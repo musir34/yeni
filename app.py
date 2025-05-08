@@ -3,19 +3,12 @@ import json
 import logging
 from datetime import datetime, timedelta
 
-from flask import Flask, request, url_for, redirect, flash, session, render_template, jsonify
+from flask import Flask, request, url_for, redirect, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.routing import BuildError
-from flask_login import LoginManager, current_user, login_required
-from models import db, User, Product # Import Product model
-# Trendyol API fonksiyonlarını import et (trendyol_api.py dosyanın adı ise)
-try:
-    from trendyol_api import update_trendyol_stock # trendyol_api.py dosyasında böyle bir fonksiyon olduğunu varsaydık
-except ImportError:
-    update_trendyol_stock = None
-    print("deneme")
-
+from flask_login import LoginManager, current_user
+from models import db, User
 
 # ✅ Düzeltme: archive.py dosyasından format_turkish_date_filter fonksiyonunu import et
 from archive import format_turkish_date_filter, archive_bp # archive_bp'yi de buradan import edelim
@@ -158,7 +151,7 @@ def check_authentication():
         if 'pending_user' in session and request.endpoint != 'login_logout.verify_totp':
             return redirect(url_for('login_logout.verify_totp'))
 
-# APScheduler - Arka planda çalışan işler
+# APScheduler - Arka Planda Cron İşleri
 from apscheduler.schedulers.background import BackgroundScheduler
 
 def fetch_and_save_returns():
@@ -176,9 +169,7 @@ def schedule_jobs():
     scheduler.add_job(func=fetch_and_save_returns, trigger='cron', hour=23, minute=50)
     scheduler.start()
 
-# Uygulama başlatıldığında zamanlanmış işleri başlat
 schedule_jobs()
-
 
 # 🔍 Veritabanı Bağlantı Testi
 with app.app_context():
@@ -189,81 +180,6 @@ with app.app_context():
         print("✅ Neon veritabanına bağlantı başarılı!")
     except Exception as e:
         print("❌ Veritabanı bağlantı hatası:", e)
-
-
-# Stok Girişi Sayfası
-@app.route('/stock_entry')
-@login_required
-def stock_entry():
-    return render_template('stock_entry.html')
-
-# Stok Güncelleme API
-@app.route('/stock_update', methods=['POST'])
-@login_required
-def stock_update():
-    data = request.get_json()
-    barcodes = data.get('barcodes', {})
-    update_type = data.get('update_type') # 'refresh' or 'add'
-
-    if not barcodes or not update_type:
-        return jsonify({'success': False, 'message': 'Eksik veri sağlandı.'}), 400
-
-    updated_products = {} # Trendyol API için güncellenen ürünleri ve yeni miktarlarını tut
-
-    try:
-        for barcode, quantity in barcodes.items():
-            product = Product.query.filter_by(barcode=barcode).first()
-
-            if product:
-                current_quantity = product.quantity # Mevcut stoğu al
-                new_quantity = 0 # Güncellenecek yeni stok miktarı
-
-                if update_type == 'refresh':
-                    # Raftaki stoğu yenile: Mevcut stoğu sıfırla ve yeni miktarı ekle
-                    new_quantity = quantity
-                elif update_type == 'add':
-                    # Yeni gelenler: Mevcut stoğun üzerine ekle
-                    new_quantity = current_quantity + quantity
-                else:
-                    return jsonify({'success': False, 'message': 'Geçersiz güncelleme tipi.'}), 400
-
-                # Veritabanındaki stoğu güncelle
-                product.quantity = new_quantity
-                updated_products[barcode] = new_quantity # Trendyol API için kaydet
-            else:
-                # Ürün veritabanında bulunamazsa, isteğe bağlı olarak logla veya hata döndür
-                print(f"Uyarı: Veritabanında barkod bulunamadı: {barcode}")
-                # return jsonify({'success': False, 'message': f'Barkod bulunamadı: {barcode}'}), 404
-                pass # Bir barkod bulunamasa bile diğerlerini işlemeye devam et
-
-        db.session.commit() # Veritabanı değişikliklerini kaydet
-
-        # Trendyol API'sini güncelleme kısmı
-        if update_trendyol_stock and updated_products:
-            try:
-                # trendyol_api.py içindeki fonksiyonu çağırarak Trendyol stoklarını güncelle
-                # Bu fonksiyonun Trendyol API dokümantasyonuna göre uygun çağrıyı yapması gerekir.
-                # Örnek: Trendyol API'nin toplu stok güncelleme endpoint'i kullanılabilir.
-                # update_trendyol_stock fonksiyonuna updated_products sözlüğü (barkod: miktar) gönderilebilir.
-                api_update_success = update_trendyol_stock(updated_products)
-
-                if not api_update_success:
-                    logger.warning("Trendyol API stok güncelleme kısmen veya tamamen başarısız oldu.")
-                    # API güncellemesi başarısız olsa bile veritabanı güncellemelerini geri almayız
-                    return jsonify({'success': True, 'message': 'Stok veritabanında güncellendi, ancak Trendyol API güncellemesinde sorun oluştu.'})
-
-            except Exception as api_e:
-                logger.error(f"Trendyol API stok güncelleme sırasında hata: {api_e}")
-                # API hatası durumunda da veritabanı güncellemelerini geri almayız
-                return jsonify({'success': True, 'message': 'Stok veritabanında güncellendi, ancak Trendyol API güncellemesi sırasında bir hata oluştu.'})
-
-        return jsonify({'success': True, 'message': 'Stok başarıyla güncellendi (Veritabanı ve Trendyol API).'})
-
-    except Exception as e:
-        db.session.rollback() # Herhangi bir veritabanı hatasında işlemleri geri al
-        logger.error(f"Genel stok güncelleme hatası: {e}")
-        return jsonify({'success': False, 'message': 'Sunucu hatası, stok güncellenemedi.'}), 500
-
 
 # Uygulama Başlat - Opsiyonel Setup
 if __name__ == '__main__':
@@ -278,3 +194,4 @@ if __name__ == '__main__':
 
     print("Uygulama başlatılıyor...")
     app.run(host='0.0.0.0', port=8080, debug=debug_mode)
+
