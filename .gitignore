@@ -174,3 +174,9 @@ attached_assets/
 *.log
 replit.nix
 .replit
+
+
+static/images/
+static/barcodes/
+static/qr_codes/
+static/qrcodes/
