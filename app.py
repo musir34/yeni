@@ -78,6 +78,7 @@ from openai_service import openai_bp
 from user_logs import user_logs_bp, log_user_action
 from commission_update_routes import commission_update_bp
 from profit import profit_bp
+from stock_management import stock_management_bp # Yeni import
 
 
 blueprints = [
@@ -102,6 +103,7 @@ blueprints = [
     claims_service_bp,
     user_logs_bp,
     commission_update_bp,
+    stock_management_bp,
     profit_bp
 ]
 
