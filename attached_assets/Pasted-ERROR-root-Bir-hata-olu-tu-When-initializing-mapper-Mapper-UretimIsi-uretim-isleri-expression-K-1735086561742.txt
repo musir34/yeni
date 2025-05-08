@@ -1,0 +1,57 @@
+ERROR:root:Bir hata oluştu: When initializing mapper Mapper[UretimIsi(uretim_isleri)], expression 'Kalfa' failed to locate a name ('Kalfa'). If this is a class name, consider adding this relationship() to the <class 'models.UretimIsi'> class after both dependent classes have been defined.
+Traceback (most recent call last):
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/clsregistry.py", line 516, in _resolve_name
+    rval = d[token]
+           ~^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/_collections.py", line 345, in __missing__
+    self[key] = val = self.creator(key)
+                      ^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/clsregistry.py", line 484, in _access_cls
+    return self.fallback[key]
+           ~~~~~~~~~~~~~^^^^^
+KeyError: 'Kalfa'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/Siparis-Yonetim/home.py", line 25, in get_home
+    oldest_order = Order.query.filter_by(status='Created').order_by(Order.order_date).first()
+                   ^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/model.py", line 22, in __get__
+    return cls.query_class(
+           ^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 275, in __init__
+    self._set_entities(entities)
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 287, in _set_entities
+    self._raw_columns = [
+                        ^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 288, in <listcomp>
+    coercions.expect(
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/coercions.py", line 389, in expect
+    insp._post_inspect
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 1253, in __get__
+    obj.__dict__[self.__name__] = result = self.fget(obj)
+                                           ^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 2711, in _post_inspect
+    self._check_configure()
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 2388, in _check_configure
+    _configure_registries({self.registry}, cascade=True)
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 4204, in _configure_registries
+    _do_configure_registries(registries, cascade)
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 4245, in _do_configure_registries
+    mapper._post_configure_properties()
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 2405, in _post_configure_properties
+    prop.init()
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/interfaces.py", line 584, in init
+    self.do_init()
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/relationships.py", line 1642, in do_init
+    self._setup_entity()
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/relationships.py", line 1854, in _setup_entity
+    self._clsregistry_resolve_name(argument)(),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/clsregistry.py", line 520, in _resolve_name
+    self._raise_for_name(name, err)
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/clsregistry.py", line 501, in _raise_for_name
+    raise exc.InvalidRequestError(
+sqlalchemy.exc.InvalidRequestError: When initializing mapper Mapper[UretimIsi(uretim_isleri)], expression 'Kalfa' failed to locate a name ('Kalfa'). If this is a class name, consider adding this relationship() to the <class 'models.UretimIsi'> class after both dependent classes have been defined.
+INFO:werkzeug:172.31.196.23 - - [25/Dec/2024 00:29:08] "GET / HTTP/1.1" 200 -

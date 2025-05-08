@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yeni Değişim Talebi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f8f9fa;
+        }
+        .thumbnail {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+        }
+        .product-card {
+            width: 210px;
+            margin: 10px auto;
+        }
+        #messageBox {
+            display: none;
+        }
+        .card-body h5 {
+            font-size: 1em;
+        }
+        h2, h5 {
+            color: #333;
+        }
+        .form-label {
+            font-weight: 500;
+        }
+        .btn {
+            font-size: 0.9em;
+        }
+        #exchangeForm h5,
+        #orderDetails h5 {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <!-- Mesaj Gösterme Alanı -->
+        <div id="messageBox" class="alert" role="alert"></div>
+
+        <div class="text-center mb-4">
+            <a href="{{ url_for('home.home') }}" class="btn btn-secondary mb-2">Anasayfaya Dön</a>
+            <a href="{{ url_for('degisim_talep') }}" class="btn btn-info w-100">Değişim Talepleri</a>
+        </div>
+        <h2 class="text-center mb-4">Yeni Değişim Talebi</h2>
+
+        <!-- Sipariş Numarası Giriş Alanı -->
+        <form id="siparisForm" class="mb-4">
+            <label for="siparis_no" class="form-label">Sipariş Numarası</label>
+            <div class="input-group">
+                <input type="text" class="form-control" id="siparis_no" name="siparis_no" required>
+                <button type="button" class="btn btn-primary" onclick="fetchOrderDetails()">Getir</button>
+            </div>
+        </form>
+
+        <!-- Sipariş ve Ürün Bilgileri -->
+        <div id="orderDetails" style="display: none;">
+            <h5>Alıcı Bilgileri</h5>
+            <div class="mb-3">
+                <label class="form-label">Ad:</label>
+                <input type="text" class="form-control" id="ad">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Soyad:</label>
+                <input type="text" class="form-control" id="soyad">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Adres:</label>
+                <textarea class="form-control" id="adres" rows="3"></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Telefon No:</label>
+                <input type="text" class="form-control" id="telefon_no">
+            </div>
+
+            <h5>Gönderilen Ürünler</h5>
+            <div id="productList" class="row"></div>
+
+            <button class="btn btn-success mt-3" onclick="showExchangeForm()">Değişim Yap</button>
+        </div>
+
+        <!-- Değişim Ürün Bilgileri Formu -->
+        <div id="exchangeForm" style="display: none; margin-top: 20px;">
+            <h5>Yeni Ürün Bilgileri</h5>
+            <div id="exchangeProducts"></div>
+
+            <div class="mb-3">
+                <label for="change_reason" class="form-label">Değişim Sebebi</label>
+                <textarea class="form-control" id="change_reason" name="change_reason" rows="3" required></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="customer_phone" class="form-label">Telefon Numarası (Opsiyonel)</label>
+                <input type="text" class="form-control" id="customer_phone" name="customer_phone">
+            </div>
+
+            <button type="button" class="btn btn-success" onclick="confirmExchange()">Değişimi Tamamla</button>
+        </div>
+    </div>
+
+    <script>
+        function showMessage(message, success=true) {
+            const box = document.getElementById('messageBox');
+            box.style.display = 'block';
+            box.className = success ? 'alert alert-success' : 'alert alert-danger';
+            box.textContent = message;
+            setTimeout(() => { box.style.display = 'none'; }, 3000);
+        }
+
+        async function fetchOrderDetails() {
+            const siparisNo = document.getElementById('siparis_no').value.trim();
+            if (!siparisNo) {
+                showMessage("Lütfen sipariş numarasını girin.", false);
+                return;
+            }
+
+            try {
+                const response = await fetch("/get_order_details", {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ siparis_no: siparisNo })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('ad').value = data.ad;
+                    document.getElementById('soyad').value = data.soyad;
+                    document.getElementById('adres').value = data.adres;
+                    document.getElementById('telefon_no').value = data.telefon_no || '';
+
+                    const productList = document.getElementById('productList');
+                    productList.innerHTML = '';
+                    data.details.forEach(product => {
+                        const productCard = `
+                            <div class="col-md-4 mb-4">
+                                <div class="card product-card">
+                                    <img src="${product.image_url}" class="card-img-top thumbnail" alt="Ürün">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title">${product.sku}</h5>
+                                        <p class="card-text">Barkod: ${product.barcode}</p>
+                                    </div>
+                                </div>
+                            </div>`;
+                        productList.innerHTML += productCard;
+                    });
+                    document.getElementById('orderDetails').style.display = 'block';
+                } else {
+                    showMessage(data.message || "Sipariş bilgileri bulunamadı.", false);
+                }
+            } catch (error) {
+                showMessage("Sipariş bilgileri alınırken bir hata oluştu.", false);
+            }
+        }
+
+        function showExchangeForm() {
+            const productList = document.getElementById('productList').children;
+            const exchangeProducts = document.getElementById('exchangeProducts');
+            exchangeProducts.innerHTML = '';
+
+            Array.from(productList).forEach((product, index) => {
+                const formHtml = `
+                    <div class="mb-4">
+                        <h6>Ürün ${index + 1}</h6>
+                        <div class="mb-3">
+                            <label class="form-label" for="new_barcode_${index}">Yeni Ürün Barkodu</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="new_barcode_${index}" required>
+                                <button type="button" class="btn btn-primary" onclick="fetchProductDetails(${index})">Getir</button>
+                            </div>
+                        </div>
+                        <div id="newProductDetails_${index}" style="display: none;">
+                            <p><strong>Model Kodu:</strong> <span id="product_main_id_${index}"></span></p>
+                            <p><strong>Beden:</strong> <span id="size_${index}"></span></p>
+                            <p><strong>Renk:</strong> <span id="color_${index}"></span></p>
+                            <img id="new_image_${index}" src="" alt="Ürün Görseli" class="thumbnail">
+                        </div>
+                    </div>
+                `;
+                exchangeProducts.innerHTML += formHtml;
+            });
+
+            document.getElementById('exchangeForm').style.display = 'block';
+        }
+
+        async function fetchProductDetails(index) {
+            const newBarcode = document.getElementById(`new_barcode_${index}`).value.trim();
+            if (!newBarcode) {
+                showMessage("Lütfen yeni ürün barkodunu girin.", false);
+                return;
+            }
+
+            try {
+                const response = await fetch("/get_product_details", {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ barcode: newBarcode })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById(`product_main_id_${index}`).innerText = data.product_main_id;
+                    document.getElementById(`size_${index}`).innerText = data.size;
+                    document.getElementById(`color_${index}`).innerText = data.color;
+                    document.getElementById(`new_image_${index}`).src = data.image_url;
+                    document.getElementById(`newProductDetails_${index}`).style.display = 'block';
+                } else {
+                    showMessage(data.message || "Ürün bilgileri bulunamadı.", false);
+                }
+            } catch (error) {
+                showMessage("Ürün bilgileri alınırken bir hata oluştu.", false);
+            }
+        }
+
+        async function confirmExchange() {
+            const siparisNo = document.getElementById('siparis_no').value.trim();
+            const ad = document.getElementById('ad').value.trim();
+            const soyad = document.getElementById('soyad').value.trim();
+            const adres = document.getElementById('adres').value.trim();
+            const telefonNo = document.getElementById('telefon_no').value.trim();
+            const changeReason = document.getElementById('change_reason').value.trim();
+
+            const productList = document.querySelectorAll('[id^="new_barcode_"]');
+            const productDetails = Array.from(productList).map((product, index) => ({
+                urun_barkod: product.value,
+                urun_model_kodu: document.getElementById(`product_main_id_${index}`).innerText,
+                urun_renk: document.getElementById(`color_${index}`).innerText,
+                urun_beden: document.getElementById(`size_${index}`).innerText
+            }));
+
+            for (let product of productDetails) {
+                const formData = new FormData();
+                formData.append('siparis_no', siparisNo);
+                formData.append('ad', ad);
+                formData.append('soyad', soyad);
+                formData.append('adres', adres);
+                formData.append('telefon_no', telefonNo);
+                formData.append('degisim_nedeni', changeReason);
+                formData.append('urun_barkod', product.urun_barkod);
+                formData.append('urun_model_kodu', product.urun_model_kodu);
+                formData.append('urun_renk', product.urun_renk);
+                formData.append('urun_beden', product.urun_beden);
+
+                try {
+                    const response = await fetch('/degisim-kaydet', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (response.ok) {
+                        showMessage("Değişim talebi başarıyla kaydedildi!", true);
+                        window.location.href = "{{ url_for('degisim_talep') }}";
+                    } else {
+                        showMessage("Değişim kaydı sırasında bir hata oluştu.", false);
+                    }
+                } catch (error) {
+                    showMessage("Değişim kaydı sırasında bir hata oluştu.", false);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

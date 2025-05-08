@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ürün Listesi - Güllü Ayakkabı</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+  />
+  <style>
+    :root {
+      --color-bg: #fafafa;
+      --color-primary: #ff3f6c;
+      --color-secondary: #2c3e50;
+      --color-gray: #888;
+      --color-white: #fff;
+      --color-success: #28a745;
+      --color-danger: #dc3545;
+      --color-info: #17a2b8;
+      --font-family-base: 'Poppins', sans-serif;
+      --border-radius: 8px;
+      --transition-fast: 0.3s;
+      --transition-slow: 0.6s;
+      --spacing-xs: 0.25rem;
+      --spacing-sm: 0.5rem;
+      --spacing-md: 1rem;
+      --spacing-lg: 1.5rem;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: var(--font-family-base); background-color: var(--color-bg); color: var(--color-secondary); line-height: 1.6; } /* Added line-height */
+    .container { width: 100%; max-width: 1200px; margin: 0 auto; padding: var(--spacing-md); }
+    h1, h2, h3, h4, h5 { margin-bottom: var(--spacing-sm); font-weight: 600; color: var(--color-secondary); }
+    .text-center { text-align: center; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; font-size: 0.9rem; font-weight: 500; padding: 0.6rem 1.2rem; border: none; border-radius: var(--border-radius); cursor: pointer; transition: background-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast); text-decoration: none; /* Ensure links look like buttons */ }
+    .btn i { font-size: 1rem; margin-right: 0.2rem; /* Add space between icon and text */ }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; } /* Disabled state */
+    .btn-primary { background-color: var(--color-primary); color: var(--color-white); }
+    .btn-primary:hover { background-color: #ff6186; }
+    .btn-secondary { background-color: var(--color-secondary); color: var(--color-white); }
+    .btn-secondary:hover { background-color: #34495e; }
+    .btn-success { background-color: var(--color-success); color: var(--color-white); }
+    .btn-success:hover { background-color: #218838; }
+    .btn-danger { background-color: var(--color-danger); color: var(--color-white); }
+    .btn-danger:hover { background-color: #c82333; }
+    .btn-info { background-color: var(--color-info); color: var(--color-white); }
+    .btn-info:hover { background-color: #138496; }
+    .btn-warning { background-color: #ffc107; color: #343a40; }
+    .btn-warning:hover { background-color: #e0a800; }
+    .btn-sm { font-size: 0.8rem; padding: 0.4rem 0.8rem; }
+    .mb-4 { margin-bottom: var(--spacing-lg); }
+    .mt-3 { margin-top: var(--spacing-md); }
+    .mb-3 { margin-bottom: var(--spacing-md); }
+    .ml-2 { margin-left: 0.5rem; }
+    .mt-2 { margin-top: 0.5rem; } /* Added margin top small */
+
+    /* Flash Messages Area */
+    .flash-messages { list-style: none; padding: 0; margin-bottom: var(--spacing-md); }
+    .flash-messages li { padding: 0.8rem 1.2rem; margin-bottom: var(--spacing-sm); border-radius: var(--border-radius); border: 1px solid transparent; }
+    .flash-success { color: #155724; background-color: #d4edda; border-color: #c3e6cb; }
+    .flash-danger { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; }
+    .flash-warning { color: #856404; background-color: #fff3cd; border-color: #ffeeba; }
+    .flash-info { color: #0c5460; background-color: #d1ecf1; border-color: #bee5eb; }
+
+
+    /* Arama Formu Stilleri */
+    .search-container { display: flex; align-items: center; justify-content: center; gap: var(--spacing-sm); flex-wrap: wrap; margin-bottom: var(--spacing-lg); padding: var(--spacing-sm); background-color: #f8f9fa; border-radius: var(--border-radius); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .search-container label { font-weight: 500; margin-right: var(--spacing-xs); }
+    .search-container select,
+    .search-container input[type="text"] { padding: 0.6rem 0.9rem; border: 1px solid #ced4da; border-radius: var(--border-radius); outline: none; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); font-size: 0.9rem; background-color: var(--color-white); }
+    .search-container select { flex-basis: 160px; cursor: pointer; }
+    .search-container input[type="text"] { flex-grow: 1; min-width: 200px; max-width: 400px; }
+    .search-container select:focus,
+    .search-container input[type="text"]:focus { border-color: var(--color-primary); box-shadow: 0 0 0 0.2rem rgba(255, 63, 108, 0.25); }
+
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); grid-gap: var(--spacing-md); margin-top: var(--spacing-md); }
+    .product-card { background-color: var(--color-white); border-radius: var(--border-radius); overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; transition: box-shadow var(--transition-fast), transform var(--transition-fast); position: relative; }
+    .product-card:hover { transform: translateY(-4px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+    .product-image img { display: block; width: 100%; height: 220px; object-fit: cover; transition: transform var(--transition-slow); background-color: #eee; /* Add background for loading */ }
+    .product-card:hover .product-image img { transform: scale(1.03); }
+    .product-info { flex: 1; padding: var(--spacing-md); display: flex; flex-direction: column; justify-content: space-between; }
+    .product-info h5 { font-size: 1rem; margin-bottom: var(--spacing-xs); font-weight: 600; line-height: 1.3; /* Adjust title line height */ }
+    .product-info p { margin-bottom: var(--spacing-xs); font-size: 0.85rem; color: var(--color-gray); }
+    .actions { margin-top: var(--spacing-md); display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .variant-list { display: none; border-top: 1px dashed #ddd; padding-top: var(--spacing-sm); margin-top: var(--spacing-sm); max-height: 200px; overflow-y: auto; /* Add scroll for long lists */ padding-right: 5px; /* Space for scrollbar */}
+    .variant-details { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); align-items: center; margin-bottom: 0.5rem; font-size: 0.85rem; /* Make variant text slightly smaller */ }
+    .size { color: var(--color-primary); font-weight: 600; }
+    .quantity { color: var(--color-success); }
+    .barcode { color: var(--color-info); /* Changed color */ word-break: break-all; /* Break long barcodes */ }
+    .copy-btn { background: transparent; border: none; cursor: pointer; color: var(--color-secondary); /* Changed color */ font-size: 0.9rem; /* Adjusted size */ display: flex; align-items: center; padding: 0 5px; /* Added padding */ }
+    .copy-btn:hover { color: var(--color-primary); }
+    .copy-confirmation { display: none; color: green; font-size: 0.75rem; margin-left: 0.2rem; font-weight: 500; }
+    .copy-confirmation.show { display: inline-block; }
+    .stock-update-form, .cost-update-form { display: none; margin-top: var(--spacing-md); padding: var(--spacing-sm); background-color: #f8f9fa; border: 1px solid #eee; border-radius: var(--border-radius); }
+    .stock-update-form-inner, .cost-update-form-inner { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+    .stock-update-form-inner table, .cost-update-form-inner table { width: 100%; border-collapse: collapse; border: 1px solid #ddd; background-color: var(--color-white); }
+    .stock-update-form-inner th, .stock-update-form-inner td, .cost-update-form-inner th, .cost-update-form-inner td { border: 1px solid #ddd; padding: 0.6rem; font-size: 0.85rem; text-align: center; vertical-align: middle; /* Align vertically */ }
+    .stock-update-form-inner input[type="number"], .cost-update-form-inner input[type="number"] { width: 80px; padding: 0.4rem; border: 1px solid #ccc; border-radius: 4px; text-align: center; }
+    .pagination-wrap { margin-top: var(--spacing-md); display: flex; justify-content: center; }
+    .pagination { display: flex; list-style: none; padding: 0; gap: 0.4rem; } /* Added padding: 0 */
+    .pagination .page-item { margin: 0; }
+    .pagination .page-link { display: inline-block; padding: 0.4rem 0.8rem; border-radius: var(--border-radius); border: 1px solid #ddd; color: var(--color-secondary); text-decoration: none; font-size: 0.9rem; transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast); }
+    .pagination .page-link:hover { background-color: #f0f0f0; border-color: #ccc; }
+    .pagination .page-item.active .page-link { background-color: var(--color-primary); color: var(--color-white); border-color: var(--color-primary); pointer-events: none; }
+    .page-item.disabled .page-link { opacity: 0.5; cursor: not-allowed; background-color: #e9ecef; /* Disabled background */ }
+    .multi-delete-mode .product-card { position: relative; border: 2px dashed #ccc; /* Default dashed border */ transition: all 0.3s; }
+    .multi-delete-mode .product-card:hover { border-color: var(--color-primary); cursor: pointer; background-color: rgba(255, 63, 108, 0.05); /* Light hover background */ }
+    .multi-delete-mode .product-card.selected { border-color: var(--color-primary); border-style: solid; /* Solid border when selected */ background-color: rgba(255, 63, 108, 0.1); }
+    .multi-delete-mode .product-card.selected::before { content: "✓"; position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; background-color: var(--color-primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem; z-index: 10; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+
+    /* Helper for screen readers */
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flash-messages">
+        {% for category, message in messages %}
+          <li class="flash-{{ category }}">{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+
+    <div class="text-center mb-4">
+      <a href="/" class="btn btn-secondary">
+        <i class="fas fa-home"></i> <span class="sr-only">Anasayfa</span>
+      </a>
+       <form action="{{ url_for('get_products.update_products_route') }}" method="post" style="display:inline-block; margin-left: 10px;">
+        <button type="submit" class="btn btn-success">
+          <i class="fas fa-sync-alt"></i> Ürünleri Güncelle (T) </button>
+      </form>
+      <form action="{{ url_for('get_products.update_stocks_route') }}" method="post" style="display:inline-block;">
+        <button type="submit" class="btn btn-warning ml-2">
+          <i class="fas fa-boxes"></i> Stokları Güncelle (T) </button>
+      </form>
+       <a href="/product_label" class="btn btn-primary ml-2">
+        <i class="fas fa-barcode"></i> Barkod Oluştur/Yazdır
+      </a>
+    </div>
+
+    <h1 class="text-center mb-4">Güllü Ayakkabı Ürün Listesi</h1>
+
+     <div class="text-center mb-4">
+      <button id="startMultiDelete" class="btn btn-danger">
+        <i class="fas fa-trash"></i> Toplu Silme Modu
+      </button>
+      <button id="executeMultiDelete" class="btn btn-warning ml-2" style="display:none;" disabled> <i class="fas fa-check"></i> Seçili (<span id="selectedCount">0</span>) Sil
+      </button>
+      <button id="cancelMultiDelete" class="btn btn-secondary ml-2" style="display:none;">
+        <i class="fas fa-times"></i> İptal
+      </button>
+    </div>
+
+    <form action="{{ url_for('get_products.search_products') }}" method="GET" class="search-container">
+        <label for="search_type" class="sr-only">Arama Türü</label> <select name="search_type" id="search_type" title="Arama Türü">
+            <option value="model_code" {% if search_type == 'model_code' %}selected{% endif %}>Model Kodu</option>
+            <option value="barcode" {% if search_type == 'barcode' %}selected{% endif %}>Barkod</option>
+        </select>
+        <label for="search_query" class="sr-only">Arama</label> <input
+            type="text"
+            name="query"
+            id="search_query"
+            placeholder="Model kodu veya barkod..."
+            required
+            value="{{ search_query or '' }}" {# Flask context'inden gelen değeri yaz #}
+            aria-label="Arama sorgusu"
+        />
+        <button type="submit" class="btn btn-info">
+            <i class="fas fa-search"></i> <span class="sr-only">Ara</span>
+        </button>
+        {% if search_mode %} {# Arama modundaysa temizle butonu göster #}
+        <a href="{{ url_for('get_products.product_list') }}" class="btn btn-secondary ml-2" title="Aramayı Temizle">
+           <i class="fas fa-times"></i> <span class="sr-only">Aramayı Temizle</span>
+        </a>
+        {% endif %}
+    </form>
+
+
+    <div class="product-grid" id="productContainer">
+      {# Ürünler varsa döngüyü başlat #}
+      {% if grouped_products %}
+          {# Gruplanmış ürünler üzerinde dön #}
+          {% for (model_id, color), product_group in grouped_products.items() %}
+          {# Grubun ilk ürününü referans al (görsel, başlık vb. için) #}
+          {% set product = product_group[0] %}
+            <div class="product-card" data-model="{{ model_id }}" data-color="{{ color }}">
+              <div class="product-image">
+                {# Görsel varsa göster, yoksa placeholder #}
+                {% if product and product.images %}
+                  {# İlk görseli al (varsa) #}
+                  <img
+                    src="{{ product.images.split(',')[0] }}"
+                    alt="{{ product.title or 'Ürün Görseli' }}"
+                    loading="lazy" {# Lazy loading for images #}
+                    onerror="this.onerror=null; this.src='https://via.placeholder.com/300x220/eee/888?text=Gorsel+Hata';" {# Daha belirgin hata görseli #}
+                  />
+                {% else %}
+                  <img
+                    src="https://via.placeholder.com/300x220/eee/888?text=Gorsel+Yok"
+                    alt="Görsel Yok"
+                    loading="lazy"
+                  />
+                {% endif %}
+              </div>
+              <div class="product-info">
+                <div>
+                  {# Başlık, model kodu ve renk bilgilerini göster #}
+                  <h5>{{ product.title or 'Başlık Belirtilmemiş' }}</h5>
+                  <p>Model Kodu: {{ model_id or 'N/A' }}</p>
+                  <p>Renk: {{ color or 'N/A' }}</p>
+                </div>
+                {# Aksiyon butonları #}
+                <div class="actions">
+                  <button class="btn btn-success btn-sm update-model-cost" data-model="{{ model_id }}" title="Bu modelin tüm varyantlarının maliyetini güncelle">
+                    <i class="fas fa-dollar-sign"></i> Model Maliyeti
+                  </button>
+                  <button class="btn btn-info btn-sm toggle-variants" title="Bu ürüne ait varyantları göster/gizle">
+                    <i class="fas fa-chevron-down"></i> Varyantlar
+                  </button>
+                  <button class="btn btn-warning btn-sm update-stocks" data-model="{{ model_id }}" data-color="{{ color }}" title="Bu ürünün varyant stoklarını güncelle">
+                    <i class="fas fa-edit"></i> Stok Güncelle
+                  </button>
+                  <button class="btn btn-primary btn-sm update-cost" data-model="{{ model_id }}" data-color="{{ color }}" title="Bu ürünün varyant maliyetlerini tek tek güncelle">
+                    <i class="fas fa-coins"></i> Varyant Maliyet
+                  </button>
+                  <button class="btn btn-danger btn-sm delete-product" data-model="{{ model_id }}" data-color="{{ color }}" title="Bu ürünü tüm varyantlarıyla birlikte sil">
+                    <i class="fas fa-trash"></i> Sil
+                  </button>
+                </div>
+                {# Stok ve Maliyet güncelleme formları için placeholder div'ler #}
+                <div class="stock-update-form mt-3"></div>
+                <div class="cost-update-form mt-3"></div>
+                {# Varyant listesi alanı #}
+                <div class="variant-list">
+                  {# Ürün grubundaki her bir varyant için dön #}
+                  {% for variant in product_group %}
+                    {# Geçerli bir barkod var mı kontrol et #}
+                    {% if variant and variant.barcode and variant.barcode|string not in ['undefined', 'None', ''] %}
+                      <div class="variant-details">
+                        <span class="size">Beden: {{ variant.size or 'N/A' }}</span>
+                        <span class="quantity">Stok: {{ variant.quantity if variant.quantity is not none else 0 }}</span>
+                        <span class="barcode" title="{{ variant.barcode }}">Barkod: {{ variant.barcode }}</span> {# Tooltip ekledim #}
+                        <button class="btn btn-info btn-sm select-product" data-barcode="{{ variant.barcode }}" data-model="{{ model_id }}" data-color="{{ color }}" data-size="{{ variant.size or '' }}" title="Bu varyant için barkod etiketi oluştur">
+                          <i class="fas fa-print"></i> <span class="sr-only">Yazdır</span>
+                        </button>
+                        <button class="copy-btn" title="Barkodu Kopyala">
+                          <i class="fas fa-copy"></i> <span class="sr-only">Kopyala</span>
+                        </button>
+                        <span class="copy-confirmation">Kopyalandı!</span>
+                      </div>
+                    {% endif %}
+                  {% endfor %}
+                </div> {# variant-list sonu #}
+              </div> {# product-info sonu #}
+            </div> {# product-card sonu #}
+          {% endfor %} {# grouped_products döngüsü sonu #}
+      {# Ürün yoksa mesaj göster #}
+      {% else %}
+         <div style="grid-column: 1 / -1; text-align: center; padding: var(--spacing-lg); background-color: #fff; border-radius: var(--border-radius); box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+             {% if search_mode %}
+                 <p><strong>'{{ search_query }}'</strong> için sonuç bulunamadı.</p>
+                 <a href="{{ url_for('get_products.product_list') }}" class="btn btn-secondary mt-2">Tüm Ürünleri Göster</a>
+             {% else %}
+                <p>Gösterilecek ürün bulunamadı.</p>
+                <p>Trendyol'dan ürünleri çekmek için yukarıdaki 'Ürünleri Güncelle' butonunu kullanabilirsiniz.</p>
+             {% endif %}
+         </div>
+      {% endif %} {# grouped_products if sonu #}
+    </div> {# product-grid sonu #}
+
+    {# Sayfalama (Arama modunda değilse ve birden fazla sayfa varsa) #}
+    {% if not search_mode and pagination and pagination.pages > 1 %}
+      <div class="pagination-wrap">
+        <nav aria-label="Ürün Sayfaları">
+          <ul class="pagination">
+            {# Önceki Sayfa #}
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+              <a class="page-link" href="{{ url_for('get_products.product_list', page=pagination.prev_num) if pagination.has_prev else '#' }}" aria-label="Önceki">
+                <span aria-hidden="true">&laquo;</span>
+              </a>
+            </li>
+            {# Sayfa Numaraları #}
+            {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+              {% if p %}
+                <li class="page-item {% if p == pagination.page %}active{% endif %}" {% if p == pagination.page %}aria-current="page"{% endif %}>
+                  <a class="page-link" href="{{ url_for('get_products.product_list', page=p) }}">{{ p }}</a>
+                </li>
+              {% else %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+              {% endif %}
+            {% endfor %}
+            {# Sonraki Sayfa #}
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+              <a class="page-link" href="{{ url_for('get_products.product_list', page=pagination.next_num) if pagination.has_next else '#' }}" aria-label="Sonraki">
+                <span aria-hidden="true">&raquo;</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    {% endif %}
+
+    {# Panoya kopyalama için gizli alan #}
+    <textarea id="temp-copier" class="sr-only" aria-hidden="true"></textarea>
+  </div> {# container sonu #}
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    // Tarayıcı konsoluna debug mesajları yazdırmak için (İsteğe bağlı)
+    // console.log("Sayfa yüklendi. Arama Modu: {{ search_mode|default(false)|lower }}");
+    // console.log("Mevcut Arama Sorgusu: {{ search_query|default('') }}");
+    // console.log("Mevcut Arama Tipi: {{ search_type|default('model_code') }}");
+
+    $(document).ready(function () {
+
+        // --- Toplu Silme Modu ---
+        let isMultiDeleteMode = false;
+        let selectedProducts = []; // { key: "model-renk", model_id: "...", color: "..." }
+
+        const $startMultiDeleteBtn = $('#startMultiDelete');
+        const $executeMultiDeleteBtn = $('#executeMultiDelete');
+        const $cancelMultiDeleteBtn = $('#cancelMultiDelete');
+        const $productContainer = $('#productContainer');
+        const $selectedCountSpan = $('#selectedCount');
+
+        $startMultiDeleteBtn.click(function() {
+            isMultiDeleteMode = true;
+            selectedProducts = [];
+            updateSelectedCount(); // Sayacı sıfırla ve butonu pasif yap
+            $productContainer.addClass('multi-delete-mode');
+            $startMultiDeleteBtn.hide();
+            $executeMultiDeleteBtn.show();
+            $cancelMultiDeleteBtn.show();
+            // Diğer aksiyon butonlarını pasif yap
+            $('.product-card .actions button').prop('disabled', true);
+        });
+
+        $cancelMultiDeleteBtn.click(function() {
+            exitMultiDeleteMode();
+        });
+
+        function exitMultiDeleteMode() {
+            isMultiDeleteMode = false;
+            selectedProducts = [];
+            $productContainer.removeClass('multi-delete-mode');
+            $('.product-card').removeClass('selected'); // Seçimleri temizle
+            $executeMultiDeleteBtn.hide();
+            $cancelMultiDeleteBtn.hide();
+            $startMultiDeleteBtn.show();
+            // Diğer aksiyon butonlarını tekrar aktif yap
+            $('.product-card .actions button').prop('disabled', false);
+            updateSelectedCount(); // Sayacı sıfırla
+        }
+
+        function updateSelectedCount() {
+            const count = selectedProducts.length;
+            $selectedCountSpan.text(count);
+            $executeMultiDeleteBtn.prop('disabled', count === 0); // Seçili ürün yoksa Sil butonunu pasif yap
+        }
+
+        // Ürün Kartı Tıklama (Toplu Silme Modunda)
+        $productContainer.on('click', '.product-card', function(e) {
+            if (!isMultiDeleteMode) return; // Mod aktif değilse çık
+            // Kart içindeki butonlara veya linklere tıklandıysa işlem yapma
+            if ($(e.target).closest('.actions, a, button, .variant-list, .stock-update-form, .cost-update-form').length) {
+                return;
+            }
+
+            const $card = $(this);
+            const modelId = $card.data('model');
+            const color = $card.data('color');
+
+            if (!modelId || !color) {
+                console.warn("Seçilen kartta model veya renk bilgisi eksik:", $card);
+                return;
+            }
+
+            const productKey = `${modelId}-${color}`;
+            const productIndex = selectedProducts.findIndex(p => p.key === productKey);
+
+            if (productIndex === -1) { // Eğer listede yoksa ekle
+                selectedProducts.push({ key: productKey, model_id: modelId, color: color });
+                $card.addClass('selected');
+            } else { // Eğer listede varsa çıkar
+                selectedProducts.splice(productIndex, 1);
+                $card.removeClass('selected');
+            }
+            updateSelectedCount(); // Sayacı ve buton durumunu güncelle
+        });
+
+        // Toplu Silme İşlemini Tetikleme
+        $executeMultiDeleteBtn.click(function() {
+            if (selectedProducts.length === 0) {
+                alert('Lütfen silmek için en az bir ürün seçin.');
+                return;
+            }
+            const productCount = selectedProducts.length;
+            if (confirm(`${productCount} ana ürünü (tüm varyantlarıyla birlikte) silmek istediğinize emin misiniz?\nBu işlem geri alınamaz!`)) {
+                const $button = $(this);
+                const originalHtml = $button.html();
+                $button.html('<i class="fas fa-spinner fa-spin"></i> Siliniyor...').prop('disabled', true);
+                $cancelMultiDeleteBtn.prop('disabled', true); // İptal butonunu da pasif yap
+
+                $.ajax({
+                    url: '/api/bulk-delete-products',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ products: selectedProducts }), // Seçili ürünlerin listesini gönder
+                    success: function(response) {
+                        if (response.success) {
+                            alert(`${response.deleted_count || productCount} ürün başarıyla silindi! Sayfa yenileniyor...`);
+                            exitMultiDeleteMode();
+                            location.reload(); // Sayfayı yenilemek en temizi
+                        } else {
+                            alert('Toplu silme işlemi başarısız oldu: ' + (response.message || 'Bilinmeyen bir hata oluştu.'));
+                            $button.html(originalHtml).prop('disabled', false); // Butonu eski haline getir
+                            $cancelMultiDeleteBtn.prop('disabled', false);
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error("Toplu silme AJAX hatası:", xhr.responseText);
+                        alert('Sunucu ile iletişim kurulamadı veya bir hata oluştu. Lütfen teknik destek ile iletişime geçin.');
+                        $button.html(originalHtml).prop('disabled', false);
+                        $cancelMultiDeleteBtn.prop('disabled', false);
+                    }
+                });
+            }
+        });
+
+
+        // --- Diğer Buton İşlevleri ---
+
+        // Genel Kapatma Fonksiyonu (Diğer açık formları/listeleri kapatır)
+        function closeOtherForms($currentCard) {
+            $currentCard.siblings().find('.stock-update-form:visible, .cost-update-form:visible, .variant-list:visible').slideUp();
+            // Kardeş kartlardaki butonları resetle
+            $currentCard.siblings().find('.update-stocks').html('<i class="fas fa-edit"></i> Stok Güncelle');
+            $currentCard.siblings().find('.update-cost').html('<i class="fas fa-coins"></i> Varyant Maliyet');
+            $currentCard.siblings().find('.toggle-variants').html('<i class="fas fa-chevron-down"></i> Varyantlar');
+        }
+
+        // Model Bazlı Maliyet Güncelleme
+        $productContainer.on('click', '.update-model-cost', function() {
+            const $button = $(this);
+            const modelId = $button.data('model');
+            if (!modelId) { alert('Model ID bulunamadı!'); return; }
+
+            $.ajax({
+                url: '/api/product-cost',
+                method: 'GET',
+                data: { model_id: modelId },
+                success: function(res) {
+                    if (res.success) {
+                        const currentCost = parseFloat(res.cost_usd || 0);
+                        const newCostStr = prompt(`'${modelId}' modeli için TÜM VARYANTLARIN yeni USD maliyetini girin (Önceki: ${currentCost.toFixed(2)} USD):`, currentCost.toFixed(2));
+
+                        if (newCostStr !== null) {
+                            const newCost = parseFloat(newCostStr.replace(',', '.'));
+                            if (!isNaN(newCost) && newCost >= 0) {
+                                $button.html('<i class="fas fa-spinner fa-spin"></i> Kaydediliyor...').prop('disabled', true);
+                                $.ajax({
+                                    url: '/api/update-product-cost',
+                                    method: 'POST',
+                                    data: { model_id: modelId, cost_usd: newCost },
+                                    success: function(updateRes) {
+                                        alert(updateRes.message || (updateRes.success ? 'Maliyet başarıyla güncellendi!' : 'Maliyet güncellenemedi!'));
+                                        if (updateRes.success) location.reload();
+                                    },
+                                    error: function() { alert('Sunucu hatası!'); },
+                                    complete: function() {
+                                        $button.html('<i class="fas fa-dollar-sign"></i> Model Maliyeti').prop('disabled', false);
+                                    }
+                                });
+                            } else {
+                                alert("Geçersiz maliyet değeri girdiniz.");
+                            }
+                        }
+                    } else {
+                        alert('Mevcut maliyet bilgisi alınamadı: ' + (res.message || ''));
+                    }
+                },
+                error: function() { alert('Sunucu ile iletişim kurulamadı!'); }
+            });
+        });
+
+        // Varyantları Göster/Gizle
+        $productContainer.on('click', '.toggle-variants', function () {
+            const $button = $(this);
+            const $card = $button.closest('.product-card');
+            const $variantList = $card.find('.variant-list');
+
+            closeOtherForms($card); // Önce diğerlerini kapat
+
+            $variantList.slideToggle(function() { // Animasyon bitince ikonu değiştir
+                 const isVisible = $variantList.is(':visible');
+                 $button.html(isVisible ? '<i class="fas fa-chevron-up"></i> Varyantlar' : '<i class="fas fa-chevron-down"></i> Varyantlar');
+            });
+            // Diğer formları da gizle
+             $card.find('.stock-update-form, .cost-update-form').slideUp();
+             $card.find('.update-stocks').html('<i class="fas fa-edit"></i> Stok Güncelle');
+             $card.find('.update-cost').html('<i class="fas fa-coins"></i> Varyant Maliyet');
+        });
+
+        // Stok Güncelle Formunu Aç/Kapat
+        $productContainer.on('click', '.update-stocks', function() {
+            const $button = $(this);
+            const $card = $button.closest('.product-card');
+            const $stockFormContainer = $card.find('.stock-update-form');
+            const model = $button.data('model');
+            const color = $button.data('color');
+
+            closeOtherForms($card); // Önce diğerlerini kapat
+            // Kendi diğer formunu/listesini de kapat
+            $card.find('.cost-update-form, .variant-list').slideUp();
+            $card.find('.update-cost').html('<i class="fas fa-coins"></i> Varyant Maliyet');
+            $card.find('.toggle-variants').html('<i class="fas fa-chevron-down"></i> Varyantlar');
+
+
+            if ($stockFormContainer.is(':visible')) {
+                $stockFormContainer.slideUp();
+                $button.html('<i class="fas fa-edit"></i> Stok Güncelle');
+            } else {
+                $button.html('<i class="fas fa-spinner fa-spin"></i> Yükleniyor...');
+                $.ajax({
+                    url: '{{ url_for("get_products.get_product_variants") }}', // Sadece stok çeken endpoint
+                    method: 'GET', data: { model: model, color: color },
+                    success: function(res) {
+                        if (res.success && res.products && res.products.length > 0) {
+                            let formHtml = `<form class="stock-update-form-inner" data-model="${model}" data-color="${color}">`;
+                            formHtml += `<table><thead><tr><th>Beden</th><th>Mevcut</th><th>Yeni Stok</th></tr></thead><tbody>`;
+                            res.products.forEach(p => {
+                                if (p.barcode && p.barcode !== 'undefined') {
+                                    formHtml += `<tr>
+                                        <td>${p.size || '-'}</td>
+                                        <td>${p.quantity ?? 0}</td>
+                                        <td><input type="number" name="${p.barcode}" value="${p.quantity ?? 0}" min="0" required style="width: 60px;"></td>
+                                    </tr>`;
+                                }
+                            });
+                            formHtml += `</tbody></table><button type="submit" class="btn btn-primary btn-sm mt-2"><i class="fas fa-save"></i> Stokları Kaydet</button></form>`;
+                            $stockFormContainer.html(formHtml).slideDown();
+                            $button.html('<i class="fas fa-times"></i> Kapat');
+                        } else {
+                            $stockFormContainer.html('<p class="text-danger" style="font-size: 0.9em; padding: 5px;">Varyant bilgisi yok veya alınamadı.</p>').slideDown();
+                            $button.html('<i class="fas fa-edit"></i> Stok Güncelle'); // Hata durumunda eski haline getir
+                        }
+                    },
+                    error: function() {
+                        $stockFormContainer.html('<p class="text-danger" style="font-size: 0.9em; padding: 5px;">Sunucu hatası!</p>').slideDown();
+                        $button.html('<i class="fas fa-edit"></i> Stok Güncelle');
+                    }
+                });
+            }
+        });
+
+        // Stok Güncelle Formu Gönder
+        $productContainer.on('submit', '.stock-update-form-inner', function(e) {
+            e.preventDefault();
+            const $form = $(this);
+            const $submitButton = $form.find('button[type="submit"]');
+            const originalButtonHtml = $submitButton.html();
+            $submitButton.html('<i class="fas fa-spinner fa-spin"></i> Kaydediliyor...').prop('disabled', true);
+
+            $.ajax({
+                url: '{{ url_for("get_products.update_stocks_ajax") }}', method: 'POST', data: $form.serialize(),
+                success: function(response) {
+                    if (response.success) {
+                        alert('Stoklar başarıyla Trendyol\'a gönderildi.');
+                        $form.closest('.stock-update-form').slideUp();
+                        const model = $form.data('model');
+                        const color = $form.data('color');
+                        $(`.update-stocks[data-model="${model}"][data-color="${color}"]`).html('<i class="fas fa-edit"></i> Stok Güncelle');
+                        // İlgili kartın varyant listesini yenilemek daha iyi olurdu ama reload şimdilik OK.
+                         location.reload();
+                    } else {
+                        alert('Stok güncelleme başarısız: ' + (response.message || 'Bilinmeyen hata.'));
+                        $submitButton.html(originalButtonHtml).prop('disabled', false);
+                    }
+                },
+                error: function(xhr) {
+                    console.error("Stok güncelleme AJAX hatası:", xhr.responseText);
+                    alert('Sunucu hatası veya iletişim sorunu!');
+                    $submitButton.html(originalButtonHtml).prop('disabled', false);
+                }
+            });
+        });
+
+        // Varyant Maliyet Formunu Aç/Kapat
+        $productContainer.on('click', '.update-cost', function() {
+            const $button = $(this);
+            const $card = $button.closest('.product-card');
+            const $costFormContainer = $card.find('.cost-update-form');
+            const model = $button.data('model');
+            const color = $button.data('color');
+
+            closeOtherForms($card); // Önce diğerlerini kapat
+             // Kendi diğer formunu/listesini de kapat
+            $card.find('.stock-update-form, .variant-list').slideUp();
+            $card.find('.update-stocks').html('<i class="fas fa-edit"></i> Stok Güncelle');
+            $card.find('.toggle-variants').html('<i class="fas fa-chevron-down"></i> Varyantlar');
+
+            if ($costFormContainer.is(':visible')) {
+                $costFormContainer.slideUp();
+                $button.html('<i class="fas fa-coins"></i> Varyant Maliyet');
+            } else {
+                $button.html('<i class="fas fa-spinner fa-spin"></i> Yükleniyor...');
+                $.ajax({
+                    url: '/api/get_variants_with_cost', method: 'GET', data: { model: model, color: color },
+                    success: function(res) {
+                        if (res.success && res.products && res.products.length > 0) {
+                            let formHtml = `<form class="cost-update-form-inner" data-model="${model}" data-color="${color}">`;
+                            formHtml += `<table><thead><tr><th>Beden</th><th>Stok</th><th>USD</th><th>TL</th><th>Yeni USD</th></tr></thead><tbody>`;
+                            res.products.forEach(p => {
+                                if (p.barcode && p.barcode !== 'undefined') {
+                                    const costUSD = parseFloat(p.cost_usd || 0).toFixed(2);
+                                    const costTRY = parseFloat(p.cost_try || 0).toFixed(2);
+                                    formHtml += `<tr>
+                                        <td>${p.size || '-'}</td>
+                                        <td>${p.quantity ?? 0}</td>
+                                        <td>${costUSD}</td>
+                                        <td>${costTRY}</td>
+                                        <td><input type="number" name="${p.barcode}" value="${costUSD}" min="0" step="0.01" required style="width: 70px;"></td>
+                                    </tr>`;
+                                }
+                            });
+                            formHtml += `</tbody></table><button type="submit" class="btn btn-primary btn-sm mt-2"><i class="fas fa-save"></i> Maliyetleri Kaydet</button></form>`;
+                            $costFormContainer.html(formHtml).slideDown();
+                            $button.html('<i class="fas fa-times"></i> Kapat');
+                        } else {
+                            $costFormContainer.html('<p class="text-danger" style="font-size: 0.9em; padding: 5px;">Varyant maliyet bilgisi yok veya alınamadı.</p>').slideDown();
+                             $button.html('<i class="fas fa-coins"></i> Varyant Maliyet');
+                        }
+                    },
+                    error: function() {
+                         $costFormContainer.html('<p class="text-danger" style="font-size: 0.9em; padding: 5px;">Sunucu hatası!</p>').slideDown();
+                         $button.html('<i class="fas fa-coins"></i> Varyant Maliyet');
+                    }
+                });
+            }
+        });
+
+        // Varyant Maliyet Formu Gönder
+        $productContainer.on('submit', '.cost-update-form-inner', function(e) {
+            e.preventDefault();
+            const $form = $(this);
+            const $submitButton = $form.find('button[type="submit"]');
+            const originalButtonHtml = $submitButton.html();
+             $submitButton.html('<i class="fas fa-spinner fa-spin"></i> Kaydediliyor...').prop('disabled', true);
+
+            $.ajax({
+                url: '/api/update_product_costs', method: 'POST', data: $form.serialize(),
+                success: function(response) {
+                    alert(response.message || (response.success ? 'Maliyetler başarıyla güncellendi!' : 'Maliyet güncelleme başarısız!'));
+                    if (response.success) {
+                        $form.closest('.cost-update-form').slideUp();
+                         const model = $form.data('model');
+                         const color = $form.data('color');
+                        $(`.update-cost[data-model="${model}"][data-color="${color}"]`).html('<i class="fas fa-coins"></i> Varyant Maliyet');
+                        // Sayfayı yenilemek gerekebilir
+                        location.reload();
+                    } else {
+                        $submitButton.html(originalButtonHtml).prop('disabled', false);
+                    }
+                    if (response.errors && response.errors.length > 0) {
+                         console.warn("Maliyet güncelleme hataları:", response.errors);
+                         alert("Bazı hatalar oluştu, detaylar için konsolu kontrol edin.");
+                     }
+                },
+                error: function(xhr) {
+                    console.error("Maliyet güncelleme AJAX hatası:", xhr.responseText);
+                    alert('Sunucu hatası veya iletişim sorunu!');
+                    $submitButton.html(originalButtonHtml).prop('disabled', false);
+                }
+            });
+        });
+
+
+        // Varyant Seç -> Barkod Sayfasına Git
+        $productContainer.on('click', '.select-product', function() {
+            const barcode = $(this).data('barcode');
+            if (!barcode || barcode === 'undefined') { alert('Geçersiz barkod.'); return; }
+            const model = $(this).data('model');
+            const color = $(this).data('color');
+            const size = $(this).data('size');
+            // URL parametrelerini encode ederek yeni sekmede aç
+            const url = `/product_label?barcode=${encodeURIComponent(barcode)}&model=${encodeURIComponent(model)}&color=${encodeURIComponent(color)}&size=${encodeURIComponent(size)}`;
+            window.open(url, '_blank');
+        });
+
+        // Barkod Kopyalama
+        $productContainer.on('click', '.copy-btn', function() {
+            const $button = $(this);
+            const $barcodeSpan = $button.siblings('.barcode');
+            const text = $barcodeSpan.attr('title'); // Tooltip'ten alalım
+
+            if (text && text !== 'undefined' && text !== 'None' && text !== '') {
+                copyToClipboard(text, $button);
+            } else {
+                alert('Kopyalanacak geçerli barkod bulunamadı.');
+                console.warn("Kopyalama hatası: Geçersiz barkod metni - ", $barcodeSpan.text());
+            }
+        });
+
+        // Panoya Kopyalama Fonksiyonu
+        function copyToClipboard(text, $element) {
+            navigator.clipboard.writeText(text).then(function() {
+                const $confirmation = $element.siblings('.copy-confirmation');
+                $confirmation.addClass('show');
+                setTimeout(() => $confirmation.removeClass('show'), 1500);
+            }).catch(function(err) {
+                console.error('Panoya kopyalanamadı: ', err);
+                // Fallback (eski yöntem) - Gerekirse eklenebilir
+                try {
+                    const $temp = $('#temp-copier');
+                    $temp.val(text).select();
+                    document.execCommand('copy');
+                     const $confirmation = $element.siblings('.copy-confirmation');
+                     $confirmation.addClass('show');
+                     setTimeout(() => $confirmation.removeClass('show'), 1500);
+                } catch (fallbackErr) {
+                    alert('Barkod kopyalanamadı. Tarayıcınız desteklemiyor olabilir.');
+                }
+            });
+        }
+
+
+        // Tekil Ürün Silme (Model+Renk Bazında)
+        $productContainer.on('click', '.delete-product', function() {
+            const $button = $(this);
+            const modelId = $button.data('model');
+            const color = $button.data('color');
+            if (!modelId || !color) { alert('Model veya renk bilgisi eksik!'); return; }
+
+            if (confirm(`'${modelId} - ${color}' ürününü TÜM VARYANTLARIYLA kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!`)) {
+                const originalHtml = $button.html();
+                $button.html('<i class="fas fa-spinner fa-spin"></i> Siliniyor...').prop('disabled', true);
+                $.ajax({
+                    url: '/api/delete-product', method: 'POST', data: { model_id: modelId, color: color },
+                    success: function(response) {
+                        if (response.success) {
+                            alert('Ürün başarıyla silindi!');
+                            $button.closest('.product-card').fadeOut(400, function() { $(this).remove(); }); // Kartı animasyonla kaldır
+                        } else {
+                            alert('Silme başarısız: ' + (response.message || 'Bilinmeyen hata.'));
+                            $button.html(originalHtml).prop('disabled', false);
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error("Tekil silme AJAX hatası:", xhr.responseText);
+                        alert('Sunucu hatası veya iletişim sorunu!');
+                        $button.html(originalHtml).prop('disabled', false);
+                    }
+                });
+            }
+        });
+
+    }); // $(document).ready sonu
+  </script>
+</body>
+</html>

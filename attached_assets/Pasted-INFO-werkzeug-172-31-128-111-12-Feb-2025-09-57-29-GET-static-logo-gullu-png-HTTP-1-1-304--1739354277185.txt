@@ -1,0 +1,58 @@
+INFO:werkzeug:172.31.128.111 - - [12/Feb/2025 09:57:29] "GET /static/logo/gullu.png HTTP/1.1" 304 -
+INFO:werkzeug:172.31.128.111 - - [12/Feb/2025 09:57:33] "GET /analysis HTTP/1.1" 200 -
+INFO:werkzeug:172.31.128.111 - - [12/Feb/2025 09:57:33] "GET /static/logo/gullu.png HTTP/1.1" 304 -
+API isteği başladı
+Tarih aralığı: 2024-11-14 09:57:34.584272 - 2025-02-12 09:57:34.584272
+Ürün satışları sorgusu başlıyor...
+Bulunan ürün satışı sayısı: 50
+Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=728, Gelir=699445.1200000024
+Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=688, Gelir=651489.5000000006
+Ürün detayı: ID=, Renk=Siyah, Beden=39, Adet=567, Gelir=548514.1400000004
+Ürün detayı: ID=, Renk=Siyah, Beden=36, Adet=404, Gelir=389867.7600000011
+Ürün detayı: ID=, Renk=Siyah-Süet, Beden=38, Adet=311, Gelir=255092.7199999993
+Ürün detayı: ID=, Renk=Siyah, Beden=40, Adet=258, Gelir=250162.7199999997
+Ürün detayı: ID=, Renk=Süet Vegan Deri, Beden=35, Adet=299, Gelir=247886.22999999972
+Ürün detayı: ID=, Renk=Vegan Deri, Beden=40, Adet=253, Gelir=200350.49999999974
+Ürün detayı: ID=, Renk=Siyah, Beden=35, Adet=208, Gelir=191566.04999999976
+Ürün detayı: ID=, Renk=Kırmızı, Beden=37, Adet=171, Gelir=172421.37000000005
+Ürün detayı: ID=, Renk=Siyah, Beden=41, Adet=177, Gelir=163697.63999999984
+Ürün detayı: ID=, Renk=Kırmızı, Beden=38, Adet=161, Gelir=156914.07000000012
+Ürün detayı: ID=, Renk=Kırmızı, Beden=39, Adet=155, Gelir=150626.9700000001
+Ürün detayı: ID=, Renk=Beyaz, Beden=38, Adet=131, Gelir=133979.80999999994
+Ürün detayı: ID=, Renk=Açık Yeşil, Beden=38, Adet=117, Gelir=120025.83999999988
+Ürün detayı: ID=, Renk=Bej, Beden=37, Adet=116, Gelir=119853.69999999988
+Ürün detayı: ID=, Renk=Siyah-Süet, Beden=39, Adet=148, Gelir=119768.34999999999
+Ürün detayı: ID=, Renk=Siyah-Süet, Beden=37, Adet=147, Gelir=119758.89000000004
+Ürün detayı: ID=, Renk=Bej, Beden=38, Adet=109, Gelir=111332.90999999999
+Ürün detayı: ID=, Renk=Açık Yeşil, Beden=37, Adet=113, Gelir=111051.44999999985
+Ürün detayı: ID=, Renk=Kırmızı, Beden=36, Adet=97, Gelir=100241.31999999999
+Ürün detayı: ID=, Renk=Ten Rengi, Beden=38, Adet=86, Gelir=88205.43000000005
+Ürün detayı: ID=, Renk=Bej, Beden=39, Adet=79, Gelir=86372.79999999999
+Ürün detayı: ID=, Renk=Beyaz, Beden=37, Adet=86, Gelir=83033.54000000001
+Ürün detayı: ID=, Renk=Gümüş, Beden=39, Adet=86, Gelir=72532.42000000004
+Ürün detayı: ID=, Renk=Beyaz, Beden=39, Adet=78, Gelir=72529.88
+Ürün detayı: ID=, Renk=Açık Mavi, Beden=38, Adet=57, Gelir=70099.33
+Ürün detayı: ID=, , Renk=Siyah, Beden=38, Adet=35, Gelir=68450.92000000003
+Ürün detayı: ID=, Renk=Açık Yeşil, Beden=39, Adet=64, Gelir=67220.06
+Ürün detayı: ID=, Renk=Bej, Beden=36, Adet=62, Gelir=66480.73000000001
+Ürün detayı: ID=, Renk=Siyah-Süet, Beden=36, Adet=73, Gelir=62037.000000000015
+Ürün detayı: ID=, Renk=Siyah Bantlı Süet, Beden=37, Adet=58, Gelir=61940.41999999999
+Ürün detayı: ID=, Renk=Ten Rengi, Beden=39, Adet=58, Gelir=60628.83000000004
+Ürün detayı: ID=, Renk=Beyaz, Beden=36, Adet=61, Gelir=59342.330000000016
+Ürün detayı: ID=, , Renk=Siyah, Beden=39, Adet=30, Gelir=58631.82000000001
+Ürün detayı: ID=, Renk=Siyah-Süet, Beden=40, Adet=72, Gelir=58030.110000000015
+Ürün detayı: ID=, Renk=Siyah Süet, Beden=35, Adet=77, Gelir=57865.08999999997
+Ürün detayı: ID=, Renk=Kırmızı, Beden=41, Adet=57, Gelir=55609.55
+Ürün detayı: ID=, Renk=Açık Yeşil, Beden=36, Adet=54, Gelir=54293.34000000002
+Ürün detayı: ID=, Renk=Açık Mavi, Beden=37, Adet=51, Gelir=52814.58
+Ürün detayı: ID=, , Renk=Siyah, Beden=37, Adet=27, Gelir=51128.89000000001
+Ürün detayı: ID=, Renk=Açık Yeşil, Beden=35, Adet=44, Gelir=50815.26000000001
+Ürün detayı: ID=, Renk=Kırmızı, Beden=40, Adet=46, Gelir=49631.93000000001
+Ürün detayı: ID=, Renk=Kırmızı, Beden=35, Adet=52, Gelir=49040.81
+Ürün detayı: ID=, Renk=altın sarısı, Beden=41, Adet=53, Gelir=47208.40000000001
+Ürün detayı: ID=, Renk=Bej, Beden=40, Adet=36, Gelir=44535.34
+Ürün detayı: ID=, Renk=yeşil, Beden=38, Adet=40, Gelir=42029.69000000003
+Ürün detayı: ID=, Renk=Siyah-Süet, Beden=41, Adet=51, Gelir=41194.13000000001
+Ürün detayı: ID=, Renk=Açık Mavi, Beden=39, Adet=37, Gelir=40793.18000000001
+Ürün detayı: ID=, Renk=Ten Rengi, Beden=36, Adet=33, Gelir=38207.86000000001
+INFO:werkzeug:172.31.128.111 - - [12/Feb/2025 09:57:37] "GET /api/sales-stats HTTP/1.1" 200 -

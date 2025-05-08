@@ -1,0 +1,27 @@
+INFO:werkzeug:Press CTRL+C to quit
+INFO:root:İşlenecek 'Created' statüsünde sipariş yok.
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:46:43] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:46:43] "GET /static/logo/gullu.png HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:46:46] "GET /siparis_fisi_sayfasi HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:46:46] "GET /static/logo/gullu.png HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:46:46] "GET /static/images/0799653335897.jpg HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:46:47] "GET /static/images/079965335555.jpg HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:46:47] "GET /static/images/73025681568.jpg HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:46:47] "GET /static/images/03523709846.jpg HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:46:47] "GET /static/images/03523709813.jpg HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:46:47] "GET /static/images/98523098314143.jpg HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:46:47] "GET /static/images/7302568154255.jpg HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:46:47] "GET /static/images/85546466.jpg HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:46:49] "GET /siparis_fisi/olustur HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:46:55] "GET /get_product_details/006 HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:47:01] "GET /get_product_details/1313 HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:47:08] "GET /get_product_details/1313 HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:47:13] "POST /siparis_fisi/olustur HTTP/1.1" 302 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:47:14] "GET /siparis_fisi_sayfasi HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:47:14] "GET /static/images/98523782317.jpg HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:47:15] "GET /static/logo/gullu.png HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:47:15] "GET /static/images/0799653335897.jpg HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:47:15] "GET /static/images/079965335555.jpg HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:47:15] "GET /static/images/73025681568.jpg HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:47:15] "GET /static/images/03523709846.jpg HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 14:47:15] "GET /static/images/03523709813.jpg HTTP/1.1" 304 -

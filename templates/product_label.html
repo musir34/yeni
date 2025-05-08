@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Kod Etiketi Oluştur</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
+
+        .form-container {
+            width: 300px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .form-container h2 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        /* Etiket Alanı */
+        .label-container {
+            width: 60mm; /* Etiket genişliği: 60mm */
+            height: 40mm; /* Etiket yüksekliği: 40mm */
+            background-color: white;
+            display: flex; /* Flexbox kullanıyoruz */
+            flex-direction: row; /* Öğeleri yan yana diz */
+            align-items: center; /* Öğeleri dikeyde ortala */
+            border: 1px solid black;
+            padding: 1.5mm; /* Kenarlardan biraz daha boşluk bırakalım */
+            box-sizing: border-box; /* Padding dahil genişlik ve yükseklik */
+            overflow: hidden; /* Taşmaları gizle */
+        }
+
+        /* QR Kod ve Altındaki Barkod Alanı */
+        .qr-and-barcode-area {
+            display: flex;
+            flex-direction: column; /* İçindeki öğeleri (QR ve barkod) alt alta diz */
+            align-items: center; /* İçindeki öğeleri yatayda ortala */
+            flex-shrink: 0; /* Küçülmesini engelle */
+            margin-right: 3mm; /* Sağdaki yazı alanıyla arasını aç */
+             width: 100px; /* QR genişliği kadar bir genişlik verelim */
+        }
+
+
+        /* QR Kod Boyutu */
+        .qr-area {
+            width: 100px; /* QR kod genişliği */
+            height: 100px; /* QR kod yüksekliği */
+            display: flex; /* İçindeki görseli ortalamak için */
+            justify-content: center;
+            align-items: center;
+             margin-bottom: 1mm; /* QR ile altındaki barkod arasına boşluk */
+        }
+
+        .qr-area img {
+            max-width: 100%; /* Alanın genişliğini aşma */
+            max-height: 100%; /* Alanın yüksekliğini aşma */
+             width: 100%; /* Alanı tam doldur */
+             height: 100%; /* Alanı tam doldur */
+            object-fit: contain; /* Görselin oranını bozmadan sığdır */
+        }
+
+        /* QR Altındaki Barkod Yazısı */
+        .barcode-text-under-qr {
+            font-size: 14px; /* Küçük puntoda barkod numarası */
+            text-align: center; /* Ortala */
+            word-break: break-all; /* Gerekirse kelimeyi kırarak sığdır */
+            max-width: 100%; /* Kendi alanından (100px) taşma */
+            overflow: hidden;
+            font-weight: bold; /* Barkod numarasını da belirgin yapalım */
+        }
+
+
+        /* Ürün Bilgisi Alanı (Sağ Taraf) */
+        .text-area {
+            flex-grow: 1; /* Kalan alanı kapla */
+            height: 100%; /* Yüksekliği etiket yüksekliği kadar yap */
+            display: flex;
+            flex-direction: column; /* Yazıları alt alta sırala */
+            justify-content: center; /* Yazıları dikeyde ortala */
+            text-align: left; /* Yazıları sola yasla */
+            font-size: 17px; /* Yazı boyutunu ayarla */
+            overflow: hidden; /* Taşmaları gizle */
+            padding-right: 1.5mm; /* Sağdan hafif boşluk */
+        }
+
+        .product-info {
+             /* flex column zaten text-area'da ayarlı, bu div sadece içerik sarıcı */
+            word-break: break-word; /* Uzun kelimeleri kırarak sığdır */
+        }
+
+        .product-info div {
+            /* Her bir bilgi satırı için (Model, Renk, Beden) */
+            margin-bottom: 7px; /* Satır aralarını aç (bir tık daha fazla) */
+            line-height: 1.2; /* Satır içindeki yazıların aralığı */
+        }
+
+        .product-info div:last-child {
+            margin-bottom: 0; /* Son satırın altına boşluk ekleme */
+        }
+
+
+        .product-info .label {
+            font-weight: bold; /* Başlıkları kalın yap (Model:, Renk:, Beden:) */
+            margin-right: 3px; /* Başlık ile değer arasına boşluk */
+        }
+
+         .product-info .value {
+             font-weight: normal; /* Değerleri normal yap */
+         }
+
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            width: 300px;
+            margin-top: 20px;
+        }
+
+        .nav-buttons a {
+            text-decoration: none;
+            color: white;
+            background-color: #007bff;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 16px;
+            text-align: center;
+            transition: background-color 0.3s;
+            width: 48%;
+        }
+
+        .nav-buttons a:hover {
+            background-color: #0056b3;
+        }
+
+        /* Yazdırma Ayarları */
+        @media print {
+            @page {
+                size: 60mm 40mm; /* Yazdırma boyutu: 60x40mm */
+                margin: 0;
+            }
+
+            body {
+                display: block; /* Yazdırırken flex yerine block daha uygun olabilir */
+                width: 60mm; /* Yazdırma body genişliği */
+                height: 40mm; /* Yazdırma body yüksekliği */
+                margin: 0;
+                background-color: white;
+            }
+
+            .form-container,
+            .nav-buttons,
+            button {
+                display: none; /* Form ve butonları gizle */
+            }
+
+            .label-container {
+                width: 60mm; /* Yazdırma etiket genişliği */
+                height: 40mm; /* Yazdırma etiket yüksekliği */
+                border: none; /* Yazdırırken çerçeve olmasın */
+                padding: 0; /* Yazdırmada padding olmasın */
+                margin: 0;
+                box-sizing: border-box;
+                 display: flex;
+                 flex-direction: row;
+                 align-items: center;
+                 justify-content: space-between; /* İçeriği iki yana yasla */
+            }
+
+             .qr-and-barcode-area {
+                 display: flex;
+                 flex-direction: column;
+                 align-items: center;
+                 flex-shrink: 0;
+                 margin-right: 3mm;
+                 width: 100px; /* QR genişliği kadar bir genişlik verelim */
+                 padding: 0; /* Yazdırmada padding olmasın */
+             }
+
+             .qr-area {
+                width: 100px; /* Yazdırmada da 100px QR */
+                height: 100px;
+                 margin-bottom: 1mm;
+                 padding: 0; /* Yazdırmada padding olmasın */
+            }
+
+             .qr-area img {
+                 width: 100%;
+                 height: 100%;
+                 object-fit: contain;
+             }
+
+             .barcode-text-under-qr {
+                 font-size: 9px; /* Yazdırmada biraz daha küçük font daha iyi olabilir */
+                 text-align: center;
+                 word-break: break-all;
+                 max-width: 100%;
+                 overflow: hidden;
+                 font-weight: bold;
+             }
+
+
+            .text-area {
+                flex-grow: 1;
+                height: 100%;
+                padding: 0 1.5mm 0 0; /* Sağdan boşluk */
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                text-align: left;
+                font-size: 11px; /* Yazdırmada biraz daha küçük font */
+            }
+
+             .product-info {
+                 word-break: break-word;
+             }
+
+             .product-info div {
+                 margin-bottom: 3px; /* Yazdırmada satır araları (ekrandan az) */
+                 line-height: 1.2;
+             }
+              .product-info div:last-child {
+                margin-bottom: 0;
+            }
+
+             .product-info .label {
+                 font-weight: bold;
+                 margin-right: 3px;
+             }
+
+              .product-info .value {
+                 font-weight: normal;
+             }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="form-container no-print">
+        <h2>Etiket Bilgileri</h2>
+        <input type="text" id="barcode-input" placeholder="Barkod" required>
+        <input type="text" id="model-input" placeholder="Model Kodu" required>
+        <input type="text" id="color-input" placeholder="Renk" required>
+        <input type="text" id="size-input" placeholder="Beden" required>
+
+        <button type="button" onclick="generateAndPrintFromForm()">Etiket Oluştur & Yazdır</button>
+    </div>
+
+    <div class="label-container" id="label">
+        <div class="qr-and-barcode-area">
+             <div class="qr-area">
+                 <img id="qr-code-image" src="https://via.placeholder.com/100" alt="QR Kod Placeholder"> </div>
+             <div class="barcode-text-under-qr" id="barcode-text-under-qr">
+                 </div>
+        </div>
+
+        <div class="text-area">
+             <div class="product-info">
+                 <div><span class="label">Model:</span> <span class="value" id="model-value"></span></div>
+                 <div><span class="label">Renk:</span> <span class="value" id="color-value"></span></div>
+                 <div><span class="label">Beden:</span> <span class="value" id="size-value"></span></div>
+             </div>
+        </div>
+    </div>
+
+    <div class="nav-buttons no-print">
+        <a href="/">Ana Sayfa</a>
+        <a href="/product_list">Ürün Listesi</a>
+    </div>
+
+    <script>
+        // Etiket oluşturma ve yazdırma fonksiyonu (artık değerleri parametre olarak alıyor ve görselin yüklenmesini bekliyor)
+        function generateLabelAndPrint(barcode, model, color, size) {
+            const qrCodeImage = document.getElementById('qr-code-image');
+            const barcodeTextUnderQr = document.getElementById('barcode-text-under-qr');
+            const modelValue = document.getElementById('model-value');
+            const colorValue = document.getElementById('color-value');
+            const sizeValue = document.getElementById('size-value');
+
+            // Önceki görsel yükleme olay dinleyicilerini temizle (olabilir ki arka arkaya hızlı basıldı)
+            // Basitçe img src değiştiğinde load/error olayları yeniden tetiklenir, dinleyiciyi bir kere kurup sonra kaldırmak daha güvenli.
+             const cleanUpListeners = () => {
+                 qrCodeImage.removeEventListener('load', onQrLoad);
+                 qrCodeImage.removeEventListener('error', onQrError);
+             };
+
+             const onQrLoad = () => {
+                 console.log("QR Kod yüklendi, yazdırma başlatılıyor...");
+                 cleanUpListeners(); // Dinleyicileri kaldır
+                 window.print(); // Görsel yüklenince yazdırma ekranını aç
+             };
+
+             const onQrError = () => {
+                 console.error("QR Kod yüklenirken hata oluştu.");
+                 cleanUpListeners(); // Dinleyicileri kaldır
+                 alert("QR Kod görseli yüklenirken hata oluştu. Yazdırma yapılamıyor.");
+                 // Hata durumunda placeholder görseli zaten ayarlanmış olacak
+             };
+
+            // Görsel yükleme ve hata olay dinleyicilerini kur
+            qrCodeImage.addEventListener('load', onQrLoad);
+            qrCodeImage.addEventListener('error', onQrError);
+
+
+            // QR Altındaki Barkod değerini güncelle (Sadece değer)
+            barcodeTextUnderQr.textContent = barcode;
+
+            // Sağdaki diğer bilgileri güncelle
+            modelValue.textContent = model;
+            colorValue.textContent = color;
+            sizeValue.textContent = size;
+
+            // Backend'den QR kod görselini çek
+            // Bu satır görsel yüklemeyi tetikler ve yukarıdaki olay dinleyicileri devreye girer
+             fetch(`/generate_qr?barcode=${encodeURIComponent(barcode)}`) // Barkodu URL'ye ekleyip backend'e gönder
+                .then(response => {
+                     if (!response.ok) {
+                         // Fetch hatası durumunda da görselin error event'i tetiklenmeyebilir,
+                         // bu yüzden burada da hata mesajı gösterelim ve görseli placeholder'a çevirelim.
+                        return response.text().then(text => { throw new Error(`HTTP error! status: ${response.status}, message: ${text}`); });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Görsel yolunu ayarla. Bu, görselin yüklenmesini başlatır.
+                        qrCodeImage.src = data.qr_code_path;
+                         qrCodeImage.alt = 'QR Kod: ' + barcode;
+                         // >>> window.print() artık BURADA DEĞİL <<<
+                         // window.print() görselin 'load' eventi içinde çağrılacak.
+                    } else {
+                         // Backend başarı dönmediyse
+                        alert('QR Kod oluşturma başarısız: ' + (data.message || 'Bilinmeyen hata'));
+                         qrCodeImage.src = 'https://via.placeholder.com/100?text=Hata'; // Hata durumunda placeholder göster
+                         qrCodeImage.alt = 'QR Kod Hatası';
+                          // Hata olursa yazdırma ekranını açma, hata dinleyicisi bunu halledecek
+                    }
+                })
+                .catch(err => {
+                    // Fetch sırasında ağ hatası vs olursa
+                    console.error('QR Kod oluşturulurken fetch hatası:', err);
+                    alert('QR Kod oluşturulurken bir ağ hatası oluştu. Detaylar konsolda.');
+                    qrCodeImage.src = 'https://via.placeholder.com/100?text=Ağ+Hata'; // Ağ hatası placeholder göster
+                    qrCodeImage.alt = 'QR Kod Ağ Hatası';
+                     // Hata olursa yazdırma ekranını açma, hata dinleyicisi veya burada gösterilen alert yeterli
+                });
+        }
+
+        // Form butonuna basınca çalışacak fonksiyon
+        function generateAndPrintFromForm() {
+             const barcode = document.getElementById('barcode-input').value;
+             const model = document.getElementById('model-input').value;
+             const color = document.getElementById('color-input').value;
+             const size = document.getElementById('size-input').value;
+
+             if (!barcode || !model || !color || !size) {
+                alert("Lütfen tüm alanları doldurun.");
+                return;
+            }
+
+            // Formdan alınan değerlerle etiket oluştur ve yazdırma işlemini başlat
+            generateLabelAndPrint(barcode, model, color, size);
+        }
+
+
+        // Sayfa yüklendiğinde URL'den gelen parametreleri kontrol et
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const barcode = urlParams.get('barcode');
+            const model = urlParams.get('model');
+            const color = urlParams.get('color');
+            const size = urlParams.get('size');
+
+            // Eğer URL'de tüm gerekli bilgiler varsa, otomatik oluştur ve yazdır
+            if (barcode && model && color && size) {
+                // Form alanlarını doldur (kullanıcı görsün diye)
+                 document.getElementById('barcode-input').value = barcode;
+                 document.getElementById('model-input').value = model;
+                 document.getElementById('color-input').value = color;
+                 document.getElementById('size-input').value = size;
+
+                // Etiketi oluştur ve yazdırma işlemini başlat
+                generateLabelAndPrint(barcode, model, color, size);
+            } else {
+                 console.log("URL'de eksik bilgi var veya hiç yok, otomatik etiket oluşturulmayacak.");
+            }
+        };
+
+        // Form ve Navigasyon butonlarını yazdırmada gizlemek için CSS'e .no-print class'ı eklendi.
+        // HTML'de bu class ilgili div'lere eklendi.
+    </script>
+
+</body>
+
+</html>

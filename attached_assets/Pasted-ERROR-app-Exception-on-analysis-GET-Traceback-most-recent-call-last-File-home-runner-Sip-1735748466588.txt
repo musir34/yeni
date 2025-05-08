@@ -1,0 +1,35 @@
+ERROR:app:Exception on /analysis [GET]
+Traceback (most recent call last):
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/base.py", line 2181, in _entity_namespace_key
+    return getattr(ns, key)  # type: ignore
+           ^^^^^^^^^^^^^^^^
+AttributeError: type object 'ReturnOrder' has no attribute 'barcode'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/analysis.py", line 67, in analysis
+    return_count = ReturnOrder.query.filter_by(barcode=product.barcode).count()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 1983, in filter_by
+    clauses = [
+              ^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 1984, in <listcomp>
+    _entity_namespace_key(from_entity, key) == value
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/base.py", line 2183, in _entity_namespace_key
+    raise exc.InvalidRequestError(
+sqlalchemy.exc.InvalidRequestError: Entity namespace for "return_orders" has no property "barcode"
+INFO:werkzeug:172.31.196.15 - - [01/Jan/2025 16:20:56] "GET /analysis HTTP/1.1" 500 -

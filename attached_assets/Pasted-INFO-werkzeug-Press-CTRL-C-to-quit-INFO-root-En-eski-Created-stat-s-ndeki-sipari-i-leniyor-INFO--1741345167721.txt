@@ -1,0 +1,117 @@
+INFO:werkzeug:Press CTRL+C to quit
+INFO:root:En eski 'Created' statüsündeki sipariş işleniyor.
+INFO:root:Sipariş detayları: [{"barcode": "7302568154255", "converted_barcode": "7302568154255", "color": "Mavi", "size": "37", "sku": "099-37 Jeans", "productName": "Stiletto Kot Jeans Kadın Topuklu Ayakkabı Konforlu Vegan Deri Günlük Ve Özel Gün 099, 37", "productCode": "977715300", "product_main_id": "", "quantity": 1, "total_price": 1149.9, "image_url": "", "line_id": "3979031030", "total_quantity": 1}]
+INFO:werkzeug:172.31.128.68 - - [07/Mar/2025 10:58:32] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:172.31.128.68 - - [07/Mar/2025 10:58:33] "GET /static/logo/gullu.png HTTP/1.1" 304 -
+INFO:werkzeug:172.31.128.68 - - [07/Mar/2025 10:58:33] "GET /static/images/7302568154255.jpg HTTP/1.1" 200 -
+INFO:werkzeug:172.31.128.68 - - [07/Mar/2025 10:58:37] "GET /analysis HTTP/1.1" 200 -
+INFO:werkzeug:172.31.128.68 - - [07/Mar/2025 10:58:37] "GET /static/logo/gullu.png HTTP/1.1" 304 -
+2025-03-07 10:58:37,895 - analysis - INFO - API isteği başladı
+INFO:analysis:API isteği başladı
+2025-03-07 10:58:37,895 - analysis - INFO - Tarih aralığı: 2024-12-07 10:58:37.895902 - 2025-03-07 10:58:37.895902
+INFO:analysis:Tarih aralığı: 2024-12-07 10:58:37.895902 - 2025-03-07 10:58:37.895902
+2025-03-07 10:58:38,391 - analysis - INFO - Ürün satışları sorgusu başlıyor...
+INFO:analysis:Ürün satışları sorgusu başlıyor...
+2025-03-07 10:58:38,650 - analysis - INFO - Bulunan ürün satışı sayısı: 50
+INFO:analysis:Bulunan ürün satışı sayısı: 50
+2025-03-07 10:58:38,650 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=70, Miktar=None, Gelir=59894.62 TL, Ort. Fiyat=855.64 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=70, Miktar=None, Gelir=59894.62 TL, Ort. Fiyat=855.64 TL
+2025-03-07 10:58:38,651 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=39, Adet=61, Miktar=None, Gelir=52453.32 TL, Ort. Fiyat=859.89 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=39, Adet=61, Miktar=None, Gelir=52453.32 TL, Ort. Fiyat=859.89 TL
+2025-03-07 10:58:38,651 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=61, Miktar=None, Gelir=51361.02 TL, Ort. Fiyat=841.98 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=61, Miktar=None, Gelir=51361.02 TL, Ort. Fiyat=841.98 TL
+2025-03-07 10:58:38,651 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=51, Miktar=None, Gelir=47164.20 TL, Ort. Fiyat=924.79 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=51, Miktar=None, Gelir=47164.20 TL, Ort. Fiyat=924.79 TL
+2025-03-07 10:58:38,651 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah-Süet, Beden=39, Adet=59, Miktar=1, Gelir=44876.62 TL, Ort. Fiyat=760.62 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah-Süet, Beden=39, Adet=59, Miktar=1, Gelir=44876.62 TL, Ort. Fiyat=760.62 TL
+2025-03-07 10:58:38,651 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=46, Miktar=1, Gelir=42348.82 TL, Ort. Fiyat=920.63 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=46, Miktar=1, Gelir=42348.82 TL, Ort. Fiyat=920.63 TL
+2025-03-07 10:58:38,651 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=36, Adet=49, Miktar=None, Gelir=41526.52 TL, Ort. Fiyat=847.48 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=36, Adet=49, Miktar=None, Gelir=41526.52 TL, Ort. Fiyat=847.48 TL
+2025-03-07 10:58:38,651 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=39, Adet=42, Miktar=None, Gelir=37975.80 TL, Ort. Fiyat=904.19 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=39, Adet=42, Miktar=None, Gelir=37975.80 TL, Ort. Fiyat=904.19 TL
+2025-03-07 10:58:38,651 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=40, Miktar=None, Gelir=30451.50 TL, Ort. Fiyat=761.29 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=40, Miktar=None, Gelir=30451.50 TL, Ort. Fiyat=761.29 TL
+2025-03-07 10:58:38,651 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=29, Miktar=29, Gelir=29326.13 TL, Ort. Fiyat=1011.25 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=29, Miktar=29, Gelir=29326.13 TL, Ort. Fiyat=1011.25 TL
+2025-03-07 10:58:38,651 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah-Süet, Beden=37, Adet=36, Miktar=None, Gelir=28003.58 TL, Ort. Fiyat=777.88 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah-Süet, Beden=37, Adet=36, Miktar=None, Gelir=28003.58 TL, Ort. Fiyat=777.88 TL
+2025-03-07 10:58:38,651 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=28, Miktar=28, Gelir=26106.68 TL, Ort. Fiyat=932.38 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=28, Miktar=28, Gelir=26106.68 TL, Ort. Fiyat=932.38 TL
+2025-03-07 10:58:38,651 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=40, Adet=29, Miktar=None, Gelir=25207.12 TL, Ort. Fiyat=869.21 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=40, Adet=29, Miktar=None, Gelir=25207.12 TL, Ort. Fiyat=869.21 TL
+2025-03-07 10:58:38,652 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=26, Miktar=26, Gelir=24349.89 TL, Ort. Fiyat=936.53 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=26, Miktar=26, Gelir=24349.89 TL, Ort. Fiyat=936.53 TL
+2025-03-07 10:58:38,652 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah-Süet, Beden=38, Adet=31, Miktar=None, Gelir=23586.01 TL, Ort. Fiyat=760.84 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah-Süet, Beden=38, Adet=31, Miktar=None, Gelir=23586.01 TL, Ort. Fiyat=760.84 TL
+2025-03-07 10:58:38,652 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=22, Miktar=22, Gelir=23168.57 TL, Ort. Fiyat=1053.12 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=22, Miktar=22, Gelir=23168.57 TL, Ort. Fiyat=1053.12 TL
+2025-03-07 10:58:38,652 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=24, Miktar=24, Gelir=23032.49 TL, Ort. Fiyat=959.69 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=24, Miktar=24, Gelir=23032.49 TL, Ort. Fiyat=959.69 TL
+2025-03-07 10:58:38,652 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=23, Miktar=23, Gelir=22829.15 TL, Ort. Fiyat=992.57 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=23, Miktar=23, Gelir=22829.15 TL, Ort. Fiyat=992.57 TL
+2025-03-07 10:58:38,652 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=22, Miktar=22, Gelir=22773.19 TL, Ort. Fiyat=1035.15 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=22, Miktar=22, Gelir=22773.19 TL, Ort. Fiyat=1035.15 TL
+2025-03-07 10:58:38,652 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=23, Miktar=23, Gelir=22428.74 TL, Ort. Fiyat=975.16 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=23, Miktar=23, Gelir=22428.74 TL, Ort. Fiyat=975.16 TL
+2025-03-07 10:58:38,652 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=36, Adet=25, Miktar=None, Gelir=22166.74 TL, Ort. Fiyat=886.67 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=36, Adet=25, Miktar=None, Gelir=22166.74 TL, Ort. Fiyat=886.67 TL
+2025-03-07 10:58:38,652 - analysis - INFO - Ürün detayı: ID=, Renk=Ten Rengi, Beden=38, Adet=24, Miktar=1, Gelir=22040.40 TL, Ort. Fiyat=918.35 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Ten Rengi, Beden=38, Adet=24, Miktar=1, Gelir=22040.40 TL, Ort. Fiyat=918.35 TL
+2025-03-07 10:58:38,652 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=39, Adet=23, Miktar=23, Gelir=21813.06 TL, Ort. Fiyat=948.39 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=39, Adet=23, Miktar=23, Gelir=21813.06 TL, Ort. Fiyat=948.39 TL
+2025-03-07 10:58:38,652 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=39, Adet=22, Miktar=22, Gelir=21664.58 TL, Ort. Fiyat=984.75 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=39, Adet=22, Miktar=22, Gelir=21664.58 TL, Ort. Fiyat=984.75 TL
+2025-03-07 10:58:38,652 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=22, Miktar=22, Gelir=21566.43 TL, Ort. Fiyat=980.29 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=22, Miktar=22, Gelir=21566.43 TL, Ort. Fiyat=980.29 TL
+2025-03-07 10:58:38,652 - analysis - INFO - Ürün detayı: ID=, Renk=Açık Yeşil, Beden=38, Adet=24, Miktar=10, Gelir=21123.71 TL, Ort. Fiyat=880.15 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Açık Yeşil, Beden=38, Adet=24, Miktar=10, Gelir=21123.71 TL, Ort. Fiyat=880.15 TL
+2025-03-07 10:58:38,652 - analysis - INFO - Ürün detayı: ID=, Renk=Kırmızı, Beden=37, Adet=25, Miktar=1, Gelir=21121.07 TL, Ort. Fiyat=844.84 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Kırmızı, Beden=37, Adet=25, Miktar=1, Gelir=21121.07 TL, Ort. Fiyat=844.84 TL
+2025-03-07 10:58:38,652 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=20, Miktar=20, Gelir=21108.93 TL, Ort. Fiyat=1055.45 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=20, Miktar=20, Gelir=21108.93 TL, Ort. Fiyat=1055.45 TL
+2025-03-07 10:58:38,653 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=28, Miktar=1, Gelir=20757.55 TL, Ort. Fiyat=741.34 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=28, Miktar=1, Gelir=20757.55 TL, Ort. Fiyat=741.34 TL
+2025-03-07 10:58:38,653 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=41, Adet=24, Miktar=None, Gelir=20385.56 TL, Ort. Fiyat=849.40 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=41, Adet=24, Miktar=None, Gelir=20385.56 TL, Ort. Fiyat=849.40 TL
+2025-03-07 10:58:38,653 - analysis - INFO - Ürün detayı: ID=, Renk=Açık Yeşil, Beden=37, Adet=18, Miktar=18, Gelir=19043.39 TL, Ort. Fiyat=1057.97 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Açık Yeşil, Beden=37, Adet=18, Miktar=18, Gelir=19043.39 TL, Ort. Fiyat=1057.97 TL
+2025-03-07 10:58:38,653 - analysis - INFO - Ürün detayı: ID=, Renk=Kırmızı, Beden=39, Adet=22, Miktar=1, Gelir=18950.31 TL, Ort. Fiyat=861.38 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Kırmızı, Beden=39, Adet=22, Miktar=1, Gelir=18950.31 TL, Ort. Fiyat=861.38 TL
+2025-03-07 10:58:38,653 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=19, Miktar=19, Gelir=18490.39 TL, Ort. Fiyat=973.18 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=19, Miktar=19, Gelir=18490.39 TL, Ort. Fiyat=973.18 TL
+2025-03-07 10:58:38,653 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=39, Adet=24, Miktar=2, Gelir=17984.09 TL, Ort. Fiyat=749.34 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=39, Adet=24, Miktar=2, Gelir=17984.09 TL, Ort. Fiyat=749.34 TL
+2025-03-07 10:58:38,653 - analysis - INFO - Ürün detayı: ID=, Renk=Açık Yeşil, Beden=37, Adet=20, Miktar=8, Gelir=17593.47 TL, Ort. Fiyat=879.67 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Açık Yeşil, Beden=37, Adet=20, Miktar=8, Gelir=17593.47 TL, Ort. Fiyat=879.67 TL
+2025-03-07 10:58:38,653 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=17, Miktar=17, Gelir=17529.48 TL, Ort. Fiyat=1031.15 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=17, Miktar=17, Gelir=17529.48 TL, Ort. Fiyat=1031.15 TL
+2025-03-07 10:58:38,653 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=36, Adet=23, Miktar=None, Gelir=17416.45 TL, Ort. Fiyat=757.24 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=36, Adet=23, Miktar=None, Gelir=17416.45 TL, Ort. Fiyat=757.24 TL
+2025-03-07 10:58:38,653 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=39, Adet=18, Miktar=18, Gelir=16784.37 TL, Ort. Fiyat=932.46 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=39, Adet=18, Miktar=18, Gelir=16784.37 TL, Ort. Fiyat=932.46 TL
+2025-03-07 10:58:38,653 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah-Süet, Beden=40, Adet=23, Miktar=None, Gelir=16746.93 TL, Ort. Fiyat=728.13 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah-Süet, Beden=40, Adet=23, Miktar=None, Gelir=16746.93 TL, Ort. Fiyat=728.13 TL
+2025-03-07 10:58:38,653 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=17, Miktar=17, Gelir=16350.57 TL, Ort. Fiyat=961.80 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=17, Miktar=17, Gelir=16350.57 TL, Ort. Fiyat=961.80 TL
+2025-03-07 10:58:38,654 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=17, Miktar=17, Gelir=16305.54 TL, Ort. Fiyat=959.15 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=17, Miktar=17, Gelir=16305.54 TL, Ort. Fiyat=959.15 TL
+2025-03-07 10:58:38,654 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=40, Adet=17, Miktar=1, Gelir=15873.43 TL, Ort. Fiyat=933.73 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=40, Adet=17, Miktar=1, Gelir=15873.43 TL, Ort. Fiyat=933.73 TL
+2025-03-07 10:58:38,654 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=36, Adet=16, Miktar=16, Gelir=15443.79 TL, Ort. Fiyat=965.24 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=36, Adet=16, Miktar=16, Gelir=15443.79 TL, Ort. Fiyat=965.24 TL
+2025-03-07 10:58:38,654 - analysis - INFO - Ürün detayı: ID=, Renk=Kırmızı, Beden=36, Adet=17, Miktar=4, Gelir=15414.64 TL, Ort. Fiyat=906.74 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Kırmızı, Beden=36, Adet=17, Miktar=4, Gelir=15414.64 TL, Ort. Fiyat=906.74 TL
+2025-03-07 10:58:38,654 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=39, Adet=16, Miktar=16, Gelir=15378.15 TL, Ort. Fiyat=961.13 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=39, Adet=16, Miktar=16, Gelir=15378.15 TL, Ort. Fiyat=961.13 TL
+2025-03-07 10:58:38,654 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah-Süet, Beden=38, Adet=17, Miktar=17, Gelir=15334.18 TL, Ort. Fiyat=902.01 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah-Süet, Beden=38, Adet=17, Miktar=17, Gelir=15334.18 TL, Ort. Fiyat=902.01 TL
+2025-03-07 10:58:38,654 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=15, Miktar=15, Gelir=14836.40 TL, Ort. Fiyat=989.09 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=38, Adet=15, Miktar=15, Gelir=14836.40 TL, Ort. Fiyat=989.09 TL
+2025-03-07 10:58:38,654 - analysis - INFO - Ürün detayı: ID=, Renk=Kırmızı, Beden=38, Adet=19, Miktar=1, Gelir=14835.64 TL, Ort. Fiyat=780.82 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Kırmızı, Beden=38, Adet=19, Miktar=1, Gelir=14835.64 TL, Ort. Fiyat=780.82 TL
+2025-03-07 10:58:38,654 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=36, Adet=16, Miktar=16, Gelir=14576.97 TL, Ort. Fiyat=911.06 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=36, Adet=16, Miktar=16, Gelir=14576.97 TL, Ort. Fiyat=911.06 TL
+2025-03-07 10:58:38,654 - analysis - INFO - Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=14, Miktar=14, Gelir=14514.80 TL, Ort. Fiyat=1036.77 TL
+INFO:analysis:Ürün detayı: ID=, Renk=Siyah, Beden=37, Adet=14, Miktar=14, Gelir=14514.80 TL, Ort. Fiyat=1036.77 TL
+INFO:werkzeug:172.31.128.68 - - [07/Mar/2025 10:58:40] "GET /api/sales-stats HTTP/1.1" 200 -

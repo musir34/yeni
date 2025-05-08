@@ -1,0 +1,51 @@
+.1" 200 -
+INFO:werkzeug:172.31.128.55 - - [17/Feb/2025 17:39:38] "GET /static/logo/gullu.png HTTP/1.1" 304 -
+INFO:werkzeug:172.31.128.55 - - [17/Feb/2025 17:39:43] "GET /analysis HTTP/1.1" 200 -
+INFO:werkzeug:172.31.128.55 - - [17/Feb/2025 17:39:44] "GET /static/logo/gullu.png HTTP/1.1" 304 -
+2025-02-17 17:39:47,962 - analysis - INFO - API isteği başladı
+INFO:analysis:API isteği başladı
+2025-02-17 17:39:47,962 - analysis - INFO - Tarih aralığı: 2024-11-19 17:39:47.962460 - 2025-02-17 17:39:47.962460
+INFO:analysis:Tarih aralığı: 2024-11-19 17:39:47.962460 - 2025-02-17 17:39:47.962460
+2025-02-17 17:39:48,435 - analysis - INFO - Ürün satışları sorgusu başlıyor...
+INFO:analysis:Ürün satışları sorgusu başlıyor...
+2025-02-17 17:39:48,685 - analysis - INFO - Bulunan ürün satışı sayısı: 50
+INFO:analysis:Bulunan ürün satışı sayısı: 50
+2025-02-17 17:39:48,685 - analysis - ERROR - Ürün satış verisi çekilirken hata oluştu:
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/result.py", line 199, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/result.py", line 138, in _key_fallback
+    raise KeyError(key) from err
+KeyError: 'product_main_id'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/workspace/analysis.py", line 82, in get_product_sales
+    f"Ürün detayı: ID={sale.product_main_id}, Renk={sale.color}, "
+                       ^^^^^^^^^^^^^^^^^^^^
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 66, in sqlalchemy.cyextension.resultproxy.BaseRow.__getattr__
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/result.py", line 201, in _key_not_found
+    raise AttributeError(ke.args[0]) from ke
+AttributeError: product_main_id
+ERROR:analysis:Ürün satış verisi çekilirken hata oluştu:
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/result.py", line 199, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/result.py", line 138, in _key_fallback
+    raise KeyError(key) from err
+KeyError: 'product_main_id'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/workspace/analysis.py", line 82, in get_product_sales
+    f"Ürün detayı: ID={sale.product_main_id}, Renk={sale.color}, "
+                       ^^^^^^^^^^^^^^^^^^^^
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 66, in sqlalchemy.cyextension.resultproxy.BaseRow.__getattr__
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/result.py", line 201, in _key_not_found
+    raise AttributeError(ke.args[0]) from ke
+AttributeError: product_main_id
+INFO:werkzeug:172.31.128.55 - - [17/Feb/2025 17:39:49] "GET /api/sales-stats HTTP/1.1" 200 -

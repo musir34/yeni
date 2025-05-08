@@ -1,0 +1,27 @@
+INFO:root:En eski 'Created' statüsündeki sipariş işleniyor.
+INFO:root:Sipariş detayları: [{"barcode": "85546466", "converted_barcode": "85546466", "color": "Kırmızı", "size": "37", "sku": "259-37 Kırmızı", "productName": "Kadın Topuklu Ayakkabı Kırmızı Stiletto Konforlu Vegan Deri Mat - Özel Gün Ve Günlük Kullanım 259, 37", "productCode": "970666912", "quantity": 1, "total_price": 712.85, "image_url": "", "total_quantity": 1}]
+INFO:werkzeug:172.31.196.29 - - [30/Dec/2024 08:45:57] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.29 - - [30/Dec/2024 08:45:57] "GET /static/images/85546466.jpg HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.29 - - [30/Dec/2024 08:45:57] "GET /static/logo/gullu.png HTTP/1.1" 304 -
+Received order_number: 9893856959
+Received barcodes: ['85546466', '85546466']
+Received barcodes (repr): ["'85546466'", "'85546466'"]
+Parsed details: [{'barcode': '85546466', 'converted_barcode': '85546466', 'color': 'Kırmızı', 'size': '37', 'sku': '259-37 Kırmızı', 'productName': 'Kadın Topuklu Ayakkabı Kırmızı Stiletto Konforlu Vegan Deri Mat - Özel Gün Ve Günlük Kullanım 259, 37', 'productCode': '970666912', 'quantity': 1, 'total_price': 712.85, 'image_url': '', 'total_quantity': 1}]
+Shipment Package IDs: {'2657562511'}
+Processing detail: {'barcode': '85546466', 'converted_barcode': '85546466', 'color': 'Kırmızı', 'size': '37', 'sku': '259-37 Kırmızı', 'productName': 'Kadın Topuklu Ayakkabı Kırmızı Stiletto Konforlu Vegan Deri Mat - Özel Gün Ve Günlük Kullanım 259, 37', 'productCode': '970666912', 'quantity': 1, 'total_price': 712.85, 'image_url': '', 'total_quantity': 1}
+Adding 2 copies of barcode: 85546466
+Expected barcodes after processing details: ['85546466', '85546466']
+Expected barcodes (repr): ["'85546466'", "'85546466'"]
+Comparing received barcodes (2): ['85546466', '85546466']
+With expected barcodes (2): ['85546466', '85546466']
+Barcodes match.
+Updated order status to 'Picking' for order_number: 9893856959
+Supplier ID: 481286, Shipment Package IDs: {'2657562511'}
+Detail line_id: None, quantity: 1, shipmentPackageId: 2657562511
+'line_id' değeri bulunamadı.
+INFO:werkzeug:172.31.196.29 - - [30/Dec/2024 08:46:04] "POST /confirm_packing HTTP/1.1" 302 -
+INFO:root:En eski 'Created' statüsündeki sipariş işleniyor.
+INFO:root:Sipariş detayları: [{"barcode": "73025681568", "converted_barcode": "73025681568", "color": "Açık Yeşil", "size": "37", "sku": "009-37 Açık Yeşil", "productName": "Kadın Topuklu Ayakkabı Açık Yeşil Stiletto Konforlu Günlük Ve Özel Günler Için Rugan Vegan Deri 9, 37", "productCode": "927447220", "quantity": 1, "total_price": 758.47, "image_url": "", "total_quantity": 1}]
+INFO:werkzeug:172.31.196.29 - - [30/Dec/2024 08:46:05] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.29 - - [30/Dec/2024 08:46:06] "GET /static/logo/gullu.png HTTP/1.1" 304 -
+INFO:werkzeug:172.31.196.29 - - [30/Dec/2024 08:46:06] "GET /static/images/73025681568.jpg HTTP/1.1" 304 -

@@ -1,0 +1,73 @@
+ERROR:root:Bir hata oluştu: (psycopg2.errors.UndefinedColumn) column orders.delivery_date does not exist
+LINE 1: ...chive_reason, orders.quantity AS orders_quantity, orders.del...
+                                                             ^
+
+[SQL: SELECT orders.id AS orders_id, orders.order_number AS orders_order_number, orders.order_date AS orders_order_date, orders.merchant_sku AS orders_merchant_sku, orders.product_barcode AS orders_product_barcode, orders.original_product_barcode AS orders_original_product_barcode, orders.status AS orders_status, orders.line_id AS orders_line_id, orders.match_status AS orders_match_status, orders.customer_name AS orders_customer_name, orders.customer_surname AS orders_customer_surname, orders.customer_address AS orders_customer_address, orders.shipping_barcode AS orders_shipping_barcode, orders.product_name AS orders_product_name, orders.product_code AS orders_product_code, orders.amount AS orders_amount, orders.discount AS orders_discount, orders.currency_code AS orders_currency_code, orders.vat_base_amount AS orders_vat_base_amount, orders.package_number AS orders_package_number, orders."stockCode" AS "orders_stockCode", orders.estimated_delivery_start AS orders_estimated_delivery_start, orders.images AS orders_images, orders.product_model_code AS orders_product_model_code, orders.estimated_delivery_end AS orders_estimated_delivery_end, orders.origin_shipment_date AS orders_origin_shipment_date, orders.product_size AS orders_product_size, orders.product_main_id AS orders_product_main_id, orders.cargo_provider_name AS orders_cargo_provider_name, orders.agreed_delivery_date AS orders_agreed_delivery_date, orders.product_color AS orders_product_color, orders.cargo_tracking_link AS orders_cargo_tracking_link, orders.shipment_package_id AS orders_shipment_package_id, orders.details AS orders_details, orders.archive_date AS orders_archive_date, orders.archive_reason AS orders_archive_reason, orders.quantity AS orders_quantity, orders.delivery_date AS orders_delivery_date 
+FROM orders 
+WHERE orders.status = %(status_1)s ORDER BY orders.order_date 
+ LIMIT %(param_1)s]
+[parameters: {'status_1': 'Created', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+Traceback (most recent call last):
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.UndefinedColumn: column orders.delivery_date does not exist
+LINE 1: ...chive_reason, orders.quantity AS orders_quantity, orders.del...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/Siparis-Yonetim/home.py", line 25, in get_home
+    oldest_order = Order.query.filter_by(status='Created').order_by(Order.order_date).first()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2728, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2827, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2362, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2247, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 305, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1418, in execute
+    return meth(
+           ^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) column orders.delivery_date does not exist
+LINE 1: ...chive_reason, orders.quantity AS orders_quantity, orders.del...
+                                                             ^
+
+[SQL: SELECT orders.id AS orders_id, orders.order_number AS orders_order_number, orders.order_date AS orders_order_date, orders.merchant_sku AS orders_merchant_sku, orders.product_barcode AS orders_product_barcode, orders.original_product_barcode AS orders_original_product_barcode, orders.status AS orders_status, orders.line_id AS orders_line_id, orders.match_status AS orders_match_status, orders.customer_name AS orders_customer_name, orders.customer_surname AS orders_customer_surname, orders.customer_address AS orders_customer_address, orders.shipping_barcode AS orders_shipping_barcode, orders.product_name AS orders_product_name, orders.product_code AS orders_product_code, orders.amount AS orders_amount, orders.discount AS orders_discount, orders.currency_code AS orders_currency_code, orders.vat_base_amount AS orders_vat_base_amount, orders.package_number AS orders_package_number, orders."stockCode" AS "orders_stockCode", orders.estimated_delivery_start AS orders_estimated_delivery_start, orders.images AS orders_images, orders.product_model_code AS orders_product_model_code, orders.estimated_delivery_end AS orders_estimated_delivery_end, orders.origin_shipment_date AS orders_origin_shipment_date, orders.product_size AS orders_product_size, orders.product_main_id AS orders_product_main_id, orders.cargo_provider_name AS orders_cargo_provider_name, orders.agreed_delivery_date AS orders_agreed_delivery_date, orders.product_color AS orders_product_color, orders.cargo_tracking_link AS orders_cargo_tracking_link, orders.shipment_package_id AS orders_shipment_package_id, orders.details AS orders_details, orders.archive_date AS orders_archive_date, orders.archive_reason AS orders_archive_reason, orders.quantity AS orders_quantity, orders.delivery_date AS orders_delivery_date 
+FROM orders 
+WHERE orders.status = %(status_1)s ORDER BY orders.order_date 
+ LIMIT %(param_1)s]
+[parameters: {'status_1': 'Created', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+INFO:werkzeug:172.31.196.53 - - [07/Jan/2025 08:42:17] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.53 - - [07/Jan/2025 08:42:17] "GET /static/logo/gullu.png HTTP/1.1" 304 -

@@ -1,0 +1,45 @@
+9819.jpg HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.33 - - [27/Jan/2025 18:09:58] "GET /static/images/0799653335545.jpg HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.33 - - [27/Jan/2025 18:09:58] "GET /static/images/0799653335859.jpg HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.33 - - [27/Jan/2025 18:09:58] "GET /static/images/07996533555563.jpg HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.33 - - [27/Jan/2025 18:09:59] "GET /static/images/0799653335408.jpg HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.33 - - [27/Jan/2025 18:09:59] "GET /static/images/0799653335927.jpg HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.33 - - [27/Jan/2025 18:10:02] "GET /search?query=259 HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.33 - - [27/Jan/2025 18:10:03] "GET /static/images/8521255522.jpg HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.33 - - [27/Jan/2025 18:10:03] "GET /static/images/852565215632.jpg HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.33 - - [27/Jan/2025 18:10:04] "GET /static/images/8528545.jpg HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.33 - - [27/Jan/2025 18:10:04] "GET /static/images/8456326336.jpg HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.33 - - [27/Jan/2025 18:10:04] "GET /static/images/85231223.jpg HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.33 - - [27/Jan/2025 18:10:04] "GET /static/images/854552345523.jpg HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.33 - - [27/Jan/2025 18:10:04] "GET /static/images/84563216336.jpg HTTP/1.1" 200 -
+INFO:get_products:Gelen istek - Model: 259, Renk: Bordo
+INFO:get_products:7 ürün bulundu.
+INFO:werkzeug:172.31.196.33 - - [27/Jan/2025 18:10:09] "GET /get_product_variants?model=259&color=Bordo HTTP/1.1" 200 -
+INFO:get_products:Gelen stok güncelleme isteği: ImmutableMultiDict([('84563216336', '0'), ('84556326336', '0'), ('84563426336', '0'), ('845632633647', '0'), ('845632633600', '0'), ('845632633601', '0'), ('845632633602', '0')])
+INFO:get_products:Güncellenecek ürün - Barkod: 84563216336, Yeni Stok: 0
+INFO:get_products:Güncellenecek ürün - Barkod: 84556326336, Yeni Stok: 0
+INFO:get_products:Güncellenecek ürün - Barkod: 84563426336, Yeni Stok: 0
+INFO:get_products:Güncellenecek ürün - Barkod: 845632633647, Yeni Stok: 0
+INFO:get_products:Güncellenecek ürün - Barkod: 845632633600, Yeni Stok: 0
+INFO:get_products:Güncellenecek ürün - Barkod: 845632633601, Yeni Stok: 0
+INFO:get_products:Güncellenecek ürün - Barkod: 845632633602, Yeni Stok: 0
+INFO:get_products:Veritabanındaki ürün sayısı: 823
+INFO:get_products:İşlenen barkod: 84563216336, miktar: 0
+INFO:get_products:Ürün bilgileri - Barkod: 84563216336, Satış Fiyatı: 1049.9, Liste Fiyatı: 1299.9, Döviz Cinsi: TRY
+INFO:get_products:İşlenen barkod: 84556326336, miktar: 0
+INFO:get_products:Ürün bilgileri - Barkod: 84556326336, Satış Fiyatı: 1049.9, Liste Fiyatı: 1299.9, Döviz Cinsi: TRY
+INFO:get_products:İşlenen barkod: 84563426336, miktar: 0
+INFO:get_products:Ürün bilgileri - Barkod: 84563426336, Satış Fiyatı: 1049.9, Liste Fiyatı: 1299.9, Döviz Cinsi: TRY
+INFO:get_products:İşlenen barkod: 845632633647, miktar: 0
+INFO:get_products:Ürün bilgileri - Barkod: 845632633647, Satış Fiyatı: 1049.9, Liste Fiyatı: 1299.9, Döviz Cinsi: TRY
+INFO:get_products:İşlenen barkod: 845632633600, miktar: 0
+INFO:get_products:Ürün bilgileri - Barkod: 845632633600, Satış Fiyatı: 1049.9, Liste Fiyatı: 1299.9, Döviz Cinsi: TRY
+INFO:get_products:İşlenen barkod: 845632633601, miktar: 0
+INFO:get_products:Ürün bilgileri - Barkod: 845632633601, Satış Fiyatı: 1049.9, Liste Fiyatı: 1299.9, Döviz Cinsi: TRY
+INFO:get_products:İşlenen barkod: 845632633602, miktar: 0
+INFO:get_products:Ürün bilgileri - Barkod: 845632633602, Satış Fiyatı: 1049.9, Liste Fiyatı: 1299.9, Döviz Cinsi: TRY
+INFO:get_products:API'ye gönderilecek ürün sayısı: 7
+INFO:get_products:API yanıtı: {'batchRequestId': 'f480a42a-dcd9-11ef-ac8a-1693f6f48071-1738015813'}
+INFO:get_products:Ürünler API üzerinden başarıyla güncellendi.
+INFO:get_products:Stoklar başarıyla güncellendi.
+INFO:werkzeug:172.31.196.33 - - [27/Jan/2025 18:10:14] "POST /update_stocks_ajax HTTP/1.1" 200 -

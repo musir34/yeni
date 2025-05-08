@@ -1,0 +1,149 @@
+ERROR:app:Exception on / [GET]
+Traceback (most recent call last):
+  File "/home/runner/Siparis-Yonetim/app.py", line 131, in custom_url_for
+    return url_for(endpoint, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 220, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1084, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1073, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'analysis_bp.analysis_page'. Did you mean 'siparis_fisi_bp.maliyet_fisi_yazdir' instead?
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/home.py", line 17, in home
+    return render_template('home.html', **order_data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/runner/Siparis-Yonetim/templates/home.html", line 242, in top-level template code
+    <a href="{{ url_for('analysis_bp.analysis_page') }}" class="btn btn-primary">Analiz Sayfası</a>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/app.py", line 139, in custom_url_for
+    raise BuildError(endpoint, values, method=None)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'analysis_bp.analysis_page'.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 772, in handle_user_exception
+    return self.ensure_sync(handler)(e)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/app.py", line 56, in handle_error
+    return jsonify({
+           ^^^^^^^^^
+TypeError: 'module' object is not callable
+ERROR:__main__:Beklenmeyen hata: 500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.
+INFO:werkzeug:172.31.196.81 - - [06/Jan/2025 12:22:29] "GET / HTTP/1.1" 500 -
+ERROR:werkzeug:Error on request:
+Traceback (most recent call last):
+  File "/home/runner/Siparis-Yonetim/app.py", line 131, in custom_url_for
+    return url_for(endpoint, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/helpers.py", line 220, in url_for
+    return current_app.url_for(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1084, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1073, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'analysis_bp.analysis_page'. Did you mean 'siparis_fisi_bp.maliyet_fisi_yazdir' instead?
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/home.py", line 17, in home
+    return render_template('home.html', **order_data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/runner/Siparis-Yonetim/templates/home.html", line 242, in top-level template code
+    <a href="{{ url_for('analysis_bp.analysis_page') }}" class="btn btn-primary">Analiz Sayfası</a>
+  File "/home/runner/Siparis-Yonetim/app.py", line 139, in custom_url_for
+    raise BuildError(endpoint, values, method=None)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'analysis_bp.analysis_page'.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 772, in handle_user_exception
+    return self.ensure_sync(handler)(e)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/app.py", line 56, in handle_error
+    return jsonify({
+           ^^^^^^^^^
+TypeError: 'module' object is not callable
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/werkzeug/serving.py", line 370, in run_wsgi
+    execute(self.server.app)
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/werkzeug/serving.py", line 331, in execute
+    application_iter = app(environ, start_response)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1498, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1476, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 823, in handle_exception
+    server_error = self.ensure_sync(handler)(server_error)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/Siparis-Yonetim/app.py", line 56, in handle_error
+    return jsonify({
+           ^^^^^^^^^
+TypeError: 'module' object is not callable

@@ -1,0 +1,20 @@
+INFO:__main__:Veritabanına başarıyla bağlanıldı ve tablolar oluşturuldu.
+/nix/store/wblvmd5y7izx0z10d1w7ga7zc4apjxmb-python3.11-setuptools-75.1.1/lib/python3.11/site-packages/_distutils_hack/__init__.py:16: UserWarning: Distutils was imported before Setuptools, but importing Setuptools also replaces the `distutils` module in `sys.modules`. This may lead to undesirable behaviors or errors. To avoid these issues, avoid using distutils directly, ensure that setuptools is installed in the traditional way (e.g. not an editable install), and/or make sure that setuptools is always imported before distutils.
+  warnings.warn(
+/nix/store/wblvmd5y7izx0z10d1w7ga7zc4apjxmb-python3.11-setuptools-75.1.1/lib/python3.11/site-packages/_distutils_hack/__init__.py:31: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+Traceback (most recent call last):
+  File "/home/runner/workspace/app.py", line 66, in <module>
+    from analysis import analysis_bp
+  File "/home/runner/workspace/analysis.py", line 3, in <module>
+    from extensions import db  # Aynı db instance'ını kullanıyoruz
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/extensions/__init__.py", line 2, in <module>
+    from extensions import dist
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/extensions/dist.py", line 9, in <module>
+    from extensions.command.install_egg_info import install_egg_info
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/extensions/command/install_egg_info.py", line 19, in <module>
+    from extensions.registry import stream_registered
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/extensions/registry.py", line 4, in <module>
+    from ConfigParser import ConfigParser
+ModuleNotFoundError: No module named 'ConfigParser'

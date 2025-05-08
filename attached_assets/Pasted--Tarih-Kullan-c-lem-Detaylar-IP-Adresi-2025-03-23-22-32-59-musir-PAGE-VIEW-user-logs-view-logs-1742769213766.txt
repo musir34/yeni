@@ -1,0 +1,31 @@
+
+Tarih	Kullanıcı	İşlem	Detaylar	IP Adresi
+2025-03-23 22:32:59	musir	PAGE_VIEW: user_logs.view_logs	
+{"action_details": {"path": "/user-logs", "endpoint": "user_logs.view_logs"}, "user_role": "admin", "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36", "method": "GET", "args": {}, "referrer": "https://5e5f38ec-4896-41e0-b881-d14c826de9d5-00-jybg4zhves9f.sisko.replit.dev/"}
+172.31.128.10
+2025-03-23 22:32:51	musir	PAGE_VIEW: home.home	
+{"action_details": {"path": "/", "endpoint": "home.home"}, "user_role": "admin", "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36", "method": "GET", "args": {}, "referrer": "https://5e5f38ec-4896-41e0-b881-d14c826de9d5-00-jybg4zhves9f.sisko.replit.dev/product_list"}
+172.31.128.10
+2025-03-23 22:32:45	musir	PAGE_VIEW: None	
+{"action_details": {"path": "/{}", "endpoint": null}, "user_role": "admin", "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36", "method": "GET", "args": {}, "referrer": "https://5e5f38ec-4896-41e0-b881-d14c826de9d5-00-jybg4zhves9f.sisko.replit.dev/product_list"}
+172.31.128.10
+2025-03-23 22:32:42	musir	PAGE_VIEW: get_products.product_list	
+{"action_details": {"path": "/product_list", "endpoint": "get_products.product_list"}, "user_role": "admin", "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36", "method": "GET", "args": {}, "referrer": "https://5e5f38ec-4896-41e0-b881-d14c826de9d5-00-jybg4zhves9f.sisko.replit.dev/product_list"}
+172.31.128.10
+2025-03-23 22:32:28	musir	PAGE_VIEW: get_products.update_products_route	
+{"action_details": {"path": "/update_products", "endpoint": "get_products.update_products_route"}, "user_role": "admin", "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36", "method": "POST", "args": {}, "referrer": "https://5e5f38ec-4896-41e0-b881-d14c826de9d5-00-jybg4zhves9f.sisko.replit.dev/product_list"}
+172.31.128.10
+2025-03-23 22:32:21	musir	PAGE_VIEW: get_products.get_product_variants	
+{"action_details": {"path": "/get_product_variants", "endpoint": "get_products.get_product_variants"}, "user_role": "admin", "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36", "method": "GET", "args": {"model": "0023", "color": "Bej Mat"}, "referrer": "https://5e5f38ec-4896-41e0-b881-d14c826de9d5-00-jybg4zhves9f.sisko.replit.dev/product_list"}
+172.31.128.10
+2025-03-23 22:32:17	musir	PAGE_VIEW: None	
+{"action_details": {"path": "/{}", "endpoint": null}, "user_role": "admin", "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36", "method": "GET", "args": {}, "referrer": "https://5e5f38ec-4896-41e0-b881-d14c826de9d5-00-jybg4zhves9f.sisko.replit.dev/product_list"}
+172.31.128.10
+2025-03-23 22:32:16	musir	PAGE_VIEW: None	
+{"action_details": {"path": "/{}", "endpoint": null}, "user_role": "admin", "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36", "method": "GET", "args": {}, "referrer": "https://5e5f38ec-4896-41e0-b881-d14c826de9d5-00-jybg4zhves9f.sisko.replit.dev/product_list"}
+172.31.128.10
+2025-03-23 22:32:13	musir	PAGE_VIEW: get_products.product_list	
+{"action_details": {"path": "/product_list", "endpoint": "get_products.product_list"}, "user_role": "admin", "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36", "method": "GET", "args": {}, "referrer": "https://5e5f38ec-4896-41e0-b881-d14c826de9d5-00-jybg4zhves9f.sisko.replit.dev/"}
+172.31.128.10
+2025-03-23 22:32:00	musir	PAGE_VIEW: home.home	
+{"action_details": {"path": "/", "endpoint": "home.home"}, "user_role": "admin", "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36", "method": "GET", "args": {}, "referrer": "https://5e5f38ec-4896-41e0-b881-d14c826de9d5-00-jybg4zhves9f.sisko.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar99%3A"}

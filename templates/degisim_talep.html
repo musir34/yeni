@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Değişim Listesi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .toggle-details { cursor: pointer; }
+        .details-section { display: none; transition: all 0.3s ease; }
+        .details-section.show { display: block; }
+        .copy-confirmation {
+            display: none;
+            color: green;
+            font-size: 1.2em;
+            position: absolute;
+            margin-left: 10px;
+        }
+        .copy-confirmation.show {
+            display: inline-block;
+            color: green;
+        }
+        .copy-container {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            margin-left: 10px;
+        }
+        .container { max-width: 1200px; }
+        .badge { font-size: 0.9em; }
+        .clipboard-icon { cursor: pointer; }
+        .product-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .card { 
+            margin-bottom: 15px; 
+            transition: all 0.3s ease;
+            transform-origin: center;
+            animation: fadeIn 0.5s;
+        }
+        .card:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        .card-body { padding: 15px; }
+        .product-image { 
+            width: 100px; 
+            height: auto; 
+            transition: transform 0.3s ease;
+        }
+        .product-image:hover {
+            transform: scale(1.1);
+        }
+        .bg-orange { background-color: orange; color: white; }
+        .bg-red { background-color: red; color: white; }
+        #messageBox { 
+            display: none; 
+            animation: slideDown 0.3s ease;
+        }
+        .result-container {
+            min-height: 500px;
+        }
+        
+        /* Animasyonlar */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        
+        .loading-item {
+            animation: pulse 1.5s infinite;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .search-highlight {
+            background-color: #fffacd;
+            padding: 2px;
+            border-radius: 3px;
+        }
+        
+        #content-area {
+            transition: opacity 0.3s ease;
+        }
+        
+        .pagination .page-item .page-link {
+            transition: all 0.2s ease;
+        }
+        
+        .pagination .page-item:hover .page-link {
+            background-color: #007bff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div id="messageBox" class="alert" role="alert"></div>
+
+        <div class="text-center mb-4">
+            <h2>Değişim Talepleri Listesi</h2>
+            <h5>Şu anki sayfa: {{ page }}</h5>
+        </div>
+
+        <!-- Filtre ve Sıralama Alanı -->
+        <div class="d-flex justify-content-center mb-4 flex-wrap">
+            <!-- Sipariş Numarasına Göre Arama Kutusu -->
+            <div class="me-3 mb-2">
+                <div class="input-group">
+                    <input type="text" id="search_input" class="form-control form-control-sm" placeholder="Sipariş No Ara" value="{{ request.args.get('siparis_no', '') }}">
+                    <button type="button" id="search_button" class="btn btn-primary btn-sm">
+                        <i class="bi bi-search"></i> Ara
+                    </button>
+                    {% if request.args.get('siparis_no') %}
+                    <a href="{{ url_for('degisim.degisim_talep') }}" class="btn btn-outline-secondary btn-sm">Temizle</a>
+                    {% endif %}
+                </div>
+                <div id="search_loader" class="mt-1 text-center d-none">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Aranıyor...</span>
+                    </div>
+                    <small class="text-muted ms-2">Aranıyor...</small>
+                </div>
+            </div>
+            
+            <!-- Durum Filtresi -->
+            <form action="{{ url_for('degisim.degisim_talep') }}" method="GET" class="me-3 mb-2">
+                <div class="input-group">
+                    <select name="filter_status" class="form-select form-select-sm">
+                        <option value="">Tümü</option>
+                        <option value="Beklemede" {% if request.args.get('filter_status') == 'Beklemede' %}selected{% endif %}>Beklemede</option>
+                        <option value="İşleme Alındı" {% if request.args.get('filter_status') == 'İşleme Alındı' %}selected{% endif %}>İşleme Alındı</option>
+                        <option value="Kargoya Verildi" {% if request.args.get('filter_status') == 'Kargoya Verildi' %}selected{% endif %}>Kargoya Verildi</option>
+                        <option value="Teslim Edildi" {% if request.args.get('filter_status') == 'Teslim Edildi' %}selected{% endif %}>Teslim Edildi</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary btn-sm">Filtrele</button>
+                </div>
+                {% if request.args.get('siparis_no') %}
+                <input type="hidden" name="siparis_no" value="{{ request.args.get('siparis_no') }}">
+                {% endif %}
+            </form>
+
+            <!-- Sıralama Seçenekleri -->
+            <div class="mb-2">
+                Sırala:
+                <a href="{{ url_for('degisim.degisim_talep', filter_status=request.args.get('filter_status'), sort='asc', siparis_no=request.args.get('siparis_no')) }}" class="btn btn-sm btn-outline-secondary">Eskiden Yeniye</a>
+                <a href="{{ url_for('degisim.degisim_talep', filter_status=request.args.get('filter_status'), sort='desc', siparis_no=request.args.get('siparis_no')) }}" class="btn btn-sm btn-outline-secondary">Yeniden Eskiye</a>
+            </div>
+        </div>
+
+        <div class="text-center mb-4">
+            <a href="{{ url_for('degisim.yeni_degisim_talebi') }}" class="btn btn-primary">Yeni Değişim Talebi Oluştur</a>
+        </div>
+
+        <div class="text-center mb-4">
+            <a href="{{ url_for('home.home') }}" class="btn btn-secondary">Anasayfaya Dön</a>
+        </div>
+
+        <div class="text-center mb-4">
+            <h4>Toplam Değişim Talebi Sayısı: {{ total_exchanges_count }}</h4>
+        </div>
+
+        <!-- Değişim Taleplerinin Listelendiği Kısım -->
+        <div id="content-area" class="row result-container">
+            {% for exchange in degisim_kayitlari %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Değişim Tarihi:</strong> {{ exchange.degisim_tarihi.strftime('%d.%m.%Y') }}<br>
+                            <strong>Durum:</strong> 
+                            <span class="badge 
+                                {% if exchange.degisim_durumu == 'Beklemede' %}
+                                    bg-warning
+                                {% elif exchange.degisim_durumu == 'İşleme Alındı' %}
+                                    bg-success
+                                {% elif exchange.degisim_durumu == 'Kargoya Verildi' %}
+                                    bg-orange
+                                {% elif exchange.degisim_durumu == 'Teslim Edildi' %}
+                                    bg-info
+                                {% else %}
+                                    bg-secondary
+                                {% endif %}">
+                                {{ exchange.degisim_durumu }}
+                            </span><br>
+                            <strong>Sipariş Numarası:</strong> {{ exchange.siparis_no }}
+                            <span class="copy-container">
+                                <span class="clipboard-icon" onclick="copyToClipboard('{{ exchange.siparis_no }}', this)">📋</span>
+                                <span class="copy-confirmation">✔️</span>
+                            </span><br>
+                            <strong>Telefon No:</strong> {{ exchange.telefon_no }}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h6><strong>Müşteri:</strong> {{ exchange.ad }} {{ exchange.soyad }}</h6>
+                        <h6><strong>Adres:</strong> {{ exchange.adres }}</h6>
+                        <h6><strong>Ürün Bilgisi:</strong> {{ exchange.urun_model_kodu }} - {{ exchange.urun_beden }} - {{ exchange.urun_renk }}</h6>
+                        <h6><strong>Değişim Nedeni:</strong> {{ exchange.degisim_nedeni }}</h6>
+
+                        <img src="{{ url_for('static', filename='images/' ~ exchange.urun_barkod ~ '.jpg') }}" 
+                             class="product-image mt-3" alt="Ürün Görseli">
+
+                        <!-- İşlem Butonları -->
+                        <div class="text-center mt-4">
+                            <button class="btn btn-outline-success btn-sm" onclick="updateStatus('{{ exchange.degisim_no }}', 'İşleme Alındı')">İşleme Alındı</button>
+                            <button class="btn btn-outline-warning btn-sm" onclick="updateStatus('{{ exchange.degisim_no }}', 'Kargoya Verildi')">Kargoya Verildi</button>
+                            <button class="btn btn-outline-info btn-sm" onclick="updateStatus('{{ exchange.degisim_no }}', 'Teslim Edildi')">Teslim Edildi</button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="deleteExchange('{{ exchange.degisim_no }}')">Sil</button>
+
+                            <!-- Kargo Etiketi Yazdırma Formu -->
+                            <form action="{{ url_for('order_label') }}" method="post" target="_blank" class="mt-2">
+                                <input type="hidden" name="order_number" value="{{ exchange.siparis_no }}">
+                                <input type="hidden" name="shipping_barcode" value="{{ exchange.kargo_kodu }}">
+                                <input type="hidden" name="cargo_provider" value="{{ exchange.cargo_provider_name }}">
+                                <input type="hidden" name="customer_name" value="{{ exchange.ad }}">
+                                <input type="hidden" name="customer_surname" value="{{ exchange.soyad }}">
+                                <input type="hidden" name="customer_address" value="{{ exchange.adres }}">
+                                <input type="hidden" name="telefon_no" value="{{ exchange.telefon_no }}">
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">Kargo Etiketini Yazdır</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Sayfalama -->
+        <nav aria-label="Sayfa gezintisi" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for(request.endpoint, page=page-1, filter_status=request.args.get('filter_status'), sort=request.args.get('sort'), siparis_no=request.args.get('siparis_no')) }}">Önceki</a>
+                </li>
+                {% endif %}
+                {% for i in range(1, total_pages + 1) %}
+                <li class="page-item {% if i == page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for(request.endpoint, page=i, filter_status=request.args.get('filter_status'), sort=request.args.get('sort'), siparis_no=request.args.get('siparis_no')) }}">{{ i }}</a>
+                </li>
+                {% endfor %}
+                {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for(request.endpoint, page=page+1, filter_status=request.args.get('filter_status'), sort=request.args.get('sort'), siparis_no=request.args.get('siparis_no')) }}">Sonraki</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+
+    <textarea id="temp-copier" style="position: absolute; top: -1000px;"></textarea>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showMessage(message, success=true) {
+            const box = document.getElementById('messageBox');
+            box.style.display = 'block';
+            box.className = success ? 'alert alert-success' : 'alert alert-danger';
+            box.textContent = message;
+            box.style.opacity = 0;
+            
+            // Animasyon ile göster
+            setTimeout(() => { 
+                box.style.opacity = 1;
+            }, 10);
+            
+            setTimeout(() => { 
+                box.style.opacity = 0;
+                setTimeout(() => {
+                    box.style.display = 'none';
+                }, 300);
+            }, 3000);
+        }
+
+        function copyToClipboard(text, element) {
+            navigator.clipboard.writeText(text).then(() => {
+                const confirmation = element.nextElementSibling;
+                confirmation.classList.add('show');
+                setTimeout(() => {
+                    confirmation.classList.remove('show');
+                }, 2000);
+            }).catch(() => {
+                showMessage("Kopyalama sırasında hata oluştu.", false);
+            });
+        }
+
+        function updateStatus(degisim_no, status) {
+            const fadeOut = (element) => {
+                element.style.opacity = 0;
+                element.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    // element.parentNode.removeChild(element);
+                }, 300);
+            };
+            
+            $.post("/update_status", { degisim_no: degisim_no, status: status }, function(response) {
+                if (response.success) {
+                    showMessage("Durum güncellendi!", true);
+                    // Animasyonlu geçiş için card elementini bul
+                    const cardElement = $(`button[onclick="updateStatus('${degisim_no}', '${status}')"]`).closest('.card');
+                    cardElement.css({
+                        'transition': 'all 0.3s ease',
+                        'opacity': '0',
+                        'transform': 'scale(0.95)'
+                    });
+                    
+                    setTimeout(() => { location.reload(); }, 700);
+                } else {
+                    showMessage("Durum güncellenirken bir hata oluştu.", false);
+                }
+            }).fail(function() {
+                showMessage("Durum güncellenirken bir hata oluştu.", false);
+            });
+        }
+
+        function deleteExchange(degisim_no) {
+            if (confirm("Bu değişim kaydını silmek istediğinizden emin misiniz?")) {
+                const cardElement = $(`button[onclick="deleteExchange('${degisim_no}')"]`).closest('.card');
+                cardElement.css({
+                    'transition': 'all 0.5s ease',
+                    'opacity': '0',
+                    'transform': 'translateY(20px)'
+                });
+                
+                $.post("/delete_exchange", { degisim_no: degisim_no }, function(response) {
+                    if (response.success) {
+                        showMessage("Değişim kaydı silindi!", true);
+                        // Animasyonlu silme işlemi
+                        setTimeout(() => {
+                            cardElement.css('display', 'none');
+                            // Kartı tamamen siliyoruz
+                            setTimeout(() => { location.reload(); }, 100);
+                        }, 500);
+                    } else {
+                        // Hata durumunda kartı geri göster
+                        cardElement.css({
+                            'opacity': '1',
+                            'transform': 'translateY(0)'
+                        });
+                        showMessage("Değişim kaydı silinirken bir hata oluştu.", false);
+                    }
+                }).fail(function() {
+                    // Hata durumunda kartı geri göster
+                    cardElement.css({
+                        'opacity': '1',
+                        'transform': 'translateY(0)'
+                    });
+                    showMessage("Değişim kaydı silinirken bir hata oluştu.", false);
+                });
+            }
+        }
+
+        function editExchange(degisim_no) {
+            window.location.href = `/edit_exchange/${degisim_no}`;
+        }
+        
+        // Sayfa yüklendiğinde
+        $(document).ready(function() {
+            // Arama işlevi için olay dinleyicileri
+            $('#search_button').on('click', function() {
+                performSearch();
+            });
+            
+            $('#search_input').on('keypress', function(e) {
+                if (e.which === 13) { // Enter tuşu
+                    e.preventDefault();
+                    performSearch();
+                }
+            });
+            
+            // Geçiş efekti - sayfalama tıklamaları için
+            $('.pagination .page-link').on('click', function() {
+                fadePageContent();
+            });
+            
+            // Sayfa içeriğini soluklaştırma fonksiyonu
+            function fadePageContent() {
+                $('#content-area').css('opacity', '0.5');
+            }
+            
+            // AJAX ile arama işlevi
+            function performSearch() {
+                const searchTerm = $('#search_input').val().trim();
+                if (searchTerm === '') return;
+                
+                // Yükleniyor göstergesini göster
+                $('#search_loader').removeClass('d-none');
+                
+                // İçeriği soluklaştır
+                $('.result-container').css('opacity', '0.6');
+                
+                // URL oluştur
+                const url = `{{ url_for('degisim.degisim_talep') }}?siparis_no=${encodeURIComponent(searchTerm)}`;
+                
+                // Sayfa içeriğini animasyonla geçiş yaparak güncelleyelim
+                window.location.href = url;
+            }
+            
+            // Sayfa yüklenirken fade-in efekti
+            $('.card').each(function(index) {
+                const card = $(this);
+                setTimeout(() => {
+                    card.css('opacity', '1');
+                }, index * 100);
+            });
+            
+            // Arama sonuçlarında eşleşen metni vurgulama
+            if ('{{ request.args.get("siparis_no", "") }}' !== '') {
+                const searchTerm = '{{ request.args.get("siparis_no", "") }}';
+                highlightSearchTerm(searchTerm);
+            }
+            
+            // Metni vurgulama fonksiyonu
+            function highlightSearchTerm(term) {
+                if (!term) return;
+                
+                // Siparış numaralarında eşleşme ara
+                $('.card strong:contains("Sipariş Numarası:")').each(function() {
+                    const element = $(this).parent();
+                    const text = element.html();
+                    
+                    if(text.indexOf(term) > -1) {
+                        const newText = text.replace(
+                            new RegExp(term, 'gi'), 
+                            '<span class="search-highlight">$&</span>'
+                        );
+                        element.html(newText);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
