@@ -10,7 +10,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 from io import BytesIO
-
+from sqlalchemy import case
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_from_directory, send_file, current_app
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import insert

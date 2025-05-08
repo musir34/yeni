@@ -13,7 +13,16 @@ import requests
 from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID, BASE_URL
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# Log seviyesini DEBUG yapalım ki detaylı bilgileri görelim
+logger.setLevel(logging.DEBUG)
+
+# Eğer handler ekli değilse ekleyelim (tekrar eklememek için kontrol edelim)
+if not logger.handlers:
+    handler = logging.StreamHandler() # Konsola yazması için StreamHandler kullanabiliriz
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
 
 stock_management_bp = Blueprint('stock_management', __name__)
 
@@ -47,6 +56,8 @@ def update_trendyol_stock(barcode, quantity):
             }
         ]
     }
+
+    logger.debug(f"Trendyol API'ye gönderilen payload: {json.dumps(payload)}")
 
     try:
         # Synchronous POST isteği Trendyol'a gönderilir
@@ -93,14 +104,15 @@ def get_product_details_by_barcode(barcode):
     """
     Veritabanından barkoda göre ürün bilgilerini döndürür.
     """
-    logger.info(f"Ürün detayları isteği alındı: Barkod {barcode}")
+    logger.debug(f"Ürün detayları isteği alındı: Barkod {barcode}")
     try:
         # Product modelinden barkoda göre ürünü bul
-        product = Product.query.filter_by(barcode=barcode).first()
+        # Büyük/küçük harf duyarlılığı olmaması için lower() kullanabiliriz
+        product = Product.query.filter(db.func.lower(Product.barcode) == barcode.lower()).first()
 
         if product:
             # Ürün bulunduğunda bilgileri JSON olarak döndür
-            logger.info(f"Ürün bulundu: Barkod {barcode}")
+            logger.debug(f"Ürün bulundu: Barkod {barcode}")
             return jsonify(
                 success=True,
                 product={
@@ -133,16 +145,17 @@ def handle_stock_update():
     if not data:
         return jsonify(success=False, message="Geçersiz veri formatı"), 400
 
-    barcode_counts = data.get('barcodeCounts') # Gruplanmış barkodlar ve adetleri
+    barcode_counts = data.get('barcodeCounts') # Gruplanmış barkodlar ve adetleri (ve artık ürün detayları)
     update_type = data.get('updateType')       # 'renew' veya 'add'
 
     if not barcode_counts or not update_type:
         return jsonify(success=False, message="Eksik veri: barkodlar veya güncelleme tipi belirtilmemiş"), 400
 
-    logger.info(f"Stok güncelleme isteği alındı. Tip: {update_type}, Barkodlar: {barcode_counts}")
+    logger.info(f"Stok güncelleme isteği alındı. Tip: {update_type}, İşlenecek Barkodlar: {list(barcode_counts.keys())}")
 
     updated_count = 0
-    errors = {}
+    errors = {} # Veritabanı güncelleme sırasında oluşan hatalar (ürün bulunamaması vb.)
+    trendyol_update_errors = {} # Trendyol API güncelleme sırasında oluşan hatalar
     items_to_update_trendyol = [] # Trendyol'a gönderilecek ürün listesi
 
     # Veritabanı işlemleri bir try-except bloğu içinde olmalı
@@ -151,15 +164,16 @@ def handle_stock_update():
             # item_data artık sadece adet değil, ürün detaylarını da içerecek
             # Adet bilgisini item_data.count'tan alıyoruz
             count = item_data.get('count', 0)
+            # Ürün detayları item_data.details'ten alınabilir, ama DB'den çekmek daha güncel bilgi sağlar.
+            # Bu yüzden yine DB sorgusu yapıyoruz.
 
             # Ürünü barkoda göre bul
-            # product bilgisi item_data içinde de olsa, güncel stok miktarını DB'den çekmek için sorgu yapıyoruz.
             product = Product.query.filter_by(barcode=barcode).first()
 
             if not product:
                 # Ürün bulunamazsa hata kaydet ve devam et
                 errors[barcode] = f"Ürün veritabanında bulunamadı: {barcode}"
-                logger.warning(f"Ürün bulunamadı: Barkod {barcode}")
+                logger.warning(f"Veritabanında ürün bulunamadı: Barkod {barcode}")
                 continue
 
             # Mevcut stok miktarını al (None ise 0 say)
@@ -169,11 +183,11 @@ def handle_stock_update():
             if update_type == 'renew':
                 # Mevcut stoğu sıfırla ve yeni adeti ekle
                 new_stock = count
-                logger.info(f"Stok yenileme: Barkod {barcode}, Eski Stok: {current_stock}, Yeni Stok: {new_stock}")
+                logger.debug(f"Stok yenileme: Barkod {barcode}, Eski Stok: {current_stock}, Yeni Stok: {new_stock}")
             elif update_type == 'add':
                 # Mevcut stoğun üzerine ekle
                 new_stock = current_stock + count
-                logger.info(f"Stok ekleme: Barkod {barcode}, Eski Stok: {current_stock}, Eklenecek: {count}, Yeni Stok: {new_stock}")
+                logger.debug(f"Stok ekleme: Barkod {barcode}, Eski Stok: {current_stock}, Eklenecek: {count}, Yeni Stok: {new_stock}")
             else:
                 # Geçersiz güncelleme tipi (frontend'de önlenmeli ama backend'de de kontrol iyi olur)
                 errors[barcode] = f"Geçersiz güncelleme tipi: {update_type}"
@@ -190,7 +204,7 @@ def handle_stock_update():
             items_to_update_trendyol.append({"barcode": barcode, "quantity": new_stock})
 
             updated_count += 1
-            logger.info(f"Veritabanı için hazırlandı: Barkod {barcode}, Yeni Stok: {new_stock}")
+            logger.debug(f"Veritabanı için hazırlandı: Barkod {barcode}, Yeni Stok: {new_stock}")
 
         # Tüm değişiklikleri veritabanına kaydet
         db.session.commit()
@@ -203,8 +217,9 @@ def handle_stock_update():
         # Mevcut update_trendyol_stock fonksiyonu tek tek çağrıldığı için aşağıdaki döngüyü kullanıyoruz.
         # Daha sonra bu Trendyol güncelleme kısmı için ayrı bir batch fonksiyonu yazılabilir.
         trendyol_update_success_count = 0
-        trendyol_update_errors = {}
 
+
+        logger.info(f"Trendyol'a güncellenecek ürün sayısı: {len(items_to_update_trendyol)}")
         for item in items_to_update_trendyol:
             barcode = item['barcode']
             quantity = item['quantity']
@@ -212,6 +227,7 @@ def handle_stock_update():
             # Bu fonksiyon artık düzeltilmiş endpoint'i kullanıyor.
             if update_trendyol_stock(barcode, quantity):
                  trendyol_update_success_count += 1
+                 logger.debug(f"Trendyol güncelleme başarılı: Barkod {barcode}")
             else:
                  # update_trendyol_stock zaten logluyor
                  trendyol_update_errors[barcode] = f"Trendyol güncellemesi başarısız: {barcode}"
@@ -223,6 +239,7 @@ def handle_stock_update():
              response_message += f" Trendyol'da {trendyol_update_success_count} ürün stoğu güncellendi."
         if trendyol_update_errors:
              response_message += f" Trendyol'da bazı ürünler güncellenemedi: {list(trendyol_update_errors.keys())}"
+             logger.error(f"Trendyol'da güncellenemeyen barkodlar: {list(trendyol_update_errors.keys())}")
 
 
         # Başarılı yanıt döndür

@@ -1,607 +1,387 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <title>Stok Ekleme Ekranı - Güllü Ayakkabı</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        body {
-            background-color: #f8f9fa;
-            font-family: 'Arial', sans-serif;
-            padding-top: 20px;
-            padding-bottom: 40px; /* Footer veya alt boşluk için */
-        }
-        .container {
-            max-width: 800px;
-            margin: auto;
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        h2 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 30px;
-        }
-        .form-label {
-            font-weight: bold;
-        }
-        .barcode-input {
-            font-size: 1.2rem;
-            padding: 10px;
-        }
-        .barcode-list-container {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-        }
-        .barcode-item {
-            display: flex;
-            /* align-items: center; */ /* İçeriği flex-start yapmak için kaldırıldı */
-            padding: 15px 10px; /* Dikey padding artırıldı */
-            border-bottom: 1px dashed #eee;
-        }
-         .barcode-item .product-info-section {
-             display: flex;
-             align-items: flex-start; /* Resim ve yazıları üste hizala */
-             gap: 15px; /* Resim ve yazı arası boşluk */
-             flex-grow: 1; /* Kalan alanı kapla */
-         }
-        .barcode-item:last-child {
-            border-bottom: none;
-        }
-         .product-thumbnail {
-             width: 60px; /* Küçük görsel boyutu */
-             height: 60px;
-             object-fit: cover;
-             border-radius: 4px;
-             flex-shrink: 0; /* Küçülmesini engelle */
-         }
-         .product-details-text {
-             flex-grow: 1; /* Yazı alanı kalan yeri kaplasın */
-         }
-        .barcode-value {
-            font-weight: bold;
-            color: #007bff;
-            font-size: 1rem; /* Barkod yazısı boyutu */
-            margin-bottom: 5px; /* Altındaki bilgiye boşluk */
-            display: block; /* Alt satıra geçmesi için */
-        }
-        .product-details-text p {
-             margin-bottom: 3px; /* Bilgi satırları arası boşluk */
-             font-size: 0.9rem; /* Bilgi yazıları boyutu */
-             color: #555;
-        }
-         .product-details-text p strong {
-             font-weight: bold;
-             margin-right: 5px;
-         }
-        .barcode-count-section {
-            margin-left: 20px; /* Barkod bilgisi ile adet arasına boşluk */
-            flex-shrink: 0; /* Küçülmesini engelle */
-            text-align: right;
-        }
-        .barcode-count {
-            font-size: 1.2rem; /* Adet yazısı boyutu artırıldı */
-            font-weight: bold;
-            color: #28a745;
-        }
-        .mode-selection-buttons {
-             display: flex;
-             justify-content: center;
-             gap: 20px; /* Butonlar arası boşluk */
-             margin-bottom: 30px;
-        }
-        .mode-selection-buttons .btn {
-            min-width: 200px; /* Butonların en az genişliği */
-            font-weight: bold;
-        }
-        .selected-mode-display {
-             text-align: center;
-             margin-bottom: 20px;
-             font-size: 1.1rem;
-             font-weight: bold;
-             color: #007bff;
-        }
-        .update-button-group {
-            margin-top: 20px;
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-        }
-        .update-button-group .btn {
-            font-weight: bold;
-        }
-        .alert {
-            margin-top: 20px;
-        }
-        .hidden {
-            display: none;
-        }
-         /* Yükleniyor spinner stili */
-         .loading-spinner {
-             display: inline-block;
-             width: 1.5rem;
-             height: 1.5rem;
-             vertical-align: -0.125em;
-             border: 0.25em solid currentColor;
-             border-right-color: transparent;
-             border-radius: 50%;
-             -webkit-animation: .75s linear infinite spinner-border;
-             animation: .75s linear infinite spinner-border;
-         }
-         @keyframes spinner-border {
-            100% {
-                transform: rotate(360deg);
-            }
-         }
-         .loading-text {
-             margin-left: 10px;
-             font-weight: normal;
-         }
-    </style>
+  <meta charset="UTF-8">
+  <title>Stok Ekleme – Güllü Ayakkabı</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <style>
+    :root {
+      --bg-page: #f7f9fc;
+      --bg-card: #ffffff;
+      --text-primary: #1a202c;
+      --btn-primary: #0069d9;
+      --btn-success: #198754;
+      --shadow-light: rgba(0,0,0,0.05);
+    }
+    body {
+      background: var(--bg-page);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', sans-serif;
+      padding: 2rem 0;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: var(--bg-card);
+      border-radius: 10px;
+      box-shadow: 0 4px 16px var(--shadow-light);
+      padding: 2rem;
+    }
+    /* Hafif bulanık üst dalga efekti */
+    .container::before {
+      content: "";
+      position: absolute;
+      top: -60px; left: -60px;
+      width: 200px; height: 200px;
+      background: rgba(0,105,217,0.2);
+      border-radius: 50%;
+      filter: blur(80px);
+      z-index: -1;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+      color: var(--btn-primary);
+    }
+    .mode-selection-buttons .btn {
+      flex: 1;
+      padding: 0.75rem;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .mode-selection-buttons .btn:hover {
+      background: var(--btn-primary);
+      color: #fff;
+    }
+    #barcodeInput {
+      font-size: 1.1rem;
+      border: 1px solid var(--shadow-light);
+      border-radius: 6px;
+      transition: box-shadow 0.2s;
+    }
+    #barcodeInput:focus {
+      box-shadow: 0 0 8px rgba(0,105,217,0.3);
+      border-color: var(--btn-primary);
+    }
+    .barcode-item {
+      background: var(--bg-page);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px var(--shadow-light);
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .barcode-value {
+      font-weight: 600;
+      color: var(--btn-primary);
+    }
+    .barcode-count {
+      font-weight: 600;
+      color: var(--btn-success);
+    }
+    .product-details {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .product-details img {
+      width: 50px;
+      height: auto;
+      border-radius: 4px;
+      cursor: zoom-in;
+      transition: transform 0.2s;
+    }
+    .product-details img:hover {
+      transform: scale(1.05);
+    }
+    .update-button-group .btn {
+      min-width: 160px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .update-button-group .btn:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+    /* Lightbox */
+    #lightbox {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    #lightbox img {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Stok Ekleme Ekranı</h2>
+  <div class="container position-relative">
+    <h2>Stok Ekleme Ekranı</h2>
 
-        <!-- Anasayfa ve Diğer Linkler -->
-        <div class="text-center mb-4">
-             <a href="{{ url_for('home.home') }}" class="btn btn-secondary me-2 btn-sm">
-                 <i class="bi bi-house-door"></i> Anasayfa
-             </a>
-             <a href="{{ url_for('get_products.product_list') }}" class="btn btn-info me-2 btn-sm">
-                 <i class="bi bi-box-seam"></i> Ürün Listesi
-             </a>
-              <a href="{{ url_for('stock_report.stock_report') }}" class="btn btn-warning btn-sm">
-                 <i class="bi bi-bar-chart"></i> Stok Raporu
-             </a>
-        </div>
-
-        <!-- Mod Seçimi -->
-        <div class="mode-selection-buttons">
-            <button type="button" class="btn btn-outline-primary btn-lg" id="selectRenewMode">
-                <i class="bi bi-arrow-repeat"></i> Raftaki Stokları Yenile
-            </button>
-            <button type="button" class="btn btn-outline-success btn-lg" id="selectAddMode">
-                 <i class="bi bi-plus-circle"></i> Yeni Gelenleri Ekle
-            </button>
-        </div>
-
-        <!-- Seçilen Modu Göster -->
-        <div id="selectedModeDisplay" class="selected-mode-display hidden">
-            Seçilen Mod: <span></span>
-        </div>
-
-        <form id="stockForm" class="hidden">
-            <div class="mb-3">
-                <label for="barcodeInput" class="form-label">Barkod Okutun:</label>
-                <input type="text" class="form-control barcode-input" id="barcodeInput" autocomplete="off" disabled>
-            </div>
-
-            <div class="barcode-list-container">
-                <h5>Okutulan Barkodlar:</h5>
-                <div id="scannedBarcodes">
-                    <!-- Okutulan barkodlar buraya eklenecek -->
-                     <!-- Örnek Barkod Öğesi Yapısı -->
-                     <!--
-                     <div class="barcode-item">
-                         <div class="product-info-section">
-                             <img src="/static/images/default.jpg" class="product-thumbnail" alt="Ürün Görseli">
-                             <div class="product-details-text">
-                                 <span class="barcode-value">BARKOD123</span>
-                                 <p><strong>Model:</strong> ABC-123</p>
-                                 <p><strong>Renk:</strong> Siyah</p>
-                                 <p><strong>Beden:</strong> 38</p>
-                             </div>
-                         </div>
-                         <div class="barcode-count-section">
-                             <span class="barcode-count">5 Adet</span>
-                         </div>
-                     </div>
-                     -->
-                </div>
-                <p id="noBarcodeMessage" class="text-muted text-center mt-3">Henüz barkod okutulmadı.</p>
-                 <div id="barcodeLoading" class="text-center hidden">
-                     <div class="loading-spinner text-primary" role="status">
-                         <span class="visually-hidden">Yükleniyor...</span>
-                     </div>
-                     <span class="loading-text text-muted">Ürün bilgisi çekiliyor...</span>
-                 </div>
-            </div>
-
-            <div class="update-button-group">
-                <button type="button" class="btn btn-primary btn-lg" id="updateStockButton" disabled>
-                    <i class="bi bi-arrow-repeat"></i> Stokları Güncelle
-                </button>
-                 <button type="button" class="btn btn-secondary btn-lg" id="resetButton">
-                    <i class="bi bi-x-circle"></i> Temizle/İptal
-                </button>
-            </div>
-        </form>
-
-        <!-- Mesaj Alanı -->
-        <div id="responseMessage" class="alert d-none" role="alert">
-            <!-- Sunucudan gelen mesajlar buraya yazılacak -->
-        </div>
-
+    <div class="text-center mb-4">
+      <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm me-2">
+        <i class="bi bi-house-door"></i> Anasayfa
+      </a>
+      <a href="{{ url_for('get_products.product_list') }}" class="btn btn-outline-info btn-sm me-2">
+        <i class="bi bi-box-seam"></i> Ürün Listesi
+      </a>
+      <!-- Stokları Güncelle Butonu -->
+      <form action="{{ url_for('get_products.update_stocks_route') }}" method="post" style="display:inline-block;">
+        <button type="submit" class="btn btn-warning btn-sm me-2">
+          <i class="bi bi-boxes"></i> Stokları Güncelle (T)
+        </button>
+      </form>
+      <a href="{{ url_for('stock_report.stock_report') }}" class="btn btn-outline-warning btn-sm">
+        <i class="bi bi-bar-chart"></i> Stok Raporu
+      </a>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // barcodeCounts artık sadece adet değil, ürün bilgilerini de tutacak
-        // { "barkod1": { count: 5, product: { model_id: "ABC", color: "Siyah", size: "38", image_url: "..." } }, ... }
-        let barcodeCounts = {};
-        let selectedMode = null; // 'renew' veya 'add'
+    <div class="mode-selection-buttons d-flex mb-3">
+      <button id="selectRenewMode" class="btn btn-outline-primary btn-lg me-2">
+        <i class="bi bi-arrow-repeat"></i><br>Raftaki Yenile
+      </button>
+      <button id="selectAddMode" class="btn btn-outline-success btn-lg">
+        <i class="bi bi-plus-circle"></i><br>Yeni Ekle
+      </button>
+    </div>
 
-        const selectRenewModeBtn = document.getElementById('selectRenewMode');
-        const selectAddModeBtn = document.getElementById('selectAddMode');
-        const selectedModeDisplay = document.getElementById('selectedModeDisplay');
-        const selectedModeSpan = selectedModeDisplay.querySelector('span');
-        const stockForm = document.getElementById('stockForm');
-        const barcodeInput = document.getElementById('barcodeInput');
-        const scannedBarcodesDiv = document.getElementById('scannedBarcodes');
-        const noBarcodeMessage = document.getElementById('noBarcodeMessage');
-        const updateStockButton = document.getElementById('updateStockButton');
-        const resetButton = document.getElementById('resetButton');
-        const responseMessageDiv = document.getElementById('responseMessage');
-        const modeSelectionButtonsDiv = document.querySelector('.mode-selection-buttons');
-        const barcodeLoadingSpinner = document.getElementById('barcodeLoading');
+    <div id="selectedModeDisplay" class="selected-mode-display hidden text-center mb-3">
+      Seçilen Mod: <span></span>
+    </div>
 
+    <form id="stockForm" class="hidden">
+      <div class="mb-3">
+        <label for="barcodeInput" class="form-label">Barkod Okutun:</label>
+        <input type="text" id="barcodeInput" class="form-control" autocomplete="off" disabled>
+      </div>
+      <div class="barcode-list-container mb-3">
+        <h5>Okutulan Barkodlar:</h5>
+        <div id="scannedBarcodes"></div>
+        <p id="noBarcodeMessage" class="text-muted text-center mt-3">Henüz barkod okutulmadı.</p>
+      </div>
+      <div class="update-button-group d-flex justify-content-center gap-3">
+        <button id="updateStockButton" class="btn btn-primary btn-lg" disabled>
+          <i class="bi bi-arrow-repeat"></i> Güncelle
+        </button>
+        <button id="resetButton" class="btn btn-secondary btn-lg">
+          <i class="bi bi-x-circle"></i> İptal
+        </button>
+      </div>
+    </form>
 
-        // Mod Seçim Butonlarına Olay Dinleyicileri Ekle
-        selectRenewModeBtn.addEventListener('click', function() {
-            selectMode('renew');
-        });
+    <div id="responseMessage" class="alert d-none text-center mt-4" role="alert"></div>
+  </div>
 
-        selectAddModeBtn.addEventListener('click', function() {
-            selectMode('add');
-        });
+  <!-- Lightbox -->
+  <div id="lightbox">
+    <img src="" alt="Büyütülmüş Ürün">
+  </div>
 
-        // Mod Seçildiğinde Arayüzü Güncelle
-        function selectMode(mode) {
-            selectedMode = mode;
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Lightbox işlevi
+    document.addEventListener('click', (e) => {
+      // Ürün resmi tıklandığında
+      if (e.target.matches('.product-details img')) {
+        const lb = document.getElementById('lightbox');
+        lb.querySelector('img').src = e.target.src;
+        lb.style.display = 'flex';
+      }
+      // Lightbox dışına tıklayınca kapat
+      else if (e.target.id === 'lightbox') {
+        const lb = e.target;
+        lb.style.display = 'none';
+        lb.querySelector('img').src = '';
+      }
+    });
 
-            // Butonların stilini güncelle
-            selectRenewModeBtn.classList.remove('btn-primary');
-            selectRenewModeBtn.classList.add('btn-outline-primary');
-            selectAddModeBtn.classList.remove('btn-success');
-            selectAddModeBtn.classList.add('btn-outline-success');
+    // Orijinal stok-formu JS kodu
+    let barcodeCounts = {};
+    let selectedMode = null;
 
-            if (mode === 'renew') {
-                selectRenewModeBtn.classList.add('btn-primary');
-                selectRenewModeBtn.classList.remove('btn-outline-primary');
-                selectedModeSpan.textContent = 'Raftaki Stokları Yenile';
-            } else if (mode === 'add') {
-                selectAddModeBtn.classList.add('btn-success');
-                selectAddModeBtn.classList.remove('btn-outline-success');
-                selectedModeSpan.textContent = 'Yeni Gelenleri Ekle';
-            }
+    const selectRenewModeBtn = document.getElementById('selectRenewMode');
+    const selectAddModeBtn    = document.getElementById('selectAddMode');
+    const selectedModeDisplay = document.getElementById('selectedModeDisplay');
+    const selectedModeSpan    = selectedModeDisplay.querySelector('span');
+    const stockForm           = document.getElementById('stockForm');
+    const barcodeInput        = document.getElementById('barcodeInput');
+    const scannedBarcodesDiv  = document.getElementById('scannedBarcodes');
+    const noBarcodeMessage    = document.getElementById('noBarcodeMessage');
+    const updateStockButton   = document.getElementById('updateStockButton');
+    const resetButton         = document.getElementById('resetButton');
+    const responseMessageDiv  = document.getElementById('responseMessage');
+    const modeSelectionButtonsDiv = document.querySelector('.mode-selection-buttons');
 
-            // Mod seçim butonlarını gizle
-            modeSelectionButtonsDiv.classList.add('hidden');
+    selectRenewModeBtn.addEventListener('click', ()=> selectMode('renew'));
+    selectAddModeBtn.addEventListener('click', ()=> selectMode('add'));
 
-            // Seçilen modu göster
-            selectedModeDisplay.classList.remove('hidden');
+    function selectMode(mode) {
+      selectedMode = mode;
+      selectRenewModeBtn.classList.remove('btn-primary');
+      selectRenewModeBtn.classList.add('btn-outline-primary');
+      selectAddModeBtn.classList.remove('btn-success');
+      selectAddModeBtn.classList.add('btn-outline-success');
+      if (mode==='renew') {
+        selectRenewModeBtn.classList.add('btn-primary');
+        selectRenewModeBtn.classList.remove('btn-outline-primary');
+        selectedModeSpan.textContent = 'Raftaki Stokları Yenile';
+      } else {
+        selectAddModeBtn.classList.add('btn-success');
+        selectAddModeBtn.classList.remove('btn-outline-success');
+        selectedModeSpan.textContent = 'Yeni Gelenleri Ekle';
+      }
+      modeSelectionButtonsDiv.classList.add('hidden');
+      selectedModeDisplay.classList.remove('hidden');
+      stockForm.classList.remove('hidden');
+      barcodeInput.disabled = false;
+      barcodeInput.focus();
+      updateStockButton.disabled = true;
+    }
 
-            // Barkod formunu göster ve inputu aktifleştir
-            stockForm.classList.remove('hidden');
-            barcodeInput.disabled = false;
-            barcodeInput.focus(); // Inputa odaklan
-
-            // Güncelleme butonunu aktifleştir (başlangıçta disabled, barkod girince aktif olacak)
-            updateStockButton.disabled = true;
+    barcodeInput.addEventListener('input', async function() {
+      const barcode = this.value.trim();
+      if (!barcode || barcode.length<4) return;
+      if (!selectedMode) {
+        showMessage("Lütfen önce bir stok güncelleme modu seçin.", false);
+      } else {
+        if (barcodeCounts[barcode]) {
+          barcodeCounts[barcode].count++;
+          renderBarcodeList();
+        } else {
+          const details = await fetchProductDetails(barcode);
+          barcodeCounts[barcode] = { count:1, details: details, error: details?null:"Ürün bulunamadı" };
+          renderBarcodeList();
         }
+        updateStockButton.disabled = Object.keys(barcodeCounts).length===0;
+      }
+      this.value=''; this.focus();
+    });
 
-        // Barkod inputuna her değer girildiğinde (genellikle barkod okuyucudan gelir)
-        // 'change' event'i yerine 'input' event'i kullanmak daha hızlı tepki verir
-        // Ancak barkod okuyucular genellikle Enter tuşu ile bitirir.
-        // Daha iyi bir yaklaşım: Input event'inde biriken değeri alıp, Enter tuşuna basıldığında veya
-        // belirli bir süre input boş kaldığında (barkod okuyucunun bitişini anlama) işlemi tetiklemek.
-        let barcodeBuffer = ''; // Klavyeden hızlı girilen barkodları tutmak için
-        let inputTimer = null; // Zaman aşımı için timer
+    async function fetchProductDetails(barcode) {
+      try {
+        const res = await fetch(`/api/get-product-details-by-barcode/${barcode}`);
+        const data = await res.json();
+        return data.success? data.product : null;
+      } catch {
+        return null;
+      }
+    }
 
-        barcodeInput.addEventListener('keydown', function(event) {
-            // Enter tuşuna basıldığında (barkod okuyucu bitişi)
-            if (event.key === 'Enter') {
-                event.preventDefault(); // Formun submit olmasını engelle
-                const barcode = barcodeBuffer.trim();
-                barcodeBuffer = ''; // Buffer'ı temizle
-                processScannedBarcode(barcode);
-            } else {
-                // Diğer tuşlara basıldığında buffer'a ekle
-                barcodeBuffer += event.key;
-                // Zaman aşımı timerını resetle (çok hızlı girişleri tek barkod saymak için)
-                if (inputTimer) clearTimeout(inputTimer);
-                inputTimer = setTimeout(() => {
-                    // Belirli bir süre (örn: 100ms) klavye girişi olmadıysa buffer'ı işle
-                    const barcode = barcodeBuffer.trim();
-                    if (barcode) { // Buffer boş değilse
-                         processScannedBarcode(barcode);
-                    }
-                    barcodeBuffer = ''; // Buffer'ı temizle
-                }, 100); // 100ms zaman aşımı
-            }
-        });
-
-        // Tarayıcıda kopyala/yapıştır gibi input eventleri için doğrudan işleme
-         barcodeInput.addEventListener('input', function() {
-             // Eğer Enter basılmadıysa ve input değeri değiştiyse
-             // Bu, barkod okuyucunun Enter göndermediği durumlar veya manuel yapıştırma olabilir.
-             // Eğer inputun anlık değeri çok kısa sürede değişip tamamlanıyorsa (tipik barkod okuyucu),
-             // inputTimer bunu yakalayıp işleyecektir.
-             // Manuel yapıştırma gibi durumlarda, zaman aşımı sonunda buffer işlenecektir.
-             // Bu event listener'ı sadece 'keydown' event'i tarafından yakalanmayan durumları yakalamak için tutuyoruz.
-             // Ancak burada doğrudan işlem yapmak yerine keydown logic'ine bırakmak daha iyi olabilir.
-             // Şimdilik bu listener'ı kaldırıyorum veya boş bırakıyorum ki logic keydown üzerinde toplansın.
-         });
-
-
-        // Taranan barkodu işleme fonksiyonu
-        async function processScannedBarcode(barcode) {
-             // Boş barkodu veya mod seçilmemişse işlem yapma
-            if (barcode === '' || !selectedMode) {
-                return;
-            }
-
-            // Yükleniyor göstergesini göster
-            barcodeLoadingSpinner.classList.remove('hidden');
-            noBarcodeMessage.style.display = 'none'; // "Barkod yok" mesajını gizle
-
-             // Eğer barkod zaten listede varsa sadece sayısını artır
-            if (barcodeCounts[barcode]) {
-                barcodeCounts[barcode].count++;
-                renderBarcodeList(); // Listeyi güncelle
-                barcodeLoadingSpinner.classList.add('hidden'); // Spinner'ı gizle
-                 updateStockButton.disabled = false; // Güncelleme butonu aktif
-                return;
-            }
-
-            // Barkod listede yoksa, ürün bilgilerini çek
-            try {
-                const response = await fetch(`/api/get-product-details-by-barcode/${encodeURIComponent(barcode)}`);
-
-                // Yükleniyor göstergesini gizle
-                barcodeLoadingSpinner.classList.add('hidden');
-
-                const data = await response.json();
-
-                if (data.success && data.product) {
-                    // Ürün bilgisi başarıyla çekildi, listeye ekle
-                    barcodeCounts[barcode] = {
-                        count: 1,
-                        product: data.product // Ürün detaylarını sakla
-                    };
-                    renderBarcodeList(); // Listeyi güncelle
-                    updateStockButton.disabled = false; // Güncelleme butonu aktif
-
-                } else {
-                    // Ürün bulunamadı veya API hatası
-                    showMessage(data.message || `Ürün bilgisi çekilemedi: ${barcode}`, false);
-                    // Hata durumunda inputu temizle ve odakla
-                    barcodeInput.value = '';
-                    barcodeInput.focus();
-                    // Eğer hiç barkod yoksa "Barkod yok" mesajını göster
-                    if (Object.keys(barcodeCounts).length === 0) {
-                         noBarcodeMessage.style.display = 'block';
-                         updateStockButton.disabled = true;
-                    }
-                }
-
-            } catch (error) {
-                 // Ağ hatası veya fetch hatası
-                console.error('Ürün bilgisi çekilirken ağ hatası:', error);
-                barcodeLoadingSpinner.classList.add('hidden'); // Spinner'ı gizle
-                showMessage(`Ürün bilgisi çekilirken ağ hatası oluştu: ${barcode}`, false);
-                 // Hata durumunda inputu temizle ve odakla
-                barcodeInput.value = '';
-                barcodeInput.focus();
-                 // Eğer hiç barkod yoksa "Barkod yok" mesajını göster
-                if (Object.keys(barcodeCounts).length === 0) {
-                     noBarcodeMessage.style.display = 'block';
-                     updateStockButton.disabled = true;
-                }
-            }
-        }
-
-
-        // Okutulan barkod listesini HTML'de göster (Ürün detayları dahil)
-        function renderBarcodeList() {
-            scannedBarcodesDiv.innerHTML = ''; // Listeyi temizle
-            noBarcodeMessage.style.display = 'none'; // "Barkod yok" mesajını gizle
-
-            // Barkodları alfabetik sıraya göre sıralayarak gösterelim
-            const sortedBarcodes = Object.keys(barcodeCounts).sort();
-
-            if (sortedBarcodes.length === 0) {
-                noBarcodeMessage.style.display = 'block';
-                updateStockButton.disabled = true; // Hiç barkod yoksa güncelle butonu pasif
-                return;
-            }
-
-            sortedBarcodes.forEach(barcode => {
-                const itemData = barcodeCounts[barcode]; // Barkod bilgileri ve sayısı
-                const product = itemData.product; // Ürün detayları
-
-                const barcodeItemDiv = document.createElement('div');
-                barcodeItemDiv.classList.add('barcode-item');
-                barcodeItemDiv.innerHTML = `
-                     <div class="product-info-section">
-                         <img src="${product.image_url || '/static/images/default.jpg'}" class="product-thumbnail" alt="Ürün Görseli">
-                         <div class="product-details-text">
-                             <span class="barcode-value">${barcode}</span>
-                             <p><strong>Model:</strong> ${product.product_main_id || 'Bilinmiyor'}</p>
-                             <p><strong>Renk:</strong> ${product.color || 'Bilinmiyor'}</p>
-                             <p><strong>Beden:</strong> ${product.size || 'Bilinmiyor'}</p>
-                         </div>
+    function renderBarcodeList() {
+      scannedBarcodesDiv.innerHTML = '';
+      noBarcodeMessage.style.display = 'none';
+      const codes = Object.keys(barcodeCounts).sort();
+      if (!codes.length) {
+        noBarcodeMessage.style.display = 'block';
+        updateStockButton.disabled = true;
+        return;
+      }
+      codes.forEach(code => {
+        const item = barcodeCounts[code];
+        const div = document.createElement('div');
+        div.className = 'barcode-item';
+        let html = `<div class="barcode-info">
+                      <span class="barcode-value">${code}</span>
+                      <span class="barcode-count">${item.count} Adet</span>
+                    </div>`;
+        if (item.error) html += `<p class="error-message">${item.error}</p>`;
+        if (item.details) {
+          html += `<div class="product-details">
+                     <img src="${item.details.image_url||'https://placehold.co/50x50'}" alt="">
+                     <div class="product-details-text">
+                       <p><strong>Model:</strong> ${item.details.product_main_id||'N/A'}</p>
+                       <p><strong>Renk:</strong> ${item.details.color||'N/A'}</p>
+                       <p><strong>Beden:</strong> ${item.details.size||'N/A'}</p>
                      </div>
-                     <div class="barcode-count-section">
-                         <span class="barcode-count">${itemData.count} Adet</span>
-                     </div>
-                `;
-                scannedBarcodesDiv.appendChild(barcodeItemDiv);
-            });
-             // Barkodlar varsa güncelle butonu aktif
-            updateStockButton.disabled = false;
+                   </div>`;
         }
+        div.innerHTML = html;
+        scannedBarcodesDiv.appendChild(div);
+      });
+      updateStockButton.disabled = false;
+    }
 
-        // "Stokları Güncelle" Butonuna Olay Dinleyicisi Ekle
-        updateStockButton.addEventListener('click', function() {
-            // submitStock fonksiyonunu çağır
-            submitStock(selectedMode);
+    updateStockButton.addEventListener('click', ()=> {
+      const countsOnly = {};
+      for (const c in barcodeCounts) {
+        countsOnly[c] = { count: barcodeCounts[c].count };
+      }
+      if (!Object.keys(countsOnly).length) {
+        showMessage("Güncellenecek barkod bulunamadı.", false);
+      } else submitStock(selectedMode, countsOnly);
+    });
+
+    resetButton.addEventListener('click', resetStockAddition);
+
+    async function submitStock(updateType, countsOnly) {
+      const actionBtns = document.querySelectorAll('.update-button-group .btn');
+      const original = {};
+      actionBtns.forEach(b=>{
+        original[b.id]=b.innerHTML;
+        b.disabled=true;
+        if (b.id==='updateStockButton') b.innerHTML=`<span class="spinner-border spinner-border-sm"></span> Güncelleniyor...`;
+        else b.innerHTML=`<span class="spinner-border spinner-border-sm"></span>`;
+      });
+      try {
+        const res = await fetch('/stock-addition', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ barcodeCounts:countsOnly, updateType })
         });
-
-         // "Temizle/İptal" Butonuna Olay Dinleyicisi Ekle
-        resetButton.addEventListener('click', function() {
-            resetStockAddition();
+        const data = await res.json();
+        actionBtns.forEach(b=>{
+          b.innerHTML = original[b.id];
+          b.disabled = !(data.success && b.id==='resetButton');
         });
-
-
-        // Stok güncelleme isteğini backend'e gönder
-        async function submitStock(updateType) {
-            // Eğer hiç barkod okutulmamışsa uyarı ver (bu kontrol updateStockButton disabled durumuyla da sağlanıyor)
-            if (Object.keys(barcodeCounts).length === 0) {
-                 showMessage("Güncellenecek barkod bulunamadı.", false);
-                 return;
-            }
-
-             // Sadece count bilgisini içeren yeni bir obje oluştur
-            const simpleBarcodeCounts = {};
-            for (const barcode in barcodeCounts) {
-                simpleBarcodeCounts[barcode] = barcodeCounts[barcode].count;
-            }
-
-
-            // Butonları geçici olarak devre dışı bırak ve yükleniyor göster
-            const actionButtons = document.querySelectorAll('.update-button-group .btn');
-            const originalButtonHtml = {};
-            actionButtons.forEach(btn => {
-                originalButtonHtml[btn.id] = btn.innerHTML; // ID'ye göre orijinal içeriği sakla
-                btn.disabled = true;
-                if (btn.id === 'updateStockButton') {
-                     btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Güncelleniyor...`;
-                } else if (btn.id === 'resetButton') {
-                     btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>`;
-                }
-
-            });
-
-
-            try {
-                const response = await fetch('/stock-addition', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        barcodeCounts: simpleBarcodeCounts, // Basit count objesini gönder
-                        updateType: updateType
-                    })
-                });
-
-                const data = await response.json();
-
-                // Butonları tekrar aktifleştir ve orijinal haline getir
-                actionButtons.forEach(btn => {
-                    btn.innerHTML = originalButtonHtml[btn.id]; // ID'ye göre orijinal içeriği geri yükle
-                    // Başarılı durumda güncelle butonu pasif kalabilir, temizle aktif olur
-                    if (data.success && btn.id === 'updateStockButton') {
-                         btn.disabled = true;
-                    } else {
-                         btn.disabled = false;
-                    }
-                });
-
-
-                if (data.success) {
-                    showMessage(data.message, true);
-                    // Başarılı olursa okutulan listeyi ve modu temizle
-                    resetStockAddition();
-
-                } else {
-                    // Hata mesajlarını göster
-                    showMessage(data.message || "Stok güncelleme başarısız oldu.", false);
-                    // Detaylı hatalar varsa konsola yazdır
-                    if (data.errors) {
-                        console.error("Veritabanı hataları:", data.errors);
-                    }
-                     if (data.trendyolUpdateErrors) {
-                        console.error("Trendyol güncelleme hataları:", data.trendyolUpdateErrors);
-                    }
-                     // Hata durumunda barkod listesi temizlenmez, kullanıcı tekrar deneyebilir veya temizleyebilir.
-                }
-
-            } catch (error) {
-                 // Ağ hatası veya fetch hatası
-                console.error('Stok güncelleme sırasında ağ hatası:', error);
-                 // Butonları tekrar aktifleştir ve orijinal haline getir
-                 actionButtons.forEach(btn => {
-                    btn.innerHTML = originalButtonHtml[btn.id];
-                    btn.disabled = false;
-                 });
-                showMessage("Stok güncelleme sırasında bir ağ hatası oluştu.", false);
-            }
+        if (data.success) {
+          showMessage(data.message, true);
+          resetStockAddition();
+        } else {
+          showMessage(data.message||"Stok güncelleme başarısız.", false);
+          console.error(data.errors, data.trendyolUpdateErrors);
         }
+      } catch (e) {
+        actionBtns.forEach(b=>{ b.innerHTML=original[b.id]; b.disabled=false; });
+        showMessage("Ağ hatası oluştu.", false);
+      }
+    }
 
-        // Sayfayı başlangıç durumuna döndür (Mod seçimi ekranı)
-        function resetStockAddition() {
-            barcodeCounts = {};
-            selectedMode = null;
+    function resetStockAddition() {
+      barcodeCounts = {};
+      selectedMode = null;
+      stockForm.classList.add('hidden');
+      selectedModeDisplay.classList.add('hidden');
+      modeSelectionButtonsDiv.classList.remove('hidden');
+      noBarcodeMessage.style.display = 'block';
+      scannedBarcodesDiv.innerHTML = '';
+      barcodeInput.disabled = true;
+      barcodeInput.value = '';
+      updateStockButton.disabled = true;
+      selectRenewModeBtn.classList.replace('btn-primary','btn-outline-primary');
+      selectAddModeBtn.classList.replace('btn-success','btn-outline-success');
+      responseMessageDiv.classList.add('d-none');
+      selectRenewModeBtn.focus();
+    }
 
-            // Arayüz elementlerini gizle/göster
-            stockForm.classList.add('hidden');
-            selectedModeDisplay.classList.add('hidden');
-            modeSelectionButtonsDiv.classList.remove('hidden');
-            noBarcodeMessage.style.display = 'block'; // "Barkod yok" mesajını göster
+    function showMessage(msg, ok) {
+      responseMessageDiv.className = `alert ${ok?'alert-success':'alert-danger'} text-center mt-4`;
+      responseMessageDiv.textContent = msg;
+      responseMessageDiv.classList.remove('d-none');
+      setTimeout(()=> responseMessageDiv.classList.add('d-none'), 5000);
+    }
 
-            // Barkod listesini temizle
-            scannedBarcodesDiv.innerHTML = '';
-
-            // Inputu ve butonu başlangıç durumuna getir
-            barcodeInput.disabled = true;
-            barcodeInput.value = '';
-            updateStockButton.disabled = true;
-
-            // Mod seçim butonlarının stilini resetle
-            selectRenewModeBtn.classList.remove('btn-primary');
-            selectRenewModeBtn.classList.add('btn-outline-primary');
-            selectAddModeBtn.classList.remove('btn-success');
-            selectAddModeBtn.classList.add('btn-outline-success');
-
-            // Mesaj kutusunu gizle (varsa)
-            responseMessageDiv.classList.add('d-none');
-            responseMessageDiv.classList.remove('show');
-
-            // Mod seçim butonlarına odaklan (isteğe bağlı)
-            selectRenewModeBtn.focus();
-        }
-
-
-        // Mesaj gösterme fonksiyonu
-        function showMessage(message, isSuccess) {
-            responseMessageDiv.classList.remove('alert-success', 'alert-danger');
-            responseMessageDiv.classList.add('alert', isSuccess ? 'alert-success' : 'alert-danger', 'show');
-            responseMessageDiv.textContent = message;
-            responseMessageDiv.classList.remove('d-none'); // Gizliliği kaldır
-
-            // Mesajı 5 saniye sonra otomatik gizle
-            setTimeout(() => {
-                responseMessageDiv.classList.add('d-none'); // Tekrar gizle
-                responseMessageDiv.classList.remove('show');
-            }, 5000);
-        }
-
-        // Sayfa yüklendiğinde (başlangıç durumu)
-        window.onload = function() {
-             // Sayfayı resetleyerek başlangıç durumuna getir
-             resetStockAddition();
-             // Mod seçim butonlarına odaklan
-             selectRenewModeBtn.focus();
-        };
-
-
-    </script>
+    window.onload = ()=>{ resetStockAddition(); selectRenewModeBtn.focus(); };
+  </script>
 </body>
 </html>
