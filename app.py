@@ -14,7 +14,7 @@ try:
     from trendyol_api import update_trendyol_stock # trendyol_api.py dosyasında böyle bir fonksiyon olduğunu varsaydık
 except ImportError:
     update_trendyol_stock = None
-    print("Uyarı: trendyol_api.py bulunamadı veya update_trendyol_stock fonksiyonu tanımlı değil. Trendyol stok güncellemeleri yapılamayacak.")
+    print("deneme")
 
 
 # ✅ Düzeltme: archive.py dosyasından format_turkish_date_filter fonksiyonunu import et
