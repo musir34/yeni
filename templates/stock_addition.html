@@ -136,9 +136,8 @@
       <a href="{{ url_for('get_products.product_list') }}" class="btn btn-outline-info btn-sm me-2">
         <i class="bi bi-box-seam"></i> Ürün Listesi
       </a>
-      <!-- Stokları Güncelle Butonu -->
-      <form action="{{ url_for('get_products.update_stocks_route') }}" method="post" style="display:inline-block;">
-        <button type="submit" class="btn btn-warning btn-sm me-2">
+      <form id="updateTrendyolStocksForm" action="{{ url_for('get_products.update_stocks_route') }}" method="post" style="display:inline-block;">
+        <button type="submit" class="btn btn-warning btn-sm me-2" id="updateTrendyolStocksButton">
           <i class="bi bi-boxes"></i> Stokları Güncelle (T)
         </button>
       </form>
@@ -183,7 +182,6 @@
     <div id="responseMessage" class="alert d-none text-center mt-4" role="alert"></div>
   </div>
 
-  <!-- Lightbox -->
   <div id="lightbox">
     <img src="" alt="Büyütülmüş Ürün">
   </div>
@@ -222,6 +220,10 @@
     const resetButton         = document.getElementById('resetButton');
     const responseMessageDiv  = document.getElementById('responseMessage');
     const modeSelectionButtonsDiv = document.querySelector('.mode-selection-buttons');
+    // Yeni eklenen elementler
+    const updateTrendyolStocksForm = document.getElementById('updateTrendyolStocksForm');
+    const updateTrendyolStocksButton = document.getElementById('updateTrendyolStocksButton');
+
 
     selectRenewModeBtn.addEventListener('click', ()=> selectMode('renew'));
     selectAddModeBtn.addEventListener('click', ()=> selectMode('add'));
@@ -346,6 +348,7 @@
         });
         if (data.success) {
           showMessage(data.message, true);
+          // Başarılı güncellemeden sonra formu sıfırla
           resetStockAddition();
         } else {
           showMessage(data.message||"Stok güncelleme başarısız.", false);
@@ -378,10 +381,62 @@
       responseMessageDiv.className = `alert ${ok?'alert-success':'alert-danger'} text-center mt-4`;
       responseMessageDiv.textContent = msg;
       responseMessageDiv.classList.remove('d-none');
+      // Mesajı 5 saniye sonra gizle
       setTimeout(()=> responseMessageDiv.classList.add('d-none'), 5000);
     }
 
+    // Sayfa yüklendiğinde formu sıfırla ve ilk moda odaklan
     window.onload = ()=>{ resetStockAddition(); selectRenewModeBtn.focus(); };
+
+    // Trendyol Stok Güncelleme Formu (Stokları Çekme) için AJAX
+    updateTrendyolStocksForm.addEventListener('submit', async function(e) {
+        e.preventDefault(); // Formun normal submit olmasını engelle
+
+        const $button = updateTrendyolStocksButton;
+        const originalButtonHtml = $button.innerHTML;
+
+        // Butonu devre dışı bırak ve yükleniyor göstergesi ekle
+        $button.disabled = true;
+        $button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Güncelleniyor...`;
+        // Mesaj kutusunu temizle/gizle
+        responseMessageDiv.classList.add('d-none');
+
+
+        try {
+            // AJAX isteğini gönder
+            const res = await fetch(this.action, {
+                method: this.method,
+                // Trendyol stok çekme POST isteği genellikle body gerektirmez,
+                // ama eğer gerektiriyorsa buraya eklenmeli.
+                // body: new FormData(this) veya JSON.stringify({})
+            });
+
+            const data = await res.json(); // JSON yanıtı bekle
+
+            // Butonu eski haline getir ve tekrar etkinleştir
+            $button.innerHTML = originalButtonHtml;
+            $button.disabled = false;
+
+            // Mesajı göster
+            if (data.success) {
+                showMessage(data.message, true);
+                // İsteğe bağlı: Başarılı güncelleme sonrası sayfayı yenile
+                // setTimeout(() => { location.reload(); }, 2000);
+            } else {
+                showMessage(data.message || "Trendyol stok güncelleme başarısız.", false);
+                console.error("Trendyol Stok Güncelleme Hatası:", data);
+            }
+
+        } catch (e) {
+            // Ağ hatası veya başka bir hata olursa
+            $button.innerHTML = originalButtonHtml;
+            $button.disabled = false;
+            showMessage("Trendyol stoklarını çekerken bir ağ hatası oluştu.", false);
+            console.error("Trendyol Stok Güncelleme Ağ Hatası:", e);
+        }
+    });
+
+
   </script>
 </body>
 </html>

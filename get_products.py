@@ -166,38 +166,63 @@ async def update_products_route():
 
 @get_products_bp.route('/update_stocks_route', methods=['POST'])
 async def update_stocks_route():
+    logger.info("Trendyol'dan stokları çekme ve güncelleme (AJAX) işlemi başlatıldı.")
     try:
+        # Fetch all products from Trendyol (this function already exists)
         trendyol_products = await fetch_all_products_async()
 
         if not trendyol_products:
-            flash('Trendyol\'dan ürünler çekilemedi.', 'danger')
-            return redirect(url_for('get_products.product_list'))
+            logger.warning("Trendyol'dan ürün çekilemedi.")
+            # Return a JSON response
+            return jsonify({'success': False, 'message': 'Trendyol\'dan ürünler çekilemedi.'})
 
+        # Create a map of barcode to quantity from Trendyol data
         barcode_quantity_map = {
-            p['barcode']: p['quantity'] for p in trendyol_products if 'barcode' in p and 'quantity' in p
+            p.get('barcode'): p.get('quantity', 0) # Default quantity to 0 if missing
+            for p in trendyol_products
+            if p.get('barcode') # Ensure barcode exists
         }
+
+        # Get products from our database that match the barcodes from Trendyol
+        # Use .keys() on the map to get the list of barcodes
+        if not barcode_quantity_map:
+            logger.info("Trendyol'dan geçerli barkod bilgisi alınamadı, veritabanı güncellenmeyecek.")
+             # Return a JSON response
+            return jsonify({'success': False, 'message': 'Trendyol\'dan güncellenecek stok bilgisi alınamadı.'})
+
 
         local_products = Product.query.filter(Product.barcode.in_(barcode_quantity_map.keys())).all()
 
+        updated_count = 0
+        # Update quantity for matching local products
         for product in local_products:
             if product.barcode in barcode_quantity_map:
-                product.quantity = barcode_quantity_map[product.barcode]
-                db.session.add(product)
+                new_quantity = barcode_quantity_map[product.barcode]
+                # Only update if quantity has actually changed
+                if product.quantity != new_quantity:
+                    product.quantity = new_quantity
+                    db.session.add(product) # Mark as changed
+                    updated_count += 1
 
+        # Commit the database changes
         db.session.commit()
-        flash('Stoklar başarıyla Trendyol\'dan çekilip güncellendi.', 'success')
-        logger.info('Stoklar Trendyol\'dan başarıyla güncellendi.')
+
+        logger.info(f"Stoklar başarıyla Trendyol'dan çekilip veritabanında güncellendi. Güncellenen ürün sayısı: {updated_count}")
+
+        # Optionally, you might want to trigger a Trendyol stock update from here too
+        # if you want to ensure your local changes are pushed back to Trendyol immediately.
+        # This would involve preparing the updated items in the format expected by update_stock_levels_with_items_async
+        # and calling it here. For now, we'll just update the local DB.
+
+        # Return a JSON response instead of a redirect
+        return jsonify({'success': True, 'message': f'Stoklar başarıyla Trendyol\'dan çekildi ve veritabanında güncellendi ({updated_count} ürün güncellendi).'})
 
     except Exception as e:
+        # Rollback in case of any error during the process
         db.session.rollback()
-        logger.error(f"update_stocks_route hata: {e}")
-        flash('Stok güncelleme sırasında hata oluştu.', 'danger')
-
-    return redirect(url_for('get_products.product_list'))
-
-
-
-
+        logger.error(f"update_stocks_route hata: {e}", exc_info=True)
+        # Return a JSON error response
+        return jsonify({'success': False, 'message': f'Stok güncelleme sırasında bir hata oluştu: {str(e)}'})
 
 
 
