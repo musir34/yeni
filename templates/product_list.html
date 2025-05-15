@@ -133,21 +133,29 @@
 
 
     <div class="text-center mb-4">
-      <a href="/" class="btn btn-secondary">
-        <i class="fas fa-home"></i> <span class="sr-only">Anasayfa</span>
-      </a>
-       <form action="{{ url_for('get_products.update_products_route') }}" method="post" style="display:inline-block; margin-left: 10px;">
-        <button type="submit" class="btn btn-success">
-          <i class="fas fa-sync-alt"></i> Ürünleri Güncelle (T) </button>
-      </form>
-      <form action="{{ url_for('get_products.update_stocks_route') }}" method="post" style="display:inline-block;">
-        <button type="submit" class="btn btn-warning ml-2">
-          <i class="fas fa-boxes"></i> Stokları Güncelle (T) </button>
-      </form>
-       <a href="/product_label" class="btn btn-primary ml-2">
-        <i class="fas fa-barcode"></i> Barkod Oluştur/Yazdır
-      </a>
-    </div>
+  <a href="/" class="btn btn-secondary">
+    <i class="fas fa-home"></i> <span class="sr-only">Anasayfa</span>
+  </a>
+  <form action="{{ url_for('get_products.update_products_route') }}" method="post" style="display:inline-block; margin-left: 10px;">
+    <button type="submit" class="btn btn-success">
+      <i class="fas fa-sync-alt"></i> Ürünleri Güncelle (T)
+    </button>
+  </form>
+  <form action="{{ url_for('get_products.update_stocks_route') }}" method="post" style="display:inline-block;">
+    <button type="submit" class="btn btn-warning ml-2">
+      <i class="fas fa-boxes"></i> Stokları Güncelle (T)
+    </button>
+  </form>
+  <a href="/product_label" class="btn btn-primary ml-2">
+    <i class="fas fa-barcode"></i> Barkod Oluştur/Yazdır
+  </a>
+  <!-- Katalog Hazırla Butonu -->
+  <form action="{{ url_for('catalog.generate_catalog_reportlab') }}" method="get" style="display:inline-block;">
+    <button type="submit" class="btn btn-info ml-2">
+      <i class="fas fa-file-pdf"></i> Katalog Hazırla
+    </button>
+  </form>
+</div>
 
     <h1 class="text-center mb-4">Güllü Ayakkabı Ürün Listesi</h1>
 
