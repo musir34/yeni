@@ -1,33 +1,56 @@
-from flask import Blueprint, render_template, request, jsonify
-import qrcode
-import os
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import mm
+from datetime import datetime
 
-qr_utils_bp = Blueprint('qr_utils', __name__)
-
-@qr_utils_bp.route('/generate_qr', methods=['GET'])
-def generate_qr():
+@qr_utils_bp.route('/generate_qr_labels_pdf', methods=['POST'])
+def generate_qr_labels_pdf():
     """
-    Trendyol'dan gelen barkod ile QR kod oluştur ve döndür.
+    Birden fazla barkod alıp, her biri için QR kod üretip A4 sayfasında 60x40 mm ölçülerde PDF etiket oluşturur.
     """
-    barcode = request.args.get('barcode', '').strip()
-    if not barcode:
-        return jsonify({'success': False, 'message': 'Barkod eksik!'})
+    data = request.get_json()
+    barcodes = data.get('barcodes', [])
 
-    # QR kod oluşturma
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=7,
-        border=3,
-    )
-    qr.add_data(barcode)
-    qr.make(fit=True)
+    if not barcodes:
+        return jsonify({'success': False, 'message': 'Barkod listesi boş!'})
 
-    # QR kodu kaydet
     qr_dir = os.path.join('static', 'qr_codes')
     os.makedirs(qr_dir, exist_ok=True)
-    qr_path = os.path.join(qr_dir, f"{barcode}.png")
-    qr.make_image(fill_color="black", back_color="white").save(qr_path)
 
-    # QR kod görselinin göreli yolunu döndür
-    return jsonify({'success': True, 'qr_code_path': f"/static/qr_codes/{barcode}.png"})
+    # PDF dosyası için yol
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    pdf_path = os.path.join(qr_dir, f"etiketler_{timestamp}.pdf")
+
+    c = canvas.Canvas(pdf_path, pagesize=A4)
+
+    label_width = 60 * mm
+    label_height = 40 * mm
+    page_width, page_height = A4
+
+    cols = int(page_width // label_width)
+    rows = int(page_height // label_height)
+
+    x_margin = (page_width - (cols * label_width)) / 2
+    y_margin = (page_height - (rows * label_height)) / 2
+
+    for i, barcode in enumerate(barcodes):
+        col = i % cols
+        row = (i // cols) % rows
+
+        if i > 0 and i % (cols * rows) == 0:
+            c.showPage()  # Yeni sayfaya geç
+
+        qr = qrcode.make(barcode)
+        qr_filename = os.path.join(qr_dir, f"{barcode}.png")
+        qr.save(qr_filename)
+
+        x = x_margin + col * label_width
+        y = page_height - y_margin - (row + 1) * label_height
+
+        c.drawImage(qr_filename, x + 5 * mm, y + 5 * mm, width=30 * mm, height=30 * mm)
+        c.setFont("Helvetica", 8)
+        c.drawCentredString(x + label_width / 2, y + 2 * mm, barcode)
+
+    c.save()
+
+    return jsonify({'success': True, 'pdf_path': f"/static/qr_codes/etiketler_{timestamp}.pdf"})

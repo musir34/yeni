@@ -165,65 +165,105 @@ async def update_products_route():
 
 
 @get_products_bp.route('/update_stocks_route', methods=['POST'])
-async def update_stocks_route():
-    logger.info("Trendyol'dan stokları çekme ve güncelleme (AJAX) işlemi başlatıldı.")
+async def update_stocks_route(): # Bu fonksiyon Trendyol'daki STOK bilgilerini çekip DB'deki stokları günceller
+    logger.info("Trendyol'dan stokları çekme ve veritabanını güncelleme işlemi başlatıldı.")
+
+    # trendyol_api.py bilgileri kontrolü
+    if not API_KEY or not API_SECRET or not SUPPLIER_ID:
+         msg = "Trendyol API bilgileri sunucuda eksik. Stoklar Trendyol'dan çekilemez."
+         logger.error(msg)
+         # Bu endpoint frontend'e JSON dönüyor, flash değil
+         return jsonify({'success': False, 'message': msg})
+
+
     try:
-        # Fetch all products from Trendyol (this function already exists)
+        # 1. Trendyol'dan TÜM ürünleri çek (quantity bilgisi de gelir)
+        # fetch_all_products_async zaten Trendyol'un ürün listeleme endpoint'ini kullanır
+        # ve her ürünün güncel quantity bilgisini içerir.
         trendyol_products = await fetch_all_products_async()
 
         if not trendyol_products:
-            logger.warning("Trendyol'dan ürün çekilemedi.")
-            # Return a JSON response
-            return jsonify({'success': False, 'message': 'Trendyol\'dan ürünler çekilemedi.'})
+            logger.warning("Trendyol'dan ürün çekilemedi. Stok güncellenemiyor.")
+            return jsonify({'success': False, 'message': 'Trendyol\'dan güncel ürün (stok) bilgisi çekilemedi.'})
 
-        # Create a map of barcode to quantity from Trendyol data
+        # 2. Trendyol verisinden barkod -> miktar eşleşmesini oluştur
+        # Sadece geçerli barkodu olanları al
         barcode_quantity_map = {
-            p.get('barcode'): p.get('quantity', 0) # Default quantity to 0 if missing
+            p.get('barcode'): int(p.get('quantity', 0)) # quantity'yi int yapalım
             for p in trendyol_products
-            if p.get('barcode') # Ensure barcode exists
+            if p.get('barcode') # Barkod var mı kontrol et
         }
 
-        # Get products from our database that match the barcodes from Trendyol
-        # Use .keys() on the map to get the list of barcodes
         if not barcode_quantity_map:
-            logger.info("Trendyol'dan geçerli barkod bilgisi alınamadı, veritabanı güncellenmeyecek.")
-             # Return a JSON response
-            return jsonify({'success': False, 'message': 'Trendyol\'dan güncellenecek stok bilgisi alınamadı.'})
+            logger.info("Trendyol'dan güncellenecek geçerli stok bilgisi (barkod/miktar) alınamadı.")
+            return jsonify({'success': False, 'message': 'Trendyol\'dan güncellenecek stok bilgisi alınamadı (Geçerli barkod bulunamadı).'})
+
+        # 3. Kendi veritabanındaki ilgili ürünleri çek (BURASI BATCH YAPILDI)
+        all_trendyol_barcodes = list(barcode_quantity_map.keys())
+        logger.debug(f"Trendyol'dan çekilen ve DB'de aranacak toplam barkod sayısı: {len(all_trendyol_barcodes)}")
+
+        batch_size = 1000 # Veritabanı sorguları için batch boyutu (Bu değeri DB limitine göre ayarlayabilirsin, 1000 genelde güvenlidir)
+        local_products_to_update = [] # Güncellenecek yerel ürünleri burada toplayacağız
+
+        # Barkod listesini batch'lere böl ve her batch için DB'den çek
+        for i in range(0, len(all_trendyol_barcodes), batch_size):
+            barcode_batch = all_trendyol_barcodes[i : i + batch_size]
+            logger.debug(f"DB'den ürünler çekiliyor: Batch {i//batch_size + 1} / { (len(all_trendyol_barcodes) + batch_size - 1) // batch_size } (Barkod aralığı: {barcode_batch[0]} - {barcode_batch[-1] if barcode_batch else 'Boş'})") # Log mesajı iyileştirildi
+
+            # SQLAlchemy sorgusu ile batch'teki barkodlara sahip ürünleri çek
+            # .all() burada senkron çalışır, async context içinde olmasına rağmen.
+            # Büyük veri setleri için burada performans darboğazı olabilir, ama IN limitini aşar.
+            batch_results = Product.query.filter(Product.barcode.in_(barcode_batch)).all()
+            local_products_to_update.extend(batch_results) # Batch sonuçlarını ana listeye ekle
+
+        logger.debug(f"Veritabanından Trendyol barkodlarına karşılık gelen toplam ürün sayısı: {len(local_products_to_update)}")
 
 
-        local_products = Product.query.filter(Product.barcode.in_(barcode_quantity_map.keys())).all()
-
+        # 4. Kendi veritabanındaki ürünlerin stoğunu Trendyol verisine göre güncelle
         updated_count = 0
-        # Update quantity for matching local products
-        for product in local_products:
-            if product.barcode in barcode_quantity_map:
-                new_quantity = barcode_quantity_map[product.barcode]
-                # Only update if quantity has actually changed
-                if product.quantity != new_quantity:
-                    product.quantity = new_quantity
-                    db.session.add(product) # Mark as changed
-                    updated_count += 1
+        products_marked_for_update = [] # session.add ile işaretlenen ürünler
 
-        # Commit the database changes
-        db.session.commit()
+        for product in local_products_to_update:
+            trendyol_quantity = barcode_quantity_map.get(product.barcode) # Trendyol'daki miktar
 
-        logger.info(f"Stoklar başarıyla Trendyol'dan çekilip veritabanında güncellendi. Güncellenen ürün sayısı: {updated_count}")
+            # Trendyol'dan gelen miktarın None veya farklı bir şey olmaması lazım, Trendyol 0 veya pozitif int döner
+            # Yine de kontrol ekleyelim
+            if trendyol_quantity is not None and isinstance(trendyol_quantity, int):
+                 # Sadece miktar gerçekten değişmişse güncelle
+                 if product.quantity != trendyol_quantity:
+                     logger.debug(f"DB Stoğu Güncelleniyor: Barkod {product.barcode}, Eski: {product.quantity}, Yeni (Trendyol): {trendyol_quantity}")
+                     product.quantity = trendyol_quantity
+                     db.session.add(product) # Mark as changed
+                     products_marked_for_update.append(product) # Commit için listeye ekle
+                     updated_count += 1
+                 else:
+                     logger.debug(f"DB Stoğu Aynı: Barkod {product.barcode}, Miktar: {product.quantity}")
+            else:
+                 logger.warning(f"Trendyol'dan {product.barcode} barkodu için geçersiz miktar geldi: {trendyol_quantity}. DB güncellenmedi.")
+                 # Bu durumda bu ürünün DB'deki stoğunu Trendyol'a göre çekmemiş oluyoruz.
 
-        # Optionally, you might want to trigger a Trendyol stock update from here too
-        # if you want to ensure your local changes are pushed back to Trendyol immediately.
-        # This would involve preparing the updated items in the format expected by update_stock_levels_with_items_async
-        # and calling it here. For now, we'll just update the local DB.
+        # 5. Veritabanı değişikliklerini kaydet (Tek commit!)
+        if products_marked_for_update:
+            try:
+                db.session.commit()
+                logger.info(f"Trendyol stok bilgisine göre veritabanında {updated_count} ürün stoğu başarıyla güncellendi.")
+            except Exception as e:
+                 db.session.rollback()
+                 logger.error(f"Veritabanına stok güncellenirken commit hatası: {e}", exc_info=True)
+                 return jsonify({'success': False, 'message': f'Veritabanına stok güncellenirken hata oluştu: {str(e)}'})
+        else:
+            logger.info("Veritabanında güncellenecek stok farkı olan ürün bulunamadı.")
 
-        # Return a JSON response instead of a redirect
+
+        # 6. Başarılı yanıt döndür
         return jsonify({'success': True, 'message': f'Stoklar başarıyla Trendyol\'dan çekildi ve veritabanında güncellendi ({updated_count} ürün güncellendi).'})
 
     except Exception as e:
-        # Rollback in case of any error during the process
-        db.session.rollback()
-        logger.error(f"update_stocks_route hata: {e}", exc_info=True)
-        # Return a JSON error response
+        # Süreç sırasında herhangi bir hata oluşursa (fetch_all_products_async hatası vb.)
+        db.session.rollback() # Olası yarım kalan DB işlemleri için
+        logger.error(f"update_stocks_route (Trendyol Stok Çekme) sırasında genel hata: {e}", exc_info=True)
+        # Frontend'e JSON hata yanıtı döndür
         return jsonify({'success': False, 'message': f'Stok güncelleme sırasında bir hata oluştu: {str(e)}'})
-
 
 
 

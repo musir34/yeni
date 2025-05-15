@@ -1,442 +1,411 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>Stok Ekleme – Güllü Ayakkabı</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-  <style>
-    :root {
-      --bg-page: #f7f9fc;
-      --bg-card: #ffffff;
-      --text-primary: #1a202c;
-      --btn-primary: #0069d9;
-      --btn-success: #198754;
-      --shadow-light: rgba(0,0,0,0.05);
-    }
-    body {
-      background: var(--bg-page);
-      color: var(--text-primary);
-      font-family: 'Segoe UI', sans-serif;
-      padding: 2rem 0;
-    }
-    .container {
-      max-width: 800px;
-      margin: auto;
-      background: var(--bg-card);
-      border-radius: 10px;
-      box-shadow: 0 4px 16px var(--shadow-light);
-      padding: 2rem;
-    }
-    /* Hafif bulanık üst dalga efekti */
-    .container::before {
-      content: "";
-      position: absolute;
-      top: -60px; left: -60px;
-      width: 200px; height: 200px;
-      background: rgba(0,105,217,0.2);
-      border-radius: 50%;
-      filter: blur(80px);
-      z-index: -1;
-    }
-    h2 {
-      text-align: center;
-      margin-bottom: 1.5rem;
-      font-weight: 600;
-      color: var(--btn-primary);
-    }
-    .mode-selection-buttons .btn {
-      flex: 1;
-      padding: 0.75rem;
-      border-radius: 6px;
-      transition: background 0.2s;
-    }
-    .mode-selection-buttons .btn:hover {
-      background: var(--btn-primary);
-      color: #fff;
-    }
-    #barcodeInput {
-      font-size: 1.1rem;
-      border: 1px solid var(--shadow-light);
-      border-radius: 6px;
-      transition: box-shadow 0.2s;
-    }
-    #barcodeInput:focus {
-      box-shadow: 0 0 8px rgba(0,105,217,0.3);
-      border-color: var(--btn-primary);
-    }
-    .barcode-item {
-      background: var(--bg-page);
-      border-radius: 8px;
-      box-shadow: 0 2px 8px var(--shadow-light);
-      padding: 0.75rem;
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-    .barcode-value {
-      font-weight: 600;
-      color: var(--btn-primary);
-    }
-    .barcode-count {
-      font-weight: 600;
-      color: var(--btn-success);
-    }
-    .product-details {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    .product-details img {
-      width: 50px;
-      height: auto;
-      border-radius: 4px;
-      cursor: zoom-in;
-      transition: transform 0.2s;
-    }
-    .product-details img:hover {
-      transform: scale(1.05);
-    }
-    .update-button-group .btn {
-      min-width: 160px;
-      border-radius: 6px;
-      transition: background 0.2s;
-    }
-    .update-button-group .btn:hover:not(:disabled) {
-      opacity: 0.9;
-    }
-    /* Lightbox */
-    #lightbox {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.7);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    }
-    #lightbox img {
-      max-width: 90%;
-      max-height: 90%;
-      border-radius: 8px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Stok Ekleme – Güllü Ayakkabı</title>
+
+<!-- Bootstrap & Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+<style>
+:root{
+  --bg-page:#f7f9fc;--bg-card:#ffffff;--text-primary:#1a202c;
+  --btn-primary:#0069d9;--btn-success:#198754;--shadow-light:rgba(0,0,0,0.05);
+}
+body{background:var(--bg-page);color:var(--text-primary);
+      font-family:'Segoe UI',sans-serif;padding:2rem 0;}
+.container{
+  max-width:800px;margin:auto;background:var(--bg-card);
+  border-radius:10px;box-shadow:0 4px 16px var(--shadow-light);padding:2rem;
+}
+.container::before{
+  content:"";position:absolute;top:-60px;left:-60px;width:200px;height:200px;
+  background:rgba(0,105,217,.2);border-radius:50%;filter:blur(80px);z-index:-1;
+}
+h2{text-align:center;margin-bottom:1.5rem;font-weight:600;color:var(--btn-primary);}
+.mode-selection-buttons .btn{flex:1;padding:.75rem;border-radius:6px;transition:background .2s;}
+.mode-selection-buttons .btn:hover{background:var(--btn-primary);color:#fff;}
+#barcodeInput{
+  font-size:1.1rem;border:1px solid var(--shadow-light);border-radius:6px;
+  transition:box-shadow .2s;
+}
+#barcodeInput:focus{box-shadow:0 0 8px rgba(0,105,217,.3);border-color:var(--btn-primary);}
+.barcode-item{
+  background:var(--bg-page);border-radius:8px;box-shadow:0 2px 8px var(--shadow-light);
+  padding:.75rem;margin-bottom:1rem;display:flex;align-items:center;gap:1rem;
+}
+.barcode-value{font-weight:600;color:var(--btn-primary);}
+.barcode-count{font-weight:600;color:var(--btn-success);}
+.product-details{display:flex;align-items:center;gap:.75rem;}
+.product-details img{width:50px;height:auto;border-radius:4px;cursor:zoom-in;transition:transform .2s;}
+.product-details img:hover{transform:scale(1.05);}
+.update-button-group .btn{min-width:160px;border-radius:6px;transition:background .2s;}
+.update-button-group .btn:hover:not(:disabled){opacity:.9;}
+#lightbox{
+  position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);
+  display:none;align-items:center;justify-content:center;z-index:9999;
+}
+#lightbox img{max-width:90%;max-height:90%;border-radius:8px;
+              box-shadow:0 4px 16px rgba(0,0,0,.3);}
+</style>
 </head>
+
 <body>
-  <div class="container position-relative">
-    <h2>Stok Ekleme Ekranı</h2>
+<div class="container position-relative">
+  <h2>Stok Ekleme Ekranı</h2>
 
-    <div class="text-center mb-4">
-      <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm me-2">
-        <i class="bi bi-house-door"></i> Anasayfa
-      </a>
-      <a href="{{ url_for('get_products.product_list') }}" class="btn btn-outline-info btn-sm me-2">
-        <i class="bi bi-box-seam"></i> Ürün Listesi
-      </a>
-      <form id="updateTrendyolStocksForm" action="{{ url_for('get_products.update_stocks_route') }}" method="post" style="display:inline-block;">
-        <button type="submit" class="btn btn-warning btn-sm me-2" id="updateTrendyolStocksButton">
-          <i class="bi bi-boxes"></i> Stokları Güncelle (T)
-        </button>
-      </form>
-      <a href="{{ url_for('stock_report.stock_report') }}" class="btn btn-outline-warning btn-sm">
-        <i class="bi bi-bar-chart"></i> Stok Raporu
-      </a>
-    </div>
+  <!-- Üst navigasyon -->
+  <div class="text-center mb-4">
+    <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm me-2">
+      <i class="bi bi-house-door"></i> Anasayfa
+    </a>
+    <a href="{{ url_for('get_products.product_list') }}" class="btn btn-outline-info btn-sm me-2">
+      <i class="bi bi-box-seam"></i> Ürün Listesi
+    </a>
 
-    <div class="mode-selection-buttons d-flex mb-3">
-      <button id="selectRenewMode" class="btn btn-outline-primary btn-lg me-2">
-        <i class="bi bi-arrow-repeat"></i><br>Raftaki Yenile
+    <form id="updateTrendyolStocksForm"
+          action="{{ url_for('get_products.update_stocks_route') }}"
+          method="post" style="display:inline-block;">
+      <button type="submit" class="btn btn-warning btn-sm me-2"
+              id="updateTrendyolStocksButton">
+        <i class="bi bi-boxes"></i> Stokları Güncelle (T)
       </button>
-      <button id="selectAddMode" class="btn btn-outline-success btn-lg">
-        <i class="bi bi-plus-circle"></i><br>Yeni Ekle
-      </button>
-    </div>
-
-    <div id="selectedModeDisplay" class="selected-mode-display hidden text-center mb-3">
-      Seçilen Mod: <span></span>
-    </div>
-
-    <form id="stockForm" class="hidden">
-      <div class="mb-3">
-        <label for="barcodeInput" class="form-label">Barkod Okutun:</label>
-        <input type="text" id="barcodeInput" class="form-control" autocomplete="off" disabled>
-      </div>
-      <div class="barcode-list-container mb-3">
-        <h5>Okutulan Barkodlar:</h5>
-        <div id="scannedBarcodes"></div>
-        <p id="noBarcodeMessage" class="text-muted text-center mt-3">Henüz barkod okutulmadı.</p>
-      </div>
-      <div class="update-button-group d-flex justify-content-center gap-3">
-        <button id="updateStockButton" class="btn btn-primary btn-lg" disabled>
-          <i class="bi bi-arrow-repeat"></i> Güncelle
-        </button>
-        <button id="resetButton" class="btn btn-secondary btn-lg">
-          <i class="bi bi-x-circle"></i> İptal
-        </button>
-      </div>
     </form>
 
-    <div id="responseMessage" class="alert d-none text-center mt-4" role="alert"></div>
+    <a href="{{ url_for('stock_report.stock_report') }}"
+       class="btn btn-outline-warning btn-sm">
+      <i class="bi bi-bar-chart"></i> Stok Raporu
+    </a>
   </div>
 
-  <div id="lightbox">
-    <img src="" alt="Büyütülmüş Ürün">
+  <!-- Mod seçimi -->
+  <div class="mode-selection-buttons d-flex mb-3">
+    <button id="selectRenewMode" class="btn btn-outline-primary btn-lg me-2">
+      <i class="bi bi-arrow-repeat"></i><br>Raftaki Yenile
+    </button>
+    <button id="selectAddMode" class="btn btn-outline-success btn-lg">
+      <i class="bi bi-plus-circle"></i><br>Yeni Ekle
+    </button>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    // Lightbox işlevi
-    document.addEventListener('click', (e) => {
-      // Ürün resmi tıklandığında
-      if (e.target.matches('.product-details img')) {
-        const lb = document.getElementById('lightbox');
-        lb.querySelector('img').src = e.target.src;
-        lb.style.display = 'flex';
+  <div id="selectedModeDisplay"
+       class="selected-mode-display hidden text-center mb-3">
+    Seçilen Mod: <span></span>
+  </div>
+
+  <!-- Stok formu -->
+  <form id="stockForm" class="hidden">
+    <div class="mb-3">
+      <label for="barcodeInput" class="form-label">Barkod Okutun:</label>
+      <input type="text" id="barcodeInput" class="form-control"
+             autocomplete="off" disabled autofocus>
+    </div>
+
+    <div class="barcode-list-container mb-3">
+      <h5>Okutulan Barkodlar:</h5>
+      <div id="scannedBarcodes"></div>
+      <p id="noBarcodeMessage" class="text-muted text-center mt-3">
+        Henüz barkod okutulmadı.
+      </p>
+    </div>
+
+    <div class="update-button-group d-flex justify-content-center gap-3">
+      <!-- type="button" → otomatik submit yok -->
+      <button id="updateStockButton" type="button"
+              class="btn btn-primary btn-lg" disabled>
+        <i class="bi bi-arrow-repeat"></i> Güncelle
+      </button>
+      <button id="resetButton" type="button"
+              class="btn btn-secondary btn-lg">
+        <i class="bi bi-x-circle"></i> İptal
+      </button>
+    </div>
+  </form>
+
+  <div id="responseMessage"
+       class="alert d-none text-center mt-4" role="alert"></div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox"><img src="" alt="Büyütülmüş Ürün"></div>
+
+<!-- Bootstrap Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+/* ---------- Lightbox ---------- */
+document.addEventListener('click', e=>{
+  if(e.target.matches('.product-details img')){
+    const lb=document.getElementById('lightbox');
+    lb.querySelector('img').src=e.target.src;
+    lb.style.display='flex';
+  }else if(e.target.id==='lightbox'){
+    e.target.style.display='none';
+    e.target.querySelector('img').src='';
+  }
+});
+
+/* ---------- Global Değişkenler ---------- */
+let barcodeCounts={},selectedMode=null,barcodeBuffer='';
+
+const barcodeInput               = document.getElementById('barcodeInput');
+const selectRenewModeBtn         = document.getElementById('selectRenewMode');
+const selectAddModeBtn           = document.getElementById('selectAddMode');
+const selectedModeDisplay        = document.getElementById('selectedModeDisplay');
+const selectedModeSpan           = selectedModeDisplay.querySelector('span');
+const stockForm                  = document.getElementById('stockForm');
+const scannedBarcodesDiv         = document.getElementById('scannedBarcodes');
+const noBarcodeMessage           = document.getElementById('noBarcodeMessage');
+const updateStockButton          = document.getElementById('updateStockButton');
+const resetButton                = document.getElementById('resetButton');
+const responseMessageDiv         = document.getElementById('responseMessage');
+const modeSelectionButtonsDiv    = document.querySelector('.mode-selection-buttons');
+const updateTrendyolStocksForm   = document.getElementById('updateTrendyolStocksForm');
+const updateTrendyolStocksButton = document.getElementById('updateTrendyolStocksButton');
+
+/* ---------- Form submit’ini tamamen engelle ---------- */
+stockForm.addEventListener('submit', e=>e.preventDefault());
+
+/* ---------- ODAK KORUYUCU ---------- */
+function forceFocus(){
+  if(!barcodeInput.disabled && document.activeElement!==barcodeInput){
+    barcodeInput.focus();
+  }
+}
+['click','focusin','keydown'].forEach(ev=>{
+  document.addEventListener(ev,forceFocus,true);
+});
+setInterval(forceFocus,5000);
+
+/* ---------- Sayfa genelinde Enter / Tab engeli ---------- */
+document.addEventListener('keydown',e=>{
+  if((e.key==='Enter'||e.key==='Tab')&&document.activeElement!==barcodeInput){
+    e.preventDefault();e.stopPropagation();forceFocus();
+  }
+});
+
+/* ---------- Mod Seçimi ---------- */
+selectRenewModeBtn.addEventListener('click',()=>selectMode('renew'));
+selectAddModeBtn  .addEventListener('click',()=>selectMode('add'));
+
+function selectMode(mode){
+  selectedMode=mode;
+
+  selectRenewModeBtn.classList.remove('btn-primary','btn-outline-primary');
+  selectAddModeBtn  .classList.remove('btn-success','btn-outline-success');
+
+  if(mode==='renew'){
+    selectRenewModeBtn.classList.add('btn-primary');
+    selectAddModeBtn.classList.add('btn-outline-success');
+    selectedModeSpan.textContent='Raftaki Stokları Yenile';
+  }else{
+    selectAddModeBtn.classList.add('btn-success');
+    selectRenewModeBtn.classList.add('btn-outline-primary');
+    selectedModeSpan.textContent='Yeni Gelenleri Ekle';
+  }
+
+  modeSelectionButtonsDiv.classList.add('hidden');
+  selectedModeDisplay.classList.remove('hidden');
+  stockForm.classList.remove('hidden');
+
+  barcodeInput.disabled=false;
+  forceFocus();
+  updateStockButton.disabled=true;
+}
+
+/* ---------- Barkod Okuma ---------- */
+barcodeInput.addEventListener('keydown',e=>{
+  if(e.key==='Tab'){e.preventDefault();e.stopPropagation();}   // Tab kaçarını engelle
+});
+barcodeInput.addEventListener('keyup',async e=>{
+  if(e.key==='Enter'){
+    e.preventDefault();e.stopPropagation();
+    const barcode=barcodeBuffer.trim();
+    barcodeBuffer='';barcodeInput.value='';
+
+    if(!barcode||barcode.length<4){
+      showMessage("Geçersiz barkod.",false);
+    }else if(!selectedMode){
+      showMessage("Lütfen önce mod seçin.",false);
+    }else{
+      if(barcodeCounts[barcode]){
+        barcodeCounts[barcode].count++;
+      }else{
+        const details=await fetchProductDetails(barcode);
+        barcodeCounts[barcode]={
+          count:1,
+          details:details,
+          error:details?null:"Ürün bulunamadı"
+        };
       }
-      // Lightbox dışına tıklayınca kapat
-      else if (e.target.id === 'lightbox') {
-        const lb = e.target;
-        lb.style.display = 'none';
-        lb.querySelector('img').src = '';
-      }
+      renderBarcodeList();
+      updateStockButton.disabled=false;
+    }
+    setTimeout(forceFocus,10);
+  }else if(e.key.length===1){
+    barcodeBuffer+=e.key; // yalnızca yazılabilir karakter
+  }
+});
+
+/* ---------- Ürün Detayını Çek ---------- */
+async function fetchProductDetails(barcode){
+  try{
+    const res=await fetch(`/api/get-product-details-by-barcode/${barcode}`);
+    const data=await res.json();
+    return data.success?data.product:null;
+  }catch(err){
+    console.error("Ürün detayı hatası:",err);
+    return null;
+  }
+}
+
+/* ---------- Listeyi Yenile ---------- */
+function renderBarcodeList(){
+  scannedBarcodesDiv.innerHTML='';
+  noBarcodeMessage.style.display='none';
+
+  const codes=Object.keys(barcodeCounts).sort();
+  if(!codes.length){
+    noBarcodeMessage.style.display='block';
+    updateStockButton.disabled=true;
+    return;
+  }
+
+  codes.forEach(code=>{
+    const item=barcodeCounts[code];
+    const div=document.createElement('div');
+    div.className='barcode-item';
+
+    let html=`
+      <div class="barcode-info">
+        <span class="barcode-value">${code}</span>
+        <span class="barcode-count">${item.count} Adet</span>
+      </div>`;
+
+    if(item.error){
+      html+=`<p class="error-message">${item.error}</p>`;
+    }
+    if(item.details){
+      html+=`
+        <div class="product-details">
+          <img src="${item.details.image_url||'https://placehold.co/50x50'}" alt="">
+          <div class="product-details-text">
+            <p><strong>Model:</strong> ${item.details.product_main_id||'N/A'}</p>
+            <p><strong>Renk :</strong> ${item.details.color||'N/A'}</p>
+            <p><strong>Beden:</strong> ${item.details.size||'N/A'}</p>
+          </div>
+        </div>`;
+    }
+
+    div.innerHTML=html;
+    scannedBarcodesDiv.appendChild(div);
+  });
+}
+
+/* ---------- Güncelle / Reset ---------- */
+updateStockButton.addEventListener('click',()=>{
+  const countsOnly={};
+  for(const c in barcodeCounts){
+    countsOnly[c]={count:barcodeCounts[c].count};
+  }
+  if(!Object.keys(countsOnly).length){
+    showMessage("Güncellenecek barkod yok.",false);
+  }else{
+    submitStock(selectedMode,countsOnly);
+  }
+});
+resetButton.addEventListener('click',resetStockAddition);
+
+async function submitStock(updateType,countsOnly){
+  const buttons=document.querySelectorAll('.update-button-group .btn');
+  const originals={};
+  buttons.forEach(b=>{
+    originals[b.id]=b.innerHTML;
+    b.disabled=true;
+    b.innerHTML=`<span class="spinner-border spinner-border-sm"></span>`;
+  });
+  try{
+    const res=await fetch('/stock-addition',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({barcodeCounts:countsOnly,updateType})
     });
+    const data=await res.json();
 
-    // Orijinal stok-formu JS kodu
-    let barcodeCounts = {};
-    let selectedMode = null;
-
-    const selectRenewModeBtn = document.getElementById('selectRenewMode');
-    const selectAddModeBtn    = document.getElementById('selectAddMode');
-    const selectedModeDisplay = document.getElementById('selectedModeDisplay');
-    const selectedModeSpan    = selectedModeDisplay.querySelector('span');
-    const stockForm           = document.getElementById('stockForm');
-    const barcodeInput        = document.getElementById('barcodeInput');
-    const scannedBarcodesDiv  = document.getElementById('scannedBarcodes');
-    const noBarcodeMessage    = document.getElementById('noBarcodeMessage');
-    const updateStockButton   = document.getElementById('updateStockButton');
-    const resetButton         = document.getElementById('resetButton');
-    const responseMessageDiv  = document.getElementById('responseMessage');
-    const modeSelectionButtonsDiv = document.querySelector('.mode-selection-buttons');
-    // Yeni eklenen elementler
-    const updateTrendyolStocksForm = document.getElementById('updateTrendyolStocksForm');
-    const updateTrendyolStocksButton = document.getElementById('updateTrendyolStocksButton');
-
-
-    selectRenewModeBtn.addEventListener('click', ()=> selectMode('renew'));
-    selectAddModeBtn.addEventListener('click', ()=> selectMode('add'));
-
-    function selectMode(mode) {
-      selectedMode = mode;
-      selectRenewModeBtn.classList.remove('btn-primary');
-      selectRenewModeBtn.classList.add('btn-outline-primary');
-      selectAddModeBtn.classList.remove('btn-success');
-      selectAddModeBtn.classList.add('btn-outline-success');
-      if (mode==='renew') {
-        selectRenewModeBtn.classList.add('btn-primary');
-        selectRenewModeBtn.classList.remove('btn-outline-primary');
-        selectedModeSpan.textContent = 'Raftaki Stokları Yenile';
-      } else {
-        selectAddModeBtn.classList.add('btn-success');
-        selectAddModeBtn.classList.remove('btn-outline-success');
-        selectedModeSpan.textContent = 'Yeni Gelenleri Ekle';
-      }
-      modeSelectionButtonsDiv.classList.add('hidden');
-      selectedModeDisplay.classList.remove('hidden');
-      stockForm.classList.remove('hidden');
-      barcodeInput.disabled = false;
-      barcodeInput.focus();
-      updateStockButton.disabled = true;
+    if(data.success){
+      showMessage(data.message,true);
+      resetStockAddition();
+    }else{
+      showMessage(data.message||"Stok güncelleme başarısız.",false);
+      console.error(data.errors,data.trendyolUpdateErrors);
     }
-
-    barcodeInput.addEventListener('input', async function() {
-      const barcode = this.value.trim();
-      if (!barcode || barcode.length<4) return;
-      if (!selectedMode) {
-        showMessage("Lütfen önce bir stok güncelleme modu seçin.", false);
-      } else {
-        if (barcodeCounts[barcode]) {
-          barcodeCounts[barcode].count++;
-          renderBarcodeList();
-        } else {
-          const details = await fetchProductDetails(barcode);
-          barcodeCounts[barcode] = { count:1, details: details, error: details?null:"Ürün bulunamadı" };
-          renderBarcodeList();
-        }
-        updateStockButton.disabled = Object.keys(barcodeCounts).length===0;
-      }
-      this.value=''; this.focus();
+  }catch(err){
+    showMessage("Ağ hatası oluştu.",false);
+    console.error(err);
+  }finally{
+    buttons.forEach(b=>{
+      b.innerHTML=originals[b.id];
+      b.disabled=false;
     });
+    updateStockButton.disabled=true;
+    resetButton.disabled=false;
+    forceFocus();
+  }
+}
 
-    async function fetchProductDetails(barcode) {
-      try {
-        const res = await fetch(`/api/get-product-details-by-barcode/${barcode}`);
-        const data = await res.json();
-        return data.success? data.product : null;
-      } catch {
-        return null;
-      }
+function resetStockAddition(){
+  barcodeCounts={};selectedMode=null;barcodeBuffer='';
+  stockForm.classList.add('hidden');
+  selectedModeDisplay.classList.add('hidden');
+  modeSelectionButtonsDiv.classList.remove('hidden');
+
+  noBarcodeMessage.style.display='block';
+  scannedBarcodesDiv.innerHTML='';
+  barcodeInput.disabled=true;barcodeInput.value='';
+  updateStockButton.disabled=true;
+
+  selectRenewModeBtn.classList.replace('btn-primary','btn-outline-primary');
+  selectAddModeBtn  .classList.replace('btn-success' ,'btn-outline-success');
+  responseMessageDiv.classList.add('d-none');
+
+  selectRenewModeBtn.focus();
+  forceFocus();
+}
+
+function showMessage(msg,ok){
+  responseMessageDiv.className=
+    `alert ${ok?'alert-success':'alert-danger'} text-center mt-4`;
+  responseMessageDiv.textContent=msg;
+  responseMessageDiv.classList.remove('d-none');
+}
+
+/* ---------- Trendyol Stok Çekme ---------- */
+updateTrendyolStocksForm.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const btn=updateTrendyolStocksButton,orig=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML=`<span class="spinner-border spinner-border-sm"></span> Güncelleniyor...`;
+  responseMessageDiv.classList.add('d-none');
+  try{
+    const res=await fetch(e.target.action,{method:'POST'});
+    const data=await res.json();
+    if(data.success){
+      showMessage(data.message,true);
+    }else{
+      showMessage(data.message||"Trendyol stok güncelleme başarısız.",false);
+      console.error("Trendyol:",data);
     }
+  }catch(err){
+    showMessage("Trendyol stoklarına erişilirken ağ hatası.",false);
+    console.error(err);
+  }finally{
+    btn.disabled=false;btn.innerHTML=orig;
+    forceFocus();
+  }
+});
 
-    function renderBarcodeList() {
-      scannedBarcodesDiv.innerHTML = '';
-      noBarcodeMessage.style.display = 'none';
-      const codes = Object.keys(barcodeCounts).sort();
-      if (!codes.length) {
-        noBarcodeMessage.style.display = 'block';
-        updateStockButton.disabled = true;
-        return;
-      }
-      codes.forEach(code => {
-        const item = barcodeCounts[code];
-        const div = document.createElement('div');
-        div.className = 'barcode-item';
-        let html = `<div class="barcode-info">
-                      <span class="barcode-value">${code}</span>
-                      <span class="barcode-count">${item.count} Adet</span>
-                    </div>`;
-        if (item.error) html += `<p class="error-message">${item.error}</p>`;
-        if (item.details) {
-          html += `<div class="product-details">
-                     <img src="${item.details.image_url||'https://placehold.co/50x50'}" alt="">
-                     <div class="product-details-text">
-                       <p><strong>Model:</strong> ${item.details.product_main_id||'N/A'}</p>
-                       <p><strong>Renk:</strong> ${item.details.color||'N/A'}</p>
-                       <p><strong>Beden:</strong> ${item.details.size||'N/A'}</p>
-                     </div>
-                   </div>`;
-        }
-        div.innerHTML = html;
-        scannedBarcodesDiv.appendChild(div);
-      });
-      updateStockButton.disabled = false;
-    }
-
-    updateStockButton.addEventListener('click', ()=> {
-      const countsOnly = {};
-      for (const c in barcodeCounts) {
-        countsOnly[c] = { count: barcodeCounts[c].count };
-      }
-      if (!Object.keys(countsOnly).length) {
-        showMessage("Güncellenecek barkod bulunamadı.", false);
-      } else submitStock(selectedMode, countsOnly);
-    });
-
-    resetButton.addEventListener('click', resetStockAddition);
-
-    async function submitStock(updateType, countsOnly) {
-      const actionBtns = document.querySelectorAll('.update-button-group .btn');
-      const original = {};
-      actionBtns.forEach(b=>{
-        original[b.id]=b.innerHTML;
-        b.disabled=true;
-        if (b.id==='updateStockButton') b.innerHTML=`<span class="spinner-border spinner-border-sm"></span> Güncelleniyor...`;
-        else b.innerHTML=`<span class="spinner-border spinner-border-sm"></span>`;
-      });
-      try {
-        const res = await fetch('/stock-addition', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ barcodeCounts:countsOnly, updateType })
-        });
-        const data = await res.json();
-        actionBtns.forEach(b=>{
-          b.innerHTML = original[b.id];
-          b.disabled = !(data.success && b.id==='resetButton');
-        });
-        if (data.success) {
-          showMessage(data.message, true);
-          // Başarılı güncellemeden sonra formu sıfırla
-          resetStockAddition();
-        } else {
-          showMessage(data.message||"Stok güncelleme başarısız.", false);
-          console.error(data.errors, data.trendyolUpdateErrors);
-        }
-      } catch (e) {
-        actionBtns.forEach(b=>{ b.innerHTML=original[b.id]; b.disabled=false; });
-        showMessage("Ağ hatası oluştu.", false);
-      }
-    }
-
-    function resetStockAddition() {
-      barcodeCounts = {};
-      selectedMode = null;
-      stockForm.classList.add('hidden');
-      selectedModeDisplay.classList.add('hidden');
-      modeSelectionButtonsDiv.classList.remove('hidden');
-      noBarcodeMessage.style.display = 'block';
-      scannedBarcodesDiv.innerHTML = '';
-      barcodeInput.disabled = true;
-      barcodeInput.value = '';
-      updateStockButton.disabled = true;
-      selectRenewModeBtn.classList.replace('btn-primary','btn-outline-primary');
-      selectAddModeBtn.classList.replace('btn-success','btn-outline-success');
-      responseMessageDiv.classList.add('d-none');
-      selectRenewModeBtn.focus();
-    }
-
-    function showMessage(msg, ok) {
-      responseMessageDiv.className = `alert ${ok?'alert-success':'alert-danger'} text-center mt-4`;
-      responseMessageDiv.textContent = msg;
-      responseMessageDiv.classList.remove('d-none');
-      // Mesajı 5 saniye sonra gizle
-      setTimeout(()=> responseMessageDiv.classList.add('d-none'), 5000);
-    }
-
-    // Sayfa yüklendiğinde formu sıfırla ve ilk moda odaklan
-    window.onload = ()=>{ resetStockAddition(); selectRenewModeBtn.focus(); };
-
-    // Trendyol Stok Güncelleme Formu (Stokları Çekme) için AJAX
-    updateTrendyolStocksForm.addEventListener('submit', async function(e) {
-        e.preventDefault(); // Formun normal submit olmasını engelle
-
-        const $button = updateTrendyolStocksButton;
-        const originalButtonHtml = $button.innerHTML;
-
-        // Butonu devre dışı bırak ve yükleniyor göstergesi ekle
-        $button.disabled = true;
-        $button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Güncelleniyor...`;
-        // Mesaj kutusunu temizle/gizle
-        responseMessageDiv.classList.add('d-none');
-
-
-        try {
-            // AJAX isteğini gönder
-            const res = await fetch(this.action, {
-                method: this.method,
-                // Trendyol stok çekme POST isteği genellikle body gerektirmez,
-                // ama eğer gerektiriyorsa buraya eklenmeli.
-                // body: new FormData(this) veya JSON.stringify({})
-            });
-
-            const data = await res.json(); // JSON yanıtı bekle
-
-            // Butonu eski haline getir ve tekrar etkinleştir
-            $button.innerHTML = originalButtonHtml;
-            $button.disabled = false;
-
-            // Mesajı göster
-            if (data.success) {
-                showMessage(data.message, true);
-                // İsteğe bağlı: Başarılı güncelleme sonrası sayfayı yenile
-                // setTimeout(() => { location.reload(); }, 2000);
-            } else {
-                showMessage(data.message || "Trendyol stok güncelleme başarısız.", false);
-                console.error("Trendyol Stok Güncelleme Hatası:", data);
-            }
-
-        } catch (e) {
-            // Ağ hatası veya başka bir hata olursa
-            $button.innerHTML = originalButtonHtml;
-            $button.disabled = false;
-            showMessage("Trendyol stoklarını çekerken bir ağ hatası oluştu.", false);
-            console.error("Trendyol Stok Güncelleme Ağ Hatası:", e);
-        }
-    });
-
-
-  </script>
+window.onload=()=>resetStockAddition(); // sayfa açılışında sıfırla
+</script>
 </body>
 </html>

@@ -3,7 +3,7 @@ modules = ["python-3.11", "postgresql-16"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["glibcLocales", "openssl"]
+packages = ["freetype", "glibcLocales", "openssl"]
 
 [unitTest]
 language = "python3"
