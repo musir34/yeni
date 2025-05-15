@@ -1,81 +1,129 @@
-from flask import Blueprint, render_template, request, send_file
-from flask_sqlalchemy import SQLAlchemy
-from PIL import Image, ImageDraw, ImageFont
+"""
+product_label.py
+Ürün barkod + bilgi etiketi üretimi (PNG olarak indirme).
+
+Blueprint: product_label_bp
+GET  → form
+POST → etiket üret ve indir
+"""
+
+from __future__ import annotations
+
+import io
+import os
+
 import barcode
 from barcode.writer import ImageWriter
-import os
-import io
+from flask import (
+    Blueprint,
+    abort,
+    current_app,
+    render_template,
+    request,
+    send_file,
+)
+from PIL import Image, ImageDraw, ImageFont
+
+from models import Product  # db’ye ihtiyaç yok, sadece sorgu
+
+# --------------------------------------------------------------------------- #
+# Blueprint
+# --------------------------------------------------------------------------- #
+
+product_label_bp = Blueprint(
+    "product_label_bp",
+    __name__,
+    url_prefix="/product_label",  # → /product_label/ …
+)
+
+# --------------------------------------------------------------------------- #
+# Yardımcı – metin ölçümü (Pillow 9 & 10 uyumlu)
+# --------------------------------------------------------------------------- #
 
 
+def _multiline_size(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont):
+    """Pillow 10+ için multiline_textbbox, önceki sürümler için multiline_textsize."""
+    try:  # Pillow ≥10
+        bbox = draw.multiline_textbbox((0, 0), text, font=font)
+        width = bbox[2] - bbox[0]
+        height = bbox[3] - bbox[1]
+        return width, height
+    except AttributeError:  # Pillow <10
+        return draw.multiline_textsize(text, font=font)
 
-product_label_bp = Blueprint('product_label', __name__)
+
+# --------------------------------------------------------------------------- #
+# Route
+# --------------------------------------------------------------------------- #
 
 
-@product_label_bp.route('/product_label', methods=['GET', 'POST'])
+@product_label_bp.route("/", methods=["GET", "POST"])
 def generate_product_label():
-    if request.method == 'POST':
-        barcode_number = request.form.get('barcode')
-        if not barcode_number:
-            return "Barkod numarası gerekli.", 400
+    # ------------------------------ GET ------------------------------ #
+    if request.method == "GET":
+        return render_template("product_label_form.html")
 
-        # Veritabanından ürünü çek
-        product = Product.query.filter_by(barcode=barcode_number).first()
-        if not product:
-            return "Ürün bulunamadı.", 404
+    # ------------------------------ POST ----------------------------- #
+    barcode_number: str = (request.form.get("barcode") or "").strip()
+    if not barcode_number:
+        abort(400, description="Barkod numarası gerekli.")
 
-        # Ürün bilgileri
-        model_code = product.product_main_id or 'Model Bilinmiyor'
-        color = product.color or 'Renk Bilinmiyor'
-        size = product.size or 'Beden Bilinmiyor'
+    product: Product | None = Product.query.filter_by(barcode=barcode_number).first()
+    if product is None:
+        abort(404, description="Ürün bulunamadı.")
 
-        # Barkod türünü seç (örneğin Code128)
-        barcode_type = 'code128'
+    # Ürün bilgileri
+    model_code = product.product_main_id or "Model Bilinmiyor"
+    color = product.color or "Renk Bilinmiyor"
+    size = product.size or "Beden Bilinmiyor"
 
-        # Barkodu oluştur
-        barcode_class = barcode.get_barcode_class(barcode_type)
-        barcode_instance = barcode_class(barcode_number, writer=ImageWriter())
+    # -------------------- Barkod görselini oluştur ------------------- #
+    try:
+        barcode_cls = barcode.get_barcode_class("code128")
+        tmp = io.BytesIO()
+        barcode_cls(barcode_number, writer=ImageWriter()).write(tmp)
+        tmp.seek(0)
+        barcode_img = Image.open(tmp)
+    except Exception as exc:  # pragma: no cover
+        abort(500, description=f"Barkod üretilemedi: {exc}")
 
-        # Barkodu hafızada tutmak için BytesIO kullan
-        barcode_bytes = io.BytesIO()
-        barcode_instance.write(barcode_bytes)
-        barcode_bytes.seek(0)
-        barcode_image = Image.open(barcode_bytes)
+    # ----------------------------- Font ------------------------------ #
+    font_path = os.path.join(current_app.root_path, "static", "fonts", "arial.ttf")
+    try:
+        font = ImageFont.truetype(font_path, 14)
+    except IOError:
+        font = ImageFont.load_default()
 
-        # Barkodun altına ürün bilgilerini ekle
-        draw = ImageDraw.Draw(barcode_image)
+    product_info = f"Model: {model_code}\nRenk: {color}\nBeden: {size}"
 
-        # Yazı tipi ve boyutu
-        try:
-            font_path = os.path.join('static', 'fonts', 'arial.ttf')
-            font = ImageFont.truetype(font_path, 14)
-        except IOError:
-            font = ImageFont.load_default()
+    # -------------------- Tuval boyutunu hesapla --------------------- #
+    draw_tmp = ImageDraw.Draw(barcode_img)
+    text_w, text_h = _multiline_size(draw_tmp, product_info, font)
 
-        # Ürün bilgisini hazırlama
-        product_info = f"Model: {model_code}\nRenk: {color}\nBeden: {size}"
+    padding = 20  # üst-alt toplam
+    canvas_w = max(barcode_img.width, text_w + 20)
+    canvas_h = barcode_img.height + text_h + padding
 
-        # Metnin boyutunu al
-        text_width, text_height = draw.multiline_textsize(product_info, font=font)
+    canvas = Image.new("RGB", (canvas_w, canvas_h), "white")
+    # Barkodu ortala
+    barcode_x = (canvas_w - barcode_img.width) // 2
+    canvas.paste(barcode_img, (barcode_x, 0))
 
-        # Yeni bir görüntü oluştur (barkod + metin)
-        total_height = barcode_image.height + text_height + 10  # 10 piksel boşluk
-        total_width = max(barcode_image.width, text_width)
-        combined_image = Image.new('RGB', (total_width, total_height), 'white')
+    # Metni çiz
+    draw = ImageDraw.Draw(canvas)
+    text_x = 10
+    text_y = barcode_img.height + 10
+    draw.multiline_text((text_x, text_y), product_info, font=font, fill="black")
 
-        # Barkod görüntüsünü yeni görüntüye yapıştır
-        combined_image.paste(barcode_image, (0, 0))
+    # ------------------------- PNG’ye kaydet ------------------------- #
+    out = io.BytesIO()
+    canvas.save(out, format="PNG")
+    out.seek(0)
 
-        # Metni yeni görüntüye çiz
-        text_position = (10, barcode_image.height + 5)  # 5 piksel boşluk
-        draw = ImageDraw.Draw(combined_image)
-        draw.multiline_text(text_position, product_info, font=font, fill="black")
-
-        # Görüntüyü hafızada tutmak için BytesIO kullan
-        output = io.BytesIO()
-        combined_image.save(output, format='PNG')
-        output.seek(0)
-
-        return send_file(output, mimetype='image/png', as_attachment=True, attachment_filename=f'{barcode_number}_label.png')
-
-    # GET isteği için formu render et
-    return render_template('product_label_form.html')
+    filename = f"{barcode_number}_label.png"
+    return send_file(
+        out,
+        mimetype="image/png",
+        as_attachment=True,
+        download_name=filename,  # Flask ≥2.0
+    )

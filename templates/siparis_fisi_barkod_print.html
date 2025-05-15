@@ -1,223 +1,234 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Barkod Etiketleri Yazdırma - Güllü Ayakkabı</title>
+  <title>Barkod Etiketleri Yazdırma - Güllü Ayakkabı (A4 - 21 Etiket, 60x38mm)</title>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ———————————————————————  GENEL STİLLER  ——————————————————————— */
-    body{
-      padding:20px;background:#f4f4f4;font-family:Arial,Helvetica,sans-serif;color:#333;
-      display:flex;flex-direction:column;align-items:center;margin:0
+    html, body {
+      width: 210mm;
+      height: 297mm;
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      box-sizing: border-box;
+      overflow: hidden;
     }
-    h1{color:#30475e;margin-bottom:20px;text-align:center}
-
-    .print-area{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;margin-top:20px;flex-grow:1}
-
-    .barcode-group{
-      display:flex;flex-direction:column;align-items:center;gap:5px;background:#fff;
-      padding:10px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,.1);width:60mm;box-sizing:border-box
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-    .barcode-label{
-      width:60mm;height:40mm;background:#fff;border:1px solid #ccc;padding:1.5mm;box-sizing:border-box;
-      display:flex;flex-direction:row;align-items:center;justify-content:space-between;position:relative;overflow:hidden
+    .print-area {
+      width: 210mm;
+      height: 297mm;
+      display: grid;
+      grid-template-columns: repeat(3, 60mm);
+      grid-template-rows: repeat(7, 38mm);
+      gap: 0;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      background: #fff;
+      overflow: hidden;
     }
-    .barcode-group:not(.print-group-print) .barcode-label:not(:first-child){display:none}
-
-    .print-group-button{
-      background:#007bff;color:#fff;border:none;border-radius:4px;padding:5px 10px;font-size:12px;
-      cursor:pointer;transition:background .3s;margin-top:5px;display:inline-block
+    .barcode-label {
+      width: 60mm !important;
+      height: 38mm !important;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      border: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow: hidden;
+      background: #fff !important;
+      position: relative;
     }
-    .print-group-button:hover{background:#0056b3}
-
-    .print-status-icon{
-      position:absolute;top:2mm;left:2mm;font-size:16px;color:#28a745;font-weight:700;z-index:10;display:none
+    .left-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 50%;
+      height: 100%;
+      box-sizing: border-box;
+      /* Tam ortalamak için flex kullanıldı */
     }
-    .barcode-label.printed .print-status-icon{display:block}
-
-    .qr-and-barcode-area{
-      display:flex;flex-direction:column;align-items:center;flex-shrink:0;margin-right:3mm;width:100px;padding:0
+    .qr-image {
+      display: block;
+      max-width: 18mm;
+      max-height: 18mm;
+      margin-bottom: 2mm;
+      margin-top: 2mm;
+      object-fit: contain;
     }
-    .qr-area{width:100px;height:100px;display:flex;justify-content:center;align-items:center;margin-bottom:1mm;padding:0}
-    .qr-area img{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain}
-
-    .barcode-text-under-qr{font-size:14px;text-align:center;word-break:break-all;max-width:100%;overflow:hidden;font-weight:700;color:#555}
-
-    .text-area{
-      flex-grow:1;height:100%;padding:0 1.5mm 0 0;box-sizing:border-box;display:flex;flex-direction:column;
-      justify-content:center;text-align:left;font-size:17px;overflow:hidden
+    .barcode-text-under-qr {
+      font-size: 8pt;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      word-break: break-all;
+      width: 100%;
+      letter-spacing: 1px;
     }
-    .product-info div{margin-bottom:7px;line-height:1.2;overflow:hidden}
-    .product-info div:last-child{margin-bottom:0}
-    .product-info .label{font-weight:700;margin-right:3px;color:#444}
-    .product-info .value{font-weight:400;color:#333}
-
-    .print-count-display{font-size:16px;font-weight:700;color:#000;margin-top:5mm;text-align:center;width:100%}
-
-    #loading-message{font-size:1.2rem;color:#555;margin-top:20px;text-align:center}
-
-    .nav-buttons{display:flex;justify-content:center;gap:20px;width:100%;max-width:400px;margin:30px 0 20px}
-    .nav-buttons a{
-      text-decoration:none;color:#fff;background:#007bff;padding:10px 20px;border-radius:4px;font-size:16px;text-align:center;transition:background .3s;flex-grow:1
+    .right-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 50%;
+      height: 100%;
+      font-size: 8.3pt;
+      box-sizing: border-box;
+      padding-left: 2mm;
+      padding-right: 2mm;
+      text-align: center;
     }
-    .nav-buttons a:hover{background:#0056b3}
-
-    .print-button{
-      background:#28a745;color:#fff;padding:10px 20px;border:none;border-radius:4px;font-size:16px;cursor:pointer;
-      transition:background .3s;margin-top:20px
+    .right-block div {
+      margin-bottom: 2.5mm;
+      font-size: 8pt;
     }
-    .print-button:hover{background:#218838}
-    .print-button:disabled{background:#6c757d;cursor:not-allowed}
-
-    /* ———————————————  YAZDIRMAYA ÖZEL  (@media print)  ——————————————— */
-    @media print{
-      @page{size:60mm 40mm;margin:0}
-      body{display:block;width:60mm;height:auto;margin:0;padding:0;background:#fff;font-family:Arial,Helvetica,sans-serif;overflow:visible}
-
-      .no-print,.print-group-button,.print-count-display{display:none !important}
-      body.printing-single .barcode-group:not(.only-print-this){display:none !important}
-
-      .print-area{display:block;width:60mm;margin:0;padding:0;gap:0}
-
-      .barcode-group{display:block;width:60mm;margin:0;padding:0;box-shadow:none;border-radius:0;gap:0}
-      .barcode-label{
-        width:60mm;height:40mm;border:none;padding:1.5mm;display:flex !important;flex-direction:row;
-        align-items:center;justify-content:space-between;page-break-after:always;margin:0;box-shadow:none
+    .right-block div:last-child {
+      margin-bottom: 0;
+    }
+    .print-status-icon {
+      position: absolute;
+      top: 1.5mm;
+      left: 1.5mm;
+      font-size: 10px;
+      color: #28a745;
+      font-weight: 700;
+      z-index: 10;
+      display: none;
+    }
+    .barcode-label.printed .print-status-icon { display: block; }
+    .no-print, .print-button, .nav-buttons { display: none !important; }
+    @media print {
+      html, body {
+        width: 210mm;
+        height: 297mm;
+        margin: 0;
+        padding: 0;
+        background: #fff;
+        box-sizing: border-box;
+        overflow: hidden;
       }
-      .barcode-label.printed .print-status-icon{display:block}
-
-      .text-area{font-size:11px}
-      .barcode-text-under-qr{font-size:9px}
-      .product-info div{margin-bottom:3px}
+      .print-area {
+        width: 210mm;
+        height: 297mm;
+        display: grid;
+        grid-template-columns: repeat(3, 60mm);
+        grid-template-rows: repeat(7, 38mm);
+        gap: 0;
+        margin: 0;
+        padding: 0;
+        background: #fff;
+      }
+      .barcode-label {
+        width: 60mm !important;
+        height: 38mm !important;
+        border: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .no-print, .print-button, .nav-buttons { display: none !important; }
     }
   </style>
 </head>
-
 <body data-siparis-id="{{ siparis_id }}">
-
   <h1 class="no-print">Barkod Etiketleri Hazırlanıyor...</h1>
-
   <div class="no-print" style="text-align:center">
     <div id="loading-message">QR Kodlar Yükleniyor... Lütfen Bekleyin.</div>
     <button id="printAllButton" class="print-button" disabled>Tümünü Yazdır</button>
   </div>
-
   <div class="print-area">
-  {% if barcodes %}
+    {% set i = 0 %}
     {% for item in barcodes %}
-    <div class="barcode-group" id="group-{{ item.barcode }}" data-barcode="{{ item.barcode }}">
-      {% for i in range(item.print_count) %}
-      <div class="barcode-label {% if item.is_printed %}printed{% endif %}" data-barcode="{{ item.barcode }}">
-        <span class="print-status-icon">✔</span>
-
-        <div class="qr-and-barcode-area">
-          <div class="qr-area">
-            <img class="qr-image" src="{{ item.qr_image_path }}" alt="QR Kod: {{ item.barcode }}" data-barcode="{{ item.barcode }}">
+      {% for j in range(item.print_count) %}
+        {% if i < 21 %}
+        <div class="barcode-label {% if item.is_printed %}printed{% endif %}" data-barcode="{{ item.barcode }}">
+          <span class="print-status-icon">✔</span>
+          <div class="left-block">
+            <img class="qr-image" src="{{ item.qr_image_path }}" alt="QR Kod: {{ item.barcode }}">
+            <div class="barcode-text-under-qr">{{ item.barcode }}</div>
           </div>
-          <div class="barcode-text-under-qr">{{ item.barcode }}</div>
-        </div>
-
-        <div class="text-area">
-          <div class="product-info">
-            <div><span class="label">Model:</span><span class="value">{{ item.model }}</span></div>
-            <div><span class="label">Renk:</span><span class="value">{{ item.color }}</span></div>
-            <div><span class="label">Beden:</span><span class="value">{{ item.size }}</span></div>
-            {% if i == 0 %}
-            <div class="print-count-display">Adet: {{ item.print_count }}</div>
-            {% endif %}
+          <div class="right-block">
+            <div>Model: {{ item.model }}</div>
+            <div>Renk: {{ item.color }}</div>
+            <div>Beden: {{ item.size }}</div>
           </div>
         </div>
-      </div>
+        {% set i = i + 1 %}
+        {% endif %}
       {% endfor %}
-      <button class="print-group-button no-print" data-barcode="{{ item.barcode }}">Sadece Bu Grubu Yazdır</button>
-    </div>
     {% endfor %}
-  {% else %}
-    <p class="no-print">Yazdırılacak barkod bulunamadı.</p>
-  {% endif %}
   </div>
-
   <div class="nav-buttons no-print">
-    <a href="{{ url_for('home') }}">Ana Sayfa</a>
+    <a href="{{ url_for('home.home') }}">Ana Sayfa</a>
     <a href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}">Sipariş Fişleri</a>
   </div>
-
   <script>
-  /* ——— ORTAK DEĞİŞKENLER ——— */
-  const qrImages       = document.querySelectorAll('.qr-image');
-  const loadingMessage = document.getElementById('loading-message');
-  const printAllBtn    = document.getElementById('printAllButton');
-  const groupButtons   = document.querySelectorAll('.print-group-button');
-  const barcodeGroups  = document.querySelectorAll('.barcode-group');
-
-  /* benzersiz barkod listesi */
-  const barcodesToPrint = [...new Set([...barcodeGroups].map(g=>g.dataset.barcode))];
-
-  /* ——— YÜKLEME ——— */
-  let loadedImages = 0;
-  const totalImages = qrImages.length;
-  function checkAllLoaded(){ if(++loadedImages===totalImages){ loadingMessage.style.display='none'; printAllBtn.disabled=false; groupButtons.forEach(b=>b.disabled=false);} }
-  if(totalImages===0){ loadingMessage.style.display='none'; printAllBtn.disabled=true; groupButtons.forEach(b=>b.disabled=true);}
-  else{ qrImages.forEach(img=>{ img.addEventListener('load',checkAllLoaded,{once:true}); img.addEventListener('error',checkAllLoaded,{once:true}); if(img.complete) setTimeout(checkAllLoaded,0); }); }
-
-  /* ——— SUNUCUYA BİLDİR ——— */
-  const siparisId = Number(document.body.dataset.siparisId||0);
-  async function sendPrintStatus(list){
-    if(!siparisId) return console.error('siparis_id yok');
-    try{
-      const r = await fetch('/mark_as_printed',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siparis_id:siparisId,barcodes:list})});
-      if(r.ok){
-        list.forEach(bc=>{ document.querySelectorAll(`.barcode-label[data-barcode="${bc}"]`).forEach(lbl=>lbl.classList.add('printed')); });
-      }else console.error('Sunucu hatası:',r.statusText);
-    }catch(e){ console.error('Ağ hatası:',e); }
-  }
-
-  /* ——— YAZDIRMA BAYRAKLARI ——— */
-  let printJobActive = false;      //  ✅ yeni
-  let singlePrint    = false;
-  let singleBarcode  = null;
-
-  /* toplu yazdır */
-  printAllBtn.addEventListener('click',()=>{
-    singlePrint   = false;
-    singleBarcode = null;
-    printJobActive = true;         // ← başlamadan önce
-    window.print();
-  });
-
-  /* grup yazdır */
-  groupButtons.forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const bc  = btn.dataset.barcode;
-      const grp = document.getElementById(`group-${bc}`);
-      if(grp){
-        singlePrint   = true;
-        singleBarcode = bc;
-        printJobActive = true;     // ← başlamadan önce
-        document.body.classList.add('printing-single');
-        grp.classList.add('only-print-this','print-group-print');
-        window.print();
+    const qrImages       = document.querySelectorAll('.qr-image');
+    const loadingMessage = document.getElementById('loading-message');
+    const printAllBtn    = document.getElementById('printAllButton');
+    const allBarcodesInTemplate = [...document.querySelectorAll('.barcode-label')].map(el => el.dataset.barcode);
+    const uniqueBarcodesToMark = [...new Set(allBarcodesInTemplate)];
+    let loadedImages = 0;
+    const totalImages = qrImages.length;
+    function checkAllLoaded(){
+      loadedImages++;
+      if(loadedImages === totalImages){
+        loadingMessage.style.display='none';
+        printAllBtn.disabled = false;
       }
+    }
+    if(totalImages === 0){
+      loadingMessage.style.display='none';
+      printAllBtn.disabled=true;
+    } else {
+      qrImages.forEach(img=>{
+        img.addEventListener('load', checkAllLoaded, {once:true});
+        img.addEventListener('error', checkAllLoaded, {once:true});
+        if(img.complete) setTimeout(checkAllLoaded, 0);
+      });
+    }
+    const siparisId = Number(document.body.dataset.siparisId||0);
+    async function sendPrintStatus(list_of_barcodes){
+      if(!siparisId || !list_of_barcodes || list_of_barcodes.length === 0) return;
+      try{
+        const url = "{{ url_for('siparis_fisi_bp.mark_as_printed') }}";
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({siparis_id: siparisId, barcodes: list_of_barcodes})
+        });
+        if(response.ok){
+          const responseData = await response.json();
+          if(responseData.success) {
+            if (responseData.added && Array.isArray(responseData.added)) {
+              responseData.added.forEach(bc=>{
+                document.querySelectorAll(`.barcode-label[data-barcode="${bc}"]`).forEach(lbl=>lbl.classList.add('printed'));
+              });
+            }
+          }
+        }
+      }catch(e){}
+    }
+    let printJobActive = false;
+    printAllBtn.addEventListener('click',()=>{
+      printJobActive = true;
+      window.print();
     });
-  });
-
-  /* onafterprint: ÇİFT ÇAĞRIYI FİLTRELE */
-  window.onafterprint = ()=>{
-    if(!printJobActive) return;    // ikinci tetik ise yok say
-
-    let printed = singlePrint && singleBarcode ? [singleBarcode] : barcodesToPrint.slice();
-
-    /* temizle */
-    document.body.classList.remove('printing-single');
-    document.querySelectorAll('.only-print-this')
-             .forEach(el=>el.classList.remove('only-print-this','print-group-print'));
-
-    printJobActive = false;        // ✅ iş bitti, sonraki tetikler yok sayılacak
-    singlePrint = false;
-    singleBarcode = null;
-
-    if(printed.length) sendPrintStatus(printed);
-  };
+    window.onafterprint = ()=>{
+      if (!printJobActive) return;
+      sendPrintStatus(uniqueBarcodesToMark);
+      printJobActive = false;
+    };
   </script>
-  </body>
-  </html>
+</body>
+</html>

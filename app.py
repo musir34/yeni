@@ -1,3 +1,4 @@
+# app.py dosyası (blueprint kaydı güncellendi)
 import os
 import json
 import logging
@@ -68,7 +69,7 @@ from degisim import degisim_bp
 from home import home_bp
 from get_products import get_products_bp
 from all_orders_service import all_orders_service_bp
-from new_orders_service import new_orders_service_bp
+from new_orders_service import new_orders_service_bp, qr_utils_bp # qr_utils_bp de import edildi
 from processed_orders_service import processed_orders_service_bp
 from iade_islemleri import iade_islemleri
 from siparis_fisi import siparis_fisi_bp
@@ -78,7 +79,7 @@ from openai_service import openai_bp
 from user_logs import user_logs_bp, log_user_action
 from commission_update_routes import commission_update_bp
 from profit import profit_bp
-from stock_management import stock_management_bp # Yeni import
+from stock_management import stock_management_bp
 
 
 blueprints = [
@@ -92,6 +93,7 @@ blueprints = [
     get_products_bp,
     all_orders_service_bp,
     new_orders_service_bp,
+    qr_utils_bp, # qr_utils_bp app'e kaydedildi
     processed_orders_service_bp,
     iade_islemleri,
     siparis_fisi_bp,
@@ -143,7 +145,8 @@ def check_authentication():
         'login_logout.register',
         'login_logout.static',
         'login_logout.verify_totp',
-        'login_logout.logout'
+        'login_logout.logout',
+        'qr_utils.generate_qr_labels_pdf' # QR PDF route'una geçici olarak izin ver
     ]
     app.permanent_session_lifetime = timedelta(days=30)
     if request.endpoint not in allowed_routes:
@@ -196,4 +199,3 @@ if __name__ == '__main__':
 
     print("Uygulama başlatılıyor...")
     app.run(host='0.0.0.0', port=8080, debug=debug_mode)
-
