@@ -113,6 +113,9 @@ blueprints = [
 for bp in blueprints:
     app.register_blueprint(bp)
 
+from qr_utils import qr_utils_bp
+app.register_blueprint(qr_utils_bp)
+
 # URL çözümleme hatalarında fallback
 def custom_url_for(endpoint, **values):
     try:

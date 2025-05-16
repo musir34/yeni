@@ -1,3 +1,5 @@
+
+from flask import Blueprint, request, jsonify, send_file, current_app
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm
@@ -5,11 +7,53 @@ from datetime import datetime
 import qrcode
 import os
 import io
-from flask import Blueprint, request, jsonify, send_file # send_file eklendi
+import shutil
 
-# Blueprint tanımı (eğer qr_utils.py ayrı bir blueprint olarak kullanılmıyorsa bu satır kaldırılmalı/düzenlenmeli)
-# from app import app # Eğer app objesine erişim gerekiyorsa
 qr_utils_bp = Blueprint('qr_utils', __name__)
+
+@qr_utils_bp.route('/generate_qr', methods=['GET'])
+def generate_qr():
+    """
+    Barkod numarasına göre QR kod üretir ve path döndürür.
+    """
+    barcode = request.args.get('barcode')
+    if not barcode:
+        return jsonify({'success': False, 'message': 'Barkod parametresi gerekli'}), 400
+
+    # QR kod klasörü
+    qr_dir = os.path.join(current_app.root_path, 'static', 'qr_codes')
+    os.makedirs(qr_dir, exist_ok=True)
+    
+    # QR kod dosya yolu
+    qr_filename = f"{barcode}.png"
+    qr_path = os.path.join(qr_dir, qr_filename)
+    
+    # Dosya zaten varsa, mevcut QR kodu kullan
+    if os.path.exists(qr_path):
+        return jsonify({
+            'success': True, 
+            'qr_code_path': f"/static/qr_codes/{qr_filename}"
+        })
+    
+    # QR kod üret
+    try:
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=2,
+        )
+        qr.add_data(barcode)
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill_color="black", back_color="white")
+        qr_img.save(qr_path)
+        
+        return jsonify({
+            'success': True, 
+            'qr_code_path': f"/static/qr_codes/{qr_filename}"
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @qr_utils_bp.route('/generate_qr_labels_pdf', methods=['POST'])
 def generate_qr_labels_pdf():
@@ -18,8 +62,6 @@ def generate_qr_labels_pdf():
     maksimum 21 adet (3 kolon, 7 satır) olacak şekilde PDF etiket oluşturur.
     """
     data = request.get_json()
-    # Beklenen data formatı: [{'barcode': 'BARKOD1', 'quantity': 2}, {'barcode': 'BARKOD2', 'quantity': 1}]
-    # Quantity kadar tekrar eden barkod listesi oluşturulmalı
     items = data.get('items', [])
 
     if not items:
@@ -29,15 +71,15 @@ def generate_qr_labels_pdf():
     barcodes_to_print = []
     for item in items:
         barcode_val = item.get('barcode')
-        quantity_val = int(item.get('quantity', 0)) # Miktarı int yap
+        quantity_val = int(item.get('quantity', 0))
         if barcode_val and quantity_val > 0:
             barcodes_to_print.extend([barcode_val] * quantity_val)
 
     if not barcodes_to_print:
-         return jsonify({'success': False, 'message': 'Yazdırılacak barkod bulunamadı.'}), 400
+        return jsonify({'success': False, 'message': 'Yazdırılacak barkod bulunamadı.'}), 400
 
-    # QR kodların geçici olarak kaydedileceği klasör (PDF oluşturulduktan sonra silinebilir)
-    qr_temp_dir = os.path.join('static', 'qr_temp')
+    # QR kodların geçici olarak kaydedileceği klasör
+    qr_temp_dir = os.path.join(current_app.root_path, 'static', 'qr_temp')
     os.makedirs(qr_temp_dir, exist_ok=True)
 
     # PDF dosyası için geçici yol
@@ -58,16 +100,24 @@ def generate_qr_labels_pdf():
 
     # Etiket içi boşluklar ve QR/Barkod boyutları
     padding_mm = 2 * mm
-    qr_size_mm = 25 * mm # QR kod boyutu
-    barcode_text_height_mm = 5 * mm # Barkod metni için ayrılan yer
+    qr_size_mm = 25 * mm  # QR kod boyutu
+    barcode_text_height_mm = 5 * mm  # Barkod metni için ayrılan yer
 
     # Etiket içindeki kullanılabilir alan
     usable_width = approx_label_width - 2 * padding_mm
     usable_height = approx_label_height - 2 * padding_mm
 
-    # QR kod ve metin yerleşimi için başlangıç koordinatları
-    # QR kodu ve metni etiket alanının içinde ortalamak için hesaplamalar
-    qr_draw_size = min(qr_size_mm, usable_width, usable_height - barcode_text_height_mm) # Kullanılabilir alandan küçük olsun
+    # QR kod ve metin yerleşimi için QR boyutu hesapla
+    qr_draw_size = min(qr_size_mm, usable_width, usable_height - barcode_text_height_mm)
+
+    # Font ayarı
+    try:
+        font_name = "Helvetica"
+        c.setFont(font_name, 8)
+    except Exception as e:
+        print(f"Font yükleme hatası: {e}. Varsayılan font kullanılıyor.")
+        font_name = "Helvetica"
+        c.setFont(font_name, 8)
 
     for i, barcode in enumerate(barcodes_to_print):
         # Etiketin sayfadaki konumu
@@ -77,78 +127,80 @@ def generate_qr_labels_pdf():
         # Yeni sayfaya geçiş
         if i > 0 and i % (cols * rows) == 0:
             c.showPage()
+            c.setFont(font_name, 8)  # Yeni sayfada font ayarını tekrar yap
 
         # Etiketin sol alt köşesinin koordinatları
-        # x = sol_kenar_boslugu + kolon_indexi * etiket_genisligi
-        # y = sayfa_yuksekligi - ust_kenar_boslugu - (satir_indexi + 1) * etiket_yuksekligi
-
-        # Boşlukları otomatik hesaplamak yerine 0,0 noktasından başlayıp etiket alanlarını kullanıyoruz
         x_start = col * approx_label_width
-        y_start = page_height - (row + 1) * approx_label_height # Y ekseni tersten artar
+        y_start = page_height - (row + 1) * approx_label_height
 
-        # Etiket içindeki elemanların konumu (etiket alanının sol alt köşesine göre)
-        # QR kodunun sol alt köşesi: etiket alanı_x + sol_padding + (kullanılabilir alan - QR boyutu) / 2
+        # QR kod yerleşimi
         qr_x = x_start + padding_mm + (usable_width - qr_draw_size) / 2
-        qr_y = y_start + padding_mm + barcode_text_height_mm # Barkod metninin üstüne
+        qr_y = y_start + padding_mm + barcode_text_height_mm
 
-        # Barkod metninin konumu (etiket alanının ortasına hizalanmış)
+        # Barkod metin yerleşimi
         barcode_text_x = x_start + approx_label_width / 2
-        barcode_text_y = y_start + padding_mm # En altta
+        barcode_text_y = y_start + padding_mm
 
         try:
-            # QR kod görseli oluştur ve geçici dosyaya kaydet
-            # QR kodunu direkt ReportLab'e drawImage ile çizmek daha performanslı olabilir, dosya kaydı yerine BytesIO kullanmak gibi.
-            # Şimdilik dosya kaydıyla devam edelim.
+            # QR kod görseli oluştur
             qr = qrcode.QRCode(
                 version=1,
                 error_correction=qrcode.constants.ERROR_CORRECT_L,
-                box_size=10, # Piksel boyutu
-                border=2,    # Kenarlık
+                box_size=10,
+                border=2,
             )
             qr.add_data(barcode)
             qr.make(fit=True)
             qr_img = qr.make_image(fill_color="black", back_color="white")
 
-            # QR görselini geçici olarak kaydet
-            qr_temp_filename = os.path.join(qr_temp_dir, f"{barcode}_{i}.png") # Aynı barkoddan birden çok olabilir, index ekle
-            qr_img.save(qr_temp_filename)
+            # BytesIO nesnesi oluştur
+            img_buffer = io.BytesIO()
+            qr_img.save(img_buffer, format='PNG')
+            img_buffer.seek(0)
 
             # PDF'e QR kodunu çiz
-            c.drawImage(qr_temp_filename, qr_x, qr_y, width=qr_draw_size, height=qr_draw_size)
-
-            # PDF'e barkod metnini çiz
-            c.setFont("Helvetica", 8) # Font boyutu ayarlanabilir
+            c.drawImage(img_buffer, qr_x, qr_y, width=qr_draw_size, height=qr_draw_size)
+            
+            # Barkod metnini çiz (ortalı)
             c.drawCentredString(barcode_text_x, barcode_text_y, barcode)
-
-            # Geçici QR dosyasını sil (isteğe bağlı, işlemi bitirdikten sonra topluca da silinebilir)
-            # os.remove(qr_temp_filename)
-
         except Exception as e:
-            print(f"Barkod {barcode} için QR kod oluşturma veya çizme hatası: {e}")
-            # Hata durumunda boş bir alan veya hata mesajı çizilebilir
-            c.setFont("Helvetica", 8)
-            c.setFillColorRGB(1,0,0) # Kırmızı renk
-            c.drawCentredString(barcode_text_x, barcode_text_y + qr_draw_size/2, "QR HATA")
-            c.setFillColorRGB(0,0,0) # Rengi siyaha geri çevir
-
+            print(f"QR kod oluşturma hatası ({barcode}): {e}")
+            # Hata durumunda bu etiketi atla ve devam et
+            continue
 
     # PDF'i kaydet
     c.save()
 
-    # Geçici QR dosyalarını temizle (PDF oluşturulduktan sonra)
+    # PDF'i kullanıcıya gönder
     try:
-        for f in os.listdir(qr_temp_dir):
-            os.remove(os.path.join(qr_temp_dir, f))
-        # os.rmdir(qr_temp_dir) # Klasörü de silebilirsiniz eğer boşsa
+        response = send_file(
+            pdf_temp_path,
+            as_attachment=True,
+            download_name=f"barkod_etiketler_{timestamp}.pdf"
+        )
+        
+        # Temizlik için callback ekle (dosya indirildikten sonra)
+        @response.call_on_close
+        def cleanup():
+            try:
+                # Geçici PDF dosyasını sil
+                if os.path.exists(pdf_temp_path):
+                    os.remove(pdf_temp_path)
+                    print(f"Geçici PDF dosyası silindi: {pdf_temp_path}")
+            except Exception as e:
+                print(f"Geçici dosya temizleme hatası: {e}")
+                
+        return response
     except Exception as e:
-        print(f"Geçici QR dosyaları silinirken hata: {e}")
+        return jsonify({'success': False, 'message': f'PDF dosyası gönderilemedi: {str(e)}'}), 500
 
-
-    # PDF dosyasını yanıt olarak gönder
-    # as_attachment=True ile dosya indirme olarak sunulur
-    return send_file(pdf_temp_path, as_attachment=True, mimetype='application/pdf', download_name=f"etiketler_{timestamp}.pdf")
-
-# Blueprint'i Flask uygulamasına kaydettiğinizden emin olun.
-# Örnek: app.register_blueprint(qr_utils_bp)
-# Ayrıca, bu fonksiyonu çağıracak bir frontend route veya API endpoint'i oluşturmanız gerekecektir.
-# Bu endpoint'e {'items': [{'barcode': 'BARKOD1', 'quantity': 2}, ...]} formatında POST isteği göndermelisiniz.
+def clean_temp_files():
+    """Geçici QR ve PDF dosyalarını temizler"""
+    qr_temp_dir = os.path.join(current_app.root_path, 'static', 'qr_temp')
+    if os.path.exists(qr_temp_dir):
+        try:
+            shutil.rmtree(qr_temp_dir)
+            os.makedirs(qr_temp_dir, exist_ok=True)
+            print("Geçici dosyalar temizlendi.")
+        except Exception as e:
+            print(f"Geçici dosya temizleme hatası: {e}")

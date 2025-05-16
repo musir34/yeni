@@ -50,6 +50,58 @@ def generate_catalog_reportlab():
 
     if not final:
         return "Gösterilecek ürün bulunamadı!", 404
+        
+@catalog_bp.route("/print_barcodes_a4", methods=["GET", "POST"])
+def print_barcodes_a4():
+    """
+    Ürün barkodlarını A4 kağıda 3x7 (21 adet) düzeninde yazdırır.
+    GET: Form gösterir
+    POST: PDF etiket dosyası oluşturur
+    """
+    from flask import render_template, flash, redirect, url_for
+    
+    if request.method == "GET":
+        return render_template("print_barcodes_a4_form.html")
+    
+    # POST işlemi
+    barcode_list = request.form.get("barcode_list", "").strip()
+    if not barcode_list:
+        flash("Lütfen en az bir barkod girin", "warning")
+        return redirect(url_for("catalog.print_barcodes_a4"))
+    
+    # Barkodları satır satır böl ve temizle
+    lines = barcode_list.strip().split("\n")
+    items = []
+    
+    for line in lines:
+        parts = line.strip().split(",")
+        if len(parts) >= 1:
+            barcode = parts[0].strip()
+            # İkinci eleman varsa adet olarak al, yoksa 1 varsay
+            quantity = 1
+            if len(parts) >= 2:
+                try:
+                    quantity = int(parts[1].strip())
+                    if quantity <= 0:
+                        quantity = 1
+                except ValueError:
+                    quantity = 1
+            
+            if barcode:
+                items.append({"barcode": barcode, "quantity": quantity})
+    
+    if not items:
+        flash("Geçerli barkod bulunamadı", "warning")
+        return redirect(url_for("catalog.print_barcodes_a4"))
+    
+    # QR kodlarını oluştur ve PDF'e aktar
+    from qr_utils import generate_qr_labels_pdf
+    
+    # Flask test_request_context ile generate_qr_labels_pdf fonksiyonunu çağır
+    with current_app.test_request_context():
+        from flask import request as flask_request
+        flask_request.json = {"items": items}
+        return generate_qr_labels_pdf()
 
     # -------- PDF / FONT ----------------------------------------------------------------
     out_path = os.path.join(current_app.root_path, "static", "catalog_reportlab.pdf")

@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A4 Barkod Etiketleri Yazdırma</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #444;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .info {
+            background-color: #e7f3fe;
+            border-left: 4px solid #2196F3;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        a.button {
+            padding: 10px 15px;
+            background-color: #f44336;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        a.button:hover {
+            background-color: #d32f2f;
+        }
+        .example {
+            font-family: monospace;
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>A4 Barkod Etiketleri Yazdırma</h1>
+        
+        <div class="info">
+            <p>Her A4 kağıdı, 3x7 düzeninde toplam 21 adet etiket alabilir.</p>
+        </div>
+        
+        <form method="POST" action="{{ url_for('catalog.print_barcodes_a4') }}">
+            <div class="form-group">
+                <label for="barcode_list">Barkod Listesi (Her satıra bir barkod yazın, adet belirtmek için virgül kullanın)</label>
+                <div class="example">1234567890123, 2<br>9876543210987, 3<br>4567891234567</div>
+                <textarea id="barcode_list" name="barcode_list" placeholder="Örnek:
+1234567890123, 2
+9876543210987, 3
+4567891234567"></textarea>
+            </div>
+            
+            <div class="buttons">
+                <a href="{{ url_for('home.home') }}" class="button">İptal</a>
+                <button type="submit">Etiketleri Oluştur</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
