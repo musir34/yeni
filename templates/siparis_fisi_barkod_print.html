@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Barkod Etiketleri Yazdırma - Güllü Ayakkabı (Her A4 Sayfasında 21 Etiket)</title>
+  <title>Barkod Etiketleri Yazdırma - Güllü Ayakkabı</title>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
@@ -21,12 +21,6 @@
       text-align: center;
       color: #2c3e50;
       margin-bottom: 30px;
-    }
-    h3 {
-      color: #34495e;
-      margin-top: 10px;
-      margin-bottom: 5px;
-      text-align: center;
     }
     .barcode-grid {
       display: grid;
@@ -86,14 +80,25 @@
     .print-button:hover {
       background-color: #1976d2;
     }
-    .print-button:disabled {
-      background-color: #bdbdbd;
-      cursor: not-allowed;
+    .a4-button {
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      display: block;
+      margin: 20px auto;
+      font-size: 16px;
+    }
+    .a4-button:hover {
+      background-color: #388e3c;
     }
     .nav-buttons {
       display: flex;
       justify-content: center;
-      margin-top: 40px;
+      margin-top: 30px;
       gap: 20px;
     }
     .nav-buttons a {
@@ -104,108 +109,17 @@
       border-radius: 4px;
       font-weight: bold;
     }
-    .nav-buttons a:hover {
-      background-color: #303f9f;
-    }
-    .print-all-container {
-      text-align: center;
-      margin: 20px 0;
-    }
-    .print-all-button {
-      background-color: #4caf50;
-      color: white;
-      border: none;
-      padding: 12px 25px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: bold;
-    }
-    .print-all-button:hover {
-      background-color: #388e3c;
-    }
-    .instructions {
-      background-color: #fff3e0;
+    .info-box {
+      background-color: #e3f2fd;
       padding: 15px;
       border-radius: 8px;
       margin-bottom: 20px;
-      border-left: 5px solid #ff9800;
-    }
-    .instructions h3 {
-      color: #e65100;
+      border-left: 5px solid #2196f3;
       text-align: left;
+    }
+    .info-box h3 {
       margin-top: 0;
-    }
-    .instructions p {
-      margin-bottom: 5px;
-    }
-
-    /* Yazdırma şablonu için stiller */
-    @media print {
-      .print-page {
-        width: 210mm;
-        height: 297mm;
-        margin: 0;
-        padding: 0;
-        page-break-after: always;
-        display: grid;
-        grid-template-columns: repeat(3, 69mm);
-        grid-template-rows: repeat(7, 42mm);
-        gap: 1mm;
-        background: white;
-      }
-      .print-label {
-        width: 69mm;
-        height: 42mm;
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        justify-content: center;
-        box-sizing: border-box;
-        overflow: hidden;
-      }
-      .print-left {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        width: 50%;
-        height: 100%;
-      }
-      .print-right {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        width: 50%;
-        height: 100%;
-        font-size: 10pt;
-        padding: 0 2mm;
-        text-align: center;
-      }
-      .print-right div {
-        margin-bottom: 3mm;
-        font-size: 10pt;
-        font-weight: 600;
-      }
-      .print-qr {
-        max-width: 22mm;
-        max-height: 22mm;
-        margin-bottom: 2mm;
-      }
-      .print-barcode-text {
-        font-size: 9.5pt;
-        text-align: center;
-        margin: 0;
-        padding: 0;
-        word-break: break-all;
-        width: 100%;
-        font-weight: bold;
-      }
-      /* Ekran görünümünü yazdırma sırasında gizle */
-      .container, .barcode-grid, .barcode-card, .nav-buttons, .instructions, 
-      .print-all-container, h1, h3, #print-templates-container {
-        display: none !important;
-      }
+      color: #0d47a1;
     }
   </style>
 </head>
@@ -213,19 +127,15 @@
   <div class="container">
     <h1>Barkod Etiketleri Yazdırma</h1>
     
-    <div class="instructions">
-      <h3>Nasıl Çalışır?</h3>
-      <p>1. Her barkod için ayrı bir kart görüntülenir.</p>
-      <p>2. Her karttaki "Bu Barkodu Yazdır" butonuyla tek bir barkodu yazdırabilirsiniz.</p>
-      <p>3. "Tüm Barkodları A4 Kağıtta Düzenle" butonu ile tüm barkodları A4 kağıt düzeninde yazdırabilirsiniz.</p>
-      <p>4. Her A4 kağıda 21 adet barkod etiketi sığacak şekilde düzenlenmiştir (3 sütun x 7 satır).</p>
+    <div class="info-box">
+      <h3>Barkod Yazdırma</h3>
+      <p>1. Her barkod için "Bu Barkodu Yazdır" butonuna tıklayarak ayrı ayrı yazdırabilirsiniz.</p>
+      <p>2. Aşağıdaki yeşil buton ile tüm barkodları A4 kağıtta düzenli biçimde yazdırabilirsiniz.</p>
     </div>
 
-    <div class="print-all-container">
-      <button id="printAllA4Button" class="print-all-button">Tüm Barkodları A4 Kağıtta Düzenle</button>
-    </div>
-
-    <div class="barcode-grid" id="barcode-grid">
+    <button class="a4-button" id="a4Button">Tüm Barkodları A4 Kağıtta Düzenle</button>
+    
+    <div class="barcode-grid">
       {% for item in barcodes %}
         {% for j in range(item.print_count) %}
           <div class="barcode-card {% if item.is_printed %}printed{% endif %}" data-barcode="{{ item.barcode }}">
@@ -239,18 +149,14 @@
               <span><strong>Renk:</strong> {{ item.color }}</span>
               <span><strong>Beden:</strong> {{ item.size }}</span>
             </div>
-            <button class="print-button single-print-button" data-barcode="{{ item.barcode }}" 
-                    data-model="{{ item.model }}" data-color="{{ item.color }}" data-size="{{ item.size }}"
-                    data-qr-path="{{ item.qr_image_path }}">
-                Bu Barkodu Yazdır
+            <button class="print-button" onclick="printSingleBarcode('{{ item.barcode }}', '{{ item.model }}', '{{ item.color }}', '{{ item.size }}', '{{ item.qr_image_path }}')">
+              Bu Barkodu Yazdır
             </button>
           </div>
         {% endfor %}
       {% endfor %}
     </div>
     
-    <div id="print-templates-container" style="display: none;"></div>
-
     <div class="nav-buttons">
       <a href="{{ url_for('home.home') }}">Ana Sayfa</a>
       <a href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}">Sipariş Fişleri</a>
@@ -258,7 +164,7 @@
   </div>
 
   <script>
-    // Tüm barkod bilgilerini topla
+    // Bütün barkodları topla
     const allBarcodes = [];
     {% for item in barcodes %}
       {% for j in range(item.print_count) %}
@@ -272,122 +178,112 @@
       {% endfor %}
     {% endfor %}
 
-    // Sipariş ID
     const siparisId = Number(document.body.dataset.siparisId || 0);
-    
-    // Tek barkod yazdırma işlevi
-    document.querySelectorAll('.single-print-button').forEach(button => {
-      button.addEventListener('click', function() {
-        const barcode = this.dataset.barcode;
-        const model = this.dataset.model;
-        const color = this.dataset.color;
-        const size = this.dataset.size;
-        const qrPath = this.dataset.qrPath;
-        
-        // Tek bir barkod için yazdırma şablonu oluştur
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Barkod Yazdırma - ${barcode}</title>
-            <style>
-              @page {
-                size: 69mm 42mm;
-                margin: 0;
-              }
-              body {
-                margin: 0;
-                padding: 0;
-                width: 69mm;
-                height: 42mm;
-                display: flex;
-                font-family: Arial, sans-serif;
-              }
-              .label {
-                display: flex;
-                width: 100%;
-                height: 100%;
-              }
-              .left {
-                width: 50%;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-              }
-              .right {
-                width: 50%;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                text-align: center;
-              }
-              img {
-                max-width: 22mm;
-                max-height: 22mm;
-                margin-bottom: 2mm;
-              }
-              .barcode-text {
-                font-size: 9.5pt;
-                text-align: center;
-                font-weight: bold;
-                word-break: break-all;
-              }
-              .info {
-                margin-bottom: 3mm;
-                font-size: 10pt;
-                font-weight: 600;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="label">
-              <div class="left">
-                <img src="${qrPath}" alt="QR Kod: ${barcode}">
-                <div class="barcode-text">${barcode}</div>
-              </div>
-              <div class="right">
-                <div class="info">Model: ${model}</div>
-                <div class="info">Renk: ${color}</div>
-                <div class="info">Beden: ${size}</div>
-              </div>
-            </div>
-            <script>
-              window.onload = function() {
-                setTimeout(function() {
-                  window.print();
-                  setTimeout(function() {
-                    window.close();
-                  }, 500);
-                }, 200);
-              };
-            </script>
-          </body>
-          </html>
-        `);
-        printWindow.document.close();
-        
-        // Yazdırma işlemi tamamlandıktan sonra sunucuya bildir
-        printWindow.onafterprint = function() {
-          sendPrintStatus([barcode]);
-        };
-      });
-    });
-    
-    // A4 kağıdına tüm barkodları düzenle ve yazdır
-    document.getElementById('printAllA4Button').addEventListener('click', function() {
-      // A4 sayfalarını oluştur - her sayfada 21 etiket (3x7)
-      const totalBarcodes = allBarcodes.length;
-      const barcodesPerPage = 21;
-      const totalPages = Math.ceil(totalBarcodes / barcodesPerPage);
-      
-      const printWindow = window.open('', '_blank');
+
+    // Tek barkod yazdırma fonksiyonu
+    function printSingleBarcode(barcode, model, color, size, qrPath) {
+      const printWindow = window.open("", "_blank");
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Barkod Etiketleri - A4 Düzeni</title>
+          <title>Barkod: ${barcode}</title>
+          <style>
+            @page {
+              size: 69mm 42mm;
+              margin: 0;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              width: 69mm;
+              height: 42mm;
+              font-family: Arial, sans-serif;
+            }
+            .label {
+              display: flex;
+              width: 100%;
+              height: 100%;
+            }
+            .left {
+              width: 50%;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              padding: 2mm;
+            }
+            .right {
+              width: 50%;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              text-align: center;
+              padding: 2mm;
+            }
+            img {
+              max-width: 22mm;
+              max-height: 22mm;
+              margin-bottom: 2mm;
+            }
+            .barcode-text {
+              font-size: 9.5pt;
+              text-align: center;
+              font-weight: bold;
+              word-break: break-all;
+            }
+            .info {
+              margin-bottom: 3mm;
+              font-size: 10pt;
+              font-weight: 600;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="label">
+            <div class="left">
+              <img src="${qrPath}" alt="QR Kod">
+              <div class="barcode-text">${barcode}</div>
+            </div>
+            <div class="right">
+              <div class="info">Model: ${model}</div>
+              <div class="info">Renk: ${color}</div>
+              <div class="info">Beden: ${size}</div>
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                setTimeout(function() {
+                  window.close();
+                }, 500);
+              }, 300);
+            };
+          <\/script>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+      
+      // Yazdırma işlemi tamamlandıktan sonra sunucuya bildir
+      setTimeout(function() {
+        markAsPrinted([barcode]);
+      }, 2000);
+    }
+
+    // A4 düzeninde tüm barkodları yazdırma
+    document.getElementById('a4Button').addEventListener('click', function() {
+      const printWindow = window.open('', '_blank');
+      const totalBarcodes = allBarcodes.length;
+      const barcodesPerPage = 21; // 3 sütun x 7 satır
+      const totalPages = Math.ceil(totalBarcodes / barcodesPerPage);
+      
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>A4 Barkod Düzeni</title>
           <style>
             @page {
               size: A4;
@@ -399,7 +295,7 @@
               background: white;
               font-family: Arial, sans-serif;
             }
-            .print-page {
+            .page {
               width: 210mm;
               height: 297mm;
               page-break-after: always;
@@ -409,78 +305,72 @@
               gap: 1mm;
               padding: 0.5mm;
             }
-            .print-label {
+            .label {
               display: flex;
-              flex-direction: row;
-              align-items: center;
-              justify-content: center;
-              overflow: hidden;
+              border: none;
+              box-sizing: border-box;
             }
-            .print-left {
+            .left {
+              width: 50%;
               display: flex;
               flex-direction: column;
               align-items: center;
               justify-content: center;
-              width: 50%;
-              height: 100%;
+              padding: 2mm;
             }
-            .print-right {
+            .right {
+              width: 50%;
               display: flex;
               flex-direction: column;
               justify-content: center;
-              width: 50%;
-              height: 100%;
-              font-size: 10pt;
-              padding: 0 2mm;
               text-align: center;
+              padding: 2mm;
             }
-            .print-right div {
-              margin-bottom: 3mm;
-              font-size: 10pt;
-              font-weight: 600;
-            }
-            .print-qr {
+            img {
               max-width: 22mm;
               max-height: 22mm;
               margin-bottom: 2mm;
             }
-            .print-barcode-text {
+            .barcode-text {
               font-size: 9.5pt;
               text-align: center;
-              margin: 0;
-              padding: 0;
-              word-break: break-all;
-              width: 100%;
               font-weight: bold;
+              word-break: break-all;
+            }
+            .info {
+              margin-bottom: 3mm;
+              font-size: 10pt;
+              font-weight: 600;
             }
           </style>
         </head>
         <body>
       `);
       
+      // Sayfaları oluştur
       for (let page = 0; page < totalPages; page++) {
-        printWindow.document.write(`<div class="print-page">`);
+        printWindow.document.write(`<div class="page">`);
         
+        // Her sayfadaki etiketleri ekle
         for (let i = 0; i < barcodesPerPage; i++) {
           const index = page * barcodesPerPage + i;
           if (index < totalBarcodes) {
             const item = allBarcodes[index];
             printWindow.document.write(`
-              <div class="print-label">
-                <div class="print-left">
-                  <img class="print-qr" src="${item.qrPath}" alt="QR Kod: ${item.barcode}">
-                  <div class="print-barcode-text">${item.barcode}</div>
+              <div class="label">
+                <div class="left">
+                  <img src="${item.qrPath}" alt="QR Kod">
+                  <div class="barcode-text">${item.barcode}</div>
                 </div>
-                <div class="print-right">
-                  <div>Model: ${item.model}</div>
-                  <div>Renk: ${item.color}</div>
-                  <div>Beden: ${item.size}</div>
+                <div class="right">
+                  <div class="info">Model: ${item.model}</div>
+                  <div class="info">Renk: ${item.color}</div>
+                  <div class="info">Beden: ${item.size}</div>
                 </div>
               </div>
             `);
           } else {
-            // Boş etiket
-            printWindow.document.write(`<div class="print-label"></div>`);
+            printWindow.document.write(`<div class="label"></div>`);
           }
         }
         
@@ -494,53 +384,47 @@
                 window.print();
               }, 500);
             };
-          </script>
+          <\/script>
         </body>
         </html>
       `);
+      
       printWindow.document.close();
       
       // Yazdırma işlemi tamamlandıktan sonra sunucuya bildir
-      printWindow.onafterprint = function() {
+      setTimeout(function() {
         const allBarcodeValues = allBarcodes.map(item => item.barcode);
         const uniqueBarcodeValues = [...new Set(allBarcodeValues)];
-        sendPrintStatus(uniqueBarcodeValues);
-      };
+        markAsPrinted(uniqueBarcodeValues);
+      }, 2000);
     });
-    
+
     // Yazdırma durumunu sunucuya bildiren fonksiyon
-    async function sendPrintStatus(list_of_barcodes) {
-      if (!siparisId || !list_of_barcodes || list_of_barcodes.length === 0) return;
+    function markAsPrinted(barcodes) {
+      if (!siparisId || !barcodes || barcodes.length === 0) return;
       
-      try {
-        const url = "{{ url_for('siparis_fisi_bp.mark_as_printed') }}";
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({siparis_id: siparisId, barcodes: list_of_barcodes})
-        });
-        
-        if (response.ok) {
-          const responseData = await response.json();
-          if (responseData.success) {
-            if (responseData.added && Array.isArray(responseData.added)) {
-              responseData.added.forEach(bc => {
-                document.querySelectorAll(`.barcode-card[data-barcode="${bc}"]`).forEach(card => {
-                  card.classList.add('printed');
-                  if (!card.querySelector('.print-status')) {
-                    const statusElement = document.createElement('span');
-                    statusElement.className = 'print-status';
-                    statusElement.textContent = '✓ Yazdırıldı';
-                    card.appendChild(statusElement);
-                  }
-                });
-              });
-            }
-          }
+      fetch("{{ url_for('siparis_fisi_bp.mark_as_printed') }}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({siparis_id: siparisId, barcodes: barcodes})
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.added && Array.isArray(data.added)) {
+          data.added.forEach(barcode => {
+            document.querySelectorAll(`.barcode-card[data-barcode="${barcode}"]`).forEach(card => {
+              card.classList.add('printed');
+              if (!card.querySelector('.print-status')) {
+                const status = document.createElement('span');
+                status.className = 'print-status';
+                status.textContent = '✓ Yazdırıldı';
+                card.appendChild(status);
+              }
+            });
+          });
         }
-      } catch(e) {
-        console.error('Yazdırma durumu gönderilirken hata oluştu:', e);
-      }
+      })
+      .catch(error => console.error('Yazdırma durumu gönderilemedi:', error));
     }
   </script>
 </body>
