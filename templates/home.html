@@ -564,13 +564,6 @@ Analizler
 
 
 <div class="container">
-<a href="{{ url_for('catalog.print_barcodes_a4') }}" class="card-link p-3 mb-2 text-center">
-  <div class="card-icon bg-primary mb-2">
-    <i class="fas fa-qrcode"></i>
-  </div>
-  <h5>A4 Barkod Yazdır</h5>
-  <p class="mb-0 text-muted small">A4 kağıda 21 etiket (3x7)</p>
-</a>
 <form method="POST" action="{{ url_for('confirm_packing') }}" id="packingForm" autocomplete="off">
 <input type="hidden" name="order_number" value="{{ order_number }}">
 
