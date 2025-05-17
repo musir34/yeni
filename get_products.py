@@ -20,6 +20,7 @@ from trendyol_api import API_KEY, SUPPLIER_ID, API_SECRET, BASE_URL
 from login_logout import roles_required
 
 from models import db, Product, ProductArchive
+from cache_config import cache, CACHE_TIMES
 
 get_products_bp = Blueprint('get_products', __name__)
 
@@ -605,6 +606,7 @@ def restore_from_archive():
 
 
 @get_products_bp.route('/product_list')
+@cache.cached(timeout=CACHE_TIMES['products'])
 def product_list():
     try:
         page = request.args.get('page', 1, type=int)

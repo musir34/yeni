@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 # Flask Uygulamasını Oluştur
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'varsayılan_anahtar')
+cache = cache_config.cache
+cache.init_app(app)
 
 # Veritabanı Bağlantı Ayarı (Neon PostgreSQL için)
 DATABASE_URI = os.environ.get(
@@ -56,6 +58,7 @@ app.jinja_env.filters['format_turkish_date'] = format_turkish_date_filter
 
 
 # Blueprint'leri Yükle
+import cache_config
 from cache_config import redis_client, CACHE_TIMES
 from siparisler import siparisler_bp
 from product_service import product_service_bp
