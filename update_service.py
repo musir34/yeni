@@ -3,7 +3,9 @@ from datetime import datetime
 import traceback
 import json
 import base64
-import requests
+import aiohttp
+import asyncio
+from logger_config import api_logger as logger
 
 # Yeni tablolar (Created, Picking vs.) ve DB objesi
 from models import db, OrderCreated, OrderPicking, Product
@@ -15,7 +17,7 @@ update_service_bp = Blueprint('update_service', __name__)
 ##############################################
 # Trendyol API üzerinden statü güncelleme
 ##############################################
-def update_order_status_to_picking(supplier_id, shipment_package_id, lines):
+async def update_order_status_to_picking(supplier_id, shipment_package_id, lines):
     """
     Trendyol API'ye PUT isteği atarak belirtilen package_id'yi 'Picking' statüsüne çevirir.
     lines: [{ "lineId": <int>, "quantity": <int> }, ...]
@@ -36,24 +38,27 @@ def update_order_status_to_picking(supplier_id, shipment_package_id, lines):
             "params": {},
             "status": "Picking"
         }
-        print(f"PUT {url}")
-        print(f"Headers: {headers}")
-        print(f"Payload: {json.dumps(payload, ensure_ascii=False)}")
+        logger.debug(f"PUT {url}")
+        logger.debug(f"Headers: {headers}")
+        logger.debug(f"Payload: {json.dumps(payload, ensure_ascii=False)}")
 
-        response = requests.put(url, headers=headers, data=json.dumps(payload), timeout=30)
+        async with aiohttp.ClientSession() as session:
+            async with session.put(url, headers=headers, data=json.dumps(payload), timeout=30) as response:
+                status = response.status
+                text = await response.text()
 
-        print(f"API yanıtı: Status Code={response.status_code}, Response Text={response.text}")
+        logger.info(f"API yanıtı: Status Code={status}, Response Text={text}")
 
-        if response.status_code == 200:
+        if status == 200:
             # Yanıt boş olabilir, yine de başarılı sayarız
-            print(f"Paket {shipment_package_id} Trendyol'da 'Picking' statüsüne güncellendi.")
+            logger.info(f"Paket {shipment_package_id} Trendyol'da 'Picking' statüsüne güncellendi.")
             return True
         else:
-            print(f"Beklenmeyen durum kodu veya hata: {response.status_code}, Yanıt: {response.text}")
+            logger.error(f"Beklenmeyen durum kodu veya hata: {status}, Yanıt: {text}")
             return False
 
     except Exception as e:
-        print(f"Trendyol API üzerinden paket statüsü güncellenirken hata: {e}")
+        logger.error(f"Trendyol API üzerinden paket statüsü güncellenirken hata: {e}")
         traceback.print_exc()
         return False
 
@@ -62,7 +67,7 @@ def update_order_status_to_picking(supplier_id, shipment_package_id, lines):
 # confirm_packing: Barkodlar onayı, tablo taşıma
 ##############################################
 @update_service_bp.route('/confirm_packing', methods=['POST'])
-def confirm_packing():
+async def confirm_packing():
     """
     Formdan gelen order_number ve barkodları karşılaştırır.
     Eğer doğruysa, Trendyol API'de statüyü 'Picking' yapar,
@@ -75,7 +80,7 @@ def confirm_packing():
             flash('Sipariş numarası bulunamadı.', 'danger')
             return redirect(url_for('home.home'))
 
-        print(f"Received order_number: {order_number}")
+        logger.debug(f"Received order_number: {order_number}")
 
         # Gönderilen barkodları topla
         barkodlar = []
@@ -84,23 +89,23 @@ def confirm_packing():
                 barkod_value = request.form[key].strip()
                 barkodlar.append(barkod_value)
 
-        print(f"Received barcodes: {barkodlar}")
+        logger.debug(f"Received barcodes: {barkodlar}")
 
         # 2) OrderCreated tablosundan siparişi bul
         order_created = OrderCreated.query.filter_by(order_number=order_number).first()
         if not order_created:
             flash('Created tablosunda bu sipariş bulunamadı.', 'danger')
-            print("Order not found in OrderCreated.")
+            logger.warning("Order not found in OrderCreated.")
             return redirect(url_for('home.home'))
 
         # 3) Sipariş detaylarını parse et
         details_json = order_created.details or '[]'
         try:
             details = json.loads(details_json)
-            print(f"Parsed details: {details}")
+            logger.debug(f"Parsed details: {details}")
         except json.JSONDecodeError:
             details = []
-            print(f"order.details JSON parse edilemedi: {order_created.details}")
+            logger.error(f"order.details JSON parse edilemedi: {order_created.details}")
 
         # 4) Beklenen barkodları hesapla (miktar*2 = sol/sağ barkod)
         expected_barcodes = []
@@ -114,15 +119,15 @@ def confirm_packing():
             count = quantity * 2  
             expected_barcodes.extend([barcode] * count)
 
-        print(f"Expected barcodes: {expected_barcodes}")
+        logger.debug(f"Expected barcodes: {expected_barcodes}")
 
         # 5) Karşılaştırma
         if sorted(barkodlar) != sorted(expected_barcodes):
             flash('Barkodlar uyuşmuyor, lütfen tekrar deneyin!', 'danger')
-            print("Barcodes do not match.")
+            logger.warning("Barcodes do not match.")
             return redirect(url_for('home.home'))
 
-        print("Barcodes match. Devam ediliyor...")
+        logger.debug("Barcodes match. Devam ediliyor...")
 
         # 6) Trendyol API'ye status=Picking çağrısı (shipmentPackageId'ye göre)
         # ShipmentPackageId'leri JSON detaydan veya tablo alanından alalım
@@ -142,7 +147,7 @@ def confirm_packing():
 
         if not shipment_package_ids:
             flash("shipmentPackageId bulunamadı. API güncellemesi yapılamıyor.", 'danger')
-            print("shipmentPackageId is missing. Cannot update Trendyol API.")
+            logger.error("shipmentPackageId is missing. Cannot update Trendyol API.")
             return redirect(url_for('home.home'))
 
         # 6b) lines (Trendyol formatında) hazırlama
@@ -187,8 +192,8 @@ def confirm_packing():
         # Trendyol güncellemesi
         supplier_id = SUPPLIER_ID
         for sp_id, lines_for_sp in lines_by_sp.items():
-            print(f"Calling Trendyol for sp_id={sp_id}, lines={lines_for_sp}")
-            result = update_order_status_to_picking(supplier_id, sp_id, lines_for_sp)
+            logger.info(f"Calling Trendyol for sp_id={sp_id}, lines={lines_for_sp}")
+            result = await update_order_status_to_picking(supplier_id, sp_id, lines_for_sp)
             if result:
                 flash(f"Paket {sp_id} Trendyol'da 'Picking' olarak güncellendi.", 'success')
             else:
@@ -211,7 +216,7 @@ def confirm_packing():
         db.session.add(new_picking_record)
         db.session.delete(order_created)
         db.session.commit()
-        print(f"Taşıma tamam: OrderCreated -> OrderPicking. Order num: {order_number}")
+        logger.info(f"Taşıma tamam: OrderCreated -> OrderPicking. Order num: {order_number}")
 
         # 8) Bir sonraki created siparişi bul
         next_created = OrderCreated.query.order_by(OrderCreated.order_date).first()
@@ -221,7 +226,7 @@ def confirm_packing():
             flash('Yeni Created sipariş bulunamadı.', 'info')
 
     except Exception as e:
-        print(f"Hata: {e}")
+        logger.error(f"Hata: {e}")
         traceback.print_exc()
         flash('Bir hata oluştu.', 'danger')
 
@@ -232,9 +237,9 @@ def confirm_packing():
 # Örnek diğer fonksiyonlar
 ##############################################
 
-def fetch_orders_from_api():
+async def fetch_orders_from_api():
     """
-    Trendyol API'den siparişleri çeker (basit örnek).
+    Trendyol API'den siparişleri asenkron olarak çeker.
     """
     auth_str = f"{API_KEY}:{API_SECRET}"
     b64_auth_str = base64.b64encode(auth_str.encode()).decode('utf-8')
@@ -245,14 +250,14 @@ def fetch_orders_from_api():
         "Content-Type": "application/json"
     }
 
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        print(f"API'den siparişler çekilirken hata: {response.status_code} - {response.text}")
-        return []
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, headers=headers) as response:
+            if response.status == 200:
+                return await response.json()
+            logger.error(f"API'den siparişler çekilirken hata: {response.status} - {await response.text()}")
+            return []
 
-def update_package_to_picking(supplier_id, package_id, line_id, quantity):
+async def update_package_to_picking(supplier_id, package_id, line_id, quantity):
     """
     Tek bir lineId ve quantity için (daha eski örnek). Yukarıda 'update_order_status_to_picking' ile benzer işler yapıyor.
     Bu fonksiyon belki artık kullanılmayabilir, ama isterseniz koruyun.
@@ -272,13 +277,13 @@ def update_package_to_picking(supplier_id, package_id, line_id, quantity):
         "status": "Picking"
     }
 
-    print(f"Sending API request to URL: {url}")
-    print(f"Headers: {headers}")
-    print(f"Payload: {payload}")
+    logger.debug(f"Sending API request to URL: {url}")
+    logger.debug(f"Headers: {headers}")
+    logger.debug(f"Payload: {payload}")
 
-    response = requests.put(url, headers=headers, json=payload)
-
-    if response.status_code == 200:
-        print(f"Paket başarıyla Picking statüsüne güncellendi. Yanıt: {response.json()}")
-    else:
-        print(f"Paket güncellenemedi! Hata kodu: {response.status_code}, Yanıt: {response.text}")
+    async with aiohttp.ClientSession() as session:
+        async with session.put(url, headers=headers, json=payload) as response:
+            if response.status == 200:
+                logger.info(f"Paket başarıyla Picking statüsüne güncellendi. Yanıt: {await response.json()}")
+            else:
+                logger.error(f"Paket güncellenemedi! Hata kodu: {response.status}, Yanıt: {await response.text()}")

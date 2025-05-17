@@ -5,6 +5,7 @@ from sqlalchemy import literal
 from sqlalchemy.orm import aliased
 import json
 import os
+from cache_config import cache, CACHE_TIMES
 import logging
 from datetime import datetime
 
@@ -168,6 +169,7 @@ def get_union_all_orders():
 ############################
 # 2) Tüm siparişleri listeleme
 ############################
+@cache.cached(timeout=CACHE_TIMES['orders'])
 def get_order_list():
     """
     Tüm tabloları tek listede gösterir (UNION ALL).
