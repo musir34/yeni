@@ -1,18 +1,20 @@
-# app.py dosyası (blueprint kaydı güncellendi)
+# ===================== EN ÜST KISIM =====================
 import os
 import json
 import logging
 from datetime import datetime, timedelta
-
 from flask import Flask, request, url_for, redirect, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.routing import BuildError
 from flask_login import LoginManager, current_user
 from models import db, User
+from archive import format_turkish_date_filter, archive_bp
 
-# ✅ Düzeltme: archive.py dosyasından format_turkish_date_filter fonksiyonunu import et
-from archive import format_turkish_date_filter, archive_bp # archive_bp'yi de buradan import edelim
+# ✅ Redis cache config
+import cache_config
+from cache_config import CACHE_TIMES  # CACHE_TIMES gerekiyorsa
+
 
 # Logging Ayarı
 logging.basicConfig(level=logging.WARNING)
@@ -21,6 +23,8 @@ logger = logging.getLogger(__name__)
 # Flask Uygulamasını Oluştur
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'varsayılan_anahtar')
+
+# ✅ Redis cache başlat
 cache = cache_config.cache
 cache.init_app(app)
 
@@ -58,8 +62,6 @@ app.jinja_env.filters['format_turkish_date'] = format_turkish_date_filter
 
 
 # Blueprint'leri Yükle
-import cache_config
-from cache_config import redis_client, CACHE_TIMES
 from siparisler import siparisler_bp
 from product_service import product_service_bp
 from claims_service import claims_service_bp
