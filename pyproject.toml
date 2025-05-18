@@ -51,6 +51,8 @@ fpdf = "^1.7.2"
 decorators = "^2.0.7"
 reportlab = "^4.4.0"
 weasyprint = "^65.1"
+Pillow = ">=10.0.0"
+holidays = "<1.0"
 
 [tool.pyright]
 # https://github.com/microsoft/pyright/blob/main/docs/configuration.md

@@ -37,4 +37,4 @@ plotly==6.0.0
 openai==1.65.4
 holidays<1.0
 reportlab
-Pillow
+Pillow>=10

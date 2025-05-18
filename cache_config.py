@@ -1,17 +1,15 @@
-
 import os
-from redis import Redis
+from flask_caching import Cache
 
-redis_client = Redis(
-    host=os.environ.get('REDIS_HOST', 'localhost'),
-    port=int(os.environ.get('REDIS_PORT', 6379)),
-    db=0,
-    decode_responses=True
-)
+cache = Cache(config={
+    "CACHE_TYPE": "RedisCache",  # ✨ DİKKAT: RedisCache büyük harflerle
+    "CACHE_REDIS_URL": os.getenv("REDIS_URL"),
+    "CACHE_DEFAULT_TIMEOUT": 300
+})
 
-# Önbellek süreleri (saniye)
+# Önbellek süresi ayarları (isteğe bağlı)
 CACHE_TIMES = {
-    'orders': 300,  # 5 dakika
-    'products': 600,  # 10 dakika
-    'user_data': 1800  # 30 dakika
+    'orders': 300,
+    'products': 600,
+    'user_data': 1800
 }

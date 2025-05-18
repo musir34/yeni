@@ -8,11 +8,12 @@ import base64
 import qrcode
 from io import BytesIO
 from models import db, User
+from logger_config import app_logger as logger
 
 login_logout_bp = Blueprint('login_logout', __name__)
 
 def login_user(user):
-    print(f"Giriş yapan kullanıcı: {user.username}, rolü: {user.role}")  # Kullanıcı bilgilerini logla
+    logger.info(f"Giriş yapan kullanıcı: {user.username}, rolü: {user.role}")
     session['user_id'] = user.id
     session['username'] = user.username
     session['role'] = user.role
@@ -21,7 +22,7 @@ def login_user(user):
     session['authenticated'] = True
     # Oturum süresini uzatmak için permanent oturumu kullanıyoruz
     session.permanent = True
-    print(f"Oturumda atanan rol: {session['role']}")  # Oturumdaki rolü logla
+    logger.debug(f"Oturumda atanan rol: {session['role']}")
 
 
 
@@ -46,13 +47,13 @@ def roles_required(*roles):
             # Kullanıcının oturum açıp açmadığını kontrol et
             if 'role' not in session:
                 flash('Lütfen giriş yapın.', 'warning')
-                print("No role found in session.")
+                logger.warning("No role found in session.")
                 return redirect(url_for('login_logout.login'))
 
             # Oturumdaki rolü kontrol et
             user_role = session.get('role')
-            print(f"User role in session: {user_role}")
-            print(f"Required roles: {roles}")
+            logger.debug(f"User role in session: {user_role}")
+            logger.debug(f"Required roles: {roles}")
 
             # Eğer kullanıcı rolü gereken roller arasında değilse, erişimi reddet
             if user_role not in roles:
@@ -137,7 +138,7 @@ def login():
         user = User.query.filter_by(username=username).first()
 
         if user:
-            print(f"Veritabanından gelen kullanıcı: {user.username}, rolü: {user.role}")  # Kullanıcı bilgilerini logla
+            logger.debug(f"Veritabanından gelen kullanıcı: {user.username}, rolü: {user.role}")
 
         if user and check_password_hash(user.password, password):
             if user.status == 'pending':

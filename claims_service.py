@@ -20,10 +20,9 @@ logger.addHandler(handler)
 claims_service_bp = Blueprint('claims_service', __name__)
 
 @claims_service_bp.route('/fetch-trendyol-claims', methods=['POST'])
-def fetch_trendyol_claims_route():
+async def fetch_trendyol_claims_route():
     try:
-        # Asenkron fonksiyonu çağır
-        asyncio.run(fetch_trendyol_claims_async())
+        await fetch_trendyol_claims_async()
         flash('İade talepleri başarıyla güncellendi!', 'success')
     except Exception as e:
         logger.error(f"Hata: fetch_trendyol_claims_route - {e}")

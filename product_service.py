@@ -20,10 +20,9 @@ logger.addHandler(handler)
 product_service_bp = Blueprint('product_service', __name__)
 
 @product_service_bp.route('/fetch-trendyol-products', methods=['POST'])
-def fetch_trendyol_products_route():
+async def fetch_trendyol_products_route():
     try:
-        # Asenkron fonksiyonu çağır
-        asyncio.run(fetch_trendyol_products_async())
+        await fetch_trendyol_products_async()
         flash('Ürün kataloğu başarıyla güncellendi!', 'success')
     except Exception as e:
         logger.error(f"Hata: fetch_trendyol_products_route - {e}")

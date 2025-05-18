@@ -66,7 +66,7 @@ STATUS_TABLE_MAP = {
 ############################
 @order_service_bp.route('/fetch-trendyol-orders', methods=['POST'])
 # @role_required('admin', 'manager') # Yetkilendirme eklenmeli
-def fetch_trendyol_orders_route():
+async def fetch_trendyol_orders_route():
     """
     UI veya Postman vb. üzerinden tetiklenen endpoint.
     Asenkron olarak Trendyol siparişlerini çeker.
@@ -76,7 +76,7 @@ def fetch_trendyol_orders_route():
         # asyncio.run yerine Flask'ın async desteği varsa o kullanılmalı
         # Veya arka plan görevi olarak çalıştırmak daha uygun olabilir.
         # Şimdilik asyncio.run varsayımıyla devam edelim.
-        asyncio.run(fetch_trendyol_orders_async())
+        await fetch_trendyol_orders_async()
         flash('Trendyol siparişleri başarıyla çekildi ve işlenmeye başlandı!', 'success')
     except Exception as e:
         logger.error(f"Hata: fetch_trendyol_orders_route - {e}", exc_info=True)
