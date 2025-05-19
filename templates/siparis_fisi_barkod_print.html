@@ -305,9 +305,9 @@
               margin: 0 auto;
             }
             .labels-container {
-              display: grid;
-              grid-template-columns: repeat(3, 1fr); /* 3 sütun - eşit genişlikte */
-              grid-gap: 1mm 3mm; /* Satır boşluğu 1mm, sütun boşluğu 3mm */
+              display: flex;
+              flex-wrap: wrap;
+              gap: 1mm 3mm; /* Satır boşluğu 1mm, sütun boşluğu 3mm */
             }
             .label {
               width: 67mm;
