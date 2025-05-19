@@ -126,15 +126,16 @@
 <body data-siparis-id="{{ siparis_id }}">
   <div class="container">
     <h1>Barkod Etiketleri Yazdırma</h1>
-    
+
     <div class="info-box">
       <h3>Barkod Yazdırma</h3>
       <p>1. Her barkod için "Bu Barkodu Yazdır" butonuna tıklayarak ayrı ayrı yazdırabilirsiniz.</p>
       <p>2. Aşağıdaki yeşil buton ile tüm barkodları A4 kağıtta düzenli biçimde yazdırabilirsiniz.</p>
+      <p><strong>Not:</strong> A4 yazdırma düzeni, sayfa kenarlarında üst/alt 1.5cm, sağ/sol 0.8cm boşluk ve etiketler arasında yan yana 2mm, alt alta 1mm boşluk olacak şekilde ayarlanmıştır. Bu durumda her bir etiketin alanı yaklaşık 63.3mm x 37.3mm olacaktır.</p>
     </div>
 
     <button class="a4-button" id="a4Button">Tüm Barkodları A4 Kağıtta Düzenle</button>
-    
+
     <div class="barcode-grid">
       {% for item in barcodes %}
         {% for j in range(item.print_count) %}
@@ -156,7 +157,7 @@
         {% endfor %}
       {% endfor %}
     </div>
-    
+
     <div class="nav-buttons">
       <a href="{{ url_for('home.home') }}">Ana Sayfa</a>
       <a href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}">Sipariş Fişleri</a>
@@ -180,7 +181,9 @@
 
     const siparisId = Number(document.body.dataset.siparisId || 0);
 
-    // Tek barkod yazdırma fonksiyonu
+    // Tek barkod yazdırma fonksiyonu - Etiket boyutları 67mm x 41mm varsayımı ile devam ediyor
+    // Eğer bu da A4 düzenine benzer şekilde dinamik olmalıysa ayrı bir konu.
+    // Şimdilik bu fonksiyonu değiştirmedim, sadece A4 düzenini etkiliyor yeni ölçüler.
     function printSingleBarcode(barcode, model, color, size, qrPath) {
       const printWindow = window.open("", "_blank");
       printWindow.document.write(`
@@ -190,7 +193,7 @@
           <title>Barkod: ${barcode}</title>
           <style>
             @page {
-              size: 67mm 41mm;
+              size: 67mm 41mm; /* Bu hala eski boyutta, gerekirse ayarlanabilir */
               margin: 0;
             }
             body {
@@ -212,6 +215,7 @@
               align-items: center;
               justify-content: center;
               padding: 2mm;
+              box-sizing: border-box;
             }
             .right {
               width: 50%;
@@ -220,9 +224,10 @@
               justify-content: center;
               text-align: center;
               padding: 2mm;
+              box-sizing: border-box;
             }
             img {
-              max-width: 22mm;
+              max-width: 22mm; /* Bu değerler yeni etiket boyutuna göre ayarlanabilir */
               max-height: 22mm;
               margin-bottom: 2mm;
             }
@@ -233,7 +238,7 @@
               word-break: break-all;
             }
             .info {
-              margin-bottom: 3mm;
+              margin-bottom: 3mm; /* Bu değerler yeni etiket boyutuna göre ayarlanabilir */
               font-size: 10pt;
               font-weight: 600;
             }
@@ -265,8 +270,7 @@
         </html>
       `);
       printWindow.document.close();
-      
-      // Yazdırma işlemi tamamlandıktan sonra sunucuya bildir
+
       setTimeout(function() {
         markAsPrinted([barcode]);
       }, 2000);
@@ -278,8 +282,8 @@
       const totalBarcodes = allBarcodes.length;
       const barcodesPerPage = 21; // 3 sütun x 7 satır
       const totalPages = Math.ceil(totalBarcodes / barcodesPerPage);
-      
-      printWindow.document.write(`
+
+      let printContent = `
         <!DOCTYPE html>
         <html>
         <head>
@@ -287,33 +291,44 @@
           <style>
             @page {
               size: A4;
-              margin: 0;
+              margin: 0; /* Yazıcının kendi minimum marjini olabilir, bunu sıfırlıyoruz */
             }
-            * {
-              box-sizing: border-box;
-            }
-            html, body {
+            body {
               margin: 0;
               padding: 0;
-              background-color: white;
+              background: white;
               font-family: Arial, sans-serif;
             }
-            .paper {
-              width: 210mm;
-              min-height: 297mm;
-              padding: 15mm 8mm;
-              margin: 0 auto;
+            .page {
+              width: 210mm; /* A4 genişliği */
+              height: 297mm; /* A4 yüksekliği */
+              box-sizing: border-box; /* Padding ve border'ı width/height'e dahil et */
+              padding: 15mm 8mm 15mm 8mm; /* Üst/Alt: 1.5cm, Sağ/Sol: 0.8cm */
+
+              display: grid;
+              /* Grid, padding sonrası kalan alanda (194mm x 267mm) çalışacak. */
+              /* Sütun genişliği: (100% - (2 * 2mm sütun arası boşluk)) / 3 sütun */
+              grid-template-columns: repeat(3, calc((100% - 4mm) / 3)); 
+              /* Satır yüksekliği: (100% - (6 * 1mm satır arası boşluk)) / 7 satır */
+              grid-template-rows: repeat(7, calc((100% - 6mm) / 7));
+
+              column-gap: 2mm; /* Sütunlar arası boşluk */
+              row-gap: 1mm;    /* Satırlar arası boşluk */
             }
-            .labels-container {
-              display: flex;
-              flex-wrap: wrap;
-              gap: 1mm 3mm; /* Satır boşluğu 1mm, sütun boşluğu 3mm */
+            .page:not(.last-page) {
+                page-break-after: always;
+            }
+            .page.last-page {
+                page-break-after: auto;
             }
             .label {
-              width: 67mm;
-              height: 41mm;
-              display: flex;
-              margin-bottom: 0;
+              display: flex; /* Etiket içeriğini flex ile ortalamak/düzenlemek için */
+              /* width ve height grid tarafından otomatik sağlanacak */
+              border: none; 
+              box-sizing: border-box; /* Padding ve border etiket boyutuna dahil */
+              /* Etiket içeriğinin taşmasını önlemek ve görmek için: */
+              /* overflow: hidden; */ 
+              /* Sınırları görmek istersen: border: 0.1mm solid #eee; */
             }
             .left {
               width: 50%;
@@ -321,7 +336,8 @@
               flex-direction: column;
               align-items: center;
               justify-content: center;
-              padding: 2mm;
+              padding: 1mm; /* Daha az padding, çünkü etiket alanı küçüldü */
+              box-sizing: border-box;
             }
             .right {
               width: 50%;
@@ -329,54 +345,41 @@
               flex-direction: column;
               justify-content: center;
               text-align: center;
-              padding: 2mm;
+              padding: 1mm; /* Daha az padding */
+              box-sizing: border-box;
             }
             img {
-              max-width: 22mm;
-              max-height: 22mm;
-              margin-bottom: 2mm;
+              max-width: 18mm; /* Yeni etiket boyutuna göre küçültüldü */
+              max-height: 18mm;
+              margin-bottom: 1mm; /* Boşluk azaltıldı */
             }
             .barcode-text {
-              font-size: 9.5pt;
+              font-size: 8pt; /* Biraz küçültüldü */
               text-align: center;
               font-weight: bold;
               word-break: break-all;
+              line-height: 1.2;
             }
             .info {
-              margin-bottom: 3mm;
-              font-size: 10pt;
+              margin-bottom: 1.5mm; /* Boşluk azaltıldı */
+              font-size: 8.5pt; /* Biraz küçültüldü */
               font-weight: 600;
-            }
-            /* Yazdırmada sayfa arası boşlukları kontrol et */
-            @media print {
-              .page-break {
-                break-after: page;
-                page-break-after: always;
-              }
-              /* Son sayfada page break olmasın */
-              .paper:last-child {
-                page-break-after: avoid;
-              }
+              line-height: 1.2;
             }
           </style>
         </head>
         <body>
-      `);
-      
-      // Her sayfa için bir paper div oluştur
+      `;
+
       for (let page = 0; page < totalPages; page++) {
-        const isLastPage = page === totalPages - 1;
-        printWindow.document.write(`
-          <div class="paper ${!isLastPage ? 'page-break' : ''}">
-            <div class="labels-container">
-        `);
-        
-        // Her sayfadaki etiketleri ekle
+        const pageClass = (page === totalPages - 1) ? "page last-page" : "page";
+        printContent += `<div class="${pageClass}">`; 
+
         for (let i = 0; i < barcodesPerPage; i++) {
           const index = page * barcodesPerPage + i;
           if (index < totalBarcodes) {
             const item = allBarcodes[index];
-            printWindow.document.write(`
+            printContent += `
               <div class="label">
                 <div class="left">
                   <img src="${item.qrPath}" alt="QR Kod">
@@ -388,20 +391,15 @@
                   <div class="info">Beden: ${item.size}</div>
                 </div>
               </div>
-            `);
-          } else if (i < barcodesPerPage) {
-            // Boş etiket (sadece sayfa düzenini korumak için)
-            printWindow.document.write(`<div class="label"></div>`);
+            `;
+          } else {
+            printContent += `<div class="label"></div>`; // Boş etiketler için
           }
         }
-        
-        printWindow.document.write(`
-            </div>
-          </div>
-        `);
+        printContent += `</div>`;
       }
-      
-      printWindow.document.write(`
+
+      printContent += `
           <script>
             window.onload = function() {
               setTimeout(function() {
@@ -411,11 +409,12 @@
           <\/script>
         </body>
         </html>
-      `);
-      
+      `;
+
+      printWindow.document.open();
+      printWindow.document.write(printContent);
       printWindow.document.close();
-      
-      // Yazdırma işlemi tamamlandıktan sonra sunucuya bildir
+
       setTimeout(function() {
         const allBarcodeValues = allBarcodes.map(item => item.barcode);
         const uniqueBarcodeValues = [...new Set(allBarcodeValues)];
@@ -423,10 +422,8 @@
       }, 2000);
     });
 
-    // Yazdırma durumunu sunucuya bildiren fonksiyon
     function markAsPrinted(barcodes) {
       if (!siparisId || !barcodes || barcodes.length === 0) return;
-      
       fetch("{{ url_for('siparis_fisi_bp.mark_as_printed') }}", {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
