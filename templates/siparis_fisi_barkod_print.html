@@ -288,40 +288,32 @@
             @page {
               size: A4;
               margin: 0;
-              orphans: 0; /* Sayfa sonunda tek kalan öğeler için davranış ayarlaması */
-              widows: 0; /* Sayfa başında kalan öğeler için davranış ayarlaması */
             }
-            /* Yazdırma özellikleri */
-            @media print {
-              body, html {
-                width: 210mm;
-                height: 297mm;
-                overflow: hidden; /* Taşan içerik boş sayfalara neden olmasın */
-                -webkit-print-color-adjust: exact !important; /* Chrome için */
-                color-adjust: exact !important; /* Firefox için */
-              }
+            * {
+              box-sizing: border-box;
             }
-            body {
+            html, body {
               margin: 0;
               padding: 0;
-              background: white;
+              background-color: white;
               font-family: Arial, sans-serif;
             }
-            .page {
+            .paper {
               width: 210mm;
-              height: 297mm;
-              page-break-after: auto; /* always yerine auto kullanıyoruz */
-              display: grid;
-              grid-template-columns: repeat(3, 67mm);
-              grid-template-rows: repeat(7, 41mm);
-              column-gap: 3mm;
-              row-gap: 1mm;
-              padding: 15mm 8mm 15mm 8mm; /* Yukarı, Sağ, Alt, Sol */
+              min-height: 297mm;
+              padding: 15mm 8mm;
+              margin: 0 auto;
+            }
+            .labels-container {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 1mm 3mm; /* Satır boşluğu 1mm, sütun boşluğu 3mm */
             }
             .label {
+              width: 67mm;
+              height: 41mm;
               display: flex;
-              border: none;
-              box-sizing: border-box;
+              margin-bottom: 0;
             }
             .left {
               width: 50%;
@@ -355,16 +347,29 @@
               font-size: 10pt;
               font-weight: 600;
             }
+            /* Yazdırmada sayfa arası boşlukları kontrol et */
+            @media print {
+              .page-break {
+                break-after: page;
+                page-break-after: always;
+              }
+              /* Son sayfada page break olmasın */
+              .paper:last-child {
+                page-break-after: avoid;
+              }
+            }
           </style>
         </head>
         <body>
       `);
       
-      // Sayfaları oluştur
+      // Her sayfa için bir paper div oluştur
       for (let page = 0; page < totalPages; page++) {
-        // Son sayfada page-break-after: avoid kullanacağız böylece son sayfadan sonra boş sayfa oluşmayacak
         const isLastPage = page === totalPages - 1;
-        printWindow.document.write(`<div class="page" style="${isLastPage ? 'page-break-after: avoid;' : ''}">`);
+        printWindow.document.write(`
+          <div class="paper ${!isLastPage ? 'page-break' : ''}">
+            <div class="labels-container">
+        `);
         
         // Her sayfadaki etiketleri ekle
         for (let i = 0; i < barcodesPerPage; i++) {
@@ -384,13 +389,16 @@
                 </div>
               </div>
             `);
-          } else {
-            // Boş etiketleri tamamen gizleyelim - çıktıya gereksiz boşluk eklemesin
-            printWindow.document.write(`<div class="label" style="visibility: hidden;"></div>`);
+          } else if (i < barcodesPerPage) {
+            // Boş etiket (sadece sayfa düzenini korumak için)
+            printWindow.document.write(`<div class="label"></div>`);
           }
         }
         
-        printWindow.document.write(`</div>`);
+        printWindow.document.write(`
+            </div>
+          </div>
+        `);
       }
       
       printWindow.document.write(`
