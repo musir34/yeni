@@ -136,7 +136,7 @@
                     </div>
                     <div class="row">
                         <div class="col-12 text-end">
-                            <button id="runAnalysisBtn" class="btn btn-primary">
+                            <button id="runAnalysisBtn" class="btn btn-primary" onclick="runStockAnalysis()">
                                 <i class="fas fa-sync-alt"></i> Analizi Çalıştır
                             </button>
                         </div>
@@ -413,13 +413,18 @@
     
     // API çağrıları
     async function getStockHealthReport() {
+        console.log("getStockHealthReport fonksiyonu çağrıldı");
         const includeVariants = $('#includeVariants').is(':checked');
         const topN = $('#stockShowCount').val();
         const days = $('#forecastDays').val();
         
+        console.log("Parametreler:", {includeVariants, topN, days});
+        
         try {
             const response = await fetch(`/api/stock-health-report?include_variants=${includeVariants}&top_n=${topN}&days=${days}`);
             const data = await response.json();
+            
+            console.log("API yanıtı:", data);
             
             if (data.success) {
                 return data.report;
