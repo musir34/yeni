@@ -401,14 +401,25 @@ def get_product_sales_prediction_api(product_main_id):
         })
     
     # Forecast dataframe'i JSON'a dönüştür
-    forecast_data = forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].to_dict(orient='records')
+    # to_dict(orient='records') metodu yerine row-by-row dönüştürme kullanalım
+    forecast_data = []
+    for _, row in forecast.iterrows():
+        forecast_data.append({
+            'ds': row['ds'],
+            'yhat': float(row['yhat']),
+            'yhat_lower': float(row['yhat_lower']),
+            'yhat_upper': float(row['yhat_upper'])
+        })
+    
+    # Tahmin döneminin başlangıç indeksi
+    start_forecast_idx = len(forecast) - forecast_days
     
     return jsonify({
         "success": True,
         "forecast": forecast_data,
-        "next_7_days": float(forecast.iloc[-forecast_days:-forecast_days+7]['yhat'].sum()),
-        "next_15_days": float(forecast.iloc[-forecast_days:-forecast_days+15]['yhat'].sum()),
-        "next_30_days": float(forecast.iloc[-forecast_days:]['yhat'].sum())
+        "next_7_days": float(forecast.iloc[start_forecast_idx:start_forecast_idx+7]['yhat'].sum()),
+        "next_15_days": float(forecast.iloc[start_forecast_idx:start_forecast_idx+15]['yhat'].sum()),
+        "next_30_days": float(forecast.iloc[start_forecast_idx:]['yhat'].sum())
     })
 
 @ai_stock_prediction_bp.route('/api/product-stock-analysis/<product_main_id>', methods=['GET'])
