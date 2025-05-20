@@ -316,128 +316,101 @@ def process_all_orders(all_orders_data):
         # db.session.rollback() # Beklenmedik hatalarda da rollback faydalı olabilir
 
 def _process_sync_orders_bulk(sync_orders):
-    """
-    Created/Picking/Cancelled siparişlerini toplu şekilde ilgili tablolara
-    ekler veya günceller (Upsert benzeri mantık). Tek seferde commit eder.
-    (Bu fonksiyon Flask app context içinde çağrılmalıdır)
-    """
     if not sync_orders:
         return
-    logger.info(f"{len(sync_orders)} adet senkron sipariş (Created/Picking/Cancelled) toplu işleniyor...")
+
+    logger.info(f"{len(sync_orders)} adet senkron sipariş işleniyor (Created / Picking / Cancelled)...")
 
     try:
-        # 1) İşlenecek sipariş numaraları
-        order_numbers = {str(od.get('orderNumber') or od.get('id')) for od in sync_orders}
+        db.session.rollback()  # Önceki işlem varsa sıfırla
 
-        # 2) İlgili tablolardaki mevcut kayıtları önceden çek (tek sorgu ile)
+        order_numbers = {str(od.get('orderNumber') or od.get('id')) for od in sync_orders if od.get('orderNumber') or od.get('id')}
+
         existing_orders = {}
-        relevant_tables = [OrderCreated, OrderPicking, OrderCancelled] # Shipped, Delivered yok
+        relevant_tables = [OrderCreated, OrderPicking, OrderCancelled]
+
         for table_model in relevant_tables:
             try:
-                 existing_in_table = table_model.query.filter(table_model.order_number.in_(order_numbers)).all()
-                 for record in existing_in_table:
-                      # Aynı sipariş farklı tablolarda olabilir mi? Olmamalı ama kontrol edelim.
-                      if record.order_number not in existing_orders:
-                           existing_orders[record.order_number] = {'record': record, 'table': table_model.__tablename__}
-                      else:
-                           # Bu durum normalde olmamalı (bir sipariş aynı anda hem created hem picking olamaz)
-                           # Eğer oluyorsa veri tutarsızlığı var demektir.
-                           logger.warning(f"Sipariş {record.order_number} birden fazla tabloda bulundu: Mevcut: {existing_orders[record.order_number]['table']}, Yeni: {table_model.__tablename__}. Veri tutarsızlığı olabilir!")
-                           # Önceliklendirme? Şimdilik ilk bulunanı tutalım.
-            except Exception as q_err:
-                 logger.error(f"{table_model.__tablename__} sorgulanırken hata: {q_err}", exc_info=True)
+                records = table_model.query.filter(table_model.order_number.in_(order_numbers)).all()
+                for record in records:
+                    existing_orders.setdefault(record.order_number, {'record': record, 'table': table_model.__tablename__})
+            except Exception as e:
+                logger.error(f"{table_model.__tablename__} sorgusunda hata: {e}", exc_info=True)
 
-
-        logger.debug(
-            f"{len(existing_orders)} adet mevcut sipariş kaydı bulundu "
-            f"({', '.join([tbl.__tablename__.replace('orders_', '') for tbl in relevant_tables])})."
-        )
-
-        # 3) Eklenecek ve silinecek kayıtları hazırla
-        to_insert_created   = []
-        to_insert_picking   = []
-        to_insert_cancelled = []
-        to_delete_ids = {table.__tablename__: [] for table in relevant_tables} # Silinecek ID'leri tablo bazında tut
+        to_insert_created, to_insert_picking, to_insert_cancelled = [], [], []
+        to_delete_ids = {tbl.__tablename__: [] for tbl in relevant_tables}
 
         for order_data in sync_orders:
             order_number = str(order_data.get('orderNumber') or order_data.get('id'))
+            if not order_number:
+                logger.error("order_number eksik, sipariş atlandı.")
+                continue
+
             status = (order_data.get('status') or '').strip()
-            if status == 'Invoiced': status = 'Picking' # Invoiced -> Picking
+            if status == 'Invoiced':
+                status = 'Picking'
 
             target_model = STATUS_TABLE_MAP.get(status)
-            if not target_model: continue # Eşleşen model yoksa atla
+            if not target_model:
+                continue
 
-            # Veritabanına yazılacak veriyi oluştur (artık dönüştürme yok)
             new_data_dict = combine_line_items(order_data, status)
-            if not new_data_dict: # combine_line_items hata döndürürse
-                 logger.error(f"Sipariş {order_number} için veri hazırlanamadı.")
-                 continue
+            if not new_data_dict:
+                logger.error(f"Sipariş {order_number} için veri oluşturulamadı.")
+                continue
 
             existing_info = existing_orders.get(order_number)
 
             if existing_info:
-                 # Sipariş zaten DB'de var
-                 current_record = existing_info['record']
-                 current_table_name = existing_info['table']
-                 target_table_name = target_model.__tablename__
+                current_record = existing_info['record']
+                current_table = existing_info['table']
+                target_table = target_model.__tablename__
 
-                 if current_table_name == target_table_name:
-                      # Aynı tabloda, sadece güncelle
-                      updated = _minimal_update_if_needed(current_record, new_data_dict)
-                      if updated:
-                           logger.debug(f"Sipariş {order_number} ({current_table_name}) güncellendi.")
-                 else:
-                      # Statü değişmiş, eski tablodan sil, yeni tabloya ekle
-                      logger.info(f"Statü Değişikliği: Sipariş {order_number} ({status}) {current_table_name} -> {target_table_name}")
-                      # Eski kaydı silme listesine ekle
-                      if current_record.id not in to_delete_ids[current_table_name]:
-                          to_delete_ids[current_table_name].append(current_record.id)
-
-                      # Yeni tabloya ekleme listesine ekle
-                      if target_model == OrderCreated: to_insert_created.append(new_data_dict)
-                      elif target_model == OrderPicking: to_insert_picking.append(new_data_dict)
-                      elif target_model == OrderCancelled: to_insert_cancelled.append(new_data_dict)
-                      # Shipped/Delivered bu fonksiyonda işlenmez
+                if current_table != target_table:
+                    logger.info(f"Statü değişimi: {order_number} {current_table} ➝ {target_table}")
+                    to_delete_ids[current_table].append(current_record.id)
+                    if target_model == OrderCreated:
+                        to_insert_created.append(new_data_dict)
+                    elif target_model == OrderPicking:
+                        to_insert_picking.append(new_data_dict)
+                    elif target_model == OrderCancelled:
+                        to_insert_cancelled.append(new_data_dict)
+                else:
+                    _minimal_update_if_needed(current_record, new_data_dict)
             else:
-                 # Sipariş DB'de yok, yeni ekle
-                 if target_model == OrderCreated: to_insert_created.append(new_data_dict)
-                 elif target_model == OrderPicking: to_insert_picking.append(new_data_dict)
-                 elif target_model == OrderCancelled: to_insert_cancelled.append(new_data_dict)
+                if target_model == OrderCreated:
+                    to_insert_created.append(new_data_dict)
+                elif target_model == OrderPicking:
+                    to_insert_picking.append(new_data_dict)
+                elif target_model == OrderCancelled:
+                    to_insert_cancelled.append(new_data_dict)
 
+        for table_name, ids in to_delete_ids.items():
+            if ids:
+                model = next(t for t in relevant_tables if t.__tablename__ == table_name)
+                model.query.filter(model.id.in_(ids)).delete(synchronize_session=False)
+                logger.info(f"{len(ids)} kayıt {table_name} tablosundan silindi.")
 
-        # 4) Toplu Silme İşlemleri (Önce silme yapılabilir)
-        for table_name, ids_to_delete in to_delete_ids.items():
-             if ids_to_delete:
-                 try:
-                      target_model_to_delete = next(t for t in relevant_tables if t.__tablename__ == table_name)
-                      # synchronize_session='fetch' daha güvenli olabilir ama 'False' daha hızlı
-                      deleted_count = target_model_to_delete.query.filter(target_model_to_delete.id.in_(ids_to_delete)).delete(synchronize_session=False)
-                      logger.info(f"{deleted_count} kayıt {table_name} tablosundan silindi (bulk).")
-                 except Exception as del_err:
-                      logger.error(f"{table_name} tablosundan silme hatası: {del_err}", exc_info=True)
-                      # Hata olsa bile devam et, eklemeleri dene? Veya burada dur? Şimdilik devam.
-
-        # 5) Toplu Ekleme İşlemleri
         if to_insert_created:
             db.session.bulk_insert_mappings(OrderCreated, to_insert_created)
-            logger.info(f"{len(to_insert_created)} kayıt OrderCreated tablosuna eklendi (bulk).")
         if to_insert_picking:
             db.session.bulk_insert_mappings(OrderPicking, to_insert_picking)
-            logger.info(f"{len(to_insert_picking)} kayıt OrderPicking tablosuna eklendi (bulk).")
         if to_insert_cancelled:
             db.session.bulk_insert_mappings(OrderCancelled, to_insert_cancelled)
-            logger.info(f"{len(to_insert_cancelled)} kayıt OrderCancelled tablosuna eklendi (bulk).")
 
-        # 6) Commit (Tüm değişiklikler için)
         db.session.commit()
-        logger.info("Senkron siparişler (Created/Picking/Cancelled) toplu olarak işlendi ve commit edildi.")
+        logger.info("Senkron sipariş işlemleri başarıyla tamamlandı.")
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        logger.error(f"Senkron sipariş toplu işleme (SQLAlchemyError): {e}", exc_info=True)
+        logger.error(f"SQLAlchemy Hatası (Sync Orders): {e}", exc_info=True)
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Senkron sipariş toplu işleme (Genel Hata): {e}", exc_info=True)
+        logger.error(f"Genel Hata (Sync Orders): {e}", exc_info=True)
+    finally:
+        db.session.remove()
+
+
 
 
 def _minimal_update_if_needed(record_obj, new_data_dict):
@@ -512,111 +485,94 @@ def _minimal_update_if_needed(record_obj, new_data_dict):
 # 3) Arka Plan Shipped/Delivered (Toplu Yaklaşım)
 ############################
 def process_bg_orders_bulk(bg_orders, app):
-    """
-    Shipped ve Delivered siparişlerini arka planda toplu olarak işler.
-    Statü geçişlerini yönetir (örn: Shipped -> Delivered).
-    (Bu fonksiyon bir thread içinde, Flask app context ile çalışır)
-    """
-    with app.app_context(): # Thread içinde Flask context'i sağlar
-        logger.info(f"Arka plan işleyici: {len(bg_orders)} adet Shipped/Delivered siparişi işleniyor...")
+    with app.app_context():
+        logger.info(f"BG İşleyici: {len(bg_orders)} adet Shipped/Delivered sipariş işleniyor...")
+
+        if not bg_orders:
+            logger.info("İşlenecek arka plan siparişi yok.")
+            return
+
         try:
-            if not bg_orders:
-                return
+            db.session.rollback()  # Aktif transaction varsa sıfırla
 
-            # 1) İşlenecek sipariş numaraları
-            order_numbers = {str(od.get('orderNumber') or od.get('id')) for od in bg_orders}
+            order_numbers = {str(od.get('orderNumber') or od.get('id')) for od in bg_orders if od.get('orderNumber') or od.get('id')}
+            relevant_tables = [OrderPicking, OrderShipped, OrderDelivered]
 
-            # 2) İlgili tablolardaki mevcut kayıtları çek (Shipped, Delivered, ve potansiyel olarak Picking)
             existing_orders = {}
-            relevant_tables = [OrderPicking, OrderShipped, OrderDelivered] # Picking'i de kontrol et (Shipped'e geçiş olabilir)
             for table_model in relevant_tables:
-                 try:
-                      existing_in_table = table_model.query.filter(table_model.order_number.in_(order_numbers)).all()
-                      for record in existing_in_table:
-                           if record.order_number not in existing_orders:
-                                existing_orders[record.order_number] = {'record': record, 'table': table_model.__tablename__}
-                           else:
-                                logger.warning(f"BG: Sipariş {record.order_number} birden fazla tabloda bulundu: Mevcut: {existing_orders[record.order_number]['table']}, Yeni: {table_model.__tablename__}.")
-                 except Exception as q_err:
-                      logger.error(f"BG: {table_model.__tablename__} sorgulanırken hata: {q_err}", exc_info=True)
+                try:
+                    records = table_model.query.filter(table_model.order_number.in_(order_numbers)).all()
+                    for record in records:
+                        existing_orders.setdefault(record.order_number, {'record': record, 'table': table_model.__tablename__})
+                except Exception as q_err:
+                    logger.error(f"BG: {table_model.__tablename__} sorgulanırken hata: {q_err}", exc_info=True)
 
-
-            logger.debug(f"BG: {len(existing_orders)} adet mevcut sipariş kaydı bulundu ({', '.join(t.__tablename__ for t in relevant_tables)}).")
-
-            # 3) Eklenecek ve silinecek kayıtları hazırla
-            to_insert_shipped   = []
-            to_insert_delivered = []
-            to_delete_ids = {table.__tablename__: [] for table in relevant_tables}
+            to_insert_shipped, to_insert_delivered = [], []
+            to_delete_ids = {tbl.__tablename__: [] for tbl in relevant_tables}
 
             for order_data in bg_orders:
-                 order_number = str(order_data.get('orderNumber') or order_data.get('id'))
-                 status = (order_data.get('status') or '').strip()
-                 # Invoiced bu fonksiyona gelmemeli ama gelirse Shipped gibi davran? Veya hata ver?
+                order_number = str(order_data.get('orderNumber') or order_data.get('id'))
+                if not order_number:
+                    logger.error("BG: order_number boş, işlem atlandı.")
+                    continue
 
-                 target_model = STATUS_TABLE_MAP.get(status)
-                 if not target_model or target_model not in (OrderShipped, OrderDelivered):
-                      logger.warning(f"BG: Sipariş {order_number} için beklenmeyen statü '{status}', atlanıyor.")
-                      continue
+                status = (order_data.get('status') or '').strip()
+                target_model = STATUS_TABLE_MAP.get(status)
+                if not target_model or target_model not in (OrderShipped, OrderDelivered):
+                    logger.warning(f"BG: {order_number} için geçersiz statü '{status}'")
+                    continue
 
-                 new_data_dict = combine_line_items(order_data, status)
-                 if not new_data_dict:
-                      logger.error(f"BG: Sipariş {order_number} için veri hazırlanamadı.")
-                      continue
+                new_data_dict = combine_line_items(order_data, status)
+                if not new_data_dict:
+                    logger.error(f"BG: {order_number} için veri oluşturulamadı.")
+                    continue
 
-                 existing_info = existing_orders.get(order_number)
+                existing_info = existing_orders.get(order_number)
 
-                 if existing_info:
-                      current_record = existing_info['record']
-                      current_table_name = existing_info['table']
-                      target_table_name = target_model.__tablename__
+                if existing_info:
+                    current_record = existing_info['record']
+                    current_table = existing_info['table']
+                    target_table = target_model.__tablename__
 
-                      if current_table_name == target_table_name:
-                           # Aynı tabloda, güncelle
-                           _minimal_update_if_needed(current_record, new_data_dict)
-                      else:
-                           # Statü değişmiş (Picking -> Shipped veya Shipped -> Delivered)
-                           logger.info(f"BG Statü Değişikliği: Sipariş {order_number} ({status}) {current_table_name} -> {target_table_name}")
-                           # Eski kaydı silme listesine ekle
-                           if current_record.id not in to_delete_ids[current_table_name]:
-                                to_delete_ids[current_table_name].append(current_record.id)
+                    if current_table != target_table:
+                        logger.info(f"BG: {order_number} statü geçişi: {current_table} ➝ {target_table}")
+                        to_delete_ids[current_table].append(current_record.id)
+                        if target_model == OrderShipped:
+                            to_insert_shipped.append(new_data_dict)
+                        elif target_model == OrderDelivered:
+                            to_insert_delivered.append(new_data_dict)
+                    else:
+                        _minimal_update_if_needed(current_record, new_data_dict)
+                else:
+                    if target_model == OrderShipped:
+                        to_insert_shipped.append(new_data_dict)
+                    elif target_model == OrderDelivered:
+                        to_insert_delivered.append(new_data_dict)
 
-                           # Yeni tabloya ekleme listesine ekle
-                           if target_model == OrderShipped: to_insert_shipped.append(new_data_dict)
-                           elif target_model == OrderDelivered: to_insert_delivered.append(new_data_dict)
-                 else:
-                      # Sipariş DB'de yok (Belki doğrudan Shipped/Delivered geldi?), yeni ekle
-                      logger.info(f"BG: Sipariş {order_number} ({status}) veritabanında bulunamadı, doğrudan ekleniyor.")
-                      if target_model == OrderShipped: to_insert_shipped.append(new_data_dict)
-                      elif target_model == OrderDelivered: to_insert_delivered.append(new_data_dict)
+            for table_name, ids in to_delete_ids.items():
+                if ids:
+                    model = next(t for t in relevant_tables if t.__tablename__ == table_name)
+                    model.query.filter(model.id.in_(ids)).delete(synchronize_session=False)
+                    logger.info(f"BG: {len(ids)} kayıt {table_name} tablosundan silindi.")
 
-            # 4) Toplu Silme İşlemleri
-            for table_name, ids_to_delete in to_delete_ids.items():
-                 if ids_to_delete:
-                      try:
-                           target_model_to_delete = next(t for t in relevant_tables if t.__tablename__ == table_name)
-                           deleted_count = target_model_to_delete.query.filter(target_model_to_delete.id.in_(ids_to_delete)).delete(synchronize_session=False)
-                           logger.info(f"BG: {deleted_count} kayıt {table_name} tablosundan silindi (bulk).")
-                      except Exception as del_err:
-                           logger.error(f"BG: {table_name} tablosundan silme hatası: {del_err}", exc_info=True)
-
-            # 5) Toplu Ekleme İşlemleri
             if to_insert_shipped:
                 db.session.bulk_insert_mappings(OrderShipped, to_insert_shipped)
-                logger.info(f"BG: {len(to_insert_shipped)} kayıt OrderShipped tablosuna eklendi (bulk).")
             if to_insert_delivered:
                 db.session.bulk_insert_mappings(OrderDelivered, to_insert_delivered)
-                logger.info(f"BG: {len(to_insert_delivered)} kayıt OrderDelivered tablosuna eklendi (bulk).")
 
-            # 6) Commit
             db.session.commit()
-            logger.info("Arka plan Shipped/Delivered siparişleri toplu olarak işlendi ve commit edildi.")
+            logger.info("BG: Tüm işlemler başarıyla tamamlandı ve commit edildi.")
 
         except SQLAlchemyError as e:
             db.session.rollback()
-            logger.error(f"Arka plan sipariş işleme (SQLAlchemyError): {e}", exc_info=True)
+            logger.error(f"⛔ BG SQLAlchemy hatası: {e}", exc_info=True)
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Arka plan sipariş işleme (Genel Hata): {e}", exc_info=True)
+            logger.error(f"⛔ BG genel hata: {e}", exc_info=True)
+        finally:
+            db.session.remove()
+
+
 
 
 ############################
