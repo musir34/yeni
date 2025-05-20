@@ -370,7 +370,7 @@ def display_archive():
     Arşiv tablosundaki siparişleri listeler (sayfalı).
     """
     page = request.args.get('page', 1, type=int)
-    per_page = 10
+    per_page = 20
 
     try:
         pagination = Archive.query.order_by(Archive.archive_date.desc()).paginate( # order_date yerine archive_date ile sırala
