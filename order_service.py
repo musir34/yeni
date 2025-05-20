@@ -5,13 +5,13 @@ import asyncio
 import aiohttp
 import base64
 import json
-import traceback
+# import traceback # Kullanılmıyor, logger.error(..., exc_info=True) daha iyi
 import logging
 from datetime import datetime
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError # IntegrityError eklendi
 import threading
 import os
-from barcode_utils import generate_barcode
+# from barcode_utils import generate_barcode # Kodda direkt kullanımı görünmüyor, eğer başka bir yerde (örn. template) gerekmiyorsa kaldırılabilir.
 # Tablolar: Created, Picking, Shipped, Delivered, Cancelled, Archive
 # models.py içindeki doğru import yolu varsayılıyor
 from models import (
@@ -21,920 +21,699 @@ from models import (
     OrderShipped,
     OrderDelivered,
     OrderCancelled,
-    OrderArchived
+    Archive # OrderArchived -> Archive olarak değiştirildi
 )
 
 # Trendyol API kimlik bilgileri
 # trendyol_api.py dosyasından import ediliyorsa:
-from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID, BASE_URL # BASE_URL eklendi
+from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID, BASE_URL
 
-# İsteğe bağlı: Sipariş detayı işleme, update service
-# Bu importların doğru dosya yollarından yapıldığından emin olalım
+# İsteğe bağlı: Sipariş detayı işleme
 from order_list_service import process_order_details # order_list_service.py'den
-from update_service import update_package_to_picking # update_service.py'den
+# from update_service import update_package_to_picking # Kodda kullanımı görünmüyor, gerekmiyorsa kaldırılabilir.
 
 # Blueprint
 order_service_bp = Blueprint('order_service', __name__)
 
 # Log ayarları
 logger = logging.getLogger(__name__)
-# Loglama yapılandırması merkezi bir yerden (örn: app factory) yapılmalı
-# Ama şimdilik dosya bazlı loglama kalabilir.
+# Log dosya yolu ve oluşturma (zaten vardı, iyi)
 log_file_path = os.path.join(os.path.dirname(__file__), 'logs', 'order_service.log')
 os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
-handler = logging.FileHandler(log_file_path)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
+
+# Handler'ların tekrar tekrar eklenmesini engelleme (zaten vardı, iyi)
 if not logger.hasHandlers():
+    handler = logging.FileHandler(log_file_path, encoding='utf-8') # encoding eklendi
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - [%(threadName)s] - %(message)s') # threadName eklendi
+    handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.setLevel(logging.INFO) # Veya DEBUG seviyesi
+    logger.setLevel(logging.INFO) # Canlıda INFO, geliştirmede DEBUG olabilir.
 
 ############################
-# Statü -> Model eşlemesi
+# Statü -> Model Eşlemesi
 ############################
 STATUS_TABLE_MAP = {
     'Created':   OrderCreated,
     'Picking':   OrderPicking,
-    'Invoiced':  OrderPicking,  # Invoiced -> picking tablosu
+    'Invoiced':  OrderPicking,  # Invoiced statüsü de OrderPicking tablosuna yazılacak
     'Shipped':   OrderShipped,
     'Delivered': OrderDelivered,
     'Cancelled': OrderCancelled
+    # Archive (eski OrderArchived) buraya dahil değil, çünkü o farklı bir akışla yönetiliyor (son durak).
 }
 
 ############################
 # 1) Trendyol'dan Sipariş Çekme (Asenkron)
 ############################
 @order_service_bp.route('/fetch-trendyol-orders', methods=['POST'])
-# @role_required('admin', 'manager') # Yetkilendirme eklenmeli
+# @role_required('admin', 'manager') # Yetkilendirme eklenmeli (örneğin Flask-Login veya Flask-Principal ile)
 async def fetch_trendyol_orders_route():
     """
-    UI veya Postman vb. üzerinden tetiklenen endpoint.
-    Asenkron olarak Trendyol siparişlerini çeker.
+    Kullanıcı arayüzünden veya bir araçla tetiklenerek Trendyol'dan siparişleri çeker.
     """
-    logger.info("Manuel Trendyol sipariş çekme işlemi tetiklendi.")
+    logger.info("Manuel Trendyol sipariş çekme işlemi kullanıcı tarafından tetiklendi.")
     try:
-        # asyncio.run yerine Flask'ın async desteği varsa o kullanılmalı
-        # Veya arka plan görevi olarak çalıştırmak daha uygun olabilir.
-        # Şimdilik asyncio.run varsayımıyla devam edelim.
         await fetch_trendyol_orders_async()
         flash('Trendyol siparişleri başarıyla çekildi ve işlenmeye başlandı!', 'success')
     except Exception as e:
-        logger.error(f"Hata: fetch_trendyol_orders_route - {e}", exc_info=True)
-        # traceback.print_exc() # Loglama zaten yapıyor
-        flash('Siparişler çekilirken veya işlenirken bir hata oluştu.', 'danger')
-    # İşlem sonrası sipariş listesine yönlendir
-    return redirect(url_for('order_list_service.order_list_all')) # Veya ilgili liste sayfasına
-
+        logger.error(f"fetch_trendyol_orders_route sırasında hata: {e}", exc_info=True)
+        flash(f'Siparişler çekilirken veya işlenirken bir hata oluştu: {str(e)}', 'danger')
+    return redirect(url_for('order_list_service.order_list_all'))
 
 async def fetch_trendyol_orders_async():
-    """
-    Trendyol API'ye asenkron istek atar, tüm sayfaları paralel çekip
-    process_all_orders fonksiyonuna iletir.
-    """
-    logger.info("Asenkron Trendyol sipariş çekme işlemi başlıyor...")
+    logger.info("Asenkron Trendyol sipariş çekme işlemi (fetch_trendyol_orders_async) başlıyor...")
     try:
         auth_str = f"{API_KEY}:{API_SECRET}"
         b64_auth_str = base64.b64encode(auth_str.encode()).decode('utf-8')
-        # BASE_URL trendyol_api.py'den import edildi varsayılıyor
-        url = f"{BASE_URL}suppliers/{SUPPLIER_ID}/orders"
-        headers = {
+        base_api_url = f"{BASE_URL}suppliers/{SUPPLIER_ID}/orders"
+        request_headers = {
             "Authorization": f"Basic {b64_auth_str}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "User-Agent": "GulluAyakkabiERP/1.0 (Python-aiohttp)"
         }
-
-        # Çekilecek statüler ve diğer parametreler
         statuses_to_fetch = "Created,Picking,Invoiced,Shipped,Delivered,Cancelled"
-        params = {
+        common_params = {
             "status": statuses_to_fetch,
             "page": 0,
-            "size": 200,  # Sayfa boyutu (API limitine göre ayarla, 500 yerine 200 daha stabil olabilir)
-            "orderByField": "PackageLastModifiedDate", # Veya orderDate
-            "orderByDirection": "DESC" # En yeniden eskiye
-            # "startDate": ..., # Belirli bir tarih aralığı eklenebilir (performans için)
-            # "endDate": ...
+            "size": 200,
+            "orderByField": "PackageLastModifiedDate",
+            "orderByDirection": "DESC"
         }
-        logger.debug(f"Trendyol API isteği: URL={url}, Params={params}")
+        logger.debug(f"Trendyol API isteği için temel URL: {base_api_url}, Parametreler (ilk sayfa): {common_params}")
+        all_orders_from_api = []
+        total_pages = 1
+        timeout_config = aiohttp.ClientTimeout(total=120, connect=30)
 
-        all_orders_data = []
-        page_number = 0
-        total_pages = 1 # İlk başta 1 sayfa varsay
-
-        async with aiohttp.ClientSession() as session:
-            # İlk sayfayı çek ve toplam sayfa sayısını öğren
-            logger.info("İlk sayfa çekiliyor...")
-            async with session.get(url, headers=headers, params=params, timeout=60) as response:
+        async with aiohttp.ClientSession(headers=request_headers, timeout=timeout_config) as session:
+            logger.info("Trendyol API'den ilk sayfa siparişler çekiliyor...")
+            async with session.get(base_api_url, params=common_params) as response:
                 if response.status != 200:
                     error_text = await response.text()
-                    logger.error(f"API Hatası (İlk Sayfa): {response.status} - {error_text[:500]}")
-                    # Kimlik doğrulama hatasıysa flash mesaj verilebilir
+                    logger.error(f"Trendyol API Hatası (İlk Sayfa): Durum Kodu {response.status} - Mesaj: {error_text[:500]}")
                     if response.status == 401:
-                         flash("Trendyol API kimlik bilgileri hatalı!", "danger")
-                    return # İlk sayfa çekilemezse devam etme
-
+                        logger.critical("Trendyol API kimlik bilgileri (API_KEY, API_SECRET) hatalı veya geçersiz!")
+                    return
                 try:
-                    data = await response.json()
-                except Exception as json_e:
-                     logger.error(f"API yanıtı JSON parse hatası (İlk Sayfa): {json_e} - Yanıt: {await response.text()[:500]}")
-                     return
-
-                if not isinstance(data, dict):
-                     logger.error(f"API yanıtı beklenmedik formatta (dict değil): {data}")
-                     return
-
-                current_page_orders = data.get('content', [])
-                if isinstance(current_page_orders, list):
-                     all_orders_data.extend(current_page_orders)
+                    api_response_data = await response.json(content_type=None)
+                except json.JSONDecodeError as json_e:
+                    raw_response_text = await response.text()
+                    logger.error(f"Trendyol API yanıtı JSON formatında değil veya parse edilemedi (İlk Sayfa): {json_e}. Yanıt: {raw_response_text[:500]}")
+                    return
+                except aiohttp.ClientResponseError as content_err:
+                    raw_response_text = await response.text()
+                    logger.error(f"Trendyol API yanıt içeriğiyle ilgili sorun (İlk Sayfa): {content_err}. Yanıt: {raw_response_text[:500]}")
+                    return
+                if not isinstance(api_response_data, dict):
+                    logger.error(f"Trendyol API yanıtı beklenmedik formatta (dict değil, {type(api_response_data)} geldi). Yanıt: {str(api_response_data)[:200]}")
+                    return
+                current_page_orders_content = api_response_data.get('content', [])
+                if isinstance(current_page_orders_content, list):
+                    all_orders_from_api.extend(current_page_orders_content)
                 else:
-                     logger.error(f"API yanıtındaki 'content' liste değil: {current_page_orders}")
+                    logger.error(f"Trendyol API yanıtındaki 'content' alanı bir liste değil (Tip: {type(current_page_orders_content)}). İçerik: {str(current_page_orders_content)[:200]}")
+                total_elements_api = api_response_data.get('totalElements', 0)
+                total_pages = api_response_data.get('totalPages', 1)
+                logger.info(f"Trendyol API: Toplam {total_elements_api} sipariş bulundu. Toplam sayfa: {total_pages}. İlk sayfadan {len(current_page_orders_content)} sipariş çekildi.")
 
-                total_elements = data.get('totalElements', 0)
-                total_pages = data.get('totalPages', 1)
-                logger.info(f"Toplam sipariş sayısı (API): {total_elements}, Toplam sayfa sayısı: {total_pages}")
-
-            # Eğer birden fazla sayfa varsa, kalanları paralel çek
             if total_pages > 1:
-                 from asyncio import Semaphore, gather
-                 sem = Semaphore(10) # Aynı anda max 10 istek
-                 tasks = []
-                 logger.info(f"Kalan {total_pages - 1} sayfa paralel olarak çekiliyor...")
-                 for page_num in range(1, total_pages):
-                      params_page = dict(params, page=page_num)
-                      tasks.append(fetch_orders_page(session, url, headers, params_page, sem))
+                concurrent_requests_semaphore = asyncio.Semaphore(10)
+                tasks_to_run = []
+                logger.info(f"Kalan {total_pages - 1} sayfa ({common_params['size']} boyutunda) paralel olarak çekilecek...")
+                for page_num in range(1, total_pages):
+                    page_specific_params = dict(common_params, page=page_num)
+                    tasks_to_run.append(
+                        fetch_single_orders_page(session, base_api_url, page_specific_params, concurrent_requests_semaphore)
+                    )
+                page_results_list = await asyncio.gather(*tasks_to_run, return_exceptions=True)
+                for single_page_result in page_results_list:
+                    if isinstance(single_page_result, list):
+                        all_orders_from_api.extend(single_page_result)
+                    elif isinstance(single_page_result, Exception):
+                        logger.error(f"Paralel sayfa çekme sırasında bir görev hata ile sonuçlandı: {single_page_result}", exc_info=True)
 
-                 # Görevleri çalıştır ve sonuçları topla
-                 pages_results = await gather(*tasks, return_exceptions=True) # Hataları da yakala
-
-                 for result in pages_results:
-                      if isinstance(result, list): # Başarılı sonuç (liste döndü)
-                           all_orders_data.extend(result)
-                      elif isinstance(result, Exception): # Görev hata ile sonuçlandı
-                           logger.error(f"Paralel sayfa çekme sırasında hata: {result}")
-                      # else: Beklenmedik durum (örn: None döndü), fetch_orders_page loglamış olmalı
-
-            logger.info(f"Toplam {len(all_orders_data)} sipariş verisi çekildi.")
-
-            # Çekilen veriyi işlemeye gönder (app context içinde)
-            if all_orders_data:
-                 with current_app.app_context():
-                      process_all_orders(all_orders_data)
+        logger.info(f"Trendyol API'den tüm sayfalardan toplam {len(all_orders_from_api)} sipariş verisi çekildi.")
+        if all_orders_from_api:
+            if current_app:
+                with current_app.app_context():
+                    process_all_orders(all_orders_from_api)
             else:
-                 logger.info("İşlenecek yeni sipariş verisi bulunamadı.")
-
+                logger.warning("Flask current_app bulunamadı. App context manuel olarak yönetilmeli (örn: app factory ile).")
+        else:
+            logger.info("Trendyol API'den işlenecek yeni sipariş verisi bulunamadı.")
     except aiohttp.ClientError as client_e:
-         logger.error(f"API bağlantı hatası: {client_e}")
-         flash(f"Trendyol API'sine bağlanırken hata oluştu: {client_e}", "danger")
+        logger.error(f"Trendyol API'ye bağlanırken veya istek yaparken ClientError oluştu: {client_e}", exc_info=True)
     except Exception as e:
-        logger.error(f"Hata: fetch_trendyol_orders_async - {e}", exc_info=True)
-        # flash('Siparişler çekilirken bilinmeyen bir hata oluştu.', 'danger') # Route zaten flash veriyor
+        logger.error(f"fetch_trendyol_orders_async fonksiyonunda genel bir hata oluştu: {e}", exc_info=True)
 
-async def fetch_orders_page(session, url, headers, params, semaphore):
-    """
-    Belirli sayfadaki siparişleri asenkron çekme fonksiyonu.
-    """
-    page_num_log = params.get('page', '?')
-    async with semaphore: # Eş zamanlı istekleri sınırla
+async def fetch_single_orders_page(session, url, params, semaphore):
+    page_num_for_log = params.get('page', 'BilinmeyenSayfa')
+    async with semaphore:
         try:
-            logger.debug(f"Sayfa {page_num_log} çekiliyor...")
-            async with session.get(url, headers=headers, params=params, timeout=60) as response:
+            logger.debug(f"Trendyol API'den Sayfa {page_num_for_log} çekiliyor... (Parametreler: {params})")
+            async with session.get(url, params=params) as response:
                 if response.status == 200:
                     try:
-                         data = await response.json()
-                         if isinstance(data, dict):
-                              content = data.get('content', [])
-                              if isinstance(content, list):
-                                   logger.debug(f"Sayfa {page_num_log}: {len(content)} sipariş çekildi.")
-                                   return content # Başarılı, sipariş listesini döndür
-                              else:
-                                   logger.error(f"API yanıtı 'content' liste değil (Sayfa {page_num_log}).")
-                                   return [] # Hata, boş liste döndür
-                         else:
-                              logger.error(f"API yanıtı dict değil (Sayfa {page_num_log}): {await response.text()[:500]}")
-                              return []
-                    except Exception as json_e:
-                         logger.error(f"API JSON parse hatası (Sayfa {page_num_log}): {json_e} - Yanıt: {await response.text()[:500]}")
-                         return []
+                        data = await response.json(content_type=None)
+                        if isinstance(data, dict):
+                            content = data.get('content', [])
+                            if isinstance(content, list):
+                                logger.debug(f"Sayfa {page_num_for_log}: {len(content)} sipariş başarıyla çekildi.")
+                                return content
+                            else:
+                                logger.error(f"Trendyol API yanıtı 'content' liste değil (Sayfa {page_num_for_log}). Tip: {type(content)}. İçerik: {str(content)[:100]}")
+                                return []
+                        else:
+                            logger.error(f"Trendyol API yanıtı dict değil (Sayfa {page_num_for_log}). Tip: {type(data)}. Yanıt: {str(await response.text())[:100]}")
+                            return []
+                    except json.JSONDecodeError as json_e:
+                        raw_text = await response.text()
+                        logger.error(f"Trendyol API JSON parse hatası (Sayfa {page_num_for_log}): {json_e}. Yanıt: {raw_text[:100]}")
+                        return []
+                    except aiohttp.ClientResponseError as content_err:
+                        raw_text = await response.text()
+                        logger.error(f"Trendyol API yanıt içeriğiyle ilgili sorun (Sayfa {page_num_for_log}): {content_err}. Yanıt: {raw_text[:100]}")
+                        return []
                 else:
-                    # API'den hata durumu döndü
                     error_text = await response.text()
-                    logger.error(f"API isteği başarısız oldu (Sayfa {page_num_log}): {response.status} - {error_text[:500]}")
-                    return [] # Hata, boş liste döndür
+                    logger.error(f"Trendyol API isteği başarısız oldu (Sayfa {page_num_for_log}): Durum Kodu {response.status}. Mesaj: {error_text[:100]}")
+                    return []
         except asyncio.TimeoutError:
-            logger.error(f"API isteği zaman aşımı (Sayfa {page_num_log}).")
+            logger.error(f"Trendyol API isteği zaman aşımına uğradı (Sayfa {page_num_for_log}).")
             return []
         except aiohttp.ClientError as client_e:
-             logger.error(f"API bağlantı hatası (Sayfa {page_num_log}): {client_e}")
-             return []
+            logger.error(f"Trendyol API bağlantı/istek hatası (Sayfa {page_num_for_log}): {client_e}", exc_info=True)
+            return []
         except Exception as e:
-            logger.error(f"Hata: fetch_orders_page (Sayfa {page_num_log}) - {e}", exc_info=True)
-            return [] # Genel hata, boş liste döndür
-
-
-
-
-
-
-
-
-
+            logger.error(f"fetch_single_orders_page fonksiyonunda (Sayfa {page_num_for_log}) genel bir hata oluştu: {e}", exc_info=True)
+            return []
 
 ############################
-# 2) Gelen Siparişleri İşleme (Senkron ve Arka Plan Ayrımı)
+# 2) Gelen Siparişleri İşleme (Ana Mantık)
 ############################
-def process_all_orders(all_orders_data):
-    """
-    API'den gelen tüm siparişleri alır, statülerine göre ayırır ve ilgili
-    işleme fonksiyonlarına yönlendirir. Arşiv kontrolü yapar.
-    (Bu fonksiyon Flask app context içinde çağrılmalıdır)
-    """
-    logger.info(f"{len(all_orders_data)} adet sipariş verisi işleniyor...")
-    try:
-        if not all_orders_data:
-            logger.info("İşlenecek sipariş verisi yok.")
-            return
-
-        # 1) Arşivdeki sipariş numaralarını çek (performans için sadece numaralar)
-        archived_numbers = set(o.order_number for o in OrderArchived.query.with_entities(OrderArchived.order_number).all())
-        logger.debug(f"Arşivde {len(archived_numbers)} sipariş bulundu.")
-
-        # 2) Siparişleri statüye göre ayır ve arşiv kontrolü yap
-        sync_orders = []  # Created / Picking / Invoiced / Cancelled
-        bg_orders   = []  # Shipped / Delivered
-        processed_numbers = set() # Aynı sipariş numarasını tekrar işlememek için
-
-        for order_data in all_orders_data:
-             if not isinstance(order_data, dict):
-                  logger.warning(f"Geçersiz sipariş verisi formatı (dict değil), atlanıyor: {order_data}")
-                  continue
-
-             order_number = str(order_data.get('orderNumber') or order_data.get('id', '')) # id fallback?
-             if not order_number:
-                  logger.warning(f"Sipariş numarası alınamayan veri, atlanıyor: {order_data}")
-                  continue
-
-             # Daha önce işlenen veya arşivde olanları atla
-             if order_number in processed_numbers:
-                 continue
-             if order_number in archived_numbers:
-                 logger.debug(f"Sipariş {order_number} arşivde, işleme atlanıyor.")
-                 continue
-
-             processed_numbers.add(order_number)
-
-             status = (order_data.get('status') or '').strip()
-             if not status:
-                  logger.warning(f"Sipariş {order_number} için statü bilgisi yok, atlanıyor.")
-                  continue
-
-             # Statüye göre ayır
-             if status in ('Created', 'Picking', 'Invoiced', 'Cancelled'):
-                 sync_orders.append(order_data)
-             elif status in ('Shipped', 'Delivered'):
-                 bg_orders.append(order_data)
-             else:
-                 logger.warning(f"Sipariş {order_number}: Tanımsız statü '{status}', işlenmiyor.")
-
-        logger.info(f"İşlenecek Senkron Sipariş Sayısı: {len(sync_orders)}")
-        logger.info(f"İşlenecek Arka Plan Sipariş Sayısı: {len(bg_orders)}")
-
-        # 3) Senkron siparişleri işle (bulk)
-        if sync_orders:
-            _process_sync_orders_bulk(sync_orders)
-
-        # 4) Arka plan siparişlerini işle (thread)
-        if bg_orders:
-            # Flask app context'ini thread'e geçmek için
-            app = current_app._get_current_object()
-            thread = threading.Thread(target=process_bg_orders_bulk, args=(bg_orders, app), daemon=True)
-            thread.start()
-            logger.info("Shipped/Delivered siparişleri için arka plan işleyici başlatıldı.")
-
-    except SQLAlchemyError as db_e:
-         logger.error(f"process_all_orders veritabanı hatası: {db_e}", exc_info=True)
-         db.session.rollback() # Rollback yapalım
-    except Exception as e:
-        logger.error(f"Hata: process_all_orders - {e}", exc_info=True)
-        # db.session.rollback() # Beklenmedik hatalarda da rollback faydalı olabilir
-
-def _process_sync_orders_bulk(sync_orders):
-    if not sync_orders:
+def process_all_orders(all_orders_data_from_api):
+    logger.info(f"Toplam {len(all_orders_data_from_api)} adet ham Trendyol sipariş verisi işlenmeye başlıyor...")
+    if not all_orders_data_from_api:
+        logger.info("İşlenecek ham sipariş verisi bulunmuyor.")
         return
 
-    logger.info(f"{len(sync_orders)} adet senkron sipariş işleniyor (Created / Picking / Cancelled)...")
-
     try:
-        db.session.rollback()  # Önceki işlem varsa sıfırla
+        # OrderArchived -> Archive olarak değiştirildi
+        archived_order_numbers_set = {
+            str(o.order_number) for o in Archive.query.with_entities(Archive.order_number).all()
+        }
+        logger.info(f"Veritabanı arşivinden {len(archived_order_numbers_set)} adet sipariş numarası kontrol için çekildi.")
 
-        order_numbers = {str(od.get('orderNumber') or od.get('id')) for od in sync_orders if od.get('orderNumber') or od.get('id')}
+        valid_orders_for_processing = []
+        skipped_archived_count = 0
+        order_numbers_processed_in_this_batch = set()
 
-        existing_orders = {}
-        relevant_tables = [OrderCreated, OrderPicking, OrderCancelled]
-
-        for table_model in relevant_tables:
-            try:
-                records = table_model.query.filter(table_model.order_number.in_(order_numbers)).all()
-                for record in records:
-                    existing_orders.setdefault(record.order_number, {'record': record, 'table': table_model.__tablename__})
-            except Exception as e:
-                logger.error(f"{table_model.__tablename__} sorgusunda hata: {e}", exc_info=True)
-
-        to_insert_created, to_insert_picking, to_insert_cancelled = [], [], []
-        to_delete_ids = {tbl.__tablename__: [] for tbl in relevant_tables}
-
-        for order_data in sync_orders:
-            order_number = str(order_data.get('orderNumber') or order_data.get('id'))
+        for order_data_item in all_orders_data_from_api:
+            if not isinstance(order_data_item, dict):
+                logger.warning(f"Geçersiz sipariş verisi formatı (dict değil), atlanıyor: {str(order_data_item)[:150]}")
+                continue
+            order_number = str(order_data_item.get('orderNumber') or order_data_item.get('id', '')).strip()
             if not order_number:
-                logger.error("order_number eksik, sipariş atlandı.")
+                logger.warning(f"Sipariş numarası (orderNumber veya id) alınamayan veri, atlanıyor: {str(order_data_item)[:150]}")
                 continue
-
-            status = (order_data.get('status') or '').strip()
-            if status == 'Invoiced':
-                status = 'Picking'
-
-            target_model = STATUS_TABLE_MAP.get(status)
-            if not target_model:
+            if order_number in order_numbers_processed_in_this_batch:
+                logger.debug(f"Sipariş {order_number} bu işlem partisinde zaten değerlendirildi, tekrar işlenmeyecek.")
                 continue
-
-            new_data_dict = combine_line_items(order_data, status)
-            if not new_data_dict:
-                logger.error(f"Sipariş {order_number} için veri oluşturulamadı.")
+            order_numbers_processed_in_this_batch.add(order_number)
+            if order_number in archived_order_numbers_set:
+                logger.info(f"Sipariş {order_number} arşivde kayıtlı. API'den tekrar gelse bile İŞLENMEYECEK.")
+                skipped_archived_count += 1
                 continue
+            status_from_api = (order_data_item.get('status') or '').strip()
+            if not status_from_api:
+                logger.warning(f"Sipariş {order_number} için API'den statü bilgisi alınamadı, atlanıyor.")
+                continue
+            target_model_for_status = STATUS_TABLE_MAP.get(status_from_api)
+            if not target_model_for_status:
+                logger.warning(f"Sipariş {order_number}: API statüsü '{status_from_api}' için sistemde tanımlı bir model (tablo) yok. Bu statü işlenmeyecek.")
+                continue
+            valid_orders_for_processing.append(order_data_item)
 
-            existing_info = existing_orders.get(order_number)
+        logger.info(f"{skipped_archived_count} sipariş, arşivde bulunduğu için işleme alınmadı.")
+        logger.info(f"Arşiv ve diğer ön kontroller sonrası işlenmek üzere {len(valid_orders_for_processing)} geçerli sipariş kaldı.")
 
-            if existing_info:
-                current_record = existing_info['record']
-                current_table = existing_info['table']
-                target_table = target_model.__tablename__
-
-                if current_table != target_table:
-                    logger.info(f"Statü değişimi: {order_number} {current_table} ➝ {target_table}")
-                    to_delete_ids[current_table].append(current_record.id)
-                    if target_model == OrderCreated:
-                        to_insert_created.append(new_data_dict)
-                    elif target_model == OrderPicking:
-                        to_insert_picking.append(new_data_dict)
-                    elif target_model == OrderCancelled:
-                        to_insert_cancelled.append(new_data_dict)
-                else:
-                    _minimal_update_if_needed(current_record, new_data_dict)
-            else:
-                if target_model == OrderCreated:
-                    to_insert_created.append(new_data_dict)
-                elif target_model == OrderPicking:
-                    to_insert_picking.append(new_data_dict)
-                elif target_model == OrderCancelled:
-                    to_insert_cancelled.append(new_data_dict)
-
-        for table_name, ids in to_delete_ids.items():
-            if ids:
-                model = next(t for t in relevant_tables if t.__tablename__ == table_name)
-                model.query.filter(model.id.in_(ids)).delete(synchronize_session=False)
-                logger.info(f"{len(ids)} kayıt {table_name} tablosundan silindi.")
-
-        if to_insert_created:
-            db.session.bulk_insert_mappings(OrderCreated, to_insert_created)
-        if to_insert_picking:
-            db.session.bulk_insert_mappings(OrderPicking, to_insert_picking)
-        if to_insert_cancelled:
-            db.session.bulk_insert_mappings(OrderCancelled, to_insert_cancelled)
-
-        db.session.commit()
-        logger.info("Senkron sipariş işlemleri başarıyla tamamlandı.")
-
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        logger.error(f"SQLAlchemy Hatası (Sync Orders): {e}", exc_info=True)
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Genel Hata (Sync Orders): {e}", exc_info=True)
-    finally:
-        db.session.remove()
-
-
-
-
-def _minimal_update_if_needed(record_obj, new_data_dict):
-    """
-    Mevcut veritabanı kaydını yeni veriyle karşılaştırır.
-    Sadece değişen alanları günceller ve değişiklik olup olmadığını döner.
-    """
-    changed = False
-    # Güncellenebilecek alanları ve dict'teki karşılıklarını tanımla
-    fields_to_check = {
-        'status': 'status',
-        'order_date': 'order_date',
-        'product_barcode': 'product_barcode', # Artık sadece orijinal barkod listesi
-        'quantity': 'quantity',
-        'commission': 'commission',
-        'details': 'details', # JSON string olduğu için her zaman değişmiş gibi görünebilir, dikkatli karşılaştırılmalı
-        'cargo_tracking_number': 'shipping_barcode', # Modelde 'cargo_tracking_number' ise
-        'cargo_provider_name': 'cargo_provider_name',
-        # ... diğer güncellenmesi gereken alanlar ...
-        'customer_name': 'customer_name',
-        'customer_surname': 'customer_surname',
-        'customer_address': 'customer_address',
-    }
-
-    for attr_name, dict_key in fields_to_check.items():
-        if hasattr(record_obj, attr_name):
-            old_value = getattr(record_obj, attr_name)
-            new_value = new_data_dict.get(dict_key)
-
-            # JSON ('details') alanı için özel karşılaştırma (isteğe bağlı, performans etkileyebilir)
-            if attr_name == 'details':
-                 try:
-                      # Stringleri JSON'a çevirip karşılaştır
-                      old_json = json.loads(old_value) if isinstance(old_value, str) and old_value else None
-                      new_json = json.loads(new_value) if isinstance(new_value, str) and new_value else None
-                      if old_json != new_json: # İçerik farklıysa güncelle
-                           setattr(record_obj, attr_name, new_value)
-                           changed = True
-                 except json.JSONDecodeError:
-                      # Parse edilemiyorsa, string olarak karşılaştır veya her zaman güncelle
-                      if old_value != new_value:
-                           setattr(record_obj, attr_name, new_value)
-                           changed = True
-                 except Exception as json_comp_err:
-                      logger.warning(f"Detay JSON karşılaştırma hatası: {json_comp_err}. Direkt güncelleme yapılıyor.")
-                      if old_value != new_value: # Güvenli fallback
-                            setattr(record_obj, attr_name, new_value)
-                            changed = True
-
-            # Diğer alanlar için normal karşılaştırma
-            elif old_value != new_value:
-                 # Tarih/saat alanları için tip kontrolü ve karşılaştırma
-                 if isinstance(old_value, datetime) and isinstance(new_value, datetime):
-                      # Zaman dilimi farkı varsa veya milisaniye hassasiyeti önemliyse dikkat!
-                      # Basit karşılaştırma yeterli olabilir:
-                      if old_value != new_value:
-                           setattr(record_obj, attr_name, new_value)
-                           changed = True
-                 # Diğer tipler için direkt karşılaştırma
-                 else:
-                      setattr(record_obj, attr_name, new_value)
-                      changed = True
-
-    # Eğer değişiklik yapıldıysa updated_at gibi bir alanı güncellemek iyi olabilir
-    if changed and hasattr(record_obj, 'updated_at'):
-         setattr(record_obj, 'updated_at', datetime.utcnow())
-
-    return changed
-
-
-############################
-# 3) Arka Plan Shipped/Delivered (Toplu Yaklaşım)
-############################
-def process_bg_orders_bulk(bg_orders, app):
-    with app.app_context():
-        logger.info(f"BG İşleyici: {len(bg_orders)} adet Shipped/Delivered sipariş işleniyor...")
-
-        if not bg_orders:
-            logger.info("İşlenecek arka plan siparişi yok.")
+        if not valid_orders_for_processing:
+            logger.info("Ön kontroller sonrası işlenecek geçerli sipariş kalmadı.")
             return
 
+        # *** İPTAL İÇİN GÜNCELLENMİŞ AYIRIM MANTIĞI ***
+        sync_processing_orders_data = []
+        background_processing_orders_data = []
+        cancelled_processing_orders_data = []
+
+        for order_data_item in valid_orders_for_processing:
+            status_from_api = (order_data_item.get('status') or '').strip()
+            if status_from_api == 'Cancelled':
+                cancelled_processing_orders_data.append(order_data_item)
+            elif status_from_api in ('Created', 'Picking', 'Invoiced'):
+                sync_processing_orders_data.append(order_data_item)
+            elif status_from_api in ('Shipped', 'Delivered'):
+                background_processing_orders_data.append(order_data_item)
+
+        logger.info(f"Senkron işleme için ayrılan sipariş sayısı (Created/Picking): {len(sync_processing_orders_data)}")
+        logger.info(f"Arka plan işleme için ayrılan sipariş sayısı (Shipped/Delivered): {len(background_processing_orders_data)}")
+        logger.info(f"İptal işleme için ayrılan sipariş sayısı (Cancelled): {len(cancelled_processing_orders_data)}")
+
+        # 4a) İptal edilen siparişleri işle (tüm potansiyel kaynak tablolardan sil)
+        if cancelled_processing_orders_data:
+            logger.info(f"İptal edilen {len(cancelled_processing_orders_data)} sipariş işleniyor...")
+            _process_orders_in_bulk(
+                cancelled_processing_orders_data,
+                # Kaynak olarak KONTROL edilecek ve potansiyel olarak SİLİNECEK tablolar:
+                [OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled],
+                # Not: OrderCancelled'ın da listede olması, eğer sipariş zaten iptal edilmişse
+                # ve API'den tekrar aynı statüde gelirse, _minimal_update_if_needed ile güncellenmesini sağlar.
+                # Hedef tablo `OrderCancelled` olacak (STATUS_TABLE_MAP ile belirlenir).
+                processing_type="İptal Edilenler (Cancelled)"
+            )
+
+        # 4b) Diğer Senkron siparişleri işle (Created, Picking)
+        if sync_processing_orders_data:
+            logger.info(f"Senkron ({len(sync_processing_orders_data)}) (Created/Picking) siparişler işleniyor...")
+            _process_orders_in_bulk(
+                sync_processing_orders_data,
+                [OrderCreated, OrderPicking], # İlgili kaynak/hedef tablolar. (OrderCancelled artık burada değil)
+                processing_type="Senkron (Created/Picking)"
+            )
+
+        # 5) Arka plan siparişlerini işle (Shipped, Delivered) (ayrı bir thread'de)
+        if background_processing_orders_data:
+            logger.info(f"Arka plan ({len(background_processing_orders_data)}) (Shipped/Delivered) siparişler için thread başlatılıyor...")
+            flask_app_instance = current_app._get_current_object()
+            bg_thread = threading.Thread(
+                target=_process_bg_orders_with_context,
+                args=(background_processing_orders_data, flask_app_instance),
+                daemon=True,
+                name="BGOrderProcessingThread"
+            )
+            bg_thread.start()
+            logger.info(f"Arka plan işleyici thread'i ({bg_thread.name}) Shipped/Delivered siparişleri için başlatıldı.")
+
+    except SQLAlchemyError as db_err:
+        logger.error(f"process_all_orders fonksiyonunda genel bir veritabanı hatası oluştu: {db_err}", exc_info=True)
+    except Exception as e:
+        logger.error(f"process_all_orders fonksiyonunda beklenmedik genel bir hata oluştu: {e}", exc_info=True)
+
+def _process_bg_orders_with_context(bg_orders_data_list, flask_app):
+    with flask_app.app_context():
+        current_thread_name = threading.current_thread().name
+        logger.info(f"Arka plan thread'i ({current_thread_name}) app context'i ile başlatıldı.")
+        # OrderPicking, Shipped'e geçiş için kaynak olabilir.
+        # OrderShipped, Delivered'a geçiş için kaynak olabilir.
+        # OrderDelivered hedef olabilir veya sadece güncellenebilir.
+        relevant_bg_tables = [OrderPicking, OrderShipped, OrderDelivered]
+        _process_orders_in_bulk(
+            bg_orders_data_list,
+            relevant_bg_tables,
+            processing_type="ArkaPlan (Shipped/Delivered)"
+        )
+        logger.info(f"Arka plan thread'i ({current_thread_name}) görevini tamamladı.")
+
+def _process_orders_in_bulk(orders_data_list_to_process, relevant_table_models_for_this_processor, processing_type="Bilinmeyen"):
+    if not orders_data_list_to_process:
+        logger.info(f"[{processing_type}] İşlenecek sipariş verisi yok.")
+        return
+
+    logger.info(f"[{processing_type}] {len(orders_data_list_to_process)} adet sipariş toplu olarak işlenmeye başlıyor. İlgili tablolar: {[m.__name__ for m in relevant_table_models_for_this_processor]}")
+    order_numbers_in_this_batch = {
+        str(od.get('orderNumber') or od.get('id')) for od in orders_data_list_to_process if od.get('orderNumber') or od.get('id')
+    }
+    if not order_numbers_in_this_batch:
+        logger.warning(f"[{processing_type}] Gelen sipariş verilerinde hiç sipariş numarası bulunamadı.")
+        return
+
+    existing_db_records_map = {}
+    for table_model_class in relevant_table_models_for_this_processor:
         try:
-            db.session.rollback()  # Aktif transaction varsa sıfırla
-
-            order_numbers = {str(od.get('orderNumber') or od.get('id')) for od in bg_orders if od.get('orderNumber') or od.get('id')}
-            relevant_tables = [OrderPicking, OrderShipped, OrderDelivered]
-
-            existing_orders = {}
-            for table_model in relevant_tables:
-                try:
-                    records = table_model.query.filter(table_model.order_number.in_(order_numbers)).all()
-                    for record in records:
-                        existing_orders.setdefault(record.order_number, {'record': record, 'table': table_model.__tablename__})
-                except Exception as q_err:
-                    logger.error(f"BG: {table_model.__tablename__} sorgulanırken hata: {q_err}", exc_info=True)
-
-            to_insert_shipped, to_insert_delivered = [], []
-            to_delete_ids = {tbl.__tablename__: [] for tbl in relevant_tables}
-
-            for order_data in bg_orders:
-                order_number = str(order_data.get('orderNumber') or order_data.get('id'))
-                if not order_number:
-                    logger.error("BG: order_number boş, işlem atlandı.")
-                    continue
-
-                status = (order_data.get('status') or '').strip()
-                target_model = STATUS_TABLE_MAP.get(status)
-                if not target_model or target_model not in (OrderShipped, OrderDelivered):
-                    logger.warning(f"BG: {order_number} için geçersiz statü '{status}'")
-                    continue
-
-                new_data_dict = combine_line_items(order_data, status)
-                if not new_data_dict:
-                    logger.error(f"BG: {order_number} için veri oluşturulamadı.")
-                    continue
-
-                existing_info = existing_orders.get(order_number)
-
-                if existing_info:
-                    current_record = existing_info['record']
-                    current_table = existing_info['table']
-                    target_table = target_model.__tablename__
-
-                    if current_table != target_table:
-                        logger.info(f"BG: {order_number} statü geçişi: {current_table} ➝ {target_table}")
-                        to_delete_ids[current_table].append(current_record.id)
-                        if target_model == OrderShipped:
-                            to_insert_shipped.append(new_data_dict)
-                        elif target_model == OrderDelivered:
-                            to_insert_delivered.append(new_data_dict)
-                    else:
-                        _minimal_update_if_needed(current_record, new_data_dict)
+            records_from_db = table_model_class.query.filter(table_model_class.order_number.in_(order_numbers_in_this_batch)).all()
+            for db_record in records_from_db:
+                order_num = str(db_record.order_number)
+                if order_num in existing_db_records_map:
+                    logger.error(
+                        f"[{processing_type}] KRİTİK VERİ TUTARSIZLIĞI: Sipariş {order_num} birden fazla ilgili tabloda bulundu! "
+                        f"Mevcut kayıtlı tablo: {existing_db_records_map[order_num]['table_name']}, Yeni bulunan tablo: {table_model_class.__tablename__}."
+                    )
                 else:
-                    if target_model == OrderShipped:
-                        to_insert_shipped.append(new_data_dict)
-                    elif target_model == OrderDelivered:
-                        to_insert_delivered.append(new_data_dict)
+                    existing_db_records_map[order_num] = {
+                        'record': db_record,
+                        'table_name': table_model_class.__tablename__
+                    }
+        except SQLAlchemyError as query_err:
+            logger.error(f"[{processing_type}] {table_model_class.__tablename__} tablosu sorgulanırken veritabanı hatası: {query_err}", exc_info=True)
+            return
 
-            for table_name, ids in to_delete_ids.items():
-                if ids:
-                    model = next(t for t in relevant_tables if t.__tablename__ == table_name)
-                    model.query.filter(model.id.in_(ids)).delete(synchronize_session=False)
-                    logger.info(f"BG: {len(ids)} kayıt {table_name} tablosundan silindi.")
+    data_to_insert_map = {model_class: [] for model_class in STATUS_TABLE_MAP.values()} # Tüm olası hedef tablolar için liste
+    ids_to_delete_map = {model_class.__tablename__: [] for model_class in relevant_table_models_for_this_processor}
+    updated_records_counter = 0
 
-            if to_insert_shipped:
-                db.session.bulk_insert_mappings(OrderShipped, to_insert_shipped)
-            if to_insert_delivered:
-                db.session.bulk_insert_mappings(OrderDelivered, to_insert_delivered)
+    for order_data_from_api in orders_data_list_to_process:
+        order_number_api = str(order_data_from_api.get('orderNumber') or order_data_from_api.get('id'))
+        if not order_number_api:
+            logger.warning(f"[{processing_type}] Sipariş verisinde order_number (veya id) eksik, atlanıyor: {str(order_data_from_api)[:100]}")
+            continue
+        api_status = (order_data_from_api.get('status') or '').strip()
+        target_model_class_for_api_status = STATUS_TABLE_MAP.get(api_status)
 
+        # Bu kontrol önemli: Hedef modelin bu işlemcinin yönettiği tablolardan biri olması gerekmiyor.
+        # Örneğin, "Cancelled" işlemi için relevant_tables [Created, Picking, Shipped, Delivered, Cancelled] iken
+        # target_model_class_for_api_status her zaman OrderCancelled olacak.
+        if not target_model_class_for_api_status: # API statüsü haritalanamıyorsa
+            logger.error(
+                f"[{processing_type}] MANTIK HATASI: Sipariş {order_number_api} (API statüsü: {api_status}) "
+                f"için STATUS_TABLE_MAP'de bir hedef model bulunamadı. Atlanıyor."
+            )
+            continue
+
+        new_data_dict_for_db = combine_line_items(order_data_from_api, api_status)
+        if not new_data_dict_for_db:
+            logger.error(f"[{processing_type}] Sipariş {order_number_api} için veritabanı sözlüğü oluşturulamadı. Atlanıyor.")
+            continue
+
+        existing_record_info = existing_db_records_map.get(order_number_api)
+        target_table_name_for_api_status = target_model_class_for_api_status.__tablename__
+
+        if existing_record_info:
+            current_db_record_object = existing_record_info['record']
+            current_db_table_name = existing_record_info['table_name']
+
+            if current_db_table_name != target_table_name_for_api_status:
+                logger.info(
+                    f"[{processing_type}] Statü Değişimi: Sipariş {order_number_api} "
+                    f"('{current_db_table_name}' -> '{target_table_name_for_api_status}')."
+                )
+                # Sadece relevant_table_models_for_this_processor listesindeki tablolardan sil.
+                if current_db_table_name in ids_to_delete_map: # Yani, bu işlemcinin kontrolündeki bir tablodan silinecek.
+                     ids_to_delete_map[current_db_table_name].append(current_db_record_object.id)
+                else:
+                    logger.warning(f"[{processing_type}] Sipariş {order_number_api} mevcut tablosu ({current_db_table_name}) bu işlemcinin silme yetkisindeki tablolarda değil. Silme atlanıyor.")
+
+
+                # Yeni tabloya eklenecekler listesine ekle
+                # data_to_insert_map anahtarları artık tüm STATUS_TABLE_MAP değerlerini içeriyor.
+                data_to_insert_map[target_model_class_for_api_status].append(new_data_dict_for_db)
+            else: # Aynı tabloda, sadece güncelleme
+                if _minimal_update_if_needed(current_db_record_object, new_data_dict_for_db):
+                    logger.info(f"[{processing_type}] Sipariş {order_number_api} ({target_table_name_for_api_status}) güncellendi.")
+                    updated_records_counter +=1
+                else:
+                    logger.debug(f"[{processing_type}] Sipariş {order_number_api} ({target_table_name_for_api_status}) için güncelleme gerekmedi.")
+        else: # Sipariş DB'de (bu işlemcinin baktığı tablolarda) hiç yok, yeni kayıt
+            logger.info(f"[{processing_type}] Yeni Sipariş: {order_number_api} -> {target_table_name_for_api_status} tablosuna eklenecek.")
+            data_to_insert_map[target_model_class_for_api_status].append(new_data_dict_for_db)
+
+    try:
+        items_deleted_count = 0
+        for table_name_to_delete_from, ids_list_to_delete in ids_to_delete_map.items():
+            if ids_list_to_delete:
+                model_class_to_delete_from = next((m for m in relevant_table_models_for_this_processor if m.__tablename__ == table_name_to_delete_from), None)
+                if model_class_to_delete_from:
+                    delete_statement = model_class_to_delete_from.__table__.delete().where(model_class_to_delete_from.id.in_(ids_list_to_delete))
+                    result = db.session.execute(delete_statement)
+                    items_deleted_count += result.rowcount
+                    logger.info(f"[{processing_type}] {result.rowcount} kayıt {table_name_to_delete_from} tablosundan silinmek üzere işaretlendi.")
+                else:
+                    logger.error(f"[{processing_type}] Silme için {table_name_to_delete_from} modeli bulunamadı!")
+
+        items_inserted_count = 0
+        for model_class_to_insert_to, data_dicts_list_to_insert in data_to_insert_map.items():
+            if data_dicts_list_to_insert: # Sadece içinde veri olanları işle
+                db.session.bulk_insert_mappings(model_class_to_insert_to, data_dicts_list_to_insert)
+                items_inserted_count += len(data_dicts_list_to_insert)
+                logger.info(f"[{processing_type}] {len(data_dicts_list_to_insert)} kayıt {model_class_to_insert_to.__name__} tablosuna eklenmek üzere işaretlendi.")
+
+        if items_deleted_count > 0 or items_inserted_count > 0 or updated_records_counter > 0:
             db.session.commit()
-            logger.info("BG: Tüm işlemler başarıyla tamamlandı ve commit edildi.")
+            logger.info(
+                f"[{processing_type}] Veritabanı işlemleri commit edildi. "
+                f"Silinen: {items_deleted_count}, Eklenen: {items_inserted_count}, Güncellenen: {updated_records_counter}."
+            )
+        else:
+            logger.info(f"[{processing_type}] Veritabanında değişiklik yok. Commit atlanıyor.")
+    except IntegrityError as int_err:
+        db.session.rollback()
+        logger.error(f"[{processing_type}] DB Bütünlük Hatası: {int_err}", exc_info=True)
+        flash(f"{processing_type} işlemleri sırasında DB bütünlük hatası. Logları kontrol edin.", "warning")
+    except SQLAlchemyError as sql_err:
+        db.session.rollback()
+        logger.error(f"[{processing_type}] SQLAlchemy Hatası: {sql_err}", exc_info=True)
+        flash(f"{processing_type} işlemleri sırasında DB hatası.", "danger")
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[{processing_type}] Genel Hata: {e}", exc_info=True)
+        flash(f"{processing_type} işlemleri sırasında beklenmedik hata.", "danger")
+    finally:
+        db.session.remove()
+        logger.debug(f"[{processing_type}] Veritabanı session'ı kapatıldı.")
 
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            logger.error(f"⛔ BG SQLAlchemy hatası: {e}", exc_info=True)
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"⛔ BG genel hata: {e}", exc_info=True)
-        finally:
-            db.session.remove()
 
+def _minimal_update_if_needed(db_record_object, new_data_dict_from_api):
+    changed_flag = False
+    fields_to_compare_and_update = {
+        'status': 'status', 'order_date': 'order_date', 'product_barcode': 'product_barcode',
+        'quantity': 'quantity', 'commission': 'commission', 'details': 'details',
+        'cargo_tracking_number': 'cargo_tracking_number', 'cargo_provider_name': 'cargo_provider_name',
+        'customer_name': 'customer_name', 'customer_surname': 'customer_surname', 'customer_address': 'customer_address',
+        'merchant_sku': 'merchant_sku', 'line_id': 'line_id', 'product_name': 'product_name',
+        'product_code': 'product_code', 'product_size': 'product_size', 'product_color': 'product_color',
+        'product_main_id': 'product_main_id', 'stockCode': 'stockCode', 'amount': 'amount',
+        'discount': 'discount', 'currency_code': 'currency_code', 'gross_amount': 'gross_amount',
+        'tax_amount': 'tax_amount', 'customer_id': 'customer_id',
+        'shipment_package_status': 'shipment_package_status', 'package_number': 'package_number',
+        'shipment_package_id': 'shipment_package_id', 'estimated_delivery_start': 'estimated_delivery_start',
+        'estimated_delivery_end': 'estimated_delivery_end', 'origin_shipment_date': 'origin_shipment_date',
+        'agreed_delivery_date': 'agreed_delivery_date', 'last_modified_date': 'last_modified_date',
+    }
+    for model_attr_name, api_dict_key in fields_to_compare_and_update.items():
+        if hasattr(db_record_object, model_attr_name):
+            current_value_in_db = getattr(db_record_object, model_attr_name)
+            new_value_from_api = new_data_dict_from_api.get(api_dict_key)
+            if new_value_from_api is None and (current_value_in_db is None or str(current_value_in_db).strip() == ""):
+                continue
+            if isinstance(current_value_in_db, datetime) and isinstance(new_value_from_api, datetime):
+                if current_value_in_db.replace(tzinfo=None, microsecond=0) != new_value_from_api.replace(tzinfo=None, microsecond=0):
+                    setattr(db_record_object, model_attr_name, new_value_from_api)
+                    changed_flag = True
+            elif model_attr_name == 'details':
+                try:
+                    current_json_obj = json.loads(current_value_in_db) if isinstance(current_value_in_db, str) and current_value_in_db.strip() else (current_value_in_db if isinstance(current_value_in_db, (dict, list)) else None)
+                    new_json_obj = json.loads(new_value_from_api) if isinstance(new_value_from_api, str) and new_value_from_api.strip() else (new_value_from_api if isinstance(new_value_from_api, (dict, list)) else None)
+                    if current_json_obj != new_json_obj:
+                        setattr(db_record_object, model_attr_name, new_value_from_api)
+                        changed_flag = True
+                except (json.JSONDecodeError, TypeError) as json_compare_err:
+                    logger.warning(f"Detaylar ('{model_attr_name}') JSON karşılaştırma/parse hatası (Sipariş: {getattr(db_record_object, 'order_number', 'N/A')}): {json_compare_err}. String olarak karşılaştırılacak.")
+                    if str(current_value_in_db) != str(new_value_from_api):
+                        setattr(db_record_object, model_attr_name, new_value_from_api)
+                        changed_flag = True
+            elif type(current_value_in_db) != type(new_value_from_api) and new_value_from_api is not None and current_value_in_db is not None:
+                try:
+                    converted_new_value = type(current_value_in_db)(new_value_from_api)
+                    if current_value_in_db != converted_new_value:
+                        setattr(db_record_object, model_attr_name, converted_new_value)
+                        changed_flag = True
+                except (ValueError, TypeError) as conversion_err:
+                    logger.debug(f"Tip dönüşümü başarısız ({model_attr_name}): {conversion_err}. Direkt karşılaştırılıyor.")
+                    if str(current_value_in_db) != str(new_value_from_api):
+                        setattr(db_record_object, model_attr_name, new_value_from_api)
+                        changed_flag = True
+            elif current_value_in_db != new_value_from_api:
+                setattr(db_record_object, model_attr_name, new_value_from_api)
+                changed_flag = True
+    if changed_flag and hasattr(db_record_object, 'updated_at'):
+        setattr(db_record_object, 'updated_at', datetime.utcnow())
+        logger.debug(f"Sipariş {getattr(db_record_object, 'order_number', 'N/A')} için 'updated_at' alanı güncellendi.")
+    return changed_flag
 
+def safe_int(value, default_if_error=0):
+    if value is None: return default_if_error
+    try: return int(value)
+    except (ValueError, TypeError): return default_if_error
 
-
-############################
-# Yardımcı Fonksiyonlar
-############################
-def safe_int(val, default=0):
-    """String veya None'ı güvenli şekilde int'e çevirir."""
-    if val is None: return default
+def safe_float(value, default_if_error=0.0):
+    if value is None: return default_if_error
     try:
-        return int(val)
-    except (ValueError, TypeError):
-        return default
+        if isinstance(value, str): value_str = value.replace('.', '').replace(',', '.')
+        else: value_str = str(value)
+        return float(value_str)
+    except (ValueError, TypeError): return default_if_error
 
-def safe_float(val, default=0.0):
-    """String veya None'ı güvenli şekilde float'a çevirir."""
-    if val is None: return default
-    try:
-        # Virgüllü sayıları da handle etmek için (örn: "10,5")
-        if isinstance(val, str):
-             val = val.replace(',', '.')
-        return float(val)
-    except (ValueError, TypeError):
-        return default
-
-# --- Barkod Dönüştürme Fonksiyonları KALDIRILDI ---
-# def replace_turkish_characters_cached(text): ...
-# def replace_turkish_characters(text): ...
-
-def create_order_details(lines):
-    """
-    API'den gelen 'lines' listesini işleyerek detaylı ürün bilgilerini
-    bir sözlük listesi olarak hazırlar. Barkod dönüştürme kaldırıldı.
-    """
-    details_dict = {}
-    total_order_quantity = 0 # Siparişteki toplam ürün adedi
-    if not isinstance(lines, list):
-         logger.warning("create_order_details: 'lines' verisi liste değil.")
-         return [], 0 # Boş liste ve 0 quantity döndür
-
-    for line in lines:
-        if not isinstance(line, dict):
-             logger.warning(f"create_order_details: 'lines' içinde geçersiz veri (dict değil): {line}")
-             continue
-
-        barcode = line.get('barcode', '')
-        # Barkod yoksa bu satırı işlemeyebiliriz veya loglayabiliriz
-        if not barcode:
-             logger.warning(f"Sipariş satırında barkod eksik: {line.get('id', 'ID Yok')}")
-             # continue # Barkodsuz satırı atlayalım mı? Şimdilik atlamayalım, belki SKU vs vardır.
-
-        color = line.get('productColor', '')
-        size_ = line.get('productSize', '')
-        quantity = safe_int(line.get('quantity'), 0) # Miktar 0 ise bile işleyelim
-        total_order_quantity += quantity
-        commission_fee = safe_float(line.get('commissionFee'), 0.0)
-        line_id = str(line.get('id', '')) # Trendyol line ID
-        amount = safe_float(line.get('amount'), 0.0) # Birim fiyat (KDV dahil?)
-
-        # Ürünü (barkod, renk, beden) anahtarıyla grupla
-        key = (barcode, color, size_)
-        if key not in details_dict:
-            details_dict[key] = {
-                'barcode': barcode,              # Orijinal barkod
-                # 'converted_barcode': ...,      # KALDIRILDI
-                'color': color,
-                'size': size_,
-                'sku': line.get('merchantSku', ''), # Satıcı SKU'su
-                'productName': line.get('productName', ''),
-                'productCode': str(line.get('productCode', '')), # Trendyol ürün kodu?
-                'product_main_id': str(line.get('productId', '')), # Trendyol ana ürün ID?
-                'quantity': quantity,            # Bu varyantın miktarı
-                'commissionFee': commission_fee, # Bu varyantın komisyonu
-                'line_id': [line_id],            # Aynı varyant farklı satırlarda olabilir, ID'leri liste yapalım
-                'unit_price': amount,            # Birim fiyat
-                'line_total_price': amount * quantity # Bu satırın toplam fiyatı
+def create_order_details(api_lines_list):
+    processed_details_map = {}
+    total_quantity_for_order = 0
+    if not isinstance(api_lines_list, list):
+        logger.warning("create_order_details: 'lines' verisi liste değil.")
+        return [], 0
+    for line_item_from_api in api_lines_list:
+        if not isinstance(line_item_from_api, dict):
+            logger.warning(f"create_order_details: 'lines' içinde geçersiz öğe: {str(line_item_from_api)[:100]}")
+            continue
+        barcode = str(line_item_from_api.get('barcode', '')).strip()
+        if not barcode: logger.warning(f"Sipariş satırında (API Line ID: {line_item_from_api.get('id', 'N/A')}) BARKOD eksik.")
+        product_color = line_item_from_api.get('productColor', '')
+        product_size = line_item_from_api.get('productSize', '')
+        quantity_in_line = safe_int(line_item_from_api.get('quantity'), 0)
+        total_quantity_for_order += quantity_in_line
+        variant_key = (barcode, product_color, product_size)
+        commission_fee_for_line = safe_float(line_item_from_api.get('commissionFee'), 0.0)
+        api_line_id = str(line_item_from_api.get('id', ''))
+        unit_price_from_api = safe_float(line_item_from_api.get('price'), 0.0)
+        line_total_price_from_api = safe_float(line_item_from_api.get('amount'), 0.0)
+        if unit_price_from_api == 0.0 and line_total_price_from_api > 0.0 and quantity_in_line > 0:
+            unit_price_from_api = round(line_total_price_from_api / quantity_in_line, 2)
+        if variant_key not in processed_details_map:
+            processed_details_map[variant_key] = {
+                'barcode': barcode, 'color': product_color, 'size': product_size,
+                'sku': str(line_item_from_api.get('merchantSku', '')).strip(),
+                'productName': line_item_from_api.get('productName', ''),
+                'productCode': str(line_item_from_api.get('productCode', '')),
+                'product_main_id': str(line_item_from_api.get('productId', '')),
+                'quantity': quantity_in_line, 'commissionFee': commission_fee_for_line,
+                'line_ids_api': [api_line_id] if api_line_id else [],
+                'unit_price': unit_price_from_api, 'line_total_price': line_total_price_from_api,
+                'vatRate': safe_float(line_item_from_api.get('vatRate'), 0.0),
+                'discountDetails': line_item_from_api.get('discountDetails', [])
             }
         else:
-            # Aynı varyant tekrar gelirse (normalde olmamalı ama olabilir?)
-            details_dict[key]['quantity'] += quantity
-            details_dict[key]['commissionFee'] += commission_fee
-            details_dict[key]['line_id'].append(line_id) # Line ID'yi listeye ekle
-            details_dict[key]['line_total_price'] += amount * quantity
+            existing_variant_data = processed_details_map[variant_key]
+            existing_variant_data['quantity'] += quantity_in_line
+            existing_variant_data['commissionFee'] += commission_fee_for_line
+            if api_line_id: existing_variant_data['line_ids_api'].append(api_line_id)
+            existing_variant_data['line_total_price'] += line_total_price_from_api
+    final_details_list_for_json = []
+    for item_details_dict in processed_details_map.values():
+        item_details_dict['line_ids_api'] = ','.join(filter(None, item_details_dict['line_ids_api']))
+        final_details_list_for_json.append(item_details_dict)
+    return final_details_list_for_json, total_quantity_for_order
 
-    # Her bir varyant detayı için 'total_quantity' (siparişin toplam adedi) ekle
-    # Bu alan belki gereksiz? details_dict dışında döndürülebilir.
-    # for item_details in details_dict.values():
-    #     item_details['total_order_quantity'] = total_order_quantity
-
-    # Line ID listelerini stringe çevir
-    for item_details in details_dict.values():
-         item_details['line_id'] = ','.join(item_details['line_id'])
-
-
-    # Sözlüğü liste olarak döndür
-    return list(details_dict.values()), total_order_quantity
-
-def combine_line_items(order_data, status):
-    """
-    API'den gelen sipariş verisini alır ve ilgili veritabanı tablosuna
-    yazılacak alanları içeren bir sözlük oluşturur.
-    Barkod dönüştürme kaldırıldı, `product_barcode` orijinal barkodları içerir.
-    `original_product_barcode` alanı kaldırıldı.
-    """
-    if not isinstance(order_data, dict):
-         logger.error("combine_line_items: Geçersiz order_data (dict değil).")
-         return None
-
-    lines = order_data.get('lines', [])
-    if not isinstance(lines, list):
-         logger.warning(f"Sipariş {order_data.get('orderNumber')}: 'lines' verisi liste değil.")
-         lines = [] # Hata vermemek için boş liste ata
-
-
-    # Detaylı ürün bilgilerini ve toplam adedi al
-    details_list, total_qty = create_order_details(lines)
-    if not details_list and not lines: # Hem lines boş hem details boşsa işlem yapma?
-         logger.warning(f"Sipariş {order_data.get('orderNumber')}: İşlenecek ürün satırı bulunamadı.")
-         # Boş sipariş kaydedilmeli mi? Şimdilik None döndürelim.
-         # Veya temel sipariş bilgileriyle kaydedilebilir. Duruma göre karar verilmeli.
-         # return None # Veya temel bilgileri içeren dict döndür
-
-    # Virgülle ayrılmış orijinal barkod listesini oluştur
-    # Not: Her barkod, quantity'si kadar tekrar etmeli mi? Önceki kod öyle yapıyordu.
-    # create_order_details grupladığı için barkodlar artık unique.
-    # Eğer quantity kadar tekrar gerekiyorsa, logic değişmeli.
-    # Şimdilik unique barkodları alalım:
-    original_barcodes = [item.get('barcode', '') for item in details_list if item.get('barcode')]
-    # Eğer quantity kadar tekrar gerekiyorsa:
-    # original_barcodes_repeated = []
-    # for item in details_list:
-    #     bc = item.get('barcode', '')
-    #     qty = item.get('quantity', 0)
-    #     if bc: original_barcodes_repeated.extend([bc] * qty)
-
-
-    # --- Dönüştürülmüş barkod listesi (cbc) oluşturma KALDIRILDI ---
-    # cbc = [replace_turkish_characters_cached(x) for x in original_barcodes]
-
-    from json import dumps # JSON'a çevirme için import
-
-    # Zaman damgalarını datetime objesine çevirme fonksiyonu
-    def ts_to_dt(timestamp_ms):
-        if not timestamp_ms: return None
+def combine_line_items(single_order_data_from_api, api_status_for_db_record):
+    if not isinstance(single_order_data_from_api, dict):
+        logger.error("combine_line_items: Geçersiz 'single_order_data_from_api'.")
+        return None
+    api_lines_list = single_order_data_from_api.get('lines', [])
+    if not isinstance(api_lines_list, list):
+        logger.warning(f"Sipariş {single_order_data_from_api.get('orderNumber', 'N/A')}: 'lines' liste değil.")
+        api_lines_list = []
+    processed_details_list, total_quantity_for_order = create_order_details(api_lines_list)
+    if not processed_details_list and api_lines_list: logger.warning(f"Sipariş {single_order_data_from_api.get('orderNumber', 'N/A')}: Ürün satırları var ama detaylar oluşturulamadı.")
+    elif not api_lines_list: logger.info(f"Sipariş {single_order_data_from_api.get('orderNumber', 'N/A')} API'den ürün satırı olmadan geldi.")
+    unique_original_barcodes_list = [item.get('barcode', '') for item in processed_details_list if item.get('barcode')]
+    def convert_timestamp_ms_to_datetime(timestamp_ms_value):
+        if not timestamp_ms_value: return None
         try:
-            # Gelen değerin int/float olduğundan emin ol
-            ts = float(timestamp_ms)
-            # Geçerli bir aralıkta mı kontrol et (örn: çok eski veya gelecek tarihleri engelle)
-            # Bu kontrol isteğe bağlıdır.
-            # min_ts = datetime(2000, 1, 1).timestamp() * 1000
-            # max_ts = (datetime.utcnow() + timedelta(days=365)).timestamp() * 1000 # Gelecek 1 yıl
-            # if not (min_ts <= ts <= max_ts):
-            #      logger.warning(f"Geçersiz timestamp değeri: {timestamp_ms}")
-            #      return None
-            return datetime.utcfromtimestamp(ts / 1000.0)
+            ts_float = float(timestamp_ms_value)
+            if ts_float < 0: return None
+            return datetime.utcfromtimestamp(ts_float / 1000.0)
         except (ValueError, TypeError, OverflowError) as e:
-            logger.warning(f"Timestamp ({timestamp_ms}) datetime'e çevrilemedi: {e}")
+            logger.warning(f"Timestamp ({timestamp_ms_value}) çevirme hatası: {e}")
             return None
-
-    # Veritabanı için sözlüğü oluştur
+    shipment_address_dict = single_order_data_from_api.get('shipmentAddress', {}) if isinstance(single_order_data_from_api.get('shipmentAddress'), dict) else {}
     db_record_dict = {
-        'order_number': str(order_data.get('orderNumber', order_data.get('id', ''))), # id fallback?
-        'order_date': ts_to_dt(order_data.get('orderDate')),
-        # Aşağıdaki alanlar 'details' içinde olduğu için tekrar tekrar birleştirmeye gerek yok gibi.
-        # Ancak mevcut DB şeması böyleyse kalmalı.
-        'merchant_sku': ', '.join(item.get('sku', '') for item in details_list),
-        # 'product_barcode' artık dönüştürülmüş değil, orijinal barkodları içeriyor.
-        # Quantity kadar tekrar isteniyorsa original_barcodes_repeated kullanılmalı.
-        'product_barcode': ', '.join(original_barcodes),
-        # 'original_product_barcode': ..., # KALDIRILDI
-        'status': status,
-        'line_id': ','.join(item.get('line_id', '') for item in details_list), # Detaydaki line_id'ler zaten birleşik
-        'match_status': '', # Bu alanın amacı ne? Boş bırakılabilir veya kaldırılabilir.
-        # Müşteri Adı/Soyadı ve Adres
-        'customer_name': order_data.get('shipmentAddress', {}).get('firstName', ''),
-        'customer_surname': order_data.get('shipmentAddress', {}).get('lastName', ''),
-        'customer_address': order_data.get('shipmentAddress', {}).get('fullAddress', ''),
-        # Kargo Bilgileri
-        'shipping_barcode': order_data.get('cargoTrackingNumber', ''), # Takip no (barkod?)
-        'cargo_tracking_number': order_data.get('cargoTrackingNumber', ''), # Modelde bu alan varsa
-        'cargo_provider_name': order_data.get('cargoProviderName', ''),
-        'cargo_tracking_link': order_data.get('cargoTrackingLink', ''), # API'de varsa
-        # Ürün Bilgileri (tekrar?)
-        'product_name': ', '.join(item.get('productName', '') for item in details_list),
-        'product_code': ', '.join(item.get('productCode', '') for item in details_list),
-        'product_size': ', '.join(item.get('size', '') for item in details_list),
-        'product_color': ', '.join(item.get('color', '') for item in details_list),
-        'product_main_id': ', '.join(item.get('product_main_id', '') for item in details_list),
-        'stockCode': ', '.join(item.get('sku', '') for item in details_list), # stockCode = merchantSku?
-        # Fiyat Bilgileri
-        'amount': sum(item.get('line_total_price', 0.0) for item in details_list), # Toplam tutar
-        'discount': sum(safe_float(line.get('discount'), 0) for line in lines), # İndirim (lines'dan)
-        'currency_code': order_data.get('currencyCode', 'TRY'),
-        'vat_base_amount': sum(safe_float(line.get('vatBaseAmount'), 0) for line in lines), # KDV matrahı? (lines'dan)
-        # Diğer ID'ler ve Tarihler
-        'package_number': str(order_data.get('id', '')), # Trendyol paket ID
-        'shipment_package_id': str(order_data.get('shipmentPackageId', '')), # Trendyol kargo paket ID
-        'estimated_delivery_start': ts_to_dt(order_data.get('estimatedDeliveryStartDate')),
-        'estimated_delivery_end': ts_to_dt(order_data.get('estimatedDeliveryEndDate')),
-        'origin_shipment_date': ts_to_dt(order_data.get('originShipmentDate')), # Sevk tarihi?
-        'agreed_delivery_date': ts_to_dt(order_data.get('agreedDeliveryDate')), # Anlaşmalı teslimat?
-        # Detaylar ve Toplamlar
-        'details': dumps(details_list, ensure_ascii=False, indent=None, separators=(',', ':')), # Daha kompakt JSON
-        'quantity': total_qty, # Siparişteki toplam ürün adedi
-        'commission': sum(item.get('commissionFee', 0.0) for item in details_list) # Toplam komisyon
-        # Modelde olmayan ama potansiyel olarak eklenebilecek alanlar:
-        # 'gross_amount': order_data.get('grossAmount'),
-        # 'total_discount': order_data.get('totalDiscount'),
-        # 'tax_amount': order_data.get('taxAmount'),
-        # 'invoice_address': ...,
-        # 'customer_email': ...,
-        # 'customer_id': order_data.get('customerId'),
-        # 'package_state': order_data.get('packageStatus'), # status yerine packageStatus daha detaylı olabilir
+        'order_number': str(single_order_data_from_api.get('orderNumber') or single_order_data_from_api.get('id', '')).strip(),
+        'order_date': convert_timestamp_ms_to_datetime(single_order_data_from_api.get('orderDate')),
+        'status': api_status_for_db_record,
+        'merchant_sku': ','.join(filter(None, {str(item.get('sku', '')).strip() for item in processed_details_list if item.get('sku')})),
+        'product_barcode': ','.join(filter(None, unique_original_barcodes_list)),
+        'product_name': ','.join(filter(None, {str(item.get('productName', '')).strip() for item in processed_details_list if item.get('productName')})),
+        'product_code': ','.join(filter(None, {str(item.get('productCode', '')).strip() for item in processed_details_list if item.get('productCode')})),
+        'product_size': ','.join(filter(None, {str(item.get('size', '')).strip() for item in processed_details_list if item.get('size')})),
+        'product_color': ','.join(filter(None, {str(item.get('color', '')).strip() for item in processed_details_list if item.get('color')})),
+        'product_main_id': ','.join(filter(None, {str(item.get('product_main_id', '')).strip() for item in processed_details_list if item.get('product_main_id')})),
+        'stockCode': ','.join(filter(None, {str(item.get('sku', '')).strip() for item in processed_details_list if item.get('sku')})),
+        'line_id': ','.join(item['line_ids_api'] for item in processed_details_list if item.get('line_ids_api')),
+        'customer_name': shipment_address_dict.get('firstName', ''),
+        'customer_surname': shipment_address_dict.get('lastName', ''),
+        'customer_address': shipment_address_dict.get('fullAddress', ''),
+        'customer_id': str(single_order_data_from_api.get('customerId', '')),
+        'shipping_barcode': single_order_data_from_api.get('cargoTrackingNumber', ''),
+        'cargo_tracking_number': single_order_data_from_api.get('cargoTrackingNumber', ''),
+        'cargo_provider_name': single_order_data_from_api.get('cargoProviderName', ''),
+        'cargo_tracking_link': single_order_data_from_api.get('cargoTrackingLink', ''),
+        'shipment_package_status': single_order_data_from_api.get('packageStatus', ''),
+        'amount': safe_float(single_order_data_from_api.get('totalPrice'), 0.0),
+        'discount': safe_float(single_order_data_from_api.get('totalDiscount'), 0.0),
+        'gross_amount': safe_float(single_order_data_from_api.get('grossAmount'), 0.0),
+        'tax_amount': safe_float(single_order_data_from_api.get('taxTotal') or single_order_data_from_api.get('totalVat'), 0.0),
+        'currency_code': single_order_data_from_api.get('currencyCode', 'TRY'),
+        'commission': safe_float(single_order_data_from_api.get('commissionTotal', sum(item.get('commissionFee', 0.0) for item in processed_details_list)), 0.0),
+        'quantity': total_quantity_for_order,
+        'package_number': str(single_order_data_from_api.get('id', '')),
+        'shipment_package_id': str(single_order_data_from_api.get('shipmentPackageId', '')),
+        'estimated_delivery_start': convert_timestamp_ms_to_datetime(single_order_data_from_api.get('estimatedDeliveryStartDate')),
+        'estimated_delivery_end': convert_timestamp_ms_to_datetime(single_order_data_from_api.get('estimatedDeliveryEndDate')),
+        'origin_shipment_date': convert_timestamp_ms_to_datetime(single_order_data_from_api.get('originShipmentDate')),
+        'agreed_delivery_date': convert_timestamp_ms_to_datetime(single_order_data_from_api.get('agreedDeliveryDate')),
+        'last_modified_date': convert_timestamp_ms_to_datetime(single_order_data_from_api.get('lastModifiedDate') or single_order_data_from_api.get('packageLastModifiedDate')),
+        'details': json.dumps(processed_details_list, ensure_ascii=False, default=str, separators=(',', ':')),
+        'match_status': '',
     }
-    # Eksik veya None olan alanları temizle (isteğe bağlı)
-    # return {k: v for k, v in db_record_dict.items() if v is not None}
     return db_record_dict
 
-
 ############################
-# 4) Sipariş Listeleme Rotaları (Değişiklik Yok)
+# 4) Sipariş Listeleme Rotaları
 ############################
-# Bu rotalarda barkod dönüştürme ile ilgili bir işlem yoktu,
-# sadece veritabanından çekip process_order_details'e gönderiyorlar.
-# process_order_details fonksiyonu da barkod dönüştürme yapmıyorsa,
-# bu rotalar olduğu gibi kalabilir.
+def _render_order_list_template(query_obj, list_title_for_page, active_list_identifier, current_page_num, items_per_page):
+    try:
+        paginated_orders_result = query_obj.paginate(page=current_page_num, per_page=items_per_page, error_out=False)
+        orders_to_display_on_page = paginated_orders_result.items
+        if orders_to_display_on_page:
+            process_order_details(orders_to_display_on_page)
+    except Exception as e:
+        logger.error(f"'{list_title_for_page}' listesi alınırken hata: {e}", exc_info=True)
+        flash(f"'{list_title_for_page}' yüklenirken hata. Yöneticiye başvurun.", "danger")
+        orders_to_display_on_page = []
+        paginated_orders_result = None
+    template_context = {
+        'orders': orders_to_display_on_page, 'pagination': paginated_orders_result,
+        'page': paginated_orders_result.page if paginated_orders_result else current_page_num,
+        'total_pages': paginated_orders_result.pages if paginated_orders_result else 1,
+        'total_orders_count': paginated_orders_result.total if paginated_orders_result else len(orders_to_display_on_page),
+        'list_title': list_title_for_page, 'active_list': active_list_identifier, 'per_page': items_per_page
+    }
+    return render_template('order_list.html', **template_context)
 
 @order_service_bp.route('/order-list/new', methods=['GET'])
-# @role_required(...)
 def get_new_orders():
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 50, type=int) # Sayfa boyutunu URL'den almak daha esnek
-    try:
-        query = OrderCreated.query.order_by(OrderCreated.order_date.desc())
-        paginated = query.paginate(page=page, per_page=per_page, error_out=False)
-        orders = paginated.items
-        # process_order_details fonksiyonu details JSON'unu parse edip template'e uygun hale getiriyor varsayalım
-        process_order_details(orders)
-    except Exception as e:
-         logger.error(f"Yeni sipariş listesi alınırken hata: {e}", exc_info=True)
-         flash("Yeni siparişler yüklenirken bir hata oluştu.", "danger")
-         orders = []
-         paginated = None # Hata durumunda pagination olmaz
-
-    return render_template(
-        'order_list.html',
-        orders=orders,
-        pagination=paginated,
-        page=paginated.page if paginated else 1,
-        total_pages=paginated.pages if paginated else 1,
-        total_orders_count=paginated.total if paginated else len(orders),
-        list_title="Yeni Siparişler",
-        active_list='new'
-    )
-
+    page_num = request.args.get('page', 1, type=int)
+    orders_per_page = request.args.get('per_page', current_app.config.get('ORDERS_PER_PAGE', 50), type=int)
+    base_query = OrderCreated.query.order_by(OrderCreated.order_date.desc(), OrderCreated.id.desc())
+    return _render_order_list_template(base_query, "Yeni Siparişler", "new", page_num, orders_per_page)
 
 @order_service_bp.route('/order-list/picking', methods=['GET'])
-# @role_required(...)
 def get_picking_orders():
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 50, type=int)
-    try:
-        query = OrderPicking.query.order_by(OrderPicking.order_date.desc())
-        paginated = query.paginate(page=page, per_page=per_page, error_out=False)
-        orders = paginated.items
-        process_order_details(orders)
-    except Exception as e:
-         logger.error(f"Picking sipariş listesi alınırken hata: {e}", exc_info=True)
-         flash("Hazırlanan siparişler yüklenirken bir hata oluştu.", "danger")
-         orders = []
-         paginated = None
-
-    return render_template(
-        'order_list.html',
-        orders=orders,
-        pagination=paginated,
-        page=paginated.page if paginated else 1,
-        total_pages=paginated.pages if paginated else 1,
-        total_orders_count=paginated.total if paginated else len(orders),
-        list_title="Hazırlanan Siparişler",
-        active_list='picking'
-    )
-
+    page_num = request.args.get('page', 1, type=int)
+    orders_per_page = request.args.get('per_page', current_app.config.get('ORDERS_PER_PAGE', 50), type=int)
+    base_query = OrderPicking.query.order_by(OrderPicking.order_date.desc(), OrderPicking.id.desc())
+    return _render_order_list_template(base_query, "Hazırlanan Siparişler", "picking", page_num, orders_per_page)
 
 @order_service_bp.route('/order-list/shipped', methods=['GET'])
-# @role_required(...)
 def get_shipped_orders():
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 50, type=int)
-    try:
-        query = OrderShipped.query.order_by(OrderShipped.order_date.desc()) # order_date mi, shipped_date mi?
-        paginated = query.paginate(page=page, per_page=per_page, error_out=False)
-        orders = paginated.items
-        process_order_details(orders)
-    except Exception as e:
-         logger.error(f"Shipped sipariş listesi alınırken hata: {e}", exc_info=True)
-         flash("Kargodaki siparişler yüklenirken bir hata oluştu.", "danger")
-         orders = []
-         paginated = None
-
-    return render_template(
-        'order_list.html',
-        orders=orders,
-        pagination=paginated,
-        page=paginated.page if paginated else 1,
-        total_pages=paginated.pages if paginated else 1,
-        total_orders_count=paginated.total if paginated else len(orders),
-        list_title="Kargodaki Siparişler",
-        active_list='shipped'
-    )
-
+    page_num = request.args.get('page', 1, type=int)
+    orders_per_page = request.args.get('per_page', current_app.config.get('ORDERS_PER_PAGE', 50), type=int)
+    base_query = OrderShipped.query.order_by(OrderShipped.last_modified_date.desc(), OrderShipped.id.desc())
+    return _render_order_list_template(base_query, "Kargodaki Siparişler", "shipped", page_num, orders_per_page)
 
 @order_service_bp.route('/order-list/delivered', methods=['GET'])
-# @role_required(...)
 def get_delivered_orders():
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 50, type=int)
-    try:
-        query = OrderDelivered.query.order_by(OrderDelivered.order_date.desc()) # order_date mi, delivered_date mi?
-        paginated = query.paginate(page=page, per_page=per_page, error_out=False)
-        orders = paginated.items
-        process_order_details(orders)
-    except Exception as e:
-         logger.error(f"Delivered sipariş listesi alınırken hata: {e}", exc_info=True)
-         flash("Teslim Edilen siparişler yüklenirken bir hata oluştu.", "danger")
-         orders = []
-         paginated = None
-
-    return render_template(
-        'order_list.html',
-        orders=orders,
-        pagination=paginated,
-        page=paginated.page if paginated else 1,
-        total_pages=paginated.pages if paginated else 1,
-        total_orders_count=paginated.total if paginated else len(orders),
-        list_title="Teslim Edilen Siparişler",
-        active_list='delivered'
-    )
-
+    page_num = request.args.get('page', 1, type=int)
+    orders_per_page = request.args.get('per_page', current_app.config.get('ORDERS_PER_PAGE', 50), type=int)
+    base_query = OrderDelivered.query.order_by(OrderDelivered.last_modified_date.desc(), OrderDelivered.id.desc())
+    return _render_order_list_template(base_query, "Teslim Edilen Siparişler", "delivered", page_num, orders_per_page)
 
 @order_service_bp.route('/order-list/cancelled', methods=['GET'])
-# @role_required(...)
 def get_cancelled_orders():
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 50, type=int)
-    try:
-        query = OrderCancelled.query.order_by(OrderCancelled.order_date.desc()) # order_date mi, cancelled_date mi?
-        paginated = query.paginate(page=page, per_page=per_page, error_out=False)
-        orders = paginated.items
-        process_order_details(orders)
-    except Exception as e:
-         logger.error(f"Cancelled sipariş listesi alınırken hata: {e}", exc_info=True)
-         flash("İptal Edilen siparişler yüklenirken bir hata oluştu.", "danger")
-         orders = []
-         paginated = None
+    page_num = request.args.get('page', 1, type=int)
+    orders_per_page = request.args.get('per_page', current_app.config.get('ORDERS_PER_PAGE', 50), type=int)
+    base_query = OrderCancelled.query.order_by(OrderCancelled.last_modified_date.desc(), OrderCancelled.id.desc())
+    return _render_order_list_template(base_query, "İptal Edilen Siparişler", "cancelled", page_num, orders_per_page)
 
-    return render_template(
-        'order_list.html',
-        orders=orders,
-        pagination=paginated,
-        page=paginated.page if paginated else 1,
-        total_pages=paginated.pages if paginated else 1,
-        total_orders_count=paginated.total if paginated else len(orders),
-        list_title="İptal Edilen Siparişler",
-        active_list='cancelled'
-    )
+@order_service_bp.route('/order-list/archived', methods=['GET'])
+def get_archived_orders():
+    page_num = request.args.get('page', 1, type=int)
+    orders_per_page = request.args.get('per_page', current_app.config.get('ORDERS_PER_PAGE', 50), type=int)
+    # OrderArchived -> Archive olarak değiştirildi
+    base_query = Archive.query.order_by(Archive.order_date.desc(), Archive.id.desc())
+    return _render_order_list_template(base_query, "Arşivlenmiş Siparişler", "archived", page_num, orders_per_page)

@@ -7,6 +7,7 @@ from datetime import datetime
 import uuid
 from sqlalchemy.dialects.postgresql import JSON
 
+
 # sqlalchemy.dialects.postgresql.UUID zaten PG_UUID olarak import edildi, tekrar gerek yok
 
 # db instance'ı başta tanımlanmalı
@@ -77,53 +78,48 @@ class SiparisFisi(db.Model):
 
 
 # İade Siparişleri - db.Model'dan türetilmeli
-class ReturnOrder(db.Model): # <--- db.Model olarak düzeltildi
+class ReturnOrder(db.Model): # db.Model'dan türedi
     __tablename__ = 'return_orders'
-    # UUID kullanımı için importlar ve db.Column kullanımı düzeltildi
-    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    order_number = Column(String)
-    return_request_number = Column(String)
-    status = Column(String)
-    return_date = Column(DateTime)
-    process_date = Column(DateTime)  # İşlem tarihi
-    customer_first_name = Column(String)
-    customer_last_name = Column(String)
-    cargo_tracking_number = Column(String)
-    cargo_provider_name = Column(String)
-    cargo_sender_number = Column(String)
-    cargo_tracking_link = Column(String)
-    processed_by = Column(String)  # İşlemi yapan kullanıcı
-    return_reason = Column(String)  # İade nedeni (Beden/Numara Uyumsuzluğu, vs.)
-    customer_explanation = Column(String)  # Müşteri açıklaması
-    return_category = Column(String)  # İade kategorisi (Ürün Kaynaklı, Müşteri Kaynaklı, vs.)
-    notes = Column(String)  # Ek notlar
-    approval_reason = Column(String)  # Onay/red nedeni
-    refund_amount = Column(Float)  # İade edilecek tutar
+    id = db.Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4) # db.Column kullanıldı
+    order_number = db.Column(db.String) # db.String
+    return_request_number = db.Column(db.String, unique=True, nullable=True, index=True) # unique ve index eklenebilir
+    status = db.Column(db.String, index=True) # db.String
+    return_date = db.Column(db.DateTime, default=datetime.utcnow) # db.DateTime
+    process_date = db.Column(db.DateTime, nullable=True)
+    customer_first_name = db.Column(db.String, nullable=True)
+    customer_last_name = db.Column(db.String, nullable=True)
+    cargo_tracking_number = db.Column(db.String, nullable=True)
+    cargo_provider_name = db.Column(db.String, nullable=True)
+    cargo_sender_number = db.Column(db.String, nullable=True) # Trendyol'un iade için verdiği kod olabilir
+    cargo_tracking_link = db.Column(db.String, nullable=True)
+    processed_by = db.Column(db.String, nullable=True) # User.id ile ForeignKey olabilir
+    return_reason = db.Column(db.String, nullable=True)
+    customer_explanation = db.Column(db.Text, nullable=True) # Text daha uygun olabilir
+    return_category = db.Column(db.String, nullable=True)
+    notes = db.Column(db.Text, nullable=True) # Text daha uygun olabilir
+    approval_reason = db.Column(db.Text, nullable=True) # Text daha uygun olabilir
+    refund_amount = db.Column(db.Float, nullable=True)
+    products = db.relationship('ReturnProduct', backref='return_order', lazy='dynamic', cascade="all, delete-orphan") # lazy='dynamic' çok ürün varsa iyi
 
-    # İlişki (ReturnProduct'a)
-    products = db.relationship('ReturnProduct', backref='return_order', lazy=True, cascade="all, delete-orphan")
-
-    def __repr__(self):
-        return f'<ReturnOrder {self.order_number}>'
 
 # İade Edilen Ürünler - db.Model'dan türetilmeli
-class ReturnProduct(db.Model): # <--- db.Model olarak düzeltildi, Base kaldırıldı
+class ReturnProduct(db.Model):
     __tablename__ = 'return_products'
-    # UUID ve ForeignKey kullanımı düzeltildi
-    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    return_order_id = Column(PG_UUID(as_uuid=True), ForeignKey('return_orders.id'))
-    product_id = Column(String)
-    barcode = Column(String)
-    model_number = Column(String)
-    size = Column(String)
-    color = Column(String)
-    quantity = Column(Integer)
-    reason = Column(String)
-    claim_line_item_id = Column(String)
-    product_condition = Column(String)  # Ürün durumu (Hasarlı, Kullanılmış, Yeni gibi)
-    damage_description = Column(String)  # Hasar açıklaması
-    inspection_notes = Column(String)  # İnceleme notları
-    return_to_stock = Column(Boolean, default=False)  # Stoğa geri alınacak mı?
+    id = db.Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    return_order_id = db.Column(PG_UUID(as_uuid=True), db.ForeignKey('return_orders.id'), nullable=False) # nullable=False olmalı
+    # product_id = db.Column(db.String) # Bu bizim sistemimizdeki ürün ID'si mi? Product.barcode ile FK olabilir.
+    barcode = db.Column(db.String, index=True) # db.String
+    # model_number = db.Column(db.String) # product_code veya merchant_sku olabilir
+    product_name = db.Column(db.String, nullable=True) # İade anındaki ürün adı
+    size = db.Column(db.String, nullable=True)
+    color = db.Column(db.String, nullable=True)
+    quantity = db.Column(db.Integer, nullable=False, default=1) # Genelde 1 olur ama API farklı verebilir
+    reason = db.Column(db.String, nullable=True) # Satır bazlı iade nedeni
+    claim_line_item_id = db.Column(db.String, index=True, nullable=True) # Trendyol iade satır ID'si
+    product_condition = db.Column(db.String, nullable=True)
+    damage_description = db.Column(db.Text, nullable=True)
+    inspection_notes = db.Column(db.Text, nullable=True)
+    return_to_stock = db.Column(db.Boolean, default=False, nullable=False)
 
 
 # Kullanıcı Modeli
@@ -163,52 +159,68 @@ class OrderItem(db.Model):
 
 # Temel sipariş modeli - tüm statüler için ortak alanlar
 class OrderBase(db.Model):
-    __abstract__ = True # Bu tablo veritabanında oluşturulmaz, sadece kalıtım için kullanılır.
+    __abstract__ = True
 
-    id = db.Column(db.Integer, primary_key=True)
-    order_number = db.Column(db.String, index=True, nullable=False) # Sipariş no boş olmamalı
-    order_date = db.Column(db.DateTime, index=True)
-    merchant_sku = db.Column(db.String)
-    # Sadece orijinal barkodları tutacak alan (virgülle ayrılmış liste)
-    product_barcode = db.Column(db.Text) # Virgülle ayrılmış çok sayıda barkod olabileceği için Text daha uygun olabilir
-    # original_product_barcode = db.Column(db.String) # --- BU ALAN KALDIRILDI ---
-    line_id = db.Column(db.String) # Trendyol satır ID'leri (virgülle ayrılmış?) Text olabilir
-    match_status = db.Column(db.String) # Anlamı net değil, kalabilir veya kaldırılabilir
-    customer_name = db.Column(db.String)
-    customer_surname = db.Column(db.String)
-    customer_address = db.Column(db.Text)
-    shipping_barcode = db.Column(db.String) # Kargo takip no?
-    cargo_tracking_number = db.Column(db.String) # shipping_barcode ile aynı mı? Tekilleştirilebilir.
-    product_name = db.Column(db.Text) # Uzun isimler için Text
-    product_code = db.Column(db.Text) # Virgülle ayrılmış olabilir, Text
-    amount = db.Column(db.Float) # Toplam tutar (KDV dahil?)
-    discount = db.Column(db.Float, default=0.0)
-    currency_code = db.Column(db.String(10))
-    vat_base_amount = db.Column(db.Float)
-    package_number = db.Column(db.String, index=True) # Trendyol paket ID
-    stockCode = db.Column(db.Text) # merchant_sku ile aynı mı? Virgülle ayrılmış olabilir, Text
-    estimated_delivery_start = db.Column(db.DateTime)
-    images = db.Column(db.Text) # Virgülle ayrılmış URL listesi? Text
-    product_model_code = db.Column(db.Text) # stockCode ile aynı mı? Text
-    estimated_delivery_end = db.Column(db.DateTime, index=True) # Index eklendi
-    origin_shipment_date = db.Column(db.DateTime)
-    product_size = db.Column(db.Text) # Virgülle ayrılmış, Text
-    product_main_id = db.Column(db.Text) # Virgülle ayrılmış, Text
-    cargo_provider_name = db.Column(db.String)
-    agreed_delivery_date = db.Column(db.DateTime)
-    product_color = db.Column(db.Text) # Virgülle ayrılmış, Text
-    cargo_tracking_link = db.Column(db.String)
-    shipment_package_id = db.Column(db.String, index=True) # Trendyol kargo paket ID
-    details = db.Column(db.Text) # Ürün detayları JSON string
-    quantity = db.Column(db.Integer) # Toplam ürün adedi
-    commission = db.Column(db.Float, default=0.0)
-    product_cost_total = db.Column(db.Float, default=0.0) # Toplam maliyet (TRY?)
-    # Status alanı artık tablo adından belli oluyor, bu alana gerek yok ama eski kod uyumu için kalmış.
-    # İleride kaldırılabilir.
-    status = db.Column(db.String)
-    # Kayıt oluşturulma/güncellenme zamanları eklenebilir
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id = db.Column(db.Integer, primary_key=True) # Otomatik artan ID, her statü tablosu için kendi sequence'ı olur.
+    order_number = db.Column(db.String, index=True, nullable=False) # Sipariş no boş olamaz
+    order_date = db.Column(db.DateTime, index=True, nullable=True) # API'den gelmeyebilir diye nullable
+
+    # API'den gelen orijinal statü (bilgi amaçlı, hangi tabloda olduğu asıl statüyü verir)
+    status = db.Column(db.String, nullable=True) 
+
+    # Müşteri Bilgileri
+    customer_id = db.Column(db.String, index=True, nullable=True) # EKLENDİ
+    customer_name = db.Column(db.String, nullable=True)
+    customer_surname = db.Column(db.String, nullable=True)
+    customer_address = db.Column(db.Text, nullable=True)
+
+    # Ürün ve Sipariş Detayları (API'den geldiği gibi, genellikle virgülle ayrılmış listeler veya JSON)
+    merchant_sku = db.Column(db.Text, nullable=True) 
+    product_barcode = db.Column(db.Text, nullable=True) 
+    product_name = db.Column(db.Text, nullable=True) 
+    product_code = db.Column(db.Text, nullable=True) 
+    product_size = db.Column(db.Text, nullable=True) 
+    product_color = db.Column(db.Text, nullable=True) 
+    product_main_id = db.Column(db.Text, nullable=True) 
+    stockCode = db.Column(db.Text, nullable=True) 
+    line_id = db.Column(db.Text, nullable=True) 
+    details = db.Column(db.Text, nullable=True) # Tüm ürün detaylarını içeren JSON string
+    quantity = db.Column(db.Integer, nullable=True) 
+
+    # Fiyat ve Finansal Bilgiler
+    amount = db.Column(db.Float, nullable=True) 
+    discount = db.Column(db.Float, default=0.0, nullable=True)
+    gross_amount = db.Column(db.Float, nullable=True) # EKLENDİ
+    tax_amount = db.Column(db.Float, nullable=True) # EKLENDİ 
+    vat_base_amount = db.Column(db.Float, nullable=True) 
+    commission = db.Column(db.Float, default=0.0, nullable=True) 
+    currency_code = db.Column(db.String(10), nullable=True)
+    product_cost_total = db.Column(db.Float, default=0.0, nullable=True) # Ürünlerin toplam maliyeti
+
+    # Kargo ve Paket Bilgileri
+    package_number = db.Column(db.String, index=True, nullable=True) 
+    shipment_package_id = db.Column(db.String, index=True, nullable=True) 
+    shipping_barcode = db.Column(db.String, nullable=True) 
+    cargo_tracking_number = db.Column(db.String, index=True, nullable=True) 
+    cargo_provider_name = db.Column(db.String, nullable=True)
+    cargo_tracking_link = db.Column(db.String, nullable=True)
+    shipment_package_status = db.Column(db.String, nullable=True) # EKLENDİ
+
+    # Tarihler
+    origin_shipment_date = db.Column(db.DateTime, nullable=True) 
+    estimated_delivery_start = db.Column(db.DateTime, nullable=True)
+    estimated_delivery_end = db.Column(db.DateTime, index=True, nullable=True)
+    agreed_delivery_date = db.Column(db.DateTime, nullable=True)
+    last_modified_date = db.Column(db.DateTime, index=True, nullable=True) # EKLENDİ
+
+    # Diğer Alanlar
+    match_status = db.Column(db.String, nullable=True) 
+    images = db.Column(db.Text, nullable=True) 
+    product_model_code = db.Column(db.Text, nullable=True) 
+
+    # Kayıt Zaman Damgaları
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
 # Yeni sipariş tablosu (Created)
