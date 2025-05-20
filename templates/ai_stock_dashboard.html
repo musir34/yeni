@@ -1,0 +1,830 @@
+{% extends 'base.html' %}
+
+{% block title %}Yapay Zeka Destekli Stok Analizi{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vendor/bootstrap.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vendor/dataTables.bootstrap5.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vendor/toastr.min.css') }}">
+<style>
+    .stockout-warning {
+        background-color: #FFEBEE;
+    }
+    .stockout-critical {
+        background-color: #FFCDD2;
+    }
+    .stock-sufficient {
+        background-color: #E8F5E9;
+    }
+    .stock-excess {
+        background-color: #F1F8E9;
+    }
+    .loader {
+        border: 5px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 5px solid #3498db;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .chart-container {
+        height: 300px;
+        width: 100%;
+    }
+    .card {
+        margin-bottom: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .card-header {
+        font-weight: bold;
+        background-color: #f8f9fa;
+    }
+    .recommendation-card {
+        transition: transform 0.3s;
+    }
+    .recommendation-card:hover {
+        transform: translateY(-5px);
+    }
+    .status-badge {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
+        border-radius: 1rem;
+    }
+    .kritik {
+        background-color: #FFCDD2;
+        color: #C62828;
+    }
+    .düşük {
+        background-color: #FFE0B2;
+        color: #E65100;
+    }
+    .yeterli {
+        background-color: #C8E6C9;
+        color: #2E7D32;
+    }
+    .yüksek {
+        background-color: #BBDEFB;
+        color: #1565C0;
+    }
+    .aşırı {
+        background-color: #D1C4E9;
+        color: #4527A0;
+    }
+    .days-badge {
+        font-size: 1rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: 0.3rem;
+        margin: 0.5rem 0;
+    }
+    #tableContainer {
+        overflow-x: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-0 text-gray-800">Yapay Zeka Destekli Stok Analizi</h1>
+            <p class="mb-4">Stok durumunuzu yapay zeka yardımıyla analiz edin, gelecek satışlarınızı öngörün</p>
+        </div>
+    </div>
+
+    <!-- Kontrol Paneli -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    Analiz Seçenekleri
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="forecastDays" class="form-label">Tahmin Süresi (Gün)</label>
+                            <select class="form-select" id="forecastDays">
+                                <option value="7">7 Gün</option>
+                                <option value="15">15 Gün</option>
+                                <option value="30" selected>30 Gün</option>
+                                <option value="60">60 Gün</option>
+                                <option value="90">90 Gün</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="stockShowCount" class="form-label">Gösterilecek Ürün Sayısı</label>
+                            <select class="form-select" id="stockShowCount">
+                                <option value="10">En Kritik 10 Ürün</option>
+                                <option value="20" selected>En Kritik 20 Ürün</option>
+                                <option value="50">En Kritik 50 Ürün</option>
+                                <option value="100">En Kritik 100 Ürün</option>
+                                <option value="0">Tüm Ürünler</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="includeVariants" class="form-label">Varyant Ayrıntısı</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="includeVariants">
+                                <label class="form-check-label" for="includeVariants">Tüm varyantları göster</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 text-end">
+                            <button id="runAnalysisBtn" class="btn btn-primary">
+                                <i class="fas fa-sync-alt"></i> Analizi Çalıştır
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Yükleniyor Göstergesi -->
+    <div id="loadingIndicator" class="text-center my-5" style="display:none;">
+        <div class="loader mb-3"></div>
+        <p>Analiz yapılıyor, lütfen bekleyin...</p>
+        <p class="text-muted small">Bu işlem, ürün sayısına bağlı olarak birkaç dakika sürebilir.</p>
+    </div>
+
+    <!-- Genel Bakış Kartları -->
+    <div id="overviewCards" class="row mb-4" style="display:none;">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Analiz Edilen Ürün</div>
+                            <div id="totalProducts" class="h5 mb-0 font-weight-bold text-gray-800">0</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-boxes fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Kritik Stok</div>
+                            <div id="criticalStockCount" class="h5 mb-0 font-weight-bold text-gray-800">0</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Düşük Stok</div>
+                            <div id="lowStockCount" class="h5 mb-0 font-weight-bold text-gray-800">0</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-arrow-down fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Yeterli/Yüksek Stok</div>
+                            <div id="goodStockCount" class="h5 mb-0 font-weight-bold text-gray-800">0</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acil Önlem Gerektiren Ürünler -->
+    <div id="urgentActionsSection" class="row mb-4" style="display:none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <i class="fas fa-exclamation-circle me-2"></i> Acil Önlem Gerektiren Ürünler
+                </div>
+                <div class="card-body">
+                    <div id="urgentActionsList" class="row">
+                        <!-- JS ile doldurulacak -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stok Analiz Tablosu -->
+    <div id="stockAnalysisSection" class="row" style="display:none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-table me-2"></i> Detaylı Stok Analizi
+                </div>
+                <div class="card-body">
+                    <div id="tableContainer">
+                        <table id="stockAnalysisTable" class="table table-striped table-bordered" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>Ürün Kodu</th>
+                                    <th>Ürün Adı</th>
+                                    <th>Renk</th>
+                                    <th>Beden</th>
+                                    <th>Mevcut Stok</th>
+                                    <th>Stok Durumu</th>
+                                    <th>Tahmini Tükeniş</th>
+                                    <th>Tavsiye</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- JS ile doldurulacak -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ürün Detay Modalı -->
+    <div class="modal fade" id="productDetailModal" tabindex="-1" aria-labelledby="productDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="productDetailModalLabel">Ürün Detayı</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="productDetailLoader" class="text-center my-3" style="display:none;">
+                        <div class="loader mb-3"></div>
+                        <p>Ürün detayları yükleniyor...</p>
+                    </div>
+                    
+                    <div id="productDetailContent">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h6 class="font-weight-bold">Ürün Bilgileri</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th>Ürün Kodu:</th>
+                                        <td id="modal-product-code"></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Ürün Adı:</th>
+                                        <td id="modal-product-name"></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Renk:</th>
+                                        <td id="modal-product-color"></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Beden:</th>
+                                        <td id="modal-product-size"></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Mevcut Stok:</th>
+                                        <td id="modal-product-stock"></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Satış Fiyatı:</th>
+                                        <td id="modal-product-price"></td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="font-weight-bold">Stok Analizi</h6>
+                                <div id="modal-stock-status" class="alert alert-info">
+                                    Stok durumu yükleniyor...
+                                </div>
+                                <div id="modal-stock-days" class="days-badge bg-secondary text-white">
+                                    Hesaplanıyor...
+                                </div>
+                                <div id="modal-recommendation" class="alert alert-secondary">
+                                    Tavsiyeler yükleniyor...
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h6 class="font-weight-bold">Satış Tahmini</h6>
+                        <div class="chart-container">
+                            <canvas id="salesForecastChart"></canvas>
+                        </div>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h6>7 Gün Tahmini Satış</h6>
+                                        <h3 id="modal-forecast-7" class="text-primary">-</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h6>15 Gün Tahmini Satış</h6>
+                                        <h3 id="modal-forecast-15" class="text-primary">-</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h6>30 Gün Tahmini Satış</h6>
+                                        <h3 id="modal-forecast-30" class="text-primary">-</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script src="{{ url_for('static', filename='js/vendor/jquery.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vendor/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vendor/jquery.dataTables.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vendor/dataTables.bootstrap5.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vendor/chart.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vendor/toastr.min.js') }}"></script>
+
+<script>
+    // Globaller
+    let stockAnalysisTable;
+    let salesForecastChart;
+    
+    // Yardımcı Fonksiyonlar
+    function formatNumber(num) {
+        return num.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+    
+    function formatPrice(price) {
+        return price.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+    }
+    
+    function getStockStatusClass(status) {
+        status = status.toLowerCase();
+        if (status.includes('kritik')) return 'kritik';
+        if (status.includes('düşük')) return 'düşük';
+        if (status.includes('yeterli')) return 'yeterli';
+        if (status.includes('yüksek')) return 'yüksek';
+        if (status.includes('aşırı')) return 'aşırı';
+        return '';
+    }
+    
+    function getRecommendationClass(action) {
+        action = action.toLowerCase();
+        if (action.includes('acil')) return 'bg-danger text-white';
+        if (action.includes('stok ekle')) return 'bg-warning';
+        if (action.includes('stok azalt')) return 'bg-info';
+        if (action.includes('izle')) return 'bg-success text-white';
+        return 'bg-secondary text-white';
+    }
+    
+    // API çağrıları
+    async function getStockHealthReport() {
+        const includeVariants = $('#includeVariants').is(':checked');
+        const topN = $('#stockShowCount').val();
+        const days = $('#forecastDays').val();
+        
+        try {
+            const response = await fetch(`/api/stock-health-report?include_variants=${includeVariants}&top_n=${topN}&days=${days}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                return data.report;
+            } else {
+                throw new Error(data.message || 'Rapor alınamadı');
+            }
+        } catch (error) {
+            console.error('Stok raporu alınamadı:', error);
+            toastr.error('Stok raporu alınamadı: ' + error.message);
+            return [];
+        }
+    }
+    
+    async function getProductSalesPrediction(productMainId, color, size) {
+        const forecastDays = $('#forecastDays').val();
+        
+        let url = `/api/product-sales-prediction/${productMainId}?forecast_days=${forecastDays}`;
+        if (color) url += `&color=${encodeURIComponent(color)}`;
+        if (size) url += `&size=${encodeURIComponent(size)}`;
+        
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.success) {
+                return data;
+            } else {
+                throw new Error(data.message || 'Tahmin alınamadı');
+            }
+        } catch (error) {
+            console.error('Satış tahmini alınamadı:', error);
+            return null;
+        }
+    }
+    
+    // UI Güncelleme Fonksiyonları
+    function updateOverviewCards(report) {
+        const totalProducts = report.length;
+        let criticalCount = 0;
+        let lowCount = 0;
+        let goodCount = 0;
+        
+        report.forEach(item => {
+            const status = item.analysis?.stock_analysis?.stock_status || '';
+            if (status.toLowerCase().includes('kritik')) {
+                criticalCount++;
+            } else if (status.toLowerCase().includes('düşük')) {
+                lowCount++;
+            } else {
+                goodCount++;
+            }
+        });
+        
+        $('#totalProducts').text(formatNumber(totalProducts));
+        $('#criticalStockCount').text(formatNumber(criticalCount));
+        $('#lowStockCount').text(formatNumber(lowCount));
+        $('#goodStockCount').text(formatNumber(goodCount));
+        
+        $('#overviewCards').show();
+    }
+    
+    function populateUrgentActions(report) {
+        const urgentItems = report.filter(item => {
+            const action = item.analysis?.recommendations?.action_needed || '';
+            return action.toLowerCase().includes('acil');
+        }).slice(0, 4); // En fazla 4 acil öğe göster
+        
+        if (urgentItems.length === 0) {
+            $('#urgentActionsSection').hide();
+            return;
+        }
+        
+        const urgentList = $('#urgentActionsList');
+        urgentList.empty();
+        
+        urgentItems.forEach(item => {
+            const product = item.product;
+            const analysis = item.analysis;
+            
+            const statusClass = getStockStatusClass(analysis.stock_analysis.stock_status);
+            const daysUntilStockout = analysis.stock_analysis.estimated_days_until_stockout;
+            
+            const card = $(`
+                <div class="col-md-6 col-xl-3 mb-3">
+                    <div class="card recommendation-card">
+                        <div class="card-header bg-danger text-white">
+                            <strong>${product.product_main_id}</strong>
+                        </div>
+                        <div class="card-body">
+                            <h6>${product.title}</h6>
+                            <p>
+                                <strong>Renk:</strong> ${product.color}<br>
+                                <strong>Beden:</strong> ${product.size}<br>
+                                <strong>Stok:</strong> ${formatNumber(product.quantity)}
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="status-badge ${statusClass}">${analysis.stock_analysis.stock_status}</span>
+                                <span class="days-badge bg-danger text-white">${daysUntilStockout} gün</span>
+                            </div>
+                            <div class="alert alert-danger mt-2">
+                                <i class="fas fa-exclamation-circle"></i> ${analysis.recommendations.action_needed}
+                            </div>
+                            <button class="btn btn-sm btn-primary viewDetailBtn" 
+                                data-product-id="${product.product_main_id}"
+                                data-product-color="${product.color}"
+                                data-product-size="${product.size}">
+                                Detayları Gör
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `);
+            
+            urgentList.append(card);
+        });
+        
+        $('#urgentActionsSection').show();
+    }
+    
+    function initStockTable(report) {
+        if (stockAnalysisTable) {
+            stockAnalysisTable.destroy();
+        }
+        
+        const tableBody = $('#stockAnalysisTable tbody');
+        tableBody.empty();
+        
+        report.forEach(item => {
+            const product = item.product;
+            const analysis = item.analysis;
+            
+            // Analiz sonuçlarında hata varsa atla
+            if (analysis.error) {
+                return;
+            }
+            
+            const stockStatus = analysis.stock_analysis.stock_status;
+            const daysUntilStockout = analysis.stock_analysis.estimated_days_until_stockout;
+            const actionNeeded = analysis.recommendations.action_needed;
+            
+            const statusClass = getStockStatusClass(stockStatus);
+            const actionClass = getRecommendationClass(actionNeeded);
+            
+            const row = $(`<tr>
+                <td>${product.product_main_id}</td>
+                <td>${product.title}</td>
+                <td>${product.color}</td>
+                <td>${product.size}</td>
+                <td>${formatNumber(product.quantity)}</td>
+                <td><span class="status-badge ${statusClass}">${stockStatus}</span></td>
+                <td>${daysUntilStockout} gün</td>
+                <td><span class="badge ${actionClass}">${actionNeeded}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-primary viewDetailBtn" 
+                        data-product-id="${product.product_main_id}"
+                        data-product-color="${product.color}"
+                        data-product-size="${product.size}">
+                        <i class="fas fa-chart-line"></i> Detay
+                    </button>
+                </td>
+            </tr>`);
+            
+            tableBody.append(row);
+        });
+        
+        stockAnalysisTable = $('#stockAnalysisTable').DataTable({
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Turkish.json"
+            },
+            "pageLength": 25,
+            "ordering": true,
+            "responsive": true
+        });
+        
+        $('#stockAnalysisSection').show();
+    }
+    
+    async function showProductDetail(productId, color, size) {
+        $('#productDetailModal').modal('show');
+        $('#productDetailLoader').show();
+        $('#productDetailContent').hide();
+        
+        try {
+            // Ürün analiz verilerini al
+            const response = await fetch(`/api/product-stock-analysis/${productId}?color=${encodeURIComponent(color)}&size=${encodeURIComponent(size)}`);
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.message || 'Ürün bilgileri alınamadı');
+            }
+            
+            const product = data.product;
+            const analysis = data.analysis;
+            
+            // Satış tahminlerini al
+            const forecastData = await getProductSalesPrediction(productId, color, size);
+            
+            // Modal başlığını güncelle
+            $('#productDetailModalLabel').text(`${product.title} (${product.product_main_id})`);
+            
+            // Ürün bilgilerini doldur
+            $('#modal-product-code').text(product.product_main_id);
+            $('#modal-product-name').text(product.title);
+            $('#modal-product-color').text(product.color);
+            $('#modal-product-size').text(product.size);
+            $('#modal-product-stock').text(formatNumber(product.quantity));
+            $('#modal-product-price').text(formatPrice(product.sale_price));
+            
+            // Stok analizi bilgilerini doldur
+            const stockStatus = analysis.stock_analysis.stock_status;
+            const statusClass = getStockStatusClass(stockStatus);
+            $('#modal-stock-status').attr('class', `alert alert-${statusClass === 'kritik' ? 'danger' : statusClass === 'düşük' ? 'warning' : 'success'}`);
+            $('#modal-stock-status').html(`<strong>Stok Durumu:</strong> ${stockStatus}`);
+            
+            const daysUntilStockout = analysis.stock_analysis.estimated_days_until_stockout;
+            $('#modal-stock-days').attr('class', `days-badge ${daysUntilStockout <= 7 ? 'bg-danger' : daysUntilStockout <= 15 ? 'bg-warning' : 'bg-success'} text-white`);
+            $('#modal-stock-days').html(`<i class="fas fa-clock"></i> Tahmini ${daysUntilStockout} gün stok yeterli olacak`);
+            
+            const actionNeeded = analysis.recommendations.action_needed;
+            const confidence = analysis.recommendations.confidence_level;
+            const explanation = analysis.recommendations.explanation;
+            const suggestedQuantity = analysis.recommendations.suggested_order_quantity;
+            const optimalTiming = analysis.recommendations.optimal_timing;
+            
+            $('#modal-recommendation').attr('class', `alert ${actionNeeded.toLowerCase().includes('acil') ? 'alert-danger' : 'alert-info'}`);
+            $('#modal-recommendation').html(`
+                <strong>Önerilen Aksiyon:</strong> ${actionNeeded}<br>
+                ${suggestedQuantity ? `<strong>Önerilen Sipariş Miktarı:</strong> ${suggestedQuantity}<br>` : ''}
+                ${optimalTiming ? `<strong>Uygun Zamanlama:</strong> ${optimalTiming}<br>` : ''}
+                <strong>Güven Düzeyi:</strong> ${confidence}<br>
+                <hr>
+                <p>${explanation}</p>
+            `);
+            
+            // Tahmin grafiğini doldur
+            if (forecastData && forecastData.forecast) {
+                updateForecastChart(forecastData.forecast);
+                $('#modal-forecast-7').text(Math.round(forecastData.next_7_days));
+                $('#modal-forecast-15').text(Math.round(forecastData.next_15_days));
+                $('#modal-forecast-30').text(Math.round(forecastData.next_30_days));
+            } else {
+                $('#modal-forecast-7').text('-');
+                $('#modal-forecast-15').text('-');
+                $('#modal-forecast-30').text('-');
+                
+                if (salesForecastChart) {
+                    salesForecastChart.destroy();
+                }
+                $('#salesForecastChart').parent().html('<div class="alert alert-warning">Satış tahmini için yeterli veri yok.</div>');
+            }
+            
+            $('#productDetailLoader').hide();
+            $('#productDetailContent').show();
+            
+        } catch (error) {
+            console.error('Ürün detayları alınamadı:', error);
+            toastr.error('Ürün detayları alınamadı: ' + error.message);
+            $('#productDetailLoader').hide();
+            $('#productDetailContent').html('<div class="alert alert-danger">Ürün detayları yüklenirken bir hata oluştu.</div>');
+        }
+    }
+    
+    function updateForecastChart(forecastData) {
+        if (salesForecastChart) {
+            salesForecastChart.destroy();
+        }
+        
+        const ctx = document.getElementById('salesForecastChart').getContext('2d');
+        
+        const dates = forecastData.map(item => item.ds);
+        const predictions = forecastData.map(item => item.yhat);
+        const lowerBounds = forecastData.map(item => item.yhat_lower);
+        const upperBounds = forecastData.map(item => item.yhat_upper);
+        
+        salesForecastChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [
+                    {
+                        label: 'Tahmin Edilen Satış',
+                        data: predictions,
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: false
+                    },
+                    {
+                        label: 'Alt Sınır',
+                        data: lowerBounds,
+                        borderColor: 'rgba(220, 220, 220, 1)',
+                        borderWidth: 1,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        tension: 0.3,
+                        fill: false
+                    },
+                    {
+                        label: 'Üst Sınır',
+                        data: upperBounds,
+                        borderColor: 'rgba(220, 220, 220, 1)',
+                        borderWidth: 1,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        tension: 0.3,
+                        fill: '-1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            maxTicksLimit: 10
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += Math.round(context.raw * 100) / 100;
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Ana Fonksiyonlar
+    async function runStockAnalysis() {
+        $('#loadingIndicator').show();
+        $('#overviewCards, #urgentActionsSection, #stockAnalysisSection').hide();
+        
+        try {
+            const report = await getStockHealthReport();
+            
+            if (report.length === 0) {
+                toastr.warning('Analiz için ürün bulunamadı veya analiz sonucunda kriterlere uygun ürün yok.');
+                $('#loadingIndicator').hide();
+                return;
+            }
+            
+            updateOverviewCards(report);
+            populateUrgentActions(report);
+            initStockTable(report);
+            
+            toastr.success('Stok analizi başarıyla tamamlandı.');
+        } catch (error) {
+            console.error('Stok analizi tamamlanamadı:', error);
+            toastr.error('Stok analizi tamamlanamadı: ' + error.message);
+        }
+        
+        $('#loadingIndicator').hide();
+    }
+    
+    // Event Listeners
+    $(document).ready(function() {
+        // İlk yükleme
+        runStockAnalysis();
+        
+        // Analiz butonuna tıklama
+        $('#runAnalysisBtn').click(function() {
+            runStockAnalysis();
+        });
+        
+        // Ürün detay butonuna tıklama (dinamik elementler)
+        $(document).on('click', '.viewDetailBtn', function() {
+            const productId = $(this).data('product-id');
+            const color = $(this).data('product-color');
+            const size = $(this).data('product-size');
+            showProductDetail(productId, color, size);
+        });
+        
+        // Ayarlar için toastr
+        toastr.options = {
+            "closeButton": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "timeOut": "3000"
+        };
+    });
+</script>
+{% endblock %}
