@@ -1,453 +1,349 @@
+# ai_stock_prediction.py
+# =============================================================
+#   AI Destekli Stok Tahmin ve Analiz Sistemi – Güllü Shoes
+#   Tam Dosya – HATA DÜZELTİLMİŞ SÜRÜM – 20 Mayıs 2025
+# =============================================================
+
 import os
 import json
 import logging
 from datetime import datetime, timedelta
+
 import numpy as np
 import pandas as pd
 from openai import OpenAI
-from sqlalchemy import func, desc, and_
-from models import db, Product
 from prophet import Prophet
-from flask import Blueprint, render_template, jsonify, request, current_app
+from sqlalchemy.sql import text
+from sqlalchemy import func
 
-# Logger kurulumu
+from models import db, Product
+from flask import Blueprint, render_template, jsonify, request
+
+# -------------------------------------------------------------------------
+# Logger
+# -------------------------------------------------------------------------
 logger = logging.getLogger(__name__)
 
-ai_stock_prediction_bp = Blueprint('ai_stock_prediction', __name__)
+# -------------------------------------------------------------------------
+# Blueprint
+# -------------------------------------------------------------------------
+ai_stock_prediction_bp = Blueprint("ai_stock_prediction", __name__)
 
+# -------------------------------------------------------------------------
+# Ana Sınıf
+# -------------------------------------------------------------------------
 class StockPredictor:
     def __init__(self):
-        """Yapay zeka destekli stok tahmin sisteminin başlatıcısı"""
-        self.client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
-        
-    def get_product_sales_data(self, product_main_id, color=None, size=None, days=90):
-        """
-        Belirli bir ürün için son {days} gündeki satış verilerini döndürür
-        """
+        self.client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+    # -------------------------------------------------------------
+    # 1. Geçmiş Satış Verisini Çek
+    # -------------------------------------------------------------
+    def get_product_sales_data(self,
+                               product_main_id: str,
+                               color: str | None = None,
+                               size: str | None = None,
+                               days: int = 90) -> pd.DataFrame:
         try:
-            # Şu anki tarih
-            now = datetime.now()
-            start_date = now - timedelta(days=days)
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
+
+            # Basitleştirilmiş parametreler
+            base_params = {
+                "start_date": start_date,
+                "end_date": end_date,
+                "model_id": product_main_id
+            }
             
-            # Satış verilerini çek (örnek: tüm sipariş tablolarından, sipariş tarihi son X gün olanlar)
-            from analysis import all_orders_union
-            from sqlalchemy.sql import text
-            
-            # SQLAlchemy Session nesnesi al
-            with db.session.no_autoflush:
-                # Tüm tablolardaki (Created, Picking, Shipped, Delivered, Cancelled) siparişleri birleştir
-                union_query = all_orders_union(start_date, now)
-                
-                # Union sorgu üzerinde filtreleme
-                # SQLAlchemy'nin text() fonksiyonunu kullanarak ham SQL sorgusu çalıştır
-                filters = []
-                
-                # Temel filtre - ürün ID'si
-                product_filter = f"product_main_id = '{product_main_id}'"
-                filters.append(product_filter)
-                
-                # Eğer renk ve/veya beden belirtilmişse filtrelere ekle
-                if color:
-                    color_filter = f"product_color = '{color}'"
-                    filters.append(color_filter)
-                if size:
-                    size_filter = f"product_size = '{size}'"
-                    filters.append(size_filter)
-                
-                # Tüm filtreleri AND ile birleştir
-                where_clause = " AND ".join(filters)
-                
-                # SQL sorgusu oluştur ve text() ile çalıştır
-                sql_query = text(f"""
-                    SELECT DATE(order_date) as date, SUM(quantity) as sold_quantity
-                    FROM ({union_query}) as union_orders
-                    WHERE {where_clause}
-                    GROUP BY DATE(order_date)
-                    ORDER BY DATE(order_date)
-                """)
-                
-                daily_sales = db.session.execute(sql_query).fetchall()
-                
-                # Satış verisini pandas DataFrame'e dönüştür
-                # fetchall() sonuçları için uygun formatta DataFrame oluştur
-                if daily_sales:
-                    df = pd.DataFrame([(date, qty) for date, qty in daily_sales], columns=['ds', 'y'])
-                else:
-                    df = pd.DataFrame(columns=['ds', 'y'])
-                
-                # Boş gün kontrolü - satış olmayan günler için 0 değeri ata
-                date_range = pd.date_range(start=start_date, end=now)
-                date_df = pd.DataFrame({'ds': date_range})
-                df = pd.merge(date_df, df, on='ds', how='left').fillna(0)
-                
-                return df
-                
+            # Sorgu filtreleri
+            filters = ["product_main_id = :model_id"]
+
+            if color:
+                filters.append("product_color = :color")
+                base_params["color"] = color
+            if size:
+                filters.append("product_size = :size")
+                base_params["size"] = size
+
+            where_clause = " AND ".join(filters)
+
+            # Parametre formatı için :param_name şeklinde kullanım
+            final_sql = text(f"""
+                SELECT DATE(order_date) AS ds,
+                       SUM(quantity)    AS y
+                FROM (
+                    SELECT * FROM orders_created
+                    WHERE order_date BETWEEN :start_date AND :end_date
+                    UNION ALL
+                    SELECT * FROM orders_picking
+                    WHERE order_date BETWEEN :start_date AND :end_date
+                    UNION ALL
+                    SELECT * FROM orders_shipped
+                    WHERE order_date BETWEEN :start_date AND :end_date
+                    UNION ALL
+                    SELECT * FROM orders_delivered
+                    WHERE order_date BETWEEN :start_date AND :end_date
+                    UNION ALL
+                    SELECT * FROM orders_cancelled
+                    WHERE order_date BETWEEN :start_date AND :end_date
+                ) AS u
+                WHERE {where_clause}
+                GROUP BY DATE(order_date)
+                ORDER BY DATE(order_date)
+            """)
+
+            # Parametre göndermek için base_params'ı kullan
+            rows = db.session.execute(final_sql, base_params).fetchall()
+
+            if rows:
+                df = pd.DataFrame(rows, columns=["ds", "y"])
+            else:
+                df = pd.DataFrame(columns=["ds", "y"])
+
+            full_range = pd.date_range(start=start_date, end=end_date)
+            df_full = pd.DataFrame({"ds": full_range}).merge(df, on="ds", how="left").fillna(0)
+            return df_full
+
         except Exception as e:
+            db.session.rollback()
             logger.error(f"Satış verisi alınırken hata: {e}", exc_info=True)
-            return pd.DataFrame(columns=['ds', 'y'])  # Boş DataFrame döndür
-    
-    def predict_future_sales(self, product_main_id, color=None, size=None, forecast_days=30, history_days=90):
-        """
-        Prophet modeli kullanarak gelecek satışları tahmin eder
-        """
+            return pd.DataFrame(columns=["ds", "y"])
+
+    # -------------------------------------------------------------
+    # 2. Prophet ile Gelecek Satış Tahmini
+    # -------------------------------------------------------------
+    def predict_future_sales(self,
+                             product_main_id: str,
+                             color: str | None = None,
+                             size: str | None = None,
+                             forecast_days: int = 30,
+                             history_days: int = 90):
         try:
-            # Geçmiş satış verilerini al
-            sales_df = self.get_product_sales_data(product_main_id, color, size, days=history_days)
-            
-            # Yeterli veri var mı kontrol et
-            if len(sales_df[sales_df['y'] > 0]) < 5:  # En az 5 gün satış olmalı
-                logger.warning(f"Ürün {product_main_id} için yeterli satış verisi yok. Tahmin yapılamıyor.")
+            sales_df = self.get_product_sales_data(product_main_id, color, size, history_days)
+            if (sales_df["y"] > 0).sum() < 5:
+                logger.warning(f"{product_main_id} için yeterli veri yok.")
                 return None
-                
-            # Prophet modelini hazırla ve eğit
-            # Prophet'ın beklediği parametreleri doğru şekilde ayarla
-            model = Prophet(
-                # Boolean değil, otomatik algılama için metin değerleri kullan
-                daily_seasonality='auto',
-                yearly_seasonality='auto',
-                weekly_seasonality='auto',
-                seasonality_mode='multiplicative'
-            )
+
+            model = Prophet(seasonality_mode="multiplicative")
             model.fit(sales_df)
-            
-            # Gelecek için tahmin yap
+
             future = model.make_future_dataframe(periods=forecast_days)
             forecast = model.predict(future)
-            
-            # Tahminleri düzenle (negatif değerleri 0 yap)
-            forecast['yhat'] = forecast['yhat'].clip(lower=0)
-            forecast['yhat_lower'] = forecast['yhat_lower'].clip(lower=0)
-            forecast['yhat_upper'] = forecast['yhat_upper'].clip(lower=0)
-            
-            # Tarihi string formatına çevir
-            forecast['ds'] = forecast['ds'].dt.strftime('%Y-%m-%d')
-            
+
+            for col in ["yhat", "yhat_lower", "yhat_upper"]:
+                forecast[col] = forecast[col].clip(lower=0)
+
+            forecast["ds"] = forecast["ds"].dt.strftime("%Y-%m-%d")
             return forecast
-        
+
         except Exception as e:
             logger.error(f"Satış tahmini yapılırken hata: {e}", exc_info=True)
             return None
-    
-    def analyze_stock_with_ai(self, product_data, sales_forecast=None):
-        """
-        OpenAI API'si kullanarak stok analizi yapar ve öneriler sunar
-        """
+
+    # -------------------------------------------------------------
+    # 3. OpenAI ile Stok Analizi
+    # -------------------------------------------------------------
+    def analyze_stock_with_ai(self,
+                              product_data: dict,
+                              sales_forecast: pd.DataFrame | None = None):
         try:
-            # OpenAI'ye gönderilecek veriyi hazırla
             prompt_data = {
                 "product": {
-                    "barcode": product_data.get("barcode"),
-                    "title": product_data.get("title"),
-                    "model_id": product_data.get("product_main_id"),
-                    "color": product_data.get("color"),
-                    "size": product_data.get("size"),
-                    "current_stock": product_data.get("quantity", 0),
-                    "sale_price": product_data.get("sale_price", 0),
-                    "cost": product_data.get("cost_try", 0)
+                    "barcode":        product_data.get("barcode"),
+                    "title":          product_data.get("title"),
+                    "model_id":       product_data.get("product_main_id"),
+                    "color":          product_data.get("color"),
+                    "size":           product_data.get("size"),
+                    "current_stock":  product_data.get("quantity", 0),
+                    "sale_price":     product_data.get("sale_price", 0),
+                    "cost":           product_data.get("cost_try", 0)
                 }
             }
-            
-            # Eğer satış tahmin verisi varsa ekle
+
             if sales_forecast is not None:
-                # forecast_days değişkenini tanımla
-                days_to_forecast = 30  # Varsayılan tahmin gün sayısı
-                
+                p30 = sales_forecast.tail(30)["yhat"]
                 prompt_data["sales_forecast"] = {
-                    "next_7_days": float(sales_forecast.iloc[-days_to_forecast:-days_to_forecast+7]['yhat'].sum()),
-                    "next_15_days": float(sales_forecast.iloc[-days_to_forecast:-days_to_forecast+15]['yhat'].sum()),
-                    "next_30_days": float(sales_forecast.iloc[-days_to_forecast:]['yhat'].sum())
+                    "next_7_days":  float(p30.tail(7).sum()),
+                    "next_15_days": float(p30.tail(15).sum()),
+                    "next_30_days": float(p30.sum())
                 }
-            
-            # OpenAI'ye prompt gönder
-            system_prompt = """
-            Sen bir stok yönetim ve tahmin uzmanısın. Verilen ürün bilgilerine göre stok durumunu analiz et ve tavsiyelerde bulun.
-            Satış tahminlerini kullanarak stok tükenmeden önce ne kadar süre kaldığını hesapla.
-            Stok seviyelerinin yeterliliğini değerlendir ve sipariş zamanlaması için tavsiyeler sun.
-            Yanıtını aşağıdaki JSON formatında oluştur:
-            {
-                "stock_analysis": {
-                    "current_stock_level": "ürünün mevcut stok seviyesi",
-                    "stock_status": "kritik/düşük/yeterli/yüksek/aşırı stok",
-                    "estimated_days_until_stockout": "mevcut stokun tahmini kaç gün dayanacağı (tahmin edilebilirse)"
-                },
-                "recommendations": {
-                    "action_needed": "stok ekle/stok azalt/izle/acil sipariş ver",
-                    "suggested_order_quantity": "sipariş edilmesi önerilen miktar (gerekiyorsa)",
-                    "optimal_timing": "sipariş verilmesi gereken en uygun zaman",
-                    "explanation": "önerilerin detaylı açıklaması",
-                    "confidence_level": "tavsiyenin güven düzeyi (düşük/orta/yüksek)"
-                }
-            }
-            """
-            
-            response = self.client.chat.completions.create(
-                model="gpt-4o", # the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+
+            system_prompt = (
+                "Sen bir stok yönetim ve tahmin uzmanısın. "
+                "Verilen JSON'daki veriye göre stok seviyesini değerlendir, "
+                "kaç gün yeteceğini tahmin et ve sipariş önerisi sun. "
+                "Yanıtı sadece JSON formatında döndür."
+            )
+
+            resp = self.client.chat.completions.create(
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": json.dumps(prompt_data, ensure_ascii=False)}
+                    {"role": "user",   "content": json.dumps(prompt_data, ensure_ascii=False)}
                 ],
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
             )
-            
-            # Yanıtı JSON olarak parse et
-            try:
-                # String olduğunu doğrula ve sonra parse et
-                content = response.choices[0].message.content
-                if isinstance(content, str):
-                    analysis_result = json.loads(content)
-                    return analysis_result
-                else:
-                    logger.error(f"AI yanıtı string değil: {type(content)}")
-                    return {"error": "AI yanıtı beklenmeyen format"}
-            except json.JSONDecodeError as e:
-                logger.error(f"AI yanıtı JSON olarak parse edilemedi: {e}")
-                return {"error": "AI yanıtı işlenirken hata oluştu"}
-                
+
+            return json.loads(resp.choices[0].message.content)
+
         except Exception as e:
             logger.error(f"AI stok analizi sırasında hata: {e}", exc_info=True)
-            return {"error": f"Stok analizi yapılırken hata: {str(e)}"}
-    
-    def get_stock_health_report(self, top_n=20, days_forecast=30, include_variants=False):
-        """
-        Tüm ürünlerin stok durumu raporu
-        """
+            return {"error": str(e)}
+
+    # -------------------------------------------------------------
+    # 4. Stok Sağlık Raporu
+    # -------------------------------------------------------------
+    def get_stock_health_report(self,
+                                top_n: int = 20,
+                                days_forecast: int = 30,
+                                include_variants: bool = False):
         try:
-            # Aktif ürünleri al (arşivde olmayanlar)
             products = Product.query.filter_by(archived=False).all()
-            
             report_items = []
-            
+
             if include_variants:
-                # Her bir ürün varyantı için ayrı rapor
-                for product in products:
-                    # Gerçek tahmin yapma
-                    sales_forecast = self.predict_future_sales(
-                        product.product_main_id, 
-                        product.color, 
-                        product.size, 
-                        forecast_days=days_forecast
+                for p in products:
+                    forecast = self.predict_future_sales(
+                        p.product_main_id, p.color, p.size, days_forecast
                     )
-                    
-                    # Ürün verisi dictionary'si
-                    product_data = {
-                        "barcode": product.barcode,
-                        "title": product.title,
-                        "product_main_id": product.product_main_id,
-                        "color": product.color,
-                        "size": product.size,
-                        "quantity": product.quantity,
-                        "sale_price": product.sale_price,
-                        "cost_try": product.cost_try
+                    pdata = {
+                        "barcode": p.barcode,
+                        "title": p.title,
+                        "product_main_id": p.product_main_id,
+                        "color": p.color,
+                        "size": p.size,
+                        "quantity": p.quantity,
+                        "sale_price": p.sale_price,
+                        "cost_try": p.cost_try
                     }
-                    
-                    # AI analizi
-                    analysis = self.analyze_stock_with_ai(product_data, sales_forecast)
-                    
-                    # Rapor öğesi
-                    item = {
-                        "product": product_data,
-                        "analysis": analysis
-                    }
-                    
-                    report_items.append(item)
+                    analysis = self.analyze_stock_with_ai(pdata, forecast)
+                    report_items.append({"product": pdata, "analysis": analysis})
             else:
-                # Modele ve renge göre grupla (varyantları birleştir)
-                from sqlalchemy import func
-                product_groups = db.session.query(
+                groups = db.session.query(
                     Product.product_main_id,
                     Product.color,
-                    func.sum(Product.quantity).label('total_quantity')
+                    func.sum(Product.quantity).label("total_qty")
                 ).filter(
                     Product.archived == False
                 ).group_by(
                     Product.product_main_id,
                     Product.color
                 ).all()
-                
-                # Her grup için rapor
-                for group in product_groups:
-                    model_id, color, total_quantity = group
-                    
-                    # Grup için ilk ürünü örnek olarak al
-                    sample_product = Product.query.filter_by(
-                        product_main_id=model_id, 
-                        color=color
-                    ).first()
-                    
-                    if not sample_product:
+
+                for model_id, color, total_qty in groups:
+                    sample = Product.query.filter_by(product_main_id=model_id, color=color).first()
+                    if not sample:
                         continue
-                    
-                    # Satış tahmini
-                    sales_forecast = self.predict_future_sales(
+                    forecast = self.predict_future_sales(
                         model_id, color, forecast_days=days_forecast
                     )
-                    
-                    # Ürün verisi dictionary'si
-                    product_data = {
+                    pdata = {
                         "barcode": f"{model_id}_{color}_group",
-                        "title": sample_product.title,
+                        "title": sample.title,
                         "product_main_id": model_id,
                         "color": color,
                         "size": "Tüm Bedenler",
-                        "quantity": total_quantity,
-                        "sale_price": sample_product.sale_price,
-                        "cost_try": sample_product.cost_try
+                        "quantity": total_qty,
+                        "sale_price": sample.sale_price,
+                        "cost_try": sample.cost_try
                     }
-                    
-                    # AI analizi
-                    analysis = self.analyze_stock_with_ai(product_data, sales_forecast)
-                    
-                    # Rapor öğesi
-                    item = {
-                        "product": product_data,
-                        "analysis": analysis
-                    }
-                    
-                    report_items.append(item)
-            
-            # En kritik ürünleri sırala
-            def get_criticality_score(item):
-                if "error" in item["analysis"]:
-                    return 0
-                    
-                stock_status = item["analysis"].get("stock_analysis", {}).get("stock_status", "")
-                days_until_stockout = item["analysis"].get("stock_analysis", {}).get("estimated_days_until_stockout", 999)
-                
-                if isinstance(days_until_stockout, str):
-                    try:
-                        days_until_stockout = float(days_until_stockout)
-                    except:
-                        days_until_stockout = 999
-                
-                # Kritiklik puanı - düşük stok ve az gün kalan ürünler önce gelsin
-                if "kritik" in stock_status.lower():
-                    return 1000 - days_until_stockout
-                elif "düşük" in stock_status.lower():
-                    return 500 - days_until_stockout
-                elif "yeterli" in stock_status.lower():
-                    return 0
-                else:
-                    return -500  # Yüksek ve aşırı stok en sonda
-            
-            # En kritikten en az kritiğe doğru sırala ve ilk N ürünü döndür
-            sorted_items = sorted(report_items, key=get_criticality_score, reverse=True)
+                    analysis = self.analyze_stock_with_ai(pdata, forecast)
+                    report_items.append({"product": pdata, "analysis": analysis})
+
+            def score(item):
+                analysis = item.get("analysis", {})
+                if "error" in analysis:
+                    return -1e9
+                sa = analysis.get("stock_analysis", {})
+                status = sa.get("stock_status", "").lower()
+                try:
+                    days_left = float(sa.get("estimated_days_until_stockout", 999))
+                except ValueError:
+                    days_left = 999
+                if "kritik" in status:
+                    return 1000 - days_left
+                if "düşük" in status:
+                    return 500 - days_left
+                return -days_left
+
+            sorted_items = sorted(report_items, key=score, reverse=True)
             return sorted_items[:top_n] if top_n else sorted_items
-            
+
         except Exception as e:
             logger.error(f"Stok sağlık raporu alınırken hata: {e}", exc_info=True)
             return []
 
-# Blueprint rotaları
+# -------------------------------------------------------------------------
+# Blueprint Rotaları
+# -------------------------------------------------------------------------
 
-@ai_stock_prediction_bp.route('/ai-stock-dashboard', methods=['GET'])
+@ai_stock_prediction_bp.route("/ai-stock-dashboard")
 def ai_stock_dashboard():
-    """
-    AI destekli stok analiz paneli
-    """
-    include_variants = request.args.get('include_variants', 'false').lower() == 'true'
-    top_n = int(request.args.get('top_n', 20))
-    days = int(request.args.get('days', 30))
-    
-    predictor = StockPredictor()
-    
-    return render_template(
-        'ai_stock_dashboard.html',
-        include_variants=include_variants,
-        top_n=top_n,
-        days=days
-    )
+    include_variants = request.args.get("include_variants", "false").lower() == "true"
+    top_n  = int(request.args.get("top_n", 20))
+    days   = int(request.args.get("days", 30))
+    return render_template("ai_stock_dashboard.html",
+                           include_variants=include_variants,
+                           top_n=top_n,
+                           days=days)
 
-@ai_stock_prediction_bp.route('/api/stock-health-report', methods=['GET'])
+@ai_stock_prediction_bp.route("/api/stock-health-report")
 def get_stock_health_report_api():
-    """
-    Stok sağlık raporu API'si
-    """
-    include_variants = request.args.get('include_variants', 'false').lower() == 'true'
-    top_n = int(request.args.get('top_n', 20))
-    days = int(request.args.get('days', 30))
-    
-    predictor = StockPredictor()
-    report = predictor.get_stock_health_report(top_n=top_n, days_forecast=days, include_variants=include_variants)
-    
-    return jsonify({
-        "success": True,
-        "report": report,
-        "count": len(report)
-    })
+    include_variants = request.args.get("include_variants", "false").lower() == "true"
+    top_n  = int(request.args.get("top_n", 20))
+    days   = int(request.args.get("days", 30))
 
-@ai_stock_prediction_bp.route('/api/product-sales-prediction/<product_main_id>', methods=['GET'])
-def get_product_sales_prediction_api(product_main_id):
-    """
-    Belirli bir ürün için satış tahmini API'si
-    """
-    color = request.args.get('color')
-    size = request.args.get('size')
-    forecast_days = int(request.args.get('forecast_days', 30))
-    history_days = int(request.args.get('history_days', 90))
-    
     predictor = StockPredictor()
-    forecast = predictor.predict_future_sales(
-        product_main_id, 
-        color, 
-        size, 
-        forecast_days=forecast_days, 
-        history_days=history_days
-    )
-    
+    report = predictor.get_stock_health_report(top_n=top_n,
+                                               days_forecast=days,
+                                               include_variants=include_variants)
+    return jsonify({"success": True, "count": len(report), "report": report})
+
+@ai_stock_prediction_bp.route("/api/product-sales-prediction/<product_main_id>")
+def get_product_sales_prediction_api(product_main_id):
+    color = request.args.get("color")
+    size  = request.args.get("size")
+    forecast_days = int(request.args.get("forecast_days", 30))
+    history_days  = int(request.args.get("history_days", 90))
+
+    predictor = StockPredictor()
+    forecast = predictor.predict_future_sales(product_main_id, color, size,
+                                              forecast_days, history_days)
     if forecast is None:
-        return jsonify({
-            "success": False,
-            "message": "Tahmin için yeterli veri yok"
-        })
-    
-    # Forecast dataframe'i JSON'a dönüştür
-    # to_dict(orient='records') metodu yerine row-by-row dönüştürme kullanalım
-    forecast_data = []
-    for _, row in forecast.iterrows():
-        forecast_data.append({
-            'ds': row['ds'],
-            'yhat': float(row['yhat']),
-            'yhat_lower': float(row['yhat_lower']),
-            'yhat_upper': float(row['yhat_upper'])
-        })
-    
-    # Tahmin döneminin başlangıç indeksi
-    start_forecast_idx = len(forecast) - forecast_days
-    
+        return jsonify({"success": False, "message": "Yeterli veri yok"})
+
+    start_idx = len(forecast) - forecast_days
+    to_json = lambda row: {
+        "ds": row["ds"],
+        "yhat":        float(row["yhat"]),
+        "yhat_lower":  float(row["yhat_lower"]),
+        "yhat_upper":  float(row["yhat_upper"])
+    }
+    forecast_data = [to_json(r) for _, r in forecast.iterrows()]
+
     return jsonify({
         "success": True,
         "forecast": forecast_data,
-        "next_7_days": float(forecast.iloc[start_forecast_idx:start_forecast_idx+7]['yhat'].sum()),
-        "next_15_days": float(forecast.iloc[start_forecast_idx:start_forecast_idx+15]['yhat'].sum()),
-        "next_30_days": float(forecast.iloc[start_forecast_idx:]['yhat'].sum())
+        "next_7_days":  float(forecast.iloc[start_idx:start_idx+7]["yhat"].sum()),
+        "next_15_days": float(forecast.iloc[start_idx:start_idx+15]["yhat"].sum()),
+        "next_30_days": float(forecast.iloc[start_idx:]["yhat"].sum())
     })
 
-@ai_stock_prediction_bp.route('/api/product-stock-analysis/<product_main_id>', methods=['GET'])
+@ai_stock_prediction_bp.route("/api/product-stock-analysis/<product_main_id>")
 def get_product_stock_analysis_api(product_main_id):
-    """
-    Belirli bir ürün için AI stok analizi API'si
-    """
-    color = request.args.get('color')
-    size = request.args.get('size')
-    forecast_days = int(request.args.get('forecast_days', 30))
-    
-    # Ürünü bul
-    product_query = Product.query.filter_by(product_main_id=product_main_id)
-    if color:
-        product_query = product_query.filter_by(color=color)
-    if size:
-        product_query = product_query.filter_by(size=size)
-    
-    product = product_query.first()
-    
+    color = request.args.get("color")
+    size  = request.args.get("size")
+    forecast_days = int(request.args.get("forecast_days", 30))
+
+    q = Product.query.filter_by(product_main_id=product_main_id)
+    if color: q = q.filter_by(color=color)
+    if size:  q = q.filter_by(size=size)
+    product = q.first()
+
     if not product:
-        return jsonify({
-            "success": False,
-            "message": "Ürün bulunamadı"
-        })
-    
-    # Ürün verisi dictionary'si
-    product_data = {
+        return jsonify({"success": False, "message": "Ürün bulunamadı"})
+
+    pdata = {
         "barcode": product.barcode,
         "title": product.title,
         "product_main_id": product.product_main_id,
@@ -457,22 +353,13 @@ def get_product_stock_analysis_api(product_main_id):
         "sale_price": product.sale_price,
         "cost_try": product.cost_try
     }
-    
+
     predictor = StockPredictor()
-    
-    # Satış tahmini
-    forecast = predictor.predict_future_sales(
-        product_main_id, 
-        color, 
-        size, 
-        forecast_days=forecast_days
-    )
-    
-    # AI analizi
-    analysis = predictor.analyze_stock_with_ai(product_data, forecast)
-    
-    return jsonify({
-        "success": True,
-        "product": product_data,
-        "analysis": analysis
-    })
+    forecast  = predictor.predict_future_sales(product_main_id,
+                                               color, size,
+                                               forecast_days)
+    analysis  = predictor.analyze_stock_with_ai(pdata, forecast)
+
+    return jsonify({"success": True,
+                    "product": pdata,
+                    "analysis": analysis})
