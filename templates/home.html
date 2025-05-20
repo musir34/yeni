@@ -953,15 +953,28 @@ yazdirBtn.disabled = true;
 }
 }
 
-// ### FORM SUBMIT OLAYI - BU KEZ DİREKT KALDIRIYORUZ ###
-// Submit listener'ına gerek yok, tarayıcı enabled butona basınca veya timer form.submit() çağırınca
-// formu gönderecek ve inputs disable olmadığı için değerler gidecek.
-/*
+// Form submit işlemini izleyelim
 packingForm.addEventListener('submit', function(event) {
-// Bu kısım kaldırıldı
+    console.log("Form submit edildi - packingForm");
+    console.log("Form verisi:", new FormData(packingForm));
+    console.log("Form action:", packingForm.action);
+    console.log("Form method:", packingForm.method);
+    
+    // Form disable durumunu kontrol et
+    const disabledInputs = packingForm.querySelectorAll('input:disabled, button:disabled');
+    console.log("Disabled elements in form:", disabledInputs.length);
+    
+    // Form içindeki order_number hidden input'unun değerini kontrol et
+    const orderNumberInput = packingForm.querySelector('input[name="order_number"]');
+    console.log("order_number input value:", orderNumberInput ? orderNumberInput.value : "yok");
 });
-*/
-// ### SUBMIT KONTROLÜ - BİTTİ ###
+
+// Onay butonuna özel tıklama event listener'ı ekle
+onaylaBtn.addEventListener('click', function(event) {
+    console.log("onaylaBtn tıklandı");
+    console.log("Button state - disabled:", onaylaBtn.disabled);
+    console.log("Button class:", onaylaBtn.className);
+});
 
 
 // İlk input'a odaklansın
