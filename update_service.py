@@ -193,9 +193,14 @@ async def confirm_packing():
         logger.info("Trendyol için 'lines' hazırlanıyor...")
         lines = []
         for detail in details:
+            # Önce line_id'ye bak, yoksa line_ids_api alanını kontrol et
             line_id = detail.get('line_id')
             if not line_id:
-                logger.error(f"Bir detay satırında line_id bulunamadı: {detail}")
+                line_id = detail.get('line_ids_api')
+                logger.info(f"line_id bulunamadı, line_ids_api kullanılıyor: {line_id}")
+                
+            if not line_id:
+                logger.error(f"Bir detay satırında line_id veya line_ids_api bulunamadı: {detail}")
                 flash("'line_id' değeri yok, Trendyol update mümkün değil.", 'danger')
                 return redirect(url_for('home.home'))
 
