@@ -3,9 +3,9 @@
 {% block title %}Yapay Zeka Destekli Stok Analizi{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap5.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vendor/bootstrap.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vendor/dataTables.bootstrap5.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vendor/toastr.min.css') }}">
 <style>
     .stockout-warning {
         background-color: #FFEBEE;
@@ -136,7 +136,7 @@
                     </div>
                     <div class="row">
                         <div class="col-12 text-end">
-                            <button id="runAnalysisBtn" class="btn btn-primary" onclick="runStockAnalysis()">
+                            <button id="runAnalysisBtn" class="btn btn-primary">
                                 <i class="fas fa-sync-alt"></i> Analizi Çalıştır
                             </button>
                         </div>
@@ -371,12 +371,12 @@
 {% endblock %}
 
 {% block javascript %}
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<script src="{{ url_for('static', filename='js/vendor/jquery.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vendor/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vendor/jquery.dataTables.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vendor/dataTables.bootstrap5.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vendor/chart.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vendor/toastr.min.js') }}"></script>
 
 <script>
     // Globaller
@@ -413,18 +413,13 @@
     
     // API çağrıları
     async function getStockHealthReport() {
-        console.log("getStockHealthReport fonksiyonu çağrıldı");
         const includeVariants = $('#includeVariants').is(':checked');
         const topN = $('#stockShowCount').val();
         const days = $('#forecastDays').val();
         
-        console.log("Parametreler:", {includeVariants, topN, days});
-        
         try {
             const response = await fetch(`/api/stock-health-report?include_variants=${includeVariants}&top_n=${topN}&days=${days}`);
             const data = await response.json();
-            
-            console.log("API yanıtı:", data);
             
             if (data.success) {
                 return data.report;
