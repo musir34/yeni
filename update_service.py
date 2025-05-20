@@ -73,14 +73,19 @@ async def confirm_packing():
     Eğer doğruysa, Trendyol API'de statüyü 'Picking' yapar,
     veritabanında OrderCreated -> OrderPicking taşıması yapar.
     """
+    logger.info("======= confirm_packing fonksiyonu başlatıldı =======")
+    logger.info(f"Request method: {request.method}")
+    logger.info(f"Request form: {request.form}")
+    
     try:
         # 1) Form verilerini alalım
         order_number = request.form.get('order_number')
         if not order_number:
+            logger.error("Sipariş numarası form verisinde bulunamadı!")
             flash('Sipariş numarası bulunamadı.', 'danger')
             return redirect(url_for('home.home'))
 
-        logger.debug(f"Received order_number: {order_number}")
+        logger.info(f"İşlenecek sipariş numarası: {order_number}")
 
         # Gönderilen barkodları topla
         barkodlar = []
@@ -88,74 +93,109 @@ async def confirm_packing():
             if key.startswith('barkod_right_') or key.startswith('barkod_left_'):
                 barkod_value = request.form[key].strip()
                 barkodlar.append(barkod_value)
+                logger.debug(f"Barkod eklendi: {key}={barkod_value}")
 
-        logger.debug(f"Received barcodes: {barkodlar}")
+        logger.info(f"Toplam {len(barkodlar)} barkod alındı: {barkodlar}")
 
         # 2) OrderCreated tablosundan siparişi bul
+        logger.info(f"OrderCreated tablosunda sipariş aranıyor: {order_number}")
         order_created = OrderCreated.query.filter_by(order_number=order_number).first()
         if not order_created:
+            logger.error(f"Sipariş bulunamadı: {order_number}")
             flash('Created tablosunda bu sipariş bulunamadı.', 'danger')
-            logger.warning("Order not found in OrderCreated.")
             return redirect(url_for('home.home'))
+        
+        logger.info(f"Sipariş bulundu: {order_created}")
+        logger.info(f"Sipariş detayları: id={order_created.id}, order_number={order_created.order_number}, status={getattr(order_created, 'status', 'status alanı yok')}")
 
         # 3) Sipariş detaylarını parse et
         details_json = order_created.details or '[]'
+        logger.info(f"Sipariş detay JSON: {details_json}")
         try:
             details = json.loads(details_json)
-            logger.debug(f"Parsed details: {details}")
-        except json.JSONDecodeError:
+            logger.info(f"Parse edilen detaylar: {json.dumps(details, ensure_ascii=False)}")
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parse hatası: {e}")
             details = []
             logger.error(f"order.details JSON parse edilemedi: {order_created.details}")
 
         # 4) Beklenen barkodları hesapla (miktar*2 = sol/sağ barkod)
         expected_barcodes = []
+        logger.info("Beklenen barkodlar hesaplanıyor...")
         for detail in details:
             barcode = detail.get('barcode')
             if not barcode:
+                logger.warning(f"Bir detay satırında barkod bulunamadı: {detail}")
                 continue
 
             quantity = int(detail.get('quantity', 1))
+            logger.info(f"Ürün: barcode={barcode}, miktar={quantity}")
             # Her adet ürün için 2 barkod: sol + sağ
             count = quantity * 2  
             expected_barcodes.extend([barcode] * count)
+            logger.debug(f"Bu ürün için {count} barkod eklendi")
 
-        logger.debug(f"Expected barcodes: {expected_barcodes}")
+        logger.info(f"Beklenen barkodlar: {expected_barcodes}")
 
         # 5) Karşılaştırma
+        logger.info("Barkodlar karşılaştırılıyor...")
+        logger.info(f"Gelen barkodlar (sıralı): {sorted(barkodlar)}")
+        logger.info(f"Beklenen barkodlar (sıralı): {sorted(expected_barcodes)}")
+        
         if sorted(barkodlar) != sorted(expected_barcodes):
+            logger.error("Barkodlar uyuşmuyor!")
+            if len(barkodlar) != len(expected_barcodes):
+                logger.error(f"Barkod sayıları farklı: Gelen={len(barkodlar)}, Beklenen={len(expected_barcodes)}")
+            
+            # Hangi barkodların eksik/fazla olduğunu bul
+            in_expected_not_in_received = set(expected_barcodes) - set(barkodlar)
+            in_received_not_in_expected = set(barkodlar) - set(expected_barcodes)
+            
+            if in_expected_not_in_received:
+                logger.error(f"Beklenen ama alınmayan barkodlar: {in_expected_not_in_received}")
+            if in_received_not_in_expected:
+                logger.error(f"Alınan ama beklenmeyen barkodlar: {in_received_not_in_expected}")
+                
             flash('Barkodlar uyuşmuyor, lütfen tekrar deneyin!', 'danger')
-            logger.warning("Barcodes do not match.")
             return redirect(url_for('home.home'))
 
-        logger.debug("Barcodes match. Devam ediliyor...")
+        logger.info("✅ Barkodlar eşleşti. İşlem devam ediyor...")
 
         # 6) Trendyol API'ye status=Picking çağrısı (shipmentPackageId'ye göre)
+        logger.info("Trendyol API için hazırlık başlatılıyor...")
         # ShipmentPackageId'leri JSON detaydan veya tablo alanından alalım
         shipment_package_ids = set()
 
         # 6a) details içinde her satırda 'shipmentPackageId' varsa toplayın
+        logger.info("ShipmentPackageId'ler toplanıyor...")
         for detail in details:
             sp_id = detail.get('shipmentPackageId') or order_created.shipment_package_id or order_created.package_number
             if sp_id:
                 shipment_package_ids.add(sp_id)
+                logger.debug(f"ShipmentPackageId eklendi: {sp_id} (detaylardan)")
 
         # eğer hiç yoksa, sipariş tablosundaki (order_created.shipment_package_id) ya da (package_number) kullanılabilir
         if not shipment_package_ids:
+            logger.warning("Detaylardan hiç shipmentPackageId bulunamadı, order_created'dan alınacak")
             sp_id_fallback = order_created.shipment_package_id or order_created.package_number
             if sp_id_fallback:
                 shipment_package_ids.add(sp_id_fallback)
+                logger.info(f"Fallback ShipmentPackageId eklendi: {sp_id_fallback}")
 
         if not shipment_package_ids:
+            logger.error("Hiçbir şekilde shipmentPackageId bulunamadı!")
             flash("shipmentPackageId bulunamadı. API güncellemesi yapılamıyor.", 'danger')
-            logger.error("shipmentPackageId is missing. Cannot update Trendyol API.")
             return redirect(url_for('home.home'))
 
+        logger.info(f"Toplanan shipmentPackageId'ler: {shipment_package_ids}")
+
         # 6b) lines (Trendyol formatında) hazırlama
+        logger.info("Trendyol için 'lines' hazırlanıyor...")
         lines = []
         for detail in details:
             line_id = detail.get('line_id')
             if not line_id:
-                # Trendyol update için lineId gerekli
+                logger.error(f"Bir detay satırında line_id bulunamadı: {detail}")
                 flash("'line_id' değeri yok, Trendyol update mümkün değil.", 'danger')
                 return redirect(url_for('home.home'))
 
@@ -165,65 +205,118 @@ async def confirm_packing():
                 "quantity": q
             }
             lines.append(line)
+            logger.debug(f"Line eklendi: lineId={line_id}, quantity={q}")
+
+        logger.info(f"Toplam {len(lines)} satır oluşturuldu: {lines}")
 
         # 6c) lines'ı shipmentPackageId'ye göre gruplandırıp Trendyol'a yolla
         from collections import defaultdict
         lines_by_sp = defaultdict(list)
+        logger.info("Satırlar shipmentPackageId'ye göre gruplandırılıyor...")
 
         for detail_line in lines:
             # Detay JSON'daki 'shipmentPackageId' bulalım
             # veya fallback olarak order_created'dan
             sp_id_detail = None
-            # Aradığımız detail objeyi bulmak için line_id eşleşmesi yapabiliriz
-            # ama bu kod basit olsun diye 'detail_line["lineId"]''a göre bulabilir
-            # ya da her satırda sp_id var mi? Yukarıda toplanmış olabilir.
-
+            
             # Tek tek details'e bakıp line_id eşleşen satırın shipmentPackageId'sini alalım
             for d in details:
                 if str(d.get('line_id')) == str(detail_line["lineId"]):
                     sp_id_detail = d.get('shipmentPackageId')
+                    logger.debug(f"Satır için shipmentPackageId bulundu: lineId={detail_line['lineId']}, sp_id={sp_id_detail}")
 
             # fallback
             if not sp_id_detail:
                 sp_id_detail = order_created.shipment_package_id or order_created.package_number
+                logger.debug(f"Satır için fallback shipmentPackageId kullanılıyor: lineId={detail_line['lineId']}, sp_id={sp_id_detail}")
+
+            if not sp_id_detail:
+                logger.error(f"Bu satır için hiçbir shipmentPackageId bulunamadı: {detail_line}")
+                flash(f"LineId {detail_line['lineId']} için shipmentPackageId bulunamadı!", 'danger')
+                return redirect(url_for('home.home'))
 
             lines_by_sp[sp_id_detail].append(detail_line)
+            logger.debug(f"Satır eklendi: sp_id={sp_id_detail}, line={detail_line}")
+
+        logger.info(f"Gruplandırma sonucu: {lines_by_sp}")
 
         # Trendyol güncellemesi
+        logger.info("⏱️ Trendyol API çağrıları başlatılıyor...")
         supplier_id = SUPPLIER_ID
+        trendyol_success = True  # API çağrılarının genel başarı durumu
+
         for sp_id, lines_for_sp in lines_by_sp.items():
-            logger.info(f"Calling Trendyol for sp_id={sp_id}, lines={lines_for_sp}")
-            result = await update_order_status_to_picking(supplier_id, sp_id, lines_for_sp)
-            if result:
-                flash(f"Paket {sp_id} Trendyol'da 'Picking' olarak güncellendi.", 'success')
-            else:
-                flash(f"Trendyol API güncellemesi sırasında hata. Paket ID: {sp_id}", 'danger')
+            logger.info(f"Trendyol API çağrısı: supplier_id={supplier_id}, sp_id={sp_id}, lines={lines_for_sp}")
+            try:
+                result = await update_order_status_to_picking(supplier_id, sp_id, lines_for_sp)
+                if result:
+                    logger.info(f"✅ API çağrısı başarılı: sp_id={sp_id}")
+                    flash(f"Paket {sp_id} Trendyol'da 'Picking' olarak güncellendi.", 'success')
+                else:
+                    logger.error(f"❌ API çağrısı başarısız: sp_id={sp_id}")
+                    flash(f"Trendyol API güncellemesi sırasında hata. Paket ID: {sp_id}", 'danger')
+                    trendyol_success = False
+            except Exception as e:
+                logger.error(f"❌ API çağrısı exception: sp_id={sp_id}, error={e}")
+                flash(f"Trendyol API çağrısında istisna: {e}", 'danger')
+                trendyol_success = False
+
+        # Eğer Trendyol API çağrıları başarısız olduysa, kullanıcıya uyarı ver ama işleme devam et
+        if not trendyol_success:
+            logger.warning("Trendyol API çağrılarında bazı hatalar oluştu, ama işleme devam ediliyor.")
 
         # 7) Veritabanı tarafında OrderCreated -> OrderPicking taşı
-        # (order_created kaydını al, OrderPicking'e ekle, OrderCreated'tan sil)
+        logger.info("Veritabanında OrderCreated -> OrderPicking taşıma işlemi başlatılıyor...")
+        
+        # OrderCreated kaydını al, OrderPicking'e ekle, OrderCreated'tan sil
         data = order_created.__dict__.copy()
         data.pop('_sa_instance_state', None)
 
-        # Kolonları, OrderPicking tablosunda var olanlarla filtreleyelim
-        picking_cols = {c.name for c in OrderPicking.__table__.columns}
-        data = {k: v for k, v in data.items() if k in picking_cols}
+        try:
+            # Kolonları, OrderPicking tablosunda var olanlarla filtreleyelim
+            # __table__ erişimi LSP hatası veriyordu, düzeltelim
+            from sqlalchemy import inspect
+            inspector = inspect(OrderPicking)
+            picking_cols = {c.key for c in inspector.mapper.column_attrs}
+            
+            logger.info(f"OrderPicking tablo kolonları: {picking_cols}")
+            data = {k: v for k, v in data.items() if k in picking_cols}
+            logger.info(f"Filtrelenmiş veri: {data}")
 
-        # Yeni picking kaydı oluştur
-        new_picking_record = OrderPicking(**data)
-        # picking tablosunda ek kolonlar varsa set edebilirsiniz:
-        new_picking_record.picking_start_time = datetime.utcnow()
-
-        db.session.add(new_picking_record)
-        db.session.delete(order_created)
-        db.session.commit()
-        logger.info(f"Taşıma tamam: OrderCreated -> OrderPicking. Order num: {order_number}")
+            # Yeni picking kaydı oluştur
+            new_picking_record = OrderPicking(**data)
+            # picking tablosunda ek kolonlar varsa set edebilirsiniz:
+            new_picking_record.picking_start_time = datetime.utcnow()
+            
+            logger.info(f"Oluşturulan OrderPicking kaydı: {new_picking_record}")
+            
+            # Veritabanı işlemlerini gerçekleştir
+            db.session.add(new_picking_record)
+            db.session.delete(order_created)
+            
+            logger.info("Değişiklikler veritabanına commit ediliyor...")
+            db.session.commit()
+            logger.info(f"✅ Veritabanı taşıma tamamlandı: OrderCreated -> OrderPicking. Order num: {order_number}")
+        except Exception as db_error:
+            logger.error(f"❌ Veritabanı taşıma hatası: {db_error}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            db.session.rollback()
+            flash(f"Veritabanı işleminde hata: {db_error}", 'danger')
+            return redirect(url_for('home.home'))
 
         # 8) Bir sonraki created siparişi bul
-        next_created = OrderCreated.query.order_by(OrderCreated.order_date).first()
-        if next_created:
-            flash(f'Bir sonraki Created sipariş: {next_created.order_number}.', 'info')
-        else:
-            flash('Yeni Created sipariş bulunamadı.', 'info')
+        logger.info("Bir sonraki sipariş aranıyor...")
+        try:
+            next_created = OrderCreated.query.order_by(OrderCreated.order_date).first()
+            if next_created:
+                logger.info(f"Bir sonraki sipariş bulundu: {next_created.order_number}")
+                flash(f'Bir sonraki Created sipariş: {next_created.order_number}.', 'info')
+            else:
+                logger.info("Başka Created sipariş bulunamadı.")
+                flash('Yeni Created sipariş bulunamadı.', 'info')
+        except Exception as e:
+            logger.error(f"Sonraki sipariş aranırken hata: {e}")
+            flash('Sonraki sipariş aranırken hata oluştu.', 'warning')
 
     except Exception as e:
         logger.error(f"Hata: {e}")
