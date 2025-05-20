@@ -43,7 +43,7 @@ async def update_order_status_to_picking(supplier_id, shipment_package_id, lines
         logger.debug(f"Payload: {json.dumps(payload, ensure_ascii=False)}")
 
         async with aiohttp.ClientSession() as session:
-            async with session.put(url, headers=headers, data=json.dumps(payload), timeout=30) as response:
+            async with session.put(url, headers=headers, data=json.dumps(payload)) as response:
                 status = response.status
                 text = await response.text()
 
@@ -274,10 +274,11 @@ async def confirm_packing():
 
         try:
             # Kolonları, OrderPicking tablosunda var olanlarla filtreleyelim
-            # __table__ erişimi LSP hatası veriyordu, düzeltelim
-            from sqlalchemy import inspect
-            inspector = inspect(OrderPicking)
-            picking_cols = {c.key for c in inspector.mapper.column_attrs}
+            # SQLAlchemy ile sınıf sütunlarını al
+            picking_cols = OrderPicking.__dict__.keys()
+            logger.info(f"Raw OrderPicking attributes: {picking_cols}")
+            # SQLAlchemy iç attributelerini filtrele (_ile başlayanlar)
+            picking_cols = {c for c in picking_cols if not c.startswith('_')}
             
             logger.info(f"OrderPicking tablo kolonları: {picking_cols}")
             data = {k: v for k, v in data.items() if k in picking_cols}
