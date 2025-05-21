@@ -520,8 +520,13 @@
                  document.getElementById('color-input').value = color;
                  document.getElementById('size-input').value = size;
 
+                // Varsayılan etiket ayarlarını al
+                const labelSize = document.getElementById('label-size').value;
+                const labelLayout = document.getElementById('label-layout').value;
+                const copyCount = parseInt(document.getElementById('copy-count').value) || 1;
+
                 // Etiketi oluştur ve yazdırma işlemini başlat
-                generateLabelAndPrint(barcode, model, color, size);
+                generateLabelAndPrint(barcode, model, color, size, labelSize, labelLayout, copyCount);
             } else {
                  console.log("URL'de eksik bilgi var veya hiç yok, otomatik etiket oluşturulmayacak.");
             }
