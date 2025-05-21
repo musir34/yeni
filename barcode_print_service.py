@@ -526,14 +526,35 @@ def generate_a4_layout(barcodes, template, layout_id):
     barcodesPerPage = columns * rows
     totalPages = (totalBarcodes + barcodesPerPage - 1) // barcodesPerPage  # Yukarı yuvarlama
     
+    # Sayfa boyutu (A4 veya özel)
+    page_size_css = "A4"
+    if template.get('page_size') == 'custom_page':
+        page_size_css = f"{width_mm}mm {height_mm}mm"
+    
+    # Etiket genişliği ve yüksekliği hesapla
+    if use_fixed_label_size and label_width_mm and label_height_mm:
+        # Özel etiket boyutları kullan
+        label_width = label_width_mm
+        label_height = label_height_mm
+        
+        # Grid yerine absolute positioning kullan
+        use_grid = False
+    else:
+        # Hesaplanan boyutları kullan
+        label_width = f"calc((100% - {gap_column_mm * (columns-1)}mm) / {columns})"
+        label_height = f"calc((100% - {gap_row_mm * (rows-1)}mm) / {rows})"
+        
+        # Grid düzen kullan
+        use_grid = True
+    
     html = f"""
     <!DOCTYPE html>
     <html>
     <head>
-      <title>A4 Barkod Düzeni</title>
+      <title>Çoklu Etiket Düzeni</title>
       <style>
         @page {{
-          size: A4;
+          size: {page_size_css};
           margin: 0;
         }}
         body {{
@@ -547,13 +568,23 @@ def generate_a4_layout(barcodes, template, layout_id):
           height: {height_mm}mm;
           box-sizing: border-box;
           padding: {margin_top_mm}mm {margin_right_mm}mm {margin_bottom_mm}mm {margin_left_mm}mm;
-          
+          position: relative;
+          """
+    
+    if use_grid:
+        html += f"""
           display: grid;
-          grid-template-columns: repeat({columns}, calc((100% - {gap_column_mm * (columns-1)}mm) / {columns}));
-          grid-template-rows: repeat({rows}, calc((100% - {gap_row_mm * (rows-1)}mm) / {rows}));
-          
+          grid-template-columns: repeat({columns}, {label_width});
+          grid-template-rows: repeat({rows}, {label_height});
           column-gap: {gap_column_mm}mm;
           row-gap: {gap_row_mm}mm;
+        """
+    else:
+        html += """
+          /* Absolute positioning for fixed label sizes */
+        """
+    
+    html += f"""
         }}
         .page:not(.last-page) {{
           page-break-after: always;
