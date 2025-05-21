@@ -13,7 +13,6 @@ import io
 import os
 
 import barcode
-import qrcode
 from barcode.writer import ImageWriter
 from flask import (
     Blueprint,
@@ -22,7 +21,6 @@ from flask import (
     render_template,
     request,
     send_file,
-    url_for,
 )
 from PIL import Image, ImageDraw, ImageFont
 
@@ -55,66 +53,6 @@ def _multiline_size(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageF
 
 
 # --------------------------------------------------------------------------- #
-# Generate QR Code
-# --------------------------------------------------------------------------- #
-
-def generate_and_save_qr_code(barcode_data):
-    """
-    Verilen barkod değeri için QR kod görseli oluşturur,
-    static/qrcodes klasörüne kaydeder ve web adresini döndürür.
-    Aynı barkod için tekrar oluşturmaz (performans).
-    """
-    # QR kodun kaydedileceği klasör yolu (uygulamanın root path'ine göre)
-    qr_codes_dir = os.path.join(current_app.root_path, 'static', 'qrcodes')
-
-    # Klasör yoksa oluştur
-    if not os.path.exists(qr_codes_dir):
-        os.makedirs(qr_codes_dir)
-
-    # QR kod dosya adı (barkod değeri + .svg)
-    # Dosya adında güvenli karakterler kullanmak önemli
-    # Barkod değeri boş veya None gelirse varsayılan bir isim kullan
-    safe_barcode_data = "".join(c for c in (barcode_data or "") if c.isalnum() or c in ('-', '_', '.'))
-    if not safe_barcode_data:
-         safe_barcode_data = "empty_barcode" # Varsayılan isim
-
-    qr_file_name = f"{safe_barcode_data}.svg"
-    qr_file_path = os.path.join(qr_codes_dir, qr_file_name)
-    qr_web_path = url_for('static', filename=f'qrcodes/{qr_file_name}') # Web'den erişim yolu
-
-    # Eğer dosya zaten varsa, tekrar oluşturmaya gerek yok (performans için)
-    if os.path.exists(qr_file_path):
-        return qr_web_path
-
-    try:
-        # QR kod objesi oluştur
-        # error_correction: Hata düzeltme seviyesi (L, M, Q, H) - H en yüksek hata düzeltme
-        # box_size: Her bir kutucuğun piksel boyutu
-        # border: Kenar boşluğu
-        qr = qrcode.QRCode(
-            version=1, # QR kod versiyonu, 1 en küçük
-            error_correction=qrcode.constants.ERROR_CORRECT_H, # Yüksek hata düzeltme
-            box_size=10, # Boyut
-            border=4, # Kenarlık
-        )
-        qr.add_data(barcode_data) # QR koduna eklenecek veri
-        qr.make(fit=True) # QR kod matrisini oluştur
-
-        # QR kod görselini SVG formatında oluştur ve dosyaya kaydet
-        # SVG formatı yazdırma için genellikle daha iyi kalite sunar
-        img = qr.make_image(image_factory=qrcode.image.svg.SvgImage)
-        with open(qr_file_path, 'wb') as f:
-            img.save(f)
-
-        print(f"QR kod oluşturuldu ve kaydedildi: {qr_file_path}") # Debug
-        return qr_web_path # Oluşturulan dosyanın web adresini döndür
-
-    except Exception as e:
-        print(f"QR kod oluşturulurken hata: {e}")
-        # Hata durumunda boş string döndür
-        return ""
-
-
 # Route
 # --------------------------------------------------------------------------- #
 
@@ -123,52 +61,7 @@ def generate_and_save_qr_code(barcode_data):
 def generate_product_label():
     # ------------------------------ GET ------------------------------ #
     if request.method == "GET":
-        # Eğer print_option parametresi varsa doğrudan yazdırma yapacağız
-        if request.args.get('print_option', '') == 'custom':
-            barcode_number = request.args.get('barcode', '').strip()
-            template_id = request.args.get('template', 'etiket_67x41')
-            layout_id = request.args.get('layout', 'standart')
-            
-            if not barcode_number:
-                abort(400, description="Barkod numarası gerekli.")
-                
-            product = Product.query.filter_by(barcode=barcode_number).first()
-            if product is None:
-                abort(404, description="Ürün bulunamadı.")
-                
-            # Barkod bilgilerini hazırla
-            barcodes = [{
-                "barcode": barcode_number,
-                "model": product.product_main_id or "Model Bilinmiyor",
-                "color": product.color or "Renk Bilinmiyor",
-                "size": product.size or "Beden Bilinmiyor",
-                "qr_path": generate_and_save_qr_code(barcode_number),
-                "print_count": 1,
-                "is_printed": False
-            }]
-            
-            # Barcode_print_service'ın print endpoint'ini kullanarak yazdır
-            from barcode_print_service import generate_single_barcode_html, LABEL_TEMPLATES
-            template = LABEL_TEMPLATES.get(template_id, LABEL_TEMPLATES['etiket_67x41'])
-            html_content = generate_single_barcode_html(barcodes[0], template, layout_id)
-            
-            return html_content
-        else:
-            # Yazdırma ayarları sayfasını göster
-            barcode = request.args.get('barcode', '').strip()
-            model = request.args.get('model', '').strip()
-            color = request.args.get('color', '').strip()
-            size = request.args.get('size', '').strip()
-            
-            # Barkod yazdırma ayarları sayfasını göster
-            from barcode_print_service import LABEL_TEMPLATES, LAYOUT_TEMPLATES
-            return render_template("product_label_settings.html", 
-                                 barcode=barcode,
-                                 model=model,
-                                 color=color,
-                                 size=size,
-                                 templates=LABEL_TEMPLATES,
-                                 layouts=LAYOUT_TEMPLATES)
+        return render_template("product_label_form.html")
 
     # ------------------------------ POST ----------------------------- #
     barcode_number: str = (request.form.get("barcode") or "").strip()
