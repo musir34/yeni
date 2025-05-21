@@ -99,6 +99,8 @@
             align-items: flex-start;
             width: 100%;
             height: 100%;
+            padding: 10mm; /* Varsayılan padding */
+            box-sizing: border-box;
         }
         
         .label-item {
@@ -353,17 +355,43 @@
                     <input type="number" id="label-height" value="40" onchange="calculateLabelLayout()">
                 </div>
             </div>
+            
+            <h4 style="margin-top: 15px; margin-bottom: 5px;">Sayfa Kenar Boşlukları</h4>
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label for="margin-left">Sol Boşluk (mm):</label>
+                    <input type="number" id="margin-left" value="10" min="0" onchange="calculateLabelLayout()">
+                </div>
+                <div style="flex: 1;">
+                    <label for="margin-right">Sağ Boşluk (mm):</label>
+                    <input type="number" id="margin-right" value="10" min="0" onchange="calculateLabelLayout()">
+                </div>
+            </div>
+            
             <div style="display: flex; gap: 10px; margin-top: 10px;">
                 <div style="flex: 1;">
+                    <label for="margin-top">Üst Boşluk (mm):</label>
+                    <input type="number" id="margin-top" value="10" min="0" onchange="calculateLabelLayout()">
+                </div>
+                <div style="flex: 1;">
+                    <label for="margin-bottom">Alt Boşluk (mm):</label>
+                    <input type="number" id="margin-bottom" value="10" min="0" onchange="calculateLabelLayout()">
+                </div>
+            </div>
+            
+            <h4 style="margin-top: 15px; margin-bottom: 5px;">Etiketler Arası Boşluklar</h4>
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
                     <label for="horizontal-gap">Yatay Boşluk (mm):</label>
-                    <input type="number" id="horizontal-gap" value="5" onchange="calculateLabelLayout()">
+                    <input type="number" id="horizontal-gap" value="5" min="0" onchange="calculateLabelLayout()">
                 </div>
                 <div style="flex: 1;">
                     <label for="vertical-gap">Dikey Boşluk (mm):</label>
-                    <input type="number" id="vertical-gap" value="5" onchange="calculateLabelLayout()">
+                    <input type="number" id="vertical-gap" value="5" min="0" onchange="calculateLabelLayout()">
                 </div>
             </div>
-            <div style="margin-top: 10px;">
+            
+            <div style="margin-top: 15px;">
                 <label for="label-count">Etiket Sayısı:</label>
                 <input type="number" id="label-count" value="1" min="1" max="100" onchange="updateLabelCount()">
             </div>
@@ -535,6 +563,48 @@
                 height = 297;
             }
             
+            if (paperType === 'a4') {
+                // A4 için kenar boşluklarını al
+                const marginLeft = parseInt(document.getElementById('margin-left').value) || 10;
+                const marginRight = parseInt(document.getElementById('margin-right').value) || 10;
+                const marginTop = parseInt(document.getElementById('margin-top').value) || 10;
+                const marginBottom = parseInt(document.getElementById('margin-bottom').value) || 10;
+                
+                updatePrintStylesWithMargins(marginTop, marginRight, marginBottom, marginLeft);
+            } else {
+                // Diğer etiket boyutları için
+                const style = document.createElement('style');
+                style.id = 'dynamic-print-styles';
+                style.textContent = `
+                    @media print {
+                        @page {
+                            size: ${width}mm ${height}mm;
+                            margin: 0;
+                        }
+                        body {
+                            width: ${width}mm;
+                            height: ${height}mm;
+                        }
+                    }
+                `;
+                
+                // Stil etiketini head'e ekle
+                document.head.appendChild(style);
+            }
+        }
+        
+        // Kenar boşlukları ile yazdırma stilini güncelle
+        function updatePrintStylesWithMargins(marginTop, marginRight, marginBottom, marginLeft) {
+            // Mevcut stil etiketini kaldır
+            const existingStyle = document.getElementById('dynamic-print-styles');
+            if (existingStyle) {
+                existingStyle.remove();
+            }
+            
+            // A4 boyutları
+            const width = 210;
+            const height = 297;
+            
             // Yeni stil etiketini oluştur
             const style = document.createElement('style');
             style.id = 'dynamic-print-styles';
@@ -547,6 +617,10 @@
                     body {
                         width: ${width}mm;
                         height: ${height}mm;
+                    }
+                    #multi-label-container {
+                        padding: ${marginTop}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm !important;
+                        box-sizing: border-box;
                     }
                 }
             `;
@@ -569,14 +643,19 @@
             const hGap = parseInt(document.getElementById('horizontal-gap').value) || 5;
             const vGap = parseInt(document.getElementById('vertical-gap').value) || 5;
             
+            // Kenar boşlukları (mm)
+            const marginLeft = parseInt(document.getElementById('margin-left').value) || 10;
+            const marginRight = parseInt(document.getElementById('margin-right').value) || 10;
+            const marginTop = parseInt(document.getElementById('margin-top').value) || 10;
+            const marginBottom = parseInt(document.getElementById('margin-bottom').value) || 10;
+            
             // A4 boyutları (mm)
             const pageWidth = 210;
             const pageHeight = 297;
-            const pagePadding = 10; // sayfa kenarlarından boşluk
             
             // Kullanılabilir alan
-            const usableWidth = pageWidth - (2 * pagePadding);
-            const usableHeight = pageHeight - (2 * pagePadding);
+            const usableWidth = pageWidth - (marginLeft + marginRight);
+            const usableHeight = pageHeight - (marginTop + marginBottom);
             
             // Bir satıra kaç etiket sığar
             const labelsPerRow = Math.floor((usableWidth + hGap) / (labelWidth + hGap));
@@ -589,6 +668,12 @@
             
             // Etiketleri oluştur
             createLabelElements(labelCount, labelWidth, labelHeight, labelsPerRow, labelsPerColumn);
+            
+            // Kenar boşluklarını ayarla
+            multiLabelContainer.style.padding = `${marginTop}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm`;
+            
+            // Yazdırma CSS stil etiketini de güncelle
+            updatePrintStylesWithMargins(marginTop, marginRight, marginBottom, marginLeft);
         }
         
         // Etiket elementlerini oluştur
