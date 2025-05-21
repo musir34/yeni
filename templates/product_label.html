@@ -439,9 +439,20 @@
             const paperType = document.getElementById('paper-type').value;
             const customFields = document.getElementById('custom-size-fields');
             const labelContainer = document.getElementById('label');
+            const singleLabelContainer = document.getElementById('single-label-container');
+            const multiLabelContainer = document.getElementById('multi-label-container');
+            const multiLabelSettings = document.getElementById('multi-label-settings');
             
             // Özel boyut alanlarını göster/gizle
             customFields.style.display = paperType === 'custom' ? 'block' : 'none';
+            
+            // Çoklu etiket ayarlarını sadece A4 için göster
+            multiLabelSettings.style.display = paperType === 'a4' ? 'block' : 'none';
+            
+            // Etiket modunu ayarla (tekli/çoklu)
+            const isMultiLabel = paperType === 'a4';
+            singleLabelContainer.style.display = isMultiLabel ? 'none' : 'flex';
+            multiLabelContainer.style.display = isMultiLabel ? 'flex' : 'none';
             
             // Etikete uygun CSS sınıfı ekle/kaldır
             labelContainer.classList.remove('paper-a4', 'paper-100x100');
@@ -464,6 +475,13 @@
                 labelContainer.style.height = '297mm';
                 document.getElementById('width-input').value = '210';
                 document.getElementById('height-input').value = '297';
+                
+                // Çoklu etiket ayarlarını güncelle
+                document.getElementById('label-width').value = '60';
+                document.getElementById('label-height').value = '40';
+                
+                // Etiketleri hesapla
+                calculateLabelLayout();
             } else if (paperType === 'custom') {
                 // Özel boyut alanlarından değerleri al
                 const width = document.getElementById('width-input').value;
@@ -537,11 +555,86 @@
             document.head.appendChild(style);
         }
         
+        // Etiket sayısını güncelle
+        function updateLabelCount() {
+            calculateLabelLayout();
+        }
+        
+        // A4 kağıtta etiket düzenini hesapla
+        function calculateLabelLayout() {
+            const multiLabelContainer = document.getElementById('multi-label-container');
+            const labelCount = parseInt(document.getElementById('label-count').value) || 1;
+            const labelWidth = parseInt(document.getElementById('label-width').value) || 60;
+            const labelHeight = parseInt(document.getElementById('label-height').value) || 40;
+            const hGap = parseInt(document.getElementById('horizontal-gap').value) || 5;
+            const vGap = parseInt(document.getElementById('vertical-gap').value) || 5;
+            
+            // A4 boyutları (mm)
+            const pageWidth = 210;
+            const pageHeight = 297;
+            const pagePadding = 10; // sayfa kenarlarından boşluk
+            
+            // Kullanılabilir alan
+            const usableWidth = pageWidth - (2 * pagePadding);
+            const usableHeight = pageHeight - (2 * pagePadding);
+            
+            // Bir satıra kaç etiket sığar
+            const labelsPerRow = Math.floor((usableWidth + hGap) / (labelWidth + hGap));
+            
+            // Bir sütuna kaç etiket sığar
+            const labelsPerColumn = Math.floor((usableHeight + vGap) / (labelHeight + vGap));
+            
+            // Bir sayfaya kaç etiket sığar
+            const labelsPerPage = labelsPerRow * labelsPerColumn;
+            
+            // Etiketleri oluştur
+            createLabelElements(labelCount, labelWidth, labelHeight, labelsPerRow, labelsPerColumn);
+        }
+        
+        // Etiket elementlerini oluştur
+        function createLabelElements(count, width, height, labelsPerRow, labelsPerColumn) {
+            const multiLabelContainer = document.getElementById('multi-label-container');
+            
+            // Önce mevcut etiketleri temizle
+            multiLabelContainer.innerHTML = '';
+            
+            // Etiketleri oluştur
+            for (let i = 0; i < count; i++) {
+                const labelItem = document.createElement('div');
+                labelItem.className = 'label-item';
+                labelItem.style.width = width + 'mm';
+                labelItem.style.height = height + 'mm';
+                
+                // Etiket içeriği (tek etiketin aynısı)
+                labelItem.innerHTML = `
+                    <div class="qr-and-barcode-area">
+                        <div class="qr-area">
+                            <img class="qr-code-clone" src="https://via.placeholder.com/100" alt="QR Kod">
+                        </div>
+                        <div class="barcode-text-under-qr barcode-clone"></div>
+                    </div>
+                    <div class="text-area">
+                        <div class="product-info">
+                            <div><span class="label">Model:</span> <span class="value model-clone"></span></div>
+                            <div><span class="label">Renk:</span> <span class="value color-clone"></span></div>
+                            <div><span class="label">Beden:</span> <span class="value size-clone"></span></div>
+                        </div>
+                    </div>
+                `;
+                
+                multiLabelContainer.appendChild(labelItem);
+            }
+        }
+        
         // Etiket oluşturma ve yazdırma fonksiyonu
         function generateLabelAndPrint(barcode, model, color, size) {
             // Önce etiket boyutlarını ayarla
             updateCustomFields();
             
+            const paperType = document.getElementById('paper-type').value;
+            const isMultiLabel = paperType === 'a4';
+            
+            // Tekli etiket elementleri
             const qrCodeImage = document.getElementById('qr-code-image');
             const barcodeTextUnderQr = document.getElementById('barcode-text-under-qr');
             const modelValue = document.getElementById('model-value');
@@ -557,7 +650,16 @@
             const onQrLoad = () => {
                 console.log("QR Kod yüklendi, yazdırma başlatılıyor...");
                 cleanUpListeners();
-                window.print();
+                
+                // Çoklu etiket modunda, klonları güncelle
+                if (isMultiLabel) {
+                    updateMultiLabels(barcode, model, color, size, qrCodeImage.src);
+                }
+                
+                // Kısa bir gecikme ekleyerek tüm QR kodların yüklenmesini bekle
+                setTimeout(() => {
+                    window.print();
+                }, 500);
             };
 
             const onQrError = () => {
@@ -602,6 +704,35 @@
                     qrCodeImage.src = 'https://via.placeholder.com/100?text=Ağ+Hata';
                     qrCodeImage.alt = 'QR Kod Ağ Hatası';
                 });
+        }
+        
+        // Çoklu etiketleri güncelle
+        function updateMultiLabels(barcode, model, color, size, qrImageSrc) {
+            const labelClones = document.querySelectorAll('.label-item');
+            
+            labelClones.forEach(label => {
+                // QR kod görselini güncelle
+                const qrImg = label.querySelector('.qr-code-clone');
+                if (qrImg) {
+                    qrImg.src = qrImageSrc;
+                    qrImg.alt = 'QR Kod: ' + barcode;
+                }
+                
+                // Barkod metnini güncelle
+                const barcodeText = label.querySelector('.barcode-clone');
+                if (barcodeText) {
+                    barcodeText.textContent = barcode;
+                }
+                
+                // Ürün bilgilerini güncelle
+                const modelClone = label.querySelector('.model-clone');
+                const colorClone = label.querySelector('.color-clone');
+                const sizeClone = label.querySelector('.size-clone');
+                
+                if (modelClone) modelClone.textContent = model;
+                if (colorClone) colorClone.textContent = color;
+                if (sizeClone) sizeClone.textContent = size;
+            });
         }
 
         // Form butonuna basınca çalışacak fonksiyon
