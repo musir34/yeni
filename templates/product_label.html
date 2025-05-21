@@ -437,10 +437,15 @@
                     }
                     
                     // Ürün verilerini sakla
-                    productData = data.data;
+                    productData = data.data || {};
                     
                     // Renk seçeneklerini güncelle
-                    updateColorOptions(Object.keys(productData));
+                    if (productData && typeof productData === 'object') {
+                        updateColorOptions(Object.keys(productData));
+                    } else {
+                        console.error('Geçersiz ürün verisi:', productData);
+                        alert('Ürün verisi alınamadı.');
+                    }
                     
                     // Renk seçim alanını göster
                     document.getElementById('color-select').style.display = 'block';
