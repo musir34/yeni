@@ -702,7 +702,7 @@
             const color = $(this).data('color');
             const size = $(this).data('size');
             // URL parametrelerini encode ederek yeni sekmede aç
-            const url = `/product_label_bp/?barcode=${encodeURIComponent(barcode)}&model=${encodeURIComponent(model)}&color=${encodeURIComponent(color)}&size=${encodeURIComponent(size)}`;
+            const url = `/product_label?barcode=${encodeURIComponent(barcode)}&model=${encodeURIComponent(model)}&color=${encodeURIComponent(color)}&size=${encodeURIComponent(size)}`;
             window.open(url, '_blank');
         });
 
