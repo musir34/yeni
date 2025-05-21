@@ -88,6 +88,7 @@ from profit import profit_bp
 from stock_management import stock_management_bp
 from catalog import catalog_bp
 from barcode_print_service import barcode_print_bp
+from api_routes import api_bp
 
 blueprints = [
     order_service_bp,
@@ -115,7 +116,8 @@ blueprints = [
     stock_management_bp,
     profit_bp,
     catalog_bp,
-    barcode_print_bp
+    barcode_print_bp,
+    api_bp
 ]
 
 for bp in blueprints:
