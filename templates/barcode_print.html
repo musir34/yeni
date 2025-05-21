@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Çok Fonksiyonlu Barkod Yazdırma - Güllü Ayakkabı</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #333;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+      margin-bottom: 20px;
+    }
+    .panel {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    select, input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    .button {
+      background-color: #2196f3;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-right: 10px;
+      font-size: 16px;
+    }
+    .button:hover {
+      background-color: #1976d2;
+    }
+    .button.green {
+      background-color: #4caf50;
+    }
+    .button.green:hover {
+      background-color: #388e3c;
+    }
+    .flex-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .flex-row > div {
+      flex: 1;
+      min-width: 300px;
+      margin-right: 20px;
+    }
+    .flex-row > div:last-child {
+      margin-right: 0;
+    }
+    .template-box {
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .template-box:hover, .template-box.selected {
+      border-color: #2196f3;
+      background-color: #e3f2fd;
+    }
+    .template-box.selected {
+      box-shadow: 0 0 0 2px #2196f3;
+    }
+    .nav-buttons {
+      display: flex;
+      justify-content: center;
+      margin-top: 30px;
+      gap: 20px;
+    }
+    .nav-buttons a {
+      text-decoration: none;
+      color: white;
+      background-color: #3f51b5;
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    #preview-container {
+      margin-top: 20px;
+      border: 1px dashed #aaa;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 300px;
+    }
+    .preview-frame {
+      border: 1px solid #ddd;
+      margin: 0 auto;
+      position: relative;
+      background: white;
+      overflow: hidden;
+    }
+    .tab-buttons {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #ddd;
+    }
+    .tab-button {
+      padding: 10px 15px;
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
+      margin-right: 5px;
+      cursor: pointer;
+    }
+    .tab-button.active {
+      background: white;
+      font-weight: bold;
+      border-bottom: 1px solid white;
+      margin-bottom: -1px;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .info-box {
+      background-color: #e3f2fd;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 5px solid #2196f3;
+    }
+    .input-group {
+      display: flex;
+      margin-bottom: 15px;
+    }
+    .input-group input {
+      flex: 1;
+      margin-right: 10px;
+    }
+    .input-group button {
+      width: auto;
+    }
+    /* Spinner için stil */
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-top: 4px solid #2196f3;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+      display: none;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Çok Fonksiyonlu Barkod Yazdırma Sistemi</h1>
+
+    <div class="info-box">
+      <h3>Barkod Yazdırma Sistemi Hakkında</h3>
+      <p>Bu sistem ile barkodları farklı etiket boyutlarında ve düzenlerde yazdırabilirsiniz:</p>
+      <ul>
+        <li>Önceden tanımlanmış etiket boyutları (67x41mm, 50x25mm, 100x50mm vb.) seçebilirsiniz</li>
+        <li>A4 kağıda çoklu etiket yerleşimi yapabilirsiniz</li>
+        <li>Farklı etiket düzenleri kullanabilirsiniz (yan yana, üst üste, büyük bilgi vb.)</li>
+        <li>Özel etiket boyutları tanımlayabilirsiniz</li>
+      </ul>
+    </div>
+
+    <div class="tab-buttons">
+      <div class="tab-button active" data-tab="printer-setup">Yazıcı Ayarları</div>
+      <div class="tab-button" data-tab="barcode-entry">Barkod Girişi</div>
+      <div class="tab-button" data-tab="custom-templates">Özel Şablon Oluştur</div>
+    </div>
+
+    <!-- Yazıcı Ayarları Sekmesi -->
+    <div class="tab-content active" id="printer-setup">
+      <div class="flex-row">
+        <div>
+          <div class="panel">
+            <h2>Etiket Boyutu</h2>
+            <div class="form-group">
+              <label for="template-select">Etiket Boyutu Seçin:</label>
+              <select id="template-select">
+                {% for template_id, template in templates.items() %}
+                <option value="{{ template_id }}">{{ template.name }} ({{ template.width_mm }}mm x {{ template.height_mm }}mm)</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <h2>Etiket Düzeni</h2>
+            <div class="form-group">
+              <label for="layout-select">Düzen Seçin:</label>
+              <select id="layout-select">
+                {% for layout_id, layout in layouts.items() %}
+                <option value="{{ layout_id }}">{{ layout.name }} - {{ layout.description }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <button id="preview-button" class="button">Önizleme Göster</button>
+            <button id="save-settings" class="button green">Ayarları Kaydet</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel">
+            <h2>Önizleme</h2>
+            <div class="spinner" id="preview-spinner"></div>
+            <div id="preview-container">
+              <div id="preview-placeholder">Önizleme için ayarları seçip "Önizleme Göster" düğmesine tıklayın</div>
+              <div id="preview-frame" class="preview-frame" style="display: none;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barkod Girişi Sekmesi -->
+    <div class="tab-content" id="barcode-entry">
+      <div class="panel">
+        <h2>Barkod Yazdırma</h2>
+        <div class="form-group">
+          <label for="barcode-input">Barkod Numarası:</label>
+          <div class="input-group">
+            <input type="text" id="barcode-input" placeholder="Barkod numarasını girin...">
+            <button id="search-product" class="button">Ürünü Bul</button>
+          </div>
+          <div id="product-details" style="display: none; margin-top: 15px;"></div>
+        </div>
+
+        <button id="print-single" class="button green" disabled>Barkodu Yazdır</button>
+      </div>
+
+      <div class="panel">
+        <h2>Çoklu Barkod Yazdırma</h2>
+        <p>Sipariş fişlerindeki tüm barkodları A4 düzeninde yazdırmak için sipariş fişi sayfasına gidebilirsiniz.</p>
+        <a href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}" class="button">Sipariş Fişleri Sayfasına Git</a>
+      </div>
+    </div>
+
+    <!-- Özel Şablon Oluşturma Sekmesi -->
+    <div class="tab-content" id="custom-templates">
+      <div class="panel">
+        <h2>Özel Etiket Boyutu Oluştur</h2>
+        <div class="form-group">
+          <label for="custom-name">Şablon Adı:</label>
+          <input type="text" id="custom-name" placeholder="Özel şablon adı...">
+        </div>
+        <div class="form-group">
+          <label for="custom-width">Genişlik (mm):</label>
+          <input type="number" id="custom-width" min="10" max="300" value="70">
+        </div>
+        <div class="form-group">
+          <label for="custom-height">Yükseklik (mm):</label>
+          <input type="number" id="custom-height" min="10" max="300" value="40">
+        </div>
+        <button id="create-template" class="button green">Şablonu Oluştur</button>
+      </div>
+    </div>
+
+    <div class="nav-buttons">
+      <a href="{{ url_for('home.home') }}">Ana Sayfa</a>
+    </div>
+  </div>
+
+  <script>
+    // Sayfa yükleme
+    document.addEventListener('DOMContentLoaded', function() {
+      // Sekme değiştirme işlevi
+      const tabButtons = document.querySelectorAll('.tab-button');
+      tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          // Aktif sekmeyi değiştir
+          document.querySelector('.tab-button.active').classList.remove('active');
+          button.classList.add('active');
+          
+          // Aktif içeriği değiştir
+          document.querySelector('.tab-content.active').classList.remove('active');
+          const tabId = button.dataset.tab;
+          document.getElementById(tabId).classList.add('active');
+        });
+      });
+
+      // Kaydedilmiş ayarları yükle
+      loadSettings();
+
+      // Önizleme butonu
+      document.getElementById('preview-button').addEventListener('click', function() {
+        showPreview();
+      });
+
+      // Ayarları kaydet
+      document.getElementById('save-settings').addEventListener('click', function() {
+        saveSettings();
+      });
+
+      // Ürün ara
+      document.getElementById('search-product').addEventListener('click', function() {
+        searchProduct();
+      });
+
+      // Barkod girişinde Enter tuşuna basılınca arama yap
+      document.getElementById('barcode-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          searchProduct();
+        }
+      });
+
+      // Tek barkod yazdır
+      document.getElementById('print-single').addEventListener('click', function() {
+        printSingleBarcode();
+      });
+
+      // Özel şablon oluştur
+      document.getElementById('create-template').addEventListener('click', function() {
+        createCustomTemplate();
+      });
+    });
+
+    // Kaydedilmiş ayarları yükle
+    function loadSettings() {
+      showSpinner();
+      fetch('/barcode_print/get_settings')
+        .then(response => response.json())
+        .then(data => {
+          if (data.success && data.settings) {
+            document.getElementById('template-select').value = data.settings.template;
+            document.getElementById('layout-select').value = data.settings.layout;
+            showPreview(); // Varsayılan ayarlarla önizleme göster
+          }
+        })
+        .catch(error => {
+          console.error('Ayarları yükleme hatası:', error);
+        })
+        .finally(() => {
+          hideSpinner();
+        });
+    }
+
+    // Ayarları kaydet
+    function saveSettings() {
+      const settings = {
+        template: document.getElementById('template-select').value,
+        layout: document.getElementById('layout-select').value
+      };
+
+      showSpinner();
+      fetch('/barcode_print/save_settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settings)
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Ayarlar başarıyla kaydedildi!');
+          } else {
+            alert('Ayarlar kaydedilirken bir hata oluştu: ' + data.error);
+          }
+        })
+        .catch(error => {
+          console.error('Ayarları kaydetme hatası:', error);
+          alert('Ayarlar kaydedilirken bir hata oluştu.');
+        })
+        .finally(() => {
+          hideSpinner();
+        });
+    }
+
+    // Önizleme göster
+    function showPreview() {
+      const templateId = document.getElementById('template-select').value;
+      const layoutId = document.getElementById('layout-select').value;
+      const barcodeValue = document.getElementById('barcode-input').value || '123456789012';
+
+      const previewData = {
+        barcode: barcodeValue,
+        template: templateId,
+        layout: layoutId
+      };
+
+      showSpinner();
+      fetch('/barcode_print/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(previewData)
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            const frame = document.getElementById('preview-frame');
+            const placeholder = document.getElementById('preview-placeholder');
+            
+            // Seçilen şablona göre boyutları ayarla (ölçek: 2mm = 10px)
+            const width = data.template.width_mm * 2;
+            const height = data.template.height_mm * 2;
+            
+            frame.style.width = width + 'px';
+            frame.style.height = height + 'px';
+            
+            // HTML içeriğini yükle
+            frame.innerHTML = data.html;
+            
+            // Önizlemeyi göster
+            placeholder.style.display = 'none';
+            frame.style.display = 'block';
+          } else {
+            alert('Önizleme oluşturulurken bir hata oluştu: ' + data.error);
+          }
+        })
+        .catch(error => {
+          console.error('Önizleme hatası:', error);
+          alert('Önizleme oluşturulurken bir hata oluştu.');
+        })
+        .finally(() => {
+          hideSpinner();
+        });
+    }
+
+    // Ürün ara
+    function searchProduct() {
+      const barcode = document.getElementById('barcode-input').value.trim();
+      if (!barcode) {
+        alert('Lütfen barkod numarası girin');
+        return;
+      }
+
+      showSpinner();
+      fetch(`/api/product?barcode=${barcode}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Ürün bulunamadı');
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data && data.success) {
+            // Ürün detaylarını göster
+            const productDetails = document.getElementById('product-details');
+            productDetails.innerHTML = `
+              <div style="border: 1px solid #ddd; padding: 15px; border-radius: 4px;">
+                <h3>Ürün Bilgileri</h3>
+                <p><strong>Barkod:</strong> ${data.product.barcode}</p>
+                <p><strong>Model:</strong> ${data.product.product_main_id || ''}</p>
+                <p><strong>Renk:</strong> ${data.product.color || ''}</p>
+                <p><strong>Beden:</strong> ${data.product.size || ''}</p>
+              </div>
+            `;
+            productDetails.style.display = 'block';
+            
+            // Yazdırma düğmesini etkinleştir
+            document.getElementById('print-single').disabled = false;
+          } else {
+            alert('Ürün bulunamadı');
+            document.getElementById('print-single').disabled = true;
+            document.getElementById('product-details').style.display = 'none';
+          }
+        })
+        .catch(error => {
+          console.error('Arama hatası:', error);
+          alert('Ürün bulunamadı');
+          document.getElementById('print-single').disabled = true;
+          document.getElementById('product-details').style.display = 'none';
+        })
+        .finally(() => {
+          hideSpinner();
+        });
+    }
+
+    // Tek barkod yazdır
+    function printSingleBarcode() {
+      const barcode = document.getElementById('barcode-input').value.trim();
+      if (!barcode) {
+        alert('Lütfen barkod numarası girin');
+        return;
+      }
+
+      const templateId = document.getElementById('template-select').value;
+      const layoutId = document.getElementById('layout-select').value;
+
+      // Yeni pencerede yazdırma sayfasını aç
+      window.open(`/barcode_print/product/${barcode}?template=${templateId}&layout=${layoutId}`, '_blank');
+    }
+
+    // Özel şablon oluştur
+    function createCustomTemplate() {
+      const name = document.getElementById('custom-name').value.trim();
+      const width = parseFloat(document.getElementById('custom-width').value);
+      const height = parseFloat(document.getElementById('custom-height').value);
+
+      if (!name) {
+        alert('Lütfen şablon adı girin');
+        return;
+      }
+
+      if (isNaN(width) || width <= 0 || isNaN(height) || height <= 0) {
+        alert('Lütfen geçerli genişlik ve yükseklik değerleri girin');
+        return;
+      }
+
+      const templateData = {
+        name: name,
+        width_mm: width,
+        height_mm: height
+      };
+
+      showSpinner();
+      fetch('/barcode_print/custom_template', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(templateData)
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Özel şablon başarıyla oluşturuldu!');
+            // Sayfayı yenile
+            location.reload();
+          } else {
+            alert('Şablon oluşturulurken bir hata oluştu: ' + data.error);
+          }
+        })
+        .catch(error => {
+          console.error('Şablon oluşturma hatası:', error);
+          alert('Şablon oluşturulurken bir hata oluştu.');
+        })
+        .finally(() => {
+          hideSpinner();
+        });
+    }
+
+    // Spinner göster
+    function showSpinner() {
+      document.getElementById('preview-spinner').style.display = 'block';
+    }
+
+    // Spinner gizle
+    function hideSpinner() {
+      document.getElementById('preview-spinner').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
