@@ -975,6 +975,12 @@ def save_custom_templates():
 def load_custom_templates():
     """Özel şablonları dosyadan yükler"""
     try:
+        from flask import current_app
+        # Flask uygulama başlatma sürecinde, import sırasında bu kod çalıştırılır,
+        # ama henüz bir uygulama bağlamı yok.
+        if '_get_current_object' not in dir(current_app):
+            return
+            
         templates_path = os.path.join(current_app.instance_path, 'custom_templates.json')
         
         if os.path.exists(templates_path):
@@ -986,5 +992,12 @@ def load_custom_templates():
     except Exception as e:
         print(f"Özel şablonları yükleme hatası: {e}")
 
-# Uygulama başlangıcında özel şablonları yükle
-load_custom_templates()
+# Blueprint'imize init_app metodu ekleyelim
+def init_barcode_blueprint(app):
+    """Flask uygulaması oluşturulduğunda çağrılan fonksiyon"""
+    with app.app_context():
+        load_custom_templates()
+
+# Uygulama başlangıcında özel şablonları yükleme işlemini başlatma kodu yerine,
+# app.py içinde bu init fonksiyonu çağrılmalı
+# load_custom_templates()
