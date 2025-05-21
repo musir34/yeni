@@ -504,9 +504,13 @@
                 document.getElementById('width-input').value = '210';
                 document.getElementById('height-input').value = '297';
                 
-                // Çoklu etiket ayarlarını güncelle
-                document.getElementById('label-width').value = '60';
-                document.getElementById('label-height').value = '40';
+                // Kaydedilmiş etiket boyutlarını al veya varsayılanları kullan
+                const savedLabelWidth = localStorage.getItem('labelWidth') || '60';
+                const savedLabelHeight = localStorage.getItem('labelHeight') || '40';
+                
+                // Etiket boyutlarını ayarla
+                document.getElementById('label-width').value = savedLabelWidth;
+                document.getElementById('label-height').value = savedLabelHeight;
                 
                 // Etiketleri hesapla
                 calculateLabelLayout();
@@ -643,6 +647,10 @@
             const hGap = parseInt(document.getElementById('horizontal-gap').value) || 5;
             const vGap = parseInt(document.getElementById('vertical-gap').value) || 5;
             
+            // Girilen etiket boyutlarını kaydet
+            localStorage.setItem('labelWidth', labelWidth);
+            localStorage.setItem('labelHeight', labelHeight);
+            
             // Kenar boşlukları (mm)
             const marginLeft = parseInt(document.getElementById('margin-left').value) || 10;
             const marginRight = parseInt(document.getElementById('margin-right').value) || 10;
@@ -690,11 +698,15 @@
                 labelItem.style.width = width + 'mm';
                 labelItem.style.height = height + 'mm';
                 
+                // QR kod alanı boyutunu da etiket boyutuna göre ayarla
+                const qrSizePercent = Math.min(0.6, 30 / Math.min(width, height)); // QR kod boyutu etiketin en fazla %60'ı kadar
+                const qrSize = Math.min(width, height) * qrSizePercent;
+                
                 // Etiket içeriği (tek etiketin aynısı)
                 labelItem.innerHTML = `
-                    <div class="qr-and-barcode-area">
-                        <div class="qr-area">
-                            <img class="qr-code-clone" src="https://via.placeholder.com/100" alt="QR Kod">
+                    <div class="qr-and-barcode-area" style="width: ${qrSize}mm;">
+                        <div class="qr-area" style="width: ${qrSize}mm; height: ${qrSize}mm;">
+                            <img class="qr-code-clone" src="https://via.placeholder.com/100" alt="QR Kod" style="width: 100%; height: 100%;">
                         </div>
                         <div class="barcode-text-under-qr barcode-clone"></div>
                     </div>
