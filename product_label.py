@@ -106,9 +106,9 @@ def generate_product_label():
     canvas_w = max(barcode_img.width, text_w + 20)
     canvas_h = barcode_img.height + text_h + padding
 
-    canvas = Image.new("RGB", (canvas_w, canvas_h), "white")
+    canvas = Image.new("RGB", (int(canvas_w), int(canvas_h)), "white")
     # Barkodu ortala
-    barcode_x = (canvas_w - barcode_img.width) // 2
+    barcode_x = int((canvas_w - barcode_img.width) // 2)
     canvas.paste(barcode_img, (barcode_x, 0))
 
     # Metni çiz
