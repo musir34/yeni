@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Ürün Etiketi Oluştur{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Ürün Etiketi Oluşturma</h4>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('product_label_bp.generate_product_label') }}" method="post">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="barcode" class="form-label">Barkod Numarası *</label>
+                                <input type="text" class="form-control" id="barcode" name="barcode" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="paper_size" class="form-label">Kağıt Boyutu</label>
+                                <select class="form-select" id="paper_size" name="paper_size">
+                                    <option value="custom" selected>Özel Boyut</option>
+                                    <option value="a4">A4 (210mm x 297mm)</option>
+                                    <option value="a5">A5 (148mm x 210mm)</option>
+                                    <option value="letter">Letter (216mm x 279mm)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="layout_type" class="form-label">Etiket Düzeni</label>
+                                <select class="form-select" id="layout_type" name="layout_type">
+                                    <option value="single" selected>Tek Etiket</option>
+                                    <option value="double">Çift Etiket (Yan Yana)</option>
+                                    <option value="multi">Çoklu Etiket</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Özel boyut seçildiğinde göster -->
+                        <div class="row mb-3" id="custom_size_options">
+                            <div class="col-md-6">
+                                <label for="label_width" class="form-label">Etiket Genişliği (mm)</label>
+                                <input type="number" class="form-control" id="label_width" name="label_width" value="80">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="label_height" class="form-label">Etiket Yüksekliği (mm)</label>
+                                <input type="number" class="form-control" id="label_height" name="label_height" value="40">
+                            </div>
+                        </div>
+
+                        <!-- Çoklu etiket seçildiğinde göster -->
+                        <div class="row mb-3" id="multi_label_options" style="display: none;">
+                            <div class="col-md-6">
+                                <label for="columns" class="form-label">Sütun Sayısı</label>
+                                <input type="number" class="form-control" id="columns" name="columns" value="2" min="1" max="4">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="rows" class="form-label">Satır Sayısı</label>
+                                <input type="number" class="form-control" id="rows" name="rows" value="4" min="1" max="8">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="margin" class="form-label">Etiket Kenar Boşluğu (mm)</label>
+                                <input type="number" class="form-control" id="margin" name="margin" value="5" min="0" max="20">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="font_size" class="form-label">Yazı Boyutu (pt)</label>
+                                <input type="number" class="form-control" id="font_size" name="font_size" value="12" min="8" max="24">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="include_price" name="include_price">
+                                    <label class="form-check-label" for="include_price">Fiyat bilgisini ekle</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-tag me-1"></i> Etiket Oluştur
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const paperSizeSelect = document.getElementById('paper_size');
+        const layoutTypeSelect = document.getElementById('layout_type');
+        const customSizeOptions = document.getElementById('custom_size_options');
+        const multiLabelOptions = document.getElementById('multi_label_options');
+        
+        // Kağıt boyutu değiştiğinde
+        paperSizeSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customSizeOptions.style.display = 'flex';
+            } else {
+                customSizeOptions.style.display = 'none';
+            }
+        });
+        
+        // Etiket düzeni değiştiğinde
+        layoutTypeSelect.addEventListener('change', function() {
+            if (this.value === 'multi') {
+                multiLabelOptions.style.display = 'flex';
+            } else {
+                multiLabelOptions.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}
