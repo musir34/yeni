@@ -767,9 +767,23 @@ def generate_a4_layout(barcodes, template, layout_id):
             if index < totalBarcodes:
                 barcode_item = barcodes[index]
                 
+                # Eğer özel etiket boyutları kullanılıyorsa absolute positioning kullan
+                if not use_grid:
+                    row = i // columns
+                    col = i % columns
+                    
+                    # Konumu hesapla (mm cinsinden)
+                    left = margin_left_mm + col * (label_width + gap_column_mm)
+                    top = margin_top_mm + row * (label_height + gap_row_mm)
+                    
+                    # Absolute positioning için div açılışı
+                    html += f'<div class="label" style="position: absolute; left: {left}mm; top: {top}mm; width: {label_width}mm; height: {label_height}mm;">'
+                else:
+                    # Grid düzen için normal div açılışı
+                    html += '<div class="label">'
+                
                 if layout_id == 'standart':
                     html += f"""
-                    <div class="label">
                       <div class="left">
                         <img src="{barcode_item.get('qr_path', '')}" alt="QR Kod">
                         <div class="barcode-text">{barcode_item.get('barcode', '')}</div>
@@ -779,11 +793,9 @@ def generate_a4_layout(barcodes, template, layout_id):
                         <div class="info">Renk: {barcode_item.get('color', '')}</div>
                         <div class="info">Beden: {barcode_item.get('size', '')}</div>
                       </div>
-                    </div>
                     """
                 elif layout_id == 'ustuste':
                     html += f"""
-                    <div class="label">
                       <div class="top">
                         <img src="{barcode_item.get('qr_path', '')}" alt="QR Kod">
                         <div class="barcode-text">{barcode_item.get('barcode', '')}</div>
@@ -793,18 +805,14 @@ def generate_a4_layout(barcodes, template, layout_id):
                         <div class="info">Renk: {barcode_item.get('color', '')}</div>
                         <div class="info">Beden: {barcode_item.get('size', '')}</div>
                       </div>
-                    </div>
                     """
                 elif layout_id == 'sadece_qr':
                     html += f"""
-                    <div class="label">
                       <img src="{barcode_item.get('qr_path', '')}" alt="QR Kod">
                       <div class="barcode-text">{barcode_item.get('barcode', '')}</div>
-                    </div>
                     """
                 elif layout_id == 'buyuk_bilgi':
                     html += f"""
-                    <div class="label">
                       <div class="left">
                         <img src="{barcode_item.get('qr_path', '')}" alt="QR Kod">
                         <div class="barcode-text">{barcode_item.get('barcode', '')}</div>
@@ -814,10 +822,16 @@ def generate_a4_layout(barcodes, template, layout_id):
                         <div class="info">Renk: {barcode_item.get('color', '')}</div>
                         <div class="info">Beden: {barcode_item.get('size', '')}</div>
                       </div>
-                    </div>
                     """
+                # Etiket div'ini kapat
+                html += '</div>'  # Etiket sonu
             else:
-                html += '<div class="label"></div>'  # Boş etiket
+                # Boş etiket (index sınırları dışında)
+                if not use_grid:
+                    # Skip empty cells for absolute positioning
+                    pass
+                else:
+                    html += '<div class="label"></div>'  # Boş etiket (grid için)
         
         html += '</div>'  # Sayfa sonu
     
