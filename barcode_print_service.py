@@ -11,16 +11,6 @@ import re
 # Blueprint oluştur
 barcode_print_bp = Blueprint('barcode_print_bp', __name__, url_prefix='/barcode_print')
 
-# Uygulama başlangıcında çalışacak fonksiyon
-@barcode_print_bp.record_once
-def init_app(state):
-    app = state.app
-    with app.app_context():
-        try:
-            load_custom_templates()
-        except Exception as e:
-            app.logger.error(f"Özel şablonları yükleme hatası: {e}")
-
 # Etiket şablonları - bu sözlüğü genişletebilirsiniz
 LABEL_TEMPLATES = {
     'etiket_67x41': {
@@ -538,35 +528,33 @@ def generate_a4_layout(barcodes, template, layout_id):
       <title>A4 Barkod Düzeni</title>
       <style>
         @page {{
-          size: A4 portrait;
+          size: A4;
           margin: 0;
         }}
-        html, body {{
+        body {{
           margin: 0;
           padding: 0;
           background: white;
           font-family: Arial, sans-serif;
-          width: 210mm;
-          height: 297mm;
         }}
         .page {{
-          width: 210mm;
-          height: 297mm;
+          width: {width_mm}mm;
+          height: {height_mm}mm;
           box-sizing: border-box;
           padding: {margin_top_mm}mm {margin_right_mm}mm {margin_bottom_mm}mm {margin_left_mm}mm;
+          
+          display: grid;
+          grid-template-columns: repeat({columns}, calc((100% - {gap_column_mm * (columns-1)}mm) / {columns}));
+          grid-template-rows: repeat({rows}, calc((100% - {gap_row_mm * (rows-1)}mm) / {rows}));
+          
+          column-gap: {gap_column_mm}mm;
+          row-gap: {gap_row_mm}mm;
+        }}
+        .page:not(.last-page) {{
           page-break-after: always;
-          position: relative;
         }}
         .page.last-page {{
           page-break-after: auto;
-        }}
-        .labels-grid {{
-          display: grid;
-          grid-template-columns: repeat({columns}, 1fr);
-          grid-template-rows: repeat({rows}, 1fr);
-          grid-gap: {gap_row_mm}mm {gap_column_mm}mm;
-          width: calc(210mm - {margin_left_mm}mm - {margin_right_mm}mm);
-          height: calc(297mm - {margin_top_mm}mm - {margin_bottom_mm}mm);
         }}
     """
     
@@ -577,9 +565,6 @@ def generate_a4_layout(barcodes, template, layout_id):
           display: flex;
           border: none;
           box-sizing: border-box;
-          width: 100%;
-          height: 100%;
-          background-color: white;
         }
         .left {
           width: 50%;
@@ -587,7 +572,7 @@ def generate_a4_layout(barcodes, template, layout_id):
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 2mm;
+          padding: 1mm;
           box-sizing: border-box;
         }
         .right {
@@ -596,24 +581,24 @@ def generate_a4_layout(barcodes, template, layout_id):
           flex-direction: column;
           justify-content: center;
           text-align: center;
-          padding: 2mm;
+          padding: 1mm;
           box-sizing: border-box;
         }
         img {
-          max-width: 20mm;
-          max-height: 20mm;
-          margin-bottom: 2mm;
+          max-width: 18mm;
+          max-height: 18mm;
+          margin-bottom: 1mm;
         }
         .barcode-text {
-          font-size: 8.5pt;
+          font-size: 8pt;
           text-align: center;
           font-weight: bold;
           word-break: break-all;
           line-height: 1.2;
         }
         .info {
-          margin-bottom: 2mm;
-          font-size: 9pt;
+          margin-bottom: 1.5mm;
+          font-size: 8.5pt;
           font-weight: 600;
           line-height: 1.2;
         }
@@ -739,7 +724,7 @@ def generate_a4_layout(barcodes, template, layout_id):
     # Sayfaları oluştur
     for page in range(totalPages):
         pageClass = "page last-page" if page == totalPages - 1 else "page"
-        html += f'<div class="{pageClass}"><div class="labels-grid">'
+        html += f'<div class="{pageClass}">'
         
         for i in range(barcodesPerPage):
             index = page * barcodesPerPage + i
@@ -798,7 +783,7 @@ def generate_a4_layout(barcodes, template, layout_id):
             else:
                 html += '<div class="label"></div>'  # Boş etiket
         
-        html += '</div></div>'  # labels-grid ve Sayfa sonu
+        html += '</div>'  # Sayfa sonu
     
     # Otomatik yazdırma script'i
     html += """
@@ -931,5 +916,5 @@ def load_custom_templates():
     except Exception as e:
         print(f"Özel şablonları yükleme hatası: {e}")
 
-# Uygulama başlangıcında özel şablonları yüklemeyeceğiz
-# load_custom_templates()
+# Uygulama başlangıcında özel şablonları yükle
+load_custom_templates()

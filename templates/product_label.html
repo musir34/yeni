@@ -286,41 +286,8 @@
         <input type="text" id="model-input" placeholder="Model Kodu" required>
         <input type="text" id="color-input" placeholder="Renk" required>
         <input type="text" id="size-input" placeholder="Beden" required>
-        
-        <div style="margin-top: 15px; margin-bottom: 15px;">
-            <h3 style="font-size: 16px; margin-bottom: 10px;">Etiket Ayarları</h3>
-            
-            <div style="margin-bottom: 10px;">
-                <label for="label-size" style="display: block; margin-bottom: 5px; font-weight: bold;">Etiket Boyutu:</label>
-                <select id="label-size" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-                    <option value="etiket_67x41">67x41mm (Standart)</option>
-                    <option value="etiket_50x25">50x25mm (Küçük)</option>
-                    <option value="etiket_100x50">100x50mm (Büyük)</option>
-                    <option value="etiket_a4_4x2">A4 (4x2 Düzen)</option>
-                    <option value="etiket_a4_3x8">A4 (3x8 Düzen)</option>
-                </select>
-            </div>
-            
-            <div style="margin-bottom: 10px;">
-                <label for="label-layout" style="display: block; margin-bottom: 5px; font-weight: bold;">Etiket Düzeni:</label>
-                <select id="label-layout" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-                    <option value="standart">Standart (Barkod ve Bilgiler)</option>
-                    <option value="sadece_qr">Sadece QR Kod</option>
-                    <option value="iki_yanyana">İki Yanyana</option>
-                    <option value="alt_uste">Alt Üste</option>
-                </select>
-            </div>
-            
-            <div style="margin-bottom: 10px;">
-                <label for="copy-count" style="display: block; margin-bottom: 5px; font-weight: bold;">Kopya Sayısı:</label>
-                <input type="number" id="copy-count" min="1" max="100" value="1" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-            </div>
-        </div>
 
-        <div style="display: flex; justify-content: space-between; gap: 10px;">
-            <button type="button" onclick="generateFromForm()" style="flex: 1; background-color: #2196f3;">Etiket Oluştur</button>
-            <button type="button" onclick="generateAndPrintFromForm()" style="flex: 1; background-color: #28a745;">Etiket Yazdır</button>
-        </div>
+        <button type="button" onclick="generateAndPrintFromForm()">Etiket Oluştur & Yazdır</button>
     </div>
 
     <div class="label-container" id="label">
@@ -346,103 +313,54 @@
     </div>
 
     <script>
-        // Sadece etiket oluşturan fonksiyon (yazdırmadan)
-        function generateLabel(barcode, model, color, size, labelSize, labelLayout) {
+        // Etiket oluşturma ve yazdırma fonksiyonu (artık değerleri parametre olarak alıyor ve görselin yüklenmesini bekliyor)
+        function generateLabelAndPrint(barcode, model, color, size) {
             const qrCodeImage = document.getElementById('qr-code-image');
             const barcodeTextUnderQr = document.getElementById('barcode-text-under-qr');
             const modelValue = document.getElementById('model-value');
             const colorValue = document.getElementById('color-value');
             const sizeValue = document.getElementById('size-value');
 
-            // Etiket boyut ve düzen ayarlarını uygula
-            applyLabelSettings(labelSize, labelLayout);
+            // Önceki görsel yükleme olay dinleyicilerini temizle (olabilir ki arka arkaya hızlı basıldı)
+            // Basitçe img src değiştiğinde load/error olayları yeniden tetiklenir, dinleyiciyi bir kere kurup sonra kaldırmak daha güvenli.
+             const cleanUpListeners = () => {
+                 qrCodeImage.removeEventListener('load', onQrLoad);
+                 qrCodeImage.removeEventListener('error', onQrError);
+             };
 
-            // QR Altındaki Barkod değerini güncelle
-            barcodeTextUnderQr.textContent = barcode;
+             const onQrLoad = () => {
+                 console.log("QR Kod yüklendi, yazdırma başlatılıyor...");
+                 cleanUpListeners(); // Dinleyicileri kaldır
+                 window.print(); // Görsel yüklenince yazdırma ekranını aç
+             };
 
-            // Ürün bilgilerini güncelle
-            modelValue.textContent = model;
-            colorValue.textContent = color;
-            sizeValue.textContent = size;
-
-            // Backend'den QR kod görselini çek ama yazdırma yapmadan
-            fetch(`/generate_qr?barcode=${encodeURIComponent(barcode)}`)
-                .then(response => {
-                    if (!response.ok) {
-                        return response.text().then(text => { throw new Error(`HTTP error! status: ${response.status}, message: ${text}`); });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        // Görsel yolunu ayarla
-                        qrCodeImage.src = data.qr_code_path;
-                        qrCodeImage.alt = 'QR Kod: ' + barcode;
-                    } else {
-                        alert('QR Kod oluşturma başarısız: ' + (data.message || 'Bilinmeyen hata'));
-                        qrCodeImage.src = 'https://via.placeholder.com/100?text=Hata';
-                        qrCodeImage.alt = 'QR Kod Hatası';
-                    }
-                })
-                .catch(err => {
-                    console.error('QR Kod oluşturulurken fetch hatası:', err);
-                    alert('QR Kod oluşturulurken bir ağ hatası oluştu. Detaylar konsolda.');
-                    qrCodeImage.src = 'https://via.placeholder.com/100?text=Ağ+Hata';
-                    qrCodeImage.alt = 'QR Kod Ağ Hatası';
-                });
-        }
-        
-        // Etiket oluşturma ve yazdırma fonksiyonu
-        function generateLabelAndPrint(barcode, model, color, size, labelSize, labelLayout, copyCount) {
-            const qrCodeImage = document.getElementById('qr-code-image');
-            const barcodeTextUnderQr = document.getElementById('barcode-text-under-qr');
-            const modelValue = document.getElementById('model-value');
-            const colorValue = document.getElementById('color-value');
-            const sizeValue = document.getElementById('size-value');
-            const labelContainer = document.getElementById('label');
-
-            // Etiket boyut ve düzen ayarlarını uygula
-            applyLabelSettings(labelSize, labelLayout);
-
-            // Önceki görsel yükleme olay dinleyicilerini temizle
-            const cleanUpListeners = () => {
-                qrCodeImage.removeEventListener('load', onQrLoad);
-                qrCodeImage.removeEventListener('error', onQrError);
-            };
-
-            const onQrLoad = () => {
-                console.log("QR Kod yüklendi, yazdırma başlatılıyor...");
-                cleanUpListeners(); // Dinleyicileri kaldır
-                
-                // Kopya sayısı kadar yazdırma hazırlığı
-                prepareMultipleCopies(copyCount);
-                
-                // Yazdırma işlemini başlat
-                window.print();
-            };
-
-            const onQrError = () => {
-                console.error("QR Kod yüklenirken hata oluştu.");
-                cleanUpListeners(); // Dinleyicileri kaldır
-                alert("QR Kod görseli yüklenirken hata oluştu. Yazdırma yapılamıyor.");
-            };
+             const onQrError = () => {
+                 console.error("QR Kod yüklenirken hata oluştu.");
+                 cleanUpListeners(); // Dinleyicileri kaldır
+                 alert("QR Kod görseli yüklenirken hata oluştu. Yazdırma yapılamıyor.");
+                 // Hata durumunda placeholder görseli zaten ayarlanmış olacak
+             };
 
             // Görsel yükleme ve hata olay dinleyicilerini kur
             qrCodeImage.addEventListener('load', onQrLoad);
             qrCodeImage.addEventListener('error', onQrError);
 
-            // QR Altındaki Barkod değerini güncelle
+
+            // QR Altındaki Barkod değerini güncelle (Sadece değer)
             barcodeTextUnderQr.textContent = barcode;
 
-            // Ürün bilgilerini güncelle
+            // Sağdaki diğer bilgileri güncelle
             modelValue.textContent = model;
             colorValue.textContent = color;
             sizeValue.textContent = size;
 
             // Backend'den QR kod görselini çek
-            fetch(`/generate_qr?barcode=${encodeURIComponent(barcode)}`)
+            // Bu satır görsel yüklemeyi tetikler ve yukarıdaki olay dinleyicileri devreye girer
+             fetch(`/generate_qr?barcode=${encodeURIComponent(barcode)}`) // Barkodu URL'ye ekleyip backend'e gönder
                 .then(response => {
-                    if (!response.ok) {
+                     if (!response.ok) {
+                         // Fetch hatası durumunda da görselin error event'i tetiklenmeyebilir,
+                         // bu yüzden burada da hata mesajı gösterelim ve görseli placeholder'a çevirelim.
                         return response.text().then(text => { throw new Error(`HTTP error! status: ${response.status}, message: ${text}`); });
                     }
                     return response.json();
@@ -451,124 +369,41 @@
                     if (data.success) {
                         // Görsel yolunu ayarla. Bu, görselin yüklenmesini başlatır.
                         qrCodeImage.src = data.qr_code_path;
-                        qrCodeImage.alt = 'QR Kod: ' + barcode;
+                         qrCodeImage.alt = 'QR Kod: ' + barcode;
+                         // >>> window.print() artık BURADA DEĞİL <<<
+                         // window.print() görselin 'load' eventi içinde çağrılacak.
                     } else {
+                         // Backend başarı dönmediyse
                         alert('QR Kod oluşturma başarısız: ' + (data.message || 'Bilinmeyen hata'));
-                        qrCodeImage.src = 'https://via.placeholder.com/100?text=Hata';
-                        qrCodeImage.alt = 'QR Kod Hatası';
+                         qrCodeImage.src = 'https://via.placeholder.com/100?text=Hata'; // Hata durumunda placeholder göster
+                         qrCodeImage.alt = 'QR Kod Hatası';
+                          // Hata olursa yazdırma ekranını açma, hata dinleyicisi bunu halledecek
                     }
                 })
                 .catch(err => {
+                    // Fetch sırasında ağ hatası vs olursa
                     console.error('QR Kod oluşturulurken fetch hatası:', err);
                     alert('QR Kod oluşturulurken bir ağ hatası oluştu. Detaylar konsolda.');
-                    qrCodeImage.src = 'https://via.placeholder.com/100?text=Ağ+Hata';
+                    qrCodeImage.src = 'https://via.placeholder.com/100?text=Ağ+Hata'; // Ağ hatası placeholder göster
                     qrCodeImage.alt = 'QR Kod Ağ Hatası';
+                     // Hata olursa yazdırma ekranını açma, hata dinleyicisi veya burada gösterilen alert yeterli
                 });
         }
-        
-        // Etiket boyut ve düzen ayarlarını uygulama fonksiyonu
-        function applyLabelSettings(labelSize, labelLayout) {
-            const labelContainer = document.getElementById('label');
-            const qrArea = document.querySelector('.qr-area');
-            const textArea = document.querySelector('.text-area');
-            
-            // Önce tüm stil sınıflarını temizle
-            labelContainer.className = 'label-container';
-            
-            // Etiket boyutu ayarları
-            switch(labelSize) {
-                case 'etiket_50x25':
-                    labelContainer.style.width = '50mm';
-                    labelContainer.style.height = '25mm';
-                    qrArea.style.width = '60px';
-                    qrArea.style.height = '60px';
-                    break;
-                case 'etiket_100x50':
-                    labelContainer.style.width = '100mm';
-                    labelContainer.style.height = '50mm';
-                    qrArea.style.width = '120px';
-                    qrArea.style.height = '120px';
-                    break;
-                case 'etiket_a4_4x2':
-                case 'etiket_a4_3x8':
-                    // A4 düzenleri için özel sınıflar eklenebilir
-                    labelContainer.classList.add('a4-layout');
-                    break;
-                default: // etiket_67x41 (standart)
-                    labelContainer.style.width = '67mm';
-                    labelContainer.style.height = '41mm';
-                    qrArea.style.width = '100px';
-                    qrArea.style.height = '100px';
-            }
-            
-            // Etiket düzeni ayarları
-            switch(labelLayout) {
-                case 'sadece_qr':
-                    labelContainer.classList.add('qr-only');
-                    textArea.style.display = 'none';
-                    break;
-                case 'iki_yanyana':
-                    labelContainer.classList.add('side-by-side');
-                    break;
-                case 'alt_uste':
-                    labelContainer.classList.add('stacked');
-                    labelContainer.style.flexDirection = 'column';
-                    break;
-                default: // standart
-                    labelContainer.style.flexDirection = 'row';
-                    textArea.style.display = 'flex';
-            }
-        }
-        
-        // Kopya sayısı kadar aynı etiketten hazırlama
-        function prepareMultipleCopies(copyCount) {
-            // Bu fonksiyonu çağıran yer yazdırma işlemini başlatacak
-            console.log(`${copyCount} adet etiket yazdırılacak`);
-            // Yazdırma ön izlemesinde birden fazla kopya seçeneği sunabilir
-            // veya script ile sayfa stili oluşturarak kopya sayısını ayarlayabilirsiniz
-        }
 
-        // Sadece etiket oluşturan fonksiyon (yazdırma yapmaz)
-        function generateFromForm() {
-            const barcode = document.getElementById('barcode-input').value;
-            const model = document.getElementById('model-input').value;
-            const color = document.getElementById('color-input').value;
-            const size = document.getElementById('size-input').value;
-            const labelSize = document.getElementById('label-size').value;
-            const labelLayout = document.getElementById('label-layout').value;
-            const copyCount = parseInt(document.getElementById('copy-count').value) || 1;
-
-            if (!barcode || !model || !color || !size) {
-                alert("Lütfen barkod ve ürün bilgilerini doldurun.");
-                return;
-            }
-            
-            // Formdan alınan değerlerle sadece etiket oluştur (yazdırmadan)
-            generateLabel(barcode, model, color, size, labelSize, labelLayout);
-        }
-        
-        // Form butonuna basınca çalışacak fonksiyon (oluştur + yazdır)
+        // Form butonuna basınca çalışacak fonksiyon
         function generateAndPrintFromForm() {
-            const barcode = document.getElementById('barcode-input').value;
-            const model = document.getElementById('model-input').value;
-            const color = document.getElementById('color-input').value;
-            const size = document.getElementById('size-input').value;
-            const labelSize = document.getElementById('label-size').value;
-            const labelLayout = document.getElementById('label-layout').value;
-            const copyCount = parseInt(document.getElementById('copy-count').value) || 1;
+             const barcode = document.getElementById('barcode-input').value;
+             const model = document.getElementById('model-input').value;
+             const color = document.getElementById('color-input').value;
+             const size = document.getElementById('size-input').value;
 
-            if (!barcode || !model || !color || !size) {
-                alert("Lütfen barkod ve ürün bilgilerini doldurun.");
-                return;
-            }
-            
-            if (copyCount < 1 || copyCount > 100) {
-                alert("Kopya sayısı 1-100 arasında olmalıdır.");
+             if (!barcode || !model || !color || !size) {
+                alert("Lütfen tüm alanları doldurun.");
                 return;
             }
 
             // Formdan alınan değerlerle etiket oluştur ve yazdırma işlemini başlat
-            generateLabelAndPrint(barcode, model, color, size, labelSize, labelLayout, copyCount);
+            generateLabelAndPrint(barcode, model, color, size);
         }
 
 
@@ -580,7 +415,7 @@
             const color = urlParams.get('color');
             const size = urlParams.get('size');
 
-            // Eğer URL'de tüm gerekli bilgiler varsa, otomatik oluştur ama yazdırmadan
+            // Eğer URL'de tüm gerekli bilgiler varsa, otomatik oluştur ve yazdır
             if (barcode && model && color && size) {
                 // Form alanlarını doldur (kullanıcı görsün diye)
                  document.getElementById('barcode-input').value = barcode;
@@ -588,13 +423,8 @@
                  document.getElementById('color-input').value = color;
                  document.getElementById('size-input').value = size;
 
-                // Varsayılan etiket ayarlarını al
-                const labelSize = document.getElementById('label-size').value;
-                const labelLayout = document.getElementById('label-layout').value;
-                const copyCount = parseInt(document.getElementById('copy-count').value) || 1;
-
-                // Sadece etiketi oluştur, yazdırma işlemini başlatma
-                generateLabel(barcode, model, color, size, labelSize, labelLayout);
+                // Etiketi oluştur ve yazdırma işlemini başlat
+                generateLabelAndPrint(barcode, model, color, size);
             } else {
                  console.log("URL'de eksik bilgi var veya hiç yok, otomatik etiket oluşturulmayacak.");
             }
