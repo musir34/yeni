@@ -11,6 +11,16 @@ import re
 # Blueprint oluştur
 barcode_print_bp = Blueprint('barcode_print_bp', __name__, url_prefix='/barcode_print')
 
+# Uygulama başlangıcında çalışacak fonksiyon
+@barcode_print_bp.record_once
+def init_app(state):
+    app = state.app
+    with app.app_context():
+        try:
+            load_custom_templates()
+        except Exception as e:
+            app.logger.error(f"Özel şablonları yükleme hatası: {e}")
+
 # Etiket şablonları - bu sözlüğü genişletebilirsiniz
 LABEL_TEMPLATES = {
     'etiket_67x41': {
@@ -916,5 +926,5 @@ def load_custom_templates():
     except Exception as e:
         print(f"Özel şablonları yükleme hatası: {e}")
 
-# Uygulama başlangıcında özel şablonları yükle
-load_custom_templates()
+# Uygulama başlangıcında özel şablonları yüklemeyeceğiz
+# load_custom_templates()
