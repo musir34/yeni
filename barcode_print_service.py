@@ -505,7 +505,7 @@ def generate_single_barcode_html(barcode_item, template, layout_id):
     return html
 
 def generate_a4_layout(barcodes, template, layout_id):
-    """A4 sayfasında barkod düzeni oluşturur"""
+    """A4 veya özel sayfa boyutunda çoklu barkod düzeni oluşturur"""
     columns = template.get('columns', 3)
     rows = template.get('rows', 7)
     width_mm = template.get('width_mm', 210)
@@ -516,6 +516,11 @@ def generate_a4_layout(barcodes, template, layout_id):
     margin_right_mm = template.get('margin_right_mm', 8)
     gap_column_mm = template.get('gap_column_mm', 2)
     gap_row_mm = template.get('gap_row_mm', 1)
+    
+    # Eğer şablonda belirtilmişse etiket boyutlarını kullan
+    use_fixed_label_size = 'label_width_mm' in template and 'label_height_mm' in template
+    label_width_mm = template.get('label_width_mm', None)
+    label_height_mm = template.get('label_height_mm', None)
     
     totalBarcodes = len(barcodes)
     barcodesPerPage = columns * rows
@@ -868,18 +873,38 @@ def create_custom_template():
         name = data.get('name', 'Özel Şablon')
         width_mm = float(data.get('width_mm', 67))
         height_mm = float(data.get('height_mm', 41))
+        page_size = data.get('page_size', 'custom')
         
-        # Yeni şablonu ekle
-        LABEL_TEMPLATES[template_id] = {
+        # Yeni şablon özellikleri
+        template_data = {
             'name': name,
             'width_mm': width_mm,
             'height_mm': height_mm,
-            'page_size': 'custom',
-            'margin_top_mm': 0,
-            'margin_bottom_mm': 0,
-            'margin_left_mm': 0,
-            'margin_right_mm': 0
+            'page_size': page_size,
+            'margin_top_mm': float(data.get('margin_top_mm', 0)),
+            'margin_bottom_mm': float(data.get('margin_bottom_mm', 0)),
+            'margin_left_mm': float(data.get('margin_left_mm', 0)),
+            'margin_right_mm': float(data.get('margin_right_mm', 0))
         }
+        
+        # Çoklu etiket (A4) için özel alanlar
+        if page_size in ['A4', 'custom_page']:
+            template_data.update({
+                'columns': int(data.get('columns', 3)),
+                'rows': int(data.get('rows', 7)),
+                'gap_column_mm': float(data.get('gap_column_mm', 2)),
+                'gap_row_mm': float(data.get('gap_row_mm', 2))
+            })
+            
+            # Etiket boyutları belirtilmişse ekle
+            if 'label_width_mm' in data and 'label_height_mm' in data:
+                template_data.update({
+                    'label_width_mm': float(data.get('label_width_mm')),
+                    'label_height_mm': float(data.get('label_height_mm'))
+                })
+        
+        # Yeni şablonu ekle
+        LABEL_TEMPLATES[template_id] = template_data
         
         # Özel şablonları kaydet
         save_custom_templates()
