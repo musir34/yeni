@@ -61,7 +61,52 @@ def _multiline_size(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageF
 def generate_product_label():
     # ------------------------------ GET ------------------------------ #
     if request.method == "GET":
-        return render_template("product_label_form.html")
+        # Eğer print_option parametresi varsa doğrudan yazdırma yapacağız
+        if request.args.get('print_option', '') == 'custom':
+            barcode_number = request.args.get('barcode', '').strip()
+            template_id = request.args.get('template', 'etiket_67x41')
+            layout_id = request.args.get('layout', 'standart')
+            
+            if not barcode_number:
+                abort(400, description="Barkod numarası gerekli.")
+                
+            product = Product.query.filter_by(barcode=barcode_number).first()
+            if product is None:
+                abort(404, description="Ürün bulunamadı.")
+                
+            # Barkod bilgilerini hazırla
+            barcodes = [{
+                "barcode": barcode_number,
+                "model": product.product_main_id or "Model Bilinmiyor",
+                "color": product.color or "Renk Bilinmiyor",
+                "size": product.size or "Beden Bilinmiyor",
+                "qr_path": generate_and_save_qr_code(barcode_number),
+                "print_count": 1,
+                "is_printed": False
+            }]
+            
+            # Barcode_print_service'ın print endpoint'ini kullanarak yazdır
+            from barcode_print_service import generate_single_barcode_html, LABEL_TEMPLATES
+            template = LABEL_TEMPLATES.get(template_id, LABEL_TEMPLATES['etiket_67x41'])
+            html_content = generate_single_barcode_html(barcodes[0], template, layout_id)
+            
+            return html_content
+        else:
+            # Yazdırma ayarları sayfasını göster
+            barcode = request.args.get('barcode', '').strip()
+            model = request.args.get('model', '').strip()
+            color = request.args.get('color', '').strip()
+            size = request.args.get('size', '').strip()
+            
+            # Barkod yazdırma ayarları sayfasını göster
+            from barcode_print_service import LABEL_TEMPLATES, LAYOUT_TEMPLATES
+            return render_template("product_label_settings.html", 
+                                 barcode=barcode,
+                                 model=model,
+                                 color=color,
+                                 size=size,
+                                 templates=LABEL_TEMPLATES,
+                                 layouts=LAYOUT_TEMPLATES)
 
     # ------------------------------ POST ----------------------------- #
     barcode_number: str = (request.form.get("barcode") or "").strip()
