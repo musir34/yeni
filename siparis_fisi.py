@@ -736,38 +736,58 @@ def siparis_fisi_barkod_yazdir(siparis_id):
     if not fis:
         return "Sipariş fişi bulunamadı", 404
 
-    try:
-        kalemler = json.loads(fis.kalemler_json or "[]")
-    except json.JSONDecodeError:
-        kalemler = []
+    # Yazdırma ayarlarını kontrol et
+    print_option = request.args.get('print_option', 'default')
+    
+    # Eğer ayarlar belirtilmişse, doğrudan yazdırma sayfasına yönlendir
+    if print_option != 'default':
+        template_id = request.args.get('template', 'etiket_67x41')
+        layout_id = request.args.get('layout', 'standart')
+        
+        try:
+            kalemler = json.loads(fis.kalemler_json or "[]")
+        except json.JSONDecodeError:
+            kalemler = []
 
-    unique_barcodes_to_print = []
+        unique_barcodes_to_print = []
 
-    # ✅ EKLE → printed barkodları küme olarak al
-    printed_set = set(fis.printed_barcodes or [])
+        # ✅ EKLE → printed barkodları küme olarak al
+        printed_set = set(fis.printed_barcodes or [])
 
-    for kalem in kalemler:
-        # … kalemden model, renk, barkodlar vs çek
-        for size in range(35, 42):
-            size_str = str(size)
-            barcode = kalem.get("barkodlar", {}).get(size_str)
-            quantity = int(kalem.get(f"beden_{size_str}", 0))
-            if quantity > 0 and barcode:
-                unique_barcodes_to_print.append({
-                    "barcode"      : barcode,
-                    "model"        : kalem.get("model_code", "N/A"),
-                    "color"        : kalem.get("color", "N/A"),
-                    "size"         : size_str,
-                    "qr_image_path": generate_and_save_qr_code(barcode),
-                    "print_count"  : quantity * 3,
-                    "is_printed"   : barcode in printed_set   # ✅ burada kullanılıyor
-                })
+        for kalem in kalemler:
+            # … kalemden model, renk, barkodlar vs çek
+            for size in range(35, 42):
+                size_str = str(size)
+                barcode = kalem.get("barkodlar", {}).get(size_str)
+                quantity = int(kalem.get(f"beden_{size_str}", 0))
+                if quantity > 0 and barcode:
+                    unique_barcodes_to_print.append({
+                        "barcode"      : barcode,
+                        "model"        : kalem.get("model_code", "N/A"),
+                        "color"        : kalem.get("color", "N/A"),
+                        "size"         : size_str,
+                        "qr_image_path": generate_and_save_qr_code(barcode),
+                        "print_count"  : quantity * 3,
+                        "is_printed"   : barcode in printed_set   # ✅ burada kullanılıyor
+                    })
 
-    return render_template(
-        "siparis_fisi_barkod_print.html",
-        barcodes=unique_barcodes_to_print,
-        siparis_id=siparis_id
-    )
+        return render_template(
+            "siparis_fisi_barkod_print.html",
+            barcodes=unique_barcodes_to_print,
+            siparis_id=siparis_id,
+            template_id=template_id,
+            layout_id=layout_id
+        )
+    else:
+        # Ayarlar belirtilmemişse, ayarlar sayfasına yönlendir
+        from barcode_print_service import LABEL_TEMPLATES, LAYOUT_TEMPLATES
+        
+        return render_template(
+            "siparis_fisi_barkod_settings.html",
+            siparis_id=siparis_id,
+            templates=LABEL_TEMPLATES,
+            layouts=LAYOUT_TEMPLATES
+        )
 
 # =========================================================
 #  YAZDIRMA DURUMUNU GÜNCELLE
