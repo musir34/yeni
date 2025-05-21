@@ -210,16 +210,19 @@
                 <option value="">-- Renk Seçiniz --</option>
             </select>
             
-            <select id="size-select" style="display: none; margin-bottom: 10px;">
-                <option value="">-- Beden Seçiniz --</option>
-            </select>
+            <div id="sizes-container" style="display: none; margin-bottom: 15px;">
+                <div style="font-weight: bold; margin-bottom: 8px;">Bedenler</div>
+                <div id="size-boxes" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    <!-- Beden kutuları burada dinamik olarak oluşturulacak -->
+                </div>
+            </div>
             
             <div style="display: flex; align-items: center; margin-top: 10px;">
                 <input type="text" id="barcode-input" placeholder="Barkod" readonly style="flex: 1; margin-bottom: 0;">
                 <input type="number" id="quantity-input" placeholder="Adet" value="1" min="1" style="width: 80px; margin: 0 0 0 10px;">
             </div>
             
-            <button type="button" id="add-barcode-btn" style="display: none; background-color: #007bff; margin-top: 10px;">Ekle</button>
+            <button type="button" id="preview-all-btn" style="display: none; background-color: #007bff; margin-top: 10px;">QR Kodları Oluştur ve Önizle</button>
             
             <div id="barcode-list" style="margin-top: 15px; max-height: 150px; overflow-y: auto; display: none;">
                 <h4>Yazdırılacak Barkodlar</h4>
@@ -480,29 +483,30 @@
             const selectedColorValue = colorSelect.value;
             
             if (!selectedColorValue) {
-                // Seçim yapılmadıysa beden seçim alanını gizle
-                document.getElementById('size-select').style.display = 'none';
+                // Seçim yapılmadıysa beden kutularını gizle
+                document.getElementById('sizes-container').style.display = 'none';
                 return;
             }
             
             selectedColor = selectedColorValue;
             
-            // Beden seçeneklerini güncelle
+            // Beden kutularını oluştur
             const sizes = Object.keys(productData[selectedColorValue]);
-            updateSizeOptions(sizes);
+            createSizeBoxes(sizes);
             
-            // Beden seçim alanını göster
-            document.getElementById('size-select').style.display = 'block';
+            // Beden konteynerini göster
+            document.getElementById('sizes-container').style.display = 'block';
+            
+            // Önizleme butonunu göster
+            document.getElementById('preview-all-btn').style.display = 'block';
         }
         
-        // Beden seçeneklerini günceller
-        function updateSizeOptions(sizes) {
-            const sizeSelect = document.getElementById('size-select');
+        // Beden kutularını oluşturur
+        function createSizeBoxes(sizes) {
+            const sizeBoxesContainer = document.getElementById('size-boxes');
             
-            // Mevcut seçenekleri temizle
-            while (sizeSelect.options.length > 1) {
-                sizeSelect.remove(1);
-            }
+            // Mevcut kutuları temizle
+            sizeBoxesContainer.innerHTML = '';
             
             // Bedenleri numerik olarak sırala
             sizes.sort((a, b) => {
@@ -516,49 +520,85 @@
                 return a.localeCompare(b);
             });
             
-            // Yeni beden seçeneklerini ekle
+            // Her beden için kutu oluştur
             sizes.forEach(size => {
-                const option = document.createElement('option');
-                option.value = size;
-                option.textContent = size;
-                sizeSelect.appendChild(option);
+                const barcode = productData[selectedColor][size];
+                
+                // Beden kutusu container
+                const sizeBox = document.createElement('div');
+                sizeBox.style.border = '1px solid #ccc';
+                sizeBox.style.borderRadius = '4px';
+                sizeBox.style.padding = '8px';
+                sizeBox.style.minWidth = '80px';
+                
+                // Beden bilgisi
+                const sizeInfo = document.createElement('div');
+                sizeInfo.textContent = size;
+                sizeInfo.style.fontWeight = 'bold';
+                sizeInfo.style.marginBottom = '5px';
+                sizeInfo.style.textAlign = 'center';
+                
+                // Miktar input
+                const quantityInput = document.createElement('input');
+                quantityInput.type = 'number';
+                quantityInput.min = '0';
+                quantityInput.value = '0';
+                quantityInput.style.width = '100%';
+                quantityInput.style.padding = '4px';
+                quantityInput.style.boxSizing = 'border-box';
+                quantityInput.dataset.barcode = barcode;
+                quantityInput.dataset.size = size;
+                
+                // Elementleri birleştir
+                sizeBox.appendChild(sizeInfo);
+                sizeBox.appendChild(quantityInput);
+                sizeBoxesContainer.appendChild(sizeBox);
             });
         }
         
-        // Beden seçildiğinde
-        function handleSizeSelect() {
-            const sizeSelect = document.getElementById('size-select');
-            const selectedSizeValue = sizeSelect.value;
-            
-            if (!selectedSizeValue) {
-                // Seçim yapılmadıysa barkod alanını temizle
-                document.getElementById('barcode-input').value = '';
-                document.getElementById('add-barcode-btn').style.display = 'none';
-                return;
-            }
-            
-            selectedSize = selectedSizeValue;
-            
-            // Barkodu al ve input alanına yerleştir
-            const barcode = productData[selectedColor][selectedSize];
-            document.getElementById('barcode-input').value = barcode;
-            selectedBarcode = barcode;
-            
-            // Ekle butonunu göster
-            document.getElementById('add-barcode-btn').style.display = 'block';
-            
-            // Önizleme için bilgileri güncelle
-            document.getElementById('barcode-text-main').textContent = barcode;
-            document.getElementById('model-value-main').textContent = selectedModel;
-            document.getElementById('color-value-main').textContent = selectedColor;
-            document.getElementById('size-value-main').textContent = selectedSize;
-            
-            // QR kod görselini güncelle (placeholder yerine gerçek QR kodu)
-            updateQrCodeImage(barcode);
-            
-            // Önizlemeyi güncelle
-            generateAndPreparePreview(false);
-        }
+        // Sayfa yüklendiğinde olay dinleyicileri ekle
+        window.addEventListener('DOMContentLoaded', function() {
+            // "QR Kodları Oluştur ve Önizle" butonuna tıklandığında
+            document.getElementById('preview-all-btn').addEventListener('click', function() {
+                // Beden kutularından seçilen adetleri topla
+                const sizeBoxes = document.querySelectorAll('#size-boxes input[type="number"]');
+                
+                // Barkod listesini temizle
+                barcodeList = [];
+                
+                // Her bir beden kutusunu kontrol et
+                sizeBoxes.forEach(input => {
+                    const quantity = parseInt(input.value);
+                    if (quantity > 0) {
+                        barcodeList.push({
+                            barcode: input.dataset.barcode,
+                            model: selectedModel,
+                            color: selectedColor,
+                            size: input.dataset.size,
+                            quantity: quantity
+                        });
+                    }
+                });
+                
+                // Eğer hiç barkod seçilmediyse uyarı ver
+                if (barcodeList.length === 0) {
+                    alert('Lütfen en az bir beden için miktar giriniz.');
+                    return;
+                }
+                
+                // Barkod listesini güncelle
+                updateBarcodeList();
+                
+                // Toplam etiket sayısını güncelle
+                updateTotalLabelCount();
+                
+                // Barkod listesini görünür yap
+                document.getElementById('barcode-list').style.display = 'block';
+                
+                // Önizlemeyi oluştur
+                generateAndPreparePreview(false);
+            });
+        });
         
         // QR kod görselini günceller
         function updateQrCodeImage(barcode) {
@@ -950,51 +990,36 @@
                 }`;
         }
 
-        function generateAndPreparePreview(fetchNewQR = true) { // autoPrint kaldırıldı
+        function generateAndPreparePreview(fetchNewQR = false) { // QR oluşturmayı kapatıyoruz
             // Barkod listesi kontrolü
             if (barcodeList.length === 0) {
-                // Legacy mod - eski form alanlarından veri al
-                const barcode = document.getElementById('barcode-input').value;
-                const model = document.getElementById('model-input').value;
-                const color = selectedColor || document.getElementById('color-input')?.value;
-                const size = selectedSize || document.getElementById('size-input')?.value;
-                
-                if (!barcode || !model || !color || !size) { 
-                    alert("Lütfen önce en az bir barkod ekleyin veya tüm bilgileri manuel doldurun."); 
-                    return; 
-                }
-                
-                // Tekli etiket içeriğini güncelle
-                populateMainLabelPreview(barcode, model, color, size);
-            } else {
-                // Çoklu barkod modu - listedeki ilk barkodu göster
-                const firstItem = barcodeList[0];
-                // Tekli etiket içeriğini güncelle
-                populateMainLabelPreview(firstItem.barcode, firstItem.model, firstItem.color, firstItem.size);
-            }
+                alert("Lütfen önce en az bir beden için miktar giriniz.");
+                return; 
+            } 
+            
+            // Çoklu barkod modu - listedeki ilk barkodu göster
+            const firstItem = barcodeList[0];
+            
+            // Tekli etiket içeriğini güncelle
+            document.getElementById('barcode-text-main').textContent = firstItem.barcode;
+            document.getElementById('model-value-main').textContent = firstItem.model;
+            document.getElementById('color-value-main').textContent = firstItem.color;
+            document.getElementById('size-value-main').textContent = firstItem.size;
+            
+            // QR kodu yerine placeholder göster
+            document.getElementById('qr-code-image-main').src = "https://via.placeholder.com/100x100?text=QR";
             
             updateCustomFields(); // Gerekli layout fonksiyonunu tetikler
 
-            const qrCodeImageElement = document.getElementById('qr-code-image-main');
-            let qrFetchTimeout;
-
-            const afterQrReady = (qrSrc) => {
-                // Barkod listesi boşsa, tekli etiketi kullan
-                if (barcodeList.length === 0) {
-                    const barcode = document.getElementById('barcode-input').value;
-                    const model = document.getElementById('model-input').value;
-                    const color = selectedColor || document.getElementById('color-input')?.value;
-                    const size = selectedSize || document.getElementById('size-input')?.value;
-                    
-                    updateAllClonedLabelsContent(barcode, model, color, size, qrSrc);
-                } else {
-                    // Çoklu barkod modu - tüm etiketleri oluştur
-                    generateMultipleLabels();
-                }
-                
-                updatePrintStyles(); // Yazdırma stillerini son halleriyle güncelle
-                console.log("Önizleme hazırlandı.");
-            };
+            // Çoklu barkod modu - tüm etiketleri oluştur
+            generateMultipleLabels();
+            
+            // Yazdırma stillerini son halleriyle güncelle
+            updatePrintStyles();
+            console.log("Önizleme hazırlandı.");
+            
+            // Yazdır butonunu göster
+            document.getElementById('execute-print-button').style.display = 'block';
             
             // Çoklu barkod etiketleri oluşturma fonksiyonu
             function generateMultipleLabels() {
@@ -1082,14 +1107,7 @@
                 document.getElementById('execute-print-button').style.display = 'block';
             }
 
-            const onQrLoad = () => { clearTimeout(qrFetchTimeout); afterQrReady(qrCodeImageElement.src); };
-            const onQrError = () => {
-                clearTimeout(qrFetchTimeout);
-                qrCodeImageElement.src = 'https://via.placeholder.com/100x100?text=QR+HATA';
-                qrCodeImageElement.alt = 'QR Kod Hatası';
-                afterQrReady(qrCodeImageElement.src); 
-                alert("QR Kod görseli yüklenirken bir sorun oluştu. Placeholder QR kullanılacak.");
-            };
+            // QR kod yükleme işlemlerini kaldırdık
 
             qrCodeImageElement.removeEventListener('load', onQrLoad); 
             qrCodeImageElement.removeEventListener('error', onQrError);
