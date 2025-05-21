@@ -538,33 +538,35 @@ def generate_a4_layout(barcodes, template, layout_id):
       <title>A4 Barkod Düzeni</title>
       <style>
         @page {{
-          size: A4;
+          size: A4 portrait;
           margin: 0;
         }}
-        body {{
+        html, body {{
           margin: 0;
           padding: 0;
           background: white;
           font-family: Arial, sans-serif;
+          width: 210mm;
+          height: 297mm;
         }}
         .page {{
-          width: {width_mm}mm;
-          height: {height_mm}mm;
+          width: 210mm;
+          height: 297mm;
           box-sizing: border-box;
           padding: {margin_top_mm}mm {margin_right_mm}mm {margin_bottom_mm}mm {margin_left_mm}mm;
-          
-          display: grid;
-          grid-template-columns: repeat({columns}, calc((100% - {gap_column_mm * (columns-1)}mm) / {columns}));
-          grid-template-rows: repeat({rows}, calc((100% - {gap_row_mm * (rows-1)}mm) / {rows}));
-          
-          column-gap: {gap_column_mm}mm;
-          row-gap: {gap_row_mm}mm;
-        }}
-        .page:not(.last-page) {{
           page-break-after: always;
+          position: relative;
         }}
         .page.last-page {{
           page-break-after: auto;
+        }}
+        .labels-grid {{
+          display: grid;
+          grid-template-columns: repeat({columns}, 1fr);
+          grid-template-rows: repeat({rows}, 1fr);
+          grid-gap: {gap_row_mm}mm {gap_column_mm}mm;
+          width: calc(210mm - {margin_left_mm}mm - {margin_right_mm}mm);
+          height: calc(297mm - {margin_top_mm}mm - {margin_bottom_mm}mm);
         }}
     """
     
@@ -575,6 +577,9 @@ def generate_a4_layout(barcodes, template, layout_id):
           display: flex;
           border: none;
           box-sizing: border-box;
+          width: 100%;
+          height: 100%;
+          background-color: white;
         }
         .left {
           width: 50%;
@@ -582,7 +587,7 @@ def generate_a4_layout(barcodes, template, layout_id):
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 1mm;
+          padding: 2mm;
           box-sizing: border-box;
         }
         .right {
@@ -591,24 +596,24 @@ def generate_a4_layout(barcodes, template, layout_id):
           flex-direction: column;
           justify-content: center;
           text-align: center;
-          padding: 1mm;
+          padding: 2mm;
           box-sizing: border-box;
         }
         img {
-          max-width: 18mm;
-          max-height: 18mm;
-          margin-bottom: 1mm;
+          max-width: 20mm;
+          max-height: 20mm;
+          margin-bottom: 2mm;
         }
         .barcode-text {
-          font-size: 8pt;
+          font-size: 8.5pt;
           text-align: center;
           font-weight: bold;
           word-break: break-all;
           line-height: 1.2;
         }
         .info {
-          margin-bottom: 1.5mm;
-          font-size: 8.5pt;
+          margin-bottom: 2mm;
+          font-size: 9pt;
           font-weight: 600;
           line-height: 1.2;
         }
@@ -734,7 +739,7 @@ def generate_a4_layout(barcodes, template, layout_id):
     # Sayfaları oluştur
     for page in range(totalPages):
         pageClass = "page last-page" if page == totalPages - 1 else "page"
-        html += f'<div class="{pageClass}">'
+        html += f'<div class="{pageClass}"><div class="labels-grid">'
         
         for i in range(barcodesPerPage):
             index = page * barcodesPerPage + i
@@ -793,7 +798,7 @@ def generate_a4_layout(barcodes, template, layout_id):
             else:
                 html += '<div class="label"></div>'  # Boş etiket
         
-        html += '</div>'  # Sayfa sonu
+        html += '</div></div>'  # labels-grid ve Sayfa sonu
     
     # Otomatik yazdırma script'i
     html += """
