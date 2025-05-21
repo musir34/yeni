@@ -4,21 +4,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Kod Etiketi Oluştur</title>
+    <title>QR Kod Etiketi Oluştur - Güllü Ayakkabı</title>
     <style>
         body {
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            padding-top: 20px;
             background-color: #f4f4f4;
             font-family: Arial, sans-serif;
         }
 
         .form-container {
-            width: 300px;
+            width: 400px; /* Biraz daha genişletildi */
             background-color: white;
             padding: 20px;
             border-radius: 8px;
@@ -26,11 +27,29 @@
             margin-bottom: 20px;
         }
 
-        .form-container h2 {
+        .form-container h2,
+        .form-container h3,
+        .form-container h4 {
             text-align: center;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             color: #333;
         }
+         .form-container h4 {
+            margin-top: 15px;
+            margin-bottom: 5px;
+            text-align: left; 
+        }
+        .form-section {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .form-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
 
         input,
         select {
@@ -40,12 +59,32 @@
             border: 1px solid #ccc;
             border-radius: 4px;
             font-size: 16px;
+            box-sizing: border-box;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield; /* Firefox'ta okları gizle */
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none; /* Chrome, Safari, Edge'de okları gizle */
+            margin: 0;
+        }
+
+        input[readonly] {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        label {
+            font-size: 14px;
+            display: block;
+            margin-bottom: 3px;
+            color: #555;
         }
 
         button {
             width: 100%;
-            padding: 10px;
-            background-color: #28a745;
+            padding: 10px 15px;
             color: white;
             border: none;
             border-radius: 4px;
@@ -54,269 +93,105 @@
             transition: background-color 0.3s;
             margin-top: 10px;
         }
+        #prepare-preview-button { background-color: #28a745; }
+        #prepare-preview-button:hover { background-color: #218838; }
+        #execute-print-button { background-color: #007bff; margin-top: 5px; }
+        #execute-print-button:hover { background-color: #0056b3; }
 
-        button:hover {
-            background-color: #218838;
-        }
 
         /* Etiket Alanı */
-        .label-container {
-            width: 60mm; /* Varsayılan etiket genişliği: 60mm */
-            height: 40mm; /* Varsayılan etiket yüksekliği: 40mm */
+        .label-container { 
+            width: 60mm; 
+            height: 40mm; 
             background-color: white;
-            display: flex; /* Flexbox kullanıyoruz */
-            flex-direction: row; /* Öğeleri yan yana diz */
-            align-items: center; /* Öğeleri dikeyde ortala */
+            display: flex; 
             border: 1px solid black;
-            padding: 1.5mm; /* Kenarlardan biraz daha boşluk bırakalım */
-            box-sizing: border-box; /* Padding dahil genişlik ve yükseklik */
-            overflow: hidden; /* Taşmaları gizle */
+            box-sizing: border-box; 
+            overflow: hidden; 
+            margin-bottom: 10px; /* Yazdır butonu için boşluk */
         }
-        
-        /* Özel boyut CSS sınıfları */
-        .paper-a4 {
-            width: 210mm;
-            height: 297mm;
-            flex-direction: row;
-            flex-wrap: wrap;
-            align-items: flex-start;
-            justify-content: flex-start;
-            padding: 10mm;
-            gap: 5mm;
+
+        .paper-a4-fixed { 
+            width: 210mm; height: 297mm; border: 1px solid #ccc; padding: 0; 
         }
-        
-        .paper-100x100 {
-            width: 100mm;
-            height: 100mm;
-        }
-        
-        /* Çoklu etiket yerleşimi için */
-        .multi-label-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5mm;
+        .paper-100x100 { width: 100mm; height: 100mm; }
+
+        .multi-label-container-custom, #multi-label-container-fixed-a4 {
+            display: flex; /* veya grid */
+            flex-wrap: wrap; /* custom için */
             justify-content: flex-start;
             align-items: flex-start;
-            width: 100%;
-            height: 100%;
-            padding: 10mm; /* Varsayılan padding */
+            width: 100%; height: 100%;
             box-sizing: border-box;
+            overflow: auto; 
         }
-        
-        .label-item {
-            width: 60mm;
-            height: 40mm;
-            border: 1px solid #ddd;
-            background-color: white;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            padding: 1.5mm;
-            overflow: hidden;
+        #multi-label-container-fixed-a4 { display: grid; overflow: hidden; }
+
+        .label-item { 
+            border: 1px solid #ddd; background-color: white; box-sizing: border-box;
+            display: flex; flex-direction: row; align-items: center; overflow: hidden;
         }
 
-        /* QR Kod ve Altındaki Barkod Alanı */
-        .qr-and-barcode-area {
-            display: flex;
-            flex-direction: column; /* İçindeki öğeleri (QR ve barkod) alt alta diz */
-            align-items: center; /* İçindeki öğeleri yatayda ortala */
-            flex-shrink: 0; /* Küçülmesini engelle */
-            margin-right: 3mm; /* Sağdaki yazı alanıyla arasını aç */
-             width: 100px; /* QR genişliği kadar bir genişlik verelim */
+        /* Tekli Etiket İçeriği Stilleri */
+        #single-label-content-wrapper { 
+            display: flex; flex-direction: row; align-items: center;
+            width: 100%; height: 100%; padding: 1.5mm; box-sizing: border-box;
         }
-
-
-        /* QR Kod Boyutu */
-        .qr-area {
-            width: 100px; /* QR kod genişliği */
-            height: 100px; /* QR kod yüksekliği */
-            display: flex; /* İçindeki görseli ortalamak için */
-            justify-content: center;
-            align-items: center;
-             margin-bottom: 1mm; /* QR ile altındaki barkod arasına boşluk */
+        #single-label-content-wrapper .qr-and-barcode-area {
+            display: flex; flex-direction: column; align-items: center; 
+            flex-shrink: 0; margin-right: 3mm; /* width JS ile ayarlanacak */
         }
-
-        .qr-area img {
-            max-width: 100%; /* Alanın genişliğini aşma */
-            max-height: 100%; /* Alanın yüksekliğini aşma */
-             width: 100%; /* Alanı tam doldur */
-             height: 100%; /* Alanı tam doldur */
-            object-fit: contain; /* Görselin oranını bozmadan sığdır */
+        #single-label-content-wrapper .qr-area {
+            /* width, height JS ile ayarlanacak */
+            display: flex; justify-content: center; align-items: center; margin-bottom: 1mm; 
         }
-
-        /* QR Altındaki Barkod Yazısı */
-        .barcode-text-under-qr {
-            font-size: 14px; /* Küçük puntoda barkod numarası */
-            text-align: center; /* Ortala */
-            word-break: break-all; /* Gerekirse kelimeyi kırarak sığdır */
-            max-width: 100%; /* Kendi alanından (100px) taşma */
-            overflow: hidden;
-            font-weight: bold; /* Barkod numarasını da belirgin yapalım */
+        #single-label-content-wrapper .qr-area img {
+            max-width: 100%; max-height: 100%; object-fit: contain; 
         }
-
-
-        /* Ürün Bilgisi Alanı (Sağ Taraf) */
-        .text-area {
-            flex-grow: 1; /* Kalan alanı kapla */
-            height: 100%; /* Yüksekliği etiket yüksekliği kadar yap */
-            display: flex;
-            flex-direction: column; /* Yazıları alt alta sırala */
-            justify-content: center; /* Yazıları dikeyde ortala */
-            text-align: left; /* Yazıları sola yasla */
-            font-size: 17px; /* Yazı boyutunu ayarla */
-            overflow: hidden; /* Taşmaları gizle */
-            padding-right: 1.5mm; /* Sağdan hafif boşluk */
+        #single-label-content-wrapper .barcode-text-under-qr { /* font-size JS ile */
+            text-align: center; word-break: break-all; max-width: 100%; 
+            overflow: hidden; font-weight: bold; 
         }
-
-        .product-info {
-             /* flex column zaten text-area'da ayarlı, bu div sadece içerik sarıcı */
-            word-break: break-word; /* Uzun kelimeleri kırarak sığdır */
+        #single-label-content-wrapper .text-area { /* font-size JS ile */
+            flex-grow: 1; height: 100%; display: flex; flex-direction: column; 
+            justify-content: center; text-align: left; overflow: hidden; padding-right: 1.5mm; 
         }
+        #single-label-content-wrapper .product-info div { margin-bottom: 2mm; line-height: 1.2; }
+        #single-label-content-wrapper .product-info .label { font-weight: bold; margin-right: 1mm; }
+        #single-label-content-wrapper .product-info .value { font-weight: normal; }
 
-        .product-info div {
-            /* Her bir bilgi satırı için (Model, Renk, Beden) */
-            margin-bottom: 7px; /* Satır aralarını aç (bir tık daha fazla) */
-            line-height: 1.2; /* Satır içindeki yazıların aralığı */
+        /* A4 Sabit Etiket İçeriği Stilleri */
+        .label-item-fixed-a4-content { 
+            display: flex; width: 100%; height: 100%; padding: 1mm; box-sizing: border-box;
         }
-
-        .product-info div:last-child {
-            margin-bottom: 0; /* Son satırın altına boşluk ekleme */
+        .label-item-fixed-a4-content .left {
+            width: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-right: 1mm; box-sizing: border-box;
         }
-
-
-        .product-info .label {
-            font-weight: bold; /* Başlıkları kalın yap (Model:, Renk:, Beden:) */
-            margin-right: 3px; /* Başlık ile değer arasına boşluk */
+        .label-item-fixed-a4-content .right {
+            width: 50%; display: flex; flex-direction: column; justify-content: center; text-align: center; padding-left: 1mm; box-sizing: border-box;
         }
-
-         .product-info .value {
-             font-weight: normal; /* Değerleri normal yap */
-         }
-
-
-        .nav-buttons {
-            display: flex;
-            justify-content: space-between;
-            width: 300px;
-            margin-top: 20px;
+        .label-item-fixed-a4-content img.qr-code-clone { /* Sabit A4'te QR boyutu CSS ile belirleniyor */
+            max-width: 18mm; max-height: 18mm; margin-bottom: 1mm; object-fit: contain;
         }
+        /* A4 sabit için fontlar JS ile inline eklenecek */
+        .label-item-fixed-a4-content .barcode-text-clone { text-align: center; font-weight: bold; word-break: break-all; line-height: 1.2; }
+        .label-item-fixed-a4-content .info-clone { margin-bottom: 1.5mm; font-weight: 600; line-height: 1.2; text-align: left; }
+        .label-item-fixed-a4-content .info-clone .label { font-weight: bold; }
+        .label-item-fixed-a4-content .info-clone .value { font-weight: normal; }
 
-        .nav-buttons a {
-            text-decoration: none;
-            color: white;
-            background-color: #007bff;
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 16px;
-            text-align: center;
-            transition: background-color 0.3s;
-            width: 48%;
-        }
 
-        .nav-buttons a:hover {
-            background-color: #0056b3;
-        }
+        .nav-buttons { display: flex; justify-content: center; width: 100%; margin-top: 20px; gap:15px; }
+        .nav-buttons a { text-decoration: none; color: white; background-color: #007bff; padding: 10px 15px; border-radius: 4px; font-size: 16px; text-align: center; transition: background-color 0.3s; }
+        .nav-buttons a:hover { background-color: #0056b3; }
 
-        /* Yazdırma Ayarları */
+        .no-print { /* Yazdırmada gizlenecek elemanlar */ }
+        #execute-print-button.print-mode { display: none !important; } /* Yazdırma sırasında Yazdır butonunu gizle */
+
+
         @media print {
-            @page {
-                /* Yazdırma boyutu JavaScript ile dinamik olarak değiştirilecek */
-                size: auto;
-                margin: 0;
-            }
-
-            body {
-                display: block; /* Yazdırırken flex yerine block daha uygun olabilir */
-                /* Genişlik ve yükseklik JavaScript ile dinamik olarak değiştirilecek */
-                margin: 0;
-                background-color: white;
-            }
-
-            .form-container,
-            .nav-buttons,
-            button {
-                display: none; /* Form ve butonları gizle */
-            }
-
-            .label-container {
-                width: 60mm; /* Yazdırma etiket genişliği */
-                height: 40mm; /* Yazdırma etiket yüksekliği */
-                border: none; /* Yazdırırken çerçeve olmasın */
-                padding: 0; /* Yazdırmada padding olmasın */
-                margin: 0;
-                box-sizing: border-box;
-                 display: flex;
-                 flex-direction: row;
-                 align-items: center;
-                 justify-content: space-between; /* İçeriği iki yana yasla */
-            }
-
-             .qr-and-barcode-area {
-                 display: flex;
-                 flex-direction: column;
-                 align-items: center;
-                 flex-shrink: 0;
-                 margin-right: 3mm;
-                 width: 100px; /* QR genişliği kadar bir genişlik verelim */
-                 padding: 0; /* Yazdırmada padding olmasın */
-             }
-
-             .qr-area {
-                width: 100px; /* Yazdırmada da 100px QR */
-                height: 100px;
-                 margin-bottom: 1mm;
-                 padding: 0; /* Yazdırmada padding olmasın */
-            }
-
-             .qr-area img {
-                 width: 100%;
-                 height: 100%;
-                 object-fit: contain;
-             }
-
-             .barcode-text-under-qr {
-                 font-size: 9px; /* Yazdırmada biraz daha küçük font daha iyi olabilir */
-                 text-align: center;
-                 word-break: break-all;
-                 max-width: 100%;
-                 overflow: hidden;
-                 font-weight: bold;
-             }
-
-
-            .text-area {
-                flex-grow: 1;
-                height: 100%;
-                padding: 0 1.5mm 0 0; /* Sağdan boşluk */
-                box-sizing: border-box;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                text-align: left;
-                font-size: 11px; /* Yazdırmada biraz daha küçük font */
-            }
-
-             .product-info {
-                 word-break: break-word;
-             }
-
-             .product-info div {
-                 margin-bottom: 3px; /* Yazdırmada satır araları (ekrandan az) */
-                 line-height: 1.2;
-             }
-              .product-info div:last-child {
-                margin-bottom: 0;
-            }
-
-             .product-info .label {
-                 font-weight: bold;
-                 margin-right: 3px;
-             }
-
-              .product-info .value {
-                 font-weight: normal;
-             }
+            .no-print { display: none !important; }
+            body { margin: 0 !important; padding:0 !important; background-color: white !important; -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+            #execute-print-button { display: none !important; } /* Yazdırma sırasında butonu gizle */
         }
     </style>
 </head>
@@ -324,531 +199,579 @@
 <body>
 
     <div class="form-container no-print">
-        <h2>Etiket Bilgileri</h2>
-        <input type="text" id="barcode-input" placeholder="Barkod" required>
-        <input type="text" id="model-input" placeholder="Model Kodu" required>
-        <input type="text" id="color-input" placeholder="Renk" required>
-        <input type="text" id="size-input" placeholder="Beden" required>
-        
-        <h3>Etiket Ayarları</h3>
-        <select id="paper-type" onchange="updateCustomFields()">
-            <option value="custom">Özel Boyut</option>
-            <option value="60x40" selected>Etiket - 60x40mm</option>
-            <option value="100x100">Etiket - 100x100mm</option>
-            <option value="a4">A4 Kağıt</option>
-        </select>
-        
-        <div id="custom-size-fields">
-            <input type="number" id="width-input" placeholder="Genişlik (mm)" value="60" onchange="updateLabelSize()">
-            <input type="number" id="height-input" placeholder="Yükseklik (mm)" value="40" onchange="updateLabelSize()">
+        <div class="form-section">
+            <h2>Etiket Bilgileri</h2>
+            <input type="text" id="barcode-input" placeholder="Barkod" required>
+            <input type="text" id="model-input" placeholder="Model Kodu" required>
+            <input type="text" id="color-input" placeholder="Renk" required>
+            <input type="text" id="size-input" placeholder="Beden" required>
         </div>
-        
-        <div id="multi-label-settings" style="display: none; margin-top: 10px;">
-            <h3>Çoklu Etiket Ayarları</h3>
-            <div style="display: flex; gap: 10px;">
-                <div style="flex: 1;">
-                    <label for="label-width">Etiket Genişliği (mm):</label>
-                    <input type="number" id="label-width" value="60" onchange="calculateLabelLayout()">
+        <div class="form-section">
+            <label for="label-count" style="font-weight:bold; font-size:16px;">Etiket Sayısı:</label>
+            <input type="number" id="label-count" value="1" min="1" max="500" onchange="updateLabelCountPreview()">
+        </div>
+
+        <div class="form-section">
+            <h3>Kağıt/Etiket Ayarları</h3>
+            <select id="paper-type" onchange="updateCustomFields()">
+                <option value="custom">Özel Boyut (Tek Etiket)</option>
+                <option value="60x40" selected>Etiket - 60x40mm (Tek)</option>
+                <option value="100x100">Etiket - 100x100mm (Tek)</option>
+                <option value="a4_fixed">A4 Standart (3x7 Etiket)</option>
+                <option value="custom_multi">Özel Sayfa (Çoklu Etiket)</option>
+            </select>
+
+            <div id="custom-size-fields-single" style="display: none;"> 
+                <h4>Tek Etiket Boyutları (mm)</h4>
+                <input type="number" id="single-label-width-input" placeholder="Genişlik" value="60" onchange="updateSingleLabelSize()">
+                <input type="number" id="single-label-height-input" placeholder="Yükseklik" value="40" onchange="updateSingleLabelSize()">
+            </div>
+
+            <div id="custom-page-size-fields-multi" style="display: none;"> 
+                <h4>Sayfa Boyutları (mm)</h4>
+                <input type="number" id="multi-page-width-input" placeholder="Sayfa Genişliği" value="210" onchange="handleMultiPageDimensionChange()">
+                <input type="number" id="multi-page-height-input" placeholder="Sayfa Yüksekliği" value="297" onchange="handleMultiPageDimensionChange()">
+            </div>
+
+            <div id="multi-label-layout-settings" style="display: none; margin-top: 10px;">
+                <h4>Çoklu Etiket Yerleşim Ayarları (mm)</h4>
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label for="multi-label-width">Etiket Genişliği:</label>
+                        <input type="number" id="multi-label-width" value="60" onchange="calculateCustomMultiLabelLayout()">
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="multi-label-height">Etiket Yüksekliği:</label>
+                        <input type="number" id="multi-label-height" value="40" onchange="calculateCustomMultiLabelLayout()">
+                    </div>
                 </div>
-                <div style="flex: 1;">
-                    <label for="label-height">Etiket Yüksekliği (mm):</label>
-                    <input type="number" id="label-height" value="40" onchange="calculateLabelLayout()">
+                <h4 style="margin-top: 15px; margin-bottom: 5px;">Sayfa Kenar Boşlukları (mm)</h4>
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;"><label for="margin-top">Üst:</label><input type="number" id="margin-top" value="10" min="0" onchange="calculateCustomMultiLabelLayout()"></div>
+                    <div style="flex: 1;"><label for="margin-bottom">Alt:</label><input type="number" id="margin-bottom" value="10" min="0" onchange="calculateCustomMultiLabelLayout()"></div>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                    <div style="flex: 1;"><label for="margin-left">Sol:</label><input type="number" id="margin-left" value="10" min="0" onchange="calculateCustomMultiLabelLayout()"></div>
+                    <div style="flex: 1;"><label for="margin-right">Sağ:</label><input type="number" id="margin-right" value="10" min="0" onchange="calculateCustomMultiLabelLayout()"></div>
+                </div>
+                <h4 style="margin-top: 15px; margin-bottom: 5px;">Etiketler Arası Boşluklar (mm)</h4>
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;"><label for="horizontal-gap">Yatay:</label><input type="number" id="horizontal-gap" value="5" min="0" onchange="calculateCustomMultiLabelLayout()"></div>
+                    <div style="flex: 1;"><label for="vertical-gap">Dikey:</label><input type="number" id="vertical-gap" value="5" min="0" onchange="calculateCustomMultiLabelLayout()"></div>
                 </div>
             </div>
-            
-            <h4 style="margin-top: 15px; margin-bottom: 5px;">Sayfa Kenar Boşlukları</h4>
-            <div style="display: flex; gap: 10px;">
-                <div style="flex: 1;">
-                    <label for="margin-left">Sol Boşluk (mm):</label>
-                    <input type="number" id="margin-left" value="10" min="0" onchange="calculateLabelLayout()">
-                </div>
-                <div style="flex: 1;">
-                    <label for="margin-right">Sağ Boşluk (mm):</label>
-                    <input type="number" id="margin-right" value="10" min="0" onchange="calculateLabelLayout()">
-                </div>
+            <div id="a4-fixed-info" style="display:none; padding:10px; background-color:#eef; border-radius:4px; margin-top:10px; font-size:14px;">
+                A4 Standart Modu: Sayfada 3x7 (21 adet) etiket basılır.
+                Etiket Boyutu: ~63.3mm x ~37.3mm.<br>
+                Bu ayarlar sabittir. "Etiket Sayısı" toplam basılacak adedi belirler.
             </div>
-            
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <div style="flex: 1;">
-                    <label for="margin-top">Üst Boşluk (mm):</label>
-                    <input type="number" id="margin-top" value="10" min="0" onchange="calculateLabelLayout()">
-                </div>
-                <div style="flex: 1;">
-                    <label for="margin-bottom">Alt Boşluk (mm):</label>
-                    <input type="number" id="margin-bottom" value="10" min="0" onchange="calculateLabelLayout()">
-                </div>
+        </div>
+        <div class="form-section">
+            <h4>Görsel & Yazı Ayarları</h4>
+            <div>
+                <label for="qr-code-size-input">QR Kodu Boyutu (mm): <small>(A4 Standart hariç)</small></label>
+                <input type="number" id="qr-code-size-input" value="25" min="10" max="100" onchange="updateVisualSettings()">
             </div>
-            
-            <h4 style="margin-top: 15px; margin-bottom: 5px;">Etiketler Arası Boşluklar</h4>
-            <div style="display: flex; gap: 10px;">
-                <div style="flex: 1;">
-                    <label for="horizontal-gap">Yatay Boşluk (mm):</label>
-                    <input type="number" id="horizontal-gap" value="5" min="0" onchange="calculateLabelLayout()">
-                </div>
-                <div style="flex: 1;">
-                    <label for="vertical-gap">Dikey Boşluk (mm):</label>
-                    <input type="number" id="vertical-gap" value="5" min="0" onchange="calculateLabelLayout()">
-                </div>
+            <div>
+                <label for="barcode-font-size-input">QR Altı Barkod Fontu (pt):</label>
+                <input type="number" id="barcode-font-size-input" value="10" min="4" max="36" onchange="updateVisualSettings()">
             </div>
-            
-            <div style="margin-top: 15px;">
-                <label for="label-count">Etiket Sayısı:</label>
-                <input type="number" id="label-count" value="1" min="1" max="100" onchange="updateLabelCount()">
+            <div>
+                <label for="info-font-size-input">Ürün Bilgisi Fontu (pt):</label>
+                <input type="number" id="info-font-size-input" value="11" min="4" max="36" onchange="updateVisualSettings()">
             </div>
         </div>
 
-        <button type="button" onclick="generateAndPrintFromForm()">Etiket Oluştur & Yazdır</button>
+        <button type="button" id="prepare-preview-button" onclick="generateAndPreparePreview()">Etiketi Hazırla & Önizle</button>
     </div>
 
-    <div class="label-container" id="label">
-        <div id="single-label-container">
-            <div class="qr-and-barcode-area">
-                 <div class="qr-area">
-                     <img id="qr-code-image" src="https://via.placeholder.com/100" alt="QR Kod Placeholder"> </div>
-                 <div class="barcode-text-under-qr" id="barcode-text-under-qr">
-                     </div>
-            </div>
-
-            <div class="text-area">
-                 <div class="product-info">
-                     <div><span class="label">Model:</span> <span class="value" id="model-value"></span></div>
-                     <div><span class="label">Renk:</span> <span class="value" id="color-value"></span></div>
-                     <div><span class="label">Beden:</span> <span class="value" id="size-value"></span></div>
-                 </div>
+    <div class="label-container" id="main-label-preview-area">
+        <div id="single-label-container" style="display:flex; width:100%; height:100%;"> 
+            <div id="single-label-content-wrapper">
+                <div class="qr-and-barcode-area">
+                    <div class="qr-area">
+                        <img id="qr-code-image-main" src="https://via.placeholder.com/100x100?text=QR" alt="QR Kod Placeholder"> 
+                    </div>
+                    <div class="barcode-text-under-qr" id="barcode-text-main">BARKOD</div>
+                </div>
+                <div class="text-area">
+                    <div class="product-info">
+                        <div><span class="label">Model:</span> <span class="value" id="model-value-main">MODEL</span></div>
+                        <div><span class="label">Renk:</span> <span class="value" id="color-value-main">RENK</span></div>
+                        <div><span class="label">Beden:</span> <span class="value" id="size-value-main">BEDEN</span></div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div id="multi-label-container" class="multi-label-container" style="display: none;">
-            <!-- Çoklu etiketler buraya JavaScript ile eklenecek -->
-        </div>
+        <div id="multi-label-container-custom" style="display: none; width:100%; height:100%;"></div>
+        <div id="multi-label-container-fixed-a4" style="display: none; width:100%; height:100%;"></div>
     </div>
+    <button type="button" id="execute-print-button" class="no-print" onclick="executePrint()" style="margin-top: 10px; width:210mm; max-width: 90%;">Önizlemeyi Yazdır</button>
 
-    <div class="nav-buttons no-print">
+
+    <div class="nav-buttons no-print" style="width:210mm; max-width: 90%;">
         <a href="/">Ana Sayfa</a>
         <a href="/product_list">Ürün Listesi</a>
     </div>
 
     <script>
-        // Sayfa yüklendiğinde yapılacak işlemler
+        const A4_FIXED_CONFIG = {
+            PAGE_WIDTH: 210, MARGIN_LEFT: 8, MARGIN_RIGHT: 8, COLUMN_GAP: 2, COLUMNS: 3,
+            PAGE_HEIGHT: 297, MARGIN_TOP: 15, MARGIN_BOTTOM: 15, ROW_GAP: 1, ROWS: 7,
+            LABELS_PER_PAGE: 21,
+            QR_SIZE_MM: 18, // A4 için sabit QR boyutu
+            LABEL_WIDTH_APPROX: ((210 - 8 - 8 - (2 * 2)) / 3), 
+            LABEL_HEIGHT_APPROX: ((297 - 15 - 15 - (6 * 1)) / 7) 
+        };
+
+        // Global default visual settings
+        let currentQrSize = 25;
+        let currentBarcodeFont = 10;
+        let currentInfoFont = 13;
+
         window.onload = function() {
-            // Özel boyut alanlarını düzenle
-            updateCustomFields();
-            
-            // Genişlik/Yükseklik değişikliklerini dinle
-            document.getElementById('width-input').addEventListener('change', updateLabelSize);
-            document.getElementById('height-input').addEventListener('change', updateLabelSize);
-            
-            // URL'den gelen parametreleri kontrol et
+            // Load visual settings from inputs
+            currentQrSize = parseFloat(document.getElementById('qr-code-size-input').value) || 25;
+            currentBarcodeFont = parseFloat(document.getElementById('barcode-font-size-input').value) || 10;
+            currentInfoFont = parseFloat(document.getElementById('info-font-size-input').value) || 11;
+
+            updateCustomFields(); 
             const urlParams = new URLSearchParams(window.location.search);
             const barcode = urlParams.get('barcode');
             const model = urlParams.get('model');
             const color = urlParams.get('color');
             const size = urlParams.get('size');
-            
-            // Form alanlarını doldur
+            const paper = urlParams.get('paper');
+            const count = urlParams.get('count');
+
+            if (paper) { document.getElementById('paper-type').value = paper; }
+            if (count) { document.getElementById('label-count').value = count; }
+
+            updateCustomFields(); 
+
             if (barcode) document.getElementById('barcode-input').value = barcode;
             if (model) document.getElementById('model-input').value = model;
             if (color) document.getElementById('color-input').value = color;
             if (size) document.getElementById('size-input').value = size;
-            
-            // URL'de tüm gerekli bilgiler varsa otomatik yazdırma işlemini başlat
-            if (barcode && model && color && size && urlParams.get('print') === 'true') {
-                generateLabelAndPrint(barcode, model, color, size);
-            } else if (barcode && model && color && size) {
-                console.log("Otomatik yazdır çalıştı");
-                // Bu eski davranış - parametreler varsa ama 'print' parametresi yoksa da otomatik yazdır
-                generateLabelAndPrint(barcode, model, color, size);
-            } else {
-                console.log("URL'de eksik bilgi var veya hiç yok, otomatik etiket oluşturulmayacak.");
+
+            if (barcode && model && color && size) {
+                generateAndPreparePreview(false); // autoPrint false
             }
         };
-        
-        // Kağıt türü değiştiğinde özel boyut alanlarını göster/gizle
+
+        function updateVisualSettings() {
+            currentQrSize = parseFloat(document.getElementById('qr-code-size-input').value) || 25;
+            currentBarcodeFont = parseFloat(document.getElementById('barcode-font-size-input').value) || 10;
+            currentInfoFont = parseFloat(document.getElementById('info-font-size-input').value) || 11;
+
+            // Ana tekli etiket önizlemesini hemen güncelle
+            applyVisualsToSingleLabelPreview();
+            // Çoklu etiket önizlemelerini de güncelle (eğer görünürse)
+            updateLabelCountPreview(); 
+        }
+
+        function applyVisualsToSingleLabelPreview() {
+            const qrArea = document.querySelector('#single-label-content-wrapper .qr-area');
+            const qrImage = document.getElementById('qr-code-image-main');
+            const qrAndBarcodeArea = document.querySelector('#single-label-content-wrapper .qr-and-barcode-area');
+            const barcodeTextElem = document.getElementById('barcode-text-main');
+            const textArea = document.querySelector('#single-label-content-wrapper .text-area');
+
+            if(qrArea && qrImage && qrAndBarcodeArea) {
+                qrArea.style.width = currentQrSize + 'mm';
+                qrArea.style.height = currentQrSize + 'mm';
+                // qrAndBarcodeArea'nın genişliği QR ve barkod yazısına yetecek kadar olmalı. 
+                // Şimdilik sabit bırakılabilir veya QR boyutuna göre ayarlanabilir.
+                // Örneğin: qrAndBarcodeArea.style.width = (currentQrSize + 5) + 'mm'; 
+            }
+            if(barcodeTextElem) barcodeTextElem.style.fontSize = currentBarcodeFont + 'pt';
+            if(textArea) textArea.style.fontSize = currentInfoFont + 'pt'; // Ana konteynerin fontu
+        }
+
+        function populateMainLabelPreview(barcode, model, color, size) {
+             document.getElementById('barcode-text-main').textContent = barcode;
+             document.getElementById('model-value-main').textContent = model;
+             document.getElementById('color-value-main').textContent = color;
+             document.getElementById('size-value-main').textContent = size;
+             applyVisualsToSingleLabelPreview(); // Font ve QR boyutlarını uygula
+        }
+
         function updateCustomFields() {
             const paperType = document.getElementById('paper-type').value;
-            const customFields = document.getElementById('custom-size-fields');
-            const labelContainer = document.getElementById('label');
-            const singleLabelContainer = document.getElementById('single-label-container');
-            const multiLabelContainer = document.getElementById('multi-label-container');
-            const multiLabelSettings = document.getElementById('multi-label-settings');
-            
-            // Özel boyut alanlarını göster/gizle
-            customFields.style.display = paperType === 'custom' ? 'block' : 'none';
-            
-            // Çoklu etiket ayarlarını sadece A4 için göster
-            multiLabelSettings.style.display = paperType === 'a4' ? 'block' : 'none';
-            
-            // Etiket modunu ayarla (tekli/çoklu)
-            const isMultiLabel = paperType === 'a4';
-            singleLabelContainer.style.display = isMultiLabel ? 'none' : 'flex';
-            multiLabelContainer.style.display = isMultiLabel ? 'flex' : 'none';
-            
-            // Etikete uygun CSS sınıfı ekle/kaldır
-            labelContainer.classList.remove('paper-a4', 'paper-100x100');
-            
-            // Seçilen kağıt türüne göre boyutları ayarla
-            if (paperType === '60x40') {
-                labelContainer.style.width = '60mm';
-                labelContainer.style.height = '40mm';
-                document.getElementById('width-input').value = '60';
-                document.getElementById('height-input').value = '40';
+            const mainPreviewArea = document.getElementById('main-label-preview-area');
+
+            document.getElementById('single-label-container').style.display = 'none';
+            document.getElementById('multi-label-container-custom').style.display = 'none';
+            document.getElementById('multi-label-container-fixed-a4').style.display = 'none';
+
+            document.getElementById('custom-size-fields-single').style.display = 'none';
+            document.getElementById('custom-page-size-fields-multi').style.display = 'none';
+            document.getElementById('multi-label-layout-settings').style.display = 'none';
+            document.getElementById('a4-fixed-info').style.display = 'none';
+
+            mainPreviewArea.classList.remove('paper-a4-fixed', 'paper-100x100');
+            mainPreviewArea.style.width = ''; mainPreviewArea.style.height = '';
+            mainPreviewArea.style.flexDirection = 'row'; mainPreviewArea.style.alignItems = 'center'; 
+
+            if (paperType === 'custom') { 
+                document.getElementById('custom-size-fields-single').style.display = 'block';
+                document.getElementById('single-label-container').style.display = 'flex';
+                updateSingleLabelSize(); // Boyutları uygula
+            } else if (paperType === '60x40') {
+                document.getElementById('single-label-container').style.display = 'flex';
+                mainPreviewArea.style.width = '60mm'; mainPreviewArea.style.height = '40mm';
+                document.getElementById('single-label-width-input').value = '60'; 
+                document.getElementById('single-label-height-input').value = '40';
             } else if (paperType === '100x100') {
-                labelContainer.classList.add('paper-100x100');
-                labelContainer.style.width = '100mm';
-                labelContainer.style.height = '100mm';
-                document.getElementById('width-input').value = '100';
-                document.getElementById('height-input').value = '100';
-            } else if (paperType === 'a4') {
-                labelContainer.classList.add('paper-a4');
-                labelContainer.style.width = '210mm';
-                labelContainer.style.height = '297mm';
-                document.getElementById('width-input').value = '210';
-                document.getElementById('height-input').value = '297';
-                
-                // Kaydedilmiş etiket boyutlarını al veya varsayılanları kullan
-                const savedLabelWidth = localStorage.getItem('labelWidth') || '60';
-                const savedLabelHeight = localStorage.getItem('labelHeight') || '40';
-                
-                // Etiket boyutlarını ayarla
-                document.getElementById('label-width').value = savedLabelWidth;
-                document.getElementById('label-height').value = savedLabelHeight;
-                
-                // Etiketleri hesapla
-                calculateLabelLayout();
-            } else if (paperType === 'custom') {
-                // Özel boyut alanlarından değerleri al
-                const width = document.getElementById('width-input').value;
-                const height = document.getElementById('height-input').value;
-                labelContainer.style.width = width + 'mm';
-                labelContainer.style.height = height + 'mm';
+                document.getElementById('single-label-container').style.display = 'flex';
+                mainPreviewArea.classList.add('paper-100x100'); 
+                document.getElementById('single-label-width-input').value = '100';
+                document.getElementById('single-label-height-input').value = '100';
+            } else if (paperType === 'a4_fixed') {
+                document.getElementById('multi-label-container-fixed-a4').style.display = 'grid';
+                mainPreviewArea.classList.add('paper-a4-fixed');
+                document.getElementById('a4-fixed-info').style.display = 'block';
+                mainPreviewArea.style.alignItems = 'flex-start'; 
+                createFixedA4LayoutPreview(); 
+            } else if (paperType === 'custom_multi') { 
+                document.getElementById('custom-page-size-fields-multi').style.display = 'block';
+                document.getElementById('multi-label-layout-settings').style.display = 'block';
+                document.getElementById('multi-label-container-custom').style.display = 'flex';
+                handleMultiPageDimensionChange(false); // false = layout'u hemen hesaplama
+                calculateCustomMultiLabelLayout(); // Boyutları ayarladıktan sonra layout'u hesapla
             }
-            
-            // Yazdırma stil etiketini güncelle
+            applyVisualsToSingleLabelPreview(); // Her durumda tekli etiket görsel ayarlarını uygula
             updatePrintStyles();
         }
-        
-        // Özel boyut alanlarında değişiklik olduğunda etiketi güncelle
-        function updateLabelSize() {
-            const paperType = document.getElementById('paper-type').value;
-            if (paperType === 'custom') {
-                const width = document.getElementById('width-input').value;
-                const height = document.getElementById('height-input').value;
-                const labelContainer = document.getElementById('label');
-                labelContainer.style.width = width + 'mm';
-                labelContainer.style.height = height + 'mm';
-                
-                // Yazdırma stil etiketini güncelle
+
+        function updateSingleLabelSize() { 
+            if (document.getElementById('paper-type').value === 'custom') {
+                const width = document.getElementById('single-label-width-input').value;
+                const height = document.getElementById('single-label-height-input').value;
+                const previewArea = document.getElementById('main-label-preview-area');
+                if (width > 0) previewArea.style.width = width + 'mm';
+                if (height > 0) previewArea.style.height = height + 'mm';
                 updatePrintStyles();
             }
         }
-        
-        // Yazdırma CSS stil etiketini dinamik olarak güncelle
-        function updatePrintStyles() {
-            // Mevcut stil etiketini kaldır
-            const existingStyle = document.getElementById('dynamic-print-styles');
-            if (existingStyle) {
-                existingStyle.remove();
-            }
-            
-            // Etiket/kağıt boyutlarını al
-            let width, height;
-            const paperType = document.getElementById('paper-type').value;
-            
-            if (paperType === 'custom') {
-                width = document.getElementById('width-input').value;
-                height = document.getElementById('height-input').value;
-            } else if (paperType === '60x40') {
-                width = 60;
-                height = 40;
-            } else if (paperType === '100x100') {
-                width = 100;
-                height = 100;
-            } else if (paperType === 'a4') {
-                width = 210;
-                height = 297;
-            }
-            
-            if (paperType === 'a4') {
-                // A4 için kenar boşluklarını al
-                const marginLeft = parseInt(document.getElementById('margin-left').value) || 10;
-                const marginRight = parseInt(document.getElementById('margin-right').value) || 10;
-                const marginTop = parseInt(document.getElementById('margin-top').value) || 10;
-                const marginBottom = parseInt(document.getElementById('margin-bottom').value) || 10;
-                
-                updatePrintStylesWithMargins(marginTop, marginRight, marginBottom, marginLeft);
-            } else {
-                // Diğer etiket boyutları için
-                const style = document.createElement('style');
-                style.id = 'dynamic-print-styles';
-                style.textContent = `
-                    @media print {
-                        @page {
-                            size: ${width}mm ${height}mm;
-                            margin: 0;
-                        }
-                        body {
-                            width: ${width}mm;
-                            height: ${height}mm;
-                        }
-                    }
-                `;
-                
-                // Stil etiketini head'e ekle
-                document.head.appendChild(style);
+
+        function handleMultiPageDimensionChange(doLayout = true) { 
+            if (document.getElementById('paper-type').value === 'custom_multi') {
+                const previewArea = document.getElementById('main-label-preview-area');
+                const pageWidth = document.getElementById('multi-page-width-input').value;
+                const pageHeight = document.getElementById('multi-page-height-input').value;
+                if (pageWidth > 0) previewArea.style.width = pageWidth + 'mm';
+                if (pageHeight > 0) previewArea.style.height = pageHeight + 'mm';
+                if(doLayout) calculateCustomMultiLabelLayout(); 
             }
         }
-        
-        // Kenar boşlukları ile yazdırma stilini güncelle
-        function updatePrintStylesWithMargins(marginTop, marginRight, marginBottom, marginLeft) {
-            // Mevcut stil etiketini kaldır
-            const existingStyle = document.getElementById('dynamic-print-styles');
-            if (existingStyle) {
-                existingStyle.remove();
+
+        function getFixedA4LabelHTML(barcode, model, color, size, qrSrc) {
+            // A4 için font boyutları da global ayarlardan alınsın
+            return `
+                <div class="label-item-fixed-a4-content">
+                    <div class="left">
+                        <img class="qr-code-clone" src="${qrSrc}" alt="QR Kod"> <div class="barcode-text-clone barcode-text-fixed-a4" style="font-size:${currentBarcodeFont}pt;">${barcode}</div>
+                    </div>
+                    <div class="right">
+                        <div class="info-clone" style="font-size:${currentInfoFont}pt;"><span class="label">Model:</span> <span class="value model-clone">${model}</span></div>
+                        <div class="info-clone" style="font-size:${currentInfoFont}pt;"><span class="label">Renk:</span> <span class="value color-clone">${color}</span></div>
+                        <div class="info-clone" style="font-size:${currentInfoFont}pt;"><span class="label">Beden:</span> <span class="value size-clone">${size}</span></div>
+                    </div>
+                </div>`;
+        }
+        function createFixedA4LayoutPreview(forPrinting = false) { 
+            const container = document.getElementById('multi-label-container-fixed-a4');
+            container.innerHTML = ''; 
+            container.style.padding = `${A4_FIXED_CONFIG.MARGIN_TOP}mm ${A4_FIXED_CONFIG.MARGIN_RIGHT}mm ${A4_FIXED_CONFIG.MARGIN_BOTTOM}mm ${A4_FIXED_CONFIG.MARGIN_LEFT}mm`;
+            container.style.gridTemplateColumns = `repeat(${A4_FIXED_CONFIG.COLUMNS}, 1fr)`; 
+            container.style.gridTemplateRows = `repeat(${A4_FIXED_CONFIG.ROWS}, 1fr)`;    
+            container.style.gap = `${A4_FIXED_CONFIG.ROW_GAP}mm ${A4_FIXED_CONFIG.COLUMN_GAP}mm`;
+
+            const labelCountInput = parseInt(document.getElementById('label-count').value) || 1;
+            const displayCount = forPrinting ? labelCountInput : Math.min(labelCountInput, A4_FIXED_CONFIG.LABELS_PER_PAGE);
+
+            const barcode = document.getElementById('barcode-input').value || "BARKOD";
+            const model = document.getElementById('model-input').value || "MODEL";
+            const color = document.getElementById('color-input').value || "RENK";
+            const size = document.getElementById('size-input').value || "BEDEN";
+            const qrSrc = document.getElementById('qr-code-image-main').src;
+
+            for (let i = 0; i < displayCount; i++) {
+                const labelItem = document.createElement('div');
+                labelItem.className = 'label-item'; 
+                labelItem.innerHTML = getFixedA4LabelHTML(barcode, model, color, size, qrSrc);
+                container.appendChild(labelItem);
             }
-            
-            // A4 boyutları
-            const width = 210;
-            const height = 297;
-            
-            // Yeni stil etiketini oluştur
-            const style = document.createElement('style');
-            style.id = 'dynamic-print-styles';
-            style.textContent = `
-                @media print {
-                    @page {
-                        size: ${width}mm ${height}mm;
-                        margin: 0;
-                    }
-                    body {
-                        width: ${width}mm;
-                        height: ${height}mm;
-                    }
-                    #multi-label-container {
-                        padding: ${marginTop}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm !important;
-                        box-sizing: border-box;
-                    }
-                }
-            `;
-            
-            // Stil etiketini head'e ekle
-            document.head.appendChild(style);
+            if(!forPrinting) updatePrintStyles();
         }
-        
-        // Etiket sayısını güncelle
-        function updateLabelCount() {
-            calculateLabelLayout();
-        }
-        
-        // A4 kağıtta etiket düzenini hesapla
-        function calculateLabelLayout() {
-            const multiLabelContainer = document.getElementById('multi-label-container');
+
+
+        function calculateCustomMultiLabelLayout(forPrinting = false) {
+            const container = document.getElementById('multi-label-container-custom');
+            container.innerHTML = '';
             const labelCount = parseInt(document.getElementById('label-count').value) || 1;
-            const labelWidth = parseInt(document.getElementById('label-width').value) || 60;
-            const labelHeight = parseInt(document.getElementById('label-height').value) || 40;
-            const hGap = parseInt(document.getElementById('horizontal-gap').value) || 5;
-            const vGap = parseInt(document.getElementById('vertical-gap').value) || 5;
-            
-            // Girilen etiket boyutlarını kaydet
-            localStorage.setItem('labelWidth', labelWidth);
-            localStorage.setItem('labelHeight', labelHeight);
-            
-            // Kenar boşlukları (mm)
-            const marginLeft = parseInt(document.getElementById('margin-left').value) || 10;
-            const marginRight = parseInt(document.getElementById('margin-right').value) || 10;
-            const marginTop = parseInt(document.getElementById('margin-top').value) || 10;
-            const marginBottom = parseInt(document.getElementById('margin-bottom').value) || 10;
-            
-            // A4 boyutları (mm)
-            const pageWidth = 210;
-            const pageHeight = 297;
-            
-            // Kullanılabilir alan
-            const usableWidth = pageWidth - (marginLeft + marginRight);
-            const usableHeight = pageHeight - (marginTop + marginBottom);
-            
-            // Bir satıra kaç etiket sığar
-            const labelsPerRow = Math.floor((usableWidth + hGap) / (labelWidth + hGap));
-            
-            // Bir sütuna kaç etiket sığar
-            const labelsPerColumn = Math.floor((usableHeight + vGap) / (labelHeight + vGap));
-            
-            // Bir sayfaya kaç etiket sığar
-            const labelsPerPage = labelsPerRow * labelsPerColumn;
-            
-            // Etiketleri oluştur
-            createLabelElements(labelCount, labelWidth, labelHeight, labelsPerRow, labelsPerColumn);
-            
-            // Kenar boşluklarını ayarla
-            multiLabelContainer.style.padding = `${marginTop}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm`;
-            
-            // Yazdırma CSS stil etiketini de güncelle
-            updatePrintStylesWithMargins(marginTop, marginRight, marginBottom, marginLeft);
-        }
-        
-        // Etiket elementlerini oluştur
-        function createLabelElements(count, width, height, labelsPerRow, labelsPerColumn) {
-            const multiLabelContainer = document.getElementById('multi-label-container');
-            
-            // Önce mevcut etiketleri temizle
-            multiLabelContainer.innerHTML = '';
-            
-            // Etiketleri oluştur
-            for (let i = 0; i < count; i++) {
+            const labelWidth = parseFloat(document.getElementById('multi-label-width').value) || 60;
+            const labelHeight = parseFloat(document.getElementById('multi-label-height').value) || 40;
+            if (labelWidth <= 0 || labelHeight <= 0) { container.innerHTML = '<p style="color:red;">Etiket boyutları geçersiz.</p>'; return; }
+
+            container.style.padding = `${document.getElementById('margin-top').value || 0}mm ${document.getElementById('margin-right').value || 0}mm ${document.getElementById('margin-bottom').value || 0}mm ${document.getElementById('margin-left').value || 0}mm`;
+            container.style.gap = `${document.getElementById('vertical-gap').value || 0}mm ${document.getElementById('horizontal-gap').value || 0}mm`;
+
+            const barcode = document.getElementById('barcode-input').value || "BARKOD";
+            const model = document.getElementById('model-input').value || "MODEL";
+            const color = document.getElementById('color-input').value || "RENK";
+            const size = document.getElementById('size-input').value || "BEDEN";
+            const qrSrc = document.getElementById('qr-code-image-main').src;
+            const userQrSize = currentQrSize; // Kullanıcının girdiği QR boyutu
+
+            for (let i = 0; i < labelCount; i++) {
                 const labelItem = document.createElement('div');
                 labelItem.className = 'label-item';
-                labelItem.style.width = width + 'mm';
-                labelItem.style.height = height + 'mm';
-                
-                // QR kod alanı boyutunu da etiket boyutuna göre ayarla
-                const qrSizePercent = Math.min(0.6, 30 / Math.min(width, height)); // QR kod boyutu etiketin en fazla %60'ı kadar
-                const qrSize = Math.min(width, height) * qrSizePercent;
-                
-                // Etiket içeriği (tek etiketin aynısı)
+                labelItem.style.width = labelWidth + 'mm';
+                labelItem.style.height = labelHeight + 'mm';
+
+                // QR boyutu, etiketin %35'ini geçmesin ve kullanıcının girdiği boyuttan büyük olmasın
+                const effectiveQrSize = Math.min(userQrSize, labelWidth * 0.4, labelHeight * 0.4);
+
                 labelItem.innerHTML = `
-                    <div class="qr-and-barcode-area" style="width: ${qrSize}mm;">
-                        <div class="qr-area" style="width: ${qrSize}mm; height: ${qrSize}mm;">
-                            <img class="qr-code-clone" src="https://via.placeholder.com/100" alt="QR Kod" style="width: 100%; height: 100%;">
+                     <div class="label-item-fixed-a4-content"> <div class="left">
+                            <img class="qr-code-clone" src="${qrSrc}" style="width:${effectiveQrSize}mm; height:${effectiveQrSize}mm; max-width:90%; max-height:90%; margin-bottom: ${Math.min(2,labelHeight*0.05)}mm;">
+                            <div class="barcode-text-clone barcode-text-fixed-a4" style="font-size:${currentBarcodeFont}pt;">${barcode}</div>
                         </div>
-                        <div class="barcode-text-under-qr barcode-clone"></div>
-                    </div>
-                    <div class="text-area">
-                        <div class="product-info">
-                            <div><span class="label">Model:</span> <span class="value model-clone"></span></div>
-                            <div><span class="label">Renk:</span> <span class="value color-clone"></span></div>
-                            <div><span class="label">Beden:</span> <span class="value size-clone"></span></div>
+                        <div class="right">
+                            <div class="info-clone" style="font-size:${currentInfoFont}pt; margin-bottom:${Math.min(2,labelHeight*0.05)}mm;"><span class="label">Model:</span> <span class="value model-clone">${model}</span></div>
+                            <div class="info-clone" style="font-size:${currentInfoFont}pt; margin-bottom:${Math.min(2,labelHeight*0.05)}mm;"><span class="label">Renk:</span> <span class="value color-clone">${color}</span></div>
+                            <div class="info-clone" style="font-size:${currentInfoFont}pt;"><span class="label">Beden:</span> <span class="value size-clone">${size}</span></div>
                         </div>
-                    </div>
-                `;
-                
-                multiLabelContainer.appendChild(labelItem);
+                    </div>`;
+                container.appendChild(labelItem);
+            }
+            if(!forPrinting) updatePrintStyles();
+        }
+
+        function updateLabelCountPreview() { 
+            const paperType = document.getElementById('paper-type').value;
+            if (paperType === 'a4_fixed') {
+                createFixedA4LayoutPreview(false); 
+            } else if (paperType === 'custom_multi') {
+                calculateCustomMultiLabelLayout(false);
+            }
+            const barcode = document.getElementById('barcode-input').value;
+            const model = document.getElementById('model-input').value;
+            const color = document.getElementById('color-input').value;
+            const sizeVal = document.getElementById('size-input').value;
+            const qrSrc = document.getElementById('qr-code-image-main').src;
+            if (barcode && model && color && sizeVal && qrSrc !== 'https://via.placeholder.com/100x100?text=QR') {
+                 updateAllClonedLabelsContent(barcode, model, color, sizeVal, qrSrc);
             }
         }
-        
-        // Etiket oluşturma ve yazdırma fonksiyonu
-        function generateLabelAndPrint(barcode, model, color, size) {
-            // Önce etiket boyutlarını ayarla
-            updateCustomFields();
-            
-            const paperType = document.getElementById('paper-type').value;
-            const isMultiLabel = paperType === 'a4';
-            
-            // Tekli etiket elementleri
-            const qrCodeImage = document.getElementById('qr-code-image');
-            const barcodeTextUnderQr = document.getElementById('barcode-text-under-qr');
-            const modelValue = document.getElementById('model-value');
-            const colorValue = document.getElementById('color-value');
-            const sizeValue = document.getElementById('size-value');
 
-            // Önceki görsel yükleme olay dinleyicilerini temizle
-            const cleanUpListeners = () => {
-                qrCodeImage.removeEventListener('load', onQrLoad);
-                qrCodeImage.removeEventListener('error', onQrError);
-            };
+        function updateAllClonedLabelsContent(barcode, model, color, size, qrImageSrc) {
+            document.querySelectorAll('.label-item').forEach(label => { 
+                const qrImgClone = label.querySelector('.qr-code-clone');
+                if (qrImgClone) { qrImgClone.src = qrImageSrc; qrImgClone.alt = 'QR Kod: ' + barcode; }
 
-            const onQrLoad = () => {
-                console.log("QR Kod yüklendi, yazdırma başlatılıyor...");
-                cleanUpListeners();
-                
-                // Çoklu etiket modunda, klonları güncelle
-                if (isMultiLabel) {
-                    updateMultiLabels(barcode, model, color, size, qrCodeImage.src);
-                }
-                
-                // Kısa bir gecikme ekleyerek tüm QR kodların yüklenmesini bekle
-                setTimeout(() => {
-                    window.print();
-                }, 500);
-            };
+                const barcodeClone = label.querySelector('.barcode-text-clone');
+                if (barcodeClone) { barcodeClone.textContent = barcode; barcodeClone.style.fontSize = currentBarcodeFont + 'pt';}
 
-            const onQrError = () => {
-                console.error("QR Kod yüklenirken hata oluştu.");
-                cleanUpListeners();
-                alert("QR Kod görseli yüklenirken hata oluştu. Yazdırma yapılamıyor.");
-            };
+                label.querySelectorAll('.info-clone').forEach(infoEl => infoEl.style.fontSize = currentInfoFont + 'pt');
 
-            // Görsel yükleme ve hata olay dinleyicilerini kur
-            qrCodeImage.addEventListener('load', onQrLoad);
-            qrCodeImage.addEventListener('error', onQrError);
-
-            // QR Altındaki Barkod değerini güncelle
-            barcodeTextUnderQr.textContent = barcode;
-
-            // Ürün bilgilerini güncelle
-            modelValue.textContent = model;
-            colorValue.textContent = color;
-            sizeValue.textContent = size;
-
-            // Backend'den QR kod görselini çek
-            fetch(`/generate_qr?barcode=${encodeURIComponent(barcode)}`)
-                .then(response => {
-                    if (!response.ok) {
-                        return response.text().then(text => { throw new Error(`HTTP error! status: ${response.status}, message: ${text}`); });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        qrCodeImage.src = data.qr_code_path;
-                        qrCodeImage.alt = 'QR Kod: ' + barcode;
-                    } else {
-                        alert('QR Kod oluşturma başarısız: ' + (data.message || 'Bilinmeyen hata'));
-                        qrCodeImage.src = 'https://via.placeholder.com/100?text=Hata';
-                        qrCodeImage.alt = 'QR Kod Hatası';
-                    }
-                })
-                .catch(err => {
-                    console.error('QR Kod oluşturulurken fetch hatası:', err);
-                    alert('QR Kod oluşturulurken bir ağ hatası oluştu. Detaylar konsolda.');
-                    qrCodeImage.src = 'https://via.placeholder.com/100?text=Ağ+Hata';
-                    qrCodeImage.alt = 'QR Kod Ağ Hatası';
-                });
-        }
-        
-        // Çoklu etiketleri güncelle
-        function updateMultiLabels(barcode, model, color, size, qrImageSrc) {
-            const labelClones = document.querySelectorAll('.label-item');
-            
-            labelClones.forEach(label => {
-                // QR kod görselini güncelle
-                const qrImg = label.querySelector('.qr-code-clone');
-                if (qrImg) {
-                    qrImg.src = qrImageSrc;
-                    qrImg.alt = 'QR Kod: ' + barcode;
-                }
-                
-                // Barkod metnini güncelle
-                const barcodeText = label.querySelector('.barcode-clone');
-                if (barcodeText) {
-                    barcodeText.textContent = barcode;
-                }
-                
-                // Ürün bilgilerini güncelle
                 const modelClone = label.querySelector('.model-clone');
-                const colorClone = label.querySelector('.color-clone');
-                const sizeClone = label.querySelector('.size-clone');
-                
                 if (modelClone) modelClone.textContent = model;
+                const colorClone = label.querySelector('.color-clone');
                 if (colorClone) colorClone.textContent = color;
+                const sizeClone = label.querySelector('.size-clone');
                 if (sizeClone) sizeClone.textContent = size;
+
+                // A4 sabit dışındaki çoklu etiketlerde QR boyutunu da güncelle
+                const paperType = document.getElementById('paper-type').value;
+                if (paperType === 'custom_multi' && qrImgClone) {
+                    const labelWidth = parseFloat(label.style.width) || 60;
+                    const labelHeight = parseFloat(label.style.height) || 40;
+                    const userQrSize = currentQrSize;
+                    const effectiveQrSize = Math.min(userQrSize, labelWidth * 0.4, labelHeight * 0.4);
+                    qrImgClone.style.width = effectiveQrSize + 'mm';
+                    qrImgClone.style.height = effectiveQrSize + 'mm';
+                }
             });
         }
 
-        // Form butonuna basınca çalışacak fonksiyon
-        function generateAndPrintFromForm() {
+        function updatePrintStyles() {
+            let existingStyle = document.getElementById('dynamic-print-styles');
+            if (existingStyle) existingStyle.remove();
+            const style = document.createElement('style');
+            style.id = 'dynamic-print-styles'; document.head.appendChild(style);
+
+            const paperType = document.getElementById('paper-type').value;
+            let pageWidth, pageHeight, printSpecificCSS = "";
+
+            if (paperType === 'custom') {
+                pageWidth = document.getElementById('single-label-width-input').value || 60;
+                pageHeight = document.getElementById('single-label-height-input').value || 40;
+            } else if (paperType === '60x40') {
+                pageWidth = 60; pageHeight = 40;
+            } else if (paperType === '100x100') {
+                pageWidth = 100; pageHeight = 100;
+            } else if (paperType === 'a4_fixed') {
+                pageWidth = A4_FIXED_CONFIG.PAGE_WIDTH; pageHeight = A4_FIXED_CONFIG.PAGE_HEIGHT;
+                printSpecificCSS = `
+                    #main-label-preview-area > #single-label-container, 
+                    #main-label-preview-area > #multi-label-container-custom { display: none !important; }
+                    #main-label-preview-area > #multi-label-container-fixed-a4 {
+                        display: grid !important; width: 100% !important; height: 100% !important;
+                        padding: ${A4_FIXED_CONFIG.MARGIN_TOP}mm ${A4_FIXED_CONFIG.MARGIN_RIGHT}mm ${A4_FIXED_CONFIG.MARGIN_BOTTOM}mm ${A4_FIXED_CONFIG.MARGIN_LEFT}mm !important;
+                        grid-template-columns: repeat(${A4_FIXED_CONFIG.COLUMNS}, calc((100% - ${(A4_FIXED_CONFIG.COLUMNS - 1) * A4_FIXED_CONFIG.COLUMN_GAP}mm) / ${A4_FIXED_CONFIG.COLUMNS})) !important;
+                        grid-template-rows: repeat(${A4_FIXED_CONFIG.ROWS}, calc((100% - ${(A4_FIXED_CONFIG.ROWS - 1) * A4_FIXED_CONFIG.ROW_GAP}mm) / ${A4_FIXED_CONFIG.ROWS})) !important;
+                        gap: ${A4_FIXED_CONFIG.ROW_GAP}mm ${A4_FIXED_CONFIG.COLUMN_GAP}mm !important;
+                    }
+                    #main-label-preview-area > #multi-label-container-fixed-a4 .label-item { page-break-inside: avoid !important; border: 0.1mm solid #eee !important; } 
+                `;
+            } else if (paperType === 'custom_multi') {
+                pageWidth = document.getElementById('multi-page-width-input').value || A4_FIXED_CONFIG.PAGE_WIDTH;
+                pageHeight = document.getElementById('multi-page-height-input').value || A4_FIXED_CONFIG.PAGE_HEIGHT;
+                printSpecificCSS = `
+                    #main-label-preview-area > #single-label-container,
+                    #main-label-preview-area > #multi-label-container-fixed-a4 { display: none !important; }
+                    #main-label-preview-area > #multi-label-container-custom {
+                        display: flex !important; flex-wrap: wrap !important; width: 100% !important; height: 100% !important;
+                        padding: ${document.getElementById('margin-top').value || 0}mm ${document.getElementById('margin-right').value || 0}mm ${document.getElementById('margin-bottom').value || 0}mm ${document.getElementById('margin-left').value || 0}mm !important;
+                        gap: ${document.getElementById('vertical-gap').value || 0}mm ${document.getElementById('horizontal-gap').value || 0}mm !important;
+                    }
+                     #main-label-preview-area > #multi-label-container-custom .label-item { page-break-inside: avoid !important; border: 0.1mm solid #eee !important; }
+                `;
+            } else { return; }
+
+            style.textContent = `
+                @media print {
+                    @page { size: ${pageWidth}mm ${pageHeight}mm; margin: 0; }
+                    body { width: ${pageWidth}mm !important; height: ${pageHeight}mm !important; }
+                    #main-label-preview-area {
+                        width: ${pageWidth}mm !important; height: ${pageHeight}mm !important;
+                        border: none !important; padding: 0 !important; margin: 0 !important;
+                        box-sizing: border-box !important; overflow: hidden !important; 
+                    }
+                    ${printSpecificCSS}
+                }`;
+        }
+
+        function generateAndPreparePreview(fetchNewQR = true) { // autoPrint kaldırıldı
             const barcode = document.getElementById('barcode-input').value;
             const model = document.getElementById('model-input').value;
             const color = document.getElementById('color-input').value;
             const size = document.getElementById('size-input').value;
-
-            if (!barcode || !model || !color || !size) {
-                alert("Lütfen tüm alanları doldurun.");
-                return;
+            if (!barcode || !model || !color || !size) { 
+                alert("Lütfen önce tüm ürün bilgilerini doldurun."); return; 
             }
 
-            // Formdan alınan değerlerle etiket oluştur ve yazdırma işlemini başlat
-            generateLabelAndPrint(barcode, model, color, size);
+            populateMainLabelPreview(barcode, model, color, size); 
+            updateCustomFields(); // Gerekli layout fonksiyonunu tetikler
+
+            const qrCodeImageElement = document.getElementById('qr-code-image-main');
+            let qrFetchTimeout;
+
+            const afterQrReady = (qrSrc) => {
+                updateAllClonedLabelsContent(barcode, model, color, size, qrSrc);
+                updatePrintStyles(); // Yazdırma stillerini son halleriyle güncelle
+                console.log("Önizleme hazırlandı.");
+            };
+
+            const onQrLoad = () => { clearTimeout(qrFetchTimeout); afterQrReady(qrCodeImageElement.src); };
+            const onQrError = () => {
+                clearTimeout(qrFetchTimeout);
+                qrCodeImageElement.src = 'https://via.placeholder.com/100x100?text=QR+HATA';
+                qrCodeImageElement.alt = 'QR Kod Hatası';
+                afterQrReady(qrCodeImageElement.src); 
+                alert("QR Kod görseli yüklenirken bir sorun oluştu. Placeholder QR kullanılacak.");
+            };
+
+            qrCodeImageElement.removeEventListener('load', onQrLoad); 
+            qrCodeImageElement.removeEventListener('error', onQrError);
+            qrCodeImageElement.addEventListener('load', onQrLoad);
+            qrCodeImageElement.addEventListener('error', onQrError);
+
+            if (fetchNewQR || qrCodeImageElement.src.startsWith('https://via.placeholder.com/')) {
+                qrFetchTimeout = setTimeout(() => { console.warn("QR yükleme zaman aşımı."); onQrError(); }, 7000);
+                fetch(`/generate_qr?barcode=${encodeURIComponent(barcode)}`)
+                    .then(response => {
+                        if (!response.ok) return response.text().then(text => { throw new Error(`HTTP ${response.status}: ${text}`); });
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success && data.qr_code_path) {
+                            qrCodeImageElement.src = data.qr_code_path + '?t=' + new Date().getTime(); 
+                        } else { qrCodeImageElement.dispatchEvent(new Event('error')); }
+                    })
+                    .catch(err => { qrCodeImageElement.dispatchEvent(new Event('error')); });
+            } else { 
+                afterQrReady(qrCodeImageElement.src); // Zaten QR varsa direkt devam
+            }
+        }
+
+        function executePrint() {
+            const paperType = document.getElementById('paper-type').value;
+            const count = parseInt(document.getElementById('label-count').value) || 1;
+            const printButton = document.getElementById('execute-print-button');
+
+            // Yazdırma sırasında butonu gizle ve sonra geri getir
+            printButton.classList.add('print-mode');
+
+            if (paperType === 'custom' || paperType === '60x40' || paperType === '100x100') {
+                const labelW = document.getElementById('single-label-width-input').value || 60;
+                const labelH = document.getElementById('single-label-height-input').value || 40;
+                const singleLabelContentHTML = document.getElementById('single-label-content-wrapper').innerHTML
+                    .replace(new RegExp(document.getElementById('qr-code-image-main').src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),'g'), document.getElementById('qr-code-image-main').src); // QR src'yi teyit et
+
+                let labelsToPrintHTML = "";
+                for (let i = 0; i < count; i++) {
+                    labelsToPrintHTML += `<div class="label-instance-print" style="width: ${labelW}mm; height: ${labelH}mm; display: flex; align-items: center; box-sizing: border-box; page-break-after: always;">${singleLabelContentHTML}</div>`;
+                }
+                if (labelsToPrintHTML.length > 0) {
+                   const lastBreak = labelsToPrintHTML.lastIndexOf('page-break-after: always;');
+                   if (lastBreak !== -1) labelsToPrintHTML = labelsToPrintHTML.substring(0, lastBreak) + labelsToPrintHTML.substring(lastBreak).replace('page-break-after: always;', 'page-break-after: auto;');
+                }
+
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`
+                    <!DOCTYPE html><html><head><title>Etiketler</title><style>
+                        @page { size: ${labelW}mm ${labelH}mm; margin: 0; }
+                        body { margin: 0; font-family: Arial, sans-serif; }
+                        .label-instance-print { /* Tekil etiket ana CSS stillerini buraya aktarmak daha iyi olur */ }
+                        /* Aşağıdakiler #single-label-content-wrapper'dan kopyalanan temel stiller */
+                        .label-instance-print .qr-and-barcode-area { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; margin-right: 3mm; width: ${currentQrSize + 5}mm; } /* QR boyutu + biraz pay */
+                        .label-instance-print .qr-area { width: ${currentQrSize}mm; height: ${currentQrSize}mm; display: flex; justify-content: center; align-items: center; margin-bottom: 1mm; }
+                        .label-instance-print .qr-area img { max-width: 100%; max-height: 100%; object-fit: contain; }
+                        .label-instance-print .barcode-text-under-qr { font-size: ${currentBarcodeFont}pt; text-align: center; word-break: break-all; max-width: 100%; overflow: hidden; font-weight: bold; }
+                        .label-instance-print .text-area { flex-grow: 1; height: 100%; display: flex; flex-direction: column; justify-content: center; text-align: left; font-size: ${currentInfoFont}pt; overflow: hidden; padding-right: 1.5mm; }
+                        .label-instance-print .product-info div { margin-bottom: 2mm; line-height: 1.2; }
+                        .label-instance-print .product-info .label { font-weight: bold; margin-right: 1mm; }
+                    </style></head><body>${labelsToPrintHTML}
+                    <script> window.onload = function() { setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 300); }, 500); }; <\/script></body></html>`);
+                printWindow.document.close();
+                setTimeout(() => printButton.classList.remove('print-mode'), 1000);
+
+
+            } else if (paperType === 'a4_fixed') {
+                createFixedA4LayoutPreview(true); // Yazdırma için TÜM etiketleri hazırla
+                updatePrintStyles(); 
+                window.print();
+                setTimeout(() => { // Yazdırma penceresi kapandıktan sonra önizlemeyi düzelt
+                    createFixedA4LayoutPreview(false); 
+                    printButton.classList.remove('print-mode');
+                }, 1000); // Gecikme gerekebilir
+            } else if (paperType === 'custom_multi') {
+                calculateCustomMultiLabelLayout(true); // TÜM etiketleri hazırla
+                updatePrintStyles(); 
+                window.print();
+                setTimeout(() => {
+                    calculateCustomMultiLabelLayout(false); // Önizlemeyi geri yükle
+                    printButton.classList.remove('print-mode');
+                }, 1000);
+            } else {
+                 printButton.classList.remove('print-mode');
+            }
         }
     </script>
 
 </body>
-
 </html>
