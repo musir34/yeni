@@ -981,12 +981,98 @@
                     updateAllClonedLabelsContent(barcode, model, color, size, qrSrc);
                 } else {
                     // Çoklu barkod modu - tüm etiketleri oluştur
-                    generateMultipleLabels(qrSrc);
+                    generateMultipleLabels();
                 }
                 
                 updatePrintStyles(); // Yazdırma stillerini son halleriyle güncelle
                 console.log("Önizleme hazırlandı.");
             };
+            
+            // Çoklu barkod etiketleri oluşturma fonksiyonu
+            function generateMultipleLabels() {
+                const paperType = document.getElementById('paper-type').value;
+                const totalLabels = parseInt(document.getElementById('label-count').value) || 0;
+                
+                // Etiket sayısı 0 ise işlem yapma
+                if (totalLabels === 0) return;
+                
+                // A4 sabit düzen
+                if (paperType === 'a4_fixed') {
+                    const container = document.getElementById('multi-label-container-fixed-a4');
+                    container.innerHTML = '';
+                    container.style.display = 'grid';
+                    
+                    // A4 grid düzeni - 3x7 grid
+                    container.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                    container.style.gridTemplateRows = 'repeat(7, 1fr)';
+                    container.style.gap = '1mm';
+                    
+                    let labelCounter = 0;
+                    
+                    // Her bir barkod için belirtilen miktarda etiket oluştur
+                    for (let i = 0; i < barcodeList.length; i++) {
+                        const item = barcodeList[i];
+                        
+                        for (let j = 0; j < item.quantity; j++) {
+                            if (labelCounter >= A4_FIXED_CONFIG.LABELS_PER_PAGE) break;
+                            
+                            const labelItem = document.createElement('div');
+                            labelItem.className = 'label-item';
+                            
+                            // Label içeriğini oluştur
+                            const qrSrc = `/generate_qr?data=${encodeURIComponent(item.barcode)}`;
+                            const barcode = item.barcode;
+                            const model = item.model;
+                            const color = item.color;
+                            const size = item.size;
+                            
+                            labelItem.innerHTML = `
+                                <div class="label-item-fixed-a4-content">
+                                    <div class="left">
+                                        <img class="qr-code-clone" src="${qrSrc}" alt="QR Kod">
+                                        <div class="barcode-text-clone barcode-text-fixed-a4" style="font-size:${currentBarcodeFont}pt;">${barcode}</div>
+                                    </div>
+                                    <div class="right">
+                                        <div class="info-clone" style="font-size:${currentInfoFont}pt;"><span class="label">Model:</span> <span class="value model-clone">${model}</span></div>
+                                        <div class="info-clone" style="font-size:${currentInfoFont}pt;"><span class="label">Renk:</span> <span class="value color-clone">${color}</span></div>
+                                        <div class="info-clone" style="font-size:${currentInfoFont}pt;"><span class="label">Beden:</span> <span class="value size-clone">${size}</span></div>
+                                    </div>
+                                </div>
+                            `;
+                            
+                            container.appendChild(labelItem);
+                            labelCounter++;
+                        }
+                    }
+                    
+                    // Görünürlüğü ayarla
+                    document.getElementById('single-label-container').style.display = 'none';
+                    document.getElementById('multi-label-container-custom').style.display = 'none';
+                    container.style.display = 'grid';
+                }
+                // Özel veya diğer düzenler için
+                else {
+                    // Tekli etiket görünümü kullan
+                    document.getElementById('single-label-container').style.display = 'flex';
+                    document.getElementById('multi-label-container-custom').style.display = 'none';
+                    document.getElementById('multi-label-container-fixed-a4').style.display = 'none';
+                    
+                    // İlk barkodu göster
+                    if (barcodeList.length > 0) {
+                        const firstItem = barcodeList[0];
+                        const qrSrc = `/generate_qr?data=${encodeURIComponent(firstItem.barcode)}`;
+                        
+                        // Tekli etiket içeriğini güncelle
+                        populateMainLabelPreview(firstItem.barcode, firstItem.model, firstItem.color, firstItem.size);
+                        
+                        // QR kodu güncelle
+                        document.getElementById('qr-code-image-main').src = qrSrc;
+                    }
+                }
+                
+                // Yazdır butonunu göster
+                document.getElementById('execute-print-button').style.display = 'block';
+            }
 
             const onQrLoad = () => { clearTimeout(qrFetchTimeout); afterQrReady(qrCodeImageElement.src); };
             const onQrError = () => {
