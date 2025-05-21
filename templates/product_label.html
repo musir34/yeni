@@ -428,7 +428,7 @@
             selectedModel = modelCode;
             
             // Model koduna göre renk ve beden seçeneklerini getir
-            fetch(`/get_product_details/${modelCode}`)
+            fetch(`/product_label/get_product_details/${modelCode}`)
                 .then(response => response.json())
                 .then(data => {
                     if (!data.success) {
@@ -555,12 +555,15 @@
             
             // QR kod görselini güncelle (placeholder yerine gerçek QR kodu)
             updateQrCodeImage(barcode);
+            
+            // Önizlemeyi güncelle
+            generateAndPreparePreview(false);
         }
         
         // QR kod görselini günceller
         function updateQrCodeImage(barcode) {
             // API'den QR kodunu al
-            fetch(`/generate_qr?data=${encodeURIComponent(barcode)}`)
+            fetch(`/product_label/generate_qr?data=${encodeURIComponent(barcode)}`)
                 .then(response => response.blob())
                 .then(blob => {
                     const url = URL.createObjectURL(blob);
