@@ -311,8 +311,8 @@
         </select>
         
         <div id="custom-size-fields">
-            <input type="number" id="width-input" placeholder="Genişlik (mm)" value="60">
-            <input type="number" id="height-input" placeholder="Yükseklik (mm)" value="40">
+            <input type="number" id="width-input" placeholder="Genişlik (mm)" value="60" onchange="updateLabelSize()">
+            <input type="number" id="height-input" placeholder="Yükseklik (mm)" value="40" onchange="updateLabelSize()">
         </div>
 
         <button type="button" onclick="generateAndPrintFromForm()">Etiket Oluştur & Yazdır</button>
@@ -341,9 +341,14 @@
     </div>
 
     <script>
-        // Sayfa yüklendiğinde özel boyut alanlarını göster/gizle
+        // Sayfa yüklendiğinde yapılacak işlemler
         window.onload = function() {
+            // Özel boyut alanlarını düzenle
             updateCustomFields();
+            
+            // Genişlik/Yükseklik değişikliklerini dinle
+            document.getElementById('width-input').addEventListener('change', updateLabelSize);
+            document.getElementById('height-input').addEventListener('change', updateLabelSize);
             
             // URL'den gelen parametreleri kontrol et
             const urlParams = new URLSearchParams(window.location.search);
@@ -358,9 +363,15 @@
             if (color) document.getElementById('color-input').value = color;
             if (size) document.getElementById('size-input').value = size;
             
-            // URL'de otomatik yazdırma parametresi varsa etiketi oluştur
+            // URL'de tüm gerekli bilgiler varsa otomatik yazdırma işlemini başlat
             if (barcode && model && color && size && urlParams.get('print') === 'true') {
                 generateLabelAndPrint(barcode, model, color, size);
+            } else if (barcode && model && color && size) {
+                console.log("Otomatik yazdır çalıştı");
+                // Bu eski davranış - parametreler varsa ama 'print' parametresi yoksa da otomatik yazdır
+                generateLabelAndPrint(barcode, model, color, size);
+            } else {
+                console.log("URL'de eksik bilgi var veya hiç yok, otomatik etiket oluşturulmayacak.");
             }
         };
         
@@ -549,33 +560,6 @@
             // Formdan alınan değerlerle etiket oluştur ve yazdırma işlemini başlat
             generateLabelAndPrint(barcode, model, color, size);
         }
-
-
-        // Sayfa yüklendiğinde URL'den gelen parametreleri kontrol et
-        window.onload = function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const barcode = urlParams.get('barcode');
-            const model = urlParams.get('model');
-            const color = urlParams.get('color');
-            const size = urlParams.get('size');
-
-            // Eğer URL'de tüm gerekli bilgiler varsa, otomatik oluştur ve yazdır
-            if (barcode && model && color && size) {
-                // Form alanlarını doldur (kullanıcı görsün diye)
-                 document.getElementById('barcode-input').value = barcode;
-                 document.getElementById('model-input').value = model;
-                 document.getElementById('color-input').value = color;
-                 document.getElementById('size-input').value = size;
-
-                // Etiketi oluştur ve yazdırma işlemini başlat
-                generateLabelAndPrint(barcode, model, color, size);
-            } else {
-                 console.log("URL'de eksik bilgi var veya hiç yok, otomatik etiket oluşturulmayacak.");
-            }
-        };
-
-        // Form ve Navigasyon butonlarını yazdırmada gizlemek için CSS'e .no-print class'ı eklendi.
-        // HTML'de bu class ilgili div'lere eklendi.
     </script>
 
 </body>
