@@ -155,7 +155,8 @@ def check_authentication():
         'login_logout.static',
         'login_logout.verify_totp',
         'login_logout.logout',
-        'qr_utils.generate_qr_labels_pdf' # QR PDF route'una geçici olarak izin ver
+        'qr_utils.generate_qr_labels_pdf', # QR PDF route'una geçici olarak izin ver
+        'product_label_bp.generate_product_label' # Ürün etiket sayfası
     ]
     app.permanent_session_lifetime = timedelta(days=30)
     if request.endpoint not in allowed_routes:
