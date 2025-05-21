@@ -87,7 +87,7 @@ from commission_update_routes import commission_update_bp
 from profit import profit_bp
 from stock_management import stock_management_bp
 from catalog import catalog_bp
-from product_label import product_label_bp
+from barcode_print_service import barcode_print_bp, init_barcode_blueprint
 
 blueprints = [
     order_service_bp,
@@ -115,7 +115,7 @@ blueprints = [
     stock_management_bp,
     profit_bp,
     catalog_bp,
-    product_label_bp
+    barcode_print_bp
 ]
 
 for bp in blueprints:
@@ -155,8 +155,7 @@ def check_authentication():
         'login_logout.static',
         'login_logout.verify_totp',
         'login_logout.logout',
-        'qr_utils.generate_qr_labels_pdf', # QR PDF route'una geçici olarak izin ver
-        'product_label_bp.generate_product_label' # Ürün etiket sayfası
+        'qr_utils.generate_qr_labels_pdf' # QR PDF route'una geçici olarak izin ver
     ]
     app.permanent_session_lifetime = timedelta(days=30)
     if request.endpoint not in allowed_routes:
