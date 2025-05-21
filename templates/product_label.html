@@ -317,7 +317,10 @@
             </div>
         </div>
 
-        <button type="button" onclick="generateAndPrintFromForm()">Etiket Oluştur & Yazdır</button>
+        <div style="display: flex; justify-content: space-between; gap: 10px;">
+            <button type="button" onclick="generateFromForm()" style="flex: 1; background-color: #2196f3;">Etiket Oluştur</button>
+            <button type="button" onclick="generateAndPrintFromForm()" style="flex: 1; background-color: #28a745;">Etiket Yazdır</button>
+        </div>
     </div>
 
     <div class="label-container" id="label">
@@ -343,7 +346,53 @@
     </div>
 
     <script>
-        // Etiket oluşturma ve yazdırma fonksiyonu (artık değerleri parametre olarak alıyor ve görselin yüklenmesini bekliyor)
+        // Sadece etiket oluşturan fonksiyon (yazdırmadan)
+        function generateLabel(barcode, model, color, size, labelSize, labelLayout) {
+            const qrCodeImage = document.getElementById('qr-code-image');
+            const barcodeTextUnderQr = document.getElementById('barcode-text-under-qr');
+            const modelValue = document.getElementById('model-value');
+            const colorValue = document.getElementById('color-value');
+            const sizeValue = document.getElementById('size-value');
+
+            // Etiket boyut ve düzen ayarlarını uygula
+            applyLabelSettings(labelSize, labelLayout);
+
+            // QR Altındaki Barkod değerini güncelle
+            barcodeTextUnderQr.textContent = barcode;
+
+            // Ürün bilgilerini güncelle
+            modelValue.textContent = model;
+            colorValue.textContent = color;
+            sizeValue.textContent = size;
+
+            // Backend'den QR kod görselini çek ama yazdırma yapmadan
+            fetch(`/generate_qr?barcode=${encodeURIComponent(barcode)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => { throw new Error(`HTTP error! status: ${response.status}, message: ${text}`); });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Görsel yolunu ayarla
+                        qrCodeImage.src = data.qr_code_path;
+                        qrCodeImage.alt = 'QR Kod: ' + barcode;
+                    } else {
+                        alert('QR Kod oluşturma başarısız: ' + (data.message || 'Bilinmeyen hata'));
+                        qrCodeImage.src = 'https://via.placeholder.com/100?text=Hata';
+                        qrCodeImage.alt = 'QR Kod Hatası';
+                    }
+                })
+                .catch(err => {
+                    console.error('QR Kod oluşturulurken fetch hatası:', err);
+                    alert('QR Kod oluşturulurken bir ağ hatası oluştu. Detaylar konsolda.');
+                    qrCodeImage.src = 'https://via.placeholder.com/100?text=Ağ+Hata';
+                    qrCodeImage.alt = 'QR Kod Ağ Hatası';
+                });
+        }
+        
+        // Etiket oluşturma ve yazdırma fonksiyonu
         function generateLabelAndPrint(barcode, model, color, size, labelSize, labelLayout, copyCount) {
             const qrCodeImage = document.getElementById('qr-code-image');
             const barcodeTextUnderQr = document.getElementById('barcode-text-under-qr');
@@ -479,7 +528,26 @@
             // veya script ile sayfa stili oluşturarak kopya sayısını ayarlayabilirsiniz
         }
 
-        // Form butonuna basınca çalışacak fonksiyon
+        // Sadece etiket oluşturan fonksiyon (yazdırma yapmaz)
+        function generateFromForm() {
+            const barcode = document.getElementById('barcode-input').value;
+            const model = document.getElementById('model-input').value;
+            const color = document.getElementById('color-input').value;
+            const size = document.getElementById('size-input').value;
+            const labelSize = document.getElementById('label-size').value;
+            const labelLayout = document.getElementById('label-layout').value;
+            const copyCount = parseInt(document.getElementById('copy-count').value) || 1;
+
+            if (!barcode || !model || !color || !size) {
+                alert("Lütfen barkod ve ürün bilgilerini doldurun.");
+                return;
+            }
+            
+            // Formdan alınan değerlerle sadece etiket oluştur (yazdırmadan)
+            generateLabel(barcode, model, color, size, labelSize, labelLayout);
+        }
+        
+        // Form butonuna basınca çalışacak fonksiyon (oluştur + yazdır)
         function generateAndPrintFromForm() {
             const barcode = document.getElementById('barcode-input').value;
             const model = document.getElementById('model-input').value;
