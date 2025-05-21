@@ -145,17 +145,7 @@ def generate_qr():
         abort(400, description="QR kodu için veri gerekli.")
     
     # QR kodu oluştur
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
-        border=4,
-    )
-    qr.add_data(data)
-    qr.make(fit=True)
-    
-    # QR görselini PNG olarak oluştur
-    img = qr.make_image(fill_color="black", back_color="white")
+    img = qrcode.make(data)
     
     # PNG dosyasını bellekte oluştur
     buffer = io.BytesIO()
