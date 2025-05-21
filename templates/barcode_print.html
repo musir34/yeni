@@ -593,6 +593,91 @@
     function hideSpinner() {
       document.getElementById('preview-spinner').style.display = 'none';
     }
+    
+    // Örnek barkod yazdırma
+    function printExampleBarcode() {
+      const templateId = document.getElementById('template-select').value;
+      const layoutId = document.getElementById('layout-select').value;
+      
+      // Örnek barkodlar ve ürün bilgileri
+      const exampleBarcodes = [
+        {
+          barcode: '8680001234567',
+          model: 'Örnek Model A',
+          color: 'Siyah',
+          size: '40',
+          qr_path: '/static/qrcodes/8680001234567.png'
+        },
+        {
+          barcode: '8680001234568',
+          model: 'Örnek Model B',
+          color: 'Beyaz',
+          size: '39',
+          qr_path: '/static/qrcodes/8680001234568.png'
+        },
+        {
+          barcode: '8680001234569',
+          model: 'Örnek Model C',
+          color: 'Kırmızı',
+          size: '41',
+          qr_path: '/static/qrcodes/8680001234569.png'
+        }
+      ];
+      
+      // QR kodları oluşturmak için önce bir istek gönderelim
+      showSpinner();
+      
+      // Her bir barkod için QR kod önizlemesi oluştur
+      const promises = exampleBarcodes.map(barcode => {
+        return fetch('/barcode_print/preview', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            barcode: barcode.barcode,
+            template: templateId,
+            layout: layoutId
+          })
+        })
+        .then(response => response.json());
+      });
+      
+      // Tüm QR kodları hazır olduğunda yazdırma isteği gönder
+      Promise.all(promises)
+        .then(() => {
+          // Yazdırma isteği
+          return fetch('/barcode_print/print', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              barcodes: exampleBarcodes,
+              template: templateId,
+              layout: layoutId
+            })
+          });
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Yeni pencerede yazdırma sayfasını aç
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(data.html);
+            printWindow.document.close();
+          } else {
+            alert('Örnek barkod yazdırma hazırlanırken bir hata oluştu: ' + data.error);
+          }
+        })
+        .catch(error => {
+          console.error('Örnek barkod yazdırma hatası:', error);
+          alert('Örnek barkod yazdırma sırasında bir hata oluştu.');
+        })
+        .finally(() => {
+          hideSpinner();
+        });
+    }
   </script>
 </body>
 </html>
