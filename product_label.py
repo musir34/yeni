@@ -13,6 +13,7 @@ import io
 import os
 
 import barcode
+import qrcode
 from barcode.writer import ImageWriter
 from flask import (
     Blueprint,
@@ -21,6 +22,7 @@ from flask import (
     render_template,
     request,
     send_file,
+    url_for,
 )
 from PIL import Image, ImageDraw, ImageFont
 
@@ -53,6 +55,66 @@ def _multiline_size(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageF
 
 
 # --------------------------------------------------------------------------- #
+# Generate QR Code
+# --------------------------------------------------------------------------- #
+
+def generate_and_save_qr_code(barcode_data):
+    """
+    Verilen barkod değeri için QR kod görseli oluşturur,
+    static/qrcodes klasörüne kaydeder ve web adresini döndürür.
+    Aynı barkod için tekrar oluşturmaz (performans).
+    """
+    # QR kodun kaydedileceği klasör yolu (uygulamanın root path'ine göre)
+    qr_codes_dir = os.path.join(current_app.root_path, 'static', 'qrcodes')
+
+    # Klasör yoksa oluştur
+    if not os.path.exists(qr_codes_dir):
+        os.makedirs(qr_codes_dir)
+
+    # QR kod dosya adı (barkod değeri + .svg)
+    # Dosya adında güvenli karakterler kullanmak önemli
+    # Barkod değeri boş veya None gelirse varsayılan bir isim kullan
+    safe_barcode_data = "".join(c for c in (barcode_data or "") if c.isalnum() or c in ('-', '_', '.'))
+    if not safe_barcode_data:
+         safe_barcode_data = "empty_barcode" # Varsayılan isim
+
+    qr_file_name = f"{safe_barcode_data}.svg"
+    qr_file_path = os.path.join(qr_codes_dir, qr_file_name)
+    qr_web_path = url_for('static', filename=f'qrcodes/{qr_file_name}') # Web'den erişim yolu
+
+    # Eğer dosya zaten varsa, tekrar oluşturmaya gerek yok (performans için)
+    if os.path.exists(qr_file_path):
+        return qr_web_path
+
+    try:
+        # QR kod objesi oluştur
+        # error_correction: Hata düzeltme seviyesi (L, M, Q, H) - H en yüksek hata düzeltme
+        # box_size: Her bir kutucuğun piksel boyutu
+        # border: Kenar boşluğu
+        qr = qrcode.QRCode(
+            version=1, # QR kod versiyonu, 1 en küçük
+            error_correction=qrcode.constants.ERROR_CORRECT_H, # Yüksek hata düzeltme
+            box_size=10, # Boyut
+            border=4, # Kenarlık
+        )
+        qr.add_data(barcode_data) # QR koduna eklenecek veri
+        qr.make(fit=True) # QR kod matrisini oluştur
+
+        # QR kod görselini SVG formatında oluştur ve dosyaya kaydet
+        # SVG formatı yazdırma için genellikle daha iyi kalite sunar
+        img = qr.make_image(image_factory=qrcode.image.svg.SvgImage)
+        with open(qr_file_path, 'wb') as f:
+            img.save(f)
+
+        print(f"QR kod oluşturuldu ve kaydedildi: {qr_file_path}") # Debug
+        return qr_web_path # Oluşturulan dosyanın web adresini döndür
+
+    except Exception as e:
+        print(f"QR kod oluşturulurken hata: {e}")
+        # Hata durumunda boş string döndür
+        return ""
+
+
 # Route
 # --------------------------------------------------------------------------- #
 
