@@ -77,15 +77,41 @@
         .paper-a4 {
             width: 210mm;
             height: 297mm;
-            flex-direction: column;
+            flex-direction: row;
+            flex-wrap: wrap;
             align-items: flex-start;
             justify-content: flex-start;
             padding: 10mm;
+            gap: 5mm;
         }
         
         .paper-100x100 {
             width: 100mm;
             height: 100mm;
+        }
+        
+        /* Çoklu etiket yerleşimi için */
+        .multi-label-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5mm;
+            justify-content: flex-start;
+            align-items: flex-start;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .label-item {
+            width: 60mm;
+            height: 40mm;
+            border: 1px solid #ddd;
+            background-color: white;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            padding: 1.5mm;
+            overflow: hidden;
         }
 
         /* QR Kod ve Altındaki Barkod Alanı */
@@ -314,24 +340,57 @@
             <input type="number" id="width-input" placeholder="Genişlik (mm)" value="60" onchange="updateLabelSize()">
             <input type="number" id="height-input" placeholder="Yükseklik (mm)" value="40" onchange="updateLabelSize()">
         </div>
+        
+        <div id="multi-label-settings" style="display: none; margin-top: 10px;">
+            <h3>Çoklu Etiket Ayarları</h3>
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label for="label-width">Etiket Genişliği (mm):</label>
+                    <input type="number" id="label-width" value="60" onchange="calculateLabelLayout()">
+                </div>
+                <div style="flex: 1;">
+                    <label for="label-height">Etiket Yüksekliği (mm):</label>
+                    <input type="number" id="label-height" value="40" onchange="calculateLabelLayout()">
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <div style="flex: 1;">
+                    <label for="horizontal-gap">Yatay Boşluk (mm):</label>
+                    <input type="number" id="horizontal-gap" value="5" onchange="calculateLabelLayout()">
+                </div>
+                <div style="flex: 1;">
+                    <label for="vertical-gap">Dikey Boşluk (mm):</label>
+                    <input type="number" id="vertical-gap" value="5" onchange="calculateLabelLayout()">
+                </div>
+            </div>
+            <div style="margin-top: 10px;">
+                <label for="label-count">Etiket Sayısı:</label>
+                <input type="number" id="label-count" value="1" min="1" max="100" onchange="updateLabelCount()">
+            </div>
+        </div>
 
         <button type="button" onclick="generateAndPrintFromForm()">Etiket Oluştur & Yazdır</button>
     </div>
 
     <div class="label-container" id="label">
-        <div class="qr-and-barcode-area">
-             <div class="qr-area">
-                 <img id="qr-code-image" src="https://via.placeholder.com/100" alt="QR Kod Placeholder"> </div>
-             <div class="barcode-text-under-qr" id="barcode-text-under-qr">
-                 </div>
-        </div>
+        <div id="single-label-container">
+            <div class="qr-and-barcode-area">
+                 <div class="qr-area">
+                     <img id="qr-code-image" src="https://via.placeholder.com/100" alt="QR Kod Placeholder"> </div>
+                 <div class="barcode-text-under-qr" id="barcode-text-under-qr">
+                     </div>
+            </div>
 
-        <div class="text-area">
-             <div class="product-info">
-                 <div><span class="label">Model:</span> <span class="value" id="model-value"></span></div>
-                 <div><span class="label">Renk:</span> <span class="value" id="color-value"></span></div>
-                 <div><span class="label">Beden:</span> <span class="value" id="size-value"></span></div>
-             </div>
+            <div class="text-area">
+                 <div class="product-info">
+                     <div><span class="label">Model:</span> <span class="value" id="model-value"></span></div>
+                     <div><span class="label">Renk:</span> <span class="value" id="color-value"></span></div>
+                     <div><span class="label">Beden:</span> <span class="value" id="size-value"></span></div>
+                 </div>
+            </div>
+        </div>
+        <div id="multi-label-container" class="multi-label-container" style="display: none;">
+            <!-- Çoklu etiketler buraya JavaScript ile eklenecek -->
         </div>
     </div>
 
