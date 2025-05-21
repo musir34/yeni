@@ -87,6 +87,7 @@ from commission_update_routes import commission_update_bp
 from profit import profit_bp
 from stock_management import stock_management_bp
 from catalog import catalog_bp
+from barcode_print_service import barcode_print_bp
 
 blueprints = [
     order_service_bp,
@@ -113,7 +114,8 @@ blueprints = [
     commission_update_bp,
     stock_management_bp,
     profit_bp,
-    catalog_bp
+    catalog_bp,
+    barcode_print_bp
 ]
 
 for bp in blueprints:
