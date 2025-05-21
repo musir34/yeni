@@ -178,6 +178,19 @@
             const customSizeOptions = document.getElementById('custom_size_options');
             const multiLabelOptions = document.getElementById('multi_label_options');
             
+            // Sayfa yüklendiğinde varsayılan seçimlere göre alanları göster/gizle
+            if (paperSizeSelect.value === 'custom') {
+                customSizeOptions.style.display = 'block';
+            } else {
+                customSizeOptions.style.display = 'none';
+            }
+            
+            if (layoutTypeSelect.value === 'multi') {
+                multiLabelOptions.style.display = 'block';
+            } else {
+                multiLabelOptions.style.display = 'none';
+            }
+            
             // Kağıt boyutu değiştiğinde
             paperSizeSelect.addEventListener('change', function() {
                 if (this.value === 'custom') {
