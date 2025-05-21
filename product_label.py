@@ -166,28 +166,40 @@ def get_product_details(model_code):
     """
     Model koduna göre renk ve beden-barkod eşleştirmelerini döndürür
     """
-    products = Product.query.filter_by(product_main_id=model_code).all()
-    
-    if not products:
-        return jsonify({"success": False, "message": "Ürün bulunamadı"})
-    
-    # Modele ait tüm benzersiz renkleri al
-    colors = list(set(p.color for p in products if p.color))
-    
-    # Renk ve beden-barkod eşleştirmelerini yap
-    product_data = {}
-    for color in colors:
-        product_data[color] = {}
-        color_products = [p for p in products if p.color == color]
-        for product in color_products:
-            # Bedenleri string olarak kaydet (JSON'da keyler string olmalı)
-            if product.size and product.barcode:
-                try:
-                    # Bedeni float'a çevirip sonra int'e çevirerek .0 kısmını at
-                    size_key = str(int(float(product.size)))
-                    product_data[color][size_key] = product.barcode
-                except (ValueError, TypeError):
-                    # Eğer beden numerik değilse, olduğu gibi string olarak kaydet
-                    product_data[color][str(product.size)] = product.barcode
-    
-    return jsonify({"success": True, "data": product_data})
+    try:
+        print(f"Model aranıyor: {model_code}")
+        products = Product.query.filter_by(product_main_id=model_code).all()
+        
+        if not products:
+            print(f"Ürün bulunamadı: {model_code}")
+            return jsonify({"success": False, "message": "Ürün bulunamadı"})
+        
+        print(f"Bulunan ürün sayısı: {len(products)}")
+        
+        # Modele ait tüm benzersiz renkleri al
+        colors = list(set(p.color for p in products if p.color))
+        print(f"Renkler: {colors}")
+        
+        # Renk ve beden-barkod eşleştirmelerini yap
+        product_data = {}
+        for color in colors:
+            product_data[color] = {}
+            color_products = [p for p in products if p.color == color]
+            for product in color_products:
+                # Bedenleri string olarak kaydet (JSON'da keyler string olmalı)
+                if product.size and product.barcode:
+                    try:
+                        # Bedeni float'a çevirip sonra int'e çevirerek .0 kısmını at
+                        size_key = str(int(float(product.size)))
+                        product_data[color][size_key] = product.barcode
+                    except (ValueError, TypeError):
+                        # Eğer beden numerik değilse, olduğu gibi string olarak kaydet
+                        product_data[color][str(product.size)] = product.barcode
+        
+        print(f"Döndürülen veri: {product_data}")
+        return jsonify({"success": True, "data": product_data})
+    except Exception as e:
+        print(f"Hata oluştu: {e}")
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({"success": False, "message": f"Bir hata oluştu: {str(e)}"})
