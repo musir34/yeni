@@ -580,7 +580,7 @@
             const color = urlParams.get('color');
             const size = urlParams.get('size');
 
-            // Eğer URL'de tüm gerekli bilgiler varsa, otomatik oluştur ve yazdır
+            // Eğer URL'de tüm gerekli bilgiler varsa, otomatik oluştur ama yazdırmadan
             if (barcode && model && color && size) {
                 // Form alanlarını doldur (kullanıcı görsün diye)
                  document.getElementById('barcode-input').value = barcode;
@@ -593,8 +593,8 @@
                 const labelLayout = document.getElementById('label-layout').value;
                 const copyCount = parseInt(document.getElementById('copy-count').value) || 1;
 
-                // Etiketi oluştur ve yazdırma işlemini başlat
-                generateLabelAndPrint(barcode, model, color, size, labelSize, labelLayout, copyCount);
+                // Sadece etiketi oluştur, yazdırma işlemini başlatma
+                generateLabel(barcode, model, color, size, labelSize, labelLayout);
             } else {
                  console.log("URL'de eksik bilgi var veya hiç yok, otomatik etiket oluşturulmayacak.");
             }
