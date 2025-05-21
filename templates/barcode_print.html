@@ -391,8 +391,32 @@
   </div>
 
   <script>
+    // Şablonları yükle
+    function initializeTemplates() {
+      // Önce şablonları yükle
+      fetch('/barcode_print/init_templates')
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            console.log('Şablonlar başarıyla yüklendi:', data.templates);
+            // Sayfa yenilenerek şablonları göster
+            window.location.reload();
+          } else {
+            console.error('Şablonları yükleme hatası:', data.error || 'Bilinmeyen hata');
+          }
+        })
+        .catch(error => {
+          console.error('Şablonları yükleme API hatası:', error);
+        });
+    }
+    
     // Sayfa yükleme
     document.addEventListener('DOMContentLoaded', function() {
+      // Şablonları kontrol et ve yoksa yükle
+      if (document.querySelector('#template-select').options.length <= 1) {
+        console.log('Şablonlar yükleniyor...');
+        initializeTemplates();
+      }
       // Sekme değiştirme işlevi
       const tabButtons = document.querySelectorAll('.tab-button');
       tabButtons.forEach(button => {

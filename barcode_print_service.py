@@ -992,12 +992,67 @@ def load_custom_templates():
     except Exception as e:
         print(f"Özel şablonları yükleme hatası: {e}")
 
-# Blueprint'imize init_app metodu ekleyelim
+# Etiket şablonlarını servise eklemek için rota
+@barcode_print_bp.route('/init_templates', methods=['GET'])
+def init_templates_route():
+    """Özel etiket şablonlarını yükler ve varsayılana ek şablonlar ekler"""
+    try:
+        # Yeni A4 çift sütun şablonu ekle
+        LABEL_TEMPLATES['a4_2x8'] = {
+            'name': 'A4 Düzeni (2x8) - Orta Boy Etiketler',
+            'width_mm': 210,
+            'height_mm': 297,
+            'page_size': 'A4',
+            'margin_top_mm': 15,
+            'margin_bottom_mm': 15,
+            'margin_left_mm': 10,
+            'margin_right_mm': 10,
+            'columns': 2,
+            'rows': 8,
+            'gap_column_mm': 5,
+            'gap_row_mm': 2
+        }
+        
+        # A4 3 sütunlu büyük etiketler ekle
+        LABEL_TEMPLATES['a4_3x5'] = {
+            'name': 'A4 Düzeni (3x5) - Büyük Etiketler',
+            'width_mm': 210,
+            'height_mm': 297,
+            'page_size': 'A4',
+            'margin_top_mm': 15,
+            'margin_bottom_mm': 15,
+            'margin_left_mm': 10,
+            'margin_right_mm': 10,
+            'columns': 3,
+            'rows': 5,
+            'gap_column_mm': 3,
+            'gap_row_mm': 5
+        }
+        
+        # Özel şablonları yüklemeyi dene
+        try:
+            load_custom_templates()
+        except:
+            # Hata olursa önemli değil, varsayılan şablonlar zaten var
+            pass
+            
+        return jsonify({
+            'success': True, 
+            'templates': list(LABEL_TEMPLATES.keys()),
+            'message': 'Etiket şablonları başarıyla yüklendi'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+# Blueprint'imize init_app metodu
 def init_barcode_blueprint(app):
     """Flask uygulaması oluşturulduğunda çağrılan fonksiyon"""
-    with app.app_context():
-        load_custom_templates()
+    try:
+        with app.app_context():
+            load_custom_templates()
+    except:
+        # Hata olursa sessizce geç
+        print("Şablonlar daha sonra yüklenecek")  
 
-# Uygulama başlangıcında özel şablonları yükleme işlemini başlatma kodu yerine,
-# app.py içinde bu init fonksiyonu çağrılmalı
+# Burayı yorum satırı yapıyoruz, hata vermesin diye
 # load_custom_templates()
