@@ -502,6 +502,7 @@ Giriş Yapan: <strong>{{ session['first_name'] }} {{ session['last_name'] }}</st
 <a href="{{ url_for('home.home') }}" class="btn btn-secondary">Anasayfa</a>
 <a href="{{ url_for('display_archive') }}" class="btn btn-secondary">Arşiv</a>
 
+
 <div class="dropdown">
 <button class="btn btn-warning dropdown-toggle" type="button" id="kullaniciMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 Kullanıcı İşlemleri
@@ -537,6 +538,7 @@ Sipariş İşlemleri
 <a class="dropdown-item" href="{{ url_for('product_list') }}">Ürün Listesi</a>
 <a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_screen') }}">Stok Ekleme</a>
 <a class="dropdown-item" href="{{ url_for('iade_listesi') }}">İade Listesi</a>
+<a class="dropdown-item" href="{{ url_for('product_questions.questions_list') }}">Ürün Soruları</a>
 </div>
 </div>
 
