@@ -337,10 +337,21 @@ function renderBarcodeList(){
     div.className='barcode-item';
     div.id = `barcode-item-${code}`;
 
+    // Barkod bilgisi ve adet butonları
     let html=`
-      <div class="barcode-info">
+      <div class="barcode-info d-flex align-items-center justify-content-between">
         <span class="barcode-value">${code}</span>
-        <span class="barcode-count">${item.count} Adet</span>
+        <div class="quantity-control d-flex align-items-center">
+          <button type="button" class="btn btn-sm btn-outline-danger quantity-btn" 
+            data-action="decrease" data-barcode="${code}">
+            <i class="bi bi-dash-lg"></i>
+          </button>
+          <span class="barcode-count mx-2 fw-bold">${item.count} Adet</span>
+          <button type="button" class="btn btn-sm btn-outline-success quantity-btn" 
+            data-action="increase" data-barcode="${code}">
+            <i class="bi bi-plus-lg"></i>
+          </button>
+        </div>
       </div>`;
 
     if(item.loading){
@@ -367,6 +378,30 @@ function renderBarcodeList(){
 
     div.innerHTML=html;
     scannedBarcodesDiv.appendChild(div);
+    
+    // + ve - butonları için event listener'lar ekleyelim
+    const decreaseBtn = div.querySelector('button[data-action="decrease"]');
+    const increaseBtn = div.querySelector('button[data-action="increase"]');
+    
+    if (decreaseBtn) {
+      decreaseBtn.addEventListener('click', function() {
+        if (barcodeCounts[code].count > 1) {
+          barcodeCounts[code].count--;
+          renderBarcodeList();
+        } else {
+          // 1'in altında düşerse, bu barkodu tamamen kaldır
+          delete barcodeCounts[code];
+          renderBarcodeList();
+        }
+      });
+    }
+    
+    if (increaseBtn) {
+      increaseBtn.addEventListener('click', function() {
+        barcodeCounts[code].count++;
+        renderBarcodeList();
+      });
+    }
   });
 }
 
