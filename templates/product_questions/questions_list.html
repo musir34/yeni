@@ -16,7 +16,7 @@
                 </div>
                 
                 <div class="actions">
-                    <form action="/product-questions/fetch" method="get" class="d-inline">
+                    <form action="{{ url_for('product_questions.fetch_questions_route') }}" method="post" class="d-inline">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-sync-alt"></i> Trendyol'dan Soruları Güncelle
                         </button>
@@ -27,7 +27,7 @@
             <!-- Filtre ve Arama -->
             <div class="card mb-3">
                 <div class="card-body">
-                    <form method="get" action="/product-questions/" class="row g-3">
+                    <form method="get" action="{{ url_for('product_questions.questions_list') }}" class="row g-3">
                         <div class="col-md-4">
                             <label for="status" class="form-label">Durum</label>
                             <select name="status" id="status" class="form-select">

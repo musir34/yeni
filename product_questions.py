@@ -17,7 +17,7 @@ from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID, BASE_URL
 logger = logging.getLogger(__name__)
 
 # Blueprint oluştur
-product_questions_bp = Blueprint('product_questions', __name__, url_prefix='/product-questions')
+product_questions_bp = Blueprint('product_questions', __name__)
 
 # Veritabanı modeli oluştur
 class ProductQuestion(db.Model):
@@ -347,7 +347,7 @@ async def send_question_answer(question_id, answer_text):
 
 
 # API endpoint: Trendyol'dan soruları çek ve veritabanına kaydet
-@product_questions_bp.route('/fetch', methods=['POST', 'GET'])
+@product_questions_bp.route('/fetch_questions', methods=['POST'])
 @login_required
 async def fetch_questions_route():
     try:
@@ -367,17 +367,17 @@ async def fetch_questions_route():
         else:
             flash("Yeni ürün sorusu bulunamadı.", "info")
         
-        return redirect('/product-questions/')
+        return redirect(url_for('product_questions.questions_list'))
         
     except Exception as e:
         error_msg = f"Ürün sorularını çekerken bir hata oluştu: {str(e)}"
         logger.error(error_msg, exc_info=True)
         flash(error_msg, "danger")
-        return redirect('/product-questions/')
+        return redirect(url_for('product_questions.questions_list'))
 
 
 # Ürün soruları listesi
-@product_questions_bp.route('/', methods=['GET'])
+@product_questions_bp.route('/questions', methods=['GET'])
 @login_required
 def questions_list():
     # Filtreler
@@ -425,7 +425,7 @@ def questions_list():
 
 
 # Soru detayları ve cevaplama
-@product_questions_bp.route('/detail/<question_id>', methods=['GET', 'POST'])
+@product_questions_bp.route('/questions/<question_id>', methods=['GET', 'POST'])
 @login_required
 async def question_detail(question_id):
     question = ProductQuestion.query.filter_by(question_id=question_id).first_or_404()
