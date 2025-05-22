@@ -708,6 +708,7 @@ def get_product_details_by_barcode(barcode):
                     'product_main_id': product.product_main_id, # model kodu gibi
                     'color': product.color,
                     'size': product.size,
+                    'quantity': product.quantity, # Mevcut stok miktarını ekledim
                     'image_url': first_image_url # Frontend için ilk resim
                     # 'all_image_urls': image_urls # Eğer tüm resimler lazımsa bu da gönderilebilir
                 }
