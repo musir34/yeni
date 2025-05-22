@@ -17,7 +17,7 @@ from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID, BASE_URL
 logger = logging.getLogger(__name__)
 
 # Blueprint oluştur
-product_questions_bp = Blueprint('product_questions', __name__)
+product_questions_bp = Blueprint('product_questions', __name__, url_prefix='/product-questions')
 
 # Veritabanı modeli oluştur
 class ProductQuestion(db.Model):
