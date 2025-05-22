@@ -394,8 +394,17 @@ document.getElementById('testUpdateButton').addEventListener('click', async func
 async function submitStock(updateType,countsOnly){
   console.log("submitStock fonksiyonu çalıştı:", updateType, Object.keys(countsOnly).length);
   
+  // Sayfa kaydırmasını önle - bunu sayfanın başına ekliyoruz
+  event.preventDefault(); 
+  
   // İlerleme göstergeleri için div oluştur ve göster
   showProgressContainer();
+  
+  // Görünüm alanının içinde kalması için - ilerleme göstergesine otomatik scroll
+  const progressContainer = document.getElementById('progressContainer');
+  if (progressContainer) {
+    progressContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
   
   const buttons=document.querySelectorAll('.update-button-group .btn');
   const originals={};
