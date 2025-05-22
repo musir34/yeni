@@ -237,31 +237,71 @@ function selectMode(mode){
 barcodeInput.addEventListener('keydown',e=>{
   if(e.key==='Tab'){e.preventDefault();e.stopPropagation();}   // Tab kaçarını engelle
 });
+// Ürün ayrıntılarını getiren istekleri optimize etelim
+let lastFetchPromise = Promise.resolve();
+let pendingBarcode = null;
+
 barcodeInput.addEventListener('keyup',async e=>{
   if(e.key==='Enter'){
     e.preventDefault();e.stopPropagation();
     const barcode=barcodeBuffer.trim();
     barcodeBuffer='';barcodeInput.value='';
-
+    
+    // Barkod kontrolü
     if(!barcode||barcode.length<4){
       showMessage("Geçersiz barkod.",false);
     }else if(!selectedMode){
       showMessage("Lütfen önce mod seçin.",false);
     }else{
       if(barcodeCounts[barcode]){
+        // Var olan barkod - sayacı artır
         barcodeCounts[barcode].count++;
+        
+        // Hızlı barkod okutma için - barkodu ekler eklemez input'u aktif et
+        setTimeout(forceFocus, 5);
       }else{
-        const details=await fetchProductDetails(barcode);
-        barcodeCounts[barcode]={
-          count:1,
-          details:details,
-          error:details?null:"Ürün bulunamadı"
+        // Yeni barkod - detay bilgisini getir
+        pendingBarcode = barcode;
+        
+        // UI'yı hızlı tepki verecek şekilde güncelle
+        // "Yükleniyor" durum mesajı ekle
+        barcodeCounts[barcode] = {
+          count: 1,
+          details: null,
+          loading: true,
+          error: null
         };
+        renderBarcodeList();
+        updateStockButton.disabled = false;
+        
+        // Odağı hemen geri getir ki hızlı okutma yapılabilsin
+        setTimeout(forceFocus, 5);
+        
+        // Arka planda ürün detaylarını getir
+        lastFetchPromise = lastFetchPromise
+          .then(() => fetchProductDetails(barcode))
+          .then(details => {
+            if (pendingBarcode === barcode) {
+              pendingBarcode = null;
+              
+              // Veri geldiğinde barkod bilgisini güncelle
+              barcodeCounts[barcode] = {
+                count: barcodeCounts[barcode].count,
+                details: details,
+                loading: false,
+                error: details ? null : "Ürün bulunamadı"
+              };
+              
+              // Listeyi güncelle
+              renderBarcodeList();
+            }
+          });
       }
+      
+      // Her durumda listeyi güncelle ve butonu etkinleştir
       renderBarcodeList();
-      updateStockButton.disabled=false;
+      updateStockButton.disabled = false;
     }
-    setTimeout(forceFocus,10);
   }else if(e.key.length===1){
     barcodeBuffer+=e.key; // yalnızca yazılabilir karakter
   }
@@ -295,6 +335,7 @@ function renderBarcodeList(){
     const item=barcodeCounts[code];
     const div=document.createElement('div');
     div.className='barcode-item';
+    div.id = `barcode-item-${code}`;
 
     let html=`
       <div class="barcode-info">
@@ -302,13 +343,19 @@ function renderBarcodeList(){
         <span class="barcode-count">${item.count} Adet</span>
       </div>`;
 
-    if(item.error){
-      html+=`<p class="error-message">${item.error}</p>`;
-    }
-    if(item.details){
+    if(item.loading){
+      // Yükleniyor göstergesi
       html+=`
         <div class="product-details">
-          <img src="${item.details.image_url||'https://placehold.co/50x50'}" alt="">
+          <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+          <span>Ürün bilgileri yükleniyor...</span>
+        </div>`;
+    } else if(item.error){
+      html+=`<p class="error-message text-danger">${item.error}</p>`;
+    } else if(item.details){
+      html+=`
+        <div class="product-details">
+          <img src="${item.details.image_url||'https://placehold.co/50x50'}" alt="" loading="lazy">
           <div class="product-details-text">
             <p><strong>Model:</strong> ${item.details.product_main_id||'N/A'}</p>
             <p><strong>Renk :</strong> ${item.details.color||'N/A'}</p>
