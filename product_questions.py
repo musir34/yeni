@@ -347,7 +347,7 @@ async def send_question_answer(question_id, answer_text):
 
 
 # API endpoint: Trendyol'dan soruları çek ve veritabanına kaydet
-@product_questions_bp.route('/fetch_questions', methods=['POST'])
+@product_questions_bp.route('/fetch', methods=['POST', 'GET'])
 @login_required
 async def fetch_questions_route():
     try:
@@ -377,7 +377,7 @@ async def fetch_questions_route():
 
 
 # Ürün soruları listesi
-@product_questions_bp.route('/questions', methods=['GET'])
+@product_questions_bp.route('/', methods=['GET'])
 @login_required
 def questions_list():
     # Filtreler
@@ -425,7 +425,7 @@ def questions_list():
 
 
 # Soru detayları ve cevaplama
-@product_questions_bp.route('/questions/<question_id>', methods=['GET', 'POST'])
+@product_questions_bp.route('/detail/<question_id>', methods=['GET', 'POST'])
 @login_required
 async def question_detail(question_id):
     question = ProductQuestion.query.filter_by(question_id=question_id).first_or_404()
