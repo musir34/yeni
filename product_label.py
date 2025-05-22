@@ -63,7 +63,7 @@ def _multiline_size(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageF
 def generate_product_label():
     # ------------------------------ GET ------------------------------ #
     if request.method == "GET":
-        return render_template("product_label_new.html")
+        return render_template("product_label_simple.html")
 
     # ------------------------------ POST ----------------------------- #
     barcode_number: str = (request.form.get("barcode") or "").strip()
