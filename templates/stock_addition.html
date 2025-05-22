@@ -294,6 +294,7 @@ function renderBarcodeList(){
             <p><strong>Model:</strong> ${item.details.product_main_id||'N/A'}</p>
             <p><strong>Renk :</strong> ${item.details.color||'N/A'}</p>
             <p><strong>Beden:</strong> ${item.details.size||'N/A'}</p>
+            <p class="text-primary fw-bold">Mevcut Stok: ${item.details.quantity !== undefined ? item.details.quantity : 'Bilinmiyor'}</p>
           </div>
         </div>`;
     }
