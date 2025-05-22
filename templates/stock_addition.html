@@ -120,6 +120,10 @@ h2{text-align:center;margin-bottom:1.5rem;font-weight:600;color:var(--btn-primar
               class="btn btn-secondary btn-lg">
         <i class="bi bi-x-circle"></i> İptal
       </button>
+      <button id="testUpdateButton" type="button"
+              class="btn btn-warning btn-lg">
+        <i class="bi bi-bug"></i> Test
+      </button>
     </div>
   </form>
 
@@ -320,20 +324,76 @@ function renderBarcodeList(){
 }
 
 /* ---------- Güncelle / Reset ---------- */
-updateStockButton.addEventListener('click',()=>{
-  const countsOnly={};
+updateStockButton.addEventListener('click', function() {
+  console.log("Güncelle butonuna tıklandı!");
+  
+  const countsOnly = {};
   for(const c in barcodeCounts){
-    countsOnly[c]={count:barcodeCounts[c].count};
+    countsOnly[c] = {count: barcodeCounts[c].count};
   }
+  
   if(!Object.keys(countsOnly).length){
-    showMessage("Güncellenecek barkod yok.",false);
-  }else{
-    submitStock(selectedMode,countsOnly);
+    showMessage("Güncellenecek barkod yok.", false);
+    return;
   }
+  
+  // Şimdi stok güncelleme işlemini çağır
+  submitStock(selectedMode, countsOnly);
 });
 resetButton.addEventListener('click',resetStockAddition);
 
+// Test butonu için event listener
+document.getElementById('testUpdateButton').addEventListener('click', async function() {
+  console.log("Test butonu tıklandı!");
+  
+  // İlerleme göstergesini görüntüle
+  showProgressContainer();
+  updateProgressStatus("Test Yapılıyor...", "API bağlantısı test ediliyor...", "warning");
+  
+  try {
+    // Test verileri oluştur
+    const testData = {
+      "barcodeCounts": {
+        "TEST123456": {"count": 5}
+      },
+      "updateType": "add"
+    };
+    
+    console.log("Test API isteği gönderiliyor:", testData);
+    
+    // API isteği gönder
+    const response = await fetch('/stock-addition', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(testData)
+    });
+    
+    console.log("Test API yanıtı:", response.status);
+    
+    // Yanıtı işle
+    if (response.ok) {
+      const data = await response.json();
+      updateProgressStatus("Test Başarılı!", 
+                         "API yanıt verdi: " + JSON.stringify(data).substring(0, 100) + "...", 
+                         "success");
+      console.log("API yanıt verisi:", data);
+    } else {
+      updateProgressStatus("Test Başarısız!", 
+                         `API hata kodu: ${response.status}`, 
+                         "danger");
+      console.error("API hatası:", response.status, response.statusText);
+    }
+  } catch (error) {
+    updateProgressStatus("Bağlantı Hatası!", 
+                       "API bağlantısı sırasında hata oluştu: " + error.message, 
+                       "danger");
+    console.error("Test sırasında hata:", error);
+  }
+});
+
 async function submitStock(updateType,countsOnly){
+  console.log("submitStock fonksiyonu çalıştı:", updateType, Object.keys(countsOnly).length);
+  
   // İlerleme göstergeleri için div oluştur ve göster
   showProgressContainer();
   
@@ -351,11 +411,15 @@ async function submitStock(updateType,countsOnly){
     // İlerleme durumunu göster
     updateProgressStatus("Veritabanı güncelleniyor...", "Veritabanına bağlanılıyor...", "info");
     
+    console.log("API isteği gönderiliyor:", {barcodeCounts:countsOnly, updateType});
+    
     const res=await fetch('/stock-addition',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({barcodeCounts:countsOnly,updateType})
     });
+    
+    console.log("API yanıtı:", res.status);
     const data=await res.json();
 
     if(data.success){
