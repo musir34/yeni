@@ -19,7 +19,7 @@ font-family: Arial, sans-serif;
 }
 
 .form-container {
-width: 400px; 
+width: 400px;
 background-color: white;
 padding: 20px;
 border-radius: 8px;
@@ -37,7 +37,7 @@ color: #333;
 .form-container h4 {
 margin-top: 15px;
 margin-bottom: 5px;
-text-align: left; 
+text-align: left;
 }
 .form-section {
 margin-bottom: 15px;
@@ -62,11 +62,11 @@ font-size: 16px;
 box-sizing: border-box;
 }
 input[type="number"] {
--moz-appearance: textfield; 
+-moz-appearance: textfield;
 }
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
--webkit-appearance: none; 
+-webkit-appearance: none;
 margin: 0;
 }
 
@@ -100,25 +100,25 @@ margin-top: 10px;
 #execute-print-button:disabled { background-color: #555; cursor: not-allowed;}
 
 
-.label-container { 
-width: 60mm; 
-height: 40mm; 
+.label-container {
+width: 60mm;
+height: 40mm;
 background-color: white;
-display: flex; 
+display: flex;
 border: 1px solid black;
-box-sizing: border-box; 
-overflow: hidden; 
-margin-bottom: 10px; 
+box-sizing: border-box;
+overflow: hidden;
+margin-bottom: 10px;
 }
 
-.paper-a4-fixed { 
+.paper-a4-fixed {
 width: 210mm; height: 297mm; border: 1px solid #ccc; padding: 0; /* Screen preview için padding, printte @page marginleri kullanılacak */
 }
 .paper-100x100 { width: 100mm; height: 100mm; }
 
 .multi-label-container-custom, #multi-label-container-fixed-a4 {
-display: flex; 
-flex-wrap: wrap; 
+display: flex;
+flex-wrap: wrap;
 justify-content: flex-start;
 align-items: flex-start;
 width: 100%; height: 100%;
@@ -127,68 +127,83 @@ overflow: auto; /* Screen preview için scroll */
 }
 #multi-label-container-fixed-a4 { display: grid; }
 
-.label-item { 
-border: 0.2mm solid #ddd; 
-background-color: white; 
+.label-item {
+border: 0.2mm solid #ddd;
+background-color: white;
 box-sizing: border-box;
-display: flex; 
-flex-direction: row; 
-align-items: center; 
+display: flex;
+flex-direction: row; /* Ensures label-item-fixed-a4-content is handled in a row, though it usually fills the item */
+align-items: center;
 overflow: hidden;
 }
 
-#single-label-content-wrapper { 
-display: flex; flex-direction: row; align-items: center;
+/* Single Label Preview - Main Structure for QR left, Info Right */
+#single-label-content-wrapper {
+display: flex; /* Arranges children (QR area, Text area) in a row by default */
+flex-direction: row; /* Explicitly set: QR+Barcode left, Product Info right */
+align-items: center; /* Vertically aligns the left and right blocks if they have different natural heights */
 width: 100%; height: 100%; padding: 1.5mm; box-sizing: border-box;
 }
+/* QR Code and its Barcode Text Area (Left Block in Single Preview) */
 #single-label-content-wrapper .qr-and-barcode-area {
-display: flex; flex-direction: column; align-items: center; justify-content: center;
-flex-shrink: 0; margin-right: 3mm; 
+display: flex; /* Arranges children (QR image, Barcode text) vertically */
+flex-direction: column; /* Stacks QR image on top of its text */
+align-items: center; /* Centers QR image and its text horizontally within this block */
+justify-content: center; /* Centers QR image and its text vertically within this block */
+flex-shrink: 0; /* Prevents this block from shrinking if space is tight */
+margin-right: 3mm; /* Space between QR block and Text Area */
 }
 #single-label-content-wrapper .qr-area {
-display: flex; justify-content: center; align-items: center; margin-bottom: 1mm; 
+display: flex; justify-content: center; align-items: center; margin-bottom: 1mm; /* Space between QR image and its text */
 }
 #single-label-content-wrapper .qr-area img {
-max-width: 100%; max-height: 100%; object-fit: contain; 
+max-width: 100%; max-height: 100%; object-fit: contain;
 }
-#single-label-content-wrapper .barcode-text-under-qr { 
-text-align: center; word-break: break-all; max-width: 100%; 
-overflow: hidden; font-weight: bold; 
+#single-label-content-wrapper .barcode-text-under-qr {
+text-align: center; word-break: break-all; max-width: 100%;
+overflow: hidden; font-weight: bold;
 }
-#single-label-content-wrapper .text-area { 
-flex-grow: 1; height: 100%; display: flex; flex-direction: column; 
-justify-content: center; text-align: left; overflow: hidden; padding-right: 1.5mm; 
+/* Product Info Text Area (Right Block in Single Preview) */
+#single-label-content-wrapper .text-area {
+flex-grow: 1; /* Takes up remaining space next to the QR block */
+height: 100%; display: flex; flex-direction: column;
+justify-content: center; /* Vertically centers the product info lines */
+text-align: left; /* Aligns product info text to the left */
+overflow: hidden; padding-right: 1.5mm;
 }
 #single-label-content-wrapper .product-info div { margin-bottom: 2mm; line-height: 1.2; }
 #single-label-content-wrapper .product-info .label { font-weight: bold; margin-right: 1mm; }
 #single-label-content-wrapper .product-info .value { font-weight: normal; }
 
-.label-item-fixed-a4-content { 
-display: flex; width: 100%; height: 100%; padding: 1mm; box-sizing: border-box;
+/* Multi-Label Item - Main Structure for QR left, Info Right (inside each label-item) */
+.label-item-fixed-a4-content {
+display: flex; /* Arranges children (.left, .right) in a row by default */
+flex-direction: row; /* Explicitly set: .left (QR) and .right (Info) side-by-side */
+width: 100%; height: 100%; padding: 1mm; box-sizing: border-box;
 }
+/* Left part of the multi-label item (QR and its barcode text) */
 .label-item-fixed-a4-content .left {
-/* width: 50%; */ /* Genişlik getLabelHTML içinde dinamik olarak ayarlanacak */
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            /* padding-right: 1mm; */ /* getLabelHTML içinde ayarlanabilir */
-            box-sizing: border-box;
+/* width is set dynamically in JS (e.g., 40% or 50%) */
+display: flex; flex-direction: column; align-items: center; justify-content: center;
+box-sizing: border-box;
 }
+/* Right part of the multi-label item (Product Info) */
 .label-item-fixed-a4-content .right {
-/* width: 50%; */ /* Genişlik getLabelHTML içinde dinamik olarak ayarlanacak */
-            display: flex; flex-direction: column; justify-content: center; 
-            text-align: left; /* Bilgiler sola yaslı olsun */
-            /* padding-left: 1mm; */ /* getLabelHTML içinde ayarlanacak */
-            box-sizing: border-box;
+/* width is set dynamically in JS (e.g., 60% or 50%) */
+display: flex; flex-direction: column; justify-content: center;
+text-align: left; /* Product info text aligned to the left */
+box-sizing: border-box;
 }
-.label-item-fixed-a4-content img.qr-code-clone { 
+.label-item-fixed-a4-content img.qr-code-clone {
 /* max-width: 18mm; max-height: 18mm; */ /* Boyut getLabelHTML'de dinamik */
-            margin-bottom: 1mm; object-fit: contain;
+margin-bottom: 1mm; object-fit: contain;
 }
-.label-item-fixed-a4-content .barcode-text-clone { 
-            text-align: center; font-weight: bold; word-break: break-all; line-height: 1.2; 
-        }
-.label-item-fixed-a4-content .info-clone { 
-            margin-bottom: 1.5mm; font-weight: 600; line-height: 1.2; text-align: left; 
-        }
+.label-item-fixed-a4-content .barcode-text-clone {
+text-align: center; font-weight: bold; word-break: break-all; line-height: 1.2;
+}
+.label-item-fixed-a4-content .info-clone {
+margin-bottom: 1.5mm; font-weight: 600; line-height: 1.2; text-align: left;
+}
 .label-item-fixed-a4-content .info-clone .label { font-weight: bold; }
 .label-item-fixed-a4-content .info-clone .value { font-weight: normal; }
 
@@ -260,13 +275,13 @@ display: flex; width: 100%; height: 100%; padding: 1mm; box-sizing: border-box;
 <option value="custom_multi">Özel Sayfa (Çoklu Etiket)</option>
 </select>
 
-<div id="custom-size-fields-single" style="display: none;"> 
+<div id="custom-size-fields-single" style="display: none;">
 <h4>Tek Etiket Boyutları (mm)</h4>
 <input type="number" id="single-label-width-input" placeholder="Genişlik" value="60" onchange="updateSingleLabelSize()">
 <input type="number" id="single-label-height-input" placeholder="Yükseklik" value="40" onchange="updateSingleLabelSize()">
 </div>
 
-<div id="custom-page-size-fields-multi" style="display: none;"> 
+<div id="custom-page-size-fields-multi" style="display: none;">
 <h4>Sayfa Boyutları (mm)</h4>
 <input type="number" id="multi-page-width-input" placeholder="Sayfa Genişliği" value="210" onchange="handleMultiPageDimensionChange()">
 <input type="number" id="multi-page-height-input" placeholder="Sayfa Yüksekliği" value="297" onchange="handleMultiPageDimensionChange()">
@@ -323,11 +338,11 @@ display: flex; width: 100%; height: 100%; padding: 1mm; box-sizing: border-box;
 </div>
 
 <div class="label-container" id="main-label-preview-area">
-<div id="single-label-container" style="display:flex; width:100%; height:100%;"> 
+<div id="single-label-container" style="display:flex; width:100%; height:100%;">
 <div id="single-label-content-wrapper">
 <div class="qr-and-barcode-area">
 <div class="qr-area">
-<img id="qr-code-image-main" src="https://via.placeholder.com/100x100?text=QR" alt="QR Kod Placeholder"> 
+<img id="qr-code-image-main" src="https://via.placeholder.com/100x100?text=QR" alt="QR Kod Placeholder">
 </div>
 <div class="barcode-text-under-qr" id="barcode-text-main">BARKOD</div>
 </div>
@@ -353,48 +368,48 @@ display: flex; width: 100%; height: 100%; padding: 1mm; box-sizing: border-box;
 
 <script>
 const A4_FIXED_CONFIG = {
-PAGE_WIDTH: 210, 
-MARGIN_LEFT: 8, 
-MARGIN_RIGHT: 8, 
-COLUMN_GAP: 2, 
+PAGE_WIDTH: 210,
+MARGIN_LEFT: 8,
+MARGIN_RIGHT: 8,
+COLUMN_GAP: 2,
 COLUMNS: 3,
-PAGE_HEIGHT: 297, 
-MARGIN_TOP: 15, 
-MARGIN_BOTTOM: 15, 
-ROW_GAP: 1, 
-ROWS: 7, 
+PAGE_HEIGHT: 297,
+MARGIN_TOP: 15,
+MARGIN_BOTTOM: 15,
+ROW_GAP: 1,
+ROWS: 7,
 LABELS_PER_PAGE: 21,
-QR_SIZE_MM: 18, 
-LABEL_WIDTH_APPROX: ((210 - 8 - 8 - (2 * 2)) / 3), 
-            // Taşma sorununu azaltmak için etiket yüksekliğinden 0.08mm çalıyoruz.
+QR_SIZE_MM: 18,
+LABEL_WIDTH_APPROX: ((210 - 8 - 8 - (2 * 2)) / 3),
+// Taşma sorununu azaltmak için etiket yüksekliğinden 0.08mm çalıyoruz.
 LABEL_HEIGHT_APPROX: (Math.floor(((297 - 15 - 15 - (7 - 1) * 1) / 7) * 100) / 100) - 0.08
 };
 
 let currentQrSize = 25;
 let currentBarcodeFont = 10;
 let currentInfoFont = 13; // Default 13pt olarak kalmış, formda 11pt idi. Tutarlılık için formdaki değerle eşleşebilir.
-let barcodeList = []; 
-let productData = {}; 
-let selectedModel = ''; 
-let selectedColor = ''; 
-let selectedSize = ''; 
+let barcodeList = [];
+let productData = {};
+let selectedModel = '';
+let selectedColor = '';
+let selectedSize = '';
 
 window.onload = function() {
 currentQrSize = parseFloat(document.getElementById('qr-code-size-input').value) || 25;
 currentBarcodeFont = parseFloat(document.getElementById('barcode-font-size-input').value) || 10;
 currentInfoFont = parseFloat(document.getElementById('info-font-size-input').value) || 11; // Formdaki varsayılan değerle eşleştirildi.
-updateCustomFields(); 
+updateCustomFields();
 document.getElementById('search-model-btn').addEventListener('click', searchModel);
 document.getElementById('color-select').addEventListener('change', handleColorSelect);
 
 const urlParams = new URLSearchParams(window.location.search);
 const paper = urlParams.get('paper');
-if (paper) { 
-document.getElementById('paper-type').value = paper; 
-updateCustomFields(); 
+if (paper) {
+document.getElementById('paper-type').value = paper;
+updateCustomFields();
 }
-updateTotalLabelCount(); 
-updateBarcodeList(); 
+updateTotalLabelCount();
+updateBarcodeList();
 const a4InfoDiv = document.getElementById('a4-fixed-info');
 if (a4InfoDiv) {
 a4InfoDiv.innerHTML = `A4 Standart Modu: Sayfada ${A4_FIXED_CONFIG.COLUMNS}x${A4_FIXED_CONFIG.ROWS} (${A4_FIXED_CONFIG.LABELS_PER_PAGE} adet) etiket basılır.<br>
@@ -407,22 +422,22 @@ Bu ayarlar sabittir. "Toplam Etiket Sayısı" genel listedeki tüm etiketlerin s
 function searchModel() {
 const modelCode = document.getElementById('model-input').value.trim();
 if (!modelCode) { alert('Lütfen bir model kodu giriniz.'); return; }
-selectedModel = modelCode; 
+selectedModel = modelCode;
 fetch(`/product_label/get_product_details/${modelCode}`)
 .then(response => response.json())
 .then(data => {
 if (!data.success) { alert(data.message || 'Ürün bulunamadı.'); return; }
-productData = data.data || {}; 
+productData = data.data || {};
 if (productData && typeof productData === 'object') {
-updateColorOptions(Object.keys(productData)); 
-} else { 
-console.error('Geçersiz ürün verisi:', productData); 
-alert('Ürün verisi alınamadı.'); 
-document.getElementById('color-select').innerHTML = '<option value="">-- Renk Seçiniz --</option>'; 
+updateColorOptions(Object.keys(productData));
+} else {
+console.error('Geçersiz ürün verisi:', productData);
+alert('Ürün verisi alınamadı.');
+document.getElementById('color-select').innerHTML = '<option value="">-- Renk Seçiniz --</option>';
 }
 document.getElementById('color-select').style.display = 'block';
-document.getElementById('color-select').value = ""; 
-document.getElementById('sizes-container').style.display = 'none'; 
+document.getElementById('color-select').value = "";
+document.getElementById('sizes-container').style.display = 'none';
 document.getElementById('preview-all-btn').style.display = 'none';
 })
 .catch(error => { console.error('Model arama hatası:', error); alert('Model aranırken bir hata oluştu.'); });
@@ -442,20 +457,20 @@ function handleColorSelect() {
 const selectedColorValue = document.getElementById('color-select').value;
 const sizesContainer = document.getElementById('sizes-container');
 const previewAllBtn = document.getElementById('preview-all-btn');
-if (!selectedColorValue) { 
+if (!selectedColorValue) {
 sizesContainer.style.display = 'none'; previewAllBtn.style.display = 'none';
-document.getElementById('barcode-input').value = ''; selectedColor = ''; 
+document.getElementById('barcode-input').value = ''; selectedColor = '';
 return;
 }
-selectedColor = selectedColorValue; 
-if (productData && productData[selectedColorValue]) { 
+selectedColor = selectedColorValue;
+if (productData && productData[selectedColorValue]) {
 createSizeBoxes(Object.keys(productData[selectedColorValue]));
 sizesContainer.style.display = 'block'; previewAllBtn.style.display = 'block';
 } else {
 console.warn(`'${selectedColorValue}' için ürün verisi bulunamadı veya productData tanımsız.`);
 sizesContainer.style.display = 'none'; previewAllBtn.style.display = 'none';
 }
-document.getElementById('barcode-input').value = ''; 
+document.getElementById('barcode-input').value = '';
 }
 
 function createSizeBoxes(sizes) {
@@ -463,7 +478,7 @@ const sizeBoxesContainer = document.getElementById('size-boxes');
 sizeBoxesContainer.innerHTML = '';
 sizes.sort((a, b) => (parseFloat(a) || a) - (parseFloat(b) || b));
 sizes.forEach(size => {
-const barcode = productData[selectedColor][size]; 
+const barcode = productData[selectedColor][size];
 const sizeBox = document.createElement('div');
 sizeBox.style.cssText = 'border: 1px solid #ccc; border-radius: 4px; padding: 8px; min-width: 80px; text-align:center;';
 const sizeInfo = document.createElement('div');
@@ -472,9 +487,9 @@ const quantityInput = document.createElement('input');
 quantityInput.type = 'number'; quantityInput.min = '0'; quantityInput.value = '0';
 quantityInput.style.cssText = 'width: 100%; padding: 4px; box-sizing: border-box;';
 quantityInput.dataset.barcode = barcode; quantityInput.dataset.size = size;
-quantityInput.addEventListener('focus', function() { 
+quantityInput.addEventListener('focus', function() {
 document.getElementById('barcode-input').value = this.dataset.barcode;
-selectedSize = this.dataset.size; 
+selectedSize = this.dataset.size;
 });
 sizeBox.appendChild(sizeInfo); sizeBox.appendChild(quantityInput);
 sizeBoxesContainer.appendChild(sizeBox);
@@ -488,22 +503,22 @@ document.querySelectorAll('#size-boxes input[type="number"]').forEach(input => {
 const quantity = parseInt(input.value);
 if (quantity > 0) {
 barcodeList.push({
-barcode: input.dataset.barcode, model: selectedModel, 
+barcode: input.dataset.barcode, model: selectedModel,
 color: selectedColor, size: input.dataset.size, quantity: quantity
 });
 newItemsAdded = true;
 }
 });
 if (!newItemsAdded && barcodeList.length === 0) { alert('Lütfen en az bir beden için miktar giriniz.'); return; }
-if (newItemsAdded || barcodeList.length > 0) { 
-updateBarcodeList(); updateTotalLabelCount(); generateAndPreparePreview(); 
+if (newItemsAdded || barcodeList.length > 0) {
+updateBarcodeList(); updateTotalLabelCount(); generateAndPreparePreview();
 }
 });
 });
 
-function updateBarcodeList() { 
+function updateBarcodeList() {
 const listBody = document.getElementById('barcode-list-body');
-listBody.innerHTML = ''; 
+listBody.innerHTML = '';
 barcodeList.forEach((item, index) => {
 const row = document.createElement('tr');
 row.style.borderBottom = '1px solid #eee';
@@ -521,30 +536,30 @@ document.getElementById('barcode-list').style.display = barcodeList.length > 0 ?
 
 function removeBarcode(index) {
 if (index >= 0 && index < barcodeList.length) {
-barcodeList.splice(index, 1); 
-updateBarcodeList(); updateTotalLabelCount(); 
-if (barcodeList.length === 0) { 
-populateMainLabelPreview(null, null, null, null); 
-document.getElementById('multi-label-container-fixed-a4').innerHTML = ''; 
+barcodeList.splice(index, 1);
+updateBarcodeList(); updateTotalLabelCount();
+if (barcodeList.length === 0) {
+populateMainLabelPreview(null, null, null, null);
+document.getElementById('multi-label-container-fixed-a4').innerHTML = '';
 document.getElementById('multi-label-container-custom').innerHTML = '';
 document.getElementById('execute-print-button').style.display = 'none';
 } else { generateAndPreparePreview(); }
 }
 }
 
-function updateTotalLabelCount() { 
+function updateTotalLabelCount() {
 document.getElementById('label-count').value = barcodeList.reduce((total, item) => total + item.quantity, 0);
 }
 
-function updateVisualSettings() { 
+function updateVisualSettings() {
 currentQrSize = parseFloat(document.getElementById('qr-code-size-input').value) || 25;
 currentBarcodeFont = parseFloat(document.getElementById('barcode-font-size-input').value) || 10;
 currentInfoFont = parseFloat(document.getElementById('info-font-size-input').value) || 11;
-applyVisualsToSingleLabelPreview(); 
+applyVisualsToSingleLabelPreview();
 if (barcodeList.length > 0) { generateAndPreparePreview(); }
 }
 
-function applyVisualsToSingleLabelPreview() { 
+function applyVisualsToSingleLabelPreview() {
 const qrArea = document.querySelector('#single-label-content-wrapper .qr-area');
 const qrAndBarcodeArea = document.querySelector('#single-label-content-wrapper .qr-and-barcode-area');
 const barcodeTextElem = document.getElementById('barcode-text-main');
@@ -553,27 +568,27 @@ if(qrArea && qrAndBarcodeArea) {
 const paperType = document.getElementById('paper-type').value;
 let effectiveQrSize = (paperType === 'a4_fixed') ? A4_FIXED_CONFIG.QR_SIZE_MM : currentQrSize;
 qrArea.style.width = effectiveQrSize + 'mm'; qrArea.style.height = effectiveQrSize + 'mm';
-qrAndBarcodeArea.style.width = (effectiveQrSize + 5) + 'mm'; 
+qrAndBarcodeArea.style.width = (effectiveQrSize + 5) + 'mm';
 }
 if(barcodeTextElem) barcodeTextElem.style.fontSize = currentBarcodeFont + 'pt';
 if(textArea) textArea.style.fontSize = currentInfoFont + 'pt';
 }
 
-function populateMainLabelPreview(barcode, model, color, size) { 
+function populateMainLabelPreview(barcode, model, color, size) {
 document.getElementById('barcode-text-main').textContent = barcode || "BARKOD";
 document.getElementById('model-value-main').textContent = model || "MODEL";
 document.getElementById('color-value-main').textContent = color || "RENK";
 document.getElementById('size-value-main').textContent = size || "BEDEN";
 const qrImgMain = document.getElementById('qr-code-image-main');
 if (barcode) {
-qrImgMain.src = `/product_label/generate_qr?data=${encodeURIComponent(barcode)}&t=${new Date().getTime()}`; 
+qrImgMain.src = `/product_label/generate_qr?data=${encodeURIComponent(barcode)}&t=${new Date().getTime()}`;
 } else {
 qrImgMain.src = "https://via.placeholder.com/100x100?text=QR";
 }
 applyVisualsToSingleLabelPreview();
 }
 
-function updateCustomFields() { 
+function updateCustomFields() {
 const paperType = document.getElementById('paper-type').value;
 const mainPreviewArea = document.getElementById('main-label-preview-area');
 document.getElementById('single-label-container').style.display = 'none';
@@ -584,44 +599,44 @@ document.getElementById('custom-page-size-fields-multi').style.display = 'none';
 document.getElementById('multi-label-layout-settings').style.display = 'none';
 document.getElementById('a4-fixed-info').style.display = 'none';
 mainPreviewArea.classList.remove('paper-a4-fixed', 'paper-100x100');
-mainPreviewArea.style.width = ''; mainPreviewArea.style.height = ''; 
-mainPreviewArea.style.alignItems = 'center'; 
+mainPreviewArea.style.width = ''; mainPreviewArea.style.height = '';
+mainPreviewArea.style.alignItems = 'center';
 const qrSizeInput = document.getElementById('qr-code-size-input');
 
-if (paperType === 'custom') { 
+if (paperType === 'custom') {
 document.getElementById('custom-size-fields-single').style.display = 'block';
 document.getElementById('single-label-container').style.display = 'flex';
 qrSizeInput.disabled = false; updateSingleLabelSize();
 } else if (paperType === '60x40') {
 document.getElementById('single-label-container').style.display = 'flex';
 mainPreviewArea.style.width = '60mm'; mainPreviewArea.style.height = '40mm';
-document.getElementById('single-label-width-input').value = '60'; 
+document.getElementById('single-label-width-input').value = '60';
 document.getElementById('single-label-height-input').value = '40';
 qrSizeInput.disabled = false;
 } else if (paperType === '100x100') {
 document.getElementById('single-label-container').style.display = 'flex';
-mainPreviewArea.classList.add('paper-100x100'); 
+mainPreviewArea.classList.add('paper-100x100');
 document.getElementById('single-label-width-input').value = '100';
 document.getElementById('single-label-height-input').value = '100';
 qrSizeInput.disabled = false;
 } else if (paperType === 'a4_fixed') {
 document.getElementById('multi-label-container-fixed-a4').style.display = 'grid';
-mainPreviewArea.classList.add('paper-a4-fixed'); 
+mainPreviewArea.classList.add('paper-a4-fixed');
 document.getElementById('a4-fixed-info').style.display = 'block';
-mainPreviewArea.style.alignItems = 'flex-start'; 
-qrSizeInput.disabled = true; 
-} else if (paperType === 'custom_multi') { 
+mainPreviewArea.style.alignItems = 'flex-start';
+qrSizeInput.disabled = true;
+} else if (paperType === 'custom_multi') {
 document.getElementById('custom-page-size-fields-multi').style.display = 'block';
 document.getElementById('multi-label-layout-settings').style.display = 'block';
 document.getElementById('multi-label-container-custom').style.display = 'flex';
-qrSizeInput.disabled = false; handleMultiPageDimensionChange(false); 
+qrSizeInput.disabled = false; handleMultiPageDimensionChange(false);
 }
-applyVisualsToSingleLabelPreview(); 
+applyVisualsToSingleLabelPreview();
 if (barcodeList.length > 0) generateAndPreparePreview();
-else updatePrintStyles(); 
+else updatePrintStyles();
 }
 
-function updateSingleLabelSize() { 
+function updateSingleLabelSize() {
 if (document.getElementById('paper-type').value === 'custom') {
 const width = document.getElementById('single-label-width-input').value;
 const height = document.getElementById('single-label-height-input').value;
@@ -631,62 +646,68 @@ if (height > 0) previewArea.style.height = height + 'mm';
 if (barcodeList.length > 0) generateAndPreparePreview(); else updatePrintStyles();
 }
 }
-function handleMultiPageDimensionChange(doLayout = true) { 
+function handleMultiPageDimensionChange(doLayout = true) {
 if (document.getElementById('paper-type').value === 'custom_multi') {
 const previewArea = document.getElementById('main-label-preview-area');
 const pageWidth = document.getElementById('multi-page-width-input').value;
 const pageHeight = document.getElementById('multi-page-height-input').value;
 if (pageWidth > 0) previewArea.style.width = pageWidth + 'mm';
 if (pageHeight > 0) previewArea.style.height = pageHeight + 'mm';
-if (barcodeList.length > 0 && doLayout) generateAndPreparePreview(); 
-else if (doLayout) calculateCustomMultiLabelLayout(); 
+if (barcodeList.length > 0 && doLayout) generateAndPreparePreview();
+else if (doLayout) calculateCustomMultiLabelLayout();
 else updatePrintStyles();
 }
 }
-function calculateCustomMultiLabelLayout() { 
+function calculateCustomMultiLabelLayout() {
 if (barcodeList.length > 0) generateAndPreparePreview();
-else { 
+else {
 const container = document.getElementById('multi-label-container-custom');
-container.innerHTML = ''; 
+container.innerHTML = '';
 container.style.padding = `${document.getElementById('margin-top').value || 0}mm ${document.getElementById('margin-right').value || 0}mm ${document.getElementById('margin-bottom').value || 0}mm ${document.getElementById('margin-left').value || 0}mm`;
 container.style.gap = `${document.getElementById('vertical-gap').value || 0}mm ${document.getElementById('horizontal-gap').value || 0}mm`;
 updatePrintStyles();
 }
 }
 
-function getLabelHTML(barcode, model, color, size, qrSrc, isA4Fixed = false) { 
+function getLabelHTML(barcode, model, color, size, qrSrc, isA4Fixed = false) {
 let qrSizeStyle = '';
 let effectiveQrSize = isA4Fixed ? A4_FIXED_CONFIG.QR_SIZE_MM : currentQrSize;
-let labelWidthForCalc = 60, labelHeightForCalc = 40; 
+let labelWidthForCalc = 60, labelHeightForCalc = 40;
 const currentPaperType = document.getElementById('paper-type').value;
 
 if (currentPaperType === 'custom_multi' && !isA4Fixed) {
 labelWidthForCalc = parseFloat(document.getElementById('multi-label-width')?.value) || 60;
 labelHeightForCalc = parseFloat(document.getElementById('multi-label-height')?.value) || 40;
 } else if ( (currentPaperType === 'custom' || currentPaperType === '60x40' || currentPaperType === '100x100') && !isA4Fixed) {
-labelWidthForCalc = parseFloat(document.getElementById('single-label-width-input')?.value) || 
+labelWidthForCalc = parseFloat(document.getElementById('single-label-width-input')?.value) ||
 (currentPaperType === '60x40' ? 60 : (currentPaperType === '100x100' ? 100 : 60));
-labelHeightForCalc = parseFloat(document.getElementById('single-label-height-input')?.value) || 
+labelHeightForCalc = parseFloat(document.getElementById('single-label-height-input')?.value) ||
 (currentPaperType === '60x40' ? 40 : (currentPaperType === '100x100' ? 100 : 40));
 }
 
-if (!isA4Fixed) { 
-let maxQrBasedOnLabel = Math.min(labelWidthForCalc * 0.45, labelHeightForCalc * 0.7); 
+if (!isA4Fixed) {
+let maxQrBasedOnLabel = Math.min(labelWidthForCalc * 0.45, labelHeightForCalc * 0.7);
 effectiveQrSize = Math.min(currentQrSize, maxQrBasedOnLabel);
 }
 
 qrSizeStyle = `width:${effectiveQrSize}mm; height:${effectiveQrSize}mm; max-width:95%; max-height:95%;`;
-const marginBottom = isA4Fixed ? '1mm' : Math.min(2, labelHeightForCalc * 0.05) + 'mm'; 
-            const infoFontSizeToUse = isA4Fixed ? '9pt' : currentInfoFont + 'pt'; 
-            const barcodeFontSizeToUse = isA4Fixed ? '8pt' : currentBarcodeFont + 'pt'; 
+const marginBottom = isA4Fixed ? '1mm' : Math.min(2, labelHeightForCalc * 0.05) + 'mm';
+const infoFontSizeToUse = isA4Fixed ? '9pt' : currentInfoFont + 'pt';
+const barcodeFontSizeToUse = isA4Fixed ? '8pt' : currentBarcodeFont + 'pt';
+
+// Conditional width for left and right panels
+// If A4 fixed, or if QR size is relatively large for the label, use 40% for QR area, 60% for text.
+// Otherwise (QR is smaller relative to label width), use 50%/50% split.
+const leftPanelWidth = (isA4Fixed || (effectiveQrSize > labelWidthForCalc * 0.33)) ? '40%' : '50%';
+const rightPanelWidth = (isA4Fixed || (effectiveQrSize > labelWidthForCalc * 0.33)) ? '60%' : '50%';
 
 return `
-<div class="label-item-fixed-a4-content"> 
-<div class="left" style="width: ${isA4Fixed || (effectiveQrSize > labelWidthForCalc * 0.33) ? '40%' : '50%'}; padding-right: 1mm;">
+<div class="label-item-fixed-a4-content">
+<div class="left" style="width: ${leftPanelWidth}; padding-right: 1mm;">
 <img class="qr-code-clone" src="${qrSrc}" alt="QR Kod ${barcode}" style="${qrSizeStyle} margin-bottom: ${marginBottom}; object-fit: contain;">
 <div class="barcode-text-clone" style="font-size:${barcodeFontSizeToUse}; max-width: ${effectiveQrSize + 2}mm;">${barcode}</div>
 </div>
-<div class="right" style="width: ${isA4Fixed || (effectiveQrSize > labelWidthForCalc * 0.33) ? '60%' : '50%'}; padding-left: ${isA4Fixed ? '1.5mm' : '2mm'};">
+<div class="right" style="width: ${rightPanelWidth}; padding-left: ${isA4Fixed ? '1.5mm' : '2mm'};">
 <div class="info-clone" style="font-size:${infoFontSizeToUse}; margin-bottom:${marginBottom};"><span class="label">Model:</span> <span class="value model-clone">${model}</span></div>
 <div class="info-clone" style="font-size:${infoFontSizeToUse}; margin-bottom:${marginBottom};"><span class="label">Renk:</span> <span class="value color-clone">${color}</span></div>
 <div class="info-clone" style="font-size:${infoFontSizeToUse};"><span class="label">Beden:</span> <span class="value size-clone">${size}</span></div>
@@ -696,22 +717,22 @@ return `
 
 function generateAndPreparePreview() {
 if (barcodeList.length === 0) {
-populateMainLabelPreview(null, null, null, null); 
+populateMainLabelPreview(null, null, null, null);
 document.getElementById('multi-label-container-fixed-a4').innerHTML = '';
 document.getElementById('multi-label-container-custom').innerHTML = '';
 document.getElementById('execute-print-button').style.display = 'none';
-updatePrintStyles(); 
+updatePrintStyles();
 return;
 }
-const firstItemForPreview = barcodeList[0]; 
+const firstItemForPreview = barcodeList[0];
 populateMainLabelPreview(firstItemForPreview.barcode, firstItemForPreview.model, firstItemForPreview.color, firstItemForPreview.size);
-generateMultipleLabelsLayout(); 
-updatePrintStyles(); 
+generateMultipleLabelsLayout();
+updatePrintStyles();
 document.getElementById('execute-print-button').style.display = 'block';
 console.log("Önizleme hazırlandı/güncellendi.");
 }
 
-function generateMultipleLabelsLayout() { 
+function generateMultipleLabelsLayout() {
 const paperType = document.getElementById('paper-type').value;
 document.getElementById('single-label-container').style.display = 'none';
 const a4Container = document.getElementById('multi-label-container-fixed-a4');
@@ -719,14 +740,14 @@ const customMultiContainer = document.getElementById('multi-label-container-cust
 a4Container.innerHTML = ''; customMultiContainer.innerHTML = '';
 a4Container.style.display = 'none'; customMultiContainer.style.display = 'none';
 
-if (barcodeList.length === 0) { 
-document.getElementById('single-label-container').style.display = 'flex'; 
+if (barcodeList.length === 0) {
+document.getElementById('single-label-container').style.display = 'flex';
 return;
 }
-let labelsToDisplayHtml = []; 
+let labelsToDisplayHtml = [];
 barcodeList.forEach(item => {
 for (let i = 0; i < item.quantity; i++) {
-const qrSrc = `/product_label/generate_qr?data=${encodeURIComponent(item.barcode)}&t=${new Date().getTime()}`; 
+const qrSrc = `/product_label/generate_qr?data=${encodeURIComponent(item.barcode)}&t=${new Date().getTime()}`;
 labelsToDisplayHtml.push(getLabelHTML(item.barcode, item.model, item.color, item.size, qrSrc, paperType === 'a4_fixed'));
 }
 });
@@ -737,13 +758,13 @@ a4Container.style.padding = `${A4_FIXED_CONFIG.MARGIN_TOP}mm ${A4_FIXED_CONFIG.M
 a4Container.style.gap = `${A4_FIXED_CONFIG.ROW_GAP}mm ${A4_FIXED_CONFIG.COLUMN_GAP}mm`;
 a4Container.style.gridTemplateColumns = `repeat(${A4_FIXED_CONFIG.COLUMNS}, 1fr)`;
 
-const displayCount = Math.min(labelsToDisplayHtml.length, A4_FIXED_CONFIG.LABELS_PER_PAGE * 2); 
+const displayCount = Math.min(labelsToDisplayHtml.length, A4_FIXED_CONFIG.LABELS_PER_PAGE * 2);
 for (let i = 0; i < displayCount; i++) {
 if (!labelsToDisplayHtml[i]) break;
-const labelItem = document.createElement('div'); 
+const labelItem = document.createElement('div');
 labelItem.className = 'label-item';
-labelItem.style.height = A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX.toFixed(2) + 'mm'; 
-labelItem.innerHTML = labelsToDisplayHtml[i]; 
+labelItem.style.height = A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX.toFixed(2) + 'mm';
+labelItem.innerHTML = labelsToDisplayHtml[i];
 a4Container.appendChild(labelItem);
 }
 } else if (paperType === 'custom_multi') {
@@ -757,141 +778,141 @@ const labelItem = document.createElement('div'); labelItem.className = 'label-it
 labelItem.style.width = labelWidth + 'mm'; labelItem.style.height = labelHeight + 'mm';
 labelItem.innerHTML = labelHtml; customMultiContainer.appendChild(labelItem);
 });
-} else { 
+} else {
 document.getElementById('single-label-container').style.display = 'flex';
 }
 }
 
-        function updatePrintStyles() {
-            let existingStyle = document.getElementById('dynamic-print-styles');
-            if (existingStyle) existingStyle.remove();
-            const style = document.createElement('style');
-            style.id = 'dynamic-print-styles'; document.head.appendChild(style);
-            const paperType = document.getElementById('paper-type').value;
-            let pageWidth, pageHeight, printSpecificCSS = "";
-            let marginTop, marginRight, marginBottom, marginLeft;
+function updatePrintStyles() {
+let existingStyle = document.getElementById('dynamic-print-styles');
+if (existingStyle) existingStyle.remove();
+const style = document.createElement('style');
+style.id = 'dynamic-print-styles'; document.head.appendChild(style);
+const paperType = document.getElementById('paper-type').value;
+let pageWidth, pageHeight, printSpecificCSS = "";
+let marginTop, marginRight, marginBottom, marginLeft;
 
-            if (paperType === 'custom' || paperType === '60x40' || paperType === '100x100') {
-                pageWidth = (paperType === 'custom') ? (document.getElementById('single-label-width-input').value || 60) : (paperType === '60x40' ? 60 : 100);
-                pageHeight = (paperType === 'custom') ? (document.getElementById('single-label-height-input').value || 40) : (paperType === '60x40' ? 40 : 100);
-                marginTop = marginRight = marginBottom = marginLeft = "0mm";
-                printSpecificCSS = `
-                    body > *:not(#main-label-preview-area):not(style):not(script) { display: none !important; }
-                    #main-label-preview-area { display: block !important; }
-                    #main-label-preview-area > #multi-label-container-custom, 
-                    #main-label-preview-area > #multi-label-container-fixed-a4 { display: none !important; } 
-                    #main-label-preview-area > #single-label-container { display: flex !important; }
-                    #main-label-preview-area, #main-label-preview-area > #single-label-container {
-                        width: ${pageWidth}mm !important; height: ${pageHeight}mm !important;
-                        border: none !important; padding: 0 !important; margin: 0 !important;
-                        box-sizing: border-box !important; overflow: hidden !important; 
-                    }`;
-            } else if (paperType === 'a4_fixed') {
-                pageWidth = A4_FIXED_CONFIG.PAGE_WIDTH; 
-                pageHeight = A4_FIXED_CONFIG.PAGE_HEIGHT;
-                marginTop = A4_FIXED_CONFIG.MARGIN_TOP + "mm";
-                marginRight = A4_FIXED_CONFIG.MARGIN_RIGHT + "mm";
-                marginBottom = A4_FIXED_CONFIG.MARGIN_BOTTOM + "mm";
-                marginLeft = A4_FIXED_CONFIG.MARGIN_LEFT + "mm";
+if (paperType === 'custom' || paperType === '60x40' || paperType === '100x100') {
+pageWidth = (paperType === 'custom') ? (document.getElementById('single-label-width-input').value || 60) : (paperType === '60x40' ? 60 : 100);
+pageHeight = (paperType === 'custom') ? (document.getElementById('single-label-height-input').value || 40) : (paperType === '60x40' ? 40 : 100);
+marginTop = marginRight = marginBottom = marginLeft = "0mm";
+printSpecificCSS = `
+body > *:not(#main-label-preview-area):not(style):not(script) { display: none !important; }
+#main-label-preview-area { display: block !important; }
+#main-label-preview-area > #multi-label-container-custom,
+#main-label-preview-area > #multi-label-container-fixed-a4 { display: none !important; }
+#main-label-preview-area > #single-label-container { display: flex !important; }
+#main-label-preview-area, #main-label-preview-area > #single-label-container {
+width: ${pageWidth}mm !important; height: ${pageHeight}mm !important;
+border: none !important; padding: 0 !important; margin: 0 !important;
+box-sizing: border-box !important; overflow: hidden !important;
+}`;
+} else if (paperType === 'a4_fixed') {
+pageWidth = A4_FIXED_CONFIG.PAGE_WIDTH;
+pageHeight = A4_FIXED_CONFIG.PAGE_HEIGHT;
+marginTop = A4_FIXED_CONFIG.MARGIN_TOP + "mm";
+marginRight = A4_FIXED_CONFIG.MARGIN_RIGHT + "mm";
+marginBottom = A4_FIXED_CONFIG.MARGIN_BOTTOM + "mm";
+marginLeft = A4_FIXED_CONFIG.MARGIN_LEFT + "mm";
 
-                printSpecificCSS = `
-                    body > *:not(#main-label-preview-area):not(style):not(script) { display: none !important; }
-                    #main-label-preview-area { 
-                        display: block !important; 
-                        width: 100% !important; 
-                        height: auto !important; 
-                        overflow: visible !important;
-                        box-sizing: border-box !important;
-                        padding: 0 !important; 
-                        margin: 0 !important;
-                    }
-                    #main-label-preview-area > #single-label-container, 
-                    #main-label-preview-area > #multi-label-container-custom { display: none !important; }
-                    #main-label-preview-area > #multi-label-container-fixed-a4 {
-                        display: grid !important; 
-                        width: 100% !important;  
-                        height: auto !important; 
-                        overflow: visible !important;
-                        padding: 0 !important; 
-                        box-sizing: border-box !important; 
-                        grid-template-columns: repeat(${A4_FIXED_CONFIG.COLUMNS}, 1fr) !important; 
-                        grid-auto-rows: ${A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX.toFixed(2)}mm !important; 
-                        gap: ${A4_FIXED_CONFIG.ROW_GAP}mm ${A4_FIXED_CONFIG.COLUMN_GAP}mm !important;
-                        border: none !important; 
-                    }
-                    #main-label-preview-area > #multi-label-container-fixed-a4 .label-item { 
-                        page-break-inside: avoid !important; 
-                        border: 0.1mm solid #eee !important; 
-                        background-color: white !important; 
-                        overflow: hidden !important; 
-                        height: ${A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX.toFixed(2)}mm !important; 
-                        box-sizing: border-box !important;
-                    }`;
-            } else if (paperType === 'custom_multi') {
-                pageWidth = document.getElementById('multi-page-width-input').value || A4_FIXED_CONFIG.PAGE_WIDTH;
-                pageHeight = document.getElementById('multi-page-height-input').value || A4_FIXED_CONFIG.PAGE_HEIGHT;
-                marginTop = (document.getElementById('margin-top').value || 0) + "mm";
-                marginRight = (document.getElementById('margin-right').value || 0) + "mm";
-                marginBottom = (document.getElementById('margin-bottom').value || 0) + "mm";
-                marginLeft = (document.getElementById('margin-left').value || 0) + "mm";
+printSpecificCSS = `
+body > *:not(#main-label-preview-area):not(style):not(script) { display: none !important; }
+#main-label-preview-area {
+display: block !important;
+width: 100% !important;
+height: auto !important;
+overflow: visible !important;
+box-sizing: border-box !important;
+padding: 0 !important;
+margin: 0 !important;
+}
+#main-label-preview-area > #single-label-container,
+#main-label-preview-area > #multi-label-container-custom { display: none !important; }
+#main-label-preview-area > #multi-label-container-fixed-a4 {
+display: grid !important;
+width: 100% !important;
+height: auto !important;
+overflow: visible !important;
+padding: 0 !important;
+box-sizing: border-box !important;
+grid-template-columns: repeat(${A4_FIXED_CONFIG.COLUMNS}, 1fr) !important;
+grid-auto-rows: ${A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX.toFixed(2)}mm !important;
+gap: ${A4_FIXED_CONFIG.ROW_GAP}mm ${A4_FIXED_CONFIG.COLUMN_GAP}mm !important;
+border: none !important;
+}
+#main-label-preview-area > #multi-label-container-fixed-a4 .label-item {
+page-break-inside: avoid !important;
+border: 0.1mm solid #eee !important;
+background-color: white !important;
+overflow: hidden !important;
+height: ${A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX.toFixed(2)}mm !important;
+box-sizing: border-box !important;
+}`;
+} else if (paperType === 'custom_multi') {
+pageWidth = document.getElementById('multi-page-width-input').value || A4_FIXED_CONFIG.PAGE_WIDTH;
+pageHeight = document.getElementById('multi-page-height-input').value || A4_FIXED_CONFIG.PAGE_HEIGHT;
+marginTop = (document.getElementById('margin-top').value || 0) + "mm";
+marginRight = (document.getElementById('margin-right').value || 0) + "mm";
+marginBottom = (document.getElementById('margin-bottom').value || 0) + "mm";
+marginLeft = (document.getElementById('margin-left').value || 0) + "mm";
 
-                printSpecificCSS = `
-                    body > *:not(#main-label-preview-area):not(style):not(script) { display: none !important; }
-                    #main-label-preview-area { 
-                        display: block !important; 
-                        width: 100% !important; 
-                        height: auto !important; 
-                        overflow: visible !important; 
-                        padding:0 !important; 
-                        margin:0 !important;
-                        box-sizing: border-box !important;
-                    }
-                    #main-label-preview-area > #single-label-container, 
-                    #main-label-preview-area > #multi-label-container-fixed-a4 { display: none !important; }
-                    #main-label-preview-area > #multi-label-container-custom {
-                        display: flex !important; 
-                        flex-wrap: wrap !important; 
-                        width: 100% !important;  
-                        height: auto !important; 
-                        overflow: visible !important; 
-                        padding: 0 !important; 
-                        gap: ${document.getElementById('vertical-gap').value || 0}mm ${document.getElementById('horizontal-gap').value || 0}mm !important;
-                        border: none !important; 
-                        box-sizing: border-box !important;
-                    }
-                    #main-label-preview-area > #multi-label-container-custom .label-item { 
-                        page-break-inside: avoid !important; 
-                        border: 0.1mm solid #eee !important; 
-                        background-color: white !important; 
-                        overflow: hidden !important; 
-                        box-sizing: border-box !important;
-                    }`;
-            } else { return; } 
+printSpecificCSS = `
+body > *:not(#main-label-preview-area):not(style):not(script) { display: none !important; }
+#main-label-preview-area {
+display: block !important;
+width: 100% !important;
+height: auto !important;
+overflow: visible !important;
+padding:0 !important;
+margin:0 !important;
+box-sizing: border-box !important;
+}
+#main-label-preview-area > #single-label-container,
+#main-label-preview-area > #multi-label-container-fixed-a4 { display: none !important; }
+#main-label-preview-area > #multi-label-container-custom {
+display: flex !important;
+flex-wrap: wrap !important;
+width: 100% !important;
+height: auto !important;
+overflow: visible !important;
+padding: 0 !important;
+gap: ${document.getElementById('vertical-gap').value || 0}mm ${document.getElementById('horizontal-gap').value || 0}mm !important;
+border: none !important;
+box-sizing: border-box !important;
+}
+#main-label-preview-area > #multi-label-container-custom .label-item {
+page-break-inside: avoid !important;
+border: 0.1mm solid #eee !important;
+background-color: white !important;
+overflow: hidden !important;
+box-sizing: border-box !important;
+}`;
+} else { return; }
 
-            const pageRuleMargin = `${marginTop} ${marginRight} ${marginBottom} ${marginLeft}`;
+const pageRuleMargin = `${marginTop} ${marginRight} ${marginBottom} ${marginLeft}`;
 
-            style.textContent = `
-                @media print {
-                    @page { 
-                        size: ${pageWidth}mm ${pageHeight}mm; 
-                        margin: ${pageRuleMargin}; 
-                    }
-                    html, body { 
-                        width: 100% !important; 
-                        height: auto !important;  
-                        margin: 0 !important; 
-                        padding: 0 !important; 
-                        box-sizing: border-box !important; 
-                        background-color: white !important; 
-                        -webkit-print-color-adjust: exact !important; 
-                        color-adjust: exact !important;
-                        overflow: visible !important; 
-                    }
-                    .no-print { display: none !important; } 
-                    #execute-print-button { display: none !important; } 
-                    ${printSpecificCSS}
-                }`;
-        }
+style.textContent = `
+@media print {
+@page {
+size: ${pageWidth}mm ${pageHeight}mm;
+margin: ${pageRuleMargin};
+}
+html, body {
+width: 100% !important;
+height: auto !important;
+margin: 0 !important;
+padding: 0 !important;
+box-sizing: border-box !important;
+background-color: white !important;
+-webkit-print-color-adjust: exact !important;
+color-adjust: exact !important;
+overflow: visible !important;
+}
+.no-print { display: none !important; }
+#execute-print-button { display: none !important; }
+${printSpecificCSS}
+}`;
+}
 
 async function executePrint() {
 const paperType = document.getElementById('paper-type').value;
@@ -910,7 +931,7 @@ try {
 const response = await fetch(`/product_label/generate_qr?data=${encodeURIComponent(barcode)}&t=${new Date().getTime()}`);
 if (!response.ok) throw new Error(`QR üretme hatası (${response.status}): ${response.statusText}`);
 const blob = await response.blob();
-if (!blob.type.startsWith("image/")) { 
+if (!blob.type.startsWith("image/")) {
 console.warn("Beklenmedik QR blob tipi:", blob.type, "Barcode:", barcode);
 const errorText = await blob.text();
 console.error("Sunucudan dönen QR hata metni:", errorText);
@@ -924,7 +945,7 @@ reader.readAsDataURL(blob);
 });
 } catch (error) {
 console.error("QR Data URL çevirme hatası (barcode: "+barcode+"):", error);
-return "https://via.placeholder.com/100x100?text=QR+Hata"; 
+return "https://via.placeholder.com/100x100?text=QR+Hata";
 }
 }
 
@@ -940,24 +961,24 @@ return getLabelHTML(item.barcode, item.model, item.color, item.size, qrDataUrl, 
 );
 }
 });
-const resolvedLabelHTMLs = await Promise.all(labelPromises); 
+const resolvedLabelHTMLs = await Promise.all(labelPromises);
 
 let targetContainer;
 if (paperType === 'a4_fixed') {
 targetContainer = document.getElementById('multi-label-container-fixed-a4');
-targetContainer.innerHTML = ''; 
-resolvedLabelHTMLs.forEach(html => { 
+targetContainer.innerHTML = '';
+resolvedLabelHTMLs.forEach(html => {
 const labelDiv = document.createElement('div');
-labelDiv.className = 'label-item'; 
+labelDiv.className = 'label-item';
 labelDiv.innerHTML = html;
 targetContainer.appendChild(labelDiv);
 });
-} else { 
+} else {
 targetContainer = document.getElementById('multi-label-container-custom');
-targetContainer.innerHTML = ''; 
+targetContainer.innerHTML = '';
 const labelWidth = document.getElementById('multi-label-width').value || 60;
 const labelHeight = document.getElementById('multi-label-height').value || 40;
-resolvedLabelHTMLs.forEach(html => { 
+resolvedLabelHTMLs.forEach(html => {
 const labelDiv = document.createElement('div');
 labelDiv.className = 'label-item';
 labelDiv.style.width = labelWidth + 'mm';
@@ -966,8 +987,8 @@ labelDiv.innerHTML = html;
 targetContainer.appendChild(labelDiv);
 });
 }
-updatePrintStyles(); 
-setTimeout(() => window.print(), 500); 
+updatePrintStyles();
+setTimeout(() => window.print(), 500);
 
 } else if (paperType === 'custom' || paperType === '60x40' || paperType === '100x100') {
 let labelWidthForPrint = (paperType === 'custom') ? (document.getElementById('single-label-width-input').value || 60) : (paperType === '60x40' ? 60 : 100);
@@ -992,9 +1013,9 @@ allLabelsForPrintHTML_single = resolvedSingleLabelInstances.join('');
 if (allLabelsForPrintHTML_single.length > 0) {
 const lastBreak = allLabelsForPrintHTML_single.lastIndexOf('page-break-after: always;');
 if (lastBreak !== -1) {
-                              allLabelsForPrintHTML_single = allLabelsForPrintHTML_single.substring(0, lastBreak) + 
-                                                           allLabelsForPrintHTML_single.substring(lastBreak).replace('page-break-after: always;', 'page-break-after: auto;');
-                          }
+allLabelsForPrintHTML_single = allLabelsForPrintHTML_single.substring(0, lastBreak) +
+allLabelsForPrintHTML_single.substring(lastBreak).replace('page-break-after: always;', 'page-break-after: auto;');
+}
 }
 
 const printWindow = window.open('', '_blank');
@@ -1003,14 +1024,26 @@ printWindow.document.write(`
 <style>
 @page { size: ${labelWidthForPrint}mm ${labelHeightForPrint}mm; margin: 0; }
 body { margin: 0; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact !important; color-adjust: exact !important;}
-.label-item-fixed-a4-content { display: flex; width: 100%; height: 100%; padding: 1mm; box-sizing: border-box; }
-.label-item-fixed-a4-content .left { /*width: 50%;*/ display: flex; flex-direction: column; align-items: center; justify-content: center; padding-right: 1mm; box-sizing: border-box;}
-.label-item-fixed-a4-content .right { /*width: 50%;*/ display: flex; flex-direction: column; justify-content: center; text-align: left; padding-left: 2mm; box-sizing: border-box; }
+/* Styles for label-item-fixed-a4-content when printed individually */
+.label-item-fixed-a4-content { display: flex; flex-direction: row; width: 100%; height: 100%; padding: 1.5mm; box-sizing: border-box; align-items: center;}
+.label-item-fixed-a4-content .left { display: flex; flex-direction: column; align-items: center; justify-content: center; padding-right: 1mm; box-sizing: border-box;}
+.label-item-fixed-a4-content .right { display: flex; flex-direction: column; justify-content: center; text-align: left; padding-left: 2mm; box-sizing: border-box; flex-grow: 1;}
 .label-item-fixed-a4-content img.qr-code-clone { object-fit: contain; }
 .label-item-fixed-a4-content .barcode-text-clone { text-align: center; font-weight: bold; word-break: break-all; line-height: 1.2; font-size: ${currentBarcodeFont}pt;}
 .label-item-fixed-a4-content .info-clone { margin-bottom: 1.5mm; font-weight: 600; line-height: 1.2; text-align: left; font-size: ${currentInfoFont}pt;}
 .label-item-fixed-a4-content .info-clone .label { font-weight: bold; }
 .label-item-fixed-a4-content .info-clone .value { font-weight: normal; }
+
+/* Adjusting widths for .left and .right within the print window for single labels */
+/* Using the same logic as getLabelHTML for consistency */
+.label-instance-print .left {
+    /* Calculate width based on currentQrSize and labelWidthForPrint, e.g. 40% or 50% */
+    width: ${( (currentQrSize / parseFloat(labelWidthForPrint)) > 0.33 && parseFloat(labelWidthForPrint) > 0 ) ? '40%' : '50%'};
+}
+.label-instance-print .right {
+    width: ${( (currentQrSize / parseFloat(labelWidthForPrint)) > 0.33 && parseFloat(labelWidthForPrint) > 0 ) ? '60%' : '50%'};
+}
+
 </style></head><body>${allLabelsForPrintHTML_single}
 <script> window.onload = function() { setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 300); }, 500); }; <\/script></body></html>`);
 printWindow.document.close();
@@ -1023,15 +1056,15 @@ setTimeout(() => {
 printButton.disabled = false;
 printButton.textContent = 'Önizlemeyi Yazdır';
 if (paperType === 'a4_fixed' || paperType === 'custom_multi') {
-generateAndPreparePreview(); 
+generateAndPreparePreview();
 } else {
-                        if(barcodeList.length > 0) {
-                            populateMainLabelPreview(barcodeList[0].barcode, barcodeList[0].model, barcodeList[0].color, barcodeList[0].size);
-                        } else {
-                            populateMainLabelPreview(null, null, null, null);
-                        }
-                    }
-}, 1000); 
+if(barcodeList.length > 0) {
+populateMainLabelPreview(barcodeList[0].barcode, barcodeList[0].model, barcodeList[0].color, barcodeList[0].size);
+} else {
+populateMainLabelPreview(null, null, null, null);
+}
+}
+}, 1000);
 }
 }
 </script>
