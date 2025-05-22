@@ -125,7 +125,7 @@
                     {% if question.status == 'WAITING_FOR_ANSWER' %}
                     <div class="mt-4" id="answer">
                         <h5 class="mb-3">Soruyu Cevapla</h5>
-                        <form method="post" action="{{ url_for('product_questions.question_detail', question_id=question.question_id) }}">
+                        <form method="post" action="/product-questions/detail/{{ question.question_id }}">
                             <div class="mb-3">
                                 <textarea name="answer_text" id="answer_text" rows="5" class="form-control" 
                                     placeholder="Müşterinin sorusunu yanıtlayın..." required></textarea>
