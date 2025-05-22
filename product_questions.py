@@ -367,13 +367,13 @@ async def fetch_questions_route():
         else:
             flash("Yeni ürün sorusu bulunamadı.", "info")
         
-        return redirect(url_for('product_questions.questions_list'))
+        return redirect('/product-questions/')
         
     except Exception as e:
         error_msg = f"Ürün sorularını çekerken bir hata oluştu: {str(e)}"
         logger.error(error_msg, exc_info=True)
         flash(error_msg, "danger")
-        return redirect(url_for('product_questions.questions_list'))
+        return redirect('/product-questions/')
 
 
 # Ürün soruları listesi
