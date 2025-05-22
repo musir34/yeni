@@ -327,18 +327,49 @@ function renderBarcodeList(){
 updateStockButton.addEventListener('click', function() {
   console.log("Güncelle butonuna tıklandı!");
   
-  const countsOnly = {};
-  for(const c in barcodeCounts){
-    countsOnly[c] = {count: barcodeCounts[c].count};
-  }
+  // Butonu hemen devre dışı bırakalım ki çift tıklama olmasın
+  this.disabled = true;
+  this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> İşleniyor...';
   
-  if(!Object.keys(countsOnly).length){
-    showMessage("Güncellenecek barkod yok.", false);
-    return;
-  }
+  // Önce ekrandaki tüm mesajları temizle
+  document.getElementById('responseMessage').classList.add('d-none');
   
-  // Şimdi stok güncelleme işlemini çağır
-  submitStock(selectedMode, countsOnly);
+  // Durum göstergesini hemen görüntüle (işlemi beklemeden)
+  const progressContainer = document.getElementById('progressContainer');
+  progressContainer.style.display = 'block';
+  document.getElementById('progressTitle').textContent = "Stok İşleniyor...";
+  document.getElementById('progressMessage').textContent = "Veriler hazırlanıyor, lütfen bekleyin...";
+  document.getElementById('progressBar').className = "progress-bar progress-bar-striped progress-bar-animated bg-primary";
+  
+  // Görünüm alanının içinde kalması için - durum göstergesine otomatik scroll
+  progressContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  
+  // Veri hazırlama ve API çağrısını geciktir (UI'ın tepki vermesine izin ver)
+  setTimeout(() => {
+    const countsOnly = {};
+    // Barkod sayısı çok olduğunda daha verimli
+    const barcodeKeys = Object.keys(barcodeCounts);
+    
+    if(!barcodeKeys.length){
+      showMessage("Güncellenecek barkod yok.", false);
+      this.disabled = false;
+      this.innerHTML = '<i class="bi bi-arrow-repeat"></i> Güncelle';
+      progressContainer.style.display = 'none';
+      return;
+    }
+    
+    updateProgressStatus("Veri Hazırlanıyor", 
+                       `${barcodeKeys.length} adet ürün işleniyor...`, 
+                       "info");
+    
+    // Büyük veri setlerinde performans için 
+    for(const c of barcodeKeys){
+      countsOnly[c] = {count: barcodeCounts[c].count};
+    }
+    
+    // Şimdi stok güncelleme işlemini çağır
+    submitStock(selectedMode, countsOnly);
+  }, 100); // Kısa bir gecikme UI'ın yenilenmesini sağlar
 });
 resetButton.addEventListener('click',resetStockAddition);
 
