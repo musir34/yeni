@@ -371,52 +371,83 @@ function renderBarcodeList(){
 }
 
 /* ---------- Güncelle / Reset ---------- */
-updateStockButton.addEventListener('click', function() {
-  console.log("Güncelle butonuna tıklandı!");
+// Güncelleme butonu - iyileştirilmiş sürüm
+document.addEventListener('DOMContentLoaded', function() {
+  const originalButtonHTML = '<i class="bi bi-arrow-repeat"></i> Güncelle';
+  const processingButtonHTML = '<span class="spinner-border spinner-border-sm"></span> İşleniyor...';
   
-  // Butonu hemen devre dışı bırakalım ki çift tıklama olmasın
-  this.disabled = true;
-  this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> İşleniyor...';
+  // Event listener'ı butondan div'e taşıyalım (daha geniş hedef alanı)
+  const buttonWrapper = document.createElement('div');
+  buttonWrapper.className = 'button-wrapper position-relative';
+  buttonWrapper.style.cssText = 'touch-action: manipulation; width: 100%; height: 100%;';
   
-  // Önce ekrandaki tüm mesajları temizle
-  document.getElementById('responseMessage').classList.add('d-none');
+  // Buton elemanını alalım
+  const updateButton = document.getElementById('updateStockButton');
   
-  // Durum göstergesini hemen görüntüle (işlemi beklemeden)
-  const progressContainer = document.getElementById('progressContainer');
-  progressContainer.style.display = 'block';
-  document.getElementById('progressTitle').textContent = "Stok İşleniyor...";
-  document.getElementById('progressMessage').textContent = "Veriler hazırlanıyor, lütfen bekleyin...";
-  document.getElementById('progressBar').className = "progress-bar progress-bar-striped progress-bar-animated bg-primary";
-  
-  // Görünüm alanının içinde kalması için - durum göstergesine otomatik scroll
-  progressContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  
-  // Veri hazırlama ve API çağrısını geciktir (UI'ın tepki vermesine izin ver)
-  setTimeout(() => {
-    const countsOnly = {};
-    // Barkod sayısı çok olduğunda daha verimli
-    const barcodeKeys = Object.keys(barcodeCounts);
+  // Butonu sarmalayalım
+  if (updateButton && updateButton.parentNode) {
+    updateButton.parentNode.insertBefore(buttonWrapper, updateButton);
+    buttonWrapper.appendChild(updateButton);
     
-    if(!barcodeKeys.length){
-      showMessage("Güncellenecek barkod yok.", false);
-      this.disabled = false;
-      this.innerHTML = '<i class="bi bi-arrow-repeat"></i> Güncelle';
-      progressContainer.style.display = 'none';
-      return;
-    }
+    // Buton stilini geliştir
+    updateButton.style.cssText = 'touch-action: manipulation; -webkit-tap-highlight-color: transparent;';
     
-    updateProgressStatus("Veri Hazırlanıyor", 
-                       `${barcodeKeys.length} adet ürün işleniyor...`, 
-                       "info");
-    
-    // Büyük veri setlerinde performans için 
-    for(const c of barcodeKeys){
-      countsOnly[c] = {count: barcodeCounts[c].count};
-    }
-    
-    // Şimdi stok güncelleme işlemini çağır
-    submitStock(selectedMode, countsOnly);
-  }, 100); // Kısa bir gecikme UI'ın yenilenmesini sağlar
+    // Buton tıklama olayını tekrar tanımla - hem tıklama hem dokunmatik için
+    ['mousedown', 'touchstart'].forEach(function(eventType) {
+      buttonWrapper.addEventListener(eventType, function(e) {
+        e.preventDefault();
+        console.log("Güncelle butonuna tıklandı! Olay: " + eventType);
+        
+        // Tüm butonları devre dışı bırak
+        const allButtons = document.querySelectorAll('.update-button-group .btn');
+        allButtons.forEach(b => {
+          b.disabled = true;
+        });
+        
+        // Güncelleme butonunu değiştir
+        updateButton.innerHTML = processingButtonHTML;
+        
+        // Ekrandaki tüm mesajları temizle
+        document.getElementById('responseMessage').classList.add('d-none');
+        
+        // Durum göstergesini hemen görüntüle (işlemi beklemeden)
+        const progressContainer = document.getElementById('progressContainer');
+        progressContainer.style.display = 'block';
+        document.getElementById('progressTitle').textContent = "Stok İşleniyor...";
+        document.getElementById('progressMessage').textContent = "Veriler hazırlanıyor, lütfen bekleyin...";
+        document.getElementById('progressBar').className = "progress-bar progress-bar-striped progress-bar-animated bg-primary";
+        
+        // Görünüm alanının içinde kalması için - durum göstergesine otomatik scroll
+        progressContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Hemen işleme başla
+        const countsOnly = {};
+        const barcodeKeys = Object.keys(barcodeCounts);
+        
+        if (!barcodeKeys.length) {
+          showMessage("Güncellenecek barkod yok.", false);
+          allButtons.forEach(b => {
+            b.disabled = false;
+          });
+          updateButton.innerHTML = originalButtonHTML;
+          progressContainer.style.display = 'none';
+          return;
+        }
+        
+        updateProgressStatus("Veri Hazırlanıyor", 
+                          `${barcodeKeys.length} adet ürün işleniyor...`, 
+                          "info");
+        
+        // Verileri hazırla  
+        for (const c of barcodeKeys) {
+          countsOnly[c] = {count: barcodeCounts[c].count};
+        }
+        
+        // Stok güncelleme işlemini çağır
+        submitStock(selectedMode, countsOnly);
+      }, {passive: false});
+    });
+  }
 });
 resetButton.addEventListener('click',resetStockAddition);
 
