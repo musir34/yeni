@@ -1,10 +1,20 @@
 # stock_management.py
 
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, current_app
 # Product modelini import et
 from models import db, Product
 import json
 import logging
+import os
+import time
+from datetime import datetime
+from threading import Thread
+from functools import wraps
+import aiohttp
+import asyncio
+from sqlalchemy import text, and_, or_, func
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # Trendyol stok güncelleme fonksiyonunu kullanacağız
 # get_products.py dosyasından Trendyol API bilgileri ve request kütüphanesini kullanıyoruz
@@ -26,20 +36,174 @@ except ImportError:
     SUPPLIER_ID = None
     BASE_URL = "https://api.trendyol.com/sapigw/" # Base URL'i yine de tanımlayalım
 
+# Uygulama ortamına göre log seviyesini ayarla
+LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
+LOG_LEVEL_MAP = {
+    'DEBUG': logging.DEBUG,
+    'INFO': logging.INFO,
+    'WARNING': logging.WARNING,
+    'ERROR': logging.ERROR
+}
 
-# Log ayarları (Zaten vardı, tekrar kontrol edelim)
+# Log ayarları
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(LOG_LEVEL_MAP.get(LOG_LEVEL, logging.INFO))
 if not logger.handlers:
     handler = logging.StreamHandler() # Konsola yazması için StreamHandler kullanabiliriz
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
+# Rate limiting için limiter oluştur (uygulama başlatılırken app'i register edecek)
+limiter = Limiter(key_func=get_remote_address)
+
+# API token kontrolü için decorator
+def require_api_token(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = request.headers.get('X-API-Token')
+        expected_token = current_app.config.get('API_TOKEN')
+        
+        # Token kontrolü
+        if not token or token != expected_token:
+            logger.warning(f"Geçersiz API token erişim denemesi: {request.remote_addr}")
+            return jsonify(success=False, message="Geçersiz API token"), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Son değerlerin cache'de tutulması için basit bir cache
+stock_cache = {}  # {barcode: quantity} formatında önbellekte tutulan son stok değerleri
 
 stock_management_bp = Blueprint('stock_management', __name__)
 
-# Eski update_trendyol_stock fonksiyonunu toplu gönderecek şekilde güncelliyoruz/yerine yenisini yazıyoruz
+# Batch işleme için parça boyutu ayarı
+BATCH_SIZE = 100  # Trendyol'a en fazla kaç ürünü tek seferde göndereceğiz
+
+# Hatalı barkodları kaydetmek için fonksiyon
+def log_failed_barcodes(failed_items, reason=""):
+    """Hatalı barkodları bir dosyaya kaydeder"""
+    try:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_dir = "logs/failed_stock_updates"
+        os.makedirs(log_dir, exist_ok=True)
+        
+        with open(f"{log_dir}/failed_stock_update_{timestamp}.json", "w") as f:
+            json.dump({
+                "timestamp": timestamp,
+                "reason": reason,
+                "items": failed_items
+            }, f, indent=2)
+        logger.info(f"{len(failed_items)} hatalı barkod kaydedildi: {log_dir}")
+    except Exception as e:
+        logger.error(f"Hatalı barkodları kaydetme hatası: {e}")
+
+# Asenkron batch gönderimleri için fonksiyon
+async def send_trendyol_stock_update_async(items_list, batch_size=BATCH_SIZE):
+    """
+    Trendyol API'ye asenkron olarak batch halinde stok güncellemesi gönderir.
+    
+    Args:
+        items_list: Güncellenecek ürünlerin listesi
+        batch_size: Her batch'te kaç ürün gönderileceği
+        
+    Returns:
+        Tuple: (success, success_count, error_details)
+    """
+    if not API_KEY or not API_SECRET or not SUPPLIER_ID:
+        logger.error("Trendyol API bilgileri eksik. Stok Trendyol'da güncellenemez.")
+        return False, 0, {"general": "Trendyol API bilgileri sunucuda eksik."} 
+
+    if not items_list:
+        logger.info("Trendyol'a gönderilecek ürün listesi boş.")
+        return True, 0, {} 
+
+    url = f"{BASE_URL}suppliers/{SUPPLIER_ID}/products/price-and-inventory"
+    credentials = f"{API_KEY}:{API_SECRET}"
+    encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
+
+    headers = {
+        "Authorization": f"Basic {encoded_credentials}",
+        "Content-Type": "application/json",
+        "User-Agent": f"GulluAyakkabiApp - Supplier {SUPPLIER_ID}"
+    }
+
+    # Ürünleri batch_size kadar gruplara böl
+    batches = [items_list[i:i + batch_size] for i in range(0, len(items_list), batch_size)]
+    logger.info(f"Toplam {len(items_list)} ürün, {len(batches)} batch'e bölündü (batch boyutu: {batch_size})")
+
+    overall_success = True
+    total_success_count = 0
+    all_errors = {}
+    
+    async with aiohttp.ClientSession() as session:
+        # Her batch için asenkron gönderi
+        for batch_idx, batch_items in enumerate(batches):
+            # API rate limit için bekleme - art arda çok hızlı istek göndermemek için
+            if batch_idx > 0:
+                await asyncio.sleep(0.5)  # Her batch arasında 500ms bekle
+                
+            try:
+                payload = {"items": batch_items}
+                logger.debug(f"Batch {batch_idx+1}/{len(batches)}: {len(batch_items)} ürün gönderiliyor")
+                
+                # Asenkron API çağrısı
+                async with session.post(url, headers=headers, json=payload, timeout=60) as response:
+                    response_text = await response.text()
+                    
+                    try:
+                        response_data = json.loads(response_text) if response_text else {}
+                    except json.JSONDecodeError:
+                        logger.error(f"Batch {batch_idx+1}: Geçersiz JSON yanıtı: {response_text[:200]}...")
+                        overall_success = False
+                        all_errors.update({f"batch{batch_idx+1}": "Geçersiz JSON yanıtı"})
+                        continue
+                    
+                    if response.status in [200, 202]:
+                        # Trendyol'un döndürdüğü hataları kontrol et
+                        trendyol_errors = response_data.get('errors', []) + response_data.get('failures', [])
+                        
+                        if trendyol_errors:
+                            logger.warning(f"Batch {batch_idx+1}: Yanıtta {len(trendyol_errors)} hata var")
+                            # Hata detaylarını topla
+                            for err in trendyol_errors:
+                                barcode = err.get('barcode', f'Bilinmeyen-Batch{batch_idx+1}')
+                                all_errors[barcode] = err.get('message', 'Bilinmeyen Hata')
+                                
+                            # Başarısız ürünleri logla
+                            failed_items = [item for item in batch_items if item.get('barcode') in all_errors]
+                            log_failed_barcodes(failed_items, f"Batch {batch_idx+1} API hatası")
+                        
+                        # Bu batch'teki başarılı sayısını hesapla
+                        batch_success_count = len(batch_items) - len(trendyol_errors)
+                        total_success_count += batch_success_count
+                        logger.info(f"Batch {batch_idx+1}: {batch_success_count}/{len(batch_items)} ürün başarıyla güncellendi")
+                    else:
+                        # HTTP hata kodu
+                        logger.error(f"Batch {batch_idx+1}: HTTP hatası {response.status} - {response_text[:200]}")
+                        overall_success = False
+                        all_errors.update({f"batch{batch_idx+1}": f"HTTP {response.status}: {response_text[:200]}"})
+                        # Bu batch'teki tüm ürünleri hataya logla
+                        log_failed_barcodes(batch_items, f"Batch {batch_idx+1} HTTP {response.status}")
+                        
+            except asyncio.TimeoutError:
+                logger.error(f"Batch {batch_idx+1}: Zaman aşımı hatası")
+                overall_success = False
+                all_errors.update({f"batch{batch_idx+1}": "Zaman aşımı"})
+                log_failed_barcodes(batch_items, f"Batch {batch_idx+1} zaman aşımı")
+                
+            except Exception as e:
+                logger.error(f"Batch {batch_idx+1}: Beklenmeyen hata: {e}", exc_info=True)
+                overall_success = False
+                all_errors.update({f"batch{batch_idx+1}": f"Hata: {str(e)}"})
+                log_failed_barcodes(batch_items, f"Batch {batch_idx+1} beklenmeyen hata: {str(e)}")
+    
+    # Özetleme
+    success_rate = (total_success_count / len(items_list)) * 100 if items_list else 0
+    logger.info(f"Toplam sonuç: {total_success_count}/{len(items_list)} ürün güncellendi (%{success_rate:.1f})")
+    
+    return overall_success, total_success_count, all_errors
+
+# Eski senkron fonksiyonu da tutalım (geriye uyumluluk için)
 def send_trendyol_stock_update_batch(items_list):
     """
     Trendyol API üzerinden birden fazla ürünün stoğunu toplu olarak günceller.
@@ -55,6 +219,14 @@ def send_trendyol_stock_update_batch(items_list):
         logger.info("Trendyol'a gönderilecek ürün listesi boş.")
         return True, 0, {} # Boş liste göndermek başarı sayılır ama güncellenen 0 olur
 
+    # Ürünleri BATCH_SIZE kadar parçalara böl
+    batches = [items_list[i:i + BATCH_SIZE] for i in range(0, len(items_list), BATCH_SIZE)]
+    logger.info(f"Toplam {len(items_list)} ürün, {len(batches)} batch'e bölündü (batch boyutu: {BATCH_SIZE})")
+    
+    overall_success = True
+    total_success_count = 0
+    all_errors = {}
+
     url = f"{BASE_URL}suppliers/{SUPPLIER_ID}/products/price-and-inventory"
     credentials = f"{API_KEY}:{API_SECRET}"
     encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
@@ -65,67 +237,233 @@ def send_trendyol_stock_update_batch(items_list):
         "User-Agent": f"GulluAyakkabiApp - Supplier {SUPPLIER_ID}" # İyi pratik: API çağrılarında User-Agent göndermek
     }
 
-    # Payload formatı (items listesi içinde toplu ürünler)
-    payload = {
-        "items": items_list
+    # Her batch için
+    for batch_idx, batch_items in enumerate(batches):
+        # API rate limit için bekleme
+        if batch_idx > 0:
+            time.sleep(0.5)  # Her batch arasında 500ms bekle
+            
+        payload = {"items": batch_items}
+        logger.debug(f"Batch {batch_idx+1}/{len(batches)}: {len(batch_items)} ürün gönderiliyor") 
+
+        try:
+            # Synchronous POST isteği Trendyol'a gönderilir
+            response = requests.post(url, headers=headers, json=payload, timeout=60)
+            
+            try:
+                response_data = response.json() if response.content else {}
+            except json.JSONDecodeError:
+                logger.error(f"Batch {batch_idx+1}: Geçersiz JSON yanıtı: {response.text[:200]}...")
+                overall_success = False
+                all_errors.update({f"batch{batch_idx+1}": "Geçersiz JSON yanıtı"})
+                log_failed_barcodes(batch_items, f"Batch {batch_idx+1} geçersiz JSON yanıtı")
+                continue
+
+            if response.status_code in [200, 202]:
+                # Trendyol'un döndürdüğü hataları kontrol et
+                trendyol_errors = response_data.get('errors', []) + response_data.get('failures', [])
+                
+                if trendyol_errors:
+                    logger.warning(f"Batch {batch_idx+1}: Yanıtta {len(trendyol_errors)} hata var")
+                    for err in trendyol_errors:
+                        barcode = err.get('barcode', f'Bilinmeyen-Batch{batch_idx+1}')
+                        all_errors[barcode] = err.get('message', 'Bilinmeyen Hata')
+                    
+                    # Başarısız ürünleri logla
+                    failed_items = [item for item in batch_items if item.get('barcode') in all_errors]
+                    log_failed_barcodes(failed_items, f"Batch {batch_idx+1} API hatası")
+                
+                # Bu batch'teki başarılı sayısını hesapla
+                batch_success_count = len(batch_items) - len(trendyol_errors)
+                total_success_count += batch_success_count
+                logger.info(f"Batch {batch_idx+1}: {batch_success_count}/{len(batch_items)} ürün başarıyla güncellendi")
+            else:
+                # HTTP hata kodu
+                logger.error(f"Batch {batch_idx+1}: HTTP hatası {response.status_code} - {response.text[:200]}")
+                overall_success = False
+                all_errors.update({f"batch{batch_idx+1}": f"HTTP {response.status_code}: {response.text[:200]}"})
+                log_failed_barcodes(batch_items, f"Batch {batch_idx+1} HTTP {response.status_code}")
+                
+        except requests.exceptions.Timeout:
+            logger.error(f"Batch {batch_idx+1}: Zaman aşımı hatası")
+            overall_success = False
+            all_errors.update({f"batch{batch_idx+1}": "Zaman aşımı"})
+            log_failed_barcodes(batch_items, f"Batch {batch_idx+1} zaman aşımı")
+            
+        except Exception as e:
+            logger.error(f"Batch {batch_idx+1}: Beklenmeyen hata: {e}", exc_info=True)
+            overall_success = False
+            all_errors.update({f"batch{batch_idx+1}": f"Hata: {str(e)}"})
+            log_failed_barcodes(batch_items, f"Batch {batch_idx+1} beklenmeyen hata: {str(e)}")
+
+    # Özetleme
+    success_rate = (total_success_count / len(items_list)) * 100 if items_list else 0
+    logger.info(f"Toplam sonuç: {total_success_count}/{len(items_list)} ürün güncellendi (%{success_rate:.1f})")
+    
+    return overall_success, total_success_count, all_errors
+
+
+# Senkron veya asenkron stok güncelleme yapan fonksiyon
+def process_stock_update_batch(barcode_counts_data, update_type, async_mode=True):
+    """
+    Veritabanı ve Trendyol stok güncellemesini toplu olarak yapar.
+    
+    Args:
+        barcode_counts_data: {"barkod1": {"count": 5, "details": {...}}, ...} formatında sözlük
+        update_type: "renew" veya "add" formatında güncelleme tipi
+        async_mode: True ise asenkron Trendyol güncellemesi, False ise senkron
+        
+    Returns:
+        Tuple: (success, results_dict)
+    """
+    start_time = time.time()  # İşlemin başlangıç zamanı
+    
+    updated_db_count = 0  # Veritabanında güncellenen ürün sayısı
+    db_errors = {}  # Veritabanı güncelleme sırasında oluşan hatalar
+    items_to_update_trendyol = []  # Trendyol'a gönderilecek ürün listesi
+    cached_items = 0  # Önbellekten dolayı güncellenmeyenler
+    
+    # Barkodları bir listede toplayalım (toplu sorgu için)
+    all_barcodes = list(barcode_counts_data.keys())
+    
+    # Veritabanı işlemleri ve Trendyol listesini hazırlama
+    try:
+        # Tüm ürünleri tek seferde sorgula (N+1 sorgu problemini önlemek için)
+        # Büyük/küçük harf duyarsız sorgu yapmak için
+        # SQLAlchemy'nin func.lower kullanılıyor
+        products = Product.query.filter(
+            func.lower(Product.barcode).in_([b.lower() for b in all_barcodes])
+        ).all()
+        
+        # Barkodlara göre hızlı erişim için sözlük oluştur (case-insensitive)
+        product_dict = {p.barcode.lower(): p for p in products}
+        
+        # Önbellekte olmayan ürünler için batch güncelleme
+        for barcode, item_data in barcode_counts_data.items():
+            count = item_data.get('count', 0)
+            
+            # Ürünü barkod sözlüğünde bul (büyük/küçük harf duyarsız)
+            product = product_dict.get(barcode.lower())
+            
+            if not product:
+                db_errors[barcode] = f"Ürün veritabanında bulunamadı: {barcode}"
+                logger.warning(f"Veritabanında ürün bulunamadı, atlanıyor: Barkod {barcode}")
+                continue
+            
+            # Mevcut stok miktarını al (None ise 0 say)
+            current_stock = product.quantity if product.quantity is not None else 0
+            
+            # Güncelleme tipine göre yeni stok miktarını hesapla
+            if update_type == 'renew':
+                new_stock = count
+                logger.debug(f"Stok yenileme: Barkod {barcode}, Eski Stok: {current_stock}, Yeni Stok: {new_stock}")
+            elif update_type == 'add':
+                new_stock = current_stock + count
+                logger.debug(f"Stok ekleme: Barkod {barcode}, Eski Stok: {current_stock}, Eklenecek: {count}, Yeni Stok: {new_stock}")
+            else:
+                db_errors[barcode] = f"Geçersiz güncelleme tipi: {update_type} (Barkod: {barcode})"
+                logger.error(f"Geçersiz güncelleme tipi alındı: {update_type}")
+                continue
+            
+            # Önbellekte son stok değeri varsa ve aynıysa güncelleme yapmayalım
+            cached_stock = stock_cache.get(barcode)
+            if cached_stock is not None and cached_stock == new_stock:
+                logger.debug(f"Önbellekteki değer değişmedi, güncelleme atlanıyor: Barkod {barcode}, Stok: {new_stock}")
+                cached_items += 1
+                continue
+            
+            # Stok değişmişse veya önbellekte yoksa güncelleme yap
+            product.quantity = new_stock
+            db.session.add(product)
+            
+            # Önbelleğe yeni değeri kaydet
+            stock_cache[barcode] = new_stock
+            
+            # Trendyol güncellemesi için listeye ekle
+            items_to_update_trendyol.append({
+                "barcode": product.barcode, 
+                "quantity": new_stock
+            })
+            
+            updated_db_count += 1
+            
+        # Tüm veritabanı değişikliklerini kaydet (Tek commit!)
+        db.session.commit()
+        logger.info(f"Veritabanı güncellemeleri başarıyla commit edildi. " 
+                    f"Güncellenen: {updated_db_count}, Önbellekten atlanılan: {cached_items}, "
+                    f"Hatalı: {len(db_errors)}")
+        
+    except Exception as e:
+        # Veritabanı işlemleri sırasında bir hata oluşursa rollback yap
+        db.session.rollback()
+        logger.error(f"Veritabanı işlemleri sırasında hata: {e}", exc_info=True)
+        return False, {
+            "message": f"Veritabanı güncellemesi sırasında bir hata oluştu: {str(e)}",
+            "errors": db_errors,
+            "trendyolUpdateErrors": {}
+        }
+    
+    # --- Trendyol API'ye toplu stok güncellemesi gönderme ---
+    trendyol_update_success = False
+    trendyol_successful_count = 0
+    trendyol_update_errors = {}
+    
+    if items_to_update_trendyol:
+        logger.info(f"Trendyol'a güncellenecek ürün sayısı: {len(items_to_update_trendyol)}")
+        
+        # Asenkron veya senkron güncelleme
+        if async_mode:
+            # asyncio.run() kullanmak yerine daha güvenli bir yöntem (Flask içinde çalıştığı için)
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                trendyol_update_success, trendyol_successful_count, trendyol_update_errors = loop.run_until_complete(
+                    send_trendyol_stock_update_async(items_to_update_trendyol)
+                )
+            finally:
+                loop.close()
+        else:
+            # Senkron güncelleme (eski yöntem)
+            trendyol_update_success, trendyol_successful_count, trendyol_update_errors = send_trendyol_stock_update_batch(items_to_update_trendyol)
+    else:
+        logger.info("Trendyol'a gönderilecek ürün listesi boş, Trendyol güncellemesi atlanıyor.")
+        trendyol_update_success = True
+    
+    # İşlem süresi
+    execution_time = time.time() - start_time
+    logger.info(f"Toplam işlem süresi: {execution_time:.2f} saniye")
+    
+    # Sonuç mesajını oluştur
+    response_message = f"Veritabanında {updated_db_count} ürün güncellendi, {cached_items} ürün önbellekten atlandı."
+    
+    if items_to_update_trendyol:
+        if trendyol_update_success:
+            response_message += f" Trendyol'da {trendyol_successful_count} ürün stoğu güncellendi."
+            if trendyol_update_errors:
+                response_message += f" Ancak {len(trendyol_update_errors)} üründe hata oluştu."
+        else:
+            response_message += f" Trendyol stok güncellemesi başarısız oldu."
+    
+    return True, {
+        "message": response_message,
+        "updatedDbCount": updated_db_count,
+        "cachedItemsCount": cached_items,
+        "trendyolUpdateSuccess": trendyol_update_success,
+        "trendyolSuccessfulCount": trendyol_successful_count,
+        "executionTime": f"{execution_time:.2f} saniye",
+        "errors": db_errors,
+        "trendyolUpdateErrors": trendyol_update_errors
     }
 
-    logger.debug(f"Trendyol API'ye gönderilen toplu payload: {json.dumps(payload)[:500]}...") # Payload'ın ilk 500 karakterini logla
-
+# Asenkron arka plan görevi
+def background_stock_update(barcode_counts_data, update_type):
+    """Stok güncellemesini arka planda çalıştırır"""
     try:
-        # Synchronous POST isteği Trendyol'a gönderilir (Tek istek!)
-        # Timeout süresini biraz daha uzun tutabiliriz toplu gönderimlerde
-        response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=60) # Timeout'ı 60 sn'ye çıkardık
-
-        # Trendyol API'den başarılı yanıt (genellikle 200 OK veya 202 Accepted) beklenir.
-        # Trendyol'un batch yanıtı genellikle içinde hatalar barındıran bir 200/202 döner.
-        response_data = response.json() if response.content else {} # Yanıt içeriği varsa JSON parse et
-
-        if response.status_code in [200, 202]: # Başarılı veya Kabul Edildi
-            logger.info(f"Trendyol'a toplu stok güncelleme isteği gönderildi. Yanıt Status: {response.status_code}")
-
-            # Trendyol'un yanıt formatına göre başarıları ve hataları ayrıştır
-            # Trendyol API dokümantasyonuna bakarak burayı daha kesin hale getirebiliriz.
-            # Genellikle 'errors', 'failures', 'errorMessage' gibi alanlar dönebilir.
-            # Basitçe, Trendyol'un döndürdüğü bir hata listesi var mı bakalım:
-            trendyol_errors = response_data.get('errors', []) + response_data.get('failures', []) # Trendyol'un döndürdüğü hatalar
-            overall_success = not bool(trendyol_errors) # Eğer Trendyol hata dönmediyse genel olarak başarılı say
-
-            error_details = {}
-            if trendyol_errors:
-                 logger.error(f"Trendyol toplu güncelleme yanıtında hatalar var: {trendyol_errors}")
-                 # Hata detaylarını frontenda göndermek için düzenleyelim
-                 for err in trendyol_errors:
-                     # Trendyol'un hata objesi farklı olabilir, barkodu bulmaya çalışalım
-                     barcode_in_error = err.get('barcode', 'Bilinmeyen Barkod') # Hata objesi içinde barkod var mı bak
-                     error_details[barcode_in_error] = err.get('message', 'Bilinmeyen Hata') # Varsa hata mesajını al
-
-            # response_data içinde kaç ürünün başarılı güncellendiğine dair bilgi olabilir mi?
-            # Trendyol dokümantasyonu lazım. Şimdilik, gönderilen toplam ürün sayısı eksi hatalı sayısı başarı sayılabilir.
-            success_count = len(items_list) - len(trendyol_errors) if not trendyol_errors else 0 # Basit bir tahmin
-
-            return overall_success, success_count, error_details
-
-        else:
-            # Başarısız HTTP status code döndü
-            logger.error(f"Trendyol'a toplu stok güncelleme başarısız oldu. Status: {response.status_code}, Yanıt: {response.text}")
-            return False, 0, {"general": f"Trendyol API hatası: Status {response.status_code}, Yanıt: {response.text[:200]}..."} # Genel hata
-
-    except requests.exceptions.Timeout:
-        logger.error(f"Trendyol toplu stok güncelleme sırasında zaman aşımı: {len(items_list)} ürün.")
-        return False, 0, {"general": "Trendyol API'den yanıt alınırken zaman aşımı oluştu."}
-    except requests.exceptions.RequestException as e:
-        # Ağ hataları vb.
-        logger.error(f"Trendyol toplu stok güncelleme sırasında ağ hatası: Hata: {e}")
-        return False, 0, {"general": f"Trendyol API isteği sırasında ağ hatası: {str(e)}"}
-    except json.JSONDecodeError:
-         logger.error(f"Trendyol yanıtı JSON formatında değil: {response.text[:200]}...")
-         return False, 0, {"general": "Trendyol API'den geçersiz yanıt formatı alındı."}
+        with current_app.app_context():
+            process_stock_update_batch(barcode_counts_data, update_type)
+            logger.info("Arka plan stok güncelleme işlemi tamamlandı")
     except Exception as e:
-        # Diğer beklenmedik hatalar
-        logger.error(f"Trendyol toplu stok güncelleme sırasında beklenmedik hata: Hata: {e}", exc_info=True)
-        return False, 0, {"general": f"Trendyol API güncelleme sırasında beklenmedik bir hata oluştu: {str(e)}"}
-
+        logger.error(f"Arka plan stok güncelleme hatası: {e}", exc_info=True)
 
 @stock_management_bp.route('/stock-addition', methods=['GET'])
 def stock_addition_screen():
@@ -134,6 +472,195 @@ def stock_addition_screen():
     """
     # HTML şablonunu render et
     return render_template('stock_addition.html')
+
+# Yeni, hızlı toplu stok güncelleme endpoint'i
+@stock_management_bp.route('/api/v2/bulk-stock-update', methods=['POST'])
+@limiter.limit("30/minute")  # Rate limiting ekle
+@require_api_token  # API token kontrolü
+def bulk_stock_update_v2():
+    """
+    Toplu stok güncelleme işlemi için optimize edilmiş yeni API endpoint.
+    
+    Özellikler:
+    - Toplu DB sorgusu (in_)
+    - Batch API gönderimleri
+    - Asenkron işleme
+    - Önbellek kontrolü
+    - Detaylı loglama
+    
+    JSON Giriş Formatı:
+    {
+        "items": [
+            {"barcode": "1234567890", "quantity": 10}, 
+            {"barcode": "0987654321", "quantity": 5}
+        ],
+        "updateType": "renew" veya "add",
+        "backgroundMode": true/false (isteğe bağlı),
+        "asyncMode": true/false (isteğe bağlı)
+    }
+    """
+    data = request.get_json()
+    
+    if not data or 'items' not in data:
+        return jsonify(success=False, message="Geçersiz veri formatı. 'items' alanı gerekli."), 400
+    
+    items = data.get('items', [])
+    update_type = data.get('updateType', 'renew')
+    background_mode = data.get('backgroundMode', False)
+    async_mode = data.get('asyncMode', True)
+    
+    if not items:
+        return jsonify(success=False, message="Güncellenecek ürün bulunamadı."), 400
+    
+    if update_type not in ['renew', 'add']:
+        return jsonify(success=False, message="Geçersiz güncelleme tipi. 'renew' veya 'add' kullanın."), 400
+    
+    # items listesini barcodeCounts formatına dönüştür
+    barcode_counts_data = {}
+    for item in items:
+        barcode = item.get('barcode')
+        quantity = item.get('quantity', 0)
+        
+        if not barcode:
+            continue
+            
+        barcode_counts_data[barcode] = {"count": quantity}
+    
+    # İstek kaynağını logla
+    client_info = {
+        'ip': request.remote_addr,
+        'user_agent': request.headers.get('User-Agent', 'Bilinmiyor'),
+        'timestamp': datetime.now().isoformat()
+    }
+    logger.info(f"Toplu stok güncelleme isteği: {len(barcode_counts_data)} ürün, Tip: {update_type}, Arkaplanda: {background_mode}")
+    
+    if background_mode:
+        # Arka planda çalıştır ve hemen cevap döndür
+        thread = Thread(target=background_stock_update, args=(barcode_counts_data, update_type))
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify(
+            success=True,
+            message=f"Stok güncelleme işlemi başlatıldı. {len(barcode_counts_data)} ürün arka planda işleniyor.",
+            backgroundMode=True
+        )
+    else:
+        # Senkron işle ve sonucu bekle
+        start_time = time.time()
+        success, result = process_stock_update_batch(barcode_counts_data, update_type, async_mode)
+        execution_time = time.time() - start_time
+        
+        # İşlem süresini logla (performans analizi için)
+        logger.info(f"Stok güncelleme işlemi toplam süresi: {execution_time:.2f} saniye, " 
+                   f"ürün sayısı: {len(barcode_counts_data)}, "
+                   f"ortalama: {(execution_time / len(barcode_counts_data) if barcode_counts_data else 0):.4f} saniye/ürün")
+        
+        if success:
+            return jsonify(
+                success=True,
+                **result
+            )
+        else:
+            return jsonify(
+                success=False,
+                **result
+            ), 500
+
+# Excel ile stok güncelleme endpoint'i
+@stock_management_bp.route('/api/v2/excel-stock-update', methods=['POST'])
+@limiter.limit("10/minute")  # Excel daha büyük veri olduğundan rate limit daha düşük
+@require_api_token
+def excel_stock_update():
+    """
+    Excel dosyası ile toplu stok güncelleme.
+    
+    Form alanları:
+    - excel_file: Excel dosyası
+    - update_type: 'renew' veya 'add'
+    - background_mode: 'true' veya 'false'
+    """
+    if 'excel_file' not in request.files:
+        return jsonify(success=False, message="Excel dosyası bulunamadı"), 400
+        
+    file = request.files['excel_file']
+    if file.filename == '':
+        return jsonify(success=False, message="Dosya seçilmedi"), 400
+    
+    update_type = request.form.get('update_type', 'renew')
+    background_mode = request.form.get('background_mode', 'false').lower() == 'true'
+    
+    if update_type not in ['renew', 'add']:
+        return jsonify(success=False, message="Geçersiz güncelleme tipi. 'renew' veya 'add' kullanın."), 400
+    
+    try:
+        # Excel dosyasını işle - pandas veya openpyxl kullanarak
+        import pandas as pd
+        
+        # Excel'den DataFrame oku
+        df = pd.read_excel(file)
+        
+        # Excel'de beklenen kolonlar: 'barcode' ve 'quantity'
+        required_columns = ['barcode', 'quantity']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            return jsonify(success=False, 
+                          message=f"Excel dosyasında eksik kolonlar: {', '.join(missing_columns)}. "
+                                  f"Gerekli kolonlar: {', '.join(required_columns)}"), 400
+        
+        # DataFrame'den barcode_counts_data oluştur
+        barcode_counts_data = {}
+        for _, row in df.iterrows():
+            barcode = str(row['barcode']).strip()
+            quantity = row['quantity']
+            
+            # Boş veya geçersiz barkodları atla
+            if not barcode or pd.isna(barcode) or barcode == 'nan':
+                continue
+                
+            # Geçersiz sayıları atla
+            if pd.isna(quantity) or quantity < 0:
+                continue
+                
+            barcode_counts_data[barcode] = {"count": int(quantity)}
+        
+        if not barcode_counts_data:
+            return jsonify(success=False, message="İşlenebilir ürün verisi bulunamadı"), 400
+            
+        logger.info(f"Excel'den {len(barcode_counts_data)} ürün işlenecek. Tip: {update_type}, Arkaplanda: {background_mode}")
+        
+        if background_mode:
+            # Arka planda çalıştır ve hemen cevap döndür
+            thread = Thread(target=background_stock_update, args=(barcode_counts_data, update_type))
+            thread.daemon = True
+            thread.start()
+            
+            return jsonify(
+                success=True,
+                message=f"Stok güncelleme işlemi başlatıldı. {len(barcode_counts_data)} ürün arka planda işleniyor.",
+                backgroundMode=True
+            )
+        else:
+            # Senkron işle ve sonucu bekle
+            start_time = time.time()
+            success, result = process_stock_update_batch(barcode_counts_data, update_type, True)
+            execution_time = time.time() - start_time
+            
+            if success:
+                return jsonify(
+                    success=True,
+                    **result
+                )
+            else:
+                return jsonify(
+                    success=False,
+                    **result
+                ), 500
+                
+    except Exception as e:
+        logger.error(f"Excel işleme hatası: {e}", exc_info=True)
+        return jsonify(success=False, message=f"Excel dosyası işlenemedi: {str(e)}"), 500
 
 # Yeni API endpoint'i: Barkoda göre ürün bilgisi döndürür
 @stock_management_bp.route('/api/get-product-details-by-barcode/<barcode>', methods=['GET'])
@@ -196,10 +723,18 @@ def get_product_details_by_barcode(barcode):
         return jsonify(success=False, message=f"Ürün bilgisi çekilirken sunucu hatası: {str(e)}"), 500 # 500 Internal Server Error
 
 @stock_management_bp.route('/stock-addition', methods=['POST'])
+@limiter.limit("30/minute")  # Rate limiting ekle
+@require_api_token  # API token kontrolü
 def handle_stock_update():
     """
     Frontend'den gelen barkod ve güncelleme tipi bilgisiyle stoğu günceller.
     Veritabanını güncelledikten sonra Trendyol'a toplu güncelleme isteği gönderir.
+    
+    Yeni özellikler:
+    - Asenkron (arka planda) güncelleme desteği
+    - Optimizasyon için önbellek kullanımı 
+    - Batch işleme
+    - Daha detaylı izleme
     """
     # JSON formatında veri bekleniyor
     data = request.get_json()
@@ -208,18 +743,56 @@ def handle_stock_update():
         return jsonify(success=False, message="Geçersiz veri formatı"), 400
 
     # Frontend'den gelen yapı: {"barkod1": {"count": 5, "details": {...}}, "barkod2": {"count": 3, "details": {...}}, ...}
-    # Bizim için önemli olan barkod ve count bilgisi
     barcode_counts_data = data.get('barcodeCounts')
-    update_type = data.get('updateType')# 'renew' veya 'add'
+    update_type = data.get('updateType')  # 'renew' veya 'add'
+    background_mode = data.get('backgroundMode', False)  # Arka planda çalıştırma modu
+    async_mode = data.get('asyncMode', True)  # Varsayılan olarak asenkron çalıştır
 
     if not barcode_counts_data or not update_type:
         return jsonify(success=False, message="Eksik veri: Barkodlar veya güncelleme tipi belirtilmemiş"), 400
 
     logger.info(f"Stok güncelleme isteği alındı. Tip: {update_type}, İşlenecek Barkod Sayısı: {len(barcode_counts_data)}")
-
-    updated_db_count = 0 # Veritabanında güncellenen ürün sayısı
-    db_errors = {} # Veritabanı güncelleme sırasında oluşan hatalar (ürün bulunamaması vb.)
-    items_to_update_trendyol = [] # Trendyol'a gönderilecek ürün listesi (toplu)
+    
+    # İstek kaynağını logla
+    client_info = {
+        'ip': request.remote_addr,
+        'user_agent': request.headers.get('User-Agent', 'Bilinmiyor'),
+        'timestamp': datetime.now().isoformat()
+    }
+    logger.info(f"Stok güncelleme isteği bilgileri: {client_info}")
+    
+    if background_mode:
+        # Arka planda çalıştır ve hemen cevap döndür
+        thread = Thread(target=background_stock_update, args=(barcode_counts_data, update_type))
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify(
+            success=True,
+            message=f"Stok güncelleme işlemi başlatıldı. {len(barcode_counts_data)} ürün arka planda işleniyor.",
+            backgroundMode=True
+        )
+    else:
+        # Senkron işle ve sonucu bekle
+        start_time = time.time()
+        success, result = process_stock_update_batch(barcode_counts_data, update_type, async_mode)
+        execution_time = time.time() - start_time
+        
+        # İşlem süresini logla (performans analizi için)
+        logger.info(f"Stok güncelleme işlemi toplam süresi: {execution_time:.2f} saniye, " 
+                    f"ürün sayısı: {len(barcode_counts_data)}, "
+                    f"ortalama: {(execution_time / len(barcode_counts_data) if barcode_counts_data else 0):.4f} saniye/ürün")
+        
+        if success:
+            return jsonify(
+                success=True,
+                **result
+            )
+        else:
+            return jsonify(
+                success=False,
+                **result
+            ), 500
 
     # Veritabanı işlemleri ve Trendyol listesini hazırlama
     try:
