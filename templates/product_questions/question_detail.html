@@ -8,7 +8,7 @@
         <div class="col-12">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="/product-questions/">Ürün Soruları</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('product_questions.questions_list') }}">Ürün Soruları</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Soru Detayı</li>
                 </ol>
             </nav>
@@ -125,7 +125,7 @@
                     {% if question.status == 'WAITING_FOR_ANSWER' %}
                     <div class="mt-4" id="answer">
                         <h5 class="mb-3">Soruyu Cevapla</h5>
-                        <form method="post" action="/product-questions/detail/{{ question.question_id }}">
+                        <form method="post" action="{{ url_for('product_questions.question_detail', question_id=question.question_id) }}">
                             <div class="mb-3">
                                 <textarea name="answer_text" id="answer_text" rows="5" class="form-control" 
                                     placeholder="Müşterinin sorusunu yanıtlayın..." required></textarea>
@@ -175,7 +175,7 @@
             {% endif %}
             
             <div class="mt-3">
-                <a href="/product-questions/" class="btn btn-secondary">
+                <a href="{{ url_for('product_questions.questions_list') }}" class="btn btn-secondary">
                     <i class="fas fa-arrow-left"></i> Geri Dön
                 </a>
             </div>
