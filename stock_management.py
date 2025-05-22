@@ -476,7 +476,8 @@ def stock_addition_screen():
 # Yeni, hızlı toplu stok güncelleme endpoint'i
 @stock_management_bp.route('/api/v2/bulk-stock-update', methods=['POST'])
 @limiter.limit("30/minute")  # Rate limiting ekle
-@require_api_token  # API token kontrolü
+# API token kontrolünü şimdilik devre dışı bıraktık
+# @require_api_token
 def bulk_stock_update_v2():
     """
     Toplu stok güncelleme işlemi için optimize edilmiş yeni API endpoint.
@@ -725,7 +726,8 @@ def get_product_details_by_barcode(barcode):
 
 @stock_management_bp.route('/stock-addition', methods=['POST'])
 @limiter.limit("30/minute")  # Rate limiting ekle
-@require_api_token  # API token kontrolü
+# API token kontrolünü şimdilik devre dışı bıraktık
+# @require_api_token
 def handle_stock_update():
     """
     Frontend'den gelen barkod ve güncelleme tipi bilgisiyle stoğu günceller.
