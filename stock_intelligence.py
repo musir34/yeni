@@ -91,13 +91,13 @@ class StockIntelligence:
             ).all()
             
             # Sonuçları pandas DataFrame'e dönüştür
-            df = pd.DataFrame([(d.date, d.sales) for d in sales_by_date], columns=['ds', 'y'])
+            df = pd.DataFrame([(d.date, float(d.sales) if d.sales is not None else 0) for d in sales_by_date], columns=['ds', 'y'])
             
             # Eksik günleri doldur (satış olmayan günler)
             date_range = pd.date_range(start=start_date, end=end_date, freq='D')
             date_df = pd.DataFrame({'ds': date_range})
             df = pd.merge(date_df, df, on='ds', how='left')
-            df['y'] = df['y'].fillna(0)
+            df['y'] = df['y'].fillna(0).astype(float)  # Sayısal tip olarak zorla
             
             return df
         
