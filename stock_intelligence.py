@@ -424,7 +424,7 @@ def ai_stock_dashboard():
     """
     AI destekli stok analiz paneli
     """
-    return render_template('stock_intelligence_dashboard.html')
+    return render_template('ai_stock_dashboard.html')
 
 @stock_intelligence_bp.route('/api/stock-health-report')
 # Giriş kontrolü geçici olarak kaldırıldı
