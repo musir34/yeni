@@ -418,7 +418,8 @@ class StockIntelligence:
 # Routes (API ve Arayüz)
 
 @stock_intelligence_bp.route('/dashboard')
-@login_required
+# Giriş kontrolü geçici olarak kaldırıldı
+# @login_required
 def ai_stock_dashboard():
     """
     AI destekli stok analiz paneli
@@ -426,7 +427,8 @@ def ai_stock_dashboard():
     return render_template('stock_intelligence_dashboard.html')
 
 @stock_intelligence_bp.route('/api/stock-health-report')
-@login_required
+# Giriş kontrolü geçici olarak kaldırıldı
+# @login_required
 def get_stock_health_report_api():
     """
     Stok sağlık raporu API'si
@@ -454,7 +456,8 @@ def get_stock_health_report_api():
         return jsonify({'error': str(e)}), 500
 
 @stock_intelligence_bp.route('/api/product-sales-prediction/<product_main_id>')
-@login_required
+# Giriş kontrolü geçici olarak kaldırıldı
+# @login_required
 def get_product_sales_prediction_api(product_main_id):
     """
     Belirli bir ürün için satış tahmini API'si
@@ -485,7 +488,8 @@ def get_product_sales_prediction_api(product_main_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @stock_intelligence_bp.route('/api/product-stock-analysis/<product_main_id>')
-@login_required
+# Giriş kontrolü geçici olarak kaldırıldı
+# @login_required
 def get_product_stock_analysis_api(product_main_id):
     """
     Belirli bir ürün için AI stok analizi API'si
