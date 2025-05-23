@@ -330,33 +330,35 @@ class StockIntelligence:
                 ).all()
             else:
                 # Model ve renk bazında grupla
-                with db.session.begin() as session:
-                    # Önce model ve renk bazında grupla
-                    products_grouped = session.query(
-                        Product.product_main_id,
-                        Product.color,
-                        func.sum(Product.quantity).label('total_quantity')
-                    ).filter(
-                        Product.archived.is_(False),
-                        Product.hidden.is_(False),
-                        Product.quantity.isnot(None)
-                    ).group_by(
-                        Product.product_main_id,
-                        Product.color
-                    ).all()
+                # db.session.begin() ile session.query kullanımı hata veriyor, doğrudan db.session kullanacağız
+                products = []
+                
+                # Önce model ve renk bazında grupla
+                products_grouped = db.session.query(
+                    Product.product_main_id,
+                    Product.color,
+                    func.sum(Product.quantity).label('total_quantity')
+                ).filter(
+                    Product.archived.is_(False),
+                    Product.hidden.is_(False),
+                    Product.quantity.isnot(None)
+                ).group_by(
+                    Product.product_main_id,
+                    Product.color
+                ).all()
+                
+                # Her grup için bir ürün örneği al
+                for group in products_grouped:
+                    product = db.session.query(Product).filter(
+                        Product.product_main_id == group.product_main_id,
+                        Product.color == group.color,
+                        Product.archived.is_(False)
+                    ).first()
                     
-                    # Her grup için bir ürün örneği al
-                    for group in products_grouped:
-                        product = Product.query.filter(
-                            Product.product_main_id == group.product_main_id,
-                            Product.color == group.color,
-                            Product.archived.is_(False)
-                        ).first()
-                        
-                        if product:
-                            # Toplam stok miktarını ata
-                            product.quantity = group.total_quantity
-                            products.append(product)
+                    if product:
+                        # Toplam stok miktarını ata
+                        product.quantity = group.total_quantity
+                        products.append(product)
             
             # Her ürün için analiz yap
             results = []
