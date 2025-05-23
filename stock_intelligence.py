@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 logger = logging.getLogger(__name__)
 
 # Blueprint oluşturma
-stock_intelligence_bp = Blueprint('stock_intelligence', __name__)
+stock_intelligence_bp = Blueprint('stock_intelligence', __name__, url_prefix='/stock_intelligence')
 
 # .env dosyasını yükle
 load_dotenv()
