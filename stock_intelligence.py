@@ -61,7 +61,7 @@ class StockIntelligence:
         from models import OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
 
         # Her tablonun ortak alanlarını seçerek birleştirelim
-        created = select([
+        created = select(
             OrderCreated.id,
             OrderCreated.order_number,
             OrderCreated.order_date,
@@ -72,9 +72,9 @@ class StockIntelligence:
             OrderCreated.product_color,
             OrderCreated.product_size,
             OrderCreated.merchant_sku
-        ])
+        )
         
-        picking = select([
+        picking = select(
             OrderPicking.id,
             OrderPicking.order_number,
             OrderPicking.order_date,
@@ -85,9 +85,9 @@ class StockIntelligence:
             OrderPicking.product_color,
             OrderPicking.product_size,
             OrderPicking.merchant_sku
-        ])
+        )
         
-        shipped = select([
+        shipped = select(
             OrderShipped.id,
             OrderShipped.order_number,
             OrderShipped.order_date,
@@ -98,9 +98,9 @@ class StockIntelligence:
             OrderShipped.product_color,
             OrderShipped.product_size,
             OrderShipped.merchant_sku
-        ])
+        )
         
-        delivered = select([
+        delivered = select(
             OrderDelivered.id,
             OrderDelivered.order_number,
             OrderDelivered.order_date,
@@ -111,7 +111,7 @@ class StockIntelligence:
             OrderDelivered.product_color,
             OrderDelivered.product_size,
             OrderDelivered.merchant_sku
-        ])
+        )
         
         # UNION ALL ile hepsini birleştir
         union_query = union_all(created, picking, shipped, delivered)
@@ -216,21 +216,27 @@ class StockIntelligence:
             # Satış verilerini işle
             results = []
             for sale in sales_by_variant:
+                # Alanları SQLAlchemy sonuç seti dışına çıkar
+                product_main_id = sale[0]  # product_main_id
+                product_color = sale[1]    # product_color
+                product_size = sale[2]     # product_size
+                total_sales = sale[3]      # total_sales
+                
                 # Stok verilerini al
                 stock_query = db.session.query(
                     func.sum(Product.quantity).label('current_stock')
                 ).filter(
-                    Product.product_main_id == sale.product_main_id,
-                    Product.color == sale.product_color
+                    Product.product_main_id == product_main_id,
+                    Product.color == product_color
                 )
                 
-                if sale.product_size:
-                    stock_query = stock_query.filter(Product.size == sale.product_size)
+                if product_size:
+                    stock_query = stock_query.filter(Product.size == product_size)
                     
                 stock = stock_query.scalar() or 0
                 
                 # Günlük ortalama satış
-                daily_avg_sales = sale.total_sales / days
+                daily_avg_sales = total_sales / days
                 
                 # Tahmini tükenme süresi (gün)
                 if daily_avg_sales > 0:
@@ -245,20 +251,20 @@ class StockIntelligence:
                 
                 # Ürün bilgilerini al
                 product_info = db.session.query(Product).filter(
-                    Product.product_main_id == sale.product_main_id,
-                    Product.color == sale.product_color
+                    Product.product_main_id == product_main_id,
+                    Product.color == product_color
                 ).first()
                 
                 product_title = product_info.title if product_info else "Bilinmeyen Ürün"
                 barcode = product_info.barcode if product_info else "-"
                 
                 results.append({
-                    'product_main_id': sale.product_main_id,
+                    'product_main_id': product_main_id,
                     'product_title': product_title,
                     'barcode': barcode,
-                    'color': sale.product_color,
-                    'size': sale.product_size,
-                    'total_sales': sale.total_sales,
+                    'color': product_color,
+                    'size': product_size,
+                    'total_sales': total_sales,
                     'daily_avg_sales': round(daily_avg_sales, 2),
                     'current_stock': stock,
                     'days_until_stockout': round(days_until_stockout, 1) if days_until_stockout != float('inf') else "∞",
