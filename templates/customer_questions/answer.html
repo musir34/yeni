@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}Müşteri Sorusunu Cevapla{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('customer_questions.questions_list') }}">Müşteri Soruları</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Soruyu Cevapla</li>
+                </ol>
+            </nav>
+            <h1>Müşteri Sorusunu Cevapla</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Ürün Bilgileri</h5>
+                </div>
+                <div class="card-body">
+                    {% if question.image_url %}
+                    <img src="{{ question.image_url }}" alt="{{ question.product_name }}" class="img-fluid mb-3">
+                    {% endif %}
+                    <h6>{{ question.product_name }}</h6>
+                    <p class="text-muted">Ürün ID: {{ question.product_main_id }}</p>
+                    
+                    {% if question.web_url %}
+                    <a href="{{ question.web_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-external-link-alt"></i> Trendyol'da Görüntüle
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Soru Detayları</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Müşteri</label>
+                        <p>{{ question.user_name }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Tarih</label>
+                        <p>{{ question.creation_date.strftime('%d.%m.%Y %H:%M') if question.creation_date else '' }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Soru</label>
+                        <div class="p-3 bg-light rounded">
+                            {{ question.text }}
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <form method="POST" action="{{ url_for('customer_questions.answer_question', question_id=question.question_id) }}">
+                        <div class="mb-3">
+                            <label for="answer" class="form-label">Cevabınız</label>
+                            <textarea class="form-control" id="answer" name="answer" rows="5" required></textarea>
+                            <div class="form-text">
+                                <ul>
+                                    <li>Müşteriye nazik ve profesyonel bir şekilde cevap verin.</li>
+                                    <li>Kişisel bilgi veya telefon numarası gibi özel bilgiler içermemelidir.</li>
+                                    <li>Yanıtınız Trendyol tarafından onaylandıktan sonra müşteriye gösterilecektir.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('customer_questions.questions_list') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Geri Dön
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Cevabı Gönder
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
