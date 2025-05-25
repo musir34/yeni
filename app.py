@@ -61,6 +61,20 @@ def from_json(value):
 # ✅ Düzeltme: Jinja filtresini app'in jinja_env'ine kaydet
 app.jinja_env.filters['format_turkish_date'] = format_turkish_date_filter
 
+# Timestamp'ten okunabilir tarih formatına dönüştürme filtresi (müşteri soruları için)
+def timestamp_to_date(timestamp):
+    if not timestamp:
+        return ""
+    
+    try:
+        from datetime import datetime
+        dt = datetime.fromtimestamp(timestamp / 1000)
+        return dt.strftime("%d.%m.%Y %H:%M")
+    except:
+        return ""
+
+app.jinja_env.filters['timestamp_to_date'] = timestamp_to_date
+
 
 # Blueprint'leri Yükle
 from siparisler import siparisler_bp
