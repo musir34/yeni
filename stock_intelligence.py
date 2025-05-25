@@ -1,5 +1,5 @@
-from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for
-from models import db, Product
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, flash
+from models import db, Product, StockAnalysisRecord
 from sqlalchemy import func, desc, asc, and_, or_
 from datetime import datetime, timedelta
 import pandas as pd
@@ -481,6 +481,33 @@ def ai_stock_dashboard():
     AI destekli stok analiz paneli
     """
     return render_template('gullushoes_stock_dashboard.html')
+    
+@stock_intelligence_bp.route('/analysis-history')
+# @login_required
+def analysis_history():
+    """
+    Geçmiş stok analizlerini görüntüleme sayfası
+    """
+    # Geçmiş analizleri tarih sırasına göre getir (en yeniler önce)
+    analyses = StockAnalysisRecord.query.order_by(StockAnalysisRecord.created_at.desc()).all()
+    return render_template('stock_analysis_history.html', analyses=analyses)
+    
+@stock_intelligence_bp.route('/view-analysis/<int:analysis_id>')
+# @login_required
+def view_analysis(analysis_id):
+    """
+    Belirli bir analizi görüntüle
+    """
+    # Analizi ID'ye göre getir
+    analysis = StockAnalysisRecord.query.get_or_404(analysis_id)
+    
+    # Analizin içeriğini JSON'dan geri al
+    analysis_data = analysis.analysis_results
+    
+    return render_template('view_stock_analysis.html', 
+                          analysis=analysis, 
+                          analysis_data=analysis_data,
+                          created_at=analysis.created_at.strftime('%d.%m.%Y %H:%M'))
 
 @stock_intelligence_bp.route('/api/stock-health-report')
 # Giriş kontrolü geçici olarak kaldırıldı
@@ -494,6 +521,8 @@ def get_stock_health_report_api():
         top_n = request.args.get('top_n', 10, type=int)  # Varsayılan değeri düşürdük
         days_forecast = request.args.get('days_forecast', 30, type=int)
         include_variants = request.args.get('include_variants', 'false').lower() == 'true'
+        save_analysis = request.args.get('save_analysis', 'false').lower() == 'true'
+        analysis_name = request.args.get('analysis_name', f'Stok Analizi {datetime.now().strftime("%d.%m.%Y %H:%M")}')
         
         # Performans için sınırlama
         if top_n > 10:  # Maksimum 10 ürün analiz edilecek
@@ -508,6 +537,35 @@ def get_stock_health_report_api():
             days_forecast=days_forecast,
             include_variants=include_variants
         )
+        
+        # Analizi veritabanına kaydet (eğer istenirse)
+        if save_analysis:
+            try:
+                # Parametre ve sonuçları hazırla
+                analysis_parameters = {
+                    'top_n': top_n,
+                    'days_forecast': days_forecast,
+                    'include_variants': include_variants,
+                    'date': datetime.now().isoformat()
+                }
+                
+                # Yeni analiz kaydı oluştur
+                new_analysis = StockAnalysisRecord(
+                    user_id=current_user.id if hasattr(current_user, 'id') else None,
+                    analysis_name=analysis_name,
+                    analysis_parameters=analysis_parameters,
+                    analysis_results=report  # Tüm rapor JSON olarak kaydedilecek
+                )
+                
+                db.session.add(new_analysis)
+                db.session.commit()
+                
+                # Rapora kayıt ID'sini ekle
+                report = {'analysis_id': new_analysis.id, 'data': report}
+                
+            except Exception as save_error:
+                logger.error(f"Analiz kaydedilirken hata: {save_error}")
+                # Kaydedilemese bile raporu döndür
         
         return jsonify(report)
     

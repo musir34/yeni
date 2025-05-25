@@ -424,8 +424,8 @@
                             <table id="stockAnalysisTable" class="table table-striped table-bordered" style="width:100%">
                                 <thead>
                                     <tr>
-                                        <th>Ürün Kodu</th>
-                                        <th>Ürün Adı</th>
+                                        <th>Barkod</th>
+                                        <th>Model Kodu</th>
                                         <th>Renk</th>
                                         <th>Beden</th>
                                         <th>Mevcut Stok</th>
@@ -832,8 +832,8 @@
                 
                 // Satır oluştur
                 const row = $(`<tr>
+                    <td>${product.barcode || '-'}</td>
                     <td>${product.product_main_id}</td>
-                    <td>${product.title}</td>
                     <td>${product.color}</td>
                     <td>${product.size || '-'}</td>
                     <td>${product.quantity}</td>
