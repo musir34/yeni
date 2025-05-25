@@ -255,18 +255,17 @@ def process_questions_data(questions_data):
                 updated_count += 1
             else:
                 # Yeni soru oluştur
-                new_question = CustomerQuestion(
-                    question_id=question_id,
-                    customer_id=question.get('customerId'),
-                    creation_date=datetime.fromtimestamp(question.get('creationDate', 0) / 1000),
-                    product_name=question.get('productName'),
-                    product_main_id=question.get('productMainId'),
-                    image_url=question.get('imageUrl'),
-                    text=question.get('text'),
-                    status=question.get('status'),
-                    user_name=question.get('userName'),
-                    web_url=question.get('webUrl')
-                )
+                new_question = CustomerQuestion()
+                new_question.question_id = question_id
+                new_question.customer_id = question.get('customerId')
+                new_question.creation_date = datetime.fromtimestamp(question.get('creationDate', 0) / 1000) if question.get('creationDate') else None
+                new_question.product_name = question.get('productName')
+                new_question.product_main_id = question.get('productMainId')
+                new_question.image_url = question.get('imageUrl')
+                new_question.text = question.get('text', '')
+                new_question.status = question.get('status', 'UNKNOWN')
+                new_question.user_name = question.get('userName')
+                new_question.web_url = question.get('webUrl')
                 
                 # Eğer bir cevap verilmişse, cevabı da ekle
                 if 'answer' in question and question['answer']:
