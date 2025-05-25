@@ -821,11 +821,17 @@ def get_models_list_api():
         models = db.session.query(
             Product.product_main_id, 
             Product.title,
-            func.count(Product.id).label('variants_count')
+            func.count(Product.barcode).label('variants_count')
         ).filter(
-            Product.archived.is_(False),
-            Product.hidden.is_(False)
-        ).group_by(
+            Product.archived.is_(False)
+        )
+        
+        # hidden alanını kontrol et
+        if hasattr(Product, 'hidden'):
+            models = models.filter(Product.hidden.is_(False))
+            
+        # Gruplama ve sıralama
+        models = models.group_by(
             Product.product_main_id,
             Product.title
         ).order_by(
