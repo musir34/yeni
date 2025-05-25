@@ -354,18 +354,18 @@ class StockIntelligence:
         try:
             products = []
             if include_variants:
-                # Tüm varyantları dahil et
+                # Tüm varyantları dahil et, ancak performans için sınırlı sayıda
                 products = Product.query.filter(
                     Product.archived.is_(False),
                     Product.hidden.is_(False),
                     Product.quantity.isnot(None)
-                ).all()
+                ).limit(top_n).all()  # Sorguyu sınırla
             else:
                 # Model ve renk bazında grupla
                 # db.session.begin() ile session.query kullanımı hata veriyor, doğrudan db.session kullanacağız
                 products = []
                 
-                # Önce model ve renk bazında grupla
+                # Önce model ve renk bazında grupla - kritik olanları öncelikle al
                 products_grouped = db.session.query(
                     Product.product_main_id,
                     Product.color,
@@ -377,7 +377,7 @@ class StockIntelligence:
                 ).group_by(
                     Product.product_main_id,
                     Product.color
-                ).all()
+                ).order_by(func.sum(Product.quantity).asc()).limit(top_n).all()  # En düşük stoktan başla, sorguyu sınırla
                 
                 # Her grup için bir ürün örneği al
                 for group in products_grouped:
@@ -491,10 +491,14 @@ def get_stock_health_report_api():
     """
     try:
         # Query parametrelerini al
-        top_n = request.args.get('top_n', 20, type=int)
+        top_n = request.args.get('top_n', 10, type=int)  # Varsayılan değeri düşürdük
         days_forecast = request.args.get('days_forecast', 30, type=int)
         include_variants = request.args.get('include_variants', 'false').lower() == 'true'
         
+        # Performans için sınırlama
+        if top_n > 10:  # Maksimum 10 ürün analiz edilecek
+            top_n = 10
+            
         # Stok zekası sınıfını başlat
         stock_intelligence = StockIntelligence()
         
