@@ -89,7 +89,6 @@ from stock_management import stock_management_bp
 from catalog import catalog_bp
 from product_label import product_label_bp
 from intelligent_stock import blueprint as intelligent_stock_bp
-from ai_brain import ai_brain_bp, start_scheduler
 
 
 blueprints = [
@@ -119,8 +118,7 @@ blueprints = [
     profit_bp,
     catalog_bp,
     product_label_bp,
-    intelligent_stock_bp,
-    ai_brain_bp
+    intelligent_stock_bp
 ]
 
 for bp in blueprints:
@@ -187,10 +185,6 @@ def schedule_jobs():
     scheduler = BackgroundScheduler(timezone="Europe/Istanbul")
     scheduler.add_job(func=fetch_and_save_returns, trigger='cron', hour=23, minute=50)
     scheduler.start()
-    
-    # AI Brain scheduler'ı başlat
-    start_scheduler()
-    logger.info("AI Brain zamanlayıcı başlatıldı.")
 
 schedule_jobs()
 
