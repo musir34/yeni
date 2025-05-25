@@ -583,8 +583,17 @@
         // Plotly grafik oluşturma yardımcı fonksiyonu
         function renderPlotlyFromJSON(containerSelector, plotJSON) {
             try {
+                // Önce seçici içindeki # işaretini kaldıralım
+                const containerId = containerSelector.replace('#', '');
+                const containerElement = document.getElementById(containerId);
+                
+                if (!containerElement) {
+                    console.error(`${containerSelector} ID'li element bulunamadı`);
+                    return;
+                }
+                
                 const figure = JSON.parse(plotJSON);
-                Plotly.newPlot(containerSelector, figure.data, figure.layout, {responsive: true});
+                Plotly.newPlot(containerId, figure.data, figure.layout, {responsive: true});
             } catch (error) {
                 console.error("Grafik oluşturma hatası:", error);
                 $(containerSelector).html('<div class="alert alert-danger">Grafik yüklenemedi</div>');
