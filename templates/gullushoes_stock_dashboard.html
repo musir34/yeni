@@ -426,6 +426,66 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Model Bazlı Stok Analizi -->
+        <div id="modelAnalysisSection" class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-sitemap me-2"></i> Model Bazlı Stok Analizi
+                        </div>
+                        <button id="runModelAnalysisButton" class="btn btn-primary btn-sm">
+                            <i class="fas fa-sync-alt me-1"></i> Model Analizi Yap
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <label for="modelAnalysisDays" class="form-label">Analiz Süresi (Gün)</label>
+                                <select class="form-select" id="modelAnalysisDays">
+                                    <option value="7" selected>Son 7 Gün</option>
+                                    <option value="15">Son 15 Gün</option>
+                                    <option value="30">Son 30 Gün</option>
+                                    <option value="60">Son 60 Gün</option>
+                                    <option value="90">Son 90 Gün</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label for="modelCodeSelect" class="form-label">Model Kodu Seçin</label>
+                                <select class="form-select" id="modelCodeSelect">
+                                    <option value="">Tüm Modeller</option>
+                                    <!-- Model kodları AJAX ile yüklenecek -->
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Model Analiz Sonuçları -->
+                        <div id="modelAnalysisResults" style="display:none;">
+                            <div class="accordion" id="modelAccordion">
+                                <!-- Model sonuçları dinamik olarak eklenecek -->
+                            </div>
+                        </div>
+                        
+                        <!-- Model Analiz Yükleniyor -->
+                        <div id="modelAnalysisLoading" class="loading-container" style="display:none;">
+                            <div class="spinner-border text-primary mb-3" role="status">
+                                <span class="visually-hidden">Yükleniyor...</span>
+                            </div>
+                            <h5 class="text-muted">Model Analizi Yapılıyor</h5>
+                            <p class="text-muted">Varyant satış verileri hesaplanıyor, stok durumları analiz ediliyor...</p>
+                        </div>
+                        
+                        <!-- Model Analiz Boş Durumu -->
+                        <div id="modelAnalysisEmpty" class="text-center py-5">
+                            <i class="fas fa-chart-bar text-muted" style="font-size: 3rem;"></i>
+                            <h5 class="mt-3 text-muted">Model Analizi Yapılmadı</h5>
+                            <p class="text-muted">Model bazlı stok ve üretim analizi için yukarıdaki parametreleri ayarlayıp "Model Analizi Yap" butonuna tıklayın.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Stok Analiz Tablosu -->
         <div id="stockAnalysisSection" class="row" style="display:none;">
