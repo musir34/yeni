@@ -243,6 +243,7 @@ class StockIntelligence:
         """
         Belirli bir model kodu için tüm renk ve beden varyantlarının satış verilerini döndürür
         Eğer product_main_id None ise, tüm modeller için verileri getirir
+        Sonuçları hiyerarşik yapıda model -> renk -> beden şeklinde döndürür
         """
         try:
             # Son X gün için tarih hesapla
@@ -279,77 +280,209 @@ class StockIntelligence:
                 all_orders_query.c.product_size
             ).all()
             
-            # Satış verilerini işle
-            results = []
-            for sale in sales_by_variant:
-                # Alanları SQLAlchemy sonuç seti dışına çıkar
-                product_main_id = sale[0]  # product_main_id
-                product_color = sale[1]    # product_color
-                product_size = sale[2]     # product_size
-                total_sales = sale[3]      # total_sales
+            # Sonuçları hiyerarşik yapıda organize et
+            result = []
+            
+            # Eğer belirli bir model kodu için veri yoksa, o modelin tüm varyantlarını göster
+            if product_main_id and len(sales_by_variant) == 0:
+                self.logger.info(f"Model {product_main_id} için sipariş verisi bulunamadı, tüm varyantları listeliyoruz.")
                 
-                # Stok verilerini al
-                stock_query = db.session.query(
-                    func.sum(Product.quantity).label('current_stock')
-                ).filter(
+                # Veritabanından modelin tüm varyantlarını al
+                products = Product.query.filter(
                     Product.product_main_id == product_main_id,
-                    Product.color == product_color
-                )
+                    Product.archived.is_(False)
+                ).all()
                 
-                if product_size:
-                    stock_query = stock_query.filter(Product.size == product_size)
+                if not products:
+                    return []
+                
+                # Model bilgilerini al
+                model_info = {
+                    'model_id': product_main_id,
+                    'title': products[0].title,
+                    'colors': []
+                }
+                
+                # Ürünleri renklere göre grupla
+                colors = {}
+                for product in products:
+                    if product.color not in colors:
+                        colors[product.color] = {
+                            'color': product.color,
+                            'total_sales': 0,
+                            'current_stock': 0,
+                            'image': product.images,
+                            'sizes': []
+                        }
+                
+                # Her renk için bedenleri ekle
+                for product in products:
+                    # Renk toplam stokunu güncelle
+                    colors[product.color]['current_stock'] += product.quantity
                     
-                stock = stock_query.scalar() or 0
+                    # Beden bilgisini ekle
+                    colors[product.color]['sizes'].append({
+                        'size': product.size,
+                        'barcode': product.barcode,
+                        'total_sales': 0,
+                        'current_stock': product.quantity,
+                        'days_until_stockout': "∞",  # Hiç satış yok
+                        'suggested_production': 0
+                    })
+                
+                # Renkleri listeye çevir
+                for color_name, color_data in colors.items():
+                    # Bedenleri boyuta göre sırala
+                    color_data['sizes'] = sorted(color_data['sizes'], 
+                                                key=lambda x: float(x['size']) if x['size'].isdigit() else 0)
+                    model_info['colors'].append(color_data)
+                
+                # Renkleri isme göre sırala
+                model_info['colors'] = sorted(model_info['colors'], key=lambda x: x['color'])
+                
+                return [model_info]
+            
+            # Eğer sipariş verileri varsa, onları işle
+            models = {}
+            
+            for sale in sales_by_variant:
+                model_id = sale[0]
+                color = sale[1]
+                size = sale[2]
+                total_sales = float(sale[3]) if sale[3] is not None else 0
+                
+                # Model yapısını oluştur
+                if model_id not in models:
+                    # Model bilgilerini al
+                    model_info = Product.query.filter(
+                        Product.product_main_id == model_id
+                    ).first()
+                    
+                    models[model_id] = {
+                        'model_id': model_id,
+                        'title': model_info.title if model_info else f"Model {model_id}",
+                        'colors': {}
+                    }
+                
+                # Renk yapısını oluştur
+                if color not in models[model_id]['colors']:
+                    # Renk için stok toplamını al
+                    color_stock = db.session.query(
+                        func.sum(Product.quantity).label('color_stock')
+                    ).filter(
+                        Product.product_main_id == model_id,
+                        Product.color == color,
+                        Product.archived.is_(False)
+                    ).scalar() or 0
+                    
+                    # Renk için ürün bilgilerini al
+                    color_info = Product.query.filter(
+                        Product.product_main_id == model_id,
+                        Product.color == color
+                    ).first()
+                    
+                    models[model_id]['colors'][color] = {
+                        'color': color,
+                        'total_sales': 0,  # Toplam satışlar, bedenler eklendikçe artacak
+                        'current_stock': int(color_stock),
+                        'image': color_info.images if color_info else "",
+                        'sizes': {}
+                    }
+                
+                # Beden için stok bilgisini al
+                size_stock = db.session.query(
+                    func.sum(Product.quantity).label('size_stock')
+                ).filter(
+                    Product.product_main_id == model_id,
+                    Product.color == color,
+                    Product.size == size,
+                    Product.archived.is_(False)
+                ).scalar() or 0
                 
                 # Günlük ortalama satış
                 daily_avg_sales = total_sales / days
                 
                 # Tahmini tükenme süresi (gün)
                 if daily_avg_sales > 0:
-                    days_until_stockout = stock / daily_avg_sales
+                    days_until_stockout = size_stock / daily_avg_sales
                 else:
                     days_until_stockout = float('inf')  # Sonsuz
                 
-                # Önerilen üretim/stok miktarı
-                # Hedef: 30 günlük stok bulundurma
+                # Önerilen üretim/stok miktarı (hedef: 30 günlük stok)
                 target_days = 30
-                suggested_production = max(0, int((daily_avg_sales * target_days) - stock))
+                suggested_production = max(0, int((daily_avg_sales * target_days) - size_stock))
                 
-                # Ürün bilgilerini al
-                product_info = db.session.query(Product).filter(
-                    Product.product_main_id == product_main_id,
-                    Product.color == product_color
+                # Beden bilgilerini al
+                size_info = Product.query.filter(
+                    Product.product_main_id == model_id,
+                    Product.color == color,
+                    Product.size == size
                 ).first()
                 
-                product_title = product_info.title if product_info else "Bilinmeyen Ürün"
-                barcode = product_info.barcode if product_info else "-"
-                
-                results.append({
-                    'product_main_id': product_main_id,
-                    'product_title': product_title,
-                    'barcode': barcode,
-                    'color': product_color,
-                    'size': product_size,
+                # Beden bilgisini ekle
+                models[model_id]['colors'][color]['sizes'][size] = {
+                    'size': size,
+                    'barcode': size_info.barcode if size_info else "-",
                     'total_sales': total_sales,
                     'daily_avg_sales': round(daily_avg_sales, 2),
-                    'current_stock': stock,
+                    'current_stock': int(size_stock),
                     'days_until_stockout': round(days_until_stockout, 1) if days_until_stockout != float('inf') else "∞",
                     'suggested_production': suggested_production
-                })
+                }
+                
+                # Renk toplam satışını güncelle
+                models[model_id]['colors'][color]['total_sales'] += total_sales
             
-            # Tüm ürünleri modele göre grupla
-            grouped_results = {}
-            for item in results:
-                model_id = item['product_main_id']
-                if model_id not in grouped_results:
-                    grouped_results[model_id] = []
-                grouped_results[model_id].append(item)
+            # Veri yapısını son format için düzenle
+            for model_id, model_data in models.items():
+                # Renkleri listeye çevir
+                colors_list = []
+                
+                for color_name, color_data in model_data['colors'].items():
+                    # Bedenleri listeye çevir ve sırala
+                    sizes_list = []
+                    for size_name, size_data in color_data['sizes'].items():
+                        sizes_list.append(size_data)
+                    
+                    # Bedenleri boyuta göre sırala
+                    sizes_list = sorted(sizes_list, 
+                                        key=lambda x: float(x['size']) if x['size'].isdigit() else 0)
+                    
+                    # Renk için tahmini tükenme süresi
+                    color_stock = color_data['current_stock']
+                    color_sales = color_data['total_sales']
+                    color_daily_sales = color_sales / days if days > 0 else 0
+                    
+                    if color_daily_sales > 0:
+                        color_days_until_stockout = color_stock / color_daily_sales
+                    else:
+                        color_days_until_stockout = float('inf')
+                    
+                    # Renk için önerilen üretim miktarı
+                    color_suggested_production = max(0, int((color_daily_sales * target_days) - color_stock))
+                    
+                    # Renk verilerini ekle
+                    color_data['sizes'] = sizes_list
+                    color_data['daily_avg_sales'] = round(color_daily_sales, 2)
+                    color_data['days_until_stockout'] = round(color_days_until_stockout, 1) if color_days_until_stockout != float('inf') else "∞"
+                    color_data['suggested_production'] = color_suggested_production
+                    
+                    colors_list.append(color_data)
+                
+                # Renkleri isme göre sırala
+                colors_list = sorted(colors_list, key=lambda x: x['color'])
+                
+                # Model verilerini güncelle
+                model_data['colors'] = colors_list
+                result.append(model_data)
             
-            return grouped_results
+            return result
             
         except Exception as e:
             self.logger.error(f"Model varyant verisi alınırken hata: {e}")
-            return {}
+            import traceback
+            self.logger.error(traceback.format_exc())
+            return []
             
     def predict_future_sales(self, product_main_id, color=None, size=None, forecast_days=30, history_days=90):
         """
@@ -924,17 +1057,20 @@ def get_model_variants_analysis_api():
         # Stok zekası sınıfını başlat
         stock_intelligence = StockIntelligence()
         
+        # Loglama ekle
+        logger.info(f"Model {product_main_id} için varyant analizi yapılıyor. Son {days} günlük veriler analiz edilecek.")
+        
         # Model varyantlarını analiz et
         variants_data = stock_intelligence.get_model_variants_data(
             product_main_id=product_main_id,
             days=days
         )
         
-        # Sonuç formatını düzenle
+        # Hiyerarşik yapıdaki varyant verisi için uygun sonuç formatı
         result = {
             'success': True,
             'days_analyzed': days,
-            'models': variants_data
+            'data': variants_data
         }
         
         # Analizi veritabanına kaydet (eğer istenirse)
