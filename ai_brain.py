@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, request
 from dotenv import load_dotenv
@@ -425,41 +426,227 @@ class AIBrain:
                 "trace": traceback.format_exc()
             }
     
+    def find_order_by_number(self, order_number):
+        """Belirli bir sipariş numarasına sahip siparişi tüm tablolarda arar"""
+        try:
+            # Tüm sipariş tablolarında ara
+            order_tables = [OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled]
+            
+            for table in order_tables:
+                order = db.session.query(table).filter(table.order_number == order_number).first()
+                if order:
+                    status_map = {
+                        OrderCreated: "Oluşturuldu",
+                        OrderPicking: "Hazırlanıyor",
+                        OrderShipped: "Kargoya Verildi",
+                        OrderDelivered: "Teslim Edildi",
+                        OrderCancelled: "İptal Edildi"
+                    }
+                    
+                    return {
+                        "found": True,
+                        "table": table.__name__,
+                        "status": status_map.get(table, "Bilinmiyor"),
+                        "order_data": {
+                            "order_number": order.order_number,
+                            "order_date": order.order_date.strftime("%d.%m.%Y %H:%M") if order.order_date else "Bilinmiyor",
+                            "customer_name": f"{order.customer_name or ''} {order.customer_surname or ''}".strip(),
+                            "amount": order.amount,
+                            "product_name": order.product_name,
+                            "product_size": order.product_size,
+                            "product_color": order.product_color,
+                            "shipping_barcode": order.shipping_barcode,
+                            "cargo_tracking_number": order.cargo_tracking_number,
+                            "cargo_provider_name": order.cargo_provider_name,
+                            "estimated_delivery_end": order.estimated_delivery_end.strftime("%d.%m.%Y") if order.estimated_delivery_end else "Bilinmiyor"
+                        }
+                    }
+            
+            # Sipariş bulunamadı
+            return {"found": False, "message": f"{order_number} numaralı sipariş bulunamadı."}
+        except Exception as e:
+            self.logger.error(f"Sipariş arama hatası: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            return {"found": False, "error": str(e)}
+    
+    def find_product(self, criteria):
+        """Belirli kriterlere göre ürün arar"""
+        try:
+            # Başlangıç sorgusu
+            query = db.session.query(Product).filter(Product.archived == False)
+            
+            # Kriterlere göre filtreleri uygula
+            if "barcode" in criteria:
+                query = query.filter(Product.barcode == criteria["barcode"])
+            
+            if "title" in criteria:
+                query = query.filter(Product.title.ilike(f"%{criteria['title']}%"))
+            
+            if "color" in criteria:
+                query = query.filter(Product.color.ilike(f"%{criteria['color']}%"))
+            
+            if "size" in criteria:
+                query = query.filter(Product.size.ilike(f"%{criteria['size']}%"))
+            
+            if "product_main_id" in criteria:
+                query = query.filter(Product.product_main_id == criteria["product_main_id"])
+            
+            # Sorguyu çalıştır
+            products = query.all()
+            
+            if not products:
+                return {"found": False, "message": "Belirtilen kriterlere uygun ürün bulunamadı."}
+            
+            # Bulunan ürünleri formatlayıp döndür
+            product_list = []
+            for product in products:
+                product_list.append({
+                    "barcode": product.barcode,
+                    "title": product.title,
+                    "color": product.color,
+                    "size": product.size,
+                    "quantity": product.quantity,
+                    "sale_price": product.sale_price,
+                    "cost_try": product.cost_try
+                })
+            
+            return {"found": True, "products": product_list, "count": len(product_list)}
+        except Exception as e:
+            self.logger.error(f"Ürün arama hatası: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            return {"found": False, "error": str(e)}
+    
+    def check_exchange_status(self, exchange_id):
+        """Değişim talebinin durumunu kontrol eder"""
+        try:
+            # Bu fonksiyon, degisim.py'daki Degisim tablosuna erişir
+            # Ancak models.py'da bu model tanımlanmamış olabilir
+            # Bu durumda doğrudan SQL sorgusu kullanarak veriyi çekebiliriz
+            
+            sql = text("""
+                SELECT * FROM degisim WHERE id = :exchange_id
+            """)
+            
+            result = db.session.execute(sql, {"exchange_id": exchange_id}).fetchone()
+            
+            if not result:
+                return {"found": False, "message": f"{exchange_id} numaralı değişim talebi bulunamadı."}
+            
+            # Sonucu sözlük olarak döndür
+            exchange_data = {}
+            for column, value in result._mapping.items():
+                exchange_data[column] = value
+            
+            return {"found": True, "exchange_data": exchange_data}
+        except Exception as e:
+            self.logger.error(f"Değişim durumu kontrol hatası: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            return {"found": False, "error": str(e)}
+    
     def answer_question(self, question):
         """Kullanıcının sorduğu soruya veritabanı bilgilerini kullanarak cevap verir"""
         try:
             # İlgili verileri topla
             context_data = {}
             
-            # Sorunun içeriğine göre ilgili verileri ekle
-            if any(keyword in question.lower() for keyword in ["stok", "stock", "ürün", "product"]):
-                context_data["stock_summary"] = self.get_stock_summary()
+            # Sipariş numarası arama
+            order_match = re.search(r'(sipariş|order).*?([A-Za-z0-9]{6,12})', question, re.IGNORECASE)
+            if order_match:
+                order_number = order_match.group(2)
+                order_data = self.find_order_by_number(order_number)
+                context_data["order_query"] = order_data
             
-            if any(keyword in question.lower() for keyword in ["satış", "sales", "gelir", "revenue", "sipariş", "order"]):
-                context_data["sales_summary"] = self.get_sales_summary()
-                context_data["order_status_summary"] = self.get_order_status_summary()
+            # Değişim ID'si arama
+            exchange_match = re.search(r'(değişim|degisim|exchange).*?([A-Za-z0-9]{6,12})', question, re.IGNORECASE)
+            if exchange_match:
+                exchange_id = exchange_match.group(2)
+                exchange_data = self.check_exchange_status(exchange_id)
+                context_data["exchange_query"] = exchange_data
             
-            if any(keyword in question.lower() for keyword in ["iade", "return", "geri"]):
-                context_data["return_summary"] = self.get_return_summary()
+            # Ürün arama
+            product_criteria = {}
             
-            # Hiçbir özel bağlam bulunamadıysa genel veri özetlerini ekle
+            # Renk kontrolü
+            color_match = re.search(r'(renk|color):?\s*([a-zışğüçöA-ZİŞĞÜÇÖ]+)', question, re.IGNORECASE)
+            if color_match:
+                product_criteria["color"] = color_match.group(2)
+            elif "kırmızı" in question.lower():
+                product_criteria["color"] = "kırmızı"
+            elif "siyah" in question.lower():
+                product_criteria["color"] = "siyah"
+            elif "beyaz" in question.lower():
+                product_criteria["color"] = "beyaz"
+            elif "mavi" in question.lower():
+                product_criteria["color"] = "mavi"
+            
+            # Numara/beden kontrolü
+            size_match = re.search(r'(numara|beden|size):?\s*(\d{2})', question, re.IGNORECASE)
+            if size_match:
+                product_criteria["size"] = size_match.group(2)
+            else:
+                for size in ["35", "36", "37", "38", "39", "40", "41", "42"]:
+                    if size in question:
+                        product_criteria["size"] = size
+                        break
+            
+            # Barkod kontrolü
+            barcode_match = re.search(r'(barkod|barcode):?\s*([0-9]{8,13})', question, re.IGNORECASE)
+            if barcode_match:
+                product_criteria["barcode"] = barcode_match.group(2)
+            
+            # Ürün adı kontrolü
+            if "stiletto" in question.lower():
+                product_criteria["title"] = "stiletto"
+            elif "topuklu" in question.lower():
+                product_criteria["title"] = "topuklu"
+            elif "bot" in question.lower():
+                product_criteria["title"] = "bot"
+            elif "sandalet" in question.lower():
+                product_criteria["title"] = "sandalet"
+            elif "ayakkabı" in question.lower() or "ayakkabi" in question.lower():
+                if not any(k in product_criteria for k in ["title", "barcode"]):
+                    product_criteria["title"] = "ayakkabı"
+            
+            # Ürün kriterlerine göre arama yap
+            if product_criteria:
+                product_data = self.find_product(product_criteria)
+                context_data["product_query"] = product_data
+            
+            # Genel sorgular için verileri ekle
             if not context_data:
-                context_data["stock_summary"] = self.get_stock_summary()
-                context_data["sales_summary"] = self.get_sales_summary()
-                context_data["order_status_summary"] = self.get_order_status_summary()
+                if any(keyword in question.lower() for keyword in ["stok", "stock", "ürün", "product"]):
+                    context_data["stock_summary"] = self.get_stock_summary()
+                
+                if any(keyword in question.lower() for keyword in ["satış", "sales", "gelir", "revenue", "sipariş", "order"]):
+                    context_data["sales_summary"] = self.get_sales_summary()
+                    context_data["order_status_summary"] = self.get_order_status_summary()
+                
+                if any(keyword in question.lower() for keyword in ["iade", "return", "geri"]):
+                    context_data["return_summary"] = self.get_return_summary()
+                
+                # Hiçbir özel bağlam bulunamadıysa genel veri özetlerini ekle
+                if not context_data:
+                    context_data["stock_summary"] = self.get_stock_summary()
+                    context_data["sales_summary"] = self.get_sales_summary()
+                    context_data["order_status_summary"] = self.get_order_status_summary()
             
             # OpenAI ile soruyu yanıtla
             system_prompt = """Sen Güllü Ayakkabı firması için çalışan bir veri analiz asistanısın.
             Firmanın topuklu ayakkabı ve ayakkabı malzemeleri üretip sattığını biliyorsun.
             Sana verilen veri bağlamını kullanarak sorulan soruları doğru, açık ve yardımcı bir şekilde yanıtla.
-            Eğer veri yetersizse, bunu belirt. Eğer soruyu yanıtlamak için daha fazla bilgiye ihtiyacın varsa, hangi ek bilgilere ihtiyacın olduğunu açıkça belirt.
+            
+            Özellikle, sorgu sonuçlarını şu şekilde yorumla:
+            - Sipariş sorgusu varsa (order_query), sipariş durumunu ve detaylarını net bir şekilde açıkla
+            - Değişim sorgusu varsa (exchange_query), değişim talebinin durumunu ve detaylarını açıkla
+            - Ürün sorgusu varsa (product_query), bulunan ürünlerin sayısını ve detaylarını listele
             
             Yanıtını şu formatta yapılandır:
-            1. Soruya doğrudan yanıt
-            2. Varsa destekleyici veriler ve analizler
+            1. Soruya doğrudan yanıt (Sipariş/değişim durumu veya ürün bilgisi)
+            2. Varsa destekleyici veriler ve detaylar
             3. Varsa ek öneriler veya aksiyonlar
             
-            Her zaman doğru, dürüst ve yardımcı olmaya çalış.
+            Her zaman doğru, dürüst ve yardımcı olmaya çalış. 
+            Eğer veri yoksa veya yetersizse, bunu açıkça belirt.
             """
             
             user_prompt = f"""Soru: {question}
