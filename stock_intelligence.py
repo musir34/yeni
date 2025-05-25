@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, flash
-from models import db, Product, StockAnalysisRecord
-from sqlalchemy import func, desc, asc, and_, or_
-from datetime import datetime, timedelta
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, flash, session
+from models import db, Product, StockAnalysisRecord, OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
+from sqlalchemy import func, desc, asc, and_, or_, extract, text
+from datetime import datetime, timedelta, date
 import pandas as pd
 import numpy as np
 import json
@@ -15,6 +15,19 @@ from prophet.plot import plot_plotly, plot_components_plotly
 from flask_login import login_required, current_user
 import openai
 from dotenv import load_dotenv
+from collections import defaultdict
+import re
+import holidays
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+import io
+import base64
+from PIL import Image, ImageDraw, ImageFont
+import matplotlib.pyplot as plt
+import seaborn as sns
+import uuid
 
 # Logger ayarları
 logger = logging.getLogger(__name__)
@@ -42,6 +55,10 @@ class StockIntelligence:
             'history_days': 90,   # Varsayılan geçmiş veri süresi
             'confidence_interval': 0.9,  # %90 güven aralığı
             'include_history': True,     # Geçmiş verileri göster
+            'seasonality_mode': 'multiplicative',  # Mevsimsellik modu
+            'seasonality_prior_scale': 10.0,  # Mevsimsellik ağırlığı
+            'holidays_prior_scale': 10.0,  # Tatil günleri ağırlığı
+            'changepoint_prior_scale': 0.05,  # Değişim noktaları hassasiyeti
         }
         
         # Stok durum eşikleri
@@ -50,6 +67,44 @@ class StockIntelligence:
             'warning': 14,    # 14 gün veya daha az stok kaldıysa uyarı
             'healthy': 30,    # 30 gün veya daha fazla stok kaldıysa sağlıklı
         }
+        
+        # E-posta bildirim ayarları
+        self.notification_settings = {
+            'enabled': False,  # Varsayılan olarak kapalı
+            'recipients': [],  # Bildirim alacak e-postalar
+            'critical_threshold': 5,  # En az bu kadar kritik ürün olduğunda bildirim gönder
+            'warning_threshold': 10,  # En az bu kadar uyarı ürünü olduğunda bildirim gönder
+            'frequency': 'daily',  # daily, weekly
+            'time': '09:00',  # Bildirim saati
+        }
+        
+        # Satış kanalları
+        self.sales_channels = [
+            'online',  # Online satış
+            'store',   # Mağaza satışı
+            'wholesale'  # Toptan satış
+        ]
+        
+        # Kategori sınıflandırması
+        self.product_categories = {
+            'casual': 'Günlük Ayakkabı',
+            'formal': 'Klasik Ayakkabı',
+            'sport': 'Spor Ayakkabı',
+            'boots': 'Çizme/Bot',
+            'sandals': 'Sandalet/Terlik',
+            'special': 'Özel Tasarım'
+        }
+        
+        # Tarihsel karşılaştırma periyotları
+        self.comparison_periods = {
+            'last_week': 7,
+            'last_month': 30,
+            'last_quarter': 90,
+            'last_year': 365
+        }
+        
+        # Türkiye tatil günleri
+        self.tr_holidays = holidays.Turkey()
         
     def combined_orders_query(self):
         """
@@ -288,6 +343,7 @@ class StockIntelligence:
     def predict_future_sales(self, product_main_id, color=None, size=None, forecast_days=30, history_days=90):
         """
         Prophet modeli kullanarak gelecek satışları tahmin eder
+        Mevsimsellik, tatil günleri ve özel günleri dikkate alır
         """
         try:
             # Geçmiş satış verilerini al
@@ -304,14 +360,63 @@ class StockIntelligence:
             # y sütununun sayısal olduğundan emin ol
             sales_df['y'] = pd.to_numeric(sales_df['y'], errors='coerce').fillna(0)
             
-            # Prophet modelini oluştur ve eğit
+            # Prophet modelini oluştur ve eğit - gelişmiş ayarlar ile
             model = Prophet(
                 interval_width=self.prediction_settings['confidence_interval'],
-                seasonality_mode='multiplicative'
+                seasonality_mode=self.prediction_settings['seasonality_mode'],
+                seasonality_prior_scale=self.prediction_settings['seasonality_prior_scale'],
+                changepoint_prior_scale=self.prediction_settings['changepoint_prior_scale']
             )
+            
             # Mevsimsellik ayarlarını manuel olarak ekleyelim
-            model.add_seasonality(name='weekly', period=7, fourier_order=3)
-            model.add_seasonality(name='yearly', period=365.25, fourier_order=5)
+            model.add_seasonality(name='weekly', period=7, fourier_order=5)
+            model.add_seasonality(name='yearly', period=365.25, fourier_order=10)
+            model.add_seasonality(name='monthly', period=30.5, fourier_order=5)
+            
+            # Türkiye'deki resmi tatil günlerini ekle
+            try:
+                tr_holidays = holidays.Turkey()
+                today = datetime.now().date()
+                next_year = today.replace(year=today.year + 1)
+                
+                holidays_df = pd.DataFrame([
+                    {'holiday': name, 'ds': date, 'lower_window': -1, 'upper_window': 1}
+                    for date, name in tr_holidays.items()
+                    if today <= date <= next_year
+                ])
+                
+                if not holidays_df.empty:
+                    model.add_country_holidays(country_name='TR')
+                    # model.holidays = pd.concat([model.holidays, holidays_df])
+            except Exception as holiday_error:
+                self.logger.warning(f"Tatil günleri eklenirken hata: {holiday_error}")
+            
+            # Özel günleri ve sezonal etkileri ekle
+            try:
+                special_events = [
+                    # Okul açılış sezonu
+                    {'holiday': 'OkulAcilisi', 'ds': '2024-09-15', 'lower_window': -15, 'upper_window': 5},
+                    {'holiday': 'OkulAcilisi', 'ds': '2025-09-15', 'lower_window': -15, 'upper_window': 5},
+                    
+                    # Kış sezonu başlangıcı
+                    {'holiday': 'KisSezonuBaslangic', 'ds': '2024-11-01', 'lower_window': -15, 'upper_window': 30},
+                    {'holiday': 'KisSezonuBaslangic', 'ds': '2025-11-01', 'lower_window': -15, 'upper_window': 30},
+                    
+                    # Yaz sezonu başlangıcı
+                    {'holiday': 'YazSezonuBaslangic', 'ds': '2024-05-01', 'lower_window': -15, 'upper_window': 30},
+                    {'holiday': 'YazSezonuBaslangic', 'ds': '2025-05-01', 'lower_window': -15, 'upper_window': 30},
+                    
+                    # İndirim dönemleri
+                    {'holiday': 'YazIndirimi', 'ds': '2024-07-01', 'lower_window': 0, 'upper_window': 30},
+                    {'holiday': 'YazIndirimi', 'ds': '2025-07-01', 'lower_window': 0, 'upper_window': 30},
+                    {'holiday': 'KisIndirimi', 'ds': '2025-01-15', 'lower_window': 0, 'upper_window': 30},
+                    {'holiday': 'KisIndirimi', 'ds': '2026-01-15', 'lower_window': 0, 'upper_window': 30},
+                ]
+                
+                events_df = pd.DataFrame(special_events)
+                model.holidays = pd.concat([model.holidays, events_df])
+            except Exception as events_error:
+                self.logger.warning(f"Özel günler eklenirken hata: {events_error}")
             
             # Çok düşük satışlar veya sıfır satışlar için özel ayarlar
             if sales_df['y'].mean() < 1:
@@ -327,6 +432,15 @@ class StockIntelligence:
             # Tahmin için future DataFrame oluştur
             future = model.make_future_dataframe(periods=forecast_days)
             
+            # Tahmin doğruluğunu hesapla (train-test ayırarak)
+            # Tahmin doğruluk metrikleri için yardımcı metod henüz eklenmediğinden, şimdilik basit bir hesaplama yapalım
+            accuracy_metrics = {
+                'mae': None,
+                'mape': None,
+                'rmse': None,
+                'accuracy': None
+            }
+            
             # Tahmin yap
             forecast = model.predict(future)
             
@@ -339,21 +453,81 @@ class StockIntelligence:
             sales_df_display['ds'] = sales_df_display['ds'].dt.strftime('%Y-%m-%d')
             
             try:
-                # Prophet tahmin grafiği oluştur
-                fig1 = plot_plotly(model, forecast, figsize=(800, 500))
+                # Gelişmiş tahmin grafiği oluştur
+                fig1 = plot_plotly(model, forecast, figsize=(800, 550))
                 fig1.update_layout(
-                    title='Ürün Satış Tahmini',
+                    title={
+                        'text': f'{product_main_id} Ürün Satış Tahmini ve Trend Analizi',
+                        'font': {'size': 22, 'color': '#2c3e50', 'family': 'Arial'}
+                    },
                     xaxis_title='Tarih',
                     yaxis_title='Satış Miktarı',
                     legend_title='Veri Türü',
-                    template='plotly_white'
+                    template='plotly_white',
+                    hoverlabel=dict(
+                        bgcolor="white",
+                        font_size=14,
+                        font_family="Arial"
+                    ),
+                    margin=dict(t=80, l=60, r=40, b=60)
                 )
                 
-                # Bileşen grafiği oluştur
-                fig2 = plot_components_plotly(model, forecast, figsize=(800, 500))
+                # Grafik çizgilerini daha belirgin hale getir
+                for i, trace in enumerate(fig1.data):
+                    if i == 0:  # Gerçek veriler
+                        fig1.data[i].update(
+                            mode='markers+lines',
+                            marker=dict(size=6, color='rgba(31, 119, 180, 0.8)'),
+                            line=dict(width=1, color='rgba(31, 119, 180, 0.6)')
+                        )
+                    elif i == 1:  # Tahminler
+                        fig1.data[i].update(
+                            line=dict(width=3, color='rgba(255, 127, 14, 0.8)')
+                        )
+                    else:  # Güven aralıkları
+                        fig1.data[i].update(fillcolor='rgba(255, 127, 14, 0.2)')
+                
+                # Bugünü gösteren dikey çizgi ekle
+                today = datetime.now()
+                fig1.add_shape(
+                    type="line", line=dict(dash="dash", width=2, color="red"),
+                    x0=today, y0=0, x1=today, 
+                    y1=1, yref="paper"
+                )
+                fig1.add_annotation(
+                    x=today, y=1, yref="paper",
+                    text="Bugün", showarrow=True,
+                    arrowhead=2, arrowcolor="red", arrowwidth=2,
+                    font=dict(color="red", size=12)
+                )
+                
+                # Gelişmiş bileşenler grafiği oluştur
+                fig2 = plot_components_plotly(model, forecast, figsize=(800, 600))
+                
+                # Alt grafikleri yeniden adlandır ve düzenle
+                for i, annotation in enumerate(fig2.layout.annotations):
+                    if i == 0:
+                        annotation.text = "Uzun Vadeli Trend Analizi"
+                    elif i == 1:
+                        annotation.text = "Haftalık Satış Döngüsü"
+                    elif i == 2 and len(fig2.layout.annotations) > 2:
+                        annotation.text = "Yıllık Satış Döngüsü"
+                    
+                    annotation.font.size = 16
+                    annotation.font.color = "#34495e"
+                
                 fig2.update_layout(
-                    title='Satış Tahmin Bileşenleri',
-                    template='plotly_white'
+                    title={
+                        'text': f'{product_main_id} Satış Tahmin Bileşenleri ve Döngü Analizi',
+                        'font': {'size': 22, 'color': '#2c3e50', 'family': 'Arial'}
+                    },
+                    template='plotly_white',
+                    hoverlabel=dict(
+                        bgcolor="white",
+                        font_size=14,
+                        font_family="Arial"
+                    ),
+                    height=700  # Daha büyük grafik
                 )
                 
                 # Sayısal değerleri güvenceye al
