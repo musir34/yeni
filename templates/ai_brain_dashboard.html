@@ -154,7 +154,7 @@
             resultDiv.innerHTML = '';
             spinner.style.display = 'block';
             
-            fetch('/api/ai-brain/analyze', {
+            fetch('/ai-brain/api/analyze', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -218,7 +218,7 @@
             resultDiv.innerHTML = '';
             spinner.style.display = 'block';
             
-            fetch('/api/ai-brain/check-orders', {
+            fetch('/ai-brain/api/check-orders', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -295,7 +295,7 @@
             spinner.style.display = 'block';
             
             // AI Brain'den stok özeti al
-            fetch('/api/ai-brain/ask', {
+            fetch('/ai-brain/api/ask', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -344,7 +344,7 @@
             answerContent.innerHTML = '';
             spinner.style.display = 'block';
             
-            fetch('/api/ai-brain/ask', {
+            fetch('/ai-brain/api/ask', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
