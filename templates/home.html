@@ -498,6 +498,11 @@ padding-right: 2.25rem;
 Giriş Yapan: <strong>{{ session['first_name'] }} {{ session['last_name'] }}</strong>
 </div>
 
+<!-- AI Brain Test Butonu -->
+<div style="position: fixed; top: 100px; left: 20px; z-index: 1000;">
+    <a href="/ai-brain/test" class="btn btn-danger">🤖 AI Test</a>
+</div>
+
 <div class="btn-group-top">
 <a href="{{ url_for('home.home') }}" class="btn btn-secondary">Anasayfa</a>
 <a href="{{ url_for('display_archive') }}" class="btn btn-secondary">Arşiv</a>
