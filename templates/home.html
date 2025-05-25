@@ -501,9 +501,6 @@ Giriş Yapan: <strong>{{ session['first_name'] }} {{ session['last_name'] }}</st
 <div class="btn-group-top">
 <a href="{{ url_for('home.home') }}" class="btn btn-secondary">Anasayfa</a>
 <a href="{{ url_for('display_archive') }}" class="btn btn-secondary">Arşiv</a>
-<a href="{{ url_for('ai_stock_dashboard') }}" class="btn btn-info">
-    <i class="fas fa-brain"></i> Stok Zekası
-</a>
 
 <div class="dropdown">
 <button class="btn btn-warning dropdown-toggle" type="button" id="kullaniciMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -545,14 +542,16 @@ Sipariş İşlemleri
 
 <div class="dropdown">
 <button class="btn btn-info dropdown-toggle" type="button" id="analizMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-Analizler
-</button>
-<div class="dropdown-menu" aria-labelledby="analizMenu">
-<a class="dropdown-item" href="{{ url_for('analysis.sales_analysis') }}">Satış Analizi</a>
-<a class="dropdown-item" href="{{ url_for('openai_bp.ai_analiz') }}">AI Analiz</a>
-<a class="dropdown-item" href="{{ url_for('commission_update_bp.update_commission_from_excel') }}">Excel Komisyon Yükle</a>
-<a class="dropdown-item" href="{{ url_for('profit.profit_report') }}">Kâr-Zarar Analizi</a>
-</div>
+    Analizler
+    </button>
+    <div class="dropdown-menu" aria-labelledby="analizMenu">
+      <a class="dropdown-item" href="{{ url_for('analysis.sales_analysis') }}">Satış Analizi</a>
+      <a class="dropdown-item" href="{{ url_for('openai_bp.ai_analiz') }}">AI Analiz</a>
+      <a class="dropdown-item" href="{{ url_for('commission_update_bp.update_commission_from_excel') }}">Excel Komisyon Yükle</a>
+      <a class="dropdown-item" href="{{ url_for('profit.profit_report') }}">Kâr-Zarar Analizi</a>
+      <a class="dropdown-item" href="/intelligent-stock/">🧠 Stok Zekası Paneli</a> <!-- Bu satırı ekledim -->
+    </div>
+
 </div>
 
 <div class="custom-control custom-switch">
