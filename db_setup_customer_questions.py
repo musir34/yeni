@@ -1,5 +1,6 @@
 from models import db, CustomerQuestion
 from app import app
+from sqlalchemy import inspect
 
 def create_customer_questions_table():
     """
@@ -7,9 +8,10 @@ def create_customer_questions_table():
     """
     with app.app_context():
         # Eğer tablo zaten varsa bir şey yapmayacak
-        if not db.engine.has_table(CustomerQuestion.__tablename__):
+        inspector = inspect(db.engine)
+        if not inspector.has_table(CustomerQuestion.__tablename__):
             print(f"Creating table: {CustomerQuestion.__tablename__}")
-            db.create_all(tables=[CustomerQuestion.__table__])
+            db.create_all()  # Tüm tabloları oluşturacak ama sadece olmayanlar eklenecek
             print("CustomerQuestion table created successfully.")
         else:
             print("CustomerQuestion table already exists.")
