@@ -103,8 +103,16 @@ class StockIntelligence:
         
         # Türkiye tatil günleri
         try:
+            # Holidays paketi farklı ülke kodları kullanabiliyor, TR veya Turkey deniyoruz
             import holidays
-            self.tr_holidays = holidays.TR()
+            try:
+                self.tr_holidays = holidays.Turkey()
+            except:
+                try:
+                    self.tr_holidays = holidays.TR()
+                except:
+                    # Varsayılan olarak boş sözlük
+                    self.tr_holidays = {}
         except Exception as e:
             self.logger.warning(f"Tatil günleri yüklenirken hata: {e}")
             self.tr_holidays = {}
@@ -376,11 +384,10 @@ class StockIntelligence:
             model.add_seasonality(name='yearly', period=365.25, fourier_order=10)
             model.add_seasonality(name='monthly', period=30.5, fourier_order=5)
             
-            # Türkiye'deki resmi tatil günlerini ekle (devre dışı bırakıldı)
+            # Türkiye'deki resmi tatil günlerini ekle
             try:
-                # Tatil günleri eklemesi şimdilik devre dışı bırakıldı
-                # İlgili paket kurulu olmadığı için hata oluşuyordu
-                pass
+                # Tatil günleri eklemesi
+                model.add_country_holidays(country_name='TR')
             except Exception as holiday_error:
                 self.logger.warning(f"Tatil günleri eklenirken hata: {holiday_error}")
             
