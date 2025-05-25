@@ -422,6 +422,11 @@
             const data = await response.json();
             
             if (data.success) {
+                // Make sure we're returning an array, even if data.report is not
+                if (!Array.isArray(data.report)) {
+                    console.warn('API response report is not an array:', data.report);
+                    return [];
+                }
                 return data.report;
             } else {
                 throw new Error(data.message || 'Rapor alınamadı');
