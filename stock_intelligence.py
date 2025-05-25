@@ -72,7 +72,7 @@ class StockIntelligence:
             OrderCreated.product_color,
             OrderCreated.product_size,
             OrderCreated.merchant_sku
-        ]).select_from(OrderCreated)
+        ])
         
         picking = select([
             OrderPicking.id,
@@ -85,7 +85,7 @@ class StockIntelligence:
             OrderPicking.product_color,
             OrderPicking.product_size,
             OrderPicking.merchant_sku
-        ]).select_from(OrderPicking)
+        ])
         
         shipped = select([
             OrderShipped.id,
@@ -98,7 +98,7 @@ class StockIntelligence:
             OrderShipped.product_color,
             OrderShipped.product_size,
             OrderShipped.merchant_sku
-        ]).select_from(OrderShipped)
+        ])
         
         delivered = select([
             OrderDelivered.id,
@@ -111,13 +111,13 @@ class StockIntelligence:
             OrderDelivered.product_color,
             OrderDelivered.product_size,
             OrderDelivered.merchant_sku
-        ]).select_from(OrderDelivered)
+        ])
         
         # UNION ALL ile hepsini birleştir
         union_query = union_all(created, picking, shipped, delivered)
         
         # Alt sorgu olarak döndür
-        return alias(union_query, name='all_orders')
+        return union_query.alias(name='all_orders')
     
     def get_product_sales_data(self, product_main_id, color=None, size=None, days=90):
         """
