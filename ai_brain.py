@@ -782,6 +782,12 @@ def ai_brain_dashboard():
     from flask import render_template
     return render_template('ai_brain_dashboard.html')
 
+@ai_brain_bp.route('/ai-brain/test', methods=['GET'])
+def ai_brain_test():
+    """AI Brain Test sayfası - basit test arayüzü"""
+    from flask import render_template
+    return render_template('ai_test.html')
+
 # Zamanlanmış görevleri başlat
 def start_scheduler():
     """Zamanlanmış görevleri başlatır"""
