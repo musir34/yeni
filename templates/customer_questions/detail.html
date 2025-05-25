@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block title %}Müşteri Sorusu Detayı{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('customer_questions.questions_list') }}">Müşteri Soruları</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Soru Detayı</li>
+                </ol>
+            </nav>
+            <h1>Müşteri Sorusu Detayı</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Ürün Bilgileri</h5>
+                </div>
+                <div class="card-body">
+                    {% if question.imageUrl %}
+                    <img src="{{ question.imageUrl }}" alt="{{ question.productName }}" class="img-fluid mb-3">
+                    {% endif %}
+                    <h6>{{ question.productName }}</h6>
+                    <p class="text-muted">Ürün ID: {{ question.productMainId }}</p>
+                    
+                    {% if question.webUrl %}
+                    <a href="{{ question.webUrl }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-external-link-alt"></i> Trendyol'da Görüntüle
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Soru Detayları</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Müşteri</label>
+                        <p>{{ question.userName }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Tarih</label>
+                        <p>{{ question.creationDate|timestamp_to_date if question.creationDate else '' }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Soru</label>
+                        <div class="p-3 bg-light rounded">
+                            {{ question.text }}
+                        </div>
+                    </div>
+                    
+                    {% if question.answer %}
+                    <div class="mb-3">
+                        <label class="form-label">Cevap</label>
+                        <div class="p-3 bg-success-subtle rounded">
+                            {{ question.answer.text }}
+                            <div class="text-muted mt-2 small">
+                                Cevaplanma tarihi: {{ question.answer.creationDate|timestamp_to_date if question.answer.creationDate else '' }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if question.rejectedAnswer %}
+                    <div class="mb-3">
+                        <label class="form-label">Reddedilen Cevap</label>
+                        <div class="p-3 bg-danger-subtle rounded">
+                            {{ question.rejectedAnswer.text }}
+                            <div class="text-muted mt-2 small">
+                                Reddedilme nedeni: {{ question.rejectedAnswer.reason }}
+                            </div>
+                            <div class="text-muted small">
+                                Reddedilme tarihi: {{ question.rejectedAnswer.creationDate|timestamp_to_date if question.rejectedAnswer.creationDate else '' }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Durum</label>
+                        {% if question.status == 'WAITING_FOR_ANSWER' %}
+                        <span class="badge bg-danger">Cevap Bekliyor</span>
+                        {% elif question.status == 'WAITING_FOR_APPROVE' %}
+                        <span class="badge bg-warning text-dark">Onay Bekliyor</span>
+                        {% elif question.status == 'ANSWERED' %}
+                        <span class="badge bg-success">Cevaplandı</span>
+                        {% elif question.status == 'REJECTED' %}
+                        <span class="badge bg-secondary">Reddedildi</span>
+                        {% elif question.status == 'REPORTED' %}
+                        <span class="badge bg-info">Raporlandı</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ question.status }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('customer_questions.questions_list') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Geri Dön
+                        </a>
+                        
+                        {% if question.status == 'WAITING_FOR_ANSWER' %}
+                        <a href="{{ url_for('customer_questions.answer_question', question_id=question.id) }}" class="btn btn-primary">
+                            <i class="fas fa-reply"></i> Cevapla
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
