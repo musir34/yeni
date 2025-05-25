@@ -732,7 +732,7 @@ def run_hourly_stock_check():
         logger.error(f"Saatlik stok kontrolü sırasında hata: {stock_summary.get('error')}")
 
 # API Endpoints
-@ai_brain_bp.route('/api/ai-brain/analyze', methods=['POST'])
+@ai_brain_bp.route('/ai-brain/api/analyze', methods=['POST'])
 def api_analyze_data():
     """Veri analizi API endpoint'i"""
     try:
@@ -749,7 +749,7 @@ def api_analyze_data():
         logger.error(traceback.format_exc())
         return jsonify({"success": False, "error": str(e), "trace": traceback.format_exc()}), 500
 
-@ai_brain_bp.route('/api/ai-brain/check-orders', methods=['POST'])
+@ai_brain_bp.route('/ai-brain/api/check-orders', methods=['POST'])
 def api_check_risky_orders():
     """Riskli sipariş kontrolü API endpoint'i"""
     try:
@@ -760,7 +760,7 @@ def api_check_risky_orders():
         logger.error(traceback.format_exc())
         return jsonify({"success": False, "error": str(e), "trace": traceback.format_exc()}), 500
 
-@ai_brain_bp.route('/api/ai-brain/ask', methods=['POST'])
+@ai_brain_bp.route('/ai-brain/api/ask', methods=['POST'])
 def api_ask_question():
     """Soru sorma API endpoint'i"""
     try:
