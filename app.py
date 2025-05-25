@@ -84,10 +84,12 @@ from stock_report import stock_report_bp
 from openai_service import openai_bp
 from user_logs import user_logs_bp, log_user_action
 from commission_update_routes import commission_update_bp
-from profit import profit_bp
+from profit import profit_bp # Kâr hesaplama modülü
 from stock_management import stock_management_bp
 from catalog import catalog_bp
 from product_label import product_label_bp
+from product_questions import product_questions_bp
+from stock_intelligence import stock_intelligence_bp
 
 blueprints = [
     order_service_bp,
@@ -116,6 +118,8 @@ blueprints = [
     profit_bp,
     catalog_bp,
     product_label_bp,
+    product_questions_bp,
+    stock_intelligence_bp,
 ]
 
 for bp in blueprints:
