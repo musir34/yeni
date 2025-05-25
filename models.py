@@ -530,3 +530,20 @@ class UserLog(db.Model):
     status_code = db.Column(db.Integer, nullable=True) # İşlem sonucu (örn: HTTP status)
     # İlişki
     user = db.relationship('User', backref=db.backref('logs', lazy='dynamic')) # lazy='dynamic' çok sayıda log varsa performansı artırır
+    
+# Stok Analizi Kayıt Tablosu
+class StockAnalysisRecord(db.Model):
+    __tablename__ = 'stock_analysis_records'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    analysis_name = db.Column(db.String(100), nullable=False)
+    analysis_parameters = db.Column(JSON, nullable=True)  # Analiz parametreleri (top_n, days_forecast, vb.)
+    analysis_results = db.Column(JSON, nullable=True)  # Analiz sonuçları JSON olarak
+    
+    # İlişkiler
+    user = db.relationship('User', backref=db.backref('stock_analyses', lazy=True))
+    
+    def __repr__(self):
+        return f"<StockAnalysisRecord {self.id}: {self.analysis_name}>"

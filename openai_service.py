@@ -14,7 +14,7 @@ load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Model seçimi - Daha hızlı ve ekonomik model olarak o3 mini (gpt-3.5-turbo)
-DEFAULT_MODEL = "gpt-3.5-turbo"  # o3 mini - daha ekonomik ve hızlı
+DEFAULT_MODEL = "gpt-4o"  # Stok tahminlemesin de en iyi model
 
 # Blueprint oluşturma
 openai_bp = Blueprint('openai_bp', __name__)
