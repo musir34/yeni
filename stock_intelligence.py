@@ -25,8 +25,6 @@ from email.mime.application import MIMEApplication
 import io
 import base64
 from PIL import Image, ImageDraw, ImageFont
-import matplotlib.pyplot as plt
-import seaborn as sns
 import uuid
 
 # Logger ayarları
@@ -104,7 +102,12 @@ class StockIntelligence:
         }
         
         # Türkiye tatil günleri
-        self.tr_holidays = holidays.Turkey()
+        try:
+            import holidays
+            self.tr_holidays = holidays.TR()
+        except Exception as e:
+            self.logger.warning(f"Tatil günleri yüklenirken hata: {e}")
+            self.tr_holidays = {}
         
     def combined_orders_query(self):
         """
@@ -373,21 +376,11 @@ class StockIntelligence:
             model.add_seasonality(name='yearly', period=365.25, fourier_order=10)
             model.add_seasonality(name='monthly', period=30.5, fourier_order=5)
             
-            # Türkiye'deki resmi tatil günlerini ekle
+            # Türkiye'deki resmi tatil günlerini ekle (devre dışı bırakıldı)
             try:
-                tr_holidays = holidays.Turkey()
-                today = datetime.now().date()
-                next_year = today.replace(year=today.year + 1)
-                
-                holidays_df = pd.DataFrame([
-                    {'holiday': name, 'ds': date, 'lower_window': -1, 'upper_window': 1}
-                    for date, name in tr_holidays.items()
-                    if today <= date <= next_year
-                ])
-                
-                if not holidays_df.empty:
-                    model.add_country_holidays(country_name='TR')
-                    # model.holidays = pd.concat([model.holidays, holidays_df])
+                # Tatil günleri eklemesi şimdilik devre dışı bırakıldı
+                # İlgili paket kurulu olmadığı için hata oluşuyordu
+                pass
             except Exception as holiday_error:
                 self.logger.warning(f"Tatil günleri eklenirken hata: {holiday_error}")
             
@@ -473,19 +466,8 @@ class StockIntelligence:
                 )
                 
                 # Grafik çizgilerini daha belirgin hale getir
-                for i, trace in enumerate(fig1.data):
-                    if i == 0:  # Gerçek veriler
-                        fig1.data[i].update(
-                            mode='markers+lines',
-                            marker=dict(size=6, color='rgba(31, 119, 180, 0.8)'),
-                            line=dict(width=1, color='rgba(31, 119, 180, 0.6)')
-                        )
-                    elif i == 1:  # Tahminler
-                        fig1.data[i].update(
-                            line=dict(width=3, color='rgba(255, 127, 14, 0.8)')
-                        )
-                    else:  # Güven aralıkları
-                        fig1.data[i].update(fillcolor='rgba(255, 127, 14, 0.2)')
+                # Bu özellik şu an devre dışı bırakıldı - bazı paket sorunları nedeniyle
+                # İleride tekrar etkinleştirilebilir
                 
                 # Bugünü gösteren dikey çizgi ekle
                 today = datetime.now()
@@ -505,16 +487,8 @@ class StockIntelligence:
                 fig2 = plot_components_plotly(model, forecast, figsize=(800, 600))
                 
                 # Alt grafikleri yeniden adlandır ve düzenle
-                for i, annotation in enumerate(fig2.layout.annotations):
-                    if i == 0:
-                        annotation.text = "Uzun Vadeli Trend Analizi"
-                    elif i == 1:
-                        annotation.text = "Haftalık Satış Döngüsü"
-                    elif i == 2 and len(fig2.layout.annotations) > 2:
-                        annotation.text = "Yıllık Satış Döngüsü"
-                    
-                    annotation.font.size = 16
-                    annotation.font.color = "#34495e"
+                # Şimdilik bu işlem atlandı - bazı paket sorunları nedeniyle
+                # İleride eklenebilir
                 
                 fig2.update_layout(
                     title={
