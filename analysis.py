@@ -1,3 +1,4 @@
+# analysis.py
 from flask import Blueprint, render_template, jsonify, request
 from models import db, ReturnOrder, Degisim, Product
 # Çok tablolu sipariş modelleri – lütfen kendi proje dosyanıza göre import edin
@@ -9,12 +10,12 @@ import logging
 
 analysis_bp = Blueprint('analysis', __name__)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-if not logger.handlers:
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+# logger.setLevel(logging.INFO) # Bu satır stock_management.py'deki logger ayarıyla çakışabilir, ana app'de yapılmalı.
+# if not logger.handlers:
+#     handler = logging.StreamHandler()
+#     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+#     handler.setFormatter(formatter)
+#     logger.addHandler(handler)
 
 
 ########################
@@ -105,7 +106,6 @@ def get_daily_sales(session, start_date: datetime, end_date: datetime):
     """
     try:
         ao = all_orders_union(start_date, end_date)
-        # ao.c => (id, order_date, status, amount, quantity, product_main_id, merchant_sku, product_color, product_size)
 
         q = session.query(
             func.date(ao.c.order_date).label('date'),
@@ -124,7 +124,7 @@ def get_daily_sales(session, start_date: datetime, end_date: datetime):
         results = q.all()
         return results
     except Exception as e:
-        logger.error(f"Günlük satış verileri çekilirken hata: {e}")
+        logger.error(f"Günlük satış verileri çekilirken hata: {e}", exc_info=True) # exc_info eklendi
         session.rollback()
         return []
 
@@ -150,21 +150,22 @@ def get_product_sales(session, start_date: datetime, end_date: datetime):
             func.avg(ao.c.amount).label('average_price'),
             func.sum(ao.c.quantity).label('total_quantity')
         ).filter(
-            ao.c.status != 'Cancelled'
+            ao.c.status != 'Cancelled' # İptal edilenleri hariç tut
         ).group_by(
             ao.c.product_main_id,
             ao.c.merchant_sku,
             ao.c.product_color,
             ao.c.product_size
         ).order_by(
-            func.sum(ao.c.amount).desc()
-        ).limit(50)
+            func.sum(ao.c.amount).desc() # En çok ciroya göre sırala
+        ).limit(50) # Performans için ilk 50 ürün
 
         results = q.all()
         logger.info(f"Bulunan ürün satışı sayısı: {len(results)}")
         return results
     except Exception as e:
-        logger.exception("Ürün satış verisi (çok tablo) çekilirken hata oluştu:")
+        logger.exception("Ürün satış verisi (çok tablo) çekilirken hata oluştu:") # exc_info=True yerine .exception
+        session.rollback() # Rollback eklendi
         return []
 
 
@@ -178,7 +179,7 @@ def get_return_stats(session, start_date: datetime, end_date: datetime):
     try:
         from sqlalchemy import inspect
         inspector = inspect(db.engine)
-        if not inspector.has_table('return_orders'):
+        if not inspector.has_table('return_orders'): # Tablo adı doğru mu kontrol et (ReturnOrder modeline göre 'return_orders')
             logger.warning("ReturnOrder tablosu veritabanında bulunamadı")
             return []
 
@@ -190,11 +191,11 @@ def get_return_stats(session, start_date: datetime, end_date: datetime):
         ).filter(
             ReturnOrder.return_date.between(start_date, end_date)
         ).group_by(
-            ReturnOrder.return_reason
+            ReturnOrder.return_reason # coalesce olmadan gruplama, coalesce gösterimde
         ).all()
         return result
     except Exception as e:
-        logger.error(f"İade istatistikleri sorgusu hatası: {e}")
+        logger.error(f"İade istatistikleri sorgusu hatası: {e}", exc_info=True) # exc_info eklendi
         session.rollback()
         return []
 
@@ -209,25 +210,25 @@ def get_exchange_stats(session, start_date: datetime, end_date: datetime):
     try:
         from sqlalchemy import inspect
         inspector = inspect(db.engine)
-        if not inspector.has_table('degisim'):
+        if not inspector.has_table('degisim'): # Tablo adı 'degisim'
             logger.warning("Degisim tablosu veritabanında bulunamadı")
             return []
 
         result = session.query(
             func.coalesce(Degisim.degisim_nedeni, 'Belirtilmemiş').label('degisim_nedeni'),
-            func.count(Degisim.degisim_no).label('exchange_count'),
+            func.count(Degisim.degisim_no).label('exchange_count'), # degisim_no primary key mi?
             func.date(Degisim.degisim_tarihi).label('date')
         ).filter(
             Degisim.degisim_tarihi.between(start_date, end_date)
         ).group_by(
-            Degisim.degisim_nedeni,
+            Degisim.degisim_nedeni, # coalesce olmadan
             func.date(Degisim.degisim_tarihi)
         ).order_by(
             func.date(Degisim.degisim_tarihi).desc()
         ).all()
         return result
     except Exception as e:
-        logger.error(f"Değişim istatistikleri sorgusu hatası: {e}")
+        logger.error(f"Değişim istatistikleri sorgusu hatası: {e}", exc_info=True) # exc_info eklendi
         session.rollback()
         return []
 
@@ -236,14 +237,14 @@ def get_exchange_stats(session, start_date: datetime, end_date: datetime):
 # 6) HTML Sayfası (Opsiyonel)
 ########################
 @analysis_bp.route('/analysis')
-def sales_analysis():
+def sales_analysis(): # Fonksiyon adı analysis.py içindeki route ile eşleşmeli
     """
     Basit bir template render ediyor (analiz dashboard). 
     """
     try:
         return render_template('analysis.html')
     except Exception as e:
-        logger.error(f"Analiz sayfası render hatası: {str(e)}")
+        logger.error(f"Analiz sayfası render hatası: {str(e)}", exc_info=True) # exc_info eklendi
         return render_template('error.html', error=str(e))
 
 
@@ -258,29 +259,32 @@ def get_sales_stats():
     - Ürün bazlı satış (5 tablo union)
     - ReturnOrder (iade) ve Degisim (değişim) tabloları
     """
-    from sqlalchemy import create_engine
+    from sqlalchemy import create_engine # app.py'deki engine'i kullanmak daha iyi olabilir
     from sqlalchemy.orm import sessionmaker
+    # DATABASE_URI app.py'den alınmalı, burada direkt tanımlamak yerine
+    # from app import app # Eğer app objesine erişim varsa
+    # DATABASE_URI = app.config['SQLALCHEMY_DATABASE_URI']
+    # Şimdilik geçici olarak app.py'den aldığını varsayalım
     from app import DATABASE_URI
 
-    # Yeni bir session oluştur
+
     engine = create_engine(DATABASE_URI)
     SessionLocal = sessionmaker(bind=engine)
     session = SessionLocal()
 
-    logger.info("API isteği başladı")
+    logger.info("API isteği başladı (/api/sales-stats)")
     now = datetime.now()
 
-    # Tarih parametrelerini al
     quick_filter = request.args.get('quick_filter')
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
 
     if quick_filter:
         if quick_filter == 'last7':
-            start_date = now - timedelta(days=7)
+            start_date = now - timedelta(days=6) # Son 7 gün, bugünü de dahil eder
             end_date = now
         elif quick_filter == 'last30':
-            start_date = now - timedelta(days=30)
+            start_date = now - timedelta(days=29)
             end_date = now
         elif quick_filter == 'today':
             start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -290,46 +294,52 @@ def get_sales_stats():
             end_date = now
         else:
             logger.info("Geçersiz quick_filter değeri, varsayılan 90 gün kullanılıyor.")
-            days = 90
-            start_date = now - timedelta(days=days)
+            start_date = now - timedelta(days=89)
             end_date = now
     elif start_date_str and end_date_str:
         try:
             start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59) # Bitiş tarihini gün sonu yap
         except ValueError:
-            return jsonify({'success': False, 'error': 'Tarih formatı geçersiz (YYYY-MM-DD).', 'daily_sales': [], 'product_sales': [], 'returns': [], 'exchanges': []})
+            return jsonify({'success': False, 'error': 'Tarih formatı geçersiz (YYYY-MM-DD).'})
     else:
-        days = int(request.args.get('days', 90))
-        start_date = now - timedelta(days=days)
+        days = int(request.args.get('days', 90)) # Varsayılan 90 gün
+        start_date = now - timedelta(days=days-1)
         end_date = now
 
-    logger.info(f"Tarih aralığı: {start_date} - {end_date}")
+    # Başlangıç tarihini gün başı yap
+    start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    logger.info(f"Veri çekilecek tarih aralığı: {start_date.strftime('%Y-%m-%d %H:%M:%S')} - {end_date.strftime('%Y-%m-%d %H:%M:%S')}")
 
     try:
-        # 1) Günlük satış
-        daily_sales = get_daily_sales(session, start_date, end_date)
-
-        # 2) Ürün bazlı satış
-        product_sales = get_product_sales(session, start_date, end_date)
-
-        # 3) Return / Exchange
+        daily_sales_data = get_daily_sales(session, start_date, end_date)
+        product_sales_data = get_product_sales(session, start_date, end_date)
         returns_data = get_return_stats(session, start_date, end_date)
         exchanges_data = get_exchange_stats(session, start_date, end_date)
 
-        # Toplam değerleri hesaplama
-        total_orders = sum(stat.order_count or 0 for stat in daily_sales) if daily_sales else 0
-        total_items_sold = sum(stat.total_quantity or 0 for stat in daily_sales) if daily_sales else 0
-        total_revenue = sum(stat.total_amount or 0 for stat in daily_sales) if daily_sales else 0
+        total_orders = sum(stat.order_count for stat in daily_sales_data if stat.order_count)
+        total_items_sold = sum(stat.total_quantity for stat in daily_sales_data if stat.total_quantity)
+        total_revenue_val = sum(stat.total_amount for stat in daily_sales_data if stat.total_amount)
 
-        # JSON yanıt oluşturma
+        # product_sales için getattr kullanarak güvenli erişim
+        product_sales_list = [{
+            'product_id': getattr(sale, 'product_main_id', None), # Düzeltildi
+            'merchant_sku': getattr(sale, 'merchant_sku', None),
+            'color': getattr(sale, 'color', None),
+            'size': getattr(sale, 'size', None),
+            'sale_count': int(getattr(sale, 'sale_count', 0) or 0),
+            'total_revenue': round(float(getattr(sale, 'total_revenue', 0.0) or 0.0), 2),
+            'average_price': round(float(getattr(sale, 'average_price', 0.0) or 0.0), 2),
+            'total_quantity': int(getattr(sale, 'total_quantity', 0) or 0),
+        } for sale in product_sales_data] if product_sales_data else []
+
+
         response = {
             'success': True,
-
             'total_orders': total_orders,
             'total_items_sold': total_items_sold,
-            'total_revenue': round(float(total_revenue), 2),
-
+            'total_revenue': round(float(total_revenue_val), 2),
             'daily_sales': [{
                 'date': stat.date.strftime('%Y-%m-%d') if stat.date else None,
                 'order_count': int(stat.order_count or 0),
@@ -338,47 +348,28 @@ def get_sales_stats():
                 'average_order_value': round(float(stat.average_order_value or 0), 2),
                 'delivered_count': int(stat.delivered_count or 0),
                 'cancelled_count': int(stat.cancelled_count or 0)
-            } for stat in daily_sales] if daily_sales else [],
-
-            'product_sales': [{
-                'product_id': sale.product_main_id,
-                'merchant_sku': sale.merchant_sku,
-                'color': sale.color,
-                'size': sale.size,
-                'sale_count': int(sale.sale_count or 0),
-                'total_revenue': round(float(sale.total_revenue or 0), 2),
-                'average_price': round(float(sale.average_price or 0), 2),
-                'total_quantity': int(sale.total_quantity or 0),
-            } for sale in product_sales] if product_sales else [],
-
-            # ReturnOrder verisi
+            } for stat in daily_sales_data] if daily_sales_data else [],
+            'product_sales': product_sales_list,
             'returns': [{
                 'return_reason': r.return_reason,
                 'return_count': int(r.return_count or 0),
                 'unique_orders': int(r.unique_orders or 0),
                 'average_refund': round(float(r.average_refund or 0), 2)
             } for r in returns_data] if returns_data else [],
-
-            # Degisim verisi
             'exchanges': [{
                 'degisim_nedeni': x.degisim_nedeni,
                 'exchange_count': int(x.exchange_count or 0),
                 'date': x.date.strftime('%Y-%m-%d') if x.date else None
             } for x in exchanges_data] if exchanges_data else []
         }
-
         return jsonify(response)
 
     except Exception as e:
-        logger.exception(f"API hatası: {str(e)}")
+        logger.exception(f"API hatası (/api/sales-stats): {str(e)}") # exc_info=True yerine .exception
         return jsonify({
-            'success': False,
-            'error': str(e),
-            'daily_sales': [],
-            'product_sales': [],
-            'returns': [],
-            'exchanges': []
+            'success': False, 'error': str(e),
+            'daily_sales': [], 'product_sales': [],
+            'returns': [], 'exchanges': []
         })
-
     finally:
         session.close()
