@@ -50,6 +50,74 @@ class StockIntelligence:
             'warning': 14,    # 14 gün veya daha az stok kaldıysa uyarı
             'healthy': 30,    # 30 gün veya daha fazla stok kaldıysa sağlıklı
         }
+        
+    def combined_orders_query(self):
+        """
+        Tüm sipariş tablolarını birleştiren bir alt sorgu oluşturur
+        (Created, Picking, Shipped, Delivered, Cancelled)
+        """
+        from sqlalchemy import union_all, select, literal_column
+        from sqlalchemy.sql import alias
+        from models import OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
+
+        # Her tablonun ortak alanlarını seçerek birleştirelim
+        created = select([
+            OrderCreated.id,
+            OrderCreated.order_number,
+            OrderCreated.order_date,
+            literal_column("'Created'").label('status'),
+            OrderCreated.quantity,
+            OrderCreated.amount,
+            OrderCreated.product_main_id,
+            OrderCreated.product_color,
+            OrderCreated.product_size,
+            OrderCreated.merchant_sku
+        ]).select_from(OrderCreated)
+        
+        picking = select([
+            OrderPicking.id,
+            OrderPicking.order_number,
+            OrderPicking.order_date,
+            literal_column("'Picking'").label('status'),
+            OrderPicking.quantity,
+            OrderPicking.amount,
+            OrderPicking.product_main_id,
+            OrderPicking.product_color,
+            OrderPicking.product_size,
+            OrderPicking.merchant_sku
+        ]).select_from(OrderPicking)
+        
+        shipped = select([
+            OrderShipped.id,
+            OrderShipped.order_number,
+            OrderShipped.order_date,
+            literal_column("'Shipped'").label('status'),
+            OrderShipped.quantity,
+            OrderShipped.amount,
+            OrderShipped.product_main_id,
+            OrderShipped.product_color,
+            OrderShipped.product_size,
+            OrderShipped.merchant_sku
+        ]).select_from(OrderShipped)
+        
+        delivered = select([
+            OrderDelivered.id,
+            OrderDelivered.order_number,
+            OrderDelivered.order_date,
+            literal_column("'Delivered'").label('status'),
+            OrderDelivered.quantity,
+            OrderDelivered.amount,
+            OrderDelivered.product_main_id,
+            OrderDelivered.product_color,
+            OrderDelivered.product_size,
+            OrderDelivered.merchant_sku
+        ]).select_from(OrderDelivered)
+        
+        # UNION ALL ile hepsini birleştir
+        union_query = union_all(created, picking, shipped, delivered)
+        
+        # Alt sorgu olarak döndür
+        return alias(union_query, name='all_orders')
     
     def get_product_sales_data(self, product_main_id, color=None, size=None, days=90):
         """
@@ -105,6 +173,112 @@ class StockIntelligence:
             self.logger.error(f"Ürün satış verisi alınırken hata: {e}")
             return pd.DataFrame([(datetime.now() - timedelta(days=i), 0) for i in range(days, 0, -1)], columns=['ds', 'y'])
     
+    def get_model_variants_data(self, product_main_id=None, days=7):
+        """
+        Belirli bir model kodu için tüm renk ve beden varyantlarının satış verilerini döndürür
+        Eğer product_main_id None ise, tüm modeller için verileri getirir
+        """
+        try:
+            # Son X gün için tarih hesapla
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
+            
+            # Tüm tablo birleşimi
+            all_orders_query = self.combined_orders_query()
+            
+            # Filtreler
+            filters = [
+                all_orders_query.c.order_date >= start_date,
+                all_orders_query.c.order_date <= end_date
+            ]
+            
+            if product_main_id:
+                filters.append(all_orders_query.c.product_main_id == product_main_id)
+            
+            # Ana sorgu: Model/Renk/Beden bazında satış sayıları
+            sales_by_variant = db.session.query(
+                all_orders_query.c.product_main_id,
+                all_orders_query.c.product_color,
+                all_orders_query.c.product_size,
+                func.sum(all_orders_query.c.quantity).label('total_sales')
+            ).filter(
+                and_(*filters)
+            ).group_by(
+                all_orders_query.c.product_main_id,
+                all_orders_query.c.product_color,
+                all_orders_query.c.product_size
+            ).order_by(
+                all_orders_query.c.product_main_id,
+                all_orders_query.c.product_color,
+                all_orders_query.c.product_size
+            ).all()
+            
+            # Satış verilerini işle
+            results = []
+            for sale in sales_by_variant:
+                # Stok verilerini al
+                stock_query = db.session.query(
+                    func.sum(Product.quantity).label('current_stock')
+                ).filter(
+                    Product.product_main_id == sale.product_main_id,
+                    Product.color == sale.product_color
+                )
+                
+                if sale.product_size:
+                    stock_query = stock_query.filter(Product.size == sale.product_size)
+                    
+                stock = stock_query.scalar() or 0
+                
+                # Günlük ortalama satış
+                daily_avg_sales = sale.total_sales / days
+                
+                # Tahmini tükenme süresi (gün)
+                if daily_avg_sales > 0:
+                    days_until_stockout = stock / daily_avg_sales
+                else:
+                    days_until_stockout = float('inf')  # Sonsuz
+                
+                # Önerilen üretim/stok miktarı
+                # Hedef: 30 günlük stok bulundurma
+                target_days = 30
+                suggested_production = max(0, int((daily_avg_sales * target_days) - stock))
+                
+                # Ürün bilgilerini al
+                product_info = db.session.query(Product).filter(
+                    Product.product_main_id == sale.product_main_id,
+                    Product.color == sale.product_color
+                ).first()
+                
+                product_title = product_info.title if product_info else "Bilinmeyen Ürün"
+                barcode = product_info.barcode if product_info else "-"
+                
+                results.append({
+                    'product_main_id': sale.product_main_id,
+                    'product_title': product_title,
+                    'barcode': barcode,
+                    'color': sale.product_color,
+                    'size': sale.product_size,
+                    'total_sales': sale.total_sales,
+                    'daily_avg_sales': round(daily_avg_sales, 2),
+                    'current_stock': stock,
+                    'days_until_stockout': round(days_until_stockout, 1) if days_until_stockout != float('inf') else "∞",
+                    'suggested_production': suggested_production
+                })
+            
+            # Tüm ürünleri modele göre grupla
+            grouped_results = {}
+            for item in results:
+                model_id = item['product_main_id']
+                if model_id not in grouped_results:
+                    grouped_results[model_id] = []
+                grouped_results[model_id].append(item)
+            
+            return grouped_results
+            
+        except Exception as e:
+            self.logger.error(f"Model varyant verisi alınırken hata: {e}")
+            return {}
+            
     def predict_future_sales(self, product_main_id, color=None, size=None, forecast_days=30, history_days=90):
         """
         Prophet modeli kullanarak gelecek satışları tahmin eder
@@ -571,6 +745,107 @@ def get_stock_health_report_api():
     
     except Exception as e:
         logger.error(f"Stok raporu API hatası: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@stock_intelligence_bp.route('/api/model-variants-analysis')
+# @login_required
+def get_model_variants_analysis_api():
+    """
+    Model koduna göre varyant analizleri API'si
+    """
+    try:
+        # Query parametrelerini al
+        product_main_id = request.args.get('product_main_id')
+        days = request.args.get('days', 7, type=int)  # Varsayılan olarak son 7 gün
+        save_analysis = request.args.get('save_analysis', 'false').lower() == 'true'
+        analysis_name = request.args.get('analysis_name', f'Model Analizi {datetime.now().strftime("%d.%m.%Y %H:%M")}')
+        
+        # Stok zekası sınıfını başlat
+        stock_intelligence = StockIntelligence()
+        
+        # Model varyantlarını analiz et
+        variants_data = stock_intelligence.get_model_variants_data(
+            product_main_id=product_main_id,
+            days=days
+        )
+        
+        # Sonuç formatını düzenle
+        result = {
+            'success': True,
+            'days_analyzed': days,
+            'models': variants_data
+        }
+        
+        # Analizi veritabanına kaydet (eğer istenirse)
+        if save_analysis:
+            try:
+                # Parametre ve sonuçları hazırla
+                analysis_parameters = {
+                    'product_main_id': product_main_id,
+                    'days': days,
+                    'date': datetime.now().isoformat()
+                }
+                
+                # Yeni analiz kaydı oluştur
+                new_analysis = StockAnalysisRecord(
+                    user_id=current_user.id if hasattr(current_user, 'id') else None,
+                    analysis_name=analysis_name,
+                    analysis_parameters=analysis_parameters,
+                    analysis_results=result  # Tüm rapor JSON olarak kaydedilecek
+                )
+                
+                db.session.add(new_analysis)
+                db.session.commit()
+                
+                # Rapora kayıt ID'sini ekle
+                result = {'analysis_id': new_analysis.id, 'data': result}
+                
+            except Exception as save_error:
+                logger.error(f"Analiz kaydedilirken hata: {save_error}")
+                # Kaydedilemese bile raporu döndür
+        
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Model varyant analizi API hatası: {e}")
+        return jsonify({'error': str(e), 'success': False}), 500
+        
+@stock_intelligence_bp.route('/api/models-list')
+# @login_required
+def get_models_list_api():
+    """
+    Sistemdeki tüm model kodlarını listeleyen API
+    """
+    try:
+        # Aktif tüm model kodlarını al
+        models = db.session.query(
+            Product.product_main_id, 
+            Product.title,
+            func.count(Product.id).label('variants_count')
+        ).filter(
+            Product.archived.is_(False),
+            Product.hidden.is_(False)
+        ).group_by(
+            Product.product_main_id,
+            Product.title
+        ).order_by(
+            Product.product_main_id
+        ).all()
+        
+        # Sonuç formatını düzenle
+        result = [
+            {
+                'product_main_id': model.product_main_id,
+                'title': model.title,
+                'variants_count': model.variants_count
+            }
+            for model in models
+        ]
+        
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Model listesi API hatası: {e}")
         return jsonify({'error': str(e)}), 500
 
 @stock_intelligence_bp.route('/api/product-sales-prediction/<product_main_id>')

@@ -545,5 +545,12 @@ class StockAnalysisRecord(db.Model):
     # İlişkiler
     user = db.relationship('User', backref=db.backref('stock_analyses', lazy=True))
     
+    # Constructor for easy initialization
+    def __init__(self, user_id=None, analysis_name=None, analysis_parameters=None, analysis_results=None):
+        self.user_id = user_id
+        self.analysis_name = analysis_name
+        self.analysis_parameters = analysis_parameters
+        self.analysis_results = analysis_results
+    
     def __repr__(self):
         return f"<StockAnalysisRecord {self.id}: {self.analysis_name}>"
