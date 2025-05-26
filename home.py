@@ -38,69 +38,61 @@ def get_home():
 
             # Sipariş detaylarını alalım - boş string veya None kontrolü
             details_json = oldest_order.details
-            products = []
-            
-            if details_json and details_json.strip() != '':
-                logging.info(f"Sipariş detayları mevcut: {details_json[:100]}...")
-                # JSON details varsa parse et
-                try:
-                    if isinstance(details_json, str):
-                        details_list = json.loads(details_json)
-                    elif isinstance(details_json, list):
-                        details_list = details_json
-                    else:
-                        details_list = []
-                    
-                    # JSON'dan ürün bilgilerini çıkar
-                    for detail in details_list:
-                        if isinstance(detail, dict):
-                            product_barcode = detail.get('barcode', '')
-                            image_url = get_product_image(product_barcode)
-                            products.append({
-                                'sku': detail.get('sku', 'Bilinmeyen SKU'),
-                                'barcode': product_barcode,
-                                'product_name': detail.get('productName', 'Ürün Adı Yok'),
-                                'size': detail.get('size', ''),
-                                'color': detail.get('color', ''),
-                                'quantity': detail.get('quantity', 1),
-                                'unit_price': detail.get('unit_price', 0),
-                                'image_url': image_url
-                            })
-                            
-                except json.JSONDecodeError as e:
-                    logging.error(f"JSON çözümleme hatası: {e}")
-                    # JSON parse edilemezse, tek ürün olarak işle
-                    if oldest_order.product_barcode:
-                        product_barcode = oldest_order.product_barcode.split(',')[0].strip()
-                        image_url = get_product_image(product_barcode)
-                        products.append({
-                            'sku': oldest_order.merchant_sku or 'Bilinmeyen SKU',
-                            'barcode': product_barcode,
-                            'product_name': oldest_order.product_name or 'Ürün Adı Yok',
-                            'size': '',
-                            'color': '',
-                            'quantity': 1,
-                            'unit_price': oldest_order.amount or 0,
-                            'image_url': image_url
-                        })
-            else:
-                logging.info("Sipariş detayları boş, temel alanlardan ürün bilgisi alınacak.")
-                # Details boşsa, temel alanlardan ürün bilgisini oluştur
+            if not details_json or details_json.strip() == '':
+                details_list = []
+                logging.info("Sipariş detayları boş, product_barcode alanından ürün bilgisi alınacak.")
+                
+                # Eğer details boşsa, product_barcode alanını kontrol edelim
                 if oldest_order.product_barcode:
-                    # Virgülle ayrılmış barkodları işle
+                    # Virgülle ayrılmış barkodları ayır
                     barcodes = [b.strip() for b in oldest_order.product_barcode.split(',') if b.strip()]
                     for barcode in barcodes:
-                        image_url = get_product_image(barcode)
-                        products.append({
-                            'sku': oldest_order.merchant_sku or 'Bilinmeyen SKU',
-                            'barcode': barcode,
-                            'product_name': oldest_order.product_name or 'Ürün Adı Yok',
-                            'size': '',
-                            'color': '',
-                            'quantity': 1,
-                            'unit_price': oldest_order.amount or 0,
-                            'image_url': image_url
-                        })
+                        details_list.append({'barcode': barcode, 'sku': oldest_order.merchant_sku or 'Bilinmeyen SKU'})
+            else:
+                logging.info(f"Sipariş detayları: {details_json}")
+                # details_json string mi, list mi kontrol edelim
+                if isinstance(details_json, str):
+                    try:
+                        details_list = json.loads(details_json)
+                    except json.JSONDecodeError as e:
+                        logging.error(f"JSON çözümleme hatası: {e}")
+                        details_list = []
+                elif isinstance(details_json, list):
+                    details_list = details_json
+                else:
+                    logging.warning("details alanı beklenmeyen bir tipte.")
+                    details_list = []
+
+            # Barkodları çıkaralım
+            barcodes = []
+            for detail in details_list:
+                if isinstance(detail, dict) and 'barcode' in detail:
+                    barcodes.append(detail['barcode'])
+                elif isinstance(detail, str):
+                    barcodes.append(detail)
+
+            # İlgili ürünleri veritabanından çekelim
+            products_dict = {}
+            if barcodes:
+                products_list = Product.query.filter(Product.barcode.in_(barcodes)).all()
+                products_dict = {product.barcode: product for product in products_list}
+
+            # Görselleri ekleyelim
+            products = []
+            for detail in details_list:
+                if isinstance(detail, dict):
+                    product_barcode = detail.get('barcode', '')
+                    sku = detail.get('sku', oldest_order.merchant_sku or 'Bilinmeyen SKU')
+                else:
+                    product_barcode = str(detail) if detail else ''
+                    sku = oldest_order.merchant_sku or 'Bilinmeyen SKU'
+                
+                image_url = get_product_image(product_barcode)
+                products.append({
+                    'sku': sku,
+                    'barcode': product_barcode,
+                    'image_url': image_url
+                })
 
             # Şablonda kolay erişim için sipariş nesnesine ekliyoruz (opsiyonel)
             oldest_order.products = products
