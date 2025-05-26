@@ -6,9 +6,6 @@ from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Float, Boo
 from datetime import datetime
 import uuid
 from sqlalchemy.dialects.postgresql import JSON
-from datetime import date
-from sqlalchemy.dialects.postgresql import DATE
-
 
 
 # sqlalchemy.dialects.postgresql.UUID zaten PG_UUID olarak import edildi, tekrar gerek yok
@@ -534,19 +531,26 @@ class UserLog(db.Model):
     # İlişki
     user = db.relationship('User', backref=db.backref('logs', lazy='dynamic')) # lazy='dynamic' çok sayıda log varsa performansı artırır
     
-
-class StockForecastResult(db.Model):
-    __tablename__ = "stock_forecast_results"
-
-    id            = db.Column(db.Integer, primary_key=True)
-    date          = db.Column(DATE, index=True, default=db.func.current_date())
-    barcode       = db.Column(db.String, index=True, nullable=False)
-    model_code    = db.Column(db.String, index=True)
-    color         = db.Column(db.String)
-    size          = db.Column(db.String)
-    stock         = db.Column(db.Integer, default=0)
-    daily_sales   = db.Column(db.Float, default=0.0)
-    need_qty      = db.Column(db.Integer, default=0)
-    coverage_days = db.Column(db.Integer, default=0)   # stok / daily_sales
-    risk_level    = db.Column(db.String)               # red / yellow / green
-
+# Stok Analizi Kayıt Tablosu
+class StockAnalysisRecord(db.Model):
+    __tablename__ = 'stock_analysis_records'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    analysis_name = db.Column(db.String(100), nullable=False)
+    analysis_parameters = db.Column(JSON, nullable=True)  # Analiz parametreleri (top_n, days_forecast, vb.)
+    analysis_results = db.Column(JSON, nullable=True)  # Analiz sonuçları JSON olarak
+    
+    # İlişkiler
+    user = db.relationship('User', backref=db.backref('stock_analyses', lazy=True))
+    
+    # Constructor for easy initialization
+    def __init__(self, user_id=None, analysis_name=None, analysis_parameters=None, analysis_results=None):
+        self.user_id = user_id
+        self.analysis_name = analysis_name
+        self.analysis_parameters = analysis_parameters
+        self.analysis_results = analysis_results
+    
+    def __repr__(self):
+        return f"<StockAnalysisRecord {self.id}: {self.analysis_name}>"

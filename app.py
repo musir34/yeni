@@ -88,8 +88,8 @@ from profit import profit_bp # Kâr hesaplama modülü
 from stock_management import stock_management_bp
 from catalog import catalog_bp
 from product_label import product_label_bp
-from intelligent_stock import blueprint as intelligent_stock_bp
-
+from product_questions import product_questions_bp
+from stock_intelligence import stock_intelligence_bp
 
 blueprints = [
     order_service_bp,
@@ -118,7 +118,8 @@ blueprints = [
     profit_bp,
     catalog_bp,
     product_label_bp,
-    intelligent_stock_bp
+    product_questions_bp,
+    stock_intelligence_bp,
 ]
 
 for bp in blueprints:
