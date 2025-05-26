@@ -89,7 +89,6 @@ from stock_management import stock_management_bp
 from catalog import catalog_bp
 from product_label import product_label_bp
 from intelligent_stock import blueprint as intelligent_stock_bp
-from customer_questions import customer_questions_bp
 
 
 blueprints = [
@@ -119,8 +118,7 @@ blueprints = [
     profit_bp,
     catalog_bp,
     product_label_bp,
-    intelligent_stock_bp,
-    customer_questions_bp
+    intelligent_stock_bp
 ]
 
 for bp in blueprints:
