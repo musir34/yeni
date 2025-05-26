@@ -550,37 +550,3 @@ class StockForecastResult(db.Model):
     coverage_days = db.Column(db.Integer, default=0)   # stok / daily_sales
     risk_level    = db.Column(db.String)               # red / yellow / green
 
-
-class CustomerQuestion(db.Model):
-    """
-    Trendyol'dan gelen müşteri sorularını saklamak için model
-    """
-    __tablename__ = 'customer_questions'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    question_id = db.Column(db.Integer, unique=True, nullable=False, index=True)
-    customer_id = db.Column(db.Integer, nullable=True)
-    creation_date = db.Column(db.DateTime, nullable=True, index=True)
-    product_name = db.Column(db.String(255), nullable=True)
-    product_main_id = db.Column(db.String(50), nullable=True, index=True)
-    image_url = db.Column(db.String(255), nullable=True)
-    text = db.Column(db.Text, nullable=False)  # Müşterinin sorusu
-    status = db.Column(db.String(50), nullable=False, index=True)  # WAITING_FOR_ANSWER, WAITING_FOR_APPROVE, ANSWERED, REPORTED, REJECTED
-    user_name = db.Column(db.String(100), nullable=True)
-    web_url = db.Column(db.String(255), nullable=True)
-    
-    # Cevap bilgileri
-    answer_text = db.Column(db.Text, nullable=True)
-    answer_date = db.Column(db.DateTime, nullable=True)
-    
-    # Reddedilen cevap bilgileri
-    rejected_reason = db.Column(db.Text, nullable=True)
-    rejected_date = db.Column(db.DateTime, nullable=True)
-    
-    # Sistem bilgileri
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
-    def __repr__(self):
-        return f"<CustomerQuestion {self.question_id}: {self.status}>"
-
