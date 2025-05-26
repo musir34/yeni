@@ -31,46 +31,65 @@ def get_home():
         oldest_order = OrderCreated.query.order_by(OrderCreated.order_date).first()
 
         if oldest_order:
-            logging.info("En eski 'Created' statüsündeki sipariş işleniyor.")
+            logging.info(f"En eski 'Created' statüsündeki sipariş işleniyor: {oldest_order.order_number}")
 
-            shipping_barcode = oldest_order.shipping_barcode  # Eğer OrderBase içinde shipping_barcode varsa
+            shipping_barcode = oldest_order.shipping_barcode or 'Kargo Kodu Yok'
             remaining_time = calculate_remaining_time(oldest_order.agreed_delivery_date)
 
-            # Sipariş detaylarını alalım
-            details_json = oldest_order.details or '[]'
-            logging.info(f"Sipariş detayları: {details_json}")
-
-            # details_json string mi, list mi kontrol edelim
-            if isinstance(details_json, str):
-                try:
-                    details_list = json.loads(details_json)
-                except json.JSONDecodeError as e:
-                    logging.error(f"JSON çözümleme hatası: {e}")
-                    details_list = []
-            elif isinstance(details_json, list):
-                details_list = details_json
-            else:
-                logging.warning("details alanı beklenmeyen bir tipte.")
+            # Sipariş detaylarını alalım - boş string veya None kontrolü
+            details_json = oldest_order.details
+            if not details_json or details_json.strip() == '':
                 details_list = []
+                logging.info("Sipariş detayları boş, product_barcode alanından ürün bilgisi alınacak.")
+                
+                # Eğer details boşsa, product_barcode alanını kontrol edelim
+                if oldest_order.product_barcode:
+                    # Virgülle ayrılmış barkodları ayır
+                    barcodes = [b.strip() for b in oldest_order.product_barcode.split(',') if b.strip()]
+                    for barcode in barcodes:
+                        details_list.append({'barcode': barcode, 'sku': oldest_order.merchant_sku or 'Bilinmeyen SKU'})
+            else:
+                logging.info(f"Sipariş detayları: {details_json}")
+                # details_json string mi, list mi kontrol edelim
+                if isinstance(details_json, str):
+                    try:
+                        details_list = json.loads(details_json)
+                    except json.JSONDecodeError as e:
+                        logging.error(f"JSON çözümleme hatası: {e}")
+                        details_list = []
+                elif isinstance(details_json, list):
+                    details_list = details_json
+                else:
+                    logging.warning("details alanı beklenmeyen bir tipte.")
+                    details_list = []
 
             # Barkodları çıkaralım
-            barcodes = [detail.get('barcode', '') for detail in details_list if 'barcode' in detail]
+            barcodes = []
+            for detail in details_list:
+                if isinstance(detail, dict) and 'barcode' in detail:
+                    barcodes.append(detail['barcode'])
+                elif isinstance(detail, str):
+                    barcodes.append(detail)
 
             # İlgili ürünleri veritabanından çekelim
+            products_dict = {}
             if barcodes:
                 products_list = Product.query.filter(Product.barcode.in_(barcodes)).all()
                 products_dict = {product.barcode: product for product in products_list}
-            else:
-                products_dict = {}
 
             # Görselleri ekleyelim
             products = []
             for detail in details_list:
-                product_barcode = detail.get('barcode', '')
+                if isinstance(detail, dict):
+                    product_barcode = detail.get('barcode', '')
+                    sku = detail.get('sku', oldest_order.merchant_sku or 'Bilinmeyen SKU')
+                else:
+                    product_barcode = str(detail) if detail else ''
+                    sku = oldest_order.merchant_sku or 'Bilinmeyen SKU'
+                
                 image_url = get_product_image(product_barcode)
-
                 products.append({
-                    'sku': detail.get('sku', 'Bilinmeyen SKU'),
+                    'sku': sku,
                     'barcode': product_barcode,
                     'image_url': image_url
                 })
@@ -83,7 +102,7 @@ def get_home():
                 'order_number': oldest_order.order_number or 'Sipariş Yok',
                 'products': products,
                 'merchant_sku': oldest_order.merchant_sku or 'Bilgi Yok',
-                'shipping_barcode': shipping_barcode if shipping_barcode else 'Kargo Kodu Yok',
+                'shipping_barcode': shipping_barcode,
                 'cargo_provider_name': oldest_order.cargo_provider_name or 'Kargo Firması Yok',
                 'customer_name': oldest_order.customer_name or 'Alıcı Yok',
                 'customer_surname': oldest_order.customer_surname or 'Soyad Yok',
