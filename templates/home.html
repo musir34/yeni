@@ -566,6 +566,39 @@ Sipariş İşlemleri
 
 
 <div class="container">
+
+<!-- Sipariş Bilgileri Kartı -->
+<div class="fixed-header">
+<h4>📦 Sipariş Bilgileri</h4>
+<div class="row">
+<div class="col-md-6">
+<p><strong>Sipariş No:</strong> {{ order_number }}
+<span class="copy-container">
+<span class="clipboard-icon" onclick="copyToClipboard('order-number-text', this)">📋</span>
+<span class="copy-confirmation">✔️</span>
+</span>
+<span id="order-number-text" style="display: none;">{{ order_number }}</span>
+</p>
+<p><strong>Müşteri:</strong> {{ customer_name }} {{ customer_surname }}</p>
+<p><strong>Adres:</strong> {{ customer_address[:50] }}{% if customer_address|length > 50 %}...{% endif %}</p>
+</div>
+<div class="col-md-6">
+<p><strong>Kargo Kodu:</strong> {{ shipping_barcode }}
+<span class="copy-container">
+<span class="clipboard-icon" onclick="copyToClipboard('shipping-barcode-text', this)">📋</span>
+<span class="copy-confirmation">✔️</span>
+</span>
+<span id="shipping-barcode-text" style="display: none;">{{ shipping_barcode }}</span>
+</p>
+<p><strong>Kargo Firması:</strong> {{ cargo_provider_name }}</p>
+<p><strong>Kalan Süre:</strong> {{ remaining_time }}</p>
+{% if order and order.amount %}
+<p><strong>Sipariş Tutarı:</strong> {{ "%.2f"|format(order.amount) }} TL</p>
+{% endif %}
+</div>
+</div>
+</div>
+
 <form method="POST" action="{{ url_for('confirm_packing') }}" id="packingForm" autocomplete="off">
 <input type="hidden" name="order_number" value="{{ order_number }}">
 
@@ -576,6 +609,23 @@ Sipariş İşlemleri
 <img src="{{ product.image_url }}" alt="Ürün Görseli" class="card-img-top product-image">
 <div class="card-body">
 <h5 class="card-title">{{ product.sku }}</h5>
+{% if product.product_name %}
+<p class="card-text">
+<strong>Ürün:</strong> {{ product.product_name[:30] }}{% if product.product_name|length > 30 %}...{% endif %}
+</p>
+{% endif %}
+{% if product.color or product.size %}
+<p class="card-text">
+{% if product.color %}<strong>Renk:</strong> {{ product.color }}{% endif %}
+{% if product.color and product.size %} | {% endif %}
+{% if product.size %}<strong>Beden:</strong> {{ product.size }}{% endif %}
+</p>
+{% endif %}
+{% if product.unit_price %}
+<p class="card-text">
+<strong>Fiyat:</strong> {{ "%.2f"|format(product.unit_price) }} TL
+</p>
+{% endif %}
 <p class="card-text">
 <strong>Miktar:</strong>
 {# Miktar 1'den büyükse highlight-quantity sınıfını ekle #}
