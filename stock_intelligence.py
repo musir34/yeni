@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, flash, session
 from models import db, Product, StockAnalysisRecord, OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
-from sqlalchemy import func, desc, asc, and_, or_, extract, text, select
+from sqlalchemy import func, desc, asc, and_, or_, extract, text
 from datetime import datetime, timedelta, date
 import pandas as pd
 import numpy as np
@@ -58,14 +58,14 @@ class StockIntelligence:
             'holidays_prior_scale': 10.0,  # Tatil günleri ağırlığı
             'changepoint_prior_scale': 0.05,  # Değişim noktaları hassasiyeti
         }
-
+        
         # Stok durum eşikleri
         self.stock_thresholds = {
             'critical': 7,    # 7 gün veya daha az stok kaldıysa kritik
             'warning': 14,    # 14 gün veya daha az stok kaldıysa uyarı
             'healthy': 30,    # 30 gün veya daha fazla stok kaldıysa sağlıklı
         }
-
+        
         # E-posta bildirim ayarları
         self.notification_settings = {
             'enabled': False,  # Varsayılan olarak kapalı
@@ -75,14 +75,14 @@ class StockIntelligence:
             'frequency': 'daily',  # daily, weekly
             'time': '09:00',  # Bildirim saati
         }
-
+        
         # Satış kanalları
         self.sales_channels = [
             'online',  # Online satış
             'store',   # Mağaza satışı
             'wholesale'  # Toptan satış
         ]
-
+        
         # Kategori sınıflandırması
         self.product_categories = {
             'casual': 'Günlük Ayakkabı',
@@ -92,7 +92,7 @@ class StockIntelligence:
             'sandals': 'Sandalet/Terlik',
             'special': 'Özel Tasarım'
         }
-
+        
         # Tarihsel karşılaştırma periyotları
         self.comparison_periods = {
             'last_week': 7,
@@ -100,7 +100,7 @@ class StockIntelligence:
             'last_quarter': 90,
             'last_year': 365
         }
-
+        
         # Türkiye tatil günleri
         try:
             # Holidays paketi farklı ülke kodları kullanabiliyor, TR veya Turkey deniyoruz
@@ -116,18 +116,17 @@ class StockIntelligence:
         except Exception as e:
             self.logger.warning(f"Tatil günleri yüklenirken hata: {e}")
             self.tr_holidays = {}
-
+        
     def combined_orders_query(self):
         """
         Tüm sipariş tablolarını birleştiren bir alt sorgu oluşturur
         (Created, Picking, Shipped, Delivered, Cancelled)
-        Cancelled siparişler genellikle satıştan sayılmaz, bu yüzden hariç tutulabilir veya farklı işlenebilir.
-        Şimdilik Created, Picking, Shipped, Delivered tablolarını birleştirelim.
         """
         from sqlalchemy import union_all, select, literal_column
         from sqlalchemy.sql import alias
-        # models importları dosyanın başında zaten var, burada tekrar gerek yok.
+        from models import OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
 
+        # Her tablonun ortak alanlarını seçerek birleştirelim
         created = select(
             OrderCreated.id,
             OrderCreated.order_number,
@@ -140,7 +139,7 @@ class StockIntelligence:
             OrderCreated.product_size,
             OrderCreated.merchant_sku
         )
-
+        
         picking = select(
             OrderPicking.id,
             OrderPicking.order_number,
@@ -153,7 +152,7 @@ class StockIntelligence:
             OrderPicking.product_size,
             OrderPicking.merchant_sku
         )
-
+        
         shipped = select(
             OrderShipped.id,
             OrderShipped.order_number,
@@ -166,7 +165,7 @@ class StockIntelligence:
             OrderShipped.product_size,
             OrderShipped.merchant_sku
         )
-
+        
         delivered = select(
             OrderDelivered.id,
             OrderDelivered.order_number,
@@ -179,1005 +178,951 @@ class StockIntelligence:
             OrderDelivered.product_size,
             OrderDelivered.merchant_sku
         )
-
+        
         # UNION ALL ile hepsini birleştir
-        # Satış tahmini için genellikle sadece 'Delivered' veya 'Shipped' olanlar dikkate alınır.
-        # Ancak burada tüm hareketleri görmek için birleştiriyoruz.
-        # İptal edilen siparişleri (OrderCancelled) bu birleşime dahil etmiyoruz çünkü satış sayılmazlar.
         union_query = union_all(created, picking, shipped, delivered)
-
+        
+        # Alt sorgu olarak döndür
         return union_query.alias(name='all_orders')
-
+    
     def get_product_sales_data(self, product_main_id, color=None, size=None, days=90):
         """
-        Belirli bir ürün için son {days} gündeki satış verilerini döndürür.
-        Satış olarak 'Delivered' veya 'Shipped' durumundaki siparişler kabul edilebilir.
-        Bu örnekte, combined_orders_query'den gelen ve 'Cancelled' olmayan tüm hareketleri alıp,
-        sonrasında daha spesifik filtreleme yapılabilir ya da direkt bu fonksiyon içinde
-        sadece belirli statüdeki siparişler sorgulanabilir.
-        Şimdilik, tüm birleşik siparişleri (iptaller hariç) kullanıyoruz.
+        Belirli bir ürün için son {days} gündeki satış verilerini döndürür
         """
         try:
+            # Tarih aralığını belirle
             end_date = datetime.now()
             start_date = end_date - timedelta(days=days)
-
-            # combined_orders_query tüm sipariş hareketlerini (iptaller hariç) getirir.
-            # Satış tahmini için genellikle sadece 'Delivered' (teslim edildi) veya 'Shipped' (kargolandı)
-            # siparişler dikkate alınır. Bu fonksiyon bu ayrımı yapmalı.
-            # Şimdilik combined_orders_query'yi kullanıyoruz ama idealde filtrelenmeli.
-
-            # Örnek: Sadece 'Delivered' siparişleri almak için
-            # query = db.session.query(
-            #     func.date_trunc('day', OrderDelivered.order_date).label('date'),
-            #     func.sum(OrderDelivered.quantity).label('sales')
-            # ).filter(OrderDelivered.order_date >= start_date, OrderDelivered.order_date <= end_date)
-
-            # Mevcut combined_orders_query'yi kullanarak devam edelim ve product_main_id, color, size filtrelerini ekleyelim.
-            # Satışları temsil eden durumlar 'Shipped' ve 'Delivered' olarak kabul edilebilir.
-
-            all_sales_query = select(
-                OrderDelivered.order_date.label('order_date'),
-                OrderDelivered.quantity.label('quantity'),
-                OrderDelivered.product_main_id.label('product_main_id'),
-                OrderDelivered.product_color.label('product_color'),
-                OrderDelivered.product_size.label('product_size')
-            ).where(
-                OrderDelivered.order_date.between(start_date, end_date)
-            ).union_all(
-                select(
-                    OrderShipped.order_date,
-                    OrderShipped.quantity,
-                    OrderShipped.product_main_id,
-                    OrderShipped.product_color,
-                    OrderShipped.product_size
-                ).where(
-                    OrderShipped.order_date.between(start_date, end_date)
-                )
-            ).alias('actual_sales')
-
-
-            filters = [all_sales_query.c.product_main_id.contains(product_main_id)]
+            
+            # Tüm satış tablolarını birleştiren bir sorgu (orders_* tabloları)
+            # Burada "all_orders_union" fonksiyonunu kullanacağız
+            from analysis import all_orders_union
+            
+            # Birleştirilmiş sorguyu al
+            all_orders_query = all_orders_union(start_date, end_date)
+            
+            # Ürün filtresi (Temel filtreleme: model kodu)
+            filters = [all_orders_query.c.product_main_id.contains(product_main_id)]
+            
+            # Renk filtresi (opsiyonel)
             if color:
-                filters.append(all_sales_query.c.product_color.contains(color))
+                filters.append(all_orders_query.c.product_color.contains(color))
+            
+            # Beden filtresi (opsiyonel)
             if size:
-                filters.append(all_sales_query.c.product_size.contains(size))
-
-            sales_by_date_query = db.session.query(
-                func.date_trunc('day', all_sales_query.c.order_date).label('date'),
-                func.sum(all_sales_query.c.quantity).label('sales')
-            ).select_from(all_sales_query).filter(
+                filters.append(all_orders_query.c.product_size.contains(size))
+            
+            # Ana sorgu: Günlük satış sayıları
+            sales_by_date = db.session.query(
+                func.date_trunc('day', all_orders_query.c.order_date).label('date'),
+                func.sum(all_orders_query.c.quantity).label('sales')
+            ).filter(
                 and_(*filters)
             ).group_by(
-                func.date_trunc('day', all_sales_query.c.order_date)
+                func.date_trunc('day', all_orders_query.c.order_date)
             ).order_by(
-                func.date_trunc('day', all_sales_query.c.order_date)
-            )
-
-            sales_by_date = sales_by_date_query.all()
-
+                func.date_trunc('day', all_orders_query.c.order_date)
+            ).all()
+            
+            # Sonuçları pandas DataFrame'e dönüştür
             df = pd.DataFrame([(d.date, float(d.sales) if d.sales is not None else 0) for d in sales_by_date], columns=['ds', 'y'])
-
-            # Tarih aralığını datetime objeleriyle oluştur
-            date_range_pd = pd.date_range(start=start_date.date(), end=end_date.date(), freq='D')
-            date_df = pd.DataFrame({'ds': date_range_pd})
-
-            # df'teki 'ds' sütununu da datetime objesine çevir (eğer değilse)
-            if not pd.api.types.is_datetime64_any_dtype(df['ds']):
-                 df['ds'] = pd.to_datetime(df['ds'])
-
+            
+            # Eksik günleri doldur (satış olmayan günler)
+            date_range = pd.date_range(start=start_date, end=end_date, freq='D')
+            date_df = pd.DataFrame({'ds': date_range})
             df = pd.merge(date_df, df, on='ds', how='left')
-            df['y'] = df['y'].fillna(0).astype(float)
-
+            df['y'] = df['y'].fillna(0).astype(float)  # Sayısal tip olarak zorla
+            
             return df
-
+        
         except Exception as e:
             self.logger.error(f"Ürün satış verisi alınırken hata: {e}")
-            # Hata durumunda boş DataFrame yerine, beklenen formatta boş veri döndür
-            date_range_pd = pd.date_range(start=(datetime.now() - timedelta(days=days)).date(), end=datetime.now().date(), freq='D')
-            return pd.DataFrame({'ds': date_range_pd, 'y': 0})
-
+            return pd.DataFrame([(datetime.now() - timedelta(days=i), 0) for i in range(days, 0, -1)], columns=['ds', 'y'])
+    
     def get_model_variants_data(self, product_main_id=None, days=7):
         """
         Belirli bir model kodu için tüm renk ve beden varyantlarının satış verilerini döndürür
-        Eğer product_main_id None ise, tüm modeller için verileri getirir (bu durumda çok veri olabilir, dikkatli kullanılmalı)
-        Sonuçları hiyerarşik yapıda model -> renk -> beden şeklinde döndürür
-        Satışlar 'Delivered' veya 'Shipped' siparişlerden hesaplanır.
+        Eğer product_main_id None ise, tüm modeller için verileri getirir
         """
         try:
+            # Son X gün için tarih hesapla
             end_date = datetime.now()
             start_date = end_date - timedelta(days=days)
-
-            # Satışları temsil eden sorgu (Delivered ve Shipped)
-            sales_query = select(
-                OrderDelivered.product_main_id,
-                OrderDelivered.product_color,
-                OrderDelivered.product_size,
-                OrderDelivered.order_date,
-                OrderDelivered.quantity
-            ).where(OrderDelivered.order_date.between(start_date, end_date)
-            ).union_all(
-                select(
-                    OrderShipped.product_main_id,
-                    OrderShipped.product_color,
-                    OrderShipped.product_size,
-                    OrderShipped.order_date,
-                    OrderShipped.quantity
-                ).where(OrderShipped.order_date.between(start_date, end_date))
-            ).alias('sales_data')
-
-            filters = []
+            
+            # Tüm tablo birleşimi
+            all_orders_query = self.combined_orders_query()
+            
+            # Filtreler
+            filters = [
+                all_orders_query.c.order_date >= start_date,
+                all_orders_query.c.order_date <= end_date
+            ]
+            
             if product_main_id:
-                filters.append(sales_query.c.product_main_id == product_main_id)
-
-            sales_by_variant_query = db.session.query(
-                sales_query.c.product_main_id,
-                sales_query.c.product_color,
-                sales_query.c.product_size,
-                func.sum(sales_query.c.quantity).label('total_sales')
-            ).select_from(sales_query).filter(
-                and_(*filters) # Filtreleri uygula
+                filters.append(all_orders_query.c.product_main_id == product_main_id)
+            
+            # Ana sorgu: Model/Renk/Beden bazında satış sayıları
+            sales_by_variant = db.session.query(
+                all_orders_query.c.product_main_id,
+                all_orders_query.c.product_color,
+                all_orders_query.c.product_size,
+                func.sum(all_orders_query.c.quantity).label('total_sales')
+            ).filter(
+                and_(*filters)
             ).group_by(
-                sales_query.c.product_main_id,
-                sales_query.c.product_color,
-                sales_query.c.product_size
+                all_orders_query.c.product_main_id,
+                all_orders_query.c.product_color,
+                all_orders_query.c.product_size
             ).order_by(
-                sales_query.c.product_main_id,
-                sales_query.c.product_color,
-                sales_query.c.product_size
-            )
-
-            sales_by_variant = sales_by_variant_query.all()
-
-            result = []
-
-            if product_main_id and not sales_by_variant:
-                self.logger.info(f"Model {product_main_id} için son {days} günde satış verisi bulunamadı, mevcut stoklarla listeleniyor.")
-                products_db = Product.query.filter(
+                all_orders_query.c.product_main_id,
+                all_orders_query.c.product_color,
+                all_orders_query.c.product_size
+            ).all()
+            
+            # Satış verilerini işle
+            results = []
+            for sale in sales_by_variant:
+                # Alanları SQLAlchemy sonuç seti dışına çıkar
+                product_main_id = sale[0]  # product_main_id
+                product_color = sale[1]    # product_color
+                product_size = sale[2]     # product_size
+                total_sales = sale[3]      # total_sales
+                
+                # Stok verilerini al
+                stock_query = db.session.query(
+                    func.sum(Product.quantity).label('current_stock')
+                ).filter(
                     Product.product_main_id == product_main_id,
-                    Product.archived.is_(False)
-                ).all()
-
-                if not products_db:
-                    return []
-
-                model_info_data = {
-                    'model_id': product_main_id,
-                    'title': products_db[0].title if products_db else product_main_id,
-                    'colors': []
-                }
-
-                colors_data_map = {}
-                for p_item in products_db:
-                    if p_item.color not in colors_data_map:
-                        colors_data_map[p_item.color] = {
-                            'color': p_item.color,
-                            'total_sales': 0,
-                            'current_stock': 0,
-                            'image': p_item.images, # İlk bulduğu ürünün resmini alır
-                            'sizes': [],
-                            'daily_avg_sales': 0,
-                            'days_until_stockout': "∞",
-                            'suggested_production': 0
-                        }
-
-                    colors_data_map[p_item.color]['current_stock'] += (p_item.quantity or 0)
-                    colors_data_map[p_item.color]['sizes'].append({
-                        'size': p_item.size,
-                        'barcode': p_item.barcode,
-                        'total_sales': 0,
-                        'daily_avg_sales': 0,
-                        'current_stock': (p_item.quantity or 0),
-                        'days_until_stockout': "∞",
-                        'suggested_production': max(0, int((0 * 30) - (p_item.quantity or 0))) # 0 satışa göre öneri
-                    })
-
-                for color_name_key, color_val_data in colors_data_map.items():
-                    color_val_data['sizes'] = sorted(color_val_data['sizes'], key=lambda x: float(x['size']) if x['size'] and x['size'].isdigit() else 0)
-                    model_info_data['colors'].append(color_val_data)
-
-                model_info_data['colors'] = sorted(model_info_data['colors'], key=lambda x: x['color'])
-                return [model_info_data]
-
-            models_map = {}
-            for sale_item in sales_by_variant:
-                model_id_val = sale_item[0]
-                color_val = sale_item[1]
-                size_val = sale_item[2]
-                total_sales_val = float(sale_item[3]) if sale_item[3] is not None else 0
-
-                if model_id_val not in models_map:
-                    product_ref = Product.query.filter(Product.product_main_id == model_id_val).first()
-                    models_map[model_id_val] = {
-                        'model_id': model_id_val,
-                        'title': product_ref.title if product_ref else model_id_val,
-                        'colors': {}
-                    }
-
-                if color_val not in models_map[model_id_val]['colors']:
-                    color_stock_val = db.session.query(func.sum(Product.quantity)).filter(
-                        Product.product_main_id == model_id_val,
-                        Product.color == color_val,
-                        Product.archived.is_(False)
-                    ).scalar() or 0
-                    product_color_ref = Product.query.filter(Product.product_main_id == model_id_val, Product.color == color_val).first()
-                    models_map[model_id_val]['colors'][color_val] = {
-                        'color': color_val,
-                        'total_sales': 0,
-                        'current_stock': int(color_stock_val),
-                        'image': product_color_ref.images if product_color_ref else "",
-                        'sizes': {}
-                    }
-
-                size_stock_val = db.session.query(func.sum(Product.quantity)).filter(
-                    Product.product_main_id == model_id_val,
-                    Product.color == color_val,
-                    Product.size == size_val,
-                    Product.archived.is_(False)
-                ).scalar() or 0
-
-                daily_avg_sales_val = total_sales_val / days if days > 0 else 0
-                days_until_stockout_val = (size_stock_val / daily_avg_sales_val) if daily_avg_sales_val > 0 else float('inf')
-                target_days_val = 30
-                suggested_production_val = max(0, int((daily_avg_sales_val * target_days_val) - size_stock_val))
-
-                size_product_ref = Product.query.filter(
-                    Product.product_main_id == model_id_val,
-                    Product.color == color_val,
-                    Product.size == size_val
+                    Product.color == product_color
+                )
+                
+                if product_size:
+                    stock_query = stock_query.filter(Product.size == product_size)
+                    
+                stock = stock_query.scalar() or 0
+                
+                # Günlük ortalama satış
+                daily_avg_sales = total_sales / days
+                
+                # Tahmini tükenme süresi (gün)
+                if daily_avg_sales > 0:
+                    days_until_stockout = stock / daily_avg_sales
+                else:
+                    days_until_stockout = float('inf')  # Sonsuz
+                
+                # Önerilen üretim/stok miktarı
+                # Hedef: 30 günlük stok bulundurma
+                target_days = 30
+                suggested_production = max(0, int((daily_avg_sales * target_days) - stock))
+                
+                # Ürün bilgilerini al
+                product_info = db.session.query(Product).filter(
+                    Product.product_main_id == product_main_id,
+                    Product.color == product_color
                 ).first()
-
-                models_map[model_id_val]['colors'][color_val]['sizes'][size_val] = {
-                    'size': size_val,
-                    'barcode': size_product_ref.barcode if size_product_ref else "-",
-                    'total_sales': total_sales_val,
-                    'daily_avg_sales': round(daily_avg_sales_val, 2),
-                    'current_stock': int(size_stock_val),
-                    'days_until_stockout': round(days_until_stockout_val, 1) if days_until_stockout_val != float('inf') else "∞",
-                    'suggested_production': suggested_production_val
-                }
-                models_map[model_id_val]['colors'][color_val]['total_sales'] += total_sales_val
-
-            for model_id_key, model_item_data in models_map.items():
-                colors_list_data = []
-                for color_name_key, color_item_data in model_item_data['colors'].items():
-                    sizes_list_data = sorted(list(color_item_data['sizes'].values()), key=lambda x: float(x['size']) if x['size'] and x['size'].isdigit() else 0)
-
-                    color_stock_total = color_item_data['current_stock']
-                    color_sales_total = color_item_data['total_sales']
-                    color_daily_avg_sales = (color_sales_total / days) if days > 0 else 0
-                    color_days_until_stockout = (color_stock_total / color_daily_avg_sales) if color_daily_avg_sales > 0 else float('inf')
-                    color_suggested_production = max(0, int((color_daily_avg_sales * 30) - color_stock_total))
-
-                    color_item_data['sizes'] = sizes_list_data
-                    color_item_data['daily_avg_sales'] = round(color_daily_avg_sales, 2)
-                    color_item_data['days_until_stockout'] = round(color_days_until_stockout, 1) if color_days_until_stockout != float('inf') else "∞"
-                    color_item_data['suggested_production'] = color_suggested_production
-                    colors_list_data.append(color_item_data)
-
-                model_item_data['colors'] = sorted(colors_list_data, key=lambda x: x['color'])
-                result.append(model_item_data)
-
-            return result
-
+                
+                product_title = product_info.title if product_info else "Bilinmeyen Ürün"
+                barcode = product_info.barcode if product_info else "-"
+                
+                results.append({
+                    'product_main_id': product_main_id,
+                    'product_title': product_title,
+                    'barcode': barcode,
+                    'color': product_color,
+                    'size': product_size,
+                    'total_sales': total_sales,
+                    'daily_avg_sales': round(daily_avg_sales, 2),
+                    'current_stock': stock,
+                    'days_until_stockout': round(days_until_stockout, 1) if days_until_stockout != float('inf') else "∞",
+                    'suggested_production': suggested_production
+                })
+            
+            # Tüm ürünleri modele göre grupla
+            grouped_results = {}
+            for item in results:
+                model_id = item['product_main_id']
+                if model_id not in grouped_results:
+                    grouped_results[model_id] = []
+                grouped_results[model_id].append(item)
+            
+            return grouped_results
+            
         except Exception as e:
             self.logger.error(f"Model varyant verisi alınırken hata: {e}")
-            import traceback
-            self.logger.error(traceback.format_exc())
-            return []
-
+            return {}
+            
     def predict_future_sales(self, product_main_id, color=None, size=None, forecast_days=30, history_days=90):
         """
         Prophet modeli kullanarak gelecek satışları tahmin eder
         Mevsimsellik, tatil günleri ve özel günleri dikkate alır
         """
         try:
+            # Geçmiş satış verilerini al
             sales_df = self.get_product_sales_data(product_main_id, color, size, days=history_days)
-
-            if len(sales_df) < 7 or sales_df['y'].sum() == 0 : # En az 7 günlük veri ve en az 1 satış
-                self.logger.warning(f"Yetersiz satış verisi: {product_main_id}, color: {color}, size: {size}. Satış sayısı: {sales_df['y'].sum()}, Veri noktası: {len(sales_df)}")
-                # Yetersiz veri durumunda grafikler için boş veya sıfır tahmin döndür
-                blank_future = pd.date_range(start=sales_df['ds'].max() + timedelta(days=1) if not sales_df.empty else datetime.now(), periods=forecast_days, freq='D')
-                blank_forecast_df = pd.DataFrame({'ds': blank_future, 'yhat': 0, 'yhat_lower': 0, 'yhat_upper': 0})
-
-                # Tarih formatlarını düzenle
-                sales_df['ds'] = pd.to_datetime(sales_df['ds']).dt.strftime('%Y-%m-%d')
-                blank_forecast_df['ds'] = pd.to_datetime(blank_forecast_df['ds']).dt.strftime('%Y-%m-%d')
-
+            
+            # Yeterli veri var mı kontrol et
+            if len(sales_df) < 7:  # En az 1 haftalık veri
                 return {
-                    'success': True, # Başarılı ama tahmin yok gibi işaretleyebiliriz veya success: False
-                    'message': 'Yeterli satış verisi bulunamadı veya hiç satış yapılmamış. Tahmin yapılamadı.',
-                    'forecast': blank_forecast_df.to_dict('records'),
-                    'sales_history': sales_df.to_dict('records'),
-                    'forecast_plot': go.Figure().to_json(), # Boş grafik
-                    'components_plot': go.Figure().to_json(), # Boş grafik
-                    'average_daily_sales': 0,
-                    'forecast_total': 0,
-                    'forecast_days': forecast_days
+                    'success': False,
+                    'error': 'Yeterli satış verisi bulunamadı. Tahmin için en az 7 günlük veri gereklidir.'
                 }
-
+            
+            # Veri tiplerini kontrol et ve düzelt
+            # y sütununun sayısal olduğundan emin ol
             sales_df['y'] = pd.to_numeric(sales_df['y'], errors='coerce').fillna(0)
-
+            
+            # Prophet modelini oluştur ve eğit - gelişmiş ayarlar ile
             model = Prophet(
                 interval_width=self.prediction_settings['confidence_interval'],
                 seasonality_mode=self.prediction_settings['seasonality_mode'],
                 seasonality_prior_scale=self.prediction_settings['seasonality_prior_scale'],
                 changepoint_prior_scale=self.prediction_settings['changepoint_prior_scale']
             )
-
-            model.add_seasonality(name='weekly', period=7, fourier_order=3) # Basitleştirilmiş fourier order
-            if history_days > 180 : # Yıllık mevsimsellik için daha fazla veri gerekebilir
-                 model.add_seasonality(name='yearly', period=365.25, fourier_order=5) # Basitleştirilmiş
-            if history_days > 60: # Aylık için
-                 model.add_seasonality(name='monthly', period=30.5, fourier_order=3) # Basitleştirilmiş
-
+            
+            # Mevsimsellik ayarlarını manuel olarak ekleyelim
+            model.add_seasonality(name='weekly', period=7, fourier_order=5)
+            model.add_seasonality(name='yearly', period=365.25, fourier_order=10)
+            model.add_seasonality(name='monthly', period=30.5, fourier_order=5)
+            
+            # Türkiye'deki resmi tatil günlerini ekle
             try:
-                if self.tr_holidays: # Eğer tatil günleri yüklendiyse
-                    # Prophet için tatil günlerini DataFrame formatına getir
-                    current_year = datetime.now().year
-                    years_for_holidays = list(range(current_year - 2, current_year + 3)) # Son 2 yıl ve gelecek 2 yıl + bu yıl
-
-                    holiday_events = []
-                    for year_to_check in years_for_holidays:
-                        for date_val, name_val in sorted(holidays.Turkey(years=year_to_check).items()):
-                            holiday_events.append({'holiday': name_val, 'ds': pd.to_datetime(date_val)})
-
-                    if holiday_events:
-                        holidays_df = pd.DataFrame(holiday_events)
-                        model.add_regressor('holidays_effect', prior_scale=self.prediction_settings['holidays_prior_scale'], mode='additive')
-                        # sales_df'e tatil günlerini ekle (0/1 olarak)
-                        sales_df['holidays_effect'] = 0
-                        for hol_date in holidays_df['ds']:
-                            sales_df.loc[sales_df['ds'].dt.date == hol_date.date(), 'holidays_effect'] = 1
-
+                # Tatil günleri eklemesi
+                model.add_country_holidays(country_name='TR')
             except Exception as holiday_error:
-                self.logger.warning(f"Tatil günleri Prophet'e eklenirken hata: {holiday_error}")
-
-            # Özel günler (manuel)
-            special_events_list = [
-                {'holiday': 'OkulAcilisi', 'ds': pd.to_datetime(f'{datetime.now().year}-09-15'), 'lower_window': -15, 'upper_window': 5},
-                {'holiday': 'KisSezonuBaslangic', 'ds': pd.to_datetime(f'{datetime.now().year}-11-01'), 'lower_window': -15, 'upper_window': 30},
-                {'holiday': 'YazSezonuBaslangic', 'ds': pd.to_datetime(f'{datetime.now().year}-05-01'), 'lower_window': -15, 'upper_window': 30},
-            ]
-            # Gelecek yıllar için de eklenebilir
-            for i in range(1, 3): # Gelecek 2 yıl için
-                special_events_list.extend([
-                    {'holiday': 'OkulAcilisi', 'ds': pd.to_datetime(f'{datetime.now().year+i}-09-15'), 'lower_window': -15, 'upper_window': 5},
-                    {'holiday': 'KisSezonuBaslangic', 'ds': pd.to_datetime(f'{datetime.now().year+i}-11-01'), 'lower_window': -15, 'upper_window': 30},
-                    {'holiday': 'YazSezonuBaslangic', 'ds': pd.to_datetime(f'{datetime.now().year+i}-05-01'), 'lower_window': -15, 'upper_window': 30},
-                ])
-
-            events_df = pd.DataFrame(special_events_list)
-            # events_df'teki ds sütununu datetime yap
-            events_df['ds'] = pd.to_datetime(events_df['ds'])
-
-            # Prophet'in beklediği tatil formatı: 'holiday' ve 'ds' sütunları olan bir DataFrame
-            # Eğer model.holidays zaten varsa birleştir, yoksa ata
-            if hasattr(model, 'holidays') and model.holidays is not None:
-                 model.holidays = pd.concat([model.holidays, events_df])
-            else:
-                 model.holidays = events_df
-
-
-            model.fit(sales_df.copy()) # .copy() ile orijinal df'i koru
-
+                self.logger.warning(f"Tatil günleri eklenirken hata: {holiday_error}")
+            
+            # Özel günleri ve sezonal etkileri ekle
+            try:
+                special_events = [
+                    # Okul açılış sezonu
+                    {'holiday': 'OkulAcilisi', 'ds': '2024-09-15', 'lower_window': -15, 'upper_window': 5},
+                    {'holiday': 'OkulAcilisi', 'ds': '2025-09-15', 'lower_window': -15, 'upper_window': 5},
+                    
+                    # Kış sezonu başlangıcı
+                    {'holiday': 'KisSezonuBaslangic', 'ds': '2024-11-01', 'lower_window': -15, 'upper_window': 30},
+                    {'holiday': 'KisSezonuBaslangic', 'ds': '2025-11-01', 'lower_window': -15, 'upper_window': 30},
+                    
+                    # Yaz sezonu başlangıcı
+                    {'holiday': 'YazSezonuBaslangic', 'ds': '2024-05-01', 'lower_window': -15, 'upper_window': 30},
+                    {'holiday': 'YazSezonuBaslangic', 'ds': '2025-05-01', 'lower_window': -15, 'upper_window': 30},
+                    
+                    # İndirim dönemleri
+                    {'holiday': 'YazIndirimi', 'ds': '2024-07-01', 'lower_window': 0, 'upper_window': 30},
+                    {'holiday': 'YazIndirimi', 'ds': '2025-07-01', 'lower_window': 0, 'upper_window': 30},
+                    {'holiday': 'KisIndirimi', 'ds': '2025-01-15', 'lower_window': 0, 'upper_window': 30},
+                    {'holiday': 'KisIndirimi', 'ds': '2026-01-15', 'lower_window': 0, 'upper_window': 30},
+                ]
+                
+                events_df = pd.DataFrame(special_events)
+                model.holidays = pd.concat([model.holidays, events_df])
+            except Exception as events_error:
+                self.logger.warning(f"Özel günler eklenirken hata: {events_error}")
+            
+            # Çok düşük satışlar veya sıfır satışlar için özel ayarlar
+            if sales_df['y'].mean() < 1:
+                model = Prophet(
+                    interval_width=self.prediction_settings['confidence_interval'],
+                    seasonality_mode='additive'
+                )
+                # Düşük satışlar için daha basit model kullanalım
+            
+            # Modeli eğit - derin kopya ile verinin güvenliğini sağla
+            model.fit(sales_df.copy())
+            
+            # Tahmin için future DataFrame oluştur
             future = model.make_future_dataframe(periods=forecast_days)
-
-            # Eğer tatil etkisini regressor olarak eklediysek, future df'e de eklemeliyiz.
-            if 'holidays_effect' in sales_df.columns:
-                future['holidays_effect'] = 0
-                if 'holidays_df' in locals() and not holidays_df.empty:
-                     for hol_date_fut in holidays_df['ds']:
-                        future.loc[future['ds'].dt.date == hol_date_fut.date(), 'holidays_effect'] = 1
-
+            
+            # Tahmin doğruluğunu hesapla (train-test ayırarak)
+            # Tahmin doğruluk metrikleri için yardımcı metod henüz eklenmediğinden, şimdilik basit bir hesaplama yapalım
+            accuracy_metrics = {
+                'mae': None,
+                'mape': None,
+                'rmse': None,
+                'accuracy': None
+            }
+            
+            # Tahmin yap
             forecast = model.predict(future)
-
+            
+            # Tarih formatlarını düzenleme - bu işlem tahmin bittikten sonra yapılmalı
+            # Önce bir kopyasını alıp veri tipi dönüşümleri yapalım
             forecast_display = forecast.copy()
             sales_df_display = sales_df.copy()
-
-            # Tarihleri string'e çevirmeden önce datetime objesi olduklarından emin ol
-            forecast_display['ds'] = pd.to_datetime(forecast_display['ds']).dt.strftime('%Y-%m-%d')
-            sales_df_display['ds'] = pd.to_datetime(sales_df_display['ds']).dt.strftime('%Y-%m-%d')
-
+            
+            forecast_display['ds'] = forecast_display['ds'].dt.strftime('%Y-%m-%d')
+            sales_df_display['ds'] = sales_df_display['ds'].dt.strftime('%Y-%m-%d')
+            
             try:
-                fig1 = plot_plotly(model, forecast, figsize=(750, 500)) # Boyut ayarı
+                # Gelişmiş tahmin grafiği oluştur
+                fig1 = plot_plotly(model, forecast, figsize=(800, 550))
                 fig1.update_layout(
-                    title={'text': f'{product_main_id} Ürün Satış Tahmini', 'font': {'size': 18}},
-                    xaxis_title='Tarih', yaxis_title='Satış Miktarı',
-                    template='plotly_white', margin=dict(t=50, l=50, r=30, b=50)
+                    title={
+                        'text': f'{product_main_id} Ürün Satış Tahmini ve Trend Analizi',
+                        'font': {'size': 22, 'color': '#2c3e50', 'family': 'Arial'}
+                    },
+                    xaxis_title='Tarih',
+                    yaxis_title='Satış Miktarı',
+                    legend_title='Veri Türü',
+                    template='plotly_white',
+                    hoverlabel=dict(
+                        bgcolor="white",
+                        font_size=14,
+                        font_family="Arial"
+                    ),
+                    margin=dict(t=80, l=60, r=40, b=60)
                 )
-                today_val = datetime.now()
-                fig1.add_shape(type="line", line=dict(dash="dash", width=1, color="red"),
-                               x0=today_val, y0=0, x1=today_val, y1=1, yref="paper")
-                fig1.add_annotation(x=today_val, y=1, yref="paper", text="Bugün", showarrow=False, yanchor="bottom", font=dict(color="red", size=10))
-
-                fig2 = plot_components_plotly(model, forecast, figsize=(750, 550)) # Boyut ayarı
+                
+                # Grafik çizgilerini daha belirgin hale getir
+                # Bu özellik şu an devre dışı bırakıldı - bazı paket sorunları nedeniyle
+                # İleride tekrar etkinleştirilebilir
+                
+                # Bugünü gösteren dikey çizgi ekle
+                today = datetime.now()
+                fig1.add_shape(
+                    type="line", line=dict(dash="dash", width=2, color="red"),
+                    x0=today, y0=0, x1=today, 
+                    y1=1, yref="paper"
+                )
+                fig1.add_annotation(
+                    x=today, y=1, yref="paper",
+                    text="Bugün", showarrow=True,
+                    arrowhead=2, arrowcolor="red", arrowwidth=2,
+                    font=dict(color="red", size=12)
+                )
+                
+                # Gelişmiş bileşenler grafiği oluştur
+                fig2 = plot_components_plotly(model, forecast, figsize=(800, 600))
+                
+                # Alt grafikleri yeniden adlandır ve düzenle
+                # Şimdilik bu işlem atlandı - bazı paket sorunları nedeniyle
+                # İleride eklenebilir
+                
                 fig2.update_layout(
-                    title={'text': f'{product_main_id} Satış Bileşenleri', 'font': {'size': 18}},
-                    template='plotly_white', height=600, margin=dict(t=50, l=50, r=30, b=50)
+                    title={
+                        'text': f'{product_main_id} Satış Tahmin Bileşenleri ve Döngü Analizi',
+                        'font': {'size': 22, 'color': '#2c3e50', 'family': 'Arial'}
+                    },
+                    template='plotly_white',
+                    hoverlabel=dict(
+                        bgcolor="white",
+                        font_size=14,
+                        font_family="Arial"
+                    ),
+                    height=700  # Daha büyük grafik
                 )
-                # Alt grafik başlıklarını Türkçeleştirme (isteğe bağlı, daha karmaşık olabilir)
-                # Örnek: fig2.layout.annotations[0].text = 'Trend' (indekslere dikkat)
-
-                avg_daily_sales_val = float(sales_df['y'].mean()) if not pd.isna(sales_df['y'].mean()) else 0.0
-                # Tahmin edilen satışlar negatif olmamalı
-                forecast_total_val = forecast.iloc[-forecast_days:]['yhat'].apply(lambda x: max(0, x)).sum()
-                forecast_total_val = float(forecast_total_val) if not pd.isna(forecast_total_val) else 0.0
-
+                
+                # Sayısal değerleri güvenceye al
+                avg_daily_sales = float(sales_df['y'].mean()) if not pd.isna(sales_df['y'].mean()) else 0.0
+                forecast_sum = forecast.iloc[-forecast_days:]['yhat'].sum() 
+                forecast_total = float(forecast_sum) if not pd.isna(forecast_sum) else 0.0
+                
+                # Sonuçları döndür - Artık display kopya verilerimizi kullanalım
                 return {
                     'success': True,
-                    'forecast': forecast_display[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].to_dict('records'),
+                    'forecast': forecast_display.to_dict('records'),
                     'sales_history': sales_df_display.to_dict('records'),
                     'forecast_plot': fig1.to_json(),
                     'components_plot': fig2.to_json(),
-                    'average_daily_sales': round(avg_daily_sales_val,2),
-                    'forecast_total': round(forecast_total_val,2),
+                    'average_daily_sales': avg_daily_sales,
+                    'forecast_total': forecast_total,
                     'forecast_days': forecast_days
                 }
-            except Exception as e_plot:
-                self.logger.error(f"Prophet grafik oluşturma hatası: {e_plot}")
-                avg_daily_sales_val = float(sales_df['y'].mean()) if not pd.isna(sales_df['y'].mean()) else 0.0
-                forecast_total_val = forecast.iloc[-forecast_days:]['yhat'].apply(lambda x: max(0, x)).sum() # Negatifleri 0 yap
-                forecast_total_val = float(forecast_total_val) if not pd.isna(forecast_total_val) else 0.0
-
-                return { # Grafik olmadan temel verileri döndür
+            except Exception as e:
+                self.logger.error(f"Prophet grafik oluşturma hatası: {e}")
+                
+                # Basit bir alternatif tahmin oluştur (grafik olmadan)
+                avg_daily_sales = float(sales_df['y'].mean()) if not pd.isna(sales_df['y'].mean()) else 0.0
+                forecast_total = avg_daily_sales * forecast_days
+                
+                # Alternatif sonuç döndür
+                return {
                     'success': True,
-                    'message': 'Tahmin yapıldı ancak grafikler oluşturulamadı.',
-                    'forecast': forecast_display[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].to_dict('records'),
+                    'forecast': [],
                     'sales_history': sales_df_display.to_dict('records'),
                     'forecast_plot': None,
-                    'components_plot': None,
-                    'average_daily_sales': round(avg_daily_sales_val,2),
-                    'forecast_total': round(forecast_total_val,2),
+                    'components_plot': None, 
+                    'average_daily_sales': avg_daily_sales,
+                    'forecast_total': forecast_total,
                     'forecast_days': forecast_days
                 }
-
+            
         except Exception as e:
-            self.logger.error(f"Satış tahmini yapılırken genel hata: {e}, Ürün: {product_main_id}")
-            import traceback
-            self.logger.error(traceback.format_exc())
+            self.logger.error(f"Satış tahmini yapılırken hata: {e}")
             return {
                 'success': False,
-                'error': f'Tahmin yapılırken bir hata oluştu: {str(e)}'
+                'error': f'Tahmin yapılırken hata oluştu: {str(e)}'
             }
-
+    
     def analyze_stock_with_ai(self, product_data, sales_forecast=None):
         """
         OpenAI API'si kullanarak stok analizi yapar ve öneriler sunar
         """
         try:
+            # OpenAI API anahtarı kontrol
             if not openai.api_key:
-                return {'success': False, 'error': 'OpenAI API anahtarı bulunamadı.'}
-
-            product_info_dict = {
+                return {
+                    'success': False,
+                    'error': 'OpenAI API anahtarı bulunamadı.'
+                }
+            
+            # Ürün bilgilerini hazırla
+            product_info = {
                 'ürün_kodu': product_data.get('product_main_id', ''),
                 'ürün_adı': product_data.get('title', ''),
                 'renk': product_data.get('color', ''),
-                'beden': product_data.get('size', ''), # Beden bilgisi varsa ekle
+                'beden': product_data.get('size', ''),
                 'mevcut_stok': product_data.get('quantity', 0),
             }
-
-            # Eğer genel bir model-renk analizi ise (beden belirtilmemişse)
-            if not product_data.get('size') and product_data.get('color'):
-                 product_info_dict['analiz_kapsamı'] = f"{product_data.get('color')} renginin tüm bedenleri için genel durum"
-
-
+            
+            # Tahmin verileri varsa ekle
             if sales_forecast and sales_forecast.get('success'):
-                # sales_forecast['forecast'] bir liste, son forecast_days kadarını al
-                forecast_days_val = sales_forecast.get('forecast_days', 30)
-
-                # Ortalama günlük satış geçmiş veriden
-                history_data_list = sales_forecast.get('sales_history', [])
-                avg_daily_sales_hist = 0
-                if history_data_list:
-                    sales_values_hist = [item.get('y', 0) for item in history_data_list]
-                    avg_daily_sales_hist = sum(sales_values_hist) / len(sales_values_hist) if sales_values_hist else 0
-
-                # Gelecek X günün toplam tahmini satışı (negatif olmayan)
-                forecast_data_list = sales_forecast.get('forecast', [])
-                # Tahmin edilen günlük satışlar (yhat) üzerinden ortalama
-                avg_forecasted_daily_sales = 0
-                if forecast_data_list:
-                    # Sadece tahmin periyodunu al (make_future_dataframe tüm geçmişi de içerir)
-                    # forecast_days_val kadar sondan veri alıp ortalamasını hesapla
-                    future_forecast_entries = [max(0, item.get('yhat',0)) for item in forecast_data_list[-forecast_days_val:]]
-                    if future_forecast_entries:
-                         avg_forecasted_daily_sales = sum(future_forecast_entries) / len(future_forecast_entries)
-
-
-                # Stok tükenme süresi için geçmiş ortalama satışları kullanmak daha güvenli olabilir
-                # Ya da tahmin edilen ortalama günlük satışı kullanabiliriz. Şimdilik geçmişi kullanalım.
-                # Eğer geçmiş satış yoksa, tahmin edilen ortalamayı kullanalım.
-                effective_daily_sales_for_stockout = avg_daily_sales_hist if avg_daily_sales_hist > 0 else avg_forecasted_daily_sales
-
-                stock_out_days_val = float('inf')
-                if effective_daily_sales_for_stockout > 0 and product_info_dict['mevcut_stok'] > 0:
-                    stock_out_days_val = product_info_dict['mevcut_stok'] / effective_daily_sales_for_stockout
-
-                product_info_dict.update({
-                    'geçmiş_ortalama_günlük_satış': round(avg_daily_sales_hist, 2),
-                    f'tahmini_gelecek_{forecast_days_val}_gün_ortalama_günlük_satış': round(avg_forecasted_daily_sales, 2),
-                    'tahmini_tükenme_süresi_gün': round(stock_out_days_val, 1) if stock_out_days_val != float('inf') else 'Çok Yüksek veya Satış Yok'
+                forecast_data = sales_forecast.get('forecast', [])
+                history_data = sales_forecast.get('sales_history', [])
+                
+                # Son 30 günün ortalama günlük satışı
+                avg_daily_sales = 0
+                if history_data:
+                    sales_values = [item.get('y', 0) for item in history_data]
+                    avg_daily_sales = sum(sales_values) / len(sales_values) if sales_values else 0
+                
+                # Gelecek 30 günün toplam tahmini satışı
+                forecast_total = 0
+                if forecast_data:
+                    forecast_days = sales_forecast.get('forecast_days', 30)
+                    forecast_values = [item.get('yhat', 0) for item in forecast_data[-forecast_days:]]
+                    forecast_total = sum(forecast_values)
+                
+                # Tahmini tükenme süresi (gün)
+                stock_out_days = float('inf')  # Varsayılan olarak sonsuz
+                if avg_daily_sales > 0 and product_info['mevcut_stok'] > 0:
+                    stock_out_days = product_info['mevcut_stok'] / avg_daily_sales
+                
+                product_info.update({
+                    'ortalama_günlük_satış': round(avg_daily_sales, 2),
+                    'tahmini_30_gün_satış': round(forecast_total, 2),
+                    'tahmini_tükenme_süresi_gün': round(stock_out_days, 1) if stock_out_days != float('inf') else 'tükenmeyecek'
                 })
-
-            # Daha detaylı prompt
-            system_message_content = f"""Sen bir ayakkabı sektörü stok yönetimi ve üretim planlama uzmanısın. 
-            Sana verilen ürünün mevcut stok bilgisi, geçmiş satışları ve gelecek satış tahminlerini dikkate alarak kapsamlı bir analiz yapacaksın.
-            Analizinde şu noktalara odaklan:
-            1. Stok Durumu: Mevcut stok kaç günlük satışı karşılar? Stok seviyesi kritik mi (örn: <{self.stock_thresholds['critical']} gün), uyarı mı (örn: <{self.stock_thresholds['warning']} gün), yoksa sağlıklı mı (örn: >{self.stock_thresholds['warning']} gün)?
-            2. Satış Hızı Değerlendirmesi: Ürünün satış hızı nasıl (hızlı, normal, yavaş)? Bu hız stokları ne kadar sürede tüketebilir?
-            3. Üretim Önerisi: Eğer stok kritik veya uyarı seviyesindeyse, üretim yapılmalı mı?
-               - Hangi bedenlerden (eğer analiz beden bazlıysa) veya genel olarak ne kadar üretilmeli? (Örn: '30 günlük satışı karşılayacak kadar, yani X adet üretilmeli.')
-               - Üretim için bir aciliyet durumu belirt (örn: 'Hemen üretime başlanmalı', '1 hafta içinde planlanmalı', 'Şu an acil değil').
-            4. Ek Notlar: Varsa dikkat çekmek istediğin özel bir durum (örn: satışlarda ani artış/düşüş, stok eritme önerisi vb.).
-            Cevabını net, anlaşılır ve maddeler halinde Türkçe olarak ver. Özellikle üretim miktarı ve aciliyet konusunda somut ol.
-            """
-
-            user_message_content = f"""Aşağıdaki ayakkabı ürünü için detaylı stok analizi ve üretim önerisi yapmanı rica ediyorum:
-            {json.dumps(product_info_dict, indent=2, ensure_ascii=False)}
-            Analizini yukarıdaki sistem mesajında belirtilen format ve detayda sun.
-            """
-
-            messages_payload = [
-                {"role": "system", "content": system_message_content},
-                {"role": "user", "content": user_message_content}
+            
+            # OpenAI API istek mesajı - modern format
+            system_message = "Sen bir yapay zeka destekli stok analiz ve üretim planlama uzmanısın. Verilen ürün ve satış verileri doğrultusunda akıllı stok analizi yapıp, üretim için öneriler sunacaksın. Analizini ve önerilerini kısa, net ve somut yap. Temelde şunları belirtmelisin: 1. Stok durumu (kritik, uyarı, veya sağlıklı) 2. Somut aksiyon (Örn: '35, 36, 38 numaralardan üret') 3. Üretilecek miktar (kesin rakam) 4. Aciliyet durumu (hemen, 1 hafta içinde, vb.)"
+            
+            user_message = f"""Aşağıdaki ürün ve satış verilerini analiz ederek stok durumunu değerlendir ve somut öneriler sun:
+                
+                {json.dumps(product_info, indent=2, ensure_ascii=False)}
+                
+                Üretim kararı için aşağıdakileri göz önünde bulundur:
+                - Kritik stok (7 günden az kalan ürün): ACİL üretim gerektirir
+                - Uyarı stoku (7-14 gün): Yakında üretim planlan
+                - Sağlıklı stok (14+ gün): Şu an üretim gerektirmez
+                
+                Ürünün mevcutta kaç günlük satışı karşılayacağını, satış hızının nasıl olduğunu ve stok trend analizini yap.
+                Üretimde önceliklendirme nedenini açıkla."""
+                
+            messages = [
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": user_message}
             ]
-
+            
+            # OpenAI API çağrısı (modern format)
             response = openai.chat.completions.create(
-                model="gpt-3.5-turbo", # veya gpt-4
-                messages=messages_payload,
-                temperature=0.3, # Daha tutarlı cevaplar için düşük temperature
-                max_tokens=600 # Cevap uzunluğunu ayarla
+                model="gpt-3.5-turbo",
+                messages=messages,
+                temperature=0.5,
+                max_tokens=500
             )
-
-            ai_analysis_text = response.choices[0].message.content
-
-            # AI cevabından temel bilgileri ayrıştırmaya çalışalım (opsiyonel, zor olabilir)
-            stock_status_code = "normal" # healthy, warning, critical
-            if "kritik" in ai_analysis_text.lower(): stock_status_code = "critical"
-            elif "uyarı" in ai_analysis_text.lower() and "kritik" not in ai_analysis_text.lower() : stock_status_code = "warning" # Kritik değilse uyarı
-            elif "sağlıklı" in ai_analysis_text.lower() : stock_status_code = "healthy"
-
-            # Basitçe üretim önerisi var mı?
-            action_needed_text = "AI analizi sonucunda özel bir aksiyon belirtilmedi."
-            production_amount_val = 0
-            if "üretim" in ai_analysis_text.lower() or "üretilmeli" in ai_analysis_text.lower():
-                 action_needed_text = "AI, üretim veya stok takviyesi öneriyor. Detaylar analizde."
-                 # Miktar çıkarmak için daha karmaşık regex gerekebilir, şimdilik genel bırakalım.
-                 # matches = re.findall(r'(\d+)\s*adet üretilmeli', ai_analysis_text, re.IGNORECASE)
-                 # if matches: production_amount_val = int(matches[0])
-
-            analysis_result_dict = {
+            
+            # Cevabı işle
+            ai_analysis = response.choices[0].message.content
+            
+            # Stok durum kodunu belirle
+            stock_status = "normal"
+            if "kritik" in ai_analysis.lower():
+                stock_status = "critical"
+            elif "uyarı" in ai_analysis.lower():
+                stock_status = "warning"
+            
+            # Somut aksiyonları çıkar
+            action_needed = "Şu an için aksiyon gerekmiyor."
+            production_need = 0
+            
+            if "üret" in ai_analysis.lower():
+                # Basit bir yaklaşım: "X adet üret" ifadesini bul
+                import re
+                
+                # Sayı ve "adet" kelimesiyle ilgili kalıpları ara
+                matches = re.findall(r'(\d+)(?:\s*-\s*\d+)?\s*adet', ai_analysis)
+                if matches:
+                    production_need = int(matches[0])
+                    
+                # Aksiyon cümlesini bul
+                action_sentences = [s for s in ai_analysis.split('.') if 'üret' in s.lower()]
+                if action_sentences:
+                    action_needed = action_sentences[0].strip()
+            
+            # Analiz sonuçlarını yapılandır
+            analysis_result = {
                 'success': True,
-                'raw_analysis': ai_analysis_text, # Ham AI cevabı
-                'summary': { # Ayrıştırılmış özet (basit)
-                    'stock_status_code': stock_status_code,
-                    'stock_remaining_days_info': product_info_dict.get('tahmini_tükenme_süresi_gün', 'N/A'),
-                    'action_suggestion': action_needed_text,
-                    'suggested_production_quantity': production_amount_val # Eğer çıkarılabildiyse
+                'stock_analysis': {
+                    'full_analysis': ai_analysis,
+                    'stock_status': stock_status,
+                    'stock_remaining_days': product_info.get('tahmini_tükenme_süresi_gün', 'belirsiz')
+                },
+                'recommendations': {
+                    'action_needed': action_needed,
+                    'production_amount': production_need
                 }
             }
-            return analysis_result_dict
-
+            
+            return analysis_result
+            
         except Exception as e:
             self.logger.error(f"AI stok analizi yapılırken hata: {e}")
-            import traceback
-            self.logger.error(traceback.format_exc())
             return {
                 'success': False,
-                'error': f'AI Stok analizi sırasında bir hata oluştu: {str(e)}'
+                'error': f'Stok analizi yapılırken hata oluştu: {str(e)}'
             }
-
-    def get_stock_health_report(self, top_n=10, days_forecast=30, include_variants=False):
+    
+    def get_stock_health_report(self, top_n=20, days_forecast=30, include_variants=False):
         """
-        Tüm ürünlerin (veya model/renk bazında) stok durumu raporu.
-        Performans için top_n ile sınırlı.
-        `include_variants`: True ise her bir product_main_id/color/size için ayrı analiz yapar.
-                           False ise product_main_id/color bazında toplu stok ve satışları analiz eder.
+        Tüm ürünlerin stok durumu raporu
         """
         try:
-            products_to_analyze = []
-
+            products = []
             if include_variants:
-                # En düşük stoklu N varyantı al (product_main_id, color, size bazında)
-                # Bu sorgu çok sayıda ürün döndürebilir, dikkatli olunmalı.
-                # Belki en çok satan veya en az stoğu olan N varyant seçilebilir.
-                # Şimdilik quantity > 0 olan ve en düşük stoklu N varyantı alalım.
-                # Order by quantity and then by some sales metric might be better.
-                products_db_variants = Product.query.filter(
+                # Tüm varyantları dahil et, ancak performans için sınırlı sayıda
+                products = Product.query.filter(
                     Product.archived.is_(False),
-                    Product.hidden.is_(False), # gizli olmayanlar
-                    Product.quantity.isnot(None),
-                    Product.quantity > 0 # Stoğu olanlar
-                ).order_by(Product.quantity.asc()).limit(top_n * 2).all() # Biraz daha fazla alıp sonra işleyebiliriz
-                # products_to_analyze = products_db_variants[:top_n] # Direkt ilk N tanesini al
-
-                # Daha mantıklı bir seçim: Önce son X günde satışı olan ürünleri, sonra stok miktarına göre sırala
-                # Bu kısım karmaşıklaşabilir, şimdilik basit tutalım ve stok miktarına göre alalım.
-                # Ancak idealde satış hızı da dikkate alınmalı.
-                # Örneğin, son 30 günde en az 1 satışı olan ve stoğu en düşük N ürün.
-
-                # Geçici olarak stok miktarına göre ilk N ürün
-                products_to_analyze = products_db_variants[:top_n]
-
-
-            else: # Model-Renk bazında toplu analiz
-                # Model ve renk bazında toplam stoğu en düşük olan N grubu al
-                grouped_products_db = db.session.query(
+                    Product.hidden.is_(False),
+                    Product.quantity.isnot(None)
+                ).limit(top_n).all()  # Sorguyu sınırla
+            else:
+                # Model ve renk bazında grupla
+                # db.session.begin() ile session.query kullanımı hata veriyor, doğrudan db.session kullanacağız
+                products = []
+                
+                # Önce model ve renk bazında grupla - kritik olanları öncelikle al
+                products_grouped = db.session.query(
                     Product.product_main_id,
                     Product.color,
-                    Product.title, # İlk ürünün başlığını alabiliriz
-                    func.sum(Product.quantity).label('total_quantity'),
-                    func.min(Product.images).label('image_url') # İlk ürünün resmini al
+                    func.sum(Product.quantity).label('total_quantity')
                 ).filter(
                     Product.archived.is_(False),
                     Product.hidden.is_(False),
-                    Product.quantity.isnot(None),
-                    Product.quantity > 0
+                    Product.quantity.isnot(None)
                 ).group_by(
                     Product.product_main_id,
-                    Product.color,
-                    Product.title, # Gruplamaya title'ı da ekleyelim
-                ).order_by(func.sum(Product.quantity).asc()).limit(top_n).all()
-
-                for group_item in grouped_products_db:
-                    # Bu product_data yapay bir obje, AI analizine uygun hale getirilecek
-                    products_to_analyze.append({
-                        'product_main_id': group_item.product_main_id,
-                        'color': group_item.color,
-                        'title': group_item.title if group_item.title else group_item.product_main_id + " " + group_item.color,
-                        'quantity': float(group_item.total_quantity) if group_item.total_quantity else 0,
-                        'size': None, # Model-Renk bazında olduğu için size None
-                        'barcode': None, # Model-Renk bazında barkod yok
-                        'is_group': True, # Bu bir grup analizi olduğunu belirtir
-                        'image': group_item.image_url
-                    })
-
-            results_list = []
-            for p_data in products_to_analyze:
+                    Product.color
+                ).order_by(func.sum(Product.quantity).asc()).limit(top_n).all()  # En düşük stoktan başla, sorguyu sınırla
+                
+                # Her grup için bir ürün örneği al
+                for group in products_grouped:
+                    product = db.session.query(Product).filter(
+                        Product.product_main_id == group.product_main_id,
+                        Product.color == group.color,
+                        Product.archived.is_(False)
+                    ).first()
+                    
+                    if product:
+                        # Toplam stok miktarını ata - sayısal tipe dönüştür
+                        try:
+                            product.quantity = float(group.total_quantity)
+                        except (ValueError, TypeError):
+                            product.quantity = 0
+                        products.append(product)
+            
+            # Her ürün için analiz yap
+            results = []
+            for product in products:
                 try:
-                    current_product_main_id = p_data.product_main_id if hasattr(p_data, 'product_main_id') else p_data['product_main_id']
-                    current_color = p_data.color if hasattr(p_data, 'color') else p_data['color']
-                    current_size = p_data.size if hasattr(p_data, 'size') else p_data.get('size') # get ile None dönebilir
-
-                    # Ürün bilgilerini Product objesinden veya dict'ten al
-                    product_info_for_ai = {
-                        'product_main_id': current_product_main_id,
-                        'title': p_data.title if hasattr(p_data, 'title') else p_data.get('title'),
-                        'color': current_color,
-                        'size': current_size, # None olabilir
-                        'quantity': float(p_data.quantity) if (hasattr(p_data, 'quantity') and p_data.quantity is not None) else float(p_data.get('quantity',0)),
-                        'barcode': p_data.barcode if hasattr(p_data, 'barcode') else p_data.get('barcode') # None olabilir
-                    }
-
-                    # Satış tahmini (size None ise model-renk bazında tahmin)
-                    sales_forecast_data = self.predict_future_sales(
-                        product_main_id=current_product_main_id,
-                        color=current_color,
-                        size=current_size, # None ise, get_product_sales_data bunu dikkate almalı
-                        forecast_days=days_forecast,
-                        history_days=self.prediction_settings['history_days'] # init'teki history_days
+                    # Mevcut stok miktarı sayısal değer olmalı
+                    if product.quantity is None:
+                        product.quantity = 0
+                    else:
+                        try:
+                            product.quantity = float(product.quantity)
+                        except (ValueError, TypeError):
+                            product.quantity = 0
+                    
+                    # Satış tahminini al
+                    forecast = self.predict_future_sales(
+                        product.product_main_id, 
+                        product.color,
+                        forecast_days=days_forecast
                     )
-
-                    # AI Analizi
-                    ai_stock_analysis = self.analyze_stock_with_ai(product_info_for_ai, sales_forecast_data)
-
-                    results_list.append({
-                        'product_info': product_info_for_ai,
-                        'sales_forecast_summary': {
-                            'success': sales_forecast_data.get('success'),
-                            'message': sales_forecast_data.get('message'),
-                            'average_daily_sales': sales_forecast_data.get('average_daily_sales'),
-                            'forecast_total': sales_forecast_data.get('forecast_total'),
-                            'forecast_days': sales_forecast_data.get('forecast_days'),
-                            'forecast_plot_json': sales_forecast_data.get('forecast_plot'), # JSON string
-                            'components_plot_json': sales_forecast_data.get('components_plot') # JSON string
-                        },
-                        'ai_analysis': ai_stock_analysis
+                except Exception as e:
+                    self.logger.error(f"Ürün tahmininde hata: {product.product_main_id} - {e}")
+                    # Hata oluşursa basit bir tahmin nesnesi oluştur
+                    forecast = {
+                        'success': True,
+                        'average_daily_sales': 0.1,  # Varsayılan düşük değer
+                        'forecast_total': days_forecast * 0.1,
+                        'forecast_days': days_forecast
+                    }
+                
+                # Tahmin başarılı ise analiz yap
+                if forecast.get('success'):
+                    # Ürün verilerini topla
+                    product_data = {
+                        'product_main_id': product.product_main_id,
+                        'title': product.title,
+                        'color': product.color,
+                        'size': product.size,
+                        'quantity': product.quantity,
+                        'barcode': product.barcode
+                    }
+                    
+                    # AI analizi yap
+                    analysis = self.analyze_stock_with_ai(product_data, forecast)
+                    
+                    # Sonucu listeye ekle
+                    results.append({
+                        'product': product_data,
+                        'forecast': forecast,
+                        'analysis': analysis
                     })
-
-                except Exception as inner_e:
-                    self.logger.error(f"Rapor için ürün işlenirken hata: {p_data} - Hata: {inner_e}")
-                    import traceback
-                    self.logger.error(traceback.format_exc())
-                    continue # Bir sonraki ürüne geç
-
-            # Sonuçları AI analizindeki kritiklik durumuna göre sırala (varsa)
-            def get_criticality_from_ai(item):
-                status_code = item.get('ai_analysis', {}).get('summary', {}).get('stock_status_code', 'healthy')
-                if status_code == 'critical': return 3
-                if status_code == 'warning': return 2
-                return 1 # healthy veya bilinmiyor
-
-            results_list.sort(key=get_criticality_from_ai, reverse=True) # En kritik olanlar üste
-
-            return results_list[:top_n] # Son olarak top_n kadarını döndür.
-
+            
+            # Kritiklik skoruna göre sırala
+            def get_criticality_score(item):
+                # Analiz başarısız ise düşük puan ver
+                if not item['analysis'].get('success'):
+                    return -1
+                
+                # Stok durumuna göre puan
+                stock_status = item['analysis']['stock_analysis']['stock_status']
+                if stock_status == 'critical':
+                    return 3
+                elif stock_status == 'warning':
+                    return 2
+                else:
+                    return 1
+            
+            # Sonuçları kritiklik skoruna göre sırala
+            results.sort(key=get_criticality_score, reverse=True)
+            
+            # En yüksek puanlı (en kritik) top_n ürünü döndür
+            return results[:top_n]
+            
         except Exception as e:
-            self.logger.error(f"Stok sağlık raporu oluşturulurken genel hata: {e}")
-            import traceback
-            self.logger.error(traceback.format_exc())
+            self.logger.error(f"Stok sağlık raporu oluşturulurken hata: {e}")
             return []
-
 
 # Routes (API ve Arayüz)
 
 @stock_intelligence_bp.route('/dashboard')
-# @login_required # Giriş kontrolü aktif edilecekse yorumu kaldırın
+# Giriş kontrolü geçici olarak kaldırıldı
+# @login_required
 def ai_stock_dashboard():
-    """ AI destekli stok analiz paneli """
-    # Bu sayfa için gerekli başlangıç verileri (örn: model listesi) buradan gönderilebilir
-    # Veya sayfa yüklendikten sonra AJAX ile API'lerden çekilebilir.
-    return render_template('gullushoes_stock_dashboard.html') # Template adını kontrol edin
-
+    """
+    AI destekli stok analiz paneli
+    """
+    return render_template('gullushoes_stock_dashboard.html')
+    
 @stock_intelligence_bp.route('/analysis-history')
 # @login_required
 def analysis_history():
-    """ Geçmiş stok analizlerini görüntüleme sayfası """
-    try:
-        page = request.args.get('page', 1, type=int)
-        per_page = 15 # Sayfa başına analiz sayısı
-        analyses_pagination = StockAnalysisRecord.query.order_by(
-            StockAnalysisRecord.created_at.desc()
-        ).paginate(page=page, per_page=per_page, error_out=False)
-
-        analyses = analyses_pagination.items
-        return render_template('stock_analysis_history.html', 
-                               analyses=analyses, 
-                               pagination=analyses_pagination)
-    except Exception as e:
-        logger.error(f"Analiz geçmişi sayfası yüklenirken hata: {e}")
-        flash('Analiz geçmişi yüklenirken bir sorun oluştu.', 'danger')
-        return redirect(url_for('stock_intelligence.ai_stock_dashboard')) # Ana panele yönlendir
-
+    """
+    Geçmiş stok analizlerini görüntüleme sayfası
+    """
+    # Geçmiş analizleri tarih sırasına göre getir (en yeniler önce)
+    analyses = StockAnalysisRecord.query.order_by(StockAnalysisRecord.created_at.desc()).all()
+    return render_template('stock_analysis_history.html', analyses=analyses)
+    
 @stock_intelligence_bp.route('/view-analysis/<int:analysis_id>')
 # @login_required
 def view_analysis(analysis_id):
-    """ Belirli bir analizi görüntüle """
-    try:
-        analysis_record = StockAnalysisRecord.query.get_or_404(analysis_id)
-        # analysis_results JSON olduğu için Python dict'ine çevrilmiş olmalı (SQLAlchemy JSON type ile)
-        # Eğer string ise: analysis_data = json.loads(analysis_record.analysis_results)
-        analysis_data = analysis_record.analysis_results 
-
-        return render_template('view_stock_analysis.html', 
-                               analysis=analysis_record, 
-                               analysis_data=analysis_data,
-                               created_at_formatted=analysis_record.created_at.strftime('%d.%m.%Y %H:%M'))
-    except Exception as e:
-        logger.error(f"Analiz detayı ({analysis_id}) görüntülenirken hata: {e}")
-        flash('Analiz detayı görüntülenirken bir sorun oluştu.', 'danger')
-        return redirect(url_for('stock_intelligence.analysis_history'))
-
+    """
+    Belirli bir analizi görüntüle
+    """
+    # Analizi ID'ye göre getir
+    analysis = StockAnalysisRecord.query.get_or_404(analysis_id)
+    
+    # Analizin içeriğini JSON'dan geri al
+    analysis_data = analysis.analysis_results
+    
+    return render_template('view_stock_analysis.html', 
+                          analysis=analysis, 
+                          analysis_data=analysis_data,
+                          created_at=analysis.created_at.strftime('%d.%m.%Y %H:%M'))
 
 @stock_intelligence_bp.route('/api/stock-health-report')
+# Giriş kontrolü geçici olarak kaldırıldı
 # @login_required
 def get_stock_health_report_api():
-    """ Stok sağlık raporu API'si """
+    """
+    Stok sağlık raporu API'si
+    """
     try:
-        top_n_param = request.args.get('top_n', 10, type=int)
-        days_forecast_param = request.args.get('days_forecast', 30, type=int)
-        include_variants_param = request.args.get('include_variants', 'false').lower() == 'true'
-        save_analysis_param = request.args.get('save_analysis', 'false').lower() == 'true'
-        analysis_name_param = request.args.get('analysis_name', f'Stok Sağlık Raporu - {datetime.now().strftime("%Y-%m-%d %H:%M")}')
-
-        # API üzerinden gelen top_n için bir üst sınır koymak iyi bir pratik
-        if top_n_param > 20: top_n_param = 20 
-
-        stock_intel_instance = StockIntelligence()
-        report_data = stock_intel_instance.get_stock_health_report(
-            top_n=top_n_param,
-            days_forecast=days_forecast_param,
-            include_variants=include_variants_param
+        # Query parametrelerini al
+        top_n = request.args.get('top_n', 10, type=int)  # Varsayılan değeri düşürdük
+        days_forecast = request.args.get('days_forecast', 30, type=int)
+        include_variants = request.args.get('include_variants', 'false').lower() == 'true'
+        save_analysis = request.args.get('save_analysis', 'false').lower() == 'true'
+        analysis_name = request.args.get('analysis_name', f'Stok Analizi {datetime.now().strftime("%d.%m.%Y %H:%M")}')
+        
+        # Performans için sınırlama
+        if top_n > 10:  # Maksimum 10 ürün analiz edilecek
+            top_n = 10
+            
+        # Stok zekası sınıfını başlat
+        stock_intelligence = StockIntelligence()
+        
+        # Raporu al
+        report = stock_intelligence.get_stock_health_report(
+            top_n=top_n,
+            days_forecast=days_forecast,
+            include_variants=include_variants
         )
-
-        response_payload = {'success': True, 'report': report_data}
-
-        if save_analysis_param and report_data: # Sadece rapor verisi varsa kaydet
+        
+        # Analizi veritabanına kaydet (eğer istenirse)
+        if save_analysis:
             try:
-                analysis_params_dict = {
-                    'top_n': top_n_param, 'days_forecast': days_forecast_param,
-                    'include_variants': include_variants_param, 'report_generation_time': datetime.now().isoformat()
+                # Parametre ve sonuçları hazırla
+                analysis_parameters = {
+                    'top_n': top_n,
+                    'days_forecast': days_forecast,
+                    'include_variants': include_variants,
+                    'date': datetime.now().isoformat()
                 }
-                new_analysis_record = StockAnalysisRecord(
-                    user_id=current_user.id if current_user and hasattr(current_user, 'id') and current_user.is_authenticated else None, # Kullanıcı girişi varsa
-                    analysis_name=analysis_name_param,
-                    analysis_parameters=analysis_params_dict,
-                    analysis_results=report_data # Raporun kendisini JSON olarak kaydet
+                
+                # Yeni analiz kaydı oluştur
+                new_analysis = StockAnalysisRecord(
+                    user_id=current_user.id if hasattr(current_user, 'id') else None,
+                    analysis_name=analysis_name,
+                    analysis_parameters=analysis_parameters,
+                    analysis_results=report  # Tüm rapor JSON olarak kaydedilecek
                 )
-                db.session.add(new_analysis_record)
+                
+                db.session.add(new_analysis)
                 db.session.commit()
-                response_payload['analysis_saved'] = True
-                response_payload['analysis_id'] = new_analysis_record.id
-                flash(f"'{analysis_name_param}' adlı analiz başarıyla kaydedildi.", "success")
-            except Exception as save_err:
-                db.session.rollback()
-                logger.error(f"Analiz kaydedilirken veritabanı hatası: {save_err}")
-                response_payload['analysis_saved'] = False
-                response_payload['save_error'] = str(save_err)
-                flash("Analiz veritabanına kaydedilirken bir hata oluştu.", "danger")
-
-        return jsonify(response_payload)
-
+                
+                # Rapora kayıt ID'sini ekle
+                report = {'analysis_id': new_analysis.id, 'data': report}
+                
+            except Exception as save_error:
+                logger.error(f"Analiz kaydedilirken hata: {save_error}")
+                # Kaydedilemese bile raporu döndür
+        
+        return jsonify(report)
+    
     except Exception as e:
         logger.error(f"Stok raporu API hatası: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'error': str(e)}), 500
 
 @stock_intelligence_bp.route('/api/model-variants-analysis')
 # @login_required
 def get_model_variants_analysis_api():
-    """ Model koduna göre varyant analizleri API'si """
+    """
+    Model koduna göre varyant analizleri API'si
+    """
     try:
-        product_main_id_param = request.args.get('product_main_id')
-        days_param = request.args.get('days', 7, type=int)
-
-        if not product_main_id_param:
-            return jsonify({'success': False, 'error': 'product_main_id parametresi zorunludur.'}), 400
-
-        stock_intel_instance = StockIntelligence()
-        logger.info(f"Model varyant analizi başlatılıyor: Model ID: {product_main_id_param}, Gün: {days_param}")
-
-        variants_data_list = stock_intel_instance.get_model_variants_data(
-            product_main_id=product_main_id_param,
-            days=days_param
+        # Query parametrelerini al
+        product_main_id = request.args.get('product_main_id')
+        days = request.args.get('days', 7, type=int)  # Varsayılan olarak son 7 gün
+        save_analysis = request.args.get('save_analysis', 'false').lower() == 'true'
+        analysis_name = request.args.get('analysis_name', f'Model Analizi {datetime.now().strftime("%d.%m.%Y %H:%M")}')
+        
+        # Stok zekası sınıfını başlat
+        stock_intelligence = StockIntelligence()
+        
+        # Model varyantlarını analiz et
+        variants_data = stock_intelligence.get_model_variants_data(
+            product_main_id=product_main_id,
+            days=days
         )
-
-        if not variants_data_list and product_main_id_param: # Eğer boş döndüyse ve model ID varsa
-             logger.warning(f"Model {product_main_id_param} için varyant verisi bulunamadı veya işlenemedi.")
-             # Belki burada ürünün var olup olmadığını kontrol etmek iyi olabilir.
-             # Product.query.filter_by(product_main_id=product_main_id_param).first()
-
-        return jsonify({
+        
+        # Sonuç formatını düzenle
+        result = {
             'success': True,
-            'model_id_analyzed': product_main_id_param,
-            'days_analyzed': days_param,
-            'data': variants_data_list # Bu zaten [{model_data_with_colors_and_sizes}] formatında olmalı
-        })
-
+            'days_analyzed': days,
+            'models': variants_data
+        }
+        
+        # Analizi veritabanına kaydet (eğer istenirse)
+        if save_analysis:
+            try:
+                # Parametre ve sonuçları hazırla
+                analysis_parameters = {
+                    'product_main_id': product_main_id,
+                    'days': days,
+                    'date': datetime.now().isoformat()
+                }
+                
+                # Yeni analiz kaydı oluştur
+                new_analysis = StockAnalysisRecord(
+                    user_id=current_user.id if hasattr(current_user, 'id') else None,
+                    analysis_name=analysis_name,
+                    analysis_parameters=analysis_parameters,
+                    analysis_results=result  # Tüm rapor JSON olarak kaydedilecek
+                )
+                
+                db.session.add(new_analysis)
+                db.session.commit()
+                
+                # Rapora kayıt ID'sini ekle
+                result = {'analysis_id': new_analysis.id, 'data': result}
+                
+            except Exception as save_error:
+                logger.error(f"Analiz kaydedilirken hata: {save_error}")
+                # Kaydedilemese bile raporu döndür
+        
+        return jsonify(result)
+    
     except Exception as e:
         logger.error(f"Model varyant analizi API hatası: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return jsonify({'success': False, 'error': str(e)}), 500
-
+        return jsonify({'error': str(e), 'success': False}), 500
+        
 @stock_intelligence_bp.route('/api/models-list')
+# @login_required
 def get_models_list_api():
-    """ Sistemdeki tüm aktif model kodlarını ve başlıklarını listeleyen API """
+    """
+    Sistemdeki tüm model kodlarını listeleyen API
+    """
     try:
-        models_result = db.session.query(
-            Product.product_main_id,
+        # Aktif tüm model kodlarını al
+        models = db.session.query(
+            Product.product_main_id, 
             Product.title,
-            # Product.id yerine func.count(1) kullanarak her gruptaki satır (varyant) sayısını alıyoruz.
-            func.count(1).label('variant_count')
+            func.count(Product.barcode).label('variants_count')
         ).filter(
-            Product.archived.is_(False),
-            Product.hidden.is_(False)  # Bu alanın Product modelinde olduğundan emin olun
-        ).group_by(
+            Product.archived.is_(False)
+        )
+        
+        # hidden alanını kontrol et
+        if hasattr(Product, 'hidden'):
+            models = models.filter(Product.hidden.is_(False))
+            
+        # Gruplama ve sıralama
+        models = models.group_by(
             Product.product_main_id,
             Product.title
         ).order_by(
             Product.product_main_id
         ).all()
-
-        output_list = [{
-            'product_main_id': model.product_main_id,
-            'title': model.title if model.title else model.product_main_id,
-            'variants_count': model.variant_count
-        } for model in models_result]
-
-        return jsonify(output_list)
-
+        
+        # Sonuç formatını düzenle
+        result = [
+            {
+                'product_main_id': model.product_main_id,
+                'title': model.title,
+                'variants_count': model.variants_count
+            }
+            for model in models
+        ]
+        
+        return jsonify(result)
+    
     except Exception as e:
         logger.error(f"Model listesi API hatası: {e}")
-        # traceback modülünün import edildiğinden emin olarak tam hatayı logla
-        logger.error(traceback.format_exc())
-        return jsonify({'success': False, 'error': f"Sunucu hatası: Model listesi alınamadı. Detaylar için logları kontrol edin."}), 500
+        return jsonify({'error': str(e)}), 500
 
-
-@stock_intelligence_bp.route('/api/product-sales-prediction/<path:product_main_id_param>') # path ile / içeren ID'leri de alabilir
+@stock_intelligence_bp.route('/api/product-sales-prediction/<product_main_id>')
+# Giriş kontrolü geçici olarak kaldırıldı
 # @login_required
-def get_product_sales_prediction_api(product_main_id_param):
-    """ Belirli bir ürün (model/renk/beden veya model/renk) için satış tahmini API'si """
+def get_product_sales_prediction_api(product_main_id):
+    """
+    Belirli bir ürün için satış tahmini API'si
+    """
     try:
-        color_param = request.args.get('color') # Opsiyonel
-        size_param = request.args.get('size')   # Opsiyonel
-        forecast_days_param = request.args.get('forecast_days', 30, type=int)
-        history_days_param = request.args.get('history_days', 90, type=int)
-
-        stock_intel_instance = StockIntelligence()
-        forecast_result = stock_intel_instance.predict_future_sales(
-            product_main_id=product_main_id_param,
-            color=color_param,
-            size=size_param,
-            forecast_days=forecast_days_param,
-            history_days=history_days_param
+        # Query parametrelerini al
+        color = request.args.get('color')
+        size = request.args.get('size')
+        forecast_days = request.args.get('forecast_days', 30, type=int)
+        history_days = request.args.get('history_days', 90, type=int)
+        
+        # Stok zekası sınıfını başlat
+        stock_intelligence = StockIntelligence()
+        
+        # Tahmini al
+        forecast = stock_intelligence.predict_future_sales(
+            product_main_id=product_main_id,
+            color=color,
+            size=size,
+            forecast_days=forecast_days,
+            history_days=history_days
         )
-
-        return jsonify(forecast_result) # success durumunu ve varsa error'u içerir
-
+        
+        return jsonify(forecast)
+    
     except Exception as e:
-        logger.error(f"Satış tahmini API hatası ({product_main_id_param}): {e}")
-        import traceback
-        logger.error(traceback.format_exc())
+        logger.error(f"Satış tahmini API hatası: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@stock_intelligence_bp.route('/api/product-stock-analysis/<path:product_main_id_param>')
+@stock_intelligence_bp.route('/api/product-stock-analysis/<product_main_id>')
+# Giriş kontrolü geçici olarak kaldırıldı
 # @login_required
-def get_product_stock_analysis_api(product_main_id_param):
-    """ Belirli bir ürün (model/renk/beden veya model/renk) için AI stok analizi API'si """
+def get_product_stock_analysis_api(product_main_id):
+    """
+    Belirli bir ürün için AI stok analizi API'si
+    """
     try:
-        color_param = request.args.get('color') # Opsiyonel ama genellikle model/renk analizi için gerekli
-        size_param = request.args.get('size')   # Opsiyonel, beden bazlı analiz için
-
-        # AI analizi için ürün bilgilerini topla
-        # Eğer size belirtilmemişse, model-renk bazında toplam stok alınır.
-        # Eğer size belirtilmişse, o spesifik varyantın stoğu alınır.
-
-        product_data_for_ai = {}
-
-        if size_param and color_param: # Beden bazlı analiz
-            product_instance = Product.query.filter(
-                Product.product_main_id == product_main_id_param,
-                Product.color == color_param,
-                Product.size == size_param,
+        # Query parametrelerini al
+        color = request.args.get('color')
+        size = request.args.get('size')
+        
+        # Ürün verisini al
+        if size:
+            # Belirli bir beden için
+            product = Product.query.filter(
+                Product.product_main_id == product_main_id,
+                Product.color == color,
+                Product.size == size,
                 Product.archived.is_(False)
             ).first()
-            if not product_instance:
-                return jsonify({'success': False, 'error': 'Belirtilen ürün varyantı bulunamadı.'}), 404
-            product_data_for_ai = {
-                'product_main_id': product_instance.product_main_id,
-                'title': product_instance.title,
-                'color': product_instance.color,
-                'size': product_instance.size,
-                'quantity': product_instance.quantity or 0,
-                'barcode': product_instance.barcode
-            }
-        elif color_param: # Model-Renk bazlı analiz (tüm bedenlerin toplam stoğu)
-            base_product_info = Product.query.filter( # Başlık gibi genel bilgileri almak için
-                Product.product_main_id == product_main_id_param,
-                Product.color == color_param,
+        else:
+            # Tüm bedenler için toplu analiz
+            product = Product.query.filter(
+                Product.product_main_id == product_main_id,
+                Product.color == color,
                 Product.archived.is_(False)
             ).first()
-            if not base_product_info: # Bu model-renk kombinasyonunda hiç ürün yoksa
-                 return jsonify({'success': False, 'error': f'{product_main_id_param} modeli için {color_param} renginde ürün bulunamadı.'}), 404
-
-            total_quantity_for_color = db.session.query(func.sum(Product.quantity)).filter(
-                Product.product_main_id == product_main_id_param,
-                Product.color == color_param,
-                Product.archived.is_(False)
-            ).scalar() or 0
-            product_data_for_ai = {
-                'product_main_id': product_main_id_param,
-                'title': base_product_info.title, # İlk bulunan varyantın başlığını kullan
-                'color': color_param,
-                'size': None, # Beden belirtilmedi
-                'quantity': total_quantity_for_color,
-            }
-        else: # Sadece product_main_id ile genel model analizi desteklenmiyorsa hata ver
-            return jsonify({'success': False, 'error': 'Analiz için en azından renk bilgisi (color) gereklidir.'}), 400
-
-        stock_intel_instance = StockIntelligence()
-
-        # Satış tahmini (size None ise model-renk bazında tahmin yapılır)
-        sales_forecast_data = stock_intel_instance.predict_future_sales(
-            product_main_id=product_main_id_param,
-            color=color_param,
-            size=size_param # None olabilir
+            
+            if product:
+                # Aynı model ve renkteki tüm ürünlerin toplam stok miktarını hesapla
+                total_quantity = db.session.query(func.sum(Product.quantity)).filter(
+                    Product.product_main_id == product_main_id,
+                    Product.color == color,
+                    Product.archived.is_(False)
+                ).scalar() or 0
+                
+                # Toplam stok miktarını ata
+                product.quantity = total_quantity
+        
+        if not product:
+            return jsonify({'success': False, 'error': 'Ürün bulunamadı'})
+        
+        # Ürün verisini hazırla
+        product_data = {
+            'product_main_id': product.product_main_id,
+            'title': product.title,
+            'color': product.color,
+            'size': product.size,
+            'quantity': product.quantity,
+            'barcode': product.barcode
+        }
+        
+        # Stok zekası sınıfını başlat
+        stock_intelligence = StockIntelligence()
+        
+        # Satış tahmini
+        forecast = stock_intelligence.predict_future_sales(
+            product_main_id=product_main_id,
+            color=color,
+            size=size
         )
-
-        # AI ile Stok Analizi
-        ai_analysis_result = stock_intel_instance.analyze_stock_with_ai(product_data_for_ai, sales_forecast_data)
-
-        return jsonify({
+        
+        # Stok analizi
+        analysis = stock_intelligence.analyze_stock_with_ai(product_data, forecast)
+        
+        # Sonuçları birleştir
+        response = {
             'success': True,
-            'product_details_analyzed': product_data_for_ai,
-            'sales_forecast_data': sales_forecast_data, # Tahmin sonuçlarını da döndür
-            'ai_stock_analysis': ai_analysis_result
-        })
-
+            'product': product_data,
+            'forecast': forecast,
+            'analysis': analysis
+        }
+        
+        return jsonify(response)
+    
     except Exception as e:
-        logger.error(f"AI Stok analizi API hatası ({product_main_id_param}): {e}")
-        import traceback
-        logger.error(traceback.format_exc())
+        logger.error(f"Stok analizi API hatası: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
