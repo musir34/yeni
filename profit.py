@@ -342,9 +342,9 @@ def profit_report():
             if all_individual_barcodes:
                   try:
                     products = Product.query.filter(Product.barcode.in_(all_individual_barcodes)).all()
-                    product_costs = {p.barcode.strip(): float(p.cost_try)
+                    product_costs = {p.barcode.strip(): float(p.cost_try or 0)
                                      for p in products
-                                     if p.barcode and p.barcode.strip() in all_individual_barcodes and p.cost_try is not None}
+                                     if p.barcode and p.barcode.strip() in all_individual_barcodes}
                     logging.info(f"{len(product_costs)}/{len(all_individual_barcodes)} *tekil* barkod için maliyet bulundu (None olmayan).")
                   except Exception as e:
                     logging.error("Ürün maliyetleri çekilirken hata: %s", e, exc_info=True)
