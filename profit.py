@@ -385,25 +385,27 @@ def profit_report():
                         else:
                             missing_barcodes_in_this_order = []
                             for bc in individual_barcodes_in_order:
-                                cost = product_costs.get(bc)
+                                cost = product_costs.get(bc, 0)  # Eksik maliyet = 0
                                 if cost is None:
-                                    cost_calculation_possible = False
-                                    missing_barcodes_in_this_order.append(bc)
+                                    cost = 0  # None ise 0 olarak kabul et
+                                if cost <= 0:
+                                    # Eksik veya sıfır maliyet olan ürünleri de dahil et, sadece log tut
                                     if bc not in missing_cost_barcodes:
                                         missing_cost_entries_list.append({"barcode": bc, "merchant_sku": f"{merchant_sku} ({bc})"})
                                         missing_cost_barcodes.add(bc)
-                                elif cost <= 0:
-                                    logging.warning(f"Sipariş {order_number}, Barkod '{bc}' maliyeti sıfır veya negatif. Hesaplamada 0 olarak kullanıldı.")
+                                    logging.info(f"Sipariş {order_number}, Barkod '{bc}' maliyeti sıfır. Hesaplamaya 0 ile dahil edildi.")
                                     order_total_product_cost += 0.0
                                 else:
                                     order_total_product_cost += cost
-                            if not cost_calculation_possible:
-                                reason = f"Ürün Maliyeti Bulunamadı ({', '.join(missing_barcodes_in_this_order)})"
+                            # Artık eksik maliyet nedeniyle sipariş dışarıda bırakılmıyor
+                            # Sadece geçersiz barkod formatı varsa dışarıda bırak
+                            pass
 
-                    if not cost_calculation_possible or reason:
+                    # Sadece geçersiz barkod formatı olan siparişleri dışarıda bırak
+                    if reason and "Geçersiz Barkod Formatı" in reason:
                         other_excluded_temp.append({
                             "order_number": order_number, "merchant_sku": merchant_sku,
-                            "status": order_status, "reason": reason or "Bilinmeyen Maliyet Hatası",
+                            "status": order_status, "reason": reason,
                             "barcode": display_barcode_in_excluded,
                         })
                         if order_id: processed_order_ids.add(order_id)
