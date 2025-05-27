@@ -214,7 +214,7 @@ def siparis_ara():
         sonuclar = [{
             'siparis_no': s.siparis_no,
             'musteri': f"{s.musteri_adi} {s.musteri_soyadi}",
-            'tutar': float(s.toplam_tutar),
+            'tutar': float(s.toplam_tutar or 0),
             'tarih': s.siparis_tarihi.strftime('%d.%m.%Y %H:%M') if s.siparis_tarihi else '',
             'durum': s.durum
         } for s in siparisler]
