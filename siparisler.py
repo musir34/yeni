@@ -72,7 +72,7 @@ def yeni_siparis():
                 'musteri_soyadi': form_data.get('musteri_soyadi'),
                 'musteri_adres': form_data.get('musteri_adres'),
                 'musteri_telefon': form_data.get('musteri_telefon'),
-                'toplam_tutar': float(form_data.get('toplam_tutar', 0)),
+                'toplam_tutar': float(form_data.get('toplam_tutar', 0) or 0),
                 'notlar': form_data.get('notlar', ''),
                 'urunler': json.loads(form_data.get('urunler', '[]'))
             }
@@ -102,13 +102,18 @@ def yeni_siparis():
         # Ürünleri kaydet
         for urun in data['urunler']:
             logger.debug("Siparişe eklenecek ürün: %s", urun)
+            # Safe numeric calculations with None checking
+            adet = float(urun.get('adet', 0) or 0)
+            birim_fiyat = float(urun.get('birim_fiyat', 0) or 0)
+            toplam_fiyat = adet * birim_fiyat
+            
             siparis_urun = SiparisUrun(
                 siparis_id=yeni_siparis.id,
                 urun_barkod=urun['barkod'],
                 urun_adi=urun['urun_adi'],
-                adet=urun['adet'],
-                birim_fiyat=urun['birim_fiyat'],
-                toplam_fiyat=urun['adet'] * urun['birim_fiyat'],
+                adet=adet,
+                birim_fiyat=birim_fiyat,
+                toplam_fiyat=toplam_fiyat,
                 renk=urun.get('renk', ''),
                 beden=urun.get('beden', ''),
                 urun_gorseli=urun.get('urun_gorseli', '')
