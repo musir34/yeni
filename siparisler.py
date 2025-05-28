@@ -72,7 +72,7 @@ def yeni_siparis():
                 'musteri_soyadi': form_data.get('musteri_soyadi'),
                 'musteri_adres': form_data.get('musteri_adres'),
                 'musteri_telefon': form_data.get('musteri_telefon'),
-                'toplam_tutar': float(form_data.get('toplam_tutar', 0)),
+                'toplam_tutar': float(form_data.get('toplam_tutar') or 0),
                 'notlar': form_data.get('notlar', ''),
                 'urunler': json.loads(form_data.get('urunler', '[]'))
             }
@@ -102,13 +102,17 @@ def yeni_siparis():
         # Ürünleri kaydet
         for urun in data['urunler']:
             logger.debug("Siparişe eklenecek ürün: %s", urun)
+            adet = urun.get('adet') or 0
+            birim_fiyat = urun.get('birim_fiyat') or 0
+            toplam_fiyat = adet * birim_fiyat
+
             siparis_urun = SiparisUrun(
                 siparis_id=yeni_siparis.id,
-                urun_barkod=urun['barkod'],
-                urun_adi=urun['urun_adi'],
-                adet=urun['adet'],
-                birim_fiyat=urun['birim_fiyat'],
-                toplam_fiyat=urun['adet'] * urun['birim_fiyat'],
+                urun_barkod=urun.get('barkod', ''),
+                urun_adi=urun.get('urun_adi', ''),
+                adet=adet,
+                birim_fiyat=birim_fiyat,
+                toplam_fiyat=toplam_fiyat,
                 renk=urun.get('renk', ''),
                 beden=urun.get('beden', ''),
                 urun_gorseli=urun.get('urun_gorseli', '')
@@ -125,6 +129,7 @@ def yeni_siparis():
         logger.error("Sipariş kaydedilirken hata oluştu: %s", e)
         logger.debug("Traceback: %s", traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
+
 
 
 @siparisler_bp.route('/api/product/<barcode>')
