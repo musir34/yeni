@@ -36,8 +36,11 @@
               </span>
             </td>
             <td>
-              <button class="btn btn-sm btn-info" onclick="showOrderDetails('{{ siparis.siparis_no }}')" type="button">
+              <button class="btn btn-sm btn-info me-1" onclick="showOrderDetails('{{ siparis.siparis_no }}')" type="button">
                 <i class="bi bi-eye"></i> Detay
+              </button>
+              <button class="btn btn-sm btn-success" onclick="printCustomerInfo('{{ siparis.siparis_no }}')" type="button">
+                <i class="bi bi-printer"></i> Müşteri Bilgileri
               </button>
             </td>
           </tr>
@@ -838,6 +841,99 @@ document.querySelector('form').addEventListener('submit', async function(e) {
       alert('Bir hata oluştu!');
     });
 });
+
+// Müşteri bilgilerini yazdır
+async function printCustomerInfo(siparisNo) {
+  try {
+    console.log('🖨️ Müşteri bilgileri yazdırma başlatıldı:', siparisNo);
+    
+    // Sipariş detaylarını al
+    const response = await fetch(`/siparis-detay/${siparisNo}`);
+    if (!response.ok) {
+      throw new Error(`Sunucu hatası: ${response.status}`);
+    }
+
+    const detayHtml = await response.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(detayHtml, 'text/html');
+
+    // Müşteri bilgilerini çıkar
+    let musteriAdi = '', musteriSoyadi = '', musteriAdres = '', musteriTelefon = '';
+    
+    const mAdiElem = doc.querySelector('[data-musteri-adi]');
+    const mSoyadiElem = doc.querySelector('[data-musteri-soyadi]');
+    const mAdresElem = doc.querySelector('[data-musteri-adres]');
+    const mTelefonElem = doc.querySelector('[data-musteri-telefon]');
+
+    if (mAdiElem) musteriAdi = mAdiElem.textContent || '';
+    if (mSoyadiElem) musteriSoyadi = mSoyadiElem.textContent || '';
+    if (mAdresElem) musteriAdres = mAdresElem.textContent || '';
+    if (mTelefonElem) musteriTelefon = mTelefonElem.textContent || '';
+
+    // Yazdırma için HTML içeriği oluştur
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Müşteri Bilgileri - ${siparisNo}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .info-box { border: 1px solid #ccc; padding: 15px; margin: 10px 0; }
+          .label { font-weight: bold; color: #333; }
+          .value { margin-left: 10px; }
+          .order-no { font-size: 18px; color: #007bff; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h2>MÜŞTERİ BİLGİLERİ</h2>
+          <div class="order-no">Sipariş No: ${siparisNo}</div>
+        </div>
+        
+        <div class="info-box">
+          <div><span class="label">Ad Soyad:</span><span class="value">${musteriAdi} ${musteriSoyadi}</span></div>
+        </div>
+        
+        <div class="info-box">
+          <div><span class="label">Telefon:</span><span class="value">${musteriTelefon}</span></div>
+        </div>
+        
+        <div class="info-box">
+          <div><span class="label">Adres:</span></div>
+          <div style="margin-top: 10px; padding: 10px; background-color: #f8f9fa; border-radius: 5px;">
+            ${musteriAdres}
+          </div>
+        </div>
+        
+        <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #666;">
+          Yazdırma Tarihi: ${new Date().toLocaleString('tr-TR')}
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Yeni pencere aç ve yazdır
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // Sayfa yüklendikten sonra yazdırma dialogunu aç
+    printWindow.onload = function() {
+      printWindow.print();
+      // Yazdırma tamamlandıktan sonra pencereyi kapat
+      printWindow.onafterprint = function() {
+        printWindow.close();
+      };
+    };
+
+    console.log('✅ Müşteri bilgileri yazdırma başarıyla tamamlandı');
+    
+  } catch (error) {
+    console.error('❌ Müşteri bilgileri yazdırma hatası:', error);
+    alert(`Müşteri bilgileri yazdırılırken bir hata oluştu: ${error.message}`);
+  }
+}
 </script>
   <div id="toastContainer"></div>
 {% endblock %}
