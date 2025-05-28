@@ -870,44 +870,115 @@ async function printCustomerInfo(siparisNo) {
     if (mAdresElem) musteriAdres = mAdresElem.textContent || '';
     if (mTelefonElem) musteriTelefon = mTelefonElem.textContent || '';
 
-    // Yazdırma için HTML içeriği oluştur
+    // 100x100mm etiket formatı için HTML içeriği oluştur
     const printContent = `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Müşteri Bilgileri - ${siparisNo}</title>
+        <title>Müşteri Etiketi - ${siparisNo}</title>
         <style>
-          body { font-family: Arial, sans-serif; margin: 20px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .info-box { border: 1px solid #ccc; padding: 15px; margin: 10px 0; }
-          .label { font-weight: bold; color: #333; }
-          .value { margin-left: 10px; }
-          .order-no { font-size: 18px; color: #007bff; font-weight: bold; }
+          @page {
+            size: 100mm 100mm;
+            margin: 2mm;
+          }
+          
+          body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            padding: 3mm;
+            width: 94mm;
+            height: 94mm;
+            font-size: 10px;
+            line-height: 1.2;
+            box-sizing: border-box;
+          }
+          
+          .header { 
+            text-align: center; 
+            margin-bottom: 3mm;
+            border-bottom: 1px solid #000;
+            padding-bottom: 2mm;
+          }
+          
+          .company-name {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 1mm;
+          }
+          
+          .order-no { 
+            font-size: 9px; 
+            font-weight: bold;
+          }
+          
+          .customer-info {
+            margin: 2mm 0;
+          }
+          
+          .info-row { 
+            margin: 1.5mm 0;
+            display: flex;
+            align-items: flex-start;
+          }
+          
+          .label { 
+            font-weight: bold; 
+            min-width: 18mm;
+            font-size: 9px;
+          }
+          
+          .value { 
+            flex: 1;
+            font-size: 10px;
+            word-wrap: break-word;
+          }
+          
+          .address {
+            margin-top: 2mm;
+            padding: 1mm;
+            border: 1px solid #ccc;
+            font-size: 8px;
+            line-height: 1.3;
+            max-height: 25mm;
+            overflow: hidden;
+          }
+          
+          .footer {
+            position: absolute;
+            bottom: 1mm;
+            left: 3mm;
+            right: 3mm;
+            text-align: center;
+            font-size: 7px;
+            color: #666;
+          }
         </style>
       </head>
       <body>
         <div class="header">
-          <h2>MÜŞTERİ BİLGİLERİ</h2>
-          <div class="order-no">Sipariş No: ${siparisNo}</div>
+          <div class="company-name">MÜŞTERİ BİLGİLERİ</div>
+          <div class="order-no">Sipariş: ${siparisNo}</div>
         </div>
         
-        <div class="info-box">
-          <div><span class="label">Ad Soyad:</span><span class="value">${musteriAdi} ${musteriSoyadi}</span></div>
-        </div>
-        
-        <div class="info-box">
-          <div><span class="label">Telefon:</span><span class="value">${musteriTelefon}</span></div>
-        </div>
-        
-        <div class="info-box">
-          <div><span class="label">Adres:</span></div>
-          <div style="margin-top: 10px; padding: 10px; background-color: #f8f9fa; border-radius: 5px;">
-            ${musteriAdres}
+        <div class="customer-info">
+          <div class="info-row">
+            <div class="label">Ad Soyad:</div>
+            <div class="value">${musteriAdi} ${musteriSoyadi}</div>
+          </div>
+          
+          <div class="info-row">
+            <div class="label">Telefon:</div>
+            <div class="value">${musteriTelefon}</div>
+          </div>
+          
+          <div style="margin-top: 2mm;">
+            <div class="label">Adres:</div>
+            <div class="address">${musteriAdres}</div>
           </div>
         </div>
         
-        <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #666;">
-          Yazdırma Tarihi: ${new Date().toLocaleString('tr-TR')}
+        <div class="footer">
+          ${new Date().toLocaleDateString('tr-TR')}
         </div>
       </body>
       </html>
