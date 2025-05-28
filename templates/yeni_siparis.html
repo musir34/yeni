@@ -687,6 +687,38 @@ document.querySelector('#orderForm form').addEventListener('submit', async funct
 });
 
 
+// Ürün Görseli Büyütme İşlevi
+function showImageModal(imageSrc, productTitle) {
+    // Eğer modal yoksa oluştur
+    let imageModal = document.getElementById('imageModal');
+    if (!imageModal) {
+        const modalHtml = `
+        <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="imageModalLabel">Ürün Görseli</h5>
+                <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close">&times;</button>
+              </div>
+              <div class="modal-body text-center">
+                <img id="modalImage" src="" alt="Ürün Görseli" class="img-fluid" style="max-height: 500px;">
+              </div>
+            </div>
+          </div>
+        </div>`;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        imageModal = document.getElementById('imageModal');
+    }
+    
+    const modalImage = document.getElementById('modalImage');
+    const modalTitle = document.getElementById('imageModalLabel');
+    
+    modalImage.src = imageSrc;
+    modalTitle.textContent = 'Ürün Görseli - ' + productTitle;
+    
+    $(imageModal).modal('show');
+}
+
 // Toplu Ürün Ekleme Modal İşlevleri
 function addMultipleProducts() {
     const modalEl = document.getElementById('multipleProductsModal');

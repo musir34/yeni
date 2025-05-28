@@ -109,30 +109,3 @@
   </div>
 </div>
 
-<!-- Ürün Görseli Büyütme Modal -->
-<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="imageModalLabel">Ürün Görseli</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">&times;</button>
-      </div>
-      <div class="modal-body text-center">
-        <img id="modalImage" src="" alt="Ürün Görseli" class="img-fluid" style="max-height: 500px;">
-      </div>
-    </div>
-  </div>
-</div>
-
-<script>
-function showImageModal(imageSrc, productTitle) {
-    const modal = document.getElementById('imageModal');
-    const modalImage = document.getElementById('modalImage');
-    const modalTitle = document.getElementById('imageModalLabel');
-    
-    modalImage.src = imageSrc;
-    modalTitle.textContent = 'Ürün Görseli - ' + productTitle;
-    
-    $(modal).modal('show');
-}
-</script>
