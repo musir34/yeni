@@ -24,33 +24,37 @@
 
   <h6>Ürünler</h6>
   <div class="table-responsive">
-    <table class="table table-bordered table-products">
-      <thead class="table-light">
+    <table class="table table-striped table-sm table-products">
+      <thead>
         <tr>
-          <th>Barkod</th>
           <th>Ürün</th>
-          <th>Renk / Beden</th>
+          <th>Barkod</th>
+          <th>Renk</th>
+          <th>Beden</th>
           <th>Adet</th>
           <th>Birim Fiyat</th>
-          <th>Toplam Fiyat</th>
+          <th>Toplam</th>
         </tr>
       </thead>
       <tbody>
         {% for urun in urunler %}
         <tr>
-          <td>{{ urun.urun_barkod }}</td>
           <td>{{ urun.urun_adi }}</td>
-          <td>{{ urun.renk }} / {{ urun.beden }}</td>
-          <td>{{ urun.adet or 0 }}</td>
-          <td>{{ "%.2f"|format(urun.birim_fiyat or 0) }} TL</td>
-          <td>{{ "%.2f"|format(urun.toplam_fiyat or 0) }} TL</td>
+          <td>{{ urun.urun_barkod }}</td>
+          <td>{{ urun.renk }}</td>
+          <td>{{ urun.beden }}</td>
+          <td>{{ urun.adet }}</td>
+          <td>{{ "%.2f"|format(urun.birim_fiyat) }} TL</td>
+          <td>{{ "%.2f"|format(urun.toplam_fiyat) }} TL</td>
         </tr>
         {% endfor %}
       </tbody>
       <tfoot>
         <tr>
-          <td colspan="5" class="text-end"><strong>Genel Toplam:</strong></td>
-          <td><strong>{{ "%.2f"|format(siparis.toplam_tutar or 0) }} TL</strong></td>
+          <td colspan="6" class="text-end"><strong>Genel Toplam:</strong></td>
+          <td><strong>{{ "%.2f"|format(siparis.toplam_tutar) }} TL</strong></td>
         </tr>
       </tfoot>
     </table>
+  </div>
+</div>
