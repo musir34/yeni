@@ -10,25 +10,6 @@ from models import db, Product, YeniSiparis, SiparisUrun
 from logger_config import order_logger
 logger = order_logger
 
-def safe_json_loads(data, default=None):
-    """JSON parsing için güvenli fonksiyon - HTML içeriği kontrolü yapar"""
-    if default is None:
-        default = []
-    
-    if not data:
-        return default
-    
-    try:
-        # HTML içeriği kontrolü
-        if isinstance(data, str) and ('<' in data or '>' in data):
-            logger.warning(f"HTML içeriği tespit edildi, varsayılan değer döndürülüyor: {data[:50]}...")
-            return default
-        
-        return json.loads(data)
-    except (json.JSONDecodeError, TypeError, ValueError) as e:
-        logger.warning(f"JSON parse hatası: {e}, varsayılan değer döndürülüyor")
-        return default
-
 siparisler_bp = Blueprint('siparisler_bp', __name__)
 
 
@@ -63,20 +44,8 @@ def yeni_siparis():
             # None veya HTML kırıntılarını temizle
             for s in siparisler:
                 try:
-                    # Toplam tutarı güvenli şekilde float'a çevir
-                    if s.toplam_tutar is None:
-                        s.toplam_tutar = 0
-                    elif isinstance(s.toplam_tutar, str):
-                        # HTML içeriği kontrolü
-                        if '<' in s.toplam_tutar or '>' in s.toplam_tutar:
-                            logger.warning(f"Sipariş {s.siparis_no} HTML içeriği tespit edildi, 0 atanıyor")
-                            s.toplam_tutar = 0
-                        else:
-                            s.toplam_tutar = float(s.toplam_tutar or 0)
-                    else:
-                        s.toplam_tutar = float(s.toplam_tutar or 0)
-                except (TypeError, ValueError) as e:
-                    logger.warning(f"Sipariş {s.siparis_no} tutar dönüştürme hatası: {e}")
+                    s.toplam_tutar = float(s.toplam_tutar or 0)
+                except (TypeError, ValueError):
                     s.toplam_tutar = 0
 
             return render_template('yeni_siparis.html', siparisler=siparisler)
@@ -95,7 +64,7 @@ def yeni_siparis():
             'musteri_telefon' : request.form.get('musteri_telefon'),
             'toplam_tutar'    : float(request.form.get('toplam_tutar') or 0),
             'notlar'          : request.form.get('notlar', ''),
-            'urunler'         : safe_json_loads(request.form.get('urunler', '[]')),
+            'urunler'         : json.loads(request.form.get('urunler', '[]')),
         }
 
         siparis_no = f"SP{datetime.now():%Y%m%d%H%M%S}"
@@ -234,7 +203,7 @@ def siparis_guncelle(siparis_no):
 
         data = request.get_json() if request.is_json else request.form.to_dict()
         if 'urunler' in data and isinstance(data['urunler'], str):
-            data['urunler'] = safe_json_loads(data['urunler'])
+            data['urunler'] = json.loads(data['urunler'])
 
         sip.musteri_adi     = data.get('musteri_adi', sip.musteri_adi)
         sip.musteri_soyadi  = data.get('musteri_soyadi', sip.musteri_soyadi)
