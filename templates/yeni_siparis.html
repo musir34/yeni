@@ -28,7 +28,7 @@
           <tr>
             <td>{{ siparis.siparis_no }}</td>
             <td>{{ siparis.musteri_adi }} {{ siparis.musteri_soyadi }}</td>
-            <td>{{ "%.2f"|format(siparis.toplam_tutar) }} TL</td>
+            <td>{{ "%.2f"|format(siparis.toplam_tutar or 0) }} TL</td>
             <td>{{ siparis.siparis_tarihi.strftime('%d.%m.%Y %H:%M') }}</td>
             <td>
               <span class="badge bg-{{ 'success' if siparis.durum == 'Tamamlandı' else 'warning' }}">

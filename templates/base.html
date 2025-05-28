@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Analiz Sayfası</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <title>Güllü Ayakkabı Yönetim Paneli</title> <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
     <style>
         /* Genel responsive düzenlemeler */
         @media (max-width: 991px) {
@@ -56,7 +55,7 @@
             .navbar-nav {
                 margin-top: 10px;
             }
-            .navbar .btn {
+            .navbar .btn { /* Navbar içindeki butonların %100 genişlik almasını engellemek için */
                 width: auto;
                 margin: 5px;
             }
@@ -69,22 +68,28 @@
 
         .table-responsive {
             overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+            -webkit-overflow-scrolling: touch; /* iOS için daha akıcı kaydırma */
         }
 
+        /* Modal düzenlemeleri mobil için */
         .modal-dialog {
-            margin: 10px;
+            margin: 10px; /* Varsayılan margin */
         }
 
         @media (max-width: 576px) {
             .modal-dialog {
-                margin: 0;
-                max-width: none;
-                height: 100%;
+                margin: 0; /* Kenar boşluklarını kaldır */
+                max-width: none; /* Maksimum genişliği kaldır */
+                width: 100%; /* Tam genişlik */
+                height: 100%; /* Tam yükseklik */
             }
             .modal-content {
-                border-radius: 0;
-                min-height: 100%;
+                border-radius: 0; /* Kenar yuvarlaklığını kaldır */
+                min-height: 100%; /* İçeriğin tam yüksekliği kaplamasını sağla */
+                height: 100%;
+            }
+            .modal-body {
+                overflow-y: auto; /* Eğer modal içeriği sığmazsa kaydırma çubuğu çıkar */
             }
         }
     </style>
@@ -92,22 +97,27 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('home.home') }}">
-                <img src="{{ url_for('static', filename='logo/gullu.png') }}" height="30" alt="Logo">
+            <a class="navbar-brand" href="{{ url_for('home.home') }}"> <img src="{{ url_for('static', filename='logo/gullu.png') }}" height="30" alt="Logo">
             </a>
-            <div class="navbar-nav ml-auto">
-                <a href="{{ url_for('home.home') }}" class="btn btn-outline-primary mr-2">Anasayfa</a>
-                <a class="nav-link" href="{{ url_for('kar_maliyet.kar_analiz') }}">
-                    <i class="fas fa-chart-line"></i> Kar Analiz
-                </a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+                <div class="navbar-nav ml-auto">
+                    <a href="{{ url_for('home.home') }}" class="btn btn-outline-primary mr-2">Anasayfa</a>
+                    <a class="nav-item nav-link" href="{{ url_for('siparisler_bp.yeni_siparis') }}">Siparişler</a> </div>
             </div>
         </div>
     </nav>
 
-    {% block content %}
-    {% endblock %}
+    <div class="container mt-4"> {% block content %}
+        {% endblock %}
+    </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js" defer></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.bundle.min.js" defer></script>
+
+    {% block scripts %}
+    {% endblock %}
 </body>
 </html>
