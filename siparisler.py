@@ -381,6 +381,31 @@ def siparis_detay(siparis_no):
 
         urunler_query = SiparisUrun.query.filter_by(siparis_id=getattr(sip, 'id', None))
         urunler = urunler_query.all() if hasattr(urunler_query, 'all') and callable(urunler_query.all) else []
+        
+        # Her ürün için Product tablosundan model bilgilerini al
+        for urun in urunler:
+            if hasattr(urun, 'urun_barkod') and urun.urun_barkod:
+                try:
+                    product = Product.query.filter_by(barcode=urun.urun_barkod).first()
+                    if product:
+                        # Product tablosundan model bilgilerini al
+                        urun.product_main_id = getattr(product, 'product_main_id', '')
+                        # Eğer ürün görseli SiparisUrun'da yoksa Product'tan al
+                        if not getattr(urun, 'urun_gorseli', None):
+                            images = getattr(product, 'images', None)
+                            if images and isinstance(images, list) and len(images) > 0:
+                                urun.urun_gorseli = images[0].get('url', '') if isinstance(images[0], dict) else str(images[0])
+                            else:
+                                urun.urun_gorseli = None
+                    else:
+                        urun.product_main_id = None
+                        if not getattr(urun, 'urun_gorseli', None):
+                            urun.urun_gorseli = None
+                except Exception as e:
+                    logger.warning(f"Ürün {urun.urun_barkod} için Product bilgisi alınırken hata: {e}")
+                    urun.product_main_id = None
+                    if not getattr(urun, 'urun_gorseli', None):
+                        urun.urun_gorseli = None
 
 
         for urun in urunler:
