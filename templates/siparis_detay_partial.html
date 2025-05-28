@@ -51,8 +51,9 @@
       <thead class="table-light">
         <tr>
           <th>#</th>
+          <th>Görsel</th>
           <th>Barkod</th>
-          <th>Ürün Adı</th>
+          <th>Ürün Adı / Model</th>
           <th>Renk / Beden</th>
           <th class="text-end">Adet</th>
           <th class="text-end">Birim Fiyat</th>
@@ -64,8 +65,23 @@
           {% for urun in urunler %}
           <tr>
             <td>{{ loop.index }}</td>
+            <td class="text-center">
+              {% if urun.urun_gorseli %}
+                <img src="{{ urun.urun_gorseli }}" alt="Ürün Görseli" class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;">
+              {% else %}
+                <img src="/static/images/{{ urun.urun_barkod }}.jpg" alt="Ürün Görseli" class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;" 
+                     onerror="this.src='/static/images/default-product.png';">
+              {% endif %}
+            </td>
             <td data-urun-barkod>{{ urun.urun_barkod }}</td>
-            <td data-urun-adi>{{ urun.urun_adi }}</td>
+            <td data-urun-adi>
+              <div>
+                <strong>{{ urun.urun_adi }}</strong>
+                {% if urun.product_main_id %}
+                  <br><small class="text-muted">Model: {{ urun.product_main_id }}</small>
+                {% endif %}
+              </div>
+            </td>
             <td><span data-urun-renk>{{ urun.renk }}</span> / <span data-urun-beden>{{ urun.beden }}</span></td>
             <td class="text-end" data-urun-adet>{{ (urun.adet|default(0, true))|int }}</td>
             <td class="text-end" data-urun-birim-fiyat>{{ "%.2f"|format((urun.birim_fiyat|default(0, true))|float) }} TL</td>
@@ -74,14 +90,14 @@
           {% endfor %}
         {% else %}
           <tr>
-            <td colspan="7" class="text-center text-muted">Bu siparişte ürün bulunmamaktadır.</td>
+            <td colspan="8" class="text-center text-muted">Bu siparişte ürün bulunmamaktadır.</td>
           </tr>
         {% endif %}
       </tbody>
       {% if urunler %}
       <tfoot>
         <tr class="table-light">
-          <td colspan="6" class="text-end fw-bold"><h5>Genel Toplam:</h5></td>
+          <td colspan="7" class="text-end fw-bold"><h5>Genel Toplam:</h5></td>
           <td class="text-end fw-bold"><h5 data-genel-toplam>{{ "%.2f"|format((siparis.toplam_tutar|default(0, true))|float) }} TL</h5></td>
         </tr>
       </tfoot>
