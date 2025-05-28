@@ -485,3 +485,44 @@ def order_label():
         flash('Kargo etiketi oluşturulurken bir hata oluştu.', 'danger')
         return redirect(url_for('home.home'))
 
+
+@order_list_service_bp.route('/customer-info-print', methods=['POST'])
+def customer_info_print():
+    """
+    Sadece müşteri bilgilerini yazdırmak için özel route
+    """
+    from urllib.parse import unquote
+    try:
+        logger.info("🚀 /customer-info-print POST isteği alındı.")
+
+        order_number = request.form.get('order_number')
+        customer_name = unquote(unquote(request.form.get('customer_name', '')))
+        customer_surname = unquote(unquote(request.form.get('customer_surname', '')))
+        customer_address = unquote(unquote(request.form.get('customer_address', '')))
+        order_date = request.form.get('order_date', '')
+        cargo_provider = unquote(unquote(request.form.get('cargo_provider', '')))
+
+        logger.info("📦 Müşteri bilgileri:")
+        logger.info(f"📌 order_number        : {order_number}")
+        logger.info(f"📌 customer_name       : {customer_name}")
+        logger.info(f"📌 customer_surname    : {customer_surname}")
+        logger.info(f"📌 customer_address    : {customer_address}")
+        logger.info(f"📌 order_date          : {order_date}")
+        logger.info(f"📌 cargo_provider      : {cargo_provider}")
+
+        logger.info("📄 customer_info_print.html şablonuna yönlendiriliyor.")
+        return render_template(
+            'customer_info_print.html',
+            order_number=order_number,
+            customer_name=customer_name,
+            customer_surname=customer_surname,
+            customer_address=customer_address,
+            order_date=order_date,
+            cargo_provider_name=cargo_provider
+        )
+
+    except Exception as e:
+        logger.error(f"🔥 Hata: customer_info_print - {e}", exc_info=True)
+        flash('Müşteri bilgileri yazdırılırken bir hata oluştu.', 'danger')
+        return redirect(url_for('home.home'))
+
