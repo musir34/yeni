@@ -146,6 +146,15 @@ def yeni_siparis():
             data = request.get_json()
             logger.debug("POST /yeni-siparis - JSON verisi alındı: %s", data)
         else:
+            # Form verisi için güvenli JSON parsing
+            urunler_str = request.form.get('urunler', '[]')
+            try:
+                urunler_data = json.loads(urunler_str) if urunler_str else []
+            except json.JSONDecodeError as je:
+                logger.error(f"Form'dan gelen ürünler JSON formatı bozuk: {je}")
+                logger.debug(f"Bozuk JSON: {urunler_str}")
+                urunler_data = []
+            
             data = {
                 'musteri_adi'     : request.form.get('musteri_adi'),
                 'musteri_soyadi'  : request.form.get('musteri_soyadi'),
@@ -153,7 +162,7 @@ def yeni_siparis():
                 'musteri_telefon' : request.form.get('musteri_telefon'),
                 'toplam_tutar'    : request.form.get('toplam_tutar'), 
                 'notlar'          : request.form.get('notlar', ''),
-                'urunler'         : json.loads(request.form.get('urunler', '[]')),
+                'urunler'         : urunler_data,
             }
             logger.debug("POST /yeni-siparis - Form verisi alındı: %s", data)
 
