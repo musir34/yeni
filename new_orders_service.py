@@ -4,25 +4,6 @@ from models import db, OrderCreated
 import json
 import traceback
 from datetime import datetime
-
-def safe_json_loads(data, default=None):
-    """JSON parsing için güvenli fonksiyon - HTML içeriği kontrolü yapar"""
-    if default is None:
-        default = []
-    
-    if not data:
-        return default
-    
-    try:
-        # HTML içeriği kontrolü
-        if isinstance(data, str) and ('<' in data or '>' in data):
-            print(f"HTML içeriği tespit edildi, varsayılan değer döndürülüyor: {data[:50]}...")
-            return default
-        
-        return json.loads(data)
-    except (json.JSONDecodeError, TypeError, ValueError) as e:
-        print(f"JSON parse hatası: {e}, varsayılan değer döndürülüyor")
-        return default
 # qr_utils_bp'yi import et ve register et
 from qr_utils import qr_utils_bp, generate_qr_labels_pdf # generate_qr_labels_pdf fonksiyonunu da import et
 
@@ -69,8 +50,13 @@ def get_new_orders():
             # Eğer order.details zaten DB'den çekilirken ORM tarafından otomatik parse ediliyorsa (PostgreSQL JSON/JSONB sütunları için olabilir) bu parse etme kodu gereksiz olabilir.
             # Loglar details'ın <class 'str'> olduğunu gösterdi, bu yüzden parse etmek doğru.
             if isinstance(order.details, str):
-                # Güvenli JSON parsing kullan
-                order.details = safe_json_loads(order.details, [])
+                try:
+                    # details alanını JSON'dan Python listesine/sözlüğüne çevir
+                    order.details = json.loads(order.details)
+                except (json.JSONDecodeError, TypeError):
+                     # JSON formatı hatalıysa veya None ise hata logu ver ve boş liste ata
+                     print(f"!!! get_new_orders: Sipariş {order.order_number} ({order.siparis_no if hasattr(order, 'siparis_no') else 'N/A'}) için detaylar JSON formatında değil veya parse hatası.") # siparis_no ekledik loga
+                     order.details = [] # Hata durumunda boş liste ata
             elif order.details is None:
                  # Details alanı None ise boş liste ata
                  order.details = []
