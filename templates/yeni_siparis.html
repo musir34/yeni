@@ -533,7 +533,7 @@ async function showOrderDetails(siparisNo) {
         contentElement.appendChild(modalFooter);
 
         const modalEl = document.getElementById('orderDetailModal');
-        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        const modal = $(modalEl).data('bs.modal') || new bootstrap.Modal(modalEl);
         modal.show();
     } catch (error) {
         console.error('Sipariş detayı yükleme hatası:', error);
@@ -582,8 +582,7 @@ async function loadOrderForEdit(siparisNo) {
         });
 
         const modalEl = document.getElementById('orderDetailModal');
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) modal.hide();
+        $(modalEl).modal('hide');
 
         showOrderForm(true, siparisData, urunlerData);
 
@@ -604,8 +603,7 @@ async function siparisiSil(siparisNo) {
         if (data.success) {
             alert('Sipariş başarıyla silindi.');
             const modalEl = document.getElementById('orderDetailModal');
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            if (modal) modal.hide();
+            $(modalEl).modal('hide');
             // Sayfayı yenilemek yerine satırı tablodan silmek daha kullanıcı dostu olabilir.
             // Şimdilik basitçe sayfayı yeniliyoruz.
             window.location.reload();
@@ -692,8 +690,7 @@ document.querySelector('#orderForm form').addEventListener('submit', async funct
 // Toplu Ürün Ekleme Modal İşlevleri
 function addMultipleProducts() {
     const modalEl = document.getElementById('multipleProductsModal');
-    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-    modal.show();
+    $(modalEl).modal('show');
 }
 
 async function processMultipleProducts() {
