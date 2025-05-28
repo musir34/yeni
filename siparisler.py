@@ -234,7 +234,7 @@ def siparis_guncelle(siparis_no):
 
         data = request.get_json() if request.is_json else request.form.to_dict()
         if 'urunler' in data and isinstance(data['urunler'], str):
-            data['urunler'] = json.loads(data['urunler'])
+            data['urunler'] = safe_json_loads(data['urunler'])
 
         sip.musteri_adi     = data.get('musteri_adi', sip.musteri_adi)
         sip.musteri_soyadi  = data.get('musteri_soyadi', sip.musteri_soyadi)
