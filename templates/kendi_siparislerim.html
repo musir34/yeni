@@ -96,7 +96,7 @@
         <tr>
           <td>{{ siparis.siparis_no }}</td>
           <td>{{ siparis.musteri_adi }} {{ siparis.musteri_soyadi }}</td>
-          <td>{{ "%.2f"|format(siparis.toplam_tutar or 0) }} TL</td>
+          <td>{{ "%.2f"|format(siparis.toplam_tutar) }} TL</td>
           <td>{{ siparis.siparis_tarihi.strftime('%d.%m.%Y %H:%M') }}</td>
           <td>
             <span class="badge bg-{% if siparis.durum == 'Yeni' %}primary{% elif siparis.durum == 'İşleme Alındı' %}warning{% elif siparis.durum == 'Tamamlandı' %}success{% endif %}">
