@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ürün Etiket Yazdırma - Güllü Ayakkabı</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        h1, h2, h3 {
+            color: #333;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        input, select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        input[type="number"] {
+            width: 70px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        .button-search {
+            background: #2196F3;
+        }
+        
+        .button-search:hover {
+            background: #0b7dda;
+        }
+        
+        .button-preview {
+            background: #ff9800;
+        }
+        
+        .button-preview:hover {
+            background: #e68a00;
+        }
+        
+        .button-print {
+            background: #f44336;
+        }
+        
+        .button-print:hover {
+            background: #da190b;
+        }
+        
+        .sizes-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .size-box {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            width: 80px;
+            background: #f9f9f9;
+        }
+        
+        .size-box .size-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        
+        .barcode-list {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .barcode-list table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .barcode-list th,
+        .barcode-list td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .barcode-list th {
+            background-color: #f2f2f2;
+        }
+        
+        .btn-remove {
+            padding: 2px 5px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .preview-container {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background: white;
+        }
+        
+        .a4-sheet {
+            width: 210mm;
+            height: 297mm;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .labels-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(7, 1fr);
+            gap: 1mm;
+            padding: 15mm 8mm;
+            height: 100%;
+            box-sizing: border-box;
+        }
+        
+        .label {
+            border: 1px solid #ddd;
+            display: flex;
+            background: white;
+            overflow: hidden;
+        }
+        
+        .label-left {
+            width: 40%;
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-right: 1px solid #eee;
+        }
+        
+        .label-right {
+            width: 60%;
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .label-image {
+            width: 90%;
+            max-height: 50px;
+            object-fit: contain;
+            margin-bottom: 5px;
+        }
+        
+        .barcode-text {
+            font-size: 8px;
+            text-align: center;
+            font-weight: bold;
+            word-break: break-all;
+        }
+        
+        .label-info {
+            font-size: 10px;
+            margin-bottom: 3px;
+        }
+        
+        .label-info span {
+            font-weight: bold;
+        }
+        
+        .nav-buttons {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .nav-buttons a {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 10px 15px;
+            text-decoration: none;
+            color: white;
+            background: #2196F3;
+            border-radius: 4px;
+        }
+        
+        .hide-on-print {
+            display: block;
+        }
+        
+        @media print {
+            .hide-on-print {
+                display: none !important;
+            }
+            
+            body {
+                margin: 0;
+                padding: 0;
+                background: white;
+            }
+            
+            .a4-sheet {
+                box-shadow: none;
+            }
+            
+            .container, .preview-container {
+                padding: 0;
+                margin: 0;
+                max-width: none;
+                box-shadow: none;
+                border: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container hide-on-print">
+        <h1>Ürün Etiket Yazdırma</h1>
+        
+        <div class="form-group">
+            <h2>Model Arama</h2>
+            <div class="form-row">
+                <input type="text" id="model-code-input" placeholder="Model Kodu" style="flex-grow: 1;">
+                <button type="button" class="button-search" id="search-button">Model Ara</button>
+            </div>
+        </div>
+        
+        <div class="form-group" id="color-container" style="display: none;">
+            <h2>Renk Seçimi</h2>
+            <select id="color-select" style="width: 100%;">
+                <option value="">-- Renk Seçiniz --</option>
+            </select>
+        </div>
+        
+        <div class="form-group" id="sizes-container" style="display: none;">
+            <h2>Bedenler ve Miktarlar</h2>
+            <div class="sizes-container" id="sizes-list">
+                <!-- Dinamik olarak bedenlerin ekleneceği yer -->
+            </div>
+        </div>
+        
+        <div class="form-group" id="barcode-list-container" style="display: none;">
+            <h2>Yazdırılacak Etiketler</h2>
+            <div class="barcode-list">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Barkod</th>
+                            <th>Model</th>
+                            <th>Renk</th>
+                            <th>Beden</th>
+                            <th>Adet</th>
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="barcode-table-body">
+                        <!-- Barkod listesi buraya eklenecek -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <div class="form-row">
+                <button type="button" class="button-preview" id="preview-button" style="display: none;">
+                    Önizleme Oluştur
+                </button>
+                <button type="button" class="button-print" id="print-button" style="display: none;" onclick="window.print()">
+                    Yazdır
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="preview-container" id="preview-container" style="display: none;">
+        <div class="a4-sheet">
+            <div class="labels-grid" id="labels-grid">
+                <!-- Dinamik olarak oluşturulacak etiketler -->
+            </div>
+        </div>
+    </div>
+    
+    <div class="nav-buttons hide-on-print">
+        <a href="/">Ana Sayfa</a>
+        <a href="/product_list">Ürün Listesi</a>
+    </div>
+
+    <script>
+        // Global değişkenler
+        let productData = {};
+        let selectedModel = '';
+        let selectedColor = '';
+        let barcodeList = [];
+
+        // DOM yüklendikten sonra
+        document.addEventListener('DOMContentLoaded', function() {
+            // Model arama butonu
+            document.getElementById('search-button').addEventListener('click', searchModel);
+            
+            // Renk seçimi
+            document.getElementById('color-select').addEventListener('change', handleColorSelect);
+            
+            // Önizleme butonu
+            document.getElementById('preview-button').addEventListener('click', createPreview);
+        });
+
+        // Model arama fonksiyonu
+        function searchModel() {
+            const modelCode = document.getElementById('model-code-input').value.trim();
+            
+            if (!modelCode) {
+                alert('Lütfen model kodu girin.');
+                return;
+            }
+            
+            selectedModel = modelCode;
+            
+            // API'den modele ait ürünleri al
+            fetch(`/product_label/get_product_details/${modelCode}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert(data.message || 'Ürün bulunamadı');
+                        return;
+                    }
+                    
+                    productData = data.data || {};
+                    
+                    if (!productData || Object.keys(productData).length === 0) {
+                        alert('Bu model için veri bulunamadı');
+                        return;
+                    }
+                    
+                    // Renk seçeneklerini güncelle
+                    updateColorOptions(Object.keys(productData));
+                    
+                    // Renk seçimini göster
+                    document.getElementById('color-container').style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Model arama hatası:', error);
+                    alert('Model aranırken bir hata oluştu');
+                });
+        }
+
+        // Renk seçeneklerini güncelleme
+        function updateColorOptions(colors) {
+            const colorSelect = document.getElementById('color-select');
+            
+            // Önceki seçenekleri temizle
+            while (colorSelect.options.length > 1) {
+                colorSelect.remove(1);
+            }
+            
+            // Yeni seçenekleri ekle
+            colors.forEach(color => {
+                const option = document.createElement('option');
+                option.value = color;
+                option.textContent = color;
+                colorSelect.appendChild(option);
+            });
+        }
+
+        // Renk seçildiğinde
+        function handleColorSelect() {
+            const colorSelect = document.getElementById('color-select');
+            const selectedColorValue = colorSelect.value;
+            
+            if (!selectedColorValue) {
+                document.getElementById('sizes-container').style.display = 'none';
+                document.getElementById('preview-button').style.display = 'none';
+                return;
+            }
+            
+            selectedColor = selectedColorValue;
+            
+            // Beden kutularını oluştur
+            createSizeBoxes(productData[selectedColor]);
+            
+            // Beden bölümünü göster
+            document.getElementById('sizes-container').style.display = 'block';
+            
+            // Önizleme butonunu göster
+            document.getElementById('preview-button').style.display = 'inline-block';
+        }
+
+        // Beden kutularını oluşturma
+        function createSizeBoxes(sizeData) {
+            const sizesListContainer = document.getElementById('sizes-list');
+            sizesListContainer.innerHTML = '';
+            
+            // Bedenleri sırala
+            const sizes = Object.keys(sizeData);
+            sizes.sort((a, b) => {
+                const numA = parseFloat(a);
+                const numB = parseFloat(b);
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    return numA - numB;
+                }
+                return a.localeCompare(b);
+            });
+            
+            // Her beden için bir kutu oluştur
+            sizes.forEach(size => {
+                const barcode = sizeData[size];
+                
+                const sizeBox = document.createElement('div');
+                sizeBox.className = 'size-box';
+                
+                const sizeLabel = document.createElement('div');
+                sizeLabel.className = 'size-label';
+                sizeLabel.textContent = size;
+                
+                const quantityInput = document.createElement('input');
+                quantityInput.type = 'number';
+                quantityInput.min = '0';
+                quantityInput.value = '0';
+                quantityInput.dataset.size = size;
+                quantityInput.dataset.barcode = barcode;
+                quantityInput.addEventListener('change', updateBarcodeList);
+                
+                sizeBox.appendChild(sizeLabel);
+                sizeBox.appendChild(quantityInput);
+                sizesListContainer.appendChild(sizeBox);
+            });
+        }
+
+        // Barkod listesini güncelleme
+        function updateBarcodeList() {
+            // Önce barkod listesini temizle
+            barcodeList = [];
+            
+            // Tüm beden inputlarını kontrol et
+            const sizeInputs = document.querySelectorAll('#sizes-list input[type="number"]');
+            sizeInputs.forEach(input => {
+                const quantity = parseInt(input.value) || 0;
+                if (quantity > 0) {
+                    // Barkodu listeye ekle
+                    barcodeList.push({
+                        barcode: input.dataset.barcode,
+                        size: input.dataset.size,
+                        model: selectedModel,
+                        color: selectedColor,
+                        quantity: quantity
+                    });
+                }
+            });
+            
+            // Barkod tablosunu güncelle
+            updateBarcodeTable();
+            
+            // Eğer listede eleman varsa tabloyu göster, yoksa gizle
+            document.getElementById('barcode-list-container').style.display = 
+                barcodeList.length > 0 ? 'block' : 'none';
+            
+            return barcodeList.length > 0;
+        }
+
+        // Barkod tablosunu güncelleme
+        function updateBarcodeTable() {
+            const tableBody = document.getElementById('barcode-table-body');
+            tableBody.innerHTML = '';
+            
+            // Toplam adeti hesapla
+            let totalQuantity = 0;
+            
+            // Her barkod için tablo satırı oluştur
+            barcodeList.forEach((item, index) => {
+                totalQuantity += item.quantity;
+                
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${item.barcode}</td>
+                    <td>${item.model}</td>
+                    <td>${item.color}</td>
+                    <td>${item.size}</td>
+                    <td>${item.quantity}</td>
+                    <td>
+                        <button type="button" class="btn-remove" onclick="removeBarcode(${index})">Sil</button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Barkod silme
+        function removeBarcode(index) {
+            // Belirli barkodu listeden sil
+            barcodeList.splice(index, 1);
+            
+            // Tabloyu güncelle
+            updateBarcodeTable();
+            
+            // Liste boşsa gizle
+            if (barcodeList.length === 0) {
+                document.getElementById('barcode-list-container').style.display = 'none';
+                document.getElementById('preview-container').style.display = 'none';
+                document.getElementById('print-button').style.display = 'none';
+            }
+        }
+
+        // Önizleme oluşturma
+        function createPreview() {
+            // Barkod listesini güncelle ve boş olup olmadığını kontrol et
+            if (!updateBarcodeList()) {
+                alert('Lütfen en az bir beden için miktar girin.');
+                return;
+            }
+            
+            // Etiketleri hazırla
+            createLabels();
+            
+            // Önizleme konteynerini göster
+            document.getElementById('preview-container').style.display = 'block';
+            
+            // Yazdır butonunu göster
+            document.getElementById('print-button').style.display = 'inline-block';
+        }
+
+        // A4 kağıda etiketleri oluşturma
+        function createLabels() {
+            const labelsGrid = document.getElementById('labels-grid');
+            labelsGrid.innerHTML = '';
+            
+            // 3x7 grid (21 etiket) oluşturuyoruz
+            let labelCount = 0;
+            const maxLabels = 21; // 3 sütun x 7 satır
+            
+            // Her barkod için istenen sayıda etiket oluştur
+            for (let i = 0; i < barcodeList.length && labelCount < maxLabels; i++) {
+                const item = barcodeList[i];
+                
+                for (let j = 0; j < item.quantity && labelCount < maxLabels; j++) {
+                    // Bir etiket elementi oluştur
+                    const label = document.createElement('div');
+                    label.className = 'label';
+                    
+                    // QR kod kısmı (sol taraf)
+                    const labelLeft = document.createElement('div');
+                    labelLeft.className = 'label-left';
+                    
+                    // QR kod placeholder
+                    const qrImage = document.createElement('img');
+                    qrImage.className = 'label-image';
+                    qrImage.src = `https://via.placeholder.com/100x100?text=QR`;
+                    qrImage.alt = 'QR Kod';
+                    
+                    // Barkod metni
+                    const barcodeText = document.createElement('div');
+                    barcodeText.className = 'barcode-text';
+                    barcodeText.textContent = item.barcode;
+                    
+                    labelLeft.appendChild(qrImage);
+                    labelLeft.appendChild(barcodeText);
+                    
+                    // Ürün bilgileri (sağ taraf)
+                    const labelRight = document.createElement('div');
+                    labelRight.className = 'label-right';
+                    
+                    // Model bilgisi
+                    const modelInfo = document.createElement('div');
+                    modelInfo.className = 'label-info';
+                    modelInfo.innerHTML = `<span>Model:</span> ${item.model}`;
+                    
+                    // Renk bilgisi
+                    const colorInfo = document.createElement('div');
+                    colorInfo.className = 'label-info';
+                    colorInfo.innerHTML = `<span>Renk:</span> ${item.color}`;
+                    
+                    // Beden bilgisi
+                    const sizeInfo = document.createElement('div');
+                    sizeInfo.className = 'label-info';
+                    sizeInfo.innerHTML = `<span>Beden:</span> ${item.size}`;
+                    
+                    labelRight.appendChild(modelInfo);
+                    labelRight.appendChild(colorInfo);
+                    labelRight.appendChild(sizeInfo);
+                    
+                    // Sol ve sağ kısımları etikete ekle
+                    label.appendChild(labelLeft);
+                    label.appendChild(labelRight);
+                    
+                    // Etiketi grid'e ekle
+                    labelsGrid.appendChild(label);
+                    
+                    labelCount++;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
