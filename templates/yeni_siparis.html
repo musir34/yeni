@@ -356,20 +356,8 @@ async function searchProduct() {
         if (data.success && data.product) {
             const product = data.product;
             document.getElementById('product-details').classList.remove('d-none');
-            // Ürün görselini ayarla
-            let imageSrc = '/static/images/default-product.png'; // Varsayılan görsel
-            if (product.images && product.images.length > 0) {
-                // Eğer images array'inde URL varsa
-                const firstImage = product.images[0];
-                if (typeof firstImage === 'string') {
-                    imageSrc = firstImage;
-                } else if (firstImage && firstImage.url) {
-                    imageSrc = firstImage.url;
-                }
-            } else {
-                // Barkod ile görsel ara
-                imageSrc = `/static/images/${product.barcode}.jpg`;
-            }
+            // Ürün görselini ayarla - öncelik sırası: barkod.jpg > database images > default
+            let imageSrc = `/static/images/${product.barcode}.jpg`;
             
             const productImageEl = document.getElementById('product-image');
             productImageEl.src = imageSrc;
