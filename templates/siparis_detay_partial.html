@@ -53,7 +53,7 @@
           <th>#</th>
           <th>Görsel</th>
           <th>Barkod</th>
-          <th>Ürün Adı / Model</th>
+          <th>Model Kod</th>
           <th>Renk / Beden</th>
           <th class="text-end">Adet</th>
           <th class="text-end">Birim Fiyat</th>
@@ -67,20 +67,23 @@
             <td>{{ loop.index }}</td>
             <td class="text-center">
               {% if urun.urun_gorseli %}
-                <img src="{{ urun.urun_gorseli }}" alt="Ürün Görseli" class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;">
+                <img src="{{ urun.urun_gorseli }}" alt="Ürün Görseli" class="img-thumbnail product-image-clickable" 
+                     style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;" 
+                     onclick="showImageModal('{{ urun.urun_gorseli }}', '{{ urun.product_main_id or urun.urun_barkod }}')">
               {% else %}
-                <img src="/static/images/{{ urun.urun_barkod }}.jpg" alt="Ürün Görseli" class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;" 
+                <img src="/static/images/{{ urun.urun_barkod }}.jpg" alt="Ürün Görseli" class="img-thumbnail product-image-clickable" 
+                     style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;" 
+                     onclick="showImageModal('/static/images/{{ urun.urun_barkod }}.jpg', '{{ urun.product_main_id or urun.urun_barkod }}')"
                      onerror="this.src='/static/images/default-product.png';">
               {% endif %}
             </td>
             <td data-urun-barkod>{{ urun.urun_barkod }}</td>
-            <td data-urun-adi>
-              <div>
-                <strong>{{ urun.urun_adi }}</strong>
-                {% if urun.product_main_id %}
-                  <br><small class="text-muted">Model: {{ urun.product_main_id }}</small>
-                {% endif %}
-              </div>
+            <td data-model-kod>
+              {% if urun.product_main_id %}
+                <strong>{{ urun.product_main_id }}</strong>
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
             </td>
             <td><span data-urun-renk>{{ urun.renk }}</span> / <span data-urun-beden>{{ urun.beden }}</span></td>
             <td class="text-end" data-urun-adet>{{ (urun.adet|default(0, true))|int }}</td>
@@ -105,3 +108,31 @@
     </table>
   </div>
 </div>
+
+<!-- Ürün Görseli Büyütme Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="imageModalLabel">Ürün Görseli</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body text-center">
+        <img id="modalImage" src="" alt="Ürün Görseli" class="img-fluid" style="max-height: 500px;">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showImageModal(imageSrc, productTitle) {
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    const modalTitle = document.getElementById('imageModalLabel');
+    
+    modalImage.src = imageSrc;
+    modalTitle.textContent = 'Ürün Görseli - ' + productTitle;
+    
+    $(modal).modal('show');
+}
+</script>
