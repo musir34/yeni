@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ürün Etiketi Yazdırma - Güllü Ayakkabı</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding-top: 20px;
+            background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
+
+        .form-container {
+            width: 400px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .form-container h2,
+        .form-container h3,
+        .form-container h4 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .form-container h4 {
+            margin-top: 15px;
+            margin-bottom: 5px;
+            text-align: left; 
+        }
+        .form-section {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .form-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[readonly] {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        label {
+            font-size: 14px;
+            display: block;
+            margin-bottom: 3px;
+            color: #555;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px 15px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+        }
+        #search-model-btn { background-color: #28a745; }
+        #search-model-btn:hover { background-color: #218838; }
+        #preview-btn { background-color: #007bff; }
+        #preview-btn:hover { background-color: #0056b3; }
+
+        .label-container { 
+            width: 60mm; 
+            height: 40mm; 
+            background-color: white;
+            display: flex; 
+            border: 1px solid black;
+            box-sizing: border-box; 
+            overflow: hidden; 
+            margin-bottom: 10px;
+        }
+
+        .paper-a4-fixed { 
+            width: 210mm; 
+            height: 297mm; 
+            border: 1px solid #ccc; 
+            padding: 0; 
+        }
+
+        #multi-label-container-fixed-a4 {
+            display: grid;
+            width: 100%; 
+            height: 100%;
+            box-sizing: border-box;
+            overflow: hidden; 
+        }
+
+        .label-item { 
+            border: 1px solid #ddd; 
+            background-color: white; 
+            box-sizing: border-box;
+            display: flex; 
+            flex-direction: row; 
+            align-items: center; 
+            overflow: hidden;
+        }
+
+        /* Single Label Content Styles */
+        #single-label-content-wrapper { 
+            display: flex; 
+            flex-direction: row; 
+            align-items: center;
+            width: 100%; 
+            height: 100%; 
+            padding: 1.5mm; 
+            box-sizing: border-box;
+        }
+        #single-label-content-wrapper .barcode-text { 
+            text-align: center; 
+            word-break: break-all; 
+            max-width: 100%; 
+            overflow: hidden; 
+            font-weight: bold; 
+            font-size: 10pt;
+        }
+        #single-label-content-wrapper .product-info div { 
+            margin-bottom: 2mm; 
+            line-height: 1.2; 
+        }
+        #single-label-content-wrapper .product-info .label { 
+            font-weight: bold; 
+            margin-right: 1mm; 
+        }
+        #single-label-content-wrapper .product-info .value { 
+            font-weight: normal; 
+        }
+
+        /* A4 Fixed Label Content Styles */
+        .label-item-fixed-a4-content { 
+            display: flex; 
+            width: 100%; 
+            height: 100%; 
+            padding: 1mm; 
+            box-sizing: border-box;
+        }
+        .label-item-fixed-a4-content .left {
+            width: 50%; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            padding-right: 1mm; 
+            box-sizing: border-box;
+        }
+        .label-item-fixed-a4-content .right {
+            width: 50%; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            text-align: center; 
+            padding-left: 1mm; 
+            box-sizing: border-box;
+        }
+        .label-item-fixed-a4-content img.qr-code-image { 
+            max-width: 18mm; 
+            max-height: 18mm; 
+            margin-bottom: 1mm; 
+            object-fit: contain;
+        }
+        .label-item-fixed-a4-content .barcode-text { 
+            text-align: center; 
+            font-weight: bold; 
+            word-break: break-all; 
+            line-height: 1.2; 
+            font-size: 10pt;
+        }
+        .label-item-fixed-a4-content .info { 
+            margin-bottom: 1.5mm; 
+            font-weight: 600; 
+            line-height: 1.2; 
+            text-align: left; 
+            font-size: 11pt;
+        }
+        .label-item-fixed-a4-content .info .label { 
+            font-weight: bold; 
+        }
+        .label-item-fixed-a4-content .info .value { 
+            font-weight: normal; 
+        }
+
+        .size-box {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 8px;
+            width: 80px;
+            margin: 5px;
+        }
+        .size-box .size-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        #size-boxes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        #barcode-list {
+            margin-top: 15px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        #barcode-list-body tr {
+            border-bottom: 1px solid #eee;
+        }
+        #barcode-list-body td {
+            padding: 5px;
+        }
+        #barcode-list-body .delete-btn {
+            background-color: #dc3545;
+            padding: 2px 5px;
+            font-size: 12px;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .nav-buttons { 
+            display: flex; 
+            justify-content: center; 
+            width: 100%; 
+            margin-top: 20px; 
+            gap: 15px; 
+        }
+        .nav-buttons a { 
+            text-decoration: none; 
+            color: white; 
+            background-color: #007bff; 
+            padding: 10px 15px; 
+            border-radius: 4px; 
+            font-size: 16px; 
+            text-align: center; 
+            transition: background-color 0.3s; 
+        }
+        .nav-buttons a:hover { 
+            background-color: #0056b3; 
+        }
+
+        .no-print { /* Hide elements during printing */ }
+        
+        @media print {
+            .no-print { 
+                display: none !important; 
+            }
+            body { 
+                margin: 0 !important; 
+                padding: 0 !important; 
+                background-color: white !important; 
+                -webkit-print-color-adjust: exact !important; 
+                color-adjust: exact !important; 
+            }
+            #print-button { 
+                display: none !important; 
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="form-container no-print">
+        <div class="form-section">
+            <h2>Etiket Bilgileri</h2>
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                <input type="text" id="model-input" placeholder="Model Kodu" required style="flex: 1; margin-bottom: 0;">
+                <button type="button" id="search-model-btn" style="width: auto; margin: 0 0 0 10px; padding: 10px;">Model Ara</button>
+            </div>
+            
+            <select id="color-select" style="display: none; margin-bottom: 10px;">
+                <option value="">-- Renk Seçiniz --</option>
+            </select>
+            
+            <div id="sizes-container" style="display: none; margin-bottom: 15px;">
+                <div style="font-weight: bold; margin-bottom: 8px;">Bedenler ve Miktarlar</div>
+                <div id="size-boxes">
+                    <!-- Beden kutuları burada dinamik olarak oluşturulacak -->
+                </div>
+            </div>
+            
+            <div id="barcode-list" style="display: none;">
+                <h4>Yazdırılacak Barkodlar</h4>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <th style="text-align: left; padding: 5px;">Barkod</th>
+                            <th style="text-align: left; padding: 5px;">Model</th>
+                            <th style="text-align: left; padding: 5px;">Renk</th>
+                            <th style="text-align: left; padding: 5px;">Beden</th>
+                            <th style="text-align: center; padding: 5px;">Adet</th>
+                            <th style="text-align: center; padding: 5px;">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="barcode-list-body">
+                        <!-- Eklenen barkodlar burada listelenecek -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <button type="button" id="preview-btn" style="display: none; margin-top: 10px;">QR Kodları Oluştur ve Önizle</button>
+        </div>
+        
+        <div class="form-section">
+            <h3>Kağıt/Etiket Ayarları</h3>
+            <select id="paper-type">
+                <option value="60x40" selected>Etiket - 60x40mm (Tek)</option>
+                <option value="a4_fixed">A4 Standart (3x7 Etiket)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="paper-a4-fixed" id="a4-container" style="display: none;">
+        <div id="multi-label-container-fixed-a4"></div>
+    </div>
+
+    <button type="button" id="print-button" class="no-print" onclick="window.print()" style="display: none; margin-top: 10px; width: 210mm; max-width: 90%;">Yazdır</button>
+
+    <div class="nav-buttons no-print" style="width: 210mm; max-width: 90%;">
+        <a href="/">Ana Sayfa</a>
+        <a href="/product_list">Ürün Listesi</a>
+    </div>
+
+    <script>
+        // Barkod listesi
+        let barcodeList = [];
+        let productData = {};
+        let selectedModel = '';
+        let selectedColor = '';
+        
+        // A4 kağıt konfigürasyonu
+        const A4_CONFIG = {
+            PAGE_WIDTH: 210, 
+            PAGE_HEIGHT: 297,
+            MARGIN_TOP: 15, 
+            MARGIN_BOTTOM: 15,
+            MARGIN_LEFT: 8, 
+            MARGIN_RIGHT: 8,
+            COLUMNS: 3,
+            ROWS: 7,
+            COLUMN_GAP: 2,
+            ROW_GAP: 1
+        };
+        
+        // Sayfa yüklendiğinde
+        document.addEventListener('DOMContentLoaded', function() {
+            // Model arama butonu
+            document.getElementById('search-model-btn').addEventListener('click', searchModel);
+            
+            // Renk seçimi değiştiğinde
+            document.getElementById('color-select').addEventListener('change', handleColorSelect);
+            
+            // Önizleme butonu
+            document.getElementById('preview-btn').addEventListener('click', previewLabels);
+        });
+        
+        // Model arama işlemi
+        function searchModel() {
+            const modelCode = document.getElementById('model-input').value.trim();
+            if (!modelCode) {
+                alert('Lütfen bir model kodu giriniz.');
+                return;
+            }
+            
+            selectedModel = modelCode;
+            
+            // Model koduna göre renk ve beden seçeneklerini getir
+            fetch(`/product_label/get_product_details/${modelCode}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert(data.message || 'Ürün bulunamadı.');
+                        return;
+                    }
+                    
+                    // Ürün verilerini sakla
+                    productData = data.data || {};
+                    
+                    if (!productData || Object.keys(productData).length === 0) {
+                        alert('Bu model için veri bulunamadı.');
+                        return;
+                    }
+                    
+                    // Renk seçeneklerini güncelle
+                    updateColorOptions(Object.keys(productData));
+                    
+                    // Renk seçim alanını göster
+                    document.getElementById('color-select').style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Model arama hatası:', error);
+                    alert('Model aranırken bir hata oluştu.');
+                });
+        }
+        
+        // Renk seçeneklerini günceller
+        function updateColorOptions(colors) {
+            const colorSelect = document.getElementById('color-select');
+            
+            // Mevcut seçenekleri temizle
+            while (colorSelect.options.length > 1) {
+                colorSelect.remove(1);
+            }
+            
+            // Yeni renk seçeneklerini ekle
+            colors.forEach(color => {
+                const option = document.createElement('option');
+                option.value = color;
+                option.textContent = color;
+                colorSelect.appendChild(option);
+            });
+        }
+        
+        // Renk seçildiğinde
+        function handleColorSelect() {
+            const colorSelect = document.getElementById('color-select');
+            const selectedColorValue = colorSelect.value;
+            
+            if (!selectedColorValue) {
+                // Seçim yapılmadıysa beden kutularını gizle
+                document.getElementById('sizes-container').style.display = 'none';
+                document.getElementById('preview-btn').style.display = 'none';
+                return;
+            }
+            
+            selectedColor = selectedColorValue;
+            
+            // Beden kutularını oluştur
+            createSizeBoxes(productData[selectedColorValue]);
+            
+            // Beden konteynerini göster
+            document.getElementById('sizes-container').style.display = 'block';
+            
+            // Önizleme butonunu göster
+            document.getElementById('preview-btn').style.display = 'block';
+        }
+        
+        // Beden kutularını oluşturur
+        function createSizeBoxes(sizeData) {
+            const sizeBoxesContainer = document.getElementById('size-boxes');
+            
+            // Mevcut kutuları temizle
+            sizeBoxesContainer.innerHTML = '';
+            
+            // Bedenleri sırala
+            const sizes = Object.keys(sizeData);
+            sizes.sort((a, b) => {
+                // Numerik olarak sırala
+                const numA = parseFloat(a);
+                const numB = parseFloat(b);
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    return numA - numB;
+                }
+                // Alfabetik sırala
+                return a.localeCompare(b);
+            });
+            
+            // Her beden için kutu oluştur
+            sizes.forEach(size => {
+                const barcode = sizeData[size];
+                
+                // Beden kutusu
+                const sizeBox = document.createElement('div');
+                sizeBox.className = 'size-box';
+                
+                // Beden bilgisi
+                const sizeHeader = document.createElement('div');
+                sizeHeader.className = 'size-header';
+                sizeHeader.textContent = size;
+                
+                // Miktar input
+                const quantityInput = document.createElement('input');
+                quantityInput.type = 'number';
+                quantityInput.min = '0';
+                quantityInput.value = '0';
+                quantityInput.dataset.size = size;
+                quantityInput.dataset.barcode = barcode;
+                
+                // Elementleri birleştir
+                sizeBox.appendChild(sizeHeader);
+                sizeBox.appendChild(quantityInput);
+                sizeBoxesContainer.appendChild(sizeBox);
+            });
+        }
+        
+        // Önizleme ve barkod listeleme
+        function previewLabels() {
+            // Beden kutularından seçilen adetleri topla
+            const sizeInputs = document.querySelectorAll('#size-boxes input[type="number"]');
+            
+            // Barkod listesini temizle
+            barcodeList = [];
+            
+            // Her bir beden kutusu için
+            sizeInputs.forEach(input => {
+                const quantity = parseInt(input.value);
+                if (quantity > 0) {
+                    barcodeList.push({
+                        barcode: input.dataset.barcode,
+                        model: selectedModel,
+                        color: selectedColor,
+                        size: input.dataset.size,
+                        quantity: quantity
+                    });
+                }
+            });
+            
+            // Eğer hiç barkod seçilmediyse uyarı ver
+            if (barcodeList.length === 0) {
+                alert('Lütfen en az bir beden için miktar giriniz.');
+                return;
+            }
+            
+            // Barkod listesini güncelle
+            updateBarcodeList();
+            
+            // A4 etiketleri oluştur
+            createA4Labels();
+            
+            // Yazdırma butonunu göster
+            document.getElementById('print-button').style.display = 'block';
+        }
+        
+        // Barkod listesini günceller
+        function updateBarcodeList() {
+            const listBody = document.getElementById('barcode-list-body');
+            listBody.innerHTML = '';
+            
+            // Toplam etiket sayısı
+            let totalCount = 0;
+            
+            // Her barkod için satır oluştur
+            barcodeList.forEach((item, index) => {
+                totalCount += item.quantity;
+                
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${item.barcode}</td>
+                    <td>${item.model}</td>
+                    <td>${item.color}</td>
+                    <td>${item.size}</td>
+                    <td style="text-align: center;">${item.quantity}</td>
+                    <td style="text-align: center;">
+                        <button class="delete-btn" onclick="removeBarcode(${index})">Sil</button>
+                    </td>
+                `;
+                
+                listBody.appendChild(row);
+            });
+            
+            // Barkod listesini görünür yap
+            document.getElementById('barcode-list').style.display = 'block';
+        }
+        
+        // Barkod listesinden öğe siler
+        function removeBarcode(index) {
+            barcodeList.splice(index, 1);
+            updateBarcodeList();
+            
+            // Liste boşsa
+            if (barcodeList.length === 0) {
+                document.getElementById('barcode-list').style.display = 'none';
+                document.getElementById('print-button').style.display = 'none';
+                document.getElementById('a4-container').style.display = 'none';
+            }
+        }
+        
+        // A4 etiketleri oluşturur
+        function createA4Labels() {
+            const container = document.getElementById('multi-label-container-fixed-a4');
+            container.innerHTML = '';
+            
+            // Grid düzenini ayarla
+            container.style.gridTemplateColumns = `repeat(${A4_CONFIG.COLUMNS}, 1fr)`;
+            container.style.gridTemplateRows = `repeat(${A4_CONFIG.ROWS}, 1fr)`;
+            container.style.gap = `${A4_CONFIG.ROW_GAP}mm ${A4_CONFIG.COLUMN_GAP}mm`;
+            container.style.padding = `${A4_CONFIG.MARGIN_TOP}mm ${A4_CONFIG.MARGIN_RIGHT}mm ${A4_CONFIG.MARGIN_BOTTOM}mm ${A4_CONFIG.MARGIN_LEFT}mm`;
+            
+            let labelCounter = 0;
+            const maxLabels = A4_CONFIG.COLUMNS * A4_CONFIG.ROWS;
+            
+            // Her bir barkod için belirtilen miktarda etiket oluştur
+            for (let i = 0; i < barcodeList.length; i++) {
+                const item = barcodeList[i];
+                
+                for (let j = 0; j < item.quantity; j++) {
+                    if (labelCounter >= maxLabels) break; // Sayfa sınırını aşarsa dur
+                    
+                    const labelItem = document.createElement('div');
+                    labelItem.className = 'label-item';
+                    
+                    // Etiket içeriği
+                    labelItem.innerHTML = `
+                        <div class="label-item-fixed-a4-content">
+                            <div class="left">
+                                <img class="qr-code-image" src="https://via.placeholder.com/100x100?text=QR-${item.barcode}" alt="QR Kod">
+                                <div class="barcode-text">${item.barcode}</div>
+                            </div>
+                            <div class="right">
+                                <div class="info"><span class="label">Model:</span> <span class="value">${item.model}</span></div>
+                                <div class="info"><span class="label">Renk:</span> <span class="value">${item.color}</span></div>
+                                <div class="info"><span class="label">Beden:</span> <span class="value">${item.size}</span></div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(labelItem);
+                    labelCounter++;
+                }
+            }
+            
+            // A4 konteynerini görünür yap
+            document.getElementById('a4-container').style.display = 'block';
+        }
+    </script>
+</body>
+
+</html>
