@@ -1,5 +1,5 @@
 # new_orders_service.py dosyası (güncellenmiş prepare_new_orders fonksiyonu)
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, make_response
 from models import db, OrderCreated
 import json
 import traceback
@@ -488,3 +488,106 @@ def generate_bulk_qr_pdf():
         traceback.print_exc()
         flash("Toplu QR etiket PDF oluşturulurken beklenmedik bir hata oluştu.", "danger")
         return redirect(url_for('new_orders_service.get_new_orders')) # Hata durumunda Yeni siparişler listesine yönlendir
+
+
+@new_orders_service_bp.route('/print-customer-info', methods=['POST'])
+def print_customer_info():
+    """
+    Seçilen siparişlerin müşteri bilgilerini yazdırmak için PDF oluşturur.
+    """
+    try:
+        # POST'tan gelen sipariş numaralarını al
+        order_numbers = request.form.getlist('order_numbers')
+        
+        if not order_numbers:
+            return jsonify({'error': 'Sipariş numarası seçilmedi'}), 400
+        
+        # Seçilen siparişleri veritabanından çek
+        orders = OrderCreated.query.filter(OrderCreated.order_number.in_(order_numbers)).all()
+        
+        if not orders:
+            return jsonify({'error': 'Seçilen siparişler bulunamadı'}), 404
+        
+        # PDF oluştur
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.units import mm
+        import io
+        
+        # Geçici dosya oluştur
+        pdf_buffer = io.BytesIO()
+        c = canvas.Canvas(pdf_buffer, pagesize=A4)
+        width, height = A4
+        
+        y_position = height - 50
+        line_height = 20
+        
+        # Başlık
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(50, y_position, "Müşteri Bilgileri Raporu")
+        y_position -= 40
+        
+        # Her sipariş için müşteri bilgilerini yazdır
+        for order in orders:
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(50, y_position, f"Sipariş No: {order.order_number}")
+            y_position -= line_height
+            
+            c.setFont("Helvetica", 10)
+            c.drawString(70, y_position, f"Müşteri Adı: {order.customer_name or 'Belirtilmemiş'} {order.customer_surname or ''}")
+            y_position -= line_height
+            
+            c.drawString(70, y_position, f"Telefon: {order.customer_phone or 'Belirtilmemiş'}")
+            y_position -= line_height
+            
+            # Adresi satırlara böl (çok uzunsa)
+            address = order.customer_address or 'Adres belirtilmemiş'
+            if len(address) > 80:
+                # Uzun adresi satırlara böl
+                words = address.split(' ')
+                lines = []
+                current_line = ""
+                for word in words:
+                    if len(current_line + " " + word) <= 80:
+                        current_line += " " + word if current_line else word
+                    else:
+                        lines.append(current_line)
+                        current_line = word
+                if current_line:
+                    lines.append(current_line)
+                
+                c.drawString(70, y_position, "Adres:")
+                y_position -= line_height
+                for line in lines:
+                    c.drawString(90, y_position, line)
+                    y_position -= line_height
+            else:
+                c.drawString(70, y_position, f"Adres: {address}")
+                y_position -= line_height
+            
+            c.drawString(70, y_position, f"Sipariş Tarihi: {order.order_date}")
+            y_position -= line_height
+            
+            c.drawString(70, y_position, f"Kargo Firması: {order.cargo_provider_name or 'Belirtilmemiş'}")
+            y_position -= line_height * 2
+            
+            # Sayfa sonu kontrolü
+            if y_position < 100:
+                c.showPage()
+                y_position = height - 50
+        
+        c.save()
+        pdf_buffer.seek(0)
+        
+        # PDF'i indir
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        response = make_response(pdf_buffer.getvalue())
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename=musteri_bilgileri_{timestamp}.pdf'
+        
+        return response
+        
+    except Exception as e:
+        print(f"!!! HATA: Müşteri bilgileri yazdırılırken hata: {e}")
+        traceback.print_exc()
+        return jsonify({'error': 'Müşteri bilgileri yazdırılırken bir hata oluştu'}), 500
