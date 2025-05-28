@@ -137,6 +137,8 @@ def yeni_siparis():
 
         except Exception as e:
             logger.error(f"Siparişler listelenirken genel bir hata oluştu: {e}")
+            logger.error(f"Hata tipi: {type(e)}")
+            logger.error(f"Hata detayı: {repr(e)}")
             logger.debug(f"Traceback:\n{traceback.format_exc()}") 
             return render_template('error.html', hata=str(e)), 500
 

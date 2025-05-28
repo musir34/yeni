@@ -27,7 +27,7 @@
           <tr>
             <td>{{ siparis.siparis_no }}</td>
             <td>{{ siparis.musteri_adi }} {{ siparis.musteri_soyadi }}</td>
-              <td>{{ '%.2f' % (siparis.toplam_tutar or 0) }} TL</td>
+              <td>{{ siparis.toplam_tutar|default(0)|float|round(2) }} TL</td>
             <td>{{ siparis.siparis_tarihi.strftime('%d.%m.%Y %H:%M') if siparis.siparis_tarihi else 'N/A' }}</td> {# GÜNCELLENDİ #}
             <td>
               <span class="badge bg-{{ 'success' if siparis.durum == 'Tamamlandı' else ('primary' if siparis.durum == 'Yeni Sipariş' else 'warning') }}">
