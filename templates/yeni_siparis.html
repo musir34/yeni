@@ -356,7 +356,28 @@ async function searchProduct() {
         if (data.success && data.product) {
             const product = data.product;
             document.getElementById('product-details').classList.remove('d-none');
-            document.getElementById('product-image').src = product.images && product.images.length > 0 ? product.images[0] : '/static/logo/default.png';
+            // Ürün görselini ayarla
+            let imageSrc = '/static/images/default-product.png'; // Varsayılan görsel
+            if (product.images && product.images.length > 0) {
+                // Eğer images array'inde URL varsa
+                const firstImage = product.images[0];
+                if (typeof firstImage === 'string') {
+                    imageSrc = firstImage;
+                } else if (firstImage && firstImage.url) {
+                    imageSrc = firstImage.url;
+                }
+            } else {
+                // Barkod ile görsel ara
+                imageSrc = `/static/images/${product.barcode}.jpg`;
+            }
+            
+            const productImageEl = document.getElementById('product-image');
+            productImageEl.src = imageSrc;
+            // Görsel yüklenemezse varsayılan görseli göster
+            productImageEl.onerror = function() {
+                this.src = '/static/images/default-product.png';
+                this.onerror = null;
+            };
             document.getElementById('product-title').textContent = product.title || 'N/A';
             document.getElementById('product-model').textContent = product.product_main_id || 'N/A';
             document.getElementById('product-color').textContent = product.color || 'N/A';
