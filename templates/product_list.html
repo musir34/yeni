@@ -100,37 +100,7 @@
     }
     .product-card:hover .product-image img { transform: scale(1.05); }
     
-    /* Hover preview stilleri */
-    .image-preview {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(0.8);
-      width: 100px;
-      height: 100px;
-      z-index: 9999;
-      border-radius: 8px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-      opacity: 0;
-      visibility: hidden;
-      transition: all 0.2s ease;
-      pointer-events: none;
-      overflow: hidden;
-      background: white;
-      border: 2px solid #fff;
-    }
-    .image-preview.show {
-      opacity: 1;
-      visibility: visible;
-      transform: translate(-50%, -50%) scale(1);
-    }
-    .image-preview img {
-      width: 100px;
-      height: 100px;
-      object-fit: cover;
-      border-radius: 6px;
-      display: block;
-    }
+
     
     /* Modal stilleri */
     .image-modal {
@@ -412,11 +382,6 @@
     {# Panoya kopyalama için gizli alan #}
     <textarea id="temp-copier" class="sr-only" aria-hidden="true"></textarea>
     
-    {# Hover önizleme için görsel elementi #}
-    <div class="image-preview" id="imagePreview">
-      <img src="" alt="Görsel Önizleme" />
-    </div>
-    
     {# Modal için görsel elementi #}
     <div class="image-modal" id="imageModal">
       <button class="close-btn" id="closeModal">&times;</button>
@@ -434,38 +399,14 @@
 
     $(document).ready(function () {
 
-        // --- Görsel Hover ve Modal Özellikleri ---
-        let hoverTimeout;
-        const $imagePreview = $('#imagePreview');
+        // --- Görsel Modal Özellikleri ---
         const $imageModal = $('#imageModal');
         const $closeModal = $('#closeModal');
 
-        // Ürün görsellerine hover ve tıklama olayları ekle
+        // Ürün görsellerine sadece tıklama olayı ekle
         $('.product-image').each(function() {
             const $productImage = $(this);
             const imageSrc = $productImage.data('image-src');
-            
-            // Mouse enter - hover önizleme
-            $productImage.on('mouseenter', function(e) {
-                if (imageSrc && imageSrc !== 'https://via.placeholder.com/300x220/eee/888?text=Gorsel+Yok') {
-                    clearTimeout(hoverTimeout);
-                    hoverTimeout = setTimeout(function() {
-                        // Görseli yükle ve boyutunu kontrol et
-                        const img = new Image();
-                        img.onload = function() {
-                            $imagePreview.find('img').attr('src', imageSrc);
-                            $imagePreview.addClass('show');
-                        };
-                        img.src = imageSrc;
-                    }, 300); // Daha hızlı açılsın
-                }
-            });
-            
-            // Mouse leave - hover önizlemeyi gizle
-            $productImage.on('mouseleave', function() {
-                clearTimeout(hoverTimeout);
-                $imagePreview.removeClass('show');
-            });
             
             // Tıklama - modal aç
             $productImage.on('click', function(e) {
