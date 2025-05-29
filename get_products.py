@@ -606,10 +606,15 @@ def restore_from_archive():
 
 
 @get_products_bp.route('/product_list')
-@cache.cached(timeout=CACHE_TIMES['products'])
 def product_list():
     try:
         page = request.args.get('page', 1, type=int)
+        
+        # Cache key'ini sayfa numarasını da içerecek şekilde oluştur
+        cache_key = f'product_list_page_{page}'
+        cached_result = cache.get(cache_key)
+        if cached_result:
+            return cached_result
         per_page = 12
         base_query = Product.query
         products = base_query.all()
@@ -628,6 +633,8 @@ def product_list():
             'pages': total_pages,
             'has_prev': page > 1,
             'has_next': page < total_pages,
+            'prev_num': page - 1 if page > 1 else None,
+            'next_num': page + 1 if page < total_pages else None,
             'iter_pages': lambda left_edge=2, right_edge=2, left_current=2, right_current=2:
                 range(1, total_pages + 1)
         }
@@ -635,13 +642,19 @@ def product_list():
         logger.error(f"Ürünler veritabanından çekilirken bir hata oluştu: {e}")
         flash("Ürünler bulunamadı veya veritabanı okunamadı.", "danger")
         return render_template('error.html', message="Ürün bulunamadı.")
-    return render_template(
+    
+    # Sonucu render et ve cache'e kaydet
+    result = render_template(
         'product_list.html',
         grouped_products=current_page_products,
         pagination=pagination,
         total_pages=total_pages,
         search_mode=False
     )
+    
+    # Sonucu cache'e kaydet
+    cache.set(cache_key, result, timeout=CACHE_TIMES['products'])
+    return result
 
 
 @get_products_bp.route('/get_product_variants', methods=['GET'])
