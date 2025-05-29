@@ -724,45 +724,125 @@
             });
         });
 
+        // Modern Alert Modal HTML'i
+        const alertModalHtml = `
+            <div class="modal fade" id="alertModal" tabindex="-1" role="dialog">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="alertModalTitle">Bilgi</h5>
+                            <button type="button" class="close" data-dismiss="modal">
+                                <span>&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <p id="alertModalMessage"></p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" data-dismiss="modal">Tamam</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Prompt Modal HTML'i
+        const promptModalHtml = `
+            <div class="modal fade" id="promptModal" tabindex="-1" role="dialog">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="promptModalTitle">Fiyat Güncelleme</h5>
+                            <button type="button" class="close" data-dismiss="modal">
+                                <span>&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <p id="promptModalMessage"></p>
+                            <input type="number" class="form-control" id="promptModalInput" placeholder="Fiyat giriniz" step="0.01" min="0">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+                            <button type="button" class="btn btn-primary" id="promptModalConfirm">Güncelle</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Modal'ları body'ye ekle
+        if (!$('#alertModal').length) {
+            $('body').append(alertModalHtml);
+        }
+        if (!$('#promptModal').length) {
+            $('body').append(promptModalHtml);
+        }
+
+        // Modern Alert fonksiyonu
+        function showAlert(message, title = 'Bilgi', type = 'info') {
+            $('#alertModalTitle').text(title);
+            $('#alertModalMessage').text(message);
+            $('#alertModal').modal('show');
+        }
+
+        // Modern Prompt fonksiyonu
+        function showPrompt(message, title = 'Fiyat Güncelleme', callback) {
+            $('#promptModalTitle').text(title);
+            $('#promptModalMessage').text(message);
+            $('#promptModalInput').val('');
+            $('#promptModal').modal('show');
+            
+            $('#promptModalConfirm').off('click').on('click', function() {
+                const value = $('#promptModalInput').val();
+                $('#promptModal').modal('hide');
+                if (callback) callback(value);
+            });
+        }
+
         // Model Fiyatı Güncelleme (Toplu)
         $productContainer.on('click', '.update-model-price', function() {
             const $button = $(this);
             const model = $button.data('model');
             
             if (!model) {
-                alert('Model bilgisi bulunamadı!');
+                showAlert('Model bilgisi bulunamadı!', 'Hata', 'error');
                 return;
             }
             
-            const newPrice = prompt(`${model} modeli için tüm varyantlara uygulanacak yeni satış fiyatını giriniz:`);
-            
-            if (newPrice === null) return; // İptal edildi
-            
-            const price = parseFloat(newPrice);
-            if (isNaN(price) || price < 0) {
-                alert('Geçerli bir fiyat değeri giriniz!');
-                return;
-            }
-            
-            $button.html('<i class="fas fa-spinner fa-spin"></i> Güncelleniyor...').prop('disabled', true);
-            
-            $.ajax({
-                url: '/api/update_model_price',
-                method: 'POST',
-                data: {
-                    model_id: model,
-                    sale_price: price
-                },
-                success: function(res) {
-                    alert(res.message || (res.success ? 'Model fiyatı başarıyla güncellendi!' : 'Model fiyatı güncellenemedi!'));
-                    if (res.success) location.reload();
-                },
-                error: function() {
-                    alert('Sunucu hatası!');
-                },
-                complete: function() {
-                    $button.html('<i class="fas fa-tags"></i> Model Fiyatı').prop('disabled', false);
+            showPrompt(`${model} modeli için tüm varyantlara uygulanacak yeni satış fiyatını giriniz:`, 'Model Fiyatı Güncelleme', function(newPrice) {
+                if (!newPrice) return;
+                
+                const price = parseFloat(newPrice);
+                if (isNaN(price) || price < 0) {
+                    showAlert('Geçerli bir fiyat değeri giriniz!', 'Hata', 'error');
+                    return;
                 }
+                
+                $button.html('<i class="fas fa-spinner fa-spin"></i> Güncelleniyor...').prop('disabled', true);
+                
+                $.ajax({
+                    url: '/api/update_model_price',
+                    method: 'POST',
+                    data: {
+                        model_id: model,
+                        sale_price: price
+                    },
+                    success: function(res) {
+                        if (res.success) {
+                            showAlert(res.message || 'Model fiyatı başarıyla güncellendi!', 'Başarılı', 'success');
+                            setTimeout(() => location.reload(), 2000);
+                        } else {
+                            showAlert(res.message || 'Model fiyatı güncellenemedi!', 'Hata', 'error');
+                        }
+                    },
+                    error: function(xhr) {
+                        const errorMsg = xhr.responseJSON ? xhr.responseJSON.message : 'Sunucu hatası!';
+                        showAlert(errorMsg, 'Hata', 'error');
+                    },
+                    complete: function() {
+                        $button.html('<i class="fas fa-tags"></i> Model Fiyatı').prop('disabled', false);
+                    }
+                });
             });
         });
 

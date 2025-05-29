@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 from dotenv import load_dotenv
 from io import BytesIO
 from sqlalchemy import case
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_from_directory, send_file, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_from_directory, send_file, current_app, session
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import insert
 # or_ operatörüne gerek kalmadı, func yeterli. İstersen import'u silebilirsin.
@@ -1053,8 +1053,17 @@ def update_product_cost():
 def update_product_prices():
     """Ürün varyantlarının satış fiyatlarını günceller"""
     try:
+        # Yetki kontrolü
+        if not session.get('user_id'):
+            return jsonify({'success': False, 'message': 'Oturum açmanız gerekli'})
+        
+        user_role = session.get('role', '').lower()
+        if user_role != 'admin':
+            return jsonify({'success': False, 'message': 'Bu işlem için admin yetkisine sahip değilsiniz'})
+        
         updated_count = 0
         errors = []
+        trendyol_errors = []
         
         for key, value in request.form.items():
             if key and value:  # Boş olmayan değerler
@@ -1067,6 +1076,16 @@ def update_product_prices():
                         product.sale_price = new_price
                         db.session.add(product)
                         updated_count += 1
+                        
+                        # Trendyol'da da fiyatı güncelle
+                        try:
+                            import asyncio
+                            result = asyncio.run(update_price_in_trendyol(barcode, new_price))
+                            if not result:
+                                trendyol_errors.append(barcode)
+                        except Exception as e:
+                            logger.error(f"Trendyol güncelleme hatası - Barkod {barcode}: {e}")
+                            trendyol_errors.append(barcode)
                     else:
                         errors.append(f"Barkod {barcode} bulunamadı")
                         
@@ -1078,7 +1097,13 @@ def update_product_prices():
         if updated_count > 0:
             db.session.commit()
             
+        # Sonuç mesajını hazırla
         message = f"{updated_count} adet ürünün fiyatı güncellendi."
+        if trendyol_errors:
+            message += f" {len(trendyol_errors)} üründe Trendyol güncellemesi başarısız oldu."
+        else:
+            message += " Trendyol fiyatları da güncellendi."
+            
         if errors:
             message += f" {len(errors)} hata oluştu."
             
@@ -1086,6 +1111,7 @@ def update_product_prices():
             'success': updated_count > 0,
             'message': message,
             'updated_count': updated_count,
+            'trendyol_errors': len(trendyol_errors),
             'errors': errors
         })
         
@@ -1095,10 +1121,66 @@ def update_product_prices():
         return jsonify({'success': False, 'message': f'Fiyat güncelleme sırasında hata oluştu: {str(e)}'})
 
 
+async def update_price_in_trendyol(barcode, new_price):
+    """Trendyol'da ürün fiyatını günceller"""
+    try:
+        import aiohttp
+        import os
+        
+        api_key = os.getenv('TRENDYOL_API_KEY')
+        secret_key = os.getenv('TRENDYOL_SECRET_KEY') 
+        supplier_id = os.getenv('TRENDYOL_SUPPLIER_ID')
+        
+        if not all([api_key, secret_key, supplier_id]):
+            logger.error("Trendyol API anahtarları eksik")
+            return False
+            
+        url = f"https://api.trendyol.com/sapigw/suppliers/{supplier_id}/v2/products/price-and-inventory"
+        
+        import base64
+        credentials = base64.b64encode(f"{api_key}:{secret_key}".encode()).decode()
+        
+        headers = {
+            'Authorization': f'Basic {credentials}',
+            'Content-Type': 'application/json',
+            'User-Agent': 'SupplierId - SendIntegrationInfo'
+        }
+        
+        payload = {
+            "items": [{
+                "barcode": barcode,
+                "salePrice": new_price,
+                "listPrice": new_price
+            }]
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json=payload, timeout=30) as response:
+                if response.status == 200:
+                    logger.info(f"Trendyol fiyat güncellendi - Barkod: {barcode}, Fiyat: {new_price}")
+                    return True
+                else:
+                    error_text = await response.text()
+                    logger.error(f"Trendyol fiyat güncelleme hatası - Status: {response.status}, Error: {error_text}")
+                    return False
+                    
+    except Exception as e:
+        logger.error(f"Trendyol API hatası: {e}")
+        return False
+
+
 @get_products_bp.route('/api/update_model_price', methods=['POST'])
 def update_model_price():
     """Bir modelin tüm varyantlarının satış fiyatını günceller"""
     try:
+        # Yetki kontrolü
+        if not session.get('user_id'):
+            return jsonify({'success': False, 'message': 'Oturum açmanız gerekli'})
+        
+        user_role = session.get('role', '').lower()
+        if user_role != 'admin':
+            return jsonify({'success': False, 'message': 'Bu işlem için admin yetkisine sahip değilsiniz'})
+        
         model_id = request.form.get('model_id', '').strip()
         sale_price_str = request.form.get('sale_price', '').strip()
         
@@ -1122,19 +1204,43 @@ def update_model_price():
         if not products:
             return jsonify({'success': False, 'message': 'Bu model için ürün bulunamadı'})
         
-        # Tüm varyantların fiyatını güncelle
+        # Veritabanında fiyatları güncelle
         updated_count = 0
+        trendyol_errors = []
+        
         for product in products:
             product.sale_price = sale_price
             db.session.add(product)
             updated_count += 1
+            
+            # Trendyol'da da fiyatı güncelle
+            try:
+                import asyncio
+                result = asyncio.run(update_price_in_trendyol(product.barcode, sale_price))
+                if not result:
+                    trendyol_errors.append(product.barcode)
+            except Exception as e:
+                logger.error(f"Trendyol güncelleme hatası - Barkod {product.barcode}: {e}")
+                trendyol_errors.append(product.barcode)
         
         db.session.commit()
         
+        # Sonuç mesajını hazırla
+        message = f'{model_id} modeli için {updated_count} varyantın fiyatı {sale_price} TL olarak güncellendi'
+        
+        if trendyol_errors:
+            message += f'\n\nUyarı: {len(trendyol_errors)} üründe Trendyol fiyat güncellemesi başarısız oldu.'
+            message += f'\nSorunlu barkodlar: {", ".join(trendyol_errors[:5])}'
+            if len(trendyol_errors) > 5:
+                message += f' ve {len(trendyol_errors) - 5} diğer...'
+        else:
+            message += '\n\nTrendyol fiyatları da başarıyla güncellendi.'
+        
         return jsonify({
             'success': True,
-            'message': f'{model_id} modeli için {updated_count} varyantın fiyatı {sale_price} TL olarak güncellendi',
-            'updated_count': updated_count
+            'message': message,
+            'updated_count': updated_count,
+            'trendyol_errors': len(trendyol_errors)
         })
         
     except Exception as e:
