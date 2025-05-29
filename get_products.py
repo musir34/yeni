@@ -1047,6 +1047,54 @@ def update_product_cost():
         db.session.rollback()
         logger.error(f"Maliyet güncelleme hatası: {e}")
         return jsonify({'success': False, 'message': f'Bir hata oluştu: {str(e)}'})
+
+
+@get_products_bp.route('/api/update_product_prices', methods=['POST'])
+def update_product_prices():
+    """Ürün varyantlarının satış fiyatlarını günceller"""
+    try:
+        updated_count = 0
+        errors = []
+        
+        for key, value in request.form.items():
+            if key and value:  # Boş olmayan değerler
+                try:
+                    barcode = key
+                    new_price = float(value)
+                    
+                    product = Product.query.filter_by(barcode=barcode).first()
+                    if product:
+                        product.sale_price = new_price
+                        db.session.add(product)
+                        updated_count += 1
+                    else:
+                        errors.append(f"Barkod {barcode} bulunamadı")
+                        
+                except (ValueError, TypeError):
+                    errors.append(f"Geçersiz fiyat değeri: {value}")
+                except Exception as e:
+                    errors.append(f"Barkod {key} güncellenirken hata: {str(e)}")
+        
+        if updated_count > 0:
+            db.session.commit()
+            
+        message = f"{updated_count} adet ürünün fiyatı güncellendi."
+        if errors:
+            message += f" {len(errors)} hata oluştu."
+            
+        return jsonify({
+            'success': updated_count > 0,
+            'message': message,
+            'updated_count': updated_count,
+            'errors': errors
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Fiyat güncelleme hatası: {e}")
+        return jsonify({'success': False, 'message': f'Fiyat güncelleme sırasında hata oluştu: {str(e)}'})
+
+
 @get_products_bp.route('/api/bulk-delete-products', methods=['POST'])
 def bulk_delete_products():
     """

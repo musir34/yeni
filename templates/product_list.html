@@ -153,11 +153,12 @@
     .copy-btn:hover { color: var(--color-primary); }
     .copy-confirmation { display: none; color: green; font-size: 0.75rem; margin-left: 0.2rem; font-weight: 500; }
     .copy-confirmation.show { display: inline-block; }
-    .stock-update-form, .cost-update-form { display: none; margin-top: var(--spacing-md); padding: var(--spacing-sm); background-color: #f8f9fa; border: 1px solid #eee; border-radius: var(--border-radius); }
-    .stock-update-form-inner, .cost-update-form-inner { display: flex; flex-direction: column; gap: var(--spacing-sm); }
-    .stock-update-form-inner table, .cost-update-form-inner table { width: 100%; border-collapse: collapse; border: 1px solid #ddd; background-color: var(--color-white); }
-    .stock-update-form-inner th, .stock-update-form-inner td, .cost-update-form-inner th, .cost-update-form-inner td { border: 1px solid #ddd; padding: 0.6rem; font-size: 0.85rem; text-align: center; vertical-align: middle; /* Align vertically */ }
-    .stock-update-form-inner input[type="number"], .cost-update-form-inner input[type="number"] { width: 80px; padding: 0.4rem; border: 1px solid #ccc; border-radius: 4px; text-align: center; }
+    .stock-update-form, .price-update-form, .cost-update-form { display: none; margin-top: var(--spacing-md); padding: var(--spacing-sm); background-color: #f8f9fa; border: 1px solid #eee; border-radius: var(--border-radius); }
+    .stock-update-form-inner, .price-update-form-inner, .cost-update-form-inner { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+    .stock-update-form-inner table, .price-update-form-inner table, .cost-update-form-inner table { width: 100%; border-collapse: collapse; border: 1px solid #ddd; background-color: var(--color-white); }
+    .stock-update-form-inner th, .stock-update-form-inner td, .price-update-form-inner th, .price-update-form-inner td, .cost-update-form-inner th, .cost-update-form-inner td { border: 1px solid #ddd; padding: 0.6rem; font-size: 0.85rem; text-align: center; vertical-align: middle; }
+    .stock-update-form-inner input[type="number"], .price-update-form-inner input[type="number"], .cost-update-form-inner input[type="number"] { width: 80px; padding: 0.4rem; border: 1px solid #ccc; border-radius: 4px; text-align: center; }
+    .price-info { color: var(--color-success); font-weight: 500; }
     .pagination-wrap { margin-top: var(--spacing-md); display: flex; justify-content: center; }
     .pagination { display: flex; list-style: none; padding: 0; gap: 0.4rem; } /* Added padding: 0 */
     .pagination .page-item { margin: 0; }
@@ -287,6 +288,7 @@
                   <h5>{{ product.title or 'Başlık Belirtilmemiş' }}</h5>
                   <p>Model Kodu: {{ model_id or 'N/A' }}</p>
                   <p>Renk: {{ color or 'N/A' }}</p>
+                  <p class="price-info">Satış Fiyatı: <strong>{{ "%.2f"|format(product.sale_price or 0) }} {{ product.currency_type or 'TRY' }}</strong></p>
                 </div>
                 {# Aksiyon butonları #}
                 <div class="actions">
@@ -297,7 +299,10 @@
                     <i class="fas fa-chevron-down"></i> Varyantlar
                   </button>
                   <button class="btn btn-warning btn-sm update-stocks" data-model="{{ model_id }}" data-color="{{ color }}" title="Bu ürünün varyant stoklarını güncelle">
-                    <i class="fas fa-edit"></i> Stok Güncelle
+                    <i class="fas fa-boxes"></i> Stok Güncelle
+                  </button>
+                  <button class="btn btn-info btn-sm update-prices" data-model="{{ model_id }}" data-color="{{ color }}" title="Bu ürünün satış fiyatlarını güncelle">
+                    <i class="fas fa-tag"></i> Fiyat Güncelle
                   </button>
                   <button class="btn btn-primary btn-sm update-cost" data-model="{{ model_id }}" data-color="{{ color }}" title="Bu ürünün varyant maliyetlerini tek tek güncelle">
                     <i class="fas fa-coins"></i> Varyant Maliyet
@@ -306,8 +311,9 @@
                     <i class="fas fa-trash"></i> Sil
                   </button>
                 </div>
-                {# Stok ve Maliyet güncelleme formları için placeholder div'ler #}
+                {# Stok, Fiyat ve Maliyet güncelleme formları için placeholder div'ler #}
                 <div class="stock-update-form mt-3"></div>
+                <div class="price-update-form mt-3"></div>
                 <div class="cost-update-form mt-3"></div>
                 {# Varyant listesi alanı #}
                 <div class="variant-list">
@@ -640,7 +646,8 @@
 
             closeOtherForms($card); // Önce diğerlerini kapat
             // Kendi diğer formunu/listesini de kapat
-            $card.find('.cost-update-form, .variant-list').slideUp();
+            $card.find('.price-update-form, .cost-update-form, .variant-list').slideUp();
+            $card.find('.update-prices').html('<i class="fas fa-tag"></i> Fiyat Güncelle');
             $card.find('.update-cost').html('<i class="fas fa-coins"></i> Varyant Maliyet');
             $card.find('.toggle-variants').html('<i class="fas fa-chevron-down"></i> Varyantlar');
 
@@ -711,6 +718,74 @@
                     alert('Sunucu hatası veya iletişim sorunu!');
                     $submitButton.html(originalButtonHtml).prop('disabled', false);
                 }
+            });
+        });
+
+        // Fiyat Güncelle Formunu Aç/Kapat
+        $productContainer.on('click', '.update-prices', function() {
+            const $button = $(this);
+            const $card = $button.closest('.product-card');
+            const $priceFormContainer = $card.find('.price-update-form');
+            const model = $button.data('model');
+            const color = $button.data('color');
+
+            closeOtherForms($card); // Önce diğerlerini kapat
+            // Kendi diğer formunu/listesini de kapat
+            $card.find('.stock-update-form, .cost-update-form, .variant-list').slideUp();
+            $card.find('.update-stocks').html('<i class="fas fa-boxes"></i> Stok Güncelle');
+            $card.find('.update-cost').html('<i class="fas fa-coins"></i> Varyant Maliyet');
+            $card.find('.toggle-variants').html('<i class="fas fa-chevron-down"></i> Varyantlar');
+
+            if ($priceFormContainer.is(':visible')) {
+                $priceFormContainer.slideUp();
+                $button.html('<i class="fas fa-tag"></i> Fiyat Güncelle');
+            } else {
+                $button.html('<i class="fas fa-spinner fa-spin"></i> Yükleniyor...');
+                $.ajax({
+                    url: '/api/get_product_variants', method: 'GET', data: { model: model, color: color },
+                    success: function(res) {
+                        if (res.success && res.products && res.products.length > 0) {
+                            let formHtml = `<form class="price-update-form-inner" data-model="${model}" data-color="${color}">`;
+                            formHtml += `<table><thead><tr><th>Beden</th><th>Stok</th><th>Mevcut Fiyat</th><th>Yeni Fiyat</th></tr></thead><tbody>`;
+                            res.products.forEach(p => {
+                                if (p.barcode && p.barcode !== 'undefined') {
+                                    formHtml += `<tr>
+                                        <td>${p.size || '-'}</td>
+                                        <td>${p.quantity ?? 0}</td>
+                                        <td>-</td>
+                                        <td><input type="number" name="${p.barcode}" value="" min="0" step="0.01" placeholder="Yeni fiyat" style="width: 90px;"></td>
+                                    </tr>`;
+                                }
+                            });
+                            formHtml += `</tbody></table><button type="submit" class="btn btn-info btn-sm mt-2"><i class="fas fa-save"></i> Fiyatları Kaydet</button></form>`;
+                            $priceFormContainer.html(formHtml).slideDown();
+                            $button.html('<i class="fas fa-times"></i> Kapat');
+                        } else {
+                            $priceFormContainer.html('<p class="text-danger" style="font-size: 0.9em; padding: 5px;">Varyant bilgisi yok veya alınamadı.</p>').slideDown();
+                            $button.html('<i class="fas fa-tag"></i> Fiyat Güncelle');
+                        }
+                    },
+                    error: function() {
+                        $priceFormContainer.html('<p class="text-danger" style="font-size: 0.9em; padding: 5px;">Sunucu hatası!</p>').slideDown();
+                        $button.html('<i class="fas fa-tag"></i> Fiyat Güncelle');
+                    }
+                });
+            }
+        });
+
+        // Fiyat Güncelleme Formu Gönder
+        $productContainer.on('submit', '.price-update-form-inner', function(e) {
+            e.preventDefault();
+            const $form = $(this);
+            const formData = new FormData(this);
+            
+            $.ajax({
+                url: '/api/update_product_prices', method: 'POST', data: formData, processData: false, contentType: false,
+                success: function(res) {
+                    alert(res.message || (res.success ? 'Fiyatlar başarıyla güncellendi!' : 'Fiyatlar güncellenemedi!'));
+                    if (res.success) location.reload();
+                },
+                error: function() { alert('Sunucu hatası!'); }
             });
         });
 
