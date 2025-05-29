@@ -10,6 +10,9 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "openai": "^4.100.0"
+    "@types/memoizee": "^0.4.12",
+    "memoizee": "^0.4.17",
+    "openai": "^4.100.0",
+    "openid-client": "^6.5.0"
   }
 }
