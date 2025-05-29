@@ -1095,6 +1095,54 @@ def update_product_prices():
         return jsonify({'success': False, 'message': f'Fiyat güncelleme sırasında hata oluştu: {str(e)}'})
 
 
+@get_products_bp.route('/api/update_model_price', methods=['POST'])
+def update_model_price():
+    """Bir modelin tüm varyantlarının satış fiyatını günceller"""
+    try:
+        model_id = request.form.get('model_id', '').strip()
+        sale_price_str = request.form.get('sale_price', '').strip()
+        
+        if not model_id:
+            return jsonify({'success': False, 'message': 'Model ID gerekli'})
+        
+        if not sale_price_str:
+            return jsonify({'success': False, 'message': 'Satış fiyatı gerekli'})
+        
+        try:
+            sale_price = float(sale_price_str)
+        except (ValueError, TypeError):
+            return jsonify({'success': False, 'message': 'Geçerli bir fiyat değeri giriniz'})
+        
+        if sale_price < 0:
+            return jsonify({'success': False, 'message': 'Fiyat negatif olamaz'})
+        
+        # Model ID'ye sahip tüm ürünleri bul
+        products = Product.query.filter_by(product_main_id=model_id).all()
+        
+        if not products:
+            return jsonify({'success': False, 'message': 'Bu model için ürün bulunamadı'})
+        
+        # Tüm varyantların fiyatını güncelle
+        updated_count = 0
+        for product in products:
+            product.sale_price = sale_price
+            db.session.add(product)
+            updated_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{model_id} modeli için {updated_count} varyantın fiyatı {sale_price} TL olarak güncellendi',
+            'updated_count': updated_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Model fiyat güncelleme hatası: {e}")
+        return jsonify({'success': False, 'message': f'Model fiyat güncelleme sırasında hata oluştu: {str(e)}'})
+
+
 @get_products_bp.route('/api/bulk-delete-products', methods=['POST'])
 def bulk_delete_products():
     """

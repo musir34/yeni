@@ -295,6 +295,9 @@
                   <button class="btn btn-success btn-sm update-model-cost" data-model="{{ model_id }}" title="Bu modelin tüm varyantlarının maliyetini güncelle">
                     <i class="fas fa-dollar-sign"></i> Model Maliyeti
                   </button>
+                  <button class="btn btn-info btn-sm update-model-price" data-model="{{ model_id }}" title="Bu modelin tüm varyantlarının satış fiyatını güncelle">
+                    <i class="fas fa-tags"></i> Model Fiyatı
+                  </button>
                   <button class="btn btn-info btn-sm toggle-variants" title="Bu ürüne ait varyantları göster/gizle">
                     <i class="fas fa-chevron-down"></i> Varyantlar
                   </button>
@@ -717,6 +720,48 @@
                     console.error("Stok güncelleme AJAX hatası:", xhr.responseText);
                     alert('Sunucu hatası veya iletişim sorunu!');
                     $submitButton.html(originalButtonHtml).prop('disabled', false);
+                }
+            });
+        });
+
+        // Model Fiyatı Güncelleme (Toplu)
+        $productContainer.on('click', '.update-model-price', function() {
+            const $button = $(this);
+            const model = $button.data('model');
+            
+            if (!model) {
+                alert('Model bilgisi bulunamadı!');
+                return;
+            }
+            
+            const newPrice = prompt(`${model} modeli için tüm varyantlara uygulanacak yeni satış fiyatını giriniz:`);
+            
+            if (newPrice === null) return; // İptal edildi
+            
+            const price = parseFloat(newPrice);
+            if (isNaN(price) || price < 0) {
+                alert('Geçerli bir fiyat değeri giriniz!');
+                return;
+            }
+            
+            $button.html('<i class="fas fa-spinner fa-spin"></i> Güncelleniyor...').prop('disabled', true);
+            
+            $.ajax({
+                url: '/api/update_model_price',
+                method: 'POST',
+                data: {
+                    model_id: model,
+                    sale_price: price
+                },
+                success: function(res) {
+                    alert(res.message || (res.success ? 'Model fiyatı başarıyla güncellendi!' : 'Model fiyatı güncellenemedi!'));
+                    if (res.success) location.reload();
+                },
+                error: function() {
+                    alert('Sunucu hatası!');
+                },
+                complete: function() {
+                    $button.html('<i class="fas fa-tags"></i> Model Fiyatı').prop('disabled', false);
                 }
             });
         });
