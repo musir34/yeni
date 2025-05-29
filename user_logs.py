@@ -110,6 +110,67 @@ def log_user_action(action: str, details: dict = None, force_log: bool = False, 
             db.session.rollback()
             logging.error(f"Log kaydedilemedi: {e}")
 
+@user_logs_bp.route('/api/log-user-activity', methods=['POST'])
+def log_user_activity_api():
+    """
+    JavaScript'ten gelen kullanıcı hareketlerini toplu olarak kaydetmek için API endpoint'i
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return {'success': False, 'message': 'Veri bulunamadı'}, 400
+        
+        logs = data.get('logs', [])
+        if not logs:
+            return {'success': False, 'message': 'Log verisi bulunamadı'}, 400
+        
+        user_id = current_user.id if current_user.is_authenticated else None
+        user_role = getattr(current_user, 'role', 'anonymous')
+        
+        saved_count = 0
+        for log_entry in logs:
+            try:
+                action = log_entry.get('action', 'UNKNOWN')
+                details = log_entry.get('details', {})
+                
+                # Detayları genişlet
+                extended_details = {
+                    'İşlem': translate_action_type(action),
+                    'Kullanıcı Rolü': (
+                        'Yönetici' if user_role == 'admin' else
+                        'Personel' if user_role == 'worker' else
+                        'Yönetici Yardımcısı' if user_role == 'manager' else
+                        'Ziyaretçi'
+                    ),
+                    'Tarayıcı': get_browser_info(),
+                    'İşletim Sistemi': get_platform_info(),
+                }
+                
+                # JavaScript'ten gelen detayları ekle
+                extended_details.update(details)
+                
+                new_log = UserLog(
+                    user_id=user_id,
+                    action=action,
+                    details=json.dumps(extended_details, ensure_ascii=False),
+                    ip_address=request.remote_addr,
+                    page_url=details.get('page_url', request.referrer)
+                )
+                db.session.add(new_log)
+                saved_count += 1
+                
+            except Exception as e:
+                logging.error(f"Tekil log kaydedilemedi: {e}")
+                continue
+        
+        db.session.commit()
+        return {'success': True, 'message': f'{saved_count} hareket kaydedildi', 'saved_count': saved_count}
+        
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Toplu log kaydetme hatası: {e}")
+        return {'success': False, 'message': 'Sunucu hatası'}, 500
+
 @user_logs_bp.route('/user-logs')
 @roles_required('admin', 'manager')
 def view_logs():
