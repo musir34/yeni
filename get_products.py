@@ -685,7 +685,7 @@ def product_list():
     return result
 
 
-@get_products_bp.route('/get_product_variants', methods=['GET'])
+@get_products_bp.route('/api/get_product_variants', methods=['GET'])
 def get_product_variants():
     model_id = request.args.get('model', '').strip()
     color = request.args.get('color', '').strip()
