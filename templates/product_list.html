@@ -87,6 +87,8 @@
       overflow: hidden; 
       background-color: #ffffff;
       border-bottom: 1px solid #f0f0f0;
+      position: relative;
+      cursor: pointer;
     }
     .product-image img { 
       display: block; 
@@ -96,7 +98,73 @@
       object-position: center;
       transition: transform var(--transition-slow);
     }
-    .product-card:hover .product-image img { transform: scale(1.03); }
+    .product-card:hover .product-image img { transform: scale(1.05); }
+    
+    /* Hover preview stilleri */
+    .image-preview {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      max-width: 90vw;
+      max-height: 90vh;
+      z-index: 9999;
+      border-radius: 8px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+    .image-preview.show {
+      opacity: 1;
+      visibility: visible;
+    }
+    .image-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+    
+    /* Modal stilleri */
+    .image-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.9);
+      z-index: 10000;
+      justify-content: center;
+      align-items: center;
+    }
+    .image-modal.show {
+      display: flex;
+    }
+    .image-modal img {
+      max-width: 95vw;
+      max-height: 95vh;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+    .image-modal .close-btn {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      color: white;
+      font-size: 40px;
+      font-weight: bold;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      z-index: 10001;
+    }
+    .image-modal .close-btn:hover {
+      opacity: 0.7;
+    }
     .product-info { flex: 1; padding: var(--spacing-md); display: flex; flex-direction: column; justify-content: space-between; }
     .product-info h5 { font-size: 1rem; margin-bottom: var(--spacing-xs); font-weight: 600; line-height: 1.3; /* Adjust title line height */ }
     .product-info p { margin-bottom: var(--spacing-xs); font-size: 0.85rem; color: var(--color-gray); }
@@ -217,21 +285,24 @@
           {# Grubun ilk ürününü referans al (görsel, başlık vb. için) #}
           {% set product = product_group[0] %}
             <div class="product-card" data-model="{{ model_id }}" data-color="{{ color }}">
-              <div class="product-image">
+              <div class="product-image" 
+                   data-image-src="{{ product.images.split(',')[0] if product and product.images else 'https://via.placeholder.com/300x220/eee/888?text=Gorsel+Yok' }}">
                 {# Görsel varsa göster, yoksa placeholder #}
                 {% if product and product.images %}
                   {# İlk görseli al (varsa) #}
                   <img
                     src="{{ product.images.split(',')[0] }}"
                     alt="{{ product.title or 'Ürün Görseli' }}"
-                    loading="lazy" {# Lazy loading for images #}
-                    onerror="this.onerror=null; this.src='https://via.placeholder.com/300x220/eee/888?text=Gorsel+Hata';" {# Daha belirgin hata görseli #}
+                    loading="lazy"
+                    class="product-main-image"
+                    onerror="this.onerror=null; this.src='https://via.placeholder.com/300x220/eee/888?text=Gorsel+Hata';"
                   />
                 {% else %}
                   <img
                     src="https://via.placeholder.com/300x220/eee/888?text=Gorsel+Yok"
                     alt="Görsel Yok"
                     loading="lazy"
+                    class="product-main-image"
                   />
                 {% endif %}
               </div>
@@ -335,6 +406,18 @@
 
     {# Panoya kopyalama için gizli alan #}
     <textarea id="temp-copier" class="sr-only" aria-hidden="true"></textarea>
+    
+    {# Hover önizleme için görsel elementi #}
+    <div class="image-preview" id="imagePreview">
+      <img src="" alt="Görsel Önizleme" />
+    </div>
+    
+    {# Modal için görsel elementi #}
+    <div class="image-modal" id="imageModal">
+      <button class="close-btn" id="closeModal">&times;</button>
+      <img src="" alt="Görsel Modal" />
+    </div>
+    
   </div> {# container sonu #}
 
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -345,6 +428,68 @@
     // console.log("Mevcut Arama Tipi: {{ search_type|default('model_code') }}");
 
     $(document).ready(function () {
+
+        // --- Görsel Hover ve Modal Özellikleri ---
+        let hoverTimeout;
+        const $imagePreview = $('#imagePreview');
+        const $imageModal = $('#imageModal');
+        const $closeModal = $('#closeModal');
+
+        // Ürün görsellerine hover ve tıklama olayları ekle
+        $('.product-image').each(function() {
+            const $productImage = $(this);
+            const imageSrc = $productImage.data('image-src');
+            
+            // Mouse enter - hover önizleme
+            $productImage.on('mouseenter', function(e) {
+                if (imageSrc && imageSrc !== 'https://via.placeholder.com/300x220/eee/888?text=Gorsel+Yok') {
+                    clearTimeout(hoverTimeout);
+                    hoverTimeout = setTimeout(function() {
+                        $imagePreview.find('img').attr('src', imageSrc);
+                        $imagePreview.addClass('show');
+                    }, 500); // 500ms bekle
+                }
+            });
+            
+            // Mouse leave - hover önizlemeyi gizle
+            $productImage.on('mouseleave', function() {
+                clearTimeout(hoverTimeout);
+                $imagePreview.removeClass('show');
+            });
+            
+            // Tıklama - modal aç
+            $productImage.on('click', function(e) {
+                e.preventDefault();
+                if (imageSrc && imageSrc !== 'https://via.placeholder.com/300x220/eee/888?text=Gorsel+Yok') {
+                    $imageModal.find('img').attr('src', imageSrc);
+                    $imageModal.addClass('show');
+                    $('body').css('overflow', 'hidden'); // Sayfa kaydırmayı engelle
+                }
+            });
+        });
+
+        // Modal kapatma olayları
+        $closeModal.on('click', function() {
+            closeImageModal();
+        });
+
+        $imageModal.on('click', function(e) {
+            if (e.target === this) { // Sadece arka plana tıklanırsa kapat
+                closeImageModal();
+            }
+        });
+
+        // ESC tuşu ile modal kapatma
+        $(document).on('keydown', function(e) {
+            if (e.key === 'Escape' && $imageModal.hasClass('show')) {
+                closeImageModal();
+            }
+        });
+
+        function closeImageModal() {
+            $imageModal.removeClass('show');
+            $('body').css('overflow', ''); // Sayfa kaydırmayı yeniden etkinleştir
+        }
 
         // --- Toplu Silme Modu ---
         let isMultiDeleteMode = false;
