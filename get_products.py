@@ -1134,8 +1134,13 @@ async def update_price_in_trendyol(barcode, new_price):
         if not all([api_key, secret_key, supplier_id]):
             logger.error("Trendyol API anahtarları eksik")
             return False
-            
-        url = f"https://api.trendyol.com/sapigw/suppliers/{supplier_id}/v2/products/price-and-inventory"
+        
+        # Trendyol API için farklı endpoint'leri dene
+        possible_urls = [
+            f"https://api.trendyol.com/sapigw/suppliers/{supplier_id}/products/price-and-inventory",
+            f"https://api.trendyol.com/sapigw/suppliers/{supplier_id}/v2/products/price-and-inventory",
+            f"https://api.trendyol.com/sapigw/suppliers/{supplier_id}/products/batch-requests/price-and-inventory"
+        ]
         
         import base64
         credentials = base64.b64encode(f"{api_key}:{secret_key}".encode()).decode()
@@ -1143,7 +1148,7 @@ async def update_price_in_trendyol(barcode, new_price):
         headers = {
             'Authorization': f'Basic {credentials}',
             'Content-Type': 'application/json',
-            'User-Agent': 'SupplierId - SendIntegrationInfo'
+            'User-Agent': f'SupplierId {supplier_id} - SendIntegrationInfo'
         }
         
         payload = {
@@ -1155,17 +1160,28 @@ async def update_price_in_trendyol(barcode, new_price):
         }
         
         async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, json=payload, timeout=30) as response:
-                if response.status == 200:
-                    logger.info(f"Trendyol fiyat güncellendi - Barkod: {barcode}, Fiyat: {new_price}")
-                    return True
-                else:
-                    error_text = await response.text()
-                    logger.error(f"Trendyol fiyat güncelleme hatası - Status: {response.status}, Error: {error_text}")
-                    return False
+            for url in possible_urls:
+                try:
+                    async with session.post(url, headers=headers, json=payload, timeout=30) as response:
+                        if response.status == 200:
+                            logger.info(f"Trendyol fiyat güncellendi - Barkod: {barcode}, Fiyat: {new_price}, URL: {url}")
+                            return True
+                        elif response.status == 404:
+                            # 404 ise başka URL'yi dene
+                            continue
+                        else:
+                            error_text = await response.text()
+                            logger.error(f"Trendyol fiyat güncelleme hatası - Status: {response.status}, Error: {error_text}, URL: {url}")
+                            return False
+                except Exception as e:
+                    logger.error(f"Trendyol API hatası - URL: {url}, Error: {e}")
+                    continue
+            
+            logger.error(f"Trendyol fiyat güncelleme başarısız - Tüm endpoint'ler denendi, Barkod: {barcode}")
+            return False
                     
     except Exception as e:
-        logger.error(f"Trendyol API hatası: {e}")
+        logger.error(f"Trendyol API genel hatası: {e}")
         return False
 
 
