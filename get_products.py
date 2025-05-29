@@ -341,11 +341,14 @@ async def save_products_to_db_async(products):
         db.session.execute(upsert_stmt)
     db.session.commit()
 
-    flash("Ürünler başarıyla veritabanına kaydedildi.", "success")
-
+    # Görsel indirme işlemini eşzamanlı olarak yap
     image_downloads = check_and_prepare_image_downloads(image_downloads, images_folder)
     if image_downloads:
-        threading.Thread(target=background_download_images, args=(image_downloads,)).start()
+        logger.info(f"{len(image_downloads)} görsel indirilecek")
+        await download_images_async(image_downloads)
+        logger.info("Tüm görseller başarıyla indirildi")
+    
+    flash("Ürünler ve görseller başarıyla kaydedildi.", "success")
 
 
 async def fetch_all_products_async():
@@ -404,30 +407,55 @@ async def fetch_products_page(session, url, headers, params):
 
 
 async def download_images_async(image_urls):
-    async with aiohttp.ClientSession() as session:
+    if not image_urls:
+        logger.info("İndirilecek görsel bulunmuyor")
+        return
+    
+    timeout = aiohttp.ClientTimeout(total=30)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
         tasks = []
-        semaphore = asyncio.Semaphore(100)
+        semaphore = asyncio.Semaphore(50)  # Daha az eşzamanlı indirme
         for image_url, image_path in image_urls:
             tasks.append(download_image(session, image_url, image_path, semaphore))
-        await asyncio.gather(*tasks)
+        
+        # Tüm indirmeleri bekle ve hataları yakala
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        success_count = sum(1 for r in results if r is True)
+        error_count = len(results) - success_count
+        
+        logger.info(f"Görsel indirme tamamlandı: {success_count} başarılı, {error_count} hatalı")
 
 
 async def download_image(session, image_url, image_path, semaphore):
     async with semaphore:
         if os.path.exists(image_path):
-            logger.info(f"Resim zaten mevcut, atlanıyor: {image_path}")
-            return
+            logger.debug(f"Resim zaten mevcut, atlanıyor: {os.path.basename(image_path)}")
+            return True
+        
         try:
-            async with session.get(image_url, timeout=10) as response:
+            # Dizin yoksa oluştur
+            os.makedirs(os.path.dirname(image_path), exist_ok=True)
+            
+            async with session.get(image_url) as response:
                 if response.status != 200:
-                    logger.error(f"Resim indirme hatası: {response.status} - {image_url}")
-                    return
+                    logger.warning(f"Resim indirme hatası: {response.status} - {image_url}")
+                    return False
+                
                 content = await response.read()
+                if len(content) < 100:  # Çok küçük dosyalar muhtemelen hatalı
+                    logger.warning(f"Geçersiz görsel boyutu: {len(content)} bytes - {image_url}")
+                    return False
+                
                 with open(image_path, 'wb') as img_file:
                     img_file.write(content)
-                logger.info(f"Resim kaydedildi: {image_path}")
+                
+                logger.debug(f"Resim kaydedildi: {os.path.basename(image_path)}")
+                return True
+                
         except Exception as e:
-            logger.error(f"Resim indirme sırasında hata oluştu ({image_url}): {e}")
+            logger.error(f"Resim indirme hatası ({os.path.basename(image_path)}): {e}")
+            return False
 
 
 def background_download_images(image_downloads):
