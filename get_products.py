@@ -1063,7 +1063,7 @@ def update_product_prices():
         
         updated_count = 0
         errors = []
-        trendyol_errors = []
+        price_updates = []
         
         for key, value in request.form.items():
             if key and value:  # Boş olmayan değerler
@@ -1076,16 +1076,7 @@ def update_product_prices():
                         product.sale_price = new_price
                         db.session.add(product)
                         updated_count += 1
-                        
-                        # Trendyol'da da fiyatı güncelle
-                        try:
-                            import asyncio
-                            result = asyncio.run(update_price_in_trendyol(barcode, new_price))
-                            if not result:
-                                trendyol_errors.append(barcode)
-                        except Exception as e:
-                            logger.error(f"Trendyol güncelleme hatası - Barkod {barcode}: {e}")
-                            trendyol_errors.append(barcode)
+                        price_updates.append((barcode, new_price))
                     else:
                         errors.append(f"Barkod {barcode} bulunamadı")
                         
@@ -1096,6 +1087,16 @@ def update_product_prices():
         
         if updated_count > 0:
             db.session.commit()
+            
+        # Trendyol'da toplu fiyat güncelleme
+        trendyol_errors = []
+        if price_updates:
+            try:
+                import asyncio
+                trendyol_errors = asyncio.run(update_prices_in_trendyol_bulk(price_updates))
+            except Exception as e:
+                logger.error(f"Trendyol toplu güncelleme hatası: {e}")
+                trendyol_errors = [barcode for barcode, _ in price_updates]
             
         # Sonuç mesajını hazırla
         message = f"{updated_count} adet ürünün fiyatı güncellendi."
@@ -1121,8 +1122,8 @@ def update_product_prices():
         return jsonify({'success': False, 'message': f'Fiyat güncelleme sırasında hata oluştu: {str(e)}'})
 
 
-async def update_price_in_trendyol(barcode, new_price):
-    """Trendyol'da ürün fiyatını günceller"""
+async def update_prices_in_trendyol_bulk(price_updates):
+    """Trendyol'da toplu fiyat güncelleme yapar"""
     try:
         import aiohttp
         import os
@@ -1133,14 +1134,12 @@ async def update_price_in_trendyol(barcode, new_price):
         
         if not all([api_key, secret_key, supplier_id]):
             logger.error("Trendyol API anahtarları eksik")
-            return False
+            return []
         
-        # Trendyol API için farklı endpoint'leri dene
-        possible_urls = [
-            f"https://api.trendyol.com/sapigw/suppliers/{supplier_id}/products/price-and-inventory",
-            f"https://api.trendyol.com/sapigw/suppliers/{supplier_id}/v2/products/price-and-inventory",
-            f"https://api.trendyol.com/sapigw/suppliers/{supplier_id}/products/batch-requests/price-and-inventory"
-        ]
+        if not price_updates:
+            return []
+        
+        url = f"https://api.trendyol.com/sapigw/suppliers/{supplier_id}/products/price-and-inventory"
         
         import base64
         credentials = base64.b64encode(f"{api_key}:{secret_key}".encode()).decode()
@@ -1151,38 +1150,30 @@ async def update_price_in_trendyol(barcode, new_price):
             'User-Agent': f'SupplierId {supplier_id} - SendIntegrationInfo'
         }
         
-        payload = {
-            "items": [{
+        # Tüm fiyat güncellemelerini tek payload'da topla
+        items = []
+        for barcode, price in price_updates:
+            items.append({
                 "barcode": barcode,
-                "salePrice": new_price,
-                "listPrice": new_price
-            }]
-        }
+                "salePrice": price,
+                "listPrice": price
+            })
+        
+        payload = {"items": items}
         
         async with aiohttp.ClientSession() as session:
-            for url in possible_urls:
-                try:
-                    async with session.post(url, headers=headers, json=payload, timeout=30) as response:
-                        if response.status == 200:
-                            logger.info(f"Trendyol fiyat güncellendi - Barkod: {barcode}, Fiyat: {new_price}, URL: {url}")
-                            return True
-                        elif response.status == 404:
-                            # 404 ise başka URL'yi dene
-                            continue
-                        else:
-                            error_text = await response.text()
-                            logger.error(f"Trendyol fiyat güncelleme hatası - Status: {response.status}, Error: {error_text}, URL: {url}")
-                            return False
-                except Exception as e:
-                    logger.error(f"Trendyol API hatası - URL: {url}, Error: {e}")
-                    continue
-            
-            logger.error(f"Trendyol fiyat güncelleme başarısız - Tüm endpoint'ler denendi, Barkod: {barcode}")
-            return False
+            async with session.post(url, headers=headers, json=payload, timeout=60) as response:
+                if response.status == 200:
+                    logger.info(f"Trendyol toplu fiyat güncellendi - {len(items)} ürün başarılı")
+                    return []  # Başarılı, hata yok
+                else:
+                    error_text = await response.text()
+                    logger.error(f"Trendyol toplu fiyat güncelleme hatası - Status: {response.status}, Error: {error_text}")
+                    return [barcode for barcode, _ in price_updates]  # Tüm barkodlar hatalı
                     
     except Exception as e:
         logger.error(f"Trendyol API genel hatası: {e}")
-        return False
+        return [barcode for barcode, _ in price_updates]  # Tüm barkodlar hatalı
 
 
 @get_products_bp.route('/api/update_model_price', methods=['POST'])
@@ -1222,24 +1213,25 @@ def update_model_price():
         
         # Veritabanında fiyatları güncelle
         updated_count = 0
-        trendyol_errors = []
+        price_updates = []
         
         for product in products:
             product.sale_price = sale_price
             db.session.add(product)
             updated_count += 1
-            
-            # Trendyol'da da fiyatı güncelle
-            try:
-                import asyncio
-                result = asyncio.run(update_price_in_trendyol(product.barcode, sale_price))
-                if not result:
-                    trendyol_errors.append(product.barcode)
-            except Exception as e:
-                logger.error(f"Trendyol güncelleme hatası - Barkod {product.barcode}: {e}")
-                trendyol_errors.append(product.barcode)
+            price_updates.append((product.barcode, sale_price))
         
         db.session.commit()
+        
+        # Trendyol'da toplu fiyat güncelleme
+        trendyol_errors = []
+        if price_updates:
+            try:
+                import asyncio
+                trendyol_errors = asyncio.run(update_prices_in_trendyol_bulk(price_updates))
+            except Exception as e:
+                logger.error(f"Trendyol toplu güncelleme hatası: {e}")
+                trendyol_errors = [barcode for barcode, _ in price_updates]
         
         # Sonuç mesajını hazırla
         message = f'{model_id} modeli için {updated_count} varyantın fiyatı {sale_price} TL olarak güncellendi'
