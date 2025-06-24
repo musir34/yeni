@@ -194,8 +194,12 @@ with app.app_context():
             connection.execute(db.text("SELECT 1"))
             connection.commit()
         print("✅ Neon veritabanına bağlantı başarılı!")
+
+        db.create_all()  # 🔧 Tabloları otomatik oluştur
+
     except Exception as e:
         print("❌ Veritabanı bağlantı hatası:", e)
+
 
 # Uygulama Başlat - Opsiyonel Setup
 if __name__ == '__main__':
