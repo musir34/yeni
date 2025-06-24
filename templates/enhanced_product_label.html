@@ -113,6 +113,85 @@
                 <button class="size-preset" data-width="60" data-height="40">60x40mm</button>
                 <button class="size-preset" data-width="120" data-height="60">120x60mm</button>
             </div>
+            <!-- Manuel Detay Ayarları -->
+            <div class="mt-4 text-center">
+                <button class="btn btn-outline-primary btn-lg" type="button" data-bs-toggle="collapse" data-bs-target="#detailSettings" aria-expanded="false" aria-controls="detailSettings">
+                    <i class="fas fa-sliders-h me-2"></i> Detaylı Ayarlar
+                </button>
+            </div>
+            
+            <div class="collapse mt-4 p-3 border rounded" id="detailSettings" style="background-color: #f8f9fa;">
+                <div class="row">
+                    <!-- Başlık Ayarları -->
+                    <div class="col-md-6">
+                        <h5 class="mb-3"><i class="fas fa-heading"></i> Başlık Ayarları</h5>
+                        <div class="mb-3">
+                            <label class="form-label">Başlık Metni</label>
+                            <input type="text" id="titleText" class="form-control" value="GÜLLÜ">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Font Boyutu</label>
+                            <input type="number" id="titleFontSize" class="form-control" value="24" min="12" max="48">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Y Pozisyonu</label>
+                            <input type="number" id="titlePositionY" class="form-control" value="10" min="0" max="100">
+                        </div>
+                    </div>
+                    
+                    <!-- Görsel Ayarları -->
+                    <div class="col-md-6">
+                        <h5 class="mb-3"><i class="fas fa-image"></i> Görsel Ayarları</h5>
+                        <div class="mb-3">
+                            <label class="form-label">Boyut (px)</label>
+                            <input type="number" id="imageSize" class="form-control" value="80" min="30" max="200">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">X Pozisyonu</label>
+                            <input type="number" id="imagePositionX" class="form-control" value="10" min="0" max="300">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Y Pozisyonu</label>
+                            <input type="number" id="imagePositionY" class="form-control" value="50" min="0" max="200">
+                        </div>
+                    </div>
+                    
+                    <!-- QR Kod Ayarları -->
+                    <div class="col-md-6">
+                        <h5 class="mb-3"><i class="fas fa-qrcode"></i> QR Kod Ayarları</h5>
+                        <div class="mb-3">
+                            <label class="form-label">Boyut (px)</label>
+                            <input type="number" id="qrSize" class="form-control" value="80" min="40" max="150">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">X Pozisyonu</label>
+                            <select id="qrPositionX" class="form-control">
+                                <option value="right">Sağ</option>
+                                <option value="center">Orta</option>
+                                <option value="left">Sol</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Y Pozisyonu</label>
+                            <input type="number" id="qrPositionY" class="form-control" value="50" min="0" max="200">
+                        </div>
+                    </div>
+                    
+                    <!-- Font Ayarları -->
+                    <div class="col-md-6">
+                        <h5 class="mb-3"><i class="fas fa-font"></i> Font Ayarları</h5>
+                        <div class="mb-3">
+                            <label class="form-label">Bilgi Font Boyutu</label>
+                            <input type="number" id="infoFontSize" class="form-control" value="18" min="10" max="30">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Küçük Font Boyutu</label>
+                            <input type="number" id="smallFontSize" class="form-control" value="14" min="8" max="24">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <div class="row mt-3">
                 <div class="col-md-6">
                     <label class="form-label">Sayfa Başına Etiket (Satır)</label>
@@ -271,18 +350,43 @@
         }
         
         function getCustomSettings() {
+            // Güvenli element erişimi - varsayılan değerlerle
+            const getElementValue = (id, defaultValue) => {
+                try {
+                    const element = document.getElementById(id);
+                    return element && element.value !== undefined && element.value !== '' ? element.value : defaultValue;
+                } catch (e) {
+                    console.warn(`Element ${id} not found, using default:`, defaultValue);
+                    return defaultValue;
+                }
+            };
+            
+            const getElementIntValue = (id, defaultValue) => {
+                try {
+                    const element = document.getElementById(id);
+                    if (element && element.value !== undefined && element.value !== '') {
+                        const intValue = parseInt(element.value);
+                        return isNaN(intValue) ? defaultValue : intValue;
+                    }
+                    return defaultValue;
+                } catch (e) {
+                    console.warn(`Element ${id} not found, using default:`, defaultValue);
+                    return defaultValue;
+                }
+            };
+            
             return {
-                title_text: document.getElementById('titleText').value,
-                title_font_size: parseInt(document.getElementById('titleFontSize').value),
-                title_position_y: parseInt(document.getElementById('titlePositionY').value),
-                image_size: parseInt(document.getElementById('imageSize').value),
-                image_position_x: parseInt(document.getElementById('imagePositionX').value),
-                image_position_y: parseInt(document.getElementById('imagePositionY').value),
-                qr_size: parseInt(document.getElementById('qrSize').value),
-                qr_position_x: document.getElementById('qrPositionX').value,
-                qr_position_y: parseInt(document.getElementById('qrPositionY').value),
-                info_font_size: parseInt(document.getElementById('infoFontSize').value),
-                small_font_size: parseInt(document.getElementById('smallFontSize').value)
+                title_text: getElementValue('titleText', 'GÜLLÜ'),
+                title_font_size: getElementIntValue('titleFontSize', 24),
+                title_position_y: getElementIntValue('titlePositionY', 10),
+                image_size: getElementIntValue('imageSize', 80),
+                image_position_x: getElementIntValue('imagePositionX', 10),
+                image_position_y: getElementIntValue('imagePositionY', 50),
+                qr_size: getElementIntValue('qrSize', 80),
+                qr_position_x: getElementValue('qrPositionX', 'right'),
+                qr_position_y: getElementIntValue('qrPositionY', 50),
+                info_font_size: getElementIntValue('infoFontSize', 18),
+                small_font_size: getElementIntValue('smallFontSize', 14)
             };
         }
         
@@ -424,6 +528,22 @@
             
             document.getElementById('previewBtn').addEventListener('click', generatePreview);
             document.getElementById('printBtn').addEventListener('click', printLabels);
+            
+            // Detaylı ayarlar collapse event
+            const detailSettingsBtn = document.querySelector('[data-bs-target="#detailSettings"]');
+            if (detailSettingsBtn) {
+                detailSettingsBtn.addEventListener('click', function() {
+                    console.log('Detaylı ayarlar butonu tıklandı');
+                });
+            }
+            
+            // Test detailed settings when collapse is shown
+            const detailSettingsCollapse = document.getElementById('detailSettings');
+            if (detailSettingsCollapse) {
+                detailSettingsCollapse.addEventListener('shown.bs.collapse', function() {
+                    testDetailedSettings();
+                });
+            }
         });
     </script>
 </body>
