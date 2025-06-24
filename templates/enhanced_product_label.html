@@ -480,6 +480,21 @@
             if (e.key === 'Enter') searchProducts();
         });
         
+        // URL parametrelerinden gelen ürün bilgilerini kontrol et
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialBarcode = urlParams.get('barcode');
+        const initialModel = urlParams.get('model');
+        const initialColor = urlParams.get('color');
+        const initialSize = urlParams.get('size');
+        
+        if (initialBarcode && initialModel && initialColor && initialSize) {
+            // Otomatik olarak ürünü kuyruğa ekle
+            addToQueue(initialBarcode, initialModel, initialColor, initialSize);
+            // Arama kutusunu da doldur
+            document.getElementById('searchType').value = 'barcode';
+            document.getElementById('searchQuery').value = initialBarcode;
+        }
+        
         // Hızlı boyut seçimi
         document.querySelectorAll('.size-preset').forEach(btn => {
             btn.addEventListener('click', function() {
