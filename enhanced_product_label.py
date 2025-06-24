@@ -155,7 +155,17 @@ def create_product_label(barcode, model_id, color, size, label_width=100, label_
 @enhanced_label_bp.route('/enhanced_product_label')
 def enhanced_product_label():
     """Ana etiket sayfası"""
-    return render_template('enhanced_product_label.html')
+    # URL parametrelerinden ürün bilgilerini al
+    barcode = request.args.get('barcode')
+    model = request.args.get('model')
+    color = request.args.get('color')
+    size = request.args.get('size')
+    
+    return render_template('enhanced_product_label.html', 
+                         initial_barcode=barcode,
+                         initial_model=model,
+                         initial_color=color,
+                         initial_size=size)
 
 @enhanced_label_bp.route('/api/search_products_for_label', methods=['GET'])
 def search_products_for_label():

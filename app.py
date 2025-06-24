@@ -120,6 +120,10 @@ blueprints = [
     intelligent_stock_bp
 ]
 
+# Enhanced Product Label Blueprint'ini ekle
+from enhanced_product_label import enhanced_label_bp
+blueprints.append(enhanced_label_bp)
+
 for bp in blueprints:
     app.register_blueprint(bp)
 

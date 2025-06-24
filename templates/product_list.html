@@ -205,7 +205,10 @@
     </button>
   </form>
   <a href="/product_label" class="btn btn-primary ml-2">
-    <i class="fas fa-barcode"></i> Barkod Oluştur/Yazdır
+    <i class="fas fa-barcode"></i> Basit Barkod
+  </a>
+  <a href="/enhanced_product_label" class="btn btn-success ml-2">
+    <i class="fas fa-tags"></i> Gelişmiş Etiket
   </a>
   <!-- Katalog Hazırla Butonu -->
   <form action="{{ url_for('catalog.generate_catalog_reportlab') }}" method="get" style="display:inline-block;">
@@ -328,8 +331,8 @@
                         <span class="size">Beden: {{ variant.size or 'N/A' }}</span>
                         <span class="quantity">Stok: {{ variant.quantity if variant.quantity is not none else 0 }}</span>
                         <span class="barcode" title="{{ variant.barcode }}">Barkod: {{ variant.barcode }}</span> {# Tooltip ekledim #}
-                        <button class="btn btn-info btn-sm select-product" data-barcode="{{ variant.barcode }}" data-model="{{ model_id }}" data-color="{{ color }}" data-size="{{ variant.size or '' }}" title="Bu varyant için barkod etiketi oluştur">
-                          <i class="fas fa-print"></i> <span class="sr-only">Yazdır</span>
+                        <button class="btn btn-info btn-sm select-product" data-barcode="{{ variant.barcode }}" data-model="{{ model_id }}" data-color="{{ color }}" data-size="{{ variant.size or '' }}" title="Bu varyant için gelişmiş etiket oluştur">
+                          <i class="fas fa-tags"></i> <span class="sr-only">Etiket Oluştur</span>
                         </button>
                         <button class="copy-btn" title="Barkodu Kopyala">
                           <i class="fas fa-copy"></i> <span class="sr-only">Kopyala</span>
