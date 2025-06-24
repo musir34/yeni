@@ -474,94 +474,24 @@
     <script>
         let labelQueue = [];
         
-        // Arama
-        document.getElementById('searchBtn').addEventListener('click', searchProducts);
-        document.getElementById('searchQuery').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') searchProducts();
-        });
-        
-        // URL parametrelerinden gelen ürün bilgilerini kontrol et
-        const urlParams = new URLSearchParams(window.location.search);
-        const initialBarcode = urlParams.get('barcode');
-        const initialModel = urlParams.get('model');
-        const initialColor = urlParams.get('color');
-        const initialSize = urlParams.get('size');
-        
-        if (initialBarcode && initialModel && initialColor && initialSize) {
-            // Otomatik olarak ürünü kuyruğa ekle
-            addToQueue(initialBarcode, initialModel, initialColor, initialSize);
-            // Arama kutusunu da doldur
-            document.getElementById('searchType').value = 'barcode';
-            document.getElementById('searchQuery').value = initialBarcode;
+        // Tüm fonksiyonları tanımla
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
+                ${message}
+            `;
+            
+            document.querySelector('.main-container').insertBefore(alertDiv, document.querySelector('.section-card'));
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
         }
         
-        // Hızlı boyut seçimi
-        document.querySelectorAll('.size-preset').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.getElementById('labelWidth').value = this.dataset.width;
-                document.getElementById('labelHeight').value = this.dataset.height;
-            });
-        });
-        
-        // Önizleme ve yazdırma
-        document.getElementById('previewBtn').addEventListener('click', generatePreview);
-        document.getElementById('printBtn').addEventListener('click', printLabels);
-        
-        async function searchProducts() {
-            const searchType = document.getElementById('searchType').value;
-            const query = document.getElementById('searchQuery').value.trim();
-            
-            if (!query) {
-                showAlert('Lütfen arama sorgusu girin', 'danger');
-                return;
-            }
-            
-            showLoading(true);
-            
-            try {
-                const response = await fetch(`/api/search_products_for_label?search_type=${searchType}&query=${encodeURIComponent(query)}`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    displaySearchResults(data.products);
-                } else {
-                    showAlert(data.message, 'danger');
-                    document.getElementById('searchResults').innerHTML = '';
-                }
-            } catch (error) {
-                showAlert('Arama sırasında hata oluştu', 'danger');
-            } finally {
-                showLoading(false);
-            }
-        }
-        
-        function displaySearchResults(products) {
-            const container = document.getElementById('searchResults');
-            
-            if (products.length === 0) {
-                container.innerHTML = '<div class="text-center text-muted py-4"><p>Ürün bulunamadı</p></div>';
-                return;
-            }
-            
-            container.innerHTML = products.map(product => `
-                <div class="product-card">
-                    <div class="product-header">
-                        ${product.model_id} - ${product.color}
-                    </div>
-                    ${product.variants.map(variant => `
-                        <div class="variant-item">
-                            <div class="variant-info">
-                                <div class="variant-size">Beden: ${variant.size}</div>
-                                <div class="variant-stock">Stok: ${variant.quantity} | Barkod: ${variant.barcode}</div>
-                            </div>
-                            <button class="btn-add-label" onclick="addToQueue('${variant.barcode}', '${product.model_id}', '${product.color}', '${variant.size}')">
-                                <i class="fas fa-plus"></i>
-                                Ekle
-                            </button>
-                        </div>
-                    `).join('')}
-                </div>
-            `).join('');
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
         
         function addToQueue(barcode, modelId, color, size) {
@@ -638,6 +568,63 @@
             showAlert('Etiket kuyruktan çıkarıldı', 'success');
         }
         
+        function displaySearchResults(products) {
+            const container = document.getElementById('searchResults');
+            
+            if (products.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-4"><p>Ürün bulunamadı</p></div>';
+                return;
+            }
+            
+            container.innerHTML = products.map(product => `
+                <div class="product-card">
+                    <div class="product-header">
+                        ${product.model_id} - ${product.color}
+                    </div>
+                    ${product.variants.map(variant => `
+                        <div class="variant-item">
+                            <div class="variant-info">
+                                <div class="variant-size">Beden: ${variant.size}</div>
+                                <div class="variant-stock">Stok: ${variant.quantity} | Barkod: ${variant.barcode}</div>
+                            </div>
+                            <button class="btn-add-label" onclick="addToQueue('${variant.barcode}', '${product.model_id}', '${product.color}', '${variant.size}')">
+                                <i class="fas fa-plus"></i>
+                                Ekle
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+        }
+        
+        async function searchProducts() {
+            const searchType = document.getElementById('searchType').value;
+            const query = document.getElementById('searchQuery').value.trim();
+            
+            if (!query) {
+                showAlert('Lütfen arama sorgusu girin', 'danger');
+                return;
+            }
+            
+            showLoading(true);
+            
+            try {
+                const response = await fetch(`/api/search_products_for_label?search_type=${searchType}&query=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    displaySearchResults(data.products);
+                } else {
+                    showAlert(data.message, 'danger');
+                    document.getElementById('searchResults').innerHTML = '';
+                }
+            } catch (error) {
+                showAlert('Arama sırasında hata oluştu', 'danger');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
         async function generatePreview() {
             if (labelQueue.length === 0) {
                 showAlert('Önizleme için etiket ekleyin', 'danger');
@@ -646,7 +633,6 @@
             
             showLoading(true);
             
-            // Sadece ilk etiketi önizleme olarak göster
             const firstLabel = labelQueue[0];
             const labelWidth = parseInt(document.getElementById('labelWidth').value);
             const labelHeight = parseInt(document.getElementById('labelHeight').value);
@@ -695,7 +681,6 @@
             const labelsPerRow = parseInt(document.getElementById('labelsPerRow').value);
             const labelsPerCol = parseInt(document.getElementById('labelsPerCol').value);
             
-            // Etiketleri adet sayısına göre çoğalt
             const expandedLabels = [];
             labelQueue.forEach(item => {
                 for (let i = 0; i < item.quantity; i++) {
@@ -727,7 +712,6 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Yeni pencerede yazdırma sayfası aç
                     const printWindow = window.open('', '_blank');
                     printWindow.document.write(`
                         <html>
@@ -762,24 +746,40 @@
             }
         }
         
-        function showAlert(message, type) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type}`;
-            alertDiv.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
-                ${message}
-            `;
+        // DOM yüklendiğinde event listener'ları bağla
+        document.addEventListener('DOMContentLoaded', function() {
+            // Arama
+            document.getElementById('searchBtn').addEventListener('click', searchProducts);
+            document.getElementById('searchQuery').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') searchProducts();
+            });
             
-            document.querySelector('.main-container').insertBefore(alertDiv, document.querySelector('.section-card'));
+            // URL parametrelerinden gelen ürün bilgilerini kontrol et
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialBarcode = urlParams.get('barcode');
+            const initialModel = urlParams.get('model');
+            const initialColor = urlParams.get('color');
+            const initialSize = urlParams.get('size');
             
-            setTimeout(() => {
-                alertDiv.remove();
-            }, 5000);
-        }
-        
-        function showLoading(show) {
-            document.getElementById('loading').style.display = show ? 'block' : 'none';
-        }
+            if (initialBarcode && initialModel && initialColor && initialSize) {
+                addToQueue(initialBarcode, initialModel, initialColor, initialSize);
+                document.getElementById('searchType').value = 'barcode';
+                document.getElementById('searchQuery').value = initialBarcode;
+            }
+            
+            // Hızlı boyut seçimi
+            document.querySelectorAll('.size-preset').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.getElementById('labelWidth').value = this.dataset.width;
+                    document.getElementById('labelHeight').value = this.dataset.height;
+                });
+            });
+            
+            // Önizleme ve yazdırma
+            document.getElementById('previewBtn').addEventListener('click', generatePreview);
+            document.getElementById('printBtn').addEventListener('click', printLabels);
+        });
+
     </script>
 </body>
 </html>
