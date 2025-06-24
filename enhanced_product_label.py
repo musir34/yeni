@@ -7,6 +7,7 @@ import base64
 from models import Product, db
 from sqlalchemy import func
 import logging
+import time
 
 enhanced_label_bp = Blueprint('enhanced_label', __name__)
 
@@ -295,6 +296,11 @@ def enhanced_product_label():
                          initial_model=model,
                          initial_color=color,
                          initial_size=size)
+
+@enhanced_label_bp.route('/advanced_editor')
+def advanced_label_editor():
+    """Gelişmiş sürükle-bırak etiket editörü"""
+    return render_template('advanced_label_editor.html')
 
 @enhanced_label_bp.route('/api/search_products_for_label', methods=['GET'])
 def search_products_for_label():
