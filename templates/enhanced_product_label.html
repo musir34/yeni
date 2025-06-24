@@ -529,6 +529,9 @@
         }
         
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize label queue as global
+            window.labelQueue = [];
+            
             document.getElementById('searchBtn').addEventListener('click', searchProducts);
             document.getElementById('searchQuery').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') searchProducts();
@@ -546,31 +549,8 @@
                 document.getElementById('searchQuery').value = initialBarcode;
             }
             
-            document.querySelectorAll('.size-preset').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.getElementById('labelWidth').value = this.dataset.width;
-                    document.getElementById('labelHeight').value = this.dataset.height;
-                });
-            });
-            
-            document.getElementById('previewBtn').addEventListener('click', generatePreview);
-            document.getElementById('printBtn').addEventListener('click', printLabels);
-            
-            // Detaylı ayarlar collapse event
-            const detailSettingsBtn = document.querySelector('[data-bs-target="#detailSettings"]');
-            if (detailSettingsBtn) {
-                detailSettingsBtn.addEventListener('click', function() {
-                    console.log('Detaylı ayarlar butonu tıklandı');
-                });
-            }
-            
-            // Test detailed settings when collapse is shown
-            const detailSettingsCollapse = document.getElementById('detailSettings');
-            if (detailSettingsCollapse) {
-                detailSettingsCollapse.addEventListener('shown.bs.collapse', function() {
-                    testDetailedSettings();
-                });
-            }
+            // Initialize selected design info
+            updateSelectedDesignInfo(null);
         });
         // Show saved designs
         function showSavedDesigns() {
@@ -612,6 +592,7 @@
             if (selectedDesignForPrint) {
                 // Close modal
                 bootstrap.Modal.getInstance(document.getElementById('savedDesignsModal')).hide();
+                updateSelectedDesignInfo(selectedDesignForPrint);
                 showAlert(`Tasarım "${selectedDesignForPrint.name}" seçildi. Artık önizleme ve yazdırma yapabilirsiniz.`, 'success');
             }
         }
