@@ -129,6 +129,7 @@ This is a comprehensive e-commerce management system built for a shoe retailer c
 - June 24, 2025. Fixed database SSL connection issues and authentication bypass for label editor access. Advanced editor now fully functional with mouse drag-drop positioning, detailed property panels, and design save/load system
 - June 24, 2025. Created standalone label editor application to bypass authentication issues. Complete drag-and-drop system now accessible at /advanced_editor with full functionality including element positioning, property editing, and design management
 - June 24, 2025. Simplified label editor created without detailed settings panels. Focus on core drag-and-drop functionality with persistent localStorage save/load system. Clean interface with only essential controls
+- June 24, 2025. Fixed 404 routing issue by adding direct route for advanced editor. Simplified drag-and-drop label editor now accessible with persistent design save/load functionality
 
 # User Preferences
 

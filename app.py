@@ -126,6 +126,13 @@ from image_manager import image_manager_bp
 blueprints.append(enhanced_label_bp)
 blueprints.append(image_manager_bp)
 
+# Direct route for simplified editor
+@app.route('/enhanced_product_label/advanced_editor')
+def direct_advanced_editor():
+    """Direct route for simplified label editor"""
+    from flask import render_template
+    return render_template('simple_label_editor.html')
+
 for bp in blueprints:
     app.register_blueprint(bp)
 
