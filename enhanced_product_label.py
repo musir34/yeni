@@ -488,12 +488,31 @@ def generate_advanced_label_preview():
 @enhanced_label_bp.route('/enhanced_product_label/api/generate_advanced_label_preview', methods=['POST'])
 @enhanced_label_bp.route('/api/generate_advanced_label_preview', methods=['POST'])
 def generate_advanced_label_preview_new():
-    """Gelişmiş editörden gelen tasarımı işle ve önizleme oluştur"""
+    """Gelişmiş editörden gelen tasarımı işle ve ürün bilgileriyle önizleme oluştur"""
     try:
         data = request.get_json()
         label_width = int(data.get('width', 100))
         label_height = int(data.get('height', 50))
         elements = data.get('elements', [])
+        product_data = data.get('product_data', {})
+        
+        # Ürün bilgileri - gerçek ürün verisi varsa onu kullan, yoksa örnek
+        if product_data:
+            sample_product = {
+                'model_code': product_data.get('model_code', 'GL099'),
+                'color': product_data.get('color', 'Siyah'),
+                'size': product_data.get('size', '42'),
+                'barcode': product_data.get('barcode', '8690123456789'),
+                'image_path': f"static/images/{product_data.get('model_code', 'GL099')}_{product_data.get('color', 'Siyah')}.jpg"
+            }
+        else:
+            sample_product = {
+                'model_code': 'GL099',
+                'color': 'Siyah',
+                'size': '42',
+                'barcode': '8690123456789',
+                'image_path': 'static/images/GL099_Siyah.jpg'
+            }
         
         # Etiket boyutları (mm'den pixel'e çevir, 300 DPI)
         dpi = 300
@@ -518,12 +537,9 @@ def generate_advanced_label_preview_new():
             x = int(element.get('x', 0) * (width_px / (label_width * 4)))
             y = int(element.get('y', 0) * (height_px / (label_height * 2)))
             
-            if element_type in ['title', 'text']:
-                # HTML içeriğinden metni çıkar
-                html_content = element.get('html', 'Text')
-                import re
-                text = re.sub('<[^<]+?>', '', html_content)
-                
+            # Ürün-spesifik alanlar
+            if element_type == 'model_code':
+                html_content = element.get('html', '[MODEL KODU]')
                 font_size = int(element.get('fontSize', '14px').replace('px', ''))
                 font_size = int(font_size * (dpi / 96))
                 
@@ -535,39 +551,78 @@ def generate_advanced_label_preview_new():
                 except:
                     font = default_font
                 
-                draw.text((x, y), text, fill='black', font=font)
+                draw.text((x, y), sample_product['model_code'], fill='black', font=font)
+                
+            elif element_type == 'color':
+                html_content = element.get('html', '[RENK]')
+                font_size = int(element.get('fontSize', '14px').replace('px', ''))
+                font_size = int(font_size * (dpi / 96))
+                
+                try:
+                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+                except:
+                    font = default_font
+                
+                draw.text((x, y), sample_product['color'], fill='black', font=font)
+                
+            elif element_type == 'size':
+                html_content = element.get('html', '[BEDEN]')
+                font_size = int(element.get('fontSize', '14px').replace('px', ''))
+                font_size = int(font_size * (dpi / 96))
+                
+                try:
+                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+                except:
+                    font = default_font
+                
+                draw.text((x, y), sample_product['size'], fill='black', font=font)
                 
             elif element_type == 'qr':
                 qr_size = int(element.get('width', 40) * (dpi / 96))
-                qr_data = 'sample_qr_data'
+                # QR kodda ürün bilgileri
+                qr_data = f"Model: {sample_product['model_code']}\nRenk: {sample_product['color']}\nBeden: {sample_product['size']}\nBarkod: {sample_product['barcode']}"
                 
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
                 qr_img = create_qr_with_logo(qr_data, logo_path if os.path.exists(logo_path) else None, qr_size)
                 label.paste(qr_img, (x, y))
                 
-            elif element_type == 'image':
+            elif element_type == 'product_image':
                 img_width = int(element.get('width', 50) * (dpi / 96))
                 img_height = int(element.get('height', 50) * (dpi / 96))
                 
-                draw.rectangle([x, y, x + img_width, y + img_height], 
-                             outline='#bdc3c7', fill='#ecf0f1', width=2)
-                
+                # Gerçek ürün görseli varsa kullan, yoksa placeholder
                 try:
-                    img_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 12)
-                except:
-                    img_font = default_font
-                
-                text_bbox = draw.textbbox((0, 0), "IMG", font=img_font)
-                text_width = text_bbox[2] - text_bbox[0]
-                text_height = text_bbox[3] - text_bbox[1]
-                text_x = x + (img_width - text_width) // 2
-                text_y = y + (img_height - text_height) // 2
-                draw.text((text_x, text_y), "IMG", fill='#7f8c8d', font=img_font)
+                    if os.path.exists(sample_product['image_path']):
+                        product_img = Image.open(sample_product['image_path'])
+                        product_img = product_img.resize((img_width, img_height), Image.Resampling.LANCZOS)
+                        label.paste(product_img, (x, y))
+                    else:
+                        # Placeholder
+                        draw.rectangle([x, y, x + img_width, y + img_height], 
+                                     outline='#3498db', fill='#e3f2fd', width=2)
+                        
+                        try:
+                            img_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 10)
+                        except:
+                            img_font = default_font
+                        
+                        text = f"{sample_product['model_code']}\n{sample_product['color']}"
+                        text_bbox = draw.textbbox((0, 0), text, font=img_font)
+                        text_width = text_bbox[2] - text_bbox[0]
+                        text_height = text_bbox[3] - text_bbox[1]
+                        text_x = x + (img_width - text_width) // 2
+                        text_y = y + (img_height - text_height) // 2
+                        draw.text((text_x, text_y), text, fill='#2196f3', font=img_font, align='center')
+                except Exception as img_error:
+                    logger.error(f"Ürün görseli yükleme hatası: {img_error}")
+                    # Hata durumunda basit placeholder
+                    draw.rectangle([x, y, x + img_width, y + img_height], 
+                                 outline='#bdc3c7', fill='#ecf0f1', width=2)
         
         # Önizleme kaydet
         os.makedirs('static/generated', exist_ok=True)
         timestamp = int(time.time())
-        preview_filename = f"advanced_label_preview_{timestamp}.png"
+        preview_filename = f"product_label_preview_{timestamp}.png"
         preview_path = os.path.join('static', 'generated', preview_filename)
         
         label.save(preview_path, 'PNG', dpi=(dpi, dpi))
@@ -576,11 +631,12 @@ def generate_advanced_label_preview_new():
         return jsonify({
             'success': True,
             'preview_url': preview_url,
-            'message': 'Önizleme başarıyla oluşturuldu'
+            'message': 'Ürün etiketi önizlemesi oluşturuldu',
+            'product_info': sample_product
         })
         
     except Exception as e:
-        logger.error(f"Gelişmiş etiket önizleme hatası: {e}")
+        logger.error(f"Ürün etiketi önizleme hatası: {e}")
         return jsonify({'success': False, 'message': f'Önizleme oluşturulamadı: {str(e)}'})
 
 @enhanced_label_bp.route('/api/save_label_preset', methods=['POST'])

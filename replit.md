@@ -132,8 +132,9 @@ This is a comprehensive e-commerce management system built for a shoe retailer c
 - June 24, 2025. Fixed 404 routing issue by adding direct route for advanced editor. Simplified drag-and-drop label editor now accessible with persistent design save/load functionality
 - June 24, 2025. Added adjustable label sizes, resizable elements, and print integration. Users can now change label dimensions, resize photos/QR codes/text, and access saved designs from the printing section for direct printing
 - June 24, 2025. Fixed API route 404 errors by implementing missing generate_advanced_label_preview endpoint. Print integration now fully functional with saved design preview generation
+- June 24, 2025. Converted editor to use product-specific fields (Model Kodu, Renk, Beden, Ürün Görseli, QR Kod) instead of generic text. System now automatically populates these fields with real product data during preview and printing
 
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
-User wants simplified drag-and-drop editor without detailed settings panels, but with persistent save/load functionality for different label configurations. Also needs adjustable label sizes, resizable elements, and saved designs accessible in printing section.
+User wants simplified drag-and-drop editor without detailed settings panels, but with persistent save/load functionality for different label configurations. Also needs adjustable label sizes, resizable elements, and saved designs accessible in printing section. IMPORTANT: Labels should use product-specific fields (size, model code, color) instead of generic text, with automatic population of real product data during printing. Each field should be positioned separately and filled with actual product information.
