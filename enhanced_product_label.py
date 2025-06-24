@@ -297,7 +297,7 @@ def enhanced_product_label():
                          initial_color=color,
                          initial_size=size)
 
-@enhanced_label_bp.route('/advanced_editor')
+@enhanced_label_bp.route('/enhanced_product_label/advanced_editor')
 def advanced_label_editor():
     """Basitleştirilmiş sürükle-bırak etiket editörü"""
     return render_template('simple_label_editor.html')
