@@ -589,8 +589,11 @@
                             <small class="text-muted">${date} - ${design.elements.length} element</small><br>
                             <small class="text-muted">Boyut: ${design.labelWidth || 100}mm x ${design.labelHeight || 50}mm</small>
                             <br>
-                            <button class="btn btn-primary btn-sm mt-2" onclick="useDesignForPrint(${index})">
-                                <i class="fas fa-print"></i> Bu Tasarımla Yazdır
+                            <button class="btn btn-primary btn-sm mt-2" onclick="selectDesignForPrint(${index})">
+                                <i class="fas fa-check"></i> Bu Tasarımı Seç
+                            </button>
+                            <button class="btn btn-success btn-sm mt-2 ms-1" onclick="useDesignForPrint(${index})">
+                                <i class="fas fa-print"></i> Direkt Yazdır
                             </button>
                             <small class="text-muted d-block mt-1">* Seçili ürün bilgileri kullanılacak</small>
                         </div>
@@ -601,6 +604,17 @@
             
             new bootstrap.Modal(document.getElementById('savedDesignsModal')).show();
         }
+        
+        // Select design for printing (don't close modal)
+        function selectDesignForPrint(index) {
+            const saved = JSON.parse(localStorage.getItem('labelDesigns') || '[]');
+            selectedDesignForPrint = saved[index];
+            if (selectedDesignForPrint) {
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('savedDesignsModal')).hide();
+                showAlert(`Tasarım "${selectedDesignForPrint.name}" seçildi. Artık önizleme ve yazdırma yapabilirsiniz.`, 'success');
+            }
+        }
 
         // Use saved design for printing
         function useDesignForPrint(index) {
@@ -608,8 +622,22 @@
             const design = saved[index];
             if (!design) return;
             
-            // Seçilen ürün bilgilerini kontrol et
+            // Seçilen ürün bilgilerini kontrol et - hem search results hem de label queue'dan al
             const selectedProducts = [];
+            
+            // Label queue'dan ürünleri al
+            if (window.labelQueue && window.labelQueue.length > 0) {
+                window.labelQueue.forEach(item => {
+                    selectedProducts.push({
+                        barcode: item.barcode,
+                        model_code: item.model_id,
+                        color: item.color,
+                        size: item.size
+                    });
+                });
+            }
+            
+            // Arama sonuçlarından seçili ürünleri de al
             document.querySelectorAll('.product-item input[type="checkbox"]:checked').forEach(checkbox => {
                 const productRow = checkbox.closest('.product-item');
                 if (productRow) {
@@ -631,7 +659,7 @@
             });
             
             if (selectedProducts.length === 0) {
-                alert('Lütfen önce yazdırılacak ürünleri seçin!');
+                alert('Lütfen önce yazdırılacak ürünleri ekleyin! (Arama yapıp ürün seçin veya manuel ekleyin)');
                 return;
             }
             
