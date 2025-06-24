@@ -121,7 +121,7 @@ blueprints = [
 ]
 
 # Enhanced Product Label Blueprint'ini ekle
-from enhanced_product_label import enhanced_label_bp, advanced_label_editor
+from enhanced_product_label import enhanced_label_bp
 from image_manager import image_manager_bp
 blueprints.append(enhanced_label_bp)
 blueprints.append(image_manager_bp)
@@ -168,11 +168,14 @@ def log_request():
 def check_authentication():
     # Etiket editör sayfalarını tamamen serbest bırak
     if (request.path.startswith('/enhanced_product_label') or 
+        request.path.startswith('/advanced_editor') or
         request.path.startswith('/static/') or 
         request.path.startswith('/api/generate_advanced_label_preview') or
         request.path.startswith('/api/save_label_preset') or
         request.path.startswith('/api/generate_label_preview') or
-        (request.endpoint and 'enhanced_label' in str(request.endpoint))):
+        request.path.startswith('/api/search_products_for_label') or
+        (request.endpoint and 'enhanced_label' in str(request.endpoint)) or
+        request.endpoint in ['direct_advanced_editor', 'alt_advanced_editor']):
         return None
     
     allowed_routes = [
