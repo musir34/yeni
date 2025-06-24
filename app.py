@@ -4,7 +4,7 @@ import os
 import json
 import logging
 from datetime import datetime, timedelta
-from flask import Flask, request, url_for, redirect, flash, session, render_template
+from flask import Flask, request, url_for, redirect, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.routing import BuildError
@@ -129,15 +129,6 @@ blueprints.append(image_manager_bp)
 for bp in blueprints:
     app.register_blueprint(bp)
 
-# Blueprint kayıtlarından sonra direkt route eklemeleri
-@app.route('/enhanced_product_label/advanced_editor')
-def direct_advanced_editor():
-    return render_template('advanced_label_editor.html')
-
-@app.route('/advanced_editor')
-def alt_advanced_editor():
-    return render_template('advanced_label_editor.html')
-
 # URL çözümleme hatalarında fallback
 def custom_url_for(endpoint, **values):
     try:
@@ -166,12 +157,13 @@ def log_request():
 # Giriş Kontrolü
 @app.before_request
 def check_authentication():
-    # Etiket editör sayfalarını SERBEST BIRAK - ÖNCELİK 1
-    if (request.path.startswith('/enhanced_product_label') or
-        request.path.startswith('/advanced_editor') or
-        request.path.startswith('/static/') or
-        request.path.startswith('/api/') or
-        request.endpoint in ['direct_advanced_editor', 'alt_advanced_editor']):
+    # Etiket editör sayfalarını tamamen serbest bırak
+    if (request.path.startswith('/enhanced_product_label') or 
+        request.path.startswith('/static/') or 
+        request.path.startswith('/api/generate_advanced_label_preview') or
+        request.path.startswith('/api/save_label_preset') or
+        request.path.startswith('/api/generate_label_preview') or
+        (request.endpoint and 'enhanced_label' in str(request.endpoint))):
         return None
     
     allowed_routes = [
