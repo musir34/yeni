@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gelişmiş Etiket Editörü - Güllü Shoes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .main-container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        .section-card { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 24px; margin-bottom: 24px; }
+        .editor-workspace { display: grid; grid-template-columns: 1fr 400px 300px; gap: 20px; height: 80vh; }
+        
+        /* Canvas Area */
+        .canvas-container { position: relative; background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 12px; overflow: hidden; }
+        .label-canvas { position: relative; background: white; margin: 20px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform-origin: center; }
+        .canvas-element { position: absolute; cursor: move; border: 2px solid transparent; transition: border-color 0.2s; }
+        .canvas-element:hover { border-color: #3498db; }
+        .canvas-element.selected { border-color: #e74c3c; box-shadow: 0 0 10px rgba(231,76,60,0.4); }
+        .canvas-element.title-element { background: rgba(52,152,219,0.1); border-radius: 4px; padding: 2px; }
+        .canvas-element.image-element { border-radius: 8px; overflow: hidden; }
+        .canvas-element.qr-element { border-radius: 4px; }
+        .canvas-element.text-element { background: rgba(46,204,113,0.1); border-radius: 4px; padding: 2px; }
+        
+        /* Property Panel */
+        .property-panel { background: #f8f9fa; border-radius: 12px; padding: 20px; max-height: 80vh; overflow-y: auto; }
+        .property-section { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; border-left: 4px solid #3498db; }
+        .property-title { font-weight: 600; color: #2c3e50; margin-bottom: 12px; }
+        
+        /* Preset Panel */
+        .preset-panel { background: #f8f9fa; border-radius: 12px; padding: 20px; max-height: 80vh; overflow-y: auto; }
+        .preset-item { background: white; border-radius: 8px; padding: 12px; margin-bottom: 10px; border: 1px solid #dee2e6; cursor: pointer; }
+        .preset-item:hover { border-color: #3498db; }
+        .preset-thumbnail { width: 100%; height: 60px; background: #ecf0f1; border-radius: 4px; margin-bottom: 8px; }
+        
+        /* Toolbar */
+        .toolbar { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
+        .zoom-controls { display: flex; gap: 5px; align-items: center; }
+        .zoom-level { font-weight: 600; min-width: 50px; text-align: center; }
+        
+        /* Scale indicator */
+        .scale-indicator { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="section-card">
+            <h1><i class="fas fa-magic"></i> Gelişmiş Etiket Editörü</h1>
+            <p class="text-muted">Sürükle-bırak ile etiket tasarımı yapın</p>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="btn-group">
+                <button class="btn btn-outline-primary" onclick="addElement('title')">
+                    <i class="fas fa-heading"></i> Başlık Ekle
+                </button>
+                <button class="btn btn-outline-success" onclick="addElement('image')">
+                    <i class="fas fa-image"></i> Görsel Ekle
+                </button>
+                <button class="btn btn-outline-info" onclick="addElement('qr')">
+                    <i class="fas fa-qrcode"></i> QR Kod Ekle
+                </button>
+                <button class="btn btn-outline-warning" onclick="addElement('text')">
+                    <i class="fas fa-font"></i> Metin Ekle
+                </button>
+            </div>
+            
+            <div class="zoom-controls">
+                <button class="btn btn-sm btn-outline-secondary" onclick="changeZoom(-0.1)">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                <span class="zoom-level">100%</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="changeZoom(0.1)">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+            </div>
+            
+            <div class="btn-group ms-auto">
+                <button class="btn btn-success" onclick="savePreset()">
+                    <i class="fas fa-save"></i> Tasarım Kaydet
+                </button>
+                <button class="btn btn-primary" onclick="generatePreview()">
+                    <i class="fas fa-eye"></i> Önizleme
+                </button>
+                <button class="btn btn-warning" onclick="exportLabel()">
+                    <i class="fas fa-download"></i> Dışa Aktar
+                </button>
+            </div>
+        </div>
+
+        <div class="editor-workspace">
+            <!-- Canvas Area -->
+            <div class="canvas-container" id="canvasContainer">
+                <div class="label-canvas" id="labelCanvas" style="width: 400px; height: 200px;">
+                    <div class="scale-indicator">100mm x 50mm</div>
+                </div>
+            </div>
+
+            <!-- Property Panel -->
+            <div class="property-panel">
+                <h5><i class="fas fa-cogs"></i> Özellikler</h5>
+                <div id="propertyContent">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-mouse-pointer fa-3x opacity-50"></i>
+                        <p class="mt-3">Düzenlemek için bir element seçin</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preset Panel -->
+            <div class="preset-panel">
+                <h5><i class="fas fa-bookmark"></i> Kayıtlı Tasarımlar</h5>
+                <button class="btn btn-outline-primary w-100 mb-3" onclick="showPresetDialog()">
+                    <i class="fas fa-plus"></i> Yeni Preset
+                </button>
+                <div id="presetList">
+                    <!-- Presets will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Label Size Settings -->
+        <div class="section-card">
+            <h5><i class="fas fa-ruler"></i> Etiket Boyutu</h5>
+            <div class="row">
+                <div class="col-md-3">
+                    <label class="form-label">Genişlik (mm)</label>
+                    <input type="number" id="labelWidth" class="form-control" value="100" min="50" max="200" onchange="updateCanvasSize()">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Yükseklik (mm)</label>
+                    <input type="number" id="labelHeight" class="form-control" value="50" min="30" max="150" onchange="updateCanvasSize()">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Hızlı Boyutlar</label><br>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="setLabelSize(100, 50)">100x50</button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="setLabelSize(80, 50)">80x50</button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="setLabelSize(80, 40)">80x40</button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="setLabelSize(60, 40)">60x40</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preset Save Dialog -->
+    <div class="modal fade" id="presetModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tasarım Kaydet</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tasarım Adı</label>
+                        <input type="text" id="presetName" class="form-control" placeholder="Örn: Standart Etiket">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Açıklama</label>
+                        <textarea id="presetDescription" class="form-control" rows="3" placeholder="Tasarım hakkında kısa açıklama"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" onclick="savePresetToStorage()">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let selectedElement = null;
+        let dragOffset = { x: 0, y: 0 };
+        let zoomLevel = 1;
+        let elementCounter = 0;
+        let labelElements = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPresets();
+            updateCanvasSize();
+        });
+
+        // Canvas size management
+        function updateCanvasSize() {
+            const width = parseInt(document.getElementById('labelWidth').value);
+            const height = parseInt(document.getElementById('labelHeight').value);
+            const canvas = document.getElementById('labelCanvas');
+            
+            // Convert mm to pixels (assuming 4px per mm for display)
+            const displayWidth = width * 4;
+            const displayHeight = height * 2;
+            
+            canvas.style.width = displayWidth + 'px';
+            canvas.style.height = displayHeight + 'px';
+            
+            document.querySelector('.scale-indicator').textContent = `${width}mm x ${height}mm`;
+        }
+
+        function setLabelSize(width, height) {
+            document.getElementById('labelWidth').value = width;
+            document.getElementById('labelHeight').value = height;
+            updateCanvasSize();
+        }
+
+        // Zoom controls
+        function changeZoom(delta) {
+            zoomLevel = Math.max(0.3, Math.min(2, zoomLevel + delta));
+            const canvas = document.getElementById('labelCanvas');
+            canvas.style.transform = `scale(${zoomLevel})`;
+            document.querySelector('.zoom-level').textContent = Math.round(zoomLevel * 100) + '%';
+        }
+
+        // Element management
+        function addElement(type) {
+            elementCounter++;
+            const elementId = `element_${type}_${elementCounter}`;
+            const canvas = document.getElementById('labelCanvas');
+            
+            const element = document.createElement('div');
+            element.id = elementId;
+            element.className = `canvas-element ${type}-element`;
+            element.style.left = '20px';
+            element.style.top = '20px';
+            
+            const elementData = {
+                id: elementId,
+                type: type,
+                x: 20,
+                y: 20,
+                properties: getDefaultProperties(type)
+            };
+
+            switch(type) {
+                case 'title':
+                    element.innerHTML = '<strong>GÜLLÜ</strong>';
+                    element.style.fontSize = '18px';
+                    element.style.fontWeight = 'bold';
+                    break;
+                case 'image':
+                    element.innerHTML = '<div style="width:60px;height:60px;background:#ecf0f1;border:2px dashed #bdc3c7;display:flex;align-items:center;justify-content:center;"><i class="fas fa-image text-muted"></i></div>';
+                    break;
+                case 'qr':
+                    element.innerHTML = '<div style="width:50px;height:50px;background:#2c3e50;color:white;display:flex;align-items:center;justify-content:center;font-size:12px;">QR</div>';
+                    break;
+                case 'text':
+                    element.innerHTML = 'Metin';
+                    element.style.fontSize = '14px';
+                    break;
+            }
+
+            element.addEventListener('mousedown', startDrag);
+            element.addEventListener('click', selectElement);
+            
+            canvas.appendChild(element);
+            labelElements.push(elementData);
+            selectElement({ target: element });
+        }
+
+        function getDefaultProperties(type) {
+            const defaults = {
+                title: {
+                    text: 'GÜLLÜ',
+                    fontSize: 18,
+                    fontWeight: 'bold',
+                    color: '#000000',
+                    fontFamily: 'Arial'
+                },
+                image: {
+                    width: 60,
+                    height: 60,
+                    source: 'placeholder'
+                },
+                qr: {
+                    size: 50,
+                    data: 'sample_barcode'
+                },
+                text: {
+                    text: 'Metin',
+                    fontSize: 14,
+                    color: '#000000',
+                    fontFamily: 'Arial'
+                }
+            };
+            return defaults[type] || {};
+        }
+
+        // Drag and drop functionality
+        function startDrag(e) {
+            e.preventDefault();
+            const element = e.target.closest('.canvas-element');
+            if (!element) return;
+
+            selectElement({ target: element });
+            
+            const rect = element.getBoundingClientRect();
+            const canvasRect = document.getElementById('labelCanvas').getBoundingClientRect();
+            
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+        }
+
+        function drag(e) {
+            if (!selectedElement) return;
+            
+            const canvasRect = document.getElementById('labelCanvas').getBoundingClientRect();
+            const newX = (e.clientX - canvasRect.left - dragOffset.x) / zoomLevel;
+            const newY = (e.clientY - canvasRect.top - dragOffset.y) / zoomLevel;
+            
+            selectedElement.style.left = Math.max(0, newX) + 'px';
+            selectedElement.style.top = Math.max(0, newY) + 'px';
+            
+            // Update element data
+            const elementData = labelElements.find(el => el.id === selectedElement.id);
+            if (elementData) {
+                elementData.x = newX;
+                elementData.y = newY;
+            }
+            
+            updatePositionInputs();
+        }
+
+        function stopDrag() {
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        // Element selection
+        function selectElement(e) {
+            // Remove previous selection
+            document.querySelectorAll('.canvas-element.selected').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            const element = e.target.closest('.canvas-element');
+            if (element) {
+                element.classList.add('selected');
+                selectedElement = element;
+                showElementProperties(element);
+            }
+        }
+
+        function showElementProperties(element) {
+            const elementData = labelElements.find(el => el.id === element.id);
+            if (!elementData) return;
+
+            const propertyContent = document.getElementById('propertyContent');
+            propertyContent.innerHTML = generatePropertyPanel(elementData);
+        }
+
+        function generatePropertyPanel(elementData) {
+            const { type, properties } = elementData;
+            let html = `
+                <div class="property-section">
+                    <div class="property-title"><i class="fas fa-arrows-alt"></i> Pozisyon</div>
+                    <div class="row">
+                        <div class="col-6">
+                            <label class="form-label">X</label>
+                            <input type="number" class="form-control" id="pos_x" value="${elementData.x}" onchange="updateElementPosition()">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Y</label>
+                            <input type="number" class="form-control" id="pos_y" value="${elementData.y}" onchange="updateElementPosition()">
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            switch(type) {
+                case 'title':
+                case 'text':
+                    html += `
+                        <div class="property-section">
+                            <div class="property-title"><i class="fas fa-font"></i> Metin Özellikleri</div>
+                            <div class="mb-3">
+                                <label class="form-label">Metin</label>
+                                <input type="text" class="form-control" value="${properties.text}" onchange="updateTextProperty('text', this.value)">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Font Boyutu</label>
+                                <input type="number" class="form-control" value="${properties.fontSize}" min="8" max="48" onchange="updateTextProperty('fontSize', this.value)">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Renk</label>
+                                <input type="color" class="form-control" value="${properties.color}" onchange="updateTextProperty('color', this.value)">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Font Ailesi</label>
+                                <select class="form-control" onchange="updateTextProperty('fontFamily', this.value)">
+                                    <option value="Arial" ${properties.fontFamily === 'Arial' ? 'selected' : ''}>Arial</option>
+                                    <option value="Times New Roman" ${properties.fontFamily === 'Times New Roman' ? 'selected' : ''}>Times New Roman</option>
+                                    <option value="Helvetica" ${properties.fontFamily === 'Helvetica' ? 'selected' : ''}>Helvetica</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Font Ağırlığı</label>
+                                <select class="form-control" onchange="updateTextProperty('fontWeight', this.value)">
+                                    <option value="normal" ${properties.fontWeight === 'normal' ? 'selected' : ''}>Normal</option>
+                                    <option value="bold" ${properties.fontWeight === 'bold' ? 'selected' : ''}>Kalın</option>
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'image':
+                    html += `
+                        <div class="property-section">
+                            <div class="property-title"><i class="fas fa-image"></i> Görsel Özellikleri</div>
+                            <div class="mb-3">
+                                <label class="form-label">Genişlik</label>
+                                <input type="number" class="form-control" value="${properties.width}" onchange="updateImageProperty('width', this.value)">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Yükseklik</label>
+                                <input type="number" class="form-control" value="${properties.height}" onchange="updateImageProperty('height', this.value)">
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'qr':
+                    html += `
+                        <div class="property-section">
+                            <div class="property-title"><i class="fas fa-qrcode"></i> QR Kod Özellikleri</div>
+                            <div class="mb-3">
+                                <label class="form-label">Boyut</label>
+                                <input type="number" class="form-control" value="${properties.size}" onchange="updateQRProperty('size', this.value)">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Data</label>
+                                <input type="text" class="form-control" value="${properties.data}" onchange="updateQRProperty('data', this.value)">
+                            </div>
+                        </div>
+                    `;
+                    break;
+            }
+
+            html += `
+                <div class="property-section">
+                    <button class="btn btn-danger w-100" onclick="deleteElement()">
+                        <i class="fas fa-trash"></i> Elementi Sil
+                    </button>
+                </div>
+            `;
+
+            return html;
+        }
+
+        // Property update functions
+        function updateElementPosition() {
+            if (!selectedElement) return;
+            
+            const x = parseInt(document.getElementById('pos_x').value);
+            const y = parseInt(document.getElementById('pos_y').value);
+            
+            selectedElement.style.left = x + 'px';
+            selectedElement.style.top = y + 'px';
+            
+            const elementData = labelElements.find(el => el.id === selectedElement.id);
+            if (elementData) {
+                elementData.x = x;
+                elementData.y = y;
+            }
+        }
+
+        function updatePositionInputs() {
+            if (!selectedElement) return;
+            
+            const posXInput = document.getElementById('pos_x');
+            const posYInput = document.getElementById('pos_y');
+            
+            if (posXInput) posXInput.value = parseInt(selectedElement.style.left);
+            if (posYInput) posYInput.value = parseInt(selectedElement.style.top);
+        }
+
+        function updateTextProperty(property, value) {
+            if (!selectedElement) return;
+            
+            const elementData = labelElements.find(el => el.id === selectedElement.id);
+            if (elementData) {
+                elementData.properties[property] = value;
+                
+                // Apply visual changes
+                switch(property) {
+                    case 'text':
+                        selectedElement.innerHTML = value;
+                        break;
+                    case 'fontSize':
+                        selectedElement.style.fontSize = value + 'px';
+                        break;
+                    case 'color':
+                        selectedElement.style.color = value;
+                        break;
+                    case 'fontFamily':
+                        selectedElement.style.fontFamily = value;
+                        break;
+                    case 'fontWeight':
+                        selectedElement.style.fontWeight = value;
+                        break;
+                }
+            }
+        }
+
+        function updateImageProperty(property, value) {
+            if (!selectedElement) return;
+            
+            const elementData = labelElements.find(el => el.id === selectedElement.id);
+            if (elementData) {
+                elementData.properties[property] = parseInt(value);
+                
+                const imgDiv = selectedElement.querySelector('div');
+                if (imgDiv) {
+                    if (property === 'width') imgDiv.style.width = value + 'px';
+                    if (property === 'height') imgDiv.style.height = value + 'px';
+                }
+            }
+        }
+
+        function updateQRProperty(property, value) {
+            if (!selectedElement) return;
+            
+            const elementData = labelElements.find(el => el.id === selectedElement.id);
+            if (elementData) {
+                elementData.properties[property] = property === 'size' ? parseInt(value) : value;
+                
+                const qrDiv = selectedElement.querySelector('div');
+                if (qrDiv && property === 'size') {
+                    qrDiv.style.width = value + 'px';
+                    qrDiv.style.height = value + 'px';
+                }
+            }
+        }
+
+        function deleteElement() {
+            if (!selectedElement) return;
+            
+            const elementId = selectedElement.id;
+            selectedElement.remove();
+            
+            labelElements = labelElements.filter(el => el.id !== elementId);
+            
+            selectedElement = null;
+            document.getElementById('propertyContent').innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-mouse-pointer fa-3x opacity-50"></i>
+                    <p class="mt-3">Düzenlemek için bir element seçin</p>
+                </div>
+            `;
+        }
+
+        // Preset management
+        function showPresetDialog() {
+            const modal = new bootstrap.Modal(document.getElementById('presetModal'));
+            modal.show();
+        }
+
+        function savePresetToStorage() {
+            const name = document.getElementById('presetName').value;
+            const description = document.getElementById('presetDescription').value;
+            
+            if (!name) {
+                alert('Lütfen tasarım adı girin');
+                return;
+            }
+
+            const preset = {
+                id: Date.now(),
+                name: name,
+                description: description,
+                labelWidth: document.getElementById('labelWidth').value,
+                labelHeight: document.getElementById('labelHeight').value,
+                elements: JSON.parse(JSON.stringify(labelElements))
+            };
+
+            let presets = JSON.parse(localStorage.getItem('labelPresets') || '[]');
+            presets.push(preset);
+            localStorage.setItem('labelPresets', JSON.stringify(presets));
+
+            loadPresets();
+            bootstrap.Modal.getInstance(document.getElementById('presetModal')).hide();
+            
+            // Clear form
+            document.getElementById('presetName').value = '';
+            document.getElementById('presetDescription').value = '';
+        }
+
+        function loadPresets() {
+            const presets = JSON.parse(localStorage.getItem('labelPresets') || '[]');
+            const presetList = document.getElementById('presetList');
+            
+            presetList.innerHTML = '';
+            
+            presets.forEach(preset => {
+                const presetDiv = document.createElement('div');
+                presetDiv.className = 'preset-item';
+                presetDiv.innerHTML = `
+                    <div class="preset-thumbnail"></div>
+                    <strong>${preset.name}</strong>
+                    <small class="text-muted d-block">${preset.description}</small>
+                    <small class="text-muted">${preset.labelWidth}x${preset.labelHeight}mm</small>
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-primary" onclick="loadPreset(${preset.id})">Yükle</button>
+                        <button class="btn btn-sm btn-danger" onclick="deletePreset(${preset.id})">Sil</button>
+                    </div>
+                `;
+                presetList.appendChild(presetDiv);
+            });
+        }
+
+        function loadPreset(presetId) {
+            const presets = JSON.parse(localStorage.getItem('labelPresets') || '[]');
+            const preset = presets.find(p => p.id === presetId);
+            
+            if (!preset) return;
+
+            // Clear current elements
+            document.querySelectorAll('.canvas-element').forEach(el => el.remove());
+            labelElements = [];
+
+            // Set label size
+            document.getElementById('labelWidth').value = preset.labelWidth;
+            document.getElementById('labelHeight').value = preset.labelHeight;
+            updateCanvasSize();
+
+            // Load elements
+            preset.elements.forEach(elementData => {
+                const element = document.createElement('div');
+                element.id = elementData.id;
+                element.className = `canvas-element ${elementData.type}-element`;
+                element.style.left = elementData.x + 'px';
+                element.style.top = elementData.y + 'px';
+
+                // Apply element specific styling
+                switch(elementData.type) {
+                    case 'title':
+                    case 'text':
+                        element.innerHTML = elementData.properties.text;
+                        element.style.fontSize = elementData.properties.fontSize + 'px';
+                        element.style.color = elementData.properties.color;
+                        element.style.fontFamily = elementData.properties.fontFamily;
+                        element.style.fontWeight = elementData.properties.fontWeight;
+                        break;
+                    // Add other element types as needed
+                }
+
+                element.addEventListener('mousedown', startDrag);
+                element.addEventListener('click', selectElement);
+                
+                document.getElementById('labelCanvas').appendChild(element);
+                labelElements.push(elementData);
+            });
+        }
+
+        function deletePreset(presetId) {
+            if (!confirm('Bu tasarımı silmek istediğinizden emin misiniz?')) return;
+            
+            let presets = JSON.parse(localStorage.getItem('labelPresets') || '[]');
+            presets = presets.filter(p => p.id !== presetId);
+            localStorage.setItem('labelPresets', JSON.stringify(presets));
+            loadPresets();
+        }
+
+        function savePreset() {
+            showPresetDialog();
+        }
+
+        function generatePreview() {
+            // Convert current design to API format and generate preview
+            const labelData = {
+                width: document.getElementById('labelWidth').value,
+                height: document.getElementById('labelHeight').value,
+                elements: labelElements
+            };
+            
+            // Call the API to generate preview
+            fetch('/api/generate_advanced_label_preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(labelData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show preview in a modal or new window
+                    window.open(data.preview_url, '_blank');
+                } else {
+                    alert('Önizleme oluşturulamadı: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Önizleme oluşturulurken hata oluştu');
+            });
+        }
+
+        function exportLabel() {
+            // Export current design
+            const labelData = {
+                width: document.getElementById('labelWidth').value,
+                height: document.getElementById('labelHeight').value,
+                elements: labelElements
+            };
+            
+            const dataStr = JSON.stringify(labelData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = 'label_design.json';
+            link.click();
+        }
+    </script>
+</body>
+</html>
