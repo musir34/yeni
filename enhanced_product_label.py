@@ -31,13 +31,16 @@ def find_product_image(model_id, color):
     for name in possible_names:
         full_path = os.path.join(images_folder, name)
         if os.path.exists(full_path):
-            return f"images/{name}"
+            logger.info(f"Ürün görseli bulundu: {full_path}")
+            return full_path  # Tam yolu döndür
     
     # Varsayılan görsel
     default_path = os.path.join(images_folder, "default_product.jpg")
     if os.path.exists(default_path):
-        return "images/default_product.jpg"
+        logger.info(f"Varsayılan görsel kullanılıyor: {default_path}")
+        return default_path
     
+    logger.warning(f"Görsel bulunamadı: model={model_id}, color={color}")
     return None
 
 def create_qr_with_logo(data, logo_path=None, size=200):
@@ -117,8 +120,14 @@ def create_product_label(barcode, model_id, color, size, label_width=100, label_
     product_image_path = find_product_image(model_id, color)
     
     try:
-        if os.path.exists(product_image_path):
+        if product_image_path and os.path.exists(product_image_path):
             product_img = Image.open(product_image_path)
+            # RGBA'yı RGB'ye çevir
+            if product_img.mode in ('RGBA', 'LA'):
+                background = Image.new('RGB', product_img.size, (255, 255, 255))
+                background.paste(product_img, mask=product_img.split()[-1] if product_img.mode == 'RGBA' else None)
+                product_img = background
+            
             # Görseli sol tarafa sığdır
             img_size = min(left_width - 20, content_height - 60)
             product_img = product_img.resize((img_size, img_size), Image.Resampling.LANCZOS)
@@ -130,9 +139,45 @@ def create_product_label(barcode, model_id, color, size, label_width=100, label_
             color_y = img_y + img_size + 5
             draw.text((img_x, color_y), f"Renk", fill='black', font=small_font)
             draw.text((img_x, color_y + 15), color, fill='black', font=info_font)
+        else:
+            # Görsel bulunamadıysa placeholder çiz
+            img_size = min(left_width - 20, content_height - 60)
+            img_x = 10
+            img_y = content_y + 10
+            
+            # Placeholder kutu çiz
+            draw.rectangle([img_x, img_y, img_x + img_size, img_y + img_size], 
+                         outline='#bdc3c7', fill='#ecf0f1', width=2)
+            
+            # "Görsel Yok" yazısı
+            no_image_text = "Görsel\nYok"
+            text_bbox = draw.textbbox((0, 0), no_image_text, font=info_font)
+            text_width = text_bbox[2] - text_bbox[0]
+            text_height = text_bbox[3] - text_bbox[1]
+            text_x = img_x + (img_size - text_width) // 2
+            text_y = img_y + (img_size - text_height) // 2
+            draw.multiline_text((text_x, text_y), no_image_text, fill='#7f8c8d', 
+                              font=info_font, align='center')
+            
+            # Renk bilgisini görsel altına yaz
+            color_y = img_y + img_size + 5
+            draw.text((img_x, color_y), f"Renk", fill='black', font=small_font)
+            draw.text((img_x, color_y + 15), color, fill='black', font=info_font)
             
     except Exception as e:
-        logger.warning(f"Ürün görseli yüklenirken hata: {e}")
+        logger.error(f"Ürün görseli yüklenirken hata: {e}")
+        # Hata durumunda da placeholder çiz
+        img_size = min(left_width - 20, content_height - 60)
+        img_x = 10
+        img_y = content_y + 10
+        draw.rectangle([img_x, img_y, img_x + img_size, img_y + img_size], 
+                     outline='#e74c3c', fill='#fadbd8', width=2)
+        error_text = "Hata"
+        text_bbox = draw.textbbox((0, 0), error_text, font=info_font)
+        text_width = text_bbox[2] - text_bbox[0]
+        text_x = img_x + (img_size - text_width) // 2
+        text_y = img_y + img_size // 2
+        draw.text((text_x, text_y), error_text, fill='#e74c3c', font=info_font)
     
     # Sağ taraf: QR kod ve bilgiler
     right_x = width_px // 2 + 10
