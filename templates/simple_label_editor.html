@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etiket Editörü - Güllü Shoes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .main-container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .editor-workspace { display: grid; grid-template-columns: 1fr 280px; gap: 20px; height: 80vh; }
+        
+        /* Canvas Area */
+        .canvas-container { 
+            position: relative; 
+            background: #f8f9fa; 
+            border: 2px dashed #dee2e6; 
+            border-radius: 12px; 
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .label-canvas { 
+            position: relative; 
+            background: white; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3); 
+            transform-origin: center;
+            width: 400px;
+            height: 200px;
+        }
+        .canvas-element { 
+            position: absolute; 
+            cursor: move; 
+            border: 2px solid transparent; 
+            transition: border-color 0.2s;
+            user-select: none;
+        }
+        .canvas-element:hover { border-color: #3498db; }
+        .canvas-element.selected { border-color: #e74c3c; box-shadow: 0 0 10px rgba(231,76,60,0.4); }
+        
+        /* Control Panel */
+        .control-panel { 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            padding: 20px; 
+            height: fit-content;
+        }
+        .toolbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .saved-design-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .saved-design-item:hover { border-color: #3498db; background: #e3f2fd; }
+        .design-name { font-weight: 600; color: #2c3e50; }
+        .design-date { font-size: 12px; color: #7f8c8d; }
+        .btn-group-sm .btn { padding: 4px 8px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-tags"></i> Etiket Editörü</h1>
+            <a href="/enhanced_product_label" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Geri Dön
+            </a>
+        </div>
+
+        <!-- Element Ekleme Toolbar -->
+        <div class="toolbar">
+            <button class="btn btn-primary" onclick="addElement('title')">
+                <i class="fas fa-heading"></i> Başlık
+            </button>
+            <button class="btn btn-success" onclick="addElement('image')">
+                <i class="fas fa-image"></i> Görsel
+            </button>
+            <button class="btn btn-info" onclick="addElement('qr')">
+                <i class="fas fa-qrcode"></i> QR Kod
+            </button>
+            <button class="btn btn-warning" onclick="addElement('text')">
+                <i class="fas fa-font"></i> Metin
+            </button>
+        </div>
+
+        <div class="editor-workspace">
+            <!-- Canvas Area -->
+            <div class="canvas-container">
+                <div id="labelCanvas" class="label-canvas">
+                    <div style="position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.6); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">
+                        100mm x 50mm
+                    </div>
+                </div>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <!-- Save Section -->
+                <div class="mb-4">
+                    <h6><i class="fas fa-save"></i> Tasarım Kaydet</h6>
+                    <div class="input-group mb-2">
+                        <input type="text" id="presetName" class="form-control form-control-sm" placeholder="Tasarım adı...">
+                        <button class="btn btn-success btn-sm" onclick="saveDesign()">Kaydet</button>
+                    </div>
+                </div>
+
+                <!-- Saved Designs -->
+                <div class="mb-4">
+                    <h6><i class="fas fa-list"></i> Kaydedilen Tasarımlar</h6>
+                    <div id="savedDesigns"></div>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-warning btn-sm" onclick="generatePreview()">
+                        <i class="fas fa-eye"></i> Önizleme
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="clearCanvas()">
+                        <i class="fas fa-trash"></i> Temizle
+                    </button>
+                </div>
+
+                <!-- Selected Element Info -->
+                <div id="selectedInfo" class="mt-4" style="display: none;">
+                    <div class="alert alert-info py-2">
+                        <small><strong>Seçili:</strong> <span id="selectedType"></span></small>
+                        <button class="btn btn-danger btn-sm float-end" onclick="deleteSelected()">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let selectedElement = null;
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+        let elementCounter = 0;
+        let currentElements = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSavedDesigns();
+        });
+
+        // Add Element
+        function addElement(type) {
+            elementCounter++;
+            const canvas = document.getElementById('labelCanvas');
+            const element = document.createElement('div');
+            element.className = 'canvas-element';
+            element.dataset.type = type;
+            element.dataset.id = `${type}_${elementCounter}`;
+            
+            // Position randomly but within canvas
+            const x = Math.random() * 300;
+            const y = Math.random() * 150;
+            element.style.left = x + 'px';
+            element.style.top = y + 'px';
+
+            // Set content based on type
+            switch(type) {
+                case 'title':
+                    element.innerHTML = '<strong style="font-size: 18px;">GÜLLÜ</strong>';
+                    break;
+                case 'image':
+                    element.innerHTML = '<div style="width:50px;height:50px;background:#ecf0f1;border:2px dashed #bdc3c7;display:flex;align-items:center;justify-content:center;border-radius:4px;"><i class="fas fa-image text-muted"></i></div>';
+                    break;
+                case 'qr':
+                    element.innerHTML = '<div style="width:40px;height:40px;background:#2c3e50;color:white;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:3px;">QR</div>';
+                    break;
+                case 'text':
+                    element.innerHTML = 'Metin';
+                    break;
+            }
+
+            // Add event listeners
+            element.addEventListener('mousedown', startDrag);
+            element.addEventListener('click', selectElement);
+            
+            canvas.appendChild(element);
+            
+            // Store element data
+            currentElements.push({
+                id: element.dataset.id,
+                type: type,
+                x: x,
+                y: y,
+                element: element
+            });
+            
+            selectElement({ target: element });
+        }
+
+        // Drag functionality
+        function startDrag(e) {
+            e.preventDefault();
+            const element = e.target.closest('.canvas-element');
+            if (!element) return;
+
+            isDragging = true;
+            selectElement({ target: element });
+            
+            const rect = element.getBoundingClientRect();
+            const canvasRect = document.getElementById('labelCanvas').getBoundingClientRect();
+            
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+        }
+
+        function drag(e) {
+            if (!isDragging || !selectedElement) return;
+            
+            const canvasRect = document.getElementById('labelCanvas').getBoundingClientRect();
+            const x = e.clientX - canvasRect.left - dragOffset.x;
+            const y = e.clientY - canvasRect.top - dragOffset.y;
+            
+            // Keep within bounds
+            const maxX = canvasRect.width - selectedElement.offsetWidth;
+            const maxY = canvasRect.height - selectedElement.offsetHeight;
+            
+            const boundedX = Math.max(0, Math.min(x, maxX));
+            const boundedY = Math.max(0, Math.min(y, maxY));
+            
+            selectedElement.style.left = boundedX + 'px';
+            selectedElement.style.top = boundedY + 'px';
+            
+            // Update stored position
+            const elementData = currentElements.find(el => el.element === selectedElement);
+            if (elementData) {
+                elementData.x = boundedX;
+                elementData.y = boundedY;
+            }
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        // Select element
+        function selectElement(e) {
+            const element = e.target.closest('.canvas-element');
+            if (!element) return;
+
+            // Clear previous selection
+            document.querySelectorAll('.canvas-element').forEach(el => {
+                el.classList.remove('selected');
+            });
+
+            // Select new element
+            element.classList.add('selected');
+            selectedElement = element;
+            
+            // Show info
+            const info = document.getElementById('selectedInfo');
+            const typeSpan = document.getElementById('selectedType');
+            typeSpan.textContent = getTypeName(element.dataset.type);
+            info.style.display = 'block';
+        }
+
+        function getTypeName(type) {
+            const names = {
+                title: 'Başlık',
+                image: 'Görsel', 
+                qr: 'QR Kod',
+                text: 'Metin'
+            };
+            return names[type] || type;
+        }
+
+        // Delete selected element
+        function deleteSelected() {
+            if (!selectedElement) return;
+            
+            // Remove from DOM
+            selectedElement.remove();
+            
+            // Remove from data
+            currentElements = currentElements.filter(el => el.element !== selectedElement);
+            
+            selectedElement = null;
+            document.getElementById('selectedInfo').style.display = 'none';
+        }
+
+        // Clear canvas
+        function clearCanvas() {
+            if (confirm('Tüm elementler silinecek. Emin misiniz?')) {
+                document.getElementById('labelCanvas').innerHTML = '<div style="position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.6); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">100mm x 50mm</div>';
+                currentElements = [];
+                selectedElement = null;
+                document.getElementById('selectedInfo').style.display = 'none';
+            }
+        }
+
+        // Save design
+        function saveDesign() {
+            const name = document.getElementById('presetName').value.trim();
+            if (!name) {
+                alert('Lütfen tasarım adı girin');
+                return;
+            }
+
+            const designData = {
+                name: name,
+                date: new Date().toISOString(),
+                elements: currentElements.map(el => ({
+                    id: el.id,
+                    type: el.type,
+                    x: el.x,
+                    y: el.y,
+                    html: el.element.innerHTML
+                }))
+            };
+
+            // Save to localStorage
+            let saved = JSON.parse(localStorage.getItem('labelDesigns') || '[]');
+            
+            // Replace if exists, otherwise add
+            const existingIndex = saved.findIndex(d => d.name === name);
+            if (existingIndex >= 0) {
+                saved[existingIndex] = designData;
+            } else {
+                saved.push(designData);
+            }
+            
+            localStorage.setItem('labelDesigns', JSON.stringify(saved));
+            document.getElementById('presetName').value = '';
+            
+            loadSavedDesigns();
+            alert('Tasarım kaydedildi: ' + name);
+        }
+
+        // Load saved designs
+        function loadSavedDesigns() {
+            const saved = JSON.parse(localStorage.getItem('labelDesigns') || '[]');
+            const container = document.getElementById('savedDesigns');
+            
+            if (saved.length === 0) {
+                container.innerHTML = '<p class="text-muted small">Henüz kaydedilen tasarım yok</p>';
+                return;
+            }
+
+            let html = '';
+            saved.forEach((design, index) => {
+                const date = new Date(design.date).toLocaleDateString('tr-TR');
+                html += `
+                    <div class="saved-design-item" onclick="loadDesign(${index})">
+                        <div class="design-name">${design.name}</div>
+                        <div class="design-date">${date} - ${design.elements.length} element</div>
+                        <div class="btn-group btn-group-sm mt-1 w-100">
+                            <button class="btn btn-outline-primary" onclick="event.stopPropagation(); loadDesign(${index})">
+                                <i class="fas fa-upload"></i> Yükle
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="event.stopPropagation(); deleteDesign(${index})">
+                                <i class="fas fa-trash"></i> Sil  
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // Load design
+        function loadDesign(index) {
+            const saved = JSON.parse(localStorage.getItem('labelDesigns') || '[]');
+            const design = saved[index];
+            if (!design) return;
+
+            // Clear current
+            clearCanvas();
+            
+            // Load elements
+            const canvas = document.getElementById('labelCanvas');
+            design.elements.forEach(elementData => {
+                const element = document.createElement('div');
+                element.className = 'canvas-element';
+                element.dataset.type = elementData.type;
+                element.dataset.id = elementData.id;
+                element.style.left = elementData.x + 'px';
+                element.style.top = elementData.y + 'px';
+                element.innerHTML = elementData.html;
+                
+                element.addEventListener('mousedown', startDrag);
+                element.addEventListener('click', selectElement);
+                
+                canvas.appendChild(element);
+                
+                currentElements.push({
+                    id: elementData.id,
+                    type: elementData.type,
+                    x: elementData.x,
+                    y: elementData.y,
+                    element: element
+                });
+            });
+            
+            alert('Tasarım yüklendi: ' + design.name);
+        }
+
+        // Delete design
+        function deleteDesign(index) {
+            if (!confirm('Bu tasarımı silmek istediğinizden emin misiniz?')) return;
+            
+            let saved = JSON.parse(localStorage.getItem('labelDesigns') || '[]');
+            saved.splice(index, 1);
+            localStorage.setItem('labelDesigns', JSON.stringify(saved));
+            
+            loadSavedDesigns();
+        }
+
+        // Generate preview
+        function generatePreview() {
+            if (currentElements.length === 0) {
+                alert('Önce etiket tasarımı oluşturun');
+                return;
+            }
+            
+            // Simple preview - just alert for now
+            alert(`Önizleme: ${currentElements.length} element içeren etiket tasarımı`);
+        }
+
+        // Click outside to deselect
+        document.getElementById('labelCanvas').addEventListener('click', function(e) {
+            if (e.target === this) {
+                document.querySelectorAll('.canvas-element').forEach(el => {
+                    el.classList.remove('selected');
+                });
+                selectedElement = null;
+                document.getElementById('selectedInfo').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
