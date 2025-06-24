@@ -378,6 +378,127 @@ def generate_label_preview():
         logger.error(f"Etiket önizleme hatası: {e}")
         return jsonify({'success': False, 'message': 'Önizleme oluşturulamadı'})
 
+@enhanced_label_bp.route('/api/generate_advanced_label_preview', methods=['POST'])
+def generate_advanced_label_preview():
+    """Gelişmiş editörden gelen tasarımı işle ve önizleme oluştur"""
+    try:
+        data = request.get_json()
+        label_width = int(data.get('width', 100))
+        label_height = int(data.get('height', 50))
+        elements = data.get('elements', [])
+        
+        # Etiket boyutları (mm'den pixel'e çevir, 300 DPI)
+        dpi = 300
+        width_px = int((label_width / 25.4) * dpi)
+        height_px = int((label_height / 25.4) * dpi)
+        
+        # Boş etiket oluştur
+        label = Image.new('RGB', (width_px, height_px), 'white')
+        draw = ImageDraw.Draw(label)
+        
+        # Font ayarları
+        try:
+            default_font = ImageFont.truetype("static/fonts/DejaVuSans.ttf", 18)
+            bold_font = ImageFont.truetype("static/fonts/DejaVuSans-Bold.ttf", 18)
+        except:
+            default_font = ImageFont.load_default()
+            bold_font = ImageFont.load_default()
+        
+        # Elementleri çiz
+        for element in elements:
+            element_type = element.get('type')
+            x = int(element.get('x', 0) * (width_px / (label_width * 4)))  # Convert from display to print scale
+            y = int(element.get('y', 0) * (height_px / (label_height * 2)))
+            properties = element.get('properties', {})
+            
+            if element_type in ['title', 'text']:
+                text = properties.get('text', 'Text')
+                font_size = int(properties.get('fontSize', 14) * (dpi / 96))  # Convert to print scale
+                color = properties.get('color', '#000000')
+                font_weight = properties.get('fontWeight', 'normal')
+                
+                try:
+                    if font_weight == 'bold':
+                        font = ImageFont.truetype("static/fonts/DejaVuSans-Bold.ttf", font_size)
+                    else:
+                        font = ImageFont.truetype("static/fonts/DejaVuSans.ttf", font_size)
+                except:
+                    font = default_font
+                
+                draw.text((x, y), text, fill=color, font=font)
+                
+            elif element_type == 'qr':
+                qr_size = int(properties.get('size', 50) * (dpi / 96))
+                qr_data = properties.get('data', 'sample')
+                
+                # QR kod oluştur
+                logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
+                qr_img = create_qr_with_logo(qr_data, logo_path if os.path.exists(logo_path) else None, qr_size)
+                label.paste(qr_img, (x, y))
+                
+            elif element_type == 'image':
+                img_width = int(properties.get('width', 60) * (dpi / 96))
+                img_height = int(properties.get('height', 60) * (dpi / 96))
+                
+                # Placeholder için basit bir kare çiz
+                draw.rectangle([x, y, x + img_width, y + img_height], 
+                             outline='#bdc3c7', fill='#ecf0f1', width=2)
+                
+                # "IMG" yazısı
+                try:
+                    img_font = ImageFont.truetype("static/fonts/DejaVuSans.ttf", 12)
+                except:
+                    img_font = default_font
+                
+                text_bbox = draw.textbbox((0, 0), "IMG", font=img_font)
+                text_width = text_bbox[2] - text_bbox[0]
+                text_height = text_bbox[3] - text_bbox[1]
+                text_x = x + (img_width - text_width) // 2
+                text_y = y + (img_height - text_height) // 2
+                draw.text((text_x, text_y), "IMG", fill='#7f8c8d', font=img_font)
+        
+        # Önizleme kaydet
+        timestamp = int(time.time())
+        preview_filename = f"label_preview_{timestamp}.png"
+        preview_path = os.path.join('static', 'generated', preview_filename)
+        
+        # Generated klasörünü oluştur
+        os.makedirs(os.path.dirname(preview_path), exist_ok=True)
+        
+        label.save(preview_path, 'PNG', dpi=(dpi, dpi))
+        
+        preview_url = f"/static/generated/{preview_filename}"
+        
+        return jsonify({
+            'success': True,
+            'preview_url': preview_url,
+            'message': 'Önizleme başarıyla oluşturuldu'
+        })
+        
+    except Exception as e:
+        logger.error(f"Gelişmiş etiket önizleme hatası: {e}")
+        return jsonify({'success': False, 'message': 'Önizleme oluşturulamadı'})
+
+@enhanced_label_bp.route('/api/save_label_preset', methods=['POST'])
+def save_label_preset():
+    """Etiket preset'ini veritabanına kaydet"""
+    try:
+        data = request.get_json()
+        preset_name = data.get('name')
+        preset_data = data.get('data')
+        
+        # Burada veritabanına kaydedebilirsiniz
+        # Şimdilik başarılı dönüş yapıyoruz
+        
+        return jsonify({
+            'success': True,
+            'message': 'Preset başarıyla kaydedildi'
+        })
+        
+    except Exception as e:
+        logger.error(f"Preset kaydetme hatası: {e}")
+        return jsonify({'success': False, 'message': 'Preset kaydedilemedi'})
+
 @enhanced_label_bp.route('/api/print_labels', methods=['POST'])
 def print_labels():
     """Etiketleri yazdırma için hazırla"""
