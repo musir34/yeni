@@ -299,8 +299,8 @@ def enhanced_product_label():
 
 @enhanced_label_bp.route('/advanced_editor')
 def advanced_label_editor():
-    """Gelişmiş sürükle-bırak etiket editörü"""
-    return render_template('advanced_label_editor.html')
+    """Basitleştirilmiş sürükle-bırak etiket editörü"""
+    return render_template('simple_label_editor.html')
 
 @enhanced_label_bp.route('/api/search_products_for_label', methods=['GET'])
 def search_products_for_label():
