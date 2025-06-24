@@ -169,8 +169,10 @@ def check_authentication():
     ]
     app.permanent_session_lifetime = timedelta(days=30)
     
-    # Debug modunda veya etiket editör sayfalarında auth kontrolünü atla
-    if (request.endpoint and 'enhanced_label' in str(request.endpoint)) or request.path.startswith('/enhanced_product_label'):
+    # Etiket editör sayfalarında auth kontrolünü atla
+    if (request.path.startswith('/enhanced_product_label') or 
+        request.path.startswith('/static/') or
+        (request.endpoint and 'enhanced_label' in str(request.endpoint))):
         return None
         
     if request.endpoint not in allowed_routes:
