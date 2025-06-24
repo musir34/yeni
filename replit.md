@@ -133,6 +133,7 @@ This is a comprehensive e-commerce management system built for a shoe retailer c
 - June 24, 2025. Added adjustable label sizes, resizable elements, and print integration. Users can now change label dimensions, resize photos/QR codes/text, and access saved designs from the printing section for direct printing
 - June 24, 2025. Fixed API route 404 errors by implementing missing generate_advanced_label_preview endpoint. Print integration now fully functional with saved design preview generation
 - June 24, 2025. Converted editor to use product-specific fields (Model Kodu, Renk, Beden, Ürün Görseli, QR Kod) instead of generic text. System now automatically populates these fields with real product data during preview and printing
+- June 24, 2025. Added title field to editor and fixed saved design system to use real selected product data instead of random placeholder data. System now requires product selection before using saved designs
 
 # User Preferences
 

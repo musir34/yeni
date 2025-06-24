@@ -592,6 +592,7 @@
                             <button class="btn btn-primary btn-sm mt-2" onclick="useDesignForPrint(${index})">
                                 <i class="fas fa-print"></i> Bu Tasarımla Yazdır
                             </button>
+                            <small class="text-muted d-block mt-1">* Seçili ürün bilgileri kullanılacak</small>
                         </div>
                     `;
                 });
@@ -607,24 +608,7 @@
             const design = saved[index];
             if (!design) return;
             
-            // Close modal
-            bootstrap.Modal.getInstance(document.getElementById('savedDesignsModal')).hide();
-            
-            // Generate preview with saved design
-            generateLabelWithDesign(design);
-        }
-
-        // Generate label with saved design
-        function generateLabelWithDesign(design) {
-            const data = {
-                width: design.labelWidth || 100,
-                height: design.labelHeight || 50,
-                elements: design.elements
-            };
-            
-            showLoading(true);
-            
-            // Seçilen ürün bilgilerini al
+            // Seçilen ürün bilgilerini kontrol et
             const selectedProducts = [];
             document.querySelectorAll('.product-item input[type="checkbox"]:checked').forEach(checkbox => {
                 const productRow = checkbox.closest('.product-item');
@@ -633,25 +617,46 @@
                     const modelId = productRow.querySelector('.model-id')?.textContent || '';
                     const color = productRow.querySelector('.color')?.textContent || '';
                     const size = productRow.querySelector('.size')?.textContent || '';
+                    const quantity = parseInt(productRow.querySelector('.quantity-input')?.value) || 1;
                     
-                    selectedProducts.push({
-                        barcode: barcode,
-                        model_code: modelId,
-                        color: color,
-                        size: size
-                    });
+                    for (let i = 0; i < quantity; i++) {
+                        selectedProducts.push({
+                            barcode: barcode,
+                            model_code: modelId,
+                            color: color,
+                            size: size
+                        });
+                    }
                 }
             });
             
-            // İlk ürünü örnek olarak kullan
-            const sampleProduct = selectedProducts.length > 0 ? selectedProducts[0] : {
-                model_code: 'GL099',
-                color: 'Siyah',
-                size: '42',
-                barcode: '8690123456789'
+            if (selectedProducts.length === 0) {
+                alert('Lütfen önce yazdırılacak ürünleri seçin!');
+                return;
+            }
+            
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('savedDesignsModal')).hide();
+            
+            // Generate preview with saved design and selected products
+            generateLabelWithDesign(design, selectedProducts);
+        }
+
+        // Generate label with saved design
+        function generateLabelWithDesign(design, selectedProducts) {
+            if (!selectedProducts || selectedProducts.length === 0) {
+                alert('Ürün bilgileri bulunamadı!');
+                return;
+            }
+            
+            const data = {
+                width: design.labelWidth || 100,
+                height: design.labelHeight || 50,
+                elements: design.elements,
+                product_data: selectedProducts[0] // İlk ürünü önizleme için kullan
             };
             
-            data.product_data = sampleProduct;
+            showLoading(true);
             
             fetch('/enhanced_product_label/api/generate_advanced_label_preview', {
                 method: 'POST',
@@ -666,7 +671,8 @@
                     document.getElementById('previewArea').innerHTML = `
                         <img src="${data.preview_url}" class="preview-image" alt="Label Preview">
                     `;
-                    showAlert('Tasarım yazdırılmak üzere hazırlandı: ' + design.name, 'success');
+                    const productInfo = selectedProducts[0];
+                    showAlert(`Tasarım "${design.name}" ile ${selectedProducts.length} etiket hazırlandı\nÖrnek: ${productInfo.model_code} - ${productInfo.color} - ${productInfo.size}`, 'success');
                 } else {
                     showAlert('Hata: ' + data.message, 'danger');
                 }
