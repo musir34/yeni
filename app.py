@@ -122,7 +122,9 @@ blueprints = [
 
 # Enhanced Product Label Blueprint'ini ekle
 from enhanced_product_label import enhanced_label_bp
+from image_manager import image_manager_bp
 blueprints.append(enhanced_label_bp)
+blueprints.append(image_manager_bp)
 
 for bp in blueprints:
     app.register_blueprint(bp)
