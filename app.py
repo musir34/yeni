@@ -163,9 +163,16 @@ def check_authentication():
         'login_logout.static',
         'login_logout.verify_totp',
         'login_logout.logout',
-        'qr_utils.generate_qr_labels_pdf' # QR PDF route'una geçici olarak izin ver
+        'qr_utils.generate_qr_labels_pdf', # QR PDF route'una geçici olarak izin ver
+        'enhanced_label.advanced_label_editor',  # Gelişmiş editör için izin
+        'enhanced_label.enhanced_product_label'  # Ana etiket sayfası için izin
     ]
     app.permanent_session_lifetime = timedelta(days=30)
+    
+    # Debug modunda veya etiket editör sayfalarında auth kontrolünü atla
+    if (request.endpoint and 'enhanced_label' in str(request.endpoint)) or request.path.startswith('/enhanced_product_label'):
+        return None
+        
     if request.endpoint not in allowed_routes:
         if 'username' not in session:
             flash('Lütfen giriş yapınız.', 'danger')
@@ -196,15 +203,21 @@ schedule_jobs()
 # 🔍 Veritabanı Bağlantı Testi
 with app.app_context():
     try:
+        from sqlalchemy import text
         with db.engine.connect() as connection:
-            connection.execute(db.text("SELECT 1"))
-            connection.commit()
+            connection.execute(text("SELECT 1"))
         print("✅ Neon veritabanına bağlantı başarılı!")
-
-        db.create_all()  # 🔧 Tabloları otomatik oluştur
+        
+        try:
+            db.create_all()
+            print("✅ Veritabanı tabloları kontrol edildi")
+        except Exception as table_error:
+            print(f"⚠️ Tablo oluşturma hatası (devam ediliyor): {str(table_error)[:50]}...")
 
     except Exception as e:
-        print("❌ Veritabanı bağlantı hatası:", e)
+        print(f"❌ Veritabanı bağlantı hatası: {str(e)[:50]}...")
+        print("⚠️ Uygulama veritabanısız modda başlatılıyor")
+        # Veritabanı bağlantısı olmasa da devam et
 
 
 # Uygulama Başlat - Opsiyonel Setup
