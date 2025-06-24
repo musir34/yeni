@@ -390,6 +390,14 @@
             };
         }
         
+        // Test function for detailed settings
+        function testDetailedSettings() {
+            console.log('Testing detailed settings...');
+            const settings = getCustomSettings();
+            console.log('Current settings:', settings);
+            showAlert('Detaylı ayarlar başarıyla yüklendi', 'success');
+        }
+        
         async function generatePreview() {
             if (labelQueue.length === 0) {
                 showAlert('Önizleme için etiket ekleyin', 'danger');
