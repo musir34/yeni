@@ -20,10 +20,12 @@ def find_product_image(model_id, color):
     
     # Farklı formatları dene
     possible_names = [
-        f"{model_id}_{color.lower()}.png",
         f"{model_id}_{color.lower()}.jpg",
+        f"{model_id}_{color.lower()}.png",
+        f"{model_id}_{color.lower()}.jpeg",
+        f"{model_id}_{color}.jpg",
         f"{model_id}_{color}.png",
-        f"{model_id}_{color}.jpg"
+        f"{model_id}_{color}.jpeg"
     ]
     
     for name in possible_names:
@@ -32,7 +34,11 @@ def find_product_image(model_id, color):
             return f"images/{name}"
     
     # Varsayılan görsel
-    return "images/default_product.png"
+    default_path = os.path.join(images_folder, "default_product.jpg")
+    if os.path.exists(default_path):
+        return "images/default_product.jpg"
+    
+    return None
 
 def create_qr_with_logo(data, logo_path=None, size=200):
     """
