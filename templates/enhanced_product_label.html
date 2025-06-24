@@ -244,14 +244,99 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Global variables
         let labelQueue = [];
+        let selectedDesignForPrint = null;
+        
+        // Update selected design info display
+        function updateSelectedDesignInfo(design) {
+            const infoDiv = document.getElementById('selectedDesignInfo');
+            if (infoDiv) {
+                if (design) {
+                    infoDiv.innerHTML = `<strong>${design.name}</strong><br><small class="text-muted">${design.elements.length} element • ${design.labelWidth || 100}x${design.labelHeight || 50}mm</small>`;
+                    infoDiv.className = 'alert alert-success';
+                } else {
+                    infoDiv.innerHTML = '<small class="text-muted">Henüz tasarım seçilmedi</small>';
+                    infoDiv.className = 'alert alert-light';
+                }
+            }
+        }
+        
+        // Get selected products
+        function getSelectedProducts() {
+            const selectedProducts = [];
+            
+            if (window.labelQueue && window.labelQueue.length > 0) {
+                window.labelQueue.forEach(item => {
+                    selectedProducts.push({
+                        barcode: item.barcode,
+                        model_code: item.model_id,
+                        color: item.color,
+                        size: item.size
+                    });
+                });
+            }
+            
+            document.querySelectorAll('.product-item input[type="checkbox"]:checked').forEach(checkbox => {
+                const productRow = checkbox.closest('.product-item');
+                if (productRow) {
+                    const barcode = productRow.querySelector('.barcode')?.textContent || '';
+                    const modelId = productRow.querySelector('.model-id')?.textContent || '';
+                    const color = productRow.querySelector('.color')?.textContent || '';
+                    const size = productRow.querySelector('.size')?.textContent || '';
+                    const quantity = parseInt(productRow.querySelector('.quantity-input')?.value) || 1;
+                    
+                    for (let i = 0; i < quantity; i++) {
+                        selectedProducts.push({
+                            barcode: barcode,
+                            model_code: modelId,
+                            color: color,
+                            size: size
+                        });
+                    }
+                }
+            });
+            
+            return selectedProducts;
+        }
+        
+        // Generate preview with selected design
+        function generatePreviewWithSavedDesign() {
+            if (!selectedDesignForPrint) {
+                showAlert('Lütfen önce kaydedilen tasarımlardan birini seçin', 'warning');
+                showSavedDesigns();
+                return;
+            }
+            
+            const selectedProducts = getSelectedProducts();
+            if (selectedProducts.length === 0) {
+                showAlert('Lütfen yazdırılacak ürünleri ekleyin!', 'warning');
+                return;
+            }
+            
+            generateLabelWithDesign(selectedDesignForPrint, selectedProducts);
+        }
+        
+        // Print with selected design
+        function printWithSelectedDesign() {
+            if (!selectedDesignForPrint) {
+                showAlert('Lütfen önce kaydedilen tasarımlardan birini seçin', 'warning');
+                showSavedDesigns();
+                return;
+            }
+            
+            const selectedProducts = getSelectedProducts();
+            if (selectedProducts.length === 0) {
+                showAlert('Lütfen yazdırılacak ürünleri ekleyin!', 'warning');
+                return;
+            }
+            
+            generatePreviewWithSavedDesign();
+        }
         
         function showAlert(message, type) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type}`;
-            alertDiv.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i> ${message}`;
-            document.querySelector('.main-container').insertBefore(alertDiv, document.querySelector('.section-card'));
-            setTimeout(() => alertDiv.remove(), 5000);
+            console.log(`${type}: ${message}`);
+            alert(message);
         }
         
         function showLoading(show) {

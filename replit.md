@@ -135,6 +135,7 @@ This is a comprehensive e-commerce management system built for a shoe retailer c
 - June 24, 2025. Converted editor to use product-specific fields (Model Kodu, Renk, Beden, Ürün Görseli, QR Kod) instead of generic text. System now automatically populates these fields with real product data during preview and printing
 - June 24, 2025. Added title field to editor and fixed saved design system to use real selected product data instead of random placeholder data. System now requires product selection before using saved designs
 - June 24, 2025. Completely replaced old label settings with drag-and-drop editor as main system. Removed complex detailed settings, fixed product selection detection from both queue and search results. Editor is now the primary label design interface
+- June 24, 2025. Fixed JavaScript function definition errors (updateSelectedDesignInfo). System now fully functional with product-specific fields (Title, Model Code, Color, Size, Product Image, QR Code) automatically populated with real product data during printing
 
 # User Preferences
 
