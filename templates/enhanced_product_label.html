@@ -270,6 +270,22 @@
             }
         }
         
+        function getCustomSettings() {
+            return {
+                title_text: document.getElementById('titleText').value,
+                title_font_size: parseInt(document.getElementById('titleFontSize').value),
+                title_position_y: parseInt(document.getElementById('titlePositionY').value),
+                image_size: parseInt(document.getElementById('imageSize').value),
+                image_position_x: parseInt(document.getElementById('imagePositionX').value),
+                image_position_y: parseInt(document.getElementById('imagePositionY').value),
+                qr_size: parseInt(document.getElementById('qrSize').value),
+                qr_position_x: document.getElementById('qrPositionX').value,
+                qr_position_y: parseInt(document.getElementById('qrPositionY').value),
+                info_font_size: parseInt(document.getElementById('infoFontSize').value),
+                small_font_size: parseInt(document.getElementById('smallFontSize').value)
+            };
+        }
+        
         async function generatePreview() {
             if (labelQueue.length === 0) {
                 showAlert('Önizleme için etiket ekleyin', 'danger');
@@ -280,6 +296,7 @@
             const firstLabel = labelQueue[0];
             const labelWidth = parseInt(document.getElementById('labelWidth').value);
             const labelHeight = parseInt(document.getElementById('labelHeight').value);
+            const settings = getCustomSettings();
             
             try {
                 const response = await fetch('/api/generate_label_preview', {
@@ -291,7 +308,8 @@
                         color: firstLabel.color,
                         size: firstLabel.size,
                         label_width: labelWidth,
-                        label_height: labelHeight
+                        label_height: labelHeight,
+                        settings: settings
                     })
                 });
                 
@@ -320,6 +338,7 @@
             const labelHeight = parseInt(document.getElementById('labelHeight').value);
             const labelsPerRow = parseInt(document.getElementById('labelsPerRow').value);
             const labelsPerCol = parseInt(document.getElementById('labelsPerCol').value);
+            const settings = getCustomSettings();
             
             const expandedLabels = [];
             labelQueue.forEach(item => {
@@ -343,7 +362,8 @@
                         labels_per_row: labelsPerRow,
                         labels_per_col: labelsPerCol,
                         label_width: labelWidth,
-                        label_height: labelHeight
+                        label_height: labelHeight,
+                        settings: settings
                     })
                 });
                 
