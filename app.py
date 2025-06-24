@@ -121,13 +121,22 @@ blueprints = [
 ]
 
 # Enhanced Product Label Blueprint'ini ekle
-from enhanced_product_label import enhanced_label_bp
+from enhanced_product_label import enhanced_label_bp, advanced_label_editor
 from image_manager import image_manager_bp
 blueprints.append(enhanced_label_bp)
 blueprints.append(image_manager_bp)
 
 for bp in blueprints:
     app.register_blueprint(bp)
+
+# Blueprint kayıtlarından sonra direkt route eklemeleri
+@app.route('/enhanced_product_label/advanced_editor')
+def direct_advanced_editor():
+    return render_template('advanced_label_editor.html')
+
+@app.route('/advanced_editor')
+def alt_advanced_editor():
+    return render_template('advanced_label_editor.html')
 
 # URL çözümleme hatalarında fallback
 def custom_url_for(endpoint, **values):
