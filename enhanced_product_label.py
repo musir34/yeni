@@ -538,7 +538,25 @@ def generate_advanced_label_preview_new():
             y = int(element.get('y', 0) * (height_px / (label_height * 2)))
             
             # Ürün-spesifik alanlar
-            if element_type == 'model_code':
+            if element_type == 'title':
+                html_content = element.get('html', 'GÜLLÜ SHOES')
+                font_size = int(element.get('fontSize', '18px').replace('px', ''))
+                font_size = int(font_size * (dpi / 96))
+                
+                try:
+                    if 'strong' in html_content:
+                        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
+                    else:
+                        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+                except:
+                    font = default_font
+                
+                # HTML etiketlerini temizle
+                import re
+                clean_text = re.sub('<[^<]+?>', '', html_content)
+                draw.text((x, y), clean_text, fill='black', font=font)
+                
+            elif element_type == 'model_code':
                 html_content = element.get('html', '[MODEL KODU]')
                 font_size = int(element.get('fontSize', '14px').replace('px', ''))
                 font_size = int(font_size * (dpi / 96))

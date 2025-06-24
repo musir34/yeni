@@ -74,6 +74,9 @@
 
         <!-- Element Ekleme Toolbar -->
         <div class="toolbar">
+            <button class="btn btn-dark" onclick="addElement('title')">
+                <i class="fas fa-heading"></i> Başlık
+            </button>
             <button class="btn btn-primary" onclick="addElement('model_code')">
                 <i class="fas fa-tag"></i> Model Kodu
             </button>
@@ -220,6 +223,9 @@
 
             // Set content based on type
             switch(type) {
+                case 'title':
+                    element.innerHTML = '<strong style="font-size: 18px;">GÜLLÜ SHOES</strong>';
+                    break;
                 case 'model_code':
                     element.innerHTML = '<strong style="font-size: 16px;">[MODEL KODU]</strong>';
                     break;
