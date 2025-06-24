@@ -74,17 +74,20 @@
 
         <!-- Element Ekleme Toolbar -->
         <div class="toolbar">
-            <button class="btn btn-primary" onclick="addElement('title')">
-                <i class="fas fa-heading"></i> Başlık
+            <button class="btn btn-primary" onclick="addElement('model_code')">
+                <i class="fas fa-tag"></i> Model Kodu
             </button>
-            <button class="btn btn-success" onclick="addElement('image')">
-                <i class="fas fa-image"></i> Görsel
+            <button class="btn btn-success" onclick="addElement('color')">
+                <i class="fas fa-palette"></i> Renk
             </button>
-            <button class="btn btn-info" onclick="addElement('qr')">
+            <button class="btn btn-info" onclick="addElement('size')">
+                <i class="fas fa-ruler"></i> Beden
+            </button>
+            <button class="btn btn-warning" onclick="addElement('product_image')">
+                <i class="fas fa-image"></i> Ürün Görseli
+            </button>
+            <button class="btn btn-secondary" onclick="addElement('qr')">
                 <i class="fas fa-qrcode"></i> QR Kod
-            </button>
-            <button class="btn btn-warning" onclick="addElement('text')">
-                <i class="fas fa-font"></i> Metin
             </button>
         </div>
 
@@ -217,17 +220,20 @@
 
             // Set content based on type
             switch(type) {
-                case 'title':
-                    element.innerHTML = '<strong style="font-size: 18px;">GÜLLÜ</strong>';
+                case 'model_code':
+                    element.innerHTML = '<strong style="font-size: 16px;">[MODEL KODU]</strong>';
                     break;
-                case 'image':
-                    element.innerHTML = '<div style="width:50px;height:50px;background:#ecf0f1;border:2px dashed #bdc3c7;display:flex;align-items:center;justify-content:center;border-radius:4px;"><i class="fas fa-image text-muted"></i></div>';
+                case 'color':
+                    element.innerHTML = '<span style="font-size: 14px;">[RENK]</span>';
+                    break;
+                case 'size':
+                    element.innerHTML = '<span style="font-size: 14px;">[BEDEN]</span>';
+                    break;
+                case 'product_image':
+                    element.innerHTML = '<div style="width:50px;height:50px;background:#e3f2fd;border:2px dashed #2196f3;display:flex;align-items:center;justify-content:center;border-radius:4px;color:#2196f3;font-size:10px;text-align:center;">ÜRÜN<br>GÖRSELI</div>';
                     break;
                 case 'qr':
                     element.innerHTML = '<div style="width:40px;height:40px;background:#2c3e50;color:white;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:3px;">QR</div>';
-                    break;
-                case 'text':
-                    element.innerHTML = 'Metin';
                     break;
             }
 

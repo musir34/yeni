@@ -624,6 +624,35 @@
             
             showLoading(true);
             
+            // Seçilen ürün bilgilerini al
+            const selectedProducts = [];
+            document.querySelectorAll('.product-item input[type="checkbox"]:checked').forEach(checkbox => {
+                const productRow = checkbox.closest('.product-item');
+                if (productRow) {
+                    const barcode = productRow.querySelector('.barcode')?.textContent || '';
+                    const modelId = productRow.querySelector('.model-id')?.textContent || '';
+                    const color = productRow.querySelector('.color')?.textContent || '';
+                    const size = productRow.querySelector('.size')?.textContent || '';
+                    
+                    selectedProducts.push({
+                        barcode: barcode,
+                        model_code: modelId,
+                        color: color,
+                        size: size
+                    });
+                }
+            });
+            
+            // İlk ürünü örnek olarak kullan
+            const sampleProduct = selectedProducts.length > 0 ? selectedProducts[0] : {
+                model_code: 'GL099',
+                color: 'Siyah',
+                size: '42',
+                barcode: '8690123456789'
+            };
+            
+            data.product_data = sampleProduct;
+            
             fetch('/enhanced_product_label/api/generate_advanced_label_preview', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
