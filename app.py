@@ -166,16 +166,22 @@ def log_request():
 # Giriş Kontrolü
 @app.before_request
 def check_authentication():
-    # Etiket editör sayfalarını tamamen serbest bırak
-    if (request.path.startswith('/enhanced_product_label') or 
-        request.path.startswith('/advanced_editor') or
-        request.path.startswith('/static/') or 
-        request.path.startswith('/api/generate_advanced_label_preview') or
-        request.path.startswith('/api/save_label_preset') or
-        request.path.startswith('/api/generate_label_preview') or
-        request.path.startswith('/api/search_products_for_label') or
-        (request.endpoint and 'enhanced_label' in str(request.endpoint)) or
-        request.endpoint in ['direct_advanced_editor', 'alt_advanced_editor']):
+    # Etiket editör sayfalarını tamamen serbest bırak - ÖNCE KONTROL ET
+    bypass_paths = [
+        '/enhanced_product_label', 
+        '/advanced_editor',
+        '/static/',
+        '/api/generate_advanced_label_preview',
+        '/api/save_label_preset',
+        '/api/generate_label_preview',
+        '/api/search_products_for_label'
+    ]
+    
+    for path in bypass_paths:
+        if request.path.startswith(path):
+            return None
+    
+    if (request.endpoint and 'enhanced_label' in str(request.endpoint)) or request.endpoint in ['direct_advanced_editor', 'alt_advanced_editor']:
         return None
     
     allowed_routes = [
