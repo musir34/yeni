@@ -16,7 +16,7 @@ barcode = "^1.0.4"
 psycopg2-binary = "^2.9.9"
 itsdangerous = "^2.2.0"
 pyotp = "^2.9.0"
-qrcode = "^8.0"
+qrcode = {extras = ["pil"], version = "^8.2"}
 werkzeug = "^3.0.4"
 python-dateutil = "^2.9.0.post0"
 flask-socketio = "^5.4.1"
