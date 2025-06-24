@@ -81,10 +81,37 @@ def create_qr_with_logo(data, logo_path=None, size=200):
     
     return qr_img
 
-def create_product_label(barcode, model_id, color, size, label_width=100, label_height=50):
+def create_product_label(barcode, model_id, color, size, label_width=100, label_height=50, settings=None):
     """
-    Ürün etiketi oluştur
+    Ürün etiketi oluştur - manuel ayarlar ile
     """
+    # Varsayılan ayarlar
+    default_settings = {
+        'title_text': 'GÜLLÜ',
+        'title_font_size': 24,
+        'title_position_x': 'center',
+        'title_position_y': 10,
+        'image_size': 'auto',
+        'image_position_x': 10,
+        'image_position_y': 50,
+        'qr_size': 80,
+        'qr_position_x': 'right',
+        'qr_position_y': 50,
+        'info_font_size': 18,
+        'small_font_size': 14,
+        'model_position_x': 'right',
+        'model_position_y': 'below_qr',
+        'color_position_x': 'left',
+        'color_position_y': 'below_image',
+        'size_position_x': 'right',
+        'size_position_y': 'below_model'
+    }
+    
+    # Kullanıcı ayarları ile varsayılanları birleştir
+    if settings:
+        default_settings.update(settings)
+    
+    settings = default_settings
     # Etiket boyutları (mm'den pixel'e çevir, 300 DPI)
     dpi = 300
     width_px = int((label_width / 25.4) * dpi)
@@ -94,31 +121,59 @@ def create_product_label(barcode, model_id, color, size, label_width=100, label_
     label = Image.new('RGB', (width_px, height_px), 'white')
     draw = ImageDraw.Draw(label)
     
-    # Font ayarları
+    # Font ayarları - ayarlanabilir boyutlarda
     try:
-        title_font = ImageFont.truetype("static/fonts/DejaVuSans-Bold.ttf", 24)
-        info_font = ImageFont.truetype("static/fonts/DejaVuSans.ttf", 18)
-        small_font = ImageFont.truetype("static/fonts/DejaVuSans.ttf", 14)
+        title_font = ImageFont.truetype("static/fonts/DejaVuSans-Bold.ttf", settings['title_font_size'])
+        info_font = ImageFont.truetype("static/fonts/DejaVuSans.ttf", settings['info_font_size'])
+        small_font = ImageFont.truetype("static/fonts/DejaVuSans.ttf", settings['small_font_size'])
     except:
         title_font = ImageFont.load_default()
         info_font = ImageFont.load_default()
         small_font = ImageFont.load_default()
     
-    # "GÜLLÜ" başlığını en üste yaz
-    title_text = "GÜLLÜ"
+    # Başlık yazısını ayarlanabilir pozisyonda yaz
+    title_text = settings['title_text']
     title_bbox = draw.textbbox((0, 0), title_text, font=title_font)
     title_width = title_bbox[2] - title_bbox[0]
-    title_x = (width_px - title_width) // 2
-    draw.text((title_x, 10), title_text, fill='black', font=title_font)
     
-    # Ana içerik alanı (başlık altında)
-    content_y = 50
+    if settings['title_position_x'] == 'center':
+        title_x = (width_px - title_width) // 2
+    elif settings['title_position_x'] == 'left':
+        title_x = 10
+    elif settings['title_position_x'] == 'right':
+        title_x = width_px - title_width - 10
+    else:
+        title_x = int(settings['title_position_x'])
+    
+    title_y = settings['title_position_y']
+    draw.text((title_x, title_y), title_text, fill='black', font=title_font)
+    
+    # Ana içerik alanı hesaplama
+    content_y = title_y + settings['title_font_size'] + 10
     content_height = height_px - content_y - 10
     
-    # Sol taraf: Ürün görseli
-    left_width = width_px // 2
+    # Ürün görseli ayarları
     product_image_path = find_product_image(model_id, color)
     
+    # Görsel boyutunu ayarla
+    if settings['image_size'] == 'auto':
+        img_size = min(width_px // 3, content_height // 2)
+    else:
+        img_size = int(settings['image_size'])
+    
+    # Görsel pozisyonunu ayarla
+    if settings['image_position_x'] == 'left':
+        img_x = 10
+    elif settings['image_position_x'] == 'center':
+        img_x = (width_px - img_size) // 2
+    elif settings['image_position_x'] == 'right':
+        img_x = width_px - img_size - 10
+    else:
+        img_x = int(settings['image_position_x'])
+    
+    img_y = int(settings['image_position_y'])
+    
+    # Ürün görselini çiz
     try:
         if product_image_path and os.path.exists(product_image_path):
             product_img = Image.open(product_image_path)
@@ -128,28 +183,13 @@ def create_product_label(barcode, model_id, color, size, label_width=100, label_
                 background.paste(product_img, mask=product_img.split()[-1] if product_img.mode == 'RGBA' else None)
                 product_img = background
             
-            # Görseli sol tarafa sığdır
-            img_size = min(left_width - 20, content_height - 60)
+            # Görseli ayarlanan boyutta yeniden boyutlandır
             product_img = product_img.resize((img_size, img_size), Image.Resampling.LANCZOS)
-            img_x = 10
-            img_y = content_y + 10
             label.paste(product_img, (img_x, img_y))
-            
-            # Renk bilgisini görsel altına yaz
-            color_y = img_y + img_size + 5
-            draw.text((img_x, color_y), f"Renk", fill='black', font=small_font)
-            draw.text((img_x, color_y + 15), color, fill='black', font=info_font)
         else:
-            # Görsel bulunamadıysa placeholder çiz
-            img_size = min(left_width - 20, content_height - 60)
-            img_x = 10
-            img_y = content_y + 10
-            
-            # Placeholder kutu çiz
+            # Placeholder çiz
             draw.rectangle([img_x, img_y, img_x + img_size, img_y + img_size], 
                          outline='#bdc3c7', fill='#ecf0f1', width=2)
-            
-            # "Görsel Yok" yazısı
             no_image_text = "Görsel\nYok"
             text_bbox = draw.textbbox((0, 0), no_image_text, font=info_font)
             text_width = text_bbox[2] - text_bbox[0]
@@ -158,48 +198,86 @@ def create_product_label(barcode, model_id, color, size, label_width=100, label_
             text_y = img_y + (img_size - text_height) // 2
             draw.multiline_text((text_x, text_y), no_image_text, fill='#7f8c8d', 
                               font=info_font, align='center')
-            
-            # Renk bilgisini görsel altına yaz
-            color_y = img_y + img_size + 5
-            draw.text((img_x, color_y), f"Renk", fill='black', font=small_font)
-            draw.text((img_x, color_y + 15), color, fill='black', font=info_font)
-            
     except Exception as e:
         logger.error(f"Ürün görseli yüklenirken hata: {e}")
-        # Hata durumunda da placeholder çiz
-        img_size = min(left_width - 20, content_height - 60)
-        img_x = 10
-        img_y = content_y + 10
         draw.rectangle([img_x, img_y, img_x + img_size, img_y + img_size], 
                      outline='#e74c3c', fill='#fadbd8', width=2)
-        error_text = "Hata"
-        text_bbox = draw.textbbox((0, 0), error_text, font=info_font)
-        text_width = text_bbox[2] - text_bbox[0]
-        text_x = img_x + (img_size - text_width) // 2
-        text_y = img_y + img_size // 2
-        draw.text((text_x, text_y), error_text, fill='#e74c3c', font=info_font)
     
-    # Sağ taraf: QR kod ve bilgiler
-    right_x = width_px // 2 + 10
-    right_width = width_px // 2 - 20
+    # QR kod ayarları
+    qr_size = settings['qr_size']
     
-    # QR kod oluştur
+    # QR kod pozisyonu
+    if settings['qr_position_x'] == 'right':
+        qr_x = width_px - qr_size - 10
+    elif settings['qr_position_x'] == 'center':
+        qr_x = (width_px - qr_size) // 2
+    elif settings['qr_position_x'] == 'left':
+        qr_x = 10
+    else:
+        qr_x = int(settings['qr_position_x'])
+    
+    qr_y = int(settings['qr_position_y'])
+    
+    # QR kod oluştur ve yerleştir
     logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
-    qr_size = min(right_width, content_height // 2)
     qr_img = create_qr_with_logo(barcode, logo_path if os.path.exists(logo_path) else None, qr_size)
-    
-    qr_x = right_x
-    qr_y = content_y + 10
     label.paste(qr_img, (qr_x, qr_y))
     
-    # Model ve Beden bilgileri QR kod altında
-    info_y = qr_y + qr_size + 10
+    # Metin bilgileri pozisyonlarını hesapla
+    # Renk bilgisi pozisyonu
+    if settings['color_position_x'] == 'left':
+        color_x = img_x
+    elif settings['color_position_x'] == 'center':
+        color_x = width_px // 2
+    elif settings['color_position_x'] == 'right':
+        color_x = qr_x
+    else:
+        color_x = int(settings['color_position_x'])
     
-    draw.text((qr_x, info_y), "Model", fill='black', font=small_font)
-    draw.text((qr_x, info_y + 15), model_id, fill='black', font=info_font)
+    if settings['color_position_y'] == 'below_image':
+        color_y = img_y + img_size + 5
+    else:
+        color_y = int(settings['color_position_y'])
     
-    draw.text((qr_x, info_y + 40), "Beden", fill='black', font=small_font)
-    draw.text((qr_x, info_y + 55), size, fill='black', font=info_font)
+    # Model bilgisi pozisyonu
+    if settings['model_position_x'] == 'right':
+        model_x = qr_x
+    elif settings['model_position_x'] == 'left':
+        model_x = img_x
+    elif settings['model_position_x'] == 'center':
+        model_x = width_px // 2
+    else:
+        model_x = int(settings['model_position_x'])
+    
+    if settings['model_position_y'] == 'below_qr':
+        model_y = qr_y + qr_size + 5
+    else:
+        model_y = int(settings['model_position_y'])
+    
+    # Beden bilgisi pozisyonu
+    if settings['size_position_x'] == 'right':
+        size_x = qr_x
+    elif settings['size_position_x'] == 'left':
+        size_x = img_x
+    elif settings['size_position_x'] == 'center':
+        size_x = width_px // 2
+    else:
+        size_x = int(settings['size_position_x'])
+    
+    if settings['size_position_y'] == 'below_model':
+        size_y = model_y + 25
+    else:
+        size_y = int(settings['size_position_y'])
+    
+    # Metinleri çiz
+    draw.text((color_x, color_y), "Renk", fill='black', font=small_font)
+    draw.text((color_x, color_y + 15), color, fill='black', font=info_font)
+    
+    draw.text((model_x, model_y), "Model", fill='black', font=small_font)
+    draw.text((model_x, model_y + 15), model_id, fill='black', font=info_font)
+    
+    draw.text((size_x, size_y), "Beden", fill='black', font=small_font)
+    draw.text((size_x, size_y + 15), size, fill='black', font=info_font)
     
     return label
 
@@ -273,6 +351,7 @@ def generate_label_preview():
         size = data.get('size')
         label_width = data.get('label_width', 100)
         label_height = data.get('label_height', 50)
+        settings = data.get('settings', {})  # Manuel ayarlar
         
         if not all([barcode, model_id, color, size]):
             return jsonify({'success': False, 'message': 'Eksik veri'})
@@ -280,7 +359,7 @@ def generate_label_preview():
         # Etiket oluştur
         label_img = create_product_label(
             barcode, model_id, color, size, 
-            label_width, label_height
+            label_width, label_height, settings
         )
         
         # Base64'e çevir
@@ -310,6 +389,7 @@ def print_labels():
         labels_per_col = data.get('labels_per_col', 7)
         label_width = data.get('label_width', 100)
         label_height = data.get('label_height', 50)
+        settings = data.get('settings', {})  # Manuel ayarlar
         
         if not labels:
             return jsonify({'success': False, 'message': 'Yazdırılacak etiket yok'})
@@ -359,7 +439,8 @@ def print_labels():
                 label_data['color'],
                 label_data['size'],
                 label_width,
-                label_height
+                label_height,
+                settings
             )
             
             # Sayfaya yapıştır
