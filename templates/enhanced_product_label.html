@@ -549,7 +549,6 @@
                 document.getElementById('searchQuery').value = initialBarcode;
             }
             
-            // Initialize selected design info
             updateSelectedDesignInfo(null);
         });
         // Show saved designs
@@ -590,7 +589,6 @@
             const saved = JSON.parse(localStorage.getItem('labelDesigns') || '[]');
             selectedDesignForPrint = saved[index];
             if (selectedDesignForPrint) {
-                // Close modal
                 bootstrap.Modal.getInstance(document.getElementById('savedDesignsModal')).hide();
                 updateSelectedDesignInfo(selectedDesignForPrint);
                 showAlert(`Tasarım "${selectedDesignForPrint.name}" seçildi. Artık önizleme ve yazdırma yapabilirsiniz.`, 'success');
