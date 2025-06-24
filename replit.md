@@ -134,4 +134,4 @@ This is a comprehensive e-commerce management system built for a shoe retailer c
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
-User wants simplified drag-and-drop editor without detailed settings panels, but with persistent save/load functionality for different label configurations.
+User wants simplified drag-and-drop editor without detailed settings panels, but with persistent save/load functionality for different label configurations. Also needs adjustable label sizes, resizable elements, and saved designs accessible in printing section.

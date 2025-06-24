@@ -92,7 +92,7 @@
             <!-- Canvas Area -->
             <div class="canvas-container">
                 <div id="labelCanvas" class="label-canvas">
-                    <div style="position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.6); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">
+                    <div id="sizeIndicator" style="position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.6); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">
                         100mm x 50mm
                     </div>
                 </div>
@@ -100,6 +100,21 @@
 
             <!-- Control Panel -->
             <div class="control-panel">
+                <!-- Label Size Section -->
+                <div class="mb-4">
+                    <h6><i class="fas fa-expand-arrows-alt"></i> Etiket Boyutu</h6>
+                    <div class="row">
+                        <div class="col-6">
+                            <label class="small">Genişlik (mm)</label>
+                            <input type="number" id="labelWidth" class="form-control form-control-sm" value="100" min="50" max="200" onchange="updateLabelSize()">
+                        </div>
+                        <div class="col-6">
+                            <label class="small">Yükseklik (mm)</label>
+                            <input type="number" id="labelHeight" class="form-control form-control-sm" value="50" min="30" max="150" onchange="updateLabelSize()">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Save Section -->
                 <div class="mb-4">
                     <h6><i class="fas fa-save"></i> Tasarım Kaydet</h6>
@@ -133,6 +148,23 @@
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
+                    <!-- Element Size Controls -->
+                    <div id="sizeControls" class="mt-2">
+                        <div class="row">
+                            <div class="col-6">
+                                <label class="small">Genişlik</label>
+                                <input type="number" id="elementWidth" class="form-control form-control-sm" min="10" max="300" onchange="updateElementSize()">
+                            </div>
+                            <div class="col-6">
+                                <label class="small">Yükseklik</label>
+                                <input type="number" id="elementHeight" class="form-control form-control-sm" min="10" max="300" onchange="updateElementSize()">
+                            </div>
+                        </div>
+                        <div class="mt-2" id="fontSizeControl" style="display: none;">
+                            <label class="small">Font Boyutu</label>
+                            <input type="number" id="fontSize" class="form-control form-control-sm" min="8" max="72" onchange="updateElementSize()">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -149,7 +181,24 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             loadSavedDesigns();
+            updateLabelSize();
         });
+
+        // Update label size
+        function updateLabelSize() {
+            const width = parseInt(document.getElementById('labelWidth').value);
+            const height = parseInt(document.getElementById('labelHeight').value);
+            const canvas = document.getElementById('labelCanvas');
+            
+            // Convert mm to pixels for display (4px per mm)
+            const displayWidth = width * 4;
+            const displayHeight = height * 2;
+            
+            canvas.style.width = displayWidth + 'px';
+            canvas.style.height = displayHeight + 'px';
+            
+            document.getElementById('sizeIndicator').textContent = `${width}mm x ${height}mm`;
+        }
 
         // Add Element
         function addElement(type) {
@@ -264,11 +313,69 @@
             element.classList.add('selected');
             selectedElement = element;
             
-            // Show info
+            // Show info and size controls
             const info = document.getElementById('selectedInfo');
             const typeSpan = document.getElementById('selectedType');
             typeSpan.textContent = getTypeName(element.dataset.type);
             info.style.display = 'block';
+            
+            // Update size controls
+            updateSizeControls(element);
+        }
+
+        // Update size controls for selected element
+        function updateSizeControls(element) {
+            const widthInput = document.getElementById('elementWidth');
+            const heightInput = document.getElementById('elementHeight');
+            const fontSizeInput = document.getElementById('fontSize');
+            const fontSizeControl = document.getElementById('fontSizeControl');
+            
+            const elementData = currentElements.find(el => el.element === element);
+            const type = element.dataset.type;
+            
+            if (type === 'title' || type === 'text') {
+                // Text elements - show font size
+                fontSizeControl.style.display = 'block';
+                widthInput.style.display = 'none';
+                heightInput.style.display = 'none';
+                
+                const currentFontSize = parseInt(element.style.fontSize) || 14;
+                fontSizeInput.value = currentFontSize;
+            } else {
+                // Image/QR elements - show width/height
+                fontSizeControl.style.display = 'none';
+                widthInput.style.display = 'block';
+                heightInput.style.display = 'block';
+                
+                widthInput.value = element.offsetWidth || 50;
+                heightInput.value = element.offsetHeight || 50;
+            }
+        }
+
+        // Update element size
+        function updateElementSize() {
+            if (!selectedElement) return;
+            
+            const type = selectedElement.dataset.type;
+            const widthInput = document.getElementById('elementWidth');
+            const heightInput = document.getElementById('elementHeight');
+            const fontSizeInput = document.getElementById('fontSize');
+            
+            if (type === 'title' || type === 'text') {
+                // Update font size
+                const fontSize = fontSizeInput.value + 'px';
+                selectedElement.style.fontSize = fontSize;
+            } else {
+                // Update width/height for image/QR
+                const width = widthInput.value + 'px';
+                const height = heightInput.value + 'px';
+                
+                const content = selectedElement.querySelector('div');
+                if (content) {
+                    content.style.width = width;
+                    content.style.height = height;
+                }
+            }
         }
 
         function getTypeName(type) {
@@ -316,12 +423,17 @@
             const designData = {
                 name: name,
                 date: new Date().toISOString(),
+                labelWidth: parseInt(document.getElementById('labelWidth').value),
+                labelHeight: parseInt(document.getElementById('labelHeight').value),
                 elements: currentElements.map(el => ({
                     id: el.id,
                     type: el.type,
                     x: el.x,
                     y: el.y,
-                    html: el.element.innerHTML
+                    html: el.element.innerHTML,
+                    width: el.element.offsetWidth,
+                    height: el.element.offsetHeight,
+                    fontSize: el.element.style.fontSize || '14px'
                 }))
             };
 
@@ -384,6 +496,13 @@
             // Clear current
             clearCanvas();
             
+            // Load label size
+            if (design.labelWidth && design.labelHeight) {
+                document.getElementById('labelWidth').value = design.labelWidth;
+                document.getElementById('labelHeight').value = design.labelHeight;
+                updateLabelSize();
+            }
+            
             // Load elements
             const canvas = document.getElementById('labelCanvas');
             design.elements.forEach(elementData => {
@@ -394,6 +513,11 @@
                 element.style.left = elementData.x + 'px';
                 element.style.top = elementData.y + 'px';
                 element.innerHTML = elementData.html;
+                
+                // Restore size properties
+                if (elementData.fontSize && (elementData.type === 'title' || elementData.type === 'text')) {
+                    element.style.fontSize = elementData.fontSize;
+                }
                 
                 element.addEventListener('mousedown', startDrag);
                 element.addEventListener('click', selectElement);
