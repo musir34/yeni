@@ -157,23 +157,26 @@ def log_request():
 # Giriş Kontrolü
 @app.before_request
 def check_authentication():
+    # Etiket editör sayfalarını tamamen serbest bırak
+    if (request.path.startswith('/enhanced_product_label') or 
+        request.path.startswith('/static/') or 
+        request.path.startswith('/api/generate_advanced_label_preview') or
+        request.path.startswith('/api/save_label_preset') or
+        request.path.startswith('/api/generate_label_preview') or
+        (request.endpoint and 'enhanced_label' in str(request.endpoint))):
+        return None
+    
     allowed_routes = [
         'login_logout.login',
         'login_logout.register',
         'login_logout.static',
         'login_logout.verify_totp',
         'login_logout.logout',
-        'qr_utils.generate_qr_labels_pdf', # QR PDF route'una geçici olarak izin ver
-        'enhanced_label.advanced_label_editor',  # Gelişmiş editör için izin
-        'enhanced_label.enhanced_product_label'  # Ana etiket sayfası için izin
+        'qr_utils.generate_qr_labels_pdf',
+        'enhanced_label.advanced_label_editor',
+        'enhanced_label.enhanced_product_label'
     ]
     app.permanent_session_lifetime = timedelta(days=30)
-    
-    # Etiket editör sayfalarında auth kontrolünü atla
-    if (request.path.startswith('/enhanced_product_label') or 
-        request.path.startswith('/static/') or
-        (request.endpoint and 'enhanced_label' in str(request.endpoint))):
-        return None
         
     if request.endpoint not in allowed_routes:
         if 'username' not in session:
