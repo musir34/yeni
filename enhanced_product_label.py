@@ -884,9 +884,10 @@ def create_label_with_design(product_data, design, label_width, label_height):
         # Tasarım elementlerini çiz - Koordinat sistemi düzeltmesi
         elements = design.get('elements', [])
         
-        # Editör canvas boyutları (400x200px varsayılan)
-        editor_width = 400
-        editor_height = 200
+        # Editör canvas boyutları - dinamik hesaplama
+        # Canvas boyutu: label_width * 4 px ve label_height * 2 px
+        editor_width = label_width * 4
+        editor_height = label_height * 2
         
         for element in elements:
             element_type = element.get('type')

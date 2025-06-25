@@ -484,12 +484,19 @@
             
             const elementData = labelElements.find(el => el.id === selectedElement.id);
             if (elementData) {
-                elementData.properties[property] = value;
+                // Özelliği güncelle
+                if (property === 'fontSize') {
+                    elementData.properties[property] = parseInt(value);
+                    elementData.fontSize = value + 'px'; // Hem properties hem de direkt olarak kaydet
+                } else {
+                    elementData.properties[property] = value;
+                }
                 
-                // Apply visual changes
+                // Görsel değişiklikleri uygula
                 switch(property) {
                     case 'text':
                         selectedElement.innerHTML = value;
+                        elementData.html = value; // HTML içeriğini de güncelle
                         break;
                     case 'fontSize':
                         selectedElement.style.fontSize = value + 'px';
@@ -504,6 +511,10 @@
                         selectedElement.style.fontWeight = value;
                         break;
                 }
+                
+                // Tasarımı kaydet
+                saveDesign();
+                console.log('Property updated:', property, value, elementData);
             }
         }
 
@@ -573,9 +584,18 @@
                 id: Date.now(),
                 name: name,
                 description: description,
-                labelWidth: document.getElementById('labelWidth').value,
-                labelHeight: document.getElementById('labelHeight').value,
-                elements: JSON.parse(JSON.stringify(labelElements))
+                labelWidth: parseInt(document.getElementById('labelWidth').value),
+                labelHeight: parseInt(document.getElementById('labelHeight').value),
+                elements: labelElements.map(el => {
+                    const domElement = document.getElementById(el.id);
+                    return {
+                        ...el,
+                        x: domElement ? parseInt(domElement.style.left || 0) : el.x,
+                        y: domElement ? parseInt(domElement.style.top || 0) : el.y,
+                        fontSize: el.fontSize || el.properties?.fontSize + 'px' || '14px',
+                        html: el.html || el.properties?.text || domElement?.innerHTML || 'Text'
+                    };
+                })
             };
 
             let presets = JSON.parse(localStorage.getItem('labelPresets') || '[]');
