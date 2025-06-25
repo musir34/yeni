@@ -262,14 +262,21 @@
             }
         }
         
-        // Get selected products
+        // Get selected products - FIXED VERSION
         function getSelectedProducts() {
             const selectedProducts = [];
             
+            console.log('DEBUG - Starting getSelectedProducts');
+            console.log('DEBUG - labelQueue exists:', typeof labelQueue !== 'undefined');
+            console.log('DEBUG - labelQueue:', labelQueue);
+            
             // labelQueue'dan ürünleri al (global değişken)
-            if (labelQueue && labelQueue.length > 0) {
-                labelQueue.forEach(item => {
-                    for (let i = 0; i < (item.quantity || 1); i++) {
+            if (typeof labelQueue !== 'undefined' && labelQueue && labelQueue.length > 0) {
+                console.log('DEBUG - Processing labelQueue with', labelQueue.length, 'items');
+                labelQueue.forEach((item, index) => {
+                    console.log(`DEBUG - Processing item ${index}:`, item);
+                    const quantity = item.quantity || 1;
+                    for (let i = 0; i < quantity; i++) {
                         selectedProducts.push({
                             barcode: item.barcode,
                             model_code: item.model_id,
@@ -278,34 +285,12 @@
                         });
                     }
                 });
+            } else {
+                console.log('DEBUG - labelQueue is empty or undefined');
             }
             
-            // Arama sonuçlarından da kontrol et
-            document.querySelectorAll('.product-item input[type="checkbox"]:checked, .variant-item input[type="checkbox"]:checked').forEach(checkbox => {
-                const productRow = checkbox.closest('.product-item, .variant-item');
-                if (productRow) {
-                    const barcode = productRow.querySelector('.barcode')?.textContent || 
-                                   productRow.dataset.barcode || '';
-                    const modelId = productRow.querySelector('.model-id')?.textContent || 
-                                   productRow.dataset.modelId || '';
-                    const color = productRow.querySelector('.color')?.textContent || 
-                                 productRow.dataset.color || '';
-                    const size = productRow.querySelector('.size')?.textContent || 
-                                productRow.dataset.size || '';
-                    const quantity = parseInt(productRow.querySelector('.quantity-input')?.value) || 1;
-                    
-                    for (let i = 0; i < quantity; i++) {
-                        selectedProducts.push({
-                            barcode: barcode,
-                            model_code: modelId,
-                            color: color,
-                            size: size
-                        });
-                    }
-                }
-            });
-            
-            console.log('Selected products:', selectedProducts);
+            console.log('DEBUG - Final selectedProducts:', selectedProducts);
+            console.log('DEBUG - selectedProducts length:', selectedProducts.length);
             return selectedProducts;
         }
         
