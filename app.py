@@ -136,6 +136,24 @@ def direct_advanced_editor():
 for bp in blueprints:
     app.register_blueprint(bp)
 
+@app.route('/editor')
+def editor_route():
+    """Editor route with cache busting"""
+    from flask import make_response, render_template
+    response = make_response(render_template('advanced_label_editor.html'))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+@app.route('/test')
+def test_route():
+    """Test route to verify changes"""
+    from flask import make_response, render_template
+    response = make_response(render_template('test_changes.html'))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return response
+
 # URL çözümleme hatalarında fallback
 def custom_url_for(endpoint, **values):
     try:
