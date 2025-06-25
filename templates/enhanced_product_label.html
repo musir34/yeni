@@ -95,24 +95,7 @@
 
         <div class="section-card">
             <h2 class="section-title"><i class="fas fa-cog"></i> Etiket Ayarları</h2>
-            <div class="size-settings">
-                <div>
-                    <label class="form-label">Etiket Genişliği (mm)</label>
-                    <input type="number" id="labelWidth" class="form-control" value="100" min="50" max="200">
-                </div>
-                <div>
-                    <label class="form-label">Etiket Yüksekliği (mm)</label>
-                    <input type="number" id="labelHeight" class="form-control" value="50" min="30" max="150">
-                </div>
-            </div>
-            <div class="preset-sizes">
-                <strong>Hızlı Boyutlar:</strong>
-                <button class="size-preset" data-width="100" data-height="50">100x50mm</button>
-                <button class="size-preset" data-width="80" data-height="50">80x50mm</button>
-                <button class="size-preset" data-width="80" data-height="40">80x40mm</button>
-                <button class="size-preset" data-width="60" data-height="40">60x40mm</button>
-                <button class="size-preset" data-width="120" data-height="60">120x60mm</button>
-            </div>
+
             <!-- Manuel Detay Ayarları -->
             <div class="mt-4 text-center">
                 <button class="btn btn-outline-primary btn-lg" type="button" data-bs-toggle="collapse" data-bs-target="#detailSettings" aria-expanded="false" aria-controls="detailSettings">
@@ -569,8 +552,8 @@
             }
             
             showLoading(true);
-            const labelWidth = parseInt(document.getElementById('labelWidth').value);
-            const labelHeight = parseInt(document.getElementById('labelHeight').value);
+            const labelWidth = 100; // Varsayılan boyut
+            const labelHeight = 50; // Varsayılan boyut
             const labelsPerRow = parseInt(document.getElementById('labelsPerRow').value);
             const labelsPerCol = parseInt(document.getElementById('labelsPerCol').value);
             const settings = getCustomSettings();
@@ -823,9 +806,9 @@
             const existingBtn = previewArea.querySelector('.print-btn');
             if (existingBtn) existingBtn.remove();
             
-            // Yeni yazdırma butonu ekle
+            // Yeni yazdırma butonu ekle (kırmızı)
             const printBtn = document.createElement('button');
-            printBtn.className = 'btn btn-primary mt-3 print-btn';
+            printBtn.className = 'btn btn-danger mt-3 print-btn';
             printBtn.innerHTML = '<i class="fas fa-print"></i> Yazdır';
             printBtn.onclick = () => printLabels(products, design);
             previewArea.appendChild(printBtn);
