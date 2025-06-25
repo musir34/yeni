@@ -262,35 +262,30 @@
             }
         }
         
-        // Get selected products - FIXED VERSION
+        // Get selected products - SIMPLIFIED AND WORKING
         function getSelectedProducts() {
-            const selectedProducts = [];
+            console.log('Getting selected products...');
+            console.log('labelQueue:', labelQueue);
             
-            console.log('DEBUG - Starting getSelectedProducts');
-            console.log('DEBUG - labelQueue exists:', typeof labelQueue !== 'undefined');
-            console.log('DEBUG - labelQueue:', labelQueue);
-            
-            // labelQueue'dan ürünleri al (global değişken)
-            if (typeof labelQueue !== 'undefined' && labelQueue && labelQueue.length > 0) {
-                console.log('DEBUG - Processing labelQueue with', labelQueue.length, 'items');
-                labelQueue.forEach((item, index) => {
-                    console.log(`DEBUG - Processing item ${index}:`, item);
-                    const quantity = item.quantity || 1;
-                    for (let i = 0; i < quantity; i++) {
-                        selectedProducts.push({
-                            barcode: item.barcode,
-                            model_code: item.model_id,
-                            color: item.color,
-                            size: item.size
-                        });
-                    }
-                });
-            } else {
-                console.log('DEBUG - labelQueue is empty or undefined');
+            if (!labelQueue || labelQueue.length === 0) {
+                console.log('No products in labelQueue');
+                return [];
             }
             
-            console.log('DEBUG - Final selectedProducts:', selectedProducts);
-            console.log('DEBUG - selectedProducts length:', selectedProducts.length);
+            const selectedProducts = [];
+            labelQueue.forEach(item => {
+                const quantity = item.quantity || 1;
+                for (let i = 0; i < quantity; i++) {
+                    selectedProducts.push({
+                        barcode: item.barcode,
+                        model_code: item.model_id,
+                        color: item.color,
+                        size: item.size
+                    });
+                }
+            });
+            
+            console.log('Selected products count:', selectedProducts.length);
             return selectedProducts;
         }
         
@@ -302,16 +297,10 @@
                 return;
             }
             
-            console.log('DEBUG - labelQueue:', labelQueue);
-            console.log('DEBUG - labelQueue length:', labelQueue ? labelQueue.length : 'undefined');
-            
             const selectedProducts = getSelectedProducts();
-            console.log('DEBUG - Selected products for preview:', selectedProducts);
-            console.log('DEBUG - Selected products length:', selectedProducts.length);
             
             if (selectedProducts.length === 0) {
-                console.log('DEBUG - No products found!');
-                showAlert(`Ürün bulunamadı! Kuyrukta ${labelQueue ? labelQueue.length : 0} ürün var. Debug: labelQueue tanımlı mı: ${typeof labelQueue}`, 'warning');
+                showAlert(`Ürün seçili değil! Lütfen önce ürün arayıp "Ekle" butonuna basın.`, 'warning');
                 return;
             }
             
@@ -328,10 +317,9 @@
             }
             
             const selectedProducts = getSelectedProducts();
-            console.log('Label queue for print:', labelQueue);
             
             if (selectedProducts.length === 0) {
-                showAlert(`Ürün seçili değil! Etiket kuyruğunda ${labelQueue.length} ürün var. Lütfen ürün arayıp "Ekle" butonuna basın.`, 'warning');
+                showAlert(`Ürün seçili değil! Lütfen önce ürün arayıp "Ekle" butonuna basın.`, 'warning');
                 return;
             }
             
