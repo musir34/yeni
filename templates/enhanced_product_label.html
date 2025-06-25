@@ -831,42 +831,101 @@
             previewArea.appendChild(printBtn);
         }
         
-        // Yazdırma işlemi
+        // Yazdırma işlemi - çoklu etiket desteği
         function printLabels(products, design) {
-            const printWindow = window.open('', '_blank');
-            const previewImg = document.querySelector('.preview-image');
-            if (!previewImg) {
-                showAlert('Önizleme bulunamadı!', 'danger');
+            showLoading(true);
+            
+            // Her ürünün miktarına göre etiket listesi oluştur
+            const allLabels = [];
+            window.labelQueue.forEach(item => {
+                for (let i = 0; i < item.quantity; i++) {
+                    allLabels.push({
+                        barcode: item.barcode,
+                        model_code: item.model_id,
+                        color: item.color,
+                        size: item.size
+                    });
+                }
+            });
+            
+            if (allLabels.length === 0) {
+                showLoading(false);
+                showAlert('Yazdırılacak etiket bulunamadı!', 'danger');
                 return;
             }
             
-            printWindow.document.write(`
-                <html>
-                <head>
-                    <title>Etiket Yazdırma</title>
-                    <style>
-                        body { margin: 0; padding: 20px; }
-                        img { max-width: 100%; height: auto; }
-                        .print-info { margin-bottom: 20px; font-family: Arial, sans-serif; }
-                        @media print {
-                            .print-info { display: none; }
-                            body { margin: 0; padding: 0; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="print-info">
-                        <h3>Etiket Yazdırma</h3>
-                        <p>Tasarım: ${design.name}</p>
-                        <p>Ürün Sayısı: ${products.length}</p>
-                        <p>Bu sayfayı yazdırmak için Ctrl+P tuşlarına basın</p>
-                    </div>
-                    <img src="${previewImg.src}" alt="Etiket">
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.focus();
+            // Çoklu etiket sayfası oluştur
+            const data = {
+                labels: allLabels,
+                design: design,
+                label_width: design.labelWidth || 100,
+                label_height: design.labelHeight || 50,
+                labels_per_row: 2, // A4 kağıda uygun
+                labels_per_col: 5
+            };
+            
+            fetch('/enhanced_product_label/api/print_multiple_labels', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                if (data.success) {
+                    // Yeni pencerede yazdırma sayfası aç
+                    const printWindow = window.open('', '_blank');
+                    printWindow.document.write(`
+                        <html>
+                        <head>
+                            <title>Etiket Yazdırma - ${allLabels.length} Etiket</title>
+                            <style>
+                                body { margin: 0; padding: 10px; }
+                                img { width: 100%; height: auto; }
+                                .print-info { 
+                                    margin-bottom: 20px; 
+                                    font-family: Arial, sans-serif;
+                                    border: 1px solid #ddd;
+                                    padding: 10px;
+                                    background: #f9f9f9;
+                                }
+                                @media print {
+                                    .print-info { display: none; }
+                                    body { margin: 0; padding: 0; }
+                                    img { page-break-inside: avoid; }
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="print-info">
+                                <h3>Etiket Yazdırma</h3>
+                                <p><strong>Tasarım:</strong> ${design.name}</p>
+                                <p><strong>Toplam Etiket:</strong> ${allLabels.length} adet</p>
+                                <p><strong>Etiket Boyutu:</strong> ${design.labelWidth || 100}mm x ${design.labelHeight || 50}mm</p>
+                                <p><strong>Ürün Detayları:</strong></p>
+                                <ul>
+                                    ${window.labelQueue.map(item => 
+                                        `<li>${item.model_id} - ${item.color} - Beden ${item.size}: ${item.quantity} adet</li>`
+                                    ).join('')}
+                                </ul>
+                                <p style="color: #666; font-size: 14px;">Bu sayfayı yazdırmak için <strong>Ctrl+P</strong> tuşlarına basın</p>
+                            </div>
+                            <img src="${data.image_url}" alt="Etiketler">
+                        </body>
+                        </html>
+                    `);
+                    printWindow.document.close();
+                    printWindow.focus();
+                    
+                    showAlert(`${allLabels.length} etiket yazdırma için hazırlandı`, 'success');
+                } else {
+                    showAlert('Yazdırma hazırlanamadı: ' + data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                showAlert('Yazdırma hatası: ' + error.message, 'danger');
+            });
         }
     </script>
 </body>
