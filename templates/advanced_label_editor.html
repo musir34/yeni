@@ -895,6 +895,108 @@
             link.download = 'label_design.json';
             link.click();
         }
+        
+        // Grid and alignment helper functions
+        function toggleGrid() {
+            showGrid = !showGrid;
+            const container = document.getElementById('canvasContainer');
+            if (showGrid) {
+                container.classList.add('show-grid');
+            } else {
+                container.classList.remove('show-grid');
+            }
+        }
+        
+        function toggleSnapToGrid() {
+            snapToGrid = !snapToGrid;
+            const btn = event.target.closest('button');
+            if (snapToGrid) {
+                btn.classList.add('active');
+                btn.style.backgroundColor = '#007bff';
+                btn.style.color = 'white';
+            } else {
+                btn.classList.remove('active');
+                btn.style.backgroundColor = '';
+                btn.style.color = '';
+            }
+        }
+        
+        function showAlignmentGuides(element, x, y) {
+            hideAlignmentGuides();
+            
+            const canvas = document.getElementById('labelCanvas');
+            const tolerance = 5;
+            
+            // Check for alignment with other elements
+            for (let otherElement of canvas.children) {
+                if (otherElement === element || !otherElement.classList.contains('canvas-element')) continue;
+                
+                const otherX = parseInt(otherElement.style.left) || 0;
+                const otherY = parseInt(otherElement.style.top) || 0;
+                
+                // Vertical alignment
+                if (Math.abs(x - otherX) < tolerance) {
+                    const guide = document.createElement('div');
+                    guide.className = 'alignment-guide vertical';
+                    guide.style.left = otherX + 'px';
+                    canvas.appendChild(guide);
+                }
+                
+                // Horizontal alignment
+                if (Math.abs(y - otherY) < tolerance) {
+                    const guide = document.createElement('div');
+                    guide.className = 'alignment-guide horizontal';
+                    guide.style.top = otherY + 'px';
+                    canvas.appendChild(guide);
+                }
+            }
+        }
+        
+        function hideAlignmentGuides() {
+            const guides = document.querySelectorAll('.alignment-guide');
+            guides.forEach(guide => guide.remove());
+        }
+        
+        function alignElements(direction) {
+            const selectedElements = document.querySelectorAll('.canvas-element.selected');
+            if (selectedElements.length < 2) {
+                alert('Hizalamak için en az 2 element seçin');
+                return;
+            }
+            
+            const canvas = document.getElementById('labelCanvas');
+            const canvasWidth = canvas.offsetWidth;
+            
+            switch (direction) {
+                case 'left':
+                    const leftMost = Math.min(...Array.from(selectedElements).map(el => parseInt(el.style.left) || 0));
+                    selectedElements.forEach(el => {
+                        el.style.left = leftMost + 'px';
+                        const elementData = labelElements.find(data => data.id === el.id);
+                        if (elementData) elementData.x = leftMost;
+                    });
+                    break;
+                case 'center':
+                    const centerX = canvasWidth / 2;
+                    selectedElements.forEach(el => {
+                        const elementWidth = el.offsetWidth;
+                        const newX = centerX - elementWidth / 2;
+                        el.style.left = newX + 'px';
+                        const elementData = labelElements.find(data => data.id === el.id);
+                        if (elementData) elementData.x = newX;
+                    });
+                    break;
+                case 'right':
+                    selectedElements.forEach(el => {
+                        const elementWidth = el.offsetWidth;
+                        const newX = canvasWidth - elementWidth - 10;
+                        el.style.left = newX + 'px';
+                        const elementData = labelElements.find(data => data.id === el.id);
+                        if (elementData) elementData.x = newX;
+                    });
+                    break;
+            }
+        }
     </script>
 </body>
 </html>
