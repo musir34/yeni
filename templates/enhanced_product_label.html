@@ -266,24 +266,32 @@
         function getSelectedProducts() {
             const selectedProducts = [];
             
-            if (window.labelQueue && window.labelQueue.length > 0) {
-                window.labelQueue.forEach(item => {
-                    selectedProducts.push({
-                        barcode: item.barcode,
-                        model_code: item.model_id,
-                        color: item.color,
-                        size: item.size
-                    });
+            // labelQueue'dan ürünleri al (global değişken)
+            if (labelQueue && labelQueue.length > 0) {
+                labelQueue.forEach(item => {
+                    for (let i = 0; i < (item.quantity || 1); i++) {
+                        selectedProducts.push({
+                            barcode: item.barcode,
+                            model_code: item.model_id,
+                            color: item.color,
+                            size: item.size
+                        });
+                    }
                 });
             }
             
-            document.querySelectorAll('.product-item input[type="checkbox"]:checked').forEach(checkbox => {
-                const productRow = checkbox.closest('.product-item');
+            // Arama sonuçlarından da kontrol et
+            document.querySelectorAll('.product-item input[type="checkbox"]:checked, .variant-item input[type="checkbox"]:checked').forEach(checkbox => {
+                const productRow = checkbox.closest('.product-item, .variant-item');
                 if (productRow) {
-                    const barcode = productRow.querySelector('.barcode')?.textContent || '';
-                    const modelId = productRow.querySelector('.model-id')?.textContent || '';
-                    const color = productRow.querySelector('.color')?.textContent || '';
-                    const size = productRow.querySelector('.size')?.textContent || '';
+                    const barcode = productRow.querySelector('.barcode')?.textContent || 
+                                   productRow.dataset.barcode || '';
+                    const modelId = productRow.querySelector('.model-id')?.textContent || 
+                                   productRow.dataset.modelId || '';
+                    const color = productRow.querySelector('.color')?.textContent || 
+                                 productRow.dataset.color || '';
+                    const size = productRow.querySelector('.size')?.textContent || 
+                                productRow.dataset.size || '';
                     const quantity = parseInt(productRow.querySelector('.quantity-input')?.value) || 1;
                     
                     for (let i = 0; i < quantity; i++) {
@@ -297,6 +305,7 @@
                 }
             });
             
+            console.log('Selected products:', selectedProducts);
             return selectedProducts;
         }
         
@@ -309,11 +318,15 @@
             }
             
             const selectedProducts = getSelectedProducts();
+            console.log('Label queue:', labelQueue);
+            console.log('Selected products for preview:', selectedProducts);
+            
             if (selectedProducts.length === 0) {
-                showAlert('Lütfen yazdırılacak ürünleri ekleyin!', 'warning');
+                showAlert(`Lütfen yazdırılacak ürünleri ekleyin! Kuyrukta ${labelQueue.length} ürün var.`, 'warning');
                 return;
             }
             
+            showAlert(`${selectedProducts.length} ürün için önizleme oluşturuluyor...`, 'info');
             generateLabelWithDesign(selectedDesignForPrint, selectedProducts);
         }
         
@@ -326,12 +339,16 @@
             }
             
             const selectedProducts = getSelectedProducts();
+            console.log('Label queue for print:', labelQueue);
+            
             if (selectedProducts.length === 0) {
-                showAlert('Lütfen yazdırılacak ürünleri ekleyin!', 'warning');
+                showAlert(`Ürün seçili değil! Etiket kuyruğunda ${labelQueue.length} ürün var. Lütfen ürün arayıp "Ekle" butonuna basın.`, 'warning');
                 return;
             }
             
-            generatePreviewWithSavedDesign();
+            // Önce önizleme oluştur, sonra yazdır
+            showAlert(`${selectedProducts.length} etiket yazdırılıyor...`, 'info');
+            generateLabelWithDesign(selectedDesignForPrint, selectedProducts);
         }
         
         function showAlert(message, type) {
