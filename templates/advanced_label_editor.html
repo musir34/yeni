@@ -307,6 +307,14 @@
                 case 'qr':
                     element.innerHTML = '<div style="width:50px;height:50px;background:#2c3e50;color:white;display:flex;align-items:center;justify-content:center;font-size:12px;">QR</div>';
                     break;
+                case 'qr_text':
+                    element.innerHTML = 'Barkod Metni';
+                    element.style.fontSize = '10px';
+                    element.style.textAlign = 'center';
+                    element.style.lineHeight = '20px';
+                    element.style.width = '100px';
+                    element.style.height = '20px';
+                    break;
                 case 'text':
                     element.innerHTML = 'Metin';
                     element.style.fontSize = '14px';
@@ -344,6 +352,13 @@
                 qr: {
                     size: 50,
                     data: 'sample_barcode'
+                },
+                qr_text: {
+                    text: 'Barkod Metni',
+                    fontSize: 10,
+                    color: '#000000',
+                    fontFamily: 'Arial',
+                    fontWeight: 'normal'
                 },
                 text: {
                     text: 'Metin',
