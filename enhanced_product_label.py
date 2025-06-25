@@ -498,12 +498,23 @@ def generate_advanced_label_preview_new():
         
         # Ürün bilgileri - gerçek ürün verisi varsa onu kullan, yoksa örnek
         if product_data:
+            model_code = product_data.get('model_code', 'GL099')
+            color = product_data.get('color', 'Siyah')
+            # Ürün görseli yolu - model_color formatında ara
+            possible_extensions = ['.jpg', '.jpeg', '.png', '.webp']
+            image_path = None
+            for ext in possible_extensions:
+                potential_path = f"static/images/{model_code}_{color}{ext}"
+                if os.path.exists(potential_path):
+                    image_path = potential_path
+                    break
+            
             sample_product = {
-                'model_code': product_data.get('model_code', 'GL099'),
-                'color': product_data.get('color', 'Siyah'),
+                'model_code': model_code,
+                'color': color,
                 'size': product_data.get('size', '42'),
                 'barcode': product_data.get('barcode', '8690123456789'),
-                'image_path': f"static/images/{product_data.get('model_code', 'GL099')}_{product_data.get('color', 'Siyah')}.jpg"
+                'image_path': image_path
             }
         else:
             sample_product = {
@@ -511,7 +522,7 @@ def generate_advanced_label_preview_new():
                 'color': 'Siyah',
                 'size': '42',
                 'barcode': '8690123456789',
-                'image_path': 'static/images/GL099_Siyah.jpg'
+                'image_path': None
             }
         
         # Etiket boyutları (mm'den pixel'e çevir, 300 DPI)
@@ -597,8 +608,8 @@ def generate_advanced_label_preview_new():
                 
             elif element_type == 'qr':
                 qr_size = int(element.get('width', 40) * (dpi / 96))
-                # QR kodda ürün bilgileri
-                qr_data = f"Model: {sample_product['model_code']}\nRenk: {sample_product['color']}\nBeden: {sample_product['size']}\nBarkod: {sample_product['barcode']}"
+                # QR kod direkt barkodu içermeli
+                qr_data = sample_product['barcode']
                 
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
                 qr_img = create_qr_with_logo(qr_data, logo_path if os.path.exists(logo_path) else None, qr_size)
@@ -609,33 +620,36 @@ def generate_advanced_label_preview_new():
                 img_height = int(element.get('height', 50) * (dpi / 96))
                 
                 # Gerçek ürün görseli varsa kullan, yoksa placeholder
+                image_loaded = False
                 try:
-                    if os.path.exists(sample_product['image_path']):
+                    if sample_product['image_path'] and os.path.exists(sample_product['image_path']):
                         product_img = Image.open(sample_product['image_path'])
+                        # RGBA moduna dönüştür eğer gerekirse
+                        if product_img.mode != 'RGB':
+                            product_img = product_img.convert('RGB')
                         product_img = product_img.resize((img_width, img_height), Image.Resampling.LANCZOS)
                         label.paste(product_img, (x, y))
-                    else:
-                        # Placeholder
-                        draw.rectangle([x, y, x + img_width, y + img_height], 
-                                     outline='#3498db', fill='#e3f2fd', width=2)
-                        
-                        try:
-                            img_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 10)
-                        except:
-                            img_font = default_font
-                        
-                        text = f"{sample_product['model_code']}\n{sample_product['color']}"
-                        text_bbox = draw.textbbox((0, 0), text, font=img_font)
-                        text_width = text_bbox[2] - text_bbox[0]
-                        text_height = text_bbox[3] - text_bbox[1]
-                        text_x = x + (img_width - text_width) // 2
-                        text_y = y + (img_height - text_height) // 2
-                        draw.text((text_x, text_y), text, fill='#2196f3', font=img_font, align='center')
+                        image_loaded = True
+                        logger.info(f"Ürün görseli yüklendi: {sample_product['image_path']}")
                 except Exception as img_error:
                     logger.error(f"Ürün görseli yükleme hatası: {img_error}")
-                    # Hata durumunda basit placeholder
+                
+                # Görsel yüklenemedi ise placeholder göster
+                if not image_loaded:
                     draw.rectangle([x, y, x + img_width, y + img_height], 
-                                 outline='#bdc3c7', fill='#ecf0f1', width=2)
+                                 outline='#3498db', fill='#e3f2fd', width=2)
+                    
+                    try:
+                        img_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 10)
+                    except:
+                        img_font = default_font
+                    
+                    text = f"{sample_product['model_code']}\n{sample_product['color']}"
+                    text_bbox = draw.textbbox((0, 0), text, font=img_font)
+                    text_height = text_bbox[3] - text_bbox[1]
+                    text_x = x + 5
+                    text_y = y + (img_height - text_height) // 2
+                    draw.text((text_x, text_y), text, fill='#2196f3', font=img_font)
         
         # Önizleme kaydet
         os.makedirs('static/generated', exist_ok=True)

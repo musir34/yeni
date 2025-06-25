@@ -803,6 +803,9 @@
                     `;
                     const productInfo = selectedProducts[0];
                     showAlert(`Tasarım "${design.name}" ile ${selectedProducts.length} etiket hazırlandı\nÖrnek: ${productInfo.model_code} - ${productInfo.color} - ${productInfo.size}`, 'success');
+                    
+                    // Yazdırma butonunu aktif hale getir
+                    addPrintButton(selectedProducts, design);
                 } else {
                     showAlert('Hata: ' + data.message, 'danger');
                 }
@@ -811,6 +814,59 @@
                 showLoading(false);
                 showAlert('Bağlantı hatası: ' + error.message, 'danger');
             });
+        }
+        
+        // Yazdırma butonu ekle
+        function addPrintButton(products, design) {
+            const previewArea = document.getElementById('previewArea');
+            // Mevcut yazdırma butonunu kaldır
+            const existingBtn = previewArea.querySelector('.print-btn');
+            if (existingBtn) existingBtn.remove();
+            
+            // Yeni yazdırma butonu ekle
+            const printBtn = document.createElement('button');
+            printBtn.className = 'btn btn-primary mt-3 print-btn';
+            printBtn.innerHTML = '<i class="fas fa-print"></i> Yazdır';
+            printBtn.onclick = () => printLabels(products, design);
+            previewArea.appendChild(printBtn);
+        }
+        
+        // Yazdırma işlemi
+        function printLabels(products, design) {
+            const printWindow = window.open('', '_blank');
+            const previewImg = document.querySelector('.preview-image');
+            if (!previewImg) {
+                showAlert('Önizleme bulunamadı!', 'danger');
+                return;
+            }
+            
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Etiket Yazdırma</title>
+                    <style>
+                        body { margin: 0; padding: 20px; }
+                        img { max-width: 100%; height: auto; }
+                        .print-info { margin-bottom: 20px; font-family: Arial, sans-serif; }
+                        @media print {
+                            .print-info { display: none; }
+                            body { margin: 0; padding: 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="print-info">
+                        <h3>Etiket Yazdırma</h3>
+                        <p>Tasarım: ${design.name}</p>
+                        <p>Ürün Sayısı: ${products.length}</p>
+                        <p>Bu sayfayı yazdırmak için Ctrl+P tuşlarına basın</p>
+                    </div>
+                    <img src="${previewImg.src}" alt="Etiket">
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
         }
     </script>
 </body>
