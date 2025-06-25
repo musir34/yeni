@@ -255,10 +255,13 @@
 
             element.addEventListener('mousedown', startDrag);
             element.addEventListener('click', selectElement);
+            element.setAttribute('data-id', elementId);
             
             canvas.appendChild(element);
             labelElements.push(elementData);
             selectElement({ target: element });
+            
+            console.log('Element added:', elementData);
         }
 
         function getDefaultProperties(type) {
@@ -499,11 +502,17 @@
                         elementData.html = value;
                         break;
                     case 'fontSize':
-                        // Zorla font boyutu güncelleme
+                        // Zorla font boyutu güncelleme - çoklu yöntem
                         selectedElement.style.fontSize = value + 'px';
                         selectedElement.style.setProperty('font-size', value + 'px', 'important');
-                        // DOM'u yeniden render etmeye zorla
-                        selectedElement.offsetHeight;
+                        selectedElement.setAttribute('data-font-size', value);
+                        
+                        // DOM'u zorla güncelle - alternatif yöntem
+                        selectedElement.style.display = 'none';
+                        selectedElement.offsetHeight; // Force reflow
+                        selectedElement.style.display = 'inline-block';
+                        
+                        console.log(`Font size FORCE updated to: ${value}px for element ${selectedElement.id}`);
                         break;
                     case 'color':
                         selectedElement.style.color = value;
