@@ -1031,6 +1031,28 @@ def create_label_with_design(product_data, design, label_width, label_height):
                 qr_img = create_qr_with_logo(qr_data, logo_path if os.path.exists(logo_path) else None, qr_size)
                 label.paste(qr_img, (x, y))
                 
+            elif element_type == 'barcode':
+                # Barkod elementi - sadece rakam olarak göster
+                font_size = 12
+                if 'properties' in element and 'fontSize' in element['properties']:
+                    font_size = int(element['properties']['fontSize'])
+                elif 'fontSize' in element:
+                    font_size_str = element.get('fontSize', '12px')
+                    if isinstance(font_size_str, str):
+                        font_size = int(font_size_str.replace('px', ''))
+                    else:
+                        font_size = int(font_size_str)
+                
+                font_size = max(6, int(font_size * (dpi / 96)))
+                
+                try:
+                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+                except:
+                    font = default_font
+                
+                # Sadece barkod rakamını yazı olarak göster
+                draw.text((x, y), barcode, fill='black', font=font)
+                
             elif element_type == 'product_image':
                 # Görsel boyutu düzeltmesi
                 img_width = int(element.get('width', 50))
