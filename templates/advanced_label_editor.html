@@ -317,17 +317,40 @@
             if (!selectedElement) return;
             
             const canvasRect = document.getElementById('labelCanvas').getBoundingClientRect();
-            const newX = (e.clientX - canvasRect.left - dragOffset.x) / zoomLevel;
-            const newY = (e.clientY - canvasRect.top - dragOffset.y) / zoomLevel;
+            let newX = (e.clientX - canvasRect.left - dragOffset.x) / zoomLevel;
+            let newY = (e.clientY - canvasRect.top - dragOffset.y) / zoomLevel;
             
-            selectedElement.style.left = Math.max(0, newX) + 'px';
-            selectedElement.style.top = Math.max(0, newY) + 'px';
+            // Canvas sınırlarını kontrol et
+            const canvas = document.getElementById('labelCanvas');
+            const canvasWidth = canvas.offsetWidth / zoomLevel;
+            const canvasHeight = canvas.offsetHeight / zoomLevel;
+            const elementWidth = selectedElement.offsetWidth / zoomLevel;
+            const elementHeight = selectedElement.offsetHeight / zoomLevel;
             
-            // Update element data
-            const elementData = labelElements.find(el => el.id === selectedElement.id);
-            if (elementData) {
-                elementData.x = newX;
-                elementData.y = newY;
+            // Sınır kontrolü - 5px güvenlik payı
+            newX = Math.max(5, Math.min(newX, canvasWidth - elementWidth - 5));
+            newY = Math.max(5, Math.min(newY, canvasHeight - elementHeight - 5));
+            
+            selectedElement.style.left = newX + 'px';
+            selectedElement.style.top = newY + 'px';
+            
+            // Çakışma kontrolü
+            const collision = checkElementCollision(selectedElement);
+            if (collision) {
+                selectedElement.style.border = '2px solid #ff6b35';
+                selectedElement.style.backgroundColor = 'rgba(255, 107, 53, 0.2)';
+                selectedElement.setAttribute('data-collision', 'true');
+            } else {
+                selectedElement.style.border = '';
+                selectedElement.style.backgroundColor = '';
+                selectedElement.removeAttribute('data-collision');
+                
+                // Element verilerini güncelle
+                const elementData = labelElements.find(el => el.id === selectedElement.id);
+                if (elementData) {
+                    elementData.x = newX;
+                    elementData.y = newY;
+                }
             }
             
             updatePositionInputs();
@@ -341,6 +364,7 @@
             if (selectedElement) {
                 selectedElement.style.backgroundColor = '';
                 selectedElement.style.border = '';
+                selectedElement.removeAttribute('data-collision');
             }
         }
 
