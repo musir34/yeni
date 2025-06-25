@@ -244,4 +244,9 @@ if __name__ == '__main__':
             logger.warning(f"Veritabanı kurulumu sırasında hata: {e}")
 
     print("Uygulama başlatılıyor...")
-    app.run(host='0.0.0.0', port=8080, debug=debug_mode)
+    try:
+        app.run(host='0.0.0.0', port=8080, debug=debug_mode, use_reloader=False)
+    except Exception as e:
+        print(f"Başlatma hatası: {e}")
+        import traceback
+        traceback.print_exc()
