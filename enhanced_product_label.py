@@ -49,12 +49,23 @@ def create_qr_with_logo(data, logo_path=None, size=200):
     Logo içeren QR kod oluştur
     """
     # QR kod oluştur
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_H,  # Yüksek hata düzeltme
-        box_size=10,
-        border=4,
-    )
+    try:
+        import qrcode
+        from qrcode.constants import ERROR_CORRECT_H
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=ERROR_CORRECT_H,  # Yüksek hata düzeltme
+            box_size=10,
+            border=4,
+        )
+    except ImportError:
+        # Fallback for different qrcode versions
+        import qrcode
+        qr = qrcode.QRCode(
+            version=1,
+            box_size=10,
+            border=4,
+        )
     qr.add_data(data)
     qr.make(fit=True)
     
@@ -628,6 +639,35 @@ def generate_advanced_label_preview_new():
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
                 qr_img = create_qr_with_logo(qr_data, logo_path if os.path.exists(logo_path) else None, qr_size)
                 label.paste(qr_img, (x, y))
+                
+            elif element_type == 'barcode':
+                barcode_width = int(element.get('width', 80) * (dpi / 96))
+                barcode_height = int(element.get('height', 20) * (dpi / 96))
+                
+                # Barkod içeriği olarak ürün barkodunu kullan
+                barcode_data = sample_product['barcode']
+                
+                try:
+                    from barcode import Code128
+                    from barcode.writer import ImageWriter
+                    import io
+                    
+                    # Barkod oluştur
+                    code = Code128(barcode_data, writer=ImageWriter())
+                    barcode_buffer = io.BytesIO()
+                    code.write(barcode_buffer)
+                    barcode_buffer.seek(0)
+                    
+                    barcode_img = Image.open(barcode_buffer)
+                    barcode_img = barcode_img.resize((barcode_width, barcode_height), Image.Resampling.LANCZOS)
+                    label.paste(barcode_img, (x, y))
+                except ImportError:
+                    # Fallback: Basit metin olarak göster
+                    try:
+                        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 12)
+                    except:
+                        font = default_font
+                    draw.text((x, y), barcode_data, fill='black', font=font)
                 
             elif element_type == 'product_image':
                 img_width = int(element.get('width', 50) * (dpi / 96))

@@ -407,6 +407,14 @@
             });
             
             selectElement({ target: element });
+            
+            // Check initial placement
+            setTimeout(() => {
+                checkElementBounds(element);
+                checkElementCollision(element);
+            }, 100);
+            
+            showNotification(`${getTypeName(type)} eklendi`, 'success');
         }
 
         // Drag functionality
@@ -435,12 +443,13 @@
             const x = e.clientX - canvasRect.left - dragOffset.x;
             const y = e.clientY - canvasRect.top - dragOffset.y;
             
-            // Keep within bounds
-            const maxX = canvasRect.width - selectedElement.offsetWidth;
-            const maxY = canvasRect.height - selectedElement.offsetHeight;
+            // Keep within bounds with padding
+            const padding = 5;
+            const maxX = canvasRect.width - selectedElement.offsetWidth - padding;
+            const maxY = canvasRect.height - selectedElement.offsetHeight - padding;
             
-            const boundedX = Math.max(0, Math.min(x, maxX));
-            const boundedY = Math.max(0, Math.min(y, maxY));
+            const boundedX = Math.max(padding, Math.min(x, maxX));
+            const boundedY = Math.max(padding, Math.min(y, maxY));
             
             selectedElement.style.left = boundedX + 'px';
             selectedElement.style.top = boundedY + 'px';
@@ -451,9 +460,18 @@
                 elementData.x = boundedX;
                 elementData.y = boundedY;
             }
+            
+            // Check for collisions during drag
+            checkElementCollision(selectedElement);
         }
 
         function stopDrag() {
+            if (selectedElement) {
+                // Final boundary and collision check
+                checkElementBounds(selectedElement);
+                checkElementCollision(selectedElement);
+            }
+            
             isDragging = false;
             document.removeEventListener('mousemove', drag);
             document.removeEventListener('mouseup', stopDrag);
@@ -727,29 +745,113 @@
                 });
             });
             
-            alert('Tasarım yüklendi: ' + design.name);
+            showNotification('Tasarım yüklendi: ' + design.name, 'success');
         }
 
         // Delete design
         function deleteDesign(index) {
-            if (!confirm('Bu tasarımı silmek istediğinizden emin misiniz?')) return;
-            
             let saved = JSON.parse(localStorage.getItem('labelDesigns') || '[]');
+            const designName = saved[index]?.name || 'Tasarım';
             saved.splice(index, 1);
             localStorage.setItem('labelDesigns', JSON.stringify(saved));
             
             loadSavedDesigns();
+            showNotification(designName + ' silindi', 'info');
         }
 
         // Generate preview
         function generatePreview() {
             if (currentElements.length === 0) {
-                alert('Önce etiket tasarımı oluşturun');
+                showNotification('Önce etiket tasarımı oluşturun', 'error');
                 return;
             }
             
-            // Simple preview - just alert for now
-            alert(`Önizleme: ${currentElements.length} element içeren etiket tasarımı`);
+            showNotification(`Önizleme: ${currentElements.length} element içeren etiket tasarımı`, 'info');
+        }
+
+        // Collision detection
+        function checkElementCollision(element) {
+            const rect1 = element.getBoundingClientRect();
+            const canvas = document.getElementById('labelCanvas');
+            const canvasRect = canvas.getBoundingClientRect();
+            
+            // Check canvas bounds
+            const tolerance = 5;
+            const x = rect1.left - canvasRect.left;
+            const y = rect1.top - canvasRect.top;
+            const right = x + rect1.width;
+            const bottom = y + rect1.height;
+            
+            // Check if element is within canvas bounds with tolerance
+            if (x < tolerance || y < tolerance || 
+                right > canvasRect.width - tolerance || 
+                bottom > canvasRect.height - tolerance) {
+                element.classList.add('collision-warning');
+                setTimeout(() => element.classList.remove('collision-warning'), 2000);
+                return true;
+            }
+            
+            // Check collision with other elements
+            let hasCollision = false;
+            currentElements.forEach(otherElementData => {
+                if (otherElementData.element === element) return;
+                
+                const rect2 = otherElementData.element.getBoundingClientRect();
+                const tolerance2 = 10;
+                
+                if (!(rect1.right < rect2.left + tolerance2 || 
+                      rect1.left > rect2.right - tolerance2 || 
+                      rect1.bottom < rect2.top + tolerance2 || 
+                      rect1.top > rect2.bottom - tolerance2)) {
+                    hasCollision = true;
+                    element.classList.add('collision-warning');
+                    otherElementData.element.classList.add('collision-warning');
+                    
+                    setTimeout(() => {
+                        element.classList.remove('collision-warning');
+                        otherElementData.element.classList.remove('collision-warning');
+                    }, 2000);
+                }
+            });
+            
+            return hasCollision;
+        }
+
+        // Enhanced boundary check
+        function checkElementBounds(element) {
+            const canvas = document.getElementById('labelCanvas');
+            const canvasRect = canvas.getBoundingClientRect();
+            const elementRect = element.getBoundingClientRect();
+            
+            const padding = 5;
+            const x = elementRect.left - canvasRect.left;
+            const y = elementRect.top - canvasRect.top;
+            const right = x + elementRect.width;
+            const bottom = y + elementRect.height;
+            
+            let adjustedX = x;
+            let adjustedY = y;
+            
+            if (x < padding) adjustedX = padding;
+            if (y < padding) adjustedY = padding;
+            if (right > canvasRect.width - padding) adjustedX = canvasRect.width - elementRect.width - padding;
+            if (bottom > canvasRect.height - padding) adjustedY = canvasRect.height - elementRect.height - padding;
+            
+            if (adjustedX !== x || adjustedY !== y) {
+                element.style.left = adjustedX + 'px';
+                element.style.top = adjustedY + 'px';
+                
+                // Update stored position
+                const elementData = currentElements.find(el => el.element === element);
+                if (elementData) {
+                    elementData.x = adjustedX;
+                    elementData.y = adjustedY;
+                }
+                
+                return true;
+            }
+            
+            return false;
         }
 
         // Click outside to deselect
