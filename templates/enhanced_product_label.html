@@ -901,6 +901,7 @@
                                 <h3>Etiket Yazdırma</h3>
                                 <p><strong>Tasarım:</strong> ${design.name}</p>
                                 <p><strong>Toplam Etiket:</strong> ${allLabels.length} adet</p>
+                                <p><strong>Sayfa Sayısı:</strong> ${data.total_pages || 1} sayfa</p>
                                 <p><strong>Etiket Boyutu:</strong> ${design.labelWidth || 100}mm x ${design.labelHeight || 50}mm</p>
                                 <p><strong>Ürün Detayları:</strong></p>
                                 <ul>
@@ -910,7 +911,10 @@
                                 </ul>
                                 <p style="color: #666; font-size: 14px;">Bu sayfayı yazdırmak için <strong>Ctrl+P</strong> tuşlarına basın</p>
                             </div>
-                            <img src="${data.image_url}" alt="Etiketler">
+                            ${data.image_url.endsWith('.pdf') ? 
+                                `<embed src="${data.image_url}" type="application/pdf" width="100%" height="800px" />` :
+                                `<img src="${data.image_url}" alt="Etiketler">`
+                            }
                         </body>
                         </html>
                     `);

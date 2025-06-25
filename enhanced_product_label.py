@@ -734,42 +734,88 @@ def print_multiple_labels():
         gap_x = int((5 / 25.4) * dpi)  # 5mm boşluk
         gap_y = int((5 / 25.4) * dpi)
         
-        # Etiketleri yerleştir
-        for i, label_data in enumerate(labels):
-            if i >= labels_per_row * labels_per_col:
-                break  # Sayfaya sığmayan etiketleri atla
+        # A4 sayfasına sığacak etiket sayısını hesapla
+        available_width = page_width_px - (2 * margin_x)
+        available_height = page_height_px - (2 * margin_y)
+        
+        max_labels_per_row = min(labels_per_row, available_width // (label_width_px + gap_x))
+        max_labels_per_col = min(labels_per_col, available_height // (label_height_px + gap_y))
+        
+        # Minimum 1 etiket garantisi
+        max_labels_per_row = max(1, max_labels_per_row)
+        max_labels_per_col = max(1, max_labels_per_col)
+        
+        # Çoklu sayfa desteği
+        labels_per_page = max_labels_per_row * max_labels_per_col
+        total_pages = (len(labels) + labels_per_page - 1) // labels_per_page
+        
+        all_pages = []
+        
+        for page_num in range(total_pages):
+            # Her sayfa için yeni sayfa oluştur
+            current_page = Image.new('RGB', (page_width_px, page_height_px), 'white')
             
-            row = i // labels_per_row
-            col = i % labels_per_row
+            start_idx = page_num * labels_per_page
+            end_idx = min(start_idx + labels_per_page, len(labels))
+            page_labels = labels[start_idx:end_idx]
             
-            # Etiket pozisyonu
-            x = margin_x + col * (label_width_px + gap_x)
-            y = margin_y + row * (label_height_px + gap_y)
+            # Bu sayfadaki etiketleri yerleştir
+            for i, label_data in enumerate(page_labels):
+                row = i // max_labels_per_row
+                col = i % max_labels_per_row
+                
+                # Etiket pozisyonu
+                x = margin_x + col * (label_width_px + gap_x)
+                y = margin_y + row * (label_height_px + gap_y)
+                
+                # Tasarım kullanarak etiket oluştur
+                label_img = create_label_with_design(
+                    label_data,
+                    design,
+                    label_width,
+                    label_height
+                )
+                
+                # Sayfaya yapıştır
+                current_page.paste(label_img, (x, y))
             
-            # Tasarım kullanarak etiket oluştur
-            label_img = create_label_with_design(
-                label_data,
-                design,
-                label_width,
-                label_height
-            )
-            
-            # Sayfaya yapıştır
-            page.paste(label_img, (x, y))
+            all_pages.append(current_page)
         
         # Dosya olarak kaydet
         os.makedirs('static/generated', exist_ok=True)
         timestamp = int(time.time())
-        filename = f"print_labels_{timestamp}.png"
-        filepath = os.path.join('static', 'generated', filename)
         
-        page.save(filepath, 'PNG', dpi=(dpi, dpi))
-        
-        return jsonify({
-            'success': True,
-            'image_url': f"/static/generated/{filename}",
-            'message': f'{len(labels)} etiket yazdırma için hazırlandı'
-        })
+        if len(all_pages) == 1:
+            # Tek sayfa
+            filename = f"print_labels_{timestamp}.png"
+            filepath = os.path.join('static', 'generated', filename)
+            all_pages[0].save(filepath, 'PNG', dpi=(dpi, dpi))
+            
+            return jsonify({
+                'success': True,
+                'image_url': f"/static/generated/{filename}",
+                'total_pages': 1,
+                'message': f'{len(labels)} etiket yazdırma için hazırlandı'
+            })
+        else:
+            # Çoklu sayfa - PDF oluştur
+            filename = f"print_labels_{timestamp}.pdf"
+            filepath = os.path.join('static', 'generated', filename)
+            
+            all_pages[0].save(
+                filepath, 
+                'PDF', 
+                resolution=dpi,
+                save_all=True, 
+                append_images=all_pages[1:]
+            )
+            
+            return jsonify({
+                'success': True,
+                'image_url': f"/static/generated/{filename}",
+                'total_pages': len(all_pages),
+                'message': f'{len(labels)} etiket {len(all_pages)} sayfada yazdırma için hazırlandı'
+            })
         
     except Exception as e:
         logger.error(f"Çoklu etiket yazdırma hatası: {e}")
@@ -907,8 +953,11 @@ def create_label_with_design(product_data, design, label_width, label_height):
         
     except Exception as e:
         logger.error(f"Etiket oluşturma hatası: {e}")
-        # Basit fallback etiket
-        label = Image.new('RGB', (width_px, height_px), 'white')
-        draw = ImageDraw.Draw(label)
-        draw.text((10, 10), f"{product_data.get('model_code', 'N/A')} - {product_data.get('color', 'N/A')}", fill='black')
-        return label
+        # Basit fallback etiket - boyutları yeniden tanımla
+        fallback_dpi = 300
+        fallback_width_px = int((label_width / 25.4) * fallback_dpi)
+        fallback_height_px = int((label_height / 25.4) * fallback_dpi)
+        fallback_label = Image.new('RGB', (fallback_width_px, fallback_height_px), 'white')
+        fallback_draw = ImageDraw.Draw(fallback_label)
+        fallback_draw.text((10, 10), f"{product_data.get('model_code', 'N/A')} - {product_data.get('color', 'N/A')}", fill='black')
+        return fallback_label
