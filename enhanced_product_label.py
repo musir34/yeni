@@ -691,18 +691,19 @@ def save_label_preset():
         logger.error(f"Preset kaydetme hatası: {e}")
         return jsonify({'success': False, 'message': 'Preset kaydedilemedi'})
 
-@enhanced_label_bp.route('/api/print_labels', methods=['POST'])
-def print_labels():
-    """Etiketleri yazdırma için hazırla"""
+@enhanced_label_bp.route('/enhanced_product_label/api/print_multiple_labels', methods=['POST'])
+@enhanced_label_bp.route('/api/print_multiple_labels', methods=['POST'])
+def print_multiple_labels():
+    """Çoklu etiket yazdırma için sayfa hazırla"""
     try:
         data = request.get_json()
         labels = data.get('labels', [])
+        design = data.get('design', {})
         paper_size = data.get('paper_size', 'a4')
-        labels_per_row = data.get('labels_per_row', 3)
-        labels_per_col = data.get('labels_per_col', 7)
+        labels_per_row = data.get('labels_per_row', 2)
+        labels_per_col = data.get('labels_per_col', 5)
         label_width = data.get('label_width', 100)
         label_height = data.get('label_height', 50)
-        settings = data.get('settings', {})  # Manuel ayarlar
         
         if not labels:
             return jsonify({'success': False, 'message': 'Yazdırılacak etiket yok'})
@@ -745,32 +746,169 @@ def print_labels():
             x = margin_x + col * (label_width_px + gap_x)
             y = margin_y + row * (label_height_px + gap_y)
             
-            # Etiket oluştur
-            label_img = create_product_label(
-                label_data['barcode'],
-                label_data['model_id'],
-                label_data['color'],
-                label_data['size'],
+            # Tasarım kullanarak etiket oluştur
+            label_img = create_label_with_design(
+                label_data,
+                design,
                 label_width,
-                label_height,
-                settings
+                label_height
             )
             
             # Sayfaya yapıştır
             page.paste(label_img, (x, y))
         
-        # Base64'e çevir
-        buffer = io.BytesIO()
-        page.save(buffer, format='PNG', dpi=(dpi, dpi))
-        buffer.seek(0)
+        # Dosya olarak kaydet
+        os.makedirs('static/generated', exist_ok=True)
+        timestamp = int(time.time())
+        filename = f"print_labels_{timestamp}.png"
+        filepath = os.path.join('static', 'generated', filename)
         
-        img_base64 = base64.b64encode(buffer.getvalue()).decode()
+        page.save(filepath, 'PNG', dpi=(dpi, dpi))
         
         return jsonify({
             'success': True,
-            'image': f"data:image/png;base64,{img_base64}"
+            'image_url': f"/static/generated/{filename}",
+            'message': f'{len(labels)} etiket yazdırma için hazırlandı'
         })
         
     except Exception as e:
-        logger.error(f"Yazdırma hazırlığı hatası: {e}")
-        return jsonify({'success': False, 'message': 'Yazdırma hazırlanırken hata oluştu'})
+        logger.error(f"Çoklu etiket yazdırma hatası: {e}")
+        return jsonify({'success': False, 'message': f'Yazdırma hazırlanırken hata oluştu: {str(e)}'})
+
+def create_label_with_design(product_data, design, label_width, label_height):
+    """Tasarım kullanarak tek etiket oluştur"""
+    try:
+        # Etiket boyutları (mm'den pixel'e çevir, 300 DPI)
+        dpi = 300
+        width_px = int((label_width / 25.4) * dpi)
+        height_px = int((label_height / 25.4) * dpi)
+        
+        # Boş etiket oluştur
+        label = Image.new('RGB', (width_px, height_px), 'white')
+        draw = ImageDraw.Draw(label)
+        
+        # Font ayarları
+        try:
+            default_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
+        except:
+            default_font = ImageFont.load_default()
+        
+        # Ürün bilgileri
+        model_code = product_data.get('model_code', 'N/A')
+        color = product_data.get('color', 'N/A')
+        size = product_data.get('size', 'N/A')
+        barcode = product_data.get('barcode', 'N/A')
+        
+        # Ürün görseli yolu
+        possible_extensions = ['.jpg', '.jpeg', '.png', '.webp']
+        image_path = None
+        for ext in possible_extensions:
+            potential_path = f"static/images/{model_code}_{color}{ext}"
+            if os.path.exists(potential_path):
+                image_path = potential_path
+                break
+        
+        # Tasarım elementlerini çiz
+        elements = design.get('elements', [])
+        for element in elements:
+            element_type = element.get('type')
+            x = int(element.get('x', 0) * (width_px / (label_width * 4)))
+            y = int(element.get('y', 0) * (height_px / (label_height * 2)))
+            
+            if element_type == 'title':
+                html_content = element.get('html', 'GÜLLÜ SHOES')
+                font_size = int(element.get('fontSize', '18px').replace('px', ''))
+                font_size = int(font_size * (dpi / 96))
+                
+                try:
+                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
+                except:
+                    font = default_font
+                
+                # HTML etiketlerini temizle
+                import re
+                clean_text = re.sub('<[^<]+?>', '', html_content)
+                draw.text((x, y), clean_text, fill='black', font=font)
+                
+            elif element_type == 'model_code':
+                font_size = int(element.get('fontSize', '14px').replace('px', ''))
+                font_size = int(font_size * (dpi / 96))
+                
+                try:
+                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+                except:
+                    font = default_font
+                
+                draw.text((x, y), model_code, fill='black', font=font)
+                
+            elif element_type == 'color':
+                font_size = int(element.get('fontSize', '14px').replace('px', ''))
+                font_size = int(font_size * (dpi / 96))
+                
+                try:
+                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+                except:
+                    font = default_font
+                
+                draw.text((x, y), color, fill='black', font=font)
+                
+            elif element_type == 'size':
+                font_size = int(element.get('fontSize', '14px').replace('px', ''))
+                font_size = int(font_size * (dpi / 96))
+                
+                try:
+                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+                except:
+                    font = default_font
+                
+                draw.text((x, y), size, fill='black', font=font)
+                
+            elif element_type == 'qr':
+                qr_size = int(element.get('width', 40) * (dpi / 96))
+                qr_data = barcode
+                
+                logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
+                qr_img = create_qr_with_logo(qr_data, logo_path if os.path.exists(logo_path) else None, qr_size)
+                label.paste(qr_img, (x, y))
+                
+            elif element_type == 'product_image':
+                img_width = int(element.get('width', 50) * (dpi / 96))
+                img_height = int(element.get('height', 50) * (dpi / 96))
+                
+                # Ürün görseli yükle
+                image_loaded = False
+                try:
+                    if image_path and os.path.exists(image_path):
+                        product_img = Image.open(image_path)
+                        if product_img.mode != 'RGB':
+                            product_img = product_img.convert('RGB')
+                        product_img = product_img.resize((img_width, img_height), Image.Resampling.LANCZOS)
+                        label.paste(product_img, (x, y))
+                        image_loaded = True
+                except Exception:
+                    pass
+                
+                # Placeholder
+                if not image_loaded:
+                    draw.rectangle([x, y, x + img_width, y + img_height], 
+                                 outline='#3498db', fill='#e3f2fd', width=2)
+                    
+                    try:
+                        img_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 10)
+                    except:
+                        img_font = default_font
+                    
+                    text = f"{model_code}\n{color}"
+                    text_x = x + 5
+                    text_y = y + 5
+                    draw.text((text_x, text_y), text, fill='#2196f3', font=img_font)
+        
+        return label
+        
+    except Exception as e:
+        logger.error(f"Etiket oluşturma hatası: {e}")
+        # Basit fallback etiket
+        label = Image.new('RGB', (width_px, height_px), 'white')
+        draw = ImageDraw.Draw(label)
+        draw.text((10, 10), f"{product_data.get('model_code', 'N/A')} - {product_data.get('color', 'N/A')}", fill='black')
+        return label
