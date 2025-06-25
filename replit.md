@@ -137,6 +137,7 @@ This is a comprehensive e-commerce management system built for a shoe retailer c
 - June 24, 2025. Completely replaced old label settings with drag-and-drop editor as main system. Removed complex detailed settings, fixed product selection detection from both queue and search results. Editor is now the primary label design interface
 - June 24, 2025. Fixed JavaScript function definition errors (updateSelectedDesignInfo). System now fully functional with product-specific fields (Title, Model Code, Color, Size, Product Image, QR Code) automatically populated with real product data during printing
 - June 25, 2025. Resolved product selection issue in getSelectedProducts function. Simplified labelQueue reading logic and fixed preview/print workflow. Enhanced Product Label system now works seamlessly with drag-and-drop editor as primary interface
+- June 25, 2025. Fixed QR code to contain only barcode data, improved product image loading with multiple format support, and added functional print button with new window opening for proper printing workflow
 
 # User Preferences
 
