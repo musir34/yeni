@@ -500,13 +500,27 @@ def generate_advanced_label_preview_new():
         if product_data:
             model_code = product_data.get('model_code', 'GL099')
             color = product_data.get('color', 'Siyah')
-            # Ürün görseli yolu - model_color formatında ara
+            
+            # Ürün görseli yolu - büyük/küçük harf duyarsız arama
             possible_extensions = ['.jpg', '.jpeg', '.png', '.webp']
             image_path = None
-            for ext in possible_extensions:
-                potential_path = f"static/images/{model_code}_{color}{ext}"
-                if os.path.exists(potential_path):
-                    image_path = potential_path
+            
+            # Farklı harf kombinasyonlarını dene
+            color_variations = [
+                color,                    # Orijinal
+                color.lower(),            # küçük harf
+                color.upper(),            # BÜYÜK HARF  
+                color.capitalize()        # İlk harf büyük
+            ]
+            
+            for color_var in color_variations:
+                for ext in possible_extensions:
+                    potential_path = f"static/images/{model_code}_{color_var}{ext}"
+                    if os.path.exists(potential_path):
+                        image_path = potential_path
+                        logger.info(f"Önizleme görseli bulundu: {potential_path}")
+                        break
+                if image_path:
                     break
             
             sample_product = {
@@ -845,13 +859,26 @@ def create_label_with_design(product_data, design, label_width, label_height):
         size = product_data.get('size', 'N/A')
         barcode = product_data.get('barcode', 'N/A')
         
-        # Ürün görseli yolu
+        # Ürün görseli yolu - büyük/küçük harf duyarsız arama
         possible_extensions = ['.jpg', '.jpeg', '.png', '.webp']
         image_path = None
-        for ext in possible_extensions:
-            potential_path = f"static/images/{model_code}_{color}{ext}"
-            if os.path.exists(potential_path):
-                image_path = potential_path
+        
+        # Farklı harf kombinasyonlarını dene
+        color_variations = [
+            color,                    # Orijinal
+            color.lower(),            # küçük harf
+            color.upper(),            # BÜYÜK HARF  
+            color.capitalize()        # İlk harf büyük
+        ]
+        
+        for color_var in color_variations:
+            for ext in possible_extensions:
+                potential_path = f"static/images/{model_code}_{color_var}{ext}"
+                if os.path.exists(potential_path):
+                    image_path = potential_path
+                    logger.info(f"Etiket görseli bulundu: {potential_path}")
+                    break
+            if image_path:
                 break
         
         # Tasarım elementlerini çiz

@@ -139,6 +139,7 @@ This is a comprehensive e-commerce management system built for a shoe retailer c
 - June 25, 2025. Resolved product selection issue in getSelectedProducts function. Simplified labelQueue reading logic and fixed preview/print workflow. Enhanced Product Label system now works seamlessly with drag-and-drop editor as primary interface
 - June 25, 2025. Fixed QR code to contain only barcode data, improved product image loading with multiple format support, and added functional print button with new window opening for proper printing workflow
 - June 25, 2025. Implemented multi-page label printing system with PDF generation for large quantities. System now creates multiple pages when labels exceed single page capacity, with automatic page calculation and proper document formatting
+- June 25, 2025. Fixed product image loading issue with case-insensitive filename matching. System now properly finds product images regardless of case differences (147_beyaz.jpg vs 147_Beyaz.jpg) with comprehensive fallback search
 
 # User Preferences
 
