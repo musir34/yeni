@@ -141,6 +141,7 @@ This is a comprehensive e-commerce management system built for a shoe retailer c
 - June 25, 2025. Implemented multi-page label printing system with PDF generation for large quantities. System now creates multiple pages when labels exceed single page capacity, with automatic page calculation and proper document formatting
 - June 25, 2025. Fixed product image loading issue with case-insensitive filename matching. System now properly finds product images regardless of case differences (147_beyaz.jpg vs 147_Beyaz.jpg) with comprehensive fallback search
 - June 25, 2025. Fixed design-to-print coordinate system and font size scaling issues. Implemented proper coordinate transformation from editor canvas (width*4px, height*2px) to print resolution (300 DPI), corrected font size persistence in editor, and synchronized element positioning between design and output
+- June 25, 2025. Enhanced font change visualization in drag-and-drop editor. Added forced DOM reflow, improved CSS property inheritance, and implemented properties-first font size reading system. Fixed coordinate scaling with proper fallback mechanisms and enhanced debug logging for element positioning
 
 # User Preferences
 
