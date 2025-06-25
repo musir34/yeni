@@ -126,28 +126,15 @@ from image_manager import image_manager_bp
 blueprints.append(enhanced_label_bp)
 blueprints.append(image_manager_bp)
 
-# Direct route for advanced editor - removed, using blueprint route
+# Direct route for simplified editor
+@app.route('/enhanced_product_label/advanced_editor')
+def direct_advanced_editor():
+    """Direct route for simplified label editor"""
+    from flask import render_template
+    return render_template('simple_label_editor.html')
 
 for bp in blueprints:
     app.register_blueprint(bp)
-
-@app.route('/editor')
-def editor_route():
-    """Editor route with cache busting"""
-    from flask import make_response, render_template
-    response = make_response(render_template('advanced_label_editor.html'))
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
-
-@app.route('/test')
-def test_route():
-    """Test route to verify changes"""
-    from flask import make_response, render_template
-    response = make_response(render_template('test_changes.html'))
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    return response
 
 # URL çözümleme hatalarında fallback
 def custom_url_for(endpoint, **values):
