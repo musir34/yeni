@@ -312,7 +312,6 @@
         
         function showAlert(message, type) {
             console.log(`${type}: ${message}`);
-            alert(message);
         }
         
         function showLoading(show) {
@@ -753,7 +752,7 @@
         // Generate label with saved design
         function generateLabelWithDesign(design, selectedProducts) {
             if (!selectedProducts || selectedProducts.length === 0) {
-                alert('Ürün bilgileri bulunamadı!');
+                console.log('Ürün bilgileri bulunamadı!');
                 return;
             }
             

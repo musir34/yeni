@@ -641,33 +641,18 @@ def generate_advanced_label_preview_new():
                 label.paste(qr_img, (x, y))
                 
             elif element_type == 'barcode':
-                barcode_width = int(element.get('width', 80) * (dpi / 96))
-                barcode_height = int(element.get('height', 20) * (dpi / 96))
-                
-                # Barkod içeriği olarak ürün barkodunu kullan
+                # Barkod alanı sadece rakam gösterecek
                 barcode_data = sample_product['barcode']
+                font_size = int(element.get('fontSize', '12px').replace('px', ''))
+                font_size = int(font_size * (dpi / 96))
                 
                 try:
-                    from barcode import Code128
-                    from barcode.writer import ImageWriter
-                    import io
-                    
-                    # Barkod oluştur
-                    code = Code128(barcode_data, writer=ImageWriter())
-                    barcode_buffer = io.BytesIO()
-                    code.write(barcode_buffer)
-                    barcode_buffer.seek(0)
-                    
-                    barcode_img = Image.open(barcode_buffer)
-                    barcode_img = barcode_img.resize((barcode_width, barcode_height), Image.Resampling.LANCZOS)
-                    label.paste(barcode_img, (x, y))
-                except ImportError:
-                    # Fallback: Basit metin olarak göster
-                    try:
-                        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 12)
-                    except:
-                        font = default_font
-                    draw.text((x, y), barcode_data, fill='black', font=font)
+                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+                except:
+                    font = default_font
+                
+                # Sadece barkod rakamını yazı olarak göster
+                draw.text((x, y), barcode_data, fill='black', font=font)
                 
             elif element_type == 'product_image':
                 img_width = int(element.get('width', 50) * (dpi / 96))
