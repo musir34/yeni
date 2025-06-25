@@ -299,13 +299,8 @@ def enhanced_product_label():
 
 @enhanced_label_bp.route('/enhanced_product_label/advanced_editor')
 def advanced_label_editor():
-    """Gelişmiş sürükle-bırak etiket editörü - QR metin ve tasarım yardımcıları ile"""
-    from flask import make_response
-    response = make_response(render_template('advanced_label_editor.html'))
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
+    """Basitleştirilmiş sürükle-bırak etiket editörü"""
+    return render_template('simple_label_editor.html')
 
 @enhanced_label_bp.route('/api/search_products_for_label', methods=['GET'])
 def search_products_for_label():
