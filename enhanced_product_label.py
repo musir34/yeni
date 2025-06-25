@@ -895,9 +895,13 @@ def create_label_with_design(product_data, design, label_width, label_height):
             raw_x = element.get('x', 0)
             raw_y = element.get('y', 0)
             
-            # Editör koordinatlarından gerçek koordinatlara dönüştürme
-            x = int((raw_x / editor_width) * width_px)
-            y = int((raw_y / editor_height) * height_px)
+            # Koordinat dönüştürme - doğru ölçeklendirme
+            if editor_width > 0 and editor_height > 0:
+                x = int((raw_x / editor_width) * width_px)
+                y = int((raw_y / editor_height) * height_px)
+            else:
+                x = int(raw_x * (dpi / 96))  # Fallback: DPI scaling
+                y = int(raw_y * (dpi / 96))
             
             # Debug bilgisi
             logger.info(f"Element {element_type}: editör({raw_x},{raw_y}) -> print({x},{y}) | canvas: {editor_width}x{editor_height} -> {width_px}x{height_px}")
@@ -930,14 +934,18 @@ def create_label_with_design(product_data, design, label_width, label_height):
                 draw.text((x, y), clean_text, fill='black', font=font)
                 
             elif element_type == 'model_code':
-                # Font boyutu düzeltmesi
-                font_size_str = element.get('fontSize', '14px')
-                if isinstance(font_size_str, str):
-                    font_size = int(font_size_str.replace('px', ''))
-                else:
-                    font_size = int(font_size_str)
+                # Font boyutu alma - properties öncelikli
+                font_size = 14
+                if 'properties' in element and 'fontSize' in element['properties']:
+                    font_size = int(element['properties']['fontSize'])
+                elif 'fontSize' in element:
+                    font_size_str = element.get('fontSize', '14px')
+                    if isinstance(font_size_str, str):
+                        font_size = int(font_size_str.replace('px', ''))
+                    else:
+                        font_size = int(font_size_str)
                 
-                font_size = max(6, int(font_size * (dpi / 96) * 0.8))
+                font_size = max(6, int(font_size * (dpi / 96)))
                 
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
@@ -947,14 +955,18 @@ def create_label_with_design(product_data, design, label_width, label_height):
                 draw.text((x, y), model_code, fill='black', font=font)
                 
             elif element_type == 'color':
-                # Font boyutu düzeltmesi
-                font_size_str = element.get('fontSize', '14px')
-                if isinstance(font_size_str, str):
-                    font_size = int(font_size_str.replace('px', ''))
-                else:
-                    font_size = int(font_size_str)
+                # Font boyutu alma - properties öncelikli
+                font_size = 14
+                if 'properties' in element and 'fontSize' in element['properties']:
+                    font_size = int(element['properties']['fontSize'])
+                elif 'fontSize' in element:
+                    font_size_str = element.get('fontSize', '14px')
+                    if isinstance(font_size_str, str):
+                        font_size = int(font_size_str.replace('px', ''))
+                    else:
+                        font_size = int(font_size_str)
                 
-                font_size = max(6, int(font_size * (dpi / 96) * 0.8))
+                font_size = max(6, int(font_size * (dpi / 96)))
                 
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
@@ -964,14 +976,18 @@ def create_label_with_design(product_data, design, label_width, label_height):
                 draw.text((x, y), color, fill='black', font=font)
                 
             elif element_type == 'size':
-                # Font boyutu düzeltmesi
-                font_size_str = element.get('fontSize', '14px')
-                if isinstance(font_size_str, str):
-                    font_size = int(font_size_str.replace('px', ''))
-                else:
-                    font_size = int(font_size_str)
+                # Font boyutu alma - properties öncelikli  
+                font_size = 14
+                if 'properties' in element and 'fontSize' in element['properties']:
+                    font_size = int(element['properties']['fontSize'])
+                elif 'fontSize' in element:
+                    font_size_str = element.get('fontSize', '14px')
+                    if isinstance(font_size_str, str):
+                        font_size = int(font_size_str.replace('px', ''))
+                    else:
+                        font_size = int(font_size_str)
                 
-                font_size = max(6, int(font_size * (dpi / 96) * 0.8))
+                font_size = max(6, int(font_size * (dpi / 96)))
                 
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
