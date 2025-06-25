@@ -261,6 +261,9 @@
             labelElements.push(elementData);
             selectElement({ target: element });
             
+            // Element sınır kontrolü
+            checkElementBounds(element);
+            
             console.log('Element added:', elementData);
         }
 
@@ -333,6 +336,12 @@
         function stopDrag() {
             document.removeEventListener('mousemove', drag);
             document.removeEventListener('mouseup', stopDrag);
+            
+            // Çakışma uyarılarını temizle
+            if (selectedElement) {
+                selectedElement.style.backgroundColor = '';
+                selectedElement.style.border = '';
+            }
         }
 
         // Element selection
@@ -502,17 +511,29 @@
                         elementData.html = value;
                         break;
                     case 'fontSize':
-                        // Zorla font boyutu güncelleme - çoklu yöntem
+                        // Font boyutunu güncelle
                         selectedElement.style.fontSize = value + 'px';
                         selectedElement.style.setProperty('font-size', value + 'px', 'important');
                         selectedElement.setAttribute('data-font-size', value);
+                        elementData.fontSize = parseInt(value);
                         
-                        // DOM'u zorla güncelle - alternatif yöntem
-                        selectedElement.style.display = 'none';
-                        selectedElement.offsetHeight; // Force reflow
-                        selectedElement.style.display = 'inline-block';
+                        // DOM'u zorla güncelle
+                        const temp = selectedElement.innerHTML;
+                        selectedElement.innerHTML = '';
+                        setTimeout(() => {
+                            selectedElement.innerHTML = temp;
+                        }, 1);
                         
-                        console.log(`Font size FORCE updated to: ${value}px for element ${selectedElement.id}`);
+                        // Element boyutunu yeniden hesapla ve çakışma kontrolü
+                        setTimeout(() => {
+                            checkElementBounds(selectedElement);
+                            const collision = checkElementCollision(selectedElement);
+                            if (collision) {
+                                showCollisionWarning(selectedElement);
+                            }
+                        }, 100);
+                        
+                        console.log(`Font size updated to: ${value}px for element ${selectedElement.id}`);
                         break;
                     case 'color':
                         selectedElement.style.color = value;
