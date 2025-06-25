@@ -197,8 +197,7 @@
             </div>
             <div class="action-buttons">
                 <a href="/enhanced_product_label/advanced_editor" class="btn btn-warning"><i class="fas fa-magic"></i> Gelişmiş Editör</a>
-                <button id="previewBtn" class="btn btn-secondary-action"><i class="fas fa-eye"></i> Önizleme Oluştur</button>
-                <button id="printBtn" class="btn btn-primary-action"><i class="fas fa-print"></i> Yazdır</button>
+
                 <button type="button" class="btn btn-info" onclick="showSavedDesigns()">
                     <i class="fas fa-list"></i> Kaydedilen Tasarımlar
                 </button>
@@ -236,7 +235,7 @@
             const infoDiv = document.getElementById('selectedDesignInfo');
             if (infoDiv) {
                 if (design) {
-                    infoDiv.innerHTML = `<strong>${design.name}</strong><br><small class="text-muted">${design.elements.length} element • ${design.labelWidth || 100}x${design.labelHeight || 50}mm</small>`;
+                    infoDiv.innerHTML = `<strong>${design.name}</strong><br><small class="text-muted">${design.elements ? design.elements.length : 0} element • ${design.labelWidth || 100}x${design.labelHeight || 50}mm</small>`;
                     infoDiv.className = 'alert alert-success';
                 } else {
                     infoDiv.innerHTML = '<small class="text-muted">Henüz tasarım seçilmedi</small>';
@@ -552,11 +551,8 @@
             }
             
             showLoading(true);
-            const labelWidth = 100; // Varsayılan boyut
-            const labelHeight = 50; // Varsayılan boyut
-            const labelsPerRow = parseInt(document.getElementById('labelsPerRow').value);
-            const labelsPerCol = parseInt(document.getElementById('labelsPerCol').value);
-            const settings = getCustomSettings();
+            const labelsPerRow = parseInt(document.getElementById('labelsPerRow').value) || 2;
+            const labelsPerCol = parseInt(document.getElementById('labelsPerCol').value) || 5;
             
             const expandedLabels = [];
             labelQueue.forEach(item => {
@@ -579,9 +575,8 @@
                         paper_size: 'a4',
                         labels_per_row: labelsPerRow,
                         labels_per_col: labelsPerCol,
-                        label_width: labelWidth,
-                        label_height: labelHeight,
-                        settings: settings
+                        label_width: 100,
+                        label_height: 50
                     })
                 });
                 
@@ -781,9 +776,12 @@
                 showLoading(false);
                 if (data.success) {
                     // Show preview
-                    document.getElementById('previewArea').innerHTML = `
-                        <img src="${data.preview_url}" class="preview-image" alt="Label Preview">
-                    `;
+                    const previewArea = document.getElementById('previewArea');
+                    if (previewArea) {
+                        previewArea.innerHTML = `
+                            <img src="${data.preview_url}" class="preview-image" alt="Label Preview">
+                        `;
+                    }
                     const productInfo = selectedProducts[0];
                     showAlert(`Tasarım "${design.name}" ile ${selectedProducts.length} etiket hazırlandı\nÖrnek: ${productInfo.model_code} - ${productInfo.color} - ${productInfo.size}`, 'success');
                     
@@ -802,16 +800,18 @@
         // Yazdırma butonu ekle
         function addPrintButton(products, design) {
             const previewArea = document.getElementById('previewArea');
-            // Mevcut yazdırma butonunu kaldır
-            const existingBtn = previewArea.querySelector('.print-btn');
-            if (existingBtn) existingBtn.remove();
-            
-            // Yeni yazdırma butonu ekle (kırmızı)
-            const printBtn = document.createElement('button');
-            printBtn.className = 'btn btn-danger mt-3 print-btn';
-            printBtn.innerHTML = '<i class="fas fa-print"></i> Yazdır';
-            printBtn.onclick = () => printLabels(products, design);
-            previewArea.appendChild(printBtn);
+            if (previewArea) {
+                // Mevcut yazdırma butonunu kaldır
+                const existingBtn = previewArea.querySelector('.print-btn');
+                if (existingBtn) existingBtn.remove();
+                
+                // Yeni yazdırma butonu ekle (kırmızı)
+                const printBtn = document.createElement('button');
+                printBtn.className = 'btn btn-danger mt-3 print-btn';
+                printBtn.innerHTML = '<i class="fas fa-print"></i> Yazdır';
+                printBtn.onclick = () => printLabels(products, design);
+                previewArea.appendChild(printBtn);
+            }
         }
         
         // Yazdırma işlemi - çoklu etiket desteği
