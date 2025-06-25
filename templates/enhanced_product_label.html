@@ -317,12 +317,16 @@
                 return;
             }
             
+            console.log('DEBUG - labelQueue:', labelQueue);
+            console.log('DEBUG - labelQueue length:', labelQueue ? labelQueue.length : 'undefined');
+            
             const selectedProducts = getSelectedProducts();
-            console.log('Label queue:', labelQueue);
-            console.log('Selected products for preview:', selectedProducts);
+            console.log('DEBUG - Selected products for preview:', selectedProducts);
+            console.log('DEBUG - Selected products length:', selectedProducts.length);
             
             if (selectedProducts.length === 0) {
-                showAlert(`Lütfen yazdırılacak ürünleri ekleyin! Kuyrukta ${labelQueue.length} ürün var.`, 'warning');
+                console.log('DEBUG - No products found!');
+                showAlert(`Ürün bulunamadı! Kuyrukta ${labelQueue ? labelQueue.length : 0} ürün var. Debug: labelQueue tanımlı mı: ${typeof labelQueue}`, 'warning');
                 return;
             }
             
@@ -367,6 +371,8 @@
             } else {
                 labelQueue.push({ barcode, model_id: modelId, color, size, quantity: 1 });
             }
+            console.log('DEBUG - Product added to queue:', { barcode, model_id: modelId, color, size, quantity: 1 });
+            console.log('DEBUG - Current labelQueue:', labelQueue);
             updateLabelQueue();
             showAlert('Etiket kuyruğa eklendi', 'success');
         }
