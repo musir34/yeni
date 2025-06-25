@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Changes</title>
+</head>
+<body>
+    <h1>Değişiklik Testi</h1>
+    <p>Bu sayfa değişikliklerin aktif olduğunu test eder.</p>
+    <div>
+        <button onclick="window.location.href='/editor'">Editor'e Git</button>
+    </div>
+    <script>
+        console.log('Test page loaded at:', new Date());
+        // Force refresh editor page
+        setTimeout(() => {
+            window.location.href = '/editor?nocache=' + Date.now();
+        }, 2000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Değişiklik Testi</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+</head>
+<body>
+    <h1>DEĞIŞIKLIKLER AKTIF!</h1>
+    <h2>Yeni özellikler eklendi:</h2>
+    <ul>
+        <li>✓ QR Metin Ekle butonu</li>
+        <li>✓ Izgara rehber sistemi</li>
+        <li>✓ Yapışkan hizalama</li>
+        <li>✓ Sol/Orta/Sağ hizalama araçları</li>
+    </ul>
+    
+    <button onclick="window.location.href='/editor?v=' + Date.now()" 
+            style="padding: 15px 30px; font-size: 18px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        Editöre Git (Cache Bypass)
+    </button>
+    
+    <script>
+        console.log('Test sayfası yüklendi:', new Date());
+        // Otomatik yönlendirme
+        setTimeout(() => {
+            window.location.href = '/editor?nocache=' + Date.now();
+        }, 3000);
+    </script>
+</body>
+</html>
