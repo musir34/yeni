@@ -891,21 +891,33 @@ def create_label_with_design(product_data, design, label_width, label_height):
         
         for element in elements:
             element_type = element.get('type')
-            # Koordinat dönüşümü: editör koordinatlarını gerçek etiket koordinatlarına çevir
-            x = int((element.get('x', 0) / editor_width) * width_px)
-            y = int((element.get('y', 0) / editor_height) * height_px)
+            # Koordinat dönüşümü düzeltmesi - 1:1 oran yerine doğru scaling
+            raw_x = element.get('x', 0)
+            raw_y = element.get('y', 0)
+            
+            # Editör koordinatlarından gerçek koordinatlara dönüştürme
+            x = int((raw_x / editor_width) * width_px)
+            y = int((raw_y / editor_height) * height_px)
+            
+            # Debug bilgisi
+            logger.info(f"Element {element_type}: editör({raw_x},{raw_y}) -> print({x},{y}) | canvas: {editor_width}x{editor_height} -> {width_px}x{height_px}")
             
             if element_type == 'title':
                 html_content = element.get('html', 'GÜLLÜ SHOES')
-                # Font boyutu düzeltmesi
-                font_size_str = element.get('fontSize', '18px')
-                if isinstance(font_size_str, str):
-                    font_size = int(font_size_str.replace('px', ''))
-                else:
-                    font_size = int(font_size_str)
+                # Font boyutu alma - properties kontrol et
+                font_size = 18
+                if 'properties' in element and 'fontSize' in element['properties']:
+                    font_size = int(element['properties']['fontSize'])
+                elif 'fontSize' in element:
+                    font_size_str = element.get('fontSize', '18px')
+                    if isinstance(font_size_str, str):
+                        font_size = int(font_size_str.replace('px', ''))
+                    else:
+                        font_size = int(font_size_str)
                 
                 # Font boyutunu DPI'ye göre ayarla
-                font_size = max(8, int(font_size * (dpi / 96) * 0.8))  # Biraz küçült
+                font_size = max(8, int(font_size * (dpi / 96)))
+                logger.info(f"Title font: {font_size}px (from {element.get('fontSize', element.get('properties', {}).get('fontSize', 'N/A'))})")
                 
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
