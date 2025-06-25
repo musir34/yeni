@@ -385,7 +385,7 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Font Boyutu</label>
-                                <input type="number" class="form-control" value="${properties.fontSize}" min="8" max="48" onchange="updateTextProperty('fontSize', this.value)">
+                                <input type="number" class="form-control" value="${properties.fontSize}" min="8" max="48" onchange="updateTextProperty('fontSize', this.value)" oninput="updateTextProperty('fontSize', this.value)">
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Renk</label>
@@ -492,23 +492,30 @@
                     elementData.properties[property] = value;
                 }
                 
-                // Görsel değişiklikleri uygula
+                // Görsel değişiklikleri uygula - FORCE UPDATE
                 switch(property) {
                     case 'text':
                         selectedElement.innerHTML = value;
-                        elementData.html = value; // HTML içeriğini de güncelle
+                        elementData.html = value;
                         break;
                     case 'fontSize':
+                        // Zorla font boyutu güncelleme
                         selectedElement.style.fontSize = value + 'px';
+                        selectedElement.style.setProperty('font-size', value + 'px', 'important');
+                        // DOM'u yeniden render etmeye zorla
+                        selectedElement.offsetHeight;
                         break;
                     case 'color':
                         selectedElement.style.color = value;
+                        selectedElement.style.setProperty('color', value, 'important');
                         break;
                     case 'fontFamily':
                         selectedElement.style.fontFamily = value;
+                        selectedElement.style.setProperty('font-family', value, 'important');
                         break;
                     case 'fontWeight':
                         selectedElement.style.fontWeight = value;
+                        selectedElement.style.setProperty('font-weight', value, 'important');
                         break;
                 }
                 
