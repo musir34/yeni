@@ -710,11 +710,34 @@
                 let html = '';
                 saved.forEach((design, index) => {
                     const date = new Date(design.date).toLocaleDateString('tr-TR');
+                    const designWidth = design.labelWidth || 100;
+                    const designHeight = design.labelHeight || 50;
+                    
+                    // Sayfa ayarlarındaki seçili boyutla karşılaştır
+                    const currentLabelSize = document.getElementById('labelSize').value;
+                    let currentWidth, currentHeight;
+                    
+                    if (currentLabelSize === 'custom') {
+                        currentWidth = parseInt(document.getElementById('customWidth').value);
+                        currentHeight = parseInt(document.getElementById('customHeight').value);
+                    } else {
+                        const [w, h] = currentLabelSize.split('x').map(Number);
+                        currentWidth = w;
+                        currentHeight = h;
+                    }
+                    
+                    const isMatchingSize = (designWidth === currentWidth && designHeight === currentHeight);
+                    const sizeClass = isMatchingSize ? 'text-success' : 'text-warning';
+                    const sizeIcon = isMatchingSize ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
+                    
                     html += `
                         <div class="border rounded p-3 mb-2">
                             <h6>${design.name}</h6>
                             <small class="text-muted">${date} - ${design.elements.length} element</small><br>
-                            <small class="text-muted">Boyut: ${design.labelWidth || 100}mm x ${design.labelHeight || 50}mm</small>
+                            <small class="${sizeClass}">
+                                <i class="${sizeIcon}"></i> Boyut: ${designWidth}mm x ${designHeight}mm
+                                ${isMatchingSize ? '(Sayfa ayarıyla uyumlu)' : '(Sayfa ayarları güncellenecek)'}
+                            </small>
                             <br>
                             <button class="btn btn-primary btn-sm mt-2" onclick="selectDesignForPrint(${index})">
                                 <i class="fas fa-check"></i> Bu Tasarımı Seç
@@ -737,10 +760,40 @@
             const saved = JSON.parse(localStorage.getItem('labelDesigns') || '[]');
             selectedDesignForPrint = saved[index];
             if (selectedDesignForPrint) {
+                // Tasarımın etiket boyutunu sayfa ayarlarına uygula
+                syncDesignWithPageSettings(selectedDesignForPrint);
+                
                 bootstrap.Modal.getInstance(document.getElementById('savedDesignsModal')).hide();
                 updateSelectedDesignInfo(selectedDesignForPrint);
-                showAlert(`Tasarım "${selectedDesignForPrint.name}" seçildi. Artık önizleme ve yazdırma yapabilirsiniz.`, 'success');
+                showAlert(`Tasarım "${selectedDesignForPrint.name}" seçildi ve sayfa ayarları güncellendi.`, 'success');
             }
+        }
+
+        // Tasarım boyutlarını sayfa ayarlarıyla senkronize et
+        function syncDesignWithPageSettings(design) {
+            const designWidth = design.labelWidth || 100;
+            const designHeight = design.labelHeight || 50;
+            const designSize = `${designWidth}x${designHeight}`;
+            
+            // Etiket boyutu dropdown'ında bu boyut var mı kontrol et
+            const labelSizeSelect = document.getElementById('labelSize');
+            const options = Array.from(labelSizeSelect.options);
+            const matchingOption = options.find(option => option.value === designSize);
+            
+            if (matchingOption) {
+                // Standart boyut varsa onu seç
+                labelSizeSelect.value = designSize;
+                document.getElementById('customSizeSection').style.display = 'none';
+            } else {
+                // Özel boyut olarak ayarla
+                labelSizeSelect.value = 'custom';
+                document.getElementById('customWidth').value = designWidth;
+                document.getElementById('customHeight').value = designHeight;
+                document.getElementById('customSizeSection').style.display = 'block';
+            }
+            
+            // Sayfa düzenini otomatik hesapla
+            calculatePageLayout();
         }
 
         // Use saved design for printing
@@ -751,6 +804,9 @@
                 showAlert('Tasarım bulunamadı!', 'danger');
                 return;
             }
+            
+            // Tasarımın etiket boyutunu sayfa ayarlarına uygula
+            syncDesignWithPageSettings(design);
             
             // Seçilen ürün bilgilerini al
             const selectedProducts = getSelectedProducts();
@@ -767,7 +823,10 @@
             // Close modal
             bootstrap.Modal.getInstance(document.getElementById('savedDesignsModal')).hide();
             
-            // Generate preview with saved design and selected products
+            // Show alert that page settings were updated
+            showAlert(`Tasarım "${design.name}" seçildi ve sayfa ayarları güncellendi.`, 'success');
+            
+            // Generate label with updated page settings
             generateLabelWithDesign(design, selectedProducts);
         }
 
@@ -778,9 +837,22 @@
                 return;
             }
             
+            // Sayfa ayarlarındaki etiket boyutunu kullan
+            const labelSize = document.getElementById('labelSize').value;
+            let labelWidth, labelHeight;
+            
+            if (labelSize === 'custom') {
+                labelWidth = parseInt(document.getElementById('customWidth').value);
+                labelHeight = parseInt(document.getElementById('customHeight').value);
+            } else {
+                const [w, h] = labelSize.split('x').map(Number);
+                labelWidth = w;
+                labelHeight = h;
+            }
+            
             const data = {
-                width: design.labelWidth || 100,
-                height: design.labelHeight || 50,
+                width: labelWidth,  // Sayfa ayarlarından al
+                height: labelHeight, // Sayfa ayarlarından al
                 elements: design.elements,
                 product_data: selectedProducts[0] // İlk ürünü önizleme için kullan
             };
