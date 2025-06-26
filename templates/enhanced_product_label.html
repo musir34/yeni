@@ -95,15 +95,93 @@
 
         <div class="section-card">
             <h2 class="section-title"><i class="fas fa-print"></i> Yazdırma Ayarları</h2>
-            <div class="row">
+            
+            <!-- A4 Sayfa Düzeni -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">Kağıt Boyutu</label>
+                    <select id="paperSize" class="form-control">
+                        <option value="a4">A4 (210 x 297 mm)</option>
+                        <option value="letter">Letter (216 x 279 mm)</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Etiket Boyutu</label>
+                    <select id="labelSize" class="form-control">
+                        <option value="100x50">100 x 50 mm</option>
+                        <option value="80x50">80 x 50 mm</option>
+                        <option value="80x40">80 x 40 mm</option>
+                        <option value="60x40" selected>60 x 40 mm</option>
+                        <option value="custom">Özel Boyut</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Sayfa Yönü</label>
+                    <select id="pageOrientation" class="form-control">
+                        <option value="portrait">Dikey</option>
+                        <option value="landscape">Yatay</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Özel Boyut Alanları -->
+            <div id="customSizeSection" class="row mb-3" style="display: none;">
                 <div class="col-md-6">
-                    <label class="form-label">Sayfa Başına Etiket (Satır)</label>
-                    <input type="number" id="labelsPerRow" class="form-control" value="3" min="1" max="6">
+                    <label class="form-label">Genişlik (mm)</label>
+                    <input type="number" id="customWidth" class="form-control" value="60" min="10" max="200">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Sayfa Başına Etiket (Sütun)</label>
-                    <input type="number" id="labelsPerCol" class="form-control" value="7" min="1" max="12">
+                    <label class="form-label">Yükseklik (mm)</label>
+                    <input type="number" id="customHeight" class="form-control" value="40" min="10" max="200">
                 </div>
+            </div>
+
+            <!-- Sayfa Düzeni -->
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label class="form-label">Satır Sayısı</label>
+                    <input type="number" id="labelsPerRow" class="form-control" value="3" min="1" max="10">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Sütun Sayısı</label>
+                    <input type="number" id="labelsPerCol" class="form-control" value="5" min="1" max="15">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Üst Kenar (mm)</label>
+                    <input type="number" id="topMargin" class="form-control" value="10" min="0" max="50">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Sol Kenar (mm)</label>
+                    <input type="number" id="leftMargin" class="form-control" value="10" min="0" max="50">
+                </div>
+            </div>
+
+            <!-- Etiket Aralıkları -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">Yatay Aralık (mm)</label>
+                    <input type="number" id="horizontalGap" class="form-control" value="5" min="0" max="20">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Dikey Aralık (mm)</label>
+                    <input type="number" id="verticalGap" class="form-control" value="5" min="0" max="20">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Yazdırma Kalitesi</label>
+                    <select id="printQuality" class="form-control">
+                        <option value="300">300 DPI (Yüksek)</option>
+                        <option value="200">200 DPI (Orta)</option>
+                        <option value="150">150 DPI (Düşük)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Sayfa Önizlemesi -->
+            <div class="text-center">
+                <button type="button" class="btn btn-outline-primary" onclick="calculatePageLayout()">
+                    <i class="fas fa-calculator"></i> Sayfa Düzenini Hesapla
+                </button>
+                <div id="layoutInfo" class="mt-2 text-muted"></div>
             </div>
         </div>
 
@@ -237,6 +315,78 @@
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
+
+        // A4 Sayfa Düzeni Fonksiyonları
+        function calculatePageLayout() {
+            const paperSize = document.getElementById('paperSize').value;
+            const labelSize = document.getElementById('labelSize').value;
+            const orientation = document.getElementById('pageOrientation').value;
+            const topMargin = parseInt(document.getElementById('topMargin').value);
+            const leftMargin = parseInt(document.getElementById('leftMargin').value);
+            const horizontalGap = parseInt(document.getElementById('horizontalGap').value);
+            const verticalGap = parseInt(document.getElementById('verticalGap').value);
+            
+            // Kağıt boyutları
+            let pageWidth, pageHeight;
+            if (paperSize === 'a4') {
+                pageWidth = orientation === 'landscape' ? 297 : 210;
+                pageHeight = orientation === 'landscape' ? 210 : 297;
+            } else { // letter
+                pageWidth = orientation === 'landscape' ? 279 : 216;
+                pageHeight = orientation === 'landscape' ? 216 : 279;
+            }
+            
+            // Etiket boyutları
+            let labelWidth, labelHeight;
+            if (labelSize === 'custom') {
+                labelWidth = parseInt(document.getElementById('customWidth').value);
+                labelHeight = parseInt(document.getElementById('customHeight').value);
+            } else {
+                const [w, h] = labelSize.split('x').map(Number);
+                labelWidth = w;
+                labelHeight = h;
+            }
+            
+            // Kullanılabilir alan
+            const availableWidth = pageWidth - (2 * leftMargin);
+            const availableHeight = pageHeight - (2 * topMargin);
+            
+            // Maksimum sığabilecek etiket sayısı
+            const maxCols = Math.floor((availableWidth + horizontalGap) / (labelWidth + horizontalGap));
+            const maxRows = Math.floor((availableHeight + verticalGap) / (labelHeight + verticalGap));
+            
+            // Önerilen değerleri ayarla
+            document.getElementById('labelsPerCol').value = Math.max(1, maxCols);
+            document.getElementById('labelsPerRow').value = Math.max(1, maxRows);
+            
+            // Bilgi göster
+            const totalLabels = maxCols * maxRows;
+            const info = `Sayfa başına maksimum ${totalLabels} etiket (${maxRows} satır × ${maxCols} sütun)`;
+            document.getElementById('layoutInfo').textContent = info;
+            
+            showAlert(`A4 sayfa düzeni hesaplandı: ${totalLabels} etiket`, 'success');
+        }
+        
+        // Etiket boyutu değiştiğinde
+        document.getElementById('labelSize').addEventListener('change', function() {
+            const customSection = document.getElementById('customSizeSection');
+            if (this.value === 'custom') {
+                customSection.style.display = 'block';
+            } else {
+                customSection.style.display = 'none';
+                // Otomatik hesaplama
+                calculatePageLayout();
+            }
+        });
+        
+        // Sayfa yönü değiştiğinde otomatik hesapla
+        document.getElementById('pageOrientation').addEventListener('change', calculatePageLayout);
+        document.getElementById('paperSize').addEventListener('change', calculatePageLayout);
+        
+        // Margin ve gap değişikliklerinde otomatik hesapla
+        ['topMargin', 'leftMargin', 'horizontalGap', 'verticalGap'].forEach(id => {
+            document.getElementById(id).addEventListener('change', calculatePageLayout);
+        });
         
         function addToQueue(barcode, modelId, color, size) {
             // Ensure window.labelQueue exists
