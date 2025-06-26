@@ -179,9 +179,10 @@
             <!-- Sayfa Önizlemesi -->
             <div class="text-center">
                 <button type="button" class="btn btn-outline-primary" onclick="calculatePageLayout()">
-                    <i class="fas fa-calculator"></i> Sayfa Düzenini Hesapla
+                    <i class="fas fa-calculator"></i> Ayarları Kontrol Et
                 </button>
                 <div id="layoutInfo" class="mt-2 text-muted"></div>
+                <small class="text-muted d-block mt-1">* Belirlediğiniz sayı zorunlu uygulanır, taşırsa yeni sayfa açılır</small>
             </div>
         </div>
 
@@ -351,20 +352,33 @@
             const availableWidth = pageWidth - (2 * leftMargin);
             const availableHeight = pageHeight - (2 * topMargin);
             
-            // Maksimum sığabilecek etiket sayısı
+            // Maksimum sığabilecek etiket sayısı hesapla (sadece bilgi için)
             const maxCols = Math.floor((availableWidth + horizontalGap) / (labelWidth + horizontalGap));
             const maxRows = Math.floor((availableHeight + verticalGap) / (labelHeight + verticalGap));
             
-            // Önerilen değerleri ayarla
-            document.getElementById('labelsPerCol').value = Math.max(1, maxCols);
-            document.getElementById('labelsPerRow').value = Math.max(1, maxRows);
+            // Mevcut kullanıcı ayarlarını al
+            const currentCols = parseInt(document.getElementById('labelsPerCol').value);
+            const currentRows = parseInt(document.getElementById('labelsPerRow').value);
+            
+            // Kullanıcı ayarları ile maksimum değerleri karşılaştır
+            const willFit = (currentCols <= maxCols && currentRows <= maxRows);
+            const totalLabels = currentCols * currentRows;
+            const maxPossible = maxCols * maxRows;
             
             // Bilgi göster
-            const totalLabels = maxCols * maxRows;
-            const info = `Sayfa başına maksimum ${totalLabels} etiket (${maxRows} satır × ${maxCols} sütun)`;
+            let info;
+            if (willFit) {
+                info = `✓ Mevcut ayarlar: ${totalLabels} etiket (${currentRows} satır × ${currentCols} sütun) - Sayfaya sığacak`;
+            } else {
+                info = `⚠ Mevcut ayarlar: ${totalLabels} etiket (${currentRows} satır × ${currentCols} sütun) - Maksimum: ${maxPossible} etiket (${maxRows} × ${maxCols})`;
+            }
             document.getElementById('layoutInfo').textContent = info;
             
-            showAlert(`A4 sayfa düzeni hesaplandı: ${totalLabels} etiket`, 'success');
+            const alertType = willFit ? 'success' : 'warning';
+            const alertMessage = willFit ? 
+                `Sayfa düzeni uygun: ${totalLabels} etiket` : 
+                `Uyarı: Etiketler sayfa boyutunu aşabilir. Maksimum: ${maxPossible} etiket`;
+            showAlert(alertMessage, alertType);
         }
         
         // Etiket boyutu değiştiğinde

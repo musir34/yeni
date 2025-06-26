@@ -787,12 +787,10 @@ def print_multiple_labels():
         gap_x = int((horizontal_gap / 25.4) * dpi)
         gap_y = int((vertical_gap / 25.4) * dpi)
         
-        # Sayfaya sığacak etiket sayısını hesapla
-        available_width = page_width_px - (2 * margin_x)
-        available_height = page_height_px - (2 * margin_y)
-        
-        max_labels_per_row = min(labels_per_row, available_width // (label_width_px + gap_x))
-        max_labels_per_col = min(labels_per_col, available_height // (label_height_px + gap_y))
+        # Kullanıcının belirlediği sütun/satır sayısını zorla uygula
+        # Sayfa boyutuna sığıp sığmadığına bakmadan kullanıcı ayarlarını kullan
+        max_labels_per_row = labels_per_row
+        max_labels_per_col = labels_per_col
         
         # Minimum 1 etiket garantisi
         max_labels_per_row = max(1, max_labels_per_row)
