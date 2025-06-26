@@ -739,22 +739,36 @@ def print_multiple_labels():
         labels = data.get('labels', [])
         design = data.get('design', {})
         paper_size = data.get('paper_size', 'a4')
+        page_orientation = data.get('page_orientation', 'portrait')
         labels_per_row = data.get('labels_per_row', 2)
         labels_per_col = data.get('labels_per_col', 5)
         label_width = data.get('label_width', 100)
         label_height = data.get('label_height', 50)
+        top_margin = data.get('top_margin', 10)
+        left_margin = data.get('left_margin', 10)
+        horizontal_gap = data.get('horizontal_gap', 5)
+        vertical_gap = data.get('vertical_gap', 5)
+        print_quality = data.get('print_quality', 300)
         
         if not labels:
             return jsonify({'success': False, 'message': 'Yazdırılacak etiket yok'})
         
-        # A4 boyutları (mm)
+        # Kağıt boyutları (mm) - sayfa yönüne göre
         if paper_size == 'a4':
-            page_width, page_height = 210, 297
+            if page_orientation == 'landscape':
+                page_width, page_height = 297, 210
+            else:
+                page_width, page_height = 210, 297
+        elif paper_size == 'letter':
+            if page_orientation == 'landscape':
+                page_width, page_height = 279, 216
+            else:
+                page_width, page_height = 216, 279
         else:
-            page_width, page_height = 210, 297  # Varsayılan A4
+            page_width, page_height = 210, 297  # Varsayılan A4 dikey
         
         # DPI ayarı
-        dpi = 300
+        dpi = print_quality
         page_width_px = int((page_width / 25.4) * dpi)
         page_height_px = int((page_height / 25.4) * dpi)
         
@@ -766,14 +780,14 @@ def print_multiple_labels():
         label_height_px = int((label_height / 25.4) * dpi)
         
         # Kenar boşlukları
-        margin_x = int((10 / 25.4) * dpi)  # 10mm kenar boşluğu
-        margin_y = int((10 / 25.4) * dpi)
+        margin_x = int((left_margin / 25.4) * dpi)
+        margin_y = int((top_margin / 25.4) * dpi)
         
         # Etiketler arası boşluk
-        gap_x = int((5 / 25.4) * dpi)  # 5mm boşluk
-        gap_y = int((5 / 25.4) * dpi)
+        gap_x = int((horizontal_gap / 25.4) * dpi)
+        gap_y = int((vertical_gap / 25.4) * dpi)
         
-        # A4 sayfasına sığacak etiket sayısını hesapla
+        # Sayfaya sığacak etiket sayısını hesapla
         available_width = page_width_px - (2 * margin_x)
         available_height = page_height_px - (2 * margin_y)
         
