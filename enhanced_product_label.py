@@ -909,27 +909,22 @@ def create_label_with_design(product_data, design, label_width, label_height):
         # Tasarım elementlerini çiz - Koordinat sistemi düzeltmesi
         elements = design.get('elements', [])
         
-        # Editör canvas boyutları - sabit 400x200px
-        # Tüm etiket boyutları için aynı canvas boyutu kullanılıyor
-        editor_width = 400  # Sabit canvas genişliği
-        editor_height = 200  # Sabit canvas yüksekliği
-        
+        # Koordinat sistemi - 1:1 doğrudan mapping
+        # Editörde görünen boyutlarla yazdırılan boyutlar aynı olacak
         for element in elements:
             element_type = element.get('type')
-            # Koordinat dönüşümü düzeltmesi - 1:1 oran yerine doğru scaling
+            
+            # Doğrudan koordinat kullanımı - ölçekleme yapmadan
             raw_x = element.get('x', 0)
             raw_y = element.get('y', 0)
             
-            # Koordinat dönüştürme - doğru ölçeklendirme
-            if editor_width > 0 and editor_height > 0:
-                x = int((raw_x / editor_width) * width_px)
-                y = int((raw_y / editor_height) * height_px)
-            else:
-                x = int(raw_x * (dpi / 96))  # Fallback: DPI scaling
-                y = int(raw_y * (dpi / 96))
+            # DPI'ye göre basit ölçeklendirme (96 DPI -> 300 DPI)
+            scale_factor = dpi / 96
+            x = int(raw_x * scale_factor)
+            y = int(raw_y * scale_factor)
             
             # Debug bilgisi
-            logger.info(f"Element {element_type}: editör({raw_x},{raw_y}) -> print({x},{y}) | canvas: {editor_width}x{editor_height} -> {width_px}x{height_px}")
+            logger.info(f"Element {element_type}: editör({raw_x},{raw_y}) -> print({x},{y}) | scale: {scale_factor} -> {width_px}x{height_px}")
             
             if element_type == 'title':
                 html_content = element.get('html', 'GÜLLÜ SHOES')
@@ -944,8 +939,8 @@ def create_label_with_design(product_data, design, label_width, label_height):
                     else:
                         font_size = int(font_size_str)
                 
-                # Font boyutunu DPI'ye göre ayarla - minimum boyut artırıldı
-                font_size = max(12, int(font_size * (dpi / 96)))
+                # Font boyutunu doğrudan ölçeklendirme ile ayarla
+                font_size = int(font_size * scale_factor)
                 logger.info(f"Title font: {font_size}px (from {element.get('fontSize', element.get('properties', {}).get('fontSize', 'N/A'))})")
                 
                 try:
@@ -970,7 +965,7 @@ def create_label_with_design(product_data, design, label_width, label_height):
                     else:
                         font_size = int(font_size_str)
                 
-                font_size = max(10, int(font_size * (dpi / 96)))
+                font_size = int(font_size * scale_factor)
                 
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
@@ -991,7 +986,7 @@ def create_label_with_design(product_data, design, label_width, label_height):
                     else:
                         font_size = int(font_size_str)
                 
-                font_size = max(10, int(font_size * (dpi / 96)))
+                font_size = int(font_size * scale_factor)
                 
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
@@ -1012,7 +1007,7 @@ def create_label_with_design(product_data, design, label_width, label_height):
                     else:
                         font_size = int(font_size_str)
                 
-                font_size = max(10, int(font_size * (dpi / 96)))
+                font_size = int(font_size * scale_factor)
                 
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
@@ -1022,9 +1017,9 @@ def create_label_with_design(product_data, design, label_width, label_height):
                 draw.text((x, y), size, fill='black', font=font)
                 
             elif element_type == 'qr':
-                # QR boyutu düzeltmesi - minimum boyut artırıldı
+                # QR boyutu doğrudan ölçeklendirme
                 qr_size = int(element.get('width', 40))
-                qr_size = max(60, int(qr_size * (dpi / 96) * 1.2))  # Daha büyük minimum boyut
+                qr_size = int(qr_size * scale_factor)
                 qr_data = barcode
                 
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
@@ -1043,7 +1038,7 @@ def create_label_with_design(product_data, design, label_width, label_height):
                     else:
                         font_size = int(font_size_str)
                 
-                font_size = max(10, int(font_size * (dpi / 96)))
+                font_size = int(font_size * scale_factor)
                 
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
@@ -1054,11 +1049,11 @@ def create_label_with_design(product_data, design, label_width, label_height):
                 draw.text((x, y), barcode, fill='black', font=font)
                 
             elif element_type == 'product_image':
-                # Görsel boyutu düzeltmesi - minimum boyut artırıldı
+                # Görsel boyutu doğrudan ölçeklendirme
                 img_width = int(element.get('width', 50))
                 img_height = int(element.get('height', 50))
-                img_width = max(50, int(img_width * (dpi / 96) * 1.2))  # Daha büyük minimum boyut
-                img_height = max(50, int(img_height * (dpi / 96) * 1.2))
+                img_width = int(img_width * scale_factor)
+                img_height = int(img_height * scale_factor)
                 
                 # Ürün görseli yükle
                 image_loaded = False
