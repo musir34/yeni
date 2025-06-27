@@ -231,8 +231,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Global variables
+        // Global variables - labelQueue'yu window objesinde de tanımla
         let labelQueue = [];
+        window.labelQueue = labelQueue;
         let selectedDesignForPrint = null;
         
         // Update selected design info display
@@ -370,9 +371,11 @@
         // Toplam etiket sayısını güncelle
         function updateTotalLabelsCount() {
             let totalCount = 0;
-            if (window.labelQueue) {
+            
+            // labelQueue'nun array olduğundan emin ol
+            if (window.labelQueue && Array.isArray(window.labelQueue)) {
                 window.labelQueue.forEach(item => {
-                    totalCount += item.quantity;
+                    totalCount += item.quantity || 0;
                 });
             }
             
@@ -387,6 +390,13 @@
 
         // Sayfa yüklendiğinde A4 standart ayarlarını otomatik uygula
         document.addEventListener('DOMContentLoaded', function() {
+            // labelQueue'yu initialize et
+            if (!window.labelQueue || !Array.isArray(window.labelQueue)) {
+                window.labelQueue = [];
+                labelQueue = window.labelQueue;
+            }
+            console.log('DEBUG - Page loaded, labelQueue initialized:', window.labelQueue);
+            
             // A4 standart zaten seçili, ayarları uygula
             applyA4StandardSettings();
             // Toplam etiket sayısını güncelle
