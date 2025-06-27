@@ -800,6 +800,18 @@ def print_multiple_labels():
         labels_per_page = max_labels_per_row * max_labels_per_col
         total_pages = (len(labels) + labels_per_page - 1) // labels_per_page
         
+        # A4 sayfasında etiketleri ortalamak için başlangıç pozisyonunu hesapla
+        total_content_width = (max_labels_per_row * label_width_px) + ((max_labels_per_row - 1) * gap_x)
+        total_content_height = (max_labels_per_col * label_height_px) + ((max_labels_per_col - 1) * gap_y)
+        
+        # Ortalanmış başlangıç pozisyonu
+        start_x = (page_width_px - total_content_width) // 2
+        start_y = (page_height_px - total_content_height) // 2
+        
+        # Minimum marjin kontrolü
+        start_x = max(margin_x, start_x)
+        start_y = max(margin_y, start_y)
+        
         all_pages = []
         
         for page_num in range(total_pages):
@@ -815,9 +827,9 @@ def print_multiple_labels():
                 row = i // max_labels_per_row
                 col = i % max_labels_per_row
                 
-                # Etiket pozisyonu
-                x = margin_x + col * (label_width_px + gap_x)
-                y = margin_y + row * (label_height_px + gap_y)
+                # Ortalanmış etiket pozisyonu
+                x = start_x + col * (label_width_px + gap_x)
+                y = start_y + row * (label_height_px + gap_y)
                 
                 # Tasarım kullanarak etiket oluştur
                 label_img = create_label_with_design(
