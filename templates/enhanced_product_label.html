@@ -195,6 +195,11 @@
                     <p>Önizleme için etiket ekleyin ve "Önizleme Oluştur" butonuna tıklayın</p>
                 </div>
             </div>
+            <!-- Toplam Etiket Sayısı Bilgisi -->
+            <div class="alert alert-info" id="totalLabelsInfo" style="display: none;">
+                <strong>Toplam Etiket Sayısı:</strong> <span id="totalLabelsCount">0</span> adet
+            </div>
+            
             <div class="action-buttons">
                 <a href="/enhanced_product_label/advanced_editor" class="btn btn-warning"><i class="fas fa-magic"></i> Gelişmiş Editör</a>
 
@@ -351,10 +356,30 @@
             }
         });
 
+        // Toplam etiket sayısını güncelle
+        function updateTotalLabelsCount() {
+            let totalCount = 0;
+            if (window.labelQueue) {
+                window.labelQueue.forEach(item => {
+                    totalCount += item.quantity;
+                });
+            }
+            
+            const countElement = document.getElementById('totalLabelsCount');
+            const infoElement = document.getElementById('totalLabelsInfo');
+            
+            if (countElement) countElement.textContent = totalCount;
+            if (infoElement) {
+                infoElement.style.display = totalCount > 0 ? 'block' : 'none';
+            }
+        }
+
         // Sayfa yüklendiğinde A4 standart ayarlarını otomatik uygula
         document.addEventListener('DOMContentLoaded', function() {
             // A4 standart zaten seçili, ayarları uygula
             applyA4StandardSettings();
+            // Toplam etiket sayısını güncelle
+            updateTotalLabelsCount();
         });
 
         // A4 Sayfa Düzeni Fonksiyonları
@@ -461,6 +486,7 @@
             console.log('DEBUG - Product added to queue:', { barcode, model_id: modelId, color, size, quantity: 1 });
             console.log('DEBUG - Current labelQueue:', window.labelQueue);
             updateLabelQueue();
+            updateTotalLabelsCount(); // Toplam sayıyı güncelle
             showAlert('Etiket kuyruğa eklendi', 'success');
         }
         
@@ -502,6 +528,7 @@
                 window.labelQueue[index].quantity = Math.max(1, window.labelQueue[index].quantity + change);
                 labelQueue = window.labelQueue;
                 updateLabelQueue();
+                updateTotalLabelsCount(); // Toplam sayıyı güncelle
             }
         }
         
@@ -511,6 +538,7 @@
                 window.labelQueue[index].quantity = Math.max(1, parseInt(value) || 1);
                 labelQueue = window.labelQueue;
                 updateLabelQueue();
+                updateTotalLabelsCount(); // Toplam sayıyı güncelle
             }
         }
         
@@ -521,6 +549,7 @@
             window.labelQueue.splice(index, 1);
             labelQueue = window.labelQueue;
             updateLabelQueue();
+            updateTotalLabelsCount(); // Toplam sayıyı güncelle
             showAlert('Etiket kuyruktan çıkarıldı', 'success');
         }
         
