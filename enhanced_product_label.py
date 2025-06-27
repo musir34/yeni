@@ -302,11 +302,7 @@ def enhanced_product_label():
     color = request.args.get('color')
     size = request.args.get('size')
     
-    return render_template('enhanced_product_label.html', 
-                         initial_barcode=barcode,
-                         initial_model=model,
-                         initial_color=color,
-                         initial_size=size)
+    return render_template('enhanced_product_label_simple.html')
 
 @enhanced_label_bp.route('/enhanced_product_label/advanced_editor')
 def advanced_label_editor():
