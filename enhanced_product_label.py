@@ -743,16 +743,37 @@ def print_multiple_labels():
         labels_per_row = data.get('labels_per_row', 2)
         labels_per_col = data.get('labels_per_col', 5)
         
-        # Etiket boyutu kontrolü - A4 standart için özel boyutlar
+        # Product Label A4_FIXED_CONFIG - Birebir kopyası
+        A4_FIXED_CONFIG = {
+            'PAGE_WIDTH': 210,
+            'MARGIN_LEFT': 8,
+            'MARGIN_RIGHT': 8,
+            'COLUMN_GAP': 2,
+            'COLUMNS': 3,
+            'PAGE_HEIGHT': 297,
+            'MARGIN_TOP': 15,
+            'MARGIN_BOTTOM': 15,
+            'ROW_GAP': 1,
+            'ROWS': 7,
+            'LABELS_PER_PAGE': 21,
+            'QR_SIZE_MM': 18,
+            'LABEL_WIDTH_APPROX': ((210 - 8 - 8 - (2 * 2)) / 3),
+            'LABEL_HEIGHT_APPROX': (int(((297 - 15 - 15 - (7 - 1) * 1) / 7) * 100) / 100) - 0.08
+        }
+        
+        # Etiket boyutu kontrolü - Product Label A4 sistemiyle uyumlu
         label_size = data.get('label_size', 'custom')
         if label_size == 'a4-standard':
-            label_width = 63.33  # A4 standart genişlik
-            label_height = 37.20  # A4 standart yükseklik
-            # A4 standart için marjinleri de zorla uygula
-            top_margin = 15  # A4 standart üst kenar
-            left_margin = 8   # A4 standart sol kenar
-            horizontal_gap = 0  # A4 standart yatay boşluk
-            vertical_gap = 0    # A4 standart dikey boşluk
+            # Product Label A4_FIXED_CONFIG değerlerini kullan
+            label_width = A4_FIXED_CONFIG['LABEL_WIDTH_APPROX']
+            label_height = A4_FIXED_CONFIG['LABEL_HEIGHT_APPROX']
+            top_margin = A4_FIXED_CONFIG['MARGIN_TOP']
+            left_margin = A4_FIXED_CONFIG['MARGIN_LEFT']
+            horizontal_gap = A4_FIXED_CONFIG['COLUMN_GAP']
+            vertical_gap = A4_FIXED_CONFIG['ROW_GAP']
+            # Sütun/satır sayısını da zorla uygula
+            labels_per_row = A4_FIXED_CONFIG['ROWS']
+            labels_per_col = A4_FIXED_CONFIG['COLUMNS']
         else:
             label_width = data.get('label_width', 100)
             label_height = data.get('label_height', 50)
