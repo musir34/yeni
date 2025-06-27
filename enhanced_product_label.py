@@ -748,13 +748,18 @@ def print_multiple_labels():
         if label_size == 'a4-standard':
             label_width = 63.33  # A4 standart genişlik
             label_height = 37.20  # A4 standart yükseklik
+            # A4 standart için marjinleri de zorla uygula
+            top_margin = 15  # A4 standart üst kenar
+            left_margin = 8   # A4 standart sol kenar
+            horizontal_gap = 0  # A4 standart yatay boşluk
+            vertical_gap = 0    # A4 standart dikey boşluk
         else:
             label_width = data.get('label_width', 100)
             label_height = data.get('label_height', 50)
-        top_margin = data.get('top_margin', 10)
-        left_margin = data.get('left_margin', 10)
-        horizontal_gap = data.get('horizontal_gap', 5)
-        vertical_gap = data.get('vertical_gap', 5)
+            top_margin = data.get('top_margin', 10)
+            left_margin = data.get('left_margin', 10)
+            horizontal_gap = data.get('horizontal_gap', 5)
+            vertical_gap = data.get('vertical_gap', 5)
         print_quality = data.get('print_quality', 300)
         
         if not labels:
