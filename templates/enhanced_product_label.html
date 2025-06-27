@@ -108,10 +108,11 @@
                 <div class="col-md-4">
                     <label class="form-label">Etiket Boyutu</label>
                     <select id="labelSize" class="form-control">
+                        <option value="a4-standard" selected>A4 Standart (63.33 x 37.20 mm)</option>
                         <option value="100x50">100 x 50 mm</option>
                         <option value="80x50">80 x 50 mm</option>
                         <option value="80x40">80 x 40 mm</option>
-                        <option value="60x40" selected>60 x 40 mm</option>
+                        <option value="60x40">60 x 40 mm</option>
                         <option value="custom">Özel Boyut</option>
                     </select>
                 </div>
@@ -316,6 +317,45 @@
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
+
+        // A4 Standart modu ayarları
+        function applyA4StandardSettings() {
+            // Sabit ayarlar
+            document.getElementById('labelsPerRow').value = 7; // 7 satır
+            document.getElementById('labelsPerCol').value = 3;  // 3 sütun
+            document.getElementById('leftMargin').value = 8;    // Sol kenar 8mm
+            document.getElementById('rightMargin').value = 8;   // Sağ kenar 8mm
+            document.getElementById('topMargin').value = 15;    // Üst kenar 15mm
+            document.getElementById('bottomMargin').value = 15; // Alt kenar 15mm
+            document.getElementById('horizontalGap').value = 0; // Yatay boşluk
+            document.getElementById('verticalGap').value = 0;   // Dikey boşluk
+            
+            // Özel boyut alanlarını güncelle
+            document.getElementById('customWidth').value = 63.33;
+            document.getElementById('customHeight').value = 37.20;
+            
+            showAlert('A4 Standart modu aktif: 3x7 (21 etiket), 63.33x37.20mm, sabit kenar boşlukları', 'success');
+        }
+
+        // Label boyutu değiştiğinde
+        document.getElementById('labelSize').addEventListener('change', function() {
+            const selectedSize = this.value;
+            
+            if (selectedSize === 'a4-standard') {
+                applyA4StandardSettings();
+                document.getElementById('customSizeSection').style.display = 'block';
+            } else if (selectedSize === 'custom') {
+                document.getElementById('customSizeSection').style.display = 'block';
+            } else {
+                document.getElementById('customSizeSection').style.display = 'none';
+            }
+        });
+
+        // Sayfa yüklendiğinde A4 standart ayarlarını otomatik uygula
+        document.addEventListener('DOMContentLoaded', function() {
+            // A4 standart zaten seçili, ayarları uygula
+            applyA4StandardSettings();
+        });
 
         // A4 Sayfa Düzeni Fonksiyonları
         function calculatePageLayout() {
@@ -855,9 +895,12 @@
             const labelSize = document.getElementById('labelSize').value;
             let labelWidth, labelHeight;
             
-            if (labelSize === 'custom') {
-                labelWidth = parseInt(document.getElementById('customWidth').value);
-                labelHeight = parseInt(document.getElementById('customHeight').value);
+            if (labelSize === 'a4-standard') {
+                labelWidth = 63.33;
+                labelHeight = 37.20;
+            } else if (labelSize === 'custom') {
+                labelWidth = parseFloat(document.getElementById('customWidth').value);
+                labelHeight = parseFloat(document.getElementById('customHeight').value);
             } else {
                 const [w, h] = labelSize.split('x').map(Number);
                 labelWidth = w;
@@ -947,15 +990,24 @@
             // Sayfa ayarlarını al
             const labelsPerRow = parseInt(document.getElementById('labelsPerRow').value) || 2;
             const labelsPerCol = parseInt(document.getElementById('labelsPerCol').value) || 5;
+            const labelSize = document.getElementById('labelSize').value;
             
             // Çoklu etiket sayfası oluştur
             const data = {
                 labels: allLabels,
                 design: design,
+                label_size: labelSize,  // A4 standart için önemli
                 label_width: design.labelWidth || 100,
                 label_height: design.labelHeight || 50,
                 labels_per_row: labelsPerRow,
-                labels_per_col: labelsPerCol
+                labels_per_col: labelsPerCol,
+                paper_size: document.getElementById('paperSize').value || 'a4',
+                page_orientation: document.getElementById('pageOrientation').value || 'portrait',
+                top_margin: parseInt(document.getElementById('topMargin').value) || 15,
+                left_margin: parseInt(document.getElementById('leftMargin').value) || 8,
+                horizontal_gap: parseInt(document.getElementById('horizontalGap').value) || 0,
+                vertical_gap: parseInt(document.getElementById('verticalGap').value) || 0,
+                print_quality: parseInt(document.getElementById('printQuality').value) || 300
             };
             
             fetch('/enhanced_product_label/api/print_multiple_labels', {

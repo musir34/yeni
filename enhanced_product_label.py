@@ -742,8 +742,15 @@ def print_multiple_labels():
         page_orientation = data.get('page_orientation', 'portrait')
         labels_per_row = data.get('labels_per_row', 2)
         labels_per_col = data.get('labels_per_col', 5)
-        label_width = data.get('label_width', 100)
-        label_height = data.get('label_height', 50)
+        
+        # Etiket boyutu kontrolü - A4 standart için özel boyutlar
+        label_size = data.get('label_size', 'custom')
+        if label_size == 'a4-standard':
+            label_width = 63.33  # A4 standart genişlik
+            label_height = 37.20  # A4 standart yükseklik
+        else:
+            label_width = data.get('label_width', 100)
+            label_height = data.get('label_height', 50)
         top_margin = data.get('top_margin', 10)
         left_margin = data.get('left_margin', 10)
         horizontal_gap = data.get('horizontal_gap', 5)
@@ -895,6 +902,11 @@ def create_label_with_design(product_data, design, label_width, label_height):
         # Boş etiket oluştur
         label = Image.new('RGB', (width_px, height_px), 'white')
         draw = ImageDraw.Draw(label)
+        
+        # Etiket kenarları (hayali çizgiler) - çok ince açık gri
+        border_color = (220, 220, 220)  # Çok açık gri
+        border_width = 1  # 1 pixel ince kenar
+        draw.rectangle([0, 0, width_px-1, height_px-1], outline=border_color, width=border_width)
         
         # Font ayarları
         try:
