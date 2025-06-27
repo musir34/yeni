@@ -324,10 +324,29 @@
             document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
 
-        // A4 Standart modu ayarları - güvenli element kontrolü ile
+        // Product Label A4 Sabit Yapılandırması - Birebir Kopyası
+        const A4_FIXED_CONFIG = {
+            PAGE_WIDTH: 210,
+            MARGIN_LEFT: 8,
+            MARGIN_RIGHT: 8,
+            COLUMN_GAP: 2,
+            COLUMNS: 3,
+            PAGE_HEIGHT: 297,
+            MARGIN_TOP: 15,
+            MARGIN_BOTTOM: 15,
+            ROW_GAP: 1,
+            ROWS: 7,
+            LABELS_PER_PAGE: 21,
+            QR_SIZE_MM: 18,
+            LABEL_WIDTH_APPROX: ((210 - 8 - 8 - (2 * 2)) / 3),
+            // Taşma sorununu azaltmak için etiket yüksekliğinden 0.08mm çalıyoruz.
+            LABEL_HEIGHT_APPROX: (Math.floor(((297 - 15 - 15 - (7 - 1) * 1) / 7) * 100) / 100) - 0.08
+        };
+
+        // A4 Standart modu ayarları - Product Label sisteminin birebir kopyası
         function applyA4StandardSettings() {
             try {
-                // Sabit ayarlar - sadece mevcut elementleri güncelle
+                // Sabit ayarlar - Product Label A4_FIXED_CONFIG değerleri
                 const labelsPerRow = document.getElementById('labelsPerRow');
                 const labelsPerCol = document.getElementById('labelsPerCol');
                 const leftMargin = document.getElementById('leftMargin');
@@ -337,18 +356,19 @@
                 const customWidth = document.getElementById('customWidth');
                 const customHeight = document.getElementById('customHeight');
                 
-                if (labelsPerRow) labelsPerRow.value = 7; // 7 satır
-                if (labelsPerCol) labelsPerCol.value = 3;  // 3 sütun
-                if (leftMargin) leftMargin.value = 8;    // Sol kenar 8mm
-                if (topMargin) topMargin.value = 15;    // Üst kenar 15mm
-                if (horizontalGap) horizontalGap.value = 0; // Yatay boşluk
-                if (verticalGap) verticalGap.value = 0;   // Dikey boşluk
+                if (labelsPerRow) labelsPerRow.value = A4_FIXED_CONFIG.ROWS; // 7 satır
+                if (labelsPerCol) labelsPerCol.value = A4_FIXED_CONFIG.COLUMNS;  // 3 sütun
+                if (leftMargin) leftMargin.value = A4_FIXED_CONFIG.MARGIN_LEFT;    // 8mm
+                if (topMargin) topMargin.value = A4_FIXED_CONFIG.MARGIN_TOP;    // 15mm
+                if (horizontalGap) horizontalGap.value = A4_FIXED_CONFIG.COLUMN_GAP; // 2mm
+                if (verticalGap) verticalGap.value = A4_FIXED_CONFIG.ROW_GAP;   // 1mm
                 
-                // Özel boyut alanlarını güncelle
-                if (customWidth) customWidth.value = 63.33;
-                if (customHeight) customHeight.value = 37.20;
+                // Özel boyut alanlarını güncelle - Product Label hesaplanan boyutları
+                if (customWidth) customWidth.value = A4_FIXED_CONFIG.LABEL_WIDTH_APPROX.toFixed(2);
+                if (customHeight) customHeight.value = A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX.toFixed(2);
                 
-                showAlert('A4 Standart modu aktif: 3x7 (21 etiket), 63.33x37.20mm, sabit kenar boşlukları', 'success');
+                const info = `A4 Standart Modu: ${A4_FIXED_CONFIG.COLUMNS}x${A4_FIXED_CONFIG.ROWS} (${A4_FIXED_CONFIG.LABELS_PER_PAGE} etiket), ${A4_FIXED_CONFIG.LABEL_WIDTH_APPROX.toFixed(2)}x${A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX.toFixed(2)}mm, Kenarlar: ${A4_FIXED_CONFIG.MARGIN_TOP}/${A4_FIXED_CONFIG.MARGIN_BOTTOM}/${A4_FIXED_CONFIG.MARGIN_LEFT}/${A4_FIXED_CONFIG.MARGIN_RIGHT}mm`;
+                showAlert(info, 'success');
             } catch (error) {
                 console.error('A4 ayarları uygulanırken hata:', error);
             }
