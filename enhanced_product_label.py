@@ -767,9 +767,9 @@ def print_multiple_labels():
             left_margin = A4_FIXED_CONFIG['MARGIN_LEFT']
             horizontal_gap = A4_FIXED_CONFIG['COLUMN_GAP']
             vertical_gap = A4_FIXED_CONFIG['ROW_GAP']
-            # Sütun/satır sayısını da zorla uygula
-            labels_per_row = A4_FIXED_CONFIG['ROWS']
-            labels_per_col = A4_FIXED_CONFIG['COLUMNS']
+            # Sütun/satır sayısını da zorla uygula - A4 Standard: 3 sütun, 7 satır
+            labels_per_row = A4_FIXED_CONFIG['COLUMNS']  # 3 sütun (yatay)
+            labels_per_col = A4_FIXED_CONFIG['ROWS']     # 7 satır (dikey)
         else:
             label_width = data.get('label_width', 100)
             label_height = data.get('label_height', 50)
@@ -830,12 +830,24 @@ def print_multiple_labels():
         total_pages = (len(labels) + labels_per_page - 1) // labels_per_page
         
         # A4 sayfasında etiketleri ortalamak için başlangıç pozisyonunu hesapla
+        # Product Label ile aynı merkezleme algoritması
         total_content_width = (max_labels_per_row * label_width_px) + ((max_labels_per_row - 1) * gap_x)
         total_content_height = (max_labels_per_col * label_height_px) + ((max_labels_per_col - 1) * gap_y)
         
-        # Ortalanmış başlangıç pozisyonu
-        start_x = (page_width_px - total_content_width) // 2
-        start_y = (page_height_px - total_content_height) // 2
+        # Mevcut alan hesabı (kenar boşluklarını çıkar)
+        available_width = page_width_px - (2 * margin_x)
+        available_height = page_height_px - (2 * margin_y)
+        
+        # İçeriği mevcut alanda ortala
+        if total_content_width <= available_width:
+            start_x = margin_x + (available_width - total_content_width) // 2
+        else:
+            start_x = margin_x
+            
+        if total_content_height <= available_height:
+            start_y = margin_y + (available_height - total_content_height) // 2
+        else:
+            start_y = margin_y
         
         # Minimum marjin kontrolü
         start_x = max(margin_x, start_x)
