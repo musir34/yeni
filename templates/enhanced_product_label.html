@@ -425,9 +425,12 @@
             
             // Etiket boyutları
             let labelWidth, labelHeight;
-            if (labelSize === 'custom') {
-                labelWidth = parseInt(document.getElementById('customWidth').value);
-                labelHeight = parseInt(document.getElementById('customHeight').value);
+            if (labelSize === 'a4-standard') {
+                labelWidth = 63.33;
+                labelHeight = 37.20;
+            } else if (labelSize === 'custom') {
+                labelWidth = parseFloat(document.getElementById('customWidth').value);
+                labelHeight = parseFloat(document.getElementById('customHeight').value);
             } else {
                 const [w, h] = labelSize.split('x').map(Number);
                 labelWidth = w;
@@ -438,9 +441,9 @@
             const availableWidth = pageWidth - (2 * leftMargin);
             const availableHeight = pageHeight - (2 * topMargin);
             
-            // Maksimum sığabilecek etiket sayısı hesapla (sadece bilgi için)
-            const maxCols = Math.floor((availableWidth + horizontalGap) / (labelWidth + horizontalGap));
-            const maxRows = Math.floor((availableHeight + verticalGap) / (labelHeight + verticalGap));
+            // NaN kontrolü ile maksimum sığabilecek etiket sayısı hesapla 
+            const maxCols = isNaN(labelWidth) || labelWidth <= 0 ? 0 : Math.floor((availableWidth + horizontalGap) / (labelWidth + horizontalGap));
+            const maxRows = isNaN(labelHeight) || labelHeight <= 0 ? 0 : Math.floor((availableHeight + verticalGap) / (labelHeight + verticalGap));
             
             // Mevcut kullanıcı ayarlarını al
             const currentCols = parseInt(document.getElementById('labelsPerCol').value);
