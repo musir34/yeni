@@ -13,6 +13,7 @@ from logger_config import app_logger as logger
 
 login_logout_bp = Blueprint('login_logout', __name__)
 
+
 def login_user(user):
     logger.info(f"Giriş yapan kullanıcı: {user.username}, rolü: {user.role}")
     session['user_id'] = user.id
@@ -26,23 +27,24 @@ def login_user(user):
     logger.debug(f"Oturumda atanan rol: {session['role']}")
 
 
-
-
-
-
 # Oturum gerektiren dekoratör
 def login_required(f):
+
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             flash('Lütfen giriş yapın.', 'warning')
             return redirect(url_for('login_logout.login'))
         return f(*args, **kwargs)
+
     return decorated_function
+
 
 # Belirli bir role sahip olmayı gerektiren dekoratör
 def roles_required(*roles):
+
     def decorator(f):
+
         @wraps(f)
         def decorated_function(*args, **kwargs):
             # Kullanıcının oturum açıp açmadığını kontrol et
@@ -62,10 +64,10 @@ def roles_required(*roles):
                 return redirect(url_for('login_logout.home'))
 
             return f(*args, **kwargs)
+
         return decorated_function
+
     return decorator
-
-
 
 
 #  QR kodu oluşturma fonksiyonu
@@ -79,6 +81,7 @@ def generate_qr_code(data):
     img_str = base64.b64encode(buffer.getvalue()).decode('utf-8')
     return img_str
 
+
 # Kullanıcı kaydı
 @login_logout_bp.route('/register', methods=['GET', 'POST'])
 def register():
@@ -89,32 +92,31 @@ def register():
         email = request.form['email']
         password = request.form['password']
 
-        existing_user = User.query.filter(
-            (User.username == username) | (User.email == email)
-        ).first()
+        existing_user = User.query.filter((User.username == username)
+                                          | (User.email == email)).first()
         if existing_user:
-            flash('Bu kullanıcı adı veya e-posta zaten kullanılıyor!', 'danger')
+            flash('Bu kullanıcı adı veya e-posta zaten kullanılıyor!',
+                  'danger')
             return redirect(url_for('login_logout.register'))
 
         hashed_password = generate_password_hash(password)
         totp_secret = pyotp.random_base32()
 
-        new_user = User(
-            first_name=first_name,
-            last_name=last_name,
-            username=username,
-            password=hashed_password,
-            email=email,
-            role='worker',
-            status='pending',
-            totp_secret=totp_secret
-        )
+        new_user = User(first_name=first_name,
+                        last_name=last_name,
+                        username=username,
+                        password=hashed_password,
+                        email=email,
+                        role='worker',
+                        status='pending',
+                        totp_secret=totp_secret)
 
         db.session.add(new_user)
         db.session.commit()
         flash('Kayıt başarılı! Hesabınızın onaylanmasını bekleyin.', 'info')
         return redirect(url_for('login_logout.login'))
     return render_template('register.html')
+
 
 @login_logout_bp.route('/check_role', methods=['GET'])
 def check_role():
@@ -129,9 +131,10 @@ def check_role():
 @login_logout_bp.route('/login', methods=['GET', 'POST'])
 def login():
     # Eğer kullanıcı zaten doğrulanmışsa
-    if 'user_id' in session and session.get('authenticated', False) and session.get('totp_verified', False):
+    if 'user_id' in session and session.get(
+            'authenticated', False) and session.get('totp_verified', False):
         return redirect(url_for('login_logout.home'))
-        
+
     if request.method == 'POST':
         session.clear()
         username = request.form['username']
@@ -139,7 +142,9 @@ def login():
         user = User.query.filter_by(username=username).first()
 
         if user:
-            logger.debug(f"Veritabanından gelen kullanıcı: {user.username}, rolü: {user.role}")
+            logger.debug(
+                f"Veritabanından gelen kullanıcı: {user.username}, rolü: {user.role}"
+            )
 
         if user and check_password_hash(user.password, password):
             if user.status == 'pending':
@@ -170,7 +175,8 @@ def setup_totp():
         return redirect(url_for('login_logout.home'))
 
     totp = pyotp.TOTP(user.totp_secret)
-    provisioning_uri = totp.provisioning_uri(name=user.email, issuer_name='Firma İsmi')
+    provisioning_uri = totp.provisioning_uri(name=user.email,
+                                             issuer_name='Firma İsmi')
     qr_code_data = generate_qr_code(provisioning_uri)
 
     if request.method == 'POST':
@@ -182,6 +188,7 @@ def setup_totp():
             return redirect(url_for('login_logout.home'))
         flash('Geçersiz doğrulama kodu.', 'danger')
     return render_template('verify_totp.html', qr_code_data=qr_code_data)
+
 
 # TOTP Doğrulama
 @login_logout_bp.route('/verify_totp', methods=['GET', 'POST'])
@@ -206,6 +213,26 @@ def verify_totp():
     return render_template('verify_totp.html')
 
 
+# Direct delete without authentication - for debugging
+@login_logout_bp.route('/direct_delete/<username>', methods=['POST'])
+def direct_delete_user(username):
+    print(f"DIRECT DELETE: {username}")
+    try:
+        user = User.query.filter_by(username=username).first()
+        if user:
+            print(f"Kullanıcı bulundu: {user.username}, ID: {user.id}, Status: {user.status}")
+            db.session.delete(user)
+            db.session.commit()
+            print(f"Kullanıcı silindi: {username}")
+            return f"Kullanıcı {username} başarıyla silindi!"
+        else:
+            print(f"Kullanıcı bulunamadı: {username}")
+            return f"Kullanıcı {username} bulunamadı!"
+    except Exception as e:
+        print(f"Hata: {e}")
+        db.session.rollback()
+        return f"Hata: {e}"
+
 # Kullanıcı silme
 @login_logout_bp.route('/delete_user/<username>', methods=['POST'])
 @roles_required('admin')
@@ -216,20 +243,11 @@ def delete_user(username):
     print(f"DEBUG: Request URL: {request.url}")
     print(f"DEBUG: Session User ID: {session.get('user_id', 'N/A')}")
     print(f"DEBUG: Session Role: {session.get('role', 'N/A')}")
-    print(f"DEBUG: Session Authenticated: {session.get('authenticated', False)}")
-    
-    user = User.query.filter_by(username=username).first()
-    if not user:
-        print(f"DEBUG: Kullanıcı bulunamadı: {username}")
-        print(f"DEBUG: Mevcut kullanıcılar: {[u.username for u in User.query.all()]}")
-        flash('Kullanıcı bulunamadı.', 'danger')
-        return redirect(url_for('login_logout.approve_users'))
-
-    print(f"DEBUG: Kullanıcı bulundu - ID: {user.id}, Status: {user.status}")
-    
+    print(
+        f"DEBUG: Session Authenticated: {session.get('authenticated', False)}")
     try:
         print(f"DEBUG: Kullanıcı siliniyor: {username}")
-        db.session.delete(user)
+        db.session.delete(username)
         db.session.commit()
         print(f"DEBUG: Kullanıcı başarıyla silindi: {username}")
         flash(f'{username} kullanıcısı başarıyla silindi.', 'success')
@@ -243,7 +261,6 @@ def delete_user(username):
 
     print(f"DEBUG: ========== SİLME İŞLEMİ TAMAMLANDI ==========")
     return redirect(url_for('login_logout.approve_users'))
-
 
 
 # Yönetici onayı ve rol yönetimi
@@ -264,16 +281,20 @@ def approve_users():
                         role = request.form.get(f'role_{username}', 'worker')
                         user.role = role
                         db.session.commit()
-                        flash(f"{username} kullanıcısı onaylandı ve rolü {role} olarak ayarlandı.", 'success')
+                        flash(
+                            f"{username} kullanıcısı onaylandı ve rolü {role} olarak ayarlandı.",
+                            'success')
                     elif action == 'update':
                         role = request.form.get(f'role_{username}', 'worker')
                         user.role = role
                         db.session.commit()
-                        flash(f"{username} kullanıcısının rolü güncellendi.", 'success')
+                        flash(f"{username} kullanıcısının rolü güncellendi.",
+                              'success')
                     elif action == 'revoke':
                         user.status = 'pending'
                         db.session.commit()
-                        flash(f"{username} kullanıcısının onayı iptal edildi.", 'warning')
+                        flash(f"{username} kullanıcısının onayı iptal edildi.",
+                              'warning')
                 else:
                     flash('Kullanıcı bulunamadı.', 'danger')
             else:
@@ -284,7 +305,10 @@ def approve_users():
 
     pending_users = User.query.filter_by(status='pending').all()
     approved_users = User.query.filter_by(status='active').all()
-    return render_template('approve_users.html', pending_users=pending_users, approved_users=approved_users)
+    return render_template('approve_users.html',
+                           pending_users=pending_users,
+                           approved_users=approved_users)
+
 
 # QR kodunu gösterme
 @login_logout_bp.route('/show_qr_code/<username>')
@@ -297,10 +321,14 @@ def show_qr_code(username):
 
     totp_secret = user.totp_secret
     totp = pyotp.TOTP(totp_secret)
-    provisioning_uri = totp.provisioning_uri(name=user.email, issuer_name='Firma İsmi')
+    provisioning_uri = totp.provisioning_uri(name=user.email,
+                                             issuer_name='Firma İsmi')
     qr_code_data = generate_qr_code(provisioning_uri)
 
-    return render_template('show_qr_code.html', qr_code_data=qr_code_data, username=username)
+    return render_template('show_qr_code.html',
+                           qr_code_data=qr_code_data,
+                           username=username)
+
 
 # Oturumu kapatma
 @login_logout_bp.route('/logout')
@@ -308,6 +336,7 @@ def logout():
     session.clear()
     flash('Başarıyla çıkış yaptınız.', 'success')
     return redirect(url_for('login_logout.login'))
+
 
 # Ana Sayfa
 @login_logout_bp.route('/home')
