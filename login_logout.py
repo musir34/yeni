@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, Blueprint
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from datetime import datetime
@@ -209,13 +210,23 @@ def verify_totp():
 @login_logout_bp.route('/delete_user/<username>', methods=['POST'])
 @roles_required('admin')
 def delete_user(username):
-    print(f"DEBUG: Kullanıcı silme isteği alındı: {username}")
+    print(f"DEBUG: ========== KULLANICI SİLME İSTEĞİ ==========")
+    print(f"DEBUG: Username: {username}")
+    print(f"DEBUG: Request Method: {request.method}")
+    print(f"DEBUG: Request URL: {request.url}")
+    print(f"DEBUG: Session User ID: {session.get('user_id', 'N/A')}")
+    print(f"DEBUG: Session Role: {session.get('role', 'N/A')}")
+    print(f"DEBUG: Session Authenticated: {session.get('authenticated', False)}")
+    
     user = User.query.filter_by(username=username).first()
     if not user:
         print(f"DEBUG: Kullanıcı bulunamadı: {username}")
+        print(f"DEBUG: Mevcut kullanıcılar: {[u.username for u in User.query.all()]}")
         flash('Kullanıcı bulunamadı.', 'danger')
         return redirect(url_for('login_logout.approve_users'))
 
+    print(f"DEBUG: Kullanıcı bulundu - ID: {user.id}, Status: {user.status}")
+    
     try:
         print(f"DEBUG: Kullanıcı siliniyor: {username}")
         db.session.delete(user)
@@ -224,9 +235,13 @@ def delete_user(username):
         flash(f'{username} kullanıcısı başarıyla silindi.', 'success')
     except Exception as e:
         print(f"DEBUG: Kullanıcı silme hatası: {e}")
+        print(f"DEBUG: Exception type: {type(e)}")
+        import traceback
+        print(f"DEBUG: Traceback: {traceback.format_exc()}")
         db.session.rollback()
         flash(f'Kullanıcı silinirken bir hata oluştu: {e}', 'danger')
 
+    print(f"DEBUG: ========== SİLME İŞLEMİ TAMAMLANDI ==========")
     return redirect(url_for('login_logout.approve_users'))
 
 
