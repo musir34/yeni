@@ -194,9 +194,10 @@
             const height = parseInt(document.getElementById('labelHeight').value);
             const canvas = document.getElementById('labelCanvas');
             
-            // Convert mm to pixels (assuming 4px per mm for display)
-            const displayWidth = width * 4;
-            const displayHeight = height * 2;
+            // Sabit bir display scale kullan - 1mm = 3.78px (96 DPI'da)
+            const displayScale = 3.78;
+            const displayWidth = width * displayScale;
+            const displayHeight = height * displayScale;
             
             canvas.style.width = displayWidth + 'px';
             canvas.style.height = displayHeight + 'px';
