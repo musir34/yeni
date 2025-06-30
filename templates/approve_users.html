@@ -151,8 +151,8 @@
                                 </form>
                             </td>
                             <td>
-                                <form method="POST" action="{{ url_for('login_logout.delete_user', username=user.username) }}" style="display:inline;">
-                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Bu kullanıcıyı silmek istediğinize emin misiniz?')">
+                                <form method="POST" action="{{ url_for('login_logout.delete_user', username=user.username) }}" style="display:inline;" onsubmit="console.log('Silme formu gönderiliyor:', '{{ user.username }}');">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="console.log('Sil butonu tıklandı:', '{{ user.username }}'); return confirm('Bu kullanıcıyı silmek istediğinize emin misiniz?')">
                                         <i class="fas fa-trash-alt me-1"></i> Sil
                                     </button>
                                 </form>
