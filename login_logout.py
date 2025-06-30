@@ -221,17 +221,27 @@ def direct_delete_user(username):
         user = User.query.filter_by(username=username).first()
         if user:
             print(f"Kullanıcı bulundu: {user.username}, ID: {user.id}, Status: {user.status}")
+            
+            # İlk önce user_logs tablosundaki ilişkili kayıtları sil
+            from models import UserLog
+            UserLog.query.filter_by(user_id=user.id).delete()
+            print(f"Kullanıcının log kayıtları silindi")
+            
+            # Sonra kullanıcıyı sil
             db.session.delete(user)
             db.session.commit()
             print(f"Kullanıcı silindi: {username}")
-            return f"Kullanıcı {username} başarıyla silindi!"
+            flash(f'{username} kullanıcısı başarıyla silindi.', 'success')
+            return redirect(url_for('login_logout.approve_users'))
         else:
             print(f"Kullanıcı bulunamadı: {username}")
-            return f"Kullanıcı {username} bulunamadı!"
+            flash(f'Kullanıcı {username} bulunamadı.', 'danger')
+            return redirect(url_for('login_logout.approve_users'))
     except Exception as e:
         print(f"Hata: {e}")
         db.session.rollback()
-        return f"Hata: {e}"
+        flash(f'Kullanıcı silinirken hata: {e}', 'danger')
+        return redirect(url_for('login_logout.approve_users'))
 
 # Kullanıcı silme
 @login_logout_bp.route('/delete_user/<username>', methods=['POST'])
@@ -243,11 +253,26 @@ def delete_user(username):
     print(f"DEBUG: Request URL: {request.url}")
     print(f"DEBUG: Session User ID: {session.get('user_id', 'N/A')}")
     print(f"DEBUG: Session Role: {session.get('role', 'N/A')}")
-    print(
-        f"DEBUG: Session Authenticated: {session.get('authenticated', False)}")
+    print(f"DEBUG: Session Authenticated: {session.get('authenticated', False)}")
+    
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        print(f"DEBUG: Kullanıcı bulunamadı: {username}")
+        flash('Kullanıcı bulunamadı.', 'danger')
+        return redirect(url_for('login_logout.approve_users'))
+
+    print(f"DEBUG: Kullanıcı bulundu - ID: {user.id}, Status: {user.status}")
+    
     try:
         print(f"DEBUG: Kullanıcı siliniyor: {username}")
-        db.session.delete(username)
+        
+        # İlk önce user_logs tablosundaki ilişkili kayıtları sil
+        from models import UserLog
+        deleted_logs = UserLog.query.filter_by(user_id=user.id).delete()
+        print(f"DEBUG: {deleted_logs} log kaydı silindi")
+        
+        # Sonra kullanıcıyı sil
+        db.session.delete(user)
         db.session.commit()
         print(f"DEBUG: Kullanıcı başarıyla silindi: {username}")
         flash(f'{username} kullanıcısı başarıyla silindi.', 'success')
