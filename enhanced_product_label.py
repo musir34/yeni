@@ -563,11 +563,18 @@ def generate_advanced_label_preview_new():
             default_font = ImageFont.load_default()
             bold_font = ImageFont.load_default()
         
-        # Elementleri çiz
+        # Elementleri çiz - Koordinat sistemi düzeltmesi
         for element in elements:
             element_type = element.get('type')
-            x = int(element.get('x', 0) * (width_px / (label_width * 4)))
-            y = int(element.get('y', 0) * (height_px / (label_height * 2)))
+            
+            # Doğrudan koordinat kullanımı - ölçekleme yapmadan
+            raw_x = element.get('x', 0)
+            raw_y = element.get('y', 0)
+            
+            # DPI'ye göre basit ölçeklendirme (96 DPI -> 300 DPI)
+            scale_factor = dpi / 96
+            x = int(raw_x * scale_factor)
+            y = int(raw_y * scale_factor)
             
             # Ürün-spesifik alanlar
             if element_type == 'title':
