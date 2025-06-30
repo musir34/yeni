@@ -83,6 +83,9 @@
                 <button class="btn btn-primary" onclick="generatePreview()">
                     <i class="fas fa-eye"></i> Önizleme
                 </button>
+                <button class="btn btn-danger" onclick="printLabels()">
+                    <i class="fas fa-print"></i> Yazdır
+                </button>
                 <button class="btn btn-warning" onclick="exportLabel()">
                     <i class="fas fa-download"></i> Dışa Aktar
                 </button>
@@ -777,6 +780,73 @@
             .catch(error => {
                 console.error('Error:', error);
                 alert('Önizleme oluşturulurken hata oluştu');
+            });
+        }
+
+        function printLabels() {
+            // Yazdırma için kullanıcıdan ürün bilgileri iste
+            const productData = prompt("Ürün bilgilerini girin (model_kodu,renk,beden,barkod formatında):");
+            if (!productData) return;
+            
+            const parts = productData.split(',');
+            if (parts.length < 4) {
+                alert('Lütfen model_kodu,renk,beden,barkod formatında girin');
+                return;
+            }
+            
+            const labelData = {
+                width: parseInt(document.getElementById('labelWidth').value),
+                height: parseInt(document.getElementById('labelHeight').value),
+                elements: labelElements.map(el => {
+                    const domElement = document.getElementById(el.id);
+                    return {
+                        ...el,
+                        x: domElement ? parseInt(domElement.style.left || 0) : el.x,
+                        y: domElement ? parseInt(domElement.style.top || 0) : el.y,
+                        fontSize: el.fontSize || el.properties?.fontSize || '14px',
+                        html: el.html || el.properties?.text || domElement?.innerHTML || 'Text'
+                    };
+                })
+            };
+            
+            const printData = {
+                labels: [{
+                    model_code: parts[0].trim(),
+                    color: parts[1].trim(),
+                    size: parts[2].trim(),
+                    barcode: parts[3].trim(),
+                    quantity: 1
+                }],
+                design: labelData,
+                label_width: labelData.width,  // Kullanıcının belirlediği boyut
+                label_height: labelData.height, // Kullanıcının belirlediği boyut
+                paper_size: 'custom',  // Custom boyut kullan
+                page_orientation: 'portrait',
+                labels_per_row: 1,  // Tek etiket yazdır
+                labels_per_col: 1,  // Tek etiket yazdır
+                top_margin: 10,
+                left_margin: 10,
+                horizontal_gap: 0,
+                vertical_gap: 0,
+                print_quality: 300
+            };
+            
+            fetch('/enhanced_product_label/api/print_multiple_labels', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(printData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.open(data.image_url, '_blank');
+                } else {
+                    alert('Yazdırma hazırlanırken hata oluştu: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Yazdırma hatası oluştu');
             });
         }
 

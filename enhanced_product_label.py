@@ -800,6 +800,11 @@ def print_multiple_labels():
                 page_width, page_height = 279, 216
             else:
                 page_width, page_height = 216, 279
+        elif paper_size == 'custom':
+            # Custom boyut - etiket boyutuna göre sayfa oluştur
+            # Etiket boyutuna kenar boşlukları ekleyerek sayfa boyutunu hesapla
+            page_width = label_width + (left_margin * 2) + 10  # 10mm extra margin
+            page_height = label_height + (top_margin * 2) + 10  # 10mm extra margin
         else:
             page_width, page_height = 210, 297  # Varsayılan A4 dikey
         
