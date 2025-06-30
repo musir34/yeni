@@ -209,16 +209,21 @@ def verify_totp():
 @login_logout_bp.route('/delete_user/<username>', methods=['POST'])
 @roles_required('admin')
 def delete_user(username):
+    print(f"DEBUG: Kullanıcı silme isteği alındı: {username}")
     user = User.query.filter_by(username=username).first()
     if not user:
+        print(f"DEBUG: Kullanıcı bulunamadı: {username}")
         flash('Kullanıcı bulunamadı.', 'danger')
         return redirect(url_for('login_logout.approve_users'))
 
     try:
+        print(f"DEBUG: Kullanıcı siliniyor: {username}")
         db.session.delete(user)
         db.session.commit()
+        print(f"DEBUG: Kullanıcı başarıyla silindi: {username}")
         flash(f'{username} kullanıcısı başarıyla silindi.', 'success')
     except Exception as e:
+        print(f"DEBUG: Kullanıcı silme hatası: {e}")
         db.session.rollback()
         flash(f'Kullanıcı silinirken bir hata oluştu: {e}', 'danger')
 
