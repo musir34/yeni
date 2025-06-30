@@ -117,47 +117,50 @@
         <!-- Onay Bekleyen Kullanıcılar -->
         <h4>Onay Bekleyen Kullanıcılar</h4>
         {% if pending_users %}
-            <form method="POST" action="{{ url_for('login_logout.approve_users') }}">
-                <table class="table table-striped table-hover">
-                    <thead class="table-dark">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Kullanıcı Adı</th>
+                        <th>Ad</th>
+                        <th>Soyad</th>
+                        <th>Rol</th>
+                        <th>Onay</th>
+                        <th>SİL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in pending_users %}
                         <tr>
-                            <th>Kullanıcı Adı</th>
-                            <th>Ad</th>
-                            <th>Soyad</th>
-                            <th>Rol</th>
-                            <th>Onay</th>
-                            <th>SİL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for user in pending_users %}
-                            <tr>
-                                <td>{{ user.username }}</td>
-                                <td>{{ user.first_name }}</td>
-                                <td>{{ user.last_name }}</td>
-                                <td>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.first_name }}</td>
+                            <td>{{ user.last_name }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('login_logout.approve_users') }}" style="display:inline;" id="roleForm_{{ user.username }}">
                                     <select name="role_{{ user.username }}" class="form-select">
                                         <option value="worker" {% if user.role == 'worker' %}selected{% endif %}>Çalışan</option>
                                         <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Yönetici</option>
                                     </select>
-                                </td>
-                                <td>
-                                    <button type="submit" name="action" value="approve_{{ user.username }}" class="btn btn-success btn-sm">
+                                </form>
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ url_for('login_logout.approve_users') }}" style="display:inline;">
+                                    <input type="hidden" name="role_{{ user.username }}" value="worker" id="hiddenRole_{{ user.username }}">
+                                    <button type="submit" name="action" value="approve_{{ user.username }}" class="btn btn-success btn-sm" onclick="syncRole('{{ user.username }}')">
                                         <i class="fas fa-check-circle me-1"></i> Onayla
                                     </button>
-                                </td>
-                                <td>
-                                    <form method="POST" action="{{ url_for('login_logout.delete_user', username=user.username) }}" style="display:inline;">
-                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Bu kullanıcıyı silmek istediğinize emin misiniz?')">
-                                            <i class="fas fa-trash-alt me-1"></i> Sil
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </form>
+                                </form>
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ url_for('login_logout.delete_user', username=user.username) }}" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Bu kullanıcıyı silmek istediğinize emin misiniz?')">
+                                        <i class="fas fa-trash-alt me-1"></i> Sil
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         {% else %}
             <p class="text-center">Onay bekleyen kullanıcı yok.</p>
         {% endif %}
@@ -252,8 +255,29 @@
             }, 2000);
         }
 
+        // Rol senkronizasyon fonksiyonu
+        function syncRole(username) {
+            const roleSelect = document.querySelector(`select[name="role_${username}"]`);
+            const hiddenInput = document.getElementById(`hiddenRole_${username}`);
+            if (roleSelect && hiddenInput) {
+                hiddenInput.value = roleSelect.value;
+            }
+        }
+
         // Form Gönderimlerini Yönetme
         document.addEventListener('DOMContentLoaded', function() {
+            // Rol değişikliklerini dinle
+            const roleSelects = document.querySelectorAll('select[name^="role_"]');
+            roleSelects.forEach(function(select) {
+                select.addEventListener('change', function() {
+                    const username = this.name.replace('role_', '');
+                    const hiddenInput = document.getElementById(`hiddenRole_${username}`);
+                    if (hiddenInput) {
+                        hiddenInput.value = this.value;
+                    }
+                });
+            });
+
             // Form gönderimlerini kontrol et
             const forms = document.querySelectorAll('form');
             forms.forEach(function(form) {
