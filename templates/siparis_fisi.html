@@ -383,7 +383,10 @@
     </style>
 </head>
 <body>
-<div class="header">
+<!-- Top Navigation Menu -->
+{% include 'includes/top_menu.html' %}
+
+<div class="header" style="margin-top: 80px;">
     <div class="logo-container">
         <img class="logo" src="{{ url_for('static', filename='logo/gullu.png') }}" alt="Logo">
         <h1>Sipariş Fişleri</h1>

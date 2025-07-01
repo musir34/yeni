@@ -155,6 +155,7 @@ This is a comprehensive e-commerce management system built for a shoe retailer c
 - June 30, 2025. Removed flash messages/notification banner from product list page to clean up interface
 - July 01, 2025. Removed all success notifications and alerts from Enhanced Product Label system. Disabled showAlert function and replaced all success messages with silent operation for cleaner user experience
 - July 01, 2025. Fixed Product List page flash messages issue by removing all remaining flash message CSS styles and backend flash message calls from get_products.py routes. Eliminated unused CSS for flash-messages classes and removed flash messages from product_list, search_products, update_products, and update_exchange_rates routes for completely clean interface
+- July 01, 2025. Implemented universal top navigation menu across all pages. Created templates/includes/top_menu.html with standardized menu structure including user info, main navigation dropdowns (User Operations, Order Operations, Product Operations, Analytics), and logout functionality. Added to key pages: product_list.html, enhanced_product_label_simple.html, advanced_label_editor.html, base.html (covers all extending templates), siparis_fisi.html, order_list.html, and image_manager.html. All pages now have consistent 80px top margin and unified navigation experience
 
 # User Preferences
 
