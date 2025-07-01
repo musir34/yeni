@@ -1111,7 +1111,7 @@ def create_label_with_design(product_data, design, label_width, label_height):
                     else:
                         font_size = int(font_size_str)
                 
-                font_size = int(font_size * scale_factor)
+                font_size = int(font_size * (dpi / 96))
                 
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
@@ -1121,9 +1121,9 @@ def create_label_with_design(product_data, design, label_width, label_height):
                 draw.text((x, y), size, fill='black', font=font)
                 
             elif element_type == 'qr':
-                # QR boyutu doğrudan ölçeklendirme
+                # QR boyutu doğrudan ölçeklendirme (editör boyutunu DPI'ya ölçekle)
                 qr_size = int(element.get('width', 40))
-                qr_size = int(qr_size * scale_factor)
+                qr_size = int(qr_size * (dpi / 96))
                 qr_data = barcode
                 
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
@@ -1142,7 +1142,7 @@ def create_label_with_design(product_data, design, label_width, label_height):
                     else:
                         font_size = int(font_size_str)
                 
-                font_size = int(font_size * scale_factor)
+                font_size = int(font_size * (dpi / 96))
                 
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
@@ -1156,8 +1156,8 @@ def create_label_with_design(product_data, design, label_width, label_height):
                 # Görsel boyutu doğrudan ölçeklendirme
                 img_width = int(element.get('width', 50))
                 img_height = int(element.get('height', 50))
-                img_width = int(img_width * scale_factor)
-                img_height = int(img_height * scale_factor)
+                img_width = int(img_width * (dpi / 96))
+                img_height = int(img_height * (dpi / 96))
                 
                 # Ürün görseli yükle
                 image_loaded = False
