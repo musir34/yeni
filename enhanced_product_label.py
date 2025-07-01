@@ -445,6 +445,22 @@ def generate_advanced_label_preview():
         label = Image.new('RGB', (max_required_width, height_px), 'white')
         draw = ImageDraw.Draw(label)
         
+        # Etiket sınırlarını çiz (gerçek etiket boyutları)
+        actual_label_width_px = int((label_width / 25.4) * dpi)
+        actual_label_height_px = int((label_height / 25.4) * dpi)
+        
+        # Sınır çizgisi çiz (açık gri, ince çizgi)
+        border_color = (200, 200, 200)  # Açık gri
+        draw.rectangle([0, 0, actual_label_width_px-1, actual_label_height_px-1], 
+                      outline=border_color, width=2)
+        
+        # Eğer canvas gerçek etiket boyutundan büyükse, kesikli çizgi ile genişletilmiş alanı göster
+        if max_required_width > actual_label_width_px:
+            # Kesikli dikey çizgi çiz
+            for y in range(0, actual_label_height_px, 10):
+                draw.line([actual_label_width_px, y, actual_label_width_px, min(y+5, actual_label_height_px)], 
+                         fill=(150, 150, 150), width=1)
+        
         # Font ayarları
         try:
             default_font = ImageFont.truetype("static/fonts/DejaVuSans.ttf", 18)
@@ -668,6 +684,22 @@ def generate_advanced_label_preview_new():
         # Gerekli genişlikte etiket oluştur
         label = Image.new('RGB', (max_required_width, height_px), 'white')
         draw = ImageDraw.Draw(label)
+        
+        # Etiket sınırlarını çiz (gerçek etiket boyutları)
+        actual_label_width_px = int((label_width / 25.4) * dpi)
+        actual_label_height_px = int((label_height / 25.4) * dpi)
+        
+        # Sınır çizgisi çiz (açık gri, ince çizgi)
+        border_color = (200, 200, 200)  # Açık gri
+        draw.rectangle([0, 0, actual_label_width_px-1, actual_label_height_px-1], 
+                      outline=border_color, width=2)
+        
+        # Eğer canvas gerçek etiket boyutundan büyükse, kesikli çizgi ile genişletilmiş alanı göster
+        if max_required_width > actual_label_width_px:
+            # Kesikli dikey çizgi çiz
+            for y in range(0, actual_label_height_px, 10):
+                draw.line([actual_label_width_px, y, actual_label_width_px, min(y+5, actual_label_height_px)], 
+                         fill=(150, 150, 150), width=1)
         
         # Font ayarları
         try:
