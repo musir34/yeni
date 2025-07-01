@@ -48,47 +48,55 @@ def create_qr_with_logo(data, logo_path=None, size=200):
     """
     Logo içeren QR kod oluştur
     """
-    # QR kod oluştur
     try:
-        qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_H,  # Yüksek hata düzeltme
-            box_size=10,
-            border=4,
-        )
-    except (ImportError, AttributeError):
-        # Fallback for different qrcode versions
+        import qrcode
+        logger.info(f"QR kod oluşturuluyor: data={data}, size={size}")
+        
+        # QR kod oluştur - basit yaklaşım
         qr = qrcode.QRCode(
             version=1,
             box_size=10,
             border=4,
         )
-    qr.add_data(data)
-    qr.make(fit=True)
-    
-    # QR kodu PIL Image olarak oluştur
-    qr_img = qr.make_image(fill_color="black", back_color="white").convert('RGB')
-    qr_img = qr_img.resize((size, size), Image.Resampling.LANCZOS)
-    
-    # Logo varsa ortaya ekle
-    if logo_path and os.path.exists(logo_path):
-        try:
-            logo = Image.open(logo_path)
+        qr.add_data(data)
+        qr.make(fit=True)
+        
+        # QR kodu PIL Image olarak oluştur
+        qr_img = qr.make_image(fill_color="black", back_color="white")
+        
+        # RGB'ye çevir
+        if qr_img.mode != 'RGB':
+            qr_img = qr_img.convert('RGB')
             
-            # Logo boyutunu QR kodun 1/5'i kadar yap
-            logo_size = size // 5
-            logo = logo.resize((logo_size, logo_size), Image.Resampling.LANCZOS)
-            
-            # Logo pozisyonu (ortada)
-            logo_pos = ((size - logo_size) // 2, (size - logo_size) // 2)
-            
-            # Logoyu QR kodun üzerine yapıştır
-            qr_img.paste(logo, logo_pos)
-            
-        except Exception as e:
-            logger.warning(f"Logo eklenirken hata: {e}")
-    
-    return qr_img
+        # Boyutlandır
+        qr_img = qr_img.resize((size, size), Image.Resampling.LANCZOS)
+        
+        logger.info(f"QR kod başarıyla oluşturuldu: {qr_img.size}")
+        
+        # Logo varsa ortaya ekle
+        if logo_path and os.path.exists(logo_path):
+            try:
+                logo = Image.open(logo_path)
+                
+                # Logo boyutunu QR kodun 1/5'i kadar yap
+                logo_size = size // 5
+                logo = logo.resize((logo_size, logo_size), Image.Resampling.LANCZOS)
+                
+                # Logo pozisyonu (ortada)
+                logo_pos = ((size - logo_size) // 2, (size - logo_size) // 2)
+                
+                # Logoyu QR kodun üzerine yapıştır
+                qr_img.paste(logo, logo_pos)
+                logger.info(f"Logo eklendi: {logo_size}x{logo_size}")
+                
+            except Exception as e:
+                logger.warning(f"Logo eklenirken hata: {e}")
+        
+        return qr_img
+        
+    except Exception as e:
+        logger.error(f"QR kod oluşturma hatası: {e}")
+        return None
 
 def create_product_label(barcode, model_id, color, size, label_width=100, label_height=50, settings=None):
     """
@@ -465,10 +473,23 @@ def generate_advanced_label_preview():
                 qr_size = int((qr_size_mm / 25.4) * dpi)  # mm'yi DPI'ya çevir
                 qr_data = properties.get('data', 'sample')
                 
+                # Debug bilgisi
+                logger.info(f"QR Debug (func1): px={qr_size_px}, mm={qr_size_mm}, final_size={qr_size}, pos=({x},{y})")
+                
+                # Minimum QR boyutu kontrolü - daha büyük minimum
+                if qr_size < 100:  # 100 pixel minimum
+                    qr_size = 100
+                    logger.warning(f"QR boyutu çok küçük, 100px'e yükseltildi")
+                
                 # QR kod oluştur - canvas genişliği zaten başta hesaplandı
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
                 qr_img = create_qr_with_logo(qr_data, logo_path if os.path.exists(logo_path) else None, qr_size)
-                label.paste(qr_img, (x, y))
+                
+                if qr_img:
+                    label.paste(qr_img, (x, y))
+                    logger.info(f"QR kod başarıyla yapıştırıldı (func1): boyut={qr_size}, pos=({x},{y})")
+                else:
+                    logger.error("QR kod oluşturulamadı (func1)!")
                 
             elif element_type == 'image':
                 # Image boyutları editörden pixel cinsinden alıp mm'ye çevirip DPI'ya ölçekle
@@ -690,13 +711,28 @@ def generate_advanced_label_preview_new():
                 qr_size_px = element.get('width', 40)  # editörde pixel cinsinden
                 qr_size_mm = qr_size_px / 4  # 4px = 1mm
                 qr_size = int((qr_size_mm / 25.4) * dpi)  # mm'yi DPI'ya çevir
+                
+                # Debug bilgisi
+                logger.info(f"QR Debug: px={qr_size_px}, mm={qr_size_mm}, final_size={qr_size}, pos=({x},{y})")
+                
                 # QR kod direkt barkodu içermeli
                 qr_data = sample_product['barcode']
+                
+                # Minimum QR boyutu kontrolü
+                if qr_size < 50:  # 50 pixel minimum
+                    qr_size = 50
+                    logger.warning(f"QR boyutu çok küçük, 50px'e yükseltildi")
                 
                 # QR kod oluştur - canvas genişliği zaten başta hesaplandı
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
                 qr_img = create_qr_with_logo(qr_data, logo_path if os.path.exists(logo_path) else None, qr_size)
-                label.paste(qr_img, (x, y))
+                
+                # QR kod başarıyla oluştu mu kontrol et
+                if qr_img:
+                    label.paste(qr_img, (x, y))
+                    logger.info(f"QR kod başarıyla yapıştırıldı: boyut={qr_size}, pos=({x},{y})")
+                else:
+                    logger.error("QR kod oluşturulamadı!")
                 
             elif element_type == 'barcode':
                 # Barkod alanı sadece rakam gösterecek
