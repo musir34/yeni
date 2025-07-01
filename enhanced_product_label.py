@@ -1201,14 +1201,36 @@ def create_label_with_design(product_data, design, label_width, label_height):
                 draw.text((x, y), size, fill='black', font=font)
                 
             elif element_type == 'qr':
-                # QR boyutu doğrudan ölçeklendirme (editör boyutunu DPI'ya ölçekle)
-                qr_size = int(element.get('width', 40))
-                qr_size = int(qr_size * (dpi / 96))
+                # QR boyutu properties'den al, yoksa element'den, yoksa varsayılan
+                qr_size = 50  # Varsayılan boyut
+                
+                # Properties'den boyut alma (öncelikli)
+                if 'properties' in element and 'size' in element['properties']:
+                    qr_size = int(element['properties']['size'])
+                elif 'size' in element:
+                    qr_size = int(element['size'])
+                elif 'width' in element:
+                    qr_size = int(element['width'])
+                
+                # Editör boyutunu mm'ye çevir (4px = 1mm) sonra DPI'ya ölçekle
+                qr_size_mm = qr_size / 4  # 4px = 1mm
+                qr_size = int((qr_size_mm / 25.4) * dpi)  # mm'den DPI'ya
+                
+                # Minimum boyut kontrolü
+                if qr_size < 100:
+                    qr_size = 100
+                
                 qr_data = barcode
+                logger.info(f"A4 QR Debug: element_size={element.get('size', 'N/A')}, final_size={qr_size}, data={qr_data}")
                 
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
                 qr_img = create_qr_with_logo(qr_data, logo_path if os.path.exists(logo_path) else None, qr_size)
-                label.paste(qr_img, (x, y))
+                
+                if qr_img:
+                    label.paste(qr_img, (x, y))
+                    logger.info(f"A4 QR kod başarıyla eklendi: boyut={qr_img.size}, pozisyon=({x},{y})")
+                else:
+                    logger.error("A4 QR kod oluşturulamadı")
                 
             elif element_type == 'barcode':
                 # Barkod elementi - sadece rakam olarak göster
