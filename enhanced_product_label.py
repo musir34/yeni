@@ -405,6 +405,17 @@ def generate_advanced_label_preview():
         label_height = int(data.get('height', 50))
         elements = data.get('elements', [])
         
+        # A4 ile tutarlılık için etiket boyutlarını kontrol et
+        product_data = data.get('product_data', {})
+        is_a4_preview = data.get('is_a4_preview', False)  # A4 önizlemesi mi?
+        
+        # Eğer A4 önizlemesi ise A4 boyutlarını kullan
+        if is_a4_preview:
+            # A4 sabit boyutları (Product Label ile aynı)
+            label_width = 64.67  # A4_FIXED_CONFIG boyutları
+            label_height = 37.92
+            logger.info(f"A4 önizleme modu: boyutlar {label_width}x{label_height}mm")
+        
         # Etiket boyutları (mm'den pixel'e çevir, 300 DPI)
         dpi = 300
         width_px = int((label_width / 25.4) * dpi)
@@ -434,17 +445,34 @@ def generate_advanced_label_preview():
             default_font = ImageFont.load_default()
             bold_font = ImageFont.load_default()
         
+        # A4 ölçeklendirme hesaplaması (A4 yazdırma ile tutarlılık için)
+        editor_default_width = 100  # mm - editör varsayılan boyutu
+        editor_default_height = 50  # mm
+        
+        # Ölçeklendirme oranları hesapla (sadece A4 önizlemesi için)
+        if is_a4_preview:
+            scale_x = label_width / editor_default_width
+            scale_y = label_height / editor_default_height
+            logger.info(f"Önizleme A4 ölçeklendirme: x={scale_x:.2f}, y={scale_y:.2f}")
+        else:
+            scale_x = 1.0  # Normal önizleme için ölçeklendirme yok
+            scale_y = 1.0
+        
         # Elementleri çiz
         for element in elements:
             element_type = element.get('type')
             
-            # Tutarlı koordinat dönüşümü: editör 4px = 1mm, çıktı da aynı oranda
-            # Editördeki pixel koordinatları mm'ye çevir, sonra çıktı DPI'sına göre ölçekle
-            editor_x_mm = element.get('x', 0) / 4  # 4px = 1mm editörde
+            # Editör koordinatlarını mm'ye çevir (4px = 1mm)
+            editor_x_mm = element.get('x', 0) / 4
             editor_y_mm = element.get('y', 0) / 4
             
-            x = int((editor_x_mm / 25.4) * dpi)  # mm'yi çıktı DPI'sına çevir
-            y = int((editor_y_mm / 25.4) * dpi)
+            # A4 modunda ölçeklendirme uygula
+            scaled_x_mm = editor_x_mm * scale_x
+            scaled_y_mm = editor_y_mm * scale_y
+            
+            # mm'yi çıktı DPI'sına çevir
+            x = int((scaled_x_mm / 25.4) * dpi)
+            y = int((scaled_y_mm / 25.4) * dpi)
             
             properties = element.get('properties', {})
             
@@ -467,10 +495,18 @@ def generate_advanced_label_preview():
                 draw.text((x, y), text, fill=color, font=font)
                 
             elif element_type == 'qr':
-                # QR boyutu editörden pixel cinsinden alıp mm'ye çevirip DPI'ya ölçekle
+                # QR boyutu editörden pixel cinsinden alıp mm'ye çevirip ölçeklendir
                 qr_size_px = properties.get('size', 50)  # editörde pixel cinsinden
                 qr_size_mm = qr_size_px / 4  # 4px = 1mm
-                qr_size = int((qr_size_mm / 25.4) * dpi)  # mm'yi DPI'ya çevir
+                
+                # A4 modunda QR boyutunu da ölçeklendir
+                if is_a4_preview:
+                    scale_factor = min(scale_x, scale_y)  # Aspect ratio korunur
+                    scaled_qr_size_mm = qr_size_mm * scale_factor
+                else:
+                    scaled_qr_size_mm = qr_size_mm
+                    
+                qr_size = int((scaled_qr_size_mm / 25.4) * dpi)  # mm'yi DPI'ya çevir
                 # QR verisi - editörden gelen data
                 qr_data = properties.get('data', 'sample')
                 
