@@ -493,6 +493,7 @@ padding-right: 2.25rem;
 <body>
 <canvas id="weatherCanvas"></canvas>
 
+    <!--Üst menü kısmı -->
 <div class="user-info">
 <img src="static/logo/gullu.png" alt="Güllü Shoes Logo">
 Giriş Yapan: <strong>{{ session['first_name'] }} {{ session['last_name'] }}</strong>
@@ -515,8 +516,6 @@ Kullanıcı İşlemleri
 {% endif %}
 </div>
 </div>
-
-
 <div class="dropdown">
 <button class="btn btn-primary dropdown-toggle" type="button" id="siparisMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 Sipariş İşlemleri
@@ -527,7 +526,6 @@ Sipariş İşlemleri
 <a class="dropdown-item" href="{{ url_for('degisim_talep') }}">Değişim Talepleri</a>
 </div>
 </div>
-
 <div class="dropdown">
 <button class="btn btn-success dropdown-toggle" type="button" id="urunMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 Ürün İşlemleri
@@ -539,7 +537,6 @@ Sipariş İşlemleri
 <a class="dropdown-item" href="{{ url_for('iade_listesi') }}">İade Listesi</a>
 </div>
 </div>
-
 <div class="dropdown">
 <button class="btn btn-info dropdown-toggle" type="button" id="analizMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 Analizler
@@ -552,18 +549,14 @@ Analizler
 <a class="dropdown-item" href="/intelligent-stock/">🧠 Stok Zekası Paneli</a> <!-- Bu satırı ekledim -->
 </div>
 </div>
-
 <div class="custom-control custom-switch">
 <input type="checkbox" class="custom-control-input" id="autoShipToggle">
 <label class="custom-control-label" for="autoShipToggle">Otomatik Gönderim</label>
 </div>
 </div>
-
 <div id="autoShipMessage">
 <strong>Otomatik Gönderim Aktif:</strong> Kargo kodu: <span id="autoShipBarcode"></span>
 </div>
-
-
 <div class="container">
 <form method="POST" action="{{ url_for('confirm_packing') }}" id="packingForm" autocomplete="off">
 <input type="hidden" name="order_number" value="{{ order_number }}">
