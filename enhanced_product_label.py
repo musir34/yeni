@@ -1328,8 +1328,25 @@ def create_label_with_design(product_data, design, label_width, label_height, is
                 qr_img = create_qr_with_logo(qr_data, logo_path if os.path.exists(logo_path) else None, qr_size)
                 
                 if qr_img:
-                    label.paste(qr_img, (x, y))
-                    logger.info(f"A4 QR kod başarıyla eklendi: boyut={qr_img.size}, pozisyon=({x},{y})")
+                    # Etiket boyutlarını kontrol et
+                    label_size = label.size
+                    logger.info(f"A4 etiket boyutu: {label_size}")
+                    logger.info(f"A4 QR pozisyon kontrolü: ({x},{y}) + {qr_img.size} etiket içinde mi?")
+                    
+                    # Sınır kontrolü
+                    if x + qr_img.size[0] <= label_size[0] and y + qr_img.size[1] <= label_size[1]:
+                        label.paste(qr_img, (x, y))
+                        logger.info(f"A4 QR kod başarıyla eklendi: boyut={qr_img.size}, pozisyon=({x},{y})")
+                    else:
+                        logger.error(f"A4 QR kod etiket sınırları dışında: QR=({x},{y})+{qr_img.size}, etiket={label_size}")
+                        # Etiket içine sığacak şekilde pozisyonu ayarla
+                        adjusted_x = min(x, label_size[0] - qr_img.size[0])
+                        adjusted_y = min(y, label_size[1] - qr_img.size[1])
+                        if adjusted_x >= 0 and adjusted_y >= 0:
+                            label.paste(qr_img, (adjusted_x, adjusted_y))
+                            logger.info(f"A4 QR kod ayarlanmış pozisyonda eklendi: ({adjusted_x},{adjusted_y})")
+                        else:
+                            logger.error("A4 QR kod hiç sığmıyor!")
                 else:
                     logger.error("A4 QR kod oluşturulamadı")
                 
