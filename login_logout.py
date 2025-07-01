@@ -82,8 +82,9 @@ def generate_qr_code(data):
     return img_str
 
 
-# Kullanıcı kaydı
+# Kullanıcı kaydı - Sadece yöneticiler erişebilir
 @login_logout_bp.route('/register', methods=['GET', 'POST'])
+@roles_required('admin')
 def register():
     if request.method == 'POST':
         first_name = request.form['first_name']
@@ -95,8 +96,6 @@ def register():
         existing_user = User.query.filter((User.username == username)
                                           | (User.email == email)).first()
         if existing_user:
-            flash('Bu kullanıcı adı veya e-posta zaten kullanılıyor!',
-                  'danger')
             return redirect(url_for('login_logout.register'))
 
         hashed_password = generate_password_hash(password)
@@ -113,7 +112,6 @@ def register():
 
         db.session.add(new_user)
         db.session.commit()
-        flash('Kayıt başarılı! Hesabınızın onaylanmasını bekleyin.', 'info')
         return redirect(url_for('login_logout.login'))
     return render_template('register.html')
 
