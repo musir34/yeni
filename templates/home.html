@@ -867,8 +867,7 @@ const packingForm = document.getElementById('packingForm'); // Form elementi
 const productCount = {{ products|length }};
 let barkodDogruList = new Array(productCount).fill(false);
 
-let printTimer = null; // Yazdırma timerı
-let confirmTimer = null; // Onay timerı
+// Otomatik timer tanımlamaları kaldırıldı
 let messageTimer = null; // Mesaj gizleme timerı
 
 // ### LOCAL STORAGE: Toggle durumunu yükle ###
@@ -880,32 +879,17 @@ if (savedToggleState !== null) {
 // ### LOCAL STORAGE: Yükleme Bitti ###
 
 
-// Tüm timerları ve mesajı temizleme fonksiyonu
-function clearAllTimersAndHideMessage() {
-if (printTimer) clearTimeout(printTimer);
-if (confirmTimer) clearTimeout(confirmTimer);
-if (messageTimer) clearTimeout(messageTimer);
-autoShipMessage.classList.remove('show');
-}
+// Timer fonksiyonları kaldırıldı - manuel kullanım
 
-// Otomatik Gönderim mesajını göster
-function showAutoShipMessage() {
-// clearMessageTimerAndHide(); // Sadece mesaj timerını temizlemek yerine tüm timerları temizledik yukarıda
-autoShipBarcodeSpan.innerText = shippingBarcode;
-autoShipMessage.classList.add('show');
-// Mesajı 3 saniye sonra gizle
-messageTimer = setTimeout(() => {
-autoShipMessage.classList.remove('show');
-}, 3000);
-}
+// Otomatik gönderim fonksiyonları kaldırıldı
 
 
 // Butonların durumunu güncelle ve timerları ayarla
 function updateButtonStates() {
 const allBarcodesMatched = barkodDogruList.every(Boolean);
 
-// Önceki tüm timerları temizle (Yeni bir set başlatılacak veya hiç başlatılmayacak)
-clearAllTimersAndHideMessage();
+// Önceki tüm timerları temizle
+clearAllTimers();
 
 if (allBarcodesMatched) {
 // Tüm barkodlar doğruysa butonları aktifleştir
@@ -1081,12 +1065,7 @@ input.addEventListener('focus', function() {
 }); // barkodInputs.forEach bitişi
 
 
-// ### LOCAL STORAGE: Toggle durumu değiştiğinde kaydet ###
-autoShipToggle.addEventListener('change', function() {
-localStorage.setItem('autoShipEnabled', autoShipToggle.checked.toString());
-updateButtonStates(); // Toggle durumu değiştiğinde mevcut barkod durumuna göre aksiyonu ayarla
-});
-// ### LOCAL STORAGE: Kaydetme Bitti ###
+// Otomatik gönderim toggle event listener kaldırıldı
 
 
 // Sayfa yüklendiğinde buton durumunu ayarla (toggle durumu localStorage'dan yüklendiği için doğru olacak)
