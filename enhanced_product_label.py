@@ -1230,11 +1230,23 @@ def create_label_with_design(product_data, design, label_width, label_height, is
             # Editörden gelen koordinatları mm'ye çevir
             # Editörde canvas boyutu: width*4 px = width mm 
             # Yani 100mm etiket için 400px canvas, 1px = 0.25mm
-            editor_x_mm = element.get('x', 0) / 4  # px'i mm'ye çevir (4px = 1mm)
-            editor_y_mm = element.get('y', 0) / 4
+            # Editör koordinatlarını normalize et
+            editor_x_px = element.get('x', 0)
+            editor_y_px = element.get('y', 0)
             
-            # Debug: koordinat dönüşümünü kontrol et
-            logger.info(f"A4 Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})px -> mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm")
+            # Editör canvas boyutlarını tespit et (1mm = 4px)
+            editor_canvas_width = label_width * 4
+            editor_canvas_height = label_height * 4
+            
+            # Koordinatları oransal değer olarak normalize et
+            norm_x = editor_x_px / editor_canvas_width if editor_canvas_width > 0 else 0
+            norm_y = editor_y_px / editor_canvas_height if editor_canvas_height > 0 else 0
+            
+            # Çıktı boyutlarına göre mm koordinatları hesapla
+            editor_x_mm = norm_x * label_width
+            editor_y_mm = norm_y * label_height
+            
+            print(f"A4 Element {element_type}: editör=({editor_x_px},{editor_y_px})px, canvas=({editor_canvas_width}x{editor_canvas_height})px, norm=({norm_x:.3f},{norm_y:.3f}), mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm")
             
             # A4 etiket boyutlarına ölçeklendir  
             scaled_x_mm = editor_x_mm * scale_x
