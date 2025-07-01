@@ -492,9 +492,8 @@ def generate_advanced_label_preview():
             editor_x_mm = element.get('x', 0) / 4  # px'i mm'ye çevir (4px = 1mm)
             editor_y_mm = element.get('y', 0) / 4
             
-            # Etiket sınırları içinde tut
-            editor_x_mm = max(0, min(editor_x_mm, editor_default_width - 1))
-            editor_y_mm = max(0, min(editor_y_mm, editor_default_height - 1))
+            # Debug: koordinat dönüşümünü kontrol et
+            logger.info(f"Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})px -> mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm")
             
             # A4 modunda ölçeklendirme uygula
             if is_a4_preview:
@@ -729,9 +728,8 @@ def generate_advanced_label_preview_new():
             editor_x_mm = element.get('x', 0) / 4  # px'i mm'ye çevir (4px = 1mm)
             editor_y_mm = element.get('y', 0) / 4
             
-            # Etiket sınırları içinde tut (100x50mm)
-            editor_x_mm = max(0, min(editor_x_mm, 99))
-            editor_y_mm = max(0, min(editor_y_mm, 49))
+            # Debug: koordinat dönüşümünü kontrol et
+            logger.info(f"Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})px -> mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm")
             
             # mm'yi DPI'ya çevir
             x = int((editor_x_mm / 25.4) * dpi)
@@ -1235,9 +1233,8 @@ def create_label_with_design(product_data, design, label_width, label_height, is
             editor_x_mm = element.get('x', 0) / 4  # px'i mm'ye çevir (4px = 1mm)
             editor_y_mm = element.get('y', 0) / 4
             
-            # Etiket sınırları içinde tut
-            editor_x_mm = max(0, min(editor_x_mm, editor_default_width - 1))
-            editor_y_mm = max(0, min(editor_y_mm, editor_default_height - 1))
+            # Debug: koordinat dönüşümünü kontrol et
+            logger.info(f"A4 Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})px -> mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm")
             
             # A4 etiket boyutlarına ölçeklendir  
             scaled_x_mm = editor_x_mm * scale_x
