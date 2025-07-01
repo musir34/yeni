@@ -93,10 +93,10 @@ def update_exchange_rates_manually():
         asyncio.set_event_loop(loop)
         loop.run_until_complete(_update_exchange_rates())
         loop.close()
-        # Döviz kurları güncellendi - sessiz çalışma
+        flash("Döviz kurları başarıyla güncellendi.", "success")
     except Exception as e:
         logger.error(f"update_exchange_rates_manually hata: {e}")
-        # Döviz kurları güncelleme hatası - sessiz çalışma
+        flash("Döviz kurları güncellenirken hata oluştu.", "danger")
     return redirect(url_for('get_products.product_list'))
 
 
@@ -160,7 +160,7 @@ async def update_products_route():
 
     except Exception as e:
         logger.error(f"update_products_route hata: {e}")
-        # Ürün güncelleme genel hatası - sessiz çalışma
+        flash('Ürünler güncellenirken bir hata oluştu.', 'danger')
 
     return redirect(url_for('get_products.product_list'))
 

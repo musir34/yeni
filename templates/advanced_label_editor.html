@@ -182,45 +182,6 @@
         let zoomLevel = 1;
         let elementCounter = 0;
         let labelElements = [];
-        
-        // MM to Pixel conversion constants and functions
-        const DPI_300 = 300; // Print DPI
-        const DPI_96 = 96;   // Display DPI  
-        const MM_TO_INCH = 25.4; // 1 inch = 25.4 mm
-        const DISPLAY_SCALE = 3.78; // 1mm = 3.78px at 96 DPI
-
-        // MM to Pixel conversion functions
-        function mmToPixels(mm, dpi = DPI_300) {
-            return Math.round((mm / MM_TO_INCH) * dpi);
-        }
-
-        function pixelsToMm(pixels, dpi = DPI_300) {
-            return Math.round((pixels * MM_TO_INCH) / dpi * 100) / 100; // 2 decimal places
-        }
-
-        function mmToDisplayPixels(mm) {
-            return Math.round(mm * DISPLAY_SCALE);
-        }
-
-        function displayPixelsToMm(pixels) {
-            return Math.round((pixels / DISPLAY_SCALE) * 100) / 100; // 2 decimal places
-        }
-
-        // Print coordinate conversion - from display to print resolution
-        function displayToPrintCoordinates(displayX, displayY, labelWidthMm, labelHeightMm) {
-            const displayWidthPx = mmToDisplayPixels(labelWidthMm);
-            const displayHeightPx = mmToDisplayPixels(labelHeightMm);
-            const printWidthPx = mmToPixels(labelWidthMm);
-            const printHeightPx = mmToPixels(labelHeightMm);
-            
-            const scaleX = printWidthPx / displayWidthPx;
-            const scaleY = printHeightPx / displayHeightPx;
-            
-            return {
-                x: Math.round(displayX * scaleX),
-                y: Math.round(displayY * scaleY)
-            };
-        }
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
@@ -234,16 +195,15 @@
             const height = parseInt(document.getElementById('labelHeight').value);
             const canvas = document.getElementById('labelCanvas');
             
-            // MM cinsinden boyutları display pixellerine çevir
-            const displayWidth = mmToDisplayPixels(width);
-            const displayHeight = mmToDisplayPixels(height);
+            // Sabit bir display scale kullan - 1mm = 3.78px (96 DPI'da)
+            const displayScale = 3.78;
+            const displayWidth = width * displayScale;
+            const displayHeight = height * displayScale;
             
             canvas.style.width = displayWidth + 'px';
             canvas.style.height = displayHeight + 'px';
             
-            document.querySelector('.scale-indicator').textContent = `${width}mm x ${height}mm (${displayWidth}×${displayHeight}px)`;
-            
-            console.log(`Canvas boyutu güncellendi: ${width}mm x ${height}mm = ${displayWidth}px x ${displayHeight}px`);
+            document.querySelector('.scale-indicator').textContent = `${width}mm x ${height}mm`;
         }
 
         function setLabelSize(width, height) {
@@ -798,37 +758,10 @@
 
         function generatePreview() {
             // Convert current design to API format and generate preview
-            const labelWidthMm = parseInt(document.getElementById('labelWidth').value);
-            const labelHeightMm = parseInt(document.getElementById('labelHeight').value);
-            
-            // Convert element coordinates from display pixels to mm for API
-            const elementsForAPI = labelElements.map(el => {
-                const domElement = document.getElementById(el.id);
-                if (domElement) {
-                    const displayX = parseInt(domElement.style.left || 0);
-                    const displayY = parseInt(domElement.style.top || 0);
-                    
-                    // Display pixellerini mm'ye çevir
-                    const xMm = displayPixelsToMm(displayX);
-                    const yMm = displayPixelsToMm(displayY);
-                    
-                    console.log(`Element ${el.id}: Display (${displayX}px, ${displayY}px) -> MM (${xMm}mm, ${yMm}mm)`);
-                    
-                    return {
-                        ...el,
-                        x: xMm,
-                        y: yMm,
-                        fontSize: el.fontSize || el.properties?.fontSize || '14px',
-                        html: el.html || el.properties?.text || domElement?.innerHTML || 'Text'
-                    };
-                }
-                return el;
-            });
-            
             const labelData = {
-                width: labelWidthMm,
-                height: labelHeightMm,
-                elements: elementsForAPI
+                width: document.getElementById('labelWidth').value,
+                height: document.getElementById('labelHeight').value,
+                elements: labelElements
             };
             
             // Call the API to generate preview
