@@ -448,16 +448,17 @@ def generate_advanced_label_preview():
                 qr_size = int(properties.get('size', 50) * (dpi / 96))
                 qr_data = properties.get('data', 'sample')
                 
-                # QR kod özel konumlandırma: etiket sağından 15mm uzakta
-                # Eğer QR kod etiket sağından 15mm uzağa konumlandırılmışsa, bu normal bir durumdur
+                # QR kod dinamik konumlandırma: QR sığacak + sağından 5mm boşluk kalacak
+                # Canvas'ı QR kodu + 5mm boşluk için genişlet
                 if editor_x_mm > label_width:  # QR kod etiket dışında
-                    # QR kodunu etiket sağına yapıştır - Canvas genişliğini artır
-                    qr_area_width = int(((editor_x_mm + (qr_size * 96 / dpi)) / 25.4) * dpi)
-                    extended_width = max(width_px, qr_area_width)
+                    qr_size_mm = qr_size * 96 / dpi  # QR boyutunu mm'ye çevir
+                    # Gerekli toplam genişlik: etiket + QR + 5mm boşluk
+                    required_width_mm = editor_x_mm + qr_size_mm + 5
+                    required_width_px = int((required_width_mm / 25.4) * dpi)
                     
-                    # Yeni genişlikte label oluştur
-                    if extended_width > width_px:
-                        extended_label = Image.new('RGB', (extended_width, height_px), 'white')
+                    # Canvas'ı gerekli genişliğe çıkar
+                    if required_width_px > width_px:
+                        extended_label = Image.new('RGB', (required_width_px, height_px), 'white')
                         extended_label.paste(label, (0, 0))
                         label = extended_label
                         draw = ImageDraw.Draw(label)
@@ -656,16 +657,17 @@ def generate_advanced_label_preview_new():
                 # QR kod direkt barkodu içermeli
                 qr_data = sample_product['barcode']
                 
-                # QR kod özel konumlandırma: etiket sağından 15mm uzakta
-                # Eğer QR kod etiket sağından 15mm uzağa konumlandırılmışsa, bu normal bir durumdur
+                # QR kod dinamik konumlandırma: QR sığacak + sağından 5mm boşluk kalacak
+                # Canvas'ı QR kodu + 5mm boşluk için genişlet
                 if editor_x_mm > label_width:  # QR kod etiket dışında
-                    # QR kodunu etiket sağına yapıştır - Canvas genişliğini artır
-                    qr_area_width = int(((editor_x_mm + (qr_size * 96 / dpi)) / 25.4) * dpi)
-                    extended_width = max(width_px, qr_area_width)
+                    qr_size_mm = qr_size * 96 / dpi  # QR boyutunu mm'ye çevir
+                    # Gerekli toplam genişlik: etiket + QR + 5mm boşluk
+                    required_width_mm = editor_x_mm + qr_size_mm + 5
+                    required_width_px = int((required_width_mm / 25.4) * dpi)
                     
-                    # Yeni genişlikte label oluştur
-                    if extended_width > width_px:
-                        extended_label = Image.new('RGB', (extended_width, height_px), 'white')
+                    # Canvas'ı gerekli genişliğe çıkar
+                    if required_width_px > width_px:
+                        extended_label = Image.new('RGB', (required_width_px, height_px), 'white')
                         extended_label.paste(label, (0, 0))
                         label = extended_label
                         draw = ImageDraw.Draw(label)
