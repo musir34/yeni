@@ -402,8 +402,20 @@ def generate_advanced_label_preview():
         width_px = int((label_width / 25.4) * dpi)
         height_px = int((label_height / 25.4) * dpi)
         
-        # Boş etiket oluştur
-        label = Image.new('RGB', (width_px, height_px), 'white')
+        # QR kodları için canvas genişliği hesapla
+        max_required_width = width_px
+        for element in elements:
+            if element.get('type') == 'qr':
+                editor_x_mm = element.get('x', 0) / 4  # 4px = 1mm editörde
+                if editor_x_mm > label_width:  # QR kod etiket dışında
+                    qr_size = element.get('properties', {}).get('size', 50)
+                    qr_size_mm = qr_size  # QR boyutu zaten mm cinsinden
+                    required_width_mm = editor_x_mm + qr_size_mm + 5  # QR + 5mm boşluk
+                    required_width_px = int((required_width_mm / 25.4) * dpi)
+                    max_required_width = max(max_required_width, required_width_px)
+        
+        # Gerekli genişlikte etiket oluştur
+        label = Image.new('RGB', (max_required_width, height_px), 'white')
         draw = ImageDraw.Draw(label)
         
         # Font ayarları
@@ -448,22 +460,7 @@ def generate_advanced_label_preview():
                 qr_size = int(properties.get('size', 50) * (dpi / 96))
                 qr_data = properties.get('data', 'sample')
                 
-                # QR kod dinamik konumlandırma: QR sığacak + sağından 5mm boşluk kalacak
-                # Canvas'ı QR kodu + 5mm boşluk için genişlet
-                if editor_x_mm > label_width:  # QR kod etiket dışında
-                    qr_size_mm = qr_size * 96 / dpi  # QR boyutunu mm'ye çevir
-                    # Gerekli toplam genişlik: etiket + QR + 5mm boşluk
-                    required_width_mm = editor_x_mm + qr_size_mm + 5
-                    required_width_px = int((required_width_mm / 25.4) * dpi)
-                    
-                    # Canvas'ı gerekli genişliğe çıkar
-                    if required_width_px > width_px:
-                        extended_label = Image.new('RGB', (required_width_px, height_px), 'white')
-                        extended_label.paste(label, (0, 0))
-                        label = extended_label
-                        draw = ImageDraw.Draw(label)
-                
-                # QR kod oluştur
+                # QR kod oluştur - canvas genişliği zaten başta hesaplandı
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
                 qr_img = create_qr_with_logo(qr_data, logo_path if os.path.exists(logo_path) else None, qr_size)
                 label.paste(qr_img, (x, y))
@@ -570,8 +567,19 @@ def generate_advanced_label_preview_new():
         width_px = int((label_width / 25.4) * dpi)
         height_px = int((label_height / 25.4) * dpi)
         
-        # Boş etiket oluştur
-        label = Image.new('RGB', (width_px, height_px), 'white')
+        # QR kodları için canvas genişliği hesapla
+        max_required_width = width_px
+        for element in elements:
+            if element.get('type') == 'qr':
+                editor_x_mm = element.get('x', 0) / 4  # 4px = 1mm editörde
+                if editor_x_mm > label_width:  # QR kod etiket dışında
+                    qr_size = element.get('width', 40)  # QR boyutu
+                    required_width_mm = editor_x_mm + qr_size + 5  # QR + 5mm boşluk
+                    required_width_px = int((required_width_mm / 25.4) * dpi)
+                    max_required_width = max(max_required_width, required_width_px)
+        
+        # Gerekli genişlikte etiket oluştur
+        label = Image.new('RGB', (max_required_width, height_px), 'white')
         draw = ImageDraw.Draw(label)
         
         # Font ayarları
@@ -657,21 +665,7 @@ def generate_advanced_label_preview_new():
                 # QR kod direkt barkodu içermeli
                 qr_data = sample_product['barcode']
                 
-                # QR kod dinamik konumlandırma: QR sığacak + sağından 5mm boşluk kalacak
-                # Canvas'ı QR kodu + 5mm boşluk için genişlet
-                if editor_x_mm > label_width:  # QR kod etiket dışında
-                    qr_size_mm = qr_size * 96 / dpi  # QR boyutunu mm'ye çevir
-                    # Gerekli toplam genişlik: etiket + QR + 5mm boşluk
-                    required_width_mm = editor_x_mm + qr_size_mm + 5
-                    required_width_px = int((required_width_mm / 25.4) * dpi)
-                    
-                    # Canvas'ı gerekli genişliğe çıkar
-                    if required_width_px > width_px:
-                        extended_label = Image.new('RGB', (required_width_px, height_px), 'white')
-                        extended_label.paste(label, (0, 0))
-                        label = extended_label
-                        draw = ImageDraw.Draw(label)
-                
+                # QR kod oluştur - canvas genişliği zaten başta hesaplandı
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
                 qr_img = create_qr_with_logo(qr_data, logo_path if os.path.exists(logo_path) else None, qr_size)
                 label.paste(qr_img, (x, y))
