@@ -486,23 +486,27 @@ def generate_advanced_label_preview():
         for element in elements:
             element_type = element.get('type')
             
-            # Editörden gelen pixel koordinatlarını doğrudan kullan
-            # Editör canvas boyutu: width*4 px = width mm olacak şekilde ayarlanmış
-            editor_x_px = element.get('x', 0)
-            editor_y_px = element.get('y', 0)
+            # Editörden gelen koordinatları mm'ye çevir
+            # Editörde canvas boyutu: width*4 px = width mm 
+            # Yani 100mm etiket için 400px canvas, 1px = 0.25mm
+            editor_x_mm = element.get('x', 0) * 0.25  # px'i mm'ye çevir
+            editor_y_mm = element.get('y', 0) * 0.25
+            
+            # Etiket sınırları içinde tut
+            editor_x_mm = max(0, min(editor_x_mm, editor_default_width - 1))
+            editor_y_mm = max(0, min(editor_y_mm, editor_default_height - 1))
             
             # A4 modunda ölçeklendirme uygula
             if is_a4_preview:
-                # Editör 100x50mm için tasarlanmış, A4 etiketi 64.67x37.92mm
-                scaled_x_px = editor_x_px * scale_x
-                scaled_y_px = editor_y_px * scale_y
+                scaled_x_mm = editor_x_mm * scale_x
+                scaled_y_mm = editor_y_mm * scale_y
             else:
-                scaled_x_px = editor_x_px
-                scaled_y_px = editor_y_px
+                scaled_x_mm = editor_x_mm
+                scaled_y_mm = editor_y_mm
             
-            # Pixel koordinatlarını doğrudan DPI'ya çevir (1:1 ölçekleme)
-            x = int(scaled_x_px * (dpi / 96))  # 96 DPI referans
-            y = int(scaled_y_px * (dpi / 96))
+            # mm'yi DPI'ya çevir
+            x = int((scaled_x_mm / 25.4) * dpi)
+            y = int((scaled_y_mm / 25.4) * dpi)
             
             properties = element.get('properties', {})
             
@@ -719,13 +723,19 @@ def generate_advanced_label_preview_new():
         for element in elements:
             element_type = element.get('type')
             
-            # Editörden gelen pixel koordinatlarını doğrudan kullan
-            editor_x_px = element.get('x', 0)
-            editor_y_px = element.get('y', 0)
+            # Editörden gelen koordinatları mm'ye çevir
+            # Editörde canvas boyutu: width*4 px = width mm 
+            # Yani 100mm etiket için 400px canvas, 1px = 0.25mm
+            editor_x_mm = element.get('x', 0) * 0.25  # px'i mm'ye çevir
+            editor_y_mm = element.get('y', 0) * 0.25
             
-            # Pixel koordinatlarını doğrudan DPI'ya çevir
-            x = int(editor_x_px * (dpi / 96))  # 96 DPI referans
-            y = int(editor_y_px * (dpi / 96))
+            # Etiket sınırları içinde tut (100x50mm)
+            editor_x_mm = max(0, min(editor_x_mm, 99))
+            editor_y_mm = max(0, min(editor_y_mm, 49))
+            
+            # mm'yi DPI'ya çevir
+            x = int((editor_x_mm / 25.4) * dpi)
+            y = int((editor_y_mm / 25.4) * dpi)
             
             # Ürün-spesifik alanlar - properties yapısını kullan
             properties = element.get('properties', {})
@@ -1219,19 +1229,25 @@ def create_label_with_design(product_data, design, label_width, label_height, is
         for element in elements:
             element_type = element.get('type')
             
-            # Editörden gelen pixel koordinatlarını doğrudan kullan
-            editor_x_px = element.get('x', 0)
-            editor_y_px = element.get('y', 0)
+            # Editörden gelen koordinatları mm'ye çevir
+            # Editörde canvas boyutu: width*4 px = width mm 
+            # Yani 100mm etiket için 400px canvas, 1px = 0.25mm
+            editor_x_mm = element.get('x', 0) * 0.25  # px'i mm'ye çevir
+            editor_y_mm = element.get('y', 0) * 0.25
             
-            # A4 etiket boyutlarına ölçeklendir
-            scaled_x_px = editor_x_px * scale_x
-            scaled_y_px = editor_y_px * scale_y
+            # Etiket sınırları içinde tut
+            editor_x_mm = max(0, min(editor_x_mm, editor_default_width - 1))
+            editor_y_mm = max(0, min(editor_y_mm, editor_default_height - 1))
             
-            # Pixel koordinatlarını A4 DPI'sına çevir
-            x = int(scaled_x_px * (dpi / 96))  # 96 DPI referans
-            y = int(scaled_y_px * (dpi / 96))
+            # A4 etiket boyutlarına ölçeklendir  
+            scaled_x_mm = editor_x_mm * scale_x
+            scaled_y_mm = editor_y_mm * scale_y
             
-            logger.info(f"A4 Element {element_type}: editör=({editor_x_px},{editor_y_px})px -> ölçekli=({scaled_x_px:.1f},{scaled_y_px:.1f})px -> DPI=({x},{y})px")
+            # mm'yi A4 DPI'sına çevir
+            x = int((scaled_x_mm / 25.4) * dpi)
+            y = int((scaled_y_mm / 25.4) * dpi)
+            
+            logger.info(f"A4 Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})px -> mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm -> ölçekli=({scaled_x_mm:.1f},{scaled_y_mm:.1f})mm -> DPI=({x},{y})px")
             
             if element_type == 'title':
                 html_content = element.get('html', 'GÜLLÜ SHOES')
