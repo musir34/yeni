@@ -107,6 +107,7 @@ def generate_qr():
     barcode = request.args.get('barcode', '').strip()
     if not barcode:
         return jsonify({'success': False, 'message': 'Barkod eksik!'})
+    import qrcode
     import qrcode.constants
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
     qr.add_data(barcode)
