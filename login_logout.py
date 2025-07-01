@@ -180,18 +180,20 @@ def login():
 @login_required
 def setup_totp():
     user = User.query.get(session['user_id'])
+    if not user:
+        return redirect(url_for('login_logout.login'))
 
     if user.totp_confirmed:
         return redirect(url_for('login_logout.home'))
 
     totp = pyotp.TOTP(user.totp_secret)
-    provisioning_uri = totp.provisioning_uri(name=user.email,
+    provisioning_uri = totp.provisioning_uri(name=user.email or 'user',
                                              issuer_name='Firma İsmi')
     qr_code_data = generate_qr_code(provisioning_uri)
 
     if request.method == 'POST':
         token = request.form.get('token')
-        if totp.verify(token):
+        if token and totp.verify(token):
             user.totp_confirmed = True
             db.session.commit()
             flash('TOTP başarıyla kuruldu.', 'success')
@@ -208,11 +210,14 @@ def verify_totp():
         return redirect(url_for('login_logout.login'))
 
     user = User.query.filter_by(username=username).first()
+    if not user:
+        return redirect(url_for('login_logout.login'))
+    
     totp = pyotp.TOTP(user.totp_secret)
 
     if request.method == 'POST':
         token = request.form.get('token')
-        if totp.verify(token):
+        if token and totp.verify(token):
             login_user(user)
             session.pop('pending_user', None)
             # 2FA tamamlandı
