@@ -492,9 +492,6 @@ def generate_advanced_label_preview():
             editor_x_mm = element.get('x', 0) / 4  # px'i mm'ye çevir (4px = 1mm)
             editor_y_mm = element.get('y', 0) / 4
             
-            # Debug: koordinat dönüşümünü kontrol et
-            logger.info(f"Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})px -> mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm")
-            
             # A4 modunda ölçeklendirme uygula
             if is_a4_preview:
                 scaled_x_mm = editor_x_mm * scale_x
@@ -1172,9 +1169,6 @@ def create_label_with_design(product_data, design, label_width, label_height, is
             default_font = ImageFont.load_default()
         
         # Ürün bilgileri
-        model_code = product_data.get('model_code', 'N/A')
-        color = product_data.get('color', 'N/A')
-        size = product_data.get('size', 'N/A')
         barcode = product_data.get('barcode', 'N/A')
         
         # Ürün görseli yolu - büyük/küçük harf duyarsız arama
@@ -1227,26 +1221,9 @@ def create_label_with_design(product_data, design, label_width, label_height, is
         for element in elements:
             element_type = element.get('type')
             
-            # Editörden gelen koordinatları mm'ye çevir
-            # Editörde canvas boyutu: width*4 px = width mm 
-            # Yani 100mm etiket için 400px canvas, 1px = 0.25mm
-            # Editör koordinatlarını normalize et
-            editor_x_px = element.get('x', 0)
-            editor_y_px = element.get('y', 0)
-            
-            # Editör canvas boyutlarını tespit et (1mm = 4px)
-            editor_canvas_width = label_width * 4
-            editor_canvas_height = label_height * 4
-            
-            # Koordinatları oransal değer olarak normalize et
-            norm_x = editor_x_px / editor_canvas_width if editor_canvas_width > 0 else 0
-            norm_y = editor_y_px / editor_canvas_height if editor_canvas_height > 0 else 0
-            
-            # Çıktı boyutlarına göre mm koordinatları hesapla
-            editor_x_mm = norm_x * label_width
-            editor_y_mm = norm_y * label_height
-            
-            print(f"A4 Element {element_type}: editör=({editor_x_px},{editor_y_px})px, canvas=({editor_canvas_width}x{editor_canvas_height})px, norm=({norm_x:.3f},{norm_y:.3f}), mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm")
+            # Editör koordinatlarını mm'ye çevir (4px = 1mm)
+            editor_x_mm = element.get('x', 0) / 4
+            editor_y_mm = element.get('y', 0) / 4
             
             # A4 etiket boyutlarına ölçeklendir  
             scaled_x_mm = editor_x_mm * scale_x
@@ -1287,21 +1264,14 @@ def create_label_with_design(product_data, design, label_width, label_height, is
             elif element_type == 'model_code':
                 # Font boyutu alma - properties öncelikli
                 font_size = 14
-                try:
-                    if 'properties' in element and 'fontSize' in element['properties']:
-                        font_val = element['properties']['fontSize']
-                        if isinstance(font_val, str):
-                            font_size = int(font_val.replace('px', ''))
-                        else:
-                            font_size = int(font_val)
-                    elif 'fontSize' in element:
-                        font_size_str = element.get('fontSize', '14px')
-                        if isinstance(font_size_str, str):
-                            font_size = int(font_size_str.replace('px', ''))
-                        else:
-                            font_size = int(font_size_str)
-                except:
-                    font_size = 14  # Hata durumunda varsayılan boyut
+                if 'properties' in element and 'fontSize' in element['properties']:
+                    font_size = int(element['properties']['fontSize'])
+                elif 'fontSize' in element:
+                    font_size_str = element.get('fontSize', '14px')
+                    if isinstance(font_size_str, str):
+                        font_size = int(font_size_str.replace('px', ''))
+                    else:
+                        font_size = int(font_size_str)  # Hata durumunda varsayılan boyut
                 
                 font_size = int(font_size * (dpi / 96))
                 
