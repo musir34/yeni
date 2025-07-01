@@ -489,8 +489,8 @@ def generate_advanced_label_preview():
             # Editörden gelen koordinatları mm'ye çevir
             # Editörde canvas boyutu: width*4 px = width mm 
             # Yani 100mm etiket için 400px canvas, 1px = 0.25mm
-            editor_x_mm = element.get('x', 0) * 0.25  # px'i mm'ye çevir
-            editor_y_mm = element.get('y', 0) * 0.25
+            editor_x_mm = element.get('x', 0) / 4  # px'i mm'ye çevir (4px = 1mm)
+            editor_y_mm = element.get('y', 0) / 4
             
             # Etiket sınırları içinde tut
             editor_x_mm = max(0, min(editor_x_mm, editor_default_width - 1))
@@ -726,8 +726,8 @@ def generate_advanced_label_preview_new():
             # Editörden gelen koordinatları mm'ye çevir
             # Editörde canvas boyutu: width*4 px = width mm 
             # Yani 100mm etiket için 400px canvas, 1px = 0.25mm
-            editor_x_mm = element.get('x', 0) * 0.25  # px'i mm'ye çevir
-            editor_y_mm = element.get('y', 0) * 0.25
+            editor_x_mm = element.get('x', 0) / 4  # px'i mm'ye çevir (4px = 1mm)
+            editor_y_mm = element.get('y', 0) / 4
             
             # Etiket sınırları içinde tut (100x50mm)
             editor_x_mm = max(0, min(editor_x_mm, 99))
@@ -1232,8 +1232,8 @@ def create_label_with_design(product_data, design, label_width, label_height, is
             # Editörden gelen koordinatları mm'ye çevir
             # Editörde canvas boyutu: width*4 px = width mm 
             # Yani 100mm etiket için 400px canvas, 1px = 0.25mm
-            editor_x_mm = element.get('x', 0) * 0.25  # px'i mm'ye çevir
-            editor_y_mm = element.get('y', 0) * 0.25
+            editor_x_mm = element.get('x', 0) / 4  # px'i mm'ye çevir (4px = 1mm)
+            editor_y_mm = element.get('y', 0) / 4
             
             # Etiket sınırları içinde tut
             editor_x_mm = max(0, min(editor_x_mm, editor_default_width - 1))
