@@ -1204,16 +1204,18 @@ def create_label_with_design(product_data, design, label_width, label_height):
                 # QR boyutu properties'den al, yoksa element'den, yoksa varsayılan
                 qr_size = 50  # Varsayılan boyut
                 
-                # Properties'den boyut alma (öncelikli)
+                # Properties'den boyut alma (öncelikli) - pixel cinsinden
                 if 'properties' in element and 'size' in element['properties']:
-                    qr_size = int(element['properties']['size'])
+                    qr_size_px = int(element['properties']['size'])
                 elif 'size' in element:
-                    qr_size = int(element['size'])
+                    qr_size_px = int(element['size'])
                 elif 'width' in element:
-                    qr_size = int(element['width'])
+                    qr_size_px = int(element['width'])
+                else:
+                    qr_size_px = 200  # Varsayılan 200px = 50mm
                 
                 # Editör boyutunu mm'ye çevir (4px = 1mm) sonra DPI'ya ölçekle
-                qr_size_mm = qr_size / 4  # 4px = 1mm
+                qr_size_mm = qr_size_px / 4  # 4px = 1mm
                 qr_size = int((qr_size_mm / 25.4) * dpi)  # mm'den DPI'ya
                 
                 # Minimum boyut kontrolü
@@ -1221,7 +1223,7 @@ def create_label_with_design(product_data, design, label_width, label_height):
                     qr_size = 100
                 
                 qr_data = barcode
-                logger.info(f"A4 QR Debug: element_size={element.get('size', 'N/A')}, final_size={qr_size}, data={qr_data}")
+                logger.info(f"A4 QR Debug: element_size_px={qr_size_px}, mm={qr_size_mm:.1f}, final_dpi_size={qr_size}, data={qr_data}")
                 
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
                 qr_img = create_qr_with_logo(qr_data, logo_path if os.path.exists(logo_path) else None, qr_size)
