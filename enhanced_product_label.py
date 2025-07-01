@@ -1018,22 +1018,18 @@ def create_label_with_design(product_data, design, label_width, label_height):
         # Tasarım elementlerini çiz - Koordinat sistemi düzeltmesi
         elements = design.get('elements', [])
         
-        # Koordinat sistemi - 1:1 doğrudan mapping
-        # Editörde görünen boyutlarla yazdırılan boyutlar aynı olacak
+        # Koordinat sistemi düzeltmesi - Editör ile A4 çıktı arasında tutarlılık
+        # Editörde 4px = 1mm mantığı, A4 çıktısında da aynı oran kullanılmalı
         for element in elements:
             element_type = element.get('type')
             
-            # Doğrudan koordinat kullanımı - ölçekleme yapmadan
-            raw_x = element.get('x', 0)
-            raw_y = element.get('y', 0)
+            # Editör koordinatlarını mm'ye çevir (4px = 1mm)
+            editor_x_mm = element.get('x', 0) / 4
+            editor_y_mm = element.get('y', 0) / 4
             
-            # DPI'ye göre basit ölçeklendirme (96 DPI -> 300 DPI)
-            scale_factor = dpi / 96
-            x = int(raw_x * scale_factor)
-            y = int(raw_y * scale_factor)
-            
-            # Debug bilgisi
-            logger.info(f"Element {element_type}: editör({raw_x},{raw_y}) -> print({x},{y}) | scale: {scale_factor} -> {width_px}x{height_px}")
+            # mm'yi A4 DPI'sına çevir (300 DPI için)
+            x = int((editor_x_mm / 25.4) * dpi)
+            y = int((editor_y_mm / 25.4) * dpi)
             
             if element_type == 'title':
                 html_content = element.get('html', 'GÜLLÜ SHOES')
@@ -1048,9 +1044,8 @@ def create_label_with_design(product_data, design, label_width, label_height):
                     else:
                         font_size = int(font_size_str)
                 
-                # Font boyutunu doğrudan ölçeklendirme ile ayarla
-                font_size = int(font_size * scale_factor)
-                logger.info(f"Title font: {font_size}px (from {element.get('fontSize', element.get('properties', {}).get('fontSize', 'N/A'))})")
+                # Font boyutunu DPI'ya göre ölçeklendir (96->300 DPI)
+                font_size = int(font_size * (dpi / 96))
                 
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
@@ -1074,7 +1069,7 @@ def create_label_with_design(product_data, design, label_width, label_height):
                     else:
                         font_size = int(font_size_str)
                 
-                font_size = int(font_size * scale_factor)
+                font_size = int(font_size * (dpi / 96))
                 
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
@@ -1095,7 +1090,7 @@ def create_label_with_design(product_data, design, label_width, label_height):
                     else:
                         font_size = int(font_size_str)
                 
-                font_size = int(font_size * scale_factor)
+                font_size = int(font_size * (dpi / 96))
                 
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
