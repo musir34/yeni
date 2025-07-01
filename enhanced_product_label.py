@@ -50,7 +50,7 @@ def create_qr_with_logo(data, logo_path=None, size=200):
     """
     try:
         import qrcode
-        logger.info(f"QR kod oluşturuluyor: data={data}, size={size}")
+        logger.info(f"QR kod oluşturuluyor: data='{data}', size={size}")
         
         # QR kod oluştur - basit yaklaşım
         qr = qrcode.QRCode(
@@ -58,24 +58,26 @@ def create_qr_with_logo(data, logo_path=None, size=200):
             box_size=10,
             border=4,
         )
-        qr.add_data(data)
+        qr.add_data(str(data))  # String'e çevir
         qr.make(fit=True)
         
         # QR kodu PIL Image olarak oluştur
         qr_img = qr.make_image(fill_color="black", back_color="white")
+        logger.info(f"QR base image oluşturuldu: mode={qr_img.mode}, size={qr_img.size}")
         
         # RGB'ye çevir
         if qr_img.mode != 'RGB':
             qr_img = qr_img.convert('RGB')
+            logger.info(f"QR RGB'ye çevrildi: mode={qr_img.mode}")
             
         # Boyutlandır
         qr_img = qr_img.resize((size, size), Image.Resampling.LANCZOS)
-        
-        logger.info(f"QR kod başarıyla oluşturuldu: {qr_img.size}")
+        logger.info(f"QR kod boyutlandırıldı: {qr_img.size}")
         
         # Logo varsa ortaya ekle
         if logo_path and os.path.exists(logo_path):
             try:
+                logger.info(f"Logo ekleniyor: {logo_path}")
                 logo = Image.open(logo_path)
                 
                 # Logo boyutunu QR kodun 1/5'i kadar yap
@@ -87,15 +89,21 @@ def create_qr_with_logo(data, logo_path=None, size=200):
                 
                 # Logoyu QR kodun üzerine yapıştır
                 qr_img.paste(logo, logo_pos)
-                logger.info(f"Logo eklendi: {logo_size}x{logo_size}")
+                logger.info(f"Logo eklendi: {logo_size}x{logo_size} at {logo_pos}")
                 
             except Exception as e:
                 logger.warning(f"Logo eklenirken hata: {e}")
+        else:
+            logger.info(f"Logo yok: path={logo_path}, exists={os.path.exists(logo_path) if logo_path else False}")
         
+        # Final kontrol
+        logger.info(f"QR kod tamamlandı: mode={qr_img.mode}, size={qr_img.size}")
         return qr_img
         
     except Exception as e:
         logger.error(f"QR kod oluşturma hatası: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return None
 
 def create_product_label(barcode, model_id, color, size, label_width=100, label_height=50, settings=None):
