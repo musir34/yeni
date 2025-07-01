@@ -408,8 +408,8 @@ def generate_advanced_label_preview():
             if element.get('type') == 'qr':
                 editor_x_mm = element.get('x', 0) / 4  # 4px = 1mm editörde
                 if editor_x_mm > label_width:  # QR kod etiket dışında
-                    qr_size = element.get('properties', {}).get('size', 50)
-                    qr_size_mm = qr_size  # QR boyutu zaten mm cinsinden
+                    qr_size_px = element.get('properties', {}).get('size', 50)  # editörde pixel
+                    qr_size_mm = qr_size_px / 4  # 4px = 1mm dönüşümü
                     required_width_mm = editor_x_mm + qr_size_mm + 5  # QR + 5mm boşluk
                     required_width_px = int((required_width_mm / 25.4) * dpi)
                     max_required_width = max(max_required_width, required_width_px)
@@ -442,7 +442,9 @@ def generate_advanced_label_preview():
             
             if element_type in ['title', 'text']:
                 text = properties.get('text', 'Text')
-                font_size = int(properties.get('fontSize', 14) * (dpi / 96))  # Convert to print scale
+                # Font boyutu editörden pixel cinsinden alıp DPI'ya ölçekle (tutarlılık için)
+                font_size_px = properties.get('fontSize', 14)  # editörde pixel cinsinden
+                font_size = int(font_size_px * (dpi / 96))  # 96 DPI -> 300 DPI ölçekleme
                 color = properties.get('color', '#000000')
                 font_weight = properties.get('fontWeight', 'normal')
                 
@@ -457,7 +459,10 @@ def generate_advanced_label_preview():
                 draw.text((x, y), text, fill=color, font=font)
                 
             elif element_type == 'qr':
-                qr_size = int(properties.get('size', 50) * (dpi / 96))
+                # QR boyutu editörden pixel cinsinden alıp mm'ye çevirip DPI'ya ölçekle
+                qr_size_px = properties.get('size', 50)  # editörde pixel cinsinden
+                qr_size_mm = qr_size_px / 4  # 4px = 1mm
+                qr_size = int((qr_size_mm / 25.4) * dpi)  # mm'yi DPI'ya çevir
                 qr_data = properties.get('data', 'sample')
                 
                 # QR kod oluştur - canvas genişliği zaten başta hesaplandı
@@ -466,8 +471,13 @@ def generate_advanced_label_preview():
                 label.paste(qr_img, (x, y))
                 
             elif element_type == 'image':
-                img_width = int(properties.get('width', 60) * (dpi / 96))
-                img_height = int(properties.get('height', 60) * (dpi / 96))
+                # Image boyutları editörden pixel cinsinden alıp mm'ye çevirip DPI'ya ölçekle
+                img_width_px = properties.get('width', 60)  # editörde pixel cinsinden
+                img_height_px = properties.get('height', 60)
+                img_width_mm = img_width_px / 4  # 4px = 1mm
+                img_height_mm = img_height_px / 4
+                img_width = int((img_width_mm / 25.4) * dpi)  # mm'yi DPI'ya çevir
+                img_height = int((img_height_mm / 25.4) * dpi)
                 
                 # Placeholder için basit bir kare çiz
                 draw.rectangle([x, y, x + img_width, y + img_height], 
