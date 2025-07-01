@@ -1254,9 +1254,10 @@ def create_label_with_design(product_data, design, label_width, label_height):
                 
                 qr_size = int((scaled_qr_size_mm / 25.4) * dpi)  # mm'den DPI'ya
                 
-                # Minimum boyut kontrolü
-                if qr_size < 100:
-                    qr_size = 100
+                # Minimum boyut kontrolü - A4 için daha büyük minimum
+                if qr_size < 200:  # A4'te en az 200px QR boyutu
+                    qr_size = 200
+                    logger.info(f"A4 QR boyutu minimum sınırına yükseltildi: {qr_size}px")
                 
                 qr_data = barcode
                 logger.info(f"A4 QR Debug: element_size_px={qr_size_px}, mm={qr_size_mm:.1f}, scaled_mm={scaled_qr_size_mm:.1f}, final_dpi_size={qr_size}, data={qr_data}")
