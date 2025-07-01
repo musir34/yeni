@@ -798,17 +798,8 @@ def delete_product_variants():
 
 
 ############################################
-# Yardımcı fonksiyon - zaten sende mevcuttu
+# Yardımcı fonksiyonlar - duplicate kaldırıldı
 ############################################
-def group_products_by_model_and_color(products):
-    grouped_products = {}
-    for product in products:
-        # Anahtar oluştururken None kontrolü ekleyelim
-        main_id = product.product_main_id if product.product_main_id else ''
-        color = product.color if product.color else ''
-        key = (main_id, color)
-        grouped_products.setdefault(key, []).append(product)
-    return grouped_products
 
 
 
@@ -1036,8 +1027,9 @@ def update_product_cost():
     asyncio.set_event_loop(loop)
     usd_rate = loop.run_until_complete(fetch_usd_rate())
     loop.close()
-    if not usd_rate:
+    if not usd_rate or usd_rate is None:
         usd_rate = 1.0
+    usd_rate = float(usd_rate)
     try:
         products = Product.query.filter_by(product_main_id=model_id).all()
         if not products:
