@@ -326,7 +326,7 @@
         }
 
         function showAlert(message, type) {
-            console.log(`${type}: ${message}`);
+            // Uyarılar kaldırıldı - sessiz çalışma
         }
         
         function showLoading(show) {
@@ -351,7 +351,7 @@
             console.log('DEBUG - Current labelQueue:', window.labelQueue);
             updateLabelQueue();
             updateTotalLabelsCount();
-            showAlert('Etiket kuyruğa eklendi', 'success');
+            // Etiket kuyruğa eklendi - sessiz
         }
         
         function updateLabelQueue() {
@@ -413,7 +413,7 @@
             labelQueue = window.labelQueue;
             updateLabelQueue();
             updateTotalLabelsCount();
-            showAlert('Etiket kuyruktan çıkarıldı', 'success');
+            // Etiket kuyruktan çıkarıldı - sessiz
         }
 
         async function searchProducts() {
@@ -567,7 +567,7 @@
                         `;
                     }
                     const productInfo = selectedProducts[0];
-                    showAlert(`Tasarım "${design.name}" ile ${selectedProducts.length} etiket hazırlandı\\nÖrnek: ${productInfo.model_code} - ${productInfo.color} - ${productInfo.size}`, 'success');
+                    // Tasarım hazırlandı - sessiz
                     
                     addPrintButton(selectedProducts, design);
                 } else {
@@ -632,7 +632,7 @@
                 showLoading(false);
                 if (data.success) {
                     window.open(data.image_url, '_blank');
-                    showAlert(`${allLabels.length} etiket yazdırma için hazırlandı`, 'success');
+                    // Etiketler yazdırma için hazırlandı - sessiz
                 } else {
                     showAlert('Yazdırma hatası: ' + data.message, 'danger');
                 }
