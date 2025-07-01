@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paketleme Ekranı - Güllü Ayakkabı</title>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
+<style>
+/* Sayfa Düzeni */
+body {
+margin: 0;
+padding: 0;
+font-family: 'Roboto', sans-serif;
+background-color: #f5f5f5;
+}
+/* Canvas: Arka plan */
+#weatherCanvas {
+position: fixed;
+top: 0;
+left: 0;
+z-index: -1; /* İçeriklerin arkasında */
+width: 100vw;
+height: 100vh;
+}
+.container {
+max-width: 1200px;
+margin-top: 60px; /* Mevcut değerini koruduk */
+margin-left: auto; /* Ortalamak için */
+margin-right: auto; /* Ortalamak için */
+padding: 0 15px; /* Sağ ve sol iç boşluk */
+}
+.user-info {
+position: fixed;
+top: 15px;
+left: 20px;
+z-index: 10;
+font-size: 14px;
+color: #333;
+display: flex;
+align-items: center;
+gap: 10px;
+}
+.user-info img {
+max-width: 100px;
+height: auto;
+border-radius: 5px;
+}
+.btn-group-top {
+position: fixed;
+top: 15px;
+right: 20px;
+display: flex;
+gap: 10px;
+z-index: 10;
+flex-wrap: wrap; /* Sığmazsa alt satıra insin */
+justify-content: flex-end; /* Sağa hizala */
+align-items: center; /* Dikeyde ortala */
+}
+
+/* Ortak buton görünümü */
+.btn {
+border-radius: 20px;
+padding: 10px 20px;
+font-size: 0.9rem;
+transition: all 0.3s ease;
+box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+border: none;
+color: #fff;
+}
+.btn:hover {
+transform: scale(1.05);
+text-decoration: none;
+color: #fff; /* Hover'da yazı rengi değişmesin */
+}
+
+/* Bootstrap renk sınıflarını gradientlerle override edelim */
+.btn-secondary {
+background: linear-gradient(to right, #757F9A, #D7DDE8); /* Gri tonlu */
+color: #fff;
+}
+.btn-warning {
+background: linear-gradient(to right, #f7971e, #ffd200); /* Turuncu-sarı */
+color: #fff;
+}
+.btn-primary {
+background: linear-gradient(to right, #2193b0, #6dd5ed); /* Mavi tonlu */
+color: #fff;
+}
+.btn-success {
+background: linear-gradient(to right, #56ab2f, #a8e063); /* Yeşil tonlu */
+color: #fff;
+}
+.btn-info {
+background: linear-gradient(to right, #667db6, #0082c8, #0082c8, #667db6); /* Mavi tonlu */
+color: #fff;
+}
+.btn-danger {
+background: linear-gradient(to right, #cb2d3e, #ef473a); /* Kırmızı tonlu */
+color: #fff;
+}
+/* Disabled buton rengi */
+.btn.disabled, .btn:disabled {
+background-color: #cccccc; /* Pasif buton arka plan */
+background-image: none; /* Gradient'i kaldır */
+cursor: not-allowed;
+opacity: 0.7;
+}
+
+
+/* Dropdown görünümü */
+.dropdown-toggle {
+border-radius: 20px !important; /* Arada .btn sınıfı da var, override için !important */
+}
+.dropdown-menu {
+border-radius: 10px;
+padding: 0.5rem 0;
+background-color: #fff;
+border: none;
+box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.dropdown-item {
+font-size: 0.85rem;
+padding: 0.5rem 1rem;
+color: #333;
+transition: background-color 0.3s ease;
+}
+.dropdown-item:hover {
+background-color: #efefef;
+}
+
+.order-container {
+display: flex;
+flex-wrap: wrap;
+gap: 20px;
+align-items: flex-start;
+justify-content: center; /* Kartları ortala */
+}
+.card {
+width: 200px;
+border: none;
+border-radius: 10px;
+box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+margin-bottom: 20px;
+transition: transform 0.2s;
+overflow: hidden; /* Resim köşeleri için */
+background-color: #fff;
+}
+.card:hover {
+transform: translateY(-5px);
+box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+.product-image {
+width: 100%;
+height: auto;
+border-radius: 10px 10px 0 0;
+object-fit: cover;
+}
+.card-title {
+font-weight: bold;
+color: #444;
+text-align: center;
+margin: 10px 0;
+white-space: nowrap; /* Başlık tek satırda kalsın */
+overflow: hidden; /* Taşan kısmı gizle */
+text-overflow: ellipsis; /* Taşan kısım yerine ... koy */
+}
+.card-text {
+font-size: 0.9rem;
+color: #666;
+text-align: center;
+}
+.form-control {
+border-radius: 10px;
+padding: 8px;
+font-size: 0.85rem;
+box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+border: 1px solid #ddd;
+}
+.form-control:focus {
+border-color: #6dd5ed;
+box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 5px rgba(109, 213, 237, 0.5);
+}
+
+.form-group {
+position: relative;
+margin-bottom: 35px;
+}
+.alert {
+position: absolute;
+top: -30px;
+left: 0;
+right: 0;
+font-size: 12px;
+padding: 5px;
+border-radius: 5px;
+opacity: 0;
+transition: opacity 0.3s ease;
+text-align: center;
+z-index: 10;
+pointer-events: none;
+width: 100%; /* Tam genişlik */
+box-sizing: border-box; /* Padding genişliğe dahil */
+}
+.alert-show {
+opacity: 1;
+}
+.alert-success {
+background-color: #d4edda;
+color: #155724;
+border: 1px solid #c3e6cb;
+}
+.alert-danger {
+background-color: #f8d7da;
+color: #721c24;
+border: 1px solid #f5c6cb;
+}
+
+/* Otomatik Gönderim Mesaj Alanı */
+#autoShipMessage {
+position: fixed;
+top: 80px; /* Üst barların altına yerleştirildi */
+left: 0;
+right: 0;
+background-color: #e9ffe9; /* Yeşilimsi arkaplan */
+color: #155724; /* Koyu yeşil yazı */
+padding: 10px 20px;
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+z-index: 9; /* Diğer içeriklerin üstünde, fixed barların altında */
+opacity: 0;
+visibility: hidden; /* Gizle */
+transition: opacity 0.5s ease, visibility 0.5s ease;
+font-size: 1rem;
+text-align: center;
+font-weight: bold;
+border-bottom: 1px solid #c3e6cb;
+}
+#autoShipMessage.show {
+opacity: 1;
+visibility: visible;
+}
+
+.copy-container {
+position: relative;
+cursor: pointer;
+display: inline-block;
+margin-left: 5px;
+color: #007bff;
+transition: color 0.2s ease;
+}
+.copy-container:hover {
+color: #0056b3;
+}
+.copy-confirmation {
+color: green;
+font-size: 1em;
+margin-left: 5px;
+display: none;
+}
+.copy-confirmation.show {
+display: inline-block;
+}
+.btn-bottom {
+max-width: 200px;
+margin: 10px 0;
+padding: 8px 15px;
+border-radius: 10px;
+}
+.bottom-buttons {
+text-align: left;
+margin-top: 20px;
+display: flex; /* Butonları yan yana hizala */
+gap: 10px; /* Butonlar arasına boşluk */
+flex-wrap: wrap; /* Sığmazsa alt satıra geçsin */
+}
+.fixed-header {
+background-color: #ffffff;
+border-radius: 10px;
+padding: 15px;
+margin-top: 20px; /* Mevcut değerini koruduk */
+box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+/* position: fixed; top: ... Kaldırıldı, container içinde kalacak */
+/* left: 0; right: 0; Kaldırıldı */
+/* transform: translateX(-50%); Kaldırıldı */
+/* width: calc(100% - 40px); Kaldırıldı */
+/* max-width: 1160px; Kaldırıldı */
+z-index: auto; /* z-index'i sıfırla */
+}
+.fixed-header h4 {
+margin-top: 0;
+margin-bottom: 10px;
+color: #333;
+}
+.fixed-header p {
+margin: 0;
+line-height: 1.5;
+color: #555;
+}
+/* Kargo Kodu yanına kopyalama ikonu */
+.fixed-header .copy-container {
+color: #555; /* Kargo kodu rengiyle uyumlu */
+}
+
+
+.modal-content {
+border-radius: 15px;
+padding: 20px;
+}
+.modal-header {
+border-bottom: none;
+justify-content: center;
+}
+.modal-footer {
+border-top: none;
+justify-content: center;
+}
+/* Özel adet stili: Adet 1'den fazla ise kırmızı ve büyük göster */
+.highlight-quantity {
+color: red;
+font-size: 1.3em;
+font-weight: bold;
+}
+
+/* Bootstrap custom switch stili */
+.custom-control {
+position: relative; /* Toggle switch için gerekli */
+display: inline-flex; /* Butonlarla yan yana */
+min-height: 1.5rem; /* Minimum yükseklik */
+padding-left: 1.5rem; /* Label için sola boşluk */
+align-items: center; /* Dikeyde ortala */
+}
+.custom-switch {
+padding-left: 2.25rem; /* Switch için daha fazla boşluk */
+}
+.custom-control-input {
+position: absolute;
+left: 0;
+z-index: -1;
+width: 1rem;
+height: 1.25rem;
+opacity: 0; /* Orijinal inputu gizle */
+}
+.custom-control-label {
+margin-bottom: 0;
+line-height: 1.5;
+cursor: pointer;
+}
+.custom-control-label::before {
+position: absolute;
+top: 0.25rem;
+left: -2.25rem;
+display: block;
+width: 1.75rem; /* Toggle arka plan genişliği */
+height: 1rem; /* Toggle arka plan yüksekliği */
+pointer-events: none;
+content: "";
+background-color: #adb5bd; /* Pasif arka plan rengi */
+border: #adb5bd solid 1px; /* Kenarlık */
+border-radius: 1rem; /* Tam yuvarlak kenar */
+transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.custom-control-label::after {
+position: absolute;
+top: 0.25rem;
+left: -2rem; /* Toggle topu pozisyonu */
+display: block;
+width: 1rem; /* Toggle top boyutu */
+height: 1rem;
+content: "";
+background-color: #fff; /* Toggle top rengi */
+border-radius: 1rem; /* Tam yuvarlak */
+transition: transform 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.custom-switch .custom-control-input:checked ~ .custom-control-label::before {
+color: #fff;
+border-color: #28a745; /* Aktif kenarlık rengi */
+background-color: #28a745; /* Aktif arka plan rengi */
+}
+.custom-switch .custom-control-input:checked ~ .custom-control-label::after {
+transform: translateX(0.75rem); /* Sağa kaydır */
+}
+
+@media (max-width: 768px) {
+.btn {
+font-size: 0.8rem;
+padding: 8px 12px;
+}
+.card-title {
+font-size: 0.9rem;
+}
+.card-text {
+font-size: 0.8rem;
+}
+.user-info img {
+max-width: 70px;
+}
+/* Mobil cihazlarda üst sabit elementlerin düzeni bozulabilir */
+/* Bu çok temel bir örnek, detaylı responsive tasarım için daha fazla medya sorgusu gerekebilir */
+.user-info {
+top: 10px;
+left: 10px;
+gap: 5px;
+font-size: 12px;
+}
+.user-info img {
+max-width: 60px;
+}
+.btn-group-top {
+top: 10px;
+right: 10px;
+gap: 5px;
+flex-direction: column; /* Mobil altında alt alta */
+align-items: flex-end; /* Sağa hizala */
+}
+.btn {
+width: 100%; /* Tam genişlik */
+text-align: center; /* Ortala */
+padding: 6px 10px;
+font-size: 0.8rem;
+}
+.dropdown-toggle {
+width: 100%;
+text-align: center !important; /* Ortala */
+}
+.dropdown-menu {
+left: auto !important; /* Bootstrap'in left:0 stilini ez */
+right: 0 !important; /* Sağa hizala */
+min-width: auto; /* Minimum genişliği kaldır */
+width: auto; /* Genişliği içeriğe göre ayarla */
+}
+.dropdown-item {
+text-align: right; /* Sağdan hizala */
+font-size: 0.8rem;
+}
+.custom-switch {
+margin-top: 10px; /* Buton grubundan boşluk */
+width: 100%; /* Tam genişlik */
+justify-content: flex-end; /* Sağa hizala */
+padding-right: 2.25rem; /* Sola padding yerine sağa */
+padding-left: 0; /* Sola padding'i kaldır */
+}
+.custom-control-label::before {
+left: auto; /* Sola sabitlemeyi kaldır */
+right: 0; /* Sağa sabitle */
+}
+.custom-control-label::after {
+left: auto; /* Sola sabitlemeyi kaldır */
+right: 0.25rem; /* Sağa sabitle ve biraz boşluk bırak */
+}
+.custom-switch .custom-control-input:checked ~ .custom-control-label::after {
+transform: translateX(-0.75rem); /* Sola kaydır (sağdan sola) */
+}
+#autoShipMessage {
+top: 120px; /* Üst fixed bar'ın altına yerleştir */
+padding: 8px 10px;
+font-size: 0.9rem;
+}
+.container {
+margin-top: 180px; /* Fixed header ve mesajın altına boşluk */
+padding: 0 10px;
+}
+.fixed-header {
+margin-top: 10px; /* Container'ın içinde üstten boşluk */
+padding: 10px;
+}
+
+}
+@media (max-width: 576px) { /* Çok küçük ekranlar */
+.card {
+width: calc(50% - 15px); /* Yan yana 2 kart */
+}
+.user-info {
+width: 100%;
+justify-content: center;
+}
+.btn-group-top {
+width: 100%;
+justify-content: center;
+}
+.custom-switch {
+justify-content: center; /* Ortala */
+padding-right: 2.25rem;
+}
+.custom-control-label::before { right: auto; left: 50%; transform: translateX(-150%); }
+.custom-control-label::after { right: auto; left: 50%; transform: translateX(-50%); }
+.custom-switch .custom-control-input:checked ~ .custom-control-label::after { transform: translateX(50%); }
+
+}
+
+</style>
+</head>
+<body>
+<canvas id="weatherCanvas"></canvas>
+
+<div class="user-info">
+<img src="static/logo/gullu.png" alt="Güllü Shoes Logo">
+Giriş Yapan: <strong>{{ session['first_name'] }} {{ session['last_name'] }}</strong>
+</div>
+
+<div class="btn-group-top">
+<a href="{{ url_for('home.home') }}" class="btn btn-secondary">Anasayfa</a>
+<a href="{{ url_for('display_archive') }}" class="btn btn-secondary">Arşiv</a>
+
+<div class="dropdown">
+<button class="btn btn-warning dropdown-toggle" type="button" id="kullaniciMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+Kullanıcı İşlemleri
+</button>
+<div class="dropdown-menu" aria-labelledby="kullaniciMenu">
+<a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a>
+{% if session['role'] in ['admin', 'manager'] %}
+<a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}">
+<i class="fas fa-history"></i> Kullanıcı Hareketleri
+</a>
+{% endif %}
+</div>
+</div>
+
+
+<div class="dropdown">
+<button class="btn btn-primary dropdown-toggle" type="button" id="siparisMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+Sipariş İşlemleri
+</button>
+<div class="dropdown-menu" aria-labelledby="siparisMenu">
+<a class="dropdown-item" href="{{ url_for('siparisler_bp.yeni_siparis') }}">Yeni Sipariş</a>
+<a class="dropdown-item" href="{{ url_for('order_list_all') }}">Sipariş Listesi</a>
+<a class="dropdown-item" href="{{ url_for('degisim_talep') }}">Değişim Talepleri</a>
+</div>
+</div>
+
+<div class="dropdown">
+<button class="btn btn-success dropdown-toggle" type="button" id="urunMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+Ürün İşlemleri
+</button>
+<div class="dropdown-menu" aria-labelledby="urunMenu">
+<a class="dropdown-item" href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}">Ürün Tedarik Sayfası</a>
+<a class="dropdown-item" href="{{ url_for('product_list') }}">Ürün Listesi</a>
+<a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_screen') }}">Stok Ekleme</a>
+<a class="dropdown-item" href="{{ url_for('iade_listesi') }}">İade Listesi</a>
+</div>
+</div>
+
+<div class="dropdown">
+<button class="btn btn-info dropdown-toggle" type="button" id="analizMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+Analizler
+</button>
+<div class="dropdown-menu" aria-labelledby="analizMenu">
+<a class="dropdown-item" href="{{ url_for('analysis.sales_analysis') }}">Satış Analizi</a>
+<a class="dropdown-item" href="{{ url_for('openai_bp.ai_analiz') }}">AI Analiz</a>
+<a class="dropdown-item" href="{{ url_for('commission_update_bp.update_commission_from_excel') }}">Excel Komisyon Yükle</a>
+<a class="dropdown-item" href="{{ url_for('profit.profit_report') }}">Kâr-Zarar Analizi</a>
+<a class="dropdown-item" href="/intelligent-stock/">🧠 Stok Zekası Paneli</a> <!-- Bu satırı ekledim -->
+</div>
+</div>
+
+</div>
+
+
+<div class="container">
+<form method="POST" action="{{ url_for('confirm_packing') }}" id="packingForm" autocomplete="off">
+<input type="hidden" name="order_number" value="{{ order_number }}">
+
+<div class="order-container">
+{% for product in products %}
+<div class="col-sm-6 col-md-4 col-lg-2 col-xl-2">
+<div class="card product-card" data-order-number="{{ order_number }}">
+<img src="{{ product.image_url }}" alt="Ürün Görseli" class="card-img-top product-image">
+<div class="card-body">
+<h5 class="card-title">{{ product.sku }}</h5>
+<p class="card-text">
+<strong>Miktar:</strong>
+{# Miktar 1'den büyükse highlight-quantity sınıfını ekle #}
+<span class="{% if product.quantity and product.quantity > 1 %}highlight-quantity{% endif %}">
+{{ product.quantity if product.quantity else 1 }}
+</span>
+</p>
+<p class="card-text">
+<strong>Ürün Barkodu:</strong>
+<span id="productBarcode-{{ loop.index0 }}">{{ product.barcode }}</span>
+<span class="copy-container">
+<span class="clipboard-icon" onclick="copyToClipboard('productBarcode-{{ loop.index0 }}', this)">📋</span>
+<span class="copy-confirmation">✔️</span>
+</span>
+</p>
+<div class="form-group">
+<div id="barkodMatchMessage-right-{{ loop.index0 }}" class="alert"></div>
+<input type="text" class="form-control barkod-input" data-product-index="{{ loop.index0 }}" data-side="right" id="barkodInput-right-{{ loop.index0 }}" name="barkod_right_{{ loop.index0 }}" placeholder="{{ product.sku }} Sağ Tek Barkodu" required autocomplete="off">
+<input type="hidden" id="expectedBarcode-right-{{ loop.index0 }}" value="{{ product.barcode }}">
+</div>
+<div class="form-group">
+<div id="barkodMatchMessage-left-{{ loop.index0 }}" class="alert"></div>
+<input type="text" class="form-control barkod-input" data-product-index="{{ loop.index0 }}" data-side="left" id="barkodInput-left-{{ loop.index0 }}" name="barkod_left_{{ loop.index0 }}" placeholder="{{ product.sku }} Sol Tek Barkodu" required autocomplete="off">
+<input type="hidden" id="expectedBarcode-left-{{ loop.index0 }}" value="{{ product.barcode }}">
+</div>
+</div>
+</div>
+</div>
+{% endfor %}
+</div>
+
+<div class="bottom-buttons">
+<button type="submit" class="btn btn-primary btn-bottom disabled" id="onaylaBtn" disabled>Paketlemeyi Onayla</button>
+</div>
+</form>
+
+<div class="bottom-buttons">
+<form method="POST" action="{{ url_for('order_label') }}" target="_blank" id="yazdirForm" autocomplete="off">
+<input type="hidden" name="order_number" value="{{ order_number }}">
+<input type="hidden" name="shipping_barcode" value="{{ shipping_barcode }}">
+<input type="hidden" name="cargo_provider" value="{{ cargo_provider_name }}">
+<input type="hidden" name="customer_name" value="{{ customer_name }}">
+<input type="hidden" name="customer_surname" value="{{ customer_surname }}">
+<input type="hidden" name="customer_address" value="{{ customer_address }}">
+<button type="submit" class="btn btn-warning btn-bottom disabled" id="yazdirBtn" disabled>Yazdır</button>
+</form>
+<button type="button" class="btn btn-danger btn-bottom" onclick="showArchiveModal('{{ order_number }}')">Arşive Gönder</button>
+</div>
+
+<div class="fixed-header">
+<h4>Kargo Bilgileri</h4>
+<p>
+<strong>Sipariş No:</strong> {{ order_number }}<br>
+<strong>Müşteri:</strong> {{ customer_name }} {{ customer_surname }}<br>
+<strong>Kargoya Kalan Süre:</strong> {{ remaining_time }}<br>
+<strong>Kargo Firması:</strong> {{ cargo_provider_name }}<br>
+<strong>Kargo Kodu:</strong> <span id="shippingBarcode">{{ shipping_barcode }}</span>
+{# Kargo kodu yanına kopyalama ikonu eklendi #}
+<span class="copy-container">
+<span class="clipboard-icon" onclick="copyToClipboard('shippingBarcode', this)">📋</span>
+<span class="copy-confirmation">✔️</span>
+</span>
+</p>
+</div>
+
+<div class="modal fade" id="archiveModal" tabindex="-1" aria-labelledby="archiveModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<form id="archiveForm">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title">Arşivleme Sebebi Seçin</h5>
+<button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
+<span aria-hidden="true">&times;</span>
+</button>
+</div>
+<div class="modal-body">
+<input type="hidden" id="archiveOrderNumber" name="order_number" value="">
+<div class="mb-3">
+<label for="archiveReason" class="form-label">Sebep</label>
+<select class="form-control" id="archiveReason" name="archive_reason" required>
+<option value="">Sebep Seçin</option>
+<option value="Stok Tükendi">Stok Tükendi</option>
+<option value="Kusurlu/Defolu Ürün">Kusurlu/Defolu Ürün</option>
+<option value="Paket İçeriği Eksik">Paket İçeriği Eksik</option>
+<option value="Ürün Sorunu Gideriliyor">Ürün Sorunu Gideriliyor</option>
+<option value="Diğer">Diğer (Açıklama Ekleyin)</option>
+</select>
+</div>
+{# Diğer sebep için metin alanı eklendi #}
+<div class="mb-3" id="otherReasonDiv" style="display: none;">
+<label for="otherReasonText" class="form-label">Diğer Sebep Açıklaması</label>
+<textarea class="form-control" id="otherReasonText" name="other_reason" rows="3"></textarea>
+</div>
+</div>
+<div class="modal-footer">
+<button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+<button type="submit" class="btn btn-primary">Arşivle</button>
+</div>
+</div>
+</form>
+</div>
+</div>
+
+<div class="toast" id="archiveSuccessToast" role="alert" aria-live="assertive" aria-atomic="true" data-delay="2000" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+<div class="toast-header">
+<strong class="mr-auto text-success">Başarılı</strong>
+<small>Şimdi</small>
+<button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Kapat">
+<span aria-hidden="true">&times;</span>
+</button>
+</div>
+<div class="toast-body">
+Sipariş arşivlendi!
+</div>
+</div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.bundle.min.js"></script>
+
+<script>
+const canvas = document.getElementById('weatherCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function getIstanbulTime() {
+try {
+return new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Istanbul" }));
+} catch (e) {
+console.error("Saat dilimi hatası:", e);
+return new Date();
+}
+}
+function getIstanbulHour() {
+return getIstanbulTime().getHours();
+}
+
+function drawBackground() {
+const hour = getIstanbulHour();
+if (hour >= 6 && hour < 18) {
+ctx.fillStyle = "#87CEEB"; // gündüz
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+drawSun();
+drawClouds();
+} else {
+ctx.fillStyle = "#2c3e50"; // gece
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+drawMoon();
+drawStars();
+}
+}
+
+function drawSun() {
+const hour = getIstanbulHour();
+// Gün doğumu ve batımı için pozisyon ayarı (6-18 arası)
+let sunProgress = 0; // 0 (doğuş) - 1 (batış)
+if (hour >= 6 && hour < 12) {
+sunProgress = (hour - 6) / 6; // Sabah 6'dan 12'ye
+} else if (hour >= 12 && hour < 18) {
+sunProgress = 1 - ((hour - 12) / 6); // Öğlen 12'den akşam 6'ya
+} else {
+// Gece veya 6'dan önce/18'den sonra güneşi gösterme
+return;
+}
+
+const sunX = canvas.width * 0.1 + sunProgress * (canvas.width * 0.8); // Soldan sağa hareket (genişliğin %10'undan %90'ına)
+const sunY = canvas.height * 0.9 - Math.sin(sunProgress * Math.PI) * canvas.height * 0.8; // Yarım daire hareketi (ufuk çizgisinden tepeye)
+
+
+ctx.beginPath();
+const gradient = ctx.createRadialGradient(sunX, sunY, 20, sunX, sunY, 60);
+gradient.addColorStop(0, "#FFD700");
+gradient.addColorStop(1, "#FFA500");
+ctx.fillStyle = gradient;
+ctx.arc(sunX, sunY, 60, 0, 2 * Math.PI);
+ctx.fill();
+}
+
+
+let clouds = [];
+const cloudCount = 5;
+function createCloud() {
+return {
+x: Math.random() * (canvas.width + 200) - 100, // Ekran dışından başlayabilir
+y: Math.random() * canvas.height * 0.3,
+width: 120 + Math.random() * 80,
+height: 60 + Math.random() * 20,
+speed: 0.3 + Math.random() * 0.5
+};
+}
+function initClouds() {
+clouds = []; // Yeniden başlat
+for (let i = 0; i < cloudCount; i++) {
+clouds.push(createCloud());
+}
+}
+initClouds();
+
+
+function drawClouds() {
+clouds.forEach(cloud => {
+ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+// Daha doğal bulut şekli çizimi (birden çok daire)
+ctx.beginPath();
+ctx.arc(cloud.x, cloud.y, cloud.width * 0.3, 0, Math.PI * 2);
+ctx.arc(cloud.x + cloud.width * 0.3, cloud.y - cloud.height * 0.2, cloud.width * 0.25, 0, Math.PI * 2);
+ctx.arc(cloud.x + cloud.width * 0.6, cloud.y, cloud.width * 0.35, 0, Math.PI * 2);
+ctx.arc(cloud.x + cloud.width * 0.4, cloud.y + cloud.height * 0.2, cloud.width * 0.2, 0, Math.PI * 2);
+ctx.fill();
+});
+updateClouds();
+}
+function updateClouds() {
+clouds.forEach(cloud => {
+cloud.x += cloud.speed;
+if (cloud.x - cloud.width > canvas.width) {
+cloud.x = -cloud.width;
+cloud.y = Math.random() * canvas.height * 0.3;
+cloud.speed = 0.3 + Math.random() * 0.5; // Hızı da rastgele yap
+}
+});
+}
+
+
+function drawMoon() {
+const moonX = canvas.width * 0.8;
+const moonY = canvas.height * 0.2;
+ctx.beginPath();
+ctx.fillStyle = "#F0E68C"; // Soluk altın sarısı
+ctx.arc(moonX, moonY, 40, 0, 2 * Math.PI);
+ctx.fill();
+
+// Hilal şekli vermek için üzerine koyu renk bir daire çiz
+ctx.beginPath();
+ctx.fillStyle = "#2c3e50"; // Gece gökyüzü rengiyle aynı
+ctx.arc(moonX + 15, moonY - 5, 40, 0, 2 * Math.PI); // Ayın biraz sağına ve yukarısına kaydır
+ctx.fill();
+}
+
+let stars = [];
+const starCount = 100;
+function createStar() {
+return {
+x: Math.random() * canvas.width,
+y: Math.random() * canvas.height,
+radius: Math.random() * 1.2,
+alpha: Math.random() * 0.7 + 0.3 // Parlama efekti için şeffaflık
+};
+}
+function initStars() {
+stars = []; // Yeniden başlat
+for (let i = 0; i < starCount; i++) {
+stars.push(createStar());
+}
+}
+initStars();
+function drawStars() {
+ctx.fillStyle = "white";
+stars.forEach(star => {
+ctx.beginPath();
+ctx.arc(star.x, star.y, star.radius, 0, 2 * Math.PI);
+ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`; // Şeffaflığı kullan
+ctx.fill();
+
+// Parlama efekti için şeffaflığı hafifçe değiştir
+star.alpha += (Math.random() - 0.5) * 0.02; // Çok yavaş değiştir
+if (star.alpha > 1) star.alpha = 1;
+if (star.alpha < 0.3) star.alpha = 0.3;
+});
+}
+
+
+function animateBackground() {
+requestAnimationFrame(animateBackground);
+drawBackground();
+}
+animateBackground();
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+const barkodInputs = document.querySelectorAll('.barkod-input');
+const onaylaBtn = document.getElementById('onaylaBtn');
+const yazdirBtn = document.getElementById('yazdirBtn');
+const yazdirForm = document.getElementById('yazdirForm');
+// Otomatik gönderim toggle kaldırıldı
+// Otomatik gönderim mesaj elementleri kaldırıldı
+const shippingBarcode = "{{ shipping_barcode }}"; // Kargo barkodunu Flask'tan al
+const packingForm = document.getElementById('packingForm'); // Form elementi
+
+
+const productCount = {{ products|length }};
+let barkodDogruList = new Array(productCount).fill(false);
+
+let printTimer = null; // Yazdırma timerı
+let confirmTimer = null; // Onay timerı
+let messageTimer = null; // Mesaj gizleme timerı
+
+// ### LOCAL STORAGE: Toggle durumunu yükle ###
+const savedToggleState = localStorage.getItem('autoShipEnabled');
+if (savedToggleState !== null) {
+// localStorage'dan alınan değer stringtir, boolean'a çevir
+// Otomatik gönderim toggle state kaldırıldı
+}
+// ### LOCAL STORAGE: Yükleme Bitti ###
+
+
+// Tüm timerları ve mesajı temizleme fonksiyonu
+function clearAllTimersAndHideMessage() {
+if (printTimer) clearTimeout(printTimer);
+if (confirmTimer) clearTimeout(confirmTimer);
+if (messageTimer) clearTimeout(messageTimer);
+autoShipMessage.classList.remove('show');
+}
+
+// Otomatik Gönderim mesajını göster
+function showAutoShipMessage() {
+// clearMessageTimerAndHide(); // Sadece mesaj timerını temizlemek yerine tüm timerları temizledik yukarıda
+autoShipBarcodeSpan.innerText = shippingBarcode;
+autoShipMessage.classList.add('show');
+// Mesajı 3 saniye sonra gizle
+messageTimer = setTimeout(() => {
+autoShipMessage.classList.remove('show');
+}, 3000);
+}
+
+
+// Butonların durumunu güncelle ve timerları ayarla
+function updateButtonStates() {
+const allBarcodesMatched = barkodDogruList.every(Boolean);
+
+// Önceki tüm timerları temizle (Yeni bir set başlatılacak veya hiç başlatılmayacak)
+clearAllTimersAndHideMessage();
+
+if (allBarcodesMatched) {
+// Tüm barkodlar doğruysa butonları aktifleştir
+onaylaBtn.classList.remove('disabled');
+yazdirBtn.classList.remove('disabled');
+onaylaBtn.disabled = false;
+yazdirBtn.disabled = false;
+
+// Otomatik işlemler kaldırıldı - manuel kullanım
+
+} else {
+// Tüm barkodlar doğru değilse butonları pasifleştir
+onaylaBtn.classList.add('disabled');
+yazdirBtn.classList.add('disabled');
+onaylaBtn.disabled = true;
+yazdirBtn.disabled = true;
+// Barkodlar yanlışsa TÜM timerları (mesaj dahil) temizle (Yukarıda yapıldı)
+}
+}
+
+// Form submit işlemini izleyelim
+packingForm.addEventListener('submit', function(event) {
+    console.log("Form submit edildi - packingForm");
+    console.log("Form verisi:", new FormData(packingForm));
+    console.log("Form action:", packingForm.action);
+    console.log("Form method:", packingForm.method);
+    
+    // Form disable durumunu kontrol et
+    const disabledInputs = packingForm.querySelectorAll('input:disabled, button:disabled');
+    console.log("Disabled elements in form:", disabledInputs.length);
+    
+    // Form içindeki order_number hidden input'unun değerini kontrol et
+    const orderNumberInput = packingForm.querySelector('input[name="order_number"]');
+    console.log("order_number input value:", orderNumberInput ? orderNumberInput.value : "yok");
+});
+
+// Onay butonuna özel tıklama event listener'ı ekle
+onaylaBtn.addEventListener('click', function(event) {
+    console.log("onaylaBtn tıklandı");
+    console.log("Button state - disabled:", onaylaBtn.disabled);
+    console.log("Button class:", onaylaBtn.className);
+});
+
+
+// İlk input'a odaklansın
+if (barkodInputs.length > 0) {
+barkodInputs[0].focus();
+}
+
+barkodInputs.forEach((input, index) => {
+input.addEventListener('input', function () {
+const side = input.dataset.side;
+const productIndex = parseInt(input.dataset.productIndex);
+const expectedBarcode = document.getElementById(`expectedBarcode-${side}-${productIndex}`).value;
+const matchMessage = document.getElementById(`barkodMatchMessage-${side}-${productIndex}`);
+const inputValue = input.value.trim();
+const expectedValue = expectedBarcode.trim();
+
+// Mesajı temizle
+matchMessage.classList.remove('alert-success', 'alert-danger', 'alert-show');
+matchMessage.textContent = '';
+// Input arka plan rengini sıfırla
+input.style.backgroundColor = '';
+
+
+if (inputValue === expectedValue) {
+matchMessage.classList.add('alert-success', 'alert-show');
+matchMessage.textContent = 'Barkod doğru!';
+input.style.backgroundColor = '#e9ffe9'; // Yeşil arka plan
+
+// barkodDogruList'i güncellemek için ilgili ürünün her iki barkodunu da kontrol et
+const rightInput = document.getElementById(`barkodInput-right-${productIndex}`);
+const leftInput = document.getElementById(`barkodInput-left-${productIndex}`);
+const expectedRight = document.getElementById(`expectedBarcode-right-${productIndex}`).value.trim();
+const expectedLeft = document.getElementById(`expectedBarcode-left-${productIndex}`).value.trim();
+
+// İki input da doğru girilmişse, o ürün için listeyi true yap
+if (rightInput && leftInput && rightInput.value.trim() === expectedRight && leftInput.value.trim() === expectedLeft) {
+     barkodDogruList[productIndex] = true;
+} else {
+     // Bir tanesi doğru girilse bile diğeri henüz doğru değilse veya boşsa false kalır
+     barkodDogruList[productIndex] = false;
+}
+
+// Sonraki inputa geçişi biraz geciktir ve odakla
+setTimeout(() => {
+    let nextInput = null;
+    if (side === 'right') {
+        // Sağ tek girildi, aynı ürünün sol tekine odaklan
+        nextInput = document.getElementById(`barkodInput-left-${productIndex}`);
+    } else if (side === 'left') {
+        // Sol tek girildi, bir sonraki ürünün sağ tekine odaklan
+        nextInput = document.getElementById(`barkodInput-right-${productIndex + 1}`);
+    }
+
+    if (nextInput) {
+        nextInput.focus();
+    } else {
+        // Eğer son input ise, belki onay butonuna odaklanabilir?
+        onaylaBtn.focus();
+    }
+}, 200); // 200ms gecikme
+
+} else if (inputValue.length > 0) { // Sadece inputta değer varsa yanlış mesajını göster
+matchMessage.classList.remove('alert-success');
+matchMessage.classList.add('alert-danger', 'alert-show');
+matchMessage.textContent = 'Barkod yanlış!';
+// barkodDogruList durumunu güncelle: Bu input yanlışsa, bu ürün kesin false olur
+barkodDogruList[productIndex] = false;
+
+
+} else { // Input boşaltıldıysa
+    // Mesaj gizlendi, arka plan rengi sıfırlandı (yukarıda yapıldı)
+    // barkodDogruList durumunu bu inputun durumu ve diğer tek'in durumuyla güncelle
+    const productIndex = parseInt(input.dataset.productIndex);
+    const rightInput = document.getElementById(`barkodInput-right-${productIndex}`);
+    const leftInput = document.getElementById(`barkodInput-left-${productIndex}`);
+    const expectedRight = document.getElementById(`expectedBarcode-right-${productIndex}`).value.trim();
+    const expectedLeft = document.getElementById(`expectedBarcode-left-${productIndex}`).value.trim();
+
+    // İki input da dolu VE doğru mu?
+    if (rightInput && leftInput && rightInput.value.trim() === expectedRight && leftInput.value.trim() === expectedLeft && rightInput.value.trim() !== '' && leftInput.value.trim() !== '') {
+         barkodDogruList[productIndex] = true;
+    } else {
+         barkodDogruList[productIndex] = false;
+    }
+}
+
+// Tüm barkodlar doğrulanırsa butonlar açılır (ve toggle'a göre otomatik eylem başlar)
+updateButtonStates();
+});
+
+// Inputtan çıkınca mesajı gizle (Sadece yanlış mesajı varsa ve input boşsa)
+input.addEventListener('blur', function() {
+const side = input.dataset.side;
+const productIndex = parseInt(input.dataset.productIndex);
+const expectedBarcode = document.getElementById(`expectedBarcode-${side}-${productIndex}`).value;
+const matchMessage = document.getElementById(`barkodMatchMessage-${side}-${productIndex}`);
+const inputValue = input.value.trim();
+const expectedValue = expectedBarcode.trim();
+
+// Input boşsa veya doğru girilmişse mesajı gizle
+if (inputValue.length === 0 || inputValue === expectedValue) {
+ matchMessage.classList.remove('alert-show');
+}
+// Eğer input dolu VE yanlışsa mesaj kalır (input eventinde ayarlanmıştı)
+});
+
+// Focuslandığında mesajı tekrar gösterme logic'i
+input.addEventListener('focus', function() {
+     const side = input.dataset.side;
+    const productIndex = parseInt(input.dataset.productIndex);
+    const expectedBarcode = document.getElementById(`expectedBarcode-${side}-${productIndex}`).value;
+    const matchMessage = document.getElementById(`barkodMatchMessage-${side}-${productIndex}`);
+    const inputValue = input.value.trim();
+    const expectedValue = expectedBarcode.trim();
+
+    // Eğer input doluysa ve doğru veya yanlış girilmişse mesajı tekrar göster
+    if (inputValue.length > 0) {
+        if (inputValue === expectedValue) {
+            matchMessage.classList.remove('alert-danger');
+            matchMessage.classList.add('alert-success', 'alert-show');
+            matchMessage.textContent = 'Barkod doğru!';
+        } else {
+            matchMessage.classList.remove('alert-success');
+            matchMessage.classList.add('alert-danger', 'alert-show');
+            matchMessage.textContent = 'Barkod yanlış!';
+        }
+    }
+    // Input boşsa focuslandığında mesaj görünmez (bu istenen davranış)
+});
+
+}); // barkodInputs.forEach bitişi
+
+
+// ### LOCAL STORAGE: Toggle durumu değiştiğinde kaydet ###
+autoShipToggle.addEventListener('change', function() {
+localStorage.setItem('autoShipEnabled', autoShipToggle.checked.toString());
+updateButtonStates(); // Toggle durumu değiştiğinde mevcut barkod durumuna göre aksiyonu ayarla
+});
+// ### LOCAL STORAGE: Kaydetme Bitti ###
+
+
+// Sayfa yüklendiğinde buton durumunu ayarla (toggle durumu localStorage'dan yüklendiği için doğru olacak)
+// ve ilk inputa odaklanma da DOMContentLoaded içinde yapıldı.
+updateButtonStates();
+
+
+}); // DOMContentLoaded bitişi
+
+
+// Kopyalama fonksiyonu (mevcuttu)
+function copyToClipboard(elementId, element) {
+const text = document.getElementById(elementId).innerText;
+// Yeni nesil kopyalama API'ı kullan
+if (navigator.clipboard && navigator.clipboard.writeText) {
+navigator.clipboard.writeText(text).then(() => {
+const confirmation = element.nextElementSibling;
+confirmation.classList.add('show');
+setTimeout(() => {
+confirmation.classList.remove('show');
+}, 2000);
+}).catch(err => {
+console.error('Kopyalarken hata oluştu: ', err);
+// Eski yönteme geri dön
+fallbackCopyToClipboard(text, element);
+});
+} else {
+// Eski yönteme geri dön
+fallbackCopyToClipboard(text, element);
+}
+}
+
+// Eski nesil kopyalama fonksiyonu (fallback)
+function fallbackCopyToClipboard(text, element) {
+const tempInput = document.createElement('textarea');
+tempInput.value = text;
+tempInput.style.position = 'absolute'; // Ekran dışında gizle
+tempInput.style.left = '-9999px';
+document.body.appendChild(tempInput);
+tempInput.select();
+try {
+document.execCommand('copy');
+const confirmation = element.nextElementSibling;
+confirmation.classList.add('show');
+setTimeout(() => {
+confirmation.classList.remove('show');
+}, 2000);
+} catch (err) {
+console.error('Eski yöntemle kopyalarken hata oluştu: ', err);
+alert('Kopyalama başarısız oldu, lütfen manuel kopyalayın.');
+}
+document.body.removeChild(tempInput);
+}
+
+
+// Arşiv modalını göster (mevcut)
+function showArchiveModal(order_number) {
+document.getElementById('archiveOrderNumber').value = order_number;
+$('#archiveModal').modal('show');
+}
+
+// Arşiv modalındaki sebep seçimi değiştiğinde diğer sebep alanını göster/gizle (mevcut)
+$('#archiveReason').change(function() {
+if ($(this).val() === 'Diğer') {
+$('#otherReasonDiv').show();
+$('#otherReasonText').prop('required', true);
+} else {
+$('#otherReasonDiv').hide();
+$('#otherReasonText').prop('required', false);
+}
+});
+
+
+// Arşiv formunu submit et (mevcut)
+$('#archiveForm').submit(function(event) {
+event.preventDefault();
+var order_number = $('#archiveOrderNumber').val();
+var archive_reason = $('#archiveReason').val();
+var other_reason = $('#otherReasonText').val(); // Diğer sebep metnini al
+
+
+if (!archive_reason) {
+alert('Lütfen bir sebep seçin.');
+return;
+}
+
+// Eğer sebep "Diğer" ise ve açıklama boşsa uyar
+if (archive_reason === 'Diğer' && other_reason.trim() === '') {
+alert('Lütfen diğer sebep açıklamasını girin.');
+return;
+}
+// Eğer sebep "Diğer" değilse ama açıklama alanında bir şeyler varsa temizle (gerekirse)
+if (archive_reason !== 'Diğer') {
+other_reason = '';
+}
+
+
+// Sunucuya gönderilecek veriyi hazırla
+var postData = {
+order_number: order_number,
+archive_reason: archive_reason,
+other_reason: other_reason // Açıklamayı da ekle
+};
+
+
+$.post('/archive_order', postData, function(response) { // postData kullanıldı
+if (response.success) {
+$('#archiveModal').modal('hide');
+$('#archiveSuccessToast').toast('show');
+setTimeout(() => {
+window.location.href = '/'; // Anasayfaya yönlendir
+}, 2000);
+} else {
+alert('Sipariş arşivlenirken hata: ' + response.message);
+}
+}).fail(function() {
+alert('Sipariş arşivlenirken bir ağ hatası oluştu.');
+});
+});
+</script>
+</body>
+</html>
