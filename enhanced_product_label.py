@@ -718,10 +718,10 @@ def generate_advanced_label_preview_new():
                 # QR kod direkt barkodu içermeli
                 qr_data = sample_product['barcode']
                 
-                # Minimum QR boyutu kontrolü
-                if qr_size < 50:  # 50 pixel minimum
-                    qr_size = 50
-                    logger.warning(f"QR boyutu çok küçük, 50px'e yükseltildi")
+                # Minimum QR boyutu kontrolü - daha büyük minimum
+                if qr_size < 100:  # 100 pixel minimum
+                    qr_size = 100
+                    logger.warning(f"QR boyutu çok küçük, 100px'e yükseltildi")
                 
                 # QR kod oluştur - canvas genişliği zaten başta hesaplandı
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
