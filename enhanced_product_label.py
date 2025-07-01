@@ -718,6 +718,12 @@ def generate_advanced_label_preview_new():
             editor_x_mm = element.get('x', 0) / 4  # 4px = 1mm editörde
             editor_y_mm = element.get('y', 0) / 4
             
+            # Metin elementleri için sol kenar boşluğunu ayarla
+            if element_type in ['title', 'model_code', 'color', 'size', 'barcode']:
+                # Sol kenardan minimum 2mm boşluk bırak
+                if editor_x_mm < 2:
+                    editor_x_mm = 2
+            
             x = int((editor_x_mm / 25.4) * dpi)  # mm'yi çıktı DPI'sına çevir
             y = int((editor_y_mm / 25.4) * dpi)
             
@@ -1216,6 +1222,12 @@ def create_label_with_design(product_data, design, label_width, label_height, is
             # Editör koordinatlarını mm'ye çevir (4px = 1mm)
             editor_x_mm = element.get('x', 0) / 4
             editor_y_mm = element.get('y', 0) / 4
+            
+            # Metin elementleri için sol kenar boşluğunu ayarla
+            if element_type in ['title', 'model_code', 'color', 'size', 'barcode']:
+                # Sol kenardan minimum 2mm boşluk bırak
+                if editor_x_mm < 2:
+                    editor_x_mm = 2
             
             # A4 etiket boyutlarına ölçeklendir
             scaled_x_mm = editor_x_mm * scale_x
