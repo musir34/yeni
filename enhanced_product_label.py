@@ -1287,14 +1287,21 @@ def create_label_with_design(product_data, design, label_width, label_height, is
             elif element_type == 'model_code':
                 # Font boyutu alma - properties öncelikli
                 font_size = 14
-                if 'properties' in element and 'fontSize' in element['properties']:
-                    font_size = int(element['properties']['fontSize'])
-                elif 'fontSize' in element:
-                    font_size_str = element.get('fontSize', '14px')
-                    if isinstance(font_size_str, str):
-                        font_size = int(font_size_str.replace('px', ''))
-                    else:
-                        font_size = int(font_size_str)
+                try:
+                    if 'properties' in element and 'fontSize' in element['properties']:
+                        font_val = element['properties']['fontSize']
+                        if isinstance(font_val, str):
+                            font_size = int(font_val.replace('px', ''))
+                        else:
+                            font_size = int(font_val)
+                    elif 'fontSize' in element:
+                        font_size_str = element.get('fontSize', '14px')
+                        if isinstance(font_size_str, str):
+                            font_size = int(font_size_str.replace('px', ''))
+                        else:
+                            font_size = int(font_size_str)
+                except:
+                    font_size = 14  # Hata durumunda varsayılan boyut
                 
                 font_size = int(font_size * (dpi / 96))
                 
