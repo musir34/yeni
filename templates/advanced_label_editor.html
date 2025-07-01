@@ -234,14 +234,14 @@
             element.id = elementId;
             element.className = `canvas-element ${type}-element`;
             
-            // QR kod için otomatik konumlandırma: etiket sağından 2mm uzağa
+            // QR kod için otomatik konumlandırma: etiket sağından 5mm uzağa
             let defaultX = 20; // Varsayılan pozisyon (5mm)
             let defaultY = 20; // Varsayılan pozisyon (5mm)
             
             if (type === 'qr') {
                 const labelWidth = parseInt(document.getElementById('labelWidth').value);
-                // Etiket sağından 2mm uzağa konumlandır (4px = 1mm)
-                defaultX = (labelWidth + 2) * 4; // mm'yi pixel'e çevir
+                // Etiket sağından 5mm uzağa konumlandır (4px = 1mm)
+                defaultX = (labelWidth + 5) * 4; // mm'yi pixel'e çevir
                 defaultY = 20; // Y pozisyonu varsayılan
             }
             
