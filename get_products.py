@@ -93,7 +93,7 @@ def update_exchange_rates_manually():
         asyncio.set_event_loop(loop)
         loop.run_until_complete(_update_exchange_rates())
         loop.close()
-        flash("Döviz kurları başarıyla güncellendi.", "success")
+        # Döviz kurları güncellendi - sessiz çalışma
     except Exception as e:
         logger.error(f"update_exchange_rates_manually hata: {e}")
         flash("Döviz kurları güncellenirken hata oluştu.", "danger")
@@ -152,15 +152,15 @@ async def update_products_route():
         if products:
             logger.debug("Ürünler veritabanına kaydediliyor...")
             await save_products_to_db_async(products)
-            flash('Ürünler başarıyla güncellendi.', 'success')
+            # Ürünler güncellendi - sessiz çalışma
             logger.info("Ürünler başarıyla güncellendi.")
         else:
             logger.warning("Ürünler bulunamadı veya güncelleme sırasında bir hata oluştu.")
-            flash('Ürünler bulunamadı veya güncelleme sırasında bir hata oluştu.', 'danger')
+            # Ürün güncelleme hatası - sessiz çalışma
 
     except Exception as e:
         logger.error(f"update_products_route hata: {e}")
-        flash('Ürünler güncellenirken bir hata oluştu.', 'danger')
+        # Ürün güncelleme genel hatası - sessiz çalışma
 
     return redirect(url_for('get_products.product_list'))
 
@@ -832,7 +832,7 @@ def search_products():
         logger.debug(f"Barkod ile arama yapılıyor: {query}")
     else:
         # Geçersiz bir arama tipi gelirse (normalde olmamalı)
-        flash('Geçersiz arama tipi seçildi.', 'danger')
+        # Geçersiz arama tipi - sessiz yönlendirme
         return redirect(url_for('get_products.product_list'))
 
     # Sorguyu çalıştır ve tüm sonuçları al
@@ -841,7 +841,7 @@ def search_products():
 
     # Sonuç bulunamazsa kullanıcıyı bilgilendir
     if not products:
-        flash(f"'{query}' için sonuç bulunamadı.", 'info')
+        # Sonuç bulunamadı - sessiz çalışma
         # Boş bir grouped_products göndererek template'in hata vermesini engelle
         return render_template(
             'product_list.html',
