@@ -448,8 +448,8 @@ def generate_advanced_label_preview():
                 qr_size = int(properties.get('size', 50) * (dpi / 96))
                 qr_data = properties.get('data', 'sample')
                 
-                # QR kod özel konumlandırma: etiket sağından 2mm uzakta
-                # Eğer QR kod etiket sağından 2mm uzağa konumlandırılmışsa, bu normal bir durumdur
+                # QR kod özel konumlandırma: etiket sağından 5mm uzakta
+                # Eğer QR kod etiket sağından 5mm uzağa konumlandırılmışsa, bu normal bir durumdur
                 if editor_x_mm > label_width:  # QR kod etiket dışında
                     # QR kodunu etiket sağına yapıştır - Canvas genişliğini artır
                     qr_area_width = int(((editor_x_mm + (qr_size * 96 / dpi)) / 25.4) * dpi)
@@ -656,8 +656,8 @@ def generate_advanced_label_preview_new():
                 # QR kod direkt barkodu içermeli
                 qr_data = sample_product['barcode']
                 
-                # QR kod özel konumlandırma: etiket sağından 2mm uzakta
-                # Eğer QR kod etiket sağından 2mm uzağa konumlandırılmışsa, bu normal bir durumdur
+                # QR kod özel konumlandırma: etiket sağından 5mm uzakta
+                # Eğer QR kod etiket sağından 5mm uzağa konumlandırılmışsa, bu normal bir durumdur
                 if editor_x_mm > label_width:  # QR kod etiket dışında
                     # QR kodunu etiket sağına yapıştır - Canvas genişliğini artır
                     qr_area_width = int(((editor_x_mm + (qr_size * 96 / dpi)) / 25.4) * dpi)
