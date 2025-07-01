@@ -668,7 +668,7 @@ def product_list():
         }
     except Exception as e:
         logger.error(f"Ürünler veritabanından çekilirken bir hata oluştu: {e}")
-        flash("Ürünler bulunamadı veya veritabanı okunamadı.", "danger")
+        # Flash mesajları kaldırıldı - sessiz çalışma
         return render_template('error.html', message="Ürün bulunamadı.")
     
     # Sonucu render et ve cache'e kaydet
@@ -817,7 +817,7 @@ def search_products():
 
     # Sorgu boşsa uyarı ver ve ana listeye dön
     if not query:
-        flash('Lütfen bir arama sorgusu girin.', 'warning')
+        # Arama sorgusu boş - sessiz yönlendirme
         return redirect(url_for('get_products.product_list'))
 
     products_query = None
