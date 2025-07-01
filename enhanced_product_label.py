@@ -583,8 +583,9 @@ def generate_advanced_label_preview_new():
             if element.get('type') == 'qr':
                 editor_x_mm = element.get('x', 0) / 4  # 4px = 1mm editörde
                 if editor_x_mm > label_width:  # QR kod etiket dışında
-                    qr_size = element.get('width', 40)  # QR boyutu
-                    required_width_mm = editor_x_mm + qr_size + 5  # QR + 5mm boşluk
+                    qr_size_px = element.get('width', 40)  # editörde pixel cinsinden
+                    qr_size_mm = qr_size_px / 4  # 4px = 1mm dönüşümü
+                    required_width_mm = editor_x_mm + qr_size_mm + 5  # QR + 5mm boşluk
                     required_width_px = int((required_width_mm / 25.4) * dpi)
                     max_required_width = max(max_required_width, required_width_px)
         
@@ -612,11 +613,16 @@ def generate_advanced_label_preview_new():
             x = int((editor_x_mm / 25.4) * dpi)  # mm'yi çıktı DPI'sına çevir
             y = int((editor_y_mm / 25.4) * dpi)
             
-            # Ürün-spesifik alanlar
+            # Ürün-spesifik alanlar - properties yapısını kullan
+            properties = element.get('properties', {})
+            
             if element_type == 'title':
                 html_content = element.get('html', 'GÜLLÜ SHOES')
-                font_size = int(element.get('fontSize', '18px').replace('px', ''))
-                font_size = int(font_size * (dpi / 96))
+                # Font boyutu properties'ten al, editör formatına uygun
+                font_size_px = properties.get('fontSize', 18)  # properties'te sayı olarak
+                if isinstance(font_size_px, str):
+                    font_size_px = int(font_size_px.replace('px', ''))
+                font_size = int(font_size_px * (dpi / 96))
                 
                 try:
                     if 'strong' in html_content:
@@ -633,8 +639,11 @@ def generate_advanced_label_preview_new():
                 
             elif element_type == 'model_code':
                 html_content = element.get('html', '[MODEL KODU]')
-                font_size = int(element.get('fontSize', '14px').replace('px', ''))
-                font_size = int(font_size * (dpi / 96))
+                # Font boyutu properties'ten al, editör formatına uygun
+                font_size_px = properties.get('fontSize', 14)  # properties'te sayı olarak
+                if isinstance(font_size_px, str):
+                    font_size_px = int(font_size_px.replace('px', ''))
+                font_size = int(font_size_px * (dpi / 96))
                 
                 try:
                     if 'strong' in html_content:
@@ -648,8 +657,11 @@ def generate_advanced_label_preview_new():
                 
             elif element_type == 'color':
                 html_content = element.get('html', '[RENK]')
-                font_size = int(element.get('fontSize', '14px').replace('px', ''))
-                font_size = int(font_size * (dpi / 96))
+                # Font boyutu properties'ten al, editör formatına uygun
+                font_size_px = properties.get('fontSize', 14)  # properties'te sayı olarak
+                if isinstance(font_size_px, str):
+                    font_size_px = int(font_size_px.replace('px', ''))
+                font_size = int(font_size_px * (dpi / 96))
                 
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
@@ -660,8 +672,11 @@ def generate_advanced_label_preview_new():
                 
             elif element_type == 'size':
                 html_content = element.get('html', '[BEDEN]')
-                font_size = int(element.get('fontSize', '14px').replace('px', ''))
-                font_size = int(font_size * (dpi / 96))
+                # Font boyutu properties'ten al, editör formatına uygun
+                font_size_px = properties.get('fontSize', 14)  # properties'te sayı olarak
+                if isinstance(font_size_px, str):
+                    font_size_px = int(font_size_px.replace('px', ''))
+                font_size = int(font_size_px * (dpi / 96))
                 
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
@@ -671,7 +686,10 @@ def generate_advanced_label_preview_new():
                 draw.text((x, y), sample_product['size'], fill='black', font=font)
                 
             elif element_type == 'qr':
-                qr_size = int(element.get('width', 40) * (dpi / 96))
+                # QR boyutu editörden pixel cinsinden alıp mm'ye çevirip DPI'ya ölçekle
+                qr_size_px = element.get('width', 40)  # editörde pixel cinsinden
+                qr_size_mm = qr_size_px / 4  # 4px = 1mm
+                qr_size = int((qr_size_mm / 25.4) * dpi)  # mm'yi DPI'ya çevir
                 # QR kod direkt barkodu içermeli
                 qr_data = sample_product['barcode']
                 
@@ -695,8 +713,13 @@ def generate_advanced_label_preview_new():
                 draw.text((x, y), barcode_data, fill='black', font=font)
                 
             elif element_type == 'product_image':
-                img_width = int(element.get('width', 50) * (dpi / 96))
-                img_height = int(element.get('height', 50) * (dpi / 96))
+                # Image boyutları editörden pixel cinsinden alıp mm'ye çevirip DPI'ya ölçekle
+                img_width_px = element.get('width', 50)  # editörde pixel cinsinden
+                img_height_px = element.get('height', 50)
+                img_width_mm = img_width_px / 4  # 4px = 1mm
+                img_height_mm = img_height_px / 4
+                img_width = int((img_width_mm / 25.4) * dpi)  # mm'yi DPI'ya çevir
+                img_height = int((img_height_mm / 25.4) * dpi)
                 
                 # Gerçek ürün görseli varsa kullan, yoksa placeholder
                 image_loaded = False
