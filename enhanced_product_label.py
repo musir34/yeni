@@ -417,8 +417,15 @@ def generate_advanced_label_preview():
         # Elementleri çiz
         for element in elements:
             element_type = element.get('type')
-            x = int(element.get('x', 0) * (width_px / (label_width * 4)))  # Convert from display to print scale
-            y = int(element.get('y', 0) * (height_px / (label_height * 2)))
+            
+            # Tutarlı koordinat dönüşümü: editör 4px = 1mm, çıktı da aynı oranda
+            # Editördeki pixel koordinatları mm'ye çevir, sonra çıktı DPI'sına göre ölçekle
+            editor_x_mm = element.get('x', 0) / 4  # 4px = 1mm editörde
+            editor_y_mm = element.get('y', 0) / 4
+            
+            x = int((editor_x_mm / 25.4) * dpi)  # mm'yi çıktı DPI'sına çevir
+            y = int((editor_y_mm / 25.4) * dpi)
+            
             properties = element.get('properties', {})
             
             if element_type in ['title', 'text']:
@@ -560,18 +567,17 @@ def generate_advanced_label_preview_new():
             default_font = ImageFont.load_default()
             bold_font = ImageFont.load_default()
         
-        # Elementleri çiz - Koordinat sistemi düzeltmesi
+        # Elementleri çiz - Tutarlı koordinat sistemi
         for element in elements:
             element_type = element.get('type')
             
-            # Doğrudan koordinat kullanımı - ölçekleme yapmadan
-            raw_x = element.get('x', 0)
-            raw_y = element.get('y', 0)
+            # Tutarlı koordinat dönüşümü: editör 4px = 1mm, çıktı da aynı oranda
+            # Editördeki pixel koordinatları mm'ye çevir, sonra çıktı DPI'sına göre ölçekle
+            editor_x_mm = element.get('x', 0) / 4  # 4px = 1mm editörde
+            editor_y_mm = element.get('y', 0) / 4
             
-            # DPI'ye göre basit ölçeklendirme (96 DPI -> 300 DPI)
-            scale_factor = dpi / 96
-            x = int(raw_x * scale_factor)
-            y = int(raw_y * scale_factor)
+            x = int((editor_x_mm / 25.4) * dpi)  # mm'yi çıktı DPI'sına çevir
+            y = int((editor_y_mm / 25.4) * dpi)
             
             # Ürün-spesifik alanlar
             if element_type == 'title':
