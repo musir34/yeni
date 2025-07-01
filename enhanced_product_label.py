@@ -1037,12 +1037,13 @@ def print_multiple_labels():
                 x = start_x + col * (label_width_px + gap_x)
                 y = start_y + row * (label_height_px + gap_y)
                 
-                # Tasarım kullanarak etiket oluştur
+                # Tasarım kullanarak etiket oluştur - A4 modu aktif
                 label_img = create_label_with_design(
                     label_data,
                     design,
                     label_width,
-                    label_height
+                    label_height,
+                    is_a4_mode=True  # A4 yazdırma modu
                 )
                 
                 # Sayfaya yapıştır
@@ -1090,7 +1091,7 @@ def print_multiple_labels():
         logger.error(f"Çoklu etiket yazdırma hatası: {e}")
         return jsonify({'success': False, 'message': f'Yazdırma hazırlanırken hata oluştu: {str(e)}'})
 
-def create_label_with_design(product_data, design, label_width, label_height):
+def create_label_with_design(product_data, design, label_width, label_height, is_a4_mode=False):
     """Tasarım kullanarak tek etiket oluştur"""
     try:
         # Etiket boyutları (mm'den pixel'e çevir, 300 DPI)
