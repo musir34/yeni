@@ -507,12 +507,15 @@ def generate_advanced_label_preview():
                     scaled_qr_size_mm = qr_size_mm
                     
                 qr_size = int((scaled_qr_size_mm / 25.4) * dpi)  # mm'yi DPI'ya çevir
-                # QR verisi - editörden gelen data
+                # QR verisi - önce editörden, yoksa gerçek ürün barkodu
                 qr_data = properties.get('data', 'sample')
+                
+                # Gerçek ürün barkodunu al
+                real_barcode = product_data.get('barcode', '0138523709823')
                 
                 # Eğer sample/placeholder verisi ise gerçek barkod kullan
                 if qr_data in ['sample_barcode', 'sample', 'placeholder']:
-                    qr_data = '0138523709823'  # Test barkodu
+                    qr_data = real_barcode  # Gerçek ürün barkodu
                 
                 logger.info(f"QR veri kaynağı: {qr_data}")
                 
@@ -1297,12 +1300,20 @@ def create_label_with_design(product_data, design, label_width, label_height, is
                 
                 qr_size = int((scaled_qr_size_mm / 25.4) * dpi)  # mm'den DPI'ya
                 
-                # Minimum boyut kontrolü - A4 için daha büyük minimum
-                if qr_size < 200:  # A4'te en az 200px QR boyutu
-                    qr_size = 200
+                # Minimum boyut kontrolü - önizleme ile aynı
+                if qr_size < 100:  # 100 pixel minimum (önizleme ile aynı)
+                    qr_size = 100
                     logger.info(f"A4 QR boyutu minimum sınırına yükseltildi: {qr_size}px")
                 
-                qr_data = barcode
+                # QR verisi - önizleme ile aynı kaynak kullan
+                properties = element.get('properties', {})
+                qr_data = properties.get('data', barcode)  # Önce editörden, yoksa ürün barkodu
+                
+                # Eğer sample/placeholder verisi ise gerçek barkod kullan
+                if qr_data in ['sample_barcode', 'sample', 'placeholder']:
+                    qr_data = barcode  # Gerçek ürün barkodu
+                
+                logger.info(f"A4 QR veri kaynağı: {qr_data}")
                 logger.info(f"A4 QR Debug: element_size_px={qr_size_px}, mm={qr_size_mm:.1f}, scaled_mm={scaled_qr_size_mm:.1f}, final_dpi_size={qr_size}, data={qr_data}")
                 
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
