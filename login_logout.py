@@ -87,7 +87,12 @@ def generate_qr_code(data):
 def register():
     # Yetki kontrolü - sadece yöneticiler kayıt yapabilir
     if 'role' not in session or session.get('role') != 'admin':
-        return render_template('yetki_yok.html')
+        return '''
+        <script>
+        alert('Yetki Yok!\\n\\nBu sayfaya erişim yetkiniz bulunmamaktadır.\\nKullanıcı kayıt işlemleri sadece yöneticiler tarafından yapılabilir.');
+        window.location.href = '/';
+        </script>
+        '''
     
     if request.method == 'POST':
         first_name = request.form['first_name']
