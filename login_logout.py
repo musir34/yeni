@@ -72,6 +72,7 @@ def roles_required(*roles):
 
 #  QR kodu oluşturma fonksiyonu
 def generate_qr_code(data):
+    import qrcode
     qr = qrcode.QRCode(box_size=4, border=2)
     qr.add_data(data)
     qr.make(fit=True)
