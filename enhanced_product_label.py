@@ -1145,23 +1145,27 @@ def create_label_with_design(product_data, design, label_width, label_height, is
         # Tasarım elementlerini çiz - Koordinat sistemi düzeltmesi
         elements = design.get('elements', [])
         
-        # Koordinat sistemi düzeltmesi - A4 etiket boyutlarına ölçeklendirme
-        # Editör tasarımları genellikle 100x50mm için yapılır, A4'te farklı boyutlar kullanılır
-        
-        # Editörde varsayılan etiket boyutları (mm)
-        editor_default_width = 100  # mm
-        editor_default_height = 50  # mm
-        
-        # A4'te kullanılan gerçek etiket boyutları
-        actual_label_width = label_width  # A4'te hesaplanan boyut
-        actual_label_height = label_height
-        
-        # Ölçeklendirme oranları
-        scale_x = actual_label_width / editor_default_width
-        scale_y = actual_label_height / editor_default_height
-        
-        logger.info(f"A4 Ölçeklendirme: editör={editor_default_width}x{editor_default_height}mm, A4={actual_label_width:.1f}x{actual_label_height:.1f}mm")
-        logger.info(f"A4 Ölçeklendirme oranları: x={scale_x:.2f}, y={scale_y:.2f}")
+        # Koordinat sistemi düzeltmesi - A4 modu varsa önizleme ile aynı ölçeklendirme
+        if is_a4_mode:
+            # A4 modunda önizleme ile aynı ölçeklendirme oranlarını kullan
+            editor_default_width = 100  # mm  
+            editor_default_height = 50  # mm
+            
+            # A4'te kullanılan gerçek etiket boyutları
+            actual_label_width = label_width  # A4'te hesaplanan boyut
+            actual_label_height = label_height
+            
+            # Önizleme ile aynı ölçeklendirme oranları
+            scale_x = actual_label_width / editor_default_width
+            scale_y = actual_label_height / editor_default_height
+            
+            logger.info(f"A4 Print Ölçeklendirme: editör={editor_default_width}x{editor_default_height}mm, A4={actual_label_width:.1f}x{actual_label_height:.1f}mm")
+            logger.info(f"A4 Print ölçeklendirme oranları: x={scale_x:.2f}, y={scale_y:.2f}")
+        else:
+            # Normal modu - ölçeklendirme yok
+            scale_x = 1.0
+            scale_y = 1.0
+            logger.info(f"Normal mod: ölçeklendirme yok")
         
         for element in elements:
             element_type = element.get('type')
