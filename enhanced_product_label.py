@@ -471,7 +471,14 @@ def generate_advanced_label_preview():
                 qr_size_px = properties.get('size', 50)  # editörde pixel cinsinden
                 qr_size_mm = qr_size_px / 4  # 4px = 1mm
                 qr_size = int((qr_size_mm / 25.4) * dpi)  # mm'yi DPI'ya çevir
+                # QR verisi - editörden gelen data
                 qr_data = properties.get('data', 'sample')
+                
+                # Eğer sample/placeholder verisi ise gerçek barkod kullan
+                if qr_data in ['sample_barcode', 'sample', 'placeholder']:
+                    qr_data = '0138523709823'  # Test barkodu
+                
+                logger.info(f"QR veri kaynağı: {qr_data}")
                 
                 # Debug bilgisi
                 logger.info(f"QR Debug (func1): px={qr_size_px}, mm={qr_size_mm}, final_size={qr_size}, pos=({x},{y})")
@@ -715,8 +722,9 @@ def generate_advanced_label_preview_new():
                 # Debug bilgisi
                 logger.info(f"QR Debug: px={qr_size_px}, mm={qr_size_mm}, final_size={qr_size}, pos=({x},{y})")
                 
-                # QR kod direkt barkodu içermeli
+                # QR kod direkt barkodu içermeli - güvenilir veri kaynağı
                 qr_data = sample_product['barcode']
+                logger.info(f"QR veri kaynağı (func2): {qr_data}")
                 
                 # Minimum QR boyutu kontrolü - daha büyük minimum
                 if qr_size < 100:  # 100 pixel minimum
