@@ -90,18 +90,11 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('home.home') }}">
-                <img src="{{ url_for('static', filename='logo/gullu.png') }}" height="30" alt="Logo">
-            </a>
-            <div class="navbar-nav ml-auto">
-                <a href="{{ url_for('home.home') }}" class="btn btn-outline-primary mr-2">Anasayfa</a>
-            </div>
-        </div>
-    </nav>
+    <!-- Üst Menü Dahil Et -->
+    {% include 'ust_menu.html' %}
 
-    {% block content %}
+    <div style="padding-top: 80px;">
+        {% block content %}
     {% endblock %}
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
