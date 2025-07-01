@@ -161,92 +161,91 @@ def log_request():
             force_log=True
         )
 
-        # Giriş Kontrolü
-        @app.before_request
-        def check_authentication():
-            # Etiket editör sayfalarını tamamen serbest bırak
-            if (request.path.startswith('/enhanced_product_label') or 
-                request.path.startswith('/static/') or 
-                request.path.startswith('/api/generate_advanced_label_preview') or
-                request.path.startswith('/api/save_label_preset') or
-                request.path.startswith('/api/generate_label_preview') or
-                (request.endpoint and 'enhanced_label' in str(request.endpoint))):
-                return None
+# Giriş Kontrolü
+@app.before_request
+def check_authentication():
+    # Etiket editör sayfalarını tamamen serbest bırak
+    if (request.path.startswith('/enhanced_product_label') or 
+        request.path.startswith('/static/') or 
+        request.path.startswith('/api/generate_advanced_label_preview') or
+        request.path.startswith('/api/save_label_preset') or
+        request.path.startswith('/api/generate_label_preview') or
+        (request.endpoint and 'enhanced_label' in str(request.endpoint))):
+        return None
 
-            allowed_routes = [
-                'login_logout.login',
-                'login_logout.register',
-                'login_logout.static',
-                'login_logout.verify_totp',
-                'login_logout.logout',
-                'qr_utils.generate_qr_labels_pdf',
-                'enhanced_label.advanced_label_editor',
-                'enhanced_label.enhanced_product_label'
-            ]
-            app.permanent_session_lifetime = timedelta(days=30)
+    allowed_routes = [
+        'login_logout.login',
+        'login_logout.register',
+        'login_logout.static',
+        'login_logout.verify_totp',
+        'login_logout.logout',
+        'qr_utils.generate_qr_labels_pdf',
+        'enhanced_label.advanced_label_editor',
+        'enhanced_label.enhanced_product_label'
+    ]
+    app.permanent_session_lifetime = timedelta(days=30)
 
-            if request.endpoint not in allowed_routes:
-                if 'username' not in session:
-                    flash('Lütfen giriş yapınız.', 'danger')
-                    return redirect(url_for('login_logout.login'))
-                if 'pending_user' in session and request.endpoint != 'login_logout.verify_totp':
-                    return redirect(url_for('login_logout.verify_totp'))
+    if request.endpoint not in allowed_routes:
+        if 'username' not in session:
+            flash('Lütfen giriş yapınız.', 'danger')
+            return redirect(url_for('login_logout.login'))
+        if 'pending_user' in session and request.endpoint != 'login_logout.verify_totp':
+            return redirect(url_for('login_logout.verify_totp'))
 
-        # APScheduler - Arka Planda Cron İşleri
-        from apscheduler.schedulers.background import BackgroundScheduler
+# APScheduler - Arka Planda Cron İşleri
+from apscheduler.schedulers.background import BackgroundScheduler
 
-        def fetch_and_save_returns():
-            with app.app_context():
-                try:
-                    from iade_islemleri import fetch_data_from_api, save_to_database
-                    data = fetch_data_from_api(datetime.now() - timedelta(days=1), datetime.now())
-                    if data:
-                        save_to_database(data, db.session)
-                except Exception as e:
-                    logger.warning(f"İade çekme hatası: {e}")
+def fetch_and_save_returns():
+    with app.app_context():
+        try:
+            from iade_islemleri import fetch_data_from_api, save_to_database
+            data = fetch_data_from_api(datetime.now() - timedelta(days=1), datetime.now())
+            if data:
+                save_to_database(data, db.session)
+        except Exception as e:
+            logger.warning(f"İade çekme hatası: {e}")
 
-        def schedule_jobs():
-            scheduler = BackgroundScheduler(timezone="Europe/Istanbul")
-            scheduler.add_job(func=fetch_and_save_returns, trigger='cron', hour=23, minute=50)
-            scheduler.start()
+def schedule_jobs():
+    scheduler = BackgroundScheduler(timezone="Europe/Istanbul")
+    scheduler.add_job(func=fetch_and_save_returns, trigger='cron', hour=23, minute=50)
+    scheduler.start()
 
-        schedule_jobs()
+schedule_jobs()
 
-        # 🔍 Veritabanı Bağlantı Testi
-        with app.app_context():
-            try:
-                from sqlalchemy import text
-                with db.engine.connect() as connection:
-                    connection.execute(text("SELECT 1"))
-                print("✅ Neon veritabanına bağlantı başarılı!")
+# 🔍 Veritabanı Bağlantı Testi
+with app.app_context():
+    try:
+        from sqlalchemy import text
+        with db.engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        print("✅ Neon veritabanına bağlantı başarılı!")
 
-                try:
-                    db.create_all()
-                    print("✅ Veritabanı tabloları kontrol edildi")
-                except Exception as table_error:
-                    print(f"⚠️ Tablo oluşturma hatası (devam ediliyor): {str(table_error)[:50]}...")
+        try:
+            db.create_all()
+            print("✅ Veritabanı tabloları kontrol edildi")
+        except Exception as table_error:
+            print(f"⚠️ Tablo oluşturma hatası (devam ediliyor): {str(table_error)[:50]}...")
 
-            except Exception as e:
-                print(f"❌ Veritabanı bağlantı hatası: {str(e)[:50]}...")
-                print("⚠️ Uygulama veritabanısız modda başlatılıyor")
-                # Veritabanı bağlantısı olmasa da devam et
+    except Exception as e:
+        print(f"❌ Veritabanı bağlantı hatası: {str(e)[:50]}...")
+        print("⚠️ Uygulama veritabanısız modda başlatılıyor")
 
 
-        # Uygulama Başlat - Opsiyonel Setup
-        if __name__ == '__main__':
-            debug_mode = os.environ.get('FLASK_DEBUG', 'False') == 'True'
+# Uygulama Başlat - Opsiyonel Setup
+if __name__ == '__main__':
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False') == 'True'
 
-            if os.environ.get("RUN_DB_SETUP") == "True":
-                try:
-                    from db_setup import run_setup
-                    run_setup()
-                except Exception as e:
-                    logger.warning(f"Veritabanı kurulumu sırasında hata: {e}")
+    if os.environ.get("RUN_DB_SETUP") == "True":
+        try:
+            from db_setup import run_setup
+            run_setup()
+        except Exception as e:
+            logger.warning(f"Veritabanı kurulumu sırasında hata: {e}")
 
-            print("Uygulama başlatılıyor...")
-            try:
-                app.run(host='0.0.0.0', port=8080, debug=debug_mode, use_reloader=False)
-            except Exception as e:
-                print(f"Başlatma hatası: {e}")
-                import traceback
-                traceback.print_exc()
+    print("Uygulama başlatılıyor...")
+    try:
+        app.run(host='0.0.0.0', port=8080, debug=debug_mode, use_reloader=False)
+    except Exception as e:
+        print(f"Başlatma hatası: {e}")
+        import traceback
+        traceback.print_exc()
