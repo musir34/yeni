@@ -701,8 +701,11 @@ def generate_advanced_label_preview_new():
             elif element_type == 'barcode':
                 # Barkod alanı sadece rakam gösterecek
                 barcode_data = sample_product['barcode']
-                font_size = int(element.get('fontSize', '12px').replace('px', ''))
-                font_size = int(font_size * (dpi / 96))
+                # Font boyutu properties'ten al, editör formatına uygun
+                font_size_px = properties.get('fontSize', 12)  # properties'te sayı olarak
+                if isinstance(font_size_px, str):
+                    font_size_px = int(font_size_px.replace('px', ''))
+                font_size = int(font_size_px * (dpi / 96))
                 
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
