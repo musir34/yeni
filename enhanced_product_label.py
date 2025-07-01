@@ -400,23 +400,10 @@ def generate_advanced_label_preview():
         label_height = int(data.get('height', 50))
         elements = data.get('elements', [])
         
-        # MM to Pixel conversion functions
-        dpi = 300
-        mm_to_inch = 25.4
-        
-        def mm_to_pixels(mm_value, target_dpi=dpi):
-            """Convert millimeters to pixels at specified DPI"""
-            return int((mm_value / mm_to_inch) * target_dpi)
-        
-        def pixels_to_mm(pixel_value, source_dpi=dpi):
-            """Convert pixels to millimeters from specified DPI"""
-            return round((pixel_value * mm_to_inch) / source_dpi, 2)
-        
         # Etiket boyutları (mm'den pixel'e çevir, 300 DPI)
-        width_px = mm_to_pixels(label_width)
-        height_px = mm_to_pixels(label_height)
-        
-        print(f"Label conversion: {label_width}mm x {label_height}mm -> {width_px}px x {height_px}px at {dpi} DPI")
+        dpi = 300
+        width_px = int((label_width / 25.4) * dpi)
+        height_px = int((label_height / 25.4) * dpi)
         
         # Boş etiket oluştur
         label = Image.new('RGB', (width_px, height_px), 'white')
@@ -433,13 +420,8 @@ def generate_advanced_label_preview():
         # Elementleri çiz
         for element in elements:
             element_type = element.get('type')
-            # Frontend'den gelen mm koordinatlarini pixel'e çevir
-            x_mm = element.get('x', 0)
-            y_mm = element.get('y', 0)
-            x = mm_to_pixels(x_mm)
-            y = mm_to_pixels(y_mm)
-            
-            print(f"Element {element_type}: ({x_mm}mm, {y_mm}mm) -> ({x}px, {y}px)")
+            x = int(element.get('x', 0) * (width_px / (label_width * 4)))  # Convert from display to print scale
+            y = int(element.get('y', 0) * (height_px / (label_height * 2)))
             properties = element.get('properties', {})
             
             if element_type in ['title', 'text']:
