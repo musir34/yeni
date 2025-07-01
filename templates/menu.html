@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Güllü Ayakkabı</title>
+   <style>
+      .container {
+      max-width: 1200px;
+      margin-top: 60px; /* Mevcut değerini koruduk */
+      margin-left: auto; /* Ortalamak için */
+      margin-right: auto; /* Ortalamak için */
+      padding: 0 15px; /* Sağ ve sol iç boşluk */
+      }
+      .user-info {
+      position: fixed;
+      top: 15px;
+      left: 20px;
+      z-index: 10;
+      font-size: 14px;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      }
+      .user-info img {
+      max-width: 100px;
+      height: auto;
+      border-radius: 5px;
+      }
+      .btn-group-top {
+      position: fixed;
+      top: 15px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
+      z-index: 10;
+      flex-wrap: wrap; /* Sığmazsa alt satıra insin */
+      justify-content: flex-end; /* Sağa hizala */
+      align-items: center; /* Dikeyde ortala */
+      }
+
+      /* Ortak buton görünümü */
+      .btn {
+      border-radius: 20px;
+      padding: 10px 20px;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border: none;
+      color: #fff;
+      }
+      .btn:hover {
+      transform: scale(1.05);
+      text-decoration: none;
+      color: #fff; /* Hover'da yazı rengi değişmesin */
+      }
+
+      /* Bootstrap renk sınıflarını gradientlerle override edelim */
+      .btn-secondary {
+      background: linear-gradient(to right, #757F9A, #D7DDE8); /* Gri tonlu */
+      color: #fff;
+      }
+      .btn-warning {
+      background: linear-gradient(to right, #f7971e, #ffd200); /* Turuncu-sarı */
+      color: #fff;
+      }
+      .btn-primary {
+      background: linear-gradient(to right, #2193b0, #6dd5ed); /* Mavi tonlu */
+      color: #fff;
+      }
+      .btn-success {
+      background: linear-gradient(to right, #56ab2f, #a8e063); /* Yeşil tonlu */
+      color: #fff;
+      }
+      .btn-info {
+      background: linear-gradient(to right, #667db6, #0082c8, #0082c8, #667db6); /* Mavi tonlu */
+      color: #fff;
+      }
+      .btn-danger {
+      background: linear-gradient(to right, #cb2d3e, #ef473a); /* Kırmızı tonlu */
+      color: #fff;
+      }
+      /* Disabled buton rengi */
+      .btn.disabled, .btn:disabled {
+      background-color: #cccccc; /* Pasif buton arka plan */
+      background-image: none; /* Gradient'i kaldır */
+      cursor: not-allowed;
+      opacity: 0.7;
+      }
+
+
+      /* Dropdown görünümü */
+      .dropdown-toggle {
+      border-radius: 20px !important; /* Arada .btn sınıfı da var, override için !important */
+      }
+      .dropdown-menu {
+      border-radius: 10px;
+      padding: 0.5rem 0;
+      background-color: #fff;
+      border: none;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      }
+      .dropdown-item {
+      font-size: 0.85rem;
+      padding: 0.5rem 1rem;
+      color: #333;
+      transition: background-color 0.3s ease;
+      }
+      .dropdown-item:hover {
+      background-color: #efefef;
+      }
+
+      .order-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-start;
+      justify-content: center; /* Kartları ortala */
+      }
+      .card {
+      width: 200px;
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+      transition: transform 0.2s;
+      overflow: hidden; /* Resim köşeleri için */
+      background-color: #fff;
+      }
+      .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+      }
+      .product-image {
+      width: 100%;
+      height: auto;
+      border-radius: 10px 10px 0 0;
+      object-fit: cover;
+      }
+      .card-title {
+      font-weight: bold;
+      color: #444;
+      text-align: center;
+      margin: 10px 0;
+      white-space: nowrap; /* Başlık tek satırda kalsın */
+      overflow: hidden; /* Taşan kısmı gizle */
+      text-overflow: ellipsis; /* Taşan kısım yerine ... koy */
+      }
+      .card-text {
+      font-size: 0.9rem;
+      color: #666;
+      text-align: center;
+      }
+      .form-control {
+      border-radius: 10px;
+      padding: 8px;
+      font-size: 0.85rem;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #ddd;
+      }
+      .form-control:focus {
+      border-color: #6dd5ed;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 5px rgba(109, 213, 237, 0.5);
+      }
+
+      .form-group {
+      position: relative;
+      margin-bottom: 35px;
+      }
+      .alert {
+      position: absolute;
+      top: -30px;
+      left: 0;
+      right: 0;
+      font-size: 12px;
+      padding: 5px;
+      border-radius: 5px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      text-align: center;
+      z-index: 10;
+      pointer-events: none;
+      width: 100%; /* Tam genişlik */
+      box-sizing: border-box; /* Padding genişliğe dahil */
+      }
+      .alert-show {
+      opacity: 1;
+      }
+      .alert-success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      }
+      .alert-danger {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+      }
+
+      /* Otomatik Gönderim Mesaj Alanı */
+      #autoShipMessage {
+      position: fixed;
+      top: 80px; /* Üst barların altına yerleştirildi */
+      left: 0;
+      right: 0;
+      background-color: #e9ffe9; /* Yeşilimsi arkaplan */
+      color: #155724; /* Koyu yeşil yazı */
+      padding: 10px 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      z-index: 9; /* Diğer içeriklerin üstünde, fixed barların altında */
+      opacity: 0;
+      visibility: hidden; /* Gizle */
+      transition: opacity 0.5s ease, visibility 0.5s ease;
+      font-size: 1rem;
+      text-align: center;
+      font-weight: bold;
+      border-bottom: 1px solid #c3e6cb;
+      }
+      #autoShipMessage.show {
+      opacity: 1;
+      visibility: visible;
+      }
+
+      .copy-container {
+      position: relative;
+      cursor: pointer;
+      display: inline-block;
+      margin-left: 5px;
+      color: #007bff;
+      transition: color 0.2s ease;
+      }
+      .copy-container:hover {
+      color: #0056b3;
+      }
+      .copy-confirmation {
+      color: green;
+      font-size: 1em;
+      margin-left: 5px;
+      display: none;
+      }
+      .copy-confirmation.show {
+      display: inline-block;
+      }
+      .btn-bottom {
+      max-width: 200px;
+      margin: 10px 0;
+      padding: 8px 15px;
+      border-radius: 10px;
+      }
+      .bottom-buttons {
+      text-align: left;
+      margin-top: 20px;
+      display: flex; /* Butonları yan yana hizala */
+      gap: 10px; /* Butonlar arasına boşluk */
+      flex-wrap: wrap; /* Sığmazsa alt satıra geçsin */
+      }
+      .fixed-header {
+      background-color: #ffffff;
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 20px; /* Mevcut değerini koruduk */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+      /* position: fixed; top: ... Kaldırıldı, container içinde kalacak */
+      /* left: 0; right: 0; Kaldırıldı */
+      /* transform: translateX(-50%); Kaldırıldı */
+      /* width: calc(100% - 40px); Kaldırıldı */
+      /* max-width: 1160px; Kaldırıldı */
+      z-index: auto; /* z-index'i sıfırla */
+      }
+      .fixed-header h4 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      color: #333;
+      }
+      .fixed-header p {
+      margin: 0;
+      line-height: 1.5;
+      color: #555;
+      }
+      /* Kargo Kodu yanına kopyalama ikonu */
+      .fixed-header .copy-container {
+      color: #555; /* Kargo kodu rengiyle uyumlu */
+      }
+
+
+      .modal-content {
+      border-radius: 15px;
+      padding: 20px;
+      }
+      .modal-header {
+      border-bottom: none;
+      justify-content: center;
+      }
+      .modal-footer {
+      border-top: none;
+      justify-content: center;
+      }
+      /* Özel adet stili: Adet 1'den fazla ise kırmızı ve büyük göster */
+      .highlight-quantity {
+      color: red;
+      font-size: 1.3em;
+      font-weight: bold;
+      }
+
+      /* Bootstrap custom switch stili */
+      .custom-control {
+      position: relative; /* Toggle switch için gerekli */
+      display: inline-flex; /* Butonlarla yan yana */
+      min-height: 1.5rem; /* Minimum yükseklik */
+      padding-left: 1.5rem; /* Label için sola boşluk */
+      align-items: center; /* Dikeyde ortala */
+      }
+      .custom-switch {
+      padding-left: 2.25rem; /* Switch için daha fazla boşluk */
+      }
+      .custom-control-input {
+      position: absolute;
+      left: 0;
+      z-index: -1;
+      width: 1rem;
+      height: 1.25rem;
+      opacity: 0; /* Orijinal inputu gizle */
+      }
+      .custom-control-label {
+      margin-bottom: 0;
+      line-height: 1.5;
+      cursor: pointer;
+      }
+      .custom-control-label::before {
+      position: absolute;
+      top: 0.25rem;
+      left: -2.25rem;
+      display: block;
+      width: 1.75rem; /* Toggle arka plan genişliği */
+      height: 1rem; /* Toggle arka plan yüksekliği */
+      pointer-events: none;
+      content: "";
+      background-color: #adb5bd; /* Pasif arka plan rengi */
+      border: #adb5bd solid 1px; /* Kenarlık */
+      border-radius: 1rem; /* Tam yuvarlak kenar */
+      transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+      }
+      .custom-control-label::after {
+      position: absolute;
+      top: 0.25rem;
+      left: -2rem; /* Toggle topu pozisyonu */
+      display: block;
+      width: 1rem; /* Toggle top boyutu */
+      height: 1rem;
+      content: "";
+      background-color: #fff; /* Toggle top rengi */
+      border-radius: 1rem; /* Tam yuvarlak */
+      transition: transform 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+      }
+      .custom-switch .custom-control-input:checked ~ .custom-control-label::before {
+      color: #fff;
+      border-color: #28a745; /* Aktif kenarlık rengi */
+      background-color: #28a745; /* Aktif arka plan rengi */
+      }
+      .custom-switch .custom-control-input:checked ~ .custom-control-label::after {
+      transform: translateX(0.75rem); /* Sağa kaydır */
+      }
+
+      @media (max-width: 768px) {
+      .btn {
+      font-size: 0.8rem;
+      padding: 8px 12px;
+      }
+      .card-title {
+      font-size: 0.9rem;
+      }
+      .card-text {
+      font-size: 0.8rem;
+      }
+      .user-info img {
+      max-width: 70px;
+      }
+      /* Mobil cihazlarda üst sabit elementlerin düzeni bozulabilir */
+      /* Bu çok temel bir örnek, detaylı responsive tasarım için daha fazla medya sorgusu gerekebilir */
+      .user-info {
+      top: 10px;
+      left: 10px;
+      gap: 5px;
+      font-size: 12px;
+      }
+      .user-info img {
+      max-width: 60px;
+      }
+      .btn-group-top {
+      top: 10px;
+      right: 10px;
+      gap: 5px;
+      flex-direction: column; /* Mobil altında alt alta */
+      align-items: flex-end; /* Sağa hizala */
+      }
+      .btn {
+      width: 100%; /* Tam genişlik */
+      text-align: center; /* Ortala */
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      }
+      .dropdown-toggle {
+      width: 100%;
+      text-align: center !important; /* Ortala */
+      }
+      .dropdown-menu {
+      left: auto !important; /* Bootstrap'in left:0 stilini ez */
+      right: 0 !important; /* Sağa hizala */
+      min-width: auto; /* Minimum genişliği kaldır */
+      width: auto; /* Genişliği içeriğe göre ayarla */
+      }
+      .dropdown-item {
+      text-align: right; /* Sağdan hizala */
+      font-size: 0.8rem;
+      }
+      .custom-switch {
+      margin-top: 10px; /* Buton grubundan boşluk */
+      width: 100%; /* Tam genişlik */
+      justify-content: flex-end; /* Sağa hizala */
+      padding-right: 2.25rem; /* Sola padding yerine sağa */
+      padding-left: 0; /* Sola padding'i kaldır */
+      }
+      .custom-control-label::before {
+      left: auto; /* Sola sabitlemeyi kaldır */
+      right: 0; /* Sağa sabitle */
+      }
+      .custom-control-label::after {
+      left: auto; /* Sola sabitlemeyi kaldır */
+      right: 0.25rem; /* Sağa sabitle ve biraz boşluk bırak */
+      }
+      .custom-switch .custom-control-input:checked ~ .custom-control-label::after {
+      transform: translateX(-0.75rem); /* Sola kaydır (sağdan sola) */
+      }
+      #autoShipMessage {
+      top: 120px; /* Üst fixed bar'ın altına yerleştir */
+      padding: 8px 10px;
+      font-size: 0.9rem;
+      }
+      .container {
+      margin-top: 180px; /* Fixed header ve mesajın altına boşluk */
+      padding: 0 10px;
+      }
+      .fixed-header {
+      margin-top: 10px; /* Container'ın içinde üstten boşluk */
+      padding: 10px;
+      }
+
+      }
+      @media (max-width: 576px) { /* Çok küçük ekranlar */
+      .card {
+      width: calc(50% - 15px); /* Yan yana 2 kart */
+      }
+      .user-info {
+      width: 100%;
+      justify-content: center;
+      }
+      .btn-group-top {
+      width: 100%;
+      justify-content: center;
+      }
+      .custom-switch {
+      justify-content: center; /* Ortala */
+      padding-right: 2.25rem;
+      }
+      .custom-control-label::before { right: auto; left: 50%; transform: translateX(-150%); }
+      .custom-control-label::after { right: auto; left: 50%; transform: translateX(-50%); }
+      .custom-switch .custom-control-input:checked ~ .custom-control-label::after { transform: translateX(50%); }
+
+      }
+
+      </style>
+<!--Üst menü kısmı -->
+<div class="user-info">
+<img src="static/logo/gullu.png" alt="Güllü Shoes Logo">
+Giriş Yapan: <strong>{{ session['first_name'] }} {{ session['last_name'] }}</strong>
+</div>
+
+<div class="btn-group-top">
+<a href="{{ url_for('home.home') }}" class="btn btn-secondary">Anasayfa</a>
+<a href="{{ url_for('display_archive') }}" class="btn btn-secondary">Arşiv</a>
+
+<div class="dropdown">
+<button class="btn btn-warning dropdown-toggle" type="button" id="kullaniciMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+Kullanıcı İşlemleri
+</button>
+<div class="dropdown-menu" aria-labelledby="kullaniciMenu">
+<a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a>
+{% if session['role'] in ['admin', 'manager'] %}
+<a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}">
+<i class="fas fa-history"></i> Kullanıcı Hareketleri
+</a>
+{% endif %}
+</div>
+</div>
+<div class="dropdown">
+<button class="btn btn-primary dropdown-toggle" type="button" id="siparisMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+Sipariş İşlemleri
+</button>
+<div class="dropdown-menu" aria-labelledby="siparisMenu">
+<a class="dropdown-item" href="{{ url_for('siparisler_bp.yeni_siparis') }}">Yeni Sipariş</a>
+<a class="dropdown-item" href="{{ url_for('order_list_all') }}">Sipariş Listesi</a>
+<a class="dropdown-item" href="{{ url_for('degisim_talep') }}">Değişim Talepleri</a>
+</div>
+</div>
+<div class="dropdown">
+<button class="btn btn-success dropdown-toggle" type="button" id="urunMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+Ürün İşlemleri
+</button>
+<div class="dropdown-menu" aria-labelledby="urunMenu">
+<a class="dropdown-item" href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}">Ürün Tedarik Sayfası</a>
+<a class="dropdown-item" href="{{ url_for('product_list') }}">Ürün Listesi</a>
+<a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_screen') }}">Stok Ekleme</a>
+<a class="dropdown-item" href="{{ url_for('iade_listesi') }}">İade Listesi</a>
+</div>
+</div>
+<div class="dropdown">
+<button class="btn btn-info dropdown-toggle" type="button" id="analizMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+Analizler
+</button>
+<div class="dropdown-menu" aria-labelledby="analizMenu">
+<a class="dropdown-item" href="{{ url_for('analysis.sales_analysis') }}">Satış Analizi</a>
+<a class="dropdown-item" href="{{ url_for('openai_bp.ai_analiz') }}">AI Analiz</a>
+<a class="dropdown-item" href="{{ url_for('commission_update_bp.update_commission_from_excel') }}">Excel Komisyon Yükle</a>
+<a class="dropdown-item" href="{{ url_for('profit.profit_report') }}">Kâr-Zarar Analizi</a>
+<a class="dropdown-item" href="/intelligent-stock/">🧠 Stok Zekası Paneli</a> <!-- Bu satırı ekledim -->
+</div>
+</div>
+<div class="custom-control custom-switch">
+<input type="checkbox" class="custom-control-input" id="autoShipToggle">
+<label class="custom-control-label" for="autoShipToggle">Otomatik Gönderim</label>
+</div>
+</div>
+<div id="autoShipMessage">
+<strong>Otomatik Gönderim Aktif:</strong> Kargo kodu: <span id="autoShipBarcode"></span>
+</div>
+<div class="container">
+<form method="POST" action="{{ url_for('confirm_packing') }}" id="packingForm" autocomplete="off">
+<input type="hidden" name="order_number" value="{{ order_number }}">

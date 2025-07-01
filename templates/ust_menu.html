@@ -1,0 +1,182 @@
+<!-- Üst Menü Bileşeni - Güllü Shoes -->
+<style>
+    .user-info {
+        position: fixed;
+        top: 15px;
+        left: 20px;
+        z-index: 10;
+        font-size: 14px;
+        color: #333;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .user-info img {
+        max-width: 100px;
+        height: auto;
+        border-radius: 5px;
+    }
+    .btn-group-top {
+        position: fixed;
+        top: 15px;
+        right: 20px;
+        display: flex;
+        gap: 10px;
+        z-index: 10;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        align-items: center;
+    }
+
+    /* Ortak buton görünümü */
+    .btn {
+        border-radius: 20px;
+        padding: 10px 20px;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: none;
+        color: #fff;
+    }
+    .btn:hover {
+        transform: scale(1.05);
+        text-decoration: none;
+        color: #fff;
+    }
+
+    /* Bootstrap renk sınıfları */
+    .btn-secondary {
+        background: linear-gradient(to right, #757F9A, #D7DDE8);
+        color: #fff;
+    }
+    .btn-warning {
+        background: linear-gradient(to right, #f7971e, #ffd200);
+        color: #fff;
+    }
+    .btn-primary {
+        background: linear-gradient(to right, #2193b0, #6dd5ed);
+        color: #fff;
+    }
+    .btn-success {
+        background: linear-gradient(to right, #56ab2f, #a8e063);
+        color: #fff;
+    }
+    .btn-info {
+        background: linear-gradient(to right, #667db6, #0082c8, #0082c8, #667db6);
+        color: #fff;
+    }
+    .btn-danger {
+        background: linear-gradient(to right, #cb2d3e, #ef473a);
+        color: #fff;
+    }
+
+    /* Dropdown görünümü */
+    .dropdown-toggle {
+        border-radius: 20px !important;
+    }
+    .dropdown-menu {
+        border-radius: 10px;
+        padding: 0.5rem 0;
+        background-color: #fff;
+        border: none;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .dropdown-item {
+        font-size: 0.85rem;
+        padding: 0.5rem 1rem;
+        color: #333;
+        transition: background-color 0.3s ease;
+    }
+    .dropdown-item:hover {
+        background-color: #efefef;
+    }
+
+    /* Mobil uyumluluk */
+    @media (max-width: 768px) {
+        .user-info {
+            top: 10px;
+            left: 10px;
+            gap: 5px;
+            font-size: 12px;
+        }
+        .user-info img {
+            max-width: 60px;
+        }
+        .btn-group-top {
+            top: 10px;
+            right: 10px;
+            gap: 5px;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        .btn {
+            width: 100%;
+            text-align: center;
+            padding: 6px 10px;
+            font-size: 0.8rem;
+        }
+    }
+</style>
+
+<!--Üst menü kısmı -->
+<div class="user-info">
+    <img src="static/logo/gullu.png" alt="Güllü Shoes Logo">
+    Giriş Yapan: <strong>{{ session['first_name'] }} {{ session['last_name'] }}</strong>
+</div>
+
+<div class="btn-group-top">
+    <a href="{{ url_for('home.home') }}" class="btn btn-secondary">Anasayfa</a>
+    <a href="{{ url_for('display_archive') }}" class="btn btn-secondary">Arşiv</a>
+
+    <div class="dropdown">
+        <button class="btn btn-warning dropdown-toggle" type="button" id="kullaniciMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Kullanıcı İşlemleri
+        </button>
+        <div class="dropdown-menu" aria-labelledby="kullaniciMenu">
+            <a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a>
+            {% if session['role'] in ['admin', 'manager'] %}
+            <a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}">
+                <i class="fas fa-history"></i> Kullanıcı Hareketleri
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="siparisMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Sipariş İşlemleri
+        </button>
+        <div class="dropdown-menu" aria-labelledby="siparisMenu">
+            <a class="dropdown-item" href="{{ url_for('siparisler_bp.yeni_siparis') }}">Yeni Sipariş Oluştur</a>
+            <a class="dropdown-item" href="{{ url_for('siparisler_bp.siparis_listesi') }}">Sipariş Listesi</a>
+            <a class="dropdown-item" href="{{ url_for('order_service_bp.order_service') }}">Sipariş Servisleri</a>
+            <a class="dropdown-item" href="{{ url_for('claims_service_bp.claims_list') }}">İade Talepleri</a>
+        </div>
+    </div>
+
+    <div class="dropdown">
+        <button class="btn btn-success dropdown-toggle" type="button" id="urunMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Ürün İşlemleri
+        </button>
+        <div class="dropdown-menu" aria-labelledby="urunMenu">
+            <a class="dropdown-item" href="{{ url_for('get_products_bp.product_list') }}">Ürün Listesi</a>
+            <a class="dropdown-item" href="{{ url_for('get_products_bp.fetch_products_route') }}">Ürün Güncelle</a>
+            <a class="dropdown-item" href="{{ url_for('enhanced_product_label') }}">Ürün Etiketi</a>
+            <a class="dropdown-item" href="{{ url_for('image_manager') }}">Görsel Yönetimi</a>
+        </div>
+    </div>
+
+    <div class="dropdown">
+        <button class="btn btn-info dropdown-toggle" type="button" id="raporMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Raporlar
+        </button>
+        <div class="dropdown-menu" aria-labelledby="raporMenu">
+            <a class="dropdown-item" href="{{ url_for('analysis_bp.sales_analysis') }}">Satış Analizi</a>
+            <a class="dropdown-item" href="{{ url_for('profit_bp.profit_analysis') }}">Kar Analizi</a>
+            <a class="dropdown-item" href="{{ url_for('ai_stock_dashboard') }}">AI Stok Analizi</a>
+            <a class="dropdown-item" href="{{ url_for('intelligent_stock_analyzer_bp.dashboard') }}">Akıllı Stok</a>
+        </div>
+    </div>
+
+    <a href="{{ url_for('login_logout.logout') }}" class="btn btn-danger">Çıkış</a>
+</div>
