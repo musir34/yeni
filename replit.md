@@ -156,7 +156,7 @@ This is a comprehensive e-commerce management system built for a shoe retailer c
 - July 01, 2025. Removed all success notifications and alerts from Enhanced Product Label system. Disabled showAlert function and replaced all success messages with silent operation for cleaner user experience
 - July 01, 2025. Fixed Product List page flash messages issue by removing all remaining flash message CSS styles and backend flash message calls from get_products.py routes. Eliminated unused CSS for flash-messages classes and removed flash messages from product_list, search_products, update_products, and update_exchange_rates routes for completely clean interface
 - July 01, 2025. Implemented register page access control with admin-only permissions. Added JavaScript alert popup for unauthorized access with automatic redirect to home page. Only admin users can now access user registration functionality
-- July 01, 2025. Created comprehensive unified top menu system (ust_menu.html) with complete CSS styling, Bootstrap integration, and dropdown menus. Integrated top menu across all major pages including product_list.html, enhanced_product_label.html, base.html (for analysis pages), profit.html, dashboard.html, and approve_users.html. Added responsive design and mobile compatibility with proper spacing and jQuery/Bootstrap JavaScript support
+- July 01, 2025. Reverted all top menu integrations upon user request. Removed ust_menu.html includes from all template files (product_list.html, enhanced_product_label.html, base.html, profit.html, dashboard.html, approve_users.html) and restored original layouts without centralized navigation system
 
 # User Preferences
 
