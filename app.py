@@ -1,4 +1,4 @@
-# ===================== EN ÜST KISIM =====================sadsad
+# ===================== EN ÜST KISIM =====================
 
 import os
 import json
@@ -58,195 +58,195 @@ def from_json(value):
     except Exception:
         return {}
 
-# ✅ Düzeltme: Jinja filtresini app'in jinja_env'ine kaydet
-app.jinja_env.filters['format_turkish_date'] = format_turkish_date_filter
+        # ✅ Düzeltme: Jinja filtresini app'in jinja_env'ine kaydet
+        app.jinja_env.filters['format_turkish_date'] = format_turkish_date_filter
 
 
-# Blueprint'leri Yükle
-from siparisler import siparisler_bp
-from product_service import product_service_bp
-from claims_service import claims_service_bp
-from order_service import order_service_bp
-from update_service import update_service_bp
-# from archive import archive_bp # Artık yukarıda import edildi
-from order_list_service import order_list_service_bp
-from login_logout import login_logout_bp
-from degisim import degisim_bp
-from home import home_bp
-from get_products import get_products_bp
-from all_orders_service import all_orders_service_bp
-from new_orders_service import new_orders_service_bp, qr_utils_bp # qr_utils_bp de import edildi
-from processed_orders_service import processed_orders_service_bp
-from iade_islemleri import iade_islemleri
-from siparis_fisi import siparis_fisi_bp
-from analysis import analysis_bp
-from stock_report import stock_report_bp
-from openai_service import openai_bp
-from user_logs import user_logs_bp, log_user_action
-from commission_update_routes import commission_update_bp
-from profit import profit_bp
-from stock_management import stock_management_bp
-from catalog import catalog_bp
-from product_label import product_label_bp
-from intelligent_stock_analyzer import blueprint as intelligent_stock_bp
+        # Blueprint'leri Yükle
+        from siparisler import siparisler_bp
+        from product_service import product_service_bp
+        from claims_service import claims_service_bp
+        from order_service import order_service_bp
+        from update_service import update_service_bp
+        # from archive import archive_bp # Artık yukarıda import edildi
+        from order_list_service import order_list_service_bp
+        from login_logout import login_logout_bp
+        from degisim import degisim_bp
+        from home import home_bp
+        from get_products import get_products_bp
+        from all_orders_service import all_orders_service_bp
+        from new_orders_service import new_orders_service_bp, qr_utils_bp # qr_utils_bp de import edildi
+        from processed_orders_service import processed_orders_service_bp
+        from iade_islemleri import iade_islemleri
+        from siparis_fisi import siparis_fisi_bp
+        from analysis import analysis_bp
+        from stock_report import stock_report_bp
+        from openai_service import openai_bp
+        from user_logs import user_logs_bp, log_user_action
+        from commission_update_routes import commission_update_bp
+        from profit import profit_bp
+        from stock_management import stock_management_bp
+        from catalog import catalog_bp
+        from product_label import product_label_bp
+        from intelligent_stock_analyzer import blueprint as intelligent_stock_bp
 
-blueprints = [
-    order_service_bp,
-    update_service_bp,
-    archive_bp, # archive_bp artık yukarıda import edildi
-    order_list_service_bp,
-    login_logout_bp,
-    degisim_bp,
-    home_bp,
-    get_products_bp,
-    all_orders_service_bp,
-    new_orders_service_bp,
-    qr_utils_bp, # qr_utils_bp app'e kaydedildi
-    processed_orders_service_bp,
-    iade_islemleri,
-    siparis_fisi_bp,
-    analysis_bp,
-    stock_report_bp,
-    openai_bp,
-    siparisler_bp,
-    product_service_bp,
-    claims_service_bp,
-    user_logs_bp,
-    commission_update_bp,
-    stock_management_bp,
-    profit_bp,
-    catalog_bp,
-    product_label_bp,
-    intelligent_stock_bp
-]
+        blueprints = [
+            order_service_bp,
+            update_service_bp,
+            archive_bp, # archive_bp artık yukarıda import edildi
+            order_list_service_bp,
+            login_logout_bp,
+            degisim_bp,
+            home_bp,
+            get_products_bp,
+            all_orders_service_bp,
+            new_orders_service_bp,
+            qr_utils_bp, # qr_utils_bp app'e kaydedildi
+            processed_orders_service_bp,
+            iade_islemleri,
+            siparis_fisi_bp,
+            analysis_bp,
+            stock_report_bp,
+            openai_bp,
+            siparisler_bp,
+            product_service_bp,
+            claims_service_bp,
+            user_logs_bp,
+            commission_update_bp,
+            stock_management_bp,
+            profit_bp,
+            catalog_bp,
+            product_label_bp,
+            intelligent_stock_bp
+        ]
 
-# Enhanced Product Label Blueprint'ini ekle
-from enhanced_product_label import enhanced_label_bp
-from image_manager import image_manager_bp
-blueprints.append(enhanced_label_bp)
-blueprints.append(image_manager_bp)
+        # Enhanced Product Label Blueprint'ini ekle
+        from enhanced_product_label import enhanced_label_bp
+        from image_manager import image_manager_bp
+        blueprints.append(enhanced_label_bp)
+        blueprints.append(image_manager_bp)
 
-# Direct route for simplified editor
-@app.route('/enhanced_product_label/advanced_editor')
-def direct_advanced_editor():
-    """Direct route for simplified label editor"""
-    from flask import render_template
-    return render_template('simple_label_editor.html')
+        # Direct route for simplified editor
+        @app.route('/enhanced_product_label/advanced_editor')
+        def direct_advanced_editor():
+            """Direct route for simplified label editor"""
+            from flask import render_template
+            return render_template('simple_label_editor.html')
 
-for bp in blueprints:
-    app.register_blueprint(bp)
+        for bp in blueprints:
+            app.register_blueprint(bp)
 
-# URL çözümleme hatalarında fallback
-def custom_url_for(endpoint, **values):
-    try:
-        return url_for(endpoint, **values)
-    except BuildError:
-        if '.' not in endpoint:
-            for blueprint in app.blueprints.values():
+        # URL çözümleme hatalarında fallback
+        def custom_url_for(endpoint, **values):
+            try:
+                return url_for(endpoint, **values)
+            except BuildError:
+                if '.' not in endpoint:
+                    for blueprint in app.blueprints.values():
+                        try:
+                            return url_for(f"{blueprint.name}.{endpoint}", **values)
+                        except BuildError:
+                            continue
+                raise BuildError(endpoint, values, method=None)
+
+        app.jinja_env.globals['url_for'] = custom_url_for
+
+        # İstek Loglama
+        @app.before_request
+        def log_request():
+            if not request.path.startswith('/static/'):
+                log_user_action(
+                    action=f"PAGE_VIEW: {request.endpoint}",
+                    details={'path': request.path, 'endpoint': request.endpoint},
+                    force_log=True
+                )
+
+        # Giriş Kontrolü
+        @app.before_request
+        def check_authentication():
+            # Etiket editör sayfalarını tamamen serbest bırak
+            if (request.path.startswith('/enhanced_product_label') or 
+                request.path.startswith('/static/') or 
+                request.path.startswith('/api/generate_advanced_label_preview') or
+                request.path.startswith('/api/save_label_preset') or
+                request.path.startswith('/api/generate_label_preview') or
+                (request.endpoint and 'enhanced_label' in str(request.endpoint))):
+                return None
+
+            allowed_routes = [
+                'login_logout.login',
+                'login_logout.register',
+                'login_logout.static',
+                'login_logout.verify_totp',
+                'login_logout.logout',
+                'qr_utils.generate_qr_labels_pdf',
+                'enhanced_label.advanced_label_editor',
+                'enhanced_label.enhanced_product_label'
+            ]
+            app.permanent_session_lifetime = timedelta(days=30)
+
+            if request.endpoint not in allowed_routes:
+                if 'username' not in session:
+                    flash('Lütfen giriş yapınız.', 'danger')
+                    return redirect(url_for('login_logout.login'))
+                if 'pending_user' in session and request.endpoint != 'login_logout.verify_totp':
+                    return redirect(url_for('login_logout.verify_totp'))
+
+        # APScheduler - Arka Planda Cron İşleri
+        from apscheduler.schedulers.background import BackgroundScheduler
+
+        def fetch_and_save_returns():
+            with app.app_context():
                 try:
-                    return url_for(f"{blueprint.name}.{endpoint}", **values)
-                except BuildError:
-                    continue
-        raise BuildError(endpoint, values, method=None)
+                    from iade_islemleri import fetch_data_from_api, save_to_database
+                    data = fetch_data_from_api(datetime.now() - timedelta(days=1), datetime.now())
+                    if data:
+                        save_to_database(data, db.session)
+                except Exception as e:
+                    logger.warning(f"İade çekme hatası: {e}")
 
-app.jinja_env.globals['url_for'] = custom_url_for
+        def schedule_jobs():
+            scheduler = BackgroundScheduler(timezone="Europe/Istanbul")
+            scheduler.add_job(func=fetch_and_save_returns, trigger='cron', hour=23, minute=50)
+            scheduler.start()
 
-# İstek Loglama
-@app.before_request
-def log_request():
-    if not request.path.startswith('/static/'):
-        log_user_action(
-            action=f"PAGE_VIEW: {request.endpoint}",
-            details={'path': request.path, 'endpoint': request.endpoint},
-            force_log=True
-        )
+        schedule_jobs()
 
-# Giriş Kontrolü
-@app.before_request
-def check_authentication():
-    # Etiket editör sayfalarını tamamen serbest bırak
-    if (request.path.startswith('/enhanced_product_label') or 
-        request.path.startswith('/static/') or 
-        request.path.startswith('/api/generate_advanced_label_preview') or
-        request.path.startswith('/api/save_label_preset') or
-        request.path.startswith('/api/generate_label_preview') or
-        (request.endpoint and 'enhanced_label' in str(request.endpoint))):
-        return None
-    
-    allowed_routes = [
-        'login_logout.login',
-        'login_logout.register',
-        'login_logout.static',
-        'login_logout.verify_totp',
-        'login_logout.logout',
-        'qr_utils.generate_qr_labels_pdf',
-        'enhanced_label.advanced_label_editor',
-        'enhanced_label.enhanced_product_label'
-    ]
-    app.permanent_session_lifetime = timedelta(days=30)
-        
-    if request.endpoint not in allowed_routes:
-        if 'username' not in session:
-            flash('Lütfen giriş yapınız.', 'danger')
-            return redirect(url_for('login_logout.login'))
-        if 'pending_user' in session and request.endpoint != 'login_logout.verify_totp':
-            return redirect(url_for('login_logout.verify_totp'))
+        # 🔍 Veritabanı Bağlantı Testi
+        with app.app_context():
+            try:
+                from sqlalchemy import text
+                with db.engine.connect() as connection:
+                    connection.execute(text("SELECT 1"))
+                print("✅ Neon veritabanına bağlantı başarılı!")
 
-# APScheduler - Arka Planda Cron İşleri
-from apscheduler.schedulers.background import BackgroundScheduler
+                try:
+                    db.create_all()
+                    print("✅ Veritabanı tabloları kontrol edildi")
+                except Exception as table_error:
+                    print(f"⚠️ Tablo oluşturma hatası (devam ediliyor): {str(table_error)[:50]}...")
 
-def fetch_and_save_returns():
-    with app.app_context():
-        try:
-            from iade_islemleri import fetch_data_from_api, save_to_database
-            data = fetch_data_from_api(datetime.now() - timedelta(days=1), datetime.now())
-            if data:
-                save_to_database(data, db.session)
-        except Exception as e:
-            logger.warning(f"İade çekme hatası: {e}")
-
-def schedule_jobs():
-    scheduler = BackgroundScheduler(timezone="Europe/Istanbul")
-    scheduler.add_job(func=fetch_and_save_returns, trigger='cron', hour=23, minute=50)
-    scheduler.start()
-
-schedule_jobs()
-
-# 🔍 Veritabanı Bağlantı Testi
-with app.app_context():
-    try:
-        from sqlalchemy import text
-        with db.engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
-        print("✅ Neon veritabanına bağlantı başarılı!")
-        
-        try:
-            db.create_all()
-            print("✅ Veritabanı tabloları kontrol edildi")
-        except Exception as table_error:
-            print(f"⚠️ Tablo oluşturma hatası (devam ediliyor): {str(table_error)[:50]}...")
-
-    except Exception as e:
-        print(f"❌ Veritabanı bağlantı hatası: {str(e)[:50]}...")
-        print("⚠️ Uygulama veritabanısız modda başlatılıyor")
-        # Veritabanı bağlantısı olmasa da devam et
+            except Exception as e:
+                print(f"❌ Veritabanı bağlantı hatası: {str(e)[:50]}...")
+                print("⚠️ Uygulama veritabanısız modda başlatılıyor")
+                # Veritabanı bağlantısı olmasa da devam et
 
 
-# Uygulama Başlat - Opsiyonel Setup
-if __name__ == '__main__':
-    debug_mode = os.environ.get('FLASK_DEBUG', 'False') == 'True'
+        # Uygulama Başlat - Opsiyonel Setup
+        if __name__ == '__main__':
+            debug_mode = os.environ.get('FLASK_DEBUG', 'False') == 'True'
 
-    if os.environ.get("RUN_DB_SETUP") == "True":
-        try:
-            from db_setup import run_setup
-            run_setup()
-        except Exception as e:
-            logger.warning(f"Veritabanı kurulumu sırasında hata: {e}")
+            if os.environ.get("RUN_DB_SETUP") == "True":
+                try:
+                    from db_setup import run_setup
+                    run_setup()
+                except Exception as e:
+                    logger.warning(f"Veritabanı kurulumu sırasında hata: {e}")
 
-    print("Uygulama başlatılıyor...")
-    try:
-        app.run(host='0.0.0.0', port=8080, debug=debug_mode, use_reloader=False)
-    except Exception as e:
-        print(f"Başlatma hatası: {e}")
-        import traceback
-        traceback.print_exc()
+            print("Uygulama başlatılıyor...")
+            try:
+                app.run(host='0.0.0.0', port=8080, debug=debug_mode, use_reloader=False)
+            except Exception as e:
+                print(f"Başlatma hatası: {e}")
+                import traceback
+                traceback.print_exc()
