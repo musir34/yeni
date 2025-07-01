@@ -448,6 +448,20 @@ def generate_advanced_label_preview():
                 qr_size = int(properties.get('size', 50) * (dpi / 96))
                 qr_data = properties.get('data', 'sample')
                 
+                # QR kod özel konumlandırma: etiket sağından 2mm uzakta
+                # Eğer QR kod etiket sağından 2mm uzağa konumlandırılmışsa, bu normal bir durumdur
+                if editor_x_mm > label_width:  # QR kod etiket dışında
+                    # QR kodunu etiket sağına yapıştır - Canvas genişliğini artır
+                    qr_area_width = int(((editor_x_mm + (qr_size * 96 / dpi)) / 25.4) * dpi)
+                    extended_width = max(width_px, qr_area_width)
+                    
+                    # Yeni genişlikte label oluştur
+                    if extended_width > width_px:
+                        extended_label = Image.new('RGB', (extended_width, height_px), 'white')
+                        extended_label.paste(label, (0, 0))
+                        label = extended_label
+                        draw = ImageDraw.Draw(label)
+                
                 # QR kod oluştur
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
                 qr_img = create_qr_with_logo(qr_data, logo_path if os.path.exists(logo_path) else None, qr_size)
@@ -641,6 +655,20 @@ def generate_advanced_label_preview_new():
                 qr_size = int(element.get('width', 40) * (dpi / 96))
                 # QR kod direkt barkodu içermeli
                 qr_data = sample_product['barcode']
+                
+                # QR kod özel konumlandırma: etiket sağından 2mm uzakta
+                # Eğer QR kod etiket sağından 2mm uzağa konumlandırılmışsa, bu normal bir durumdur
+                if editor_x_mm > label_width:  # QR kod etiket dışında
+                    # QR kodunu etiket sağına yapıştır - Canvas genişliğini artır
+                    qr_area_width = int(((editor_x_mm + (qr_size * 96 / dpi)) / 25.4) * dpi)
+                    extended_width = max(width_px, qr_area_width)
+                    
+                    # Yeni genişlikte label oluştur
+                    if extended_width > width_px:
+                        extended_label = Image.new('RGB', (extended_width, height_px), 'white')
+                        extended_label.paste(label, (0, 0))
+                        label = extended_label
+                        draw = ImageDraw.Draw(label)
                 
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
                 qr_img = create_qr_with_logo(qr_data, logo_path if os.path.exists(logo_path) else None, qr_size)
