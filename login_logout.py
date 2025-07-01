@@ -82,9 +82,13 @@ def generate_qr_code(data):
     return img_str
 
 
-# Kullanıcı kaydı
+# Kullanıcı kaydı - Sadece yöneticiler erişebilir
 @login_logout_bp.route('/register', methods=['GET', 'POST'])
 def register():
+    # Yetki kontrolü - sadece yöneticiler kayıt yapabilir
+    if 'role' not in session or session.get('role') != 'admin':
+        return render_template('yetki_yok.html')
+    
     if request.method == 'POST':
         first_name = request.form['first_name']
         last_name = request.form['last_name']
