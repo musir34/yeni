@@ -96,7 +96,7 @@ def update_exchange_rates_manually():
         # Döviz kurları güncellendi - sessiz çalışma
     except Exception as e:
         logger.error(f"update_exchange_rates_manually hata: {e}")
-        flash("Döviz kurları güncellenirken hata oluştu.", "danger")
+        # Döviz kurları güncelleme hatası - sessiz çalışma
     return redirect(url_for('get_products.product_list'))
 
 
