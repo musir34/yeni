@@ -339,6 +339,9 @@ class ProductArchive(db.Model):
     list_price = db.Column(db.Float)
     currency_type = db.Column(db.String)
     archive_date = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __init__(self, **kwargs):
+        super(ProductArchive, self).__init__(**kwargs)
 
 
 # Ürün Modeli - primary key düzeltildi, original_product_barcode kaldırıldı, __init__ güncellendi
