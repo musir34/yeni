@@ -876,7 +876,8 @@ const packingForm = document.getElementById('packingForm'); // Form elementi
 const productCount = {{ products|length }};
 let barkodDogruList = new Array(productCount).fill(false);
 
-// Timer değişkenleri kaldırıldı
+let printTimer = null; // Yazdırma timerı
+let confirmTimer = null; // Onay timerı
 let messageTimer = null; // Mesaj gizleme timerı
 
 // ### LOCAL STORAGE: Toggle durumunu yükle ###
@@ -888,14 +889,32 @@ autoShipToggle.checked = savedToggleState === 'true';
 // ### LOCAL STORAGE: Yükleme Bitti ###
 
 
-// Otomatik timer fonksiyonları tamamen kaldırıldı
+// Tüm timerları ve mesajı temizleme fonksiyonu
+function clearAllTimersAndHideMessage() {
+if (printTimer) clearTimeout(printTimer);
+if (confirmTimer) clearTimeout(confirmTimer);
+if (messageTimer) clearTimeout(messageTimer);
+autoShipMessage.classList.remove('show');
+}
+
+// Otomatik Gönderim mesajını göster
+function showAutoShipMessage() {
+// clearMessageTimerAndHide(); // Sadece mesaj timerını temizlemek yerine tüm timerları temizledik yukarıda
+autoShipBarcodeSpan.innerText = shippingBarcode;
+autoShipMessage.classList.add('show');
+// Mesajı 3 saniye sonra gizle
+messageTimer = setTimeout(() => {
+autoShipMessage.classList.remove('show');
+}, 3000);
+}
 
 
 // Butonların durumunu güncelle ve timerları ayarla
 function updateButtonStates() {
 const allBarcodesMatched = barkodDogruList.every(Boolean);
 
-// Otomatik timer çağrıları kaldırıldı
+// Önceki tüm timerları temizle (Yeni bir set başlatılacak veya hiç başlatılmayacak)
+clearAllTimersAndHideMessage();
 
 if (allBarcodesMatched) {
 // Tüm barkodlar doğruysa butonları aktifleştir
@@ -904,7 +923,26 @@ yazdirBtn.classList.remove('disabled');
 onaylaBtn.disabled = false;
 yazdirBtn.disabled = false;
 
-// Otomatik işlemler tamamen kaldırıldı - sadece manuel kullanım
+// ONAYLAMA timerı HER ZAMAN başlar (15 saniye)
+confirmTimer = setTimeout(() => {
+console.log("Otomatik onayla çalıştı"); // Debug için
+// Formu manuel olarak submit et
+packingForm.submit();
+}, 15000);
+
+
+if (autoShipToggle.checked) {
+// Toggle AÇIK ise: Otomatik Gönderim mesajını göster
+showAutoShipMessage();
+// Yazdırma timerı BAŞLATILMAZ (Toggle açıkken sadece onay timerı)
+} else {
+// Toggle KAPALI ise: Yazdırma timerı BAŞLATILIR (5 saniye)
+printTimer = setTimeout(() => {
+console.log("Otomatik yazdır çalıştı"); // Debug için
+yazdirForm.submit();
+}, 5000);
+// Otomatik Gönderim mesajı GİZLENİR (clearAllTimersAndHideMessage içinde yapıldı)
+}
 
 } else {
 // Tüm barkodlar doğru değilse butonları pasifleştir
