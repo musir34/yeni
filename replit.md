@@ -159,6 +159,7 @@ This is a comprehensive e-commerce management system built for a shoe retailer c
 - July 01, 2025. Reverted all top menu integrations upon user request. Removed ust_menu.html includes from all template files (product_list.html, enhanced_product_label.html, base.html, profit.html, dashboard.html, approve_users.html) and restored original layouts without centralized navigation system
 - July 01, 2025. Completely removed all automatic operations from home menu system. Eliminated all setTimeout timers, automatic print/confirm functions, timer variables, and automatic message display functions. System restored to original manual-only operation without any automatic processing
 - July 01, 2025. Fixed critical indentation errors in app.py that prevented proper application startup. Corrected blueprint registration, import statements, try-except blocks, and code structure. All 150 routes now loading successfully with Neon PostgreSQL connection working properly. Flask server running stable on port 8080
+- July 01, 2025. Fixed coordinate system mismatch between advanced_label_editor.html and enhanced_product_label.py. Implemented consistent 1:1 scaling (4px = 1mm in editor, same ratio in output). Updated position inputs to display mm units, fixed coordinate transformation in both drag operations and print output. Editor design now matches printed label exactly
 
 # User Preferences
 
