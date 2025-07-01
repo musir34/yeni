@@ -195,15 +195,19 @@
             const height = parseInt(document.getElementById('labelHeight').value);
             const canvas = document.getElementById('labelCanvas');
             
-            // Sabit bir display scale kullan - 1mm = 3.78px (96 DPI'da)
-            const displayScale = 3.78;
+            // Tutarlı ölçek sistemi - 1mm = 4px (editör ve çıktı arasında 1:1 uyum)
+            const displayScale = 4;
             const displayWidth = width * displayScale;
             const displayHeight = height * displayScale;
             
             canvas.style.width = displayWidth + 'px';
             canvas.style.height = displayHeight + 'px';
             
-            document.querySelector('.scale-indicator').textContent = `${width}mm x ${height}mm`;
+            // Gerçek boyutları data attribute olarak sakla
+            canvas.setAttribute('data-real-width', width);
+            canvas.setAttribute('data-real-height', height);
+            
+            document.querySelector('.scale-indicator').textContent = `${width}mm x ${height}mm (4px = 1mm)`;
         }
 
         function setLabelSize(width, height) {
@@ -332,6 +336,10 @@
             const elementWidth = selectedElement.offsetWidth / zoomLevel;
             const elementHeight = selectedElement.offsetHeight / zoomLevel;
             
+            // Gerçek mm koordinatlarını hesapla (4px = 1mm)
+            const realX = newX / 4;
+            const realY = newY / 4;
+            
             // Sınır kontrolü - 5px güvenlik payı
             newX = Math.max(5, Math.min(newX, canvasWidth - elementWidth - 5));
             newY = Math.max(5, Math.min(newY, canvasHeight - elementHeight - 5));
@@ -350,11 +358,14 @@
                 selectedElement.style.backgroundColor = '';
                 selectedElement.removeAttribute('data-collision');
                 
-                // Element verilerini güncelle
+                // Element verilerini güncelle - mm cinsinden kaydet
                 const elementData = labelElements.find(el => el.id === selectedElement.id);
                 if (elementData) {
-                    elementData.x = newX;
+                    elementData.x = newX;  // Pixel cinsinden editör koordinatları
                     elementData.y = newY;
+                    // Gerçek mm koordinatlarını da kaydet (debug için)
+                    elementData.realX = realX;
+                    elementData.realY = realY;
                 }
             }
             
@@ -400,15 +411,15 @@
             const { type, properties } = elementData;
             let html = `
                 <div class="property-section">
-                    <div class="property-title"><i class="fas fa-arrows-alt"></i> Pozisyon</div>
+                    <div class="property-title"><i class="fas fa-arrows-alt"></i> Pozisyon (mm)</div>
                     <div class="row">
                         <div class="col-6">
-                            <label class="form-label">X</label>
-                            <input type="number" class="form-control" id="pos_x" value="${elementData.x}" onchange="updateElementPosition()">
+                            <label class="form-label">X (mm)</label>
+                            <input type="number" class="form-control" id="pos_x" value="${Math.round(elementData.x / 4)}" onchange="updateElementPosition()">
                         </div>
                         <div class="col-6">
-                            <label class="form-label">Y</label>
-                            <input type="number" class="form-control" id="pos_y" value="${elementData.y}" onchange="updateElementPosition()">
+                            <label class="form-label">Y (mm)</label>
+                            <input type="number" class="form-control" id="pos_y" value="${Math.round(elementData.y / 4)}" onchange="updateElementPosition()">
                         </div>
                     </div>
                 </div>
@@ -497,16 +508,21 @@
         function updateElementPosition() {
             if (!selectedElement) return;
             
-            const x = parseInt(document.getElementById('pos_x').value);
-            const y = parseInt(document.getElementById('pos_y').value);
+            // Input'tan mm cinsinden al, pixel'e çevir (1mm = 4px)
+            const xMM = parseInt(document.getElementById('pos_x').value);
+            const yMM = parseInt(document.getElementById('pos_y').value);
+            const xPx = xMM * 4;
+            const yPx = yMM * 4;
             
-            selectedElement.style.left = x + 'px';
-            selectedElement.style.top = y + 'px';
+            selectedElement.style.left = xPx + 'px';
+            selectedElement.style.top = yPx + 'px';
             
             const elementData = labelElements.find(el => el.id === selectedElement.id);
             if (elementData) {
-                elementData.x = x;
-                elementData.y = y;
+                elementData.x = xPx;  // Pixel cinsinden sakla
+                elementData.y = yPx;
+                elementData.realX = xMM;  // mm cinsinden de sakla
+                elementData.realY = yMM;
             }
         }
 
@@ -516,8 +532,15 @@
             const posXInput = document.getElementById('pos_x');
             const posYInput = document.getElementById('pos_y');
             
-            if (posXInput) posXInput.value = parseInt(selectedElement.style.left);
-            if (posYInput) posYInput.value = parseInt(selectedElement.style.top);
+            if (posXInput) {
+                // Pixel değerini mm'ye çevir (4px = 1mm)
+                const xMM = Math.round(parseInt(selectedElement.style.left) / 4);
+                posXInput.value = xMM;
+            }
+            if (posYInput) {
+                const yMM = Math.round(parseInt(selectedElement.style.top) / 4);
+                posYInput.value = yMM;
+            }
         }
 
         function updateTextProperty(property, value) {
