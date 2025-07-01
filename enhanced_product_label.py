@@ -853,6 +853,14 @@ def print_multiple_labels():
         labels_per_row = data.get('labels_per_row', 2)
         labels_per_col = data.get('labels_per_col', 5)
         
+        # Debug: Gelen tasarım verisini logla
+        logger.info(f"A4 Yazdırma başladı - Etiket sayısı: {len(labels)}")
+        logger.info(f"A4 Tasarım elementi sayısı: {len(design.get('elements', []))}")
+        logger.info(f"A4 Etiket boyutları: {data.get('label_width', 'N/A')}x{data.get('label_height', 'N/A')}mm")
+        
+        for i, element in enumerate(design.get('elements', [])):
+            logger.info(f"A4 Element {i}: type={element.get('type')}, x={element.get('x')}, y={element.get('y')}, props={element.get('properties', {})}")
+        
         # Product Label A4_FIXED_CONFIG - Birebir kopyası
         A4_FIXED_CONFIG = {
             'PAGE_WIDTH': 210,
@@ -1098,8 +1106,24 @@ def create_label_with_design(product_data, design, label_width, label_height):
         # Tasarım elementlerini çiz - Koordinat sistemi düzeltmesi
         elements = design.get('elements', [])
         
-        # Koordinat sistemi düzeltmesi - Editör ile A4 çıktı arasında tutarlılık
-        # Editörde 4px = 1mm mantığı, A4 çıktısında da aynı oran kullanılmalı
+        # Koordinat sistemi düzeltmesi - A4 etiket boyutlarına ölçeklendirme
+        # Editör tasarımları genellikle 100x50mm için yapılır, A4'te farklı boyutlar kullanılır
+        
+        # Editörde varsayılan etiket boyutları (mm)
+        editor_default_width = 100  # mm
+        editor_default_height = 50  # mm
+        
+        # A4'te kullanılan gerçek etiket boyutları
+        actual_label_width = label_width  # A4'te hesaplanan boyut
+        actual_label_height = label_height
+        
+        # Ölçeklendirme oranları
+        scale_x = actual_label_width / editor_default_width
+        scale_y = actual_label_height / editor_default_height
+        
+        logger.info(f"A4 Ölçeklendirme: editör={editor_default_width}x{editor_default_height}mm, A4={actual_label_width:.1f}x{actual_label_height:.1f}mm")
+        logger.info(f"A4 Ölçeklendirme oranları: x={scale_x:.2f}, y={scale_y:.2f}")
+        
         for element in elements:
             element_type = element.get('type')
             
@@ -1107,9 +1131,15 @@ def create_label_with_design(product_data, design, label_width, label_height):
             editor_x_mm = element.get('x', 0) / 4
             editor_y_mm = element.get('y', 0) / 4
             
+            # A4 etiket boyutlarına ölçeklendir
+            scaled_x_mm = editor_x_mm * scale_x
+            scaled_y_mm = editor_y_mm * scale_y
+            
             # mm'yi A4 DPI'sına çevir (300 DPI için)
-            x = int((editor_x_mm / 25.4) * dpi)
-            y = int((editor_y_mm / 25.4) * dpi)
+            x = int((scaled_x_mm / 25.4) * dpi)
+            y = int((scaled_y_mm / 25.4) * dpi)
+            
+            logger.info(f"A4 Element {element_type}: editör=({editor_x_mm:.1f},{editor_y_mm:.1f})mm -> ölçekli=({scaled_x_mm:.1f},{scaled_y_mm:.1f})mm -> DPI=({x},{y})px")
             
             if element_type == 'title':
                 html_content = element.get('html', 'GÜLLÜ SHOES')
@@ -1214,16 +1244,22 @@ def create_label_with_design(product_data, design, label_width, label_height):
                 else:
                     qr_size_px = 200  # Varsayılan 200px = 50mm
                 
-                # Editör boyutunu mm'ye çevir (4px = 1mm) sonra DPI'ya ölçekle
+                # Editör boyutunu mm'ye çevir (4px = 1mm) sonra A4 boyutlarına ölçeklendir
                 qr_size_mm = qr_size_px / 4  # 4px = 1mm
-                qr_size = int((qr_size_mm / 25.4) * dpi)  # mm'den DPI'ya
+                
+                # QR boyutunu da A4 etiket boyutlarına ölçeklendir
+                # En küçük ölçeklendirme oranını kullan (aspect ratio korunur)
+                scale_factor = min(scale_x, scale_y)
+                scaled_qr_size_mm = qr_size_mm * scale_factor
+                
+                qr_size = int((scaled_qr_size_mm / 25.4) * dpi)  # mm'den DPI'ya
                 
                 # Minimum boyut kontrolü
                 if qr_size < 100:
                     qr_size = 100
                 
                 qr_data = barcode
-                logger.info(f"A4 QR Debug: element_size_px={qr_size_px}, mm={qr_size_mm:.1f}, final_dpi_size={qr_size}, data={qr_data}")
+                logger.info(f"A4 QR Debug: element_size_px={qr_size_px}, mm={qr_size_mm:.1f}, scaled_mm={scaled_qr_size_mm:.1f}, final_dpi_size={qr_size}, data={qr_data}")
                 
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
                 qr_img = create_qr_with_logo(qr_data, logo_path if os.path.exists(logo_path) else None, qr_size)
