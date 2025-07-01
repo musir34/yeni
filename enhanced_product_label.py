@@ -486,17 +486,23 @@ def generate_advanced_label_preview():
         for element in elements:
             element_type = element.get('type')
             
-            # Editör koordinatlarını mm'ye çevir (4px = 1mm)
-            editor_x_mm = element.get('x', 0) / 4
-            editor_y_mm = element.get('y', 0) / 4
+            # Editörden gelen pixel koordinatlarını doğrudan kullan
+            # Editör canvas boyutu: width*4 px = width mm olacak şekilde ayarlanmış
+            editor_x_px = element.get('x', 0)
+            editor_y_px = element.get('y', 0)
             
             # A4 modunda ölçeklendirme uygula
-            scaled_x_mm = editor_x_mm * scale_x
-            scaled_y_mm = editor_y_mm * scale_y
+            if is_a4_preview:
+                # Editör 100x50mm için tasarlanmış, A4 etiketi 64.67x37.92mm
+                scaled_x_px = editor_x_px * scale_x
+                scaled_y_px = editor_y_px * scale_y
+            else:
+                scaled_x_px = editor_x_px
+                scaled_y_px = editor_y_px
             
-            # mm'yi çıktı DPI'sına çevir
-            x = int((scaled_x_mm / 25.4) * dpi)
-            y = int((scaled_y_mm / 25.4) * dpi)
+            # Pixel koordinatlarını doğrudan DPI'ya çevir (1:1 ölçekleme)
+            x = int(scaled_x_px * (dpi / 96))  # 96 DPI referans
+            y = int(scaled_y_px * (dpi / 96))
             
             properties = element.get('properties', {})
             
@@ -713,13 +719,13 @@ def generate_advanced_label_preview_new():
         for element in elements:
             element_type = element.get('type')
             
-            # Tutarlı koordinat dönüşümü: editör 4px = 1mm, çıktı da aynı oranda
-            # Editördeki pixel koordinatları mm'ye çevir, sonra çıktı DPI'sına göre ölçekle
-            editor_x_mm = element.get('x', 0) / 4  # 4px = 1mm editörde
-            editor_y_mm = element.get('y', 0) / 4
+            # Editörden gelen pixel koordinatlarını doğrudan kullan
+            editor_x_px = element.get('x', 0)
+            editor_y_px = element.get('y', 0)
             
-            x = int((editor_x_mm / 25.4) * dpi)  # mm'yi çıktı DPI'sına çevir
-            y = int((editor_y_mm / 25.4) * dpi)
+            # Pixel koordinatlarını doğrudan DPI'ya çevir
+            x = int(editor_x_px * (dpi / 96))  # 96 DPI referans
+            y = int(editor_y_px * (dpi / 96))
             
             # Ürün-spesifik alanlar - properties yapısını kullan
             properties = element.get('properties', {})
@@ -1213,19 +1219,19 @@ def create_label_with_design(product_data, design, label_width, label_height, is
         for element in elements:
             element_type = element.get('type')
             
-            # Editör koordinatlarını mm'ye çevir (4px = 1mm)
-            editor_x_mm = element.get('x', 0) / 4
-            editor_y_mm = element.get('y', 0) / 4
+            # Editörden gelen pixel koordinatlarını doğrudan kullan
+            editor_x_px = element.get('x', 0)
+            editor_y_px = element.get('y', 0)
             
             # A4 etiket boyutlarına ölçeklendir
-            scaled_x_mm = editor_x_mm * scale_x
-            scaled_y_mm = editor_y_mm * scale_y
+            scaled_x_px = editor_x_px * scale_x
+            scaled_y_px = editor_y_px * scale_y
             
-            # mm'yi A4 DPI'sına çevir (300 DPI için)
-            x = int((scaled_x_mm / 25.4) * dpi)
-            y = int((scaled_y_mm / 25.4) * dpi)
+            # Pixel koordinatlarını A4 DPI'sına çevir
+            x = int(scaled_x_px * (dpi / 96))  # 96 DPI referans
+            y = int(scaled_y_px * (dpi / 96))
             
-            logger.info(f"A4 Element {element_type}: editör=({editor_x_mm:.1f},{editor_y_mm:.1f})mm -> ölçekli=({scaled_x_mm:.1f},{scaled_y_mm:.1f})mm -> DPI=({x},{y})px")
+            logger.info(f"A4 Element {element_type}: editör=({editor_x_px},{editor_y_px})px -> ölçekli=({scaled_x_px:.1f},{scaled_y_px:.1f})px -> DPI=({x},{y})px")
             
             if element_type == 'title':
                 html_content = element.get('html', 'GÜLLÜ SHOES')
