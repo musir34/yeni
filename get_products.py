@@ -6,6 +6,7 @@ import json
 import logging
 import threading
 import qrcode
+import qrcode.constants
 from datetime import datetime
 from urllib.parse import urlparse
 from dotenv import load_dotenv
@@ -45,7 +46,8 @@ async def fetch_usd_rate():
         # Merkez Bankası veya açık API servislerine bağlanma
         url = "https://api.exchangerate-api.com/v4/latest/USD"
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=10) as response:
+            timeout = aiohttp.ClientTimeout(total=10)
+            async with session.get(url, timeout=timeout) as response:
                 if response.status == 200:
                     data = await response.json()
                     # Bu API'de TRY değeri rates altında yer alır
@@ -105,6 +107,7 @@ def generate_qr():
     barcode = request.args.get('barcode', '').strip()
     if not barcode:
         return jsonify({'success': False, 'message': 'Barkod eksik!'})
+    import qrcode.constants
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
     qr.add_data(barcode)
     qr.make(fit=True)
@@ -359,7 +362,8 @@ async def fetch_all_products_async():
     headers = {"Authorization": f"Basic {encoded_credentials}"}
     async with aiohttp.ClientSession() as session:
         params = {"page": 0, "size": page_size}
-        async with session.get(url, headers=headers, params=params, timeout=30) as response:
+        timeout = aiohttp.ClientTimeout(total=30)
+        async with session.get(url, headers=headers, params=params, timeout=timeout) as response:
             if response.status != 200:
                 error_text = await response.text()
                 logging.error(f"API Hatası: {response.status} - {error_text}")
@@ -528,7 +532,8 @@ async def update_stock_levels_with_items_async(items):
     payload = {"items": payload_items}
     async with aiohttp.ClientSession() as session:
         try:
-            async with session.post(url, headers=headers, json=payload, timeout=30) as response:
+            timeout = aiohttp.ClientTimeout(total=30)
+            async with session.post(url, headers=headers, json=payload, timeout=timeout) as response:
                 if response.status != 200:
                     logger.error(f"HTTP Hatası: {response.status}, Yanıt: {await response.text()}")
                     return False
@@ -1162,7 +1167,8 @@ async def update_prices_in_trendyol_bulk(price_updates):
         payload = {"items": items}
         
         async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, json=payload, timeout=60) as response:
+            timeout = aiohttp.ClientTimeout(total=60)
+            async with session.post(url, headers=headers, json=payload, timeout=timeout) as response:
                 if response.status == 200:
                     logger.info(f"Trendyol toplu fiyat güncellendi - {len(items)} ürün başarılı")
                     return []  # Başarılı, hata yok

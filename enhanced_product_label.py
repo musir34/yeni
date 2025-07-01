@@ -51,14 +51,14 @@ def create_qr_with_logo(data, logo_path=None, size=200):
     # QR kod oluştur
     try:
         import qrcode
-        from qrcode.constants import ERROR_CORRECT_H
+        import qrcode.constants
         qr = qrcode.QRCode(
             version=1,
-            error_correction=ERROR_CORRECT_H,  # Yüksek hata düzeltme
+            error_correction=qrcode.constants.ERROR_CORRECT_H,  # Yüksek hata düzeltme
             box_size=10,
             border=4,
         )
-    except ImportError:
+    except (ImportError, AttributeError):
         # Fallback for different qrcode versions
         import qrcode
         qr = qrcode.QRCode(
