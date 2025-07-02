@@ -1078,63 +1078,41 @@ def print_multiple_labels():
             # Bu sayfadaki etiketleri yerleştir
             page_draw = ImageDraw.Draw(current_page)  # Sayfaya çizim için draw objesi
             
-            # Test - kırmızı test çizgileri sayfanın üst kısmına
-            print(f"DEBUG: Çizim test başlıyor - sayfa {page_num + 1}")
-            logger.info(f"DEBUG: Çizim test başlıyor - sayfa {page_num + 1}")
-            
-            # Basit test çizgileri - sayfanın görünür yerine
-            page_draw.rectangle([50, 50, 200, 100], outline=(255, 0, 0), width=10)
-            page_draw.ellipse([250, 50, 300, 100], fill=(0, 255, 0))
-            page_draw.text((50, 120), "TEST BORDER", fill=(0, 0, 255))
-            
+            # TÜM ETİKETLER İÇİN ÖNCE POZİSYONLARI HESAPLA
+            label_positions = []
             for i, label_data in enumerate(page_labels):
                 row = i // max_labels_per_row
                 col = i % max_labels_per_row
-
-                # Ortalanmış etiket pozisyonu
                 x = start_x + col * (label_width_px + gap_x)
                 y = start_y + row * (label_height_px + gap_y)
+                label_positions.append((x, y, label_data))
 
-                print(f"DEBUG: Etiket {i+1} pozisyon: x={x}, y={y}, boyut: {label_width_px}x{label_height_px}")
-                logger.info(f"DEBUG: Etiket {i+1} pozisyon: x={x}, y={y}, boyut: {label_width_px}x{label_height_px}")
-
-                # Tasarım kullanarak etiket oluştur - A4 modu aktif
+            # ÖNCE TÜM ETİKETLERİ YAPIŞTIR
+            for i, (x, y, label_data) in enumerate(label_positions):
                 label_img = create_label_with_design(
                     label_data,
                     design,
                     label_width,
                     label_height,
-                    is_a4_mode=True  # A4 yazdırma modu
+                    is_a4_mode=True
                 )
-
-                # Sayfaya yapıştır
                 current_page.paste(label_img, (x, y))
-                
-                # ÇOKLU BORDER TESTİ - farklı renkler ve kalınlıklar
-                
-                # 1. Kırmızı ana çerçeve
+
+            # SONRA TÜM BORDERLARI ÇİZ - ÜST KATMANDA
+            for i, (x, y, label_data) in enumerate(label_positions):
+                # Siyah etiket sınır çizgisi
                 page_draw.rectangle(
-                    [x, y, x + label_width_px, y + label_height_px],
-                    outline=(255, 0, 0),
-                    width=10
+                    [x-1, y-1, x + label_width_px + 1, y + label_height_px + 1],
+                    outline=(0, 0, 0),
+                    width=3
                 )
                 
-                # 2. Mavi iç çerçeve
+                # İç beyaz çizgi - kesim kılavuzu
                 page_draw.rectangle(
-                    [x + 5, y + 5, x + label_width_px - 5, y + label_height_px - 5],
-                    outline=(0, 0, 255),
-                    width=5
-                )
-                
-                # 3. Yeşil nokta köşelerde
-                point_size = 15
-                page_draw.ellipse([x-point_size, y-point_size, x+point_size, y+point_size], fill=(0, 255, 0))
-                page_draw.ellipse([x+label_width_px-point_size, y-point_size, x+label_width_px+point_size, y+point_size], fill=(0, 255, 0))
-                page_draw.ellipse([x-point_size, y+label_height_px-point_size, x+point_size, y+label_height_px+point_size], fill=(0, 255, 0))
-                page_draw.ellipse([x+label_width_px-point_size, y+label_height_px-point_size, x+label_width_px+point_size, y+label_height_px+point_size], fill=(0, 255, 0))
-                
-                print(f"DEBUG: Border çizildi etiket {i+1}")
-                logger.info(f"DEBUG: Border çizildi etiket {i+1}")                
+                    [x+1, y+1, x + label_width_px - 1, y + label_height_px - 1],
+                    outline=(128, 128, 128),
+                    width=1
+                )                
 
             all_pages.append(current_page)
 
