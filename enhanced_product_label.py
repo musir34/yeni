@@ -833,7 +833,7 @@ def generate_advanced_label_preview_new():
                     text_y = y + (img_height - text_height) // 2
                     draw.text((text_x, text_y),
                               text,
-                              fill='#000000',
+                              fill='#2196f3',
                               font=img_font)
 
         # PNG editöründe etiket kenarlarına belirleme çizgisi ekle
@@ -1073,8 +1073,7 @@ def print_multiple_labels():
             # Bu sayfadaki etiketleri yerleştir
             page_draw = ImageDraw.Draw(current_page)
             
-            # TEST: Sayfayı tamamen beyaz yap (mavi alanları temizlemek için)
-            page_draw.rectangle([0, 0, page_width_px, page_height_px], fill=(255, 255, 255))
+
 
             start_idx = page_num * labels_per_page
             end_idx = min(start_idx + labels_per_page, len(labels))
@@ -1177,15 +1176,25 @@ def create_label_with_design(product_data,
         width_px = int((label_width / 25.4) * dpi)
         height_px = int((label_height / 25.4) * dpi)
 
-        # Canvas boyutunu etiket boyutuna sınırla - büyük mavi alanları engellemek için
+        # Tasarımın gerçek genişliğini hesapla
+        elements = design.get('elements', [])
         max_required_width = width_px
+        for element in elements:
+            element_x = element.get('x', 0)
+            element_width = element.get('width', 60)
+            element_right_edge = element_x + element_width
+            element_right_mm = element_right_edge / 4  # 4px = 1mm
+            
+            if element_right_mm > label_width:
+                required_width_mm = element_right_mm + 5
+                required_width_px = int((required_width_mm / 25.4) * dpi)
+                max_required_width = max(max_required_width, required_width_px)
 
         # Gerekli genişlikte etiket oluştur
         label = Image.new('RGB', (max_required_width, height_px), 'white')
         draw = ImageDraw.Draw(label)
         
-        # Tüm canvas'ı zorla beyaz doldur (mavi alanları engellemek için)
-        draw.rectangle([0, 0, max_required_width, height_px], fill=(255, 255, 255))
+
         
         # Gerçek etiket boyutları
         actual_label_width_px = width_px
@@ -1474,7 +1483,7 @@ def create_label_with_design(product_data,
                     text_y = y + 5
                     draw.text((text_x, text_y),
                               text,
-                              fill='#000000',
+                              fill='#2196f3',
                               font=img_font)
 
         # Etiket kenarlarına border çiz - belirtilen boyutlara göre
