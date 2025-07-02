@@ -585,7 +585,7 @@ def generate_advanced_label_preview():
                 draw.text((x, y), text, fill=color, font=font)
 
             elif element_type == 'qr':
-                # QR kod - basit yaklaşım
+                # QR kod elementi
                 qr_size = properties.get('size', 100)
                 qr_data = properties.get('data', product_data.get('barcode', '0138523709823'))
                 if qr_size < 100:  # 100 pixel minimum
@@ -1511,8 +1511,8 @@ def create_label_with_design(product_data,
                 draw.text((x, y), size, fill='black', font=font)
 
             elif element_type == 'qr':
-                # QR kod elementi - basit yaklaşım
-                qr_size = element.get('properties', {}).get('size', 120)
+                # QR kod elementi
+                qr_size = element.get('properties', {}).get('size', 100)
                 qr_data = element.get('properties', {}).get('data', barcode)
                 
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
@@ -1522,7 +1522,6 @@ def create_label_with_design(product_data,
 
                 if qr_img:
                     label.paste(qr_img, (x, y))
-                    logger.info(f"QR kod eklendi: ({x},{y})")
                 else:
                     logger.error("QR kod oluşturulamadı")
 
