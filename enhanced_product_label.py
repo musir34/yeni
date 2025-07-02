@@ -1191,7 +1191,6 @@ def create_label_with_design(product_data,
                 max_required_width = max(max_required_width, required_width_px)
 
         # Gerekli genişlikte etiket oluştur
-        logger.info(f"Etiket boyutları: {max_required_width}x{height_px}px (is_a4_mode={is_a4_mode})")
         label = Image.new('RGB', (max_required_width, height_px), 'white')
         draw = ImageDraw.Draw(label)
         
@@ -1415,7 +1414,13 @@ def create_label_with_design(product_data,
             elif element_type == 'qr':
                 # QR kod elementi - boyut hesaplaması düzeltildi
                 qr_size_px = element.get('width', 60)  # Editörden gelen pixel boyutu
-                qr_size = int(qr_size_px * (dpi / 96))  # DPI ölçeklendirmesi
+                
+                # A4 modunda scale factor uygula
+                if is_a4_mode:
+                    scaled_qr_size = qr_size_px * scale_x  # X ekseni scale kullan
+                    qr_size = int(scaled_qr_size * (dpi / 96))
+                else:
+                    qr_size = int(qr_size_px * (dpi / 96))  # Sadece DPI ölçeklendirmesi
                 qr_data = barcode  # Barkod verisini kullan
                 
                 logger.info(f"QR oluşturuluyor: data={qr_data}, size={qr_size}, pos=({x},{y})")
@@ -1458,10 +1463,18 @@ def create_label_with_design(product_data,
 
             elif element_type == 'product_image':
                 # Görsel boyutu doğrudan ölçeklendirme
-                img_width = int(element.get('width', 50))
-                img_height = int(element.get('height', 50))
-                img_width = int(img_width * (dpi / 96))
-                img_height = int(img_height * (dpi / 96))
+                img_width_px = int(element.get('width', 50))
+                img_height_px = int(element.get('height', 50))
+                
+                # A4 modunda scale factor uygula
+                if is_a4_mode:
+                    scaled_width = img_width_px * scale_x
+                    scaled_height = img_height_px * scale_y
+                    img_width = int(scaled_width * (dpi / 96))
+                    img_height = int(scaled_height * (dpi / 96))
+                else:
+                    img_width = int(img_width_px * (dpi / 96))
+                    img_height = int(img_height_px * (dpi / 96))
 
                 # Ürün görseli yükle
                 image_loaded = False
