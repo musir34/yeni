@@ -472,20 +472,13 @@ def generate_advanced_label_preview():
         width_px = int((label_width / 25.4) * dpi)
         height_px = int((label_height / 25.4) * dpi)
 
-        # QR kodları için canvas genişliği hesapla
+        # Canvas genişliği - tüm elementleri kapsayacak şekilde hesapla
         max_required_width = width_px
         for element in elements:
-            if element.get('type') == 'qr':
-                editor_x_mm = element.get('x', 0) / 4  # 4px = 1mm editörde
-                if editor_x_mm > label_width:  # QR kod etiket dışında
-                    qr_size_px = element.get('properties',
-                                             {}).get('size',
-                                                     50)  # editörde pixel
-                    qr_size_mm = qr_size_px / 4  # 4px = 1mm dönüşümü
-                    required_width_mm = editor_x_mm + qr_size_mm + 5  # QR + 5mm boşluk
-                    required_width_px = int((required_width_mm / 25.4) * dpi)
-                    max_required_width = max(max_required_width,
-                                             required_width_px)
+            element_x = element.get('x', 0)
+            element_width = element.get('width', 0)
+            total_width_px = int((element_x + element_width) * (dpi / 96))
+            max_required_width = max(max_required_width, total_width_px + 50)  # 50px güvenlik payı
 
         # Gerekli genişlikte etiket oluştur
         label = Image.new('RGB', (max_required_width, height_px), 'white')
@@ -1385,16 +1378,7 @@ def create_label_with_design(product_data,
             x = int(orig_x * (dpi / 96))
             y = int(orig_y * (dpi / 96))
             
-            # Etiket sınırları içerisinde tutma kontrolü
-            max_x = width_px - 50  # 50px güvenlik payı
-            max_y = height_px - 50  # 50px güvenlik payı
-            
-            if x > max_x:
-                x = max_x
-                logger.warning(f"X koordinatı etiket dışında, düzeltildi: {orig_x} -> {x}")
-            if y > max_y:
-                y = max_y
-                logger.warning(f"Y koordinatı etiket dışında, düzeltildi: {orig_y} -> {y}")
+            # Sınırlamaları kaldırıldı - elementler istenen pozisyona yerleştirilecek
 
             logger.info(
                 f"A4 Element {element_type}: pos=({x},{y})px, orig=({orig_x},{orig_y})"
