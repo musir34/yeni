@@ -1471,9 +1471,13 @@ def create_label_with_design(product_data,
         actual_label_width_px = int((label_width / 25.4) * dpi)
         actual_label_height_px = int((label_height / 25.4) * dpi)
         
-        # Border çiz (siyah, 2px kalınlık)
-        border_color = (0, 0, 0)  # Siyah
-        border_width = 2
+        # A4 modunda gri, normal modunda siyah border
+        if is_a4_mode:
+            border_color = (100, 100, 100)  # Gri - A4 sayfasında kesim kılavuzu 
+            border_width = 1
+        else:
+            border_color = (0, 0, 0)  # Siyah - PNG'de belirleme çizgisi
+            border_width = 2
         
         # Etiket sınırlarını çiz
         draw.rectangle(
