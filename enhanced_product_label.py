@@ -1314,6 +1314,12 @@ def create_label_with_design(product_data,
         label = Image.new('RGB', (width_px, height_px), 'white')
         draw = ImageDraw.Draw(label)
 
+        # Ürün verilerini al
+        model_code = product_data.get('model_code', '000')
+        color = product_data.get('color', 'Renk')
+        size = product_data.get('size', 'Beden')
+        barcode = product_data.get('barcode', '0000000000000')
+        
         # Etiket kenarları (hayali çizgiler) - çok ince açık gri
         border_color = (220, 220, 220)  # Çok açık gri
         border_width = 1  # 1 pixel ince kenar
@@ -1327,9 +1333,6 @@ def create_label_with_design(product_data,
                 "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
         except:
             default_font = ImageFont.load_default()
-
-        # Ürün bilgileri
-        barcode = product_data.get('barcode', 'N/A')
 
         # Ürün görseli yolu - büyük/küçük harf duyarsız arama
         possible_extensions = ['.jpg', '.jpeg', '.png', '.webp']
