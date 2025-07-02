@@ -1098,19 +1098,25 @@ def print_multiple_labels():
                 # Sayfaya yapıştır
                 current_page.paste(label_img, (x, y))
                 
-                # Her etiketin kenarına belirleme çizgisi çiz
-                # Etiket sınırları (tasarım ölçülerine göre)
-                border_color = (0, 0, 0)  # Siyah çizgi - net görünüm için
-                border_width = 2
+                # Her etiketin kenarına belirleme çizgisi çiz - kalın siyah çerçeve
+                border_color = (0, 0, 0)  # Siyah
+                border_width = 3  # Daha kalın çizgi
                 
-                # Dikdörtgen çerçeve çiz - etiketin tam kenarları
+                # Dikdörtgen çerçeve çiz - etiketin tam boyutları
                 page_draw.rectangle(
                     [x, y, x + label_width_px - 1, y + label_height_px - 1],
                     outline=border_color,
                     width=border_width
                 )
                 
-                logger.info(f"A4 PNG belirleme çizgisi çizildi: etiket {i+1} pozisyon ({x},{y})")                
+                # Ek güçlendirme - içten bir çerçeve daha
+                page_draw.rectangle(
+                    [x + 1, y + 1, x + label_width_px - 2, y + label_height_px - 2],
+                    outline=border_color,
+                    width=1
+                )
+                
+                logger.info(f"A4 PNG belirleme çizgisi çizildi: etiket {i+1} boyut {label_width_px}x{label_height_px}px pozisyon ({x},{y})")                
 
             all_pages.append(current_page)
 
