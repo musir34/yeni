@@ -1191,6 +1191,7 @@ def create_label_with_design(product_data,
                 max_required_width = max(max_required_width, required_width_px)
 
         # Gerekli genişlikte etiket oluştur
+        logger.info(f"Etiket boyutları: {max_required_width}x{height_px}px (is_a4_mode={is_a4_mode})")
         label = Image.new('RGB', (max_required_width, height_px), 'white')
         draw = ImageDraw.Draw(label)
         
@@ -1280,8 +1281,19 @@ def create_label_with_design(product_data,
             # Koordinat ölçeklendirme ve sınır kontrolü
             orig_x = element.get('x', 0)
             orig_y = element.get('y', 0)
-            x = int(orig_x * (dpi / 96))
-            y = int(orig_y * (dpi / 96))
+            
+            # A4 modunda scale factor'ları uygula
+            if is_a4_mode:
+                # Önce tasarım ölçeklendirmesi uygula
+                scaled_x = orig_x * scale_x
+                scaled_y = orig_y * scale_y
+                # Sonra DPI ölçeklendirmesi
+                x = int(scaled_x * (dpi / 96))
+                y = int(scaled_y * (dpi / 96))
+            else:
+                # Normal mod - sadece DPI ölçeklendirmesi
+                x = int(orig_x * (dpi / 96))
+                y = int(orig_y * (dpi / 96))
             
             # Etiket sınırları içerisinde tutma kontrolü
             max_x = width_px - 50  # 50px güvenlik payı
