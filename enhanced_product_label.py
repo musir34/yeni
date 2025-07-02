@@ -1599,27 +1599,32 @@ def create_label_with_design(product_data,
                         f"A4 QR pozisyon kontrolü: ({x},{y}) + {qr_img.size} etiket içinde mi?"
                     )
 
-                    # Sınır kontrolü
-                    if x + qr_img.size[0] <= label_size[
-                            0] and y + qr_img.size[1] <= label_size[1]:
+                    # Sınır kontrolü ve otomatik pozisyon düzeltmesi
+                    if x + qr_img.size[0] > label_size[0] or y + qr_img.size[1] > label_size[1] or x < 0 or y < 0:
+                        # QR kod etiket sınırları dışında - pozisyonu ayarla
+                        logger.error(
+                            f"A4 QR kod etiket sınırları dışında: QR=({x},{y})+{qr_img.size}, etiket={label_size}"
+                        )
+                        # Güvenli pozisyon hesapla
+                        adjusted_x = max(0, min(x, label_size[0] - qr_img.size[0]))
+                        adjusted_y = max(0, min(y, label_size[1] - qr_img.size[1]))
+                        
+                        # Eğer hala sığmıyorsa sağ alt köşeye yerleştir
+                        if adjusted_x < 0 or adjusted_y < 0:
+                            adjusted_x = max(0, label_size[0] - qr_img.size[0])
+                            adjusted_y = max(0, label_size[1] - qr_img.size[1])
+                            logger.info("QR kod sağ alt köşeye yerleştirildi")
+                        
+                        label.paste(qr_img, (adjusted_x, adjusted_y))
+                        logger.info(
+                            f"A4 QR kod ayarlanmış pozisyonda eklendi: ({adjusted_x},{adjusted_y})"
+                        )
+                    else:
+                        # QR kod etiket içinde - normal yerleştirme
                         label.paste(qr_img, (x, y))
                         logger.info(
                             f"A4 QR kod başarıyla eklendi: boyut={qr_img.size}, pozisyon=({x},{y})"
                         )
-                    else:
-                        logger.error(
-                            f"A4 QR kod etiket sınırları dışında: QR=({x},{y})+{qr_img.size}, etiket={label_size}"
-                        )
-                        # Etiket içine sığacak şekilde pozisyonu ayarla
-                        adjusted_x = min(x, label_size[0] - qr_img.size[0])
-                        adjusted_y = min(y, label_size[1] - qr_img.size[1])
-                        if adjusted_x >= 0 and adjusted_y >= 0:
-                            label.paste(qr_img, (adjusted_x, adjusted_y))
-                            logger.info(
-                                f"A4 QR kod ayarlanmış pozisyonda eklendi: ({adjusted_x},{adjusted_y})"
-                            )
-                        else:
-                            logger.error("A4 QR kod hiç sığmıyor!")
                 else:
                     logger.error("A4 QR kod oluşturulamadı")
 
