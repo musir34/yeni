@@ -542,12 +542,51 @@
                 return;
             }
             
+            // Kaydedilen tasarım boyutları
+            const savedLabelWidth = design.labelWidth || 100;  // mm
+            const savedLabelHeight = design.labelHeight || 50; // mm
+            
+            // Mevcut A4 etiket boyutları
+            const currentLabelWidth = A4_FIXED_CONFIG.LABEL_WIDTH_APPROX;
+            const currentLabelHeight = A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX;
+            
+            // Ölçeklendirme faktörleri hesapla
+            const scaleX = currentLabelWidth / savedLabelWidth;
+            const scaleY = currentLabelHeight / savedLabelHeight;
+            
+            // Elemanları ölçeklendir
+            const scaledElements = design.elements.map(element => {
+                const scaledElement = { ...element };
+                
+                // Pozisyonları ölçeklendir
+                scaledElement.x = element.x * scaleX;
+                scaledElement.y = element.y * scaleY;
+                
+                // Boyutları ölçeklendir
+                if (element.width) scaledElement.width = element.width * scaleX;
+                if (element.height) scaledElement.height = element.height * scaleY;
+                
+                // Font boyutlarını ölçeklendir
+                if (element.fontSize) {
+                    const currentFontSize = parseInt(element.fontSize.replace('px', ''));
+                    scaledElement.fontSize = Math.round(currentFontSize * Math.min(scaleX, scaleY)) + 'px';
+                }
+                
+                if (element.properties && element.properties.fontSize) {
+                    scaledElement.properties.fontSize = Math.round(element.properties.fontSize * Math.min(scaleX, scaleY));
+                }
+                
+                return scaledElement;
+            });
+            
             const data = {
-                width: A4_FIXED_CONFIG.LABEL_WIDTH_APPROX,
-                height: A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX,
-                elements: design.elements,
+                width: currentLabelWidth,
+                height: currentLabelHeight,
+                elements: scaledElements,
                 product_data: selectedProducts[0],
-                is_a4_preview: true  // A4 önizlemesi olduğunu belirt
+                is_a4_preview: true,  // A4 önizlemesi olduğunu belirt
+                original_design_size: { width: savedLabelWidth, height: savedLabelHeight },
+                scale_factors: { x: scaleX, y: scaleY }
             };
             
             showLoading(true);
@@ -606,16 +645,59 @@
                 return;
             }
             
+            // Kaydedilen tasarım boyutları
+            const savedLabelWidth = design.labelWidth || 100;  // mm
+            const savedLabelHeight = design.labelHeight || 50; // mm
+            
+            // Mevcut A4 etiket boyutları
+            const currentLabelWidth = A4_FIXED_CONFIG.LABEL_WIDTH_APPROX;
+            const currentLabelHeight = A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX;
+            
+            // Ölçeklendirme faktörleri hesapla
+            const scaleX = currentLabelWidth / savedLabelWidth;
+            const scaleY = currentLabelHeight / savedLabelHeight;
+            
+            // Tasarım elemanlarını ölçeklendir
+            const scaledDesign = {
+                ...design,
+                labelWidth: currentLabelWidth,
+                labelHeight: currentLabelHeight,
+                elements: design.elements.map(element => {
+                    const scaledElement = { ...element };
+                    
+                    // Pozisyonları ölçeklendir
+                    scaledElement.x = element.x * scaleX;
+                    scaledElement.y = element.y * scaleY;
+                    
+                    // Boyutları ölçeklendir
+                    if (element.width) scaledElement.width = element.width * scaleX;
+                    if (element.height) scaledElement.height = element.height * scaleY;
+                    
+                    // Font boyutlarını ölçeklendir
+                    if (element.fontSize) {
+                        const currentFontSize = parseInt(element.fontSize.replace('px', ''));
+                        scaledElement.fontSize = Math.round(currentFontSize * Math.min(scaleX, scaleY)) + 'px';
+                    }
+                    
+                    if (element.properties && element.properties.fontSize) {
+                        scaledElement.properties.fontSize = Math.round(element.properties.fontSize * Math.min(scaleX, scaleY));
+                    }
+                    
+                    return scaledElement;
+                })
+            };
+            
             // Debug: tasarım ve ürün bilgilerini kontrol et
-            console.log('A4 Print Design:', design);
+            console.log('A4 Print Design:', scaledDesign);
             console.log('A4 Print Labels:', allLabels);
+            console.log('Scale factors:', { x: scaleX, y: scaleY });
             
             const data = {
                 labels: allLabels,
-                design: design,
+                design: scaledDesign,
                 label_size: 'a4-standard',
-                label_width: A4_FIXED_CONFIG.LABEL_WIDTH_APPROX,
-                label_height: A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX,
+                label_width: currentLabelWidth,
+                label_height: currentLabelHeight,
                 labels_per_row: A4_FIXED_CONFIG.ROWS,
                 labels_per_col: A4_FIXED_CONFIG.COLUMNS,
                 paper_size: 'a4',
