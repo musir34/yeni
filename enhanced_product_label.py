@@ -985,26 +985,13 @@ def print_multiple_labels():
                 'message': 'Yazdırılacak etiket yok'
             })
 
-        # Kağıt boyutları (mm) - sayfa yönüne göre
-        if paper_size == 'a4':
-            if page_orientation == 'landscape':
-                page_width, page_height = 297, 210
-            else:
-                page_width, page_height = 210, 297
-        elif paper_size == 'letter':
-            if page_orientation == 'landscape':
-                page_width, page_height = 279, 216
-            else:
-                page_width, page_height = 216, 279
-        elif paper_size == 'custom':
-            # Custom boyut - etiket boyutuna göre sayfa oluştur
-            # Etiket boyutuna kenar boşlukları ekleyerek sayfa boyutunu hesapla
-            page_width = label_width + (left_margin *
-                                        2) + 10  # 10mm extra margin
-            page_height = label_height + (top_margin *
-                                          2) + 10  # 10mm extra margin
-        else:
-            page_width, page_height = 210, 297  # Varsayılan A4 dikey
+        # Sayfa boyutunu sadece etiketler için hesapla - büyük mavi alanları engellemek için
+        content_width = (labels_per_row * label_width) + ((labels_per_row - 1) * horizontal_gap) + (left_margin * 2)
+        content_height = (labels_per_col * label_height) + ((labels_per_col - 1) * vertical_gap) + (top_margin * 2)
+        
+        # Sayfa boyutunu içerik boyutuna sınırla
+        page_width = content_width
+        page_height = content_height
 
         # DPI ayarı
         dpi = print_quality
