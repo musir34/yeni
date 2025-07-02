@@ -985,13 +985,9 @@ def print_multiple_labels():
                 'message': 'Yazdırılacak etiket yok'
             })
 
-        # Sayfa boyutunu sadece etiketler için hesapla - büyük mavi alanları engellemek için
-        content_width = (labels_per_row * label_width) + ((labels_per_row - 1) * horizontal_gap) + (left_margin * 2)
-        content_height = (labels_per_col * label_height) + ((labels_per_col - 1) * vertical_gap) + (top_margin * 2)
-        
-        # Sayfa boyutunu içerik boyutuna sınırla
-        page_width = content_width
-        page_height = content_height
+        # Sayfa boyutunu sadece tek etiket boyutuna eşitle - mavi alanları tamamen engellemek için
+        page_width = label_width
+        page_height = label_height
 
         # DPI ayarı
         dpi = print_quality
@@ -1026,31 +1022,9 @@ def print_multiple_labels():
         labels_per_page = max_labels_per_row * max_labels_per_col
         total_pages = (len(labels) + labels_per_page - 1) // labels_per_page
 
-        # A4 sayfasında etiketleri ortalamak için başlangıç pozisyonunu hesapla
-        # Product Label ile aynı merkezleme algoritması
-        total_content_width = (max_labels_per_row * label_width_px) + (
-            (max_labels_per_row - 1) * gap_x)
-        total_content_height = (max_labels_per_col * label_height_px) + (
-            (max_labels_per_col - 1) * gap_y)
-
-        # Mevcut alan hesabı (kenar boşluklarını çıkar)
-        available_width = page_width_px - (2 * margin_x)
-        available_height = page_height_px - (2 * margin_y)
-
-        # İçeriği mevcut alanda ortala
-        if total_content_width <= available_width:
-            start_x = margin_x + (available_width - total_content_width) // 2
-        else:
-            start_x = margin_x
-
-        if total_content_height <= available_height:
-            start_y = margin_y + (available_height - total_content_height) // 2
-        else:
-            start_y = margin_y
-
-        # Minimum marjin kontrolü
-        start_x = max(margin_x, start_x)
-        start_y = max(margin_y, start_y)
+        # Tek etiket için başlangıç pozisyonu - sol üst köşe
+        start_x = 0
+        start_y = 0
 
         all_pages = []
 
