@@ -1484,7 +1484,7 @@ def create_label_with_design(product_data,
                     text_y = y + 5
                     draw.text((text_x, text_y),
                               text,
-                              fill='#2196f3',
+                              fill='#000000',
                               font=img_font)
 
         # Etiket kenarlarına border çiz - belirtilen boyutlara göre
