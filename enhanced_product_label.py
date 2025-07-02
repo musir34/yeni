@@ -1390,7 +1390,7 @@ def create_label_with_design(product_data,
             y = int(element.get('y', 0) * (dpi / 96))
 
             logger.info(
-                f"A4 Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})px -> DPI=({x},{y})px"
+                f"A4 Element {element_type}: pos=({x},{y})px"
             )
 
             if element_type == 'title':
@@ -1544,6 +1544,7 @@ def create_label_with_design(product_data,
 
                 # Ürün görseli yükle
                 image_loaded = False
+                image_path = find_product_image(model_code, color)
                 try:
                     if image_path and os.path.exists(image_path):
                         product_img = Image.open(image_path)
