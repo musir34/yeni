@@ -448,7 +448,7 @@ def generate_label_preview():
 @enhanced_label_bp.route('/api/generate_advanced_label_preview',
                          methods=['POST'])
 def generate_advanced_label_preview():
-    """Gelişmiş editörden gelen tasarımı işle ve önizleme oluştur"""
+    """Gelişmiş editörden gelen tasarımı işle ve önizleme oluştur - PNG ile aynı mantık"""
     try:
         data = request.get_json()
         label_width = int(data.get('width', 100))
@@ -467,199 +467,43 @@ def generate_advanced_label_preview():
             logger.info(
                 f"A4 önizleme modu: boyutlar {label_width}x{label_height}mm")
 
-        # Etiket boyutları (mm'den pixel'e çevir, 300 DPI)
-        dpi = 300
-        width_px = int((label_width / 25.4) * dpi)
-        height_px = int((label_height / 25.4) * dpi)
+        # PNG oluşturma ile aynı mantığı kullan
+        design = {
+            'elements': elements,
+            'labelWidth': label_width,
+            'labelHeight': label_height
+        }
+        
+        # create_label_with_design fonksiyonunu kullan - PNG ile aynı mantık
+        label_image = create_label_with_design(
+            product_data, 
+            design, 
+            label_width, 
+            label_height, 
+            is_a4_mode=is_a4_preview
+        )
+        
+        if label_image is None:
+            return jsonify({'error': 'Etiket oluşturulamadı'}), 500
 
-        # Tüm elementler için canvas genişliği hesapla
-        max_required_width = width_px
-        for element in elements:
-            element_x = element.get('x', 0)
-            element_width = element.get('width', 60)  # Varsayılan genişlik
-            
-            # Element'in sağ kenarını hesapla (editör koordinatlarında)
-            element_right_edge = element_x + element_width
-            
-            # mm'ye çevir (4px = 1mm editörde)
-            element_right_mm = element_right_edge / 4
-            
-            # Eğer element etiket sınırları dışındaysa canvas genişletilmeli
-            if element_right_mm > label_width:
-                required_width_mm = element_right_mm + 5  # 5mm güvenlik payı
-                required_width_px = int((required_width_mm / 25.4) * dpi)
-                max_required_width = max(max_required_width, required_width_px)
-                logger.info(f"Element {element.get('type')} için canvas genişletiliyor: {element_right_mm:.1f}mm")
-
-        # Gerekli genişlikte etiket oluştur
-        label = Image.new('RGB', (max_required_width, height_px), 'white')
-        draw = ImageDraw.Draw(label)
-
-        # Etiket sınırlarını çiz (gerçek etiket boyutları)
-        actual_label_width_px = int((label_width / 25.4) * dpi)
-        actual_label_height_px = int((label_height / 25.4) * dpi)
-
-        # Sınır çizgisi çiz (açık gri, ince çizgi)
-        # border_color = (200, 200, 200)  # Açık gri - kaldırıldı
-        #         draw.rectangle(
-        #             [0, 0, actual_label_width_px - 1, actual_label_height_px - 1],
-        #             outline=border_color,
-        #             width=2)
-
-
-
-        # Eğer canvas gerçek etiket boyutundan büyükse, kesikli çizgi ile genişletilmiş alanı göster
-        if max_required_width > actual_label_width_px:
-            # Kesikli dikey çizgi çiz
-            for y in range(0, actual_label_height_px, 10):
-                draw.line([
-                    actual_label_width_px, y, actual_label_width_px,
-                    min(y + 5, actual_label_height_px)
-                ],
-                          fill=(150, 150, 150),
-                          width=1)
-        # Font ayarları
-        try:
-            default_font = ImageFont.truetype("static/fonts/DejaVuSans.ttf",
-                                              18)
-            bold_font = ImageFont.truetype("static/fonts/DejaVuSans-Bold.ttf",
-                                           18)
-        except:
-            default_font = ImageFont.load_default()
-            bold_font = ImageFont.load_default()
-
-        # A4 ölçeklendirme hesaplaması (A4 yazdırma ile tutarlılık için)
-        editor_default_width = 100  # mm - editör varsayılan boyutu
-        editor_default_height = 50  # mm
-
-        # Ölçeklendirme oranları hesapla (sadece A4 önizlemesi için)
-        if is_a4_preview:
-            scale_x = label_width / editor_default_width
-            scale_y = label_height / editor_default_height
-            logger.info(
-                f"Önizleme A4 ölçeklendirme: x={scale_x:.2f}, y={scale_y:.2f}")
-        else:
-            scale_x = 1.0  # Normal önizleme için ölçeklendirme yok
-            scale_y = 1.0
-
-        # Elementleri çiz
-        for element in elements:
-            element_type = element.get('type')
-
-            # Editörden gelen koordinatları mm'ye çevir
-            # Editörde canvas boyutu: width*4 px = width mm
-            # Yani 100mm etiket için 400px canvas, 1px = 0.25mm
-            editor_x_mm = element.get('x',
-                                      0) / 4  # px'i mm'ye çevir (4px = 1mm)
-            editor_y_mm = element.get('y', 0) / 4
-
-            # A4 modunda ölçeklendirme uygula
-            if is_a4_preview:
-                scaled_x_mm = editor_x_mm * scale_x
-                scaled_y_mm = editor_y_mm * scale_y
-            else:
-                scaled_x_mm = editor_x_mm
-                scaled_y_mm = editor_y_mm
-
-            # mm'yi DPI'ya çevir
-            x = int((scaled_x_mm / 25.4) * dpi)
-            y = int((scaled_y_mm / 25.4) * dpi)
-
-            properties = element.get('properties', {})
-
-            if element_type in ['title', 'text']:
-                text = properties.get('text', 'Text')
-                # Font boyutu editörden pixel cinsinden alıp DPI'ya ölçekle (tutarlılık için)
-                font_size_px = properties.get('fontSize',
-                                              14)  # editörde pixel cinsinden
-                font_size = int(font_size_px *
-                                (dpi / 96))  # 96 DPI -> 300 DPI ölçekleme
-                color = properties.get('color', '#000000')
-                font_weight = properties.get('fontWeight', 'normal')
-
-                try:
-                    if font_weight == 'bold':
-                        font = ImageFont.truetype(
-                            "static/fonts/DejaVuSans-Bold.ttf", font_size)
-                    else:
-                        font = ImageFont.truetype(
-                            "static/fonts/DejaVuSans.ttf", font_size)
-                except:
-                    font = default_font
-
-                draw.text((x, y), text, fill=color, font=font)
-
-            elif element_type == 'qr':
-                # QR kod elementi
-                qr_size = properties.get('size', 100)
-                qr_data = properties.get('data', product_data.get('barcode', '0138523709823'))
-                
-                logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
-                qr_img = create_qr_with_logo(
-                    qr_data, logo_path if os.path.exists(logo_path) else None,
-                    qr_size)
-
-                if qr_img:
-                    label.paste(qr_img, (x, y))
-                else:
-                    logger.error("QR kod oluşturulamadı")
-
-            elif element_type == 'image':
-                # Image boyutları editörden pixel cinsinden alıp mm'ye çevirip DPI'ya ölçekle
-                img_width_px = properties.get('width',
-                                              60)  # editörde pixel cinsinden
-                img_height_px = properties.get('height', 60)
-                img_width_mm = img_width_px / 4  # 4px = 1mm
-                img_height_mm = img_height_px / 4
-                img_width = int(
-                    (img_width_mm / 25.4) * dpi)  # mm'yi DPI'ya çevir
-                img_height = int((img_height_mm / 25.4) * dpi)
-
-                # Placeholder için basit bir kare çiz - çizgisiz
-                draw.rectangle([x, y, x + img_width, y + img_height],
-                               fill='#ecf0f1')
-
-                # "IMG" yazısı
-                try:
-                    img_font = ImageFont.truetype(
-                        "static/fonts/DejaVuSans.ttf", 12)
-                except:
-                    img_font = default_font
-
-                text_bbox = draw.textbbox((0, 0), "IMG", font=img_font)
-                text_width = text_bbox[2] - text_bbox[0]
-                text_height = text_bbox[3] - text_bbox[1]
-                text_x = x + (img_width - text_width) // 2
-                text_y = y + (img_height - text_height) // 2
-                draw.text((text_x, text_y),
-                          "IMG",
-                          fill='#7f8c8d',
-                          font=img_font)
-
-        # Önizleme kaydet
-        timestamp = int(time.time())
-        preview_filename = f"label_preview_{timestamp}.png"
-        preview_path = os.path.join('static', 'generated', preview_filename)
-
-        # Generated klasörünü oluştur
-        os.makedirs(os.path.dirname(preview_path), exist_ok=True)
-
-        label.save(preview_path, 'PNG', dpi=(dpi, dpi))
-
-        preview_url = f"/static/generated/{preview_filename}"
-
+        # Base64'e çevir
+        buffer = io.BytesIO()
+        label_image.save(buffer, format='PNG')
+        buffer.seek(0)
+        
+        base64_image = base64.b64encode(buffer.getvalue()).decode()
+        
         return jsonify({
             'success': True,
-            'preview_url': preview_url,
-            'message': 'Önizleme başarıyla oluşturuldu'
+            'image_data': f'data:image/png;base64,{base64_image}'
         })
 
     except Exception as e:
-        logger.error(f"Gelişmiş etiket önizleme hatası: {e}")
+        logger.error(f"Önizleme oluşturma hatası: {e}")
         return jsonify({
             'success': False,
-            'message': 'Önizleme oluşturulamadı'
-        })
+            'message': f'Önizleme oluşturulamadı: {str(e)}'
+        }), 500
 
 
 @enhanced_label_bp.route(
