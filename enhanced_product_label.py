@@ -971,8 +971,13 @@ def print_multiple_labels():
             labels_per_row = A4_FIXED_CONFIG['COLUMNS']  # 3 sütun (yatay)
             labels_per_col = A4_FIXED_CONFIG['ROWS']  # 7 satır (dikey)
         else:
-            label_width = data.get('label_width', 100)
-            label_height = data.get('label_height', 50)
+            # Tasarım boyutlarını kullan - varsa
+            if design and 'labelWidth' in design and 'labelHeight' in design:
+                label_width = design['labelWidth']
+                label_height = design['labelHeight']
+            else:
+                label_width = data.get('label_width', 100)
+                label_height = data.get('label_height', 50)
             top_margin = data.get('top_margin', 10)
             left_margin = data.get('left_margin', 10)
             horizontal_gap = data.get('horizontal_gap', 5)
