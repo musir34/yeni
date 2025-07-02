@@ -546,13 +546,13 @@
             const savedLabelWidth = design.labelWidth || 100;  // mm
             const savedLabelHeight = design.labelHeight || 50; // mm
             
-            // Mevcut A4 etiket boyutları
-            const currentLabelWidth = A4_FIXED_CONFIG.LABEL_WIDTH_APPROX;
-            const currentLabelHeight = A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX;
+            // Tasarımın orijinal boyutlarını kullan - önizlemede de scaling yok
+            const currentLabelWidth = savedLabelWidth;  // Tasarımın kendi boyutunu kullan
+            const currentLabelHeight = savedLabelHeight; // Tasarımın kendi boyutunu kullan
             
-            // Ölçeklendirme faktörleri hesapla
-            const scaleX = currentLabelWidth / savedLabelWidth;
-            const scaleY = currentLabelHeight / savedLabelHeight;
+            // Ölçeklendirme faktörleri hesapla (1:1 olacak)
+            const scaleX = 1.0;  // Hiç ölçeklendirme yapma
+            const scaleY = 1.0;  // Hiç ölçeklendirme yapma
             
             // Elemanları ölçeklendir
             const scaledElements = design.elements.map(element => {
@@ -649,15 +649,15 @@
             const savedLabelWidth = design.labelWidth || 100;  // mm
             const savedLabelHeight = design.labelHeight || 50; // mm
             
-            // Mevcut A4 etiket boyutları
-            const currentLabelWidth = A4_FIXED_CONFIG.LABEL_WIDTH_APPROX;
-            const currentLabelHeight = A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX;
+            // Tasarımın orijinal boyutlarını kullan - scaling yok
+            const currentLabelWidth = savedLabelWidth;  // Tasarımın kendi boyutunu kullan
+            const currentLabelHeight = savedLabelHeight; // Tasarımın kendi boyutunu kullan
             
-            // Ölçeklendirme faktörleri hesapla
-            const scaleX = currentLabelWidth / savedLabelWidth;
-            const scaleY = currentLabelHeight / savedLabelHeight;
+            // Ölçeklendirme faktörleri hesapla (1:1 olacak)
+            const scaleX = 1.0;  // Hiç ölçeklendirme yapma
+            const scaleY = 1.0;  // Hiç ölçeklendirme yapma
             
-            // Tasarım elemanlarını ölçeklendir
+            // Tasarım elemanlarını ölçeklendir (artık 1:1)
             const scaledDesign = {
                 ...design,
                 labelWidth: currentLabelWidth,
