@@ -1078,6 +1078,15 @@ def print_multiple_labels():
             # Bu sayfadaki etiketleri yerleştir
             page_draw = ImageDraw.Draw(current_page)  # Sayfaya çizim için draw objesi
             
+            # Test - kırmızı test çizgileri sayfanın üst kısmına
+            print(f"DEBUG: Çizim test başlıyor - sayfa {page_num + 1}")
+            logger.info(f"DEBUG: Çizim test başlıyor - sayfa {page_num + 1}")
+            
+            # Basit test çizgileri - sayfanın görünür yerine
+            page_draw.rectangle([50, 50, 200, 100], outline=(255, 0, 0), width=10)
+            page_draw.ellipse([250, 50, 300, 100], fill=(0, 255, 0))
+            page_draw.text((50, 120), "TEST BORDER", fill=(0, 0, 255))
+            
             for i, label_data in enumerate(page_labels):
                 row = i // max_labels_per_row
                 col = i % max_labels_per_row
@@ -1085,6 +1094,9 @@ def print_multiple_labels():
                 # Ortalanmış etiket pozisyonu
                 x = start_x + col * (label_width_px + gap_x)
                 y = start_y + row * (label_height_px + gap_y)
+
+                print(f"DEBUG: Etiket {i+1} pozisyon: x={x}, y={y}, boyut: {label_width_px}x{label_height_px}")
+                logger.info(f"DEBUG: Etiket {i+1} pozisyon: x={x}, y={y}, boyut: {label_width_px}x{label_height_px}")
 
                 # Tasarım kullanarak etiket oluştur - A4 modu aktif
                 label_img = create_label_with_design(
@@ -1098,32 +1110,31 @@ def print_multiple_labels():
                 # Sayfaya yapıştır
                 current_page.paste(label_img, (x, y))
                 
-                # Etiket boyutlarına göre kenar çizgileri - çok kalın ve net
-                border_color = (255, 0, 0)  # Kırmızı - test için görünür renk
-                border_width = 8  # Çok kalın çizgi
+                # ÇOKLU BORDER TESTİ - farklı renkler ve kalınlıklar
                 
-                # Ana dikdörtgen çerçeve - etiketin tam boyutları
+                # 1. Kırmızı ana çerçeve
                 page_draw.rectangle(
                     [x, y, x + label_width_px, y + label_height_px],
-                    outline=border_color,
-                    width=border_width
+                    outline=(255, 0, 0),
+                    width=10
                 )
                 
-                # İkinci çerçeve - daha ince siyah
+                # 2. Mavi iç çerçeve
                 page_draw.rectangle(
-                    [x + 3, y + 3, x + label_width_px - 3, y + label_height_px - 3],
-                    outline=(0, 0, 0),
-                    width=2
+                    [x + 5, y + 5, x + label_width_px - 5, y + label_height_px - 5],
+                    outline=(0, 0, 255),
+                    width=5
                 )
                 
-                # Test noktaları - köşelere kırmızı noktalar
-                point_size = 10
-                page_draw.ellipse([x-point_size, y-point_size, x+point_size, y+point_size], fill=(255, 0, 0))
-                page_draw.ellipse([x+label_width_px-point_size, y-point_size, x+label_width_px+point_size, y+point_size], fill=(255, 0, 0))
-                page_draw.ellipse([x-point_size, y+label_height_px-point_size, x+point_size, y+label_height_px+point_size], fill=(255, 0, 0))
-                page_draw.ellipse([x+label_width_px-point_size, y+label_height_px-point_size, x+label_width_px+point_size, y+label_height_px+point_size], fill=(255, 0, 0))
+                # 3. Yeşil nokta köşelerde
+                point_size = 15
+                page_draw.ellipse([x-point_size, y-point_size, x+point_size, y+point_size], fill=(0, 255, 0))
+                page_draw.ellipse([x+label_width_px-point_size, y-point_size, x+label_width_px+point_size, y+point_size], fill=(0, 255, 0))
+                page_draw.ellipse([x-point_size, y+label_height_px-point_size, x+point_size, y+label_height_px+point_size], fill=(0, 255, 0))
+                page_draw.ellipse([x+label_width_px-point_size, y+label_height_px-point_size, x+label_width_px+point_size, y+label_height_px+point_size], fill=(0, 255, 0))
                 
-                logger.info(f"Kırmızı belirleme çizgisi çizildi: etiket {i+1} boyut {label_width_px}x{label_height_px}px pozisyon ({x},{y})")                
+                print(f"DEBUG: Border çizildi etiket {i+1}")
+                logger.info(f"DEBUG: Border çizildi etiket {i+1}")                
 
             all_pages.append(current_page)
 
