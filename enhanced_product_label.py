@@ -1076,6 +1076,8 @@ def print_multiple_labels():
             page_labels = labels[start_idx:end_idx]
 
             # Bu sayfadaki etiketleri yerleştir
+            page_draw = ImageDraw.Draw(current_page)  # Sayfaya çizim için draw objesi
+            
             for i, label_data in enumerate(page_labels):
                 row = i // max_labels_per_row
                 col = i % max_labels_per_row
@@ -1097,8 +1099,6 @@ def print_multiple_labels():
                 current_page.paste(label_img, (x, y))
                 
                 # Her etiketin kenarına belirleme çizgisi çiz
-                page_draw = ImageDraw.Draw(current_page)
-                
                 # Etiket sınırları (tasarım ölçülerine göre)
                 border_color = (100, 100, 100)  # Gri çizgi
                 border_width = 1
@@ -1109,6 +1109,8 @@ def print_multiple_labels():
                     outline=border_color,
                     width=border_width
                 )
+                
+                logger.info(f"A4 PNG belirleme çizgisi çizildi: etiket {i+1} pozisyon ({x},{y})")                
 
             all_pages.append(current_page)
 
