@@ -1098,25 +1098,32 @@ def print_multiple_labels():
                 # Sayfaya yapıştır
                 current_page.paste(label_img, (x, y))
                 
-                # Her etiketin kenarına belirleme çizgisi çiz - kalın siyah çerçeve
-                border_color = (0, 0, 0)  # Siyah
-                border_width = 3  # Daha kalın çizgi
+                # Etiket boyutlarına göre kenar çizgileri - çok kalın ve net
+                border_color = (255, 0, 0)  # Kırmızı - test için görünür renk
+                border_width = 8  # Çok kalın çizgi
                 
-                # Dikdörtgen çerçeve çiz - etiketin tam boyutları
+                # Ana dikdörtgen çerçeve - etiketin tam boyutları
                 page_draw.rectangle(
-                    [x, y, x + label_width_px - 1, y + label_height_px - 1],
+                    [x, y, x + label_width_px, y + label_height_px],
                     outline=border_color,
                     width=border_width
                 )
                 
-                # Ek güçlendirme - içten bir çerçeve daha
+                # İkinci çerçeve - daha ince siyah
                 page_draw.rectangle(
-                    [x + 1, y + 1, x + label_width_px - 2, y + label_height_px - 2],
-                    outline=border_color,
-                    width=1
+                    [x + 3, y + 3, x + label_width_px - 3, y + label_height_px - 3],
+                    outline=(0, 0, 0),
+                    width=2
                 )
                 
-                logger.info(f"A4 PNG belirleme çizgisi çizildi: etiket {i+1} boyut {label_width_px}x{label_height_px}px pozisyon ({x},{y})")                
+                # Test noktaları - köşelere kırmızı noktalar
+                point_size = 10
+                page_draw.ellipse([x-point_size, y-point_size, x+point_size, y+point_size], fill=(255, 0, 0))
+                page_draw.ellipse([x+label_width_px-point_size, y-point_size, x+label_width_px+point_size, y+point_size], fill=(255, 0, 0))
+                page_draw.ellipse([x-point_size, y+label_height_px-point_size, x+point_size, y+label_height_px+point_size], fill=(255, 0, 0))
+                page_draw.ellipse([x+label_width_px-point_size, y+label_height_px-point_size, x+label_width_px+point_size, y+label_height_px+point_size], fill=(255, 0, 0))
+                
+                logger.info(f"Kırmızı belirleme çizgisi çizildi: etiket {i+1} boyut {label_width_px}x{label_height_px}px pozisyon ({x},{y})")                
 
             all_pages.append(current_page)
 
