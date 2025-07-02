@@ -1012,6 +1012,12 @@ def print_multiple_labels():
 
         # Sayfa oluştur
         page = Image.new('RGB', (page_width_px, page_height_px), 'white')
+        
+        # ACIL TEST - Sayfaya hemen çizgi çiz
+        test_draw = ImageDraw.Draw(page)
+        test_draw.rectangle([100, 100, 500, 200], outline=(255, 0, 0), width=10)
+        test_draw.text((100, 250), "BORDER TEST ACTIVE", fill=(0, 0, 255))
+        logger.info("Acil test çizgileri sayfaya eklendi")
 
         # Etiket boyutları pixel
         label_width_px = int((label_width / 25.4) * dpi)
