@@ -588,11 +588,7 @@ def generate_advanced_label_preview():
                 # QR kod elementi
                 qr_size = properties.get('size', 100)
                 qr_data = properties.get('data', product_data.get('barcode', '0138523709823'))
-                if qr_size < 100:  # 100 pixel minimum
-                    qr_size = 100
-                    logger.warning(f"QR boyutu çok küçük, 100px'e yükseltildi")
-
-                # QR kod oluştur - canvas genişliği zaten başta hesaplandı
+                
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
                 qr_img = create_qr_with_logo(
                     qr_data, logo_path if os.path.exists(logo_path) else None,
@@ -600,11 +596,8 @@ def generate_advanced_label_preview():
 
                 if qr_img:
                     label.paste(qr_img, (x, y))
-                    logger.info(
-                        f"QR kod başarıyla yapıştırıldı (func1): boyut={qr_size}, pos=({x},{y})"
-                    )
                 else:
-                    logger.error("QR kod oluşturulamadı (func1)!")
+                    logger.error("QR kod oluşturulamadı")
 
             elif element_type == 'image':
                 # Image boyutları editörden pixel cinsinden alıp mm'ye çevirip DPI'ya ölçekle
