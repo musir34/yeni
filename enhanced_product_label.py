@@ -53,17 +53,10 @@ def create_qr_with_logo(data, logo_path=None, size=200):
         import qrcode
         logger.info(f"QR kod oluşturuluyor: data='{data}', size={size}")
 
-        # QR kod oluştur - basit yaklaşım
-        qr = qrcode.QRCode(
-            version=1,
-            box_size=10,
-            border=4,
-        )
-        qr.add_data(str(data))  # String'e çevir
-        qr.make(fit=True)
+        # QR kod oluştur - basit yaklaşım  
+        qr_img = qrcode.make(str(data))
 
-        # QR kodu PIL Image olarak oluştur
-        qr_img = qr.make_image(fill_color="black", back_color="white")
+        # QR kod zaten PIL Image olarak oluşturuldu
         logger.info(
             f"QR base image oluşturuldu: mode={qr_img.mode}, size={qr_img.size}"
         )
