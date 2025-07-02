@@ -1101,11 +1101,19 @@ def print_multiple_labels():
                 )
                 current_page.paste(label_img, (x, y))
 
-            # SONRA TÜM ETIKET BORDERLARINI ÇİZ - SADECE SİYAH ANA ÇERÇEVE
+            # SONRA TÜM ETIKET BORDERLARINI ÇİZ - TASARİM BOYUTLARINA GÖRE
             for i, (x, y, label_data) in enumerate(label_positions):
-                # Siyah ana çerçeve - etiket sınırları (2px ince)
+                # Tasarım boyutlarını kullan
+                if design and 'labelWidth' in design and 'labelHeight' in design:
+                    border_width_px = int((design['labelWidth'] / 25.4) * dpi)
+                    border_height_px = int((design['labelHeight'] / 25.4) * dpi)
+                else:
+                    border_width_px = label_width_px
+                    border_height_px = label_height_px
+                
+                # Siyah ana çerçeve - tasarım boyutlarına göre
                 page_draw.rectangle(
-                    [x, y, x + label_width_px, y + label_height_px],
+                    [x, y, x + border_width_px, y + border_height_px],
                     outline=(0, 0, 0),
                     width=2
                 )                
@@ -1511,21 +1519,25 @@ def create_label_with_design(product_data,
                               fill='black',
                               font=img_font)
 
-        # Etiket kenarlarına border çiz - belirtilen boyutlara göre
-        actual_label_width_px = int((label_width / 25.4) * dpi)
-        actual_label_height_px = int((label_height / 25.4) * dpi)
-        
-        # A4 modunda koyu gri, normal modunda siyah border
-        if is_a4_mode:
-            border_color = (0, 0, 0)  # Siyah - A4'te de net görünecek şekilde 
-            border_width = 2
+        # Etiket kenarlarına border çiz - tasarım boyutlarını kullan
+        if is_a4_mode and design and 'labelWidth' in design and 'labelHeight' in design:
+            # A4 modunda tasarımda kaydedilen boyutları kullan
+            design_width = design['labelWidth']  # mm
+            design_height = design['labelHeight']  # mm
+            border_width_px = int((design_width / 25.4) * dpi)
+            border_height_px = int((design_height / 25.4) * dpi)
         else:
-            border_color = (0, 0, 0)  # Siyah - PNG'de belirleme çizgisi
-            border_width = 2
+            # Normal modda mevcut etiket boyutlarını kullan
+            border_width_px = int((label_width / 25.4) * dpi)
+            border_height_px = int((label_height / 25.4) * dpi)
+        
+        # Siyah border
+        border_color = (0, 0, 0)
+        border_width = 2
         
         # Etiket sınırlarını çiz
         draw.rectangle(
-            [0, 0, actual_label_width_px - 1, actual_label_height_px - 1],
+            [0, 0, border_width_px - 1, border_height_px - 1],
             outline=border_color,
             width=border_width
         )
