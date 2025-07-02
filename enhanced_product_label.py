@@ -53,10 +53,17 @@ def create_qr_with_logo(data, logo_path=None, size=200):
         import qrcode
         logger.info(f"QR kod oluşturuluyor: data='{data}', size={size}")
 
-        # QR kod oluştur - basit yaklaşım  
-        qr_img = qrcode.make(str(data))
+        # QR kod oluştur - basit yaklaşım
+        qr = qrcode.QRCode(
+            version=1,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(str(data))  # String'e çevir
+        qr.make(fit=True)
 
-        # QR kod zaten PIL Image olarak oluşturuldu
+        # QR kodu PIL Image olarak oluştur
+        qr_img = qr.make_image(fill_color="black", back_color="white")
         logger.info(
             f"QR base image oluşturuldu: mode={qr_img.mode}, size={qr_img.size}"
         )
@@ -465,13 +472,20 @@ def generate_advanced_label_preview():
         width_px = int((label_width / 25.4) * dpi)
         height_px = int((label_height / 25.4) * dpi)
 
-        # Canvas genişliği - tüm elementleri kapsayacak şekilde hesapla
+        # QR kodları için canvas genişliği hesapla
         max_required_width = width_px
         for element in elements:
-            element_x = element.get('x', 0)
-            element_width = element.get('width', 0)
-            total_width_px = int((element_x + element_width) * (dpi / 96))
-            max_required_width = max(max_required_width, total_width_px + 50)  # 50px güvenlik payı
+            if element.get('type') == 'qr':
+                editor_x_mm = element.get('x', 0) / 4  # 4px = 1mm editörde
+                if editor_x_mm > label_width:  # QR kod etiket dışında
+                    qr_size_px = element.get('properties',
+                                             {}).get('size',
+                                                     50)  # editörde pixel
+                    qr_size_mm = qr_size_px / 4  # 4px = 1mm dönüşümü
+                    required_width_mm = editor_x_mm + qr_size_mm + 5  # QR + 5mm boşluk
+                    required_width_px = int((required_width_mm / 25.4) * dpi)
+                    max_required_width = max(max_required_width,
+                                             required_width_px)
 
         # Gerekli genişlikte etiket oluştur
         label = Image.new('RGB', (max_required_width, height_px), 'white')
@@ -489,6 +503,17 @@ def generate_advanced_label_preview():
         #             width=2)
 
 
+
+        # Eğer canvas gerçek etiket boyutundan büyükse, kesikli çizgi ile genişletilmiş alanı göster
+        if max_required_width > actual_label_width_px:
+            # Kesikli dikey çizgi çiz
+            for y in range(0, actual_label_height_px, 10):
+                draw.line([
+                    actual_label_width_px, y, actual_label_width_px,
+                    min(y + 5, actual_label_height_px)
+                ],
+                          fill=(150, 150, 150),
+                          width=1)
         # Font ayarları
         try:
             default_font = ImageFont.truetype("static/fonts/DejaVuSans.ttf",
@@ -1284,6 +1309,17 @@ def create_label_with_design(product_data,
         
         # Etiket kenarları kaldırıldı - temiz görünüm için
 
+
+        # Eğer canvas gerçek etiket boyutundan büyükse, kesikli çizgi ile genişletilmiş alanı göster
+        if max_required_width > actual_label_width_px:
+            # Kesikli dikey çizgi çiz
+            for y in range(0, actual_label_height_px, 10):
+                draw.line([
+                    actual_label_width_px, y, actual_label_width_px,
+                    min(y + 5, actual_label_height_px)
+                ],
+                          fill=(150, 150, 150),
+                          width=1)
         # Font ayarları
         try:
             default_font = ImageFont.truetype(
@@ -1351,7 +1387,16 @@ def create_label_with_design(product_data,
             x = int(orig_x * (dpi / 96))
             y = int(orig_y * (dpi / 96))
             
-            # Sınırlamaları kaldırıldı - elementler istenen pozisyona yerleştirilecek
+            # Etiket sınırları içerisinde tutma kontrolü
+            max_x = width_px - 50  # 50px güvenlik payı
+            max_y = height_px - 50  # 50px güvenlik payı
+            
+            if x > max_x:
+                x = max_x
+                logger.warning(f"X koordinatı etiket dışında, düzeltildi: {orig_x} -> {x}")
+            if y > max_y:
+                y = max_y
+                logger.warning(f"Y koordinatı etiket dışında, düzeltildi: {orig_y} -> {y}")
 
             logger.info(
                 f"A4 Element {element_type}: pos=({x},{y})px, orig=({orig_x},{orig_y})"
