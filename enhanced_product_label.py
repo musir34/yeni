@@ -817,7 +817,7 @@ def generate_advanced_label_preview_new():
                 # Görsel yüklenemedi ise placeholder göster - çizgisiz
                 if not image_loaded:
                     draw.rectangle([x, y, x + img_width, y + img_height],
-                                   fill='#ffffff')
+                                   fill='#e3f2fd')
 
                     try:
                         img_font = ImageFont.truetype(
@@ -1469,7 +1469,7 @@ def create_label_with_design(product_data,
                 # Placeholder - çizgisiz
                 if not image_loaded:
                     draw.rectangle([x, y, x + img_width, y + img_height],
-                                   fill='#ffffff')
+                                   fill='#e3f2fd')
 
                     try:
                         img_font = ImageFont.truetype(
