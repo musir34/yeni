@@ -1197,6 +1197,9 @@ def create_label_with_design(product_data,
         label = Image.new('RGB', (max_required_width, height_px), 'white')
         draw = ImageDraw.Draw(label)
         
+        # Tüm canvas'ı zorla beyaz doldur (mavi alanları engellemek için)
+        draw.rectangle([0, 0, max_required_width, height_px], fill=(255, 255, 255))
+        
         # Gerçek etiket boyutları
         actual_label_width_px = width_px
         actual_label_height_px = height_px
