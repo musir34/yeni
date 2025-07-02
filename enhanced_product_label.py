@@ -495,16 +495,6 @@ def generate_advanced_label_preview():
         #             outline=border_color,
         #             width=2)
 
-        # Eğer canvas gerçek etiket boyutundan büyükse, kesikli çizgi ile genişletilmiş alanı göster
-        if max_required_width > actual_label_width_px:
-            # Kesikli dikey çizgi çiz
-            for y in range(0, actual_label_height_px, 10):
-                draw.line([
-                    actual_label_width_px, y, actual_label_width_px,
-                    min(y + 5, actual_label_height_px)
-                ],
-                          fill=(150, 150, 150),
-                          width=1)
 
         # Font ayarları
         try:
@@ -743,16 +733,6 @@ def generate_advanced_label_preview_new():
         #             outline=border_color,
         #             width=2)
 
-        # Eğer canvas gerçek etiket boyutundan büyükse, kesikli çizgi ile genişletilmiş alanı göster
-        if max_required_width > actual_label_width_px:
-            # Kesikli dikey çizgi çiz
-            for y in range(0, actual_label_height_px, 10):
-                draw.line([
-                    actual_label_width_px, y, actual_label_width_px,
-                    min(y + 5, actual_label_height_px)
-                ],
-                          fill=(150, 150, 150),
-                          width=1)
 
         # Font ayarları
         try:
