@@ -496,11 +496,11 @@ def generate_advanced_label_preview():
         actual_label_height_px = int((label_height / 25.4) * dpi)
 
         # Sınır çizgisi çiz (açık gri, ince çizgi)
-        border_color = (200, 200, 200)  # Açık gri
-        draw.rectangle(
-            [0, 0, actual_label_width_px - 1, actual_label_height_px - 1],
-            outline=border_color,
-            width=2)
+        # border_color = (200, 200, 200)  # Açık gri - kaldırıldı
+        #         draw.rectangle(
+        #             [0, 0, actual_label_width_px - 1, actual_label_height_px - 1],
+        #             outline=border_color,
+        #             width=2)
 
         # Eğer canvas gerçek etiket boyutundan büyükse, kesikli çizgi ile genişletilmiş alanı göster
         if max_required_width > actual_label_width_px:
@@ -744,11 +744,11 @@ def generate_advanced_label_preview_new():
         actual_label_height_px = int((label_height / 25.4) * dpi)
 
         # Sınır çizgisi çiz (açık gri, ince çizgi)
-        border_color = (200, 200, 200)  # Açık gri
-        draw.rectangle(
-            [0, 0, actual_label_width_px - 1, actual_label_height_px - 1],
-            outline=border_color,
-            width=2)
+        # border_color = (200, 200, 200)  # Açık gri - kaldırıldı
+        #         draw.rectangle(
+        #             [0, 0, actual_label_width_px - 1, actual_label_height_px - 1],
+        #             outline=border_color,
+        #             width=2)
 
         # Eğer canvas gerçek etiket boyutundan büyükse, kesikli çizgi ile genişletilmiş alanı göster
         if max_required_width > actual_label_width_px:
