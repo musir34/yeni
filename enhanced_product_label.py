@@ -1100,8 +1100,8 @@ def print_multiple_labels():
                 
                 # Her etiketin kenarına belirleme çizgisi çiz
                 # Etiket sınırları (tasarım ölçülerine göre)
-                border_color = (100, 100, 100)  # Gri çizgi
-                border_width = 1
+                border_color = (0, 0, 0)  # Siyah çizgi - net görünüm için
+                border_width = 2
                 
                 # Dikdörtgen çerçeve çiz - etiketin tam kenarları
                 page_draw.rectangle(
@@ -1490,10 +1490,10 @@ def create_label_with_design(product_data,
         actual_label_width_px = int((label_width / 25.4) * dpi)
         actual_label_height_px = int((label_height / 25.4) * dpi)
         
-        # A4 modunda gri, normal modunda siyah border
+        # A4 modunda koyu gri, normal modunda siyah border
         if is_a4_mode:
-            border_color = (100, 100, 100)  # Gri - A4 sayfasında kesim kılavuzu 
-            border_width = 1
+            border_color = (0, 0, 0)  # Siyah - A4'te de net görünecek şekilde 
+            border_width = 2
         else:
             border_color = (0, 0, 0)  # Siyah - PNG'de belirleme çizgisi
             border_width = 2
