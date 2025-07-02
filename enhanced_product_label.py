@@ -1385,20 +1385,12 @@ def create_label_with_design(product_data,
         for element in elements:
             element_type = element.get('type')
 
-            # Editör koordinatlarını mm'ye çevir (4px = 1mm)
-            editor_x_mm = element.get('x', 0) / 4
-            editor_y_mm = element.get('y', 0) / 4
-
-            # A4 etiket boyutlarına ölçeklendir
-            scaled_x_mm = editor_x_mm * scale_x
-            scaled_y_mm = editor_y_mm * scale_y
-
-            # mm'yi A4 DPI'sına çevir
-            x = int((scaled_x_mm / 25.4) * dpi)
-            y = int((scaled_y_mm / 25.4) * dpi)
+            # Basit koordinat ölçeklendirme
+            x = int(element.get('x', 0) * (dpi / 96))
+            y = int(element.get('y', 0) * (dpi / 96))
 
             logger.info(
-                f"A4 Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})px -> mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm -> ölçekli=({scaled_x_mm:.1f},{scaled_y_mm:.1f})mm -> DPI=({x},{y})px"
+                f"A4 Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})px -> DPI=({x},{y})px"
             )
 
             if element_type == 'title':
