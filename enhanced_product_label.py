@@ -1320,12 +1320,7 @@ def create_label_with_design(product_data,
         size = product_data.get('size', 'Beden')
         barcode = product_data.get('barcode', '0000000000000')
         
-        # Etiket kenarları (hayali çizgiler) - çok ince açık gri
-        border_color = (220, 220, 220)  # Çok açık gri
-        border_width = 1  # 1 pixel ince kenar
-        draw.rectangle([0, 0, width_px - 1, height_px - 1],
-                       outline=border_color,
-                       width=border_width)
+        # Etiket kenarları kaldırıldı - temiz görünüm için
 
         # Font ayarları
         try:
