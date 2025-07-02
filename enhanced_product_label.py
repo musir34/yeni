@@ -1078,6 +1078,20 @@ def print_multiple_labels():
 
                 # Sayfaya yapıştır
                 current_page.paste(label_img, (x, y))
+                
+                # Her etiketin kenarına belirleme çizgisi çiz
+                page_draw = ImageDraw.Draw(current_page)
+                
+                # Etiket sınırları (tasarım ölçülerine göre)
+                border_color = (100, 100, 100)  # Gri çizgi
+                border_width = 1
+                
+                # Dikdörtgen çerçeve çiz - etiketin tam kenarları
+                page_draw.rectangle(
+                    [x, y, x + label_width_px - 1, y + label_height_px - 1],
+                    outline=border_color,
+                    width=border_width
+                )
 
             all_pages.append(current_page)
 
