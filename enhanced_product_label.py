@@ -585,39 +585,9 @@ def generate_advanced_label_preview():
                 draw.text((x, y), text, fill=color, font=font)
 
             elif element_type == 'qr':
-                # QR boyutu editörden pixel cinsinden alıp mm'ye çevirip ölçeklendir
-                qr_size_px = properties.get('size',
-                                            50)  # editörde pixel cinsinden
-                qr_size_mm = qr_size_px / 4  # 4px = 1mm
-
-                # A4 modunda QR boyutunu da ölçeklendir
-                if is_a4_preview:
-                    scale_factor = min(scale_x,
-                                       scale_y)  # Aspect ratio korunur
-                    scaled_qr_size_mm = qr_size_mm * scale_factor
-                else:
-                    scaled_qr_size_mm = qr_size_mm
-
-                qr_size = int(
-                    (scaled_qr_size_mm / 25.4) * dpi)  # mm'yi DPI'ya çevir
-                # QR verisi - önce editörden, yoksa gerçek ürün barkodu
-                qr_data = properties.get('data', 'sample')
-
-                # Gerçek ürün barkodunu al
-                real_barcode = product_data.get('barcode', '0138523709823')
-
-                # Eğer sample/placeholder verisi ise gerçek barkod kullan
-                if qr_data in ['sample_barcode', 'sample', 'placeholder']:
-                    qr_data = real_barcode  # Gerçek ürün barkodu
-
-                logger.info(f"QR veri kaynağı: {qr_data}")
-
-                # Debug bilgisi
-                logger.info(
-                    f"QR Debug (func1): px={qr_size_px}, mm={qr_size_mm}, final_size={qr_size}, pos=({x},{y})"
-                )
-
-                # Minimum QR boyutu kontrolü - daha büyük minimum
+                # QR kod - basit yaklaşım
+                qr_size = properties.get('size', 100)
+                qr_data = properties.get('data', product_data.get('barcode', '0138523709823'))
                 if qr_size < 100:  # 100 pixel minimum
                     qr_size = 100
                     logger.warning(f"QR boyutu çok küçük, 100px'e yükseltildi")
