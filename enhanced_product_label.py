@@ -1541,8 +1541,7 @@ def create_label_with_design(product_data,
             outline=border_color,
             width=border_width
         )
-        
-        logger.info(f"Etiket border çizildi: {actual_label_width_px}x{actual_label_height_px}px")
+
 
         return label
 
