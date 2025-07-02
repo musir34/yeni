@@ -826,17 +826,9 @@ def generate_advanced_label_preview_new():
                 f"Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})px -> mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm"
             )
 
-            # Normal önizleme için de A4 ile aynı ölçeklendirme hesabı
-            editor_default_width = 100  # mm
-            editor_default_height = 50  # mm
-            
-            # Mevcut etiket boyutları ile ölçeklendirme
-            scale_x = label_width / editor_default_width
-            scale_y = label_height / editor_default_height
-            
-            # Ölçeklendir
-            scaled_x_mm = editor_x_mm * scale_x
-            scaled_y_mm = editor_y_mm * scale_y
+            # Normal önizlemede ölçeklendirme yapmıyoruz (editör boyutları aynen kullanılır)
+            scaled_x_mm = editor_x_mm
+            scaled_y_mm = editor_y_mm
             
             # mm'yi DPI'ya çevir
             x = int((scaled_x_mm / 25.4) * dpi)
