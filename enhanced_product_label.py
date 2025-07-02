@@ -472,20 +472,24 @@ def generate_advanced_label_preview():
         width_px = int((label_width / 25.4) * dpi)
         height_px = int((label_height / 25.4) * dpi)
 
-        # QR kodları için canvas genişliği hesapla
+        # Tüm elementler için canvas genişliği hesapla
         max_required_width = width_px
         for element in elements:
-            if element.get('type') == 'qr':
-                editor_x_mm = element.get('x', 0) / 4  # 4px = 1mm editörde
-                if editor_x_mm > label_width:  # QR kod etiket dışında
-                    qr_size_px = element.get('properties',
-                                             {}).get('size',
-                                                     50)  # editörde pixel
-                    qr_size_mm = qr_size_px / 4  # 4px = 1mm dönüşümü
-                    required_width_mm = editor_x_mm + qr_size_mm + 5  # QR + 5mm boşluk
-                    required_width_px = int((required_width_mm / 25.4) * dpi)
-                    max_required_width = max(max_required_width,
-                                             required_width_px)
+            element_x = element.get('x', 0)
+            element_width = element.get('width', 60)  # Varsayılan genişlik
+            
+            # Element'in sağ kenarını hesapla (editör koordinatlarında)
+            element_right_edge = element_x + element_width
+            
+            # mm'ye çevir (4px = 1mm editörde)
+            element_right_mm = element_right_edge / 4
+            
+            # Eğer element etiket sınırları dışındaysa canvas genişletilmeli
+            if element_right_mm > label_width:
+                required_width_mm = element_right_mm + 5  # 5mm güvenlik payı
+                required_width_px = int((required_width_mm / 25.4) * dpi)
+                max_required_width = max(max_required_width, required_width_px)
+                logger.info(f"Element {element.get('type')} için canvas genişletiliyor: {element_right_mm:.1f}mm")
 
         # Gerekli genişlikte etiket oluştur
         label = Image.new('RGB', (max_required_width, height_px), 'white')
@@ -1297,9 +1301,27 @@ def create_label_with_design(product_data,
         width_px = int((label_width / 25.4) * dpi)
         height_px = int((label_height / 25.4) * dpi)
 
-        # Boş etiket oluştur
-        label = Image.new('RGB', (width_px, height_px), 'white')
+        # Tasarımın gerçek genişliğini hesapla
+        elements = design.get('elements', [])
+        max_required_width = width_px
+        for element in elements:
+            element_x = element.get('x', 0)
+            element_width = element.get('width', 60)
+            element_right_edge = element_x + element_width
+            element_right_mm = element_right_edge / 4  # 4px = 1mm
+            
+            if element_right_mm > label_width:
+                required_width_mm = element_right_mm + 5
+                required_width_px = int((required_width_mm / 25.4) * dpi)
+                max_required_width = max(max_required_width, required_width_px)
+
+        # Gerekli genişlikte etiket oluştur
+        label = Image.new('RGB', (max_required_width, height_px), 'white')
         draw = ImageDraw.Draw(label)
+        
+        # Gerçek etiket boyutları
+        actual_label_width_px = width_px
+        actual_label_height_px = height_px
 
         # Ürün verilerini al
         model_code = product_data.get('model_code', '000')
@@ -1307,9 +1329,6 @@ def create_label_with_design(product_data,
         size = product_data.get('size', 'Beden')
         barcode = product_data.get('barcode', '0000000000000')
         
-        # Etiket kenarları kaldırıldı - temiz görünüm için
-
-
         # Eğer canvas gerçek etiket boyutundan büyükse, kesikli çizgi ile genişletilmiş alanı göster
         if max_required_width > actual_label_width_px:
             # Kesikli dikey çizgi çiz
