@@ -1105,33 +1105,14 @@ def print_multiple_labels():
                 )
                 current_page.paste(label_img, (x, y))
 
-            # SONRA TÜM ETIKET BORDERLARINI ÇİZ - TASARIM BOYUTLARINA GÖRE
+            # SONRA TÜM ETIKET BORDERLARINI ÇİZ - SADECE SİYAH ANA ÇERÇEVE
             for i, (x, y, label_data) in enumerate(label_positions):
-                # Editörde belirlenen boyutlara göre etiket border'ı çiz
-                # Siyah kalın çerçeve - etiket sınırları
+                # Siyah ana çerçeve - etiket sınırları (2px ince)
                 page_draw.rectangle(
                     [x, y, x + label_width_px, y + label_height_px],
                     outline=(0, 0, 0),
-                    width=4
-                )
-                
-                # Kırmızı dış çerçeve - test için daha görünür
-                page_draw.rectangle(
-                    [x-2, y-2, x + label_width_px + 2, y + label_height_px + 2],
-                    outline=(255, 0, 0),
                     width=2
-                )
-                
-                # Köşe işaretleri - etiket boyutlarını belirlemek için
-                corner_size = 8
-                # Sol üst
-                page_draw.rectangle([x-corner_size, y-corner_size, x, y], fill=(0, 255, 0))
-                # Sağ üst  
-                page_draw.rectangle([x+label_width_px, y-corner_size, x+label_width_px+corner_size, y], fill=(0, 255, 0))
-                # Sol alt
-                page_draw.rectangle([x-corner_size, y+label_height_px, x, y+label_height_px+corner_size], fill=(0, 255, 0))
-                # Sağ alt
-                page_draw.rectangle([x+label_width_px, y+label_height_px, x+label_width_px+corner_size, y+label_height_px+corner_size], fill=(0, 255, 0))                
+                )                
 
             all_pages.append(current_page)
 
