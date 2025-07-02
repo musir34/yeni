@@ -1072,14 +1072,17 @@ def print_multiple_labels():
             current_page = Image.new('RGB', (page_width_px, page_height_px),
                                      'white')
             
-
+            # Bu sayfadaki etiketleri yerleştir
+            page_draw = ImageDraw.Draw(current_page)
+            
+            # TEST: Sayfayı tamamen beyaz yap (mavi alanları temizlemek için)
+            page_draw.rectangle([0, 0, page_width_px, page_height_px], fill=(255, 255, 255))
 
             start_idx = page_num * labels_per_page
             end_idx = min(start_idx + labels_per_page, len(labels))
             page_labels = labels[start_idx:end_idx]
 
-            # Bu sayfadaki etiketleri yerleştir
-            page_draw = ImageDraw.Draw(current_page)  # Sayfaya çizim için draw objesi
+
             
             # TÜM ETİKETLER İÇİN ÖNCE POZİSYONLARI HESAPLA
             label_positions = []
