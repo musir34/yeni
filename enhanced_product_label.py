@@ -1076,11 +1076,15 @@ def print_multiple_labels():
             current_page = Image.new('RGB', (page_width_px, page_height_px),
                                      'white')
             
-            # ACIL TEST - Gerçek sayfaya test çizgileri ekle
-            test_draw = ImageDraw.Draw(current_page)
-            test_draw.rectangle([50, 50, 300, 150], outline=(255, 0, 0), width=8)
-            test_draw.text((50, 200), "SAYFA TEST ACTIVE", fill=(0, 0, 255))
-            logger.info(f"Sayfa {page_num+1} için test çizgileri eklendi")
+            # ACIL TEST - Sayfanın tamamına büyük çerçeve çiz
+            page_draw = ImageDraw.Draw(current_page)
+            # Sayfa kenarlarına büyük kırmızı çerçeve
+            page_draw.rectangle([0, 0, page_width_px-1, page_height_px-1], 
+                               outline=(255, 0, 0), width=20)
+            # Ortaya büyük mavi dikdörtgen
+            page_draw.rectangle([100, 100, page_width_px-100, page_height_px-100], 
+                               fill=(0, 0, 255))
+            logger.error(f"DEV TEST: Sayfa {page_num+1} - Büyük test çerçeveleri çizildi")
 
             start_idx = page_num * labels_per_page
             end_idx = min(start_idx + labels_per_page, len(labels))
