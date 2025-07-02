@@ -904,6 +904,11 @@ def save_label_preset():
 def print_multiple_labels():
     """Çoklu etiket yazdırma için sayfa hazırla"""
     try:
+        # BÜYÜK TEST MESAJI - HANGI FONKSIYON ÇALIŞIYOR
+        logger.error("========== ENHANCED PRODUCT LABEL PRINT_MULTIPLE_LABELS ÇALIŞTI ==========")
+        print("========== ENHANCED PRODUCT LABEL PRINT_MULTIPLE_LABELS ÇALIŞTI ==========")
+        logger.error("========== BU MESAYI GÖRÜYORSANIZ DOĞRU FONKSİYON ==========")
+        print("========== BU MESAYI GÖRÜYORSANIZ DOĞRU FONKSİYON ==========")
         data = request.get_json()
         labels = data.get('labels', [])
         design = data.get('design', {})
