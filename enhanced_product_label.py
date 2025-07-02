@@ -836,6 +836,23 @@ def generate_advanced_label_preview_new():
                               fill='#2196f3',
                               font=img_font)
 
+        # PNG editöründe etiket kenarlarına belirleme çizgisi ekle
+        actual_label_width_px = int((label_width / 25.4) * dpi)
+        actual_label_height_px = int((label_height / 25.4) * dpi)
+        
+        # Belirleme çizgisi çiz (siyah, 2px kalınlık)
+        border_color = (0, 0, 0)  # Siyah
+        border_width = 2
+        
+        # Etiket sınırlarını çiz
+        draw.rectangle(
+            [0, 0, actual_label_width_px - 1, actual_label_height_px - 1],
+            outline=border_color,
+            width=border_width
+        )
+        
+        logger.info(f"PNG editörü belirleme çizgisi çizildi: {actual_label_width_px}x{actual_label_height_px}px")
+
         # Önizleme kaydet
         os.makedirs('static/generated', exist_ok=True)
         timestamp = int(time.time())
