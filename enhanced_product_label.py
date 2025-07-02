@@ -1599,19 +1599,9 @@ def create_label_with_design(product_data,
                         f"A4 QR pozisyon kontrolü: ({x},{y}) + {qr_img.size} etiket içinde mi?"
                     )
 
-                    # QR kodu muhakkak etiket içine yerleştir
-                    # Güvenli pozisyon hesapla - her durumda etiket içinde kalacak
-                    safe_x = max(0, min(x, label_size[0] - qr_img.size[0]))
-                    safe_y = max(0, min(y, label_size[1] - qr_img.size[1]))
-                    
-                    # Hala etiket dışındaysa sol üst köşeye yerleştir
-                    if safe_x < 0 or safe_y < 0:
-                        safe_x = 10  # Kenardan 10px içeride
-                        safe_y = 10
-                    
-                    # Her durumda QR kodu yerleştir
-                    label.paste(qr_img, (safe_x, safe_y))
-                    logger.info(f"A4 QR kod yerleştirildi: ({safe_x},{safe_y})")
+                    # QR kodu belirtilen koordinatlara yerleştir
+                    label.paste(qr_img, (x, y))
+                    logger.info(f"A4 QR kod yerleştirildi: ({x},{y})")
                 else:
                     logger.error("A4 QR kod oluşturulamadı")
 
