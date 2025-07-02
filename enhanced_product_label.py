@@ -610,11 +610,9 @@ def generate_advanced_label_preview():
                     (img_width_mm / 25.4) * dpi)  # mm'yi DPI'ya çevir
                 img_height = int((img_height_mm / 25.4) * dpi)
 
-                # Placeholder için basit bir kare çiz
+                # Placeholder için basit bir kare çiz - çizgisiz
                 draw.rectangle([x, y, x + img_width, y + img_height],
-                               outline='#bdc3c7',
-                               fill='#ecf0f1',
-                               width=2)
+                               fill='#ecf0f1')
 
                 # "IMG" yazısı
                 try:
@@ -977,12 +975,10 @@ def generate_advanced_label_preview_new():
                 except Exception as img_error:
                     logger.error(f"Ürün görseli yükleme hatası: {img_error}")
 
-                # Görsel yüklenemedi ise placeholder göster
+                # Görsel yüklenemedi ise placeholder göster - çizgisiz
                 if not image_loaded:
                     draw.rectangle([x, y, x + img_width, y + img_height],
-                                   outline='#3498db',
-                                   fill='#e3f2fd',
-                                   width=2)
+                                   fill='#e3f2fd')
 
                     try:
                         img_font = ImageFont.truetype(
@@ -1555,12 +1551,10 @@ def create_label_with_design(product_data,
                 except Exception:
                     pass
 
-                # Placeholder
+                # Placeholder - çizgisiz
                 if not image_loaded:
                     draw.rectangle([x, y, x + img_width, y + img_height],
-                                   outline='#3498db',
-                                   fill='#e3f2fd',
-                                   width=2)
+                                   fill='#e3f2fd')
 
                     try:
                         img_font = ImageFont.truetype(
