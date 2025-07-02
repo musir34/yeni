@@ -826,13 +826,9 @@ def generate_advanced_label_preview_new():
                 f"Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})px -> mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm"
             )
 
-            # Normal önizlemede ölçeklendirme yapmıyoruz (editör boyutları aynen kullanılır)
-            scaled_x_mm = editor_x_mm
-            scaled_y_mm = editor_y_mm
-            
             # mm'yi DPI'ya çevir
-            x = int((scaled_x_mm / 25.4) * dpi)
-            y = int((scaled_y_mm / 25.4) * dpi)
+            x = int((editor_x_mm / 25.4) * dpi)
+            y = int((editor_y_mm / 25.4) * dpi)
 
             # Ürün-spesifik alanlar - properties yapısını kullan
             properties = element.get('properties', {})
