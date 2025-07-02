@@ -1379,12 +1379,25 @@ def create_label_with_design(product_data,
         for element in elements:
             element_type = element.get('type')
 
-            # Basit koordinat ölçeklendirme
-            x = int(element.get('x', 0) * (dpi / 96))
-            y = int(element.get('y', 0) * (dpi / 96))
+            # Koordinat ölçeklendirme ve sınır kontrolü
+            orig_x = element.get('x', 0)
+            orig_y = element.get('y', 0)
+            x = int(orig_x * (dpi / 96))
+            y = int(orig_y * (dpi / 96))
+            
+            # Etiket sınırları içerisinde tutma kontrolü
+            max_x = width_px - 50  # 50px güvenlik payı
+            max_y = height_px - 50  # 50px güvenlik payı
+            
+            if x > max_x:
+                x = max_x
+                logger.warning(f"X koordinatı etiket dışında, düzeltildi: {orig_x} -> {x}")
+            if y > max_y:
+                y = max_y
+                logger.warning(f"Y koordinatı etiket dışında, düzeltildi: {orig_y} -> {y}")
 
             logger.info(
-                f"A4 Element {element_type}: pos=({x},{y})px"
+                f"A4 Element {element_type}: pos=({x},{y})px, orig=({orig_x},{orig_y})"
             )
 
             if element_type == 'title':
@@ -1490,9 +1503,12 @@ def create_label_with_design(product_data,
                 draw.text((x, y), size, fill='black', font=font)
 
             elif element_type == 'qr':
-                # QR kod elementi
-                qr_size = element.get('properties', {}).get('size', 100)
-                qr_data = element.get('properties', {}).get('data', barcode)
+                # QR kod elementi - boyut hesaplaması düzeltildi
+                qr_size_px = element.get('width', 60)  # Editörden gelen pixel boyutu
+                qr_size = int(qr_size_px * (dpi / 96))  # DPI ölçeklendirmesi
+                qr_data = barcode  # Barkod verisini kullan
+                
+                logger.info(f"QR oluşturuluyor: data={qr_data}, size={qr_size}, pos=({x},{y})")
                 
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
                 qr_img = create_qr_with_logo(
@@ -1501,8 +1517,9 @@ def create_label_with_design(product_data,
 
                 if qr_img:
                     label.paste(qr_img, (x, y))
+                    logger.info(f"QR kod başarıyla yerleştirildi: pos=({x},{y}), size={qr_size}")
                 else:
-                    logger.error("QR kod oluşturulamadı")
+                    logger.error(f"QR kod oluşturulamadı: data={qr_data}, size={qr_size}")
 
             elif element_type == 'barcode':
                 # Barkod elementi - sadece rakam olarak göster
