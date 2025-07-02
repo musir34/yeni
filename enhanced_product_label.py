@@ -1366,9 +1366,6 @@ def create_label_with_design(product_data,
             default_font = ImageFont.load_default()
 
         # Ürün bilgileri
-        model_code = product_data.get('model_code', 'N/A')
-        color = product_data.get('color', 'N/A')
-        size = product_data.get('size', 'N/A')
         barcode = product_data.get('barcode', 'N/A')
 
         # Ürün görseli yolu - büyük/küçük harf duyarsız arama
