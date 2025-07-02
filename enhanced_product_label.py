@@ -817,7 +817,7 @@ def generate_advanced_label_preview_new():
                 # Görsel yüklenemedi ise placeholder göster - çizgisiz
                 if not image_loaded:
                     draw.rectangle([x, y, x + img_width, y + img_height],
-                                   fill='#e3f2fd')
+                                   fill='#ffffff')
 
                     try:
                         img_font = ImageFont.truetype(
@@ -833,7 +833,7 @@ def generate_advanced_label_preview_new():
                     text_y = y + (img_height - text_height) // 2
                     draw.text((text_x, text_y),
                               text,
-                              fill='#2196f3',
+                              fill='#000000',
                               font=img_font)
 
         # PNG editöründe etiket kenarlarına belirleme çizgisi ekle
@@ -1470,7 +1470,7 @@ def create_label_with_design(product_data,
                 # Placeholder - çizgisiz
                 if not image_loaded:
                     draw.rectangle([x, y, x + img_width, y + img_height],
-                                   fill='#e3f2fd')
+                                   fill='#ffffff')
 
                     try:
                         img_font = ImageFont.truetype(
