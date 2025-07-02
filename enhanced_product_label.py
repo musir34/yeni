@@ -1179,19 +1179,8 @@ def create_label_with_design(product_data,
         width_px = int((label_width / 25.4) * dpi)
         height_px = int((label_height / 25.4) * dpi)
 
-        # Tasarımın gerçek genişliğini hesapla
-        elements = design.get('elements', [])
+        # Canvas boyutunu etiket boyutuna sınırla - büyük mavi alanları engellemek için
         max_required_width = width_px
-        for element in elements:
-            element_x = element.get('x', 0)
-            element_width = element.get('width', 60)
-            element_right_edge = element_x + element_width
-            element_right_mm = element_right_edge / 4  # 4px = 1mm
-            
-            if element_right_mm > label_width:
-                required_width_mm = element_right_mm + 5
-                required_width_px = int((required_width_mm / 25.4) * dpi)
-                max_required_width = max(max_required_width, required_width_px)
 
         # Gerekli genişlikte etiket oluştur
         label = Image.new('RGB', (max_required_width, height_px), 'white')
