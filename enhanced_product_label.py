@@ -1453,6 +1453,23 @@ def create_label_with_design(product_data,
                               fill='#2196f3',
                               font=img_font)
 
+        # Etiket kenarlarına border çiz - belirtilen boyutlara göre
+        actual_label_width_px = int((label_width / 25.4) * dpi)
+        actual_label_height_px = int((label_height / 25.4) * dpi)
+        
+        # Border çiz (siyah, 2px kalınlık)
+        border_color = (0, 0, 0)  # Siyah
+        border_width = 2
+        
+        # Etiket sınırlarını çiz
+        draw.rectangle(
+            [0, 0, actual_label_width_px - 1, actual_label_height_px - 1],
+            outline=border_color,
+            width=border_width
+        )
+        
+        logger.info(f"Etiket border çizildi: {actual_label_width_px}x{actual_label_height_px}px")
+
         return label
 
     except Exception as e:
