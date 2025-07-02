@@ -1586,10 +1586,16 @@ def create_label_with_design(product_data,
                     f"A4 QR Debug: element_size_px={qr_size_px}, mm={qr_size_mm:.1f}, scaled_mm={scaled_qr_size_mm:.1f}, final_dpi_size={qr_size}, data={qr_data}"
                 )
 
-                logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
-                qr_img = create_qr_with_logo(
-                    qr_data, logo_path if os.path.exists(logo_path) else None,
-                    qr_size)
+                # Debug: QR kod yerine basit kırmızı kare oluştur
+                qr_img = Image.new('RGB', (qr_size, qr_size), 'red')
+                print(f"DEBUG: Kırmızı QR placeholder oluşturuldu: {qr_img.size}")
+                print(f"DEBUG: QR pozisyon: ({x},{y}), etiket boyutu: {label.size}")
+                print(f"DEBUG: QR sığıyor mu? x+w={x+qr_img.size[0]} <= {label.size[0]}, y+h={y+qr_img.size[1]} <= {label.size[1]}")
+                
+                # logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
+                # qr_img = create_qr_with_logo(
+                #     qr_data, logo_path if os.path.exists(logo_path) else None,
+                #     qr_size)
 
                 if qr_img:
                     # Etiket boyutlarını kontrol et
