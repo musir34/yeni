@@ -1541,69 +1541,20 @@ def create_label_with_design(product_data,
                 draw.text((x, y), size, fill='black', font=font)
 
             elif element_type == 'qr':
-                # QR boyutu properties'den al, yoksa element'den, yoksa varsayılan
-                qr_size = 50  # Varsayılan boyut
-
-                # Properties'den boyut alma (öncelikli) - pixel cinsinden
-                if 'properties' in element and 'size' in element['properties']:
-                    qr_size_px = int(element['properties']['size'])
-                elif 'size' in element:
-                    qr_size_px = int(element['size'])
-                elif 'width' in element:
-                    qr_size_px = int(element['width'])
-                else:
-                    qr_size_px = 200  # Varsayılan 200px = 50mm
-
-                # Editör boyutunu mm'ye çevir (4px = 1mm) sonra A4 boyutlarına ölçeklendir
-                qr_size_mm = qr_size_px / 4  # 4px = 1mm
-
-                # QR boyutunu da A4 etiket boyutlarına ölçeklendir
-                # En küçük ölçeklendirme oranını kullan (aspect ratio korunur)
-                scale_factor = min(scale_x, scale_y)
-                scaled_qr_size_mm = qr_size_mm * scale_factor
-
-                qr_size = int(
-                    (scaled_qr_size_mm / 25.4) * dpi)  # mm'den DPI'ya
-
-                # Minimum boyut kontrolü - önizleme ile aynı
-                if qr_size < 100:  # 100 pixel minimum (önizleme ile aynı)
-                    qr_size = 100
-                    logger.info(
-                        f"A4 QR boyutu minimum sınırına yükseltildi: {qr_size}px"
-                    )
-
-                # QR verisi - önizleme ile aynı kaynak kullan
-                properties = element.get('properties', {})
-                qr_data = properties.get(
-                    'data', barcode)  # Önce editörden, yoksa ürün barkodu
-
-                # Eğer sample/placeholder verisi ise gerçek barkod kullan
-                if qr_data in ['sample_barcode', 'sample', 'placeholder']:
-                    qr_data = barcode  # Gerçek ürün barkodu
-
-                logger.info(f"A4 QR veri kaynağı: {qr_data}")
-                logger.info(
-                    f"A4 QR Debug: element_size_px={qr_size_px}, mm={qr_size_mm:.1f}, scaled_mm={scaled_qr_size_mm:.1f}, final_dpi_size={qr_size}, data={qr_data}"
-                )
-
+                # QR kod elementi - basit yaklaşım
+                qr_size = element.get('properties', {}).get('size', 120)
+                qr_data = element.get('properties', {}).get('data', barcode)
+                
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
                 qr_img = create_qr_with_logo(
                     qr_data, logo_path if os.path.exists(logo_path) else None,
                     qr_size)
 
                 if qr_img:
-                    # Etiket boyutlarını kontrol et
-                    label_size = label.size
-                    logger.info(f"A4 etiket boyutu: {label_size}")
-                    logger.info(
-                        f"A4 QR pozisyon kontrolü: ({x},{y}) + {qr_img.size} etiket içinde mi?"
-                    )
-
-                    # QR kodu belirtilen koordinatlara yerleştir
                     label.paste(qr_img, (x, y))
-                    logger.info(f"A4 QR kod yerleştirildi: ({x},{y})")
+                    logger.info(f"QR kod eklendi: ({x},{y})")
                 else:
-                    logger.error("A4 QR kod oluşturulamadı")
+                    logger.error("QR kod oluşturulamadı")
 
             elif element_type == 'barcode':
                 # Barkod elementi - sadece rakam olarak göster
