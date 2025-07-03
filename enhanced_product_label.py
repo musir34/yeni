@@ -939,9 +939,14 @@ def generate_advanced_label_preview_new():
                     f"QR Debug: px={qr_size_px}, mm={qr_size_mm}, final_size={qr_size}, pos=({x},{y})"
                 )
 
-                # QR kod direkt barkodu içermeli - güvenilir veri kaynağı
-                qr_data = sample_product['barcode']
-                logger.info(f"QR veri kaynağı (func2): {qr_data}")
+                # QR kod her etiket için unique barkod kullanmalı
+                # product_data'dan gerçek barkodu al (çoklu etiket desteği)
+                if product_data and 'barcode' in product_data:
+                    qr_data = product_data['barcode']  # Her etiket için farklı barkod
+                    print(f"DEBUG QR: Etiket için unique barkod: {qr_data}")
+                else:
+                    qr_data = sample_product['barcode']  # Fallback
+                    print(f"DEBUG QR: Fallback barkod kullanılıyor: {qr_data}")
 
                 # Minimum QR boyutu kontrolü - daha büyük minimum
                 if qr_size < 100:  # 100 pixel minimum
@@ -964,8 +969,13 @@ def generate_advanced_label_preview_new():
                     logger.error("QR kod oluşturulamadı!")
 
             elif element_type == 'barcode':
-                # Barkod alanı sadece rakam gösterecek
-                barcode_data = sample_product['barcode']
+                # Barkod her etiket için unique data kullanmalı
+                if product_data and 'barcode' in product_data:
+                    barcode_data = product_data['barcode']  # Her etiket için farklı barkod
+                    print(f"DEBUG BARCODE: Etiket için unique barkod: {barcode_data}")
+                else:
+                    barcode_data = sample_product['barcode']  # Fallback
+                    print(f"DEBUG BARCODE: Fallback barkod kullanılıyor: {barcode_data}")
                 # Font boyutu properties'ten al, editör formatına uygun
                 font_size_px = properties.get('fontSize',
                                               12)  # properties'te sayı olarak
