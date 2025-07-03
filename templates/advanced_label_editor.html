@@ -1,453 +1,713 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gelişmiş Etiket Editörü - Güllü Shoes</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .main-container { max-width: 1600px; margin: 0 auto; padding: 20px; }
-        .section-card { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 24px; margin-bottom: 24px; }
-        .editor-workspace { display: grid; grid-template-columns: 1fr 300px; gap: 20px; height: 90vh; }
-        
-        /* Canvas Area */
-        .canvas-container { position: relative; background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 12px; overflow: hidden; min-height: 500px; }
-        .label-canvas { position: relative; background: white; margin: 20px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform-origin: center; transition: width 0.3s ease, height 0.3s ease; border: 2px solid #dee2e6; min-width: 100mm; min-height: 50mm; }
-        .canvas-element { position: absolute; cursor: move; border: 2px solid transparent; transition: border-color 0.2s; }
-        .canvas-element:hover { border-color: #3498db; }
-        .canvas-element.selected { border-color: #e74c3c; box-shadow: 0 0 10px rgba(231,76,60,0.4); }
-        .canvas-element.title-element { background: rgba(52,152,219,0.1); border-radius: 4px; padding: 2px; }
-        .canvas-element.image-element { border-radius: 8px; overflow: hidden; }
-        .canvas-element.qr-element { border-radius: 4px; }
-        .canvas-element.text-element { background: rgba(46,204,113,0.1); border-radius: 4px; padding: 2px; }
-        
-        /* Property Panel */
-        .property-panel { background: #f8f9fa; border-radius: 12px; padding: 20px; max-height: 80vh; overflow-y: auto; }
-        .property-section { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; border-left: 4px solid #3498db; }
-        .property-title { font-weight: 600; color: #2c3e50; margin-bottom: 12px; }
-        
-        /* Preset Panel */
-        .preset-panel { background: #f8f9fa; border-radius: 12px; padding: 20px; max-height: 80vh; overflow-y: auto; }
-        .preset-item { background: white; border-radius: 8px; padding: 12px; margin-bottom: 10px; border: 1px solid #dee2e6; cursor: pointer; }
-        .preset-item:hover { border-color: #3498db; }
-        .preset-thumbnail { width: 100%; height: 60px; background: #ecf0f1; border-radius: 4px; margin-bottom: 8px; }
-        
-        /* Toolbar */
-        .toolbar { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
-        .zoom-controls { display: flex; gap: 5px; align-items: center; }
-        .zoom-level { font-weight: 600; min-width: 50px; text-align: center; }
-        
-        /* Scale indicator */
-        .scale-indicator { position: absolute; bottom: 10px; right: 10px; background: rgba(52, 152, 219, 0.9); color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-    </style>
-</head>
-<body>
-    <div class="main-container">
-        <div class="section-card">
-            <h1><i class="fas fa-magic"></i> Gelişmiş Etiket Editörü</h1>
-            <p class="text-muted">Sürükle-bırak ile etiket tasarımı yapın</p>
-        </div>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Gelişmiş Etiket Editörü - Güllü Shoes</title>
+        <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+        />
+        <link
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+            rel="stylesheet"
+        />
+        <style>
+            .main-container {
+                max-width: 1600px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            .section-card {
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                padding: 24px;
+                margin-bottom: 24px;
+            }
+            .editor-workspace {
+                display: grid;
+                grid-template-columns: 1fr 300px;
+                gap: 20px;
+                height: 90vh;
+            }
 
-        <!-- Toolbar -->
-        <div class="toolbar">
-            <div class="btn-group">
-                <button class="btn btn-outline-primary" onclick="addElement('title')">
-                    <i class="fas fa-heading"></i> Başlık Ekle
-                </button>
-                <button class="btn btn-outline-success" onclick="addElement('image')">
-                    <i class="fas fa-image"></i> Görsel Ekle
-                </button>
-                <button class="btn btn-outline-info" onclick="addElement('qr')">
-                    <i class="fas fa-qrcode"></i> QR Kod Ekle
-                </button>
-                <button class="btn btn-outline-warning" onclick="addElement('text')">
-                    <i class="fas fa-font"></i> Metin Ekle
-                </button>
-            </div>
-            
-            <div class="zoom-controls">
-                <button class="btn btn-sm btn-outline-secondary" onclick="changeZoom(-0.1)">
-                    <i class="fas fa-search-minus"></i>
-                </button>
-                <span class="zoom-level">100%</span>
-                <button class="btn btn-sm btn-outline-secondary" onclick="changeZoom(0.1)">
-                    <i class="fas fa-search-plus"></i>
-                </button>
-            </div>
-            
-            <div class="btn-group ms-auto">
-                <button class="btn btn-success" onclick="savePreset()">
-                    <i class="fas fa-save"></i> Tasarım Kaydet
-                </button>
-                <button class="btn btn-primary" onclick="generatePreview()">
-                    <i class="fas fa-eye"></i> Önizleme
-                </button>
-                <button class="btn btn-danger" onclick="printLabels()">
-                    <i class="fas fa-print"></i> Yazdır
-                </button>
-                <button class="btn btn-warning" onclick="exportLabel()">
-                    <i class="fas fa-download"></i> Dışa Aktar
-                </button>
-            </div>
-        </div>
+            /* Canvas Area */
+            .canvas-container {
+                position: relative;
+                background: #f8f9fa;
+                border: 2px dashed #dee2e6;
+                border-radius: 12px;
+                overflow: hidden;
+                min-height: 500px;
+            }
+            .label-canvas {
+                position: relative;
+                background: white;
+                margin: 20px auto;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                transform-origin: center;
+                transition:
+                    width 0.3s ease,
+                    height 0.3s ease;
+                border: 2px solid #dee2e6;
+                min-width: 100mm;
+                min-height: 50mm;
+            }
+            .canvas-element {
+                position: absolute;
+                cursor: move;
+                border: 2px solid transparent;
+                transition: border-color 0.2s;
+            }
+            .canvas-element:hover {
+                border-color: #3498db;
+            }
+            .canvas-element.selected {
+                border-color: #e74c3c;
+                box-shadow: 0 0 10px rgba(231, 76, 60, 0.4);
+            }
+            .canvas-element.title-element {
+                background: rgba(52, 152, 219, 0.1);
+                border-radius: 4px;
+                padding: 2px;
+            }
+            .canvas-element.image-element {
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            .canvas-element.qr-element {
+                border-radius: 4px;
+            }
+            .canvas-element.text-element {
+                background: rgba(46, 204, 113, 0.1);
+                border-radius: 4px;
+                padding: 2px;
+            }
 
-        <div class="editor-workspace">
-            <!-- Canvas Area -->
-            <div class="canvas-container" id="canvasContainer">
-                <div class="label-canvas" id="labelCanvas" style="width: 400px; height: 200px;">
-                    <div class="scale-indicator">100mm x 50mm</div>
+            /* Property Panel */
+            .property-panel {
+                background: #f8f9fa;
+                border-radius: 12px;
+                padding: 20px;
+                max-height: 80vh;
+                overflow-y: auto;
+            }
+            .property-section {
+                background: white;
+                border-radius: 8px;
+                padding: 15px;
+                margin-bottom: 15px;
+                border-left: 4px solid #3498db;
+            }
+            .property-title {
+                font-weight: 600;
+                color: #2c3e50;
+                margin-bottom: 12px;
+            }
+
+            /* Preset Panel */
+            .preset-panel {
+                background: #f8f9fa;
+                border-radius: 12px;
+                padding: 20px;
+                max-height: 80vh;
+                overflow-y: auto;
+            }
+            .preset-item {
+                background: white;
+                border-radius: 8px;
+                padding: 12px;
+                margin-bottom: 10px;
+                border: 1px solid #dee2e6;
+                cursor: pointer;
+            }
+            .preset-item:hover {
+                border-color: #3498db;
+            }
+            .preset-thumbnail {
+                width: 100%;
+                height: 60px;
+                background: #ecf0f1;
+                border-radius: 4px;
+                margin-bottom: 8px;
+            }
+
+            /* Toolbar */
+            .toolbar {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 20px;
+                align-items: center;
+            }
+            .zoom-controls {
+                display: flex;
+                gap: 5px;
+                align-items: center;
+            }
+            .zoom-level {
+                font-weight: 600;
+                min-width: 50px;
+                text-align: center;
+            }
+
+            /* Scale indicator */
+            .scale-indicator {
+                position: absolute;
+                bottom: 10px;
+                right: 10px;
+                background: rgba(52, 152, 219, 0.9);
+                color: white;
+                padding: 5px 10px;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: bold;
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="main-container">
+            <div class="section-card">
+                <h1><i class="fas fa-magic"></i> Gelişmiş Etiket Editörü</h1>
+                <p class="text-muted">
+                    Sürükle-bırak ile etiket tasarımı yapın
+                </p>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <div class="btn-group">
+                    <button
+                        class="btn btn-outline-primary"
+                        onclick="addElement('title')"
+                    >
+                        <i class="fas fa-heading"></i> Başlık Ekle
+                    </button>
+                    <button
+                        class="btn btn-outline-success"
+                        onclick="addElement('image')"
+                    >
+                        <i class="fas fa-image"></i> Görsel Ekle
+                    </button>
+                    <button
+                        class="btn btn-outline-info"
+                        onclick="addElement('qr')"
+                    >
+                        <i class="fas fa-qrcode"></i> QR Kod Ekle
+                    </button>
+                    <button
+                        class="btn btn-outline-warning"
+                        onclick="addElement('text')"
+                    >
+                        <i class="fas fa-font"></i> Metin Ekle
+                    </button>
+                </div>
+
+                <div class="zoom-controls">
+                    <button
+                        class="btn btn-sm btn-outline-secondary"
+                        onclick="changeZoom(-0.1)"
+                    >
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <span class="zoom-level">100%</span>
+                    <button
+                        class="btn btn-sm btn-outline-secondary"
+                        onclick="changeZoom(0.1)"
+                    >
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                </div>
+
+                <div class="btn-group ms-auto">
+                    <button class="btn btn-success" onclick="savePreset()">
+                        <i class="fas fa-save"></i> Tasarım Kaydet
+                    </button>
+                    <button class="btn btn-primary" onclick="generatePreview()">
+                        <i class="fas fa-eye"></i> Önizleme
+                    </button>
+                    <button class="btn btn-danger" onclick="printLabels()">
+                        <i class="fas fa-print"></i> Yazdır
+                    </button>
+                    <button class="btn btn-warning" onclick="exportLabel()">
+                        <i class="fas fa-download"></i> Dışa Aktar
+                    </button>
                 </div>
             </div>
 
-            <!-- Property Panel -->
-            <div class="property-panel">
-                <h5><i class="fas fa-cogs"></i> Özellikler</h5>
-                <div id="propertyContent">
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-mouse-pointer fa-3x opacity-50"></i>
-                        <p class="mt-3">Düzenlemek için bir element seçin</p>
+            <div class="editor-workspace">
+                <!-- Canvas Area -->
+                <div class="canvas-container" id="canvasContainer">
+                    <div
+                        class="label-canvas"
+                        id="labelCanvas"
+                        style="width: 500px; height: 600px"
+                    >
+                        <div class="scale-indicator">100mm x 50mm</div>
+                    </div>
+                </div>
+
+                <!-- Property Panel -->
+                <div class="property-panel">
+                    <h5><i class="fas fa-cogs"></i> Özellikler</h5>
+                    <div id="propertyContent">
+                        <div class="text-center text-muted py-4">
+                            <i
+                                class="fas fa-mouse-pointer fa-3x opacity-50"
+                            ></i>
+                            <p class="mt-3">
+                                Düzenlemek için bir element seçin
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preset Panel -->
+                <div class="preset-panel">
+                    <h5><i class="fas fa-bookmark"></i> Kayıtlı Tasarımlar</h5>
+                    <button
+                        class="btn btn-outline-primary w-100 mb-3"
+                        onclick="showPresetDialog()"
+                    >
+                        <i class="fas fa-plus"></i> Yeni Preset
+                    </button>
+                    <div id="presetList">
+                        <!-- Presets will be loaded here -->
                     </div>
                 </div>
             </div>
 
-            <!-- Preset Panel -->
-            <div class="preset-panel">
-                <h5><i class="fas fa-bookmark"></i> Kayıtlı Tasarımlar</h5>
-                <button class="btn btn-outline-primary w-100 mb-3" onclick="showPresetDialog()">
-                    <i class="fas fa-plus"></i> Yeni Preset
-                </button>
-                <div id="presetList">
-                    <!-- Presets will be loaded here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Label Size Settings -->
-        <div class="section-card">
-            <h5><i class="fas fa-ruler"></i> Etiket Boyutu</h5>
-            <div class="row">
-                <div class="col-md-3">
-                    <label class="form-label">Genişlik (mm)</label>
-                    <input type="number" id="labelWidth" class="form-control" value="150" min="50" max="300" 
-                        onchange="updateCanvasSize()" oninput="updateCanvasSize()">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Yükseklik (mm)</label>
-                    <input type="number" id="labelHeight" class="form-control" value="80" min="30" max="200" onchange="updateCanvasSize()" oninput="updateCanvasSize()">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Hızlı Boyutlar</label><br>
-                    <div class="btn-group" role="group">
-                        <button class="btn btn-outline-secondary btn-sm" onclick="setLabelSize(150, 80)">150x80</button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="setLabelSize(120, 60)">120x60</button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="setLabelSize(100, 50)">100x50</button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="setLabelSize(80, 40)">80x40</button>
+            <!-- Label Size Settings -->
+            <div class="section-card">
+                <h5><i class="fas fa-ruler"></i> Etiket Boyutu</h5>
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Genişlik (mm)</label>
+                        <input
+                            type="number"
+                            id="labelWidth"
+                            class="form-control"
+                            value="150"
+                            min="50"
+                            max="300"
+                            onchange="updateCanvasSize()"
+                            oninput="updateCanvasSize()"
+                        />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Yükseklik (mm)</label>
+                        <input
+                            type="number"
+                            id="labelHeight"
+                            class="form-control"
+                            value="80"
+                            min="30"
+                            max="200"
+                            onchange="updateCanvasSize()"
+                            oninput="updateCanvasSize()"
+                        />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Hızlı Boyutlar</label><br />
+                        <div class="btn-group" role="group">
+                            <button
+                                class="btn btn-outline-secondary btn-sm"
+                                onclick="setLabelSize(150, 80)"
+                            >
+                                150x80
+                            </button>
+                            <button
+                                class="btn btn-outline-secondary btn-sm"
+                                onclick="setLabelSize(120, 60)"
+                            >
+                                120x60
+                            </button>
+                            <button
+                                class="btn btn-outline-secondary btn-sm"
+                                onclick="setLabelSize(100, 50)"
+                            >
+                                100x50
+                            </button>
+                            <button
+                                class="btn btn-outline-secondary btn-sm"
+                                onclick="setLabelSize(80, 40)"
+                            >
+                                80x40
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Preset Save Dialog -->
-    <div class="modal fade" id="presetModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Tasarım Kaydet</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Tasarım Adı</label>
-                        <input type="text" id="presetName" class="form-control" placeholder="Örn: Standart Etiket">
+        <!-- Preset Save Dialog -->
+        <div class="modal fade" id="presetModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Tasarım Kaydet</h5>
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                        ></button>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Açıklama</label>
-                        <textarea id="presetDescription" class="form-control" rows="3" placeholder="Tasarım hakkında kısa açıklama"></textarea>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Tasarım Adı</label>
+                            <input
+                                type="text"
+                                id="presetName"
+                                class="form-control"
+                                placeholder="Örn: Standart Etiket"
+                            />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Açıklama</label>
+                            <textarea
+                                id="presetDescription"
+                                class="form-control"
+                                rows="3"
+                                placeholder="Tasarım hakkında kısa açıklama"
+                            ></textarea>
+                        </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                    <button type="button" class="btn btn-primary" onclick="savePresetToStorage()">Kaydet</button>
+                    <div class="modal-footer">
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal"
+                        >
+                            İptal
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-primary"
+                            onclick="savePresetToStorage()"
+                        >
+                            Kaydet
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        let selectedElement = null;
-        let dragOffset = { x: 0, y: 0 };
-        let zoomLevel = 1;
-        let elementCounter = 0;
-        let labelElements = [];
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            let selectedElement = null;
+            let dragOffset = { x: 0, y: 0 };
+            let zoomLevel = 1;
+            let elementCounter = 0;
+            let labelElements = [];
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            loadPresets();
-            updateCanvasSize();
-        });
-
-        // Canvas size management
-        function updateCanvasSize() {
-            const width = parseInt(document.getElementById('labelWidth').value);
-            const height = parseInt(document.getElementById('labelHeight').value);
-            const canvas = document.getElementById('labelCanvas');
-            
-            // Direkt mm cinsinden boyutlar - pixel dönüşümü yok
-            canvas.style.width = width + 'mm';
-            canvas.style.height = height + 'mm';
-            
-            // Gerçek boyutları data attribute olarak sakla
-            canvas.setAttribute('data-real-width', width);
-            canvas.setAttribute('data-real-height', height);
-            
-            // Ölçek göstergesini güncelle
-            const scaleIndicator = document.querySelector('.scale-indicator');
-            if (scaleIndicator) {
-                scaleIndicator.textContent = `${width}mm x ${height}mm (Gerçek Boyut)`;
-                scaleIndicator.style.backgroundColor = 'rgba(52, 152, 219, 0.9)';
-                scaleIndicator.style.color = 'white';
-                scaleIndicator.style.padding = '5px 10px';
-                scaleIndicator.style.borderRadius = '4px';
-                scaleIndicator.style.fontSize = '12px';
-                scaleIndicator.style.fontWeight = 'bold';
-            }
-            
-            // Canvas container'ın merkez hizalamasını güncelle
-            const container = document.querySelector('.canvas-container');
-            if (container) {
-                container.style.display = 'flex';
-                container.style.justifyContent = 'center';
-                container.style.alignItems = 'center';
-                container.style.minHeight = '400px';
-            }
-        }
-
-        function setLabelSize(width, height) {
-            document.getElementById('labelWidth').value = width;
-            document.getElementById('labelHeight').value = height;
-            updateCanvasSize();
-        }
-
-        // Zoom controls
-        function changeZoom(delta) {
-            zoomLevel = Math.max(0.3, Math.min(2, zoomLevel + delta));
-            const canvas = document.getElementById('labelCanvas');
-            canvas.style.transform = `scale(${zoomLevel})`;
-            document.querySelector('.zoom-level').textContent = Math.round(zoomLevel * 100) + '%';
-        }
-
-        // Element management
-        function addElement(type) {
-            elementCounter++;
-            const elementId = `element_${type}_${elementCounter}`;
-            const canvas = document.getElementById('labelCanvas');
-            
-            const element = document.createElement('div');
-            element.id = elementId;
-            element.className = `canvas-element ${type}-element`;
-            
-            // QR kod için otomatik konumlandırma: dinamik hesaplama
-            let defaultX = 20; // Varsayılan pozisyon (5mm)
-            let defaultY = 20; // Varsayılan pozisyon (5mm)
-            
-            if (type === 'qr') {
-                const labelWidth = parseInt(document.getElementById('labelWidth').value);
-                const qrSize = 50; // Varsayılan QR boyutu (mm)
-                
-                // QR kod: etiket sağından başlayıp, QR boyutu + 5mm boşluk bırakacak şekilde konumlandır
-                // Toplam genişlik: etiket + QR boyutu + 5mm boşluk
-                const totalRequiredWidth = labelWidth + qrSize + 5;
-                const qrStartPosition = labelWidth + 2; // Etiket bitiminden 2mm sonra QR başlar
-                
-                defaultX = qrStartPosition * 3.78; // mm'yi pixel'e çevir (3.78px = 1mm)
-                defaultY = 5 * 3.78; // Y pozisyonu varsayılan (mm'den pixel'e)
-            }
-            
-            element.style.left = defaultX + 'px';
-            element.style.top = defaultY + 'px';
-            
-            const elementData = {
-                id: elementId,
-                type: type,
-                x: defaultX / 3.78,  // mm cinsinden sakla
-                y: defaultY / 3.78,
-                pixelX: defaultX,     // Display için pixel de sakla
-                pixelY: defaultY,
-                properties: getDefaultProperties(type)
-            };
-
-            switch(type) {
-                case 'title':
-                    element.innerHTML = '<strong>GÜLLÜ</strong>';
-                    element.style.fontSize = '18px';
-                    element.style.fontWeight = 'bold';
-                    break;
-                case 'image':
-                    element.innerHTML = '<div style="width:60px;height:60px;background:#ecf0f1;border:2px dashed #bdc3c7;display:flex;align-items:center;justify-content:center;"><i class="fas fa-image text-muted"></i></div>';
-                    break;
-                case 'qr':
-                    element.innerHTML = '<div style="width:50px;height:50px;background:#2c3e50;color:white;display:flex;align-items:center;justify-content:center;font-size:12px;">QR</div>';
-                    break;
-                case 'text':
-                    element.innerHTML = 'Metin';
-                    element.style.fontSize = '14px';
-                    break;
-            }
-
-            element.addEventListener('mousedown', startDrag);
-            element.addEventListener('click', selectElement);
-            element.setAttribute('data-id', elementId);
-            
-            canvas.appendChild(element);
-            labelElements.push(elementData);
-            selectElement({ target: element });
-            
-            // Element sınır kontrolü
-            checkElementBounds(element);
-            
-            console.log('Element added:', elementData);
-        }
-
-        function getDefaultProperties(type) {
-            const defaults = {
-                title: {
-                    text: 'GÜLLÜ',
-                    fontSize: 18,
-                    fontWeight: 'bold',
-                    color: '#000000',
-                    fontFamily: 'Arial'
-                },
-                image: {
-                    width: 60,
-                    height: 60,
-                    source: 'placeholder'
-                },
-                qr: {
-                    size: 120,  // A4 için daha büyük varsayılan QR boyutu
-                    data: 'sample_barcode'
-                },
-                text: {
-                    text: 'Metin',
-                    fontSize: 14,
-                    color: '#000000',
-                    fontFamily: 'Arial'
-                }
-            };
-            return defaults[type] || {};
-        }
-
-        // Drag and drop functionality
-        function startDrag(e) {
-            e.preventDefault();
-            const element = e.target.closest('.canvas-element');
-            if (!element) return;
-
-            selectElement({ target: element });
-            
-            const rect = element.getBoundingClientRect();
-            const canvasRect = document.getElementById('labelCanvas').getBoundingClientRect();
-            
-            dragOffset.x = e.clientX - rect.left;
-            dragOffset.y = e.clientY - rect.top;
-
-            document.addEventListener('mousemove', drag);
-            document.addEventListener('mouseup', stopDrag);
-        }
-
-        function drag(e) {
-            if (!selectedElement) return;
-            
-            const canvasRect = document.getElementById('labelCanvas').getBoundingClientRect();
-            let newX = (e.clientX - canvasRect.left - dragOffset.x) / zoomLevel;
-            let newY = (e.clientY - canvasRect.top - dragOffset.y) / zoomLevel;
-            
-            // Canvas sınırlarını mm cinsinden kontrol et
-            const canvas = document.getElementById('labelCanvas');
-            const canvasWidthMM = parseInt(canvas.getAttribute('data-real-width')) || 100;
-            const canvasHeightMM = parseInt(canvas.getAttribute('data-real-height')) || 50;
-            
-            // Pixel'den mm'ye dönüştür (1mm = 3.78px yaklaşık)
-            const mmX = newX / 3.78;
-            const mmY = newY / 3.78;
-            
-            // Element boyutlarını mm cinsinden hesapla
-            const elementWidthMM = selectedElement.offsetWidth / 3.78;
-            const elementHeightMM = selectedElement.offsetHeight / 3.78;
-            
-            // Sınır kontrolü - 1mm güvenlik payı
-            const finalX = Math.max(1, Math.min(mmX, canvasWidthMM - elementWidthMM - 1));
-            const finalY = Math.max(1, Math.min(mmY, canvasHeightMM - elementHeightMM - 1));
-            
-            // Pixel'e geri dönüştür display için
-            selectedElement.style.left = (finalX * 3.78) + 'px';
-            selectedElement.style.top = (finalY * 3.78) + 'px';
-            
-            // Çakışma kontrolü
-            const collision = checkElementCollision(selectedElement);
-            if (collision) {
-                selectedElement.style.border = '2px solid #ff6b35';
-                selectedElement.style.backgroundColor = 'rgba(255, 107, 53, 0.2)';
-                selectedElement.setAttribute('data-collision', 'true');
-            } else {
-                selectedElement.style.border = '';
-                selectedElement.style.backgroundColor = '';
-                selectedElement.removeAttribute('data-collision');
-                
-                // Element verilerini güncelle - mm cinsinden kaydet
-                const elementData = labelElements.find(el => el.id === selectedElement.id);
-                if (elementData) {
-                    elementData.x = finalX;  // mm cinsinden koordinatlar
-                    elementData.y = finalY;
-                    // Debug için pixel koordinatlarını da kaydet
-                    elementData.pixelX = finalX * 3.78;
-                    elementData.realY = realY;
-                }
-            }
-            
-            updatePositionInputs();
-        }
-
-        function stopDrag() {
-            document.removeEventListener('mousemove', drag);
-            document.removeEventListener('mouseup', stopDrag);
-            
-            // Çakışma uyarılarını temizle
-            if (selectedElement) {
-                selectedElement.style.backgroundColor = '';
-                selectedElement.style.border = '';
-                selectedElement.removeAttribute('data-collision');
-            }
-        }
-
-        // Element selection
-        function selectElement(e) {
-            // Remove previous selection
-            document.querySelectorAll('.canvas-element.selected').forEach(el => {
-                el.classList.remove('selected');
+            // Initialize
+            document.addEventListener("DOMContentLoaded", function () {
+                loadPresets();
+                updateCanvasSize();
             });
-            
-            const element = e.target.closest('.canvas-element');
-            if (element) {
-                element.classList.add('selected');
-                selectedElement = element;
-                showElementProperties(element);
+
+            // Canvas size management
+            function updateCanvasSize() {
+                const width = parseInt(
+                    document.getElementById("labelWidth").value,
+                );
+                const height = parseInt(
+                    document.getElementById("labelHeight").value,
+                );
+                const canvas = document.getElementById("labelCanvas");
+
+                // Sağ taraftaki mm değerleriyle tam eşleştirme - gerçek boyut
+                // 1mm = 3.78px (96 DPI standardında) kullanarak ekran boyutunu hesapla
+                const displayWidth = width * 3.78;
+                const displayHeight = height * 3.78;
+                
+                canvas.style.width = displayWidth + "px";
+                canvas.style.height = displayHeight + "px";
+
+                // Gerçek boyutları data attribute olarak sakla
+                canvas.setAttribute("data-real-width", width);
+                canvas.setAttribute("data-real-height", height);
+
+                // Ölçek göstergesini güncelle
+                const scaleIndicator =
+                    document.querySelector(".scale-indicator");
+                if (scaleIndicator) {
+                    scaleIndicator.textContent = `${width}mm × ${height}mm (1:1 Ölçek)`;
+                    scaleIndicator.style.backgroundColor = "rgba(46, 204, 113, 0.9)";
+                    scaleIndicator.style.color = "white";
+                    scaleIndicator.style.padding = "8px 15px";
+                    scaleIndicator.style.borderRadius = "6px";
+                    scaleIndicator.style.fontSize = "13px";
+                    scaleIndicator.style.fontWeight = "bold";
+                    scaleIndicator.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
+                    scaleIndicator.style.border = "2px solid rgba(46, 204, 113, 1)";
+                }
+
+                // Canvas container'ın merkez hizalamasını güncelle
+                const container = document.querySelector(".canvas-container");
+                if (container) {
+                    container.style.display = "flex";
+                    container.style.justifyContent = "center";
+                    container.style.alignItems = "center";
+                    container.style.minHeight = Math.max(500, displayHeight + 100) + "px";
+                    container.style.padding = "30px";
+                }
+                
+                console.log(`Canvas gerçek boyut: ${width}mm × ${height}mm (${displayWidth}px × ${displayHeight}px)`);
             }
-        }
 
-        function showElementProperties(element) {
-            const elementData = labelElements.find(el => el.id === element.id);
-            if (!elementData) return;
+            function setLabelSize(width, height) {
+                document.getElementById("labelWidth").value = width;
+                document.getElementById("labelHeight").value = height;
+                updateCanvasSize();
+            }
 
-            const propertyContent = document.getElementById('propertyContent');
-            propertyContent.innerHTML = generatePropertyPanel(elementData);
-        }
+            // Zoom controls
+            function changeZoom(delta) {
+                zoomLevel = Math.max(0.3, Math.min(2, zoomLevel + delta));
+                const canvas = document.getElementById("labelCanvas");
+                canvas.style.transform = `scale(${zoomLevel})`;
+                document.querySelector(".zoom-level").textContent =
+                    Math.round(zoomLevel * 100) + "%";
+            }
 
-        function generatePropertyPanel(elementData) {
-            const { type, properties } = elementData;
-            let html = `
+            // Element management
+            function addElement(type) {
+                elementCounter++;
+                const elementId = `element_${type}_${elementCounter}`;
+                const canvas = document.getElementById("labelCanvas");
+
+                const element = document.createElement("div");
+                element.id = elementId;
+                element.className = `canvas-element ${type}-element`;
+
+                // QR kod için otomatik konumlandırma: dinamik hesaplama
+                let defaultX = 20; // Varsayılan pozisyon (5mm)
+                let defaultY = 20; // Varsayılan pozisyon (5mm)
+
+                if (type === "qr") {
+                    const labelWidth = parseInt(
+                        document.getElementById("labelWidth").value,
+                    );
+                    const qrSize = 50; // Varsayılan QR boyutu (mm)
+
+                    // QR kod: etiket sağından başlayıp, QR boyutu + 5mm boşluk bırakacak şekilde konumlandır
+                    // Toplam genişlik: etiket + QR boyutu + 5mm boşluk
+                    const totalRequiredWidth = labelWidth + qrSize + 5;
+                    const qrStartPosition = labelWidth + 2; // Etiket bitiminden 2mm sonra QR başlar
+
+                    defaultX = qrStartPosition * 3.78; // mm'yi pixel'e çevir (3.78px = 1mm)
+                    defaultY = 5 * 3.78; // Y pozisyonu varsayılan (mm'den pixel'e)
+                }
+
+                element.style.left = defaultX + "px";
+                element.style.top = defaultY + "px";
+
+                const elementData = {
+                    id: elementId,
+                    type: type,
+                    x: defaultX / 3.78, // mm cinsinden sakla
+                    y: defaultY / 3.78,
+                    pixelX: defaultX, // Display için pixel de sakla
+                    pixelY: defaultY,
+                    properties: getDefaultProperties(type),
+                };
+
+                switch (type) {
+                    case "title":
+                        element.innerHTML = "<strong>GÜLLÜ</strong>";
+                        element.style.fontSize = "18px";
+                        element.style.fontWeight = "bold";
+                        break;
+                    case "image":
+                        element.innerHTML =
+                            '<div style="width:60px;height:60px;background:#ecf0f1;border:2px dashed #bdc3c7;display:flex;align-items:center;justify-content:center;"><i class="fas fa-image text-muted"></i></div>';
+                        break;
+                    case "qr":
+                        element.innerHTML =
+                            '<div style="width:50px;height:50px;background:#2c3e50;color:white;display:flex;align-items:center;justify-content:center;font-size:12px;">QR</div>';
+                        break;
+                    case "text":
+                        element.innerHTML = "Metin";
+                        element.style.fontSize = "14px";
+                        break;
+                }
+
+                element.addEventListener("mousedown", startDrag);
+                element.addEventListener("click", selectElement);
+                element.setAttribute("data-id", elementId);
+
+                canvas.appendChild(element);
+                labelElements.push(elementData);
+                selectElement({ target: element });
+
+                // Element sınır kontrolü
+                checkElementBounds(element);
+
+                console.log("Element added:", elementData);
+            }
+
+            function getDefaultProperties(type) {
+                const defaults = {
+                    title: {
+                        text: "GÜLLÜ",
+                        fontSize: 18,
+                        fontWeight: "bold",
+                        color: "#000000",
+                        fontFamily: "Arial",
+                    },
+                    image: {
+                        width: 60,
+                        height: 60,
+                        source: "placeholder",
+                    },
+                    qr: {
+                        size: 120, // A4 için daha büyük varsayılan QR boyutu
+                        data: "sample_barcode",
+                    },
+                    text: {
+                        text: "Metin",
+                        fontSize: 14,
+                        color: "#000000",
+                        fontFamily: "Arial",
+                    },
+                };
+                return defaults[type] || {};
+            }
+
+            // Drag and drop functionality
+            function startDrag(e) {
+                e.preventDefault();
+                const element = e.target.closest(".canvas-element");
+                if (!element) return;
+
+                selectElement({ target: element });
+
+                const rect = element.getBoundingClientRect();
+                const canvasRect = document
+                    .getElementById("labelCanvas")
+                    .getBoundingClientRect();
+
+                dragOffset.x = e.clientX - rect.left;
+                dragOffset.y = e.clientY - rect.top;
+
+                document.addEventListener("mousemove", drag);
+                document.addEventListener("mouseup", stopDrag);
+            }
+
+            function drag(e) {
+                if (!selectedElement) return;
+
+                const canvasRect = document
+                    .getElementById("labelCanvas")
+                    .getBoundingClientRect();
+                let newX =
+                    (e.clientX - canvasRect.left - dragOffset.x) / zoomLevel;
+                let newY =
+                    (e.clientY - canvasRect.top - dragOffset.y) / zoomLevel;
+
+                // Canvas sınırlarını mm cinsinden kontrol et
+                const canvas = document.getElementById("labelCanvas");
+                const canvasWidthMM =
+                    parseInt(canvas.getAttribute("data-real-width")) || 100;
+                const canvasHeightMM =
+                    parseInt(canvas.getAttribute("data-real-height")) || 50;
+
+                // Pixel'den mm'ye dönüştür (1mm = 3.78px yaklaşık)
+                const mmX = newX / 3.78;
+                const mmY = newY / 3.78;
+
+                // Element boyutlarını mm cinsinden hesapla
+                const elementWidthMM = selectedElement.offsetWidth / 3.78;
+                const elementHeightMM = selectedElement.offsetHeight / 3.78;
+
+                // Sınır kontrolü - 1mm güvenlik payı
+                const finalX = Math.max(
+                    1,
+                    Math.min(mmX, canvasWidthMM - elementWidthMM - 1),
+                );
+                const finalY = Math.max(
+                    1,
+                    Math.min(mmY, canvasHeightMM - elementHeightMM - 1),
+                );
+
+                // Pixel'e geri dönüştür display için
+                selectedElement.style.left = finalX * 3.78 + "px";
+                selectedElement.style.top = finalY * 3.78 + "px";
+
+                // Çakışma kontrolü
+                const collision = checkElementCollision(selectedElement);
+                if (collision) {
+                    selectedElement.style.border = "2px solid #ff6b35";
+                    selectedElement.style.backgroundColor =
+                        "rgba(255, 107, 53, 0.2)";
+                    selectedElement.setAttribute("data-collision", "true");
+                } else {
+                    selectedElement.style.border = "";
+                    selectedElement.style.backgroundColor = "";
+                    selectedElement.removeAttribute("data-collision");
+
+                    // Element verilerini güncelle - mm cinsinden kaydet
+                    const elementData = labelElements.find(
+                        (el) => el.id === selectedElement.id,
+                    );
+                    if (elementData) {
+                        elementData.x = finalX; // mm cinsinden koordinatlar
+                        elementData.y = finalY;
+                        // Debug için pixel koordinatlarını da kaydet
+                        elementData.pixelX = finalX * 3.78;
+                        elementData.realY = realY;
+                    }
+                }
+
+                updatePositionInputs();
+            }
+
+            function stopDrag() {
+                document.removeEventListener("mousemove", drag);
+                document.removeEventListener("mouseup", stopDrag);
+
+                // Çakışma uyarılarını temizle
+                if (selectedElement) {
+                    selectedElement.style.backgroundColor = "";
+                    selectedElement.style.border = "";
+                    selectedElement.removeAttribute("data-collision");
+                }
+            }
+
+            // Element selection
+            function selectElement(e) {
+                // Remove previous selection
+                document
+                    .querySelectorAll(".canvas-element.selected")
+                    .forEach((el) => {
+                        el.classList.remove("selected");
+                    });
+
+                const element = e.target.closest(".canvas-element");
+                if (element) {
+                    element.classList.add("selected");
+                    selectedElement = element;
+                    showElementProperties(element);
+                }
+            }
+
+            function showElementProperties(element) {
+                const elementData = labelElements.find(
+                    (el) => el.id === element.id,
+                );
+                if (!elementData) return;
+
+                const propertyContent =
+                    document.getElementById("propertyContent");
+                propertyContent.innerHTML = generatePropertyPanel(elementData);
+            }
+
+            function generatePropertyPanel(elementData) {
+                const { type, properties } = elementData;
+                let html = `
                 <div class="property-section">
                     <div class="property-title"><i class="fas fa-arrows-alt"></i> Pozisyon (mm)</div>
                     <div class="row">
@@ -463,10 +723,10 @@
                 </div>
             `;
 
-            switch(type) {
-                case 'title':
-                case 'text':
-                    html += `
+                switch (type) {
+                    case "title":
+                    case "text":
+                        html += `
                         <div class="property-section">
                             <div class="property-title"><i class="fas fa-font"></i> Metin Özellikleri</div>
                             <div class="mb-3">
@@ -484,23 +744,23 @@
                             <div class="mb-3">
                                 <label class="form-label">Font Ailesi</label>
                                 <select class="form-control" onchange="updateTextProperty('fontFamily', this.value)">
-                                    <option value="Arial" ${properties.fontFamily === 'Arial' ? 'selected' : ''}>Arial</option>
-                                    <option value="Times New Roman" ${properties.fontFamily === 'Times New Roman' ? 'selected' : ''}>Times New Roman</option>
-                                    <option value="Helvetica" ${properties.fontFamily === 'Helvetica' ? 'selected' : ''}>Helvetica</option>
+                                    <option value="Arial" ${properties.fontFamily === "Arial" ? "selected" : ""}>Arial</option>
+                                    <option value="Times New Roman" ${properties.fontFamily === "Times New Roman" ? "selected" : ""}>Times New Roman</option>
+                                    <option value="Helvetica" ${properties.fontFamily === "Helvetica" ? "selected" : ""}>Helvetica</option>
                                 </select>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Font Ağırlığı</label>
                                 <select class="form-control" onchange="updateTextProperty('fontWeight', this.value)">
-                                    <option value="normal" ${properties.fontWeight === 'normal' ? 'selected' : ''}>Normal</option>
-                                    <option value="bold" ${properties.fontWeight === 'bold' ? 'selected' : ''}>Kalın</option>
+                                    <option value="normal" ${properties.fontWeight === "normal" ? "selected" : ""}>Normal</option>
+                                    <option value="bold" ${properties.fontWeight === "bold" ? "selected" : ""}>Kalın</option>
                                 </select>
                             </div>
                         </div>
                     `;
-                    break;
-                case 'image':
-                    html += `
+                        break;
+                    case "image":
+                        html += `
                         <div class="property-section">
                             <div class="property-title"><i class="fas fa-image"></i> Görsel Özellikleri</div>
                             <div class="mb-3">
@@ -513,9 +773,9 @@
                             </div>
                         </div>
                     `;
-                    break;
-                case 'qr':
-                    html += `
+                        break;
+                    case "qr":
+                        html += `
                         <div class="property-section">
                             <div class="property-title"><i class="fas fa-qrcode"></i> QR Kod Özellikleri</div>
                             <div class="mb-3">
@@ -528,10 +788,10 @@
                             </div>
                         </div>
                     `;
-                    break;
-            }
+                        break;
+                }
 
-            html += `
+                html += `
                 <div class="property-section">
                     <button class="btn btn-danger w-100" onclick="deleteElement()">
                         <i class="fas fa-trash"></i> Elementi Sil
@@ -539,214 +799,282 @@
                 </div>
             `;
 
-            return html;
-        }
-
-        // Property update functions
-        function updateElementPosition() {
-            if (!selectedElement) return;
-            
-            // Input'tan mm cinsinden al, display için pixel'e çevir (1mm = 3.78px)
-            const xMM = parseInt(document.getElementById('pos_x').value);
-            const yMM = parseInt(document.getElementById('pos_y').value);
-            const xPx = xMM * 3.78;
-            const yPx = yMM * 3.78;
-            
-            selectedElement.style.left = xPx + 'px';
-            selectedElement.style.top = yPx + 'px';
-            
-            const elementData = labelElements.find(el => el.id === selectedElement.id);
-            if (elementData) {
-                elementData.x = xMM;  // mm cinsinden sakla
-                elementData.y = yMM;
-                elementData.pixelX = xPx;  // Display için pixel de sakla
-                elementData.pixelY = yPx;
+                return html;
             }
-        }
 
-        function updatePositionInputs() {
-            if (!selectedElement) return;
-            
-            const posXInput = document.getElementById('pos_x');
-            const posYInput = document.getElementById('pos_y');
-            
-            if (posXInput) {
-                // Pixel değerini mm'ye çevir (3.78px = 1mm)
-                const xMM = Math.round(parseInt(selectedElement.style.left) / 3.78);
-                posXInput.value = xMM;
-            }
-            if (posYInput) {
-                const yMM = Math.round(parseInt(selectedElement.style.top) / 3.78);
-                posYInput.value = yMM;
-            }
-        }
+            // Property update functions
+            function updateElementPosition() {
+                if (!selectedElement) return;
 
-        function updateTextProperty(property, value) {
-            if (!selectedElement) return;
-            
-            const elementData = labelElements.find(el => el.id === selectedElement.id);
-            if (elementData) {
-                // Özelliği güncelle
-                if (property === 'fontSize') {
+                // Input'tan mm cinsinden al, display için pixel'e çevir (1mm = 3.78px)
+                const xMM = parseInt(document.getElementById("pos_x").value);
+                const yMM = parseInt(document.getElementById("pos_y").value);
+                const xPx = xMM * 3.78;
+                const yPx = yMM * 3.78;
+
+                selectedElement.style.left = xPx + "px";
+                selectedElement.style.top = yPx + "px";
+
+                const elementData = labelElements.find(
+                    (el) => el.id === selectedElement.id,
+                );
+                if (elementData) {
+                    elementData.x = xMM; // mm cinsinden sakla
+                    elementData.y = yMM;
+                    elementData.pixelX = xPx; // Display için pixel de sakla
+                    elementData.pixelY = yPx;
+                }
+            }
+
+            function updatePositionInputs() {
+                if (!selectedElement) return;
+
+                const posXInput = document.getElementById("pos_x");
+                const posYInput = document.getElementById("pos_y");
+
+                if (posXInput) {
+                    // Pixel değerini mm'ye çevir (3.78px = 1mm)
+                    const xMM = Math.round(
+                        parseInt(selectedElement.style.left) / 3.78,
+                    );
+                    posXInput.value = xMM;
+                }
+                if (posYInput) {
+                    const yMM = Math.round(
+                        parseInt(selectedElement.style.top) / 3.78,
+                    );
+                    posYInput.value = yMM;
+                }
+            }
+
+            function updateTextProperty(property, value) {
+                if (!selectedElement) return;
+
+                const elementData = labelElements.find(
+                    (el) => el.id === selectedElement.id,
+                );
+                if (elementData) {
+                    // Özelliği güncelle
+                    if (property === "fontSize") {
+                        elementData.properties[property] = parseInt(value);
+                        elementData.fontSize = value + "px"; // Hem properties hem de direkt olarak kaydet
+                    } else {
+                        elementData.properties[property] = value;
+                    }
+
+                    // Görsel değişiklikleri uygula - FORCE UPDATE
+                    switch (property) {
+                        case "text":
+                            selectedElement.innerHTML = value;
+                            elementData.html = value;
+                            break;
+                        case "fontSize":
+                            // Font boyutunu güncelle
+                            selectedElement.style.fontSize = value + "px";
+                            selectedElement.style.setProperty(
+                                "font-size",
+                                value + "px",
+                                "important",
+                            );
+                            selectedElement.setAttribute(
+                                "data-font-size",
+                                value,
+                            );
+                            elementData.fontSize = parseInt(value);
+
+                            // DOM'u zorla güncelle
+                            const temp = selectedElement.innerHTML;
+                            selectedElement.innerHTML = "";
+                            setTimeout(() => {
+                                selectedElement.innerHTML = temp;
+                            }, 1);
+
+                            // Element boyutunu yeniden hesapla ve çakışma kontrolü
+                            setTimeout(() => {
+                                checkElementBounds(selectedElement);
+                                const collision =
+                                    checkElementCollision(selectedElement);
+                                if (collision) {
+                                    showCollisionWarning(selectedElement);
+                                }
+                            }, 100);
+
+                            console.log(
+                                `Font size updated to: ${value}px for element ${selectedElement.id}`,
+                            );
+                            break;
+                        case "color":
+                            selectedElement.style.color = value;
+                            selectedElement.style.setProperty(
+                                "color",
+                                value,
+                                "important",
+                            );
+                            break;
+                        case "fontFamily":
+                            selectedElement.style.fontFamily = value;
+                            selectedElement.style.setProperty(
+                                "font-family",
+                                value,
+                                "important",
+                            );
+                            break;
+                        case "fontWeight":
+                            selectedElement.style.fontWeight = value;
+                            selectedElement.style.setProperty(
+                                "font-weight",
+                                value,
+                                "important",
+                            );
+                            break;
+                    }
+
+                    // Tasarımı kaydet
+                    saveDesign();
+                    console.log(
+                        "Property updated:",
+                        property,
+                        value,
+                        elementData,
+                    );
+                }
+            }
+
+            function updateImageProperty(property, value) {
+                if (!selectedElement) return;
+
+                const elementData = labelElements.find(
+                    (el) => el.id === selectedElement.id,
+                );
+                if (elementData) {
                     elementData.properties[property] = parseInt(value);
-                    elementData.fontSize = value + 'px'; // Hem properties hem de direkt olarak kaydet
-                } else {
-                    elementData.properties[property] = value;
-                }
-                
-                // Görsel değişiklikleri uygula - FORCE UPDATE
-                switch(property) {
-                    case 'text':
-                        selectedElement.innerHTML = value;
-                        elementData.html = value;
-                        break;
-                    case 'fontSize':
-                        // Font boyutunu güncelle
-                        selectedElement.style.fontSize = value + 'px';
-                        selectedElement.style.setProperty('font-size', value + 'px', 'important');
-                        selectedElement.setAttribute('data-font-size', value);
-                        elementData.fontSize = parseInt(value);
-                        
-                        // DOM'u zorla güncelle
-                        const temp = selectedElement.innerHTML;
-                        selectedElement.innerHTML = '';
-                        setTimeout(() => {
-                            selectedElement.innerHTML = temp;
-                        }, 1);
-                        
-                        // Element boyutunu yeniden hesapla ve çakışma kontrolü
-                        setTimeout(() => {
-                            checkElementBounds(selectedElement);
-                            const collision = checkElementCollision(selectedElement);
-                            if (collision) {
-                                showCollisionWarning(selectedElement);
-                            }
-                        }, 100);
-                        
-                        console.log(`Font size updated to: ${value}px for element ${selectedElement.id}`);
-                        break;
-                    case 'color':
-                        selectedElement.style.color = value;
-                        selectedElement.style.setProperty('color', value, 'important');
-                        break;
-                    case 'fontFamily':
-                        selectedElement.style.fontFamily = value;
-                        selectedElement.style.setProperty('font-family', value, 'important');
-                        break;
-                    case 'fontWeight':
-                        selectedElement.style.fontWeight = value;
-                        selectedElement.style.setProperty('font-weight', value, 'important');
-                        break;
-                }
-                
-                // Tasarımı kaydet
-                saveDesign();
-                console.log('Property updated:', property, value, elementData);
-            }
-        }
 
-        function updateImageProperty(property, value) {
-            if (!selectedElement) return;
-            
-            const elementData = labelElements.find(el => el.id === selectedElement.id);
-            if (elementData) {
-                elementData.properties[property] = parseInt(value);
-                
-                const imgDiv = selectedElement.querySelector('div');
-                if (imgDiv) {
-                    if (property === 'width') imgDiv.style.width = value + 'px';
-                    if (property === 'height') imgDiv.style.height = value + 'px';
+                    const imgDiv = selectedElement.querySelector("div");
+                    if (imgDiv) {
+                        if (property === "width")
+                            imgDiv.style.width = value + "px";
+                        if (property === "height")
+                            imgDiv.style.height = value + "px";
+                    }
                 }
             }
-        }
 
-        function updateQRProperty(property, value) {
-            if (!selectedElement) return;
-            
-            const elementData = labelElements.find(el => el.id === selectedElement.id);
-            if (elementData) {
-                elementData.properties[property] = property === 'size' ? parseInt(value) : value;
-                
-                const qrDiv = selectedElement.querySelector('div');
-                if (qrDiv && property === 'size') {
-                    qrDiv.style.width = value + 'px';
-                    qrDiv.style.height = value + 'px';
+            function updateQRProperty(property, value) {
+                if (!selectedElement) return;
+
+                const elementData = labelElements.find(
+                    (el) => el.id === selectedElement.id,
+                );
+                if (elementData) {
+                    elementData.properties[property] =
+                        property === "size" ? parseInt(value) : value;
+
+                    const qrDiv = selectedElement.querySelector("div");
+                    if (qrDiv && property === "size") {
+                        qrDiv.style.width = value + "px";
+                        qrDiv.style.height = value + "px";
+                    }
                 }
             }
-        }
 
-        function deleteElement() {
-            if (!selectedElement) return;
-            
-            const elementId = selectedElement.id;
-            selectedElement.remove();
-            
-            labelElements = labelElements.filter(el => el.id !== elementId);
-            
-            selectedElement = null;
-            document.getElementById('propertyContent').innerHTML = `
+            function deleteElement() {
+                if (!selectedElement) return;
+
+                const elementId = selectedElement.id;
+                selectedElement.remove();
+
+                labelElements = labelElements.filter(
+                    (el) => el.id !== elementId,
+                );
+
+                selectedElement = null;
+                document.getElementById("propertyContent").innerHTML = `
                 <div class="text-center text-muted py-4">
                     <i class="fas fa-mouse-pointer fa-3x opacity-50"></i>
                     <p class="mt-3">Düzenlemek için bir element seçin</p>
                 </div>
             `;
-        }
-
-        // Preset management
-        function showPresetDialog() {
-            const modal = new bootstrap.Modal(document.getElementById('presetModal'));
-            modal.show();
-        }
-
-        function savePresetToStorage() {
-            const name = document.getElementById('presetName').value;
-            const description = document.getElementById('presetDescription').value;
-            
-            if (!name) {
-                alert('Lütfen tasarım adı girin');
-                return;
             }
 
-            const preset = {
-                id: Date.now(),
-                name: name,
-                description: description,
-                labelWidth: parseInt(document.getElementById('labelWidth').value),
-                labelHeight: parseInt(document.getElementById('labelHeight').value),
-                elements: labelElements.map(el => {
-                    const domElement = document.getElementById(el.id);
-                    return {
-                        ...el,
-                        x: domElement ? parseInt(domElement.style.left || 0) : el.x,
-                        y: domElement ? parseInt(domElement.style.top || 0) : el.y,
-                        fontSize: el.fontSize || el.properties?.fontSize + 'px' || '14px',
-                        html: el.html || el.properties?.text || domElement?.innerHTML || 'Text'
-                    };
-                })
-            };
+            // Preset management
+            function showPresetDialog() {
+                const modal = new bootstrap.Modal(
+                    document.getElementById("presetModal"),
+                );
+                modal.show();
+            }
 
-            let presets = JSON.parse(localStorage.getItem('labelPresets') || '[]');
-            presets.push(preset);
-            localStorage.setItem('labelPresets', JSON.stringify(presets));
+            function savePresetToStorage() {
+                const name = document.getElementById("presetName").value;
+                const description =
+                    document.getElementById("presetDescription").value;
 
-            loadPresets();
-            bootstrap.Modal.getInstance(document.getElementById('presetModal')).hide();
-            
-            // Clear form
-            document.getElementById('presetName').value = '';
-            document.getElementById('presetDescription').value = '';
-        }
+                if (!name) {
+                    alert("Lütfen tasarım adı girin");
+                    return;
+                }
 
-        function loadPresets() {
-            const presets = JSON.parse(localStorage.getItem('labelPresets') || '[]');
-            const presetList = document.getElementById('presetList');
-            
-            presetList.innerHTML = '';
-            
-            presets.forEach(preset => {
-                const presetDiv = document.createElement('div');
-                presetDiv.className = 'preset-item';
-                presetDiv.innerHTML = `
+                const preset = {
+                    id: Date.now(),
+                    name: name,
+                    description: description,
+                    labelWidth: parseInt(
+                        document.getElementById("labelWidth").value,
+                    ),
+                    labelHeight: parseInt(
+                        document.getElementById("labelHeight").value,
+                    ),
+                    elements: labelElements.map((el) => {
+                        const domElement = document.getElementById(el.id);
+                        return {
+                            ...el,
+                            x: domElement
+                                ? parseInt(domElement.style.left || 0)
+                                : el.x,
+                            y: domElement
+                                ? parseInt(domElement.style.top || 0)
+                                : el.y,
+                            fontSize:
+                                el.fontSize ||
+                                el.properties?.fontSize + "px" ||
+                                "14px",
+                            html:
+                                el.html ||
+                                el.properties?.text ||
+                                domElement?.innerHTML ||
+                                "Text",
+                        };
+                    }),
+                };
+
+                let presets = JSON.parse(
+                    localStorage.getItem("labelPresets") || "[]",
+                );
+                presets.push(preset);
+                localStorage.setItem("labelPresets", JSON.stringify(presets));
+
+                loadPresets();
+                bootstrap.Modal.getInstance(
+                    document.getElementById("presetModal"),
+                ).hide();
+
+                // Clear form
+                document.getElementById("presetName").value = "";
+                document.getElementById("presetDescription").value = "";
+            }
+
+            function loadPresets() {
+                const presets = JSON.parse(
+                    localStorage.getItem("labelPresets") || "[]",
+                );
+                const presetList = document.getElementById("presetList");
+
+                presetList.innerHTML = "";
+
+                presets.forEach((preset) => {
+                    const presetDiv = document.createElement("div");
+                    presetDiv.className = "preset-item";
+                    presetDiv.innerHTML = `
                     <div class="preset-thumbnail"></div>
                     <strong>${preset.name}</strong>
                     <small class="text-muted d-block">${preset.description}</small>
@@ -756,179 +1084,216 @@
                         <button class="btn btn-sm btn-danger" onclick="deletePreset(${preset.id})">Sil</button>
                     </div>
                 `;
-                presetList.appendChild(presetDiv);
-            });
-        }
-
-        function loadPreset(presetId) {
-            const presets = JSON.parse(localStorage.getItem('labelPresets') || '[]');
-            const preset = presets.find(p => p.id === presetId);
-            
-            if (!preset) return;
-
-            // Clear current elements
-            document.querySelectorAll('.canvas-element').forEach(el => el.remove());
-            labelElements = [];
-
-            // Set label size
-            document.getElementById('labelWidth').value = preset.labelWidth;
-            document.getElementById('labelHeight').value = preset.labelHeight;
-            updateCanvasSize();
-
-            // Load elements
-            preset.elements.forEach(elementData => {
-                const element = document.createElement('div');
-                element.id = elementData.id;
-                element.className = `canvas-element ${elementData.type}-element`;
-                element.style.left = elementData.x + 'px';
-                element.style.top = elementData.y + 'px';
-
-                // Apply element specific styling
-                switch(elementData.type) {
-                    case 'title':
-                    case 'text':
-                        element.innerHTML = elementData.properties.text;
-                        element.style.fontSize = elementData.properties.fontSize + 'px';
-                        element.style.color = elementData.properties.color;
-                        element.style.fontFamily = elementData.properties.fontFamily;
-                        element.style.fontWeight = elementData.properties.fontWeight;
-                        break;
-                    // Add other element types as needed
-                }
-
-                element.addEventListener('mousedown', startDrag);
-                element.addEventListener('click', selectElement);
-                
-                document.getElementById('labelCanvas').appendChild(element);
-                labelElements.push(elementData);
-            });
-        }
-
-        function deletePreset(presetId) {
-            if (!confirm('Bu tasarımı silmek istediğinizden emin misiniz?')) return;
-            
-            let presets = JSON.parse(localStorage.getItem('labelPresets') || '[]');
-            presets = presets.filter(p => p.id !== presetId);
-            localStorage.setItem('labelPresets', JSON.stringify(presets));
-            loadPresets();
-        }
-
-        function savePreset() {
-            showPresetDialog();
-        }
-
-        function generatePreview() {
-            // Convert current design to API format and generate preview
-            const labelData = {
-                width: document.getElementById('labelWidth').value,
-                height: document.getElementById('labelHeight').value,
-                elements: labelElements
-            };
-            
-            // Call the API to generate preview
-            fetch('/api/generate_advanced_label_preview', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(labelData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Show preview in a modal or new window
-                    window.open(data.preview_url, '_blank');
-                } else {
-                    alert('Önizleme oluşturulamadı: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Önizleme oluşturulurken hata oluştu');
-            });
-        }
-
-        function printLabels() {
-            // Yazdırma için kullanıcıdan ürün bilgileri iste
-            const productData = prompt("Ürün bilgilerini girin (model_kodu,renk,beden,barkod formatında):");
-            if (!productData) return;
-            
-            const parts = productData.split(',');
-            if (parts.length < 4) {
-                alert('Lütfen model_kodu,renk,beden,barkod formatında girin');
-                return;
+                    presetList.appendChild(presetDiv);
+                });
             }
-            
-            const labelData = {
-                width: parseInt(document.getElementById('labelWidth').value),
-                height: parseInt(document.getElementById('labelHeight').value),
-                elements: labelElements.map(el => {
-                    const domElement = document.getElementById(el.id);
-                    return {
-                        ...el,
-                        x: domElement ? parseInt(domElement.style.left || 0) : el.x,
-                        y: domElement ? parseInt(domElement.style.top || 0) : el.y,
-                        fontSize: el.fontSize || el.properties?.fontSize || '14px',
-                        html: el.html || el.properties?.text || domElement?.innerHTML || 'Text'
-                    };
-                })
-            };
-            
-            const printData = {
-                labels: [{
-                    model_code: parts[0].trim(),
-                    color: parts[1].trim(),
-                    size: parts[2].trim(),
-                    barcode: parts[3].trim(),
-                    quantity: 1
-                }],
-                design: labelData,
-                label_width: labelData.width,  // Kullanıcının belirlediği boyut
-                label_height: labelData.height, // Kullanıcının belirlediği boyut
-                paper_size: 'custom',  // Custom boyut kullan
-                page_orientation: 'portrait',
-                labels_per_row: 1,  // Tek etiket yazdır
-                labels_per_col: 1,  // Tek etiket yazdır
-                top_margin: 10,
-                left_margin: 10,
-                horizontal_gap: 0,
-                vertical_gap: 0,
-                print_quality: 300
-            };
-            
-            fetch('/enhanced_product_label/api/print_multiple_labels', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(printData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    window.open(data.image_url, '_blank');
-                } else {
-                    alert('Yazdırma hazırlanırken hata oluştu: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Yazdırma hatası oluştu');
-            });
-        }
 
-        function exportLabel() {
-            // Export current design
-            const labelData = {
-                width: document.getElementById('labelWidth').value,
-                height: document.getElementById('labelHeight').value,
-                elements: labelElements
-            };
-            
-            const dataStr = JSON.stringify(labelData, null, 2);
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(dataBlob);
-            link.download = 'label_design.json';
-            link.click();
-        }
-    </script>
-</body>
+            function loadPreset(presetId) {
+                const presets = JSON.parse(
+                    localStorage.getItem("labelPresets") || "[]",
+                );
+                const preset = presets.find((p) => p.id === presetId);
+
+                if (!preset) return;
+
+                // Clear current elements
+                document
+                    .querySelectorAll(".canvas-element")
+                    .forEach((el) => el.remove());
+                labelElements = [];
+
+                // Set label size
+                document.getElementById("labelWidth").value = preset.labelWidth;
+                document.getElementById("labelHeight").value =
+                    preset.labelHeight;
+                updateCanvasSize();
+
+                // Load elements
+                preset.elements.forEach((elementData) => {
+                    const element = document.createElement("div");
+                    element.id = elementData.id;
+                    element.className = `canvas-element ${elementData.type}-element`;
+                    element.style.left = elementData.x + "px";
+                    element.style.top = elementData.y + "px";
+
+                    // Apply element specific styling
+                    switch (elementData.type) {
+                        case "title":
+                        case "text":
+                            element.innerHTML = elementData.properties.text;
+                            element.style.fontSize =
+                                elementData.properties.fontSize + "px";
+                            element.style.color = elementData.properties.color;
+                            element.style.fontFamily =
+                                elementData.properties.fontFamily;
+                            element.style.fontWeight =
+                                elementData.properties.fontWeight;
+                            break;
+                        // Add other element types as needed
+                    }
+
+                    element.addEventListener("mousedown", startDrag);
+                    element.addEventListener("click", selectElement);
+
+                    document.getElementById("labelCanvas").appendChild(element);
+                    labelElements.push(elementData);
+                });
+            }
+
+            function deletePreset(presetId) {
+                if (!confirm("Bu tasarımı silmek istediğinizden emin misiniz?"))
+                    return;
+
+                let presets = JSON.parse(
+                    localStorage.getItem("labelPresets") || "[]",
+                );
+                presets = presets.filter((p) => p.id !== presetId);
+                localStorage.setItem("labelPresets", JSON.stringify(presets));
+                loadPresets();
+            }
+
+            function savePreset() {
+                showPresetDialog();
+            }
+
+            function generatePreview() {
+                // Convert current design to API format and generate preview
+                const labelData = {
+                    width: document.getElementById("labelWidth").value,
+                    height: document.getElementById("labelHeight").value,
+                    elements: labelElements,
+                };
+
+                // Call the API to generate preview
+                fetch("/api/generate_advanced_label_preview", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(labelData),
+                })
+                    .then((response) => response.json())
+                    .then((data) => {
+                        if (data.success) {
+                            // Show preview in a modal or new window
+                            window.open(data.preview_url, "_blank");
+                        } else {
+                            alert("Önizleme oluşturulamadı: " + data.message);
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("Error:", error);
+                        alert("Önizleme oluşturulurken hata oluştu");
+                    });
+            }
+
+            function printLabels() {
+                // Yazdırma için kullanıcıdan ürün bilgileri iste
+                const productData = prompt(
+                    "Ürün bilgilerini girin (model_kodu,renk,beden,barkod formatında):",
+                );
+                if (!productData) return;
+
+                const parts = productData.split(",");
+                if (parts.length < 4) {
+                    alert(
+                        "Lütfen model_kodu,renk,beden,barkod formatında girin",
+                    );
+                    return;
+                }
+
+                const labelData = {
+                    width: parseInt(
+                        document.getElementById("labelWidth").value,
+                    ),
+                    height: parseInt(
+                        document.getElementById("labelHeight").value,
+                    ),
+                    elements: labelElements.map((el) => {
+                        const domElement = document.getElementById(el.id);
+                        return {
+                            ...el,
+                            x: domElement
+                                ? parseInt(domElement.style.left || 0)
+                                : el.x,
+                            y: domElement
+                                ? parseInt(domElement.style.top || 0)
+                                : el.y,
+                            fontSize:
+                                el.fontSize ||
+                                el.properties?.fontSize ||
+                                "14px",
+                            html:
+                                el.html ||
+                                el.properties?.text ||
+                                domElement?.innerHTML ||
+                                "Text",
+                        };
+                    }),
+                };
+
+                const printData = {
+                    labels: [
+                        {
+                            model_code: parts[0].trim(),
+                            color: parts[1].trim(),
+                            size: parts[2].trim(),
+                            barcode: parts[3].trim(),
+                            quantity: 1,
+                        },
+                    ],
+                    design: labelData,
+                    label_width: labelData.width, // Kullanıcının belirlediği boyut
+                    label_height: labelData.height, // Kullanıcının belirlediği boyut
+                    paper_size: "custom", // Custom boyut kullan
+                    page_orientation: "portrait",
+                    labels_per_row: 1, // Tek etiket yazdır
+                    labels_per_col: 1, // Tek etiket yazdır
+                    top_margin: 10,
+                    left_margin: 10,
+                    horizontal_gap: 0,
+                    vertical_gap: 0,
+                    print_quality: 300,
+                };
+
+                fetch("/enhanced_product_label/api/print_multiple_labels", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(printData),
+                })
+                    .then((response) => response.json())
+                    .then((data) => {
+                        if (data.success) {
+                            window.open(data.image_url, "_blank");
+                        } else {
+                            alert(
+                                "Yazdırma hazırlanırken hata oluştu: " +
+                                    data.message,
+                            );
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("Error:", error);
+                        alert("Yazdırma hatası oluştu");
+                    });
+            }
+
+            function exportLabel() {
+                // Export current design
+                const labelData = {
+                    width: document.getElementById("labelWidth").value,
+                    height: document.getElementById("labelHeight").value,
+                    elements: labelElements,
+                };
+
+                const dataStr = JSON.stringify(labelData, null, 2);
+                const dataBlob = new Blob([dataStr], {
+                    type: "application/json",
+                });
+
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = "label_design.json";
+                link.click();
+            }
+        </script>
+    </body>
 </html>
