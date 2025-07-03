@@ -1135,35 +1135,22 @@ def print_multiple_labels():
                 f"A4 Element {i}: type={element.get('type')}, x={element.get('x')}, y={element.get('y')}, props={element.get('properties', {})}"
             )
 
-        # Product Label A4_FIXED_CONFIG - Birebir kopyası
+        # A4 Sayfa Başı Yapılandırma - Margin ve gap sıfır, sayfa başından başla
         A4_FIXED_CONFIG = {
-            'PAGE_WIDTH':
-            210,
-            'MARGIN_LEFT':
-            8,
-            'MARGIN_RIGHT':
-            8,
-            'COLUMN_GAP':
-            2,
-            'COLUMNS':
-            3,
-            'PAGE_HEIGHT':
-            297,
-            'MARGIN_TOP':
-            15,
-            'MARGIN_BOTTOM':
-            15,
-            'ROW_GAP':
-            1,
-            'ROWS':
-            7,
-            'LABELS_PER_PAGE':
-            21,
-            'QR_SIZE_MM':
-            18,
-            'LABEL_WIDTH_APPROX': ((210 - 8 - 8 - (2 * 2)) / 3),
-            'LABEL_HEIGHT_APPROX': (int(
-                ((297 - 15 - 15 - (7 - 1) * 1) / 7) * 100) / 100) - 0.08
+            'PAGE_WIDTH': 210,
+            'MARGIN_LEFT': 0,      # Sayfa başından başla
+            'MARGIN_RIGHT': 0,     # Sayfa başından başla
+            'COLUMN_GAP': 0,       # Etiketler arası boşluk yok
+            'COLUMNS': 3,
+            'PAGE_HEIGHT': 297,
+            'MARGIN_TOP': 0,       # Sayfa başından başla
+            'MARGIN_BOTTOM': 0,    # Sayfa başından başla
+            'ROW_GAP': 0,          # Etiketler arası boşluk yok
+            'ROWS': 7,
+            'LABELS_PER_PAGE': 21,
+            'QR_SIZE_MM': 18,
+            'LABEL_WIDTH_APPROX': (210 / 3),     # Sayfa genişliği / sütun sayısı
+            'LABEL_HEIGHT_APPROX': (297 / 7)     # Sayfa yüksekliği / satır sayısı
         }
 
         # Etiket boyutu kontrolü - Product Label A4 sistemiyle uyumlu
