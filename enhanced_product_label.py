@@ -1221,31 +1221,12 @@ def print_multiple_labels():
         labels_per_page = max_labels_per_row * max_labels_per_col
         total_pages = (len(labels) + labels_per_page - 1) // labels_per_page
 
-        # A4 sayfasında etiketleri ortalamak için başlangıç pozisyonunu hesapla
-        # Product Label ile aynı merkezleme algoritması
-        total_content_width = (max_labels_per_row * label_width_px) + (
-            (max_labels_per_row - 1) * gap_x)
-        total_content_height = (max_labels_per_col * label_height_px) + (
-            (max_labels_per_col - 1) * gap_y)
-
-        # Mevcut alan hesabı (kenar boşluklarını çıkar)
-        available_width = page_width_px - (2 * margin_x)
-        available_height = page_height_px - (2 * margin_y)
-
-        # İçeriği mevcut alanda ortala
-        if total_content_width <= available_width:
-            start_x = margin_x + (available_width - total_content_width) // 2
-        else:
-            start_x = margin_x
-
-        if total_content_height <= available_height:
-            start_y = margin_y + (available_height - total_content_height) // 2
-        else:
-            start_y = margin_y
-
-        # Minimum marjin kontrolü
-        start_x = max(margin_x, start_x)
-        start_y = max(margin_y, start_y)
+        # Etiketleri sayfanın başından itibaren yerleştir (ortalamadan farklı olarak)
+        # Sadece sol ve üst kenar boşluklarını kullan
+        start_x = margin_x
+        start_y = margin_y
+        
+        print(f"DEBUG: Etiketler sayfanın başından itibaren yerleştirilecek - start_x: {start_x}, start_y: {start_y}")
 
         all_pages = []
 
