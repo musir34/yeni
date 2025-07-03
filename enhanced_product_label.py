@@ -825,7 +825,7 @@ def generate_advanced_label_preview_new():
                 f"Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})px -> mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm"
             )
 
-            # mm'yi DPI'ya çevir
+            # mm'yi DPI'ya çevir 
             x = int((editor_x_mm / 25.4) * dpi)
             y = int((editor_y_mm / 25.4) * dpi)
 
@@ -1282,7 +1282,9 @@ def print_multiple_labels():
                     design,
                     label_width,
                     label_height,
-                    is_a4_mode=True  # A4 yazdırma modu
+                    is_a4_mode=True,  # A4 yazdırma modu
+                    label_offset_x=0,  # Her etiket kendi canvas'ında
+                    label_offset_y=0   # Her etiket kendi canvas'ında
                 )
 
                 # Sayfaya yapıştır
@@ -1346,7 +1348,9 @@ def create_label_with_design(product_data,
                              design,
                              label_width,
                              label_height,
-                             is_a4_mode=False):
+                             is_a4_mode=False,
+                             label_offset_x=0,
+                             label_offset_y=0):
     print(f"DEBUG: create_label_with_design called with product: {product_data}, design: {design.get('name', 'No name')}, is_a4_mode: {is_a4_mode}")
     """Tasarım kullanarak tek etiket oluştur"""
     try:
