@@ -1156,7 +1156,7 @@ def print_multiple_labels():
             'ROWS': 7,
             'LABELS_PER_PAGE': 21,
             'QR_SIZE_MM': 18,
-            'LABEL_WIDTH_APPROX': (200 / 3),     # Sayfa genişliği / sütun sayısı (küçültüldü)
+            'LABEL_WIDTH_APPROX': (210 / 3),     # Sayfa genişliği / sütun sayısı
             'LABEL_HEIGHT_APPROX': (297 / 7)     # Sayfa yüksekliği / satır sayısı
         }
 
@@ -1241,10 +1241,10 @@ def print_multiple_labels():
         print(f"DEBUG: SAYFA BAŞI - Grid: {labels_per_row}x{labels_per_col}")
         print(f"DEBUG: SAYFA BAŞI - Etiket boyutu: {label_width_px}x{label_height_px} px")
 
-        # Etiketler arası boşluk sistemi - Sayfa sığdırma optimizasyonu
-        margin_x = int((-10 / 25.4) * dpi) # -10mm sol kenar (daha çok sola çek)
+        # Etiketler arası boşluk sistemi - Tasarım genişliği korunacak
+        margin_x = int((-15 / 25.4) * dpi) # -15mm sol kenar (maksimum sola çek)
         margin_y = int((20 / 25.4) * dpi)  # 20mm üst kenar boşluğu
-        gap_x = int((2 / 25.4) * dpi)      # 2mm sütun arası boşluk (azaltıldı)
+        gap_x = int((0 / 25.4) * dpi)      # 0mm sütun arası boşluk (sıfır)
         gap_y = int((3 / 25.4) * dpi)      # 3mm satır arası boşluk
         
         print(f"DEBUG: Boşluk sistemi - margin_x={margin_x}, margin_y={margin_y}, gap_x={gap_x}, gap_y={gap_y}")
