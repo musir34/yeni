@@ -1424,9 +1424,17 @@ def create_label_with_design(product_data,
         for element in elements:
             element_type = element.get('type')
 
-            # Editör koordinatlarını mm'ye çevir (4px = 1mm)
-            editor_x_mm = element.get('x', 0) / 4
-            editor_y_mm = element.get('y', 0) / 4
+            # Editör koordinatlarını direkt al
+            editor_x_px = element.get('x', 0)
+            editor_y_px = element.get('y', 0)
+            
+            print(f"Element {element_type}: editör_koordinatları=({editor_x_px}, {editor_y_px})")
+
+            # Editör koordinat sistemi: 4px = 1mm (doğrudan dönüştürme)
+            # Web editörü canvas boyutu label_width*4 x label_height*4 pixel
+            # Bu yüzden koordinatları direkt 4'e bölerek mm'ye çeviriyoruz
+            editor_x_mm = editor_x_px / 4
+            editor_y_mm = editor_y_px / 4
 
             # A4 etiket boyutlarına ölçeklendir
             scaled_x_mm = editor_x_mm * scale_x
@@ -1435,10 +1443,8 @@ def create_label_with_design(product_data,
             # mm'yi A4 DPI'sına çevir
             x = int((scaled_x_mm / 25.4) * dpi)
             y = int((scaled_y_mm / 25.4) * dpi)
-
-            logger.info(
-                f"A4 Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})px -> mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm -> ölçekli=({scaled_x_mm:.1f},{scaled_y_mm:.1f})mm -> DPI=({x},{y})px"
-            )
+            
+            print(f"Element {element_type}: mm=({editor_x_mm:.1f}, {editor_y_mm:.1f}), scaled_mm=({scaled_x_mm:.1f}, {scaled_y_mm:.1f}), final_px=({x}, {y})")
 
             if element_type == 'title':
                 html_content = element.get('html', 'GÜLLÜ SHOES')
