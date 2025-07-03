@@ -1421,6 +1421,28 @@ def create_label_with_design(product_data,
             scale_y = 1.0
             logger.info(f"Normal mod: ölçeklendirme yok")
 
+        # Çakışma kontrolü için ürün görseli pozisyonunu tespit et
+        product_image_area = None
+        for element in elements:
+            if element.get('type') == 'product_image':
+                img_x_px = element.get('x', 0)
+                img_y_px = element.get('y', 0) 
+                img_width = element.get('width', 62)
+                img_height = element.get('height', 62)
+                
+                # Ürün görseli alanını mm cinsinden hesapla
+                img_x_mm = img_x_px / 4
+                img_y_mm = img_y_px / 4  
+                img_w_mm = img_width / 4
+                img_h_mm = img_height / 4
+                
+                product_image_area = {
+                    'x': img_x_mm, 'y': img_y_mm, 
+                    'width': img_w_mm, 'height': img_h_mm
+                }
+                print(f"Ürün görseli alanı: ({img_x_mm:.1f}, {img_y_mm:.1f}) boyut: {img_w_mm:.1f}x{img_h_mm:.1f}mm")
+                break
+
         for element in elements:
             element_type = element.get('type')
 
@@ -1431,10 +1453,24 @@ def create_label_with_design(product_data,
             print(f"Element {element_type}: editör_koordinatları=({editor_x_px}, {editor_y_px})")
 
             # Editör koordinat sistemi: 4px = 1mm (doğrudan dönüştürme)
-            # Web editörü canvas boyutu label_width*4 x label_height*4 pixel
-            # Bu yüzden koordinatları direkt 4'e bölerek mm'ye çeviriyoruz
             editor_x_mm = editor_x_px / 4
             editor_y_mm = editor_y_px / 4
+
+            # Çakışma kontrolü - yazı elementleri için
+            if element_type in ['model_code', 'color', 'size', 'title'] and product_image_area:
+                # Yazının ürün görseli ile çakışıp çakışmadığını kontrol et
+                text_width_mm = 20  # Yaklaşık yazı genişliği
+                text_height_mm = 5  # Yaklaşık yazı yüksekliği
+                
+                # Çakışma kontrolü
+                if (editor_x_mm < product_image_area['x'] + product_image_area['width'] and
+                    editor_x_mm + text_width_mm > product_image_area['x'] and
+                    editor_y_mm < product_image_area['y'] + product_image_area['height'] and
+                    editor_y_mm + text_height_mm > product_image_area['y']):
+                    
+                    # Çakışma var - yazıyı ürün görseli yanına kaydır
+                    editor_x_mm = product_image_area['x'] + product_image_area['width'] + 2  # 2mm boşluk
+                    print(f"ÇAKIŞMA DÜZELTME: {element_type} kaydırıldı -> ({editor_x_mm:.1f}, {editor_y_mm:.1f})mm")
 
             # A4 etiket boyutlarına ölçeklendir
             scaled_x_mm = editor_x_mm * scale_x
