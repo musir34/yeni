@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, send_file
 import os
+import json
 import qrcode
 from PIL import Image, ImageDraw, ImageFont
 import io
@@ -1090,17 +1091,31 @@ def print_multiple_labels():
         data = request.get_json()
         print(f"DEBUG API: Gelen tüm veri: {data}")
         
+        # Veri türlerini kontrol et ve parse et
         labels = data.get('labels', [])
         design = data.get('design', {})
         
-        # JSON string geliyorsa parse et
-        if isinstance(labels, str):
-            labels = json.loads(labels)
+        print(f"DEBUG API: Raw data types - labels: {type(labels)}, design: {type(design)}")
+        
+        # Design JSON string ise parse et
         if isinstance(design, str):
-            design = json.loads(design)
-            
-        print(f"DEBUG API: Parse edilmiş labels: {labels}")
-        print(f"DEBUG API: Parse edilmiş design: {design}")
+            try:
+                design = json.loads(design)
+                print(f"DEBUG API: Design JSON parsed successfully")
+            except Exception as parse_error:
+                print(f"DEBUG API: Design JSON parse hatası: {parse_error}")
+                design = {}
+        
+        # Labels JSON string ise parse et        
+        if isinstance(labels, str):
+            try:
+                labels = json.loads(labels)
+                print(f"DEBUG API: Labels JSON parsed successfully")
+            except Exception as parse_error:
+                print(f"DEBUG API: Labels JSON parse hatası: {parse_error}")
+                labels = []
+                
+        print(f"DEBUG API: Final parsed - labels count: {len(labels)}, design elements: {len(design.get('elements', []))}")
         
         paper_size = data.get('paper_size', 'a4')
         page_orientation = data.get('page_orientation', 'portrait')
