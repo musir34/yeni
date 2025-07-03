@@ -9,11 +9,11 @@
     <style>
         .main-container { max-width: 1600px; margin: 0 auto; padding: 20px; }
         .section-card { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 24px; margin-bottom: 24px; }
-        .editor-workspace { display: grid; grid-template-columns: 1fr 300px; gap: 20px; height: 80vh; }
+        .editor-workspace { display: grid; grid-template-columns: 1fr 300px; gap: 20px; height: 90vh; }
         
         /* Canvas Area */
-        .canvas-container { position: relative; background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 12px; overflow: hidden; }
-        .label-canvas { position: relative; background: white; margin: 20px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform-origin: center; transition: width 0.3s ease, height 0.3s ease; border: 2px solid #dee2e6; min-width: 10mm; min-height: 10mm; }
+        .canvas-container { position: relative; background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 12px; overflow: hidden; min-height: 500px; }
+        .label-canvas { position: relative; background: white; margin: 20px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform-origin: center; transition: width 0.3s ease, height 0.3s ease; border: 2px solid #dee2e6; min-width: 100mm; min-height: 50mm; }
         .canvas-element { position: absolute; cursor: move; border: 2px solid transparent; transition: border-color 0.2s; }
         .canvas-element:hover { border-color: #3498db; }
         .canvas-element.selected { border-color: #e74c3c; box-shadow: 0 0 10px rgba(231,76,60,0.4); }
@@ -129,20 +129,20 @@
             <div class="row">
                 <div class="col-md-3">
                     <label class="form-label">Genişlik (mm)</label>
-                    <input type="number" id="labelWidth" class="form-control" value="100" min="50" max="200" 
+                    <input type="number" id="labelWidth" class="form-control" value="150" min="50" max="300" 
                         onchange="updateCanvasSize()" oninput="updateCanvasSize()">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Yükseklik (mm)</label>
-                    <input type="number" id="labelHeight" class="form-control" value="50" min="30" max="150" onchange="updateCanvasSize()" oninput="updateCanvasSize()">
+                    <input type="number" id="labelHeight" class="form-control" value="80" min="30" max="200" onchange="updateCanvasSize()" oninput="updateCanvasSize()">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Hızlı Boyutlar</label><br>
                     <div class="btn-group" role="group">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="setLabelSize(150, 80)">150x80</button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="setLabelSize(120, 60)">120x60</button>
                         <button class="btn btn-outline-secondary btn-sm" onclick="setLabelSize(100, 50)">100x50</button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="setLabelSize(80, 50)">80x50</button>
                         <button class="btn btn-outline-secondary btn-sm" onclick="setLabelSize(80, 40)">80x40</button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="setLabelSize(60, 40)">60x40</button>
                     </div>
                 </div>
             </div>
