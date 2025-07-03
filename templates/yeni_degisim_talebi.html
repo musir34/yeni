@@ -6,102 +6,76 @@
     <title>Yeni Değişim Talebi</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body {
-            background: #f8f9fa;
-        }
-        .thumbnail {
-            width: 100%;
-            height: auto;
-            object-fit: cover;
-        }
-        .product-card {
-            width: 210px;
-            margin: 10px auto;
-        }
-        #messageBox {
-            display: none;
-        }
-        .card-body h5 {
-            font-size: 1em;
-        }
-        h2, h5 {
-            color: #333;
-        }
-        .form-label {
-            font-weight: 500;
-        }
-        .btn {
-            font-size: 0.9em;
-        }
+        body { background: #f8f9fa; }
+        .thumbnail { width: 100%; max-width: 150px; height: auto; object-fit: cover; }
+        .product-card { width: 210px; margin: 10px auto; }
+        #messageBox { display: none; }
+        .card-body h5 { font-size: 1em; }
+        h2, h5 { color: #333; }
+        .form-label { font-weight: 500; }
+        .btn { font-size: 0.9em; }
         #exchangeForm h5,
-        #orderDetails h5 {
-            margin-top: 20px;
-        }
+        #orderDetails h5 { margin-top: 20px; }
     </style>
 </head>
 <body>
-    <div class="container mt-4">
-        <!-- Mesaj Gösterme Alanı -->
-        <div id="messageBox" class="alert" role="alert"></div>
+    <div class="container mt-4 mb-5">
+        <div id="messageBox" class="alert" role="alert" style="position: sticky; top: 10px; z-index: 1050;"></div>
 
         <div class="text-center mb-4">
             <a href="{{ url_for('home.home') }}" class="btn btn-secondary mb-2">Anasayfaya Dön</a>
-            <a href="{{ url_for('degisim_talep') }}" class="btn btn-info w-100">Değişim Talepleri</a>
+            <a href="{{ url_for('degisim.degisim_talep') }}" class="btn btn-info w-100">Değişim Talepleri Listesi</a>
         </div>
         <h2 class="text-center mb-4">Yeni Değişim Talebi</h2>
 
-        <!-- Sipariş Numarası Giriş Alanı -->
-        <form id="siparisForm" class="mb-4">
-            <label for="siparis_no" class="form-label">Sipariş Numarası</label>
+        <div class="mb-4">
+            <label for="siparis_no_input" class="form-label">Sipariş Numarası</label>
             <div class="input-group">
-                <input type="text" class="form-control" id="siparis_no" name="siparis_no" required>
-                <button type="button" class="btn btn-primary" onclick="fetchOrderDetails()">Getir</button>
+                <input type="text" class="form-control" id="siparis_no_input" required>
+                <button type="button" class="btn btn-primary" onclick="fetchOrderDetails()">Siparişi Getir</button>
+            </div>
+        </div>
+
+        <form id="degisimKayitForm">
+            <div id="orderDetails" style="display: none;">
+                <input type="hidden" id="siparis_no" name="siparis_no">
+
+                <h5>Alıcı Bilgileri</h5>
+                <div class="mb-3">
+                    <label class="form-label">Ad:</label>
+                    <input type="text" class="form-control" id="ad" name="ad">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Soyad:</label>
+                    <input type="text" class="form-control" id="soyad" name="soyad">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Adres:</label>
+                    <textarea class="form-control" id="adres" name="adres" rows="3"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Telefon No:</label>
+                    <input type="text" class="form-control" id="telefon_no" name="telefon_no">
+                </div>
+
+                <h5>Sipariş Edilen Ürünler</h5>
+                <div id="productList" class="row"></div>
+
+                <button class="btn btn-success mt-3" type="button" onclick="showExchangeForm()">Değişim İçin Ürün Seç</button>
+            </div>
+
+            <div id="exchangeForm" style="display: none; margin-top: 20px;">
+                <h5>Değişim Yapılacak Yeni Ürün(ler)</h5>
+                <div id="exchangeProducts"></div>
+
+                <div class="mb-3">
+                    <label for="degisim_nedeni" class="form-label">Değişim Sebebi</label>
+                    <textarea class="form-control" id="degisim_nedeni" name="degisim_nedeni" rows="3" required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-success w-100">Değişimi Tamamla</button>
             </div>
         </form>
-
-        <!-- Sipariş ve Ürün Bilgileri -->
-        <div id="orderDetails" style="display: none;">
-            <h5>Alıcı Bilgileri</h5>
-            <div class="mb-3">
-                <label class="form-label">Ad:</label>
-                <input type="text" class="form-control" id="ad">
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Soyad:</label>
-                <input type="text" class="form-control" id="soyad">
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Adres:</label>
-                <textarea class="form-control" id="adres" rows="3"></textarea>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Telefon No:</label>
-                <input type="text" class="form-control" id="telefon_no">
-            </div>
-
-            <h5>Gönderilen Ürünler</h5>
-            <div id="productList" class="row"></div>
-
-            <button class="btn btn-success mt-3" onclick="showExchangeForm()">Değişim Yap</button>
-        </div>
-
-        <!-- Değişim Ürün Bilgileri Formu -->
-        <div id="exchangeForm" style="display: none; margin-top: 20px;">
-            <h5>Yeni Ürün Bilgileri</h5>
-            <div id="exchangeProducts"></div>
-
-            <div class="mb-3">
-                <label for="change_reason" class="form-label">Değişim Sebebi</label>
-                <textarea class="form-control" id="change_reason" name="change_reason" rows="3" required></textarea>
-            </div>
-
-            <div class="mb-3">
-                <label for="customer_phone" class="form-label">Telefon Numarası (Opsiyonel)</label>
-                <input type="text" class="form-control" id="customer_phone" name="customer_phone">
-            </div>
-
-            <button type="button" class="btn btn-success" onclick="confirmExchange()">Değişimi Tamamla</button>
-        </div>
     </div>
 
     <script>
@@ -110,15 +84,13 @@
             box.style.display = 'block';
             box.className = success ? 'alert alert-success' : 'alert alert-danger';
             box.textContent = message;
-            setTimeout(() => { box.style.display = 'none'; }, 3000);
+            box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { box.style.display = 'none'; }, 4000);
         }
 
         async function fetchOrderDetails() {
-            const siparisNo = document.getElementById('siparis_no').value.trim();
-            if (!siparisNo) {
-                showMessage("Lütfen sipariş numarasını girin.", false);
-                return;
-            }
+            const siparisNo = document.getElementById('siparis_no_input').value.trim();
+            if (!siparisNo) return showMessage("Lütfen sipariş numarasını girin.", false);
 
             try {
                 const response = await fetch("/get_order_details", {
@@ -129,6 +101,7 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    document.getElementById('siparis_no').value = siparisNo;
                     document.getElementById('ad').value = data.ad;
                     document.getElementById('soyad').value = data.soyad;
                     document.getElementById('adres').value = data.adres;
@@ -140,7 +113,7 @@
                         const productCard = `
                             <div class="col-md-4 mb-4">
                                 <div class="card product-card">
-                                    <img src="${product.image_url}" class="card-img-top thumbnail" alt="Ürün">
+                                    <img src="/${product.image_url}" class="card-img-top thumbnail" alt="Ürün" onerror="this.src='/static/images/default.jpg'">
                                     <div class="card-body text-center">
                                         <h5 class="card-title">${product.sku}</h5>
                                         <p class="card-text">Barkod: ${product.barcode}</p>
@@ -159,41 +132,39 @@
         }
 
         function showExchangeForm() {
-            const productList = document.getElementById('productList').children;
+            const productCount = document.getElementById('productList').children.length;
+            if (productCount === 0) return showMessage("Değişim yapılacak ürün bulunamadı.", false);
+
             const exchangeProducts = document.getElementById('exchangeProducts');
             exchangeProducts.innerHTML = '';
 
-            Array.from(productList).forEach((product, index) => {
+            for (let i = 0; i < productCount; i++) {
                 const formHtml = `
-                    <div class="mb-4">
-                        <h6>Ürün ${index + 1}</h6>
+                    <div class="border p-3 mb-4 rounded bg-light">
+                        <h6>Değiştirilecek ${i + 1}. Ürün İçin Yeni Bilgiler</h6>
                         <div class="mb-3">
-                            <label class="form-label" for="new_barcode_${index}">Yeni Ürün Barkodu</label>
+                            <label class="form-label" for="new_barcode_${i}">Yeni Ürün Barkodu</label>
                             <div class="input-group">
-                                <input type="text" class="form-control" id="new_barcode_${index}" required>
-                                <button type="button" class="btn btn-primary" onclick="fetchProductDetails(${index})">Getir</button>
+                                <input type="text" class="form-control" name="urun_barkod" id="new_barcode_${i}" required>
+                                <button type="button" class="btn btn-primary" onclick="fetchProductDetails(${i})">Getir</button>
                             </div>
                         </div>
-                        <div id="newProductDetails_${index}" style="display: none;">
-                            <p><strong>Model Kodu:</strong> <span id="product_main_id_${index}"></span></p>
-                            <p><strong>Beden:</strong> <span id="size_${index}"></span></p>
-                            <p><strong>Renk:</strong> <span id="color_${index}"></span></p>
-                            <img id="new_image_${index}" src="" alt="Ürün Görseli" class="thumbnail">
-                        </div>
+                        <div id="newProductDetails_${i}" class="mt-2">
+                            </div>
                     </div>
                 `;
                 exchangeProducts.innerHTML += formHtml;
-            });
+            }
 
             document.getElementById('exchangeForm').style.display = 'block';
         }
 
         async function fetchProductDetails(index) {
             const newBarcode = document.getElementById(`new_barcode_${index}`).value.trim();
-            if (!newBarcode) {
-                showMessage("Lütfen yeni ürün barkodunu girin.", false);
-                return;
-            }
+            if (!newBarcode) return showMessage("Lütfen yeni ürün barkodunu girin.", false);
+
+            const detailsDiv = document.getElementById(`newProductDetails_${index}`);
+            detailsDiv.innerHTML = '<div class="spinner-border spinner-border-sm"></div>'; // Yükleniyor...
 
             try {
                 const response = await fetch("/get_product_details", {
@@ -204,64 +175,70 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    document.getElementById(`product_main_id_${index}`).innerText = data.product_main_id;
-                    document.getElementById(`size_${index}`).innerText = data.size;
-                    document.getElementById(`color_${index}`).innerText = data.color;
-                    document.getElementById(`new_image_${index}`).src = data.image_url;
-                    document.getElementById(`newProductDetails_${index}`).style.display = 'block';
+                    detailsDiv.innerHTML = `
+                        <div class='alert alert-success p-2'>
+                            <p class="mb-1"><strong>Model:</strong> ${data.product_main_id}</p>
+                            <p class="mb-1"><strong>Beden:</strong> ${data.size}</p>
+                            <p class="mb-1"><strong>Renk:</strong> ${data.color}</p>
+                            <img src="/${data.image_url}" alt="Ürün Görseli" class="thumbnail" onerror="this.src='/static/images/default.jpg'">
+                        </div>
+                        <input type="hidden" name="urun_model_kodu" value="${data.product_main_id}">
+                        <input type="hidden" name="urun_renk" value="${data.color}">
+                        <input type="hidden" name="urun_beden" value="${data.size}">
+                    `;
                 } else {
+                    detailsDiv.innerHTML = `<div class='alert alert-danger p-2'>Ürün bulunamadı.</div>`;
                     showMessage(data.message || "Ürün bilgileri bulunamadı.", false);
                 }
             } catch (error) {
+                detailsDiv.innerHTML = '';
                 showMessage("Ürün bilgileri alınırken bir hata oluştu.", false);
             }
         }
 
-        async function confirmExchange() {
-            const siparisNo = document.getElementById('siparis_no').value.trim();
-            const ad = document.getElementById('ad').value.trim();
-            const soyad = document.getElementById('soyad').value.trim();
-            const adres = document.getElementById('adres').value.trim();
-            const telefonNo = document.getElementById('telefon_no').value.trim();
-            const changeReason = document.getElementById('change_reason').value.trim();
+        document.getElementById('degisimKayitForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
 
-            const productList = document.querySelectorAll('[id^="new_barcode_"]');
-            const productDetails = Array.from(productList).map((product, index) => ({
-                urun_barkod: product.value,
-                urun_model_kodu: document.getElementById(`product_main_id_${index}`).innerText,
-                urun_renk: document.getElementById(`color_${index}`).innerText,
-                urun_beden: document.getElementById(`size_${index}`).innerText
-            }));
+            const productInputs = document.querySelectorAll('input[name="urun_barkod"]');
+            for (let i = 0; i < productInputs.length; i++) {
+                const barcode = productInputs[i].value;
+                const detailsDiv = document.getElementById(`newProductDetails_${i}`);
+                // "urun_model_kodu" için gizli input var mı diye kontrol et. Varsa, "Getir"e basılmıştır.
+                const hiddenModelInput = detailsDiv.querySelector('input[name="urun_model_kodu"]');
 
-            for (let product of productDetails) {
-                const formData = new FormData();
-                formData.append('siparis_no', siparisNo);
-                formData.append('ad', ad);
-                formData.append('soyad', soyad);
-                formData.append('adres', adres);
-                formData.append('telefon_no', telefonNo);
-                formData.append('degisim_nedeni', changeReason);
-                formData.append('urun_barkod', product.urun_barkod);
-                formData.append('urun_model_kodu', product.urun_model_kodu);
-                formData.append('urun_renk', product.urun_renk);
-                formData.append('urun_beden', product.urun_beden);
-
-                try {
-                    const response = await fetch('/degisim-kaydet', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    if (response.ok) {
-                        showMessage("Değişim talebi başarıyla kaydedildi!", true);
-                        window.location.href = "{{ url_for('degisim_talep') }}";
-                    } else {
-                        showMessage("Değişim kaydı sırasında bir hata oluştu.", false);
-                    }
-                } catch (error) {
-                    showMessage("Değişim kaydı sırasında bir hata oluştu.", false);
+                if (!barcode || !hiddenModelInput || !hiddenModelInput.value) {
+                    showMessage(`Lütfen ${i + 1}. ürün için barkodu girip 'Getir' butonuna basın ve ürün bilgilerinin geldiğinden emin olun.`, false);
+                    return; // Form gönderimini durdur
                 }
             }
-        }
+
+            const formData = new FormData(this);
+            const submitButton = this.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Kaydediliyor...';
+
+            try {
+                const response = await fetch('/degisim-kaydet', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok && response.redirected) {
+                     window.location.href = response.url;
+                } else if (response.ok) {
+                    showMessage("Değişim talebi başarıyla kaydedildi! Yönlendiriliyor...", true);
+                    setTimeout(() => { window.location.href = "{{ url_for('degisim.degisim_talep') }}"; }, 1500);
+                } else {
+                    const errorData = await response.json().catch(() => ({ message: "Bilinmeyen bir sunucu hatası oluştu." }));
+                    showMessage(errorData.message, false);
+                }
+            } catch (error) {
+                showMessage("Ağ hatası: Sunucuya ulaşılamadı.", false);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = 'Değişimi Tamamla';
+            }
+        });
     </script>
 </body>
 </html>
