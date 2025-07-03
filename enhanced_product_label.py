@@ -1217,23 +1217,22 @@ def print_multiple_labels():
         # Sayfa oluştur
         page = Image.new('RGB', (page_width_px, page_height_px), 'white')
 
-        # SAYFA BAŞI SİSTEMİ: Etiket boyutlarını sayfa boyutuna göre hesapla
-        # Sayfa genişliği / sütun sayısı = etiket genişliği (pixel)
-        # Sayfa yüksekliği / satır sayısı = etiket yüksekliği (pixel)
-        label_width_px = page_width_px // max(1, labels_per_row)
-        label_height_px = page_height_px // max(1, labels_per_col)
+        # Etiket boyutlarını orijinal tasarım boyutlarından hesapla
+        # mm'den pixel'e çevir
+        label_width_px = int((label_width / 25.4) * dpi)
+        label_height_px = int((label_height / 25.4) * dpi)
         
         print(f"DEBUG: SAYFA BAŞI - Sayfa boyutu: {page_width_px}x{page_height_px} px")
         print(f"DEBUG: SAYFA BAŞI - Grid: {labels_per_row}x{labels_per_col}")
         print(f"DEBUG: SAYFA BAŞI - Etiket boyutu: {label_width_px}x{label_height_px} px")
 
-        # SAYFA BAŞI SİSTEMİ: Margin ve gap kullanmıyoruz - sayfa başından başla
-        margin_x = 0  # Kenar boşluğu yok
-        margin_y = 0  # Kenar boşluğu yok
-        gap_x = 0     # Etiketler arası boşluk yok  
-        gap_y = 0     # Etiketler arası boşluk yok
+        # Etiketler arası boşluk sistemi - A4 standart ayarlar
+        margin_x = int((8 / 25.4) * dpi)   # 8mm kenar boşluğu
+        margin_y = int((15 / 25.4) * dpi)  # 15mm kenar boşluğu
+        gap_x = int((2 / 25.4) * dpi)      # 2mm sütun arası boşluk
+        gap_y = int((1 / 25.4) * dpi)      # 1mm satır arası boşluk
         
-        print(f"DEBUG: SAYFA BAŞI - Margin ve gap sıfırlandı: margin_x={margin_x}, margin_y={margin_y}, gap_x={gap_x}, gap_y={gap_y}")
+        print(f"DEBUG: Boşluk sistemi - margin_x={margin_x}, margin_y={margin_y}, gap_x={gap_x}, gap_y={gap_y}")
 
         # Kullanıcının belirlediği sütun/satır sayısını zorla uygula
         # Sayfa boyutuna sığıp sığmadığına bakmadan kullanıcı ayarlarını kullan
@@ -1248,11 +1247,11 @@ def print_multiple_labels():
         labels_per_page = max_labels_per_row * max_labels_per_col
         total_pages = (len(labels) + labels_per_page - 1) // labels_per_page
 
-        # Etiketleri sayfanın tam başından itibaren yerleştir - kenar boşluklarını yok say
-        start_x = 0
-        start_y = 0
+        # Etiketleri margin'dan itibaren yerleştir - boşluk sistemi
+        start_x = margin_x
+        start_y = margin_y
         
-        print(f"DEBUG: Etiketler sayfanın tam başından itibaren yerleştirilecek - start_x: {start_x}, start_y: {start_y}")
+        print(f"DEBUG: Etiketler margin'dan itibaren yerleştirilecek - start_x: {start_x}, start_y: {start_y}")
 
         all_pages = []
 
@@ -1270,9 +1269,9 @@ def print_multiple_labels():
                 row = i // max_labels_per_row
                 col = i % max_labels_per_row
 
-                # Sayfa başından itibaren bitişik etiket pozisyonu (gap yok)
-                x = start_x + col * label_width_px
-                y = start_y + row * label_height_px
+                # Etiket pozisyonu - margin + gap hesaplaması
+                x = start_x + col * (label_width_px + gap_x)
+                y = start_y + row * (label_height_px + gap_y)
                 
                 print(f"DEBUG: Etiket {i} - row: {row}, col: {col}, x: {x}, y: {y} (px)")
 
