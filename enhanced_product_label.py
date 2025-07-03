@@ -1243,9 +1243,9 @@ def print_multiple_labels():
                 row = i // max_labels_per_row
                 col = i % max_labels_per_row
 
-                # Ortalanmış etiket pozisyonu
-                x = start_x + col * (label_width_px + gap_x)
-                y = start_y + row * (label_height_px + gap_y)
+                # Sayfa başından itibaren bitişik etiket pozisyonu (gap yok)
+                x = start_x + col * label_width_px
+                y = start_y + row * label_height_px
 
                 # Tasarım kullanarak etiket oluştur - A4 modu aktif
                 label_img = create_label_with_design(
