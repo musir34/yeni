@@ -1367,6 +1367,9 @@ def create_label_with_design(product_data,
 
         # Ürün bilgileri
         barcode = product_data.get('barcode', 'N/A')
+        model_code = product_data.get('model_code', 'N/A')
+        color = product_data.get('color', 'N/A')
+        size = product_data.get('size', 'N/A')
 
         # Ürün görseli yolu - büyük/küçük harf duyarsız arama
         possible_extensions = ['.jpg', '.jpeg', '.png', '.webp']
@@ -1587,9 +1590,13 @@ def create_label_with_design(product_data,
                 )
 
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
+                logger.info(f"A4 QR Logo path: {logo_path}, exists: {os.path.exists(logo_path)}")
+                
                 qr_img = create_qr_with_logo(
                     qr_data, logo_path if os.path.exists(logo_path) else None,
                     qr_size)
+                
+                logger.info(f"A4 QR Image created: {qr_img is not None}, size: {qr_img.size if qr_img else 'None'}")
 
                 if qr_img:
                     # Etiket boyutlarını kontrol et
@@ -1638,6 +1645,7 @@ def create_label_with_design(product_data,
                 img_height = int(img_height * (dpi / 96))
 
                 # Ürün görseli yükle
+                logger.info(f"A4 Product image: path={image_path}, exists={os.path.exists(image_path) if image_path else 'No path'}")
                 image_loaded = False
                 try:
                     if image_path and os.path.exists(image_path):
@@ -1648,7 +1656,9 @@ def create_label_with_design(product_data,
                             (img_width, img_height), Image.Resampling.LANCZOS)
                         label.paste(product_img, (x, y))
                         image_loaded = True
-                except Exception:
+                        logger.info(f"A4 Product image loaded successfully: {image_path}")
+                except Exception as e:
+                    logger.error(f"A4 Product image load failed: {e}")
                     pass
 
                 # Placeholder
