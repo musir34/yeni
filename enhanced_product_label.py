@@ -939,13 +939,9 @@ def generate_advanced_label_preview_new():
                     f"QR Debug: px={qr_size_px}, mm={qr_size_mm}, final_size={qr_size}, pos=({x},{y})"
                 )
 
-                # QR kod her etiket için kendine ait barkodu kullanmalı
-                if product_data and 'barcode' in product_data:
-                    qr_data = product_data['barcode']  # Bu etiketin kendi barkodu
-                    print(f"QR: Etiket barkodu: {qr_data}")
-                else:
-                    qr_data = sample_product['barcode']  # Fallback
-                    print(f"QR: Fallback barkod: {qr_data}")
+                # QR kod direkt barkodu içermeli - güvenilir veri kaynağı
+                qr_data = sample_product['barcode']
+                print(f"QR veri kaynağı: {qr_data}")
 
                 # Minimum QR boyutu kontrolü - daha büyük minimum
                 if qr_size < 100:  # 100 pixel minimum
@@ -968,13 +964,8 @@ def generate_advanced_label_preview_new():
                     logger.error("QR kod oluşturulamadı!")
 
             elif element_type == 'barcode':
-                # Barkod her etiket için kendine ait barkodu kullanmalı
-                if product_data and 'barcode' in product_data:
-                    barcode_data = product_data['barcode']  # Bu etiketin kendi barkodu
-                    print(f"BARKOD: Etiket barkodu: {barcode_data}")
-                else:
-                    barcode_data = sample_product['barcode']  # Fallback
-                    print(f"BARKOD: Fallback barkod: {barcode_data}")
+                # Barkod alanı sadece rakam gösterecek
+                barcode_data = sample_product['barcode']
                 # Font boyutu properties'ten al, editör formatına uygun
                 font_size_px = properties.get('fontSize',
                                               12)  # properties'te sayı olarak
