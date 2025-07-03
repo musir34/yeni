@@ -1223,9 +1223,31 @@ def print_multiple_labels():
         labels_per_page = max_labels_per_row * max_labels_per_col
         total_pages = (len(labels) + labels_per_page - 1) // labels_per_page
 
-        # Etiketleri sayfa başından başlat - hiç ortalama yok
-        start_x = 20  # Sol kenardan 5mm (20px @ 300dpi)
-        start_y = 20  # Üst kenardan 5mm (20px @ 300dpi)
+        # A4 sayfasında etiketleri ortalamak için başlangıç pozisyonunu hesapla
+        # Product Label ile aynı merkezleme algoritması
+        total_content_width = (max_labels_per_row * label_width_px) + (
+            (max_labels_per_row - 1) * gap_x)
+        total_content_height = (max_labels_per_col * label_height_px) + (
+            (max_labels_per_col - 1) * gap_y)
+
+        # Mevcut alan hesabı (kenar boşluklarını çıkar)
+        available_width = page_width_px - (2 * margin_x)
+        available_height = page_height_px - (2 * margin_y)
+
+        # İçeriği mevcut alanda ortala
+        if total_content_width <= available_width:
+            start_x = margin_x + (available_width - total_content_width) // 2
+        else:
+            start_x = margin_x
+
+        if total_content_height <= available_height:
+            start_y = margin_y + (available_height - total_content_height) // 2
+        else:
+            start_y = margin_y
+
+        # Minimum marjin kontrolü
+        start_x = max(margin_x, start_x)
+        start_y = max(margin_y, start_y)
 
         all_pages = []
 
@@ -1243,12 +1265,9 @@ def print_multiple_labels():
                 row = i // max_labels_per_row
                 col = i % max_labels_per_row
 
-                # Etiket pozisyonu - sayfa başından başlayarak
+                # Etiket pozisyonu hesapla
                 x = start_x + col * (label_width_px + gap_x)
                 y = start_y + row * (label_height_px + gap_y)
-                
-                # Debug: Koordinat bilgilerini logla
-                logger.info(f"A4 PNG Etiket {i}: pos=({x},{y}), start=({start_x},{start_y}), row={row}, col={col}")
 
                 # Tasarım kullanarak etiket oluştur - A4 modu aktif
                 label_img = create_label_with_design(
