@@ -1223,9 +1223,9 @@ def print_multiple_labels():
         labels_per_page = max_labels_per_row * max_labels_per_col
         total_pages = (len(labels) + labels_per_page - 1) // labels_per_page
 
-        # Etiketleri TAM sayfa başından başlat - kenar boşlukları kullan
-        start_x = margin_x  # Sol kenar boşluğu
-        start_y = margin_y  # Üst kenar boşluğu
+        # Etiketleri sayfa başından başlat - hiç ortalama yok
+        start_x = 20  # Sol kenardan 5mm (20px @ 300dpi)
+        start_y = 20  # Üst kenardan 5mm (20px @ 300dpi)
 
         all_pages = []
 
@@ -1248,7 +1248,7 @@ def print_multiple_labels():
                 y = start_y + row * (label_height_px + gap_y)
                 
                 # Debug: Koordinat bilgilerini logla
-                logger.info(f"A4 PNG Etiket {i}: pos=({x},{y}), start=({start_x},{start_y}), margin=({margin_x},{margin_y}), row={row}, col={col}")
+                logger.info(f"A4 PNG Etiket {i}: pos=({x},{y}), start=({start_x},{start_y}), row={row}, col={col}")
 
                 # Tasarım kullanarak etiket oluştur - A4 modu aktif
                 label_img = create_label_with_design(
