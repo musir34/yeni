@@ -1156,8 +1156,8 @@ def print_multiple_labels():
             'ROWS': 7,
             'LABELS_PER_PAGE': 21,
             'QR_SIZE_MM': 18,
-            'LABEL_WIDTH_APPROX': ((210 - 8 - 8 - (2 * 2)) / 3),  # Product Label hesaplama
-            'LABEL_HEIGHT_APPROX': (int(((297 - 15 - 15 - (7 - 1) * 1) / 7) * 100) / 100) - 0.08  # Product Label hesaplama
+            'LABEL_WIDTH_APPROX': ((210 - 8 - 8 - (2 * 2)) / 3),  # = 64.67mm
+            'LABEL_HEIGHT_APPROX': (int(((297 - 15 - 15 - (7 - 1) * 1) / 7) * 100) / 100) - 0.08  # = 37.92mm
         }
 
         # Etiket boyutu kontrolü - Product Label A4 sistemiyle uyumlu

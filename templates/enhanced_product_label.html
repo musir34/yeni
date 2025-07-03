@@ -1,556 +1,1041 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gelişmiş Ürün Etiketi - Güllü Shoes</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .main-container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        .section-card { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 24px; margin-bottom: 24px; }
-        .section-title { font-size: 1.4rem; font-weight: 600; color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
-        .search-container { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
-        .form-field { flex: 1; min-width: 200px; }
-        .btn-search { background: linear-gradient(135deg, #3498db, #2980b9); border: none; padding: 12px 24px; border-radius: 8px; color: white; font-weight: 500; transition: all 0.3s; }
-        .btn-search:hover { background: linear-gradient(135deg, #2980b9, #21618c); transform: translateY(-1px); }
-        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 20px; }
-        .product-card { border: 2px solid #e1e8ed; border-radius: 12px; padding: 16px; background: #f8f9fa; transition: all 0.3s; }
-        .product-card:hover { border-color: #3498db; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2); }
-        .product-header { background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 12px; border-radius: 8px; margin-bottom: 12px; text-align: center; font-weight: 600; }
-        .variant-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin: 4px 0; background: white; border-radius: 6px; border: 1px solid #dee2e6; }
-        .variant-info { flex: 1; }
-        .variant-size { font-weight: 600; color: #2c3e50; }
-        .variant-stock { font-size: 0.9em; color: #7f8c8d; }
-        .btn-add-label { background: linear-gradient(135deg, #27ae60, #229954); border: none; padding: 6px 12px; border-radius: 6px; color: white; font-size: 0.9em; transition: all 0.3s; }
-        .btn-add-label:hover { background: linear-gradient(135deg, #229954, #1e8449); transform: scale(1.05); }
-        .label-queue { max-height: 400px; overflow-y: auto; }
-        .label-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; margin: 8px 0; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db; }
-        .label-info { flex: 1; }
-        .label-model { font-weight: 600; color: #2c3e50; }
-        .label-details { font-size: 0.9em; color: #7f8c8d; }
-        .quantity-control { display: flex; align-items: center; gap: 8px; margin: 0 12px; }
-        .quantity-btn { width: 32px; height: 32px; border: none; border-radius: 6px; background: #ecf0f1; color: #2c3e50; font-weight: bold; cursor: pointer; transition: all 0.2s; }
-        .quantity-btn:hover { background: #bdc3c7; }
-        .quantity-input { width: 60px; text-align: center; border: 1px solid #bdc3c7; border-radius: 4px; padding: 4px; }
-        .btn-remove { background: #e74c3c; border: none; padding: 6px 10px; border-radius: 6px; color: white; font-size: 0.9em; transition: all 0.3s; }
-        .btn-remove:hover { background: #c0392b; }
-        .size-settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 20px 0; }
-        .preset-sizes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-        .size-preset { padding: 8px 16px; background: #ecf0f1; border: none; border-radius: 20px; font-size: 0.9em; cursor: pointer; transition: all 0.3s; }
-        .size-preset:hover { background: #3498db; color: white; }
-        .preview-area { border: 2px dashed #bdc3c7; border-radius: 12px; padding: 40px; text-align: center; min-height: 200px; display: flex; align-items: center; justify-content: center; background: #fafafa; }
-        .preview-image { max-width: 100%; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .action-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
-        .btn-primary-action { background: linear-gradient(135deg, #e74c3c, #c0392b); border: none; padding: 12px 32px; border-radius: 8px; color: white; font-weight: 600; font-size: 1.1em; transition: all 0.3s; }
-        .btn-primary-action:hover { background: linear-gradient(135deg, #c0392b, #a93226); transform: translateY(-2px); }
-        .btn-secondary-action { background: linear-gradient(135deg, #95a5a6, #7f8c8d); border: none; padding: 12px 32px; border-radius: 8px; color: white; font-weight: 600; transition: all 0.3s; }
-        .btn-secondary-action:hover { background: linear-gradient(135deg, #7f8c8d, #6c7b7d); }
-        .loading { display: none; text-align: center; padding: 20px; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 12px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .alert { border-radius: 8px; border: none; padding: 16px; margin: 16px 0; }
-        .alert-success { background: linear-gradient(135deg, #d5f4e6, #c3e9d0); color: #155724; }
-        .alert-danger { background: linear-gradient(135deg, #f8d7da, #f1b0b7); color: #721c24; }
-        .page-header { background: linear-gradient(135deg, #2c3e50, #34495e); color: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; text-align: center; }
-        .page-title { font-size: 2rem; font-weight: 700; margin: 0; }
-        .page-subtitle { font-size: 1.1rem; opacity: 0.9; margin-top: 8px; }
-    </style>
-</head>
-<body style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh;">
-    <div class="main-container">
-        <div class="page-header">
-            <h1 class="page-title"><i class="fas fa-tags"></i> Gelişmiş Ürün Etiketi</h1>
-            <p class="page-subtitle">QR kodlu, logolu ve özelleştirilebilir ürün etiketleri</p>
-        </div>
-
-        <div class="section-card">
-            <h2 class="section-title"><i class="fas fa-search"></i> Ürün Ara</h2>
-            <div class="search-container">
-                <div class="form-field">
-                    <label class="form-label">Arama Tipi</label>
-                    <select id="searchType" class="form-select">
-                        <option value="model">Model Kodu</option>
-                        <option value="barcode">Barkod</option>
-                    </select>
-                </div>
-                <div class="form-field">
-                    <label class="form-label">Arama Sorgusu</label>
-                    <input type="text" id="searchQuery" class="form-control" placeholder="Model kodu veya barkod girin...">
-                </div>
-                <button id="searchBtn" class="btn btn-search"><i class="fas fa-search"></i> Ara</button>
-            </div>
-            <div id="searchResults" class="product-grid"></div>
-        </div>
-
-        <div class="section-card">
-            <h2 class="section-title"><i class="fas fa-list"></i> Yazdırılacak Etiketler <span id="labelCount" class="badge bg-primary ms-2">0</span></h2>
-            <div id="labelQueue" class="label-queue">
-                <div class="text-center text-muted py-4">
-                    <i class="fas fa-inbox fa-3x mb-3 opacity-50"></i>
-                    <p>Henüz etiket eklenmedi</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="section-card">
-            <h2 class="section-title"><i class="fas fa-print"></i> Yazdırma Ayarları</h2>
-            
-            <!-- A4 Sayfa Düzeni -->
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <label class="form-label">Kağıt Boyutu</label>
-                    <select id="paperSize" class="form-control">
-                        <option value="a4">A4 (210 x 297 mm)</option>
-                        <option value="letter">Letter (216 x 279 mm)</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Etiket Boyutu</label>
-                    <select id="labelSize" class="form-control">
-                        <option value="a4-standard" selected>A4 Standart (63.33 x 37.20 mm)</option>
-                        <option value="100x50">100 x 50 mm</option>
-                        <option value="80x50">80 x 50 mm</option>
-                        <option value="80x40">80 x 40 mm</option>
-                        <option value="60x40">60 x 40 mm</option>
-                        <option value="custom">Özel Boyut</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Sayfa Yönü</label>
-                    <select id="pageOrientation" class="form-control">
-                        <option value="portrait">Dikey</option>
-                        <option value="landscape">Yatay</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Özel Boyut Alanları -->
-            <div id="customSizeSection" class="row mb-3" style="display: none;">
-                <div class="col-md-6">
-                    <label class="form-label">Genişlik (mm)</label>
-                    <input type="number" id="customWidth" class="form-control" value="60" min="10" max="200">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Yükseklik (mm)</label>
-                    <input type="number" id="customHeight" class="form-control" value="40" min="10" max="200">
-                </div>
-            </div>
-
-            <!-- Sayfa Düzeni -->
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <label class="form-label">Satır Sayısı</label>
-                    <input type="number" id="labelsPerRow" class="form-control" value="3" min="1" max="10">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Sütun Sayısı</label>
-                    <input type="number" id="labelsPerCol" class="form-control" value="5" min="1" max="15">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Üst Kenar (mm)</label>
-                    <input type="number" id="topMargin" class="form-control" value="10" min="0" max="50">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Sol Kenar (mm)</label>
-                    <input type="number" id="leftMargin" class="form-control" value="10" min="0" max="50">
-                </div>
-            </div>
-
-            <!-- Etiket Aralıkları -->
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <label class="form-label">Yatay Aralık (mm)</label>
-                    <input type="number" id="horizontalGap" class="form-control" value="5" min="0" max="20">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Dikey Aralık (mm)</label>
-                    <input type="number" id="verticalGap" class="form-control" value="5" min="0" max="20">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Yazdırma Kalitesi</label>
-                    <select id="printQuality" class="form-control">
-                        <option value="300">300 DPI (Yüksek)</option>
-                        <option value="200">200 DPI (Orta)</option>
-                        <option value="150">150 DPI (Düşük)</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Sayfa Önizlemesi -->
-            <div class="text-center">
-                <button type="button" class="btn btn-outline-primary" onclick="calculatePageLayout()">
-                    <i class="fas fa-calculator"></i> Ayarları Kontrol Et
-                </button>
-                <div id="layoutInfo" class="mt-2 text-muted"></div>
-                <small class="text-muted d-block mt-1">* Belirlediğiniz sayı zorunlu uygulanır, taşırsa yeni sayfa açılır</small>
-            </div>
-        </div>
-
-        <div class="section-card">
-            <h2 class="section-title"><i class="fas fa-eye"></i> Etiket Önizlemesi</h2>
-            <div id="previewArea" class="preview-area">
-                <div class="text-muted">
-                    <i class="fas fa-image fa-3x mb-3 opacity-50"></i>
-                    <p>Önizleme için etiket ekleyin ve "Önizleme Oluştur" butonuna tıklayın</p>
-                </div>
-            </div>
-            <!-- Toplam Etiket Sayısı Bilgisi -->
-            <div class="alert alert-info" id="totalLabelsInfo" style="display: none;">
-                <strong>Toplam Etiket Sayısı:</strong> <span id="totalLabelsCount">0</span> adet
-            </div>
-            
-            <div class="action-buttons">
-                <a href="/enhanced_product_label/advanced_editor" class="btn btn-warning"><i class="fas fa-magic"></i> Gelişmiş Editör</a>
-
-                <button type="button" class="btn btn-info" onclick="showSavedDesigns()">
-                    <i class="fas fa-list"></i> Kaydedilen Tasarımlar
-                </button>
-            </div>
-            <div id="loading" class="loading">
-                <div class="spinner"></div>
-                <p>İşlem devam ediyor...</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Saved Designs Modal -->
-    <div class="modal fade" id="savedDesignsModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Kaydedilen Tasarımlar</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="savedDesignsList"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Global variables - labelQueue'yu window objesinde de tanımla
-        let labelQueue = [];
-        window.labelQueue = labelQueue;
-        let selectedDesignForPrint = null;
-        
-        // Update selected design info display
-        function updateSelectedDesignInfo(design) {
-            const infoDiv = document.getElementById('selectedDesignInfo');
-            if (infoDiv) {
-                if (design) {
-                    infoDiv.innerHTML = `<strong>${design.name}</strong><br><small class="text-muted">${design.elements ? design.elements.length : 0} element • ${design.labelWidth || 100}x${design.labelHeight || 50}mm</small>`;
-                    infoDiv.className = 'alert alert-success';
-                } else {
-                    infoDiv.innerHTML = '<small class="text-muted">Henüz tasarım seçilmedi</small>';
-                    infoDiv.className = 'alert alert-light';
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Gelişmiş Ürün Etiketi - Güllü Shoes</title>
+        <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+        />
+        <link
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+            rel="stylesheet"
+        />
+        <style>
+            .main-container {
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            .section-card {
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                padding: 24px;
+                margin-bottom: 24px;
+            }
+            .section-title {
+                font-size: 1.4rem;
+                font-weight: 600;
+                color: #2c3e50;
+                margin-bottom: 20px;
+                border-bottom: 2px solid #3498db;
+                padding-bottom: 8px;
+            }
+            .search-container {
+                display: flex;
+                gap: 12px;
+                align-items: end;
+                flex-wrap: wrap;
+            }
+            .form-field {
+                flex: 1;
+                min-width: 200px;
+            }
+            .btn-search {
+                background: linear-gradient(135deg, #3498db, #2980b9);
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                transition: all 0.3s;
+            }
+            .btn-search:hover {
+                background: linear-gradient(135deg, #2980b9, #21618c);
+                transform: translateY(-1px);
+            }
+            .product-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 16px;
+                margin-top: 20px;
+            }
+            .product-card {
+                border: 2px solid #e1e8ed;
+                border-radius: 12px;
+                padding: 16px;
+                background: #f8f9fa;
+                transition: all 0.3s;
+            }
+            .product-card:hover {
+                border-color: #3498db;
+                box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
+            }
+            .product-header {
+                background: linear-gradient(135deg, #3498db, #2980b9);
+                color: white;
+                padding: 12px;
+                border-radius: 8px;
+                margin-bottom: 12px;
+                text-align: center;
+                font-weight: 600;
+            }
+            .variant-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 12px;
+                margin: 4px 0;
+                background: white;
+                border-radius: 6px;
+                border: 1px solid #dee2e6;
+            }
+            .variant-info {
+                flex: 1;
+            }
+            .variant-size {
+                font-weight: 600;
+                color: #2c3e50;
+            }
+            .variant-stock {
+                font-size: 0.9em;
+                color: #7f8c8d;
+            }
+            .btn-add-label {
+                background: linear-gradient(135deg, #27ae60, #229954);
+                border: none;
+                padding: 6px 12px;
+                border-radius: 6px;
+                color: white;
+                font-size: 0.9em;
+                transition: all 0.3s;
+            }
+            .btn-add-label:hover {
+                background: linear-gradient(135deg, #229954, #1e8449);
+                transform: scale(1.05);
+            }
+            .label-queue {
+                max-height: 400px;
+                overflow-y: auto;
+            }
+            .label-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px;
+                margin: 8px 0;
+                background: #f8f9fa;
+                border-radius: 8px;
+                border-left: 4px solid #3498db;
+            }
+            .label-info {
+                flex: 1;
+            }
+            .label-model {
+                font-weight: 600;
+                color: #2c3e50;
+            }
+            .label-details {
+                font-size: 0.9em;
+                color: #7f8c8d;
+            }
+            .quantity-control {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin: 0 12px;
+            }
+            .quantity-btn {
+                width: 32px;
+                height: 32px;
+                border: none;
+                border-radius: 6px;
+                background: #ecf0f1;
+                color: #2c3e50;
+                font-weight: bold;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .quantity-btn:hover {
+                background: #bdc3c7;
+            }
+            .quantity-input {
+                width: 60px;
+                text-align: center;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                padding: 4px;
+            }
+            .btn-remove {
+                background: #e74c3c;
+                border: none;
+                padding: 6px 10px;
+                border-radius: 6px;
+                color: white;
+                font-size: 0.9em;
+                transition: all 0.3s;
+            }
+            .btn-remove:hover {
+                background: #c0392b;
+            }
+            .size-settings {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 16px;
+                margin: 20px 0;
+            }
+            .preset-sizes {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-top: 12px;
+            }
+            .size-preset {
+                padding: 8px 16px;
+                background: #ecf0f1;
+                border: none;
+                border-radius: 20px;
+                font-size: 0.9em;
+                cursor: pointer;
+                transition: all 0.3s;
+            }
+            .size-preset:hover {
+                background: #3498db;
+                color: white;
+            }
+            .preview-area {
+                border: 2px dashed #bdc3c7;
+                border-radius: 12px;
+                padding: 40px;
+                text-align: center;
+                min-height: 200px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #fafafa;
+            }
+            .preview-image {
+                max-width: 100%;
+                border-radius: 8px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            }
+            .action-buttons {
+                display: flex;
+                gap: 12px;
+                justify-content: center;
+                flex-wrap: wrap;
+                margin-top: 20px;
+            }
+            .btn-primary-action {
+                background: linear-gradient(135deg, #e74c3c, #c0392b);
+                border: none;
+                padding: 12px 32px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 600;
+                font-size: 1.1em;
+                transition: all 0.3s;
+            }
+            .btn-primary-action:hover {
+                background: linear-gradient(135deg, #c0392b, #a93226);
+                transform: translateY(-2px);
+            }
+            .btn-secondary-action {
+                background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+                border: none;
+                padding: 12px 32px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 600;
+                transition: all 0.3s;
+            }
+            .btn-secondary-action:hover {
+                background: linear-gradient(135deg, #7f8c8d, #6c7b7d);
+            }
+            .loading {
+                display: none;
+                text-align: center;
+                padding: 20px;
+            }
+            .spinner {
+                width: 40px;
+                height: 40px;
+                border: 4px solid #f3f3f3;
+                border-top: 4px solid #3498db;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin: 0 auto 12px;
+            }
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
                 }
             }
-        }
-        
-        // Get selected products - SIMPLIFIED AND WORKING
-        function getSelectedProducts() {
-            console.log('Getting selected products...');
-            console.log('labelQueue:', labelQueue);
-            
-            if (!labelQueue || labelQueue.length === 0) {
-                console.log('No products in labelQueue');
-                return [];
+            .alert {
+                border-radius: 8px;
+                border: none;
+                padding: 16px;
+                margin: 16px 0;
             }
-            
-            const selectedProducts = [];
-            labelQueue.forEach(item => {
-                const quantity = item.quantity || 1;
-                for (let i = 0; i < quantity; i++) {
-                    selectedProducts.push({
-                        barcode: item.barcode,
-                        model_code: item.model_id,
-                        color: item.color,
-                        size: item.size
+            .alert-success {
+                background: linear-gradient(135deg, #d5f4e6, #c3e9d0);
+                color: #155724;
+            }
+            .alert-danger {
+                background: linear-gradient(135deg, #f8d7da, #f1b0b7);
+                color: #721c24;
+            }
+            .page-header {
+                background: linear-gradient(135deg, #2c3e50, #34495e);
+                color: white;
+                padding: 24px;
+                border-radius: 12px;
+                margin-bottom: 24px;
+                text-align: center;
+            }
+            .page-title {
+                font-size: 2rem;
+                font-weight: 700;
+                margin: 0;
+            }
+            .page-subtitle {
+                font-size: 1.1rem;
+                opacity: 0.9;
+                margin-top: 8px;
+            }
+        </style>
+    </head>
+    <body
+        style="
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        "
+    >
+        <div class="main-container">
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-tags"></i> Gelişmiş Ürün Etiketi
+                </h1>
+                <p class="page-subtitle">
+                    QR kodlu, logolu ve özelleştirilebilir ürün etiketleri
+                </p>
+            </div>
+
+            <div class="section-card">
+                <h2 class="section-title">
+                    <i class="fas fa-search"></i> Ürün Ara
+                </h2>
+                <div class="search-container">
+                    <div class="form-field">
+                        <label class="form-label">Arama Tipi</label>
+                        <select id="searchType" class="form-select">
+                            <option value="model">Model Kodu</option>
+                            <option value="barcode">Barkod</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Arama Sorgusu</label>
+                        <input
+                            type="text"
+                            id="searchQuery"
+                            class="form-control"
+                            placeholder="Model kodu veya barkod girin..."
+                        />
+                    </div>
+                    <button id="searchBtn" class="btn btn-search">
+                        <i class="fas fa-search"></i> Ara
+                    </button>
+                </div>
+                <div id="searchResults" class="product-grid"></div>
+            </div>
+
+            <div class="section-card">
+                <h2 class="section-title">
+                    <i class="fas fa-list"></i> Yazdırılacak Etiketler
+                    <span id="labelCount" class="badge bg-primary ms-2">0</span>
+                </h2>
+                <div id="labelQueue" class="label-queue">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-3x mb-3 opacity-50"></i>
+                        <p>Henüz etiket eklenmedi</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <h2 class="section-title">
+                    <i class="fas fa-print"></i> Yazdırma Ayarları
+                </h2>
+
+                <!-- A4 Sayfa Düzeni -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Kağıt Boyutu</label>
+                        <select id="paperSize" class="form-control">
+                            <option value="a4">A4 (210 x 297 mm)</option>
+                            <option value="letter">
+                                Letter (216 x 279 mm)
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Etiket Boyutu</label>
+                        <select id="labelSize" class="form-control">
+                            <option value="a4-standard" selected>
+                                A4 Standart (63.33 x 37.20 mm)
+                            </option>
+                            <option value="100x50">100 x 50 mm</option>
+                            <option value="80x50">80 x 50 mm</option>
+                            <option value="80x40">80 x 40 mm</option>
+                            <option value="60x40">60 x 40 mm</option>
+                            <option value="custom">Özel Boyut</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Sayfa Yönü</label>
+                        <select id="pageOrientation" class="form-control">
+                            <option value="portrait">Dikey</option>
+                            <option value="landscape">Yatay</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Özel Boyut Alanları -->
+                <div
+                    id="customSizeSection"
+                    class="row mb-3"
+                    style="display: none"
+                >
+                    <div class="col-md-6">
+                        <label class="form-label">Genişlik (mm)</label>
+                        <input
+                            type="number"
+                            id="customWidth"
+                            class="form-control"
+                            value="60"
+                            min="10"
+                            max="200"
+                        />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Yükseklik (mm)</label>
+                        <input
+                            type="number"
+                            id="customHeight"
+                            class="form-control"
+                            value="40"
+                            min="10"
+                            max="200"
+                        />
+                    </div>
+                </div>
+
+                <!-- Sayfa Düzeni -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Satır Sayısı</label>
+                        <input
+                            type="number"
+                            id="labelsPerRow"
+                            class="form-control"
+                            value="3"
+                            min="1"
+                            max="10"
+                        />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Sütun Sayısı</label>
+                        <input
+                            type="number"
+                            id="labelsPerCol"
+                            class="form-control"
+                            value="5"
+                            min="1"
+                            max="15"
+                        />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Üst Kenar (mm)</label>
+                        <input
+                            type="number"
+                            id="topMargin"
+                            class="form-control"
+                            value="10"
+                            min="0"
+                            max="50"
+                        />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Sol Kenar (mm)</label>
+                        <input
+                            type="number"
+                            id="leftMargin"
+                            class="form-control"
+                            value="10"
+                            min="0"
+                            max="50"
+                        />
+                    </div>
+                </div>
+
+                <!-- Etiket Aralıkları -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Yatay Aralık (mm)</label>
+                        <input
+                            type="number"
+                            id="horizontalGap"
+                            class="form-control"
+                            value="5"
+                            min="0"
+                            max="20"
+                        />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Dikey Aralık (mm)</label>
+                        <input
+                            type="number"
+                            id="verticalGap"
+                            class="form-control"
+                            value="5"
+                            min="0"
+                            max="20"
+                        />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Yazdırma Kalitesi</label>
+                        <select id="printQuality" class="form-control">
+                            <option value="300">300 DPI (Yüksek)</option>
+                            <option value="200">200 DPI (Orta)</option>
+                            <option value="150">150 DPI (Düşük)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Sayfa Önizlemesi -->
+                <div class="text-center">
+                    <button
+                        type="button"
+                        class="btn btn-outline-primary"
+                        onclick="calculatePageLayout()"
+                    >
+                        <i class="fas fa-calculator"></i> Ayarları Kontrol Et
+                    </button>
+                    <div id="layoutInfo" class="mt-2 text-muted"></div>
+                    <small class="text-muted d-block mt-1"
+                        >* Belirlediğiniz sayı zorunlu uygulanır, taşırsa yeni
+                        sayfa açılır</small
+                    >
+                </div>
+            </div>
+
+            <div class="section-card">
+                <h2 class="section-title">
+                    <i class="fas fa-eye"></i> Etiket Önizlemesi
+                </h2>
+                <div id="previewArea" class="preview-area">
+                    <div class="text-muted">
+                        <i class="fas fa-image fa-3x mb-3 opacity-50"></i>
+                        <p>
+                            Önizleme için etiket ekleyin ve "Önizleme Oluştur"
+                            butonuna tıklayın
+                        </p>
+                    </div>
+                </div>
+                <!-- Toplam Etiket Sayısı Bilgisi -->
+                <div
+                    class="alert alert-info"
+                    id="totalLabelsInfo"
+                    style="display: none"
+                >
+                    <strong>Toplam Etiket Sayısı:</strong>
+                    <span id="totalLabelsCount">0</span> adet
+                </div>
+
+                <div class="action-buttons">
+                    <a
+                        href="/enhanced_product_label/advanced_editor"
+                        class="btn btn-warning"
+                        ><i class="fas fa-magic"></i> Gelişmiş Editör</a
+                    >
+
+                    <button
+                        type="button"
+                        class="btn btn-info"
+                        onclick="showSavedDesigns()"
+                    >
+                        <i class="fas fa-list"></i> Kaydedilen Tasarımlar
+                    </button>
+                </div>
+                <div id="loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>İşlem devam ediyor...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Saved Designs Modal -->
+        <div class="modal fade" id="savedDesignsModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Kaydedilen Tasarımlar</h5>
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                        ></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="savedDesignsList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            // Global variables - labelQueue'yu window objesinde de tanımla
+            let labelQueue = [];
+            window.labelQueue = labelQueue;
+            let selectedDesignForPrint = null;
+
+            // Update selected design info display
+            function updateSelectedDesignInfo(design) {
+                const infoDiv = document.getElementById("selectedDesignInfo");
+                if (infoDiv) {
+                    if (design) {
+                        infoDiv.innerHTML = `<strong>${design.name}</strong><br><small class="text-muted">${design.elements ? design.elements.length : 0} element • ${design.labelWidth || 100}x${design.labelHeight || 50}mm</small>`;
+                        infoDiv.className = "alert alert-success";
+                    } else {
+                        infoDiv.innerHTML =
+                            '<small class="text-muted">Henüz tasarım seçilmedi</small>';
+                        infoDiv.className = "alert alert-light";
+                    }
+                }
+            }
+
+            // Get selected products - SIMPLIFIED AND WORKING
+            function getSelectedProducts() {
+                console.log("Getting selected products...");
+                console.log("labelQueue:", labelQueue);
+
+                if (!labelQueue || labelQueue.length === 0) {
+                    console.log("No products in labelQueue");
+                    return [];
+                }
+
+                const selectedProducts = [];
+                labelQueue.forEach((item) => {
+                    const quantity = item.quantity || 1;
+                    for (let i = 0; i < quantity; i++) {
+                        selectedProducts.push({
+                            barcode: item.barcode,
+                            model_code: item.model_id,
+                            color: item.color,
+                            size: item.size,
+                        });
+                    }
+                });
+
+                console.log(
+                    "Selected products count:",
+                    selectedProducts.length,
+                );
+                return selectedProducts;
+            }
+
+            // Generate preview with selected design
+            function generatePreviewWithSavedDesign() {
+                if (!selectedDesignForPrint) {
+                    showAlert(
+                        "Lütfen önce kaydedilen tasarımlardan birini seçin",
+                        "warning",
+                    );
+                    showSavedDesigns();
+                    return;
+                }
+
+                const selectedProducts = getSelectedProducts();
+
+                if (selectedProducts.length === 0) {
+                    showAlert(
+                        `Ürün seçili değil! Lütfen önce ürün arayıp "Ekle" butonuna basın.`,
+                        "warning",
+                    );
+                    return;
+                }
+
+                showAlert(
+                    `${selectedProducts.length} ürün için önizleme oluşturuluyor...`,
+                    "info",
+                );
+                generateLabelWithDesign(
+                    selectedDesignForPrint,
+                    selectedProducts,
+                );
+            }
+
+            // Print with selected design
+            function printWithSelectedDesign() {
+                if (!selectedDesignForPrint) {
+                    showAlert(
+                        "Lütfen önce kaydedilen tasarımlardan birini seçin",
+                        "warning",
+                    );
+                    showSavedDesigns();
+                    return;
+                }
+
+                const selectedProducts = getSelectedProducts();
+
+                if (selectedProducts.length === 0) {
+                    showAlert(
+                        `Ürün seçili değil! Lütfen önce ürün arayıp "Ekle" butonuna basın.`,
+                        "warning",
+                    );
+                    return;
+                }
+
+                // Önce önizleme oluştur, sonra yazdır
+                showAlert(
+                    `${selectedProducts.length} etiket yazdırılıyor...`,
+                    "info",
+                );
+                generateLabelWithDesign(
+                    selectedDesignForPrint,
+                    selectedProducts,
+                );
+            }
+
+            function showAlert(message, type) {
+                console.log(`${type}: ${message}`);
+            }
+
+            function showLoading(show) {
+                document.getElementById("loading").style.display = show
+                    ? "block"
+                    : "none";
+            }
+
+            // Product Label A4 Sabit Yapılandırması - Birebir Kopyası
+            const A4_FIXED_CONFIG = {
+                PAGE_WIDTH: 210,
+                MARGIN_LEFT: 8,
+                MARGIN_RIGHT: 8,
+                COLUMN_GAP: 2,
+                COLUMNS: 3,
+                PAGE_HEIGHT: 297,
+                MARGIN_TOP: 15,
+                MARGIN_BOTTOM: 15,
+                ROW_GAP: 1,
+                ROWS: 7,
+                LABELS_PER_PAGE: 21,
+                QR_SIZE_MM: 18,
+                LABEL_WIDTH_APPROX: (210 - 8 - 8 - 2 * 2) / 3,
+                // Taşma sorununu azaltmak için etiket yüksekliğinden 0.08mm çalıyoruz.
+                LABEL_HEIGHT_APPROX:
+                    Math.floor(((297 - 15 - 15 - (7 - 1) * 1) / 7) * 100) /
+                        100 -
+                    0.08,
+            };
+
+            // A4 Standart modu ayarları - Product Label sisteminin birebir kopyası
+            function applyA4StandardSettings() {
+                try {
+                    // Sabit ayarlar - Product Label A4_FIXED_CONFIG değerleri
+                    const labelsPerRow =
+                        document.getElementById("labelsPerRow");
+                    const labelsPerCol =
+                        document.getElementById("labelsPerCol");
+                    const leftMargin = document.getElementById("leftMargin");
+                    const topMargin = document.getElementById("topMargin");
+                    const horizontalGap =
+                        document.getElementById("horizontalGap");
+                    const verticalGap = document.getElementById("verticalGap");
+                    const customWidth = document.getElementById("customWidth");
+                    const customHeight =
+                        document.getElementById("customHeight");
+
+                    if (labelsPerRow) labelsPerRow.value = A4_FIXED_CONFIG.ROWS; // 7 satır
+                    if (labelsPerCol)
+                        labelsPerCol.value = A4_FIXED_CONFIG.COLUMNS; // 3 sütun
+                    if (leftMargin)
+                        leftMargin.value = A4_FIXED_CONFIG.MARGIN_LEFT; // 8mm
+                    if (topMargin) topMargin.value = A4_FIXED_CONFIG.MARGIN_TOP; // 15mm
+                    if (horizontalGap)
+                        horizontalGap.value = A4_FIXED_CONFIG.COLUMN_GAP; // 2mm
+                    if (verticalGap)
+                        verticalGap.value = A4_FIXED_CONFIG.ROW_GAP; // 1mm
+
+                    // Özel boyut alanlarını güncelle - Product Label hesaplanan boyutları
+                    if (customWidth)
+                        customWidth.value =
+                            A4_FIXED_CONFIG.LABEL_WIDTH_APPROX.toFixed(2);
+                    if (customHeight)
+                        customHeight.value =
+                            A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX.toFixed(2);
+
+                    const info = `A4 Standart Modu: ${A4_FIXED_CONFIG.COLUMNS}x${A4_FIXED_CONFIG.ROWS} (${A4_FIXED_CONFIG.LABELS_PER_PAGE} etiket), ${A4_FIXED_CONFIG.LABEL_WIDTH_APPROX.toFixed(2)}x${A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX.toFixed(2)}mm, Kenarlar: ${A4_FIXED_CONFIG.MARGIN_TOP}/${A4_FIXED_CONFIG.MARGIN_BOTTOM}/${A4_FIXED_CONFIG.MARGIN_LEFT}/${A4_FIXED_CONFIG.MARGIN_RIGHT}mm`;
+                    showAlert(info, "success");
+                } catch (error) {
+                    console.error("A4 ayarları uygulanırken hata:", error);
+                }
+            }
+
+            // Label boyutu değiştiğinde
+            document
+                .getElementById("labelSize")
+                .addEventListener("change", function () {
+                    const selectedSize = this.value;
+
+                    if (selectedSize === "a4-standard") {
+                        applyA4StandardSettings();
+                        document.getElementById(
+                            "customSizeSection",
+                        ).style.display = "block";
+                    } else if (selectedSize === "custom") {
+                        document.getElementById(
+                            "customSizeSection",
+                        ).style.display = "block";
+                    } else {
+                        document.getElementById(
+                            "customSizeSection",
+                        ).style.display = "none";
+                    }
+                });
+
+            // Toplam etiket sayısını güncelle
+            function updateTotalLabelsCount() {
+                let totalCount = 0;
+
+                // labelQueue'nun array olduğundan emin ol
+                if (window.labelQueue && Array.isArray(window.labelQueue)) {
+                    window.labelQueue.forEach((item) => {
+                        totalCount += item.quantity || 0;
                     });
                 }
-            });
-            
-            console.log('Selected products count:', selectedProducts.length);
-            return selectedProducts;
-        }
-        
-        // Generate preview with selected design
-        function generatePreviewWithSavedDesign() {
-            if (!selectedDesignForPrint) {
-                showAlert('Lütfen önce kaydedilen tasarımlardan birini seçin', 'warning');
-                showSavedDesigns();
-                return;
-            }
-            
-            const selectedProducts = getSelectedProducts();
-            
-            if (selectedProducts.length === 0) {
-                showAlert(`Ürün seçili değil! Lütfen önce ürün arayıp "Ekle" butonuna basın.`, 'warning');
-                return;
-            }
-            
-            showAlert(`${selectedProducts.length} ürün için önizleme oluşturuluyor...`, 'info');
-            generateLabelWithDesign(selectedDesignForPrint, selectedProducts);
-        }
-        
-        // Print with selected design
-        function printWithSelectedDesign() {
-            if (!selectedDesignForPrint) {
-                showAlert('Lütfen önce kaydedilen tasarımlardan birini seçin', 'warning');
-                showSavedDesigns();
-                return;
-            }
-            
-            const selectedProducts = getSelectedProducts();
-            
-            if (selectedProducts.length === 0) {
-                showAlert(`Ürün seçili değil! Lütfen önce ürün arayıp "Ekle" butonuna basın.`, 'warning');
-                return;
-            }
-            
-            // Önce önizleme oluştur, sonra yazdır
-            showAlert(`${selectedProducts.length} etiket yazdırılıyor...`, 'info');
-            generateLabelWithDesign(selectedDesignForPrint, selectedProducts);
-        }
-        
-        function showAlert(message, type) {
-            console.log(`${type}: ${message}`);
-        }
-        
-        function showLoading(show) {
-            document.getElementById('loading').style.display = show ? 'block' : 'none';
-        }
 
-        // Product Label A4 Sabit Yapılandırması - Birebir Kopyası
-        const A4_FIXED_CONFIG = {
-            PAGE_WIDTH: 210,
-            MARGIN_LEFT: 8,
-            MARGIN_RIGHT: 8,
-            COLUMN_GAP: 2,
-            COLUMNS: 3,
-            PAGE_HEIGHT: 297,
-            MARGIN_TOP: 15,
-            MARGIN_BOTTOM: 15,
-            ROW_GAP: 1,
-            ROWS: 7,
-            LABELS_PER_PAGE: 21,
-            QR_SIZE_MM: 18,
-            LABEL_WIDTH_APPROX: ((210 - 8 - 8 - (2 * 2)) / 3),
-            // Taşma sorununu azaltmak için etiket yüksekliğinden 0.08mm çalıyoruz.
-            LABEL_HEIGHT_APPROX: (Math.floor(((297 - 15 - 15 - (7 - 1) * 1) / 7) * 100) / 100) - 0.08
-        };
+                const countElement =
+                    document.getElementById("totalLabelsCount");
+                const infoElement = document.getElementById("totalLabelsInfo");
 
-        // A4 Standart modu ayarları - Product Label sisteminin birebir kopyası
-        function applyA4StandardSettings() {
-            try {
-                // Sabit ayarlar - Product Label A4_FIXED_CONFIG değerleri
-                const labelsPerRow = document.getElementById('labelsPerRow');
-                const labelsPerCol = document.getElementById('labelsPerCol');
-                const leftMargin = document.getElementById('leftMargin');
-                const topMargin = document.getElementById('topMargin');
-                const horizontalGap = document.getElementById('horizontalGap');
-                const verticalGap = document.getElementById('verticalGap');
-                const customWidth = document.getElementById('customWidth');
-                const customHeight = document.getElementById('customHeight');
-                
-                if (labelsPerRow) labelsPerRow.value = A4_FIXED_CONFIG.ROWS; // 7 satır
-                if (labelsPerCol) labelsPerCol.value = A4_FIXED_CONFIG.COLUMNS;  // 3 sütun
-                if (leftMargin) leftMargin.value = A4_FIXED_CONFIG.MARGIN_LEFT;    // 8mm
-                if (topMargin) topMargin.value = A4_FIXED_CONFIG.MARGIN_TOP;    // 15mm
-                if (horizontalGap) horizontalGap.value = A4_FIXED_CONFIG.COLUMN_GAP; // 2mm
-                if (verticalGap) verticalGap.value = A4_FIXED_CONFIG.ROW_GAP;   // 1mm
-                
-                // Özel boyut alanlarını güncelle - Product Label hesaplanan boyutları
-                if (customWidth) customWidth.value = A4_FIXED_CONFIG.LABEL_WIDTH_APPROX.toFixed(2);
-                if (customHeight) customHeight.value = A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX.toFixed(2);
-                
-                const info = `A4 Standart Modu: ${A4_FIXED_CONFIG.COLUMNS}x${A4_FIXED_CONFIG.ROWS} (${A4_FIXED_CONFIG.LABELS_PER_PAGE} etiket), ${A4_FIXED_CONFIG.LABEL_WIDTH_APPROX.toFixed(2)}x${A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX.toFixed(2)}mm, Kenarlar: ${A4_FIXED_CONFIG.MARGIN_TOP}/${A4_FIXED_CONFIG.MARGIN_BOTTOM}/${A4_FIXED_CONFIG.MARGIN_LEFT}/${A4_FIXED_CONFIG.MARGIN_RIGHT}mm`;
-                showAlert(info, 'success');
-            } catch (error) {
-                console.error('A4 ayarları uygulanırken hata:', error);
+                if (countElement) countElement.textContent = totalCount;
+                if (infoElement) {
+                    infoElement.style.display =
+                        totalCount > 0 ? "block" : "none";
+                }
             }
-        }
 
-        // Label boyutu değiştiğinde
-        document.getElementById('labelSize').addEventListener('change', function() {
-            const selectedSize = this.value;
-            
-            if (selectedSize === 'a4-standard') {
+            // Sayfa yüklendiğinde A4 standart ayarlarını otomatik uygula
+            document.addEventListener("DOMContentLoaded", function () {
+                // labelQueue'yu initialize et
+                if (!window.labelQueue || !Array.isArray(window.labelQueue)) {
+                    window.labelQueue = [];
+                    labelQueue = window.labelQueue;
+                }
+                console.log(
+                    "DEBUG - Page loaded, labelQueue initialized:",
+                    window.labelQueue,
+                );
+
+                // A4 standart zaten seçili, ayarları uygula
                 applyA4StandardSettings();
-                document.getElementById('customSizeSection').style.display = 'block';
-            } else if (selectedSize === 'custom') {
-                document.getElementById('customSizeSection').style.display = 'block';
-            } else {
-                document.getElementById('customSizeSection').style.display = 'none';
-            }
-        });
+                // Toplam etiket sayısını güncelle
+                updateTotalLabelsCount();
+            });
 
-        // Toplam etiket sayısını güncelle
-        function updateTotalLabelsCount() {
-            let totalCount = 0;
-            
-            // labelQueue'nun array olduğundan emin ol
-            if (window.labelQueue && Array.isArray(window.labelQueue)) {
-                window.labelQueue.forEach(item => {
-                    totalCount += item.quantity || 0;
+            // A4 Sayfa Düzeni Fonksiyonları
+            function calculatePageLayout() {
+                const paperSize = document.getElementById("paperSize").value;
+                const labelSize = document.getElementById("labelSize").value;
+                const orientation =
+                    document.getElementById("pageOrientation").value;
+                const topMargin = parseInt(
+                    document.getElementById("topMargin").value,
+                );
+                const leftMargin = parseInt(
+                    document.getElementById("leftMargin").value,
+                );
+                const horizontalGap = parseInt(
+                    document.getElementById("horizontalGap").value,
+                );
+                const verticalGap = parseInt(
+                    document.getElementById("verticalGap").value,
+                );
+
+                // Kağıt boyutları
+                let pageWidth, pageHeight;
+                if (paperSize === "a4") {
+                    pageWidth = orientation === "landscape" ? 297 : 210;
+                    pageHeight = orientation === "landscape" ? 210 : 297;
+                } else {
+                    // letter
+                    pageWidth = orientation === "landscape" ? 279 : 216;
+                    pageHeight = orientation === "landscape" ? 216 : 279;
+                }
+
+                // Etiket boyutları
+                let labelWidth, labelHeight;
+                if (labelSize === "a4-standard") {
+                    labelWidth = 63.33;
+                    labelHeight = 37.2;
+                } else if (labelSize === "custom") {
+                    labelWidth = parseFloat(
+                        document.getElementById("customWidth").value,
+                    );
+                    labelHeight = parseFloat(
+                        document.getElementById("customHeight").value,
+                    );
+                } else {
+                    const [w, h] = labelSize.split("x").map(Number);
+                    labelWidth = w;
+                    labelHeight = h;
+                }
+
+                // Kullanılabilir alan
+                const availableWidth = pageWidth - 2 * leftMargin;
+                const availableHeight = pageHeight - 2 * topMargin;
+
+                // NaN kontrolü ile maksimum sığabilecek etiket sayısı hesapla
+                const maxCols =
+                    isNaN(labelWidth) || labelWidth <= 0
+                        ? 0
+                        : Math.floor(
+                              (availableWidth + horizontalGap) /
+                                  (labelWidth + horizontalGap),
+                          );
+                const maxRows =
+                    isNaN(labelHeight) || labelHeight <= 0
+                        ? 0
+                        : Math.floor(
+                              (availableHeight + verticalGap) /
+                                  (labelHeight + verticalGap),
+                          );
+
+                // Mevcut kullanıcı ayarlarını al
+                const currentCols = parseInt(
+                    document.getElementById("labelsPerCol").value,
+                );
+                const currentRows = parseInt(
+                    document.getElementById("labelsPerRow").value,
+                );
+
+                // Kullanıcı ayarları ile maksimum değerleri karşılaştır
+                const willFit =
+                    currentCols <= maxCols && currentRows <= maxRows;
+                const totalLabels = currentCols * currentRows;
+                const maxPossible = maxCols * maxRows;
+
+                // Bilgi göster
+                let info;
+                if (willFit) {
+                    info = `✓ Mevcut ayarlar: ${totalLabels} etiket (${currentRows} satır × ${currentCols} sütun) - Sayfaya sığacak`;
+                } else {
+                    info = `⚠ Mevcut ayarlar: ${totalLabels} etiket (${currentRows} satır × ${currentCols} sütun) - Maksimum: ${maxPossible} etiket (${maxRows} × ${maxCols})`;
+                }
+                document.getElementById("layoutInfo").textContent = info;
+
+                const alertType = willFit ? "success" : "warning";
+                const alertMessage = willFit
+                    ? `Sayfa düzeni uygun: ${totalLabels} etiket`
+                    : `Uyarı: Etiketler sayfa boyutunu aşabilir. Maksimum: ${maxPossible} etiket`;
+                showAlert(alertMessage, alertType);
+            }
+
+            // Etiket boyutu değiştiğinde
+            document
+                .getElementById("labelSize")
+                .addEventListener("change", function () {
+                    const customSection =
+                        document.getElementById("customSizeSection");
+                    if (this.value === "custom") {
+                        customSection.style.display = "block";
+                    } else {
+                        customSection.style.display = "none";
+                        // Otomatik hesaplama
+                        calculatePageLayout();
+                    }
                 });
-            }
-            
-            const countElement = document.getElementById('totalLabelsCount');
-            const infoElement = document.getElementById('totalLabelsInfo');
-            
-            if (countElement) countElement.textContent = totalCount;
-            if (infoElement) {
-                infoElement.style.display = totalCount > 0 ? 'block' : 'none';
-            }
-        }
 
-        // Sayfa yüklendiğinde A4 standart ayarlarını otomatik uygula
-        document.addEventListener('DOMContentLoaded', function() {
-            // labelQueue'yu initialize et
-            if (!window.labelQueue || !Array.isArray(window.labelQueue)) {
-                window.labelQueue = [];
+            // Sayfa yönü değiştiğinde otomatik hesapla
+            document
+                .getElementById("pageOrientation")
+                .addEventListener("change", calculatePageLayout);
+            document
+                .getElementById("paperSize")
+                .addEventListener("change", calculatePageLayout);
+
+            // Margin ve gap değişikliklerinde otomatik hesapla
+            ["topMargin", "leftMargin", "horizontalGap", "verticalGap"].forEach(
+                (id) => {
+                    document
+                        .getElementById(id)
+                        .addEventListener("change", calculatePageLayout);
+                },
+            );
+
+            function addToQueue(barcode, modelId, color, size) {
+                // Ensure window.labelQueue exists
+                if (!window.labelQueue) {
+                    window.labelQueue = [];
+                }
+
+                const existingIndex = window.labelQueue.findIndex(
+                    (item) => item.barcode === barcode,
+                );
+                if (existingIndex >= 0) {
+                    window.labelQueue[existingIndex].quantity++;
+                } else {
+                    window.labelQueue.push({
+                        barcode,
+                        model_id: modelId,
+                        color,
+                        size,
+                        quantity: 1,
+                    });
+                }
+
+                // Sync global references
                 labelQueue = window.labelQueue;
-            }
-            console.log('DEBUG - Page loaded, labelQueue initialized:', window.labelQueue);
-            
-            // A4 standart zaten seçili, ayarları uygula
-            applyA4StandardSettings();
-            // Toplam etiket sayısını güncelle
-            updateTotalLabelsCount();
-        });
 
-        // A4 Sayfa Düzeni Fonksiyonları
-        function calculatePageLayout() {
-            const paperSize = document.getElementById('paperSize').value;
-            const labelSize = document.getElementById('labelSize').value;
-            const orientation = document.getElementById('pageOrientation').value;
-            const topMargin = parseInt(document.getElementById('topMargin').value);
-            const leftMargin = parseInt(document.getElementById('leftMargin').value);
-            const horizontalGap = parseInt(document.getElementById('horizontalGap').value);
-            const verticalGap = parseInt(document.getElementById('verticalGap').value);
-            
-            // Kağıt boyutları
-            let pageWidth, pageHeight;
-            if (paperSize === 'a4') {
-                pageWidth = orientation === 'landscape' ? 297 : 210;
-                pageHeight = orientation === 'landscape' ? 210 : 297;
-            } else { // letter
-                pageWidth = orientation === 'landscape' ? 279 : 216;
-                pageHeight = orientation === 'landscape' ? 216 : 279;
+                console.log("DEBUG - Product added to queue:", {
+                    barcode,
+                    model_id: modelId,
+                    color,
+                    size,
+                    quantity: 1,
+                });
+                console.log("DEBUG - Current labelQueue:", window.labelQueue);
+                updateLabelQueue();
+                updateTotalLabelsCount(); // Toplam sayıyı güncelle
+                showAlert("Etiket kuyruğa eklendi", "success");
             }
-            
-            // Etiket boyutları
-            let labelWidth, labelHeight;
-            if (labelSize === 'a4-standard') {
-                labelWidth = 63.33;
-                labelHeight = 37.20;
-            } else if (labelSize === 'custom') {
-                labelWidth = parseFloat(document.getElementById('customWidth').value);
-                labelHeight = parseFloat(document.getElementById('customHeight').value);
-            } else {
-                const [w, h] = labelSize.split('x').map(Number);
-                labelWidth = w;
-                labelHeight = h;
-            }
-            
-            // Kullanılabilir alan
-            const availableWidth = pageWidth - (2 * leftMargin);
-            const availableHeight = pageHeight - (2 * topMargin);
-            
-            // NaN kontrolü ile maksimum sığabilecek etiket sayısı hesapla 
-            const maxCols = isNaN(labelWidth) || labelWidth <= 0 ? 0 : Math.floor((availableWidth + horizontalGap) / (labelWidth + horizontalGap));
-            const maxRows = isNaN(labelHeight) || labelHeight <= 0 ? 0 : Math.floor((availableHeight + verticalGap) / (labelHeight + verticalGap));
-            
-            // Mevcut kullanıcı ayarlarını al
-            const currentCols = parseInt(document.getElementById('labelsPerCol').value);
-            const currentRows = parseInt(document.getElementById('labelsPerRow').value);
-            
-            // Kullanıcı ayarları ile maksimum değerleri karşılaştır
-            const willFit = (currentCols <= maxCols && currentRows <= maxRows);
-            const totalLabels = currentCols * currentRows;
-            const maxPossible = maxCols * maxRows;
-            
-            // Bilgi göster
-            let info;
-            if (willFit) {
-                info = `✓ Mevcut ayarlar: ${totalLabels} etiket (${currentRows} satır × ${currentCols} sütun) - Sayfaya sığacak`;
-            } else {
-                info = `⚠ Mevcut ayarlar: ${totalLabels} etiket (${currentRows} satır × ${currentCols} sütun) - Maksimum: ${maxPossible} etiket (${maxRows} × ${maxCols})`;
-            }
-            document.getElementById('layoutInfo').textContent = info;
-            
-            const alertType = willFit ? 'success' : 'warning';
-            const alertMessage = willFit ? 
-                `Sayfa düzeni uygun: ${totalLabels} etiket` : 
-                `Uyarı: Etiketler sayfa boyutunu aşabilir. Maksimum: ${maxPossible} etiket`;
-            showAlert(alertMessage, alertType);
-        }
-        
-        // Etiket boyutu değiştiğinde
-        document.getElementById('labelSize').addEventListener('change', function() {
-            const customSection = document.getElementById('customSizeSection');
-            if (this.value === 'custom') {
-                customSection.style.display = 'block';
-            } else {
-                customSection.style.display = 'none';
-                // Otomatik hesaplama
-                calculatePageLayout();
-            }
-        });
-        
-        // Sayfa yönü değiştiğinde otomatik hesapla
-        document.getElementById('pageOrientation').addEventListener('change', calculatePageLayout);
-        document.getElementById('paperSize').addEventListener('change', calculatePageLayout);
-        
-        // Margin ve gap değişikliklerinde otomatik hesapla
-        ['topMargin', 'leftMargin', 'horizontalGap', 'verticalGap'].forEach(id => {
-            document.getElementById(id).addEventListener('change', calculatePageLayout);
-        });
-        
-        function addToQueue(barcode, modelId, color, size) {
-            // Ensure window.labelQueue exists
-            if (!window.labelQueue) {
-                window.labelQueue = [];
-            }
-            
-            const existingIndex = window.labelQueue.findIndex(item => item.barcode === barcode);
-            if (existingIndex >= 0) {
-                window.labelQueue[existingIndex].quantity++;
-            } else {
-                window.labelQueue.push({ barcode, model_id: modelId, color, size, quantity: 1 });
-            }
-            
-            // Sync global references
-            labelQueue = window.labelQueue;
-            
-            console.log('DEBUG - Product added to queue:', { barcode, model_id: modelId, color, size, quantity: 1 });
-            console.log('DEBUG - Current labelQueue:', window.labelQueue);
-            updateLabelQueue();
-            updateTotalLabelsCount(); // Toplam sayıyı güncelle
-            showAlert('Etiket kuyruğa eklendi', 'success');
-        }
-        
-        function updateLabelQueue() {
-            // Ensure we're working with the global labelQueue
-            if (!window.labelQueue) {
-                window.labelQueue = [];
-            }
-            labelQueue = window.labelQueue;
-            
-            const container = document.getElementById('labelQueue');
-            const countBadge = document.getElementById('labelCount');
-            countBadge.textContent = labelQueue.length;
-            
-            if (labelQueue.length === 0) {
-                container.innerHTML = `<div class="text-center text-muted py-4"><i class="fas fa-inbox fa-3x mb-3 opacity-50"></i><p>Henüz etiket eklenmedi</p></div>`;
-                return;
-            }
-            
-            container.innerHTML = labelQueue.map((item, index) => `
+
+            function updateLabelQueue() {
+                // Ensure we're working with the global labelQueue
+                if (!window.labelQueue) {
+                    window.labelQueue = [];
+                }
+                labelQueue = window.labelQueue;
+
+                const container = document.getElementById("labelQueue");
+                const countBadge = document.getElementById("labelCount");
+                countBadge.textContent = labelQueue.length;
+
+                if (labelQueue.length === 0) {
+                    container.innerHTML = `<div class="text-center text-muted py-4"><i class="fas fa-inbox fa-3x mb-3 opacity-50"></i><p>Henüz etiket eklenmedi</p></div>`;
+                    return;
+                }
+
+                container.innerHTML = labelQueue
+                    .map(
+                        (item, index) => `
                 <div class="label-item">
                     <div class="label-info">
                         <div class="label-model">${item.model_id} - ${item.color}</div>
@@ -563,51 +1048,64 @@
                     </div>
                     <button class="btn-remove" onclick="removeFromQueue(${index})"><i class="fas fa-trash"></i></button>
                 </div>
-            `).join('');
-        }
-        
-        function changeQuantity(index, change) {
-            if (!window.labelQueue) window.labelQueue = [];
-            if (window.labelQueue[index]) {
-                window.labelQueue[index].quantity = Math.max(1, window.labelQueue[index].quantity + change);
+            `,
+                    )
+                    .join("");
+            }
+
+            function changeQuantity(index, change) {
+                if (!window.labelQueue) window.labelQueue = [];
+                if (window.labelQueue[index]) {
+                    window.labelQueue[index].quantity = Math.max(
+                        1,
+                        window.labelQueue[index].quantity + change,
+                    );
+                    labelQueue = window.labelQueue;
+                    updateLabelQueue();
+                    updateTotalLabelsCount(); // Toplam sayıyı güncelle
+                }
+            }
+
+            function setQuantity(index, value) {
+                if (!window.labelQueue) window.labelQueue = [];
+                if (window.labelQueue[index]) {
+                    window.labelQueue[index].quantity = Math.max(
+                        1,
+                        parseInt(value) || 1,
+                    );
+                    labelQueue = window.labelQueue;
+                    updateLabelQueue();
+                    updateTotalLabelsCount(); // Toplam sayıyı güncelle
+                }
+            }
+
+            function removeFromQueue(index) {
+                if (!window.labelQueue) {
+                    window.labelQueue = [];
+                }
+                window.labelQueue.splice(index, 1);
                 labelQueue = window.labelQueue;
                 updateLabelQueue();
                 updateTotalLabelsCount(); // Toplam sayıyı güncelle
+                showAlert("Etiket kuyruktan çıkarıldı", "success");
             }
-        }
-        
-        function setQuantity(index, value) {
-            if (!window.labelQueue) window.labelQueue = [];
-            if (window.labelQueue[index]) {
-                window.labelQueue[index].quantity = Math.max(1, parseInt(value) || 1);
-                labelQueue = window.labelQueue;
-                updateLabelQueue();
-                updateTotalLabelsCount(); // Toplam sayıyı güncelle
-            }
-        }
-        
-        function removeFromQueue(index) {
-            if (!window.labelQueue) {
-                window.labelQueue = [];
-            }
-            window.labelQueue.splice(index, 1);
-            labelQueue = window.labelQueue;
-            updateLabelQueue();
-            updateTotalLabelsCount(); // Toplam sayıyı güncelle
-            showAlert('Etiket kuyruktan çıkarıldı', 'success');
-        }
-        
-        function displaySearchResults(products) {
-            const container = document.getElementById('searchResults');
-            if (products.length === 0) {
-                container.innerHTML = '<div class="text-center text-muted py-4"><p>Ürün bulunamadı</p></div>';
-                return;
-            }
-            
-            container.innerHTML = products.map(product => `
+
+            function displaySearchResults(products) {
+                const container = document.getElementById("searchResults");
+                if (products.length === 0) {
+                    container.innerHTML =
+                        '<div class="text-center text-muted py-4"><p>Ürün bulunamadı</p></div>';
+                    return;
+                }
+
+                container.innerHTML = products
+                    .map(
+                        (product) => `
                 <div class="product-card">
                     <div class="product-header">${product.model_id} - ${product.color}</div>
-                    ${product.variants.map(variant => `
+                    ${product.variants
+                        .map(
+                            (variant) => `
                         <div class="variant-item">
                             <div class="variant-info">
                                 <div class="variant-size">Beden: ${variant.size}</div>
@@ -617,121 +1115,139 @@
                                 <i class="fas fa-plus"></i> Ekle
                             </button>
                         </div>
-                    `).join('')}
+                    `,
+                        )
+                        .join("")}
                 </div>
-            `).join('');
-        }
-        
-        async function searchProducts() {
-            const searchType = document.getElementById('searchType').value;
-            const query = document.getElementById('searchQuery').value.trim();
-            
-            if (!query) {
-                showAlert('Lütfen arama sorgusu girin', 'danger');
-                return;
+            `,
+                    )
+                    .join("");
             }
-            
-            showLoading(true);
-            try {
-                const response = await fetch(`/api/search_products_for_label?search_type=${searchType}&query=${encodeURIComponent(query)}`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    displaySearchResults(data.products);
-                } else {
-                    showAlert(data.message, 'danger');
-                    document.getElementById('searchResults').innerHTML = '';
-                }
-            } catch (error) {
-                showAlert('Arama sırasında hata oluştu', 'danger');
-                console.error('Search error:', error);
-            } finally {
-                showLoading(false);
-            }
-        }
-        
 
-        
-        async function generatePreview() {
-            if (labelQueue.length === 0) {
-                showAlert('Önizleme için etiket ekleyin', 'danger');
-                return;
-            }
-            
-            showLoading(true);
-            const firstLabel = labelQueue[0];
-            const labelWidth = parseInt(document.getElementById('labelWidth').value);
-            const labelHeight = parseInt(document.getElementById('labelHeight').value);
-            
-            try {
-                const response = await fetch('/api/generate_label_preview', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        barcode: firstLabel.barcode,
-                        model_id: firstLabel.model_id,
-                        color: firstLabel.color,
-                        size: firstLabel.size,
-                        label_width: labelWidth,
-                        label_height: labelHeight,
-                        settings: {}
-                    })
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    document.getElementById('previewArea').innerHTML = `<img src="${data.image}" class="preview-image" alt="Etiket Önizlemesi">`;
-                } else {
-                    showAlert(data.message, 'danger');
+            async function searchProducts() {
+                const searchType = document.getElementById("searchType").value;
+                const query = document
+                    .getElementById("searchQuery")
+                    .value.trim();
+
+                if (!query) {
+                    showAlert("Lütfen arama sorgusu girin", "danger");
+                    return;
                 }
-            } catch (error) {
-                showAlert('Önizleme oluşturulurken hata oluştu', 'danger');
-                console.error('Preview error:', error);
-            } finally {
-                showLoading(false);
+
+                showLoading(true);
+                try {
+                    const response = await fetch(
+                        `/api/search_products_for_label?search_type=${searchType}&query=${encodeURIComponent(query)}`,
+                    );
+                    const data = await response.json();
+
+                    if (data.success) {
+                        displaySearchResults(data.products);
+                    } else {
+                        showAlert(data.message, "danger");
+                        document.getElementById("searchResults").innerHTML = "";
+                    }
+                } catch (error) {
+                    showAlert("Arama sırasında hata oluştu", "danger");
+                    console.error("Search error:", error);
+                } finally {
+                    showLoading(false);
+                }
             }
-        }
-        
-        async function printLabels() {
-            if (labelQueue.length === 0) {
-                showAlert('Yazdırılacak etiket yok', 'danger');
-                return;
+
+            async function generatePreview() {
+                if (labelQueue.length === 0) {
+                    showAlert("Önizleme için etiket ekleyin", "danger");
+                    return;
+                }
+
+                showLoading(true);
+                const firstLabel = labelQueue[0];
+                const labelWidth = parseInt(
+                    document.getElementById("labelWidth").value,
+                );
+                const labelHeight = parseInt(
+                    document.getElementById("labelHeight").value,
+                );
+
+                try {
+                    const response = await fetch(
+                        "/api/generate_label_preview",
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                barcode: firstLabel.barcode,
+                                model_id: firstLabel.model_id,
+                                color: firstLabel.color,
+                                size: firstLabel.size,
+                                label_width: labelWidth,
+                                label_height: labelHeight,
+                                settings: {},
+                            }),
+                        },
+                    );
+
+                    const data = await response.json();
+                    if (data.success) {
+                        document.getElementById("previewArea").innerHTML =
+                            `<img src="${data.image}" class="preview-image" alt="Etiket Önizlemesi">`;
+                    } else {
+                        showAlert(data.message, "danger");
+                    }
+                } catch (error) {
+                    showAlert("Önizleme oluşturulurken hata oluştu", "danger");
+                    console.error("Preview error:", error);
+                } finally {
+                    showLoading(false);
+                }
             }
-            
-            showLoading(true);
-            const labelsPerRow = parseInt(document.getElementById('labelsPerRow').value) || 2;
-            const labelsPerCol = parseInt(document.getElementById('labelsPerCol').value) || 5;
-            
-            const expandedLabels = [];
-            labelQueue.forEach(item => {
-                for (let i = 0; i < item.quantity; i++) {
-                    expandedLabels.push({
-                        barcode: item.barcode,
-                        model_id: item.model_id,
-                        color: item.color,
-                        size: item.size
+
+            async function printLabels() {
+                if (labelQueue.length === 0) {
+                    showAlert("Yazdırılacak etiket yok", "danger");
+                    return;
+                }
+
+                showLoading(true);
+                const labelsPerRow =
+                    parseInt(document.getElementById("labelsPerRow").value) ||
+                    2;
+                const labelsPerCol =
+                    parseInt(document.getElementById("labelsPerCol").value) ||
+                    5;
+
+                const expandedLabels = [];
+                labelQueue.forEach((item) => {
+                    for (let i = 0; i < item.quantity; i++) {
+                        expandedLabels.push({
+                            barcode: item.barcode,
+                            model_id: item.model_id,
+                            color: item.color,
+                            size: item.size,
+                        });
+                    }
+                });
+
+                try {
+                    const response = await fetch("/api/print_labels", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            labels: expandedLabels,
+                            paper_size: "a4",
+                            labels_per_row: labelsPerRow,
+                            labels_per_col: labelsPerCol,
+                            label_width: 100,
+                            label_height: 50,
+                        }),
                     });
-                }
-            });
-            
-            try {
-                const response = await fetch('/api/print_labels', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        labels: expandedLabels,
-                        paper_size: 'a4',
-                        labels_per_row: labelsPerRow,
-                        labels_per_col: labelsPerCol,
-                        label_width: 100,
-                        label_height: 50
-                    })
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    const printWindow = window.open('', '_blank');
-                    printWindow.document.write(`
+
+                    const data = await response.json();
+                    if (data.success) {
+                        const printWindow = window.open("", "_blank");
+                        printWindow.document.write(`
                         <html>
                         <head>
                             <title>Ürün Etiketleri - Yazdır</title>
@@ -747,123 +1263,179 @@
                         </body>
                         </html>
                     `);
-                } else {
-                    showAlert(data.message, 'danger');
-                }
-            } catch (error) {
-                showAlert('Yazdırma hazırlanırken hata oluştu', 'danger');
-                console.error('Print error:', error);
-            } finally {
-                showLoading(false);
-            }
-        }
-        
-        // Get selected products from both queue and search results
-        function getSelectedProducts() {
-            const selectedProducts = [];
-            
-            // Label queue'dan ürünleri al
-            if (window.labelQueue && window.labelQueue.length > 0) {
-                window.labelQueue.forEach(item => {
-                    selectedProducts.push({
-                        barcode: item.barcode,
-                        model_code: item.model_id,
-                        color: item.color,
-                        size: item.size
-                    });
-                });
-            }
-            
-            // Arama sonuçlarından seçili ürünleri de al
-            document.querySelectorAll('.product-item input[type="checkbox"]:checked').forEach(checkbox => {
-                const productRow = checkbox.closest('.product-item');
-                if (productRow) {
-                    const barcode = productRow.querySelector('.barcode')?.textContent?.trim() || '';
-                    const modelId = productRow.querySelector('.model-id')?.textContent?.trim() || '';
-                    const color = productRow.querySelector('.color')?.textContent?.trim() || '';
-                    const size = productRow.querySelector('.size')?.textContent?.trim() || '';
-                    const quantity = parseInt(productRow.querySelector('.quantity-input')?.value) || 1;
-                    
-                    // Seçili ürünü belirtilen miktar kadar ekle
-                    for (let i = 0; i < quantity; i++) {
-                        selectedProducts.push({
-                            barcode: barcode,
-                            model_code: modelId,
-                            color: color,
-                            size: size
-                        });
-                    }
-                }
-            });
-            
-            return selectedProducts;
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize label queue as global variables
-            window.labelQueue = [];
-            labelQueue = window.labelQueue;
-            
-            document.getElementById('searchBtn').addEventListener('click', searchProducts);
-            document.getElementById('searchQuery').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') searchProducts();
-            });
-            
-            const urlParams = new URLSearchParams(window.location.search);
-            const initialBarcode = urlParams.get('barcode');
-            const initialModel = urlParams.get('model');
-            const initialColor = urlParams.get('color');
-            const initialSize = urlParams.get('size');
-            
-            if (initialBarcode && initialModel && initialColor && initialSize) {
-                addToQueue(initialBarcode, initialModel, initialColor, initialSize);
-                document.getElementById('searchType').value = 'barcode';
-                document.getElementById('searchQuery').value = initialBarcode;
-            }
-            
-            updateSelectedDesignInfo(null);
-            
-            // Debug: Check if labelQueue is properly initialized
-            console.log('DEBUG - Page loaded, labelQueue initialized:', window.labelQueue);
-        });
-        // Show saved designs
-        function showSavedDesigns() {
-            const saved = JSON.parse(localStorage.getItem('labelDesigns') || '[]');
-            const container = document.getElementById('savedDesignsList');
-            
-            if (saved.length === 0) {
-                container.innerHTML = '<p class="text-muted">Henüz kaydedilen tasarım yok</p>';
-            } else {
-                let html = '';
-                saved.forEach((design, index) => {
-                    const date = new Date(design.date).toLocaleDateString('tr-TR');
-                    const designWidth = design.labelWidth || 100;
-                    const designHeight = design.labelHeight || 50;
-                    
-                    // Sayfa ayarlarındaki seçili boyutla karşılaştır
-                    const currentLabelSize = document.getElementById('labelSize').value;
-                    let currentWidth, currentHeight;
-                    
-                    if (currentLabelSize === 'custom') {
-                        currentWidth = parseInt(document.getElementById('customWidth').value);
-                        currentHeight = parseInt(document.getElementById('customHeight').value);
                     } else {
-                        const [w, h] = currentLabelSize.split('x').map(Number);
-                        currentWidth = w;
-                        currentHeight = h;
+                        showAlert(data.message, "danger");
                     }
-                    
-                    const isMatchingSize = (designWidth === currentWidth && designHeight === currentHeight);
-                    const sizeClass = isMatchingSize ? 'text-success' : 'text-warning';
-                    const sizeIcon = isMatchingSize ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
-                    
-                    html += `
+                } catch (error) {
+                    showAlert("Yazdırma hazırlanırken hata oluştu", "danger");
+                    console.error("Print error:", error);
+                } finally {
+                    showLoading(false);
+                }
+            }
+
+            // Get selected products from both queue and search results
+            function getSelectedProducts() {
+                const selectedProducts = [];
+
+                // Label queue'dan ürünleri al
+                if (window.labelQueue && window.labelQueue.length > 0) {
+                    window.labelQueue.forEach((item) => {
+                        selectedProducts.push({
+                            barcode: item.barcode,
+                            model_code: item.model_id,
+                            color: item.color,
+                            size: item.size,
+                        });
+                    });
+                }
+
+                // Arama sonuçlarından seçili ürünleri de al
+                document
+                    .querySelectorAll(
+                        '.product-item input[type="checkbox"]:checked',
+                    )
+                    .forEach((checkbox) => {
+                        const productRow = checkbox.closest(".product-item");
+                        if (productRow) {
+                            const barcode =
+                                productRow
+                                    .querySelector(".barcode")
+                                    ?.textContent?.trim() || "";
+                            const modelId =
+                                productRow
+                                    .querySelector(".model-id")
+                                    ?.textContent?.trim() || "";
+                            const color =
+                                productRow
+                                    .querySelector(".color")
+                                    ?.textContent?.trim() || "";
+                            const size =
+                                productRow
+                                    .querySelector(".size")
+                                    ?.textContent?.trim() || "";
+                            const quantity =
+                                parseInt(
+                                    productRow.querySelector(".quantity-input")
+                                        ?.value,
+                                ) || 1;
+
+                            // Seçili ürünü belirtilen miktar kadar ekle
+                            for (let i = 0; i < quantity; i++) {
+                                selectedProducts.push({
+                                    barcode: barcode,
+                                    model_code: modelId,
+                                    color: color,
+                                    size: size,
+                                });
+                            }
+                        }
+                    });
+
+                return selectedProducts;
+            }
+
+            document.addEventListener("DOMContentLoaded", function () {
+                // Initialize label queue as global variables
+                window.labelQueue = [];
+                labelQueue = window.labelQueue;
+
+                document
+                    .getElementById("searchBtn")
+                    .addEventListener("click", searchProducts);
+                document
+                    .getElementById("searchQuery")
+                    .addEventListener("keypress", function (e) {
+                        if (e.key === "Enter") searchProducts();
+                    });
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const initialBarcode = urlParams.get("barcode");
+                const initialModel = urlParams.get("model");
+                const initialColor = urlParams.get("color");
+                const initialSize = urlParams.get("size");
+
+                if (
+                    initialBarcode &&
+                    initialModel &&
+                    initialColor &&
+                    initialSize
+                ) {
+                    addToQueue(
+                        initialBarcode,
+                        initialModel,
+                        initialColor,
+                        initialSize,
+                    );
+                    document.getElementById("searchType").value = "barcode";
+                    document.getElementById("searchQuery").value =
+                        initialBarcode;
+                }
+
+                updateSelectedDesignInfo(null);
+
+                // Debug: Check if labelQueue is properly initialized
+                console.log(
+                    "DEBUG - Page loaded, labelQueue initialized:",
+                    window.labelQueue,
+                );
+            });
+            // Show saved designs
+            function showSavedDesigns() {
+                const saved = JSON.parse(
+                    localStorage.getItem("labelDesigns") || "[]",
+                );
+                const container = document.getElementById("savedDesignsList");
+
+                if (saved.length === 0) {
+                    container.innerHTML =
+                        '<p class="text-muted">Henüz kaydedilen tasarım yok</p>';
+                } else {
+                    let html = "";
+                    saved.forEach((design, index) => {
+                        const date = new Date(design.date).toLocaleDateString(
+                            "tr-TR",
+                        );
+                        const designWidth = design.labelWidth || 100;
+                        const designHeight = design.labelHeight || 50;
+
+                        // Sayfa ayarlarındaki seçili boyutla karşılaştır
+                        const currentLabelSize =
+                            document.getElementById("labelSize").value;
+                        let currentWidth, currentHeight;
+
+                        if (currentLabelSize === "custom") {
+                            currentWidth = parseInt(
+                                document.getElementById("customWidth").value,
+                            );
+                            currentHeight = parseInt(
+                                document.getElementById("customHeight").value,
+                            );
+                        } else {
+                            const [w, h] = currentLabelSize
+                                .split("x")
+                                .map(Number);
+                            currentWidth = w;
+                            currentHeight = h;
+                        }
+
+                        const isMatchingSize =
+                            designWidth === currentWidth &&
+                            designHeight === currentHeight;
+                        const sizeClass = isMatchingSize
+                            ? "text-success"
+                            : "text-warning";
+                        const sizeIcon = isMatchingSize
+                            ? "fas fa-check-circle"
+                            : "fas fa-exclamation-triangle";
+
+                        html += `
                         <div class="border rounded p-3 mb-2">
                             <h6>${design.name}</h6>
                             <small class="text-muted">${date} - ${design.elements.length} element</small><br>
                             <small class="${sizeClass}">
                                 <i class="${sizeIcon}"></i> Boyut: ${designWidth}mm x ${designHeight}mm
-                                ${isMatchingSize ? '(Sayfa ayarıyla uyumlu)' : '(Sayfa ayarları güncellenecek)'}
+                                ${isMatchingSize ? "(Sayfa ayarıyla uyumlu)" : "(Sayfa ayarları güncellenecek)"}
                             </small>
                             <br>
                             <button class="btn btn-primary btn-sm mt-2" onclick="selectDesignForPrint(${index})">
@@ -875,226 +1447,292 @@
                             <small class="text-muted d-block mt-1">* Seçili ürün bilgileri kullanılacak</small>
                         </div>
                     `;
-                });
-                container.innerHTML = html;
+                    });
+                    container.innerHTML = html;
+                }
+
+                new bootstrap.Modal(
+                    document.getElementById("savedDesignsModal"),
+                ).show();
             }
-            
-            new bootstrap.Modal(document.getElementById('savedDesignsModal')).show();
-        }
-        
-        // Select design for printing (don't close modal)
-        function selectDesignForPrint(index) {
-            const saved = JSON.parse(localStorage.getItem('labelDesigns') || '[]');
-            selectedDesignForPrint = saved[index];
-            if (selectedDesignForPrint) {
+
+            // Select design for printing (don't close modal)
+            function selectDesignForPrint(index) {
+                const saved = JSON.parse(
+                    localStorage.getItem("labelDesigns") || "[]",
+                );
+                selectedDesignForPrint = saved[index];
+                if (selectedDesignForPrint) {
+                    // Tasarımın etiket boyutunu sayfa ayarlarına uygula
+                    syncDesignWithPageSettings(selectedDesignForPrint);
+
+                    bootstrap.Modal.getInstance(
+                        document.getElementById("savedDesignsModal"),
+                    ).hide();
+                    updateSelectedDesignInfo(selectedDesignForPrint);
+                    showAlert(
+                        `Tasarım "${selectedDesignForPrint.name}" seçildi ve sayfa ayarları güncellendi.`,
+                        "success",
+                    );
+                }
+            }
+
+            // Tasarım boyutlarını sayfa ayarlarıyla senkronize et
+            function syncDesignWithPageSettings(design) {
+                const designWidth = design.labelWidth || 100;
+                const designHeight = design.labelHeight || 50;
+                const designSize = `${designWidth}x${designHeight}`;
+
+                // Etiket boyutu dropdown'ında bu boyut var mı kontrol et
+                const labelSizeSelect = document.getElementById("labelSize");
+                const options = Array.from(labelSizeSelect.options);
+                const matchingOption = options.find(
+                    (option) => option.value === designSize,
+                );
+
+                if (matchingOption) {
+                    // Standart boyut varsa onu seç
+                    labelSizeSelect.value = designSize;
+                    document.getElementById("customSizeSection").style.display =
+                        "none";
+                } else {
+                    // Özel boyut olarak ayarla
+                    labelSizeSelect.value = "custom";
+                    document.getElementById("customWidth").value = designWidth;
+                    document.getElementById("customHeight").value =
+                        designHeight;
+                    document.getElementById("customSizeSection").style.display =
+                        "block";
+                }
+
+                // Sayfa düzenini otomatik hesapla
+                calculatePageLayout();
+            }
+
+            // Use saved design for printing
+            function useDesignForPrint(index) {
+                const saved = JSON.parse(
+                    localStorage.getItem("labelDesigns") || "[]",
+                );
+                const design = saved[index];
+                if (!design) {
+                    showAlert("Tasarım bulunamadı!", "danger");
+                    return;
+                }
+
                 // Tasarımın etiket boyutunu sayfa ayarlarına uygula
-                syncDesignWithPageSettings(selectedDesignForPrint);
-                
-                bootstrap.Modal.getInstance(document.getElementById('savedDesignsModal')).hide();
-                updateSelectedDesignInfo(selectedDesignForPrint);
-                showAlert(`Tasarım "${selectedDesignForPrint.name}" seçildi ve sayfa ayarları güncellendi.`, 'success');
-            }
-        }
+                syncDesignWithPageSettings(design);
 
-        // Tasarım boyutlarını sayfa ayarlarıyla senkronize et
-        function syncDesignWithPageSettings(design) {
-            const designWidth = design.labelWidth || 100;
-            const designHeight = design.labelHeight || 50;
-            const designSize = `${designWidth}x${designHeight}`;
-            
-            // Etiket boyutu dropdown'ında bu boyut var mı kontrol et
-            const labelSizeSelect = document.getElementById('labelSize');
-            const options = Array.from(labelSizeSelect.options);
-            const matchingOption = options.find(option => option.value === designSize);
-            
-            if (matchingOption) {
-                // Standart boyut varsa onu seç
-                labelSizeSelect.value = designSize;
-                document.getElementById('customSizeSection').style.display = 'none';
-            } else {
-                // Özel boyut olarak ayarla
-                labelSizeSelect.value = 'custom';
-                document.getElementById('customWidth').value = designWidth;
-                document.getElementById('customHeight').value = designHeight;
-                document.getElementById('customSizeSection').style.display = 'block';
-            }
-            
-            // Sayfa düzenini otomatik hesapla
-            calculatePageLayout();
-        }
+                // Seçilen ürün bilgilerini al
+                const selectedProducts = getSelectedProducts();
 
-        // Use saved design for printing
-        function useDesignForPrint(index) {
-            const saved = JSON.parse(localStorage.getItem('labelDesigns') || '[]');
-            const design = saved[index];
-            if (!design) {
-                showAlert('Tasarım bulunamadı!', 'danger');
-                return;
-            }
-            
-            // Tasarımın etiket boyutunu sayfa ayarlarına uygula
-            syncDesignWithPageSettings(design);
-            
-            // Seçilen ürün bilgilerini al
-            const selectedProducts = getSelectedProducts();
-            
-            console.log('DEBUG - Selected products for design:', selectedProducts);
-            console.log('DEBUG - Current labelQueue:', window.labelQueue);
-            console.log('DEBUG - labelQueue length:', window.labelQueue ? window.labelQueue.length : 'undefined');
-            
-            if (selectedProducts.length === 0) {
-                showAlert('Ürün bulunamadı! Lütfen önce:\n1. Arama yapıp ürün seçin ve "Ekle" butonuna basın, veya\n2. Manuel olarak ürün ekleyin\n\nŞu anda kuyrukta ' + (window.labelQueue ? window.labelQueue.length : 0) + ' ürün var.', 'danger');
-                return;
-            }
-            
-            // Close modal
-            bootstrap.Modal.getInstance(document.getElementById('savedDesignsModal')).hide();
-            
-            // Show alert that page settings were updated
-            showAlert(`Tasarım "${design.name}" seçildi ve sayfa ayarları güncellendi.`, 'success');
-            
-            // Generate label with updated page settings
-            generateLabelWithDesign(design, selectedProducts);
-        }
+                console.log(
+                    "DEBUG - Selected products for design:",
+                    selectedProducts,
+                );
+                console.log("DEBUG - Current labelQueue:", window.labelQueue);
+                console.log(
+                    "DEBUG - labelQueue length:",
+                    window.labelQueue ? window.labelQueue.length : "undefined",
+                );
 
-        // Generate label with saved design
-        function generateLabelWithDesign(design, selectedProducts) {
-            if (!selectedProducts || selectedProducts.length === 0) {
-                console.log('Ürün bilgileri bulunamadı!');
-                return;
+                if (selectedProducts.length === 0) {
+                    showAlert(
+                        'Ürün bulunamadı! Lütfen önce:\n1. Arama yapıp ürün seçin ve "Ekle" butonuna basın, veya\n2. Manuel olarak ürün ekleyin\n\nŞu anda kuyrukta ' +
+                            (window.labelQueue ? window.labelQueue.length : 0) +
+                            " ürün var.",
+                        "danger",
+                    );
+                    return;
+                }
+
+                // Close modal
+                bootstrap.Modal.getInstance(
+                    document.getElementById("savedDesignsModal"),
+                ).hide();
+
+                // Show alert that page settings were updated
+                showAlert(
+                    `Tasarım "${design.name}" seçildi ve sayfa ayarları güncellendi.`,
+                    "success",
+                );
+
+                // Generate label with updated page settings
+                generateLabelWithDesign(design, selectedProducts);
             }
-            
-            // Sayfa ayarlarındaki etiket boyutunu kullan
-            const labelSize = document.getElementById('labelSize').value;
-            let labelWidth, labelHeight;
-            
-            if (labelSize === 'a4-standard') {
-                labelWidth = 63.33;
-                labelHeight = 37.20;
-            } else if (labelSize === 'custom') {
-                labelWidth = parseFloat(document.getElementById('customWidth').value);
-                labelHeight = parseFloat(document.getElementById('customHeight').value);
-            } else {
-                const [w, h] = labelSize.split('x').map(Number);
-                labelWidth = w;
-                labelHeight = h;
-            }
-            
-            const data = {
-                width: labelWidth,  // Sayfa ayarlarından al
-                height: labelHeight, // Sayfa ayarlarından al
-                elements: design.elements,
-                product_data: selectedProducts[0] // İlk ürünü önizleme için kullan
-            };
-            
-            showLoading(true);
-            
-            fetch('/enhanced_product_label/api/generate_advanced_label_preview', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(data => {
-                showLoading(false);
-                if (data.success) {
-                    // Show preview
-                    const previewArea = document.getElementById('previewArea');
-                    if (previewArea) {
-                        previewArea.innerHTML = `
+
+            // Generate label with saved design
+            function generateLabelWithDesign(design, selectedProducts) {
+                if (!selectedProducts || selectedProducts.length === 0) {
+                    console.log("Ürün bilgileri bulunamadı!");
+                    return;
+                }
+
+                // Sayfa ayarlarındaki etiket boyutunu kullan
+                const labelSize = document.getElementById("labelSize").value;
+                let labelWidth, labelHeight;
+
+                if (labelSize === "a4-standard") {
+                    labelWidth = 63.33;
+                    labelHeight = 37.2;
+                } else if (labelSize === "custom") {
+                    labelWidth = parseFloat(
+                        document.getElementById("customWidth").value,
+                    );
+                    labelHeight = parseFloat(
+                        document.getElementById("customHeight").value,
+                    );
+                } else {
+                    const [w, h] = labelSize.split("x").map(Number);
+                    labelWidth = w;
+                    labelHeight = h;
+                }
+
+                const data = {
+                    width: labelWidth, // Sayfa ayarlarından al
+                    height: labelHeight, // Sayfa ayarlarından al
+                    elements: design.elements,
+                    product_data: selectedProducts[0], // İlk ürünü önizleme için kullan
+                };
+
+                showLoading(true);
+
+                fetch(
+                    "/enhanced_product_label/api/generate_advanced_label_preview",
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(data),
+                    },
+                )
+                    .then((response) => response.json())
+                    .then((data) => {
+                        showLoading(false);
+                        if (data.success) {
+                            // Show preview
+                            const previewArea =
+                                document.getElementById("previewArea");
+                            if (previewArea) {
+                                previewArea.innerHTML = `
                             <img src="${data.preview_url}" class="preview-image" alt="Label Preview">
                         `;
-                    }
-                    const productInfo = selectedProducts[0];
-                    showAlert(`Tasarım "${design.name}" ile ${selectedProducts.length} etiket hazırlandı\nÖrnek: ${productInfo.model_code} - ${productInfo.color} - ${productInfo.size}`, 'success');
-                    
-                    // Yazdırma butonunu aktif hale getir
-                    addPrintButton(selectedProducts, design);
-                } else {
-                    showAlert('Hata: ' + data.message, 'danger');
-                }
-            })
-            .catch(error => {
-                showLoading(false);
-                showAlert('Bağlantı hatası: ' + error.message, 'danger');
-            });
-        }
-        
-        // Yazdırma butonu ekle
-        function addPrintButton(products, design) {
-            const previewArea = document.getElementById('previewArea');
-            if (previewArea) {
-                // Mevcut yazdırma butonunu kaldır
-                const existingBtn = previewArea.querySelector('.print-btn');
-                if (existingBtn) existingBtn.remove();
-                
-                // Yeni yazdırma butonu ekle (kırmızı)
-                const printBtn = document.createElement('button');
-                printBtn.className = 'btn btn-danger mt-3 print-btn';
-                printBtn.innerHTML = '<i class="fas fa-print"></i> Yazdır';
-                printBtn.onclick = () => printLabels(products, design);
-                previewArea.appendChild(printBtn);
-            }
-        }
-        
-        // Yazdırma işlemi - çoklu etiket desteği
-        function printLabels(products, design) {
-            showLoading(true);
-            
-            // Her ürünün miktarına göre etiket listesi oluştur
-            const allLabels = [];
-            window.labelQueue.forEach(item => {
-                for (let i = 0; i < item.quantity; i++) {
-                    allLabels.push({
-                        barcode: item.barcode,
-                        model_code: item.model_id,
-                        color: item.color,
-                        size: item.size
+                            }
+                            const productInfo = selectedProducts[0];
+                            showAlert(
+                                `Tasarım "${design.name}" ile ${selectedProducts.length} etiket hazırlandı\nÖrnek: ${productInfo.model_code} - ${productInfo.color} - ${productInfo.size}`,
+                                "success",
+                            );
+
+                            // Yazdırma butonunu aktif hale getir
+                            addPrintButton(selectedProducts, design);
+                        } else {
+                            showAlert("Hata: " + data.message, "danger");
+                        }
+                    })
+                    .catch((error) => {
+                        showLoading(false);
+                        showAlert(
+                            "Bağlantı hatası: " + error.message,
+                            "danger",
+                        );
                     });
-                }
-            });
-            
-            if (allLabels.length === 0) {
-                showLoading(false);
-                showAlert('Yazdırılacak etiket bulunamadı!', 'danger');
-                return;
             }
-            
-            // Sayfa ayarlarını al
-            const labelsPerRow = parseInt(document.getElementById('labelsPerRow').value) || 2;
-            const labelsPerCol = parseInt(document.getElementById('labelsPerCol').value) || 5;
-            const labelSize = document.getElementById('labelSize').value;
-            
-            // Çoklu etiket sayfası oluştur
-            const data = {
-                labels: allLabels,
-                design: design,
-                label_size: labelSize,  // A4 standart için önemli
-                label_width: design.labelWidth || 100,
-                label_height: design.labelHeight || 50,
-                labels_per_row: labelsPerRow,
-                labels_per_col: labelsPerCol,
-                paper_size: document.getElementById('paperSize').value || 'a4',
-                page_orientation: document.getElementById('pageOrientation').value || 'portrait',
-                top_margin: parseInt(document.getElementById('topMargin').value) || 15,
-                left_margin: parseInt(document.getElementById('leftMargin').value) || 8,
-                horizontal_gap: parseInt(document.getElementById('horizontalGap').value) || 0,
-                vertical_gap: parseInt(document.getElementById('verticalGap').value) || 0,
-                print_quality: parseInt(document.getElementById('printQuality').value) || 300
-            };
-            
-            fetch('/enhanced_product_label/api/print_multiple_labels', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(data => {
-                showLoading(false);
-                if (data.success) {
-                    // Yeni pencerede yazdırma sayfası aç
-                    const printWindow = window.open('', '_blank');
-                    printWindow.document.write(`
+
+            // Yazdırma butonu ekle
+            function addPrintButton(products, design) {
+                const previewArea = document.getElementById("previewArea");
+                if (previewArea) {
+                    // Mevcut yazdırma butonunu kaldır
+                    const existingBtn = previewArea.querySelector(".print-btn");
+                    if (existingBtn) existingBtn.remove();
+
+                    // Yeni yazdırma butonu ekle (kırmızı)
+                    const printBtn = document.createElement("button");
+                    printBtn.className = "btn btn-danger mt-3 print-btn";
+                    printBtn.innerHTML = '<i class="fas fa-print"></i> Yazdır';
+                    printBtn.onclick = () => printLabels(products, design);
+                    previewArea.appendChild(printBtn);
+                }
+            }
+
+            // Yazdırma işlemi - çoklu etiket desteği
+            function printLabels(products, design) {
+                showLoading(true);
+
+                // Her ürünün miktarına göre etiket listesi oluştur
+                const allLabels = [];
+                window.labelQueue.forEach((item) => {
+                    for (let i = 0; i < item.quantity; i++) {
+                        allLabels.push({
+                            barcode: item.barcode,
+                            model_code: item.model_id,
+                            color: item.color,
+                            size: item.size,
+                        });
+                    }
+                });
+
+                if (allLabels.length === 0) {
+                    showLoading(false);
+                    showAlert("Yazdırılacak etiket bulunamadı!", "danger");
+                    return;
+                }
+
+                // Sayfa ayarlarını al
+                const labelsPerRow =
+                    parseInt(document.getElementById("labelsPerRow").value) ||
+                    2;
+                const labelsPerCol =
+                    parseInt(document.getElementById("labelsPerCol").value) ||
+                    5;
+                const labelSize = document.getElementById("labelSize").value;
+
+                // Çoklu etiket sayfası oluştur
+                const data = {
+                    labels: allLabels,
+                    design: design,
+                    label_size: labelSize, // A4 standart için önemli
+                    label_width: design.labelWidth || 100,
+                    label_height: design.labelHeight || 50,
+                    labels_per_row: labelsPerRow,
+                    labels_per_col: labelsPerCol,
+                    paper_size:
+                        document.getElementById("paperSize").value || "a4",
+                    page_orientation:
+                        document.getElementById("pageOrientation").value ||
+                        "portrait",
+                    top_margin:
+                        parseInt(document.getElementById("topMargin").value) ||
+                        5,
+                    left_margin:
+                        parseInt(document.getElementById("leftMargin").value) ||
+                        5,
+                    horizontal_gap:
+                        parseInt(
+                            document.getElementById("horizontalGap").value,
+                        ) || 0,
+                    vertical_gap:
+                        parseInt(
+                            document.getElementById("verticalGap").value,
+                        ) || 0,
+                    print_quality:
+                        parseInt(
+                            document.getElementById("printQuality").value,
+                        ) || 300,
+                };
+
+                fetch("/enhanced_product_label/api/print_multiple_labels", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data),
+                })
+                    .then((response) => response.json())
+                    .then((data) => {
+                        showLoading(false);
+                        if (data.success) {
+                            // Yeni pencerede yazdırma sayfası aç
+                            const printWindow = window.open("", "_blank");
+                            printWindow.document.write(`
                         <html>
                         <head>
                             <title>Etiket Yazdırma - ${allLabels.length} Etiket</title>
@@ -1124,32 +1762,45 @@
                                 <p><strong>Etiket Boyutu:</strong> ${design.labelWidth || 100}mm x ${design.labelHeight || 50}mm</p>
                                 <p><strong>Ürün Detayları:</strong></p>
                                 <ul>
-                                    ${window.labelQueue.map(item => 
-                                        `<li>${item.model_id} - ${item.color} - Beden ${item.size}: ${item.quantity} adet</li>`
-                                    ).join('')}
+                                    ${window.labelQueue
+                                        .map(
+                                            (item) =>
+                                                `<li>${item.model_id} - ${item.color} - Beden ${item.size}: ${item.quantity} adet</li>`,
+                                        )
+                                        .join("")}
                                 </ul>
                                 <p style="color: #666; font-size: 14px;">Bu sayfayı yazdırmak için <strong>Ctrl+P</strong> tuşlarına basın</p>
                             </div>
-                            ${data.image_url.endsWith('.pdf') ? 
-                                `<embed src="${data.image_url}" type="application/pdf" width="100%" height="800px" />` :
-                                `<img src="${data.image_url}" alt="Etiketler">`
+                            ${
+                                data.image_url.endsWith(".pdf")
+                                    ? `<embed src="${data.image_url}" type="application/pdf" width="100%" height="800px" />`
+                                    : `<img src="${data.image_url}" alt="Etiketler">`
                             }
                         </body>
                         </html>
                     `);
-                    printWindow.document.close();
-                    printWindow.focus();
-                    
-                    showAlert(`${allLabels.length} etiket yazdırma için hazırlandı`, 'success');
-                } else {
-                    showAlert('Yazdırma hazırlanamadı: ' + data.message, 'danger');
-                }
-            })
-            .catch(error => {
-                showLoading(false);
-                showAlert('Yazdırma hatası: ' + error.message, 'danger');
-            });
-        }
-    </script>
-</body>
+                            printWindow.document.close();
+                            printWindow.focus();
+
+                            showAlert(
+                                `${allLabels.length} etiket yazdırma için hazırlandı`,
+                                "success",
+                            );
+                        } else {
+                            showAlert(
+                                "Yazdırma hazırlanamadı: " + data.message,
+                                "danger",
+                            );
+                        }
+                    })
+                    .catch((error) => {
+                        showLoading(false);
+                        showAlert(
+                            "Yazdırma hatası: " + error.message,
+                            "danger",
+                        );
+                    });
+            }
+        </script>
+    </body>
 </html>
