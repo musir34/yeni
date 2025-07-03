@@ -418,13 +418,9 @@
                 );
                 const canvas = document.getElementById("labelCanvas");
 
-                // Sağ taraftaki mm değerleriyle tam eşleştirme - gerçek boyut
-                // 1mm = 3.78px (96 DPI standardında) kullanarak ekran boyutunu hesapla
-                const displayWidth = width * 3.78;
-                const displayHeight = height * 3.78;
-                
-                canvas.style.width = displayWidth + "px";
-                canvas.style.height = displayHeight + "px";
+                // Direkt mm cinsinden boyutlar - pixel dönüşümü yok
+                canvas.style.width = width + "mm";
+                canvas.style.height = height + "mm";
 
                 // Gerçek boyutları data attribute olarak sakla
                 canvas.setAttribute("data-real-width", width);
@@ -434,15 +430,14 @@
                 const scaleIndicator =
                     document.querySelector(".scale-indicator");
                 if (scaleIndicator) {
-                    scaleIndicator.textContent = `${width}mm × ${height}mm (1:1 Ölçek)`;
-                    scaleIndicator.style.backgroundColor = "rgba(46, 204, 113, 0.9)";
+                    scaleIndicator.textContent = `${width}mm x ${height}mm (Gerçek Boyut)`;
+                    scaleIndicator.style.backgroundColor =
+                        "rgba(52, 152, 219, 0.9)";
                     scaleIndicator.style.color = "white";
-                    scaleIndicator.style.padding = "8px 15px";
-                    scaleIndicator.style.borderRadius = "6px";
-                    scaleIndicator.style.fontSize = "13px";
+                    scaleIndicator.style.padding = "5px 10px";
+                    scaleIndicator.style.borderRadius = "4px";
+                    scaleIndicator.style.fontSize = "12px";
                     scaleIndicator.style.fontWeight = "bold";
-                    scaleIndicator.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
-                    scaleIndicator.style.border = "2px solid rgba(46, 204, 113, 1)";
                 }
 
                 // Canvas container'ın merkez hizalamasını güncelle
@@ -451,11 +446,8 @@
                     container.style.display = "flex";
                     container.style.justifyContent = "center";
                     container.style.alignItems = "center";
-                    container.style.minHeight = Math.max(500, displayHeight + 100) + "px";
-                    container.style.padding = "30px";
+                    container.style.minHeight = "400px";
                 }
-                
-                console.log(`Canvas gerçek boyut: ${width}mm × ${height}mm (${displayWidth}px × ${displayHeight}px)`);
             }
 
             function setLabelSize(width, height) {
