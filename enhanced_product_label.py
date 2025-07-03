@@ -813,13 +813,16 @@ def generate_advanced_label_preview_new():
         for element in elements:
             element_type = element.get('type')
 
-            # Editörden gelen koordinatları direkt mm olarak kullan
-            # Tasarım editöründe girilen x,y değerleri zaten mm cinsindendir
-            editor_x_mm = element.get('x', 0)
-            editor_y_mm = element.get('y', 0)
+            # Editörden gelen koordinatları mm'ye çevir (4px = 1mm editörde)
+            editor_x_px = element.get('x', 0)
+            editor_y_px = element.get('y', 0)
+            
+            # Editör koordinat sistemi: 4px = 1mm dönüşümü
+            editor_x_mm = editor_x_px / 4
+            editor_y_mm = editor_y_px / 4
 
             # Debug: koordinat dönüşümünü kontrol et
-            print(f"Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})mm -> DPI pozisyon hesaplanıyor")
+            print(f"Element {element_type}: editör=({editor_x_px},{editor_y_px})px -> mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm")
 
             # mm'yi DPI'ya çevir 
             x = int((editor_x_mm / 25.4) * dpi)
