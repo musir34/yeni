@@ -13,7 +13,7 @@
         
         /* Canvas Area */
         .canvas-container { position: relative; background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 12px; overflow: hidden; }
-        .label-canvas { position: relative; background: white; margin: 20px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform-origin: center; }
+        .label-canvas { position: relative; background: white; margin: 20px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform-origin: center; transition: width 0.3s ease, height 0.3s ease; border: 2px solid #dee2e6; }
         .canvas-element { position: absolute; cursor: move; border: 2px solid transparent; transition: border-color 0.2s; }
         .canvas-element:hover { border-color: #3498db; }
         .canvas-element.selected { border-color: #e74c3c; box-shadow: 0 0 10px rgba(231,76,60,0.4); }
@@ -39,7 +39,7 @@
         .zoom-level { font-weight: 600; min-width: 50px; text-align: center; }
         
         /* Scale indicator */
-        .scale-indicator { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px; }
+        .scale-indicator { position: absolute; bottom: 10px; right: 10px; background: rgba(52, 152, 219, 0.9); color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
@@ -130,11 +130,11 @@
                 <div class="col-md-3">
                     <label class="form-label">Genişlik (mm)</label>
                     <input type="number" id="labelWidth" class="form-control" value="100" min="50" max="200" 
-                        onchange="updateCanvasSize()">
+                        onchange="updateCanvasSize()" oninput="updateCanvasSize()">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Yükseklik (mm)</label>
-                    <input type="number" id="labelHeight" class="form-control" value="50" min="30" max="150" onchange="updateCanvasSize()">
+                    <input type="number" id="labelHeight" class="form-control" value="50" min="30" max="150" onchange="updateCanvasSize()" oninput="updateCanvasSize()">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Hızlı Boyutlar</label><br>
@@ -207,7 +207,26 @@
             canvas.setAttribute('data-real-width', width);
             canvas.setAttribute('data-real-height', height);
             
-            document.querySelector('.scale-indicator').textContent = `${width}mm x ${height}mm (4px = 1mm)`;
+            // Ölçek göstergesini güncelle
+            const scaleIndicator = document.querySelector('.scale-indicator');
+            if (scaleIndicator) {
+                scaleIndicator.textContent = `${width}mm x ${height}mm (4px = 1mm)`;
+                scaleIndicator.style.backgroundColor = 'rgba(52, 152, 219, 0.9)';
+                scaleIndicator.style.color = 'white';
+                scaleIndicator.style.padding = '5px 10px';
+                scaleIndicator.style.borderRadius = '4px';
+                scaleIndicator.style.fontSize = '12px';
+                scaleIndicator.style.fontWeight = 'bold';
+            }
+            
+            // Canvas container'ın merkez hizalamasını güncelle
+            const container = document.querySelector('.canvas-container');
+            if (container) {
+                container.style.display = 'flex';
+                container.style.justifyContent = 'center';
+                container.style.alignItems = 'center';
+                container.style.minHeight = '400px';
+            }
         }
 
         function setLabelSize(width, height) {
