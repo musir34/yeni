@@ -418,9 +418,13 @@
                 );
                 const canvas = document.getElementById("labelCanvas");
 
-                // Direkt mm cinsinden boyutlar - pixel dönüşümü yok
-                canvas.style.width = width + "mm";
-                canvas.style.height = height + "mm";
+                // Sağ panelden gelen mm değerlerini gerçek ekran boyutuna dönüştür
+                // 1mm = 3.78px (96 DPI standardı) kullanarak gerçek ölçüde göster
+                const realPixelWidth = width * 3.78;
+                const realPixelHeight = height * 3.78;
+                
+                canvas.style.width = realPixelWidth + "px";
+                canvas.style.height = realPixelHeight + "px";
 
                 // Gerçek boyutları data attribute olarak sakla
                 canvas.setAttribute("data-real-width", width);
@@ -430,7 +434,7 @@
                 const scaleIndicator =
                     document.querySelector(".scale-indicator");
                 if (scaleIndicator) {
-                    scaleIndicator.textContent = `${width}mm x ${height}mm (Gerçek Boyut)`;
+                    scaleIndicator.textContent = `${width}mm × ${height}mm (Gerçek Ölçü)`;
                     scaleIndicator.style.backgroundColor =
                         "rgba(52, 152, 219, 0.9)";
                     scaleIndicator.style.color = "white";
@@ -440,14 +444,17 @@
                     scaleIndicator.style.fontWeight = "bold";
                 }
 
-                // Canvas container'ın merkez hizalamasını güncelle
+                // Canvas container'ı gerçek boyutlara göre ayarla
                 const container = document.querySelector(".canvas-container");
                 if (container) {
                     container.style.display = "flex";
                     container.style.justifyContent = "center";
                     container.style.alignItems = "center";
-                    container.style.minHeight = "400px";
+                    container.style.minHeight = Math.max(450, realPixelHeight + 100) + "px";
+                    container.style.padding = "25px";
                 }
+                
+                console.log(`Canvas: ${width}mm × ${height}mm = ${realPixelWidth}px × ${realPixelHeight}px`);
             }
 
             function setLabelSize(width, height) {
