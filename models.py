@@ -469,29 +469,25 @@ class SiparisUrun(db.Model):
 
 
 
-# Değişim Modeli    
+### ----> İSTEDİĞİN GÜNCELLEME BURADA <---- ###
 class Degisim(db.Model):
     __tablename__ = 'degisim'
-
     id = db.Column(db.Integer, primary_key=True)
-    degisim_no = db.Column(db.String, primary_key=True)
-    siparis_no = db.Column(db.String)
+    degisim_no = db.Column(db.String, unique=True, nullable=False, index=True)
+    siparis_no = db.Column(db.String, index=True)
     ad = db.Column(db.String)
     soyad = db.Column(db.String)
     adres = db.Column(db.Text)
     telefon_no = db.Column(db.String)
-    urun_barkod = db.Column(db.String)
-    urun_model_kodu = db.Column(db.String)
-    urun_renk = db.Column(db.String)
-    urun_beden = db.Column(db.String)
     degisim_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
-    degisim_durumu = db.Column(db.String)
+    degisim_durumu = db.Column(db.String, index=True)
     kargo_kodu = db.Column(db.String)
-    degisim_nedeni = db.Column(db.String, nullable=True)
+    degisim_nedeni = db.Column(db.Text)
+    # GÜNCELLENDİ: Tekil ürün alanları kaldırıldı, yerine JSON alanı eklendi.
+    urunler_json = db.Column(db.Text, nullable=False)
 
     def __repr__(self):
-        return f"<Exchange {self.degisim_no}>"
-
+        return f"<Degisim {self.degisim_no}>"
 
 # İade Modeli (Bu model ReturnOrder/ReturnProduct ile çakışıyor gibi?)
 # Eğer bu kullanılacaksa, ReturnOrder/ReturnProduct kaldırılabilir.
