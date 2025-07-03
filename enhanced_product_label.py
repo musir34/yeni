@@ -1188,6 +1188,21 @@ def print_multiple_labels():
                 'message': 'Yazdırılacak etiket yok'
             })
 
+        # Her etiket için unique barkod üret
+        import time
+        timestamp = str(int(time.time()))[-4:]  # Son 4 digit timestamp
+        unique_labels = []
+        for i, label in enumerate(labels):
+            unique_label = label.copy()
+            original_barcode = label.get('barcode', '0000000000000')
+            unique_barcode = f"{original_barcode}{timestamp}{str(i+1).zfill(2)}"
+            unique_label['barcode'] = unique_barcode
+            unique_labels.append(unique_label)
+            print(f"Unique barkod üretildi: {original_barcode} -> {unique_barcode}")
+        
+        # Unique labels kullan
+        labels = unique_labels
+
         # Kağıt boyutları (mm) - sayfa yönüne göre
         if paper_size == 'a4':
             if page_orientation == 'landscape':
