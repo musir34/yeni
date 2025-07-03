@@ -1142,22 +1142,22 @@ def print_multiple_labels():
                 f"A4 Element {i}: type={element.get('type')}, x={element.get('x')}, y={element.get('y')}, props={element.get('properties', {})}"
             )
 
-        # A4 Sayfa Başı Yapılandırma - Etiketler sola kaydırıldı
+        # Product Label A4_FIXED_CONFIG - Birebir Kopya
         A4_FIXED_CONFIG = {
             'PAGE_WIDTH': 210,
-            'MARGIN_LEFT': -10,    # Etiketleri daha çok sola kaydır
-            'MARGIN_RIGHT': 0,     # Sayfa başından başla
-            'COLUMN_GAP': 0,       # Etiketler arası boşluk yok
+            'MARGIN_LEFT': 8,      # Product Label değeri
+            'MARGIN_RIGHT': 8,     # Product Label değeri
+            'COLUMN_GAP': 2,       # Product Label değeri
             'COLUMNS': 3,
             'PAGE_HEIGHT': 297,
-            'MARGIN_TOP': 0,       # Sayfa başından başla
-            'MARGIN_BOTTOM': 0,    # Sayfa başından başla
-            'ROW_GAP': 0,          # Etiketler arası boşluk yok
+            'MARGIN_TOP': 15,      # Product Label değeri
+            'MARGIN_BOTTOM': 15,   # Product Label değeri
+            'ROW_GAP': 1,          # Product Label değeri
             'ROWS': 7,
             'LABELS_PER_PAGE': 21,
             'QR_SIZE_MM': 18,
-            'LABEL_WIDTH_APPROX': (210 / 3),     # Sayfa genişliği / sütun sayısı
-            'LABEL_HEIGHT_APPROX': (297 / 7)     # Sayfa yüksekliği / satır sayısı
+            'LABEL_WIDTH_APPROX': ((210 - 8 - 8 - (2 * 2)) / 3),  # Product Label hesaplama
+            'LABEL_HEIGHT_APPROX': (int(((297 - 15 - 15 - (7 - 1) * 1) / 7) * 100) / 100) - 0.08  # Product Label hesaplama
         }
 
         # Etiket boyutu kontrolü - Product Label A4 sistemiyle uyumlu
@@ -1241,11 +1241,11 @@ def print_multiple_labels():
         print(f"DEBUG: SAYFA BAŞI - Grid: {labels_per_row}x{labels_per_col}")
         print(f"DEBUG: SAYFA BAŞI - Etiket boyutu: {label_width_px}x{label_height_px} px")
 
-        # A4 PNG çıktısı için sol kenara yaklaştırılmış boşluklar
-        margin_x = int((5 / 25.4) * dpi)   # 5mm sol kenar (yaklaştırıldı)
-        margin_y = int((15 / 25.4) * dpi)  # 15mm üst kenar
-        gap_x = int((8 / 25.4) * dpi)      # 8mm sütun arası boşluk
-        gap_y = int((5 / 25.4) * dpi)      # 5mm satır arası boşluk
+        # Product Label sistemiyle birebir uyumlu boşluklar
+        margin_x = int((A4_FIXED_CONFIG['MARGIN_LEFT'] / 25.4) * dpi)      # 8mm sol kenar
+        margin_y = int((A4_FIXED_CONFIG['MARGIN_TOP'] / 25.4) * dpi)       # 15mm üst kenar
+        gap_x = int((A4_FIXED_CONFIG['COLUMN_GAP'] / 25.4) * dpi)          # 2mm sütun arası
+        gap_y = int((A4_FIXED_CONFIG['ROW_GAP'] / 25.4) * dpi)             # 1mm satır arası
         
         print(f"DEBUG: Boşluk sistemi - margin_x={margin_x}, margin_y={margin_y}, gap_x={gap_x}, gap_y={gap_y}")
 
@@ -1262,21 +1262,12 @@ def print_multiple_labels():
         labels_per_page = max_labels_per_row * max_labels_per_col
         total_pages = (len(labels) + labels_per_page - 1) // labels_per_page
 
-        # A4 sayfasında etiketleri merkezi konumlandırma
-        # Toplam etiket alanı genişliği ve yüksekliği hesapla
-        total_labels_width = max_labels_per_row * label_width_px + (max_labels_per_row - 1) * gap_x
-        total_labels_height = max_labels_per_col * label_height_px + (max_labels_per_col - 1) * gap_y
+        # Product Label sistemi - margin'dan başlayarak düz sıralama
+        start_x = margin_x
+        start_y = margin_y
         
-        # Sayfa ortasında konumlandır
-        start_x = (page_width_px - total_labels_width) // 2
-        start_y = (page_height_px - total_labels_height) // 2
-        
-        # Minimum margin kontrolü
-        start_x = max(start_x, margin_x)
-        start_y = max(start_y, margin_y)
-        
-        print(f"DEBUG: Merkezi konumlandırma - total_width: {total_labels_width}, total_height: {total_labels_height}")
-        print(f"DEBUG: Merkezi koordinatlar - start_x: {start_x}, start_y: {start_y}")
+        print(f"DEBUG: Product Label sistemi - start_x: {start_x}, start_y: {start_y}")
+        print(f"DEBUG: Boşluk değerleri - margin_x: {margin_x}, margin_y: {margin_y}, gap_x: {gap_x}, gap_y: {gap_y}")
 
         all_pages = []
 
