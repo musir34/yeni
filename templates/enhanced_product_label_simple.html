@@ -524,8 +524,10 @@
             if (window.labelQueue && Array.isArray(window.labelQueue)) {
                 window.labelQueue.forEach(item => {
                     for (let i = 0; i < item.quantity; i++) {
+                        // Her etiket için unique barkod üret
+                        const uniqueBarcode = generateUniqueBarcode(item.barcode, i);
                         selectedProducts.push({
-                            barcode: item.barcode,
+                            barcode: uniqueBarcode,
                             model_code: item.model_id,
                             color: item.color,
                             size: item.size
@@ -534,6 +536,13 @@
                 });
             }
             return selectedProducts;
+        }
+        
+        function generateUniqueBarcode(originalBarcode, index) {
+            // Orijinal barkodun sonuna sıra numarası ekleyerek unique barkod üret
+            const timestamp = Date.now().toString().slice(-4); // Son 4 digit timestamp
+            const uniqueSuffix = (index + 1).toString().padStart(2, '0'); // 01, 02, 03...
+            return originalBarcode + timestamp + uniqueSuffix;
         }
 
         function generateLabelWithDesign(design, selectedProducts) {
