@@ -1273,6 +1273,8 @@ def print_multiple_labels():
                 # Sayfa başından itibaren bitişik etiket pozisyonu (gap yok)
                 x = start_x + col * label_width_px
                 y = start_y + row * label_height_px
+                
+                print(f"DEBUG: Etiket {i} - row: {row}, col: {col}, x: {x}, y: {y} (px)")
 
                 # Tasarım kullanarak etiket oluştur - A4 modu aktif
                 label_img = create_label_with_design(
