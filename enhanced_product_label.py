@@ -1437,12 +1437,6 @@ def create_label_with_design(product_data,
             logger.info(
                 f"A4 Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})px -> mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm -> ölçekli=({scaled_x_mm:.1f},{scaled_y_mm:.1f})mm -> DPI=({x},{y})px"
             )
-            
-            # Etiket sınırları kontrolü
-            if x < 0 or y < 0:
-                logger.warning(f"Element {element_type} negatif koordinatlarda: ({x},{y})")
-            if x > int((label_width / 25.4) * dpi) or y > int((label_height / 25.4) * dpi):
-                logger.warning(f"Element {element_type} etiket sınırları dışında: ({x},{y}) - Etiket boyutu: {int((label_width / 25.4) * dpi)}x{int((label_height / 25.4) * dpi)}")
 
             if element_type == 'title':
                 html_content = element.get('html', 'GÜLLÜ SHOES')
