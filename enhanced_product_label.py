@@ -1142,10 +1142,10 @@ def print_multiple_labels():
                 f"A4 Element {i}: type={element.get('type')}, x={element.get('x')}, y={element.get('y')}, props={element.get('properties', {})}"
             )
 
-        # Product Label A4_FIXED_CONFIG - Birebir Kopya
+        # Enhanced Product Label A4_CONFIG - Sol kenar boşluğu düşürüldü
         A4_FIXED_CONFIG = {
             'PAGE_WIDTH': 210,
-            'MARGIN_LEFT': 8,      # Product Label değeri
+            'MARGIN_LEFT': 4,      # Yarıya düşürüldü (8mm -> 4mm)
             'MARGIN_RIGHT': 8,     # Product Label değeri
             'COLUMN_GAP': 2,       # Product Label değeri
             'COLUMNS': 3,
@@ -1156,7 +1156,7 @@ def print_multiple_labels():
             'ROWS': 7,
             'LABELS_PER_PAGE': 21,
             'QR_SIZE_MM': 18,
-            'LABEL_WIDTH_APPROX': ((210 - 8 - 8 - (2 * 2)) / 3),  # = 64.67mm
+            'LABEL_WIDTH_APPROX': ((210 - 4 - 8 - (2 * 2)) / 3),  # Yeni hesaplama: 65.33mm
             'LABEL_HEIGHT_APPROX': (int(((297 - 15 - 15 - (7 - 1) * 1) / 7) * 100) / 100) - 0.08  # = 37.92mm
         }
 

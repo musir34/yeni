@@ -726,7 +726,7 @@
             // Product Label A4 Sabit Yapılandırması - Birebir Kopyası
             const A4_FIXED_CONFIG = {
                 PAGE_WIDTH: 210,
-                MARGIN_LEFT: 8,
+                MARGIN_LEFT: 4,     // Yarıya düşürüldü (8mm -> 4mm)
                 MARGIN_RIGHT: 8,
                 COLUMN_GAP: 2,
                 COLUMNS: 3,
@@ -737,7 +737,7 @@
                 ROWS: 7,
                 LABELS_PER_PAGE: 21,
                 QR_SIZE_MM: 18,
-                LABEL_WIDTH_APPROX: (210 - 8 - 8 - 2 * 2) / 3,
+                LABEL_WIDTH_APPROX: (210 - 4 - 8 - 2 * 2) / 3,  // Yeni hesaplama: 65.33mm
                 // Taşma sorununu azaltmak için etiket yüksekliğinden 0.08mm çalıyoruz.
                 LABEL_HEIGHT_APPROX:
                     Math.floor(((297 - 15 - 15 - (7 - 1) * 1) / 7) * 100) /
