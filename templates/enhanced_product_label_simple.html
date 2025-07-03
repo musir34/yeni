@@ -274,22 +274,22 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Product Label A4_FIXED_CONFIG - Birebir Kopyası
+        // A4 Sayfa Başı Yapılandırma - Margin ve gap sıfır, sayfa başından başla
         const A4_FIXED_CONFIG = {
             PAGE_WIDTH: 210,
-            MARGIN_LEFT: 8,
-            MARGIN_RIGHT: 8,
-            COLUMN_GAP: 2,
+            MARGIN_LEFT: 0,      // Sayfa başından başla
+            MARGIN_RIGHT: 0,     // Sayfa başından başla
+            COLUMN_GAP: 0,       // Etiketler arası boşluk yok
             COLUMNS: 3,
             PAGE_HEIGHT: 297,
-            MARGIN_TOP: 15,
-            MARGIN_BOTTOM: 15,
-            ROW_GAP: 1,
+            MARGIN_TOP: 0,       // Sayfa başından başla
+            MARGIN_BOTTOM: 0,    // Sayfa başından başla
+            ROW_GAP: 0,          // Etiketler arası boşluk yok
             ROWS: 7,
             LABELS_PER_PAGE: 21,
             QR_SIZE_MM: 18,
-            LABEL_WIDTH_APPROX: ((210 - 8 - 8 - (2 * 2)) / 3),
-            LABEL_HEIGHT_APPROX: (Math.floor(((297 - 15 - 15 - (7 - 1) * 1) / 7) * 100) / 100) - 0.08
+            LABEL_WIDTH_APPROX: (210 / 3),     // Sayfa genişliği / sütun sayısı
+            LABEL_HEIGHT_APPROX: (297 / 7)     // Sayfa yüksekliği / satır sayısı
         };
 
         // Global variables
