@@ -65,7 +65,9 @@ def create_qr_with_logo(data, logo_path=None, size=200):
 
         # QR kodu PIL Image olarak oluştur
         qr_img = qr.make_image(fill_color="black", back_color="white")
-        print(f"QR base image oluşturuldu: mode={qr_img.mode}, size={qr_img.size}")
+        print(
+            f"QR base image oluşturuldu: mode={qr_img.mode}, size={qr_img.size}"
+        )
 
         # RGB'ye çevir
         if qr_img.mode != 'RGB':
@@ -939,14 +941,9 @@ def generate_advanced_label_preview_new():
                     f"QR Debug: px={qr_size_px}, mm={qr_size_mm}, final_size={qr_size}, pos=({x},{y})"
                 )
 
-                # QR kod her etiket için unique barkod kullanmalı
-                # product_data'dan gerçek barkodu al (çoklu etiket desteği)
-                if product_data and 'barcode' in product_data:
-                    qr_data = product_data['barcode']  # Her etiket için farklı barkod
-                    print(f"DEBUG QR: Etiket için unique barkod: {qr_data}")
-                else:
-                    qr_data = sample_product['barcode']  # Fallback
-                    print(f"DEBUG QR: Fallback barkod kullanılıyor: {qr_data}")
+                # QR kod direkt barkodu içermeli - güvenilir veri kaynağı
+                qr_data = sample_product['barcode']
+                print(f"QR veri kaynağı: {qr_data}")
 
                 # Minimum QR boyutu kontrolü - daha büyük minimum
                 if qr_size < 100:  # 100 pixel minimum
@@ -969,13 +966,8 @@ def generate_advanced_label_preview_new():
                     logger.error("QR kod oluşturulamadı!")
 
             elif element_type == 'barcode':
-                # Barkod her etiket için unique data kullanmalı
-                if product_data and 'barcode' in product_data:
-                    barcode_data = product_data['barcode']  # Her etiket için farklı barkod
-                    print(f"DEBUG BARCODE: Etiket için unique barkod: {barcode_data}")
-                else:
-                    barcode_data = sample_product['barcode']  # Fallback
-                    print(f"DEBUG BARCODE: Fallback barkod kullanılıyor: {barcode_data}")
+                # Barkod alanı sadece rakam gösterecek
+                barcode_data = sample_product['barcode']
                 # Font boyutu properties'ten al, editör formatına uygun
                 font_size_px = properties.get('fontSize',
                                               12)  # properties'te sayı olarak
@@ -1100,13 +1092,15 @@ def print_multiple_labels():
     try:
         data = request.get_json()
         print(f"DEBUG API: Gelen tüm veri: {data}")
-        
+
         # Veri türlerini kontrol et ve parse et
         labels = data.get('labels', [])
         design = data.get('design', {})
-        
-        print(f"DEBUG API: Raw data types - labels: {type(labels)}, design: {type(design)}")
-        
+
+        print(
+            f"DEBUG API: Raw data types - labels: {type(labels)}, design: {type(design)}"
+        )
+
         # Design JSON string ise parse et
         if isinstance(design, str):
             try:
@@ -1115,8 +1109,8 @@ def print_multiple_labels():
             except Exception as parse_error:
                 print(f"DEBUG API: Design JSON parse hatası: {parse_error}")
                 design = {}
-        
-        # Labels JSON string ise parse et        
+
+        # Labels JSON string ise parse et
         if isinstance(labels, str):
             try:
                 labels = json.loads(labels)
@@ -1124,9 +1118,11 @@ def print_multiple_labels():
             except Exception as parse_error:
                 print(f"DEBUG API: Labels JSON parse hatası: {parse_error}")
                 labels = []
-                
-        print(f"DEBUG API: Final parsed - labels count: {len(labels)}, design elements: {len(design.get('elements', []))}")
-        
+
+        print(
+            f"DEBUG API: Final parsed - labels count: {len(labels)}, design elements: {len(design.get('elements', []))}"
+        )
+
         paper_size = data.get('paper_size', 'a4')
         page_orientation = data.get('page_orientation', 'portrait')
         labels_per_row = data.get('labels_per_row', 2)
@@ -1148,19 +1144,19 @@ def print_multiple_labels():
         # A4 Sayfa Başı Yapılandırma - Margin ve gap sıfır, sayfa başından başla
         A4_FIXED_CONFIG = {
             'PAGE_WIDTH': 210,
-            'MARGIN_LEFT': 0,      # Sayfa başından başla
-            'MARGIN_RIGHT': 0,     # Sayfa başından başla
-            'COLUMN_GAP': 0,       # Etiketler arası boşluk yok
+            'MARGIN_LEFT': 0,  # Sayfa başından başla
+            'MARGIN_RIGHT': 0,  # Sayfa başından başla
+            'COLUMN_GAP': 0,  # Etiketler arası boşluk yok
             'COLUMNS': 3,
             'PAGE_HEIGHT': 297,
-            'MARGIN_TOP': 0,       # Sayfa başından başla
-            'MARGIN_BOTTOM': 0,    # Sayfa başından başla
-            'ROW_GAP': 0,          # Etiketler arası boşluk yok
+            'MARGIN_TOP': 0,  # Sayfa başından başla
+            'MARGIN_BOTTOM': 0,  # Sayfa başından başla
+            'ROW_GAP': 0,  # Etiketler arası boşluk yok
             'ROWS': 7,
             'LABELS_PER_PAGE': 21,
             'QR_SIZE_MM': 18,
-            'LABEL_WIDTH_APPROX': (210 / 3),     # Sayfa genişliği / sütun sayısı
-            'LABEL_HEIGHT_APPROX': (297 / 7)     # Sayfa yüksekliği / satır sayısı
+            'LABEL_WIDTH_APPROX': (210 / 3),  # Sayfa genişliği / sütun sayısı
+            'LABEL_HEIGHT_APPROX': (297 / 7)  # Sayfa yüksekliği / satır sayısı
         }
 
         # Etiket boyutu kontrolü - Product Label A4 sistemiyle uyumlu
@@ -1219,24 +1215,33 @@ def print_multiple_labels():
 
         # Sayfa oluştur
         page = Image.new('RGB', (page_width_px, page_height_px), 'white')
+        # Etiket boyutları pixel
+        label_width_px = int((label_width / 25.4) * dpi)
+        label_height_px = int((label_height / 25.4) * dpi)
 
         # SAYFA BAŞI SİSTEMİ: Etiket boyutlarını sayfa boyutuna göre hesapla
         # Sayfa genişliği / sütun sayısı = etiket genişliği (pixel)
         # Sayfa yüksekliği / satır sayısı = etiket yüksekliği (pixel)
         label_width_px = page_width_px // max(1, labels_per_row)
         label_height_px = page_height_px // max(1, labels_per_col)
-        
-        print(f"DEBUG: SAYFA BAŞI - Sayfa boyutu: {page_width_px}x{page_height_px} px")
+
+        print(
+            f"DEBUG: SAYFA BAŞI - Sayfa boyutu: {page_width_px}x{page_height_px} px"
+        )
         print(f"DEBUG: SAYFA BAŞI - Grid: {labels_per_row}x{labels_per_col}")
-        print(f"DEBUG: SAYFA BAŞI - Etiket boyutu: {label_width_px}x{label_height_px} px")
+        print(
+            f"DEBUG: SAYFA BAŞI - Etiket boyutu: {label_width_px}x{label_height_px} px"
+        )
 
         # SAYFA BAŞI SİSTEMİ: Margin ve gap kullanmıyoruz - sayfa başından başla
         margin_x = 0  # Kenar boşluğu yok
         margin_y = 0  # Kenar boşluğu yok
-        gap_x = 0     # Etiketler arası boşluk yok  
-        gap_y = 0     # Etiketler arası boşluk yok
-        
-        print(f"DEBUG: SAYFA BAŞI - Margin ve gap sıfırlandı: margin_x={margin_x}, margin_y={margin_y}, gap_x={gap_x}, gap_y={gap_y}")
+        gap_x = int((horizontal_gap / 25.4) * dpi)
+        gap_y = int((vertical_gap / 25.4) * dpi)
+
+        print(
+            f"DEBUG: SAYFA BAŞI - Margin ve gap sıfırlandı: margin_x={margin_x}, margin_y={margin_y}, gap_x={gap_x}, gap_y={gap_y}"
+        )
 
         # Kullanıcının belirlediği sütun/satır sayısını zorla uygula
         # Sayfa boyutuna sığıp sığmadığına bakmadan kullanıcı ayarlarını kullan
@@ -1254,8 +1259,10 @@ def print_multiple_labels():
         # Etiketleri sayfanın tam başından itibaren yerleştir - kenar boşluklarını yok say
         start_x = 0
         start_y = 0
-        
-        print(f"DEBUG: Etiketler sayfanın tam başından itibaren yerleştirilecek - start_x: {start_x}, start_y: {start_y}")
+
+        print(
+            f"DEBUG: Etiketler sayfanın tam başından itibaren yerleştirilecek - start_x: {start_x}, start_y: {start_y}"
+        )
 
         all_pages = []
 
@@ -1276,8 +1283,10 @@ def print_multiple_labels():
                 # Sayfa başından itibaren bitişik etiket pozisyonu (gap yok)
                 x = start_x + col * label_width_px
                 y = start_y + row * label_height_px
-                
-                print(f"DEBUG: Etiket {i} - row: {row}, col: {col}, x: {x}, y: {y} (px)")
+
+                print(
+                    f"DEBUG: Etiket {i} - row: {row}, col: {col}, x: {x}, y: {y} (px)"
+                )
 
                 # Tasarım kullanarak etiket oluştur - A4 modu aktif
                 label_img = create_label_with_design(
@@ -1350,7 +1359,9 @@ def create_label_with_design(product_data,
                              label_width,
                              label_height,
                              is_a4_mode=False):
-    print(f"DEBUG: create_label_with_design called with product: {product_data}, design: {design.get('name', 'No name')}, is_a4_mode: {is_a4_mode}")
+    print(
+        f"DEBUG: create_label_with_design called with product: {product_data}, design: {design.get('name', 'No name')}, is_a4_mode: {is_a4_mode}"
+    )
     """Tasarım kullanarak tek etiket oluştur"""
     try:
         # Etiket boyutları (mm'den pixel'e çevir, 300 DPI)
@@ -1438,21 +1449,25 @@ def create_label_with_design(product_data,
         for element in elements:
             if element.get('type') == 'product_image':
                 img_x_px = element.get('x', 0)
-                img_y_px = element.get('y', 0) 
+                img_y_px = element.get('y', 0)
                 img_width = element.get('width', 62)
                 img_height = element.get('height', 62)
-                
+
                 # Ürün görseli alanını mm cinsinden hesapla
                 img_x_mm = img_x_px / 4
-                img_y_mm = img_y_px / 4  
+                img_y_mm = img_y_px / 4
                 img_w_mm = img_width / 4
                 img_h_mm = img_height / 4
-                
+
                 product_image_area = {
-                    'x': img_x_mm, 'y': img_y_mm, 
-                    'width': img_w_mm, 'height': img_h_mm
+                    'x': img_x_mm,
+                    'y': img_y_mm,
+                    'width': img_w_mm,
+                    'height': img_h_mm
                 }
-                print(f"Ürün görseli alanı: ({img_x_mm:.1f}, {img_y_mm:.1f}) boyut: {img_w_mm:.1f}x{img_h_mm:.1f}mm")
+                print(
+                    f"Ürün görseli alanı: ({img_x_mm:.1f}, {img_y_mm:.1f}) boyut: {img_w_mm:.1f}x{img_h_mm:.1f}mm"
+                )
                 break
 
         for element in elements:
@@ -1461,28 +1476,38 @@ def create_label_with_design(product_data,
             # Editör koordinatlarını direkt al
             editor_x_px = element.get('x', 0)
             editor_y_px = element.get('y', 0)
-            
-            print(f"Element {element_type}: editör_koordinatları=({editor_x_px}, {editor_y_px})")
+
+            print(
+                f"Element {element_type}: editör_koordinatları=({editor_x_px}, {editor_y_px})"
+            )
 
             # Editör koordinat sistemi: 4px = 1mm (doğrudan dönüştürme)
             editor_x_mm = editor_x_px / 4
             editor_y_mm = editor_y_px / 4
 
             # Çakışma kontrolü - yazı elementleri için
-            if element_type in ['model_code', 'color', 'size', 'title'] and product_image_area:
+            if element_type in ['model_code', 'color', 'size', 'title'
+                                ] and product_image_area:
                 # Yazının ürün görseli ile çakışıp çakışmadığını kontrol et
                 text_width_mm = 20  # Yaklaşık yazı genişliği
                 text_height_mm = 5  # Yaklaşık yazı yüksekliği
-                
+
                 # Çakışma kontrolü
-                if (editor_x_mm < product_image_area['x'] + product_image_area['width'] and
-                    editor_x_mm + text_width_mm > product_image_area['x'] and
-                    editor_y_mm < product_image_area['y'] + product_image_area['height'] and
-                    editor_y_mm + text_height_mm > product_image_area['y']):
-                    
+                if (editor_x_mm
+                        < product_image_area['x'] + product_image_area['width']
+                        and editor_x_mm + text_width_mm
+                        > product_image_area['x']
+                        and editor_y_mm < product_image_area['y'] +
+                        product_image_area['height']
+                        and editor_y_mm + text_height_mm
+                        > product_image_area['y']):
+
                     # Çakışma var - yazıyı ürün görseli yanına kaydır
-                    editor_x_mm = product_image_area['x'] + product_image_area['width'] + 2  # 2mm boşluk
-                    print(f"ÇAKIŞMA DÜZELTME: {element_type} kaydırıldı -> ({editor_x_mm:.1f}, {editor_y_mm:.1f})mm")
+                    editor_x_mm = product_image_area['x'] + product_image_area[
+                        'width'] + 2  # 2mm boşluk
+                    print(
+                        f"ÇAKIŞMA DÜZELTME: {element_type} kaydırıldı -> ({editor_x_mm:.1f}, {editor_y_mm:.1f})mm"
+                    )
 
             # A4 etiket boyutlarına ölçeklendir
             scaled_x_mm = editor_x_mm * scale_x
@@ -1491,8 +1516,10 @@ def create_label_with_design(product_data,
             # mm'yi A4 DPI'sına çevir
             x = int((scaled_x_mm / 25.4) * dpi)
             y = int((scaled_y_mm / 25.4) * dpi)
-            
-            print(f"Element {element_type}: mm=({editor_x_mm:.1f}, {editor_y_mm:.1f}), scaled_mm=({scaled_x_mm:.1f}, {scaled_y_mm:.1f}), final_px=({x}, {y})")
+
+            print(
+                f"Element {element_type}: mm=({editor_x_mm:.1f}, {editor_y_mm:.1f}), scaled_mm=({scaled_x_mm:.1f}, {scaled_y_mm:.1f}), final_px=({x}, {y})"
+            )
 
             if element_type == 'title':
                 html_content = element.get('html', 'GÜLLÜ SHOES')
@@ -1638,16 +1665,22 @@ def create_label_with_design(product_data,
                     qr_data = barcode  # Gerçek ürün barkodu
 
                 print(f"A4 QR veri kaynağı: {qr_data}")
-                print(f"A4 QR Debug: element_size_px={qr_size_px}, mm={qr_size_mm:.1f}, scaled_mm={scaled_qr_size_mm:.1f}, final_dpi_size={qr_size}, data={qr_data}")
+                print(
+                    f"A4 QR Debug: element_size_px={qr_size_px}, mm={qr_size_mm:.1f}, scaled_mm={scaled_qr_size_mm:.1f}, final_dpi_size={qr_size}, data={qr_data}"
+                )
 
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
-                print(f"A4 QR Logo path: {logo_path}, exists: {os.path.exists(logo_path)}")
-                
+                print(
+                    f"A4 QR Logo path: {logo_path}, exists: {os.path.exists(logo_path)}"
+                )
+
                 qr_img = create_qr_with_logo(
                     qr_data, logo_path if os.path.exists(logo_path) else None,
                     qr_size)
-                
-                print(f"A4 QR Image created: {qr_img is not None}, size: {qr_img.size if qr_img else 'None'}")
+
+                print(
+                    f"A4 QR Image created: {qr_img is not None}, size: {qr_img.size if qr_img else 'None'}"
+                )
 
                 if qr_img:
                     # Etiket boyutlarını kontrol et
@@ -1696,7 +1729,9 @@ def create_label_with_design(product_data,
                 img_height = int(img_height * (dpi / 96))
 
                 # Ürün görseli yükle
-                print(f"A4 Product image: path={image_path}, exists={os.path.exists(image_path) if image_path else 'No path'}")
+                print(
+                    f"A4 Product image: path={image_path}, exists={os.path.exists(image_path) if image_path else 'No path'}"
+                )
                 image_loaded = False
                 try:
                     if image_path and os.path.exists(image_path):
@@ -1707,7 +1742,9 @@ def create_label_with_design(product_data,
                             (img_width, img_height), Image.Resampling.LANCZOS)
                         label.paste(product_img, (x, y))
                         image_loaded = True
-                        print(f"A4 Product image loaded successfully: {image_path}")
+                        print(
+                            f"A4 Product image loaded successfully: {image_path}"
+                        )
                 except Exception as e:
                     print(f"A4 Product image load failed: {e}")
                     pass
