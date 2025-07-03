@@ -1210,17 +1210,23 @@ def print_multiple_labels():
         # Sayfa oluştur
         page = Image.new('RGB', (page_width_px, page_height_px), 'white')
 
-        # Etiket boyutları pixel
-        label_width_px = int((label_width / 25.4) * dpi)
-        label_height_px = int((label_height / 25.4) * dpi)
+        # SAYFA BAŞI SİSTEMİ: Etiket boyutlarını sayfa boyutuna göre hesapla
+        # Sayfa genişliği / sütun sayısı = etiket genişliği (pixel)
+        # Sayfa yüksekliği / satır sayısı = etiket yüksekliği (pixel)
+        label_width_px = page_width_px // max(1, labels_per_row)
+        label_height_px = page_height_px // max(1, labels_per_col)
+        
+        print(f"DEBUG: SAYFA BAŞI - Sayfa boyutu: {page_width_px}x{page_height_px} px")
+        print(f"DEBUG: SAYFA BAŞI - Grid: {labels_per_row}x{labels_per_col}")
+        print(f"DEBUG: SAYFA BAŞI - Etiket boyutu: {label_width_px}x{label_height_px} px")
 
-        # Kenar boşlukları
-        margin_x = int((left_margin / 25.4) * dpi)
-        margin_y = int((top_margin / 25.4) * dpi)
-
-        # Etiketler arası boşluk
-        gap_x = int((horizontal_gap / 25.4) * dpi)
-        gap_y = int((vertical_gap / 25.4) * dpi)
+        # SAYFA BAŞI SİSTEMİ: Margin ve gap kullanmıyoruz - sayfa başından başla
+        margin_x = 0  # Kenar boşluğu yok
+        margin_y = 0  # Kenar boşluğu yok
+        gap_x = 0     # Etiketler arası boşluk yok  
+        gap_y = 0     # Etiketler arası boşluk yok
+        
+        print(f"DEBUG: SAYFA BAŞI - Margin ve gap sıfırlandı: margin_x={margin_x}, margin_y={margin_y}, gap_x={gap_x}, gap_y={gap_y}")
 
         # Kullanıcının belirlediği sütun/satır sayısını zorla uygula
         # Sayfa boyutuna sığıp sığmadığına bakmadan kullanıcı ayarlarını kullan
