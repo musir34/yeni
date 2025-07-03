@@ -1088,8 +1088,20 @@ def print_multiple_labels():
     """Çoklu etiket yazdırma için sayfa hazırla"""
     try:
         data = request.get_json()
+        print(f"DEBUG API: Gelen tüm veri: {data}")
+        
         labels = data.get('labels', [])
         design = data.get('design', {})
+        
+        # JSON string geliyorsa parse et
+        if isinstance(labels, str):
+            labels = json.loads(labels)
+        if isinstance(design, str):
+            design = json.loads(design)
+            
+        print(f"DEBUG API: Parse edilmiş labels: {labels}")
+        print(f"DEBUG API: Parse edilmiş design: {design}")
+        
         paper_size = data.get('paper_size', 'a4')
         page_orientation = data.get('page_orientation', 'portrait')
         labels_per_row = data.get('labels_per_row', 2)
