@@ -51,7 +51,7 @@ def create_qr_with_logo(data, logo_path=None, size=200):
     """
     try:
         import qrcode
-        logger.info(f"QR kod oluşturuluyor: data='{data}', size={size}")
+        print(f"QR kod oluşturuluyor: data='{data}', size={size}")
 
         # QR kod oluştur - basit yaklaşım
         qr = qrcode.QRCode(
@@ -64,23 +64,21 @@ def create_qr_with_logo(data, logo_path=None, size=200):
 
         # QR kodu PIL Image olarak oluştur
         qr_img = qr.make_image(fill_color="black", back_color="white")
-        logger.info(
-            f"QR base image oluşturuldu: mode={qr_img.mode}, size={qr_img.size}"
-        )
+        print(f"QR base image oluşturuldu: mode={qr_img.mode}, size={qr_img.size}")
 
         # RGB'ye çevir
         if qr_img.mode != 'RGB':
             qr_img = qr_img.convert('RGB')
-            logger.info(f"QR RGB'ye çevrildi: mode={qr_img.mode}")
+            print(f"QR RGB'ye çevrildi: mode={qr_img.mode}")
 
         # Boyutlandır
         qr_img = qr_img.resize((size, size), Image.Resampling.LANCZOS)
-        logger.info(f"QR kod boyutlandırıldı: {qr_img.size}")
+        print(f"QR kod boyutlandırıldı: {qr_img.size}")
 
         # Logo varsa ortaya ekle
         if logo_path and os.path.exists(logo_path):
             try:
-                logger.info(f"Logo ekleniyor: {logo_path}")
+                print(f"Logo ekleniyor: {logo_path}")
                 logo = Image.open(logo_path)
 
                 # Logo boyutunu QR kodun 1/5'i kadar yap
@@ -1340,6 +1338,7 @@ def create_label_with_design(product_data,
                              label_width,
                              label_height,
                              is_a4_mode=False):
+    print(f"DEBUG: create_label_with_design called with product: {product_data}, design: {design.get('name', 'No name')}, is_a4_mode: {is_a4_mode}")
     """Tasarım kullanarak tek etiket oluştur"""
     try:
         # Etiket boyutları (mm'den pixel'e çevir, 300 DPI)
@@ -1584,19 +1583,17 @@ def create_label_with_design(product_data,
                 if qr_data in ['sample_barcode', 'sample', 'placeholder']:
                     qr_data = barcode  # Gerçek ürün barkodu
 
-                logger.info(f"A4 QR veri kaynağı: {qr_data}")
-                logger.info(
-                    f"A4 QR Debug: element_size_px={qr_size_px}, mm={qr_size_mm:.1f}, scaled_mm={scaled_qr_size_mm:.1f}, final_dpi_size={qr_size}, data={qr_data}"
-                )
+                print(f"A4 QR veri kaynağı: {qr_data}")
+                print(f"A4 QR Debug: element_size_px={qr_size_px}, mm={qr_size_mm:.1f}, scaled_mm={scaled_qr_size_mm:.1f}, final_dpi_size={qr_size}, data={qr_data}")
 
                 logo_path = os.path.join('static', 'logos', 'gullu_logo.png')
-                logger.info(f"A4 QR Logo path: {logo_path}, exists: {os.path.exists(logo_path)}")
+                print(f"A4 QR Logo path: {logo_path}, exists: {os.path.exists(logo_path)}")
                 
                 qr_img = create_qr_with_logo(
                     qr_data, logo_path if os.path.exists(logo_path) else None,
                     qr_size)
                 
-                logger.info(f"A4 QR Image created: {qr_img is not None}, size: {qr_img.size if qr_img else 'None'}")
+                print(f"A4 QR Image created: {qr_img is not None}, size: {qr_img.size if qr_img else 'None'}")
 
                 if qr_img:
                     # Etiket boyutlarını kontrol et
@@ -1645,7 +1642,7 @@ def create_label_with_design(product_data,
                 img_height = int(img_height * (dpi / 96))
 
                 # Ürün görseli yükle
-                logger.info(f"A4 Product image: path={image_path}, exists={os.path.exists(image_path) if image_path else 'No path'}")
+                print(f"A4 Product image: path={image_path}, exists={os.path.exists(image_path) if image_path else 'No path'}")
                 image_loaded = False
                 try:
                     if image_path and os.path.exists(image_path):
@@ -1656,9 +1653,9 @@ def create_label_with_design(product_data,
                             (img_width, img_height), Image.Resampling.LANCZOS)
                         label.paste(product_img, (x, y))
                         image_loaded = True
-                        logger.info(f"A4 Product image loaded successfully: {image_path}")
+                        print(f"A4 Product image loaded successfully: {image_path}")
                 except Exception as e:
-                    logger.error(f"A4 Product image load failed: {e}")
+                    print(f"A4 Product image load failed: {e}")
                     pass
 
                 # Placeholder
