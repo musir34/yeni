@@ -523,9 +523,11 @@
             const selectedProducts = [];
             if (window.labelQueue && Array.isArray(window.labelQueue)) {
                 window.labelQueue.forEach(item => {
+                    console.log(`Processing item: ${item.barcode}, quantity: ${item.quantity}`);
                     for (let i = 0; i < item.quantity; i++) {
                         // Her etiket için unique barkod üret
                         const uniqueBarcode = generateUniqueBarcode(item.barcode, i);
+                        console.log(`Generated unique barcode ${i+1}/${item.quantity}: ${uniqueBarcode}`);
                         selectedProducts.push({
                             barcode: uniqueBarcode,
                             model_code: item.model_id,
@@ -535,6 +537,7 @@
                     }
                 });
             }
+            console.log('Final selectedProducts:', selectedProducts);
             return selectedProducts;
         }
         
