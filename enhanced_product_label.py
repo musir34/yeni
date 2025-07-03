@@ -1246,6 +1246,9 @@ def print_multiple_labels():
                 # Etiket pozisyonu - sayfa başından başlayarak
                 x = start_x + col * (label_width_px + gap_x)
                 y = start_y + row * (label_height_px + gap_y)
+                
+                # Debug: Koordinat bilgilerini logla
+                logger.info(f"A4 PNG Etiket {i}: pos=({x},{y}), start=({start_x},{start_y}), row={row}, col={col}")
 
                 # Tasarım kullanarak etiket oluştur - A4 modu aktif
                 label_img = create_label_with_design(
