@@ -1241,11 +1241,11 @@ def print_multiple_labels():
         print(f"DEBUG: SAYFA BAŞI - Grid: {labels_per_row}x{labels_per_col}")
         print(f"DEBUG: SAYFA BAŞI - Etiket boyutu: {label_width_px}x{label_height_px} px")
 
-        # A4 PNG çıktısı için kenar boşlukları - Tasarım değişmeyecek
-        margin_x = int((8 / 25.4) * dpi)   # 8mm sol kenar boşluğu
-        margin_y = int((10 / 25.4) * dpi)  # 10mm üst kenar boşluğu
-        gap_x = int((3 / 25.4) * dpi)      # 3mm sütun arası boşluk
-        gap_y = int((2 / 25.4) * dpi)      # 2mm satır arası boşluk
+        # A4 PNG çıktısı için optimize edilmiş kenar boşlukları
+        margin_x = int((15 / 25.4) * dpi)  # 15mm sol kenar (daha merkezi)
+        margin_y = int((15 / 25.4) * dpi)  # 15mm üst kenar (daha dengeli)
+        gap_x = int((8 / 25.4) * dpi)      # 8mm sütun arası boşluk (daha görünür)
+        gap_y = int((5 / 25.4) * dpi)      # 5mm satır arası boşluk (daha görünür)
         
         print(f"DEBUG: Boşluk sistemi - margin_x={margin_x}, margin_y={margin_y}, gap_x={gap_x}, gap_y={gap_y}")
 
