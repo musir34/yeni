@@ -1469,15 +1469,15 @@ def create_label_with_design(product_data,
         for element in elements:
             element_type = element.get('type')
 
-            # Editör koordinatlarını direkt al
+            # Editörden gelen koordinatları mm'ye çevir (4px = 1mm editörde)
             editor_x_px = element.get('x', 0)
             editor_y_px = element.get('y', 0)
             
-            print(f"Element {element_type}: editör_koordinatları=({editor_x_px}, {editor_y_px})")
-
-            # Editör koordinat sistemi: 4px = 1mm (doğrudan dönüştürme)
+            # Editör koordinat sistemi: 4px = 1mm dönüşümü
             editor_x_mm = editor_x_px / 4
             editor_y_mm = editor_y_px / 4
+            
+            print(f"Element {element_type}: editör=({editor_x_px},{editor_y_px})px -> mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm")
 
             # Çakışma kontrolü - yazı elementleri için
             if element_type in ['model_code', 'color', 'size', 'title'] and product_image_area:
