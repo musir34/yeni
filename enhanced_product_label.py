@@ -1263,9 +1263,9 @@ def print_multiple_labels():
                 row = i // max_labels_per_row
                 col = i % max_labels_per_row
 
-                # Etiket pozisyonu - yatay ortalı, dikey üstten başlayarak
+                # Etiket pozisyonu - yatay ortalı, dikey sayfa başından
                 x = start_x + col * (label_width_px + gap_x)
-                y = margin_y + row * (label_height_px + gap_y)  # Direkt margin_y kullan
+                y = 20 + row * (label_height_px + gap_y)  # Minimal margin (5mm ≈ 20px @ 300dpi)
 
                 # Tasarım kullanarak etiket oluştur - A4 modu aktif
                 label_img = create_label_with_design(
