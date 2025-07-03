@@ -1265,7 +1265,7 @@ def print_multiple_labels():
                 row = i // max_labels_per_row
                 col = i % max_labels_per_row
 
-                # Etiket pozisyonu hesapla
+                # Ortalanmış etiket pozisyonu
                 x = start_x + col * (label_width_px + gap_x)
                 y = start_y + row * (label_height_px + gap_y)
 
