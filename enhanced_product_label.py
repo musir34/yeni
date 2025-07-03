@@ -1262,11 +1262,21 @@ def print_multiple_labels():
         labels_per_page = max_labels_per_row * max_labels_per_col
         total_pages = (len(labels) + labels_per_page - 1) // labels_per_page
 
-        # Etiketleri margin'dan itibaren yerleştir - boşluk sistemi
-        start_x = margin_x
-        start_y = margin_y
+        # A4 sayfasında etiketleri merkezi konumlandırma
+        # Toplam etiket alanı genişliği ve yüksekliği hesapla
+        total_labels_width = max_labels_per_row * label_width_px + (max_labels_per_row - 1) * gap_x
+        total_labels_height = max_labels_per_col * label_height_px + (max_labels_per_col - 1) * gap_y
         
-        print(f"DEBUG: Etiketler margin'dan itibaren yerleştirilecek - start_x: {start_x}, start_y: {start_y}")
+        # Sayfa ortasında konumlandır
+        start_x = (page_width_px - total_labels_width) // 2
+        start_y = (page_height_px - total_labels_height) // 2
+        
+        # Minimum margin kontrolü
+        start_x = max(start_x, margin_x)
+        start_y = max(start_y, margin_y)
+        
+        print(f"DEBUG: Merkezi konumlandırma - total_width: {total_labels_width}, total_height: {total_labels_height}")
+        print(f"DEBUG: Merkezi koordinatlar - start_x: {start_x}, start_y: {start_y}")
 
         all_pages = []
 
