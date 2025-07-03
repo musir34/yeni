@@ -1482,17 +1482,26 @@ def create_label_with_design(product_data,
             # Çakışma kontrolü - yazı elementleri için
             if element_type in ['model_code', 'color', 'size', 'title'] and product_image_area:
                 # Yazının ürün görseli ile çakışıp çakışmadığını kontrol et
-                text_width_mm = 20  # Yaklaşık yazı genişliği
-                text_height_mm = 5  # Yaklaşık yazı yüksekliği
+                text_width_mm = 25  # Yaklaşık yazı genişliği
+                text_height_mm = 8  # Yaklaşık yazı yüksekliği
                 
-                # Çakışma kontrolü
-                if (editor_x_mm < product_image_area['x'] + product_image_area['width'] and
-                    editor_x_mm + text_width_mm > product_image_area['x'] and
-                    editor_y_mm < product_image_area['y'] + product_image_area['height'] and
-                    editor_y_mm + text_height_mm > product_image_area['y']):
+                # Çakışma kontrolü - 2mm tolerans ile
+                text_left = editor_x_mm - 1  # 1mm sol tolerans
+                text_right = editor_x_mm + text_width_mm + 1  # 1mm sağ tolerans
+                text_top = editor_y_mm - 1  # 1mm üst tolerans
+                text_bottom = editor_y_mm + text_height_mm + 1  # 1mm alt tolerans
+                
+                img_left = product_image_area['x']
+                img_right = product_image_area['x'] + product_image_area['width']
+                img_top = product_image_area['y']
+                img_bottom = product_image_area['y'] + product_image_area['height']
+                
+                # Çakışma var mı kontrol et
+                if (text_left < img_right and text_right > img_left and
+                    text_top < img_bottom and text_bottom > img_top):
                     
-                    # Çakışma var - yazıyı ürün görseli yanına kaydır
-                    editor_x_mm = product_image_area['x'] + product_image_area['width'] + 2  # 2mm boşluk
+                    # Çakışma var - yazıyı ürün görseli sağına kaydır
+                    editor_x_mm = img_right + 3  # 3mm boşluk
                     print(f"ÇAKIŞMA DÜZELTME: {element_type} kaydırıldı -> ({editor_x_mm:.1f}, {editor_y_mm:.1f})mm")
 
             # A4 etiket boyutlarına ölçeklendir
