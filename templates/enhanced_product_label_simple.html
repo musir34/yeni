@@ -708,8 +708,9 @@
             
             // Debug: tasarım ve ürün bilgilerini kontrol et
             console.log('A4 Print Design:', scaledDesign);
-            console.log('A4 Print Labels:', allLabels);
+            console.log('A4 Print Labels WITH UNIQUE BARCODES:', allLabels);
             console.log('Scale factors:', { x: scaleX, y: scaleY });
+            console.log('LABEL COUNT:', allLabels.length);
             
             const data = {
                 labels: allLabels,
