@@ -1142,10 +1142,10 @@ def print_multiple_labels():
                 f"A4 Element {i}: type={element.get('type')}, x={element.get('x')}, y={element.get('y')}, props={element.get('properties', {})}"
             )
 
-        # A4 Sayfa Başı Yapılandırma - Margin ve gap sıfır, sayfa başından başla
+        # A4 Sayfa Başı Yapılandırma - Etiketler sola kaydırıldı
         A4_FIXED_CONFIG = {
             'PAGE_WIDTH': 210,
-            'MARGIN_LEFT': 0,      # Sayfa başından başla
+            'MARGIN_LEFT': -10,    # Etiketleri daha çok sola kaydır
             'MARGIN_RIGHT': 0,     # Sayfa başından başla
             'COLUMN_GAP': 0,       # Etiketler arası boşluk yok
             'COLUMNS': 3,
