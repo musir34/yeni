@@ -271,7 +271,7 @@ Seç
 </div>
 <div class="card-body">
 <h6 class="mb-2"><i class="fas fa-user me-1"></i><strong>Müşteri:</strong> {{ order.customer_name }} {{ order.customer_surname }}</h6>
-<h6 class="mb-3"><i class="fas fa-map-marker-alt me-1"></i><strong>Adres:</strong> {{ order.customer_address }}</h6>
+<h6 class="mb-3"><i class="fas fa-question-circle me-1"></i><strong>Arşivlenme Nedeni:</strong> {{ order.archive_reason if order.archive_reason else 'Belirtilmemiş' }}</h6>
 
 {% if order.products and order.products|length > 0 %}
 <div class="product-images-list">
