@@ -408,6 +408,35 @@
                 updateCanvasSize();
             });
 
+            // Canvas içindeki elementleri yeniden boyutlandır
+            function updateCanvasElements() {
+                const canvas = document.getElementById("labelCanvas");
+                const elements = canvas.querySelectorAll('.canvas-element');
+                
+                const canvasWidth = parseInt(canvas.getAttribute('data-real-width') || '100');
+                const canvasHeight = parseInt(canvas.getAttribute('data-real-height') || '50');
+                
+                elements.forEach(element => {
+                    const elementType = element.className.split(' ')[1]?.replace('-element', '');
+                    
+                    if (elementType === 'text') {
+                        // Metin elementleri için canvas boyutuyla orantılı font boyutu
+                        const fontSize = Math.max(8, Math.min(canvasWidth / 8, canvasHeight / 3));
+                        element.style.fontSize = fontSize + 'px';
+                    } else if (elementType === 'qr' || elementType === 'barcode') {
+                        // QR kod ve barkod için canvas boyutuyla orantılı boyut
+                        const size = Math.max(20, Math.min(canvasWidth / 4, canvasHeight / 2));
+                        element.style.width = size + 'px';
+                        element.style.height = size + 'px';
+                    } else if (elementType === 'image') {
+                        // Görsel elementleri için canvas boyutuyla orantılı boyut
+                        const size = Math.max(30, Math.min(canvasWidth / 3, canvasHeight / 2));
+                        element.style.width = size + 'px';
+                        element.style.height = size + 'px';
+                    }
+                });
+            }
+
             // Canvas size management
             function updateCanvasSize() {
                 const width = parseInt(
@@ -449,6 +478,9 @@
                     container.style.minHeight = Math.max(300, height + 50) + "mm";
                     container.style.padding = "15mm";
                 }
+                
+                // Canvas içindeki mevcut elementleri yeniden boyutlandır
+                updateCanvasElements();
                 
                 console.log(`Canvas gerçek boyut: ${width}mm × ${height}mm`);
             }
