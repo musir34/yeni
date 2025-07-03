@@ -13,7 +13,7 @@
         
         /* Canvas Area */
         .canvas-container { position: relative; background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 12px; overflow: hidden; }
-        .label-canvas { position: relative; background: white; margin: 20px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform-origin: center; transition: width 0.3s ease, height 0.3s ease; border: 2px solid #dee2e6; }
+        .label-canvas { position: relative; background: white; margin: 20px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform-origin: center; transition: width 0.3s ease, height 0.3s ease; border: 2px solid #dee2e6; min-width: 10mm; min-height: 10mm; }
         .canvas-element { position: absolute; cursor: move; border: 2px solid transparent; transition: border-color 0.2s; }
         .canvas-element:hover { border-color: #3498db; }
         .canvas-element.selected { border-color: #e74c3c; box-shadow: 0 0 10px rgba(231,76,60,0.4); }
@@ -195,13 +195,9 @@
             const height = parseInt(document.getElementById('labelHeight').value);
             const canvas = document.getElementById('labelCanvas');
             
-            // Tutarlı ölçek sistemi - 1mm = 4px (editör ve çıktı arasında 1:1 uyum)
-            const displayScale = 4;
-            const displayWidth = width * displayScale;
-            const displayHeight = height * displayScale;
-            
-            canvas.style.width = displayWidth + 'px';
-            canvas.style.height = displayHeight + 'px';
+            // Direkt mm cinsinden boyutlar - pixel dönüşümü yok
+            canvas.style.width = width + 'mm';
+            canvas.style.height = height + 'mm';
             
             // Gerçek boyutları data attribute olarak sakla
             canvas.setAttribute('data-real-width', width);
@@ -210,7 +206,7 @@
             // Ölçek göstergesini güncelle
             const scaleIndicator = document.querySelector('.scale-indicator');
             if (scaleIndicator) {
-                scaleIndicator.textContent = `${width}mm x ${height}mm (4px = 1mm)`;
+                scaleIndicator.textContent = `${width}mm x ${height}mm (Gerçek Boyut)`;
                 scaleIndicator.style.backgroundColor = 'rgba(52, 152, 219, 0.9)';
                 scaleIndicator.style.color = 'white';
                 scaleIndicator.style.padding = '5px 10px';
@@ -266,8 +262,8 @@
                 const totalRequiredWidth = labelWidth + qrSize + 5;
                 const qrStartPosition = labelWidth + 2; // Etiket bitiminden 2mm sonra QR başlar
                 
-                defaultX = qrStartPosition * 4; // mm'yi pixel'e çevir (4px = 1mm)
-                defaultY = 20; // Y pozisyonu varsayılan
+                defaultX = qrStartPosition * 3.78; // mm'yi pixel'e çevir (3.78px = 1mm)
+                defaultY = 5 * 3.78; // Y pozisyonu varsayılan (mm'den pixel'e)
             }
             
             element.style.left = defaultX + 'px';
@@ -276,8 +272,10 @@
             const elementData = {
                 id: elementId,
                 type: type,
-                x: defaultX,
-                y: defaultY,
+                x: defaultX / 3.78,  // mm cinsinden sakla
+                y: defaultY / 3.78,
+                pixelX: defaultX,     // Display için pixel de sakla
+                pixelY: defaultY,
                 properties: getDefaultProperties(type)
             };
 
@@ -366,23 +364,26 @@
             let newX = (e.clientX - canvasRect.left - dragOffset.x) / zoomLevel;
             let newY = (e.clientY - canvasRect.top - dragOffset.y) / zoomLevel;
             
-            // Canvas sınırlarını kontrol et
+            // Canvas sınırlarını mm cinsinden kontrol et
             const canvas = document.getElementById('labelCanvas');
-            const canvasWidth = canvas.offsetWidth / zoomLevel;
-            const canvasHeight = canvas.offsetHeight / zoomLevel;
-            const elementWidth = selectedElement.offsetWidth / zoomLevel;
-            const elementHeight = selectedElement.offsetHeight / zoomLevel;
+            const canvasWidthMM = parseInt(canvas.getAttribute('data-real-width')) || 100;
+            const canvasHeightMM = parseInt(canvas.getAttribute('data-real-height')) || 50;
             
-            // Gerçek mm koordinatlarını hesapla (4px = 1mm)
-            //const realX = newX / 4;
-            //const realY = newY / 4;
+            // Pixel'den mm'ye dönüştür (1mm = 3.78px yaklaşık)
+            const mmX = newX / 3.78;
+            const mmY = newY / 3.78;
             
-            // Sınır kontrolü - 5px güvenlik payı
-            newX = Math.max(5, Math.min(newX, canvasWidth - elementWidth - 5));
-            newY = Math.max(5, Math.min(newY, canvasHeight - elementHeight - 5));
+            // Element boyutlarını mm cinsinden hesapla
+            const elementWidthMM = selectedElement.offsetWidth / 3.78;
+            const elementHeightMM = selectedElement.offsetHeight / 3.78;
             
-            selectedElement.style.left = newX + 'px';
-            selectedElement.style.top = newY + 'px';
+            // Sınır kontrolü - 1mm güvenlik payı
+            const finalX = Math.max(1, Math.min(mmX, canvasWidthMM - elementWidthMM - 1));
+            const finalY = Math.max(1, Math.min(mmY, canvasHeightMM - elementHeightMM - 1));
+            
+            // Pixel'e geri dönüştür display için
+            selectedElement.style.left = (finalX * 3.78) + 'px';
+            selectedElement.style.top = (finalY * 3.78) + 'px';
             
             // Çakışma kontrolü
             const collision = checkElementCollision(selectedElement);
@@ -398,10 +399,10 @@
                 // Element verilerini güncelle - mm cinsinden kaydet
                 const elementData = labelElements.find(el => el.id === selectedElement.id);
                 if (elementData) {
-                    elementData.x = newX;  // Pixel cinsinden editör koordinatları
-                    elementData.y = newY;
-                    // Gerçek mm koordinatlarını da kaydet (debug için)
-                    elementData.realX = realX;
+                    elementData.x = finalX;  // mm cinsinden koordinatlar
+                    elementData.y = finalY;
+                    // Debug için pixel koordinatlarını da kaydet
+                    elementData.pixelX = finalX * 3.78;
                     elementData.realY = realY;
                 }
             }
@@ -545,21 +546,21 @@
         function updateElementPosition() {
             if (!selectedElement) return;
             
-            // Input'tan mm cinsinden al, pixel'e çevir (1mm = 4px)
+            // Input'tan mm cinsinden al, display için pixel'e çevir (1mm = 3.78px)
             const xMM = parseInt(document.getElementById('pos_x').value);
             const yMM = parseInt(document.getElementById('pos_y').value);
-            const xPx = xMM * 4;
-            const yPx = yMM * 4;
+            const xPx = xMM * 3.78;
+            const yPx = yMM * 3.78;
             
             selectedElement.style.left = xPx + 'px';
             selectedElement.style.top = yPx + 'px';
             
             const elementData = labelElements.find(el => el.id === selectedElement.id);
             if (elementData) {
-                elementData.x = xPx;  // Pixel cinsinden sakla
-                elementData.y = yPx;
-                elementData.realX = xMM;  // mm cinsinden de sakla
-                elementData.realY = yMM;
+                elementData.x = xMM;  // mm cinsinden sakla
+                elementData.y = yMM;
+                elementData.pixelX = xPx;  // Display için pixel de sakla
+                elementData.pixelY = yPx;
             }
         }
 
@@ -570,12 +571,12 @@
             const posYInput = document.getElementById('pos_y');
             
             if (posXInput) {
-                // Pixel değerini mm'ye çevir (4px = 1mm)
-                const xMM = Math.round(parseInt(selectedElement.style.left) / 4);
+                // Pixel değerini mm'ye çevir (3.78px = 1mm)
+                const xMM = Math.round(parseInt(selectedElement.style.left) / 3.78);
                 posXInput.value = xMM;
             }
             if (posYInput) {
-                const yMM = Math.round(parseInt(selectedElement.style.top) / 4);
+                const yMM = Math.round(parseInt(selectedElement.style.top) / 3.78);
                 posYInput.value = yMM;
             }
         }

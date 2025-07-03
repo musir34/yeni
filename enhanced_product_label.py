@@ -1229,7 +1229,7 @@ def print_multiple_labels():
 
         # Etiket boyutlarını orijinal tasarım boyutlarından hesapla
         # mm'den pixel'e çevir
-        label_width_px = int((label_width / 25.4) * dpi)
+        label_width_px = int label_width / 25.4) * dpi)
         label_height_px = int((label_height / 25.4) * dpi)
         
         print(f"DEBUG: SAYFA BAŞI - Sayfa boyutu: {page_width_px}x{page_height_px} px")
