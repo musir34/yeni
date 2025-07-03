@@ -813,17 +813,13 @@ def generate_advanced_label_preview_new():
         for element in elements:
             element_type = element.get('type')
 
-            # Editörden gelen koordinatları mm'ye çevir
-            # Editörde canvas boyutu: width*4 px = width mm
-            # Yani 100mm etiket için 400px canvas, 1px = 0.25mm
-            editor_x_mm = element.get('x',
-                                      0) / 4  # px'i mm'ye çevir (4px = 1mm)
-            editor_y_mm = element.get('y', 0) / 4
+            # Editörden gelen koordinatları direkt mm olarak kullan
+            # Tasarım editöründe girilen x,y değerleri zaten mm cinsindendir
+            editor_x_mm = element.get('x', 0)
+            editor_y_mm = element.get('y', 0)
 
             # Debug: koordinat dönüşümünü kontrol et
-            logger.info(
-                f"Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})px -> mm=({editor_x_mm:.1f},{editor_y_mm:.1f})mm"
-            )
+            print(f"Element {element_type}: editör=({element.get('x', 0)},{element.get('y', 0)})mm -> DPI pozisyon hesaplanıyor")
 
             # mm'yi DPI'ya çevir 
             x = int((editor_x_mm / 25.4) * dpi)
@@ -1160,26 +1156,22 @@ def print_multiple_labels():
             'LABEL_HEIGHT_APPROX': (int(((297 - 15 - 15 - (7 - 1) * 1) / 7) * 100) / 100) - 0.08  # = 37.92mm
         }
 
-        # Etiket boyutu kontrolü - Product Label A4 sistemiyle uyumlu
-        label_size = data.get('label_size', 'custom')
-        if label_size == 'a4-standard':
-            # Product Label A4_FIXED_CONFIG değerlerini kullan
-            label_width = A4_FIXED_CONFIG['LABEL_WIDTH_APPROX']
-            label_height = A4_FIXED_CONFIG['LABEL_HEIGHT_APPROX']
-            top_margin = A4_FIXED_CONFIG['MARGIN_TOP']
-            left_margin = A4_FIXED_CONFIG['MARGIN_LEFT']
-            horizontal_gap = A4_FIXED_CONFIG['COLUMN_GAP']
-            vertical_gap = A4_FIXED_CONFIG['ROW_GAP']
-            # Sütun/satır sayısını da zorla uygula - A4 Standard: 3 sütun, 7 satır
-            labels_per_row = A4_FIXED_CONFIG['COLUMNS']  # 3 sütun (yatay)
-            labels_per_col = A4_FIXED_CONFIG['ROWS']  # 7 satır (dikey)
-        else:
-            label_width = data.get('label_width', 100)
-            label_height = data.get('label_height', 50)
-            top_margin = data.get('top_margin', 10)
-            left_margin = data.get('left_margin', 10)
-            horizontal_gap = data.get('horizontal_gap', 5)
-            vertical_gap = data.get('vertical_gap', 5)
+        # Tasarım editöründe kaydedilen etiket boyutlarını koru
+        # Design nesnesinden labelWidth ve labelHeight değerlerini al
+        design_label_width = design.get('labelWidth', 100)
+        design_label_height = design.get('labelHeight', 50)
+        
+        print(f"DEBUG: Tasarım editöründen gelen boyutlar - width: {design_label_width}mm, height: {design_label_height}mm")
+        
+        # A4 sabit margin değerlerini kullan ama etiket boyutlarını tasarımdan al
+        label_width = design_label_width
+        label_height = design_label_height
+        top_margin = A4_FIXED_CONFIG['MARGIN_TOP']
+        left_margin = A4_FIXED_CONFIG['MARGIN_LEFT']
+        horizontal_gap = A4_FIXED_CONFIG['COLUMN_GAP']
+        vertical_gap = A4_FIXED_CONFIG['ROW_GAP']
+        labels_per_row = A4_FIXED_CONFIG['COLUMNS']  # 3 sütun
+        labels_per_col = A4_FIXED_CONFIG['ROWS']  # 7 satır
         print_quality = data.get('print_quality', 300)
 
         if not labels:
