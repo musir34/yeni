@@ -1234,16 +1234,14 @@ def print_multiple_labels():
         available_width = page_width_px - (2 * margin_x)
         available_height = page_height_px - (2 * margin_y)
 
-        # İçeriği mevcut alanda ortala
+        # İçeriği mevcut alanda ortala (sadece yatay ortalama)
         if total_content_width <= available_width:
             start_x = margin_x + (available_width - total_content_width) // 2
         else:
             start_x = margin_x
 
-        if total_content_height <= available_height:
-            start_y = margin_y + (available_height - total_content_height) // 2
-        else:
-            start_y = margin_y
+        # Dikey olarak üst kısmından başlat - ortalama yok
+        start_y = margin_y
 
         # Minimum marjin kontrolü
         start_x = max(margin_x, start_x)
