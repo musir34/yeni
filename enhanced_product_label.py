@@ -1221,12 +1221,11 @@ def print_multiple_labels():
         labels_per_page = max_labels_per_row * max_labels_per_col
         total_pages = (len(labels) + labels_per_page - 1) // labels_per_page
 
-        # Etiketleri sayfanın başından itibaren yerleştir (ortalamadan farklı olarak)
-        # Sadece sol ve üst kenar boşluklarını kullan
-        start_x = margin_x
-        start_y = margin_y
+        # Etiketleri sayfanın tam başından itibaren yerleştir - kenar boşluklarını yok say
+        start_x = 0
+        start_y = 0
         
-        print(f"DEBUG: Etiketler sayfanın başından itibaren yerleştirilecek - start_x: {start_x}, start_y: {start_y}")
+        print(f"DEBUG: Etiketler sayfanın tam başından itibaren yerleştirilecek - start_x: {start_x}, start_y: {start_y}")
 
         all_pages = []
 
