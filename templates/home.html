@@ -1289,12 +1289,14 @@
             // Butonların durumunu güncelle ve timerları ayarla
             function updateButtonStates() {
             const allBarcodesMatched = barkodDogruList.every(Boolean);
+            const hasProducts = productCount > 0;
 
             // Önceki tüm timerları temizle (Yeni bir set başlatılacak veya hiç başlatılmayacak)
             clearAllTimersAndHideMessage();
 
-            if (allBarcodesMatched) {
-            // Tüm barkodlar doğruysa butonları aktifleştir
+            if (allBarcodesMatched && hasProducts) {
+            // Tüm barkodlar doğru VE ürün var ise butonları aktifleştir
+            console.log("Butonlar aktifleştiriliyor - tüm barkodlar doğru ve ürün var");
             onaylaBtn.classList.remove('disabled');
             yazdirBtn.classList.remove('disabled');
             onaylaBtn.disabled = false;
@@ -1322,7 +1324,8 @@
             }
 
             } else {
-            // Tüm barkodlar doğru değilse butonları pasifleştir
+            // Tüm barkodlar doğru değilse VEYA ürün yoksa butonları pasifleştir
+            console.log("Butonlar pasifleştiriliyor - allBarcodesMatched:", allBarcodesMatched, "hasProducts:", hasProducts);
             onaylaBtn.classList.add('disabled');
             yazdirBtn.classList.add('disabled');
             onaylaBtn.disabled = true;
