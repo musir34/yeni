@@ -1,7 +1,7 @@
 # order_list_service.py
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from sqlalchemy import literal
+from sqlalchemy import literal, desc
 from sqlalchemy.orm import aliased
 import json
 import os
@@ -10,7 +10,7 @@ import logging
 from datetime import datetime
 
 from models import db, Product, OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
-from barcode_utils import generate_barcode  # Bunu yalnızca generate_barcode için kullanıyoruz
+from barcode_utils import generate_barcode
 import qrcode
 import os
 
@@ -24,12 +24,12 @@ def generate_qr_code(shipping_barcode):
     if not shipping_barcode:
         logger.warning("❌ [generate_qr_code] Barkod değeri boş!")
         return None
-    
+
     try:
         # QR kod klasörü
         qr_dir = os.path.join('static', 'qr_codes')
         os.makedirs(qr_dir, exist_ok=True)
-        
+
         # QR kodu oluştur (büyük ve okunaklı olması için ayarlar)
         qr = qrcode.QRCode(
             version=1,
@@ -39,14 +39,14 @@ def generate_qr_code(shipping_barcode):
         )
         qr.add_data(shipping_barcode)
         qr.make(fit=True)
-        
+
         # QR kod dosyasını kaydet
         qr_path = os.path.join(qr_dir, f"qr_{shipping_barcode}.png")
         qr.make_image(fill_color="black", back_color="white").save(qr_path)
-        
+
         logger.info(f"✅ QR kod başarıyla kaydedildi: {qr_path}")
         return f"qr_codes/qr_{shipping_barcode}.png"
-        
+
     except Exception as e:
         logger.error(f"🔥 [generate_qr_code] QR kod oluşturma hatası: {e}")
         return None
@@ -75,9 +75,7 @@ def get_product_image(barcode):
 def get_union_all_orders():
     """
     Beş tabloda ortak kolonları seçip UNION ALL ile birleştirir.
-    Kargo firması, tahmini teslim tarihi vs. kolonları da ekliyoruz.
     """
-
     c = db.session.query(
         OrderCreated.id.label('id'),
         OrderCreated.order_number.label('order_number'),
@@ -167,9 +165,9 @@ def get_union_all_orders():
 
 
 ############################
-# 2) Tüm siparişleri listeleme
+# 2) Tüm siparişleri listeleme (GÜNCELLENDİ)
 ############################
-@cache.cached(timeout=CACHE_TIMES['orders'])
+# @cache.cached(timeout=CACHE_TIMES['orders']) # ARAMANIN ÇALIŞMASI İÇİN BU SATIR KALDIRILDI
 def get_order_list():
     """
     Tüm tabloları tek listede gösterir (UNION ALL).
@@ -192,7 +190,6 @@ def get_order_list():
             q = q.filter(AllOrders.c.order_number.ilike(f"%{search_query}%"))
             logger.debug(f"Arama sorgusuna göre filtre: {search_query}")
 
-        from sqlalchemy import desc
         q = q.order_by(desc(AllOrders.c.order_date))
 
         # Flask-SQLAlchemy paginate
@@ -215,8 +212,6 @@ def get_order_list():
             mock.merchant_sku = r.merchant_sku
             mock.product_barcode = r.product_barcode
             mock.status = r.status_name
-
-            # Eklediğimiz yeni kolonları da mock nesnesine atıyoruz:
             mock.cargo_provider_name = getattr(r, 'cargo_provider_name', '')
             mock.customer_name       = getattr(r, 'customer_name', '')
             mock.customer_surname    = getattr(r, 'customer_surname', '')
@@ -224,7 +219,6 @@ def get_order_list():
             mock.shipping_barcode    = getattr(r, 'shipping_barcode', '')
             mock.agreed_delivery_date = getattr(r, 'agreed_delivery_date', None)
             mock.estimated_delivery_end = getattr(r, 'estimated_delivery_end', None)
-
             orders.append(mock)
 
         # process details
@@ -315,12 +309,11 @@ def process_order_details(orders):
 
 
 ############################
-# 4) Belirli Durumlara Göre Filtre
+# 4) Belirli Durumlara Göre Filtre (GÜNCELLENDİ)
 ############################
 def get_filtered_orders(status):
     """
-    Created, Picking, Shipped, Delivered, Cancelled tablolarının
-    her birine ayrı sorgu atanır.
+    Belirli bir durumdaki siparişleri arama filtresiyle birlikte listeler.
     """
     status_map = {
         'Yeni': OrderCreated,
@@ -337,12 +330,23 @@ def get_filtered_orders(status):
     try:
         page = request.args.get('page', 1, type=int)
         per_page = 50
+        search_query = request.args.get('search', None) # Arama parametresini al
+
         model_cls = status_map.get(status, None)
         if not model_cls:
             flash(f"{status} durumuna ait tablo bulunamadı.", "warning")
             return redirect(url_for('home.home'))
 
-        orders_query = model_cls.query.order_by(model_cls.order_date.desc())
+        orders_query = model_cls.query
+
+        # ARAMA FİLTRESİNİ SORGUSA EKLE
+        if search_query:
+            search_query = search_query.strip()
+            orders_query = orders_query.filter(model_cls.order_number.ilike(f"%{search_query}%"))
+            logger.debug(f"'{status}' durumu için arama: {search_query}")
+
+        orders_query = orders_query.order_by(model_cls.order_date.desc())
+
         paginated_orders = orders_query.paginate(page=page, per_page=per_page, error_out=False)
         orders = paginated_orders.items
         total_pages = paginated_orders.pages
@@ -350,16 +354,7 @@ def get_filtered_orders(status):
 
         # Statü atama
         for order in orders:
-            if isinstance(order, OrderCreated):
-                order.status = 'Created'
-            elif isinstance(order, OrderPicking):
-                order.status = 'Picking'
-            elif isinstance(order, OrderShipped):
-                order.status = 'Shipped'
-            elif isinstance(order, OrderDelivered):
-                order.status = 'Delivered'
-            elif isinstance(order, OrderCancelled):
-                order.status = 'Cancelled'
+            order.status = status_map[status].__name__.replace("Order", "")
 
         process_order_details(orders)
 
@@ -368,7 +363,8 @@ def get_filtered_orders(status):
             orders=orders,
             page=page,
             total_pages=total_pages,
-            total_orders_count=total_orders_count
+            total_orders_count=total_orders_count,
+            search_query=search_query
         )
     except Exception as e:
         logger.error(f"Hata: get_filtered_orders - {e}")
@@ -422,8 +418,7 @@ def order_list_delivered():
 
 @order_list_service_bp.route('/order-list/cancelled')
 def order_list_cancelled():
-    return render_template('order_list_cancelled.html')  # veya redirect vs. ne istiyorsan
-
+    return get_filtered_orders('İptal Edildi') 
 
 
 @order_list_service_bp.route('/order-label', methods=['POST'])
@@ -441,24 +436,24 @@ def order_label():
         telefon_no = request.form.get('telefon_no', 'Bilinmiyor')
 
         logger.info("📦 Formdan gelen veriler:")
-        logger.info(f"📌 order_number        : {order_number}")
-        logger.info(f"📌 shipping_barcode    : {shipping_barcode}")
-        logger.info(f"📌 cargo_provider      : {cargo_provider}")
-        logger.info(f"📌 customer_name       : {customer_name}")
-        logger.info(f"📌 customer_surname    : {customer_surname}")
-        logger.info(f"📌 customer_address    : {customer_address}")
-        logger.info(f"📌 telefon_no          : {telefon_no}")
+        logger.info(f"📌 order_number         : {order_number}")
+        logger.info(f"📌 shipping_barcode   : {shipping_barcode}")
+        logger.info(f"📌 cargo_provider       : {cargo_provider}")
+        logger.info(f"📌 customer_name        : {customer_name}")
+        logger.info(f"📌 customer_surname     : {customer_surname}")
+        logger.info(f"📌 customer_address     : {customer_address}")
+        logger.info(f"📌 telefon_no           : {telefon_no}")
 
         # Barkod ve QR kod yollarını oluştur
         barcode_path = None
         qr_code_path = None
-        
+
         if shipping_barcode:
             # Doğrusal barkod (Code128) oluştur
             logger.debug("🛠️ shipping_barcode değeri bulundu, barkod üretiliyor...")
             barcode_path = generate_barcode(shipping_barcode)
             logger.info(f"✅ Barkod dosya yolu: {barcode_path}")
-            
+
             # QR kod oluştur
             logger.debug("🛠️ QR kod üretiliyor...")
             qr_code_path = generate_qr_code(shipping_barcode)
@@ -472,7 +467,7 @@ def order_label():
             order_number=order_number,
             shipping_barcode=shipping_barcode,
             barcode_path=barcode_path,
-            qr_code_path=qr_code_path,  # Yeni QR kod yolu
+            qr_code_path=qr_code_path,
             cargo_provider_name=cargo_provider,
             customer_name=customer_name,
             customer_surname=customer_surname,
@@ -484,4 +479,3 @@ def order_label():
         logger.error(f"🔥 Hata: order_label - {e}", exc_info=True)
         flash('Kargo etiketi oluşturulurken bir hata oluştu.', 'danger')
         return redirect(url_for('home.home'))
-

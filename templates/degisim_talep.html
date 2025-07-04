@@ -74,10 +74,18 @@
                     <label for="siparis_no" class="form-label">Sipariş No</label>
                     <input type="text" id="siparis_no" name="siparis_no" class="form-control" placeholder="Sipariş No Ara..." value="{{ current_filters.siparis_no or '' }}">
                 </div>
+
                 <div class="col-lg-3 col-md-6">
                     <label for="reason_keyword" class="form-label">Değişim Nedeni</label>
-                    <input type="text" id="reason_keyword" name="reason_keyword" class="form-control" placeholder="Kusurlu, yanlış..." value="{{ current_filters.reason_keyword or '' }}">
+                    <select id="reason_keyword" name="reason_keyword" class="form-select">
+                        <option value="">Tüm Nedenler</option>
+                        <option value="Ürün bedeni büyük geldi." {% if current_filters.reason_keyword == 'Ürün bedeni büyük geldi.' %}selected{% endif %}>Ürün Bedeni Büyük Geldi</option>
+                        <option value="Ürün bedeni küçük geldi." {% if current_filters.reason_keyword == 'Ürün bedeni küçük geldi.' %}selected{% endif %}>Ürün Bedeni Küçük Geldi</option>
+                        <option value="Kusurlu ürün gönderildi." {% if current_filters.reason_keyword == 'Kusurlu ürün gönderildi.' %}selected{% endif %}>Kusurlu Ürün Gönderildi</option>
+                        <option value="Yanlış ürün gönderildi." {% if current_filters.reason_keyword == 'Yanlış ürün gönderildi.' %}selected{% endif %}>Yanlış Ürün Gönderildi</option>
+                    </select>
                 </div>
+
                 <div class="col-lg-2 col-md-6">
                     <label for="filter_status" class="form-label">Durum</label>
                     <select id="filter_status" name="filter_status" class="form-select">

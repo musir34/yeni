@@ -160,10 +160,10 @@ def get_order_details():
 def degisim_talep():
     page = request.args.get('page', 1, type=int)
     try:
-        per_page = int(request.args.get('per_page', 10))
+        per_page = int(request.args.get('per_page', 12))
         per_page = max(5, min(100, per_page))
     except (ValueError, TypeError):
-        per_page = 10
+        per_page = 12
 
     filter_status = request.args.get('filter_status')
     sort = request.args.get('sort', 'desc')
