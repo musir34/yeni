@@ -123,7 +123,18 @@ def group_products_by_model_and_color(products):
     grouped_products = {}
     for product in products:
         key = (product.product_main_id or '', product.color or '')
-        grouped_products.setdefault(key, []).append(product)
+        # Sadece anahtar değil, tüm ürün listesini ekle
+        if key not in grouped_products:
+            grouped_products[key] = []
+        grouped_products[key].append(product)
+
+    # Her grubu bedene göre sırala
+    for key, group in grouped_products.items():
+        try:
+            grouped_products[key] = sorted(group, key=lambda p: float(p.size), reverse=True)
+        except (ValueError, TypeError):
+            grouped_products[key] = sorted(group, key=lambda p: p.size, reverse=True)
+
     return grouped_products
 
 
@@ -175,10 +186,10 @@ async def update_stocks_route(): # Bu fonksiyon Trendyol'daki STOK bilgilerini �
 
     # trendyol_api.py bilgileri kontrolü
     if not API_KEY or not API_SECRET or not SUPPLIER_ID:
-         msg = "Trendyol API bilgileri sunucuda eksik. Stoklar Trendyol'dan çekilemez."
-         logger.error(msg)
-         # Bu endpoint frontend'e JSON dönüyor, flash değil
-         return jsonify({'success': False, 'message': msg})
+        msg = "Trendyol API bilgileri sunucuda eksik. Stoklar Trendyol'dan çekilemez."
+        logger.error(msg)
+        # Bu endpoint frontend'e JSON dönüyor, flash değil
+        return jsonify({'success': False, 'message': msg})
 
 
     try:
@@ -234,18 +245,18 @@ async def update_stocks_route(): # Bu fonksiyon Trendyol'daki STOK bilgilerini �
             # Trendyol'dan gelen miktarın None veya farklı bir şey olmaması lazım, Trendyol 0 veya pozitif int döner
             # Yine de kontrol ekleyelim
             if trendyol_quantity is not None and isinstance(trendyol_quantity, int):
-                 # Sadece miktar gerçekten değişmişse güncelle
-                 if product.quantity != trendyol_quantity:
-                     logger.debug(f"DB Stoğu Güncelleniyor: Barkod {product.barcode}, Eski: {product.quantity}, Yeni (Trendyol): {trendyol_quantity}")
-                     product.quantity = trendyol_quantity
-                     db.session.add(product) # Mark as changed
-                     products_marked_for_update.append(product) # Commit için listeye ekle
-                     updated_count += 1
-                 else:
-                     logger.debug(f"DB Stoğu Aynı: Barkod {product.barcode}, Miktar: {product.quantity}")
+                # Sadece miktar gerçekten değişmişse güncelle
+                if product.quantity != trendyol_quantity:
+                    logger.debug(f"DB Stoğu Güncelleniyor: Barkod {product.barcode}, Eski: {product.quantity}, Yeni (Trendyol): {trendyol_quantity}")
+                    product.quantity = trendyol_quantity
+                    db.session.add(product) # Mark as changed
+                    products_marked_for_update.append(product) # Commit için listeye ekle
+                    updated_count += 1
+                else:
+                    logger.debug(f"DB Stoğu Aynı: Barkod {product.barcode}, Miktar: {product.quantity}")
             else:
-                 logger.warning(f"Trendyol'dan {product.barcode} barkodu için geçersiz miktar geldi: {trendyol_quantity}. DB güncellenmedi.")
-                 # Bu durumda bu ürünün DB'deki stoğunu Trendyol'a göre çekmemiş oluyoruz.
+                logger.warning(f"Trendyol'dan {product.barcode} barkodu için geçersiz miktar geldi: {trendyol_quantity}. DB güncellenmedi.")
+                # Bu durumda bu ürünün DB'deki stoğunu Trendyol'a göre çekmemiş oluyoruz.
 
         # 5. Veritabanı değişikliklerini kaydet (Tek commit!)
         if products_marked_for_update:
@@ -253,9 +264,9 @@ async def update_stocks_route(): # Bu fonksiyon Trendyol'daki STOK bilgilerini �
                 db.session.commit()
                 logger.info(f"Trendyol stok bilgisine göre veritabanında {updated_count} ürün stoğu başarıyla güncellendi.")
             except Exception as e:
-                 db.session.rollback()
-                 logger.error(f"Veritabanına stok güncellenirken commit hatası: {e}", exc_info=True)
-                 return jsonify({'success': False, 'message': f'Veritabanına stok güncellenirken hata oluştu: {str(e)}'})
+                db.session.rollback()
+                logger.error(f"Veritabanına stok güncellenirken commit hatası: {e}", exc_info=True)
+                return jsonify({'success': False, 'message': f'Veritabanına stok güncellenirken hata oluştu: {str(e)}'})
         else:
             logger.info("Veritabanında güncellenecek stok farkı olan ürün bulunamadı.")
 
@@ -280,7 +291,6 @@ async def save_products_to_db_async(products):
     images_folder = os.path.join(current_app.root_path, 'static', 'images')
     os.makedirs(images_folder, exist_ok=True)
 
-    image_downloads = []
     product_objects = []
     seen_barcodes = set()
 
@@ -292,24 +302,31 @@ async def save_products_to_db_async(products):
 
         seen_barcodes.add(original_barcode)
 
+        # --- lastUpdateDate alanını işle ---
+        last_update_timestamp = product_data.get('lastUpdateDate')
+        last_update_date_obj = None
+        if last_update_timestamp:
+            try:
+                # Trendyol genellikle Unix timestamp'i milisaniye cinsinden verir.
+                last_update_date_obj = datetime.fromtimestamp(int(last_update_timestamp) / 1000)
+            except (ValueError, TypeError, OSError): # Olası tüm hataları yakala
+                logger.warning(f"Barkod {original_barcode} için geçersiz lastUpdateDate formatı: {last_update_timestamp}")
+
+        # --- Diğer alanlar ---
         image_urls = [img.get('url', '') for img in product_data.get('images', []) if isinstance(img, dict)]
-        image_url = image_urls[0] if image_urls else ''
-        if image_url:
-            parsed_url = urlparse(image_url)
+        images_path_db = ''
+        if image_urls and image_urls[0]:
+            # ... (Bu kısım aynı)
+            parsed_url = urlparse(image_urls[0])
             image_extension = os.path.splitext(parsed_url.path)[1] or '.jpg'
             image_filename = f"{original_barcode}{image_extension.lower()}"
-            image_path = os.path.join(images_folder, image_filename)
-            image_downloads.append((image_url, image_path))
             images_path_db = f"/static/images/{image_filename}"
-        else:
-            images_path_db = ''
 
         size = next((attr.get('attributeValue', 'N/A') for attr in product_data.get('attributes', []) if attr.get('attributeName') == 'Beden'), 'N/A')
         color = next((attr.get('attributeValue', 'N/A') for attr in product_data.get('attributes', []) if attr.get('attributeName') == 'Renk'), 'N/A')
 
-        reject_reason_str = '; '.join([r.get('reason', 'N/A') for r in product_data.get('rejectReasonDetails', [])])
-
         product_objects.append({
+            # --- Önceki tüm alanlar ---
             "barcode": original_barcode,
             "title": product_data.get('title', 'N/A'),
             "product_main_id": product_data.get('productMainId', 'N/A'),
@@ -321,38 +338,68 @@ async def save_products_to_db_async(products):
             "archived": product_data.get('archived', False),
             "locked": product_data.get('locked', False),
             "on_sale": product_data.get('onSale', False),
-            "reject_reason": reject_reason_str,
+            "reject_reason": '; '.join([r.get('reason', 'N/A') for r in product_data.get('rejectReasonDetails', [])]),
             "sale_price": float(product_data.get('salePrice', 0)),
             "list_price": float(product_data.get('listPrice', 0)),
             "currency_type": product_data.get('currencyType', 'TRY'),
+            "description": product_data.get('description', ''),
+            "attributes": json.dumps(product_data.get('attributes', [])),
+            "brand": product_data.get('brand', 'N/A'),
+            "category_name": product_data.get('categoryName', 'N/A'),
+            "category_id": product_data.get('categoryId'),
+            "stock_code": product_data.get('stockCode'),
+            "shipment_address_id": product_data.get('shipmentAddressId'),
+            "delivery_duration": product_data.get('deliveryDuration'),
+            "cargo_company_id": product_data.get('cargoCompanyId'),
+            "dimensional_weight": product_data.get('dimensionalWeight'),
+            "vat_rate": product_data.get('vatRate'),
+
+            # --- YENİ EKLENEN ALANLAR (07.07.2025) ---
+            "status": product_data.get('status'),
+            "gtin": product_data.get('gtin'),
+            "last_update_date": last_update_date_obj
         })
 
+    if not product_objects:
+        logger.info("Veritabanına eklenecek veya güncellenecek yeni ürün bulunamadı.")
+        return
+
+    # Toplu Ekleme/Güncelleme (Upsert)
     batch_size = 500
     for i in range(0, len(product_objects), batch_size):
         batch = product_objects[i:i + batch_size]
         insert_stmt = insert(Product).values(batch)
+
+        set_payload = {
+            # --- Önceki tüm güncellenecek alanlar ---
+            'quantity': insert_stmt.excluded.quantity,
+            'sale_price': insert_stmt.excluded.sale_price,
+            'list_price': insert_stmt.excluded.list_price,
+            'images': insert_stmt.excluded.images,
+            'description': insert_stmt.excluded.description,
+            'attributes': insert_stmt.excluded.attributes,
+            'on_sale': insert_stmt.excluded.on_sale,
+            'locked': insert_stmt.excluded.locked,
+            'reject_reason': insert_stmt.excluded.reject_reason,
+            "brand": insert_stmt.excluded.brand,
+            "category_name": insert_stmt.excluded.category_name,
+            "stock_code": insert_stmt.excluded.stock_code,
+            "vat_rate": insert_stmt.excluded.vat_rate,
+
+            # --- YENİ ALANLARIN GÜNCELLENMESİ ---
+            "status": insert_stmt.excluded.status,
+            "gtin": insert_stmt.excluded.gtin,
+            "last_update_date": insert_stmt.excluded.last_update_date,
+        }
+
         upsert_stmt = insert_stmt.on_conflict_do_update(
             index_elements=['barcode'],
-            set_={
-                'quantity': insert_stmt.excluded.quantity,
-                'sale_price': insert_stmt.excluded.sale_price,
-                'list_price': insert_stmt.excluded.list_price,
-                'images': insert_stmt.excluded.images,
-                'size': insert_stmt.excluded.size,
-                'color': insert_stmt.excluded.color,
-            }
+            set_=set_payload
         )
         db.session.execute(upsert_stmt)
-    db.session.commit()
 
-    # Görsel indirme işlemini eşzamanlı olarak yap
-    image_downloads = check_and_prepare_image_downloads(image_downloads, images_folder)
-    if image_downloads:
-        logger.info(f"{len(image_downloads)} görsel indirilecek")
-        await download_images_async(image_downloads)
-        logger.info("Tüm görseller başarıyla indirildi")
-    
-    flash("Ürünler ve görseller başarıyla kaydedildi.", "success")
+    db.session.commit()
+    flash("Ürünler başarıyla ve tüm detaylarıyla veritabanına kaydedildi/güncellendi.", "success")
 
 
 async def fetch_all_products_async():
@@ -415,20 +462,20 @@ async def download_images_async(image_urls):
     if not image_urls:
         logger.info("İndirilecek görsel bulunmuyor")
         return
-    
+
     timeout = aiohttp.ClientTimeout(total=30)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         tasks = []
         semaphore = asyncio.Semaphore(50)  # Daha az eşzamanlı indirme
         for image_url, image_path in image_urls:
             tasks.append(download_image(session, image_url, image_path, semaphore))
-        
+
         # Tüm indirmeleri bekle ve hataları yakala
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         success_count = sum(1 for r in results if r is True)
         error_count = len(results) - success_count
-        
+
         logger.info(f"Görsel indirme tamamlandı: {success_count} başarılı, {error_count} hatalı")
 
 
@@ -437,27 +484,27 @@ async def download_image(session, image_url, image_path, semaphore):
         if os.path.exists(image_path):
             logger.debug(f"Resim zaten mevcut, atlanıyor: {os.path.basename(image_path)}")
             return True
-        
+
         try:
             # Dizin yoksa oluştur
             os.makedirs(os.path.dirname(image_path), exist_ok=True)
-            
+
             async with session.get(image_url) as response:
                 if response.status != 200:
                     logger.warning(f"Resim indirme hatası: {response.status} - {image_url}")
                     return False
-                
+
                 content = await response.read()
                 if len(content) < 100:  # Çok küçük dosyalar muhtemelen hatalı
                     logger.warning(f"Geçersiz görsel boyutu: {len(content)} bytes - {image_url}")
                     return False
-                
+
                 with open(image_path, 'wb') as img_file:
                     img_file.write(content)
-                
+
                 logger.debug(f"Resim kaydedildi: {os.path.basename(image_path)}")
                 return True
-                
+
         except Exception as e:
             logger.error(f"Resim indirme hatası ({os.path.basename(image_path)}): {e}")
             return False
@@ -491,6 +538,9 @@ def upsert_products(products):
             'images': insert_stmt.excluded.images,
             'size': insert_stmt.excluded.size,
             'color': insert_stmt.excluded.color,
+            # YENİ: Güncellenecek alanlar
+            'description': insert_stmt.excluded.description,
+            'attributes': insert_stmt.excluded.attributes,
         }
     )
     db.session.execute(upsert_stmt)
@@ -576,30 +626,21 @@ def archive_product():
         products = Product.query.filter_by(product_main_id=product_main_id).all()
         if not products:
             return jsonify({'success': False, 'message': 'Ürün bulunamadı'})
+
         for product in products:
-            archive_product = ProductArchive(
-                barcode=product.barcode,
-                title=product.title,
-                product_main_id=product.product_main_id,
-                quantity=product.quantity,
-                images=product.images,
-                variants=product.variants,
-                size=product.size,
-                color=product.color,
-                archived=True,
-                locked=product.locked,
-                on_sale=product.on_sale,
-                reject_reason=product.reject_reason,
-                sale_price=product.sale_price,
-                list_price=product.list_price,
-                currency_type=product.currency_type
-            )
+            # Tüm alanları dinamik olarak kopyala
+            archive_data = {c.name: getattr(product, c.name) for c in product.__table__.columns}
+            archive_data['archived'] = True # Arşivlendi olarak işaretle
+
+            archive_product = ProductArchive(**archive_data)
             db.session.add(archive_product)
             db.session.delete(product)
+
         db.session.commit()
         return jsonify({'success': True, 'message': 'Ürünler başarıyla arşivlendi'})
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Arşivleme hatası: {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)})
 
 
@@ -612,83 +653,110 @@ def restore_from_archive():
         archived_products = ProductArchive.query.filter_by(product_main_id=product_main_id).all()
         if not archived_products:
             return jsonify({'success': False, 'message': 'Arşivde ürün bulunamadı'})
+
         for archived in archived_products:
-            product = Product(
-                barcode=archived.barcode,
-                title=archived.title,
-                product_main_id=archived.product_main_id,
-                quantity=archived.quantity,
-                images=archived.images,
-                variants=archived.variants,
-                size=archived.size,
-                color=archived.color,
-                archived=False,
-                locked=archived.locked,
-                on_sale=archived.on_sale,
-                reject_reason=archived.reject_reason,
-                sale_price=archived.sale_price,
-                list_price=archived.list_price,
-                currency_type=archived.currency_type
-            )
+            # Tüm alanları dinamik olarak kopyala
+            product_data = {c.name: getattr(archived, c.name) for c in archived.__table__.columns if hasattr(Product, c.name)}
+            product_data['archived'] = False # Arşivden çıkarıldı olarak işaretle
+
+            # archive_date gibi Product modelinde olmayan alanları kaldır
+            product_data.pop('archive_date', None)
+
+            product = Product(**product_data)
             db.session.add(product)
             db.session.delete(archived)
+
         db.session.commit()
         return jsonify({'success': True, 'message': 'Ürünler başarıyla arşivden çıkarıldı'})
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Arşivden geri yükleme hatası: {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)})
 
 
+def group_products_by_model_and_then_color(products):
+    """Ürünleri önce modele, sonra renge göre hiyerarşik olarak gruplar."""
+    grouped_by_model = {}
+    for product in products:
+        model_id = product.product_main_id
+        if not model_id:
+            continue
+
+        # Model için anahtar daha önce oluşturulmadıysa oluştur
+        if model_id not in grouped_by_model:
+            grouped_by_model[model_id] = {
+                'main_product_info': product, # Ana görsel, başlık vs. için temsilci ürün
+                'colors': {}
+            }
+
+        color = product.color or 'Diğer'
+        # Renk için anahtar daha önce oluşturulmadıysa oluştur
+        if color not in grouped_by_model[model_id]['colors']:
+            grouped_by_model[model_id]['colors'][color] = []
+
+        grouped_by_model[model_id]['colors'][color].append(product)
+
+    # Her rengin içindeki bedenleri numaraya göre büyükten küçüğe sırala
+    for model_id, data in grouped_by_model.items():
+        for color, variants in data['colors'].items():
+            try:
+                data['colors'][color] = sorted(variants, key=lambda x: float(x.size), reverse=True)
+            except (ValueError, TypeError):
+                data['colors'][color] = sorted(variants, key=lambda x: x.size, reverse=True)
+
+    return grouped_by_model
+
+
+# get_products.py içindeki GÜNCELLENECEK ROUTE
 @get_products_bp.route('/product_list')
 def product_list():
     try:
         page = request.args.get('page', 1, type=int)
-        
-        # Cache key'ini sayfa numarasını da içerecek şekilde oluştur
-        cache_key = f'product_list_page_{page}'
-        cached_result = cache.get(cache_key)
-        if cached_result:
-            return cached_result
-        per_page = 12
-        base_query = Product.query
-        products = base_query.all()
-        grouped_products = group_products_by_model_and_color(products)
-        sorted_keys = sorted(grouped_products.keys(), key=lambda x: (x[0].lower(), x[1].lower()))
-        total_groups = len(sorted_keys)
+        per_page = 12 # Sayfa başına gösterilecek MODEL sayısı
+
+        all_products = Product.query.order_by(Product.product_main_id).all()
+
+        # Yeni hiyerarşik gruplama fonksiyonunu kullan
+        hierarchical_products = group_products_by_model_and_then_color(all_products)
+
+        model_keys = sorted(list(hierarchical_products.keys()))
+        total_models = len(model_keys)
+
         start_idx = (page - 1) * per_page
-        end_idx = min(start_idx + per_page, total_groups)
-        current_page_keys = sorted_keys[start_idx:end_idx]
-        current_page_products = {key: sort_variants_by_size(grouped_products[key]) for key in current_page_keys}
-        total_pages = (total_groups + per_page - 1) // per_page
+        end_idx = start_idx + per_page
+
+        current_page_keys = model_keys[start_idx:end_idx]
+        current_page_products = {key: hierarchical_products[key] for key in current_page_keys}
+
+        total_pages = (total_models + per_page - 1) // per_page
+
+        # Flask-SQLAlchemy'nin pagination nesnesini manuel oluşturuyoruz
         pagination = {
             'page': page,
             'per_page': per_page,
-            'total': total_groups,
+            'total': total_models,
             'pages': total_pages,
             'has_prev': page > 1,
             'has_next': page < total_pages,
             'prev_num': page - 1 if page > 1 else None,
             'next_num': page + 1 if page < total_pages else None,
-            'iter_pages': lambda left_edge=2, right_edge=2, left_current=2, right_current=2:
-                range(1, total_pages + 1)
+            'iter_pages': lambda left_edge=1, right_edge=1, left_current=2, right_current=2: 
+                           # Bu lambda, sayfa numaralarını oluşturmak için basit bir mantık içerir
+                           # Gerçek bir pagination nesnesi gibi karmaşık değildir ama iş görür
+                           range(max(1, page - left_current), min(total_pages, page + right_current) + 1)
         }
+
+        return render_template(
+            'product_list.html', # Artık bu dosyayı kullanacağız
+            grouped_products=current_page_products,
+            pagination=pagination,
+            search_mode=False # Arama modu entegrasyonu ayrıca yapılmalı
+        )
+
     except Exception as e:
-        logger.error(f"Ürünler veritabanından çekilirken bir hata oluştu: {e}")
-        # Flash mesajları kaldırıldı - sessiz çalışma
-        return render_template('error.html', message="Ürün bulunamadı.")
-    
-    # Sonucu render et ve cache'e kaydet
-    result = render_template(
-        'product_list.html',
-        grouped_products=current_page_products,
-        pagination=pagination,
-        total_pages=total_pages,
-        search_mode=False
-    )
-    
-    # Sonucu cache'e kaydet
-    cache.set(cache_key, result, timeout=CACHE_TIMES['products'])
-    return result
+        logger.error(f"Ürün listesi oluşturulurken hata: {e}", exc_info=True)
+        flash("Ürün listesi yüklenirken bir hata oluştu.", "danger")
+        return render_template('product_list.html', grouped_products={}, pagination=None)
 
 
 @get_products_bp.route('/api/get_product_variants', methods=['GET'])
@@ -796,76 +864,39 @@ def delete_product_variants():
 
 
 
-
-############################################
-# Yardımcı fonksiyonlar - duplicate kaldırıldı
-############################################
-
-
-
 ############################################
 # Arama fonksiyonu - İSTEĞE GÖRE GÜNCELLENMİŞ HALİ
 ############################################
-@get_products_bp.route('/search_products', methods=['GET'])
+@get_products_bp.route('/search_products')
 def search_products():
-    # Formdan gelen arama tipi ve sorguyu al
-    search_type = request.args.get('search_type', 'model_code').strip() # Varsayılan: model_code
     query = request.args.get('query', '').strip()
+    search_type = request.args.get('search_type', 'model_code').strip()
 
-    # Sorgu boşsa uyarı ver ve ana listeye dön
     if not query:
-        # Arama sorgusu boş - sessiz yönlendirme
         return redirect(url_for('get_products.product_list'))
 
-    products_query = None
-    # Arama tipine göre SQLAlchemy sorgusunu oluştur
+    found_products_query = None
     if search_type == 'model_code':
-        # Model koduna göre büyük/küçük harf duyarsız tam eşleşme
-        products_query = Product.query.filter(func.lower(Product.product_main_id) == query.lower())
-        logger.debug(f"Model kodu ile arama yapılıyor: {query}")
+        found_products_query = Product.query.filter(func.lower(Product.product_main_id) == query.lower())
     elif search_type == 'barcode':
-        # Barkoda göre tam eşleşme
-        products_query = Product.query.filter(Product.barcode == query)
-        logger.debug(f"Barkod ile arama yapılıyor: {query}")
-    else:
-        # Geçersiz bir arama tipi gelirse (normalde olmamalı)
-        # Geçersiz arama tipi - sessiz yönlendirme
-        return redirect(url_for('get_products.product_list'))
+        product_by_barcode = Product.query.filter_by(barcode=query).first()
+        if product_by_barcode and product_by_barcode.product_main_id:
+            found_products_query = Product.query.filter_by(product_main_id=product_by_barcode.product_main_id)
 
-    # Sorguyu çalıştır ve tüm sonuçları al
-    products = products_query.all()
-    logger.debug(f"Arama sonucu bulunan ürün sayısı: {len(products)}")
+    found_products = found_products_query.all() if found_products_query else []
 
-    # Sonuç bulunamazsa kullanıcıyı bilgilendir
-    if not products:
-        # Sonuç bulunamadı - sessiz çalışma
-        # Boş bir grouped_products göndererek template'in hata vermesini engelle
-        return render_template(
-            'product_list.html',
-            grouped_products={},
-            pagination=None,
-            search_mode=True,
-            search_query=query, # Arama kutusunu dolu tutmak için
-            search_type=search_type
-        )
+    # Arama sonuçlarını "model ve renge göre" grupla
+    grouped_results = group_products_by_model_and_color(found_products)
 
-    # Bulunan ürünleri model ve renge göre grupla
-    # group_products_by_model_and_color zaten listenin boş olup olmadığını kontrol etmeli
-    grouped_products = group_products_by_model_and_color(products)
-    logger.debug(f"Gruplanmış ürün anahtarları: {list(grouped_products.keys())}")
-
-    # Sonuçları template'e gönder
+    # YENİ: Artık 'search_results.html' yerine ana şablonu çağırıyoruz
     return render_template(
-        'product_list.html',
-        grouped_products=grouped_products,
-        pagination=None,  # Arama sonuçlarında genellikle sayfalama olmaz
-        search_mode=True,
-        search_query=query, # Arama kutusunu dolu tutmak için
+        'product_list.html', 
+        grouped_products=grouped_results, # Veriyi (model,renk) olarak gruplu gönder
+        pagination=None,
+        search_mode=True, # Arama modunda olduğumuzu şablona bildiriyoruz
+        search_query=query,
         search_type=search_type
     )
-
-
-
 
 
 @get_products_bp.route('/api/delete-product', methods=['POST'])
@@ -1057,21 +1088,21 @@ def update_product_prices():
         # Yetki kontrolü
         if not session.get('user_id'):
             return jsonify({'success': False, 'message': 'Oturum açmanız gerekli'})
-        
+
         user_role = session.get('role', '').lower()
         if user_role != 'admin':
             return jsonify({'success': False, 'message': 'Bu işlem için admin yetkisine sahip değilsiniz'})
-        
+
         updated_count = 0
         errors = []
         price_updates = []
-        
+
         for key, value in request.form.items():
             if key and value:  # Boş olmayan değerler
                 try:
                     barcode = key
                     new_price = float(value)
-                    
+
                     product = Product.query.filter_by(barcode=barcode).first()
                     if product:
                         product.sale_price = new_price
@@ -1080,15 +1111,15 @@ def update_product_prices():
                         price_updates.append((barcode, new_price))
                     else:
                         errors.append(f"Barkod {barcode} bulunamadı")
-                        
+
                 except (ValueError, TypeError):
                     errors.append(f"Geçersiz fiyat değeri: {value}")
                 except Exception as e:
                     errors.append(f"Barkod {key} güncellenirken hata: {str(e)}")
-        
+
         if updated_count > 0:
             db.session.commit()
-            
+
         # Trendyol'da toplu fiyat güncelleme
         trendyol_errors = []
         if price_updates:
@@ -1098,17 +1129,17 @@ def update_product_prices():
             except Exception as e:
                 logger.error(f"Trendyol toplu güncelleme hatası: {e}")
                 trendyol_errors = [barcode for barcode, _ in price_updates]
-            
+
         # Sonuç mesajını hazırla
         message = f"{updated_count} adet ürünün fiyatı güncellendi."
         if trendyol_errors:
             message += f" {len(trendyol_errors)} üründe Trendyol güncellemesi başarısız oldu."
         else:
             message += " Trendyol fiyatları da güncellendi."
-            
+
         if errors:
             message += f" {len(errors)} hata oluştu."
-            
+
         return jsonify({
             'success': updated_count > 0,
             'message': message,
@@ -1116,7 +1147,7 @@ def update_product_prices():
             'trendyol_errors': len(trendyol_errors),
             'errors': errors
         })
-        
+
     except Exception as e:
         db.session.rollback()
         logger.error(f"Fiyat güncelleme hatası: {e}")
@@ -1128,29 +1159,29 @@ async def update_prices_in_trendyol_bulk(price_updates):
     try:
         import aiohttp
         import os
-        
+
         api_key = os.getenv('TRENDYOL_API_KEY')
         secret_key = os.getenv('TRENDYOL_SECRET_KEY') 
         supplier_id = os.getenv('TRENDYOL_SUPPLIER_ID')
-        
+
         if not all([api_key, secret_key, supplier_id]):
             logger.error("Trendyol API anahtarları eksik")
             return []
-        
+
         if not price_updates:
             return []
-        
+
         url = f"https://api.trendyol.com/sapigw/suppliers/{supplier_id}/products/price-and-inventory"
-        
+
         import base64
         credentials = base64.b64encode(f"{api_key}:{secret_key}".encode()).decode()
-        
+
         headers = {
             'Authorization': f'Basic {credentials}',
             'Content-Type': 'application/json',
             'User-Agent': f'SupplierId {supplier_id} - SendIntegrationInfo'
         }
-        
+
         # Tüm fiyat güncellemelerini tek payload'da topla
         items = []
         for barcode, price in price_updates:
@@ -1159,9 +1190,9 @@ async def update_prices_in_trendyol_bulk(price_updates):
                 "salePrice": price,
                 "listPrice": price
             })
-        
+
         payload = {"items": items}
-        
+
         async with aiohttp.ClientSession() as session:
             timeout = aiohttp.ClientTimeout(total=60)
             async with session.post(url, headers=headers, json=payload, timeout=timeout) as response:
@@ -1172,7 +1203,7 @@ async def update_prices_in_trendyol_bulk(price_updates):
                     error_text = await response.text()
                     logger.error(f"Trendyol toplu fiyat güncelleme hatası - Status: {response.status}, Error: {error_text}")
                     return [barcode for barcode, _ in price_updates]  # Tüm barkodlar hatalı
-                    
+
     except Exception as e:
         logger.error(f"Trendyol API genel hatası: {e}")
         return [barcode for barcode, _ in price_updates]  # Tüm barkodlar hatalı
@@ -1185,46 +1216,46 @@ def update_model_price():
         # Yetki kontrolü
         if not session.get('user_id'):
             return jsonify({'success': False, 'message': 'Oturum açmanız gerekli'})
-        
+
         user_role = session.get('role', '').lower()
         if user_role != 'admin':
             return jsonify({'success': False, 'message': 'Bu işlem için admin yetkisine sahip değilsiniz'})
-        
+
         model_id = request.form.get('model_id', '').strip()
         sale_price_str = request.form.get('sale_price', '').strip()
-        
+
         if not model_id:
             return jsonify({'success': False, 'message': 'Model ID gerekli'})
-        
+
         if not sale_price_str:
             return jsonify({'success': False, 'message': 'Satış fiyatı gerekli'})
-        
+
         try:
             sale_price = float(sale_price_str)
         except (ValueError, TypeError):
             return jsonify({'success': False, 'message': 'Geçerli bir fiyat değeri giriniz'})
-        
+
         if sale_price < 0:
             return jsonify({'success': False, 'message': 'Fiyat negatif olamaz'})
-        
+
         # Model ID'ye sahip tüm ürünleri bul
         products = Product.query.filter_by(product_main_id=model_id).all()
-        
+
         if not products:
             return jsonify({'success': False, 'message': 'Bu model için ürün bulunamadı'})
-        
+
         # Veritabanında fiyatları güncelle
         updated_count = 0
         price_updates = []
-        
+
         for product in products:
             product.sale_price = sale_price
             db.session.add(product)
             updated_count += 1
             price_updates.append((product.barcode, sale_price))
-        
+
         db.session.commit()
-        
+
         # Trendyol'da toplu fiyat güncelleme
         trendyol_errors = []
         if price_updates:
@@ -1234,10 +1265,10 @@ def update_model_price():
             except Exception as e:
                 logger.error(f"Trendyol toplu güncelleme hatası: {e}")
                 trendyol_errors = [barcode for barcode, _ in price_updates]
-        
+
         # Sonuç mesajını hazırla
         message = f'{model_id} modeli için {updated_count} varyantın fiyatı {sale_price} TL olarak güncellendi'
-        
+
         if trendyol_errors:
             message += f'\n\nUyarı: {len(trendyol_errors)} üründe Trendyol fiyat güncellemesi başarısız oldu.'
             message += f'\nSorunlu barkodlar: {", ".join(trendyol_errors[:5])}'
@@ -1245,14 +1276,14 @@ def update_model_price():
                 message += f' ve {len(trendyol_errors) - 5} diğer...'
         else:
             message += '\n\nTrendyol fiyatları da başarıyla güncellendi.'
-        
+
         return jsonify({
             'success': True,
             'message': message,
             'updated_count': updated_count,
             'trendyol_errors': len(trendyol_errors)
         })
-        
+
     except Exception as e:
         db.session.rollback()
         logger.error(f"Model fiyat güncelleme hatası: {e}")
@@ -1333,3 +1364,61 @@ def bulk_delete_products():
 
 
 
+@get_products_bp.route('/api/get_variants_for_stock_update')
+def get_variants_for_stock_update():
+    model_id = request.args.get('model')
+    if not model_id:
+        return jsonify({'success': False, 'message': 'Model ID eksik.'}), 400
+
+    products = Product.query.filter_by(product_main_id=model_id).order_by(Product.color, Product.size).all()
+    variants = [{'barcode': p.barcode, 'color': p.color, 'size': p.size, 'quantity': p.quantity} for p in products]
+    return jsonify({'success': True, 'products': variants})
+
+@get_products_bp.route('/api/get_variants_for_cost_update')
+def get_variants_for_cost_update():
+    model_id = request.args.get('model')
+    if not model_id:
+        return jsonify({'success': False, 'message': 'Model ID eksik.'}), 400
+
+    products = Product.query.filter_by(product_main_id=model_id).order_by(Product.color, Product.size).all()
+    variants = [{'barcode': p.barcode, 'color': p.color, 'size': p.size, 'cost_usd': p.cost_usd or 0} for p in products]
+    return jsonify({'success': True, 'products': variants})
+
+@get_products_bp.route('/api/delete-model', methods=['POST'])
+def delete_model():
+    model_id = request.form.get('model_id')
+    if not model_id:
+        return jsonify({'success': False, 'message': 'Model ID eksik.'})
+
+    try:
+        products_to_delete = Product.query.filter_by(product_main_id=model_id).all()
+        if not products_to_delete:
+            return jsonify({'success': False, 'message': 'Silinecek ürün bulunamadı.'})
+
+        for product in products_to_delete:
+            db.session.delete(product)
+
+        db.session.commit()
+        return jsonify({'success': True, 'message': f"'{model_id}' modeli ve tüm varyantları başarıyla silindi."})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Model silinirken hata oluştu: {e}", exc_info=True)
+        return jsonify({'success': False, 'message': 'Bir sunucu hatası oluştu.'})
+
+@get_products_bp.route('/api/get_model_info')
+def get_model_info():
+    model_id = request.args.get('model_id')
+    if not model_id:
+        return jsonify({'success': False, 'message': 'Model ID eksik.'}), 400
+
+    # Modelin herhangi bir varyantını referans olarak alalım
+    product = Product.query.filter_by(product_main_id=model_id).first()
+
+    if product:
+        return jsonify({
+            'success': True,
+            'sale_price': product.sale_price or 0,
+            'cost_usd': product.cost_usd or 0
+        })
+    else:
+        return jsonify({'success': False, 'message': 'Ürün bulunamadı.'}), 404

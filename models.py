@@ -319,10 +319,11 @@ class Order(db.Model):
     product_cost_total = db.Column(db.Float, default=0.0)
     # İlişkiler (OrderItem'a) - Zaten OrderItem modelinde tanımlı
 
-
 class ProductArchive(db.Model):
     __tablename__ = 'product_archive'
 
+    # --- Önceki tüm alanlar burada yer alıyor ---
+    # ... (barcode, title, brand, category_name, vs.)
     barcode = db.Column(db.String, primary_key=True)
     title = db.Column(db.String)
     product_main_id = db.Column(db.String)
@@ -339,12 +340,27 @@ class ProductArchive(db.Model):
     list_price = db.Column(db.Float)
     currency_type = db.Column(db.String)
     archive_date = db.Column(db.DateTime, default=datetime.utcnow)
-    
+    description = db.Column(db.Text, nullable=True)
+    attributes = db.Column(db.Text, nullable=True)
+    brand = db.Column(db.String(255), nullable=True)
+    category_name = db.Column(db.String(255), nullable=True)
+    category_id = db.Column(db.Integer, nullable=True)
+    stock_code = db.Column(db.String(255), nullable=True)
+    shipment_address_id = db.Column(db.Integer, nullable=True)
+    delivery_duration = db.Column(db.Integer, nullable=True)
+    cargo_company_id = db.Column(db.Integer, nullable=True)
+    dimensional_weight = db.Column(db.Float, nullable=True)
+    vat_rate = db.Column(db.Integer, nullable=True)
+
+    # --- YENİ EKLENEN ALANLAR (07.07.2025) ---
+    status = db.Column(db.String(50), nullable=True)
+    gtin = db.Column(db.String(255), nullable=True)
+    last_update_date = db.Column(db.DateTime, nullable=True)
+
     def __init__(self, **kwargs):
         super(ProductArchive, self).__init__(**kwargs)
 
 
-# Ürün Modeli - primary key düzeltildi, original_product_barcode kaldırıldı, __init__ güncellendi
 class Product(db.Model):
     __tablename__ = 'products'
 
@@ -364,35 +380,25 @@ class Product(db.Model):
     sale_price = db.Column(db.Float)
     list_price = db.Column(db.Float)
     currency_type = db.Column(db.String)
-    cost_usd = db.Column(db.Float, default=0.0)  # Maliyet (USD cinsinden)
-    cost_date = db.Column(db.DateTime)  # Maliyet girişi tarihi
-    cost_try = db.Column(db.Float, default=0) #tl karşılığı
+    cost_usd = db.Column(db.Float, default=0.0)
+    cost_date = db.Column(db.DateTime)
+    cost_try = db.Column(db.Float, default=0)
+    description = db.Column(db.Text, nullable=True)
+    attributes = db.Column(db.Text, nullable=True)
+    brand = db.Column(db.String(255), nullable=True)
+    category_name = db.Column(db.String(255), nullable=True)
+    category_id = db.Column(db.Integer, nullable=True)
+    stock_code = db.Column(db.String(255), nullable=True)
+    shipment_address_id = db.Column(db.Integer, nullable=True)
+    delivery_duration = db.Column(db.Integer, nullable=True)
+    cargo_company_id = db.Column(db.Integer, nullable=True)
+    dimensional_weight = db.Column(db.Float, nullable=True)
+    vat_rate = db.Column(db.Integer, nullable=True)
 
-    def __init__(self, barcode, title, product_main_id, 
-                 quantity, images, variants, size, color, archived, locked, on_sale,
-                 reject_reason, sale_price, list_price, currency_type, cost_usd=0.0, cost_try=0.0, cost_date=None):
-        self.barcode = barcode
-        self.title = title
-        self.product_main_id = product_main_id
-        self.quantity = quantity
-        self.images = images
-        self.variants = variants
-        self.size = size
-        self.color = color
-        self.archived = archived
-        self.locked = locked
-        self.on_sale = on_sale
-        self.reject_reason = reject_reason
-        self.sale_price = sale_price
-        self.list_price = list_price
-        self.currency_type = currency_type
-        self.cost_usd = cost_usd
-        self.cost_date = cost_date
-        self.cost_try = cost_try  # <- Doğrusu budur!
-
-
-
-# Arşiv Modeli - Bu model de OrderBase gibi görünüyor, OrderArchived ile aynı mı?
+    # --- YENİ EKLENEN ALANLAR (07.07.2025) ---
+    status = db.Column(db.String(50), nullable=True)
+    gtin = db.Column(db.String(255), nullable=True)
+    last_update_date = db.Column(db.DateTime, nullable=True)
 # Eğer farklıysa, buradan da original_product_barcode'u kaldıralım.
 class Archive(db.Model):
     __tablename__ = 'archive' # Bu tablo adı OrderArchived ile çakışıyor mu? Dikkat!
