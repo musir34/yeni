@@ -356,6 +356,22 @@ class ProductArchive(db.Model):
     status = db.Column(db.String(50), nullable=True)
     gtin = db.Column(db.String(255), nullable=True)
     last_update_date = db.Column(db.DateTime, nullable=True)
+    brand_id = db.Column(db.Integer, nullable=True)
+    create_date_time = db.Column(db.DateTime, nullable=True)
+    gender = db.Column(db.String(50), nullable=True)
+    has_active_campaign = db.Column(db.Boolean, nullable=True)
+    trendyol_id = db.Column(db.String(255), nullable=True)
+    pim_category_id = db.Column(db.Integer, nullable=True)
+    platform_listing_id = db.Column(db.String(255), nullable=True)
+    product_code = db.Column(db.String(255), nullable=True)
+    product_content_id = db.Column(db.Integer, nullable=True)
+    stock_unit_type = db.Column(db.String(50), nullable=True)
+    supplier_id = db.Column(db.Integer, nullable=True)
+    is_rejected = db.Column(db.Boolean, nullable=True)
+    is_blacklisted = db.Column(db.Boolean, nullable=True)
+    has_html_content = db.Column(db.Boolean, nullable=True)
+    product_url = db.Column(db.Text, nullable=True)
+    is_approved = db.Column(db.Boolean, nullable=True)
 
     def __init__(self, **kwargs):
         super(ProductArchive, self).__init__(**kwargs)
@@ -395,10 +411,28 @@ class Product(db.Model):
     dimensional_weight = db.Column(db.Float, nullable=True)
     vat_rate = db.Column(db.Integer, nullable=True)
 
-    # --- YENİ EKLENEN ALANLAR (07.07.2025) ---
+    # --- YENİ EKLENEN ALANLAR (TÜM VERİLER) ---
+    brand_id = db.Column(db.Integer, nullable=True)
+    create_date_time = db.Column(db.DateTime, nullable=True)
+    gender = db.Column(db.String(50), nullable=True)
+    has_active_campaign = db.Column(db.Boolean, nullable=True)
+    trendyol_id = db.Column(db.String(255), nullable=True) # Trendyol'un kendi ürün ID'si
+    pim_category_id = db.Column(db.Integer, nullable=True)
+    platform_listing_id = db.Column(db.String(255), nullable=True)
+    product_code = db.Column(db.String(255), nullable=True)
+    product_content_id = db.Column(db.Integer, nullable=True)
+    stock_unit_type = db.Column(db.String(50), nullable=True)
+    supplier_id = db.Column(db.Integer, nullable=True)
+    is_rejected = db.Column(db.Boolean, nullable=True)
+    is_blacklisted = db.Column(db.Boolean, nullable=True)
+    has_html_content = db.Column(db.Boolean, nullable=True)
+    product_url = db.Column(db.Text, nullable=True)
+    is_approved = db.Column(db.Boolean, nullable=True)
     status = db.Column(db.String(50), nullable=True)
     gtin = db.Column(db.String(255), nullable=True)
     last_update_date = db.Column(db.DateTime, nullable=True)
+
+
 # Eğer farklıysa, buradan da original_product_barcode'u kaldıralım.
 class Archive(db.Model):
     __tablename__ = 'archive' # Bu tablo adı OrderArchived ile çakışıyor mu? Dikkat!
