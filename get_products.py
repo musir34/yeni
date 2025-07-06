@@ -283,113 +283,117 @@ async def update_stocks_route(): # Bu fonksiyon Trendyol'daki STOK bilgilerini �
 
 
 
-
 async def save_products_to_db_async(products):
     products = [p for p in products if isinstance(p, dict)]
-    archived_barcodes = set(x.barcode for x in ProductArchive.query.all())
+    archived_barcodes = {x.barcode for x in ProductArchive.query.with_entities(ProductArchive.barcode).all()}
 
     images_folder = os.path.join(current_app.root_path, 'static', 'images')
     os.makedirs(images_folder, exist_ok=True)
 
     product_objects = []
     seen_barcodes = set()
+    image_downloads = [] # DÜZELTME: İndirilecek görseller için boş liste oluşturuldu.
 
     for product_data in products:
         original_barcode = product_data.get('barcode', '').strip()
-
         if not original_barcode or original_barcode in seen_barcodes or original_barcode in archived_barcodes:
             continue
-
         seen_barcodes.add(original_barcode)
 
-        # --- lastUpdateDate alanını işle ---
-        last_update_timestamp = product_data.get('lastUpdateDate')
-        last_update_date_obj = None
-        if last_update_timestamp:
-            try:
-                # Trendyol genellikle Unix timestamp'i milisaniye cinsinden verir.
-                last_update_date_obj = datetime.fromtimestamp(int(last_update_timestamp) / 1000)
-            except (ValueError, TypeError, OSError): # Olası tüm hataları yakala
-                logger.warning(f"Barkod {original_barcode} için geçersiz lastUpdateDate formatı: {last_update_timestamp}")
+        def safe_datetime_from_timestamp(ts):
+            if not ts: return None
+            try: return datetime.fromtimestamp(int(ts) / 1000)
+            except (ValueError, TypeError, OSError): return None
 
-        # --- Diğer alanlar ---
+        last_update_date_obj = safe_datetime_from_timestamp(product_data.get('lastUpdateDate'))
+        create_date_time_obj = safe_datetime_from_timestamp(product_data.get('createDateTime'))
+
+        # DÜZELTME 1: GÖRSEL İNDİRME LİSTESİNİ DOLDURMA MANTIĞI EKLENDİ
         image_urls = [img.get('url', '') for img in product_data.get('images', []) if isinstance(img, dict)]
         images_path_db = ''
         if image_urls and image_urls[0]:
-            # ... (Bu kısım aynı)
-            parsed_url = urlparse(image_urls[0])
+            image_url = image_urls[0]
+            parsed_url = urlparse(image_url)
             image_extension = os.path.splitext(parsed_url.path)[1] or '.jpg'
             image_filename = f"{original_barcode}{image_extension.lower()}"
+            image_path_local = os.path.join(images_folder, image_filename)
             images_path_db = f"/static/images/{image_filename}"
+            # İndirme listesine (url, yerel_dosya_yolu) olarak ekle
+            image_downloads.append((image_url, image_path_local))
+
+        # DÜZELTME 2: STATÜ BİLGİSİNİ ANLAMLI METNE ÇEVİRME
+        status_str = "Beklemede" # Varsayılan
+        if product_data.get('rejected'):
+            status_str = "Reddedildi"
+        elif product_data.get('approved'):
+            status_str = "Onaylandı"
+        if product_data.get('archived'):
+            status_str = f"{status_str} (Arşivde)"
 
         size = next((attr.get('attributeValue', 'N/A') for attr in product_data.get('attributes', []) if attr.get('attributeName') == 'Beden'), 'N/A')
         color = next((attr.get('attributeValue', 'N/A') for attr in product_data.get('attributes', []) if attr.get('attributeName') == 'Renk'), 'N/A')
 
         product_objects.append({
-            # --- Önceki tüm alanlar ---
             "barcode": original_barcode,
-            "title": product_data.get('title', 'N/A'),
-            "product_main_id": product_data.get('productMainId', 'N/A'),
-            "quantity": int(product_data.get('quantity', 0)),
-            "images": images_path_db,
-            "variants": json.dumps(product_data.get('variants', [])),
-            "size": size,
-            "color": color,
+            "title": product_data.get('title'),
+            "images": images_path_db, # Görselin veritabanına kaydedilecek yolu
+            "product_main_id": product_data.get('productMainId'),
+            "quantity": product_data.get('quantity', 0),
+            "size": size, "color": color,
             "archived": product_data.get('archived', False),
             "locked": product_data.get('locked', False),
             "on_sale": product_data.get('onSale', False),
-            "reject_reason": '; '.join([r.get('reason', 'N/A') for r in product_data.get('rejectReasonDetails', [])]),
-            "sale_price": float(product_data.get('salePrice', 0)),
-            "list_price": float(product_data.get('listPrice', 0)),
-            "currency_type": product_data.get('currencyType', 'TRY'),
-            "description": product_data.get('description', ''),
+            "sale_price": product_data.get('salePrice', 0),
+            "list_price": product_data.get('listPrice', 0),
+            "currency_type": product_data.get('currencyType'),
+            "description": product_data.get('description'),
             "attributes": json.dumps(product_data.get('attributes', [])),
-            "brand": product_data.get('brand', 'N/A'),
-            "category_name": product_data.get('categoryName', 'N/A'),
-            "category_id": product_data.get('categoryId'),
-            "stock_code": product_data.get('stockCode'),
-            "shipment_address_id": product_data.get('shipmentAddressId'),
-            "delivery_duration": product_data.get('deliveryDuration'),
-            "cargo_company_id": product_data.get('cargoCompanyId'),
-            "dimensional_weight": product_data.get('dimensionalWeight'),
+            "reject_reason": '; '.join([r.get('reason', 'N/A') for r in product_data.get('rejectReasonDetails', [])]),
+            "brand": product_data.get('brand'),
+            "category_name": product_data.get('categoryName'),
             "vat_rate": product_data.get('vatRate'),
-
-            # --- YENİ EKLENEN ALANLAR (07.07.2025) ---
-            "status": product_data.get('status'),
+            "status": status_str, # DÜZELTME: Artık anlamlı metin olarak kaydediliyor
             "gtin": product_data.get('gtin'),
-            "last_update_date": last_update_date_obj
+            "last_update_date": last_update_date_obj,
+            "brand_id": product_data.get('brandId'),
+            "create_date_time": create_date_time_obj,
+            "gender": product_data.get('gender'),
+            "has_active_campaign": product_data.get('hasActiveCampaign'),
+            "trendyol_id": product_data.get('id'),
+            "pim_category_id": product_data.get('pimCategoryId'),
+            "platform_listing_id": product_data.get('platformListingId'),
+            "product_code": product_data.get('productCode'),
+            "product_content_id": product_data.get('productContentId'),
+            "stock_unit_type": product_data.get('stockUnitType'),
+            "supplier_id": product_data.get('supplierId'),
+            "is_rejected": product_data.get('rejected'),
+            "is_blacklisted": product_data.get('blacklisted'),
+            "has_html_content": product_data.get('hasHtmlContent'),
+            "product_url": product_data.get('productUrl'),
+            "is_approved": product_data.get('approved')
         })
 
-    if not product_objects:
-        logger.info("Veritabanına eklenecek veya güncellenecek yeni ürün bulunamadı.")
-        return
+    if not product_objects: return
 
-    # Toplu Ekleme/Güncelleme (Upsert)
-    batch_size = 500
+    # Veritabanına toplu kayıt/güncelleme
+    batch_size = 200
     for i in range(0, len(product_objects), batch_size):
         batch = product_objects[i:i + batch_size]
         insert_stmt = insert(Product).values(batch)
 
         set_payload = {
-            # --- Önceki tüm güncellenecek alanlar ---
-            'quantity': insert_stmt.excluded.quantity,
-            'sale_price': insert_stmt.excluded.sale_price,
-            'list_price': insert_stmt.excluded.list_price,
-            'images': insert_stmt.excluded.images,
-            'description': insert_stmt.excluded.description,
-            'attributes': insert_stmt.excluded.attributes,
-            'on_sale': insert_stmt.excluded.on_sale,
-            'locked': insert_stmt.excluded.locked,
-            'reject_reason': insert_stmt.excluded.reject_reason,
-            "brand": insert_stmt.excluded.brand,
-            "category_name": insert_stmt.excluded.category_name,
-            "stock_code": insert_stmt.excluded.stock_code,
-            "vat_rate": insert_stmt.excluded.vat_rate,
-
-            # --- YENİ ALANLARIN GÜNCELLENMESİ ---
-            "status": insert_stmt.excluded.status,
-            "gtin": insert_stmt.excluded.gtin,
-            "last_update_date": insert_stmt.excluded.last_update_date,
+            'title': insert_stmt.excluded.title, 'quantity': insert_stmt.excluded.quantity,
+            'sale_price': insert_stmt.excluded.sale_price, 'list_price': insert_stmt.excluded.list_price,
+            'on_sale': insert_stmt.excluded.on_sale, 'locked': insert_stmt.excluded.locked,
+            'is_approved': insert_stmt.excluded.is_approved, 'last_update_date': insert_stmt.excluded.last_update_date,
+            'vat_rate': insert_stmt.excluded.vat_rate, 'reject_reason': insert_stmt.excluded.reject_reason,
+            'description': insert_stmt.excluded.description, 'attributes': insert_stmt.excluded.attributes,
+            'is_rejected': insert_stmt.excluded.is_rejected, 'brand': insert_stmt.excluded.brand,
+            'category_name': insert_stmt.excluded.category_name, 'gender': insert_stmt.excluded.gender,
+            'product_url': insert_stmt.excluded.product_url,
+            'has_active_campaign': insert_stmt.excluded.has_active_campaign,
+            'is_blacklisted': insert_stmt.excluded.is_blacklisted, 'status': insert_stmt.excluded.status,
+            'images': insert_stmt.excluded.images # Görsel yolu değişirse diye bunu da ekleyelim
         }
 
         upsert_stmt = insert_stmt.on_conflict_do_update(
@@ -399,8 +403,16 @@ async def save_products_to_db_async(products):
         db.session.execute(upsert_stmt)
 
     db.session.commit()
-    flash("Ürünler başarıyla ve tüm detaylarıyla veritabanına kaydedildi/güncellendi.", "success")
 
+    # DÜZELTME 1 (devamı): GÖRSELLERİ İNDİRME KISMI EKLENDİ
+    if image_downloads:
+        logger.info(f"{len(image_downloads)} adet yeni görsel indirilecek...")
+        # Bu fonksiyonun dosyanın başka bir yerinde tanımlı olduğundan emin ol
+        await download_images_async(image_downloads) 
+        logger.info("Tüm görsellerin indirme işlemi tamamlandı.")
+
+    flash("Tüm ürün verileri başarıyla veritabanına kaydedildi/güncellendi.", "success")
+    
 
 async def fetch_all_products_async():
     page_size = 1000
