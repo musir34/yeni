@@ -367,40 +367,28 @@ class Product(db.Model):
     cost_usd = db.Column(db.Float, default=0.0)  # Maliyet (USD cinsinden)
     cost_date = db.Column(db.DateTime)  # Maliyet girişi tarihi
     cost_try = db.Column(db.Float, default=0) #tl karşılığı
-    
-    # Yeni eklenen alanlar - Trendyol ürün yükleme için gerekli
-    description = db.Column(db.Text) # Ürün açıklaması (HTML destekli, max 30000 karakter)
-    brand = db.Column(db.String) # Marka
-    category_id = db.Column(db.Integer) # Kategori ID
-    category_name = db.Column(db.String) # Kategori adı (bilgi amaçlı)
-    attributes = db.Column(JSON) # Ürün özellikleri (renk, beden dışındaki tüm özellikler)
-    cargo_company = db.Column(db.String) # Kargo firması
-    delivery_duration = db.Column(db.Integer) # Teslimat süresi (gün)
-    stock_code = db.Column(db.String) # Stok kodu
-    dimension_weight = db.Column(db.Float) # Ağırlık (gr)
-    dimension_length = db.Column(db.Float) # Uzunluk (cm)
-    dimension_width = db.Column(db.Float) # Genişlik (cm) 
-    dimension_height = db.Column(db.Float) # Yükseklik (cm)
-    vat_rate = db.Column(db.Integer, default=20) # KDV oranı (%)
-    product_content_id = db.Column(db.String) # Trendyol ürün içerik ID
-    gender = db.Column(db.String) # Cinsiyet (Erkek/Kadın/Unisex)
-    marketplace_status = db.Column(JSON) # Her pazaryeri için durum {"trendyol": "approved", "hepsiburada": "pending"}
-    created_at = db.Column(db.DateTime, default=datetime.utcnow) # Oluşturulma tarihi
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow) # Güncellenme tarihi
 
-    def __init__(self, **kwargs):
-        # Set default values for optional fields
-        kwargs.setdefault('cost_usd', 0.0)
-        kwargs.setdefault('cost_try', 0.0)
-        kwargs.setdefault('vat_rate', 20)
-        kwargs.setdefault('archived', False)
-        kwargs.setdefault('locked', False)
-        kwargs.setdefault('on_sale', True)
-        kwargs.setdefault('hidden', False)
-        
-        # Initialize all attributes from kwargs
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+    def __init__(self, barcode, title, product_main_id, 
+                 quantity, images, variants, size, color, archived, locked, on_sale,
+                 reject_reason, sale_price, list_price, currency_type, cost_usd=0.0, cost_try=0.0, cost_date=None):
+        self.barcode = barcode
+        self.title = title
+        self.product_main_id = product_main_id
+        self.quantity = quantity
+        self.images = images
+        self.variants = variants
+        self.size = size
+        self.color = color
+        self.archived = archived
+        self.locked = locked
+        self.on_sale = on_sale
+        self.reject_reason = reject_reason
+        self.sale_price = sale_price
+        self.list_price = list_price
+        self.currency_type = currency_type
+        self.cost_usd = cost_usd
+        self.cost_date = cost_date
+        self.cost_try = cost_try  # <- Doğrusu budur!
 
 
 
