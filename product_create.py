@@ -26,7 +26,7 @@ def allowed_file(filename):
 @roles_required('admin', 'user')
 def product_create_page():
     """Ürün oluşturma sayfasını render et"""
-    return render_template('product_create.html')
+    return render_template('product_create_new.html')
 
 @product_create_bp.route('/api/create_product', methods=['POST'])
 @login_required
@@ -237,4 +237,118 @@ def send_to_marketplace():
         return jsonify({
             'success': False,
             'message': f'Ürün gönderilirken hata oluştu: {str(e)}'
+        }), 500
+
+@product_create_bp.route('/api/create_product_with_variants', methods=['POST'])
+@login_required
+@roles_required('admin', 'user')
+def create_product_with_variants():
+    """Varyantlı ürün oluştur"""
+    try:
+        data = request.get_json()
+        
+        # Ana ürün bilgilerini al
+        product_main_id = data.get('product_main_id')
+        brand = data.get('brand')
+        category_id = data.get('category_id')
+        category_name = data.get('category_name')
+        title = data.get('title')
+        description = data.get('description', '')
+        gender = data.get('gender')
+        cargo_company = data.get('cargo_company')
+        delivery_duration = data.get('delivery_duration')
+        dimension_weight = float(data.get('dimension_weight', 0)) if data.get('dimension_weight') else None
+        dimension_length = float(data.get('dimension_length', 0)) if data.get('dimension_length') else None
+        dimension_width = float(data.get('dimension_width', 0)) if data.get('dimension_width') else None
+        dimension_height = float(data.get('dimension_height', 0)) if data.get('dimension_height') else None
+        vat_rate = int(data.get('vat_rate', 20))
+        images = data.get('images', [])
+        
+        # Attributes
+        attributes = {}
+        for key, value in data.items():
+            if key.startswith('attributes[') and key.endswith(']'):
+                attr_name = key[11:-1]  # Extract attribute name
+                if value:  # Only add non-empty attributes
+                    attributes[attr_name] = value
+        
+        # Varyantları işle
+        variants = data.get('variants', [])
+        if not variants:
+            return jsonify({
+                'success': False,
+                'message': 'En az bir varyant eklemelisiniz.'
+            }), 400
+        
+        created_products = []
+        
+        # Her varyant için ayrı bir ürün oluştur
+        for variant in variants:
+            # Barkodun benzersiz olduğunu kontrol et
+            existing_product = Product.query.filter_by(barcode=variant['barcode']).first()
+            if existing_product:
+                return jsonify({
+                    'success': False,
+                    'message': f'Bu barkod zaten mevcut: {variant["barcode"]}'
+                }), 400
+            
+            # Yeni ürünü oluştur
+            new_product = Product(
+                barcode=variant['barcode'],
+                title=f"{title} - {variant['color']} - Beden {variant['size']}",
+                product_main_id=product_main_id,
+                brand=brand,
+                category_id=category_id,
+                category_name=category_name,
+                size=str(variant['size']),
+                color=variant['color'],
+                sale_price=float(variant['price']),
+                list_price=float(variant['price']),  # İlk başta satış fiyatıyla aynı
+                quantity=int(variant['stock']),
+                stock_code=variant.get('stock_code', ''),
+                description=description,
+                attributes=attributes,
+                cargo_company=cargo_company,
+                delivery_duration=delivery_duration,
+                dimension_weight=dimension_weight,
+                dimension_length=dimension_length,
+                dimension_width=dimension_width,
+                dimension_height=dimension_height,
+                vat_rate=vat_rate,
+                gender=gender,
+                images=','.join(images) if images else '',
+                variants=json.dumps([]),
+                archived=False,
+                locked=False,
+                on_sale=True,
+                reject_reason='',
+                currency_type='TRY',
+                marketplace_status={'created': True, 'trendyol': 'pending'}
+            )
+            
+            db.session.add(new_product)
+            created_products.append({
+                'barcode': new_product.barcode,
+                'title': new_product.title,
+                'size': new_product.size,
+                'color': new_product.color
+            })
+        
+        # Veritabanına kaydet
+        db.session.commit()
+        
+        logger.info(f"Yeni ürün grubu oluşturuldu: {product_main_id} - {len(created_products)} varyant")
+        
+        return jsonify({
+            'success': True,
+            'message': f'{len(created_products)} adet varyant başarıyla oluşturuldu.',
+            'products': created_products
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Varyantlı ürün oluşturma hatası: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Hata: {str(e)}'
         }), 500
