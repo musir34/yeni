@@ -508,6 +508,7 @@ Sipariş İşlemleri
 Ürün İşlemleri
 </button>
 <div class="dropdown-menu" aria-labelledby="urunMenu">
+<a class="dropdown-item" href="{{ url_for('product_create.product_create_page') }}">Yeni Ürün Ekle</a>
 <a class="dropdown-item" href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}">Ürün Tedarik Sayfası</a>
 <a class="dropdown-item" href="{{ url_for('product_list') }}">Ürün Listesi</a>
 <a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_screen') }}">Stok Ekleme</a>
