@@ -123,8 +123,10 @@ blueprints = [
 # Enhanced Product Label Blueprint'ini ekle
 from enhanced_product_label import enhanced_label_bp
 from image_manager import image_manager_bp
+from product_create import product_create_bp
 blueprints.append(enhanced_label_bp)
 blueprints.append(image_manager_bp)
+blueprints.append(product_create_bp)
 
 # Direct route for simplified editor
 @app.route('/enhanced_product_label/advanced_editor')
