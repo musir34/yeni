@@ -579,12 +579,14 @@
         let variants = [];
         let uploadedImages = [];
 
-        // Initialize Select2
-        $(document).ready(function() {
-            $('#category').select2({
-                theme: 'bootstrap-5',
-                placeholder: 'Kategori seçiniz'
-            });
+        // Initialize Select2 - jQuery control
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof $ !== 'undefined' && $.fn.select2) {
+                $('#category').select2({
+                    theme: 'bootstrap-5',
+                    placeholder: 'Kategori seçiniz'
+                });
+            }
         });
 
         // Form validation
