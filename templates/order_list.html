@@ -1,658 +1,336 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Daha Canlı Sipariş Listesi</title>
-  <!-- Bootstrap CSS -->
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  />
-  <style>
-    /* Genel */
-    body {
-      margin: 0;
-      padding: 0;
-      background: linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%);
-      font-family: 'Nunito', sans-serif;
-      color: #333;
-    }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Sipariş Takip - Güllü Ayakkabı</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        :root {
+            --color-primary: #B76E79; /* Gül Kurusu */
+            --color-primary-dark: #A05F6A;
+            --color-secondary: #212529; /* Siyah/Koyu Gri */
+            --color-text: #343a40;
+            --color-bg: #f8f9fa;
+            --color-white: #fff;
+            --color-border: #dee2e6;
+            --color-success: #28a745;
+            --color-warning: #ffc107;
+            --color-danger: #dc3545;
+            --color-info: #0dcaf0;
+            --font-family-base: 'Inter', sans-serif;
+            --border-radius: 0.5rem;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+            --shadow-md: 0 5px 15px rgba(0,0,0,0.08);
+            --transition: all 0.25s ease-in-out;
+        }
 
-    .container {
-      max-width: 1200px;
-      margin: 80px auto;
-      padding: 20px;
-    }
+        body {
+            font-family: var(--font-family-base);
+            background-color: var(--color-bg);
+            color: var(--color-text);
+        }
+        .container { max-width: 1600px; padding: 1.5rem; }
+        h2, h4, h5 { color: var(--color-secondary); font-weight: 600; }
 
-    /* Üst Menü */
-    .top-bar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      background: #fff;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-      z-index: 999;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 20px;
-    }
+        .page-header {
+            background-color: var(--color-white); padding: 1rem 1.5rem;
+            border-radius: var(--border-radius); box-shadow: var(--shadow-sm); margin-bottom: 2rem;
+        }
+        .btn {
+            border-radius: var(--border-radius); font-weight: 600;
+            transition: var(--transition); border: none; padding: 0.6rem 1.2rem;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+        .btn-primary { background-color: var(--color-primary); border-color: var(--color-primary); }
+        .btn-primary:hover { background-color: var(--color-primary-dark); border-color: var(--color-primary-dark); }
+        .btn-secondary { background-color: var(--color-secondary); border-color: var(--color-secondary); color: var(--color-white); }
+        .btn-secondary:hover { background-color: #343a40; border-color: #343a40; }
+        .btn-warning, .bg-warning { background-color: var(--color-warning) !important; color: var(--color-secondary) !important; }
+        .btn-success, .bg-success { background-color: var(--color-success) !important; }
+        .btn-info, .bg-info { background-color: var(--color-info) !important; }
+        .btn-danger, .bg-danger { background-color: var(--color-danger) !important; }
+        .bg-orange { background-color: #fd7e14 !important; }
 
-    .top-bar .user-info {
-      font-size: 14px;
-      font-weight: 600;
-      color: #444;
-    }
+        .filter-section {
+            background-color: var(--color-white); padding: 1.5rem;
+            border-radius: var(--border-radius); box-shadow: var(--shadow-sm); margin-bottom: 2rem;
+        }
+        .filter-section .btn { width: 100%; }
 
-    .top-bar .btn-group-top {
-      display: flex;
-      gap: 10px;
-    }
+        .order-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; }
+        .card {
+            border: none; border-radius: var(--border-radius);
+            box-shadow: var(--shadow-sm); transition: var(--transition); margin-bottom: 0;
+        }
+        .card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); }
+        .card-header {
+            background-color: var(--color-white); border-bottom: 1px solid var(--color-border);
+            border-radius: var(--border-radius) var(--border-radius) 0 0; font-size: 0.9rem;
+        }
+        .card-body { padding: 1.25rem; }
+        .card-footer { background-color: #fcfcfc; border-top: 1px solid var(--color-border); }
+        .cargo-provider.orange { color: #fd7e14; }
+        .red { color: var(--color-danger); }
+        .badge { font-size: 0.8rem; padding: 0.4em 0.7em; }
 
-    /* Başlık */
-    h2,
-    h4 {
-      color: #444;
-      font-weight: 700;
-      text-align: center;
-    }
+        .copy-container { cursor: pointer; color: var(--color-primary); margin-left: 8px; }
+        .copy-container:hover { transform: scale(1.1); }
+        .copy-confirmation { color: var(--color-success); font-size: 1em; display: none; margin-left: 5px; }
+        .copy-confirmation.show { display: inline-block; }
 
-    /* Üst Butonlar */
-    .category-buttons .btn {
-      margin-bottom: 10px;
-      width: 100%;
-      border-radius: 8px;
-      transition: transform 0.2s;
-      font-weight: 600;
-    }
+        .details-section table { font-size: 1.5rem; } /* DÜZELTME 1: YAZI BOYUTU BÜYÜTÜLDÜ */
+        .details-section table strong { font-size: 1.45rem; } /* Model kodu daha da belirgin */
+        .details-section img { max-width: 100px; border-radius: 8px; cursor: pointer; }
 
-    .category-buttons .btn:hover {
-      transform: scale(1.02);
-    }
+        .pagination-container { display: flex; justify-content: center; align-items: center; padding: 2.5rem 0 1rem; }
+        .pagination { display: flex; align-items: center; gap: 0.5rem; list-style: none; }
+        .pagination li a {
+            display: block; color: var(--color-secondary); background-color: var(--color-white);
+            border: 1px solid var(--color-border); border-radius: var(--border-radius);
+            padding: 0.6rem 1rem; text-decoration: none; transition: var(--transition);
+            font-weight: 600; min-width: 44px; text-align: center;
+        }
+        .pagination li a:hover { background-color: #f1f3f5; box-shadow: var(--shadow-sm); }
+        .pagination li.active a { background-color: var(--color-primary); color: var(--color-white); border-color: var(--color-primary); cursor: default; }
+        .pagination li.disabled a { opacity: 0.6; cursor: not-allowed; background-color: #e9ecef; }
 
-    .bg-red {
-      background-color: #e74c3c !important;
-      color: #fff !important;
-      border: none;
-    }
-
-    .bg-orange {
-      background-color: #f39c12 !important;
-      color: #fff !important;
-      border: none;
-    }
-
-    /* Sipariş Kartları */
-    .order-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-    }
-
-    .card {
-      flex: 1 1 300px;
-      max-width: 350px;
-      min-width: 280px;
-      border: none;
-      border-radius: 10px;
-      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.05);
-      transition: all 0.3s ease;
-      background-color: #fff;
-      margin-bottom: 20px;
-    }
-
-    .card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 12px 20px rgba(0, 0, 0, 0.08);
-    }
-
-    .card-header {
-      border-bottom: 1px solid #eee;
-      padding: 12px;
-      border-radius: 10px 10px 0 0;
-      background: #f8f9fa;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-    }
-
-    .cargo-provider {
-      font-size: 0.85rem;
-      font-weight: 500;
-    }
-    .cargo-provider.orange {
-      color: orange;
-    }
-
-    .badge {
-      font-size: 0.75rem;
-      padding: 5px 8px;
-      border-radius: 8px;
-      font-weight: 600;
-    }
-
-    .card-body {
-      padding: 15px;
-    }
-
-    .btn-warning-img {
-      padding: 5px;
-      border: none;
-      background-color: transparent;
-      border-radius: 8px;
-      width: 42px;
-      height: 42px;
-      transition: all 0.2s ease;
-    }
-
-    .btn-warning-img:hover {
-      transform: scale(1.1);
-    }
-
-    .card-title {
-      margin: 10px 0;
-      font-weight: 700;
-      font-size: 1rem;
-      text-align: center;
-    }
-
-    .btn-outline-primary {
-      border-radius: 5px;
-      font-weight: 600;
-      margin-top: 10px;
-    }
-
-    /* Copy Container */
-    .copy-container {
-      cursor: pointer;
-      margin-left: 5px;
-      font-size: 1.2rem;
-      user-select: none;
-      transition: transform 0.2s;
-    }
-
-    .copy-container:hover {
-      transform: scale(1.1);
-    }
-
-    .copy-confirmation {
-      color: green;
-      font-size: 1em;
-      display: none;
-      margin-left: 5px;
-    }
-
-    .copy-confirmation.show {
-      display: inline-block;
-    }
-
-    /* Collapse Detaylar */
-    .details-section {
-      margin-top: 15px;
-    }
-
-    .details-section table {
-      font-size: 0.9rem;
-    }
-
-    /* Arama ve Güncelleme */
-    .search-row {
-      margin-top: 30px;
-      margin-bottom: 30px;
-    }
-
-    /* Sayfalama */
-    .pagination .page-link {
-      border-radius: 6px;
-      margin: 0 3px;
-    }
-
-    /* Arşiv Modal */
-    .modal-content {
-      border-radius: 10px;
-    }
-
-    .modal-header,
-    .modal-footer {
-      border: none;
-    }
-
-    /* Kırmızı Yazı (Süre) */
-    .red {
-      color: #c0392b;
-      font-weight: 700;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .top-bar {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-      }
-
-      .category-buttons {
-        margin-bottom: 20px;
-      }
-    }
-  </style>
+        #imageZoomModal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.85); z-index: 1060;
+            justify-content: center; align-items: center; cursor: pointer;
+        }
+        #imageZoomModal.show { display: flex; }
+        #imageZoomModal img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: var(--border-radius); }
+        #imageZoomModal .close-btn { position:absolute; top:20px; right:30px; color:white; font-size:40px; font-weight:bold; cursor:pointer; background:none; border:none; }
+    </style>
 </head>
 <body>
-  <!-- Üst Bar -->
-  <div class="top-bar">
-    <div class="user-info">
-      Giriş Yapan: <strong>{{ session['first_name'] }} {{ session['last_name'] }}</strong>
-    </div>
-    <div class="btn-group-top">
-      <form method="POST" action="{{ url_for('logout') }}">
-        <button type="submit" class="btn btn-danger">Çıkış Yap</button>
-      </form>
-      {% if session['role'] == 'admin' %}
-      <a href="{{ url_for('approve_users') }}" class="btn btn-warning">Kullanıcı Yönetimi</a>
-      {% endif %}
-      <a href="{{ url_for('home.home') }}" class="btn btn-secondary">Anasayfa</a>
-    </div>
-  </div>
-
-  <div class="container">
-    <!-- Logo -->
-    <div class="text-center mb-4">
-      <img src="/static/logo/gullu.png" alt="Güllü Logo" style="max-height:80px;">
-    </div>
-
-    <h2>Sipariş Listesi</h2>
-    <h5>Şu anki sayfa: {{ page }}</h5>
-
-    <div class="row category-buttons">
-      <div class="col-md-4 text-center">
-        <a href="{{ url_for('order_list_service.order_list_all') }}" class="btn btn-primary">Tüm Siparişler</a>
-      </div>
-      <div class="col-md-4 text-center">
-        <a href="{{ url_for('order_list_service.order_list_new') }}" class="btn btn-warning">Yeni Siparişler</a>
-      </div>
-      <div class="col-md-4 text-center">
-        <a href="{{ url_for('order_list_service.order_list_processed') }}" class="btn btn-success">İşleme Alınanlar</a>
-      </div>
-      <div class="col-md-6 text-center mt-3">
-        <a href="{{ url_for('order_list_service.order_list_shipped') }}" class="btn bg-red">Kargoda</a>
-      </div>
-      <div class="col-md-6 text-center mt-3">
-        <a href="{{ url_for('order_list_service.order_list_delivered') }}" class="btn bg-orange">Teslim Edilenler</a>
-      </div>
-      <div class="col-md-12 text-center mt-3"> {# Tam satır genişliğinde ve üstten boşluklu bir sütun #}
-        <a href="{{ url_for('new_orders_service.prepare_new_orders') }}" class="btn btn-info">Toplu Ürün Hazırla</a> {# btn-info mavi bir buton rengi verir, değiştirebilirsin #}
-      </div>
-    </div>
-
-    <h4>Toplam Sipariş Sayısı: {{ total_orders_count }}</h4>
-
-    <!-- Arama / Güncelleme -->
-    <div class="row search-row">
-      <div class="col-md-8">
-        <form method="GET" action="{{ url_for('order_list_service.order_list_all') }}">
-          <div class="input-group">
-            <input
-              type="text"
-              class="form-control"
-              name="search"
-              placeholder="Sipariş Numarasına Göre Ara"
-              value="{{ request.args.get('search', '') }}"
-            />
-            <button class="btn btn-primary" type="submit">Ara</button>
-          </div>
-        </form>
-      </div>
-      <div class="col-md-4 text-end">
-        <form
-          method="POST"
-          action="{{ url_for('order_service.fetch_trendyol_orders_route') }}"
-        >
-          <button type="submit" class="btn btn-secondary">
-            Siparişleri Güncelle
-          </button>
-        </form>
-      </div>
-    </div>
-
-    <!-- Sipariş Kartları -->
-    <div class="order-list">
-      {% for order in orders %}
-      <div class="card">
-        <div class="card-header">
-          <div>
-            <strong>Sipariş Tarihi:</strong> {{ order.order_date }}<br />
-            <span
-              class="cargo-provider {% if 'MNG Kargo' in order.cargo_provider_name %}orange{% endif %}"
-            >
-              ({{ order.cargo_provider_name }})
-            </span>
-            {% set translated_status = {
-              'Created': 'Yeni',
-              'Picking': 'İşleme Alındı',
-              'Shipped': 'Kargoda',
-              'Delivered': 'Teslim Edildi',
-              'Cancelled': 'İptal Edildi'
-            }.get(order.status, order.status) %}
-            <span
-              class="badge
-                {% if translated_status == 'Yeni' %}
-                    bg-warning
-                {% elif translated_status == 'İşleme Alındı' %}
-                    bg-success
-                {% elif translated_status == 'Kargoda' %}
-                    bg-danger
-                {% elif translated_status == 'Teslim Edildi' %}
-                    bg-orange
-                {% elif translated_status == 'İptal Edildi' %}
-                    bg-dark
-                {% else %}
-                    bg-secondary
-                {% endif %}
-              "
-            >
-              {{ translated_status }}
-            </span>
-            <br />
-            <strong>Sipariş No:</strong> {{ order.order_number }}
-            <span class="copy-container" onclick="copyToClipboard('{{ order.order_number }}', this)">
-              📋
-            </span>
-            <span class="copy-confirmation">✔️</span>
-          </div>
-          <div>
-            <form
-              method="POST"
-              action="{{ url_for('order_list_service.order_label') }}"
-              target="_blank"
-            >
-              <input
-                type="hidden"
-                name="order_number"
-                value="{{ order.order_number }}"
-              />
-              <input
-                type="hidden"
-                name="shipping_barcode"
-                value="{{ order.shipping_barcode }}"
-              />
-              <input
-                type="hidden"
-                name="cargo_provider"
-                value="{{ order.cargo_provider_name }}"
-              />
-              <input
-                type="hidden"
-                name="customer_name"
-                value="{{ order.customer_name }}"
-              />
-              <input
-                type="hidden"
-                name="customer_surname"
-                value="{{ order.customer_surname }}"
-              />
-              <input
-                type="hidden"
-                name="customer_address"
-                value="{{ order.customer_address }}"
-              />
-              <button
-                type="submit"
-                class="btn-warning-img"
-                title="Kargo Etiketi Yazdır"
-              >
-                <img
-                  src="/static/logo/kargo.png"
-                  alt="Kargo Yazdır"
-                  style="width:100%;height:auto;border-radius:5px;"
-                />
-              </button>
-            </form>
-            <button
-              class="btn btn-secondary mt-2"
-              onclick="showArchiveModal('{{ order.order_number }}')"
-            >
-              Arşivle
-            </button>
-          </div>
-        </div>
-        <div class="card-body">
-          {% if translated_status in ['Yeni','İşleme Alındı'] %}
-          <h6>
-            <strong>Kargoya Kalan Süre:</strong>
-            <span
-              class="remaining-time"
-              id="remaining-time-{{ loop.index }}"
-              data-end-time="{{ order.agreed_delivery_date or order.estimated_delivery_end }}"
-            >
-              {{ order.remaining_time }}
-            </span>
-          </h6>
-          {% endif %}
-          <button
-            class="btn btn-outline-primary w-100"
-            data-bs-toggle="collapse"
-            data-bs-target="#details-{{ loop.index }}"
-          >
-            Ürün Detayları
-          </button>
-          <div id="details-{{ loop.index }}" class="collapse details-section">
-            <table class="table table-bordered mt-3">
-              <thead>
-                <tr>
-                  <th>Stok Kodu</th>
-                  <th>Ürün Barkodu</th>
-                  <th>Görsel</th>
-                  <th>Miktar</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for detail in order.processed_details %}
-                <tr>
-                  <td>{{ detail.sku }}</td>
-                  <td>{{ detail.barcode }}</td>
-                  <td>
-                    <img
-                      src="{{ detail.image_url }}"
-                      alt="Ürün Görseli"
-                      style="max-width: 80px; border-radius:4px;"
-                    />
-                  </td>
-                  <td><strong>{{ detail.quantity }}</strong></td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-
-    <!-- Sayfalama -->
-    <nav aria-label="Sayfa gezintisi" class="mt-4">
-      <ul class="pagination justify-content-center">
-        {% if page > 1 %}
-        <li class="page-item">
-          <a
-            class="page-link"
-            href="{{ url_for(request.endpoint, page=page-1, search=request.args.get('search', ''), _external=False) }}"
-            >Önceki</a
-          >
-        </li>
-        {% endif %}
-        {% for i in range(1, total_pages + 1) %}
-        <li class="page-item {% if i == page %}active{% endif %}">
-          <a
-            class="page-link"
-            href="{{ url_for(request.endpoint, page=i, search=request.args.get('search', ''), _external=False) }}"
-            >{{ i }}</a
-          >
-        </li>
-        {% endfor %}
-        {% if page < total_pages %}
-        <li class="page-item">
-          <a
-            class="page-link"
-            href="{{ url_for(request.endpoint, page=page+1, search=request.args.get('search', ''), _external=False) }}"
-            >Sonraki</a
-          >
-        </li>
-        {% endif %}
-      </ul>
-    </nav>
-  </div>
-
-  <!-- Arşiv Modal -->
-  <div
-    class="modal fade"
-    id="archiveModal"
-    tabindex="-1"
-    aria-labelledby="archiveModalLabel"
-    aria-hidden="true"
-  >
-    <div class="modal-dialog">
-      <form id="archiveForm">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Arşivleme Sebebi Seçin</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Kapat"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <input
-              type="hidden"
-              id="archiveOrderNumber"
-              name="order_number"
-              value=""
-            />
-            <div class="mb-3">
-              <label for="archiveReason" class="form-label">Sebep</label>
-              <select
-                class="form-control"
-                id="archiveReason"
-                name="archive_reason"
-                required
-              >
-                <option value="">Sebep Seçin</option>
-                <option value="Stok Tükendi">Stok Tükendi</option>
-                <option value="Kusurlu/Defolu Ürün">Kusurlu/Defolu Ürün</option>
-                <option value="Paket İçeriği Eksik">Paket İçeriği Eksik</option>
-                <option value="Ürün Sorunu Gideriliyor"
-                  >Ürün Sorunu Gideriliyor</option
-                >
-              </select>
+    <div class="container">
+        <div class="page-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <img src="/static/logo/gullu.png" alt="Güllü Logo" style="height:40px; margin-right: 15px;">
+                <h2 class="mb-0">Sipariş Takip</h2>
             </div>
-          </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-bs-dismiss="modal"
-            >
-              İptal
-            </button>
-            <button type="submit" class="btn btn-primary">Arşivle</button>
-          </div>
+            <div class="user-actions d-flex align-items-center gap-3">
+                <span><i class="fas fa-user-circle"></i> {{ session['first_name'] }} {{ session['last_name'] }}</span>
+                <a href="{{ url_for('home.home') }}" class="btn btn-sm btn-outline-secondary">Ana Sayfa</a>
+                {% if session['role'] == 'admin' %}
+                <a href="{{ url_for('approve_users') }}" class="btn btn-sm btn-outline-warning">Kullanıcı Yönetimi</a>
+                {% endif %}
+                <form method="POST" action="{{ url_for('logout') }}" class="mb-0"><button type="submit" class="btn btn-sm btn-danger">Çıkış Yap</button></form>
+            </div>
         </div>
-      </form>
+
+        <div class="filter-section mt-4">
+            <div class="row g-2">
+                <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_all') }}" class="btn btn-secondary">Tümü</a></div>
+                <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_new') }}" class="btn btn-warning">Yeni Siparişler</a></div>
+                <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_processed') }}" class="btn btn-success">İşleme Alınanlar</a></div>
+                <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_shipped') }}" class="btn btn-danger text-white">Kargoda</a></div>
+                <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_delivered') }}" class="btn bg-orange text-white">Teslim Edilenler</a></div>
+                <div class="col-md col-12"><a href="{{ url_for('new_orders_service.prepare_new_orders') }}" class="btn btn-info text-white">Toplu Ürün Hazırla</a></div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center my-4 gap-3">
+             <h4>Toplam Sipariş: {{ total_orders_count }}</h4>
+             <div class="d-flex gap-2">
+                <form method="POST" action="{{ url_for('order_service.fetch_trendyol_orders_route') }}">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-sync-alt"></i> Siparişleri Güncelle</button>
+                </form>
+                <form method="GET" action="{{ url_for('order_list_service.order_list_all') }}">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="search" placeholder="Sipariş No ile Ara" value="{{ request.args.get('search', '') }}">
+                        <button class="btn btn-secondary" type="submit"><i class="fas fa-search"></i></button>
+                    </div>
+                </form>
+             </div>
+        </div>
+
+        <div class="order-list">
+        {% for order in orders %}
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div><strong>Sipariş No:</strong> {{ order.order_number }}
+                        <span class="copy-container" onclick="copyToClipboard('{{ order.order_number }}', this)"><i class="far fa-copy"></i></span>
+                        <span class="copy-confirmation">✔️</span>
+                    </div>
+                    <form method="POST" action="{{ url_for('order_list_service.order_label') }}" target="_blank">
+                        <input type="hidden" name="order_number" value="{{ order.order_number }}"><input type="hidden" name="shipping_barcode" value="{{ order.shipping_barcode }}"><input type="hidden" name="cargo_provider" value="{{ order.cargo_provider_name }}"><input type="hidden" name="customer_name" value="{{ order.customer_name }}"><input type="hidden" name="customer_surname" value="{{ order.customer_surname }}"><input type="hidden" name="customer_address" value="{{ order.customer_address }}">
+                        <button type="submit" class="btn p-0" title="Kargo Etiketi Yazdır"><img src="/static/logo/kargo.png" alt="Kargo Yazdır" style="width:36px; height:36px; border-radius:5px;"></button>
+                    </form>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1"><small><strong>Tarih:</strong> {{ order.order_date.strftime('%d-%m-%Y %H:%M') if order.order_date else 'N/A' }}</small></p>
+                    <p class="mb-1"><small><strong>Kargo:</strong> <span class="cargo-provider {% if 'MNG Kargo' in order.cargo_provider_name %}orange{% endif %}">{{ order.cargo_provider_name }}</span></small></p>
+                    <p class="mb-2">
+                        {% set translated_status = {'Created': 'Yeni', 'Picking': 'İşleme Alındı', 'Shipped': 'Kargoda', 'Delivered': 'Teslim Edildi', 'Cancelled': 'İptal Edildi'}.get(order.status, order.status) %}
+                        <strong>Durum:</strong>
+                        <span class="badge {% if translated_status == 'Yeni' %}bg-warning{% elif translated_status == 'İşleme Alındı' %}bg-success{% elif translated_status == 'Kargoda' %}bg-danger{% elif translated_status == 'Teslim Edildi' %}bg-orange{% else %}bg-secondary{% endif %}">{{ translated_status }}</span>
+                    </p>
+                    {% if translated_status in ['Yeni','İşleme Alındı'] %}
+                        <p class="mb-3"><strong>Kalan Süre:</strong> <span class="remaining-time red" data-end-time="{{ order.agreed_delivery_date or order.estimated_delivery_end }}">{{ order.remaining_time }}</span></p>
+                    {% endif %}
+                    <button class="btn btn-outline-secondary w-100" data-bs-toggle="collapse" data-bs-target="#details-{{ loop.index }}">
+                        Ürün Detayları <i class="fas fa-chevron-down fa-xs"></i>
+                    </button>
+                    <div id="details-{{ loop.index }}" class="collapse details-section">
+                        <table class="table table-sm table-bordered mt-3">
+                            <thead><tr><th>Ürün Detayı</th><th>Görsel</th><th>Adet</th></tr></thead>
+                            <tbody>
+                            {% for detail in order.processed_details %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ detail.model_code or 'N/A' }}</strong><br>
+                                        <small>{{ detail.color or 'N/A' }} / {{ detail.size or 'N/A' }}</small>
+                                    </td>
+                                    <td><img src="{{ detail.image_url }}" alt="Ürün" class="zoomable-image" data-image-src="{{ detail.image_url }}"></td>
+                                    <td><strong>{{ detail.quantity }}</strong></td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                 <div class="card-footer bg-light text-center">
+                    <button class="btn btn-secondary btn-sm" onclick="showArchiveModal('{{ order.order_number }}')">Arşivle</button>
+                 </div>
+            </div>
+        {% endfor %}
+        </div>
+
+        <nav aria-label="Sayfa gezintisi" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page > 1 %}
+                <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, page=page-1, search=request.args.get('search', '')) }}">Önceki</a></li>
+                {% endif %}
+                {% for i in range(1, total_pages + 1) %}
+                <li class="page-item {% if i == page %}active{% endif %}"><a class="page-link" href="{{ url_for(request.endpoint, page=i, search=request.args.get('search', '')) }}">{{ i }}</a></li>
+                {% endfor %}
+                {% if page < total_pages %}
+                <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, page=page+1, search=request.args.get('search', '')) }}">Sonraki</a></li>
+                {% endif %}
+            </ul>
+        </nav>
     </div>
-  </div>
 
-  <!-- Kopyalama Alanı -->
-  <textarea
-    id="temp-copier"
-    style="position: absolute; top: -1000px;"
-  ></textarea>
+    <div class="modal fade" id="archiveModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form id="archiveForm">
+                <div class="modal-content" style="border-radius: var(--border-radius);">
+                    <div class="modal-header"><h5 class="modal-title">Arşivleme Sebebi</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body">
+                        <input type="hidden" id="archiveOrderNumber" name="order_number" value="">
+                        <div class="mb-3">
+                            <label for="archiveReason" class="form-label">Sebep</label>
+                            <select class="form-select" id="archiveReason" name="archive_reason" required>
+                                <option value="">Sebep Seçin</option>
+                                <option value="Stok Tükendi">Stok Tükendi</option>
+                                <option value="Kusurlu/Defolu Ürün">Kusurlu/Defolu Ürün</option>
+                                <option value="Paket İçeriği Eksik">Paket İçeriği Eksik</option>
+                                <option value="Ürün Sorunu Gideriliyor">Ürün Sorunu Gideriliyor</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                        <button type="submit" class="btn btn-primary">Arşivle</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 
-  <!-- JS'ler -->
-  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-  <script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"
-  ></script>
-  <script>
-    function copyToClipboard(text, element) {
-      const tempInput = document.getElementById('temp-copier');
-      tempInput.value = text;
-      tempInput.select();
-      document.execCommand('copy');
-      const confirmation = element.nextElementSibling;
-      confirmation.classList.add('show');
-      setTimeout(() => {
-        confirmation.classList.remove('show');
-      }, 2000);
-    }
+    <div id="imageZoomModal">
+      <button class="close-btn">&times;</button>
+      <img src="" alt="Büyük Görsel" />
+    </div>
 
-    function showArchiveModal(order_number) {
-      document.getElementById('archiveOrderNumber').value = order_number;
-      var archiveModal = new bootstrap.Modal(
-        document.getElementById('archiveModal')
-      );
-      archiveModal.show();
-    }
+    <textarea id="temp-copier" style="position: absolute; top: -1000px;"></textarea>
 
-    $('#archiveForm').submit(function (event) {
-      event.preventDefault();
-      var order_number = $('#archiveOrderNumber').val();
-      var archive_reason = $('#archiveReason').val();
-      if (!archive_reason) {
-        alert('Lütfen bir sebep seçin.');
-        return;
-      }
-      $.post(
-        '/archive_order',
-        { order_number: order_number, archive_reason: archive_reason },
-        function (response) {
-          if (response.success) {
-            alert('Sipariş arşivlendi!');
-            $('#archiveModal').modal('hide');
-            window.location.href = '/';
-          } else {
-            alert(
-              'Sipariş arşivlenirken bir hata oluştu: ' + response.message
-            );
-          }
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        // GÖRSEL BÜYÜTME İŞLEVİ
+        const $imageModal = $('#imageZoomModal');
+        $('.order-list').on('click', '.zoomable-image', function(e) {
+            e.stopPropagation();
+            const src = $(this).data('image-src');
+            if (src) {
+                $imageModal.find('img').attr('src', src);
+                $imageModal.addClass('show');
+            }
+        });
+        $imageModal.on('click', function() {
+            $(this).removeClass('show');
+        });
+
+        // Bu sayfadaki diğer tüm JS kodları aynı kalabilir.
+        function copyToClipboard(text, element) {
+            const tempInput = document.getElementById('temp-copier');
+            tempInput.value = text;
+            tempInput.select();
+            document.execCommand('copy');
+            const confirmation = element.nextElementSibling;
+            confirmation.classList.add('show');
+            setTimeout(() => { confirmation.classList.remove('show'); }, 2000);
         }
-      ).fail(function () {
-        alert('Sipariş arşivlenirken bir hata oluştu.');
-      });
-    });
-
-    function updateRemainingTime() {
-      const remainingTimeElements = document.querySelectorAll('.remaining-time');
-      const now = new Date();
-      remainingTimeElements.forEach((element) => {
-        const endTime = new Date(element.getAttribute('data-end-time') + 'Z');
-        const timeDiff = endTime - now;
-        if (timeDiff > 0) {
-          const totalMinutes = Math.floor(timeDiff / 60000);
-          const days = Math.floor(totalMinutes / 1440);
-          const hours = Math.floor((totalMinutes % 1440) / 60);
-          const minutes = totalMinutes % 60;
-          let newTimeString = '';
-          if (days > 0) newTimeString += days + ' gün ';
-          if (hours > 0) newTimeString += hours + ' saat ';
-          newTimeString += minutes + ' dakika';
-          element.innerText = newTimeString;
-          if (totalMinutes <= 600) {
-            element.classList.add('red');
-          } else {
-            element.classList.remove('red');
-          }
-        } else {
-          element.innerText = 'Süre Doldu';
-          element.classList.add('red');
+        function showArchiveModal(order_number) {
+            document.getElementById('archiveOrderNumber').value = order_number;
+            var archiveModal = new bootstrap.Modal(document.getElementById('archiveModal'));
+            archiveModal.show();
         }
-      });
-    }
+        $('#archiveForm').submit(function (event) {
+            event.preventDefault();
+            var order_number = $('#archiveOrderNumber').val();
+            var archive_reason = $('#archiveReason').val();
+            if (!archive_reason) { alert('Lütfen bir sebep seçin.'); return; }
 
-    setInterval(updateRemainingTime, 60000);
-    window.onload = updateRemainingTime;
-  </script>
+            // SAĞLAMLAŞTIRILMIŞ AJAX İSTEĞİ
+            $.post('/archive_order', { order_number: order_number, archive_reason: archive_reason })
+             .done(function (response) {
+                if (response.success) {
+                    alert('Sipariş arşivlendi!');
+                    $('#archiveModal').modal('hide');
+                    window.location.reload();
+                } else {
+                    alert('Sipariş arşivlenirken bir hata oluştu: ' + (response.message || 'Bilinmeyen hata.'));
+                }
+             })
+             .fail(function (jqXHR, textStatus, errorThrown) {
+                console.error("Arşivleme hatası:", textStatus, errorThrown);
+                alert('Sunucu ile iletişim kurulamadı. Lütfen internet bağlantınızı kontrol edin.');
+             });
+        });
+        function updateRemainingTime() {
+            const remainingTimeElements = document.querySelectorAll('.remaining-time');
+            const now = new Date();
+            remainingTimeElements.forEach((element) => {
+                const endTime = new Date(element.getAttribute('data-end-time') + 'Z');
+                const timeDiff = endTime - now;
+                if (timeDiff > 0) {
+                    const totalMinutes = Math.floor(timeDiff / 60000);
+                    const days = Math.floor(totalMinutes / 1440);
+                    const hours = Math.floor((totalMinutes % 1440) / 60);
+                    const minutes = totalMinutes % 60;
+                    let newTimeString = '';
+                    if (days > 0) newTimeString += days + ' gün ';
+                    if (hours > 0) newTimeString += hours + ' saat ';
+                    newTimeString += minutes + ' dakika';
+                    element.innerText = newTimeString;
+                    if (totalMinutes <= 600) { element.classList.add('red'); } 
+                    else { element.classList.remove('red'); }
+                } else {
+                    element.innerText = 'Süre Doldu';
+                    element.classList.add('red');
+                }
+            });
+        }
+        setInterval(updateRemainingTime, 60000);
+        window.onload = updateRemainingTime;
+    </script>
 </body>
 </html>

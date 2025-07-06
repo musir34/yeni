@@ -3,95 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yeni Değişim Talebi</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <title>Yeni Değişim Talebi - Güllü Ayakkabı</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background: #f8f9fa; }
-        .thumbnail { width: 100%; max-width: 150px; height: auto; object-fit: cover; }
-        .product-card { width: 210px; margin: 10px auto; }
-        #messageBox { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1050; min-width: 300px; }
-        .card-body h5 { font-size: 1em; }
-        h2, h5 { color: #333; }
-        .form-label { font-weight: 500; }
-        .btn { font-size: 0.9em; }
-        #exchangeForm h5,
-        #orderDetails h5 { margin-top: 20px; }
+        :root {
+            --color-primary: #B76E79; /* Gül Kurusu */
+            --color-primary-dark: #A05F6A;
+            --color-secondary: #212529; /* Siyah/Koyu Gri */
+            --color-text: #343a40;
+            --color-bg: #f8f9fa;
+            --color-white: #fff;
+            --color-border: #dee2e6;
+            --color-success: #28a745;
+            --color-warning: #ffc107;
+            --color-danger: #dc3545;
+            --color-info: #0dcaf0;
+            --font-family-base: 'Inter', sans-serif;
+            --border-radius: 0.5rem;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+            --shadow-md: 0 5px 15px rgba(0,0,0,0.08);
+            --transition: all 0.25s ease-in-out;
+        }
+
+        body {
+            font-family: var(--font-family-base);
+            background-color: var(--color-bg);
+            color: var(--color-text);
+        }
+        .container { max-width: 960px; }
+        h2, h5 { color: var(--color-secondary); font-weight: 600; }
+
+        .page-header {
+            background-color: var(--color-white); padding: 1.5rem;
+            border-radius: var(--border-radius); box-shadow: var(--shadow-sm); margin-bottom: 2rem;
+        }
+
+        .btn {
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            transition: var(--transition);
+            border: none;
+            padding: 0.7rem 1.3rem;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+        .btn-primary { background-color: var(--color-primary); border-color: var(--color-primary); }
+        .btn-primary:hover { background-color: var(--color-primary-dark); border-color: var(--color-primary-dark); }
+        .btn-secondary { background-color: var(--color-secondary); border-color: var(--color-secondary); color: var(--color-white); }
+        .btn-secondary:hover { background-color: #343a40; border-color: #343a40; }
+        .btn-success { background-color: var(--color-success); border-color: var(--color-success); }
+        .btn-info { background-color: var(--color-info); border-color: var(--color-info); }
+
+        .card {
+            border: none;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-sm);
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 0.25rem rgba(183, 110, 121, 0.25);
+        }
+
+        #messageBox {
+            display: none; position: fixed; top: 20px; left: 50%;
+            transform: translateX(-50%); z-index: 1050; min-width: 300px;
+            border-radius: var(--border-radius); box-shadow: var(--shadow-md);
+        }
+
+        .product-card {
+            border: 1px solid var(--color-border);
+            transition: var(--transition);
+        }
+        .product-card:hover {
+            box-shadow: var(--shadow-sm);
+        }
+        .product-card .card-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .product-card .thumbnail {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
     </style>
 </head>
 <body>
     <div class="container mt-4 mb-5">
         <div id="messageBox" class="alert text-center" role="alert"></div>
 
-        <div class="text-center mb-4">
-            <a href="{{ url_for('home.home') }}" class="btn btn-secondary mb-2">Anasayfaya Dön</a>
-            <a href="{{ url_for('degisim.degisim_talep') }}" class="btn btn-info w-100">Değişim Talepleri Listesi</a>
-        </div>
-        <h2 class="text-center mb-4">Yeni Değişim Talebi</h2>
-
-        <div class="mb-4">
-            <label for="siparis_no_input" class="form-label">Sipariş Numarası</label>
-            <div class="input-group">
-                <input type="text" class="form-control" id="siparis_no_input" required>
-                <button type="button" class="btn btn-primary" onclick="fetchOrderDetails()">Siparişi Getir</button>
+        <div class="page-header text-center">
+            <h2 class="mb-3"><i class="fas fa-sync-alt"></i> Yeni Değişim Talebi</h2>
+            <div class="d-flex justify-content-center gap-2">
+                 <a href="{{ url_for('home.home') }}" class="btn btn-secondary"><i class="fas fa-home"></i> Anasayfa</a>
+                 <a href="{{ url_for('degisim.degisim_talep') }}" class="btn btn-info text-white"><i class="fas fa-list-ul"></i> Değişim Listesi</a>
             </div>
         </div>
 
-        <form id="degisimKayitForm">
-            <div id="orderDetails" style="display: none;">
-                <input type="hidden" id="siparis_no" name="siparis_no">
-
-                <h5>Alıcı Bilgileri</h5>
-                <div class="mb-3">
-                    <label class="form-label">Ad:</label>
-                    <input type="text" class="form-control" id="ad" name="ad">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Soyad:</label>
-                    <input type="text" class="form-control" id="soyad" name="soyad">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Adres:</label>
-                    <textarea class="form-control" id="adres" name="adres" rows="3"></textarea>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Telefon No:</label>
-                    <input type="text" class="form-control" id="telefon_no" name="telefon_no">
-                </div>
-
-                <h5>Sipariş Edilen Ürünler</h5>
-                <div id="productList" class="row"></div>
-
-                <button class="btn btn-success mt-3 w-100" type="button" onclick="showExchangeForm()">Değişim İçin Yeni Ürün Ekle</button>
-            </div>
-
-            <div id="exchangeForm" style="display: none; margin-top: 20px;">
-                <h5>Değişim Yapılacak Yeni Ürün(ler)</h5>
-                <div id="exchangeProductsContainer">
+        <div class="card">
+            <div class="card-body p-4">
+                <div class="mb-4">
+                    <label for="siparis_no_input" class="form-label fs-5">Sipariş Numarası</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control form-control-lg" id="siparis_no_input" required placeholder="Değişim yapılacak siparişin numarasını girin...">
+                        <button type="button" class="btn btn-primary" onclick="fetchOrderDetails()">Siparişi Getir</button>
                     </div>
-                <button type="button" class="btn btn-outline-success mt-2" onclick="addNewProductField()">+ Yeni Ürün Ekle</button>
-                <hr>
-
-                <div class="mb-3">
-                    <label for="reason_select" class="form-label">Değişim Sebebi</label>
-                    <select id="reason_select" class="form-select" onchange="handleReasonChange(this)">
-                        <option value="">Seçiniz...</option>
-                        <option value="Ürün bedeni büyük geldi.">Ürün Bedeni Büyük Geldi</option>
-                        <option value="Ürün bedeni küçük geldi.">Ürün Bedeni Küçük Geldi</option>
-                        <option value="Kusurlu ürün gönderildi.">Kusurlu Ürün Gönderildi</option>
-                        <option value="Yanlış ürün gönderildi.">Yanlış Ürün Gönderildi</option>
-                        <option value="Özel">Özel (Kendim yazacağım)</option>
-                    </select>
                 </div>
 
-                <div id="custom_reason_div" class="mb-3" style="display: none;">
-                    <label for="degisim_nedeni_custom" class="form-label">Özel Değişim Nedeni</label>
-                    <textarea class="form-control" id="degisim_nedeni_custom" rows="3"></textarea>
-                </div>
-                <input type="hidden" id="degisim_nedeni" name="degisim_nedeni">
-                <button type="submit" class="btn btn-success w-100">Değişimi Tamamla</button>
+                <form id="degisimKayitForm">
+                    <div id="orderDetails" style="display: none;">
+                        <input type="hidden" id="siparis_no" name="siparis_no">
+
+                        <hr class="my-4">
+                        <h5><i class="fas fa-user-circle text-primary"></i> Alıcı Bilgileri</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ad:</label>
+                                <input type="text" class="form-control" id="ad" name="ad">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Soyad:</label>
+                                <input type="text" class="form-control" id="soyad" name="soyad">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Adres:</label>
+                            <textarea class="form-control" id="adres" name="adres" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Telefon No:</label>
+                            <input type="text" class="form-control" id="telefon_no" name="telefon_no">
+                        </div>
+
+                        <h5 class="mt-4"><i class="fas fa-box-open text-primary"></i> Sipariş Edilen Ürünler</h5>
+                        <div id="productList" class="row"></div>
+
+                        <button class="btn btn-success mt-3 w-100" type="button" onclick="showExchangeForm()">
+                            <i class="fas fa-plus"></i> Değişim İçin Yeni Ürün Ekle
+                        </button>
+                    </div>
+
+                    <div id="exchangeForm" style="display: none; margin-top: 2rem; background-color: #f1f3f5; padding: 1.5rem; border-radius: var(--border-radius);">
+                        <h5 class="mt-0"><i class="fas fa-exchange-alt text-primary"></i> Değişim Yapılacak Yeni Ürün(ler)</h5>
+                        <div id="exchangeProductsContainer"></div>
+                        <button type="button" class="btn btn-outline-success mt-2" onclick="addNewProductField()">
+                            <i class="fas fa-plus"></i> Başka Ürün Ekle
+                        </button>
+                        <hr>
+
+                        <div class="mb-3">
+                            <label for="reason_select" class="form-label">Değişim Sebebi</label>
+                            <select id="reason_select" class="form-select" onchange="handleReasonChange(this)">
+                                <option value="">Seçiniz...</option>
+                                <option value="Ürün bedeni büyük geldi.">Ürün Bedeni Büyük Geldi</option>
+                                <option value="Ürün bedeni küçük geldi.">Ürün Bedeni Küçük Geldi</option>
+                                <option value="Kusurlu ürün gönderildi.">Kusurlu Ürün Gönderildi</option>
+                                <option value="Yanlış ürün gönderildi.">Yanlış Ürün Gönderildi</option>
+                                <option value="Özel">Özel (Kendim yazacağım)</option>
+                            </select>
+                        </div>
+
+                        <div id="custom_reason_div" class="mb-3" style="display: none;">
+                            <label for="degisim_nedeni_custom" class="form-label">Özel Değişim Nedeni</label>
+                            <textarea class="form-control" id="degisim_nedeni_custom" rows="3"></textarea>
+                        </div>
+                        <input type="hidden" id="degisim_nedeni" name="degisim_nedeni">
+                        <button type="submit" class="btn btn-primary w-100 btn-lg mt-3">
+                            <i class="fas fa-check-circle"></i> Değişimi Tamamla
+                        </button>
+                    </div>
+                </form>
             </div>
-        </form>
+        </div>
     </div>
 
     <script>
