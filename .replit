@@ -1,5 +1,6 @@
 entrypoint = "app.py"
-modules = ["python-3.11", "postgresql-16", "nodejs-20", "python3"]
+language = "python3"
+modules = ["python-3.11", "postgresql-16", "nodejs-20"]
 
 [nix]
 channel = "stable-24_05"
@@ -12,9 +13,9 @@ language = "python3"
 requiredFiles = [".replit", "replit.nix"]
 
 [deployment]
-run = ["sh", "-c", "bash auto_push.sh && python3 app.py"]
+run = ["python3", "app.py"]
 deploymentTarget = "cloudrun"
-build = ["sh", "-c", "pip install -r requirements.txt"]
+build = ["sh", "-c", "pip install --upgrade pip && pip install -r requirements.txt"]
 
 [[ports]]
 localPort = 3000
