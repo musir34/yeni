@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ürün Oluştur - Güllü Shoes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .step-indicator {
+            display: flex;
+            margin-bottom: 30px;
+            padding: 0;
+            list-style: none;
+        }
+        .step-indicator li {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            font-weight: 500;
+        }
+        .step-indicator li::before {
+            content: attr(data-step);
+            display: block;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            border-radius: 50%;
+            background: #e9ecef;
+            margin: 0 auto 10px;
+            color: #6c757d;
+        }
+        .step-indicator li.active::before {
+            background: #fd5e00;
+            color: white;
+        }
+        .step-indicator li.completed::before {
+            background: #28a745;
+            color: white;
+            content: '✓';
+        }
+        .step-indicator li:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: #e9ecef;
+            z-index: -1;
+        }
+        .step-indicator li.completed:not(:last-child)::after {
+            background: #28a745;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+            margin-bottom: 1.5rem;
+        }
+        .card-header {
+            background-color: #fff;
+            border-bottom: 1px solid #dee2e6;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+        }
+        .form-label {
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+        .required::after {
+            content: ' *';
+            color: #dc3545;
+        }
+        .info-text {
+            color: #6c757d;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        .btn-orange {
+            background-color: #fd5e00;
+            color: white;
+            border: none;
+        }
+        .btn-orange:hover {
+            background-color: #e54d00;
+            color: white;
+        }
+        .variant-table th {
+            background-color: #f8f9fa;
+            font-weight: 500;
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+        .variant-table input {
+            min-width: 120px;
+        }
+        .size-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        .trendyol-info {
+            background-color: #fff3cd;
+            border-left: 4px solid #fd5e00;
+            padding: 12px 16px;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+        .attribute-item {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        /* Rich text editor style */
+        .editor-toolbar {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-bottom: none;
+            border-radius: 0.25rem 0.25rem 0 0;
+            padding: 0.5rem;
+        }
+        .editor-content {
+            min-height: 200px;
+            border: 1px solid #dee2e6;
+            border-radius: 0 0 0.25rem 0.25rem;
+            padding: 1rem;
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+    {% include 'menu.html' %}
+    
+    <div class="container mt-4 mb-5">
+        <!-- Başlık -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Ürün Oluştur</h2>
+            <a href="/product_list" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Ürün Listesine Dön
+            </a>
+        </div>
+
+        <!-- Adım Göstergesi -->
+        <ul class="step-indicator">
+            <li class="active" data-step="1">Ürün Bilgileri</li>
+            <li data-step="2">Satış ve Varyant Bilgileri</li>
+        </ul>
+
+        <!-- Step 1: Ürün Bilgileri -->
+        <div id="step1" class="step-content">
+            <!-- Trendyol Bilgilendirme -->
+            <div class="trendyol-info">
+                <i class="bi bi-info-circle"></i> 
+                Ürün bilgileri, ürünümüzü tanıtan temel bilgilerdir. Ürün bilgileriyle ayırt etici bir sayfa yaratır, ürünümüzün performansını artırabiliriz.
+            </div>
+
+            <form id="productForm">
+                <!-- Ürün Bilgileri -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-box-seam"></i> Ürün Bilgileri
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">Kategori Seçimi</label>
+                                <select class="form-select" id="category" name="category_id" required>
+                                    <option value="">Kategori seçiniz</option>
+                                    <option value="1801">Ayakkabı > Kadın > Topuklu Ayakkabı</option>
+                                    <option value="1802">Ayakkabı > Kadın > Günlük</option>
+                                    <option value="1803">Ayakkabı > Kadın > Spor Ayakkabı</option>
+                                    <option value="1804">Ayakkabı > Erkek > Günlük</option>
+                                    <option value="1805">Ayakkabı > Erkek > Klasik</option>
+                                    <option value="1806">Ayakkabı > Erkek > Bot</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">Marka</label>
+                                <input type="text" class="form-control" id="brand" name="brand" value="Güllü Shoes" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ürün Özellikleri -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-list-ul"></i> Ürün Özellikleri
+                    </div>
+                    <div class="card-body">
+                        <div class="trendyol-info mb-3">
+                            <i class="bi bi-info-circle"></i> 
+                            Ürün özelliklerini doldurduğu müşteriler tarafından tercih edilmenizi ve ürünümüzün görünürlüğünün artmasını sağlar. Ürün girişi yaparken <strong>Renk</strong> ve <strong>Beden</strong> bilgileri seçeneklerde varsa lütfen filtreleri kullanın.
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">Ürün Adı</label>
+                                <input type="text" class="form-control" id="title" name="title" placeholder="Örn: Kadın Siyah Topuklu Ayakkabı" required>
+                                <div class="info-text">Marka, model, renk ve önemli özellikleri içermelidir</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">Model Kodu</label>
+                                <input type="text" class="form-control" id="product_main_id" name="product_main_id" placeholder="Örn: GS-2024-001" required>
+                                <div class="info-text">Ürününüzün benzersiz model kodu</div>
+                            </div>
+                        </div>
+
+                        <div class="row" id="dynamicAttributes">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">Renk</label>
+                                <select class="form-select" id="color" name="color" required>
+                                    <option value="">Seçiniz</option>
+                                    <option value="Siyah">Siyah</option>
+                                    <option value="Beyaz">Beyaz</option>
+                                    <option value="Lacivert">Lacivert</option>
+                                    <option value="Kırmızı">Kırmızı</option>
+                                    <option value="Kahverengi">Kahverengi</option>
+                                    <option value="Bej">Bej</option>
+                                    <option value="Gri">Gri</option>
+                                    <option value="Mavi">Mavi</option>
+                                    <option value="Yeşil">Yeşil</option>
+                                    <option value="Bordo">Bordo</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">Cinsiyet</label>
+                                <select class="form-select" id="gender" name="gender" required>
+                                    <option value="">Seçiniz</option>
+                                    <option value="Kadın">Kadın</option>
+                                    <option value="Erkek">Erkek</option>
+                                    <option value="Unisex">Unisex</option>
+                                    <option value="Kız Çocuk">Kız Çocuk</option>
+                                    <option value="Erkek Çocuk">Erkek Çocuk</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Kategori bazlı dinamik özellikler buraya eklenecek -->
+                        <div id="categoryAttributes"></div>
+                    </div>
+                </div>
+
+                <!-- En Çok Filtrelenen Alanlar -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-funnel"></i> En Çok Filtrelenen Alanlar <span class="text-muted">(Opsiyonel)</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Malzeme</label>
+                                <select class="form-select" name="attributes[material]">
+                                    <option value="">Seçiniz</option>
+                                    <option value="Deri">Deri</option>
+                                    <option value="Süet">Süet</option>
+                                    <option value="Tekstil">Tekstil</option>
+                                    <option value="Suni Deri">Suni Deri</option>
+                                    <option value="Kanvas">Kanvas</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Taban Malzemesi</label>
+                                <select class="form-select" name="attributes[sole_material]">
+                                    <option value="">Seçiniz</option>
+                                    <option value="Kauçuk">Kauçuk</option>
+                                    <option value="Poliüretan">Poliüretan</option>
+                                    <option value="TPU">TPU</option>
+                                    <option value="EVA">EVA</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Bağlama Şekli</label>
+                                <select class="form-select" name="attributes[closure_type]">
+                                    <option value="">Seçiniz</option>
+                                    <option value="Bağcıklı">Bağcıklı</option>
+                                    <option value="Fermuarlı">Fermuarlı</option>
+                                    <option value="Cırtcırtlı">Cırtcırtlı</option>
+                                    <option value="Tokalı">Tokalı</option>
+                                    <option value="Slip-on">Slip-on</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Topuk Boyu</label>
+                                <select class="form-select" name="attributes[heel_height]">
+                                    <option value="">Seçiniz</option>
+                                    <option value="0-4 cm">0-4 cm</option>
+                                    <option value="4-8 cm">4-8 cm</option>
+                                    <option value="8-12 cm">8-12 cm</option>
+                                    <option value="12+ cm">12+ cm</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Mevsim</label>
+                                <select class="form-select" name="attributes[season]">
+                                    <option value="">Seçiniz</option>
+                                    <option value="İlkbahar-Yaz">İlkbahar-Yaz</option>
+                                    <option value="Sonbahar-Kış">Sonbahar-Kış</option>
+                                    <option value="Dört Mevsim">Dört Mevsim</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Su Geçirmezlik</label>
+                                <select class="form-select" name="attributes[waterproof]">
+                                    <option value="">Seçiniz</option>
+                                    <option value="Evet">Evet</option>
+                                    <option value="Hayır">Hayır</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Opsiyonel Alanlar -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-plus-circle"></i> Opsiyonel Alanlar
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Kargo Bilgisi (Opsiyonel)</label>
+                                <select class="form-select" name="cargo_company">
+                                    <option value="">Seçiniz</option>
+                                    <option value="Aras Kargo">Aras Kargo</option>
+                                    <option value="Yurtiçi Kargo">Yurtiçi Kargo</option>
+                                    <option value="MNG Kargo">MNG Kargo</option>
+                                    <option value="PTT Kargo">PTT Kargo</option>
+                                    <option value="Sürat Kargo">Sürat Kargo</option>
+                                    <option value="UPS">UPS</option>
+                                    <option value="Sendeo">Sendeo</option>
+                                    <option value="HepsiJet">HepsiJet</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Teslimat Süresi (Gün)</label>
+                                <input type="number" class="form-control" name="delivery_duration" placeholder="Örn: 3" min="1" max="30">
+                                <div class="info-text">Ürün hazırlama ve kargo süresi toplamı</div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Ağırlık (gr)</label>
+                                <input type="number" class="form-control" name="dimension_weight" placeholder="Örn: 500" min="1">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Uzunluk (cm)</label>
+                                <input type="number" class="form-control" name="dimension_length" placeholder="Örn: 30" min="1">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Genişlik (cm)</label>
+                                <input type="number" class="form-control" name="dimension_width" placeholder="Örn: 20" min="1">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Yükseklik (cm)</label>
+                                <input type="number" class="form-control" name="dimension_height" placeholder="Örn: 10" min="1">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">KDV Oranı (%)</label>
+                                <select class="form-select" name="vat_rate">
+                                    <option value="1">%1</option>
+                                    <option value="10">%10</option>
+                                    <option value="20" selected>%20</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ürün Açıklaması -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-text-paragraph"></i> Ürün Açıklaması
+                    </div>
+                    <div class="card-body">
+                        <div class="trendyol-info mb-3">
+                            Ürün açıklaması, ürün sayfanızın içeriği hakkında arama motorlarına bilgi verir. Açıklama kısmının satışlarınıza katkı sağlayacak şekilde detaylandırılması önemlidir.
+                        </div>
+                        <div class="editor-toolbar">
+                            <button type="button" class="btn btn-sm btn-light" onclick="formatText('bold')"><i class="bi bi-type-bold"></i></button>
+                            <button type="button" class="btn btn-sm btn-light" onclick="formatText('italic')"><i class="bi bi-type-italic"></i></button>
+                            <button type="button" class="btn btn-sm btn-light" onclick="formatText('underline')"><i class="bi bi-type-underline"></i></button>
+                            <button type="button" class="btn btn-sm btn-light" onclick="formatText('strikethrough')"><i class="bi bi-type-strikethrough"></i></button>
+                            <span class="mx-2">|</span>
+                            <button type="button" class="btn btn-sm btn-light" onclick="formatText('justifyLeft')"><i class="bi bi-text-left"></i></button>
+                            <button type="button" class="btn btn-sm btn-light" onclick="formatText('justifyCenter')"><i class="bi bi-text-center"></i></button>
+                            <button type="button" class="btn btn-sm btn-light" onclick="formatText('justifyRight')"><i class="bi bi-text-right"></i></button>
+                            <span class="mx-2">|</span>
+                            <button type="button" class="btn btn-sm btn-light" onclick="formatText('insertUnorderedList')"><i class="bi bi-list-ul"></i></button>
+                            <button type="button" class="btn btn-sm btn-light" onclick="formatText('insertOrderedList')"><i class="bi bi-list-ol"></i></button>
+                            <span class="mx-2">|</span>
+                            <button type="button" class="btn btn-sm btn-light" onclick="showHTMLCode()">HTML Göster</button>
+                        </div>
+                        <div class="editor-content" contenteditable="true" id="descriptionEditor">
+                            <p>Ürün açıklamanızı buraya yazın...</p>
+                        </div>
+                        <input type="hidden" id="description" name="description">
+                    </div>
+                </div>
+
+                <!-- Ürün Görselleri -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-image"></i> Ürün Görselleri <span class="badge bg-secondary">Çoklu Seçim</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="trendyol-info mb-3">
+                            Görsel olarak daha fazla örnek gösterilmesi satış şansını yükseltmektedir. Ürünlerinize görseli eklediğinizde görünüm kalitesini ve ilgi düzeyini arttırabilirsiniz.
+                        </div>
+                        <div class="row" id="imageUploadArea">
+                            <div class="col-md-3 mb-3">
+                                <div class="border rounded p-3 text-center" style="min-height: 150px; cursor: pointer;" onclick="document.getElementById('imageInput').click()">
+                                    <i class="bi bi-cloud-upload" style="font-size: 2rem;"></i>
+                                    <p class="mb-0 mt-2">Görsel Yükle</p>
+                                    <small class="text-muted">JPG, PNG (Max 5MB)</small>
+                                </div>
+                                <input type="file" id="imageInput" name="images" multiple accept="image/*" style="display: none;" onchange="handleImageUpload(this)">
+                            </div>
+                            <div id="imagePreview" class="col-md-9">
+                                <div class="row" id="previewContainer"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-secondary" onclick="window.location.href='/product_list'">
+                        <i class="bi bi-x-circle"></i> İptal
+                    </button>
+                    <button type="button" class="btn btn-orange" onclick="nextStep()">
+                        Devam Et <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Step 2: Satış ve Varyant Bilgileri -->
+        <div id="step2" class="step-content" style="display: none;">
+            <form id="variantForm">
+                <!-- Satış ve Varyant Bilgileri -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-tags"></i> Satış ve Varyant Bilgileri
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label required">Beden Seçimi</label>
+                                <select class="form-select" id="sizeRange" onchange="updateSizeTable()">
+                                    <option value="">Beden aralığı seçiniz</option>
+                                    <option value="25-30">25-30 (Çocuk)</option>
+                                    <option value="31-35">31-35 (Çocuk)</option>
+                                    <option value="35-40">35-40 (Kadın)</option>
+                                    <option value="36-41">36-41 (Kadın)</option>
+                                    <option value="39-45">39-45 (Erkek)</option>
+                                    <option value="40-46">40-46 (Erkek)</option>
+                                    <option value="custom">Özel Beden Girişi</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Renk</label>
+                                <input type="text" class="form-control" id="variantColor" readonly>
+                            </div>
+                        </div>
+
+                        <!-- Varyant Tablosu -->
+                        <div class="table-responsive">
+                            <table class="table table-bordered variant-table">
+                                <thead>
+                                    <tr>
+                                        <th width="50">
+                                            <input type="checkbox" class="form-check-input" id="selectAllSizes" onchange="toggleAllSizes()">
+                                        </th>
+                                        <th>Renk</th>
+                                        <th>Beden</th>
+                                        <th>Barkod <span class="text-danger">*</span></th>
+                                        <th>Trendyol Satış Fiyatı <span class="text-danger">*</span></th>
+                                        <th>Stok</th>
+                                        <th>KDV</th>
+                                        <th>Stok Kodu</th>
+                                        <th>İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="variantTableBody">
+                                    <!-- Dinamik olarak doldurulacak -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addCustomSize()">
+                                <i class="bi bi-plus-circle"></i> Beden Ekle
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-success ms-2" onclick="generateBarcodes()">
+                                <i class="bi bi-upc"></i> Otomatik Barkod Oluştur
+                            </button>
+                        </div>
+
+                        <!-- Toplu İşlemler -->
+                        <div class="card mt-4">
+                            <div class="card-body">
+                                <h6>Toplu İşlemler</h6>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <label class="form-label">Tüm Fiyatları Güncelle</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="bulkPrice" placeholder="0.00" step="0.01">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="applyBulkPrice()">Uygula</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Tüm Stokları Güncelle</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="bulkStock" placeholder="0" min="0">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="applyBulkStock()">Uygula</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-secondary" onclick="previousStep()">
+                        <i class="bi bi-arrow-left"></i> Geri
+                    </button>
+                    <button type="button" class="btn btn-orange" onclick="saveProduct()">
+                        <i class="bi bi-check-circle"></i> Ürünü Kaydet
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Başarılı!</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Ürün başarıyla kaydedildi.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn btn-primary" onclick="window.location.href='/product_list'">Ürün Listesine Git</button>
+                    <button type="button" class="btn btn-success" onclick="window.location.reload()">Yeni Ürün Ekle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        let currentStep = 1;
+        let productData = {};
+        let variants = [];
+        let uploadedImages = [];
+
+        // Initialize Select2
+        $(document).ready(function() {
+            $('#category').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Kategori seçiniz'
+            });
+        });
+
+        // Form validation
+        function validateStep1() {
+            const form = document.getElementById('productForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return false;
+            }
+            
+            // Get description content
+            const descriptionContent = document.getElementById('descriptionEditor').innerHTML;
+            document.getElementById('description').value = descriptionContent;
+            
+            return true;
+        }
+
+        // Navigation functions
+        function nextStep() {
+            if (!validateStep1()) return;
+            
+            // Collect form data
+            const formData = new FormData(document.getElementById('productForm'));
+            productData = Object.fromEntries(formData.entries());
+            
+            // Set color in variant form
+            document.getElementById('variantColor').value = productData.color;
+            
+            // Update step indicator
+            document.querySelector('.step-indicator li:nth-child(1)').classList.remove('active');
+            document.querySelector('.step-indicator li:nth-child(1)').classList.add('completed');
+            document.querySelector('.step-indicator li:nth-child(2)').classList.add('active');
+            
+            // Show step 2
+            document.getElementById('step1').style.display = 'none';
+            document.getElementById('step2').style.display = 'block';
+            window.scrollTo(0, 0);
+        }
+
+        function previousStep() {
+            // Update step indicator
+            document.querySelector('.step-indicator li:nth-child(2)').classList.remove('active');
+            document.querySelector('.step-indicator li:nth-child(1)').classList.remove('completed');
+            document.querySelector('.step-indicator li:nth-child(1)').classList.add('active');
+            
+            // Show step 1
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('step1').style.display = 'block';
+            window.scrollTo(0, 0);
+        }
+
+        // Size table management
+        function updateSizeTable() {
+            const sizeRange = document.getElementById('sizeRange').value;
+            const tbody = document.getElementById('variantTableBody');
+            tbody.innerHTML = '';
+            variants = [];
+            
+            if (!sizeRange) return;
+            
+            let sizes = [];
+            switch(sizeRange) {
+                case '25-30':
+                    sizes = [25, 26, 27, 28, 29, 30];
+                    break;
+                case '31-35':
+                    sizes = [31, 32, 33, 34, 35];
+                    break;
+                case '35-40':
+                    sizes = [35, 36, 37, 38, 39, 40];
+                    break;
+                case '36-41':
+                    sizes = [36, 37, 38, 39, 40, 41];
+                    break;
+                case '39-45':
+                    sizes = [39, 40, 41, 42, 43, 44, 45];
+                    break;
+                case '40-46':
+                    sizes = [40, 41, 42, 43, 44, 45, 46];
+                    break;
+            }
+            
+            sizes.forEach(size => {
+                addVariantRow(size);
+            });
+        }
+
+        function addVariantRow(size, customRow = false) {
+            const tbody = document.getElementById('variantTableBody');
+            const color = document.getElementById('variantColor').value;
+            const row = document.createElement('tr');
+            const rowId = 'variant_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            row.id = rowId;
+            row.innerHTML = `
+                <td>
+                    <input type="checkbox" class="form-check-input size-checkbox" data-row="${rowId}">
+                </td>
+                <td>${color}</td>
+                <td>
+                    ${customRow ? 
+                        `<input type="text" class="form-control form-control-sm" value="${size}" data-field="size">` : 
+                        `${size}`
+                    }
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm" data-field="barcode" required>
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm" data-field="price" step="0.01" required>
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm" data-field="stock" value="0" min="0">
+                </td>
+                <td>%${productData.vat_rate || 20}</td>
+                <td>
+                    <input type="text" class="form-control form-control-sm" data-field="stock_code">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeVariantRow('${rowId}')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+            
+            // Add to variants array
+            variants.push({
+                id: rowId,
+                size: size,
+                color: color,
+                barcode: '',
+                price: 0,
+                stock: 0,
+                stock_code: ''
+            });
+        }
+
+        function addCustomSize() {
+            const size = prompt('Beden giriniz:');
+            if (size) {
+                addVariantRow(size, true);
+            }
+        }
+
+        function removeVariantRow(rowId) {
+            document.getElementById(rowId).remove();
+            variants = variants.filter(v => v.id !== rowId);
+        }
+
+        function toggleAllSizes() {
+            const selectAll = document.getElementById('selectAllSizes');
+            const checkboxes = document.querySelectorAll('.size-checkbox');
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+        }
+
+        function generateBarcodes() {
+            const rows = document.querySelectorAll('#variantTableBody tr');
+            rows.forEach(row => {
+                const barcodeInput = row.querySelector('[data-field="barcode"]');
+                if (!barcodeInput.value) {
+                    // Generate 13-digit barcode
+                    const barcode = '869' + Math.floor(Math.random() * 10000000000).toString().padStart(10, '0');
+                    barcodeInput.value = barcode;
+                }
+            });
+        }
+
+        function applyBulkPrice() {
+            const price = document.getElementById('bulkPrice').value;
+            if (price) {
+                document.querySelectorAll('[data-field="price"]').forEach(input => {
+                    input.value = price;
+                });
+            }
+        }
+
+        function applyBulkStock() {
+            const stock = document.getElementById('bulkStock').value;
+            if (stock) {
+                document.querySelectorAll('[data-field="stock"]').forEach(input => {
+                    input.value = stock;
+                });
+            }
+        }
+
+        // Rich text editor functions
+        function formatText(command) {
+            document.execCommand(command, false, null);
+            document.getElementById('descriptionEditor').focus();
+        }
+
+        function showHTMLCode() {
+            const editor = document.getElementById('descriptionEditor');
+            const currentHTML = editor.innerHTML;
+            const newHTML = prompt('HTML Kodu:', currentHTML);
+            if (newHTML !== null) {
+                editor.innerHTML = newHTML;
+            }
+        }
+
+        // Image upload handling
+        function handleImageUpload(input) {
+            const files = input.files;
+            const previewContainer = document.getElementById('previewContainer');
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const col = document.createElement('div');
+                        col.className = 'col-md-4 mb-3';
+                        col.innerHTML = `
+                            <div class="position-relative">
+                                <img src="${e.target.result}" class="img-thumbnail" style="height: 150px; width: 100%; object-fit: cover;">
+                                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="removeImage(this)">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                        `;
+                        previewContainer.appendChild(col);
+                        uploadedImages.push(file);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        }
+
+        function removeImage(button) {
+            button.closest('.col-md-4').remove();
+        }
+
+        // Save product
+        async function saveProduct() {
+            // Collect variant data
+            const variantData = [];
+            const rows = document.querySelectorAll('#variantTableBody tr');
+            
+            for (const row of rows) {
+                const sizeElement = row.querySelector('td:nth-child(3)');
+                const size = sizeElement.querySelector('input') ? 
+                    sizeElement.querySelector('input').value : 
+                    sizeElement.textContent.trim();
+                
+                const variant = {
+                    size: size,
+                    color: productData.color,
+                    barcode: row.querySelector('[data-field="barcode"]').value,
+                    price: parseFloat(row.querySelector('[data-field="price"]').value) || 0,
+                    stock: parseInt(row.querySelector('[data-field="stock"]').value) || 0,
+                    stock_code: row.querySelector('[data-field="stock_code"]').value || ''
+                };
+                
+                if (!variant.barcode || !variant.price) {
+                    alert('Lütfen tüm zorunlu alanları doldurun (Barkod ve Fiyat)');
+                    return;
+                }
+                
+                variantData.push(variant);
+            }
+            
+            if (variantData.length === 0) {
+                alert('En az bir varyant eklemelisiniz');
+                return;
+            }
+            
+            // Prepare final data
+            const finalData = {
+                ...productData,
+                variants: variantData,
+                images: uploadedImages.map(img => img.name) // In real implementation, upload images first
+            };
+            
+            try {
+                const response = await fetch('/api/create_product_with_variants', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(finalData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    $('#successModal').modal('show');
+                } else {
+                    alert('Hata: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+            }
+        }
+
+        // Category-based attributes (can be extended)
+        document.getElementById('category').addEventListener('change', function() {
+            const categoryId = this.value;
+            const attributesDiv = document.getElementById('categoryAttributes');
+            
+            // Here you can load category-specific attributes dynamically
+            // For now, we'll keep the static attributes
+        });
+    </script>
+</body>
+</html>

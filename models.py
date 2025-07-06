@@ -388,48 +388,19 @@ class Product(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow) # Oluşturulma tarihi
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow) # Güncellenme tarihi
 
-    def __init__(self, barcode, title, product_main_id, 
-                 quantity, images, variants, size, color, archived, locked, on_sale,
-                 reject_reason, sale_price, list_price, currency_type, cost_usd=0.0, cost_try=0.0, cost_date=None,
-                 description=None, brand=None, category_id=None, category_name=None, attributes=None,
-                 cargo_company=None, delivery_duration=None, stock_code=None, dimension_weight=None,
-                 dimension_length=None, dimension_width=None, dimension_height=None, vat_rate=20,
-                 product_content_id=None, gender=None, marketplace_status=None):
-        self.barcode = barcode
-        self.title = title
-        self.product_main_id = product_main_id
-        self.quantity = quantity
-        self.images = images
-        self.variants = variants
-        self.size = size
-        self.color = color
-        self.archived = archived
-        self.locked = locked
-        self.on_sale = on_sale
-        self.reject_reason = reject_reason
-        self.sale_price = sale_price
-        self.list_price = list_price
-        self.currency_type = currency_type
-        self.cost_usd = cost_usd
-        self.cost_date = cost_date
-        self.cost_try = cost_try
-        # Yeni alanlar
-        self.description = description
-        self.brand = brand
-        self.category_id = category_id
-        self.category_name = category_name
-        self.attributes = attributes
-        self.cargo_company = cargo_company
-        self.delivery_duration = delivery_duration
-        self.stock_code = stock_code
-        self.dimension_weight = dimension_weight
-        self.dimension_length = dimension_length
-        self.dimension_width = dimension_width
-        self.dimension_height = dimension_height
-        self.vat_rate = vat_rate
-        self.product_content_id = product_content_id
-        self.gender = gender
-        self.marketplace_status = marketplace_status
+    def __init__(self, **kwargs):
+        # Set default values for optional fields
+        kwargs.setdefault('cost_usd', 0.0)
+        kwargs.setdefault('cost_try', 0.0)
+        kwargs.setdefault('vat_rate', 20)
+        kwargs.setdefault('archived', False)
+        kwargs.setdefault('locked', False)
+        kwargs.setdefault('on_sale', True)
+        kwargs.setdefault('hidden', False)
+        
+        # Initialize all attributes from kwargs
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 
 

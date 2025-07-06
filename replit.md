@@ -118,6 +118,13 @@ This is a comprehensive e-commerce management system built for Güllü Shoes, a 
   - Implemented image upload functionality for products
   - Added "Yeni Ürün Ekle" menu item under "Ürün İşlemleri"
   - Products can be created locally first, then sent to marketplaces (Trendyol, etc.) when ready
+- July 06, 2025. Upgraded product creation to 2-step variant system
+  - Redesigned interface to exactly match Trendyol's product creation flow
+  - Implemented multi-size variant support with individual barcodes and stock codes
+  - Added bulk operations for price and stock management
+  - Created beautiful drag-and-drop interface with step indicators
+  - Added rich text editor for product descriptions
+  - Improved category-specific attribute handling
 
 ## User Preferences
 
