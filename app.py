@@ -69,7 +69,18 @@ from flask_restx import Api
 # Swagger / OpenAPI UI
 api = Api(app, title='Güllü Shoes API', version='1.0', doc='/docs')
 # Blue­print kayıt fonksiyonunu çağır
+# Kayıtlı tüm blueprint'ler
 register_blueprints(app)
+
+# Ana sayfa ve home alias olarak yönlendirme
+from home import home as home_view
+
+@app.route('/')
+@app.route('/home')
+@app.route('/anasayfa')
+def index():
+    # Ana sayfa view fonksiyonunu çağırır
+    return home_view()
 
 # Asenkron görevler için Celery başlat
 from celery_app import init_celery
