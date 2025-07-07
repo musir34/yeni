@@ -10,7 +10,8 @@ missing = [var for var in [API_KEY, API_SECRET, SUPPLIER_ID] if not var]
 if missing:
     missing_names = [name for name, value in {"API_KEY": API_KEY, "API_SECRET": API_SECRET, "SUPPLIER_ID": SUPPLIER_ID}.items() if not value]
     missing_str = ", ".join(missing_names)
-    raise EnvironmentError(f"Missing required environment variables: {missing_str}")
+    # Çevre değişkenleri eksik: import sırasında hata fırlatma yerine uyarı ver
+    print(f"Warning: Missing environment variables for Trendyol API: {missing_str}")
 
 # Webhook güvenlik anahtarı (eğer çevre değişkeni yoksa rastgele oluştur)
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET") or secrets.token_hex(16)
