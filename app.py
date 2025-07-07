@@ -2,7 +2,6 @@
 
 import os
 import json
-import logging
 from datetime import datetime, timedelta
 from flask import Flask, request, url_for, redirect, flash, session
 from flask_sqlalchemy import SQLAlchemy
@@ -17,25 +16,23 @@ import cache_config
 from cache_config import CACHE_TIMES  # CACHE_TIMES gerekiyorsa
 
 
-# Logging Ayarı
-logging.basicConfig(level=logging.WARNING)
-logger = logging.getLogger(__name__)
+# Logging Ayarı (RotatingFile + console)
+from logger_config import app_logger as logger
 
 # Flask Uygulamasını Oluştur
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'varsayılan_anahtar')
-
-# ✅ Redis cache başlat
-cache = cache_config.cache
-cache.init_app(app)
-
-# Veritabanı Bağlantı Ayarı (Neon PostgreSQL için)
-DATABASE_URI = os.environ.get(
-    'DATABASE_URL',
-    'postgresql://neondb_owner:npg_Z0a3kSwtrOJf@ep-cool-bonus-a64bzq6f.us-west-2.aws.neon.tech/neondb?sslmode=require'
+# Config yükle (FLASK_ENV env ile veya default development)
+env = os.getenv('FLASK_ENV', 'development')
+app.config.from_object(
+    __import__('config').config_map.get(env, __import__('config').DevelopmentConfig)
 )
-app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+"""
+# Uygulama konfigürasyonu config.py içinden yüklendi (DATABASE_URL, CACHE_REDIS_URL vb.)
+"""
+# Redis cache başlat
+from cache_config import cache
+cache.init_app(app)
 
 # Uzantıları Başlat
 db.init_app(app)
@@ -62,79 +59,21 @@ def from_json(value):
 app.jinja_env.filters['format_turkish_date'] = format_turkish_date_filter
 
 
-# Blueprint'leri Yükle
-from siparisler import siparisler_bp
-from product_service import product_service_bp
-from claims_service import claims_service_bp
-from order_service import order_service_bp
-from update_service import update_service_bp
-# from archive import archive_bp # Artık yukarıda import edildi
-from order_list_service import order_list_service_bp
-from login_logout import login_logout_bp
-from degisim import degisim_bp
-from home import home_bp
-from get_products import get_products_bp
-from all_orders_service import all_orders_service_bp
-from new_orders_service import new_orders_service_bp, qr_utils_bp # qr_utils_bp de import edildi
-from processed_orders_service import processed_orders_service_bp
-from iade_islemleri import iade_islemleri
-from siparis_fisi import siparis_fisi_bp
-from analysis import analysis_bp
-from stock_report import stock_report_bp
-from openai_service import openai_bp
-from user_logs import user_logs_bp, log_user_action
-from commission_update_routes import commission_update_bp
-from profit import profit_bp
-from stock_management import stock_management_bp
-from catalog import catalog_bp
-from product_label import product_label_bp
-from intelligent_stock_analyzer import blueprint as intelligent_stock_bp
+# Blueprint'leri merkezi modülden kaydet
+from routes import register_blueprints
 
-blueprints = [
-    order_service_bp,
-    update_service_bp,
-    archive_bp, # archive_bp artık yukarıda import edildi
-    order_list_service_bp,
-    login_logout_bp,
-    degisim_bp,
-    home_bp,
-    get_products_bp,
-    all_orders_service_bp,
-    new_orders_service_bp,
-    qr_utils_bp, # qr_utils_bp app'e kaydedildi
-    processed_orders_service_bp,
-    iade_islemleri,
-    siparis_fisi_bp,
-    analysis_bp,
-    stock_report_bp,
-    openai_bp,
-    siparisler_bp,
-    product_service_bp,
-    claims_service_bp,
-    user_logs_bp,
-    commission_update_bp,
-    stock_management_bp,
-    profit_bp,
-    catalog_bp,
-    product_label_bp,
-    intelligent_stock_bp
-]
+# Kullanıcı loglama fonksiyonu (kullanıcı hareketi kaydı için)
+from user_logs import log_user_action
 
-# Enhanced Product Label Blueprint'ini ekle
-from enhanced_product_label import enhanced_label_bp
-from image_manager import image_manager_bp
-blueprints.append(enhanced_label_bp)
-blueprints.append(image_manager_bp)
+from flask_restx import Api
+# Swagger / OpenAPI UI
+api = Api(app, title='Güllü Shoes API', version='1.0', doc='/docs')
+# Blue­print kayıt fonksiyonunu çağır
+register_blueprints(app)
 
-# Direct route for simplified editor
-@app.route('/enhanced_product_label/advanced_editor')
-def direct_advanced_editor():
-    """Direct route for simplified label editor"""
-    from flask import render_template
-    return render_template('simple_label_editor.html')
-
-for bp in blueprints:
-    app.register_blueprint(bp)
+# Asenkron görevler için Celery başlat
+from celery_app import init_celery
+celery = init_celery(app)
 
 # URL çözümleme hatalarında fallback
 def custom_url_for(endpoint, **values):
@@ -151,25 +90,37 @@ def custom_url_for(endpoint, **values):
 
 app.jinja_env.globals['url_for'] = custom_url_for
 
+# Safe URL builder: if endpoint missing, return '#' instead of raising
+def safe_url_for(endpoint, **values):
+    try:
+        return custom_url_for(endpoint, **values)
+    except Exception:
+        return '#'
+app.jinja_env.globals['safe_url_for'] = safe_url_for
+
 # İstek Loglama
 @app.before_request
 def log_request():
     if not request.path.startswith('/static/'):
-        log_user_action(
-            action=f"PAGE_VIEW: {request.endpoint}",
-            details={'path': request.path, 'endpoint': request.endpoint},
-            force_log=True
-        )
+        try:
+            log_user_action(
+                action=f"PAGE_VIEW: {request.endpoint}",
+                details={'path': request.path, 'endpoint': request.endpoint},
+                force_log=True
+            )
+        except Exception as e:
+            logger.error(f"Log kaydedilemedi: {e}")
 
 # Giriş Kontrolü
 @app.before_request
 def check_authentication():
     # Etiket editör sayfalarını tamamen serbest bırak
-    if (request.path.startswith('/enhanced_product_label') or 
-        request.path.startswith('/static/') or 
+    if (request.path.startswith('/enhanced_product_label') or
+        request.path.startswith('/static/') or
         request.path.startswith('/api/generate_advanced_label_preview') or
         request.path.startswith('/api/save_label_preset') or
         request.path.startswith('/api/generate_label_preview') or
+        request.path.startswith('/health') or
         (request.endpoint and 'enhanced_label' in str(request.endpoint))):
         return None
 
@@ -180,6 +131,7 @@ def check_authentication():
         'login_logout.verify_totp',
         'login_logout.logout',
         'qr_utils.generate_qr_labels_pdf',
+        'health.health_check',
         'enhanced_label.advanced_label_editor',
         'enhanced_label.enhanced_product_label'
     ]
