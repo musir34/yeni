@@ -6,6 +6,14 @@ from models import OrderCreated, OrderPicking, OrderShipped, OrderDelivered, Ord
 from sqlalchemy import func, case, distinct, select, union_all
 from datetime import datetime, timedelta
 import logging
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+import os
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
+
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 analysis_bp = Blueprint('analysis', __name__)
 logger = logging.getLogger(__name__)
@@ -258,12 +266,9 @@ def get_sales_stats():
     - Ürün bazlı satış (5 tablo union)
     - ReturnOrder (iade) ve Degisim (değişim) tabloları
     """
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-    from app import DATABASE_URI
-
+ 
     # Yeni bir session oluştur
-    engine = create_engine(DATABASE_URI)
+    engine = create_engine(DATABASE_URL)
     SessionLocal = sessionmaker(bind=engine)
     session = SessionLocal()
 

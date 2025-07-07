@@ -13,10 +13,13 @@ qrcode==8.0
 werkzeug==3.0.4
 python-dateutil==2.9.0.post0
 flask-socketio==5.4.1
+flask-restx>=0.5.1
 python-dotenv==1.0.1
 pandas==2.2.3
 flask-wtf==1.2.2
 flask-caching==2.3.0
+pytest>=7.0.0
+pytest-flask>=1.2.0
 wtforms==3.2.1
 aiohttp==3.11.2
 flask-script==2.0.6

@@ -17,23 +17,6 @@ app.secret_key = 'gullu_shoes_label_editor'
 def home():
     return "Güllü Shoes - Etiket Editörü Sistemi Çalışıyor!"
 
-@app.route('/enhanced_product_label')
-def enhanced_product_label():
-    """Ana etiket sayfası"""
-    return render_template('enhanced_product_label.html')
-
-@app.route('/enhanced_product_label/advanced_editor')
-def advanced_editor():
-    """Gelişmiş drag-and-drop editör"""
-    return render_template('advanced_label_editor.html')
-
-# Enhanced product label blueprint'ini ekle
-try:
-    from enhanced_product_label import enhanced_label_bp
-    app.register_blueprint(enhanced_label_bp)
-    logger.info("Enhanced label blueprint başarıyla yüklendi")
-except Exception as e:
-    logger.warning(f"Blueprint yükleme hatası: {e}")
 
 if __name__ == '__main__':
     logger.info("Etiket editörü sunucusu başlatılıyor...")
