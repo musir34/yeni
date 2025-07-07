@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, redirect, url_for
 import json
 import os
 import traceback
@@ -151,3 +151,8 @@ def get_product_image(barcode):
         if os.path.exists(image_path):
             return f"/static/images/{image_filename}"
     return "/static/images/default.jpg"
+
+@home_bp.route('/home')
+@home_bp.route('/anasayfa')
+def home_alias():
+    return redirect(url_for('home.home'))
