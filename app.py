@@ -121,6 +121,7 @@ def check_authentication():
         request.path.startswith('/api/save_label_preset') or
         request.path.startswith('/api/generate_label_preview') or
         request.path.startswith('/health') or
+        request.path == '/' or
         (request.endpoint and 'enhanced_label' in str(request.endpoint))):
         return None
 
@@ -133,7 +134,8 @@ def check_authentication():
         'qr_utils.generate_qr_labels_pdf',
         'health.health_check',
         'enhanced_label.advanced_label_editor',
-        'enhanced_label.enhanced_product_label'
+        'enhanced_label.enhanced_product_label',
+        'home.home'
     ]
     app.permanent_session_lifetime = timedelta(days=30)
 
