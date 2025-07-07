@@ -254,6 +254,11 @@ def direct_delete_user(username):
             return redirect(url_for('login_logout.approve_users'))
     except Exception as e:
         print(f"Hata: {e}")
+
+@login_logout_bp.route('/home')
+@login_required
+def home_redirect():
+    return redirect(url_for('home.home'))
         db.session.rollback()
         flash(f'Kullanıcı silinirken hata: {e}', 'danger')
         return redirect(url_for('login_logout.approve_users'))
