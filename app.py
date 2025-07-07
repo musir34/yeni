@@ -72,6 +72,12 @@ api = Api(app, title='Güllü Shoes API', version='1.0', doc='/docs')
 # Kayıtlı tüm blueprint'ler
 register_blueprints(app)
 
+# Temel anasayfa ve alias rotaları
+from home import home as home_view
+app.add_url_rule('/', 'index', home_view)
+app.add_url_rule('/home', 'home', home_view)
+app.add_url_rule('/anasayfa', 'anasayfa', home_view)
+
 # Ana sayfa ve home alias olarak yönlendirme
 from home import home as home_view
 
