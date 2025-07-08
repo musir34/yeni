@@ -244,7 +244,7 @@ let pendingBarcode = null;
 barcodeInput.addEventListener('keyup',async e=>{
   if(e.key==='Enter'){
     e.preventDefault();e.stopPropagation();
-    const barcode=barcodeBuffer.trim();
+    const barcode=barcodeBuffer.trim()||barcodeInput.value.trim();
     barcodeBuffer='';barcodeInput.value='';
     
     // Barkod kontrolü
