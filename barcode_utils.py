@@ -1,7 +1,7 @@
 from flask import Blueprint
 import os
 import traceback
-from barcode import Code128
+from barcode.codex import Code128
 from barcode.writer import ImageWriter
 import re
 
