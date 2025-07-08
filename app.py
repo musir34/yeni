@@ -1,5 +1,3 @@
-# ===================== EN ÜST KISIM =====================
-
 import os
 import json
 from datetime import datetime, timedelta
@@ -9,36 +7,30 @@ from flask_cors import CORS
 from werkzeug.routing import BuildError
 from flask_login import LoginManager, current_user
 from models import db, User
-from archive import format_turkish_date_filter, archive_bp
-
-# ✅ Redis cache config
-import cache_config
-from cache_config import CACHE_TIMES  # CACHE_TIMES gerekiyorsa
-
-
-# Logging Ayarı (RotatingFile + console)
+from archive import format_turkish_date_filter
 from logger_config import app_logger as logger
+from cache_config import cache, CACHE_TIMES
+from flask_restx import Api
+from routes import register_blueprints
+from user_logs import log_user_action
+from celery_app import init_celery
+from apscheduler.schedulers.background import BackgroundScheduler
+from sqlalchemy import text
 
-# Flask Uygulamasını Oluştur
+# Flask Uygulamasını Başlat
 app = Flask(__name__)
-# Config yükle (FLASK_ENV env ile veya default development)
 env = os.getenv('FLASK_ENV', 'development')
 app.config.from_object(
     __import__('config').config_map.get(env, __import__('config').DevelopmentConfig)
 )
 
-"""
-# Uygulama konfigürasyonu config.py içinden yüklendi (DATABASE_URL, CACHE_REDIS_URL vb.)
-"""
-# Redis cache başlat
-from cache_config import cache
+# Uzantıları başlat
 cache.init_app(app)
-
-# Uzantıları Başlat
 db.init_app(app)
 CORS(app)
+celery = init_celery(app)
 
-# Flask-Login Ayarları
+# Flask-Login ayarları
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login_logout.login"
@@ -47,7 +39,7 @@ login_manager.login_view = "login_logout.login"
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Jinja2 Template Filtresi
+# Jinja filtreleri
 @app.template_filter('from_json')
 def from_json(value):
     try:
@@ -55,44 +47,20 @@ def from_json(value):
     except Exception:
         return {}
 
-# ✅ Düzeltme: Jinja filtresini app'in jinja_env'ine kaydet
 app.jinja_env.filters['format_turkish_date'] = format_turkish_date_filter
 
-
-# Blueprint'leri merkezi modülden kaydet
-from routes import register_blueprints
-
-# Kullanıcı loglama fonksiyonu (kullanıcı hareketi kaydı için)
-from user_logs import log_user_action
-
-from flask_restx import Api
-# Swagger / OpenAPI UI
-api = Api(app, title='Güllü Shoes API', version='1.0', doc='/docs')
-# Blue­print kayıt fonksiyonunu çağır
-# Kayıtlı tüm blueprint'ler
+# Blueprint'leri kaydet
 register_blueprints(app)
 
-# Temel anasayfa ve alias rotaları
-from home import home as home_view
-app.add_url_rule('/', 'index', home_view)
-app.add_url_rule('/home', 'home', home_view)
-app.add_url_rule('/anasayfa', 'anasayfa', home_view)
-
-# Ana sayfa ve home alias olarak yönlendirme
-from home import home as home_view
-
+# Ana route yönlendirmesi (anasayfa)
 @app.route('/')
-@app.route('/home')
-@app.route('/anasayfa')
 def index():
-    # Ana sayfa view fonksiyonunu çağırır
-    return home_view()
+    return redirect(url_for('home.home'))  # 'home' blueprint içindeki 'home' fonksiyonu
 
-# Asenkron görevler için Celery başlat
-from celery_app import init_celery
-celery = init_celery(app)
+# Flask-RESTX API
+api = Api(app, title='Güllü Shoes API', version='1.0', doc='/docs')
 
-# URL çözümleme hatalarında fallback
+# URL builder fallback
 def custom_url_for(endpoint, **values):
     try:
         return url_for(endpoint, **values)
@@ -107,15 +75,15 @@ def custom_url_for(endpoint, **values):
 
 app.jinja_env.globals['url_for'] = custom_url_for
 
-# Safe URL builder: if endpoint missing, return '#' instead of raising
 def safe_url_for(endpoint, **values):
     try:
         return custom_url_for(endpoint, **values)
     except Exception:
         return '#'
+
 app.jinja_env.globals['safe_url_for'] = safe_url_for
 
-# İstek Loglama
+# İstek loglama
 @app.before_request
 def log_request():
     if not request.path.startswith('/static/'):
@@ -128,10 +96,9 @@ def log_request():
         except Exception as e:
             logger.error(f"Log kaydedilemedi: {e}")
 
-# Giriş Kontrolü
+# Giriş kontrolü
 @app.before_request
 def check_authentication():
-    # Etiket editör sayfalarını tamamen serbest bırak
     if (request.path.startswith('/enhanced_product_label') or
         request.path.startswith('/static/') or
         request.path.startswith('/api/generate_advanced_label_preview') or
@@ -161,9 +128,7 @@ def check_authentication():
         if 'pending_user' in session and request.endpoint != 'login_logout.verify_totp':
             return redirect(url_for('login_logout.verify_totp'))
 
-# APScheduler - Arka Planda Cron İşleri
-from apscheduler.schedulers.background import BackgroundScheduler
-
+# APScheduler – Arka planda cron job
 def fetch_and_save_returns():
     with app.app_context():
         try:
@@ -181,10 +146,9 @@ def schedule_jobs():
 
 schedule_jobs()
 
-# 🔍 Veritabanı Bağlantı Testi
+# Veritabanı bağlantı testi
 with app.app_context():
     try:
-        from sqlalchemy import text
         with db.engine.connect() as connection:
             connection.execute(text("SELECT 1"))
         print("✅ Neon veritabanına bağlantı başarılı!")
@@ -199,8 +163,7 @@ with app.app_context():
         print(f"❌ Veritabanı bağlantı hatası: {str(e)[:50]}...")
         print("⚠️ Uygulama veritabanısız modda başlatılıyor")
 
-
-# Uygulama Başlat - Opsiyonel Setup
+# Uygulama başlat
 if __name__ == '__main__':
     debug_mode = os.environ.get('FLASK_DEBUG', 'False') == 'True'
 

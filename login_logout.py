@@ -258,10 +258,14 @@ def direct_delete_user(username):
 @login_logout_bp.route('/home')
 @login_required
 def home_redirect():
-    return redirect(url_for('home.home'))
+    try:
+        return redirect(url_for('home.home'))
+    except Exception as e:
         db.session.rollback()
         flash(f'Kullanıcı silinirken hata: {e}', 'danger')
         return redirect(url_for('login_logout.approve_users'))
+
+
 
 # Kullanıcı silme
 @login_logout_bp.route('/delete_user/<username>', methods=['POST'])
@@ -387,4 +391,4 @@ def logout():
 @login_logout_bp.route('/home')
 @login_required
 def home():
-    return render_template('home.html')
+    return render_template('home.home.html')

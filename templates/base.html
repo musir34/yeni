@@ -91,7 +91,7 @@
 </head>
 <body>
     <div class="container mt-5">
-        <a href="/" class="btn btn-primary mb-3">Ana Sayfaya Dön</a>
+        <a href="{{ url_for('home.home') }}" class="btn btn-sm btn-outline-secondary">Ana Sayfa</a>
         {% block content %}
         {% endblock %}
 
