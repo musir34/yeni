@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
-from models import db, Kasa, User
+from models import db, Kasa, User, KasaKategori
 from datetime import datetime, timedelta
 from sqlalchemy import or_, and_, desc, func, extract
 from login_logout import login_required, roles_required
@@ -136,7 +136,9 @@ def yeni_kasa_kaydi():
             flash('Kayıt eklenirken bir hata oluştu!', 'error')
             return redirect(url_for('kasa.yeni_kasa_kaydi'))
     
-    return render_template('kasa_yeni.html')
+    # Kategorileri al
+    kategoriler = KasaKategori.query.filter_by(aktif=True).order_by(KasaKategori.kategori_adi).all()
+    return render_template('kasa_yeni.html', kategoriler=kategoriler)
 
 @kasa_bp.route('/kasa/duzenle/<int:kayit_id>', methods=['GET', 'POST'])
 @login_required
@@ -179,7 +181,9 @@ def kasa_duzenle(kayit_id):
             db.session.rollback()
             flash('Kayıt güncellenirken bir hata oluştu!', 'error')
     
-    return render_template('kasa_duzenle.html', kayit=kayit)
+    # Kategorileri al
+    kategoriler = KasaKategori.query.filter_by(aktif=True).order_by(KasaKategori.kategori_adi).all()
+    return render_template('kasa_duzenle.html', kayit=kayit, kategoriler=kategoriler)
 
 @kasa_bp.route('/kasa/sil/<int:kayit_id>', methods=['POST'])
 @login_required
@@ -275,3 +279,143 @@ def kasa_ozet_api():
         'toplam_gider': gider_toplam,
         'net_durum': gelir_toplam - gider_toplam
     })
+
+# Kategori Yönetimi Rotaları
+@kasa_bp.route('/kasa/kategoriler')
+@login_required
+@roles_required('admin')
+def kategoriler():
+    """Kategori listesi"""
+    kategoriler = KasaKategori.query.order_by(KasaKategori.kategori_adi).all()
+    return render_template('kasa_kategoriler.html', kategoriler=kategoriler)
+
+@kasa_bp.route('/kasa/kategori/yeni', methods=['GET', 'POST'])
+@login_required
+@roles_required('admin')
+def yeni_kategori():
+    """Yeni kategori ekleme"""
+    if request.method == 'POST':
+        kategori_adi = request.form.get('kategori_adi')
+        aciklama = request.form.get('aciklama', '')
+        renk = request.form.get('renk', '#007bff')
+        
+        if not kategori_adi:
+            flash('Kategori adı gereklidir!', 'error')
+            return redirect(url_for('kasa.yeni_kategori'))
+        
+        # Aynı isimde kategori var mı kontrol et
+        existing = KasaKategori.query.filter_by(kategori_adi=kategori_adi).first()
+        if existing:
+            flash('Bu kategori adı zaten kullanılıyor!', 'error')
+            return redirect(url_for('kasa.yeni_kategori'))
+        
+        try:
+            yeni_kategori = KasaKategori(
+                kategori_adi=kategori_adi,
+                aciklama=aciklama,
+                renk=renk,
+                olusturan_kullanici_id=session['user_id']
+            )
+            db.session.add(yeni_kategori)
+            db.session.commit()
+            flash('Kategori başarıyla eklendi!', 'success')
+            return redirect(url_for('kasa.kategoriler'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Kategori eklenirken bir hata oluştu!', 'error')
+    
+    return render_template('kasa_kategori_yeni.html')
+
+@kasa_bp.route('/kasa/kategori/duzenle/<int:kategori_id>', methods=['GET', 'POST'])
+@login_required
+@roles_required('admin')
+def kategori_duzenle(kategori_id):
+    """Kategori düzenleme"""
+    kategori = KasaKategori.query.get_or_404(kategori_id)
+    
+    if request.method == 'POST':
+        kategori_adi = request.form.get('kategori_adi')
+        aciklama = request.form.get('aciklama', '')
+        renk = request.form.get('renk', '#007bff')
+        aktif = request.form.get('aktif') == 'on'
+        
+        if not kategori_adi:
+            flash('Kategori adı gereklidir!', 'error')
+            return redirect(url_for('kasa.kategori_duzenle', kategori_id=kategori_id))
+        
+        # Aynı isimde başka kategori var mı kontrol et
+        existing = KasaKategori.query.filter(
+            KasaKategori.kategori_adi == kategori_adi,
+            KasaKategori.id != kategori_id
+        ).first()
+        if existing:
+            flash('Bu kategori adı zaten kullanılıyor!', 'error')
+            return redirect(url_for('kasa.kategori_duzenle', kategori_id=kategori_id))
+        
+        try:
+            kategori.kategori_adi = kategori_adi
+            kategori.aciklama = aciklama
+            kategori.renk = renk
+            kategori.aktif = aktif
+            db.session.commit()
+            flash('Kategori başarıyla güncellendi!', 'success')
+            return redirect(url_for('kasa.kategoriler'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Kategori güncellenirken bir hata oluştu!', 'error')
+    
+    return render_template('kasa_kategori_duzenle.html', kategori=kategori)
+
+@kasa_bp.route('/kasa/kategori/sil/<int:kategori_id>', methods=['POST'])
+@login_required
+@roles_required('admin')
+def kategori_sil(kategori_id):
+    """Kategori silme"""
+    kategori = KasaKategori.query.get_or_404(kategori_id)
+    
+    # Bu kategoriye ait kayıt var mı kontrol et
+    kullaniliyor = Kasa.query.filter_by(kategori=kategori.kategori_adi).first()
+    if kullaniliyor:
+        flash('Bu kategori aktif kayıtlarda kullanılıyor, silinemez!', 'error')
+        return redirect(url_for('kasa.kategoriler'))
+    
+    try:
+        db.session.delete(kategori)
+        db.session.commit()
+        flash('Kategori başarıyla silindi!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Kategori silinirken bir hata oluştu!', 'error')
+    
+    return redirect(url_for('kasa.kategoriler'))
+
+@kasa_bp.route('/kasa/api/kategori/ekle', methods=['POST'])
+@login_required
+@roles_required('admin')
+def api_kategori_ekle():
+    """AJAX ile hızlı kategori ekleme"""
+    kategori_adi = request.form.get('kategori_adi')
+    if not kategori_adi:
+        return jsonify({'success': False, 'message': 'Kategori adı gereklidir!'})
+    
+    # Aynı isimde kategori var mı kontrol et
+    existing = KasaKategori.query.filter_by(kategori_adi=kategori_adi).first()
+    if existing:
+        return jsonify({'success': False, 'message': 'Bu kategori adı zaten kullanılıyor!'})
+    
+    try:
+        yeni_kategori = KasaKategori(
+            kategori_adi=kategori_adi,
+            olusturan_kullanici_id=session['user_id']
+        )
+        db.session.add(yeni_kategori)
+        db.session.commit()
+        return jsonify({
+            'success': True, 
+            'message': 'Kategori başarıyla eklendi!',
+            'kategori_id': yeni_kategori.id,
+            'kategori_adi': yeni_kategori.kategori_adi
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Kategori eklenirken bir hata oluştu!'})
