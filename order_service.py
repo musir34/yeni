@@ -26,12 +26,15 @@ from models import (
 
 # Trendyol API kimlik bilgileri
 # trendyol_api.py dosyasından import ediliyorsa:
-from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID, BASE_URL # BASE_URL eklendi
+from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID # BASE_URL eklendi
 
 # İsteğe bağlı: Sipariş detayı işleme, update service
 # Bu importların doğru dosya yollarından yapıldığından emin olalım
 from order_list_service import process_order_details # order_list_service.py'den
 from update_service import update_package_to_picking # update_service.py'den
+
+# Trendyol API için temel URL
+BASE_URL = "https://api.trendyol.com/sapigw/"
 
 # Blueprint
 order_service_bp = Blueprint('order_service', __name__)

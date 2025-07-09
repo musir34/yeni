@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, redirect, url_for
 import json
 import os
 import traceback
@@ -16,7 +16,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 home_bp = Blueprint('home', __name__)
 
-@home_bp.route('/')
+@home_bp.route('/home')
+@home_bp.route('/anasayfa')
 def home():
     order_data = get_home()
     return render_template('home.html', **order_data)
@@ -151,3 +152,5 @@ def get_product_image(barcode):
         if os.path.exists(image_path):
             return f"/static/images/{image_filename}"
     return "/static/images/default.jpg"
+
+# alias düğmeleri yerine doğrudan /index yönlendirmesi kullanılıyor

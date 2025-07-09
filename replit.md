@@ -107,15 +107,7 @@ This is a comprehensive Flask-based e-commerce management system for Güllü Sho
 
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes
-
-- **July 07, 2025**: Modified authentication system to allow home page access without login
-  - Added home route (`/`) to authentication bypass list
-  - Added `home.home` endpoint to allowed routes
-  - Home page now opens directly when application starts
-
 ## Changelog
 
 Changelog:
 - July 06, 2025. Initial setup
-- July 07, 2025. Updated home page access configuration

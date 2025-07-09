@@ -2,822 +2,421 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stok Ekleme – Güllü Ayakkabı</title>
 
-<!-- Bootstrap & Icons -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
 <style>
-:root{
-  --bg-page:#f7f9fc;--bg-card:#ffffff;--text-primary:#1a202c;
-  --btn-primary:#0069d9;--btn-success:#198754;--shadow-light:rgba(0,0,0,0.05);
+:root {
+    --color-primary: #B76E79; /* Gül Kurusu */
+    --color-primary-dark: #A05F6A;
+    --color-secondary: #212529; /* Siyah/Koyu Gri */
+    --color-text: #343a40;
+    --color-bg: #f8f9fa;
+    --color-bg-light: #ffffff;
+    --color-white: #fff;
+    --color-border: #dee2e6;
+    --color-success: #3ac47d;
+    --color-danger: #d92550;
+    --font-family-base: 'Inter', sans-serif;
+    --border-radius: 0.5rem;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+    --shadow-md: 0 5px 15px rgba(0,0,0,0.08);
+    --transition: all 0.25s ease-in-out;
 }
-body{background:var(--bg-page);color:var(--text-primary);
-      font-family:'Segoe UI',sans-serif;padding:2rem 0;}
-.container{
-  max-width:800px;margin:auto;background:var(--bg-card);
-  border-radius:10px;box-shadow:0 4px 16px var(--shadow-light);padding:2rem;
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: var(--font-family-base);
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    padding: 1.5rem 0;
 }
-.container::before{
-  content:"";position:absolute;top:-60px;left:-60px;width:200px;height:200px;
-  background:rgba(0,105,217,.2);border-radius:50%;filter:blur(80px);z-index:-1;
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.5rem;
 }
-h2{text-align:center;margin-bottom:1.5rem;font-weight:600;color:var(--btn-primary);}
-.mode-selection-buttons .btn{flex:1;padding:.75rem;border-radius:6px;transition:background .2s;}
-.mode-selection-buttons .btn:hover{background:var(--btn-primary);color:#fff;}
-#barcodeInput{
-  font-size:1.1rem;border:1px solid var(--shadow-light);border-radius:6px;
-  transition:box-shadow .2s;
+h1 {
+    color: var(--color-secondary);
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 2rem;
 }
-#barcodeInput:focus{box-shadow:0 0 8px rgba(0,105,217,.3);border-color:var(--btn-primary);}
-.barcode-item{
-  background:var(--bg-page);border-radius:8px;box-shadow:0 2px 8px var(--shadow-light);
-  padding:.75rem;margin-bottom:1rem;display:flex;align-items:center;gap:1rem;
+.btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    font-size: 0.9rem; font-weight: 600; padding: 0.7rem 1.3rem;
+    border: 1px solid transparent; border-radius: var(--border-radius);
+    cursor: pointer; transition: var(--transition); text-decoration: none;
 }
-.barcode-value{font-weight:600;color:var(--btn-primary);}
-.barcode-count{font-weight:600;color:var(--btn-success);}
-.product-details{display:flex;align-items:center;gap:.75rem;}
-.product-details img{width:50px;height:auto;border-radius:4px;cursor:zoom-in;transition:transform .2s;}
-.product-details img:hover{transform:scale(1.05);}
-.update-button-group .btn{min-width:160px;border-radius:6px;transition:background .2s;}
-.update-button-group .btn:hover:not(:disabled){opacity:.9;}
-#lightbox{
-  position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);
-  display:none;align-items:center;justify-content:center;z-index:9999;
+.btn-primary { background: linear-gradient(45deg, var(--color-primary), var(--color-primary-dark)); color: var(--color-white); border: none; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+.btn-secondary { background-color: var(--color-secondary); color: var(--color-white); }
+.btn-secondary:hover { background-color: #343a40; }
+.btn-warning { background-color: #ffc107; color: #212529; }
+
+.header-actions {
+    display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 0.75rem;
+    margin-bottom: 2rem; padding: 1rem; background-color: var(--color-secondary);
+    border-radius: var(--border-radius); box-shadow: var(--shadow-md);
 }
-#lightbox img{max-width:90%;max-height:90%;border-radius:8px;
-              box-shadow:0 4px 16px rgba(0,0,0,.3);}
+.header-actions .btn { background-color: var(--color-white); color: var(--color-secondary); border-color: #495057; }
+.header-actions .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); border-color: var(--color-white); }
+.header-actions .btn-warning { background-color: #ffc107; color: #212529; border-color: #ffc107; }
+
+.main-card {
+    background-color: var(--color-white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+}
+#barcodeInput {
+    font-size: 1.1rem; border: 1px solid var(--color-border); border-radius: var(--border-radius);
+    padding: 0.7rem 1rem; transition: var(--transition); width: 100%;
+}
+#barcodeInput:focus { box-shadow: 0 0 0 3px rgba(183, 110, 121, 0.25); border-color: var(--color-primary); }
+
+.barcode-item {
+    background-color: var(--color-white); border: 1px solid var(--color-border);
+    border-radius: var(--border-radius); box-shadow: var(--shadow-sm); margin-bottom: 1rem;
+    padding: 1rem; display: flex; gap: 1rem; align-items: center; transition: var(--transition);
+}
+.barcode-item:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+.item-image img {
+    width: 80px; height: 80px; object-fit: cover; border-radius: var(--border-radius);
+    background-color: var(--color-bg); cursor: zoom-in;
+}
+.item-details { flex-grow: 1; }
+.item-details h4 { font-size: 1rem; font-weight: 600; margin: 0 0 0.25rem 0; }
+.item-details p { font-size: 0.85rem; color: #6c757d; margin: 0; }
+.item-details .barcode-value { font-weight: 500; color: var(--color-primary); }
+.item-quantity { text-align: right; }
+.item-quantity .db-stock { font-size: 0.8rem; color: #6c757d; margin-bottom: 0.5rem; }
+.quantity-control { display: flex; align-items: center; gap: 0.5rem; }
+.quantity-control .btn { padding: 0.2rem 0.5rem; min-width: 35px; }
+.quantity-control .barcode-count { font-weight: 600; font-size: 1.1rem; min-width: 60px; text-align: center; }
+
+#lightbox {
+    position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(33, 37, 41, 0.7);
+    backdrop-filter: blur(5px); display:none; align-items:center; justify-content:center; z-index:9999;
+}
+#lightbox img { max-width:90%; max-height:90%; border-radius:var(--border-radius); box-shadow:var(--shadow-md); }
+
+.hidden { display: none; }
+.form-label { font-weight: 600; margin-bottom: 0.5rem; }
+.update-button-group { margin-top: 1.5rem; }
+.progress { height: 20px; font-size: 0.8rem; background-color: #e9ecef;}
+.progress-bar { background-color: var(--color-primary); }
 </style>
 </head>
 
 <body>
-<div class="container position-relative">
-  <h2>Stok Ekleme Ekranı</h2>
+<div class="container">
+    <h1>Stok Ekleme Ekranı</h1>
 
-  <!-- Üst navigasyon -->
-  <div class="text-center mb-4">
-    <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm me-2">
-      <i class="bi bi-house-door"></i> Anasayfa
-    </a>
-    <a href="{{ url_for('get_products.product_list') }}" class="btn btn-outline-info btn-sm me-2">
-      <i class="bi bi-box-seam"></i> Ürün Listesi
-    </a>
-
-    <form id="updateTrendyolStocksForm"
-          action="{{ url_for('get_products.update_stocks_route') }}"
-          method="post" style="display:inline-block;">
-      <button type="submit" class="btn btn-warning btn-sm me-2"
-              id="updateTrendyolStocksButton">
-        <i class="bi bi-boxes"></i> Stokları Güncelle (T)
-      </button>
-    </form>
-
-    <a href="{{ url_for('stock_report.stock_report') }}"
-       class="btn btn-outline-warning btn-sm">
-      <i class="bi bi-bar-chart"></i> Stok Raporu
-    </a>
-  </div>
-
-  <!-- Mod seçimi -->
-  <div class="mode-selection-buttons d-flex mb-3">
-    <button id="selectRenewMode" class="btn btn-outline-primary btn-lg me-2">
-      <i class="bi bi-arrow-repeat"></i><br>Raftaki Yenile
-    </button>
-    <button id="selectAddMode" class="btn btn-outline-success btn-lg">
-      <i class="bi bi-plus-circle"></i><br>Yeni Ekle
-    </button>
-  </div>
-
-  <div id="selectedModeDisplay"
-       class="selected-mode-display hidden text-center mb-3">
-    Seçilen Mod: <span></span>
-  </div>
-
-  <!-- Stok formu -->
-  <form id="stockForm" class="hidden">
-    <div class="mb-3">
-      <label for="barcodeInput" class="form-label">Barkod Okutun:</label>
-      <input type="text" id="barcodeInput" class="form-control"
-             autocomplete="off" disabled autofocus>
+    <div class="header-actions">
+        <a href="{{ url_for('home.home') }}" class="btn"><i class="bi bi-house-door"></i> Ana Sayfa</a>
+        <a href="{{ url_for('get_products.product_list') }}" class="btn"><i class="bi bi-box-seam"></i> Ürün Listesi</a>
+        <form id="updateTrendyolStocksForm" action="{{ url_for('get_products.update_stocks_route') }}" method="post" style="margin:0;">
+            <button type="submit" class="btn btn-warning" id="updateTrendyolStocksButton"><i class="bi bi-boxes"></i> Stokları Güncelle (T)</button>
+        </form>
+        <a href="{{ url_for('stock_report.stock_report') }}" class="btn"><i class="bi bi-bar-chart"></i> Stok Raporu</a>
     </div>
 
-    <div class="barcode-list-container mb-3">
-      <h5>Okutulan Barkodlar:</h5>
-      <div id="scannedBarcodes"></div>
-      <p id="noBarcodeMessage" class="text-muted text-center mt-3">
-        Henüz barkod okutulmadı.
-      </p>
-    </div>
-
-    <div class="update-button-group d-flex justify-content-center gap-3">
-      <!-- type="button" → otomatik submit yok -->
-      <button id="updateStockButton" type="button"
-              class="btn btn-primary btn-lg" disabled>
-        <i class="bi bi-arrow-repeat"></i> Güncelle
-      </button>
-      <button id="resetButton" type="button"
-              class="btn btn-secondary btn-lg">
-        <i class="bi bi-x-circle"></i> İptal
-      </button>
-      <button id="testUpdateButton" type="button"
-              class="btn btn-warning btn-lg">
-        <i class="bi bi-bug"></i> Test
-      </button>
-    </div>
-  </form>
-
-  <div id="responseMessage"
-       class="alert d-none text-center mt-4" role="alert"></div>
-       
-  <!-- İlerleme ve durum göstergesi -->
-  <div id="progressContainer" class="mt-4" style="display: none;">
-    <div class="card border-0 shadow-sm bg-light">
-      <div class="card-body">
-        <h5 id="progressTitle" class="card-title text-center mb-3 fw-bold">İşlem Durumu</h5>
-        <div class="progress mb-3" style="height: 20px;">
-          <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
-              role="progressbar" style="width: 100%"></div>
+    <div class="main-card">
+        <div id="modeSelectionContainer">
+            <div class="mode-selection-buttons d-flex justify-content-center mb-4" style="gap:1rem;">
+                <button id="selectRenewMode" class="btn btn-lg btn-secondary" style="flex:1;"><i class="bi bi-arrow-repeat"></i> Raftaki Yenile</button>
+                <button id="selectAddMode" class="btn btn-lg btn-primary" style="flex:1;"><i class="bi bi-plus-circle"></i> Yeni Ekle</button>
+            </div>
         </div>
-        <p id="progressMessage" class="card-text text-center fw-bold">Hazırlanıyor...</p>
-        <div id="errorDetails" class="mt-3 p-3 bg-light rounded border border-danger" style="display: none; max-height: 200px; overflow-y: auto;"></div>
-      </div>
+
+        <div id="formContainer" class="hidden">
+            <div class="text-center mb-3">
+                <h4 style="font-weight:600;">Seçilen Mod: <span id="selectedModeText" style="color: var(--color-primary);"></span></h4>
+            </div>
+
+            <form id="stockForm">
+                <div class="mb-3">
+                    <label for="barcodeInput" class="form-label">Barkod Okutun:</label>
+                    <input type="text" id="barcodeInput" class="form-control" autocomplete="off" disabled autofocus>
+                </div>
+            </form>
+
+            <div class="barcode-list-container mt-4">
+                <h5 style="font-weight:600;">Okutulan Barkodlar</h5>
+                <hr>
+                <div id="scannedBarcodes"></div>
+                <p id="noBarcodeMessage" class="text-muted text-center mt-3">Henüz barkod okutulmadı.</p>
+            </div>
+
+            <div class="update-button-group d-flex justify-content-center gap-3">
+                <button id="updateStockButton" type="button" class="btn btn-primary btn-lg" disabled><i class="bi bi-arrow-repeat"></i> Güncelle</button>
+                <button id="resetButton" type="button" class="btn btn-secondary btn-lg"><i class="bi bi-x-circle"></i> İptal</button>
+            </div>
+        </div>
+
+        <div id="responseMessage" class="alert d-none text-center mt-4" role="alert"></div>
+
+        <div id="progressContainer" class="mt-4 hidden">
+             <h5 id="progressTitle" class="text-center mb-3 fw-bold">İşlem Durumu</h5>
+             <div class="progress">
+               <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%;"></div>
+             </div>
+             <p id="progressMessage" class="text-center fw-bold mt-2">Hazırlanıyor...</p>
+             <div id="errorDetails" class="mt-3 p-3 bg-light rounded border border-danger hidden" style="max-height: 200px; overflow-y: auto;"></div>
+        </div>
     </div>
-  </div>
 </div>
 
-<!-- Lightbox -->
 <div id="lightbox"><img src="" alt="Büyütülmüş Ürün"></div>
 
-<!-- Bootstrap Bundle -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
-/* ---------- Lightbox ---------- */
-document.addEventListener('click', e=>{
-  if(e.target.matches('.product-details img')){
-    const lb=document.getElementById('lightbox');
-    lb.querySelector('img').src=e.target.src;
-    lb.style.display='flex';
-  }else if(e.target.id==='lightbox'){
-    e.target.style.display='none';
-    e.target.querySelector('img').src='';
-  }
-});
-
-/* ---------- Global Değişkenler ---------- */
-let barcodeCounts={},selectedMode=null,barcodeBuffer='';
-
-const barcodeInput               = document.getElementById('barcodeInput');
-const selectRenewModeBtn         = document.getElementById('selectRenewMode');
-const selectAddModeBtn           = document.getElementById('selectAddMode');
-const selectedModeDisplay        = document.getElementById('selectedModeDisplay');
-const selectedModeSpan           = selectedModeDisplay.querySelector('span');
-const stockForm                  = document.getElementById('stockForm');
-const scannedBarcodesDiv         = document.getElementById('scannedBarcodes');
-const noBarcodeMessage           = document.getElementById('noBarcodeMessage');
-const updateStockButton          = document.getElementById('updateStockButton');
-const resetButton                = document.getElementById('resetButton');
-const responseMessageDiv         = document.getElementById('responseMessage');
-const modeSelectionButtonsDiv    = document.querySelector('.mode-selection-buttons');
-const updateTrendyolStocksForm   = document.getElementById('updateTrendyolStocksForm');
-const updateTrendyolStocksButton = document.getElementById('updateTrendyolStocksButton');
-
-/* ---------- Form submit’ini tamamen engelle ---------- */
-stockForm.addEventListener('submit', e=>e.preventDefault());
-
-/* ---------- ODAK KORUYUCU ---------- */
-function forceFocus(){
-  if(!barcodeInput.disabled && document.activeElement!==barcodeInput){
-    barcodeInput.focus();
-  }
-}
-['click','focusin','keydown'].forEach(ev=>{
-  document.addEventListener(ev,forceFocus,true);
-});
-setInterval(forceFocus,5000);
-
-/* ---------- Sayfa genelinde Enter / Tab engeli ---------- */
-document.addEventListener('keydown',e=>{
-  if((e.key==='Enter'||e.key==='Tab')&&document.activeElement!==barcodeInput){
-    e.preventDefault();e.stopPropagation();forceFocus();
-  }
-});
-
-/* ---------- Mod Seçimi ---------- */
-selectRenewModeBtn.addEventListener('click',()=>selectMode('renew'));
-selectAddModeBtn  .addEventListener('click',()=>selectMode('add'));
-
-function selectMode(mode){
-  selectedMode=mode;
-
-  selectRenewModeBtn.classList.remove('btn-primary','btn-outline-primary');
-  selectAddModeBtn  .classList.remove('btn-success','btn-outline-success');
-
-  if(mode==='renew'){
-    selectRenewModeBtn.classList.add('btn-primary');
-    selectAddModeBtn.classList.add('btn-outline-success');
-    selectedModeSpan.textContent='Raftaki Stokları Yenile';
-  }else{
-    selectAddModeBtn.classList.add('btn-success');
-    selectRenewModeBtn.classList.add('btn-outline-primary');
-    selectedModeSpan.textContent='Yeni Gelenleri Ekle';
-  }
-
-  modeSelectionButtonsDiv.classList.add('hidden');
-  selectedModeDisplay.classList.remove('hidden');
-  stockForm.classList.remove('hidden');
-
-  barcodeInput.disabled=false;
-  forceFocus();
-  updateStockButton.disabled=true;
-}
-
-/* ---------- Barkod Okuma ---------- */
-barcodeInput.addEventListener('keydown',e=>{
-  if(e.key==='Tab'){e.preventDefault();e.stopPropagation();}   // Tab kaçarını engelle
-});
-// Ürün ayrıntılarını getiren istekleri optimize etelim
-let lastFetchPromise = Promise.resolve();
-let pendingBarcode = null;
-
-barcodeInput.addEventListener('keyup',async e=>{
-  if(e.key==='Enter'){
-    e.preventDefault();e.stopPropagation();
-    const barcode=barcodeBuffer.trim();
-    barcodeBuffer='';barcodeInput.value='';
-    
-    // Barkod kontrolü
-    if(!barcode||barcode.length<4){
-      showMessage("Geçersiz barkod.",false);
-    }else if(!selectedMode){
-      showMessage("Lütfen önce mod seçin.",false);
-    }else{
-      if(barcodeCounts[barcode]){
-        // Var olan barkod - sayacı artır
-        barcodeCounts[barcode].count++;
-        
-        // Hızlı barkod okutma için - barkodu ekler eklemez input'u aktif et
-        setTimeout(forceFocus, 5);
-      }else{
-        // Yeni barkod - detay bilgisini getir
-        pendingBarcode = barcode;
-        
-        // UI'yı hızlı tepki verecek şekilde güncelle
-        // "Yükleniyor" durum mesajı ekle
-        barcodeCounts[barcode] = {
-          count: 1,
-          details: null,
-          loading: true,
-          error: null
-        };
-        renderBarcodeList();
-        updateStockButton.disabled = false;
-        
-        // Odağı hemen geri getir ki hızlı okutma yapılabilsin
-        setTimeout(forceFocus, 5);
-        
-        // Arka planda ürün detaylarını getir
-        lastFetchPromise = lastFetchPromise
-          .then(() => fetchProductDetails(barcode))
-          .then(details => {
-            if (pendingBarcode === barcode) {
-              pendingBarcode = null;
-              
-              // Veri geldiğinde barkod bilgisini güncelle
-              barcodeCounts[barcode] = {
-                count: barcodeCounts[barcode].count,
-                details: details,
-                loading: false,
-                error: details ? null : "Ürün bulunamadı"
-              };
-              
-              // Listeyi güncelle
-              renderBarcodeList();
-            }
-          });
-      }
-      
-      // Her durumda listeyi güncelle ve butonu etkinleştir
-      renderBarcodeList();
-      updateStockButton.disabled = false;
-    }
-  }else if(e.key.length===1){
-    barcodeBuffer+=e.key; // yalnızca yazılabilir karakter
-  }
-});
-
-/* ---------- Ürün Detayını Çek ---------- */
-async function fetchProductDetails(barcode){
-  try{
-    const res=await fetch(`/api/get-product-details-by-barcode/${barcode}`);
-    const data=await res.json();
-    return data.success?data.product:null;
-  }catch(err){
-    console.error("Ürün detayı hatası:",err);
-    return null;
-  }
-}
-
-/* ---------- Listeyi Yenile ---------- */
-function renderBarcodeList(){
-  scannedBarcodesDiv.innerHTML='';
-  noBarcodeMessage.style.display='none';
-
-  const codes=Object.keys(barcodeCounts).sort();
-  if(!codes.length){
-    noBarcodeMessage.style.display='block';
-    updateStockButton.disabled=true;
-    return;
-  }
-
-  codes.forEach(code=>{
-    const item=barcodeCounts[code];
-    const div=document.createElement('div');
-    div.className='barcode-item';
-    div.id = `barcode-item-${code}`;
-
-    // Barkod bilgisi ve adet butonları
-    let html=`
-      <div class="barcode-info d-flex align-items-center justify-content-between">
-        <span class="barcode-value">${code}</span>
-        <div class="quantity-control d-flex align-items-center">
-          <button type="button" class="btn btn-sm btn-outline-danger quantity-btn" 
-            data-action="decrease" data-barcode="${code}">
-            <i class="bi bi-dash-lg"></i>
-          </button>
-          <span class="barcode-count mx-2 fw-bold">${item.count} Adet</span>
-          <button type="button" class="btn btn-sm btn-outline-success quantity-btn" 
-            data-action="increase" data-barcode="${code}">
-            <i class="bi bi-plus-lg"></i>
-          </button>
-        </div>
-      </div>`;
-
-    if(item.loading){
-      // Yükleniyor göstergesi
-      html+=`
-        <div class="product-details">
-          <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-          <span>Ürün bilgileri yükleniyor...</span>
-        </div>`;
-    } else if(item.error){
-      html+=`<p class="error-message text-danger">${item.error}</p>`;
-    } else if(item.details){
-      html+=`
-        <div class="product-details">
-          <img src="${item.details.image_url||'https://placehold.co/50x50'}" alt="" loading="lazy">
-          <div class="product-details-text">
-            <p><strong>Model:</strong> ${item.details.product_main_id||'N/A'}</p>
-            <p><strong>Renk :</strong> ${item.details.color||'N/A'}</p>
-            <p><strong>Beden:</strong> ${item.details.size||'N/A'}</p>
-            <p class="text-primary fw-bold">Mevcut Stok: ${item.details.quantity !== undefined ? item.details.quantity : 'Bilinmiyor'}</p>
-          </div>
-        </div>`;
-    }
-
-    div.innerHTML=html;
-    scannedBarcodesDiv.appendChild(div);
-    
-    // + ve - butonları için event listener'lar ekleyelim
-    const decreaseBtn = div.querySelector('button[data-action="decrease"]');
-    const increaseBtn = div.querySelector('button[data-action="increase"]');
-    
-    if (decreaseBtn) {
-      decreaseBtn.addEventListener('click', function() {
-        if (barcodeCounts[code].count > 1) {
-          barcodeCounts[code].count--;
-          renderBarcodeList();
-        } else {
-          // 1'in altında düşerse, bu barkodu tamamen kaldır
-          delete barcodeCounts[code];
-          renderBarcodeList();
+    // --- Lightbox ---
+    document.addEventListener('click', e => {
+        const lightbox = document.getElementById('lightbox');
+        if (e.target.matches('.item-image img')) {
+            lightbox.querySelector('img').src = e.target.src;
+            lightbox.style.display = 'flex';
+        } else if (e.target.id === 'lightbox') {
+            e.target.style.display = 'none';
         }
-      });
-    }
-    
-    if (increaseBtn) {
-      increaseBtn.addEventListener('click', function() {
-        barcodeCounts[code].count++;
-        renderBarcodeList();
-      });
-    }
-  });
-}
-
-/* ---------- Güncelle / Reset ---------- */
-// Güncelleme butonu - iyileştirilmiş sürüm
-document.addEventListener('DOMContentLoaded', function() {
-  const originalButtonHTML = '<i class="bi bi-arrow-repeat"></i> Güncelle';
-  const processingButtonHTML = '<span class="spinner-border spinner-border-sm"></span> İşleniyor...';
-  
-  // Event listener'ı butondan div'e taşıyalım (daha geniş hedef alanı)
-  const buttonWrapper = document.createElement('div');
-  buttonWrapper.className = 'button-wrapper position-relative';
-  buttonWrapper.style.cssText = 'touch-action: manipulation; width: 100%; height: 100%;';
-  
-  // Buton elemanını alalım
-  const updateButton = document.getElementById('updateStockButton');
-  
-  // Butonu sarmalayalım
-  if (updateButton && updateButton.parentNode) {
-    updateButton.parentNode.insertBefore(buttonWrapper, updateButton);
-    buttonWrapper.appendChild(updateButton);
-    
-    // Buton stilini geliştir
-    updateButton.style.cssText = 'touch-action: manipulation; -webkit-tap-highlight-color: transparent;';
-    
-    // Buton tıklama olayını tekrar tanımla - hem tıklama hem dokunmatik için
-    ['mousedown', 'touchstart'].forEach(function(eventType) {
-      buttonWrapper.addEventListener(eventType, function(e) {
-        e.preventDefault();
-        console.log("Güncelle butonuna tıklandı! Olay: " + eventType);
-        
-        // Tüm butonları devre dışı bırak
-        const allButtons = document.querySelectorAll('.update-button-group .btn');
-        allButtons.forEach(b => {
-          b.disabled = true;
-        });
-        
-        // Güncelleme butonunu değiştir
-        updateButton.innerHTML = processingButtonHTML;
-        
-        // Ekrandaki tüm mesajları temizle
-        document.getElementById('responseMessage').classList.add('d-none');
-        
-        // Durum göstergesini hemen görüntüle (işlemi beklemeden)
-        const progressContainer = document.getElementById('progressContainer');
-        progressContainer.style.display = 'block';
-        document.getElementById('progressTitle').textContent = "Stok İşleniyor...";
-        document.getElementById('progressMessage').textContent = "Veriler hazırlanıyor, lütfen bekleyin...";
-        document.getElementById('progressBar').className = "progress-bar progress-bar-striped progress-bar-animated bg-primary";
-        
-        // Görünüm alanının içinde kalması için - durum göstergesine otomatik scroll
-        progressContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        // Hemen işleme başla
-        const countsOnly = {};
-        const barcodeKeys = Object.keys(barcodeCounts);
-        
-        if (!barcodeKeys.length) {
-          showMessage("Güncellenecek barkod yok.", false);
-          allButtons.forEach(b => {
-            b.disabled = false;
-          });
-          updateButton.innerHTML = originalButtonHTML;
-          progressContainer.style.display = 'none';
-          return;
-        }
-        
-        updateProgressStatus("Veri Hazırlanıyor", 
-                          `${barcodeKeys.length} adet ürün işleniyor...`, 
-                          "info");
-        
-        // Verileri hazırla  
-        for (const c of barcodeKeys) {
-          countsOnly[c] = {count: barcodeCounts[c].count};
-        }
-        
-        // Stok güncelleme işlemini çağır
-        submitStock(selectedMode, countsOnly);
-      }, {passive: false});
     });
-  }
-});
-resetButton.addEventListener('click',resetStockAddition);
 
-// Test butonu için event listener
-document.getElementById('testUpdateButton').addEventListener('click', async function() {
-  console.log("Test butonu tıklandı!");
-  
-  // İlerleme göstergesini görüntüle
-  showProgressContainer();
-  updateProgressStatus("Test Yapılıyor...", "API bağlantısı test ediliyor...", "warning");
-  
-  try {
-    // Test verileri oluştur
-    const testData = {
-      "barcodeCounts": {
-        "TEST123456": {"count": 5}
-      },
-      "updateType": "add"
+    // --- Global Değişkenler ---
+    let barcodeCounts = {}, selectedMode = null, lastFetchPromise = Promise.resolve(), pendingBarcode = null;
+    const allElements = {
+        barcodeInput: document.getElementById('barcodeInput'),
+        // DÜZELTME: Buton ID'leri HTML ile eşleşecek şekilde "Btn" olmadan yazıldı.
+        selectRenewModeBtn: document.getElementById('selectRenewMode'),
+        selectAddModeBtn: document.getElementById('selectAddMode'),
+        selectedModeText: document.getElementById('selectedModeText'),
+        formContainer: document.getElementById('formContainer'),
+        scannedBarcodesDiv: document.getElementById('scannedBarcodes'),
+        noBarcodeMessage: document.getElementById('noBarcodeMessage'),
+        updateStockButton: document.getElementById('updateStockButton'),
+        resetButton: document.getElementById('resetButton'),
+        modeSelectionContainer: document.getElementById('modeSelectionContainer'),
+        updateTrendyolStocksForm: document.getElementById('updateTrendyolStocksForm'),
+        responseMessageDiv: document.getElementById('responseMessage'),
+        progressContainer: document.getElementById('progressContainer'),
+        progressTitle: document.getElementById('progressTitle'),
+        progressBar: document.getElementById('progressBar'),
+        progressMessage: document.getElementById('progressMessage'),
+        errorDetails: document.getElementById('errorDetails')
     };
-    
-    console.log("Test API isteği gönderiliyor:", testData);
-    
-    // API isteği gönder
-    const response = await fetch('/stock-addition', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(testData)
-    });
-    
-    console.log("Test API yanıtı:", response.status);
-    
-    // Yanıtı işle
-    if (response.ok) {
-      const data = await response.json();
-      updateProgressStatus("Test Başarılı!", 
-                         "API yanıt verdi: " + JSON.stringify(data).substring(0, 100) + "...", 
-                         "success");
-      console.log("API yanıt verisi:", data);
-    } else {
-      updateProgressStatus("Test Başarısız!", 
-                         `API hata kodu: ${response.status}`, 
-                         "danger");
-      console.error("API hatası:", response.status, response.statusText);
+
+    // --- Olay Dinleyicileri ---
+    document.getElementById('stockForm').addEventListener('submit', e => e.preventDefault());
+    document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === 'Tab') && document.activeElement !== allElements.barcodeInput) { e.preventDefault(); e.stopPropagation(); forceFocus(); } });
+    ['click', 'focusin', 'keydown'].forEach(ev => { document.addEventListener(ev, forceFocus, true); });
+    allElements.selectRenewModeBtn.addEventListener('click', () => selectMode('renew', 'Raftaki Stokları Yenile'));
+    allElements.selectAddModeBtn.addEventListener('click', () => selectMode('add', 'Yeni Gelenleri Ekle'));
+    allElements.barcodeInput.addEventListener('keydown', handleBarcodeKeyDown);
+    allElements.updateStockButton.addEventListener('click', handleUpdateClick);
+    allElements.resetButton.addEventListener('click', resetStockAddition);
+    allElements.updateTrendyolStocksForm.addEventListener('submit', handleTrendyolUpdate);
+    window.onload = () => resetStockAddition();
+
+    // --- Ana Fonksiyonlar ---
+    function forceFocus() { if (!allElements.barcodeInput.disabled && document.activeElement !== allElements.barcodeInput) { allElements.barcodeInput.focus(); } }
+
+    function selectMode(mode, text) {
+        selectedMode = mode;
+        allElements.selectedModeText.textContent = text;
+        allElements.modeSelectionContainer.classList.add('hidden');
+        allElements.formContainer.classList.remove('hidden');
+        allElements.barcodeInput.disabled = false;
+        forceFocus();
     }
-  } catch (error) {
-    updateProgressStatus("Bağlantı Hatası!", 
-                       "API bağlantısı sırasında hata oluştu: " + error.message, 
-                       "danger");
-    console.error("Test sırasında hata:", error);
-  }
-});
 
-async function submitStock(updateType,countsOnly){
-  console.log("submitStock fonksiyonu çalıştı:", updateType, Object.keys(countsOnly).length);
-  
-  // Sayfa kaydırmasını önle - bunu sayfanın başına ekliyoruz
-  if (event) event.preventDefault(); 
-  
-  // Önce ekrandaki tüm mesajları temizle
-  document.getElementById('responseMessage').classList.add('d-none');
-  
-  // Durum göstergesini hazırla ve göster
-  const progressContainer = document.getElementById('progressContainer');
-  if (progressContainer) {
-    progressContainer.style.display = 'block';
-    
-    // Başlangıç değerlerini ayarla
-    document.getElementById('progressTitle').textContent = "Stok Güncelleme";
-    document.getElementById('progressMessage').textContent = "İşlem başlatılıyor...";
-    document.getElementById('progressBar').className = "progress-bar progress-bar-striped progress-bar-animated bg-primary";
-    
-    // Görünüm alanının içinde kalması için - durum göstergesine otomatik scroll
-    progressContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  } else {
-    console.error("progressContainer bulunamadı!");
-  }
-  
-  const buttons=document.querySelectorAll('.update-button-group .btn');
-  const originals={};
-  buttons.forEach(b=>{
-    originals[b.id]=b.innerHTML;
-    b.disabled=true;
-    b.innerHTML=`<span class="spinner-border spinner-border-sm"></span>`;
-  });
-  
-  // İlerleme bildirimi
-  updateProgressStatus("Stok Güncelleme Başlatıldı", "Stok verileri işleniyor...", "info");
-  
-  try{
-    // İlerleme durumunu göster
-    updateProgressStatus("Veritabanı güncelleniyor...", "Veritabanına bağlanılıyor...", "info");
-    
-    console.log("API isteği gönderiliyor:", {barcodeCounts:countsOnly, updateType});
-    
-    const res=await fetch('/stock-addition',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({barcodeCounts:countsOnly,updateType})
-    });
-    
-    console.log("API yanıtı:", res.status);
-    const data=await res.json();
+    function handleBarcodeKeyDown(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const barcode = allElements.barcodeInput.value.trim();
+            allElements.barcodeInput.value = '';
+            if (!barcode || barcode.length < 4 || !selectedMode) return;
+            processBarcode(barcode);
+        }
+    }
 
-    if(data.success){
-      // Başarılı durumda özet bilgileri göster
-      const dbUpdateCount = data.updatedDbCount || 0;
-      const trendyolCount = data.trendyolSuccessfulCount || 0;
-      
-      updateProgressStatus(
-        "Güncelleme Tamamlandı!", 
-        `Veritabanında ${dbUpdateCount} ürün güncellendi, Trendyol'da ${trendyolCount} ürün güncellendi.`, 
-        "success"
-      );
-      
-      // 3 saniye sonra mesajı göster ve formu sıfırla
-      setTimeout(() => {
-        showMessage(data.message, true);
-        resetStockAddition();
+    function processBarcode(barcode) {
+        if (barcodeCounts[barcode]) {
+            barcodeCounts[barcode].count++;
+        } else {
+            pendingBarcode = barcode;
+            barcodeCounts[barcode] = { count: 1, details: null, loading: true, error: null };
+            lastFetchPromise = lastFetchPromise
+                .then(() => fetchProductDetails(barcode))
+                .then(details => {
+                    if (pendingBarcode === barcode) {
+                        pendingBarcode = null;
+                        barcodeCounts[barcode] = { ...barcodeCounts[barcode], details, loading: false, error: details ? null : "Ürün bulunamadı" };
+                        renderBarcodeList();
+                    }
+                });
+        }
+        renderBarcodeList();
+        setTimeout(forceFocus, 10);
+    }
+
+    async function fetchProductDetails(barcode) {
+        try {
+            const res = await fetch(`/api/get-product-details-by-barcode/${barcode}`);
+            const data = await res.json();
+            return data.success ? data.product : null;
+        } catch (err) {
+            console.error("Ürün detayı hatası:", err); return null;
+        }
+    }
+
+    function renderBarcodeList() {
+        allElements.scannedBarcodesDiv.innerHTML = '';
+        const codes = Object.keys(barcodeCounts).sort();
+        allElements.noBarcodeMessage.style.display = codes.length ? 'none' : 'block';
+        allElements.updateStockButton.disabled = codes.length === 0;
+
+        codes.forEach(code => {
+            const item = barcodeCounts[code];
+            const div = document.createElement('div');
+            div.className = 'barcode-item';
+
+            let imageHTML = `<div class="item-image"><img src="https://via.placeholder.com/80x80/eee/888?text=?" alt="Ürün"></div>`;
+            let detailsHTML = `<div class="item-details"><div class="d-flex align-items-center h-100"><div class="spinner-border spinner-border-sm" style="color: var(--color-primary);" role="status"></div><span class="ms-2">Yükleniyor...</span></div></div>`;
+
+            if (!item.loading && item.details) {
+                const p = item.details;
+                imageHTML = `<div class="item-image"><img src="${p.image_url || 'https://via.placeholder.com/80x80/eee/888?text=?'}" alt="${p.title || ''}"></div>`;
+                detailsHTML = `<div class="item-details"><h4>Model: ${p.product_main_id || 'N/A'}</h4><p>Renk: <strong>${p.color || 'N/A'}</strong> / Beden: <strong>${p.size || 'N/A'}</strong></p><p class="barcode-value">Barkod: ${code}</p></div>`;
+            } else if (item.error) {
+                detailsHTML = `<div class="item-details"><p class="text-danger">${item.error}</p></div>`;
+            }
+
+            div.innerHTML = `${imageHTML}${detailsHTML}
+                <div class="item-quantity">
+                    <div class="db-stock">Mevcut Stok: <strong>${item.details ? item.details.quantity : '?'}</strong></div>
+                    <div class="quantity-control">
+                        <button type="button" class="btn btn-sm" style="background-color: var(--color-danger); color: white;" data-action="decrease"><i class="bi bi-dash-lg"></i></button>
+                        <span class="barcode-count">${item.count} Adet</span>
+                        <button type="button" class="btn btn-sm" style="background-color: var(--color-success); color: white;" data-action="increase"><i class="bi bi-plus-lg"></i></button>
+                    </div>
+                </div>`;
+            allElements.scannedBarcodesDiv.appendChild(div);
+
+            div.querySelector('[data-action="decrease"]').addEventListener('click', () => { if (item.count > 0) item.count--; else delete barcodeCounts[code]; renderBarcodeList(); });
+            div.querySelector('[data-action="increase"]').addEventListener('click', () => { item.count++; renderBarcodeList(); });
+        });
+    }
+
+    function handleUpdateClick() {
+        const countsOnly = {};
+        Object.keys(barcodeCounts).forEach(c => { if(barcodeCounts[c].count > 0) countsOnly[c] = { count: barcodeCounts[c].count }; });
+        if (Object.keys(countsOnly).length === 0) { showMessage("Güncellenecek ürün yok (sayımlar 0).", false); return; }
+        submitStock(selectedMode, countsOnly);
+    }
+
+    async function submitStock(updateType, countsOnly) {
+        showProgressContainer();
+        updateProgressStatus("Stok Güncelleme Başlatıldı", `${Object.keys(countsOnly).length} farklı barkod işleniyor...`, "info");
+        allElements.updateStockButton.disabled = true;
+        allElements.resetButton.disabled = true;
+
+        try {
+            const res = await fetch('/stock-addition', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ barcodeCounts: countsOnly, updateType }) });
+            const data = await res.json();
+            if (data.success) {
+                updateProgressStatus("Güncelleme Tamamlandı!", data.message || "İşlem başarıyla tamamlandı.", "success");
+                setTimeout(() => { showMessage(data.message, true); resetStockAddition(); }, 3000);
+            } else {
+                updateProgressStatus("Güncelleme Hatası!", data.message || "İşlem başarısız oldu.", "danger", data.errors || data.trendyolUpdateErrors);
+                setTimeout(() => { allElements.updateStockButton.disabled = false; allElements.resetButton.disabled = false; }, 5000);
+            }
+        } catch (err) {
+            updateProgressStatus("Bağlantı Hatası!", "Sunucuya bağlanırken bir hata oluştu.", "danger", { "Ağ Hatası": err.message });
+            setTimeout(() => { allElements.updateStockButton.disabled = false; allElements.resetButton.disabled = false; }, 5000);
+        }
+    }
+
+    async function handleTrendyolUpdate(e) {
+        e.preventDefault();
+        const btn = e.target.querySelector('button');
+        const origHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Güncelleniyor...`;
+        showProgressContainer();
+        updateProgressStatus("Trendyol Stokları Güncelleniyor...", "Trendyol'dan güncel stok bilgileri alınıyor...", "info");
+        try {
+            const res = await fetch(e.target.action, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                updateProgressStatus("İşlem Başarılı!", data.message, "success");
+                setTimeout(() => { showMessage(data.message, true); hideProgressContainer(); }, 3000);
+            } else {
+                updateProgressStatus("İşlem Hatası!", data.message, "danger", data.errors || data.error);
+            }
+        } catch (err) {
+            updateProgressStatus("Bağlantı Hatası!", "Trendyol'a erişilirken bir hata oluştu.", "danger", { "Ağ Hatası": err.message });
+        } finally {
+            btn.disabled = false; btn.innerHTML = origHTML;
+        }
+    }
+
+    function resetStockAddition() {
+        barcodeCounts = {}; selectedMode = null;
+        allElements.formContainer.classList.add('hidden');
+        allElements.modeSelectionContainer.classList.remove('hidden');
+        renderBarcodeList();
+        allElements.barcodeInput.disabled = true;
+        allElements.responseMessageDiv.classList.add('d-none');
         hideProgressContainer();
-      }, 3000);
-    } else {
-      // Başarısız durumda hata detaylarını göster
-      updateProgressStatus(
-        "Güncelleme Sırasında Hata!", 
-        data.message || "Stok güncelleme işlemi başarısız oldu.", 
-        "danger"
-      );
-      
-      // Hata detaylarını listele
-      let errorDetails = "";
-      
-      // Veritabanı hataları
-      if (data.errors && Object.keys(data.errors).length) {
-        errorDetails += "<div class='mt-2'><strong>Veritabanı Hataları:</strong><ul>";
-        for (const [barcode, error] of Object.entries(data.errors)) {
-          errorDetails += `<li>Barkod ${barcode}: ${error}</li>`;
+    }
+
+    // --- Yardımcı Fonksiyonlar ---
+    function showMessage(msg, isSuccess) {
+        allElements.responseMessageDiv.className = `alert text-center mt-4 ${isSuccess ? 'alert-success' : 'alert-danger'}`;
+        allElements.responseMessageDiv.textContent = msg;
+        allElements.responseMessageDiv.classList.remove('d-none');
+    }
+
+    function showProgressContainer() {
+        allElements.progressContainer.classList.remove('hidden');
+        allElements.errorDetails.classList.add('hidden');
+        allElements.errorDetails.innerHTML = '';
+        allElements.progressContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function hideProgressContainer() { allElements.progressContainer.classList.add('hidden'); }
+
+    function updateProgressStatus(title, message, status, errors = null) {
+        allElements.progressTitle.textContent = title;
+        allElements.progressMessage.textContent = message;
+        const statusToColor = { info: 'primary', success: 'success', danger: 'danger', warning: 'warning' };
+        allElements.progressBar.parentElement.style.backgroundColor = '#e9ecef';
+        allElements.progressBar.style.backgroundColor = `var(--color-${statusToColor[status]})`;
+
+        if (status === 'success' || status === 'danger') {
+            allElements.progressBar.classList.remove('progress-bar-animated');
+        } else {
+            allElements.progressBar.classList.add('progress-bar-animated');
         }
-        errorDetails += "</ul></div>";
-      }
-      
-      // Trendyol hataları
-      if (data.trendyolUpdateErrors && Object.keys(data.trendyolUpdateErrors).length) {
-        errorDetails += "<div class='mt-2'><strong>Trendyol Hataları:</strong><ul>";
-        for (const [key, error] of Object.entries(data.trendyolUpdateErrors)) {
-          errorDetails += `<li>${key}: ${error}</li>`;
+
+        if (errors) {
+            let errorHtml = "<ul>";
+            if (typeof errors === 'string') {
+                errorHtml += `<li>${errors}</li>`;
+            } else if (Array.isArray(errors)) {
+                 errors.forEach(err => errorHtml += `<li>${err}</li>`);
+            } else {
+                for (const [key, val] of Object.entries(errors)) {
+                    errorHtml += `<li><strong>${key}:</strong> ${JSON.stringify(val)}</li>`;
+                }
+            }
+            errorHtml += "</ul>";
+            allElements.errorDetails.innerHTML = errorHtml;
+            allElements.errorDetails.classList.remove('hidden');
         }
-        errorDetails += "</ul></div>";
-      }
-      
-      if (errorDetails) {
-        document.getElementById('errorDetails').innerHTML = errorDetails;
-        document.getElementById('errorDetails').style.display = 'block';
-      }
-      
-      console.error(data.errors, data.trendyolUpdateErrors);
-      
-      // 5 saniye sonra hata mesajını göster
-      setTimeout(() => {
-        showMessage(data.message || "Stok güncelleme başarısız.", false);
-      }, 5000);
     }
-  } catch(err) {
-    updateProgressStatus("Bağlantı Hatası!", "Sunucuya bağlanırken bir hata oluştu.", "danger");
-    document.getElementById('errorDetails').innerHTML = `<p class="text-danger">${err.message || "Ağ bağlantı hatası"}</p>`;
-    document.getElementById('errorDetails').style.display = 'block';
-    
-    showMessage("Ağ hatası oluştu.", false);
-    console.error(err);
-  } finally {
-    // Butonları eski haline getir
-    buttons.forEach(b=>{
-      b.innerHTML=originals[b.id];
-      b.disabled=false;
-    });
-    updateStockButton.disabled=true;
-    resetButton.disabled=false;
-    forceFocus();
-  }
-}
-
-function resetStockAddition(){
-  barcodeCounts={};selectedMode=null;barcodeBuffer='';
-  stockForm.classList.add('hidden');
-  selectedModeDisplay.classList.add('hidden');
-  modeSelectionButtonsDiv.classList.remove('hidden');
-
-  noBarcodeMessage.style.display='block';
-  scannedBarcodesDiv.innerHTML='';
-  barcodeInput.disabled=true;barcodeInput.value='';
-  updateStockButton.disabled=true;
-
-  selectRenewModeBtn.classList.replace('btn-primary','btn-outline-primary');
-  selectAddModeBtn  .classList.replace('btn-success' ,'btn-outline-success');
-  responseMessageDiv.classList.add('d-none');
-
-  selectRenewModeBtn.focus();
-  forceFocus();
-}
-
-function showMessage(msg,ok){
-  responseMessageDiv.className=
-    `alert ${ok?'alert-success':'alert-danger'} text-center mt-4`;
-  responseMessageDiv.textContent=msg;
-  responseMessageDiv.classList.remove('d-none');
-}
-
-/* ---------- İlerleme Göstergeleri ---------- */
-function showProgressContainer() {
-  const container = document.getElementById('progressContainer');
-  if (container) {
-    // d-none class'ını kaldır, display style'ını direkt olarak ayarla
-    container.classList.remove('d-none');
-    container.style.display = 'block';
-    
-    // Hata detayları bölümünü temizle
-    const errorDetails = document.getElementById('errorDetails');
-    if (errorDetails) {
-      errorDetails.style.display = 'none';
-      errorDetails.innerHTML = '';
-    }
-    
-    console.log("İlerleme konteynerini gösterme çağrıldı: ", container);
-  } else {
-    console.error("progressContainer bulunamadı!");
-  }
-}
-
-function hideProgressContainer() {
-  const container = document.getElementById('progressContainer');
-  if (container) {
-    container.classList.add('d-none');
-  }
-}
-
-function updateProgressStatus(title, message, status) {
-  // Status: info, success, warning, danger
-  const progressTitle = document.getElementById('progressTitle');
-  const progressBar = document.getElementById('progressBar');
-  const progressMessage = document.getElementById('progressMessage');
-  
-  if (progressTitle) progressTitle.textContent = title;
-  if (progressMessage) progressMessage.textContent = message;
-  
-  if (progressBar) {
-    // İlerleme çubuğu rengini durum tipine göre ayarla
-    progressBar.className = `progress-bar progress-bar-striped progress-bar-animated bg-${status}`;
-    
-    // Durum başarılı ise animasyonu durdur
-    if (status === 'success') {
-      progressBar.classList.remove('progress-bar-animated');
-    } else {
-      progressBar.classList.add('progress-bar-animated');
-    }
-  }
-}
-
-/* ---------- Trendyol Stok Çekme ---------- */
-updateTrendyolStocksForm.addEventListener('submit',async e=>{
-  e.preventDefault();
-  const btn=updateTrendyolStocksButton,orig=btn.innerHTML;
-  btn.disabled=true;
-  btn.innerHTML=`<span class="spinner-border spinner-border-sm"></span> Güncelleniyor...`;
-  responseMessageDiv.classList.add('d-none');
-  
-  // İlerleme göstergesini görüntüle
-  showProgressContainer();
-  updateProgressStatus("Trendyol Stokları Güncelleniyor...", "Trendyol'dan güncel stok bilgileri alınıyor...", "warning");
-  
-  try{
-    // İstek gönderiliyor aşaması
-    updateProgressStatus("Trendyol Stokları Çekiliyor...", "Bağlantı kuruluyor, lütfen bekleyin...", "info");
-    
-    const res=await fetch(e.target.action,{method:'POST'});
-    const data=await res.json();
-    
-    if(data.success){
-      // Başarılı durumda
-      updateProgressStatus(
-        "Stoklar Güncellendi!", 
-        data.message || "Trendyol'dan stoklar başarıyla alındı.", 
-        "success"
-      );
-      
-      // 3 saniye sonra mesajı göster ve ilerleme göstergesini kapat
-      setTimeout(() => {
-        showMessage(data.message, true);
-        hideProgressContainer();
-      }, 3000);
-    }else{
-      // Başarısız durumda
-      updateProgressStatus(
-        "Stok Çekme Hatası!", 
-        data.message || "Trendyol stok güncelleme başarısız oldu.", 
-        "danger"
-      );
-      
-      // Hata detayını göster (eğer varsa)
-      if (data.error || data.errors) {
-        let errorHtml = "<div class='mt-2'><strong>Hata Detayları:</strong><ul>";
-        
-        if (typeof data.error === 'string') {
-          errorHtml += `<li>${data.error}</li>`;
-        } else if (data.errors) {
-          for (const error of data.errors) {
-            errorHtml += `<li>${error}</li>`;
-          }
-        }
-        
-        errorHtml += "</ul></div>";
-        document.getElementById('errorDetails').innerHTML = errorHtml;
-        document.getElementById('errorDetails').style.display = 'block';
-      }
-      
-      console.error("Trendyol:", data);
-      
-      // 5 saniye sonra hata mesajını göster
-      setTimeout(() => {
-        showMessage(data.message || "Trendyol stok güncelleme başarısız.", false);
-      }, 5000);
-    }
-  }catch(err){
-    // Bağlantı/ağ hatası
-    updateProgressStatus("Bağlantı Hatası!", "Trendyol'a erişilirken bir hata oluştu.", "danger");
-    document.getElementById('errorDetails').innerHTML = `<p class="text-danger">${err.message || "Ağ hatası"}</p>`;
-    document.getElementById('errorDetails').style.display = 'block';
-    
-    showMessage("Trendyol stoklarına erişilirken ağ hatası.", false);
-    console.error(err);
-  }finally{
-    btn.disabled=false;btn.innerHTML=orig;
-    forceFocus();
-  }
-});
-
-window.onload=()=>resetStockAddition(); // sayfa açılışında sıfırla
 </script>
 </body>
 </html>

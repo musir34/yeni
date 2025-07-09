@@ -93,8 +93,18 @@
         .color-thumbnail { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--color-white); box-shadow: var(--shadow-sm); cursor: pointer; }
         .size-variants-container { display: none; padding: 1rem; margin-top: 1rem; background-color: var(--color-bg-light); border-radius: var(--border-radius); }
         .size-list { list-style: none; padding: 0; }
-        .size-list li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--color-border); font-size: 0.85rem; }
+        .size-list li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--color-border); font-size: 0.85rem; gap: 10px; }
         .size-list li:last-child { border-bottom: none; }
+        .barcode-info { display: flex; align-items: center; gap: 10px; color: #6c757d; flex-basis: 100%; margin-top: 5px; }
+
+        /* YENİ: Kopyalama butonu stili */
+        .btn-copy {
+            background: none; border: none; cursor: pointer; color: #6c757d;
+            padding: 0.2rem 0.4rem; transition: var(--transition);
+        }
+        .btn-copy:hover { color: var(--color-primary); }
+        .btn-copy .fa-check { color: var(--color-success); }
+        /* Bitiş */
 
         .pagination-container { display: flex; justify-content: center; align-items: center; padding: 2.5rem 0 1rem; }
         .pagination { display: flex; align-items: center; gap: 0.5rem; list-style: none; }
@@ -142,7 +152,7 @@
         </div>
 
         <div class="header-actions">
-            <a href="/" class="btn"><i class="fas fa-home"></i> Ana Sayfa</a>
+            <a href="{{ url_for('home.home') }}" class="btn btn-sm btn-outline-secondary">Ana Sayfa</a>
             <div class="dropdown" id="updateDropdown">
                 <button class="btn btn-primary dropdown-toggle"><i class="fas fa-sync-alt"></i> Güncelle</button>
                 <div class="dropdown-content">
@@ -194,6 +204,7 @@
                                 <div class="more-actions dropdown">
                                     <button class="btn btn-sm dropdown-toggle"><i class="fas fa-ellipsis-v"></i></button>
                                     <div class="dropdown-content">
+                                        <button class="open-action-modal" data-action="list_variants" data-model="{{ model_id }}"><i class="fas fa-list-ul"></i> Tüm Varyantları Listele</button>
                                         <button class="update-model-cost" data-model="{{ model_id }}"><i class="fas fa-dollar-sign"></i> Model Maliyeti</button>
                                         <button class="delete-action" data-model="{{ model_id }}" data-color="{{ color }}"><i class="fas fa-trash"></i> Rengi Sil</button>
                                     </div>
@@ -207,6 +218,12 @@
                                     <span>Beden: {{ variant.size }}</span>
                                     <span>Stok: {{ variant.quantity }}</span>
                                     <span>{{ "%.2f"|format(variant.sale_price) }} TL</span>
+                                    <span class="barcode-info">
+                                        Barkod: {{ variant.barcode }}
+                                        <button class="btn-copy copy-barcode-btn" data-barcode="{{ variant.barcode }}" title="Barkodu Kopyala">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </span>
                                 </li>
                             {% endfor %}
                             </ul>
@@ -258,7 +275,12 @@
                                             <span>Beden: {{ variant.size }}</span>
                                             <span>Stok: {{ variant.quantity }}</span>
                                             <span>Fiyat: {{ "%.2f"|format(variant.sale_price) }} TL</span>
-                                            <span class="barcode-info">Barkod: {{ variant.barcode }}</span>
+                                            <span class="barcode-info">
+                                                Barkod: {{ variant.barcode }}
+                                                <button class="btn-copy copy-barcode-btn" data-barcode="{{ variant.barcode }}" title="Barkodu Kopyala">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </span>
                                         </li>
                                     {% endfor %}
                                     </ul>
@@ -340,16 +362,12 @@
             $('#modalBody').html('<div class="text-center p-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>');
             $('#modalSaveBtn').show();
 
-            // Fiyat veya Maliyet için şık prompt göster
             if (action === 'update_model_price' || action === 'update_model_cost') {
                 const isPrice = action === 'update_model_price';
                 const title = `${modelId} - Model ${isPrice ? 'Fiyatı' : 'Maliyeti'} Gir`;
                 const currency = isPrice ? 'TL' : 'USD';
                 const inputName = isPrice ? 'sale_price' : 'cost_usd';
-
                 $('#modalTitle').text(title);
-
-                // Mevcut değeri almak için API isteği
                 $.get(`/api/get_model_info?model_id=${modelId}`, function(res) {
                     if (res.success) {
                         const currentValue = isPrice ? res.sale_price : res.cost_usd;
@@ -369,7 +387,6 @@
                 return;
             }
 
-            // Diğer aksiyonlar
             let url = '', title = '';
             if (action === 'list_variants') {
                 url = `/api/get_variants_for_stock_update?model=${modelId}`;
@@ -380,17 +397,28 @@
             $('#modalTitle').text(title);
             $.get(url, function(res) {
                  if (res.success && res.products.length > 0) {
-                    let tableHtml = '<table class="form-table"><thead><tr><th>Renk</th><th>Beden</th><th>Stok</th><th>Barkod</th></tr></thead><tbody>';
-                    res.products.forEach(p => { tableHtml += `<tr><td>${p.color}</td><td>${p.size}</td><td>${p.quantity}</td><td>${p.barcode}</td></tr>`; });
-                    tableHtml += '</tbody></table>';
-                    $('#modalBody').html(tableHtml);
+                     let tableHtml = '<table class="form-table"><thead><tr><th>Renk</th><th>Beden</th><th>Stok</th><th>Barkod</th></tr></thead><tbody>';
+                     // YENİ: Modal içindeki tabloya kopyala butonu ekleme
+                     res.products.forEach(p => { 
+                         tableHtml += `<tr>
+                                         <td>${p.color}</td>
+                                         <td>${p.size}</td>
+                                         <td>${p.quantity}</td>
+                                         <td>${p.barcode} 
+                                             <button class="btn-copy copy-barcode-btn" data-barcode="${p.barcode}" title="Barkodu Kopyala">
+                                                 <i class="fas fa-copy"></i>
+                                             </button>
+                                         </td>
+                                       </tr>`; 
+                     });
+                     tableHtml += '</tbody></table>';
+                     $('#modalBody').html(tableHtml);
                  } else {
-                    $('#modalBody').html('<p class="text-danger p-4">Bu model için varyant bulunamadı.</p>');
+                     $('#modalBody').html('<p class="text-danger p-4">Bu model için varyant bulunamadı.</p>');
                  }
             }).fail(() => $('#modalBody').html('<p class="text-danger p-4">Sunucu hatası veya API adresi bulunamadı.</p>'));
         }
 
-        // Butonlara event listener atama
         $('.model-grid').on('click', '.open-action-modal', function() {
             openActionModal($(this).data('action'), $(this).data('model'));
         });
@@ -401,7 +429,29 @@
             openActionModal('update_model_cost', $(this).data('model'));
         });
 
-        // Modal Kaydet Butonu
+        // YENİ: Barkod Kopyalama Fonksiyonu
+        // Event delegation kullandığımız için modal veya açılır menü sonradan oluşsa bile bu kod çalışır.
+        $(document).on('click', '.copy-barcode-btn', function() {
+            const button = $(this);
+            const barcode = button.data('barcode');
+
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(barcode).then(() => {
+                    const originalIcon = button.html();
+                    button.html('<i class="fas fa-check"></i>');
+                    setTimeout(() => {
+                        button.html(originalIcon);
+                    }, 1500); // 1.5 saniye sonra eski ikona dön
+                }).catch(err => {
+                    console.error('Barkod kopyalanamadı: ', err);
+                    alert('Hata: Barkod kopyalanamadı!');
+                });
+            } else {
+                alert('Tarayıcınız bu özelliği desteklemiyor.');
+            }
+        });
+        // Bitiş
+
         $('#modalSaveBtn').on('click', function() {
             let url = '', formId = '';
             if (currentAction === 'update_model_cost') {
@@ -416,25 +466,22 @@
             }).fail(() => alert('İşlem sırasında sunucu hatası oluştu.'));
         });
 
-        // Modal Kapatma
         $modal.on('click', function(e) {
             if (e.target === this || $(e.target).hasClass('close-btn')) {
                 $modal.removeClass('is-visible');
             }
         });
 
-        // Model Silme
         $('.model-grid').on('click', '.delete-model', function() {
             const modelId = $(this).data('model');
             if (confirm(`'${modelId}' modeline ait TÜM ürünleri kalıcı olarak silmek istediğinizden emin misiniz?`)) {
                 $.post('/api/delete-model', { model_id: modelId }, res => {
-                     alert(res.message);
-                     if (res.success) location.reload();
+                        alert(res.message);
+                        if (res.success) location.reload();
                 });
             }
         });
 
-        // Görsel Büyütme
         const $imageModal = $('#imageZoomModal');
         $('.model-grid').on('click', '.zoomable-image', function(e) {
             e.stopPropagation();
