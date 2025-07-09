@@ -569,3 +569,20 @@ class UserLog(db.Model):
     status_code = db.Column(db.Integer, nullable=True) # İşlem sonucu (örn: HTTP status)
     # İlişki
     user = db.relationship('User', backref=db.backref('logs', lazy='dynamic')) # lazy='dynamic' çok sayıda log varsa performansı artırır
+
+# Kasa modeli - Gelir ve gider kayıtları
+class Kasa(db.Model):
+    __tablename__ = 'kasa'
+    id = db.Column(db.Integer, primary_key=True)
+    tip = db.Column(db.String(50), nullable=False)  # 'gelir' veya 'gider'
+    aciklama = db.Column(db.Text, nullable=False)
+    tutar = db.Column(db.Float, nullable=False)
+    tarih = db.Column(db.DateTime, default=datetime.utcnow)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    kategori = db.Column(db.String(100), nullable=True)  # Kategori (opsiyonel)
+    
+    # Relationship to User model
+    kullanici = db.relationship('User', backref='kasa_kayitlari')
+    
+    def __repr__(self):
+        return f"<Kasa {self.tip}: {self.tutar} TL>"

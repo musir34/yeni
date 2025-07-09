@@ -13,6 +13,6 @@
     "@types/memoizee": "^0.4.12",
     "memoizee": "^0.4.17",
     "openai": "^4.100.0",
-    "openid-client": "^6.5.0"
+    "openid-client": "^6.6.2"
   }
 }
