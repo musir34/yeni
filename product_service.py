@@ -5,7 +5,7 @@ import asyncio
 import json
 from datetime import datetime
 from models import db, Product
-from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID, BASE_URL
+from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID
 import logging
 
 # Loglama ayarları
@@ -15,6 +15,9 @@ handler = logging.FileHandler('product_service.log')
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
+
+# Trendyol ürünler için API temel URL
+BASE_URL = "https://api.trendyol.com/"
 
 product_service_bp = Blueprint('product_service', __name__)
 

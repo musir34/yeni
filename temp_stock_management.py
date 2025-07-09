@@ -34,7 +34,7 @@ except ImportError:
     API_KEY = None
     API_SECRET = None
     SUPPLIER_ID = None
-    BASE_URL = "https://api.trendyol.com/" # Base URL'i yine de tanımlayalım
+    BASE_URL = "https://api.trendyol.com/sapigw/" # Base URL'i yine de tanımlayalım
 
 # Uygulama ortamına göre log seviyesini ayarla
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
