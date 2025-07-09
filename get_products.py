@@ -14,16 +14,16 @@ from io import BytesIO
 from sqlalchemy import case
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_from_directory, send_file, current_app, session
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.dialects.postgresql import insert
-# or_ operatörüne gerek kalmadı, func yeterli. İstersen import'u silebilirsin.
 from sqlalchemy import func
-from trendyol_api import API_KEY, SUPPLIER_ID, API_SECRET, BASE_URL
 from login_logout import roles_required
-
+from sqlalchemy.dialects.postgresql import insert
+from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID
 from models import db, Product, ProductArchive
 from cache_config import cache, CACHE_TIMES
 
 get_products_bp = Blueprint('get_products', __name__)
+
+
 
 load_dotenv()
 
@@ -34,6 +34,7 @@ formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+BASE_URL = "https://apigw.trendyol.com/integration/"
 
 #-------------------------------------------------------------------
 # HAREM DÖVİZ'DEN KUR ÇEKME (ÖRNEK)
@@ -152,12 +153,28 @@ def render_product_list(products, pagination=None):
     return render_template('product_list.html', grouped_products=grouped_products, pagination=pagination, search_mode=False)
 
 
+async def fetch_all_product_stocks_async():
+    all_products = await fetch_all_products_async()
+    if not all_products:
+        return []
+    return [
+        {
+            "barcode": p.get("barcode"),
+            "quantity": p.get("quantity", 0)
+        }
+        for p in all_products if p.get("barcode")
+    ]
+
+
+
 @get_products_bp.route('/update_products', methods=['POST'])
 async def update_products_route():
     try:
-        logger.debug("update_products_route fonksiyonu çağrıldı.")
+        logger.debug("Tüm ürünleri ve detaylarını Trendyol'dan çekme işlemi başlatıldı.")
         products = await fetch_all_products_async()
 
+        if products is None:
+             raise ValueError("Ürünler çekilirken bir API hatası oluştu.")
         if not isinstance(products, list):
             logger.error(f"Beklenmeyen veri türü: {type(products)} - İçerik: {products}")
             raise ValueError("Beklenen liste değil.")
@@ -167,119 +184,84 @@ async def update_products_route():
         if products:
             logger.debug("Ürünler veritabanına kaydediliyor...")
             await save_products_to_db_async(products)
-            # Ürünler güncellendi - sessiz çalışma
             logger.info("Ürünler başarıyla güncellendi.")
         else:
             logger.warning("Ürünler bulunamadı veya güncelleme sırasında bir hata oluştu.")
-            # Ürün güncelleme hatası - sessiz çalışma
 
     except Exception as e:
-        logger.error(f"update_products_route hata: {e}")
+        logger.error(f"update_products_route hata: {e}", exc_info=True)
         flash('Ürünler güncellenirken bir hata oluştu.', 'danger')
 
     return redirect(url_for('get_products.product_list'))
 
-
 @get_products_bp.route('/update_stocks_route', methods=['POST'])
-async def update_stocks_route(): # Bu fonksiyon Trendyol'daki STOK bilgilerini çekip DB'deki stokları günceller
+async def update_stocks_route():
+    """
+    GÜNCELLENMİŞ VE HIZLANDIRILMIŞ ROUTE: 
+    Sadece stok bilgisi çeken yeni ve verimli fonksiyonu kullanır.
+    """
     logger.info("Trendyol'dan stokları çekme ve veritabanını güncelleme işlemi başlatıldı.")
 
-    # trendyol_api.py bilgileri kontrolü
-    if not API_KEY or not API_SECRET or not SUPPLIER_ID:
-        msg = "Trendyol API bilgileri sunucuda eksik. Stoklar Trendyol'dan çekilemez."
+    if not all([API_KEY, API_SECRET, SUPPLIER_ID]):
+        msg = "Trendyol API bilgileri sunucuda eksik. Stoklar çekilemez."
         logger.error(msg)
-        # Bu endpoint frontend'e JSON dönüyor, flash değil
         return jsonify({'success': False, 'message': msg})
 
-
     try:
-        # 1. Trendyol'dan TÜM ürünleri çek (quantity bilgisi de gelir)
-        # fetch_all_products_async zaten Trendyol'un ürün listeleme endpoint'ini kullanır
-        # ve her ürünün güncel quantity bilgisini içerir.
-        trendyol_products = await fetch_all_products_async()
+        # 1. YENİ VE VERİMLİ FONKSİYON: Trendyol'dan SADECE stokları çek
+        trendyol_stock_data = await fetch_all_product_stocks_async()
 
-        if not trendyol_products:
-            logger.warning("Trendyol'dan ürün çekilemedi. Stok güncellenemiyor.")
-            return jsonify({'success': False, 'message': 'Trendyol\'dan güncel ürün (stok) bilgisi çekilemedi.'})
+        if trendyol_stock_data is None: # Fonksiyon hata dönerse None gelir
+            logger.error("Trendyol'dan stok bilgisi çekilemedi veya API hatası oluştu.")
+            return jsonify({'success': False, 'message': 'Trendyol API hatası nedeniyle stoklar çekilemedi.'})
+
+        if not trendyol_stock_data:
+            logger.warning("Trendyol'dan hiç stok bilgisi gelmedi.")
+            return jsonify({'success': True, 'message': 'Trendyol\'dan güncellenecek stok bilgisi bulunamadı.'})
 
         # 2. Trendyol verisinden barkod -> miktar eşleşmesini oluştur
-        # Sadece geçerli barkodu olanları al
         barcode_quantity_map = {
-            p.get('barcode'): int(p.get('quantity', 0)) # quantity'yi int yapalım
-            for p in trendyol_products
-            if p.get('barcode') # Barkod var mı kontrol et
+            p.get('barcode'): int(p.get('quantity', 0))
+            for p in trendyol_stock_data if p.get('barcode')
         }
 
         if not barcode_quantity_map:
-            logger.info("Trendyol'dan güncellenecek geçerli stok bilgisi (barkod/miktar) alınamadı.")
-            return jsonify({'success': False, 'message': 'Trendyol\'dan güncellenecek stok bilgisi alınamadı (Geçerli barkod bulunamadı).'})
+            logger.info("Trendyol'dan geçerli barkod/miktar bilgisi alınamadı.")
+            return jsonify({'success': False, 'message': 'Trendyol\'dan güncellenecek stok bilgisi (geçerli barkod) alınamadı.'})
 
-        # 3. Kendi veritabanındaki ilgili ürünleri çek (BURASI BATCH YAPILDI)
-        all_trendyol_barcodes = list(barcode_quantity_map.keys())
-        logger.debug(f"Trendyol'dan çekilen ve DB'de aranacak toplam barkod sayısı: {len(all_trendyol_barcodes)}")
+        # 3. Kendi veritabanındaki ürünlerin stoğunu güncelle
+        all_db_products = Product.query.filter(Product.barcode.in_(barcode_quantity_map.keys())).all()
+        logger.debug(f"Veritabanından Trendyol barkodlarına karşılık gelen toplam ürün sayısı: {len(all_db_products)}")
 
-        batch_size = 1000 # Veritabanı sorguları için batch boyutu (Bu değeri DB limitine göre ayarlayabilirsin, 1000 genelde güvenlidir)
-        local_products_to_update = [] # Güncellenecek yerel ürünleri burada toplayacağız
-
-        # Barkod listesini batch'lere böl ve her batch için DB'den çek
-        for i in range(0, len(all_trendyol_barcodes), batch_size):
-            barcode_batch = all_trendyol_barcodes[i : i + batch_size]
-            logger.debug(f"DB'den ürünler çekiliyor: Batch {i//batch_size + 1} / { (len(all_trendyol_barcodes) + batch_size - 1) // batch_size } (Barkod aralığı: {barcode_batch[0]} - {barcode_batch[-1] if barcode_batch else 'Boş'})") # Log mesajı iyileştirildi
-
-            # SQLAlchemy sorgusu ile batch'teki barkodlara sahip ürünleri çek
-            # .all() burada senkron çalışır, async context içinde olmasına rağmen.
-            # Büyük veri setleri için burada performans darboğazı olabilir, ama IN limitini aşar.
-            batch_results = Product.query.filter(Product.barcode.in_(barcode_batch)).all()
-            local_products_to_update.extend(batch_results) # Batch sonuçlarını ana listeye ekle
-
-        logger.debug(f"Veritabanından Trendyol barkodlarına karşılık gelen toplam ürün sayısı: {len(local_products_to_update)}")
-
-
-        # 4. Kendi veritabanındaki ürünlerin stoğunu Trendyol verisine göre güncelle
         updated_count = 0
-        products_marked_for_update = [] # session.add ile işaretlenen ürünler
+        for product in all_db_products:
+            trendyol_quantity = barcode_quantity_map.get(product.barcode)
 
-        for product in local_products_to_update:
-            trendyol_quantity = barcode_quantity_map.get(product.barcode) # Trendyol'daki miktar
+            # Sadece miktar gerçekten değişmişse güncelle
+            if trendyol_quantity is not None and product.quantity != trendyol_quantity:
+                logger.debug(f"DB Stoğu Güncelleniyor: Barkod {product.barcode}, Eski: {product.quantity}, Yeni (Trendyol): {trendyol_quantity}")
+                product.quantity = trendyol_quantity
+                db.session.add(product)
+                updated_count += 1
 
-            # Trendyol'dan gelen miktarın None veya farklı bir şey olmaması lazım, Trendyol 0 veya pozitif int döner
-            # Yine de kontrol ekleyelim
-            if trendyol_quantity is not None and isinstance(trendyol_quantity, int):
-                # Sadece miktar gerçekten değişmişse güncelle
-                if product.quantity != trendyol_quantity:
-                    logger.debug(f"DB Stoğu Güncelleniyor: Barkod {product.barcode}, Eski: {product.quantity}, Yeni (Trendyol): {trendyol_quantity}")
-                    product.quantity = trendyol_quantity
-                    db.session.add(product) # Mark as changed
-                    products_marked_for_update.append(product) # Commit için listeye ekle
-                    updated_count += 1
-                else:
-                    logger.debug(f"DB Stoğu Aynı: Barkod {product.barcode}, Miktar: {product.quantity}")
-            else:
-                logger.warning(f"Trendyol'dan {product.barcode} barkodu için geçersiz miktar geldi: {trendyol_quantity}. DB güncellenmedi.")
-                # Bu durumda bu ürünün DB'deki stoğunu Trendyol'a göre çekmemiş oluyoruz.
-
-        # 5. Veritabanı değişikliklerini kaydet (Tek commit!)
-        if products_marked_for_update:
+        # 4. Veritabanı değişikliklerini tek seferde kaydet
+        if updated_count > 0:
             try:
                 db.session.commit()
-                logger.info(f"Trendyol stok bilgisine göre veritabanında {updated_count} ürün stoğu başarıyla güncellendi.")
+                logger.info(f"Veritabanında {updated_count} ürün stoğu başarıyla güncellendi.")
             except Exception as e:
                 db.session.rollback()
                 logger.error(f"Veritabanına stok güncellenirken commit hatası: {e}", exc_info=True)
-                return jsonify({'success': False, 'message': f'Veritabanına stok güncellenirken hata oluştu: {str(e)}'})
+                return jsonify({'success': False, 'message': f'Veritabanı commit hatası: {str(e)}'})
         else:
             logger.info("Veritabanında güncellenecek stok farkı olan ürün bulunamadı.")
 
-
-        # 6. Başarılı yanıt döndür
-        return jsonify({'success': True, 'message': f'Stoklar başarıyla Trendyol\'dan çekildi ve veritabanında güncellendi ({updated_count} ürün güncellendi).'})
+        return jsonify({'success': True, 'message': f'Stoklar başarıyla Trendyol\'dan çekildi. Veritabanında {updated_count} ürün güncellendi.'})
 
     except Exception as e:
-        # Süreç sırasında herhangi bir hata oluşursa (fetch_all_products_async hatası vb.)
-        db.session.rollback() # Olası yarım kalan DB işlemleri için
-        logger.error(f"update_stocks_route (Trendyol Stok Çekme) sırasında genel hata: {e}", exc_info=True)
-        # Frontend'e JSON hata yanıtı döndür
-        return jsonify({'success': False, 'message': f'Stok güncelleme sırasında bir hata oluştu: {str(e)}'})
+        db.session.rollback()
+        logger.error(f"update_stocks_route sırasında genel hata: {e}", exc_info=True)
+        return jsonify({'success': False, 'message': f'Stok güncelleme sırasında genel bir sunucu hatası oluştu: {str(e)}'})
 
 
 
@@ -415,37 +397,40 @@ async def save_products_to_db_async(products):
     
 
 async def fetch_all_products_async():
+    """Tüm ürünlerin detaylı bilgisini Trendyol'dan çeker."""
+    all_products = []
     page_size = 1000
-    url = f"{BASE_URL}suppliers/{SUPPLIER_ID}/products"
+    url = f"{BASE_URL}product/sellers/{SUPPLIER_ID}/products"
     credentials = f"{API_KEY}:{API_SECRET}"
     encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
     headers = {"Authorization": f"Basic {encoded_credentials}"}
+
     async with aiohttp.ClientSession() as session:
         params = {"page": 0, "size": page_size}
-        timeout = aiohttp.ClientTimeout(total=30)
-        async with session.get(url, headers=headers, params=params, timeout=timeout) as response:
-            if response.status != 200:
-                error_text = await response.text()
-                logging.error(f"API Hatası: {response.status} - {error_text}")
-                return []
-            try:
+        timeout = aiohttp.ClientTimeout(total=60)
+        try:
+            async with session.get(url, headers=headers, params=params, timeout=timeout) as response:
+                response.raise_for_status()
                 data = await response.json()
-                logging.debug(f"API Yanıtı: Tür: {type(data)}, İçerik: {data}")
-            except Exception as e:
-                error_text = await response.text()
-                logging.error(f"JSON çözümleme hatası: {e} - Yanıt: {error_text}")
-                return []
-            total_pages = data.get('totalPages', 1)
-            logging.info(f"Toplam sayfa sayısı: {total_pages}")
-        tasks = [
-            fetch_products_page(session, url, headers, {"page": page_number, "size": page_size})
-            for page_number in range(total_pages)
-        ]
-        pages_data = await asyncio.gather(*tasks)
-        all_products = [product for page in pages_data if isinstance(page, list) for product in page]
-        logging.info(f"Toplam çekilen ürün sayısı: {len(all_products)}")
-        return all_products
+                total_pages = data.get('totalPages', 1)
+                logging.info(f"Toplam ürün detay sayfası sayısı: {total_pages}")
+                if 'content' in data and isinstance(data['content'], list):
+                    all_products.extend(data['content'])
 
+                tasks = [
+                    fetch_products_page(session, url, headers, {"page": page_number, "size": page_size})
+                    for page_number in range(1, total_pages)
+                ]
+                pages_data = await asyncio.gather(*tasks)
+                for page in pages_data:
+                    if isinstance(page, list):
+                        all_products.extend(page)
+        except Exception as e:
+            logger.error(f"fetch_all_products_async hata: {e}", exc_info=True)
+            return None
+
+    logging.info(f"Toplam çekilen ürün sayısı: {len(all_products)}")
+    return all_products
 
 async def fetch_products_page(session, url, headers, params):
     try:
@@ -459,7 +444,7 @@ async def fetch_products_page(session, url, headers, params):
                 if not isinstance(data.get('content'), list):
                     logging.error(f"Sayfa verisi content beklenen bir liste değil: {type(data.get('content'))}")
                     return []
-                logging.debug(f"Sayfa {params['page']} başarıyla çekildi, içerik boyutu: {len(data['content'])}")
+                logging.debug(f"Sayfa {params.get('page', 'N/A')} başarıyla çekildi, içerik boyutu: {len(data['content'])}")
                 return data.get('content', [])
             except Exception as e:
                 error_text = await response.text()
@@ -563,7 +548,7 @@ async def update_stock_levels_with_items_async(items):
     if not items:
         logger.error("Güncellenecek ürün bulunamadı.")
         return False
-    url = f"{BASE_URL}suppliers/{SUPPLIER_ID}/products/price-and-inventory"
+    url = f"{BASE_URL}products/price-and-inventory"
     credentials = f"{API_KEY}:{API_SECRET}"
     encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
     headers = {
@@ -771,12 +756,12 @@ def product_list():
         return render_template('product_list.html', grouped_products={}, pagination=None)
 
 
+
 @get_products_bp.route('/api/get_product_variants', methods=['GET'])
 def get_product_variants():
     model_id = request.args.get('model', '').strip()
     color = request.args.get('color', '').strip()
     if not model_id or not color:
-        logger.warning("Model veya renk bilgisi eksik.")
         return jsonify({'success': False, 'message': 'Model veya renk bilgisi eksik.'})
     products = Product.query.filter(
         func.lower(Product.product_main_id) == model_id.lower(),
@@ -785,13 +770,8 @@ def get_product_variants():
     products_list = []
     if products:
         for p in products:
-            if not p.barcode or p.quantity is None:
-                logger.warning(f"Eksik veri - Barkod: {p.barcode}, Stok: {p.quantity}")
-                continue
             products_list.append({
-                'size': p.size,
-                'barcode': p.barcode,
-                'quantity': p.quantity
+                'size': p.size, 'barcode': p.barcode, 'quantity': p.quantity
             })
         try:
             products_list = sorted(products_list, key=lambda x: float(x['size']), reverse=True)
@@ -800,6 +780,9 @@ def get_product_variants():
         return jsonify({'success': True, 'products': products_list})
     else:
         return jsonify({'success': False, 'message': 'Ürün bulunamadı.'})
+
+
+
 
 
 @get_products_bp.route('/update_stocks_ajax', methods=['POST'])
@@ -1385,6 +1368,7 @@ def get_variants_for_stock_update():
     products = Product.query.filter_by(product_main_id=model_id).order_by(Product.color, Product.size).all()
     variants = [{'barcode': p.barcode, 'color': p.color, 'size': p.size, 'quantity': p.quantity} for p in products]
     return jsonify({'success': True, 'products': variants})
+    
 
 @get_products_bp.route('/api/get_variants_for_cost_update')
 def get_variants_for_cost_update():
@@ -1395,6 +1379,7 @@ def get_variants_for_cost_update():
     products = Product.query.filter_by(product_main_id=model_id).order_by(Product.color, Product.size).all()
     variants = [{'barcode': p.barcode, 'color': p.color, 'size': p.size, 'cost_usd': p.cost_usd or 0} for p in products]
     return jsonify({'success': True, 'products': variants})
+    
 
 @get_products_bp.route('/api/delete-model', methods=['POST'])
 def delete_model():
@@ -1416,6 +1401,8 @@ def delete_model():
         db.session.rollback()
         logger.error(f"Model silinirken hata oluştu: {e}", exc_info=True)
         return jsonify({'success': False, 'message': 'Bir sunucu hatası oluştu.'})
+
+
 
 @get_products_bp.route('/api/get_model_info')
 def get_model_info():
