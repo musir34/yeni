@@ -1,5 +1,3 @@
-# stock_management.py
-
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, current_app
 # Product modelini import et
 from models import db, Product
