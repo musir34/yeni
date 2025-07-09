@@ -29,6 +29,7 @@ def register_blueprints(app):
     from intelligent_stock_analyzer import blueprint as intelligent_stock_bp
     from image_manager import image_manager_bp
     from routes.common.health import health_bp
+    from kasa import kasa_bp
 
     # Register all blueprints
     for bp in [
@@ -59,5 +60,6 @@ def register_blueprints(app):
         intelligent_stock_bp,
         image_manager_bp,
         health_bp,
+        kasa_bp,
     ]:
         app.register_blueprint(bp)
