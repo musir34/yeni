@@ -17,7 +17,7 @@ if missing:
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET") or secrets.token_hex(16)
 
 # Trendyol API için temel URL
-BASE_URL = "https://api.trendyol.com/sapigw/"
+BASE_URL = "https://api.trendyol.com/"
 
 # Webhook URL'leri (kendi domain adresinizle değiştirin)
 WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", "https://your-domain.com")
