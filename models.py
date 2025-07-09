@@ -586,3 +586,20 @@ class Kasa(db.Model):
     
     def __repr__(self):
         return f"<Kasa {self.tip}: {self.tutar} TL>"
+
+# Kasa Kategori modeli - Kategori yönetimi
+class KasaKategori(db.Model):
+    __tablename__ = 'kasa_kategoriler'
+    id = db.Column(db.Integer, primary_key=True)
+    kategori_adi = db.Column(db.String(100), nullable=False, unique=True)
+    aciklama = db.Column(db.Text, nullable=True)
+    renk = db.Column(db.String(7), default='#007bff')  # Hex renk kodu
+    aktif = db.Column(db.Boolean, default=True)
+    olusturma_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    olusturan_kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    # Relationship to User model
+    olusturan_kullanici = db.relationship('User', backref='olusturulan_kategoriler')
+    
+    def __repr__(self):
+        return f"<KasaKategori {self.kategori_adi}>"

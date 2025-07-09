@@ -135,6 +135,14 @@
                 ); /* Kırmızı tonlu */
                 color: #fff;
             }
+            .btn-dark {
+                background: linear-gradient(
+                    to right,
+                    #343a40,
+                    #495057
+                ); /* Koyu gri tonlu */
+                color: #fff;
+            }
             /* Disabled buton rengi */
             .btn.disabled,
             .btn:disabled {
@@ -698,6 +706,12 @@
                     <!-- Bu satırı ekledim -->
                 </div>
             </div>
+
+            {% if session['role'] in ['admin', 'manager'] %}
+            <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-dark">
+                <i class="fas fa-cash-register"></i> Kasa
+            </a>
+            {% endif %}
 
             {% if session['role'] == 'admin' %}
             <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-success">
