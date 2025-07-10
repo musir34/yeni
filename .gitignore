@@ -180,3 +180,4 @@ static/images/
 static/barcodes/
 static/qr_codes/
 static/qrcodes/
+backup.sql
