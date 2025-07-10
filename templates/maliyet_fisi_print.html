@@ -7,18 +7,23 @@
     /* Sayfa Ayarları */
     @page {
       size: 148mm 210mm; /* A5 */
-      margin: 0;         /* Yazdırırken kenar boşluğu bırakmamak için */
+      margin: 0;
     }
+
+    /* Daha esnek bir sayfa yapısı için Flexbox kullandık */
     body {
       margin: 0;
       padding: 5mm;
-      width: 138mm;  /* A5’in eninden, padding’leri düşerek kalan alan */
-      height: 200mm; /* A5’in boyundan, padding’leri düşerek kalan alan */
+      width: 138mm;   /* 148mm - 5mm - 5mm */
+      height: 200mm;  /* 210mm - 5mm - 5mm */
       box-sizing: border-box;
-      /* Arka planda hafif bir renk gradyanı */
       background: linear-gradient(to bottom right, #fff 0%, #fdf9f6 100%);
       font-family: "Segoe UI", Tahoma, sans-serif;
       color: #333;
+
+      /* Sayfa elemanlarını (başlık, grid, altbilgi) dikeyde hizalamak için */
+      display: flex;
+      flex-direction: column;
     }
 
     /* Genel Stil */
@@ -26,6 +31,7 @@
       margin: 0;
       padding: 0;
     }
+
     .page-header {
       display: flex;
       align-items: center;
@@ -35,16 +41,21 @@
       border-radius: 4px;
       margin-bottom: 6mm;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      /* Başlığın esnememesi için */
+      flex-shrink: 0; 
     }
+
     .header-left {
       display: flex;
       align-items: center;
       gap: 5mm;
     }
+
     .header-left img {
       height: 18mm;
       width: auto;
     }
+
     .header-title {
       font-size: 16pt;
       color: #da627d;
@@ -55,17 +66,18 @@
     /* Fiş Grid Yapısı */
     .fis-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;  /* 2 sütun */
-      grid-template-rows: repeat(3, 1fr); /* 3 satır */
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: repeat(3, 1fr);
       gap: 6mm;
-      height: calc(100% - 35mm); /* Başlık alanından geriye kalanı doldursun */
+      /* Bu en önemli kısım: Kalan tüm dikey boşluğu doldurmasını sağlıyor */
+      flex-grow: 1; 
     }
+
     .fis-container {
       display: flex;
       flex-direction: column;
-      background: #ffffffcc; /* Hafif şeffaf beyaz arka plan */
-      /* Çizgileri biraz koyulaştırıp kalınlaştırdık */
-      border: 1px solid #b84057; 
+      background: #ffffffcc;
+      border: 1px solid #b84057;
       border-radius: 4px;
       padding: 4mm;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
@@ -76,22 +88,24 @@
     .fis-header {
       margin-bottom: 4mm;
     }
+
     .input-group {
       display: flex;
       align-items: center;
       gap: 3mm;
       margin-bottom: 2mm;
     }
+
     .input-label {
       font-weight: bold;
       white-space: nowrap;
       color: #b84057;
       min-width: 25mm;
     }
-    /* Doldurulacak çizgi - daha koyu renk ve 1px kalın */
+
     .input-line {
       flex: 1;
-      border-bottom: 1px dashed #b84057; 
+      border-bottom: 1px dashed #b84057;
       height: 2.5mm;
       min-width: 20mm;
     }
@@ -103,22 +117,24 @@
       margin-bottom: 4mm;
       font-size: 7pt;
     }
+
     .maliyet-table th,
     .maliyet-table td {
-      /* Daha koyu sınırlar için renk ve kalınlık arttırıldı */
-      border: 1px solid #b84057; 
+      border: 1px solid #b84057;
       text-align: center;
       padding: 2mm;
     }
+
     .maliyet-table th {
-      background: #fcdce1; /* Pastel pembe zemin */
+      background: #fcdce1;
       color: #333;
       font-weight: bold;
     }
 
     /* Fiş Alt Kısmı */
     .fis-bottom {
-      margin-top: auto; /* Kalan boş alanı ittirir, tablo aşağıda sabitlenir */
+      /* Flex container içinde bu elemanı en dibe iter */
+      margin-top: auto; 
       border-top: 1px solid #b84057;
       padding-top: 3mm;
       display: flex;
@@ -126,10 +142,12 @@
       align-items: center;
       gap: 4mm;
     }
+
     .fis-bottom .label {
       font-weight: bold;
       color: #b84057;
     }
+
     .line-small {
       display: inline-block;
       width: 30mm;
@@ -137,33 +155,54 @@
       height: 3mm;
     }
 
+    /* Sayfa Altındaki İmza Alanı (Footer) */
+    .page-footer {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 10mm; /* Grid ile arasında boşluk */
+        padding: 0 10mm;
+        /* Footer'ın esnememesi için */
+        flex-shrink: 0;
+    }
+
+    .signature-area {
+        text-align: center;
+    }
+
+    .signature-line {
+        border-top: 1px solid #000; 
+        width: 40mm; 
+        margin-top: 15mm;
+    }
+
+    .signature-title {
+        font-size: 8pt;
+    }
+
+
     /* Yazdırma Ayarları */
     @media print {
       body {
-        background: #fff;  /* Yazdırırken normal beyaz zemin */
+        background: #fff;
       }
       .fis-container {
         box-shadow: none;
-        border: 0.5pt solid #000; /* İsterseniz yazdırırken daha net çıksın diye siyaha yakın seçebilirsiniz */
+        border: 0.5pt solid #000;
       }
     }
   </style>
 </head>
 <body>
-  <!-- Sayfa Başlığı -->
   <div class="page-header">
     <div class="header-left">
-      <!-- Logonuzu buraya koyabilirsiniz -->
       <img src="{{ url_for('static', filename='logo/gullu.png') }}" alt="Logo">
       <h1 class="header-title">Maliyet Fişi</h1>
     </div>
   </div>
 
-  <!-- Fişlerin Olduğu Grid -->
   <div class="fis-grid">
     {% for i in range(6) %}
     <div class="fis-container">
-      <!-- Model / Renk -->
       <div class="fis-header">
         <div class="input-group">
           <span class="input-label">Model:</span>
@@ -175,7 +214,6 @@
         </div>
       </div>
 
-      <!-- Maliyet Tablosu -->
       <table class="maliyet-table">
         <tr>
           <th>Maliyet</th>
@@ -199,7 +237,6 @@
         </tr>
       </table>
 
-      <!-- Toplam Alanı -->
       <div class="fis-bottom">
         <span class="label">Toplam:</span>
         <span class="line-small"></span>
@@ -208,25 +245,25 @@
     {% endfor %}
   </div>
 
-  <!-- Hazırlayan / Onaylayan -->
-  <div style="display: flex; justify-content: space-between; margin-top: 10mm; padding: 0 10mm;">
-    <div style="text-align: center;">
-      <div style="border-top: 1px solid #000; width: 40mm; margin-top: 15mm;">
-        <span style="font-size: 8pt;">Hazırlayan</span>
+  <div class="page-footer">
+    <div class="signature-area">
+      <div class="signature-line">
+        <span class="signature-title">Hazırlayan</span>
       </div>
     </div>
-    <div style="text-align: center;">
-      <div style="border-top: 1px solid #000; width: 40mm; margin-top: 15mm;">
-        <span style="font-size: 8pt;">Onaylayan</span>
+    <div class="signature-area">
+      <div class="signature-line">
+        <span class="signature-title">Onaylayan</span>
       </div>
     </div>
   </div>
 
   <script>
-    window.onload = function() {
-      window.print();
-    };
-    */
+    // window.onload = function() {
+    //   window.print();
+    // };
+    // Not: Otomatik yazdırmayı test ederken sürekli açılmaması için yorum satırı yaptım. 
+    // İşin bitince baştaki iki eğik çizgiyi (//) silebilirsin.
   </script>
 </body>
 </html>
