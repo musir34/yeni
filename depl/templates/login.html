@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giriş Yap</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Stil ayarları buraya eklenebilir */
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="text-center">Giriş Yap</h2>
+
+        <!-- Hata mesajı göstermek için -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} mt-3">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('login_logout.login') }}" method="POST" class="mt-3">
+            <div class="mb-3">
+                <label for="username" class="form-label">Kullanıcı Adı:</label>
+                <input type="text" class="form-control" id="username" name="username" required autocomplete="off">
+            </div>
+            <div class="mb-3 position-relative">
+                <label for="password" class="form-label">Şifre:</label>
+                <input type="password" class="form-control" id="password" name="password" required autocomplete="off">
+                <button type="button" class="btn btn-outline-secondary btn-sm position-absolute end-0 top-0 mt-2 me-2" onclick="togglePassword()">Göster</button>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Giriş Yap</button>
+        </form>
+    <script>
+        function togglePassword() {
+            var passwordField = document.getElementById("password");
+            var showButton = event.target;
+            if (passwordField.type === "password") {
+                passwordField.type = "text";
+                showButton.innerText = "Gizle";
+            } else {
+                passwordField.type = "password";
+                showButton.innerText = "Göster";
+            }
+        }
+    </script>
+</body>
+</html>

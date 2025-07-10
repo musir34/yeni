@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yeni Değişim Talebi - Güllü Ayakkabı</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --color-primary: #B76E79; /* Gül Kurusu */
+            --color-primary-dark: #A05F6A;
+            --color-secondary: #212529; /* Siyah/Koyu Gri */
+            --color-text: #343a40;
+            --color-bg: #f8f9fa;
+            --color-white: #fff;
+            --color-border: #dee2e6;
+            --color-success: #28a745;
+            --color-warning: #ffc107;
+            --color-danger: #dc3545;
+            --color-info: #0dcaf0;
+            --font-family-base: 'Inter', sans-serif;
+            --border-radius: 0.5rem;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+            --shadow-md: 0 5px 15px rgba(0,0,0,0.08);
+            --transition: all 0.25s ease-in-out;
+        }
+
+        body {
+            font-family: var(--font-family-base);
+            background-color: var(--color-bg);
+            color: var(--color-text);
+        }
+        .container { max-width: 960px; }
+        h2, h5 { color: var(--color-secondary); font-weight: 600; }
+
+        .page-header {
+            background-color: var(--color-white); padding: 1.5rem;
+            border-radius: var(--border-radius); box-shadow: var(--shadow-sm); margin-bottom: 2rem;
+        }
+
+        .btn {
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            transition: var(--transition);
+            border: none;
+            padding: 0.7rem 1.3rem;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+        .btn-primary { background-color: var(--color-primary); border-color: var(--color-primary); }
+        .btn-primary:hover { background-color: var(--color-primary-dark); border-color: var(--color-primary-dark); }
+        .btn-secondary { background-color: var(--color-secondary); border-color: var(--color-secondary); color: var(--color-white); }
+        .btn-secondary:hover { background-color: #343a40; border-color: #343a40; }
+        .btn-success { background-color: var(--color-success); border-color: var(--color-success); }
+        .btn-info { background-color: var(--color-info); border-color: var(--color-info); }
+
+        .card {
+            border: none;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-sm);
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 0.25rem rgba(183, 110, 121, 0.25);
+        }
+
+        #messageBox {
+            display: none; position: fixed; top: 20px; left: 50%;
+            transform: translateX(-50%); z-index: 1050; min-width: 300px;
+            border-radius: var(--border-radius); box-shadow: var(--shadow-md);
+        }
+
+        .product-card {
+            border: 1px solid var(--color-border);
+            transition: var(--transition);
+        }
+        .product-card:hover {
+            box-shadow: var(--shadow-sm);
+        }
+        .product-card .card-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .product-card .thumbnail {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4 mb-5">
+        <div id="messageBox" class="alert text-center" role="alert"></div>
+
+        <div class="page-header text-center">
+            <h2 class="mb-3"><i class="fas fa-sync-alt"></i> Yeni Değişim Talebi</h2>
+            <div class="d-flex justify-content-center gap-2">
+                 <a href="{{ url_for('home.home') }}" class="btn btn-secondary"><i class="fas fa-home"></i> Anasayfa</a>
+                 <a href="{{ url_for('degisim.degisim_talep') }}" class="btn btn-info text-white"><i class="fas fa-list-ul"></i> Değişim Listesi</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-4">
+                <div class="mb-4">
+                    <label for="siparis_no_input" class="form-label fs-5">Sipariş Numarası</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control form-control-lg" id="siparis_no_input" required placeholder="Değişim yapılacak siparişin numarasını girin...">
+                        <button type="button" class="btn btn-primary" onclick="fetchOrderDetails()">Siparişi Getir</button>
+                    </div>
+                </div>
+
+                <form id="degisimKayitForm">
+                    <div id="orderDetails" style="display: none;">
+                        <input type="hidden" id="siparis_no" name="siparis_no">
+
+                        <hr class="my-4">
+                        <h5><i class="fas fa-user-circle text-primary"></i> Alıcı Bilgileri</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ad:</label>
+                                <input type="text" class="form-control" id="ad" name="ad">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Soyad:</label>
+                                <input type="text" class="form-control" id="soyad" name="soyad">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Adres:</label>
+                            <textarea class="form-control" id="adres" name="adres" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Telefon No:</label>
+                            <input type="text" class="form-control" id="telefon_no" name="telefon_no">
+                        </div>
+
+                        <h5 class="mt-4"><i class="fas fa-box-open text-primary"></i> Sipariş Edilen Ürünler</h5>
+                        <div id="productList" class="row"></div>
+
+                        <button class="btn btn-success mt-3 w-100" type="button" onclick="showExchangeForm()">
+                            <i class="fas fa-plus"></i> Değişim İçin Yeni Ürün Ekle
+                        </button>
+                    </div>
+
+                    <div id="exchangeForm" style="display: none; margin-top: 2rem; background-color: #f1f3f5; padding: 1.5rem; border-radius: var(--border-radius);">
+                        <h5 class="mt-0"><i class="fas fa-exchange-alt text-primary"></i> Değişim Yapılacak Yeni Ürün(ler)</h5>
+                        <div id="exchangeProductsContainer"></div>
+                        <button type="button" class="btn btn-outline-success mt-2" onclick="addNewProductField()">
+                            <i class="fas fa-plus"></i> Başka Ürün Ekle
+                        </button>
+                        <hr>
+
+                        <div class="mb-3">
+                            <label for="reason_select" class="form-label">Değişim Sebebi</label>
+                            <select id="reason_select" class="form-select" onchange="handleReasonChange(this)">
+                                <option value="">Seçiniz...</option>
+                                <option value="Ürün bedeni büyük geldi.">Ürün Bedeni Büyük Geldi</option>
+                                <option value="Ürün bedeni küçük geldi.">Ürün Bedeni Küçük Geldi</option>
+                                <option value="Kusurlu ürün gönderildi.">Kusurlu Ürün Gönderildi</option>
+                                <option value="Yanlış ürün gönderildi.">Yanlış Ürün Gönderildi</option>
+                                <option value="Özel">Özel (Kendim yazacağım)</option>
+                            </select>
+                        </div>
+
+                        <div id="custom_reason_div" class="mb-3" style="display: none;">
+                            <label for="degisim_nedeni_custom" class="form-label">Özel Değişim Nedeni</label>
+                            <textarea class="form-control" id="degisim_nedeni_custom" rows="3"></textarea>
+                        </div>
+                        <input type="hidden" id="degisim_nedeni" name="degisim_nedeni">
+                        <button type="submit" class="btn btn-primary w-100 btn-lg mt-3">
+                            <i class="fas fa-check-circle"></i> Değişimi Tamamla
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let productFieldIndex = 0;
+
+        function showMessage(message, success=true) {
+            const box = document.getElementById('messageBox');
+            box.style.display = 'block';
+            box.className = success ? 'alert alert-success text-center' : 'alert alert-danger text-center';
+            box.textContent = message;
+            box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { box.style.display = 'none'; }, 4000);
+        }
+
+        async function fetchOrderDetails() {
+            const siparisNo = document.getElementById('siparis_no_input').value.trim();
+            if (!siparisNo) return showMessage("Lütfen sipariş numarasını girin.", false);
+
+            try {
+                const response = await fetch("/get_order_details", {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ siparis_no: siparisNo })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('siparis_no').value = siparisNo;
+                    document.getElementById('ad').value = data.ad;
+                    document.getElementById('soyad').value = data.soyad;
+                    document.getElementById('adres').value = data.adres;
+                    document.getElementById('telefon_no').value = data.telefon_no || '';
+
+                    const productList = document.getElementById('productList');
+                    productList.innerHTML = '';
+                    data.details.forEach(product => {
+                        const productCard = `
+                            <div class="col-md-4 mb-4">
+                                <div class="card product-card">
+                                    <img src="/${product.image_url}" class="card-img-top thumbnail" alt="Ürün" onerror="this.src='/static/images/default.jpg'">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title">${product.sku}</h5>
+                                        <p class="card-text">Barkod: ${product.barcode}</p>
+                                    </div>
+                                </div>
+                            </div>`;
+                        productList.innerHTML += productCard;
+                    });
+                    document.getElementById('orderDetails').style.display = 'block';
+                    document.getElementById('exchangeForm').style.display = 'none';
+                } else {
+                    showMessage(data.message || "Sipariş bilgileri bulunamadı.", false);
+                }
+            } catch (error) {
+                showMessage("Sipariş bilgileri alınırken bir hata oluştu.", false);
+            }
+        }
+
+        function showExchangeForm() {
+            productFieldIndex = 0;
+            document.getElementById('exchangeProductsContainer').innerHTML = '';
+            addNewProductField();
+            document.getElementById('exchangeForm').style.display = 'block';
+        }
+
+        function addNewProductField() {
+            const index = productFieldIndex;
+            const container = document.getElementById('exchangeProductsContainer');
+
+            const newFieldWrapper = document.createElement('div');
+            newFieldWrapper.className = 'border p-3 mb-4 rounded bg-light position-relative';
+            newFieldWrapper.id = `product-field-block-${index}`;
+
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'btn-close position-absolute top-0 end-0 m-2';
+            removeButton.setAttribute('aria-label', 'Close');
+            removeButton.onclick = function() { this.parentElement.remove(); };
+
+            newFieldWrapper.appendChild(removeButton);
+
+            const fieldContent = `
+                <h6>Yeni Eklenecek Ürün #${index + 1}</h6>
+                <div class="mb-3">
+                    <label class="form-label" for="new_barcode_${index}">Yeni Ürün Barkodu</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="urun_barkod" id="new_barcode_${index}" required>
+                        <button type="button" class="btn btn-primary" onclick="fetchProductDetails(${index})">Getir</button>
+                    </div>
+                </div>
+                <div id="newProductDetails_${index}" class="mt-2"></div>
+            `;
+            newFieldWrapper.innerHTML += fieldContent;
+            container.appendChild(newFieldWrapper);
+            productFieldIndex++;
+        }
+
+        async function fetchProductDetails(index) {
+            const newBarcode = document.getElementById(`new_barcode_${index}`).value.trim();
+            if (!newBarcode) return showMessage("Lütfen yeni ürün barkodunu girin.", false);
+
+            const detailsDiv = document.getElementById(`newProductDetails_${index}`);
+            detailsDiv.innerHTML = '<div class="spinner-border spinner-border-sm"></div>';
+
+            try {
+                const response = await fetch("/get_product_details", {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ barcode: newBarcode })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    detailsDiv.innerHTML = `
+                        <div class='alert alert-success p-2'>
+                            <p class="mb-1"><strong>Model:</strong> ${data.product_main_id}</p>
+                            <p class="mb-1"><strong>Beden:</strong> ${data.size}</p>
+                            <p class="mb-1"><strong>Renk:</strong> ${data.color}</p>
+                            <img src="/${data.image_url}" alt="Ürün Görseli" class="thumbnail" onerror="this.src='/static/images/default.jpg'">
+                        </div>
+                        <input type="hidden" name="urun_model_kodu" value="${data.product_main_id}">
+                        <input type="hidden" name="urun_renk" value="${data.color}">
+                        <input type="hidden" name="urun_beden" value="${data.size}">
+                    `;
+                } else {
+                    detailsDiv.innerHTML = `<div class='alert alert-danger p-2'>Ürün bulunamadı.</div>`;
+                    showMessage(data.message || "Ürün bilgileri bulunamadı.", false);
+                }
+            } catch (error) {
+                detailsDiv.innerHTML = '';
+                showMessage("Ürün bilgileri alınırken bir hata oluştu.", false);
+            }
+        }
+
+        // DEĞİŞİM NEDENİ SEÇİMİNİ YÖNETEN FONKSİYON
+        function handleReasonChange(selectElement) {
+            const customReasonDiv = document.getElementById('custom_reason_div');
+            const hiddenReasonInput = document.getElementById('degisim_nedeni');
+
+            if (selectElement.value === 'Özel') {
+                customReasonDiv.style.display = 'block';
+                hiddenReasonInput.value = ''; // Özel seçildiğinde gizli input'u boşalt
+            } else {
+                customReasonDiv.style.display = 'none';
+                hiddenReasonInput.value = selectElement.value; // Seçilen değeri gizli input'a ata
+            }
+        }
+
+        document.getElementById('degisimKayitForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            // Değişim nedenini ayarla
+            const reasonSelect = document.getElementById('reason_select');
+            const hiddenReasonInput = document.getElementById('degisim_nedeni');
+            if (reasonSelect.value === 'Özel') {
+                hiddenReasonInput.value = document.getElementById('degisim_nedeni_custom').value.trim();
+            } else {
+                hiddenReasonInput.value = reasonSelect.value;
+            }
+
+            if (!hiddenReasonInput.value) {
+                return showMessage("Lütfen bir değişim sebebi seçin veya yazın.", false);
+            }
+
+            const productInputs = this.querySelectorAll('input[name="urun_barkod"]');
+            if (productInputs.length === 0) {
+                return showMessage("Lütfen değişim için en az bir yeni ürün ekleyin.", false);
+            }
+
+            for (let i = 0; i < productInputs.length; i++) {
+                const block = productInputs[i].closest('.border');
+                const hiddenModelInput = block.querySelector('input[name="urun_model_kodu"]');
+
+                if (!productInputs[i].value || !hiddenModelInput || !hiddenModelInput.value) {
+                    showMessage(`Lütfen ${i + 1}. ürün için barkodu girip 'Getir' butonuna basın ve bilgilerin geldiğinden emin olun.`, false);
+                    return;
+                }
+            }
+
+            const formData = new FormData(this);
+            const submitButton = this.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Kaydediliyor...';
+
+            try {
+                const response = await fetch('/degisim-kaydet', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok && response.redirected) {
+                     window.location.href = response.url;
+                } else {
+                    const errorData = await response.json().catch(() => ({ message: "Bilinmeyen bir sunucu hatası oluştu." }));
+                    showMessage(errorData.message || "Kayıt sırasında hata oluştu.", false);
+                }
+            } catch (error) {
+                showMessage("Ağ hatası: Sunucuya ulaşılamadı.", false);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = 'Değişimi Tamamla';
+            }
+        });
+    </script>
+</body>
+</html>

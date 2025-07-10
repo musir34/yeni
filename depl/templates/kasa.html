@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kasa - Güllü Ayakkabı</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin-top: 20px;
+            padding: 0 15px;
+        }
+        
+        .header-section {
+            background: linear-gradient(135deg, #667db6 0%, #0082c8 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .header-section h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+        
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card.gelir {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+        }
+        
+        .stat-card.gider {
+            background: linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%);
+        }
+        
+        .stat-card.net {
+            background: linear-gradient(135deg, #757f9a 0%, #d7dde8 100%);
+        }
+        
+        .stat-card.net.positive {
+            background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
+        }
+        
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.1rem;
+        }
+        
+        .stat-card .amount {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .top-actions {
+            margin-bottom: 20px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .filter-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .filter-section h5 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .table-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+        
+        .btn {
+            border-radius: 20px;
+            padding: 8px 20px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: none;
+            white-space: nowrap;
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            color: white;
+        }
+        
+        .btn-info {
+            background: linear-gradient(135deg, #17a2b8 0%, #5bc0de 100%);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #adb5bd 100%);
+            color: white;
+        }
+        
+        .form-control {
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            font-size: 14px;
+        }
+        
+        .form-control:focus {
+            border-color: #6dd5ed;
+            box-shadow: 0 0 5px rgba(109, 213, 237, 0.5);
+        }
+        
+        .table {
+            margin-bottom: 0;
+        }
+        
+        .table th {
+            background-color: #f8f9fa;
+            border-top: none;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .table td {
+            vertical-align: middle;
+        }
+        
+        .tip-gelir {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+        
+        .tip-gider {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+        
+        .pagination {
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .pagination .page-link {
+            border-radius: 5px;
+            margin: 0 2px;
+            border: 1px solid #dee2e6;
+            color: #495057;
+        }
+        
+        .pagination .page-link:hover {
+            background-color: #6dd5ed;
+            color: white;
+        }
+        
+        .pagination .page-item.active .page-link {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+        
+        .alert {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .kategori-tag {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+        }
+        
+        .kategori-yonetim {
+            background: linear-gradient(135deg, #667db6 0%, #0082c8 100%);
+            color: white;
+            margin-right: 5px;
+        }
+        
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            .container {
+                margin-top: 10px;
+                padding: 0 10px;
+            }
+            
+            .header-section {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+            
+            .header-section h1 {
+                font-size: 1.5rem;
+            }
+            
+            .stats-cards {
+                grid-template-columns: 1fr;
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+            
+            .stat-card {
+                padding: 15px;
+            }
+            
+            .stat-card h3 {
+                font-size: 1rem;
+            }
+            
+            .stat-card .amount {
+                font-size: 1.3rem;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .btn {
+                margin-bottom: 5px;
+                width: 100%;
+                text-align: center;
+            }
+            
+            .filter-section {
+                padding: 15px;
+            }
+            
+            .filter-section .row {
+                margin: 0;
+            }
+            
+            .filter-section .col-md-3,
+            .filter-section .col-md-2 {
+                padding: 0;
+                margin-bottom: 10px;
+            }
+            
+            .table-section {
+                padding: 10px;
+            }
+            
+            .table-responsive {
+                border: none;
+            }
+            
+            .table {
+                font-size: 12px;
+            }
+            
+            .table th,
+            .table td {
+                padding: 8px 4px;
+            }
+            
+            .btn-sm {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+            
+            .kategori-tag {
+                font-size: 10px;
+                padding: 2px 6px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .stats-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .btn {
+                font-size: 12px;
+                padding: 6px 15px;
+            }
+            
+            .table {
+                font-size: 11px;
+            }
+            
+            .table th,
+            .table td {
+                padding: 6px 2px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header-section">
+            <h1><i class="fas fa-cash-register"></i> Kasa Yönetimi</h1>
+            <p>Gelir ve gider kayıtlarınızı yönetin</p>
+        </div>
+
+        <!-- Flash Messages 
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}  -->
+
+        <!-- İstatistik Kartları -->
+        <div class="stats-cards">
+            <div class="stat-card gelir">
+                <h3><i class="fas fa-arrow-up"></i> Toplam Gelir</h3>
+                <div class="amount">{{ "%.2f"|format(toplam_gelir) }} ₺</div>
+            </div>
+            <div class="stat-card gider">
+                <h3><i class="fas fa-arrow-down"></i> Toplam Gider</h3>
+                <div class="amount">{{ "%.2f"|format(toplam_gider) }} ₺</div>
+            </div>
+            <div class="stat-card net {{ 'positive' if net_durum >= 0 else '' }}">
+                <h3><i class="fas fa-balance-scale"></i> Net Durum</h3>
+                <div class="amount">{{ "%.2f"|format(net_durum) }} ₺</div>
+            </div>
+        </div>
+
+        <!-- Üst Aksiyonlar -->
+        <div class="top-actions">
+            <div class="action-buttons">
+                <a href="{{ url_for('kasa.yeni_kasa_kaydi') }}" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Yeni Kayıt
+                </a>
+                <a href="{{ url_for('kasa.kategoriler') }}" class="btn kategori-yonetim">
+                    <i class="fas fa-tags"></i> Kategori Yönetimi
+                </a>
+                <!--<a href="{{ url_for('kasa.kasa_rapor') }}" class="btn btn-info">
+                    <i class="fas fa-chart-bar"></i> Raporlar
+                </a> -->
+                <a href="{{ url_for('home.home') }}" class="btn btn-secondary">
+                    <i class="fas fa-home"></i> Ana Sayfa
+                </a>
+            </div>
+        </div>
+
+        <!-- Filtreleme -->
+        <div class="filter-section">
+            <h5><i class="fas fa-filter"></i> Filtreleme</h5>
+            <form method="GET" action="{{ url_for('kasa.kasa_sayfasi') }}">
+                <div class="row">
+                    <div class="col-md-3 col-sm-6">
+                        <label for="baslangic_tarihi">Başlangıç Tarihi:</label>
+                        <input type="date" class="form-control" id="baslangic_tarihi" name="baslangic_tarihi" value="{{ baslangic_tarihi }}">
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <label for="bitis_tarihi">Bitiş Tarihi:</label>
+                        <input type="date" class="form-control" id="bitis_tarihi" name="bitis_tarihi" value="{{ bitis_tarihi }}">
+                    </div>
+                    <div class="col-md-2 col-sm-6">
+                        <label for="tip">Tip:</label>
+                        <select class="form-control" id="tip" name="tip">
+                            <option value="">Tümü</option>
+                            <option value="gelir" {{ 'selected' if tip == 'gelir' else '' }}>Gelir</option>
+                            <option value="gider" {{ 'selected' if tip == 'gider' else '' }}>Gider</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 col-sm-6">
+                        <label for="arama">Arama:</label>
+                        <input type="text" class="form-control" id="arama" name="arama" placeholder="Açıklama, kategori..." value="{{ arama }}">
+                    </div>
+                    <div class="col-md-2 col-sm-12">
+                        <label>&nbsp;</label>
+                        <div class="d-flex">
+                            <button type="submit" class="btn btn-primary mr-2">
+                                <i class="fas fa-search"></i> Filtrele
+                            </button>
+                            <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Temizle
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Kasa Listesi -->
+        <div class="table-section">
+            <h5><i class="fas fa-list"></i> Kasa Kayıtları ({{ toplam_kayit }} kayıt)</h5>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Tarih</th>
+                            <th>Tip</th>
+                            <th>Açıklama</th>
+                            <th>Kategori</th>
+                            <th>Tutar</th>
+                            <th>Kullanıcı</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for kayit in kayitlar %}
+                        <tr>
+                            <td>{{ kayit.tarih.strftime('%d.%m.%Y %H:%M') }}</td>
+                            <td>
+                                <span class="tip-{{ kayit.tip }}">
+                                    {{ kayit.tip.title() }}
+                                </span>
+                            </td>
+                            <td>{{ kayit.aciklama }}</td>
+                            <td>
+                                {% if kayit.kategori %}
+                                    <span class="kategori-tag">{{ kayit.kategori }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>{{ "%.2f"|format(kayit.tutar) }} ₺</strong>
+                            </td>
+                            <td>{{ kayit.first_name }} {{ kayit.last_name }}</td>
+                            <td>
+                                <a href="{{ url_for('kasa.kasa_duzenle', kayit_id=kayit.id) }}" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('kasa.kasa_sil', kayit_id=kayit.id) }}" class="d-inline" onsubmit="return confirm('Bu kaydı silmek istediğinizden emin misiniz?')">
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">Henüz kayıt bulunmamaktadır.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Sayfalama -->
+            {% if toplam_sayfa > 1 %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination">
+                    {% if sayfa > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('kasa.kasa_sayfasi', sayfa=sayfa-1, baslangic_tarihi=baslangic_tarihi, bitis_tarihi=bitis_tarihi, tip=tip, arama=arama) }}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in range(1, toplam_sayfa + 1) %}
+                        {% if page_num == sayfa %}
+                        <li class="page-item active">
+                            <a class="page-link" href="#">{{ page_num }}</a>
+                        </li>
+                        {% elif page_num <= 3 or page_num > toplam_sayfa - 3 or (page_num >= sayfa - 1 and page_num <= sayfa + 1) %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('kasa.kasa_sayfasi', sayfa=page_num, baslangic_tarihi=baslangic_tarihi, bitis_tarihi=bitis_tarihi, tip=tip, arama=arama) }}">{{ page_num }}</a>
+                        </li>
+                        {% elif page_num == 4 and sayfa > 6 %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        {% elif page_num == toplam_sayfa - 3 and sayfa < toplam_sayfa - 5 %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if sayfa < toplam_sayfa %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('kasa.kasa_sayfasi', sayfa=sayfa+1, baslangic_tarihi=baslangic_tarihi, bitis_tarihi=bitis_tarihi, tip=tip, arama=arama) }}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+</body>
+</html>

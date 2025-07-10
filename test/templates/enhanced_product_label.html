@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Otomatik Etiket Basımı - Güllü Shoes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <style>
+        body { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; }
+        .main-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .section-card { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); padding: 24px; margin-bottom: 24px; }
+        .section-title { font-size: 1.4rem; font-weight: 600; color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 16px; margin-top: 20px; }
+        .product-card { border: 2px solid #e1e8ed; border-radius: 12px; padding: 16px; background: #f8f9fa; }
+        .product-header { background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 12px; border-radius: 8px; margin-bottom: 12px; text-align: center; font-weight: 600; }
+        .variant-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin: 4px 0; background: white; border-radius: 6px; border: 1px solid #dee2e6; }
+        .btn-add-label { background: linear-gradient(135deg, #27ae60, #229954); border: none; padding: 6px 12px; border-radius: 6px; color: white; transition: all 0.3s; }
+        .btn-add-label:hover { background: linear-gradient(135deg, #229954, #1e8449); }
+        .label-queue { max-height: 500px; overflow-y: auto; }
+        .label-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; margin: 8px 0; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db; }
+        .quantity-control { display: flex; align-items: center; gap: 8px; margin: 0 12px; }
+        .quantity-input { width: 60px; text-align: center; border: 1px solid #bdc3c7; border-radius: 4px; padding: 4px; }
+        .btn-remove { background: #e74c3c; border: none; padding: 6px 10px; border-radius: 6px; color: white; }
+        .btn-primary-action { background: linear-gradient(135deg, #e74c3c, #c0392b); border: none; padding: 14px 40px; border-radius: 8px; color: white; font-weight: 600; font-size: 1.2em; transition: all 0.3s; width: 100%; }
+        .btn-primary-action:hover { background: linear-gradient(135deg, #c0392b, #a93226); transform: translateY(-2px); }
+        .loading { display: none; text-align: center; padding: 40px; }
+        .spinner { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .alert-container { position: fixed; top: 20px; right: 20px; z-index: 1050; width: 350px; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+
+        <div class="section-card">
+            <h2 class="section-title"><i class="fas fa-search"></i> 1. Ürün Ara</h2>
+            <div class="d-flex gap-2">
+                <input type="text" id="searchQuery" class="form-control form-control-lg" placeholder="Model kodunu girin..."/>
+                <button id="searchBtn" class="btn btn-primary btn-lg"><i class="fas fa-search"></i></button>
+            </div>
+            <div id="searchResults" class="product-grid"></div>
+        </div>
+
+        <div class="section-card">
+            <h2 class="section-title"><i class="fas fa-list"></i> 2. Yazdırılacak Etiketler <span id="labelCount" class="badge bg-primary ms-2">0</span></h2>
+            <div id="labelQueue" class="label-queue">
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-inbox fa-3x mb-3 opacity-50"></i>
+                    <p>Henüz etiket eklenmedi</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-card text-center">
+            <h2 class="section-title"><i class="fas fa-print"></i> 3. Yazdır</h2>
+            <p class="text-muted">Aşağıdaki butona bastığınızda, seçili etiketler A4 kağıdına 21 adet (60x40mm) sığacak şekilde bir PDF olarak hazırlanacaktır.</p>
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>PDF hazırlanıyor, lütfen bekleyin...</p>
+            </div>
+            <button id="printBtn" class="btn btn-primary-action mt-3">
+                <i class="fas fa-print"></i> TÜM ETİKETLERİ YAZDIR
+            </button>
+        </div>
+    </div>
+
+    <div id="alertContainer" class="alert-container"></div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Global değişkenler
+            window.labelQueue = []; 
+
+            // Event Listeners
+            const searchBtn = document.getElementById("searchBtn");
+            const searchQuery = document.getElementById("searchQuery");
+            const printBtn = document.getElementById("printBtn");
+
+            searchBtn.addEventListener("click", searchProducts);
+            searchQuery.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") searchProducts();
+            });
+            printBtn.addEventListener("click", printLabels);
+        });
+
+        // --- Arayüz Fonksiyonları ---
+        function showAlert(message, type = 'info', duration = 3000) {
+            const container = document.getElementById('alertContainer');
+            const alertEl = document.createElement('div');
+            alertEl.className = `alert alert-${type} alert-dismissible fade show`;
+            alertEl.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            container.appendChild(alertEl);
+            setTimeout(() => {
+                alertEl.classList.remove('show');
+                setTimeout(() => alertEl.remove(), 150);
+            }, duration);
+        }
+
+        function showLoading(show) {
+            document.getElementById("loading").style.display = show ? "block" : "none";
+            document.getElementById("printBtn").style.display = show ? "none" : "block";
+        }
+
+        // --- Etiket Kuyruğu Yönetimi ---
+        function addToQueue(barcode, modelId, color, size) {
+            const existingIndex = window.labelQueue.findIndex(item => item.barcode === barcode);
+            if (existingIndex > -1) {
+                window.labelQueue[existingIndex].quantity++;
+            } else {
+                window.labelQueue.push({ barcode, model_id: modelId, color, size, quantity: 1 });
+            }
+            updateLabelQueueUI();
+            showAlert(`${modelId} - ${size} kuyruğa eklendi.`, 'success');
+        }
+
+        function removeFromQueue(index) {
+            window.labelQueue.splice(index, 1);
+            updateLabelQueueUI();
+            showAlert("Etiket kuyruktan çıkarıldı.", "warning");
+        }
+
+        function changeQuantity(index, change) {
+            const item = window.labelQueue[index];
+            if (item) {
+                item.quantity = Math.max(1, item.quantity + change);
+                updateLabelQueueUI();
+            }
+        }
+
+        function updateLabelQueueUI() {
+            const container = document.getElementById("labelQueue");
+            const countBadge = document.getElementById("labelCount");
+
+            let totalQuantity = window.labelQueue.reduce((sum, item) => sum + item.quantity, 0);
+            countBadge.textContent = totalQuantity;
+
+            if (window.labelQueue.length === 0) {
+                container.innerHTML = `<div class="text-center text-muted py-4"><i class="fas fa-inbox fa-3x mb-3 opacity-50"></i><p>Henüz etiket eklenmedi</p></div>`;
+                return;
+            }
+
+            container.innerHTML = window.labelQueue.map((item, index) => `
+                <div class="label-item">
+                    <div class="flex-grow-1">
+                        <div class="fw-bold">${item.model_id} - ${item.color}</div>
+                        <div class="text-muted small">Beden: ${item.size} | Barkod: ${item.barcode}</div>
+                    </div>
+                    <div class="quantity-control">
+                        <button class="btn btn-secondary btn-sm" onclick="changeQuantity(${index}, -1)">-</button>
+                        <input type="number" class="quantity-input" value="${item.quantity}" min="1" onchange="this.value = Math.max(1, parseInt(this.value) || 1); window.labelQueue[${index}].quantity = parseInt(this.value); updateLabelQueueUI();">
+                        <button class="btn btn-secondary btn-sm" onclick="changeQuantity(${index}, 1)">+</button>
+                    </div>
+                    <button class="btn-remove" onclick="removeFromQueue(${index})"><i class="fas fa-trash"></i></button>
+                </div>
+            `).join("");
+        }
+
+        // --- API İstekleri ---
+        async function searchProducts() {
+            const query = document.getElementById("searchQuery").value.trim();
+            if (!query) {
+                showAlert("Lütfen arama için bir model kodu girin.", "danger");
+                return;
+            }
+            showLoading(true);
+            try {
+                const response = await fetch(`/api/search_products_for_label?query=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                if (data.success) {
+                    displaySearchResults(data.products);
+                } else {
+                    showAlert(data.message, "danger");
+                    document.getElementById("searchResults").innerHTML = "";
+                }
+            } catch (error) {
+                showAlert("Arama sırasında bir ağ hatası oluştu.", "danger");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function displaySearchResults(products) {
+            const container = document.getElementById("searchResults");
+            if (products.length === 0) {
+                container.innerHTML = `<div class="text-center text-muted py-4"><p>Ürün bulunamadı</p></div>`;
+                return;
+            }
+            container.innerHTML = products.map(product => `
+                <div class="product-card">
+                    <div class="product-header">${product.model_id} - ${product.color}</div>
+                    ${product.variants.map(variant => `
+                        <div class="variant-item">
+                            <div>
+                                <div class="fw-bold">Beden: ${variant.size}</div>
+                                <div class="text-muted small">Stok: ${variant.quantity}</div>
+                            </div>
+                            <button class="btn-add-label" onclick="addToQueue('${variant.barcode}', '${product.model_id}', '${product.color}', '${variant.size}')">
+                                <i class="fas fa-plus"></i> Ekle
+                            </button>
+                        </div>
+                    `).join("")}
+                </div>
+            `).join("");
+        }
+
+        async function printLabels() {
+            if (window.labelQueue.length === 0) {
+                showAlert("Yazdırılacak etiket bulunmuyor.", "danger");
+                return;
+            }
+
+            showLoading(true);
+
+            const expandedLabels = [];
+            window.labelQueue.forEach(item => {
+                for (let i = 0; i < item.quantity; i++) {
+                    expandedLabels.push({
+                        barcode: item.barcode,
+                        model_code: item.model_id,
+                        color: item.color,
+                        size: item.size
+                    });
+                }
+            });
+
+            try {
+                const response = await fetch("/api/print_labels", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ labels: expandedLabels }),
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showAlert("PDF başarıyla oluşturuldu! Yeni sekmede açılıyor...", "success");
+                    window.open(data.image_url, '_blank');
+                } else {
+                    showAlert(`Yazdırma hatası: ${data.message}`, "danger");
+                }
+            } catch (error) {
+                showAlert("PDF oluşturulurken bir ağ hatası oluştu.", "danger");
+            } finally {
+                showLoading(false);
+            }
+        }
+    </script>
+</body>
+</html>

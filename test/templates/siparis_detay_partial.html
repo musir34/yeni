@@ -1,0 +1,111 @@
+<div class="container-fluid">
+  <div class="row mb-3">
+    <div class="col-lg-6 mb-3 mb-lg-0">
+      <div class="card h-100">
+        <div class="card-header bg-light">
+          <h6 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Sipariş Bilgileri</h6>
+        </div>
+        <div class="card-body">
+          <p class="mb-1"><strong>Sipariş No:</strong> <span data-siparis-no>{{ siparis.siparis_no }}</span></p>
+          <p class="mb-1"><strong>Tarih:</strong> <span data-siparis-tarihi>{{ siparis.siparis_tarihi.strftime('%d.%m.%Y %H:%M') if siparis.siparis_tarihi else 'N/A' }}</span></p> {# GÜNCELLENDİ #}
+          <p class="mb-0"><strong>Durum:</strong> 
+            <span class="badge 
+              {% if siparis.durum == 'Tamamlandı' %}bg-success
+              {% elif siparis.durum == 'İptal Edildi' %}bg-danger
+              {% elif siparis.durum == 'Kargoya Verildi' %}bg-info
+              {% elif siparis.durum == 'Hazırlanıyor' %}bg-warning
+              {% elif siparis.durum == 'Onaylandı' %}bg-primary
+              {% else %}bg-secondary{% endif %}" data-durum>{{ siparis.durum }}</span>
+          </p>
+          {% if siparis.notlar %}
+          <hr class="my-2">
+          <p class="mb-1"><strong>Notlar:</strong></p>
+          <p class="mb-0 fst-italic text-muted" data-notlar>"{{ siparis.notlar }}"</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header bg-light">
+          <h6 class="mb-0"><i class="bi bi-person-fill me-2"></i>Müşteri Bilgileri</h6>
+        </div>
+        <div class="card-body">
+          <p class="mb-1"><strong>Müşteri:</strong>
+             <span data-musteri-adi>{{ siparis.musteri_adi }}</span>
+             <span data-musteri-soyadi>{{ siparis.musteri_soyadi }}</span>
+          </p>
+          <p class="mb-1"><strong>Telefon:</strong> <span data-musteri-telefon>{{ siparis.musteri_telefon }}</span></p>
+          <p class="mb-0"><strong>Adres:</strong> <span data-musteri-adres class="d-block" style="white-space: pre-wrap;">{{ siparis.musteri_adres }}</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="my-4">
+
+  <h6 class="mb-3"><i class="bi bi-box-seam me-2"></i>Sipariş Edilen Ürünler</h6>
+  <div class="table-responsive">
+    <table class="table table-bordered table-hover table-sm table-products">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>Görsel</th>
+          <th>Barkod</th>
+          <th>Model Kod</th>
+          <th>Renk / Beden</th>
+          <th class="text-end">Adet</th>
+          <th class="text-end">Birim Fiyat</th>
+          <th class="text-end">Toplam Fiyat</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if urunler %}
+          {% for urun in urunler %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td class="text-center">
+              {% if urun.urun_gorseli %}
+                <img src="{{ urun.urun_gorseli }}" alt="Ürün Görseli" class="img-thumbnail product-image-clickable" 
+                     style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;" 
+                     onclick="showImageModal('{{ urun.urun_gorseli }}', '{{ urun.product_main_id or urun.urun_barkod }}')">
+              {% else %}
+                <img src="/static/images/{{ urun.urun_barkod }}.jpg" alt="Ürün Görseli" class="img-thumbnail product-image-clickable" 
+                     style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;" 
+                     onclick="showImageModal('/static/images/{{ urun.urun_barkod }}.jpg', '{{ urun.product_main_id or urun.urun_barkod }}')"
+                     onerror="this.src='/static/images/default-product.png';">
+              {% endif %}
+            </td>
+            <td data-urun-barkod>{{ urun.urun_barkod }}</td>
+            <td data-model-kod>
+              {% if urun.product_main_id %}
+                <strong>{{ urun.product_main_id }}</strong>
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+            <td><span data-urun-renk>{{ urun.renk }}</span> / <span data-urun-beden>{{ urun.beden }}</span></td>
+            <td class="text-end" data-urun-adet>{{ (urun.adet|default(0, true))|int }}</td>
+            <td class="text-end" data-urun-birim-fiyat>{{ "%.2f"|format((urun.birim_fiyat|default(0, true))|float) }} TL</td>
+            <td class="text-end fw-bold" data-urun-toplam-fiyat>{{ "%.2f"|format((urun.toplam_fiyat|default(0, true))|float) }} TL</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" class="text-center text-muted">Bu siparişte ürün bulunmamaktadır.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+      {% if urunler %}
+      <tfoot>
+        <tr class="table-light">
+          <td colspan="7" class="text-end fw-bold"><h5>Genel Toplam:</h5></td>
+          <td class="text-end fw-bold"><h5 data-genel-toplam>{{ "%.2f"|format((siparis.toplam_tutar|default(0, true))|float) }} TL</h5></td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+

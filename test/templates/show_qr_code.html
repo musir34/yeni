@@ -1,0 +1,13 @@
+<!-- show_qr_code.html -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ username }} Kullanıcısının QR Kodu</title>
+</head>
+<body>
+    <h3>{{ username }} için QR Kodu</h3>
+    <img src="data:image/png;base64,{{ qr_code_data }}" alt="QR Kodu">
+    <p><a href="{{ url_for('approve_users') }}">Kullanıcı Yönetimine Geri Dön</a></p>
+</body>
+</html>

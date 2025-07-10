@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tedarik Bilgileri - Güllü Shoes</title> {# Başlığa firma adını ekledim #}
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet"> {# Daha güzel bir font #}
+    <style>
+        /* Temel Sıfırlama */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Sayfa Arka Plan ve Yazı Tipi */
+        body {
+            font-family: 'Open Sans', Arial, sans-serif; /* Yeni fontu kullan */
+            background: #f5f5f5;
+            color: #333;
+            display: flex; /* Footer'ı alta sabitlemek için */
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /********************************
+         * Header (Üst Menü)
+         ********************************/
+        .header {
+            background: #30475e; /* Koyu Mavi/Gri tonu */
+            color: #fff;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: sticky; /* Yukarıya sabitler */
+            top: 0;
+            z-index: 999; /* Diğer elementlerin üstünde kalır */
+             flex-wrap: wrap; /* Küçük ekranlarda alt alta düşsün */
+             gap: 10px; /* Elementler arasına boşluk */
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logo {
+            width: 40px; /* Logo boyutunu biraz küçülttüm */
+            height: auto;
+            border-radius: 4px;
+            object-fit: cover;
+        }
+         .header h1 {
+             margin: 0;
+             font-size: 1.3rem; /* Başlık boyutunu ayarladım */
+             font-weight: 600; /* Başlık biraz kalın */
+             color: #fff; /* Başlık rengi */
+         }
+        .header .left-btns {
+            display: flex; /* Butonları yan yana al */
+            align-items: center;
+            gap: 10px; /* Butonlar arası boşluk */
+             flex-wrap: wrap; /* Küçük ekranlarda alt alta düşsün */
+             justify-content: center; /* Ortala */
+        }
+        .header .left-btns a,
+        .header .left-btns button { /* Hem a hem button seçimi */
+            color: #fff;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            background-color: rgba(255, 255, 255, 0.1); /* Hafif şeffaf arkaplan */
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+            font-size: 0.9rem; /* Yazı boyutu */
+        }
+        .header .left-btns a:hover,
+        .header .left-btns button:hover {
+            background-color: rgba(255, 255, 255, 0.2); /* Hoverda daha belirgin şeffaf */
+        }
+        .btn-print {
+            background-color: #28a745; /* Yazdırma butonları yeşil */
+            color: white;
+        }
+        .btn-print:hover {
+            background-color: #218838;
+        }
+        .btn-print:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        /********************************
+         * Arama Alanı
+         ********************************/
+        .search-container {
+            padding: 20px;
+            background: #fff;
+            margin: 20px auto;
+            width: 95%; /* Genişliği artırdım */
+            max-width: 1200px;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            animation: fadeIn 0.8s ease forwards; /* Hafif giriş animasyonu */
+        }
+        .search-form {
+            display: flex;
+            gap: 10px;
+             flex-wrap: wrap; /* Küçük ekranlarda alt alta düşsün */
+             align-items: center;
+        }
+        .search-form input {
+            flex: 1;
+            padding: 10px; /* Padding artırdım */
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            outline: none;
+             min-width: 150px; /* Minimum genişlik */
+             font-size: 0.9rem;
+        }
+        .search-form button {
+            padding: 10px 20px; /* Padding artırdım */
+            background: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+             font-size: 0.9rem;
+        }
+        .search-form button:hover {
+            background-color: #0056b3;
+        }
+        .clear-btn {
+             display: inline-block; /* Link de buton gibi davransın */
+            padding: 10px 20px;
+            background: #6c757d;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+             text-align: center;
+             font-size: 0.9rem;
+        }
+        .clear-btn:hover {
+            background: #5a6268;
+        }
+         @media (max-width: 600px) {
+             .search-form {
+                 flex-direction: column;
+             }
+             .search-form input,
+             .search-form button,
+             .clear-btn {
+                 width: 100%; /* Küçük ekranda tam genişlik */
+                 min-width: auto;
+             }
+         }
+
+
+        /********************************
+         * Ana İçerik ve Kartlar
+         ********************************/
+        .content {
+            width: 95%; /* Genişliği artırdım */
+            max-width: 1200px;
+            margin: 20px auto;
+            display: grid; /* Grid kullandım */
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Otomatik yerleşen kolonlar */
+            gap: 20px; /* Kartlar arası boşluk */
+            flex-grow: 1; /* Sayfa içeriğinin footer dışındaki alanı kaplamasını sağlar */
+        }
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .card {
+            background: #fff;
+            border-radius: 8px; /* Köşe yuvarlama artırdım */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* Gölge artırdım */
+            overflow: hidden; /* İçerik taşarsa gizle */
+            display: flex;
+            flex-direction: column; /* İçindeki elemanları dikey sırala */
+            animation: fadeIn 0.8s ease forwards; /* Giriş animasyonu */
+            transition: transform 0.2s ease, box-shadow 0.2s ease; /* Hover animasyonları */
+            position: relative; /* Checkbox konumu için */
+        }
+        .card:hover {
+            transform: translateY(-8px); /* Hoverda hafif yukarı hareket */
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15); /* Hoverda gölge artışı */
+        }
+        .card img {
+            width: 100%;
+            height: 180px; /* Resim yüksekliği */
+            object-fit: cover; /* Resmi kutuya sığdırırken oranını koru */
+            border-bottom: 1px solid #eee; /* Resim altına çizgi */
+        }
+        .card-body {
+            padding: 15px; /* İç padding */
+            display: flex;
+            flex-direction: column;
+            gap: 8px; /* İç elemanlar arası boşluk */
+            flex-grow: 1; /* Kalan dikey alanı kapla */
+        }
+        .card-title {
+            font-size: 1.2rem; /* Başlık boyutu */
+            font-weight: 700; /* Kalınlık */
+            margin: 0 0 5px 0; /* Alt boşluk */
+            color: #30475e; /* Başlık rengi */
+        }
+        .card-text {
+            font-size: 0.95rem; /* Metin boyutu */
+            color: #555;
+            margin: 0;
+            line-height: 1.4;
+        }
+        .card-text strong {
+            font-weight: 600; /* Bilgi başlıkları (Renk, Oluşturma vb.) kalın */
+            color: #444;
+        }
+        .fis-select {
+            position: absolute; /* Kartın üstüne yerleştir */
+            top: 10px;
+            left: 10px;
+            z-index: 10; /* Üstte kalmasını sağla */
+            background: rgba(255, 255, 255, 0.8); /* Hafif şeffaf arka plan */
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .fis-checkbox {
+            transform: scale(1.3); /* Checkbox boyutu */
+            cursor: pointer;
+        }
+
+        /********************************
+         * Butonlar (Detay, Yazdır, Sil, Barkod)
+         ********************************/
+        .btn-actions {
+            display: flex;
+            flex-wrap: wrap; /* Butonlar sığmazsa alt alta düşsün */
+            gap: 8px; /* Butonlar arası boşluk */
+            margin-top: auto; /* Kart body içinde en alta it */
+            padding-top: 10px; /* Üstten boşluk */
+            border-top: 1px solid #eee; /* Ayırıcı çizgi */
+        }
+        .btn-actions a, /* .btn-actions içindeki linkler */
+        .btn-actions button { /* .btn-actions içindeki buttonlar */
+             flex-grow: 1; /* Tüm butonlar/linkler eşit alanı kaplasın */
+             flex-basis: auto; /* Başlangıç boyutu otomatik */
+            padding: 8px 12px; /* Padding */
+            border-radius: 4px;
+            color: #fff;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+             text-align: center; /* Yazıyı ortala */
+             font-size: 0.9rem; /* Yazı boyutu */
+             min-width: 80px; /* Minimum genişlik, küçük ekranlarda önemli */
+        }
+         /* Detay ve Fiş Yazdır butonları */
+        .btn-detail {
+            background-color: #007bff; /* Mavi */
+        }
+        .btn-detail:hover {
+            background-color: #0056b3; /* Koyu Mavi */
+        }
+         /* Yeni Barkod Yazdır Butonu Stili */
+        .btn-barcode {
+            background-color: #ffc107; /* Sarı */
+            color: #333; /* Koyu yazı */
+        }
+        .btn-barcode:hover {
+            background-color: #e0a800; /* Daha koyu sarı */
+        }
+         /* Sil Butonu */
+        .btn-delete {
+            background-color: #dc3545; /* Kırmızı */
+        }
+        .btn-delete:hover {
+            background-color: #b02a37; /* Koyu Kırmızı */
+        }
+
+
+        /********************************
+         * Sayfalandırma (Pagination)
+         ********************************/
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 30px 0; /* Üst ve alt boşluk */
+            animation: fadeIn 0.8s ease forwards;
+             flex-wrap: wrap; /* Küçük ekranlarda alt alta düşsün */
+        }
+        .pagination a {
+            padding: 10px 15px; /* Padding */
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-decoration: none;
+            color: #007bff;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+             min-width: 40px; /* Sayfa numaraları için minimum genişlik */
+             text-align: center;
+        }
+        .pagination a:hover {
+            background: #e9ecef; /* Hover rengi */
+            border-color: #cce5ff;
+        }
+        .pagination a.active {
+            background: #007bff;
+            color: #fff;
+            border-color: #007bff;
+            font-weight: bold;
+        }
+        .pagination span {
+            padding: 10px 15px;
+             color: #777;
+        }
+
+        /* Footer */
+        .page-footer {
+            width: 100%;
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #ddd;
+            color: #777;
+            font-size: 0.9rem;
+            flex-shrink: 0; /* Sayfa içeriği uzadığında footer'ın küçülmesini engeller */
+            padding-bottom: 1rem; /* Alt boşluk */
+        }
+
+
+         /* Kartların minimum genişliği (Responsive) */
+         @media (max-width: 480px) { /* Tablet ve altı */
+             .content {
+                 grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Minimum genişlik 250px */
+             }
+             .header {
+                 flex-direction: column;
+                 gap: 15px;
+             }
+             .header .left-btns {
+                 justify-content: center;
+             }
+             .header .left-btns a,
+             .header .left-btns button {
+                 flex-grow: 0; /* Küçük ekranda eşit yayılmasınlar, kendi boyutlarında kalsınlar */
+             }
+             .card-body {
+                 padding: 10px; /* Küçük ekranlarda padding azalt */
+             }
+             .btn-actions a,
+             .btn-actions button {
+                 font-size: 0.85rem; /* Küçük ekranlarda yazı boyutu */
+                 padding: 6px 10px;
+             }
+         }
+         @media (max-width: 320px) { /* Çok küçük telefonlar */
+              .content {
+                  grid-template-columns: 1fr; /* Tek kolon */
+                  gap: 15px;
+              }
+              .card {
+                  width: 100%; /* Tam genişlik */
+              }
+         }
+
+
+    </style>
+</head>
+<body>
+<div class="header">
+    <div class="logo-container">
+        <img class="logo" src="{{ url_for('static', filename='logo/gullu.png') }}" alt="Logo">
+        <h1>Sipariş Fişleri</h1>
+    </div>
+    <div class="left-btns">
+        <a href="{{ url_for('home') }}">Anasayfa</a>
+        <a href="{{ url_for('siparis_fisi_bp.siparis_fisi_olustur') }}">Sipariş Oluştur</a>
+        {# Toplu Yazdır butonu, JS ile yönetiliyor #}
+        <button id="printSelectedBtn" class="btn-print" onclick="printSelected()" disabled>Seçilenleri Yazdır</button>
+        {# Boş Teslimat Fişi Yazdırma Linki #}
+        <a href="{{ url_for('siparis_fisi_bp.bos_yazdir') }}" target="_blank" class="btn-print">Teslimat Fişi Yazdır</a>
+        {# Boş Maliyet Fişi Yazdırma Linki #}
+        <a href="{{ url_for('siparis_fisi_bp.maliyet_fisi_bos') }}" target="_blank" class="btn-print">Maliyet Fişi Yazdır</a>
+    </div>
+</div>
+
+<div class="search-container">
+    <form method="GET" class="search-form">
+        <input type="text" name="model_kodu" placeholder="Model Kodu..." value="{{ request.args.get('model_kodu', '') }}">
+        <input type="text" name="renk" placeholder="Renk..." value="{{ request.args.get('renk', '') }}">
+        <button type="submit">Ara</button>
+        {# Arama temizleme linki #}
+        <a href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}" class="clear-btn">Temizle</a>
+    </form>
+</div>
+
+<div class="content">
+    {% for fis in fisler %}
+        <div class="card">
+            <div class="fis-select">
+                {# Her kartın checkbox'ı, fis ID'sini value olarak taşır #}
+                <input type="checkbox" class="fis-checkbox" value="{{ fis.siparis_id }}" onchange="checkSelection(this)">
+            </div>
+            {% if fis.image_url %}
+                {# Fişin kendi görseli varsa onu kullan #}
+                <img src="{{ fis.image_url }}" alt="Ürün Görseli">
+            {% else %}
+                <img src="{{ url_for('static', filename='logo/gullu.png') }}" alt="Logo">
+            {% endif %}
+            <div class="card-body">
+                <div class="card-title">{{ fis.urun_model_kodu }}</div>
+                <div class="card-text">
+                    <strong>Renk:</strong> {{ fis.renk }}
+                </div>
+                <div class="card-text">
+                    <strong>Oluşturma:</strong> {{ fis.created_date.strftime('%Y-%m-%d %H:%M') if fis.created_date else 'Tarih Yok' }} {# Tarih yoksa bilgi ver #}
+                </div>
+                 {% if fis.print_date %}
+                 <div class="card-text">
+                    <strong>Son Yazdırma:</strong> {{ fis.print_date.strftime('%Y-%m-%d %H:%M') }}
+                 </div>
+                 {% endif %}
+                <div class="card-text">
+                    <strong>Toplam Adet:</strong> {{ fis.toplam_adet | int(default=0) }}<br> {# int default ekledim #}
+                    <strong>Toplam Fiyat:</strong> {{ "%.2f"|format(fis.toplam_fiyat | float(default=0.0)) }} TL {# float default ekledim #}
+                </div>
+
+                <div class="btn-actions">
+                    {# Detay Sayfasına Link #}
+                    <a href="{{ url_for('siparis_fisi_bp.siparis_fisi_detay', siparis_id=fis.siparis_id) }}"
+                       class="btn-detail">Detay</a> {# class'ları sadeleştirdim #}
+                    {# Tek Fiş Yazdırma Linki #}
+                    <a href="{{ url_for('siparis_fisi_bp.siparis_fisi_yazdir', siparis_id=fis.siparis_id) }}"
+                       class="btn-detail" target="_blank">Fiş Yazdır</a> {# class'ları sadeleştirdim, metni değiştirdim #}
+                    {# YENİ EKLENEN: Barkod Yazdırma Butonu #}
+                    {# onclick ile printBarcodes fonksiyonunu çağırıyoruz, fis.siparis_id parametresini gönderiyoruz #}
+                    <button class="btn-barcode" onclick="printBarcodes({{ fis.siparis_id }})">Barkod Yazdır</button> {# class'ları sadeleştirdim, yeni class verdim #}
+                    {# Fiş Silme Butonu #}
+                    <button class="btn-delete" onclick="deleteFis({{ fis.siparis_id }})">Sil</button> {# class'ları sadeleştirdim #}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+{# Sayfalandırma Linkleri #}
+{% if pagination %}
+<div class="pagination">
+    {% if pagination.has_prev %}
+        <a href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi', page=pagination.prev_num,
+                            model_kodu=request.args.get('model_kodu', ''),
+                            renk=request.args.get('renk', '')) }}">&laquo; Önceki</a>
+    {% endif %}
+
+    {# Sayfa Numaraları #}
+    {% for page in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=3) %} {# Sayfa numaralarını daha düzenli göster #}
+        {% if page %}
+            <a href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi', page=page,
+                                model_kodu=request.args.get('model_kodu', ''),
+                                renk=request.args.get('renk', '')) }}"
+               {% if page == pagination.page %}class="active"{% endif %}>
+                {{ page }}
+            </a>
+        {% else %}
+            <span>...</span> {# Araya ... koyar #}
+        {% endif %}
+    {% endfor %}
+
+    {% if pagination.has_next %}
+        <a href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi', page=pagination.next_num,
+                            model_kodu=request.args.get('model_kodu', ''),
+                            renk=request.args.get('renk', '')) }}">Sonraki &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<script>
+    /* Fiş Silme Fonksiyonu */
+    function deleteFis(id) {
+        if (!confirm("Bu fişi silmek istediğine emin misin?")) {
+            return; // Kullanıcı vazgeçtiyse çık
+        }
+
+        // Fetch API ile DELETE isteği gönder
+        fetch(`/siparis_fisi/${id}`, { // Endpoint URL'si
+            method: "DELETE"
+        })
+        .then(response => {
+            if (!response.ok) { // HTTP status kodu 200-299 aralığında değilse hata fırlat
+                 // Hata mesajını backend'den almaya çalış
+                 return response.json().then(err => { throw new Error(err.mesaj || 'Silme işlemi başarısız oldu.') });
+            }
+            return response.json(); // Başarılı yanıtı JSON olarak parse et
+        })
+        .then(data => {
+            alert(data.mesaj || 'Fiş başarıyla silindi.'); // Başarılı mesajı göster
+            location.reload(); // Sayfayı yeniden yükleyerek silinen fişi kaldır
+        })
+        .catch(error => {
+            console.error("Silme hatası:", error); // Konsola hatayı yaz
+            alert("Silme işlemi sırasında bir hata oluştu: " + error.message); // Kullanıcıya hata mesajı göster
+        });
+    }
+
+    /* Seçilen fişleri yönetmek (checkbox) */
+    let selectedCount = 0; // Seçili fiş sayısı
+    const maxSelection = 10; // Maksimum seçilebilecek fiş sayısı (Üst menüdeki toplu yazdırma için)
+
+    // Sayfa tamamen yüklendiğinde checkbox durumlarını güncelle
+    document.addEventListener('DOMContentLoaded', (event) => {
+        updateCheckboxes();
+         // NOT: Sayfa yenilendiğinde veya geri/ileri gidildiğinde checkbox seçimleri sıfırlanır.
+         // Eğer seçimleri korumak istersen LocalStorage gibi yöntemler kullanman gerekir.
+    });
+
+    // Checkbox'ın durumu değiştiğinde çalışan fonksiyon
+    function checkSelection(checkbox) {
+        if (checkbox.checked) {
+            // Checkbox işaretlendiğinde
+            if (selectedCount >= maxSelection) {
+                checkbox.checked = false; // İşaretlemeyi geri al
+                alert(`En fazla ${maxSelection} fiş seçebilirsiniz!`);
+                return; // Fonksiyondan çık, sayacı artırma
+            }
+            selectedCount++; // Seçilen sayısını artır
+        } else {
+            // Checkbox işareti kaldırıldığında
+            selectedCount--; // Seçilen sayısını azalt
+        }
+        // Seçilen sayısı 0 ise "Seçilenleri Yazdır" butonunu devre dışı bırak, değilse etkinleştir
+        document.getElementById('printSelectedBtn').disabled = (selectedCount === 0);
+        // Diğer checkboxların durumunu güncelle (maksimuma ulaşıldıysa diğerlerini disable et)
+        updateCheckboxes();
+    }
+
+    // Maksimum seçime ulaşıldığında diğer checkboxları devre dışı bırakan fonksiyon
+    function updateCheckboxes() {
+        const checkboxes = document.querySelectorAll('.fis-checkbox');
+        checkboxes.forEach(cb => {
+            // Eğer checkbox seçili değilse VE toplam seçilen sayısı maksimuma eşit veya büyükse
+            if (!cb.checked && selectedCount >= maxSelection) {
+                cb.disabled = true; // Checkbox'ı devre dışı bırak
+            } else {
+                 // Checkbox seçiliyse veya maksimum seçime daha ulaşılmadıysa
+                cb.disabled = false; // Checkbox'ı etkinleştir
+            }
+        });
+    }
+
+    // Seçili fişleri toplu yazdırma fonksiyonu
+    function printSelected() {
+        const selectedFisIds = [];
+        // Seçili checkboxların value (fiş ID) değerlerini bir diziye topla
+        document.querySelectorAll('.fis-checkbox:checked').forEach(cb => {
+            selectedFisIds.push(cb.value);
+        });
+
+        if (selectedFisIds.length > 0) {
+            // Seçilen fiş ID'lerini virgülle birleştirerek URL oluştur
+            const url = `/siparis_fisi/toplu_yazdir/${selectedFisIds.join(',')}`;
+            console.log("Toplu Yazdırma URL:", url); // Debug için URL'yi konsola yaz
+
+            // Yeni sekmede yazdırma sayfasını aç
+            const printWindow = window.open(url, '_blank');
+
+            // Popup engelleyici tarafından engellenip engellenmediğini kontrol et
+            if (!printWindow) {
+                alert('Popup engelleyiciyi devre dışı bırakın veya tarayıcınızın izin penceresine dikkat edin!');
+            } else {
+                 // İsteğe bağlı: Yeni pencere yüklendikten sonra otomatik yazdırma komutu gönderebilirsin
+                 // printWindow.onload = function() { printWindow.print(); };
+                 // İsteğe bağlı: Yazdırma veya iptal sonrası pencereyi kapat
+                 // printWindow.onafterprint = function() { printWindow.close(); }
+            }
+
+             // Seçimleri ve sayacı sıfırla (isteğe bağlı, yazdırma sonrası temizlik)
+             document.querySelectorAll('.fis-checkbox:checked').forEach(cb => {
+                 cb.checked = false;
+             });
+             selectedCount = 0;
+             document.getElementById('printSelectedBtn').disabled = true;
+             updateCheckboxes(); // Checkbox durumlarını yeniden ayarla
+        } else {
+            // Hiç fiş seçilmediyse uyarı ver
+            alert('Lütfen yazdırılacak fişleri seçin!');
+        }
+    }
+
+    /* YENİ EKLENEN: Tek Fiş İçin Barkod Yazdırma Fonksiyonu */
+    function printBarcodes(fisId) {
+        // Barkod yazdırma endpoint'ine gidecek URL'i oluştur
+        const url = `/siparis_fisi/${fisId}/barkod_yazdir`;
+        console.log("Barkod Yazdırma URL:", url); // Debug için
+
+        // Bu URL'i yeni bir sekmede/pencerede aç
+        const printWindow = window.open(url, '_blank');
+
+        // Popup engelleyici tarafından engellenip engellenmediğini kontrol et
+        if (!printWindow) {
+            alert('Barkod yazdırmak için popup engelleyiciyi devre dışı bırakın veya tarayıcınızın izin penceresine dikkat edin!');
+        } else {
+             // İsteğe bağlı: Yeni pencere yüklendikten sonra otomatik yazdırma komutu gönderebilirsin
+             // printWindow.onload = function() { printWindow.print(); };
+             // İsteğe bağlı: Yazdırma veya iptal sonrası pencereyi kapat
+             // printWindow.onafterprint = function() { printWindow.close(); }
+        }
+    }
+
+</script>
+</body>
+</html>

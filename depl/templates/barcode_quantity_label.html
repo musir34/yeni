@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SKU Miktar Etiketleri (SKU Sıralı - 16/etiket)</title>
+    <style>
+        /* Sayfa Genel Ayarları */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+            /* 100x100mm yazdırma için sayfa boyutu ayarı (Tarayıcı desteğine bağlıdır) */
+            /* @page { size: 100mm 100mm; margin: 0; } */
+        }
+
+        /* Her 100x100mm'lik Etiket Alanı */
+        .label-page {
+            width: 98mm; /* Kenar boşlukları/çerçeveler için biraz boşluk */
+            height: 98mm; /* Kenar boşlukları/çerçeveler için biraz boşluk */
+            margin: 1mm; /* Etiketler arası boşluk */
+            border: 1px solid #ccc; /* İsteğe bağlı: Etiket sınırlarını görmek için */
+            box-sizing: border-box;
+            page-break-after: always; /* Her .label-page'den sonra yeni sayfaya geç */
+            display: grid; /* İçindeki ürün bilgilerini düzenlemek için grid kullan */
+            /* 4x4 düzeni ile 16 adet SKU+Miktar+Tik çifti sığdırıyoruz */
+            grid-template-columns: repeat(4, 1fr); /* Dört eşit genişlikte sütun */
+            grid-template-rows: repeat(4, 1fr); /* Dört eşit yükseklikte satır */
+            gap: 1mm; /* Ürün bilgi alanları arası boşluğu azalttık */
+            padding: 1mm; /* Konteyner içi boşluğu azalttık */
+            overflow: hidden; /* Taşmaları gizle */
+        }
+
+         /* Yazdırma için sayfa ayarları */
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .label-page {
+                width: 100mm;
+                height: 100mm;
+                margin: 0;
+                border: none; /* Yazdırırken çerçeveleri kaldırma */
+                page-break-after: always;
+                grid-template-columns: repeat(4, 1fr); /* Yazdırmada da 4 sütun */
+                grid-template-rows: repeat(4, 1fr); /* Yazdırmada da 4 satır */
+                gap: 0.5mm; /* Yazdırmada boşluğu daha da azalttık */
+                padding: 0.5mm;
+            }
+             /* Yazdırma sırasında boş divleri gizle */
+            .product-item:empty {
+                display: none;
+            }
+        }
+
+
+        /* Her bir Ürün Bilgi Kutusu (SKU + Miktar + Tik Alanı) */
+        .product-item {
+            display: flex;
+            flex-direction: column; /* Alt alta dizeceğiz */
+            /* justify-content: space-between; */ /* İçeriği dikeyde yayma, boşluklar font ve margin ile ayarlanacak */ {# space-between kaldırıldı #}
+            align-items: center; /* İçeriği yatayda ortala */
+            border: 1px dashed #eee; /* Alanları ayırmak için ince çizgi */
+            padding: 1mm; /* İç boşluğu biraz artırdık, içeriğin kenarlara yapışmasını engellemek için */ {# Padding ayarlandı #}
+            overflow: hidden; /* İçerik taşarsa gizle */
+            text-align: center; /* Metni ortala */
+            line-height: 1.2; /* Satır yüksekliğini ayarladık */
+            position: relative; /* Tik kutusunu absolut pozisyonlamak için */ {# Position eklendi #}
+        }
+
+        /* SKU ve Miktar için bir üst konteyner */
+        .sku-quantity-container {
+            display: flex; /* SKU ve Miktarı yan yana tutmak için */
+            flex-direction: column; /* SKU ve Miktarı alt alta dizeceğiz */
+            justify-content: center;
+            align-items: center;
+            width: 100%; /* Konteynerin tam genişliğini kullan */
+            flex-grow: 1; /* İçeriğin kalan alanı kaplamasını sağla (eğer gerekirse) */ {# Flex-grow eklendi #}
+             /* Tik alanı için altta boşluk bırakabiliriz */
+             /* margin-bottom: 1mm; */ /* Tik kutusu absolut olacağı için buna gerek kalmadı */ {# Margin kaldırıldı #}
+        }
+
+
+        .sku-text {
+            font-size: 11px; /* SKU metni için boyutu ayarladık */ {# Font boyutu tekrar ayarlandı #}
+            margin-bottom: 1px; /* SKU ile miktar arası boşluk */ {# Boşluk ayarlandı #}
+            /* text-overflow: ellipsis; */ /* Kaldırıldı */
+            /* overflow: hidden; */ /* Kaldırıldı - wrapping için overflow visible olmalı */ {# Kaldırıldı #}
+            /* white-space: nowrap; */ /* Kaldırıldı */
+            word-break: break-word; /* Uzun kelimelerin de kırılmasını sağla */
+            /* max-width: 100%; */ /* Kaldırıldı, parent container genişliğini kullanacak */
+            font-weight: bold; /* SKU'yu kalın yapalım */
+            display: block; /* Tam genişliği kaplaması ve alt satıra geçmesi için */ {# Display block eklendi #}
+            width: 100%; /* Tam genişliği kullan */ {# Width eklendi #}
+             overflow-wrap: break-word; /* Alternatif kelime kırma özelliği */ {# Eklendi #}
+
+             /* Eğer font boyutu hala büyük gelirse küçültmeyi düşün */
+             /* Eğer çok uzun SKU'lar hala taşarsa line-height'ı biraz azaltabilirsin */
+        }
+
+        .quantity-text {
+            font-size: 16px; /* Miktar için boyutu ayarladık */ {# Font boyutu tekrar ayarlandı #}
+            font-weight: bold;
+            margin-top: 1px; /* Üstündeki SKU ile arasına boşluk verdik */ {# Boşluk ayarlandı #}
+            display: block; /* Tam genişliği kaplaması için */ {# Display block eklendi #}
+            width: 100%; /* Tam genişliği kullan */ {# Width eklendi #}
+        }
+
+        /* Tik Koyma Alanı */
+        .tick-box {
+            width: 4mm; /* Tik kutusu genişliği */
+            height: 4mm; /* Tik kutusu yüksekliği */
+            border: 1px solid black; /* Kenarlık */
+            position: absolute; /* Kutucuğa göre konumlandır */ {# Position değişti #}
+            bottom: 2mm; /* Alttan boşluk */ {# Konum ayarlandı #}
+            right: 2mm; /* Sağdan boşluk */ {# Konum ayarlandı #}
+            flex-shrink: 0; /* Küçülmesini engelle */
+            background-color: white; /* Arka plan rengi (varsa) */ {# Arka plan eklendi #}
+            z-index: 1; /* Diğer içeriklerin üstünde görünmesi için */ {# Z-index eklendi #}
+        }
+
+        /* product-main-id-text ve color-size-text sınıfları zaten kullanılmıyordu */
+    </style>
+</head>
+<body>
+    {# Her sayfada kaç ürün çifti olacağını belirle (Grid yapısıyla uyumlu olmalı: 4x4 = 16) #}
+    {% set items_per_page = 16 %} {# Sayfa başına öğe sayısı 16 #}
+    {% set total_items = product_items | length %}
+    {# Toplam ürün sayısına ve her sayfadaki öğe sayısına göre toplam sayfa sayısını hesapla #}
+    {% set total_pages = (total_items / items_per_page) | round(0, 'ceil') | int %}
+
+    {# Toplam sayfa sayısı kadar döngü kur #}
+    {% for i in range(total_pages) %}
+        {# Her döngüde yeni bir etiket sayfası alanı (.label-page) oluştur #}
+        <div class="label-page">
+            {# Her sayfada belirlenen sayıda ürün bilgi alanı (.product-item) oluştur #}
+            {% for j in range(items_per_page) %}
+                {# O anki öğenin product_items listesindeki indeksini hesapla #}
+                {% set current_item_index = i * items_per_page + j %}
+
+                {# Eğer hesaplanan indeks, product_items listesinin toplam boyutunu aşmadıysa #}
+                {% if current_item_index < total_items %}
+                    {# product_items listesinden o anki ürün öğesini al #}
+                    {% set item = product_items[current_item_index] %}
+
+                    {# Bir ürün bilgi kutusu oluştur (.product-item) #}
+                    <div class="product-item">
+                        {# SKU ve Miktar için üst konteyner #}
+                        {# justify-content kaldırıldı, dikey boşluklar margin ile ayarlanacak #}
+                        <div class="sku-quantity-container">
+                            {# SKU'yu göster #}
+                            <div class="sku-text">{{ item.sku }}</div>
+                            {# Miktarı göster #}
+                            <div class="quantity-text">{{ item.quantity }}</div>
+                        </div>
+                         {# Tik koyma alanı - Ürün kutucuğunun sağ altında absolut konumlandırıldı #}
+                        <div class="tick-box"></div>
+                    </div>
+                {% else %}
+                     {# Eğer listedeki öğe sayısı yetmiyorsa, etiket düzenini korumak için boş alanlar oluştur #}
+                     {# Bu boş divler @media print içinde gizlenerek yazdırırken görünmemesi sağlanır #}
+                     <div class="product-item">
+                         {# Boş bırak #}
+                     </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endfor %}
+
+    <!-- Yazdır Butonu -->
+    <button onclick="window.print()" style="
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        padding: 8px 16px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        cursor: pointer;
+        z-index: 9999;
+    ">
+        🖨️ Yazdır
+    </button>
+
+    <style>
+    @media print {
+        button {
+            display: none;
+        }
+    }
+    </style>
+</body>
+</html>

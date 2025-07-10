@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Pastel Sipariş Fişleri</title>
+  <style>
+    /***** SAYFA AYARLARI *****/
+    @page {
+      size: A5;
+      margin: 0;
+    }
+    body {
+      margin: 0;
+      padding: 4mm;                /* Dış kenar boşluğunu azalttık */
+      width: 148mm;
+      height: 210mm;
+      box-sizing: border-box;
+      background: #fdf9f6;         /* Pastel arka plan rengi */
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: #333;
+    }
+
+    /***** GENEL KULLANILACAK RENKLER *****/
+    :root {
+      --accent-color: #da627d;     /* Pastel kırmızımsı ton */
+      --border-color: #ccc;
+      --text-dark: #333;
+      --text-light: #666;
+    }
+
+    /***** SAYFA ÜST BAŞLIK (HEADER) *****/
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fff;
+      padding: 3mm 4mm;           /* İç boşluğu biraz düşürdük */
+      border-radius: 6px;
+      margin-bottom: 4mm;         /* Alt boşluğu azalttık */
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 4mm;
+    }
+    .header-left img {
+      height: 18mm;  /* Logo boyutu */
+      width: auto;
+    }
+    .header-title {
+      font-size: 14pt;
+      color: var(--accent-color);
+      margin: 0;
+      font-weight: bold;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 3mm;
+      font-size: 9pt;
+    }
+    .date-line {
+      display: inline-block;
+      width: 46mm;
+      border-bottom: 1px solid var(--text-dark);
+      height: 4mm;
+      text-align: center;
+      background-color: transparent;
+    }
+
+    /***** FİŞLERİ GRID HALİNDE YERLEŞTİRME *****/
+    .fis-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;  /* 2 sütun */
+      grid-template-rows: repeat(3, auto); /* 3 satır (toplam 6 fiş) */
+      gap: 4mm;                        /* Kartlar arası boşluğu azalttık */
+    }
+
+    /***** FİŞ KUTUSU *****/
+    .fis-container {
+      background: #ffffff;
+      border-radius: 5px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+      border: 1px solid #eee;
+      padding: 4mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-size: 8.5pt;  /* Biraz ufalttık */
+    }
+
+    /***** FİŞ ÜST BİLGİ ALANI (Model, Renk, Tarih) *****/
+    .fis-header {
+      display: flex;
+      flex-direction: column;
+      gap: 2mm;    /* Satırlar arası boşluk */
+      margin-bottom: 3mm;
+    }
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 2mm;
+    }
+    .input-label {
+      font-weight: bold;
+      color: var(--text-dark);
+      white-space: nowrap;
+    }
+    .input-line {
+      display: inline-block;
+      flex: 1;
+      border-bottom: 1px solid var(--accent-color);
+      height: 4mm;
+      min-width: 30mm;
+      background-color: #fefefe;
+    }
+
+    /***** BEDEN TABLOSU *****/
+    .beden-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 3mm;
+    }
+    .beden-table th,
+    .beden-table td {
+      border: 1px solid var(--border-color);
+      text-align: center;
+      padding: 1mm;
+    }
+    .beden-table th {
+      font-weight: bold;
+      background: #fae9ec; /* Pastel arka plan */
+      color: var(--text-dark);
+      font-size: 8pt;
+    }
+    .beden-table td {
+      font-size: 8pt;
+    }
+
+    /***** TOPLAM KISMI *****/
+    .fis-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #ddd;
+      padding-top: 2mm;
+      margin-top: auto;
+    }
+    .fis-bottom .label {
+      font-weight: bold;
+      color: var(--text-dark);
+      margin-right: 2mm;
+    }
+    .line-small {
+      display: inline-block;
+      width: 25mm;
+      border-bottom: 1px solid var(--accent-color);
+      height: 4mm;
+      background-color: #fefefe;
+      margin: 0 2mm;
+      text-align: center;
+    }
+    .line-wide {
+      width: 35mm; 
+    }
+
+    /***** BASKI ANINDA GÖRÜNÜM *****/
+    @media print {
+      body {
+        background: #fff;
+      }
+      .page-header,
+      .fis-container {
+        box-shadow: none;
+        border: 1px solid #000; /* İsterseniz yazıcıda daha net görünmesi için */
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sayfa Üst Başlık -->
+  <div class="page-header">
+    <div class="header-left">
+      <!-- Logo yolunu kendi projenize göre ayarlayınız -->
+      <img src="{{ url_for('static', filename='logo/gullu.png') }}" alt="Logo">
+      <h1 class="header-title">Sipariş Fişi</h1>
+    </div>
+    <div class="header-right">
+      <strong>Sayfa Tarihi:</strong>
+      <span class="date-line"></span>
+    </div>
+  </div>
+
+  <!-- Fişlerin Grid'i -->
+  <div class="fis-grid">
+    {% for i in range(6) %}
+    <div class="fis-container">
+      <!-- Fiş Üst Bilgileri -->
+      <div class="fis-header">
+        <div class="input-group">
+          <span class="input-label">İşleyen:</span>
+          <span class="input-line"></span>
+        </div>
+        <div class="input-group">
+          <span class="input-label">Tarih:</span>
+          <span class="input-line"></span>
+        </div>
+        <!-- Her fiş için Gün/Ay şeklinde tarih alanı -->
+        <div class="input-group">
+          <span class="input-label">Model/Renk:</span>
+          <span class="input-line"></span>
+        </div>
+      </div>
+
+      <!-- Beden Tablosu -->
+      <table class="beden-table">
+        <tr>
+          <th>Beden</th>
+          <th>35</th>
+          <th>36</th>
+          <th>37</th>
+          <th>38</th>
+          <th>39</th>
+          <th>40</th>
+          <th>41</th>
+        </tr>
+        <tr>
+          <td>Çift</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      </table>
+
+      <!-- Toplam Alanı -->
+      <div class="fis-bottom">
+        <div>
+          <span class="label">Çift:</span>
+          <span class="line-wide"></span> 
+        </div>
+        <div>
+          <span class="label">Toplam:</span>
+          <span class="line-small"></span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Otomatik Baskı (isteğe bağlı) -->
+  <script>
+    window.onload = function() {
+      window.print();
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Stok Raporu</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Ürün ID</th>
+                <th>Renk</th>
+                <th>Beden</th>
+                <th>Toplam Stok</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stat in stock_stats %}
+            <tr>
+                <td>{{ stat.product_main_id }}</td>
+                <td>{{ stat.color }}</td>
+                <td>{{ stat.size }}</td>
+                <td>{{ stat.total_stock }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

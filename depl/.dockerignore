@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+venv/
+.venv/
+logs/
+.env
+.env.*
+Dockerfile
+docker-compose.yml
