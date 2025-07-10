@@ -10,9 +10,11 @@ from logger_config import api_logger as logger
 # Yeni tablolar (Created, Picking vs.) ve DB objesi
 from models import db, OrderCreated, OrderPicking, Product
 # Trendyol API kimlikleri ve BASE_URL
-from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID, BASE_URL
+from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID
 
 update_service_bp = Blueprint('update_service', __name__)
+
+BASE_URL = "https://apigw.trendyol.com/integration/order/sellers/"
 
 ##############################################
 # Trendyol API üzerinden statü güncelleme
@@ -23,14 +25,17 @@ async def update_order_status_to_picking(supplier_id, shipment_package_id, lines
     lines: [{ "lineId": <int>, "quantity": <int> }, ...]
     """
     try:
-        url = f"{BASE_URL}suppliers/{supplier_id}/shipment-packages/{shipment_package_id}"
+        url = f"{BASE_URL}{supplier_id}/shipment-packages/{shipment_package_id}"
 
         credentials = f"{API_KEY}:{API_SECRET}"
         encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
 
         headers = {
             "Authorization": f"Basic {encoded_credentials}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            # === CLOUDFLARE ÇÖZÜMÜ BURADA ===
+            # İsteği normal bir tarayıcıdan geliyormuş gibi gösteriyoruz
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
 
         payload = {
@@ -43,7 +48,8 @@ async def update_order_status_to_picking(supplier_id, shipment_package_id, lines
         logger.debug(f"Payload: {json.dumps(payload, ensure_ascii=False)}")
 
         async with aiohttp.ClientSession() as session:
-            async with session.put(url, headers=headers, data=json.dumps(payload)) as response:
+            async with session.put(url, headers=headers, json=payload) as response:
+
                 status = response.status
                 text = await response.text()
 
@@ -343,7 +349,7 @@ async def fetch_orders_from_api():
     auth_str = f"{API_KEY}:{API_SECRET}"
     b64_auth_str = base64.b64encode(auth_str.encode()).decode('utf-8')
 
-    url = f"{BASE_URL}suppliers/{SUPPLIER_ID}/orders"
+    url = f"{BASE_URL}{SUPPLIER_ID}/orders"
     headers = {
         "Authorization": f"Basic {b64_auth_str}",
         "Content-Type": "application/json"
@@ -361,7 +367,7 @@ async def update_package_to_picking(supplier_id, package_id, line_id, quantity):
     Tek bir lineId ve quantity için (daha eski örnek). Yukarıda 'update_order_status_to_picking' ile benzer işler yapıyor.
     Bu fonksiyon belki artık kullanılmayabilir, ama isterseniz koruyun.
     """
-    url = f"{BASE_URL}suppliers/{supplier_id}/shipment-packages/{package_id}"
+    url = f"{BASE_URL}{supplier_id}/shipment-packages/{package_id}"
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Basic {base64.b64encode(f'{API_KEY}:{API_SECRET}'.encode()).decode()}"

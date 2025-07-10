@@ -6,6 +6,8 @@ API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
 SUPPLIER_ID = os.getenv("SUPPLIER_ID")  # SATICI ID
 
+
+
 missing = [var for var in [API_KEY, API_SECRET, SUPPLIER_ID] if not var]
 if missing:
     missing_names = [name for name, value in {"API_KEY": API_KEY, "API_SECRET": API_SECRET, "SUPPLIER_ID": SUPPLIER_ID}.items() if not value]

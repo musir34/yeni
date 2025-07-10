@@ -363,7 +363,7 @@
             <p>Gelir ve gider kayıtlarınızı yönetin</p>
         </div>
 
-        <!-- Flash Messages -->
+        <!-- Flash Messages 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="flash-messages">
@@ -377,7 +377,7 @@
                     {% endfor %}
                 </div>
             {% endif %}
-        {% endwith %}
+        {% endwith %}  -->
 
         <!-- İstatistik Kartları -->
         <div class="stats-cards">
@@ -404,9 +404,9 @@
                 <a href="{{ url_for('kasa.kategoriler') }}" class="btn kategori-yonetim">
                     <i class="fas fa-tags"></i> Kategori Yönetimi
                 </a>
-                <a href="{{ url_for('kasa.kasa_rapor') }}" class="btn btn-info">
+                <!--<a href="{{ url_for('kasa.kasa_rapor') }}" class="btn btn-info">
                     <i class="fas fa-chart-bar"></i> Raporlar
-                </a>
+                </a> -->
                 <a href="{{ url_for('home.home') }}" class="btn btn-secondary">
                     <i class="fas fa-home"></i> Ana Sayfa
                 </a>
