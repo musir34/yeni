@@ -7,7 +7,7 @@ import aiohttp
 import asyncio
 from logger_config import api_logger as logger
 from sqlalchemy import asc
-from collections import Counter
+from collections import Counter, defaultdict
 
 # Yeni tablolar (Created, Picking vs.) ve DB objesi
 from models import db, OrderCreated, OrderPicking, Product, RafUrun
