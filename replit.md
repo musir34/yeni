@@ -115,5 +115,6 @@ Changelog:
   - update_service.py dosyasında confirm_packing() fonksiyonuna raf stok düşürme kodu eklendi
   - Barkod karşılaştırma mantığı basitleştirildi
   - Sistem siparişdeki her ürün için raflardan otomatik stok düşürüyor
-  - Stok yetersizliği durumunda işlem iptal ediliyor
+  - Stok yetersizliği durumunda işlem iptal edilmiyor, sadece uyarı verilip devam ediyor
   - Kargo kodu mesajı merkezi ve büyük şekilde gösterilecek şekilde tasarlandı
+  - Raf stoğu 0 olsa bile sipariş onaylanabilir

@@ -213,15 +213,15 @@ async def confirm_packing():
 
             # Tüm ürünler kontrol edildikten sonra genel durumu değerlendir
             if not all_stock_sufficient:
-                db.session.rollback() # Yapılan tüm değişiklikleri geri al
-                error_msg = f"Raf Stoğu Yetersiz! İşlem iptal edildi. Eksik ürünler: {', '.join(insufficient_stock_items)}"
-                flash(error_msg, 'danger')
-                logger.error(error_msg)
-                return redirect(url_for('home.home'))
-
-            # Her şey yolundaysa değişiklikleri commit et
+                # Raf stoğu yetersiz olsa bile işlemi devam ettir
+                warning_msg = f"Raf Stoğu Yetersiz ama işlem devam ediyor. Eksik ürünler: {', '.join(insufficient_stock_items)}"
+                flash(warning_msg, 'warning')
+                logger.warning(warning_msg)
+                # İşlemi iptal etmek yerine devam et
+            
+            # Her şey yolundaysa veya eksik stok olsa bile değişiklikleri commit et
             db.session.commit()
-            logger.info("Tüm ürünler için raf stokları başarıyla güncellendi.")
+            logger.info("Raf stokları güncellendi (eksik stok olsa bile işlem tamamlandı).")
 
         except Exception as raf_error:
             db.session.rollback()
