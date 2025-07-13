@@ -118,3 +118,4 @@ Changelog:
   - Stok yetersizliği durumunda işlem iptal edilmiyor, sadece uyarı verilip devam ediyor
   - Kargo kodu mesajı merkezi ve büyük şekilde gösterilecek şekilde tasarlandı
   - Raf stoğu 0 olsa bile sipariş onaylanabilir
+  - Ürün görselleri büyük boyutlu görüntüleniyor ve tıklanabilir modal ile büyütülüyor
