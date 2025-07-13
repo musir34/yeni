@@ -1068,15 +1068,20 @@
                 const quantityIndex = this.dataset.quantityIndex;
                 const side = this.dataset.side;
 
-                // Her input için kendine özel uyarı ve barkod elementlerini hedefle
-                const expectedEl = document.getElementById(`expectedBarcode-${side}-${productIndex}-${quantityIndex}`);
-                const matchMessage = document.getElementById(`barkodMatchMessage-${side}-${productIndex}-${quantityIndex}`);
+                // Her input için form-group içindeki alert elementini doğrudan bul
+                const formGroup = this.closest('.form-group');
+                if (!formGroup) return;
 
-                // Eğer elementler bulunamazsa hata mesajı ver
-                if (!expectedEl || !matchMessage) {
-                    console.error(`Element bulunamadı: expectedBarcode-${side}-${productIndex}-${quantityIndex} veya barkodMatchMessage-${side}-${productIndex}-${quantityIndex}`);
-                    return;
-                }
+                const matchMessage = formGroup.querySelector('.alert');
+                if (!matchMessage) return;
+
+                // Barkod değerini input'un bulunduğu card-body'den al
+                const cardBody = this.closest('.card-body');
+                if (!cardBody) return;
+
+                // Gizli barkod değerini bul
+                const expectedEl = cardBody.querySelector(`input[type="hidden"][id="expectedBarcode-${side}-${productIndex}-${quantityIndex}"]`);
+                if (!expectedEl) return;
 
                 const expectedValue = expectedEl.value.trim();
                 const inputValue = this.value.trim();
