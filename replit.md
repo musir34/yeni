@@ -119,3 +119,4 @@ Changelog:
   - Kargo kodu mesajı merkezi ve büyük şekilde gösterilecek şekilde tasarlandı
   - Raf stoğu 0 olsa bile sipariş onaylanabilir
   - Ürün görselleri büyük boyutlu görüntüleniyor ve tıklanabilir modal ile büyütülüyor
+  - Home.html'deki ürün görselleri 180px'den 250px'e çıkarıldı ve tıklanabilir modal eklendi

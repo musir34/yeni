@@ -196,10 +196,14 @@
             }
             .product-image {
                 width: 100%;
-                height: 180px; /* Sabit yükseklik */
+                height: 250px; /* Sabit yükseklik artırıldı */
                 border-radius: 10px 10px 0 0;
                 object-fit: cover; /* Resmin orantısını koru */
                 cursor: zoom-in; /* Büyütme imleci */
+                transition: transform 0.3s ease;
+            }
+            .product-image:hover {
+                transform: scale(1.05);
             }
             .card-title {
                 font-weight: bold;
@@ -373,6 +377,52 @@
                 display: flex;
                 gap: 10px;
                 flex-wrap: wrap;
+            }
+            
+            /* Görsel Modal Stili */
+            .image-modal-overlay {
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px); z-index: 1060;
+                display: none; align-items: center; justify-content: center;
+                opacity: 0; transition: opacity 0.3s ease;
+            }
+            .image-modal-overlay.is-visible { display: flex; opacity: 1; }
+            .image-modal-content {
+                background: #fff; border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); max-width: 90vw; max-height: 90vh;
+                position: relative; overflow: hidden;
+                transform: scale(0.8); transition: transform 0.3s ease;
+            }
+            .image-modal-overlay.is-visible .image-modal-content { transform: scale(1); }
+            .image-modal-header {
+                padding: 1rem 1.5rem; border-bottom: 1px solid #dee2e6;
+                display: flex; justify-content: space-between; align-items: center;
+                background-color: #f8f9fa;
+            }
+            .image-modal-header h4 { margin: 0; font-size: 1.2rem; color: #333; }
+            .image-modal-close {
+                background: none; border: none; font-size: 2rem; cursor: pointer;
+                color: #999; width: 40px; height: 40px; display: flex;
+                align-items: center; justify-content: center; border-radius: 50%;
+                transition: all 0.2s ease;
+            }
+            .image-modal-close:hover { background-color: #f1f1f1; color: #333; }
+            .image-modal-body {
+                padding: 1rem; text-align: center;
+                max-height: 80vh; overflow-y: auto;
+            }
+            .image-modal-body img {
+                max-width: 100%; max-height: 70vh;
+                object-fit: contain; border-radius: 10px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            }
+            .image-modal-footer {
+                padding: 1rem 1.5rem; background-color: #f8f9fa;
+                border-top: 1px solid #dee2e6; text-align: center;
+            }
+            .image-modal-footer p {
+                margin: 0; color: #666; font-size: 0.9rem;
+            }
             }
             .fixed-header {
                 background-color: #ffffff;
@@ -611,7 +661,21 @@
     </head>
     <body>
         <canvas id="weatherCanvas"></canvas>
-        <div id="lightbox"><img src="" alt="Büyütülmüş Ürün Görseli"></div>
+        <!-- Görsel Büyütme Modal -->
+        <div id="imageModal" class="image-modal-overlay">
+            <div class="image-modal-content">
+                <div class="image-modal-header">
+                    <h4 id="imageModalTitle">Ürün Görseli</h4>
+                    <button class="image-modal-close">&times;</button>
+                </div>
+                <div class="image-modal-body">
+                    <img id="imageModalImg" src="" alt="Ürün Görseli" />
+                </div>
+                <div class="image-modal-footer">
+                    <p id="imageModalInfo">Görseli kapatmak için dışarı tıklayın</p>
+                </div>
+            </div>
+        </div>
 
         <div class="user-info">
             <img src="{{ url_for('static', filename='logo/gullu.png') }}" alt="Güllü Shoes Logo" />
@@ -699,7 +763,7 @@
                     {% for product in order.products if order %}
                     <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
                         <div class="card product-card">
-                            <img src="{{ product['image_url'] }}" alt="Ürün Görseli" class="card-img-top product-image" />
+                            <img src="{{ product['image_url'] }}" alt="Ürün Görseli" class="card-img-top product-image zoomable-image" data-image-src="{{ product['image_url'] }}" />
                             <div class="card-body">
                                 <h5 class="card-title">{{ product['sku'] }}</h5>
                                 <p class="card-text">
@@ -1251,6 +1315,37 @@
                 alert('Hata: ' + response.message);
             }
         }).fail(() => alert('Sunucu hatası.'));
+    });
+
+    // Görsel Modal JavaScript
+    $(document).ready(function() {
+        const $imageModal = $('#imageModal');
+        
+        // Ürün görseli tıklama
+        $('.zoomable-image').on('click', function(e) {
+            e.stopPropagation();
+            const src = $(this).data('image-src');
+            if (src) {
+                $('#imageModalImg').attr('src', src);
+                $('#imageModalTitle').text('Ürün Görseli');
+                $('#imageModalInfo').text('Görseli kapatmak için dışarı tıklayın');
+                $imageModal.addClass('is-visible');
+            }
+        });
+        
+        // Modal kapatma
+        $imageModal.on('click', function(e) {
+            if (e.target === this || $(e.target).hasClass('image-modal-close')) {
+                $(this).removeClass('is-visible');
+            }
+        });
+        
+        // ESC tuşu ile kapatma
+        $(document).keyup(function(e) {
+            if (e.key === "Escape") {
+                $imageModal.removeClass('is-visible');
+            }
+        });
     });
     </script>
     </body>
