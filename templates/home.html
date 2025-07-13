@@ -267,23 +267,74 @@
 
             #autoShipMessage {
                 position: fixed;
-                top: 80px; 
-                left: 0;
-                right: 0;
-                background-color: #e9ffe9;
-                color: #155724; 
-                padding: 10px 20px;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-                z-index: 9; 
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background-color: rgba(0, 0, 0, 0.9);
+                color: #fff;
+                padding: 0;
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                z-index: 1000;
                 opacity: 0;
                 visibility: hidden;
-                transition:
-                    opacity 0.5s ease,
-                    visibility 0.5s ease;
-                font-size: 1rem;
+                transition: all 0.3s ease;
+                min-width: 400px;
+                max-width: 500px;
+            }
+            
+            .auto-ship-card {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 15px;
+                padding: 30px;
                 text-align: center;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .auto-ship-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+                animation: shine 2s infinite;
+            }
+            
+            @keyframes shine {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(100%); }
+            }
+            
+            .shipping-header h3 {
+                margin: 0 0 10px 0;
+                font-size: 1.5rem;
                 font-weight: bold;
-                border-bottom: 1px solid #c3e6cb;
+                color: #fff;
+            }
+            
+            .shipping-header p {
+                margin: 0 0 20px 0;
+                font-size: 1rem;
+                color: rgba(255, 255, 255, 0.8);
+            }
+            
+            .shipping-barcode {
+                background: rgba(255, 255, 255, 0.1);
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                border-radius: 10px;
+                padding: 20px;
+                margin-top: 15px;
+            }
+            
+            .shipping-barcode strong {
+                font-size: 2rem;
+                font-weight: bold;
+                color: #fff;
+                letter-spacing: 2px;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
             }
             #autoShipMessage.show {
                 opacity: 1;
@@ -525,9 +576,21 @@
                     );
                 }
                 #autoShipMessage {
-                    top: 120px;
-                    padding: 8px 10px;
-                    font-size: 0.9rem;
+                    min-width: 300px;
+                    max-width: 90%;
+                    margin: 0 5%;
+                }
+                
+                .auto-ship-card {
+                    padding: 20px;
+                }
+                
+                .shipping-header h3 {
+                    font-size: 1.2rem;
+                }
+                
+                .shipping-barcode strong {
+                    font-size: 1.5rem;
                 }
                 .container {
                     margin-top: 180px;
@@ -617,8 +680,15 @@
         </div>
 
         <div id="autoShipMessage">
-            <strong>Otomatik Gönderim Aktif:</strong> Kargo kodu:
-            <span id="autoShipBarcode"></span>
+            <div class="auto-ship-card">
+                <div class="shipping-header">
+                    <h3>Otomatik Gönderim Aktif</h3>
+                    <p>Kargo kodu: <span id="autoShipBarcode"></span></p>
+                </div>
+                <div class="shipping-barcode">
+                    <strong id="autoShipBarcodeDisplay"></strong>
+                </div>
+            </div>
         </div>
 
         <div class="container">
@@ -1010,7 +1080,9 @@
         }
 
         function showAutoShipMessage() {
+            const autoShipBarcodeDisplay = document.getElementById('autoShipBarcodeDisplay');
             autoShipBarcodeSpan.innerText = shippingBarcode;
+            autoShipBarcodeDisplay.innerText = shippingBarcode;
             autoShipMessage.classList.add('show');
             setTimeout(() => autoShipMessage.classList.remove('show'), 3000);
         }
@@ -1030,8 +1102,15 @@
                 const quantityIndex = input.dataset.quantityIndex;
                 const side = input.dataset.side;
 
-                // Her bir input için beklenen barkodu kendi ID'si ile bul
-                const expectedEl = document.getElementById(`expectedBarcode-${side}-${productIndex}-${quantityIndex}`);
+                // Yeni DOM-based yaklaşım kullan
+                const cardBody = input.closest('.card-body');
+                if (!cardBody) {
+                    allBarcodesMatched = false;
+                    return;
+                }
+
+                // Gizli barkod değerini bul
+                const expectedEl = cardBody.querySelector(`input[type="hidden"][id="expectedBarcode-${side}-${productIndex}-${quantityIndex}"]`);
                 const expectedValue = expectedEl ? expectedEl.value.trim() : '';
                 const inputValue = input.value.trim();
 
