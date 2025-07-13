@@ -1,11 +1,15 @@
 import os
 import json
+from dotenv import load_dotenv
+load_dotenv()
+
 from datetime import datetime, timedelta
 from flask import Flask, request, url_for, redirect, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.routing import BuildError
 from flask_login import LoginManager, current_user
+
 from models import db, User
 from archive import format_turkish_date_filter
 from logger_config import app_logger as logger
@@ -19,10 +23,16 @@ from sqlalchemy import text
 
 # Flask Uygulamasını Başlat
 app = Flask(__name__)
+
+# Ortam yapılandırması
 env = os.getenv('FLASK_ENV', 'development')
 app.config.from_object(
     __import__('config').config_map.get(env, __import__('config').DevelopmentConfig)
 )
+
+# Veritabanı bağlantı adresini ayarla (en son yaz!)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Uzantıları başlat
 cache.init_app(app)
@@ -34,6 +44,10 @@ celery = init_celery(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login_logout.login"
+
+# DEBUG: Veritabanı bağlantı adresini logla
+print("DB URL:", os.getenv("DATABASE_URL"))
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -176,7 +190,16 @@ if __name__ == '__main__':
 
     print("Uygulama başlatılıyor...")
     try:
-        app.run(host='0.0.0.0', port=8080, debug=debug_mode, use_reloader=False)
+        app.run(
+            host='0.0.0.0',
+            port=443,
+            debug=debug_mode,
+            use_reloader=False,
+            ssl_context=(
+                '/home/musir/gullupanel/yeni/cert.pem',
+                '/home/musir/gullupanel/yeni/key.pem'
+            )
+        )
     except Exception as e:
         print(f"Başlatma hatası: {e}")
         import traceback
