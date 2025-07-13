@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Raf Oluştur</title>
+</head>
+<body>
+    <h2>📦 Raf Oluştur</h2>
+    <form id="rafForm">
+        <label>Ana Kod:</label><br>
+        <input type="text" name="ana" required><br><br>
+
+        <label>İkincil Kod:</label><br>
+        <input type="text" name="ikincil" required><br><br>
+
+        <label>Kat:</label><br>
+        <input type="number" name="kat" required><br><br>
+
+        <button type="submit">Oluştur</button>
+    </form>
+
+    <div id="sonuc" style="margin-top:20px;"></div>
+
+    <script>
+        document.getElementById("rafForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const data = {
+                ana: formData.get("ana"),
+                ikincil: formData.get("ikincil"),
+                kat: formData.get("kat")
+            };
+
+            const res = await fetch("/raf/olustur", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+
+            const result = await res.json();
+            const sonucDiv = document.getElementById("sonuc");
+            if (res.status === 201) {
+                sonucDiv.innerHTML = `
+                    <p style="color:green;">✅ ${result.message}</p>
+                    <p><strong>Raf Kodu:</strong> ${result.kod}</p>
+                    <img src="/${result.barcode}" alt="Barkod"><br>
+                    <img src="/${result.qr}" alt="QR Kod">
+                `;
+            } else {
+                sonucDiv.innerHTML = `<p style="color:red;">❌ ${result.error}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

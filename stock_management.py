@@ -1,5 +1,3 @@
-# stock_management.py
-
 import os
 import json
 import logging
@@ -18,7 +16,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 # Modelleri ve veritabanı bağlantısını import et
-from models import db, Product 
+from models import db, Product, RafUrun
 
 # Trendyol API bilgilerini import et (yoksa None olarak ayarla)
 try:
@@ -216,26 +214,65 @@ def handle_stock_update_from_frontend():
     items = data.get('items', [])
     update_type = data.get('updateType')
 
-    logger.info(f"Stok güncelleme paketi alındı. Ürün sayısı: {len(items)}, Tip: {update_type}")
+    # 1. RAF KODUNU AL VE KONTROL ET
+    raf_kodu = data.get("raf_kodu")
+    if not raf_kodu:
+        return jsonify(success=False, message="Raf kodu zorunludur."), 400
 
-    # 1. Veritabanını Güncelle
+    logger.info(f"Stok güncelleme paketi alındı. Ürün: {len(items)}, Tip: {update_type}, Raf: {raf_kodu}")
+
+    # 2. ANA ÜRÜN STOKLARINI GÜNCELLE
     db_errors, items_for_trendyol = process_stock_updates(items, update_type)
+
+    # 3. RAFA AİT STOKLARI GÜNCELLE
+    try:
+        for item in items:
+            barcode = item["barcode"]
+            count = item["count"]
+
+            # Ana ürün güncellemesinde zaten hata almış ürünleri atla
+            if barcode in db_errors:
+                logger.warning(f"Raf güncellemesi atlanıyor (önceki hata): Barkod {barcode}, Raf {raf_kodu}")
+                continue
+
+            mevcut_kayit = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barcode).first()
+
+            if mevcut_kayit:
+                if update_type == "add":
+                    mevcut_kayit.adet = (mevcut_kayit.adet or 0) + count
+                elif update_type == "renew":
+                    mevcut_kayit.adet = count
+            else:
+                yeni_kayit = RafUrun(
+                    raf_kodu=raf_kodu,
+                    urun_barkodu=barcode,
+                    adet=count
+                )
+                db.session.add(yeni_kayit)
+
+        # Raf güncellemelerini veritabanına kaydet
+        db.session.commit()
+        logger.info(f"Raf ({raf_kodu}) stokları başarıyla güncellendi.")
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Raf stoklarını güncellerken kritik hata: {e}", exc_info=True)
+        # Oluşan hatayı ön yüze gönderilecek genel hata listesine ekle
+        db_errors['raf_guncelleme_hatasi'] = f"Raf stokları güncellenemedi: {str(e)}"
 
     updated_db_count = len(items) - len(db_errors)
     if updated_db_count < 0: updated_db_count = 0
 
-    # 2. Trendyol'u Güncelle (eğer DB'de güncellenen ürün varsa)
+    # 4. TRENDYOL'U GÜNCELLE (eğer DB'de güncellenen ürün varsa)
     trendyol_errors = {}
     if items_for_trendyol:
         try:
-            # Asenkron fonksiyonu Flask içinde bu şekilde çalıştırıyoruz
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             trendyol_errors = loop.run_until_complete(send_trendyol_update_async(items_for_trendyol))
         finally:
             loop.close()
 
-    # 3. Sonucu Ön Yüze Bildir
+    # 5. SONUCU ÖN YÜZE BİLDİR
     total_errors = {**db_errors, **trendyol_errors}
 
     if not total_errors:
@@ -245,4 +282,4 @@ def handle_stock_update_from_frontend():
             success=False,
             message=f"İşlem hatalarla tamamlandı. Lütfen detayları kontrol edin.",
             errors=total_errors
-        ), 207 # 207 Multi-Status, işlemin kısmen başarılı olduğunu belirtir
+        ), 207

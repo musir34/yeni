@@ -72,11 +72,13 @@
             border-radius: var(--border-radius);
             box-shadow: var(--shadow-md);
         }
-        #barcodeInput {
+        #barcodeInput, #rafKoduInput {
             font-size: 1.1rem; border: 1px solid var(--color-border); border-radius: var(--border-radius);
             padding: 0.7rem 1rem; transition: var(--transition); width: 100%;
         }
-        #barcodeInput:focus { box-shadow: 0 0 0 3px rgba(183, 110, 121, 0.25); border-color: var(--color-primary); }
+        #barcodeInput:focus, #rafKoduInput:focus {
+            box-shadow: 0 0 0 3px rgba(183, 110, 121, 0.25); border-color: var(--color-primary);
+        }
 
         .barcode-item {
             background-color: var(--color-white); border: 1px solid var(--color-border);
@@ -89,7 +91,7 @@
             background-color: var(--color-bg);
         }
         .item-image img { cursor: zoom-in; }
-        .item-details { flex-grow: 1; min-width: 0; } /* min-width:0 flexbox taşmasını engeller */
+        .item-details { flex-grow: 1; min-width: 0; }
         .item-details h4 { font-size: 1rem; font-weight: 600; margin: 0 0 0.25rem 0; word-break: break-all; }
         .item-details p { font-size: 0.85rem; color: #6c757d; margin: 0; }
         .item-details .barcode-value { font-weight: 500; color: var(--color-primary); }
@@ -157,6 +159,11 @@
 
             <form id="stockForm" onsubmit="return false;">
                 <div class="mb-3">
+                    <label for="rafKoduInput" class="form-label">Raf Barkodu:</label>
+                    <input type="text" id="rafKoduInput" class="form-control" placeholder="örn: A-B-01" required>
+                </div>
+
+                <div class="mb-3">
                     <label for="barcodeInput" class="form-label">Barkod Okutun:</label>
                     <input type="text" id="barcodeInput" class="form-control" autocomplete="off" disabled autofocus>
                 </div>
@@ -180,7 +187,7 @@
         <div id="progressContainer" class="mt-4 hidden">
              <h5 id="progressTitle" class="text-center mb-3 fw-bold">İşlem Durumu</h5>
              <div class="progress">
-                <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%;"></div>
+                 <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%;"></div>
              </div>
              <p id="progressMessage" class="text-center fw-bold mt-2">Hazırlanıyor...</p>
              <div id="errorDetails" class="mt-3 p-3 bg-light rounded border border-danger hidden" style="max-height: 200px; overflow-y: auto;"></div>
@@ -190,296 +197,339 @@
 
 <div id="lightbox"><img src="" alt="Büyütülmüş Ürün"></div>
 
-<script>
-    // --- Global Değişkenler ---
-    let barcodeCounts = {}, selectedMode = null, isSubmitting = false;
-    const allElements = {
-        barcodeInput: document.getElementById('barcodeInput'),
-        selectRenewModeBtn: document.getElementById('selectRenewMode'),
-        selectAddModeBtn: document.getElementById('selectAddMode'),
-        selectedModeText: document.getElementById('selectedModeText'),
-        formContainer: document.getElementById('formContainer'),
-        scannedBarcodesDiv: document.getElementById('scannedBarcodes'),
-        noBarcodeMessage: document.getElementById('noBarcodeMessage'),
-        updateStockButton: document.getElementById('updateStockButton'),
-        resetButton: document.getElementById('resetButton'),
-        modeSelectionContainer: document.getElementById('modeSelectionContainer'),
-        progressContainer: document.getElementById('progressContainer'),
-        progressTitle: document.getElementById('progressTitle'),
-        progressBar: document.getElementById('progressBar'),
-        progressMessage: document.getElementById('progressMessage'),
-        errorDetails: document.getElementById('errorDetails'),
-        totalBarcodeCount: document.getElementById('totalBarcodeCount')
-    };
+    <script>
+        // --- Global Değişkenler ---
+        let barcodeCounts = {}, selectedMode = null, isSubmitting = false;
+        const allElements = {
+            barcodeInput: document.getElementById('barcodeInput'),
+            selectRenewModeBtn: document.getElementById('selectRenewMode'),
+            selectAddModeBtn: document.getElementById('selectAddMode'),
+            selectedModeText: document.getElementById('selectedModeText'),
+            formContainer: document.getElementById('formContainer'),
+            scannedBarcodesDiv: document.getElementById('scannedBarcodes'),
+            noBarcodeMessage: document.getElementById('noBarcodeMessage'),
+            updateStockButton: document.getElementById('updateStockButton'),
+            resetButton: document.getElementById('resetButton'),
+            modeSelectionContainer: document.getElementById('modeSelectionContainer'),
+            progressContainer: document.getElementById('progressContainer'),
+            progressTitle: document.getElementById('progressTitle'),
+            progressBar: document.getElementById('progressBar'),
+            progressMessage: document.getElementById('progressMessage'),
+            errorDetails: document.getElementById('errorDetails'),
+            totalBarcodeCount: document.getElementById('totalBarcodeCount'),
+            rafKoduInput: document.getElementById('rafKoduInput') // Raf inputunu da ekleyelim
+        };
 
-    // --- Olay Dinleyicileri ---
-    allElements.selectRenewModeBtn.addEventListener('click', () => selectMode('renew', 'Raftaki Stokları Yenile'));
-    allElements.selectAddModeBtn.addEventListener('click', () => selectMode('add', 'Yeni Gelenleri Ekle'));
-    allElements.barcodeInput.addEventListener('keydown', handleBarcodeKeyDown);
-    allElements.updateStockButton.addEventListener('click', handleUpdateClick);
-    allElements.resetButton.addEventListener('click', resetStockAddition);
-    window.onload = () => resetStockAddition();
+        // --- Olay Dinleyicileri ---
+        allElements.selectRenewModeBtn.addEventListener('click', () => selectMode('renew', 'Raftaki Stokları Yenile'));
+        allElements.selectAddModeBtn.addEventListener('click', () => selectMode('add', 'Yeni Gelenleri Ekle'));
+        allElements.barcodeInput.addEventListener('keydown', handleBarcodeKeyDown);
+        allElements.updateStockButton.addEventListener('click', handleUpdateClick);
+        allElements.resetButton.addEventListener('click', resetStockAddition);
+        window.onload = () => resetStockAddition();
 
-    document.addEventListener('click', e => {
-        const lightbox = document.getElementById('lightbox');
-        if (e.target.matches('.item-image img')) {
-            lightbox.querySelector('img').src = e.target.src;
-            lightbox.style.display = 'flex';
-        } else if (e.target.id === 'lightbox') {
-            e.target.style.display = 'none';
-        }
-    });
-
-    function forceFocus() { if (!isSubmitting && !allElements.barcodeInput.disabled) allElements.barcodeInput.focus(); }
-    document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === 'Tab') && document.activeElement !== allElements.barcodeInput) { e.preventDefault(); e.stopPropagation(); forceFocus(); } });
-    ['click', 'focusin', 'keydown'].forEach(ev => { document.addEventListener(ev, forceFocus, true); });
-
-    // YENİ: Trendyol'dan Stok Çekme Butonu İçin Olay Dinleyici
-    document.getElementById('syncTrendyolForm').addEventListener('submit', async function(e) {
-        e.preventDefault(); // Formun normal gönderimini engelle
-
-        const form = e.target;
-        const button = form.querySelector('button');
-        const originalButtonHTML = button.innerHTML;
-
-        if (!confirm("Bu işlem Trendyol'daki tüm ürünlerin stoklarını kontrol edecek ve veritabanınızı güncelleyecektir. Uzun sürebilir. Devam etmek istiyor musunuz?")) {
-            return;
-        }
-
-        button.disabled = true;
-        button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Senkronize ediliyor...`;
-
-        try {
-            const response = await fetch(form.action, {
-                method: 'POST'
-            });
-            const data = await response.json();
-            if (data.success) {
-                alert('İşlem Başarılı: ' + data.message);
-            } else {
-                alert('Hata: ' + (data.message || 'Bilinmeyen bir hata oluştu.'));
+        document.addEventListener('click', e => {
+            const lightbox = document.getElementById('lightbox');
+            if (e.target.matches('.item-image img')) {
+                lightbox.querySelector('img').src = e.target.src;
+                lightbox.style.display = 'flex';
+            } else if (e.target.id === 'lightbox') {
+                e.target.style.display = 'none';
             }
-        } catch (error) {
-            console.error('Senkronizasyon Hatası:', error);
-            alert('İşlem sırasında bir ağ hatası veya kritik bir sorun oluştu. Konsolu kontrol et.');
-        } finally {
-            button.disabled = false;
-            button.innerHTML = originalButtonHTML;
+        });
+
+        function forceFocus() {
+            if (isSubmitting) return;
+            // Raf kodu girilmediyse veya yanlışsa ürün barkoduna değil, raf barkoduna odaklan
+            if (allElements.rafKoduInput.value.trim() === '' || allElements.barcodeInput.disabled) {
+                allElements.rafKoduInput.focus();
+            } else {
+                 allElements.barcodeInput.focus();
+            }
         }
-    });
+        document.addEventListener('keydown', e => {
+            const activeEl = document.activeElement;
+            if ((e.key === 'Enter' || e.key === 'Tab') && activeEl !== allElements.barcodeInput && activeEl !== allElements.rafKoduInput) {
+                 e.preventDefault(); e.stopPropagation(); forceFocus();
+            }
+        });
+        ['click', 'focusin', 'keydown'].forEach(ev => { document.addEventListener(ev, forceFocus, true); });
 
-
-    function selectMode(mode, text) {
-        selectedMode = mode;
-        allElements.selectedModeText.textContent = text;
-        allElements.modeSelectionContainer.classList.add('hidden');
-        allElements.formContainer.classList.remove('hidden');
-        allElements.barcodeInput.disabled = false;
-        forceFocus();
-    }
-
-    function handleBarcodeKeyDown(e) {
-        if (e.key === 'Enter') {
+        document.getElementById('syncTrendyolForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const barcode = allElements.barcodeInput.value.trim();
-            allElements.barcodeInput.value = '';
-            if (!barcode || !selectedMode) return;
-            processBarcode(barcode);
-        }
-    }
-
-    function processBarcode(barcode) {
-        if (barcodeCounts[barcode]) {
-            barcodeCounts[barcode].count++;
-            updateBarcodeInList(barcode);
-        } else {
-            barcodeCounts[barcode] = { count: 1, details: null, loading: true, error: null };
-            addBarcodeToList(barcode);
-            fetchProductDetails(barcode);
-        }
-        updateTotals();
-    }
-
-    async function fetchProductDetails(barcode) {
-        try {
-            const res = await fetch(`/api/get-product-details-by-barcode/${barcode}`);
-            const data = await res.json();
-            if (data.success && data.product) {
-                barcodeCounts[barcode].details = data.product;
-            } else {
-                barcodeCounts[barcode].error = data.message || "Ürün bulunamadı";
+            const form = e.target;
+            const button = form.querySelector('button');
+            const originalButtonHTML = button.innerHTML;
+            if (!confirm("Bu işlem Trendyol'daki tüm ürünlerin stoklarını kontrol edecek ve veritabanınızı güncelleyecektir. Uzun sürebilir. Devam etmek istiyor musunuz?")) {
+                return;
             }
-        } catch (err) {
-            barcodeCounts[barcode].error = "Sunucu bağlantı hatası";
-            console.error("Fetch hatası:", err);
-        } finally {
-            barcodeCounts[barcode].loading = false;
-            updateBarcodeInList(barcode);
-        }
-    }
-
-    function addBarcodeToList(code) {
-        allElements.noBarcodeMessage.style.display = 'none';
-        const div = document.createElement('div');
-        div.className = 'barcode-item';
-        div.id = `item-${code}`;
-
-        const imageHTML = `<div class="item-image d-flex align-items-center justify-content-center"><img src="https://via.placeholder.com/80x80/eee/888?text=?" alt="Ürün"></div>`;
-        const detailsHTML = `<div class="item-details"><div class="d-flex align-items-center h-100"><div class="spinner-border spinner-border-sm" role="status"></div><span class="ms-2">Yükleniyor...</span></div></div>`;
-        div.innerHTML = generateItemHTML(code, barcodeCounts[code], imageHTML, detailsHTML);
-        allElements.scannedBarcodesDiv.prepend(div);
-        addEventListenersToItem(div, code);
-    }
-
-    function updateBarcodeInList(code) {
-        const item = barcodeCounts[code];
-        const div = document.getElementById(`item-${code}`);
-        if (!div) return;
-
-        if (item && item.count <= 0) {
-             div.remove();
-             delete barcodeCounts[code];
-        } else {
-            let imageHTML, detailsHTML;
-            if (item.loading) return; 
-
-            if (item.error) {
-                imageHTML = `<div class="item-image d-flex align-items-center justify-content-center"><i class="bi bi-x-circle-fill text-danger fs-1"></i></div>`;
-                detailsHTML = `<div class="item-details"><p class="text-danger mb-0"><strong>Hata:</strong> ${item.error}</p><p class="barcode-value">Barkod: ${code}</p></div>`;
-            } else {
-                const p = item.details;
-                imageHTML = `<div class="item-image"><img src="${p.image_url || 'https://via.placeholder.com/80x80/eee/888?text=?'}" alt="${p.title || ''}"></div>`;
-                detailsHTML = `<div class="item-details"><h4>Model: ${p.product_main_id || 'N/A'}</h4><p>Renk: <strong>${p.color || 'N/A'}</strong> / Beden: <strong>${p.size || 'N/A'}</strong></p><p class="barcode-value">Barkod: ${code}</p></div>`;
-            }
-            div.innerHTML = generateItemHTML(code, item, imageHTML, detailsHTML);
-            addEventListenersToItem(div, code);
-        }
-        updateTotals();
-    }
-
-    function generateItemHTML(code, item, imageHTML, detailsHTML) {
-        const dbStock = item && item.details ? `Mevcut Stok: <strong>${item.details.quantity}</strong>` : '';
-        const count = item ? item.count : 0;
-        return `
-            ${imageHTML}
-            ${detailsHTML}
-            <div class="item-quantity">
-                <div class="db-stock">${dbStock}</div>
-                <div class="quantity-control">
-                    <button type="button" class="btn btn-sm" style="background-color: var(--color-danger); color: white;" data-action="decrease"><i class="bi bi-dash-lg"></i></button>
-                    <span class="barcode-count">${count} Adet</span>
-                    <button type="button" class="btn btn-sm" style="background-color: var(--color-success); color: white;" data-action="increase"><i class="bi bi-plus-lg"></i></button>
-                </div>
-            </div>`;
-    }
-
-    function addEventListenersToItem(div, code) {
-        div.querySelector('[data-action="decrease"]').addEventListener('click', () => {
-            if (barcodeCounts[code]) { barcodeCounts[code].count--; updateBarcodeInList(code); }
-        });
-        div.querySelector('[data-action="increase"]').addEventListener('click', () => {
-            if (barcodeCounts[code]) { barcodeCounts[code].count++; updateBarcodeInList(code); }
-        });
-    }
-
-    function updateTotals() {
-        const total = Object.keys(barcodeCounts).length;
-        allElements.totalBarcodeCount.textContent = total;
-        allElements.updateStockButton.disabled = total === 0 || isSubmitting;
-        allElements.noBarcodeMessage.style.display = total === 0 ? 'block' : 'none';
-    }
-
-    async function handleUpdateClick() {
-        const itemsToUpdate = Object.entries(barcodeCounts)
-            .filter(([_, item]) => !item.loading && !item.error && item.count > 0)
-            .map(([code, item]) => ({ barcode: code, count: item.count }));
-
-        if (itemsToUpdate.length === 0) {
-            alert("Güncellenecek geçerli ürün bulunamadı.");
-            return;
-        }
-
-        isSubmitting = true;
-        updateTotals();
-        allElements.barcodeInput.disabled = true;
-        allElements.resetButton.disabled = true;
-        showProgressContainer(itemsToUpdate.length);
-
-        const BATCH_SIZE = 25;
-        let successfulUpdates = 0, failedUpdates = [];
-
-        for (let i = 0; i < itemsToUpdate.length; i += BATCH_SIZE) {
-            const batch = itemsToUpdate.slice(i, i + BATCH_SIZE);
-            const progress = (i / itemsToUpdate.length) * 100;
-            updateProgressStatus(`Paket ${i + 1}-${Math.min(i + BATCH_SIZE, itemsToUpdate.length)} işleniyor...`, 'info', progress);
-            batch.forEach(item => document.getElementById(`item-${item.barcode}`)?.classList.add('is-updating'));
-
+            button.disabled = true;
+            button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Senkronize ediliyor...`;
             try {
-                const res = await fetch('/stock-addition', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ updateType: selectedMode, items: batch })
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    successfulUpdates += batch.length;
-                    batch.forEach(item => document.getElementById(`item-${item.barcode}`)?.classList.replace('is-updating', 'is-success'));
+                const response = await fetch(form.action, { method: 'POST' });
+                const data = await response.json();
+                if (data.success) {
+                    alert('İşlem Başarılı: ' + data.message);
                 } else {
-                    const failedBarcodes = data.errors ? Object.keys(data.errors) : batch.map(b => b.barcode);
-                    failedUpdates.push(...failedBarcodes);
-                    batch.forEach(item => document.getElementById(`item-${item.barcode}`)?.classList.replace('is-updating', 'is-danger'));
+                    alert('Hata: ' + (data.message || 'Bilinmeyen bir hata oluştu.'));
+                }
+            } catch (error) {
+                console.error('Senkronizasyon Hatası:', error);
+                alert('İşlem sırasında bir ağ hatası veya kritik bir sorun oluştu. Konsolu kontrol et.');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = originalButtonHTML;
+            }
+        });
+
+        function selectMode(mode, text) {
+            selectedMode = mode;
+            allElements.selectedModeText.textContent = text;
+            allElements.modeSelectionContainer.classList.add('hidden');
+            allElements.formContainer.classList.remove('hidden');
+            // Mod seçilince direkt raf koduna odaklansın
+            allElements.rafKoduInput.focus();
+        }
+
+        function handleBarcodeKeyDown(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const barcode = allElements.barcodeInput.value.trim();
+                allElements.barcodeInput.value = '';
+                if (!barcode || !selectedMode) return;
+                processBarcode(barcode);
+            }
+        }
+
+        function processBarcode(barcode) {
+            if (barcodeCounts[barcode]) {
+                barcodeCounts[barcode].count++;
+                updateBarcodeInList(barcode);
+            } else {
+                barcodeCounts[barcode] = { count: 1, details: null, loading: true, error: null };
+                addBarcodeToList(barcode);
+                fetchProductDetails(barcode);
+            }
+            updateTotals();
+        }
+
+        async function fetchProductDetails(barcode) {
+            try {
+                const res = await fetch(`/api/get-product-details-by-barcode/${barcode}`);
+                const data = await res.json();
+                if (data.success && data.product) {
+                    barcodeCounts[barcode].details = data.product;
+                } else {
+                    barcodeCounts[barcode].error = data.message || "Ürün bulunamadı";
                 }
             } catch (err) {
-                failedUpdates.push(...batch.map(b => b.barcode));
-                batch.forEach(item => document.getElementById(`item-${item.barcode}`)?.classList.replace('is-updating', 'is-danger'));
-                console.error("Ağ hatası:", err);
+                barcodeCounts[barcode].error = "Sunucu bağlantı hatası";
+                console.error("Fetch hatası:", err);
+            } finally {
+                barcodeCounts[barcode].loading = false;
+                updateBarcodeInList(barcode);
             }
         }
 
-        const finalProgress = (successfulUpdates / itemsToUpdate.length) * 100;
-        if (failedUpdates.length === 0) {
-             updateProgressStatus(`${successfulUpdates} ürün başarıyla güncellendi!`, 'success', 100);
-             setTimeout(resetStockAddition, 2000);
-        } else {
-             const errorMsg = `${successfulUpdates} ürün güncellendi, ${failedUpdates.length} üründe hata oluştu.`;
-             updateProgressStatus(errorMsg, 'danger', finalProgress);
-             allElements.errorDetails.innerHTML = `<strong>Hatalı barkodlar:</strong><br>${failedUpdates.join(', ')}`;
-             allElements.errorDetails.classList.remove('hidden');
-             allElements.resetButton.disabled = false;
+        function addBarcodeToList(code) {
+            allElements.noBarcodeMessage.style.display = 'none';
+            const div = document.createElement('div');
+            div.className = 'barcode-item';
+            div.id = `item-${code}`;
+            const imageHTML = `<div class="item-image d-flex align-items-center justify-content-center"><img src="https://via.placeholder.com/80x80/eee/888?text=?" alt="Ürün"></div>`;
+            const detailsHTML = `<div class="item-details"><div class="d-flex align-items-center h-100"><div class="spinner-border spinner-border-sm" role="status"></div><span class="ms-2">Yükleniyor...</span></div></div>`;
+            div.innerHTML = generateItemHTML(code, barcodeCounts[code], imageHTML, detailsHTML);
+            allElements.scannedBarcodesDiv.prepend(div);
+            addEventListenersToItem(div, code);
         }
-    }
 
-    function resetStockAddition() {
-        barcodeCounts = {};
-        selectedMode = null;
-        isSubmitting = false;
-        allElements.scannedBarcodesDiv.innerHTML = '';
-        allElements.formContainer.classList.add('hidden');
-        allElements.modeSelectionContainer.classList.remove('hidden');
-        allElements.barcodeInput.disabled = true;
-        allElements.barcodeInput.value = '';
-        allElements.resetButton.disabled = false;
-        hideProgressContainer();
-        updateTotals();
-    }
+        function updateBarcodeInList(code) {
+            const item = barcodeCounts[code];
+            const div = document.getElementById(`item-${code}`);
+            if (!div) return;
 
-    function showProgressContainer(totalItems) {
-        allElements.progressContainer.classList.remove('hidden');
-        allElements.errorDetails.classList.add('hidden');
-        allElements.errorDetails.innerHTML = '';
-        allElements.progressTitle.textContent = `Toplam ${totalItems} ürün işleniyor...`;
-        allElements.progressContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+            if (item && item.count <= 0) {
+                 div.remove();
+                 delete barcodeCounts[code];
+            } else {
+                let imageHTML, detailsHTML;
+                if (item.loading) return;
+                if (item.error) {
+                    imageHTML = `<div class="item-image d-flex align-items-center justify-content-center"><i class="bi bi-x-circle-fill text-danger fs-1"></i></div>`;
+                    detailsHTML = `<div class="item-details"><p class="text-danger mb-0"><strong>Hata:</strong> ${item.error}</p><p class="barcode-value">Barkod: ${code}</p></div>`;
+                } else {
+                    const p = item.details;
+                    imageHTML = `<div class="item-image"><img src="${p.image_url || 'https://via.placeholder.com/80x80/eee/888?text=?'}" alt="${p.title || ''}"></div>`;
+                    detailsHTML = `<div class="item-details"><h4>Model: ${p.product_main_id || 'N/A'}</h4><p>Renk: <strong>${p.color || 'N/A'}</strong> / Beden: <strong>${p.size || 'N/A'}</strong></p><p class="barcode-value">Barkod: ${code}</p></div>`;
+                }
+                div.innerHTML = generateItemHTML(code, item, imageHTML, detailsHTML);
+                addEventListenersToItem(div, code);
+            }
+            updateTotals();
+        }
 
-    function hideProgressContainer() { allElements.progressContainer.classList.add('hidden'); }
+        function generateItemHTML(code, item, imageHTML, detailsHTML) {
+            const dbStock = item && item.details ? `Mevcut Stok: <strong>${item.details.quantity}</strong>` : '';
+            const count = item ? item.count : 0;
+            return `
+                ${imageHTML}
+                ${detailsHTML}
+                <div class="item-quantity">
+                    <div class="db-stock">${dbStock}</div>
+                    <div class="quantity-control">
+                        <button type="button" class="btn btn-sm" style="background-color: var(--color-danger); color: white;" data-action="decrease"><i class="bi bi-dash-lg"></i></button>
+                        <span class="barcode-count">${count} Adet</span>
+                        <button type="button" class="btn btn-sm" style="background-color: var(--color-success); color: white;" data-action="increase"><i class="bi bi-plus-lg"></i></button>
+                    </div>
+                </div>`;
+        }
 
-    function updateProgressStatus(message, status, percentage) {
-        allElements.progressMessage.textContent = message;
-        const progressBar = allElements.progressBar;
-        progressBar.style.width = `${percentage}%`;
-        const statusClasses = { info: 'bg-primary progress-bar-animated', success: 'bg-success', danger: 'bg-danger' };
-        progressBar.className = `progress-bar progress-bar-striped ${statusClasses[status]}`;
-    }
-</script>
+        function addEventListenersToItem(div, code) {
+            div.querySelector('[data-action="decrease"]').addEventListener('click', () => {
+                if (barcodeCounts[code]) { barcodeCounts[code].count--; updateBarcodeInList(code); }
+            });
+            div.querySelector('[data-action="increase"]').addEventListener('click', () => {
+                if (barcodeCounts[code]) { barcodeCounts[code].count++; updateBarcodeInList(code); }
+            });
+        }
+
+        function updateTotals() {
+            const total = Object.keys(barcodeCounts).length;
+            allElements.totalBarcodeCount.textContent = total;
+            allElements.updateStockButton.disabled = total === 0 || isSubmitting;
+            allElements.noBarcodeMessage.style.display = total === 0 ? 'block' : 'none';
+        }
+
+        async function handleUpdateClick() {
+            const itemsToUpdate = Object.entries(barcodeCounts)
+                .filter(([_, item]) => !item.loading && !item.error && item.count > 0)
+                .map(([code, item]) => ({ barcode: code, count: item.count }));
+
+            if (itemsToUpdate.length === 0) {
+                alert("Güncellenecek geçerli ürün bulunamadı.");
+                return;
+            }
+
+            const rafKodu = document.getElementById('rafKoduInput').value.trim();
+            if (!rafKodu) {
+                 alert("Lütfen raf barkodunu girin.");
+                 document.getElementById('rafKoduInput')?.focus();
+                 return;
+            }
+
+            isSubmitting = true;
+            updateTotals();
+            allElements.barcodeInput.disabled = true;
+            allElements.rafKoduInput.disabled = true;
+            allElements.resetButton.disabled = true;
+            showProgressContainer(itemsToUpdate.length);
+
+            const BATCH_SIZE = 25;
+            let successfulUpdates = 0, failedUpdates = [];
+
+            for (let i = 0; i < itemsToUpdate.length; i += BATCH_SIZE) {
+                const batch = itemsToUpdate.slice(i, i + BATCH_SIZE);
+                const progress = (i / itemsToUpdate.length) * 100;
+                updateProgressStatus(`Paket ${i + 1}-${Math.min(i + BATCH_SIZE, itemsToUpdate.length)} işleniyor...`, 'info', progress);
+                batch.forEach(item => document.getElementById(`item-${item.barcode}`)?.classList.add('is-updating'));
+
+                try {
+                    const res = await fetch('/stock-addition', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            updateType: selectedMode,
+                            raf_kodu: rafKodu,
+                            items: batch
+                        })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        successfulUpdates += batch.length;
+                        batch.forEach(item => document.getElementById(`item-${item.barcode}`)?.classList.replace('is-updating', 'is-success'));
+                    } else {
+                        const failedBarcodes = data.errors ? Object.keys(data.errors) : batch.map(b => b.barcode);
+                        failedUpdates.push(...failedBarcodes);
+                        batch.forEach(item => document.getElementById(`item-${item.barcode}`)?.classList.replace('is-updating', 'is-danger'));
+                    }
+                } catch (err) {
+                    failedUpdates.push(...batch.map(b => b.barcode));
+                    batch.forEach(item => document.getElementById(`item-${item.barcode}`)?.classList.replace('is-updating', 'is-danger'));
+                    console.error("Ağ hatası:", err);
+                }
+            }
+
+            const finalProgress = (successfulUpdates / itemsToUpdate.length) * 100;
+            if (failedUpdates.length === 0) {
+                 updateProgressStatus(`${successfulUpdates} ürün başarıyla güncellendi!`, 'success', 100);
+                 setTimeout(resetStockAddition, 2000);
+            } else {
+                 const errorMsg = `${successfulUpdates} ürün güncellendi, ${failedUpdates.length} üründe hata oluştu.`;
+                 updateProgressStatus(errorMsg, 'danger', finalProgress);
+                 allElements.errorDetails.innerHTML = `<strong>Hatalı barkodlar:</strong><br>${failedUpdates.join(', ')}`;
+                 allElements.errorDetails.classList.remove('hidden');
+                 allElements.resetButton.disabled = false;
+            }
+        }
+
+        function resetStockAddition() {
+            barcodeCounts = {};
+            selectedMode = null;
+            isSubmitting = false;
+            allElements.scannedBarcodesDiv.innerHTML = '';
+            allElements.formContainer.classList.add('hidden');
+            allElements.modeSelectionContainer.classList.remove('hidden');
+            allElements.barcodeInput.disabled = true;
+            allElements.barcodeInput.value = '';
+            allElements.rafKoduInput.value = ''; // Raf kodunu da sıfırla
+            allElements.rafKoduInput.disabled = false; // Raf inputunu aktif et
+            allElements.resetButton.disabled = false;
+            hideProgressContainer();
+            updateTotals();
+        }
+
+        function showProgressContainer(totalItems) {
+            allElements.progressContainer.classList.remove('hidden');
+            allElements.errorDetails.classList.add('hidden');
+            allElements.errorDetails.innerHTML = '';
+            allElements.progressTitle.textContent = `Toplam ${totalItems} ürün işleniyor...`;
+            allElements.progressContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function hideProgressContainer() { allElements.progressContainer.classList.add('hidden'); }
+
+        function updateProgressStatus(message, status, percentage) {
+            allElements.progressMessage.textContent = message;
+            const progressBar = allElements.progressBar;
+            progressBar.style.width = `${percentage}%`;
+            const statusClasses = { info: 'bg-primary progress-bar-animated', success: 'bg-success', danger: 'bg-danger' };
+            progressBar.className = `progress-bar progress-bar-striped ${statusClasses[status]}`;
+        }
+    </script>
+
+    <script>
+        document.getElementById("rafKoduInput").addEventListener("blur", async function () {
+            const rafKodu = this.value.trim();
+            const barcodeInput = document.getElementById("barcodeInput");
+
+            if (!rafKodu) return;
+
+            try {
+                const res = await fetch(`/raf/api/check-raf/${rafKodu}`);
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    barcodeInput.disabled = false;
+                    barcodeInput.focus();
+                } else {
+                    barcodeInput.disabled = true;
+                    alert("❌ " + data.message);
+                }
+            } catch (err) {
+                console.error("Raf kontrol hatası:", err);
+                alert("Sunucu hatası: raf doğrulanamadı.");
+            }
+        });
+    </script>
 </body>
 </html>

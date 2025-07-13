@@ -6,13 +6,32 @@ from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Float, Boo
 from datetime import datetime
 import uuid
 from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
 
-
-# sqlalchemy.dialects.postgresql.UUID zaten PG_UUID olarak import edildi, tekrar gerek yok
-
-# db instance'ı başta tanımlanmalı
 db = SQLAlchemy()
-# Base = declarative_base() # db.Model kullanıldığı için buna gerek yok
+
+class Raf(db.Model):
+    __tablename__ = 'raflar'
+
+    id = db.Column(db.Integer, primary_key=True)
+    kod = db.Column(db.String, unique=True, nullable=False)
+    ana = db.Column(db.String, nullable=False)
+    ikincil = db.Column(db.String, nullable=False)
+    kat = db.Column(db.String, nullable=False)
+    barcode_path = db.Column(db.String)
+    qr_path = db.Column(db.String)
+
+class RafUrun(db.Model):
+    __tablename__ = "raf_urunleri"
+
+    id = db.Column(db.Integer, primary_key=True)
+    raf_kodu = db.Column(db.String, db.ForeignKey("raflar.kod"), nullable=False)
+    urun_barkodu = db.Column(db.String, nullable=False)
+    adet = db.Column(db.Integer, default=1)
+
+    __table_args__ = (db.UniqueConstraint("raf_kodu", "urun_barkodu", name="u_raf_urun"),)
+
 
 # Bu modeller db.Model'dan türetilmeli
 class Shipment(db.Model):

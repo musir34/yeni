@@ -1,65 +1,89 @@
-import os
-import json
+from flask import Blueprint, request, jsonify
+from models import db, Raf
 import qrcode
 import barcode
 from barcode.writer import ImageWriter
+import os
+from flask import Blueprint, request, jsonify, render_template
 
-RAF_VERISI_DOSYA = "raf_verileri.json"
+raf_bp = Blueprint("raf", __name__, url_prefix="/raf")
 
-# Dosya yoksa oluştur
-if not os.path.exists(RAF_VERISI_DOSYA):
-    with open(RAF_VERISI_DOSYA, "w") as f:
-        json.dump([], f)
+@raf_bp.route("/olustur", methods=["POST"])
+def raf_olustur_api():
+    data = request.json
+    ana = data.get("ana")
+    ikincil = data.get("ikincil")
+    kat = data.get("kat", "").zfill(2)
 
-def raf_var_mi(kod):
-    with open(RAF_VERISI_DOSYA) as f:
-        raflar = json.load(f)
-    return any(r["kod"] == kod for r in raflar)
+    if not ana or not ikincil or not kat:
+        return jsonify({"error": "Tüm alanlar zorunludur."}), 400
 
-def raf_olustur():
-    print("Raf oluşturma başlatıldı...")
+    kod = f"{ana}-{ikincil}-{kat}"
 
-    ana_kod = input("Ana raf kodu (örnek A): ").strip().upper()
-    ikincil_kod = input("İkincil kod (örnek B): ").strip().upper()
-    kat = input("Kat (örnek 01): ").zfill(2)
+    if Raf.query.filter_by(kod=kod).first():
+        return jsonify({"error": "Bu raf zaten kayıtlı."}), 409
 
-    tam_kod = f"{ana_kod}-{ikincil_kod}-{kat}"
+    os.makedirs("static", exist_ok=True)
+    barcode_path = f"static/barcode_{kod}.png"
+    qr_path = f"static/qr_{kod}.png"
 
-    if raf_var_mi(tam_kod):
-        print("❌ Bu raf kodu zaten kullanılıyor.")
-        return
+    barcode.get("code128", kod, writer=ImageWriter()).save(barcode_path.replace(".png", ""))
+    qrcode.make(kod).save(qr_path)
 
-    print(f"✅ Raf oluşturuluyor: {tam_kod}")
+    yeni_raf = Raf(
+        kod=kod,
+        ana=ana,
+        ikincil=ikincil,
+        kat=kat,
+        barcode_path=barcode_path,
+        qr_path=qr_path
+    )
+    db.session.add(yeni_raf)
+    db.session.commit()
 
-    # Barkod ve QR üret
-    barcode_path = f"static/barcode_{tam_kod}.png"
-    qr_path = f"static/qr_{tam_kod}.png"
-
-    # Barcode
-    code128 = barcode.get("code128", tam_kod, writer=ImageWriter())
-    code128.save(barcode_path.replace(".png", ""))
-
-    # QR
-    img = qrcode.make(tam_kod)
-    img.save(qr_path)
-
-    # JSON'a kaydet
-    with open(RAF_VERISI_DOSYA) as f:
-        raflar = json.load(f)
-
-    raflar.append({
-        "kod": tam_kod,
-        "ana": ana_kod,
-        "ikincil": ikincil_kod,
-        "kat": kat,
+    return jsonify({
+        "message": "Raf başarıyla oluşturuldu.",
+        "kod": kod,
         "barcode": barcode_path,
         "qr": qr_path
-    })
+    }), 201
 
-    with open(RAF_VERISI_DOSYA, "w") as f:
-        json.dump(raflar, f, indent=2)
+@raf_bp.route("/stok-ekle", methods=["POST"])
+def stok_ekle_api():
+    data = request.json
+    raf_kodu = data.get("raf_kodu")
+    urunler = data.get("urunler")  # Liste bekliyoruz: ["12345", "12346", ...]
 
-    print(f"✅ Raf başarıyla kaydedildi ve görseller oluşturuldu.\nKod: {tam_kod}")
+    if not raf_kodu or not urunler:
+        return jsonify({"error": "Raf kodu ve ürün listesi zorunludur."}), 400
 
-# Test için aktif edebilirsin
-# raf_olustur()
+    for barkod in urunler:
+        mevcut_kayit = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barkod).first()
+        if mevcut_kayit:
+            mevcut_kayit.adet += 1
+        else:
+            yeni = RafUrun(raf_kodu=raf_kodu, urun_barkodu=barkod, adet=1)
+            db.session.add(yeni)
+
+    db.session.commit()
+    return jsonify({"message": "Stok başarıyla eklendi."}), 200
+
+@raf_bp.route('/api/check-raf/<raf_kodu>', methods=['GET'])
+def check_raf_var_mi(raf_kodu):
+    from models import Raf  # modelde raflar varsa
+    raf = Raf.query.filter_by(kod=raf_kodu).first()
+    if raf:
+        return jsonify(success=True, message="Raf mevcut.")
+    else:
+        return jsonify(success=False, message="Bu raf mevcut değil."), 404
+
+
+@raf_bp.route("/stok-form", methods=["GET"])
+def stok_form():
+    return render_template("raf_stok_ekle.html")
+
+
+
+@raf_bp.route("/form", methods=["GET"])
+def raf_form_sayfasi():
+    return render_template("raf_olustur.html")

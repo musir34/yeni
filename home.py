@@ -8,6 +8,7 @@ import traceback
 # Yeni tablolarınız:
 from models import (
     OrderCreated,
+    RafUrun,
     Product,
     # ... eğer diğer tabloları da kullanacaksanız, buraya ekleyin
 )
@@ -25,23 +26,17 @@ def home():
 def get_home():
     """
     Ana sayfa için gerekli sipariş verilerini hazırlar.
-    Artık eski 'Order' tablosu yerine 'OrderCreated' tablosunu kullanıyoruz.
     """
     try:
-        # En eski 'Created' siparişi OrderCreated tablosundan çekelim
         oldest_order = OrderCreated.query.order_by(OrderCreated.order_date).first()
 
         if oldest_order:
             logging.info("En eski 'Created' statüsündeki sipariş işleniyor.")
 
-            shipping_barcode = oldest_order.shipping_barcode  # Eğer OrderBase içinde shipping_barcode varsa
             remaining_time = calculate_remaining_time(oldest_order.agreed_delivery_date)
 
-            # Sipariş detaylarını alalım
             details_json = oldest_order.details or '[]'
-            logging.info(f"Sipariş detayları: {details_json}")
 
-            # details_json string mi, list mi kontrol edelim
             if isinstance(details_json, str):
                 try:
                     details_list = json.loads(details_json)
@@ -54,41 +49,31 @@ def get_home():
                 logging.warning("details alanı beklenmeyen bir tipte.")
                 details_list = []
 
-            # Barkodları çıkaralım
-            barcodes = [detail.get('barcode', '') for detail in details_list if 'barcode' in detail]
-
-            # İlgili ürünleri veritabanından çekelim
-            if barcodes:
-                products_list = Product.query.filter(Product.barcode.in_(barcodes)).all()
-                products_dict = {product.barcode: product for product in products_list}
-            else:
-                products_dict = {}
-
-            # Görselleri ekleyelim
+            # Görselleri ve raf bilgilerini ekleyelim
             products = []
             for detail in details_list:
                 product_barcode = detail.get('barcode', '')
                 image_url = get_product_image(product_barcode)
 
+                raf_kayitlari = RafUrun.query.filter_by(urun_barkodu=product_barcode).all()
+                raflar = [{"kod": r.raf_kodu, "adet": r.adet} for r in raf_kayitlari]
+
+                # --- DÜZELTME BURADA ---
+                # Her ürün sözlüğüne 'quantity' anahtarını ekliyoruz.
                 products.append({
                     'sku': detail.get('sku', 'Bilinmeyen SKU'),
                     'barcode': product_barcode,
-                    'image_url': image_url
+                    'quantity': detail.get('quantity', 1),  # Miktar bilgisi eklendi
+                    'image_url': image_url,
+                    'raflar': raflar
                 })
 
-            # Şablonda kolay erişim için sipariş nesnesine ekliyoruz (opsiyonel)
+            # Bu satırı güncelleyerek 'products' listesini 'order' nesnesine ekliyoruz
             oldest_order.products = products
 
+            # Dönüş verisini de güncelliyoruz
             return {
                 'order': oldest_order,
-                'order_number': oldest_order.order_number or 'Sipariş Yok',
-                'products': products,
-                'merchant_sku': oldest_order.merchant_sku or 'Bilgi Yok',
-                'shipping_barcode': shipping_barcode if shipping_barcode else 'Kargo Kodu Yok',
-                'cargo_provider_name': oldest_order.cargo_provider_name or 'Kargo Firması Yok',
-                'customer_name': oldest_order.customer_name or 'Alıcı Yok',
-                'customer_surname': oldest_order.customer_surname or 'Soyad Yok',
-                'customer_address': oldest_order.customer_address or 'Adres Yok',
                 'remaining_time': remaining_time
             }
         else:
