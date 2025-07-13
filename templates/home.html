@@ -248,9 +248,11 @@
                 pointer-events: none;
                 width: 100%; 
                 box-sizing: border-box;
+                visibility: hidden;
             }
             .alert-show {
                 opacity: 1;
+                visibility: visible;
             }
             .alert-success {
                 background-color: #d4edda;
@@ -1066,11 +1068,17 @@
                 const quantityIndex = this.dataset.quantityIndex;
                 const side = this.dataset.side;
 
-                // Kendi ID'sine sahip uyarı ve barkod elementlerini hedefle
+                // Her input için kendine özel uyarı ve barkod elementlerini hedefle
                 const expectedEl = document.getElementById(`expectedBarcode-${side}-${productIndex}-${quantityIndex}`);
                 const matchMessage = document.getElementById(`barkodMatchMessage-${side}-${productIndex}-${quantityIndex}`);
 
-                const expectedValue = expectedEl ? expectedEl.value.trim() : '';
+                // Eğer elementler bulunamazsa hata mesajı ver
+                if (!expectedEl || !matchMessage) {
+                    console.error(`Element bulunamadı: expectedBarcode-${side}-${productIndex}-${quantityIndex} veya barkodMatchMessage-${side}-${productIndex}-${quantityIndex}`);
+                    return;
+                }
+
+                const expectedValue = expectedEl.value.trim();
                 const inputValue = this.value.trim();
 
                 if (inputValue === expectedValue) {
@@ -1091,6 +1099,8 @@
                     this.style.backgroundColor = '';
                 } else {
                     matchMessage.className = 'alert';
+                    matchMessage.style.opacity = '0';
+                    matchMessage.style.visibility = 'hidden';
                     this.style.backgroundColor = '';
                 }
 
