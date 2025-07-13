@@ -282,7 +282,7 @@
                 min-width: 400px;
                 max-width: 500px;
             }
-
+            
             .auto-ship-card {
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 border-radius: 15px;
@@ -291,7 +291,7 @@
                 position: relative;
                 overflow: hidden;
             }
-
+            
             .auto-ship-card::before {
                 content: '';
                 position: absolute;
@@ -302,25 +302,25 @@
                 background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
                 animation: shine 2s infinite;
             }
-
+            
             @keyframes shine {
                 0% { transform: translateX(-100%); }
                 100% { transform: translateX(100%); }
             }
-
+            
             .shipping-header h3 {
                 margin: 0 0 10px 0;
                 font-size: 1.5rem;
                 font-weight: bold;
                 color: #fff;
             }
-
+            
             .shipping-header p {
                 margin: 0 0 20px 0;
                 font-size: 1rem;
                 color: rgba(255, 255, 255, 0.8);
             }
-
+            
             .shipping-barcode {
                 background: rgba(255, 255, 255, 0.1);
                 border: 2px solid rgba(255, 255, 255, 0.2);
@@ -328,7 +328,7 @@
                 padding: 20px;
                 margin-top: 15px;
             }
-
+            
             .shipping-barcode strong {
                 font-size: 2rem;
                 font-weight: bold;
@@ -580,15 +580,15 @@
                     max-width: 90%;
                     margin: 0 5%;
                 }
-
+                
                 .auto-ship-card {
                     padding: 20px;
                 }
-
+                
                 .shipping-header h3 {
                     font-size: 1.2rem;
                 }
-
+                
                 .shipping-barcode strong {
                     font-size: 1.5rem;
                 }
@@ -1034,7 +1034,7 @@
             stars.forEach((star) => {
                 ctx.beginPath();
                 ctx.arc(star.x, star.y, star.radius, 0, 2 * Math.PI);
-                ctx.fillStyle = rgba(255, 255, 255, ${star.alpha});
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
                 ctx.fill();
                 star.alpha += (Math.random() - 0.5) * 0.02;
                 if (star.alpha > 1) star.alpha = 1;
@@ -1110,7 +1110,7 @@
                 }
 
                 // Gizli barkod değerini bul
-                const expectedEl = cardBody.querySelector(input[type="hidden"][id="expectedBarcode-${side}-${productIndex}-${quantityIndex}"]);
+                const expectedEl = cardBody.querySelector(`input[type="hidden"][id="expectedBarcode-${side}-${productIndex}-${quantityIndex}"]`);
                 const expectedValue = expectedEl ? expectedEl.value.trim() : '';
                 const inputValue = input.value.trim();
 
@@ -1159,7 +1159,7 @@
                 if (!cardBody) return;
 
                 // Gizli barkod değerini bul
-                const expectedEl = cardBody.querySelector(input[type="hidden"][id="expectedBarcode-${side}-${productIndex}-${quantityIndex}"]);
+                const expectedEl = cardBody.querySelector(`input[type="hidden"][id="expectedBarcode-${side}-${productIndex}-${quantityIndex}"]`);
                 if (!expectedEl) return;
 
                 const expectedValue = expectedEl.value.trim();
