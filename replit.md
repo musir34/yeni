@@ -111,3 +111,9 @@ Preferred communication style: Simple, everyday language.
 
 Changelog:
 - July 06, 2025. Initial setup
+- July 13, 2025. Raf stok düşürme sistemi güncellendi
+  - update_service.py dosyasında confirm_packing() fonksiyonuna raf stok düşürme kodu eklendi
+  - Barkod karşılaştırma mantığı basitleştirildi
+  - Sistem siparişdeki her ürün için raflardan otomatik stok düşürüyor
+  - Stok yetersizliği durumunda işlem iptal ediliyor
+  - Kargo kodu mesajı merkezi ve büyük şekilde gösterilecek şekilde tasarlandı

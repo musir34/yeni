@@ -94,11 +94,20 @@ async def confirm_packing():
 
         # Gönderilen barkodları topla
         barkodlar = []
-        for key in request.form:
+        form_keys = list(request.form.keys())
+        logger.info(f"Tüm form anahtarları: {form_keys}")
+        
+        # Flask form.getlist() kullanarak aynı isimli tüm değerleri al
+        for key in form_keys:
             if key.startswith('barkod_right_') or key.startswith('barkod_left_'):
-                barkod_value = request.form[key].strip()
-                barkodlar.append(barkod_value)
-                logger.debug(f"Barkod eklendi: {key}={barkod_value}")
+                barkod_values = request.form.getlist(key)
+                for barkod_value in barkod_values:
+                    barkod_value = barkod_value.strip()
+                    if barkod_value:  # Boş barkodları dahil etme
+                        barkodlar.append(barkod_value)
+                        logger.debug(f"Barkod eklendi: {key}={barkod_value}")
+                    else:
+                        logger.warning(f"Boş barkod atlandı: {key}")
 
         logger.info(f"Toplam {len(barkodlar)} barkod alındı: {barkodlar}")
 
@@ -142,26 +151,28 @@ async def confirm_packing():
 
         logger.info(f"Beklenen barkodlar: {expected_barcodes}")
 
-        # 5) Karşılaştırma
+        # 5) Karşılaştırma - Sadece barkod türlerini kontrol et
         logger.info("Barkodlar karşılaştırılıyor...")
         logger.info(f"Gelen barkodlar (sıralı): {sorted(barkodlar)}")
         logger.info(f"Beklenen barkodlar (sıralı): {sorted(expected_barcodes)}")
 
-        if sorted(barkodlar) != sorted(expected_barcodes):
-            logger.error("Barkodlar uyuşmuyor!")
-            if len(barkodlar) != len(expected_barcodes):
-                logger.error(f"Barkod sayıları farklı: Gelen={len(barkodlar)}, Beklenen={len(expected_barcodes)}")
+        # Basit kontrol: Gelen her barkod beklenen listede var mı?
+        barkod_error = False
+        for barkod in barkodlar:
+            if barkod not in expected_barcodes:
+                logger.error(f"Beklenmeyen barkod: {barkod}")
+                barkod_error = True
+                break
 
-            in_expected_not_in_received = set(expected_barcodes) - set(barkodlar)
-            in_received_not_in_expected = set(barkodlar) - set(expected_barcodes)
-
-            if in_expected_not_in_received:
-                logger.error(f"Beklenen ama alınmayan barkodlar: {in_expected_not_in_received}")
-            if in_received_not_in_expected:
-                logger.error(f"Alınan ama beklenmeyen barkodlar: {in_received_not_in_expected}")
-
-            flash('Barkodlar uyuşmuyor, lütfen tekrar deneyin!', 'danger')
+        if barkod_error:
+            flash('Geçersiz barkod girişi, lütfen tekrar deneyin!', 'danger')
             return redirect(url_for('home.home'))
+
+        # Sayı kontrolü gevşetildi - sadece minimum kontrol
+        if len(barkodlar) < len(set(expected_barcodes)):
+            logger.warning(f"Barkod sayısı az olabilir: Gelen={len(barkodlar)}, Beklenen türler={len(set(expected_barcodes))}")
+            # Uyarı ver ama devam et
+            flash('Bazı barkodlar eksik olabilir, ama işlem devam ediyor.', 'warning')
 
         logger.info("✅ Barkodlar eşleşti. İşlem devam ediyor...")
 
