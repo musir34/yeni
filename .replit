@@ -18,6 +18,10 @@ deploymentTarget = "cloudrun"
 build = ["sh", "-c", "pip install --upgrade pip && pip install -r requirements.txt"]
 
 [[ports]]
+localPort = 443
+externalPort = 3002
+
+[[ports]]
 localPort = 3000
 externalPort = 3000
 

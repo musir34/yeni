@@ -189,17 +189,29 @@ if __name__ == '__main__':
             logger.warning(f"Veritabanı kurulumu sırasında hata: {e}")
 
     print("Uygulama başlatılıyor...")
+
+    # Ortama göre çalıştır (production vs development)
+    app_env = os.getenv("APP_ENV", "development")
+
     try:
-        app.run(
-            host='0.0.0.0',
-            port=443,
-            debug=debug_mode,
-            use_reloader=False,
-            ssl_context=(
-                '/home/musir/gullupanel/yeni/cert.pem',
-                '/home/musir/gullupanel/yeni/key.pem'
+        if app_env == "production":
+            app.run(
+                host='0.0.0.0',
+                port=443,
+                debug=debug_mode,
+                use_reloader=False,
+                ssl_context=(
+                    os.getenv("SSL_CERT", "/home/musir/gullupanel/yeni/cert.pem"),
+                    os.getenv("SSL_KEY", "/home/musir/gullupanel/yeni/key.pem")
+                )
             )
-        )
+        else:
+            app.run(
+                host='0.0.0.0',
+                port=8080,
+                debug=debug_mode,
+                use_reloader=False
+            )
     except Exception as e:
         print(f"Başlatma hatası: {e}")
         import traceback
