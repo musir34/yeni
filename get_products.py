@@ -18,7 +18,7 @@ from sqlalchemy import func
 from login_logout import roles_required
 from sqlalchemy.dialects.postgresql import insert
 from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID
-from models import db, Product, ProductArchive
+from models import db, Product, ProductArchive, RafUrun
 from cache_config import cache, CACHE_TIMES
 
 get_products_bp = Blueprint('get_products', __name__)
@@ -707,13 +707,22 @@ def group_products_by_model_and_then_color(products):
 # get_products.py içindeki GÜNCELLENECEK ROUTE
 @get_products_bp.route('/product_list')
 def product_list():
+
     try:
         page = request.args.get('page', 1, type=int)
-        per_page = 12 # Sayfa başına gösterilecek MODEL sayısı
+        per_page = 12  # Sayfa başına gösterilecek MODEL sayısı
 
         all_products = Product.query.order_by(Product.product_main_id).all()
 
-        # Yeni hiyerarşik gruplama fonksiyonunu kullan
+        # Tüm raf kayıtlarını tek seferde al
+        raf_kayitlari = RafUrun.query.all()
+        raf_map = {r.urun_barkodu: r.raf_kodu for r in raf_kayitlari}
+
+        # Her ürüne sadece bellekte eşleşme yap
+        for p in all_products:
+            p.raf_bilgisi = raf_map.get(p.barcode)
+
+        # Model → Renk → Ürün hiyerarşisini oluştur
         hierarchical_products = group_products_by_model_and_then_color(all_products)
 
         model_keys = sorted(list(hierarchical_products.keys()))
@@ -727,7 +736,6 @@ def product_list():
 
         total_pages = (total_models + per_page - 1) // per_page
 
-        # Flask-SQLAlchemy'nin pagination nesnesini manuel oluşturuyoruz
         pagination = {
             'page': page,
             'per_page': per_page,
@@ -737,23 +745,24 @@ def product_list():
             'has_next': page < total_pages,
             'prev_num': page - 1 if page > 1 else None,
             'next_num': page + 1 if page < total_pages else None,
-            'iter_pages': lambda left_edge=1, right_edge=1, left_current=2, right_current=2: 
-                           # Bu lambda, sayfa numaralarını oluşturmak için basit bir mantık içerir
-                           # Gerçek bir pagination nesnesi gibi karmaşık değildir ama iş görür
-                           range(max(1, page - left_current), min(total_pages, page + right_current) + 1)
+            'iter_pages': lambda left_edge=1, right_edge=1, left_current=2, right_current=2:
+                range(max(1, page - left_current), min(total_pages, page + right_current) + 1)
         }
 
         return render_template(
-            'product_list.html', # Artık bu dosyayı kullanacağız
+            'product_list.html',
             grouped_products=current_page_products,
             pagination=pagination,
-            search_mode=False # Arama modu entegrasyonu ayrıca yapılmalı
+            search_mode=False
         )
 
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.error(f"Ürün listesi oluşturulurken hata: {e}", exc_info=True)
         flash("Ürün listesi yüklenirken bir hata oluştu.", "danger")
         return render_template('product_list.html', grouped_products={}, pagination=None)
+
 
 
 
@@ -1361,13 +1370,34 @@ def bulk_delete_products():
 
 @get_products_bp.route('/api/get_variants_for_stock_update')
 def get_variants_for_stock_update():
+    from models import RafUrun  # RafUrun modelini import et
+
     model_id = request.args.get('model')
     if not model_id:
         return jsonify({'success': False, 'message': 'Model ID eksik.'}), 400
 
-    products = Product.query.filter_by(product_main_id=model_id).order_by(Product.color, Product.size).all()
-    variants = [{'barcode': p.barcode, 'color': p.color, 'size': p.size, 'quantity': p.quantity} for p in products]
-    return jsonify({'success': True, 'products': variants})
+    try:
+        products = Product.query.filter_by(product_main_id=model_id).order_by(Product.color, Product.size).all()
+        variants = []
+
+        for p in products:
+            # Barkod üzerinden raf bilgisi al
+            raflar = RafUrun.query.filter_by(urun_barkodu=p.barcode).all()
+            raf_bilgisi = ', '.join([r.raf_kodu for r in raflar]) if raflar else '-'
+
+            variants.append({
+                'barcode': p.barcode,
+                'color': p.color,
+                'size': p.size,
+                'quantity': p.quantity,
+                'raf_bilgisi': raf_bilgisi
+            })
+
+        return jsonify({'success': True, 'products': variants})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Hata oluştu: {str(e)}'}), 500
+
     
 
 @get_products_bp.route('/api/get_variants_for_cost_update')

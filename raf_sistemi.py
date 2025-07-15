@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models import db, Raf
+from models import db, Raf, Product, RafUrun
 import qrcode
 import barcode
 from barcode.writer import ImageWriter
@@ -9,6 +9,100 @@ from PIL import Image, ImageDraw, ImageFont
 import qrcode
 
 raf_bp = Blueprint("raf", __name__, url_prefix="/raf")
+
+# BU YENİ FONKSİYONU raf_bp.py DOSYANA EKLE
+@raf_bp.route("/api/stoklar/<string:raf_kodu>", methods=["GET"])
+def api_get_raf_stoklari(raf_kodu):
+    # Model importlarını fonksiyon içinde yapmak yerine dosyanın başında yapabilirsin
+    # from models import Product, RafUrun 
+
+    raf = Raf.query.filter_by(kod=raf_kodu).first()
+    if not raf:
+        return jsonify({"error": "Raf bulunamadı"}), 404
+
+    urunler_db = RafUrun.query.filter_by(raf_kodu=raf.kod).all()
+
+    if not urunler_db:
+        return jsonify([]) # Boş liste döndür
+
+    # Ürünlerin barkodlarını topla
+    barkodlar = [u.urun_barkodu for u in urunler_db]
+
+    # Product tablosundan ilgili ürün bilgilerini tek seferde çek
+    urun_bilgileri_map = {
+        p.barcode: {
+            "model": p.product_main_id,
+            "color": p.color,
+            "size": p.size
+        }
+        for p in Product.query.filter(Product.barcode.in_(barkodlar))
+    }
+
+    detaylar = []
+    for u in urunler_db:
+        urun_bilgi = urun_bilgileri_map.get(u.urun_barkodu)
+        if urun_bilgi:
+            detaylar.append({
+                "barkod": u.urun_barkodu,
+                "adet": u.adet,
+                "model": urun_bilgi["model"],
+                "color": urun_bilgi["color"],
+                "size": urun_bilgi["size"]
+            })
+
+    return jsonify(detaylar)
+
+@raf_bp.route("/stok-guncelle", methods=["POST"])
+def raf_stok_guncelle():
+    raf_kodu = request.form.get("raf_kodu")
+    barkod = request.form.get("barkod")
+    yeni_adet = int(request.form.get("adet"))
+
+    urun = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barkod).first()
+    if urun:
+        urun.adet = yeni_adet
+        db.session.commit()
+        flash("Stok güncellendi.", "success")
+    else:
+        flash("Ürün rafta bulunamadı.", "danger")
+
+    return redirect("/raf/stoklar")
+
+
+@raf_bp.route("/stoklar", methods=["GET"])
+def raf_stok_listesi():
+    raflar = Raf.query.order_by(Raf.kod).all()
+    raf_stoklari = {}
+
+    # Barkod üzerinden ürün bilgisi eşleştirme için tek seferde çekiyoruz
+    barkod_map = {
+        p.barcode: {
+            "product_main_id": p.product_main_id,
+            "color": p.color,
+            "size": p.size
+        }
+        for p in Product.query.with_entities(Product.barcode, Product.product_main_id, Product.color, Product.size)
+    }
+
+    for raf in raflar:
+        urunler = RafUrun.query.filter_by(raf_kodu=raf.kod).all()
+        detaylar = []
+
+        for u in urunler:
+            urun_bilgi = barkod_map.get(u.urun_barkodu)
+            if urun_bilgi:
+                detaylar.append({
+                    "barkod": u.urun_barkodu,
+                    "adet": u.adet,
+                    "model": urun_bilgi["product_main_id"],
+                    "color": urun_bilgi["color"],
+                    "size": urun_bilgi["size"]
+                })
+
+        raf_stoklari[raf.kod] = detaylar
+
+    return render_template("raf_stok_liste.html", raf_stoklari=raf_stoklari)
+    
 
 def qrcode_with_text(data, filename):
     import qrcode
