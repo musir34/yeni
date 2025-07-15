@@ -10,6 +10,68 @@ import qrcode
 
 raf_bp = Blueprint("raf", __name__, url_prefix="/raf")
 
+# YENİ FONKSİYON: raf_bp.py dosyana bunu ekle
+@raf_bp.route("/api/kademeli-liste", methods=["GET"])
+def raf_kademeli_liste():
+    """
+    Rafları 3 katmanlı bir yapıda döndürür:
+    {
+        "A": {
+            "A-01": ["01", "02"],
+            "A-02": ["01"]
+        },
+        "B": { ... }
+    }
+    """
+    raflar = Raf.query.order_by(Raf.ana, Raf.ikincil, Raf.kat).all()
+    kademeli_raflar = {}
+
+    for r in raflar:
+        ana_kod = r.ana
+        ikincil_tam_kod = f"{r.ana}-{r.ikincil}"
+        kat_kod = r.kat
+
+        # Ana raf grubunu oluştur
+        if ana_kod not in kademeli_raflar:
+            kademeli_raflar[ana_kod] = {}
+
+        # İkincil raf grubunu oluştur
+        if ikincil_tam_kod not in kademeli_raflar[ana_kod]:
+            kademeli_raflar[ana_kod][ikincil_tam_kod] = []
+
+        # Kat'ı ekle
+        kademeli_raflar[ana_kod][ikincil_tam_kod].append(kat_kod)
+
+    return jsonify(kademeli_raflar)
+
+@raf_bp.route("/api/gruplu-liste", methods=["GET"])
+def raf_gruplu_liste():
+    raflar = Raf.query.order_by(Raf.kod.asc()).all()
+    gruplar = {}
+    for r in raflar:
+        ana = r.ana  # Örnek: "A"
+        if ana not in gruplar:
+            gruplar[ana] = []
+        gruplar[ana].append({
+            "kod": r.kod,
+            "qr": "/" + r.qr_path,
+            "barkod": "/" + r.barcode_path
+        })
+    return jsonify(gruplar)
+
+
+@raf_bp.route('/yonetim')
+def raf_yonetimi():
+    # Örnek raflar: {'A': ['A-A', 'A-B'], 'B': ['B-A']}
+    ana_raflar = db.session.query(Raf.ana_kod).distinct().all()
+    grouped_raflar = {}
+    for ana in ana_raflar:
+        ikinciller = Raf.query.filter_by(ana_kod=ana[0]).all()
+        grouped_raflar[ana[0]] = [f"{r.ana_kod}-{r.ikincil_kod}" for r in ikinciller]
+
+    return render_template("raf_olustur.html", grouped_raflar=grouped_raflar)
+
+
 # BU YENİ FONKSİYONU raf_bp.py DOSYANA EKLE
 @raf_bp.route("/api/stoklar/<string:raf_kodu>", methods=["GET"])
 def api_get_raf_stoklari(raf_kodu):
