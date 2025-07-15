@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kargo Etiketi - Yazdır</title>
+    <title>Test Order Label Preview</title>
     <style>
         @page {
             size: 100mm 100mm;
@@ -94,40 +94,26 @@
     <div class="label">
         <!-- Barkod -->
         <div class="barcode-container">
-            {% if barcode_path %}
-                <img src="{{ url_for('static', filename=barcode_path) }}" alt="Kargo Barkodu">
-            {% else %}
-                <p style="text-align: center;">Barkod mevcut değil</p>
-            {% endif %}
+            <img src="static/barcodes/728002479650496.png" alt="Kargo Barkodu">
         </div>
+        
         <!-- Kargo Firması -->
         <div class="cargo-provider">
-            {{ cargo_provider_name }}
+            DHL eCommerce Marketplace
         </div>
+        
         <!-- QR Kod -->
         <div class="qrcode-container">
-            {% if qr_code_path %}
-                <img src="{{ url_for('static', filename=qr_code_path) }}" alt="QR Kod">
-            {% else %}
-                <p style="text-align: center;">QR kod mevcut değil</p>
-            {% endif %}
+            <img src="static/qr_codes/qr_728002479650496.png" alt="QR Kod">
         </div>
+        
         <!-- Müşteri Bilgileri -->
         <div class="customer-info">
-            <p class="order-number">Sipariş No: {{ order_number }}</p>
-            <p class="name">Alıcı: {{ customer_name }} {{ customer_surname }}</p>
-            <p class="address">{{ customer_address }}</p>
-            <p class="phone">Telefon: {{ telefon_no }}</p>
+            <p class="order-number">Sipariş No: 10353475915</p>
+            <p class="name">Alıcı: dilaver hasanoglu</p>
+            <p class="address">Kevenli afet konutlari K1-5 daire.10 İpekyolu Van</p>
+            <p class="phone">Telefon: Bilinmiyor</p>
         </div>
     </div>
-
-    <script>
-        window.onload = function() {
-            window.print();
-            window.onafterprint = function() {
-                window.close();
-            };
-        };
-    </script>
 </body>
 </html>
