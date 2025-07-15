@@ -7,7 +7,7 @@ import re
 
 barcode_utils_bp = Blueprint('barcode_utils', __name__)
 
-def generate_barcode(shipping_barcode, width_mm=80, height_mm=20, dpi=300):
+def generate_barcode(shipping_barcode, width_mm=85, height_mm=20, dpi=300):
     if not shipping_barcode or not isinstance(shipping_barcode, str):
         print("❌ [generate_barcode] Barkod değeri boş veya geçersiz!")
         return None
@@ -23,11 +23,11 @@ def generate_barcode(shipping_barcode, width_mm=80, height_mm=20, dpi=300):
         height_px = int((height_mm / 25.4) * dpi)
 
         writer_options = {
-            'module_width': width_mm / width_px,
+            'module_width': 0.3,
             'module_height': height_mm,
-            'font_size': 10,
-            'text_distance': 5,
-            'quiet_zone': 4.0,
+            'font_size': 12,
+            'text_distance': 3,
+            'quiet_zone': 2.0,
             'dpi': dpi,
             'write_text': True,
             'format': 'PNG'

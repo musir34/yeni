@@ -120,3 +120,11 @@ Changelog:
   - Raf stoğu 0 olsa bile sipariş onaylanabilir
   - Ürün görselleri büyük boyutlu görüntüleniyor ve tıklanabilir modal ile büyütülüyor
   - Home.html'deki ürün görselleri 180px'den 250px'e çıkarıldı ve tıklanabilir modal eklendi
+- July 15, 2025. Sipariş etiketi barkod hizalama sorunu düzeltildi
+  - order_label.html'de barkod container'ında flex layout kullanarak ortalama iyileştirildi
+  - Barkod genişliği %90'dan %98'e çıkarıldı
+  - barcode_utils.py'da varsayılan barkod genişliği 80mm'den 85mm'e çıkarıldı
+  - Barkod üretim parametreleri optimize edildi (module_width, quiet_zone vb.)
+  - Barkod numarası font boyutu 10pt'den 11pt'e çıkarıldı
+  - Barkod altında kargo numarası gösterimi eklendi
+  - Test dosyası (test_order_label.py) oluşturuldu

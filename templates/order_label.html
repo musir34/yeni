@@ -28,9 +28,12 @@
         .barcode-container {
             text-align: center;
             margin-bottom: 2mm;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         .barcode-container img {
-            max-width: 90%;
+            max-width: 98%;
             max-height: 18mm;
             width: auto;
             height: auto;
@@ -39,10 +42,12 @@
             object-fit: contain;
         }
         .barcode-number {
-            font-size: 10pt;
+            font-size: 11pt;
             text-align: center;
             margin: 1mm 0 3mm 0;
             font-weight: bold;
+            display: block;
+            width: 100%;
         }
         .cargo-provider {
             font-size: 11pt;
@@ -94,6 +99,9 @@
                 <p style="text-align: center;">Barkod mevcut değil</p>
             {% endif %}
         </div>
+        {% if shipping_barcode %}
+        <div class="barcode-number">{{ shipping_barcode }}</div>
+        {% endif %}
         <!-- Kargo Firması -->
         <div class="cargo-provider">
             {{ cargo_provider_name }}
