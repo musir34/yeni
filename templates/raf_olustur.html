@@ -237,7 +237,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 const anaHeader = document.createElement("div");
                 anaHeader.className = "collapsible-header";
-                // DEĞİŞTİ: ikona sabit bir class (collapse-icon) eklendi
                 anaHeader.innerHTML = `<h3><i class="bi bi-folder"></i> Ana Raf: ${anaKod}</h3><i class="bi bi-chevron-down collapse-icon"></i>`;
 
                 const anaContent = document.createElement("div");
@@ -251,30 +250,36 @@ document.addEventListener("DOMContentLoaded", function() {
 
                     const ikincilHeader = document.createElement("div");
                     ikincilHeader.className = "collapsible-header";
-                    // DEĞİŞTİ: ikona sabit bir class (collapse-icon) eklendi
                     ikincilHeader.innerHTML = `<h4><i class="bi bi-collection"></i> ${ikincilKod}</h4><i class="bi bi-chevron-down collapse-icon"></i>`;
 
                     const ikincilContent = document.createElement("div");
                     ikincilContent.className = "collapsible-content";
 
-                    const katlar = data[anaKod][ikincilKod].sort();
+                    const katlar = data[anaKod][ikincilKod].sort((a, b) => a - b); // Katları sayısal olarak sırala
                     katlar.forEach(kat => {
                         const tamRafKodu = `${ikincilKod}-${kat}`;
                         const katDiv = document.createElement('div');
                         katDiv.className = 'kat-item';
                         katDiv.setAttribute("data-search-text", `${anaKod.toLowerCase()} ${ikincilKod.toLowerCase()} ${kat.toLowerCase()}`);
 
+                        // *** DEĞİŞİKLİK BAŞLANGICI ***
+                        // Sil butonu eklendi.
                         katDiv.innerHTML = `
                             <div class="kat-item-header">
                                 <h5><i class="bi bi-layers-fill"></i> Kat: ${kat} (Kod: ${tamRafKodu})</h5>
-                                <div>
+                                <div style="display: flex; gap: 0.5rem;">
                                     <button class="btn btn-primary btn-sm" onclick="stoklariGoster('${tamRafKodu}', this)">
                                         <i class="bi bi-box-seam"></i> Stokları Göster
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="rafiSil('${tamRafKodu}')">
+                                        <i class="bi bi-trash"></i> Sil
                                     </button>
                                 </div>
                             </div>
                             <div class="stok-listesi-container" id="stok-listesi-${tamRafKodu}"></div>
                         `;
+                        // *** DEĞİŞİKLİK SONU ***
+
                         ikincilContent.appendChild(katDiv);
                     });
 
@@ -282,7 +287,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     ikincilGrupDiv.appendChild(ikincilContent);
                     anaContent.appendChild(ikincilGrupDiv);
 
-                    // DEĞİŞTİ: İkonu bulmak için yeni class kullanılıyor
                     ikincilHeader.addEventListener("click", () => toggleCollapse(ikincilContent, ikincilHeader.querySelector('.collapse-icon')));
                 });
 
@@ -290,7 +294,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 anaGrupDiv.appendChild(anaContent);
                 container.appendChild(anaGrupDiv);
 
-                // DEĞİŞTİ: İkonu bulmak için yeni class kullanılıyor
                 anaHeader.addEventListener("click", () => toggleCollapse(anaContent, anaHeader.querySelector('.collapse-icon')));
             });
 
@@ -342,9 +345,10 @@ document.addEventListener("DOMContentLoaded", function() {
 function toggleCollapse(contentElement, iconElement) {
     const isVisible = contentElement.style.display === "block";
     contentElement.style.display = isVisible ? "none" : "block";
-    // Bu fonksiyon artık hatasız çalışacak çünkü iconElement asla null olmayacak
-    iconElement.classList.toggle("bi-chevron-down", isVisible);
-    iconElement.classList.toggle("bi-chevron-up", !isVisible);
+    if (iconElement) {
+        iconElement.classList.toggle("bi-chevron-down", isVisible);
+        iconElement.classList.toggle("bi-chevron-up", !isVisible);
+    }
 }
 
 async function stoklariGoster(rafKodu, button) {
@@ -418,6 +422,45 @@ function stokAra(input, rafKodu) {
         }
     }
 }
+
+// *** YENİ FONKSİYON BAŞLANGICI ***
+async function rafiSil(rafKodu) {
+    // Silmeden önce kullanıcıdan onay alıyoruz.
+    if (!confirm(`'${rafKodu}' kodlu rafı ve içindeki TÜM ürünleri kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!`)) {
+        return; // Kullanıcı "İptal" derse işlemi durdur.
+    }
+
+    try {
+        // Flask'taki silme route'una POST isteği gönderiyoruz.
+        const res = await fetch(`/raf/sil/${rafKodu}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await res.json();
+        const sonucDiv = document.getElementById("rafSonuc");
+
+        if (res.ok) { // HTTP status 200-299 arasındaysa...
+            sonucDiv.innerHTML = `<p style="color:green;">✅ ${result.message}</p>`;
+            // Silme işlemi başarılı olduğu için raf listesini yeniliyoruz.
+            raflariGetir(); 
+        } else {
+            // Sunucudan bir hata mesajı geldiyse onu gösteriyoruz.
+            sonucDiv.innerHTML = `<p style="color:red;">❌ Hata: ${result.error || 'Raf silinirken bir sorun oluştu.'}</p>`;
+        }
+         // Mesajı 4 saniye sonra temizle
+        setTimeout(() => { sonucDiv.innerHTML = ''; }, 4000);
+    } catch (error) {
+        // Ağ hatası veya başka bir JS hatası olursa...
+        console.error('Raf silme hatası:', error);
+        const sonucDiv = document.getElementById("rafSonuc");
+        sonucDiv.innerHTML = `<p style="color:red;">❌ Bir ağ hatası oluştu. Lütfen konsolu kontrol edin.</p>`;
+        setTimeout(() => { sonucDiv.innerHTML = ''; }, 4000);
+    }
+}
+// *** YENİ FONKSİYON SONU ***
 </script>
 </body>
 </html>

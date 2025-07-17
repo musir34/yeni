@@ -9,7 +9,7 @@ import aiohttp
 import requests
 from threading import Thread
 from functools import wraps
-
+from sqlalchemy.orm import joinedload
 from flask import Blueprint, render_template, request, jsonify, current_app
 from sqlalchemy import func
 from flask_limiter import Limiter
@@ -105,11 +105,7 @@ async def send_trendyol_update_async(items_to_update):
     return all_errors
 
 # --- ANA İŞLEM FONKSİYONU ---
-def process_stock_updates(items, update_type):
-    """
-    Veritabanı stoklarını günceller ve Trendyol'a gönderilecek listeyi hazırlar.
-    Bu fonksiyon artık tek bir veritabanı sorgusu ve tek bir commit ile çalışır.
-    """
+def process_stock_updates(items, update_type, raf_kodu=None):
     if not items:
         return {"db_errors": {"genel": "İşlenecek ürün listesi boş."}}, []
 
@@ -118,11 +114,9 @@ def process_stock_updates(items, update_type):
     items_for_trendyol = []
 
     try:
-        # 1. Adım: Tüm ürünleri veritabanından TEK BİR SORGUDAYLA çek.
         products_in_db = Product.query.filter(func.lower(Product.barcode).in_([b.lower() for b in barcodes])).all()
         product_map = {p.barcode.lower(): p for p in products_in_db}
 
-        # 2. Adım: Her ürün için yeni stok miktarını hesapla ve güncelle.
         for item in items:
             barcode = item['barcode']
             count = item['count']
@@ -132,34 +126,40 @@ def process_stock_updates(items, update_type):
                 db_errors[barcode] = "Ürün veritabanında bulunamadı."
                 continue
 
-            current_stock = product.quantity if product.quantity is not None else 0
-
             if update_type == 'add':
-                new_stock = current_stock + count
+                product.quantity = (product.quantity or 0) + count
+
             elif update_type == 'renew':
-                new_stock = count
+                # Bu barkodun tüm raflardaki toplamını hesapla
+                toplam_adet = db.session.query(func.sum(RafUrun.adet)).filter(
+                    RafUrun.urun_barkodu == barcode
+                ).scalar() or 0
+
+                # Yeni gelen raf güncellemesini de ekle
+                toplam_adet += count
+
+                # Ama eğer bu rafta zaten varsa, eskisini çıkar yeni ekleneni koy
+                mevcut_raf = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barcode).first()
+                if mevcut_raf:
+                    toplam_adet = toplam_adet - (mevcut_raf.adet or 0)
+
+                product.quantity = toplam_adet
+
             else:
                 db_errors[barcode] = f"Geçersiz güncelleme tipi: {update_type}"
                 continue
 
-            product.quantity = new_stock
+            items_for_trendyol.append({"barcode": product.barcode, "quantity": product.quantity})
 
-            # 3. Adım: Trendyol'a gönderilecekler listesine ekle.
-            items_for_trendyol.append({"barcode": product.barcode, "quantity": new_stock})
-
-        # 4. Adım: Tüm değişiklikleri TEK BİR COMMIT ile veritabanına kaydet.
-        if len(items_for_trendyol) > 0:
-            db.session.commit()
-            logger.info(f"{len(items_for_trendyol)} ürün veritabanında başarıyla güncellendi.")
-        else:
-             logger.warning("Veritabanında güncellenecek geçerli ürün bulunamadı.")
-
+        db.session.commit()
+        logger.info(f"{len(items_for_trendyol)} ürün güncellendi.")
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Veritabanı güncelleme sırasında kritik hata: {e}", exc_info=True)
+        logger.error(f"Veritabanı hatası: {e}", exc_info=True)
         return {"db_errors": {"kritik_hata": str(e)}}, []
 
     return db_errors, items_for_trendyol
+
 
 # --- FLASK ENDPOINT'LERİ ---
 
@@ -222,7 +222,7 @@ def handle_stock_update_from_frontend():
     logger.info(f"Stok güncelleme paketi alındı. Ürün: {len(items)}, Tip: {update_type}, Raf: {raf_kodu}")
 
     # 2. ANA ÜRÜN STOKLARINI GÜNCELLE
-    db_errors, items_for_trendyol = process_stock_updates(items, update_type)
+    db_errors, items_for_trendyol = process_stock_updates(items, update_type, raf_kodu)
 
     # 3. RAFA AİT STOKLARI GÜNCELLE
     try:

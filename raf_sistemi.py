@@ -4,7 +4,8 @@ import qrcode
 import barcode
 from barcode.writer import ImageWriter
 import os
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template, flash, redirect
+
 from PIL import Image, ImageDraw, ImageFont
 import qrcode
 
@@ -62,14 +63,14 @@ def raf_gruplu_liste():
 
 @raf_bp.route('/yonetim')
 def raf_yonetimi():
-    # Örnek raflar: {'A': ['A-A', 'A-B'], 'B': ['B-A']}
-    ana_raflar = db.session.query(Raf.ana_kod).distinct().all()
+    ana_raflar = db.session.query(Raf.ana).distinct().all()
     grouped_raflar = {}
     for ana in ana_raflar:
-        ikinciller = Raf.query.filter_by(ana_kod=ana[0]).all()
-        grouped_raflar[ana[0]] = [f"{r.ana_kod}-{r.ikincil_kod}" for r in ikinciller]
+        ikinciller = Raf.query.filter_by(ana=ana[0]).all()
+        grouped_raflar[ana[0]] = [f"{r.ana}-{r.ikincil}" for r in ikinciller]
 
     return render_template("raf_olustur.html", grouped_raflar=grouped_raflar)
+
 
 
 # BU YENİ FONKSİYONU raf_bp.py DOSYANA EKLE
@@ -277,6 +278,24 @@ def raf_sil(kod):
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+@raf_bp.route("/stok-sil", methods=["POST"])
+def raf_urun_sil():
+    raf_kodu = request.form.get("raf_kodu")
+    barkod = request.form.get("barkod")
+
+    if not raf_kodu or not barkod:
+        flash("Geçersiz istek. Raf kodu ve barkod gerekli.", "danger")
+        return redirect("/raf/yonetim")
+
+    urun = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barkod).first()
+    if not urun:
+        flash("Ürün rafta bulunamadı.", "warning")
+        return redirect("/raf/yonetim")
+
+    db.session.delete(urun)
+    db.session.commit()
+    flash("Ürün raftan silindi.", "success")
+    return redirect("/raf/yonetim")
 
 
 @raf_bp.route("/stok-ekle", methods=["POST"])
@@ -325,7 +344,7 @@ def raf_listesi_api():
 
 @raf_bp.route("/stok-form", methods=["GET"])
 def stok_form():
-    return render_template("raf_stok_ekle.html")
+    return render_template("stock_addition.html")
 
 
 @raf_bp.route("/form", methods=["GET"])
