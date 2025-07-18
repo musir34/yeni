@@ -6,9 +6,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-
     <style>
         :root {
             --color-primary: #B76E79;
@@ -65,10 +62,6 @@
             padding: 0.4rem 0.8rem;
             font-size: 0.8rem;
         }
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
         .btn-primary {
             background: linear-gradient(45deg, var(--color-primary), var(--color-primary-dark));
             color: white;
@@ -81,7 +74,7 @@
             background-color: #dc3545;
             color: white;
         }
-        .btn:hover:not(:disabled) {
+        .btn:hover {
             opacity: 0.9;
             transform: translateY(-1px);
         }
@@ -216,21 +209,6 @@
 <script>
 document.addEventListener("DOMContentLoaded", function() {
 
-    function checkLibrariesAndEnableButtons() {
-        const checkInterval = setInterval(function() {
-            if (typeof QRCode !== 'undefined' && typeof JsBarcode !== 'undefined') {
-                console.log("✅ Kütüphaneler yüklendi, Yazdır butonları aktif ediliyor.");
-                clearInterval(checkInterval);
-                const printButtons = document.querySelectorAll('.btn-print');
-                printButtons.forEach(button => {
-                    button.disabled = false;
-                });
-            } else {
-                console.log("Kütüphaneler bekleniyor...");
-            }
-        }, 200); 
-    }
-
     async function raflariGetir() {
         const container = document.getElementById("rafListesiYeri");
         container.innerHTML = '<p class="text-muted text-center">Yükleniyor...</p>';
@@ -270,11 +248,12 @@ document.addEventListener("DOMContentLoaded", function() {
                         katDiv.className = 'kat-item';
                         katDiv.setAttribute("data-search-text", `${anaKod.toLowerCase()} ${ikincilKod.toLowerCase()} ${katObj.kat.toLowerCase()}`);
 
+                        // Yazdır butonu artık en başından itibaren aktif ve basit
                         katDiv.innerHTML = `
                             <div class="kat-item-header">
                                 <h5><i class="bi bi-layers-fill"></i> Kat: ${katObj.kat} (Kod: ${tamRafKodu})</h5>
                                 <div style="display: flex; gap: 0.5rem;">
-                                    <button class="btn btn-secondary btn-sm btn-print" onclick="yazdirRafEtiketi('${tamRafKodu}')" disabled>
+                                    <button class="btn btn-secondary btn-sm" onclick="yazdirRafEtiketi('${tamRafKodu}')">
                                         <i class="bi bi-printer"></i> Yazdır
                                     </button>
                                     <button class="btn btn-primary btn-sm" onclick="stoklariGoster('${tamRafKodu}', this)">
@@ -301,13 +280,12 @@ document.addEventListener("DOMContentLoaded", function() {
                 anaHeader.addEventListener("click", () => toggleCollapse(anaContent, anaHeader.querySelector('.collapse-icon')));
             });
 
-            checkLibrariesAndEnableButtons();
-
         } catch (err) {
             console.error("Raflar çekilemedi:", err);
             container.innerHTML = '<p style="color:red" class="text-center">Raflar yüklenirken bir hata oluştu.</p>';
         }
     }
+
     document.getElementById("rafAramaInput").addEventListener("input", function () {
         const arama = this.value.toLowerCase().trim();
         document.querySelectorAll('.kat-item').forEach(item => {
@@ -322,6 +300,7 @@ document.addEventListener("DOMContentLoaded", function() {
             grup.style.display = grup.getAttribute('data-search-text').includes(arama) || gorunurIkincilVar ? 'block' : 'none';
         });
     });
+
     document.getElementById("rafForm").addEventListener("submit", async function(e) {
         e.preventDefault();
         const formData = new FormData(this);
@@ -342,6 +321,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
         setTimeout(() => { sonucDiv.innerHTML = ''; }, 3000);
     });
+
     raflariGetir();
 });
 
@@ -447,6 +427,7 @@ async function rafiSil(rafKodu) {
     }
 }
 
+// YAZDIRMA FONKSİYONU (BACKEND DESTEKLİ, BASİT VE GÜVENİLİR YÖNTEM)
 function yazdirRafEtiketi(rafKodu) {
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
@@ -484,67 +465,41 @@ function yazdirRafEtiketi(rafKodu) {
                         justify-content: center;
                         gap: 2mm;
                     }
-                    canvas, svg {
-                        display: block;
+                    img {
+                        max-width: 85mm; /* Taşmaları engellemek için */
+                    }
+                    #qr-image {
+                        max-width: 45mm;
+                        max-height: 45mm;
+                    }
+                    #barcode-image {
+                        max-width: 80mm;
+                        max-height: 18mm;
                     }
                 </style>
             </head>
             <body>
+                <div class="raf-kodu">${rafKodu}</div>
+                <div class="gorsel-alani">
+                    <img id="qr-image" src="/raf/etiket/qr/${rafKodu}">
+                    <img id="barcode-image" src="/raf/etiket/barkod/${rafKodu}">
+                </div>
+                <script>
+                    window.onload = function() {
+                        // Backend'den resimlerin yüklenmesini beklemek için küçük bir gecikme
+                        setTimeout(function() {
+                            window.print();
+                        }, 250); // Gecikmeyi biraz artırarak garantiye alalım
+
+                        window.onafterprint = function() {
+                           window.close();
+                        }
+                    }
+                <\/script>
             </body>
         </html>
     `);
     printWindow.document.close();
-
-    const printBody = printWindow.document.body;
-    const title = printWindow.document.createElement('div');
-    title.className = 'raf-kodu';
-    title.textContent = rafKodu;
-    printBody.appendChild(title);
-
-    const gorselAlani = printWindow.document.createElement('div');
-    gorselAlani.className = 'gorsel-alani';
-
-    const qrCanvas = printWindow.document.createElement('canvas');
-    gorselAlani.appendChild(qrCanvas);
-
-    const barcodeSvg = printWindow.document.createElement('svg');
-    gorselAlani.appendChild(barcodeSvg);
-
-    printBody.appendChild(gorselAlani);
-
-    try {
-        QRCode.toCanvas(
-            qrCanvas,
-            rafKodu, 
-            { width: 170, margin: 1 },
-            function (error) {
-                if (error) console.error('QR Kod Hatası:', error);
-            }
-        );
-
-        JsBarcode(
-            barcodeSvg,
-            rafKodu, 
-            {
-                format: 'CODE128',
-                displayValue: false,
-                width: 3,
-                height: 68,
-                margin: 5
-            }
-        );
-    } catch(e) {
-        console.error("Görsel oluşturma hatası:", e);
-        printBody.innerHTML = "Görseller oluşturulurken bir hata oluştu.";
-        return;
-    }
-
-    setTimeout(function() {
-        printWindow.print();
-        printWindow.onafterprint = function() {
-           printWindow.close();
-        }
-    }, 100);
 }
 </script>
 </body>
