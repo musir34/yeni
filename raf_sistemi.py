@@ -12,16 +12,21 @@ import qrcode
 raf_bp = Blueprint("raf", __name__, url_prefix="/raf")
 
 # YENİ FONKSİYON: raf_bp.py dosyana bunu ekle
+# YENİ FONKSİYON: raf_bp.py dosyana bunu ekle
 @raf_bp.route("/api/kademeli-liste", methods=["GET"])
 def raf_kademeli_liste():
     """
-    Rafları 3 katmanlı bir yapıda döndürür:
+    Rafları 3 katmanlı bir yapıda, her kat için görsel yollarıyla birlikte döndürür:
     {
         "A": {
-            "A-01": ["01", "02"],
-            "A-02": ["01"]
-        },
-        "B": { ... }
+            "A-01": [
+                {
+                    "kat": "01",
+                    "qr_path": "/static/raflar/qr_A-01-01.png",
+                    "barcode_path": "/static/raflar/barcode_A-01-01.png"
+                }
+            ]
+        }
     }
     """
     raflar = Raf.query.order_by(Raf.ana, Raf.ikincil, Raf.kat).all()
@@ -32,16 +37,18 @@ def raf_kademeli_liste():
         ikincil_tam_kod = f"{r.ana}-{r.ikincil}"
         kat_kod = r.kat
 
-        # Ana raf grubunu oluştur
         if ana_kod not in kademeli_raflar:
             kademeli_raflar[ana_kod] = {}
 
-        # İkincil raf grubunu oluştur
         if ikincil_tam_kod not in kademeli_raflar[ana_kod]:
             kademeli_raflar[ana_kod][ikincil_tam_kod] = []
 
-        # Kat'ı ekle
-        kademeli_raflar[ana_kod][ikincil_tam_kod].append(kat_kod)
+        # Kat'ı sadece kod olarak değil, bir obje olarak ekliyoruz
+        kademeli_raflar[ana_kod][ikincil_tam_kod].append({
+            "kat": kat_kod,
+            "qr_path": "/" + r.qr_path if r.qr_path else "",
+            "barcode_path": "/" + r.barcode_path if r.barcode_path else ""
+        })
 
     return jsonify(kademeli_raflar)
 
