@@ -184,15 +184,10 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      console.log('Rapor giriş sayfası yüklendi');
-      
       const kategoriSelect = document.getElementById('kategori');
-      const submitButton = document.querySelector('button[type="submit"]');
-      const form = document.querySelector('form');
 
       if (kategoriSelect) {
         kategoriSelect.addEventListener('change', function () {
-          console.log('Kategori değiştirildi:', this.value);
           document.querySelectorAll('.category-fields').forEach(div => {
             div.style.display = 'none';
           });
@@ -206,44 +201,6 @@
             const iadeDiv = document.getElementById('fields_trendyol_iade_yonetimi');
             if (iadeDiv) iadeDiv.style.display = 'block';
           }
-        });
-      }
-
-      // Form submit olayını kontrol et
-      if (form) {
-        form.addEventListener('submit', function(e) {
-          console.log('Form gönderiliyor...');
-          
-          // Kategori seçilmiş mi kontrol et
-          if (!kategoriSelect || !kategoriSelect.value) {
-            e.preventDefault();
-            alert('Lütfen bir kategori seçin');
-            return false;
-          }
-          
-          // Açıklama doldurulmuş mu kontrol et
-          const aciklama = document.getElementById('aciklama');
-          if (!aciklama || !aciklama.value.trim()) {
-            e.preventDefault();
-            alert('Lütfen yapılan işin açıklamasını girin');
-            return false;
-          }
-          
-          // Butonu devre dışı bırak
-          if (submitButton) {
-            submitButton.disabled = true;
-            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Kaydediliyor...';
-          }
-          
-          console.log('Form validation başarılı, gönderiliyor');
-          return true;
-        });
-      }
-
-      // Buton tıklama olayını da dinle
-      if (submitButton) {
-        submitButton.addEventListener('click', function(e) {
-          console.log('Submit butonuna tıklandı');
         });
       }
     });
