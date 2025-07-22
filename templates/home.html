@@ -689,14 +689,19 @@
             <div class="dropdown">
                 <button class="btn btn-warning dropdown-toggle" type="button" id="kullaniciMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     Kullanıcı İşlemleri
-                </button>
-                <div class="dropdown-menu" aria-labelledby="kullaniciMenu">
-                    <a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a>
-                    {% if session['role'] in ['admin', 'manager'] %}
-                    <a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}">
-                        <i class="fas fa-history"></i> Kullanıcı Hareketleri
-                    </a>
-                    {% endif %}
+                    </button>
+                    <div class="dropdown-menu" aria-labelledby="kullaniciMenu">
+                        <a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a>
+
+                        <a class="dropdown-item" href="{{ url_for('rapor_gir.giris') }}">
+                            <i class="fas fa-file-alt"></i> Raporlama
+                        </a>
+
+                        {% if session['role'] in ['admin', 'manager'] %}
+                        <a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}">
+                            <i class="fas fa-history"></i> Kullanıcı Hareketleri
+                        </a>
+                        {% endif %}
                 </div>
             </div>
             <div class="dropdown">

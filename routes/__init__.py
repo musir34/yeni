@@ -31,6 +31,7 @@ def register_blueprints(app):
     from routes.common.health import health_bp
     from kasa import kasa_bp
     from raf_sistemi import raf_bp
+    from rapor_gir import rapor_gir_bp
 
     # Register all blueprints
     for bp in [
@@ -63,5 +64,6 @@ def register_blueprints(app):
         health_bp,
         raf_bp,
         kasa_bp,
+        rapor_gir_bp,
     ]:
         app.register_blueprint(bp)

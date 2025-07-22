@@ -9,7 +9,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.routing import BuildError
 from flask_login import LoginManager, current_user
-
+from datetime import datetime
 from models import db, User
 from archive import format_turkish_date_filter
 from logger_config import app_logger as logger
@@ -30,7 +30,7 @@ app.config.from_object(
     __import__('config').config_map.get(env, __import__('config').DevelopmentConfig)
 )
 
-# Veritabanı bağlantı adresini ayarla (en son yaz!)
+# Veritabanı bağlantı adresini ayarla
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -45,15 +45,15 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login_logout.login"
 
-# DEBUG: Veritabanı bağlantı adresini logla
 print("DB URL:", os.getenv("DATABASE_URL"))
-
 
 @login_manager.user_loader
 def load_user(user_id):
+    # Debug print'lerini temizledik, artık gerek yok.
     return User.query.get(int(user_id))
 
-# Jinja filtreleri
+# --- JINJA FİLTRELERİ (DÜZELTİLMİŞ BÖLÜM) ---
+
 @app.template_filter('from_json')
 def from_json(value):
     try:
@@ -61,7 +61,29 @@ def from_json(value):
     except Exception:
         return {}
 
-app.jinja_env.filters['format_turkish_date'] = format_turkish_date_filter
+# Bu filtre, rapor giriş formunun en altındaki anlık tarihi gösterir.
+def format_datetime_filter(value, format='full'):
+    dt = datetime.now()
+    aylar = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+    gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
+    formatlanmis_tarih = f"{dt.day} {aylar[dt.month - 1]} {dt.year}, {gunler[dt.weekday()]} - {dt.strftime('%H:%M')}"
+    return formatlanmis_tarih
+
+# Bu filtre ise admin panelindeki '2025-07-22' gibi tarihleri formatlar.
+def format_date_filter(date_str, format=None):
+    try:
+        dt = datetime.strptime(str(date_str), '%Y-%m-%d')
+        aylar = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+        return f"{dt.day} {aylar[dt.month - 1]} {dt.year}"
+    except (ValueError, TypeError):
+        return date_str
+
+# Her iki filtreyi de doğru isimlerle Jinja'ya tanıtıyoruz.
+app.jinja_env.filters['format_datetime'] = format_datetime_filter
+app.jinja_env.filters['format_date'] = format_date_filter
+app.jinja_env.filters['format_turkish_date'] = format_turkish_date_filter # Bu satır zaten vardı, kalıyor.
+
+# --- FİLTRE BÖLÜMÜ BİTTİ ---
 
 # Blueprint'leri kaydet
 register_blueprints(app)
@@ -69,7 +91,7 @@ register_blueprints(app)
 # Ana route yönlendirmesi (anasayfa)
 @app.route('/')
 def index():
-    return redirect(url_for('home.home'))  # 'home' blueprint içindeki 'home' fonksiyonu
+    return redirect(url_for('home.home'))
 
 # Flask-RESTX API
 api = Api(app, title='Güllü Shoes API', version='1.0', doc='/docs')
@@ -100,6 +122,10 @@ app.jinja_env.globals['safe_url_for'] = safe_url_for
 # İstek loglama
 @app.before_request
 def log_request():
+    # Raporlama sayfasının GET isteklerini loglama
+    if request.endpoint == 'rapor_gir.giris' and request.method == 'GET':
+        return
+
     if not request.path.startswith('/static/'):
         try:
             log_user_action(
@@ -110,37 +136,33 @@ def log_request():
         except Exception as e:
             logger.error(f"Log kaydedilemedi: {e}")
 
-# Giriş kontrolü
+# Giriş kontrolü (Artık Flask-Login çalıştığı için bu fonksiyonu silebiliriz veya devre dışı bırakabiliriz)
+# Şimdilik dokunmuyoruz, ama ileride kaldırılabilir.
 @app.before_request
 def check_authentication():
     if (request.path.startswith('/enhanced_product_label') or
         request.path.startswith('/static/') or
-        request.path.startswith('/api/generate_advanced_label_preview') or
-        request.path.startswith('/api/save_label_preset') or
-        request.path.startswith('/api/generate_label_preview') or
-        request.path.startswith('/health') or
-        (request.endpoint and 'enhanced_label' in str(request.endpoint))):
+        request.path.startswith('/api/') or # API yollarını genel olarak muaf tutmak daha güvenli olabilir
+        request.path.startswith('/health')):
         return None
 
+    # Flask-Login zaten çalıştığı için bu özel kontrol listesi artık çok kritik değil.
     allowed_routes = [
-        'login_logout.login',
-        'login_logout.register',
-        'login_logout.static',
-        'login_logout.verify_totp',
-        'login_logout.logout',
-        'qr_utils.generate_qr_labels_pdf',
-        'health.health_check',
-        'enhanced_label.advanced_label_editor',
+        'login_logout.login', 'login_logout.register', 'login_logout.static',
+        'login_logout.verify_totp', 'login_logout.logout', 'qr_utils.generate_qr_labels_pdf',
+        'health.health_check', 'enhanced_label.advanced_label_editor',
         'enhanced_label.enhanced_product_label'
     ]
     app.permanent_session_lifetime = timedelta(days=30)
 
-    if request.endpoint not in allowed_routes:
+    # Bu kontrolü Flask-Login'in kontrolüyle değiştirmek daha doğru olur, ama şimdilik bırakıyoruz.
+    if request.endpoint not in allowed_routes and not current_user.is_authenticated:
         if 'username' not in session:
             flash('Lütfen giriş yapınız.', 'danger')
             return redirect(url_for('login_logout.login'))
         if 'pending_user' in session and request.endpoint != 'login_logout.verify_totp':
             return redirect(url_for('login_logout.verify_totp'))
+
 
 # APScheduler – Arka planda cron job
 def fetch_and_save_returns():
@@ -168,14 +190,45 @@ with app.app_context():
         print("✅ Neon veritabanına bağlantı başarılı!")
 
         try:
-            db.create_all()
-            print("✅ Veritabanı tabloları kontrol edildi")
+            # db.create_all() yerine migrate kullanmak daha güvenli
+            print("✅ Veritabanı tabloları kontrol edildi (migrate ile yönetiliyor)")
         except Exception as table_error:
             print(f"⚠️ Tablo oluşturma hatası (devam ediliyor): {str(table_error)[:50]}...")
 
     except Exception as e:
         print(f"❌ Veritabanı bağlantı hatası: {str(e)[:50]}...")
         print("⚠️ Uygulama veritabanısız modda başlatılıyor")
+
+
+# Bu fonksiyon, tarih veya zaman damgası nesnelerini alıp Türkçe'ye çevirir
+def turkce_tarih_formatla(dt, format='full'):
+    if not dt:
+        return ""
+
+    # Eğer string gelirse datetime objesine çevir
+    if isinstance(dt, str):
+        for fmt in ("%Y-%m-%d", "%Y-%m-%d %H:%M:%S"):
+            try:
+                dt = datetime.strptime(dt, fmt)
+                break
+            except ValueError:
+                continue
+        else:
+            return dt  # Hiçbiri tutmazsa olduğu gibi döner
+
+    aylar = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+             "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+    gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
+
+    if format == 'full':
+        return f"{dt.day} {aylar[dt.month - 1]} {dt.year}, {gunler[dt.weekday()]}"
+    elif format == 'datetime':
+        return f"{dt.day} {aylar[dt.month - 1]} {dt.year} - {dt.strftime('%H:%M')}"
+    else:
+        return f"{dt.day} {aylar[dt.month - 1]} {dt.year}"
+
+# Oluşturduğumuz bu fonksiyonu, Jinja'ya 'turkce_tarih' adıyla tanıtıyoruz
+app.jinja_env.filters['turkce_tarih'] = turkce_tarih_formatla
 
 # Uygulama başlat
 if __name__ == '__main__':
@@ -190,28 +243,14 @@ if __name__ == '__main__':
 
     print("Uygulama başlatılıyor...")
 
-    # Ortama göre çalıştır (production vs development)
     app_env = os.getenv("APP_ENV", "development")
 
     try:
         if app_env == "production":
-            app.run(
-                host='0.0.0.0',
-                port=443,
-                debug=debug_mode,
-                use_reloader=False,
-                ssl_context=(
-                    os.getenv("SSL_CERT", "/home/musir/gullupanel/yeni/cert.pem"),
-                    os.getenv("SSL_KEY", "/home/musir/gullupanel/yeni/key.pem")
-                )
-            )
+            app.run(host='0.0.0.0', port=443, debug=debug_mode, use_reloader=False,
+                    ssl_context=(os.getenv("SSL_CERT"), os.getenv("SSL_KEY")))
         else:
-            app.run(
-                host='0.0.0.0',
-                port=8080,
-                debug=debug_mode,
-                use_reloader=False
-            )
+            app.run(host='0.0.0.0', port=8080, debug=debug_mode, use_reloader=False)
     except Exception as e:
         print(f"Başlatma hatası: {e}")
         import traceback

@@ -1,15 +1,37 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 # create_engine gerekli değil, db instance'ı kullanılıyor
-from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Float, Boolean, Text, Index # Index import edildi
+from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Float, Boolean, Text, Index, UniqueConstraint
 # declarative_base gerekli değil, db.Model kullanılıyor
 from datetime import datetime
 import uuid
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
+from datetime import date
+from sqlalchemy.dialects.postgresql import JSONB # Eğer PostgreSQL kullanıyorsan bu daha verimli
+from sqlalchemy import JSON
+from flask_login import UserMixin
 
 db = SQLAlchemy()
+
+
+### --- YENİ EKLENEN GÜNLÜK RAPOR MODELİ --- ###
+class Rapor(db.Model):
+    __tablename__ = 'raporlar'
+
+    id = db.Column(db.Integer, primary_key=True)
+    icerik = db.Column(db.Text, nullable=True)
+    zaman_damgasi = db.Column(DateTime, nullable=False, default=datetime.utcnow)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    kullanici = db.relationship('User', backref=db.backref('raporlar', lazy=True))
+    kategori = db.Column(db.String(100), nullable=False)
+    aciklama = db.Column(db.Text, nullable=True)
+    veri = db.Column(JSON, nullable=True)
+
+    def __repr__(self):
+        kullanici_adi = self.kullanici.username if self.kullanici else 'Bilinmeyen'
+        return f'<Rapor ID: {self.id} - Kullanıcı: {kullanici_adi} - Zaman: {self.zaman_damgasi.strftime("%Y-%m-%d %H:%M")}>'
 
 class Raf(db.Model):
     __tablename__ = 'raflar'
@@ -142,7 +164,7 @@ class ReturnProduct(db.Model):
 
 
 # Kullanıcı Modeli
-class User(db.Model):
+class User(db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(150), nullable=False)

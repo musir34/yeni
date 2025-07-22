@@ -10,22 +10,24 @@ import qrcode
 from io import BytesIO
 from models import db, User
 from logger_config import app_logger as logger
+from flask_login import login_user as flask_login_user
 
 login_logout_bp = Blueprint('login_logout', __name__)
 
-
 def login_user(user):
     logger.info(f"Giriş yapan kullanıcı: {user.username}, rolü: {user.role}")
+    
+    flask_login_user(user, remember=True)
+    
+    # Senin mevcut session atamaların olduğu gibi kalabilir, sorun değil.
     session['user_id'] = user.id
     session['username'] = user.username
     session['role'] = user.role
     session['first_name'] = user.first_name
     session['last_name'] = user.last_name
     session['authenticated'] = True
-    # Oturum süresini uzatmak için permanent oturumu kullanıyoruz
     session.permanent = True
     logger.debug(f"Oturumda atanan rol: {session['role']}")
-
 
 # Oturum gerektiren dekoratör
 def login_required(f):

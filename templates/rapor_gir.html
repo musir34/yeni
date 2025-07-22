@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Raporlama - Güllü Ayakkabı</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    :root {
+      --color-primary: #B76E79;
+      --color-primary-dark: #A05F6A;
+      --color-secondary: #212529;
+      --color-text: #343a40;
+      --color-bg: #f8f9fa;
+      --color-white: #fff;
+      --color-border: #dee2e6;
+      --color-danger: #d92550;
+      --font-family-base: 'Inter', sans-serif;
+      --border-radius: 0.5rem;
+      --shadow-md: 0 5px 15px rgba(0,0,0,0.08);
+      --transition: all 0.25s ease-in-out;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-family-base);
+      background-color: var(--color-bg);
+      color: var(--color-text);
+    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+    h1, h2 {
+      color: var(--color-secondary);
+      text-align: center;
+      font-weight: 700;
+    }
+    h1 { margin-bottom: 0.5rem; }
+    h2 { margin-top: 3rem; font-size: 1.8rem; }
+    .user-info {
+      text-align: center;
+      color: #6c757d;
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+    }
+    .alert {
+      padding: 1rem 1.25rem;
+      margin: 1rem auto 2rem auto;
+      border: 1px solid transparent;
+      border-radius: var(--border-radius);
+      max-width: 700px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-weight: 600;
+    }
+    .alert-danger {
+      color: #842029;
+      background-color: #f8d7da;
+      border-color: #f5c2c7;
+    }
+    .alert-success {
+      color: #0f5132;
+      background-color: #d1e7dd;
+      border-color: #badbcc;
+    }
+    .btn-close {
+      background: transparent;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+    .card {
+      background: var(--color-white);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+    .card-header {
+      background: var(--color-secondary);
+      color: white;
+      padding: 1rem 1.5rem;
+    }
+    .card-body { padding: 1.5rem; }
+    .form-group { margin-bottom: 1.5rem; }
+    .form-group label {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      font-size: 1rem;
+    }
+    .btn-primary {
+      background: linear-gradient(45deg, var(--color-primary), var(--color-primary-dark));
+      color: white;
+      border: none;
+      padding: 0.8rem 1.5rem;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-weight: 600;
+      width: 100%;
+    }
+    .category-fields {
+      display: none;
+      margin-top: 1.5rem;
+      border-top: 1px dashed var(--color-border);
+      padding-top: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Raporlama Paneli</h1>
+    <p class="user-info">Hoşgeldin, <strong>{{ current_user.first_name }} {{ current_user.last_name }}</strong></p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">
+            <span>{{ message }}</span>
+            <button type="button" class="btn-close" onclick="this.parentElement.style.display='none'">&times;</button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="card">
+      <div class="card-header"><h3>Yeni Rapor Ekle</h3></div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('rapor_gir.giris') }}">
+          <div class="form-group">
+            <label for="kategori">İş Kategorisi</label>
+            <select id="kategori" name="kategori" required>
+              <option value="">Seçin...</option>
+              <option>Trendyol - Soru Cevaplama</option>
+              <option>Trendyol - İade Yönetimi</option>
+              <option>Trendyol - Yönetim</option>
+              <option>Instagram - Yönetim</option>
+              <option>Web Sitesi - Yönetim</option>
+              <option>Genel</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="aciklama">Yapılan İşin Açıklaması</label>
+            <textarea id="aciklama" name="aciklama" required></textarea>
+          </div>
+
+          <div id="fields_trendyol_soru_cevaplama" class="category-fields">
+            <div class="form-group">
+              <label for="cevaplanan_soru_sayisi">Cevaplanan Soru Sayısı</label>
+              <input type="number" id="cevaplanan_soru_sayisi" name="cevaplanan_soru_sayisi" min="1" required />
+            </div>
+            <div class="form-group">
+              <label for="soru_tipleri_aciklama">Gelen Soruların İçeriği</label>
+              <textarea id="soru_tipleri_aciklama" name="soru_tipleri_aciklama"></textarea>
+            </div>
+          </div>
+
+          <div id="fields_trendyol_iade_yonetimi" class="category-fields">
+            <div class="form-group">
+              <label for="onaylanan_iade_sayisi">İşlem Yapılan İade Sayısı</label>
+              <input type="number" id="onaylanan_iade_sayisi" name="onaylanan_iade_sayisi" min="1" required />
+            </div>
+            <div class="form-group">
+              <label for="iade_sebepleri_aciklama">Öne Çıkan İade Sebepleri</label>
+              <textarea id="iade_sebepleri_aciklama" name="iade_sebepleri_aciklama"></textarea>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save"></i> Raporu Kaydet
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const kategoriSelect = document.getElementById('kategori');
+
+      if (kategoriSelect) {
+        kategoriSelect.addEventListener('change', function () {
+          document.querySelectorAll('.category-fields').forEach(div => {
+            div.style.display = 'none';
+          });
+
+          const value = this.value;
+
+          if (value.includes('Soru')) {
+            const soruDiv = document.getElementById('fields_trendyol_soru_cevaplama');
+            if (soruDiv) soruDiv.style.display = 'block';
+          } else if (value.includes('İade')) {
+            const iadeDiv = document.getElementById('fields_trendyol_iade_yonetimi');
+            if (iadeDiv) iadeDiv.style.display = 'block';
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
