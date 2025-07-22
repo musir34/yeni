@@ -26,6 +26,7 @@
       font-family: var(--font-family-base);
       background-color: var(--color-bg);
       color: var(--color-text);
+      line-height: 1.6;
     }
     .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
     h1, h2 {
@@ -33,8 +34,8 @@
       text-align: center;
       font-weight: 700;
     }
-    h1 { margin-bottom: 0.5rem; }
-    h2 { margin-top: 3rem; font-size: 1.8rem; }
+    h1 { margin-bottom: 0.5rem; font-size: 2.2rem; }
+    h2 { margin-top: 3rem; font-size: 1.8rem; margin-bottom: 1.5rem; }
     .user-info {
       text-align: center;
       color: #6c757d;
@@ -49,23 +50,12 @@
       max-width: 700px;
       display: flex; justify-content: space-between; align-items: center;
       font-weight: 600;
+      box-shadow: var(--shadow-md);
     }
-    .alert-danger {
-      color: #842029;
-      background-color: #f8d7da;
-      border-color: #f5c2c7;
-    }
-    .alert-success {
-      color: #0f5132;
-      background-color: #d1e7dd;
-      border-color: #badbcc;
-    }
-    .btn-close {
-      background: transparent;
-      border: none;
-      font-size: 1.2rem;
-      cursor: pointer;
-    }
+    .alert-danger { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+    .alert-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
+    .btn-close { background: transparent; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.7; transition: var(--transition); }
+    .btn-close:hover { opacity: 1; }
     .card {
       background: var(--color-white);
       border-radius: var(--border-radius);
@@ -77,38 +67,82 @@
       background: var(--color-secondary);
       color: white;
       padding: 1rem 1.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
     }
     .card-body { padding: 1.5rem; }
     .form-group { margin-bottom: 1.5rem; }
-    .form-group label {
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      display: block;
-    }
-    .form-group input,
-    .form-group textarea,
-    .form-group select {
+    .form-group label { font-weight: 600; margin-bottom: 0.5rem; display: block; }
+    .form-group input, .form-group textarea, .form-group select {
       width: 100%;
       padding: 0.75rem 1rem;
       border: 1px solid var(--color-border);
       border-radius: var(--border-radius);
       font-size: 1rem;
+      font-family: var(--font-family-base);
+      transition: var(--transition);
+    }
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 0.2rem rgba(183, 110, 121, 0.25);
+        outline: none;
     }
     .btn-primary {
       background: linear-gradient(45deg, var(--color-primary), var(--color-primary-dark));
       color: white;
       border: none;
-      padding: 0.8rem 1.5rem;
+      padding: 0.9rem 1.5rem;
       border-radius: var(--border-radius);
       cursor: pointer;
       font-weight: 600;
       width: 100%;
+      font-size: 1.1rem;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 7px 20px rgba(0,0,0,0.1);
+    }
+    .list-group a {
+      display: block;
+      padding: 1rem 1.5rem;
+      margin-bottom: -1px;
+      background: white;
+      border: 1px solid #ddd;
+      text-decoration: none;
+      color: var(--color-text);
+      transition: var(--transition);
+    }
+    .list-group a:first-child { border-top-left-radius: var(--border-radius); border-top-right-radius: var(--border-radius); }
+    .list-group a:last-child { border-bottom-left-radius: var(--border-radius); border-bottom-right-radius: var(--border-radius); margin-bottom: 0; }
+    .list-group a:hover { background-color: #f1f3f5; }
+    .report-card .card-header {
+      background: #f1f3f5;
+      color: var(--color-text);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .report-card .report-details { list-style: none; padding-left: 0; margin-top: 1rem; }
+    .report-card .report-details li { display: flex; padding: 0.6rem 0; border-bottom: 1px solid #eee; gap: 1rem; }
+    .report-card .report-details li:last-child { border-bottom: none; }
+    .report-card .report-details strong { flex-shrink: 0; width: 200px; color: var(--color-secondary); }
+    .report-card .report-details pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: var(--font-family-base);
     }
     .category-fields {
-      display: none;
-      margin-top: 1.5rem;
-      border-top: 1px dashed var(--color-border);
-      padding-top: 1.5rem;
+        display: none;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+        border: 1px dashed var(--color-border);
+        border-radius: var(--border-radius);
+        background-color: #fafafa;
     }
   </style>
 </head>
@@ -129,50 +163,63 @@
     {% endwith %}
 
     <div class="card">
-      <div class="card-header"><h3>Yeni Rapor Ekle</h3></div>
+      <div class="card-header"><h3><i class="fas fa-plus-circle"></i> Yeni Rapor Ekle</h3></div>
       <div class="card-body">
         <form method="POST" action="{{ url_for('rapor_gir.giris') }}">
           <div class="form-group">
             <label for="kategori">İş Kategorisi</label>
             <select id="kategori" name="kategori" required>
               <option value="">Seçin...</option>
-              <option>Trendyol - Soru Cevaplama</option>
-              <option>Trendyol - İade Yönetimi</option>
-              <option>Trendyol - Yönetim</option>
-              <option>Instagram - Yönetim</option>
-              <option>Web Sitesi - Yönetim</option>
-              <option>Genel</option>
+              <option value="Trendyol - Soru Cevaplama" data-fields-id="fields_trendyol_soru_cevaplama">Trendyol - Soru Cevaplama</option>
+              <option value="Trendyol - İade Yönetimi" data-fields-id="fields_trendyol_iade_yonetimi">Trendyol - İade Yönetimi</option>
+              <option value="Trendyol - Yönetim" data-fields-id="fields_trendyol_yonetim">Trendyol - Yönetim</option>
+              <option value="Instagram - Yönetim">Instagram - Yönetim</option>
+              <option value="Web Sitesi - Yönetim">Web Sitesi - Yönetim</option>
+              <option value="Genel">Genel</option>
             </select>
           </div>
-
           <div class="form-group">
             <label for="aciklama">Yapılan İşin Açıklaması</label>
-            <textarea id="aciklama" name="aciklama" required></textarea>
+            <textarea id="aciklama" name="aciklama" rows="4" required></textarea>
           </div>
 
           <div id="fields_trendyol_soru_cevaplama" class="category-fields">
+            <h4>Trendyol - Soru Cevaplama Detayları</h4>
             <div class="form-group">
               <label for="cevaplanan_soru_sayisi">Cevaplanan Soru Sayısı</label>
-              <input type="number" id="cevaplanan_soru_sayisi" name="cevaplanan_soru_sayisi" min="1" required />
+              <input type="number" id="cevaplanan_soru_sayisi" name="cevaplanan_soru_sayisi" min="0" />
             </div>
             <div class="form-group">
-              <label for="soru_tipleri_aciklama">Gelen Soruların İçeriği</label>
-              <textarea id="soru_tipleri_aciklama" name="soru_tipleri_aciklama"></textarea>
+              <label for="soru_tipleri_aciklama">Gelen Soruların İçeriği (Örn: Stok, Kargo, Kalıp vb.)</label>
+              <textarea id="soru_tipleri_aciklama" name="soru_tipleri_aciklama" rows="3"></textarea>
             </div>
           </div>
 
           <div id="fields_trendyol_iade_yonetimi" class="category-fields">
+             <h4>Trendyol - İade Yönetimi Detayları</h4>
             <div class="form-group">
               <label for="onaylanan_iade_sayisi">İşlem Yapılan İade Sayısı</label>
-              <input type="number" id="onaylanan_iade_sayisi" name="onaylanan_iade_sayisi" min="1" required />
+              <input type="number" id="onaylanan_iade_sayisi" name="onaylanan_iade_sayisi" min="0" />
             </div>
             <div class="form-group">
               <label for="iade_sebepleri_aciklama">Öne Çıkan İade Sebepleri</label>
-              <textarea id="iade_sebepleri_aciklama" name="iade_sebepleri_aciklama"></textarea>
+              <textarea id="iade_sebepleri_aciklama" name="iade_sebepleri_aciklama" rows="3"></textarea>
             </div>
           </div>
 
-          <div class="form-group">
+          <div id="fields_trendyol_yonetim" class="category-fields">
+             <h4>Trendyol - Yönetim Detayları</h4>
+            <div class="form-group">
+              <label for="guncellenen_urun_sayisi">Güncellenen Ürün Sayısı (Fiyat, Stok, Açıklama vb.)</label>
+              <input type="number" id="guncellenen_urun_sayisi" name="guncellenen_urun_sayisi" min="0" />
+            </div>
+            <div class="form-group">
+              <label for="kampanya_calismalari">Yapılan Kampanya Çalışmaları</label>
+              <textarea id="kampanya_calismalari" name="kampanya_calismalari" rows="3"></textarea>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 2rem;">
             <button type="submit" class="btn btn-primary">
               <i class="fas fa-save"></i> Raporu Kaydet
             </button>
@@ -180,28 +227,106 @@
         </form>
       </div>
     </div>
+
+    {% if current_user.role == 'admin' %}
+      {% if view_mode == 'gun_liste' %}
+        <h2>Gün Arşivi</h2>
+        <div class="list-group">
+          {% for r in data.gunler %}
+            <a href="{{ url_for('rapor_gir.giris', gun=r) }}">{{ r | turkce_tarih('full') }}</a>
+          {% endfor %}
+        </div>
+      {% elif view_mode == 'gun_detay' %}
+        <h2>{{ data.gun | turkce_tarih('full') }} - Rapor Girenler</h2>
+        <div class="list-group">
+          {% for k in data.kullanicilar %}
+            <a href="{{ url_for('rapor_gir.giris', gun=data.gun, kullanici_id=k.id) }}">{{ k.first_name }} {{ k.last_name }}</a>
+          {% endfor %}
+        </div>
+      {% elif view_mode == 'kullanici_detay' %}
+        <h2>{{ data.kullanici.first_name }} - {{ data.gun }} Raporları</h2>
+        {% for rapor in data.raporlar %}
+          <div class="card report-card">
+            <div class="card-header">
+              <h4>{{ rapor.kategori }}</h4>
+              <span>{{ rapor.zaman_damgasi.strftime('%H:%M') }}</span>
+            </div>
+            <div class="card-body">
+              <p><strong>Açıklama:</strong><br><pre>{{ rapor.aciklama }}</pre></p>
+              {% if rapor.veri %}
+                <hr>
+                <ul class="report-details">
+                  {% for anahtar, deger in rapor.veri.items() %}
+                    <li><strong>{{ anahtar | replace('_', ' ') | title }}:</strong><pre>{{ deger }}</pre></li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% else %}
+      <h2>Geçmiş Raporlarım</h2>
+      {% for rapor in data.raporlar %}
+        <div class="card report-card">
+          <div class="card-header">
+            <h4>{{ rapor.kategori }}</h4>
+            <span>{{ rapor.zaman_damgasi | turkce_tarih('datetime') }}</span>
+          </div>
+          <div class="card-body">
+            <p><strong>Açıklama:</strong><br><pre>{{ rapor.aciklama }}</pre></p>
+            {% if rapor.veri %}
+              <hr>
+              <ul class="report-details">
+                {% for anahtar, deger in rapor.veri.items() %}
+                  <li><strong>{{ anahtar | replace('_', ' ') | title }}:</strong><pre>{{ deger }}</pre></li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+        </div>
+      {% else %}
+        <p style="text-align: center;">Henüz hiç rapor girmemişsiniz.</p>
+      {% endfor %}
+    {% endif %}
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
       const kategoriSelect = document.getElementById('kategori');
+      const allFieldsDivs = document.querySelectorAll('.category-fields');
 
       if (kategoriSelect) {
         kategoriSelect.addEventListener('change', function () {
-          document.querySelectorAll('.category-fields').forEach(div => {
+          const selectedOption = this.options[this.selectedIndex];
+          const targetFieldsId = selectedOption.getAttribute('data-fields-id');
+
+          // Tüm kategori alanlarını ve içindeki zorunlulukları sıfırla
+          allFieldsDivs.forEach(function (div) {
             div.style.display = 'none';
+            // Div içindeki tüm input ve textarea'ları bul
+            div.querySelectorAll('input, textarea').forEach(function(input) {
+                input.required = false; // Zorunluluğu kaldır
+            });
           });
 
-          const value = this.value;
-
-          if (value.includes('Soru')) {
-            const soruDiv = document.getElementById('fields_trendyol_soru_cevaplama');
-            if (soruDiv) soruDiv.style.display = 'block';
-          } else if (value.includes('İade')) {
-            const iadeDiv = document.getElementById('fields_trendyol_iade_yonetimi');
-            if (iadeDiv) iadeDiv.style.display = 'block';
+          // Eğer seçilen kategoriye özel bir alan varsa göster ve zorunluluk ekle
+          if (targetFieldsId) {
+            const targetDiv = document.getElementById(targetFieldsId);
+            if (targetDiv) {
+              targetDiv.style.display = 'block';
+              // Gösterilen div içindeki ilk inputu zorunlu yapalım (isteğe bağlı)
+              const firstInput = targetDiv.querySelector('input[type="number"]');
+              if (firstInput) {
+                  firstInput.required = true;
+              }
+            }
           }
         });
+
+        // Sayfa yüklendiğinde de bir kerelik tetikle, eğer form validation hatasıyla geri dönüldüyse
+        // seçili olan kategoriye ait alanlar açık kalsın.
+        kategoriSelect.dispatchEvent(new Event('change'));
       }
     });
   </script>
