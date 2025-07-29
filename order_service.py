@@ -235,11 +235,6 @@ async def fetch_orders_page(session, url, headers, params, semaphore):
 
 
 
-
-
-
-
-
 ############################
 # 2) Gelen Siparişleri İşleme (Senkron ve Arka Plan Ayrımı)
 ############################

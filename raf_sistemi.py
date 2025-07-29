@@ -12,6 +12,7 @@ from flask import send_file
 
 raf_bp = Blueprint("raf", __name__, url_prefix="/raf")
 
+
 @raf_bp.route("/api/kademeli-liste", methods=["GET"])
 def raf_kademeli_liste():
     """
@@ -33,12 +34,16 @@ def raf_kademeli_liste():
             kademeli_raflar[ana_kod][ikincil_tam_kod] = []
 
         kademeli_raflar[ana_kod][ikincil_tam_kod].append({
-            "kat": kat_kod,
-            "qr_path": "/" + r.qr_path if r.qr_path else "",
-            "barcode_path": "/" + r.barcode_path if r.barcode_path else ""
+            "kat":
+            kat_kod,
+            "qr_path":
+            "/" + r.qr_path if r.qr_path else "",
+            "barcode_path":
+            "/" + r.barcode_path if r.barcode_path else ""
         })
 
     return jsonify(kademeli_raflar)
+
 
 @raf_bp.route("/api/gruplu-liste", methods=["GET"])
 def raf_gruplu_liste():
@@ -102,13 +107,15 @@ def api_get_raf_stoklari(raf_kodu):
 
     return jsonify(detaylar)
 
+
 @raf_bp.route("/stok-guncelle", methods=["POST"])
 def raf_stok_guncelle():
     raf_kodu = request.form.get("raf_kodu")
     barkod = request.form.get("barkod")
     yeni_adet = int(request.form.get("adet"))
 
-    urun = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barkod).first()
+    urun = RafUrun.query.filter_by(raf_kodu=raf_kodu,
+                                   urun_barkodu=barkod).first()
     if urun:
         urun.adet = yeni_adet
         db.session.commit()
@@ -129,7 +136,9 @@ def raf_stok_listesi():
             "color": p.color,
             "size": p.size
         }
-        for p in Product.query.with_entities(Product.barcode, Product.product_main_id, Product.color, Product.size)
+        for p in
+        Product.query.with_entities(Product.barcode, Product.product_main_id,
+                                    Product.color, Product.size)
     }
     for raf in raflar:
         urunler = RafUrun.query.filter_by(raf_kodu=raf.kod).all()
@@ -152,7 +161,8 @@ def qrcode_with_text(data, filename):
     qr = qrcode.QRCode(box_size=12, border=4)
     qr.add_data(data)
     qr.make(fit=True)
-    qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+    qr_img = qr.make_image(fill_color="black",
+                           back_color="white").convert("RGB")
     width, height = qr_img.size
     text_height_area = 80
     total_height = height + text_height_area
@@ -191,17 +201,16 @@ def raf_olustur_api():
     barcode_path = f"static/raflar/barcode_{kod}.png"
     qr_path = f"static/raflar/qr_{kod}.png"
 
-    barcode.get("code128", kod, writer=ImageWriter()).save(barcode_path.replace(".png", ""))
+    barcode.get("code128", kod,
+                writer=ImageWriter()).save(barcode_path.replace(".png", ""))
     qrcode_with_text(kod, qr_path)
 
-    yeni_raf = Raf(
-        kod=kod,
-        ana=ana,
-        ikincil=ikincil,
-        kat=kat,
-        barcode_path=barcode_path,
-        qr_path=qr_path
-    )
+    yeni_raf = Raf(kod=kod,
+                   ana=ana,
+                   ikincil=ikincil,
+                   kat=kat,
+                   barcode_path=barcode_path,
+                   qr_path=qr_path)
     db.session.add(yeni_raf)
     db.session.commit()
 
@@ -232,10 +241,14 @@ def raf_sil(kod):
         db.session.delete(raf)
         db.session.commit()
 
-        return jsonify({"success": True, "message": f"{kod} başarıyla silindi."})
+        return jsonify({
+            "success": True,
+            "message": f"{kod} başarıyla silindi."
+        })
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
 
 @raf_bp.route("/stok-sil", methods=["POST"])
 def raf_urun_sil():
@@ -244,7 +257,8 @@ def raf_urun_sil():
     if not raf_kodu or not barkod:
         flash("Geçersiz istek. Raf kodu ve barkod gerekli.", "danger")
         return redirect("/raf/yonetim")
-    urun = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barkod).first()
+    urun = RafUrun.query.filter_by(raf_kodu=raf_kodu,
+                                   urun_barkodu=barkod).first()
     if not urun:
         flash("Ürün rafta bulunamadı.", "warning")
         return redirect("/raf/yonetim")
@@ -262,7 +276,8 @@ def stok_ekle_api():
     if not raf_kodu or not urunler:
         return jsonify({"error": "Raf kodu ve ürün listesi zorunludur."}), 400
     for barkod in urunler:
-        mevcut_kayit = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barkod).first()
+        mevcut_kayit = RafUrun.query.filter_by(raf_kodu=raf_kodu,
+                                               urun_barkodu=barkod).first()
         if mevcut_kayit:
             mevcut_kayit.adet += 1
         else:
@@ -270,6 +285,7 @@ def stok_ekle_api():
             db.session.add(yeni)
     db.session.commit()
     return jsonify({"message": "Stok başarıyla eklendi."}), 200
+
 
 @raf_bp.route('/api/check-raf/<raf_kodu>', methods=['GET'])
 def check_raf_var_mi(raf_kodu):
@@ -279,17 +295,16 @@ def check_raf_var_mi(raf_kodu):
     else:
         return jsonify(success=False, message="Bu raf mevcut değil."), 404
 
+
 @raf_bp.route("/api/liste", methods=["GET"])
 def raf_listesi_api():
     raflar = Raf.query.order_by(Raf.kod.asc()).all()
-    return jsonify([
-        {
-            "kod": r.kod,
-            "barkod": "/" + r.barcode_path,
-            "qr": "/" + r.qr_path
-        }
-        for r in raflar
-    ])
+    return jsonify([{
+        "kod": r.kod,
+        "barkod": "/" + r.barcode_path,
+        "qr": "/" + r.qr_path
+    } for r in raflar])
+
 
 @raf_bp.route("/stok-form", methods=["GET"])
 def stok_form():
@@ -300,6 +315,7 @@ def stok_form():
 def raf_form_sayfasi():
     return render_template("raf_olustur.html")
 
+
 # YENİ EKLENEN ROUTE'LAR (Anlık Görsel Oluşturma için)
 @raf_bp.route('/etiket/qr/<string:raf_kodu>')
 def generate_qr_etiket(raf_kodu):
@@ -309,10 +325,11 @@ def generate_qr_etiket(raf_kodu):
     # Not: Yazdırma etiketinde yazı zaten var, o yüzden basit qrcode.make kullanıyoruz
     qr_img = qrcode.make(raf_kodu)
     qr_img.save(img_buffer, 'PNG')
-    img_buffer.seek(0) # Buffer'ın başına git
+    img_buffer.seek(0)  # Buffer'ın başına git
 
     # Resmi tarayıcıya gönder
     return send_file(img_buffer, mimetype='image/png')
+
 
 @raf_bp.route('/etiket/barkod/<string:raf_kodu>')
 def generate_barcode_etiket(raf_kodu):
@@ -323,7 +340,7 @@ def generate_barcode_etiket(raf_kodu):
 
     img_buffer = io.BytesIO()
     ean.write(img_buffer)
-    img_buffer.seek(0) # Buffer'ın başına git
+    img_buffer.seek(0)  # Buffer'ın başına git
 
     # Resmi tarayıcıya gönder
     return send_file(img_buffer, mimetype='image/png')
