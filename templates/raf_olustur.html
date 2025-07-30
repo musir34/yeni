@@ -605,8 +605,8 @@
                 <style>
                     @page { size: 100mm 100mm; margin: 0; }
                     body { 
-                        width: 70mm;
-                        height: 40mm;
+                        width: 100mm;
+                        height: 100mm;
                         margin: 0;
                         padding: 0;
                         font-family: Arial, sans-serif;
@@ -634,19 +634,23 @@
                         gap: 2mm;
                     }
                     img {
-                        max-width: 100mm; /* Taşmaları engellemek için */
+                        max-width: 85mm; /* Taşmaları engellemek için */
                     }
                     #qr-image {
                         max-width: 45mm;
                         max-height: 45mm;
                     }
-                    
+                    #barcode-image {
+                        max-width: 80mm;
+                        max-height: 18mm;
+                    }
                 </style>
             </head>
             <body>
                 <div class="raf-kodu">${rafKodu}</div>
                 <div class="gorsel-alani">
                     <img id="qr-image" src="/raf/etiket/qr/${rafKodu}">
+                    <img id="barcode-image" src="/raf/etiket/barkod/${rafKodu}">
                 </div>
                 <script>
                     window.onload = function() {
