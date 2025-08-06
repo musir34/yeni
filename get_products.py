@@ -990,47 +990,6 @@ def get_variants_with_cost():
     return jsonify({'success': True, 'products': variants})
 
 
-@get_products_bp.route('/api/update_product_costs', methods=['POST'])
-def update_product_costs():
-    form_data = request.form
-    if not form_data:
-        return jsonify({'success': False, 'message': 'Güncellenecek veri bulunamadı.'})
-    try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        usd_rate = loop.run_until_complete(fetch_usd_rate())
-        loop.close()
-        if not usd_rate:
-            usd_rate = 1.0
-    except:
-        usd_rate = 1.0
-    updated_count = 0
-    errors = []
-    for barcode, cost_str in form_data.items():
-        try:
-            new_cost = float(cost_str)
-        except ValueError:
-            errors.append(f"Barkod {barcode} için geçersiz maliyet değeri.")
-            continue
-        product = Product.query.filter_by(barcode=barcode).first()
-        if not product:
-            errors.append(f"Barkod bulunamadı: {barcode}")
-            continue
-        product.cost_usd = new_cost
-        product.cost_try= new_cost * usd_rate
-        product.cost_date = datetime.now()
-        db.session.add(product)
-        updated_count += 1
-    if updated_count == 0 and errors:
-        return jsonify({'success': False, 'message': 'Maliyet güncellemesi yapılamadı.', 'errors': errors})
-    try:
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Maliyet güncelleme hatası: {e}")
-        return jsonify({'success': False, 'message': str(e)})
-    return jsonify({'success': True, 'message': f"{updated_count} adet varyant güncellendi.", 'errors': errors})
-
 
 @get_products_bp.route('/api/product-cost', methods=['GET'])
 def get_product_cost():
