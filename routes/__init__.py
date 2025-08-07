@@ -32,6 +32,8 @@ def register_blueprints(app):
     from kasa import kasa_bp
     from raf_sistemi import raf_bp
     from rapor_gir import rapor_gir_bp
+    from profit import profit_bp
+
 
     # Register all blueprints
     for bp in [
@@ -65,5 +67,6 @@ def register_blueprints(app):
         raf_bp,
         kasa_bp,
         rapor_gir_bp,
+        profit_bp,
     ]:
         app.register_blueprint(bp)

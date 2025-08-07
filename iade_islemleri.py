@@ -73,7 +73,7 @@ def is_valid_uuid(uuid_str):
 def fetch_data_from_api(start_date: datetime, end_date: datetime):
     logger.info("API’den iade verileri çekiliyor: %s – %s", start_date, end_date)
 
-    url = f"https://api.trendyol.com/sapigw/suppliers/{SUPPLIER_ID}/claims"
+    url = f"https://apigw.trendyol.com/integration/order/sellers/{SUPPLIER_ID}/claims"
     cred = base64.b64encode(f"{API_KEY}:{API_SECRET}".encode()).decode()
     headers = {
         "Authorization": f"Basic {cred}",
@@ -373,3 +373,5 @@ def iade_guncelle(claim_id):
         session.close()
 
     return redirect(url_for("iade_islemleri.iade_listesi"))
+
+

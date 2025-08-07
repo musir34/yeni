@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        /* --- Önceki CSS stilleri buraya gelecek (değişiklik yok) --- */
+        /* --- Önceki CSS stilleri (değişiklik yok) --- */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -54,7 +54,7 @@
         p { margin-bottom: 1.2rem; color: #6c757d; }
 
         /* --- Ana Parametre Formu Stilleri --- */
-        form#analysis-params-form { /* ID eklendi */
+        form#analysis-params-form {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1.5rem;
@@ -151,6 +151,8 @@
         .profit-positive { color: #38a169 !important; }
         .profit-negative { color: #e53e3e !important; }
         .profit-zero { color: #718096 !important; }
+        .text-danger { color: #e53e3e !important; font-weight: 700 !important; } /* YENİ: Negatif kâr için genel sınıf */
+
 
         /* --- Tablo Genel Stilleri --- */
         .table-container { overflow-x: auto; margin-top: 1rem; border: 1px solid #eaeaef; border-radius: 8px; }
@@ -168,7 +170,6 @@
         tbody tr:hover { background-color: #f1f3f9; }
         th.align-right, td.align-right { text-align: right; }
         td:last-child .value { display: inline-block; font-weight: 600; }
-        /* Son 2 sütunu (genellikle sayılar) kalın yapalım */
         td:nth-last-child(1), td:nth-last-child(2) { font-weight: 600; }
 
         /* --- Tooltip Stilleri --- */
@@ -192,25 +193,25 @@
         .tooltip-base-content span { display: block; margin-bottom: 3px; }
         .tooltip-base-content span label { display: inline-block; width: 110px; color: #ccc; }
         .tooltip-base-content span .value { font-weight: 600; color: #fff; }
-        /* Summary Tooltip Özel */
         .summary-tooltip-content span { display: flex; justify-content: space-between; margin-bottom: 2px; }
         .summary-tooltip-content label { width: auto; margin-right: 5px; flex-shrink: 0; }
         .summary-tooltip-content .value { text-align: right; }
 
         /* --- Hariç Tutulan Tabloların Stilleri --- */
-        .excluded-table-container, .cancelled-table-container, .returned-table-container {
+        .excluded-table-container, .cancelled-table-container, .returned-table-container, .warned-table-container { /* YENİ: warned-table-container eklendi */
             border-color: #ced4da !important; margin-top: 1rem;
         }
-        .excluded-table thead, .cancelled-table thead, .returned-table thead {
+        .excluded-table thead, .cancelled-table thead, .returned-table thead, .warned-table thead { /* YENİ: warned-table thead eklendi */
             background-color: #e9ecef !important;
         }
-        .excluded-table th, .cancelled-table th, .returned-table th { color: #495057 !important; }
-        .excluded-table td, .cancelled-table td, .returned-table td {
+        .excluded-table th, .cancelled-table th, .returned-table th, .warned-table th { color: #495057 !important; } /* YENİ: warned-table th eklendi */
+        .excluded-table td, .cancelled-table td, .returned-table td, .warned-table td { /* YENİ: warned-table td eklendi */
             font-size: 0.9em; vertical-align: top;
         }
         .analysis-table-title { color: #4e54c8 !important; }
+        .warned-table-title { color: #fd7e14 !important; margin-top: 3rem; } /* YENİ */
         .cancelled-table-title { color: #dc3545 !important; margin-top: 3rem; }
-        .returned-table-title { color: #fd7e14 !important; margin-top: 3rem; }
+        .returned-table-title { color: #ffc107 !important; margin-top: 3rem; }
         .excluded-table-title { color: #6c757d !important; margin-top: 3rem; }
         .col-order-no, .col-status { white-space: nowrap; width: 1%; }
         .col-sku { white-space: normal; word-break: break-all; max-width: 300px; }
@@ -243,71 +244,44 @@
         .chart-box canvas { max-height: 400px; }
 
         /* --- EKSİK MALİYET GİRİŞ FORMU ÖZEL STİLLERİ --- */
-        #missing-cost-section { /* ID eklendi */
+        #missing-cost-section {
              margin-top: 2.5rem;
              margin-bottom: 3rem;
-             border: 2px dashed #ffc107; /* Sarı uyarı */
+             border: 2px dashed #ffc107;
              border-radius: 8px;
              padding: 1.5rem 2rem;
              background-color: #fff9e6;
         }
         #missing-cost-section h2 {
-            color: #d39e00; /* Koyu sarı */
-            margin-top: 0;
-            margin-bottom: 1rem;
-            border-bottom: none;
-            font-size: 1.4rem;
+            color: #d39e00; margin-top: 0; margin-bottom: 1rem;
+            border-bottom: none; font-size: 1.4rem;
         }
-        #missing-cost-section p {
-            color: #856404; /* Kahverengimsi sarı */
-            margin-bottom: 1.5rem;
-        }
+        #missing-cost-section p { color: #856404; margin-bottom: 1.5rem; }
         #cost-form table {
-            margin-bottom: 1.5rem;
-            background-color: #fff; /* İç tablo beyaz */
-            border: 1px solid #ffeeba; /* Açık sarı border */
+            margin-bottom: 1.5rem; background-color: #fff;
+            border: 1px solid #ffeeba;
         }
-        #cost-form th {
-            background-color: #fff3cd; /* Daha açık sarı başlık */
-            color: #856404;
-            font-size: 0.9rem;
-        }
-        #cost-form td {
-            vertical-align: middle;
-            padding: 0.6rem 1rem;
-        }
+        #cost-form th { background-color: #fff3cd; color: #856404; font-size: 0.9rem; }
+        #cost-form td { vertical-align: middle; padding: 0.6rem 1rem; }
         #cost-form input[type="number"] {
-            padding: 0.5rem;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            font-size: 0.95rem;
-            width: 100px; /* Sabit genişlik */
-            text-align: right;
+            padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px;
+            font-size: 0.95rem; width: 100px; text-align: right;
         }
         #cost-form input[type="number"]:focus {
             border-color: #ffc107;
             box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
         }
         #cost-form button[type="submit"] {
-            background: linear-gradient(90deg, #fd7e14, #ffc107); /* Turuncu-Sarı */
-            color: #212529;
-            font-weight: 700;
-            padding: 0.7rem 1.8rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            float: right; /* Sağa yasla */
+            background: linear-gradient(90deg, #fd7e14, #ffc107);
+            color: #212529; font-weight: 700; padding: 0.7rem 1.8rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); float: right;
         }
         #cost-form button[type="submit"]:hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
-        #cost-form::after { /* Clear float */
-            content: "";
-            display: table;
-            clear: both;
-        }
-        .cost-input { /* JS'in hedeflemesi için class */
-            /* Özel stil gerekirse buraya */
-        }
+        #cost-form::after { content: ""; display: table; clear: both; }
+        .cost-input { /* JS'in hedeflemesi için class */ }
 
     </style>
 </head>
@@ -331,7 +305,7 @@
         <h2>Analiz Parametreleri</h2>
         <p>
             Selam Müşir abi! Buradan istediğin tarih aralığını ve sipariş başına düşen tahmini maliyetlerini girerek, e-ticaret satışlarının kârlılık durumunu detaylıca inceleyebilirsin. Hadi bakalım, Güllü Ayakkabı'nın rakamları konuşsun! 🚀
-            <br><small>(Personel maaşı aylık olarak girilir ve seçilen döneme göre sipariş başına dağıtılır. Ürün maliyeti 0 olan, iptal veya iade edilen siparişler ana analize dahil edilmez. İadelerin ek kargo maliyeti ayrıca gösterilir.)</small>
+            <br><small>(Personel maaşı aylık olarak girilir ve seçilen döneme göre sipariş başına dağıtılır. İadelerin ek kargo maliyeti ayrıca gösterilir.)</small>
         </p>
 
         <form method="POST" action="{{ url_for('profit.profit_report') }}" id="analysis-params-form">
@@ -344,7 +318,7 @@
                 <input type="date" id="end_date" name="end_date" value="{{ end_date or '' }}" required />
             </div>
             <div class="form-group">
-                <label for="package_cost">Paket Maliyeti / Sipariş (TL)</label>
+                <label for="package_cost">Paket Maliyeti / Ürün (TL)</label>
                 <input type="text" id="package_cost" name="package_cost" value="{{ package_cost or '0' }}" placeholder="Ör: 3,50" inputmode="decimal" />
             </div>
             <div class="form-group">
@@ -353,7 +327,7 @@
             </div>
             <div class="form-group">
                 <label for="shipping_cost">Kargo Maliyeti / Sipariş (TL)</label>
-                <input type="text" id="shipping_cost" name="shipping_cost" value="{{ shipping_cost or '0' }}" placeholder="Ör: 10,00" inputmode="decimal" />
+                <input type="text" id="shipping_cost" name="shipping_cost" value="{{ shipping_cost or '0' }}" placeholder="Ör: 65,00" inputmode="decimal" />
             </div>
             <div class="form-submit-area">
                 <button type="submit">Analiz Et</button>
@@ -361,7 +335,6 @@
         </form>
 
         {# --- SONUÇLAR BÖLÜMÜ --- #}
-        {# Sadece POST sonrası veya auto_reload varsa sonuçları göster #}
         {% if (request.method == 'POST' or request.args.get('auto_reload') == '1') %}
 
             {# --- EKSİK MALİYET GİRİŞ FORMU --- #}
@@ -371,13 +344,11 @@
                 <p>Abdurrahman abi, aşağıdaki ürünler için sistemde maliyet bilgisi bulamadım. Bunları girmezsen analiz eksik kalır. Lütfen maliyetleri (TL cinsinden, örn: 45,50) girip aşağıdaki butona bas.</p>
 
                 <form action="{{ url_for('profit.save_missing_costs') }}" method="post" id="cost-form">
-                    {# Mevcut rapor parametrelerini gizli inputlarla taşıyalım ki rapor yeniden üretilebilsin #}
                     <input type="hidden" name="start_date" value="{{ start_date }}">
                     <input type="hidden" name="end_date" value="{{ end_date }}">
-                    <input type="hidden" name="package_cost" value="{{ package_cost }}"> {# Ana formdaki ham değer #}
-                    <input type="hidden" name="monthly_employee_salary" value="{{ monthly_employee_salary }}"> {# Ana formdaki ham değer #}
-                    <input type="hidden" name="shipping_cost" value="{{ shipping_cost }}"> {# Ana formdaki ham değer #}
-                    {# shipping_cost_str'a gerek yok, redirect'te yeniden hesaplanacak #}
+                    <input type="hidden" name="package_cost" value="{{ package_cost }}">
+                    <input type="hidden" name="monthly_employee_salary" value="{{ monthly_employee_salary }}">
+                    <input type="hidden" name="shipping_cost" value="{{ shipping_cost }}">
 
                     <div class="table-container">
                         <table>
@@ -394,14 +365,9 @@
                                     <td>{{ entry.barcode }}</td>
                                     <td>{{ entry.merchant_sku }}</td>
                                     <td>
-                                        <input type="number"
-                                               step="0.01"
-                                               min="0"
-                                               class="cost-input" {# JS için class eklendi #}
-                                               name="cost_{{ entry.barcode }}"
-                                               placeholder="0,00"
-                                               required
-                                               inputmode="decimal"> {# Mobil klavyeler için ipucu #}
+                                        <input type="number" step="0.01" min="0" class="cost-input"
+                                               name="cost_{{ entry.barcode }}" placeholder="0,00"
+                                               required inputmode="decimal">
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -417,22 +383,23 @@
             {# --- /Eksik Maliyet Giriş Formu --- #}
 
 
-            {# --- ANALİZ ÖZETİ (Eğer veri varsa göster) --- #}
-            {% if order_count or total_return_shipping_cost > 0 %} {# Ya analiz edilecek sipariş var ya da en azından iade kargo maliyeti var #}
+            {# --- ANALİZ ÖZETİ --- #}
+            {% if order_count > 0 or warned_order_count > 0 or total_return_shipping_cost > 0 %}
                 <h2 class="analysis-table-title">Analiz Özeti ({{ start_date }} - {{ end_date }})</h2>
                 <div class="summary">
                      <p>
-                         <strong>Bulunan Toplam Kayıt:</strong>
-                         <div class="value-container tooltip-base-container">
+                        <strong>Bulunan Toplam Kayıt:</strong>
+                        <div class="value-container tooltip-base-container">
                              <span class="summary-tooltip-container">{{ total_records_found }} adet</span>
                              <div class="summary-tooltip-content tooltip-base-content">
-                                <strong>Kayıt Dağılımı:</strong>
-                                <span><label>Dahil Edilen:</label><span class="value">{{ order_count }} ad.</span></span>
-                                <span><label>İptal Edilen:</label><span class="value">{{ cancelled_orders|length }} ad.</span></span>
-                                <span><label>İade Edilen:</label><span class="value">{{ returned_orders|length }} ad.</span></span>
-                                <span><label>Diğer Hariç:</label><span class="value">{{ other_excluded_orders|length }} ad.</span></span>
+                                 <strong>Kayıt Dağılımı:</strong>
+                                 <span><label>Dahil Edilen:</label><span class="value">{{ order_count }} ad.</span></span>
+                                 <span><label>Uyarı ile Dahil:</label><span class="value">{{ warned_order_count }} ad.</span></span>
+                                 <span><label>İptal Edilen:</label><span class="value">{{ cancelled_orders|length }} ad.</span></span>
+                                 <span><label>İade Edilen:</label><span class="value">{{ returned_orders|length }} ad.</span></span>
+                                 <span><label>Diğer Hariç:</label><span class="value">{{ other_excluded_orders|length }} ad.</span></span>
                             </div>
-                         </div>
+                        </div>
                     </p>
                     <p>
                         <strong>Toplam Brüt Gelir:</strong>
@@ -443,51 +410,31 @@
                         <span class="value-container">{{ total_discount_sum_str }} TL</span>
                     </p>
                      <p>
-                         <strong>Toplam Gider (Dahil Edilenler):</strong>
-                         <div class="value-container tooltip-base-container">
+                        <strong>Toplam Gider (Dahil Edilenler):</strong>
+                        <div class="value-container tooltip-base-container">
                              <span class="summary-tooltip-container">{{ total_expenses_sum_str }} TL</span>
                              <div class="summary-tooltip-content tooltip-base-content">
-                                <strong>Gider Dağılımı (Dahil Edilenler):</strong>
-                                <span><label>Ürün Maliyeti:</label><span class="value">{{ total_product_cost_sum_str }} TL</span></span>
-                                <span><label>Komisyon:</label><span class="value">{{ total_commission_sum_str }} TL</span></span>
-                                <span><label>Paket Gideri:</label><span class="value">{{ total_package_cost_period_str }} TL</span></span>
-                                <span><label>Kargo Gideri (Gidiş):</label><span class="value">{{ total_shipping_cost_period_str }} TL</span></span>
-                                <span><label>Personel:</label><span class="value">{{ total_employee_cost_period_str }} TL</span></span>
-                             </div>
-                         </div>
+                                 <strong>Gider Dağılımı:</strong>
+                                 <span><label>Ürün Maliyeti:</label><span class="value">{{ total_product_cost_sum_str }} TL</span></span>
+                                 <span><label>Komisyon:</label><span class="value">{{ total_commission_sum_str }} TL</span></span>
+                                 <span><label>Paket Gideri:</label><span class="value">{{ total_package_cost_period_str }} TL</span></span>
+                                 <span><label>Kargo Gideri (Gidiş):</label><span class="value">{{ total_shipping_cost_period_str }} TL</span></span>
+                                 <span><label>Personel:</label><span class="value">{{ total_employee_cost_period_str }} TL</span></span>
+                                 <span><label>İade Kargo:</label><span class="value">{{ total_return_shipping_cost_str }} TL</span></span>
+                            </div>
+                        </div>
                      </p>
-                     <p>
-                         <strong>Toplam İade Kargo Gideri:</strong>
-                         <div class="value-container tooltip-base-container">
-                             <span class="summary-tooltip-container">{{ total_return_shipping_cost_str }} TL</span>
-                             <div class="summary-tooltip-content tooltip-base-content">
-                                 <strong>İade Detayları:</strong>
-                                 <span><label>İade Sayısı:</label><span class="value">{{ returned_orders|length }} adet</span></span>
-                                 <span><label>İade Başına Kargo (Tahmini):</label><span class="value">{{ shipping_cost_str }} TL</span></span>
-                             </div>
-                         </div>
-                     </p>
-                     <p> {# Kâr hesaplamalarını sadece geçerli sipariş varsa gösterelim #}
-                        {% if order_count > 0 %}
-                            <strong>Ortalama Kâr / Sipariş:</strong>
-                            <span class="value-container {{ 'profit-positive' if avg_profit > 0 else 'profit-negative' if avg_profit < 0 else 'profit-zero' }}">
-                                {{ avg_profit_str }} TL
-                            </span>
-                        {% else %}
-                            <strong>Ortalama Kâr / Sipariş:</strong>
-                            <span class="value-container profit-zero">N/A</span>
-                        {% endif %}
+                    <p>
+                         <strong>Ortalama Kâr / Sipariş:</strong>
+                         <span class="value-container {{ 'profit-positive' if avg_profit > 0 else 'profit-negative' if avg_profit < 0 else 'profit-zero' }}">
+                             {{ avg_profit_str }} TL
+                         </span>
                     </p>
                     <p>
-                        {% if order_count > 0 %}
-                            <strong>Ortalama Kâr Marjı:</strong>
-                            <span class="value-container {{ 'profit-positive' if avg_profit_margin > 0 else 'profit-negative' if avg_profit_margin < 0 else 'profit-zero' }}">
-                                {{ avg_profit_margin_str }} %
-                            </span>
-                        {% else %}
-                            <strong>Ortalama Kâr Marjı:</strong>
-                            <span class="value-container profit-zero">N/A</span>
-                        {% endif %}
+                         <strong>Ortalama Kâr Marjı:</strong>
+                         <span class="value-container {{ 'profit-positive' if avg_profit_margin > 0 else 'profit-negative' if avg_profit_margin < 0 else 'profit-zero' }}">
+                             {{ avg_profit_margin_str }} %
+                         </span>
                     </p>
                     <p>
                         <strong>Net Toplam Kâr:</strong>
@@ -496,23 +443,22 @@
                         </span>
                     </p>
                 </div>
-            {% elif not missing_cost_entries %} {# Maliyet girilecek bir şey de yoksa mesaj göster #}
+            {% elif not missing_cost_entries %}
                  <p style="text-align: center; font-weight: 600; color: #007bff; margin-top:2rem;">
-                    Belirtilen kriterlere uygun analiz edilecek veya hariç tutulacak bir kayıt bulunamadı. Tarih aralığını veya filtreleri kontrol et.
+                     Belirtilen kriterlere uygun analiz edilecek veya hariç tutulacak bir kayıt bulunamadı. Tarih aralığını kontrol et.
                  </p>
-            {% endif %} {# End of summary check #}
+            {% endif %}
 
 
             {# --- ANALİZ DETAY TABLOSU --- #}
-            {% if analysis %} {# analysis listesi doluysa tabloyu göster #}
+            {% if analysis %}
+                {% set analysis_limit = 15 %}
                 <h2 class="analysis-table-title">
-                    Analize Dahil Edilen Sipariş Detayları
-                    {% set analysis_limit = 15 %}
-                    {% if analysis|length > analysis_limit %}(İlk {{ analysis_limit }} Gösteriliyor){% endif %}
-                    ({{ analysis|length }} adet)
+                    Analize Dahil Edilen Sipariş Detayları ({{ analysis|length }} adet)
+                    {% if analysis|length > analysis_limit %} (İlk {{ analysis_limit }} gösteriliyor){% endif %}
                 </h2>
                 <div class="table-controls">
-                    <input type="text" id="analysis-search-input" class="search-input" placeholder="Dahil Edilenlerde Sipariş Numarasına Göre Filtrele...">
+                    <input type="text" id="analysis-search-input" class="search-input" placeholder="Dahil edilenlerde sipariş no ile filtrele...">
                 </div>
                 <div class="table-container">
                     <table>
@@ -532,24 +478,20 @@
                                 <tr class="analysis-row {% if loop.index > analysis_limit %}initially-hidden{% endif %}">
                                     <td>{{ item.order_number|default('N/A') }}</td>
                                     <td class="col-sku">{{ item.merchant_sku|default('N/A') }}</td>
-                                    <td class="align-right">{{ item.net_income_str }}</td> {# Formatlı değer #}
+                                    <td class="align-right">{{ item.net_income_str }}</td>
                                     <td class="align-right tooltip-base-container">
-                                        <span class="summary-tooltip-container">{{ item.total_expenses_str }}</span> {# Formatlı değer #}
+                                        <span>{{ item.total_expenses_str }}</span>
                                         <div class="tooltip-base-content summary-tooltip-content">
-                                             <strong>Gider Detayları:</strong>
-                                             <span><label>Ürün M.:</label><span class="value">{{ item.product_cost_str }} TL</span></span>
-                                             <span><label>Komisyon:</label><span class="value">{{ item.commission_str }} TL</span></span>
-                                             <span><label>Kargo:</label><span class="value">{{ item.shipping_cost_str }} TL</span></span>
-                                             <span><label>Paket:</label><span class="value">{{ item.package_cost_str }} TL</span></span>
-                                             <span><label>İşçilik:</label><span class="value">{{ item.employee_cost_str }} TL</span></span>
-                                         </div>
+                                            <strong>Gider Detayları:</strong>
+                                            <span><label>Ürün M.:</label><span class="value">{{ item.product_cost_str }} TL</span></span>
+                                            <span><label>Komisyon:</label><span class="value">{{ item.commission_str }} TL</span></span>
+                                            <span><label>Kargo:</label><span class="value">{{ item.shipping_cost_str }} TL</span></span>
+                                            <span><label>Paket:</label><span class="value">{{ item.package_cost_str }} TL</span></span>
+                                            <span><label>İşçilik:</label><span class="value">{{ item.employee_cost_str }} TL</span></span>
+                                       </div>
                                     </td>
-                                    <td class="align-right">
-                                        <span class="value {{ 'profit-positive' if item.profit > 0 else 'profit-negative' if item.profit < 0 else 'profit-zero' }}">
-                                            {{ item.profit_str }} {# Formatlı değer #}
-                                        </span>
-                                    </td>
-                                    <td class="align-right">{{ item.profit_margin_str }}</td> {# Formatlı değer #}
+                                    <td class="align-right {{ item.profit_status_class }}">{{ item.profit_str }}</td>
+                                    <td class="align-right {{ item.profit_status_class }}">{{ item.profit_margin_str }} %</td>
                                     <td>{{ item.status|default('N/A') }}</td>
                                 </tr>
                             {% endfor %}
@@ -559,17 +501,59 @@
                 {% if analysis|length > analysis_limit %}
                     <button type="button" id="show-all-analysis" class="show-all-button">Tüm {{ analysis|length }} Analiz Kaydını Göster</button>
                 {% endif %}
-            {% endif %} {# End of analysis table check #}
+            {% endif %}
+
+
+            {# YENİ BÖLÜM: UYARI İLE DAHİL EDİLENLER #}
+            {% if warned_orders %}
+                {% set warned_limit = 10 %}
+                <h2 class="warned-table-title">
+                    Uyarı ile Dahil Edilen Siparişler ({{ warned_orders|length }} adet)
+                    {% if warned_orders|length > warned_limit %} (İlk {{ warned_limit }} gösteriliyor){% endif %}
+                </h2>
+                <p><small>Aşağıdaki siparişler, tutar veya komisyon değeri sıfır olduğu için bu bölümde ayrı olarak listelenmiştir. Genel toplamlara dahil edilmişlerdir.</small></p>
+                <div class="table-controls">
+                    <input type="text" id="warned-search-input" class="search-input" placeholder="Uyarılı siparişlerde no ile filtrele...">
+                </div>
+                <div class="table-container warned-table-container">
+                    <table class="warned-table">
+                        <thead>
+                            <tr>
+                                <th>Sipariş No</th>
+                                <th class="col-sku">Merchant SKU</th>
+                                <th class="align-right">Net Gelir (TL)</th>
+                                <th class="align-right">Kâr (TL)</th>
+                                <th>Uyarı Nedeni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="warned-tbody">
+                            {% for item in warned_orders %}
+                                <tr class="warned-row {% if loop.index > warned_limit %}initially-hidden{% endif %}">
+                                    <td>{{ item.order_number|default('N/A') }}</td>
+                                    <td class="col-sku">{{ item.merchant_sku|default('N/A') }}</td>
+                                    <td class="align-right">{{ item.net_income_str }}</td>
+                                    <td class="align-right {{ item.profit_status_class }}">{{ item.profit_str }}</td>
+                                    <td class="col-reason">{{ item.warning_reason }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if warned_orders|length > warned_limit %}
+                    <button type="button" id="show-all-warned" class="show-all-button">Tüm {{ warned_orders|length }} Uyarılı Kaydı Göster</button>
+                {% endif %}
+            {% endif %}
 
 
             {# --- İPTAL EDİLEN SİPARİŞLER TABLOSU --- #}
             {% if cancelled_orders %}
                 {% set cancelled_limit = 10 %}
                 <h2 class="cancelled-table-title">
-                    İptal Edilen Siparişler ({{ cancelled_orders|length }} adet{% if cancelled_orders|length > cancelled_limit %} - İlk {{ cancelled_limit }} Gösteriliyor{% endif %})
+                    İptal Edilen Siparişler ({{ cancelled_orders|length }} adet)
+                    {% if cancelled_orders|length > cancelled_limit %} (İlk {{ cancelled_limit }} gösteriliyor){% endif %}
                 </h2>
                 <div class="table-controls">
-                    <input type="text" id="cancelled-search-input" class="search-input" placeholder="İptallerde Sipariş Numarasına Göre Filtrele...">
+                    <input type="text" id="cancelled-search-input" class="search-input" placeholder="İptallerde sipariş no ile filtrele...">
                 </div>
                 <div class="table-container cancelled-table-container">
                     <table class="cancelled-table">
@@ -583,9 +567,9 @@
                         <tbody id="cancelled-tbody">
                             {% for item in cancelled_orders %}
                                 <tr class="cancelled-row {% if loop.index > cancelled_limit %}initially-hidden{% endif %}">
-                                    <td class="col-order-no" title="{{ item.order_number|default('N/A') }}">{{ item.order_number|default('N/A') }}</td>
-                                    <td class="col-sku" title="{{ item.merchant_sku|default('N/A') }}">{{ item.merchant_sku|default('N/A') }}</td>
-                                    <td class="col-status" title="{{ item.status|default('N/A') }}">{{ item.status|default('N/A') }}</td>
+                                    <td>{{ item.order_number|default('N/A') }}</td>
+                                    <td>{{ item.merchant_sku|default('N/A') }}</td>
+                                    <td>{{ item.status|default('N/A') }}</td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -594,24 +578,24 @@
                 {% if cancelled_orders|length > cancelled_limit %}
                     <button type="button" id="show-all-cancelled" class="show-all-button">Tüm {{ cancelled_orders|length }} İptal Kaydını Göster</button>
                 {% endif %}
-            {% endif %} {# End of cancelled_orders table check #}
+            {% endif %}
 
 
             {# --- İADE EDİLEN SİPARİŞLER TABLOSU --- #}
             {% if returned_orders %}
-                 {% set returned_limit = 10 %}
+                {% set returned_limit = 10 %}
                 <h2 class="returned-table-title">
-                    İade Edilen Siparişler ({{ returned_orders|length }} adet{% if returned_orders|length > returned_limit %} - İlk {{ returned_limit }} Gösteriliyor{% endif %})
+                    İade Edilen Siparişler ({{ returned_orders|length }} adet)
+                    {% if returned_orders|length > returned_limit %} (İlk {{ returned_limit }} gösteriliyor){% endif %}
                 </h2>
                 <div class="table-controls">
-                    <input type="text" id="returned-search-input" class="search-input" placeholder="İadelerde Sipariş Numarasına Göre Filtrele...">
+                    <input type="text" id="returned-search-input" class="search-input" placeholder="İadelerde sipariş no ile filtrele...">
                 </div>
                 <div class="table-container returned-table-container">
                     <table class="returned-table">
                         <thead>
                             <tr>
                                 <th class="col-order-no">Sipariş No</th>
-                                {# <th class="col-sku">Merchant SKU</th> İade verisinde SKU yoksa kaldırılabilir #}
                                 <th class="col-status">Durum</th>
                                 <th class="col-reason">İade Nedeni</th>
                             </tr>
@@ -619,12 +603,9 @@
                         <tbody id="returned-tbody">
                             {% for item in returned_orders %}
                                 <tr class="returned-row {% if loop.index > returned_limit %}initially-hidden{% endif %}">
-                                    <td class="col-order-no" title="{{ item.order_number|default('N/A') }}">{{ item.order_number|default('N/A') }}</td>
-                                    {# <td class="col-sku" title="{{ item.merchant_sku|default('N/A') }}">{{ item.merchant_sku|default('N/A') }}</td> #}
-                                    <td class="col-status" title="{{ item.status|default('N/A') }}">{{ item.status|default('N/A') }}</td>
-                                    <td class="col-reason" title="{{ item.reason|default('İade Edildi') }}">
-                                        {{ item.reason|replace('İade Edildi (', '')|replace(')', '') }}
-                                    </td>
+                                    <td>{{ item.order_number|default('N/A') }}</td>
+                                    <td>{{ item.status|default('N/A') }}</td>
+                                    <td class="col-reason">{{ item.reason|replace('İade Edildi (', '')|replace(')', '') }}</td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -633,18 +614,19 @@
                 {% if returned_orders|length > returned_limit %}
                     <button type="button" id="show-all-returned" class="show-all-button">Tüm {{ returned_orders|length }} İade Kaydını Göster</button>
                 {% endif %}
-            {% endif %} {# End of returned_orders table check #}
+            {% endif %}
 
 
             {# --- DİĞER HARİÇ TUTULANLAR TABLOSU --- #}
             {% if other_excluded_orders %}
                 {% set other_excluded_limit = 10 %}
                 <h2 class="excluded-table-title">
-                    Diğer Hariç Tutulan Kayıtlar ({{ other_excluded_orders|length }} adet{% if other_excluded_orders|length > other_excluded_limit %} - İlk {{ other_excluded_limit }} Gösteriliyor{% endif %})
+                    Diğer Hariç Tutulan Kayıtlar ({{ other_excluded_orders|length }} adet)
+                    {% if other_excluded_orders|length > other_excluded_limit %} (İlk {{ other_excluded_limit }} gösteriliyor){% endif %}
                 </h2>
-                <p><small>Aşağıdaki kayıtlar, ürün maliyeti sıfır/bulunamadığı, barkodu bulunamadığı veya işlem sırasında hata oluştuğu için ana analize dahil edilmemiştir.</small></p>
+                <p><small>Aşağıdaki kayıtlar, ürün maliyeti bulunamadığı, barkodu eksik olduğu veya işlem sırasında hata oluştuğu için analize dahil edilmemiştir.</small></p>
                 <div class="table-controls">
-                    <input type="text" id="other-excluded-search-input" class="search-input" placeholder="Diğer Hariçlerde Sipariş Numarasına Göre Filtrele...">
+                    <input type="text" id="other-excluded-search-input" class="search-input" placeholder="Diğer hariçlerde sipariş no ile filtrele...">
                 </div>
                 <div class="table-container excluded-table-container">
                     <table class="excluded-table">
@@ -659,10 +641,10 @@
                         <tbody id="other-excluded-tbody">
                             {% for item in other_excluded_orders %}
                                 <tr class="other-excluded-row {% if loop.index > other_excluded_limit %}initially-hidden{% endif %}">
-                                    <td class="col-order-no" title="{{ item.order_number|default('N/A') }}">{{ item.order_number|default('N/A') }}</td>
-                                    <td class="col-sku" title="{{ item.merchant_sku|default('N/A') }}">{{ item.merchant_sku|default('N/A') }}</td>
-                                    <td class="col-status" title="{{ item.status|default('N/A') }}">{{ item.status|default('N/A') }}</td>
-                                    <td class="col-reason" title="{{ item.reason|default('Bilinmiyor') }}">{{ item.reason|default('Bilinmiyor') }}</td>
+                                    <td>{{ item.order_number|default('N/A') }}</td>
+                                    <td>{{ item.merchant_sku|default('N/A') }}</td>
+                                    <td>{{ item.status|default('N/A') }}</td>
+                                    <td class="col-reason">{{ item.reason|default('Bilinmiyor') }}</td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -671,11 +653,11 @@
                 {% if other_excluded_orders|length > other_excluded_limit %}
                     <button type="button" id="show-all-other-excluded" class="show-all-button">Tüm {{ other_excluded_orders|length }} Diğer Kaydı Göster</button>
                 {% endif %}
-            {% endif %} {# End of other_excluded_orders table check #}
+            {% endif %}
 
 
             {# --- GRAFİKLER --- #}
-            {% if analysis %} {# Sadece analiz verisi varsa grafikleri göster #}
+            {% if analysis or warned_orders %}
                 <div class="charts-container">
                     {% if top_profit_products %}
                     <div class="chart-box">
@@ -696,187 +678,155 @@
                     </div>
                     {% endif %}
                 </div>
-                {# Grafik verisini JSON olarak göm #}
-                 <script id="chartData" type="application/json">
-                     {
-                         "top_profit": {{ top_profit_products | default([]) | tojson }},
-                         "top_commission": {{ top_commission_products | default([]) | tojson }},
-                         "top_discount": {{ top_discount_products | default([]) | tojson }}
-                     }
-                 </script>
-            {% endif %} {# End of analysis check for charts #}
-
-        {# --- /SONUÇLAR BÖLÜMÜ --- #}
+                <script id="chartData" type="application/json">
+                    {
+                        "top_profit": {{ top_profit_products | default([]) | tojson }},
+                        "top_commission": {{ top_commission_products | default([]) | tojson }},
+                        "top_discount": {{ top_discount_products | default([]) | tojson }}
+                    }
+                </script>
+            {% endif %}
 
         {% elif not request.method == 'POST' and not request.args.get('auto_reload') %}
-            {# Sayfa ilk açıldığında veya form gönderilmediğinde mesaj göster #}
             <p style="text-align: center; font-weight: 600; color: #007bff; margin-top: 3rem;">
                 Raporu görmek için yukarıdaki formu doldur ve "Analiz Et" butonuna bas. Kolay gelsin! 👍
             </p>
-        {% endif %} {# End of results section check #}
+        {% endif %}
 
-    </div> {# End of .container #}
+    </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function() {
 
-            // --- Tümünü Göster Fonksiyonu ---
-            function setupShowAllButton(buttonId, tbodyId, rowSelector) {
-                const button = document.getElementById(buttonId);
-                if (button) {
-                    button.addEventListener('click', function() {
-                        const hiddenRows = document.querySelectorAll(`${tbodyId} ${rowSelector}.initially-hidden`);
-                        hiddenRows.forEach(row => row.classList.remove('initially-hidden'));
-                        this.style.display = 'none'; // Butonu gizle
-                    });
-                }
+        function setupShowAllButton(buttonId, tbodyId, rowSelector) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.addEventListener('click', function() {
+                    const hiddenRows = document.querySelectorAll(`${tbodyId} ${rowSelector}.initially-hidden`);
+                    hiddenRows.forEach(row => row.classList.remove('initially-hidden'));
+                    this.style.display = 'none';
+                });
             }
-            setupShowAllButton('show-all-analysis', '#analysis-tbody', 'tr.analysis-row');
-            setupShowAllButton('show-all-cancelled', '#cancelled-tbody', 'tr.cancelled-row');
-            setupShowAllButton('show-all-returned', '#returned-tbody', 'tr.returned-row');
-            setupShowAllButton('show-all-other-excluded', '#other-excluded-tbody', 'tr.other-excluded-row');
+        }
+        setupShowAllButton('show-all-analysis', '#analysis-tbody', 'tr.analysis-row');
+        setupShowAllButton('show-all-warned', '#warned-tbody', 'tr.warned-row'); // YENİ
+        setupShowAllButton('show-all-cancelled', '#cancelled-tbody', 'tr.cancelled-row');
+        setupShowAllButton('show-all-returned', '#returned-tbody', 'tr.returned-row');
+        setupShowAllButton('show-all-other-excluded', '#other-excluded-tbody', 'tr.other-excluded-row');
 
-            // --- Arama/Filtreleme Fonksiyonu ---
-            function setupSearchFilter(inputId, tbodyId, rowSelector, cellIndex) {
-                const searchInput = document.getElementById(inputId);
-                const tableBody = document.getElementById(tbodyId);
-                if (searchInput && tableBody) {
-                    searchInput.addEventListener('keyup', function() {
-                        const searchTerm = this.value.toLowerCase().trim();
-                        const rows = tableBody.querySelectorAll(rowSelector);
-                        rows.forEach(row => {
-                            // Eğer satır zaten "Tümünü Göster" ile görünür değilse, filtreleme yapma
-                            if (row.classList.contains('initially-hidden')) return;
-
-                            const cell = row.querySelector(`td:nth-child(${cellIndex + 1})`);
-                            if (cell) {
-                                const cellText = cell.textContent || cell.innerText;
-                                // Arama terimi boşsa veya hücre metni içeriyorsa göster, yoksa gizle
-                                row.style.display = (!searchTerm || cellText.toLowerCase().includes(searchTerm)) ? '' : 'none';
-                            }
-                        });
+        function setupSearchFilter(inputId, tbodyId, rowSelector) {
+            const searchInput = document.getElementById(inputId);
+            const tableBody = document.getElementById(tbodyId);
+            if (searchInput && tableBody) {
+                searchInput.addEventListener('keyup', function() {
+                    const searchTerm = this.value.toLowerCase().trim();
+                    const rows = tableBody.querySelectorAll(rowSelector);
+                    rows.forEach(row => {
+                        if (row.classList.contains('initially-hidden')) return;
+                        const cell = row.querySelector('td:first-child');
+                        if (cell) {
+                            const cellText = cell.textContent || cell.innerText;
+                            row.style.display = (!searchTerm || cellText.toLowerCase().includes(searchTerm)) ? '' : 'none';
+                        }
                     });
-                }
+                });
             }
-            // Sipariş Numarası sütunu genellikle ilk sütun (index 0)
-            setupSearchFilter('analysis-search-input', '#analysis-tbody', 'tr.analysis-row', 0);
-            setupSearchFilter('cancelled-search-input', '#cancelled-tbody', 'tr.cancelled-row', 0);
-            setupSearchFilter('returned-search-input', '#returned-tbody', 'tr.returned-row', 0);
-            setupSearchFilter('other-excluded-search-input', '#other-excluded-tbody', 'tr.other-excluded-row', 0);
+        }
+        setupSearchFilter('analysis-search-input', '#analysis-tbody', 'tr.analysis-row');
+        setupSearchFilter('warned-search-input', '#warned-tbody', 'tr.warned-row'); // YENİ
+        setupSearchFilter('cancelled-search-input', '#cancelled-tbody', 'tr.cancelled-row');
+        setupSearchFilter('returned-search-input', '#returned-tbody', 'tr.returned-row');
+        setupSearchFilter('other-excluded-search-input', '#other-excluded-tbody', 'tr.other-excluded-row');
 
+        const costInputs = document.querySelectorAll('#cost-form .cost-input');
+        if (costInputs.length > 0) {
+            costInputs[0].focus();
+            costInputs.forEach((input, index) => {
+                input.addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        const nextIndex = index + 1;
+                        if (nextIndex < costInputs.length) {
+                            costInputs[nextIndex].focus();
+                            costInputs[nextIndex].select();
+                        } else {
+                            const submitButton = document.querySelector('#cost-form button[type="submit"]');
+                            if (submitButton) submitButton.focus();
+                        }
+                    }
+                });
+            });
+        }
 
-            // --- Eksik Maliyet Formu İçin Otomatik Odaklanma ---
-            const costInputs = document.querySelectorAll('#cost-form .cost-input');
-            if (costInputs.length > 0) {
-                costInputs[0].focus(); // İlk inputa odaklan
+        // --- GÜNCELLENMİŞ GRAFİK OLUŞTURMA ---
+        try {
+            const chartDataElement = document.getElementById('chartData');
+            if (chartDataElement) {
+                const chartData = JSON.parse(chartDataElement.textContent);
 
-                costInputs.forEach((input, index) => {
-                    input.addEventListener('keydown', function(event) {
-                        if (event.key === 'Enter') {
-                            event.preventDefault(); // Formun normal gönderilmesini engelle
-                            const nextIndex = index + 1;
-                            if (nextIndex < costInputs.length) {
-                                costInputs[nextIndex].focus(); // Sonraki inputa odaklan
-                                costInputs[nextIndex].select(); // İçeriğini seçili hale getir
-                            } else {
-                                // Son inputtayız, kaydet butonuna odaklan
-                                const submitButton = document.querySelector('#cost-form button[type="submit"]');
-                                if (submitButton) {
-                                    submitButton.focus();
+                // GÜNCELLENDİ: Tek renk şeması
+                const chartBackgroundColor = 'rgba(78, 84, 200, 0.7)'; // #4e54c8
+                const chartBorderColor = 'rgba(78, 84, 200, 1)';
+                const chartHoverBackgroundColor = 'rgba(143, 148, 251, 0.9)'; // #8f94fb
+                const chartHoverBorderColor = 'rgba(143, 148, 251, 1)';
+
+                const chartOptions = {
+                    indexAxis: 'y',
+                    scales: { x: { beginAtZero: true } },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.x !== null) {
+                                        label += parseFloat(context.parsed.x).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' TL';
+                                    }
+                                    return label;
                                 }
                             }
                         }
-                    });
-                });
-            } // End of cost input focus management
-
-
-            // --- Grafik Oluşturma ---
-            try {
-                const chartDataElement = document.getElementById('chartData');
-                if (chartDataElement) {
-                    const chartData = JSON.parse(chartDataElement.textContent);
-
-                    const chartColors = [
-                        'rgba(75, 192, 192, 0.7)', 'rgba(255, 99, 132, 0.7)', 'rgba(54, 162, 235, 0.7)',
-                        'rgba(255, 206, 86, 0.7)', 'rgba(153, 102, 255, 0.7)', 'rgba(255, 159, 64, 0.7)',
-                        'rgba(201, 203, 207, 0.7)', 'rgba(83, 102, 255, 0.7)', 'rgba(46, 204, 113, 0.7)',
-                        'rgba(231, 76, 60, 0.7)'
-                    ];
-                     const chartBorderColors = chartColors.map(c => c.replace('0.7', '1'));
-
-                    const chartOptions = {
-                        indexAxis: 'y', // Yatay çubuk grafik
-                        scales: { x: { beginAtZero: true } },
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false }, // Göstergeyi kapat
-                            tooltip: { // Tooltip formatlama
-                                callbacks: {
-                                     label: function(context) {
-                                         let label = context.dataset.label || '';
-                                         if (label) { label += ': '; }
-                                         if (context.parsed.x !== null) {
-                                             // Sayıyı formatla (virgülle ayır)
-                                             label += parseFloat(context.parsed.x).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' TL';
-                                         }
-                                         return label;
-                                     }
-                                 }
-                            }
-                        }
-                    };
-
-                    // Fonksiyon: Grafik oluşturucu
-                    function createBarChart(canvasId, data, label) {
-                        const ctx = document.getElementById(canvasId)?.getContext('2d');
-                        if (ctx && data && data.length > 0) {
-                            new Chart(ctx, {
-                                type: 'bar',
-                                data: {
-                                    labels: data.map(p => p.sku.length > 30 ? p.sku.substring(0, 27) + '...' : p.sku), // SKU çok uzunsa kısalt
-                                    datasets: [{
-                                        label: label,
-                                        data: data.map(p => p[label.includes('Kâr') ? 'total_profit' : (label.includes('Komisyon') ? 'total_commission' : 'total_discount')]), // Veri anahtarını etiketten al
-                                        backgroundColor: chartColors.slice(0, data.length), // Veri sayısı kadar renk kullan
-                                        borderColor: chartBorderColors.slice(0, data.length),
-                                        borderWidth: 1
-                                    }]
-                                },
-                                options: chartOptions
-                            });
-                        } else if(ctx) {
-                             // Veri yoksa canvas'a mesaj yaz
-                             ctx.font = "16px 'Nunito'";
-                             ctx.fillStyle = "#aaa";
-                             ctx.textAlign = "center";
-                             ctx.fillText("Bu kategori için grafik verisi yok.", ctx.canvas.width / 2, ctx.canvas.height / 2);
-                        }
                     }
+                };
 
-                    // Grafikleri oluştur
-                    createBarChart('profitChart', chartData.top_profit, 'Toplam Kâr (TL)');
-                    createBarChart('commissionChart', chartData.top_commission, 'Toplam Komisyon (TL)');
-                    createBarChart('discountChart', chartData.top_discount, 'Toplam İndirim (TL)');
-
-                }
-            } catch (e) {
-                console.error("Grafikler oluşturulurken hata oluştu:", e);
-                 // Grafik alanlarına hata mesajı yazdırabiliriz
-                ['profitChart', 'commissionChart', 'discountChart'].forEach(id => {
-                    const ctx = document.getElementById(id)?.getContext('2d');
-                    if(ctx) {
+                function createBarChart(canvasId, data, label) {
+                    const ctx = document.getElementById(canvasId)?.getContext('2d');
+                    if (ctx && data && data.length > 0) {
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: data.map(p => p.sku.length > 30 ? p.sku.substring(0, 27) + '...' : p.sku),
+                                datasets: [{
+                                    label: label,
+                                    data: data.map(p => p[label.toLowerCase().includes('kâr') ? 'total_profit' : (label.includes('komisyon') ? 'total_commission' : 'total_discount')]),
+                                    backgroundColor: chartBackgroundColor,
+                                    borderColor: chartBorderColor,
+                                    hoverBackgroundColor: chartHoverBackgroundColor,
+                                    hoverBorderColor: chartHoverBorderColor,
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: chartOptions
+                        });
+                    } else if (ctx) {
                         ctx.font = "16px 'Nunito'";
-                        ctx.fillStyle = "#e53e3e"; // Kırmızı
+                        ctx.fillStyle = "#aaa";
                         ctx.textAlign = "center";
-                        ctx.fillText("Grafik yüklenemedi.", ctx.canvas.width / 2, ctx.canvas.height / 2);
+                        ctx.fillText("Bu kategori için grafik verisi yok.", ctx.canvas.width / 2, ctx.canvas.height / 2);
                     }
-                });
-            } // End of chart creation try-catch
+                }
+                createBarChart('profitChart', chartData.top_profit, 'Toplam Kâr');
+                createBarChart('commissionChart', chartData.top_commission, 'Toplam Komisyon');
+                createBarChart('discountChart', chartData.top_discount, 'Toplam İndirim');
+            }
+        } catch (e) {
+            console.error("Grafikler oluşturulurken hata oluştu:", e);
+        }
 
-        }); // End of DOMContentLoaded
+    });
     </script>
-
 </body>
 </html>
