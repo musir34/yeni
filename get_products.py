@@ -171,10 +171,10 @@ async def fetch_all_product_stocks_async():
 async def update_products_route():
     try:
         logger.debug("Tüm ürünleri ve detaylarını Trendyol'dan çekme işlemi başlatıldı.")
-        products = await fetch_all_products_async()
+        products = await fetch_all_products_async()  # filtreli
 
         if products is None:
-             raise ValueError("Ürünler çekilirken bir API hatası oluştu.")
+            raise ValueError("Ürünler çekilirken bir API hatası oluştu.")
         if not isinstance(products, list):
             logger.error(f"Beklenmeyen veri türü: {type(products)} - İçerik: {products}")
             raise ValueError("Beklenen liste değil.")
@@ -183,16 +183,19 @@ async def update_products_route():
 
         if products:
             logger.debug("Ürünler veritabanına kaydediliyor...")
-            await save_products_to_db_async(products)
+            await save_products_to_db_async(products)  # kayıt öncesi ikinci süzgeç aktif
             logger.info("Ürünler başarıyla güncellendi.")
+            flash('Ürünler başarıyla güncellendi.', 'success')
         else:
             logger.warning("Ürünler bulunamadı veya güncelleme sırasında bir hata oluştu.")
+            flash('Ürün bulunamadı.', 'warning')
 
     except Exception as e:
         logger.error(f"update_products_route hata: {e}", exc_info=True)
         flash('Ürünler güncellenirken bir hata oluştu.', 'danger')
 
     return redirect(url_for('get_products.product_list'))
+
 
 @get_products_bp.route('/update_stocks_route', methods=['POST'])
 async def update_stocks_route():
@@ -395,9 +398,8 @@ async def save_products_to_db_async(products):
 
     flash("Tüm ürün verileri başarıyla veritabanına kaydedildi/güncellendi.", "success")
     
-
 async def fetch_all_products_async():
-    """Tüm ürünlerin detaylı bilgisini Trendyol'dan çeker."""
+    """Sadece onaylı ve arşivde olmayan ürünleri Trendyol'dan çeker."""
     all_products = []
     page_size = 1000
     url = f"{BASE_URL}product/sellers/{SUPPLIER_ID}/products"
@@ -405,10 +407,17 @@ async def fetch_all_products_async():
     encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
     headers = {"Authorization": f"Basic {encoded_credentials}"}
 
+    base_params = {
+        "size": page_size,
+        "approved": "true",
+        "archived": "false"
+    }
+
     async with aiohttp.ClientSession() as session:
-        params = {"page": 0, "size": page_size}
         timeout = aiohttp.ClientTimeout(total=60)
         try:
+            # İlk sayfa
+            params = {"page": 0, **base_params}
             async with session.get(url, headers=headers, params=params, timeout=timeout) as response:
                 response.raise_for_status()
                 data = await response.json()
@@ -417,8 +426,9 @@ async def fetch_all_products_async():
                 if 'content' in data and isinstance(data['content'], list):
                     all_products.extend(data['content'])
 
+                # Diğer sayfalar
                 tasks = [
-                    fetch_products_page(session, url, headers, {"page": page_number, "size": page_size})
+                    fetch_products_page(session, url, headers, {"page": page_number, **base_params})
                     for page_number in range(1, total_pages)
                 ]
                 pages_data = await asyncio.gather(*tasks)
@@ -431,6 +441,8 @@ async def fetch_all_products_async():
 
     logging.info(f"Toplam çekilen ürün sayısı: {len(all_products)}")
     return all_products
+
+
 
 async def fetch_products_page(session, url, headers, params):
     try:
@@ -602,16 +614,17 @@ async def update_stock_levels_with_items_async(items):
 @get_products_bp.route('/fetch-products')
 async def fetch_products_route():
     try:
-        products = await fetch_all_products_async()
+        products = await fetch_all_products_async()  # filtreli çağrı (approved=true, archived=false)
         if products:
-            await save_products_to_db_async(products)
+            await save_products_to_db_async(products)  # save içi: archived/approved/blacklisted ikinci süzgeç
             flash('Ürünler başarıyla güncellendi.', 'success')
         else:
             flash('Ürünler bulunamadı veya güncelleme sırasında bir hata oluştu.', 'danger')
     except Exception as e:
-        logger.error(f"fetch_products_route hata: {e}")
+        logger.error(f"fetch_products_route hata: {e}", exc_info=True)
         flash('Ürünler güncellenirken bir hata oluştu.', 'danger')
     return redirect(url_for('get_products.product_list'))
+
 
 
 @get_products_bp.route('/archive_product', methods=['POST'])
@@ -1410,3 +1423,43 @@ def get_model_info():
         })
     else:
         return jsonify({'success': False, 'message': 'Ürün bulunamadı.'}), 404
+
+
+async def fetch_archived_barcodes_async():
+    """Trendyol'da ARŞİVDE olan ürünlerin barkod listesini döner."""
+    page_size = 1000
+    url = f"{BASE_URL}product/sellers/{SUPPLIER_ID}/products"
+    creds = base64.b64encode(f"{API_KEY}:{API_SECRET}".encode()).decode()
+    headers = {"Authorization": f"Basic {creds}"}
+
+    archived_barcodes = set()
+    base_params = {"size": page_size, "archived": "true"}  # sadece arşivdekiler
+
+    async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=60)
+        # İlk sayfa
+        async with session.get(url, headers=headers, params={**base_params, "page": 0}, timeout=timeout) as resp:
+            resp.raise_for_status()
+            data = await resp.json()
+            total_pages = data.get("totalPages", 1)
+            for p in data.get("content", []):
+                if p.get("barcode"): archived_barcodes.add(p["barcode"])
+        # Diğer sayfalar
+        tasks = [
+            fetch_products_page(session, url, headers, {**base_params, "page": page})
+            for page in range(1, total_pages)
+        ]
+        pages = await asyncio.gather(*tasks)
+        for content in pages:
+            for p in content:
+                b = p.get("barcode")
+                if b: archived_barcodes.add(b)
+
+    return archived_barcodes
+
+
+def delete_archived_in_db(barcodes: set) -> int:
+    if not barcodes: return 0
+    deleted = Product.query.filter(Product.barcode.in_(barcodes)).delete(synchronize_session=False)
+    db.session.commit()
+    return deleted
