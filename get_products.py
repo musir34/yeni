@@ -169,26 +169,48 @@ async def fetch_all_product_stocks_async():
 
 @get_products_bp.route('/update_products', methods=['POST'])
 async def update_products_route():
+    """
+    Trendyol ürün senkronu (tam): 
+    1) approved=true & archived=false ürünleri çek
+    2) DB'ye upsert et
+    3) Trendyol'da archived=true olanları DB'den sil
+    4) Aktif listede görünmeyenleri (Trendyol'dan kalkmış) DB'den sil
+    """
     try:
-        logger.debug("Tüm ürünleri ve detaylarını Trendyol'dan çekme işlemi başlatıldı.")
-        products = await fetch_all_products_async()  # filtreli
+        logger.debug("Trendyol'dan ürün çekme başlıyor (approved=true, archived=false).")
+        products = await fetch_all_products_async()
 
         if products is None:
-            raise ValueError("Ürünler çekilirken bir API hatası oluştu.")
+            raise ValueError("Trendyol API yanıtı None döndü.")
+
         if not isinstance(products, list):
             logger.error(f"Beklenmeyen veri türü: {type(products)} - İçerik: {products}")
-            raise ValueError("Beklenen liste değil.")
+            raise ValueError("Trendyol ürün verisi liste değil.")
 
-        logger.debug(f"Çekilen ürün sayısı: {len(products)}")
+        logger.debug(f"Trendyol'dan çekilen aktif ürün sayısı: {len(products)}")
 
         if products:
-            logger.debug("Ürünler veritabanına kaydediliyor...")
-            await save_products_to_db_async(products)  # kayıt öncesi ikinci süzgeç aktif
-            logger.info("Ürünler başarıyla güncellendi.")
+            # 1) Upsert
+            logger.debug("Ürünler veritabanına kaydediliyor/güncelleniyor...")
+            await save_products_to_db_async(products)
+
+            # 2) Silinecekleri senkronla
+            logger.debug("Trendyol'da silinen/archived ürünlerin DB senkronu başlıyor...")
+            sync_result = await sync_trendyol_deletions(products)
+
+
+            msg = (f"Ürünler güncellendi. "
+                   f"Arşivde olanlardan silinen: {sync_result.get('deleted_archived', 0)}, "
+                   f"Aktif listede görünmeyip silinen: {sync_result.get('deleted_inactive', 0)}.")
+            logger.info(msg)
+            flash(msg, "info")
+
+            logger.info("Ürün senkronu başarıyla tamamlandı.")
             flash('Ürünler başarıyla güncellendi.', 'success')
         else:
-            logger.warning("Ürünler bulunamadı veya güncelleme sırasında bir hata oluştu.")
-            flash('Ürün bulunamadı.', 'warning')
+            logger.warning("Trendyol'dan ürün gelmedi (aktif liste boş).")
+            # Aktif liste boş gelirse, tüm DB’yi silmek istemeyiz; bilerek dokunmuyoruz.
+            flash('Aktif ürün bulunamadı. (Trendyol liste boş döndü)', 'warning')
 
     except Exception as e:
         logger.error(f"update_products_route hata: {e}", exc_info=True)
@@ -1463,3 +1485,46 @@ def delete_archived_in_db(barcodes: set) -> int:
     deleted = Product.query.filter(Product.barcode.in_(barcodes)).delete(synchronize_session=False)
     db.session.commit()
     return deleted
+
+
+def extract_active_barcodes(api_products: list[str|dict]) -> set[str]:
+    """fetch_all_products_async ile gelen (approved=true, archived=false) ürünlerin barkod seti"""
+    active = set()
+    for p in api_products or []:
+        b = (p or {}).get("barcode")
+        if b:
+            active.add(b)
+    return active
+
+
+def delete_missing_products_in_db(active_barcodes: set[str]) -> int:
+    if not active_barcodes:
+        logger.warning("Aktif barkod seti boş; herhangi bir ürün silinmeyecek.")
+        return 0
+    to_delete = Product.query.filter(~Product.barcode.in_(active_barcodes)).all()
+    for p in to_delete:
+        db.session.delete(p)
+    if to_delete:
+        db.session.commit()
+    return len(to_delete)
+
+
+
+
+async def sync_trendyol_deletions(api_products: list[dict]) -> dict:
+    """
+    1) Trendyol 'archived=true' barkodlarını çek → DB’den sil
+    2) Trendyol 'approved=true & archived=false' listesinde olmayanları da DB’den sil
+    """
+    # 1) Arşivdekiler
+    archived_barcodes = await fetch_archived_barcodes_async()
+    deleted_archived = delete_archived_in_db(archived_barcodes)
+
+    # 2) Aktif listede görünmeyenler
+    active_barcodes = extract_active_barcodes(api_products)
+    deleted_inactive = delete_missing_products_in_db(active_barcodes)
+
+    return {
+        "deleted_archived": deleted_archived,
+        "deleted_inactive": deleted_inactive
+    }
