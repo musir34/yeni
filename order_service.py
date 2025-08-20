@@ -21,7 +21,7 @@ from models import (
     OrderShipped,
     OrderDelivered,
     OrderCancelled,
-    OrderArchived
+    Archive
 )
 
 # Trendyol API kimlik bilgileri
@@ -251,7 +251,8 @@ def process_all_orders(all_orders_data):
             return
 
         # 1) Arşivdeki sipariş numaralarını çek (performans için sadece numaralar)
-        archived_numbers = set(o.order_number for o in OrderArchived.query.with_entities(OrderArchived.order_number).all())
+        archived_numbers = set(o.order_number for o in Archive.query.with_entities(Archive.order_number).all()
+)
         logger.debug(f"Arşivde {len(archived_numbers)} sipariş bulundu.")
 
         # 2) Siparişleri statüye göre ayır ve arşiv kontrolü yap

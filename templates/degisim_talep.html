@@ -9,9 +9,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root {
-            --color-primary: #B76E79; /* Gül Kurusu */
+            --color-primary: #B76E79;
             --color-primary-dark: #A05F6A;
-            --color-secondary: #212529; /* Siyah/Koyu Gri */
+            --color-secondary: #212529;
             --color-text: #343a40;
             --color-bg: #f8f9fa;
             --color-white: #fff;
@@ -26,50 +26,28 @@
             --shadow-md: 0 5px 15px rgba(0,0,0,0.08);
             --transition: all 0.25s ease-in-out;
         }
-
-        body {
-            font-family: var(--font-family-base);
-            background-color: var(--color-bg);
-            color: var(--color-text);
-        }
+        body { font-family: var(--font-family-base); background-color: var(--color-bg); color: var(--color-text); }
         .container-xl { max-width: 1600px; }
         h2 { color: var(--color-secondary); font-weight: 600; }
 
-        .btn {
-            border-radius: var(--border-radius);
-            font-weight: 600;
-            transition: var(--transition);
-            border: none;
-            padding: 0.6rem 1.2rem;
-        }
+        .btn { border-radius: var(--border-radius); font-weight: 600; transition: var(--transition); border: none; padding: 0.6rem 1.2rem; }
         .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-        .btn-primary { background-color: var(--color-primary); border-color: var(--color-primary); color: var(--color-white); }
-        .btn-primary:hover { background-color: var(--color-primary-dark); border-color: var(--color-primary-dark); }
-        .btn-secondary { background-color: var(--color-secondary); border-color: var(--color-secondary); color: var(--color-white); }
-        .btn-secondary:hover { background-color: #343a40; border-color: #343a40; }
-        .btn-success { background-color: var(--color-success); border-color: var(--color-success); }
+        .btn-primary { background-color: var(--color-primary); color: var(--color-white); }
+        .btn-primary:hover { background-color: var(--color-primary-dark); }
+        .btn-secondary { background-color: var(--color-secondary); color: var(--color-white); }
+        .btn-secondary:hover { background-color: #343a40; }
+        .btn-success { background-color: var(--color-success); }
         .btn-warning, .bg-warning { background-color: var(--color-warning) !important; color: var(--color-secondary) !important; }
         .btn-info, .bg-info { background-color: var(--color-info) !important; }
         .bg-orange { background-color: #fd7e14 !important; }
 
-        .filter-area {
-            background-color: var(--color-white);
-            padding: 1.5rem;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-sm);
-        }
+        .filter-area { background-color: var(--color-white); padding: 1.5rem; border-radius: var(--border-radius); box-shadow: var(--shadow-sm); }
         .form-control:focus, .form-select:focus {
             border-color: var(--color-primary);
             box-shadow: 0 0 0 0.25rem rgba(183, 110, 121, 0.25);
         }
 
-        .card {
-            border: none;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-sm);
-            transition: var(--transition);
-            animation: fadeIn 0.5s;
-        }
+        .card { border: none; border-radius: var(--border-radius); box-shadow: var(--shadow-sm); transition: var(--transition); animation: fadeIn 0.5s; }
         .card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); }
         .card-header { background-color: var(--color-white); border-bottom: 1px solid var(--color-border); }
         .card-footer { background-color: #fcfcfc; border-top: 1px solid var(--color-border); }
@@ -86,19 +64,14 @@
         .product-image-small:hover { transform: scale(1.1); }
         .badge { font-size: 0.85em; }
 
-        .pagination .page-link {
-            border-radius: var(--border-radius); margin: 0 4px; border: 1px solid var(--color-border);
-            color: var(--color-primary); font-weight: 600;
-        }
-        .pagination .page-item.active .page-link {
-            background-color: var(--color-primary); border-color: var(--color-primary); color: var(--color-white);
-        }
+        .raf-badges .badge { margin-right: 6px; margin-top: 4px; }
+        .raf-line { margin-top: 4px; }
+
+        .pagination .page-link { border-radius: var(--border-radius); margin: 0 4px; border: 1px solid var(--color-border); color: var(--color-primary); font-weight: 600; }
+        .pagination .page-item.active .page-link { background-color: var(--color-primary); border-color: var(--color-primary); color: var(--color-white); }
         .pagination .page-item:not(.active) .page-link:hover { background-color: #f1f1f1; }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -186,10 +159,31 @@
                                      class="product-image-small" alt="Ürün" 
                                      onclick="showImageModal('{{ url_for('static', filename='images/' ~ urun.barkod ~ '.jpg') }}')"
                                      onerror="this.src='{{ url_for('static', filename='images/default.jpg') }}'">
-                                <div class="small">
-                                    <strong>{{ urun.model_kodu }}</strong><br>
-                                    <span class="text-muted">{{ urun.renk }} - {{ urun.beden }}</span><br>
-                                    <span class="text-muted">Barkod: {{ urun.barkod }}</span>
+                                <div class="small w-100">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <strong>{{ urun.model_kodu }}</strong><br>
+                                            <span class="text-muted">{{ urun.renk }} - {{ urun.beden }}</span><br>
+                                            <span class="text-muted">Barkod: {{ urun.barkod }}</span>
+                                        </div>
+                                        {% if urun.adet %}
+                                            <span class="badge bg-secondary align-self-start">Adet: {{ urun.adet }}</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Raf bilgisi: birden fazla ise rozetler -->
+                                    <div class="raf-line">
+                                        <span class="text-muted">Raf:</span>
+                                        {% if urun.raf_kodlari and urun.raf_kodlari|length > 0 %}
+                                            <span class="raf-badges">
+                                                {% for rk in urun.raf_kodlari %}
+                                                    <span class="badge bg-dark-subtle text-dark border">{{ rk or '—' }}</span>
+                                                {% endfor %}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                             {% endfor %}
@@ -266,21 +260,15 @@
                 const successIcon = 'fa-check';
                 const $icon = $(element);
                 $icon.removeClass(originalIcon).addClass(successIcon).css('color', 'var(--color-success)');
-                setTimeout(() => {
-                    $icon.removeClass(successIcon).addClass(originalIcon).css('color', '');
-                }, 2000);
+                setTimeout(() => { $icon.removeClass(successIcon).addClass(originalIcon).css('color', ''); }, 2000);
             });
         }
 
         function updateStatus(degisim_no, status) {
             $.post("{{ url_for('degisim.update_status') }}", { degisim_no: degisim_no, status: status })
             .done(function(response) {
-                if(response.success) {
-                    // Sayfayı yenilemek en basit çözüm
-                    location.reload();
-                } else {
-                    alert('Durum güncellenirken bir hata oluştu: ' + response.message);
-                }
+                if(response.success) { location.reload(); }
+                else { alert('Durum güncellenirken bir hata oluştu: ' + (response.message || '')); }
             }).fail(() => alert('Sunucuyla iletişim kurulamadı.'));
         }
 
@@ -289,10 +277,9 @@
                 $.post("{{ url_for('degisim.delete_exchange') }}", { degisim_no: degisim_no })
                 .done(function(response) {
                     if (response.success) {
-                        // Kartı animasyonla kaldır
-                        $(`[onclick="deleteExchange('${degisim_no}')"]`).closest('.col-md-6').fadeOut(500, function() { $(this).remove(); });
+                        $(`[onclick="deleteExchange('${degisim_no}')"]`).closest('.col-md-6, .col-lg-4').fadeOut(500, function() { $(this).remove(); });
                     } else {
-                        alert('Silme işlemi sırasında bir hata oluştu: ' + response.message);
+                        alert('Silme işlemi sırasında bir hata oluştu: ' + (response.message || ''));
                     }
                 }).fail(() => alert('Sunucuyla iletişim kurulamadı.'));
             }
