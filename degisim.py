@@ -19,6 +19,20 @@ logger = logging.getLogger(__name__)
 
 degisim_bp = Blueprint('degisim', __name__)
 
+
+# helpers
+def _resolve_col(model, candidates):
+    for name in candidates:
+        if hasattr(model, name):
+            return getattr(model, name), name
+    raise AttributeError(f"{model.__name__} içinde bu adaylardan hiçbiri yok: {candidates}")
+
+def _get_attr(obj, candidates, default=None):
+    for name in candidates:
+        if hasattr(obj, name):
+            return getattr(obj, name)
+    return default
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Yardımcı: Siparişi her tabloda ara
 # ──────────────────────────────────────────────────────────────────────────────
@@ -34,47 +48,61 @@ def find_order_across_tables(order_number):
 # ──────────────────────────────────────────────────────────────────────────────
 def allocate_from_shelves_and_decrement_central(barcode, qty=1):
     """
-    Verilen barkod için raflarda stok arar ve en çok stoğu olandan başlayarak
-    'qty' adet tahsis eder. Tahsis edilen her adet için CentralStock da 1 düşer.
-    Dönüş: {"allocated": int, "shelf_codes": [..]}  (allocated kadar raf_kodu döner)
-    Not: Raf bulunamazsa central düşülmez; tahsis edilen kadar düşülür.
+    RafUrun.urun_barkodu üzerinden raflardan 'qty' adet tahsis eder.
+    Raf miktar kolonu dinamik: (adet/miktar/qty/quantity/stok).
+    Tahsis edildiği kadar CentralStock’tan da düşer.
+    Dönüş: {"allocated": int, "shelf_codes": [..]}
     """
-    shelf_codes = []
-    allocated = 0
     if not barcode or qty <= 0:
         return {"allocated": 0, "shelf_codes": []}
 
-    # Rafları çoktan aza sırala (daha dengeli tahsis)
+    # Raf alanları
+    raf_barcode_col = RafUrun.urun_barkodu                      # ✅ sabit
+    raf_qty_col, raf_qty_name = _resolve_col(
+        RafUrun, ["adet", "miktar", "qty", "quantity", "stok"]  # ❗ sende hangisiyse otomatik bulunur
+    )
+    shelf_code_attr_candidates = ["raf_kodu", "rafKodu", "shelf_code", "raf_code", "code"]
+
+    # Central alanları (gerekirse sırayı değiştir)
+    cs_barcode_col, _ = _resolve_col(CentralStock, ["barcode", "barkod", "urun_barkodu", "product_barcode"])
+    cs_qty_col, _     = _resolve_col(CentralStock, ["qty", "quantity", "adet", "miktar", "stok"])
+
+    # Rafları stok Çoktan→Aza sırala
     raflar = (RafUrun.query
-              .filter(RafUrun.barcode == barcode, RafUrun.quantity > 0)
-              .order_by(RafUrun.quantity.desc())
+              .filter(raf_barcode_col == barcode, raf_qty_col > 0)
+              .order_by(raf_qty_col.desc())
               .all())
 
-    need = qty
+    shelf_codes, allocated, need = [], 0, qty
+
     for raf in raflar:
         if need <= 0:
             break
-        take = min(raf.quantity or 0, need)
-        if take <= 0:
+        cur = getattr(raf, raf_qty_col.key) or 0
+        if cur <= 0:
             continue
-
-        # Bu raftan 'take' kadar düş
-        raf.quantity = (raf.quantity or 0) - take
+        take = min(cur, need)
+        setattr(raf, raf_qty_col.key, cur - take)
         db.session.flush()
-        shelf_codes.extend([getattr(raf, 'raf_kodu', None)] * take)
+
+        shelf_code_val = _get_attr(raf, shelf_code_attr_candidates)
+        shelf_codes.extend([shelf_code_val] * take)
+
         allocated += take
         need -= take
 
+    # Central’ı tahsis edilen kadar düş
     if allocated > 0:
-        # CentralStock: tahsis edilen kadar 1:1 düş
-        cs = CentralStock.query.filter_by(barcode=barcode).first()
+        cs = CentralStock.query.filter(cs_barcode_col == barcode).first()
         if cs:
-            cs.qty = max(0, (cs.qty or 0) - allocated)
+            cur = getattr(cs, cs_qty_col.key) or 0
+            newv = cur - allocated
+            if newv < 0: newv = 0
+            setattr(cs, cs_qty_col.key, newv)
             db.session.flush()
-        else:
-            logger.warning(f"CentralStock kaydı yok (barcode={barcode}), raf düşüldü ama central yok.")
 
     return {"allocated": allocated, "shelf_codes": shelf_codes}
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 1) Değişim Kaydetme (Raf + Central stok düşme entegre)
