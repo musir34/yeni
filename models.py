@@ -16,6 +16,14 @@ from flask_login import UserMixin
 db = SQLAlchemy()
 
 
+class CentralStock(db.Model):
+    __tablename__ = "central_stock"
+
+    barcode = db.Column(db.String, primary_key=True)   # Ürün barkodu
+    qty = db.Column(db.Integer, nullable=False, default=0)  # Merkezdeki toplam adet
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 ### --- YENİ EKLENEN GÜNLÜK RAPOR MODELİ --- ###
 class Rapor(db.Model):
     __tablename__ = 'raporlar'

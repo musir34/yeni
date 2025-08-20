@@ -4,6 +4,8 @@ from flask import Blueprint, render_template, redirect, url_for
 import json
 import os
 import traceback
+from sqlalchemy import desc
+
 
 # Yeni tablolarınız:
 from models import (
@@ -17,68 +19,69 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 home_bp = Blueprint('home', __name__)
 
+
 @home_bp.route('/home')
 @home_bp.route('/anasayfa')
 def home():
-    order_data = get_home()
-    return render_template('home.html', **order_data)
+    data = get_home()
+    return render_template('home.html', **data)
 
 def get_home():
     """
-    Ana sayfa için gerekli sipariş verilerini hazırlar.
+    Ana sayfa: en eski 'Created' siparişi ve ürünlerinin (aktif ilk 3 rafla) hazırlanması.
     """
     try:
         oldest_order = OrderCreated.query.order_by(OrderCreated.order_date).first()
-
-        if oldest_order:
-            logging.info("En eski 'Created' statüsündeki sipariş işleniyor.")
-
-            remaining_time = calculate_remaining_time(oldest_order.agreed_delivery_date)
-
-            details_json = oldest_order.details or '[]'
-
-            if isinstance(details_json, str):
-                try:
-                    details_list = json.loads(details_json)
-                except json.JSONDecodeError as e:
-                    logging.error(f"JSON çözümleme hatası: {e}")
-                    details_list = []
-            elif isinstance(details_json, list):
-                details_list = details_json
-            else:
-                logging.warning("details alanı beklenmeyen bir tipte.")
-                details_list = []
-
-            # Görselleri ve raf bilgilerini ekleyelim
-            products = []
-            for detail in details_list:
-                product_barcode = detail.get('barcode', '')
-                image_url = get_product_image(product_barcode)
-
-                raf_kayitlari = RafUrun.query.filter_by(urun_barkodu=product_barcode).all()
-                raflar = [{"kod": r.raf_kodu, "adet": r.adet} for r in raf_kayitlari]
-
-                # --- DÜZELTME BURADA ---
-                # Her ürün sözlüğüne 'quantity' anahtarını ekliyoruz.
-                products.append({
-                    'sku': detail.get('sku', 'Bilinmeyen SKU'),
-                    'barcode': product_barcode,
-                    'quantity': detail.get('quantity', 1),  # Miktar bilgisi eklendi
-                    'image_url': image_url,
-                    'raflar': raflar
-                })
-
-            # Bu satırı güncelleyerek 'products' listesini 'order' nesnesine ekliyoruz
-            oldest_order.products = products
-
-            # Dönüş verisini de güncelliyoruz
-            return {
-                'order': oldest_order,
-                'remaining_time': remaining_time
-            }
-        else:
-            logging.info("İşlenecek 'Created' statüsünde sipariş yok.")
+        if not oldest_order:
+            logging.info("İşlenecek 'Created' sipariş yok.")
             return default_order_data()
+
+        remaining_time = calculate_remaining_time(oldest_order.agreed_delivery_date)
+
+        # details parse
+        details_json = oldest_order.details or '[]'
+        if isinstance(details_json, str):
+            try:
+                details_list = json.loads(details_json)
+            except json.JSONDecodeError as e:
+                logging.error(f"JSON çözümleme hatası: {e}")
+                details_list = []
+        elif isinstance(details_json, list):
+            details_list = details_json
+        else:
+            details_list = []
+
+        # ürün kartları
+        products = []
+        for d in details_list:
+            bc = d.get('barcode', '')
+            image_url = get_product_image(bc)
+
+            # SADECE AKTİF (adet>0) İLK 3 RAF
+            raf_kayitlari = (
+                RafUrun.query
+                .filter(RafUrun.urun_barkodu == bc, RafUrun.adet > 0)
+                .order_by(desc(RafUrun.adet))
+                .limit(3)
+                .all()
+            )
+            raflar = [{"kod": r.raf_kodu, "adet": r.adet} for r in raf_kayitlari]
+
+            products.append({
+                "sku": d.get("sku", "Bilinmeyen SKU"),
+                "barcode": bc,
+                "quantity": d.get("quantity", 1),
+                "image_url": image_url,
+                "raflar": raflar,  # sadece aktif ilk 3
+            })
+
+        # sipariş objesine iliştir
+        oldest_order.products = products
+
+        return {
+            "order": oldest_order,
+            "remaining_time": remaining_time
+        }
 
     except Exception as e:
         logging.error(f"Bir hata oluştu: {e}")

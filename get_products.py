@@ -18,8 +18,9 @@ from sqlalchemy import func
 from login_logout import roles_required
 from sqlalchemy.dialects.postgresql import insert
 from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID
-from models import db, Product, ProductArchive, RafUrun
+from models import db, Product, ProductArchive, RafUrun, CentralStock
 from cache_config import cache, CACHE_TIMES
+from sqlalchemy import event
 
 get_products_bp = Blueprint('get_products', __name__)
 
@@ -153,7 +154,7 @@ def render_product_list(products, pagination=None):
     return render_template('product_list.html', grouped_products=grouped_products, pagination=pagination, search_mode=False)
 
 
-async def fetch_all_product_stocks_async():
+"""async def fetch_all_product_stocks_async():
     all_products = await fetch_all_products_async()
     if not all_products:
         return []
@@ -163,7 +164,7 @@ async def fetch_all_product_stocks_async():
             "quantity": p.get("quantity", 0)
         }
         for p in all_products if p.get("barcode")
-    ]
+    ]"""
 
 
 
@@ -219,12 +220,8 @@ async def update_products_route():
     return redirect(url_for('get_products.product_list'))
 
 
-@get_products_bp.route('/update_stocks_route', methods=['POST'])
+"""@get_products_bp.route('/update_stocks_route', methods=['POST'])
 async def update_stocks_route():
-    """
-    GÜNCELLENMİŞ VE HIZLANDIRILMIŞ ROUTE: 
-    Sadece stok bilgisi çeken yeni ve verimli fonksiyonu kullanır.
-    """
     logger.info("Trendyol'dan stokları çekme ve veritabanını güncelleme işlemi başlatıldı.")
 
     if not all([API_KEY, API_SECRET, SUPPLIER_ID]):
@@ -286,7 +283,7 @@ async def update_stocks_route():
     except Exception as e:
         db.session.rollback()
         logger.error(f"update_stocks_route sırasında genel hata: {e}", exc_info=True)
-        return jsonify({'success': False, 'message': f'Stok güncelleme sırasında genel bir sunucu hatası oluştu: {str(e)}'})
+        return jsonify({'success': False, 'message': f'Stok güncelleme sırasında genel bir sunucu hatası oluştu: {str(e)}'})"""
 
 
 
@@ -345,7 +342,6 @@ async def save_products_to_db_async(products):
             "title": product_data.get('title'),
             "images": images_path_db, # Görselin veritabanına kaydedilecek yolu
             "product_main_id": product_data.get('productMainId'),
-            "quantity": product_data.get('quantity', 0),
             "size": size, "color": color,
             "archived": product_data.get('archived', False),
             "locked": product_data.get('locked', False),
@@ -389,7 +385,7 @@ async def save_products_to_db_async(products):
         insert_stmt = insert(Product).values(batch)
 
         set_payload = {
-            'title': insert_stmt.excluded.title, 'quantity': insert_stmt.excluded.quantity,
+            'title': insert_stmt.excluded.title, 
             'sale_price': insert_stmt.excluded.sale_price, 'list_price': insert_stmt.excluded.list_price,
             'on_sale': insert_stmt.excluded.on_sale, 'locked': insert_stmt.excluded.locked,
             'is_approved': insert_stmt.excluded.is_approved, 'last_update_date': insert_stmt.excluded.last_update_date,
@@ -563,7 +559,6 @@ def upsert_products(products):
     upsert_stmt = insert_stmt.on_conflict_do_update(
         index_elements=['barcode'],
         set_={
-            'quantity': insert_stmt.excluded.quantity,
             'sale_price': insert_stmt.excluded.sale_price,
             'list_price': insert_stmt.excluded.list_price,
             'images': insert_stmt.excluded.images,
@@ -582,35 +577,39 @@ async def update_stock_levels_with_items_async(items):
     if not items:
         logger.error("Güncellenecek ürün bulunamadı.")
         return False
+
     url = f"{BASE_URL}products/price-and-inventory"
     credentials = f"{API_KEY}:{API_SECRET}"
     encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
-    headers = {
-        "Authorization": f"Basic {encoded_credentials}",
-        "Content-Type": "application/json"
-    }
-    product_dict = {p.barcode: p for p in Product.query.all()}
-    logger.info(f"Veritabanındaki ürün sayısı: {len(product_dict)}")
+    headers = {"Authorization": f"Basic {encoded_credentials}", "Content-Type": "application/json"}
+
+    # fiyat için Product, adet için CentralStock kullan
+    product_map = {p.barcode: p for p in Product.query.all()}
+    cs_map = {c.barcode: c.qty for c in CentralStock.query.all()}
+
     payload_items = []
-    for item in items:
-        barcode = item['barcode']
-        quantity = item['quantity']
-        logger.info(f"İşlenen barkod: {barcode}, miktar: {quantity}")
-        product_info = product_dict.get(barcode)
-        if product_info:
-            try:
-                sale_price = float(product_info.sale_price or 0)
-                list_price = float(product_info.list_price or 0)
-                currency_type = product_info.currency_type or 'TRY'
-                payload_item = {"barcode": barcode, "quantity": quantity}
-                payload_items.append(payload_item)
-            except ValueError as e:
-                logger.error(f"Fiyat bilgileri hatalı: {e}")
-                continue
-        else:
+    for it in items:
+        barcode = it['barcode']
+        p = product_map.get(barcode)
+        if not p:
             logger.warning(f"Barkod için ürün bulunamadı: {barcode}")
             continue
-    logger.info(f"API'ye gönderilecek ürün sayısı: {len(payload_items)}")
+
+        qty = int(cs_map.get(barcode, 0))  # <<<< MERKEZ STOK
+        try:
+            sale_price = float(p.sale_price or 0)
+            list_price = float(p.list_price or 0)
+            _currency = p.currency_type or 'TRY'
+        except ValueError as e:
+            logger.error(f"Fiyat bilgileri hatalı: {e}")
+            continue
+
+        payload_items.append({"barcode": barcode, "quantity": qty})
+
+    if not payload_items:
+        logger.info("Gönderilecek item yok.")
+        return True
+
     payload = {"items": payload_items}
     async with aiohttp.ClientSession() as session:
         try:
@@ -621,13 +620,7 @@ async def update_stock_levels_with_items_async(items):
                     return False
                 data = await response.json()
                 logger.info(f"API yanıtı: {data}")
-                batch_request_id = data.get('batchRequestId')
-                if batch_request_id:
-                    logger.info("Ürünler API üzerinden başarıyla güncellendi.")
-                    return True
-                else:
-                    logger.error("Batch Request ID alınamadı.")
-                    return False
+                return bool(data.get('batchRequestId'))
         except aiohttp.ClientError as e:
             logger.error(f"İstek Hatası: {e}")
             return False
@@ -799,34 +792,40 @@ def product_list():
         return render_template('product_list.html', grouped_products={}, pagination=None)
 
 
-
-
 @get_products_bp.route('/api/get_product_variants', methods=['GET'])
 def get_product_variants():
     model_id = request.args.get('model', '').strip()
     color = request.args.get('color', '').strip()
     if not model_id or not color:
         return jsonify({'success': False, 'message': 'Model veya renk bilgisi eksik.'})
-    products = Product.query.filter(
-        func.lower(Product.product_main_id) == model_id.lower(),
-        func.lower(Product.color) == color.lower()
-    ).all()
-    products_list = []
-    if products:
-        for p in products:
-            products_list.append({
-                'size': p.size, 'barcode': p.barcode, 'quantity': p.quantity
-            })
+
+    try:
+        rows = (
+            db.session.query(
+                Product.size.label('size'),
+                Product.barcode.label('barcode'),
+                CentralStock.qty.label('qty')
+            )
+            .outerjoin(CentralStock, CentralStock.barcode == Product.barcode)
+            .filter(func.lower(Product.product_main_id) == model_id.lower(),
+                    func.lower(Product.color) == color.lower())
+            .all()
+        )
+
+        products_list = [
+            {'size': r.size, 'barcode': r.barcode, 'quantity': int(r.qty or 0)}
+            for r in rows
+        ]
+
         try:
-            products_list = sorted(products_list, key=lambda x: float(x['size']), reverse=True)
+            products_list.sort(key=lambda x: float(x['size']), reverse=True)
         except (ValueError, TypeError):
-            products_list = sorted(products_list, key=lambda x: x['size'], reverse=True)
+            products_list.sort(key=lambda x: str(x['size']), reverse=True)
+
         return jsonify({'success': True, 'products': products_list})
-    else:
-        return jsonify({'success': False, 'message': 'Ürün bulunamadı.'})
-
-
-
+    except Exception as e:
+        logger.error(f"get_product_variants hata: {e}", exc_info=True)
+        return jsonify({'success': False, 'message': 'Sunucu hatası.'}), 500
 
 
 @get_products_bp.route('/update_stocks_ajax', methods=['POST'])
@@ -1002,27 +1001,42 @@ def get_variants_with_cost():
     color = request.args.get('color', '').strip()
     if not model or not color:
         return jsonify({'success': False, 'message': 'Model veya renk eksik.'})
-    products = Product.query.filter(
-        func.lower(Product.product_main_id) == model.lower(),
-        func.lower(Product.color) == color.lower()
-    ).all()
-    if not products:
-        return jsonify({'success': False, 'message': 'Ürün bulunamadı.'})
-    variants = []
-    for p in products:
-        if p.barcode and p.barcode != 'undefined':
-            variants.append({
-                'barcode': p.barcode,
-                'size': p.size,
-                'quantity': p.quantity,
-                'cost_usd': p.cost_usd or 0,
-                'cost_try': p.cost_try or 0
-            })
+
     try:
-        variants = sorted(variants, key=lambda x: float(x['size']), reverse=True)
-    except (ValueError, TypeError):
-        variants = sorted(variants, key=lambda x: x['size'], reverse=True)
-    return jsonify({'success': True, 'products': variants})
+        rows = (
+            db.session.query(
+                Product.barcode.label('barcode'),
+                Product.size.label('size'),
+                Product.cost_usd.label('cost_usd'),
+                Product.cost_try.label('cost_try'),
+                CentralStock.qty.label('qty')
+            )
+            .outerjoin(CentralStock, CentralStock.barcode == Product.barcode)
+            .filter(func.lower(Product.product_main_id) == model.lower(),
+                    func.lower(Product.color) == color.lower())
+            .all()
+        )
+
+        variants = [
+            {
+                'barcode': r.barcode,
+                'size': r.size,
+                'quantity': int(r.qty or 0),
+                'cost_usd': float(r.cost_usd or 0),
+                'cost_try': float(r.cost_try or 0),
+            }
+            for r in rows if r.barcode and r.barcode != 'undefined'
+        ]
+
+        try:
+            variants.sort(key=lambda x: float(x['size']), reverse=True)
+        except (ValueError, TypeError):
+            variants.sort(key=lambda x: str(x['size']), reverse=True)
+
+        return jsonify({'success': True, 'products': variants})
+    except Exception as e:
+        logger.error(f"get_variants_with_cost hata: {e}", exc_info=True)
+        return jsonify({'success': False, 'message': 'Sunucu hatası.'}), 500
 
 
 
@@ -1364,32 +1378,35 @@ def bulk_delete_products():
 
 @get_products_bp.route('/api/get_variants_for_stock_update')
 def get_variants_for_stock_update():
-    from models import RafUrun  # RafUrun modelini import et
-
     model_id = request.args.get('model')
     if not model_id:
         return jsonify({'success': False, 'message': 'Model ID eksik.'}), 400
 
     try:
-        products = Product.query.filter_by(product_main_id=model_id).order_by(Product.color, Product.size).all()
-        variants = []
+        products = (Product.query
+                    .filter_by(product_main_id=model_id)
+                    .order_by(Product.color, Product.size)
+                    .all())
 
+        variants = []
         for p in products:
-            # Barkod üzerinden raf bilgisi al
             raflar = RafUrun.query.filter_by(urun_barkodu=p.barcode).all()
             raf_bilgisi = ', '.join([r.raf_kodu for r in raflar]) if raflar else '-'
+
+            cs = CentralStock.query.get(p.barcode)
+            qty = int(cs.qty) if cs and cs.qty is not None else 0
 
             variants.append({
                 'barcode': p.barcode,
                 'color': p.color,
                 'size': p.size,
-                'quantity': p.quantity,
+                'quantity': qty,
                 'raf_bilgisi': raf_bilgisi
             })
 
         return jsonify({'success': True, 'products': variants})
-
     except Exception as e:
+        logger.error(f"get_variants_for_stock_update hata: {e}", exc_info=True)
         return jsonify({'success': False, 'message': f'Hata oluştu: {str(e)}'}), 500
 
     
@@ -1528,3 +1545,25 @@ async def sync_trendyol_deletions(api_products: list[dict]) -> dict:
         "deleted_archived": deleted_archived,
         "deleted_inactive": deleted_inactive
     }
+
+
+
+def _abs_from_static(static_path: str) -> str | None:
+    if not static_path:
+        return None
+    rel = static_path[1:] if static_path.startswith('/') else static_path
+    abs_path = os.path.join(current_app.root_path, rel.replace('/', os.sep))
+    static_root = os.path.join(current_app.root_path, 'static')
+    # static dışına çıkma
+    if os.path.commonpath([abs_path, static_root]) != static_root:
+        return None
+    return abs_path
+
+@event.listens_for(Product, 'after_delete')
+def _delete_product_image(mapper, connection, target):
+    try:
+        abs_path = _abs_from_static(getattr(target, 'images', None))
+        if abs_path and os.path.exists(abs_path):
+            os.remove(abs_path)
+    except Exception as e:
+        current_app.logger.error(f"Görsel silinirken hata (barcode={getattr(target,'barcode',None)}): {e}")

@@ -2,6 +2,7 @@ import os
 import json
 from dotenv import load_dotenv
 load_dotenv()
+import asyncio
 
 from datetime import datetime, timedelta
 from flask import Flask, request, url_for, redirect, flash, session
@@ -175,10 +176,30 @@ def fetch_and_save_returns():
         except Exception as e:
             logger.warning(f"İade çekme hatası: {e}")
 
+def push_central_stock_to_trendyol():
+    """CentralStock tablosundaki tüm stokları Trendyol'a gönderir."""
+    from stock_management import send_trendyol_update_async  # async push fonksiyonu buradaydı
+    from models import CentralStock
+    with app.app_context():
+        try:
+            rows = CentralStock.query.all()
+            if not rows:
+                logger.info("CentralStock boş, Trendyol'a gönderilecek stok yok.")
+                return
+            items = [{"barcode": r.barcode, "quantity": int(r.qty or 0)} for r in rows]
+            asyncio.run(send_trendyol_update_async(items))
+            logger.info(f"{len(items)} ürün Trendyol'a gönderildi (otomatik).")
+        except Exception as e:
+            logger.error(f"Otomatik stok gönderim hatası: {e}", exc_info=True)
+
 def schedule_jobs():
     scheduler = BackgroundScheduler(timezone="Europe/Istanbul")
+    # İade job'u
     scheduler.add_job(func=fetch_and_save_returns, trigger='cron', hour=23, minute=50)
+    # Stok push job'u (her 5 dakikada bir)
+    scheduler.add_job(func=push_central_stock_to_trendyol, trigger='interval', minutes=1)
     scheduler.start()
+
 
 schedule_jobs()
 

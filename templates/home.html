@@ -787,17 +787,26 @@
                                     </span>
                                 </p>
                                 <div class="card-text">
-                                    {% if product['raflar'] %}
-                                    <p style="margin-bottom: 5px;"><strong>Raf Bilgisi:</strong></p>
-                                    <ul style="padding-left: 20px; text-align: left; margin-bottom: 10px; list-style-position: inside;">
-                                        {% for raf in product['raflar'] %}
-                                        <li>{{ raf.kod }} &mdash; {{ raf.adet }} adet</li>
-                                        {% endfor %}
-                                    </ul>
-                                    {% else %}
-                                    <p><em>Bu ürün rafta kayıtlı değil.</em></p>
-                                    {% endif %}
-                                </div>
+  {% set aktif_raflar = product['raflar']
+      |selectattr('adet','gt',0)
+      |sort(attribute='adet', reverse=True)
+      |list %}
+  {% if aktif_raflar %}
+    <p style="margin-bottom:5px;"><strong>Raf Seçimi (ilk 3, aktif):</strong></p>
+    {% for raf in aktif_raflar[:3] %}
+      <label class="d-block" style="text-align:left; margin-bottom:6px;">
+        <input type="radio"
+               name="pick_{{ product['barcode'] }}"
+               value="{{ raf.kod }}"
+               {% if loop.first %}checked{% endif %}>
+        {% if loop.first %}<span style="color:green; font-weight:bold;">✅</span>{% endif %}
+        {{ raf.kod }} — {{ raf.adet }} adet
+      </label>
+    {% endfor %}
+  {% else %}
+    <p><em>Bu ürün için aktif raf stoğu yok.</em></p>
+  {% endif %}
+</div>
 
                                 {% for q in range(product['quantity']|int) %}
                                 <div class="form-group">

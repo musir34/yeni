@@ -16,7 +16,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 # Modelleri ve veritabanı bağlantısını import et
-from models import db, Product, RafUrun
+from models import db, Product, RafUrun, CentralStock
 
 # Trendyol API bilgilerini import et (yoksa None olarak ayarla)
 try:
@@ -109,56 +109,60 @@ def process_stock_updates(items, update_type, raf_kodu=None):
     if not items:
         return {"db_errors": {"genel": "İşlenecek ürün listesi boş."}}, []
 
-    barcodes = [item['barcode'] for item in items]
+    barcodes = [it['barcode'] for it in items]
     db_errors = {}
-    items_for_trendyol = []
+    items_for_trendyol = {}
 
     try:
+        # Ürün var mı kontrol (sadece doğrulama için)
         products_in_db = Product.query.filter(func.lower(Product.barcode).in_([b.lower() for b in barcodes])).all()
         product_map = {p.barcode.lower(): p for p in products_in_db}
 
-        for item in items:
-            barcode = item['barcode']
-            count = item['count']
-            product = product_map.get(barcode.lower())
-
-            if not product:
+        for it in items:
+            barcode = it['barcode']
+            count = int(it['count'])
+            if not product_map.get(barcode.lower()):
                 db_errors[barcode] = "Ürün veritabanında bulunamadı."
                 continue
 
+            # CentralStock kaydını bul/oluştur
+            cs = CentralStock.query.get(barcode)
+            if not cs:
+                cs = CentralStock(barcode=barcode, qty=0)
+                db.session.add(cs)
+
             if update_type == 'add':
-                product.quantity = (product.quantity or 0) + count
+                # Merkez stoğu artır (Raf güncellemesi aşağıda yapılacak)
+                cs.qty = (cs.qty or 0) + count
 
             elif update_type == 'renew':
-                # Bu barkodun tüm raflardaki toplamını hesapla
+                # Bu barkodun raf toplamını (yeni adetle) hesapla
                 toplam_adet = db.session.query(func.sum(RafUrun.adet)).filter(
                     RafUrun.urun_barkodu == barcode
                 ).scalar() or 0
 
-                # Yeni gelen raf güncellemesini de ekle
-                toplam_adet += count
-
-                # Ama eğer bu rafta zaten varsa, eskisini çıkar yeni ekleneni koy
+                # Bu raftaki eski değeri çıkarıp yeni geleni ekle
                 mevcut_raf = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barcode).first()
-                if mevcut_raf:
-                    toplam_adet = toplam_adet - (mevcut_raf.adet or 0)
+                eski = mevcut_raf.adet if mevcut_raf else 0
+                yeni_toplam = (toplam_adet - (eski or 0)) + count
 
-                product.quantity = toplam_adet
+                cs.qty = max(0, int(yeni_toplam))
 
             else:
                 db_errors[barcode] = f"Geçersiz güncelleme tipi: {update_type}"
                 continue
 
-            items_for_trendyol.append({"barcode": product.barcode, "quantity": product.quantity})
+            items_for_trendyol[barcode] = cs.qty  # Trendyol’a merkezden gidecek
 
         db.session.commit()
-        logger.info(f"{len(items_for_trendyol)} ürün güncellendi.")
+        logger.info(f"{len(items_for_trendyol)} barkod için CentralStock güncellendi.")
     except Exception as e:
         db.session.rollback()
         logger.error(f"Veritabanı hatası: {e}", exc_info=True)
         return {"db_errors": {"kritik_hata": str(e)}}, []
 
-    return db_errors, items_for_trendyol
+    # DÖNÜŞ: Trendyol için list hale çevir
+    return db_errors, [{"barcode": b, "quantity": q} for b, q in items_for_trendyol.items()]
 
 
 # --- FLASK ENDPOINT'LERİ ---
@@ -191,7 +195,7 @@ def get_product_details(barcode):
                 'product_main_id': product.product_main_id,
                 'color': product.color,
                 'size': product.size,
-                'quantity': product.quantity,
+                'quantity': (cs.qty if cs else 0),
                 'image_url': image_url
             })
         else:
@@ -200,12 +204,15 @@ def get_product_details(barcode):
         logger.error(f"Ürün detayı alınırken hata (barkod: {barcode}): {e}", exc_info=True)
         return jsonify(success=False, message="Sunucu hatası oluştu."), 500
 
-# DÜZENLENDİ: Bu artık ana ve tek stok güncelleme endpoint'imiz.
+# DÜZENLENDİ:  artık ana ve tek stok güncelleme endpoint'imiz.
 @stock_management_bp.route('/stock-addition', methods=['POST'])
 @limiter.limit("60/minute")
 def handle_stock_update_from_frontend():
     """
-    Barkod okuyucu arayüzünden gelen ve paketlere bölünmüş stok güncelleme isteklerini işler.
+    Barkod okuyucudan gelen stokları:
+      - Seçilen raf için RafUrun'a (add/renew) yazar,
+      - CentralStock.qty'yi günceller,
+    Trendyol'a hiçbir gönderim yapmaz.
     """
     data = request.get_json()
     if not data or 'items' not in data or 'updateType' not in data:
@@ -213,73 +220,84 @@ def handle_stock_update_from_frontend():
 
     items = data.get('items', [])
     update_type = data.get('updateType')
+    raf_kodu = data.get("raf_kodu", "").strip()
 
-    # 1. RAF KODUNU AL VE KONTROL ET
-    raf_kodu = data.get("raf_kodu")
     if not raf_kodu:
         return jsonify(success=False, message="Raf kodu zorunludur."), 400
+    if update_type not in ('add', 'renew'):
+        return jsonify(success=False, message="updateType 'add' veya 'renew' olmalı."), 400
+    if not items:
+        return jsonify(success=False, message="İşlenecek ürün yok."), 400
 
-    logger.info(f"Stok güncelleme paketi alındı. Ürün: {len(items)}, Tip: {update_type}, Raf: {raf_kodu}")
+    errors = {}
+    results = []
 
-    # 2. ANA ÜRÜN STOKLARINI GÜNCELLE
-    db_errors, items_for_trendyol = process_stock_updates(items, update_type, raf_kodu)
-
-    # 3. RAFA AİT STOKLARI GÜNCELLE
     try:
-        for item in items:
-            barcode = item["barcode"]
-            count = item["count"]
+        with db.session.begin():  # tek transaction
+            # Ürünleri doğrula (var mı yok mu)
+            barcode_set = [it.get('barcode') for it in items if it.get('barcode')]
+            existing = Product.query.filter(func.lower(Product.barcode).in_([b.lower() for b in barcode_set])).all()
+            exist_map = {p.barcode.lower(): True for p in existing}
 
-            # Ana ürün güncellemesinde zaten hata almış ürünleri atla
-            if barcode in db_errors:
-                logger.warning(f"Raf güncellemesi atlanıyor (önceki hata): Barkod {barcode}, Raf {raf_kodu}")
-                continue
+            for it in items:
+                barcode = (it.get('barcode') or '').strip()
+                try:
+                    count = int(it.get('count', 0))
+                except (TypeError, ValueError):
+                    count = 0
 
-            mevcut_kayit = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barcode).first()
+                if not barcode or count < 0:
+                    errors[barcode or 'EMPTY'] = "Geçersiz barkod/adet"
+                    continue
+                if not exist_map.get(barcode.lower()):
+                    errors[barcode] = "Ürün veritabanında yok"
+                    continue
 
-            if mevcut_kayit:
-                if update_type == "add":
-                    mevcut_kayit.adet = (mevcut_kayit.adet or 0) + count
-                elif update_type == "renew":
-                    mevcut_kayit.adet = count
-            else:
-                yeni_kayit = RafUrun(
-                    raf_kodu=raf_kodu,
-                    urun_barkodu=barcode,
-                    adet=count
-                )
-                db.session.add(yeni_kayit)
+                # CentralStock kaydını hazırla
+                cs = CentralStock.query.get(barcode)
+                if not cs:
+                    cs = CentralStock(barcode=barcode, qty=0)
+                    db.session.add(cs)
 
-        # Raf güncellemelerini veritabanına kaydet
-        db.session.commit()
-        logger.info(f"Raf ({raf_kodu}) stokları başarıyla güncellendi.")
+                # Raf kaydını çek
+                rec = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barcode).first()
+
+                if update_type == 'add':
+                    # 1) Raf'a ekle
+                    if rec:
+                        rec.adet = (rec.adet or 0) + count
+                    else:
+                        db.session.add(RafUrun(raf_kodu=raf_kodu, urun_barkodu=barcode, adet=count))
+                    # 2) Merkeze ekle
+                    cs.qty = (cs.qty or 0) + count
+
+                elif update_type == 'renew':
+                    # 1) Raf'ta bu barkodun eski değerini öğren
+                    eski = rec.adet if rec else 0
+                    # 2) Bu barkodun raflardaki toplamını hesapla (şu anki)
+                    toplam = db.session.query(func.coalesce(func.sum(RafUrun.adet), 0))\
+                                       .filter(RafUrun.urun_barkodu == barcode).scalar()
+                    # 3) Yeni toplam = mevcut toplam - bu rafın eski değeri + yeni değer
+                    yeni_toplam = max(0, int((toplam or 0) - (eski or 0) + count))
+                    # 4) Raf'ı yenile
+                    if rec:
+                        rec.adet = count
+                    else:
+                        db.session.add(RafUrun(raf_kodu=raf_kodu, urun_barkodu=barcode, adet=count))
+                    # 5) Merkezi stoğu yeni toplama sabitle
+                    cs.qty = yeni_toplam
+
+                results.append({"barcode": barcode, "central_qty": int(cs.qty or 0)})
+
+        # Transaction başarılı
+        if errors:
+            return jsonify(success=False,
+                           message="Bazı kalemler işlenemedi.",
+                           errors=errors,
+                           results=results), 207
+        return jsonify(success=True,
+                       message=f"{len(results)} ürün güncellendi.",
+                       results=results)
     except Exception as e:
-        db.session.rollback()
-        logger.error(f"Raf stoklarını güncellerken kritik hata: {e}", exc_info=True)
-        # Oluşan hatayı ön yüze gönderilecek genel hata listesine ekle
-        db_errors['raf_guncelleme_hatasi'] = f"Raf stokları güncellenemedi: {str(e)}"
-
-    updated_db_count = len(items) - len(db_errors)
-    if updated_db_count < 0: updated_db_count = 0
-
-    # 4. TRENDYOL'U GÜNCELLE (eğer DB'de güncellenen ürün varsa)
-    trendyol_errors = {}
-    if items_for_trendyol:
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            trendyol_errors = loop.run_until_complete(send_trendyol_update_async(items_for_trendyol))
-        finally:
-            loop.close()
-
-    # 5. SONUCU ÖN YÜZE BİLDİR
-    total_errors = {**db_errors, **trendyol_errors}
-
-    if not total_errors:
-        return jsonify(success=True, message=f"{updated_db_count} ürün başarıyla güncellendi.")
-    else:
-        return jsonify(
-            success=False,
-            message=f"İşlem hatalarla tamamlandı. Lütfen detayları kontrol edin.",
-            errors=total_errors
-        ), 207
+        logger.error(f"Stok ekleme/güncelleme hatası: {e}", exc_info=True)
+        return jsonify(success=False, message=f"Sunucu hatası: {str(e)}"), 500
