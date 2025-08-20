@@ -197,7 +197,7 @@ def schedule_jobs():
     # İade job'u
     scheduler.add_job(func=fetch_and_save_returns, trigger='cron', hour=23, minute=50)
     # Stok push job'u (her 5 dakikada bir)
-    scheduler.add_job(func=push_central_stock_to_trendyol, trigger='interval', minutes=1)
+    scheduler.add_job(func=push_central_stock_to_trendyol, trigger='interval', minutes=5)
     scheduler.start()
 
 
