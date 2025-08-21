@@ -5,49 +5,47 @@ import json
 from dotenv import load_dotenv
 load_dotenv()
 import asyncio
-
 from datetime import datetime, timedelta
-from flask import Flask, request, url_for, redirect, flash, session, current_app
+
+from flask import Flask, request, url_for, redirect, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.routing import BuildError
 from flask_login import LoginManager, current_user
-from models import db, User
+
+from models import db, User, CentralStock  # OrderCreated içerden import edilecek
 from archive import format_turkish_date_filter
 from logger_config import app_logger as logger
-from cache_config import cache, CACHE_TIMES
+from cache_config import cache
 from flask_restx import Api
 from routes import register_blueprints
 from user_logs import log_user_action
 from celery_app import init_celery
 from sqlalchemy import text
+from trendyol_api import SUPPLIER_ID, API_KEY, API_SECRET
 
 # APScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
 from threading import Lock
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Flask Uygulamasını Başlat
+# Flask Uygulaması
 # ──────────────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 
-# Ortam yapılandırması
 env = os.getenv('FLASK_ENV', 'development')
 app.config.from_object(
     __import__('config').config_map.get(env, __import__('config').DevelopmentConfig)
 )
 
-# Veritabanı bağlantı adresini ayarla
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Uzantıları başlat
 cache.init_app(app)
 db.init_app(app)
 CORS(app)
 celery = init_celery(app)
 
-# Flask-Login ayarları
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login_logout.login"
@@ -74,45 +72,11 @@ def format_datetime_filter(value, format='full'):
     gunler = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"]
     return f"{dt.day} {aylar[dt.month - 1]} {dt.year}, {gunler[dt.weekday()]} - {dt.strftime('%H:%M')}"
 
-def format_date_filter(date_str, format=None):
-    try:
-        dt = datetime.strptime(str(date_str), '%Y-%m-%d')
-        aylar = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"]
-        return f"{dt.day} {aylar[dt.month - 1]} {dt.year}"
-    except (ValueError, TypeError):
-        return date_str
-
-# Türkçe tarih yardımcı
-def turkce_tarih_formatla(dt, format='full'):
-    if not dt:
-        return ""
-    # string ise çevir
-    if isinstance(dt, str):
-        for fmt in ("%Y-%m-%d", "%Y-%m-%d %H:%M:%S"):
-            try:
-                dt = datetime.strptime(dt, fmt)
-                break
-            except ValueError:
-                continue
-        else:
-            return dt
-    aylar = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"]
-    gunler = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"]
-    if format == 'full':
-        return f"{dt.day} {aylar[dt.month - 1]} {dt.year}, {gunler[dt.weekday()]}"
-    elif format == 'datetime':
-        return f"{dt.day} {aylar[dt.month - 1]} {dt.year} - {dt.strftime('%H:%M')}"
-    else:
-        return f"{dt.day} {aylar[dt.month - 1]} {dt.year}"
-
-# Jinja'ya tanıt
 app.jinja_env.filters['format_datetime'] = format_datetime_filter
-app.jinja_env.filters['format_date'] = format_date_filter
-app.jinja_env.filters['format_turkish_date'] = format_turkish_date_filter
-app.jinja_env.filters['turkce_tarih'] = turkce_tarih_formatla
+app.jinja_env.filters['format_date'] = format_turkish_date_filter
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Blueprint'leri kaydet & Ana route
+# Blueprint & API
 # ──────────────────────────────────────────────────────────────────────────────
 register_blueprints(app)
 
@@ -120,10 +84,8 @@ register_blueprints(app)
 def index():
     return redirect(url_for('home.home'))
 
-# Flask-RESTX API
 api = Api(app, title='Güllü Shoes API', version='1.0', doc='/docs')
 
-# URL builder fallback
 def custom_url_for(endpoint, **values):
     try:
         return url_for(endpoint, **values)
@@ -138,30 +100,21 @@ def custom_url_for(endpoint, **values):
 
 app.jinja_env.globals['url_for'] = custom_url_for
 
-def safe_url_for(endpoint, **values):
-    try:
-        return custom_url_for(endpoint, **values)
-    except Exception:
-        return '#'
-
-app.jinja_env.globals['safe_url_for'] = safe_url_for
-
 # ──────────────────────────────────────────────────────────────────────────────
-# İstek loglama & Basit auth kalkanı
+# Request log & Basit auth kalkanı
 # ──────────────────────────────────────────────────────────────────────────────
 @app.before_request
 def log_request():
-    if request.endpoint == 'rapor_gir.giris' and request.method == 'GET':
+    if request.path.startswith('/static/'):
         return
-    if not request.path.startswith('/static/'):
-        try:
-            log_user_action(
-                action=f"PAGE_VIEW: {request.endpoint}",
-                details={'path': request.path, 'endpoint': request.endpoint},
-                force_log=True
-            )
-        except Exception as e:
-            logger.error(f"Log kaydedilemedi: {e}")
+    try:
+        log_user_action(
+            action=f"PAGE_VIEW: {request.endpoint}",
+            details={'path': request.path, 'endpoint': request.endpoint},
+            force_log=True
+        )
+    except Exception as e:
+        logger.error(f"Log kaydedilemedi: {e}")
 
 @app.before_request
 def check_authentication():
@@ -170,51 +123,19 @@ def check_authentication():
         or request.path.startswith('/api/')
         or request.path.startswith('/health')):
         return None
-
-    allowed_routes = [
+    allowed = [
         'login_logout.login','login_logout.register','login_logout.static',
         'login_logout.verify_totp','login_logout.logout','qr_utils.generate_qr_labels_pdf',
         'health.health_check','enhanced_label.advanced_label_editor',
         'enhanced_label.enhanced_product_label'
     ]
     app.permanent_session_lifetime = timedelta(days=30)
-
-    if request.endpoint not in allowed_routes and not current_user.is_authenticated:
-        if 'username' not in session:
-            flash('Lütfen giriş yapınız.', 'danger')
-            return redirect(url_for('login_logout.login'))
-        if 'pending_user' in session and request.endpoint != 'login_logout.verify_totp':
-            return redirect(url_for('login_logout.verify_totp'))
+    if request.endpoint not in allowed and not current_user.is_authenticated:
+        flash('Lütfen giriş yapınız.', 'danger')
+        return redirect(url_for('login_logout.login'))
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Yardımcılar (stok rezerv okuma)
-# ──────────────────────────────────────────────────────────────────────────────
-def _parse_details_any(details_raw):
-    """details alanı str/list/dict olabilir; normalize edip liste döndürür."""
-    if not details_raw:
-        return []
-    if isinstance(details_raw, list):
-        return details_raw
-    if isinstance(details_raw, dict):
-        return [details_raw]
-    try:
-        data = json.loads(details_raw)
-        if isinstance(data, list):
-            return data
-        if isinstance(data, dict):
-            return [data]
-        return []
-    except Exception:
-        return []
-
-def _to_int(x, default=0):
-    try:
-        return int(str(x).strip())
-    except Exception:
-        return default
-
-# ──────────────────────────────────────────────────────────────────────────────
-# İş Job'ları
+# İşlevler: Sipariş Çekme & Stok Push
 # ──────────────────────────────────────────────────────────────────────────────
 def fetch_and_save_returns():
     with app.app_context():
@@ -226,122 +147,167 @@ def fetch_and_save_returns():
         except Exception as e:
             logger.warning(f"İade çekme hatası: {e}")
 
-def push_central_stock_to_trendyol():
-    """
-    CentralStock'u, **Created** sipariş rezervlerini düşerek Trendyol'a gönderir.
-    Döngü tetikçisi push_stock_job çağırır.
-    """
+def pull_orders_job():
+    """Siparişleri Trendyol'dan çeker (Created rezervleri sistemde güncellenir)."""
     with app.app_context():
         try:
-            from stock_management import send_trendyol_update_async
-            from models import CentralStock, OrderCreated
-
-            rows = CentralStock.query.all()
-            if not rows:
-                logger.info("CentralStock boş, Trendyol'a gönderilecek stok yok.")
-                return
-
-            # Created siparişlerden rezerv miktarını hesapla
-            reserved = {}
-            for (details_str,) in OrderCreated.query.with_entities(OrderCreated.details).all():
-                for it in _parse_details_any(details_str):
-                    bc = (it.get("barcode") or "").strip()
-                    q  = _to_int(it.get("quantity"), 0)
-                    if bc and q > 0:
-                        reserved[bc] = reserved.get(bc, 0) + q
-
-            # available = max(0, central - reserved)
-            items = []
-            for r in rows:
-                central = _to_int(r.qty, 0)
-                res = reserved.get(r.barcode, 0)
-                available = central - res
-                if available < 0:
-                    available = 0
-                items.append({"barcode": r.barcode, "quantity": available})
-
-            if not items:
-                logger.info("Gönderilecek item yok.")
-                return
-
-            asyncio.run(send_trendyol_update_async(items))
-            logger.info(f"[PUSH] CentralStock (Created rezerv düşülmüş) -> Trendyol: {len(items)} kalem gönderildi.")
-
+            from order_service import fetch_trendyol_orders_async
+            asyncio.run(fetch_trendyol_orders_async())
         except Exception as e:
-            logger.error(f"[PUSH] CentralStock push hata: {e}", exc_info=True)
+            logger.error(f"pull_orders_job hata: {e}", exc_info=True)
+
+def push_central_stock_to_trendyol():
+    """
+    CentralStock (Created rezerv düşülmüş) → Trendyol
+    POST /sapigw/suppliers/{SUPPLIER_ID}/products/price-and-inventory
+    """
+    with app.app_context():
+        import base64, aiohttp, asyncio, math
+        from models import OrderCreated
+
+        def _parse(raw):
+            try:
+                if not raw: return []
+                d = json.loads(raw) if isinstance(raw, str) else raw
+                return d if isinstance(d, list) else [d]
+            except Exception:
+                return []
+
+        def _i(x, d=0):
+            try: return int(str(x).strip())
+            except Exception: return d
+
+        rows = CentralStock.query.all()
+        if not rows:
+            logger.info("[PUSH] CentralStock boş; gönderim yok.")
+            return
+
+        # Created rezerv toplamı
+        reserved = {}
+        for (details_str,) in OrderCreated.query.with_entities(OrderCreated.details).all():
+            for it in _parse(details_str):
+                bc = (it.get("barcode") or "").strip()
+                q  = _i(it.get("quantity"), 0)
+                if bc and q > 0:
+                    reserved[bc] = reserved.get(bc, 0) + q
+
+        # available = central - reserved
+        items = []
+        for r in rows:
+            available = max(0, _i(r.qty, 0) - reserved.get(r.barcode, 0))
+            items.append({"barcode": r.barcode.strip(), "quantity": available})
+
+        if not items:
+            logger.info("[PUSH] Gönderilecek kalem yok.")
+            return
+
+        url = f"https://api.trendyol.com/sapigw/suppliers/{SUPPLIER_ID}/products/price-and-inventory"
+        auth = base64.b64encode(f"{API_KEY}:{API_SECRET}".encode()).decode()
+        headers = {
+            "Authorization": f"Basic {auth}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": f"GulluAyakkabiApp-V2/{SUPPLIER_ID}"
+        }
+
+        BATCH_SIZE = 100
+        total = len(items)
+        parts = math.ceil(total / BATCH_SIZE)
+        logger.info(f"[PUSH] price-and-inventory gönderiliyor: {total} kalem, {parts} paket")
+
+        async def _run():
+            async with aiohttp.ClientSession() as session:
+                for i in range(0, total, BATCH_SIZE):
+                    batch = items[i:i+BATCH_SIZE]
+                    payload = {"items": [{"barcode": it["barcode"], "quantity": max(0, int(it["quantity"]))}
+                                         for it in batch if it.get("barcode")]}
+                    async with session.post(url, headers=headers, json=payload, timeout=60) as resp:
+                        body = await resp.text()
+                        logger.info(f"[PINV {i//BATCH_SIZE+1}/{parts}] {resp.status} {body[:200]}")
+                    await asyncio.sleep(0.4)
+
+        try:
+            asyncio.run(_run())
+            logger.info("[PUSH] price-and-inventory tamamlandı.")
+        except Exception as e:
+            logger.error(f"[PUSH] Hata: {e}", exc_info=True)
+
+def push_stock_job():
+    """Zamanlayıcı tetiklemesinde direkt stok gönderir (zamanlamayı schedule ayarlar)."""
+    push_central_stock_to_trendyol()
 
 # ──────────────────────────────────────────────────────────────────────────────
-# ZAMANLAYICI: Çek → 2 dk → Stok → 1 dk → Çek …
+# Zamanlayıcı: ÇEK (0dk) → PUSHA (2dk) → ÇEK (4dk) → …
 # ──────────────────────────────────────────────────────────────────────────────
 scheduler = BackgroundScheduler(
     timezone="Europe/Istanbul",
     job_defaults={"max_instances": 1, "coalesce": True, "misfire_grace_time": 60}
 )
 
-_state_lock = Lock()
-_last_pull_finished = None  # çekim bittiği an
-
-def _mark_pull_done():
-    global _last_pull_finished
-    with _state_lock:
-        _last_pull_finished = datetime.now()
-
-def pull_orders_job():
-    """0,3,6... dakikalarda çalışır; Trendyol siparişlerini çeker."""
-    with app.app_context():
-        try:
-            # circular import riskini azaltmak için içerde import
-            from order_service import fetch_trendyol_orders_async
-            asyncio.run(fetch_trendyol_orders_async())
-        except Exception as e:
-            logger.error(f"pull_orders_job hata: {e}", exc_info=True)
-        finally:
-            _mark_pull_done()
-
-def push_stock_job():
-    """2,5,8... dakikalarda çalışır; son çekimden ≥2 dk sonra stok gönderir."""
-    with _state_lock:
-        ok_to_push = (_last_pull_finished is not None
-                      and (datetime.now() - _last_pull_finished) >= timedelta(minutes=2))
-    if not ok_to_push:
-        logger.info("push_stock_job skip: çekimden 2 dk geçmedi.")
-        return
-    push_central_stock_to_trendyol()
+# Çoklu worker’da yalnız 1 süreç scheduler/push çalıştırsın (leader lock)
+import fcntl
+_leader_fd = None
+def become_leader(lock_path="/tmp/gullupanel_leader.lock"):
+    global _leader_fd
+    _leader_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR)
+    try:
+        fcntl.flock(_leader_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except BlockingIOError:
+        os.close(_leader_fd); _leader_fd = None
+        return False
 
 def schedule_jobs():
     scheduler.start()
     now = datetime.now()
 
-    # İade job'u (gündelik)
-    scheduler.add_job(fetch_and_save_returns, trigger='cron', hour=23, minute=50, id="pull_returns_daily")
+    # ÇEK: hemen başla, her 4 dk
+    scheduler.add_job(
+        pull_orders_job,
+        trigger='interval',
+        minutes=4,
+        next_run_time=now,
+        id="pull_orders"
+    )
 
-    # Döngü:
-    # 0,3,6,9 ... dakikalar: SİPARİŞ ÇEK
-    scheduler.add_job(pull_orders_job, trigger='interval', minutes=3, next_run_time=now, id="pull_orders")
-    # 2,5,8,11 ... dakikalar: STOK GÖNDER
-    scheduler.add_job(push_stock_job, trigger='interval', minutes=3, next_run_time=now + timedelta(minutes=2), id="push_stock")
+    # PUSHA: 2 dk sonra başla, her 4 dk (çek ile ping-pong)
+    scheduler.add_job(
+        push_stock_job,
+        trigger='interval',
+        minutes=4,
+        next_run_time=now + timedelta(minutes=2),
+        id="push_stock"
+    )
 
-schedule_jobs()
+    # İade (opsiyonel günlük)
+    scheduler.add_job(
+        fetch_and_save_returns,
+        trigger='cron',
+        hour=23,
+        minute=50,
+        id="pull_returns_daily"
+    )
+
+if become_leader():
+    schedule_jobs()
+else:
+    logger.info("Not scheduler leader (web-only worker).")
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Veritabanı bağlantı testi
+# DB bağlantı testi
 # ──────────────────────────────────────────────────────────────────────────────
 with app.app_context():
     try:
         with db.engine.connect() as connection:
             connection.execute(text("SELECT 1"))
         print("✅ Neon veritabanına bağlantı başarılı!")
-        try:
-            # db.create_all() yerine migrate kullanmak daha güvenli
-            print("✅ Veritabanı tabloları kontrol edildi (migrate ile yönetiliyor)")
-        except Exception as table_error:
-            print(f"⚠️ Tablo oluşturma hatası (devam ediliyor): {str(table_error)[:50]}...")
+        print("✅ Veritabanı tabloları kontrol edildi (migrate ile yönetiliyor)")
     except Exception as e:
         print(f"❌ Veritabanı bağlantı hatası: {str(e)[:50]}...")
         print("⚠️ Uygulama veritabanısız modda başlatılıyor")
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Uygulama başlat
+# Main
 # ──────────────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     debug_mode = os.environ.get('FLASK_DEBUG', 'False') == 'True'

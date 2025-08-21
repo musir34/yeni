@@ -735,33 +735,37 @@ def group_products_by_model_and_then_color(products):
 # get_products.py içindeki GÜNCELLENECEK ROUTE
 @get_products_bp.route('/product_list')
 def product_list():
-
     try:
         page = request.args.get('page', 1, type=int)
-        per_page = 12  # Sayfa başına gösterilecek MODEL sayısı
+        per_page = 12
 
+        # Ürünleri çek
         all_products = Product.query.order_by(Product.product_main_id).all()
 
-        # Tüm raf kayıtlarını tek seferde al
-        raf_kayitlari = RafUrun.query.all()
-        raf_map = {r.urun_barkodu: r.raf_kodu for r in raf_kayitlari}
+        # CentralStock map
+        cs_rows = db.session.query(CentralStock.barcode, CentralStock.qty).all()
+        cs_map = {b: int(q or 0) for b, q in cs_rows}
 
-        # Her ürüne sadece bellekte eşleşme yap
+        # Raf map
+        raf_rows = RafUrun.query.with_entities(RafUrun.urun_barkodu, RafUrun.raf_kodu).all()
+        raf_map = {b: rk for b, rk in raf_rows}
+
+        # Görünüm için CENTRAL stok ile override
         for p in all_products:
             p.raf_bilgisi = raf_map.get(p.barcode)
+            p.central_qty = cs_map.get(p.barcode, 0)
+            p.quantity = p.central_qty  # şablon {{ variant.quantity }} ise artık central_stock görünür
 
-        # Model → Renk → Ürün hiyerarşisini oluştur
+        # Model → Renk → Ürün hiyerarşisi
         hierarchical_products = group_products_by_model_and_then_color(all_products)
 
-        model_keys = sorted(list(hierarchical_products.keys()))
+        # Sayfalama
+        model_keys = sorted(hierarchical_products.keys())
         total_models = len(model_keys)
-
         start_idx = (page - 1) * per_page
         end_idx = start_idx + per_page
-
         current_page_keys = model_keys[start_idx:end_idx]
-        current_page_products = {key: hierarchical_products[key] for key in current_page_keys}
-
+        current_page_products = {k: hierarchical_products[k] for k in current_page_keys}
         total_pages = (total_models + per_page - 1) // per_page
 
         pagination = {
@@ -785,11 +789,11 @@ def product_list():
         )
 
     except Exception as e:
-        import logging
         logger = logging.getLogger(__name__)
         logger.error(f"Ürün listesi oluşturulurken hata: {e}", exc_info=True)
         flash("Ürün listesi yüklenirken bir hata oluştu.", "danger")
         return render_template('product_list.html', grouped_products={}, pagination=None)
+
 
 
 @get_products_bp.route('/api/get_product_variants', methods=['GET'])
@@ -828,7 +832,7 @@ def get_product_variants():
         return jsonify({'success': False, 'message': 'Sunucu hatası.'}), 500
 
 
-@get_products_bp.route('/update_stocks_ajax', methods=['POST'])
+"""@get_products_bp.route('/update_stocks_ajax', methods=['POST'])
 async def update_stocks_ajax():
     form_data = request.form
     if not form_data:
@@ -843,7 +847,7 @@ async def update_stocks_ajax():
     if result:
         return jsonify({'success': True})
     else:
-        return jsonify({'success': False, 'message': 'Stok güncelleme başarısız oldu.'})
+        return jsonify({'success': False, 'message': 'Stok güncelleme başarısız oldu.'})"""
 
 
 @get_products_bp.route('/delete_product_variants', methods=['POST'])
@@ -913,28 +917,39 @@ def search_products():
     if not query:
         return redirect(url_for('get_products.product_list'))
 
-    found_products_query = None
+    # Ürünleri bul
     if search_type == 'model_code':
-        found_products_query = Product.query.filter(func.lower(Product.product_main_id) == query.lower())
+        found_products = Product.query.filter(func.lower(Product.product_main_id) == query.lower()).all()
     elif search_type == 'barcode':
-        product_by_barcode = Product.query.filter_by(barcode=query).first()
-        if product_by_barcode and product_by_barcode.product_main_id:
-            found_products_query = Product.query.filter_by(product_main_id=product_by_barcode.product_main_id)
+        pbb = Product.query.filter_by(barcode=query).first()
+        found_products = Product.query.filter_by(product_main_id=pbb.product_main_id).all() if pbb and pbb.product_main_id else []
+    else:
+        found_products = []
 
-    found_products = found_products_query.all() if found_products_query else []
+    # CENTRAL stok ve raf bilgisini iliştir + quantity override
+    if found_products:
+        bcs = [p.barcode for p in found_products]
+        cs_rows = db.session.query(CentralStock.barcode, CentralStock.qty).filter(CentralStock.barcode.in_(bcs)).all()
+        cs_map = {b: int(q or 0) for b, q in cs_rows}
+        raf_rows = RafUrun.query.filter(RafUrun.urun_barkodu.in_(bcs)).all()
+        raf_map = {r.urun_barkodu: r.raf_kodu for r in raf_rows}
+        for p in found_products:
+            p.raf_bilgisi = raf_map.get(p.barcode)
+            p.central_qty = cs_map.get(p.barcode, 0)
+            p.quantity = p.central_qty
 
-    # Arama sonuçlarını "model ve renge göre" grupla
+    # (model, renk) gruplu gönder
     grouped_results = group_products_by_model_and_color(found_products)
 
-    # YENİ: Artık 'search_results.html' yerine ana şablonu çağırıyoruz
     return render_template(
-        'product_list.html', 
-        grouped_products=grouped_results, # Veriyi (model,renk) olarak gruplu gönder
+        'product_list.html',
+        grouped_products=grouped_results,
         pagination=None,
-        search_mode=True, # Arama modunda olduğumuzu şablona bildiriyoruz
+        search_mode=True,
         search_query=query,
         search_type=search_type
     )
+
 
 
 @get_products_bp.route('/api/delete-product', methods=['POST'])
