@@ -12,6 +12,40 @@ from update_service import update_order_status_to_picking
 
 archive_bp = Blueprint('archive', __name__)
 
+
+# ✅ Yeni Jinja Filtresi: Türkçe Ay Adları ile Tarih Formatlama
+@archive_bp.app_template_filter('format_turkish_date')
+def format_turkish_date_filter(value):
+    """
+    Datetime objesini Türkçe ay adıyla "Gün Ay" formatına çevirir.
+    Örnek: 2023-10-27 -> "27 Ekim"
+    """
+    if not value:
+        return ""
+    try:
+        turkish_months = [
+            "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+            "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
+        ]
+        # value string gelirse DateTime'a çevir (opsiyonel)
+        if isinstance(value, str):
+            # ISO veya "YYYY-MM-DD HH:MM:SS" vb. gelirse deneyelim
+            try:
+                value = datetime.fromisoformat(value)
+            except Exception:
+                pass
+
+        day = getattr(value, "day", None)
+        month_index = getattr(value, "month", None)
+        if not day or not month_index:
+            return str(value)
+
+        return f"{day} {turkish_months[month_index]}"
+    except Exception as e:
+        print(f"Tarih formatlama hatası: {e}")
+        return str(value)
+
+
 #############################
 # 1) Yardımcı Fonksiyonlar
 #############################
