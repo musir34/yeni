@@ -175,19 +175,20 @@ def stock_addition_page():
 @stock_management_bp.route('/api/get-product-details-by-barcode/<string:barcode>', methods=['GET'])
 @limiter.limit("120/minute")
 def get_product_details(barcode):
-    """Verilen barkoda ait ürün detaylarını veritabanından çeker."""
     try:
         product = Product.query.filter(func.lower(Product.barcode) == barcode.lower()).first()
+
+        # ⬇️ EK: CentralStock'ı çek (PK olarak barcode kullandığın için .get yeterli)
+        cs = CentralStock.query.get(barcode)
+
         if product:
             image_url = 'https://placehold.co/80x80'
             if product.images:
                 try:
-                    # '["url1", "url2"]' formatındaki JSON string'i listeye çevir
                     image_list = json.loads(product.images)
                     if image_list and isinstance(image_list, list):
                         image_url = image_list[0]
                 except (json.JSONDecodeError, TypeError):
-                    # Eğer JSON değilse veya format bozuksa, direkt string olarak al
                     image_url = product.images
 
             return jsonify(success=True, product={
@@ -195,7 +196,7 @@ def get_product_details(barcode):
                 'product_main_id': product.product_main_id,
                 'color': product.color,
                 'size': product.size,
-                'quantity': (cs.qty if cs else 0),
+                'quantity': (cs.qty if cs else 0),  # ✅ artık cs tanımlı
                 'image_url': image_url
             })
         else:
@@ -203,6 +204,7 @@ def get_product_details(barcode):
     except Exception as e:
         logger.error(f"Ürün detayı alınırken hata (barkod: {barcode}): {e}", exc_info=True)
         return jsonify(success=False, message="Sunucu hatası oluştu."), 500
+
 
 # DÜZENLENDİ:  artık ana ve tek stok güncelleme endpoint'imiz.
 @stock_management_bp.route('/stock-addition', methods=['POST'])
