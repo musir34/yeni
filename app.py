@@ -12,9 +12,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.routing import BuildError
 from flask_login import LoginManager, current_user
-
-from models import db, User, CentralStock  # OrderCreated içerden import edilecek
 from archive import format_turkish_date_filter
+from models import db, User, CentralStock  # OrderCreated içerden import edilecek
 from logger_config import app_logger as logger
 from cache_config import cache
 from flask_restx import Api
@@ -26,7 +25,6 @@ from trendyol_api import SUPPLIER_ID, API_KEY, API_SECRET
 
 # APScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
-from threading import Lock
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Flask Uygulaması
@@ -40,6 +38,9 @@ app.config.from_object(
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Jinja filtre kaydı
+app.add_template_filter(format_turkish_date_filter, name='turkce_tarih')
 
 cache.init_app(app)
 db.init_app(app)
@@ -237,12 +238,21 @@ def push_stock_job():
     push_central_stock_to_trendyol()
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Zamanlayıcı: ÇEK (0dk) → PUSHA (2dk) → ÇEK (4dk) → …
+# Zamanlayıcı (ENV kontrollü) — ÇEK (0dk) ↔ PUSHA (2dk) ping-pong + iade cron
 # ──────────────────────────────────────────────────────────────────────────────
 scheduler = BackgroundScheduler(
     timezone="Europe/Istanbul",
     job_defaults={"max_instances": 1, "coalesce": True, "misfire_grace_time": 60}
 )
+
+# ENV bayrakları
+# DISABLE_JOBS=1  -> tüm job'lar kapalı (local test için birebir)
+# DISABLE_JOBS_IDS=pull_orders,push_stock -> seçili job'lar kapalı (virgülle ayır)
+ENABLE_JOBS = str(os.getenv("DISABLE_JOBS", "0")).lower() not in ("1", "true", "yes")
+DISABLED_IDS = set([s.strip() for s in os.getenv("DISABLE_JOBS_IDS", "").split(",") if s.strip()])
+
+# Reloader emniyeti (yine de use_reloader=False veriyoruz)
+is_main_proc = (not app.debug) or (os.getenv("WERKZEUG_RUN_MAIN") == "true")
 
 # Çoklu worker’da yalnız 1 süreç scheduler/push çalıştırsın (leader lock)
 import fcntl
@@ -257,41 +267,52 @@ def become_leader(lock_path="/tmp/gullupanel_leader.lock"):
         os.close(_leader_fd); _leader_fd = None
         return False
 
+def _add_job_safe(func, *, trigger, id, **kw):
+    if id in DISABLED_IDS:
+        logger.info(f"Job disabled by DISABLE_JOBS_IDS: {id}")
+        return
+    scheduler.add_job(func, trigger=trigger, id=id, **kw)
+
 def schedule_jobs():
-    scheduler.start()
     now = datetime.now()
 
     # ÇEK: hemen başla, her 4 dk
-    scheduler.add_job(
+    _add_job_safe(
         pull_orders_job,
         trigger='interval',
+        id="pull_orders",
         minutes=4,
-        next_run_time=now,
-        id="pull_orders"
+        next_run_time=now
     )
 
     # PUSHA: 2 dk sonra başla, her 4 dk (çek ile ping-pong)
-    scheduler.add_job(
+    _add_job_safe(
         push_stock_job,
         trigger='interval',
+        id="push_stock",
         minutes=4,
-        next_run_time=now + timedelta(minutes=2),
-        id="push_stock"
+        next_run_time=now + timedelta(minutes=2)
     )
 
-    # İade (opsiyonel günlük)
-    scheduler.add_job(
+    # İade: her gece 23:50
+    _add_job_safe(
         fetch_and_save_returns,
         trigger='cron',
+        id="pull_returns_daily",
         hour=23,
-        minute=50,
-        id="pull_returns_daily"
+        minute=50
     )
 
-if become_leader():
+# ENV ve liderlik kontrolü
+if ENABLE_JOBS and is_main_proc and become_leader():
+    scheduler.start()
     schedule_jobs()
+    logger.info("Scheduler started (ENABLE_JOBS=on, leader ok).")
 else:
-    logger.info("Not scheduler leader (web-only worker).")
+    logger.info(
+        "Scheduler NOT started (ENABLE_JOBS=%s, is_main_proc=%s, leader=%s)",
+        ENABLE_JOBS, is_main_proc, False if _leader_fd is None else True
+    )
 
 # ──────────────────────────────────────────────────────────────────────────────
 # DB bağlantı testi

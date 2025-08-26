@@ -4,6 +4,8 @@ from flask_login import current_user, login_required
 from datetime import datetime
 from models import db, Rapor, User
 from sqlalchemy import func
+from archive import format_turkish_date_filter as _format_tr_date
+
 
 rapor_gir_bp = Blueprint('rapor_gir', __name__)
 
@@ -94,3 +96,22 @@ def giris():
         view_data = {'raporlar': raporlar}
 
     return render_template('rapor_gir.html', view_mode=view_mode, data=view_data)
+
+
+# --- Jinja filtre kaydı (rapor_gir_bp tanımından SONRA) ---
+
+@rapor_gir_bp.app_template_filter('turkce_tarih')
+def turkce_tarih_filter(value, mode=None):
+    """
+    Şablonda: {{ r | turkce_tarih('full') }} gibi kullanımlar için.
+    archive.format_turkish_date_filter tek param alıyorsa fallback yapar.
+    """
+    # Önce iki argümanla dene (fonksiyon destekliyorsa)
+    if mode is not None:
+        try:
+            return _format_tr_date(value, mode)  # bazı projelerde iki parametreli olabilir
+        except TypeError:
+            pass  # tek parametreli ise aşağıdakiye düş
+
+    # Tek argümanlı kullanım
+    return _format_tr_date(value)
