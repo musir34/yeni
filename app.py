@@ -27,6 +27,16 @@ from trendyol_api import SUPPLIER_ID, API_KEY, API_SECRET
 from apscheduler.schedulers.background import BackgroundScheduler
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Platform-safe lock import (Unix: fcntl, Windows: msvcrt+tempfile)
+# ──────────────────────────────────────────────────────────────────────────────
+try:
+    import fcntl  # Unix
+except ImportError:
+    fcntl = None
+    import msvcrt  # Windows
+    import tempfile
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Flask Uygulaması
 # ──────────────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -136,7 +146,7 @@ def check_authentication():
         return redirect(url_for('login_logout.login'))
 
 # ──────────────────────────────────────────────────────────────────────────────
-# İşlevler: Sipariş Çekme & Stok Push
+# İşlevler: İade Çekme • Sipariş Çekme • Stok Push
 # ──────────────────────────────────────────────────────────────────────────────
 def fetch_and_save_returns():
     with app.app_context():
@@ -251,20 +261,47 @@ scheduler = BackgroundScheduler(
 ENABLE_JOBS = str(os.getenv("DISABLE_JOBS", "0")).lower() not in ("1", "true", "yes")
 DISABLED_IDS = set([s.strip() for s in os.getenv("DISABLE_JOBS_IDS", "").split(",") if s.strip()])
 
-# Reloader emniyeti (yine de use_reloader=False veriyoruz)
+# Reloader emniyeti (flask run reloader'ında sadece main process işlesin)
 is_main_proc = (not app.debug) or (os.getenv("WERKZEUG_RUN_MAIN") == "true")
 
 # Çoklu worker’da yalnız 1 süreç scheduler/push çalıştırsın (leader lock)
-import fcntl
-_leader_fd = None
-def become_leader(lock_path="/tmp/gullupanel_leader.lock"):
-    global _leader_fd
+_leader_fd = None          # Unix
+_leader_handle = None      # Windows
+
+def become_leader(lock_path=None):
+    """
+    Unix: fcntl ile non-blocking file lock
+    Windows: msvcrt.locking ile lock
+    """
+    global _leader_fd, _leader_handle
+
+    if os.name == "nt":  # Windows
+        if lock_path is None:
+            lock_path = os.path.join(tempfile.gettempdir(), "gullupanel_leader.lock")
+        os.makedirs(os.path.dirname(lock_path), exist_ok=True)
+        if not os.path.exists(lock_path):
+            open(lock_path, "wb").close()
+        try:
+            _leader_handle = open(lock_path, "r+b")
+            msvcrt.locking(_leader_handle.fileno(), msvcrt.LK_NBLCK, 1)  # 1 byte lock
+            return True
+        except OSError:
+            if _leader_handle:
+                try: _leader_handle.close()
+                except: pass
+                _leader_handle = None
+            return False
+
+    # Unix (Linux/macOS)
+    lock_path = lock_path or "/tmp/gullupanel_leader.lock"
     _leader_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR)
     try:
         fcntl.flock(_leader_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         return True
-    except BlockingIOError:
-        os.close(_leader_fd); _leader_fd = None
+    except (BlockingIOError, OSError):
+        try: os.close(_leader_fd)
+        except: pass
+        _leader_fd = None
         return False
 
 def _add_job_safe(func, *, trigger, id, **kw):
@@ -304,14 +341,19 @@ def schedule_jobs():
     )
 
 # ENV ve liderlik kontrolü
-if ENABLE_JOBS and is_main_proc and become_leader():
-    scheduler.start()
-    schedule_jobs()
-    logger.info("Scheduler started (ENABLE_JOBS=on, leader ok).")
+_leader_ok = False
+if ENABLE_JOBS and is_main_proc:
+    _leader_ok = become_leader()
+    if _leader_ok:
+        scheduler.start()
+        schedule_jobs()
+        logger.info("Scheduler started (ENABLE_JOBS=on, leader ok).")
+    else:
+        logger.info("Scheduler NOT started (ENABLE_JOBS=on, leader=false)")
 else:
     logger.info(
         "Scheduler NOT started (ENABLE_JOBS=%s, is_main_proc=%s, leader=%s)",
-        ENABLE_JOBS, is_main_proc, False if _leader_fd is None else True
+        ENABLE_JOBS, is_main_proc, _leader_ok
     )
 
 # ──────────────────────────────────────────────────────────────────────────────

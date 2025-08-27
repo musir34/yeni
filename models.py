@@ -206,112 +206,125 @@ class OrderItem(db.Model):
     product = db.relationship('Product', backref=db.backref('order_items', lazy=True)) # backref eklendi
 
 
+# ──────────────────────────────────────────────────────────────────────────────
 # Temel sipariş modeli - tüm statüler için ortak alanlar
+# ──────────────────────────────────────────────────────────────────────────────
 class OrderBase(db.Model):
     __abstract__ = True
 
-    id = db.Column(db.Integer, primary_key=True) # Otomatik artan ID, her statü tablosu için kendi sequence'ı olur.
-    order_number = db.Column(db.String, index=True, nullable=False) # Sipariş no boş olamaz
-    order_date = db.Column(db.DateTime, index=True, nullable=True) # API'den gelmeyebilir diye nullable
+    id = db.Column(db.Integer, primary_key=True)  # Her tabloya ayrı sequence
+    order_number = db.Column(db.String, index=True, nullable=False)
+    order_date = db.Column(db.DateTime, index=True, nullable=True)
 
-    # API'den gelen orijinal statü (bilgi amaçlı, hangi tabloda olduğu asıl statüyü verir)
-    status = db.Column(db.String, nullable=True) 
+    # API'den gelen orijinal statü (bilgi amaçlı)
+    status = db.Column(db.String, nullable=True)
 
     # Müşteri Bilgileri
-    customer_id = db.Column(db.String, index=True, nullable=True) # EKLENDİ
+    customer_id = db.Column(db.String, index=True, nullable=True)
     customer_name = db.Column(db.String, nullable=True)
     customer_surname = db.Column(db.String, nullable=True)
     customer_address = db.Column(db.Text, nullable=True)
 
-    # Ürün ve Sipariş Detayları (API'den geldiği gibi, genellikle virgülle ayrılmış listeler veya JSON)
-    merchant_sku = db.Column(db.Text, nullable=True) 
-    product_barcode = db.Column(db.Text, nullable=True) 
-    product_name = db.Column(db.Text, nullable=True) 
-    product_code = db.Column(db.Text, nullable=True) 
-    product_size = db.Column(db.Text, nullable=True) 
-    product_color = db.Column(db.Text, nullable=True) 
-    product_main_id = db.Column(db.Text, nullable=True) 
-    stockCode = db.Column(db.Text, nullable=True) 
-    line_id = db.Column(db.Text, nullable=True) 
-    details = db.Column(db.Text, nullable=True) # Tüm ürün detaylarını içeren JSON string
-    quantity = db.Column(db.Integer, nullable=True) 
+    # Ürün ve Sipariş Detayları
+    merchant_sku = db.Column(db.Text, nullable=True)
+    product_barcode = db.Column(db.Text, nullable=True)
+    product_name = db.Column(db.Text, nullable=True)
+    product_code = db.Column(db.Text, nullable=True)
+    product_size = db.Column(db.Text, nullable=True)
+    product_color = db.Column(db.Text, nullable=True)
+    product_main_id = db.Column(db.Text, nullable=True)
+    stockCode = db.Column(db.Text, nullable=True)
+    line_id = db.Column(db.Text, nullable=True)
+    details = db.Column(db.Text, nullable=True)  # JSON string
+    quantity = db.Column(db.Integer, nullable=True)
 
     # Fiyat ve Finansal Bilgiler
-    amount = db.Column(db.Float, nullable=True) 
+    amount = db.Column(db.Float, nullable=True)
     discount = db.Column(db.Float, default=0.0, nullable=True)
-    gross_amount = db.Column(db.Float, nullable=True) # EKLENDİ
-    tax_amount = db.Column(db.Float, nullable=True) # EKLENDİ 
-    vat_base_amount = db.Column(db.Float, nullable=True) 
-    commission = db.Column(db.Float, default=0.0, nullable=True) 
+    gross_amount = db.Column(db.Float, nullable=True)
+    tax_amount = db.Column(db.Float, nullable=True)
+    vat_base_amount = db.Column(db.Float, nullable=True)
+    commission = db.Column(db.Float, default=0.0, nullable=True)
     currency_code = db.Column(db.String(10), nullable=True)
-    product_cost_total = db.Column(db.Float, default=0.0, nullable=True) # Ürünlerin toplam maliyeti
+    product_cost_total = db.Column(db.Float, default=0.0, nullable=True)
 
     # Kargo ve Paket Bilgileri
-    package_number = db.Column(db.String, index=True, nullable=True) 
-    shipment_package_id = db.Column(db.String, index=True, nullable=True) 
-    shipping_barcode = db.Column(db.String, nullable=True) 
-    cargo_tracking_number = db.Column(db.String, index=True, nullable=True) 
+    package_number = db.Column(db.String, index=True, nullable=True)
+    shipment_package_id = db.Column(db.String, index=True, nullable=True)
+    shipping_barcode = db.Column(db.String, nullable=True)
+    cargo_tracking_number = db.Column(db.String, index=True, nullable=True)
     cargo_provider_name = db.Column(db.String, nullable=True)
     cargo_tracking_link = db.Column(db.String, nullable=True)
-    shipment_package_status = db.Column(db.String, nullable=True) # EKLENDİ
+    shipment_package_status = db.Column(db.String, nullable=True)
 
     # Tarihler
-    origin_shipment_date = db.Column(db.DateTime, nullable=True) 
+    origin_shipment_date = db.Column(db.DateTime, nullable=True)
     estimated_delivery_start = db.Column(db.DateTime, nullable=True)
     estimated_delivery_end = db.Column(db.DateTime, index=True, nullable=True)
     agreed_delivery_date = db.Column(db.DateTime, nullable=True)
-    last_modified_date = db.Column(db.DateTime, index=True, nullable=True) # EKLENDİ
+    last_modified_date = db.Column(db.DateTime, index=True, nullable=True)
 
     # Diğer Alanlar
-    match_status = db.Column(db.String, nullable=True) 
-    images = db.Column(db.Text, nullable=True) 
-    product_model_code = db.Column(db.Text, nullable=True) 
+    match_status = db.Column(db.String, nullable=True)
+    images = db.Column(db.Text, nullable=True)
+    product_model_code = db.Column(db.Text, nullable=True)
 
     # Kayıt Zaman Damgaları
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
-# Yeni sipariş tablosu (Created)
+# ──────────────────────────────────────────────────────────────────────────────
+# Statü tabloları
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Yeni sipariş (Created)
 class OrderCreated(OrderBase):
     __tablename__ = 'orders_created'
-    # Bu statüye özel alanlar eklenebilir
-    # creation_time = db.Column(db.DateTime, default=datetime.utcnow) # Zaten OrderBase'de created_at var
+    # statüye özel alan gerekirse eklenir
 
-# İşleme alınan sipariş tablosu (Picking)
+
+# İşleme alınan (Picking)
 class OrderPicking(OrderBase):
     __tablename__ = 'orders_picking'
-    # Bu statüye özel alanlar
-    picking_start_time = db.Column(db.DateTime, default=datetime.utcnow) # İşleme alınma zamanı
-    picked_by = db.Column(db.String) # İşleme alan kullanıcı
+    picking_start_time = db.Column(db.DateTime, default=datetime.utcnow)
+    picked_by = db.Column(db.String)
 
-# Kargodaki sipariş tablosu (Shipped)
+
+# Kargoda (Shipped)
 class OrderShipped(OrderBase):
     __tablename__ = 'orders_shipped'
-    # Bu statüye özel alanlar
-    shipping_time = db.Column(db.DateTime, default=datetime.utcnow) # Kargoya verilme zamanı
-    tracking_updated = db.Column(db.Boolean, default=False) # Kargo durumu güncellendi mi?
+    shipping_time = db.Column(db.DateTime, default=datetime.utcnow)
+    tracking_updated = db.Column(db.Boolean, default=False)
 
-# Teslim edilen sipariş tablosu (Delivered)
+
+# Teslim (Delivered)
 class OrderDelivered(OrderBase):
     __tablename__ = 'orders_delivered'
-    # Bu statüye özel alanlar
-    delivery_date = db.Column(db.DateTime) # Teslim edilme zamanı
-    delivery_confirmed = db.Column(db.Boolean, default=False) # Teslimat onayı?
+    delivery_date = db.Column(db.DateTime)
+    delivery_confirmed = db.Column(db.Boolean, default=False)
 
-# İptal edilen sipariş tablosu (Cancelled)
+
+# İptal (Cancelled)
 class OrderCancelled(OrderBase):
     __tablename__ = 'orders_cancelled'
-    # Bu statüye özel alanlar
-    cancellation_date = db.Column(db.DateTime, default=datetime.utcnow) # İptal zamanı
-    cancellation_reason = db.Column(db.String) # İptal nedeni
+    cancellation_date = db.Column(db.DateTime, default=datetime.utcnow)
+    cancellation_reason = db.Column(db.String)
 
-# Arşivlenen sipariş tablosu (Archived)
+
+# Arşiv (Archived)
 class OrderArchived(OrderBase):
     __tablename__ = 'orders_archived'
-    # Bu statüye özel alanlar
-    archive_date = db.Column(db.DateTime, default=datetime.utcnow) # Arşivlenme zamanı
-    archive_reason = db.Column(db.String) # Arşivlenme nedeni
+    archive_date = db.Column(db.DateTime, default=datetime.utcnow)
+    archive_reason = db.Column(db.String)
+
+
+# 🔥 YENİ: Hazır Gönderim (ReadyToShip)
+class OrderReadyToShip(OrderBase):
+    __tablename__ = 'orders_ready_to_ship'
+    # İstersen bu statüye özgü küçük alanlar:
+    ready_since = db.Column(db.DateTime, default=datetime.utcnow)   # “hazır”a geçtiği an
+    label_printed = db.Column(db.Boolean, default=False)            # etiketi basıldı mı
 
 
 # Geriye dönük uyumluluk için mevcut sipariş tablosu ('orders')
