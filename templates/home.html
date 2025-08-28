@@ -736,6 +736,7 @@
                         <a class="dropdown-item" href="{{ url_for('commission_update_bp.update_commission_from_excel') }}">Excel Komisyon Yükle</a>
                         <a class="dropdown-item" href="/intelligent-stock/">🧠 Stok Zekası Paneli</a>
                         <a class="dropdown-item" href="{{ url_for('profit.profit_report') }}">💰 Kâr Analizi</a>
+                        <a class="dropdown-item" href="{{ url_for('canli_panel.canli_panel_sayfa') }}">📊 Canlı Satış & Stok Paneli</a>
                     </div>
             </div>
             {% if session['role'] in ['admin', 'manager'] %}

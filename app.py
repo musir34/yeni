@@ -23,6 +23,7 @@ from celery_app import init_celery
 from sqlalchemy import text
 from trendyol_api import SUPPLIER_ID, API_KEY, API_SECRET
 
+
 # APScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -45,6 +46,14 @@ env = os.getenv('FLASK_ENV', 'development')
 app.config.from_object(
     __import__('config').config_map.get(env, __import__('config').DevelopmentConfig)
 )
+import platform, os, time
+os.environ['TZ'] = 'Europe/Istanbul'
+if platform.system() in ('Linux', 'Darwin'):  # Windows'ta tzset yok
+    try:
+        time.tzset()
+    except Exception:
+        pass
+
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -65,7 +74,8 @@ print("DB URL:", os.getenv("DATABASE_URL"))
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # JINJA FİLTRELERİ
