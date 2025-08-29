@@ -1,13 +1,3 @@
-# canli_panel.py
-# Canlı Satış & Stok Paneli (İstanbul 00:00–23:59, "sipariş oluşturma zamanı"na göre)
-# - Kaynaklar: OrderCreated + OrderPicking + OrderShipped + Archive
-# - Gün penceresi: YALNIZ OrderCreated.created_at (TR) baz alınır
-# - Diğer tablolar: sadece bu "bugün oluşturulan" siparişler (order_id eşleşmesi) dahil
-# - Order-bazlı DEDUP: Archive > Shipped > Picking > Created (aynı sipariş bir kez)
-# - Model: SADECE product_main_id + renk (ürün adı yok)
-# - Ortalama fiyat: tutarı olan adetlerle (Created/Picking/Shipped)
-# - Saat metni: gg/aa/yyyy ss:dd
-
 import json, time, hashlib
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -16,13 +6,12 @@ from sqlalchemy import func, literal, text
 from sqlalchemy import func, literal, text, and_, or_
 from models import db, Product, CentralStock
 from models import OrderCreated, OrderPicking, OrderShipped, Archive
-
 canli_panel_bp = Blueprint("canli_panel", __name__)
 
 # ── Ayarlar
 IST = ZoneInfo("Europe/Istanbul")
 DUSUK_STOK_ESIK = 5
-AKIS_ARALIGI_SANIYE = 5
+AKIS_ARALIGI_SANIYE = 300
 
 def now_tr_str():
     return datetime.now(IST).strftime("%d/%m/%Y %H:%M")
@@ -420,24 +409,24 @@ def _build_cards_from_orders():
 # ── API’ler
 @canli_panel_bp.route("/api/canli/ozet")
 def ozet_json():
-    # Tarayıcı HTML isterse panele yönlendir
     accept = request.headers.get("Accept","")
     if "text/html" in accept and "application/json" not in accept:
         return redirect(url_for("canli_panel.canli_panel_sayfa"))
 
     tek_model = (request.args.get("model") or "").strip() or None
 
-    # 1) 3 tabloyu TR 00:00–23:59'a göre AYRI AYRI filtreleyip topla
-    qty_map, amt_map = _collect_orders_today_strict()  # ← Created + Picking + Shipped
+    # 1) Bugünün Created+Picking+Shipped verilerini TR 00:00–23:59’a göre topla
+    qty_map, amt_map = _collect_orders_today_strict()
 
-    # 2) Ürün ve stok bilgisi
+    # 2) Toplam sipariş sayısı (distinct)
+    toplam_siparis_sayisi = _count_orders_today_distinct()
+
+    # 3) Ürün/stok bilgisi ve kartlar
     barcodes = set(qty_map.keys()) | set(amt_map.keys())
     pinfo = _fetch_product_info_for_barcodes(barcodes)
     sdict = _fetch_stock_for_barcodes(barcodes)
 
-    # 3) (model, renk) → beden kırılımı
-    grp = {}
-    rep_image = {}
+    grp, rep_image = {}, {}
     for bc in barcodes:
         qty = int(qty_map.get(bc, 0))
         amt = _to_number(amt_map.get(bc, None), None)
@@ -454,27 +443,30 @@ def ozet_json():
             rec["tutar"]        += float(amt)
             rec["tutarli_adet"] += qty
 
-    # 4) Kartlar
     now_tr = datetime.now(ZoneInfo("Europe/Istanbul"))
     hours = max(1.0, now_tr.hour + now_tr.minute/60.0)
     kartlar, total_sold = [], 0
-
     def _beden_key(b):
         try: return (0, float(str(b).replace(',','.')))
         except: return (1, str(b))
+
+    toplam_tutar_all = 0.0
+    toplam_adet_all  = 0
 
     for (model, renk), beden_map in grp.items():
         if tek_model and str(model) != tek_model:
             continue
         detay, toplam_sip, toplam_stok, toplam_tutar, toplam_tutarli_adet = [], 0, 0, 0.0, 0
         for beden in sorted(beden_map.keys(), key=_beden_key):
-            s = int(beden_map[beden]["siparis"])
-            k = int(beden_map[beden]["stok"])
-            a = float(beden_map[beden]["tutar"])
+            s  = int(beden_map[beden]["siparis"])
+            k  = int(beden_map[beden]["stok"])
+            a  = float(beden_map[beden]["tutar"])
             qa = int(beden_map[beden]["tutarli_adet"])
             toplam_sip += s; toplam_stok += k; toplam_tutar += a; toplam_tutarli_adet += qa
             detay.append({"beden": beden, "siparis": s, "stok": k})
         total_sold += toplam_sip
+        toplam_tutar_all += toplam_tutar
+        toplam_adet_all  += toplam_tutarli_adet  # tutarlı adet (fiyatı bilinen)
         ort_fiyat = (toplam_tutar / toplam_tutarli_adet) if toplam_tutarli_adet > 0 else 0.0
         kartlar.append({
             "model": model, "renk": renk, "image": rep_image.get((model, renk)),
@@ -486,7 +478,17 @@ def ozet_json():
         })
 
     kartlar.sort(key=lambda k: (k["toplam_siparis_bugun"], k["toplam_stok"]), reverse=True)
-    return jsonify({"guncellendi": now_tr_str(), "toplam_satis": total_sold, "kartlar": kartlar})
+
+    genel_ortalama_fiyat = round((toplam_tutar_all / toplam_adet_all), 2) if toplam_adet_all > 0 else 0.0
+
+    return jsonify({
+        "guncellendi": now_tr_str(),
+        "toplam_satis": total_sold,
+        "toplam_siparis_sayisi": toplam_siparis_sayisi,
+        "genel_ortalama_fiyat": genel_ortalama_fiyat,
+        "kartlar": kartlar
+    })
+
 
 
 @canli_panel_bp.route("/api/canli/akis")
@@ -494,14 +496,30 @@ def akis_sse():
     tek_model = (request.args.get("model") or "").strip() or None
     def _gen():
         while True:
+            # kartlar
             kartlar, total_sold = _build_cards_from_orders()
+            # toplam sipariş ve genel ortalama
+            qty_map, amt_map = _collect_orders_today_strict()
+            toplam_siparis_sayisi = _count_orders_today_distinct()
+            toplam_adet_all = sum(int(v) for v in qty_map.values())
+            toplam_tutar_all = sum(float(v) for v in amt_map.values() if v is not None)
+            genel_ortalama_fiyat = round((toplam_tutar_all / toplam_adet_all), 2) if toplam_adet_all > 0 else 0.0
+
             if tek_model:
                 kartlar = [k for k in kartlar if str(k["model"]) == tek_model]
-            payload = {"guncellendi": now_tr_str(), "toplam_satis": total_sold, "kartlar": kartlar}
+
+            payload = {
+                "guncellendi": now_tr_str(),
+                "toplam_satis": total_sold,
+                "toplam_siparis_sayisi": toplam_siparis_sayisi,
+                "genel_ortalama_fiyat": genel_ortalama_fiyat,
+                "kartlar": kartlar
+            }
             yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
             time.sleep(AKIS_ARALIGI_SANIYE)
     headers = {"Content-Type":"text/event-stream","Cache-Control":"no-cache","Connection":"keep-alive"}
     return Response(stream_with_context(_gen()), headers=headers)
+
 
 # ── HTML panel sayfası
 @canli_panel_bp.route("/canli-panel")
@@ -579,3 +597,41 @@ def _collect_orders_today_strict():
                 add(it["bc"], it["qty"], line_amt)
 
     return qty_map, amt_map
+
+
+
+
+def _count_orders_today_distinct():
+    start_tr, end_tr = tr_today_bounds_sql()
+    sources = [OrderCreated, OrderPicking, OrderShipped]
+    ids = set()
+    for cls in sources:
+        ts_col, _, _ = _col(cls, ORD_TS_CANDS, "ts")
+        # details kolonu (order_id fallback için)
+        det_name = None
+        for n in ORD_DTL_CANDS:
+            if hasattr(cls, n): det_name = n; break
+        if ts_col is None:
+            continue
+        q = db.session.query(cls).filter(
+            or_(
+                and_(func.timezone('Europe/Istanbul', ts_col) >= start_tr,
+                     func.timezone('Europe/Istanbul', ts_col) <  end_tr),
+                and_(ts_col >= start_tr, ts_col < end_tr)  # ts_col tz'siz ise
+            )
+        )
+        for row in q.all():
+            payload = getattr(row, det_name) if (det_name and hasattr(row, det_name)) else None
+            oid = _extract_order_id_from_row_or_payload(row, payload)
+            if not oid:
+                # içerik imzası fallback
+                items = []
+                for it in _iter_items_once(payload) or []:
+                    bc = _pick_first(it, BARCODE_CANDS, None)
+                    qt = _to_number(_pick_first(it, ITEM_QTY_CANDS, 1), 0) or 0
+                    sz = _pick_first(it, ITEM_SIZE_CANDS, "")
+                    if bc and int(qt) > 0:
+                        items.append({"bc": bc, "qty": int(qt), "size": sz})
+                oid = _content_signature(items, cls.__name__, getattr(row, "id", None))
+            ids.add(str(oid))
+    return len(ids)

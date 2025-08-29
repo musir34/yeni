@@ -4,177 +4,325 @@
   <meta charset="utf-8">
   <title>📊 Canlı Satış & Stok Paneli</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <style>
     :root{
       --color-primary:#B76E79; --color-primary-dark:#A05F6A;
       --color-secondary:#212529; --color-text:#343a40; --color-bg:#f8f9fa;
       --color-white:#fff; --color-border:#dee2e6; --color-success:#28a745;
       --color-warning:#ffc107; --color-danger:#dc3545; --color-info:#0dcaf0;
-      --font-family-base:'Inter',sans-serif; --border-radius:.5rem;
-      --shadow-sm:0 1px 3px rgba(0,0,0,.04); --shadow-md:0 5px 15px rgba(0,0,0,.08);
-      --transition:all .25s ease-in-out;
+      --chip:#f1f3f5;
+      --font-family-base:'Inter',system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      --radius:.7rem; --radius-sm:.5rem;
+      --shadow-sm:0 1px 3px rgba(0,0,0,.06); --shadow-md:0 6px 18px rgba(0,0,0,.10);
+      --transition:all .25s ease;
     }
     *{box-sizing:border-box}
-    body{margin:16px;background:var(--color-bg);color:var(--color-text);font-family:var(--font-family-base)}
-    .ust{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
-    .zaman{font-size:13px;color:#6c757d}
-    .arama{display:flex;gap:8px;align-items:center}
-    input[type=text],.btn{padding:10px 12px;border:1px solid var(--color-border);border-radius:var(--border-radius);background:var(--color-white);color:var(--color-secondary);box-shadow:var(--shadow-sm)}
-    .btn{cursor:pointer;transition:var(--transition)}
+    html,body{height:100%}
+    body{margin:0;background:var(--color-bg);color:var(--color-text);font-family:var(--font-family-base)}
+
+    /* Top App Bar */
+    .appbar{
+      position:sticky; top:0; z-index:50; backdrop-filter:saturate(160%) blur(6px);
+      background:linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.6));
+      border-bottom:1px solid var(--color-border);
+    }
+    .appbar-inner{display:flex;align-items:center;gap:12px;padding:10px 16px;max-width:1400px;margin:0 auto}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.3px;color:var(--color-secondary)}
+    .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--color-primary)}
+    .spacer{flex:1}
+    .btn{
+      padding:10px 12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);
+      background:var(--color-white);color:var(--color-secondary);cursor:pointer;transition:var(--transition);
+      box-shadow:var(--shadow-sm)
+    }
     .btn:hover{border-color:var(--color-primary);color:var(--color-primary)}
-    .btn-primary{background:var(--color-primary);color:#fff;border-color:var(--color-primary)}
-    .btn-primary:hover{background:var(--color-primary-dark);border-color:var(--color-primary-dark)}
-    .mini{font-size:12px;color:#6c757d}
+    .btn-primary{background:var(--color-primary);color:#fff;border-color:transparent}
+    .btn-primary:hover{background:var(--color-primary-dark)}
+    .inp{
+      padding:10px 12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);
+      background:var(--color-white);color:var(--color-secondary);min-width:240px;box-shadow:var(--shadow-sm)
+    }
+    .hint{font-size:12px;color:#6c757d}
 
-    .panel-top{display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:16px}
-    .kpi{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--border-radius);padding:16px;box-shadow:var(--shadow-md);display:flex;flex-direction:column;gap:6px}
-    .kpi .title{font-size:13px;color:#6c757d}
-    .kpi .value{font-size:28px;font-weight:800;color:var(--color-secondary)}
-    .chartbox{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--border-radius);padding:16px;box-shadow:var(--shadow-md)}
+    /* Layout */
+    .container{max-width:1400px;margin:0 auto;padding:16px}
+    .toprow{display:grid;grid-template-columns:repeat(3,1fr) 2fr;gap:16px;align-items:stretch}
 
-    .kartlar{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
-    .kart{background:var(--color-white);border:1px solid var(--color-border);border-radius:calc(var(--border-radius) + 2px);padding:16px;position:relative;box-shadow:var(--shadow-md);transition:var(--transition)}
-    .kart:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.12)}
-    .kart.uyari{border-color:#ffe8a1;box-shadow:0 0 0 2px rgba(255,193,7,.15)}
-    .ribbon{position:absolute;top:12px;right:12px;background:var(--color-warning);color:#212529;font-weight:700;padding:4px 10px;border-radius:999px;font-size:11px;letter-spacing:.3px;box-shadow:var(--shadow-sm)}
+    /* KPI Cards */
+    .kpi{
+      background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius);
+      box-shadow:var(--shadow-md);padding:14px 16px;display:flex;gap:10px;align-items:center
+    }
+    .kpi-icon{
+      flex:0 0 44px;height:44px;border-radius:12px;display:grid;place-items:center;
+      background:linear-gradient(135deg, rgba(183,110,121,.15), rgba(183,110,121,.05));
+      border:1px solid var(--color-border)
+    }
+    .kpi .title{font-size:12px;color:#6c757d;margin-bottom:4px}
+    .kpi .value{font-size:26px;font-weight:900;color:var(--color-secondary);letter-spacing:.3px}
 
-    /* BAŞLIK YOK → sadece çiplerle model/renk ve butonlar */
-    .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
-    .chip{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--color-border);color:var(--color-secondary);padding:6px 10px;border-radius:999px;font-size:12px;box-shadow:var(--shadow-sm)}
-    .chip .dot{width:8px;height:8px;border-radius:50%;background:var(--color-primary);box-shadow:0 0 0 3px rgba(183,110,121,.18)}
-    .ghost{border:1px dashed var(--color-border);background:transparent;margin-left:auto}
-    .ghost:hover{border-color:var(--color-primary);color:var(--color-primary)}
+    /* Chart box */
+    .chartbox{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius);
+      box-shadow:var(--shadow-md);padding:12px 16px}
 
-    .media{margin-bottom:12px;border-radius:12px;overflow:hidden;border:1px solid var(--color-border)}
-    .media img{display:block;width:100%;height:220px;object-fit:cover;cursor:pointer}
-
-    .istat{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:10px 0 8px}
-    .kutu{border:1px solid var(--color-border);border-radius:var(--border-radius);padding:12px;background:#fff;box-shadow:var(--shadow-sm)}
-    .kutu .etik{font-size:12px;color:#6c757d;margin-bottom:4px}
-    .kutu .deger{font-size:20px;font-weight:800;color:var(--color-secondary)}
-    .kutu.ok{border-color:rgba(40,167,69,.25)}
-    .kutu.warn{border-color:rgba(255,193,7,.45)}
-
-    .bar{height:10px;background:#f1f3f5;border-radius:999px;border:1px solid var(--color-border);overflow:hidden}
-    .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--color-primary),var(--color-primary-dark));transition:width .6s ease}
-
-    .detay{display:none;margin-top:12px}
-    table{width:100%;border-collapse:collapse;border:1px solid var(--color-border);border-radius:10px;overflow:hidden;background:#fff}
+    /* Cards grid */
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-top:16px}
+    .card{
+      background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius);
+      box-shadow:var(--shadow-md);transition:transform .18s ease, box-shadow .18s ease;
+      overflow:hidden
+    }
+    .card:hover{transform:translateY(-2px);box-shadow:0 14px 26px rgba(0,0,0,.12)}
+    .card-head{display:flex;gap:8px;align-items:center;padding:12px 12px 0 12px}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid var(--color-border);background:var(--chip);font-size:12px}
+    .chip .dot{width:8px;height:8px;border-radius:50%;background:var(--color-primary)}
+    .ghost{margin-left:auto}
+    .media{margin:12px;border-radius:12px;overflow:hidden;border:1px solid var(--color-border)}
+    .media img{display:block;width:100%;height:220px;object-fit:cover;cursor:pointer;transition:transform .3s}
+    .media img:hover{transform:scale(1.01)}
+    .pill{position:absolute;right:12px;top:12px;background:var(--color-warning);color:#111;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:0 12px 12px}
+    .mini{border:1px solid var(--color-border);border-radius:12px;padding:10px;background:#fff}
+    .mini .label{font-size:12px;color:#6c757d;margin-bottom:4px}
+    .mini .num{font-size:20px;font-weight:800;color:var(--color-secondary)}
+    .bar{height:10px;background:#f1f3f5;border-radius:999px;border:1px solid var(--color-border);overflow:hidden;margin:0 12px 12px}
+    .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--color-primary),var(--color-primary-dark));transition:width .6s ease}
+    .details{display:none;padding:12px;border-top:1px dashed var(--color-border);background:#fff}
+    table{width:100%;border-collapse:collapse}
     th,td{padding:10px;border-top:1px solid var(--color-border);text-align:left}
-    thead th{background:#f1f3f5;color:#6c757d;font-weight:600}
+    thead th{background:#f6f7f8;color:#6c757d}
     tbody tr:hover{background:#fafafa}
 
     /* Lightbox */
     .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:9999}
-    .lightbox img{max-width:92vw;max-height:92vh;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,.4)}
-    .nav{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+    .lightbox img{max-width:92vw;max-height:92vh;border-radius:16px;box-shadow:0 20px 40px rgba(0,0,0,.4)}
+
+    /* Helpers */
+    .fade-in{animation:fade .25s ease both}
+    @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
   </style>
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <div class="ust">
-    <div class="nav">
+
+  <!-- Top bar -->
+  <header class="appbar">
+    <div class="appbar-inner">
+      <div class="brand"><span class="dot"></span> Canlı Satış & Stok</div>
       <a class="btn" href="/">🏠 Anasayfa</a>
-    </div>
-    <div class="zaman" id="zaman">Yükleniyor…</div>
-    <div class="arama">
-      <input id="filtreModel" type="text" placeholder="Model filtresi (örn: 099)">
+      <div class="spacer"></div>
+
+      <span class="hint" id="zaman">Yükleniyor…</span>
+      <input id="filtreModel" class="inp" type="text" placeholder="Model filtresi (örn: 099)" />
       <button class="btn btn-primary" id="uygulaBtn">Uygula</button>
-      <span class="mini">JSON: <code>/api/canli/ozet?model=099</code></span>
+      <button class="btn" id="yenileBtn">Yenile</button>
     </div>
-  </div>
+  </header>
 
-  <div class="panel-top">
-    <div class="kpi"><div class="title">Bugün Toplam Satış (Adet)</div><div class="value" id="kpiToplam">0</div></div>
-    <div class="chartbox"><canvas id="grafikTop"></canvas></div>
-  </div>
+  <main class="container">
+    <!-- KPI row -->
+    <section class="toprow">
+      <div class="kpi">
+        <div class="kpi-icon">₺</div>
+        <div>
+          <div class="title">Genel Ortalama Fiyat</div>
+          <div class="value" id="kpiAvg">₺0,00</div>
+        </div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-icon">🧮</div>
+        <div>
+          <div class="title">Bugün Toplam Satış (Adet)</div>
+          <div class="value" id="kpiToplam">0</div>
+        </div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-icon">📦</div>
+        <div>
+          <div class="title">Bugün Toplam Sipariş</div>
+          <div class="value" id="kpiOrders">0</div>
+        </div>
+      </div>
 
-  <div class="kartlar" id="kartlar"></div>
+      <div class="chartbox">
+        <canvas id="grafikTop" height="120"></canvas>
+      </div>
+    </section>
+
+    <!-- Cards -->
+    <section class="grid" id="kartlar"></section>
+  </main>
+
+  <!-- Lightbox -->
   <div class="lightbox" id="lightbox"><img id="lightImg" alt=""></div>
 
-  <script>
-  const elZaman=document.getElementById('zaman'), elKartlar=document.getElementById('kartlar');
-  const inpModel=document.getElementById('filtreModel'), btnUygula=document.getElementById('uygulaBtn'), elKpi=document.getElementById('kpiToplam');
+<script>
+  // Elements
+  const elZaman   = document.getElementById('zaman');
+  const elKartlar = document.getElementById('kartlar');
+  const elAvg     = document.getElementById('kpiAvg');
+  const elToplam  = document.getElementById('kpiToplam');
+  const elOrders  = document.getElementById('kpiOrders');
+  const inpModel  = document.getElementById('filtreModel');
+  const btnUygula = document.getElementById('uygulaBtn');
+  const btnYenile = document.getElementById('yenileBtn');
 
-  const ctx=document.getElementById('grafikTop').getContext('2d');
-  const chart=new Chart(ctx,{type:'bar',data:{labels:[],datasets:[{label:'Bugün Satış (adet)',data:[],backgroundColor:'rgba(183,110,121,0.45)',borderColor:'#B76E79',borderWidth:1}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+  // Chart.js
+  const ctx = document.getElementById('grafikTop').getContext('2d');
+  const chart = new Chart(ctx,{
+    type:'bar',
+    data:{labels:[],datasets:[{label:'Bugün Satış (adet)',data:[],backgroundColor:'rgba(183,110,121,0.45)',borderColor:'#B76E79',borderWidth:1}]},
+    options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}
+  });
 
-  function bedenSirala(b){const t=String(b??'').replace(',','.');const n=Number(t);return Number.isFinite(n)?[0,n]:[1,String(b??'')];}
-  function yuzde(a,b){if(!b)return 0;const p=Math.max(0,Math.min(100,Math.round((a/b)*100)));return p;}
-  function formatTL(x){const n=Number(x)||0;return n.toLocaleString('tr-TR',{style:'currency',currency:'TRY',minimumFractionDigits:2,maximumFractionDigits:2});}
+  // Utils
+  const tl = v => (Number(v)||0).toLocaleString('tr-TR',{style:'currency',currency:'TRY',minimumFractionDigits:2,maximumFractionDigits:2});
+  const bedenKey = b => { const t=String(b??'').replace(',','.'); const n=Number(t); return Number.isFinite(n)?[0,n]:[1,String(b??'')]; };
+  const pct = (a,b)=>{ if(!b) return 0; return Math.max(0,Math.min(100,Math.round((a/b)*100))); };
 
-  function render(kartlar,ts,toplam){
-    elZaman.textContent='Güncellendi: '+ts; elKpi.textContent=toplam??0;
+  function render(kartlar, ts, toplamAdet, toplamSiparis, genelAvg){
+    // KPI
+    elZaman.textContent = 'Güncellendi: ' + ts;
+    elToplam.textContent = toplamAdet ?? 0;
 
-    const top=[...kartlar].sort((a,b)=>b.toplam_siparis_bugun-a.toplam_siparis_bugun).slice(0,10);
-    chart.data.labels=top.map(k=>`${k.model} ${k.renk}`); chart.data.datasets[0].data=top.map(k=>k.toplam_siparis_bugun); chart.update();
+    // Genel ortalama fiyat: backend yoksa fallback hesapla (yaklaşık, sipariş ağırlıklı)
+    if (typeof genelAvg === 'number') {
+      elAvg.textContent = tl(genelAvg);
+    } else {
+      const s = kartlar.reduce((acc,k)=>{acc.t+=k.toplam_siparis_bugun||0; acc.m+=(k.ortalama_fiyat||0)*(k.toplam_siparis_bugun||0); return acc;},{t:0,m:0});
+      elAvg.textContent = tl(s.t>0 ? s.m/s.t : 0);
+    }
 
-    elKartlar.innerHTML='';
+    // Toplam sipariş sayısı: yoksa gizleme
+    if (typeof toplamSiparis === 'number') {
+      elOrders.textContent = toplamSiparis;
+    } else {
+      elOrders.textContent = '—';
+    }
+
+    // Chart (Top 10)
+    const top = [...kartlar].sort((a,b)=>b.toplam_siparis_bugun-a.toplam_siparis_bugun).slice(0,10);
+    chart.data.labels = top.map(k=>`${k.model} ${k.renk}`);
+    chart.data.datasets[0].data = top.map(k=>k.toplam_siparis_bugun);
+    chart.update();
+
+    // Cards
+    elKartlar.innerHTML = '';
     kartlar.forEach((k,idx)=>{
-      const div=document.createElement('div'); div.className='kart'+(k.dusuk_stok?' uyari':'');
+      const div = document.createElement('article');
+      div.className='card fade-in';
       const detayId='detay-'+idx;
+      const cap = (k.toplam_stok||0)+(k.toplam_siparis_bugun||0);
+      const prc = pct(k.toplam_stok||0, cap || (k.toplam_stok||1));
+      const avg = tl(k.ortalama_fiyat||0);
 
-      const cap=k.toplam_stok+k.toplam_siparis_bugun; const pct=yuzde(k.toplam_stok,cap||k.toplam_stok||1);
-      const avg=formatTL(k.ortalama_fiyat);
-
-      div.innerHTML=`
-        ${k.dusuk_stok?'<span class="ribbon">DÜŞÜK STOK</span>':''}
-        <div class="meta">
+      div.innerHTML = `
+        ${k.dusuk_stok ? `<span class="pill">DÜŞÜK STOK</span>` : ``}
+        <div class="card-head">
           <span class="chip">${k.model ?? '-'}</span>
           <span class="chip"><span class="dot"></span>${k.renk ?? '-'}</span>
           <button class="btn ghost" data-target="${detayId}">Detay</button>
         </div>
 
-        ${k.image?`<div class="media"><img class="card-img" src="${k.image}" alt="${k.model ?? ''} ${k.renk ?? ''}"></div>`:''}
+        ${k.image ? `
+          <div class="media"><img class="card-img" src="${k.image}" alt="${k.model ?? ''} ${k.renk ?? ''}"></div>
+        ` : ``}
 
-        <div class="istat">
-          <div class="kutu"><div class="etik">Bugün Toplam Sipariş (Gider)</div><div class="deger">${k.toplam_siparis_bugun}</div></div>
-          <div class="kutu ${k.dusuk_stok?'warn':'ok'}"><div class="etik">Güncel Stok</div><div class="deger">${k.toplam_stok}</div></div>
-          <div class="kutu"><div class="etik">Ortalama Fiyat</div><div class="deger">${avg}</div></div>
+        <div class="stats">
+          <div class="mini">
+            <div class="label">Bugün Toplam (Gider)</div>
+            <div class="num">${k.toplam_siparis_bugun ?? 0}</div>
+          </div>
+          <div class="mini">
+            <div class="label">Güncel Stok</div>
+            <div class="num">${k.toplam_stok ?? 0}</div>
+          </div>
+          <div class="mini">
+            <div class="label">Ortalama Fiyat</div>
+            <div class="num">${avg}</div>
+          </div>
         </div>
 
-        <div class="bar" title="Stok doluluk"><i style="width:${pct}%"></i></div>
+        <div class="bar"><i style="width:${prc}%"></i></div>
 
-        <div class="detay" id="${detayId}">
+        <div class="details" id="${detayId}">
           <table>
             <thead><tr><th>Beden</th><th>Bugün</th><th>Stok</th></tr></thead>
             <tbody>
-              ${[...k.detay].sort((a,b)=>{const A=bedenSirala(a.beden),B=bedenSirala(b.beden);return A[0]-B[0]||A[1]-B[1];}).map(d=>`
-                <tr><td>${d.beden ?? '-'}</td><td>${d.siparis}</td><td>${d.stok}</td></tr>
+              ${[...(k.detay||[])].sort((a,b)=>{
+                  const A=bedenKey(a.beden), B=bedenKey(b.beden);
+                  return A[0]-B[0] || A[1]-B[1];
+                }).map(d=>`
+                <tr>
+                  <td>${d.beden ?? '-'}</td>
+                  <td>${d.siparis ?? 0}</td>
+                  <td>${d.stok ?? 0}</td>
+                </tr>
               `).join('')}
             </tbody>
           </table>
-        </div>`;
+        </div>
+      `;
       elKartlar.appendChild(div);
     });
 
+    // Toggle detay
     elKartlar.querySelectorAll('.btn.ghost').forEach(btn=>{
-      btn.onclick=()=>{const id=btn.getAttribute('data-target');const d=document.getElementById(id);const acik=d.style.display==='block';d.style.display=acik?'none':'block';btn.textContent='Detay';};
+      btn.onclick = ()=>{
+        const d = document.getElementById(btn.getAttribute('data-target'));
+        const open = d.style.display==='block';
+        d.style.display = open?'none':'block';
+      };
     });
 
     // Lightbox
     elKartlar.querySelectorAll('.card-img').forEach(img=>{
-      img.onclick=()=>{const lb=document.getElementById('lightbox');const li=document.getElementById('lightImg');li.src=img.getAttribute('src');lb.style.display='flex';};
+      img.onclick=()=>{
+        const lb=document.getElementById('lightbox');
+        const li=document.getElementById('lightImg');
+        li.src=img.getAttribute('src'); lb.style.display='flex';
+      };
     });
   }
 
-  document.getElementById('lightbox').onclick=(e)=>{if(e.target.id==='lightbox'||e.target.id==='lightImg'){e.currentTarget.style.display='none';}};
+  // Lightbox close
+  document.getElementById('lightbox').onclick=(e)=>{
+    if(e.target.id==='lightbox'||e.target.id==='lightImg'){ e.currentTarget.style.display='none'; }
+  };
+  document.addEventListener('keydown', e=>{
+    if(e.key==='Escape'){ document.getElementById('lightbox').style.display='none'; }
+  });
 
+  // Data hooks
   async function yukle(model){
-    const u=model?`/api/canli/ozet?model=${encodeURIComponent(model)}`:'/api/canli/ozet';
-    const r=await fetch(u); const j=await r.json(); render(j.kartlar,j.guncellendi,j.toplam_satis);
+    const u = model ? `/api/canli/ozet?model=${encodeURIComponent(model)}` : '/api/canli/ozet';
+    const r = await fetch(u);
+    const j = await r.json();
+    render(j.kartlar, j.guncellendi, j.toplam_satis, j.toplam_siparis_sayisi, j.genel_ortalama_fiyat);
   }
-  btnUygula.onclick=()=>{const m=inpModel.value.trim(); startSSE(m); yukle(m);};
 
   let ev=null;
   function startSSE(model){
     if(ev){ev.close();ev=null;}
     const url='/api/canli/akis'+(model?`?model=${encodeURIComponent(model)}`:'');
     ev=new EventSource(url);
-    ev.onmessage=(e)=>{try{const j=JSON.parse(e.data); render(j.kartlar,j.guncellendi,j.toplam_satis);}catch(err){console.error(err);}};
+    ev.onmessage=(e)=>{
+      try{
+        const j=JSON.parse(e.data);
+        render(j.kartlar, j.guncellendi, j.toplam_satis, j.toplam_siparis_sayisi, j.genel_ortalama_fiyat);
+      }catch(err){console.error(err);}
+    };
   }
 
+  // Events
+  btnUygula.onclick=()=>{ const m=inpModel.value.trim(); startSSE(m); yukle(m); };
+  btnYenile.onclick = ()=>{ yukle(inpModel.value.trim()); };
+
+  // Init
   startSSE(''); yukle('');
-  </script>
+</script>
+
 </body>
 </html>
