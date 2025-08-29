@@ -11,7 +11,8 @@ canli_panel_bp = Blueprint("canli_panel", __name__)
 # ── Ayarlar
 IST = ZoneInfo("Europe/Istanbul")
 DUSUK_STOK_ESIK = 5
-AKIS_ARALIGI_SANIYE = 300
+AKIS_ARALIGI_SANIYE = 300   # veriyi ne sıklıkla YENİDEN HESAPLAYALIM
+PING_INTERVAL = 10
 
 def now_tr_str():
     return datetime.now(IST).strftime("%d/%m/%Y %H:%M")
@@ -490,33 +491,46 @@ def ozet_json():
     })
 
 
-
 @canli_panel_bp.route("/api/canli/akis")
 def akis_sse():
     tek_model = (request.args.get("model") or "").strip() or None
+
     def _gen():
+        next_refresh_at = 0
+        last_payload = None
+
         while True:
-            # kartlar
-            kartlar, total_sold = _build_cards_from_orders()
-            # toplam sipariş ve genel ortalama
-            qty_map, amt_map = _collect_orders_today_strict()
-            toplam_siparis_sayisi = _count_orders_today_distinct()
-            toplam_adet_all = sum(int(v) for v in qty_map.values())
-            toplam_tutar_all = sum(float(v) for v in amt_map.values() if v is not None)
-            genel_ortalama_fiyat = round((toplam_tutar_all / toplam_adet_all), 2) if toplam_adet_all > 0 else 0.0
+            now = time.time()
+            # Veriyi sadece periyodik olarak yeniden hesapla
+            if now >= next_refresh_at or last_payload is None:
+                # kartlar
+                kartlar, total_sold = _build_cards_from_orders()
+                qty_map, amt_map = _collect_orders_today_strict()
+                toplam_siparis_sayisi = _count_orders_today_distinct()
 
-            if tek_model:
-                kartlar = [k for k in kartlar if str(k["model"]) == tek_model]
+                toplam_adet_all  = sum(int(v) for v in qty_map.values())
+                toplam_tutar_all = sum(float(v) for v in amt_map.values() if v is not None)
+                genel_ortalama_fiyat = round((toplam_tutar_all / toplam_adet_all), 2) if toplam_adet_all > 0 else 0.0
 
-            payload = {
-                "guncellendi": now_tr_str(),
-                "toplam_satis": total_sold,
-                "toplam_siparis_sayisi": toplam_siparis_sayisi,
-                "genel_ortalama_fiyat": genel_ortalama_fiyat,
-                "kartlar": kartlar
-            }
-            yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
-            time.sleep(AKIS_ARALIGI_SANIYE)
+                if tek_model:
+                    kartlar = [k for k in kartlar if str(k["model"]) == tek_model]
+
+                last_payload = {
+                    "guncellendi": now_tr_str(),
+                    "toplam_satis": total_sold,
+                    "toplam_siparis_sayisi": toplam_siparis_sayisi,
+                    "genel_ortalama_fiyat": genel_ortalama_fiyat,
+                    "kartlar": kartlar
+                }
+                next_refresh_at = now + AKIS_ARALIGI_SANIYE
+
+                # Yeni veri çıktığında hemen gönder
+                yield f"data: {json.dumps(last_payload, ensure_ascii=False)}\n\n"
+
+            # Her 10 sn’de bir ping (veya aynı payload’ı tekrar) gönder → bağlantı düşmez
+            yield ": ping\n\n"
+            time.sleep(PING_INTERVAL)
+
     headers = {"Content-Type":"text/event-stream","Cache-Control":"no-cache","Connection":"keep-alive"}
     return Response(stream_with_context(_gen()), headers=headers)
 

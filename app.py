@@ -271,8 +271,15 @@ scheduler = BackgroundScheduler(
 ENABLE_JOBS = str(os.getenv("DISABLE_JOBS", "0")).lower() not in ("1", "true", "yes")
 DISABLED_IDS = set([s.strip() for s in os.getenv("DISABLE_JOBS_IDS", "").split(",") if s.strip()])
 
-# Reloader emniyeti (flask run reloader'ında sadece main process işlesin)
-is_main_proc = (not app.debug) or (os.getenv("WERKZEUG_RUN_MAIN") == "true")
+# Gunicorn veya zorla çalıştırma bayrağı
+is_gunicorn = "gunicorn" in os.environ.get("SERVER_SOFTWARE", "").lower() \
+              or "GUNICORN_CMD_ARGS" in os.environ
+force_sched = os.getenv("FORCE_SCHEDULER", "0").lower() in ("1", "true", "yes")
+
+# Eski satırın yerine bu satırı kullan:
+is_main_proc = force_sched or is_gunicorn or (not app.debug) or (os.getenv("WERKZEUG_RUN_MAIN") == "true")
+
+
 
 # Çoklu worker’da yalnız 1 süreç scheduler/push çalıştırsın (leader lock)
 _leader_fd = None          # Unix
