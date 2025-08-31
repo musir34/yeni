@@ -665,3 +665,73 @@ class KasaKategori(db.Model):
     
     def __repr__(self):
         return f"<KasaKategori {self.kategori_adi}>"
+        
+
+
+        # --- GÖREV MODELLERİ (temiz) ---
+
+class TaskTemplate(db.Model):
+    __tablename__ = "task_templates"
+    id             = db.Column(db.Integer, primary_key=True)
+    assignee       = db.Column(db.String(80),  nullable=False)
+    assignee_email = db.Column(db.String(120))
+    title          = db.Column(db.String(120), nullable=False)
+    due_h          = db.Column(db.Integer,      nullable=False, default=11)
+    due_m          = db.Column(db.Integer,      nullable=False, default=0)
+    weekdays       = db.Column(db.String(20),   nullable=False, default="0,1,2,3,4")
+    priority       = db.Column(db.Integer,      nullable=False, default=2)
+    proof_required = db.Column(db.Boolean,      nullable=False, default=False)
+    active         = db.Column(db.Boolean,      nullable=False, default=True)
+
+    __table_args__ = (
+        db.UniqueConstraint("assignee", "title", name="uq_ttpl_assignee_title"),
+    )
+
+
+class Task(db.Model):
+    __tablename__ = "tasks"
+
+    id              = db.Column(db.Integer, primary_key=True)
+    assignee        = db.Column(db.String(80),  nullable=False)
+    assignee_email  = db.Column(db.String(120))
+    title           = db.Column(db.String(120), nullable=False)
+    date_           = db.Column(db.Date,        nullable=False, index=True)
+    due             = db.Column(db.DateTime(timezone=True), nullable=False, index=True)  # klasik due (esnekte yedek)
+    priority        = db.Column(db.Integer,     nullable=False, default=2)
+    status          = db.Column(db.String(16),  nullable=False, default="bekliyor")
+    proof_required  = db.Column(db.Boolean,     nullable=False, default=False)
+    proof_url       = db.Column(db.String(300))
+    reminded_30     = db.Column(db.Boolean,     nullable=False, default=False)
+    reminded_10     = db.Column(db.Boolean,     nullable=False, default=False)
+
+    # --- ESNEK GÖREV alanları ---
+    flexible        = db.Column(db.Boolean,     nullable=False, default=True)          # çalışan planlar mı?
+    expected_window = db.Column(db.String(12),  nullable=False, default="this_week")   # today|this_week|custom
+    sla_latest      = db.Column(db.Date)                                               # en geç gün (opsiyonel)
+    acceptance      = db.Column(db.Text)                                               # kabul kriteri (opsiyonel)
+    effort          = db.Column(db.Integer,     default=1)                              # iş yükü puanı
+    commit_due      = db.Column(db.DateTime(timezone=True), index=True)                 # çalışanın taahhüt ettiği teslim
+    commit_at       = db.Column(db.DateTime(timezone=True))                             # taahhüt zamanı
+
+    __table_args__ = (
+        db.UniqueConstraint("assignee", "title", "date_", name="uq_tasks_assignee_title_date"),
+        db.Index("ix_tasks_assignee_date", "assignee", "date_"),
+        db.Index("ix_tasks_commit_due", "commit_due"),
+    )
+
+
+
+
+class MasterTask(db.Model):
+    __tablename__ = "master_tasks"
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(120), unique=True, nullable=False)
+    description = db.Column(db.Text)
+    default_due_h = db.Column(db.Integer, default=11, nullable=False)
+    default_due_m = db.Column(db.Integer, default=0,  nullable=False)
+    default_weekdays = db.Column(db.String(20), default="0,1,2,3,4", nullable=False)
+    default_priority = db.Column(db.Integer, default=2, nullable=False)
+    proof_required = db.Column(db.Boolean, default=False, nullable=False)
+    active = db.Column(db.Boolean, default=True, nullable=False)
+
+        

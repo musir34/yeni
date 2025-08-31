@@ -22,10 +22,7 @@ from user_logs import log_user_action
 from celery_app import init_celery
 from sqlalchemy import text
 from trendyol_api import SUPPLIER_ID, API_KEY, API_SECRET
-
-
-# APScheduler
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.background import BackgroundScheduler  # <-- DOĞRU YER
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Platform-safe lock import (Unix: fcntl, Windows: msvcrt+tempfile)
@@ -54,7 +51,6 @@ if platform.system() in ('Linux', 'Darwin'):  # Windows'ta tzset yok
     except Exception:
         pass
 
-
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -75,7 +71,6 @@ print("DB URL:", os.getenv("DATABASE_URL"))
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # JINJA FİLTRELERİ
@@ -195,8 +190,10 @@ def push_central_stock_to_trendyol():
                 return []
 
         def _i(x, d=0):
-            try: return int(str(x).strip())
-            except Exception: return d
+            try:
+                return int(str(x).strip())
+            except Exception:
+                return d
 
         rows = CentralStock.query.all()
         if not rows:
@@ -278,8 +275,6 @@ force_sched = os.getenv("FORCE_SCHEDULER", "0").lower() in ("1", "true", "yes")
 
 # Eski satırın yerine bu satırı kullan:
 is_main_proc = force_sched or is_gunicorn or (not app.debug) or (os.getenv("WERKZEUG_RUN_MAIN") == "true")
-
-
 
 # Çoklu worker’da yalnız 1 süreç scheduler/push çalıştırsın (leader lock)
 _leader_fd = None          # Unix
@@ -364,6 +359,9 @@ if ENABLE_JOBS and is_main_proc:
     if _leader_ok:
         scheduler.start()
         schedule_jobs()
+        # GÖREV JOBLARI (scheduler start edildikten sonra ekle)
+        from gorev import attach_jobs
+        attach_jobs(scheduler)
         logger.info("Scheduler started (ENABLE_JOBS=on, leader ok).")
     else:
         logger.info("Scheduler NOT started (ENABLE_JOBS=on, leader=false)")

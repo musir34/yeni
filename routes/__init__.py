@@ -35,6 +35,7 @@ def register_blueprints(app):
     from profit import profit_bp
     from canli_panel import canli_panel_bp
     from siparis_hazirla import siparis_hazirla_bp
+    from gorev import gorev_bp, attach_jobs
 
 
     # Register all blueprints
@@ -72,5 +73,6 @@ def register_blueprints(app):
         profit_bp,
         canli_panel_bp,
         siparis_hazirla_bp,
+        gorev_bp,
     ]:
         app.register_blueprint(bp)

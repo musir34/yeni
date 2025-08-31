@@ -89,6 +89,29 @@
       <i class="fas fa-home"></i> Anasayfa
     </a>
 
+    <button class="btn btn-warning dropdown-toggle" type="button" id="kullaniciMenu"
+        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+  Kullanıcı İşlemleri
+</button>
+<div class="dropdown-menu" aria-labelledby="kullaniciMenu">
+  <a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a>
+
+  <a class="dropdown-item" href="{{ url_for('rapor_gir.giris') }}">
+    <i class="fas fa-file-alt"></i> Raporlama
+  </a>
+
+  {% if session.get('role') in ['admin','manager'] %}
+    <div class="dropdown-divider"></div>
+    <a class="dropdown-item" href="{{ url_for('gorev.gorev_panel') }}">
+      <i class="fas fa-tasks"></i> Görev Paneli
+    </a>
+    <a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}">
+      <i class="fas fa-history"></i> Kullanıcı Hareketleri
+    </a>
+  {% endif %}
+</div>
+
+
     <!-- ARŞİV ÜSTTEKİ BUTONDAN ÇIKARILDI, AŞAĞIDAKİ MENÜYE TAŞINDI -->
     <a href="{{ url_for('siparis_hazirla.index') }}" class="btn btn-danger btn-pulse" title="Sipariş Hazırla">
       <i class="fas fa-box-open"></i> Sipariş Hazırla
@@ -183,8 +206,8 @@
         <a class="btn btn-warning m-1" href="{{ url_for('raf.raf_form_sayfasi') }}">
           <i class="fas fa-archive"></i> Raflar
         </a>
-        <a class="btn btn-info m-1" href="{{ url_for('analysis.sales_analysis') }}">
-          <i class="fas fa-chart-line"></i> Satış Analizi
+        <a class="btn btn-info m-1" href="{{ url_for('canli_panel.canli_panel_sayfa') }}">
+          <i class="fas fa-chart-line"></i> 📊 Canlı Satış & Stok
         </a>
         <a class="btn btn-secondary m-1" href="{{ url_for('display_archive') }}">
           <i class="fas fa-box"></i> Arşiv

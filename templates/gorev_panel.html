@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>Görev Paneli</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap 4 -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+  <!-- Inter font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome (opsiyonel) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+  <style>
+    :root{
+      --color-primary:#B76E79; --color-primary-dark:#A05F6A;
+      --color-secondary:#212529; --color-text:#343a40;
+      --color-bg:#f8f9fa; --color-bg-light:#ffffff; --color-white:#fff;
+      --color-border:#dee2e6; --color-success:#3ac47d; --color-danger:#d92550;
+
+      --font-family-base:'Inter',sans-serif;
+      --radius:.75rem; --shadow-sm:0 1px 3px rgba(0,0,0,.04);
+      --shadow-md:0 8px 20px rgba(0,0,0,.08); --transition:all .25s ease-in-out;
+
+      --grad-primary:linear-gradient(135deg,var(--color-primary),var(--color-primary-dark));
+      --grad-secondary:linear-gradient(135deg,#2b3035,var(--color-secondary));
+      --grad-success:linear-gradient(135deg,#31b66f,var(--color-success));
+      --grad-danger:linear-gradient(135deg,#b71f45,var(--color-danger));
+      --grad-info:linear-gradient(135deg,#667db6,#0082c8);
+    }
+
+    body{background:var(--color-bg);font-family:var(--font-family-base);color:var(--color-text);margin:0}
+    .container-xl{max-width:1320px}
+    .page-title{font-weight:700}
+    .toolbar{background:var(--color-bg-light);border:1px solid var(--color-border);border-radius:var(--radius);padding:12px 16px;box-shadow:var(--shadow-sm)}
+    .card-soft{border:none;border-radius:var(--radius);background:var(--color-bg-light);box-shadow:var(--shadow-md);overflow:hidden}
+    .btn-grad{border:none;color:#fff;border-radius:12px;padding:.6rem 1rem;box-shadow:0 10px 18px rgba(0,0,0,.12);transition:var(--transition)}
+    .btn-grad:hover{transform:translateY(-2px);box-shadow:0 16px 26px rgba(0,0,0,.18);color:#fff}
+    .btn-grad-primary{background:var(--grad-primary)}
+    .btn-grad-secondary{background:var(--grad-secondary)}
+    .btn-grad-success{background:var(--grad-success)}
+    .btn-grad-danger{background:var(--grad-danger)}
+    .btn-grad-info{background:var(--grad-info)}
+    .form-control,.custom-select{border-radius:10px;border-color:var(--color-border)}
+    .section-title{font-weight:700;margin-bottom:.75rem}
+    .muted{color:#666}
+    .row-gap{row-gap:1.25rem}
+    .table thead th{border-top:0}
+    .table td,.table th{vertical-align:middle}
+    .table tbody tr{height:56px}
+    .badge-acil{background:var(--color-danger)}
+    .badge-normal{background:#5aa8e0}
+    .badge-dusuk{background:#adb5bd;color:#212529}
+    .nav-pills .nav-link{border-radius:999px}
+    .nav-pills .nav-link.active{background:var(--grad-primary)}
+    .empty{padding:24px;color:#6c757d;text-align:center}
+    .card-body-lg{padding:1.25rem 1.25rem}
+  </style>
+</head>
+<body>
+
+<div class="container-xl py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="page-title mb-0">🗂️ Görev Paneli</h3>
+    <a href="{{ url_for('home.home') }}" class="btn btn-sm btn-outline-secondary">Anasayfa</a>
+  </div>
+
+  <!-- ÜST ARAÇ ÇUBUĞU -->
+  <div class="toolbar d-flex flex-wrap align-items-center justify-content-between mb-4">
+    <div class="d-flex flex-wrap align-items-center">
+      <form action="{{ url_for('gorev.bugun_dagit') }}" method="post" class="mr-2 mb-2">
+        <button class="btn btn-grad btn-grad-primary"><i class="fas fa-bolt"></i> Bugünü Dağıt</button>
+      </form>
+      <form action="{{ url_for('gorev.hafta_dagit') }}" method="post" class="mr-2 mb-2">
+        <button class="btn btn-grad btn-grad-info"><i class="fas fa-calendar-week"></i> Bu Haftayı Dağıt</button>
+      </form>
+      <button class="btn btn-grad btn-grad-secondary mb-2" data-toggle="modal" data-target="#sideModal">
+        <i class="fas fa-plus-circle"></i> Yan Görev Ekle
+      </button>
+    </div>
+    <div class="text-muted small mb-2">
+      <i class="far fa-lightbulb"></i> Haftalık ana görevler Pazartesi 00:00 otomatik. Günlük ekstra görevler eklediğin anki saatle görünür.
+    </div>
+  </div>
+
+  <div class="row row-gap">
+    <!-- Sol: Şablon + Ana Görevler -->
+    <div class="col-lg-5">
+      <div class="card-soft p-3 mb-3">
+        <ul class="nav nav-pills mb-3" role="tablist">
+          <li class="nav-item">
+            <a class="nav-link active" id="tab-sablon" data-toggle="pill" href="#pane-sablon" role="tab">Şablon Oluştur</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="tab-master" data-toggle="pill" href="#pane-master" role="tab">Ana Görevler</a>
+          </li>
+        </ul>
+
+        <div class="tab-content">
+          <!-- TAB 1: ŞABLON OLUŞTUR (gün/saat YOK) -->
+          <div class="tab-pane fade show active" id="pane-sablon" role="tabpanel" aria-labelledby="tab-sablon">
+            <div class="section-title">Yeni Görev (Şablon)</div>
+            <form method="POST" action="{{ url_for('gorev.sablon_ekle_ui') }}">
+              <div class="form-group">
+                <label>Kullanıcı</label>
+                <select name="assignee_user_id" class="custom-select" required>
+                  <option value="">Seçin…</option>
+                  {% for u in users %}
+                    <option value="{{ u.id }}">{{ u.first_name }} {{ u.last_name }} — {{ u.email }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Görev Adı</label>
+                <input type="text" class="form-control" name="title" placeholder="Örn: Instagram Post" required>
+              </div>
+              <div class="form-group">
+                <label>Öncelik</label>
+                <select name="priority" class="custom-select">
+                  <option value="1">Acil</option>
+                  <option value="2" selected>Normal</option>
+                  <option value="3">Düşük</option>
+                </select>
+              </div>
+              <div class="custom-control custom-checkbox mb-3">
+                <input type="checkbox" class="custom-control-input" id="proof_required" name="proof_required">
+                <label class="custom-control-label" for="proof_required">Kanıt İstensin (opsiyonel)</label>
+              </div>
+              <div class="custom-control custom-switch">
+                <input type="checkbox" class="custom-control-input" id="active" name="active" checked>
+                <label class="custom-control-label" for="active">Aktif</label>
+              </div>
+
+              <div class="mt-3 d-flex">
+                <button class="btn btn-grad btn-grad-primary mr-2"><i class="far fa-save"></i> ŞABLON KAYDET</button>
+                <button formaction="{{ url_for('gorev.ekstra_ekle_ui') }}" class="btn btn-grad btn-grad-secondary">
+                  <i class="fas fa-plus"></i> BUGÜNE EKSTRA
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- TAB 2: ANA GÖREVLER (Katalog) — gün/saat alanları YOK -->
+          <div class="tab-pane fade" id="pane-master" role="tabpanel" aria-labelledby="tab-master">
+            <div class="section-title">Ana Görev Ekle</div>
+            <form id="masterForm" onsubmit="return false;">
+              <div class="form-group">
+                <label>Başlık</label>
+                <input type="text" class="form-control" id="m_title" placeholder="Örn: Instagram Post" required>
+              </div>
+              <div class="form-group">
+                <label>Açıklama (opsiyonel)</label>
+                <textarea class="form-control" id="m_desc" rows="2" placeholder="Kısa not…"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Öncelik</label>
+                <select id="m_priority" class="custom-select">
+                  <option value="1">Acil</option>
+                  <option value="2" selected>Normal</option>
+                  <option value="3">Düşük</option>
+                </select>
+              </div>
+              <div class="custom-control custom-checkbox mb-3">
+                <input type="checkbox" class="custom-control-input" id="m_proof">
+                <label class="custom-control-label" for="m_proof">Kanıt İstensin</label>
+              </div>
+              <div class="custom-control custom-switch">
+                <input type="checkbox" class="custom-control-input" id="m_active" checked>
+                <label class="custom-control-label" for="m_active">Aktif</label>
+              </div>
+
+              <div class="mt-3 d-flex">
+                <button id="btnMasterSave" class="btn btn-grad btn-grad-primary mr-2"><i class="far fa-save"></i> KATALOĞA EKLE</button>
+              </div>
+            </form>
+
+            <hr class="my-3">
+
+            <div class="section-title">Ana Görev Listesi</div>
+            <div class="card-soft card-body-lg p-0">
+              <div class="table-responsive">
+                <table class="table table-sm mb-0" id="masterTable">
+                  <thead class="thead-light">
+                    <tr>
+                      <th>Başlık</th><th>Öncelik</th><th>Aktif</th><th style="width:220px">İşlem</th>
+                    </tr>
+                  </thead>
+                  <tbody><!-- JS dolduracak --></tbody>
+                </table>
+              </div>
+              <div class="empty d-none" id="masterEmpty">Henüz ana görev yok.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-soft p-3">
+        <div class="section-title">💡 İpucu</div>
+        <div class="muted">Ana görevler haftalık otomatik üretilir. Çalışanlar kendi saatini taahhüt eder.</div>
+      </div>
+    </div>
+
+    <!-- Sağ: Bugünün Görevleri + Şablonlar -->
+    <div class="col-lg-7">
+      <div class="card-soft card-body-lg mb-3">
+        <div class="section-title mb-0">Bugünün Görevleri</div>
+        <div class="table-responsive mt-2">
+          <table class="table table-sm mb-0" id="todayTable">
+            <thead class="thead-light">
+              <tr>
+                <th>Kullanıcı</th><th>Görev</th><th>Zaman</th><th>Öncelik</th><th>Durum</th><th style="width:220px">İşlem</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for t in tasks_today %}
+              <tr data-task-id="{{ t.id }}">
+                <td>{{ t.assignee }}</td>
+                <td>{{ t.title }}</td>
+                <td>{{ (t.created_at or t.due).astimezone().strftime('%H:%M') }}</td>
+                <td>
+                  {% if t.priority==1 %}<span class="badge badge-acil">Acil</span>
+                  {% elif t.priority==3 %}<span class="badge badge-dusuk">Düşük</span>
+                  {% else %}<span class="badge badge-normal">Normal</span>{% endif %}
+                </td>
+                <td>
+                  <select class="custom-select custom-select-sm status-select" data-id="{{ t.id }}">
+                    {% for s in ['bekliyor','çalışılıyor','bitti','başarısız'] %}
+                      <option value="{{ s }}" {% if t.status==s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                  </select>
+                </td>
+                <td class="text-nowrap">
+                  <button class="btn btn-sm btn-outline-secondary mr-1 btn-note" data-id="{{ t.id }}"><i class="far fa-sticky-note"></i> Not</button>
+                  <button class="btn btn-sm btn-grad btn-grad-info mr-1 btn-task-re" data-id="{{ t.id }}"><i class="fas fa-user-edit"></i> Ata</button>
+                  <button class="btn btn-sm btn-grad btn-grad-danger btn-task-del" data-id="{{ t.id }}"><i class="fas fa-trash"></i> Sil</button>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="6" class="text-center text-muted">Bugün için görev yok.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card-soft card-body-lg">
+        <div class="section-title">Şablonlar</div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0" id="tplTable">
+            <thead class="thead-light">
+              <tr><th>Kullanıcı</th><th>Görev</th><th>Öncelik</th><th>Aktif</th><th style="width:240px">İşlem</th></tr>
+            </thead>
+            <tbody>
+              {% for s in templates %}
+              <tr data-tpl-id="{{ s.id }}">
+                <td>{{ s.assignee }}</td>
+                <td>{{ s.title }}</td>
+                <td>
+                  {% if s.priority==1 %}<span class="badge badge-acil">Acil</span>
+                  {% elif s.priority==3 %}<span class="badge badge-dusuk">Düşük</span>
+                  {% else %}<span class="badge badge-normal">Normal</span>{% endif %}
+                </td>
+                <td>{% if s.active %}<span class="badge badge-success">Açık</span>{% else %}<span class="badge badge-secondary">Kapalı</span>{% endif %}</td>
+                <td class="text-nowrap">
+                  <button class="btn btn-sm btn-grad btn-grad-info mr-1 btn-tpl-re" data-id="{{ s.id }}"><i class="fas fa-user-edit"></i> Ata</button>
+                  <button class="btn btn-sm btn-grad btn-grad-danger btn-tpl-del" data-id="{{ s.id }}"><i class="fas fa-trash"></i> Sil</button>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" class="text-center text-muted">Şablon bulunamadı.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- YAN GÖREV MODAL -->
+<div class="modal fade" id="sideModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Yan Görev Ekle</h5>
+      <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Kullanıcı</label>
+        <select id="side_user" class="custom-select">
+          {% for u in users %}
+            <option value="{{ u.id }}">{{ u.first_name }} {{ u.last_name }} — {{ u.email }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Başlık</label>
+        <input type="text" id="side_title" class="form-control" placeholder="Örn: Ürün sayfası hatası çözüm">
+      </div>
+      <div class="form-row">
+        <div class="form-group col-6">
+          <label>Öncelik</label>
+          <select id="side_priority" class="custom-select">
+            <option value="1">Acil</option>
+            <option value="2" selected>Normal</option>
+            <option value="3">Düşük</option>
+          </select>
+        </div>
+        <div class="form-group col-6">
+          <label>İş Yükü</label>
+          <input type="number" id="side_effort" class="form-control" min="1" max="8" value="1">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Kısa Not / Kabul Kriteri (opsiyonel)</label>
+        <textarea id="side_acceptance" class="form-control" rows="2"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-grad btn-grad-secondary" data-dismiss="modal">İptal</button>
+      <button id="btnSideSave" class="btn btn-grad btn-grad-primary">Kaydet</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- RE-ASSIGN MODALS (Task/Template) -->
+<div class="modal fade" id="taskReModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Görevi Ata</h5>
+      <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="re_task_id">
+      <div class="form-group">
+        <label>Yeni Kullanıcı</label>
+        <select id="re_task_user" class="custom-select">
+          {% for u in users %}
+            <option value="{{ u.id }}">{{ u.first_name }} {{ u.last_name }} — {{ u.email }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-grad btn-grad-secondary" data-dismiss="modal">İptal</button>
+      <button id="btnTaskReDo" class="btn btn-grad btn-grad-primary">Ata</button>
+    </div>
+  </div></div>
+</div>
+
+<div class="modal fade" id="tplReModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Şablonu Ata</h5>
+      <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="re_tpl_id">
+      <div class="form-group">
+        <label>Yeni Kullanıcı</label>
+        <select id="re_tpl_user" class="custom-select">
+          {% for u in users %}
+            <option value="{{ u.id }}">{{ u.first_name }} {{ u.last_name }} — {{ u.email }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-grad btn-grad-secondary" data-dismiss="modal">İptal</button>
+      <button id="btnTplReDo" class="btn btn-grad btn-grad-primary">Ata</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- jQuery + Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.bundle.min.js"></script>
+
+<script>
+(function(){
+  function toast(msg){ alert(msg); }
+
+  const URLS = {
+    catalog_list: "{{ url_for('gorev.catalog_list') }}",
+    catalog_create: "{{ url_for('gorev.catalog_create') }}",
+    catalog_update_0: "{{ url_for('gorev.catalog_update', mid=0) }}",
+    catalog_delete_0: "{{ url_for('gorev.catalog_delete', mid=0) }}",
+    distribute: "{{ url_for('gorev.distribute') }}",
+    task_reassign: "{{ url_for('gorev.task_reassign') }}",
+    task_delete: "{{ url_for('gorev.task_delete') }}",
+    tpl_reassign: "{{ url_for('gorev.template_reassign') }}",
+    tpl_delete: "{{ url_for('gorev.template_delete') }}",
+    side_add: "{{ url_for('gorev.side_add') }}",
+    update_task: "{{ url_for('gorev.update_task') }}"
+  };
+  function withId(url0, id){ return url0.replace(/0$/, String(id)); }
+
+  // KATALOĞU YÜKLE
+  function loadCatalog(){
+    $.getJSON(URLS.catalog_list, function(r){
+      const tb = $("#masterTable tbody").empty();
+      const empty = $("#masterEmpty");
+      if(!r.items || !r.items.length){ empty.removeClass("d-none"); return; }
+      empty.addClass("d-none");
+      (r.items || []).forEach(it=>{
+        const activeBadge = it.active ? '<span class="badge badge-success">Açık</span>' : '<span class="badge badge-secondary">Kapalı</span>';
+        const tr = $(`
+          <tr data-mid="${it.id}">
+            <td>${it.title}</td>
+            <td>${it.priority==1?'Acil':(it.priority==3?'Düşük':'Normal')}</td>
+            <td class="td-active">${activeBadge}</td>
+            <td class="text-nowrap">
+              <button class="btn btn-sm btn-grad btn-grad-primary mr-1 btn-dist" data-id="${it.id}"><i class="fas fa-share-alt"></i> Dağıt</button>
+              <button class="btn btn-sm btn-grad btn-grad-secondary mr-1 btn-toggle" data-id="${it.id}"><i class="fas fa-toggle-on"></i> Aktif/Pasif</button>
+              <button class="btn btn-sm btn-grad btn-grad-danger btn-del" data-id="${it.id}"><i class="fas fa-trash"></i> Sil</button>
+            </td>
+          </tr>`);
+        tb.append(tr);
+      });
+    });
+  }
+
+  // Ana görev Ekle (gün/saat yok)
+  $("#btnMasterSave").on("click", function(){
+    const payload = {
+      title: ($("#m_title").val()||"").trim(),
+      description: ($("#m_desc").val()||"").trim(),
+      priority: parseInt($("#m_priority").val()||"2",10),
+      proof_required: $("#m_proof").is(":checked"),
+      active: $("#m_active").is(":checked")
+    };
+    if(!payload.title){ toast("Başlık zorunlu"); return; }
+    $.ajax({
+      url: URLS.catalog_create, method:"POST",
+      data: JSON.stringify(payload), contentType:"application/json"
+    }).done(()=>{ toast("Kataloğa eklendi"); loadCatalog(); $("#m_title").val(""); $("#m_desc").val(""); })
+      .fail(()=> toast("Kayıt hatası"));
+  });
+
+  // Aktif/Pasif toggle
+  $(document).on("click",".btn-toggle", function(){
+    const id = $(this).data("id");
+    const row = $(this).closest("tr");
+    const isActive = row.find(".td-active .badge-success").length > 0;
+    $.ajax({
+      url: withId(URLS.catalog_update_0, id), method:"POST",
+      data: JSON.stringify({active: !isActive}), contentType:"application/json"
+    }).done(()=>{ loadCatalog(); })
+      .fail(()=> toast("Güncelleme hatası"));
+  });
+
+  // Dağıt (kullanıcı seçimi için basit prompt; istersen modal eklenir)
+  $(document).on("click",".btn-dist", function(){
+    const mid = $(this).data("id");
+    const ids = prompt("Kullanıcı ID'lerini virgülle gir (ör: 12,15,21):","");
+    if(!ids){ return; }
+    const user_ids = ids.split(",").map(x=>parseInt(x.trim(),10)).filter(x=>!isNaN(x));
+    if(!user_ids.length){ toast("Geçersiz seçim"); return; }
+    $.ajax({
+      url: URLS.distribute, method:"POST",
+      data: JSON.stringify({ master_task_id: mid, user_ids }),
+      contentType:"application/json"
+    }).done(()=> toast("Dağıtıldı"))
+      .fail(()=> toast("Dağıtım hatası"));
+  });
+
+  // Sil (katalog)
+  $(document).on("click",".btn-del", function(){
+    if(!confirm("Silinsin mi?")) return;
+    const id = $(this).data("id");
+    $.ajax({ url: withId(URLS.catalog_delete_0, id), method:"POST" })
+      .done(()=> loadCatalog())
+      .fail(()=> alert("Silme hatası"));
+  });
+
+  // Durum (aşama) güncelle
+  $(document).on('change','.status-select', function(){
+    const id = $(this).data('id');
+    const status = $(this).val();
+    $.ajax({
+      url: URLS.update_task, method:"POST",
+      data: JSON.stringify({id, status}), contentType:"application/json"
+    }).fail(()=> alert("Durum güncellenemedi"));
+  });
+
+  // Not ekle/güncelle
+  $(document).on('click','.btn-note', function(){
+    const id = $(this).data('id');
+    const note = prompt("Not girin (boş = sil):", "");
+    $.ajax({
+      url: URLS.update_task, method:"POST",
+      data: JSON.stringify({id, note}), contentType:"application/json"
+    }).done(()=> location.reload())
+      .fail(()=> alert("Not kaydedilemedi"));
+  });
+
+  // Yan görev kaydet (günlük — eklenme saati otomatik)
+  $("#btnSideSave").on("click", function(){
+    const payload = {
+      user_id: parseInt($("#side_user").val(),10),
+      title: ($("#side_title").val()||"").trim(),
+      priority: parseInt($("#side_priority").val()||"2",10),
+      effort: parseInt($("#side_effort").val()||"1",10),
+      acceptance: ($("#side_acceptance").val()||"").trim()
+    };
+    if(!payload.title){ toast("Başlık zorunlu"); return; }
+    $.ajax({
+      url: URLS.side_add, method:"POST",
+      data: JSON.stringify(payload), contentType:"application/json"
+    }).done(()=>{ toast("Yan görev eklendi"); $("#sideModal").modal("hide"); })
+      .fail(()=> toast("Kayıt hatası"));
+  });
+
+  // İlk yüklemede katalog
+  $(function(){ loadCatalog(); });
+})();
+</script>
+
+</body>
+</html>
