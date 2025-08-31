@@ -78,7 +78,8 @@ async def confirm_packing():
         order_number = request.form.get('order_number')
         if not order_number:
             flash('Sipariş numarası bulunamadı.', 'danger')
-            return redirect(url_for('home.home'))
+            return redirect(url_for('siparis_hazirla.index'))
+
 
         # 2) Okutulan barkodlar
         barkodlar = []
@@ -93,7 +94,8 @@ async def confirm_packing():
         order_created = OrderCreated.query.filter_by(order_number=order_number).first()
         if not order_created:
             flash('Created tablosunda bu sipariş yok.', 'danger')
-            return redirect(url_for('home.home'))
+            return redirect(url_for('siparis_hazirla.index'))
+
 
         # 4) Detaylar
         try:
@@ -113,7 +115,8 @@ async def confirm_packing():
         # 6) Basit doğrulama
         if any(bc not in expected_barcodes for bc in barkodlar):
             flash('Geçersiz barkod girişi, lütfen tekrar deneyin!', 'danger')
-            return redirect(url_for('home.home'))
+            return redirect(url_for('siparis_hazirla.index'))
+
         if len(barkodlar) < len(set(expected_barcodes)):
             flash('Bazı barkodlar eksik olabilir, işlem devam ediyor.', 'warning')
 
@@ -177,7 +180,8 @@ async def confirm_packing():
             db.session.rollback()
             logger.error(f"Stok düşümünde hata: {e}", exc_info=True)
             flash("Stok düşümünde hata oluştu.", 'danger')
-            return redirect(url_for('home.home'))
+            return redirect(url_for('siparis_hazirla.index'))
+
 
         # 8) Trendyol: Picking’e geçir
         try:
@@ -188,14 +192,16 @@ async def confirm_packing():
                     shipment_package_ids.add(sp)
             if not shipment_package_ids:
                 flash("shipmentPackageId yok; API güncellenemiyor.", 'danger')
-                return redirect(url_for('home.home'))
+                return redirect(url_for('siparis_hazirla.index'))
+
 
             lines = []
             for d in details:
                 lid = d.get('line_id') or d.get('line_ids_api')
                 if not lid:
                     flash("'line_id' yok; Trendyol update mümkün değil.", 'danger')
-                    return redirect(url_for('home.home'))
+                    return redirect(url_for('siparis_hazirla.index'))
+
                 q = int(d.get('quantity', 1))
                 lines.append({"lineId": int(lid), "quantity": q})
 
@@ -243,7 +249,8 @@ async def confirm_packing():
             db.session.rollback()
             logger.error(f"Taşıma hatası: {db_error}", exc_info=True)
             flash(f"Veritabanı taşıma hatası: {db_error}", 'danger')
-            return redirect(url_for('home.home'))
+            return redirect(url_for('siparis_hazirla.index'))
+
 
         # 10) Sonraki sipariş info
         try:
@@ -259,7 +266,7 @@ async def confirm_packing():
         logger.error(f"Hata: {e}", exc_info=True)
         flash('Bir hata oluştu.', 'danger')
 
-    return redirect(url_for('home.home'))
+    return redirect(url_for('siparis_hazirla.index'))
 
 
 

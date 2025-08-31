@@ -8,6 +8,7 @@ import os
 from cache_config import cache, CACHE_TIMES
 import logging
 from datetime import datetime
+from barcode_utils import generate_barcode_data_uri
 
 from models import db, Product, OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
 from barcode_utils import generate_barcode
@@ -157,7 +158,8 @@ def get_order_list():
     except Exception as e:
         logger.error(f"Hata: get_order_list - {e}")
         flash("Sipariş listesi yüklenirken hata oluştu.", "danger")
-        return redirect(url_for('home.home'))
+        return redirect(url_for('siparis_hazirla.index'))
+
 
 # --- BU FONKSİYON GÜNCELLENDİ ---
 def process_order_details(orders):
@@ -226,7 +228,8 @@ def get_filtered_orders(status):
         model_cls = status_map.get(status)
         if not model_cls:
             flash(f"{status} durumuna ait tablo bulunamadı.", "warning")
-            return redirect(url_for('home.home'))
+            return redirect(url_for('siparis_hazirla.index'))
+
 
         orders_query = model_cls.query
         if search_query:
@@ -248,7 +251,8 @@ def get_filtered_orders(status):
     except Exception as e:
         logger.error(f"Hata: get_filtered_orders - {e}")
         flash(f'{status} durumundaki siparişler yüklenirken bir hata oluştu.', 'danger')
-        return redirect(url_for('home.home'))
+        return redirect(url_for('siparis_hazirla.index'))
+
 
 def search_order_by_number(order_number):
     try:
@@ -296,16 +300,24 @@ def order_label():
         customer_address = unquote(unquote(request.form.get('customer_address', '')))
         telefon_no = request.form.get('telefon_no', 'Bilinmiyor')
 
-        barcode_path = generate_barcode(shipping_barcode) if shipping_barcode else None
+        # Barkod dosya YOK: inline (base64) veri
+        barcode_data_uri = generate_barcode_data_uri(shipping_barcode) if shipping_barcode else None
+        # QR kaydetmeye devam (istersen bunu da inline’a çevirebiliriz)
         qr_code_path = generate_qr_code(shipping_barcode) if shipping_barcode else None
 
         return render_template(
-            'order_label.html', order_number=order_number, shipping_barcode=shipping_barcode,
-            barcode_path=barcode_path, qr_code_path=qr_code_path, cargo_provider_name=cargo_provider,
-            customer_name=customer_name, customer_surname=customer_surname, customer_address=customer_address,
+            'order_label.html',
+            order_number=order_number,
+            shipping_barcode=shipping_barcode,
+            barcode_data_uri=barcode_data_uri,     # <— DÜZGÜN AD
+            qr_code_path=qr_code_path,
+            cargo_provider_name=cargo_provider,
+            customer_name=customer_name,
+            customer_surname=customer_surname,
+            customer_address=customer_address,
             telefon_no=telefon_no
         )
     except Exception as e:
         logger.error(f"🔥 Hata: order_label - {e}", exc_info=True)
         flash('Kargo etiketi oluşturulurken bir hata oluştu.', 'danger')
-        return redirect(url_for('home.home'))
+        return redirect(url_for('siparis_hazirla.index'))  # yeni akışa uygun

@@ -120,7 +120,7 @@ typing-inspection==0.4.1
 typing_extensions==4.14.1
 tzdata==2025.2
 tzlocal==5.3.1
-urllib3==2.2.3
+urllib3[socks]==2.4.0
 vine==5.1.0
 wcwidth==0.2.13
 Werkzeug==3.0.4
@@ -128,3 +128,6 @@ wrapt==1.17.2
 wsproto==1.2.0
 WTForms==3.2.1
 yarl==1.20.1
+Pillow>=10.0.0,<11
+python-barcode>=0.15
+qrcode>=7.4
