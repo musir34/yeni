@@ -1,157 +1,177 @@
 <!doctype html>
 <html lang="tr">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   <title>📊 Canlı Satış & Stok Paneli</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
       --color-primary:#B76E79; --color-primary-dark:#A05F6A;
-      --color-secondary:#212529; --color-text:#343a40; --color-bg:#f8f9fa;
-      --color-white:#fff; --color-border:#dee2e6; --color-success:#28a745;
-      --color-warning:#ffc107; --color-danger:#dc3545; --color-info:#0dcaf0;
-      --chip:#f1f3f5;
-      --font-family-base:'Inter',system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      --radius:.7rem; --radius-sm:.5rem;
-      --shadow-sm:0 1px 3px rgba(0,0,0,.06); --shadow-md:0 6px 18px rgba(0,0,0,.10);
+      --color-secondary:#212529; --color-text:#343a40; --color-bg:#f3f5f7;
+      --color-white:#fff; --color-border:#e5e7eb; --color-success:#22c55e;
+      --color-warning:#f59e0b; --color-danger:#ef4444; --color-info:#0ea5e9;
+      --chip:#f1f3f5; --muted:#6b7280;
+      --font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      --radius:14px; --radius-sm:10px;
+      --shadow-sm:0 4px 10px rgba(0,0,0,.06); --shadow-md:0 12px 30px rgba(0,0,0,.10);
       --transition:all .25s ease;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;background:var(--color-bg);color:var(--color-text);font-family:var(--font-family-base)}
+    body{margin:0;background:var(--color-bg);color:var(--color-text);font-family:var(--font-family)}
 
-    /* Top App Bar */
-    .appbar{
-      position:sticky; top:0; z-index:50; backdrop-filter:saturate(160%) blur(6px);
-      background:linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.6));
-      border-bottom:1px solid var(--color-border);
-    }
-    .appbar-inner{display:flex;align-items:center;gap:12px;padding:10px 16px;max-width:1400px;margin:0 auto}
+    .appbar{position:sticky; top:0; z-index:50; backdrop-filter:saturate(160%) blur(6px);
+      background:linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.75));
+      border-bottom:1px solid var(--color-border)}
+    .appbar-inner{max-width:1400px;margin:0 auto;display:flex;gap:12px;align-items:center;padding:10px 16px}
     .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.3px;color:var(--color-secondary)}
     .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--color-primary)}
     .spacer{flex:1}
-    .btn{
-      padding:10px 12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);
-      background:var(--color-white);color:var(--color-secondary);cursor:pointer;transition:var(--transition);
-      box-shadow:var(--shadow-sm)
-    }
+    .btn{padding:10px 12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-white);color:var(--color-secondary);cursor:pointer;transition:var(--transition);box-shadow:var(--shadow-sm)}
     .btn:hover{border-color:var(--color-primary);color:var(--color-primary)}
     .btn-primary{background:var(--color-primary);color:#fff;border-color:transparent}
     .btn-primary:hover{background:var(--color-primary-dark)}
-    .inp{
-      padding:10px 12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);
-      background:var(--color-white);color:var(--color-secondary);min-width:240px;box-shadow:var(--shadow-sm)
-    }
-    .hint{font-size:12px;color:#6c757d}
+    .inp{padding:10px 12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-white);color:var(--color-secondary);box-shadow:var(--shadow-sm)}
+    .hint{font-size:12px;color:var(--muted)}
 
-    /* Layout */
-    .container{max-width:1400px;margin:0 auto;padding:16px}
-    .toprow{display:grid;grid-template-columns:repeat(3,1fr) 2fr;gap:16px;align-items:stretch}
+    .filters{max-width:1400px;margin:12px auto 0;display:flex;gap:10px;align-items:center;padding:0 16px;flex-wrap:wrap}
+    .seg{display:flex;border:1px solid var(--color-border);border-radius:999px;overflow:hidden;box-shadow:var(--shadow-sm);background:#fff}
+    .seg button{border:0;background:#fff;padding:8px 12px;cursor:pointer;color:var(--color-secondary)}
+    .seg button.active{background:var(--color-primary);color:#fff}
+    .date-range{display:flex;gap:8px;align-items:center}
+    .switch{display:inline-flex;gap:8px;align-items:center;color:var(--muted);font-size:13px}
 
-    /* KPI Cards */
+    .container{max-width:1400px;margin:12px auto 20px;padding:0 16px}
+
+    .toprow{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-items:stretch}
     .kpi{
-      background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius);
-      box-shadow:var(--shadow-md);padding:14px 16px;display:flex;gap:10px;align-items:center
+      background:#fff;border:1px solid var(--color-border);border-radius:var(--radius);
+      padding:16px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow-md);position:relative;overflow:hidden
     }
-    .kpi-icon{
-      flex:0 0 44px;height:44px;border-radius:12px;display:grid;place-items:center;
-      background:linear-gradient(135deg, rgba(183,110,121,.15), rgba(183,110,121,.05));
-      border:1px solid var(--color-border)
-    }
-    .kpi .title{font-size:12px;color:#6c757d;margin-bottom:4px}
+    .kpi::after{content:""; position:absolute; inset:-30% -30% auto auto; width:150px; height:150px; background:radial-gradient(closest-side, rgba(183,110,121,.12), transparent 70%); transform:rotate(20deg)}
+    .kpi-icon{flex:0 0 48px;height:48px;border-radius:12px;display:grid;place-items:center;
+      background:linear-gradient(135deg, rgba(183,110,121,.18), rgba(183,110,121,.06));border:1px solid var(--color-border)}
+    .kpi .title{font-size:12px;color:var(--muted);margin-bottom:2px}
     .kpi .value{font-size:26px;font-weight:900;color:var(--color-secondary);letter-spacing:.3px}
+    .kpi .sub{font-size:12px;color:var(--muted)}
 
-    /* Chart box */
-    .chartbox{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius);
-      box-shadow:var(--shadow-md);padding:12px 16px}
+    .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+    .chartbox{background:#fff;border:1px solid var(--color-border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:16px}
+    .chartbox h4{margin:0 0 10px;color:#111;letter-spacing:.2px}
 
-    /* Cards grid */
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-top:16px}
-    .card{
-      background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius);
-      box-shadow:var(--shadow-md);transition:transform .18s ease, box-shadow .18s ease;
-      overflow:hidden
-    }
-    .card:hover{transform:translateY(-2px);box-shadow:0 14px 26px rgba(0,0,0,.12)}
-    .card-head{display:flex;gap:8px;align-items:center;padding:12px 12px 0 12px}
-    .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid var(--color-border);background:var(--chip);font-size:12px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px;margin-top:16px}
+    .card{background:#fff;border:1px solid var(--color-border);border-radius:var(--radius);box-shadow:var(--shadow-md);transition:transform .18s, box-shadow .18s;overflow:hidden}
+    .card:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(0,0,0,.12)}
+    .card-head{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:12px 12px 0 12px}
+    .head-left{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .head-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid var(--color-border);background:var(--chip);font-size:12px;white-space:nowrap}
     .chip .dot{width:8px;height:8px;border-radius:50%;background:var(--color-primary)}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--color-border);font-weight:700;font-size:12px}
+    .badge.warn{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+    .badge.danger{background:#fef2f2;border-color:#fecaca;color:#991b1b}
     .ghost{margin-left:auto}
     .media{margin:12px;border-radius:12px;overflow:hidden;border:1px solid var(--color-border)}
     .media img{display:block;width:100%;height:220px;object-fit:cover;cursor:pointer;transition:transform .3s}
     .media img:hover{transform:scale(1.01)}
-    .pill{position:absolute;right:12px;top:12px;background:var(--color-warning);color:#111;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
-    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:0 12px 12px}
-    .mini{border:1px solid var(--color-border);border-radius:12px;padding:10px;background:#fff}
-    .mini .label{font-size:12px;color:#6c757d;margin-bottom:4px}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:0 12px 12px}
+    .mini{border:1px solid var(--color-border);border-radius:12px;padding:12px;background:#fff}
+    .mini .label{font-size:12px;color:var(--muted);margin-bottom:4px}
     .mini .num{font-size:20px;font-weight:800;color:var(--color-secondary)}
     .bar{height:10px;background:#f1f3f5;border-radius:999px;border:1px solid var(--color-border);overflow:hidden;margin:0 12px 12px}
     .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--color-primary),var(--color-primary-dark));transition:width .6s ease}
     .details{display:none;padding:12px;border-top:1px dashed var(--color-border);background:#fff}
     table{width:100%;border-collapse:collapse}
     th,td{padding:10px;border-top:1px solid var(--color-border);text-align:left}
-    thead th{background:#f6f7f8;color:#6c757d}
+    thead th{background:#f6f7f8;color:var(--muted)}
     tbody tr:hover{background:#fafafa}
 
-    /* Lightbox */
     .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:9999}
     .lightbox img{max-width:92vw;max-height:92vh;border-radius:16px;box-shadow:0 20px 40px rgba(0,0,0,.4)}
 
-    /* Helpers */
     .fade-in{animation:fade .25s ease both}
     @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
   </style>
-
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-  <!-- Top bar -->
+  <!-- App Bar -->
   <header class="appbar">
     <div class="appbar-inner">
       <div class="brand"><span class="dot"></span> Canlı Satış & Stok</div>
       <a class="btn" href="/">🏠 Anasayfa</a>
       <div class="spacer"></div>
-
       <span class="hint" id="zaman">Yükleniyor…</span>
+    </div>
+    <div class="filters">
+      <div class="seg" id="segPreset">
+        <button data-preset="today" class="active">Bugün</button>
+        <button data-preset="yesterday">Dün</button>
+        <button data-preset="this_week">Bu Hafta</button>
+        <button data-preset="last_7d">Son 7 Gün</button>
+        <button data-preset="this_month">Bu Ay</button>
+        <button data-preset="last_30d">Son 30 Gün</button>
+        <button data-preset="custom">Özel</button>
+      </div>
+      <div class="date-range" id="customRange" style="display:none">
+        <input id="start" class="inp" type="date" />
+        <input id="end"   class="inp" type="date" />
+      </div>
       <input id="filtreModel" class="inp" type="text" placeholder="Model filtresi (örn: 099)" />
       <button class="btn btn-primary" id="uygulaBtn">Uygula</button>
       <button class="btn" id="yenileBtn">Yenile</button>
+      <label class="switch"><input type="checkbox" id="liveToggle" checked /> Canlı (SSE)</label>
     </div>
   </header>
 
+  <!-- Content -->
   <main class="container">
-    <!-- KPI row -->
     <section class="toprow">
       <div class="kpi">
         <div class="kpi-icon">₺</div>
         <div>
-          <div class="title">Genel Ortalama Fiyat</div>
+          <div class="title">Genel NET Ortalama Fiyat</div>
           <div class="value" id="kpiAvg">₺0,00</div>
+          <div class="sub" id="kpiAvgSub"></div>
         </div>
       </div>
       <div class="kpi">
         <div class="kpi-icon">🧮</div>
         <div>
-          <div class="title">Bugün Toplam Satış (Adet)</div>
+          <div class="title">Seçilen Aralık Toplam NET Satış (Adet)</div>
           <div class="value" id="kpiToplam">0</div>
         </div>
       </div>
       <div class="kpi">
         <div class="kpi-icon">📦</div>
         <div>
-          <div class="title">Bugün Toplam Sipariş</div>
+          <div class="title">Seçilen Aralık Toplam Sipariş</div>
           <div class="value" id="kpiOrders">0</div>
         </div>
       </div>
-
-      <div class="chartbox">
-        <canvas id="grafikTop" height="120"></canvas>
+      <div class="kpi">
+        <div class="kpi-icon">↩️</div>
+        <div>
+          <div class="title">Toplam İade (Adet) • Oran</div>
+          <div class="value" id="kpiReturns">0</div>
+          <div class="sub" id="kpiReturnRate">—</div>
+        </div>
       </div>
     </section>
 
-    <!-- Cards -->
+    <!-- Charts -->
+    <section class="twocol">
+      <div class="chartbox">
+        <h4>Top-10 NET Satış (Adet)</h4>
+        <canvas id="grafikSatis" height="130"></canvas>
+      </div>
+      <div class="chartbox">
+        <h4>Top-10 İade (Adet)</h4>
+        <canvas id="grafikIade" height="130"></canvas>
+      </div>
+    </section>
+
     <section class="grid" id="kartlar"></section>
   </main>
 
@@ -159,112 +179,184 @@
   <div class="lightbox" id="lightbox"><img id="lightImg" alt=""></div>
 
 <script>
+  /* ---- CHART SHADOW PLUGIN ---- */
+  const ShadowPlugin = {
+    id:'shadow',
+    afterDatasetsDraw(chart, args, pluginOpts){
+      const {ctx, chartArea:{top,bottom,left,right}} = chart;
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.18)';
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetY = 6;
+      ctx.fillRect(left, top, 0, 0); // trigger
+      ctx.restore();
+    }
+  };
+  Chart.register(ShadowPlugin);
+
   // Elements
   const elZaman   = document.getElementById('zaman');
   const elKartlar = document.getElementById('kartlar');
   const elAvg     = document.getElementById('kpiAvg');
+  const elAvgSub  = document.getElementById('kpiAvgSub');
   const elToplam  = document.getElementById('kpiToplam');
   const elOrders  = document.getElementById('kpiOrders');
+  const elRet     = document.getElementById('kpiReturns');
+  const elRetRate = document.getElementById('kpiReturnRate');
   const inpModel  = document.getElementById('filtreModel');
   const btnUygula = document.getElementById('uygulaBtn');
   const btnYenile = document.getElementById('yenileBtn');
+  const liveToggle= document.getElementById('liveToggle');
 
-  // Chart.js
-  const ctx = document.getElementById('grafikTop').getContext('2d');
-  const chart = new Chart(ctx,{
-    type:'bar',
-    data:{labels:[],datasets:[{label:'Bugün Satış (adet)',data:[],backgroundColor:'rgba(183,110,121,0.45)',borderColor:'#B76E79',borderWidth:1}]},
-    options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}
+  // Preset segment
+  const seg = document.getElementById('segPreset');
+  const customRange = document.getElementById('customRange');
+  const inpStart = document.getElementById('start');
+  const inpEnd   = document.getElementById('end');
+
+  seg.addEventListener('click', (e)=>{
+    if(e.target.tagName !== 'BUTTON') return;
+    [...seg.children].forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    const p = e.target.dataset.preset;
+    customRange.style.display = (p === 'custom') ? '' : 'none';
   });
+
+  // Chart.js instances (with rounded bars)
+  function newBar(canvasId, label){
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    return new Chart(ctx,{
+      type:'bar',
+      data:{labels:[],datasets:[{label, data:[], borderWidth:1, borderRadius:10, backgroundColor:'rgba(183,110,121,0.35)', borderColor:'#B76E79'}]},
+      options:{
+        responsive:true,
+        plugins:{legend:{display:false}, tooltip:{enabled:true, mode:'index', intersect:false}},
+        scales:{
+          x:{ticks:{color:'#374151'}, grid:{display:false}},
+          y:{beginAtZero:true, ticks:{precision:0,color:'#6b7280'}, grid:{color:'rgba(0,0,0,0.06)'}}
+        }
+      }
+    });
+  }
+  const cSatis = newBar('grafikSatis','Satış (adet)');
+  const cIade  = newBar('grafikIade','İade (adet)');
 
   // Utils
   const tl = v => (Number(v)||0).toLocaleString('tr-TR',{style:'currency',currency:'TRY',minimumFractionDigits:2,maximumFractionDigits:2});
-  const bedenKey = b => { const t=String(b??'').replace(',','.'); const n=Number(t); return Number.isFinite(n)?[0,n]:[1,String(b??'')]; };
-  const pct = (a,b)=>{ if(!b) return 0; return Math.max(0,Math.min(100,Math.round((a/b)*100))); };
+  const bedenKey = b => {const t=String(b??'').replace(',','.');const n=Number(t);return Number.isFinite(n)?[0,n]:[1,String(b??'')];};
+  const pct = (a,b)=>{if(!b)return 0;return Math.max(0,Math.min(100,Math.round((a/b)*100)));};
 
-  function render(kartlar, ts, toplamAdet, toplamSiparis, genelAvg){
+  function getPreset(){
+    const active = seg.querySelector('.active');
+    return active ? active.dataset.preset : 'today';
+  }
+  function buildQuery(model){
+    const p = new URLSearchParams();
+    const preset = getPreset();
+    if(model) p.set('model', model);
+    // Varsayılan model grubu:
+    p.set('group','model');
+    if (preset === 'custom' && inpStart.value && inpEnd.value){
+      p.set('start', inpStart.value);
+      p.set('end',   inpEnd.value);
+    } else {
+      p.set('preset', preset);
+    }
+    return p.toString() ? ('?'+p.toString()) : '';
+  }
+
+  // Render
+  function render(kartlar, ts, toplamNetAdet, toplamSiparis, genelAvg){
+    console.log('[RENDER] ts=', ts, 'kartlar=', Array.isArray(kartlar)?kartlar.length:kartlar);
+    if (!Array.isArray(kartlar)) { elZaman.textContent = 'Hata: kartlar dizisi gelmedi'; return; }
+
     // KPI
     elZaman.textContent = 'Güncellendi: ' + ts;
-    elToplam.textContent = toplamAdet ?? 0;
+    const toplamNet = (typeof toplamNetAdet === 'number')
+        ? toplamNetAdet
+        : (kartlar.reduce((a,k)=>a+(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0));
+    elToplam.textContent = toplamNet ?? 0;
+    elOrders.textContent = (typeof toplamSiparis === 'number') ? toplamSiparis : '—';
+    const netAvg = (typeof genelAvg === 'number') ? genelAvg
+                    : (kartlar.reduce((acc,k)=>acc+(k.ortalama_fiyat ?? 0)*(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0)) /
+                      Math.max(1,kartlar.reduce((acc,k)=>acc+(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0));
+    elAvg.textContent = tl(netAvg);
+    // Toplam iade ve oran
+    const totalReturns = kartlar.reduce((a,k)=>a+(k.toplam_iade ?? 0),0);
+    elRet.textContent = totalReturns;
+    const totalSales  = kartlar.reduce((a,k)=>a+(k.toplam_siparis_bugun ?? 0),0);
+    const totalRate   = pct(totalReturns, totalSales);
+    elRetRate.textContent = (totalSales>0) ? `%${totalRate} iade oranı` : '—';
 
-    // Genel ortalama fiyat: backend yoksa fallback hesapla (yaklaşık, sipariş ağırlıklı)
-    if (typeof genelAvg === 'number') {
-      elAvg.textContent = tl(genelAvg);
-    } else {
-      const s = kartlar.reduce((acc,k)=>{acc.t+=k.toplam_siparis_bugun||0; acc.m+=(k.ortalama_fiyat||0)*(k.toplam_siparis_bugun||0); return acc;},{t:0,m:0});
-      elAvg.textContent = tl(s.t>0 ? s.m/s.t : 0);
-    }
+    // Charts (Top10)
+    const topSatis = [...kartlar].sort((a,b)=>(b.toplam_net_satis??b.toplam_siparis_bugun)-(a.toplam_net_satis??a.toplam_siparis_bugun)).slice(0,10);
+    cSatis.data.labels = topSatis.map(k=>`${k.model} ${k.renk}`);
+    cSatis.data.datasets[0].data = topSatis.map(k=>k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0);
+    cSatis.update();
 
-    // Toplam sipariş sayısı: yoksa gizleme
-    if (typeof toplamSiparis === 'number') {
-      elOrders.textContent = toplamSiparis;
-    } else {
-      elOrders.textContent = '—';
-    }
-
-    // Chart (Top 10)
-    const top = [...kartlar].sort((a,b)=>b.toplam_siparis_bugun-a.toplam_siparis_bugun).slice(0,10);
-    chart.data.labels = top.map(k=>`${k.model} ${k.renk}`);
-    chart.data.datasets[0].data = top.map(k=>k.toplam_siparis_bugun);
-    chart.update();
+    const topIade = [...kartlar].sort((a,b)=>(b.toplam_iade ?? 0)-(a.toplam_iade ?? 0)).slice(0,10);
+    cIade.data.labels = topIade.map(k=>`${k.model} ${k.renk}`);
+    cIade.data.datasets[0].data = topIade.map(k=>k.toplam_iade ?? 0);
+    cIade.update();
 
     // Cards
     elKartlar.innerHTML = '';
     kartlar.forEach((k,idx)=>{
-      const div = document.createElement('article');
-      div.className='card fade-in';
-      const detayId='detay-'+idx;
-      const cap = (k.toplam_stok||0)+(k.toplam_siparis_bugun||0);
-      const prc = pct(k.toplam_stok||0, cap || (k.toplam_stok||1));
-      const avg = tl(k.ortalama_fiyat||0);
+      const div = document.createElement('article'); div.className='card fade-in';
+      const detayId = 'detay-'+idx;
+
+      const net  = (k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0);
+      const ret  = (k.toplam_iade ?? 0);
+      const retP = pct(ret, (k.toplam_siparis_bugun ?? 0));
+      const cap  = (k.toplam_stok ?? 0) + (net);
+      const barP = pct((k.toplam_stok ?? 0), (cap || (k.toplam_stok ?? 1)));
+      const avg  = tl(k.ortalama_fiyat ?? 0);
+
+      // Badgeler artık head-right içinde, çakışmaz
+      const badgeLow  = k.dusuk_stok ? `<span class="badge warn">DÜŞÜK STOK</span>` : ``;
+      const badgeHigh = k.iade_uyari ? `<span class="badge danger">⚠️ YÜKSEK İADE</span>` : ``;
 
       div.innerHTML = `
-        ${k.dusuk_stok ? `<span class="pill">DÜŞÜK STOK</span>` : ``}
         <div class="card-head">
-          <span class="chip">${k.model ?? '-'}</span>
-          <span class="chip"><span class="dot"></span>${k.renk ?? '-'}</span>
-          <button class="btn ghost" data-target="${detayId}">Detay</button>
+          <div class="head-left">
+            <span class="chip">${k.model ?? '-'}</span>
+            <span class="chip"><span class="dot"></span>${k.renk ?? '-'}</span>
+          </div>
+          <div class="head-right">
+            ${badgeHigh}
+            ${badgeLow}
+            <button class="btn ghost" data-target="${detayId}">Detay</button>
+          </div>
         </div>
-
-        ${k.image ? `
-          <div class="media"><img class="card-img" src="${k.image}" alt="${k.model ?? ''} ${k.renk ?? ''}"></div>
-        ` : ``}
-
+        ${k.image ? `<div class="media"><img class="card-img" src="${k.image}" alt="${k.model ?? ''} ${k.renk ?? ''}"></div>` : ``}
         <div class="stats">
-          <div class="mini">
-            <div class="label">Bugün Toplam (Gider)</div>
-            <div class="num">${k.toplam_siparis_bugun ?? 0}</div>
-          </div>
-          <div class="mini">
-            <div class="label">Güncel Stok</div>
-            <div class="num">${k.toplam_stok ?? 0}</div>
-          </div>
-          <div class="mini">
-            <div class="label">Ortalama Fiyat</div>
-            <div class="num">${avg}</div>
-          </div>
+          <div class="mini"><div class="label">Satış (NET)</div><div class="num">${net}</div></div>
+          <div class="mini"><div class="label">İade</div><div class="num">${ret} <span style="font-size:12px;color:var(--muted)">(%${retP})</span></div></div>
+          <div class="mini"><div class="label">Kalan Stok</div><div class="num">${k.toplam_stok ?? 0}</div></div>
+          <div class="mini"><div class="label">Net Ortalama</div><div class="num">${avg}</div></div>
         </div>
-
-        <div class="bar"><i style="width:${prc}%"></i></div>
-
+        <div class="bar"><i style="width:${barP}%"></i></div>
         <div class="details" id="${detayId}">
           <table>
-            <thead><tr><th>Beden</th><th>Bugün</th><th>Stok</th></tr></thead>
+            <thead><tr><th>Beden</th><th>Satış</th><th>İade ( % )</th><th>Net</th><th>Kalan Stok</th></tr></thead>
             <tbody>
-              ${[...(k.detay||[])].sort((a,b)=>{
-                  const A=bedenKey(a.beden), B=bedenKey(b.beden);
-                  return A[0]-B[0] || A[1]-B[1];
-                }).map(d=>`
-                <tr>
-                  <td>${d.beden ?? '-'}</td>
-                  <td>${d.siparis ?? 0}</td>
-                  <td>${d.stok ?? 0}</td>
-                </tr>
-              `).join('')}
+              ${[...(k.detay||[])].sort((a,b)=>{const A=bedenKey(a.beden),B=bedenKey(b.beden);return A[0]-B[0]||A[1]-B[1];})
+                 .map(d=>{
+                    const s = d.siparis ?? 0;
+                    const r = d.iade ?? 0;
+                    const n = (d.net ?? Math.max(0,s - r));
+                    const rp = pct(r, s);
+                    return `<tr>
+                      <td>${d.beden ?? '-'}</td>
+                      <td>${s}</td>
+                      <td>${r} <span style="color:var(--muted)">(%${rp})</span></td>
+                      <td>${n}</td>
+                      <td>${d.stok ?? 0}</td>
+                    </tr>`;
+                 }).join('')}
             </tbody>
           </table>
-        </div>
-      `;
+        </div>`;
       elKartlar.appendChild(div);
     });
 
@@ -272,57 +364,71 @@
     elKartlar.querySelectorAll('.btn.ghost').forEach(btn=>{
       btn.onclick = ()=>{
         const d = document.getElementById(btn.getAttribute('data-target'));
-        const open = d.style.display==='block';
-        d.style.display = open?'none':'block';
+        d.style.display = (d.style.display==='block') ? 'none' : 'block';
       };
     });
-
     // Lightbox
     elKartlar.querySelectorAll('.card-img').forEach(img=>{
-      img.onclick=()=>{
-        const lb=document.getElementById('lightbox');
-        const li=document.getElementById('lightImg');
-        li.src=img.getAttribute('src'); lb.style.display='flex';
-      };
+      img.onclick=()=>{const lb=document.getElementById('lightbox'), li=document.getElementById('lightImg'); li.src=img.getAttribute('src'); lb.style.display='flex';};
     });
   }
 
   // Lightbox close
-  document.getElementById('lightbox').onclick=(e)=>{
-    if(e.target.id==='lightbox'||e.target.id==='lightImg'){ e.currentTarget.style.display='none'; }
-  };
-  document.addEventListener('keydown', e=>{
-    if(e.key==='Escape'){ document.getElementById('lightbox').style.display='none'; }
-  });
+  document.getElementById('lightbox').onclick=(e)=>{ if(e.target.id==='lightbox'||e.target.id==='lightImg'){ e.currentTarget.style.display='none'; } };
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ document.getElementById('lightbox').style.display='none'; } });
 
-  // Data hooks
+  // Data I/O
   async function yukle(model){
-    const u = model ? `/api/canli/ozet?model=${encodeURIComponent(model)}` : '/api/canli/ozet';
-    const r = await fetch(u);
-    const j = await r.json();
-    render(j.kartlar, j.guncellendi, j.toplam_satis, j.toplam_siparis_sayisi, j.genel_ortalama_fiyat);
+    try{
+      const u = '/api/canli/ozet' + buildQuery(model);
+      const r = await fetch(u);
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      console.log('[OZET] yanit', j);
+      const toplamA = (typeof j.toplam_net_satis === 'number') ? j.toplam_net_satis : j.toplam_satis;
+      render(j.kartlar, j.guncellendi, toplamA, j.toplam_siparis_sayisi, j.genel_ortalama_fiyat);
+    }catch(err){
+      console.error('[FETCH ERROR]', err);
+      elZaman.textContent = 'İstek hatası: ' + (err.message || err);
+    }
   }
 
   let ev=null;
   function startSSE(model){
     if(ev){ev.close();ev=null;}
-    const url='/api/canli/akis'+(model?`?model=${encodeURIComponent(model)}`:'');
+    if(!liveToggle.checked){ return; }
+    const url='/api/canli/akis'+buildQuery(model);
     ev=new EventSource(url);
     ev.onmessage=(e)=>{
       try{
         const j=JSON.parse(e.data);
-        render(j.kartlar, j.guncellendi, j.toplam_satis, j.toplam_siparis_sayisi, j.genel_ortalama_fiyat);
-      }catch(err){console.error(err);}
+        console.log('[SSE] paket', j);
+        const toplamA = (typeof j.toplam_net_satis === 'number') ? j.toplam_net_satis : j.toplam_satis;
+        render(j.kartlar, j.guncellendi, toplamA, j.toplam_siparis_sayisi, j.genel_ortalama_fiyat);
+      }catch(err){ console.error(err); elZaman.textContent='SSE veri hatası: '+err.message; }
+    };
+    ev.onerror = (err) => {
+      console.error('[SSE ERROR]', err);
+      elZaman.textContent = 'SSE Hatası — akış koptu, yeniden bağlanılıyor…';
     };
   }
 
   // Events
   btnUygula.onclick=()=>{ const m=inpModel.value.trim(); startSSE(m); yukle(m); };
   btnYenile.onclick = ()=>{ yukle(inpModel.value.trim()); };
+  liveToggle.onchange = ()=>{ const m=inpModel.value.trim(); if(liveToggle.checked){ startSSE(m); } else { if(ev){ev.close();ev=null;} } };
+
+  // Defaults
+  (function initDefaults(){
+    const today = new Date(); const yyyy=today.getFullYear();
+    const mm=String(today.getMonth()+1).padStart(2,'0');
+    const dd=String(today.getDate()).padStart(2,'0');
+    document.getElementById('start').value = `${yyyy}-${mm}-${dd}`;
+    document.getElementById('end').value   = `${yyyy}-${mm}-${dd}`;
+  })();
 
   // Init
   startSSE(''); yukle('');
 </script>
-
 </body>
 </html>
