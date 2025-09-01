@@ -210,7 +210,7 @@
                 color: #444;
                 text-align: center;
                 margin: 10px 0;
-                white-space: nowrap; 
+                white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
@@ -250,7 +250,7 @@
                 text-align: center;
                 z-index: 10;
                 pointer-events: none;
-                width: 100%; 
+                width: 100%;
                 box-sizing: border-box;
                 visibility: hidden;
             }
@@ -286,7 +286,7 @@
                 min-width: 400px;
                 max-width: 500px;
             }
-            
+
             .auto-ship-card {
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 border-radius: 15px;
@@ -295,7 +295,7 @@
                 position: relative;
                 overflow: hidden;
             }
-            
+
             .auto-ship-card::before {
                 content: '';
                 position: absolute;
@@ -306,25 +306,25 @@
                 background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
                 animation: shine 2s infinite;
             }
-            
+
             @keyframes shine {
                 0% { transform: translateX(-100%); }
                 100% { transform: translateX(100%); }
             }
-            
+
             .shipping-header h3 {
                 margin: 0 0 10px 0;
                 font-size: 1.5rem;
                 font-weight: bold;
                 color: #fff;
             }
-            
+
             .shipping-header p {
                 margin: 0 0 20px 0;
                 font-size: 1rem;
                 color: rgba(255, 255, 255, 0.8);
             }
-            
+
             .shipping-barcode {
                 background: rgba(255, 255, 255, 0.1);
                 border: 2px solid rgba(255, 255, 255, 0.2);
@@ -332,7 +332,7 @@
                 padding: 20px;
                 margin-top: 15px;
             }
-            
+
             .shipping-barcode strong {
                 font-size: 2rem;
                 font-weight: bold;
@@ -378,7 +378,7 @@
                 gap: 10px;
                 flex-wrap: wrap;
             }
-            
+
             /* Görsel Modal Stili */
             .image-modal-overlay {
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -423,7 +423,7 @@
             .image-modal-footer p {
                 margin: 0; color: #666; font-size: 0.9rem;
             }
-            }
+
             .fixed-header {
                 background-color: #ffffff;
                 border-radius: 10px;
@@ -485,11 +485,11 @@
                 border-radius: 5px;
             }
             .custom-control {
-                position: relative; 
-                display: inline-flex; 
-                min-height: 1.5rem; 
-                padding-left: 1.5rem; 
-                align-items: center; 
+                position: relative;
+                display: inline-flex;
+                min-height: 1.5rem;
+                padding-left: 1.5rem;
+                align-items: center;
             }
             .custom-switch {
                 padding-left: 2.25rem;
@@ -512,13 +512,13 @@
                 top: 0.25rem;
                 left: -2.25rem;
                 display: block;
-                width: 1.75rem; 
+                width: 1.75rem;
                 height: 1rem;
                 pointer-events: none;
                 content: "";
-                background-color: #adb5bd; 
-                border: #adb5bd solid 1px; 
-                border-radius: 1rem; 
+                background-color: #adb5bd;
+                border: #adb5bd solid 1px;
+                border-radius: 1rem;
                 transition:
                     background-color 0.15s ease-in-out,
                     border-color 0.15s ease-in-out,
@@ -527,12 +527,12 @@
             .custom-control-label::after {
                 position: absolute;
                 top: 0.25rem;
-                left: -2rem; 
+                left: -2rem;
                 display: block;
-                width: 1rem; 
+                width: 1rem;
                 height: 1rem;
                 content: "";
-                background-color: #fff; 
+                background-color: #fff;
                 border-radius: 1rem;
                 transition:
                     transform 0.15s ease-in-out,
@@ -552,6 +552,12 @@
                 ~ .custom-control-label::after {
                 transform: translateX(0.75rem);
             }
+
+            /* --- RAF SEÇİMİ (mavi tik) --- */
+            .raf-option { display:block; text-align:left; margin-bottom:6px; position:relative; padding-left:28px; }
+            .raf-option input[type="radio"] { position:absolute; left:0; top:2px; }
+            .raf-option .tick { margin-left:6px; font-weight:bold; color:#0d6efd; opacity:0; transition:opacity .15s ease; }
+            .raf-option input[type="radio"]:checked ~ .tick { opacity:1; }
 
             @media (max-width: 768px) {
                 .btn {
@@ -580,8 +586,8 @@
                     top: 10px;
                     right: 10px;
                     gap: 5px;
-                    flex-direction: column; 
-                    align-items: flex-end; 
+                    flex-direction: column;
+                    align-items: flex-end;
                 }
                 .btn {
                     width: 100%;
@@ -630,15 +636,15 @@
                     max-width: 90%;
                     margin: 0 5%;
                 }
-                
+
                 .auto-ship-card {
                     padding: 20px;
                 }
-                
+
                 .shipping-header h3 {
                     font-size: 1.2rem;
                 }
-                
+
                 .shipping-barcode strong {
                     font-size: 1.5rem;
                 }
@@ -787,28 +793,53 @@
                                         <span class="copy-confirmation">✔️</span>
                                     </span>
                                 </p>
-                                <div class="card-text">
-  {% set aktif_raflar = product['raflar']
-      |selectattr('adet','gt',0)
-      |sort(attribute='adet', reverse=True)
-      |list %}
-  {% if aktif_raflar %}
-    <p style="margin-bottom:5px;"><strong>Raf Seçimi (ilk 3, aktif):</strong></p>
-    {% for raf in aktif_raflar[:3] %}
-      <label class="d-block" style="text-align:left; margin-bottom:6px;">
-        <input type="radio"
-               name="pick_{{ product['barcode'] }}"
-               value="{{ raf.kod }}"
-               {% if loop.first %}checked{% endif %}>
-        {% if loop.first %}<span style="color:green; font-weight:bold;">✅</span>{% endif %}
-        {{ raf.kod }} — {{ raf.adet }} adet
-      </label>
-    {% endfor %}
-  {% else %}
-    <p><em>Bu ürün için aktif raf stoğu yok.</em></p>
-  {% endif %}
+                     <div id="archiveWarningModal" class="modal fade" tabindex="-1" role="dialog">
+                      <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+                      <div class="modal-content" style="border-radius:15px; background: #fff3cd;">
+                      <div class="modal-header">
+                      <h4 class="modal-title" style="color:#856404; font-weight:bold;">📦 Arşiv Uyarısı</h4>
+                      <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
+                      <span aria-hidden="true">&times;</span>
+                   </button>
+                </div>
+      <div class="modal-body">
+        <h5>Arşivde <strong>{{ archive_warnings[1] }}</strong> sipariş bulunuyor.</h5>
+        <ul>
+          {% for msg in archive_warnings[0] %}
+            <li>{{ msg }}</li>
+          {% endfor %}
+        </ul>
+        <p class="text-danger mt-3"><strong>⚠️ Lütfen bu siparişleri kontrol et!</strong></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-warning" data-dismiss="modal">Tamam</button>
+      </div>
+    </div>
+  </div>
 </div>
 
+
+                                <div class="card-text">
+                                  {% set aktif_raflar = product['raflar']
+                                      |selectattr('adet','gt',0)
+                                      |sort(attribute='adet', reverse=True)
+                                      |list %}
+                                  {% if aktif_raflar %}
+                                    <p style="margin-bottom:5px;"><strong>Raf Seçimi (aktif olanların tamamı):</strong></p>
+                                    {% for raf in aktif_raflar %}
+                                      <label class="raf-option">
+                                        <input type="radio"
+                                               name="pick_{{ product['barcode'] }}"
+                                               value="{{ raf.kod }}"
+                                               {% if loop.first %}checked{% endif %}>
+                                        {{ raf.kod }} — {{ raf.adet }} adet
+                                        <span class="tick">✔</span>
+                                      </label>
+                                    {% endfor %}
+                                  {% else %}
+                                    <p><em>Bu ürün için aktif raf stoğu yok.</em></p>
+                                  {% endif %}
+                                </div>
                                 {% for q in range(product['quantity']|int) %}
                                 <div class="form-group">
                                     <div id="barkodMatchMessage-right-{{ loop.index0 }}-{{ q }}" class="alert"></div>
@@ -1131,238 +1162,245 @@
     })();
     </script>
 
+<script>
+  // --- YENİ VE DÜZENLENMİŞ SCRIPT ---
+  document.addEventListener('DOMContentLoaded', function () {
+    const onaylaBtn = document.getElementById('onaylaBtn');
+    const yazdirBtn = document.getElementById('yazdirBtn');
+    const yazdirForm = document.getElementById('yazdirForm');
+    const packingForm = document.getElementById('packingForm');
+    const autoShipToggle = document.getElementById('autoShipToggle');
+    const autoShipMessage = document.getElementById('autoShipMessage');
+    const autoShipBarcodeSpan = document.getElementById('autoShipBarcode');
+    const shippingBarcode = "{{ order.shipping_barcode if order else '' }}";
+    const barkodInputs = document.querySelectorAll('.barkod-input');
 
-    <script>
-    // --- YENİ VE DÜZENLENMİŞ SCRIPT ---
-    document.addEventListener('DOMContentLoaded', function () {
-        const onaylaBtn = document.getElementById('onaylaBtn');
-        const yazdirBtn = document.getElementById('yazdirBtn');
-        const yazdirForm = document.getElementById('yazdirForm');
-        const packingForm = document.getElementById('packingForm');
-        const autoShipToggle = document.getElementById('autoShipToggle');
-        const autoShipMessage = document.getElementById('autoShipMessage');
-        const autoShipBarcodeSpan = document.getElementById('autoShipBarcode');
-        const shippingBarcode = "{{ order.shipping_barcode if order else '' }}";
-        const barkodInputs = document.querySelectorAll('.barkod-input');
+    let printTimer = null;
+    let confirmTimer = null;
 
-        let printTimer = null;
-        let confirmTimer = null;
+    const savedToggleState = localStorage.getItem('autoShipEnabled');
+    if (savedToggleState !== null) {
+      autoShipToggle.checked = savedToggleState === 'true';
+    }
 
-        const savedToggleState = localStorage.getItem('autoShipEnabled');
-        if (savedToggleState !== null) {
-            autoShipToggle.checked = savedToggleState === 'true';
+    function clearAllTimersAndHideMessage() {
+      if (printTimer) clearTimeout(printTimer);
+      if (confirmTimer) clearTimeout(confirmTimer);
+      autoShipMessage.classList.remove('show');
+    }
+
+    function showAutoShipMessage() {
+      const autoShipBarcodeDisplay = document.getElementById('autoShipBarcodeDisplay');
+      autoShipBarcodeSpan.innerText = shippingBarcode;
+      autoShipBarcodeDisplay.innerText = shippingBarcode;
+      autoShipMessage.classList.add('show');
+      setTimeout(() => autoShipMessage.classList.remove('show'), 3000);
+    }
+
+    function updateButtonStates() {
+      clearAllTimersAndHideMessage();
+      let allBarcodesMatched = true;
+
+      if (barkodInputs.length === 0) {
+        allBarcodesMatched = false;
+      }
+
+      barkodInputs.forEach(input => {
+        const productIndex = input.dataset.productIndex;
+        const quantityIndex = input.dataset.quantityIndex;
+        const side = input.dataset.side;
+
+        const cardBody = input.closest('.card-body');
+        if (!cardBody) {
+          allBarcodesMatched = false;
+          return;
         }
 
-        function clearAllTimersAndHideMessage() {
-            if (printTimer) clearTimeout(printTimer);
-            if (confirmTimer) clearTimeout(confirmTimer);
-            autoShipMessage.classList.remove('show');
+        const expectedEl = cardBody.querySelector(
+          `input[type="hidden"][id="expectedBarcode-${side}-${productIndex}-${quantityIndex}"]`
+        );
+        const expectedValue = expectedEl ? expectedEl.value.trim() : '';
+        const inputValue = input.value.trim();
+
+        if (inputValue === '' || inputValue !== expectedValue) {
+          allBarcodesMatched = false;
         }
+      });
 
-        function showAutoShipMessage() {
-            const autoShipBarcodeDisplay = document.getElementById('autoShipBarcodeDisplay');
-            autoShipBarcodeSpan.innerText = shippingBarcode;
-            autoShipBarcodeDisplay.innerText = shippingBarcode;
-            autoShipMessage.classList.add('show');
-            setTimeout(() => autoShipMessage.classList.remove('show'), 3000);
+      if (allBarcodesMatched) {
+        onaylaBtn.classList.remove('disabled');
+        yazdirBtn.classList.remove('disabled');
+        onaylaBtn.disabled = false;
+        yazdirBtn.disabled = false;
+
+        confirmTimer = setTimeout(() => packingForm.submit(), 15000);
+
+        if (autoShipToggle.checked) {
+          showAutoShipMessage();
+        } else {
+          printTimer = setTimeout(() => yazdirForm.submit(), 5000);
         }
+      } else {
+        onaylaBtn.classList.add('disabled');
+        yazdirBtn.classList.add('disabled');
+        onaylaBtn.disabled = true;
+        yazdirBtn.disabled = true;
+      }
+    }
 
-        function updateButtonStates() {
-            clearAllTimersAndHideMessage();
-            let allBarcodesMatched = true;
+    barkodInputs.forEach((input, currentIndex) => {
+      input.addEventListener('input', function () {
+        const productIndex = this.dataset.productIndex;
+        const quantityIndex = this.dataset.quantityIndex;
+        const side = this.dataset.side;
 
-            // Eğer hiç input yoksa, butonlar pasif kalmalı
-            if (barkodInputs.length === 0) {
-                 allBarcodesMatched = false;
-            }
+        const formGroup = this.closest('.form-group');
+        if (!formGroup) return;
 
-            // Sayfadaki TÜM barkod inputlarını kontrol et
-            barkodInputs.forEach(input => {
-                const productIndex = input.dataset.productIndex;
-                const quantityIndex = input.dataset.quantityIndex;
-                const side = input.dataset.side;
+        const matchMessage = formGroup.querySelector('.alert');
+        if (!matchMessage) return;
 
-                // Yeni DOM-based yaklaşım kullan
-                const cardBody = input.closest('.card-body');
-                if (!cardBody) {
-                    allBarcodesMatched = false;
-                    return;
-                }
+        const cardBody = this.closest('.card-body');
+        if (!cardBody) return;
 
-                // Gizli barkod değerini bul
-                const expectedEl = cardBody.querySelector(`input[type="hidden"][id="expectedBarcode-${side}-${productIndex}-${quantityIndex}"]`);
-                const expectedValue = expectedEl ? expectedEl.value.trim() : '';
-                const inputValue = input.value.trim();
+        const expectedEl = cardBody.querySelector(
+          `input[type="hidden"][id="expectedBarcode-${side}-${productIndex}-${quantityIndex}"]`
+        );
+        if (!expectedEl) return;
 
-                // Eğer input boşsa veya değeri yanlışsa, genel durumu 'false' yap
-                if (inputValue === '' || inputValue !== expectedValue) {
-                    allBarcodesMatched = false;
-                }
-            });
+        const expectedValue = expectedEl.value.trim();
+        const inputValue = this.value.trim();
 
-            if (allBarcodesMatched) {
-                onaylaBtn.classList.remove('disabled');
-                yazdirBtn.classList.remove('disabled');
-                onaylaBtn.disabled = false;
-                yazdirBtn.disabled = false;
-
-                confirmTimer = setTimeout(() => packingForm.submit(), 15000);
-
-                if (autoShipToggle.checked) {
-                    showAutoShipMessage();
-                } else {
-                    printTimer = setTimeout(() => yazdirForm.submit(), 5000);
-                }
-            } else {
-                onaylaBtn.classList.add('disabled');
-                yazdirBtn.classList.add('disabled');
-                onaylaBtn.disabled = true;
-                yazdirBtn.disabled = true;
-            }
-        }
-
-        barkodInputs.forEach((input, currentIndex) => {
-            input.addEventListener('input', function () {
-                const productIndex = this.dataset.productIndex;
-                const quantityIndex = this.dataset.quantityIndex;
-                const side = this.dataset.side;
-
-                // Her input için form-group içindeki alert elementini doğrudan bul
-                const formGroup = this.closest('.form-group');
-                if (!formGroup) return;
-
-                const matchMessage = formGroup.querySelector('.alert');
-                if (!matchMessage) return;
-
-                // Barkod değerini input'un bulunduğu card-body'den al
-                const cardBody = this.closest('.card-body');
-                if (!cardBody) return;
-
-                // Gizli barkod değerini bul
-                const expectedEl = cardBody.querySelector(`input[type="hidden"][id="expectedBarcode-${side}-${productIndex}-${quantityIndex}"]`);
-                if (!expectedEl) return;
-
-                const expectedValue = expectedEl.value.trim();
-                const inputValue = this.value.trim();
-
-                if (inputValue === expectedValue) {
-                    matchMessage.textContent = 'Doğru!';
-                    matchMessage.className = 'alert alert-success alert-show';
-                    this.style.backgroundColor = '#e9ffe9';
-
-                    // Bir sonraki input'a otomatik geçiş
-                    const next = barkodInputs[currentIndex + 1];
-                    if (next) {
-                        setTimeout(() => next.focus(), 150);
-                    } else {
-                        onaylaBtn.focus();
-                    }
-                } else if (inputValue.length > 0) {
-                    matchMessage.textContent = 'Yanlış!';
-                    matchMessage.className = 'alert alert-danger alert-show';
-                    this.style.backgroundColor = '';
-                } else {
-                    matchMessage.className = 'alert';
-                    matchMessage.style.opacity = '0';
-                    matchMessage.style.visibility = 'hidden';
-                    this.style.backgroundColor = '';
-                }
-
-                updateButtonStates();
-            });
-        });
-
-        autoShipToggle.addEventListener('change', function () {
-            localStorage.setItem('autoShipEnabled', this.checked.toString());
-            updateButtonStates();
-        });
-
-        if (barkodInputs.length > 0) {
-            barkodInputs[0].focus();
+        if (inputValue === expectedValue) {
+          matchMessage.textContent = 'Doğru!';
+          matchMessage.className = 'alert alert-success alert-show';
+          this.style.backgroundColor = '#e9ffe9';
+          const next = barkodInputs[currentIndex + 1];
+          if (next) setTimeout(() => next.focus(), 150);
+          else onaylaBtn.focus();
+        } else if (inputValue.length > 0) {
+          matchMessage.textContent = 'Yanlış!';
+          matchMessage.className = 'alert alert-danger alert-show';
+          this.style.backgroundColor = '';
+        } else {
+          matchMessage.className = 'alert';
+          matchMessage.style.opacity = '0';
+          matchMessage.style.visibility = 'hidden';
+          this.style.backgroundColor = '';
         }
 
         updateButtonStates();
+      });
     });
 
-    function copyToClipboard(elementId, element) {
-        const text = document.getElementById(elementId).innerText;
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(text).then(() => {
-                const confirmation = element.nextElementSibling;
-                confirmation.classList.add('show');
-                setTimeout(() => confirmation.classList.remove('show'), 1500);
-            }).catch(err => console.error('Kopyalama hatası: ', err));
-        }
+    autoShipToggle.addEventListener('change', function () {
+      localStorage.setItem('autoShipEnabled', this.checked.toString());
+      updateButtonStates();
+    });
+
+    if (barkodInputs.length > 0) {
+      barkodInputs[0].focus();
     }
 
-    function showArchiveModal(order_number) {
-        document.getElementById('archiveOrderNumber').value = order_number;
-        $('#archiveModal').modal('show');
+    updateButtonStates();
+  });
+
+  function copyToClipboard(elementId, element) {
+    const text = document.getElementById(elementId).innerText;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        const confirmation = element.nextElementSibling;
+        confirmation.classList.add('show');
+        setTimeout(() => confirmation.classList.remove('show'), 1500);
+      }).catch(err => console.error('Kopyalama hatası: ', err));
+    }
+  }
+
+  function showArchiveModal(order_number) {
+    document.getElementById('archiveOrderNumber').value = order_number;
+    $('#archiveModal').modal('show');
+  }
+
+  $('#archiveReason').change(function () {
+    if ($(this).val() === 'Diğer') {
+      $('#otherReasonDiv').show();
+      $('#otherReasonText').prop('required', true);
+    } else {
+      $('#otherReasonDiv').hide();
+      $('#otherReasonText').prop('required', false);
+    }
+  });
+
+  $('#archiveForm').submit(function (event) {
+    event.preventDefault();
+    var postData = {
+      order_number: $('#archiveOrderNumber').val(),
+      archive_reason: $('#archiveReason').val(),
+      other_reason: $('#otherReasonText').val()
+    };
+
+    if (!postData.archive_reason || (postData.archive_reason === 'Diğer' && !postData.other_reason.trim())) {
+      alert('Lütfen bir sebep belirtin.');
+      return;
     }
 
-    $('#archiveReason').change(function () {
-        if ($(this).val() === 'Diğer') {
-            $('#otherReasonDiv').show();
-            $('#otherReasonText').prop('required', true);
-        } else {
-            $('#otherReasonDiv').hide();
-            $('#otherReasonText').prop('required', false);
-        }
+    $.post("/archive_order", postData, function (response) {
+      if (response.success) {
+        $('#archiveModal').modal('hide');
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        alert('Hata: ' + response.message);
+      }
+    }).fail(() => alert('Sunucu hatası.'));
+  });
+
+  // Görsel Modal JavaScript
+  $(document).ready(function () {
+    const $imageModal = $('#imageModal');
+
+    $('.zoomable-image').on('click', function (e) {
+      e.stopPropagation();
+      const src = $(this).data('image-src');
+      if (src) {
+        $('#imageModalImg').attr('src', src);
+        $('#imageModalTitle').text('Ürün Görseli');
+        $('#imageModalInfo').text('Görseli kapatmak için dışarı tıklayın');
+        $imageModal.addClass('is-visible');
+      }
     });
 
-    $('#archiveForm').submit(function (event) {
-        event.preventDefault();
-        var postData = {
-            order_number: $('#archiveOrderNumber').val(),
-            archive_reason: $('#archiveReason').val(),
-            other_reason: $('#otherReasonText').val()
-        };
-
-        if (!postData.archive_reason || (postData.archive_reason === 'Diğer' && !postData.other_reason.trim())) {
-            alert('Lütfen bir sebep belirtin.');
-            return;
-        }
-
-        $.post("/archive_order", postData, function (response) {
-            if (response.success) {
-                $('#archiveModal').modal('hide');
-                setTimeout(() => window.location.reload(), 2000);
-            } else {
-                alert('Hata: ' + response.message);
-            }
-        }).fail(() => alert('Sunucu hatası.'));
+    $imageModal.on('click', function (e) {
+      if (e.target === this || $(e.target).hasClass('image-modal-close')) {
+        $(this).removeClass('is-visible');
+      }
     });
 
-    // Görsel Modal JavaScript
-    $(document).ready(function() {
-        const $imageModal = $('#imageModal');
-        
-        // Ürün görseli tıklama
-        $('.zoomable-image').on('click', function(e) {
-            e.stopPropagation();
-            const src = $(this).data('image-src');
-            if (src) {
-                $('#imageModalImg').attr('src', src);
-                $('#imageModalTitle').text('Ürün Görseli');
-                $('#imageModalInfo').text('Görseli kapatmak için dışarı tıklayın');
-                $imageModal.addClass('is-visible');
-            }
-        });
-        
-        // Modal kapatma
-        $imageModal.on('click', function(e) {
-            if (e.target === this || $(e.target).hasClass('image-modal-close')) {
-                $(this).removeClass('is-visible');
-            }
-        });
-        
-        // ESC tuşu ile kapatma
-        $(document).keyup(function(e) {
-            if (e.key === "Escape") {
-                $imageModal.removeClass('is-visible');
-            }
-        });
+    $(document).keyup(function (e) {
+      if (e.key === "Escape") {
+        $imageModal.removeClass('is-visible');
+      }
     });
-    </script>
-    </body>
-</html>
+  });
+
+//  🔧 Arşiv uyarısı (düzeltilmiş) 
+  $(document).ready(function () {
+    function showArchiveWarningIfAny() {
+      // Jinja → güvenli string, sonra parse ediyoruz
+      const raw = '{{ archive_warnings | default([], true) | tojson | safe }}';
+      let archiveWarnings = [];
+      try {
+        archiveWarnings = JSON.parse(raw);
+      } catch {
+        archiveWarnings = [];
+      }
+
+      if (Array.isArray(archiveWarnings) && archiveWarnings.length > 0) {
+        $('#archiveWarningModal').modal('show');
+      }
+    }
+
+    // sayfa yüklenince ve her 30 dk’da bir tetikle
+    showArchiveWarningIfAny();
+    setInterval(showArchiveWarningIfAny, 30 * 60 * 1000);
+  });
+</script>

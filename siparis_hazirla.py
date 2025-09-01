@@ -1,40 +1,56 @@
 import logging
-from datetime import datetime
-from flask import Blueprint, render_template, redirect, url_for
-import json
 import os
+import json
 import traceback
+from datetime import datetime
+from flask import Blueprint, render_template
 from sqlalchemy import desc
 
+# Modeller
+from models import OrderCreated, RafUrun, Product, Archive
 
-
-# Yeni tablolarınız:
-from models import (
-    OrderCreated,
-    RafUrun,
-    Product,
-    # ... eğer diğer tabloları da kullanacaksanız, buraya ekleyin
-)
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
+# Blueprint
 siparis_hazirla_bp = Blueprint("siparis_hazirla", __name__)
 
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s - %(levelname)s - %(message)s")
+
+
+# 🔔 Arşivde bekleyen siparişlerden uyarılar üret
+def get_archive_warnings():
+    now = datetime.utcnow()
+    archived_orders = Archive.query.all()
+    warnings = []
+
+    for a in archived_orders:
+        if not a.archive_date:
+            continue
+
+        diff = now - a.archive_date
+        minutes = diff.total_seconds() // 60
+        hours = diff.total_seconds() // 3600
+
+        if hours >= 1:
+            warnings.append(f"Sipariş {a.order_number} {int(hours)} saattir arşivde bekliyor.")
+        elif minutes >= 30:
+            warnings.append(f"Sipariş {a.order_number} 30 dakikadan fazla arşivde.")
+
+    return warnings, len(archived_orders)
 
 
 @siparis_hazirla_bp.route("/siparis-hazirla", endpoint="index")
 @siparis_hazirla_bp.route("/hazirla")
 def index():
-    data = get_home()  # en eski Created siparişi ve ürünleri toplar
+    data = get_home()
     return render_template("siparis_hazirla.html", **data)
-
 
 
 def get_home():
     """
-    Ana sayfa: en eski 'Created' siparişi ve ürünlerinin (aktif ilk 3 rafla) hazırlanması.
+    En eski 'Created' sipariş ve ürünlerini hazırla.
     """
     try:
+        # En eski Created sipariş
         oldest_order = OrderCreated.query.order_by(OrderCreated.order_date).first()
         if not oldest_order:
             logging.info("İşlenecek 'Created' sipariş yok.")
@@ -42,8 +58,8 @@ def get_home():
 
         remaining_time = calculate_remaining_time(oldest_order.agreed_delivery_date)
 
-        # details parse
-        details_json = oldest_order.details or '[]'
+        # Details parse
+        details_json = oldest_order.details or "[]"
         if isinstance(details_json, str):
             try:
                 details_list = json.loads(details_json)
@@ -55,18 +71,17 @@ def get_home():
         else:
             details_list = []
 
-        # ürün kartları
+        # Ürün kartları
         products = []
         for d in details_list:
-            bc = d.get('barcode', '')
+            bc = d.get("barcode", "")
             image_url = get_product_image(bc)
 
-            # SADECE AKTİF (adet>0) İLK 3 RAF
+            # Aktif tüm raflar (adet > 0)
             raf_kayitlari = (
                 RafUrun.query
                 .filter(RafUrun.urun_barkodu == bc, RafUrun.adet > 0)
                 .order_by(desc(RafUrun.adet))
-                .limit(3)
                 .all()
             )
             raflar = [{"kod": r.raf_kodu, "adet": r.adet} for r in raf_kayitlari]
@@ -76,15 +91,20 @@ def get_home():
                 "barcode": bc,
                 "quantity": d.get("quantity", 1),
                 "image_url": image_url,
-                "raflar": raflar,  # sadece aktif ilk 3
+                "raflar": raflar
             })
 
-        # sipariş objesine iliştir
+        # Sipariş objesine iliştir
         oldest_order.products = products
+
+        # Arşiv uyarılarını ekle
+        warnings, archive_count = get_archive_warnings()
 
         return {
             "order": oldest_order,
-            "remaining_time": remaining_time
+            "remaining_time": remaining_time,
+            "archive_warnings": warnings,
+            "archive_count": archive_count
         }
 
     except Exception as e:
@@ -94,33 +114,29 @@ def get_home():
 
 
 def default_order_data():
-    """
-    Varsayılan boş sipariş verilerini döndürür.
-    """
     return {
-        'order': None,
-        'order_number': 'Sipariş Yok',
-        'products': [],
-        'merchant_sku': 'Bilgi Yok',
-        'shipping_barcode': 'Kargo Kodu Yok',
-        'cargo_provider_name': 'Kargo Firması Yok',
-        'customer_name': 'Alıcı Yok',
-        'customer_surname': 'Soyad Yok',
-        'customer_address': 'Adres Yok',
-        'remaining_time': 'Kalan Süre Yok'
+        "order": None,
+        "order_number": "Sipariş Yok",
+        "products": [],
+        "merchant_sku": "Bilgi Yok",
+        "shipping_barcode": "Kargo Kodu Yok",
+        "cargo_provider_name": "Kargo Firması Yok",
+        "customer_name": "Alıcı Yok",
+        "customer_surname": "Soyad Yok",
+        "customer_address": "Adres Yok",
+        "remaining_time": "Kalan Süre Yok",
+        "archive_warnings": [],
+        "archive_count": 0
     }
 
+
 def calculate_remaining_time(delivery_date):
-    """
-    Teslimat süresini hesaplar.
-    """
     if delivery_date:
         try:
             now = datetime.now()
-            time_difference = delivery_date - now
-
-            if time_difference.total_seconds() > 0:
-                days, seconds = divmod(time_difference.total_seconds(), 86400)
+            diff = delivery_date - now
+            if diff.total_seconds() > 0:
+                days, seconds = divmod(diff.total_seconds(), 86400)
                 hours, seconds = divmod(seconds, 3600)
                 minutes = seconds // 60
                 return f"{int(days)} gün {int(hours)} saat {int(minutes)} dakika"
@@ -129,20 +145,15 @@ def calculate_remaining_time(delivery_date):
         except Exception as ve:
             logging.error(f"Tarih hesaplama hatası: {ve}")
             return "Kalan Süre Yok"
-    else:
-        return "Kalan Süre Yok"
+    return "Kalan Süre Yok"
+
 
 def get_product_image(barcode):
-    """
-    Ürün görselinin yolunu döndürür.
-    """
-    images_folder = os.path.join('static', 'images')
-    extensions = ['.jpg', '.jpeg', '.png', '.gif']
+    images_folder = os.path.join("static", "images")
+    extensions = [".jpg", ".jpeg", ".png", ".gif"]
     for ext in extensions:
         image_filename = f"{barcode}{ext}"
         image_path = os.path.join(images_folder, image_filename)
         if os.path.exists(image_path):
             return f"/static/images/{image_filename}"
     return "/static/images/default.jpg"
-
-# alias düğmeleri yerine doğrudan /index yönlendirmesi kullanılıyor
