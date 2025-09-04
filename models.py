@@ -587,6 +587,8 @@ class Degisim(db.Model):
     degisim_nedeni = db.Column(db.Text)
     # GÜNCELLENDİ: Tekil ürün alanları kaldırıldı, yerine JSON alanı eklendi.
     urunler_json = db.Column(db.Text, nullable=False)
+    musteri_kargo_takip = db.Column(db.String(64), nullable=True)
+
 
     def __repr__(self):
         return f"<Degisim {self.degisim_no}>"

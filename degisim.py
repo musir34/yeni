@@ -187,10 +187,11 @@ def degisim_kaydet():
             adres=adres,
             telefon_no=telefon_no,
             degisim_tarihi=datetime.now(),
-            degisim_durumu='Beklemede',
+            degisim_durumu='Oluşturuldu',   # <-- değişti
             kargo_kodu=generate_kargo_kodu(),
             degisim_nedeni=degisim_nedeni,
-            urunler_json=urunler_json_str
+            urunler_json=urunler_json_str,
+            musteri_kargo_takip=None        # <-- modelde varsa; yoksa bkz. Not
         )
 
         db.session.add(degisim_kaydi)
@@ -213,12 +214,26 @@ def degisim_kaydet():
 def update_status():
     degisim_no = request.form.get('degisim_no')
     status = request.form.get('status')
-    degisim_kaydi = Degisim.query.filter_by(degisim_no=degisim_no).first()
-    if degisim_kaydi:
-        degisim_kaydi.degisim_durumu = status
-        db.session.commit()
-        return jsonify(success=True)
-    return jsonify(success=False), 500
+    musteri_kargo_takip = request.form.get('musteri_kargo_takip', '').strip()
+
+    rec = Degisim.query.filter_by(degisim_no=degisim_no).first()
+    if not rec:
+        return jsonify(success=False, message="Kayıt bulunamadı"), 404
+
+    # Takip no kontrolü (her statü için)
+    if not (rec.musteri_kargo_takip or musteri_kargo_takip):
+        return jsonify(success=False, need_tracking=True,
+                       message="Müşteri kargo takip numarası olmadan statü güncellenemez.")
+
+    # varsa güncelle
+    if musteri_kargo_takip:
+        rec.musteri_kargo_takip = musteri_kargo_takip
+
+    rec.degisim_durumu = status
+    db.session.commit()
+    return jsonify(success=True)
+
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 3) Sil

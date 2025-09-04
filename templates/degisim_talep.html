@@ -1,289 +1,319 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Değişim Listesi - Güllü Ayakkabı</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --color-primary: #B76E79;
-            --color-primary-dark: #A05F6A;
-            --color-secondary: #212529;
-            --color-text: #343a40;
-            --color-bg: #f8f9fa;
-            --color-white: #fff;
-            --color-border: #dee2e6;
-            --color-success: #28a745;
-            --color-warning: #ffc107;
-            --color-danger: #dc3545;
-            --color-info: #0dcaf0;
-            --font-family-base: 'Inter', sans-serif;
-            --border-radius: 0.5rem;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
-            --shadow-md: 0 5px 15px rgba(0,0,0,0.08);
-            --transition: all 0.25s ease-in-out;
-        }
-        body { font-family: var(--font-family-base); background-color: var(--color-bg); color: var(--color-text); }
-        .container-xl { max-width: 1600px; }
-        h2 { color: var(--color-secondary); font-weight: 600; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Değişim Listesi - Güllü Ayakkabı</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root{
+      --color-primary:#B76E79; --color-primary-dark:#A05F6A;
+      --color-secondary:#212529; --color-text:#343a40;
+      --color-bg:#f8f9fa; --color-white:#fff; --color-border:#dee2e6;
+      --color-success:#28a745; --color-warning:#ffc107; --color-danger:#dc3545; --color-info:#0dcaf0;
+      --font-family-base:'Inter',sans-serif; --border-radius:.5rem;
+      --shadow-sm:0 1px 3px rgba(0,0,0,.04); --shadow-md:0 5px 15px rgba(0,0,0,.08);
+      --transition:all .25s ease-in-out;
+    }
+    body{font-family:var(--font-family-base);background:var(--color-bg);color:var(--color-text)}
+    .container-xl{max-width:1600px}
+    h2{color:var(--color-secondary);font-weight:600}
+    .btn{border-radius:var(--border-radius);font-weight:600;transition:var(--transition);border:none;padding:.6rem 1.2rem}
+    .btn:hover{transform:translateY(-2px);box-shadow:var(--shadow-sm)}
+    .btn-primary{background:var(--color-primary);color:#fff}.btn-primary:hover{background:var(--color-primary-dark)}
+    .btn-secondary{background:var(--color-secondary);color:#fff}.btn-secondary:hover{background:#343a40}
+    .btn-success{background:var(--color-success)}
+    .btn-warning,.bg-warning{background:var(--color-warning)!important;color:var(--color-secondary)!important}
+    .btn-info,.bg-info{background:var(--color-info)!important}
+    .bg-orange{background:#fd7e14!important}
 
-        .btn { border-radius: var(--border-radius); font-weight: 600; transition: var(--transition); border: none; padding: 0.6rem 1.2rem; }
-        .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-        .btn-primary { background-color: var(--color-primary); color: var(--color-white); }
-        .btn-primary:hover { background-color: var(--color-primary-dark); }
-        .btn-secondary { background-color: var(--color-secondary); color: var(--color-white); }
-        .btn-secondary:hover { background-color: #343a40; }
-        .btn-success { background-color: var(--color-success); }
-        .btn-warning, .bg-warning { background-color: var(--color-warning) !important; color: var(--color-secondary) !important; }
-        .btn-info, .bg-info { background-color: var(--color-info) !important; }
-        .bg-orange { background-color: #fd7e14 !important; }
+    .filter-area{background:var(--color-white);padding:1.5rem;border-radius:var(--border-radius);box-shadow:var(--shadow-sm)}
+    .form-control:focus,.form-select:focus{border-color:var(--color-primary);box-shadow:0 0 0 .25rem rgba(183,110,121,.25)}
 
-        .filter-area { background-color: var(--color-white); padding: 1.5rem; border-radius: var(--border-radius); box-shadow: var(--shadow-sm); }
-        .form-control:focus, .form-select:focus {
-            border-color: var(--color-primary);
-            box-shadow: 0 0 0 0.25rem rgba(183, 110, 121, 0.25);
-        }
+    .card{border:none;border-radius:var(--border-radius);box-shadow:var(--shadow-sm);transition:var(--transition);animation:fadeIn .5s}
+    .card:hover{transform:translateY(-5px);box-shadow:var(--shadow-md)}
+    .card-header{background:var(--color-white);border-bottom:1px solid var(--color-border)}
+    .card-footer{background:#fcfcfc;border-top:1px solid var(--color-border)}
 
-        .card { border: none; border-radius: var(--border-radius); box-shadow: var(--shadow-sm); transition: var(--transition); animation: fadeIn 0.5s; }
-        .card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); }
-        .card-header { background-color: var(--color-white); border-bottom: 1px solid var(--color-border); }
-        .card-footer { background-color: #fcfcfc; border-top: 1px solid var(--color-border); }
+    .product-in-card{display:flex;align-items:center;padding:.75rem;background:#f8f9fa;border-radius:var(--border-radius);margin-bottom:.5rem}
+    .product-image-small{width:60px;height:60px;object-fit:cover;border-radius:var(--border-radius);margin-right:1rem;cursor:pointer;transition:transform .2s}
+    .product-image-small:hover{transform:scale(1.1)}
+    .badge{font-size:.85em}
+    .raf-badges .badge{margin-right:6px;margin-top:4px}
+    .raf-line{margin-top:4px}
 
-        .product-in-card {
-            display: flex; align-items: center; padding: 0.75rem;
-            background-color: #f8f9fa; border-radius: var(--border-radius); margin-bottom: 0.5rem;
-        }
-        .product-image-small {
-            width: 60px; height: 60px; object-fit: cover;
-            border-radius: var(--border-radius); margin-right: 1rem;
-            cursor: pointer; transition: transform 0.2s ease;
-        }
-        .product-image-small:hover { transform: scale(1.1); }
-        .badge { font-size: 0.85em; }
-
-        .raf-badges .badge { margin-right: 6px; margin-top: 4px; }
-        .raf-line { margin-top: 4px; }
-
-        .pagination .page-link { border-radius: var(--border-radius); margin: 0 4px; border: 1px solid var(--color-border); color: var(--color-primary); font-weight: 600; }
-        .pagination .page-item.active .page-link { background-color: var(--color-primary); border-color: var(--color-primary); color: var(--color-white); }
-        .pagination .page-item:not(.active) .page-link:hover { background-color: #f1f1f1; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
+    .pagination .page-link{border-radius:var(--border-radius);margin:0 4px;border:1px solid var(--color-border);color:var(--color-primary);font-weight:600}
+    .pagination .page-item.active .page-link{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+    .pagination .page-item:not(.active) .page-link:hover{background:#f1f1f1}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+  </style>
 </head>
 <body>
-    <div class="container-xl mt-4 mb-5">
-        <div class="text-center mb-4">
-            <h2><i class="fas fa-sync-alt"></i> Değişim Talepleri Listesi</h2>
-            <p class="text-muted">Toplam {{ total_exchanges_count }} talep bulundu.</p>
-        </div>
+  <div class="container-xl mt-4 mb-5">
+    <div class="text-center mb-4">
+      <h2><i class="fas fa-sync-alt"></i> Değişim Talepleri Listesi</h2>
+      <p class="text-muted">Toplam {{ total_exchanges_count }} talep bulundu.</p>
+    </div>
 
-        <div class="filter-area mb-4">
-            <form id="filterForm" action="{{ url_for('degisim.degisim_talep') }}" method="GET" class="row g-3 align-items-end">
-                <div class="col-lg-3 col-md-6">
-                    <label for="siparis_no" class="form-label">Sipariş No</label>
-                    <input type="text" id="siparis_no" name="siparis_no" class="form-control" placeholder="Sipariş No Ara..." value="{{ current_filters.siparis_no or '' }}">
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <label for="reason_keyword" class="form-label">Değişim Nedeni</label>
-                    <select id="reason_keyword" name="reason_keyword" class="form-select">
-                        <option value="">Tüm Nedenler</option>
-                        <option value="Ürün bedeni büyük geldi." {% if current_filters.reason_keyword == 'Ürün bedeni büyük geldi.' %}selected{% endif %}>Ürün Bedeni Büyük Geldi</option>
-                        <option value="Ürün bedeni küçük geldi." {% if current_filters.reason_keyword == 'Ürün bedeni küçük geldi.' %}selected{% endif %}>Ürün Bedeni Küçük Geldi</option>
-                        <option value="Kusurlu ürün gönderildi." {% if current_filters.reason_keyword == 'Kusurlu ürün gönderildi.' %}selected{% endif %}>Kusurlu Ürün Gönderildi</option>
-                        <option value="Yanlış ürün gönderildi." {% if current_filters.reason_keyword == 'Yanlış ürün gönderildi.' %}selected{% endif %}>Yanlış Ürün Gönderildi</option>
-                    </select>
-                </div>
-                <div class="col-lg-2 col-md-6">
-                    <label for="filter_status" class="form-label">Durum</label>
-                    <select id="filter_status" name="filter_status" class="form-select">
-                        <option value="">Tümü</option>
-                        <option value="Beklemede" {% if current_filters.filter_status == 'Beklemede' %}selected{% endif %}>Beklemede</option>
-                        <option value="İşleme Alındı" {% if current_filters.filter_status == 'İşleme Alındı' %}selected{% endif %}>İşleme Alındı</option>
-                        <option value="Kargoya Verildi" {% if current_filters.filter_status == 'Kargoya Verildi' %}selected{% endif %}>Kargoya Verildi</option>
-                        <option value="Teslim Edildi" {% if current_filters.filter_status == 'Teslim Edildi' %}selected{% endif %}>Teslim Edildi</option>
-                    </select>
-                </div>
-                <div class="col-lg-2 col-md-6">
-                    <label for="per_page" class="form-label">Sayfa Başına</label>
-                    <select id="per_page" name="per_page" class="form-select">
-                        <option value="12" {% if (current_filters.per_page or 12)|int == 12 %}selected{% endif %}>12 Kayıt</option>
-                        <option value="24" {% if (current_filters.per_page or 12)|int == 24 %}selected{% endif %}>24 Kayıt</option>
-                        <option value="48" {% if (current_filters.per_page or 12)|int == 48 %}selected{% endif %}>48 Kayıt</option>
-                    </select>
-                </div>
-                <div class="col-lg-2 col-md-12 text-end">
-                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter"></i> Filtrele</button>
-                </div>
-            </form>
+    <div class="filter-area mb-4">
+      <form id="filterForm" action="{{ url_for('degisim.degisim_talep') }}" method="GET" class="row g-3 align-items-end">
+        <div class="col-lg-3 col-md-6">
+          <label for="siparis_no" class="form-label">Sipariş No</label>
+          <input type="text" id="siparis_no" name="siparis_no" class="form-control" placeholder="Sipariş No Ara..." value="{{ current_filters.siparis_no or '' }}">
         </div>
-
-        <div class="text-center mb-4">
-            <a href="{{ url_for('degisim.yeni_degisim_talebi') }}" class="btn btn-success me-2"><i class="fas fa-plus-circle"></i> Yeni Değişim Talebi</a>
-            <a href="{{ url_for('home.home') }}" class="btn btn-secondary"><i class="fas fa-home"></i> Anasayfa</a>
+        <div class="col-lg-3 col-md-6">
+          <label for="reason_keyword" class="form-label">Değişim Nedeni</label>
+          <select id="reason_keyword" name="reason_keyword" class="form-select">
+            <option value="">Tüm Nedenler</option>
+            <option value="Ürün bedeni büyük geldi." {% if current_filters.reason_keyword == 'Ürün bedeni büyük geldi.' %}selected{% endif %}>Ürün Bedeni Büyük Geldi</option>
+            <option value="Ürün bedeni küçük geldi." {% if current_filters.reason_keyword == 'Ürün bedeni küçük geldi.' %}selected{% endif %}>Ürün Bedeni Küçük Geldi</option>
+            <option value="Kusurlu ürün gönderildi." {% if current_filters.reason_keyword == 'Kusurlu ürün gönderildi.' %}selected{% endif %}>Kusurlu Ürün Gönderildi</option>
+            <option value="Yanlış ürün gönderildi." {% if current_filters.reason_keyword == 'Yanlış ürün gönderildi.' %}selected{% endif %}>Yanlış Ürün Gönderildi</option>
+          </select>
         </div>
+        <div class="col-lg-2 col-md-6">
+          <label for="filter_status" class="form-label">Durum</label>
+          <select id="filter_status" name="filter_status" class="form-select">
+            <option value="">Tümü</option>
+            <option value="Oluşturuldu" {% if current_filters.filter_status == 'Oluşturuldu' %}selected{% endif %}>Oluşturuldu</option>
+            <option value="Beklemede" {% if current_filters.filter_status == 'Beklemede' %}selected{% endif %}>Beklemede</option>
+            <option value="İşleme Alındı" {% if current_filters.filter_status == 'İşleme Alındı' %}selected{% endif %}>İşleme Alındı</option>
+            <option value="Kargoya Verildi" {% if current_filters.filter_status == 'Kargoya Verildi' %}selected{% endif %}>Kargoya Verildi</option>
+            <option value="Teslim Edildi" {% if current_filters.filter_status == 'Teslim Edildi' %}selected{% endif %}>Teslim Edildi</option>
+          </select>
+        </div>
+        <div class="col-lg-2 col-md-6">
+          <label for="per_page" class="form-label">Sayfa Başına</label>
+          <select id="per_page" name="per_page" class="form-select">
+            <option value="12" {% if (current_filters.per_page or 12)|int == 12 %}selected{% endif %}>12 Kayıt</option>
+            <option value="24" {% if (current_filters.per_page or 12)|int == 24 %}selected{% endif %}>24 Kayıt</option>
+            <option value="48" {% if (current_filters.per_page or 12)|int == 48 %}selected{% endif %}>48 Kayıt</option>
+          </select>
+        </div>
+        <div class="col-lg-2 col-md-12 text-end">
+          <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter"></i> Filtrele</button>
+        </div>
+      </form>
+    </div>
 
-        <div class="row">
-        {% for exchange in degisim_kayitlari %}
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong class="text-primary">{{ exchange.siparis_no }}</strong>
-                            <i class="far fa-copy ms-2" style="cursor: pointer;" onclick="copyToClipboard('{{ exchange.siparis_no }}', this)"></i>
-                            <br>
-                            <small class="text-muted">{{ exchange.degisim_tarihi.strftime('%d.%m.%Y %H:%M') }}</small>
-                        </div>
-                        <span class="badge fs-6 rounded-pill
-                            {% if exchange.degisim_durumu == 'Beklemede' %} bg-warning
-                            {% elif exchange.degisim_durumu == 'İşleme Alındı' %} bg-success
-                            {% elif exchange.degisim_durumu == 'Kargoya Verildi' %} bg-orange
-                            {% elif exchange.degisim_durumu == 'Teslim Edildi' %} bg-info text-dark
-                            {% else %} bg-secondary {% endif %}">
-                            {{ exchange.degisim_durumu }}
+    <div class="text-center mb-4">
+      <a href="{{ url_for('degisim.yeni_degisim_talebi') }}" class="btn btn-success me-2"><i class="fas fa-plus-circle"></i> Yeni Değişim Talebi</a>
+      <a href="{{ url_for('home.home') }}" class="btn btn-secondary"><i class="fas fa-home"></i> Anasayfa</a>
+    </div>
+
+    <div class="row">
+      {% for exchange in degisim_kayitlari %}
+      <div class="col-md-6 col-lg-4 mb-4" id="card-{{ exchange.degisim_no }}">
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+              <strong class="text-primary">{{ exchange.siparis_no }}</strong>
+              <i class="far fa-copy ms-2" style="cursor:pointer" onclick="copyToClipboard('{{ exchange.siparis_no }}', this)"></i><br>
+              <small class="text-muted">{{ exchange.degisim_tarihi.strftime('%d.%m.%Y %H:%M') }}</small>
+            </div>
+            <span class="badge fs-6 rounded-pill
+              {% if exchange.degisim_durumu == 'Oluşturuldu' %} bg-warning
+              {% elif exchange.degisim_durumu == 'Beklemede' %} bg-warning
+              {% elif exchange.degisim_durumu == 'İşleme Alındı' %} bg-success
+              {% elif exchange.degisim_durumu == 'Kargoya Verildi' %} bg-orange
+              {% elif exchange.degisim_durumu == 'Teslim Edildi' %} bg-info text-dark
+              {% else %} bg-secondary {% endif %}">
+              {{ exchange.degisim_durumu }}
+            </span>
+          </div>
+
+          <div class="card-body d-flex flex-column">
+            <h6 class="card-title">{{ exchange.ad }} {{ exchange.soyad }}</h6>
+            <p class="card-text text-muted small">{{ exchange.adres }}</p>
+            <p class="card-text text-muted small"><strong>Neden:</strong> {{ exchange.degisim_nedeni or 'Belirtilmemiş' }}</p>
+            {% if exchange.musteri_kargo_takip %}
+              <p class="card-text text-muted small"><strong>Müşteri Takip No:</strong> {{ exchange.musteri_kargo_takip }}</p>
+            {% endif %}
+            <hr>
+            <div class="products-container mb-auto">
+              {% if exchange.urunler %}
+                {% for urun in exchange.urunler %}
+                <div class="product-in-card">
+                  <img src="{{ url_for('static', filename='images/' ~ urun.barkod ~ '.jpg') }}"
+                       class="product-image-small" alt="Ürün"
+                       onclick="showImageModal('{{ url_for('static', filename='images/' ~ urun.barkod ~ '.jpg') }}')"
+                       onerror="this.src='{{ url_for('static', filename='images/default.jpg') }}'">
+                  <div class="small w-100">
+                    <div class="d-flex justify-content-between">
+                      <div>
+                        <strong>{{ urun.model_kodu }}</strong><br>
+                        <span class="text-muted">{{ urun.renk }} - {{ urun.beden }}</span><br>
+                        <span class="text-muted">Barkod: {{ urun.barkod }}</span>
+                      </div>
+                      {% if urun.adet %}
+                        <span class="badge bg-secondary align-self-start">Adet: {{ urun.adet }}</span>
+                      {% endif %}
+                    </div>
+                    <div class="raf-line">
+                      <span class="text-muted">Raf:</span>
+                      {% if urun.raf_kodlari and urun.raf_kodlari|length > 0 %}
+                        <span class="raf-badges">
+                          {% for rk in urun.raf_kodlari %}
+                            <span class="badge bg-dark-subtle text-dark border">{{ rk or '—' }}</span>
+                          {% endfor %}
                         </span>
+                      {% else %}
+                        <span class="text-muted">—</span>
+                      {% endif %}
                     </div>
-                    <div class="card-body d-flex flex-column">
-                        <h6 class="card-title">{{ exchange.ad }} {{ exchange.soyad }}</h6>
-                        <p class="card-text text-muted small">{{ exchange.adres }}</p>
-                        <p class="card-text text-muted small"><strong>Neden:</strong> {{ exchange.degisim_nedeni or 'Belirtilmemiş' }}</p>
-                        <hr>
-                        <div class="products-container mb-auto">
-                        {% if exchange.urunler %}
-                            {% for urun in exchange.urunler %}
-                            <div class="product-in-card">
-                                <img src="{{ url_for('static', filename='images/' ~ urun.barkod ~ '.jpg') }}" 
-                                     class="product-image-small" alt="Ürün" 
-                                     onclick="showImageModal('{{ url_for('static', filename='images/' ~ urun.barkod ~ '.jpg') }}')"
-                                     onerror="this.src='{{ url_for('static', filename='images/default.jpg') }}'">
-                                <div class="small w-100">
-                                    <div class="d-flex justify-content-between">
-                                        <div>
-                                            <strong>{{ urun.model_kodu }}</strong><br>
-                                            <span class="text-muted">{{ urun.renk }} - {{ urun.beden }}</span><br>
-                                            <span class="text-muted">Barkod: {{ urun.barkod }}</span>
-                                        </div>
-                                        {% if urun.adet %}
-                                            <span class="badge bg-secondary align-self-start">Adet: {{ urun.adet }}</span>
-                                        {% endif %}
-                                    </div>
-
-                                    <!-- Raf bilgisi: birden fazla ise rozetler -->
-                                    <div class="raf-line">
-                                        <span class="text-muted">Raf:</span>
-                                        {% if urun.raf_kodlari and urun.raf_kodlari|length > 0 %}
-                                            <span class="raf-badges">
-                                                {% for rk in urun.raf_kodlari %}
-                                                    <span class="badge bg-dark-subtle text-dark border">{{ rk or '—' }}</span>
-                                                {% endfor %}
-                                            </span>
-                                        {% else %}
-                                            <span class="text-muted">—</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="alert alert-warning p-2 small">Ürün bilgisi bulunamadı.</div>
-                        {% endif %}
-                        </div>
-                    </div>
-                    <div class="card-footer border-0">
-                         <div class="btn-toolbar" role="toolbar">
-                            <div class="btn-group me-2 mb-2" role="group">
-                                <button class="btn btn-success btn-sm" onclick="updateStatus('{{ exchange.degisim_no }}', 'İşleme Alındı')">İşleme Al</button>
-                                <button class="btn btn-warning btn-sm" onclick="updateStatus('{{ exchange.degisim_no }}', 'Kargoya Verildi')">Kargola</button>
-                                <button class="btn btn-info btn-sm" onclick="updateStatus('{{ exchange.degisim_no }}', 'Teslim Edildi')">Teslim Et</button>
-                            </div>
-                            <div class="btn-group mb-2" role="group">
-                                <form action="{{ url_for('order_label') }}" method="post" target="_blank" class="d-inline">
-                                    <input type="hidden" name="order_number" value="{{ exchange.siparis_no }}">
-                                    <input type="hidden" name="shipping_barcode" value="{{ exchange.kargo_kodu }}">
-                                    <input type="hidden" name="customer_name" value="{{ exchange.ad }}">
-                                    <input type="hidden" name="customer_surname" value="{{ exchange.soyad }}">
-                                    <input type="hidden" name="customer_address" value="{{ exchange.adres }}">
-                                    <input type="hidden" name="telefon_no" value="{{ exchange.telefon_no }}">
-                                    <button type="submit" class="btn btn-secondary btn-sm">Etiket</button>
-                                </form>
-                                <button class="btn btn-danger btn-sm" onclick="deleteExchange('{{ exchange.degisim_no }}')">Sil</button>
-                            </div>
-                        </div>
-                    </div>
+                  </div>
                 </div>
+                {% endfor %}
+              {% else %}
+                <div class="alert alert-warning p-2 small">Ürün bilgisi bulunamadı.</div>
+              {% endif %}
             </div>
-        {% else %}
-            <div class="col-12">
-                <div class="alert alert-warning text-center">Aradığınız kriterlere uygun değişim talebi bulunamadı.</div>
+          </div>
+
+          <div class="card-footer border-0">
+            <div class="btn-toolbar" role="toolbar">
+              <div class="btn-group me-2 mb-2" role="group">
+                <button class="btn btn-success btn-sm" onclick="tryMoveToProcessing('{{ exchange.degisim_no }}')">İşleme Al</button>
+                <button class="btn btn-warning btn-sm" onclick="updateStatus('{{ exchange.degisim_no }}','Kargoya Verildi')">Kargola</button>
+                <button class="btn btn-info btn-sm" onclick="updateStatus('{{ exchange.degisim_no }}','Teslim Edildi')">Teslim Et</button>
+              </div>
+              <div class="btn-group mb-2" role="group">
+                <form id="label-form-{{ exchange.degisim_no }}" action="{{ url_for('order_label') }}" method="post" target="_blank" class="d-inline">
+                  <input type="hidden" name="order_number" value="{{ exchange.siparis_no }}">
+                  <input type="hidden" name="shipping_barcode" value="{{ exchange.kargo_kodu }}">
+                  <input type="hidden" name="customer_name" value="{{ exchange.ad }}">
+                  <input type="hidden" name="customer_surname" value="{{ exchange.soyad }}">
+                  <input type="hidden" name="customer_address" value="{{ exchange.adres }}">
+                  <input type="hidden" name="telefon_no" value="{{ exchange.telefon_no }}">
+                </form>
+                <button class="btn btn-secondary btn-sm" onclick="guardedLabelPrint('{{ exchange.degisim_no }}','{{ exchange.degisim_durumu }}')">Etiket</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteExchange('{{ exchange.degisim_no }}')">Sil</button>
+              </div>
             </div>
+          </div>
+
+        </div>
+      </div>
+      {% else %}
+      <div class="col-12">
+        <div class="alert alert-warning text-center">Aradığınız kriterlere uygun değişim talebi bulunamadı.</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <nav aria-label="Sayfa gezintisi" class="mt-4">
+      <ul class="pagination justify-content-center">
+        {% if page > 1 %}<li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, page=page-1, **current_filters) }}">Önceki</a></li>{% endif %}
+        {% for i in range(1, total_pages + 1) %}
+          <li class="page-item {% if i == page %}active{% endif %}"><a class="page-link" href="{{ url_for(request.endpoint, page=i, **current_filters) }}">{{ i }}</a></li>
         {% endfor %}
+        {% if page < total_pages %}<li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, page=page+1, **current_filters) }}">Sonraki</a></li>{% endif %}
+      </ul>
+    </nav>
+  </div>
+
+  <!-- Görsel modal -->
+  <div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Ürün Görseli</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
-
-        <nav aria-label="Sayfa gezintisi" class="mt-4">
-            <ul class="pagination justify-content-center">
-                {% if page > 1 %}<li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, page=page-1, **current_filters) }}">Önceki</a></li>{% endif %}
-                {% for i in range(1, total_pages + 1) %}<li class="page-item {% if i == page %}active{% endif %}"><a class="page-link" href="{{ url_for(request.endpoint, page=i, **current_filters) }}">{{ i }}</a></li>{% endfor %}
-                {% if page < total_pages %}<li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, page=page+1, **current_filters) }}">Sonraki</a></li>{% endif %}
-            </ul>
-        </nav>
-    </div>
-
-    <div class="modal fade" id="imageModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Ürün Görseli</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body text-center p-2">
-                    <img src="" id="modalImage" class="img-fluid" alt="Büyük Ürün Görseli" style="border-radius: var(--border-radius);">
-                </div>
-            </div>
+        <div class="modal-body text-center p-2">
+          <img src="" id="modalImage" class="img-fluid" alt="Büyük Ürün Görseli" style="border-radius: var(--border-radius);">
         </div>
+      </div>
     </div>
+  </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
-        function showImageModal(imageUrl) {
-            document.getElementById('modalImage').src = imageUrl;
-            imageModal.show();
-        }
+  <!-- Müşteri takip no modal -->
+  <div class="modal fade" id="trackingModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Müşteri Kargo Takip Numarası</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="trackingInput" class="form-control" placeholder="Örn: 1234567890">
+          <small class="text-muted">İşleme Almak için müşterinin gönderdiği ürünün takip numarası zorunlu.</small>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="trackingSaveBtn" class="btn btn-primary">Kaydet ve İşleme Al</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        function copyToClipboard(text, element) {
-            navigator.clipboard.writeText(text).then(() => {
-                const originalIcon = 'fa-copy';
-                const successIcon = 'fa-check';
-                const $icon = $(element);
-                $icon.removeClass(originalIcon).addClass(successIcon).css('color', 'var(--color-success)');
-                setTimeout(() => { $icon.removeClass(successIcon).addClass(originalIcon).css('color', ''); }, 2000);
-            });
-        }
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+    function showImageModal(url){ document.getElementById('modalImage').src = url; imageModal.show(); }
 
-        function updateStatus(degisim_no, status) {
-            $.post("{{ url_for('degisim.update_status') }}", { degisim_no: degisim_no, status: status })
-            .done(function(response) {
-                if(response.success) { location.reload(); }
-                else { alert('Durum güncellenirken bir hata oluştu: ' + (response.message || '')); }
-            }).fail(() => alert('Sunucuyla iletişim kurulamadı.'));
-        }
+    function copyToClipboard(text, el){
+      navigator.clipboard.writeText(text).then(()=>{
+        const original='fa-copy', ok='fa-check'; const $i=$(el);
+        $i.removeClass(original).addClass(ok).css('color','var(--color-success)');
+        setTimeout(()=>{$i.removeClass(ok).addClass(original).css('color','')},2000);
+      });
+    }
 
-        function deleteExchange(degisim_no) {
-            if (confirm("Bu kaydı silmek istediğinizden emin misiniz?")) {
-                $.post("{{ url_for('degisim.delete_exchange') }}", { degisim_no: degisim_no })
-                .done(function(response) {
-                    if (response.success) {
-                        $(`[onclick="deleteExchange('${degisim_no}')"]`).closest('.col-md-6, .col-lg-4').fadeOut(500, function() { $(this).remove(); });
-                    } else {
-                        alert('Silme işlemi sırasında bir hata oluştu: ' + (response.message || ''));
-                    }
-                }).fail(() => alert('Sunucuyla iletişim kurulamadı.'));
-            }
-        }
-    </script>
+    // Etiket sadece "İşleme Alındı" iken
+    function guardedLabelPrint(degisim_no, status){
+      if(status !== 'İşleme Alındı'){ alert("Etiket sadece 'İşleme Alındı' statüsünde yazdırılabilir."); return; }
+      document.getElementById(`label-form-${degisim_no}`).submit();
+    }
+
+    // Genel statü güncelle
+    function updateStatus(degisim_no, status){
+      $.post("{{ url_for('degisim.update_status') }}",{degisim_no,status})
+        .done(res=>{
+          if(res.success){ location.reload(); }
+          else if(res.need_tracking){ // backend "takip gerekli" dediyse
+            pendingDegisimNo = degisim_no;
+            $('#trackingInput').val('');
+            trackingModal.show();
+          } else { alert(res.message || 'Güncellenemedi.'); }
+        }).fail(()=>alert('Sunucuyla iletişim kurulamadı.'));
+    }
+
+    // "İşleme Al" butonu: önce doğrudan dene, gerekirse modal aç
+    const trackingModalEl = document.getElementById('trackingModal');
+    const trackingModal = new bootstrap.Modal(trackingModalEl);
+    let pendingDegisimNo = null;
+
+    function tryMoveToProcessing(degisim_no){
+      $.post("{{ url_for('degisim.update_status') }}",{degisim_no, status:'İşleme Alındı'})
+        .done(res=>{
+          if(res.success){ location.reload(); return; }
+          if(res.need_tracking){ pendingDegisimNo = degisim_no; $('#trackingInput').val(''); trackingModal.show(); }
+          else{ alert(res.message || 'Güncellenemedi.'); }
+        }).fail(()=>alert('Sunucuyla iletişim kurulamadı.'));
+    }
+
+    // Modal "Kaydet ve İşleme Al"
+    $('#trackingSaveBtn').on('click', function(){
+      const code = ($('#trackingInput').val()||'').trim();
+      if(!code){ alert('Takip numarası zorunlu.'); return; }
+      $.post("{{ url_for('degisim.update_status') }}",
+             {degisim_no: pendingDegisimNo, status:'İşleme Alındı', musteri_kargo_takip: code})
+        .done(res=>{ res.success ? location.reload() : alert(res.message || 'Güncellenemedi.'); })
+        .fail(()=>alert('Sunucuyla iletişim kurulamadı.'));
+    });
+
+    // Sil
+    function deleteExchange(degisim_no){
+      if(!confirm("Bu kaydı silmek istediğinizden emin misiniz?")) return;
+      $.post("{{ url_for('degisim.delete_exchange') }}",{degisim_no})
+        .done(res=>{
+          if(res.success){ $(`#card-${degisim_no}`).fadeOut(300,function(){ $(this).remove(); }); }
+          else{ alert('Silme işlemi sırasında hata: '+(res.message||'')); }
+        }).fail(()=>alert('Sunucuyla iletişim kurulamadı.'));
+    }
+  </script>
 </body>
 </html>
