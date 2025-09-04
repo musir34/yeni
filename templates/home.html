@@ -153,12 +153,20 @@
       <!-- /canlı kart -->
 
       <div class="col-md-3 mb-3">
-        <div class="card-soft p-3 tile">
-          <h5>İade</h5>
-          <div class="num">{{ stats.iade }}</div>
-        </div>
-      </div>
+  <div class="card-soft p-3 tile">
+    <h5>İade / Değişim</h5>
+    <div class="num" style="line-height:1;">{{ stats.iade }}</div>
+    <div class="mt-2 d-flex flex-wrap" style="gap:6px;">
+      <span class="badge" style="background:linear-gradient(135deg,#2193b0,#6dd5ed);font-size:.8rem;">
+      🔄 Günlük Değişim: {{ stats.degisim_gunluk or 0 }}
+      </span>
+      <span class="badge" style="background:linear-gradient(135deg,#f7971e,#ffd200);font-size:.8rem;">
+      📅 Aylık Değişim: {{ stats.degisim_aylik or 0 }}
+    </span>
     </div>
+  </div>
+</div>
+
 
     <!-- Kısayollar -->
     <div class="card-soft p-4 quick-links">

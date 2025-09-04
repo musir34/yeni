@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, current_app
 from sqlalchemy import func, cast, String, and_
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from models import db, CentralStock, OrderCreated, OrderPicking, OrderShipped, Return
+from models import db, CentralStock, OrderCreated, OrderPicking, OrderShipped, Return, Degisim
 try:
     from models import OrderDelivered
 except ImportError:
@@ -44,6 +44,10 @@ def index():
     now = datetime.now(IST)
     ay_basi, sonraki_ay = _month_range_ist(now)
 
+    # **GÜN aralığı (IST)**
+    gun_basi = datetime(now.year, now.month, now.day, tzinfo=IST)
+    gun_sonu = datetime(now.year, now.month, now.day, tzinfo=IST).replace(hour=23, minute=59, second=59, microsecond=999000)
+
     # 1) Birleşik sipariş kümesi
     best_rows = _collect_month_orders_unified(ay_basi, sonraki_ay)
 
@@ -52,21 +56,6 @@ def index():
 
     # 3) Ortalama sipariş tutarı
     ortalama_siparis_tutari, _total_net, _order_cnt = _monthly_aov_from_unified_rows(best_rows)
-
-    # Debug log
-    try:
-        current_app.logger.info(
-            f"[HOME] {now:%Y-%m} unified_orders={aylik_toplam_siparis} "
-            f"avg={ortalama_siparis_tutari:.2f} total_net={_total_net:.2f} cnt={_order_cnt}"
-        )
-    except Exception:
-        pass
-
-    # Türkçe ay adı
-    tr_ay = [
-        "Ocak","Şubat","Mart","Nisan","Mayıs","Haziran",
-        "Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"
-    ][now.month-1]
 
     # Created ve Picking sayıları
     created_count = db.session.query(func.count()).select_from(OrderCreated).scalar() or 0
@@ -79,6 +68,19 @@ def index():
         .scalar()
     )
 
+    # **DEĞİŞİM: Günlük ve Aylık**
+    degisim_gunluk = (
+        db.session.query(func.count(Degisim.id))
+        .filter(_ist_between(Degisim.degisim_tarihi, gun_basi, gun_sonu))
+        .scalar()
+    ) or 0
+
+    degisim_aylik = (
+        db.session.query(func.count(Degisim.id))
+        .filter(_ist_between(Degisim.degisim_tarihi, ay_basi, sonraki_ay))
+        .scalar()
+    ) or 0
+
     stats = {
         "toplam_siparis": aylik_toplam_siparis,
         "created": created_count,
@@ -86,16 +88,18 @@ def index():
         "hazirlanan": 0,
         "iade": iade_adedi,
         "kritik_stok": 0,
+        # ↓ yeni alanlar
+        "degisim_gunluk": degisim_gunluk,
+        "degisim_aylik": degisim_aylik,
     }
 
     return render_template(
         "home.html",
         stats=stats,
         toplam_stok=toplam_stok,
-        ay_adi=tr_ay,
+        ay_adi=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"][now.month-1],
         ortalama_siparis_tutari=ortalama_siparis_tutari
     )
-
 
 
 
