@@ -8,23 +8,13 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"/>
   <style>
-    :root{
-      --card-bg:#ffffff;
-      --tile-shadow:0 14px 30px rgba(0,0,0,.08);
-      --btn-shadow:0 10px 18px rgba(0,0,0,.12);
-      --btn-hover-shadow:0 16px 26px rgba(0,0,0,.18);
-      --shine:linear-gradient(120deg,rgba(255,255,255,0) 30%,rgba(255,255,255,.35) 45%,rgba(255,255,255,0) 60%);
-    }
+    :root{ --card-bg:#ffffff; --tile-shadow:0 14px 30px rgba(0,0,0,.08); --btn-shadow:0 10px 18px rgba(0,0,0,.12); --btn-hover-shadow:0 16px 26px rgba(0,0,0,.18); --shine:linear-gradient(120deg,rgba(255,255,255,0) 30%,rgba(255,255,255,.35) 45%,rgba(255,255,255,0) 60%); }
     *{outline:0}
     body{margin:0;padding:0;font-family:"Roboto",sans-serif;background:#f5f5f5}
     #weatherCanvas{position:fixed;top:0;left:0;z-index:-1;width:100vw;height:100vh;filter:contrast(1.02) saturate(1.02)}
     .container{max-width:1200px;margin-top:60px;margin-left:auto;margin-right:auto;padding:0 15px}
-
-    /* Üst bar */
-    .user-info{position:fixed;top:15px;left:20px;z-index:10;font-size:14px;color:#333;display:flex;align-items:center;gap:10px;
-      padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.5);backdrop-filter:blur(6px);box-shadow:0 6px 18px rgba(0,0,0,.08)}
+    .user-info{position:fixed;top:15px;left:20px;z-index:10;font-size:14px;color:#333;display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.5);backdrop-filter:blur(6px);box-shadow:0 6px 18px rgba(0,0,0,.08)}
     .user-info img{max-width:100px;height:auto;border-radius:5px;box-shadow:0 8px 18px rgba(0,0,0,.12)}
-
     .btn-group-top{position:fixed;top:15px;right:20px;display:flex;gap:10px;z-index:10;flex-wrap:wrap;justify-content:flex-end;align-items:center}
     .btn{border-radius:20px;padding:10px 20px;font-size:.9rem;transition:all .25s ease;box-shadow:var(--btn-shadow);border:none;color:#fff;position:relative;overflow:hidden}
     .btn::after{content:"";position:absolute;inset:0;transform:translateX(-120%);background:var(--shine);transition:transform .6s ease}
@@ -39,32 +29,18 @@
     .btn-dark{background:linear-gradient(135deg,#343a40,#495057)}
     .dropdown-menu{border:none;border-radius:12px;box-shadow:0 14px 30px rgba(0,0,0,.12)}
     .dropdown-item{font-size:.9rem}
-
-    /* Kartlar */
-    .card-soft{border:none;border-radius:16px;background:var(--card-bg);
-      box-shadow:var(--tile-shadow);position:relative;overflow:hidden}
-    .card-soft::before{content:"";position:absolute;top:-60%;left:-30%;width:160%;height:220%;
-      background:radial-gradient(ellipse at top left, rgba(255,255,255,.45), transparent 60%);
-      transform:rotate(8deg);pointer-events:none}
+    .card-soft{border:none;border-radius:16px;background:var(--card-bg);box-shadow:var(--tile-shadow);position:relative;overflow:hidden}
+    .card-soft::before{content:"";position:absolute;top:-60%;left:-30%;width:160%;height:220%;background:radial-gradient(ellipse at top left, rgba(255,255,255,.45), transparent 60%);transform:rotate(8deg);pointer-events:none}
     .tile{transition:transform .2s ease}
     .tile:hover{transform:translateY(-3px)}
     .tile h5{margin:0;color:#666;font-weight:600}
     .tile .num{font-size:2rem;font-weight:800;color:#222;letter-spacing:.5px}
-
-    /* Quick links */
     .quick-links .btn{min-width:200px}
     .quick-links .btn i{margin-right:6px}
     .quick-links{animation:fadeUp .5s ease both}
     @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-
-    /* Mini “pulse” efekti (Sipariş Hazırla) */
     .btn-pulse{animation:pulse 1.8s ease-in-out infinite}
-    @keyframes pulse{
-      0%{box-shadow:0 0 0 0 rgba(203,45,62,.4)}
-      70%{box-shadow:0 0 0 20px rgba(203,45,62,0)}
-      100%{box-shadow:0 0 0 0 rgba(203,45,62,0)}
-    }
-
+    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(203,45,62,.4)}70%{box-shadow:0 0 0 20px rgba(203,45,62,0)}100%{box-shadow:0 0 0 0 rgba(203,45,62,0)}}
     @media (max-width:768px){
       .btn{font-size:.8rem;padding:8px 12px}
       .user-info img{max-width:60px}
@@ -76,46 +52,26 @@
 <body>
   <canvas id="weatherCanvas"></canvas>
 
-  <!-- Üst sol: kullanıcı -->
   <div class="user-info">
     <img src="{{ url_for('static', filename='logo/gullu.png') }}" alt="Güllü Shoes Logo"/>
-    Giriş Yapan:
-    <strong>{{ session.get('first_name','') }} {{ session.get('last_name','') }}</strong>
+    Giriş Yapan: <strong>{{ session.get('first_name','') }} {{ session.get('last_name','') }}</strong>
   </div>
 
-  <!-- Üst sağ: menü butonları -->
   <div class="btn-group-top">
-    <a href="{{ url_for('home.home') }}" class="btn btn-secondary" title="Anasayfa">
-      <i class="fas fa-home"></i> Anasayfa
-    </a>
+    <a href="{{ url_for('home.home') }}" class="btn btn-secondary" title="Anasayfa"><i class="fas fa-home"></i> Anasayfa</a>
 
-    <button class="btn btn-warning dropdown-toggle" type="button" id="kullaniciMenu"
-        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-  Kullanıcı İşlemleri
-</button>
-<div class="dropdown-menu" aria-labelledby="kullaniciMenu">
-  <a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a>
+    <button class="btn btn-warning dropdown-toggle" type="button" id="kullaniciMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Kullanıcı İşlemleri</button>
+    <div class="dropdown-menu" aria-labelledby="kullaniciMenu">
+      <a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a>
+      <a class="dropdown-item" href="{{ url_for('rapor_gir.giris') }}"><i class="fas fa-file-alt"></i> Raporlama</a>
+      {% if session.get('role') in ['admin','manager'] %}
+        <div class="dropdown-divider"></div>
+        <a class="dropdown-item" href="{{ url_for('gorev.gorev_panel') }}"><i class="fas fa-tasks"></i> Görev Paneli</a>
+        <a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}"><i class="fas fa-history"></i> Kullanıcı Hareketleri</a>
+      {% endif %}
+    </div>
 
-  <a class="dropdown-item" href="{{ url_for('rapor_gir.giris') }}">
-    <i class="fas fa-file-alt"></i> Raporlama
-  </a>
-
-  {% if session.get('role') in ['admin','manager'] %}
-    <div class="dropdown-divider"></div>
-    <a class="dropdown-item" href="{{ url_for('gorev.gorev_panel') }}">
-      <i class="fas fa-tasks"></i> Görev Paneli
-    </a>
-    <a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}">
-      <i class="fas fa-history"></i> Kullanıcı Hareketleri
-    </a>
-  {% endif %}
-</div>
-
-
-    <!-- ARŞİV ÜSTTEKİ BUTONDAN ÇIKARILDI, AŞAĞIDAKİ MENÜYE TAŞINDI -->
-    <a href="{{ url_for('siparis_hazirla.index') }}" class="btn btn-danger btn-pulse" title="Sipariş Hazırla">
-      <i class="fas fa-box-open"></i> Sipariş Hazırla
-    </a>
+    <a href="{{ url_for('siparis_hazirla.index') }}" class="btn btn-danger btn-pulse" title="Sipariş Hazırla"><i class="fas fa-box-open"></i> Sipariş Hazırla</a>
 
     <div class="dropdown">
       <button class="btn btn-primary dropdown-toggle" data-toggle="dropdown">Sipariş İşlemleri</button>
@@ -124,7 +80,6 @@
         <a class="dropdown-item" href="{{ url_for('order_list_all') }}"><i class="fas fa-list"></i> Sipariş Listesi</a>
         <a class="dropdown-item" href="{{ url_for('degisim_talep') }}"><i class="fas fa-exchange-alt"></i> Değişim Talepleri</a>
         <div class="dropdown-divider"></div>
-        <!-- ARŞİV BURAYA ALINDI -->
         <a class="dropdown-item" href="{{ url_for('display_archive') }}"><i class="fas fa-box"></i> Arşiv</a>
       </div>
     </div>
@@ -153,9 +108,7 @@
     </div>
 
     {% if session.get('role') in ['admin','manager'] %}
-    <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-dark" title="Kasa">
-      <i class="fas fa-cash-register"></i> Kasa
-    </a>
+      <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-dark" title="Kasa"><i class="fas fa-cash-register"></i> Kasa</a>
     {% endif %}
   </div>
 
@@ -164,26 +117,45 @@
     <div class="row">
       <div class="col-md-3 mb-3">
         <div class="card-soft p-3 tile">
-          <h5>Toplam Sipariş</h5>
-          <div class="num">{{ stats.toplam_siparis }}</div>
+          <h5>🧰 Toplam Stok</h5>
+          <div class="num">{{ toplam_stok }}</div>
         </div>
       </div>
+
       <div class="col-md-3 mb-3">
         <div class="card-soft p-3 tile">
-          <h5>Hazırlanan</h5>
-          <div class="num">{{ stats.hazirlanan }}</div>
+          <h5>{{ ay_adi }} Aylık Toplam Sipariş</h5>
+          <div class="num">{{ stats.toplam_siparis }}</div>
+          <div style="margin-top:6px;font-weight:600;color:#555;">
+            Ortalama Sipariş Tutarı:
+            ₺{{ "{:,.2f}".format(ortalama_siparis_tutari).replace(",", "X").replace(".", ",").replace("X", ".") }}
+          </div>
         </div>
       </div>
+
+      <!-- BURADA: 'Hazırlanan' yerine küçük canlı kart -->
+      <div class="col-md-3 mb-3">
+        <div class="card-soft p-3 tile">
+          <h5>📦 Sipariş Durumu</h5>
+          <div class="d-flex flex-column" style="gap:6px;">
+            <div class="d-flex align-items-center" style="gap:8px;">
+              <span class="badge badge-warning badge-pill" style="font-size:.8rem;">Yeni</span>
+              <span id="count-created" class="num" style="font-size:1.4rem;">{{ stats.created if stats.get('created') is not none else 0 }}</span>
+            </div>
+            <div class="d-flex align-items-center" style="gap:8px;">
+              <span class="badge badge-success badge-pill" style="font-size:.8rem;">İşleme Alınmış</span>
+              <span id="count-picking" class="num" style="font-size:1.4rem;">{{ stats.picking if stats.get('picking') is not none else 0 }}</span>
+            </div>
+          </div>
+          <div class="text-muted small mt-2" id="op-last-update">Son güncelleme: şimdi</div>
+        </div>
+      </div>
+      <!-- /canlı kart -->
+
       <div class="col-md-3 mb-3">
         <div class="card-soft p-3 tile">
           <h5>İade</h5>
           <div class="num">{{ stats.iade }}</div>
-        </div>
-      </div>
-      <div class="col-md-3 mb-3">
-        <div class="card-soft p-3 tile">
-          <h5>Kritik Stok</h5>
-          <div class="num">{{ stats.kritik_stok }}</div>
         </div>
       </div>
     </div>
@@ -192,29 +164,15 @@
     <div class="card-soft p-4 quick-links">
       <h4 class="mb-3">Hızlı İşlemler</h4>
       <div class="d-flex flex-wrap">
-        <!-- Yeni: Sipariş Hazırla kısayolu -->
-        <a class="btn btn-danger m-1" href="{{ url_for('siparis_hazirla.index') }}" title="Sipariş Hazırlama">
-          <i class="fas fa-box-open"></i> Sipariş Hazırla
-        </a>
-
-        <a class="btn btn-primary m-1" href="{{ url_for('order_list_all') }}">
-          <i class="fas fa-list"></i> Siparişler
-        </a>
-        <a class="btn btn-success m-1" href="{{ url_for('stock_management.stock_addition_page') }}">
-          <i class="fas fa-plus-circle"></i> Stok Ekle
-        </a>
-        <a class="btn btn-warning m-1" href="{{ url_for('raf.raf_form_sayfasi') }}">
-          <i class="fas fa-archive"></i> Raflar
-        </a>
-        <a class="btn btn-info m-1" href="{{ url_for('canli_panel.canli_panel_sayfa') }}">
-          <i class="fas fa-chart-line"></i> 📊 Canlı Satış & Stok
-        </a>
-        <a class="btn btn-secondary m-1" href="{{ url_for('display_archive') }}">
-          <i class="fas fa-box"></i> Arşiv
-        </a>
-        <a class="btn btn-danger m-1" href="{{ url_for('iade_listesi') }}">
-          <i class="fas fa-undo"></i> İadeler
-        </a>
+        <a class="btn btn-danger m-1" href="{{ url_for('siparis_hazirla.index') }}" title="Sipariş Hazırlama"><i class="fas fa-box-open"></i> Sipariş Hazırla</a>
+        <a class="btn btn-primary m-1" href="{{ url_for('order_list_all') }}"><i class="fas fa-list"></i> Siparişler</a>
+        <a class="btn btn-success m-1" href="{{ url_for('product_list') }}"><i class="fas fa-tags"></i> Ürün Listesi</a>
+        <a class="btn btn-success m-1" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="fas fa-plus-circle"></i> Stok Ekle</a>
+        <a class="btn btn-warning m-1" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="fas fa-archive"></i> Raflar</a>
+        <a class="btn btn-info m-1" href="{{ url_for('canli_panel.canli_panel_sayfa') }}"><i class="fas fa-chart-line"></i> 📊 Canlı Satış & Stok</a>
+        <a class="btn btn-secondary m-1" href="{{ url_for('display_archive') }}"><i class="fas fa-box"></i> Arşiv</a>
+        <a class="btn btn-danger m-1" href="{{ url_for('iade_listesi') }}"><i class="fas fa-undo"></i> İadeler</a>
+        <a class="btn btn-dark  m-1" href="{{ url_for('rapor_gir.giris') }}"><i class="fas fa-file-alt"></i> Raporlama</a>
       </div>
     </div>
   </div>
@@ -241,8 +199,8 @@
     })();
   </script>
 
+  <!-- Ripple -->
   <script>
-    // Küçük “ripple” efekti (butonlara tıklamada hafif dalga)
     document.addEventListener('click', function(e){
       const btn = e.target.closest('.btn');
       if(!btn) return;
@@ -262,9 +220,33 @@
       setTimeout(()=>circle.remove(), 650);
     });
   </script>
-  <style>
-    @keyframes ripple { to { transform: scale(3); opacity: 0; } }
-  </style>
+  <style>@keyframes ripple { to { transform: scale(3); opacity: 0; } }</style>
+
+  <!-- Canlı Yeni/İşleme Alınmış fetch -->
+  <script>
+    (function () {
+      const createdEl = document.getElementById('count-created');   // "Yeni"
+      const pickingEl = document.getElementById('count-picking');   // "İşleme Alınmış"
+      const lastEl    = document.getElementById('op-last-update');
+      const intervalMs = 150000; // 2.5 dk (120000-180000 arası yapabilirsin)
+
+      async function refreshCounts() {
+        try {
+          const res = await fetch('/api/home/status-counts', { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          if (typeof data.created === 'number') createdEl.textContent = data.created;
+          if (typeof data.picking === 'number') pickingEl.textContent = data.picking;
+          lastEl.textContent = 'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR');
+        } catch (err) {
+          console.error('status refresh failed', err);
+        }
+      }
+
+      refreshCounts(); // ilk yüklemede
+      setInterval(refreshCounts, intervalMs);
+    })();
+  </script>
 
   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.bundle.min.js"></script>
