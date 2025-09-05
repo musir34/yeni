@@ -5,9 +5,12 @@ import traceback
 from datetime import datetime
 from flask import Blueprint, render_template
 from sqlalchemy import desc
+from zoneinfo import ZoneInfo
+
+
 
 # Modeller
-from models import OrderCreated, RafUrun, Product, Archive
+from models import OrderCreated, RafUrun, Product, Archive, Degisim
 
 # Blueprint
 siparis_hazirla_bp = Blueprint("siparis_hazirla", __name__)
@@ -16,9 +19,20 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(levelname)s - %(message)s")
 
 
+IST = ZoneInfo("Europe/Istanbul")
+
+def to_ist(dt):
+    """Naive ise IST varsay, aware ise IST'ye çevir."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=IST)
+    return dt.astimezone(IST)
+
+
 # 🔔 Arşivde bekleyen siparişlerden uyarılar üret
 def get_archive_warnings():
-    now = datetime.utcnow()
+    now = datetime.now(IST)  # <-- IST
     archived_orders = Archive.query.all()
     warnings = []
 
@@ -26,7 +40,8 @@ def get_archive_warnings():
         if not a.archive_date:
             continue
 
-        diff = now - a.archive_date
+        a_dt = to_ist(a.archive_date)       # <-- normalize
+        diff = now - a_dt
         minutes = diff.total_seconds() // 60
         hours = diff.total_seconds() // 3600
 
@@ -36,6 +51,35 @@ def get_archive_warnings():
             warnings.append(f"Sipariş {a.order_number} 30 dakikadan fazla arşivde.")
 
     return warnings, len(archived_orders)
+
+# 🔔 Değişim bekleyen siparişlerden uyarılar üret
+def get_exchange_warnings():
+    """
+    'İşleme Alındı' statüsündeki değişimler için mesaj + max saat.
+    Dönüş: (messages:list[str], count:int, max_delay_hours:int)
+    """
+    try:
+        items = (Degisim.query
+                 .filter(Degisim.degisim_durumu == 'İşleme Alındı')
+                 .order_by(Degisim.degisim_tarihi.desc())
+                 .all())
+        now = datetime.now(IST)  # <-- IST
+        msgs, max_h = [], 0
+        for d in items:
+            started = to_ist(getattr(d, 'degisim_tarihi', None))  # <-- normalize
+            if started:
+                diff_h = int((now - started).total_seconds() // 3600)
+                max_h = max(max_h, diff_h)
+                msgs.append(f"#{d.siparis_no} — {d.ad} {d.soyad} ({diff_h} saattir işleme alındı.)")
+            else:
+                msgs.append(f"#{d.siparis_no} — {d.ad} {d.soyad}")
+        return msgs, len(items), max_h
+    except Exception as e:
+        logging.error(f"Değişim uyarıları alınamadı: {e}")
+        return [], 0, 0
+
+
+
 
 
 @siparis_hazirla_bp.route("/siparis-hazirla", endpoint="index")
@@ -48,13 +92,27 @@ def index():
 def get_home():
     """
     En eski 'Created' sipariş ve ürünlerini hazırla.
+    Ayrıca arşiv ve değişim (İşleme Alındı) uyarılarını template'e gönderir.
     """
     try:
         # En eski Created sipariş
         oldest_order = OrderCreated.query.order_by(OrderCreated.order_date).first()
+
+        # Uyarıları (her durumda) hazırla
+        warnings, archive_count = get_archive_warnings()
+        # get_exchange_warnings() => (messages, count, max_delay_hours)
+        degisim_msgs, _degisim_count, degisim_max_h = get_exchange_warnings()
+
         if not oldest_order:
             logging.info("İşlenecek 'Created' sipariş yok.")
-            return default_order_data()
+            base = default_order_data()
+            base.update({
+                "archive_warnings": warnings,
+                "archive_count": archive_count,
+                "degisim_warnings": degisim_msgs,
+                "degisim_meta": {"max_delay_hours": degisim_max_h},  # ⬅️ sıklaşma için
+            })
+            return base
 
         remaining_time = calculate_remaining_time(oldest_order.agreed_delivery_date)
 
@@ -97,20 +155,34 @@ def get_home():
         # Sipariş objesine iliştir
         oldest_order.products = products
 
-        # Arşiv uyarılarını ekle
-        warnings, archive_count = get_archive_warnings()
-
+        # Dönüş
         return {
             "order": oldest_order,
             "remaining_time": remaining_time,
             "archive_warnings": warnings,
-            "archive_count": archive_count
+            "archive_count": archive_count,
+            "degisim_warnings": degisim_msgs,
+            "degisim_meta": {"max_delay_hours": degisim_max_h},  # ⬅️ ARŞİVLE AYNI MANTIK
         }
 
     except Exception as e:
         logging.error(f"Bir hata oluştu: {e}")
         traceback.print_exc()
-        return default_order_data()
+
+        # Hata olsa da uyarıları gönder
+        warnings, archive_count = get_archive_warnings()
+        degisim_msgs, _degisim_count, degisim_max_h = get_exchange_warnings()
+
+        base = default_order_data()
+        base.update({
+            "archive_warnings": warnings,
+            "archive_count": archive_count,
+            "degisim_warnings": degisim_msgs,
+            "degisim_meta": {"max_delay_hours": degisim_max_h},
+        })
+        return base
+
+
 
 
 def default_order_data():
@@ -129,17 +201,18 @@ def default_order_data():
         "archive_count": 0
     }
 
-
 def calculate_remaining_time(delivery_date):
     if delivery_date:
         try:
-            now = datetime.now()
-            diff = delivery_date - now
+            now = datetime.now(IST)         # <-- IST
+            dd  = to_ist(delivery_date)     # <-- normalize
+            diff = dd - now
             if diff.total_seconds() > 0:
-                days, seconds = divmod(diff.total_seconds(), 86400)
-                hours, seconds = divmod(seconds, 3600)
-                minutes = seconds // 60
-                return f"{int(days)} gün {int(hours)} saat {int(minutes)} dakika"
+                total = int(diff.total_seconds())
+                days, rem = divmod(total, 86400)
+                hours, rem = divmod(rem, 3600)
+                minutes = rem // 60
+                return f"{days} gün {hours} saat {minutes} dakika"
             else:
                 return "0 dakika"
         except Exception as ve:
