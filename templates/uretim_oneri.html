@@ -1,0 +1,73 @@
+<h2>Stok Önerileri</h2>
+<div style="margin:10px 0">
+  <label>Gün Aralığı:</label>
+  <input id="days" type="number" value="30" min="7" max="120" style="width:90px">
+  <button id="btnRefresh">Yenile</button>
+</div>
+
+<div id="groups"></div>
+
+<script>
+async function loadOneri(){
+  const days = document.getElementById('days').value || 30;
+  const res = await fetch(`/api/uretim-oneri/suggestions?days=${days}`);
+  const data = await res.json();
+  const wrap = document.getElementById('groups');
+  if(!data.ok){ wrap.innerHTML = '<p>Hata</p>'; return; }
+  if(!data.groups.length){ wrap.innerHTML = '<p>İzlenen ürün yok.</p>'; return; }
+
+  wrap.innerHTML = data.groups.map(g=>{
+    const header = `
+      <div style="display:flex;align-items:center;gap:12px;margin:18px 0">
+        <img src="${g.image||'https://via.placeholder.com/80x80?text=No+Img'}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid #eee">
+        <div>
+          <div><b>${g.product_main_id || '-'}</b></div>
+          <div style="color:#666">${g.title||''}</div>
+          <div style="margin-top:6px"><b>Toplam Öneri:</b> ${g.total_suggest}</div>
+        </div>
+      </div>
+    `;
+    const colors = g.colors.map(c=>{
+      const rows = c.items.map(x=>`
+        <tr>
+          <td>${x.color||'-'}</td>
+          <td>${x.size||'-'}</td>
+          <td>${x.barcode}</td>
+          <td>${x.stock}</td>
+          <td>${x.sold_last_days}</td>
+          <td>${x.avg_daily}</td>
+          <td>${x.days_left ?? '-'}</td>
+          <td><b>${x.suggest_qty}</b></td>
+        </tr>
+      `).join('');
+      return `
+        <details style="margin:10px 0" open>
+          <summary style="cursor:pointer;font-weight:600">${c.color}</summary>
+          <div style="overflow:auto">
+            <table style="width:100%;border-collapse:collapse;margin-top:8px">
+              <thead>
+                <tr>
+                  <th style="text-align:left;border-bottom:1px solid #eee;padding:6px 4px">Renk</th>
+                  <th style="text-align:left;border-bottom:1px solid #eee;padding:6px 4px">Beden</th>
+                  <th style="text-align:left;border-bottom:1px solid #eee;padding:6px 4px">Barkod</th>
+                  <th style="text-align:right;border-bottom:1px solid #eee;padding:6px 4px">Stok</th>
+                  <th style="text-align:right;border-bottom:1px solid #eee;padding:6px 4px">Son ${days}g Satış</th>
+                  <th style="text-align:right;border-bottom:1px solid #eee;padding:6px 4px">Günlük Ort.</th>
+                  <th style="text-align:right;border-bottom:1px solid #eee;padding:6px 4px">Kalan Gün</th>
+                  <th style="text-align:right;border-bottom:1px solid #eee;padding:6px 4px">Öneri</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      `;
+    }).join('');
+    return `<section style="background:#fff;border:1px solid #eee;border-radius:10px;padding:12px 14px;margin-bottom:14px">${header}${colors}</section>`;
+  }).join('');
+}
+document.getElementById('btnRefresh').addEventListener('click', loadOneri);
+loadOneri();
+</script>

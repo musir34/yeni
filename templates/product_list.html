@@ -7,576 +7,507 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <style>
-        :root {
-            /* YENİ: Marka Renkleri (Gül Kurusu & Siyah) */
-            --color-primary: #B76E79; /* Gül Kurusu */
-            --color-primary-dark: #A05F6A;
-            --color-secondary: #212529; /* Siyah/Koyu Gri */
-            --color-text: #343a40;
-            --color-bg: #f8f9fa;
-            --color-bg-light: #ffffff;
-            --color-white: #fff;
-            --color-border: #dee2e6;
-            --color-success: #3ac47d;
-            --color-danger: #d92550;
-            --font-family-base: 'Inter', sans-serif;
-            --border-radius: 0.5rem;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
-            --shadow-md: 0 5px 15px rgba(0,0,0,0.08);
-            --transition: all 0.25s ease-in-out;
+        :root{
+            --color-primary:#B76E79; --color-primary-dark:#A05F6A;
+            --color-secondary:#212529; --color-text:#343a40;
+            --color-bg:#f8f9fa; --color-bg-light:#ffffff; --color-white:#fff;
+            --color-border:#dee2e6; --color-success:#3ac47d; --color-danger:#d92550;
+            --font-family-base:'Inter',sans-serif; --border-radius:.5rem;
+            --shadow-sm:0 1px 3px rgba(0,0,0,.04); --shadow-md:0 5px 15px rgba(0,0,0,.08);
+            --transition:all .25s ease-in-out;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: var(--font-family-base); background-color: var(--color-bg); color: var(--color-text); }
-        .container { max-width: 1600px; margin: 0 auto; padding: 1.5rem; }
-        h1 { color: var(--color-secondary); font-weight: 700; }
-        .text-center { text-align: center; }
-        .mb-4 { margin-bottom: 2rem; }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:var(--font-family-base);background:var(--color-bg);color:var(--color-text)}
+        .container{max-width:1600px;margin:0 auto;padding:1.5rem}
+        h1{color:var(--color-secondary);font-weight:700}
+        .text-center{text-align:center}.mb-4{margin-bottom:2rem}
 
-        .header-actions {
-            display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 0.75rem;
-            margin-bottom: 2rem; padding: 1rem; background-color: var(--color-secondary);
-            border-radius: var(--border-radius); box-shadow: var(--shadow-md);
-        }
-        .btn {
-            display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-            font-size: 0.9rem; font-weight: 600; padding: 0.7rem 1.3rem;
-            border: 1px solid transparent; border-radius: var(--border-radius);
-            cursor: pointer; transition: var(--transition); text-decoration: none;
-        }
-        .header-actions .btn { background-color: var(--color-white); color: var(--color-secondary); border-color: #495057; }
-        .header-actions .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); border-color: var(--color-white); }
-        .btn-primary { background: linear-gradient(45deg, var(--color-primary), var(--color-primary-dark)); color: var(--color-white); border: none; }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .btn i { margin-right: 0.2rem; }
+        .header-actions{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:.75rem;margin-bottom:2rem;padding:1rem;background:var(--color-secondary);border-radius:var(--border-radius);box-shadow:var(--shadow-md)}
+        .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;font-size:.9rem;font-weight:600;padding:.7rem 1.3rem;border:1px solid transparent;border-radius:var(--border-radius);cursor:pointer;transition:var(--transition);text-decoration:none}
+        .header-actions .btn{background:var(--color-white);color:var(--color-secondary);border-color:#495057}
+        .header-actions .btn:hover{transform:translateY(-2px);box-shadow:0 4px 10px rgba(0,0,0,.2);border-color:var(--color-white)}
+        .btn-primary{background:linear-gradient(45deg,var(--color-primary),var(--color-primary-dark));color:var(--color-white);border:none}
+        .btn-primary:hover{transform:translateY(-2px);box-shadow:0 4px 10px rgba(0,0,0,.2)}
+        .btn i{margin-right:.2rem}
 
-        .dropdown { position: relative; display: inline-block; }
-        .dropdown-content {
-            display: none; position: absolute; background-color: var(--color-white);
-            min-width: 240px; box-shadow: var(--shadow-md); border-radius: var(--border-radius);
-            z-index: 100; padding: 0.5rem 0; overflow: hidden; margin-top: 0.5rem;
-            border: 1px solid var(--color-border); right: 0;
-        }
-        .dropdown-content button, .dropdown-content a {
-            color: var(--color-text); padding: 0.75rem 1.25rem; text-decoration: none; display: flex;
-            align-items: center; gap: 0.75rem; width: 100%; border: none; background: none; text-align: left;
-            cursor: pointer; font-size: 0.9rem;
-        }
-        .dropdown-content button:hover, .dropdown-content a:hover { background-color: #f1f1f1; }
-        .dropdown-content i { width: 16px; text-align: center; color: #999; }
-        .dropdown-content .delete-action i { color: var(--color-danger); }
-        .dropdown.active .dropdown-content { display: block; }
+        .dropdown{position:relative;display:inline-block}
+        .dropdown-content{display:none;position:absolute;background:var(--color-white);min-width:240px;box-shadow:var(--shadow-md);border-radius:var(--border-radius);z-index:100;padding:.5rem 0;overflow:hidden;margin-top:.5rem;border:1px solid var(--color-border);right:0}
+        .dropdown-content button,.dropdown-content a{color:var(--color-text);padding:.75rem 1.25rem;text-decoration:none;display:flex;align-items:center;gap:.75rem;width:100%;border:none;background:none;text-align:left;cursor:pointer;font-size:.9rem}
+        .dropdown-content button:hover,.dropdown-content a:hover{background:#f1f1f1}
+        .dropdown-content .delete-action i{color:var(--color-danger)}
+        .dropdown.active .dropdown-content{display:block}
 
-        .search-container { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 2rem; }
-        .search-container input, .search-container select { padding: 0.7rem 1rem; border: 1px solid var(--color-border); border-radius: var(--border-radius); font-size: 1rem; }
-        .search-container .btn { padding: 0.7rem 1.2rem; }
+        .search-container{display:flex;align-items:center;justify-content:center;gap:.5rem;margin-bottom:2rem}
+        .search-container input,.search-container select{padding:.7rem 1rem;border:1px solid var(--color-border);border-radius:var(--border-radius);font-size:1rem}
+        .search-container .btn{padding:.7rem 1.2rem}
 
-        .model-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
-        .model-card {
-            background-color: var(--color-white); border-radius: var(--border-radius);
-            box-shadow: var(--shadow-sm); transition: var(--transition); display: flex; flex-direction: column;
-        }
-        .model-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); }
-        .model-image-container { height: 400px; background-color: #f1f3f5; border-top-left-radius: var(--border-radius); border-top-right-radius: var(--border-radius); overflow: hidden; cursor:pointer; transition: var(--transition); }
-        .model-image-container img { width: 100%; height: 100%; object-fit: cover; }
-        .model-info { padding: 1.25rem; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
-        .model-info h4 { font-size: 1.1rem; font-weight: 600; color: var(--color-secondary); margin-bottom: 0.25rem; }
-        .model-info p { font-size: 0.9rem; color: #6c757d; margin-bottom: 1rem; }
+        .model-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.5rem}
+        .model-card{background:var(--color-white);border-radius:var(--border-radius);box-shadow:var(--shadow-sm);transition:var(--transition);display:flex;flex-direction:column}
+        .model-card:hover{transform:translateY(-5px);box-shadow:var(--shadow-md)}
+        .model-image-container{height:400px;background:#f1f3f5;border-top-left-radius:var(--border-radius);border-top-right-radius:var(--border-radius);overflow:hidden;cursor:pointer;transition:var(--transition)}
+        .model-image-container img{width:100%;height:100%;object-fit:cover}
+        .model-info{padding:1.25rem;flex-grow:1;display:flex;flex-direction:column;justify-content:space-between}
+        .model-info h4{font-size:1.1rem;font-weight:600;color:var(--color-secondary);margin-bottom:.25rem}
+        .model-info p{font-size:.9rem;color:#6c757d;margin-bottom:1rem}
+        .model-actions{display:flex;justify-content:space-between;align-items:center}
+        .model-actions .btn{transition:transform .2s ease, box-shadow .2s ease}
+        .model-actions .btn:hover{transform:scale(1.05);box-shadow:var(--shadow-sm)}
 
-        .model-actions { display: flex; justify-content: space-between; align-items: center; }
-        .model-actions .btn { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .model-actions .btn:hover { transform: scale(1.05); box-shadow: var(--shadow-sm); }
+        .color-variants-container,.variant-list-container{display:none;padding:1rem 1.25rem 1.25rem;background:var(--color-bg);border-top:1px solid var(--color-border)}
+        .color-card{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--border-radius);margin-top:1rem;padding:1rem}
+        .color-header{display:flex;justify-content:space-between;align-items:center;gap:1rem}
+        .color-info{display:flex;align-items:center;gap:.75rem;font-weight:600}
+        .color-thumbnail{width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid var(--color-white);box-shadow:var(--shadow-sm);cursor:pointer;transition:var(--transition)}
+        .color-thumbnail:hover{transform:scale(1.1);box-shadow:var(--shadow-md)}
+        .size-variants-container{display:none;padding:1rem;margin-top:1rem;background:var(--color-bg-light);border-radius:var(--border-radius)}
+        .size-list{list-style:none;padding:0}
+        .size-list li{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:.75rem .5rem;border-bottom:1px solid var(--color-border);font-size:.85rem;gap:10px}
+        .size-list li:last-child{border-bottom:none}
+        .barcode-info{display:flex;align-items:center;gap:10px;color:#6c757d;flex-basis:100%;margin-top:5px}
 
-        .color-variants-container, .variant-list-container { display: none; padding: 1rem 1.25rem 1.25rem; background-color: var(--color-bg); border-top: 1px solid var(--color-border); }
-        .color-card { background-color: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--border-radius); margin-top: 1rem; padding: 1rem; }
-        .color-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
-        .color-info { display: flex; align-items: center; gap: 0.75rem; font-weight: 600; }
-        .color-thumbnail { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--color-white); box-shadow: var(--shadow-sm); cursor: pointer; transition: var(--transition); }
-        .color-thumbnail:hover { transform: scale(1.1); box-shadow: var(--shadow-md); }
-        .size-variants-container { display: none; padding: 1rem; margin-top: 1rem; background-color: var(--color-bg-light); border-radius: var(--border-radius); }
-        .size-list { list-style: none; padding: 0; }
-        .size-list li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--color-border); font-size: 0.85rem; gap: 10px; }
-        .size-list li:last-child { border-bottom: none; }
-        .barcode-info { display: flex; align-items: center; gap: 10px; color: #6c757d; flex-basis: 100%; margin-top: 5px; }
+        .btn-copy{background:none;border:none;cursor:pointer;color:#6c757d;padding:.2rem .4rem;transition:var(--transition)}
+        .btn-copy:hover{color:#B76E79}
+        .btn-copy .fa-check{color:#3ac47d}
 
-        /* YENİ: Kopyalama butonu stili */
-        .btn-copy {
-            background: none; border: none; cursor: pointer; color: #6c757d;
-            padding: 0.2rem 0.4rem; transition: var(--transition);
-        }
-        .btn-copy:hover { color: var(--color-primary); }
-        .btn-copy .fa-check { color: var(--color-success); }
-        /* Bitiş */
+        .watch-btn{border:1px dashed #ffc107;background:#fff;color:#b8860b;padding:.45rem .6rem;border-radius:.4rem}
+        .watch-btn.active{background:#ffc107;color:#212529;border-style:solid}
+        .watch-badge{margin-left:.4rem;background:#ffc107;color:#212529;padding:.2rem .45rem;border-radius:.35rem;font-weight:600}
 
-        .pagination-container { display: flex; justify-content: center; align-items: center; padding: 2.5rem 0 1rem; }
-        .pagination { display: flex; align-items: center; gap: 0.5rem; list-style: none; }
-        .pagination li a {
-            display: block; color: var(--color-secondary); background-color: var(--color-white);
-            border: 1px solid var(--color-border); border-radius: var(--border-radius);
-            padding: 0.6rem 1rem; text-decoration: none; transition: var(--transition);
-            font-weight: 600; min-width: 44px; text-align: center;
-        }
-        .pagination li a:hover { background-color: #f1f3f5; box-shadow: var(--shadow-sm); }
-        .pagination li.active a { background: var(--color-primary); color: var(--color-white); border-color: var(--color-primary); cursor: default; }
-        .pagination li.disabled a { opacity: 0.6; cursor: not-allowed; background-color: #e9ecef; }
+        .pagination-container{display:flex;justify-content:center;align-items:center;padding:2.5rem 0 1rem}
+        .pagination{display:flex;align-items:center;gap:.5rem;list-style:none}
+        .pagination li a{display:block;color:var(--color-secondary);background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--border-radius);padding:.6rem 1rem;text-decoration:none;transition:var(--transition);font-weight:600;min-width:44px;text-align:center}
+        .pagination li a:hover{background:#f1f3f5;box-shadow:var(--shadow-sm)}
+        .pagination li.active a{background:#B76E79;color:#fff;border-color:#B76E79;cursor:default}
+        .pagination li.disabled a{opacity:.6;cursor:not-allowed;background:#e9ecef}
 
-        .action-modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(33, 37, 41, 0.6); backdrop-filter: blur(5px); z-index: 1050;
-            display: none; align-items: center; justify-content: center;
-            opacity: 0; transition: opacity 0.3s ease;
-        }
-        .action-modal-overlay.is-visible { display: flex; opacity: 1; }
-        .action-modal-content {
-            background: var(--color-white); border-radius: var(--border-radius);
-            box-shadow: var(--shadow-md); max-width: 600px; width: 90%;
-            max-height: 90vh; display: flex; flex-direction: column;
-            transform: translateY(20px); transition: transform 0.3s ease;
-        }
-        .action-modal-overlay.is-visible .action-modal-content { transform: translateY(0); }
-        .action-modal-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; }
-        .action-modal-header h4 { margin: 0; font-size: 1.2rem; }
-        .action-modal-header .close-btn { background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #999; }
-        .action-modal-body { padding: 1.5rem; overflow-y: auto; }
-        .action-modal-body .form-table { width: 100%; border-collapse: collapse; }
-        .action-modal-body th, .action-modal-body td { padding: 0.75rem; border: 1px solid var(--color-border); text-align: center; }
-        .action-modal-body input { width: 90px; text-align: center; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; }
-        .action-modal-footer { padding: 1rem 1.5rem; background-color: var(--color-bg-light); border-top: 1px solid var(--color-border); text-align: right; }
-        .prompt-input-group { margin: 1rem 0; }
-        .prompt-input-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
-        .prompt-input-group input { font-size: 1rem; width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px; }
+        .action-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(33,37,41,.6);backdrop-filter:blur(5px);z-index:1050;display:none;align-items:center;justify-content:center;opacity:0;transition:opacity .3s ease}
+        .action-modal-overlay.is-visible{display:flex;opacity:1}
+        .action-modal-content{background:var(--color-white);border-radius:var(--border-radius);box-shadow:var(--shadow-md);max-width:600px;width:90%;max-height:90vh;display:flex;flex-direction:column;transform:translateY(20px);transition:transform .3s ease}
+        .action-modal-overlay.is-visible .action-modal-content{transform:translateY(0)}
+        .action-modal-header{padding:1rem 1.5rem;border-bottom:1px solid var(--color-border);display:flex;justify-content:space-between;align-items:center}
+        .action-modal-header .close-btn{background:none;border:none;font-size:1.8rem;cursor:pointer;color:#999}
+        .action-modal-body{padding:1.5rem;overflow-y:auto}
+        .action-modal-footer{padding:1rem 1.5rem;background:var(--color-bg-light);border-top:1px solid var(--color-border);text-align:right}
+        .prompt-input-group{margin:1rem 0}
+        .prompt-input-group input{font-size:1rem;width:100%;padding:.75rem;border:1px solid #ccc;border-radius:4px}
 
-        /* Görsel Modal Stili */
-        .image-modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px); z-index: 1060;
-            display: none; align-items: center; justify-content: center;
-            opacity: 0; transition: opacity 0.3s ease;
-        }
-        .image-modal-overlay.is-visible { display: flex; opacity: 1; }
-        .image-modal-content {
-            background: var(--color-white); border-radius: var(--border-radius);
-            box-shadow: var(--shadow-md); max-width: 90vw; max-height: 90vh;
-            position: relative; overflow: hidden;
-            transform: scale(0.8); transition: transform 0.3s ease;
-        }
-        .image-modal-overlay.is-visible .image-modal-content { transform: scale(1); }
-        .image-modal-header {
-            padding: 1rem 1.5rem; border-bottom: 1px solid var(--color-border);
-            display: flex; justify-content: space-between; align-items: center;
-            background-color: var(--color-bg-light);
-        }
-        .image-modal-header h4 { margin: 0; font-size: 1.2rem; color: var(--color-secondary); }
-        .image-modal-close {
-            background: none; border: none; font-size: 2rem; cursor: pointer;
-            color: #999; width: 40px; height: 40px; display: flex;
-            align-items: center; justify-content: center; border-radius: 50%;
-            transition: var(--transition);
-        }
-        .image-modal-close:hover { background-color: #f1f1f1; color: var(--color-secondary); }
-        .image-modal-body {
-            padding: 1rem; text-align: center;
-            max-height: 80vh; overflow-y: auto;
-        }
-        .image-modal-body img {
-            max-width: 100%; max-height: 70vh;
-            object-fit: contain; border-radius: var(--border-radius);
-            box-shadow: var(--shadow-sm);
-        }
-        .image-modal-footer {
-            padding: 1rem 1.5rem; background-color: var(--color-bg-light);
-            border-top: 1px solid var(--color-border); text-align: center;
-        }
-        .image-modal-footer p {
-            margin: 0; color: #6c757d; font-size: 0.9rem;
-        }
+        .image-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);backdrop-filter:blur(5px);z-index:1060;display:none;align-items:center;justify-content:center;opacity:0;transition:opacity .3s ease}
+        .image-modal-overlay.is-visible{display:flex;opacity:1}
+        .image-modal-content{background:#fff;border-radius:var(--border-radius);box-shadow:var(--shadow-md);max-width:90vw;max-height:90vh;position:relative;overflow:hidden;transform:scale(.8);transition:transform .3s ease}
+        .image-modal-overlay.is-visible .image-modal-content{transform:scale(1)}
+        .image-modal-header{padding:1rem 1.5rem;border-bottom:1px solid var(--color-border);display:flex;justify-content:space-between;align-items:center;background:#f8f9fa}
+        .image-modal-body{padding:1rem;text-align:center;max-height:80vh;overflow-y:auto}
+        .image-modal-body img{max-width:100%;max-height:70vh;object-fit:contain;border-radius:var(--border-radius);box-shadow:var(--shadow-sm)}
+        .image-modal-footer{padding:1rem 1.5rem;background:#f8f9fa;border-top:1px solid var(--color-border);text-align:center}
+        .image-modal-close{background:none;border:none;font-size:2rem;cursor:pointer;color:#999;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+        .image-modal-close:hover{background:#f1f1f1;color:#212529}
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="text-center mb-4">
-            <h1>Güllü Ayakkabı Ürün Yönetimi</h1>
-        </div>
+<div class="container">
+    <div class="text-center mb-4"><h1>Güllü Ayakkabı Ürün Yönetimi</h1></div>
 
-        <div class="header-actions">
-            <a href="{{ url_for('home.home') }}" class="btn btn-sm btn-outline-secondary">Ana Sayfa</a>
-            <div class="dropdown" id="updateDropdown">
-                <button class="btn btn-primary dropdown-toggle"><i class="fas fa-sync-alt"></i> Güncelle</button>
-                <div class="dropdown-content">
-                    <form action="{{ url_for('get_products.update_products_route') }}" method="post" style="margin:0;"><button type="submit"><i class="fas fa-cubes"></i> Ürünleri Güncelle</button></form>
-                </div>
-            </div>
-            <div class="dropdown" id="toolsDropdown">
-                 <button class="btn dropdown-toggle"><i class="fas fa-tools"></i> Araçlar</button>
-                 <div class="dropdown-content">
-                    <a href="/product_label"><i class="fas fa-barcode"></i> Basit Barkod</a>
-                    <a href="/image_manager"><i class="fas fa-images"></i> Görsel Yöneticisi</a>
-                 </div>
+    <div class="header-actions">
+        <a href="{{ url_for('home.home') }}" class="btn btn-sm btn-outline-secondary">Ana Sayfa</a>
+
+        <div class="dropdown" id="updateDropdown">
+            <button class="btn btn-primary dropdown-toggle"><i class="fas fa-sync-alt"></i> Güncelle</button>
+            <div class="dropdown-content">
+                <form action="{{ url_for('get_products.update_products_route') }}" method="post" style="margin:0;">
+                    <button type="submit"><i class="fas fa-cubes"></i> Ürünleri Güncelle</button>
+                </form>
             </div>
         </div>
 
-        <form action="{{ url_for('get_products.search_products') }}" method="GET" class="search-container">
-             <select name="search_type" id="search_type">
-                 <option value="model_code" {% if search_type == 'model_code' %}selected{% endif %}>Model Kodu</option>
-                 <option value="barcode" {% if search_type == 'barcode' %}selected{% endif %}>Barkod</option>
-             </select>
-             <input type="text" name="query" placeholder="Ara..." required value="{{ search_query or '' }}">
-             <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
-             {% if search_mode %}
-             <a href="{{ url_for('get_products.product_list') }}" class="btn" title="Aramayı Temizle"><i class="fas fa-times"></i></a>
-             {% endif %}
-        </form>
+        <div class="dropdown" id="toolsDropdown">
+            <button class="btn dropdown-toggle"><i class="fas fa-tools"></i> Araçlar</button>
+            <div class="dropdown-content">
+                <a href="/product_label"><i class="fas fa-barcode"></i> Basit Barkod</a>
+                <a href="/image_manager"><i class="fas fa-images"></i> Görsel Yöneticisi</a>
+            </div>
+        </div>
 
-        <div class="model-grid">
-        {% if grouped_products %}
-            {% if search_mode %}
-                {% for (model_id, color), product_group in grouped_products.items() %}
-                    {% set product = product_group[0] %}
-                    <div class="model-card">
-                        <div class="model-image-container zoomable-image" data-image-src="{{ product.images.split(',')[0] if product.images else '' }}">
-                            <img src="{{ product.images.split(',')[0] if product.images else 'https://via.placeholder.com/350x350/eee/888?text=Gorsel+Yok' }}" alt="{{ product.title }}">
+        <!-- Stok Önerileri sayfası -->
+        <a href="/uretim-oneri" class="btn btn-primary"><i class="fa-solid fa-lightbulb"></i> Stok Önerileri</a>
+    </div>
+
+    <form action="{{ url_for('get_products.search_products') }}" method="GET" class="search-container">
+        <select name="search_type" id="search_type">
+            <option value="model_code" {% if search_type == 'model_code' %}selected{% endif %}>Model Kodu</option>
+            <option value="barcode" {% if search_type == 'barcode' %}selected{% endif %}>Barkod</option>
+        </select>
+        <input type="text" name="query" placeholder="Ara..." required value="{{ search_query or '' }}">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
+        {% if search_mode %}
+        <a href="{{ url_for('get_products.product_list') }}" class="btn" title="Aramayı Temizle"><i class="fas fa-times"></i></a>
+        {% endif %}
+    </form>
+
+    <div class="model-grid">
+    {% if grouped_products %}
+        {% if search_mode %}
+            {% for (model_id, color), product_group in grouped_products.items() %}
+                {% set product = product_group[0] %}
+                <div class="model-card">
+                    <div class="model-image-container zoomable-image" data-image-src="{{ product.images.split(',')[0] if product.images else '' }}">
+                        <img src="{{ product.images.split(',')[0] if product.images else 'https://via.placeholder.com/350x350/eee/888?text=Gorsel+Yok' }}" alt="{{ product.title }}">
+                    </div>
+                    <div class="model-info">
+                        <div>
+                            <h4>{{ product.title }}</h4>
+                            <p>Model Kodu: <strong>{{ model_id }}</strong></p>
+                            <p>Renk: <strong>{{ color }}</strong></p>
                         </div>
-                        <div class="model-info">
-                            <div>
-                                <h4>{{ product.title }}</h4>
-                                <p>Model Kodu: <strong>{{ model_id }}</strong></p>
-                                <p>Renk: <strong>{{ color }}</strong></p>
+                        <div class="model-actions">
+                            <div class="main-actions">
+                                <button class="btn btn-sm update-model-price" data-model="{{ model_id }}"><i class="fas fa-tags"></i> Model Fiyatı</button>
+                                <button class="btn btn-sm toggle-variants-btn"><i class="fas fa-ruler-combined"></i> Bedenleri Göster</button>
+
+                                <!-- Watchlist -->
+                                <button class="btn btn-sm watch-btn"
+                                        data-barcode="{{ (product.barcode|string) if product.barcode else '' }}"
+                                        title="Üretim önerisine ekle/çıkar">★ Takip</button>
+                                <span class="watch-badge d-none">Takipte</span>
                             </div>
-                            <div class="model-actions">
-                                <div class="main-actions">
-                                    <button class="btn btn-sm update-model-price" data-model="{{ model_id }}"><i class="fas fa-tags"></i> Model Fiyatı</button>
-                                    <button class="btn btn-sm toggle-variants-btn"><i class="fas fa-ruler-combined"></i> Bedenleri Göster</button>
-                                </div>
-                                <div class="more-actions dropdown">
-                                    <button class="btn btn-sm dropdown-toggle"><i class="fas fa-ellipsis-v"></i></button>
-                                    <div class="dropdown-content">
-                                        <button class="open-action-modal" data-action="list_variants" data-model="{{ model_id }}"><i class="fas fa-list-ul"></i> Tüm Varyantları Listele</button>
-                                        <button class="update-model-cost" data-model="{{ model_id }}"><i class="fas fa-dollar-sign"></i> Model Maliyeti</button>
-                                        <button class="delete-action" data-model="{{ model_id }}" data-color="{{ color }}"><i class="fas fa-trash"></i> Rengi Sil</button>
-                                    </div>
+                            <div class="more-actions dropdown">
+                                <button class="btn btn-sm dropdown-toggle"><i class="fas fa-ellipsis-v"></i></button>
+                                <div class="dropdown-content">
+                                    <button class="open-action-modal" data-action="list_variants" data-model="{{ model_id }}"><i class="fas fa-list-ul"></i> Tüm Varyantları Listele</button>
+                                    <button class="update-model-cost" data-model="{{ model_id }}"><i class="fas fa-dollar-sign"></i> Model Maliyeti</button>
+                                    <button class="delete-action" data-model="{{ model_id }}" data-color="{{ color }}"><i class="fas fa-trash"></i> Rengi Sil</button>
                                 </div>
                             </div>
-                        </div>
-                        <div class="variant-list-container">
-                            <ul class="size-list">
-                            {% for variant in product_group %}
-                                <li>
-                                    <span>Beden: {{ variant.size }}</span>
-                                    <span>Stok: {{ variant.quantity }}</span>
-                                    <span>{{ "%.2f"|format(variant.sale_price) }} TL</span>
-                                    <span class="barcode-info">
-                                        Barkod: {{ variant.barcode }}
-                                        {% if variant.raf_bilgisi %}
-                                            | Raf: {{ variant.raf_bilgisi }}
-                                        {% endif %}
-                                        <button class="btn-copy copy-barcode-btn" data-barcode="{{ variant.barcode }}" title="Barkodu Kopyala">
-                                            <i class="fas fa-copy"></i>
-                                        </button>
-                                    </span>
-                                </li>
-                            {% endfor %}
-                            </ul>
                         </div>
                     </div>
-                {% endfor %}
-            {% else %}
-                {% for model_id, model_data in grouped_products.items() %}
-                    {% set product = model_data.main_product_info %}
-                    <div class="model-card">
-                        <div class="model-image-container zoomable-image" data-image-src="{{ product.images.split(',')[0] if product.images else '' }}">
-                            <img src="{{ product.images.split(',')[0] if product.images else 'https://via.placeholder.com/350x350/eee/888?text=Gorsel+Yok' }}" alt="{{ product.title }}">
-                        </div>
-                        <div class="model-info">
-                            <div>
-                                <h4>{{ product.title }}</h4>
-                                <p>Model Kodu: <strong>{{ model_id }}</strong></p>
-                            </div>
-                            <div class="model-actions">
-                                <div class="main-actions">
-                                    <button class="btn btn-sm update-model-price" data-model="{{ model_id }}"><i class="fas fa-tags"></i> Model Fiyatı</button>
-                                    <button class="btn btn-sm toggle-colors-btn"><i class="fas fa-palette"></i> Renkleri Göster</button>
-                                </div>
-                                <div class="more-actions dropdown">
-                                    <button class="btn btn-sm dropdown-toggle"><i class="fas fa-ellipsis-v"></i></button>
-                                    <div class="dropdown-content">
-                                        <button class="open-action-modal" data-action="list_variants" data-model="{{ model_id }}"><i class="fas fa-list-ul"></i> Tüm Varyantları Listele</button>
-                                        <button class="update-model-cost" data-model="{{ model_id }}"><i class="fas fa-dollar-sign"></i> Model Maliyeti Gir</button>
-                                        <button class="delete-model delete-action" data-model="{{ model_id }}"><i class="fas fa-trash"></i> Modeli Sil</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="color-variants-container">
-                        {% for color, color_group in model_data.colors.items() %}
-                            {% set color_product = color_group[0] %}
-                            <div class="color-card">
-                                <div class="color-header">
-                                    <div class="color-info">
-                                        <img src="{{ color_product.images.split(',')[0] if color_product.images else 'https://via.placeholder.com/40x40/eee/888?text=?' }}" class="color-thumbnail zoomable-image" alt="{{ color }}" data-image-src="{{ color_product.images.split(',')[0] if color_product.images else '' }}">
-                                        <span>{{ color }}</span>
-                                    </div>
-                                    <button class="btn btn-sm toggle-sizes-btn"><i class="fas fa-ruler-combined"></i> Bedenleri Göster</button>
-                                </div>
-                                <div class="size-variants-container">
-                                    <ul class="size-list">
-                                    {% for variant in color_group %}
-                                        <li>
-                                            <span>Beden: {{ variant.size }}</span>
-                                            <span>Stok: {{ variant.quantity }}</span>
-                                            <span>Fiyat: {{ "%.2f"|format(variant.sale_price) }} TL</span>
-                                            <span class="barcode-info">
-                                                Barkod: {{ variant.barcode }}
-                                                {% if variant.raf_bilgisi %}
-                                                    | Raf: {{ variant.raf_bilgisi }}
-                                                {% endif %}
-                                                <button class="btn-copy copy-barcode-btn" data-barcode="{{ variant.barcode }}" title="Barkodu Kopyala">
-                                                    <i class="fas fa-copy"></i>
-                                                </button>
-                                            </span>
-                                        </li>
-                                    {% endfor %}
-                                    </ul>
-                                </div>
-                            </div>
-                        {% endfor %}
-                        </div>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% else %}
-            <p style="grid-column: 1 / -1; text-align:center; background: #fff; padding: 2rem; border-radius: var(--border-radius);">Gösterilecek ürün bulunamadı.</p>
-        {% endif %}
-        </div>
-
-        {% if pagination and pagination.pages > 1 %}
-        <div class="pagination-container">
-            <nav aria-label="Sayfalar">
-                <ul class="pagination">
-                    <li class="page-item {{ 'disabled' if not pagination.has_prev }}"><a class="page-link" href="{{ url_for('get_products.product_list', page=1) if pagination.has_prev else '#' }}">&laquo;</a></li>
-                    {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
-                        {% if p %}
-                            <li class="page-item {{ 'active' if p == pagination.page }}"><a class="page-link" href="{{ url_for('get_products.product_list', page=p) }}">{{ p }}</a></li>
-                        {% else %}
-                            <li class="page-item disabled"><a class="page-link">...</a></li>
-                        {% endif %}
-                    {% endfor %}
-                    <li class="page-item {{ 'disabled' if not pagination.has_next }}"><a class="page-link" href="{{ url_for('get_products.product_list', page=pagination.pages) if pagination.has_next else '#' }}">&raquo;</a></li>
-                </ul>
-            </nav>
-        </div>
-        {% endif %}
-    </div>
-
-    <div class="action-modal-overlay" id="actionModal">
-        <div class="action-modal-content">
-            <div class="action-modal-header"><h4 id="modalTitle"></h4><button class="close-btn">&times;</button></div>
-            <div class="action-modal-body" id="modalBody"></div>
-            <div class="action-modal-footer">
-                <button class="btn close-btn" style="background-color: var(--color-secondary); color: white;">İptal</button>
-                <button class="btn btn-primary" id="modalSaveBtn">Kaydet</button>
-            </div>
-        </div>
-    </div>
-    <div id="imageModal" class="image-modal-overlay">
-        <div class="image-modal-content">
-            <div class="image-modal-header">
-                <h4 id="imageModalTitle">Ürün Görseli</h4>
-                <button class="image-modal-close">&times;</button>
-            </div>
-            <div class="image-modal-body">
-                <img id="imageModalImg" src="" alt="Ürün Görseli" />
-            </div>
-            <div class="image-modal-footer">
-                <p id="imageModalInfo">Görseli büyütmek için tıklayın</p>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-    $(document).ready(function() {
-        // Dropdown menüleri
-        $('.dropdown-toggle').on('click', function(e) {
-            e.stopPropagation();
-            var $dropdown = $(this).closest('.dropdown');
-            $('.dropdown.active').not($dropdown).removeClass('active');
-            $dropdown.toggleClass('active');
-        });
-        $(document).on('click', function(e) {
-            if (!$(e.target).closest('.dropdown').length) { $('.dropdown').removeClass('active'); }
-        });
-
-        // Hiyerarşi ve varyant listesi açma/kapama
-        $('.model-grid').on('click', '.toggle-colors-btn, .toggle-sizes-btn, .toggle-variants-btn', function() {
-            const $button = $(this);
-            const $card = $button.closest('.model-card, .color-card');
-            const $container = $card.find('.color-variants-container, .size-variants-container, .variant-list-container').first();
-            $container.slideToggle(250);
-        });
-
-        const $modal = $('#actionModal');
-        let currentAction = '';
-
-        function openActionModal(action, modelId) {
-            currentAction = action;
-            $modal.addClass('is-visible');
-            $('#modalTitle').text('Yükleniyor...');
-            $('#modalBody').html('<div class="text-center p-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>');
-            $('#modalSaveBtn').show();
-
-            if (action === 'update_model_price' || action === 'update_model_cost') {
-                const isPrice = action === 'update_model_price';
-                const title = `${modelId} - Model ${isPrice ? 'Fiyatı' : 'Maliyeti'} Gir`;
-                const currency = isPrice ? 'TL' : 'USD';
-                const inputName = isPrice ? 'sale_price' : 'cost_usd';
-                $('#modalTitle').text(title);
-                $.get(`/api/get_model_info?model_id=${modelId}`, function(res) {
-                    if (res.success) {
-                        const currentValue = isPrice ? res.sale_price : res.cost_usd;
-                        $('#modalBody').html(`
-                            <form id="singleInputForm">
-                                <div class="prompt-input-group">
-                                    <label for="promptInput">Bu modele ait tüm varyantlar için yeni ${isPrice ? 'satış fiyatını' : 'maliyeti'} (${currency}) girin:</label>
-                                    <input type="number" id="promptInput" name="${inputName}" value="${currentValue.toFixed(2)}" class="form-control" step="0.01" min="0" required>
-                                    <input type="hidden" name="model_id" value="${modelId}">
-                                </div>
-                            </form>
-                        `);
-                    } else {
-                         $('#modalBody').html('<p class="text-danger">Mevcut değer alınamadı.</p>');
-                    }
-                });
-                return;
-            }
-
-            let url = '', title = '';
-            if (action === 'list_variants') {
-                url = `/api/get_variants_for_stock_update?model=${modelId}`;
-                title = `${modelId} - Tüm Varyantlar`;
-                $('#modalSaveBtn').hide();
-            }
-
-            $('#modalTitle').text(title);
-            $.get(url, function(res) {
-                 if (res.success && res.products.length > 0) {
-                      let tableHtml = '<table class="form-table"><thead><tr><th>Renk</th><th>Beden</th><th>Stok</th><th>Barkod</th><th>Raf</th></tr></thead><tbody>';
-                      // YENİ: Modal içindeki tabloya kopyala butonu ekleme
-                      res.products.forEach(p => { 
-                          tableHtml += `<tr>
-                                <td>${p.color}</td>
-                                <td>${p.size}</td>
-                                <td>${p.quantity}</td>
-                                <td>
-                                    ${p.barcode}
-                                    <button class="btn-copy copy-barcode-btn" data-barcode="${p.barcode}" title="Barkodu Kopyala">
+                    <div class="variant-list-container">
+                        <ul class="size-list">
+                        {% for variant in product_group %}
+                            <li>
+                                <span>Beden: {{ variant.size }}</span>
+                                <span>Stok: {{ variant.quantity }}</span>
+                                <span>{{ "%.2f"|format(variant.sale_price) }} TL</span>
+                                <span class="barcode-info">
+                                    Barkod: {{ variant.barcode }}
+                                    {% if variant.raf_bilgisi %}| Raf: {{ variant.raf_bilgisi }}{% endif %}
+                                    <button class="btn-copy copy-barcode-btn" data-barcode="{{ variant.barcode }}" title="Barkodu Kopyala">
                                         <i class="fas fa-copy"></i>
                                     </button>
-                                </td>
-                                <td>${p.raf_bilgisi || '-'}</td>
-                          </tr>`;
-                      });
-                      tableHtml += '</tbody></table>';
-                      $('#modalBody').html(tableHtml);
-                 } else {
-                      $('#modalBody').html('<p class="text-danger p-4">Bu model için varyant bulunamadı.</p>');
-                 }
-            }).fail(() => $('#modalBody').html('<p class="text-danger p-4">Sunucu hatası veya API adresi bulunamadı.</p>'));
+                                </span>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            {% for model_id, model_data in grouped_products.items() %}
+                {% set product = model_data.main_product_info %}
+                <div class="model-card">
+                    <div class="model-image-container zoomable-image" data-image-src="{{ product.images.split(',')[0] if product.images else '' }}">
+                        <img src="{{ product.images.split(',')[0] if product.images else 'https://via.placeholder.com/350x350/eee/888?text=Gorsel+Yok' }}" alt="{{ product.title }}">
+                    </div>
+                    <div class="model-info">
+                        <div>
+                            <h4>{{ product.title }}</h4>
+                            <p>Model Kodu: <strong>{{ model_id }}</strong></p>
+                        </div>
+                        <div class="model-actions">
+                            <div class="main-actions">
+                                <button class="btn btn-sm update-model-price" data-model="{{ model_id }}"><i class="fas fa-tags"></i> Model Fiyatı</button>
+                                <button class="btn btn-sm toggle-colors-btn"><i class="fas fa-palette"></i> Renkleri Göster</button>
+
+                                <!-- Watchlist -->
+                                <button class="btn btn-sm watch-btn"
+                                        data-barcode="{{ (product.barcode|string) if product.barcode else '' }}"
+                                        title="Üretim önerisine ekle/çıkar">★ Takip</button>
+                                <span class="watch-badge d-none">Takipte</span>
+                            </div>
+                            <div class="more-actions dropdown">
+                                <button class="btn btn-sm dropdown-toggle"><i class="fas fa-ellipsis-v"></i></button>
+                                <div class="dropdown-content">
+                                    <button class="open-action-modal" data-action="list_variants" data-model="{{ model_id }}"><i class="fas fa-list-ul"></i> Tüm Varyantları Listele</button>
+                                    <button class="update-model-cost" data-model="{{ model_id }}"><i class="fas fa-dollar-sign"></i> Model Maliyeti Gir</button>
+                                    <button class="delete-model delete-action" data-model="{{ model_id }}"><i class="fas fa-trash"></i> Modeli Sil</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="color-variants-container">
+                    {% for color, color_group in model_data.colors.items() %}
+                        {% set color_product = color_group[0] %}
+                        <div class="color-card">
+                            <div class="color-header">
+                                <div class="color-info">
+                                    <img src="{{ color_product.images.split(',')[0] if color_product.images else 'https://via.placeholder.com/40x40/eee/888?text=?' }}"
+                                         class="color-thumbnail zoomable-image" alt="{{ color }}"
+                                         data-image-src="{{ color_product.images.split(',')[0] if color_product.images else '' }}">
+                                    <span>{{ color }}</span>
+                                </div>
+                                <button class="btn btn-sm toggle-sizes-btn"><i class="fas fa-ruler-combined"></i> Bedenleri Göster</button>
+                            </div>
+                            <div class="size-variants-container">
+                                <ul class="size-list">
+                                {% for variant in color_group %}
+                                    <li>
+                                        <span>Beden: {{ variant.size }}</span>
+                                        <span>Stok: {{ variant.quantity }}</span>
+                                        <span>Fiyat: {{ "%.2f"|format(variant.sale_price) }} TL</span>
+                                        <span class="barcode-info">
+                                            Barkod: {{ variant.barcode }}
+                                            {% if variant.raf_bilgisi %}| Raf: {{ variant.raf_bilgisi }}{% endif %}
+                                            <button class="btn-copy copy-barcode-btn" data-barcode="{{ variant.barcode }}" title="Barkodu Kopyala">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </span>
+                                    </li>
+                                {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% else %}
+        <p style="grid-column:1 / -1;text-align:center;background:#fff;padding:2rem;border-radius:var(--border-radius);">Gösterilecek ürün bulunamadı.</p>
+    {% endif %}
+    </div>
+
+    {% if pagination and pagination.pages > 1 %}
+    <div class="pagination-container">
+        <nav aria-label="Sayfalar">
+            <ul class="pagination">
+                <li class="page-item {{ 'disabled' if not pagination.has_prev }}"><a class="page-link" href="{{ url_for('get_products.product_list', page=1) if pagination.has_prev else '#' }}">&laquo;</a></li>
+                {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                        <li class="page-item {{ 'active' if p == pagination.page }}"><a class="page-link" href="{{ url_for('get_products.product_list', page=p) }}">{{ p }}</a></li>
+                    {% else %}
+                        <li class="page-item disabled"><a class="page-link">...</a></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {{ 'disabled' if not pagination.has_next }}"><a class="page-link" href="{{ url_for('get_products.product_list', page=pagination.pages) if pagination.has_next else '#' }}">&raquo;</a></li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Action Modal -->
+<div class="action-modal-overlay" id="actionModal">
+    <div class="action-modal-content">
+        <div class="action-modal-header"><h4 id="modalTitle"></h4><button class="close-btn">&times;</button></div>
+        <div class="action-modal-body" id="modalBody"></div>
+        <div class="action-modal-footer">
+            <button class="btn close-btn" style="background:#212529;color:#fff;">İptal</button>
+            <button class="btn btn-primary" id="modalSaveBtn">Kaydet</button>
+        </div>
+    </div>
+</div>
+
+<!-- Image Modal -->
+<div id="imageModal" class="image-modal-overlay">
+    <div class="image-modal-content">
+        <div class="image-modal-header">
+            <h4 id="imageModalTitle">Ürün Görseli</h4>
+            <button class="image-modal-close">&times;</button>
+        </div>
+        <div class="image-modal-body">
+            <img id="imageModalImg" src="" alt="Ürün Görseli" />
+        </div>
+        <div class="image-modal-footer"><p id="imageModalInfo">Görseli kapatmak için dışarı tıklayın</p></div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(function(){
+
+    // Dropdown
+    $('.dropdown-toggle').on('click', function(e){
+        e.stopPropagation();
+        const $d=$(this).closest('.dropdown');
+        $('.dropdown.active').not($d).removeClass('active');
+        $d.toggleClass('active');
+    });
+    $(document).on('click', function(e){
+        if(!$(e.target).closest('.dropdown').length){ $('.dropdown').removeClass('active'); }
+    });
+
+    // Hiyerarşi aç/kapat
+    $('.model-grid').on('click', '.toggle-colors-btn, .toggle-sizes-btn, .toggle-variants-btn', function(){
+        const $btn=$(this);
+        const $card=$btn.closest('.model-card, .color-card');
+        const $container=$card.find('.color-variants-container, .size-variants-container, .variant-list-container').first();
+        $container.slideToggle(250);
+    });
+
+    // Modal
+    const $modal = $('#actionModal');
+    let currentAction='';
+
+    function openActionModal(action, modelId){
+        currentAction=action;
+        $modal.addClass('is-visible');
+        $('#modalTitle').text('Yükleniyor...');
+        $('#modalBody').html('<div class="text-center p-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>');
+        $('#modalSaveBtn').show();
+
+        if(action==='update_model_price' || action==='update_model_cost'){
+            const isPrice=(action==='update_model_price');
+            const title=`${modelId} - Model ${isPrice?'Fiyatı':'Maliyeti'} Gir`;
+            const currency=isPrice?'TL':'USD';
+            const inputName=isPrice?'sale_price':'cost_usd';
+            $('#modalTitle').text(title);
+            $.get(`/api/get_model_info?model_id=${modelId}`, function(res){
+                if(res.success){
+                    const val=isPrice?res.sale_price:res.cost_usd;
+                    $('#modalBody').html(`
+                        <form id="singleInputForm">
+                            <div class="prompt-input-group">
+                                <label>Bu modele ait tüm varyantlar için yeni ${isPrice?'satış fiyatını':'maliyeti'} (${currency}) girin:</label>
+                                <input type="number" id="promptInput" name="${inputName}" value="${Number(val||0).toFixed(2)}" class="form-control" step="0.01" min="0" required>
+                                <input type="hidden" name="model_id" value="${modelId}">
+                            </div>
+                        </form>
+                    `);
+                }else{
+                    $('#modalBody').html('<p class="text-danger">Mevcut değer alınamadı.</p>');
+                }
+            });
+            return;
         }
 
-        $('.model-grid').on('click', '.open-action-modal', function() {
-            openActionModal($(this).data('action'), $(this).data('model'));
-        });
-        $('.model-grid').on('click', '.update-model-price', function() {
-            openActionModal('update_model_price', $(this).data('model'));
-        });
-        $('.model-grid').on('click', '.update-model-cost', function() {
-            openActionModal('update_model_cost', $(this).data('model'));
-        });
+        if(action==='list_variants'){
+            $('#modalTitle').text(`${modelId} - Tüm Varyantlar`);
+            $('#modalSaveBtn').hide();
+            $.get(`/api/get_variants_for_stock_update?model=${modelId}`, function(res){
+                if(res.success && res.products.length>0){
+                    let html='<table class="form-table"><thead><tr><th>Renk</th><th>Beden</th><th>Stok</th><th>Barkod</th><th>Raf</th></tr></thead><tbody>';
+                    res.products.forEach(p=>{
+                        html+=`<tr>
+                            <td>${p.color}</td>
+                            <td>${p.size}</td>
+                            <td>${p.quantity}</td>
+                            <td>${p.barcode}
+                                <button class="btn-copy copy-barcode-btn" data-barcode="${p.barcode}" title="Barkodu Kopyala">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </td>
+                            <td>${p.raf_bilgisi || '-'}</td>
+                        </tr>`;
+                    });
+                    html+='</tbody></table>';
+                    $('#modalBody').html(html);
+                }else{
+                    $('#modalBody').html('<p class="text-danger p-4">Bu model için varyant bulunamadı.</p>');
+                }
+            }).fail(()=>$('#modalBody').html('<p class="text-danger p-4">Sunucu hatası veya API adresi bulunamadı.</p>'));
+        }
+    }
 
-        // YENİ: Barkod Kopyalama Fonksiyonu
-        // Event delegation kullandığımız için modal veya açılır menü sonradan oluşsa bile bu kod çalışır.
-        $(document).on('click', '.copy-barcode-btn', function() {
-            const button = $(this);
-            const barcode = button.data('barcode');
+    $('.model-grid').on('click','.open-action-modal',function(){
+        openActionModal($(this).data('action'), $(this).data('model'));
+    });
+    $('.model-grid').on('click','.update-model-price',function(){
+        openActionModal('update_model_price', $(this).data('model'));
+    });
+    $('.model-grid').on('click','.update-model-cost',function(){
+        openActionModal('update_model_cost', $(this).data('model'));
+    });
 
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(barcode).then(() => {
-                    const originalIcon = button.html();
-                    button.html('<i class="fas fa-check"></i>');
-                    setTimeout(() => {
-                        button.html(originalIcon);
-                    }, 1500); // 1.5 saniye sonra eski ikona dön
-                }).catch(err => {
-                    console.error('Barkod kopyalanamadı: ', err);
-                    alert('Hata: Barkod kopyalanamadı!');
-                });
-            } else {
-                alert('Tarayıcınız bu özelliği desteklemiyor.');
-            }
-        });
-        // Bitiş
+    $('#modalSaveBtn').on('click', function(){
+        let url='', formId='';
+        if(currentAction==='update_model_cost'){ url='/api/update-product-cost'; formId='#singleInputForm'; }
+        else if(currentAction==='update_model_price'){ url='/api/update_model_price'; formId='#singleInputForm'; }
+        else return;
 
-        $('#modalSaveBtn').on('click', function() {
-            let url = '', formId = '';
-            if (currentAction === 'update_model_cost') {
-                url = '/api/update-product-cost'; formId = '#singleInputForm';
-            } else if (currentAction === 'update_model_price') {
-                url = '/api/update_model_price'; formId = '#singleInputForm';
-            } else return;
+        $.post(url, $(formId).serialize(), res=>{
+            alert(res.message||'İşlem tamamlandı.');
+            if(res.success) location.reload();
+        }).fail(()=>alert('İşlem sırasında sunucu hatası oluştu.'));
+    });
+    $modal.on('click', function(e){
+        if(e.target===this || $(e.target).hasClass('close-btn')){ $modal.removeClass('is-visible'); }
+    });
 
-            $.post(url, $(formId).serialize(), res => {
-                alert(res.message || 'İşlem tamamlandı.');
-                if (res.success) location.reload();
-            }).fail(() => alert('İşlem sırasında sunucu hatası oluştu.'));
-        });
+    // Silme
+    $('.model-grid').on('click','.delete-model', function(){
+        const modelId=$(this).data('model');
+        if(confirm(`'${modelId}' modeline ait TÜM ürünleri kalıcı olarak silmek istediğinizden emin misiniz?`)){
+            $.post('/api/delete-model',{model_id:modelId},res=>{
+                alert(res.message);
+                if(res.success) location.reload();
+            });
+        }
+    });
 
-        $modal.on('click', function(e) {
-            if (e.target === this || $(e.target).hasClass('close-btn')) {
-                $modal.removeClass('is-visible');
-            }
-        });
+    // Görsel modal
+    const $imageModal=$('#imageModal');
+    $('.model-grid').on('click','.zoomable-image',function(e){
+        e.stopPropagation();
+        const src=$(this).data('image-src');
+        if(src){
+            $('#imageModalImg').attr('src', src);
+            $('#imageModalTitle').text('Ürün Görseli');
+            $('#imageModalInfo').text('Görseli kapatmak için dışarı tıklayın');
+            $imageModal.addClass('is-visible');
+        }
+    });
+    $('.model-grid').on('click','.color-thumbnail',function(e){
+        e.stopPropagation();
+        const src=$(this).attr('src');
+        if(src && !src.includes('placeholder')){
+            $('#imageModalImg').attr('src', src);
+            $('#imageModalTitle').text('Renk Görseli');
+            $('#imageModalInfo').text('Görseli kapatmak için dışarı tıklayın');
+            $imageModal.addClass('is-visible');
+        }
+    });
+    $imageModal.on('click', function(e){
+        if(e.target===this || $(e.target).hasClass('image-modal-close')){ $(this).removeClass('is-visible'); }
+    });
 
-        $('.model-grid').on('click', '.delete-model', function() {
-            const modelId = $(this).data('model');
-            if (confirm(`'${modelId}' modeline ait TÜM ürünleri kalıcı olarak silmek istediğinizden emin misiniz?`)) {
-                $.post('/api/delete-model', { model_id: modelId }, res => {
-                        alert(res.message);
-                        if (res.success) location.reload();
-                });
-            }
-        });
+    // Barkod kopyalama
+    $(document).on('click','.copy-barcode-btn',function(){
+        const $btn=$(this), barcode=String($btn.data('barcode')||'');
+        if(navigator.clipboard){
+            navigator.clipboard.writeText(barcode).then(()=>{
+                const orig=$btn.html();
+                $btn.html('<i class="fas fa-check"></i>');
+                setTimeout(()=>$btn.html(orig),1500);
+            }).catch(()=>alert('Hata: Barkod kopyalanamadı!'));
+        }else{ alert('Tarayıcınız bu özelliği desteklemiyor.'); }
+    });
 
-        // Görsel büyütme modal
-        const $imageModal = $('#imageModal');
-        $('.model-grid').on('click', '.zoomable-image', function(e) {
-            e.stopPropagation();
-            const src = $(this).data('image-src');
-            if (src) {
-                $('#imageModalImg').attr('src', src);
-                $('#imageModalTitle').text('Ürün Görseli');
-                $('#imageModalInfo').text('Görseli kapatmak için dışarı tıklayın');
-                $imageModal.addClass('is-visible');
-            }
-        });
+    // Watchlist toggle (STRING!)
+    $('.model-grid').on('click','.watch-btn',function(){
+        const $btn=$(this);
+        const $badge=$btn.siblings('.watch-badge');
+        const barcode=String($btn.attr('data-barcode')||'').trim();
+        if(!barcode){ alert('Barkod yok'); return; }
 
-        // Renk thumbnail görseli büyütme
-        $('.model-grid').on('click', '.color-thumbnail', function(e) {
-            e.stopPropagation();
-            const src = $(this).attr('src');
-            if (src && !src.includes('placeholder')) {
-                $('#imageModalImg').attr('src', src);
-                $('#imageModalTitle').text('Renk Görseli');
-                $('#imageModalInfo').text('Görseli kapatmak için dışarı tıklayın');
-                $imageModal.addClass('is-visible');
-            }
-        });
-
-        // Modal kapatma
-        $imageModal.on('click', function(e) {
-            if (e.target === this || $(e.target).hasClass('image-modal-close')) {
-                $(this).removeClass('is-visible');
-            }
+        $.ajax({
+            url:'/api/uretim-oneri/watchlist/toggle',
+            method:'POST',
+            contentType:'application/json',
+            data: JSON.stringify({ barcode }),
+            success:(res)=>{
+                if(res.ok){
+                    if(res.active){
+                        $btn.addClass('active').text('★ Takipte');
+                        $badge.removeClass('d-none');
+                    }else{
+                        $btn.removeClass('active').text('★ Takip');
+                        $badge.addClass('d-none');
+                    }
+                }else{ alert(res.error||'Hata'); }
+            },
+            error:()=>alert('Sunucu hatası')
         });
     });
-    </script>
+
+});
+</script>
 </body>
 </html>

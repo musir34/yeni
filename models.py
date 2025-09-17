@@ -16,6 +16,19 @@ from flask_login import UserMixin
 db = SQLAlchemy()
 
 
+
+class UretimOneriWatch(db.Model):
+    __tablename__ = "uretim_oneri_watchlist"
+    id = db.Column(db.Integer, primary_key=True)
+    product_barcode = db.Column(db.String(64), unique=True, index=True, nullable=False)
+    product_main_id = db.Column(db.String, index=True)     # grup için
+    note = db.Column(db.String(255))
+    min_cover_days = db.Column(db.Integer, default=10)
+    safety_factor = db.Column(db.Float, default=0.20)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+
+
 class CentralStock(db.Model):
     __tablename__ = "central_stock"
 
