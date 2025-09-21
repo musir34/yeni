@@ -13,6 +13,32 @@ from flask import send_file
 raf_bp = Blueprint("raf", __name__, url_prefix="/raf")
 
 
+
+@raf_bp.route("/api/ara/<string:barkod>", methods=["GET"])
+def barkod_ara(barkod):
+    """
+    Barkod girildiğinde ürünün hangi raflarda olduğunu döndürür.
+    """
+    urunler = RafUrun.query.filter_by(urun_barkodu=barkod).all()
+    if not urunler:
+        return jsonify({"message": "Bu barkod için stok bulunamadı."}), 404
+
+    detaylar = []
+    for u in urunler:
+        raf = Raf.query.filter_by(kod=u.raf_kodu).first()
+        detaylar.append({
+            "raf_kodu": u.raf_kodu,
+            "raf_adi": raf.kod if raf else "",
+            "adet": u.adet
+        })
+
+    return jsonify({
+        "barkod": barkod,
+        "raflar": detaylar
+    })
+
+
+
 @raf_bp.route("/api/kademeli-liste", methods=["GET"])
 def raf_kademeli_liste():
     """
@@ -254,18 +280,30 @@ def raf_sil(kod):
 def raf_urun_sil():
     raf_kodu = request.form.get("raf_kodu")
     barkod = request.form.get("barkod")
+
     if not raf_kodu or not barkod:
         flash("Geçersiz istek. Raf kodu ve barkod gerekli.", "danger")
         return redirect("/raf/yonetim")
+
     urun = RafUrun.query.filter_by(raf_kodu=raf_kodu,
                                    urun_barkodu=barkod).first()
     if not urun:
         flash("Ürün rafta bulunamadı.", "warning")
         return redirect("/raf/yonetim")
+
+    # Not: raf stoğu kadar central stoğu da azalt
+    adet_silinecek = urun.adet or 0
+    from models import CentralStock
+    cs = CentralStock.query.get(barkod)
+    if cs:
+        cs.qty = max(0, (cs.qty or 0) - adet_silinecek)
+
     db.session.delete(urun)
     db.session.commit()
-    flash("Ürün raftan silindi.", "success")
+
+    flash(f"Ürün raftan silindi. CentralStock da {adet_silinecek} düştü.", "success")
     return redirect("/raf/yonetim")
+
 
 
 @raf_bp.route("/stok-ekle", methods=["POST"])
