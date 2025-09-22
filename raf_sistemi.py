@@ -1,5 +1,5 @@
-from flask import Blueprint, request, jsonify, render_template, flash, redirect
-from models import db, Raf, Product, RafUrun
+from flask import Blueprint, request, jsonify, render_template, flash, redirect, url_for
+from models import db, Raf, Product, RafUrun, CentralStock
 import qrcode
 import barcode
 from barcode.writer import ImageWriter
@@ -13,13 +13,17 @@ from flask import send_file
 raf_bp = Blueprint("raf", __name__, url_prefix="/raf")
 
 
-
+#barkod ile ürün arama
 @raf_bp.route("/api/ara/<string:barkod>", methods=["GET"])
 def barkod_ara(barkod):
     """
     Barkod girildiğinde ürünün hangi raflarda olduğunu döndürür.
+    Sadece adet > 0 olan raf kayıtları gösterilir.
     """
-    urunler = RafUrun.query.filter_by(urun_barkodu=barkod).all()
+    urunler = (RafUrun.query
+               .filter_by(urun_barkodu=barkod)
+               .filter(RafUrun.adet > 0)
+               .all())
     if not urunler:
         return jsonify({"message": "Bu barkod için stok bulunamadı."}), 404
 
@@ -32,10 +36,7 @@ def barkod_ara(barkod):
             "adet": u.adet
         })
 
-    return jsonify({
-        "barkod": barkod,
-        "raflar": detaylar
-    })
+    return jsonify({"barkod": barkod, "raflar": detaylar})
 
 
 
@@ -104,18 +105,18 @@ def api_get_raf_stoklari(raf_kodu):
     if not raf:
         return jsonify({"error": "Raf bulunamadı"}), 404
 
-    urunler_db = RafUrun.query.filter_by(raf_kodu=raf.kod).all()
+    # 👇 0 adetli kayıtlar gelmez
+    urunler_db = (RafUrun.query
+                  .filter_by(raf_kodu=raf.kod)
+                  .filter(RafUrun.adet > 0)
+                  .all())
 
     if not urunler_db:
         return jsonify([])
 
     barkodlar = [u.urun_barkodu for u in urunler_db]
     urun_bilgileri_map = {
-        p.barcode: {
-            "model": p.product_main_id,
-            "color": p.color,
-            "size": p.size
-        }
+        p.barcode: {"model": p.product_main_id, "color": p.color, "size": p.size}
         for p in Product.query.filter(Product.barcode.in_(barkodlar))
     }
 
@@ -136,38 +137,60 @@ def api_get_raf_stoklari(raf_kodu):
 
 @raf_bp.route("/stok-guncelle", methods=["POST"])
 def raf_stok_guncelle():
+    from models import CentralStock
+
     raf_kodu = request.form.get("raf_kodu")
-    barkod = request.form.get("barkod")
-    yeni_adet = int(request.form.get("adet"))
+    barkod = (request.form.get("barkod") or "").strip().replace(" ", "")
+    try:
+        yeni_adet = int(request.form.get("adet"))
+    except (TypeError, ValueError):
+        flash("Geçersiz adet.", "danger")
+        return redirect(url_for("raf.raf_yonetimi"))  # 👈 raf listesine dön
 
-    urun = RafUrun.query.filter_by(raf_kodu=raf_kodu,
-                                   urun_barkodu=barkod).first()
-    if urun:
-        urun.adet = yeni_adet
-        db.session.commit()
-        flash("Stok güncellendi.", "success")
-    else:
+    urun = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barkod).first()
+    if not urun:
         flash("Ürün rafta bulunamadı.", "danger")
+        return redirect(url_for("raf.raf_yonetimi"))  # 👈
 
-    return redirect("/raf/stoklar")
+    if yeni_adet <= 0:
+        # 0'a çekilirse kaydı sil + CentralStock düş
+        cs = CentralStock.query.get(barkod)
+        if cs:
+            cs.qty = max(0, (cs.qty or 0) - (urun.adet or 0))
+        db.session.delete(urun)
+        db.session.commit()
+        flash(f"{raf_kodu} rafından {barkod} kaldırıldı. CentralStock düşürüldü.", "success")
+        return redirect(url_for("raf.raf_yonetimi"))  # 👈
+
+    urun.adet = yeni_adet
+    db.session.commit()
+    flash(f"{raf_kodu} rafındaki {barkod} adet {yeni_adet} olarak güncellendi.", "success")
+    return redirect(url_for("raf.raf_yonetimi"))  # 👈
+
 
 
 @raf_bp.route("/stoklar", methods=["GET"])
 def raf_stok_listesi():
     raflar = Raf.query.order_by(Raf.kod).all()
     raf_stoklari = {}
+
     barkod_map = {
         p.barcode: {
             "product_main_id": p.product_main_id,
             "color": p.color,
             "size": p.size
         }
-        for p in
-        Product.query.with_entities(Product.barcode, Product.product_main_id,
-                                    Product.color, Product.size)
+        for p in Product.query.with_entities(
+            Product.barcode, Product.product_main_id, Product.color, Product.size
+        )
     }
+
     for raf in raflar:
-        urunler = RafUrun.query.filter_by(raf_kodu=raf.kod).all()
+        # 👇 0 adetli kayıtlar gelmez
+        urunler = (RafUrun.query
+                   .filter_by(raf_kodu=raf.kod)
+                   .filter(RafUrun.adet > 0)
+                   .all())
         detaylar = []
         for u in urunler:
             urun_bilgi = barkod_map.get(u.urun_barkodu)
@@ -180,7 +203,9 @@ def raf_stok_listesi():
                     "size": urun_bilgi["size"]
                 })
         raf_stoklari[raf.kod] = detaylar
+
     return render_template("raf_stok_liste.html", raf_stoklari=raf_stoklari)
+
 
 
 def qrcode_with_text(data, filename):
@@ -279,30 +304,25 @@ def raf_sil(kod):
 @raf_bp.route("/stok-sil", methods=["POST"])
 def raf_urun_sil():
     raf_kodu = request.form.get("raf_kodu")
-    barkod = request.form.get("barkod")
-
+    barkod = (request.form.get("barkod") or "").strip().replace(" ", "")
     if not raf_kodu or not barkod:
         flash("Geçersiz istek. Raf kodu ve barkod gerekli.", "danger")
-        return redirect("/raf/yonetim")
+        return redirect(url_for("raf.raf_yonetimi"))  # 👈
 
-    urun = RafUrun.query.filter_by(raf_kodu=raf_kodu,
-                                   urun_barkodu=barkod).first()
+    urun = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barkod).first()
     if not urun:
         flash("Ürün rafta bulunamadı.", "warning")
-        return redirect("/raf/yonetim")
+        return redirect(url_for("raf.raf_yonetimi"))  # 👈
 
-    # Not: raf stoğu kadar central stoğu da azalt
-    adet_silinecek = urun.adet or 0
-    from models import CentralStock
+    # CentralStock’u raftaki miktar kadar azalt
     cs = CentralStock.query.get(barkod)
     if cs:
-        cs.qty = max(0, (cs.qty or 0) - adet_silinecek)
+        cs.qty = max(0, (cs.qty or 0) - (urun.adet or 0))
 
     db.session.delete(urun)
     db.session.commit()
-
-    flash(f"Ürün raftan silindi. CentralStock da {adet_silinecek} düştü.", "success")
-    return redirect("/raf/yonetim")
+    flash(f"{raf_kodu} rafından {barkod} silindi. CentralStock güncellendi.", "success")
+    return redirect(url_for("raf.raf_yonetimi"))  # 👈
 
 
 
