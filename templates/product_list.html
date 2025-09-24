@@ -69,10 +69,6 @@
         .btn-copy:hover{color:#B76E79}
         .btn-copy .fa-check{color:#3ac47d}
 
-        .watch-btn{border:1px dashed #ffc107;background:#fff;color:#b8860b;padding:.45rem .6rem;border-radius:.4rem}
-        .watch-btn.active{background:#ffc107;color:#212529;border-style:solid}
-        .watch-badge{margin-left:.4rem;background:#ffc107;color:#212529;padding:.2rem .45rem;border-radius:.35rem;font-weight:600}
-
         .pagination-container{display:flex;justify-content:center;align-items:center;padding:2.5rem 0 1rem}
         .pagination{display:flex;align-items:center;gap:.5rem;list-style:none}
         .pagination li a{display:block;color:var(--color-secondary);background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--border-radius);padding:.6rem 1rem;text-decoration:none;transition:var(--transition);font-weight:600;min-width:44px;text-align:center}
@@ -127,7 +123,6 @@
             </div>
         </div>
 
-        <!-- Stok Önerileri sayfası -->
         <a href="/uretim-oneri" class="btn btn-primary"><i class="fa-solid fa-lightbulb"></i> Stok Önerileri</a>
     </div>
 
@@ -162,12 +157,6 @@
                             <div class="main-actions">
                                 <button class="btn btn-sm update-model-price" data-model="{{ model_id }}"><i class="fas fa-tags"></i> Model Fiyatı</button>
                                 <button class="btn btn-sm toggle-variants-btn"><i class="fas fa-ruler-combined"></i> Bedenleri Göster</button>
-
-                                <!-- Watchlist -->
-                                <button class="btn btn-sm watch-btn"
-                                        data-barcode="{{ (product.barcode|string) if product.barcode else '' }}"
-                                        title="Üretim önerisine ekle/çıkar">★ Takip</button>
-                                <span class="watch-badge d-none">Takipte</span>
                             </div>
                             <div class="more-actions dropdown">
                                 <button class="btn btn-sm dropdown-toggle"><i class="fas fa-ellipsis-v"></i></button>
@@ -215,12 +204,6 @@
                             <div class="main-actions">
                                 <button class="btn btn-sm update-model-price" data-model="{{ model_id }}"><i class="fas fa-tags"></i> Model Fiyatı</button>
                                 <button class="btn btn-sm toggle-colors-btn"><i class="fas fa-palette"></i> Renkleri Göster</button>
-
-                                <!-- Watchlist -->
-                                <button class="btn btn-sm watch-btn"
-                                        data-barcode="{{ (product.barcode|string) if product.barcode else '' }}"
-                                        title="Üretim önerisine ekle/çıkar">★ Takip</button>
-                                <span class="watch-badge d-none">Takipte</span>
                             </div>
                             <div class="more-actions dropdown">
                                 <button class="btn btn-sm dropdown-toggle"><i class="fas fa-ellipsis-v"></i></button>
@@ -293,7 +276,6 @@
     {% endif %}
 </div>
 
-<!-- Action Modal -->
 <div class="action-modal-overlay" id="actionModal">
     <div class="action-modal-content">
         <div class="action-modal-header"><h4 id="modalTitle"></h4><button class="close-btn">&times;</button></div>
@@ -305,7 +287,6 @@
     </div>
 </div>
 
-<!-- Image Modal -->
 <div id="imageModal" class="image-modal-overlay">
     <div class="image-modal-content">
         <div class="image-modal-header">
@@ -478,33 +459,6 @@ $(function(){
                 setTimeout(()=>$btn.html(orig),1500);
             }).catch(()=>alert('Hata: Barkod kopyalanamadı!'));
         }else{ alert('Tarayıcınız bu özelliği desteklemiyor.'); }
-    });
-
-    // Watchlist toggle (STRING!)
-    $('.model-grid').on('click','.watch-btn',function(){
-        const $btn=$(this);
-        const $badge=$btn.siblings('.watch-badge');
-        const barcode=String($btn.attr('data-barcode')||'').trim();
-        if(!barcode){ alert('Barkod yok'); return; }
-
-        $.ajax({
-            url:'/api/uretim-oneri/watchlist/toggle',
-            method:'POST',
-            contentType:'application/json',
-            data: JSON.stringify({ barcode }),
-            success:(res)=>{
-                if(res.ok){
-                    if(res.active){
-                        $btn.addClass('active').text('★ Takipte');
-                        $badge.removeClass('d-none');
-                    }else{
-                        $btn.removeClass('active').text('★ Takip');
-                        $badge.addClass('d-none');
-                    }
-                }else{ alert(res.error||'Hata'); }
-            },
-            error:()=>alert('Sunucu hatası')
-        });
     });
 
 });

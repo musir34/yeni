@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>{{ plan.title }} - Yazdır</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{ --fg:#111; --muted:#555; --line:#ddd; }
+  body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:var(--fg); margin:0; }
+  .wrap{ max-width: 980px; margin: 12mm auto; padding: 0 8mm; }
+  h1{ margin:0 0 6mm 0; font-size: 18pt; }
+  .meta{ color:var(--muted); margin-bottom: 6mm; }
+  table{ width:100%; border-collapse: collapse; page-break-inside:auto; }
+  th,td{ border-bottom:1px solid var(--line); padding:6px 8px; font-size: 10pt; }
+  th{ text-align:left; background:#f7f7f7; }
+  .group{ margin:6mm 0 2mm; font-weight:700; }
+  .sub{ margin:2mm 0; font-weight:600; }
+  .right{ text-align:right; }
+  .small{ font-size:9pt; color:var(--muted); }
+  /* Yazdır ayarları */
+  @page { size: auto; margin: 10mm; }
+  @media print {
+    .noprint{ display:none !important; }
+    body{ margin:0; }
+    .wrap{ margin:0; padding:0; max-width:none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="noprint" style="display:flex; gap:8px; justify-content:flex-end; margin:8px 0;">
+    <button onclick="window.print()">Yazdır</button>
+    <a href="/uretim-oneri-haftalik">Geri</a>
+  </div>
+
+  <h1>{{ plan.title }}</h1>
+  <div class="meta">
+    Durum: <b>{{ plan.status }}</b> •
+    Oluşturuldu: <b>{{ plan.created_at.strftime("%d.%m.%Y %H:%M") }}</b> •
+    Toplam öneri: <b>{{ plan.total_suggest }}</b>
+  </div>
+
+  {% set snap = data %}
+  {% for g in snap.get('groups', []) %}
+    <div class="group">{{ g.model }}</div>
+    {% for c in g.colors %}
+      <div class="sub">{{ c.renk }}</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Barkod</th><th>Beden</th><th class="right">Satış ({{ snap.days }}g)</th>
+            <th class="right">Stok</th><th class="right">Günlük Ort.</th><th class="right">Kalan Gün</th><th class="right">Öneri</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for it in c.items %}
+          <tr>
+            <td>{{ it.barcode }}</td>
+            <td>{{ it.beden }}</td>
+            <td class="right">{{ it.sold_last_days }}</td>
+            <td class="right">{{ it.stok }}</td>
+            <td class="right">{{ it.avg_daily }}</td>
+            <td class="right">{{ it.days_left if it.days_left is not none else '-' }}</td>
+            <td class="right"><b>{{ it.suggest_qty }}</b></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endfor %}
+    <div class="small">Model toplam öneri: {{ g.total_suggest }}</div>
+  {% endfor %}
+</div>
+</body>
+</html>

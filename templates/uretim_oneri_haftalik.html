@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>Haftalık Üretim Önerisi - Güllü Ayakkabı</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    :root{
+        --color-primary:#B76E79; --color-primary-dark:#A05F6A;
+        --color-secondary:#212529; --color-text:#343a40;
+        --color-bg:#f8f9fa; --color-bg-light:#ffffff; --color-white:#fff;
+        --color-border:#dee2e6; --color-success:#16a34a; --color-danger:#d92550;
+        --color-muted: #6c757d; --font-family-base:'Inter',sans-serif;
+        --border-radius:.5rem; --shadow-sm:0 1px 3px rgba(0,0,0,.04);
+        --shadow-md:0 5px 15px rgba(0,0,0,.08); --transition:all .25s ease-in-out;
+    }
+    *{box-sizing:border-box}
+    body{font-family:var(--font-family-base);margin:0;color:var(--color-text);background:var(--color-bg)}
+    .container{max-width:1400px;margin:0 auto;padding:1.5rem}
+    h1{font-size:1.75rem;margin:0 0 .5rem;color:var(--color-secondary)}
+    .sub{color:var(--color-muted);font-size:.9rem;margin-bottom:1.5rem;max-width:600px}
+    
+    .card{background:var(--color-bg-light);border:1px solid var(--color-border);border-radius:var(--border-radius);padding:1.5rem;margin-bottom:1.5rem;box-shadow:var(--shadow-sm);transition:var(--transition)}
+    .card:hover{transform:translateY(-4px);box-shadow:var(--shadow-md)}
+    .card-header{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--color-border)}
+    .card-header h2{font-size:1.25rem;margin:0;color:var(--color-secondary)}
+
+    .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.5rem;align-items:flex-end}
+    .form-group{display:flex;flex-direction:column;gap:.25rem}
+    .form-group label{font-size:.8rem;font-weight:600;color:var(--color-muted);display:flex;align-items:center;gap:.5rem}
+    .form-group .input-wrapper{display:flex;align-items:center;gap:.5rem}
+    input[type=text],input[type=number]{width:100%;padding:.6rem .8rem;font-size:.9rem;border:1px solid var(--color-border);border-radius:.4rem;transition:var(--transition)}
+    input[type=text]:focus,input[type=number]:focus{border-color:var(--color-primary);box-shadow:0 0 0 3px rgba(183,110,121,.2)}
+    .checkbox-group{display:flex;align-items:center;gap:.5rem;padding-top:1.5rem}
+    input[type=checkbox]{width:16px;height:16px}
+
+    .tooltip-trigger{position:relative;cursor:help;color:var(--color-muted);display:inline-flex}
+    .tooltip-content{
+        position:absolute;bottom:120%;left:50%;transform:translateX(-50%);
+        background:var(--color-secondary);
+        color: var(--color-primary); /* DEĞİŞİKLİK BURADA */
+        padding:.5rem .8rem;border-radius:.4rem;font-size:.8rem;width:240px;text-align:left;z-index:10;
+        opacity:0;visibility:hidden;transition:opacity .2s, bottom .2s;box-shadow:var(--shadow-md)
+    }
+    .tooltip-trigger:hover .tooltip-content{opacity:1;visibility:visible;bottom:130%}
+    .th-tooltip .tooltip-content{bottom:auto;top:130%} /* Tablo başlıkları için aşağı açılır */
+    .tooltip-trigger i{font-size:1rem}
+
+    .tools{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:1.5rem;border-top:1px solid var(--color-border);padding-top:1.5rem}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;font-size:.9rem;font-weight:600;padding:.6rem 1.2rem;border:1px solid transparent;border-radius:.4rem;cursor:pointer;transition:var(--transition);text-decoration:none}
+    .btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:var(--shadow-sm)}
+    .btn:disabled{opacity:0.5;cursor:not-allowed}
+    .btn.active{transform:translateY(-2px);box-shadow:var(--shadow-sm);border-color:var(--color-primary)}
+    .btn-primary{background:var(--color-primary);color:var(--color-white);border-color:var(--color-primary-dark)}
+    .btn-success{background:var(--color-success);color:var(--color-white);border-color:var(--color-success)}
+    .btn-ghost{background:transparent;border-color:var(--color-border);color:var(--color-text)}
+    .btn-ghost:hover:not(:disabled){background:var(--color-border);color:var(--color-secondary)}
+    
+    .main-grid{display:grid;grid-template-columns:1fr;gap:1.5rem}
+    @media(min-width:1000px){ .main-grid{grid-template-columns:minmax(0,2fr) minmax(0,1fr)} }
+    
+    .section h2{font-size:1.25rem;color:var(--color-secondary);margin-bottom:1rem}
+    .placeholder{padding:2rem;text-align:center;color:var(--color-muted);background:rgba(0,0,0,.02);border-radius:.4rem}
+    
+    table{width:100%;border-collapse:collapse;margin-top:1rem}
+    th,td{padding:.75rem;border-bottom:1px solid var(--color-border);text-align:left;font-size:.85rem;vertical-align:middle}
+    th{background:#f8fafc;font-weight:600;color:var(--color-secondary)}
+    th .tooltip-trigger i{font-size:.8rem;margin-left:.25rem}
+    tbody tr{transition:background-color .2s}
+    tbody tr:hover{background-color:rgba(183,110,121,.05)}
+    td.right,th.right{text-align:right}
+    .thumb{height:48px;width:48px;object-fit:cover;border-radius:.4rem;border:1px solid var(--color-border);vertical-align:middle}
+    .model-title{font-size:1.1rem;font-weight:600;margin:0 0 .25rem}
+    .color-title{margin-top:1rem;font-weight:600;color:var(--color-muted)}
+    .suggested-qty{font-weight:700;font-size:1rem;color:var(--color-primary)}
+
+    .plan-card{padding:1rem;transition:var(--transition)}
+    .plan-card:hover{transform:none;box-shadow:var(--shadow-sm);border-color: var(--color-primary-dark)}
+    .plan-header{display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap}
+    .plan-info strong{display:block;color:var(--color-secondary)}
+    .plan-info .muted{font-size:.8rem}
+    .plan-tools{display:flex;gap:.5rem;align-items:center}
+    .plan-actions{display:flex;gap:.5rem;align-items:center;margin-top:1rem}
+    .status-select{padding:.5rem;border-radius:.4rem;border:1px solid var(--color-border);font-size:.85rem}
+    .kbd{background:var(--color-secondary);color:#fff;border-radius:.4rem;padding:0 .4rem;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.8rem}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Haftalık Üretim Önerisi</h1>
+    <div class="sub">
+      Aşağıdaki alanları doldurarak <span class="kbd">Hesapla</span> butonuna basın. Oluşturulan
+      öneriyi <span class="kbd">Plan Oluştur</span> ile kaydedip, <span class="kbd">Yazdır</span> ile çıktısını alabilirsiniz.
+    </div>
+  
+    <div class="card">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1">
+          <label for="models">
+            Modeller
+            <span class="tooltip-trigger">
+              <i class="fas fa-question-circle"></i>
+              <span class="tooltip-content">Üretim planına dahil edilecek <b>model kodlarını</b> girin (örn: gll012, gll088). Bu listeyi "Varsayılanı Kaydet" ile sonraki kullanımlar için saklayabilirsiniz.</span>
+            </span>
+          </label>
+          <input id="models" type="text" placeholder="Modelleri virgül ile ayırarak yazın...">
+        </div>
+        <div class="form-group">
+          <label for="days">
+            Satış Geçmişi (gün)
+             <span class="tooltip-trigger">
+              <i class="fas fa-question-circle"></i>
+              <span class="tooltip-content">Satış ortalamasını hesaplamak için kaç gün geriye bakılacağını belirtir. Örneğin, <b>7</b> değeri son 1 haftalık satışı baz alır.</span>
+            </span>
+          </label>
+          <input id="days" type="number" min="1" value="7">
+        </div>
+        <div class="form-group">
+          <label for="cover">
+            Hedef Stok (gün)
+            <span class="tooltip-trigger">
+              <i class="fas fa-question-circle"></i>
+              <span class="tooltip-content">Depoda en az kaç <b>günlük</b> satışa yetecek kadar stok hedeflendiğini belirtir. Örneğin, <b>14</b> günlük stok hedefi.</span>
+            </span>
+          </label>
+          <input id="cover" type="number" step="0.5" value="14">
+        </div>
+        <div class="form-group">
+          <label for="sf">
+            Güvenlik Faktörü
+            <span class="tooltip-trigger">
+              <i class="fas fa-question-circle"></i>
+              <span class="tooltip-content">Hesaplanan öneri miktarına eklenecek güvenlik stoğu oranıdır. <b>0.10</b> değeri, öneriye %10'luk bir tampon ekler.</span>
+            </span>
+          </label>
+          <input id="sf" type="number" step="0.01" value="0.10">
+        </div>
+        <div class="form-group checkbox-group">
+          <input id="onlypos" type="checkbox" checked>
+          <label for="onlypos">Sadece önerisi olanları göster</label>
+        </div>
+      </div>
+      <div class="tools">
+        <button id="btn-calc" class="btn btn-primary"><i class="fas fa-calculator"></i> Hesapla</button>
+        <button id="btn-create-plan" class="btn btn-success" disabled><i class="fas fa-plus-circle"></i> Plan Oluştur</button>
+        <button id="btn-print-plan" class="btn btn-primary" disabled><i class="fas fa-print"></i> Yazdır</button>
+        <div style="margin-left:auto; display:flex; gap:.75rem;">
+          <button id="btn-load-defaults" class="btn btn-ghost">Varsayılanı Yükle</button>
+          <button id="btn-save-defaults" class="btn btn-ghost">Kaydet</button>
+          <button id="btn-export-csv" class="btn btn-ghost" disabled>CSV</button>
+          <button id="btn-copy" class="btn btn-ghost" disabled>Kopyala</button>
+        </div>
+      </div>
+    </div>
+  
+    <div class="main-grid">
+      <div id="results" class="section">
+        <div class="card-header" style="padding-bottom:0; border:none; margin-bottom:0;">
+            <h2><i class="fas fa-boxes-stacked" style="margin-right:.5rem; color:var(--color-primary);"></i>Hesaplama Sonuçları</h2>
+        </div>
+        <div id="out">
+          <div class="placeholder">Sonuçlar burada görünecek.</div>
+        </div>
+      </div>
+  
+      <div class="section">
+        <div class="card-header" style="padding-bottom:0; border:none; margin-bottom:0;">
+            <h2><i class="fas fa-history" style="margin-right:.5rem; color:var(--color-primary);"></i>Plan Geçmişi</h2>
+            <button id="btn-refresh-plans" class="btn btn-ghost">Yenile</button>
+        </div>
+        <div id="plans">
+          <div class="placeholder">Geçmiş plan bulunamadı.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const sel = id => document.getElementById(id);
+    const toModels = () => (sel('models').value.trim().split(/[\s,]+/).map(s=>s.trim()).filter(Boolean));
+
+    function serializeCurrentParams(){
+      return {
+        models: toModels(),
+        days: +sel('days').value || 7,
+        min_cover_days: +sel('cover').value || 14,
+        safety_factor: +sel('sf').value || 0.10,
+        only_positive: sel('onlypos').checked
+      };
+    }
+
+    function renderGroups(data){
+      const out = sel('out');
+      if(!data?.ok){ out.innerHTML = '<div class="placeholder">Hata oluştu veya boş sonuç döndü.</div>'; return; }
+      if(!data.groups?.length){ out.innerHTML = '<div class="placeholder">Seçili modellere ait veri bulunamadı.</div>'; return; }
+
+      const thTooltip = (text, tip) => `
+        <span class="tooltip-trigger th-tooltip">
+          ${text} <i class="fas fa-info-circle"></i>
+          <span class="tooltip-content">${tip}</span>
+        </span>`;
+
+      out.innerHTML = data.groups.map(g => `
+        <div class="card">
+          <div class="card-header" style="padding-bottom:1rem; border-bottom:1px solid var(--color-border); margin-bottom:1rem;">
+            <div>
+              <h3 class="model-title">${g.model}</h3>
+              <span style="font-size:.9rem; color:var(--color-muted);">Toplam Öneri: <strong style="color:var(--color-primary);">${g.total_suggest}</strong> adet</span>
+            </div>
+            ${g.image ? `<img class="thumb" src="${g.image}" alt="${g.model}">` : ''}
+          </div>
+          ${g.colors.map(c => `
+            <h4 class="color-title">${c.renk}</h4>
+            <table>
+              <thead><tr>
+                <th>Barkod</th>
+                <th>Beden</th>
+                <th class="right">${thTooltip(`Satış (${data.days}g)`, `Son ${data.days} günde satılan toplam adet.`)}</th>
+                <th class="right">${thTooltip('Stok', 'Merkezi depodaki mevcut, satılabilir stok adedi.')}</th>
+                <th class="right">${thTooltip('Günlük Ort.', `Belirtilen gün aralığındaki günlük ortalama satış adedi.`)}</th>
+                <th class="right">${thTooltip('Kalan Gün', 'Mevcut stok ve satış hızına göre stoğun tahmini bitiş süresi.')}</th>
+                <th class="right">${thTooltip('Öneri', 'Hedeflenen stok gün sayısına ulaşmak için üretilmesi tavsiye edilen adet.')}</th>
+              </tr></thead>
+              <tbody>
+                ${c.items.map(it => `
+                  <tr>
+                    <td>${it.barcode}</td>
+                    <td>${it.beden}</td>
+                    <td class="right">${it.sold_last_days}</td>
+                    <td class="right">${it.stok}</td>
+                    <td class="right">${it.avg_daily}</td>
+                    <td class="right">${(it.days_left ?? '---')}</td>
+                    <td class="right"><strong class="suggested-qty">${it.suggest_qty}</strong></td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          `).join('')}
+        </div>
+      `).join('');
+    }
+    
+    function setActionButtonsDisabled(state) {
+        sel('btn-create-plan').disabled = state;
+        sel('btn-print-plan').disabled = state;
+        sel('btn-export-csv').disabled = state;
+        sel('btn-copy').disabled = state;
+    }
+
+    async function loadDefaults(){
+      try {
+        const r = await fetch('/api/uretim-oneri/defaults'); const d = await r.json();
+        sel('models').value = (d.models||[]).join(', ');
+        sel('days').value = d.days ?? 7;
+        sel('cover').value = d.min_cover_days ?? 14;
+        sel('sf').value = d.safety_factor ?? 0.10;
+        sel('onlypos').checked = d.only_positive !== false;
+      } catch(e) { console.error("Varsayılanlar yüklenemedi:", e); }
+    }
+
+    async function saveDefaults(){
+      const body = serializeCurrentParams();
+      try {
+        const res = await fetch('/api/uretim-oneri/defaults', {
+          method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+        });
+        const j = await res.json(); alert(j.ok ? 'Varsayılan ayarlar kaydedildi.' : 'Hata: Kaydedilemedi.');
+      } catch(e) { alert("Sunucu hatası, kaydedilemedi."); }
+    }
+
+    async function calc(){
+      const body = serializeCurrentParams();
+      if(!body.models.length){ alert('Lütfen en az bir model kodu girin.'); return; }
+      sel('out').innerHTML = '<div class="placeholder">Hesaplanıyor... <i class="fas fa-spinner fa-spin"></i></div>';
+      setActionButtonsDisabled(true);
+      try {
+        const res = await fetch('/api/uretim-oneri-haftalik', {
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        window.__lastData = data;
+        renderGroups(data);
+        if(data.ok && data.groups?.length) {
+            setActionButtonsDisabled(false);
+        }
+      } catch(e) { sel('out').innerHTML = '<div class="placeholder">Hesaplama sırasında bir sunucu hatası oluştu.</div>'; }
+    }
+
+    async function createPlan(){
+      const body = serializeCurrentParams();
+      if(!body.models.length){ alert('Plan oluşturmak için en az bir model kodu girin.'); return; }
+      try {
+        const res = await fetch('/api/uretim-oneri/plan', {
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+        });
+        const j = await res.json();
+        if(j.ok){
+          alert('Plan başarıyla oluşturuldu! Şimdi geçmiş listesinden yazdırabilirsiniz.');
+          refreshPlans();
+        } else {
+          alert(j.error || 'Plan oluşturulamadı.');
+        }
+      } catch(e) { alert('Plan oluşturulurken sunucu hatası oluştu.'); }
+    }
+    
+    async function printPlan() {
+      const body = serializeCurrentParams();
+      if(!body.models.length){ alert('Yazdırmak için en az bir model kodu girin.'); return; }
+      try {
+        const res = await fetch('/api/uretim-oneri/plan', {
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+        });
+        const j = await res.json();
+        if(j.ok && j.print_url){
+          window.open(j.print_url, '_blank');
+          refreshPlans();
+        } else {
+          alert(j.error || 'Plan oluşturulup yazılamadı.');
+        }
+      } catch(e) { alert('Plan yazdırılırken sunucu hatası oluştu.'); }
+    }
+
+    async function refreshPlans(){
+      const box = sel('plans');
+      try {
+        const r = await fetch('/api/uretim-oneri/planlar'); const d = await r.json();
+        if(!d.ok || !d.plans?.length){ box.innerHTML = '<div class="placeholder">Geçmiş plan bulunamadı.</div>'; return; }
+        box.innerHTML = d.plans.map(p => `
+          <div class="card plan-card">
+            <div class="plan-header">
+              <div class="plan-info">
+                <strong>#${p.id} - ${p.title}</strong>
+                <span class="muted">Oluşturulma: ${p.created_at}</span>
+              </div>
+              <div class="plan-tools">
+                <span class="btn btn-ghost" style="font-size:.75rem; padding:.2rem .5rem; pointer-events:none;">${p.status}</span>
+                <a class="btn btn-ghost" href="/uretim-oneri/plan/${p.id}/yazdir" target="_blank" title="Bu Planı Yazdır"><i class="fas fa-print"></i></a>
+              </div>
+            </div>
+            <div class="plan-actions">
+              <select class="status-select" id="st-${p.id}">
+                <option value="calisacak" ${p.status==='calisacak'?'selected':''}>Çalışacak</option>
+                <option value="tamamlandi" ${p.status==='tamamlandi'?'selected':''}>Tamamlandı</option>
+                <option value="iptal" ${p.status==='iptal'?'selected':''}>İptal</option>
+              </select>
+              <button class="btn btn-ghost" onclick="updatePlanStatus(${p.id})">Güncelle</button>
+            </div>
+          </div>
+        `).join('');
+      } catch(e) { box.innerHTML = '<div class="placeholder">Planlar yüklenemedi.</div>'; }
+    }
+
+    async function updatePlanStatus(id){
+      const v = sel('st-'+id).value;
+      try {
+        const r = await fetch('/api/uretim-oneri/plan/'+id+'/status', {
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status:v})
+        });
+        const j = await r.json();
+        if(j.ok){ refreshPlans(); } else { alert('Durum güncellenemedi.'); }
+      } catch(e) { alert('Durum güncellenirken sunucu hatası oluştu.'); }
+    }
+
+    function exportCSV(){
+      const data = window.__lastData;
+      if(!data?.groups?.length){ return; }
+      const rows = [['Model','Renk','Barkod','Beden','Satis('+data.days+'g)','Stok','GunlukOrt','KalanGun','Oneri']];
+      data.groups.forEach(g=>{
+        g.colors.forEach(c=>{
+          c.items.forEach(it=>{
+            rows.push([g.model,c.renk,it.barcode,it.beden,it.sold_last_days,it.stok,it.avg_daily,(it.days_left ?? ''),it.suggest_qty]);
+          });
+        });
+      });
+      const csv = rows.map(r=>r.map(v=>{
+        const s = (v===null||v===undefined)?'':String(v);
+        return /[",;\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+      }).join(',')).join('\n');
+      const blob = new Blob(["\uFEFF" + csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'uretim_oneri.csv'; a.click();
+      URL.revokeObjectURL(url);
+    }
+    
+    async function copyToClipboard(){
+      const data = window.__lastData;
+      if(!data?.groups?.length){ return; }
+      let txt = `Model\tRenk\tBarkod\tBeden\tSatış(${data.days}g)\tStok\tGünlükOrt\tKalanGün\tÖneri\n`;
+      data.groups.forEach(g=>{
+        g.colors.forEach(c=>{
+          c.items.forEach(it=>{
+            txt += `${g.model}\t${c.renk}\t${it.barcode}\t${it.beden}\t${it.sold_last_days}\t${it.stok}\t${it.avg_daily}\t${(it.days_left ?? '')}\t${it.suggest_qty}\n`;
+          });
+        });
+      });
+      try{
+        await navigator.clipboard.writeText(txt);
+        alert('Tablo panoya kopyalandı.');
+      }catch(e){
+        alert('Kopyalama başarısız oldu.');
+      }
+    }
+
+    sel('btn-load-defaults').onclick = loadDefaults;
+    sel('btn-save-defaults').onclick = saveDefaults;
+    sel('btn-calc').onclick = calc;
+    sel('btn-create-plan').onclick = createPlan;
+    sel('btn-print-plan').onclick = printPlan;
+    sel('btn-export-csv').onclick = exportCSV;
+    sel('btn-copy').onclick = copyToClipboard;
+    sel('btn-refresh-plans').onclick = refreshPlans;
+
+    (async ()=>{
+      await loadDefaults();
+      await refreshPlans();
+    })();
+  </script>
+</body>
+</html>

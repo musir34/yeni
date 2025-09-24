@@ -1,73 +1,97 @@
-<h2>Stok Önerileri</h2>
-<div style="margin:10px 0">
-  <label>Gün Aralığı:</label>
-  <input id="days" type="number" value="30" min="7" max="120" style="width:90px">
-  <button id="btnRefresh">Yenile</button>
-</div>
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Haftalık Üretim Önerisi</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:24px;}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+    input,button,select{padding:8px 10px;font-size:14px}
+    .card{border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin:10px 0}
+    .badge{padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #e5e7eb}
+    .muted{color:#6b7280}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;font-size:14px}
+    th{background:#fafafa}
+    img{height:48px;width:48px;object-fit:cover;border-radius:6px;border:1px solid #eee}
+  </style>
+</head>
+<body>
+  <h2>Haftalık Üretim Önerisi</h2>
 
-<div id="groups"></div>
+  <div class="row">
+    <input id="models" placeholder="Modeller (ör: gll012,gll088)" style="min-width:320px">
+    <input id="days" type="number" min="1" value="7" title="Kaç gün">
+    <input id="cover" type="number" step="0.5" value="14" title="Min cover (gün)">
+    <input id="sf" type="number" step="0.05" value="0.10" title="Safety factor">
+    <label><input id="onlypos" type="checkbox" checked> sadece pozitif</label>
+    <button id="btn">Hesapla</button>
+  </div>
 
-<script>
-async function loadOneri(){
-  const days = document.getElementById('days').value || 30;
-  const res = await fetch(`/api/uretim-oneri/suggestions?days=${days}`);
-  const data = await res.json();
-  const wrap = document.getElementById('groups');
-  if(!data.ok){ wrap.innerHTML = '<p>Hata</p>'; return; }
-  if(!data.groups.length){ wrap.innerHTML = '<p>İzlenen ürün yok.</p>'; return; }
+  <div id="out"></div>
 
-  wrap.innerHTML = data.groups.map(g=>{
-    const header = `
-      <div style="display:flex;align-items:center;gap:12px;margin:18px 0">
-        <img src="${g.image||'https://via.placeholder.com/80x80?text=No+Img'}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid #eee">
-        <div>
-          <div><b>${g.product_main_id || '-'}</b></div>
-          <div style="color:#666">${g.title||''}</div>
-          <div style="margin-top:6px"><b>Toplam Öneri:</b> ${g.total_suggest}</div>
-        </div>
-      </div>
-    `;
-    const colors = g.colors.map(c=>{
-      const rows = c.items.map(x=>`
-        <tr>
-          <td>${x.color||'-'}</td>
-          <td>${x.size||'-'}</td>
-          <td>${x.barcode}</td>
-          <td>${x.stock}</td>
-          <td>${x.sold_last_days}</td>
-          <td>${x.avg_daily}</td>
-          <td>${x.days_left ?? '-'}</td>
-          <td><b>${x.suggest_qty}</b></td>
-        </tr>
-      `).join('');
-      return `
-        <details style="margin:10px 0" open>
-          <summary style="cursor:pointer;font-weight:600">${c.color}</summary>
-          <div style="overflow:auto">
-            <table style="width:100%;border-collapse:collapse;margin-top:8px">
-              <thead>
-                <tr>
-                  <th style="text-align:left;border-bottom:1px solid #eee;padding:6px 4px">Renk</th>
-                  <th style="text-align:left;border-bottom:1px solid #eee;padding:6px 4px">Beden</th>
-                  <th style="text-align:left;border-bottom:1px solid #eee;padding:6px 4px">Barkod</th>
-                  <th style="text-align:right;border-bottom:1px solid #eee;padding:6px 4px">Stok</th>
-                  <th style="text-align:right;border-bottom:1px solid #eee;padding:6px 4px">Son ${days}g Satış</th>
-                  <th style="text-align:right;border-bottom:1px solid #eee;padding:6px 4px">Günlük Ort.</th>
-                  <th style="text-align:right;border-bottom:1px solid #eee;padding:6px 4px">Kalan Gün</th>
-                  <th style="text-align:right;border-bottom:1px solid #eee;padding:6px 4px">Öneri</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rows}
-              </tbody>
-            </table>
+  <script>
+    async function run(){
+      const models = document.getElementById('models').value.trim();
+      if(!models){ alert('Model(ler) gir'); return; }
+      const payload = {
+        models: models.split(',').map(s=>s.trim()).filter(Boolean),
+        days: +document.getElementById('days').value || 7,
+        min_cover_days: +document.getElementById('cover').value || 14,
+        safety_factor: +document.getElementById('sf').value || 0.10,
+        only_positive: document.getElementById('onlypos').checked
+      };
+      const res = await fetch('/api/uretim-oneri-haftalik', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      render(data);
+    }
+
+    function render(data){
+      const out = document.getElementById('out');
+      if(!data.ok){ out.innerHTML = '<p class="muted">Hata/boş sonuç</p>'; return; }
+      if(!data.groups?.length){ out.innerHTML = '<p class="muted">Sonuç yok</p>'; return; }
+      out.innerHTML = data.groups.map(g => {
+        const head = `
+          <div class="card">
+            <div class="row" style="justify-content:space-between">
+              <div><strong>${g.model}</strong>
+                <span class="badge">toplam öneri: ${g.total_suggest}</span>
+              </div>
+              ${g.image ? `<img src="${g.image}" alt="">` : ''}
+            </div>
+            ${g.colors.map(c => `
+              <div style="margin-top:6px"><strong>${c.renk}</strong></div>
+              <table>
+                <thead><tr>
+                  <th>Barkod</th><th>Beden</th><th>Satış (${data.days}g)</th>
+                  <th>Stok</th><th>Günlük Ort.</th><th>Kalan Gün</th><th>Öneri</th>
+                </tr></thead>
+                <tbody>
+                ${c.items.map(it => `
+                  <tr>
+                    <td>${it.barcode}</td>
+                    <td>${it.beden}</td>
+                    <td>${it.sold_last_days}</td>
+                    <td>${it.stok}</td>
+                    <td>${it.avg_daily}</td>
+                    <td>${it.days_left ?? '-'}</td>
+                    <td><strong>${it.suggest_qty}</strong></td>
+                  </tr>
+                `).join('')}
+                </tbody>
+              </table>
+            `).join('')}
           </div>
-        </details>
-      `;
-    }).join('');
-    return `<section style="background:#fff;border:1px solid #eee;border-radius:10px;padding:12px 14px;margin-bottom:14px">${header}${colors}</section>`;
-  }).join('');
-}
-document.getElementById('btnRefresh').addEventListener('click', loadOneri);
-loadOneri();
-</script>
+        `;
+        return head;
+      }).join('');
+    }
+
+    document.getElementById('btn').addEventListener('click', run);
+  </script>
+</body>
+</html>

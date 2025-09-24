@@ -12,8 +12,35 @@ from datetime import date
 from sqlalchemy.dialects.postgresql import JSONB # Eğer PostgreSQL kullanıyorsan bu daha verimli
 from sqlalchemy import JSON
 from flask_login import UserMixin
+from sqlalchemy import func
+
 
 db = SQLAlchemy()
+
+
+
+# --- Varsayılan seçimler (tek kayıt yeter)
+class UretimOneriDefaults(db.Model):
+    __tablename__ = "uretim_oneri_defaults"
+    id = db.Column(db.Integer, primary_key=True)
+    models_json = db.Column(db.Text, nullable=False, default="[]")       # ["gll012","gll088",...]
+    days = db.Column(db.Integer, nullable=False, default=7)
+    min_cover_days = db.Column(db.Float, nullable=False, default=14.0)
+    safety_factor = db.Column(db.Float, nullable=False, default=0.10)
+    only_positive = db.Column(db.Boolean, nullable=False, default=True)
+    updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
+
+# --- Haftalık üretim planı kaydı (snapshot)
+class UretimPlan(db.Model):
+    __tablename__ = "uretim_plan"
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(120), nullable=False)                    # örn: "Haftalık Plan 2025-09-24"
+    models_json = db.Column(db.Text, nullable=False)                      # ["gll012","gll088"]
+    params_json = db.Column(db.Text, nullable=False)                      # {"days":7,"min_cover_days":14,...}
+    snapshot_json = db.Column(db.Text, nullable=False)                    # API çıktısı (groups vb.)
+    total_suggest = db.Column(db.Integer, nullable=False, default=0)
+    status = db.Column(db.String(24), nullable=False, default="calisacak")# calisacak|tamamlandi|iptal
+    created_at = db.Column(db.DateTime, server_default=func.now(), nullable=False)
 
 
 
