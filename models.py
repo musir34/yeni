@@ -18,6 +18,58 @@ from sqlalchemy import func
 db = SQLAlchemy()
 
 
+class DailySales(db.Model):
+    __tablename__ = "daily_sales"
+
+    id = db.Column(db.Integer, primary_key=True)
+    barcode = db.Column(db.String(64), nullable=False, index=True)
+    date = db.Column(db.Date, nullable=False, index=True)
+    qty = db.Column(db.Integer, nullable=False, default=0)
+
+    __table_args__ = (
+        db.UniqueConstraint("barcode", "date", name="uq_daily_sales_barcodedate"),
+    )
+
+
+class DailySalesStatus(db.Model):
+    __tablename__ = "daily_sales_status"
+
+    id = db.Column(db.Integer, primary_key=True)
+    last_run_start = db.Column(db.DateTime(timezone=True))
+    last_run_end = db.Column(db.DateTime(timezone=True))
+    processed_days = db.Column(db.Integer, nullable=False, default=0)
+    total_days = db.Column(db.Integer, nullable=False, default=0)
+    status = db.Column(db.String(16), nullable=False, default="idle")  # idle/running/done/error
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+# ---- Forecast cache (öneri ön-hesap tablosu) ----
+class ForecastCache(db.Model):
+    __tablename__ = "forecast_cache"
+
+    barcode     = db.Column(db.String(64), primary_key=True)
+    days        = db.Column(db.Integer,     primary_key=True)  # 7 / 14 / 30 vb.
+    avg_base    = db.Column(db.Float,       nullable=False)
+    avg_prophet = db.Column(db.Float)       # NULL olabilir
+    avg_ai_used = db.Column(db.Float)       # clip sonrası; NULL olabilir
+    avg_final   = db.Column(db.Float,       nullable=False)
+    updated_at  = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        db.Index("ix_fcache_barcode", "barcode"),
+        db.Index("ix_fcache_days", "days"),
+    )
+
+
+# ---- Kirli barkod kuyruğu (opsiyonel) ----
+class ForecastDirty(db.Model):
+    __tablename__ = "forecast_dirty"
+
+    barcode    = db.Column(db.String(64), primary_key=True)
+    reason     = db.Column(db.String(32), nullable=False, default="event")  # event/rebuild
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 
 # --- Varsayılan seçimler (tek kayıt yeter)
 class UretimOneriDefaults(db.Model):

@@ -12,7 +12,7 @@
         --color-secondary:#212529; --color-text:#343a40;
         --color-bg:#f8f9fa; --color-bg-light:#ffffff; --color-white:#fff;
         --color-border:#dee2e6; --color-success:#16a34a; --color-danger:#d92550;
-        --color-muted: #6c757d; --font-family-base:'Inter',sans-serif;
+        --color-muted:#6c757d; --font-family-base:'Inter',sans-serif;
         --border-radius:.5rem; --shadow-sm:0 1px 3px rgba(0,0,0,.04);
         --shadow-md:0 5px 15px rgba(0,0,0,.08); --transition:all .25s ease-in-out;
     }
@@ -21,31 +21,30 @@
     .container{max-width:1400px;margin:0 auto;padding:1.5rem}
     h1{font-size:1.75rem;margin:0 0 .5rem;color:var(--color-secondary)}
     .sub{color:var(--color-muted);font-size:.9rem;margin-bottom:1.5rem;max-width:600px}
-    
+
     .card{background:var(--color-bg-light);border:1px solid var(--color-border);border-radius:var(--border-radius);padding:1.5rem;margin-bottom:1.5rem;box-shadow:var(--shadow-sm);transition:var(--transition)}
     .card:hover{transform:translateY(-4px);box-shadow:var(--shadow-md)}
-    .card-header{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--color-border)}
+    .card-header{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--color-border);flex-wrap:wrap}
     .card-header h2{font-size:1.25rem;margin:0;color:var(--color-secondary)}
 
     .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.5rem;align-items:flex-end}
     .form-group{display:flex;flex-direction:column;gap:.25rem}
     .form-group label{font-size:.8rem;font-weight:600;color:var(--color-muted);display:flex;align-items:center;gap:.5rem}
     .form-group .input-wrapper{display:flex;align-items:center;gap:.5rem}
-    input[type=text],input[type=number]{width:100%;padding:.6rem .8rem;font-size:.9rem;border:1px solid var(--color-border);border-radius:.4rem;transition:var(--transition)}
-    input[type=text]:focus,input[type=number]:focus{border-color:var(--color-primary);box-shadow:0 0 0 3px rgba(183,110,121,.2)}
+    input[type=text],input[type=number],input[type=date]{width:100%;padding:.6rem .8rem;font-size:.9rem;border:1px solid var(--color-border);border-radius:.4rem;transition:var(--transition);background:#fff;min-width:0}
+    input[type=text]:focus,input[type=number]:focus,input[type=date]:focus{border-color:var(--color-primary);box-shadow:0 0 0 3px rgba(183,110,121,.2)}
     .checkbox-group{display:flex;align-items:center;gap:.5rem;padding-top:1.5rem}
     input[type=checkbox]{width:16px;height:16px}
 
     .tooltip-trigger{position:relative;cursor:help;color:var(--color-muted);display:inline-flex}
     .tooltip-content{
         position:absolute;bottom:120%;left:50%;transform:translateX(-50%);
-        background:var(--color-secondary);
-        color: var(--color-primary); /* DEĞİŞİKLİK BURADA */
+        background:var(--color-secondary); color: var(--color-primary);
         padding:.5rem .8rem;border-radius:.4rem;font-size:.8rem;width:240px;text-align:left;z-index:10;
         opacity:0;visibility:hidden;transition:opacity .2s, bottom .2s;box-shadow:var(--shadow-md)
     }
     .tooltip-trigger:hover .tooltip-content{opacity:1;visibility:visible;bottom:130%}
-    .th-tooltip .tooltip-content{bottom:auto;top:130%} /* Tablo başlıkları için aşağı açılır */
+    .th-tooltip .tooltip-content{bottom:auto;top:130%}
     .tooltip-trigger i{font-size:1rem}
 
     .tools{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:1.5rem;border-top:1px solid var(--color-border);padding-top:1.5rem}
@@ -57,13 +56,14 @@
     .btn-success{background:var(--color-success);color:var(--color-white);border-color:var(--color-success)}
     .btn-ghost{background:transparent;border-color:var(--color-border);color:var(--color-text)}
     .btn-ghost:hover:not(:disabled){background:var(--color-border);color:var(--color-secondary)}
-    
+    .btn-danger{background:var(--color-danger);color:#fff;border-color:var(--color-danger)}
+
     .main-grid{display:grid;grid-template-columns:1fr;gap:1.5rem}
     @media(min-width:1000px){ .main-grid{grid-template-columns:minmax(0,2fr) minmax(0,1fr)} }
-    
+
     .section h2{font-size:1.25rem;color:var(--color-secondary);margin-bottom:1rem}
     .placeholder{padding:2rem;text-align:center;color:var(--color-muted);background:rgba(0,0,0,.02);border-radius:.4rem}
-    
+
     table{width:100%;border-collapse:collapse;margin-top:1rem}
     th,td{padding:.75rem;border-bottom:1px solid var(--color-border);text-align:left;font-size:.85rem;vertical-align:middle}
     th{background:#f8fafc;font-weight:600;color:var(--color-secondary)}
@@ -78,13 +78,25 @@
 
     .plan-card{padding:1rem;transition:var(--transition)}
     .plan-card:hover{transform:none;box-shadow:var(--shadow-sm);border-color: var(--color-primary-dark)}
-    .plan-header{display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap}
+    .plan-header{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap}
     .plan-info strong{display:block;color:var(--color-secondary)}
     .plan-info .muted{font-size:.8rem}
     .plan-tools{display:flex;gap:.5rem;align-items:center}
-    .plan-actions{display:flex;gap:.5rem;align-items:center;margin-top:1rem}
-    .status-select{padding:.5rem;border-radius:.4rem;border:1px solid var(--color-border);font-size:.85rem}
+    .plan-actions{display:flex;gap:.5rem;align-items:center;margin-top:1rem;flex-wrap:wrap}
+    .status-select{padding:.5rem;border-radius:.4rem;border:1px solid var(--color-border);font-size:.85rem;background:#fff;min-width:0}
+
     .kbd{background:var(--color-secondary);color:#fff;border-radius:.4rem;padding:0 .4rem;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.8rem}
+
+    .plans-toolbar{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+      gap:.5rem; margin-bottom:.5rem
+    }
+    .plans-toolbar .wide{grid-column:span 2}
+    .plans-toolbar .full{grid-column:1/-1}
+    .badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;padding:.2rem .45rem;border-radius:.35rem;border:1px solid var(--color-border);background:#fff;color:var(--color-muted)}
+    .pagination{display:flex;gap:.5rem;align-items:center;justify-content:center;margin-top:.75rem}
+    .progress{width:100%;height:12px;background:#eee;border-radius:999px;overflow:hidden;border:1px solid var(--color-border)}.progress-bar{height:100%;background:linear-gradient(90deg,var(--color-primary),var(--color-primary-dark));transition:width .3s}
   </style>
 </head>
 <body>
@@ -94,7 +106,7 @@
       Aşağıdaki alanları doldurarak <span class="kbd">Hesapla</span> butonuna basın. Oluşturulan
       öneriyi <span class="kbd">Plan Oluştur</span> ile kaydedip, <span class="kbd">Yazdır</span> ile çıktısını alabilirsiniz.
     </div>
-  
+
     <div class="card">
       <div class="form-grid">
         <div class="form-group" style="grid-column:1/-1">
@@ -108,34 +120,32 @@
           <input id="models" type="text" placeholder="Modelleri virgül ile ayırarak yazın...">
         </div>
         <div class="form-group">
-          <label for="days">
-            Satış Geçmişi (gün)
-             <span class="tooltip-trigger">
-              <i class="fas fa-question-circle"></i>
-              <span class="tooltip-content">Satış ortalamasını hesaplamak için kaç gün geriye bakılacağını belirtir. Örneğin, <b>7</b> değeri son 1 haftalık satışı baz alır.</span>
+          <label for="days">Satış Geçmişi (gün)
+            <span class="tooltip-trigger"><i class="fas fa-question-circle"></i>
+              <span class="tooltip-content">Satış ortalamasını hesaplamak için kaç gün geriye bakılacağını belirtir. Örn: <b>7</b>.</span>
             </span>
           </label>
           <input id="days" type="number" min="1" value="7">
         </div>
         <div class="form-group">
-          <label for="cover">
-            Hedef Stok (gün)
-            <span class="tooltip-trigger">
-              <i class="fas fa-question-circle"></i>
-              <span class="tooltip-content">Depoda en az kaç <b>günlük</b> satışa yetecek kadar stok hedeflendiğini belirtir. Örneğin, <b>14</b> günlük stok hedefi.</span>
+          <label for="cover">Hedef Stok (gün)
+            <span class="tooltip-trigger"><i class="fas fa-question-circle"></i>
+              <span class="tooltip-content">Depoda en az kaç <b>günlük</b> satış hedeflenir. Örn: <b>14</b>.</span>
             </span>
           </label>
           <input id="cover" type="number" step="0.5" value="14">
         </div>
         <div class="form-group">
-          <label for="sf">
-            Güvenlik Faktörü
-            <span class="tooltip-trigger">
-              <i class="fas fa-question-circle"></i>
-              <span class="tooltip-content">Hesaplanan öneri miktarına eklenecek güvenlik stoğu oranıdır. <b>0.10</b> değeri, öneriye %10'luk bir tampon ekler.</span>
+          <label for="sf">Güvenlik Faktörü
+            <span class="tooltip-trigger"><i class="fas fa-question-circle"></i>
+              <span class="tooltip-content">Öneriye eklenecek tampon oranı. <b>0.10</b> = %10.</span>
             </span>
           </label>
           <input id="sf" type="number" step="0.01" value="0.10">
+        </div>
+        <div class="form-group">
+          <label for="target_qty">Hedef Toplam Adet</label>
+          <input id="target_qty" type="number" min="0" value="0">
         </div>
         <div class="form-group checkbox-group">
           <input id="onlypos" type="checkbox" checked>
@@ -154,7 +164,27 @@
         </div>
       </div>
     </div>
-  
+
+    <div id="ds-progress" class="card">
+      <div class="card-header" style="margin-bottom:.5rem; padding-bottom:.5rem; border:none;">
+        <h2 style="margin:0;font-size:1rem;">
+          <i class="fas fa-sync-alt" style="color:var(--color-primary);"></i>
+          Veri Senkronizasyonu (DailySales)
+        </h2>
+        <div style="display:flex;gap:.5rem;align-items:center;">
+          <button id="btn-rebuild" class="btn btn-ghost"><i class="fas fa-rotate"></i> 30 günü yeniden tara</button>
+        </div>
+      </div>
+      <div class="progress">
+        <div class="progress-bar" id="ds-bar" style="width:0%"></div>
+      </div>
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.5rem;font-size:.85rem;color:var(--color-muted)">
+        <span id="ds-label">Durum: —</span>
+        <span id="ds-count"></span>
+        <span id="ds-updated"></span>
+      </div>
+    </div>
+
     <div class="main-grid">
       <div id="results" class="section">
         <div class="card-header" style="padding-bottom:0; border:none; margin-bottom:0;">
@@ -164,45 +194,112 @@
           <div class="placeholder">Sonuçlar burada görünecek.</div>
         </div>
       </div>
-  
+
       <div class="section">
-        <div class="card-header" style="padding-bottom:0; border:none; margin-bottom:0;">
+        <div class="card-header" style="padding-bottom:0; border:none; margin-bottom:.75rem;">
             <h2><i class="fas fa-history" style="margin-right:.5rem; color:var(--color-primary);"></i>Plan Geçmişi</h2>
-            <button id="btn-refresh-plans" class="btn btn-ghost">Yenile</button>
+            <div style="display:flex; gap:.5rem; align-items:center;">
+              <button id="btn-refresh-plans" class="btn btn-ghost">Yenile</button>
+              <button id="btn-delete-selected" class="btn btn-danger" disabled><i class="fas fa-trash"></i> Seçileni Sil</button>
+            </div>
         </div>
+
+        <div class="plans-toolbar card" style="margin-bottom:1rem;">
+          <div class="form-group">
+            <label for="pl-q">Arama (başlık)</label>
+            <input id="pl-q" type="text" placeholder="Başlıkta ara...">
+          </div>
+          <div class="form-group">
+            <label for="pl-status">Durum</label>
+            <select id="pl-status" class="status-select">
+              <option value="">Tümü</option>
+              <option value="calisacak">Çalışacak</option>
+              <option value="tamamlandi">Tamamlandı</option>
+              <option value="iptal">İptal</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="pl-from">Tarih (başlangıç)</label>
+            <input id="pl-from" type="date">
+          </div>
+          <div class="form-group">
+            <label for="pl-to">Tarih (bitiş)</label>
+            <input id="pl-to" type="date">
+          </div>
+          <div class="form-group">
+            <label for="pl-perpage">Sayfa Boyutu</label>
+            <input id="pl-perpage" type="number" min="5" max="200" value="50">
+          </div>
+          <div class="form-group">
+            <label>&nbsp;</label>
+            <button id="pl-apply" class="btn btn-primary"><i class="fas fa-filter"></i> Uygula</button>
+          </div>
+          <div class="full" id="pl-meta" style="display:flex;gap:.5rem;flex-wrap:wrap;">
+            <span class="badge"><i class="fas fa-database"></i> <span id="pl-total">0</span> kayıt</span>
+            <span class="badge"><i class="fas fa-layer-group"></i> <span id="pl-pages">0</span> sayfa</span>
+            <span class="badge"><i class="fas fa-list-ol"></i> sayfa <span id="pl-page">1</span></span>
+          </div>
+        </div>
+
         <div id="plans">
           <div class="placeholder">Geçmiş plan bulunamadı.</div>
+        </div>
+
+        <div class="pagination" id="pl-pager" style="display:none;">
+          <button class="btn btn-ghost" id="pl-first"><i class="fas fa-angles-left"></i></button>
+          <button class="btn btn-ghost" id="pl-prev"><i class="fas fa-angle-left"></i></button>
+          <span class="badge">Sayfa <span id="pl-page-2">1</span></span>
+          <button class="btn btn-ghost" id="pl-next"><i class="fas fa-angle-right"></i></button>
+          <button class="btn btn-ghost" id="pl-last"><i class="fas fa-angles-right"></i></button>
         </div>
       </div>
     </div>
   </div>
 
   <script>
+    // ---------- Helpers ----------
     const sel = id => document.getElementById(id);
     const toModels = () => (sel('models').value.trim().split(/[\s,]+/).map(s=>s.trim()).filter(Boolean));
-
     function serializeCurrentParams(){
       return {
         models: toModels(),
         days: +sel('days').value || 7,
         min_cover_days: +sel('cover').value || 14,
         safety_factor: +sel('sf').value || 0.10,
-        only_positive: sel('onlypos').checked
+        only_positive: sel('onlypos').checked,
+        target_qty: +sel('target_qty').value || 0,
       };
     }
+    function setActionButtonsDisabled(state) {
+      sel('btn-create-plan').disabled = state;
+      sel('btn-print-plan').disabled  = state;
+      sel('btn-export-csv').disabled  = state;
+      sel('btn-copy').disabled        = state;
+    }
+    function escapeHtml(s){
+      return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
 
+    // ---------- Sonuçlar ----------
     function renderGroups(data){
       const out = sel('out');
       if(!data?.ok){ out.innerHTML = '<div class="placeholder">Hata oluştu veya boş sonuç döndü.</div>'; return; }
       if(!data.groups?.length){ out.innerHTML = '<div class="placeholder">Seçili modellere ait veri bulunamadı.</div>'; return; }
+
+      let header = '';
+      if (data.target_qty > 0) {
+        const sum = data.groups.reduce((s, g) => s + g.total_suggest, 0);
+        header = `<div class="badge" style="margin-bottom:1rem; padding:.5rem; font-size:.9rem;">
+                    Hedef Toplam: <b>${data.target_qty}</b> • Dağıtılan: <b>${sum}</b>
+                  </div>`;
+      }
 
       const thTooltip = (text, tip) => `
         <span class="tooltip-trigger th-tooltip">
           ${text} <i class="fas fa-info-circle"></i>
           <span class="tooltip-content">${tip}</span>
         </span>`;
-
-      out.innerHTML = data.groups.map(g => `
+      out.innerHTML = header + data.groups.map(g => `
         <div class="card">
           <div class="card-header" style="padding-bottom:1rem; border-bottom:1px solid var(--color-border); margin-bottom:1rem;">
             <div>
@@ -240,25 +337,17 @@
         </div>
       `).join('');
     }
-    
-    function setActionButtonsDisabled(state) {
-        sel('btn-create-plan').disabled = state;
-        sel('btn-print-plan').disabled = state;
-        sel('btn-export-csv').disabled = state;
-        sel('btn-copy').disabled = state;
-    }
 
     async function loadDefaults(){
       try {
         const r = await fetch('/api/uretim-oneri/defaults'); const d = await r.json();
-        sel('models').value = (d.models||[]).join(', ');
-        sel('days').value = d.days ?? 7;
-        sel('cover').value = d.min_cover_days ?? 14;
-        sel('sf').value = d.safety_factor ?? 0.10;
-        sel('onlypos').checked = d.only_positive !== false;
+        sel('models').value   = (d.models||[]).join(', ');
+        sel('days').value     = d.days ?? 7;
+        sel('cover').value    = d.min_cover_days ?? 14;
+        sel('sf').value       = d.safety_factor ?? 0.10;
+        sel('onlypos').checked= d.only_positive !== false;
       } catch(e) { console.error("Varsayılanlar yüklenemedi:", e); }
     }
-
     async function saveDefaults(){
       const body = serializeCurrentParams();
       try {
@@ -268,7 +357,6 @@
         const j = await res.json(); alert(j.ok ? 'Varsayılan ayarlar kaydedildi.' : 'Hata: Kaydedilemedi.');
       } catch(e) { alert("Sunucu hatası, kaydedilemedi."); }
     }
-
     async function calc(){
       const body = serializeCurrentParams();
       if(!body.models.length){ alert('Lütfen en az bir model kodu girin.'); return; }
@@ -281,12 +369,11 @@
         const data = await res.json();
         window.__lastData = data;
         renderGroups(data);
-        if(data.ok && data.groups?.length) {
-            setActionButtonsDisabled(false);
-        }
-      } catch(e) { sel('out').innerHTML = '<div class="placeholder">Hesaplama sırasında bir sunucu hatası oluştu.</div>'; }
+        if(data.ok && data.groups?.length) setActionButtonsDisabled(false);
+      } catch(e) {
+        sel('out').innerHTML = '<div class="placeholder">Hesaplama sırasında bir sunucu hatası oluştu.</div>';
+      }
     }
-
     async function createPlan(){
       const body = serializeCurrentParams();
       if(!body.models.length){ alert('Plan oluşturmak için en az bir model kodu girin.'); return; }
@@ -295,15 +382,10 @@
           method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
         });
         const j = await res.json();
-        if(j.ok){
-          alert('Plan başarıyla oluşturuldu! Şimdi geçmiş listesinden yazdırabilirsiniz.');
-          refreshPlans();
-        } else {
-          alert(j.error || 'Plan oluşturulamadı.');
-        }
+        if(j.ok){ alert('Plan başarıyla oluşturuldu!'); refreshPlans(); }
+        else   { alert(j.error || 'Plan oluşturulamadı.'); }
       } catch(e) { alert('Plan oluşturulurken sunucu hatası oluştu.'); }
     }
-    
     async function printPlan() {
       const body = serializeCurrentParams();
       if(!body.models.length){ alert('Yazdırmak için en az bir model kodu girin.'); return; }
@@ -312,54 +394,9 @@
           method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
         });
         const j = await res.json();
-        if(j.ok && j.print_url){
-          window.open(j.print_url, '_blank');
-          refreshPlans();
-        } else {
-          alert(j.error || 'Plan oluşturulup yazılamadı.');
-        }
+        if(j.ok && j.print_url){ window.open(j.print_url, '_blank'); refreshPlans(); }
+        else { alert(j.error || 'Plan oluşturulup yazılamadı.'); }
       } catch(e) { alert('Plan yazdırılırken sunucu hatası oluştu.'); }
-    }
-
-    async function refreshPlans(){
-      const box = sel('plans');
-      try {
-        const r = await fetch('/api/uretim-oneri/planlar'); const d = await r.json();
-        if(!d.ok || !d.plans?.length){ box.innerHTML = '<div class="placeholder">Geçmiş plan bulunamadı.</div>'; return; }
-        box.innerHTML = d.plans.map(p => `
-          <div class="card plan-card">
-            <div class="plan-header">
-              <div class="plan-info">
-                <strong>#${p.id} - ${p.title}</strong>
-                <span class="muted">Oluşturulma: ${p.created_at}</span>
-              </div>
-              <div class="plan-tools">
-                <span class="btn btn-ghost" style="font-size:.75rem; padding:.2rem .5rem; pointer-events:none;">${p.status}</span>
-                <a class="btn btn-ghost" href="/uretim-oneri/plan/${p.id}/yazdir" target="_blank" title="Bu Planı Yazdır"><i class="fas fa-print"></i></a>
-              </div>
-            </div>
-            <div class="plan-actions">
-              <select class="status-select" id="st-${p.id}">
-                <option value="calisacak" ${p.status==='calisacak'?'selected':''}>Çalışacak</option>
-                <option value="tamamlandi" ${p.status==='tamamlandi'?'selected':''}>Tamamlandı</option>
-                <option value="iptal" ${p.status==='iptal'?'selected':''}>İptal</option>
-              </select>
-              <button class="btn btn-ghost" onclick="updatePlanStatus(${p.id})">Güncelle</button>
-            </div>
-          </div>
-        `).join('');
-      } catch(e) { box.innerHTML = '<div class="placeholder">Planlar yüklenemedi.</div>'; }
-    }
-
-    async function updatePlanStatus(id){
-      const v = sel('st-'+id).value;
-      try {
-        const r = await fetch('/api/uretim-oneri/plan/'+id+'/status', {
-          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status:v})
-        });
-        const j = await r.json();
-        if(j.ok){ refreshPlans(); } else { alert('Durum güncellenemedi.'); }
-      } catch(e) { alert('Durum güncellenirken sunucu hatası oluştu.'); }
     }
 
     function exportCSV(){
@@ -379,11 +416,9 @@
       }).join(',')).join('\n');
       const blob = new Blob(["\uFEFF" + csv], {type:'text/csv;charset=utf-8;'});
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'uretim_oneri.csv'; a.click();
+      const a = document.createElement('a'); a.href = url; a.download = 'uretim_oneri.csv'; a.click();
       URL.revokeObjectURL(url);
     }
-    
     async function copyToClipboard(){
       const data = window.__lastData;
       if(!data?.groups?.length){ return; }
@@ -395,14 +430,205 @@
           });
         });
       });
-      try{
-        await navigator.clipboard.writeText(txt);
-        alert('Tablo panoya kopyalandı.');
-      }catch(e){
-        alert('Kopyalama başarısız oldu.');
+      try{ await navigator.clipboard.writeText(txt); alert('Tablo panoya kopyalandı.'); }
+      catch(e){ alert('Kopyalama başarısız oldu.'); }
+    }
+
+    // ---------- Plan Geçmişi (API ile) ----------
+    let PL_STATE = {
+      page: 1, pages: 0, total: 0, per_page: 50,
+      status: '', q: '', date_from: '', date_to: '',
+      selected: new Set()
+    };
+
+    function plansQueryString(){
+      const params = new URLSearchParams();
+      params.set('page', PL_STATE.page);
+      params.set('per_page', PL_STATE.per_page);
+      if(PL_STATE.status)    params.set('status', PL_STATE.status);
+      if(PL_STATE.q)         params.set('q', PL_STATE.q);
+      if(PL_STATE.date_from) params.set('date_from', PL_STATE.date_from);
+      if(PL_STATE.date_to)   params.set('date_to', PL_STATE.date_to);
+      return params.toString();
+    }
+
+    function updatePlansMetaUi(){
+      sel('pl-total').textContent = PL_STATE.total;
+      sel('pl-pages').textContent = PL_STATE.pages;
+      sel('pl-page').textContent  = PL_STATE.page;
+      sel('pl-page-2').textContent= PL_STATE.page;
+      sel('pl-pager').style.display = (PL_STATE.pages > 1) ? 'flex' : 'none';
+      sel('btn-delete-selected').disabled = (PL_STATE.selected.size === 0);
+    }
+
+    function renderPlansList(list){
+      const box = sel('plans');
+      if(!list?.length){
+        box.innerHTML = '<div class="placeholder">Geçmiş plan bulunamadı.</div>';
+        return;
+      }
+      box.innerHTML = list.map(p => `
+        <div class="card plan-card">
+          <div class="plan-header">
+            <div class="plan-info" style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+              <label style="display:inline-flex;align-items:center;gap:.5rem;">
+                <input type="checkbox" data-chk="${p.id}" ${PL_STATE.selected.has(p.id) ? 'checked':''}
+                  onchange="(function(el){ if(el.checked){PL_STATE.selected.add(${p.id})} else {PL_STATE.selected.delete(${p.id})}; updatePlansMetaUi(); })(this)">
+                <strong>#${p.id} - ${escapeHtml(p.title)}</strong>
+              </label>
+              <span class="muted">Oluşturulma: ${p.created_at}</span>
+              <span class="badge">${p.status}</span>
+              <span class="badge"><i class="fas fa-cubes"></i> ${p.total_suggest}</span>
+            </div>
+            <div class="plan-tools">
+              <button class="btn btn-primary" title="Aç" onclick="openPlan(${p.id})"><i class="fas fa-folder-open"></i> Aç</button>
+              <a class="btn btn-ghost" href="/uretim-oneri/plan/${p.id}/yazdir" target="_blank" title="Yazdır"><i class="fas fa-print"></i></a>
+              <button class="btn btn-ghost" title="Sil" onclick="deletePlan(${p.id})"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+          <div class="plan-actions">
+            <select class="status-select" id="st-${p.id}">
+              <option value="calisacak" ${p.status==='calisacak'?'selected':''}>Çalışacak</option>
+              <option value="tamamlandi" ${p.status==='tamamlandi'?'selected':''}>Tamamlandı</option>
+              <option value="iptal" ${p.status==='iptal'?'selected':''}>İptal</option>
+            </select>
+            <button class="btn btn-ghost" onclick="updatePlanStatus(${p.id})">Güncelle</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function refreshPlans(){
+      try {
+        PL_STATE.q         = sel('pl-q').value.trim();
+        PL_STATE.status    = sel('pl-status').value;
+        PL_STATE.date_from = sel('pl-from').value || '';
+        PL_STATE.date_to   = sel('pl-to').value || '';
+        PL_STATE.per_page  = Math.max(5, Math.min(200, +sel('pl-perpage').value || 50));
+        const url = '/api/uretim-oneri/planlar?' + plansQueryString();
+        const r = await fetch(url); const d = await r.json();
+        if(!d.ok){ sel('plans').innerHTML = '<div class="placeholder">Planlar yüklenemedi.</div>'; return; }
+        PL_STATE.page  = d.page; PL_STATE.pages = d.pages; PL_STATE.total = d.total;
+        renderPlansList(d.plans);
+        updatePlansMetaUi();
+      } catch(e) {
+        sel('plans').innerHTML = '<div class="placeholder">Planlar yüklenemedi.</div>';
       }
     }
 
+    async function gotoPage(p){
+      PL_STATE.page = Math.max(1, Math.min(PL_STATE.pages || 1, p));
+      await refreshPlans();
+      window.scrollTo({top:0, behavior:'smooth'});
+    }
+
+    async function deletePlan(id){
+      if(!confirm(`#${id} planını silmek istiyor musun?`)) return;
+      try{
+        let res = await fetch('/api/uretim-oneri/plan/'+id, {method:'DELETE'});
+        if(!res.ok){
+          res = await fetch('/api/uretim-oneri/plan/'+id+'/delete', {method:'POST'});
+        }
+        const j = await res.json();
+        if(j.ok){
+          PL_STATE.selected.delete(id);
+          await refreshPlans();
+        } else {
+          alert(j.error || 'Silinemedi.');
+        }
+      }catch(e){ alert('Silme sırasında hata oluştu.'); }
+    }
+
+    async function bulkDeleteSelected(){
+      if(PL_STATE.selected.size === 0) return;
+      if(!confirm(`${PL_STATE.selected.size} plan silinsin mi?`)) return;
+      try{
+        const ids = Array.from(PL_STATE.selected);
+        const res = await fetch('/api/uretim-oneri/planlar/delete', {
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ids})
+        });
+        const j = await res.json();
+        if(j.ok){
+          PL_STATE.selected.clear();
+          await refreshPlans();
+        }else{
+          alert(j.error || 'Toplu silme başarısız.');
+        }
+      }catch(e){ alert('Toplu silme sırasında hata oluştu.'); }
+    }
+
+    async function updatePlanStatus(id){
+      const v = sel('st-'+id).value;
+      try {
+        const r = await fetch('/api/uretim-oneri/plan/'+id+'/status', {
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status:v})
+        });
+        const j = await r.json();
+        if(j.ok){ refreshPlans(); } else { alert('Durum güncellenemedi.'); }
+      } catch(e) { alert('Durum güncellenirken sunucu hatası oluştu.'); }
+    }
+
+    async function openPlan(id){
+      try{
+        const r = await fetch(`/api/uretim-oneri/plan/${id}`);
+        const j = await r.json();
+        if(!j.ok){ alert('Plan bulunamadı'); return; }
+
+        const snap = j.snapshot || {};
+        window.__lastData = snap;
+        renderGroups(snap);
+
+        sel('btn-export-csv').disabled = !(snap?.groups?.length);
+        sel('btn-copy').disabled       = !(snap?.groups?.length);
+        sel('btn-print-plan').onclick  = () => window.open(`/uretim-oneri/plan/${id}/yazdir`, '_blank');
+        sel('btn-print-plan').disabled = false;
+
+        const hdr = document.querySelector('#results .card-header h2');
+        if(hdr){
+          const created = (j.created_at || '').replace('T',' ').slice(0,16);
+          hdr.innerHTML = `<i class="fas fa-boxes-stacked" style="margin-right:.5rem;color:var(--color-primary);"></i>Plan Görüntüleme — <span class="badge">#${j.id}</span> <span class="badge">${created}</span>`;
+        }
+      }catch(e){
+        alert('Plan açılırken bir hata oluştu.');
+      }
+    }
+
+    async function pollDailyStatus(){
+      try{
+        const r = await fetch('/api/daily-sales/status');
+        const s = await r.json();
+        const box = sel('ds-progress');
+        const bar = sel('ds-bar');
+        const lbl = sel('ds-label');
+        const cnt = sel('ds-count');
+        const upd = sel('ds-updated');
+
+        const total = +s.total_days || 0;
+        const done  = +s.processed_days || 0;
+        const pct   = total > 0 ? Math.round(done*100/total) : (s.status==='running'?5:0);
+
+        // Barın her zaman görünür olması için bu satırları devre dışı bıraktık
+        // const visible = (s.status && s.status !== 'idle');
+        // box.style.display = visible ? 'block' : 'none';
+
+        bar.style.width = pct + '%';
+        lbl.textContent = `Durum: ${s.status || '—'}`;
+        cnt.textContent = total ? `İşlenen: ${done}/${total} gün (${pct}%)` : '';
+        upd.textContent = s.updated_at ? `Güncellendi: ${s.updated_at.replace('T',' ').slice(0,19)}` : '';
+
+      }catch(e){ /* sessiz geç */ }
+    }
+    sel('btn-rebuild').onclick = async ()=>{
+      sel('ds-progress').style.display = 'block';
+      sel('ds-bar').style.width = '0%';
+      sel('ds-label').textContent = 'Durum: başlatılıyor…';
+      try{
+        await fetch('/api/daily-sales/rebuild', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({days:30})});
+      }catch(e){}
+      pollDailyStatus();
+    };
+
+    // ---------- Events ----------
     sel('btn-load-defaults').onclick = loadDefaults;
     sel('btn-save-defaults').onclick = saveDefaults;
     sel('btn-calc').onclick = calc;
@@ -410,11 +636,27 @@
     sel('btn-print-plan').onclick = printPlan;
     sel('btn-export-csv').onclick = exportCSV;
     sel('btn-copy').onclick = copyToClipboard;
-    sel('btn-refresh-plans').onclick = refreshPlans;
+    sel('btn-refresh-plans').onclick = ()=>{ PL_STATE.page = 1; refreshPlans(); };
+    sel('btn-delete-selected').onclick = bulkDeleteSelected;
 
+    sel('pl-apply').onclick = ()=>{ PL_STATE.page = 1; refreshPlans(); };
+    sel('pl-first').onclick = ()=> gotoPage(1);
+    sel('pl-prev').onclick  = ()=> gotoPage(PL_STATE.page - 1);
+    sel('pl-next').onclick  = ()=> gotoPage(PL_STATE.page + 1);
+    sel('pl-last').onclick  = ()=> gotoPage(PL_STATE.pages);
+
+    document.addEventListener('change', (e)=>{
+      if(e.target && e.target.matches('input[type="checkbox"][data-chk]')){
+        sel('btn-delete-selected').disabled = (PL_STATE.selected.size === 0);
+      }
+    });
+
+    // ---------- Init ----------
     (async ()=>{
       await loadDefaults();
       await refreshPlans();
+      setInterval(pollDailyStatus, 2000);
+      pollDailyStatus();
     })();
   </script>
 </body>

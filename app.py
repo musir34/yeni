@@ -96,6 +96,14 @@ app.jinja_env.filters['format_date'] = format_turkish_date_filter
 # ──────────────────────────────────────────────────────────────────────────────
 register_blueprints(app)
 
+# >>> Forecast cache fonksiyonlarını blueprint yüklendikten sonra import et
+try:
+    # Eğer uretim_oneri blueprint'in kök dizindeyse:
+    from uretim_oneri import forecast_worker_loop, rebuild_daily_sales
+except Exception:
+    # routes paketinde ise:
+    from routes.uretim_oneri import forecast_worker_loop, rebuild_daily_sales
+
 @app.route('/')
 def index():
     return redirect(url_for('home.home'))
@@ -255,7 +263,20 @@ def push_stock_job():
     push_central_stock_to_trendyol()
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Zamanlayıcı (ENV kontrollü) — ÇEK (0dk) ↔ PUSHA (2dk) ping-pong + iade cron
+# Forecast cache wrapper'ları (app context ile)
+# ──────────────────────────────────────────────────────────────────────────────
+def _run_fcache_loop():
+    with app.app_context():
+        # 14 günlük cache, her döngüde 50 barkod
+        forecast_worker_loop(days=14, batch=50)
+
+def _nightly_rebuild():
+    with app.app_context():
+        # DailySales gece güvenlik senkronu (son 30 gün)
+        rebuild_daily_sales(days=30)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Zamanlayıcı (ENV kontrollü) — ÇEK (0dk) ↔ PUSHA (2dk) ping-pong + iade cron + forecast jobs
 # ──────────────────────────────────────────────────────────────────────────────
 scheduler = BackgroundScheduler(
     timezone="Europe/Istanbul",
@@ -350,6 +371,23 @@ def schedule_jobs():
         id="pull_returns_daily",
         hour=23,
         minute=50
+    )
+
+    # >>> Forecast cache worker: her 10 saniye
+    _add_job_safe(
+        _run_fcache_loop,
+        trigger='interval',
+        id="fcache_loop",
+        seconds=10
+    )
+
+    # >>> DailySales gece rebuild: her gece 03:10
+    _add_job_safe(
+        _nightly_rebuild,
+        trigger='cron',
+        id="daily_sales_rebuild",
+        hour=3,
+        minute=10
     )
 
 # ENV ve liderlik kontrolü

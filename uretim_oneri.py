@@ -1,40 +1,77 @@
 # -*- coding: utf-8 -*-
-from flask import Blueprint, request, jsonify, render_template
-from sqlalchemy import func, literal
-from datetime import datetime, timedelta
+from flask import Blueprint, request, jsonify, render_template, current_app
+from sqlalchemy import func, literal, text
+from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
-from models import UretimOneriDefaults, UretimPlan
-import json
-from models import db, Product, CentralStock, UretimOneriWatch, OrderCreated, OrderPicking, OrderShipped
+import json, hashlib, os, re, time
+from sqlalchemy.inspection import inspect as sqla_inspect
+from sqlalchemy import text
+
+from dotenv import load_dotenv
+load_dotenv()
+
+# ------------------ Modeller ------------------
+from models import (
+    db,
+    Product, CentralStock,
+    UretimOneriDefaults, UretimPlan, UretimOneriWatch,
+    OrderCreated, OrderPicking, OrderShipped,
+)
 try:
     from models import OrderDelivered
 except Exception:
     from models import orders_delivered as OrderDelivered
 
-from sqlalchemy.inspection import inspect as sqla_inspect
-import json, hashlib
+# Daily cache modelleri (models.py'ye ekledin)
+from models import DailySales, DailySalesStatus
+
+# ------------------ OpenAI / Prophet ------------------
+from openai import OpenAI
+
+# NumPy 2 uyumluluk (Prophet için)
+import numpy as np
+if not hasattr(np, "float_"): np.float_ = np.float64
+if not hasattr(np, "int_"):   np.int_   = np.int64
+
+try:
+    from prophet import Prophet  # cmdstanpy backend ile
+except Exception:
+    Prophet = None
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+
+# Basit AI cache (1 saat)
+_AI_CACHE = {}
+_AI_TTL_SEC = 3600
 
 # ------------------------------------------------------------------------------
 # Blueprint
 # ------------------------------------------------------------------------------
 uretim_oneri_bp = Blueprint("uretim_oneri", __name__)
+IST = ZoneInfo("Europe/Istanbul")
 
 # ------------------------------------------------------------------------------
-# Ortak yardımcılar
+# Esnek okuyucu (eski sistem yardımcıları gerektiği kadar duruyor)
 # ------------------------------------------------------------------------------
+ORD_TS_CANDS = [
+    "order_date", "delivered_at",
+    "created_at","created","order_created_at","timestamp",
+    "createdDate","create_date_time","date","olusturma_tarihi","shipped_at"
+]
+ORD_DTL_CANDS  = ["details","items","lines","order_lines","orderItems","kalemler","urunler","json_items","raw_json"]
+ORD_AMT_CANDS  = ["amount","total_amount","order_amount","grand_total","total","line_total","price_total","sum","paid_amount"]
+ORD_DISC_CANDS = ["discount","order_discount","discount_amount","indirim","indirim_tutari"]
+ORD_ID_CANDS   = ["order_number","orderNumber","orderNo","order_id","orderId","trendyol_order_id","platform_order_id"]
+BARCODE_CANDS  = ["barcode","barkod","urun_barkod","product_barcode","productBarcode","sku","stock_code","stok_kodu","gtin","ean","ean13","upc","model_barcode"]
+ITEM_QTY_CANDS = ["quantity","qty","adet","miktar","count","units","piece","quantityOrdered","adet_sayisi"]
+
 def _json_parse(x):
     if isinstance(x, (dict, list)): return x
     if isinstance(x, str):
         try: return json.loads(x)
         except: return None
     return None
-
-def _resolve_col(model, candidates):
-    """Modelde var olan ilk kolonu döndür (SQLAlchemy column objesi)."""
-    cols = {c.key for c in sqla_inspect(model).mapper.column_attrs}
-    for name in candidates:
-        if name in cols: return getattr(model, name)
-    raise AttributeError(f"{model.__name__} içinde bu aday kolonlar yok: {candidates}")
 
 def _pick(d, keys, default=None):
     if not isinstance(d, dict): return default
@@ -64,37 +101,6 @@ def _to_list(val):
         except: pass
     return [x.strip() for x in s.split(",") if x.strip()]
 
-def _content_signature(items, src_name, row_id):
-    parts = []
-    for it in items:
-        bc = str(it.get("bc") or "").strip()
-        sz = str(it.get("size") or "").strip()
-        qt = int(it.get("qty") or 0)
-        parts.append(f"{bc}|{sz}|{qt}")
-    sig = "|".join(sorted(parts)) or f"{src_name}:{row_id}"
-    return "SIG:" + hashlib.md5(sig.encode("utf-8")).hexdigest()
-
-# ------------------------------------------------------------------------------
-# Satış toplama (son X gün) – farklı tablo isimleri/alanları için esnek okuyucu
-# ------------------------------------------------------------------------------
-ORD_TS_CANDS = [
-    "order_date", "delivered_at",
-    "created_at","created","order_created_at","timestamp",
-    "createdDate","create_date_time","date","olusturma_tarihi","shipped_at"
-]
-ORD_DTL_CANDS  = ["details","items","lines","order_lines","orderItems","kalemler","urunler","json_items","raw_json"]
-ORD_AMT_CANDS  = ["amount","total_amount","order_amount","grand_total","total","line_total","price_total","sum","paid_amount"]
-ORD_DISC_CANDS = ["discount","order_discount","discount_amount","indirim","indirim_tutari"]
-ORD_ID_CANDS   = ["order_number","orderNumber","orderNo","order_id","orderId","trendyol_order_id","platform_order_id"]
-
-BARCODE_CANDS = [
-    "barcode","barkod","urun_barkod","product_barcode","productBarcode",
-    "sku","stock_code","stok_kodu","gtin","ean","ean13","upc","model_barcode"
-]
-ITEM_QTY_CANDS   = ["quantity","qty","adet","miktar","count","units","piece","quantityOrdered","adet_sayisi"]
-ITEM_PRICE_CANDS = ["unitPrice","unit_price","price","salePrice","sale_price","amount","line_total","total","lineTotal","totalPrice","total_price","payablePrice"]
-ITEM_SIZE_CANDS  = ["size","beden","number","numara","shoe_size","beden_no"]
-
 def _col(model_cls, candidates, label=None):
     for name in candidates:
         col = getattr(model_cls, name, None)
@@ -121,263 +127,9 @@ def _iter_items_once(blob):
                 for it in v: yield it
                 return
 
-def _extract_order_id_from_row_or_payload(row, payload):
-    for n in ORD_ID_CANDS:
-        if hasattr(row, n):
-            v = getattr(row, n)
-            if v not in (None,""): return str(v)
-    root = _json_parse(payload)
-    if isinstance(root, dict):
-        for n in ORD_ID_CANDS:
-            v = root.get(n)
-            if v not in (None,""): return str(v)
-    return None
-
-def _collect_orders_between_strict_generic(start_ist, end_ist):
-    """barcode→qty / barcode→NET_tutar"""
-    qty_map, amt_map = {}, {}
-    sources = [("Created",OrderCreated), ("Picking",OrderPicking), ("Shipped",OrderShipped), ("Delivered",OrderDelivered)]
-    def add(bc, q, a):
-        if not bc or q <= 0: return
-        s = str(bc).strip()
-        qty_map[s] = qty_map.get(s, 0) + int(q)
-        if a is not None:
-            amt_map[s] = amt_map.get(s, 0.0) + float(a)
-
-    for name, cls in sources:
-        ts_col, _, _   = _col(cls, ORD_TS_CANDS, "ts")
-        amt_col, _, A  = _col(cls, ORD_AMT_CANDS,  "amount")
-        disc_col,_, D  = _col(cls, ORD_DISC_CANDS, "discount")
-        det_name = next((n for n in ORD_DTL_CANDS if hasattr(cls, n)), None)
-        if ts_col is None: continue
-
-        q = db.session.query(cls).filter(
-            func.timezone('Europe/Istanbul', ts_col) >= start_ist,
-            func.timezone('Europe/Istanbul', ts_col) <  end_ist
-        )
-        for row in q.all():
-            payload = getattr(row, det_name) if (det_name and hasattr(row, det_name)) else None
-            if payload in (None,"",[]):
-                for alt in ["raw_json","raw","order_json","json"]:
-                    if hasattr(row, alt):
-                        payload = getattr(row, alt)
-                        if payload not in (None,"",[]): break
-
-            amount_gross   = _to_number(getattr(row, A, None), None) if (A and hasattr(row, A)) else None
-            discount_total = _to_number(getattr(row, D, None), 0.0)  if (D and hasattr(row, D)) else 0.0
-            amount_net     = None
-            if amount_gross is not None:
-                try: amount_net = float(amount_gross) - float(discount_total or 0.0)
-                except: amount_net = amount_gross
-
-            items, total_qty = [], 0
-            for it in _iter_items_once(payload) or []:
-                bc = _pick(it, BARCODE_CANDS)
-                qt = _to_number(_pick(it, ITEM_QTY_CANDS, 1), 0) or 0
-                pr = _to_number(_pick(it, ITEM_PRICE_CANDS, None), None)
-                if not bc or int(qt) <= 0: continue
-                items.append({"bc": bc, "qty": int(qt), "price": pr})
-                total_qty += int(qt)
-
-            per_unit_net = (amount_net/float(total_qty)) if (amount_net is not None and total_qty>0) else None
-            for it in items:
-                line_amt_net = (per_unit_net*it["qty"]) if per_unit_net is not None else ((it["price"]*it["qty"]) if it["price"] is not None else None)
-                add(it["bc"], it["qty"], line_amt_net)
-
-    return qty_map, amt_map
-
 # ------------------------------------------------------------------------------
-# WATCHLIST + EXPLICIT (barkod/model) ÖNERİ
+# Product / CentralStock kolon bağlama
 # ------------------------------------------------------------------------------
-def _sum_sales_for_barcode(barcode, days=30):
-    since = datetime.utcnow() - timedelta(days=days)
-    total = 0
-    order_models = [OrderCreated, OrderPicking, OrderShipped, OrderDelivered]
-    json_candidates = ["items","order_lines","lines","products","payload"]
-    date_field_candidates = ["create_date","created_at","order_date","date"]
-    for M in order_models:
-        q = M.query
-        for df in date_field_candidates:
-            if hasattr(M, df):
-                q = q.filter(getattr(M, df) >= since)
-                break
-        for row in q:
-            data = None
-            for cand in json_candidates:
-                if hasattr(row, cand):
-                    data = _json_parse(getattr(row, cand))
-                    if data: break
-            if not data: continue
-            lines = data if isinstance(data, list) else _pick(data, json_candidates, [])
-            if not isinstance(lines, list): continue
-            for it in lines:
-                b = _pick(it, ["barcode","barkod","sku","gtin"])
-                if b and str(b).strip() == barcode:
-                    qty = _pick(it, ["quantity","qty","adet"], 0) or 0
-                    try: total += float(qty)
-                    except: pass
-    return total
-
-def _stock_for(barcode):
-    col = _resolve_col(
-        CentralStock,
-        ["product_barcode", "barcode", "product_code", "sku", "productBarcode"]
-    )
-    cs = CentralStock.query.filter(col == str(barcode)).first()
-    return int(getattr(cs, "quantity", 0) or 0)
-
-@uretim_oneri_bp.route("/uretim-oneri")
-def uretim_oneri_page():
-    return render_template("uretim_oneri.html")
-
-@uretim_oneri_bp.route("/api/uretim-oneri/watchlist/toggle", methods=["POST"])
-def toggle_watch():
-    data = request.get_json(silent=True) or {}
-    barcode = str(data.get("barcode", "")).strip()
-    if not barcode: return jsonify({"ok": False, "error": "barcode boş"}), 400
-    if len(barcode) > 64: barcode = barcode[:64]
-
-    row = UretimOneriWatch.query.filter_by(product_barcode=barcode).first()
-    if row:
-        row.is_active = not bool(row.is_active)
-        db.session.commit()
-        return jsonify({"ok": True, "active": row.is_active})
-
-    p = Product.query.get(barcode)
-    row = UretimOneriWatch(
-        product_barcode=barcode,
-        product_main_id=(p.product_main_id if p else None),
-    )
-    db.session.add(row)
-    db.session.commit()
-    return jsonify({"ok": True, "active": True})
-
-# ---- gelişmiş suggestions: watch (default) / explicit; renk/beden/only_positive
-def _wk_to_list_for_endpoint(val):
-    return _to_list(val)
-
-def _expand_barcodes_from_main_ids(main_ids):
-    if not main_ids: return []
-    qs = Product.query.with_entities(Product.barcode).filter(Product.product_main_id.in_(main_ids)).all()
-    return [b for (b,) in qs if b]
-
-def _filter_items(items, colors=None, sizes=None, only_positive=False):
-    colors = set([c.lower() for c in (colors or [])])
-    sizes  = set([s.lower() for s in (sizes or [])])
-    out = []
-    for x in items:
-        if colors and (str(x.get("color") or "").lower() not in colors): continue
-        if sizes and (str(x.get("size") or "").lower() not in sizes): continue
-        if only_positive and x.get("suggest_qty", 0) <= 0: continue
-        out.append(x)
-    return out
-
-@uretim_oneri_bp.route("/api/uretim-oneri/suggestions", methods=["GET","POST"])
-def suggestions_grouped():
-    # Parametreler
-    data = request.get_json(silent=True) or {}
-    qs = request.args
-    mode = (data.get("mode") or qs.get("mode") or "watch").strip().lower()
-    days = int(data.get("days") or qs.get("days") or 30)
-
-    barcodes = _wk_to_list_for_endpoint(data.get("barcodes") or qs.get("barcodes"))
-    main_ids = _wk_to_list_for_endpoint(data.get("product_main_ids") or qs.get("product_main_ids"))
-    colors   = _wk_to_list_for_endpoint(data.get("colors") or qs.get("colors"))
-    sizes    = _wk_to_list_for_endpoint(data.get("sizes") or qs.get("sizes"))
-    only_positive = str(data.get("only_positive") or qs.get("only_positive") or "0") in ("1","true","True")
-
-    # hangi barkodlar?
-    selected_barcodes = set()
-    if mode == "explicit":
-        selected_barcodes.update(barcodes)
-        selected_barcodes.update(_expand_barcodes_from_main_ids(main_ids))
-        selected_barcodes = {b for b in selected_barcodes if b}
-        if not selected_barcodes:
-            return jsonify({"ok": True, "mode": mode, "days": days, "groups": []})
-        watch_like = [{"product_barcode": b, "min_cover_days": 14, "safety_factor": 0.1, "product_main_id": None} for b in selected_barcodes]
-    else:
-        watch = UretimOneriWatch.query.filter_by(is_active=True).all()
-        if not watch:
-            return jsonify({"ok": True, "mode": "watch", "days": days, "groups": []})
-        watch_like = watch
-        selected_barcodes = {w.product_barcode for w in watch_like}
-
-    # product cache
-    prods = Product.query.filter(Product.barcode.in_(selected_barcodes)).all()
-    pm = {p.barcode: p for p in prods}
-
-    items = []
-    for w in watch_like:
-        bc = getattr(w, "product_barcode", None) or w.get("product_barcode")
-        if not bc: continue
-        sold = _sum_sales_for_barcode(bc, days=days)
-        avg  = sold / float(days) if days > 0 else 0.0
-        stock= _stock_for(bc)
-        days_left = (stock / avg) if avg > 0 else None
-        min_cover_days = getattr(w, "min_cover_days", None) or w.get("min_cover_days") or 14
-        safety_factor  = getattr(w, "safety_factor", None)  or w.get("safety_factor")  or 0.1
-        target  = max(0.0, (min_cover_days * avg) - stock)
-        suggest = int(round(target * (1 + (safety_factor or 0.0))))
-
-        p = pm.get(bc)
-        img = None
-        if p and getattr(p, "images", None):
-            img = (p.images.split(",")[0] or "").strip()
-
-        items.append({
-            "barcode": bc,
-            "product_main_id": (getattr(w, "product_main_id", None) or (p.product_main_id if p else None)),
-            "title": getattr(p, "title", None),
-            "color": getattr(p, "color", None),
-            "size":  getattr(p, "size",  None),
-            "image": img,
-            "stock": stock,
-            "sold_last_days": int(sold),
-            "avg_daily": round(avg, 3),
-            "days_left": (round(days_left, 1) if days_left is not None else None),
-            "min_cover_days": min_cover_days,
-            "safety_factor": safety_factor,
-            "suggest_qty": max(suggest, 0),
-        })
-
-    items = _filter_items(items, colors=colors, sizes=sizes, only_positive=only_positive)
-
-    # product_main_id altında renk -> satırlar
-    groups_dict = {}
-    for x in items:
-        key = x["product_main_id"] or "_UNGROUPED_"
-        g = groups_dict.setdefault(key, {"product_main_id": key, "title": None, "image": None, "colors": {}})
-        if not g["title"] and x["title"]: g["title"] = x["title"]
-        if not g["image"] and x["image"]: g["image"] = x["image"]
-        ckey = x["color"] or "Renk Yok"
-        g["colors"].setdefault(ckey, []).append(x)
-
-    groups = []
-    for _, g in groups_dict.items():
-        colors_out = [{"color": c, "items": rows} for c, rows in g["colors"].items()]
-        total_suggest = sum(r["suggest_qty"] for rows in g["colors"].values() for r in rows)
-        groups.append({
-            "product_main_id": g["product_main_id"],
-            "title": g["title"],
-            "image": g["image"],
-            "total_suggest": total_suggest,
-            "colors": colors_out
-        })
-
-    groups.sort(key=lambda g: g["total_suggest"], reverse=True)
-    return jsonify({"ok": True, "mode": mode, "days": days, "groups": groups})
-
-# ------------------------------------------------------------------------------
-# HAFTALIK ÜRETİM ÖNERİSİ (SEÇİLEN MODELLER) – Ayrı sayfa + API
-# Kaynak satış: canli_panel._collect_orders_between_strict (import edemezsen üstteki generic kullanılır)
-# ------------------------------------------------------------------------------
-IST = ZoneInfo("Europe/Istanbul")
-try:
-    from canli_panel import _collect_orders_between_strict as _collect_orders_between_strict_ref
-except Exception:
-    _collect_orders_between_strict_ref = _collect_orders_between_strict_generic
-
-# LAZY kolons for Product / CentralStock
 _BAR_CANDS2 = ["barcode","barkod","product_barcode","productBarcode","sku","gtin","ean","stock_code","model_barcode"]
 _MOD_CANDS2 = ["product_main_id","model","model_code"]
 _CLR_CANDS2 = ["color","renk","colour","color_name"]
@@ -436,6 +188,200 @@ def _parse_first_image(val):
             if val.get(k): return val[k]
     return None
 
+# ------------------------------------------------------------------------------
+# DailySales: upsert & incremental update (webhooklardan çağır)
+# ------------------------------------------------------------------------------
+def upsert_daily_sales(barcode: str, d: date, delta: int):
+    sql = text("""
+        INSERT INTO daily_sales (barcode, date, qty)
+        VALUES (:bc, :dt, :dq)
+        ON CONFLICT (barcode, date)
+        DO UPDATE SET qty = daily_sales.qty + EXCLUDED.qty
+    """)
+    db.session.execute(sql, {"bc": str(barcode).strip(), "dt": d, "dq": int(delta)})
+    # qty negatif olur ise 0'a sabitle (opsiyonel güvenlik)
+    db.session.execute(text("""
+        UPDATE daily_sales SET qty = 0
+        WHERE barcode = :bc AND date = :dt AND qty < 0
+    """), {"bc": str(barcode).strip(), "dt": d})
+
+def update_daily_from_event(event_type: str, ts: datetime, items: list):
+    """
+    event_type: 'create' | 'cancel' | 'return'
+    ts: event timestamp (Europe/Istanbul tavsiye)
+    items: [{'barcode': '...', 'quantity': 2}, ...]
+    """
+    sign = 1 if event_type == "create" else -1
+    d = (ts.astimezone(IST) if ts.tzinfo else ts.replace(tzinfo=IST)).date()
+    for it in items or []:
+        bc = str(it.get("barcode") or "").strip()
+        q  = int(it.get("quantity", 1) or 1)
+        if not bc or q <= 0: continue
+        upsert_daily_sales(bc, d, sign * q)
+    db.session.commit()
+
+# ------------------------------------------------------------------------------
+# DailySales: toplu yeniden kur (gece güvenlik senkronu)
+# ------------------------------------------------------------------------------
+def rebuild_daily_sales(days: int = 30):
+    """
+    Geçmiş 'days' gününü baştan hesaplar ve o aralığı daily_sales'ta yeniler.
+    Progress için DailySalesStatus güncellenir.
+    """
+    end_ist = datetime.now(IST).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    start_ist = end_ist - timedelta(days=days)
+    total_days = days
+    # status row (tek satır mantığı)
+    st = DailySalesStatus.query.order_by(DailySalesStatus.id.asc()).first()
+    if not st:
+        st = DailySalesStatus(status="idle", processed_days=0, total_days=0)
+        db.session.add(st); db.session.commit()
+
+    st.last_run_start = datetime.now(IST)
+    st.status = "running"
+    st.processed_days = 0
+    st.total_days = total_days
+    st.updated_at = datetime.now(IST)
+    db.session.commit()
+
+    # seçilen aralığı temizle
+    cutoff = (end_ist.date() - timedelta(days=days))
+    db.session.query(DailySales).filter(DailySales.date >= cutoff).delete()
+    db.session.flush()
+
+    # gün gün ilerle (hafif RAM tüketimi)
+    for i in range(days):
+        day_start = (start_ist + timedelta(days=i))
+        day_end   = day_start + timedelta(days=1)
+        bucket = {}  # barcode -> qty
+
+        def _scan(cls):
+            ts_col, _, TS = _col(cls, ORD_TS_CANDS, "ts")
+            if ts_col is None: return
+            det_name = next((n for n in ORD_DTL_CANDS if hasattr(cls, n)), None)
+            q = db.session.query(cls).filter(
+                func.timezone('Europe/Istanbul', ts_col) >= day_start,
+                func.timezone('Europe/Istanbul', ts_col) <  day_end
+            )
+            for row in q:
+                payload = getattr(row, det_name) if (det_name and hasattr(row, det_name)) else None
+                ts_val = getattr(row, TS, None)
+                if not ts_val: continue
+                for it in _iter_items_once(payload) or []:
+                    bc = _pick(it, BARCODE_CANDS)
+                    qt = int(_to_number(_pick(it, ITEM_QTY_CANDS, 0), 0) or 0)
+                    if not bc or qt <= 0: continue
+                    s = str(bc).strip()
+                    bucket[s] = bucket.get(s, 0) + qt
+
+        for cls in (OrderCreated, OrderPicking, OrderShipped, OrderDelivered):
+            _scan(cls)
+
+        if bucket:
+            rows = [DailySales(barcode=bc, date=day_start.date(), qty=qty) for bc, qty in bucket.items()]
+            db.session.bulk_save_objects(rows)
+            db.session.flush()
+
+        # progress
+        st.processed_days = i + 1
+        st.updated_at = datetime.now(IST)
+        db.session.commit()
+
+    st.last_run_end = datetime.now(IST)
+    st.status = "done"
+    st.updated_at = datetime.now(IST)
+    db.session.commit()
+
+# ------------------------------------------------------------------------------
+# DailySales: hızlı okuma yardımcıları
+# ------------------------------------------------------------------------------
+def _daily_series_from_cache(bc: str, days: int, end_day: date):
+    start_day = end_day - timedelta(days=days - 1)
+    rows = (db.session.query(DailySales.date, DailySales.qty)
+            .filter(
+                DailySales.barcode == str(bc).strip(),
+                DailySales.date >= start_day,
+                DailySales.date <= end_day
+            ).all())
+    by_day = {d.isoformat(): int(q or 0) for d, q in rows}
+    series, cur = [], start_day
+    for _ in range(days):
+        iso = cur.isoformat()
+        series.append({"date": iso, "qty": by_day.get(iso, 0)})
+        cur += timedelta(days=1)
+    return series
+
+def _fetch_sales_totals_from_cache(barcodes, start_day: date, end_day: date):
+    if not barcodes: return {}
+    rows = (db.session.query(DailySales.barcode, func.coalesce(func.sum(DailySales.qty), 0))
+            .filter(DailySales.barcode.in_(list(barcodes)),
+                    DailySales.date >= start_day,
+                    DailySales.date <= end_day)
+            .group_by(DailySales.barcode).all())
+    return {str(b): int(s or 0) for b, s in rows}
+
+def _moving_average(series, window):
+    if not series: return 0.0
+    qty = [int(x.get("qty",0) or 0) for x in series][-window:]
+    return (sum(qty) / float(window)) if window > 0 else 0.0
+
+# ------------------------------------------------------------------------------
+# AI / Prophet tahminleyiciler
+# ------------------------------------------------------------------------------
+def ai_forecast_sales(barcode, sales_series, horizon=14):
+    if not openai_client:
+        return None
+    prompt = f"""
+    Sen bir satış analisti gibi davran.
+    Elinde aşağıdaki günlük satış serisi var (JSON formatında):
+    {sales_series}
+    Bu ürünün (barkod: {barcode}) önümüzdeki {horizon} gün için beklenen günlük satış ortalamasını tahmin et.
+    Lütfen sadece bir sayı döndür (örn: 12.3) başka açıklama yazma.
+    """
+    try:
+        key = (str(barcode), str(sales_series[0]["date"] if sales_series else ""), str(sales_series[-1]["date"] if sales_series else ""), int(horizon), hash(json.dumps(sales_series, sort_keys=True)))
+        now_ts = time.time()
+        hit = _AI_CACHE.get(key)
+        if hit and (now_ts - hit[0] <= _AI_TTL_SEC):
+            return hit[1]
+        resp = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        raw = resp.choices[0].message.content.strip()
+        m = re.search(r"[-+]?\d*\.?\d+", raw)
+        if m:
+            val = float(m.group())
+            _AI_CACHE[key] = (now_ts, val)
+            return val
+        return None
+    except Exception as e:
+        try: current_app.logger.warning(f"AI forecast hata: {e}")
+        except Exception: pass
+        return None
+
+def prophet_forecast(series, horizon_days):
+    if not Prophet:
+        return None
+    try:
+        import pandas as pd
+        df = pd.DataFrame([{"ds": s["date"], "y": float(s["qty"])} for s in series])
+        if df.empty:
+            return None
+        m = Prophet(daily_seasonality=True, weekly_seasonality=True, yearly_seasonality=False)
+        m.fit(df)
+        future = m.make_future_dataframe(periods=horizon_days, freq="D", include_history=False)
+        fcst = m.predict(future)
+        yhat_mean = float(fcst["yhat"].mean())
+        return max(0.0, yhat_mean)
+    except Exception as e:
+        try: current_app.logger.warning(f"Prophet fallback (hata: {e})")
+        except Exception: pass
+        return None
+
+# ------------------------------------------------------------------------------
+# Genel yardımcılar
+# ------------------------------------------------------------------------------
 def _expand_barcodes_for_models(model_ids):
     _bind_columns_once()
     if not model_ids: return set()
@@ -467,61 +413,196 @@ def _fetch_stock_for_barcodes(barcodes):
             .group_by(C_BAR).all())
     return {str(b).strip(): int(st or 0) for b, st in rows}
 
+# ------------------------------------------------------------------------------
+# Sayfalar
+# ------------------------------------------------------------------------------
+@uretim_oneri_bp.route("/uretim-oneri")
+def uretim_oneri_page():
+    return render_template("uretim_oneri.html")
+
 @uretim_oneri_bp.route("/uretim-oneri-haftalik")
 def uretim_oneri_haftalik_page():
     _bind_columns_once()
     return render_template("uretim_oneri_haftalik.html")
 
+# ------------------------------------------------------------------------------
+# DailySales status & rebuild
+# ------------------------------------------------------------------------------
+@uretim_oneri_bp.route("/api/daily-sales/status", methods=["GET"])
+def daily_sales_status():
+    st = DailySalesStatus.query.order_by(DailySalesStatus.id.asc()).first()
+    if not st:
+        return jsonify({"status":"idle","processed_days":0,"total_days":0,"updated_at":None,"last_run_start":None,"last_run_end":None})
+    return jsonify({
+        "status": st.status,
+        "processed_days": st.processed_days,
+        "total_days": st.total_days,
+        "last_run_start": st.last_run_start.isoformat() if st.last_run_start else None,
+        "last_run_end": st.last_run_end.isoformat() if st.last_run_end else None,
+        "updated_at": st.updated_at.isoformat() if st.updated_at else None
+    })
+
+@uretim_oneri_bp.route("/api/daily-sales/rebuild", methods=["POST"])
+def daily_sales_rebuild():
+    days = int((request.get_json(silent=True) or {}).get("days") or request.args.get("days") or 30)
+    rebuild_daily_sales(days=days)
+    return jsonify({"ok": True, "days": days})
+
+# ------------------------------------------------------------------------------
+# Watchlist basit API (değişmedi)
+# ------------------------------------------------------------------------------
+@uretim_oneri_bp.route("/api/uretim-oneri/watchlist/toggle", methods=["POST"])
+def toggle_watch():
+    data = request.get_json(silent=True) or {}
+    barcode = str(data.get("barcode", "")).strip()
+    if not barcode: return jsonify({"ok": False, "error": "barcode boş"}), 400
+    if len(barcode) > 64: barcode = barcode[:64]
+
+    row = UretimOneriWatch.query.filter_by(product_barcode=barcode).first()
+    if row:
+        row.is_active = not bool(row.is_active)
+        db.session.commit()
+        return jsonify({"ok": True, "active": row.is_active})
+
+    p = Product.query.get(barcode)
+    row = UretimOneriWatch(
+        product_barcode=barcode,
+        product_main_id=(p.product_main_id if p else None),
+    )
+    db.session.add(row)
+    db.session.commit()
+    return jsonify({"ok": True, "active": True})
+
+# ------------------------------------------------------------------------------
+# Haftalık üretim önerisi – DailySales cache üzerinden ultra hızlı
+# ------------------------------------------------------------------------------
 @uretim_oneri_bp.route("/api/uretim-oneri-haftalik", methods=["GET","POST"])
 def uretim_oneri_haftalik_api():
     """
-    Param:
-      - models: CSV/JSON list (product_main_id)
-      - days: int (default 7)
-      - min_cover_days: float (default 14)
-      - safety_factor: float (default 0.1)
-      - only_positive: 1/0 (default 1)
+    Hızlı: cache kullanır. Parametreler:
+      - models: [...], days (7/14/30), min_cover_days, safety_factor, only_positive, target_qty
+      - use_cache (default true), force_compute (default false)
+      - quick, max_items, ai_max_items (fallback hesap yolu için)
     """
     _bind_columns_once()
     body = request.get_json(silent=True) or {}
     args = request.args
 
-    model_ids     = _to_list(body.get("models") or args.get("models"))
-    days          = int(body.get("days") or args.get("days") or 7)
-    min_cover     = float(body.get("min_cover_days") or args.get("min_cover_days") or 14)
-    safety_factor = float(body.get("safety_factor") or args.get("safety_factor") or 0.10)
-    only_positive = str(body.get("only_positive") or args.get("only_positive") or "1") in ("1","true","True")
+    model_ids       = _to_list(body.get("models") or args.get("models"))
+    days            = int(body.get("days") or args.get("days") or 7)
+    min_cover       = float(body.get("min_cover_days") or args.get("min_cover_days") or 14)
+    safety_factor   = float(body.get("safety_factor") or args.get("safety_factor") or 0.10)
+    only_positive   = str(body.get("only_positive") or args.get("only_positive") or "1").lower() in ("1","true","yes")
+    target_qty      = int(body.get("target_qty") or args.get("target_qty") or 0)
+
+    # cache kontrol
+    use_cache       = str(body.get("use_cache") or args.get("use_cache") or "true").lower() in ("1","true","yes")
+    force_compute   = str(body.get("force_compute") or args.get("force_compute") or "false").lower() in ("1","true","yes")
+
+    # fallback hesap (gerekirse)
+    use_ai          = str(body.get("use_ai") or args.get("use_ai") or "false").lower() in ("1","true","yes")
+    use_prophet     = str(body.get("use_prophet") or args.get("use_prophet") or "false").lower() in ("1","true","yes")
+    blend_weight_ai = float(body.get("blend_weight_ai") or args.get("blend_weight_ai") or 0.30)
+    blend_weight_ai = max(0.0, min(1.0, blend_weight_ai))
+    quick           = str(body.get("quick") or args.get("quick") or "1").lower() in ("1","true","yes")
+    max_items       = int(body.get("max_items") or args.get("max_items") or 0)
+    ai_max_items    = int(body.get("ai_max_items") or args.get("ai_max_items") or 0)
 
     if not model_ids:
         return jsonify({"ok": True, "days": days, "groups": [], "note": "models boş"}), 200
 
     now = datetime.now(IST)
-    start_ist = datetime.combine((now - timedelta(days=days-1)).date(), datetime.min.time(), IST)
-    end_ist   = datetime.combine((now + timedelta(days=1)).date(), datetime.min.time(), IST)
+    start_day = (now - timedelta(days=days - 1)).date()
+    end_day   = now.date()
 
-    # satış (adet + NET):
-    qty_map, _ = _collect_orders_between_strict_ref(start_ist, end_ist)
+    # Seçili modellerin barkodları
+    sel_barcodes = list(_expand_barcodes_for_models(model_ids))
+    if not sel_barcodes:
+        return jsonify({"ok": True, "days": days, "groups": []})
 
-    sel_barcodes = _expand_barcodes_for_models(model_ids)
-    barcodes = set(k for k in qty_map.keys() if k in sel_barcodes)
+    # Satış toplamları (daily_sales'tan) sıralama için
+    totals_map = _fetch_sales_totals_from_cache(sel_barcodes, start_day, end_day)
+    sel_barcodes.sort(key=lambda b: int(totals_map.get(b, 0)), reverse=True)
 
-    sdict = _fetch_stock_for_barcodes(barcodes)
-    pinfo = _fetch_product_info_for_barcodes(barcodes)
+    # stok + ürün info
+    sdict = _fetch_stock_for_barcodes(sel_barcodes)
+    pinfo = _fetch_product_info_for_barcodes(sel_barcodes)
+
+    # ---- 1) CACHE'TEN ÇEK ----
+    cache_map = {}
+    if use_cache and not force_compute:
+        try:
+            from models import ForecastCache
+            fc_rows = (db.session.query(ForecastCache)
+                       .filter(ForecastCache.days == days,
+                               ForecastCache.barcode.in_(sel_barcodes))
+                       .all())
+            for r in fc_rows:
+                cache_map[r.barcode] = {
+                    "avg_final":  float(r.avg_final),
+                    "avg_base":   float(r.avg_base or 0.0),
+                    "avg_prophet": (float(r.avg_prophet) if r.avg_prophet is not None else None),
+                    "avg_ai_used":(float(r.avg_ai_used) if r.avg_ai_used is not None else None),
+                }
+        except Exception as e:
+            current_app.logger.warning(f"FCACHE read fail: {e}")
+
+    # Prophet/AI bucket (sadece cache yoksa ve force_compute=True ise anlamlı)
+    prophet_bucket = set(sel_barcodes[:max_items]) if (use_prophet and not quick and (force_compute or not use_cache)) else set()
+    ai_bucket      = set(sel_barcodes[:ai_max_items]) if (use_ai and not quick and (force_compute or not use_cache)) else set()
 
     rows = []
-    for bc in barcodes:
-        sold = int(qty_map.get(bc, 0))
-        avg  = sold / float(days) if days > 0 else 0.0
-        st   = int(sdict.get(bc, 0))
-        days_left = (st / avg) if avg > 0 else None
-        target = max(0.0, (min_cover * avg) - st)
+    for bc in sel_barcodes:
+        # günlük seri (satış sütunları için lazım)
+        series = _daily_series_from_cache(bc, days, end_day)
+        sold = sum(int(r["qty"]) for r in series)
+
+        # 1) cache varsa direk kullan
+        if bc in cache_map and not force_compute:
+            avg_final   = cache_map[bc]["avg_final"]
+            avg_base    = cache_map[bc]["avg_base"]
+            avg_prophet = cache_map[bc]["avg_prophet"]
+            avg_ai_used = cache_map[bc]["avg_ai_used"]
+        else:
+            # 2) fallback: hızlı base (quick default), istenirse sınırlı Prophet/AI
+            avg_base = _moving_average(series, days)
+            if quick:
+                avg_prophet = None
+                avg_ai_used = None
+                avg_final   = avg_base
+            else:
+                nonzero_days = sum(1 for r in series if (r.get("qty") or 0) > 0)
+                use_prophet_local = (bc in prophet_bucket) and (nonzero_days >= 3) and (avg_base > 0 or sold > 0)
+                avg_prophet = prophet_forecast(series, horizon_days=days) if use_prophet_local else None
+
+                avg_ai_raw = ai_forecast_sales(bc, series, horizon=days) if (bc in ai_bucket) else None
+                band_low  = max(0.1 * avg_base, 0.1)
+                band_high = 5.0 * max(avg_base, 0.01)
+                avg_ai_used = None if avg_ai_raw is None else min(max(avg_ai_raw, band_low), band_high)
+
+                if avg_prophet is not None:
+                    w_ai = blend_weight_ai if (avg_ai_used is not None) else 0.0
+                    avg_final = (1.0 - w_ai) * avg_prophet + (w_ai * (avg_ai_used or 0.0))
+                else:
+                    avg_final = avg_base
+
+        st = int(sdict.get(bc, 0))
+        days_left = (st / avg_final) if avg_final > 0 else None
+        target = max(0.0, (min_cover * avg_final) - st)
         suggest = int(round(target * (1 + safety_factor)))
 
         info = pinfo.get(bc, {"model":"Bilinmiyor","renk":"Bilinmiyor","beden":"—","image":None})
         rec = {
-            "barcode": bc, "model": info["model"], "renk": info["renk"], "beden": info["beden"],
+            "barcode": bc,
+            "model": info["model"], "renk": info["renk"], "beden": info["beden"],
             "image": info.get("image"),
-            "stok": st, "sold_last_days": sold, "avg_daily": round(avg, 3),
+            "stok": st, "sold_last_days": int(sold),
+            "avg_daily": round(avg_final, 3),
+            "avg_base": round(avg_base, 3),
+            "avg_prophet": (round(avg_prophet, 3) if avg_prophet is not None else None),
+            "avg_ai_used": (round(avg_ai_used, 3) if avg_ai_used is not None else None),
+            "avg_final": round(avg_final, 3),
+            "blend_weight_ai": round(blend_weight_ai, 3),
             "days_left": (round(days_left, 1) if days_left is not None else None),
             "min_cover_days": min_cover, "safety_factor": safety_factor,
             "suggest_qty": max(suggest, 0),
@@ -529,7 +610,15 @@ def uretim_oneri_haftalik_api():
         if (not only_positive) or rec["suggest_qty"] > 0:
             rows.append(rec)
 
-    # model > renk grupla
+    # hedef toplam normalize
+    if target_qty > 0 and rows:
+        total = sum(r["suggest_qty"] for r in rows)
+        if total > 0:
+            scale = float(target_qty) / float(total)
+            for r in rows:
+                r["suggest_qty"] = max(0, int(round(r["suggest_qty"] * scale)))
+
+    # model > renk grup
     groups_dict = {}
     for x in rows:
         key = x["model"] or "_UNGROUPED_"
@@ -551,18 +640,27 @@ def uretim_oneri_haftalik_api():
         "min_cover_days": min_cover,
         "safety_factor": safety_factor,
         "only_positive": only_positive,
+        "target_qty": target_qty,
+        "use_cache": use_cache,
+        "force_compute": force_compute,
+        "use_ai": use_ai,
+        "use_prophet": use_prophet,
+        "blend_weight_ai": blend_weight_ai,
+        "quick": quick,
+        "max_items": max_items,
+        "ai_max_items": ai_max_items,
         "models": model_ids,
         "groups": groups
     })
 
 
-
-# ---------- Varsayılanları getir ----------
+# ------------------------------------------------------------------------------
+# Defaults / Plan / Models (mevcut davranış korunur)
+# ------------------------------------------------------------------------------
 @uretim_oneri_bp.route("/api/uretim-oneri/defaults", methods=["GET"])
 def get_defaults():
     row = UretimOneriDefaults.query.order_by(UretimOneriDefaults.id.asc()).first()
     if not row:
-        # yoksa fabrika ayarı
         return jsonify({"models": [], "days": 7, "min_cover_days": 14.0, "safety_factor": 0.10, "only_positive": True})
     return jsonify({
         "models": json.loads(row.models_json or "[]"),
@@ -572,7 +670,6 @@ def get_defaults():
         "only_positive": bool(row.only_positive)
     })
 
-# ---------- Varsayılanları kaydet ----------
 @uretim_oneri_bp.route("/api/uretim-oneri/defaults", methods=["POST"])
 def save_defaults():
     data = request.get_json(silent=True) or {}
@@ -596,49 +693,42 @@ def save_defaults():
     db.session.commit()
     return jsonify({"ok": True})
 
-# ---------- Plan oluştur (snapshot + yazdır linki döner) ----------
 @uretim_oneri_bp.route("/api/uretim-oneri/plan", methods=["POST"])
 def create_plan():
-    """
-    Body:
-      - models: [..] ya da "gll012,gll088"
-      - days, min_cover_days, safety_factor, only_positive
-      - title (opsiyonel)
-    Çalışma:
-      1) /api/uretim-oneri-haftalik ile hesaplar (snapshot)
-      2) uretim_plan'a kaydeder (status=calisacak, created_at=now)
-    """
     body = request.get_json(silent=True) or {}
-    # 1) Paramları toparla
     models = body.get("models") or []
     if isinstance(models, str):
         models = [m.strip() for m in models.split(",") if m.strip()]
     if not models:
-        # defaults’tan al
         d = UretimOneriDefaults.query.first()
         models = json.loads(d.models_json) if d else []
     if not models:
         return jsonify({"ok": False, "error": "models boş"}), 400
 
-    days = int(body.get("days") or 0) or (UretimOneriDefaults.query.first().days if UretimOneriDefaults.query.first() else 7)
-    min_cover_days = float(body.get("min_cover_days") or (UretimOneriDefaults.query.first().min_cover_days if UretimOneriDefaults.query.first() else 14))
-    safety_factor = float(body.get("safety_factor") or (UretimOneriDefaults.query.first().safety_factor if UretimOneriDefaults.query.first() else 0.10))
-    only_positive = bool(body.get("only_positive") if body.get("only_positive") is not None else (UretimOneriDefaults.query.first().only_positive if UretimOneriDefaults.query.first() else True))
+    defaults = UretimOneriDefaults.query.first()
+    days = int(body.get("days") or 0) or (defaults.days if defaults else 7)
+    min_cover_days = float(body.get("min_cover_days") or (defaults.min_cover_days if defaults else 14))
+    safety_factor = float(body.get("safety_factor") or (defaults.safety_factor if defaults else 0.10))
+    only_positive = bool(body.get("only_positive") if body.get("only_positive") is not None else (defaults.only_positive if defaults else True))
 
-    # 2) Haftalık API'yi çağır (internal)
-    with uretim_oneri_bp.test_request_context(
-        f"/api/uretim-oneri-haftalik?models={','.join(models)}&days={days}&min_cover_days={min_cover_days}&safety_factor={safety_factor}&only_positive={'1' if only_positive else '0'}"
+    use_ai          = str(body.get("use_ai") or "true").lower() in ("1","true","yes")
+    use_prophet     = str(body.get("use_prophet") or "true").lower() in ("1","true","yes")
+    blend_weight_ai = float(body.get("blend_weight_ai") or 0.30)
+    blend_weight_ai = max(0.0, min(1.0, blend_weight_ai))
+
+    with current_app.test_request_context(
+        f"/api/uretim-oneri-haftalik?models={','.join(models)}"
+        f"&days={days}&min_cover_days={min_cover_days}&safety_factor={safety_factor}"
+        f"&only_positive={'1' if only_positive else '0'}"
+        f"&use_ai={'1' if use_ai else '0'}&use_prophet={'1' if use_prophet else '0'}"
+        f"&blend_weight_ai={blend_weight_ai}"
     ):
         resp = uretim_oneri_haftalik_api()
         data = resp.get_json()
 
-    # 3) top.öneri
-    total_suggest = 0
-    for g in data.get("groups", []):
-        total_suggest += int(g.get("total_suggest", 0))
+    total_suggest = sum(int(g.get("total_suggest", 0)) for g in data.get("groups", []))
+    title = body.get("title") or f"Haftalık Plan {datetime.now(IST).strftime('%Y-%m-%d %H:%M')}"
 
-    # 4) kaydet
-    title = body.get("title") or f"Haftalık Plan {datetime.now(ZoneInfo('Europe/Istanbul')).strftime('%Y-%m-%d %H:%M')}"
     plan = UretimPlan(
         title=title,
         models_json=json.dumps(models, ensure_ascii=False),
@@ -646,33 +736,77 @@ def create_plan():
             "days": data.get("days"),
             "min_cover_days": data.get("min_cover_days"),
             "safety_factor": data.get("safety_factor"),
-            "only_positive": data.get("only_positive")
+            "only_positive": data.get("only_positive"),
+            "use_ai": data.get("use_ai"),
+            "use_prophet": data.get("use_prophet"),
+            "blend_weight_ai": data.get("blend_weight_ai"),
         }, ensure_ascii=False),
         snapshot_json=json.dumps(data, ensure_ascii=False),
         total_suggest=total_suggest,
         status="calisacak"
     )
-    db.session.add(plan)
-    db.session.commit()
+    db.session.add(plan); db.session.commit()
 
     return jsonify({"ok": True, "plan_id": plan.id, "print_url": f"/uretim-oneri/plan/{plan.id}/yazdir"})
 
-# ---------- Plan listesi ----------
 @uretim_oneri_bp.route("/api/uretim-oneri/planlar", methods=["GET"])
 def list_plans():
-    qs = UretimPlan.query.order_by(UretimPlan.id.desc()).limit(200).all()
-    out = []
-    for p in qs:
-        out.append({
-            "id": p.id,
-            "title": p.title,
-            "status": p.status,
-            "total_suggest": p.total_suggest,
-            "created_at": p.created_at.strftime("%Y-%m-%d %H:%M")
-        })
-    return jsonify({"ok": True, "plans": out})
+    page     = int(request.args.get("page", 1) or 1)
+    per_page = min(int(request.args.get("per_page", 50) or 50), 200)
+    status   = (request.args.get("status") or "").strip().lower()
+    qtext    = (request.args.get("q") or "").strip()
+    df       = (request.args.get("date_from") or "").strip()
+    dt       = (request.args.get("date_to") or "").strip()
 
-# ---------- Plan durumu güncelle ----------
+    qry = UretimPlan.query
+    if status in ("calisacak","tamamlandi","iptal"):
+        qry = qry.filter(UretimPlan.status == status)
+    if qtext:
+        qry = qry.filter(UretimPlan.title.ilike(f"%{qtext}%"))
+
+    def _pd(s):
+        try: return datetime.strptime(s, "%Y-%m-%d")
+        except Exception: return None
+    dfp = _pd(df); dtp = _pd(dt)
+    if dfp: qry = qry.filter(UretimPlan.created_at >= dfp)
+    if dtp: qry = qry.filter(UretimPlan.created_at < (dtp + timedelta(days=1)))
+
+    qry = qry.order_by(UretimPlan.id.desc())
+    pagination = qry.paginate(page=page, per_page=per_page, error_out=False)
+    items = [{
+        "id": p.id, "title": p.title, "status": p.status,
+        "total_suggest": p.total_suggest, "created_at": p.created_at.strftime("%Y-%m-%d %H:%M")
+    } for p in pagination.items]
+    return jsonify({"ok": True, "page": page, "per_page": per_page, "total": pagination.total, "pages": pagination.pages, "plans": items})
+
+@uretim_oneri_bp.route("/api/uretim-oneri/plan/<int:pid>", methods=["DELETE"])
+def delete_plan(pid):
+    p = UretimPlan.query.get(pid)
+    if not p:
+        return jsonify({"ok": False, "error": "plan bulunamadı"}), 404
+    db.session.delete(p); db.session.commit()
+    return jsonify({"ok": True, "deleted_id": pid})
+
+@uretim_oneri_bp.route("/api/uretim-oneri/plan/<int:pid>/delete", methods=["POST"])
+def delete_plan_via_post(pid):
+    return delete_plan(pid)
+
+@uretim_oneri_bp.route("/api/uretim-oneri/planlar/delete", methods=["POST"])
+def bulk_delete_plans():
+    data = request.get_json(silent=True) or {}
+    ids = data.get("ids") or []
+    if isinstance(ids, str):
+        ids = [x.strip() for x in ids.split(",") if x.strip()]
+    ids = [int(x) for x in ids if str(x).isdigit()]
+    if not ids:
+        return jsonify({"ok": False, "error": "ids boş"}), 400
+
+    found = UretimPlan.query.filter(UretimPlan.id.in_(ids)).all()
+    for p in found:
+        db.session.delete(p)
+    db.session.commit()
+    return jsonify({"ok": True, "deleted_ids": [p.id for p in found], "requested": ids})
+
 @uretim_oneri_bp.route("/api/uretim-oneri/plan/<int:pid>/status", methods=["POST"])
 def update_plan_status(pid):
     body = request.get_json(silent=True) or {}
@@ -681,22 +815,21 @@ def update_plan_status(pid):
         return jsonify({"ok": False, "error": "geçersiz status"}), 400
     p = UretimPlan.query.get(pid)
     if not p: return jsonify({"ok": False, "error":"plan bulunamadı"}), 404
-    p.status = status
-    db.session.commit()
+    p.status = status; db.session.commit()
     return jsonify({"ok": True})
 
-# ---------- Plan detay (JSON) ----------
 @uretim_oneri_bp.route("/api/uretim-oneri/plan/<int:pid>", methods=["GET"])
 def get_plan(pid):
     p = UretimPlan.query.get(pid)
-    if not p: return jsonify({"ok": False, "error":"plan bulunamadı"}), 404
+    if not p:
+        return jsonify({"ok": False, "error":"plan bulunamadı"}), 404
     return jsonify({
+        "ok": True,
         "id": p.id, "title": p.title, "status": p.status,
         "created_at": p.created_at.strftime("%Y-%m-%d %H:%M"),
         "snapshot": json.loads(p.snapshot_json or "{}")
     })
 
-# ---------- Yazdırılabilir görünüm ----------
 @uretim_oneri_bp.route("/uretim-oneri/plan/<int:pid>/yazdir")
 def print_plan(pid):
     p = UretimPlan.query.get(pid)
@@ -704,10 +837,7 @@ def print_plan(pid):
     snap = json.loads(p.snapshot_json or "{}")
     return render_template("uretim_plan_print.html", plan=p, data=snap)
 
-
-# --- Model seçimi: kalıcı listeyi getir / toggle / bulk ---
-from models import UretimOneriDefaults
-
+# --- Model seçimi ---
 def _get_or_create_defaults():
     row = UretimOneriDefaults.query.order_by(UretimOneriDefaults.id.asc()).first()
     if not row:
@@ -718,7 +848,6 @@ def _get_or_create_defaults():
 @uretim_oneri_bp.route("/api/uretim-oneri/models", methods=["GET"])
 def get_selected_models():
     row = _get_or_create_defaults()
-    import json
     return jsonify({"ok": True, "models": json.loads(row.models_json or "[]")})
 
 @uretim_oneri_bp.route("/api/uretim-oneri/models/toggle", methods=["POST"])
@@ -727,32 +856,78 @@ def toggle_selected_model():
     model_id = (data.get("model_id") or "").strip()
     if not model_id:
         return jsonify({"ok": False, "error": "model_id boş"}), 400
-
-    import json
     row = _get_or_create_defaults()
-    lst = json.loads(row.models_json or "[]")
+    lst = set(json.loads(row.models_json or "[]"))
+    active = None
     if model_id in lst:
-        lst = [m for m in lst if m != model_id]
-        active = False
+        lst.remove(model_id); active = False
     else:
-        lst.append(model_id)
-        active = True
-    row.models_json = json.dumps(lst, ensure_ascii=False)
+        lst.add(model_id); active = True
+    row.models_json = json.dumps(sorted(lst), ensure_ascii=False)
     db.session.commit()
-    return jsonify({"ok": True, "active": active, "models": lst})
+    return jsonify({"ok": True, "active": active, "models": list(sorted(lst))})
 
 @uretim_oneri_bp.route("/api/uretim-oneri/models/bulk", methods=["POST"])
 def bulk_add_models():
-    """Açık listedeki birden fazla modeli tek seferde eklemek için (opsiyonel)."""
     data = request.get_json(silent=True) or {}
     models = data.get("models") or []
     if isinstance(models, str):
         models = [m.strip() for m in models.split(",") if m.strip()]
-    import json
     row = _get_or_create_defaults()
     lst = set(json.loads(row.models_json or "[]"))
-    for m in models: 
+    for m in models:
         if m: lst.add(m)
     row.models_json = json.dumps(sorted(lst), ensure_ascii=False)
     db.session.commit()
     return jsonify({"ok": True, "models": json.loads(row.models_json)})
+
+
+
+def mark_forecast_dirty(barcode:str, reason:str="event"):
+    sql = text("""
+      INSERT INTO forecast_dirty (barcode, reason)
+      VALUES (:bc, :rs)
+      ON CONFLICT (barcode) DO UPDATE SET reason = EXCLUDED.reason
+    """)
+    db.session.execute(sql, {"bc": barcode.strip(), "rs": reason})
+    db.session.commit()
+
+
+def pop_dirty_batch(n=50):
+    rows = db.session.execute(text("""
+      DELETE FROM forecast_dirty
+      WHERE barcode IN (
+        SELECT barcode FROM forecast_dirty ORDER BY created_at ASC LIMIT :n FOR UPDATE SKIP LOCKED
+      )
+      RETURNING barcode
+    """), {"n": n}).fetchall()
+    db.session.commit()
+    return [r[0] for r in rows]
+
+def build_cache_for_barcode(barcode:str, days:int=14):
+    end_day = datetime.now(IST).date()
+    series  = _daily_series_from_cache(barcode, days, end_day)   # daily_sales’tan
+    avg_base = _moving_average(series, days)
+
+    # hafif koşullar (hız)
+    nonzero = sum(1 for r in series if (r.get("qty") or 0)>0)
+    use_prophet_local = (nonzero>=5 and avg_base>0)
+    avg_prophet = prophet_forecast(series, days) if use_prophet_local else None
+
+    avg_ai_used = None  # ister ekle: ai_forecast_sales(...) + band clip
+    avg_final = avg_prophet if (avg_prophet is not None) else avg_base
+
+    db.session.execute(text("""
+      INSERT INTO forecast_cache (barcode, days, avg_base, avg_prophet, avg_ai_used, avg_final, updated_at)
+      VALUES (:bc, :dy, :ab, :pp, :ai, :af, NOW())
+      ON CONFLICT (barcode, days)
+      DO UPDATE SET avg_base=:ab, avg_prophet=:pp, avg_ai_used=:ai, avg_final=:af, updated_at=NOW()
+    """), {"bc": barcode.strip(), "dy": days, "ab": avg_base, "pp": avg_prophet, "ai": avg_ai_used, "af": avg_final})
+    db.session.commit()
+
+def forecast_worker_loop(days:int=14, batch:int=50):
+    barcodes = pop_dirty_batch(batch)
+    for bc in barcodes:
+        try: build_cache_for_barcode(bc, days=days)
+        except Exception as e:
+            current_app.logger.warning(f"FCACHE fail {bc}: {e}")
