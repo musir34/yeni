@@ -181,9 +181,14 @@
         <a class="btn btn-secondary m-1" href="{{ url_for('display_archive') }}"><i class="fas fa-box"></i> Arşiv</a>
         <a class="btn btn-danger m-1" href="{{ url_for('iade_listesi') }}"><i class="fas fa-undo"></i> İadeler</a>
         <a class="btn btn-dark  m-1" href="{{ url_for('rapor_gir.giris') }}"><i class="fas fa-file-alt"></i> Raporlama</a>
+        <!-- ✅ Yeni eklenen buton -->
+        <a class="btn btn-primary m-1" href="{{ url_for('uretim_oneri.uretim_oneri_haftalik_page') }}">
+          <i class="fas fa-lightbulb"></i> Stok Önerisi
+        </a>
       </div>
     </div>
   </div>
+
 
   <!-- Arka plan animasyonu -->
   <script>

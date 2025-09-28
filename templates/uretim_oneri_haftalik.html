@@ -97,11 +97,36 @@
     .badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;padding:.2rem .45rem;border-radius:.35rem;border:1px solid var(--color-border);background:#fff;color:var(--color-muted)}
     .pagination{display:flex;gap:.5rem;align-items:center;justify-content:center;margin-top:.75rem}
     .progress{width:100%;height:12px;background:#eee;border-radius:999px;overflow:hidden;border:1px solid var(--color-border)}.progress-bar{height:100%;background:linear-gradient(90deg,var(--color-primary),var(--color-primary-dark));transition:width .3s}
+    
+    /* --- How It Works Modal --- */
+    .hw-overlay{
+      position:fixed; inset:0; background:rgba(0,0,0,.35);
+      display:none; align-items:center; justify-content:center; z-index:9999;
+    }
+    .hw-modal{
+      width:min(900px,92vw); max-height:85vh; overflow:auto;
+      background:var(--color-bg-light); border:1px solid var(--color-border);
+      border-radius:var(--border-radius); box-shadow:var(--shadow-md); padding:1rem 1rem 1.25rem;
+    }
+    .hw-header{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding-bottom:.5rem;border-bottom:1px solid var(--color-border)}
+    .hw-title{font-size:1.1rem;font-weight:700;color:var(--color-secondary);margin:0}
+    .hw-close{border:1px solid var(--color-border);background:#fff;border-radius:.35rem;padding:.4rem .6rem;cursor:pointer}
+    .hw-close:hover{background:var(--color-border)}
+    .hw-body{padding-top:1rem;color:var(--color-text);font-size:.92rem;line-height:1.55}
+    .hw-body h3{margin:.75rem 0 .35rem;font-size:1rem}
+    .hw-kbd{background:var(--color-secondary);color:#fff;border-radius:.35rem;padding:0 .35rem;font-family:ui-monospace,monospace;font-size:.85rem}
+    .hw-list{margin:.25rem 0 .75rem; padding-left:1rem}
+    .hw-badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;padding:.15rem .45rem;border-radius:.35rem;border:1px solid var(--color-border);background:#fff;color:var(--color-muted)}
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Haftalık Üretim Önerisi</h1>
+    <h1 style="display:flex;align-items:center;gap:.5rem;">
+      Haftalık Üretim Önerisi
+      <button id="btn-howitworks" class="btn btn-ghost" title="Sistem nasıl çalışır?" aria-label="Sistem nasıl çalışır?">
+        <i class="fas fa-circle-exclamation"></i>
+      </button>
+    </h1>
     <div class="sub">
       Aşağıdaki alanları doldurarak <span class="kbd">Hesapla</span> butonuna basın. Oluşturulan
       öneriyi <span class="kbd">Plan Oluştur</span> ile kaydedip, <span class="kbd">Yazdır</span> ile çıktısını alabilirsiniz.
@@ -128,14 +153,6 @@
           <input id="days" type="number" min="1" value="7">
         </div>
         <div class="form-group">
-          <label for="cover">Hedef Stok (gün)
-            <span class="tooltip-trigger"><i class="fas fa-question-circle"></i>
-              <span class="tooltip-content">Depoda en az kaç <b>günlük</b> satış hedeflenir. Örn: <b>14</b>.</span>
-            </span>
-          </label>
-          <input id="cover" type="number" step="0.5" value="14">
-        </div>
-        <div class="form-group">
           <label for="sf">Güvenlik Faktörü
             <span class="tooltip-trigger"><i class="fas fa-question-circle"></i>
               <span class="tooltip-content">Öneriye eklenecek tampon oranı. <b>0.10</b> = %10.</span>
@@ -146,6 +163,10 @@
         <div class="form-group">
           <label for="target_qty">Hedef Toplam Adet</label>
           <input id="target_qty" type="number" min="0" value="0">
+        </div>
+        <div class="form-group">
+          <label for="work_days">Kaç Günlük İş</label>
+          <input id="work_days" type="number" min="1" value="1">
         </div>
         <div class="form-group checkbox-group">
           <input id="onlypos" type="checkbox" checked>
@@ -256,6 +277,124 @@
     </div>
   </div>
 
+  <div id="howitworks" class="hw-overlay" role="dialog" aria-modal="true" aria-labelledby="hw-title">
+    <div class="hw-modal">
+      <div class="hw-header">
+        <h2 class="hw-title" id="hw-title">
+          <i class="fas fa-circle-exclamation" style="color:var(--color-primary);"></i>
+          Sistem Nasıl Çalışır? — Adım Adım
+        </h2>
+        <button class="hw-close" id="hw-close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="hw-body">
+        <p class="hw-badge"><i class="fas fa-code-branch"></i> Sürüm: 14 gün stok üst sınırı + aktif plan rezervi, barkod başı max 5</p>
+
+        <ol style="margin:0; padding-left:1.15rem; line-height:1.6;">
+          <li><b>Girdi Alımı</b> — Formdan şu parametreler okunur:
+            <ul class="hw-list">
+              <li><code class="hw-kbd">models</code> (hesaplanacak model kodları)</li>
+              <li><code class="hw-kbd">days</code> (satış penceresi; örn 30)</li>
+              <li><code class="hw-kbd">target_qty</code> (günlük üretim kapasitesi)</li>
+              <li><code class="hw-kbd">work_days</code> (kaç günlük plan)</li>
+              <li><code class="hw-kbd">min_cover_days</code> (= <b>14</b>, stok hedef/üst sınır)</li>
+              <li><code class="hw-kbd">safety_factor</code> (tampon; örn 0.10)</li>
+              <li><code class="hw-kbd">only_positive</code> (önerisi 0 olanları gizle)</li>
+            </ul>
+            <div class="hw-badge">Toplam kapasite: <code class="hw-kbd">total_cap = target_qty × work_days</code></div>
+          </li>
+
+          <li><b>Barkod Genişletme</b> — Seçilen <i>model</i> kodlarından Product tablosu üzerinden tüm <i>barkodlar</i> çıkarılır.</li>
+
+          <li><b>Toplu Veri Çekimi (tek seferde)</b>:
+            <ul class="hw-list">
+              <li><b>Stok</b> (CentralStock) → <code class="hw-kbd">barcode → stok</code></li>
+              <li><b>Ürün bilgisi</b> (Product) → model / renk / beden / görsel</li>
+              <li><b>Satış toplamı</b> (DailySales) → son <code class="hw-kbd">days</code> günün toplamı (tek SQL)</li>
+            </ul>
+          </li>
+
+          <li><b>Günlük Ortalama Satış (avg) Hesabı</b>:
+            <ul class="hw-list">
+              <li>Eğer ForecastCache’te değer varsa: <code class="hw-kbd">avg = avg_final</code></li>
+              <li>Yoksa: <code class="hw-kbd">avg = sold / days</code> (sold: ilgili periyodun toplam satışı)</li>
+            </ul>
+            <div class="hw-badge">Bilgi: <code class="hw-kbd">days_left = stok / avg</code> (avg > 0 ise)</div>
+          </li>
+
+          <li><b>Aktif Plan Rezervi</b> — Sadece <code class="hw-kbd">status='calisacak'</code> planların snapshot’ları okunur:
+            <ul class="hw-list">
+              <li>Her barkod için <code class="hw-kbd">reserved[barcode]</code> toplanır.</li>
+              <li><i>Tamamlandı</i> ve <i>iptal</i> planlar sayılmaz.</li>
+            </ul>
+          </li>
+
+          <li><b>Aday Havuzu</b> — Her barkod için <i>sold, avg, stok, reserved, model/renk/beden</i> seti hazırlanır.
+            <ul class="hw-list">
+              <li><b>best</b>: <code class="hw-kbd">sold > 0</code> (çok satanlar)</li>
+              <li><b>zero_zero</b>: <code class="hw-kbd">sold == 0</code> ve <code class="hw-kbd">stok == 0</code> (doldurma havuzu)</li>
+              <li><code class="hw-kbd">best</code>, satışa göre <b>azalan</b> sıralanır.</li>
+            </ul>
+          </li>
+
+          <li><b>Sabit Üst Sınırlar</b>:
+            <ul class="hw-list">
+              <li><b>Barkod başı üst sınır</b>: <code class="hw-kbd">per_cap = 5</code> adet</li>
+              <li><b>14 gün üst sınırı</b>: <code class="hw-kbd">cap = ceil(14 × avg)</code></li>
+              <li><b>Kritik kural</b>: <code class="hw-kbd">stok + reserved + öneri ≤ cap</code> (avg > 0 iken asla aşılmaz)</li>
+            </ul>
+          </li>
+
+          <li><b>Adım 1 — Çok Satanların Dağıtımı</b>:
+            <ul class="hw-list">
+              <li>Her barkod için: <code class="hw-kbd">have = stok + reserved</code>, <code class="hw-kbd">cap = ceil(14 × avg)</code></li>
+              <li><code class="hw-kbd">need = max(0, cap - have)</code> → <i>güvenlik payı</i> uygula: <code class="hw-kbd">need = ceil(need × (1+sf))</code></li>
+              <li>Cap’e çarp: <code class="hw-kbd">need = min(need, cap - have)</code></li>
+              <li>Öner: <code class="hw-kbd">suggest = min(need, per_cap, remaining)</code></li>
+              <li><code class="hw-kbd">remaining</code> (kalan kapasite) azaltılır.</li>
+            </ul>
+          </li>
+
+          <li><b>Adım 2 — Kapasite Kalırsa (Satış=0 & Stok=0 Doldurma)</b>:
+            <ul class="hw-list">
+              <li><code class="hw-kbd">zero_zero</code> random karıştırılır.</li>
+              <li>Her barkod için <code class="hw-kbd">add ≤ 5</code> ve <code class="hw-kbd">add ≤ remaining</code>.</li>
+              <li>Eğer <code class="hw-kbd">avg > 0</code> ise cap kontrolü: <code class="hw-kbd">cap = ceil(14 × avg)</code>, <code class="hw-kbd">room = max(0, cap - (stok + reserved + already))</code>, <code class="hw-kbd">add ≤ room</code>.</li>
+              <li>Eklenen miktar <code class="hw-kbd">suggest_qty</code>’ye yazılır, <code class="hw-kbd">remaining</code> azaltılır.</li>
+            </ul>
+          </li>
+
+          <li><b>Son İşlemler</b>:
+            <ul class="hw-list">
+              <li><code class="hw-kbd">only_positive</code> ise önerisi 0 olanlar gizlenir.</li>
+              <li>Çıktı: <b>model → renk → items</b> halinde gruplanır, her model için <code class="hw-kbd">total_suggest</code> hesaplanır.</li>
+            </ul>
+          </li>
+
+          <li><b>Plan Oluşturma</b>:
+            <ul class="hw-list">
+              <li><code class="hw-kbd">/api/uretim-oneri/plan</code> → içerden haftalık API aynı parametrelerle çağrılır.</li>
+              <li>Snapshot + <code class="hw-kbd">total_suggest</code> kaydedilir, <code class="hw-kbd">status='calisacak'</code> olur.</li>
+              <li>Bir sonraki hesapta bu plan <b>rezerv</b> olarak düşülür; böylece <b>14 gün üstü stok</b> tutulmaz.</li>
+            </ul>
+          </li>
+
+          <li><b>Kenar Durumları & Güvenlik</b>:
+            <ul class="hw-list">
+              <li><code class="hw-kbd">avg = 0</code> ise 14 gün sınırı hesaplanamaz → sadece <code class="hw-kbd">per_cap=5</code> uygulanır.</li>
+              <li><code class="hw-kbd">target_qty ≤ 0</code> ise plan reddedilir.</li>
+              <li>Hız için günlük seri çekimi yapılmaz; <i>tek SQL ile toplam satış</i> kullanılır.</li>
+            </ul>
+          </li>
+        </ol>
+
+        <p style="margin-top:.9rem;color:var(--color-muted);">
+          Not: Kurallar değiştirilirse bu pencere güncellenecektir. Son sürüm, aktif plan rezerviyle birlikte 14 gün üst sınırını <b>her barkodda</b> garanti eder.
+        </p>
+      </div>
+    </div>
+  </div>
+
+
   <script>
     // ---------- Helpers ----------
     const sel = id => document.getElementById(id);
@@ -264,10 +403,10 @@
       return {
         models: toModels(),
         days: +sel('days').value || 7,
-        min_cover_days: +sel('cover').value || 14,
         safety_factor: +sel('sf').value || 0.10,
         only_positive: sel('onlypos').checked,
-        target_qty: +sel('target_qty').value || 0,
+        target_qty: +sel('target_qty').value || 0,   // günlük kapasite
+        work_days: +sel('work_days').value || 1      // kaç gün
       };
     }
     function setActionButtonsDisabled(state) {
@@ -287,11 +426,11 @@
       if(!data.groups?.length){ out.innerHTML = '<div class="placeholder">Seçili modellere ait veri bulunamadı.</div>'; return; }
 
       let header = '';
-      if (data.target_qty > 0) {
+      if (data.total_cap > 0) {
         const sum = data.groups.reduce((s, g) => s + g.total_suggest, 0);
         header = `<div class="badge" style="margin-bottom:1rem; padding:.5rem; font-size:.9rem;">
-                    Hedef Toplam: <b>${data.target_qty}</b> • Dağıtılan: <b>${sum}</b>
-                  </div>`;
+                      Hedef Kapasite (${data.work_days} gün x ${data.daily_cap}): <b>${data.total_cap}</b> • Dağıtılan: <b>${sum}</b>
+                    </div>`;
       }
 
       const thTooltip = (text, tip) => `
@@ -343,7 +482,6 @@
         const r = await fetch('/api/uretim-oneri/defaults'); const d = await r.json();
         sel('models').value   = (d.models||[]).join(', ');
         sel('days').value     = d.days ?? 7;
-        sel('cover').value    = d.min_cover_days ?? 14;
         sel('sf').value       = d.safety_factor ?? 0.10;
         sel('onlypos').checked= d.only_positive !== false;
       } catch(e) { console.error("Varsayılanlar yüklenemedi:", e); }
@@ -606,11 +744,7 @@
         const total = +s.total_days || 0;
         const done  = +s.processed_days || 0;
         const pct   = total > 0 ? Math.round(done*100/total) : (s.status==='running'?5:0);
-
-        // Barın her zaman görünür olması için bu satırları devre dışı bıraktık
-        // const visible = (s.status && s.status !== 'idle');
-        // box.style.display = visible ? 'block' : 'none';
-
+        
         bar.style.width = pct + '%';
         lbl.textContent = `Durum: ${s.status || '—'}`;
         cnt.textContent = total ? `İşlenen: ${done}/${total} gün (${pct}%)` : '';
@@ -657,6 +791,21 @@
       await refreshPlans();
       setInterval(pollDailyStatus, 2000);
       pollDailyStatus();
+    })();
+
+    // --- How It Works modal ---
+    (function(){
+      const modal = document.getElementById('howitworks');
+      const btn   = document.getElementById('btn-howitworks');
+      const close = document.getElementById('hw-close');
+
+      function openHW(){ modal.style.display = 'flex'; }
+      function closeHW(){ modal.style.display = 'none'; }
+
+      btn?.addEventListener('click', openHW);
+      close?.addEventListener('click', closeHW);
+      modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeHW(); });
+      window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && modal.style.display === 'flex') closeHW(); });
     })();
   </script>
 </body>

@@ -378,7 +378,7 @@ def schedule_jobs():
         _run_fcache_loop,
         trigger='interval',
         id="fcache_loop",
-        seconds=10
+        seconds=30
     )
 
     # >>> DailySales gece rebuild: her gece 03:10
