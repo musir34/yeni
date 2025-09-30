@@ -216,11 +216,52 @@
                 align-items: center;
                 gap: 0.5rem;
             }
+            .info-btn{
+              width: 32px; height: 32px; border-radius: 50%;
+              border: 0; cursor: pointer; font-weight: 800;
+              background: linear-gradient(45deg, var(--color-primary), var(--color-primary-dark));
+              color: #fff; display:flex; align-items:center; justify-content:center;
+              box-shadow: var(--shadow-md); transition: var(--transition);
+            }.info-btn:hover{ transform: translateY(-1px); opacity: .95; }.modal-backdrop{
+              position: fixed; inset: 0; background: rgba(0,0,0,.45);
+              display:none; z-index: 9998;
+            }.modal-wrap{
+              position: fixed; inset: 0; display:none;
+              align-items: center; justify-content: center; z-index: 9999;
+            }.modal{
+              width: min(920px, 92vw); max-height: 88vh; overflow: auto;
+              background: #fff; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.25);
+              padding: 1rem 1rem 1.25rem;
+            }.modal-header{
+              display:flex; align-items:center; justify-content: space-between; gap:.75rem;
+              padding: .5rem 0 .75rem; border-bottom:1px solid var(--color-border);
+            }.modal-header h3{ margin:0; font-weight: 700; color: var(--color-secondary); }.modal-close{
+              border:0; background:transparent; cursor:pointer; font-size: 20px; line-height: 1;
+              color:#666; padding:.25rem .5rem; border-radius:8px;
+            }.modal-close:hover{ background:#f0f0f0; }.tab-bar{
+              display:flex; gap:.5rem; padding:.75rem 0; border-bottom:1px solid var(--color-border);
+            }.tab-btn{
+              border:1px solid var(--color-border); background:#fff; color:#333;
+              padding:.45rem .8rem; border-radius:8px; cursor:pointer; font-weight:600; font-size:.9rem;
+            }.tab-btn.active{
+              background:linear-gradient(45deg, var(--color-primary), var(--color-primary-dark));
+              color:#fff; border-color: transparent;
+            }.tab-panel{ display:none; padding: 1rem 0 .5rem; line-height:1.6; }.tab-panel.active{ display:block; }.badge{
+              display:inline-block; padding:.15rem .5rem; font-size:.75rem;
+              border-radius:999px; background:#eef2f6; color:#334155; border:1px solid #e2e8f0;
+            }.code{
+              background:#0f172a; color:#e2e8f0; border-radius:8px; padding:.5rem .75rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:.85rem; overflow:auto;
+            }ul.clean{ margin: .25rem 0 .25rem 1.1rem; }ul.clean li{ margin:.15rem 0; }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>📦 Raf Yönetimi</h1>
+            <h1 style="display:flex;align-items:center;justify-content:center;gap:0.6rem;">
+              📦 Raf Yönetimi
+              <button type="button" class="info-btn" title="Raf Sistemi Bilgi" onclick="openInfoModal()">
+                !
+              </button>
+            </h1>
             <div class="header-actions">
                 <a href="{{ url_for('home.home') }}" class="btn btn-secondary"
                     ><i class="bi bi-house-door"></i> Ana Sayfa</a
@@ -245,59 +286,6 @@
                 </div>
               {% endif %}
             {% endwith %}
-
-            <div
-                class="main-card"
-                style="border-left: 5px solid #b76e79; background: #fff8f9"
-            >
-                <h4>📌 Sistem Mantığı – Notlar</h4>
-                <ul style="margin-top: 1rem; line-height: 1.6">
-                    <li>
-                        <b>📦 Raf → Ürün:</b> Her ürün belirli bir rafta tutulur. <br />
-                        Raf kodları <code>ANA-İKİNCİL-KAT</code> formatındadır (ör:
-                        <code>A-01-02</code>).
-                    </li>
-                    <li>
-                        <b>🔍 Barkod Arama:</b> Barkod okutulduğunda sistem hangi raflarda
-                        ürün olduğunu listeler.
-                    </li>
-                    <li>
-                        <b>✏️ Güncelleme:</b> Raf içindeki adet güncellendiğinde sadece o
-                        rafın stoğu değişir. Eğer
-                        <b>ürün raftan tamamen silinirse</b>, <u>CentralStock</u> (merkezi
-                        stok) da aynı miktarda azalır.
-                    </li>
-                    <li>
-                        <b>📊 CentralStock:</b> Tüm rafların toplamıdır. Her işlemde paralel
-                        güncellenir.
-                    </li>
-                    <li>
-                        <b>🚫 Eksik/yanlış barkod:</b> Doğrulama geçmezse stok düşmez. Yani
-                        <u>barkod okutulmadan stok düşmez</u>.
-                    </li>
-                    <li>
-                        <b>🗑 Raf Sil:</b> Bir raf silinirse, içindeki tüm ürünler de
-                        silinir. CentralStock’tan düşülür.
-                    </li>
-                    <li>
-                        <b>🖨 Etiket:</b> Her raf için anlık QR ve barkod etiketi
-                        yazdırılabilir.
-                    </li>
-                </ul>
-                <p
-                    style="
-                        margin-top: 1rem;
-                        font-size: 0.9rem;
-                        color: #6c757d;
-                    "
-                >
-                    <i class="bi bi-info-circle"></i> <b>Hatırlatma:</b>
-                    - Sipariş onayında stok <u>sipariş adedi</u> kadar düşer, barkodlar
-                    sadece doğrulama içindir. <br />
-                    - Raflarda görünen stok = fiili durum; CentralStock = tüm rafların
-                    toplamı.
-                </p>
-            </div>
 
             <div class="main-card">
                 <h4 class="mb-4">Yeni Raf Oluştur</h4>
@@ -788,6 +776,88 @@
                     sonucDiv.innerHTML = `<p style='color:red;'>Hata: ${err}</p>`;
                 }
             }
+
+            function openInfoModal(){
+              document.getElementById('infoModalBackdrop').style.display='block';
+              const wrap = document.getElementById('infoModalWrap');
+              wrap.style.display='flex';
+              wrap.setAttribute('aria-hidden','false');
+            }function closeInfoModal(){
+              document.getElementById('infoModalBackdrop').style.display='none';
+              const wrap = document.getElementById('infoModalWrap');
+              wrap.style.display='none';
+              wrap.setAttribute('aria-hidden','true');
+            }document.getElementById('infoModalBackdrop').addEventListener('click', closeInfoModal);document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeInfoModal(); });function switchInfoTab(which){
+              const kisaBtn = document.getElementById('tabKisaBtn');
+              const detayBtn = document.getElementById('tabDetayBtn');
+              const kisa = document.getElementById('tabKisa');
+              const detay = document.getElementById('tabDetay');
+              if(which==='kisa'){
+                kisaBtn.classList.add('active'); detayBtn.classList.remove('active');
+                kisa.classList.add('active'); detay.classList.remove('active');
+              }else{
+                detayBtn.classList.add('active'); kisaBtn.classList.remove('active');
+                detay.classList.add('active'); kisa.classList.remove('active');
+              }
+            }
         </script>
+        <div class="modal-backdrop" id="infoModalBackdrop"></div><div class="modal-wrap" id="infoModalWrap" aria-hidden="true">
+          <div class="modal" role="dialog" aria-modal="true" aria-labelledby="infoModalTitle">
+            <div class="modal-header">
+              <h3 id="infoModalTitle">Raf Sistemi – Kılavuz</h3>
+              <button class="modal-close" onclick="closeInfoModal()" aria-label="Kapat">✕</button>
+            </div>
+
+            <div class="tab-bar">
+              <button class="tab-btn active" id="tabKisaBtn" onclick="switchInfoTab('kisa')">Kısa Özet (Operasyon)</button>
+              <button class="tab-btn" id="tabDetayBtn" onclick="switchInfoTab('detay')">Detaylı Akış (Teknik)</button>
+            </div>
+
+            <div class="tab-panel active" id="tabKisa">
+              <p><span class="badge">Format</span> Raf kodu: <b>ANA-İKİNCİL-KAT</b> (örn: <b>A-01-02</b>)</p>
+              <ul class="clean">
+                <li><b>Raf Oluştur:</b> Formu doldur → sistem <u>QR</u> ve <u>Code128 barkod</u> etiketi üretir.</li>
+                <li><b>Etiket Yazdır:</b> Raf satırındaki <i>Yazdır</i> → anlık görsel akışıyla yazıcıya gönder.</li>
+                <li><b>Stok Ekle:</b> <code class="code">POST /raf/stok-ekle</code> ile barkod okut → o rafta adet +1 (yoksa kayıt açılır).</li>
+                <li><b>Stok Gör:</b> <i>Stokları Göster</i> → model/renk/beden/adet tablosu + filtre.</li>
+                <li><b>Güncelle:</b> satırdaki formdan adet set et; 0 yaparsan ürün raftan silinir ve <u>CentralStock</u> aynı miktar düşer.</li>
+                <li><b>Barkod Ara:</b> <code class="code">GET /raf/api/ara/&lt;barkod&gt;</code> → ürünün bulunduğu raflar + adetler.</li>
+                <li><b>Raf Sil:</b> Raf ve içindeki tüm ürünler silinir; etiket dosyaları da temizlenir.</li>
+              </ul>
+              <p class="text-muted" style="margin-top:.5rem">
+                <i class="bi bi-info-circle"></i> Listelemeler <b>adet &gt; 0</b> kuralıyla gelir; çöp kayıt gösterilmez.
+              </p>
+            </div>
+
+            <div class="tab-panel" id="tabDetay">
+              <p><span class="badge">Modeller</span> <b>Raf</b>, <b>RafUrun</b>, <b>Product</b>, <b>CentralStock</b></p>
+              <ul class="clean">
+                <li><b>Raf oluşturma</b> (<code class="code">POST /raf/olustur</code>): <code>kat</code> <i>zfill(2)</i>, <code>kod=ANA-İKİNCİL-KAT</code> (unique). <u>static/raflar/</u> altında <b>barcode_*.png</b> ve <b>qr_*.png</b> kaydedilir.</li>
+                <li><b>Etiket akışı</b>: <code class="code">/raf/etiket/qr/&lt;kod&gt;</code> ve <code class="code">/raf/etiket/barkod/&lt;kod&gt;</code> görselleri <i>memory stream</i> olarak döner (dosyaya yazmaz) → yazdırma penceresi bunları kullanır.</li>
+                <li><b>Kademeli liste</b> (<code class="code">GET /raf/api/kademeli-liste</code>): <i>ANA → ANA-İKİNCİL → KAT</i> hiyerarşisi ve etiket yolları.</li>
+                <li><b>Stok görünümü</b>:
+                  <ul class="clean">
+                    <li><code class="code">GET /raf/api/stoklar/&lt;raf_kodu&gt;</code> → <b>RafUrun(adet&gt;0)</b> + <b>Product</b> map’i (model/color/size).</li>
+                    <li><code class="code">GET /raf/stoklar</code> → tüm rafları HTML tablo olarak render.</li>
+                  </ul>
+                </li>
+                <li><b>Stok ekleme</b> (<code class="code">POST /raf/stok-ekle</code>): payload’daki her barkod için mevcut satır varsa <i>adet += 1</i>, yoksa <i>adet = 1</i>. <u>CentralStock burada artırılmaz</u> (operasyon tercihi).</li>
+                <li><b>Güncelle / Sil</b>:
+                  <ul class="clean">
+                    <li><code class="code">POST /raf/stok-guncelle</code>: <i>adet &gt; 0</i> → set, <i>adet ≤ 0</i> → <b>RafUrun</b> silinir ve <b>CentralStock.qty</b> raftaki eski adet kadar <u>azaltılır</u>.</li>
+                    <li><code class="code">POST /raf/stok-sil</code>: kayıt silinir; <b>CentralStock.qty</b> raftaki adet kadar <u>azaltılır</u>.</li>
+                  </ul>
+                </li>
+                <li><b>Arama</b>: <code class="code">GET /raf/api/ara/&lt;barkod&gt;</code> → ürünün bulunduğu raflar (adet&gt;0).</li>
+                <li><b>Raf silme</b> (<code class="code">POST /raf/sil/&lt;kod&gt;</code>): ilişkili tüm <b>RafUrun</b> + etiket dosyaları temizlenir; ardından <b>Raf</b> silinir.</li>
+              </ul>
+              <p style="margin-top:.5rem">
+                <span class="badge">Öneriler</span> <br/>
+                • <b>Unique index</b>: <code class="code">RafUrun(raf_kodu, urun_barkodu)</code> çiftine unique ekleyin.<br/>
+                • <b>Index</b>: <code class="code">RafUrun.raf_kodu</code>, <code class="code">RafUrun.urun_barkodu</code>, <code class="code">Product.barcode</code> index’leri performans için iyi.<br/>
+                • <b>Merkez stok senk.</b>: İsterseniz <code class="code">/raf/stok-ekle</code> içinde de <b>CentralStock</b> artırma opsiyonu eklenebilir (toplu payload ile).
+              </p>
+            </div>
+          </div></div>
     </body>
 </html>
