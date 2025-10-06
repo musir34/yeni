@@ -18,14 +18,15 @@ from models import (
     Product, CentralStock,
     UretimOneriDefaults, UretimPlan, UretimOneriWatch,
     OrderCreated, OrderPicking, OrderShipped,
+    UretimSecimPreset,          # 👈 preset modelini ekledik
+    DailySales, DailySalesStatus
 )
+
 try:
     from models import OrderDelivered
 except Exception:
     from models import orders_delivered as OrderDelivered
 
-# Daily cache modelleri (models.py'ye ekledin)
-from models import DailySales, DailySalesStatus
 
 # ------------------ OpenAI / Prophet ------------------
 from openai import OpenAI
@@ -478,15 +479,18 @@ def toggle_watch():
 # --------------------------------------------------------------------------
 # Haftalık üretim önerisi – Öncelik çok satanlar, sonra sıfır satış & stok 0
 # --------------------------------------------------------------------------
-from uuid import uuid4
-import time, math, random
-
 @uretim_oneri_bp.route("/api/uretim-oneri-haftalik", methods=["GET","POST"])
 def uretim_oneri_haftalik_api():
     """
-    1) Çok satanlar: stok+rezerv+öneri <= ceil(14*avg), barkod başı max 5
-    2) Kapasite kalırsa: satış=0 & stok=0 ürünlerle model-odaklı random doldurma (yine 14g sınırı)
-    3) Rezerv: sadece status='calisacak' planlar
+    Haftalık üretim önerisi (BAŞTAN YAZILDI)
+
+    Özellikler:
+      - Model → Renk seçimi (selection/preset_id) destekli
+      - Yalnızca seçilen renklerin barkodları havuza girer
+      - Rezerv: yalnızca status='calisacak' planlar
+      - Öncelik-1: Çok satanlar (sold>0), stok+rezerv+öneri ceil(min_cover_days*avg) ÜSTÜNE ÇIKMAZ
+      - Öncelik-2: satış=0 & stok=0 model-odaklı rastgele doldurma (yine 14g sınır mantığı)
+      - TÜM ÖNERİLER ÇİFT sayıdır (min 2; tek kalan kapasite bilerek boşa bırakılır)
     """
     req_id = f"WEEK-{uuid4().hex[:8]}"
     t0 = time.perf_counter()
@@ -497,71 +501,90 @@ def uretim_oneri_haftalik_api():
         args = request.args
         dbg  = str(body.get("debug") or args.get("debug") or "0").lower() in ("1","true","yes")
 
-        # ---- Girdiler
+        # -------------------- Parametreler
+        # (model_ids; selection/preset varsa override edilecek)
         model_ids      = _to_list(body.get("models") or args.get("models"))
         days           = int(body.get("days") or args.get("days") or 7)
+        min_cover_days = float(body.get("min_cover_days") or args.get("min_cover_days") or 14.0)
         safety_factor  = float(body.get("safety_factor") or args.get("safety_factor") or 0.10)
         only_positive  = str(body.get("only_positive") or args.get("only_positive") or "1").lower() in ("1","true","yes")
         work_days      = int(body.get("work_days") or args.get("work_days") or 1)
         daily_cap      = int(body.get("target_qty") or args.get("target_qty") or 0)
         total_cap      = max(0, daily_cap * work_days)
-        min_cover_days = float(body.get("min_cover_days") or args.get("min_cover_days") or 14.0)
-        min_fill_ratio = float(body.get("min_fill_ratio") or args.get("min_fill_ratio") or 0.95)  # hedefe yakın yeter
+        min_fill_ratio = float(body.get("min_fill_ratio") or args.get("min_fill_ratio") or 0.95)
 
+        # Seçim/preset (model → renk)
+        selection = body.get("selection") or args.get("selection")
+        preset_id = body.get("preset_id") or args.get("preset_id")
+        if isinstance(selection, str):
+            try: selection = json.loads(selection)
+            except: selection = []
+        if preset_id and not selection:
+            try:
+                row = UretimSecimPreset.query.get(int(preset_id))
+                if row:
+                    selection = json.loads(row.payload_json or "[]")
+            except:
+                selection = []
+
+        # Tazeleme/AI önbellek opsiyonları
+        use_cache     = str(body.get("use_cache") or args.get("use_cache") or "true").lower() in ("1","true","yes")
+        force_compute = str(body.get("force_compute") or args.get("force_compute") or "false").lower() in ("1","true","yes")
+
+        # RNG determinism (UI test için)
         rand_seed = body.get("random_seed") or args.get("random_seed")
         if rand_seed is not None:
             try: random.seed(int(rand_seed))
             except Exception: pass
 
-        use_cache     = str(body.get("use_cache") or args.get("use_cache") or "true").lower() in ("1","true","yes")
-        force_compute = str(body.get("force_compute") or args.get("force_compute") or "false").lower() in ("1","true","yes")
+        current_app.logger.info(f"[{req_id}] start days={days} target={daily_cap} work_days={work_days} min_cover={min_cover_days} selection={'Y' if selection else 'N'}")
 
-        current_app.logger.info(f"[{req_id}] start models={len(model_ids)} days={days} target={daily_cap} work_days={work_days} sf={safety_factor} cap_days={min_cover_days} min_fill={min_fill_ratio}")
+        if daily_cap <= 0 or work_days <= 0:
+            return jsonify({"ok": False, "error": "target_qty > 0 ve work_days > 0 olmalı"}), 400
 
-        if not model_ids:
-            return jsonify({"ok": True, "days": days, "groups": [], "note": "models boş"}), 200
+        # -------------------- Barkod havuzu (selection öncelikli)
+        if selection:
+            sel_barcodes = list(_expand_barcodes_for_selection(selection))
+            # model_ids görünürde dursun (UI için), selection’dan türet
+            model_ids = sorted({(it.get("model") or "").strip() for it in selection if (it.get("model") or "").strip()})
+        else:
+            if not model_ids:
+                return jsonify({"ok": True, "days": days, "groups": [], "note": "models/selection boş"}), 200
+            sel_barcodes = list(_expand_barcodes_for_models(model_ids))
 
+        if not sel_barcodes:
+            return jsonify({"ok": True, "days": days, "groups": [], "note": "barkod bulunamadı"}), 200
+
+        # -------------------- Zaman
         now = datetime.now(IST)
         start_day = (now - timedelta(days=days - 1)).date()
         end_day   = now.date()
 
-        # ---- Barkodlar
-        t1 = time.perf_counter()
-        sel_barcodes = list(_expand_barcodes_for_models(model_ids))
-        current_app.logger.info(f"[{req_id}] expanded barcodes={len(sel_barcodes)} dur={(time.perf_counter()-t1)*1000:.1f}ms")
-        if not sel_barcodes:
-            return jsonify({"ok": True, "days": days, "groups": []})
-
-        # ---- Stok & ürün & satış toplam
+        # -------------------- Stok/Ürün/Satış
         t2 = time.perf_counter()
-        sdict = _fetch_stock_for_barcodes(sel_barcodes)                                  # barcode -> stok
-        pinfo = _fetch_product_info_for_barcodes(sel_barcodes)                            # barcode -> {model,renk,beden,image}
-        totals_map = _fetch_sales_totals_from_cache(sel_barcodes, start_day, end_day)     # barcode -> toplam satış
-        current_app.logger.info(f"[{req_id}] fetched stock={len(sdict)} pinfo={len(pinfo)} totals_map={len(totals_map)} dur={(time.perf_counter()-t2)*1000:.1f}ms")
+        sdict = _fetch_stock_for_barcodes(sel_barcodes)
+        pinfo = _fetch_product_info_for_barcodes(sel_barcodes)
+        totals_map = _fetch_sales_totals_from_cache(sel_barcodes, start_day, end_day)
+        current_app.logger.info(f"[{req_id}] fetched stock={len(sdict)} pinfo={len(pinfo)} totals={len(totals_map)} dur={(time.perf_counter()-t2)*1000:.1f}ms")
 
-        # ---- ForecastCache (varsa avg_final, yoksa sold/days)
+        # -------------------- ForecastCache (varsa)
         cache_map = {}
         if use_cache and not force_compute:
             try:
                 from models import ForecastCache
-                t3 = time.perf_counter()
                 fc_rows = (db.session.query(ForecastCache)
                            .filter(ForecastCache.days == days,
                                    ForecastCache.barcode.in_(sel_barcodes))
                            .all())
                 for r in fc_rows:
                     cache_map[r.barcode] = float(r.avg_final)
-                current_app.logger.info(f"[{req_id}] fcache rows={len(cache_map)} dur={(time.perf_counter()-t3)*1000:.1f}ms")
             except Exception as e:
                 current_app.logger.warning(f"[{req_id}] FCACHE read fail: {e}")
 
-        # ---- Rezerv (aktif planlar)
-        t4 = time.perf_counter()
+        # -------------------- Rezerv (aktif planlar)
         reserved_map = _reserved_from_active_plans()
-        current_app.logger.info(f"[{req_id}] reserved_map size={len(reserved_map)} dur={(time.perf_counter()-t4)*1000:.1f}ms")
 
-        # ---- Aday havuzu (seri yok)
-        t5 = time.perf_counter()
+        # -------------------- Adaylar
         candidates = []
         for bc in sel_barcodes:
             sold = int(totals_map.get(bc, 0) or 0)
@@ -579,105 +602,127 @@ def uretim_oneri_haftalik_api():
                 "beden": info.get("beden", "—"),
                 "image": info.get("image")
             })
-        current_app.logger.info(f"[{req_id}] candidates={len(candidates)} dur={(time.perf_counter()-t5)*1000:.1f}ms")
 
-        # ---- Öncelikler
-        best       = [c for c in candidates if c["sold"] > 0]
-        zero_zero  = [c for c in candidates if c["sold"] == 0 and int(c["stok"] or 0) <= 0]
+        # -------------------- Öncelik kümeleri
+        best      = [c for c in candidates if c["sold"] > 0]
+        zero_zero = [c for c in candidates if c["sold"] == 0 and int(c["stok"] or 0) <= 0]
         best.sort(key=lambda c: c["sold"], reverse=True)
-        current_app.logger.info(f"[{req_id}] best={len(best)} zero_zero={len(zero_zero)}")
 
-        rows_dict = {}
-        remaining = total_cap
-        per_cap   = 5
+        # -------------------- EVEN policy yardımcıları
+        def _to_even_floor(x: int) -> int:
+            return x if x % 2 == 0 else max(0, x - 1)
+
+        def _even_pack(desired: int, remaining: int, room: int, min_even: int = 2) -> int:
+            mx = min(desired, remaining, room)
+            ev = _to_even_floor(mx)
+            if ev == 0 and min(remaining, room) >= min_even:
+                ev = min_even
+            return ev
+
+        # Barkod başı tavan (çift uygulanır)
+        per_cap_base = 6
+        per_cap_even = _to_even_floor(per_cap_base)
 
         def _cap_units(avg: float) -> int:
             return int(math.ceil(max(0.0, min_cover_days * max(0.0, avg))))
 
-        def _distributed():
+        def _distributed(remaining: int) -> int:
             return total_cap - remaining
 
-        # ---- 1) Çok satanlar: 14 gün üstü ASLA aşma
-        t6 = time.perf_counter()
+        # -------------------- Dağıtım
+        rows_dict = {}
+        remaining = total_cap
+
+        # (1) Çok satanlar
         for c in best:
-            if remaining <= 0: break
+            if remaining <= 0:
+                break
             bc   = c["barcode"]
             avg  = float(c["avg"] or 0.0)
-            if avg <= 0: 
+            if avg <= 0.0:
                 continue
             stok = int(c["stok"] or 0)
             rsv  = int(reserved_map.get(bc, 0) or 0)
-
             have = stok + rsv
+
             cap  = _cap_units(avg)
-            if have >= cap:   # zaten 14 gün ve üstü
+            if have >= cap:
                 continue
 
             need = max(0, cap - have)
             need = int(math.ceil(need * (1 + safety_factor)))
             need = max(0, min(need, cap - have))
 
-            suggest = max(0, min(need, per_cap, remaining))
+            suggest = _even_pack(desired=min(need, per_cap_even),
+                                 remaining=remaining,
+                                 room=(cap - have),
+                                 min_even=2)
             if suggest <= 0:
                 if dbg: current_app.logger.info(f"[{req_id}] SKIP best bc={bc} have={have} cap={cap} need={need} rem={remaining}")
                 continue
 
             remaining -= suggest
             rows_dict[bc] = {
-                "barcode": bc, "model": c["model"], "renk": c["renk"], "beden": c["beden"],
+                "barcode": bc,
+                "model": c["model"], "renk": c["renk"], "beden": c["beden"],
                 "image": c["image"], "stok": stok, "sold_last_days": c["sold"],
                 "avg_daily": round(avg, 3),
-                "days_left": (round((have+suggest)/avg, 1) if avg>0 else None),
+                "days_left": (round((have + suggest) / avg, 1) if avg > 0 else None),
                 "work_days": work_days, "daily_cap": daily_cap, "safety_factor": safety_factor,
                 "suggest_qty": suggest
             }
-            if total_cap > 0 and _distributed() >= total_cap * min_fill_ratio:
-                break
-        current_app.logger.info(f"[{req_id}] step1 done remaining={remaining} dur={(time.perf_counter()-t6)*1000:.1f}ms")
 
-        # ---- 2) Model-odaklı doldurma: satış=0 & stok=0, 14 gün sınırıyla
-        t7 = time.perf_counter()
+            if total_cap > 0 and _distributed(remaining) >= total_cap * min_fill_ratio:
+                break
+
+        # (2) Satış=0 & Stok=0 model-odaklı doldurma
         if remaining > 0 and zero_zero:
-            # model -> barkod listesi
             model_map = {}
             for c in zero_zero:
                 model_map.setdefault(c["model"], []).append(c)
 
-            model_keys = list(model_map.keys())
-            random.shuffle(model_keys)          # model sırası random
-            for m in model_keys:
+            mkeys = list(model_map.keys())
+            random.shuffle(mkeys)
+
+            for m in mkeys:
                 lst = model_map[m]
-                random.shuffle(lst)              # model içi barkod sırası random
+                random.shuffle(lst)
                 for c in lst:
-                    if remaining <= 0: break
+                    if remaining <= 0:
+                        break
                     bc   = c["barcode"]
                     avg  = float(c["avg"] or 0.0)
                     stok = int(c["stok"] or 0)   # 0
                     rsv  = int(reserved_map.get(bc, 0) or 0)
                     already = rows_dict.get(bc, {}).get("suggest_qty", 0)
-                    if already >= per_cap:
+                    if already >= per_cap_even:
                         continue
 
-                    max_add = min(5, per_cap - already, remaining)
+                    base_room = max(0, per_cap_even - already)
+                    if base_room <= 0:
+                        continue
+
                     if avg > 0:
                         cap   = _cap_units(avg)
                         have  = stok + rsv + already
                         if have >= cap:
                             continue
-                        room  = max(0, cap - have)
-                        max_add = min(max_add, room)
+                        room  = max(0, min(base_room, cap - have))
+                    else:
+                        room  = base_room
 
-                    add = max_add
+                    add = _even_pack(desired=room, remaining=remaining, room=room, min_even=2)
                     if add <= 0:
                         continue
 
                     rec = rows_dict.get(bc)
                     if rec is None:
                         rec = {
-                            "barcode": bc, "model": c["model"], "renk": c["renk"], "beden": c["beden"],
+                            "barcode": bc,
+                            "model": c["model"], "renk": c["renk"], "beden": c["beden"],
                             "image": c["image"], "stok": stok, "sold_last_days": c["sold"],
                             "avg_daily": round(avg, 3),
-                            "days_left": (round((stok+rsv+add)/avg, 1) if avg>0 else None),
+                            "days_left": (round((stok + rsv + add)/avg, 1) if avg > 0 else None),
                             "work_days": work_days, "daily_cap": daily_cap, "safety_factor": safety_factor,
                             "suggest_qty": 0
                         }
@@ -688,25 +733,22 @@ def uretim_oneri_haftalik_api():
                         rec["days_left"] = round((stok + rsv + rec["suggest_qty"]) / avg, 1)
 
                     remaining -= add
-
-                    if total_cap > 0 and _distributed() >= total_cap * min_fill_ratio:
+                    if total_cap > 0 and _distributed(remaining) >= total_cap * min_fill_ratio:
                         break
-                if total_cap > 0 and _distributed() >= total_cap * min_fill_ratio:
+                if total_cap > 0 and _distributed(remaining) >= total_cap * min_fill_ratio:
                     break
-        current_app.logger.info(f"[{req_id}] step2 done remaining={remaining} dur={(time.perf_counter()-t7)*1000:.1f}ms")
 
-        # ---- Rows & filtre
+        # -------------------- Sonuç / Gruplama
         rows = list(rows_dict.values())
         if only_positive:
             rows = [r for r in rows if r["suggest_qty"] > 0]
 
-        # ---- Grupla
-        t8 = time.perf_counter()
         groups_dict = {}
         for r in rows:
             key = r["model"] or "_UNGROUPED_"
             g = groups_dict.setdefault(key, {"model": key, "image": r.get("image"), "colors": {}})
-            if not g["image"] and r.get("image"): g["image"] = r["image"]
+            if not g["image"] and r.get("image"):
+                g["image"] = r["image"]
             g["colors"].setdefault(r.get("renk") or "Renk Yok", []).append(r)
 
         groups = []
@@ -715,11 +757,10 @@ def uretim_oneri_haftalik_api():
             total_suggest = sum(it["suggest_qty"] for lst in g["colors"].values() for it in lst)
             groups.append({"model": g["model"], "image": g["image"], "total_suggest": total_suggest, "colors": colors})
         groups.sort(key=lambda x: x["total_suggest"] - 1e-9, reverse=True)
-        current_app.logger.info(f"[{req_id}] grouped groups={len(groups)} dur={(time.perf_counter()-t8)*1000:.1f}ms")
 
-        dur = (time.perf_counter()-t0)*1000
-        total = sum(g["total_suggest"] for g in groups) if groups else 0
-        current_app.logger.info(f"[{req_id}] done total_suggest={total} remaining={remaining} dur={dur:.1f}ms")
+        dur_ms = (time.perf_counter()-t0)*1000.0
+        total_suggest = sum(g["total_suggest"] for g in groups) if groups else 0
+        current_app.logger.info(f"[{req_id}] DONE total_suggest={total_suggest} remaining={remaining} sel={'Y' if selection else 'N'} dur={dur_ms:.1f}ms")
 
         return jsonify({
             "ok": True,
@@ -731,11 +772,17 @@ def uretim_oneri_haftalik_api():
             "only_positive": only_positive,
             "min_cover_days": min_cover_days,
             "min_fill_ratio": min_fill_ratio,
+            "even_policy": True,
+            "per_cap_even": per_cap_even,
+            "selection": (selection or []),
+            "models": model_ids,
             "groups": groups
-        })
+        }), 200
+
     except Exception as e:
         current_app.logger.exception(f"[{req_id}] weekly EXC: {e}")
         return jsonify({"ok": False, "error": "weekly_call error"}), 500
+
 
 
 
@@ -1123,3 +1170,86 @@ def forecast_worker_loop(days:int=14, batch:int=50):
             build_cache_for_barcode(bc, days=days)
         except Exception as e:
             current_app.logger.warning(f"FCACHE fail {bc}: {e}")
+
+
+
+def _expand_barcodes_for_selection(selection):
+    """
+    selection: [{"model":"M123","colors":["Siyah","Kırmızı"]}, ...]
+    renk listesi boş/None ise o model için TÜM renkler dahil.
+    """
+    _bind_columns_once()
+    if not selection: return set()
+    q = db.session.query(P_BAR, P_MOD, P_CLR).filter(P_BAR.isnot(None), P_MOD.isnot(None))
+    rows = q.all()
+    want = {}
+    for it in selection:
+        m = (it.get("model") or "").strip()
+        cols = set([(c or "").strip() for c in (it.get("colors") or []) if str(c).strip()])
+        if m:
+            want[m] = cols  # boş set => tüm renkler
+    out = set()
+    for bc, m, renk in rows:
+        if not bc or not m: 
+            continue
+        if m in want:
+            chosen = want[m]
+            if not chosen or (renk or "").strip() in chosen:
+                out.add(str(bc).strip())
+    return out
+
+
+@uretim_oneri_bp.route("/api/uretim-oneri/model-colors", methods=["GET"])
+def get_model_colors():
+    _bind_columns_once()
+    model_id = (request.args.get("model") or "").strip()
+    if not model_id:
+        return jsonify({"ok": False, "error": "model boş"}), 400
+    rows = db.session.query(P_CLR).filter(P_MOD == model_id, P_CLR.isnot(None)).distinct().all()
+    colors = sorted({(r[0] or "").strip() for r in rows if r and r[0]})
+    return jsonify({"ok": True, "model": model_id, "colors": colors})
+
+
+
+# preset oluştur (Kaydet)
+@uretim_oneri_bp.route("/api/uretim-oneri/presets", methods=["POST"])
+def create_preset():
+    body = request.get_json(silent=True) or {}
+    name = (body.get("name") or "").strip()
+    selection = body.get("selection") or []  # [{"model":"M","colors":[...]}]
+    if not name or not isinstance(selection, list):
+        return jsonify({"ok": False, "error": "name/selection geçersiz"}), 400
+    payload = json.dumps(selection, ensure_ascii=False)
+    # aynı isim varsa güncelle
+    row = UretimSecimPreset.query.filter_by(name=name).first()
+    if not row:
+        row = UretimSecimPreset(name=name, payload_json=payload)
+        db.session.add(row)
+    else:
+        row.payload_json = payload
+    db.session.commit()
+    return jsonify({"ok": True, "id": row.id, "name": row.name})
+
+# presetleri listele (Yükle butonunda)
+@uretim_oneri_bp.route("/api/uretim-oneri/presets", methods=["GET"])
+def list_presets():
+    rows = UretimSecimPreset.query.order_by(UretimSecimPreset.created_at.desc()).all()
+    data = [{"id": r.id, "name": r.name, "created_at": r.created_at.strftime("%Y-%m-%d %H:%M")} for r in rows]
+    return jsonify({"ok": True, "presets": data})
+
+# preset içeriğini çek
+@uretim_oneri_bp.route("/api/uretim-oneri/presets/<int:pid>", methods=["GET"])
+def get_preset(pid):
+    r = UretimSecimPreset.query.get(pid)
+    if not r:
+        return jsonify({"ok": False, "error": "preset bulunamadı"}), 404
+    return jsonify({"ok": True, "id": r.id, "name": r.name, "selection": json.loads(r.payload_json)})
+
+# preset sil
+@uretim_oneri_bp.route("/api/uretim-oneri/presets/<int:pid>", methods=["DELETE"])
+def delete_preset(pid):
+    r = UretimSecimPreset.query.get(pid)
+    if not r:
+        return jsonify({"ok": False, "error": "preset bulunamadı"}), 404
+    db.session.delete(r); db.session.commit()
+    return jsonify({"ok": True, "deleted": pid})

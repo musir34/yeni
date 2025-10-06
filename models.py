@@ -18,6 +18,15 @@ from sqlalchemy import func
 db = SQLAlchemy()
 
 
+# models.py içine ekle
+class UretimSecimPreset(db.Model):
+    __tablename__ = "uretim_secim_preset"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False, unique=True)
+    payload_json = db.Column(db.Text, nullable=False)  # [{"model":"X","colors":["Siyah","Kırmızı"]}, ...]
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class DailySales(db.Model):
     __tablename__ = "daily_sales"
 

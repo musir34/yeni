@@ -31,8 +31,8 @@
     .form-group{display:flex;flex-direction:column;gap:.25rem}
     .form-group label{font-size:.8rem;font-weight:600;color:var(--color-muted);display:flex;align-items:center;gap:.5rem}
     .form-group .input-wrapper{display:flex;align-items:center;gap:.5rem}
-    input[type=text],input[type=number],input[type=date]{width:100%;padding:.6rem .8rem;font-size:.9rem;border:1px solid var(--color-border);border-radius:.4rem;transition:var(--transition);background:#fff;min-width:0}
-    input[type=text]:focus,input[type=number]:focus,input[type=date]:focus{border-color:var(--color-primary);box-shadow:0 0 0 3px rgba(183,110,121,.2)}
+    input[type=text],input[type=number],input[type=date],select{width:100%;padding:.6rem .8rem;font-size:.9rem;border:1px solid var(--color-border);border-radius:.4rem;transition:var(--transition);background:#fff;min-width:0}
+    input[type=text]:focus,input[type=number]:focus,input[type=date]:focus,select:focus{border-color:var(--color-primary);box-shadow:0 0 0 3px rgba(183,110,121,.2)}
     .checkbox-group{display:flex;align-items:center;gap:.5rem;padding-top:1.5rem}
     input[type=checkbox]{width:16px;height:16px}
 
@@ -97,7 +97,7 @@
     .badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;padding:.2rem .45rem;border-radius:.35rem;border:1px solid var(--color-border);background:#fff;color:var(--color-muted)}
     .pagination{display:flex;gap:.5rem;align-items:center;justify-content:center;margin-top:.75rem}
     .progress{width:100%;height:12px;background:#eee;border-radius:999px;overflow:hidden;border:1px solid var(--color-border)}.progress-bar{height:100%;background:linear-gradient(90deg,var(--color-primary),var(--color-primary-dark));transition:width .3s}
-    
+
     /* --- How It Works Modal --- */
     .hw-overlay{
       position:fixed; inset:0; background:rgba(0,0,0,.35);
@@ -117,6 +117,21 @@
     .hw-kbd{background:var(--color-secondary);color:#fff;border-radius:.35rem;padding:0 .35rem;font-family:ui-monospace,monospace;font-size:.85rem}
     .hw-list{margin:.25rem 0 .75rem; padding-left:1rem}
     .hw-badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;padding:.15rem .45rem;border-radius:.35rem;border:1px solid var(--color-border);background:#fff;color:var(--color-muted)}
+
+    /* --- Yeni eklenen UI için stiller --- */
+    .form-inline { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+    .list-group { list-style: none; padding: 0; margin: 0; }
+    .list-group-item {
+      padding: .5rem .75rem;
+      border: 1px solid var(--color-border);
+      border-radius: .4rem;
+      margin-bottom: .5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+    #colorBox label { margin-right: 1rem; margin-bottom: 0.5rem; display: inline-flex; align-items: center; gap: .25rem; }
   </style>
 </head>
 <body>
@@ -133,17 +148,27 @@
     </div>
 
     <div class="card">
+      <h2 class="card-header" style="font-size:1.2rem; border:none; padding:0 0 1rem 0; margin:0;">Model ve Renk Seçimi</h2>
+      <div class="form-inline">
+        <input id="modelInput" type="text" placeholder="Model kodu yaz" style="flex:1;">
+        <button class="btn btn-primary" onclick="fetchColors()">Renkleri Getir</button>
+      </div>
+      <div id="colorBox" class="mt-3" style="margin-top:1rem; max-height:150px; overflow-y:auto; padding-top:.5rem; border-top:1px solid var(--color-border);"></div>
+      <button class="btn btn-success" onclick="addSelection()" style="margin-top:1rem;">Seçimi Ekle</button>
+    </div>
+
+    <div class="card">
+      <h6>Seçimler ve Kayıtlı Listeler</h6>
+      <ul id="selectionList" class="list-group" style="margin-top:1rem;"></ul>
+      <div class="tools" style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--color-border);">
+        <button class="btn btn-ghost" onclick="savePreset()">Listeyi Kaydet</button>
+        <button class="btn btn-ghost" onclick="loadPresets()">Kayıtlı Listeleri Yükle</button>
+        <select id="presetSelect" style="flex:1; max-width:240px;"></select>
+        <button class="btn btn-primary" onclick="usePreset()">Seçili Listeyi Kullan</button>
+      </div>
+    </div>
+    <div class="card">
       <div class="form-grid">
-        <div class="form-group" style="grid-column:1/-1">
-          <label for="models">
-            Modeller
-            <span class="tooltip-trigger">
-              <i class="fas fa-question-circle"></i>
-              <span class="tooltip-content">Üretim planına dahil edilecek <b>model kodlarını</b> girin (örn: gll012, gll088). Bu listeyi "Varsayılanı Kaydet" ile sonraki kullanımlar için saklayabilirsiniz.</span>
-            </span>
-          </label>
-          <input id="models" type="text" placeholder="Modelleri virgül ile ayırarak yazın...">
-        </div>
         <div class="form-group">
           <label for="days">Satış Geçmişi (gün)
             <span class="tooltip-trigger"><i class="fas fa-question-circle"></i>
@@ -396,19 +421,123 @@
 
 
   <script>
+    // ---------- YENİ EKLENEN PRESET FONKSİYONLARI ----------
+    let currentColors = [];
+    let selection = []; // [{model:"M", colors:[...]}]
+
+    async function fetchColors(){
+      const model = sel('modelInput').value.trim();
+      if(!model) return alert('Lütfen bir model kodu girin.');
+      const r = await fetch(`/api/uretim-oneri/model-colors?model=${encodeURIComponent(model)}`);
+      const j = await r.json();
+      if(!j.ok){ alert(j.error||'Renkler getirilirken bir hata oluştu.'); return; }
+      currentColors = j.colors || [];
+      const box = sel('colorBox');
+      if (currentColors.length === 0) {
+        box.innerHTML = '<span class="text-muted">Bu model için renk bulunamadı.</span>';
+        return;
+      }
+      box.innerHTML = currentColors.map(c=>`
+        <label>
+          <input type="checkbox" value="${escapeHtml(c)}"> ${escapeHtml(c)}
+        </label>
+      `).join('');
+    }
+
+    function addSelection(){
+      const model = sel('modelInput').value.trim();
+      if(!model) return alert('Lütfen bir model kodu girin.');
+      const checked = Array.from(document.querySelectorAll('#colorBox input[type=checkbox]:checked')).map(el=>el.value);
+      selection = selection.filter(it=>it.model !== model);
+      selection.push({model, colors: checked});
+      renderSelection();
+      sel('modelInput').value='';
+      sel('colorBox').innerHTML='';
+    }
+
+    function renderSelection(){
+      const ul = sel('selectionList');
+      ul.innerHTML = selection.map(it=>{
+        const colors = (it.colors && it.colors.length)? it.colors.map(c=>escapeHtml(c)).join(', ') : '<b>(Tüm Renkler)</b>';
+        return `<li class="list-group-item">
+          <span><b>${escapeHtml(it.model)}</b> — ${colors}</span>
+          <button class="btn btn-ghost" style="padding:.2rem .4rem;" title="Sil" onclick="delModel('${escapeHtml(it.model)}')"><i class="fas fa-times"></i></button>
+        </li>`;
+      }).join('');
+    }
+
+    function delModel(m){
+      selection = selection.filter(it=>it.model !== m);
+      renderSelection();
+    }
+
+    async function savePreset(){
+      const name = prompt('Kaydedilecek listenin adını girin:');
+      if(!name || !name.trim()) return;
+      if(selection.length === 0) return alert('Kaydedilecek bir seçim bulunmuyor.');
+      try {
+        const r = await fetch('/api/uretim-oneri/presets', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({name: name.trim(), selection})
+        });
+        const j = await r.json();
+        if(!j.ok){ alert(j.error || 'Liste kaydedilirken bir hata oluştu.'); return; }
+        alert('Liste başarıyla kaydedildi.');
+        loadPresets(); // Listeyi yenile
+      } catch(e) { alert('Sunucu hatası: Liste kaydedilemedi.'); }
+    }
+
+    async function loadPresets(){
+      try {
+        const r = await fetch('/api/uretim-oneri/presets');
+        const j = await r.json();
+        const selectEl = sel('presetSelect');
+        if(!j.ok || !j.presets || j.presets.length === 0) {
+            selectEl.innerHTML = '<option value="">Kayıtlı liste yok</option>';
+            return;
+        }
+        selectEl.innerHTML = (j.presets||[]).map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+      } catch(e) { sel('presetSelect').innerHTML = '<option value="">Listeler yüklenemedi</option>'; }
+    }
+
+    async function usePreset(){
+      const pid = sel('presetSelect').value;
+      if(!pid) return alert('Lütfen bir liste seçin.');
+      try {
+        const r = await fetch(`/api/uretim-oneri/presets/${pid}`);
+        const j = await r.json();
+        if(!j.ok){ alert(j.error||'Liste yüklenirken bir hata oluştu.'); return; }
+        selection = j.selection || [];
+        renderSelection();
+      } catch(e) { alert('Sunucu hatası: Liste yüklenemedi.'); }
+    }
+
+
     // ---------- Helpers ----------
     const sel = id => document.getElementById(id);
-    const toModels = () => (sel('models').value.trim().split(/[\s,]+/).map(s=>s.trim()).filter(Boolean));
-    function serializeCurrentParams(){
+    
+    // API'ye gönderilecek veriyi oluşturan ana fonksiyon
+    function buildPayload() {
       return {
-        models: toModels(),
+        selection: selection,
         days: +sel('days').value || 7,
         safety_factor: +sel('sf').value || 0.10,
         only_positive: sel('onlypos').checked,
-        target_qty: +sel('target_qty').value || 0,   // günlük kapasite
-        work_days: +sel('work_days').value || 1      // kaç gün
+        target_qty: +sel('target_qty').value || 0,
+        work_days: +sel('work_days').value || 1
       };
     }
+
+    // Varsayılan ayarları kaydetmek için kullanılan yardımcı fonksiyon
+    function serializeDefaultParams(){
+      return {
+        days: +sel('days').value || 7,
+        safety_factor: +sel('sf').value || 0.10,
+        only_positive: sel('onlypos').checked,
+      };
+    }
+
+
     function setActionButtonsDisabled(state) {
       sel('btn-create-plan').disabled = state;
       sel('btn-print-plan').disabled  = state;
@@ -416,7 +545,7 @@
       sel('btn-copy').disabled        = state;
     }
     function escapeHtml(s){
-      return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+      return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#x27;'}[m]));
     }
 
     // ---------- Sonuçlar ----------
@@ -480,14 +609,13 @@
     async function loadDefaults(){
       try {
         const r = await fetch('/api/uretim-oneri/defaults'); const d = await r.json();
-        sel('models').value   = (d.models||[]).join(', ');
         sel('days').value     = d.days ?? 7;
         sel('sf').value       = d.safety_factor ?? 0.10;
         sel('onlypos').checked= d.only_positive !== false;
       } catch(e) { console.error("Varsayılanlar yüklenemedi:", e); }
     }
     async function saveDefaults(){
-      const body = serializeCurrentParams();
+      const body = serializeDefaultParams();
       try {
         const res = await fetch('/api/uretim-oneri/defaults', {
           method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
@@ -495,9 +623,12 @@
         const j = await res.json(); alert(j.ok ? 'Varsayılan ayarlar kaydedildi.' : 'Hata: Kaydedilemedi.');
       } catch(e) { alert("Sunucu hatası, kaydedilemedi."); }
     }
+    
     async function calc(){
-      const body = serializeCurrentParams();
-      if(!body.models.length){ alert('Lütfen en az bir model kodu girin.'); return; }
+      const body = buildPayload();
+      if (!body.selection || body.selection.length === 0) {
+        alert('Lütfen en az bir model ve renk seçimi yapın.'); return;
+      }
       sel('out').innerHTML = '<div class="placeholder">Hesaplanıyor... <i class="fas fa-spinner fa-spin"></i></div>';
       setActionButtonsDisabled(true);
       try {
@@ -512,9 +643,12 @@
         sel('out').innerHTML = '<div class="placeholder">Hesaplama sırasında bir sunucu hatası oluştu.</div>';
       }
     }
+    
     async function createPlan(){
-      const body = serializeCurrentParams();
-      if(!body.models.length){ alert('Plan oluşturmak için en az bir model kodu girin.'); return; }
+      const body = buildPayload();
+      if (!body.selection || body.selection.length === 0) {
+        alert('Plan oluşturmak için en az bir model ve renk seçimi yapın.'); return;
+      }
       try {
         const res = await fetch('/api/uretim-oneri/plan', {
           method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
@@ -524,9 +658,12 @@
         else   { alert(j.error || 'Plan oluşturulamadı.'); }
       } catch(e) { alert('Plan oluşturulurken sunucu hatası oluştu.'); }
     }
+    
     async function printPlan() {
-      const body = serializeCurrentParams();
-      if(!body.models.length){ alert('Yazdırmak için en az bir model kodu girin.'); return; }
+      const body = buildPayload();
+      if (!body.selection || body.selection.length === 0) {
+        alert('Yazdırmak için en az bir model ve renk seçimi yapın.'); return;
+      }
       try {
         const res = await fetch('/api/uretim-oneri/plan', {
           method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
@@ -789,6 +926,7 @@
     (async ()=>{
       await loadDefaults();
       await refreshPlans();
+      await loadPresets(); // Sayfa yüklendiğinde kayıtlı listeleri getir
       setInterval(pollDailyStatus, 2000);
       pollDailyStatus();
     })();
