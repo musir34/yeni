@@ -43,6 +43,15 @@ env = os.getenv('FLASK_ENV', 'development')
 app.config.from_object(
     __import__('config').config_map.get(env, __import__('config').DevelopmentConfig)
 )
+
+# >>>>>> BURAYA EKLENDİ (register_blueprints'ten önce) <<<<<<
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+app.config.setdefault('UPLOAD_FOLDER', os.path.join(BASE_DIR, 'uploads', 'receipts'))
+app.config.setdefault('ALLOWED_IMAGE_EXTENSIONS', {'png', 'jpg', 'jpeg', 'webp', 'heic', 'heif'})
+app.config.setdefault('MAX_CONTENT_LENGTH', 10 * 1024 * 1024)  # 10 MB
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 import platform, os, time
 os.environ['TZ'] = 'Europe/Istanbul'
 if platform.system() in ('Linux', 'Darwin'):  # Windows'ta tzset yok

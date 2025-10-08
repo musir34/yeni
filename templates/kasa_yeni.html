@@ -273,13 +273,11 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="header-section">
             <h1><i class="fas fa-plus-circle"></i> Yeni Kasa Kaydı</h1>
             <p>Gelir veya gider kaydı ekleyin</p>
         </div>
 
-        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="flash-messages">
@@ -295,11 +293,9 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Form -->
         <div class="form-section">
-            <form method="POST" action="{{ url_for('kasa.yeni_kasa_kaydi') }}">
+            <form method="POST" action="" enctype="multipart/form-data">
                 
-                <!-- Tip Seçimi -->
                 <div class="form-group">
                     <label for="tip">Tip <span class="required">*</span></label>
                     <div class="radio-group">
@@ -318,31 +314,53 @@
                     </div>
                 </div>
 
-                <!-- Açıklama -->
                 <div class="form-group">
                     <label for="aciklama">Açıklama <span class="required">*</span></label>
                     <textarea class="form-control" id="aciklama" name="aciklama" rows="3" 
-                              placeholder="Kasa kaydı hakkında açıklama..." required></textarea>
+                              placeholder="Kasa kaydı hakkında açıklama..." required>{{ kayit.aciklama if kayit else '' }}</textarea>
                 </div>
 
-                <!-- Tutar -->
                 <div class="form-group">
                     <label for="tutar">Tutar (₺) <span class="required">*</span></label>
                     <input type="number" class="form-control" id="tutar" name="tutar" 
-                           step="0.01" min="0.01" placeholder="0.00" required>
+                           step="0.01" min="0.01" placeholder="0.00" required value="{{ kayit.tutar if kayit else '' }}">
                 </div>
 
-                <!-- Kategori Seçimi -->
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="yil">Yıl</label>
+                        <input type="number" id="yil" name="yil" class="form-control" value="{{ default_yil if default_yil is defined else '' }}">
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="ay">Ay</label>
+                        <input type="number" id="ay" name="ay" class="form-control" value="{{ default_ay if default_ay is defined else '' }}" min="1" max="12">
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="durum">Durum</label>
+                        <select name="durum" id="durum" class="form-control">
+                            <option value="bekleyen" selected>Bekleyen</option>
+                            <option value="ödenen">Ödenen</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="fis_foto">Fiş Fotoğrafı (opsiyonel)</label>
+                    <input type="file" id="fis_foto" name="fis_foto" accept="image/*" class="form-control-file">
+                    {% if kayit and kayit.fis_yolu %}
+                        <small class="form-text text-muted">Mevcut Fiş: <a target="_blank" href="{{ url_for('kasa.serve_receipt', fname=kayit.fis_yolu) }}">Görüntüle</a></small>
+                    {% endif %}
+                </div>
+
                 <div class="kategori-section">
                     <h6><i class="fas fa-tags"></i> Kategori</h6>
                     
-                    <!-- Mevcut Kategoriler -->
                     {% if kategoriler %}
                     <div class="form-group">
-                        <label for="kategori">Mevcut Kategoriler:</label>
+                        <label for="kategori-listesi">Mevcut Kategoriler:</label>
                         <div class="kategori-listesi">
                             {% for k in kategoriler %}
-                            <span class="kategori-item" onclick="selectKategori('{{ k.kategori_adi }}')">
+                            <span class="kategori-item" onclick="selectKategori('{{ k.kategori_adi }}', this)">
                                 {{ k.kategori_adi }}
                             </span>
                             {% endfor %}
@@ -350,13 +368,12 @@
                     </div>
                     {% endif %}
                     
-                    <!-- Kategori Input -->
                     <div class="form-group">
                         <label for="kategori">Kategori Seçin veya Yazın:</label>
                         <div class="kategori-input-group">
                             <input type="text" class="form-control" id="kategori" name="kategori" 
-                                   placeholder="Kategori adı (opsiyonel)" list="kategori-listesi">
-                            <datalist id="kategori-listesi">
+                                   placeholder="Kategori adı (opsiyonel)" list="kategori-datalist" value="{{ kayit.kategori if kayit else '' }}">
+                            <datalist id="kategori-datalist">
                                 {% for k in kategoriler %}
                                 <option value="{{ k.kategori_adi }}">
                                 {% endfor %}
@@ -368,7 +385,6 @@
                     </div>
                 </div>
 
-                <!-- Form Actions -->
                 <div class="form-actions">
                     <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-secondary">
                         <i class="fas fa-times"></i> İptal
@@ -381,7 +397,6 @@
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
@@ -390,51 +405,50 @@
             const radio = document.getElementById(value);
             radio.checked = true;
             
-            // Update visual selection
             document.querySelectorAll('.radio-option').forEach(option => {
                 option.classList.remove('selected');
             });
             radio.parentElement.classList.add('selected');
         }
         
-        function selectKategori(kategoriAdi) {
-            const input = document.getElementById('kategori');
-            input.value = kategoriAdi;
+        function selectKategori(kategoriAdi, element) {
+            document.getElementById('kategori').value = kategoriAdi;
             
-            // Update visual selection
             document.querySelectorAll('.kategori-item').forEach(item => {
                 item.classList.remove('selected');
             });
-            event.target.classList.add('selected');
+            element.classList.add('selected');
         }
         
         function hizliKategoriEkle() {
             const kategoriAdi = prompt('Yeni kategori adını girin:');
             if (kategoriAdi && kategoriAdi.trim()) {
-                // AJAX ile kategori ekleme
                 $.ajax({
-                    url: '/kasa/api/kategori/ekle',
+                    url: "{{ url_for('kasa.api_kategori_ekle') }}",
                     method: 'POST',
-                    data: { kategori_adi: kategoriAdi.trim() },
+                    contentType: 'application/json',
+                    data: JSON.stringify({ kategori_adi: kategoriAdi.trim() }),
                     success: function(response) {
                         if (response.success) {
-                            // Kategori başarıyla eklendi
                             alert('Kategori başarıyla eklendi!');
-                            // Sayfayı yenile
                             location.reload();
                         } else {
                             alert('Hata: ' + response.message);
                         }
                     },
                     error: function() {
-                        alert('Kategori eklenirken bir hata oluştu!');
+                        alert('Kategori eklenirken bir sunucu hatası oluştu!');
                     }
                 });
             }
         }
         
-        // Form validation
         document.addEventListener('DOMContentLoaded', function() {
+            const seciliTip = document.querySelector('input[name="tip"]:checked');
+            if (seciliTip) {
+                seciliTip.parentElement.classList.add('selected');
+            }
+
             const form = document.querySelector('form');
             form.addEventListener('submit', function(e) {
                 const tip = document.querySelector('input[name="tip"]:checked');
@@ -443,7 +457,7 @@
                 
                 if (!tip || !aciklama.trim() || !tutar) {
                     e.preventDefault();
-                    alert('Lütfen tüm gerekli alanları doldurun!');
+                    alert('Lütfen Tip, Açıklama ve Tutar alanlarını doldurun!');
                     return false;
                 }
                 

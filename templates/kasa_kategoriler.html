@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kategori Yönetimi - Güllü Ayakkabı</title>
+    <title>Kasa Kaydını Düzenle - Güllü Ayakkabı</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <style>
@@ -15,13 +15,13 @@
         }
         
         .container {
-            max-width: 1000px;
+            max-width: 800px;
             margin-top: 20px;
             padding: 0 15px;
         }
         
         .header-section {
-            background: linear-gradient(135deg, #667db6 0%, #0082c8 100%);
+            background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
             color: white;
             padding: 20px;
             border-radius: 10px;
@@ -35,104 +35,24 @@
             font-size: 1.8rem;
         }
         
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-        
-        .kategori-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .kategori-card {
+        .form-section {
             background: white;
+            padding: 30px;
             border-radius: 10px;
-            padding: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }
-        
-        .kategori-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .kategori-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        
-        .kategori-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #333;
-            margin: 0;
-        }
-        
-        .kategori-renk {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            border: 2px solid #ddd;
-        }
-        
-        .kategori-info {
-            color: #666;
-            font-size: 0.9rem;
-            margin-bottom: 15px;
-        }
-        
-        .kategori-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-        
-        .durum-badge {
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-        
-        .durum-aktif {
-            background: #d4edda;
-            color: #155724;
-        }
-        
-        .durum-pasif {
-            background: #f8d7da;
-            color: #721c24;
         }
         
         .btn {
             border-radius: 20px;
-            padding: 8px 20px;
+            padding: 10px 25px;
             font-size: 14px;
             transition: all 0.3s ease;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             border: none;
-            white-space: nowrap;
         }
         
         .btn:hover {
             transform: scale(1.05);
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
-            color: white;
-        }
-        
-        .btn-success {
-            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
-            color: white;
         }
         
         .btn-warning {
@@ -140,19 +60,37 @@
             color: white;
         }
         
-        .btn-danger {
-            background: linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%);
-            color: white;
-        }
-        
         .btn-secondary {
-            background: linear-gradient(135deg, #6c757d 0%, #adb5bd 100%);
+            background: linear-gradient(135deg, #757f9a 0%, #d7dde8 100%);
             color: white;
         }
         
-        .btn-sm {
-            padding: 5px 15px;
-            font-size: 12px;
+        .btn-info {
+            background: linear-gradient(135deg, #17a2b8 0%, #5bc0de 100%);
+            color: white;
+        }
+        
+        .form-control {
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            padding: 12px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: #6dd5ed;
+            box-shadow: 0 0 5px rgba(109, 213, 237, 0.5);
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .required {
+            color: #dc3545;
         }
         
         .flash-messages {
@@ -165,16 +103,98 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #666;
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
         }
         
-        .empty-state i {
-            font-size: 3rem;
+        .radio-option {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            justify-content: center;
+        }
+        
+        .radio-option:hover {
+            border-color: #6dd5ed;
+            background-color: #f8f9fa;
+        }
+        
+        .radio-option.selected {
+            border-color: #f7971e;
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .radio-option input[type="radio"] {
+            margin-right: 8px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        .kategori-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
             margin-bottom: 20px;
-            color: #ddd;
+            border-left: 4px solid #f7971e;
+        }
+        
+        .kategori-section h6 {
+            margin-bottom: 15px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .kategori-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+        }
+        
+        .kategori-input-group .form-control {
+            flex: 1;
+        }
+        
+        .kategori-input-group .btn {
+            white-space: nowrap;
+        }
+        
+        .kategori-listesi {
+            margin-top: 15px;
+        }
+        
+        .kategori-item {
+            display: inline-block;
+            background: #e9ecef;
+            color: #495057;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            margin: 3px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .kategori-item:hover {
+            background: #f7971e;
+            color: white;
+        }
+        
+        .kategori-item.selected {
+            background: #f7971e;
+            color: white;
         }
         
         /* Mobile Responsive Styles */
@@ -193,7 +213,20 @@
                 font-size: 1.5rem;
             }
             
-            .action-buttons {
+            .form-section {
+                padding: 20px;
+            }
+            
+            .radio-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .radio-option {
+                padding: 10px 15px;
+            }
+            
+            .form-actions {
                 flex-direction: column;
                 align-items: stretch;
             }
@@ -203,22 +236,17 @@
                 margin-bottom: 10px;
             }
             
-            .kategori-cards {
-                grid-template-columns: 1fr;
-                gap: 15px;
-            }
-            
-            .kategori-card {
-                padding: 15px;
-            }
-            
-            .kategori-actions {
+            .kategori-input-group {
                 flex-direction: column;
-                gap: 5px;
+                gap: 10px;
             }
             
-            .btn-sm {
+            .kategori-input-group .btn {
                 width: 100%;
+            }
+            
+            .kategori-section {
+                padding: 15px;
             }
         }
         
@@ -227,32 +255,29 @@
                 font-size: 1.3rem;
             }
             
-            .kategori-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-            
-            .kategori-title {
-                font-size: 1.1rem;
+            .form-section {
+                padding: 15px;
             }
             
             .btn {
                 font-size: 12px;
-                padding: 6px 15px;
+                padding: 8px 20px;
+            }
+            
+            .kategori-item {
+                font-size: 11px;
+                padding: 4px 10px;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="header-section">
-            <h1><i class="fas fa-tags"></i> Kategori Yönetimi</h1>
-            <p>Kasa kategorilerini yönetin</p>
+            <h1><i class="fas fa-edit"></i> Kasa Kaydını Düzenle</h1>
+            <p>Mevcut kasa kaydını güncelleyin</p>
         </div>
 
-        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="flash-messages">
@@ -268,70 +293,178 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Action Buttons -->
-        <div class="action-buttons">
-            <a href="{{ url_for('kasa.yeni_kategori') }}" class="btn btn-success">
-                <i class="fas fa-plus"></i> Yeni Kategori
-            </a>
-            <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Kasa Sayfasına Dön
-            </a>
-        </div>
+        <div class="form-section">
+            <form method="POST" action="{{ url_for('kasa.kasa_duzenle', kayit_id=kayit.id) }}" enctype="multipart/form-data">
+                
+                <div class="form-group">
+                    <label for="tip">Tip <span class="required">*</span></label>
+                    <div class="radio-group">
+                        <div class="radio-option {{ 'selected' if kayit.tip == 'gelir' else '' }}" onclick="selectRadio('gelir')">
+                            <input type="radio" id="gelir" name="tip" value="gelir" {{ 'checked' if kayit.tip == 'gelir' else '' }} required>
+                            <label for="gelir" class="mb-0">
+                                <i class="fas fa-arrow-up text-success"></i> Gelir
+                            </label>
+                        </div>
+                        <div class="radio-option {{ 'selected' if kayit.tip == 'gider' else '' }}" onclick="selectRadio('gider')">
+                            <input type="radio" id="gider" name="tip" value="gider" {{ 'checked' if kayit.tip == 'gider' else '' }} required>
+                            <label for="gider" class="mb-0">
+                                <i class="fas fa-arrow-down text-danger"></i> Gider
+                            </label>
+                        </div>
+                    </div>
+                </div>
 
-        <!-- Kategori Cards -->
-        {% if kategoriler %}
-        <div class="kategori-cards">
-            {% for kategori in kategoriler %}
-            <div class="kategori-card">
-                <div class="kategori-header">
-                    <h5 class="kategori-title">{{ kategori.kategori_adi }}</h5>
-                    <div class="kategori-renk" style="background-color: {{ kategori.renk }}"></div>
+                <div class="form-group">
+                    <label for="aciklama">Açıklama <span class="required">*</span></label>
+                    <textarea class="form-control" id="aciklama" name="aciklama" rows="3" 
+                              placeholder="Kasa kaydı hakkında açıklama..." required>{{ kayit.aciklama }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="tutar">Tutar (₺) <span class="required">*</span></label>
+                    <input type="number" class="form-control" id="tutar" name="tutar" 
+                           step="0.01" min="0.01" placeholder="0.00" value="{{ kayit.tutar }}" required>
                 </div>
                 
-                <div class="kategori-info">
-                    {% if kategori.aciklama %}
-                    <p class="mb-2">{{ kategori.aciklama }}</p>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                      <label>Yıl</label>
+                      <input type="number" name="yil" class="form-control" value="{{ kayit.yil }}">
+                    </div>
+                    <div class="form-group col-md-4">
+                      <label>Ay</label>
+                      <input type="number" name="ay" class="form-control" value="{{ kayit.ay }}" min="1" max="12">
+                    </div>
+                    <div class="form-group col-md-4">
+                      <label>Durum</label>
+                      <select name="durum" class="form-control">
+                        <option value="bekleyen" {{ 'selected' if kayit.durum=='bekleyen' else '' }}>Bekleyen</option>
+                        <option value="ödenen"  {{ 'selected' if kayit.durum=='ödenen'  else '' }}>Ödenen</option>
+                      </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Fiş Fotoğrafı (opsiyonel)</label>
+                    <input type="file" name="fis_foto" accept="image/*" class="form-control-file">
+                    {% if kayit and kayit.fis_yolu %}
+                      <small class="form-text text-muted">Mevcut Fiş: <a target="_blank" href="{{ url_for('kasa.serve_receipt', fname=kayit.fis_yolu) }}">Görüntüle</a></small>
+                    {% endif %}
+                </div>
+
+                <div class="kategori-section">
+                    <h6><i class="fas fa-tags"></i> Kategori</h6>
+                    
+                    {% if kategoriler %}
+                    <div class="form-group">
+                        <label for="kategori-listesi">Mevcut Kategoriler:</label>
+                        <div class="kategori-listesi">
+                            {% for k in kategoriler %}
+                            <span class="kategori-item {{ 'selected' if k.kategori_adi == kayit.kategori else '' }}" 
+                                  onclick="selectKategori('{{ k.kategori_adi }}', this)">
+                                {{ k.kategori_adi }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
                     {% endif %}
                     
-                    <div class="mb-2">
-                        <span class="durum-badge {{ 'durum-aktif' if kategori.aktif else 'durum-pasif' }}">
-                            {{ 'Aktif' if kategori.aktif else 'Pasif' }}
-                        </span>
+                    <div class="form-group">
+                        <label for="kategori">Kategori Seçin veya Yazın:</label>
+                        <div class="kategori-input-group">
+                            <input type="text" class="form-control" id="kategori" name="kategori" 
+                                   placeholder="Kategori adı (opsiyonel)" value="{{ kayit.kategori or '' }}" 
+                                   list="kategori-datalist">
+                            <datalist id="kategori-datalist">
+                                {% for k in kategoriler %}
+                                <option value="{{ k.kategori_adi }}">
+                                {% endfor %}
+                            </datalist>
+                            <button type="button" class="btn btn-info" onclick="hizliKategoriEkle()">
+                                <i class="fas fa-plus"></i> Yeni Kategori
+                            </button>
+                        </div>
                     </div>
-                    
-                    <small class="text-muted">
-                        Oluşturan: {{ kategori.olusturan_kullanici.first_name }} {{ kategori.olusturan_kullanici.last_name }}<br>
-                        Tarih: {{ kategori.olusturma_tarihi.strftime('%d.%m.%Y') }}
-                    </small>
                 </div>
-                
-                <div class="kategori-actions">
-                    <a href="{{ url_for('kasa.kategori_duzenle', kategori_id=kategori.id) }}" 
-                       class="btn btn-warning btn-sm">
-                        <i class="fas fa-edit"></i> Düzenle
+
+                <div class="form-actions">
+                    <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> İptal
                     </a>
-                    <form method="POST" action="{{ url_for('kasa.kategori_sil', kategori_id=kategori.id) }}" 
-                          class="d-inline" onsubmit="return confirm('Bu kategoriyi silmek istediğinizden emin misiniz?')">
-                        <button type="submit" class="btn btn-danger btn-sm">
-                            <i class="fas fa-trash"></i> Sil
-                        </button>
-                    </form>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save"></i> Güncelle
+                    </button>
                 </div>
-            </div>
-            {% endfor %}
+            </form>
         </div>
-        {% else %}
-        <div class="empty-state">
-            <i class="fas fa-tags"></i>
-            <h4>Henüz kategori bulunmamaktadır</h4>
-            <p>İlk kategoriyi oluşturmak için yukarıdaki "Yeni Kategori" butonuna tıklayın.</p>
-        </div>
-        {% endif %}
     </div>
 
-    <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+    <script>
+        function selectRadio(value) {
+            const radio = document.getElementById(value);
+            radio.checked = true;
+            
+            document.querySelectorAll('.radio-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            radio.parentElement.classList.add('selected');
+        }
+        
+        function selectKategori(kategoriAdi, element) {
+            document.getElementById('kategori').value = kategoriAdi;
+            
+            document.querySelectorAll('.kategori-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            element.classList.add('selected');
+        }
+        
+        function hizliKategoriEkle() {
+            const kategoriAdi = prompt('Yeni kategori adını girin:');
+            if (kategoriAdi && kategoriAdi.trim()) {
+                $.ajax({
+                    url: "{{ url_for('kasa.api_kategori_ekle') }}",
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ kategori_adi: kategoriAdi.trim() }),
+                    success: function(response) {
+                        if (response.success) {
+                            alert('Kategori başarıyla eklendi!');
+                            location.reload();
+                        } else {
+                            alert('Hata: ' + response.message);
+                        }
+                    },
+                    error: function() {
+                        alert('Kategori eklenirken bir sunucu hatası oluştu!');
+                    }
+                });
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form');
+            form.addEventListener('submit', function(e) {
+                const tip = document.querySelector('input[name="tip"]:checked');
+                const aciklama = document.getElementById('aciklama').value;
+                const tutar = document.getElementById('tutar').value;
+                
+                if (!tip || !aciklama.trim() || !tutar) {
+                    e.preventDefault();
+                    alert('Lütfen tüm gerekli alanları doldurun!');
+                    return false;
+                }
+                
+                if (parseFloat(tutar) <= 0) {
+                    e.preventDefault();
+                    alert('Tutar 0\'dan büyük olmalıdır!');
+                    return false;
+                }
+            });
+        });
+    </script>
 </body>
 </html>
