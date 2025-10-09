@@ -196,31 +196,31 @@
         <div class="stats-cards">
             <div class="stat-card gelir">
                 <h3><i class="fas fa-check-circle"></i> Toplam Gelir (Ödenen)</h3>
-                <div class="amount">{{ "%.2f"|format(toplam_gelir) }} ₺</div>
+                <div class="amount">{{ toplam_gelir | tl_format }} ₺</div>
                 <hr>
                 <div class="sub-info">
                     <small><i class="fas fa-hourglass-half"></i> Bekleyen Gelir</small>
-                    <div class="sub-amount">{{ "%.2f"|format(bekleyen_gelir) }} ₺</div>
+                    <div class="sub-amount">{{ bekleyen_gelir | tl_format }} ₺</div>
                 </div>
             </div>
 
             <div class="stat-card gider">
                 <h3><i class="fas fa-check-circle"></i> Toplam Gider (Ödenen)</h3>
-                <div class="amount">{{ "%.2f"|format(toplam_gider) }} ₺</div>
+                 <div class="amount">{{ toplam_gider | tl_format }} ₺</div>
                 <hr>
                 <div class="sub-info">
                     <small><i class="fas fa-hourglass-half"></i> Bekleyen Gider</small>
-                    <div class="sub-amount">{{ "%.2f"|format(bekleyen_gider) }} ₺</div>
+                    <div class="sub-amount">{{ bekleyen_gider | tl_format }} ₺</div>
                 </div>
             </div>
 
             <div class="stat-card net {{ 'positive' if net_durum >= 0 else '' }}">
                 <h3><i class="fas fa-balance-scale"></i> Net Durum (Ödenen)</h3>
-                <div class="amount">{{ "%.2f"|format(net_durum) }} ₺</div>
+                <div class="amount">{{ net_durum | tl_format }} ₺</div>
                 <hr>
                 <div class="sub-info">
                     <small><i class="fas fa-calculator"></i> Bekleyen Dahil Net Toplam</small>
-                    <div class="sub-amount">{{ "%.2f"|format(net_dahil_bekleyen) }} ₺</div>
+                    <div class="sub-amount">{{ net_dahil_bekleyen | tl_format }} ₺</div>
                 </div>
             </div>
         </div>
@@ -330,7 +330,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <strong>{{ "%.2f"|format(kayit.tutar) }} ₺</strong>
+                                <strong>{{ kayit.tutar | tl_format }} ₺</strong>
                             </td>
                             <td>{{ kayit.first_name }} {{ kayit.last_name }}</td>
                             <td>

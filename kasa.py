@@ -4,9 +4,44 @@ from datetime import datetime, timedelta
 from sqlalchemy import or_, and_, desc, func
 from login_logout import login_required, roles_required
 from werkzeug.utils import secure_filename
-import os, uuid
+import os, uuid, locale
 
 kasa_bp = Blueprint('kasa', __name__)
+
+
+# =================================================================
+# TÜRK LİRASI FORMATI İÇİN ÖZEL FİLTRE TANIMLAMA
+# =================================================================
+# Bu fonksiyon, Blueprint kaydedildikten sonra çalışır.
+@kasa_bp.record_once
+def setup_kasa_filters(state):
+    # 1. Yerel ayarları Türkçe'ye ayarla
+    try:
+        # Linux/Mac için daha yaygın
+        locale.setlocale(locale.LC_ALL, 'tr_TR.UTF-8') 
+    except locale.Error:
+        try:
+            # Windows için daha yaygın
+            locale.setlocale(locale.LC_ALL, 'Turkish_Turkey.1254')
+        except locale.Error:
+            # Yedek: Eğer yerel ayar desteklenmezse
+            state.app.logger.warning("Türkçe yerel ayar (locale) sistemde bulunamadı. Sayı formatı yanlış olabilir.")
+            locale.setlocale(locale.LC_ALL, '') 
+
+    def tl_format(value):
+        """
+        Sayıyı binlik ayraç olarak nokta ve ondalık ayraç olarak virgül kullanarak formatlar.
+        Örn: 50000.61 -> 50.000,61
+        """
+        # None gelirse 0.00 TL olarak göster
+        if value is None:
+            value = 0.00
+        # Para birimi sembolü olmadan formatlama yapıyoruz
+        return locale.format_string("%.2f", float(value), grouping=True) 
+
+    # Jinja2 ortamına bu filtreyi ekle
+    state.app.jinja_env.filters['tl_format'] = tl_format
+# =================================================================
 
 def month_bounds(yil:int, ay:int):
     bas = datetime(yil, ay, 1)
