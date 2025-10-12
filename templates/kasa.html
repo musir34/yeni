@@ -154,7 +154,6 @@
             font-weight: 600;
         }
         
-        /* Modal (açılır pencere) içindeki metinler için stiller */
         .modal-body h4 {
             color: #0082c8;
         }
@@ -305,8 +304,7 @@
                             <th>Tarih</th>
                             <th>Tip</th>
                             <th>Açıklama</th>
-                            <th>Kategori</th>
-                            <th>Tutar</th>
+                            <th>Tutar Bilgisi</th>
                             <th>Kullanıcı</th>
                             <th>Durum</th>
                             <th>İşlemler</th>
@@ -314,53 +312,60 @@
                     </thead>
                     <tbody>
                         {% for kayit in kayitlar %}
-                        <tr>
-                            <td>{{ kayit.tarih.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <tr id="kayit-{{ kayit.id }}">
                             <td>
-                                <span class="tip-{{ kayit.tip }}">
-                                    {{ kayit.tip.title() }}
+                                {{ kayit.tarih.strftime('%d.%m.%Y') }}
+                                <div id="odeme-detay-{{ kayit.id }}" class="text-muted small">
+                                    {% for odeme in kayit.odemeler %}
+                                        <div>Ödeme: {{ odeme.odeme_tarihi.strftime('%d.%m.%Y') }}</div>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="tip-{{ kayit.tip }}">{{ kayit.tip.title() }}</span>
+                            </td>
+                            <td>
+                                {{ kayit.aciklama }}
+                                {% if kayit.kategori %}<br><small class="text-muted">{{ kayit.kategori }}</small>{% endif %}
+                            </td>
+                            <td class="tutar-hucre">
+                                <strong>Toplam: {{ kayit.tutar | tl_format }} ₺</strong>
+                                <div class="text-success small">
+                                  Ödenen: <span id="odenen-tutar-{{ kayit.id }}">{{ kayit.odenen_tutar | tl_format }}</span> ₺
+                                </div>
+                                <div class="text-danger small">
+                                  Kalan: <span id="kalan-tutar-{{ kayit.id }}">{{ kayit.kalan_tutar | tl_format }}</span> ₺
+                                </div>
+                            </td>
+                            <td>
+                                {{ (kayit.kullanici.first_name ~ ' ' ~ kayit.kullanici.last_name).strip()
+                                   or kayit.kullanici.username
+                                   or kayit.kullanici.email }}
+                            </td>
+                            <td class="durum-hucre">
+                                <span id="durum-badge-{{ kayit.id }}" class="badge p-2
+                                    {% if kayit.durum.name == 'TAMAMLANDI' %}badge-success
+                                    {% elif kayit.durum.name == 'KISMI_ODENDI' %}badge-info
+                                    {% else %}badge-warning
+                                    {% endif %}">
+                                    {{ kayit.durum.value.title() }}
                                 </span>
                             </td>
-                            <td>{{ kayit.aciklama }}</td>
-                            <td>
-                                {% if kayit.kategori %}
-                                    <span class="kategori-tag">{{ kayit.kategori }}</span>
-                                {% else %}
-                                    <span class="text-muted">-</span>
+                            <td class="islem-hucre">
+                                {% if kayit.durum.name != 'TAMAMLANDI' %}
+                                <button id="odeme-btn-{{ kayit.id }}" type="button" class="btn btn-success btn-sm"
+                                        onclick="handleOdemeClick(this)"
+                                        data-id="{{ kayit.id }}"
+                                        data-aciklama="{{ kayit.aciklama }}"
+                                        data-tutar="{{ kayit.tutar }}"
+                                        data-kalan="{{ kayit.kalan_tutar }}">
+                                    Öde
+                                </button>
                                 {% endif %}
-                            </td>
-                            <td>
-                                <strong>{{ kayit.tutar | tl_format }} ₺</strong>
-                            </td>
-                            <td>{{ kayit.first_name }} {{ kayit.last_name }}</td>
-                            <td>
-                                {% if kayit.durum.value == 'bekleyen' %}
-                                    <span class="badge badge-warning" style="font-size:13px; vertical-align: middle;">Bekleyen</span>
-                                    <form action="{{ url_for('kasa.kasa_odendi', kayit_id=kayit.id) }}" method="post" class="d-inline ml-1">
-                                        <button class="btn btn-sm btn-success"
-                                                onclick="return confirm('Ödendi olarak işaretlemek istediğinizden emin misiniz?')">
-                                            Öde
-                                        </button>
-                                    </form>
-                                {% elif kayit.durum.value == 'ödenen' %}
-                                    <span class="badge badge-success" style="font-size:13px;">Ödendi</span>
-                                {% else %}
-                                    <span class="badge badge-secondary" style="font-size:13px;">{{ kayit.durum }}</span>
-                                {% endif %}
-
-                                {% if kayit.fis_yolu %}
-                                    <a class="btn btn-sm btn-info ml-1" target="_blank"
-                                    href="{{ url_for('kasa.serve_receipt', fname=kayit.fis_yolu) }}">Fiş</a>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <a href="{{ url_for('kasa.kasa_duzenle', kayit_id=kayit.id) }}" class="btn btn-warning btn-sm">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <form method="POST" action="{{ url_for('kasa.kasa_sil', kayit_id=kayit.id) }}" class="d-inline" onsubmit="return confirm('Bu kaydı silmek istediğinizden emin misiniz?')">
-                                    <button type="submit" class="btn btn-danger btn-sm">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                        
+                                <a href="{{ url_for('kasa.kasa_duzenle', kayit_id=kayit.id) }}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i></a>
+                                <form method="POST" action="{{ url_for('kasa.kasa_sil', kayit_id=kayit.id) }}" class="d-inline" onsubmit="return confirm('Emin misin?')">
+                                    <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
                                 </form>
                             </td>
                         </tr>
@@ -424,8 +429,118 @@
             </div>
         </div>
     </div>
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+    
+    <div class="modal fade" id="odemeModal" tabindex="-1" role="dialog" aria-labelledby="odemeModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="odemeModalLabel">Ödeme Yap</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Açıklama:</strong> <span id="modalAciklama"></span></p>
+                    <p><strong>Toplam Tutar:</strong> <span id="modalToplamTutar"></span> ₺</p>
+                    <p><strong>Kalan Tutar:</strong> <span id="modalKalanTutar"></span> ₺</p>
+                    <hr>
+                    <div class="form-group">
+                        <label for="odemeTutari">Ödenecek Tutar</label>
+                        <input type="number" class="form-control" id="odemeTutari" placeholder="0.00" step="0.01">
+                    </div>
+                    <div class="btn-group w-100">
+                        <button type="button" class="btn btn-info" onclick="document.getElementById('odemeTutari').value = parseFloat(document.getElementById('modalKalanTutar').innerText.replace(/\./g, '').replace(',', '.')) / 2;">Yarısını Öde</button>
+                        <button type="button" class="btn btn-success" onclick="document.getElementById('odemeTutari').value = document.getElementById('modalKalanTutar').innerText.replace(/\./g, '').replace(',', '.');">Tamamını Öde</button>
+                    </div>
+                    <input type="hidden" id="modalKasaId">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" onclick="submitOdeme()">Ödemeyi Onayla</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function handleOdemeClick(btn) {
+            const kasaId = btn.dataset.id;
+            const aciklama = btn.dataset.aciklama;
+            const toplamTutar = parseFloat(btn.dataset.tutar).toLocaleString('tr-TR', { minimumFractionDigits: 2 });
+            const kalanTutar = parseFloat(btn.dataset.kalan).toLocaleString('tr-TR', { minimumFractionDigits: 2 });
+        
+            document.getElementById('modalKasaId').value = kasaId;
+            document.getElementById('modalAciklama').innerText = aciklama;
+            document.getElementById('modalToplamTutar').innerText = toplamTutar;
+            document.getElementById('modalKalanTutar').innerText = kalanTutar;
+            document.getElementById('odemeTutari').value = '';
+            document.getElementById('odemeTutari').max = parseFloat(btn.dataset.kalan);
+        
+            $('#odemeModal').modal('show');
+        }
+        
+        async function submitOdeme() {
+            const kasaId = document.getElementById('modalKasaId').value;
+            const odemeTutari = document.getElementById('odemeTutari').value;
+        
+            if (!odemeTutari || parseFloat(odemeTutari) <= 0) {
+                alert('Lütfen geçerli bir ödeme tutarı girin.');
+                return;
+            }
+        
+            const response = await fetch("{{ url_for('kasa.api_odeme_yap') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    kasa_id: kasaId,
+                    odeme_tutari: odemeTutari
+                })
+            });
+        
+            const data = await response.json();
+        
+            if (!data.success) {
+              alert(data.message || 'Ödeme kaydedilemedi');
+              return;
+            }
+
+            const f = (n) => Number(n).toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+            const elOdenen = document.getElementById(`odenen-tutar-${kasaId}`);
+            const elKalan = document.getElementById(`kalan-tutar-${kasaId}`);
+            const elDurum = document.getElementById(`durum-badge-${kasaId}`);
+
+            if (elOdenen) elOdenen.textContent = f(data.toplam_odenen);
+            if (elKalan)  elKalan.textContent  = f(data.kalan_tutar);
+            if (elDurum) {
+                elDurum.textContent = data.yeni_durum.charAt(0).toUpperCase() + data.yeni_durum.slice(1).replace('_', ' ');
+                
+                elDurum.className = 'badge p-2 ';
+                if (data.yeni_durum_enum === 'TAMAMLANDI') {
+                    elDurum.classList.add('badge-success');
+                    const odemeBtn = document.getElementById(`odeme-btn-${kasaId}`);
+                    if (odemeBtn) odemeBtn.remove();
+                } else if (data.yeni_durum_enum === 'KISMI_ODENDI') {
+                    elDurum.classList.add('badge-info');
+                } else {
+                    elDurum.classList.add('badge-warning');
+                }
+            }
+
+            const odemeBtn = document.getElementById(`odeme-btn-${kasaId}`);
+            if (odemeBtn) {
+                odemeBtn.dataset.kalan = data.kalan_tutar;
+            }
+
+            $('#odemeModal').modal('hide');
+        }
+    </script>
+
 </body>
 </html>

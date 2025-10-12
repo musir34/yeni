@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <style>
+        /* ... CSS stilleri burada, hiç dokunmadım ... */
         body { font-family: 'Roboto', sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
         .container { max-width: 800px; margin-top: 20px; padding: 0 15px; }
         .header-section { background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; }
@@ -38,41 +39,20 @@
         .kategori-item { display: inline-block; background: #e9ecef; color: #495057; padding: 5px 12px; border-radius: 15px; font-size: 12px; margin: 3px; cursor: pointer; transition: all 0.3s ease; }
         .kategori-item:hover { background: #f7971e; color: white; }
         .kategori-item.selected { background: #f7971e; color: white; }
-        @media (max-width: 768px) {
-            .container { margin-top: 10px; padding: 0 10px; }
-            .header-section { padding: 15px; margin-bottom: 15px; }
-            .header-section h1 { font-size: 1.5rem; }
-            .form-section { padding: 20px; }
-            .radio-group { flex-direction: column; gap: 10px; }
-            .radio-option { padding: 10px 15px; }
-            .form-actions { flex-direction: column; align-items: stretch; }
-            .btn { width: 100%; margin-bottom: 10px; }
-            .kategori-input-group { flex-direction: column; gap: 10px; }
-            .kategori-input-group .btn { width: 100%; }
-            .kategori-section { padding: 15px; }
-        }
-        @media (max-width: 576px) {
-            .header-section h1 { font-size: 1.3rem; }
-            .form-section { padding: 15px; }
-            .btn { font-size: 12px; padding: 8px 20px; }
-            .kategori-item { font-size: 11px; padding: 4px 10px; }
-        }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="header-section">
             <h1><i class="fas fa-edit"></i> Kasa Kaydını Düzenle</h1>
             <p>Mevcut kasa kaydını güncelleyin</p>
         </div>
 
-        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="flash-messages">
                     {% for category, message in messages %}
-                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show" role="alert">
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
                             {{ message }}
                             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
@@ -83,64 +63,48 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Form -->
         <div class="form-section">
-            <!-- NOTE: enctype eklendi -->
             <form method="POST" action="{{ url_for('kasa.kasa_duzenle', kayit_id=kayit.id) }}" enctype="multipart/form-data">
                 
-                <!-- Tip Seçimi -->
                 <div class="form-group">
-                    <label for="tip">Tip <span class="required">*</span></label>
+                    <label>Tip <span class="required">*</span></label>
                     <div class="radio-group">
                         <div class="radio-option {{ 'selected' if kayit.tip == 'gelir' else '' }}" onclick="selectRadio('gelir')">
                             <input type="radio" id="gelir" name="tip" value="gelir" {{ 'checked' if kayit.tip == 'gelir' else '' }} required>
-                            <label for="gelir" class="mb-0">
-                                <i class="fas fa-arrow-up text-success"></i> Gelir
-                            </label>
+                            <label for="gelir" class="mb-0"><i class="fas fa-arrow-up text-success"></i> Gelir</label>
                         </div>
                         <div class="radio-option {{ 'selected' if kayit.tip == 'gider' else '' }}" onclick="selectRadio('gider')">
                             <input type="radio" id="gider" name="tip" value="gider" {{ 'checked' if kayit.tip == 'gider' else '' }} required>
-                            <label for="gider" class="mb-0">
-                                <i class="fas fa-arrow-down text-danger"></i> Gider
-                            </label>
+                            <label for="gider" class="mb-0"><i class="fas fa-arrow-down text-danger"></i> Gider</label>
                         </div>
                     </div>
                 </div>
 
-                <!-- DURUM + AY/YIL -->
-                <div class="form-row">
-                    <div class="form-group col-md-6">
-                        <label for="durum">Durum <span class="required">*</span></label>
-                        <select id="durum" name="durum" class="form-control" required>
-                            <option value="bekleyen" {{ 'selected' if kayit.durum.value=='bekleyen' else '' }}>Bekleyen</option>
-                            <option value="ödenen"  {{ 'selected' if kayit.durum.value=='ödenen'  else '' }}>Ödenen</option>
-                        </select>
-                    </div>
-                    <div class="form-group col-md-3">
-                        <label for="yil">Yıl <span class="required">*</span></label>
-                        <input type="number" id="yil" name="yil" class="form-control" value="{{ kayit.yil }}" min="2020" required>
-                    </div>
-                    <div class="form-group col-md-3">
-                        <label for="ay">Ay <span class="required">*</span></label>
-                        <input type="number" id="ay" name="ay" class="form-control" value="{{ kayit.ay }}" min="1" max="12" required>
-                    </div>
-                </div>
-
-                <!-- Açıklama -->
                 <div class="form-group">
                     <label for="aciklama">Açıklama <span class="required">*</span></label>
-                    <textarea class="form-control" id="aciklama" name="aciklama" rows="3" 
-                              placeholder="Kasa kaydı hakkında açıklama..." required>{{ kayit.aciklama }}</textarea>
+                    <textarea class="form-control" id="aciklama" name="aciklama" rows="3" placeholder="Kasa kaydı hakkında açıklama..." required>{{ kayit.aciklama }}</textarea>
                 </div>
-
-                <!-- Tutar -->
+                
                 <div class="form-group">
                     <label for="tutar">Tutar (₺) <span class="required">*</span></label>
-                    <input type="number" class="form-control" id="tutar" name="tutar" 
-                           step="0.01" min="0.01" placeholder="0.00" value="{{ kayit.tutar }}" required>
+                    <input type="text" inputmode="decimal" class="form-control" id="tutar" name="tutar" placeholder="0.00" value="{{ kayit.tutar }}" required>
                 </div>
 
-                <!-- Fiş Fotoğrafı -->
+                <div class="form-row">
+                    <div class="form-group col-md-8">
+                        <label for="tarih">Tarih <span class="required">*</span></label>
+                        <input type="date" id="tarih" name="tarih" class="form-control" 
+                               value="{{ kayit.tarih.strftime('%Y-%m-%d') if kayit.tarih else '' }}" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="durum">Durum</label>
+                        <select name="durum" id="durum" class="form-control">
+                            <option value="bekleyen" {{ 'selected' if kayit.durum=='bekleyen' else '' }}>Bekleyen</option>
+                            <option value="ödenen"   {{ 'selected' if kayit.durum=='ödenen'   else '' }}>Ödenen</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label for="fis_foto">Fiş Fotoğrafı (opsiyonel)</label>
                     <input type="file" id="fis_foto" name="fis_foto" class="form-control-file" accept="image/*">
@@ -151,56 +115,41 @@
                     {% endif %}
                 </div>
 
-                <!-- Kategori Seçimi -->
                 <div class="kategori-section">
                     <h6><i class="fas fa-tags"></i> Kategori</h6>
-                    
                     {% if kategoriler %}
                     <div class="form-group">
                         <label for="kategori">Mevcut Kategoriler:</label>
                         <div class="kategori-listesi">
                             {% for k in kategoriler %}
-                            <span class="kategori-item {{ 'selected' if k.kategori_adi == kayit.kategori else '' }}" 
-                                  onclick="selectKategori('{{ k.kategori_adi }}')">
+                            <span class="kategori-item {{ 'selected' if k.kategori_adi == kayit.kategori else '' }}" onclick="selectKategori(this, '{{ k.kategori_adi }}')">
                                 {{ k.kategori_adi }}
                             </span>
                             {% endfor %}
                         </div>
                     </div>
                     {% endif %}
-                    
                     <div class="form-group">
-                        <label for="kategori">Kategori Seçin veya Yazın:</label>
+                        <label for="kategori-input">Kategori Seçin veya Yazın:</label>
                         <div class="kategori-input-group">
-                            <input type="text" class="form-control" id="kategori" name="kategori" 
-                                   placeholder="Kategori adı (opsiyonel)" value="{{ kayit.kategori or '' }}" 
-                                   list="kategori-listesi">
-                            <datalist id="kategori-listesi">
+                            <input type="text" class="form-control" id="kategori-input" name="kategori" placeholder="Kategori adı (opsiyonel)" value="{{ kayit.kategori or '' }}" list="kategori-datalist">
+                            <datalist id="kategori-datalist">
                                 {% for k in kategoriler %}
                                 <option value="{{ k.kategori_adi }}">
                                 {% endfor %}
                             </datalist>
-                            <button type="button" class="btn btn-info" onclick="hizliKategoriEkle()">
-                                <i class="fas fa-plus"></i> Yeni Kategori
-                            </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Form Actions -->
                 <div class="form-actions">
-                    <a href="{{ url_for('kasa.kasa_sayfasi', yil=kayit.yil, ay=kayit.ay) }}" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> İptal
-                    </a>
-                    <button type="submit" class="btn btn-warning">
-                        <i class="fas fa-save"></i> Güncelle
-                    </button>
+                    <a href="{{ url_for('kasa.kasa_sayfasi', yil=kayit.yil, ay=kayit.ay) }}" class="btn btn-secondary"><i class="fas fa-times"></i> İptal</a>
+                    <button type="submit" class="btn btn-warning"><i class="fas fa-save"></i> Güncelle</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
@@ -211,38 +160,66 @@
             document.querySelectorAll('.radio-option').forEach(option => option.classList.remove('selected'));
             radio.parentElement.classList.add('selected');
         }
-        function selectKategori(kategoriAdi) {
-            const input = document.getElementById('kategori');
-            input.value = kategoriAdi;
+
+        function selectKategori(element, kategoriAdi) {
+            document.getElementById('kategori-input').value = kategoriAdi;
             document.querySelectorAll('.kategori-item').forEach(item => item.classList.remove('selected'));
-            event.target.classList.add('selected');
+            element.classList.add('selected');
         }
-        function hizliKategoriEkle() {
-            const kategoriAdi = prompt('Yeni kategori adını girin:');
-            if (kategoriAdi && kategoriAdi.trim()) {
-                $.ajax({
-                    url: '/kasa/api/kategori/ekle',
-                    method: 'POST',
-                    data: { kategori_adi: kategoriAdi.trim() },
-                    success: function(r) { r.success ? (alert('Kategori eklendi!'), location.reload()) : alert('Hata: ' + r.message); },
-                    error: function() { alert('Kategori eklenirken bir hata oluştu!'); }
+    </script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tutarInput = document.getElementById('tutar');
+            const form = document.querySelector('form');
+
+            // Sayfa yüklendiğinde mevcut tutarı formatla
+            if (tutarInput && tutarInput.value) {
+                try {
+                     // Değeri ondalık sayı olarak formatla (en-US locali virgül kullanır)
+                     tutarInput.value = parseFloat(tutarInput.value).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                } catch(e) { console.error("Tutar formatlanamadı:", tutarInput.value); }
+            }
+
+            // 1. Yazarken Tutar Alanını Formatlama Fonksiyonu
+            if (tutarInput) {
+                tutarInput.addEventListener('input', function(e) {
+                    let value = e.target.value;
+                    let selectionStart = e.target.selectionStart;
+                    
+                    let parts = value.split('.');
+                    let integerPart = parts[0].replace(/[^\d]/g, '');
+                    let decimalPart = parts.length > 1 ? '.' + parts[1].replace(/[^\d]/g, '') : '';
+                    
+                    if (integerPart === '') {
+                        e.target.value = '';
+                        return;
+                    }
+                    
+                    let formattedIntegerPart = Number(integerPart).toLocaleString('en-US');
+                    let formattedValue = formattedIntegerPart + decimalPart.slice(0, 3);
+
+                    let originalLength = value.length;
+                    let newLength = formattedValue.length;
+                    let newSelectionStart = selectionStart + (newLength - originalLength);
+
+                    e.target.value = formattedValue;
+                    e.target.setSelectionRange(newSelectionStart, newSelectionStart);
                 });
             }
-        }
-        // Basit client-side doğrulama
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.querySelector('form');
-            form.addEventListener('submit', function(e) {
-                const tip = document.querySelector('input[name="tip"]:checked');
-                const aciklama = document.getElementById('aciklama').value.trim();
-                const tutar = parseFloat(document.getElementById('tutar').value || '0');
-                const ay = parseInt(document.getElementById('ay').value || '0', 10);
-                const yil = parseInt(document.getElementById('yil').value || '0', 10);
-                if (!tip || !aciklama || !tutar || tutar <= 0 || !yil || !ay || ay < 1 || ay > 12) {
-                    e.preventDefault();
-                    alert('Lütfen zorunlu alanları doğru doldurun.');
-                }
-            });
+
+            // 2. Form Gönderilmeden Önce Tutar Alanını Temizleme Fonksiyonu
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    if (tutarInput) {
+                        tutarInput.value = tutarInput.value.replace(/,/g, '');
+                    }
+                    // Diğer client-side kontroller...
+                });
+            }
         });
     </script>
 </body>

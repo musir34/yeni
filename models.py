@@ -16,14 +16,29 @@ from sqlalchemy import func
 # models.py (EN ÜSTE ek importlar)
 from enum import Enum
 from sqlalchemy import Enum as SqlEnum
+from sqlalchemy.ext.hybrid import hybrid_property
+import enum
 
 
 db = SQLAlchemy()
 
-# models.py (importların hemen altına)
-class KasaDurum(Enum):
-    bekleyen = "bekleyen"
-    odenen   = "ödenen"
+
+# Bu Enum'ı ve Odeme modelini Kasa modelinden ÖNCE ekle
+class KasaDurum(enum.Enum):
+    ODENMEDI = 'ödenmedi'
+    KISMI_ODENDI = 'kısmi ödendi'
+    TAMAMLANDI = 'tamamlandı'
+
+class Odeme(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    kasa_id = db.Column(db.Integer, db.ForeignKey('kasa.id'), nullable=False)
+    tutar = db.Column(db.Numeric(10, 2), nullable=False)
+    odeme_tarihi = db.Column(db.DateTime, default=datetime.now)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    def __repr__(self):
+        return f'<Odeme {self.id} - {self.tutar}>'
+
 
 # models.py içine ekle
 class UretimSecimPreset(db.Model):
@@ -742,42 +757,36 @@ class UserLog(db.Model):
     # İlişki
     user = db.relationship('User', backref=db.backref('logs', lazy='dynamic')) # lazy='dynamic' çok sayıda log varsa performansı artırır
 
-# Kasa modeli - Gelir ve gider kayıtları
-# Kasa modeli - Gelir ve gider kayıtları
+# Mevcut Kasa modelini silip bunu yapıştır
 class Kasa(db.Model):
-    __tablename__ = 'kasa'
     id = db.Column(db.Integer, primary_key=True)
-    tip = db.Column(db.String(50), nullable=False)  # 'gelir' veya 'gider'
-    aciklama = db.Column(db.Text, nullable=False)
-    tutar = db.Column(db.Float, nullable=False)
-    tarih = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    tip = db.Column(db.String(10), nullable=False) # gelir, gider
+    aciklama = db.Column(db.String(255), nullable=False)
+    tutar = db.Column(db.Numeric(10, 2), nullable=False) # Bu artık BORCUN/ALACAĞIN TOPLAM TUTARI
+    kategori = db.Column(db.String(100))
+    tarih = db.Column(db.DateTime, default=datetime.now)
     kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    kategori = db.Column(db.String(100), nullable=True, index=True)
+    fis_yolu = db.Column(db.String(255))
 
-    # >>> YENİ ALANLAR <<<
-    durum = db.Column(
-        SqlEnum(
-            KasaDurum, 
-            name="kasadurum",
-            native_enum=True,  # PostgreSQL'in kendi ENUM tipini kullanmaya zorla
-            values_callable=lambda obj: [e.value for e in obj]  # İsimleri değil, DEĞERLERİ ('ödenen') kullan
-        ),
-        nullable=False,
-        default=KasaDurum.bekleyen,
-        index=True
-    ) # bekleyen | ödenen
+    # DURUM ARTIK ENUM OLDU
+    durum = db.Column(db.Enum(KasaDurum, native_enum=False), default=KasaDurum.ODENMEDI, nullable=False)
 
-    yil = db.Column(db.Integer, nullable=False, default=lambda: datetime.utcnow().year, index=True)
-    ay  = db.Column(db.Integer, nullable=False, default=lambda: datetime.utcnow().month, index=True)
+    # YENİ: Ödemelerle ilişki kuruyoruz
+    odemeler = db.relationship('Odeme', backref='kasa_kaydi', lazy='dynamic', cascade="all, delete-orphan")
 
-    # Fiş/irsaliye fotoğraf yolu (uploads/receipts/...)
-    fis_yolu = db.Column(db.String(255), nullable=True)
+    kullanici = db.relationship('User', backref=db.backref('kasa_kayitlari', lazy='dynamic'))
 
-    # Relationship to User model
-    kullanici = db.relationship('User', backref='kasa_kayitlari')
+    # Bu iki fonksiyon, ödenen ve kalan tutarı bizim için otomatik hesaplar
+    @hybrid_property
+    def odenen_tutar(self):
+        return sum(odeme.tutar for odeme in self.odemeler)
+
+    @hybrid_property
+    def kalan_tutar(self):
+        return self.tutar - self.odenen_tutar
 
     def __repr__(self):
-        return f"<Kasa {self.tip} {self.durum.value}: {self.tutar} TL ({self.ay}/{self.yil})>"
+        return f'<Kasa {self.id} - {self.aciklama}>'
 
 
 
