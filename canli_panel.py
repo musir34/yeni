@@ -840,6 +840,7 @@ def ozet_json():
 
         kartlar.sort(key=lambda k:(k.get("iade_uyari",False), k.get("toplam_iade",0), k.get("toplam_net_satis",0)), reverse=True)
         genel_ortalama_fiyat = round((toplam_net_tutar_all / toplam_adet_all), 2) if toplam_adet_all > 0 else 0.0
+        toplam_ciro = round(toplam_net_tutar_all, 2)  # Toplam NET ciro
 
         _info("ozet_json: done", cards=len(kartlar), ms=_dt_ms(t0))
         return jsonify({
@@ -849,6 +850,7 @@ def ozet_json():
             "toplam_net_satis": toplam_net_satis,
             "toplam_siparis_sayisi": _count_orders_between_distinct(start_ist, end_ist),
             "genel_ortalama_fiyat": genel_ortalama_fiyat,        # NET
+            "toplam_ciro": toplam_ciro,                          # Toplam NET ciro
             "kartlar": kartlar
         })
     except Exception:
@@ -907,7 +909,7 @@ def akis_sse():
                             if net is not None and sat>0: rec["net_tutar"]+=float(net); rec["tutarli_adet"]+=sat
 
                     now_tr=datetime.now(IST); hours=max(1.0, now_tr.hour + now_tr.minute/60.0)
-                    kartlar=[]; toplam_net_satis=0
+                    kartlar=[]; toplam_net_satis=0; toplam_net_tutar_sse=0.0
 
                     if group_by_barcode:
                         for bc, rec in grp.items():
@@ -916,6 +918,7 @@ def akis_sse():
                             s=rec["siparis"]; r=rec["iade"]; n_adet=rec["net_adet"]
                             k=rec["stok"];    nt=rec["net_tutar"]; qa=rec["tutarli_adet"]
                             toplam_net_satis += n_adet
+                            toplam_net_tutar_sse += nt
                             iade_oran=(r/s) if s>0 else 0.0
                             ort_net=(nt/qa) if qa>0 else 0.0
                             iade_uyari=(iade_oran>=IADE_UYARI_ORAN)
@@ -940,6 +943,7 @@ def akis_sse():
                                 top_sat+=s; top_iade+=r; top_net_adet+=n_adet; top_stok+=k; top_net_tutar+=nt; top_tutarli_adet+=qa
                                 detay.append({"beden":beden,"siparis":s,"iade":r,"net":n_adet,"stok":k})
                             toplam_net_satis+=top_net_adet
+                            toplam_net_tutar_sse+=top_net_tutar
                             iade_oran=(top_iade/top_sat) if top_sat>0 else 0.0
                             ort_net=(top_net_tutar/top_tutarli_adet) if top_tutarli_adet>0 else 0.0
                             iade_uyari=(iade_oran>=IADE_UYARI_ORAN)
@@ -953,11 +957,13 @@ def akis_sse():
                             })
 
                     kartlar.sort(key=lambda k:(k.get("iade_uyari",False),k.get("toplam_iade",0),k.get("toplam_net_satis",0)), reverse=True)
+                    toplam_ciro_sse = round(toplam_net_tutar_sse, 2)
                     payload={
                         "guncellendi": now_tr_str(),
                         "group": ("barcode" if group_by_barcode else "model"),
                         "toplam_net_satis": toplam_net_satis,
                         "toplam_siparis_sayisi": _count_orders_between_distinct(start_ist,end_ist),
+                        "toplam_ciro": toplam_ciro_sse,
                         "kartlar": kartlar
                     }
                     _info("SSE: loop done", cards=len(kartlar), net=toplam_net_satis, uniq=len(barcodes), ms=_dt_ms(loop_t0))

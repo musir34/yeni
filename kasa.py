@@ -15,13 +15,15 @@ kasa_bp = Blueprint('kasa', __name__)
 
 def _parse_durum_input(raw: str):
     if not raw:
-        return KasaDurum.ODENMEDI
+        return None  # Tümü için None döndür
     s = raw.strip().lower().replace('ö','o')
     if s in ('odenen','tamamlandi'):
         return KasaDurum.TAMAMLANDI
     if s in ('kismi_odendi','kismi odendi','kısmi_ödendi','kısmi odendi'):
         return KasaDurum.KISMI_ODENDI
-    return KasaDurum.ODENMEDI
+    if s in ('bekleyen','odenmedi'):
+        return KasaDurum.ODENMEDI
+    return None
 
 # ============================== #
 #   ÖDEME – API (JSON POST)      #
@@ -162,8 +164,6 @@ def kasa_sayfasi():
     tip = request.args.get('tip', '')
     arama = request.args.get('arama', '')
     durum = request.args.get('durum', '')
-    sayfa = request.args.get('sayfa', 1, type=int)
-    sayfa_boyutu = 20
 
     # 🔧 Sadece Kasa modelini döndür (template: kayit.kalan_tutar vs. çalışsın)
     base = (
@@ -192,7 +192,9 @@ def kasa_sayfasi():
         base = base.filter(Kasa.tip == tip)
 
     if durum:
-        base = base.filter(Kasa.durum == _parse_durum_input(durum))
+        parsed_durum = _parse_durum_input(durum)
+        if parsed_durum is not None:
+            base = base.filter(Kasa.durum == parsed_durum)
 
     if arama:
         base = base.filter(or_(
@@ -203,10 +205,9 @@ def kasa_sayfasi():
         ))
 
     toplam_kayit = base.count()
+    # Tüm kayıtları getir (sayfalama yok)
     kayitlar = (base
                 .order_by(desc(Kasa.tarih))
-                .offset((sayfa - 1) * sayfa_boyutu)
-                .limit(sayfa_boyutu)
                 .all())
 
     # ÖDENEN – Odeme join'leri
@@ -239,7 +240,6 @@ def kasa_sayfasi():
     )
 
     net_dahil_bekleyen = (odenen_gelir + bekleyen_gelir) - (odenen_gider + bekleyen_gider)
-    toplam_sayfa = (toplam_kayit + sayfa_boyutu - 1) // sayfa_boyutu
 
     return render_template(
         'kasa.html',
@@ -250,8 +250,6 @@ def kasa_sayfasi():
         bekleyen_gelir=bekleyen_gelir,
         bekleyen_gider=bekleyen_gider,
         net_dahil_bekleyen=net_dahil_bekleyen,
-        sayfa=sayfa,
-        toplam_sayfa=toplam_sayfa,
         toplam_kayit=toplam_kayit,
         baslangic_tarihi=baslangic_tarihi,
         bitis_tarihi=bitis_tarihi,
