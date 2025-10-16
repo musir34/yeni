@@ -92,15 +92,17 @@
 
                 <div class="form-row">
                     <div class="form-group col-md-8">
-                        <label for="tarih">Tarih <span class="required">*</span></label>
-                        <input type="date" id="tarih" name="tarih" class="form-control" 
-                               value="{{ kayit.tarih.strftime('%Y-%m-%d') if kayit.tarih else '' }}" required>
+                        <label for="tarih">Tarih ve Saat <span class="required">*</span></label>
+                        <input type="datetime-local" id="tarih" name="tarih" class="form-control" 
+                               value="{{ kayit.tarih.strftime('%Y-%m-%dT%H:%M') if kayit.tarih else '' }}" required>
+                        <small class="form-text text-muted">Tarih ve saat seçin</small>
                     </div>
                     <div class="form-group col-md-4">
                         <label for="durum">Durum</label>
                         <select name="durum" id="durum" class="form-control">
-                            <option value="bekleyen" {{ 'selected' if kayit.durum=='bekleyen' else '' }}>Bekleyen</option>
-                            <option value="ödenen"   {{ 'selected' if kayit.durum=='ödenen'   else '' }}>Ödenen</option>
+                            <option value="bekleyen" {{ 'selected' if kayit.durum.name == 'ODENMEDI' else '' }}>Bekleyen</option>
+                            <option value="kismi_odendi" {{ 'selected' if kayit.durum.name == 'KISMI_ODENDI' else '' }}>Kısmi Ödendi</option>
+                            <option value="ödenen" {{ 'selected' if kayit.durum.name == 'TAMAMLANDI' else '' }}>Ödenen</option>
                         </select>
                     </div>
                 </div>
@@ -173,41 +175,52 @@
             const tutarInput = document.getElementById('tutar');
             const form = document.querySelector('form');
 
-            // Sayfa yüklendiğinde mevcut tutarı formatla
+            // Sayfa yüklendiğinde mevcut tutarı Türkçe formatla
             if (tutarInput && tutarInput.value) {
                 try {
-                     // Değeri ondalık sayı olarak formatla (en-US locali virgül kullanır)
-                     tutarInput.value = parseFloat(tutarInput.value).toLocaleString('en-US', {
+                     tutarInput.value = parseFloat(tutarInput.value).toLocaleString('tr-TR', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
                     });
                 } catch(e) { console.error("Tutar formatlanamadı:", tutarInput.value); }
             }
 
-            // 1. Yazarken Tutar Alanını Formatlama Fonksiyonu
+            // 1. Yazarken Tutar Alanını Formatlama Fonksiyonu (Türkçe format: 1.000,00)
             if (tutarInput) {
                 tutarInput.addEventListener('input', function(e) {
-                    let value = e.target.value;
-                    let selectionStart = e.target.selectionStart;
+                    let inputValue = e.target.value;
                     
-                    let parts = value.split('.');
-                    let integerPart = parts[0].replace(/[^\d]/g, '');
-                    let decimalPart = parts.length > 1 ? '.' + parts[1].replace(/[^\d]/g, '') : '';
+                    // Tüm formatları temizle, sadece rakamları al
+                    let cleanValue = inputValue.replace(/[^\d,]/g, ''); // Sadece rakam ve virgül
                     
-                    if (integerPart === '') {
+                    // Virgülden sonraki kısmı ayır (ondalık)
+                    let hasComma = cleanValue.includes(',');
+                    let parts = cleanValue.split(',');
+                    let integerPart = parts[0];
+                    let decimalPart = parts.length > 1 ? parts[1].slice(0, 2) : ''; // Max 2 basamak
+                    
+                    if (!integerPart) {
                         e.target.value = '';
                         return;
                     }
                     
-                    let formattedIntegerPart = Number(integerPart).toLocaleString('en-US');
-                    let formattedValue = formattedIntegerPart + decimalPart.slice(0, 3);
-
-                    let originalLength = value.length;
-                    let newLength = formattedValue.length;
-                    let newSelectionStart = selectionStart + (newLength - originalLength);
-
-                    e.target.value = formattedValue;
-                    e.target.setSelectionRange(newSelectionStart, newSelectionStart);
+                    // Binlik ayırıcı ekle (tam sayı kısmına)
+                    let formatted = '';
+                    let counter = 0;
+                    for (let i = integerPart.length - 1; i >= 0; i--) {
+                        if (counter > 0 && counter % 3 === 0) {
+                            formatted = '.' + formatted;
+                        }
+                        formatted = integerPart[i] + formatted;
+                        counter++;
+                    }
+                    
+                    // Ondalık kısmı ekle
+                    if (hasComma || decimalPart) {
+                        formatted += ',' + decimalPart;
+                    }
+                    
+                    e.target.value = formatted;
                 });
             }
 
@@ -215,9 +228,9 @@
             if (form) {
                 form.addEventListener('submit', function(e) {
                     if (tutarInput) {
-                        tutarInput.value = tutarInput.value.replace(/,/g, '');
+                        // Türkçe formatı temizle: "1.000,50" -> "1000.50"
+                        tutarInput.value = tutarInput.value.replace(/\./g, '').replace(',', '.');
                     }
-                    // Diğer client-side kontroller...
                 });
             }
         });

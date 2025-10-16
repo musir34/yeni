@@ -120,8 +120,18 @@ def setup_kasa_filters(state):
     def tl_format(value):
         if value is None:
             value = 0.0
-        formatted_number = f"{float(value):,.2f}"
-        return f"{formatted_number} ₺"
+        # Türkçe format: 1.000.000,00
+        try:
+            from decimal import Decimal
+            if isinstance(value, Decimal):
+                value = float(value)
+            # Intl.NumberFormat benzeri Türkçe format
+            formatted = "{:,.2f}".format(float(value))
+            # Binlik ayırıcıyı nokta, ondalık ayırıcıyı virgül yap
+            formatted = formatted.replace(',', 'TEMP').replace('.', ',').replace('TEMP', '.')
+            return formatted
+        except:
+            return "0,00"
 
     state.app.jinja_env.filters['tl_format'] = tl_format
 
@@ -302,9 +312,14 @@ def yeni_kasa_kaydi():
 
         tarih_str = request.form.get('tarih')
         try:
-            secilen_tarih = datetime.strptime(tarih_str, '%Y-%m-%d')
+            # Önce datetime-local formatını dene (YYYY-MM-DDTHH:MM)
+            secilen_tarih = datetime.strptime(tarih_str, '%Y-%m-%dT%H:%M')
         except (ValueError, TypeError):
-            secilen_tarih = datetime.now()
+            try:
+                # Eski format (sadece tarih) için fallback
+                secilen_tarih = datetime.strptime(tarih_str, '%Y-%m-%d')
+            except (ValueError, TypeError):
+                secilen_tarih = datetime.now()
 
         durum_raw = request.form.get('durum') or ''
         kayit_durumu = _parse_durum_input(durum_raw)
@@ -345,7 +360,20 @@ def yeni_kasa_kaydi():
         )
         try:
             db.session.add(yeni_kayit)
+            db.session.flush()  # ID'yi almak için flush
+            
+            # Eğer durum "Ödenen" ise, otomatik ödeme kaydı oluştur
+            if kayit_durumu == KasaDurum.TAMAMLANDI:
+                otomatik_odeme = Odeme(
+                    kasa_id=yeni_kayit.id,
+                    tutar=Decimal(str(tutar)),
+                    odeme_tarihi=secilen_tarih,  # Ekleme tarihi ile aynı
+                    kullanici_id=session.get('user_id')
+                )
+                db.session.add(otomatik_odeme)
+            
             db.session.commit()
+            flash('Kayıt başarıyla eklendi!', 'success')
             return redirect(url_for('kasa.kasa_sayfasi', yil=secilen_tarih.year, ay=secilen_tarih.month))
         except Exception as e:
             db.session.rollback()
@@ -353,7 +381,8 @@ def yeni_kasa_kaydi():
             return redirect(url_for('kasa.yeni_kasa_kaydi'))
 
     kategoriler = KasaKategori.query.filter_by(aktif=True).order_by(KasaKategori.kategori_adi).all()
-    today_str = datetime.now().strftime('%Y-%m-%d')
+    # datetime-local format: YYYY-MM-DDTHH:MM
+    today_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
     return render_template('kasa_yeni.html', kategoriler=kategoriler, default_tarih=today_str)
 
 
@@ -366,6 +395,8 @@ def yeni_kasa_kaydi():
 def kasa_duzenle(kayit_id):
     kayit = Kasa.query.get_or_404(kayit_id)
     if request.method == 'POST':
+        eski_durum = kayit.durum
+        
         kayit.tip = request.form.get('tip')
         kayit.aciklama = request.form.get('aciklama')
         tutar_str = (request.form.get('tutar') or '0').replace(',', '')
@@ -374,14 +405,36 @@ def kasa_duzenle(kayit_id):
 
         tarih_str = request.form.get('tarih')
         try:
-            secilen_tarih = datetime.strptime(tarih_str, '%Y-%m-%d')
+            # Önce datetime-local formatını dene (YYYY-MM-DDTHH:MM)
+            secilen_tarih = datetime.strptime(tarih_str, '%Y-%m-%dT%H:%M')
         except (ValueError, TypeError):
-            secilen_tarih = kayit.tarih
+            try:
+                # Eski format (sadece tarih) için fallback
+                secilen_tarih = datetime.strptime(tarih_str, '%Y-%m-%d')
+            except (ValueError, TypeError):
+                secilen_tarih = kayit.tarih
 
         kayit.tarih = secilen_tarih
 
         durum_raw = request.form.get('durum') or getattr(kayit.durum, 'name', '')
-        kayit.durum = _parse_durum_input(durum_raw)
+        yeni_durum = _parse_durum_input(durum_raw)
+        kayit.durum = yeni_durum
+        
+        # Eğer durum "Bekleyen" -> "Ödenen" değiştirilmişse, otomatik ödeme kaydı oluştur
+        if eski_durum != KasaDurum.TAMAMLANDI and yeni_durum == KasaDurum.TAMAMLANDI:
+            mevcut_odenen = Decimal(db.session.query(func.coalesce(func.sum(Odeme.tutar), 0))
+                                     .filter(Odeme.kasa_id == kayit_id).scalar() or 0)
+            kalan = Decimal(str(kayit.tutar)) - mevcut_odenen
+            
+            if kalan > Decimal('0'):
+                # Kalan tutarı tamamla
+                otomatik_odeme = Odeme(
+                    kasa_id=kayit_id,
+                    tutar=kalan,
+                    odeme_tarihi=secilen_tarih,
+                    kullanici_id=session.get('user_id')
+                )
+                db.session.add(otomatik_odeme)
 
         file = request.files.get('fis_foto')
         if file and file.filename and allowed_image(file.filename):
@@ -395,6 +448,7 @@ def kasa_duzenle(kayit_id):
 
         try:
             db.session.commit()
+            flash('Kayıt başarıyla güncellendi!', 'success')
             return redirect(url_for('kasa.kasa_sayfasi', yil=secilen_tarih.year, ay=secilen_tarih.month))
         except Exception as e:
             db.session.rollback()

@@ -336,10 +336,10 @@
                         {% for kayit in kayitlar %}
                         <tr id="kayit-{{ kayit.id }}">
                             <td>
-                                {{ kayit.tarih.strftime('%d.%m.%Y') }}
+                                {{ kayit.tarih.strftime('%d.%m.%Y') }} <span class="text-muted">{{ kayit.tarih.strftime('%H:%M') }}</span>
                                 <div id="odeme-detay-{{ kayit.id }}" class="text-muted small">
                                     {% for odeme in kayit.odemeler %}
-                                        <div>Ödeme: {{ odeme.odeme_tarihi.strftime('%d.%m.%Y') }}</div>
+                                        <div>Ödeme: {{ odeme.odeme_tarihi.strftime('%d.%m.%Y %H:%M') }}</div>
                                     {% endfor %}
                                 </div>
                             </td>
@@ -458,11 +458,11 @@
                     <hr>
                     <div class="form-group">
                         <label for="odemeTutari">Ödenecek Tutar</label>
-                        <input type="number" class="form-control" id="odemeTutari" placeholder="0.00" step="0.01">
+                        <input type="text" class="form-control" id="odemeTutari" placeholder="0,00">
                     </div>
                     <div class="btn-group w-100">
-                        <button type="button" class="btn btn-info" onclick="document.getElementById('odemeTutari').value = parseFloat(document.getElementById('modalKalanTutar').innerText.replace(/\./g, '').replace(',', '.')) / 2;">Yarısını Öde</button>
-                        <button type="button" class="btn btn-success" onclick="document.getElementById('odemeTutari').value = document.getElementById('modalKalanTutar').innerText.replace(/\./g, '').replace(',', '.');">Tamamını Öde</button>
+                        <button type="button" class="btn btn-info" onclick="setOdemeYarisi()">Yarısını Öde</button>
+                        <button type="button" class="btn btn-success" onclick="setOdemeTamami()">Tamamını Öde</button>
                     </div>
                     <input type="hidden" id="modalKasaId">
                 </div>
@@ -475,28 +475,113 @@
     </div>
     
     <script>
+        // Türkçe formatı parse eden yardımcı fonksiyon
+        function parseTurkishNumber(str) {
+            if (typeof str === 'number') return str;
+            // Örnek: "1.000,50" -> 1000.50
+            return parseFloat(str.replace(/\./g, '').replace(',', '.'));
+        }
+        
+        // Sayıyı Türkçe formatında gösterir (1000.50 -> "1.000,50")
+        function formatTurkishNumber(num) {
+            return new Intl.NumberFormat('tr-TR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(num);
+        }
+        
+        // Ödeme tutarı input'una otomatik format uygula
+        document.addEventListener('DOMContentLoaded', function() {
+            const odemeTutariInput = document.getElementById('odemeTutari');
+            if (odemeTutariInput) {
+                odemeTutariInput.addEventListener('input', function(e) {
+                    let inputValue = e.target.value;
+                    
+                    // Tüm formatları temizle, sadece rakamları al
+                    let cleanValue = inputValue.replace(/[^\d,]/g, ''); // Sadece rakam ve virgül
+                    
+                    // Virgülden sonraki kısmı ayır (ondalık)
+                    let hasComma = cleanValue.includes(',');
+                    let parts = cleanValue.split(',');
+                    let integerPart = parts[0];
+                    let decimalPart = parts.length > 1 ? parts[1].slice(0, 2) : ''; // Max 2 basamak
+                    
+                    if (!integerPart) {
+                        e.target.value = '';
+                        return;
+                    }
+                    
+                    // Binlik ayırıcı ekle (tam sayı kısmına)
+                    let formatted = '';
+                    let counter = 0;
+                    for (let i = integerPart.length - 1; i >= 0; i--) {
+                        if (counter > 0 && counter % 3 === 0) {
+                            formatted = '.' + formatted;
+                        }
+                        formatted = integerPart[i] + formatted;
+                        counter++;
+                    }
+                    
+                    // Ondalık kısmı ekle
+                    if (hasComma || decimalPart) {
+                        formatted += ',' + decimalPart;
+                    }
+                    
+                    e.target.value = formatted;
+                });
+            }
+        });
+        
+        function setOdemeYarisi() {
+            const kalanStr = document.getElementById('modalKalanTutar').innerText;
+            const kalan = parseTurkishNumber(kalanStr);
+            const yarisi = kalan / 2;
+            document.getElementById('odemeTutari').value = formatTurkishNumber(yarisi);
+        }
+        
+        function setOdemeTamami() {
+            const kalanStr = document.getElementById('modalKalanTutar').innerText;
+            document.getElementById('odemeTutari').value = kalanStr;
+        }
+        
         function handleOdemeClick(btn) {
             const kasaId = btn.dataset.id;
             const aciklama = btn.dataset.aciklama;
-            const toplamTutar = parseFloat(btn.dataset.tutar).toLocaleString('tr-TR', { minimumFractionDigits: 2 });
-            const kalanTutar = parseFloat(btn.dataset.kalan).toLocaleString('tr-TR', { minimumFractionDigits: 2 });
+            const toplamTutar = parseFloat(btn.dataset.tutar);
+            const kalanTutar = parseFloat(btn.dataset.kalan);
         
             document.getElementById('modalKasaId').value = kasaId;
             document.getElementById('modalAciklama').innerText = aciklama;
-            document.getElementById('modalToplamTutar').innerText = toplamTutar;
-            document.getElementById('modalKalanTutar').innerText = kalanTutar;
+            document.getElementById('modalToplamTutar').innerText = formatTurkishNumber(toplamTutar);
+            document.getElementById('modalKalanTutar').innerText = formatTurkishNumber(kalanTutar);
             document.getElementById('odemeTutari').value = '';
-            document.getElementById('odemeTutari').max = parseFloat(btn.dataset.kalan);
+            document.getElementById('odemeTutari').dataset.maxKalan = kalanTutar; // Kalan tutarı saklıyoruz
         
             $('#odemeModal').modal('show');
         }
         
         async function submitOdeme() {
             const kasaId = document.getElementById('modalKasaId').value;
-            const odemeTutari = document.getElementById('odemeTutari').value;
-        
-            if (!odemeTutari || parseFloat(odemeTutari) <= 0) {
+            const odemeTutariInput = document.getElementById('odemeTutari');
+            const odemeTutariStr = odemeTutariInput.value.trim();
+            
+            if (!odemeTutariStr) {
+                alert('Lütfen bir ödeme tutarı girin.');
+                return;
+            }
+            
+            // Türkçe formatı parse et
+            const odemeTutari = parseTurkishNumber(odemeTutariStr);
+            const maxKalan = parseFloat(odemeTutariInput.dataset.maxKalan);
+            
+            if (isNaN(odemeTutari) || odemeTutari <= 0) {
                 alert('Lütfen geçerli bir ödeme tutarı girin.');
+                return;
+            }
+            
+            // Kalan tutarla karşılaştır
+            if (odemeTutari > maxKalan) {
+                alert(`Ödeme tutarı kalan tutardan (${formatTurkishNumber(maxKalan)} ₺) fazla olamaz.`);
                 return;
             }
         
@@ -518,16 +603,14 @@
               return;
             }
 
-            const f = (n) => Number(n).toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-
             const elOdenen = document.getElementById(`odenen-tutar-${kasaId}`);
             const elKalan = document.getElementById(`kalan-tutar-${kasaId}`);
             const elDurum = document.getElementById(`durum-badge-${kasaId}`);
 
-            if (elOdenen) elOdenen.textContent = f(data.toplam_odenen);
-            if (elKalan)  elKalan.textContent  = f(data.kalan_tutar);
+            if (elOdenen) elOdenen.textContent = formatTurkishNumber(data.toplam_odenen);
+            if (elKalan)  elKalan.textContent  = formatTurkishNumber(data.kalan_tutar);
             if (elDurum) {
-                elDurum.textContent = data.yeni_durum.charAt(0).toUpperCase() + data.yeni_durum.slice(1).replace('_', ' ');
+                elDurum.textContent = data.durum;
                 
                 elDurum.className = 'badge p-2 ';
                 if (data.yeni_durum_enum === 'TAMAMLANDI') {
@@ -547,6 +630,7 @@
             }
 
             $('#odemeModal').modal('hide');
+            alert('Ödeme başarıyla kaydedildi!');
         }
     </script>
 

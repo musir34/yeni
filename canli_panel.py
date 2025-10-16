@@ -5,6 +5,7 @@ from flask import Blueprint, Response, jsonify, request, stream_with_context, re
 from sqlalchemy import func, literal, text, and_, or_
 from models import db, Product, CentralStock
 from models import OrderCreated, OrderPicking, OrderShipped, Archive, ReturnOrder, ReturnProduct
+from login_logout import login_required, roles_required
 try:
     from models import OrderDelivered
 except ImportError:
@@ -712,6 +713,8 @@ def _build_cards_from_orders():
 
 # ── API’ler
 @canli_panel_bp.route("/api/canli/ozet")
+@login_required
+@roles_required('admin')
 def ozet_json():
     t0=_t0()
     try:
@@ -861,6 +864,8 @@ def ozet_json():
 
 
 @canli_panel_bp.route("/api/canli/akis")
+@login_required
+@roles_required('admin')
 def akis_sse():
     def _gen():
         conn_t0=_t0()
@@ -988,6 +993,8 @@ def akis_sse():
 
 # ── HTML panel sayfası
 @canli_panel_bp.route("/canli-panel")
+@login_required
+@roles_required('admin')
 def canli_panel_sayfa():
     return render_template("canli_panel.html")
 

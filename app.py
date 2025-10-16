@@ -408,7 +408,7 @@ if ENABLE_JOBS and is_main_proc:
         schedule_jobs()
         # GÖREV JOBLARI (scheduler start edildikten sonra ekle)
         from gorev import attach_jobs
-        attach_jobs(scheduler)
+        attach_jobs(scheduler, app)
         logger.info("Scheduler started (ENABLE_JOBS=on, leader ok).")
     else:
         logger.info("Scheduler NOT started (ENABLE_JOBS=on, leader=false)")

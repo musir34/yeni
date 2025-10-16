@@ -329,15 +329,19 @@
 
                 <div class="form-row">
                     <div class="form-group col-md-8">
-                        <label for="tarih">Tarih <span class="required">*</span></label>
-                        <input type="date" id="tarih" name="tarih" class="form-control" value="{{ default_tarih }}" required>
+                        <label for="tarih">Tarih ve Saat <span class="required">*</span></label>
+                        <input type="datetime-local" id="tarih" name="tarih" class="form-control" value="{{ default_tarih }}" required>
+                        <small class="form-text text-muted">Tarih ve saat seçin</small>
                     </div>
                     <div class="form-group col-md-4">
                         <label for="durum">Durum</label>
                         <select name="durum" id="durum" class="form-control">
                             <option value="bekleyen" selected>Bekleyen</option>
-                            <option value="ödenen">Ödenen</option>
+                            <option value="ödenen">Ödenen (Tam Ödeme)</option>
                         </select>
+                        <small class="form-text text-muted">
+                            "Ödenen" seçilirse, ödeme tarihi ekleme tarihi ile aynı olur.
+                        </small>
                     </div>
                 </div>
 
@@ -434,34 +438,55 @@
         document.addEventListener('DOMContentLoaded', function() {
             const tutarInput = document.getElementById('tutar');
             const form = document.querySelector('form');
+            const tarihInput = document.getElementById('tarih');
+            
+            // Tarih input'una şu anki tarih ve saati ata
+            if (tarihInput && !tarihInput.value) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                tarihInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
 
-            // 1. Yazarken Tutar Alanını Formatlama Fonksiyonu
+            // 1. Yazarken Tutar Alanını Formatlama Fonksiyonu (Türkçe format: 1.000,00)
             if (tutarInput) {
                 tutarInput.addEventListener('input', function(e) {
-                    let value = e.target.value;
-                    let selectionStart = e.target.selectionStart;
+                    let inputValue = e.target.value;
                     
-                    // Ondalık kısmı ve tam sayı kısmını ayır
-                    let parts = value.split('.');
-                    let integerPart = parts[0].replace(/[^\d]/g, ''); // Sadece rakamları al
-                    let decimalPart = parts.length > 1 ? '.' + parts[1].replace(/[^\d]/g, '') : '';
+                    // Tüm formatları temizle, sadece rakamları al
+                    let cleanValue = inputValue.replace(/[^\d,]/g, ''); // Sadece rakam ve virgül
                     
-                    if (integerPart === '') {
+                    // Virgülden sonraki kısmı ayır (ondalık)
+                    let hasComma = cleanValue.includes(',');
+                    let parts = cleanValue.split(',');
+                    let integerPart = parts[0];
+                    let decimalPart = parts.length > 1 ? parts[1].slice(0, 2) : ''; // Max 2 basamak
+                    
+                    if (!integerPart) {
                         e.target.value = '';
                         return;
                     }
                     
-                    // Tam sayı kısmını formatla
-                    let formattedIntegerPart = Number(integerPart).toLocaleString('en-US');
-                    let formattedValue = formattedIntegerPart + decimalPart.slice(0, 3); // Ondalık en fazla 2 hane olsun (.xx)
-
-                    // İmleç pozisyonunu korumak için hesaplama
-                    let originalLength = value.length;
-                    let newLength = formattedValue.length;
-                    let newSelectionStart = selectionStart + (newLength - originalLength);
-
-                    e.target.value = formattedValue;
-                    e.target.setSelectionRange(newSelectionStart, newSelectionStart);
+                    // Binlik ayırıcı ekle (tam sayı kısmına)
+                    let formatted = '';
+                    let counter = 0;
+                    for (let i = integerPart.length - 1; i >= 0; i--) {
+                        if (counter > 0 && counter % 3 === 0) {
+                            formatted = '.' + formatted;
+                        }
+                        formatted = integerPart[i] + formatted;
+                        counter++;
+                    }
+                    
+                    // Ondalık kısmı ekle
+                    if (hasComma || decimalPart) {
+                        formatted += ',' + decimalPart;
+                    }
+                    
+                    e.target.value = formatted;
                 });
             }
 
@@ -469,26 +494,34 @@
             if (form) {
                 form.addEventListener('submit', function(e) {
                     if (tutarInput) {
-                        // Virgülleri kaldır ve sunucuya temiz halini gönder
-                        tutarInput.value = tutarInput.value.replace(/,/g, '');
+                        // Türkçe formatı temizle: "1.000,50" -> "1000.50"
+                        tutarInput.value = tutarInput.value.replace(/\./g, '').replace(',', '.');
                     }
-                    // Diğer form doğrulama kontrolleri burada kalabilir...
+                    
                     const tip = document.querySelector('input[name="tip"]:checked');
                     const aciklama = document.getElementById('aciklama').value;
                     const tutar = tutarInput.value;
 
                     if (!tip || !aciklama.trim() || !tutar) {
-                        e.preventDefault(); // Formu göndermeyi engelle
+                        e.preventDefault();
                         alert('Lütfen Tip, Açıklama ve Tutar alanlarını doldurun!');
-                        // Virgülleri geri ekleyebiliriz ki kullanıcı görmeye devam etsin
-                        tutarInput.value = Number(tutar.replace(/,/g, '')).toLocaleString('en-US');
+                        // Türkçe formatı geri koy
+                        if (tutar) {
+                            tutarInput.value = parseFloat(tutar).toLocaleString('tr-TR', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            });
+                        }
                         return false;
                     }
 
                     if (parseFloat(tutar) <= 0) {
                         e.preventDefault();
                         alert('Tutar 0\'dan büyük olmalıdır!');
-                        tutarInput.value = Number(tutar.replace(/,/g, '')).toLocaleString('en-US');
+                        tutarInput.value = parseFloat(tutar).toLocaleString('tr-TR', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        });
                         return false;
                     }
                 });

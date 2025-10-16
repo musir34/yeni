@@ -95,24 +95,33 @@ def _send_mail_stub(to, subject, body):
     if to:
         log.info(f"[REMINDER] to={to} subj={subject} body={body[:120]}")
 
-def reminders_job():
-    now = datetime.now(IST)
-    q = Task.query.filter(Task.status.in_(["bekliyor", "yapiliyor"]))
-    for t in q.all():
-        # esnek ve taahhüt verilmemişse hatırlatma yapma
-        if getattr(t, "flexible", False) and getattr(t, "commit_due", None) is None:
-            continue
-        ref_dt = getattr(t, "commit_due", None) or t.due
-        mins_left = (ref_dt - now).total_seconds() / 60
-        if 29.5 < mins_left <= 30 and not t.reminded_30:
-            _send_mail_stub(getattr(t,"assignee_email",None), f"30 dk kaldı: {t.title}", "Yaklaşıyor.")
-            t.reminded_30 = True
-        if 9.5 < mins_left <= 10 and not t.reminded_10:
-            _send_mail_stub(getattr(t,"assignee_email",None), f"10 dk kaldı: {t.title}", "Hadi bitirelim.")
-            t.reminded_10 = True
-        if mins_left < 0 and t.status in ("bekliyor","yapiliyor"):
-            t.status = "gecikti"
-    db.session.commit()
+def reminders_job(app=None):
+    """
+    APScheduler job - Flask app context gerektirir.
+    app parametresi attach_jobs içinde lambda ile sağlanır.
+    """
+    if app is None:
+        from flask import current_app
+        app = current_app._get_current_object()
+    
+    with app.app_context():
+        now = datetime.now(IST)
+        q = Task.query.filter(Task.status.in_(["bekliyor", "yapiliyor"]))
+        for t in q.all():
+            # esnek ve taahhüt verilmemişse hatırlatma yapma
+            if getattr(t, "flexible", False) and getattr(t, "commit_due", None) is None:
+                continue
+            ref_dt = getattr(t, "commit_due", None) or t.due
+            mins_left = (ref_dt - now).total_seconds() / 60
+            if 29.5 < mins_left <= 30 and not t.reminded_30:
+                _send_mail_stub(getattr(t,"assignee_email",None), f"30 dk kaldı: {t.title}", "Yaklaşıyor.")
+                t.reminded_30 = True
+            if 9.5 < mins_left <= 10 and not t.reminded_10:
+                _send_mail_stub(getattr(t,"assignee_email",None), f"10 dk kaldı: {t.title}", "Hadi bitirelim.")
+                t.reminded_10 = True
+            if mins_left < 0 and t.status in ("bekliyor","yapiliyor"):
+                t.status = "gecikti"
+        db.session.commit()
 
 
 # ───────────────────────── Admin UI Panel ─────────────────────────
@@ -408,11 +417,28 @@ def kanban_json():
     return jsonify(range=f"{_week_start(today)}..{_week_start(today)+timedelta(days=6)}", columns=cols)
 
 # ───────────────────────── Scheduler bağlayıcı ─────────────────────────
-def attach_jobs(scheduler):
-    scheduler.add_job(generate_week_main_tasks, "cron",
-                      day_of_week="mon", hour=0, minute=0, timezone=str(IST),
-                      id="gv_weekly", replace_existing=True)
-    scheduler.add_job(reminders_job, "interval", minutes=5, id="gv_rem", replace_existing=True)
+def attach_jobs(scheduler, app):
+    """
+    Scheduler'a job'ları ekler. app instance'ı job'lara context sağlamak için kullanılır.
+    """
+    scheduler.add_job(
+        lambda: generate_week_main_tasks_with_context(app), 
+        "cron",
+        day_of_week="mon", hour=0, minute=0, timezone=str(IST),
+        id="gv_weekly", replace_existing=True
+    )
+    scheduler.add_job(
+        lambda: reminders_job(app), 
+        "interval", 
+        minutes=5, 
+        id="gv_rem", 
+        replace_existing=True
+    )
+
+def generate_week_main_tasks_with_context(app):
+    """Haftalık görev oluşturmayı Flask app context içinde yapar."""
+    with app.app_context():
+        return generate_week_main_tasks()
 
 
 
