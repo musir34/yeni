@@ -440,7 +440,7 @@
             updateTotals();
             showProgressContainer(itemsToUpdate.length);
 
-            const BATCH_SIZE = 25;
+            const BATCH_SIZE = 10000; // 🚀 Tüm ürünler tek seferde gönderilsin
             let successfulUpdates = 0, failedUpdates = [];
 
             for (let i = 0; i < itemsToUpdate.length; i += BATCH_SIZE) {
