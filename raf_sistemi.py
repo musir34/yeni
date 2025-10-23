@@ -347,6 +347,13 @@ def stok_ekle_api():
 
 @raf_bp.route('/api/check-raf/<raf_kodu>', methods=['GET'])
 def check_raf_var_mi(raf_kodu):
+    """
+    Raf kodunun sistemde olup olmadığını kontrol eder.
+    🔧 "=" karakterini "-" ile değiştirir (telefon klavyelerinden kaynaklanan sorun için).
+    """
+    # 🔧 "=" karakterini "-" ile değiştir
+    raf_kodu = raf_kodu.replace('=', '-')
+    
     raf = Raf.query.filter_by(kod=raf_kodu).first()
     if raf:
         return jsonify(success=True, message="Raf mevcut.")

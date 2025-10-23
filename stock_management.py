@@ -186,12 +186,20 @@ def handle_stock_update_from_frontend():
     items = data.get('items', [])
     update_type = data.get('updateType')
     raf_kodu = (data.get('raf_kodu') or '').strip()
+    
+    # 🔧 "=" karakterini "-" ile değiştir (telefonlardan kaynaklanıyor)
+    raf_kodu = raf_kodu.replace('=', '-')
+    
+    logger.info(f"🔹 Stok ekleme isteği alındı: Raf={raf_kodu}, Mod={update_type}, Ürün Sayısı={len(items)}")
 
     if not raf_kodu:
+        logger.error("❌ Raf kodu boş geldi!")
         return jsonify(success=False, message="Raf kodu zorunludur."), 400
     if update_type not in ('add', 'renew'):
+        logger.error(f"❌ Geçersiz işlem tipi: {update_type}")
         return jsonify(success=False, message="updateType 'add' veya 'renew' olmalı."), 400
     if not items and update_type == 'add': # 'renew' boş liste ile rafı temizleyebilir
+         logger.warning(f"⚠️ İşlenecek ürün yok (mod: {update_type})")
          return jsonify(success=False, message="İşlenecek ürün yok."), 400
 
     errors = {}
@@ -199,31 +207,46 @@ def handle_stock_update_from_frontend():
 
     try:
         with db.session.begin():  # Tek transaction
+            logger.info(f"📦 Transaction başlatıldı - Raf: {raf_kodu}")
+            
             # Gelen ürünlerin barkodlarını ve Product tablosundaki varlıklarını kontrol et
             barcode_set = [it.get('barcode') for it in items if it.get('barcode')]
             valid_products = {}
             if barcode_set:
+                logger.info(f"🔍 {len(barcode_set)} barkod için Product tablosunda kontrol yapılıyor...")
                 existing = Product.query.filter(func.lower(Product.barcode).in_([b.lower() for b in barcode_set])).all()
                 valid_products = {p.barcode.lower(): True for p in existing}
+                logger.info(f"✅ Product tablosunda {len(valid_products)} ürün bulundu.")
+                
+                # Bulunamayan ürünleri logla
+                missing_barcodes = [bc for bc in barcode_set if bc.lower() not in valid_products]
+                if missing_barcodes:
+                    logger.warning(f"⚠️ Product tablosunda BULUNAMAYAN barkodlar ({len(missing_barcodes)}): {', '.join(missing_barcodes[:10])}{'...' if len(missing_barcodes) > 10 else ''}")
 
             # --- 'RENEW' (YENİLE) MANTIĞI ---
             if update_type == 'renew':
-                logger.info(f"'{raf_kodu}' rafı için YENİLEME işlemi başlatıldı.")
+                logger.info(f"🔄 '{raf_kodu}' rafı için YENİLEME işlemi başlatıldı.")
                 # 1. Bu raftaki TÜM mevcut ürünleri bul
                 raftaki_eski_urunler = RafUrun.query.filter_by(raf_kodu=raf_kodu).all()
+                logger.info(f"📋 Rafta mevcut {len(raftaki_eski_urunler)} kayıt bulundu.")
 
                 # 2. Bu ürünlerin stoklarını merkezi stoktan düş
+                if raftaki_eski_urunler:
+                    logger.info(f"⬇️ CentralStock'tan düşülen ürünler:")
                 for eski_urun in raftaki_eski_urunler:
                     cs_eski = CentralStock.query.get(eski_urun.urun_barkodu)
                     if cs_eski and cs_eski.qty is not None:
+                        eski_qty = cs_eski.qty
                         cs_eski.qty = max(0, cs_eski.qty - eski_urun.adet)
+                        logger.info(f"   - {eski_urun.urun_barkodu}: {eski_qty} → {cs_eski.qty} (Düşülen: -{eski_urun.adet})")
                 
                 # 3. Raftaki tüm eski kayıtları tek seferde sil
                 if raftaki_eski_urunler:
-                    RafUrun.query.filter_by(raf_kodu=raf_kodu).delete()
-                    logger.info(f"'{raf_kodu}' rafından {len(raftaki_eski_urunler)} kalem ürün silindi.")
+                    silinen_sayisi = RafUrun.query.filter_by(raf_kodu=raf_kodu).delete()
+                    logger.info(f"🗑️ '{raf_kodu}' rafından {silinen_sayisi} kayıt silindi.")
 
             # --- YENİ ÜRÜNLERİ İŞLEME (HEM 'ADD' HEM DE 'RENEW' İÇİN) ---
+            logger.info(f"➕ '{raf_kodu}' rafına eklenecek ürün sayısı: {len(items)}")
             for it in items:
                 barcode = (it.get('barcode') or '').strip()
                 try:
@@ -232,9 +255,11 @@ def handle_stock_update_from_frontend():
                     count = 0
 
                 if not barcode or count < 0:
+                    logger.warning(f"Geçersiz barkod veya adet: barkod={barcode}, count={count}")
                     errors[barcode or 'EMPTY'] = "Geçersiz barkod/adet"
                     continue
                 if not valid_products.get(barcode.lower()):
+                    logger.warning(f"Ürün veritabanında bulunamadı: {barcode}")
                     errors[barcode] = "Ürün veritabanında yok"
                     continue
                 
@@ -243,24 +268,37 @@ def handle_stock_update_from_frontend():
                 if not cs:
                     cs = CentralStock(barcode=barcode, qty=0)
                     db.session.add(cs)
+                    logger.info(f"Yeni CentralStock kaydı oluşturuldu: {barcode}")
                 
                 # RafUrun kaydını bul veya oluştur
                 rec = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barcode).first()
                 
                 # 'add' ise adedi ekle, 'renew' ise zaten silindiği için sıfırdan oluştur
                 if rec:
+                    eski_adet = rec.adet
                     rec.adet = (rec.adet or 0) + count
+                    logger.info(f"Raf: {raf_kodu}, Barkod: {barcode}, Eski: {eski_adet}, Yeni: {rec.adet}")
                 else:
                     rec = RafUrun(raf_kodu=raf_kodu, urun_barkodu=barcode, adet=count)
                     db.session.add(rec)
+                    logger.info(f"Raf: {raf_kodu}, Barkod: {barcode}, İlk kez eklendi, Adet: {count}")
                 
                 # Merkezi stoğu GÜNCEL adede göre artır
                 cs.qty = (cs.qty or 0) + count
 
                 results.append({"barcode": barcode, "central_qty": int(cs.qty or 0)})
 
+            # Transaction başarıyla tamamlandı
+            logger.info(f"✅ Transaction başarıyla tamamlandı - {len(results)} ürün işlendi, {len(errors)} hata.")
+
         # --- SONUÇLARI DÖNDÜR ---
         if errors:
+            logger.warning(f"⚠️ '{raf_kodu}' rafı güncellenirken bazı ürünler eklenemedi:")
+            for err_barcode, err_msg in list(errors.items())[:10]:  # İlk 10 hatayı logla
+                logger.warning(f"   - {err_barcode}: {err_msg}")
+            if len(errors) > 10:
+                logger.warning(f"   ... ve {len(errors) - 10} hata daha.")
+            
             return jsonify(success=False,
                            message="Bazı kalemler işlenemedi.",
                            errors=errors,
@@ -269,11 +307,14 @@ def handle_stock_update_from_frontend():
         message = f"'{raf_kodu}' rafındaki {len(results)} ürün başarıyla güncellendi."
         if update_type == 'renew' and not items:
             message = f"'{raf_kodu}' rafı başarıyla boşaltıldı."
+        
+        logger.info(f"🎉 '{raf_kodu}' rafı başarıyla güncellendi. Toplam {len(results)} ürün işlendi. (Mod: {update_type})")
 
         return jsonify(success=True,
                        message=message,
                        results=results)
 
     except Exception as e:
+        logger.error(f"❌ HATA - Raf: {raf_kodu}, Mod: {update_type}, Ürün Sayısı: {len(items)}")
         logger.error("Stok ekleme/güncelleme hatası: %s", e, exc_info=True)
         return jsonify(success=False, message=f"Sunucu hatası: {str(e)}"), 500

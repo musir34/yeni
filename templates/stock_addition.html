@@ -158,8 +158,12 @@
 
             <form id="stockForm" onsubmit="return false;">
                 <div class="mb-3">
-                    <label for="rafKoduInput" class="form-label">Raf Barkodu:</label>
+                    <label for="rafKoduInput" class="form-label">
+                        Raf Barkodu: 
+                        <span id="rafStatusIcon" style="margin-left: 10px;"></span>
+                    </label>
                     <input type="text" id="rafKoduInput" class="form-control" placeholder="örn: A-B-01" required>
+                    <small id="rafKoduHelp" class="form-text text-muted">🚀 Otomatik kontrol - Raf kodu girerken bekleyin</small>
                 </div>
 
                 <div class="mb-3">
@@ -475,6 +479,7 @@
             barcodeCounts = {};
             selectedMode = null;
             isSubmitting = false;
+            lastCheckedRafKodu = null; // 🔧 Son kontrol edilen raf kodunu sıfırla
             allElements.scannedBarcodesDiv.innerHTML = '';
             allElements.formContainer.classList.add('hidden');
             allElements.modeSelectionContainer.classList.remove('hidden');
@@ -482,7 +487,13 @@
             allElements.barcodeInput.value = '';
             allElements.rafKoduInput.value = ''; // Raf kodunu da sıfırla
             allElements.rafKoduInput.disabled = false; // Raf inputunu aktif et
+            allElements.rafKoduInput.style.borderColor = ''; // 🔧 Border rengini sıfırla
             allElements.resetButton.disabled = false;
+            
+            // 🔧 Raf durum göstergesini sıfırla
+            const statusIcon = document.getElementById('rafStatusIcon');
+            if (statusIcon) statusIcon.innerHTML = '';
+            
             hideProgressContainer();
             updateTotals();
         }
@@ -507,28 +518,106 @@
     </script>
 
     <script>
-        document.getElementById("rafKoduInput").addEventListener("blur", async function () {
-            const rafKodu = this.value.trim();
-            const barcodeInput = document.getElementById("barcodeInput");
+        let rafKoduCheckTimeout = null; // Debounce için
 
-            if (!rafKodu) return;
+        document.getElementById("rafKoduInput").addEventListener("input", function () {
+            // 🔧 "=" karakterini "-" ile değiştir (telefonlardan kaynaklanıyor)
+            this.value = this.value.replace(/=/g, '-');
+            
+            // 🎯 Anlık kontrol - 300ms bekle, ardından otomatik kontrol yap
+            clearTimeout(rafKoduCheckTimeout);
+            const rafKodu = this.value.trim();
+            
+            // En az 5 karakter girilmişse kontrol et (örn: A-B-01)
+            if (rafKodu.length >= 5) {
+                rafKoduCheckTimeout = setTimeout(() => {
+                    checkRafKodu();
+                }, 300); // 300ms sonra kontrol et (hızlı tepki)
+            } else {
+                // Kısa ise görsel feedback'i temizle
+                const statusIcon = document.getElementById("rafStatusIcon");
+                const rafInput = document.getElementById("rafKoduInput");
+                statusIcon.innerHTML = '';
+                rafInput.style.borderColor = '';
+                document.getElementById("barcodeInput").disabled = true;
+            }
+        });
+
+        document.getElementById("rafKoduInput").addEventListener("keydown", async function (e) {
+            // Enter tuşuna basıldığında HEMEN kontrol yap
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(rafKoduCheckTimeout); // Debounce iptal
+                await checkRafKodu();
+            }
+        });
+
+        document.getElementById("rafKoduInput").addEventListener("blur", async function () {
+            clearTimeout(rafKoduCheckTimeout); // Debounce iptal
+            await checkRafKodu();
+        });
+
+        let lastCheckedRafKodu = null; // Son kontrol edilen raf kodu
+
+        async function checkRafKodu() {
+            const rafKodu = document.getElementById("rafKoduInput").value.trim();
+            const barcodeInput = document.getElementById("barcodeInput");
+            const statusIcon = document.getElementById("rafStatusIcon");
+            const rafInput = document.getElementById("rafKoduInput");
+
+            // Boşsa resetle
+            if (!rafKodu) {
+                barcodeInput.disabled = true;
+                statusIcon.innerHTML = '';
+                rafInput.style.borderColor = '';
+                lastCheckedRafKodu = null;
+                return;
+            }
+
+            // 🚀 Aynı raf kodunu tekrar kontrol etme
+            if (lastCheckedRafKodu === rafKodu && !barcodeInput.disabled) {
+                console.log("⏭️ Raf zaten doğrulandı, tekrar kontrol edilmedi:", rafKodu);
+                return;
+            }
+
+            // Kontrol sırasında loading göster
+            statusIcon.innerHTML = '<i class="bi bi-hourglass-split text-warning"></i> Kontrol ediliyor...';
+            rafInput.style.borderColor = '#ffc107';
 
             try {
                 const res = await fetch(`/raf/api/check-raf/${rafKodu}`);
                 const data = await res.json();
 
                 if (res.ok && data.success) {
+                    console.log("✅ Raf doğrulandı:", rafKodu);
+                    statusIcon.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i> Raf doğrulandı!';
+                    rafInput.style.borderColor = 'var(--color-success)';
                     barcodeInput.disabled = false;
-                    barcodeInput.focus();
+                    lastCheckedRafKodu = rafKodu; // Başarılı kontrolü kaydet
+                    
+                    // 🎯 Otomatik olarak ürün barkodu alanına geç
+                    setTimeout(() => {
+                        barcodeInput.focus();
+                        console.log("🎯 Ürün barkodu alanına otomatik geçildi!");
+                    }, 100);
                 } else {
+                    console.warn("❌ Raf bulunamadı:", rafKodu);
+                    statusIcon.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i> Raf bulunamadı!';
+                    rafInput.style.borderColor = 'var(--color-danger)';
                     barcodeInput.disabled = true;
+                    lastCheckedRafKodu = null; // Başarısız kontrolü sıfırla
                     alert("❌ " + data.message);
+                    setTimeout(() => rafInput.focus(), 100);
                 }
             } catch (err) {
                 console.error("Raf kontrol hatası:", err);
+                statusIcon.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-danger"></i> Hata!';
+                rafInput.style.borderColor = 'var(--color-danger)';
+                barcodeInput.disabled = true;
+                lastCheckedRafKodu = null; // Hatalı kontrolü sıfırla
                 alert("Sunucu hatası: raf doğrulanamadı.");
             }
-        });
+        }
     </script>
 </body>
 </html>
