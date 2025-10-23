@@ -5,6 +5,8 @@ import base64
 from datetime import datetime
 import asyncio
 import aiohttp
+import hashlib
+import time
 from sqlalchemy.orm import joinedload
 from flask import Blueprint, render_template, request, jsonify
 from sqlalchemy import func
@@ -24,6 +26,11 @@ except ImportError:
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# --- Çift İşlem Önleme Cache ---
+# {request_hash: timestamp} - Son 60 saniyedeki istekleri tutar
+_request_cache = {}
+_CACHE_TIMEOUT = 60  # 60 saniye
 
 # --- Blueprint ve Rate Limit ---
 stock_management_bp = Blueprint('stock_management', __name__)
@@ -189,6 +196,24 @@ def handle_stock_update_from_frontend():
     
     # 🔧 "=" karakterini "-" ile değiştir (telefonlardan kaynaklanıyor)
     raf_kodu = raf_kodu.replace('=', '-')
+    
+    # 🛡️ Çift işlem kontrolü - Aynı istek 60 saniye içinde tekrar gelirse engelle
+    request_data = f"{raf_kodu}|{update_type}|{len(items)}"
+    request_hash = hashlib.md5(request_data.encode()).hexdigest()
+    current_time = time.time()
+    
+    # Eski cache'leri temizle (60 saniyeden eski)
+    global _request_cache
+    _request_cache = {k: v for k, v in _request_cache.items() if current_time - v < _CACHE_TIMEOUT}
+    
+    # Bu istek daha önce yapıldı mı kontrol et
+    if request_hash in _request_cache:
+        time_diff = current_time - _request_cache[request_hash]
+        logger.warning(f"🚫 ÇIFT İŞLEM ENGELLENDİ! Raf={raf_kodu}, Mod={update_type}, Ürün={len(items)}, Son işlemden {time_diff:.2f} saniye geçti")
+        return jsonify(success=True, message="Bu işlem zaten yapıldı (önbellekten döndü)", cached=True), 200
+    
+    # İsteği cache'e kaydet
+    _request_cache[request_hash] = current_time
     
     logger.info(f"🔹 Stok ekleme isteği alındı: Raf={raf_kodu}, Mod={update_type}, Ürün Sayısı={len(items)}")
 
