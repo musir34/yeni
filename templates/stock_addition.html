@@ -224,10 +224,12 @@
         };
 
         // --- Olay Dinleyicileri ---
+        // ⚠️ Çift tıklama koruması için { once: false } kullanmıyoruz
+        // Bunun yerine butonu disable ediyoruz
         allElements.selectRenewModeBtn.addEventListener('click', () => selectMode('renew', 'Raftaki Stokları Yenile'));
         allElements.selectAddModeBtn.addEventListener('click', () => selectMode('add', 'Yeni Gelenleri Ekle'));
         allElements.barcodeInput.addEventListener('keydown', handleBarcodeKeyDown);
-        allElements.updateStockButton.addEventListener('click', handleUpdateClick);
+        allElements.updateStockButton.addEventListener('click', handleUpdateClick, { once: false });
         allElements.resetButton.addEventListener('click', resetStockAddition);
         window.onload = () => resetStockAddition();
 
@@ -404,6 +406,12 @@
         }
 
         async function handleUpdateClick() {
+            // 🛡️ Çift tıklama koruması - zaten işlem yapılıyorsa çık
+            if (isSubmitting) {
+                console.warn("⚠️ Zaten bir işlem devam ediyor, tekrar tıklama engellendi!");
+                return;
+            }
+            
             const itemsToUpdate = Object.entries(barcodeCounts)
                 .filter(([_, item]) => !item.loading && !item.error && item.count > 0)
                 .map(([code, item]) => ({ barcode: code, count: item.count }));
@@ -420,11 +428,16 @@
                  return;
             }
 
+            // ✅ İşlem başladı olarak işaretle
             isSubmitting = true;
-            updateTotals();
+            console.log("🔒 İşlem kilidi aktif edildi");
+            
+            // 🛡️ Tüm kontrolleri hemen devre dışı bırak
+            allElements.updateStockButton.disabled = true;
             allElements.barcodeInput.disabled = true;
             allElements.rafKoduInput.disabled = true;
             allElements.resetButton.disabled = true;
+            updateTotals();
             showProgressContainer(itemsToUpdate.length);
 
             const BATCH_SIZE = 25;
@@ -465,17 +478,24 @@
             const finalProgress = (successfulUpdates / itemsToUpdate.length) * 100;
             if (failedUpdates.length === 0) {
                  updateProgressStatus(`${successfulUpdates} ürün başarıyla güncellendi!`, 'success', 100);
+                 console.log("✅ İşlem başarılı, 2 saniye sonra sıfırlanacak");
                  setTimeout(resetStockAddition, 2000);
             } else {
                  const errorMsg = `${successfulUpdates} ürün güncellendi, ${failedUpdates.length} üründe hata oluştu.`;
                  updateProgressStatus(errorMsg, 'danger', finalProgress);
                  allElements.errorDetails.innerHTML = `<strong>Hatalı barkodlar:</strong><br>${failedUpdates.join(', ')}`;
                  allElements.errorDetails.classList.remove('hidden');
+                 
+                 // 🔓 Hata durumunda kilidi aç
+                 isSubmitting = false;
+                 console.log("🔓 Hata nedeniyle işlem kilidi kaldırıldı");
                  allElements.resetButton.disabled = false;
+                 allElements.updateStockButton.disabled = false;
             }
         }
 
         function resetStockAddition() {
+            console.log("🔄 Stok ekleme formu sıfırlanıyor...");
             barcodeCounts = {};
             selectedMode = null;
             isSubmitting = false;
