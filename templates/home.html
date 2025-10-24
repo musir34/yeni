@@ -122,6 +122,7 @@
         </div>
       </div>
 
+      {% if session.get('role') == 'admin' %}
       <div class="col-md-3 mb-3">
         <div class="card-soft p-3 tile">
           <h5>{{ ay_adi }} Aylık Toplam Sipariş</h5>
@@ -132,6 +133,7 @@
           </div>
         </div>
       </div>
+      {% endif %}
 
       <!-- BURADA: 'Hazırlanan' yerine küçük canlı kart -->
       <div class="col-md-3 mb-3">
