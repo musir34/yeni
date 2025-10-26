@@ -165,20 +165,21 @@ cython_debug/
 .local/
 
 # Ağır klasörler
-static/
 logs/
 uploads/
 attached_assets/
+
+# Static klasöründen sadece büyük/dinamik içerikler ignore edilsin
+static/images/
+static/barcodes/
+static/qr_codes/
+static/qrcodes/
 
 # Replit özel
 *.log
 replit.nix
 .replit
 
-
-static/images/
-static/barcodes/
-static/qr_codes/
-static/qrcodes/
+# Yedek ve geçici dosyalar
 backup.sql
 yeni_20250724-*
