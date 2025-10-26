@@ -12,6 +12,9 @@ from zoneinfo import ZoneInfo
 # Modeller
 from models import OrderCreated, RafUrun, Product, Archive, Degisim
 
+# Hava Durumu Servisi
+from weather_service import get_weather_info, get_istanbul_time
+
 # Blueprint
 siparis_hazirla_bp = Blueprint("siparis_hazirla", __name__)
 
@@ -32,7 +35,7 @@ def to_ist(dt):
 
 # 🔔 Arşivde bekleyen siparişlerden uyarılar üret
 def get_archive_warnings():
-    now = datetime.now(IST)  # <-- IST
+    now = get_istanbul_time()  # <-- IST (Türkiye saati)
     archived_orders = Archive.query.all()
     warnings = []
 
@@ -63,7 +66,7 @@ def get_exchange_warnings():
                  .filter(Degisim.degisim_durumu == 'İşleme Alındı')
                  .order_by(Degisim.degisim_tarihi.desc())
                  .all())
-        now = datetime.now(IST)  # <-- IST
+        now = get_istanbul_time()  # <-- IST (Türkiye saati)
         msgs, max_h = [], 0
         for d in items:
             started = to_ist(getattr(d, 'degisim_tarihi', None))  # <-- normalize
@@ -98,6 +101,10 @@ def get_home():
         # En eski Created sipariş
         oldest_order = OrderCreated.query.order_by(OrderCreated.order_date).first()
 
+        # Hava durumu bilgisi
+        weather_info = get_weather_info()
+        current_time = get_istanbul_time()
+
         # Uyarıları (her durumda) hazırla
         warnings, archive_count = get_archive_warnings()
         # get_exchange_warnings() => (messages, count, max_delay_hours)
@@ -111,6 +118,8 @@ def get_home():
                 "archive_count": archive_count,
                 "degisim_warnings": degisim_msgs,
                 "degisim_meta": {"max_delay_hours": degisim_max_h},  # ⬅️ sıklaşma için
+                "weather": weather_info,
+                "current_time": current_time
             })
             return base
 
@@ -163,15 +172,19 @@ def get_home():
             "archive_count": archive_count,
             "degisim_warnings": degisim_msgs,
             "degisim_meta": {"max_delay_hours": degisim_max_h},  # ⬅️ ARŞİVLE AYNI MANTIK
+            "weather": weather_info,
+            "current_time": current_time
         }
 
     except Exception as e:
         logging.error(f"Bir hata oluştu: {e}")
         traceback.print_exc()
 
-        # Hata olsa da uyarıları gönder
+        # Hata olsa da uyarıları ve hava durumunu gönder
         warnings, archive_count = get_archive_warnings()
         degisim_msgs, _degisim_count, degisim_max_h = get_exchange_warnings()
+        weather_info = get_weather_info()
+        current_time = get_istanbul_time()
 
         base = default_order_data()
         base.update({
@@ -179,6 +192,8 @@ def get_home():
             "archive_count": archive_count,
             "degisim_warnings": degisim_msgs,
             "degisim_meta": {"max_delay_hours": degisim_max_h},
+            "weather": weather_info,
+            "current_time": current_time
         })
         return base
 
@@ -204,7 +219,7 @@ def default_order_data():
 def calculate_remaining_time(delivery_date):
     if delivery_date:
         try:
-            now = datetime.now(IST)         # <-- IST
+            now = get_istanbul_time()       # <-- IST (Türkiye saati)
             dd  = to_ist(delivery_date)     # <-- normalize
             diff = dd - now
             if diff.total_seconds() > 0:

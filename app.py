@@ -53,12 +53,18 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 import platform, os, time
+from zoneinfo import ZoneInfo
+
+# Türkiye saati için timezone ayarı
 os.environ['TZ'] = 'Europe/Istanbul'
 if platform.system() in ('Linux', 'Darwin'):  # Windows'ta tzset yok
     try:
         time.tzset()
     except Exception:
         pass
+
+# İstanbul timezone objesi
+IST = ZoneInfo("Europe/Istanbul")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -92,10 +98,21 @@ def from_json(value):
         return {}
 
 def format_datetime_filter(value, format='full'):
-    dt = datetime.now()
+    """Türkiye saati ile tarih formatı"""
+    from weather_service import get_istanbul_time
+    dt = get_istanbul_time()
+    
     aylar = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"]
     gunler = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"]
-    return f"{dt.day} {aylar[dt.month - 1]} {dt.year}, {gunler[dt.weekday()]} - {dt.strftime('%H:%M')}"
+    
+    if format == 'full':
+        return f"{dt.day} {aylar[dt.month - 1]} {dt.year}, {gunler[dt.weekday()]} - {dt.strftime('%H:%M:%S')}"
+    elif format == 'short':
+        return f"{dt.strftime('%d.%m.%Y %H:%M')}"
+    elif format == 'time':
+        return f"{dt.strftime('%H:%M:%S')}"
+    else:
+        return f"{dt.strftime('%d/%m/%Y')}"
 
 app.jinja_env.filters['format_datetime'] = format_datetime_filter
 app.jinja_env.filters['format_date'] = format_turkish_date_filter
@@ -140,10 +157,16 @@ app.jinja_env.globals['url_for'] = custom_url_for
 def log_request():
     if request.path.startswith('/static/'):
         return
+    if request.path.startswith('/api/'):
+        return  # API isteklerini loglama
     try:
+        endpoint_name = request.endpoint or 'bilinmeyen'
         log_user_action(
-            action=f"PAGE_VIEW: {request.endpoint}",
-            details={'path': request.path, 'endpoint': request.endpoint},
+            action=f'PAGE_VIEW: {endpoint_name}',
+            details={
+                'yol': request.path,
+                'metod': request.method
+            },
             force_log=True
         )
     except Exception as e:

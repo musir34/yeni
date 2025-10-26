@@ -632,6 +632,22 @@ async def fetch_products_route():
         products = await fetch_all_products_async()  # filtreli çağrı (approved=true, archived=false)
         if products:
             await save_products_to_db_async(products)  # save içi: archived/approved/blacklisted ikinci süzgeç
+            
+            # Kullanıcı işlemini logla
+            try:
+                from user_logs import log_user_action
+                log_details = {
+                    'sayfa': 'Ürün Listesi',
+                    'çekilen_ürün_sayısı': len(products),
+                    'işlem_açıklaması': f'Trendyol\'dan {len(products)} ürün başarıyla çekildi ve veritabanına kaydedildi'
+                }
+                log_user_action(
+                    action='FETCH',
+                    details=log_details
+                )
+            except Exception as e:
+                logger.error(f"Kullanıcı log hatası: {e}")
+                
             flash('Ürünler başarıyla güncellendi.', 'success')
         else:
             flash('Ürünler bulunamadı veya güncelleme sırasında bir hata oluştu.', 'danger')
@@ -652,6 +668,8 @@ def archive_product():
         if not products:
             return jsonify({'success': False, 'message': 'Ürün bulunamadı'})
 
+        archived_count = len(products)
+        
         for product in products:
             # Tüm alanları dinamik olarak kopyala
             archive_data = {c.name: getattr(product, c.name) for c in product.__table__.columns}
@@ -662,6 +680,23 @@ def archive_product():
             db.session.delete(product)
 
         db.session.commit()
+        
+        # Kullanıcı işlemini logla
+        try:
+            from user_logs import log_user_action
+            log_details = {
+                'sayfa': 'Ürün Listesi',
+                'model_kodu': product_main_id,
+                'arşivlenen_adet': archived_count,
+                'işlem_açıklaması': f'{product_main_id} model koduna ait {archived_count} ürün arşivlendi'
+            }
+            log_user_action(
+                action='ARCHIVE',
+                details=log_details
+            )
+        except Exception as e:
+            logger.error(f"Kullanıcı log hatası: {e}")
+            
         return jsonify({'success': True, 'message': 'Ürünler başarıyla arşivlendi'})
     except Exception as e:
         db.session.rollback()
@@ -679,6 +714,8 @@ def restore_from_archive():
         if not archived_products:
             return jsonify({'success': False, 'message': 'Arşivde ürün bulunamadı'})
 
+        restored_count = len(archived_products)
+        
         for archived in archived_products:
             # Tüm alanları dinamik olarak kopyala
             product_data = {c.name: getattr(archived, c.name) for c in archived.__table__.columns if hasattr(Product, c.name)}
@@ -692,6 +729,23 @@ def restore_from_archive():
             db.session.delete(archived)
 
         db.session.commit()
+        
+        # Kullanıcı işlemini logla
+        try:
+            from user_logs import log_user_action
+            log_details = {
+                'sayfa': 'Ürün Listesi',
+                'model_kodu': product_main_id,
+                'geri_yüklenen_adet': restored_count,
+                'işlem_açıklaması': f'{product_main_id} model koduna ait {restored_count} ürün arşivden geri yüklendi'
+            }
+            log_user_action(
+                action='RESTORE',
+                details=log_details
+            )
+        except Exception as e:
+            logger.error(f"Kullanıcı log hatası: {e}")
+            
         return jsonify({'success': True, 'message': 'Ürünler başarıyla arşivden çıkarıldı'})
     except Exception as e:
         db.session.rollback()
@@ -870,10 +924,12 @@ def delete_product_variants():
 
         # İşlem logunu hazırla
         log_details = {
-            'model_id': model_id,
-            'color': color,
-            'deleted_count': len(products),
-            'barcodes': [p.barcode for p in products]
+            'sayfa': 'Ürün Listesi',
+            'model_kodu': model_id,
+            'renk': color,
+            'silinen_adet': len(products),
+            'barkodlar': ', '.join([p.barcode for p in products][:5]) + (f' (+{len(products)-5} daha)' if len(products) > 5 else ''),
+            'işlem_açıklaması': f'{model_id} model kodu ve {color} rengine ait {len(products)} ürün silindi'
         }
 
         # Ürünleri sil
@@ -886,7 +942,7 @@ def delete_product_variants():
         try:
             from user_logs import log_user_action
             log_user_action(
-                action=f"DELETE_PRODUCTS: {model_id} - {color}",
+                action='DELETE_PRODUCTS',
                 details=log_details
             )
         except Exception as e:
@@ -972,10 +1028,12 @@ def delete_product_api():
 
         # İşlem logunu hazırla
         log_details = {
-            'model_id': model_id,
-            'color': color,
-            'deleted_count': len(products),
-            'barcodes': [p.barcode for p in products]
+            'sayfa': 'Ürün Listesi',
+            'model_kodu': model_id,
+            'renk': color,
+            'silinen_adet': len(products),
+            'barkodlar': ', '.join([p.barcode for p in products][:5]) + (f' (+{len(products)-5} daha)' if len(products) > 5 else ''),
+            'işlem_açıklaması': f'{model_id} model kodu ve {color} rengine ait {len(products)} ürün silindi'
         }
 
         # Ürünleri sil
@@ -988,7 +1046,7 @@ def delete_product_api():
         try:
             from user_logs import log_user_action
             log_user_action(
-                action=f"DELETE_PRODUCTS: {model_id} - {color}",
+                action='DELETE_PRODUCTS',
                 details=log_details
             )
         except Exception as e:
@@ -1101,6 +1159,26 @@ def update_product_cost():
             product.cost_date = datetime.now()
             db.session.add(product)
         db.session.commit()
+        
+        # Kullanıcı işlemini logla
+        try:
+            from user_logs import log_user_action
+            log_details = {
+                'sayfa': 'Ürün Listesi',
+                'model_kodu': model_id,
+                'güncellenen_adet': len(products),
+                'yeni_maliyet_usd': f'{cost_usd:.2f} USD',
+                'yeni_maliyet_try': f'{cost_usd * usd_rate:.2f} TL',
+                'usd_kuru': f'{usd_rate:.4f}',
+                'işlem_açıklaması': f'{model_id} model koduna ait {len(products)} ürünün maliyeti güncellendi'
+            }
+            log_user_action(
+                action='COST_UPDATE',
+                details=log_details
+            )
+        except Exception as e:
+            logger.error(f"Kullanıcı log hatası: {e}")
+            
         return jsonify({'success': True, 'message': 'Ürün maliyetleri güncellendi'})
     except Exception as e:
         db.session.rollback()
@@ -1146,6 +1224,23 @@ def update_product_prices():
 
         if updated_count > 0:
             db.session.commit()
+            
+            # Kullanıcı işlemini logla
+            try:
+                from user_logs import log_user_action
+                log_details = {
+                    'sayfa': 'Ürün Listesi',
+                    'güncellenen_adet': updated_count,
+                    'işlem_açıklaması': f'{updated_count} ürünün satış fiyatı güncellendi',
+                    'güncellenen_ürünler': ', '.join([f'{barcode}: {price}₺' for barcode, price in price_updates[:5]]) + 
+                                           (f' (+{updated_count-5} daha)' if updated_count > 5 else '')
+                }
+                log_user_action(
+                    action='PRICE_UPDATE',
+                    details=log_details
+                )
+            except Exception as e:
+                logger.error(f"Kullanıcı log hatası: {e}")
 
         # Trendyol'da toplu fiyat güncelleme
         trendyol_errors = []
@@ -1282,6 +1377,23 @@ def update_model_price():
             price_updates.append((product.barcode, sale_price))
 
         db.session.commit()
+        
+        # Kullanıcı işlemini logla
+        try:
+            from user_logs import log_user_action
+            log_details = {
+                'sayfa': 'Ürün Listesi',
+                'model_kodu': model_id,
+                'güncellenen_adet': updated_count,
+                'yeni_fiyat': f'{sale_price:.2f} TL',
+                'işlem_açıklaması': f'{model_id} model koduna ait {updated_count} varyantın fiyatı {sale_price:.2f} TL olarak güncellendi'
+            }
+            log_user_action(
+                action='PRICE_UPDATE',
+                details=log_details
+            )
+        except Exception as e:
+            logger.error(f"Kullanıcı log hatası: {e}")
 
         # Trendyol'da toplu fiyat güncelleme
         trendyol_errors = []
@@ -1360,8 +1472,11 @@ def bulk_delete_products():
         if deleted_count > 0:
             # İşlem logunu hazırla
             log_details = {
-                'total_deleted': deleted_count,
-                'deleted_items': deleted_items
+                'sayfa': 'Ürün Listesi',
+                'silinen_toplam_adet': deleted_count,
+                'işlem_açıklaması': f'Toplu silme işlemi ile {deleted_count} ürün silindi',
+                'silinen_ürünler': ', '.join([f"{item['title']} ({item['barcode']})" for item in deleted_items[:5]]) + 
+                                   (f' (+{deleted_count-5} daha)' if deleted_count > 5 else '')
             }
 
             db.session.commit()
@@ -1370,7 +1485,7 @@ def bulk_delete_products():
             try:
                 from user_logs import log_user_action
                 log_user_action(
-                    action=f"BULK_DELETE_PRODUCTS: {deleted_count} ürün silindi",
+                    action='BULK_DELETE_PRODUCTS',
                     details=log_details
                 )
             except Exception as e:
@@ -1448,10 +1563,29 @@ def delete_model():
         if not products_to_delete:
             return jsonify({'success': False, 'message': 'Silinecek ürün bulunamadı.'})
 
+        deleted_count = len(products_to_delete)
+        
         for product in products_to_delete:
             db.session.delete(product)
 
         db.session.commit()
+        
+        # Kullanıcı işlemini logla
+        try:
+            from user_logs import log_user_action
+            log_details = {
+                'sayfa': 'Ürün Listesi',
+                'model_kodu': model_id,
+                'silinen_toplam_adet': deleted_count,
+                'işlem_açıklaması': f'{model_id} model kodu ve tüm varyantları ({deleted_count} ürün) tamamen silindi'
+            }
+            log_user_action(
+                action='DELETE',
+                details=log_details
+            )
+        except Exception as e:
+            logger.error(f"Kullanıcı log hatası: {e}")
+            
         return jsonify({'success': True, 'message': f"'{model_id}' modeli ve tüm varyantları başarıyla silindi."})
     except Exception as e:
         db.session.rollback()

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="weather-description" content="{{ weather.description if weather else 'Açık Hava' }}" />
   <title>Anasayfa - Güllü Ayakkabı</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
@@ -13,7 +14,7 @@
     body{margin:0;padding:0;font-family:"Roboto",sans-serif;background:#f5f5f5}
     #weatherCanvas{position:fixed;top:0;left:0;z-index:-1;width:100vw;height:100vh;filter:contrast(1.02) saturate(1.02)}
     .container{max-width:1200px;margin-top:60px;margin-left:auto;margin-right:auto;padding:0 15px}
-    .user-info{position:fixed;top:15px;left:20px;z-index:10;font-size:14px;color:#333;display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.5);backdrop-filter:blur(6px);box-shadow:0 6px 18px rgba(0,0,0,.08)}
+    .user-info{position:fixed;top:15px;left:20px;z-index:10;font-size:14px;color:#333;display:flex;align-items:center;gap:10px;padding:10px 15px;border-radius:10px;background:rgba(255,255,255,.7);backdrop-filter:blur(6px);box-shadow:0 6px 18px rgba(0,0,0,.08);max-width:450px;}
     .user-info img{max-width:100px;height:auto;border-radius:5px;box-shadow:0 8px 18px rgba(0,0,0,.12)}
     .btn-group-top{position:fixed;top:15px;right:20px;display:flex;gap:10px;z-index:10;flex-wrap:wrap;justify-content:flex-end;align-items:center}
     .btn{border-radius:20px;padding:10px 20px;font-size:.9rem;transition:all .25s ease;box-shadow:var(--btn-shadow);border:none;color:#fff;position:relative;overflow:hidden}
@@ -54,7 +55,24 @@
 
   <div class="user-info">
     <img src="{{ url_for('static', filename='logo/gullu.png') }}" alt="Güllü Shoes Logo"/>
-    Giriş Yapan: <strong>{{ session.get('first_name','') }} {{ session.get('last_name','') }}</strong>
+    <div style="display:flex;flex-direction:column;gap:2px;">
+      <div>Giriş Yapan: <strong>{{ session.get('first_name','') }} {{ session.get('last_name','') }}</strong></div>
+      {% if weather %}
+      <div style="font-size:12px;color:#555;">
+        {{ weather.icon }} {{ weather.description }} • {{ weather.temperature }}°C
+        {% if weather.feels_like %}(Hissedilen: {{ weather.feels_like }}°C){% endif %}
+      </div>
+      <div style="font-size:11px;color:#666;">
+        💨 {{ weather.wind_speed }} km/h {{ weather.wind_direction }} • 💧 Nem: {{ weather.humidity }}%
+        {% if weather.visibility %} • 👁️ Görüş: {{ weather.visibility|round(1) }} km{% endif %}
+      </div>
+      {% endif %}
+      {% if current_time %}
+      <div style="font-size:11px;color:#666;">
+        🕐 {{ current_time.strftime('%d %B %Y, %A - %H:%M:%S') }}
+      </div>
+      {% endif %}
+    </div>
   </div>
 
   <div class="btn-group-top">
@@ -192,27 +210,8 @@
   </div>
 
 
-  <!-- Arka plan animasyonu -->
-  <script>
-    (function () {
-      const canvas = document.getElementById("weatherCanvas");
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      function resize(){canvas.width=innerWidth;canvas.height=innerHeight}
-      addEventListener("resize",resize);resize();
-      const stars=new Array(100).fill(0).map(()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:Math.random()*1.2,a:Math.random()*0.7+0.3}));
-      function istHour(){try{return new Date(new Date().toLocaleString("en-US",{timeZone:"Europe/Istanbul"})).getHours()}catch(e){return new Date().getHours()}}
-      function drawBG(){
-        const h=istHour();
-        if(h>=6&&h<18){ctx.fillStyle="#87CEEB";ctx.fillRect(0,0,canvas.width,canvas.height);drawSun();} 
-        else {ctx.fillStyle="#2c3e50";ctx.fillRect(0,0,canvas.width,canvas.height);drawMoon();drawStars();}
-      }
-      function drawSun(){ctx.beginPath();ctx.fillStyle="#FFD54F";ctx.arc(canvas.width*0.15,canvas.height*0.2,60,0,2*Math.PI);ctx.fill()}
-      function drawMoon(){ctx.beginPath();ctx.fillStyle="#F0E68C";ctx.arc(canvas.width*0.8,canvas.height*0.2,40,0,2*Math.PI);ctx.fill();ctx.beginPath();ctx.fillStyle="#2c3e50";ctx.arc(canvas.width*0.82,canvas.height*0.18,40,0,2*Math.PI);ctx.fill()}
-      function drawStars(){stars.forEach(s=>{ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,2*Math.PI);ctx.fillStyle=`rgba(255,255,255,${s.a})`;ctx.fill();s.a+= (Math.random()-0.5)*0.02; if(s.a>1)s.a=1; if(s.a<0.3)s.a=0.3;});}
-      (function loop(){requestAnimationFrame(loop);drawBG();})();
-    })();
-  </script>
+  <!-- Gelişmiş hava durumu canvas animasyonları -->
+  <script src="{{ url_for('static', filename='js/weather-canvas.js') }}"></script>
 
   <!-- Ripple -->
   <script>

@@ -70,18 +70,55 @@
               <td>{{ log.user.username }}</td>
               <td>
                 {% if log.details_dict['İşlem'] is defined %}
-                  <span class="badge bg-primary">{{ log.details_dict['İşlem'] }}</span>
+                  {% set islem = log.details_dict['İşlem'] %}
+                  {% if 'Silme' in islem or 'Toplu Silme' in islem %}
+                    <span class="badge bg-danger">{{ islem }}</span>
+                  {% elif 'Güncelleme' in islem or 'Fiyat Güncelleme' in islem or 'Maliyet Güncelleme' in islem %}
+                    <span class="badge bg-warning text-dark">{{ islem }}</span>
+                  {% elif 'Oluşturma' in islem or 'Ekleme' in islem %}
+                    <span class="badge bg-success">{{ islem }}</span>
+                  {% elif 'Arşivleme' in islem %}
+                    <span class="badge bg-secondary">{{ islem }}</span>
+                  {% elif 'Geri Yükleme' in islem %}
+                    <span class="badge bg-info">{{ islem }}</span>
+                  {% elif 'Veri Çekme' in islem %}
+                    <span class="badge bg-primary">{{ islem }}</span>
+                  {% elif 'Görüntüleme' in islem %}
+                    <span class="badge bg-light text-dark">{{ islem }}</span>
+                  {% else %}
+                    <span class="badge bg-primary">{{ islem }}</span>
+                  {% endif %}
                   {% if log.details_dict['Sayfa'] is defined %}
-                  <span class="ms-2 text-muted">→ {{ log.details_dict['Sayfa'] }}</span>
+                  <br><span class="ms-2 text-muted small">📍 {{ log.details_dict['Sayfa'] }}</span>
                   {% endif %}
                 {% else %} {{ log.action }} {% endif %}
               </td>
               <td>
                 {% if log.details_dict %}
-                  <ul class="small mb-0">
-                    {% for key, value in log.details_dict.items() if key not in ['İşlem', 'Sayfa'] and value and value != 'null' and value != {} %}
-                      <li><strong>{{ key }}:</strong> {{ value }}</li>
+                  <ul class="small mb-0" style="max-height: 120px; overflow-y: auto;">
+                    {% if log.details_dict['işlem_açıklaması'] is defined %}
+                      <li class="fw-bold text-primary">📝 {{ log.details_dict['işlem_açıklaması'] }}</li>
+                    {% endif %}
+                    {% for key, value in log.details_dict.items() if key not in ['İşlem', 'Sayfa', 'Kullanıcı Rolü', 'Tarayıcı', 'İşletim Sistemi', 'Gelinen Sayfa', 'Zaman', 'işlem_açıklaması', 'Kullanıcı', 'Endpoint', 'Yol', 'Metod'] and value and value != 'null' and value != {} %}
+                      <li>
+                        <strong>{{ key }}:</strong>
+                        {% if value is string and value|length > 100 %}
+                          <span class="text-truncate d-inline-block" style="max-width: 300px;" title="{{ value }}">{{ value[:100] }}...</span>
+                        {% else %}
+                          {{ value }}
+                        {% endif %}
+                      </li>
                     {% endfor %}
+                    {% if log.details_dict['Kullanıcı Rolü'] is defined or log.details_dict['Tarayıcı'] is defined %}
+                      <li class="text-muted small mt-2">
+                        {% if log.details_dict['Kullanıcı Rolü'] is defined %}
+                          👤 {{ log.details_dict['Kullanıcı Rolü'] }}
+                        {% endif %}
+                        {% if log.details_dict['Tarayıcı'] is defined %}
+                          | 🌐 {{ log.details_dict['Tarayıcı'] }}
+                        {% endif %}
+                      </li>
+                    {% endif %}
                   </ul>
                 {% else %}<span>-</span>{% endif %}
               </td>

@@ -11,6 +11,9 @@ except ImportError:
 # --- JSON & satır okuma helper'ları ---
 import json
 
+# --- Hava Durumu Servisi ---
+from weather_service import get_weather_info, get_istanbul_time
+
 # ── Ayarlar
 LIVE_REFRESH_SECONDS = 150  # 2,5 dk. İstersen 120-180 arası ver
 USE_MONTH_WINDOW = False    # True yaparsan sadece içinde bulunulan ayı sayar
@@ -40,8 +43,11 @@ def index():
     # Toplam stok
     toplam_stok = db.session.query(func.sum(CentralStock.qty)).scalar() or 0
 
-    # Ay aralığı (IST)
-    now = datetime.now(IST)
+    # Hava durumu bilgisi
+    weather_info = get_weather_info()
+
+    # Ay aralığı (IST) - İstanbul saati
+    now = get_istanbul_time()
     ay_basi, sonraki_ay = _month_range_ist(now)
 
     # **GÜN aralığı (IST)**
@@ -99,7 +105,9 @@ def index():
         stats=stats,
         toplam_stok=toplam_stok,
         ay_adi=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"][now.month-1],
-        ortalama_siparis_tutari=ortalama_siparis_tutari
+        ortalama_siparis_tutari=ortalama_siparis_tutari,
+        weather=weather_info,
+        current_time=now
     )
 
 

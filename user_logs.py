@@ -7,30 +7,138 @@ import json
 import urllib.parse
 import logging
 
-# Sabit sözlükler
+# Sabit sözlükler - Genişletilmiş versiyon
 PAGE_NAME_MAP = {
+    # Genel Sayfalar
     'home': 'Ana Sayfa',
-    'order_list': 'Sipariş Listesi',
-    'exchange_form': 'Değişim Formu',
-    'analysis': 'Analiz Sayfası',
-    'stock_report': 'Stok Raporu',
-    'user_logs': 'Kullanıcı Logları',
+    'home_bp.home': 'Ana Sayfa',
+    'index': 'Ana Sayfa',
+    'bilinmeyen': 'Bilinmeyen Sayfa',
+    
+    # Ürün İşlemleri
+    'get_products.product_list': 'Ürün Listesi',
+    'get_products.fetch_products': 'Ürün Çekme',
+    'get_products.fetch_products_route': 'Ürün Çekme',
+    'get_products.update_products': 'Ürün Güncelleme',
+    'get_products.archive_product': 'Ürün Arşivleme',
+    'get_products.restore_from_archive': 'Arşivden Geri Yükleme',
+    'get_products.delete_product_variants': 'Ürün Varyantı Silme',
+    'get_products.delete_product_api': 'Ürün Silme',
+    'get_products.bulk_delete_products': 'Toplu Ürün Silme',
+    'get_products.update_product_prices': 'Ürün Fiyat Güncelleme',
+    'get_products.update_model_price': 'Model Fiyat Güncelleme',
+    'get_products.update_product_cost': 'Ürün Maliyet Güncelleme',
+    'get_products.delete_model_api': 'Model Silme',
+    'get_products.search_products': 'Ürün Arama',
+    'get_products.product_label': 'Ürün Etiketi',
     'product_list': 'Ürün Listesi',
-    'archive': 'Arşiv',
+    
+    # Sipariş İşlemleri
+    'order_list': 'Sipariş Listesi',
+    'order_list_service.order_list_all': 'Tüm Siparişler',
+    'order_list_service.order_list_new': 'Yeni Siparişler',
+    'order_list_service.order_list_processed': 'İşlenen Siparişler',
+    'order_list_service.order_list_shipped': 'Kargolanan Siparişler',
+    'order_list_service.order_list_delivered': 'Teslim Edilen Siparişler',
+    'order_list_service.order_list_cancelled': 'İptal Edilen Siparişler',
+    'siparisler.yeni_siparis': 'Yeni Sipariş',
+    'siparisler.siparis_detay': 'Sipariş Detay',
+    'siparisler.siparis_guncelle': 'Sipariş Güncelleme',
+    'siparisler.siparis_sil': 'Sipariş Silme',
+    'siparis_hazirla_bp.index': 'Sipariş Hazırlama',
+    'siparis_hazirla_bp.hazirla': 'Sipariş Hazırlama',
+    
+    # Sipariş Fişi
+    'siparis_fisi.siparis_fisi_olustur': 'Sipariş Fişi Oluşturma',
+    'siparis_fisi.siparis_fisi_sayfasi': 'Sipariş Fişi Sayfası',
+    'siparis_fisi.siparis_fisi_listesi': 'Sipariş Fişi Listesi',
+    'siparis_fisi_bp.siparis_fisi_urunler': 'Sipariş Fişi Ürünleri',
+    
+    # Kasa İşlemleri
+    'kasa.kasa': 'Kasa Yönetimi',
+    'kasa_bp.kasa': 'Kasa Yönetimi',
+    'kasa.kasa_yeni': 'Yeni Kasa Kaydı',
+    'kasa.kasa_duzenle': 'Kasa Kaydı Düzenleme',
+    'kasa.kasa_sil': 'Kasa Kaydı Silme',
+    'kasa.kasa_rapor': 'Kasa Raporu',
+    'kasa_bp.kasa_rapor': 'Kasa Raporu',
+    'kasa.kategoriler': 'Kasa Kategorileri',
+    
+    # Raf Sistemi
+    'raf_bp.yonetim': 'Raf Yönetimi',
+    'raf_bp.stok_guncelle': 'Raf Stok Güncelleme',
+    'raf_bp.olustur': 'Raf Oluşturma',
+    'raf_bp.sil': 'Raf Silme',
+    'raf_bp.stok_sil': 'Raf Stok Silme',
+    'raf_bp.stok_ekle': 'Raf Stok Ekleme',
+    'raf_bp.stoklar': 'Raf Stokları',
+    'raf_bp.stok_form': 'Raf Stok Formu',
+    'raf_bp.form': 'Raf Formu',
+    
+    # Üretim Önerisi
+    'uretim_oneri_bp.uretim_oneri': 'Üretim Önerisi',
+    'uretim_oneri_bp.uretim_oneri_haftalik': 'Haftalık Üretim Önerisi',
+    'uretim_oneri_bp.api_uretim_oneri_plan': 'Üretim Planı Oluşturma',
+    
+    # Kullanıcı İşlemleri
+    'login_logout.login': 'Giriş',
+    'login_logout.logout': 'Çıkış',
+    'login_logout.register': 'Kayıt',
+    'login_logout.approve_users': 'Kullanıcı Onaylama',
+    'login_logout.delete_user': 'Kullanıcı Silme',
+    'login_logout.setup_totp': '2FA Kurulumu',
+    'login_logout.verify_totp': '2FA Doğrulama',
     'login': 'Giriş',
     'register': 'Kayıt',
+    
+    # Stok İşlemleri
+    'stock_report': 'Stok Raporu',
+    'stock_report_bp.stock_report': 'Stok Raporu',
+    'stock_management.stock_addition': 'Stok Ekleme',
+    'stock_management_bp.stock_addition': 'Stok Ekleme',
+    
+    # Kar/Zarar
+    'profit.index': 'Kar/Zarar Analizi',
+    'profit_bp.index': 'Kar/Zarar Analizi',
+    'profit.save_costs': 'Maliyet Kaydetme',
+    
+    # Analiz ve Raporlar
+    'analysis': 'Analiz Sayfası',
+    'exchange_form': 'Değişim Formu',
+    'degisim.exchange_form': 'Değişim Formu',
+    
+    # Diğer
+    'user_logs': 'Kullanıcı Logları',
+    'user_logs.view_logs': 'Kullanıcı Logları',
+    'archive': 'Arşiv',
+    'archive_bp.archive': 'Arşiv',
+    'order_aggregation_bp.toplam_siparisler': 'Toplam Siparişler',
+    'intelligent_stock_analyzer_bp.index': 'Akıllı Stok Analizi',
+    'image_manager_bp.image_manager': 'Görsel Yönetimi',
+    'openai_bp.ai_analiz': 'AI Analiz',
+    'rapor_gir_bp.raporlama': 'Raporlama',
 }
 
 ACTION_TYPE_MAP = {
     'PAGE_VIEW': 'Sayfa Görüntüleme',
-    'LOGIN': 'Giriş',
-    'LOGOUT': 'Çıkış',
+    'LOGIN': 'Giriş Yapıldı',
+    'LOGOUT': 'Çıkış Yapıldı',
     'CREATE': 'Oluşturma',
     'UPDATE': 'Güncelleme',
     'DELETE': 'Silme',
     'ARCHIVE': 'Arşivleme',
+    'RESTORE': 'Geri Yükleme',
     'PRINT': 'Yazdırma',
     'EXPORT': 'Dışa Aktarma',
+    'FETCH': 'Veri Çekme',
+    'BULK_DELETE': 'Toplu Silme',
+    'PRICE_UPDATE': 'Fiyat Güncelleme',
+    'COST_UPDATE': 'Maliyet Güncelleme',
+    'STOCK_UPDATE': 'Stok Güncelleme',
+    'DELETE_PRODUCTS': 'Ürün Silme',
+    'BULK_DELETE_PRODUCTS': 'Toplu Ürün Silme',
+    'VIEW': 'Görüntüleme',
+    'SEARCH': 'Arama',
 }
 
 user_logs_bp = Blueprint('user_logs', __name__)
@@ -54,52 +162,74 @@ def extract_page_from_referrer(referrer: str) -> str:
         return PAGE_NAME_MAP.get(page, 'Doğrudan Giriş') if page else 'Doğrudan Giriş'
     return 'Doğrudan Giriş'
 
-def log_user_action(action: str, details: dict = None, force_log: bool = False, log_level: str = "INFO") -> None:
+def log_user_action(action: str, details = None, force_log: bool = False, log_level: str = "INFO") -> None:
     """
-    Aksiyon: 'UPDATE: product_list' vb.
-    details: {'stok_kodu': 'ABC123', 'guncellenen_adet': 5} gibi ek ayrıntılar.
+    Geliştirilmiş kullanıcı işlem loglama fonksiyonu
+    
+    Args:
+        action: İşlem tipi (örn: 'UPDATE', 'DELETE', 'CREATE') veya 'UPDATE: product_list' formatında
+        details: İşlem detayları (dict veya string)
+        force_log: Oturum açmamış kullanıcılar için zorunlu loglama
+        log_level: Log seviyesi
+        
+    Örnekler:
+        log_user_action('UPDATE', {'sayfa': 'Ürün Listesi', 'model': 'ABC123', 'değişiklik': 'Fiyat güncellendi'})
+        log_user_action('DELETE', {'sayfa': 'Ürün Listesi', 'silinen_ürün': 'XYZ789'})
     """
     if current_user.is_authenticated or force_log:
         user_id = current_user.id if current_user.is_authenticated else session.get('user_id')
         user_role = getattr(current_user, 'role', session.get('role', 'anonymous'))
+        username = getattr(current_user, 'username', 'Bilinmeyen')
 
-        # action içinden 'UPDATE' ve 'product_list' vb. ayrıştır
+        # action içinden işlem tipini ve sayfayı ayrıştır
         action_parts = action.split(': ', 1)
-        action_type_raw = action_parts[0].strip()   # 'UPDATE'
-        action_page_raw = action_parts[1].strip() if len(action_parts) > 1 else ''  # 'product_list'
+        action_type_raw = action_parts[0].strip()
+        action_page_raw = action_parts[1].strip() if len(action_parts) > 1 else ''
 
-        translated_action = translate_action_type(action_type_raw)  # 'Güncelleme'
-        translated_page = translate_page_name(action_page_raw)      # 'Ürün Listesi'
+        # Türkçe çeviriler
+        translated_action = translate_action_type(action_type_raw)
+        translated_page = translate_page_name(action_page_raw)
+
+        # Rol çevirisi
+        role_display = {
+            'admin': 'Yönetici',
+            'worker': 'Personel',
+            'manager': 'Yönetici Yardımcısı'
+        }.get(user_role, 'Ziyaretçi')
 
         # Detay sözlüğünü genişlet
         extended_details = {
-            'İşlem': translated_action,   # 'Güncelleme'
-            'Sayfa': translated_page,     # 'Ürün Listesi'
-            'Kullanıcı Rolü': (
-                'Yönetici' if user_role == 'admin' else
-                'Personel' if user_role == 'worker' else
-                'Yönetici Yardımcısı' if user_role == 'manager' else
-                'Ziyaretçi'
-            ),
+            'Kullanıcı': username,
+            'İşlem': translated_action,
+            'Kullanıcı Rolü': role_display,
             'Tarayıcı': get_browser_info(),
             'İşletim Sistemi': get_platform_info(),
-            'Gelinen Sayfa': extract_page_from_referrer(request.referrer)
+            'Zaman': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         }
 
+        # Sayfa bilgisi varsa ekle
+        if translated_page:
+            extended_details['Sayfa'] = translated_page
+            
+        # Gelinen sayfa bilgisi
+        if request.referrer:
+            extended_details['Gelinen Sayfa'] = extract_page_from_referrer(request.referrer)
+
+        # Kullanıcının gönderdiği detayları ekle
         if details:
             if isinstance(details, dict):
-                # details içindeki key-value'ları extended_details'e ekle
-                extended_details.update({
-                    k.replace('_', ' ').title(): v
-                    for k, v in details.items()
-                })
+                # Anahtar adlarını Türkçeleştir ve ekle
+                for k, v in details.items():
+                    # Anahtar isimlerini daha okunabilir hale getir
+                    formatted_key = k.replace('_', ' ').title()
+                    extended_details[formatted_key] = v
             else:
-                extended_details['Ek Detaylar'] = details
+                extended_details['Detay'] = str(details)
 
         try:
             new_log = UserLog(
                 user_id=user_id,
-                action=action,  # DB'de ham halde saklanır, 'UPDATE: product_list'
+                action=action,
                 details=json.dumps(extended_details, ensure_ascii=False),
                 ip_address=request.remote_addr,
                 page_url=request.url
