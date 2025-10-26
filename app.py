@@ -248,6 +248,19 @@ def handle_exception(error):
     return render_template('errors/500.html', error_id=error_id), 500
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Favicon Route
+# ──────────────────────────────────────────────────────────────────────────────
+@app.route('/favicon.ico')
+def favicon():
+    """Favicon için özel route"""
+    from flask import send_from_directory
+    return send_from_directory(
+        os.path.join(app.root_path, 'static'),
+        'favicon.ico',
+        mimetype='image/vnd.microsoft.icon'
+    )
+
+# ──────────────────────────────────────────────────────────────────────────────
 # İşlevler: İade Çekme • Sipariş Çekme • Stok Push
 # ──────────────────────────────────────────────────────────────────────────────
 def fetch_and_save_returns():
