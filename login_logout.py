@@ -273,44 +273,32 @@ def home_redirect():
 @login_logout_bp.route('/delete_user/<username>', methods=['POST'])
 @roles_required('admin')
 def delete_user(username):
-    print(f"DEBUG: ========== KULLANICI SİLME İSTEĞİ ==========")
-    print(f"DEBUG: Username: {username}")
-    print(f"DEBUG: Request Method: {request.method}")
-    print(f"DEBUG: Request URL: {request.url}")
-    print(f"DEBUG: Session User ID: {session.get('user_id', 'N/A')}")
-    print(f"DEBUG: Session Role: {session.get('role', 'N/A')}")
-    print(f"DEBUG: Session Authenticated: {session.get('authenticated', False)}")
+    logger.debug(f"Kullanıcı silme isteği - Username: {username}, Session: {session.get('user_id')}")
     
     user = User.query.filter_by(username=username).first()
     if not user:
-        print(f"DEBUG: Kullanıcı bulunamadı: {username}")
+        logger.warning(f"Kullanıcı bulunamadı: {username}")
         flash('Kullanıcı bulunamadı.', 'danger')
         return redirect(url_for('login_logout.approve_users'))
 
-    print(f"DEBUG: Kullanıcı bulundu - ID: {user.id}, Status: {user.status}")
+    logger.info(f"Kullanıcı siliniyor - Username: {username}, ID: {user.id}")
     
     try:
-        print(f"DEBUG: Kullanıcı siliniyor: {username}")
-        
         # İlk önce user_logs tablosundaki ilişkili kayıtları sil
         from models import UserLog
         deleted_logs = UserLog.query.filter_by(user_id=user.id).delete()
-        print(f"DEBUG: {deleted_logs} log kaydı silindi")
+        logger.debug(f"{deleted_logs} log kaydı silindi")
         
         # Sonra kullanıcıyı sil
         db.session.delete(user)
         db.session.commit()
-        print(f"DEBUG: Kullanıcı başarıyla silindi: {username}")
+        logger.info(f"Kullanıcı başarıyla silindi: {username}")
         flash(f'{username} kullanıcısı başarıyla silindi.', 'success')
     except Exception as e:
-        print(f"DEBUG: Kullanıcı silme hatası: {e}")
-        print(f"DEBUG: Exception type: {type(e)}")
-        import traceback
-        print(f"DEBUG: Traceback: {traceback.format_exc()}")
+        logger.error(f"Kullanıcı silme hatası: {username}", exc_info=True)
         db.session.rollback()
         flash(f'Kullanıcı silinirken bir hata oluştu: {e}', 'danger')
 
-    print(f"DEBUG: ========== SİLME İŞLEMİ TAMAMLANDI ==========")
     return redirect(url_for('login_logout.approve_users'))
 
 

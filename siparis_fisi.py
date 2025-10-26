@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify, current_app, send_from_directory
 import json
+import logging
 from datetime import datetime
 from models import db, SiparisFisi, Product
 # Eğer Pillow kütüphanesini logo boyutlandırma için kullanıyorsan bu import kalsın:
@@ -13,6 +14,7 @@ import qrcode
 import qrcode.image.svg # SVG formatında QR kod için
 import io # QR kodunu bellekte tutmak için
 
+logger = logging.getLogger(__name__)
 siparis_fisi_bp = Blueprint("siparis_fisi_bp", __name__)
 
 # json_loads filtresi zaten vardı, kalsın
@@ -24,8 +26,7 @@ def json_loads_filter(s):
     try:
         return json.loads(s)
     except (json.JSONDecodeError, TypeError):
-        # Hata olursa boş liste dön veya logla
-        print(f"JSON Decode Error: {s}") # Debug için
+        logger.error(f"JSON Decode Error: {s}")
         return []
 
 # ------------------------------------------------------------
@@ -79,11 +80,11 @@ def generate_and_save_qr_code(barcode_data):
         with open(qr_file_path, 'wb') as f:
             img.save(f)
 
-        print(f"QR kod oluşturuldu ve kaydedildi: {qr_file_path}") # Debug
+        logger.debug(f"QR kod oluşturuldu: {qr_file_path}")
         return qr_web_path # Oluşturulan dosyanın web adresini döndür
 
     except Exception as e:
-        print(f"QR kod oluşturulurken hata: {e}")
+        logger.error(f"QR kod oluşturma hatası: {e}")
         # Hata durumunda placeholder görselin yolunu döndürebiliriz
         # Bu placeholder görselin static klasöründe olduğundan emin olmalısın
         # Örneğin: static/placeholder_qr_error.svg veya static/placeholder_qr_error.png
@@ -290,7 +291,7 @@ def toplu_yazdir(fis_ids):
             current_year=current_year # Yıl değişkenini template'e gönder
         )
     except Exception as e:
-        print(f"Toplu yazdırma hatası: {e}") # Debug
+        logger.error(f"Toplu yazdırma hatası: {e}", exc_info=True)
         return jsonify({"mesaj": "Hata oluştu", "error": str(e)}), 500
 
 
@@ -387,7 +388,7 @@ def teslimat_kaydi_ekle(siparis_id):
                         product_to_update = Product.query.filter_by(barcode=barkod).first()
                         if product_to_update:
                              product_to_update.quantity -= adet # MİKTARI DÜŞ
-                             print(f"Stok güncellendi: Barkod {barkod}, Adet {adet} düşüldü.") # Debug
+                             logger.debug(f"Stok güncellendi: Barkod {barkod}, Adet {adet} düşüldü")
 
         db.session.commit()
         # Başarılı olunca fiş detay sayfasına geri dön
@@ -396,7 +397,7 @@ def teslimat_kaydi_ekle(siparis_id):
 
     except Exception as e:
         # Hata durumunda kullanıcıya mesaj gösterilebilir
-        print(f"Teslimat kaydı eklerken hata: {e}") # Debug için
+        logger.error(f"Teslimat kaydı eklerken hata: {e}", exc_info=True)
         # Flask'ta flash mesaj sistemi kullanmak iyi olabilir
         return redirect(url_for("siparis_fisi_bp.siparis_fisi_detay", siparis_id=siparis_id, error=f"Teslimat eklenirken bir hata oluştu: {str(e)}"))
 

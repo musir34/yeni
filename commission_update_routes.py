@@ -3,9 +3,12 @@ from flask import Blueprint, request, render_template, flash, redirect, url_for,
 import pandas as pd
 import os
 import random
+import logging
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from sqlalchemy import func
+
+logger = logging.getLogger(__name__)
 
 # Veritabanı modellerinizi import edin
 try:
@@ -41,13 +44,13 @@ def parse_excel_date(date_value):
                 return datetime.strptime(date_value, fmt)
             except ValueError:
                 pass
-        print(f"[DEBUG] Tanınamayan tarih formatı: {date_value}")
+        logger.warning(f"Tanınamayan tarih formatı: {date_value}")
         return None
     if isinstance(date_value, (int, float)):
         try:
             return pd.to_datetime(date_value, unit='D', origin='1899-12-30').to_pydatetime()
         except Exception as e:
-            print(f"[DEBUG] Sayısal tarih parse hatası: {e}")
+            logger.warning(f"Sayısal tarih parse hatası: {e}")
             return None
     return None
 
@@ -134,7 +137,7 @@ def update_commission_from_excel():
                 for idx, row in df.iterrows():
                     order_num = str(row.get('order_number', '')).strip()
                     if not order_num:
-                        print(f"[DEBUG] {filename} - Satır {idx + 2}: Boş sipariş numarası, atlanıyor.")
+                        logger.debug(f"{filename} - Satır {idx + 2}: Boş sipariş numarası, atlanıyor")
                         continue
 
                     raw_commission = row.get('commission')
@@ -166,7 +169,7 @@ def update_commission_from_excel():
                             updated_objects.append(order_to_update)
                     else:
                         file_not_found_count += 1
-                        print(f"[DEBUG] {filename} - Sipariş {order_num} veritabanında bulunamadı.")
+                        logger.debug(f"{filename} - Sipariş {order_num} veritabanında bulunamadı")
 
                 if updated_objects:
                     db.session.bulk_save_objects(updated_objects)

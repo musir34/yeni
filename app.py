@@ -7,7 +7,7 @@ load_dotenv()
 import asyncio
 from datetime import datetime, timedelta
 
-from flask import Flask, request, url_for, redirect, flash, session
+from flask import Flask, request, url_for, redirect, flash, session, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.routing import BuildError
@@ -189,6 +189,63 @@ def check_authentication():
     if request.endpoint not in allowed and not current_user.is_authenticated:
         flash('Lütfen giriş yapınız.', 'danger')
         return redirect(url_for('login_logout.login'))
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Global Error Handlers
+# ──────────────────────────────────────────────────────────────────────────────
+@app.errorhandler(404)
+def not_found_error(error):
+    """404 - Sayfa Bulunamadı"""
+    logger.warning(f"404 Hatası - Yol: {request.path}, IP: {request.remote_addr}")
+    if request.path.startswith('/api/'):
+        return {'error': 'Endpoint bulunamadı', 'path': request.path}, 404
+    return render_template('errors/404.html'), 404
+
+@app.errorhandler(403)
+def forbidden_error(error):
+    """403 - Yetkisiz Erişim"""
+    logger.warning(f"403 Hatası - Kullanıcı: {current_user.username if current_user.is_authenticated else 'Anonim'}, Yol: {request.path}")
+    if request.path.startswith('/api/'):
+        return {'error': 'Bu işlem için yetkiniz yok', 'path': request.path}, 403
+    return render_template('errors/403.html'), 403
+
+@app.errorhandler(500)
+def internal_error(error):
+    """500 - Sunucu Hatası"""
+    import uuid
+    error_id = str(uuid.uuid4())[:8]
+    logger.error(f"500 Hatası [ID: {error_id}] - Yol: {request.path}, Kullanıcı: {current_user.username if current_user.is_authenticated else 'Anonim'}", exc_info=True)
+    db.session.rollback()  # Veritabanı işlemini geri al
+    if request.path.startswith('/api/'):
+        return {'error': 'Sunucu hatası oluştu', 'error_id': error_id}, 500
+    return render_template('errors/500.html', error_id=error_id), 500
+
+@app.errorhandler(Exception)
+def handle_exception(error):
+    """Tüm yakalanmamış hataları yakala"""
+    import uuid
+    error_id = str(uuid.uuid4())[:8]
+    
+    # 404, 403, 500 gibi HTTP hataları için özel handler'ları kullan
+    if hasattr(error, 'code'):
+        if error.code == 404:
+            return not_found_error(error)
+        elif error.code == 403:
+            return forbidden_error(error)
+        elif error.code == 500:
+            return internal_error(error)
+    
+    # Diğer tüm hatalar için genel handler
+    logger.error(f"Beklenmeyen Hata [ID: {error_id}] - Yol: {request.path}, Tip: {type(error).__name__}, Mesaj: {str(error)}", exc_info=True)
+    db.session.rollback()
+    
+    if request.path.startswith('/api/'):
+        return {
+            'error': 'Beklenmeyen bir hata oluştu',
+            'error_id': error_id,
+            'type': type(error).__name__
+        }, 500
+    return render_template('errors/500.html', error_id=error_id), 500
 
 # ──────────────────────────────────────────────────────────────────────────────
 # İşlevler: İade Çekme • Sipariş Çekme • Stok Push

@@ -1009,22 +1009,33 @@ def search_products():
 
 
 @get_products_bp.route('/api/delete-product', methods=['POST'])
+@roles_required('admin', 'manager')
 def delete_product_api():
     """
     API endpoint for deleting all variants of a product by model ID and color
     """
+    from utils import error_response, success_response, validation_error_response
+    
     try:
         model_id = request.form.get('model_id')
         color = request.form.get('color')
 
+        # Validasyon
         if not model_id or not color:
-            return jsonify({'success': False, 'message': 'Model ID ve renk gereklidir'})
+            return validation_error_response({
+                'model_id': 'Model ID gereklidir' if not model_id else None,
+                'color': 'Renk gereklidir' if not color else None
+            })
 
         # Bu modele ve renge ait tüm ürünleri bul
         products = Product.query.filter_by(product_main_id=model_id, color=color).all()
 
         if not products:
-            return jsonify({'success': False, 'message': 'Silinecek ürün bulunamadı'})
+            return error_response(
+                'Silinecek ürün bulunamadı',
+                status_code=404,
+                error_code='NOT_FOUND'
+            )
 
         # İşlem logunu hazırla
         log_details = {
@@ -1052,16 +1063,19 @@ def delete_product_api():
         except Exception as e:
             logger.error(f"Kullanıcı log hatası: {e}")
 
-        return jsonify({
-            'success': True, 
-            'message': f'Toplam {len(products)} ürün başarıyla silindi',
-            'deleted_count': len(products)
-        })
+        return success_response(
+            f'Toplam {len(products)} ürün başarıyla silindi',
+            data={'deleted_count': len(products)}
+        )
 
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Ürün silme hatası: {e}")
-        return jsonify({'success': False, 'message': f'Hata oluştu: {str(e)}'})
+        logger.error(f"Ürün silme hatası: {e}", exc_info=True)
+        return error_response(
+            'Ürün silinirken hata oluştu',
+            status_code=500,
+            error_code='DATABASE_ERROR'
+        )
 
 @get_products_bp.route('/product_label')
 def product_label():
@@ -1130,6 +1144,7 @@ def get_product_cost():
 
 
 @get_products_bp.route('/api/update-product-cost', methods=['POST'])
+@roles_required('admin', 'manager')
 def update_product_cost():
     model_id = request.form.get('model_id', '').strip()
     cost_usd_str = request.form.get('cost_usd')
@@ -1187,6 +1202,7 @@ def update_product_cost():
 
 
 @get_products_bp.route('/api/update_product_prices', methods=['POST'])
+@roles_required('admin', 'manager')
 def update_product_prices():
     """Ürün varyantlarının satış fiyatlarını günceller"""
     try:
@@ -1332,6 +1348,7 @@ async def update_prices_in_trendyol_bulk(price_updates):
 
 
 @get_products_bp.route('/api/update_model_price', methods=['POST'])
+@roles_required('admin', 'manager')
 def update_model_price():
     """Bir modelin tüm varyantlarının satış fiyatını günceller"""
     try:
@@ -1430,6 +1447,7 @@ def update_model_price():
 
 
 @get_products_bp.route('/api/bulk-delete-products', methods=['POST'])
+@roles_required('admin', 'manager')
 def bulk_delete_products():
     """
     Birden fazla ürünü toplu halde silmek için API endpoint'i
@@ -1553,6 +1571,7 @@ def get_variants_for_cost_update():
     
 
 @get_products_bp.route('/api/delete-model', methods=['POST'])
+@roles_required('admin', 'manager')
 def delete_model():
     model_id = request.form.get('model_id')
     if not model_id:
