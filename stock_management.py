@@ -194,8 +194,8 @@ def handle_stock_update_from_frontend():
     update_type = data.get('updateType')
     raf_kodu = (data.get('raf_kodu') or '').strip()
     
-    # 🔧 "=" karakterini "-" ile değiştir (telefonlardan kaynaklanıyor)
-    raf_kodu = raf_kodu.replace('=', '-')
+    # 🔧 "=" ve "*" karakterlerini "-" ile değiştir (telefonlardan kaynaklanıyor)
+    raf_kodu = raf_kodu.replace('=', '-').replace('*', '-')
     
     # 🛡️ Çift işlem kontrolü - Aynı istek 60 saniye içinde tekrar gelirse engelle
     request_data = f"{raf_kodu}|{update_type}|{len(items)}"

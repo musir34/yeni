@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="weather-description" content="{{ weather.description if weather else 'Açık Hava' }}" />
+  <meta name="weather-clouds" content="{{ weather.clouds if weather else 0 }}" />
+  <meta name="weather-code" content="{{ weather.weather_code if weather else 0 }}" />
   <title>Anasayfa - Güllü Ayakkabı</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
@@ -63,7 +65,9 @@
         {% if weather.feels_like %}(Hissedilen: {{ weather.feels_like }}°C){% endif %}
       </div>
       <div style="font-size:11px;color:#666;">
-        💨 {{ weather.wind_speed }} km/h {{ weather.wind_direction }} • 💧 Nem: {{ weather.humidity }}%
+        💨 {{ weather.wind_speed }} km/h {{ weather.wind_direction }}
+        {% if weather.wind_gusts and weather.wind_gusts > weather.wind_speed %} (🌪️ Şiddetli: {{ weather.wind_gusts }} km/h){% endif %}
+        • 💧 Nem: {{ weather.humidity }}% • ☁️ Bulutluluk: {{ weather.clouds }}%
         {% if weather.visibility %} • 👁️ Görüş: {{ weather.visibility|round(1) }} km{% endif %}
       </div>
       {% endif %}
@@ -224,28 +228,124 @@
       window.addEventListener('resize', resize);
 
       const weatherDesc = document.querySelector('meta[name="weather-description"]')?.content || 'Açık';
+      const weatherClouds = parseInt(document.querySelector('meta[name="weather-clouds"]')?.content) || 0;
+      const weatherCode = parseInt(document.querySelector('meta[name="weather-code"]')?.content) || 0;
+      
       let colors = { top: [135, 206, 250], bottom: [255, 255, 255] }; // Varsayılan: Açık mavi
+      let showSun = false;
+      let showClouds = false;
+      let showRain = false;
+      let showWind = false;
+      let cloudDensity = 0;
 
-      // Hava durumuna göre renk paleti
-      if (weatherDesc.includes('Yağmur') || weatherDesc.includes('yağmur')) {
-        colors = { top: [70, 130, 180], bottom: [176, 196, 222] }; // Gri-Mavi
-      } else if (weatherDesc.includes('Kar') || weatherDesc.includes('kar')) {
-        colors = { top: [176, 224, 230], bottom: [240, 248, 255] }; // Açık mavi-beyaz
-      } else if (weatherDesc.includes('Bulut') || weatherDesc.includes('bulut')) {
-        colors = { top: [135, 206, 235], bottom: [211, 211, 211] }; // Mavi-Gri
-      } else if (weatherDesc.includes('Güneş') || weatherDesc.includes('açık') || weatherDesc.includes('Açık')) {
-        colors = { top: [135, 206, 250], bottom: [255, 250, 205] }; // Mavi-Sarı
-      } else if (weatherDesc.includes('Gece') || weatherDesc.includes('gece')) {
-        colors = { top: [25, 25, 112], bottom: [72, 61, 139] }; // Koyu mavi
+      // Hava durumuna göre renk paleti ve efektler
+      if (weatherCode >= 95) {
+        // Fırtına
+        colors = { top: [47, 79, 79], bottom: [105, 105, 105] };
+        showClouds = true;
+        showRain = true;
+        showWind = true;
+        cloudDensity = 8;
+      } else if (weatherCode >= 80 || (weatherCode >= 61 && weatherCode <= 65)) {
+        // Yağmurlu
+        colors = { top: [70, 130, 180], bottom: [176, 196, 222] };
+        showClouds = true;
+        showRain = true;
+        cloudDensity = 6;
+      } else if (weatherCode >= 71 && weatherCode <= 77) {
+        // Karlı
+        colors = { top: [176, 224, 230], bottom: [240, 248, 255] };
+        showClouds = true;
+        cloudDensity = 5;
+      } else if (weatherCode >= 51 && weatherCode <= 55) {
+        // Çiseleyen
+        colors = { top: [119, 136, 153], bottom: [192, 192, 192] };
+        showClouds = true;
+        showRain = true;
+        cloudDensity = 4;
+      } else if (weatherCode >= 45 && weatherCode <= 48) {
+        // Sisli
+        colors = { top: [169, 169, 169], bottom: [211, 211, 211] };
+        showClouds = true;
+        cloudDensity = 7;
+      } else if (weatherCode === 3 || weatherClouds > 75) {
+        // Kapalı - GÜNEŞ ASLA GÖSTERILMEZ!
+        colors = { top: [128, 128, 128], bottom: [192, 192, 192] };
+        showClouds = true;
+        showSun = false;  // Kapalı havada güneş yok!
+        showWind = true;  // Rüzgar her zaman göster
+        cloudDensity = 8;  // Daha yoğun bulutlar
+      } else if (weatherCode === 2 || weatherClouds > 50) {
+        // Parçalı Bulutlu
+        colors = { top: [135, 206, 235], bottom: [220, 220, 220] };
+        showClouds = true;
+        showSun = true;
+        showWind = true;
+        cloudDensity = 5;
+      } else if (weatherCode === 1 || weatherClouds > 25) {
+        // Az Bulutlu
+        colors = { top: [135, 206, 250], bottom: [245, 245, 220] };
+        showSun = true;
+        showClouds = true;
+        showWind = true;
+        cloudDensity = 3;
+      } else {
+        // Açık/Güneşli
+        colors = { top: [135, 206, 250], bottom: [255, 250, 205] };
+        showSun = true;
+        cloudDensity = 0;
+      }
+
+      // Bulutlar
+      const clouds = [];
+      for (let i = 0; i < cloudDensity; i++) {
+        clouds.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height * 0.6,
+          radius: 50 + Math.random() * 80,  // Daha büyük bulutlar
+          speed: 0.3 + Math.random() * 0.6,  // Biraz daha hızlı
+          opacity: (weatherCode === 3 || weatherClouds > 75) ? 0.5 + Math.random() * 0.3 : 0.3 + Math.random() * 0.4  // Kapalı havada daha koyu
+        });
+      }
+
+      // Rüzgar çizgileri
+      const windLines = [];
+      if (showWind) {
+        for (let i = 0; i < 50; i++) {  // 30'dan 50'ye çıkarıldı
+          windLines.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            length: 30 + Math.random() * 50,  // Daha uzun çizgiler
+            speed: 3 + Math.random() * 4,  // Daha hızlı
+            opacity: 0.2 + Math.random() * 0.3  // Daha belirgin
+          });
+        }
+      }
+
+      // Yağmur damlaları
+      const rainDrops = [];
+      if (showRain) {
+        for (let i = 0; i < 100; i++) {
+          rainDrops.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            speed: 5 + Math.random() * 5,
+            length: 10 + Math.random() * 20
+          });
+        }
       }
 
       let offset = 0;
+      let sunX = canvas.width - 150;
+      let sunY = 150;
+      let sunPulse = 0;
+
       function animate() {
         offset += 0.0005;
+        sunPulse += 0.02;
         
+        // Gradient arka plan
         const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        
-        // Dinamik renk geçişi
         const wave = Math.sin(offset) * 0.1 + 0.9;
         const top = colors.top.map(c => Math.floor(c * wave));
         const bottom = colors.bottom.map(c => Math.floor(c * (2 - wave)));
@@ -255,6 +355,101 @@
         
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Güneş çiz
+        if (showSun) {
+          const sunRadius = 60 + Math.sin(sunPulse) * 5;
+          const sunGradient = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunRadius * 1.5);
+          sunGradient.addColorStop(0, 'rgba(255, 220, 100, 0.9)');
+          sunGradient.addColorStop(0.5, 'rgba(255, 200, 80, 0.5)');
+          sunGradient.addColorStop(1, 'rgba(255, 200, 80, 0)');
+          
+          ctx.fillStyle = sunGradient;
+          ctx.beginPath();
+          ctx.arc(sunX, sunY, sunRadius * 1.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Güneş ışınları
+          ctx.strokeStyle = 'rgba(255, 220, 100, 0.3)';
+          ctx.lineWidth = 3;
+          for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2 + offset * 2;
+            const rayLength = sunRadius + 20 + Math.sin(sunPulse + i) * 10;
+            ctx.beginPath();
+            ctx.moveTo(sunX + Math.cos(angle) * sunRadius, sunY + Math.sin(angle) * sunRadius);
+            ctx.lineTo(sunX + Math.cos(angle) * rayLength, sunY + Math.sin(angle) * rayLength);
+            ctx.stroke();
+          }
+        }
+
+        // Bulutlar çiz
+        if (showClouds) {
+          clouds.forEach(cloud => {
+            cloud.x += cloud.speed;
+            if (cloud.x > canvas.width + 100) cloud.x = -100;
+
+            // Kapalı havada gri bulutlar, diğerlerinde beyaz
+            const isOvercast = (weatherCode === 3 || weatherClouds > 75);
+            const cloudColor = isOvercast ? `rgba(180, 180, 180, ${cloud.opacity})` : `rgba(255, 255, 255, ${cloud.opacity})`;
+            ctx.fillStyle = cloudColor;
+            
+            // Bulut şekli (beş daire - daha gerçekçi)
+            ctx.beginPath();
+            ctx.arc(cloud.x, cloud.y, cloud.radius, 0, Math.PI * 2);
+            ctx.arc(cloud.x + cloud.radius * 0.7, cloud.y - cloud.radius * 0.2, cloud.radius * 0.9, 0, Math.PI * 2);
+            ctx.arc(cloud.x - cloud.radius * 0.7, cloud.y - cloud.radius * 0.2, cloud.radius * 0.9, 0, Math.PI * 2);
+            ctx.arc(cloud.x + cloud.radius * 0.4, cloud.y + cloud.radius * 0.3, cloud.radius * 0.7, 0, Math.PI * 2);
+            ctx.arc(cloud.x - cloud.radius * 0.4, cloud.y + cloud.radius * 0.3, cloud.radius * 0.7, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        }
+
+        // Rüzgar çizgileri çiz
+        if (showWind) {
+          windLines.forEach(line => {
+            line.x += line.speed;
+            if (line.x > canvas.width) {
+              line.x = -line.length;
+              line.y = Math.random() * canvas.height;
+            }
+
+            ctx.strokeStyle = `rgba(255, 255, 255, ${line.opacity})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(line.x, line.y);
+            ctx.lineTo(line.x + line.length, line.y);
+            ctx.stroke();
+
+            // Küçük yan çizgiler
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(line.x + line.length * 0.3, line.y);
+            ctx.lineTo(line.x + line.length * 0.3 + 8, line.y + 5);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(line.x + line.length * 0.7, line.y);
+            ctx.lineTo(line.x + line.length * 0.7 + 8, line.y + 5);
+            ctx.stroke();
+          });
+        }
+
+        // Yağmur damlaları çiz
+        if (showRain) {
+          rainDrops.forEach(drop => {
+            drop.y += drop.speed;
+            if (drop.y > canvas.height) {
+              drop.y = -10;
+              drop.x = Math.random() * canvas.width;
+            }
+
+            ctx.strokeStyle = 'rgba(174, 194, 224, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(drop.x, drop.y);
+            ctx.lineTo(drop.x, drop.y + drop.length);
+            ctx.stroke();
+          });
+        }
         
         requestAnimationFrame(animate);
       }

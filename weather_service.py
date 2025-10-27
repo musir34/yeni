@@ -17,9 +17,9 @@ IST = ZoneInfo("Europe/Istanbul")
 # Open-Meteo API (Tamamen ücretsiz, API key gerektirmez!)
 WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast"
 
-# İstanbul koordinatları
-ISTANBUL_LAT = 41.0082  # Enlem
-ISTANBUL_LON = 28.9784  # Boylam
+# Başakşehir İkitelli OSB koordinatları
+ISTANBUL_LAT = 41.0685  # Enlem (Başakşehir İkitelli)
+ISTANBUL_LON = 28.7856  # Boylam (Başakşehir İkitelli)
 
 # Cache mekanizması (5 dakikada bir güncellenir)
 _weather_cache = {
@@ -114,7 +114,7 @@ def fetch_weather_data():
         params = {
             "latitude": ISTANBUL_LAT,
             "longitude": ISTANBUL_LON,
-            "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m",
+            "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,is_day,wind_gusts_10m",
             "timezone": "Europe/Istanbul",
             "forecast_days": 1
         }
@@ -166,7 +166,7 @@ def get_weather_info():
             "sunrise": None,
             "sunset": None,
             "is_day": True,
-            "city": "İstanbul",
+            "city": "Başakşehir İkitelli",
             "last_update": now
         }
     
@@ -174,9 +174,8 @@ def get_weather_info():
         # Open-Meteo API yanıtından gerekli bilgileri çıkar
         current = raw_data.get("current", {})
         
-        # Saat bilgisi - gün/gece kontrolü için
-        current_hour = now.hour
-        is_day = 6 <= current_hour < 20  # 06:00 - 20:00 arası gündüz
+        # API'den gün/gece bilgisi al (1=gündüz, 0=gece)
+        is_day = bool(current.get("is_day", 1))
         
         # Rüzgar yönü
         wind_deg = current.get("wind_direction_10m", 0)
@@ -186,12 +185,17 @@ def get_weather_info():
         # Hava durumu kodu
         weather_code = current.get("weather_code", 0)
         
+        # Rüzgar hızı ve şiddetini al
+        wind_speed = round(current.get("wind_speed_10m", 0), 1)
+        wind_gusts = round(current.get("wind_gusts_10m", 0), 1) if current.get("wind_gusts_10m") else None
+        
         weather_info = {
             "temperature": round(current.get("temperature_2m", 0), 1),
             "feels_like": round(current.get("apparent_temperature", 0), 1),
             "humidity": current.get("relative_humidity_2m", 0),
             "pressure": round(current.get("pressure_msl", 0)),
-            "wind_speed": round(current.get("wind_speed_10m", 0), 1),  # zaten km/h
+            "wind_speed": wind_speed,
+            "wind_gusts": wind_gusts,
             "wind_direction": wind_direction,
             "description": get_weather_description_tr(weather_code),
             "icon": get_weather_icon_emoji(weather_code, is_day),
@@ -200,8 +204,9 @@ def get_weather_info():
             "sunrise": None,  # Open-Meteo temel API'de yok
             "sunset": None,
             "is_day": is_day,
-            "city": "İstanbul",
-            "last_update": now
+            "city": "Başakşehir İkitelli",
+            "last_update": now,
+            "weather_code": weather_code  # Debug için
         }
         
         # Cache'e kaydet
@@ -217,7 +222,7 @@ def get_weather_info():
             "description": "Hata",
             "icon": "❌",
             "is_day": True,
-            "city": "İstanbul",
+            "city": "Başakşehir İkitelli",
             "last_update": now
         }
 

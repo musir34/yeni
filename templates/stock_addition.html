@@ -541,8 +541,8 @@
         let rafKoduCheckTimeout = null; // Debounce için
 
         document.getElementById("rafKoduInput").addEventListener("input", function () {
-            // 🔧 "=" karakterini "-" ile değiştir (telefonlardan kaynaklanıyor)
-            this.value = this.value.replace(/=/g, '-');
+            // 🔧 "=" ve "*" karakterlerini "-" ile değiştir (telefonlardan kaynaklanıyor)
+            this.value = this.value.replace(/=/g, '-').replace(/\*/g, '-');
             
             // 🎯 Anlık kontrol - 300ms bekle, ardından otomatik kontrol yap
             clearTimeout(rafKoduCheckTimeout);

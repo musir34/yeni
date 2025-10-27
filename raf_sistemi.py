@@ -349,10 +349,10 @@ def stok_ekle_api():
 def check_raf_var_mi(raf_kodu):
     """
     Raf kodunun sistemde olup olmadığını kontrol eder.
-    🔧 "=" karakterini "-" ile değiştirir (telefon klavyelerinden kaynaklanan sorun için).
+    🔧 "=" ve "*" karakterlerini "-" ile değiştirir (telefon klavyelerinden kaynaklanan sorun için).
     """
-    # 🔧 "=" karakterini "-" ile değiştir
-    raf_kodu = raf_kodu.replace('=', '-')
+    # 🔧 "=" ve "*" karakterlerini "-" ile değiştir
+    raf_kodu = raf_kodu.replace('=', '-').replace('*', '-')
     
     raf = Raf.query.filter_by(kod=raf_kodu).first()
     if raf:
