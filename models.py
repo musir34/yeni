@@ -145,6 +145,25 @@ class CentralStock(db.Model):
     barcode = db.Column(db.String, primary_key=True)   # Ürün barkodu
     qty = db.Column(db.Integer, nullable=False, default=0)  # Merkezdeki toplam adet
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_push_date = db.Column(db.DateTime(timezone=True), nullable=True)  # Son Trendyol'a gönderim tarihi
+
+
+class StockPushLog(db.Model):
+    """Trendyol'a stok gönderim logları"""
+    __tablename__ = "stock_push_log"
+
+    id = db.Column(db.Integer, primary_key=True)
+    push_time = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
+    total_items = db.Column(db.Integer, nullable=False, default=0)  # Gönderilen toplam ürün sayısı
+    total_quantity = db.Column(db.Integer, nullable=False, default=0)  # Gönderilen toplam adet
+    reserved_quantity = db.Column(db.Integer, nullable=False, default=0)  # Rezerve edilen miktar
+    batch_count = db.Column(db.Integer, nullable=False, default=0)  # Kaç batch gönderildi
+    success = db.Column(db.Boolean, nullable=False, default=True)  # Başarılı mı?
+    error_message = db.Column(db.Text, nullable=True)  # Hata mesajı varsa
+    duration_seconds = db.Column(db.Float, nullable=True)  # İşlem süresi
+    
+    def __repr__(self):
+        return f'<StockPushLog {self.push_time} - {self.total_items} items, success={self.success}>'
 
 
 ### --- YENİ EKLENEN GÜNLÜK RAPOR MODELİ --- ###

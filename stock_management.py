@@ -263,6 +263,7 @@ def handle_stock_update_from_frontend():
                     if cs_eski and cs_eski.qty is not None:
                         eski_qty = cs_eski.qty
                         cs_eski.qty = max(0, cs_eski.qty - eski_urun.adet)
+                        cs_eski.updated_at = datetime.utcnow()  # 🔧 Manuel güncelleme
                         logger.info(f"   - {eski_urun.urun_barkodu}: {eski_qty} → {cs_eski.qty} (Düşülen: -{eski_urun.adet})")
                 
                 # 3. Raftaki tüm eski kayıtları tek seferde sil
@@ -310,6 +311,7 @@ def handle_stock_update_from_frontend():
                 
                 # Merkezi stoğu GÜNCEL adede göre artır
                 cs.qty = (cs.qty or 0) + count
+                cs.updated_at = datetime.utcnow()  # 🔧 Manuel güncelleme
 
                 results.append({"barcode": barcode, "central_qty": int(cs.qty or 0)})
 

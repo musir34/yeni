@@ -5,6 +5,7 @@ import barcode
 from barcode.writer import ImageWriter
 import os
 from PIL import Image, ImageDraw, ImageFont
+from datetime import datetime  # 🔧 datetime import eklendi
 
 # YENİ EKLENEN IMPORT'LAR
 import io
@@ -157,6 +158,7 @@ def raf_stok_guncelle():
         cs = CentralStock.query.get(barkod)
         if cs:
             cs.qty = max(0, (cs.qty or 0) - (urun.adet or 0))
+            cs.updated_at = datetime.utcnow()  # 🔧 Manuel güncelleme
         db.session.delete(urun)
         db.session.commit()
         flash(f"{raf_kodu} rafından {barkod} kaldırıldı. CentralStock düşürüldü.", "success")
@@ -314,10 +316,11 @@ def raf_urun_sil():
         flash("Ürün rafta bulunamadı.", "warning")
         return redirect(url_for("raf.raf_yonetimi"))  # 👈
 
-    # CentralStock’u raftaki miktar kadar azalt
+    # CentralStock'u raftaki miktar kadar azalt
     cs = CentralStock.query.get(barkod)
     if cs:
         cs.qty = max(0, (cs.qty or 0) - (urun.adet or 0))
+        cs.updated_at = datetime.utcnow()  # 🔧 Manuel güncelleme
 
     db.session.delete(urun)
     db.session.commit()

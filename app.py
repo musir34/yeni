@@ -2,10 +2,12 @@
 
 import os
 import json
+import time  # 🔧 time.time() için eklendi
 from dotenv import load_dotenv
 load_dotenv()
 import asyncio
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo  # 🔧 Timezone için eklendi
 
 from flask import Flask, request, url_for, redirect, flash, session, render_template
 from flask_sqlalchemy import SQLAlchemy
@@ -13,7 +15,7 @@ from flask_cors import CORS
 from werkzeug.routing import BuildError
 from flask_login import LoginManager, current_user
 from archive import format_turkish_date_filter
-from models import db, User, CentralStock  # OrderCreated içerden import edilecek
+from models import db, User, CentralStock, StockPushLog  # OrderCreated içerden import edilecek
 from logger_config import app_logger as logger
 from cache_config import cache
 from flask_restx import Api
@@ -284,12 +286,24 @@ def pull_orders_job():
 
 def push_central_stock_to_trendyol():
     """
-    CentralStock (Created rezerv düşülmüş) → Trendyol
-    POST /sapigw/suppliers/{SUPPLIER_ID}/products/price-and-inventory
+    🔄 CentralStock'tan Trendyol'a stok gönderimi
+    
+    MANTIK:
+    1. OrderCreated (Yeni) siparişler → REZERVE sayılır (stoktan düşülmez)
+    2. Available Stock = CentralStock.qty - OrderCreated rezerv
+    3. Trendyol'a bu "müsait stok" gönderilir
+    4. OrderPicking'e geçen siparişler → CentralStock'tan düşülür (update_service.py)
+    
+    ZAMANLAMA: Her 5-10 dakikada bir otomatik çalışır
+    LOG: StockPushLog tablosuna detay kaydedilir
     """
+    start_time = time.time()
+    push_success = False
+    error_msg = None
+    
     with app.app_context():
         import base64, aiohttp, asyncio, math
-        from models import OrderCreated
+        from models import OrderCreated, StockPushLog
 
         def _parse(raw):
             try:
@@ -305,60 +319,124 @@ def push_central_stock_to_trendyol():
             except Exception:
                 return d
 
-        rows = CentralStock.query.all()
-        if not rows:
-            logger.info("[PUSH] CentralStock boş; gönderim yok.")
-            return
-
-        # Created rezerv toplamı
-        reserved = {}
-        for (details_str,) in OrderCreated.query.with_entities(OrderCreated.details).all():
-            for it in _parse(details_str):
-                bc = (it.get("barcode") or "").strip()
-                q  = _i(it.get("quantity"), 0)
-                if bc and q > 0:
-                    reserved[bc] = reserved.get(bc, 0) + q
-
-        # available = central - reserved
-        items = []
-        for r in rows:
-            available = max(0, _i(r.qty, 0) - reserved.get(r.barcode, 0))
-            items.append({"barcode": r.barcode.strip(), "quantity": available})
-
-        if not items:
-            logger.info("[PUSH] Gönderilecek kalem yok.")
-            return
-
-        url = f"https://api.trendyol.com/sapigw/suppliers/{SUPPLIER_ID}/products/price-and-inventory"
-        auth = base64.b64encode(f"{API_KEY}:{API_SECRET}".encode()).decode()
-        headers = {
-            "Authorization": f"Basic {auth}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "User-Agent": f"GulluAyakkabiApp-V2/{SUPPLIER_ID}"
-        }
-
-        BATCH_SIZE = 100
-        total = len(items)
-        parts = math.ceil(total / BATCH_SIZE)
-        logger.info(f"[PUSH] price-and-inventory gönderiliyor: {total} kalem, {parts} paket")
-
-        async def _run():
-            async with aiohttp.ClientSession() as session:
-                for i in range(0, total, BATCH_SIZE):
-                    batch = items[i:i+BATCH_SIZE]
-                    payload = {"items": [{"barcode": it["barcode"], "quantity": max(0, int(it["quantity"]))}
-                                         for it in batch if it.get("barcode")]}
-                    async with session.post(url, headers=headers, json=payload, timeout=60) as resp:
-                        body = await resp.text()
-                        logger.info(f"[PINV {i//BATCH_SIZE+1}/{parts}] {resp.status} {body[:200]}")
-                    await asyncio.sleep(0.4)
-
         try:
+            rows = CentralStock.query.all()
+            if not rows:
+                logger.info("[PUSH] CentralStock boş; gönderim yok.")
+                # Boş gönderim de log'a yazalım
+                log = StockPushLog(
+                    total_items=0,
+                    total_quantity=0,
+                    reserved_quantity=0,
+                    batch_count=0,
+                    success=True,
+                    duration_seconds=time.time() - start_time
+                )
+                db.session.add(log)
+                db.session.commit()
+                return
+
+            # 1️⃣ Created (Yeni) siparişlerdeki REZERV hesapla
+            reserved = {}
+            total_reserved = 0
+            for (details_str,) in OrderCreated.query.with_entities(OrderCreated.details).all():
+                for it in _parse(details_str):
+                    bc = (it.get("barcode") or "").strip()
+                    q  = _i(it.get("quantity"), 0)
+                    if bc and q > 0:
+                        reserved[bc] = reserved.get(bc, 0) + q
+                        total_reserved += q
+
+            logger.info(f"[PUSH] 📦 Toplam rezerv (Created siparişler): {total_reserved} adet, {len(reserved)} farklı barkod")
+
+            # 2️⃣ Available = CentralStock - Reserved
+            items = []
+            total_qty = 0
+            barcode_to_obj = {}  # Barkod -> CentralStock object mapping
+            for r in rows:
+                central_qty = _i(r.qty, 0)
+                reserved_qty = reserved.get(r.barcode, 0)
+                available = max(0, central_qty - reserved_qty)
+                items.append({"barcode": r.barcode.strip(), "quantity": available})
+                total_qty += available
+                barcode_to_obj[r.barcode.strip()] = r  # Sonra update için
+
+            if not items:
+                logger.info("[PUSH] Gönderilecek kalem yok.")
+                log = StockPushLog(
+                    total_items=0,
+                    total_quantity=0,
+                    reserved_quantity=total_reserved,
+                    batch_count=0,
+                    success=True,
+                    duration_seconds=time.time() - start_time
+                )
+                db.session.add(log)
+                db.session.commit()
+                return
+
+            # 3️⃣ Trendyol API'ye gönder
+            url = f"https://api.trendyol.com/sapigw/suppliers/{SUPPLIER_ID}/products/price-and-inventory"
+            auth = base64.b64encode(f"{API_KEY}:{API_SECRET}".encode()).decode()
+            headers = {
+                "Authorization": f"Basic {auth}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": f"GulluAyakkabiApp-V2/{SUPPLIER_ID}"
+            }
+
+            BATCH_SIZE = 100
+            total = len(items)
+            parts = math.ceil(total / BATCH_SIZE)
+            logger.info(f"[PUSH] 🚀 Trendyol'a gönderiliyor: {total} ürün ({total_qty} adet), {parts} batch")
+
+            async def _run():
+                async with aiohttp.ClientSession() as session:
+                    for i in range(0, total, BATCH_SIZE):
+                        batch = items[i:i+BATCH_SIZE]
+                        payload = {"items": [{"barcode": it["barcode"], "quantity": max(0, int(it["quantity"]))}
+                                             for it in batch if it.get("barcode")]}
+                        async with session.post(url, headers=headers, json=payload, timeout=60) as resp:
+                            body = await resp.text()
+                            status_icon = "✅" if resp.status == 200 else "❌"
+                            logger.info(f"[PUSH {status_icon}] Batch {i//BATCH_SIZE+1}/{parts}: {resp.status} - {body[:200]}")
+                            if resp.status != 200:
+                                raise Exception(f"API Hatası: {resp.status} - {body}")
+                        await asyncio.sleep(0.4)
+
             asyncio.run(_run())
-            logger.info("[PUSH] price-and-inventory tamamlandı.")
+            push_success = True
+            
+            # 4️⃣ Gönderilen her barkodun last_push_date'ini güncelle
+            push_time = datetime.now(ZoneInfo("Europe/Istanbul"))
+            for item in items:
+                barcode = item["barcode"]
+                if barcode in barcode_to_obj:
+                    barcode_to_obj[barcode].last_push_date = push_time
+            db.session.commit()
+            
+            logger.info("[PUSH] ✅ Trendyol stok güncellemesi BAŞARILI!")
+
         except Exception as e:
-            logger.error(f"[PUSH] Hata: {e}", exc_info=True)
+            push_success = False
+            error_msg = str(e)
+            logger.error(f"[PUSH] ❌ Hata: {e}", exc_info=True)
+
+        finally:
+            # 4️⃣ Log kaydı oluştur
+            duration = time.time() - start_time
+            log = StockPushLog(
+                total_items=len(items) if 'items' in locals() else 0,
+                total_quantity=total_qty if 'total_qty' in locals() else 0,
+                reserved_quantity=total_reserved if 'total_reserved' in locals() else 0,
+                batch_count=parts if 'parts' in locals() else 0,
+                success=push_success,
+                error_message=error_msg,
+                duration_seconds=duration
+            )
+            db.session.add(log)
+            db.session.commit()
+            logger.info(f"[PUSH] 📝 Log kaydedildi: {len(items) if 'items' in locals() else 0} ürün, {duration:.2f}s")
 
 def push_stock_job():
     """Zamanlayıcı tetiklemesinde direkt stok gönderir (zamanlamayı schedule ayarlar)."""
@@ -457,13 +535,13 @@ def schedule_jobs():
         next_run_time=now
     )
 
-    # PUSHA: 2 dk sonra başla, her 4 dk (çek ile ping-pong)
+    # PUSHA: 3 dk sonra başla, her 10 dakikada (stok senkronizasyonu)
     _add_job_safe(
         push_stock_job,
         trigger='interval',
         id="push_stock",
-        minutes=4,
-        next_run_time=now + timedelta(minutes=2)
+        minutes=10,  # 🔧 10 dakikada bir stok gönder
+        next_run_time=now + timedelta(minutes=3)
     )
 
     # İade: her gece 23:50

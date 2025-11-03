@@ -207,6 +207,7 @@ async def confirm_packing():
 
                 eski_cs = cs.qty or 0
                 cs.qty = max(0, eski_cs - adet)
+                cs.updated_at = datetime.utcnow()  # 🔧 Manuel güncelleme
                 logger.debug(f"[CENTRAL] bc={bc} {eski_cs}->{cs.qty} (dusen={adet})")
 
                 if kalan > 0:
