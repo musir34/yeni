@@ -291,12 +291,17 @@ def push_central_stock_to_trendyol():
         import base64, aiohttp, asyncio, math
         from models import OrderCreated
 
+        logger.info("=" * 80)
+        logger.info("[PUSH] 🚀 Stok gönderme işlemi başlatıldı")
+        logger.info(f"[PUSH] ⏰ Zaman: {datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}")
+        
         def _parse(raw):
             try:
                 if not raw: return []
                 d = json.loads(raw) if isinstance(raw, str) else raw
                 return d if isinstance(d, list) else [d]
-            except Exception:
+            except Exception as e:
+                logger.warning(f"[PUSH] ⚠️ JSON parse hatası: {e}")
                 return []
 
         def _i(x, d=0):
@@ -305,30 +310,85 @@ def push_central_stock_to_trendyol():
             except Exception:
                 return d
 
+        # 1. CentralStock Kontrolü
+        logger.info("[PUSH] 📦 Step 1: CentralStock verisi okunuyor...")
         rows = CentralStock.query.all()
+        logger.info(f"[PUSH] 📊 CentralStock'ta {len(rows)} kayıt bulundu")
+        
         if not rows:
-            logger.info("[PUSH] CentralStock boş; gönderim yok.")
+            logger.warning("[PUSH] ⚠️ CentralStock boş; gönderim yapılamadı!")
             return
 
-        # Created rezerv toplamı
+        # İlk 5 kaydı örnek göster
+        if rows:
+            logger.info("[PUSH] 📋 İlk 5 CentralStock örneği:")
+            for idx, r in enumerate(rows[:5], 1):
+                logger.info(f"[PUSH]   {idx}. Barkod: {r.barcode}, Miktar: {r.qty}")
+
+        # 2. Created Rezerv Hesaplama
+        logger.info("[PUSH] 🔒 Step 2: Created siparişler rezerv hesaplanıyor...")
         reserved = {}
-        for (details_str,) in OrderCreated.query.with_entities(OrderCreated.details).all():
+        created_orders = OrderCreated.query.with_entities(OrderCreated.details).all()
+        logger.info(f"[PUSH] 📦 {len(created_orders)} adet Created sipariş bulundu")
+        
+        total_reserved_items = 0
+        for (details_str,) in created_orders:
             for it in _parse(details_str):
                 bc = (it.get("barcode") or "").strip()
                 q  = _i(it.get("quantity"), 0)
                 if bc and q > 0:
                     reserved[bc] = reserved.get(bc, 0) + q
+                    total_reserved_items += q
+        
+        logger.info(f"[PUSH] 🔒 Toplam {len(reserved)} farklı barkod için {total_reserved_items} adet rezerve edildi")
+        
+        # En çok rezerve edilen 5 ürünü göster
+        if reserved:
+            top_reserved = sorted(reserved.items(), key=lambda x: x[1], reverse=True)[:5]
+            logger.info("[PUSH] 📋 En çok rezerve edilen 5 ürün:")
+            for idx, (bc, qty) in enumerate(top_reserved, 1):
+                logger.info(f"[PUSH]   {idx}. Barkod: {bc}, Rezerve: {qty}")
 
-        # available = central - reserved
+        # 3. Available Stok Hesaplama
+        logger.info("[PUSH] 🧮 Step 3: Kullanılabilir stok hesaplanıyor...")
         items = []
+        zero_stock_count = 0
+        negative_adjusted_count = 0
+        
         for r in rows:
-            available = max(0, _i(r.qty, 0) - reserved.get(r.barcode, 0))
+            central_qty = _i(r.qty, 0)
+            reserved_qty = reserved.get(r.barcode, 0)
+            available = central_qty - reserved_qty
+            
+            if available < 0:
+                negative_adjusted_count += 1
+                logger.debug(f"[PUSH] ⚠️ Negatif stok düzeltildi: {r.barcode} (Central: {central_qty}, Rezerve: {reserved_qty} → 0)")
+                available = 0
+            
+            if available == 0:
+                zero_stock_count += 1
+                
             items.append({"barcode": r.barcode.strip(), "quantity": available})
 
+        logger.info(f"[PUSH] 📊 Stok İstatistikleri:")
+        logger.info(f"[PUSH]   • Toplam ürün: {len(items)}")
+        logger.info(f"[PUSH]   • Sıfır stoklu: {zero_stock_count}")
+        logger.info(f"[PUSH]   • Negatif düzeltilen: {negative_adjusted_count}")
+        logger.info(f"[PUSH]   • Pozitif stoklu: {len(items) - zero_stock_count}")
+
         if not items:
-            logger.info("[PUSH] Gönderilecek kalem yok.")
+            logger.warning("[PUSH] ⚠️ Gönderilecek kalem yok!")
             return
 
+        # Pozitif stoklu ilk 5 ürünü göster
+        positive_items = [it for it in items if it["quantity"] > 0][:5]
+        if positive_items:
+            logger.info("[PUSH] 📋 Gönderilecek örnek 5 ürün:")
+            for idx, it in enumerate(positive_items, 1):
+                logger.info(f"[PUSH]   {idx}. Barkod: {it['barcode']}, Miktar: {it['quantity']}")
+
+        # 4. API İsteği Hazırlık
+        logger.info("[PUSH] 🌐 Step 4: Trendyol API isteği hazırlanıyor...")
         url = f"https://api.trendyol.com/sapigw/suppliers/{SUPPLIER_ID}/products/price-and-inventory"
         auth = base64.b64encode(f"{API_KEY}:{API_SECRET}".encode()).decode()
         headers = {
@@ -337,28 +397,66 @@ def push_central_stock_to_trendyol():
             "Accept": "application/json",
             "User-Agent": f"GulluAyakkabiApp-V2/{SUPPLIER_ID}"
         }
+        
+        logger.info(f"[PUSH] 🔗 API URL: {url}")
+        logger.info(f"[PUSH] 🔑 Supplier ID: {SUPPLIER_ID}")
+        logger.info(f"[PUSH] 🔐 Auth hazırlandı (API_KEY mevcut: {bool(API_KEY)})")
 
         BATCH_SIZE = 100
         total = len(items)
         parts = math.ceil(total / BATCH_SIZE)
-        logger.info(f"[PUSH] price-and-inventory gönderiliyor: {total} kalem, {parts} paket")
+        logger.info(f"[PUSH] 📦 Batch ayarları: {total} kalem, {parts} paket (Batch size: {BATCH_SIZE})")
 
+        # 5. Asenkron Gönderim
+        logger.info("[PUSH] 📤 Step 5: Asenkron gönderim başlatılıyor...")
+        
         async def _run():
+            success_count = 0
+            error_count = 0
+            timeout = aiohttp.ClientTimeout(total=60)
+            
             async with aiohttp.ClientSession() as session:
                 for i in range(0, total, BATCH_SIZE):
+                    batch_num = i//BATCH_SIZE + 1
                     batch = items[i:i+BATCH_SIZE]
                     payload = {"items": [{"barcode": it["barcode"], "quantity": max(0, int(it["quantity"]))}
                                          for it in batch if it.get("barcode")]}
-                    async with session.post(url, headers=headers, json=payload, timeout=60) as resp:
-                        body = await resp.text()
-                        logger.info(f"[PINV {i//BATCH_SIZE+1}/{parts}] {resp.status} {body[:200]}")
+                    
+                    logger.info(f"[PUSH] 📮 Batch {batch_num}/{parts} gönderiliyor ({len(payload['items'])} ürün)...")
+                    
+                    try:
+                        async with session.post(url, headers=headers, json=payload, timeout=timeout) as resp:
+                            body = await resp.text()
+                            
+                            if resp.status == 200:
+                                success_count += 1
+                                logger.info(f"[PUSH] ✅ Batch {batch_num}/{parts} başarılı! Status: {resp.status}")
+                                logger.debug(f"[PUSH] 📄 Response: {body[:300]}")
+                            else:
+                                error_count += 1
+                                logger.error(f"[PUSH] ❌ Batch {batch_num}/{parts} hata! Status: {resp.status}")
+                                logger.error(f"[PUSH] 📄 Error Response: {body[:500]}")
+                                
+                    except asyncio.TimeoutError:
+                        error_count += 1
+                        logger.error(f"[PUSH] ⏱️ Batch {batch_num}/{parts} zaman aşımı (60s)")
+                    except Exception as e:
+                        error_count += 1
+                        logger.error(f"[PUSH] ⚠️ Batch {batch_num}/{parts} istisna: {e}")
+                        
                     await asyncio.sleep(0.4)
+            
+            logger.info(f"[PUSH] 📊 Gönderim özeti: Başarılı: {success_count}/{parts}, Hatalı: {error_count}/{parts}")
 
         try:
+            logger.info("[PUSH] 🚀 Asenkron döngü başlatılıyor...")
             asyncio.run(_run())
-            logger.info("[PUSH] price-and-inventory tamamlandı.")
+            logger.info("[PUSH] ✅ price-and-inventory işlemi tamamlandı!")
         except Exception as e:
-            logger.error(f"[PUSH] Hata: {e}", exc_info=True)
+            logger.error(f"[PUSH] ❌ KRITIK HATA: {e}", exc_info=True)
+        
+        logger.info("[PUSH] 🏁 Stok gönderme işlemi sona erdi")
+        logger.info("=" * 80)
 
 def push_stock_job():
     """Zamanlayıcı tetiklemesinde direkt stok gönderir (zamanlamayı schedule ayarlar)."""
