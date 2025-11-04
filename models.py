@@ -23,6 +23,32 @@ import enum
 db = SQLAlchemy()
 
 
+# ════════════════════════════════════════════════════════════════════
+# BARKOD ALIAS SİSTEMİ
+# ════════════════════════════════════════════════════════════════════
+class BarcodeAlias(db.Model):
+    """
+    Barkod alias (takma ad) sistemi.
+    Birden fazla barkod aynı ürünü gösterebilir.
+    
+    Örnek:
+    alias_barcode='ABC123' -> main_barcode='XYZ789'
+    alias_barcode='DEF456' -> main_barcode='XYZ789'
+    
+    Tüm barkod işlemleri ana barkod üzerinden yapılır.
+    """
+    __tablename__ = 'barcode_aliases'
+    
+    alias_barcode = db.Column(db.String(100), primary_key=True)  # Alternatif barkod
+    main_barcode = db.Column(db.String(100), nullable=False, index=True)  # Ana (gerçek) barkod
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.String(100))  # Hangi kullanıcı ekledi
+    note = db.Column(db.String(255))  # Açıklama (opsiyonel)
+    
+    def __repr__(self):
+        return f"<BarcodeAlias {self.alias_barcode} -> {self.main_barcode}>"
+
+
 # Bu Enum'ı ve Odeme modelini Kasa modelinden ÖNCE ekle
 class KasaDurum(enum.Enum):
     ODENMEDI = 'ödenmedi'

@@ -7,13 +7,14 @@ from flask import Blueprint, render_template
 from sqlalchemy import desc
 from zoneinfo import ZoneInfo
 
-
-
 # Modeller
 from models import OrderCreated, RafUrun, Product, Archive, Degisim
 
 # Hava Durumu Servisi
 from weather_service import get_weather_info, get_istanbul_time
+
+# 🔥 BARKOD ALIAS DESTEĞİ
+from barcode_alias_helper import normalize_barcode
 
 # Blueprint
 siparis_hazirla_bp = Blueprint("siparis_hazirla", __name__)
@@ -142,12 +143,16 @@ def get_home():
         products = []
         for d in details_list:
             bc = d.get("barcode", "")
-            image_url = get_product_image(bc)
+            
+            # 🔥 Barkodu normalize et (alias ise ana barkoda çevir)
+            normalized_bc = normalize_barcode(bc)
+            
+            image_url = get_product_image(normalized_bc)
 
             # Aktif tüm raflar (adet > 0)
             raf_kayitlari = (
                 RafUrun.query
-                .filter(RafUrun.urun_barkodu == bc, RafUrun.adet > 0)
+                .filter(RafUrun.urun_barkodu == normalized_bc, RafUrun.adet > 0)
                 .order_by(desc(RafUrun.adet))
                 .all()
             )
@@ -155,7 +160,8 @@ def get_home():
 
             products.append({
                 "sku": d.get("sku", "Bilinmeyen SKU"),
-                "barcode": bc,
+                "barcode": bc,  # Orijinal (API'den gelen)
+                "normalized_barcode": normalized_bc,  # 🔥 Ana barkod
                 "quantity": d.get("quantity", 1),
                 "image_url": image_url,
                 "raflar": raflar

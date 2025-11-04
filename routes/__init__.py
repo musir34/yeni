@@ -37,6 +37,7 @@ def register_blueprints(app):
     from siparis_hazirla import siparis_hazirla_bp
     from gorev import gorev_bp, attach_jobs
     from uretim_oneri import uretim_oneri_bp
+    from barcode_alias_routes import barcode_alias_bp  # 🔥 BARKOD ALIAS SİSTEMİ
 
 
 
@@ -77,5 +78,6 @@ def register_blueprints(app):
         siparis_hazirla_bp,
         gorev_bp,
         uretim_oneri_bp,
+        barcode_alias_bp,  # 🔥 BARKOD ALIAS SİSTEMİ
     ]:
         app.register_blueprint(bp)

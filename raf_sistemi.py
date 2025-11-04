@@ -10,6 +10,9 @@ from PIL import Image, ImageDraw, ImageFont
 import io
 from flask import send_file
 
+# 🔥 BARKOD ALIAS DESTEĞİ
+from barcode_alias_helper import normalize_barcode
+
 raf_bp = Blueprint("raf", __name__, url_prefix="/raf")
 
 
@@ -19,9 +22,14 @@ def barkod_ara(barkod):
     """
     Barkod girildiğinde ürünün hangi raflarda olduğunu döndürür.
     Sadece adet > 0 olan raf kayıtları gösterilir.
+    
+    🔥 BARKOD ALIAS DESTEKLİ: Alias girilirse ana barkod olarak arar.
     """
+    # 🔥 Barkodu normalize et (alias ise ana barkoda çevir)
+    normalized = normalize_barcode(barkod)
+    
     urunler = (RafUrun.query
-               .filter_by(urun_barkodu=barkod)
+               .filter_by(urun_barkodu=normalized)
                .filter(RafUrun.adet > 0)
                .all())
     if not urunler:
@@ -36,7 +44,11 @@ def barkod_ara(barkod):
             "adet": u.adet
         })
 
-    return jsonify({"barkod": barkod, "raflar": detaylar})
+    return jsonify({
+        "barkod": normalized,  # Ana barkodu döndür
+        "searched_barcode": barkod,  # Aranan orijinal barkod
+        "raflar": detaylar
+    })
 
 
 
@@ -141,30 +153,34 @@ def raf_stok_guncelle():
 
     raf_kodu = request.form.get("raf_kodu")
     barkod = (request.form.get("barkod") or "").strip().replace(" ", "")
+    
+    # 🔥 Barkodu normalize et
+    normalized = normalize_barcode(barkod)
+    
     try:
         yeni_adet = int(request.form.get("adet"))
     except (TypeError, ValueError):
         flash("Geçersiz adet.", "danger")
         return redirect(url_for("raf.raf_yonetimi"))  # 👈 raf listesine dön
 
-    urun = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barkod).first()
+    urun = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=normalized).first()
     if not urun:
         flash("Ürün rafta bulunamadı.", "danger")
         return redirect(url_for("raf.raf_yonetimi"))  # 👈
 
     if yeni_adet <= 0:
         # 0'a çekilirse kaydı sil + CentralStock düş
-        cs = CentralStock.query.get(barkod)
+        cs = CentralStock.query.get(normalized)
         if cs:
             cs.qty = max(0, (cs.qty or 0) - (urun.adet or 0))
         db.session.delete(urun)
         db.session.commit()
-        flash(f"{raf_kodu} rafından {barkod} kaldırıldı. CentralStock düşürüldü.", "success")
+        flash(f"{raf_kodu} rafından {normalized} kaldırıldı. CentralStock düşürüldü.", "success")
         return redirect(url_for("raf.raf_yonetimi"))  # 👈
 
     urun.adet = yeni_adet
     db.session.commit()
-    flash(f"{raf_kodu} rafındaki {barkod} adet {yeni_adet} olarak güncellendi.", "success")
+    flash(f"{raf_kodu} rafındaki {normalized} adet {yeni_adet} olarak güncellendi.", "success")
     return redirect(url_for("raf.raf_yonetimi"))  # 👈
 
 
