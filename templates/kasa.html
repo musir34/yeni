@@ -187,7 +187,7 @@
                     <i class="fas fa-question"></i>
                 </button>
             </h1>
-            <p><strong>{{ ay }}. Ay / {{ yil }}</strong> dönemi gelir ve gider kayıtları</p>
+            <p>Gelir ve gider kayıtlarınızı takip edin</p>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -204,6 +204,39 @@
                 </div>
             {% endif %}
         {% endwith %}
+
+        <!-- Minimal Toplam Filtresi -->
+        <div class="card mb-3" style="background: linear-gradient(135deg, #667db6 0%, #0082c8 100%); border: none;">
+            <div class="card-body py-2">
+                <form method="GET" action="{{ url_for('kasa.kasa_sayfasi') }}" class="form-inline justify-content-center">
+                    <label class="text-white mr-2 mb-0"><i class="fas fa-chart-line"></i> Toplam Filtre:</label>
+                    <input type="number" name="toplam_yil" class="form-control form-control-sm mr-2" 
+                           style="width: 80px;" placeholder="Yıl" 
+                           value="{{ toplam_yil if toplam_yil else bugun.year }}" min="2000" max="2100">
+                    <input type="number" name="toplam_ay" class="form-control form-control-sm mr-2" 
+                           style="width: 70px;" placeholder="Ay" 
+                           value="{{ toplam_ay if toplam_ay else bugun.month }}" min="1" max="12">
+                    
+                    <!-- Kayıt filtre değerlerini koru -->
+                    {% if yil %}<input type="hidden" name="yil" value="{{ yil }}">{% endif %}
+                    {% if ay %}<input type="hidden" name="ay" value="{{ ay }}">{% endif %}
+                    {% if tip %}<input type="hidden" name="tip" value="{{ tip }}">{% endif %}
+                    {% if durum %}<input type="hidden" name="durum" value="{{ durum }}">{% endif %}
+                    {% if arama %}<input type="hidden" name="arama" value="{{ arama }}">{% endif %}
+                    {% if baslangic_tarihi %}<input type="hidden" name="baslangic_tarihi" value="{{ baslangic_tarihi }}">{% endif %}
+                    {% if bitis_tarihi %}<input type="hidden" name="bitis_tarihi" value="{{ bitis_tarihi }}">{% endif %}
+                    
+                    <button type="submit" class="btn btn-light btn-sm mr-2">
+                        <i class="fas fa-filter"></i> Uygula
+                    </button>
+                    <a href="{{ url_for('kasa.kasa_sayfasi', yil=yil, ay=ay, tip=tip, durum=durum, arama=arama, baslangic_tarihi=baslangic_tarihi, bitis_tarihi=bitis_tarihi) }}" 
+                       class="btn btn-outline-light btn-sm">
+                        <i class="fas fa-infinity"></i> Tümü
+                    </a>
+                    <span class="badge badge-light ml-2 px-3 py-2">{{ toplam_filtre_metni }}</span>
+                </form>
+            </div>
+        </div>
 
         <div class="stats-cards">
             <div class="stat-card gelir">
@@ -252,7 +285,7 @@
         </div>
 
         <div class="filter-section">
-            <h5><i class="fas fa-filter"></i> Filtreleme</h5>
+            <h5><i class="fas fa-filter"></i> Kayıt Filtreleme</h5>
             <form method="GET" action="{{ url_for('kasa.kasa_sayfasi') }}">
                 <div class="row">
                     <div class="col-md-2 col-sm-6">
@@ -289,7 +322,7 @@
                             <button type="submit" class="btn btn-primary mr-2">
                                 <i class="fas fa-search"></i> Filtrele
                             </button>
-                            <a href="{{ url_for('kasa.kasa_sayfasi', yil=yil, ay=ay) }}" class="btn btn-secondary">
+                            <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-secondary">
                                 <i class="fas fa-times"></i> Temizle
                             </a>
                         </div>
@@ -393,13 +426,15 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="8" class="text-center text-muted">Bu filtreye uygun kayıt bulunmamaktadır.</td>
+                            <td colspan="7" class="text-center text-muted">Bu filtreye uygun kayıt bulunmamaktadır.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
+
+
     </div>
 
     <div class="modal fade" id="infoModal" tabindex="-1" role="dialog" aria-labelledby="infoModalLabel" aria-hidden="true">
@@ -412,24 +447,32 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <h4><i class="fas fa-chart-pie"></i> Üstteki Kartlar</h4>
-                    <p>Sayfanın üst kısmında gördüğün özet kartları, filtrelediğin ay ve yıla ait finansal durumu gösterir.</p>
+                    <h4><i class="fas fa-chart-line"></i> Toplam Filtresi (Minimal)</h4>
+                    <p>Özet kartlarının hemen üstünde bulunan <strong>minimal toplam filtresi</strong> ile yeşil/kırmızı/gri kartlardaki toplamları istediğin döneme göre filtreleyebilirsin.</p>
                     <ul>
-                        <li><strong>Toplam Gelir/Gider (Ödenen):</strong> Bu kartlar, durumu <strong>"Ödendi"</strong> olarak işaretlenmiş kayıtların toplamını gösterir. Kasaya fiilen giren veya çıkan net parayı temsil eder.</li>
-                        <li><strong>Bekleyen Gelir/Gider:</strong> Ana kartların altındaki bu küçük alanlar, durumu <strong>"Bekleyen"</strong> olan kayıtların toplamını gösterir. Bunlar henüz gerçekleşmemiş, beklenen ödemeler veya alacaklardır.</li>
-                        <li><strong>Net Durum (Ödenen):</strong> Ödenmiş gelirler ve ödenmiş giderler arasındaki farkı gösterir. Ay sonu kasada kalması gereken net rakam budur.</li>
-                        <li><strong>Bekleyen Dahil Net Toplam:</strong> Eğer tüm bekleyen gelirler alınır ve tüm bekleyen giderler ödenirse, ay sonunda kasanın ulaşacağı potansiyel durumu gösterir.</li>
+                        <li><strong>Yıl ve Ay:</strong> Sadece belirli bir ay/yıl için toplamları görmek istiyorsan bu alanlara gir.</li>
+                        <li><strong>Tümü Butonu:</strong> Tüm zamanların toplamını görmek için "Tümü" butonuna bas.</li>
+                        <li><strong>Badge:</strong> Sağdaki beyaz badge, hangi dönemin toplamlarını gördüğünü gösterir.</li>
+                    </ul>
+                    <hr>
+                    <h4><i class="fas fa-chart-pie"></i> Üstteki Kartlar (Yeşil/Kırmızı/Gri)</h4>
+                    <p>Sayfanın üst kısmındaki özet kartları <strong>Toplam Filtresi'ne göre</strong> hesaplanır.</p>
+                    <ul>
+                        <li><strong>Toplam Gelir/Gider (Ödenen):</strong> Seçili dönemde durumu <strong>"Ödendi"</strong> olan kayıtların toplamını gösterir.</li>
+                        <li><strong>Bekleyen Gelir/Gider:</strong> Seçili dönemde durumu <strong>"Bekleyen"</strong> olan kayıtların toplamını gösterir.</li>
+                        <li><strong>Net Durum:</strong> Seçili dönemdeki gelir-gider farkını gösterir.</li>
+                        <li><strong>Bekleyen Dahil Net Toplam:</strong> Bekleyen tutarlar dahil edildiğinde net durumu gösterir.</li>
                     </ul>
                     <hr>
                     <h4><i class="fas fa-list"></i> Kasa Kayıtları Tablosu</h4>
-                    <p>Bu tablo, seçtiğin döneme ait tüm gelir ve gider kalemlerini listeler.</p>
+                    <p>Bu tablo, gelir ve gider kalemlerini listeler. <strong>Kayıt Filtreleme (alttaki form) ile ayrı olarak filtrelenir!</strong></p>
                     <ul>
                         <li><strong>Durum Kolonu:</strong> Bir kaydın "Ödendi" mi yoksa "Bekleyen" mi olduğunu gösterir.</li>
-                        <li><strong>Öde Butonu:</strong> "Bekleyen" durumundaki bir kaydın yanındaki yeşil "Öde" butonuna basarak o kaydı "Ödendi" olarak işaretleyebilirsin. Bu işlemden sonra tutar, üstteki "Ödenen" toplamlarına dahil edilir.</li>
+                        <li><strong>Öde Butonu:</strong> "Bekleyen" durumundaki bir kaydı "Ödendi" olarak işaretlemek için kullanılır.</li>
                     </ul>
                      <hr>
-                    <h4><i class="fas fa-filter"></i> Filtreleme</h4>
-                    <p>Filtreleme bölümünü kullanarak istediğin zaman aralığına, tipe (gelir/gider) veya duruma (ödenen/bekleyen) göre kayıtları süzebilirsin. Arama kutusu ise açıklama, kategori ve kullanıcı adıyla arama yapmanı sağlar.</p>
+                    <h4><i class="fas fa-filter"></i> Kayıt Filtreleme (Alt Form)</h4>
+                    <p>Filtreleme bölümünü kullanarak <strong>sadece kayıt listesini</strong> süzebilirsin. <strong>ÖNEMLİ:</strong> Bu filtreleme üstteki toplam kartları ETKİLEMEZ! Toplamlar için yukarıdaki minimal filtreyi kullan.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Anladım, Kapat</button>

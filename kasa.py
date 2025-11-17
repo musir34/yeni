@@ -59,9 +59,11 @@ def api_odeme_yap():
         return jsonify({'success': False, 'message': 'Ödeme tutarı kalan tutardan fazla olamaz.'}), 400
 
     # ---- ödeme kaydı
+    # 🔧 ÖNEMLİ: Ödeme tarihini kasa kaydının tarihi ile eşitle
     yeni_odeme = Odeme(
         kasa_id=kasa_id,
         tutar=odeme_tutari,
+        odeme_tarihi=kasa_kaydi.tarih,  # Kasa kaydının tarihini kullan
         kullanici_id=session.get('user_id')
     )
     db.session.add(yeni_odeme)
@@ -165,24 +167,31 @@ def serve_receipt(fname):
 @login_required
 @roles_required('admin')
 def kasa_sayfasi():
-    yil = request.args.get('yil', type=int) or datetime.now().year
-    ay = request.args.get('ay', type=int) or datetime.now().month
-    bas, son = month_bounds(yil, ay)
-
+    # 🔧 TOPLAM FİLTRESİ (üstteki kartlar için)
+    toplam_yil = request.args.get('toplam_yil', type=int)
+    toplam_ay = request.args.get('toplam_ay', type=int)
+    
+    # 🔧 Filtreleme parametreleri (kayıt listesi için)
+    yil = request.args.get('yil', type=int)
+    ay = request.args.get('ay', type=int)
     baslangic_tarihi = request.args.get('baslangic_tarihi', '')
     bitis_tarihi = request.args.get('bitis_tarihi', '')
     tip = request.args.get('tip', '')
     arama = request.args.get('arama', '')
     durum = request.args.get('durum', '')
 
-    # 🔧 Sadece Kasa modelini döndür (template: kayit.kalan_tutar vs. çalışsın)
+    # 🔧 KAYIT LİSTESİ için base query
     base = (
         db.session.query(Kasa)
         .select_from(Kasa)
         .join(User, Kasa.kullanici_id == User.id)
         .options(contains_eager(Kasa.kullanici))
-        .filter(Kasa.tarih >= bas, Kasa.tarih < son)
     )
+    
+    # Ay/Yıl filtresi (kayıt listesi için)
+    if yil and ay:
+        bas, son = month_bounds(yil, ay)
+        base = base.filter(Kasa.tarih >= bas, Kasa.tarih < son)
 
     if baslangic_tarihi:
         try:
@@ -220,37 +229,61 @@ def kasa_sayfasi():
                 .order_by(desc(Kasa.tarih))
                 .all())
 
-    # ÖDENEN – Odeme join'leri
-    odenen_gelir = (
+    # 🎯 TOPLAMLAR: Minimal filtre (toplam_yil, toplam_ay)
+    # Eğer toplam_yil ve toplam_ay varsa o döneme filtrele, yoksa tüm zamanlar
+    if toplam_yil and toplam_ay:
+        toplam_bas, toplam_son = month_bounds(toplam_yil, toplam_ay)
+        toplam_filtre_metni = f"{toplam_ay}. Ay / {toplam_yil}"
+    else:
+        toplam_bas = None
+        toplam_son = None
+        toplam_filtre_metni = "Tüm Zamanlar"
+    
+    # ÖDENEN – Toplam filtresine göre
+    odenen_gelir_query = (
         db.session.query(func.sum(Odeme.tutar))
         .select_from(Odeme)
         .join(Kasa, Kasa.id == Odeme.kasa_id)
-        .filter(Kasa.tip == 'gelir', Odeme.odeme_tarihi >= bas, Odeme.odeme_tarihi < son)
-        .scalar() or 0
+        .filter(Kasa.tip == 'gelir')
     )
-    odenen_gider = (
+    if toplam_bas and toplam_son:
+        odenen_gelir_query = odenen_gelir_query.filter(Odeme.odeme_tarihi >= toplam_bas, Odeme.odeme_tarihi < toplam_son)
+    odenen_gelir = odenen_gelir_query.scalar() or 0
+    
+    odenen_gider_query = (
         db.session.query(func.sum(Odeme.tutar))
         .select_from(Odeme)
         .join(Kasa, Kasa.id == Odeme.kasa_id)
-        .filter(Kasa.tip == 'gider', Odeme.odeme_tarihi >= bas, Odeme.odeme_tarihi < son)
-        .scalar() or 0
+        .filter(Kasa.tip == 'gider')
     )
+    if toplam_bas and toplam_son:
+        odenen_gider_query = odenen_gider_query.filter(Odeme.odeme_tarihi >= toplam_bas, Odeme.odeme_tarihi < toplam_son)
+    odenen_gider = odenen_gider_query.scalar() or 0
+    
     net_durum = odenen_gelir - odenen_gider
 
-    # BEKLEYEN – Enum ile
-    bekleyen_gelir = (
+    # BEKLEYEN – Toplam filtresine göre
+    bekleyen_gelir_query = (
         db.session.query(func.sum(Kasa.tutar))
-        .filter(Kasa.tarih >= bas, Kasa.tarih < son, Kasa.tip == 'gelir', Kasa.durum == KasaDurum.ODENMEDI)
-        .scalar() or 0
+        .filter(Kasa.tip == 'gelir', Kasa.durum == KasaDurum.ODENMEDI)
     )
-    bekleyen_gider = (
+    if toplam_bas and toplam_son:
+        bekleyen_gelir_query = bekleyen_gelir_query.filter(Kasa.tarih >= toplam_bas, Kasa.tarih < toplam_son)
+    bekleyen_gelir = bekleyen_gelir_query.scalar() or 0
+    
+    bekleyen_gider_query = (
         db.session.query(func.sum(Kasa.tutar))
-        .filter(Kasa.tarih >= bas, Kasa.tarih < son, Kasa.tip == 'gider', Kasa.durum == KasaDurum.ODENMEDI)
-        .scalar() or 0
+        .filter(Kasa.tip == 'gider', Kasa.durum == KasaDurum.ODENMEDI)
     )
+    if toplam_bas and toplam_son:
+        bekleyen_gider_query = bekleyen_gider_query.filter(Kasa.tarih >= toplam_bas, Kasa.tarih < toplam_son)
+    bekleyen_gider = bekleyen_gider_query.scalar() or 0
 
     net_dahil_bekleyen = (odenen_gelir + bekleyen_gelir) - (odenen_gider + bekleyen_gider)
-
+    
+    # Bugünün tarihini template için gönder
+    bugun = datetime.now()
+    
     return render_template(
         'kasa.html',
         kayitlar=kayitlar,
@@ -266,8 +299,13 @@ def kasa_sayfasi():
         tip=tip,
         arama=arama,
         durum=durum,
-        yil=yil,
-        ay=ay
+        yil=yil or '',
+        ay=ay or '',
+        # Toplam filtre değerleri
+        toplam_yil=toplam_yil or '',
+        toplam_ay=toplam_ay or '',
+        toplam_filtre_metni=toplam_filtre_metni,
+        bugun=bugun
     )
 
 
@@ -281,12 +319,33 @@ def anasayfa_ozet_api():
     yil, ay = now.year, now.month
     bas, son = month_bounds(yil, ay)
 
-    q = db.session.query(func.sum(Kasa.tutar))
-
-    odenen_gelir = q.filter(Kasa.tarih >= bas, Kasa.tarih < son, Kasa.tip == 'gelir', Kasa.durum == 'ödenen').scalar() or 0
-    odenen_gider = q.filter(Kasa.tarih >= bas, Kasa.tarih < son, Kasa.tip == 'gider', Kasa.durum == 'ödenen').scalar() or 0
-    bekleyen_gelir = q.filter(Kasa.tarih >= bas, Kasa.tarih < son, Kasa.tip == 'gelir', Kasa.durum == 'bekleyen').scalar() or 0
-    bekleyen_gider = q.filter(Kasa.tarih >= bas, Kasa.tarih < son, Kasa.tip == 'gider', Kasa.durum == 'bekleyen').scalar() or 0
+    # 🔧 ÖDENEN: Odeme tablosundan, odeme_tarihi ile filtrele
+    odenen_gelir = (
+        db.session.query(func.sum(Odeme.tutar))
+        .select_from(Odeme)
+        .join(Kasa, Kasa.id == Odeme.kasa_id)
+        .filter(Kasa.tip == 'gelir', Odeme.odeme_tarihi >= bas, Odeme.odeme_tarihi < son)
+        .scalar() or 0
+    )
+    odenen_gider = (
+        db.session.query(func.sum(Odeme.tutar))
+        .select_from(Odeme)
+        .join(Kasa, Kasa.id == Odeme.kasa_id)
+        .filter(Kasa.tip == 'gider', Odeme.odeme_tarihi >= bas, Odeme.odeme_tarihi < son)
+        .scalar() or 0
+    )
+    
+    # 🔧 BEKLEYEN: Kasa tablosundan, Kasa.tarih ile filtrele
+    bekleyen_gelir = (
+        db.session.query(func.sum(Kasa.tutar))
+        .filter(Kasa.tarih >= bas, Kasa.tarih < son, Kasa.tip == 'gelir', Kasa.durum == KasaDurum.ODENMEDI)
+        .scalar() or 0
+    )
+    bekleyen_gider = (
+        db.session.query(func.sum(Kasa.tutar))
+        .filter(Kasa.tarih >= bas, Kasa.tarih < son, Kasa.tip == 'gider', Kasa.durum == KasaDurum.ODENMEDI)
+        .scalar() or 0
+    )
 
     return jsonify({
         'odenen_gelir': float(odenen_gelir),
@@ -363,11 +422,12 @@ def yeni_kasa_kaydi():
             db.session.flush()  # ID'yi almak için flush
             
             # Eğer durum "Ödenen" ise, otomatik ödeme kaydı oluştur
+            # 🔧 ÖNEMLİ: Ödeme tarihi, kaydın tarihi ile aynı olmalı
             if kayit_durumu == KasaDurum.TAMAMLANDI:
                 otomatik_odeme = Odeme(
                     kasa_id=yeni_kayit.id,
                     tutar=Decimal(str(tutar)),
-                    odeme_tarihi=secilen_tarih,  # Ekleme tarihi ile aynı
+                    odeme_tarihi=secilen_tarih,  # Kaydın tarihini kullan
                     kullanici_id=session.get('user_id')
                 )
                 db.session.add(otomatik_odeme)
@@ -421,17 +481,18 @@ def kasa_duzenle(kayit_id):
         kayit.durum = yeni_durum
         
         # Eğer durum "Bekleyen" -> "Ödenen" değiştirilmişse, otomatik ödeme kaydı oluştur
+        # 🔧 ÖNEMLİ: Ödeme tarihi, kaydın güncellenmiş tarihini kullanmalı
         if eski_durum != KasaDurum.TAMAMLANDI and yeni_durum == KasaDurum.TAMAMLANDI:
             mevcut_odenen = Decimal(db.session.query(func.coalesce(func.sum(Odeme.tutar), 0))
                                      .filter(Odeme.kasa_id == kayit_id).scalar() or 0)
             kalan = Decimal(str(kayit.tutar)) - mevcut_odenen
             
             if kalan > Decimal('0'):
-                # Kalan tutarı tamamla
+                # Kalan tutarı tamamla - ödeme tarihini kaydın tarihi ile eşle
                 otomatik_odeme = Odeme(
                     kasa_id=kayit_id,
                     tutar=kalan,
-                    odeme_tarihi=secilen_tarih,
+                    odeme_tarihi=secilen_tarih,  # Kaydın güncellenmiş tarihini kullan
                     kullanici_id=session.get('user_id')
                 )
                 db.session.add(otomatik_odeme)
@@ -503,24 +564,32 @@ def kasa_rapor():
     ay = request.args.get('ay', type=int) or datetime.now().month
     bas, son = month_bounds(yil, ay)
 
+    # 🔧 ÖDENEN: Odeme tablosundan, odeme_tarihi ile filtrele
     bu_ay_gelir = (
-        db.session.query(func.sum(Kasa.tutar))
-        .filter(Kasa.tip == 'gelir', Kasa.durum == 'ödenen', Kasa.tarih >= bas, Kasa.tarih < son)
+        db.session.query(func.sum(Odeme.tutar))
+        .select_from(Odeme)
+        .join(Kasa, Kasa.id == Odeme.kasa_id)
+        .filter(Kasa.tip == 'gelir', Odeme.odeme_tarihi >= bas, Odeme.odeme_tarihi < son)
         .scalar() or 0
     )
     bu_ay_gider = (
-        db.session.query(func.sum(Kasa.tutar))
-        .filter(Kasa.tip == 'gider', Kasa.durum == 'ödenen', Kasa.tarih >= bas, Kasa.tarih < son)
+        db.session.query(func.sum(Odeme.tutar))
+        .select_from(Odeme)
+        .join(Kasa, Kasa.id == Odeme.kasa_id)
+        .filter(Kasa.tip == 'gider', Odeme.odeme_tarihi >= bas, Odeme.odeme_tarihi < son)
         .scalar() or 0
     )
 
+    # 🔧 KATEGORİ RAPOR: Odeme tablosundan, odeme_tarihi ile filtrele
     kategori_rapor = (
         db.session.query(
             Kasa.kategori, Kasa.tip,
-            func.sum(Kasa.tutar).label('toplam'),
-            func.count(Kasa.id).label('adet')
+            func.sum(Odeme.tutar).label('toplam'),
+            func.count(Odeme.id).label('adet')
         )
-        .filter(Kasa.durum == 'ödenen', Kasa.tarih >= bas, Kasa.tarih < son)
+        .select_from(Odeme)
+        .join(Kasa, Kasa.id == Odeme.kasa_id)
+        .filter(Odeme.odeme_tarihi >= bas, Odeme.odeme_tarihi < son)
         .group_by(Kasa.kategori, Kasa.tip)
         .all()
     )
@@ -548,14 +617,19 @@ def kasa_ozet_api():
     ay = request.args.get('ay', type=int) or datetime.now().month
     bas, son = month_bounds(yil, ay)
 
+    # 🔧 ÖDENEN: Odeme tablosundan, odeme_tarihi ile filtrele
     gelir_toplam = (
-        db.session.query(func.sum(Kasa.tutar))
-        .filter(Kasa.tarih >= bas, Kasa.tarih < son, Kasa.tip == 'gelir', Kasa.durum == 'ödenen')
+        db.session.query(func.sum(Odeme.tutar))
+        .select_from(Odeme)
+        .join(Kasa, Kasa.id == Odeme.kasa_id)
+        .filter(Kasa.tip == 'gelir', Odeme.odeme_tarihi >= bas, Odeme.odeme_tarihi < son)
         .scalar() or 0
     )
     gider_toplam = (
-        db.session.query(func.sum(Kasa.tutar))
-        .filter(Kasa.tarih >= bas, Kasa.tarih < son, Kasa.tip == 'gider', Kasa.durum == 'ödenen')
+        db.session.query(func.sum(Odeme.tutar))
+        .select_from(Odeme)
+        .join(Kasa, Kasa.id == Odeme.kasa_id)
+        .filter(Kasa.tip == 'gider', Odeme.odeme_tarihi >= bas, Odeme.odeme_tarihi < son)
         .scalar() or 0
     )
 

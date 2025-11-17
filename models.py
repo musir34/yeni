@@ -702,6 +702,8 @@ class YeniSiparis(db.Model):
     toplam_tutar = db.Column(db.Float)
     durum = db.Column(db.String, default='Yeni') # Değişim durumu? (Bekliyor, Onaylandı, Kargoda...)
     notlar = db.Column(db.Text)
+    kapida_odeme = db.Column(db.Boolean, default=False)  # Kapıda ödeme var mı?
+    kapida_odeme_tutari = db.Column(db.Numeric(10, 2))  # Kapıda ödenecek tutar
     # İlişki
     urunler = db.relationship('SiparisUrun', backref='yeni_siparis', lazy=True, cascade="all, delete-orphan")
 
@@ -717,6 +719,7 @@ class SiparisUrun(db.Model):
     renk = db.Column(db.String)
     beden = db.Column(db.String)
     urun_gorseli = db.Column(db.String)
+    raf_kodu = db.Column(db.String)  # Hangi raftan alındığı
 
 
 

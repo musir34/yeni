@@ -10,7 +10,7 @@ from sqlalchemy import or_
 # Örnek: from .models import db, Product, YeniSiparis, SiparisUrun
 # Eğer farklı bir yapıdaysa, bu kısmı kendi projenize göre düzenleyin.
 try:
-    from models import db, Product, YeniSiparis, SiparisUrun
+    from models import db, Product, YeniSiparis, SiparisUrun, RafUrun, CentralStock
 except ImportError:
     print("UYARI: 'models' modülü bulunamadı. Lütfen doğru import yolunu kontrol edin.")
     class FakeDB:
@@ -53,6 +53,53 @@ except ImportError:
 logger = order_logger
 
 siparisler_bp = Blueprint('siparisler_bp', __name__)
+
+
+# ------------------------------------------------------------- #
+#  YARDIMCI FONKSİYON: RAF TAHSIS VE STOK DÜŞÜRME
+# ------------------------------------------------------------- #
+def allocate_from_shelf_and_decrement(barcode, qty=1):
+    """
+    Raflardan stok tahsis eder ve central stoktan düşer.
+    Returns: {"allocated": int, "shelf_codes": [..]}
+    """
+    if not barcode or qty <= 0:
+        return {"allocated": 0, "shelf_codes": []}
+    
+    # Raflardan stok çoktan aza sırala
+    raflar = (RafUrun.query
+              .filter_by(urun_barkodu=barcode)
+              .filter(RafUrun.adet > 0)
+              .order_by(RafUrun.adet.desc())
+              .all())
+    
+    shelf_codes = []
+    allocated = 0
+    need = qty
+    
+    for raf in raflar:
+        if need <= 0:
+            break
+        cur = raf.adet or 0
+        if cur <= 0:
+            continue
+        take = min(cur, need)
+        raf.adet = cur - take
+        db.session.flush()
+        
+        # Tahsis edilen her adet için raf kodunu ekle
+        shelf_codes.extend([raf.raf_kodu] * take)
+        allocated += take
+        need -= take
+    
+    # CentralStock'tan düş
+    if allocated > 0:
+        cs = CentralStock.query.get(barcode)
+        if cs:
+            cs.qty = max(0, (cs.qty or 0) - allocated)
+            db.session.flush()
+    
+    return {"allocated": allocated, "shelf_codes": shelf_codes}
 
 
 # ------------------------------------------------------------- #
@@ -164,8 +211,14 @@ def yeni_siparis():
                 'musteri_telefon' : request.form.get('musteri_telefon'),
                 'toplam_tutar'    : request.form.get('toplam_tutar'), 
                 'notlar'          : request.form.get('notlar', ''),
+                'kapida_odeme'    : request.form.get('kapida_odeme') == 'on',
+                'kapida_odeme_tutari' : request.form.get('kapida_odeme_tutari'),
                 'urunler'         : urunler_data,
             }
+            logger.info(f"🔍 KAPIDA ÖDEME DEBUG - Raw form data:")
+            logger.info(f"   kapida_odeme checkbox: {request.form.get('kapida_odeme')}")
+            logger.info(f"   kapida_odeme_tutari: {request.form.get('kapida_odeme_tutari')}")
+            logger.info(f"   kapida_odeme (boolean): {data.get('kapida_odeme')}")
             logger.debug("POST /yeni-siparis - Form verisi alındı: %s", data)
 
         if not data.get('musteri_adi') or not data.get('urunler'): # Temel doğrulama
@@ -181,6 +234,16 @@ def yeni_siparis():
         siparis_no = f"SP{datetime.now():%Y%m%d%H%M%S%f}"
         logger.info(f"Yeni sipariş oluşturuluyor. Sipariş No: {siparis_no}")
 
+        # Kapıda ödeme tutarını işle
+        kapida_odeme = data.get('kapida_odeme', False)
+        kapida_odeme_tutari = None
+        if kapida_odeme:
+            try:
+                kapida_odeme_tutari = float(data.get('kapida_odeme_tutari') or 0.0)
+            except (ValueError, TypeError):
+                logger.warning(f"Geçersiz kapıda ödeme tutarı: {data.get('kapida_odeme_tutari')}. 0.0 olarak ayarlanacak.")
+                kapida_odeme_tutari = 0.0
+
         sip = YeniSiparis(
             siparis_no=siparis_no,
             musteri_adi=data['musteri_adi'],
@@ -189,7 +252,9 @@ def yeni_siparis():
             musteri_telefon=data.get('musteri_telefon', ''),
             toplam_tutar=siparis_toplam_tutar,
             notlar=data.get('notlar', ''),
-            durum=data.get('durum', 'Yeni Sipariş') # Varsayılan durum
+            durum=data.get('durum', 'Yeni Sipariş'), # Varsayılan durum
+            kapida_odeme=kapida_odeme,
+            kapida_odeme_tutari=kapida_odeme_tutari
         )
         db.session.add(sip)
         logger.debug(f"YeniSiparis nesnesi session'a eklendi: {siparis_no}")
@@ -213,9 +278,14 @@ def yeni_siparis():
             except (ValueError, TypeError):
                 urun_birim_fiyat = 0.0
 
+            # Raftan tahsis et ve stok düş
+            barkod = u_data.get('barkod', '')
+            alloc = allocate_from_shelf_and_decrement(barkod, qty=urun_adet)
+            raf_kodu = ", ".join([rk for rk in alloc["shelf_codes"] if rk]) if alloc["shelf_codes"] else None
+
             db.session.add(SiparisUrun(
                 siparis_id   = sip_id,
-                urun_barkod  = u_data.get('barkod', ''),
+                urun_barkod  = barkod,
                 urun_adi     = u_data.get('urun_adi', ''),
                 adet         = urun_adet,
                 birim_fiyat  = urun_birim_fiyat,
@@ -223,6 +293,7 @@ def yeni_siparis():
                 renk         = u_data.get('renk', ''),
                 beden        = u_data.get('beden', ''),
                 urun_gorseli = u_data.get('urun_gorseli', ''),
+                raf_kodu     = raf_kodu  # Hangi raftan alındığı
             ))
         logger.info(f"{len(data['urunler'])} adet ürün SiparisUrun tablosuna eklenecek.")
 
@@ -432,6 +503,42 @@ def siparis_detay(siparis_no):
 
 
 # ------------------------------------------------------------- #
+#  MÜŞTERİ BİLGİSİ JSON (Yazdırma için)
+# ------------------------------------------------------------- #
+@siparisler_bp.route('/siparis-musteri-bilgisi/<siparis_no>')
+def siparis_musteri_bilgisi(siparis_no):
+    """Müşteri bilgilerini JSON olarak döndürür (yazdırma için)"""
+    logger.info(f"Müşteri bilgisi isteği. Sipariş No: {siparis_no}")
+    try:
+        sip = YeniSiparis.query.filter_by(siparis_no=siparis_no).first()
+        if not sip:
+            return jsonify(success=False, message='Sipariş bulunamadı'), 404
+        
+        # Kapıda ödeme tutarını güvenli şekilde al
+        kapida_odeme_tutari = 0.0
+        if sip.kapida_odeme_tutari:
+            try:
+                kapida_odeme_tutari = float(sip.kapida_odeme_tutari)
+            except (ValueError, TypeError):
+                kapida_odeme_tutari = 0.0
+        
+        return jsonify({
+            'success': True,
+            'siparis_no': sip.siparis_no,
+            'musteri_adi': sip.musteri_adi or '',
+            'musteri_soyadi': sip.musteri_soyadi or '',
+            'musteri_telefon': sip.musteri_telefon or '',
+            'musteri_adres': sip.musteri_adres or '',
+            'kapida_odeme': bool(sip.kapida_odeme),
+            'kapida_odeme_tutari': kapida_odeme_tutari
+        })
+    except Exception as e:
+        logger.error(f"Müşteri bilgisi getirilirken hata (siparis_no: {siparis_no}): {e}")
+        logger.debug(f"Traceback:\n{traceback.format_exc()}")
+        return jsonify(success=False, message='Bir hata oluştu'), 500
+
+
+# ------------------------------------------------------------- #
 #  SİPARİŞ GÜNCELLE
 # ------------------------------------------------------------- #
 @siparisler_bp.route('/siparis-guncelle/<siparis_no>', methods=['POST'])
@@ -521,3 +628,100 @@ def siparis_sil(siparis_no):
         logger.error(f"Sipariş silinirken hata (siparis_no: {siparis_no}): {e}")
         logger.debug(f"Traceback:\n{traceback.format_exc()}")
         return jsonify(success=False, message=f'Sunucu hatası: {str(e)}'), 500
+
+
+# ------------------------------------------------------------- #
+#  TOPLU SİPARİŞ SİL
+# ------------------------------------------------------------- #
+@siparisler_bp.route('/siparis-toplu-sil', methods=['POST'])
+def siparis_toplu_sil():
+    logger.info("Toplu sipariş silme isteği alındı")
+    try:
+        data = request.get_json()
+        siparis_nolar = data.get('siparis_nolar', [])
+        
+        if not siparis_nolar or not isinstance(siparis_nolar, list):
+            return jsonify(success=False, message='Geçersiz sipariş listesi'), 400
+
+        silinen_sayisi = 0
+        for siparis_no in siparis_nolar:
+            sip = YeniSiparis.query.filter_by(siparis_no=siparis_no).first()
+            if sip:
+                SiparisUrun.query.filter_by(siparis_id=sip.id).delete()
+                db.session.delete(sip)
+                silinen_sayisi += 1
+
+        db.session.commit()
+        logger.info(f"{silinen_sayisi} adet sipariş toplu olarak silindi")
+        return jsonify(success=True, message=f'{silinen_sayisi} sipariş silindi', deleted_count=silinen_sayisi)
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Toplu sipariş silinirken hata: {e}")
+        logger.debug(f"Traceback:\n{traceback.format_exc()}")
+        return jsonify(success=False, message=f'Sunucu hatası: {str(e)}'), 500
+
+
+# ------------------------------------------------------------- #
+#  SİPARİŞ DURUMU GÜNCELLE
+# ------------------------------------------------------------- #
+@siparisler_bp.route('/siparis-durum-guncelle/<siparis_no>', methods=['POST'])
+def siparis_durum_guncelle(siparis_no):
+    logger.info(f"Sipariş durum güncelleme isteği. Sipariş No: {siparis_no}")
+    try:
+        data = request.get_json()
+        yeni_durum = data.get('durum')
+        
+        if not yeni_durum:
+            return jsonify(success=False, message='Yeni durum belirtilmedi'), 400
+
+        sip = YeniSiparis.query.filter_by(siparis_no=siparis_no).first()
+        if not sip:
+            return jsonify(success=False, message='Sipariş bulunamadı'), 404
+
+        sip.durum = yeni_durum
+        db.session.commit()
+        
+        logger.info(f"Sipariş {siparis_no} durumu '{yeni_durum}' olarak güncellendi")
+        return jsonify(success=True, message='Sipariş durumu güncellendi', new_status=yeni_durum)
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Sipariş durumu güncellenirken hata (siparis_no: {siparis_no}): {e}")
+        logger.debug(f"Traceback:\n{traceback.format_exc()}")
+        return jsonify(success=False, message=f'Sunucu hatası: {str(e)}'), 500
+
+
+# ------------------------------------------------------------- #
+#  KARGO ETİKETİ YAZDIR
+# ------------------------------------------------------------- #
+@siparisler_bp.route('/siparis-kargo-etiketi/<siparis_no>')
+def siparis_kargo_etiketi(siparis_no):
+    logger.info(f"Kargo etiketi yazdırma isteği. Sipariş No: {siparis_no}")
+    try:
+        sip = YeniSiparis.query.filter_by(siparis_no=siparis_no).first()
+        if not sip:
+            return "Sipariş bulunamadı", 404
+
+        # Ürün bilgilerini al
+        urunler = SiparisUrun.query.filter_by(siparis_id=sip.id).all()
+        
+        # Her ürün için model bilgilerini ekle
+        for urun in urunler:
+            if hasattr(urun, 'urun_barkod') and urun.urun_barkod:
+                try:
+                    product = Product.query.filter_by(barcode=urun.urun_barkod).first()
+                    if product:
+                        urun.product_main_id = getattr(product, 'product_main_id', '')
+                    else:
+                        urun.product_main_id = ''
+                except Exception as e:
+                    logger.warning(f"Ürün {urun.urun_barkod} için Product bilgisi alınırken hata: {e}")
+                    urun.product_main_id = ''
+
+        return render_template('kargo_etiketi.html', siparis=sip, urunler=urunler)
+
+    except Exception as e:
+        logger.error(f"Kargo etiketi oluşturulurken hata (siparis_no: {siparis_no}): {e}")
+        logger.debug(f"Traceback:\n{traceback.format_exc()}")
+        return "Bir hata oluştu, lütfen logları kontrol edin.", 500

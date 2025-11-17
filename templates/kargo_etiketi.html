@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kargo Etiketi - {{ siparis.siparis_no }}</title>
+    <style>
+        @page {
+            size: 100mm 150mm;
+            margin: 5mm;
+        }
+        
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
+            padding: 10px;
+            max-width: 100mm;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 5px;
+        }
+        
+        .header h2 {
+            margin: 0;
+            font-size: 14pt;
+            font-weight: bold;
+        }
+        
+        .section {
+            margin-bottom: 10px;
+            padding: 5px;
+            border: 1px solid #ddd;
+        }
+        
+        .section-title {
+            font-weight: bold;
+            font-size: 11pt;
+            margin-bottom: 5px;
+            color: #333;
+            background-color: #f0f0f0;
+            padding: 3px;
+        }
+        
+        .info-row {
+            margin: 3px 0;
+            display: flex;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            min-width: 80px;
+        }
+        
+        .info-value {
+            flex: 1;
+        }
+        
+        .address {
+            white-space: pre-line;
+            border: 1px solid #ccc;
+            padding: 5px;
+            background-color: #f9f9f9;
+            margin-top: 3px;
+        }
+        
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+            font-size: 9pt;
+        }
+        
+        .products-table th,
+        .products-table td {
+            border: 1px solid #000;
+            padding: 3px;
+            text-align: left;
+        }
+        
+        .products-table th {
+            background-color: #333;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .barcode {
+            text-align: center;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 18pt;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 8pt;
+            color: #666;
+            border-top: 1px solid #ccc;
+            padding-top: 5px;
+        }
+        
+        .no-print {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .print-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14pt;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        
+        .print-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button class="print-btn" onclick="window.print()">🖨️ Yazdır</button>
+    </div>
+    
+    <div class="header">
+        <h2>KARGO ETİKETİ</h2>
+        <div class="barcode">{{ siparis.siparis_no }}</div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">📦 Sipariş Bilgileri</div>
+        <div class="info-row">
+            <span class="info-label">Sipariş No:</span>
+            <span class="info-value">{{ siparis.siparis_no }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Tarih:</span>
+            <span class="info-value">{{ siparis.siparis_tarihi.strftime('%d.%m.%Y %H:%M') if siparis.siparis_tarihi else 'N/A' }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Durum:</span>
+            <span class="info-value">{{ siparis.durum }}</span>
+        </div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">👤 Alıcı Bilgileri</div>
+        <div class="info-row">
+            <span class="info-label">Ad Soyad:</span>
+            <span class="info-value">{{ siparis.musteri_adi }} {{ siparis.musteri_soyadi }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Telefon:</span>
+            <span class="info-value">{{ siparis.musteri_telefon or 'Belirtilmemiş' }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Adres:</span>
+        </div>
+        <div class="address">{{ siparis.musteri_adres or 'Adres belirtilmemiş' }}</div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">📋 Ürünler</div>
+        <table class="products-table">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Ürün Adı</th>
+                    <th>R/B</th>
+                    <th>Adet</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for urun in urunler %}
+                <tr>
+                    <td>{{ urun.product_main_id or '-' }}</td>
+                    <td>{{ urun.urun_adi or 'N/A' }}</td>
+                    <td>{{ urun.renk }}/{{ urun.beden }}</td>
+                    <td style="text-align: center;">{{ urun.adet }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="text-align: center;">Ürün bulunamadı</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div style="margin-top: 5px; font-weight: bold;">
+            Toplam: {{ siparis.toplam_tutar|default(0)|float|round(2) }} TL
+        </div>
+    </div>
+    
+    {% if siparis.notlar %}
+    <div class="section">
+        <div class="section-title">📝 Notlar</div>
+        <div style="padding: 5px; background-color: #fffacd;">{{ siparis.notlar }}</div>
+    </div>
+    {% endif %}
+    
+    <div class="footer">
+        Yazdırma Tarihi: {{ now().strftime('%d.%m.%Y %H:%M') }}
+    </div>
+    
+    <script>
+        // Sayfa yüklendiğinde otomatik yazdırma (isteğe bağlı)
+        // window.onload = function() {
+        //     setTimeout(function() {
+        //         window.print();
+        //     }, 500);
+        // };
+    </script>
+</body>
+</html>
