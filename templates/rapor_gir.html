@@ -81,6 +81,16 @@
       font-family: var(--font-family-base);
       transition: var(--transition);
     }
+
+    /* Rapor açıklaması textarea'sında uzun metinlerin tam görünmesi için ayarlar */
+    #aciklama {
+      min-height: 140px;
+      max-height: 320px;
+      resize: vertical;           /* Kullanıcı isterse boyu büyütebilsin / küçültebilsin */
+      overflow-y: auto;           /* Çok uzarsa dikey scroll çıksın, satırlar kayarak görünsün */
+      white-space: pre-wrap;      /* Satır sonlarını koru, uzun satırları da kır */
+      word-wrap: break-word;      /* Çok uzun kelimeleri de satır sonunda kır */
+    }
     .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
         border-color: var(--color-primary);
         box-shadow: 0 0 0 0.2rem rgba(183, 110, 121, 0.25);
@@ -163,6 +173,12 @@
       word-wrap: break-word;
       font-family: var(--font-family-base);
     }
+
+    /* Alt taraftaki kaydedilmiş açıklamaların da tam görünmesi için */
+    .report-card pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
     .category-fields {
         display: none;
         padding: 1.5rem;
@@ -212,8 +228,9 @@
           </div>
           <div class="form-group">
             <label for="aciklama">Yapılan İşin Açıklaması</label>
-            <textarea id="aciklama" name="aciklama" rows="4" required></textarea>
+            <textarea id="aciklama" name="aciklama" rows="4" required spellcheck="true" autocapitalize="sentences" autocomplete="on"></textarea>
           </div>
+
 
           <div id="fields_trendyol_soru_cevaplama" class="category-fields">
             <h4>Trendyol - Soru Cevaplama Detayları</h4>
@@ -325,8 +342,10 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      const kategoriSelect = document.getElementById('kategori');
-      const allFieldsDivs = document.querySelectorAll('.category-fields');
+  const kategoriSelect = document.getElementById('kategori');
+  const allFieldsDivs = document.querySelectorAll('.category-fields');
+  const raporForm = document.querySelector("form[action='{{ url_for('rapor_gir.giris') }}']");
+      const aciklamaTextarea = document.getElementById('aciklama');
 
       if (kategoriSelect) {
         kategoriSelect.addEventListener('change', function () {
@@ -359,6 +378,93 @@
         // Sayfa yüklendiğinde de bir kerelik tetikle, eğer form validation hatasıyla geri dönüldüyse
         // seçili olan kategoriye ait alanlar açık kalsın.
         kategoriSelect.dispatchEvent(new Event('change'));
+      }
+
+      // --- Otomatik metin düzeltme ---
+      // Temel kelime düzeltmeleri (her iki modda da kullanılır)
+      const correctionMap = {
+        'haıyr': 'hayır',
+        'kardesım': 'kardeşim',
+        'kardesim': 'kardeşim',
+        'gelcem': 'geleceğim',
+        'gelcemiş': 'gelecekmiş',
+        'tnk': 'teşekkürler',
+        'tsk': 'teşekkürler',
+      };
+
+      function applyBasicCorrections(text) {
+        if (!text) return text;
+        return text
+          .split(/(\s+)/)  // boşlukları koru
+          .map(part => {
+            if (/^\s+$/.test(part)) {
+              return part;
+            }
+
+            const lower = part.toLocaleLowerCase('tr-TR');
+            if (correctionMap[lower]) {
+              const corrected = correctionMap[lower];
+              if (part === part.toUpperCase()) {
+                return corrected.toUpperCase();
+              }
+              if (part[0] === part[0].toUpperCase()) {
+                return corrected.charAt(0).toUpperCase() + corrected.slice(1);
+              }
+              return corrected;
+            }
+            return part;
+          })
+          .join('');
+      }
+
+      // Daha agresif düzeltme: boşluk, cümle başı büyük harf, noktalama
+      function applyFullFormatting(text) {
+        if (!text) return text;
+
+        // Önce temel yazım düzeltmelerini uygula
+        let result = applyBasicCorrections(text);
+
+        // Birden fazla boşluğu teke indir
+        result = result.replace(/\s+/g, ' ');
+
+        // Cümleleri nokta, ünlem, soru işaretine göre ayır
+        const sentences = result
+          .split(/([.!?]+)/)
+          .reduce((acc, part, index, arr) => {
+            if (!part.trim()) return acc;
+            // İşaret cümle sonu ise öncekiyle birleştir
+            if (/^[.!?]+$/.test(part) && acc.length) {
+              acc[acc.length - 1] += part;
+            } else {
+              acc.push(part.trim());
+            }
+            return acc;
+          }, []);
+
+        const formatted = sentences
+          .map(sentence => {
+            if (!sentence) return '';
+            // İlk harfi büyük yap (Türkçe'ye dikkat ederek)
+            const firstChar = sentence.charAt(0);
+            const rest = sentence.slice(1);
+            const capitalized = firstChar.toLocaleUpperCase('tr-TR') + rest;
+
+            // Son karakter noktalama değilse nokta ekle
+            if (!/[.!?]$/.test(capitalized)) {
+              return capitalized + '.';
+            }
+            return capitalized;
+          })
+          .join(' ');
+
+        return formatted.trim();
+      }
+
+      if (raporForm && aciklamaTextarea) {
+        raporForm.addEventListener('submit', function () {
+          // Kaydetmeden hemen önce her zaman gelişmiş düzeltmeyi uygula
+          aciklamaTextarea.value = applyFullFormatting(aciklamaTextarea.value);
+        });
       }
     });
   </script>

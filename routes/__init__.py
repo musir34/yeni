@@ -38,6 +38,7 @@ def register_blueprints(app):
     from gorev import gorev_bp, attach_jobs
     from uretim_oneri import uretim_oneri_bp
     from barcode_alias_routes import barcode_alias_bp  # 🔥 BARKOD ALIAS SİSTEMİ
+    from woocommerce_site import woo_bp  # 🛒 WOOCOMMERCE SİPARİŞ SİSTEMİ
 
 
 
@@ -79,5 +80,6 @@ def register_blueprints(app):
         gorev_bp,
         uretim_oneri_bp,
         barcode_alias_bp,  # 🔥 BARKOD ALIAS SİSTEMİ
+        woo_bp,  # 🛒 WOOCOMMERCE SİPARİŞ SİSTEMİ
     ]:
         app.register_blueprint(bp)

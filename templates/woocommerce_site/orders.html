@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WooCommerce Siparişler</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .order-card {
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        .order-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .status-badge {
+            font-size: 0.85rem;
+            padding: 0.35rem 0.75rem;
+        }
+        .search-box {
+            max-width: 400px;
+        }
+        .filter-section {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-bag-check text-primary"></i>
+                    WooCommerce Siparişler
+                </h1>
+            </div>
+            <div class="col-auto">
+                <a href="{{ url_for('woo.sync_orders') }}?days=30" class="btn btn-success">
+                    <i class="bi bi-arrow-clockwise"></i> Siparişleri Senkronize Et
+                </a>
+            </div>
+        </div>
+
+        <!-- Filtreler -->
+        <div class="filter-section">
+            <form method="get" action="{{ url_for('woo.orders') }}" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Durum Filtresi</label>
+                    <select name="status" class="form-select">
+                        <option value="">Tümü</option>
+                        {% for status_key, status_name in statuses.items() %}
+                        <option value="{{ status_key }}" {% if current_status == status_key %}selected{% endif %}>
+                            {{ status_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Arama</label>
+                    <input type="text" 
+                           name="search" 
+                           class="form-control" 
+                           placeholder="Sipariş numarası, müşteri adı veya email..."
+                           value="{{ search_term or '' }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Filtrele
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sipariş Listesi -->
+        <div class="row">
+            {% if orders %}
+                {% for order in orders %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card order-card h-100">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <strong>#{{ order.order_number }}</strong>
+                            <span class="badge status-badge 
+                                {% if order.status == 'completed' %}bg-success
+                                {% elif order.status == 'processing' %}bg-info
+                                {% elif order.status == 'pending' %}bg-warning
+                                {% elif order.status == 'cancelled' %}bg-danger
+                                {% elif order.status == 'shipped' %}bg-primary
+                                {% elif order.status == 'on-hold' %}bg-secondary
+                                {% else %}bg-dark{% endif %}">
+                                {{ statuses.get(order.status, order.status) }}
+                            </span>
+                        </div>
+                        <div class="card-body" onclick="window.location.href='{{ url_for('woo.order_detail', order_id=order.id) }}'" style="cursor: pointer;">
+                            <div class="mb-2">
+                                <i class="bi bi-person text-muted"></i>
+                                {% if order.customer.first_name and order.customer.last_name %}
+                                    <strong>{{ order.customer.first_name }} {{ order.customer.last_name }}</strong>
+                                {% else %}
+                                    <span class="text-warning">
+                                        <i class="bi bi-exclamation-triangle"></i> Bilgi Eksik
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="mb-2 small text-muted">
+                                <i class="bi bi-envelope"></i>
+                                {{ order.customer.email or 'Belirtilmemiş' }}
+                            </div>
+                            <div class="mb-2 small text-muted">
+                                <i class="bi bi-telephone"></i>
+                                {{ order.customer.phone or 'Belirtilmemiş' }}
+                            </div>
+                            <div class="mb-2 small">
+                                <i class="bi bi-credit-card text-muted"></i>
+                                <strong>{{ order.payment_method or 'Belirtilmemiş' }}</strong>
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="text-muted">Toplam</small>
+                                    <div class="h5 mb-0 text-success">
+                                        {{ order.total }} {{ order.currency }}
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">Ürün Sayısı</small>
+                                    <div class="h6 mb-0">
+                                        {{ order.line_items|length }} adet
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2 small text-muted">
+                                <i class="bi bi-calendar"></i>
+                                {{ order.date_created[:10] if order.date_created else 'Belirtilmemiş' }}
+                            </div>
+                            
+                            <!-- Hızlı Sipariş Bilgi Gir Butonu -->
+                            {% if not order.customer.first_name or not order.customer.phone or not order.billing_address.address_1 %}
+                            <div class="mt-2">
+                                <a href="{{ url_for('woo.order_detail', order_id=order.id) }}" 
+                                   class="btn btn-warning btn-sm w-100" 
+                                   onclick="event.stopPropagation();">
+                                    <i class="bi bi-person-plus"></i> Bilgi Gir
+                                </a>
+                            </div>
+                            {% else %}
+                            <!-- Teslimat Etiketi Butonu -->
+                            <div class="mt-2">
+                                <a href="{{ url_for('woo.shipping_label', order_id=order.id) }}" 
+                                   class="btn btn-success btn-sm w-100" 
+                                   target="_blank"
+                                   onclick="event.stopPropagation();">
+                                    <i class="bi bi-printer"></i> Teslimat Etiketi
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <i class="bi bi-info-circle"></i>
+                        Sipariş bulunamadı. Filtrelerinizi değiştirmeyi deneyin.
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Sayfalama -->
+        {% if orders %}
+        <div class="row mt-4">
+            <div class="col text-center">
+                <div class="btn-group" role="group">
+                    {% if current_page > 1 %}
+                    <a href="{{ url_for('woo.orders', page=current_page-1, status=current_status, search=search_term) }}" 
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-chevron-left"></i> Önceki
+                    </a>
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-primary" disabled>
+                        Sayfa {{ current_page }}
+                    </button>
+                    
+                    {% if orders|length >= 50 %}
+                    <a href="{{ url_for('woo.orders', page=current_page+1, status=current_status, search=search_term) }}" 
+                       class="btn btn-outline-primary">
+                        Sonraki <i class="bi bi-chevron-right"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

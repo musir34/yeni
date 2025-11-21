@@ -318,7 +318,7 @@
                 <div class="form-group">
                     <label for="aciklama">Açıklama <span class="required">*</span></label>
                     <textarea class="form-control" id="aciklama" name="aciklama" rows="3" 
-                              placeholder="Kasa kaydı hakkında açıklama..." required>{{ kayit.aciklama if kayit else '' }}</textarea>
+                              placeholder="Kasa kaydı hakkında açıklama..." required spellcheck="true" autocapitalize="sentences" autocomplete="on">{{ kayit.aciklama if kayit else '' }}</textarea>
                 </div>
 
                 <div class="form-group">
@@ -439,6 +439,7 @@
             const tutarInput = document.getElementById('tutar');
             const form = document.querySelector('form');
             const tarihInput = document.getElementById('tarih');
+            const aciklamaTextarea = document.getElementById('aciklama');
             
             // Tarih input'una şu anki tarih ve saati ata
             if (tarihInput && !tarihInput.value) {
@@ -493,6 +494,11 @@
             // 2. Form Gönderilmeden Önce Tutar Alanını Temizleme Fonksiyonu
             if (form) {
                 form.addEventListener('submit', function(e) {
+                    // --- Otomatik metin düzeltme (kasa açıklaması) ---
+                    if (aciklamaTextarea && aciklamaTextarea.value) {
+                        aciklamaTextarea.value = applyFullFormatting(aciklamaTextarea.value);
+                    }
+
                     if (tutarInput) {
                         // Türkçe formatı temizle: "1.000,50" -> "1000.50"
                         tutarInput.value = tutarInput.value.replace(/\./g, '').replace(',', '.');
@@ -528,6 +534,86 @@
             }
         });
     </script>
+
+        <script>
+                // Rapor sayfasındakiyle aynı otomatik metin düzeltme fonksiyonları
+                document.addEventListener('DOMContentLoaded', function () {
+                    // Temel kelime düzeltmeleri (istersen genişletebilirsin)
+                    const correctionMap = {
+                        'haıyr': 'hayır',
+                        'kardesım': 'kardeşim',
+                        'kardesim': 'kardeşim',
+                        'gelcem': 'geleceğim',
+                        'gelcemiş': 'gelecekmiş',
+                        'tnk': 'teşekkürler',
+                        'tsk': 'teşekkürler',
+                    };
+
+                    window.applyBasicCorrections = function(text) {
+                        if (!text) return text;
+                        return text
+                            .split(/(\s+)/)  // boşlukları koru
+                            .map(part => {
+                                if (/^\s+$/.test(part)) {
+                                    return part;
+                                }
+
+                                const lower = part.toLocaleLowerCase('tr-TR');
+                                if (correctionMap[lower]) {
+                                    const corrected = correctionMap[lower];
+                                    if (part === part.toUpperCase()) {
+                                        return corrected.toUpperCase();
+                                    }
+                                    if (part[0] === part[0].toUpperCase()) {
+                                        return corrected.charAt(0).toUpperCase() + corrected.slice(1);
+                                    }
+                                    return corrected;
+                                }
+                                return part;
+                            })
+                            .join('');
+                    }
+
+                    window.applyFullFormatting = function(text) {
+                        if (!text) return text;
+
+                        // Önce temel yazım düzeltmelerini uygula
+                        let result = window.applyBasicCorrections(text);
+
+                        // Birden fazla boşluğu teke indir
+                        result = result.replace(/\s+/g, ' ');
+
+                        // Cümleleri nokta, ünlem, soru işaretine göre ayır
+                        const sentences = result
+                            .split(/([.!?]+)/)
+                            .reduce((acc, part) => {
+                                if (!part.trim()) return acc;
+                                if (/^[.!?]+$/.test(part) && acc.length) {
+                                    acc[acc.length - 1] += part;
+                                } else {
+                                    acc.push(part.trim());
+                                }
+                                return acc;
+                            }, []);
+
+                        const formatted = sentences
+                            .map(sentence => {
+                                if (!sentence) return '';
+                                const firstChar = sentence.charAt(0);
+                                const rest = sentence.slice(1);
+                                const capitalized = firstChar.toLocaleUpperCase('tr-TR') + rest;
+
+                                if (!/[.!?]$/.test(capitalized)) {
+                                    return capitalized + '.';
+                                }
+                                return capitalized;
+                            })
+                            .join(' ');
+
+                        return formatted.trim();
+                    }
+                });
+        </script>
 
 </body>
 </html>
