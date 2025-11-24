@@ -3,8 +3,10 @@ WooCommerce Routes - Sipariş yönetimi sayfaları
 """
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from functools import wraps
+from datetime import datetime
 from .woo_service import WooCommerceService
 from .woo_config import WooConfig
+from models import db
 
 # Blueprint oluştur
 woo_bp = Blueprint('woo', __name__, url_prefix='/site')
@@ -27,27 +29,65 @@ def check_woo_config(f):
 @woo_bp.route('/orders')
 @check_woo_config
 def orders():
-    """Sipariş listesi sayfası"""
+    """Sipariş listesi sayfası - Veritabanından hızlı okuma"""
+    from .models import WooOrder
+    from sqlalchemy import or_
+    
     # Query parametreleri
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', None)
     search = request.args.get('search', None)
+    per_page = 50
     
-    # Siparişleri getir
+    # Veritabanından sorgula (API yerine)
+    query = WooOrder.query
+    
+    if status:
+        query = query.filter_by(status=status)
+    
     if search:
-        orders_list = woo_service.search_orders(search)
-    else:
-        orders_list = woo_service.get_orders(status=status, page=page)
+        search_term = f"%{search}%"
+        query = query.filter(
+            or_(
+                WooOrder.order_number.ilike(search_term),
+                WooOrder.customer_first_name.ilike(search_term),
+                WooOrder.customer_last_name.ilike(search_term),
+                WooOrder.customer_email.ilike(search_term)
+            )
+        )
     
-    # Veritabanına kaydet
-    if orders_list:
-        woo_service.save_orders_to_db(orders_list)
+    # Sıralama ve sayfalama
+    orders_list = query.order_by(WooOrder.date_created.desc()).paginate(
+        page=page, 
+        per_page=per_page, 
+        error_out=False
+    )
     
-    # Formatla
-    formatted_orders = [
-        WooCommerceService.format_order_data(order) 
-        for order in orders_list
-    ]
+    # Format
+    formatted_orders = []
+    for order in orders_list.items:
+        formatted_orders.append({
+            'id': order.order_id,  # WooCommerce order ID
+            'order_number': order.order_number,
+            'status': order.status,
+            'total': order.total,
+            'currency': order.currency,
+            'payment_method': order.payment_method,
+            'date_created': order.date_created.isoformat() if order.date_created else None,
+            'customer': {
+                'first_name': order.customer_first_name,
+                'last_name': order.customer_last_name,
+                'email': order.customer_email,
+                'phone': order.customer_phone
+            },
+            'billing_address': {
+                'address_1': order.billing_address_1,
+                'city': order.billing_city,
+                'state': order.billing_state,
+                'postcode': order.billing_postcode
+            },
+            'line_items': order.line_items or []
+        })
     
     # Durum listesi
     statuses = woo_service.get_order_statuses()
@@ -241,9 +281,57 @@ def update_customer_info(order_id):
             # Veritabanını güncelle
             woo_service.save_order_to_db(updated_order)
             
+            # ✅ OrderCreated'a kaydet (artık bilgiler tam)
+            try:
+                from models import OrderCreated
+                import json
+                
+                order_number = str(order_id)
+                
+                # Zaten var mı kontrol et
+                existing = OrderCreated.query.filter_by(order_number=order_number).first()
+                
+                if not existing:
+                    # Line items hazırla
+                    line_items = []
+                    for item in updated_order.get('line_items', []):
+                        line_items.append({
+                            'barcode': item.get('sku', ''),
+                            'product_name': item.get('name', ''),
+                            'quantity': item.get('quantity', 1),
+                            'price': float(item.get('price', 0)),
+                            'line_id': item.get('id')
+                        })
+                    
+                    # OrderCreated'a ekle
+                    new_order = OrderCreated(
+                        order_number=order_number,
+                        order_date=datetime.fromisoformat(updated_order.get('date_created', '').replace('Z', '+00:00')) if updated_order.get('date_created') else datetime.utcnow(),
+                        status=updated_order.get('status', 'processing'),
+                        customer_name=data.get('first_name'),
+                        customer_surname=data.get('last_name'),
+                        customer_address=data.get('address'),
+                        customer_id=data.get('email', ''),
+                        product_barcode='',
+                        product_name='',
+                        quantity=sum(item.get('quantity', 0) for item in updated_order.get('line_items', [])),
+                        amount=float(updated_order.get('total', 0)),
+                        currency_code=updated_order.get('currency', 'TRY'),
+                        package_number=order_number,
+                        details=json.dumps(line_items, ensure_ascii=False),
+                        cargo_provider_name='MNG',
+                        shipment_package_id=None
+                    )
+                    
+                    db.session.add(new_order)
+                    db.session.commit()
+            except Exception as e:
+                print(f"OrderCreated'a kaydetme hatası: {e}")
+                # Hata olsa da devam et
+            
             return jsonify({
                 'success': True,
-                'message': 'Müşteri bilgileri güncellendi',
+                'message': 'Müşteri bilgileri güncellendi ve sipariş hazırlamaya eklendi',
                 'order': WooCommerceService.format_order_data(updated_order)
             })
         else:

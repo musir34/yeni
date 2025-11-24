@@ -89,6 +89,18 @@ class WooCommerceService:
         """
         return self._make_request(f'orders/{order_id}')
     
+    def get_product(self, product_id: int) -> Optional[Dict]:
+        """
+        Tek bir ürünü getir (meta_data ile birlikte)
+        
+        Args:
+            product_id: Ürün ID'si
+            
+        Returns:
+            Ürün detayları (barcode meta_data dahil)
+        """
+        return self._make_request(f'products/{product_id}')
+    
     def update_order_status(self, order_id: int, status: str) -> Optional[Dict]:
         """
         Sipariş durumunu güncelle
@@ -337,14 +349,158 @@ class WooCommerceService:
         if status:
             orders = [o for o in orders if o.get('status') == status]
         
-        # Veritabanına kaydet
+        # Veritabanına kaydet (hem woo_orders hem de OrderCreated'a)
         saved = self.save_orders_to_db(orders)
+        saved_to_created = self.sync_to_order_created(orders)
         
         return {
             'total_fetched': len(orders),
             'total_saved': saved,
+            'saved_to_created': saved_to_created,
             'date_range': {
                 'start': start_date.strftime('%Y-%m-%d'),
                 'end': end_date.strftime('%Y-%m-%d')
             }
         }
+    
+    def sync_to_order_created(self, orders_list: List[Dict]) -> int:
+        """
+        WooCommerce siparişlerini OrderCreated tablosuna kaydet (Trendyol mantığıyla)
+        
+        Her sipariş için TEK OrderCreated kaydı oluşturur (Trendyol gibi)
+        - Tüm ürünler details JSON'unda
+        - Her ürün: barcode (SKU), name, quantity, price, image_url
+        - source = 'WOOCOMMERCE'
+        
+        Koşullar:
+        - Durum: processing, on-hold, shipped
+        - Müşteri bilgileri eksiksiz
+        - Ödeme yöntemi belirtilmiş
+        
+        Args:
+            orders_list: WooCommerce siparişleri
+            
+        Returns:
+            OrderCreated'a kaydedilen sipariş sayısı
+        """
+        from models import OrderCreated
+        import json
+        
+        saved_count = 0
+        
+        for order_data in orders_list:
+            try:
+                # Durum kontrolü
+                status = order_data.get('status', '')
+                order_id = order_data.get('id')
+                
+                print(f"[WOO-SYNC] Sipariş #{order_id} kontrol ediliyor, durum: {status}")
+                
+                if status not in ['processing', 'on-hold', 'shipped']:
+                    print(f"[WOO-SYNC] Sipariş #{order_id} atlandı - durum uygun değil: {status}")
+                    continue
+                
+                # Müşteri bilgileri
+                billing = order_data.get('billing', {})
+                shipping = order_data.get('shipping', {})
+                first_name = billing.get('first_name', '').strip()
+                last_name = billing.get('last_name', '').strip()
+                phone = billing.get('phone', '').strip()
+                
+                # Adres - önce shipping, yoksa billing
+                address = shipping.get('address_1', '').strip() or billing.get('address_1', '').strip()
+                city = shipping.get('city', '').strip() or billing.get('city', '').strip()
+                full_address = f"{address}, {city}" if city else address
+                
+                print(f"[WOO-SYNC] Sipariş #{order_id} bilgiler: name={first_name} {last_name}, phone={phone}, address={address[:20] if address else 'YOK'}")
+                
+                # Bilgiler eksikse atla
+                if not all([first_name, last_name, phone, address]):
+                    print(f"[WOO-SYNC] Sipariş #{order_id} atlandı - bilgiler eksik")
+                    continue
+                
+                # Ödeme yöntemi
+                payment_method = order_data.get('payment_method', '').strip()
+                if not payment_method:
+                    print(f"[WOO-SYNC] Sipariş #{order_id} atlandı - ödeme yöntemi yok")
+                    continue
+                
+                # Zaten var mı kontrol et
+                order_number = str(order_id)
+                existing = OrderCreated.query.filter_by(order_number=order_number).first()
+                
+                if existing:
+                    print(f"[WOO-SYNC] Sipariş #{order_id} atlandı - zaten OrderCreated'da var")
+                    continue
+                
+                print(f"[WOO-SYNC] Sipariş #{order_id} OrderCreated'a eklenecek...")
+                
+                # 🔥 YENİ MANTIK: product_id'yi kaydet, details JSON'da da sakla
+                # Sipariş hazırla sayfası product_id ile Product tablosundan bilgi çekecek
+                
+                line_items = order_data.get('line_items', [])
+                details_list = []
+                total_qty = 0
+                first_product_id = ''  # İlk ürünün WooCommerce ID'si
+                
+                for item in line_items:
+                    product_id = item.get('product_id')
+                    variation_id = item.get('variation_id')
+                    
+                    # WooCommerce'den gelen ID'yi kullan (varyasyon varsa onu, yoksa ürün ID'sini)
+                    woo_id = variation_id if variation_id else product_id
+                    
+                    if not first_product_id:
+                        first_product_id = str(woo_id)  # product_barcode alanına kaydedilecek
+                    
+                    qty = int(item.get('quantity', 1))
+                    total_qty += qty
+                    
+                    # Details JSON'a WooCommerce ID'lerini kaydet
+                    details_list.append({
+                        'woo_product_id': product_id,
+                        'woo_variation_id': variation_id,
+                        'woo_id': woo_id,  # Kullanılacak ID (variation > product)
+                        'quantity': qty,
+                        'price': float(item.get('price', 0)),
+                        'line_total_price': float(item.get('total', 0)),
+                        'line_id': str(item.get('id', '')),
+                        'product_name': item.get('name', '')  # Yedek olarak WooCommerce'den gelen isim
+                    })
+                    
+                    print(f"[WOO-SYNC] ➕ Ürün: WooID={woo_id}, qty={qty}, name={item.get('name', '')[:30]}")
+                
+                # OrderCreated kaydı oluştur (TEK KAYIT - Trendyol gibi)
+                new_order = OrderCreated(
+                    order_number=order_number,
+                    order_date=datetime.fromisoformat(order_data.get('date_created', '').replace('Z', '+00:00')) if order_data.get('date_created') else datetime.utcnow(),
+                    status=status,
+                    customer_name=first_name,
+                    customer_surname=last_name,
+                    customer_address=full_address,
+                    customer_id=billing.get('email', ''),
+                    product_barcode=first_product_id,  # 🔥 İlk ürünün WooCommerce ID'si
+                    product_name=', '.join([item.get('name', '') for item in line_items[:3]]),  # İlk 3 ürün
+                    quantity=total_qty,
+                    amount=float(order_data.get('total', 0)),
+                    currency_code=order_data.get('currency', 'TRY'),
+                    package_number=order_number,
+                    details=json.dumps(details_list, ensure_ascii=False),  # 🔥 TÜM ÜRÜNLER
+                    cargo_provider_name='MNG',
+                    shipment_package_id=None,
+                    source='WOOCOMMERCE'  # 🔥 KAYNAK BİLGİSİ
+                )
+                
+                db.session.add(new_order)
+                db.session.commit()
+                saved_count += 1
+                print(f"[WOO-SYNC] ✅ Sipariş #{order_id} OrderCreated'a eklendi ({len(details_list)} ürün)")
+                
+            except Exception as e:
+                db.session.rollback()
+                print(f"❌ WooCommerce sipariş OrderCreated'a kaydedilemedi ({order_data.get('id')}): {e}")
+                import traceback
+                traceback.print_exc()
+                continue
+        
+        return saved_count

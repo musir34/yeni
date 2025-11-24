@@ -462,6 +462,34 @@ def push_stock_job():
     """Zamanlayıcı tetiklemesinde direkt stok gönderir (zamanlamayı schedule ayarlar)."""
     push_central_stock_to_trendyol()
 
+def sync_woo_orders_background():
+    """WooCommerce siparişlerini arka planda senkronize eder (zamanlayıcı için)"""
+    with app.app_context():
+        try:
+            from woocommerce_site.woo_service import WooCommerceService
+            from woocommerce_site.woo_config import WooConfig
+            
+            # API ayarları kontrolü
+            if not WooConfig.is_configured():
+                logger.debug("WooCommerce API ayarları yapılmamış, senkronizasyon atlandı")
+                return
+            
+            woo_service = WooCommerceService()
+            
+            # Son 3 günün siparişlerini çek (sadece aktif olanlar)
+            active_statuses = ['pending', 'processing', 'on-hold']
+            total = 0
+            
+            for status in active_statuses:
+                result = woo_service.sync_orders_to_db(status=status, days=3)
+                total += result.get('total_saved', 0)
+            
+            if total > 0:
+                logger.info(f"WooCommerce otomatik senkronizasyon: {total} sipariş güncellendi")
+                
+        except Exception as e:
+            logger.error(f"WooCommerce arka plan senkronizasyon hatası: {str(e)}")
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Forecast cache wrapper'ları (app context ile)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -589,6 +617,15 @@ def schedule_jobs():
         hour=3,
         minute=10
     )
+
+    # >>> WooCommerce sipariş senkronizasyonu: her 10 dakika - DEVRE DIŞI
+    # _add_job_safe(
+    #     sync_woo_orders_background,
+    #     trigger='interval',
+    #     id="woo_sync_orders",
+    #     minutes=10,
+    #     next_run_time=now + timedelta(minutes=1)  # 1 dk sonra başlasın
+    # )
 
 # ENV ve liderlik kontrolü
 _leader_ok = False

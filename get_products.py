@@ -1446,6 +1446,83 @@ def update_model_price():
         return jsonify({'success': False, 'message': f'Model fiyat güncelleme sırasında hata oluştu: {str(e)}'})
 
 
+@get_products_bp.route('/api/update-woo-mapping', methods=['POST'])
+@roles_required('admin', 'manager')
+def update_woo_mapping():
+    """Bir ürünün WooCommerce mapping bilgilerini günceller"""
+    try:
+        # Yetki kontrolü
+        if not session.get('user_id'):
+            return jsonify({'success': False, 'message': 'Oturum açmanız gerekli'})
+
+        barcode = request.form.get('barcode', '').strip()
+        woo_product_id_str = request.form.get('woo_product_id', '').strip()
+        woo_barcode = request.form.get('woo_barcode', '').strip()
+
+        if not barcode:
+            return jsonify({'success': False, 'message': 'Barkod gerekli'})
+
+        # Ürünü bul
+        product = Product.query.filter_by(barcode=barcode).first()
+        if not product:
+            return jsonify({'success': False, 'message': 'Ürün bulunamadı'})
+
+        # Woo Product ID'yi kontrol et ve kaydet
+        woo_product_id = None
+        if woo_product_id_str:
+            try:
+                woo_product_id = int(woo_product_id_str)
+            except (ValueError, TypeError):
+                return jsonify({'success': False, 'message': 'Geçersiz WooCommerce Product ID'})
+
+        # Güncelleme yap
+        old_woo_id = product.woo_product_id
+        old_woo_barcode = product.woo_barcode
+        
+        product.woo_product_id = woo_product_id
+        product.woo_barcode = woo_barcode if woo_barcode else None
+        
+        db.session.add(product)
+        db.session.commit()
+
+        # Kullanıcı işlemini logla
+        try:
+            from user_logs import log_user_action
+            log_details = {
+                'sayfa': 'Ürün Listesi',
+                'barkod': barcode,
+                'eski_woo_id': old_woo_id,
+                'yeni_woo_id': woo_product_id,
+                'eski_woo_barcode': old_woo_barcode,
+                'yeni_woo_barcode': woo_barcode,
+                'işlem_açıklaması': f'{barcode} barkodlu ürünün WooCommerce mapping bilgileri güncellendi'
+            }
+            log_user_action(
+                action='WOO_MAPPING_UPDATE',
+                details=log_details
+            )
+        except Exception as e:
+            logger.error(f"Kullanıcı log hatası: {e}")
+
+        message = f'WooCommerce mapping bilgileri başarıyla güncellendi.'
+        if woo_product_id:
+            message += f' Woo ID: {woo_product_id}'
+        if woo_barcode:
+            message += f', Woo Barkod: {woo_barcode}'
+
+        return jsonify({
+            'success': True,
+            'message': message,
+            'woo_product_id': woo_product_id,
+            'woo_barcode': woo_barcode
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Woo mapping güncelleme hatası: {e}")
+        return jsonify({'success': False, 'message': f'Güncelleme sırasında hata oluştu: {str(e)}'})
+
+
 @get_products_bp.route('/api/bulk-delete-products', methods=['POST'])
 @roles_required('admin', 'manager')
 def bulk_delete_products():
@@ -1549,7 +1626,8 @@ def get_variants_for_stock_update():
                 'color': p.color,
                 'size': p.size,
                 'quantity': qty,
-                'raf_bilgisi': raf_bilgisi
+                'raf_bilgisi': raf_bilgisi,
+                'woo_product_id': p.woo_product_id
             })
 
         return jsonify({'success': True, 'products': variants})

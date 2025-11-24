@@ -39,6 +39,9 @@ def register_blueprints(app):
     from uretim_oneri import uretim_oneri_bp
     from barcode_alias_routes import barcode_alias_bp  # 🔥 BARKOD ALIAS SİSTEMİ
     from woocommerce_site import woo_bp  # 🛒 WOOCOMMERCE SİPARİŞ SİSTEMİ
+    from woocommerce_site.test_routes import test_bp  # 🧪 WOOCOMMERCE TEST - GEÇİCİ AKTİF
+    # Preview: Woo barcode mapping
+    from routes.woo_barcodes_preview import woo_preview_bp
 
 
 
@@ -81,5 +84,7 @@ def register_blueprints(app):
         uretim_oneri_bp,
         barcode_alias_bp,  # 🔥 BARKOD ALIAS SİSTEMİ
         woo_bp,  # 🛒 WOOCOMMERCE SİPARİŞ SİSTEMİ
+        test_bp,  # 🧪 WOOCOMMERCE TEST - GEÇİCİ AKTİF
+        woo_preview_bp,
     ]:
         app.register_blueprint(bp)

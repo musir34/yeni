@@ -177,9 +177,17 @@
                                 <span>{{ "%.2f"|format(variant.sale_price) }} TL</span>
                                 <span class="barcode-info">
                                     Barkod: {{ variant.barcode }}
+                                    {% if variant.woo_product_id %}| Woo ID: {{ variant.woo_product_id }}{% endif %}
                                     {% if variant.raf_bilgisi %}| Raf: {{ variant.raf_bilgisi }}{% endif %}
                                     <button class="btn-copy copy-barcode-btn" data-barcode="{{ variant.barcode }}" title="Barkodu Kopyala">
                                         <i class="fas fa-copy"></i>
+                                    </button>
+                                    <button class="btn-copy edit-woo-id-btn" 
+                                            data-barcode="{{ variant.barcode }}" 
+                                            data-woo-id="{{ variant.woo_product_id or '' }}"
+                                            data-woo-barcode="{{ variant.woo_barcode or '' }}"
+                                            title="{% if variant.woo_product_id %}Woo ID Düzenle{% else %}Woo ID Ekle{% endif %}">
+                                        <i class="fas fa-{% if variant.woo_product_id %}edit{% else %}plus{% endif %}"></i>
                                     </button>
                                 </span>
                             </li>
@@ -237,9 +245,17 @@
                                         <span>Fiyat: {{ "%.2f"|format(variant.sale_price) }} TL</span>
                                         <span class="barcode-info">
                                             Barkod: {{ variant.barcode }}
+                                            {% if variant.woo_product_id %}| Woo ID: {{ variant.woo_product_id }}{% endif %}
                                             {% if variant.raf_bilgisi %}| Raf: {{ variant.raf_bilgisi }}{% endif %}
                                             <button class="btn-copy copy-barcode-btn" data-barcode="{{ variant.barcode }}" title="Barkodu Kopyala">
                                                 <i class="fas fa-copy"></i>
+                                            </button>
+                                            <button class="btn-copy edit-woo-id-btn" 
+                                                    data-barcode="{{ variant.barcode }}" 
+                                                    data-woo-id="{{ variant.woo_product_id or '' }}"
+                                                    data-woo-barcode="{{ variant.woo_barcode or '' }}"
+                                                    title="{% if variant.woo_product_id %}Woo ID Düzenle{% else %}Woo ID Ekle{% endif %}">
+                                                <i class="fas fa-{% if variant.woo_product_id %}edit{% else %}plus{% endif %}"></i>
                                             </button>
                                         </span>
                                     </li>
@@ -364,7 +380,7 @@ $(function(){
             $('#modalSaveBtn').hide();
             $.get(`/api/get_variants_for_stock_update?model=${modelId}`, function(res){
                 if(res.success && res.products.length>0){
-                    let html='<table class="form-table"><thead><tr><th>Renk</th><th>Beden</th><th>Stok</th><th>Barkod</th><th>Raf</th></tr></thead><tbody>';
+                    let html='<table class="form-table"><thead><tr><th>Renk</th><th>Beden</th><th>Stok</th><th>Barkod</th><th>Woo ID</th><th>Raf</th></tr></thead><tbody>';
                     res.products.forEach(p=>{
                         html+=`<tr>
                             <td>${p.color}</td>
@@ -375,6 +391,7 @@ $(function(){
                                     <i class="fas fa-copy"></i>
                                 </button>
                             </td>
+                            <td>${p.woo_product_id || '-'}</td>
                             <td>${p.raf_bilgisi || '-'}</td>
                         </tr>`;
                     });
@@ -401,6 +418,7 @@ $(function(){
         let url='', formId='';
         if(currentAction==='update_model_cost'){ url='/api/update-product-cost'; formId='#singleInputForm'; }
         else if(currentAction==='update_model_price'){ url='/api/update_model_price'; formId='#singleInputForm'; }
+        else if(currentAction==='edit_woo_id'){ url='/api/update-woo-mapping'; formId='#wooIdForm'; }
         else return;
 
         $.post(url, $(formId).serialize(), res=>{
@@ -459,6 +477,40 @@ $(function(){
                 setTimeout(()=>$btn.html(orig),1500);
             }).catch(()=>alert('Hata: Barkod kopyalanamadı!'));
         }else{ alert('Tarayıcınız bu özelliği desteklemiyor.'); }
+    });
+
+    // Woo ID Ekleme/Düzenleme
+    $(document).on('click', '.edit-woo-id-btn', function(e){
+        e.stopPropagation();
+        const $btn = $(this);
+        const barcode = $btn.data('barcode');
+        const currentWooId = $btn.data('woo-id') || '';
+        const currentWooBarcode = $btn.data('woo-barcode') || '';
+        
+        currentAction = 'edit_woo_id';
+        $('#modalTitle').text(`Woo ID ${currentWooId ? 'Düzenle' : 'Ekle'} - ${barcode}`);
+        $('#modalSaveBtn').show().text('Kaydet');
+        
+        $('#modalBody').html(`
+            <form id="wooIdForm">
+                <input type="hidden" name="barcode" value="${barcode}">
+                <div class="prompt-input-group">
+                    <label>WooCommerce Product ID:</label>
+                    <input type="number" name="woo_product_id" value="${currentWooId}" 
+                           class="form-control" placeholder="Örn: 37710" min="0">
+                </div>
+                <div class="prompt-input-group">
+                    <label>WooCommerce Barkod (isteğe bağlı):</label>
+                    <input type="text" name="woo_barcode" value="${currentWooBarcode}" 
+                           class="form-control" placeholder="Örn: 9857498231635">
+                </div>
+                <p style="color:#6c757d;font-size:0.85rem;margin-top:0.5rem;">
+                    <i class="fas fa-info-circle"></i> Bu değerler WooCommerce siparişlerinde ürün eşleştirmesi için kullanılır.
+                </p>
+            </form>
+        `);
+        
+        $modal.addClass('is-visible');
     });
 
 });

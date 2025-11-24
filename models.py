@@ -421,6 +421,9 @@ class OrderBase(db.Model):
     # Kayıt Zaman Damgaları
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # 🆕 Sipariş Kaynağı (TRENDYOL / WOOCOMMERCE)
+    source = db.Column(db.String(20), default='TRENDYOL', nullable=False)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -592,6 +595,9 @@ class Product(db.Model):
     __tablename__ = 'products'
 
     barcode = db.Column(db.String, primary_key=True)
+    # WooCommerce mapping
+    woo_product_id = db.Column(db.Integer, index=True, nullable=True)  # WooCommerce product_id
+    woo_barcode = db.Column(db.String(64), index=True, nullable=True)   # Gerçek barkod (CSV'den)
     title = db.Column(db.String)
     hidden = db.Column(db.Boolean, default=False)
     product_main_id = db.Column(db.String)

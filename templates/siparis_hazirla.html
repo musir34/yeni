@@ -382,7 +382,13 @@
     <div class="fixed-header">
       <h4>Kargo Bilgileri</h4>
       <p>
-        <strong>Sipariş No:</strong> {{ order.order_number }}<br/>
+        <strong>Sipariş No:</strong> {{ order.order_number }}
+        {% if order.source == 'WOOCOMMERCE' %}
+          <span class="badge badge-info" style="font-size:0.75rem;margin-left:5px;">🛒 WooCommerce</span>
+        {% else %}
+          <span class="badge badge-warning" style="font-size:0.75rem;margin-left:5px;">📦 Trendyol</span>
+        {% endif %}
+        <br/>
         <strong>Müşteri:</strong> {{ order.customer_name }} {{ order.customer_surname }}<br/>
         <strong>Kargoya Kalan Süre:</strong> {{ remaining_time }}<br/>
         <strong>Kargo Firması:</strong> {{ order.cargo_provider_name }}<br/>

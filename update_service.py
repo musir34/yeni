@@ -103,17 +103,47 @@ async def confirm_packing():
                     barkodlar.extend(vals)
         logger.info(f"[SCAN] toplam_okutma={len(barkodlar)}")
 
-        # 3) Sipariş kaydı
-        order_created = OrderCreated.query.filter_by(order_number=order_number).first()
+        # 3) Sipariş kaydı - OrderCreated veya WooOrder tablosundan bul
+        from archive import find_order_across_tables
+        from woocommerce_site.models import WooOrder
+        
+        order_created, table_cls = find_order_across_tables(order_number)
+        
         if not order_created:
-            logger.error("[DB] OrderCreated bulunamadı")
-            flash('Created tablosunda bu sipariş yok.', 'danger')
+            logger.error("[DB] Sipariş hiçbir tabloda bulunamadı")
+            flash('Sipariş bulunamadı.', 'danger')
             return redirect(url_for('siparis_hazirla.index'))
+        
+        is_woo_order = table_cls == WooOrder
+        logger.info(f"[ORDER] Bulundu: {order_number}, Tablo: {table_cls.__name__ if hasattr(table_cls, '__name__') else 'WooOrder'}")
 
         # 4) Detaylar
         try:
-            details = json.loads(order_created.details or '[]')
-            logger.info(f"[DETAILS] satir={len(details)}")
+            if is_woo_order:
+                # WooCommerce siparişi - line_items'dan details oluştur
+                details = []
+                for item in order_created.line_items or []:
+                    product_id = item.get('product_id')
+                    variation_id = item.get('variation_id')
+                    woo_id = variation_id if variation_id else product_id
+                    
+                    # Product tablosundan barkod al
+                    from models import Product
+                    product_db = Product.query.filter_by(woo_product_id=int(woo_id)).first()
+                    barcode = product_db.barcode if product_db else str(woo_id)
+                    
+                    details.append({
+                        'barcode': barcode,
+                        'quantity': item.get('quantity', 1),
+                        'woo_product_id': product_id,
+                        'woo_variation_id': variation_id,
+                        'product_name': item.get('name', '')
+                    })
+                logger.info(f"[DETAILS][WOO] {len(details)} ürün, line_items'dan oluşturuldu")
+            else:
+                # Trendyol siparişi - standart details parse
+                details = json.loads(order_created.details or '[]')
+                logger.info(f"[DETAILS][TY] satir={len(details)}")
         except json.JSONDecodeError:
             logger.exception("[DETAILS] JSON hatalı, boş dizi kullanılacak")
             details = []
@@ -280,20 +310,81 @@ async def confirm_packing():
             logger.exception("[TYL][EXC]")
             flash(f"Trendyol API çağrısında istisna: {e}", 'danger')
 
-        # 8) OrderCreated -> OrderPicking taşı
+        # 7.5) WooCommerce: on-hold/processing → completed (Hazırlandı) statüsüne geçir
         try:
-            data = order_created.__dict__.copy()
-            data.pop('_sa_instance_state', None)
-            picking_cols = {c.name for c in OrderPicking.__table__.columns}
-            data = {k: v for k, v in data.items() if k in picking_cols}
+            # WooCommerce siparişi mi kontrol et
+            is_woocommerce = (
+                hasattr(order_created, 'source') and order_created.source == 'WOOCOMMERCE'
+            ) or (
+                order_created.order_number and '-' not in str(order_created.order_number)
+            )
+            
+            if is_woocommerce:
+                logger.info(f"[WOO] WooCommerce siparişi tespit edildi: {order_number}")
+                
+                # WooCommerce API'ye durum güncellemesi gönder
+                from woocommerce_site.woo_service import WooCommerceService
+                from woocommerce_site.models import WooOrder
+                
+                try:
+                    woo_service = WooCommerceService()
+                    
+                    # WooOrder tablosundan sipariş ID'sini al
+                    woo_order_db = WooOrder.query.filter_by(order_number=str(order_number)).first()
+                    
+                    if woo_order_db:
+                        woo_order_id = woo_order_db.order_id
+                        
+                        # Statüyü 'completed' (Tamamlandı) yap
+                        updated = woo_service.update_order_status(woo_order_id, 'completed')
+                        
+                        if updated:
+                            logger.info(f"[WOO][OK] Sipariş {order_number} WooCommerce'te 'completed' statüsüne geçti")
+                            flash(f"WooCommerce siparişi 'Tamamlandı' statüsüne geçirildi", 'success')
+                            
+                            # woo_orders tablosundaki kaydı da güncelle
+                            woo_order_db.status = 'completed'
+                            db.session.commit()
+                        else:
+                            logger.error(f"[WOO][FAIL] Sipariş {order_number} güncellenemedi")
+                            flash("WooCommerce güncellenemedi, ancak işlem devam ediyor", 'warning')
+                    else:
+                        logger.warning(f"[WOO] Sipariş {order_number} woo_orders tablosunda bulunamadı")
+                        flash("WooCommerce siparişi veritabanında bulunamadı", 'warning')
+                        
+                except Exception as woo_inner:
+                    logger.exception(f"[WOO][INNER] WooCommerce işleme hatası")
+                    flash("WooCommerce güncellenemedi, işlem devam ediyor", 'warning')
+                    
+        except Exception as woo_error:
+            logger.exception(f"[WOO][EXC] WooCommerce güncelleme hatası")
+            # Hata olsa da devam et, sipariş işleme devam etsin
 
-            new_rec = OrderPicking(**data)
-            new_rec.picking_start_time = datetime.utcnow()
+        # 8) OrderCreated -> OrderPicking taşı (veya woo_orders tablosunu güncelle)
+        try:
+            # 🔥 Eğer sipariş woo_orders tablosundan geldiyse
+            if is_woo_order:
+                logger.info(f"[WOO_TABLE] Sipariş woo_orders tablosundan geldi, durum 'completed' yapılacak")
+                
+                # Zaten yukarıda WooCommerce API'ye güncelleme gönderildi
+                # Sadece lokal veritabanını güncelle
+                order_created.status = 'completed'
+                db.session.commit()
+                logger.info(f"[WOO_TABLE][OK] woo_orders tablosunda durum 'completed' yapıldı")
+            else:
+                # Normal akış: OrderCreated -> OrderPicking
+                data = order_created.__dict__.copy()
+                data.pop('_sa_instance_state', None)
+                picking_cols = {c.name for c in OrderPicking.__table__.columns}
+                data = {k: v for k, v in data.items() if k in picking_cols}
 
-            db.session.add(new_rec)
-            db.session.delete(order_created)
-            db.session.commit()
-            logger.info(f"[MOVE] Created ➜ Picking OK (order={order_number})")
+                new_rec = OrderPicking(**data)
+                new_rec.picking_start_time = datetime.utcnow()
+
+                db.session.add(new_rec)
+                db.session.delete(order_created)
+                db.session.commit()
+                logger.info(f"[MOVE] Created ➜ Picking OK (order={order_number})")
         except Exception as db_error:
             db.session.rollback()
             logger.exception("[MOVE][ERR] rollback")

@@ -44,6 +44,12 @@
                 </h1>
             </div>
             <div class="col-auto">
+                <a href="{{ url_for('home.home') }}" class="btn btn-secondary me-2">
+                    <i class="bi bi-house"></i> Anasayfa
+                </a>
+                <a href="{{ url_for('siparis_hazirla.index') }}" class="btn btn-danger me-2">
+                    <i class="bi bi-box-seam"></i> Sipariş Hazırla
+                </a>
                 <a href="{{ url_for('woo.sync_orders') }}?days=30" class="btn btn-success">
                     <i class="bi bi-arrow-clockwise"></i> Siparişleri Senkronize Et
                 </a>

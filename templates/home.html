@@ -102,6 +102,7 @@
         <a class="dropdown-item" href="{{ url_for('order_list_all') }}"><i class="fas fa-list"></i> Sipariş Listesi</a>
         <a class="dropdown-item" href="{{ url_for('degisim_talep') }}"><i class="fas fa-exchange-alt"></i> Değişim Talepleri</a>
         <div class="dropdown-divider"></div>
+        <a class="dropdown-item" href="{{ url_for('woo.orders') }}"><i class="fas fa-shopping-cart"></i> WooCommerce Siparişler</a>
         <a class="dropdown-item" href="{{ url_for('display_archive') }}"><i class="fas fa-box"></i> Arşiv</a>
       </div>
     </div>
@@ -210,6 +211,10 @@
         <!-- ✅ Yeni eklenen buton -->
         <a class="btn btn-primary m-1" href="{{ url_for('uretim_oneri.uretim_oneri_haftalik_page') }}">
           <i class="fas fa-lightbulb"></i> Stok Önerisi
+        </a>
+        <!-- WooCommerce Siparişleri -->
+        <a class="btn btn-info m-1" href="{{ url_for('woo.orders') }}" title="WooCommerce Siparişleri">
+          <i class="fas fa-shopping-cart"></i> WooCommerce Siparişler
         </a>
       </div>
     </div>
