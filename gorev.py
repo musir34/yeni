@@ -421,17 +421,29 @@ def attach_jobs(scheduler, app):
     """
     Scheduler'a job'ları ekler. app instance'ı job'lara context sağlamak için kullanılır.
     """
+    # Haftalık görev oluşturma (Pazartesi 00:00)
     scheduler.add_job(
         lambda: generate_week_main_tasks_with_context(app), 
         "cron",
         day_of_week="mon", hour=0, minute=0, timezone=str(IST),
         id="gv_weekly", replace_existing=True
     )
+    
+    # Görev hatırlatıcılar (Her 5 dakika)
     scheduler.add_job(
         lambda: reminders_job(app), 
         "interval", 
         minutes=5, 
         id="gv_rem", 
+        replace_existing=True
+    )
+    
+    # 🛒 WooCommerce sipariş senkronizasyonu (Her 10 dakika)
+    scheduler.add_job(
+        lambda: sync_woocommerce_orders(app),
+        "interval",
+        minutes=10,
+        id="woo_sync",
         replace_existing=True
     )
 
@@ -440,6 +452,48 @@ def generate_week_main_tasks_with_context(app):
     with app.app_context():
         return generate_week_main_tasks()
 
+
+def sync_woocommerce_orders(app):
+    """
+    WooCommerce siparişlerini otomatik olarak senkronize eder.
+    Trendyol pull_orders_job mantığıyla aynı - her 10 dakikada çalışır.
+    """
+    with app.app_context():
+        try:
+            from woocommerce_site.woo_service import WooCommerceService
+            from woocommerce_site.woo_config import WooConfig
+            
+            # API ayarları kontrolü
+            if not WooConfig.is_configured():
+                log.warning("🛒 WooCommerce API ayarları yapılmamış, senkronizasyon atlandı")
+                return
+            
+            log.info("🛒 WooCommerce sipariş senkronizasyonu başlıyor...")
+            
+            woo_service = WooCommerceService()
+            
+            # Aktif siparişleri çek (son 7 gün)
+            # on-hold: Sipariş hazırla ekranına düşecek
+            # processing: Paketleme tamamlanmış, kargo bekleniyor
+            # pending: Ödeme bekleyen siparişler
+            active_statuses = ['on-hold', 'processing', 'pending']
+            total_saved = 0
+            
+            for status in active_statuses:
+                result = woo_service.sync_orders_to_db(status=status, days=7)
+                saved = result.get('total_saved', 0)
+                total_saved += saved
+                
+                if saved > 0:
+                    log.info(f"🛒 WooCommerce {status}: {saved} sipariş kaydedildi")
+            
+            if total_saved > 0:
+                log.info(f"🛒 WooCommerce senkronizasyonu tamamlandı: {total_saved} sipariş")
+            else:
+                log.debug("🛒 WooCommerce: Yeni sipariş yok")
+                
+        except Exception as e:
+            log.error(f"🛒 WooCommerce senkronizasyon hatası: {str(e)}", exc_info=True)
 
 
 # ── PANEL: Şablon oluştur (form-post)

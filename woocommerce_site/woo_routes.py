@@ -140,7 +140,11 @@ def order_detail(order_id):
     logger.info(f"[ORDER_DETAIL] API'den sipariş alındı: #{order.get('number')}")
     
     # Veritabanına kaydet
-    woo_service.save_order_to_db(order)
+    saved_order = woo_service.save_order_to_db(order)
+    if saved_order:
+        logger.info(f"[ORDER_DETAIL] ✅ DB'ye kaydedildi: ID={saved_order.id}, order_id={saved_order.order_id}, order_number={saved_order.order_number}")
+    else:
+        logger.error(f"[ORDER_DETAIL] ❌ DB'ye kaydedilemedi!")
     
     formatted_order = WooCommerceService.format_order_data(order)
     notes = woo_service.get_order_notes(woo_order_id)

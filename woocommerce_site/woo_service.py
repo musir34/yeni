@@ -269,30 +269,43 @@ class WooCommerceService:
         Returns:
             Kaydedilen WooOrder instance
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
             order_id = order_data.get('id')
             if not order_id:
+                logger.error("[SAVE_ORDER] order_id bulunamadı!")
                 return None
+            
+            logger.info(f"[SAVE_ORDER] Sipariş kaydediliyor: order_id={order_id}, number={order_data.get('number')}")
             
             # Mevcut kaydı kontrol et
             existing = WooOrder.query.filter_by(order_id=order_id).first()
             
             if existing:
                 # Güncelle
+                logger.info(f"[SAVE_ORDER] Mevcut kayıt bulundu (DB ID={existing.id}), güncelleniyor...")
                 existing.update_from_woo_data(order_data)
                 db.session.commit()
+                logger.info(f"[SAVE_ORDER] ✅ Güncelleme başarılı: #{existing.order_number}")
                 return existing
             else:
                 # Yeni kayıt oluştur
+                logger.info(f"[SAVE_ORDER] Yeni kayıt oluşturuluyor...")
                 new_order = WooOrder.from_woo_data(order_data)
                 if new_order:
                     db.session.add(new_order)
                     db.session.commit()
+                    logger.info(f"[SAVE_ORDER] ✅ Yeni kayıt başarılı: DB ID={new_order.id}, #{new_order.order_number}")
                     return new_order
-                return None
+                else:
+                    logger.error(f"[SAVE_ORDER] ❌ from_woo_data() None döndürdü!")
+                    return None
                 
         except Exception as e:
             db.session.rollback()
+            logger.error(f"[SAVE_ORDER] ❌ HATA: {e}", exc_info=True)
             print(f"Sipariş veritabanına kaydedilemedi: {e}")
             return None
     
