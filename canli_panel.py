@@ -5,6 +5,7 @@ from flask import Blueprint, Response, jsonify, request, stream_with_context, re
 from sqlalchemy import func, literal, text, and_, or_
 from models import db, Product, CentralStock
 from models import OrderCreated, OrderPicking, OrderShipped, Archive, ReturnOrder, ReturnProduct
+from woocommerce_site.models import WooOrder
 from login_logout import login_required, roles_required
 try:
     from models import OrderDelivered
@@ -145,10 +146,35 @@ def _tr_range_from_params(args):
         return start, start + timedelta(days=1)
 
 
-def _count_orders_between_distinct(start_ist, end_ist):
-    sources = [OrderCreated, OrderPicking, OrderShipped, OrderDelivered]
+def _count_orders_between_distinct(start_ist, end_ist, source_filter="all"):
+    """
+    Seçilen aralıktaki benzersiz sipariş sayısını döndürür.
+    source_filter: "all", "trendyol", "woocommerce"
+    """
+    if source_filter == "woocommerce":
+        sources = [WooOrder]
+    elif source_filter == "trendyol":
+        sources = [OrderCreated, OrderPicking, OrderShipped, OrderDelivered]
+    else:  # "all"
+        sources = [OrderCreated, OrderPicking, OrderShipped, OrderDelivered, WooOrder]
+    
     ids = set()
     for cls in sources:
+        # WooCommerce için özel işlem
+        if cls == WooOrder:
+            q = db.session.query(WooOrder).filter(
+                or_(
+                    and_(func.timezone('Europe/Istanbul', WooOrder.date_created) >= start_ist,
+                         func.timezone('Europe/Istanbul', WooOrder.date_created) <  end_ist),
+                    and_(WooOrder.date_created >= start_ist, WooOrder.date_created < end_ist)
+                )
+            )
+            for row in q.all():
+                if hasattr(row, 'order_number') and row.order_number:
+                    ids.add(str(row.order_number))
+            continue
+        
+        # Trendyol siparişleri için mevcut mantık
         ts_col, _, _ = _col(cls, ORD_TS_CANDS, "ts")
         det_name = next((n for n in ORD_DTL_CANDS if hasattr(cls, n)), None)
         if ts_col is None: continue
@@ -200,10 +226,21 @@ def _order_numbers_created_between(start_ist: datetime, end_ist: datetime) -> se
 
 
 
-def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime):
+def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, source_filter: str = "all"):
+    """
+    Siparişleri tarih aralığında topla.
+    
+    Args:
+        start_ist: Başlangıç tarihi (IST)
+        end_ist: Bitiş tarihi (IST)
+        source_filter: Kaynak filtresi - "all", "trendyol", "woocommerce"
+    
+    Returns:
+        (qty_map, amt_map): Barkod bazında miktar ve NET tutar haritaları
+    """
     t0=_t0()
     qty_map, amt_map = {}, {}   # amt_map artık NET tutar olacak
-    _info("orders: collecting", start=str(start_ist), end=str(end_ist))
+    _info("orders: collecting", start=str(start_ist), end=str(end_ist), source=source_filter)
 
     def add(bc, q, a):
         if not bc or q <= 0: return
@@ -212,12 +249,108 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime):
         if a is not None:
             amt_map[s] = amt_map.get(s, 0.0) + float(a)
 
-    sources = [("Created",OrderCreated), ("Picking",OrderPicking), ("Shipped",OrderShipped), ("Delivered",OrderDelivered), ("Archive",Archive)]
+    # 🔥 WooCommerce modeli ekle
+    from woocommerce_site.models import WooOrder
+    
+    # Kaynak filtresine göre source listesini belirle
+    if source_filter == "woocommerce":
+        sources = [("WooCommerce", WooOrder)]
+    elif source_filter == "trendyol":
+        sources = [
+            ("Created", OrderCreated),
+            ("Picking", OrderPicking),
+            ("Shipped", OrderShipped),
+            ("Delivered", OrderDelivered),
+            ("Archive", Archive)
+        ]
+    else:  # "all"
+        sources = [
+            ("Created", OrderCreated),
+            ("Picking", OrderPicking),
+            ("Shipped", OrderShipped),
+            ("Delivered", OrderDelivered),
+            ("Archive", Archive),
+            ("WooCommerce", WooOrder)  # 🛒 YENİ
+        ]
+    
+    _info("collect_orders: source_filter", filter=source_filter, source_count=len(sources))
+    
     if "order_date" not in ORD_TS_CANDS: ORD_TS_CANDS.insert(0, "order_date")
 
     for name, cls in sources:
         t1=_t0()
         try:
+            # 🛒 WooCommerce için özel işlem
+            if cls == WooOrder:
+                # WooCommerce siparişlerini tarih aralığında filtrele
+                q = db.session.query(cls).filter(
+                    or_(
+                        and_(func.timezone('Europe/Istanbul', cls.date_created) >= start_ist,
+                             func.timezone('Europe/Istanbul', cls.date_created) <  end_ist),
+                        and_(cls.date_created >= start_ist, cls.date_created < end_ist)
+                    )
+                )
+                rows = q.all()
+                _info("orders: WooCommerce fetched", rows=len(rows), ms=_dt_ms(t1))
+                
+                for row in rows:
+                    # Tutar ve indirim
+                    amount_gross = float(row.total) if row.total else 0.0
+                    discount_total = float(row.discount_total) if row.discount_total else 0.0
+                    amount_net = amount_gross - discount_total
+                    
+                    # line_items JSON'dan ürünleri al
+                    items, total_qty = [], 0
+                    for item in (row.line_items or []):
+                        # WooCommerce'den product_id veya variation_id al
+                        woo_id = item.get('variation_id') or item.get('product_id')
+                        qty = int(item.get('quantity', 1))
+                        price = float(item.get('price', 0))
+                        
+                        if not woo_id or qty <= 0:
+                            continue
+                        
+                        # Product tablosundan barkod bul
+                        product = None
+                        if woo_id:
+                            product = Product.query.filter_by(woo_product_id=str(woo_id)).first()
+                        
+                        if not product:
+                            # SKU fallback - önce direkt eşleşme
+                            sku = item.get('sku', '').strip()
+                            if sku:
+                                # Tam eşleşme dene
+                                product = Product.query.filter_by(barcode=sku).first()
+                                
+                                # Bulamazsa, normalize edilmiş karşılaştırma (boşluk/tire farksız)
+                                if not product:
+                                    # SQL ile case-insensitive ve normalize edilmiş arama
+                                    sku_clean = sku.replace(' ', '').replace('-', '').upper()
+                                    product = (
+                                        Product.query
+                                        .filter(func.replace(func.replace(func.upper(Product.barcode), ' ', ''), '-', '') == sku_clean)
+                                        .first()
+                                    )
+                        
+                        if product:
+                            bc = product.barcode
+                        else:
+                            # Eşleşme bulunamadı - SKU'yu direkt kullan
+                            bc = item.get('sku', str(woo_id))
+                            _info("WooOrder: ürün eşleşmedi", woo_id=woo_id, sku=item.get('sku'), order=row.order_number)
+                        
+                        items.append({"bc": bc, "qty": qty, "price": price})
+                        total_qty += qty
+                    
+                    # NET paylaşım
+                    per_unit_net = (amount_net / total_qty) if total_qty > 0 else None
+                    for it in items:
+                        line_amt_net = (per_unit_net * it["qty"]) if per_unit_net is not None else (it["price"] * it["qty"])
+                        add(it["bc"], it["qty"], line_amt_net)
+                
+                continue  # WooCommerce işlendi, devam et
+            
+            # 📦 Trendyol siparişleri için mevcut mantık
             ts_col, _, _   = _col(cls, ORD_TS_CANDS, "ts")
             amt_col, _, A  = _col(cls, ORD_AMT_CANDS,  "amount")
             disc_col,_, D  = _col(cls, ORD_DISC_CANDS, "discount")  # ← indirim
@@ -714,7 +847,6 @@ def _build_cards_from_orders():
 # ── API’ler
 @canli_panel_bp.route("/api/canli/ozet")
 @login_required
-@roles_required('admin')
 def ozet_json():
     t0=_t0()
     try:
@@ -727,10 +859,15 @@ def ozet_json():
         start_ist, end_ist = _tr_range_from_params(request.args)
         _info("ozet_json: start", start=str(start_ist), end=str(end_ist))
 
+        # 🔥 Kaynak filtresi
+        source_filter = (request.args.get("source") or "all").lower().strip()
+        if source_filter not in ["all", "trendyol", "woocommerce"]:
+            source_filter = "all"
+
         # 2) satış (adet + NET tutar) — barcode→qty / barcode→net_tutar
         t1=_t0()
-        qty_map, net_map = _collect_orders_between_strict(start_ist, end_ist)   # ← net_map = amount - discount
-        _info("ozet_json: orders done", qty=len(qty_map), net=len(net_map), ms=_dt_ms(t1))
+        qty_map, net_map = _collect_orders_between_strict(start_ist, end_ist, source_filter)   # ← net_map = amount - discount
+        _info("ozet_json: orders done", qty=len(qty_map), net=len(net_map), source=source_filter, ms=_dt_ms(t1))
 
         # 3) sadece gösterilen siparişlerin iadeleri
         t2=_t0()
@@ -851,7 +988,7 @@ def ozet_json():
             "range": {"start": start_ist.strftime("%Y-%m-%d"), "end_exclusive": end_ist.strftime("%Y-%m-%d")},
             "group": ("barcode" if group_by_barcode else "model"),
             "toplam_net_satis": toplam_net_satis,
-            "toplam_siparis_sayisi": _count_orders_between_distinct(start_ist, end_ist),
+            "toplam_siparis_sayisi": _count_orders_between_distinct(start_ist, end_ist, source_filter),
             "genel_ortalama_fiyat": genel_ortalama_fiyat,        # NET
             "toplam_ciro": toplam_ciro,                          # Toplam NET ciro
             "kartlar": kartlar
@@ -865,7 +1002,6 @@ def ozet_json():
 
 @canli_panel_bp.route("/api/canli/akis")
 @login_required
-@roles_required('admin')
 def akis_sse():
     def _gen():
         conn_t0=_t0()
@@ -877,8 +1013,13 @@ def akis_sse():
                     start_ist, end_ist = _tr_range_from_params(request.args)
                     _info("SSE: loop start", start=str(start_ist), end=str(end_ist))
 
+                    # 🔥 Kaynak filtresi
+                    source_filter = (request.args.get("source") or "all").lower().strip()
+                    if source_filter not in ["all", "trendyol", "woocommerce"]:
+                        source_filter = "all"
+
                     # satış (adet + NET tutar)
-                    qty_map, net_map = _collect_orders_between_strict(start_ist, end_ist)
+                    qty_map, net_map = _collect_orders_between_strict(start_ist, end_ist, source_filter)
                     # sadece gösterilen siparişlerin iadeleri
                     ord_nos = _order_numbers_created_between(start_ist, end_ist)
                     ret_qty_map, returned_orders = _collect_returns_for_order_numbers(ord_nos)
@@ -967,7 +1108,7 @@ def akis_sse():
                         "guncellendi": now_tr_str(),
                         "group": ("barcode" if group_by_barcode else "model"),
                         "toplam_net_satis": toplam_net_satis,
-                        "toplam_siparis_sayisi": _count_orders_between_distinct(start_ist,end_ist),
+                        "toplam_siparis_sayisi": _count_orders_between_distinct(start_ist, end_ist, source_filter),
                         "toplam_ciro": toplam_ciro_sse,
                         "kartlar": kartlar
                     }
@@ -994,9 +1135,11 @@ def akis_sse():
 # ── HTML panel sayfası
 @canli_panel_bp.route("/canli-panel")
 @login_required
-@roles_required('admin')
 def canli_panel_sayfa():
-    return render_template("canli_panel.html")
+    # Kullanıcının admin olup olmadığını kontrol et
+    from flask_login import current_user
+    is_admin = hasattr(current_user, 'role') and current_user.role == 'admin'
+    return render_template("canli_panel.html", is_admin=is_admin)
 
 
 def _collect_orders_today_strict():

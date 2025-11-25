@@ -182,6 +182,9 @@ def get_home():
         archived_order_numbers = db.session.query(Archive.order_number).all()
         archived_order_numbers = [num[0] for num in archived_order_numbers]
         
+        logging.info(f"[SIPARIS_HAZIRLA] Arşivdeki sipariş sayısı: {len(archived_order_numbers)}")
+        logging.info(f"[SIPARIS_HAZIRLA] Arşivdeki ilk 5 numara: {archived_order_numbers[:5]}")
+        
         woo_order_db = (WooOrder.query
                        .filter(WooOrder.status == 'on-hold')
                        .filter(~WooOrder.order_number.in_(archived_order_numbers))
@@ -189,10 +192,12 @@ def get_home():
                        .first())
         
         if woo_order_db:
+            logging.info(f"[SIPARIS_HAZIRLA] WooOrder bulundu: {woo_order_db.order_number}")
             # WooOrder'dan OrderCreated formatına çevir
             oldest_order = convert_woo_to_order_format(woo_order_db)
             is_from_woo_table = True
         else:
+            logging.info("[SIPARIS_HAZIRLA] WooOrder bulunamadı, Trendyol'a geçiliyor")
             # 🛒 ÖNCELİK 2: orders_created tablosundan al (Trendyol)
             # Sadece 'Created' durumundaki siparişler
             oldest_order = (OrderCreated.query
