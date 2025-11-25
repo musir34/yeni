@@ -35,7 +35,12 @@ class WooCommerceService:
         Returns:
             API yanıtı (dict veya list)
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
         url = f"{self.base_url}/{endpoint}"
+        
+        logger.info(f"[WOO_API] {method} {url} (params={params})")
         
         try:
             response = requests.request(
@@ -46,10 +51,35 @@ class WooCommerceService:
                 json=data,
                 timeout=self.timeout
             )
+            
+            logger.info(f"[WOO_API] Response: {response.status_code}")
+            
+            # Detaylı hata logu
+            if response.status_code >= 400:
+                logger.error(f"[WOO_API] ❌ HTTP {response.status_code}: {response.text[:500]}")
+            
             response.raise_for_status()
-            return response.json()
+            result = response.json()
+            
+            logger.info(f"[WOO_API] ✅ Success: {type(result)} (len={len(result) if isinstance(result, (list, dict)) else 'N/A'})")
+            
+            return result
+            
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"[WOO_API] ❌ HTTP Error: {e}")
+            logger.error(f"[WOO_API] Response: {e.response.text if hasattr(e, 'response') else 'No response'}")
+            return None
+        except requests.exceptions.Timeout as e:
+            logger.error(f"[WOO_API] ❌ Timeout: {e}")
+            return None
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"[WOO_API] ❌ Connection Error: {e}")
+            return None
         except requests.exceptions.RequestException as e:
-            print(f"WooCommerce API hatası: {str(e)}")
+            logger.error(f"[WOO_API] ❌ Request Error: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"[WOO_API] ❌ Unexpected Error: {e}", exc_info=True)
             return None
     
     def get_orders(self, status: str = None, page: int = 1, per_page: int = None) -> List[Dict]:
