@@ -105,18 +105,45 @@ def orders():
 @woo_bp.route('/orders/<int:order_id>')
 @check_woo_config
 def order_detail(order_id):
-    """Sipariş detay sayfası"""
-    order = woo_service.get_order(order_id)
+    """
+    Sipariş detay sayfası
+    
+    Args:
+        order_id: Database ID (woo_orders.id) VEYA WooCommerce order ID
+    """
+    from woocommerce_site.models import WooOrder
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    logger.info(f"[ORDER_DETAIL] Gelen order_id: {order_id}")
+    
+    # Önce database ID olarak kontrol et
+    woo_order_db = WooOrder.query.get(order_id)
+    
+    if woo_order_db:
+        # Database'den bulundu, WooCommerce ID'yi al
+        logger.info(f"[ORDER_DETAIL] DB'den bulundu: #{woo_order_db.order_number}, WooCommerce ID: {woo_order_db.order_id}")
+        woo_order_id = woo_order_db.order_id
+    else:
+        # Database'de yok, belki WooCommerce ID olarak gönderilmiş
+        logger.info(f"[ORDER_DETAIL] DB'de bulunamadı, WooCommerce ID olarak deneniyor: {order_id}")
+        woo_order_id = order_id
+    
+    # WooCommerce API'den çek
+    order = woo_service.get_order(woo_order_id)
     
     if not order:
+        logger.warning(f"[ORDER_DETAIL] Sipariş bulunamadı: {order_id}")
         flash('Sipariş bulunamadı.', 'warning')
         return redirect(url_for('woo.orders'))
+    
+    logger.info(f"[ORDER_DETAIL] API'den sipariş alındı: #{order.get('number')}")
     
     # Veritabanına kaydet
     woo_service.save_order_to_db(order)
     
     formatted_order = WooCommerceService.format_order_data(order)
-    notes = woo_service.get_order_notes(order_id)
+    notes = woo_service.get_order_notes(woo_order_id)
     statuses = woo_service.get_order_statuses()
     
     return render_template(
