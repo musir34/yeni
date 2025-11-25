@@ -8,7 +8,7 @@ from sqlalchemy import desc
 from zoneinfo import ZoneInfo
 
 # Modeller
-from models import OrderCreated, RafUrun, Product, Archive, Degisim
+from models import db, OrderCreated, RafUrun, Product, Archive, Degisim
 
 # Hava Durumu Servisi
 from weather_service import get_weather_info, get_istanbul_time
@@ -177,8 +177,14 @@ def get_home():
         
         # 🛒 ÖNCELİK 1: woo_orders tablosundan hazırlanacak sipariş var mı?
         # Sadece 'on-hold' (Beklemede) siparişler sipariş hazırla ekranına gelir
+        # 🔥 ARŞİVDE OLMAYAN siparişleri filtrele
+        # Arşivdeki sipariş numaralarını al
+        archived_order_numbers = db.session.query(Archive.order_number).all()
+        archived_order_numbers = [num[0] for num in archived_order_numbers]
+        
         woo_order_db = (WooOrder.query
                        .filter(WooOrder.status == 'on-hold')
+                       .filter(~WooOrder.order_number.in_(archived_order_numbers))
                        .order_by(WooOrder.date_created)
                        .first())
         

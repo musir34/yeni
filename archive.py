@@ -597,8 +597,9 @@ def archive_an_order():
 @archive_bp.route('/restore_from_archive', methods=['POST'])
 def recover_from_archive():
     """
-    Arşivdeki siparişi 'Created' tablosuna geri taşır.
-    (Ya da dilediğiniz tabloya.)
+    Arşivdeki siparişi orijinal tablosuna geri taşır:
+    - WooCommerce siparişleri -> woo_orders tablosuna
+    - Trendyol siparişleri -> orders_created tablosuna
     """
     order_number = request.form.get('order_number')
     print(f"Arşivden geri yükleniyor: {order_number}")
@@ -607,35 +608,88 @@ def recover_from_archive():
     if not archived_order:
         return jsonify({'success': False, 'message': 'Sipariş arşivde bulunamadı.'})
 
-    # Hangi tabloya geri yükleyeceğinize siz karar verin. Burada 'Created' tablosuna alıyoruz:
-    from models import OrderCreated
-    restored_order = OrderCreated(
-        order_number=archived_order.order_number,
-        status='Created', # Geri yüklenince 'Created' statüsüne alıyoruz
-        order_date=archived_order.order_date,
-        details=archived_order.details, # details alanını olduğu gibi aktar
-        shipment_package_id=archived_order.shipment_package_id,
-        package_number=archived_order.package_number,
-        shipping_barcode=archived_order.shipping_barcode,
-        cargo_provider_name=archived_order.cargo_provider_name,
-        customer_name=archived_order.customer_name,
-        customer_surname=archived_order.customer_surname,
-        customer_address=archived_order.customer_address,
-        agreed_delivery_date=archived_order.agreed_delivery_date
-        # vs.
-    )
-
+    # 🔥 Sipariş kaynağını kontrol et (tire olmayan = WooCommerce)
+    is_woocommerce = '-' not in str(order_number)
+    
     try:
+        if is_woocommerce:
+            # 🛒 WooCommerce siparişini woo_orders tablosuna geri yükle
+            from woocommerce_site.models import WooOrder
+            
+            # Details JSON'dan line_items'ı parse et
+            details_json = archived_order.details or '[]'
+            if isinstance(details_json, str):
+                try:
+                    details_list = json.loads(details_json)
+                except json.JSONDecodeError:
+                    details_list = []
+            else:
+                details_list = details_json if isinstance(details_json, list) else []
+            
+            # WooOrder formatına çevir
+            line_items = []
+            for item in details_list:
+                line_items.append({
+                    'product_id': item.get('woo_product_id'),
+                    'variation_id': item.get('woo_variation_id'),
+                    'quantity': item.get('quantity', 1),
+                    'price': item.get('price', 0),
+                    'total': item.get('line_total_price', 0),
+                    'name': item.get('product_name', ''),
+                    'sku': item.get('sku', '')
+                })
+            
+            # Adres bilgisini parse et
+            address = archived_order.customer_address or ''
+            
+            # WooOrder objesi oluştur
+            restored_order = WooOrder()
+            restored_order.order_id = int(archived_order.order_number)
+            restored_order.order_number = archived_order.order_number
+            restored_order.status = 'on-hold'  # Geri yüklenince tekrar sipariş hazırla ekranına düşsün
+            restored_order.date_created = archived_order.order_date
+            restored_order.customer_first_name = archived_order.customer_name
+            restored_order.customer_last_name = archived_order.customer_surname
+            restored_order.total = 0.0  # Arşivde bu bilgi yok
+            restored_order.currency = 'TRY'
+            restored_order.line_items = line_items
+            restored_order.shipping_address_1 = address[:255] if address else None
+            restored_order.billing_address_1 = address[:255] if address else None
+            
+            print(f"WooCommerce siparişi {order_number} woo_orders tablosuna geri yükleniyor.")
+        else:
+            # 📦 Trendyol siparişini orders_created tablosuna geri yükle
+            from models import OrderCreated
+            
+            restored_order = OrderCreated()
+            restored_order.order_number = archived_order.order_number
+            restored_order.status = 'Created'  # Geri yüklenince 'Created' statüsüne alıyoruz
+            restored_order.order_date = archived_order.order_date
+            restored_order.details = archived_order.details
+            restored_order.shipment_package_id = archived_order.shipment_package_id
+            restored_order.package_number = archived_order.package_number
+            restored_order.shipping_barcode = archived_order.shipping_barcode
+            restored_order.cargo_provider_name = archived_order.cargo_provider_name
+            restored_order.customer_name = archived_order.customer_name
+            restored_order.customer_surname = archived_order.customer_surname
+            restored_order.customer_address = archived_order.customer_address
+            restored_order.agreed_delivery_date = archived_order.agreed_delivery_date
+            
+            print(f"Trendyol siparişi {order_number} orders_created tablosuna geri yükleniyor.")
+        
         db.session.add(restored_order)
         db.session.delete(archived_order)
         db.session.commit()
-        print(f"Sipariş {order_number} arşivden çıkartıldı, 'Created' tablosuna eklendi.")
+        
+        table_name = 'woo_orders' if is_woocommerce else 'orders_created'
+        print(f"Sipariş {order_number} arşivden çıkartıldı, '{table_name}' tablosuna eklendi.")
         return jsonify({'success': True, 'message': 'Sipariş başarıyla geri yüklendi.'})
+        
     except Exception as e:
         db.session.rollback()
         print(f"Arşivden geri yükleme DB hatası: {e}")
         traceback.print_exc()
-        return jsonify({'success': False, 'message': 'Arşivden geri yükleme sırasında veritabanı hatası oluştu.'})
+        return jsonify({'success': False, 'message': f'Arşivden geri yükleme hatası: {str(e)}'})
 
 
 #############################
