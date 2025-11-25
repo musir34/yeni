@@ -7,7 +7,10 @@ from datetime import datetime
 from typing import List, Dict, Optional
 from .woo_config import WooConfig
 from .models import WooOrder
-from models import db
+from models import db, Product
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class WooCommerceService:
@@ -292,6 +295,7 @@ class WooCommerceService:
     def save_order_to_db(self, order_data: Dict) -> Optional[WooOrder]:
         """
         Siparişi veritabanına kaydet veya güncelle
+        + Siparişteki ürünleri otomatik SKU bazlı eşleştir
         
         Args:
             order_data: WooCommerce API'den gelen sipariş verisi
@@ -309,6 +313,22 @@ class WooCommerceService:
                 return None
             
             logger.info(f"[SAVE_ORDER] Sipariş kaydediliyor: order_id={order_id}, number={order_data.get('number')}")
+            
+            # 🔥 SİPARİŞTEKİ ÜRÜNLERİ OTOMATIK EŞLEŞTİR
+            line_items = order_data.get('line_items', [])
+            if line_items:
+                logger.info(f"[SAVE_ORDER] {len(line_items)} ürün için otomatik eşleştirme kontrol ediliyor...")
+                for item in line_items:
+                    product_id = item.get('product_id')
+                    sku = item.get('sku')
+                    
+                    if product_id and sku:
+                        # SKU bazlı otomatik eşleştirme
+                        mapped_product = self.auto_map_product_from_sku(product_id, sku)
+                        if mapped_product:
+                            logger.info(f"[SAVE_ORDER] ✅ Ürün eşleştirildi: {sku} → {mapped_product.barcode}")
+                        else:
+                            logger.warning(f"[SAVE_ORDER] ⚠️ Ürün eşleştirilemedi: WooID={product_id}, SKU={sku}")
             
             # Mevcut kaydı kontrol et
             existing = WooOrder.query.filter_by(order_id=order_id).first()
@@ -548,3 +568,68 @@ class WooCommerceService:
                 continue
         
         return saved_count
+    
+    @staticmethod
+    def auto_map_product_from_sku(woo_product_id: int, sku: str) -> Optional[Product]:
+        """
+        WooCommerce SKU'dan Product tablosunda otomatik eşleştirme yap
+        
+        SKU Format: PRODUCT_MAIN_ID-SIZE COLOR
+        Örnek: 259-37 Siyah, 009-41 Beyaz
+        
+        Args:
+            woo_product_id: WooCommerce ürün ID
+            sku: WooCommerce SKU
+            
+        Returns:
+            Eşleşen Product nesnesi veya None
+        """
+        if not sku or not sku.strip():
+            return None
+        
+        try:
+            # SKU'yu parçala: "259-37 Siyah" -> ["259-37", "Siyah"]
+            parts = sku.strip().split(' ', 1)
+            if len(parts) < 2:
+                logger.warning(f"[AUTO_MAP] SKU formatı hatalı: {sku}")
+                return None
+            
+            size_part = parts[0]  # "259-37"
+            color = parts[1].strip()  # "Siyah"
+            
+            # Size part'ı parçala: "259-37" -> product_main_id=259, size=37
+            if '-' not in size_part:
+                logger.warning(f"[AUTO_MAP] SKU size formatı hatalı: {size_part}")
+                return None
+            
+            product_main_id_str, size = size_part.split('-', 1)
+            product_main_id = product_main_id_str.strip()
+            size = size.strip()
+            
+            logger.info(f"[AUTO_MAP] Arama: product_main_id={product_main_id}, size={size}, color={color}")
+            
+            # Product tablosunda ara
+            product = Product.query.filter_by(
+                product_main_id=product_main_id,
+                size=size,
+                color=color
+            ).first()
+            
+            if product:
+                # Eşleşme bulundu, woo_product_id ve woo_barcode güncelle
+                if not product.woo_product_id:
+                    product.woo_product_id = str(woo_product_id)
+                    product.woo_barcode = product.barcode
+                    db.session.commit()
+                    logger.info(f"[AUTO_MAP] ✅ Otomatik eşleştirme: WooID={woo_product_id} → Barcode={product.barcode}")
+                else:
+                    logger.info(f"[AUTO_MAP] ✓ Zaten eşleşmiş: WooID={product.woo_product_id} → Barcode={product.barcode}")
+                
+                return product
+            else:
+                logger.warning(f"[AUTO_MAP] ❌ Product bulunamadı: product_main_id={product_main_id}, size={size}, color={color}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"[AUTO_MAP] Hata: {e}", exc_info=True)
+            return None
