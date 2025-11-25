@@ -191,7 +191,7 @@ class WooCommerceService:
         """
         return {
             'pending': 'Ödeme Bekliyor',
-            'processing': 'İşleme Alındı',
+            'processing': 'Hazırlanıyor',
             'on-hold': 'Beklemede',
             'completed': 'Tamamlandı',
             'cancelled': 'İptal Edildi',
@@ -349,14 +349,15 @@ class WooCommerceService:
         if status:
             orders = [o for o in orders if o.get('status') == status]
         
-        # Veritabanına kaydet (hem woo_orders hem de OrderCreated'a)
+        # Veritabanına kaydet (SADECE woo_orders tablosuna)
         saved = self.save_orders_to_db(orders)
-        saved_to_created = self.sync_to_order_created(orders)
+        # ❌ OrderCreated tablosuna KAYDETME - WooCommerce ayrı, Trendyol ayrı
+        # saved_to_created = self.sync_to_order_created(orders)
         
         return {
             'total_fetched': len(orders),
             'total_saved': saved,
-            'saved_to_created': saved_to_created,
+            # 'saved_to_created': saved_to_created,
             'date_range': {
                 'start': start_date.strftime('%Y-%m-%d'),
                 'end': end_date.strftime('%Y-%m-%d')

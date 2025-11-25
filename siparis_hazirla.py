@@ -176,8 +176,9 @@ def get_home():
         from woocommerce_site.models import WooOrder
         
         # 🛒 ÖNCELİK 1: woo_orders tablosundan hazırlanacak sipariş var mı?
+        # Sadece 'on-hold' (Beklemede) siparişler sipariş hazırla ekranına gelir
         woo_order_db = (WooOrder.query
-                       .filter(WooOrder.status.in_(['processing', 'on-hold']))
+                       .filter(WooOrder.status == 'on-hold')
                        .order_by(WooOrder.date_created)
                        .first())
         
@@ -187,7 +188,11 @@ def get_home():
             is_from_woo_table = True
         else:
             # 🛒 ÖNCELİK 2: orders_created tablosundan al (Trendyol)
-            oldest_order = OrderCreated.query.order_by(OrderCreated.order_date).first()
+            # Sadece 'Created' durumundaki siparişler
+            oldest_order = (OrderCreated.query
+                          .filter(OrderCreated.status == 'Created')
+                          .order_by(OrderCreated.order_date)
+                          .first())
             is_from_woo_table = False
 
         # Hava durumu bilgisi

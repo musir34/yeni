@@ -363,15 +363,27 @@
     </form>
 
     <div class="bottom-buttons">
-      <form method="POST" action="{{ url_for('order_label') }}" target="_blank" id="yazdirForm" autocomplete="off">
-        <input type="hidden" name="order_number" value="{{ order.order_number if order else '' }}"/>
-        <input type="hidden" name="shipping_barcode" value="{{ order.shipping_barcode if order else '' }}"/>
-        <input type="hidden" name="cargo_provider" value="{{ order.cargo_provider_name if order else '' }}"/>
-        <input type="hidden" name="customer_name" value="{{ order.customer_name if order else '' }}"/>
-        <input type="hidden" name="customer_surname" value="{{ order.customer_surname if order else '' }}"/>
-        <input type="hidden" name="customer_address" value="{{ order.customer_address if order else '' }}"/>
-        <button type="submit" class="btn btn-warning btn-bottom disabled" id="yazdirBtn" disabled>Yazdır</button>
-      </form>
+      {% if order and order.source == 'WOOCOMMERCE' %}
+        <!-- WooCommerce için etiket -->
+        <a href="{{ url_for('woo.shipping_label_by_number', order_number=order.order_number) }}" 
+           target="_blank" 
+           class="btn btn-warning btn-bottom disabled" 
+           id="yazdirBtn"
+           style="pointer-events: none; opacity: 0.6;">
+          Yazdır
+        </a>
+      {% else %}
+        <!-- Trendyol için etiket -->
+        <form method="POST" action="{{ url_for('order_label') }}" target="_blank" id="yazdirForm" autocomplete="off">
+          <input type="hidden" name="order_number" value="{{ order.order_number if order else '' }}"/>
+          <input type="hidden" name="shipping_barcode" value="{{ order.shipping_barcode if order else '' }}"/>
+          <input type="hidden" name="cargo_provider" value="{{ order.cargo_provider_name if order else '' }}"/>
+          <input type="hidden" name="customer_name" value="{{ order.customer_name if order else '' }}"/>
+          <input type="hidden" name="customer_surname" value="{{ order.customer_surname if order else '' }}"/>
+          <input type="hidden" name="customer_address" value="{{ order.customer_address if order else '' }}"/>
+          <button type="submit" class="btn btn-warning btn-bottom disabled" id="yazdirBtn" disabled>Yazdır</button>
+        </form>
+      {% endif %}
 
       {% if order %}
         <button type="button" class="btn btn-danger btn-bottom" onclick="showArchiveModal('{{ order.order_number }}')">Arşive Gönder</button>
@@ -593,14 +605,39 @@
         });
 
         if(ok){
-          onaylaBtn.classList.remove('disabled');yazdirBtn.classList.remove('disabled');
-          onaylaBtn.disabled=false;yazdirBtn.disabled=false;
+          onaylaBtn.classList.remove('disabled');
+          onaylaBtn.disabled=false;
+          yazdirBtn.classList.remove('disabled');
+          
+          // WooCommerce için link, Trendyol için button
+          if(yazdirBtn.tagName === 'A'){
+            yazdirBtn.style.pointerEvents = 'auto';
+            yazdirBtn.style.opacity = '1';
+          } else {
+            yazdirBtn.disabled=false;
+          }
+          
           confirmTimer=setTimeout(()=>packingForm.submit(),15000);
           if(autoShipToggle.checked){showAutoShip();}
-          else{printTimer=setTimeout(()=>yazdirForm.submit(),5000);}
+          else{
+            if(yazdirBtn.tagName === 'A'){
+              setTimeout(()=>yazdirBtn.click(),5000);
+            } else {
+              printTimer=setTimeout(()=>yazdirForm.submit(),5000);
+            }
+          }
         }else{
-          onaylaBtn.classList.add('disabled');yazdirBtn.classList.add('disabled');
-          onaylaBtn.disabled=true;yazdirBtn.disabled=true;
+          onaylaBtn.classList.add('disabled');
+          onaylaBtn.disabled=true;
+          yazdirBtn.classList.add('disabled');
+          
+          // WooCommerce için link, Trendyol için button
+          if(yazdirBtn.tagName === 'A'){
+            yazdirBtn.style.pointerEvents = 'none';
+            yazdirBtn.style.opacity = '0.6';
+          } else {
+            yazdirBtn.disabled=true;
+          }
         }
       }
 

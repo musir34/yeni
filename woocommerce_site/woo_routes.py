@@ -367,3 +367,35 @@ def shipping_label(order_id):
         order=formatted_order,
         is_cod=is_cod
     )
+
+
+@woo_bp.route('/label/<order_number>')
+@check_woo_config
+def shipping_label_by_number(order_number):
+    """Sipariş numarası ile teslimat etiketi (sipariş hazırla için)"""
+    from woocommerce_site.models import WooOrder
+    
+    # WooOrder tablosundan sipariş bul
+    woo_order = WooOrder.query.filter_by(order_number=str(order_number)).first()
+    
+    if not woo_order:
+        flash('WooCommerce siparişi bulunamadı.', 'warning')
+        return redirect(url_for('siparis_hazirla.index'))
+    
+    # API'den güncel bilgileri al
+    order = woo_service.get_order(woo_order.order_id)
+    
+    if not order:
+        # API'den alamadıysa veritabanındaki raw_data kullan
+        order = woo_order.raw_data
+    
+    formatted_order = WooCommerceService.format_order_data(order)
+    
+    # Kapıda ödeme kontrolü
+    is_cod = order.get('payment_method') in ['cod', 'cash_on_delivery', 'kapida_odeme']
+    
+    return render_template(
+        'woocommerce_site/shipping_label.html',
+        order=formatted_order,
+        is_cod=is_cod
+    )

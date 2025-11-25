@@ -41,6 +41,9 @@
                 <h1 class="h3 mb-0">
                     <i class="bi bi-bag-check text-primary"></i>
                     WooCommerce Siparişler
+                    <button type="button" class="btn btn-sm btn-outline-info ms-2" data-bs-toggle="modal" data-bs-target="#infoModal">
+                        <i class="bi bi-info-circle"></i>
+                    </button>
                 </h1>
             </div>
             <div class="col-auto">
@@ -208,6 +211,203 @@
             </div>
         </div>
         {% endif %}
+    </div>
+
+    <!-- Bilgi Modal -->
+    <div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="infoModalLabel">
+                        <i class="bi bi-info-circle-fill"></i> WooCommerce Entegrasyonu - Kullanım Kılavuzu
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    
+                    <!-- Genel Bakış -->
+                    <h5 class="text-primary"><i class="bi bi-diagram-3"></i> Sistem Mimarisi</h5>
+                    <p>WooCommerce ve Trendyol siparişleri <strong>tamamen ayrı</strong> sistemlerde yönetilir:</p>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">🛒 WooCommerce</div>
+                                <div class="card-body">
+                                    <ul class="small mb-0">
+                                        <li>Tablo: <code>woo_orders</code></li>
+                                        <li>Tek tabloda tüm yaşam döngüsü</li>
+                                        <li>Sadece status değişir</li>
+                                        <li>Tablolar arası taşıma YOK</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning">📦 Trendyol</div>
+                                <div class="card-body">
+                                    <ul class="small mb-0">
+                                        <li>Tablolar: <code>orders_created → picking → packing</code></li>
+                                        <li>Aşamalı tablo geçişleri</li>
+                                        <li>Status + tablo değişir</li>
+                                        <li>Tablolar arası taşıma VAR</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Sipariş Akışı -->
+                    <h5 class="text-primary"><i class="bi bi-arrow-right-circle"></i> Sipariş Yaşam Döngüsü</h5>
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge bg-secondary me-2">1</span>
+                                <strong>pending</strong>
+                                <span class="ms-2 text-muted">→ Ödeme bekleniyor</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge bg-warning me-2">2</span>
+                                <strong>on-hold</strong>
+                                <span class="ms-2 text-success">→ ⭐ Sipariş Hazırla ekranına düşer</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge bg-info me-2">3</span>
+                                <strong>processing</strong>
+                                <span class="ms-2 text-muted">→ Paketleme tamamlandı, kargo bekleniyor</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge bg-primary me-2">4</span>
+                                <strong>shipped</strong>
+                                <span class="ms-2 text-muted">→ Kargoya verildi</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-success me-2">5</span>
+                                <strong>completed</strong>
+                                <span class="ms-2 text-muted">→ Müşteriye teslim edildi</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Sipariş Hazırla -->
+                    <h5 class="text-primary"><i class="bi bi-box-seam"></i> Sipariş Hazırla Öncelik Sistemi</h5>
+                    <div class="alert alert-info">
+                        <strong>Öncelik Sırası:</strong>
+                        <ol class="mb-0 mt-2">
+                            <li><strong>WooCommerce on-hold siparişler</strong> (öncelikli)</li>
+                            <li><strong>Trendyol Created siparişler</strong> (WooCommerce yoksa)</li>
+                        </ol>
+                        <p class="mt-3 mb-0"><i class="bi bi-lightbulb"></i> <small>WooCommerce siparişi varsa, Trendyol beklemeye alınır.</small></p>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header bg-warning">
+                            <i class="bi bi-exclamation-triangle"></i> Paketleme Onayı Sonrası
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li>WooCommerce API'ye status güncelleme gönderilir: <code>on-hold → processing</code></li>
+                                <li>Yerel veritabanı da güncellenir</li>
+                                <li>Sipariş <code>woo_orders</code> tablosunda <strong>KALIR</strong> (taşınmaz)</li>
+                                <li>Website'de müşteri "Hazırlanıyor" durumunu görür</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Etiket Sistemi -->
+                    <h5 class="text-primary"><i class="bi bi-printer"></i> Akıllı Etiket Sistemi</h5>
+                    <p>"Yazdır" butonu siparişin kaynağını otomatik algılar:</p>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6><i class="bi bi-cart"></i> WooCommerce Etiketi</h6>
+                                    <ul class="small">
+                                        <li>100x100mm termal format</li>
+                                        <li>Kapıda ödeme algılama (COD)</li>
+                                        <li>Tutar uyarısı gösterimi</li>
+                                        <li>Siyah-beyaz tasarım</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6><i class="bi bi-truck"></i> Trendyol Etiketi</h6>
+                                    <ul class="small">
+                                        <li>Standart kargo etiketi</li>
+                                        <li>Trendyol API bilgileri</li>
+                                        <li>Kargo barkodu dahil</li>
+                                        <li>Firma logosu</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Barkod Eşleşmesi -->
+                    <h5 class="text-primary"><i class="bi bi-upc-scan"></i> Ürün Barkod Eşleşmesi</h5>
+                    <div class="alert alert-warning">
+                        <strong><i class="bi bi-exclamation-triangle"></i> Önemli:</strong> WooCommerce API barkod bilgisi vermez!
+                    </div>
+                    <p><strong>Çözüm:</strong> Product tablosunda WooCommerce product_id → barkod mapping</p>
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h6>Nasıl Çalışır?</h6>
+                            <ol>
+                                <li>WooCommerce'den ürün ID'si gelir (örn: 12345)</li>
+                                <li>Product tablosunda <code>woo_product_id = 12345</code> aranır</li>
+                                <li>Eşleşen kayıttaki <code>barcode</code> kullanılır</li>
+                                <li>Barkod okutma ekranında bu barkod beklenir</li>
+                            </ol>
+                            <p class="mb-0">
+                                <i class="bi bi-pencil-square text-primary"></i> 
+                                <strong>Manuel Düzenleme:</strong> Ürün listesinde "Woo ID" sütunundaki edit butonuyla mapping güncellenebilir.
+                            </p>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Senkronizasyon -->
+                    <h5 class="text-primary"><i class="bi bi-arrow-clockwise"></i> Otomatik Senkronizasyon</h5>
+                    <div class="card">
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li><strong>Celery Task:</strong> Arka planda düzenli aralıklarla çalışır</li>
+                                <li><strong>API Çekim:</strong> WooCommerce REST API üzerinden sipariş bilgileri alınır</li>
+                                <li><strong>Otomatik Kayıt:</strong> Yeni/güncel siparişler <code>woo_orders</code> tablosuna kaydedilir</li>
+                                <li><strong>Manuel Tetikleme:</strong> "Siparişleri Senkronize Et" butonu ile manuel çekim yapılabilir</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Kısayol Tuşları -->
+                    <h5 class="text-primary"><i class="bi bi-keyboard"></i> İpuçları</h5>
+                    <ul>
+                        <li><strong>Filtreler:</strong> Durum ve arama filtrelerini kullanarak siparişleri hızlıca bulun</li>
+                        <li><strong>Detay Görünüm:</strong> Sipariş kartına tıklayarak tüm detayları görün</li>
+                        <li><strong>Teslimat Etiketi:</strong> "processing" durumundaki siparişler için etiket yazdırılabilir</li>
+                        <li><strong>Kapıda Ödeme:</strong> COD siparişlerde etiket üzerinde tutar uyarısı görünür</li>
+                    </ul>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

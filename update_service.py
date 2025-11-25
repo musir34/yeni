@@ -310,14 +310,14 @@ async def confirm_packing():
             logger.exception("[TYL][EXC]")
             flash(f"Trendyol API çağrısında istisna: {e}", 'danger')
 
-        # 7.5) WooCommerce: on-hold/processing → completed (Hazırlandı) statüsüne geçir
+        # 7.5) WooCommerce: on-hold → processing (Hazırlanıyor) statüsüne geçir
         try:
             # WooCommerce siparişi mi kontrol et
             is_woocommerce = (
                 hasattr(order_created, 'source') and order_created.source == 'WOOCOMMERCE'
             ) or (
                 order_created.order_number and '-' not in str(order_created.order_number)
-            )
+            ) or is_woo_order
             
             if is_woocommerce:
                 logger.info(f"[WOO] WooCommerce siparişi tespit edildi: {order_number}")
@@ -335,15 +335,15 @@ async def confirm_packing():
                     if woo_order_db:
                         woo_order_id = woo_order_db.order_id
                         
-                        # Statüyü 'completed' (Tamamlandı) yap
-                        updated = woo_service.update_order_status(woo_order_id, 'completed')
+                        # Statüyü 'processing' (Hazırlanıyor) yap
+                        updated = woo_service.update_order_status(woo_order_id, 'processing')
                         
                         if updated:
-                            logger.info(f"[WOO][OK] Sipariş {order_number} WooCommerce'te 'completed' statüsüne geçti")
-                            flash(f"WooCommerce siparişi 'Tamamlandı' statüsüne geçirildi", 'success')
+                            logger.info(f"[WOO][OK] Sipariş {order_number} WooCommerce'te 'processing' statüsüne geçti")
+                            flash(f"WooCommerce siparişi 'Hazırlanıyor' statüsüne geçirildi", 'success')
                             
                             # woo_orders tablosundaki kaydı da güncelle
-                            woo_order_db.status = 'completed'
+                            woo_order_db.status = 'processing'
                             db.session.commit()
                         else:
                             logger.error(f"[WOO][FAIL] Sipariş {order_number} güncellenemedi")
@@ -364,13 +364,11 @@ async def confirm_packing():
         try:
             # 🔥 Eğer sipariş woo_orders tablosundan geldiyse
             if is_woo_order:
-                logger.info(f"[WOO_TABLE] Sipariş woo_orders tablosundan geldi, durum 'completed' yapılacak")
+                logger.info(f"[WOO_TABLE] Sipariş woo_orders tablosundan geldi, durum 'processing' yapıldı")
                 
-                # Zaten yukarıda WooCommerce API'ye güncelleme gönderildi
-                # Sadece lokal veritabanını güncelle
-                order_created.status = 'completed'
-                db.session.commit()
-                logger.info(f"[WOO_TABLE][OK] woo_orders tablosunda durum 'completed' yapıldı")
+                # Yukarıda zaten 'processing' yapıldı, burada ek işlem gerekmez
+                # WooCommerce siparişleri OrderPicking tablosuna taşınmaz
+                logger.info(f"[WOO_TABLE][OK] WooCommerce siparişi hazırlandı, woo_orders tablosunda kalıyor (status='processing')")
             else:
                 # Normal akış: OrderCreated -> OrderPicking
                 data = order_created.__dict__.copy()
