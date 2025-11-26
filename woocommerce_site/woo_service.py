@@ -296,6 +296,7 @@ class WooCommerceService:
         """
         Siparişi veritabanına kaydet veya güncelle
         + Siparişteki ürünleri otomatik SKU bazlı eşleştir
+        + Arşivdeki siparişleri tekrar eklemeyi engelle
         
         Args:
             order_data: WooCommerce API'den gelen sipariş verisi
@@ -312,7 +313,15 @@ class WooCommerceService:
                 logger.error("[SAVE_ORDER] order_id bulunamadı!")
                 return None
             
-            logger.info(f"[SAVE_ORDER] Sipariş kaydediliyor: order_id={order_id}, number={order_data.get('number')}")
+            order_number = str(order_data.get('number', order_id))
+            logger.info(f"[SAVE_ORDER] Sipariş kaydediliyor: order_id={order_id}, number={order_number}")
+            
+            # 🔥 ARŞİV KONTROLÜ - Arşivdeki siparişleri tekrar ekleme
+            from models import Archive
+            archived = Archive.query.filter_by(order_number=order_number).first()
+            if archived:
+                logger.warning(f"[SAVE_ORDER] ⚠️ Sipariş arşivde bulundu, atlanıyor: #{order_number}")
+                return None
             
             # 🔥 SİPARİŞTEKİ ÜRÜNLERİ OTOMATIK EŞLEŞTİR
             line_items = order_data.get('line_items', [])
