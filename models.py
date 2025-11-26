@@ -690,6 +690,7 @@ class Archive(db.Model):
     details = db.Column(db.Text)
     archive_date = db.Column(db.DateTime, default=datetime.utcnow)
     archive_reason = db.Column(db.String)
+    source = db.Column(db.String(20), default='trendyol')  # 'trendyol' veya 'woocommerce'
     # quantity, commission gibi alanlar eksikse OrderArchived'dan eklenebilir.
 
     def __repr__(self):

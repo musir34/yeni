@@ -555,7 +555,8 @@ def archive_an_order():
             customer_address=full_address,
             agreed_delivery_date=None,
             archive_reason=archive_reason,
-            archive_date=datetime.now()
+            archive_date=datetime.now(),
+            source='woocommerce'
         )
     else:
         # Trendyol siparişi - standart alan eşleştirmesi
@@ -573,7 +574,8 @@ def archive_an_order():
             customer_address=getattr(order_obj, 'customer_address', None),
             agreed_delivery_date=getattr(order_obj, 'agreed_delivery_date', None),
             archive_reason=archive_reason,
-            archive_date=datetime.now()
+            archive_date=datetime.now(),
+            source='trendyol'
         )
     
     try:
@@ -608,8 +610,16 @@ def recover_from_archive():
     if not archived_order:
         return jsonify({'success': False, 'message': 'Sipariş arşivde bulunamadı.'})
 
-    # 🔥 Sipariş kaynağını kontrol et (tire olmayan = WooCommerce)
-    is_woocommerce = '-' not in str(order_number)
+    # 🔥 Sipariş kaynağını kontrol et
+    # Önce source alanını kontrol et (varsa)
+    if hasattr(archived_order, 'source') and archived_order.source:
+        is_woocommerce = (archived_order.source == 'woocommerce')
+    else:
+        # Eski kayıtlar için fallback: sipariş numarasına bak
+        # WooCommerce sipariş numaraları genellikle 5 haneli (49787, 49797)
+        # Trendyol sipariş numaraları 11 haneli (10725318633)
+        order_num_str = str(order_number)
+        is_woocommerce = len(order_num_str) <= 6 and order_num_str.isdigit() and '-' not in order_num_str
     
     try:
         if is_woocommerce:
@@ -644,7 +654,19 @@ def recover_from_archive():
             
             # WooOrder objesi oluştur
             restored_order = WooOrder()
-            restored_order.order_id = int(archived_order.order_number)
+            # order_id için integer overflow kontrolü
+            try:
+                order_id_int = int(archived_order.order_number)
+                # PostgreSQL Integer max: 2147483647
+                if order_id_int <= 2147483647:
+                    restored_order.order_id = order_id_int
+                else:
+                    # Çok büyük sayı, NULL bırak
+                    restored_order.order_id = None
+                    print(f"⚠️  order_id çok büyük ({order_id_int}), NULL olarak ayarlandı")
+            except ValueError:
+                restored_order.order_id = None
+            
             restored_order.order_number = archived_order.order_number
             restored_order.status = 'on-hold'  # Geri yüklenince tekrar sipariş hazırla ekranına düşsün
             restored_order.date_created = archived_order.order_date
@@ -674,6 +696,48 @@ def recover_from_archive():
             restored_order.customer_surname = archived_order.customer_surname
             restored_order.customer_address = archived_order.customer_address
             restored_order.agreed_delivery_date = archived_order.agreed_delivery_date
+            
+            # Ek alanlar (Archive'de varsa)
+            if hasattr(archived_order, 'merchant_sku'):
+                restored_order.merchant_sku = archived_order.merchant_sku
+            if hasattr(archived_order, 'product_barcode'):
+                restored_order.product_barcode = archived_order.product_barcode
+            if hasattr(archived_order, 'product_name'):
+                restored_order.product_name = archived_order.product_name
+            if hasattr(archived_order, 'product_code'):
+                restored_order.product_code = archived_order.product_code
+            if hasattr(archived_order, 'product_size'):
+                restored_order.product_size = archived_order.product_size
+            if hasattr(archived_order, 'product_color'):
+                restored_order.product_color = archived_order.product_color
+            if hasattr(archived_order, 'amount'):
+                restored_order.amount = archived_order.amount
+            if hasattr(archived_order, 'discount'):
+                restored_order.discount = archived_order.discount
+            if hasattr(archived_order, 'currency_code'):
+                restored_order.currency_code = archived_order.currency_code
+            if hasattr(archived_order, 'line_id'):
+                restored_order.line_id = archived_order.line_id
+            if hasattr(archived_order, 'images'):
+                restored_order.images = archived_order.images
+            if hasattr(archived_order, 'estimated_delivery_start'):
+                restored_order.estimated_delivery_start = archived_order.estimated_delivery_start
+            if hasattr(archived_order, 'estimated_delivery_end'):
+                restored_order.estimated_delivery_end = archived_order.estimated_delivery_end
+            if hasattr(archived_order, 'cargo_tracking_link'):
+                restored_order.cargo_tracking_link = archived_order.cargo_tracking_link
+            if hasattr(archived_order, 'product_main_id'):
+                restored_order.product_main_id = archived_order.product_main_id
+            if hasattr(archived_order, 'product_model_code'):
+                restored_order.product_model_code = archived_order.product_model_code
+            if hasattr(archived_order, 'stockCode'):
+                restored_order.stockCode = archived_order.stockCode
+            if hasattr(archived_order, 'vat_base_amount'):
+                restored_order.vat_base_amount = archived_order.vat_base_amount
+            if hasattr(archived_order, 'origin_shipment_date'):
+                restored_order.origin_shipment_date = archived_order.origin_shipment_date
+            
+            restored_order.source = 'TRENDYOL'
             
             print(f"Trendyol siparişi {order_number} orders_created tablosuna geri yükleniyor.")
         
