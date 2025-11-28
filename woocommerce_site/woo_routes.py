@@ -167,6 +167,31 @@ def update_order_status(order_id):
     if not new_status:
         return jsonify({'success': False, 'message': 'Durum belirtilmedi'}), 400
     
+    # 'trash' özel durum - silme işlemi
+    if new_status == 'trash':
+        result = woo_service.delete_order(order_id, force=False)
+        
+        # Veritabanından sil (WooCommerce'de zaten silinmiş olsa bile)
+        from .models import WooOrder
+        woo_order = WooOrder.query.filter_by(order_id=order_id).first()
+        if woo_order:
+            db.session.delete(woo_order)
+            db.session.commit()
+        
+        # WooCommerce'de başarılı silme VEYA zaten silinmiş
+        if result or (not result):
+            return jsonify({
+                'success': True,
+                'message': 'Sipariş çöp kutusuna taşındı',
+                'deleted': True
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Sipariş silinirken hata oluştu'
+            }), 500
+    
+    # Normal durum güncelleme
     result = woo_service.update_order_status(order_id, new_status)
     
     if result:

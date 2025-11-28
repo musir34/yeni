@@ -978,7 +978,12 @@ def ozet_json():
                     "detay":detay
                 })
 
-        kartlar.sort(key=lambda k:(k.get("iade_uyari",False), k.get("toplam_iade",0), k.get("toplam_net_satis",0)), reverse=True)
+        # En çok satan her zaman en üstte: net satış, brüt satış, stok
+        kartlar.sort(key=lambda k:(
+            k.get("toplam_net_satis",0),
+            k.get("toplam_siparis_bugun",0),
+            k.get("toplam_stok",0)
+        ), reverse=True)
         genel_ortalama_fiyat = round((toplam_net_tutar_all / toplam_adet_all), 2) if toplam_adet_all > 0 else 0.0
         toplam_ciro = round(toplam_net_tutar_all, 2)  # Toplam NET ciro
 
@@ -1102,7 +1107,12 @@ def akis_sse():
                                 "detay":detay
                             })
 
-                    kartlar.sort(key=lambda k:(k.get("iade_uyari",False),k.get("toplam_iade",0),k.get("toplam_net_satis",0)), reverse=True)
+                    # En çok satan her zaman en üstte: net satış, brüt satış, stok
+                    kartlar.sort(key=lambda k:(
+                        k.get("toplam_net_satis",0),
+                        k.get("toplam_siparis_bugun",0),
+                        k.get("toplam_stok",0)
+                    ), reverse=True)
                     toplam_ciro_sse = round(toplam_net_tutar_sse, 2)
                     payload={
                         "guncellendi": now_tr_str(),
@@ -1322,7 +1332,8 @@ def _build_cards_between(start_ist, end_ist):
             "detay": detay
         })
 
-    kartlar.sort(key=lambda k: (k["toplam_siparis_bugun"], k["toplam_stok"]), reverse=True)
+    # En çok satan modele göre sırala
+    kartlar.sort(key=lambda k: k["toplam_siparis_bugun"], reverse=True)
     return kartlar, total_sold, qty_map, amt_map
 
 

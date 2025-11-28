@@ -383,6 +383,13 @@
             e.preventDefault();
             const newStatus = document.getElementById('newStatus').value;
             
+            // Çöp kutusuna taşıma için onay iste
+            if (newStatus === 'trash') {
+                if (!confirm('Bu siparişi çöp kutusuna taşımak istediğinize emin misiniz?')) {
+                    return;
+                }
+            }
+            
             try {
                 const response = await fetch('{{ url_for("woo.update_order_status", order_id=order.id) }}', {
                     method: 'POST',
@@ -396,7 +403,12 @@
                 
                 if (data.success) {
                     alert('Sipariş durumu güncellendi!');
-                    location.reload();
+                    // Çöp kutusuna taşındıysa sipariş listesine yönlendir
+                    if (data.deleted) {
+                        window.location.href = '{{ url_for("woo.orders") }}';
+                    } else {
+                        location.reload();
+                    }
                 } else {
                     alert('Hata: ' + data.message);
                 }

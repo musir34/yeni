@@ -69,6 +69,11 @@ class WooCommerceService:
             return result
             
         except requests.exceptions.HTTPError as e:
+            # 410 Gone (sipariş zaten silinmiş) - Beklenen durum, sessizce handle et
+            if e.response.status_code == 410:
+                logger.info(f"[WOO_API] ℹ️ HTTP 410: Sipariş zaten çöp kutusunda")
+                return None
+            
             logger.error(f"[WOO_API] ❌ HTTP Error: {e}")
             logger.error(f"[WOO_API] Response: {e.response.text if hasattr(e, 'response') else 'No response'}")
             return None
@@ -141,12 +146,27 @@ class WooCommerceService:
         Args:
             order_id: Sipariş ID'si
             status: Yeni durum (pending, processing, completed, cancelled, vb.)
+                   'trash' durumu için delete_order() kullanılır
             
         Returns:
             Güncellenmiş sipariş
         """
         data = {'status': status}
         return self._make_request(f'orders/{order_id}', method='PUT', data=data)
+    
+    def delete_order(self, order_id: int, force: bool = False) -> Optional[Dict]:
+        """
+        Siparişi sil veya çöp kutusuna at
+        
+        Args:
+            order_id: Sipariş ID'si
+            force: True ise kalıcı sil, False ise çöp kutusuna at (varsayılan)
+            
+        Returns:
+            Silinen sipariş bilgisi
+        """
+        params = {'force': 'true' if force else 'false'}
+        return self._make_request(f'orders/{order_id}', method='DELETE', params=params)
     
     def add_order_note(self, order_id: int, note: str, customer_note: bool = False) -> Optional[Dict]:
         """
@@ -231,7 +251,7 @@ class WooCommerceService:
             'refunded': 'İade Edildi',
             'failed': 'Başarısız',
             'shipped': 'Kargoya Verildi',
-            'trash': 'Çöp Kutusu'
+            'trash': '🗑️ Çöp Kutusuna Taşı'
         }
     
     @staticmethod
