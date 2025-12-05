@@ -51,19 +51,30 @@ def format_turkish_date_filter(value):
 #############################
 def find_order_across_tables(order_number):
     """
-    Siparişi 6 tabloda arar: Created, Picking, Shipped, Delivered, Cancelled, WooOrders
+    Siparişi 6 tabloda arar: WooOrders, Created, Picking, Shipped, Delivered, Cancelled
     Bulursa (obj, tablo_sinifi), bulamazsa (None, None)
+    
+    🔥 ÖNCELİK: WooCommerce siparişleri (tire içermeyen) önce woo_orders tablosuna bakar
     """
     from woocommerce_site.models import WooOrder
     
-    # Önce Trendyol tablolarına bak
+    order_number_str = str(order_number)
+    
+    # 🔥 WooCommerce siparişi kontrolü (tire içermeyen = WooCommerce)
+    # WooCommerce siparişleri için önce woo_orders tablosuna bak
+    if '-' not in order_number_str:
+        found = WooOrder.query.filter_by(order_number=order_number_str).first()
+        if found:
+            return found, WooOrder
+    
+    # Trendyol tablolarına bak
     for cls in [OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled]:
-        found = cls.query.filter_by(order_number=order_number).first()
+        found = cls.query.filter_by(order_number=order_number_str).first()
         if found:
             return found, cls
     
-    # WooCommerce tablosuna bak
-    found = WooOrder.query.filter_by(order_number=str(order_number)).first()
+    # Son çare: WooCommerce tablosuna tekrar bak (tire içerse bile)
+    found = WooOrder.query.filter_by(order_number=order_number_str).first()
     if found:
         return found, WooOrder
     

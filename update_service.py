@@ -120,26 +120,26 @@ async def confirm_packing():
         # 4) Detaylar
         try:
             if is_woo_order:
-                # WooCommerce siparişi - line_items'dan details oluştur
+                # 🔥 WooCommerce siparişi - line_items'dan details oluştur
+                # Barkod doğrulaması için woo_product_id kullanılır (barkod = woo_product_id)
                 details = []
                 for item in order_created.line_items or []:
                     product_id = item.get('product_id')
                     variation_id = item.get('variation_id')
                     woo_id = variation_id if variation_id else product_id
                     
-                    # Product tablosundan barkod al
-                    from models import Product
-                    product_db = Product.query.filter_by(woo_product_id=int(woo_id)).first()
-                    barcode = product_db.barcode if product_db else str(woo_id)
+                    # 🔥 WooCommerce'de barkod = woo_product_id
+                    # Görüntüde barkod gösterilir ama arka planda woo_id ile eşleşir
+                    barcode = str(woo_id)
                     
                     details.append({
-                        'barcode': barcode,
+                        'barcode': barcode,  # woo_product_id
                         'quantity': item.get('quantity', 1),
                         'woo_product_id': product_id,
                         'woo_variation_id': variation_id,
                         'product_name': item.get('name', '')
                     })
-                logger.info(f"[DETAILS][WOO] {len(details)} ürün, line_items'dan oluşturuldu")
+                logger.info(f"[DETAILS][WOO] {len(details)} ürün, line_items'dan oluşturuldu (woo_id bazlı)")
             else:
                 # Trendyol siparişi - standart details parse
                 details = json.loads(order_created.details or '[]')
@@ -150,22 +150,60 @@ async def confirm_packing():
 
         # 5) Barkod doğrulama (başarısızsa stok düşmeyeceğiz)
         from collections import Counter
-        scan_cnt = Counter(barkodlar)
+        from models import Product
+        
         eksikler = []
         toplam_gerekli_okutma = 0
 
-        for d in details:
-            bc = _norm_bc(d.get('barcode'))
-            q = int(d.get('quantity') or 0)
-            if not bc or q <= 0:
-                logger.debug(f"[DETAILS] atla bc={bc} q={q}")
-                continue
-            gerekli = q * REQ_PER_UNIT
-            varolan = scan_cnt.get(bc, 0)
-            toplam_gerekli_okutma += gerekli
-            logger.debug(f"[VERIFY] bc={bc} q={q} gerekli_okutma={gerekli} varolan={varolan}")
-            if varolan < gerekli:
-                eksikler.append(f"{bc}: {varolan}/{gerekli}")
+        if is_woo_order:
+            # 🔥 WooCommerce siparişi için özel doğrulama
+            # Taranan barkodlar -> woo_product_id'ye çevrilir ve siparişle karşılaştırılır
+            
+            # Taranan barkodların woo_product_id'lerini bul
+            scanned_woo_ids = []
+            for bc in barkodlar:
+                product = Product.query.filter_by(barcode=bc).first()
+                if product and product.woo_product_id:
+                    scanned_woo_ids.append(str(product.woo_product_id))
+                    logger.debug(f"[VERIFY][WOO] Barkod {bc} -> woo_id={product.woo_product_id}")
+                else:
+                    # Barkod Product tablosunda yok veya woo_product_id yok
+                    # Belki doğrudan woo_id tarandı?
+                    scanned_woo_ids.append(bc)
+                    logger.debug(f"[VERIFY][WOO] Barkod {bc} eşleştirilmedi, olduğu gibi kullanılıyor")
+            
+            scan_cnt = Counter(scanned_woo_ids)
+            
+            for d in details:
+                woo_id = str(d.get('barcode'))  # WooCommerce'de barcode = woo_id
+                q = int(d.get('quantity') or 0)
+                if not woo_id or q <= 0:
+                    continue
+                gerekli = q * REQ_PER_UNIT
+                varolan = scan_cnt.get(woo_id, 0)
+                toplam_gerekli_okutma += gerekli
+                logger.debug(f"[VERIFY][WOO] woo_id={woo_id} q={q} gerekli={gerekli} varolan={varolan}")
+                if varolan < gerekli:
+                    # Kullanıcıya göstermek için Product tablosundan barkod al
+                    product = Product.query.filter_by(woo_product_id=int(woo_id)).first()
+                    display_name = product.barcode if product else woo_id
+                    eksikler.append(f"{display_name}: {varolan}/{gerekli}")
+        else:
+            # Trendyol siparişi - standart doğrulama
+            scan_cnt = Counter(barkodlar)
+            
+            for d in details:
+                bc = _norm_bc(d.get('barcode'))
+                q = int(d.get('quantity') or 0)
+                if not bc or q <= 0:
+                    logger.debug(f"[DETAILS] atla bc={bc} q={q}")
+                    continue
+                gerekli = q * REQ_PER_UNIT
+                varolan = scan_cnt.get(bc, 0)
+                toplam_gerekli_okutma += gerekli
+                logger.debug(f"[VERIFY] bc={bc} q={q} gerekli_okutma={gerekli} varolan={varolan}")
+                if varolan < gerekli:
+                    eksikler.append(f"{bc}: {varolan}/{gerekli}")
 
         logger.info(f"[VERIFY] REQ_PER_UNIT={REQ_PER_UNIT} toplam_gerekli_okutma={toplam_gerekli_okutma} okutulan={len(barkodlar)}")
 
@@ -183,13 +221,25 @@ async def confirm_packing():
             toplam_dusen = 0
 
             for d in details:
-                bc = _norm_bc(d.get("barcode"))
+                # 🔥 WooCommerce için woo_id'den gerçek barkod al
+                if is_woo_order:
+                    woo_id = d.get("barcode")  # WooCommerce'de barcode = woo_id
+                    product = Product.query.filter_by(woo_product_id=int(woo_id)).first()
+                    if product:
+                        bc = product.barcode  # Gerçek barkod
+                        logger.info(f"[STOCK][WOO] woo_id={woo_id} -> barcode={bc}")
+                    else:
+                        logger.warning(f"[STOCK][WOO] woo_id={woo_id} için Product bulunamadı, stok düşülmüyor")
+                        continue
+                else:
+                    bc = _norm_bc(d.get("barcode"))
+                
                 adet = int(d.get("quantity") or 0)
                 if not bc or adet <= 0:
                     logger.debug(f"[STOCK] atla bc={bc} adet={adet}")
                     continue
 
-                chosen_raf = request.form.get(f"pick_{bc}")
+                chosen_raf = request.form.get(f"pick_{d.get('barcode')}")  # Form'dan gelen key (woo_id veya barkod)
                 kalan = adet
                 logger.info(f"[STOCK] basla bc={bc} adet={adet} chosen_raf={chosen_raf}")
 
@@ -366,7 +416,18 @@ async def confirm_packing():
             if is_woo_order:
                 logger.info(f"[WOO_TABLE] Sipariş woo_orders tablosundan geldi, durum 'processing' yapıldı")
                 
-                # Yukarıda zaten 'processing' yapıldı, burada ek işlem gerekmez
+                # 🔥 Statüyü kesinlikle güncelle (ard arda düşmeyi önlemek için)
+                # API güncelleme başarısız olsa bile veritabanında processing yap
+                try:
+                    woo_order_check = WooOrder.query.filter_by(order_number=str(order_number)).first()
+                    if woo_order_check and woo_order_check.status != 'processing':
+                        woo_order_check.status = 'processing'
+                        db.session.commit()
+                        logger.info(f"[WOO_TABLE] Statü 'processing' olarak güncellendi: {order_number}")
+                except Exception as status_err:
+                    logger.error(f"[WOO_TABLE] Statü güncelleme hatası: {status_err}")
+                    db.session.rollback()
+                
                 # WooCommerce siparişleri OrderPicking tablosuna taşınmaz
                 logger.info(f"[WOO_TABLE][OK] WooCommerce siparişi hazırlandı, woo_orders tablosunda kalıyor (status='processing')")
             else:

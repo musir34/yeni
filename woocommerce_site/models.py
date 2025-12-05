@@ -156,7 +156,7 @@ class WooOrder(db.Model):
             return None
     
     def update_from_woo_data(self, data):
-        """Mevcut kaydı güncelle"""
+        """Mevcut kaydı güncelle - Tüm müşteri bilgileri dahil"""
         try:
             self.status = data.get('status', self.status)
             
@@ -170,6 +170,65 @@ class WooOrder(db.Model):
             self.payment_method = data.get('payment_method', self.payment_method)
             self.payment_method_title = data.get('payment_method_title', self.payment_method_title)
             self.transaction_id = data.get('transaction_id', self.transaction_id)
+            
+            # 🔥 Müşteri bilgilerini güncelle (Hızlı sipariş için kritik!)
+            billing = data.get('billing', {})
+            shipping = data.get('shipping', {})
+            
+            # Müşteri bilgileri - billing'den al
+            if billing.get('first_name'):
+                self.customer_first_name = billing.get('first_name')
+            if billing.get('last_name'):
+                self.customer_last_name = billing.get('last_name')
+            if billing.get('email'):
+                self.customer_email = billing.get('email')
+            if billing.get('phone'):
+                self.customer_phone = billing.get('phone')
+            
+            # Fatura adresi
+            if billing.get('address_1'):
+                self.billing_address_1 = billing.get('address_1')
+            if billing.get('address_2'):
+                self.billing_address_2 = billing.get('address_2')
+            if billing.get('city'):
+                self.billing_city = billing.get('city')
+            if billing.get('state'):
+                self.billing_state = billing.get('state')
+            if billing.get('postcode'):
+                self.billing_postcode = billing.get('postcode')
+            if billing.get('country'):
+                self.billing_country = billing.get('country')
+            
+            # Teslimat adresi
+            if shipping.get('address_1'):
+                self.shipping_address_1 = shipping.get('address_1')
+            if shipping.get('address_2'):
+                self.shipping_address_2 = shipping.get('address_2')
+            if shipping.get('city'):
+                self.shipping_city = shipping.get('city')
+            if shipping.get('state'):
+                self.shipping_state = shipping.get('state')
+            if shipping.get('postcode'):
+                self.shipping_postcode = shipping.get('postcode')
+            if shipping.get('country'):
+                self.shipping_country = shipping.get('country')
+            
+            # Ürünleri güncelle
+            if data.get('line_items'):
+                self.line_items = [
+                    {
+                        'name': item.get('name'),
+                        'product_id': item.get('product_id'),
+                        'variation_id': item.get('variation_id'),
+                        'quantity': item.get('quantity'),
+                        'subtotal': item.get('subtotal'),
+                        'total': item.get('total'),
+                        'sku': item.get('sku'),
+                        'price': item.get('price'),
+                    }
+                    for item in data.get('line_items', [])
+                ]
+            
             self.raw_data = data
             self.last_synced = datetime.utcnow()
             

@@ -289,12 +289,15 @@
 
               <p class="card-text">
                 <strong>Barkod:</strong>
-                <span id="productBarcode-{{ loop.index0 }}">{{ product['barcode'] }}</span>
+                {# 🔥 Görüntüde display_barcode göster (varsa), yoksa barcode #}
+                <span id="productBarcode-{{ loop.index0 }}">{{ product['display_barcode'] or product['barcode'] }}</span>
                 <span class="copy-container">
                   <span class="clipboard-icon" onclick="copyToClipboard('productBarcode-{{ loop.index0 }}', this)">📋</span>
                   <span class="copy-confirmation">✔️</span>
                 </span>
-                {% if product['normalized_barcode'] != product['barcode'] %}
+                {% if product['woo_id'] %}
+                  <br><small style="color:#17a2b8;">🛒 WooCommerce ID: {{ product['woo_id'] }}</small>
+                {% elif product['normalized_barcode'] != product['barcode'] %}
                   <br><small style="color:#666;">Ana Barkod: {{ product['normalized_barcode'] }}</small>
                 {% endif %}
               </p>

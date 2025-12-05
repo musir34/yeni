@@ -251,35 +251,41 @@ def get_home():
         # Ürün kartları
         products = []
         for d in details_list:
-            # 🔥 WooCommerce siparişi için product_id kullan
+            # 🔥 WooCommerce siparişi için woo_product_id kullan
             if is_woocommerce:
                 woo_id = d.get("woo_id") or d.get("woo_product_id")
                 
                 if woo_id:
-                    # Product tablosundan woo_product_id ile ara
+                    # Product tablosundan woo_product_id ile ürün bilgilerini al
                     product_db = Product.query.filter_by(woo_product_id=int(woo_id)).first()
                     
                     if product_db:
-                        bc = product_db.barcode  # Gerçek barkod
-                        normalized_bc = normalize_barcode(bc)
-                        product_name = product_db.title or "Bilinmeyen Ürün"
+                        # 🔥 Görüntüde gerçek barkod gösterilir
+                        display_barcode = product_db.barcode
+                        normalized_bc = normalize_barcode(display_barcode)
+                        product_name = product_db.title or d.get("product_name", "Bilinmeyen Ürün")
                         image_url = product_db.images or get_product_image(normalized_bc)
                     else:
-                        # WooCommerce'den gelen bilgiler (fallback)
-                        bc = str(woo_id)  # ID'yi barkod olarak kullan
-                        normalized_bc = bc
+                        # Product bulunamadı - WooCommerce'den gelen bilgileri kullan
+                        display_barcode = d.get("sku", "") or str(woo_id)
+                        normalized_bc = display_barcode
                         product_name = d.get("product_name", "Bilinmeyen Ürün")
-                        image_url = get_product_image(bc)
+                        image_url = get_product_image(normalized_bc)
                         logging.warning(f"⚠️ WooCommerce ürün #{woo_id} Product tablosunda bulunamadı!")
+                    
+                    # 🔥 ARKA PLANDA woo_id kullanılır (barkod doğrulama için)
+                    bc = str(woo_id)  # Arka planda woo_id
                 else:
                     # Hiç ID yok (çok eski veri)
                     bc = d.get("barcode", "")
+                    display_barcode = bc
                     normalized_bc = normalize_barcode(bc)
                     product_name = d.get("product_name", "Bilinmeyen Ürün")
                     image_url = get_product_image(normalized_bc)
             else:
                 # 🔥 Trendyol siparişi - klasik mantık
                 bc = d.get("barcode", "")
+                display_barcode = bc
                 normalized_bc = normalize_barcode(bc)
                 
                 # Product tablosundan barkod ile ara
@@ -292,24 +298,29 @@ def get_home():
                     product_name = d.get("product_name") or d.get("productName", "Bilinmeyen Ürün")
                     image_url = d.get("image_url") or get_product_image(normalized_bc)
 
-            # Aktif tüm raflar (adet > 0)
-            raf_kayitlari = (
-                RafUrun.query
-                .filter(RafUrun.urun_barkodu == normalized_bc, RafUrun.adet > 0)
-                .order_by(desc(RafUrun.adet))
-                .all()
-            )
-            raflar = [{"kod": r.raf_kodu, "adet": r.adet} for r in raf_kayitlari]
+            # Aktif tüm raflar (adet > 0) - WooCommerce için woo_id bazlı raf yok, Trendyol için barkod bazlı
+            if is_woocommerce:
+                # WooCommerce siparişleri için raf kontrolü atlanabilir veya woo_id bazlı yapılabilir
+                raflar = []  # WooCommerce için şimdilik boş
+            else:
+                raf_kayitlari = (
+                    RafUrun.query
+                    .filter(RafUrun.urun_barkodu == normalized_bc, RafUrun.adet > 0)
+                    .order_by(desc(RafUrun.adet))
+                    .all()
+                )
+                raflar = [{"kod": r.raf_kodu, "adet": r.adet} for r in raf_kayitlari]
 
             products.append({
-                "sku": d.get("sku", bc),  # SKU veya barkod
-                "barcode": bc,  # Orijinal (API'den gelen veya gerçek barkod)
-                "normalized_barcode": normalized_bc,  # 🔥 Ana barkod
+                "sku": d.get("sku", display_barcode if is_woocommerce else bc),  # SKU veya görüntü barkodu
+                "barcode": bc,  # 🔥 Arka planda kullanılan (WooCommerce için woo_id)
+                "display_barcode": display_barcode if is_woocommerce else bc,  # 🔥 Görüntüde gösterilen
+                "normalized_barcode": normalized_bc,  # 🔥 Normalize edilmiş
                 "product_name": product_name,  # 🔥 Product tablosundan
                 "quantity": d.get("quantity", 1),
                 "image_url": image_url,  # 🔥 Product tablosundan
                 "raflar": raflar,
-                "woo_id": d.get("woo_id") if is_woocommerce else None  # WooCommerce ID (debug için)
+                "woo_id": d.get("woo_id") or d.get("woo_product_id") if is_woocommerce else None  # WooCommerce ID
             })
 
         # Sipariş objesine iliştir

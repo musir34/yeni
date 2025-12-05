@@ -22,8 +22,207 @@
             font-size: 0.85rem;
             padding: 0.35rem 0.75rem;
         }
+        /* 🔥 Statü dropdown için stiller */
+        .status-badge.dropdown-toggle::after {
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+        .status-badge.dropdown-toggle:hover {
+            opacity: 0.85;
+        }
+        .dropdown-menu .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+        }
+        .dropdown-menu .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+        .dropdown-menu .badge {
+            width: 12px;
+            height: 12px;
+            padding: 0;
+            border-radius: 50%;
+        }
         .search-box {
             max-width: 400px;
+        }
+        /* 🔥 Özel Modal ve Bildirim Stilleri */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .custom-modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .custom-modal-box {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transform: scale(0.8) translateY(-20px);
+            transition: all 0.3s ease;
+            pointer-events: auto;
+            position: relative;
+        }
+        .custom-modal-overlay.show .custom-modal-box {
+            transform: scale(1) translateY(0);
+        }
+        .custom-modal-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+        }
+        .custom-modal-icon.warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffc107 100%);
+            color: #856404;
+        }
+        .custom-modal-icon.danger {
+            background: linear-gradient(135deg, #f8d7da 0%, #dc3545 100%);
+            color: white;
+        }
+        .custom-modal-icon.success {
+            background: linear-gradient(135deg, #d4edda 0%, #28a745 100%);
+            color: white;
+        }
+        .custom-modal-icon.info {
+            background: linear-gradient(135deg, #d1ecf1 0%, #17a2b8 100%);
+            color: white;
+        }
+        .custom-modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 0.75rem;
+            color: #333;
+        }
+        .custom-modal-message {
+            text-align: center;
+            color: #666;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+        .custom-modal-buttons {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            position: relative;
+            z-index: 10;
+        }
+        .custom-modal-btn {
+            padding: 0.6rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            min-width: 100px;
+            pointer-events: auto;
+            position: relative;
+            z-index: 11;
+        }
+        .custom-modal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .custom-modal-btn:active {
+            transform: translateY(0);
+        }
+        .custom-modal-btn.primary {
+            background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+            color: white;
+        }
+        .custom-modal-btn.danger {
+            background: linear-gradient(135deg, #dc3545 0%, #bb2d3b 100%);
+            color: white;
+        }
+        .custom-modal-btn.secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        /* Toast Bildirimleri */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .custom-toast {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            transform: translateX(120%);
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            min-width: 280px;
+        }
+        .custom-toast.show {
+            transform: translateX(0);
+        }
+        .custom-toast.success {
+            border-left: 4px solid #28a745;
+        }
+        .custom-toast.error {
+            border-left: 4px solid #dc3545;
+        }
+        .custom-toast.warning {
+            border-left: 4px solid #ffc107;
+        }
+        .custom-toast-icon {
+            font-size: 1.5rem;
+        }
+        .custom-toast.success .custom-toast-icon {
+            color: #28a745;
+        }
+        .custom-toast.error .custom-toast-icon {
+            color: #dc3545;
+        }
+        .custom-toast.warning .custom-toast-icon {
+            color: #ffc107;
+        }
+        .custom-toast-content {
+            flex: 1;
+        }
+        .custom-toast-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        .custom-toast-message {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .custom-toast-close {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
         }
         .filter-section {
             background: white;
@@ -39,11 +238,19 @@
         <div class="row mb-4">
             <div class="col">
                 <h1 class="h3 mb-0">
+                    {% if current_status == 'trash' %}
+                    <i class="bi bi-trash3 text-secondary"></i>
+                    Çöp Kutusu
+                    <a href="{{ url_for('woo.orders') }}" class="btn btn-sm btn-outline-primary ms-2">
+                        <i class="bi bi-arrow-left"></i> Siparişlere Dön
+                    </a>
+                    {% else %}
                     <i class="bi bi-bag-check text-primary"></i>
                     WooCommerce Siparişler
                     <button type="button" class="btn btn-sm btn-outline-info ms-2" data-bs-toggle="modal" data-bs-target="#infoModal">
                         <i class="bi bi-info-circle"></i>
                     </button>
+                    {% endif %}
                 </h1>
             </div>
             <div class="col-auto">
@@ -52,6 +259,10 @@
                 </a>
                 <a href="{{ url_for('siparis_hazirla.index') }}" class="btn btn-danger me-2">
                     <i class="bi bi-box-seam"></i> Sipariş Hazırla
+                </a>
+                <!-- 🗑️ Çöp Kutusu Butonu -->
+                <a href="{{ url_for('woo.orders', status='trash') }}" class="btn btn-outline-dark me-2 {% if current_status == 'trash' %}active{% endif %}">
+                    <i class="bi bi-trash3"></i> Çöp Kutusu
                 </a>
                 <a href="{{ url_for('woo.sync_orders') }}?days=30" class="btn btn-success">
                     <i class="bi bi-arrow-clockwise"></i> Siparişleri Senkronize Et
@@ -67,9 +278,12 @@
                     <select name="status" class="form-select">
                         <option value="">Tümü</option>
                         {% for status_key, status_name in statuses.items() %}
+                        {# 🔥 Çöp kutusu (trash) dropdown'da gösterilmez, ayrı buton var #}
+                        {% if status_key != 'trash' %}
                         <option value="{{ status_key }}" {% if current_status == status_key %}selected{% endif %}>
                             {{ status_name }}
                         </option>
+                        {% endif %}
                         {% endfor %}
                     </select>
                 </div>
@@ -97,16 +311,49 @@
                     <div class="card order-card h-100">
                         <div class="card-header bg-white d-flex justify-content-between align-items-center">
                             <strong>#{{ order.order_number }}</strong>
-                            <span class="badge status-badge 
-                                {% if order.status == 'completed' %}bg-success
-                                {% elif order.status == 'processing' %}bg-info
-                                {% elif order.status == 'pending' %}bg-warning
-                                {% elif order.status == 'cancelled' %}bg-danger
-                                {% elif order.status == 'shipped' %}bg-primary
-                                {% elif order.status == 'on-hold' %}bg-secondary
-                                {% else %}bg-dark{% endif %}">
-                                {{ statuses.get(order.status, order.status) }}
-                            </span>
+                            <!-- 🔥 Tıklanabilir Statü Dropdown -->
+                            <div class="dropdown">
+                                <span class="badge status-badge dropdown-toggle
+                                    {% if order.status == 'completed' %}bg-success
+                                    {% elif order.status == 'processing' %}bg-info
+                                    {% elif order.status == 'pending' %}bg-warning
+                                    {% elif order.status == 'cancelled' %}bg-danger
+                                    {% elif order.status == 'shipped' %}bg-primary
+                                    {% elif order.status == 'on-hold' %}bg-secondary
+                                    {% elif order.status == 'trash' %}bg-dark
+                                    {% else %}bg-dark{% endif %}"
+                                    style="cursor: pointer;"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                    onclick="event.stopPropagation();">
+                                    {{ statuses.get(order.status, order.status) }}
+                                </span>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    {% for status_key, status_name in statuses.items() %}
+                                    {% if status_key != order.status %}
+                                    <li>
+                                        <a class="dropdown-item status-change-item" 
+                                           href="#" 
+                                           data-order-id="{{ order.id }}"
+                                           data-new-status="{{ status_key }}"
+                                           onclick="event.stopPropagation(); changeStatus({{ order.id }}, '{{ status_key }}');">
+                                            <span class="badge 
+                                                {% if status_key == 'completed' %}bg-success
+                                                {% elif status_key == 'processing' %}bg-info
+                                                {% elif status_key == 'pending' %}bg-warning
+                                                {% elif status_key == 'cancelled' %}bg-danger
+                                                {% elif status_key == 'shipped' %}bg-primary
+                                                {% elif status_key == 'on-hold' %}bg-secondary
+                                                {% elif status_key == 'trash' %}bg-dark
+                                                {% else %}bg-dark{% endif %} me-2">
+                                            </span>
+                                            {{ status_name }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
                         </div>
                         <div class="card-body" onclick="window.location.href='{{ url_for('woo.order_detail', order_id=order.id) }}'" style="cursor: pointer;">
                             <div class="mb-2">
@@ -539,6 +786,207 @@
         </div>
     </div>
 
+    <!-- Özel Onay Modal -->
+    <div id="customModalOverlay" class="custom-modal-overlay">
+        <div class="custom-modal-box">
+            <div id="customModalIcon" class="custom-modal-icon warning">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <h5 id="customModalTitle" class="custom-modal-title">Onay Gerekiyor</h5>
+            <p id="customModalMessage" class="custom-modal-message">Bu işlemi gerçekleştirmek istediğinize emin misiniz?</p>
+            <div class="custom-modal-buttons">
+                <button type="button" id="customModalCancel" class="custom-modal-btn secondary">İptal</button>
+                <button type="button" id="customModalConfirm" class="custom-modal-btn primary">Tamam</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // 🔥 Özel Modal Sistemi
+        let modalResolve = null;
+        
+        // Sayfa yüklendiğinde event listener'ları bir kez ekle
+        document.addEventListener('DOMContentLoaded', function() {
+            const overlay = document.getElementById('customModalOverlay');
+            const modalBox = document.querySelector('.custom-modal-box');
+            const cancelBtn = document.getElementById('customModalCancel');
+            const confirmBtn = document.getElementById('customModalConfirm');
+            
+            // Modal box'a tıklamayı durdur
+            modalBox.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+            
+            // Cancel butonu
+            cancelBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                overlay.classList.remove('show');
+                if (modalResolve) {
+                    modalResolve(false);
+                    modalResolve = null;
+                }
+            });
+            
+            // Confirm butonu
+            confirmBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                overlay.classList.remove('show');
+                if (modalResolve) {
+                    modalResolve(true);
+                    modalResolve = null;
+                }
+            });
+            
+            // Overlay'e tıklama ile kapatma
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    overlay.classList.remove('show');
+                    if (modalResolve) {
+                        modalResolve(false);
+                        modalResolve = null;
+                    }
+                }
+            });
+        });
+        
+        function showModal(options) {
+            return new Promise((resolve) => {
+                modalResolve = resolve;
+                
+                const overlay = document.getElementById('customModalOverlay');
+                const icon = document.getElementById('customModalIcon');
+                const title = document.getElementById('customModalTitle');
+                const message = document.getElementById('customModalMessage');
+                const cancelBtn = document.getElementById('customModalCancel');
+                const confirmBtn = document.getElementById('customModalConfirm');
+                
+                // İkon ayarla
+                const iconMap = {
+                    'warning': { icon: 'bi-exclamation-triangle', class: 'warning' },
+                    'danger': { icon: 'bi-trash3', class: 'danger' },
+                    'success': { icon: 'bi-check-circle', class: 'success' },
+                    'info': { icon: 'bi-info-circle', class: 'info' },
+                    'question': { icon: 'bi-question-circle', class: 'warning' }
+                };
+                
+                const iconConfig = iconMap[options.type || 'warning'];
+                icon.className = `custom-modal-icon ${iconConfig.class}`;
+                icon.innerHTML = `<i class="bi ${iconConfig.icon}"></i>`;
+                
+                // İçerikleri ayarla
+                title.textContent = options.title || 'Onay';
+                message.textContent = options.message || 'Devam etmek istiyor musunuz?';
+                cancelBtn.textContent = options.cancelText || 'İptal';
+                confirmBtn.textContent = options.confirmText || 'Tamam';
+                
+                // Buton stillerini ayarla
+                confirmBtn.className = `custom-modal-btn ${options.confirmClass || 'primary'}`;
+                
+                // Sadece onay butonu göster (alert modu)
+                if (options.alertMode) {
+                    cancelBtn.style.display = 'none';
+                } else {
+                    cancelBtn.style.display = 'inline-block';
+                }
+                
+                // Modal'ı göster
+                overlay.classList.add('show');
+            });
+        }
+        
+        // 🔥 Toast Bildirim Sistemi
+        function showToast(options) {
+            const container = document.getElementById('toastContainer');
+            
+            const toast = document.createElement('div');
+            toast.className = `custom-toast ${options.type || 'success'}`;
+            
+            const iconMap = {
+                'success': 'bi-check-circle-fill',
+                'error': 'bi-x-circle-fill',
+                'warning': 'bi-exclamation-triangle-fill'
+            };
+            
+            toast.innerHTML = `
+                <i class="bi ${iconMap[options.type || 'success']} custom-toast-icon"></i>
+                <div class="custom-toast-content">
+                    <div class="custom-toast-title">${options.title || 'Bildirim'}</div>
+                    <div class="custom-toast-message">${options.message || ''}</div>
+                </div>
+                <button class="custom-toast-close" onclick="this.parentElement.remove()">
+                    <i class="bi bi-x"></i>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Animasyon için küçük gecikme
+            setTimeout(() => toast.classList.add('show'), 50);
+            
+            // Otomatik kaldırma
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, options.duration || 4000);
+        }
+        
+        // 🔥 Hızlı Statü Değiştirme Fonksiyonu
+        async function changeStatus(orderId, newStatus) {
+            // Çöp kutusuna taşıma için onay iste
+            if (newStatus === 'trash') {
+                const confirmed = await showModal({
+                    type: 'danger',
+                    title: 'Çöp Kutusuna Taşı',
+                    message: 'Bu siparişi çöp kutusuna taşımak istediğinize emin misiniz?',
+                    confirmText: 'Evet, Taşı',
+                    cancelText: 'Vazgeç',
+                    confirmClass: 'danger'
+                });
+                
+                if (!confirmed) return;
+            }
+            
+            try {
+                const response = await fetch(`/site/orders/${orderId}/update-status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast({
+                        type: 'success',
+                        title: 'Başarılı!',
+                        message: 'Sipariş durumu güncellendi'
+                    });
+                    // Kısa bir gecikme sonra sayfa yenile
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast({
+                        type: 'error',
+                        title: 'Hata!',
+                        message: data.message || 'İşlem başarısız oldu'
+                    });
+                }
+            } catch (error) {
+                showToast({
+                    type: 'error',
+                    title: 'Bağlantı Hatası',
+                    message: error.message || 'Sunucuya bağlanılamadı'
+                });
+            }
+        }
+    </script>
 </body>
 </html>

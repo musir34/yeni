@@ -42,8 +42,15 @@ def orders():
     # Veritabanından sorgula (API yerine)
     query = WooOrder.query
     
-    if status:
+    # 🔥 Çöp kutusu (trash) durumu özel olarak filtrelenir
+    # Sadece status=trash seçildiğinde gösterilir, aksi halde gizlenir
+    if status == 'trash':
+        query = query.filter_by(status='trash')
+    elif status:
         query = query.filter_by(status=status)
+    else:
+        # Tüm durumlar seçildiğinde trash hariç göster
+        query = query.filter(WooOrder.status != 'trash')
     
     if search:
         search_term = f"%{search}%"
@@ -334,60 +341,15 @@ def update_customer_info(order_id):
         )
         
         if updated_order:
-            # Veritabanını güncelle
+            # Veritabanını güncelle (sadece woo_orders tablosu)
             woo_service.save_order_to_db(updated_order)
             
-            # ✅ OrderCreated'a kaydet (artık bilgiler tam)
-            try:
-                from models import OrderCreated
-                import json
-                
-                order_number = str(order_id)
-                
-                # Zaten var mı kontrol et
-                existing = OrderCreated.query.filter_by(order_number=order_number).first()
-                
-                if not existing:
-                    # Line items hazırla
-                    line_items = []
-                    for item in updated_order.get('line_items', []):
-                        line_items.append({
-                            'barcode': item.get('sku', ''),
-                            'product_name': item.get('name', ''),
-                            'quantity': item.get('quantity', 1),
-                            'price': float(item.get('price', 0)),
-                            'line_id': item.get('id')
-                        })
-                    
-                    # OrderCreated'a ekle
-                    new_order = OrderCreated(
-                        order_number=order_number,
-                        order_date=datetime.fromisoformat(updated_order.get('date_created', '').replace('Z', '+00:00')) if updated_order.get('date_created') else datetime.utcnow(),
-                        status=updated_order.get('status', 'processing'),
-                        customer_name=data.get('first_name'),
-                        customer_surname=data.get('last_name'),
-                        customer_address=data.get('address'),
-                        customer_id=data.get('email', ''),
-                        product_barcode='',
-                        product_name='',
-                        quantity=sum(item.get('quantity', 0) for item in updated_order.get('line_items', [])),
-                        amount=float(updated_order.get('total', 0)),
-                        currency_code=updated_order.get('currency', 'TRY'),
-                        package_number=order_number,
-                        details=json.dumps(line_items, ensure_ascii=False),
-                        cargo_provider_name='MNG',
-                        shipment_package_id=None
-                    )
-                    
-                    db.session.add(new_order)
-                    db.session.commit()
-            except Exception as e:
-                print(f"OrderCreated'a kaydetme hatası: {e}")
-                # Hata olsa da devam et
+            # 🔥 WooCommerce siparişleri OrderCreated'a KAYDEDİLMEZ
+            # WooCommerce siparişleri sadece woo_orders tablosunda kalır
             
             return jsonify({
                 'success': True,
-                'message': 'Müşteri bilgileri güncellendi ve sipariş hazırlamaya eklendi',
+                'message': 'Müşteri bilgileri güncellendi',
                 'order': WooCommerceService.format_order_data(updated_order)
             })
         else:

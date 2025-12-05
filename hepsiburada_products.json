@@ -1,0 +1,4970 @@
+[
+  {
+    "id": "5dce8a1f00cff1000bc89e31",
+    "createdAt": "2019-11-15T11:21:03.947Z",
+    "createdBy": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "modifiedAt": "2023-02-27T12:29:13.595Z",
+    "modifiedBy": "5ddcd53500cff1000ce37cd6",
+    "analyzed": false,
+    "fields": {
+      "Barcode": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2023-02-27T12:29:13.58Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2023-02-27T12:29:13.58Z",
+            "value": "TEST-SIT"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-27T12:28:35.875Z",
+            "value": "TEST-SIT"
+          }
+        ],
+        "value": "TEST-SIT",
+        "mandatory": true
+      },
+      "tax_vat_rate": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2023-02-27T12:29:13.58Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2023-02-27T12:29:13.58Z",
+            "value": "1"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-27T12:28:35.875Z",
+            "value": "1"
+          }
+        ],
+        "value": "1",
+        "mandatory": true
+      },
+      "Image1": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2023-02-27T12:29:13.58Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2023-02-27T12:29:13.58Z",
+            "value": "Single121.jpg"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-27T12:28:35.875Z",
+            "value": "Single121.jpg"
+          }
+        ],
+        "value": "Single121.jpg",
+        "mandatory": true
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2023-02-27T12:29:13.581Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2023-02-27T12:29:13.581Z",
+            "value": "TEST-SIT"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-27T12:28:35.875Z",
+            "value": "TEST-SIT"
+          }
+        ],
+        "value": "TEST-SIT",
+        "mandatory": true
+      },
+      "kg": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2023-02-27T12:29:13.581Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2023-02-27T12:29:13.581Z",
+            "value": "2"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-27T12:28:35.875Z",
+            "value": "2"
+          }
+        ],
+        "value": "2",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2023-02-27T12:29:13.581Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2023-02-27T12:29:13.581Z",
+            "value": "test-sit"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-27T12:28:35.875Z",
+            "value": "test-sit"
+          }
+        ],
+        "value": "test-sit",
+        "mandatory": true
+      },
+      "GarantiSuresi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2023-02-27T12:29:13.581Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2023-02-27T12:29:13.581Z",
+            "value": "12"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-27T12:28:35.875Z",
+            "value": "12"
+          }
+        ],
+        "value": "12",
+        "mandatory": true
+      },
+      "Marka": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2023-02-27T12:29:13.581Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2023-02-27T12:29:13.581Z",
+            "value": "test-sit"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-27T12:28:35.875Z",
+            "value": "test-sit"
+          }
+        ],
+        "value": "test-sit",
+        "mandatory": true
+      },
+      "hbSku": {
+        "detail": {
+          "revisedBy": "ROOT",
+          "revisionDate": "2023-02-27T12:29:13.584Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-27T12:28:35.875Z",
+            "value": "test-sit"
+          },
+          {
+            "revisedBy": "ROOT",
+            "revisionDate": "2023-02-27T12:29:13.584Z",
+            "value": "test-sit"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2023-02-27T12:29:13.58Z",
+            "value": "test-sit"
+          }
+        ],
+        "value": "test-sit",
+        "mandatory": false
+      },
+      "renk_variant_property": {
+        "detail": {
+          "revisedBy": null,
+          "revisionDate": "2023-02-27T12:29:13.574Z"
+        },
+        "history": [],
+        "value": "Abanoz",
+        "mandatory": true
+      },
+      "00003U48": {
+        "detail": {
+          "revisedBy": null,
+          "revisionDate": "2023-02-27T12:29:13.574Z"
+        },
+        "history": [],
+        "value": "0 - 24 Ay",
+        "mandatory": true
+      }
+    },
+    "fromStatus": "WAITING",
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "merchantSku": "TEST-SIT",
+    "preMatchedSku": null,
+    "siblingSku": null,
+    "productCreateTransitionReason": "SINGLE_PRODUCT_CREATE",
+    "status": "CREATED",
+    "validationStatus": "CALCULATING",
+    "productStatusTransitionReason": null,
+    "tags": [],
+    "productType": {
+      "name": "Panduf",
+      "productTypeId": 3330,
+      "categoryName": "Panduf",
+      "categoryId": 60003862,
+      "buyingCategoryId": 80794153,
+      "buyingCategoryName": "Panduf",
+      "parentBuyingCategoryId": 0,
+      "parentBuyingCategoryName": "Ayakkabı & Çanta",
+      "deleted": false
+    },
+    "uploadDate": "2019-11-15T11:21:03.947Z",
+    "matchedDate": null,
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2019-11-18T06:50:20.932Z",
+    "version": 3,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": false,
+    "hasUnclosedTask": false
+  },
+  {
+    "id": "5dd4e9ee00cff1000c0e8e5e",
+    "createdAt": "2019-11-20T07:23:26.771Z",
+    "createdBy": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "modifiedAt": "2025-04-10T06:59:21.489Z",
+    "modifiedBy": "5e3a7ab700cff1000b180d33",
+    "analyzed": false,
+    "fields": {
+      "VaryantGroupID": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2025-04-10T06:59:21.125Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2025-04-10T06:59:21.125Z",
+            "value": "HB00000M1AA4"
+          }
+        ],
+        "value": "HB00000M1AA4",
+        "mandatory": false
+      },
+      "hbSku": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2025-04-10T06:59:21.124Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2025-04-10T06:59:21.124Z",
+            "value": "HBV00000M1AA5"
+          }
+        ],
+        "value": "HBV00000M1AA5",
+        "mandatory": false
+      },
+      "Barcode": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2025-04-10T06:59:21.125Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2023-02-03T08:55:48.505Z",
+            "value": "8697463090079"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-11-20T07:23:44.263Z",
+            "value": "8697463090079"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2025-04-10T06:59:21.125Z",
+            "value": "2221998150777"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-09T13:45:07.472Z",
+            "value": "8697400038133"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-09T13:47:03.985Z",
+            "value": "0048256216004"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-09T13:47:27.224Z",
+            "value": "0352842564307"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-09T13:47:52.995Z",
+            "value": "8699432211102"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-09T13:49:39.673Z",
+            "value": "8690345884131"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-09T13:54:32.743Z",
+            "value": "8697463090079"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-09T13:55:07.733Z",
+            "value": "86948572048887511"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2023-02-09T13:57:03.942Z",
+            "value": "2221998150777"
+          }
+        ],
+        "value": "2221998150777",
+        "mandatory": true
+      },
+      "tax_vat_rate": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2025-04-10T06:59:21.124Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2023-02-03T08:55:48.505Z",
+            "value": "8.0"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2025-04-10T06:59:21.124Z",
+            "value": "18.0"
+          }
+        ],
+        "value": "18.0",
+        "mandatory": true
+      },
+      "Image1": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2025-04-10T06:59:21.125Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2025-04-10T06:59:21.125Z",
+            "value": "https://productimages.hepsiburada.net/s/29/500/10276290560050.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/29/500/10276290560050.jpg",
+        "mandatory": false
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2025-04-10T06:59:21.123Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2025-04-10T06:59:21.123Z",
+            "value": "TESTCYPRESS008"
+          }
+        ],
+        "value": "TESTCYPRESS008",
+        "mandatory": true
+      },
+      "kg": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2025-04-10T06:59:21.125Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2023-02-03T08:55:48.506Z",
+            "value": "1.0"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2025-04-10T06:59:21.125Z",
+            "value": "50.0"
+          }
+        ],
+        "value": "50.0",
+        "mandatory": true
+      },
+      "GarantiSuresi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2025-04-10T06:59:21.125Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2023-02-03T08:55:48.506Z",
+            "value": "1"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2025-04-10T06:59:21.125Z",
+            "value": "12"
+          }
+        ],
+        "value": "12",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2025-04-10T06:59:21.125Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2023-02-03T08:55:48.506Z",
+            "value": "Sade Organik Kuru Dut 250 Gr"
+          },
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2025-04-10T06:59:21.125Z",
+            "value": "Lastik Tv Tubeless Takımın 2 Delikli Parçası"
+          }
+        ],
+        "value": "Lastik Tv Tubeless Takımın 2 Delikli Parçası",
+        "mandatory": true
+      },
+      "Marka": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2025-04-10T06:59:21.125Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2025-04-10T06:59:21.125Z",
+            "value": "Lastik Tv"
+          }
+        ],
+        "value": "Lastik Tv",
+        "mandatory": false
+      }
+    },
+    "fromStatus": "PRE_MATCHED",
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": true,
+    "merchant": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "merchantSku": "TESTCYPRESS008",
+    "preMatchedSku": null,
+    "siblingSku": null,
+    "productCreateTransitionReason": "SINGLE_PRODUCT_CREATE",
+    "status": "MATCHED",
+    "validationStatus": "CALCULATING",
+    "productStatusTransitionReason": "PREMATCH_APPROVE",
+    "tags": [],
+    "productType": {
+      "name": "Oto Lastik Bakım",
+      "productTypeId": 1298,
+      "categoryName": "Oto Lastik-Bakım",
+      "categoryId": 262977,
+      "buyingCategoryId": 80794111,
+      "buyingCategoryName": "Oto Lastik Bakımı",
+      "parentBuyingCategoryId": 0,
+      "parentBuyingCategoryName": "Oto Aksesuar Mağazası",
+      "deleted": false
+    },
+    "uploadDate": "2019-11-20T07:23:26.771Z",
+    "matchedDate": "2025-04-10T06:59:21.143Z",
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2024-04-24T13:00:36.482Z",
+    "version": 116,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": true,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": false,
+    "hasUnclosedTask": false
+  },
+  {
+    "id": "5de644cc00cff1000e0c66a0",
+    "createdAt": "2019-12-03T11:19:39.732Z",
+    "createdBy": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "modifiedAt": "2022-10-26T10:46:30.19Z",
+    "modifiedBy": "user-0",
+    "analyzed": false,
+    "fields": {
+      "VaryantGroupID": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:28:38.975Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:28:38.975Z",
+            "value": "0861"
+          }
+        ],
+        "value": "0861",
+        "mandatory": false
+      },
+      "hbSku": {
+        "detail": {
+          "revisedBy": "MERCHANT",
+          "revisionDate": "2019-12-03T11:28:41.235Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:28:38.975Z",
+            "value": "OUTBURC0861-S"
+          },
+          {
+            "revisedBy": "MERCHANT",
+            "revisionDate": "2019-12-03T11:28:41.235Z",
+            "value": "OUTBURC0861-S"
+          }
+        ],
+        "value": "OUTBURC0861-S",
+        "mandatory": false
+      },
+      "Barcode": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:28:38.975Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:28:38.975Z",
+            "value": "0OUTBURC0861S"
+          }
+        ],
+        "value": "0OUTBURC0861S",
+        "mandatory": true
+      },
+      "tax_vat_rate": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:28:38.975Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:28:38.975Z",
+            "value": "8.0"
+          }
+        ],
+        "value": "8.0",
+        "mandatory": false
+      },
+      "Image1": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:28:38.975Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:28:38.975Z",
+            "value": "https://productimages.hepsiburada.net/s/9/500/8798335664178.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/9/500/8798335664178.jpg",
+        "mandatory": false
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:28:38.973Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:28:38.973Z",
+            "value": "S89FAST24"
+          }
+        ],
+        "value": "S89FAST24",
+        "mandatory": true
+      },
+      "kg": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:28:38.975Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:28:38.975Z",
+            "value": "1.0"
+          }
+        ],
+        "value": "1.0",
+        "mandatory": false
+      },
+      "GarantiSuresi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:28:38.975Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:28:38.975Z",
+            "value": "24"
+          }
+        ],
+        "value": "24",
+        "mandatory": false
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:28:38.975Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:28:38.975Z",
+            "value": "Mobydick My Favorite Tişört - Yayın"
+          }
+        ],
+        "value": "Mobydick My Favorite Tişört - Yayın",
+        "mandatory": true
+      },
+      "Marka": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:28:38.975Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:28:38.975Z",
+            "value": "Mobydick"
+          }
+        ],
+        "value": "Mobydick",
+        "mandatory": false
+      }
+    },
+    "fromStatus": "MATCHED",
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": "LISTING_CREATED",
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "merchantSku": "S89FAST24",
+    "preMatchedSku": null,
+    "siblingSku": null,
+    "productCreateTransitionReason": "FASTLISTING_CREATE",
+    "status": "WAITING",
+    "validationStatus": null,
+    "productStatusTransitionReason": "CREATE_TASK",
+    "tags": [],
+    "productType": {
+      "name": "Outdoor Giyim",
+      "productTypeId": 3543,
+      "categoryName": "Sweatshirt ve T-Shirt",
+      "categoryId": 1302737,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-03T11:19:39.732Z",
+    "matchedDate": "2019-12-03T11:28:41.24Z",
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2022-10-26T10:46:29.862Z",
+    "version": 2,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": true,
+    "hasUnclosedTask": true
+  },
+  {
+    "id": "5de644cc00cff1000e0c66a1",
+    "createdAt": "2021-10-15T14:23:38.752Z",
+    "createdBy": "5f7c422cce36ce000c749e1f",
+    "modifiedAt": "2023-11-10T06:22:15.322Z",
+    "modifiedBy": "root",
+    "analyzed": false,
+    "fields": {
+      "VaryantGroupID": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-10-15T14:23:38.736Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-10-15T14:23:38.736Z",
+            "value": "0861"
+          }
+        ],
+        "value": "0861",
+        "mandatory": false
+      },
+      "hbSku": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-10-15T14:23:38.735Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-10-15T14:23:38.735Z",
+            "value": "OUTBURC0861-M"
+          }
+        ],
+        "value": "OUTBURC0861-M",
+        "mandatory": false
+      },
+      "Barcode": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-10-15T14:23:38.736Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-10-15T14:23:38.736Z",
+            "value": "0OUTBURC0861M"
+          }
+        ],
+        "value": "0OUTBURC0861M",
+        "mandatory": true
+      },
+      "tax_vat_rate": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-10-15T14:23:38.735Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-10-15T14:23:38.735Z",
+            "value": "8.0"
+          }
+        ],
+        "value": "8.0",
+        "mandatory": false
+      },
+      "Image1": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-10-15T14:23:38.736Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-10-15T14:23:38.736Z",
+            "value": "https://productimages.hepsiburada.net/s/9/500/8798335664178.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/9/500/8798335664178.jpg",
+        "mandatory": false
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-10-15T14:23:38.735Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-10-15T14:23:38.735Z",
+            "value": "S89FAST28"
+          }
+        ],
+        "value": "S89FAST28",
+        "mandatory": true
+      },
+      "kg": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-10-15T14:23:38.736Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-10-15T14:23:38.736Z",
+            "value": "1.0"
+          }
+        ],
+        "value": "1.0",
+        "mandatory": false
+      },
+      "GarantiSuresi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-10-15T14:23:38.735Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-10-15T14:23:38.735Z",
+            "value": "24"
+          }
+        ],
+        "value": "24",
+        "mandatory": false
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-10-15T14:23:38.736Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-10-15T14:23:38.736Z",
+            "value": "Mobydick My Favorite Tişört - Yayın"
+          }
+        ],
+        "value": "Mobydick My Favorite Tişört - Yayın",
+        "mandatory": true
+      },
+      "Marka": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-10-15T14:23:38.736Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-10-15T14:23:38.736Z",
+            "value": "Mobydick"
+          }
+        ],
+        "value": "Mobydick",
+        "mandatory": false
+      }
+    },
+    "fromStatus": "PRE_MATCHED",
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": "LISTING_FAILED",
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": true,
+    "merchant": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "merchantSku": "S89FAST28",
+    "preMatchedSku": null,
+    "siblingSku": null,
+    "productCreateTransitionReason": "FASTLISTING_CREATE",
+    "status": "MATCHED",
+    "validationStatus": null,
+    "productStatusTransitionReason": null,
+    "tags": [
+      "614b0bed295f7502752eb2bd"
+    ],
+    "productType": {
+      "name": "Outdoor Giyim",
+      "productTypeId": 3543,
+      "categoryName": "Sweatshirt ve T-Shirt",
+      "categoryId": 1302737,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-03T11:19:39.962Z",
+    "matchedDate": "2021-10-15T14:23:38.736Z",
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2019-12-03T11:19:39.962Z",
+    "version": 5,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": false,
+    "hasUnclosedTask": false
+  },
+  {
+    "id": "5de644cc00cff1000e0c66a2",
+    "createdAt": "2019-12-03T11:19:39.995Z",
+    "createdBy": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "modifiedAt": "2019-12-03T11:19:39.995Z",
+    "modifiedBy": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "analyzed": false,
+    "fields": {
+      "Barcode": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:19:39.995Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:19:39.995Z",
+            "value": "8697783958349"
+          }
+        ],
+        "value": "8697783958349",
+        "mandatory": true
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:19:39.995Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:19:39.995Z",
+            "value": "S89FAST29"
+          }
+        ],
+        "value": "S89FAST29",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:19:39.995Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:19:39.995Z",
+            "value": "S89FASTMATCH3"
+          }
+        ],
+        "value": "S89FASTMATCH3",
+        "mandatory": true
+      }
+    },
+    "fromStatus": "WAITING",
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "merchantSku": "S89FAST29",
+    "preMatchedSku": "1212154100110LAC",
+    "siblingSku": null,
+    "productCreateTransitionReason": "FASTLISTING_CREATE",
+    "status": "PRE_MATCHED",
+    "validationStatus": null,
+    "productStatusTransitionReason": null,
+    "tags": [],
+    "productType": {
+      "name": "Fast Listing",
+      "productTypeId": 0,
+      "categoryName": null,
+      "categoryId": null,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-03T11:19:39.995Z",
+    "matchedDate": null,
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2019-12-03T11:19:39.999Z",
+    "version": -1,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": false,
+    "hasUnclosedTask": false
+  },
+  {
+    "id": "5de644cc00cff1000e0c66a3",
+    "createdAt": "2019-12-03T11:19:40.005Z",
+    "createdBy": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "modifiedAt": "2023-04-11T06:52:33.281Z",
+    "modifiedBy": "user-0",
+    "analyzed": false,
+    "fields": {
+      "VaryantGroupID": {
+        "detail": {
+          "revisedBy": "MERCHANT",
+          "revisionDate": "2022-07-05T10:30:17.095Z"
+        },
+        "history": [
+          {
+            "revisedBy": "MERCHANT",
+            "revisionDate": "2022-07-05T10:30:17.095Z",
+            "value": "1212154100"
+          }
+        ],
+        "value": "1212154100",
+        "mandatory": false
+      },
+      "hbSku": {
+        "detail": {
+          "revisedBy": "MERCHANT",
+          "revisionDate": "2022-07-05T10:30:17.095Z"
+        },
+        "history": [
+          {
+            "revisedBy": "MERCHANT",
+            "revisionDate": "2022-07-05T10:30:17.095Z",
+            "value": "121215410092LAC"
+          }
+        ],
+        "value": "121215410092LAC",
+        "mandatory": false
+      },
+      "Barcode": {
+        "detail": {
+          "revisedBy": "MERCHANT",
+          "revisionDate": "2022-07-05T10:30:17.095Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:19:40.005Z",
+            "value": "869778395831"
+          },
+          {
+            "revisedBy": "MERCHANT",
+            "revisionDate": "2022-07-05T10:30:17.095Z",
+            "value": "869778395831"
+          }
+        ],
+        "value": "869778395831",
+        "mandatory": true
+      },
+      "tax_vat_rate": {
+        "detail": {
+          "revisedBy": "MERCHANT",
+          "revisionDate": "2022-07-05T10:30:17.095Z"
+        },
+        "history": [
+          {
+            "revisedBy": "MERCHANT",
+            "revisionDate": "2022-07-05T10:30:17.095Z",
+            "value": "8.0"
+          }
+        ],
+        "value": "8.0",
+        "mandatory": false
+      },
+      "Image1": {
+        "detail": {
+          "revisedBy": "MERCHANT",
+          "revisionDate": "2022-07-05T10:30:17.095Z"
+        },
+        "history": [
+          {
+            "revisedBy": "MERCHANT",
+            "revisionDate": "2022-07-05T10:30:17.095Z",
+            "value": "https://productimages.hepsiburada.net/s/11/500/8805526044722.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/11/500/8805526044722.jpg",
+        "mandatory": false
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "MERCHANT",
+          "revisionDate": "2022-07-05T10:30:17.095Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:19:40.005Z",
+            "value": "S89FAST30"
+          },
+          {
+            "revisedBy": "MERCHANT",
+            "revisionDate": "2022-07-05T10:30:17.095Z",
+            "value": "S89FAST30"
+          }
+        ],
+        "value": "S89FAST30",
+        "mandatory": true
+      },
+      "kg": {
+        "detail": {
+          "revisedBy": "MERCHANT",
+          "revisionDate": "2022-07-05T10:30:17.095Z"
+        },
+        "history": [
+          {
+            "revisedBy": "MERCHANT",
+            "revisionDate": "2022-07-05T10:30:17.095Z",
+            "value": "2.0"
+          }
+        ],
+        "value": "2.0",
+        "mandatory": false
+      },
+      "GarantiSuresi": {
+        "detail": {
+          "revisedBy": "MERCHANT",
+          "revisionDate": "2022-07-05T10:30:17.095Z"
+        },
+        "history": [
+          {
+            "revisedBy": "MERCHANT",
+            "revisionDate": "2022-07-05T10:30:17.095Z",
+            "value": "24"
+          }
+        ],
+        "value": "24",
+        "mandatory": false
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "MERCHANT",
+          "revisionDate": "2022-07-05T10:30:17.095Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:19:40.005Z",
+            "value": "S89FASTMATCH4"
+          },
+          {
+            "revisedBy": "MERCHANT",
+            "revisionDate": "2022-07-05T10:30:17.095Z",
+            "value": "Panço Kız Jean Pantolon"
+          }
+        ],
+        "value": "Panço Kız Jean Pantolon",
+        "mandatory": true
+      },
+      "Marka": {
+        "detail": {
+          "revisedBy": "MERCHANT",
+          "revisionDate": "2022-07-05T10:30:17.095Z"
+        },
+        "history": [
+          {
+            "revisedBy": "MERCHANT",
+            "revisionDate": "2022-07-05T10:30:17.095Z",
+            "value": "Panço"
+          }
+        ],
+        "value": "Panço",
+        "mandatory": false
+      }
+    },
+    "fromStatus": "WAITING",
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": "LISTING_CREATED",
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "merchantSku": "S89FAST30",
+    "preMatchedSku": null,
+    "siblingSku": null,
+    "productCreateTransitionReason": "FASTLISTING_CREATE",
+    "status": "MISSING_INFO",
+    "validationStatus": "FAILED",
+    "productStatusTransitionReason": "MISSING_INFO_CHANGED",
+    "tags": [],
+    "productType": {
+      "name": "Çocuk Giyim",
+      "productTypeId": 1854,
+      "categoryName": "Pantolon",
+      "categoryId": 60000919,
+      "buyingCategoryId": 80089006,
+      "buyingCategoryName": "Giyim",
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": "Giyim",
+      "deleted": false
+    },
+    "uploadDate": "2019-12-03T11:19:40.005Z",
+    "matchedDate": "2022-07-05T10:30:17.096Z",
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2022-10-26T10:46:30.366Z",
+    "version": 7,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": false,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": true,
+    "hasUnclosedTask": true
+  },
+  {
+    "id": "5de644cc00cff1000e0c66a4",
+    "createdAt": "2019-12-03T11:19:40.015Z",
+    "createdBy": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "modifiedAt": "2019-12-03T11:19:40.015Z",
+    "modifiedBy": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "analyzed": false,
+    "fields": {
+      "Barcode": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:19:40.014Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:19:40.014Z",
+            "value": "8697783959155"
+          }
+        ],
+        "value": "8697783959155",
+        "mandatory": true
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:19:40.015Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:19:40.015Z",
+            "value": "S89FAST31"
+          }
+        ],
+        "value": "S89FAST31",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:19:40.014Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:19:40.014Z",
+            "value": "S89FASTMATCH5"
+          }
+        ],
+        "value": "S89FASTMATCH5",
+        "mandatory": true
+      }
+    },
+    "fromStatus": "WAITING",
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "merchantSku": "S89FAST31",
+    "preMatchedSku": "12122911008086VIZ",
+    "siblingSku": null,
+    "productCreateTransitionReason": "FASTLISTING_CREATE",
+    "status": "PRE_MATCHED",
+    "validationStatus": null,
+    "productStatusTransitionReason": null,
+    "tags": [],
+    "productType": {
+      "name": "Fast Listing",
+      "productTypeId": 0,
+      "categoryName": null,
+      "categoryId": null,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-03T11:19:40.015Z",
+    "matchedDate": null,
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2019-12-03T11:19:40.018Z",
+    "version": -1,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": false,
+    "hasUnclosedTask": false
+  },
+  {
+    "id": "5de644cc00cff1000e0c66a6",
+    "createdAt": "2019-12-03T11:19:40.032Z",
+    "createdBy": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "modifiedAt": "2019-12-03T11:19:40.032Z",
+    "modifiedBy": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "analyzed": false,
+    "fields": {
+      "Barcode": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:19:40.032Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:19:40.032Z",
+            "value": "8697783973953"
+          }
+        ],
+        "value": "8697783973953",
+        "mandatory": true
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:19:40.032Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:19:40.032Z",
+            "value": "S89FAST33"
+          }
+        ],
+        "value": "S89FAST33",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:19:40.032Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:19:40.032Z",
+            "value": "S89FASTMATCH7"
+          }
+        ],
+        "value": "S89FASTMATCH7",
+        "mandatory": true
+      }
+    },
+    "fromStatus": "WAITING",
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "merchantSku": "S89FAST33",
+    "preMatchedSku": "1212626100146SAR",
+    "siblingSku": null,
+    "productCreateTransitionReason": "FASTLISTING_CREATE",
+    "status": "PRE_MATCHED",
+    "validationStatus": null,
+    "productStatusTransitionReason": null,
+    "tags": [],
+    "productType": {
+      "name": "Fast Listing",
+      "productTypeId": 0,
+      "categoryName": null,
+      "categoryId": null,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-03T11:19:40.032Z",
+    "matchedDate": null,
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2019-12-03T11:19:40.035Z",
+    "version": -1,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": false,
+    "hasUnclosedTask": false
+  },
+  {
+    "id": "5de644cc00cff1000e0c66a7",
+    "createdAt": "2019-12-03T11:19:40.041Z",
+    "createdBy": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "modifiedAt": "2019-12-03T11:19:40.041Z",
+    "modifiedBy": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "analyzed": false,
+    "fields": {
+      "Barcode": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:19:40.04Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:19:40.04Z",
+            "value": "8697783974011"
+          }
+        ],
+        "value": "8697783974011",
+        "mandatory": true
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:19:40.041Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:19:40.041Z",
+            "value": "S89FAST34"
+          }
+        ],
+        "value": "S89FAST34",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-03T11:19:40.04Z"
+        },
+        "history": [
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-03T11:19:40.04Z",
+            "value": "S89FASTMATCH8"
+          }
+        ],
+        "value": "S89FASTMATCH8",
+        "mandatory": true
+      }
+    },
+    "fromStatus": "WAITING",
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "168602cd-a5de-4c30-9b12-1246d37e0d95",
+    "merchantSku": "S89FAST34",
+    "preMatchedSku": "1212626100146COR",
+    "siblingSku": null,
+    "productCreateTransitionReason": "FASTLISTING_CREATE",
+    "status": "PRE_MATCHED",
+    "validationStatus": null,
+    "productStatusTransitionReason": null,
+    "tags": [],
+    "productType": {
+      "name": "Fast Listing",
+      "productTypeId": 0,
+      "categoryName": null,
+      "categoryId": null,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-03T11:19:40.041Z",
+    "matchedDate": null,
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2019-12-03T11:19:40.044Z",
+    "version": -1,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": false,
+    "hasUnclosedTask": false
+  },
+  {
+    "id": "5e00663d00cff1000b4a4fb6",
+    "createdAt": "2019-12-23T07:01:17.18Z",
+    "createdBy": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "modifiedAt": "2019-12-23T07:08:58.633Z",
+    "modifiedBy": null,
+    "analyzed": true,
+    "fields": {
+      "renk_variant_property": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.163Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.163Z",
+            "value": "Siyah"
+          }
+        ],
+        "value": "Siyah",
+        "mandatory": false
+      },
+      "UrunAciklamasi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.163Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.163Z",
+            "value": "Duis enim duis magna ex veniam elit id Lorem cillum minim nisi id aliquip. Laboris magna id est et deserunt adipisicing tempor eu ea officia ipsum deserunt. Irure occaecat sit aliquip elit ipsum sint dolore quis est amet aute pariatur cupidatat fugiat. Cillum pariatur pariatur occaecat sint. Aliqua qui in exercitation nulla aliquip id ipsum aliquip ad ut excepteur culpa consequat aliquip. Nisi ut ex tempor enim adipisicing anim irure pariatur.\r\n"
+          }
+        ],
+        "value": "Duis enim duis magna ex veniam elit id Lorem cillum minim nisi id aliquip. Laboris magna id est et deserunt adipisicing tempor eu ea officia ipsum deserunt. Irure occaecat sit aliquip elit ipsum sint dolore quis est amet aute pariatur cupidatat fugiat. Cillum pariatur pariatur occaecat sint. Aliqua qui in exercitation nulla aliquip id ipsum aliquip ad ut excepteur culpa consequat aliquip. Nisi ut ex tempor enim adipisicing anim irure pariatur.\r\n",
+        "mandatory": true
+      },
+      "Image5": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.163Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.163Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image4": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.163Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.163Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image3": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.163Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.163Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image2": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.163Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.163Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image1": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.163Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.163Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": true
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.163Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.163Z",
+            "value": "ESRA-SKU-INT-0"
+          }
+        ],
+        "value": "ESRA-SKU-INT-0",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.163Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.163Z",
+            "value": "Roth Tyler"
+          }
+        ],
+        "value": "Roth Tyler",
+        "mandatory": true
+      },
+      "Barcode": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.163Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.163Z",
+            "value": "ESRA-Barcode-INT-0"
+          }
+        ],
+        "value": "ESRA-Barcode-INT-0",
+        "mandatory": true
+      },
+      "ebatlar_variant_property": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.163Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.163Z",
+            "value": "Büyük Ebat"
+          }
+        ],
+        "value": "Büyük Ebat",
+        "mandatory": false
+      },
+      "kg": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.163Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.163Z",
+            "value": "1"
+          }
+        ],
+        "value": "1",
+        "mandatory": true
+      },
+      "GarantiSuresi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.163Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.163Z",
+            "value": "24"
+          }
+        ],
+        "value": "24",
+        "mandatory": true
+      },
+      "Marka": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.163Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.163Z",
+            "value": "Nike"
+          }
+        ],
+        "value": "Nike",
+        "mandatory": true
+      }
+    },
+    "fromStatus": "WAITING",
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "merchantSku": "ESRA-SKU-INT-0",
+    "preMatchedSku": null,
+    "siblingSku": null,
+    "productCreateTransitionReason": "INTEGRATOR_API",
+    "status": "IN_EXTERNAL_PROGRESS",
+    "validationStatus": null,
+    "productStatusTransitionReason": null,
+    "tags": [],
+    "productType": {
+      "name": "Duş Sistemleri",
+      "productTypeId": 3497,
+      "categoryName": "Duş Teknesi",
+      "categoryId": 18021982,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-23T07:01:17.18Z",
+    "matchedDate": null,
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2019-12-23T07:08:58.447Z",
+    "version": -1,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": false,
+    "hasUnclosedTask": false
+  },
+  {
+    "id": "5e00663d00cff1000b4a4fb7",
+    "createdAt": "2021-05-21T13:14:49.185Z",
+    "createdBy": "5fc0d896ce36ce000c752f31",
+    "modifiedAt": "2021-12-01T14:47:13.708Z",
+    "modifiedBy": "5fc0d896ce36ce000c752f31",
+    "analyzed": false,
+    "fields": {
+      "renk_variant_property": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:14:49.177Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.212Z",
+            "value": "Siyah"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:14:49.177Z",
+            "value": "Siyah"
+          }
+        ],
+        "value": "Siyah",
+        "mandatory": false
+      },
+      "UrunAciklamasi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:14:49.177Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.212Z",
+            "value": "Cupidatat laborum officia sunt aliqua eu exercitation cillum officia occaecat. Exercitation tempor labore ut et. Anim occaecat ex excepteur occaecat pariatur. Sunt aute ipsum ea aliquip proident qui sunt nulla eu. Id qui in enim id exercitation Lorem ea.\r\n"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:14:49.177Z",
+            "value": "Cupidatat laborum officia sunt aliqua eu exercitation cillum officia occaecat. Exercitation tempor labore ut et. Anim occaecat ex excepteur occaecat pariatur. Sunt aute ipsum ea aliquip proident qui sunt nulla eu. Id qui in enim id exercitation Lorem ea.\r\n"
+          }
+        ],
+        "value": "Cupidatat laborum officia sunt aliqua eu exercitation cillum officia occaecat. Exercitation tempor labore ut et. Anim occaecat ex excepteur occaecat pariatur. Sunt aute ipsum ea aliquip proident qui sunt nulla eu. Id qui in enim id exercitation Lorem ea.\r\n",
+        "mandatory": true
+      },
+      "Image5": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:14:49.177Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.212Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:14:49.177Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image4": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:14:49.177Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.212Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:14:49.177Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image3": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:14:49.177Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.212Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:14:49.177Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image2": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:14:49.177Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.212Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:14:49.177Z",
+            "value": "https://miro.medium.com/max/1200/1*mk1-6aYaf_Bes1E3Imhc0A.jpeg"
+          }
+        ],
+        "value": "https://miro.medium.com/max/1200/1*mk1-6aYaf_Bes1E3Imhc0A.jpeg",
+        "mandatory": false
+      },
+      "Image1": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:14:49.177Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.212Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:14:49.177Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": true
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:14:49.177Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.212Z",
+            "value": "ESRA-SKU-INT-1"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:14:49.177Z",
+            "value": "ESRA-SKU-INT-1"
+          }
+        ],
+        "value": "ESRA-SKU-INT-1",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:14:49.177Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.212Z",
+            "value": "Stefanie Turner"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:14:49.177Z",
+            "value": "Stefanie Turner"
+          }
+        ],
+        "value": "Stefanie Turner",
+        "mandatory": true
+      },
+      "Barcode": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:14:49.177Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.212Z",
+            "value": "ESRA-Barcode-INT-1"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:14:49.177Z",
+            "value": "ESRA-Barcode-INT-1"
+          }
+        ],
+        "value": "ESRA-Barcode-INT-1",
+        "mandatory": true
+      },
+      "ebatlar_variant_property": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:14:49.177Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.212Z",
+            "value": "Büyük Ebat"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:14:49.177Z",
+            "value": "Büyük Ebat"
+          }
+        ],
+        "value": "Büyük Ebat",
+        "mandatory": false
+      },
+      "kg": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:14:49.177Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.212Z",
+            "value": "1"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:14:49.177Z",
+            "value": "1"
+          }
+        ],
+        "value": "1",
+        "mandatory": true
+      },
+      "GarantiSuresi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:14:49.177Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.212Z",
+            "value": "24"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:14:49.177Z",
+            "value": "24"
+          }
+        ],
+        "value": "24",
+        "mandatory": true
+      },
+      "Marka": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:14:49.177Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.212Z",
+            "value": "Nike"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:14:49.177Z",
+            "value": "Nike"
+          }
+        ],
+        "value": "Nike",
+        "mandatory": true
+      }
+    },
+    "fromStatus": null,
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "merchantSku": "ESRA-SKU-INT-1",
+    "preMatchedSku": null,
+    "siblingSku": null,
+    "productCreateTransitionReason": "INTEGRATOR_API",
+    "status": "WAITING",
+    "validationStatus": "SUCCESS",
+    "productStatusTransitionReason": null,
+    "tags": [],
+    "productType": {
+      "name": "Duş Sistemleri",
+      "productTypeId": 3497,
+      "categoryName": "Duş Teknesi",
+      "categoryId": 18021982,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-23T07:01:17.216Z",
+    "matchedDate": null,
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2019-12-23T07:01:17.204Z",
+    "version": 1,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": true,
+    "hasUnclosedTask": true
+  },
+  {
+    "id": "5e00663d00cff1000b4a4fb8",
+    "createdAt": "2021-03-19T08:08:29.624Z",
+    "createdBy": "5fc0d896ce36ce000c752f31",
+    "modifiedAt": "2021-03-19T08:08:30.166Z",
+    "modifiedBy": "user-0",
+    "analyzed": false,
+    "fields": {
+      "renk_variant_property": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-03-19T08:08:29.614Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.242Z",
+            "value": "Siyah"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-03-19T08:08:29.614Z",
+            "value": "Siyah"
+          }
+        ],
+        "value": "Siyah",
+        "mandatory": false
+      },
+      "UrunAciklamasi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-03-19T08:08:29.614Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.242Z",
+            "value": "Pariatur pariatur aliquip commodo dolor fugiat. Do consectetur labore qui dolor. Nisi magna esse est consequat pariatur anim nulla irure irure.\r\n"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-03-19T08:08:29.614Z",
+            "value": "Pariatur pariatur aliquip commodo dolor fugiat. Do consectetur labore qui dolor. Nisi magna esse est consequat pariatur anim nulla irure irure.\r\n"
+          }
+        ],
+        "value": "Pariatur pariatur aliquip commodo dolor fugiat. Do consectetur labore qui dolor. Nisi magna esse est consequat pariatur anim nulla irure irure.\r\n",
+        "mandatory": true
+      },
+      "Image5": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-03-19T08:08:29.614Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.242Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-03-19T08:08:29.614Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image4": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-03-19T08:08:29.614Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.242Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-03-19T08:08:29.614Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image3": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-03-19T08:08:29.614Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.242Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-03-19T08:08:29.614Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image2": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-03-19T08:08:29.614Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.242Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-03-19T08:08:29.614Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image1": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-03-19T08:08:29.614Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.242Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-03-19T08:08:29.614Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": true
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-03-19T08:08:29.614Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.242Z",
+            "value": "ESRA-SKU-INT-2"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-03-19T08:08:29.614Z",
+            "value": "ESRA-SKU-INT-2"
+          }
+        ],
+        "value": "ESRA-SKU-INT-2",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-03-19T08:08:29.614Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.242Z",
+            "value": "Marilyn Riley"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-03-19T08:08:29.614Z",
+            "value": "Marilyn Riley"
+          }
+        ],
+        "value": "Marilyn Riley",
+        "mandatory": true
+      },
+      "Barcode": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-03-19T08:08:29.614Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.242Z",
+            "value": "ESRA-Barcode-INT-2"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-03-19T08:08:29.614Z",
+            "value": "8690345884131"
+          }
+        ],
+        "value": "8690345884131",
+        "mandatory": true
+      },
+      "ebatlar_variant_property": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-03-19T08:08:29.614Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.242Z",
+            "value": "Büyük Ebat"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-03-19T08:08:29.614Z",
+            "value": "Büyük Ebat"
+          }
+        ],
+        "value": "Büyük Ebat",
+        "mandatory": false
+      },
+      "kg": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-03-19T08:08:29.614Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.242Z",
+            "value": "1"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-03-19T08:08:29.614Z",
+            "value": "1"
+          }
+        ],
+        "value": "1",
+        "mandatory": true
+      },
+      "GarantiSuresi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-03-19T08:08:29.614Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.242Z",
+            "value": "24"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-03-19T08:08:29.614Z",
+            "value": "24"
+          }
+        ],
+        "value": "24",
+        "mandatory": true
+      },
+      "Marka": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-03-19T08:08:29.614Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.242Z",
+            "value": "Nike"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-03-19T08:08:29.614Z",
+            "value": "Nike"
+          }
+        ],
+        "value": "Nike",
+        "mandatory": true
+      }
+    },
+    "fromStatus": null,
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "merchantSku": "ESRA-SKU-INT-2",
+    "preMatchedSku": "HBV000000KSN4",
+    "siblingSku": null,
+    "productCreateTransitionReason": "INTEGRATOR_API",
+    "status": "PRE_MATCHED",
+    "validationStatus": null,
+    "productStatusTransitionReason": null,
+    "tags": [],
+    "productType": {
+      "name": "Duş Sistemleri",
+      "productTypeId": 3497,
+      "categoryName": "Duş Teknesi",
+      "categoryId": 18021982,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-23T07:01:17.243Z",
+    "matchedDate": null,
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2021-03-19T08:08:29.624Z",
+    "version": 1,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": false,
+    "hasUnclosedTask": false
+  },
+  {
+    "id": "5e00663d00cff1000b4a4fb9",
+    "createdAt": "2021-05-21T13:08:01.206Z",
+    "createdBy": "5fc0d896ce36ce000c752f31",
+    "modifiedAt": "2021-12-01T14:47:13.708Z",
+    "modifiedBy": "5fc0d896ce36ce000c752f31",
+    "analyzed": false,
+    "fields": {
+      "renk_variant_property": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:08:01.197Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.267Z",
+            "value": "Siyah"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:08:01.197Z",
+            "value": "Siyah"
+          }
+        ],
+        "value": "Siyah",
+        "mandatory": false
+      },
+      "UrunAciklamasi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:08:01.198Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.267Z",
+            "value": "Eu sunt esse nostrud magna. Do excepteur aliqua in aute esse. Qui anim labore elit deserunt.\r\n"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:08:01.198Z",
+            "value": "Eu sunt esse nostrud magna. Do excepteur aliqua in aute esse. Qui anim labore elit deserunt.\r\n"
+          }
+        ],
+        "value": "Eu sunt esse nostrud magna. Do excepteur aliqua in aute esse. Qui anim labore elit deserunt.\r\n",
+        "mandatory": true
+      },
+      "Image5": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:08:01.198Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.267Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:08:01.198Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image4": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:08:01.198Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.267Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:08:01.198Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image3": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:08:01.198Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.267Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:08:01.198Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image2": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:08:01.198Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.267Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:08:01.198Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image1": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:08:01.198Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.267Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:08:01.198Z",
+            "value": "https://productimages.hepsiburada.net/s/10/500/8805526831154.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/10/500/8805526831154.jpg",
+        "mandatory": true
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:08:01.198Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.267Z",
+            "value": "ESRA-SKU-INT-3"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:08:01.198Z",
+            "value": "ESRA-SKU-INT-3"
+          }
+        ],
+        "value": "ESRA-SKU-INT-3",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:08:01.198Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.267Z",
+            "value": "Little Lewis"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:08:01.198Z",
+            "value": "Little Lewis"
+          }
+        ],
+        "value": "Little Lewis",
+        "mandatory": true
+      },
+      "Barcode": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:08:01.198Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.267Z",
+            "value": "ESRA-Barcode-INT-3"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:08:01.198Z",
+            "value": "ESRA-Barcode-INT-3"
+          }
+        ],
+        "value": "ESRA-Barcode-INT-3",
+        "mandatory": true
+      },
+      "ebatlar_variant_property": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:08:01.198Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.267Z",
+            "value": "Büyük Ebat"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:08:01.198Z",
+            "value": "Büyük Ebat"
+          }
+        ],
+        "value": "Büyük Ebat",
+        "mandatory": false
+      },
+      "kg": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:08:01.198Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.267Z",
+            "value": "1"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:08:01.198Z",
+            "value": "1"
+          }
+        ],
+        "value": "1",
+        "mandatory": true
+      },
+      "GarantiSuresi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:08:01.198Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.267Z",
+            "value": "24"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:08:01.198Z",
+            "value": "24"
+          }
+        ],
+        "value": "24",
+        "mandatory": true
+      },
+      "Marka": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-21T13:08:01.198Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.267Z",
+            "value": "Nike"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-21T13:08:01.198Z",
+            "value": "Nike"
+          }
+        ],
+        "value": "Nike",
+        "mandatory": true
+      }
+    },
+    "fromStatus": null,
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "merchantSku": "ESRA-SKU-INT-3",
+    "preMatchedSku": null,
+    "siblingSku": null,
+    "productCreateTransitionReason": "INTEGRATOR_API",
+    "status": "WAITING",
+    "validationStatus": "SUCCESS",
+    "productStatusTransitionReason": null,
+    "tags": [],
+    "productType": {
+      "name": "Duş Sistemleri",
+      "productTypeId": 3497,
+      "categoryName": "Duş Teknesi",
+      "categoryId": 18021982,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-23T07:01:17.269Z",
+    "matchedDate": null,
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2019-12-23T07:01:17.261Z",
+    "version": 1,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": true,
+    "hasUnclosedTask": true
+  },
+  {
+    "id": "5e00663d00cff1000b4a4fba",
+    "createdAt": "2019-12-23T07:01:17.291Z",
+    "createdBy": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "modifiedAt": "2021-12-01T14:47:13.708Z",
+    "modifiedBy": "5e3aeaf8ed9b5b37044a791f",
+    "analyzed": false,
+    "fields": {
+      "renk_variant_property": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.289Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.289Z",
+            "value": "Siyah"
+          }
+        ],
+        "value": "Siyah",
+        "mandatory": false
+      },
+      "UrunAciklamasi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.289Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.289Z",
+            "value": "Cupidatat occaecat velit duis sint consequat laborum nostrud ullamco exercitation ea consequat ut dolor laboris. In occaecat qui consequat aliquip deserunt deserunt laboris. Qui nulla qui commodo sunt pariatur sint excepteur. Esse velit exercitation cillum ipsum consequat ex anim dolore enim sit culpa veniam commodo veniam. Lorem sunt proident ullamco ullamco eiusmod sint exercitation quis labore.\r\n"
+          }
+        ],
+        "value": "Cupidatat occaecat velit duis sint consequat laborum nostrud ullamco exercitation ea consequat ut dolor laboris. In occaecat qui consequat aliquip deserunt deserunt laboris. Qui nulla qui commodo sunt pariatur sint excepteur. Esse velit exercitation cillum ipsum consequat ex anim dolore enim sit culpa veniam commodo veniam. Lorem sunt proident ullamco ullamco eiusmod sint exercitation quis labore.\r\n",
+        "mandatory": true
+      },
+      "Image5": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.289Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.289Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image4": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.289Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.289Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image3": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.289Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.289Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image2": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.289Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.289Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image1": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.289Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.289Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": true
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.289Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.289Z",
+            "value": "ESRA-SKU-INT-4"
+          }
+        ],
+        "value": "ESRA-SKU-INT-4",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.289Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.289Z",
+            "value": "Armstrong Forbes"
+          }
+        ],
+        "value": "Armstrong Forbes",
+        "mandatory": true
+      },
+      "Barcode": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.289Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.289Z",
+            "value": "ESRA-Barcode-INT-4"
+          }
+        ],
+        "value": "ESRA-Barcode-INT-4",
+        "mandatory": true
+      },
+      "ebatlar_variant_property": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.289Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.289Z",
+            "value": "Büyük Ebat"
+          }
+        ],
+        "value": "Büyük Ebat",
+        "mandatory": false
+      },
+      "kg": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.289Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.289Z",
+            "value": "1"
+          }
+        ],
+        "value": "1",
+        "mandatory": true
+      },
+      "GarantiSuresi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.289Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.289Z",
+            "value": "24"
+          }
+        ],
+        "value": "24",
+        "mandatory": true
+      },
+      "Marka": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.289Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.289Z",
+            "value": "Nike"
+          }
+        ],
+        "value": "Nike",
+        "mandatory": true
+      }
+    },
+    "fromStatus": null,
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "merchantSku": "ESRA-SKU-INT-4",
+    "preMatchedSku": null,
+    "siblingSku": null,
+    "productCreateTransitionReason": "INTEGRATOR_API",
+    "status": "WAITING",
+    "validationStatus": "SUCCESS",
+    "productStatusTransitionReason": null,
+    "tags": [
+      "5b19223fb656cd000a06249c",
+      "5e942485ce36ce000872b90f",
+      "5e94d925ce36ce000872b937",
+      "5e94d947ce36ce000872b938"
+    ],
+    "productType": {
+      "name": "Duş Sistemleri",
+      "productTypeId": 3497,
+      "categoryName": "Duş Teknesi",
+      "categoryId": 18021982,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-23T07:01:17.291Z",
+    "matchedDate": null,
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2019-12-23T07:01:17.282Z",
+    "version": 0,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": true,
+    "hasUnclosedTask": true
+  },
+  {
+    "id": "5e00663d00cff1000b4a4fbb",
+    "createdAt": "2019-12-23T07:01:17.321Z",
+    "createdBy": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "modifiedAt": "2021-12-01T14:47:13.708Z",
+    "modifiedBy": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "analyzed": false,
+    "fields": {
+      "renk_variant_property": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.319Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.319Z",
+            "value": "Siyah"
+          }
+        ],
+        "value": "Siyah",
+        "mandatory": false
+      },
+      "UrunAciklamasi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.319Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.319Z",
+            "value": "Sunt officia deserunt ullamco id amet culpa tempor. Enim in aute cupidatat minim ut nulla esse culpa. Et do do proident est est minim est. Quis officia ex occaecat aliqua et ipsum nisi ut.\r\n"
+          }
+        ],
+        "value": "Sunt officia deserunt ullamco id amet culpa tempor. Enim in aute cupidatat minim ut nulla esse culpa. Et do do proident est est minim est. Quis officia ex occaecat aliqua et ipsum nisi ut.\r\n",
+        "mandatory": true
+      },
+      "Image5": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.319Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.319Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image4": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.319Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.319Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image3": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.319Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.319Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image2": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.319Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.319Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image1": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.319Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.319Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": true
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.319Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.319Z",
+            "value": "ESRA-SKU-INT-5"
+          }
+        ],
+        "value": "ESRA-SKU-INT-5",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.319Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.319Z",
+            "value": "Hendrix Foreman"
+          }
+        ],
+        "value": "Hendrix Foreman",
+        "mandatory": true
+      },
+      "Barcode": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.319Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.319Z",
+            "value": "ESRA-Barcode-INT-5"
+          }
+        ],
+        "value": "ESRA-Barcode-INT-5",
+        "mandatory": true
+      },
+      "ebatlar_variant_property": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.319Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.319Z",
+            "value": "Büyük Ebat"
+          }
+        ],
+        "value": "Büyük Ebat",
+        "mandatory": false
+      },
+      "kg": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.319Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.319Z",
+            "value": "1"
+          }
+        ],
+        "value": "1",
+        "mandatory": true
+      },
+      "GarantiSuresi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.319Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.319Z",
+            "value": "24"
+          }
+        ],
+        "value": "24",
+        "mandatory": true
+      },
+      "Marka": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.319Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.319Z",
+            "value": "Nike"
+          }
+        ],
+        "value": "Nike",
+        "mandatory": true
+      }
+    },
+    "fromStatus": null,
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "merchantSku": "ESRA-SKU-INT-5",
+    "preMatchedSku": null,
+    "siblingSku": null,
+    "productCreateTransitionReason": "INTEGRATOR_API",
+    "status": "WAITING",
+    "validationStatus": "SUCCESS",
+    "productStatusTransitionReason": null,
+    "tags": [],
+    "productType": {
+      "name": "Duş Sistemleri",
+      "productTypeId": 3497,
+      "categoryName": "Duş Teknesi",
+      "categoryId": 18021982,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-23T07:01:17.321Z",
+    "matchedDate": null,
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2019-12-23T07:01:17.313Z",
+    "version": 0,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": true,
+    "hasUnclosedTask": true
+  },
+  {
+    "id": "5e00663d00cff1000b4a4fbc",
+    "createdAt": "2019-12-23T07:01:17.346Z",
+    "createdBy": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "modifiedAt": "2021-12-01T14:47:13.708Z",
+    "modifiedBy": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "analyzed": false,
+    "fields": {
+      "renk_variant_property": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.344Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.344Z",
+            "value": "Siyah"
+          }
+        ],
+        "value": "Siyah",
+        "mandatory": false
+      },
+      "UrunAciklamasi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.344Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.344Z",
+            "value": "Labore excepteur est aliqua ullamco culpa. Mollit labore cillum ea qui deserunt enim proident amet. Pariatur consequat velit consequat excepteur. Consequat officia tempor velit dolore consequat non reprehenderit culpa aliqua sit consectetur nisi sunt.\r\n"
+          }
+        ],
+        "value": "Labore excepteur est aliqua ullamco culpa. Mollit labore cillum ea qui deserunt enim proident amet. Pariatur consequat velit consequat excepteur. Consequat officia tempor velit dolore consequat non reprehenderit culpa aliqua sit consectetur nisi sunt.\r\n",
+        "mandatory": true
+      },
+      "Image5": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.344Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.344Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image4": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.344Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.344Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image3": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.344Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.344Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image2": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.344Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.344Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image1": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.344Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.344Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": true
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.344Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.344Z",
+            "value": "ESRA-SKU-INT-6"
+          }
+        ],
+        "value": "ESRA-SKU-INT-6",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.344Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.344Z",
+            "value": "Alice Keller"
+          }
+        ],
+        "value": "Alice Keller",
+        "mandatory": true
+      },
+      "Barcode": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.344Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.344Z",
+            "value": "ESRA-Barcode-INT-6"
+          }
+        ],
+        "value": "ESRA-Barcode-INT-6",
+        "mandatory": true
+      },
+      "ebatlar_variant_property": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.344Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.344Z",
+            "value": "Büyük Ebat"
+          }
+        ],
+        "value": "Büyük Ebat",
+        "mandatory": false
+      },
+      "kg": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.344Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.344Z",
+            "value": "1"
+          }
+        ],
+        "value": "1",
+        "mandatory": true
+      },
+      "GarantiSuresi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.344Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.344Z",
+            "value": "24"
+          }
+        ],
+        "value": "24",
+        "mandatory": true
+      },
+      "Marka": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.344Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.344Z",
+            "value": "Nike"
+          }
+        ],
+        "value": "Nike",
+        "mandatory": true
+      }
+    },
+    "fromStatus": null,
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "merchantSku": "ESRA-SKU-INT-6",
+    "preMatchedSku": null,
+    "siblingSku": null,
+    "productCreateTransitionReason": "INTEGRATOR_API",
+    "status": "WAITING",
+    "validationStatus": "SUCCESS",
+    "productStatusTransitionReason": null,
+    "tags": [],
+    "productType": {
+      "name": "Duş Sistemleri",
+      "productTypeId": 3497,
+      "categoryName": "Duş Teknesi",
+      "categoryId": 18021982,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-23T07:01:17.346Z",
+    "matchedDate": null,
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2019-12-23T07:01:17.337Z",
+    "version": 0,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": true,
+    "hasUnclosedTask": true
+  },
+  {
+    "id": "5e00663d00cff1000b4a4fbd",
+    "createdAt": "2019-12-23T07:01:17.371Z",
+    "createdBy": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "modifiedAt": "2021-12-01T14:47:13.708Z",
+    "modifiedBy": "5dfb3a8e3444677edf16b31d",
+    "analyzed": false,
+    "fields": {
+      "renk_variant_property": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:42:27.59Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.37Z",
+            "value": "Siyah"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:42:27.59Z",
+            "value": "Siyah"
+          }
+        ],
+        "value": "Siyah",
+        "mandatory": false
+      },
+      "UrunAciklamasi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:43:38.172Z"
+        },
+        "history": [],
+        "value": "<p>Duis aliqua dolore ipsum ex fugiat est nisi mollit magna. Ad proident est commodo excepteur Lorem. Nisi consequat consequat laborum aute reprehenderit pariatur id. Non culpa reprehenderit reprehenderit fugiat magna. Eiusmod et ut anim duis in ullamco.whatsapp</p>",
+        "mandatory": true
+      },
+      "Image5": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:42:27.59Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.37Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:42:27.59Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image4": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:42:27.59Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.37Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:42:27.59Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image3": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:42:27.59Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.37Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:42:27.59Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image2": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:42:27.59Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.37Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:42:27.59Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image1": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:42:27.59Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.37Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:42:27.59Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": true
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:42:27.59Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.37Z",
+            "value": "ESRA-SKU-INT-7"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:42:27.59Z",
+            "value": "ESRA-SKU-INT-7"
+          }
+        ],
+        "value": "ESRA-SKU-INT-7",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:42:27.591Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.37Z",
+            "value": "Yvonne Collier"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:42:27.591Z",
+            "value": "Yvonne Collier"
+          }
+        ],
+        "value": "Yvonne Collier",
+        "mandatory": true
+      },
+      "Barcode": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:42:27.591Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.37Z",
+            "value": "ESRA-Barcode-INT-7"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:42:27.591Z",
+            "value": "INT-7"
+          }
+        ],
+        "value": "INT-7",
+        "mandatory": true
+      },
+      "ebatlar_variant_property": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:42:27.591Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.37Z",
+            "value": "Büyük Ebat"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:42:27.591Z",
+            "value": "Büyük Ebat"
+          }
+        ],
+        "value": "Büyük Ebat",
+        "mandatory": false
+      },
+      "kg": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:42:27.591Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.37Z",
+            "value": "1"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:42:27.591Z",
+            "value": "1"
+          }
+        ],
+        "value": "1",
+        "mandatory": true
+      },
+      "GarantiSuresi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:42:27.591Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.37Z",
+            "value": "24"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:42:27.591Z",
+            "value": "24"
+          }
+        ],
+        "value": "24",
+        "mandatory": true
+      },
+      "Marka": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:42:27.591Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.37Z",
+            "value": "Nike"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:42:27.591Z",
+            "value": "Nike"
+          }
+        ],
+        "value": "Nike",
+        "mandatory": true
+      }
+    },
+    "fromStatus": null,
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "merchantSku": "ESRA-SKU-INT-7",
+    "preMatchedSku": null,
+    "siblingSku": null,
+    "productCreateTransitionReason": "INTEGRATOR_API",
+    "status": "WAITING",
+    "validationStatus": "SUCCESS",
+    "productStatusTransitionReason": null,
+    "tags": [],
+    "productType": {
+      "name": "Duş Sistemleri",
+      "productTypeId": 3497,
+      "categoryName": "Duş Teknesi",
+      "categoryId": 18021982,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-23T07:01:17.371Z",
+    "matchedDate": null,
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2019-12-23T07:01:17.363Z",
+    "version": -1,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": true,
+    "hasUnclosedTask": true
+  },
+  {
+    "id": "5e00663d00cff1000b4a4fbe",
+    "createdAt": "2019-12-23T07:01:17.397Z",
+    "createdBy": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "modifiedAt": "2021-12-01T14:47:13.708Z",
+    "modifiedBy": "5dfb3a8e3444677edf16b31d",
+    "analyzed": false,
+    "fields": {
+      "renk_variant_property": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:46:22.099Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.396Z",
+            "value": "Siyah"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:46:22.099Z",
+            "value": "Siyah"
+          }
+        ],
+        "value": "Siyah",
+        "mandatory": false
+      },
+      "UrunAciklamasi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:46:48.806Z"
+        },
+        "history": [],
+        "value": "<p>Veniam duis amet eu nulla labore esse incididunt magna laboris ipsum. Ullamco adipisicing ut cillum veniam Lorem tempor sunt voluptate nostrud cupidatat enim ex. Amet elit reprehenderit qui quis in eu velit aliqua. Et laboris minim id sit nisi in nostrud sit culpa eiusmod culpa do ea.whatsapp</p>",
+        "mandatory": true
+      },
+      "Image5": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:46:22.099Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.396Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:46:22.099Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image4": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:46:22.099Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.396Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:46:22.099Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image3": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:46:22.099Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.396Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:46:22.099Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image2": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:46:22.099Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.396Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:46:22.099Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image1": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:46:22.099Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.396Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:46:22.099Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": true
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:46:22.099Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.396Z",
+            "value": "ESRA-SKU-INT-8"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:46:22.099Z",
+            "value": "ESRA-SKU-INT-8"
+          }
+        ],
+        "value": "ESRA-SKU-INT-8",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:46:22.099Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.396Z",
+            "value": "Vang Bridges"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:46:22.099Z",
+            "value": "Vang Bridges"
+          }
+        ],
+        "value": "Vang Bridges",
+        "mandatory": true
+      },
+      "Barcode": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:46:22.099Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.396Z",
+            "value": "ESRA-Barcode-INT-8"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:46:22.099Z",
+            "value": "INT-8"
+          }
+        ],
+        "value": "INT-8",
+        "mandatory": true
+      },
+      "ebatlar_variant_property": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:46:22.099Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.396Z",
+            "value": "Büyük Ebat"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:46:22.099Z",
+            "value": "Büyük Ebat"
+          }
+        ],
+        "value": "Büyük Ebat",
+        "mandatory": false
+      },
+      "kg": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:46:22.099Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.396Z",
+            "value": "1"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:46:22.099Z",
+            "value": "1"
+          }
+        ],
+        "value": "1",
+        "mandatory": true
+      },
+      "GarantiSuresi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:46:22.099Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.396Z",
+            "value": "24"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:46:22.099Z",
+            "value": "24"
+          }
+        ],
+        "value": "24",
+        "mandatory": true
+      },
+      "Marka": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2019-12-25T08:46:22.1Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.396Z",
+            "value": "Nike"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2019-12-25T08:46:22.1Z",
+            "value": "Nike"
+          }
+        ],
+        "value": "Nike",
+        "mandatory": true
+      }
+    },
+    "fromStatus": null,
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "merchantSku": "ESRA-SKU-INT-8",
+    "preMatchedSku": null,
+    "siblingSku": null,
+    "productCreateTransitionReason": "INTEGRATOR_API",
+    "status": "WAITING",
+    "validationStatus": "SUCCESS",
+    "productStatusTransitionReason": null,
+    "tags": [],
+    "productType": {
+      "name": "Duş Sistemleri",
+      "productTypeId": 3497,
+      "categoryName": "Duş Teknesi",
+      "categoryId": 18021982,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-23T07:01:17.397Z",
+    "matchedDate": null,
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2019-12-23T07:01:17.388Z",
+    "version": -1,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": true,
+    "hasUnclosedTask": true
+  },
+  {
+    "id": "5e00663d00cff1000b4a4fbf",
+    "createdAt": "2019-12-23T07:01:17.42Z",
+    "createdBy": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "modifiedAt": "2021-12-01T14:47:13.708Z",
+    "modifiedBy": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "analyzed": false,
+    "fields": {
+      "renk_variant_property": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.418Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.418Z",
+            "value": "Siyah"
+          }
+        ],
+        "value": "Siyah",
+        "mandatory": false
+      },
+      "UrunAciklamasi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.418Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.418Z",
+            "value": "Enim nulla in excepteur qui laborum occaecat magna dolor. Veniam dolor qui minim nulla minim nisi. Pariatur amet nulla irure fugiat ut.\r\n"
+          }
+        ],
+        "value": "Enim nulla in excepteur qui laborum occaecat magna dolor. Veniam dolor qui minim nulla minim nisi. Pariatur amet nulla irure fugiat ut.\r\n",
+        "mandatory": true
+      },
+      "Image5": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.418Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.418Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image4": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.418Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.418Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image3": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.418Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.418Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image2": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.418Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.418Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image1": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.418Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.418Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": true
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.418Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.418Z",
+            "value": "ESRA-SKU-INT-9"
+          }
+        ],
+        "value": "ESRA-SKU-INT-9",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.418Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.418Z",
+            "value": "Esperanza Moreno"
+          }
+        ],
+        "value": "Esperanza Moreno",
+        "mandatory": true
+      },
+      "Barcode": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.418Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.418Z",
+            "value": "ESRA-Barcode-INT-9"
+          }
+        ],
+        "value": "ESRA-Barcode-INT-9",
+        "mandatory": true
+      },
+      "ebatlar_variant_property": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.418Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.418Z",
+            "value": "Büyük Ebat"
+          }
+        ],
+        "value": "Büyük Ebat",
+        "mandatory": false
+      },
+      "kg": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.418Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.418Z",
+            "value": "1"
+          }
+        ],
+        "value": "1",
+        "mandatory": true
+      },
+      "GarantiSuresi": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.418Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.418Z",
+            "value": "24"
+          }
+        ],
+        "value": "24",
+        "mandatory": true
+      },
+      "Marka": {
+        "detail": {
+          "revisedBy": "INTEGRATOR",
+          "revisionDate": "2019-12-23T07:01:17.418Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.418Z",
+            "value": "Nike"
+          }
+        ],
+        "value": "Nike",
+        "mandatory": true
+      }
+    },
+    "fromStatus": null,
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "merchantSku": "ESRA-SKU-INT-9",
+    "preMatchedSku": null,
+    "siblingSku": null,
+    "productCreateTransitionReason": "INTEGRATOR_API",
+    "status": "WAITING",
+    "validationStatus": "SUCCESS",
+    "productStatusTransitionReason": null,
+    "tags": [],
+    "productType": {
+      "name": "Duş Sistemleri",
+      "productTypeId": 3497,
+      "categoryName": "Duş Teknesi",
+      "categoryId": 18021982,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-23T07:01:17.42Z",
+    "matchedDate": null,
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2019-12-23T07:01:17.411Z",
+    "version": 0,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": true,
+    "hasUnclosedTask": true
+  },
+  {
+    "id": "5e00663d00cff1000b4a4fc0",
+    "createdAt": "2021-05-24T12:24:54.844Z",
+    "createdBy": "5fc0d896ce36ce000c752f31",
+    "modifiedAt": "2021-12-01T14:47:13.817Z",
+    "modifiedBy": "user-0",
+    "analyzed": false,
+    "fields": {
+      "renk_variant_property": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-24T12:30:03.381Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.439Z",
+            "value": "Siyah"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-24T12:30:03.381Z",
+            "value": "Siyah"
+          }
+        ],
+        "value": "Siyah",
+        "mandatory": false
+      },
+      "UrunAciklamasi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-24T12:30:03.381Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.439Z",
+            "value": "Cupidatat id adipisicing enim ad. Ullamco quis deserunt exercitation veniam enim ex magna velit aliquip. Officia nulla ea occaecat quis non reprehenderit adipisicing magna officia aliqua veniam anim.\r\n"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-24T12:30:03.381Z",
+            "value": "Cupidatat id adipisicing enim ad. Ullamco quis deserunt exercitation veniam enim ex magna velit aliquip. Officia nulla ea occaecat quis non reprehenderit adipisicing magna officia aliqua veniam anim.\r\n"
+          }
+        ],
+        "value": "Cupidatat id adipisicing enim ad. Ullamco quis deserunt exercitation veniam enim ex magna velit aliquip. Officia nulla ea occaecat quis non reprehenderit adipisicing magna officia aliqua veniam anim.\r\n",
+        "mandatory": true
+      },
+      "Image5": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-24T12:30:03.381Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.439Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-24T12:30:03.381Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image4": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-24T12:30:03.381Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.439Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-24T12:30:03.381Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": false
+      },
+      "Image3": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-24T12:30:03.381Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.439Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-24T12:30:03.381Z",
+            "value": "http://seliminfo.xmlbankasi.com/image/data/resimler/invicta-25855-50mm-pro-diver-blue-erkek-kol-saati-2552.jpg"
+          }
+        ],
+        "value": "invicta-25855-50mm-pro-diver-blue-erkek-kol-saati-2552.jpg",
+        "mandatory": false
+      },
+      "Image2": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-24T12:30:03.381Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.439Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-24T12:30:03.381Z",
+            "value": "https://marketplace-single-product-images.oss-eu-central-1.aliyuncs.com/prod/152028/de6b4df5-7a7f-4211-9e04-b18cd207743e/IMG_9239.JPG?x-oss-process=image/resize,w_500,limit_0"
+          }
+        ],
+        "value": "https://marketplace-single-product-images.oss-eu-central-1.aliyuncs.com/prod/152028/de6b4df5-7a7f-4211-9e04-b18cd207743e/IMG_9239.JPG?x-oss-process=image/resize,w_500,limit_0",
+        "mandatory": false
+      },
+      "Image1": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-24T12:30:03.381Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.439Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-24T12:30:03.381Z",
+            "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg"
+          }
+        ],
+        "value": "https://productimages.hepsiburada.net/s/27/552/10194862145586.jpg",
+        "mandatory": true
+      },
+      "merchantSku": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-24T12:30:03.381Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.439Z",
+            "value": "ESRA-SKU-INT-10"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-24T12:30:03.381Z",
+            "value": "ESRA-SKU-INT-10"
+          }
+        ],
+        "value": "ESRA-SKU-INT-10",
+        "mandatory": true
+      },
+      "UrunAdi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-24T12:30:03.381Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.439Z",
+            "value": "Cortez Oconnor"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-24T12:30:03.381Z",
+            "value": "Cortez Oconnor"
+          }
+        ],
+        "value": "Cortez Oconnor",
+        "mandatory": true
+      },
+      "Barcode": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-24T12:30:03.381Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.439Z",
+            "value": "ESRA-Barcode-INT-10"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-24T12:30:03.381Z",
+            "value": "ESRA-Barcode-INT-10"
+          }
+        ],
+        "value": "ESRA-Barcode-INT-10",
+        "mandatory": true
+      },
+      "ebatlar_variant_property": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-24T12:30:03.381Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.439Z",
+            "value": "Büyük Ebat"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-24T12:30:03.381Z",
+            "value": "Büyük Ebat"
+          }
+        ],
+        "value": "Büyük Ebat",
+        "mandatory": false
+      },
+      "kg": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-24T12:30:03.381Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.439Z",
+            "value": "1"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-24T12:30:03.381Z",
+            "value": "1"
+          }
+        ],
+        "value": "1",
+        "mandatory": true
+      },
+      "GarantiSuresi": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-24T12:30:03.381Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.439Z",
+            "value": "24"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-24T12:30:03.381Z",
+            "value": "24"
+          }
+        ],
+        "value": "24",
+        "mandatory": true
+      },
+      "Marka": {
+        "detail": {
+          "revisedBy": "CTA",
+          "revisionDate": "2021-05-24T12:30:03.381Z"
+        },
+        "history": [
+          {
+            "revisedBy": "INTEGRATOR",
+            "revisionDate": "2019-12-23T07:01:17.439Z",
+            "value": "Nike"
+          },
+          {
+            "revisedBy": "CTA",
+            "revisionDate": "2021-05-24T12:30:03.381Z",
+            "value": "Nike"
+          }
+        ],
+        "value": "Nike",
+        "mandatory": true
+      }
+    },
+    "fromStatus": null,
+    "retail": false,
+    "listingFailureReason": null,
+    "listingStatus": null,
+    "listingFailureReasonList": [],
+    "listingStatusList": [],
+    "matched": false,
+    "merchant": "ac2a8cdd-5608-433e-8922-14c8a3db9de3",
+    "merchantSku": "ESRA-SKU-INT-10",
+    "preMatchedSku": null,
+    "siblingSku": null,
+    "productCreateTransitionReason": "INTEGRATOR_API",
+    "status": "WAITING",
+    "validationStatus": "FAILED",
+    "productStatusTransitionReason": null,
+    "tags": [],
+    "productType": {
+      "name": "Duş Sistemleri",
+      "productTypeId": 3497,
+      "categoryName": "Duş Teknesi",
+      "categoryId": 18021982,
+      "buyingCategoryId": null,
+      "buyingCategoryName": null,
+      "parentBuyingCategoryId": null,
+      "parentBuyingCategoryName": null,
+      "deleted": false
+    },
+    "uploadDate": "2019-12-23T07:01:17.44Z",
+    "matchedDate": null,
+    "valid": false,
+    "suspendedMatched": false,
+    "stagedProduct": null,
+    "fromStatusSetDate": "2019-12-23T07:01:17.433Z",
+    "version": 3,
+    "cosineSimilarity": null,
+    "matchedType": null,
+    "rejectReasons": [],
+    "check": null,
+    "videoStatus": null,
+    "forcedBy": null,
+    "questionIds": null,
+    "lastModification": null,
+    "productQuality": null,
+    "categoryScore": null,
+    "isBestSeller": false,
+    "isPreMatchedSkuBestSeller": false,
+    "bestSellerTag": "",
+    "hasTask": true,
+    "hasUnclosedTask": true
+  }
+]
