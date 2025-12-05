@@ -298,11 +298,20 @@ def get_home():
                     product_name = d.get("product_name") or d.get("productName", "Bilinmeyen Ürün")
                     image_url = d.get("image_url") or get_product_image(normalized_bc)
 
-            # Aktif tüm raflar (adet > 0) - WooCommerce için woo_id bazlı raf yok, Trendyol için barkod bazlı
-            if is_woocommerce:
-                # WooCommerce siparişleri için raf kontrolü atlanabilir veya woo_id bazlı yapılabilir
-                raflar = []  # WooCommerce için şimdilik boş
-            else:
+            # Aktif tüm raflar (adet > 0) - Her iki platform için de barkod bazlı raf kontrolü
+            # WooCommerce için display_barcode (gerçek barkod), Trendyol için normalized_bc kullanılır
+            raf_barkod = display_barcode if is_woocommerce else normalized_bc
+            
+            raf_kayitlari = (
+                RafUrun.query
+                .filter(RafUrun.urun_barkodu == raf_barkod, RafUrun.adet > 0)
+                .order_by(desc(RafUrun.adet))
+                .all()
+            )
+            raflar = [{"kod": r.raf_kodu, "adet": r.adet} for r in raf_kayitlari]
+            
+            # Eğer bulunamazsa normalized_bc ile de dene (alias durumu için)
+            if not raflar and is_woocommerce and display_barcode != normalized_bc:
                 raf_kayitlari = (
                     RafUrun.query
                     .filter(RafUrun.urun_barkodu == normalized_bc, RafUrun.adet > 0)
