@@ -218,6 +218,8 @@
             }
         }
     </style>
+    {% block extra_css %}
+    {% endblock %}
 </head>
 <body>
     <div class="container mt-5">
@@ -251,5 +253,7 @@
             });
         });
     </script>
+    {% block scripts %}
+    {% endblock %}
 </body>
 </html>

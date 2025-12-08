@@ -122,6 +122,10 @@ app.jinja_env.filters['format_date'] = format_turkish_date_filter
 # ──────────────────────────────────────────────────────────────────────────────
 register_blueprints(app)
 
+# Idefix Blueprint
+from idefix.idefix_routes import idefix_bp
+app.register_blueprint(idefix_bp)
+
 # >>> Forecast cache fonksiyonlarını blueprint yüklendikten sonra import et
 try:
     # Eğer uretim_oneri blueprint'in kök dizindeyse:
@@ -461,6 +465,202 @@ def push_central_stock_to_trendyol():
 def push_stock_job():
     """Zamanlayıcı tetiklemesinde direkt stok gönderir (zamanlamayı schedule ayarlar)."""
     push_central_stock_to_trendyol()
+    push_central_stock_to_idefix()
+    # Trendyol fiyatlarını Idefix'e senkronize et
+    sync_trendyol_prices_to_idefix()
+
+def push_central_stock_to_idefix():
+    """
+    CentralStock (Created rezerv düşülmüş) → Idefix
+    POST /pim/catalog/{vendorId}/inventory-upload
+    Sadece platforms alanında 'idefix' olan ürünleri gönderir
+    """
+    with app.app_context():
+        import json as json_module
+        from models import Product, OrderCreated
+        from idefix.idefix_service import idefix_service
+        
+        logger.info("=" * 80)
+        logger.info("[IDEFIX-PUSH] 🚀 Idefix stok gönderme işlemi başlatıldı")
+        logger.info(f"[IDEFIX-PUSH] ⏰ Zaman: {datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        try:
+            def _parse(raw):
+                try:
+                    if not raw: return []
+                    d = json_module.loads(raw) if isinstance(raw, str) else raw
+                    return d if isinstance(d, list) else [d]
+                except:
+                    return []
+
+            def _i(x, d=0):
+                try:
+                    return int(str(x).strip())
+                except:
+                    return d
+            
+            # 1. Idefix'te satılan ürünleri bul
+            logger.info("[IDEFIX-PUSH] 📦 Step 1: Idefix ürünleri okunuyor...")
+            idefix_products = Product.query.filter(
+                Product.platforms.ilike('%idefix%')
+            ).all()
+            logger.info(f"[IDEFIX-PUSH] 📊 {len(idefix_products)} Idefix ürünü bulundu")
+            
+            if not idefix_products:
+                logger.warning("[IDEFIX-PUSH] ⚠️ Idefix ürünü yok; gönderim yapılamadı!")
+                return
+            
+            # 2. CentralStock'tan stok al
+            logger.info("[IDEFIX-PUSH] 📦 Step 2: CentralStock okunuyor...")
+            central_stocks = {cs.barcode: cs.qty for cs in CentralStock.query.all()}
+            logger.info(f"[IDEFIX-PUSH] 📊 CentralStock'ta {len(central_stocks)} kayıt")
+            
+            # 3. Created rezerv hesapla
+            logger.info("[IDEFIX-PUSH] 🔒 Step 3: Created siparişler rezerv hesaplanıyor...")
+            reserved = {}
+            created_orders = OrderCreated.query.with_entities(OrderCreated.details).all()
+            for (details_str,) in created_orders:
+                for it in _parse(details_str):
+                    bc = (it.get("barcode") or "").strip()
+                    q  = _i(it.get("quantity"), 0)
+                    if bc and q > 0:
+                        reserved[bc] = reserved.get(bc, 0) + q
+            logger.info(f"[IDEFIX-PUSH] 🔒 {len(reserved)} farklı barkod için rezerve edildi")
+            
+            # 4. Stok hesapla ve hazırla
+            logger.info("[IDEFIX-PUSH] 🧮 Step 4: Kullanılabilir stok hesaplanıyor...")
+            items = []
+            for product in idefix_products:
+                bc = product.barcode
+                if not bc:
+                    continue
+                central_qty = central_stocks.get(bc, 0)
+                reserved_qty = reserved.get(bc, 0)
+                available = max(0, central_qty - reserved_qty)
+                items.append({
+                    "barcode": bc,
+                    "inventoryQuantity": available
+                })
+            
+            logger.info(f"[IDEFIX-PUSH] 📊 {len(items)} ürün hazırlandı")
+            
+            if not items:
+                logger.warning("[IDEFIX-PUSH] ⚠️ Gönderilecek ürün yok!")
+                return
+            
+            # 5. Batch halinde gönder (100'lük gruplar)
+            BATCH_SIZE = 100
+            total = len(items)
+            parts = (total + BATCH_SIZE - 1) // BATCH_SIZE
+            logger.info(f"[IDEFIX-PUSH] 📤 Step 5: {parts} batch halinde gönderiliyor...")
+            
+            success_count = 0
+            error_count = 0
+            
+            for i in range(0, total, BATCH_SIZE):
+                batch_num = i // BATCH_SIZE + 1
+                batch = items[i:i+BATCH_SIZE]
+                
+                logger.info(f"[IDEFIX-PUSH] 📮 Batch {batch_num}/{parts} gönderiliyor ({len(batch)} ürün)...")
+                result = idefix_service.update_stocks(batch)
+                
+                if result.get("success"):
+                    success_count += 1
+                    logger.info(f"[IDEFIX-PUSH] ✅ Batch {batch_num}/{parts} başarılı!")
+                else:
+                    error_count += 1
+                    logger.error(f"[IDEFIX-PUSH] ❌ Batch {batch_num}/{parts} hata: {result.get('error')}")
+            
+            logger.info(f"[IDEFIX-PUSH] 📊 Gönderim özeti: Başarılı: {success_count}/{parts}, Hatalı: {error_count}/{parts}")
+            logger.info("[IDEFIX-PUSH] ✅ Idefix stok gönderimi tamamlandı!")
+            
+        except Exception as e:
+            logger.error(f"[IDEFIX-PUSH] ❌ KRITIK HATA: {e}", exc_info=True)
+        
+        logger.info("[IDEFIX-PUSH] 🏁 İşlem sona erdi")
+        logger.info("=" * 80)
+
+def sync_trendyol_prices_to_idefix():
+    """
+    Trendyol'daki satış fiyatlarını Idefix'e senkronize eder.
+    Eşleşen ürünlerin (platforms'da idefix olan) sale_price değerini Idefix'e gönderir.
+    """
+    with app.app_context():
+        import json as json_module
+        from models import Product
+        from idefix.idefix_service import idefix_service
+        
+        logger.info("=" * 80)
+        logger.info("[IDEFIX-PRICE] 💰 Trendyol → Idefix fiyat senkronizasyonu başlatıldı")
+        logger.info(f"[IDEFIX-PRICE] ⏰ Zaman: {datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        try:
+            # 1. Idefix'te satılan ve fiyatı olan ürünleri bul
+            logger.info("[IDEFIX-PRICE] 📦 Step 1: Idefix ürünleri okunuyor...")
+            idefix_products = Product.query.filter(
+                Product.platforms.ilike('%idefix%'),
+                Product.sale_price.isnot(None),
+                Product.sale_price > 0
+            ).all()
+            logger.info(f"[IDEFIX-PRICE] 📊 {len(idefix_products)} fiyatlı Idefix ürünü bulundu")
+            
+            if not idefix_products:
+                logger.warning("[IDEFIX-PRICE] ⚠️ Fiyat güncellenecek ürün yok!")
+                return {"success": True, "message": "Güncellenecek ürün yok", "count": 0}
+            
+            # 2. Fiyat listesi hazırla
+            logger.info("[IDEFIX-PRICE] 💵 Step 2: Fiyat listesi hazırlanıyor...")
+            items = []
+            for product in idefix_products:
+                bc = product.barcode
+                if not bc:
+                    continue
+                
+                sale_price = float(product.sale_price or 0)
+                list_price = float(product.list_price or sale_price)
+                
+                if sale_price > 0:
+                    items.append({
+                        "barcode": bc,
+                        "salePrice": sale_price,
+                        "listPrice": list_price if list_price >= sale_price else sale_price
+                    })
+            
+            logger.info(f"[IDEFIX-PRICE] 📊 {len(items)} ürün fiyatı hazırlandı")
+            
+            # Örnek fiyatları göster
+            if items[:5]:
+                logger.info("[IDEFIX-PRICE] 📋 Örnek fiyatlar:")
+                for idx, it in enumerate(items[:5], 1):
+                    logger.info(f"[IDEFIX-PRICE]   {idx}. Barkod: {it['barcode']}, Satış: {it['salePrice']} TL, Liste: {it['listPrice']} TL")
+            
+            if not items:
+                logger.warning("[IDEFIX-PRICE] ⚠️ Gönderilecek fiyat yok!")
+                return {"success": True, "message": "Fiyat yok", "count": 0}
+            
+            # 3. Idefix'e gönder
+            logger.info("[IDEFIX-PRICE] 📤 Step 3: Fiyatlar Idefix'e gönderiliyor...")
+            result = idefix_service.update_prices(items)
+            
+            if result.get("success"):
+                logger.info(f"[IDEFIX-PRICE] ✅ Fiyat senkronizasyonu başarılı! {len(items)} ürün güncellendi")
+            else:
+                logger.error(f"[IDEFIX-PRICE] ❌ Hata: {result.get('error')}")
+            
+            logger.info("[IDEFIX-PRICE] 🏁 İşlem sona erdi")
+            logger.info("=" * 80)
+            
+            return {
+                "success": result.get("success", False),
+                "message": result.get("message", ""),
+                "count": len(items),
+                "details": result
+            }
+            
+        except Exception as e:
+            logger.error(f"[IDEFIX-PRICE] ❌ KRITIK HATA: {e}", exc_info=True)
+            logger.info("=" * 80)
+            return {"success": False, "error": str(e), "count": 0}
 
 def sync_woo_orders_background():
     """WooCommerce siparişlerini arka planda senkronize eder (zamanlayıcı için)"""

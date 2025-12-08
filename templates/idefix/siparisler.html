@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Idefix Siparişler - {{ seller_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        Idefix Siparişleri
+                    </h4>
+                    <a href="{{ url_for('idefix.index') }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i> Geri
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="siparislerTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Sipariş No</th>
+                                    <th>Tarih</th>
+                                    <th>Müşteri</th>
+                                    <th>Ürünler</th>
+                                    <th>Tutar</th>
+                                    <th>Durum</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Henüz sipariş bulunmuyor. API entegrasyonu tamamlandığında siparişler burada görünecek.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Idefix siparişleri yükle
+async function loadOrders() {
+    try {
+        const response = await fetch('/idefix/api/orders');
+        const data = await response.json();
+        console.log('Idefix siparişleri:', data);
+        // TODO: Tabloyu doldur
+    } catch (error) {
+        console.error('Siparişler yüklenirken hata:', error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadOrders);
+</script>
+{% endblock %}

@@ -1,0 +1,556 @@
+{% extends "base.html" %}
+
+{% block title %}Idefix Ürün Eşleştirme - {{ seller_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .idefix-header {
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+    }
+    
+    .sync-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+    }
+    
+    .stats-row {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-box {
+        flex: 1;
+        padding: 1rem;
+        border-radius: 10px;
+        text-align: center;
+    }
+    
+    .stat-box.total { background: #e3f2fd; color: #1976d2; }
+    .stat-box.matched { background: #e8f5e9; color: #388e3c; }
+    .stat-box.unmatched { background: #fff3e0; color: #f57c00; }
+    .stat-box.updated { background: #f3e5f5; color: #7b1fa2; }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .stat-label {
+        font-size: 0.85rem;
+        margin: 0;
+    }
+    
+    .btn-sync {
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 2rem;
+        font-size: 1.1rem;
+        border-radius: 8px;
+    }
+    
+    .btn-sync:hover {
+        background: linear-gradient(135deg, #e55a2b 0%, #e08316 100%);
+        color: white;
+    }
+    
+    .btn-sync:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+    
+    .product-table {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .product-table .card-header {
+        background: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 1rem 1.25rem;
+    }
+    
+    .table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        color: #6c757d;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+    
+    .barcode-text {
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+        background: #f1f3f4;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+    }
+    
+    .platform-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        margin-right: 0.25rem;
+    }
+    
+    .platform-trendyol { background: #ff6000; color: white; }
+    .platform-idefix { background: #ff6b35; color: white; }
+    .platform-hepsiburada { background: #ff6600; color: white; }
+    .platform-woocommerce { background: #96588a; color: white; }
+    
+    .status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .status-matched { background: #d4edda; color: #155724; }
+    .status-not_matched { background: #fff3cd; color: #856404; }
+    .status-approved { background: #cce5ff; color: #004085; }
+    
+    .match-modal-search {
+        position: relative;
+    }
+    
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .search-result-item {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .search-result-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .search-result-item:last-child {
+        border-bottom: none;
+    }
+    
+    .loading-spinner {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #ff6b35;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 0.5rem;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .nav-tabs .nav-link {
+        color: #6c757d;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #ff6b35;
+        font-weight: 600;
+        border-color: #dee2e6 #dee2e6 #fff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="idefix-header d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-0"><i class="fas fa-link me-2"></i>Ürün Eşleştirme</h4>
+            <p class="mb-0 opacity-75">{{ seller_name }} - Idefix ürünlerini mevcut ürünlerle eşleştirin</p>
+        </div>
+        <div>
+            <a href="{{ url_for('idefix.index') }}" class="btn btn-light btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Geri
+            </a>
+        </div>
+    </div>
+
+    <!-- Sync Card -->
+    <div class="sync-card">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h5><i class="fas fa-sync me-2"></i>Otomatik Eşleştirme</h5>
+                <p class="text-muted mb-0">
+                    Idefix'teki tüm ürünleri çeker ve barkod numarasına göre mevcut ürünlerinizle otomatik eşleştirir.
+                    Eşleşen ürünlere "idefix" platformu eklenir.
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-sync" id="syncBtn" onclick="syncProducts()">
+                    <i class="fas fa-sync-alt me-2"></i>Senkronize Et
+                </button>
+            </div>
+        </div>
+        
+        <!-- Stats -->
+        <div class="stats-row mt-4 d-none" id="statsRow">
+            <div class="stat-box total">
+                <p class="stat-number" id="statTotal">0</p>
+                <p class="stat-label">Idefix Ürün</p>
+            </div>
+            <div class="stat-box matched">
+                <p class="stat-number" id="statMatched">0</p>
+                <p class="stat-label">Eşleşen</p>
+            </div>
+            <div class="stat-box unmatched">
+                <p class="stat-number" id="statUnmatched">0</p>
+                <p class="stat-label">Eşleşmeyen</p>
+            </div>
+            <div class="stat-box updated">
+                <p class="stat-number" id="statUpdated">0</p>
+                <p class="stat-label">Güncellenen</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Tabs -->
+    <div class="product-table d-none" id="resultsSection">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs" id="resultTabs">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#unmatchedTab">
+                        <i class="fas fa-exclamation-triangle me-1"></i>Eşleşmeyenler
+                        <span class="badge bg-warning text-dark ms-1" id="unmatchedBadge">0</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#matchedTab">
+                        <i class="fas fa-check-circle me-1"></i>Eşleşenler
+                        <span class="badge bg-success ms-1" id="matchedBadge">0</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="tab-content">
+            <!-- Eşleşmeyenler -->
+            <div class="tab-pane fade show active" id="unmatchedTab">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Barkod</th>
+                                <th>Ürün Adı</th>
+                                <th>Stok Kodu</th>
+                                <th>Fiyat</th>
+                                <th>Stok</th>
+                                <th>Durum</th>
+                                <th style="width: 150px;">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="unmatchedTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    Senkronizasyon yapılmadı
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Eşleşenler -->
+            <div class="tab-pane fade" id="matchedTab">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Barkod</th>
+                                <th>Idefix Ürün</th>
+                                <th>Bizim Ürün</th>
+                                <th>Platformlar</th>
+                                <th>Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matchedTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    Senkronizasyon yapılmadı
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Manuel Eşleştirme Modal -->
+<div class="modal fade" id="matchModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-link me-2"></i>Manuel Eşleştirme</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label"><strong>Idefix Ürünü</strong></label>
+                    <div class="p-3 bg-light rounded">
+                        <p class="mb-1"><strong>Barkod:</strong> <span class="barcode-text" id="modalIdefixBarcode"></span></p>
+                        <p class="mb-0"><strong>Ürün:</strong> <span id="modalIdefixTitle"></span></p>
+                    </div>
+                </div>
+                
+                <div class="mb-3 match-modal-search">
+                    <label class="form-label"><strong>Eşleştirilecek Ürün</strong></label>
+                    <input type="text" class="form-control" id="searchOurProduct" 
+                           placeholder="Barkod veya ürün adı ile arayın..." autocomplete="off">
+                    <div class="search-results d-none" id="searchResults"></div>
+                </div>
+                
+                <div class="mb-3 d-none" id="selectedProductBox">
+                    <label class="form-label"><strong>Seçilen Ürün</strong></label>
+                    <div class="p-3 bg-success bg-opacity-10 rounded border border-success">
+                        <p class="mb-1"><strong>Barkod:</strong> <span class="barcode-text" id="selectedBarcode"></span></p>
+                        <p class="mb-0"><strong>Ürün:</strong> <span id="selectedTitle"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-success" id="confirmMatchBtn" onclick="confirmMatch()" disabled>
+                    <i class="fas fa-check me-1"></i>Eşleştir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let syncResults = null;
+let selectedOurBarcode = null;
+let currentIdefixBarcode = null;
+
+async function syncProducts() {
+    const btn = document.getElementById('syncBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span>Senkronize ediliyor...';
+    
+    try {
+        const response = await fetch('/idefix/api/sync-products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            syncResults = data;
+            updateStats(data);
+            renderResults(data);
+            document.getElementById('statsRow').classList.remove('d-none');
+            document.getElementById('resultsSection').classList.remove('d-none');
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    } catch (error) {
+        console.error('Sync hatası:', error);
+        alert('Bağlantı hatası: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Senkronize Et';
+    }
+}
+
+function updateStats(data) {
+    document.getElementById('statTotal').textContent = data.total_idefix || 0;
+    document.getElementById('statMatched').textContent = data.matched_count || 0;
+    document.getElementById('statUnmatched').textContent = data.unmatched_count || 0;
+    document.getElementById('statUpdated').textContent = data.updated_count || 0;
+    
+    document.getElementById('unmatchedBadge').textContent = data.unmatched_count || 0;
+    document.getElementById('matchedBadge').textContent = data.matched_count || 0;
+}
+
+function renderResults(data) {
+    // Eşleşmeyenler
+    const unmatchedBody = document.getElementById('unmatchedTableBody');
+    if (data.unmatched && data.unmatched.length > 0) {
+        unmatchedBody.innerHTML = data.unmatched.map(p => `
+            <tr>
+                <td><span class="barcode-text">${p.barcode}</span></td>
+                <td>${p.title || '-'}</td>
+                <td>${p.vendorStockCode || '-'}</td>
+                <td>${p.price || 0} ₺</td>
+                <td>${p.inventoryQuantity || 0}</td>
+                <td><span class="status-badge status-${p.idefix_status || 'not_matched'}">${p.idefix_status || '-'}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="openMatchModal('${p.barcode}', '${(p.title || '').replace(/'/g, "\\'")}')">
+                        <i class="fas fa-link me-1"></i>Eşleştir
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    } else {
+        unmatchedBody.innerHTML = '<tr><td colspan="7" class="text-center text-success py-4"><i class="fas fa-check-circle me-2"></i>Tüm ürünler eşleşti!</td></tr>';
+    }
+    
+    // Eşleşenler
+    const matchedBody = document.getElementById('matchedTableBody');
+    if (data.matched && data.matched.length > 0) {
+        matchedBody.innerHTML = data.matched.map(p => `
+            <tr>
+                <td><span class="barcode-text">${p.barcode}</span></td>
+                <td>${p.title || '-'}</td>
+                <td>${p.our_title || '-'}</td>
+                <td>${renderPlatforms(p.platforms || [])}</td>
+                <td><span class="status-badge status-matched">Eşleşti</span></td>
+            </tr>
+        `).join('');
+    } else {
+        matchedBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Henüz eşleşen ürün yok</td></tr>';
+    }
+}
+
+function renderPlatforms(platforms) {
+    return platforms.map(p => `<span class="platform-badge platform-${p}">${p}</span>`).join('');
+}
+
+function openMatchModal(idefixBarcode, idefixTitle) {
+    currentIdefixBarcode = idefixBarcode;
+    selectedOurBarcode = null;
+    
+    document.getElementById('modalIdefixBarcode').textContent = idefixBarcode;
+    document.getElementById('modalIdefixTitle').textContent = idefixTitle;
+    document.getElementById('searchOurProduct').value = '';
+    document.getElementById('searchResults').classList.add('d-none');
+    document.getElementById('selectedProductBox').classList.add('d-none');
+    document.getElementById('confirmMatchBtn').disabled = true;
+    
+    new bootstrap.Modal(document.getElementById('matchModal')).show();
+}
+
+// Ürün arama
+let searchTimeout = null;
+document.getElementById('searchOurProduct').addEventListener('input', function() {
+    const search = this.value.trim();
+    
+    clearTimeout(searchTimeout);
+    
+    if (search.length < 2) {
+        document.getElementById('searchResults').classList.add('d-none');
+        return;
+    }
+    
+    searchTimeout = setTimeout(async () => {
+        try {
+            const response = await fetch(`/idefix/api/our-products?search=${encodeURIComponent(search)}`);
+            const data = await response.json();
+            
+            if (data.success && data.products.length > 0) {
+                const resultsDiv = document.getElementById('searchResults');
+                resultsDiv.innerHTML = data.products.map(p => `
+                    <div class="search-result-item" onclick="selectProduct('${p.barcode}', '${(p.title || '').replace(/'/g, "\\'")}')">
+                        <div><strong>${p.barcode}</strong></div>
+                        <div class="text-muted small">${p.title || ''} - ${p.color || ''} - ${p.size || ''}</div>
+                    </div>
+                `).join('');
+                resultsDiv.classList.remove('d-none');
+            } else {
+                document.getElementById('searchResults').classList.add('d-none');
+            }
+        } catch (error) {
+            console.error('Arama hatası:', error);
+        }
+    }, 300);
+});
+
+function selectProduct(barcode, title) {
+    selectedOurBarcode = barcode;
+    
+    document.getElementById('selectedBarcode').textContent = barcode;
+    document.getElementById('selectedTitle').textContent = title;
+    document.getElementById('selectedProductBox').classList.remove('d-none');
+    document.getElementById('searchResults').classList.add('d-none');
+    document.getElementById('searchOurProduct').value = barcode;
+    document.getElementById('confirmMatchBtn').disabled = false;
+}
+
+async function confirmMatch() {
+    if (!currentIdefixBarcode || !selectedOurBarcode) {
+        alert('Lütfen bir ürün seçin');
+        return;
+    }
+    
+    const btn = document.getElementById('confirmMatchBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span>Eşleştiriliyor...';
+    
+    try {
+        const response = await fetch('/idefix/api/match-product', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                idefix_barcode: currentIdefixBarcode,
+                our_barcode: selectedOurBarcode
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('matchModal')).hide();
+            alert('Ürün başarıyla eşleştirildi!');
+            // Tablodan kaldır ve yeniden senkronize et
+            syncProducts();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    } catch (error) {
+        console.error('Eşleştirme hatası:', error);
+        alert('Bağlantı hatası: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i>Eşleştir';
+    }
+}
+
+// Modal dışına tıklayınca arama sonuçlarını kapat
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.match-modal-search')) {
+        document.getElementById('searchResults').classList.add('d-none');
+    }
+});
+</script>
+{% endblock %}

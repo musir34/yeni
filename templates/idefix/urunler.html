@@ -1,0 +1,724 @@
+{% extends "base.html" %}
+
+{% block title %}Idefix Ürünler - {{ seller_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .idefix-header {
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+    }
+    
+    .idefix-header h4 {
+        margin: 0;
+        font-weight: 600;
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        transition: transform 0.2s, box-shadow 0.2s;
+        border-left: 4px solid;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+    
+    .stats-card.total { border-left-color: #3498db; }
+    .stats-card.active { border-left-color: #27ae60; }
+    .stats-card.pending { border-left-color: #f39c12; }
+    .stats-card.inactive { border-left-color: #e74c3c; }
+    
+    .stats-number {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .stats-label {
+        color: #7f8c8d;
+        font-size: 0.875rem;
+        margin: 0;
+    }
+    
+    .search-box {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+    }
+    
+    .product-table-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .product-table-card .card-header {
+        background: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 1rem 1.25rem;
+    }
+    
+    .product-img {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .product-img-placeholder {
+        width: 60px;
+        height: 60px;
+        background: #f1f3f4;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #bdc3c7;
+    }
+    
+    .status-badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-approved { background: #d4edda; color: #155724; }
+    .status-pending, .status-not_matched { background: #fff3cd; color: #856404; }
+    .status-rejected { background: #f8d7da; color: #721c24; }
+    .status-matched { background: #cce5ff; color: #004085; }
+    
+    .table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        border-bottom: 2px solid #e9ecef !important;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        padding: 1rem 0.75rem;
+    }
+    
+    .table tbody tr {
+        transition: background 0.15s;
+    }
+    
+    .table tbody tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .price-text {
+        font-weight: 600;
+        color: #27ae60;
+    }
+    
+    .compare-price {
+        text-decoration: line-through;
+        color: #95a5a6;
+        font-size: 0.85rem;
+    }
+    
+    .stock-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+    
+    .stock-high { background: #d4edda; color: #155724; }
+    .stock-medium { background: #fff3cd; color: #856404; }
+    .stock-low { background: #f8d7da; color: #721c24; }
+    .stock-zero { background: #e9ecef; color: #6c757d; }
+    
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255,255,255,0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        border-radius: 12px;
+    }
+    
+    .pagination-wrapper {
+        padding: 1rem 1.25rem;
+        background: #f8f9fa;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .btn-idefix {
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        border: none;
+        color: white;
+    }
+    
+    .btn-idefix:hover {
+        background: linear-gradient(135deg, #e55a2b 0%, #e08316 100%);
+        color: white;
+    }
+    
+    .empty-state {
+        padding: 4rem 2rem;
+        text-align: center;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        color: #dee2e6;
+        margin-bottom: 1rem;
+    }
+    
+    .barcode-text {
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+        background: #f1f3f4;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+    }
+    
+    .product-title {
+        font-weight: 500;
+        color: #2c3e50;
+        margin-bottom: 0.25rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    .product-code {
+        font-size: 0.8rem;
+        color: #7f8c8d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="idefix-header d-flex justify-content-between align-items-center">
+        <div>
+            <h4><i class="fas fa-box me-2"></i>Idefix Ürünleri</h4>
+            <p class="mb-0 opacity-75">{{ seller_name }} - Satıcı ID: {{ seller_id }}</p>
+        </div>
+        <div>
+            <a href="{{ url_for('idefix.index') }}" class="btn btn-light btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Geri
+            </a>
+            <button class="btn btn-light btn-sm ms-2" onclick="loadProducts()">
+                <i class="fas fa-sync-alt me-1"></i> Yenile
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4" id="statsRow">
+        <div class="col-md-2 mb-3">
+            <div class="stats-card total">
+                <p class="stats-number" id="totalProducts">-</p>
+                <p class="stats-label"><i class="fas fa-boxes me-1"></i>Toplam</p>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="stats-card" style="border-left-color: #28a745;">
+                <p class="stats-number" id="matchedProducts">-</p>
+                <p class="stats-label"><i class="fas fa-link me-1"></i>Eşleşen</p>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="stats-card" style="border-left-color: #dc3545;">
+                <p class="stats-number" id="unmatchedProducts">-</p>
+                <p class="stats-label"><i class="fas fa-unlink me-1"></i>Eşleşmeyen</p>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="stats-card active">
+                <p class="stats-number" id="activeProducts">-</p>
+                <p class="stats-label"><i class="fas fa-check-circle me-1"></i>Onaylı</p>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="stats-card pending">
+                <p class="stats-number" id="pendingProducts">-</p>
+                <p class="stats-label"><i class="fas fa-clock me-1"></i>Bekleyen</p>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="stats-card inactive">
+                <p class="stats-number" id="inactiveProducts">-</p>
+                <p class="stats-label"><i class="fas fa-times-circle me-1"></i>Pasif</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Box -->
+    <div class="search-box">
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="fas fa-barcode"></i></span>
+                    <input type="text" id="barcodeSearch" class="form-control" placeholder="Barkod ile ara...">
+                    <button class="btn btn-idefix" onclick="searchByBarcode()">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <select id="statusFilter" class="form-select" onchange="filterProducts()">
+                    <option value="">Tüm Durumlar</option>
+                    <option value="approved">Onaylı</option>
+                    <option value="pending">Beklemede</option>
+                    <option value="not_matched">Eşleşmemiş</option>
+                    <option value="rejected">Reddedilmiş</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select id="matchFilter" class="form-select" onchange="filterProducts()">
+                    <option value="">Tüm Eşleşmeler</option>
+                    <option value="matched">Eşleşen</option>
+                    <option value="unmatched">Eşleşmeyen</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select id="limitSelect" class="form-select" onchange="changeLimit()">
+                    <option value="5" selected>5 Ürün</option>
+                    <option value="25">25 Ürün</option>
+                    <option value="50">50 Ürün</option>
+                    <option value="100">100 Ürün</option>
+                </select>
+            </div>
+            <div class="col-md-3 text-end">
+                <button class="btn btn-outline-secondary me-2" onclick="clearFilters()">
+                    <i class="fas fa-times me-1"></i>Temizle
+                </button>
+                <button class="btn btn-outline-primary" onclick="exportProducts()">
+                    <i class="fas fa-download me-1"></i>Excel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Table -->
+    <div class="product-table-card position-relative">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Ürün Listesi</h5>
+            <span id="productCount" class="text-muted">Yükleniyor...</span>
+        </div>
+        
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="text-center">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Yükleniyor...</span>
+                </div>
+                <p class="mb-0 text-muted">Ürünler yükleniyor...</p>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="productsTable">
+                <thead>
+                    <tr>
+                        <th style="width: 70px;">Görsel</th>
+                        <th>Ürün Bilgisi</th>
+                        <th style="width: 150px;">Barkod</th>
+                        <th style="width: 100px;">Stok</th>
+                        <th style="width: 120px;">Fiyat</th>
+                        <th style="width: 120px;">Durum</th>
+                        <th style="width: 100px;">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody id="productsTableBody">
+                    <!-- Ürünler buraya yüklenecek -->
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Empty State -->
+        <div class="empty-state d-none" id="emptyState">
+            <i class="fas fa-box-open"></i>
+            <h5>Ürün Bulunamadı</h5>
+            <p class="mb-0">Henüz Idefix'e yüklenmiş ürün bulunmuyor veya arama kriterlerinize uygun ürün yok.</p>
+        </div>
+        
+        <!-- Error State -->
+        <div class="empty-state d-none" id="errorState">
+            <i class="fas fa-exclamation-triangle text-warning"></i>
+            <h5>Bir Hata Oluştu</h5>
+            <p class="mb-3" id="errorMessage">Ürünler yüklenirken bir hata oluştu.</p>
+            <button class="btn btn-idefix" onclick="loadProducts()">
+                <i class="fas fa-redo me-1"></i>Tekrar Dene
+            </button>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="pagination-wrapper" id="paginationWrapper">
+            <div class="d-flex justify-content-between align-items-center">
+                <p class="mb-0 text-muted" id="paginationInfo">Sayfa 1</p>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0" id="pagination">
+                        <!-- Sayfalama butonları -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Detail Modal -->
+<div class="modal fade" id="productDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Ürün Detayı</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="productDetailBody">
+                <!-- Ürün detayları buraya yüklenecek -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentPage = 1;
+let currentLimit = 5;  // Test için 5
+let allProducts = [];
+let filteredProducts = [];
+
+// Sayfa yüklendiğinde ürünleri çek
+document.addEventListener('DOMContentLoaded', function() {
+    loadProducts();
+    
+    // Enter tuşu ile arama
+    document.getElementById('barcodeSearch').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchByBarcode();
+        }
+    });
+});
+
+async function loadProducts() {
+    console.log('loadProducts başladı - TÜM ÜRÜNLER');
+    showLoading(true);
+    hideStates();
+    
+    try {
+        // Tüm ürünleri çek (all=true parametresi ile)
+        console.log('API çağrısı yapılıyor:', `/idefix/api/products?all=true`);
+        const response = await fetch(`/idefix/api/products?all=true`);
+        console.log('API yanıtı:', response.status);
+        const data = await response.json();
+        console.log('API data - toplam ürün:', data.products?.length || 0);
+        
+        if (data.success) {
+            allProducts = data.products || [];
+            filteredProducts = [...allProducts];
+            updateStats();
+            renderProducts();
+            document.getElementById('productCount').textContent = `Toplam ${allProducts.length} ürün`;
+        } else {
+            showError(data.error || 'Ürünler yüklenirken bir hata oluştu');
+        }
+    } catch (error) {
+        console.error('Ürün yükleme hatası:', error);
+        showError('Bağlantı hatası: ' + error.message);
+    } finally {
+        showLoading(false);
+    }
+}
+
+function renderProducts() {
+    const tbody = document.getElementById('productsTableBody');
+    
+    if (filteredProducts.length === 0) {
+        tbody.innerHTML = '';
+        document.getElementById('emptyState').classList.remove('d-none');
+        document.getElementById('paginationWrapper').classList.add('d-none');
+        return;
+    }
+    
+    document.getElementById('emptyState').classList.add('d-none');
+    document.getElementById('paginationWrapper').classList.remove('d-none');
+    
+    tbody.innerHTML = filteredProducts.map(product => {
+        const imageUrl = product.images && product.images.length > 0 ? product.images[0].url : null;
+        const statusClass = getStatusClass(product.status);
+        const statusText = getStatusText(product.status);
+        const stockClass = getStockClass(product.inventoryQuantity);
+        const isMatched = product.is_matched;
+        const matchBadge = isMatched 
+            ? `<span class="badge bg-success ms-1" title="Bizde mevcut: ${product.our_title || ''}"><i class="fas fa-link"></i></span>`
+            : `<span class="badge bg-danger ms-1" title="Eşleşme yok"><i class="fas fa-unlink"></i></span>`;
+        
+        return `
+            <tr class="${isMatched ? '' : 'table-warning'}">
+                <td>
+                    ${imageUrl 
+                        ? `<img src="${imageUrl}" class="product-img" alt="${product.title}" onerror="this.parentElement.innerHTML='<div class=\\'product-img-placeholder\\'><i class=\\'fas fa-image\\'></i></div>'">`
+                        : `<div class="product-img-placeholder"><i class="fas fa-image"></i></div>`
+                    }
+                </td>
+                <td>
+                    <div class="product-title">${product.title || '-'} ${matchBadge}</div>
+                    <div class="product-code">
+                        <span class="me-2"><i class="fas fa-tag me-1"></i>${product.vendorStockCode || '-'}</span>
+                        <span><i class="fas fa-cube me-1"></i>${product.productMainId || '-'}</span>
+                    </div>
+                    ${isMatched && product.our_stock !== undefined ? `<small class="text-muted">Bizim stok: ${product.our_stock}</small>` : ''}
+                </td>
+                <td>
+                    <span class="barcode-text">${product.barcode || '-'}</span>
+                </td>
+                <td>
+                    <span class="stock-badge ${stockClass}">${product.inventoryQuantity || 0}</span>
+                </td>
+                <td>
+                    <div class="price-text">${formatPrice(product.price)} ₺</div>
+                    ${product.comparePrice && product.comparePrice > product.price 
+                        ? `<div class="compare-price">${formatPrice(product.comparePrice)} ₺</div>` 
+                        : ''
+                    }
+                </td>
+                <td>
+                    <span class="status-badge ${statusClass}">${statusText}</span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="showProductDetail('${product.barcode}')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function updateStats() {
+    const total = allProducts.length;
+    const matched = allProducts.filter(p => p.is_matched === true).length;
+    const unmatched = allProducts.filter(p => p.is_matched === false).length;
+    const active = allProducts.filter(p => p.status === 'approved').length;
+    const pending = allProducts.filter(p => p.status === 'pending' || p.status === 'not_matched').length;
+    const inactive = allProducts.filter(p => p.status === 'rejected').length;
+    
+    document.getElementById('totalProducts').textContent = total;
+    document.getElementById('matchedProducts').textContent = matched;
+    document.getElementById('unmatchedProducts').textContent = unmatched;
+    document.getElementById('activeProducts').textContent = active;
+    document.getElementById('pendingProducts').textContent = pending;
+    document.getElementById('inactiveProducts').textContent = inactive;
+}
+
+function getStatusClass(status) {
+    const classes = {
+        'approved': 'status-approved',
+        'pending': 'status-pending',
+        'matched': 'status-matched',
+        'not_matched': 'status-not_matched',
+        'rejected': 'status-rejected'
+    };
+    return classes[status] || 'status-pending';
+}
+
+function getStatusText(status) {
+    const texts = {
+        'approved': 'Onaylı',
+        'pending': 'Beklemede',
+        'matched': 'Eşleşmiş',
+        'not_matched': 'Eşleşmemiş',
+        'rejected': 'Reddedilmiş'
+    };
+    return texts[status] || status || 'Bilinmiyor';
+}
+
+function getStockClass(quantity) {
+    if (quantity === 0) return 'stock-zero';
+    if (quantity < 10) return 'stock-low';
+    if (quantity < 50) return 'stock-medium';
+    return 'stock-high';
+}
+
+function formatPrice(price) {
+    if (!price) return '0';
+    return new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(price);
+}
+
+async function searchByBarcode() {
+    const barcode = document.getElementById('barcodeSearch').value.trim();
+    if (!barcode) {
+        loadProducts();
+        return;
+    }
+    
+    showLoading(true);
+    
+    try {
+        const response = await fetch(`/idefix/api/products/search?barcode=${encodeURIComponent(barcode)}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            allProducts = data.products || [];
+            filteredProducts = [...allProducts];
+            updateStats();
+            renderProducts();
+            document.getElementById('productCount').textContent = `${allProducts.length} ürün bulundu`;
+        } else {
+            showError(data.error || 'Arama yapılırken bir hata oluştu');
+        }
+    } catch (error) {
+        console.error('Arama hatası:', error);
+        showError('Arama hatası: ' + error.message);
+    } finally {
+        showLoading(false);
+    }
+}
+
+function filterProducts() {
+    const status = document.getElementById('statusFilter').value;
+    const matchFilter = document.getElementById('matchFilter').value;
+    
+    filteredProducts = [...allProducts];
+    
+    // Durum filtresi
+    if (status) {
+        filteredProducts = filteredProducts.filter(p => p.status === status);
+    }
+    
+    // Eşleşme filtresi
+    if (matchFilter === 'matched') {
+        filteredProducts = filteredProducts.filter(p => p.is_matched === true);
+    } else if (matchFilter === 'unmatched') {
+        filteredProducts = filteredProducts.filter(p => p.is_matched === false);
+    }
+    
+    renderProducts();
+    document.getElementById('productCount').textContent = `${filteredProducts.length} ürün gösteriliyor`;
+}
+
+function changeLimit() {
+    currentLimit = parseInt(document.getElementById('limitSelect').value);
+    currentPage = 1;
+    loadProducts();
+}
+
+function clearFilters() {
+    document.getElementById('barcodeSearch').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('matchFilter').value = '';
+    document.getElementById('limitSelect').value = '5';
+    currentLimit = 5;
+    currentPage = 1;
+    loadProducts();
+}
+
+function showProductDetail(barcode) {
+    const product = allProducts.find(p => p.barcode === barcode);
+    if (!product) return;
+    
+    const imageUrl = product.images && product.images.length > 0 ? product.images[0].url : null;
+    
+    document.getElementById('productDetailBody').innerHTML = `
+        <div class="row">
+            <div class="col-md-4 text-center mb-3">
+                ${imageUrl 
+                    ? `<img src="${imageUrl}" class="img-fluid rounded" style="max-height: 250px;" alt="${product.title}">`
+                    : `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 200px;"><i class="fas fa-image fa-3x text-muted"></i></div>`
+                }
+            </div>
+            <div class="col-md-8">
+                <h5 class="mb-3">${product.title || '-'}</h5>
+                <table class="table table-sm">
+                    <tr><th style="width: 150px;">Barkod:</th><td><span class="barcode-text">${product.barcode || '-'}</span></td></tr>
+                    <tr><th>Satıcı Stok Kodu:</th><td>${product.vendorStockCode || '-'}</td></tr>
+                    <tr><th>Ana Ürün ID:</th><td>${product.productMainId || '-'}</td></tr>
+                    <tr><th>Marka ID:</th><td>${product.brandId || '-'}</td></tr>
+                    <tr><th>Kategori ID:</th><td>${product.categoryId || '-'}</td></tr>
+                    <tr><th>Stok:</th><td><span class="stock-badge ${getStockClass(product.inventoryQuantity)}">${product.inventoryQuantity || 0}</span></td></tr>
+                    <tr><th>Fiyat:</th><td class="price-text">${formatPrice(product.price)} ₺</td></tr>
+                    <tr><th>Karşılaştırma Fiyatı:</th><td>${formatPrice(product.comparePrice)} ₺</td></tr>
+                    <tr><th>Ağırlık:</th><td>${product.weight || '-'} gr</td></tr>
+                    <tr><th>Teslimat Süresi:</th><td>${product.deliveryDuration || '-'} gün</td></tr>
+                    <tr><th>Teslimat Tipi:</th><td>${product.deliveryType || '-'}</td></tr>
+                    <tr><th>Durum:</th><td><span class="status-badge ${getStatusClass(product.status)}">${getStatusText(product.status)}</span></td></tr>
+                    <tr><th>Oluşturulma Tarihi:</th><td>${product.statusDateCreatedAt ? new Date(product.statusDateCreatedAt).toLocaleDateString('tr-TR') : '-'}</td></tr>
+                    <tr><th>Ekleme Tipi:</th><td>${product.addType || '-'}</td></tr>
+                </table>
+                ${product.description ? `<div class="mt-3"><strong>Açıklama:</strong><p class="text-muted">${product.description}</p></div>` : ''}
+            </div>
+        </div>
+    `;
+    
+    new bootstrap.Modal(document.getElementById('productDetailModal')).show();
+}
+
+function exportProducts() {
+    if (filteredProducts.length === 0) {
+        alert('Dışa aktarılacak ürün bulunamadı!');
+        return;
+    }
+    
+    // CSV oluştur
+    const headers = ['Barkod', 'Ürün Adı', 'Stok Kodu', 'Stok', 'Fiyat', 'Karşılaştırma Fiyatı', 'Durum'];
+    const rows = filteredProducts.map(p => [
+        p.barcode || '',
+        (p.title || '').replace(/"/g, '""'),
+        p.vendorStockCode || '',
+        p.inventoryQuantity || 0,
+        p.price || 0,
+        p.comparePrice || 0,
+        getStatusText(p.status)
+    ]);
+    
+    let csv = '\ufeff' + headers.join(';') + '\n';
+    rows.forEach(row => {
+        csv += row.map(val => `"${val}"`).join(';') + '\n';
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `idefix_urunler_${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+}
+
+function showLoading(show) {
+    document.getElementById('loadingOverlay').classList.toggle('d-none', !show);
+}
+
+function hideStates() {
+    document.getElementById('emptyState').classList.add('d-none');
+    document.getElementById('errorState').classList.add('d-none');
+}
+
+function showError(message) {
+    document.getElementById('errorMessage').textContent = message;
+    document.getElementById('errorState').classList.remove('d-none');
+    document.getElementById('paginationWrapper').classList.add('d-none');
+    document.getElementById('productsTableBody').innerHTML = '';
+}
+</script>
+{% endblock %}

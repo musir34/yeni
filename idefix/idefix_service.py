@@ -1,0 +1,370 @@
+"""
+Idefix Satıcı Paneli Servisi
+Satıcı: Güllü shoes
+Satıcı ID: 10594
+"""
+
+import os
+import base64
+import requests
+from typing import Optional, Dict, Any, List
+from logger_config import app_logger
+
+class IdefixService:
+    """Idefix API entegrasyonu için servis sınıfı"""
+    
+    # Canlı ortam API URL'leri
+    PIM_BASE_URL = "https://merchantapi.idefix.com/pim"
+    OMS_BASE_URL = "https://merchantapi.idefix.com/oms"
+    
+    def __init__(self):
+        self.seller_id = os.getenv("IDEFIX_SELLER_ID", "10594")
+        self.seller_name = os.getenv("IDEFIX_SELLER_NAME", "Güllü shoes")
+        self.token = os.getenv("IDEFIX_TOKEN")
+        self.secret = os.getenv("IDEFIX_SECRET")
+        self._vendor_token = None
+        app_logger.info(f"[IDEFIX] Service başlatıldı - Seller ID: {self.seller_id}, Seller Name: {self.seller_name}")
+        app_logger.debug(f"[IDEFIX] Token mevcut: {bool(self.token)}, Secret mevcut: {bool(self.secret)}")
+        
+    def _get_vendor_token(self) -> str:
+        """API Key ve Secret'tan vendor token oluşturur (base64 encode)"""
+        if self._vendor_token is None:
+            credentials = f"{self.token}:{self.secret}"
+            self._vendor_token = base64.b64encode(credentials.encode()).decode()
+            app_logger.debug(f"[IDEFIX] Vendor token oluşturuldu")
+        return self._vendor_token
+        
+    def _get_headers(self) -> Dict[str, str]:
+        """API istekleri için gerekli header'ları döndürür"""
+        return {
+            "X-API-KEY": self._get_vendor_token(),
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+    
+    def get_products(self, page: int = 1, limit: int = 50, barcode: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Satıcının ürünlerini listeler
+        
+        Args:
+            page: Sayfa numarası
+            limit: Sayfa başına ürün sayısı
+            barcode: Barkod ile filtreleme (opsiyonel)
+        
+        Returns:
+            Ürün listesi
+        """
+        app_logger.info(f"[IDEFIX] get_products çağrıldı - page: {page}, limit: {limit}, barcode: {barcode}")
+        
+        try:
+            url = f"{self.PIM_BASE_URL}/pool/{self.seller_id}/list"
+            params: Dict[str, Any] = {
+                "page": page,
+                "limit": limit
+            }
+            
+            if barcode:
+                params["barcode"] = barcode
+            
+            app_logger.info(f"[IDEFIX] API isteği: GET {url}")
+            app_logger.debug(f"[IDEFIX] Params: {params}")
+            
+            response = requests.get(
+                url, 
+                headers=self._get_headers(),
+                params=params,
+                timeout=30
+            )
+            
+            app_logger.info(f"[IDEFIX] API yanıtı: Status {response.status_code}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                product_count = len(data.get('products', []))
+                app_logger.info(f"[IDEFIX] Başarılı: {product_count} ürün alındı")
+                return {
+                    "success": True,
+                    "products": data.get("products", []),
+                    "page": page,
+                    "limit": limit,
+                    "total": product_count
+                }
+            elif response.status_code == 401:
+                app_logger.error("[IDEFIX] API: Yetkilendirme hatası (401)")
+                return {
+                    "success": False,
+                    "error": "Yetkilendirme hatası. API Key ve Secret bilgilerini kontrol edin.",
+                    "products": []
+                }
+            elif response.status_code == 429:
+                app_logger.warning("[IDEFIX] API: Rate limit aşıldı (429)")
+                return {
+                    "success": False,
+                    "error": "API istek limiti aşıldı. Lütfen biraz bekleyip tekrar deneyin.",
+                    "products": []
+                }
+            else:
+                app_logger.error(f"[IDEFIX] API hatası: {response.status_code} - {response.text[:500]}")
+                return {
+                    "success": False,
+                    "error": f"API hatası: {response.status_code}",
+                    "products": []
+                }
+                
+        except requests.exceptions.Timeout:
+            app_logger.error("[IDEFIX] API: Zaman aşımı")
+            return {
+                "success": False,
+                "error": "İstek zaman aşımına uğradı",
+                "products": []
+            }
+        except requests.exceptions.RequestException as e:
+            app_logger.error(f"[IDEFIX] API bağlantı hatası: {str(e)}")
+            return {
+                "success": False,
+                "error": f"Bağlantı hatası: {str(e)}",
+                "products": []
+            }
+        except Exception as e:
+            app_logger.error(f"[IDEFIX] Beklenmeyen hata: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "products": []
+            }
+    
+    def get_product_by_barcode(self, barcode: str) -> Dict[str, Any]:
+        """Barkod ile ürün arar"""
+        return self.get_products(barcode=barcode)
+    
+    def get_all_products(self, max_pages: int = 100) -> Dict[str, Any]:
+        """
+        Tüm ürünleri sayfalama ile çeker
+        
+        Args:
+            max_pages: Maksimum sayfa sayısı (güvenlik için)
+        
+        Returns:
+            Tüm ürünlerin listesi
+        """
+        app_logger.info(f"[IDEFIX] Tüm ürünler çekiliyor (max_pages: {max_pages})")
+        
+        all_products = []
+        page = 1
+        limit = 100  # Maksimum limit
+        
+        while page <= max_pages:
+            result = self.get_products(page=page, limit=limit)
+            
+            if not result.get("success"):
+                app_logger.error(f"[IDEFIX] Sayfa {page} çekilirken hata: {result.get('error')}")
+                break
+            
+            products = result.get("products", [])
+            if not products:
+                app_logger.info(f"[IDEFIX] Sayfa {page} boş, çekme tamamlandı")
+                break
+            
+            all_products.extend(products)
+            app_logger.info(f"[IDEFIX] Sayfa {page}: {len(products)} ürün (toplam: {len(all_products)})")
+            
+            # Eğer gelen ürün sayısı limit'ten azsa, son sayfadayız
+            if len(products) < limit:
+                break
+            
+            page += 1
+        
+        app_logger.info(f"[IDEFIX] Toplam {len(all_products)} ürün çekildi")
+        
+        return {
+            "success": True,
+            "products": all_products,
+            "total": len(all_products)
+        }
+    
+    def get_orders(self, status: Optional[str] = None) -> Dict[str, Any]:
+        """Siparişleri getirir"""
+        # TODO: Sipariş entegrasyonu eklenecek
+        return {"success": False, "orders": [], "message": "Sipariş entegrasyonu henüz eklenmedi"}
+    
+    def update_stock(self, barcode: str, quantity: int, price: float = None) -> Dict[str, Any]:
+        """Tek ürün stok günceller"""
+        items = [{"barcode": barcode, "inventoryQuantity": quantity}]
+        if price:
+            items[0]["price"] = price
+        return self.update_stocks(items)
+    
+    def update_stocks(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Toplu stok ve fiyat güncelleme
+        
+        Args:
+            items: [{"barcode": "xxx", "inventoryQuantity": 10, "price": 100}, ...]
+        
+        Returns:
+            API yanıtı
+        """
+        app_logger.info(f"[IDEFIX] Stok güncelleme başlatıldı - {len(items)} ürün")
+        
+        try:
+            url = f"{self.PIM_BASE_URL}/catalog/{self.seller_id}/inventory-upload"
+            
+            # API formatına dönüştür
+            payload = {
+                "items": [
+                    {
+                        "barcode": item["barcode"],
+                        "inventoryQuantity": max(0, int(item.get("inventoryQuantity", 0))),
+                        "deliveryDuration": 1,
+                        "deliveryType": "regular"
+                    }
+                    for item in items if item.get("barcode")
+                ]
+            }
+            
+            app_logger.info(f"[IDEFIX] API isteği: POST {url}")
+            app_logger.debug(f"[IDEFIX] Payload örnek: {payload['items'][:3] if payload['items'] else 'boş'}")
+            
+            response = requests.post(
+                url,
+                headers=self._get_headers(),
+                json=payload,
+                timeout=60
+            )
+            
+            app_logger.info(f"[IDEFIX] API yanıtı: Status {response.status_code}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                app_logger.info(f"[IDEFIX] Stok güncelleme başarılı - batchRequestId: {data.get('batchRequestId', 'N/A')}")
+                return {
+                    "success": True,
+                    "batch_request_id": data.get("batchRequestId"),
+                    "message": f"{len(items)} ürün stok bilgisi gönderildi"
+                }
+            elif response.status_code == 401:
+                app_logger.error("[IDEFIX] Stok güncelleme: Yetkilendirme hatası (401)")
+                return {"success": False, "error": "Yetkilendirme hatası"}
+            else:
+                app_logger.error(f"[IDEFIX] Stok güncelleme hatası: {response.status_code} - {response.text[:500]}")
+                return {"success": False, "error": f"API hatası: {response.status_code}"}
+                
+        except requests.exceptions.Timeout:
+            app_logger.error("[IDEFIX] Stok güncelleme: Zaman aşımı")
+            return {"success": False, "error": "İstek zaman aşımına uğradı"}
+        except Exception as e:
+            app_logger.error(f"[IDEFIX] Stok güncelleme hatası: {str(e)}")
+            return {"success": False, "error": str(e)}
+    
+    def update_order_status(self, order_id: str, status: str) -> Dict[str, Any]:
+        """Sipariş durumunu günceller"""
+        # TODO: Sipariş durumu güncelleme endpoint'i eklenecek
+        return {"success": False, "message": "Sipariş durumu güncelleme henüz eklenmedi"}
+    
+    def update_prices(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Toplu fiyat güncelleme
+        
+        Args:
+            items: [{"barcode": "xxx", "salePrice": 100.0, "listPrice": 120.0}, ...]
+        
+        Returns:
+            API yanıtı
+        """
+        app_logger.info(f"[IDEFIX] Fiyat güncelleme başlatıldı - {len(items)} ürün")
+        
+        try:
+            url = f"{self.PIM_BASE_URL}/catalog/{self.seller_id}/price-upload"
+            
+            # API formatına dönüştür
+            payload = {
+                "items": [
+                    {
+                        "barcode": item["barcode"],
+                        "salePrice": float(item.get("salePrice", item.get("sale_price", 0))),
+                        "listPrice": float(item.get("listPrice", item.get("list_price", item.get("salePrice", item.get("sale_price", 0)))))
+                    }
+                    for item in items if item.get("barcode") and (item.get("salePrice") or item.get("sale_price"))
+                ]
+            }
+            
+            if not payload["items"]:
+                app_logger.warning("[IDEFIX] Fiyat güncellenecek ürün yok")
+                return {"success": True, "message": "Güncellenecek ürün yok"}
+            
+            app_logger.info(f"[IDEFIX] API isteği: POST {url}")
+            app_logger.debug(f"[IDEFIX] Payload örnek: {payload['items'][:3]}")
+            
+            # Batch gönderim (100'ür)
+            BATCH_SIZE = 100
+            total_success = 0
+            total_error = 0
+            batch_ids = []
+            
+            for i in range(0, len(payload["items"]), BATCH_SIZE):
+                batch = payload["items"][i:i+BATCH_SIZE]
+                batch_payload = {"items": batch}
+                
+                response = requests.post(
+                    url,
+                    headers=self._get_headers(),
+                    json=batch_payload,
+                    timeout=60
+                )
+                
+                app_logger.info(f"[IDEFIX] Batch {i//BATCH_SIZE + 1} yanıt: Status {response.status_code}")
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    batch_ids.append(data.get("batchRequestId", "N/A"))
+                    total_success += len(batch)
+                else:
+                    app_logger.error(f"[IDEFIX] Batch hatası: {response.status_code} - {response.text[:300]}")
+                    total_error += len(batch)
+            
+            app_logger.info(f"[IDEFIX] Fiyat güncelleme tamamlandı - Başarılı: {total_success}, Hatalı: {total_error}")
+            
+            return {
+                "success": total_error == 0,
+                "batch_request_ids": batch_ids,
+                "total_success": total_success,
+                "total_error": total_error,
+                "message": f"{total_success} ürün fiyatı gönderildi"
+            }
+                
+        except requests.exceptions.Timeout:
+            app_logger.error("[IDEFIX] Fiyat güncelleme: Zaman aşımı")
+            return {"success": False, "error": "İstek zaman aşımına uğradı"}
+        except Exception as e:
+            app_logger.error(f"[IDEFIX] Fiyat güncelleme hatası: {str(e)}")
+            return {"success": False, "error": str(e)}
+    
+    def update_stock_and_price(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Stok ve fiyatı birlikte günceller
+        
+        Args:
+            items: [{"barcode": "xxx", "quantity": 10, "salePrice": 100.0}, ...]
+        
+        Returns:
+            API yanıtı
+        """
+        app_logger.info(f"[IDEFIX] Stok ve fiyat güncelleme - {len(items)} ürün")
+        
+        # Önce stokları güncelle
+        stock_items = [{"barcode": it["barcode"], "inventoryQuantity": it.get("quantity", 0)} for it in items]
+        stock_result = self.update_stocks(stock_items)
+        
+        # Sonra fiyatları güncelle
+        price_items = [{"barcode": it["barcode"], "salePrice": it.get("salePrice"), "listPrice": it.get("listPrice")} for it in items if it.get("salePrice")]
+        price_result = self.update_prices(price_items) if price_items else {"success": True, "message": "Fiyat yok"}
+        
+        return {
+            "success": stock_result.get("success") and price_result.get("success"),
+            "stock_result": stock_result,
+            "price_result": price_result
+        }
+
+
+# Singleton instance
+idefix_service = IdefixService()

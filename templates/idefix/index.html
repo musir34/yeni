@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Idefix - {{ seller_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .loading-spinner {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #333;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 0.5rem;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-store me-2"></i>
+                        Idefix Satıcı Paneli
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <p><strong>Satıcı Adı:</strong> {{ seller_name }}</p>
+                            <p><strong>Satıcı ID:</strong> {{ seller_id }}</p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <button class="btn btn-success me-2" id="pushStockBtn" onclick="pushAllStocks()">
+                                <i class="fas fa-upload me-2"></i>Stokları Gönder
+                            </button>
+                            <button class="btn btn-warning" id="syncPriceBtn" onclick="syncPrices()">
+                                <i class="fas fa-tags me-2"></i>Fiyatları Senkronize Et
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-info text-white h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-shopping-cart fa-3x mb-3"></i>
+                                    <h5>Siparişler</h5>
+                                    <a href="{{ url_for('idefix.siparisler') }}" class="btn btn-light mt-2">
+                                        Görüntüle
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-success text-white h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-box fa-3x mb-3"></i>
+                                    <h5>Ürünler</h5>
+                                    <a href="{{ url_for('idefix.urunler') }}" class="btn btn-light mt-2">
+                                        Görüntüle
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card h-100" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                                <div class="card-body text-center text-white">
+                                    <i class="fas fa-link fa-3x mb-3"></i>
+                                    <h5>Eşleştirme</h5>
+                                    <a href="{{ url_for('idefix.eslestirme') }}" class="btn btn-light mt-2">
+                                        Eşleştir
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-warning text-dark h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-chart-bar fa-3x mb-3"></i>
+                                    <h5>Raporlar</h5>
+                                    <button class="btn btn-light mt-2" disabled>
+                                        Yakında
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function pushAllStocks() {
+    const btn = document.getElementById('pushStockBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span>Gönderiliyor...';
+    
+    try {
+        const response = await fetch('/idefix/api/push-all-stocks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(`✅ Stok gönderimi tamamlandı!\n\nToplam: ${data.total_products} ürün\nBaşarılı batch: ${data.success_count}/${data.batches_sent}`);
+        } else {
+            alert('❌ Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    } catch (error) {
+        console.error('Stok gönderimi hatası:', error);
+        alert('❌ Bağlantı hatası: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-upload me-2"></i>Stokları Gönder';
+    }
+}
+
+async function syncPrices() {
+    const btn = document.getElementById('syncPriceBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span>Senkronize ediliyor...';
+    
+    try {
+        const response = await fetch('/idefix/api/sync-prices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(`✅ Fiyat senkronizasyonu tamamlandı!\n\nToplam: ${data.total_products} ürün\nBaşarılı: ${data.total_success}\nHatalı: ${data.total_error}`);
+        } else {
+            alert('❌ Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    } catch (error) {
+        console.error('Fiyat senkronizasyonu hatası:', error);
+        alert('❌ Bağlantı hatası: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-tags me-2"></i>Fiyatları Senkronize Et';
+    }
+}
+</script>
+{% endblock %}

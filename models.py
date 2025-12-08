@@ -648,6 +648,15 @@ class Product(db.Model):
     status = db.Column(db.String(50), nullable=True)
     gtin = db.Column(db.String(255), nullable=True)
     last_update_date = db.Column(db.DateTime, nullable=True)
+    
+    # --- PLATFORM BİLGİLERİ ---
+    # Ürünün satıldığı platformlar (JSON array: ["trendyol", "idefix", "hepsiburada", "woocommerce"])
+    platforms = db.Column(db.Text, nullable=True, default='["trendyol"]')
+    
+    # Idefix spesifik alanlar
+    idefix_product_id = db.Column(db.String(255), nullable=True)  # Idefix'teki ürün reference ID
+    idefix_status = db.Column(db.String(50), nullable=True)  # approved, pending, not_matched vs.
+    idefix_last_sync = db.Column(db.DateTime, nullable=True)  # Son senkronizasyon tarihi
 
 
 # Eğer farklıysa, buradan da original_product_barcode'u kaldıralım.
