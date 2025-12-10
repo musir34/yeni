@@ -4,6 +4,11 @@
 
 {% block extra_css %}
 <style>
+    /* Genel Stil İyileştirmeleri - Arşiv Uyumlu */
+    body {
+        background-color: #f8f9fa;
+    }
+    
     .idefix-header {
         background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
         color: white;
@@ -22,14 +27,14 @@
         background: white;
         border-radius: 12px;
         padding: 1.25rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         border-left: 4px solid;
     }
     
     .stats-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        transform: translateY(-5px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
     }
     
     .stats-card.total { border-left-color: #3498db; }
@@ -223,11 +228,14 @@
             <h4><i class="fas fa-box me-2"></i>Idefix Ürünleri</h4>
             <p class="mb-0 opacity-75">{{ seller_name }} - Satıcı ID: {{ seller_id }}</p>
         </div>
-        <div>
-            <a href="{{ url_for('idefix.index') }}" class="btn btn-light btn-sm">
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('home.home') }}" class="btn btn-light">
+                <i class="fas fa-home me-2"></i>Anasayfa
+            </a>
+            <a href="{{ url_for('idefix.index') }}" class="btn btn-light">
                 <i class="fas fa-arrow-left me-1"></i> Geri
             </a>
-            <button class="btn btn-light btn-sm ms-2" onclick="loadProducts()">
+            <button class="btn btn-light" onclick="loadProducts()">
                 <i class="fas fa-sync-alt me-1"></i> Yenile
             </button>
         </div>

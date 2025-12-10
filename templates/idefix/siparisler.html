@@ -2,19 +2,98 @@
 
 {% block title %}Idefix Siparişler - {{ seller_name }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Genel Stil İyileştirmeleri - Arşiv Uyumlu */
+    body {
+        background-color: #f8f9fa;
+    }
+    
+    /* Idefix Header */
+    .idefix-header {
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+    }
+    
+    .idefix-header h4 {
+        margin: 0;
+        font-weight: 600;
+    }
+    
+    /* Kart Stilleri */
+    .card {
+        border: 1px solid #e9ecef;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        border-radius: 12px;
+    }
+    
+    .card-header {
+        background-color: #f8f9fa;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid rgba(0,0,0,.125);
+        border-radius: 12px 12px 0 0 !important;
+    }
+    
+    /* Tablo Stilleri */
+    .table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        border-bottom: 2px solid #e9ecef !important;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        padding: 1rem 0.75rem;
+    }
+    
+    .table tbody tr {
+        transition: background 0.15s;
+    }
+    
+    .table tbody tr:hover {
+        background: #f8f9fa;
+    }
+    
+    /* Durum Rozetleri */
+    .bg-orange { background-color: #fd7e14 !important; color: white; }
+    .bg-red { background-color: #dc3545 !important; color: white; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4">
+    <!-- Idefix Header -->
+    <div class="idefix-header d-flex justify-content-between align-items-center">
+        <div>
+            <h4><i class="fas fa-shopping-cart me-2"></i>Idefix Siparişleri</h4>
+            <p class="mb-0 opacity-75">{{ seller_name }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('home.home') }}" class="btn btn-light">
+                <i class="fas fa-home me-2"></i>Anasayfa
+            </a>
+            <a href="{{ url_for('idefix.index') }}" class="btn btn-light">
+                <i class="fas fa-arrow-left me-1"></i> Geri
+            </a>
+        </div>
+    </div>
+    
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">
-                        <i class="fas fa-shopping-cart me-2"></i>
-                        Idefix Siparişleri
-                    </h4>
-                    <a href="{{ url_for('idefix.index') }}" class="btn btn-light btn-sm">
-                        <i class="fas fa-arrow-left me-1"></i> Geri
-                    </a>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>Sipariş Listesi</h5>
+                    <button class="btn btn-outline-primary btn-sm" onclick="loadOrders()">
+                        <i class="fas fa-sync-alt me-1"></i> Yenile
+                    </button>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">

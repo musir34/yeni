@@ -4,6 +4,11 @@
 
 {% block extra_css %}
 <style>
+    /* Genel Stil İyileştirmeleri - Arşiv Uyumlu */
+    body {
+        background-color: #f8f9fa;
+    }
+    
     .idefix-header {
         background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
         color: white;
@@ -11,6 +16,19 @@
         border-radius: 12px;
         margin-bottom: 1.5rem;
         box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+    }
+    
+    /* Kart Stilleri - Arşiv Uyumlu */
+    .card {
+        border: 1px solid #e9ecef;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        border-radius: 12px;
+    }
+    
+    .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
     }
     
     .sync-card {
@@ -195,8 +213,11 @@
             <h4 class="mb-0"><i class="fas fa-link me-2"></i>Ürün Eşleştirme</h4>
             <p class="mb-0 opacity-75">{{ seller_name }} - Idefix ürünlerini mevcut ürünlerle eşleştirin</p>
         </div>
-        <div>
-            <a href="{{ url_for('idefix.index') }}" class="btn btn-light btn-sm">
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('home.home') }}" class="btn btn-light">
+                <i class="fas fa-home me-2"></i>Anasayfa
+            </a>
+            <a href="{{ url_for('idefix.index') }}" class="btn btn-light">
                 <i class="fas fa-arrow-left me-1"></i> Geri
             </a>
         </div>

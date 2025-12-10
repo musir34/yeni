@@ -187,7 +187,7 @@ class IdefixService:
         # TODO: Sipariş entegrasyonu eklenecek
         return {"success": False, "orders": [], "message": "Sipariş entegrasyonu henüz eklenmedi"}
     
-    def update_stock(self, barcode: str, quantity: int, price: float = None) -> Dict[str, Any]:
+    def update_stock(self, barcode: str, quantity: int, price: Optional[float] = None) -> Dict[str, Any]:
         """Tek ürün stok günceller"""
         items = [{"barcode": barcode, "inventoryQuantity": quantity}]
         if price:
@@ -197,9 +197,10 @@ class IdefixService:
     def update_stocks(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Toplu stok ve fiyat güncelleme
+        inventory-upload endpoint'i hem stok hem de fiyat güncellemesini destekler.
         
         Args:
-            items: [{"barcode": "xxx", "inventoryQuantity": 10, "price": 100}, ...]
+            items: [{"barcode": "xxx", "inventoryQuantity": 10, "price": 100, "comparePrice": 120}, ...]
         
         Returns:
             API yanıtı
@@ -209,18 +210,33 @@ class IdefixService:
         try:
             url = f"{self.PIM_BASE_URL}/catalog/{self.seller_id}/inventory-upload"
             
-            # API formatına dönüştür
-            payload = {
-                "items": [
-                    {
-                        "barcode": item["barcode"],
-                        "inventoryQuantity": max(0, int(item.get("inventoryQuantity", 0))),
-                        "deliveryDuration": 1,
-                        "deliveryType": "regular"
-                    }
-                    for item in items if item.get("barcode")
-                ]
-            }
+            # API formatına dönüştür - fiyat alanları da ekleniyor
+            processed_items = []
+            for item in items:
+                if not item.get("barcode"):
+                    continue
+                    
+                item_data = {
+                    "barcode": item["barcode"],
+                    "inventoryQuantity": max(0, int(item.get("inventoryQuantity", 0))),
+                    "deliveryDuration": 1,
+                    "deliveryType": "regular"
+                }
+                
+                # Fiyat alanları varsa ekle (price = satış fiyatı, comparePrice = liste fiyatı)
+                if item.get("price") or item.get("salePrice") or item.get("sale_price"):
+                    price = float(item.get("price") or item.get("salePrice") or item.get("sale_price", 0))
+                    if price > 0:
+                        item_data["price"] = price
+                        
+                if item.get("comparePrice") or item.get("listPrice") or item.get("list_price"):
+                    compare_price = float(item.get("comparePrice") or item.get("listPrice") or item.get("list_price", 0))
+                    if compare_price > 0:
+                        item_data["comparePrice"] = compare_price
+                        
+                processed_items.append(item_data)
+            
+            payload = {"items": processed_items}
             
             app_logger.info(f"[IDEFIX] API isteği: POST {url}")
             app_logger.debug(f"[IDEFIX] Payload örnek: {payload['items'][:3] if payload['items'] else 'boş'}")
@@ -265,6 +281,10 @@ class IdefixService:
         """
         Toplu fiyat güncelleme
         
+        Idefix API'de ayrı price-upload endpoint'i yok.
+        Fiyat güncellemesi inventory-upload endpoint'i üzerinden yapılıyor.
+        price = satış fiyatı, comparePrice = liste/karşılaştırma fiyatı
+        
         Args:
             items: [{"barcode": "xxx", "salePrice": 100.0, "listPrice": 120.0}, ...]
         
@@ -274,35 +294,45 @@ class IdefixService:
         app_logger.info(f"[IDEFIX] Fiyat güncelleme başlatıldı - {len(items)} ürün")
         
         try:
-            url = f"{self.PIM_BASE_URL}/catalog/{self.seller_id}/price-upload"
+            # inventory-upload endpoint'i hem stok hem fiyat güncellemesini destekliyor
+            url = f"{self.PIM_BASE_URL}/catalog/{self.seller_id}/inventory-upload"
             
-            # API formatına dönüştür
-            payload = {
-                "items": [
-                    {
-                        "barcode": item["barcode"],
-                        "salePrice": float(item.get("salePrice", item.get("sale_price", 0))),
-                        "listPrice": float(item.get("listPrice", item.get("list_price", item.get("salePrice", item.get("sale_price", 0)))))
-                    }
-                    for item in items if item.get("barcode") and (item.get("salePrice") or item.get("sale_price"))
-                ]
-            }
+            # API formatına dönüştür - fiyat için price ve comparePrice kullanılıyor
+            processed_items = []
+            for item in items:
+                if not item.get("barcode"):
+                    continue
+                    
+                sale_price = float(item.get("salePrice") or item.get("sale_price") or 0)
+                list_price = float(item.get("listPrice") or item.get("list_price") or sale_price)
+                
+                if sale_price <= 0:
+                    continue
+                    
+                item_data = {
+                    "barcode": item["barcode"],
+                    "price": sale_price,  # Satış fiyatı
+                    "comparePrice": list_price if list_price >= sale_price else sale_price,  # Liste fiyatı
+                    "deliveryDuration": 1,
+                    "deliveryType": "regular"
+                }
+                processed_items.append(item_data)
             
-            if not payload["items"]:
+            if not processed_items:
                 app_logger.warning("[IDEFIX] Fiyat güncellenecek ürün yok")
-                return {"success": True, "message": "Güncellenecek ürün yok"}
+                return {"success": True, "message": "Güncellenecek ürün yok", "total_success": 0, "total_error": 0}
             
             app_logger.info(f"[IDEFIX] API isteği: POST {url}")
-            app_logger.debug(f"[IDEFIX] Payload örnek: {payload['items'][:3]}")
+            app_logger.debug(f"[IDEFIX] Payload örnek: {processed_items[:3]}")
             
-            # Batch gönderim (100'ür)
+            # Batch gönderim (100'er)
             BATCH_SIZE = 100
             total_success = 0
             total_error = 0
             batch_ids = []
             
-            for i in range(0, len(payload["items"]), BATCH_SIZE):
-                batch = payload["items"][i:i+BATCH_SIZE]
+            for i in range(0, len(processed_items), BATCH_SIZE):
+                batch = processed_items[i:i+BATCH_SIZE]
                 batch_payload = {"items": batch}
                 
                 response = requests.post(
@@ -312,14 +342,15 @@ class IdefixService:
                     timeout=60
                 )
                 
-                app_logger.info(f"[IDEFIX] Batch {i//BATCH_SIZE + 1} yanıt: Status {response.status_code}")
+                app_logger.info(f"[IDEFIX] Fiyat Batch {i//BATCH_SIZE + 1} yanıt: Status {response.status_code}")
                 
                 if response.status_code == 200:
                     data = response.json()
                     batch_ids.append(data.get("batchRequestId", "N/A"))
                     total_success += len(batch)
+                    app_logger.info(f"[IDEFIX] ✅ Batch başarılı - batchRequestId: {data.get('batchRequestId', 'N/A')}")
                 else:
-                    app_logger.error(f"[IDEFIX] Batch hatası: {response.status_code} - {response.text[:300]}")
+                    app_logger.error(f"[IDEFIX] ❌ Batch hatası: {response.status_code} - {response.text[:300]}")
                     total_error += len(batch)
             
             app_logger.info(f"[IDEFIX] Fiyat güncelleme tamamlandı - Başarılı: {total_success}, Hatalı: {total_error}")
@@ -334,36 +365,41 @@ class IdefixService:
                 
         except requests.exceptions.Timeout:
             app_logger.error("[IDEFIX] Fiyat güncelleme: Zaman aşımı")
-            return {"success": False, "error": "İstek zaman aşımına uğradı"}
+            return {"success": False, "error": "İstek zaman aşımına uğradı", "total_success": 0, "total_error": len(items)}
         except Exception as e:
             app_logger.error(f"[IDEFIX] Fiyat güncelleme hatası: {str(e)}")
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": str(e), "total_success": 0, "total_error": len(items)}
     
     def update_stock_and_price(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Stok ve fiyatı birlikte günceller
+        Stok ve fiyatı birlikte günceller (tek API isteğiyle)
+        inventory-upload endpoint'i hem stok hem fiyat güncellemesini destekler.
         
         Args:
-            items: [{"barcode": "xxx", "quantity": 10, "salePrice": 100.0}, ...]
+            items: [{"barcode": "xxx", "quantity": 10, "salePrice": 100.0, "listPrice": 120.0}, ...]
         
         Returns:
             API yanıtı
         """
         app_logger.info(f"[IDEFIX] Stok ve fiyat güncelleme - {len(items)} ürün")
         
-        # Önce stokları güncelle
-        stock_items = [{"barcode": it["barcode"], "inventoryQuantity": it.get("quantity", 0)} for it in items]
-        stock_result = self.update_stocks(stock_items)
+        # Tek istek ile hem stok hem fiyat gönder
+        combined_items = []
+        for it in items:
+            item_data = {
+                "barcode": it["barcode"],
+                "inventoryQuantity": it.get("quantity", it.get("inventoryQuantity", 0))
+            }
+            
+            # Fiyat varsa ekle
+            if it.get("salePrice") or it.get("sale_price"):
+                item_data["price"] = float(it.get("salePrice") or it.get("sale_price", 0))
+            if it.get("listPrice") or it.get("list_price"):
+                item_data["comparePrice"] = float(it.get("listPrice") or it.get("list_price", 0))
+                
+            combined_items.append(item_data)
         
-        # Sonra fiyatları güncelle
-        price_items = [{"barcode": it["barcode"], "salePrice": it.get("salePrice"), "listPrice": it.get("listPrice")} for it in items if it.get("salePrice")]
-        price_result = self.update_prices(price_items) if price_items else {"success": True, "message": "Fiyat yok"}
-        
-        return {
-            "success": stock_result.get("success") and price_result.get("success"),
-            "stock_result": stock_result,
-            "price_result": price_result
-        }
+        return self.update_stocks(combined_items)
 
 
 # Singleton instance

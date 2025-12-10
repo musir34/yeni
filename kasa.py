@@ -5,6 +5,7 @@ from sqlalchemy import or_, desc, func
 from login_logout import login_required, roles_required
 from werkzeug.utils import secure_filename
 import os, uuid, locale
+import pandas as pd
 # imports altına ekle
 from models import KasaDurum
 from decimal import Decimal, InvalidOperation
@@ -167,11 +168,11 @@ def serve_receipt(fname):
 @login_required
 @roles_required('admin')
 def kasa_sayfasi():
-    # 🔧 TOPLAM FİLTRESİ (üstteki kartlar için)
     toplam_yil = request.args.get('toplam_yil', type=int)
     toplam_ay = request.args.get('toplam_ay', type=int)
+    bugun = datetime.now()
+    ay_filtresi_var = 'ay' in request.args and request.args.get('ay')
     
-    # 🔧 Filtreleme parametreleri (kayıt listesi için)
     yil = request.args.get('yil', type=int)
     ay = request.args.get('ay', type=int)
     baslangic_tarihi = request.args.get('baslangic_tarihi', '')
@@ -179,8 +180,12 @@ def kasa_sayfasi():
     tip = request.args.get('tip', '')
     arama = request.args.get('arama', '')
     durum = request.args.get('durum', '')
+    
+    sayfa = request.args.get('sayfa', 1, type=int)
+    sayfa_basina = request.args.get('adet', 10, type=int)
+    if sayfa_basina not in [10, 20, 50]:
+        sayfa_basina = 10
 
-    # 🔧 KAYIT LİSTESİ için base query
     base = (
         db.session.query(Kasa)
         .select_from(Kasa)
@@ -188,8 +193,8 @@ def kasa_sayfasi():
         .options(contains_eager(Kasa.kullanici))
     )
     
-    # Ay/Yıl filtresi (kayıt listesi için)
-    if yil and ay:
+    # Ay/Yıl filtresi - SADECE kullanıcı açıkça filtrelediyse uygula
+    if ay_filtresi_var and yil and ay:
         bas, son = month_bounds(yil, ay)
         base = base.filter(Kasa.tarih >= bas, Kasa.tarih < son)
 
@@ -224,65 +229,160 @@ def kasa_sayfasi():
         ))
 
     toplam_kayit = base.count()
-    # Tüm kayıtları getir (sayfalama yok)
-    kayitlar = (base
-                .order_by(desc(Kasa.tarih))
-                .all())
+    
+    if ay_filtresi_var:
+        kayitlar = base.order_by(desc(Kasa.tarih)).all()
+        toplam_sayfa = 1
+        sayfa = 1
+    else:
+        toplam_sayfa = (toplam_kayit + sayfa_basina - 1) // sayfa_basina
+        if toplam_sayfa == 0:
+            toplam_sayfa = 1
+        offset = (sayfa - 1) * sayfa_basina
+        kayitlar = base.order_by(desc(Kasa.tarih)).offset(offset).limit(sayfa_basina).all()
 
-    # 🎯 TOPLAMLAR: Minimal filtre (toplam_yil, toplam_ay)
-    # Eğer toplam_yil ve toplam_ay varsa o döneme filtrele, yoksa tüm zamanlar
-    if toplam_yil and toplam_ay:
+    # 🎯 TOPLAMLAR: Eğer ay filtresi varsa o aya göre, yoksa TÜM ZAMANLAR
+    # Bu sayede kullanıcı listedeki kayıtlarla toplamları eşleşir görür
+    if ay_filtresi_var and yil and ay:
+        # Ay filtresi var - o aya göre hesapla
+        toplam_yil = yil
+        toplam_ay = ay
         toplam_bas, toplam_son = month_bounds(toplam_yil, toplam_ay)
         toplam_filtre_metni = f"{toplam_ay}. Ay / {toplam_yil}"
+        
+        # ÖDENEN – Ay filtresine göre
+        odenen_gelir_query = (
+            db.session.query(func.sum(Odeme.tutar))
+            .select_from(Odeme)
+            .join(Kasa, Kasa.id == Odeme.kasa_id)
+            .filter(Kasa.tip == 'gelir')
+            .filter(Odeme.odeme_tarihi >= toplam_bas, Odeme.odeme_tarihi < toplam_son)
+        )
+        odenen_gelir = odenen_gelir_query.scalar() or 0
+        
+        odenen_gider_query = (
+            db.session.query(func.sum(Odeme.tutar))
+            .select_from(Odeme)
+            .join(Kasa, Kasa.id == Odeme.kasa_id)
+            .filter(Kasa.tip == 'gider')
+            .filter(Odeme.odeme_tarihi >= toplam_bas, Odeme.odeme_tarihi < toplam_son)
+        )
+        odenen_gider = odenen_gider_query.scalar() or 0
+        
+        # BEKLEYEN – Ay filtresine göre
+        # ODENMEDI: Tam tutar bekliyor
+        # KISMI_ODENDI: Kalan tutar bekliyor (tutar - ödenen)
+        
+        # Ödenmemiş kayıtların tam tutarı
+        bekleyen_gelir_odenmedi = (
+            db.session.query(func.sum(Kasa.tutar))
+            .filter(Kasa.tip == 'gelir', Kasa.durum == KasaDurum.ODENMEDI)
+            .filter(Kasa.tarih >= toplam_bas, Kasa.tarih < toplam_son)
+            .scalar() or 0
+        )
+        
+        # Kısmi ödenen kayıtların kalan tutarı
+        kismi_gelir_kayitlar = (
+            db.session.query(Kasa.id, Kasa.tutar)
+            .filter(Kasa.tip == 'gelir', Kasa.durum == KasaDurum.KISMI_ODENDI)
+            .filter(Kasa.tarih >= toplam_bas, Kasa.tarih < toplam_son)
+            .all()
+        )
+        bekleyen_gelir_kismi = 0
+        for kasa_id, kasa_tutar in kismi_gelir_kayitlar:
+            odenen = db.session.query(func.sum(Odeme.tutar)).filter(Odeme.kasa_id == kasa_id).scalar() or 0
+            bekleyen_gelir_kismi += (kasa_tutar - odenen)
+        
+        bekleyen_gelir = bekleyen_gelir_odenmedi + bekleyen_gelir_kismi
+        
+        # Gider için aynı mantık
+        bekleyen_gider_odenmedi = (
+            db.session.query(func.sum(Kasa.tutar))
+            .filter(Kasa.tip == 'gider', Kasa.durum == KasaDurum.ODENMEDI)
+            .filter(Kasa.tarih >= toplam_bas, Kasa.tarih < toplam_son)
+            .scalar() or 0
+        )
+        
+        kismi_gider_kayitlar = (
+            db.session.query(Kasa.id, Kasa.tutar)
+            .filter(Kasa.tip == 'gider', Kasa.durum == KasaDurum.KISMI_ODENDI)
+            .filter(Kasa.tarih >= toplam_bas, Kasa.tarih < toplam_son)
+            .all()
+        )
+        bekleyen_gider_kismi = 0
+        for kasa_id, kasa_tutar in kismi_gider_kayitlar:
+            odenen = db.session.query(func.sum(Odeme.tutar)).filter(Odeme.kasa_id == kasa_id).scalar() or 0
+            bekleyen_gider_kismi += (kasa_tutar - odenen)
+        
+        bekleyen_gider = bekleyen_gider_odenmedi + bekleyen_gider_kismi
     else:
-        toplam_bas = None
-        toplam_son = None
+        # Ay filtresi yok - TÜM ZAMANLAR için hesapla
+        toplam_yil = None
+        toplam_ay = None
         toplam_filtre_metni = "Tüm Zamanlar"
-    
-    # ÖDENEN – Toplam filtresine göre
-    odenen_gelir_query = (
-        db.session.query(func.sum(Odeme.tutar))
-        .select_from(Odeme)
-        .join(Kasa, Kasa.id == Odeme.kasa_id)
-        .filter(Kasa.tip == 'gelir')
-    )
-    if toplam_bas and toplam_son:
-        odenen_gelir_query = odenen_gelir_query.filter(Odeme.odeme_tarihi >= toplam_bas, Odeme.odeme_tarihi < toplam_son)
-    odenen_gelir = odenen_gelir_query.scalar() or 0
-    
-    odenen_gider_query = (
-        db.session.query(func.sum(Odeme.tutar))
-        .select_from(Odeme)
-        .join(Kasa, Kasa.id == Odeme.kasa_id)
-        .filter(Kasa.tip == 'gider')
-    )
-    if toplam_bas and toplam_son:
-        odenen_gider_query = odenen_gider_query.filter(Odeme.odeme_tarihi >= toplam_bas, Odeme.odeme_tarihi < toplam_son)
-    odenen_gider = odenen_gider_query.scalar() or 0
+        
+        # ÖDENEN – Tüm zamanlar
+        odenen_gelir = (
+            db.session.query(func.sum(Odeme.tutar))
+            .select_from(Odeme)
+            .join(Kasa, Kasa.id == Odeme.kasa_id)
+            .filter(Kasa.tip == 'gelir')
+            .scalar() or 0
+        )
+        
+        odenen_gider = (
+            db.session.query(func.sum(Odeme.tutar))
+            .select_from(Odeme)
+            .join(Kasa, Kasa.id == Odeme.kasa_id)
+            .filter(Kasa.tip == 'gider')
+            .scalar() or 0
+        )
+        
+        # BEKLEYEN – Tüm zamanlar
+        # ODENMEDI: Tam tutar bekliyor
+        # KISMI_ODENDI: Kalan tutar bekliyor (tutar - ödenen)
+        
+        # Ödenmemiş kayıtların tam tutarı
+        bekleyen_gelir_odenmedi = (
+            db.session.query(func.sum(Kasa.tutar))
+            .filter(Kasa.tip == 'gelir', Kasa.durum == KasaDurum.ODENMEDI)
+            .scalar() or 0
+        )
+        
+        # Kısmi ödenen kayıtların kalan tutarı
+        kismi_gelir_kayitlar = (
+            db.session.query(Kasa.id, Kasa.tutar)
+            .filter(Kasa.tip == 'gelir', Kasa.durum == KasaDurum.KISMI_ODENDI)
+            .all()
+        )
+        bekleyen_gelir_kismi = 0
+        for kasa_id, kasa_tutar in kismi_gelir_kayitlar:
+            odenen = db.session.query(func.sum(Odeme.tutar)).filter(Odeme.kasa_id == kasa_id).scalar() or 0
+            bekleyen_gelir_kismi += (kasa_tutar - odenen)
+        
+        bekleyen_gelir = bekleyen_gelir_odenmedi + bekleyen_gelir_kismi
+        
+        # Gider için aynı mantık
+        bekleyen_gider_odenmedi = (
+            db.session.query(func.sum(Kasa.tutar))
+            .filter(Kasa.tip == 'gider', Kasa.durum == KasaDurum.ODENMEDI)
+            .scalar() or 0
+        )
+        
+        kismi_gider_kayitlar = (
+            db.session.query(Kasa.id, Kasa.tutar)
+            .filter(Kasa.tip == 'gider', Kasa.durum == KasaDurum.KISMI_ODENDI)
+            .all()
+        )
+        bekleyen_gider_kismi = 0
+        for kasa_id, kasa_tutar in kismi_gider_kayitlar:
+            odenen = db.session.query(func.sum(Odeme.tutar)).filter(Odeme.kasa_id == kasa_id).scalar() or 0
+            bekleyen_gider_kismi += (kasa_tutar - odenen)
+        
+        bekleyen_gider = bekleyen_gider_odenmedi + bekleyen_gider_kismi
     
     net_durum = odenen_gelir - odenen_gider
-
-    # BEKLEYEN – Toplam filtresine göre
-    bekleyen_gelir_query = (
-        db.session.query(func.sum(Kasa.tutar))
-        .filter(Kasa.tip == 'gelir', Kasa.durum == KasaDurum.ODENMEDI)
-    )
-    if toplam_bas and toplam_son:
-        bekleyen_gelir_query = bekleyen_gelir_query.filter(Kasa.tarih >= toplam_bas, Kasa.tarih < toplam_son)
-    bekleyen_gelir = bekleyen_gelir_query.scalar() or 0
-    
-    bekleyen_gider_query = (
-        db.session.query(func.sum(Kasa.tutar))
-        .filter(Kasa.tip == 'gider', Kasa.durum == KasaDurum.ODENMEDI)
-    )
-    if toplam_bas and toplam_son:
-        bekleyen_gider_query = bekleyen_gider_query.filter(Kasa.tarih >= toplam_bas, Kasa.tarih < toplam_son)
-    bekleyen_gider = bekleyen_gider_query.scalar() or 0
-
     net_dahil_bekleyen = (odenen_gelir + bekleyen_gelir) - (odenen_gider + bekleyen_gider)
-    
-    # Bugünün tarihini template için gönder
-    bugun = datetime.now()
     
     return render_template(
         'kasa.html',
@@ -301,11 +401,16 @@ def kasa_sayfasi():
         durum=durum,
         yil=yil or '',
         ay=ay or '',
+        ay_filtresi_var=ay_filtresi_var,
         # Toplam filtre değerleri
-        toplam_yil=toplam_yil or '',
-        toplam_ay=toplam_ay or '',
+        toplam_yil=toplam_yil,
+        toplam_ay=toplam_ay,
         toplam_filtre_metni=toplam_filtre_metni,
-        bugun=bugun
+        bugun=bugun,
+        # Sayfalama
+        sayfa=sayfa,
+        toplam_sayfa=toplam_sayfa,
+        sayfa_basina=sayfa_basina
     )
 
 
@@ -336,16 +441,42 @@ def anasayfa_ozet_api():
     )
     
     # 🔧 BEKLEYEN: Kasa tablosundan, Kasa.tarih ile filtrele
-    bekleyen_gelir = (
+    # ODENMEDI: Tam tutar bekliyor
+    # KISMI_ODENDI: Kalan tutar bekliyor (tutar - ödenen)
+    
+    # Gelir bekleyen
+    bekleyen_gelir_odenmedi = (
         db.session.query(func.sum(Kasa.tutar))
         .filter(Kasa.tarih >= bas, Kasa.tarih < son, Kasa.tip == 'gelir', Kasa.durum == KasaDurum.ODENMEDI)
         .scalar() or 0
     )
-    bekleyen_gider = (
+    kismi_gelir_kayitlar = (
+        db.session.query(Kasa.id, Kasa.tutar)
+        .filter(Kasa.tarih >= bas, Kasa.tarih < son, Kasa.tip == 'gelir', Kasa.durum == KasaDurum.KISMI_ODENDI)
+        .all()
+    )
+    bekleyen_gelir_kismi = 0
+    for kasa_id, kasa_tutar in kismi_gelir_kayitlar:
+        odenen = db.session.query(func.sum(Odeme.tutar)).filter(Odeme.kasa_id == kasa_id).scalar() or 0
+        bekleyen_gelir_kismi += (kasa_tutar - odenen)
+    bekleyen_gelir = bekleyen_gelir_odenmedi + bekleyen_gelir_kismi
+    
+    # Gider bekleyen
+    bekleyen_gider_odenmedi = (
         db.session.query(func.sum(Kasa.tutar))
         .filter(Kasa.tarih >= bas, Kasa.tarih < son, Kasa.tip == 'gider', Kasa.durum == KasaDurum.ODENMEDI)
         .scalar() or 0
     )
+    kismi_gider_kayitlar = (
+        db.session.query(Kasa.id, Kasa.tutar)
+        .filter(Kasa.tarih >= bas, Kasa.tarih < son, Kasa.tip == 'gider', Kasa.durum == KasaDurum.KISMI_ODENDI)
+        .all()
+    )
+    bekleyen_gider_kismi = 0
+    for kasa_id, kasa_tutar in kismi_gider_kayitlar:
+        odenen = db.session.query(func.sum(Odeme.tutar)).filter(Odeme.kasa_id == kasa_id).scalar() or 0
+        bekleyen_gider_kismi += (kasa_tutar - odenen)
+    bekleyen_gider = bekleyen_gider_odenmedi + bekleyen_gider_kismi
 
     return jsonify({
         'odenen_gelir': float(odenen_gelir),
@@ -770,3 +901,310 @@ def api_kategori_ekle():
     except Exception:
         db.session.rollback()
         return jsonify({'success': False, 'message': 'Kategori eklenirken bir hata oluştu!'}), 500
+
+
+# ============================== #
+#   EXCEL İLE GELİR EKLEME       #
+# ============================== #
+@kasa_bp.route('/kasa/excel-yukle', methods=['GET', 'POST'])
+@login_required
+@roles_required('admin')
+def excel_gelir_yukle():
+    """İşbankası Excel formatında gelir yükleme"""
+    if request.method == 'GET':
+        return render_template('kasa_excel_yukle.html')
+    
+    if 'excel_file' not in request.files:
+        flash('Lütfen bir Excel dosyası seçin!', 'error')
+        return redirect(url_for('kasa.excel_gelir_yukle'))
+    
+    file = request.files['excel_file']
+    
+    if file.filename == '':
+        flash('Dosya seçilmedi!', 'error')
+        return redirect(url_for('kasa.excel_gelir_yukle'))
+    
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        flash('Sadece Excel dosyaları (.xlsx, .xls) kabul edilir!', 'error')
+        return redirect(url_for('kasa.excel_gelir_yukle'))
+    
+    kategori = request.form.get('kategori', 'Banka Geliri')
+    durum_secim = request.form.get('durum', 'odenen')
+    
+    try:
+        df = pd.read_excel(file, header=None)
+        
+        eklenen_kayit = 0
+        atlanan_kayit = 0
+        hatalar = []
+        
+        # Satır 7'den itibaren (index 6) veri başlıyor
+        for index, row in df.iterrows():
+            try:
+                # A sütunu (0): Tarih/Saat - Format: 28/11/2025-12:55:35
+                tarih_raw = row.iloc[0] if len(row) > 0 else None
+                # D sütunu (3): İşlem Tutarı
+                tutar_raw = row.iloc[3] if len(row) > 3 else None
+                # I sütunu (8): Açıklama
+                aciklama_raw = row.iloc[8] if len(row) > 8 else None
+                
+                # Tarih kontrolü - boş veya başlık satırı ise atla
+                if pd.isna(tarih_raw) or tarih_raw is None:
+                    atlanan_kayit += 1
+                    continue
+                
+                # Başlık satırlarını atla (Tarih/Saat, Net Bakiye vb.)
+                tarih_str_check = str(tarih_raw).lower()
+                if any(x in tarih_str_check for x in ['tarih', 'saat', 'net bakiye', 'hesap', 'türkiye']):
+                    atlanan_kayit += 1
+                    continue
+                
+                # Tutar kontrolü - boş ise atla
+                if pd.isna(tutar_raw) or tutar_raw is None:
+                    atlanan_kayit += 1
+                    continue
+                
+                # Tutarı sayıya çevir
+                try:
+                    if isinstance(tutar_raw, str):
+                        # Türkçe format: 1.234,56 -> 1234.56
+                        tutar_str = tutar_raw.replace('.', '').replace(',', '.').strip()
+                        tutar = float(tutar_str)
+                    else:
+                        tutar = float(tutar_raw)
+                except (ValueError, TypeError):
+                    atlanan_kayit += 1
+                    continue
+                
+                if tutar <= 0:
+                    atlanan_kayit += 1
+                    continue
+                
+                # Tarihi parse et - İşbankası formatı: 28/11/2025-12:55:35
+                tarih = None
+                if isinstance(tarih_raw, datetime):
+                    tarih = tarih_raw
+                elif isinstance(tarih_raw, str):
+                    # İşbankası özel formatları
+                    date_formats = [
+                        '%d/%m/%Y-%H:%M:%S',  # İşbankası formatı: 28/11/2025-12:55:35
+                        '%d/%m/%Y-%H:%M',
+                        '%d.%m.%Y-%H:%M:%S',
+                        '%d.%m.%Y-%H:%M',
+                        '%d/%m/%Y %H:%M:%S',
+                        '%d/%m/%Y %H:%M',
+                        '%d.%m.%Y %H:%M:%S',
+                        '%d.%m.%Y %H:%M',
+                        '%Y-%m-%d %H:%M:%S',
+                        '%Y-%m-%d',
+                        '%d.%m.%Y',
+                        '%d/%m/%Y'
+                    ]
+                    for fmt in date_formats:
+                        try:
+                            tarih = datetime.strptime(tarih_raw.strip(), fmt)
+                            break
+                        except ValueError:
+                            continue
+                    
+                    if tarih is None:
+                        hatalar.append(f"Satır {index + 1}: Tarih formatı tanınamadı - {tarih_raw}")
+                        atlanan_kayit += 1
+                        continue
+                else:
+                    try:
+                        tarih = pd.to_datetime(tarih_raw).to_pydatetime()
+                    except:
+                        hatalar.append(f"Satır {index + 1}: Tarih dönüştürülemedi - {tarih_raw}")
+                        atlanan_kayit += 1
+                        continue
+                
+                # Açıklama
+                if pd.isna(aciklama_raw) or aciklama_raw is None:
+                    aciklama = f"İşbankası geliri - {tarih.strftime('%d.%m.%Y')}"
+                else:
+                    aciklama = str(aciklama_raw).strip()[:255]  # Max 255 karakter
+                
+                # Durumu belirle
+                if durum_secim == 'odenen':
+                    kayit_durumu = KasaDurum.TAMAMLANDI
+                else:
+                    kayit_durumu = KasaDurum.ODENMEDI
+                
+                yeni_kayit = Kasa(
+                    tip='gelir',
+                    aciklama=aciklama,
+                    tutar=Decimal(str(round(tutar, 2))),
+                    kategori=kategori,
+                    kullanici_id=session.get('user_id'),
+                    durum=kayit_durumu,
+                    tarih=tarih
+                )
+                db.session.add(yeni_kayit)
+                db.session.flush()
+                
+                if kayit_durumu == KasaDurum.TAMAMLANDI:
+                    otomatik_odeme = Odeme(
+                        kasa_id=yeni_kayit.id,
+                        tutar=Decimal(str(round(tutar, 2))),
+                        odeme_tarihi=tarih,
+                        kullanici_id=session.get('user_id')
+                    )
+                    db.session.add(otomatik_odeme)
+                
+                eklenen_kayit += 1
+                
+            except Exception as e:
+                hatalar.append(f"Satır {index + 1}: {str(e)}")
+                atlanan_kayit += 1
+                continue
+        
+        if eklenen_kayit > 0:
+            db.session.commit()
+            flash(f'✅ {eklenen_kayit} gelir kaydı başarıyla eklendi! ({atlanan_kayit} satır atlandı)', 'success')
+        else:
+            db.session.rollback()
+            flash(f'⚠️ Hiçbir kayıt eklenemedi. {atlanan_kayit} satır atlandı.', 'warning')
+        
+        if hatalar:
+            hata_mesaji = "Hatalar: " + "; ".join(hatalar[:5])
+            if len(hatalar) > 5:
+                hata_mesaji += f" ... ve {len(hatalar) - 5} hata daha."
+            flash(hata_mesaji, 'warning')
+        
+        return redirect(url_for('kasa.kasa_sayfasi'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Excel dosyası okunurken hata oluştu: {str(e)}', 'error')
+        return redirect(url_for('kasa.excel_gelir_yukle'))
+
+
+@kasa_bp.route('/kasa/api/excel-onizleme', methods=['POST'])
+@login_required
+@roles_required('admin')
+def excel_onizleme():
+    """Excel dosyasının önizlemesini göster"""
+    if 'excel_file' not in request.files:
+        return jsonify({'success': False, 'message': 'Dosya bulunamadı'}), 400
+    
+    file = request.files['excel_file']
+    
+    if file.filename == '':
+        return jsonify({'success': False, 'message': 'Dosya seçilmedi'}), 400
+    
+    try:
+        df = pd.read_excel(file, header=None)
+        
+        onizleme = []
+        for index, row in df.head(20).iterrows():
+            tarih_raw = row.iloc[0] if len(row) > 0 else None
+            tutar_raw = row.iloc[3] if len(row) > 3 else None
+            aciklama_raw = row.iloc[8] if len(row) > 8 else None
+            
+            is_header = False
+            if not pd.isna(tarih_raw):
+                tarih_str_check = str(tarih_raw).lower()
+                if any(x in tarih_str_check for x in ['tarih', 'saat', 'net bakiye', 'hesap', 'türkiye', 'işlem saatleri']):
+                    is_header = True
+            
+            # Tarihi formatla - İşbankası formatı: 28/11/2025-12:55:35
+            if pd.isna(tarih_raw):
+                tarih_str = "-"
+            elif isinstance(tarih_raw, datetime):
+                tarih_str = tarih_raw.strftime('%d.%m.%Y %H:%M')
+            elif isinstance(tarih_raw, str):
+                # İşbankası formatını dene
+                tarih = None
+                date_formats = [
+                    '%d/%m/%Y-%H:%M:%S',
+                    '%d/%m/%Y-%H:%M',
+                    '%d.%m.%Y-%H:%M:%S',
+                    '%d.%m.%Y %H:%M:%S',
+                ]
+                for fmt in date_formats:
+                    try:
+                        tarih = datetime.strptime(tarih_raw.strip(), fmt)
+                        tarih_str = tarih.strftime('%d.%m.%Y %H:%M')
+                        break
+                    except ValueError:
+                        continue
+                if tarih is None:
+                    tarih_str = str(tarih_raw)
+            else:
+                try:
+                    tarih_str = pd.to_datetime(tarih_raw).strftime('%d.%m.%Y %H:%M')
+                except:
+                    tarih_str = str(tarih_raw)
+            
+            # Tutarı formatla
+            tutar_num = 0
+            if pd.isna(tutar_raw) or tutar_raw is None:
+                tutar_str = "-"
+            else:
+                try:
+                    if isinstance(tutar_raw, str):
+                        cleaned = tutar_raw.replace('.', '').replace(',', '.').strip()
+                        tutar_num = float(cleaned)
+                    else:
+                        tutar_num = float(tutar_raw)
+                    tutar_str = f"{tutar_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                except (ValueError, TypeError):
+                    tutar_str = str(tutar_raw)
+                    tutar_num = 0
+                    is_header = True  # Sayıya çevrilemezse başlık
+            
+            # Açıklama
+            aciklama_str = str(aciklama_raw)[:60] if not pd.isna(aciklama_raw) else "-"
+            
+            # Geçerli mi?
+            gecerli = tutar_num > 0 and not is_header and tarih_str != "-"
+            
+            onizleme.append({
+                'satir': index + 1,
+                'tarih': tarih_str,
+                'tutar': tutar_str,
+                'tutar_num': tutar_num,
+                'aciklama': aciklama_str,
+                'gecerli': gecerli
+            })
+        
+        toplam_satir = len(df)
+        
+        # Geçerli satır sayısını güvenli hesapla
+        gecerli_satir = 0
+        for index, row in df.iterrows():
+            try:
+                tarih_raw = row.iloc[0] if len(row) > 0 else None
+                tutar_raw = row.iloc[3] if len(row) > 3 else None
+                
+                # Boş satır
+                if pd.isna(tarih_raw) or pd.isna(tutar_raw):
+                    continue
+                
+                # Başlık satırı kontrolü
+                tarih_str_check = str(tarih_raw).lower()
+                if any(x in tarih_str_check for x in ['tarih', 'saat', 'net bakiye', 'hesap', 'türkiye']):
+                    continue
+                
+                # Tutarı sayıya çevir
+                if isinstance(tutar_raw, str):
+                    cleaned = tutar_raw.replace('.', '').replace(',', '.').strip()
+                    tutar_num = float(cleaned)
+                else:
+                    tutar_num = float(tutar_raw) if tutar_raw else 0
+                
+                if tutar_num > 0:
+                    gecerli_satir += 1
+            except (ValueError, TypeError):
+                continue
+        
+        return jsonify({
+            'success': True,
+            'onizleme': onizleme,
+            'toplam_satir': toplam_satir,
+            'gecerli_satir': gecerli_satir
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Dosya okunurken hata: {str(e)}'}), 400

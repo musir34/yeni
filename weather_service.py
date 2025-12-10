@@ -197,6 +197,7 @@ def get_weather_info():
             "wind_speed": wind_speed,
             "wind_gusts": wind_gusts,
             "wind_direction": wind_direction,
+            "wind_direction_deg": wind_deg,  # Derece cinsinden rüzgar yönü (animasyon için)
             "description": get_weather_description_tr(weather_code),
             "icon": get_weather_icon_emoji(weather_code, is_day),
             "visibility": 10.0,  # Open-Meteo visibility vermez, varsayılan
