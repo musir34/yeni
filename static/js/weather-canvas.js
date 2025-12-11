@@ -14,17 +14,33 @@
   const windDirection = parseFloat(document.querySelector('meta[name="weather-wind-direction"]')?.content || '180');
 
   // Hava durumu tespiti
-  const isOvercast = weatherCode === 3 || cloudPercent >= 75 || weatherDesc.includes('kapalı') || weatherDesc.includes('bulutlu');
+  // WMO Kodları: 0=Açık, 1=Çoğunlukla açık, 2=Az bulutlu, 3=Kapalı
+  // Sadece kod 3 (Overcast) veya %90+ bulutlulukta güneşi gizle
+  const isOvercast = weatherCode === 3 || cloudPercent >= 90 || weatherDesc.includes('kapalı');
+  const isPartlyCloudy = weatherCode === 2 || (cloudPercent >= 50 && cloudPercent < 90);
   const isRainy = weatherCode >= 51 || weatherDesc.includes('yağmur') || weatherDesc.includes('sağanak');
   const isSnowy = (weatherCode >= 71 && weatherCode <= 86) || weatherDesc.includes('kar');
   const showSun = !isOvercast && !isRainy && !isSnowy;
 
-  // Rüzgar hızına göre hareket çarpanı (0-50 km/h arası normalize)
-  const windMultiplier = Math.min(windSpeed / 20, 2.5);
+  // Gerçekçi rüzgar hızı hesaplama
+  // 0-5 km/h = neredeyse hareketsiz, 5-15 = çok yavaş, 15-30 = normal, 30+ = hızlı
+  let cloudSpeedMultiplier;
+  if (windSpeed < 5) {
+    cloudSpeedMultiplier = 0.02; // Neredeyse durgun
+  } else if (windSpeed < 10) {
+    cloudSpeedMultiplier = 0.05; // Çok yavaş hareket
+  } else if (windSpeed < 20) {
+    cloudSpeedMultiplier = 0.1; // Yavaş hareket
+  } else if (windSpeed < 35) {
+    cloudSpeedMultiplier = 0.2; // Normal hareket
+  } else {
+    cloudSpeedMultiplier = 0.4; // Hızlı hareket (fırtına)
+  }
+  
   // Rüzgar yönü (derece -> radyan, 0=kuzey, 90=doğu, 180=güney, 270=batı)
   const windAngle = (windDirection - 90) * (Math.PI / 180);
-  const windX = Math.cos(windAngle) * windMultiplier;
-  const windY = Math.sin(windAngle) * windMultiplier * 0.3;
+  const windX = Math.cos(windAngle) * cloudSpeedMultiplier;
+  const windY = Math.sin(windAngle) * cloudSpeedMultiplier * 0.2;
 
   // Saat bilgisi (İstanbul)
   function getHour() {
@@ -66,17 +82,26 @@
     if (isSnowy) initSnow();
   }
 
-  // Bulutlar - 10-15 adet, farklı şekiller
+  // Bulutlar - bulut oranına göre adet
   function initClouds() {
     clouds = [];
-    const count = isOvercast ? 15 : 10;
+    // Bulut sayısını bulut yüzdesine göre ayarla
+    let count;
+    if (isOvercast) {
+      count = 15; // Kapalı hava
+    } else if (isPartlyCloudy) {
+      count = 8 + Math.floor(cloudPercent / 15); // Az bulutlu (8-13 arası)
+    } else {
+      count = 4; // Açık hava
+    }
+    
     for (let i = 0; i < count; i++) {
       clouds.push({
         x: Math.random() * (canvas.width + 400) - 200,
         y: 15 + Math.random() * canvas.height * 0.4,
         scale: 0.6 + Math.random() * 1.0,
-        baseSpeed: 0.1 + Math.random() * 0.15,
-        opacity: isOvercast ? (0.88 + Math.random() * 0.12) : (0.6 + Math.random() * 0.25),
+        baseSpeed: 0.01 + Math.random() * 0.02, // Çok düşük baz hız - rüzgar eklenecek
+        opacity: isOvercast ? (0.88 + Math.random() * 0.12) : (0.5 + Math.random() * 0.3),
         type: Math.floor(Math.random() * 4), // 4 farklı bulut tipi
         puffs: [] // Her bulutun kendi puf dizisi
       });
@@ -266,33 +291,205 @@
     });
   }
 
-  // Güneş
+  // Gerçekçi Güneş - Saate göre hareket eden
   function drawSun() {
     if (!isDay || !showSun) return;
     
-    const x = canvas.width * 0.88;
-    const y = canvas.height * 0.12;
+    const time = Date.now() * 0.001;
+    const radius = 38;
     
-    // Işık halesi
-    const glow = ctx.createRadialGradient(x, y, 25, x, y, 150);
-    glow.addColorStop(0, "rgba(255, 250, 200, 0.5)");
-    glow.addColorStop(0.4, "rgba(255, 220, 120, 0.2)");
-    glow.addColorStop(1, "rgba(255, 200, 100, 0)");
+    // Güneş pozisyonu hesaplama (07:00 - 18:00 arası)
+    // 07:00 = sol (x: %10), 12:30 = tepe (x: %50), 18:00 = sağ (x: %90)
+    const sunriseHour = 7;
+    const sunsetHour = 18;
+    const dayLength = sunsetHour - sunriseHour; // 11 saat
+    
+    // Şu anki dakika dahil saat
+    const now = new Date();
+    const currentHour = now.getHours() + now.getMinutes() / 60;
+    
+    // Güneşin gün içindeki pozisyonu (0 = doğuş, 1 = batış)
+    const dayProgress = Math.max(0, Math.min(1, (currentHour - sunriseHour) / dayLength));
+    
+    // X pozisyonu: soldan sağa (ekranın %10'u - %90'ı arası)
+    const x = canvas.width * (0.10 + dayProgress * 0.80);
+    
+    // Y pozisyonu: yay çizerek hareket (öğlen en tepede)
+    // Sin fonksiyonu ile doğal yay hareketi
+    const maxHeight = canvas.height * 0.12; // En yüksek nokta (tepede)
+    const minHeight = canvas.height * 0.40; // En alçak nokta (ufukta)
+    const arcHeight = Math.sin(dayProgress * Math.PI); // 0->1->0 şeklinde yay
+    const y = minHeight - (arcHeight * (minHeight - maxHeight));
+    
+    // Gün doğumu/batımı renk ayarı
+    const isNearHorizon = dayProgress < 0.15 || dayProgress > 0.85;
+    const horizonFactor = isNearHorizon ? 
+      (dayProgress < 0.15 ? 1 - (dayProgress / 0.15) : (dayProgress - 0.85) / 0.15) : 0;
+    
+    // Atmosferik saçılma - ufka yakınken daha turuncu/kırmızı
+    const atmosphere = ctx.createRadialGradient(x, y, radius, x, y, radius * 8);
+    if (horizonFactor > 0.3) {
+      // Gün doğumu/batımı - kırmızı-turuncu atmosfer
+      atmosphere.addColorStop(0, "rgba(255, 120, 80, 0.4)");
+      atmosphere.addColorStop(0.2, "rgba(255, 100, 50, 0.25)");
+      atmosphere.addColorStop(0.5, "rgba(255, 80, 30, 0.1)");
+      atmosphere.addColorStop(1, "rgba(255, 60, 20, 0)");
+    } else if (horizonFactor > 0) {
+      // Ufka yakın - turuncu atmosfer
+      atmosphere.addColorStop(0, "rgba(255, 200, 120, 0.35)");
+      atmosphere.addColorStop(0.2, "rgba(255, 180, 100, 0.2)");
+      atmosphere.addColorStop(0.5, "rgba(255, 150, 80, 0.08)");
+      atmosphere.addColorStop(1, "rgba(255, 120, 60, 0)");
+    } else {
+      // Normal gündüz - sarı atmosfer
+      atmosphere.addColorStop(0, "rgba(255, 250, 220, 0.3)");
+      atmosphere.addColorStop(0.2, "rgba(255, 230, 150, 0.15)");
+      atmosphere.addColorStop(0.5, "rgba(255, 200, 100, 0.05)");
+      atmosphere.addColorStop(1, "rgba(255, 180, 80, 0)");
+    }
+    ctx.fillStyle = atmosphere;
+    ctx.beginPath();
+    ctx.arc(x, y, radius * 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Işık halesi - orta seviye
+    const glow = ctx.createRadialGradient(x, y, radius * 0.8, x, y, radius * 3);
+    if (horizonFactor > 0) {
+      // Ufka yakın - turuncu hale
+      glow.addColorStop(0, "rgba(255, 200, 150, 0.7)");
+      glow.addColorStop(0.3, "rgba(255, 180, 100, 0.4)");
+      glow.addColorStop(0.6, "rgba(255, 150, 80, 0.15)");
+      glow.addColorStop(1, "rgba(255, 120, 60, 0)");
+    } else {
+      glow.addColorStop(0, "rgba(255, 255, 240, 0.7)");
+      glow.addColorStop(0.3, "rgba(255, 245, 180, 0.4)");
+      glow.addColorStop(0.6, "rgba(255, 220, 120, 0.15)");
+      glow.addColorStop(1, "rgba(255, 200, 80, 0)");
+    }
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(x, y, 150, 0, Math.PI * 2);
+    ctx.arc(x, y, radius * 3, 0, Math.PI * 2);
     ctx.fill();
     
-    // Ana güneş
+    // Dönen ışık ışınları
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(time * 0.1);
+    
+    for (let i = 0; i < 12; i++) {
+      ctx.save();
+      ctx.rotate(i * Math.PI / 6);
+      
+      const rayGrad = ctx.createLinearGradient(0, -radius * 1.2, 0, -radius * 4);
+      rayGrad.addColorStop(0, "rgba(255, 250, 200, 0.4)");
+      rayGrad.addColorStop(0.5, "rgba(255, 240, 150, 0.15)");
+      rayGrad.addColorStop(1, "rgba(255, 220, 100, 0)");
+      
+      ctx.fillStyle = rayGrad;
+      ctx.beginPath();
+      ctx.moveTo(-8, -radius * 1.2);
+      ctx.lineTo(0, -radius * 4);
+      ctx.lineTo(8, -radius * 1.2);
+      ctx.closePath();
+      ctx.fill();
+      
+      ctx.restore();
+    }
+    ctx.restore();
+    
+    // Parlak dış halka
     ctx.beginPath();
-    const sunGrad = ctx.createRadialGradient(x, y, 0, x, y, 40);
-    sunGrad.addColorStop(0, "#FFFEF0");
-    sunGrad.addColorStop(0.3, "#FFF59D");
-    sunGrad.addColorStop(0.7, "#FFEB3B");
-    sunGrad.addColorStop(1, "#FFC107");
-    ctx.fillStyle = sunGrad;
-    ctx.arc(x, y, 40, 0, Math.PI * 2);
+    const ringGrad = ctx.createRadialGradient(x, y, radius * 0.9, x, y, radius * 1.15);
+    ringGrad.addColorStop(0, "rgba(255, 255, 255, 0)");
+    ringGrad.addColorStop(0.5, "rgba(255, 255, 240, 0.8)");
+    ringGrad.addColorStop(1, "rgba(255, 240, 200, 0)");
+    ctx.fillStyle = ringGrad;
+    ctx.arc(x, y, radius * 1.15, 0, Math.PI * 2);
     ctx.fill();
+    
+    // Ana güneş cismi - ufka yakınken daha turuncu/kırmızı
+    ctx.beginPath();
+    const sunGrad = ctx.createRadialGradient(x - radius * 0.2, y - radius * 0.2, 0, x, y, radius);
+    
+    if (horizonFactor > 0.3) {
+      // Gün doğumu/batımı - kırmızımsı turuncu
+      sunGrad.addColorStop(0, "#FFFAF0");
+      sunGrad.addColorStop(0.15, "#FFE4B5");
+      sunGrad.addColorStop(0.4, "#FFA500");
+      sunGrad.addColorStop(0.7, "#FF6347");
+      sunGrad.addColorStop(0.9, "#FF4500");
+      sunGrad.addColorStop(1, "#DC143C");
+    } else if (horizonFactor > 0) {
+      // Ufka yakın - turuncu tonları
+      sunGrad.addColorStop(0, "#FFFFFF");
+      sunGrad.addColorStop(0.15, "#FFF8DC");
+      sunGrad.addColorStop(0.4, "#FFD700");
+      sunGrad.addColorStop(0.7, "#FFA500");
+      sunGrad.addColorStop(0.9, "#FF8C00");
+      sunGrad.addColorStop(1, "#FF6600");
+    } else {
+      // Normal gündüz - sarı
+      sunGrad.addColorStop(0, "#FFFFFF");
+      sunGrad.addColorStop(0.15, "#FFFEF5");
+      sunGrad.addColorStop(0.4, "#FFF59D");
+      sunGrad.addColorStop(0.7, "#FFEB3B");
+      sunGrad.addColorStop(0.9, "#FFB300");
+      sunGrad.addColorStop(1, "#FF8F00");
+    }
+    ctx.fillStyle = sunGrad;
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Yüzey detayları - hafif dalgalanma
+    ctx.globalAlpha = 0.15;
+    for (let i = 0; i < 3; i++) {
+      const spotX = x + Math.cos(time * 0.5 + i * 2) * radius * 0.4;
+      const spotY = y + Math.sin(time * 0.3 + i * 2.5) * radius * 0.3;
+      const spotR = radius * (0.15 + Math.sin(time + i) * 0.05);
+      
+      ctx.beginPath();
+      ctx.fillStyle = "#FFE082";
+      ctx.arc(spotX, spotY, spotR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    
+    // Merkez parlaklık
+    const coreGrad = ctx.createRadialGradient(x - radius * 0.15, y - radius * 0.15, 0, x, y, radius * 0.5);
+    coreGrad.addColorStop(0, "rgba(255, 255, 255, 0.9)");
+    coreGrad.addColorStop(0.5, "rgba(255, 255, 255, 0.3)");
+    coreGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = coreGrad;
+    ctx.beginPath();
+    ctx.arc(x, y, radius * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Lens flare efekti
+    const flareColors = [
+      { offset: 0.3, color: "rgba(255, 200, 100, 0.15)", size: 15 },
+      { offset: 0.5, color: "rgba(100, 200, 255, 0.1)", size: 25 },
+      { offset: 0.7, color: "rgba(255, 150, 50, 0.08)", size: 20 },
+      { offset: 1.2, color: "rgba(150, 255, 200, 0.06)", size: 35 }
+    ];
+    
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const dx = centerX - x;
+    const dy = centerY - y;
+    
+    flareColors.forEach(flare => {
+      const fx = x + dx * flare.offset;
+      const fy = y + dy * flare.offset;
+      
+      const flareGrad = ctx.createRadialGradient(fx, fy, 0, fx, fy, flare.size);
+      flareGrad.addColorStop(0, flare.color);
+      flareGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+      
+      ctx.fillStyle = flareGrad;
+      ctx.beginPath();
+      ctx.arc(fx, fy, flare.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
   }
 
   // Gerçekçi Ay (faz hesaplı)
@@ -504,10 +701,10 @@
       
       ctx.restore();
       
-      // Hareket - rüzgar ve sallanma etkisi
+      // Hareket - r\u00fczgar ve sallanma etkisi (ger\u00e7ek\u00e7i)
       flake.y += flake.speed;
       flake.swing += flake.swingSpeed;
-      flake.x += Math.sin(flake.swing) * 0.8 + windX * 0.5;
+      flake.x += Math.sin(flake.swing) * 0.5 + windX * windSpeed * 0.08; // R\u00fczgar h\u0131z\u0131na orant\u0131l\u0131
       flake.rotation += flake.rotationSpeed;
       
       if (flake.y > canvas.height + flake.size) {
@@ -600,5 +797,5 @@
   resize();
   animate();
 
-  console.log('[WEATHER] Durum:', weatherDesc, '| Kod:', weatherCode, '| Rüzgar:', windSpeed, 'km/h @', windDirection + '°', '| Ay fazı:', (moonPhase * 100).toFixed(0) + '%');
+  console.log('[WEATHER] Kod:', weatherCode, '| Bulut:', cloudPercent + '%', '| Rüzgar:', windSpeed, 'km/h | Hız çarpanı:', cloudSpeedMultiplier, '| Güneş:', showSun);
 })();

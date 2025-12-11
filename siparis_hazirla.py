@@ -416,3 +416,163 @@ def get_product_image(barcode):
         if os.path.exists(image_path):
             return f"/static/images/{image_filename}"
     return "/static/images/default.jpg"
+
+
+# 🔥 Sıradaki siparişleri getiren API endpoint
+@siparis_hazirla_bp.route("/api/siradaki-siparisler")
+def get_queue_orders():
+    """
+    Sıradaki siparişlerin özet bilgilerini döndürür.
+    Aktif sipariş hariç, en fazla 10 sipariş döndürülür.
+    Raf bilgisi de dahil edilir.
+    """
+    from flask import jsonify, request
+    from sqlalchemy import desc
+    from woocommerce_site.models import WooOrder
+    
+    try:
+        queue_orders = []
+        
+        # Aktif sipariş numarasını al (kuyrukta gösterilmeyecek)
+        active_order_number = request.args.get('active', '')
+        
+        # Arşivdeki sipariş numaralarını al
+        archived_order_numbers = db.session.query(Archive.order_number).all()
+        archived_order_numbers = [num[0] for num in archived_order_numbers]
+        
+        # 1. WooCommerce siparişleri (on-hold)
+        woo_query = (WooOrder.query
+                     .filter(WooOrder.status == 'on-hold')
+                     .filter(~WooOrder.order_number.in_(archived_order_numbers)))
+        
+        # Aktif siparişi hariç tut
+        if active_order_number:
+            woo_query = woo_query.filter(WooOrder.order_number != active_order_number)
+        
+        woo_orders = woo_query.order_by(WooOrder.date_created).limit(10).all()
+        
+        for woo in woo_orders:
+            # İlk ürünün görselini ve raf bilgisini al
+            first_image = "/static/images/default.jpg"
+            product_count = 0
+            first_product_name = "Ürün"
+            first_sku = ""
+            first_raf = None
+            
+            if woo.line_items:
+                product_count = len(woo.line_items)
+                first_item = woo.line_items[0] if woo.line_items else {}
+                woo_id = first_item.get('variation_id') or first_item.get('product_id')
+                first_product_name = first_item.get('name', 'Ürün')[:30]
+                first_sku = first_item.get('sku', '')  # 🔥 SKU al
+                
+                if woo_id:
+                    product_db = Product.query.filter_by(woo_product_id=int(woo_id)).first()
+                    if product_db:
+                        if product_db.images:
+                            first_image = product_db.images
+                        # 🔥 SKU yoksa Product tablosundan al
+                        if not first_sku and product_db.barcode:
+                            first_sku = product_db.barcode
+                        # Raf bilgisini al
+                        raf_kayit = (RafUrun.query
+                                    .filter(RafUrun.urun_barkodu == product_db.barcode, RafUrun.adet > 0)
+                                    .order_by(desc(RafUrun.adet))
+                                    .first())
+                        if raf_kayit:
+                            first_raf = {"kod": raf_kayit.raf_kodu, "adet": raf_kayit.adet}
+            
+            queue_orders.append({
+                "order_number": woo.order_number,
+                "source": "WOOCOMMERCE",
+                "customer_name": f"{woo.customer_first_name or ''} {woo.customer_last_name or ''}".strip(),
+                "product_count": product_count,
+                "first_product_name": first_product_name,
+                "first_sku": first_sku,  # 🔥 SKU ekle
+                "first_image": first_image,
+                "first_raf": first_raf,
+                "order_date": woo.date_created.isoformat() if woo.date_created else None,
+                "total": float(woo.total) if woo.total else 0
+            })
+        
+        # 2. Trendyol siparişleri (Created)
+        remaining_slots = 10 - len(queue_orders)
+        if remaining_slots > 0:
+            trendyol_query = (OrderCreated.query
+                              .filter(OrderCreated.status == 'Created'))
+            
+            # Aktif siparişi hariç tut
+            if active_order_number:
+                trendyol_query = trendyol_query.filter(OrderCreated.order_number != active_order_number)
+            
+            trendyol_orders = trendyol_query.order_by(OrderCreated.order_date).limit(remaining_slots).all()
+            
+            for order in trendyol_orders:
+                first_image = "/static/images/default.jpg"
+                product_count = 0
+                first_product_name = "Ürün"
+                first_sku = ""
+                first_raf = None
+                
+                # Details parse
+                details_json = order.details or "[]"
+                if isinstance(details_json, str):
+                    try:
+                        details_list = json.loads(details_json)
+                    except json.JSONDecodeError:
+                        details_list = []
+                elif isinstance(details_json, list):
+                    details_list = details_json
+                else:
+                    details_list = []
+                
+                if details_list:
+                    product_count = len(details_list)
+                    first_item = details_list[0]
+                    bc = first_item.get("barcode", "")
+                    normalized_bc = normalize_barcode(bc)
+                    first_product_name = first_item.get("product_name", first_item.get("productName", "Ürün"))[:30]
+                    first_sku = first_item.get("sku", bc)  # 🔥 SKU veya barkod
+                    
+                    # Ürün görselini al
+                    product_db = Product.query.filter_by(barcode=normalized_bc).first()
+                    if product_db and product_db.images:
+                        first_image = product_db.images
+                    else:
+                        first_image = get_product_image(normalized_bc)
+                    
+                    # Raf bilgisini al
+                    raf_kayit = (RafUrun.query
+                                .filter(RafUrun.urun_barkodu == normalized_bc, RafUrun.adet > 0)
+                                .order_by(desc(RafUrun.adet))
+                                .first())
+                    if raf_kayit:
+                        first_raf = {"kod": raf_kayit.raf_kodu, "adet": raf_kayit.adet}
+                
+                queue_orders.append({
+                    "order_number": order.order_number,
+                    "source": "TRENDYOL",
+                    "customer_name": f"{order.customer_name or ''} {order.customer_surname or ''}".strip(),
+                    "product_count": product_count,
+                    "first_product_name": first_product_name,
+                    "first_sku": first_sku,  # 🔥 SKU ekle
+                    "first_image": first_image,
+                    "first_raf": first_raf,
+                    "order_date": order.order_date.isoformat() if order.order_date else None,
+                    "total": float(order.amount) if order.amount else 0
+                })
+        
+        return jsonify({
+            "success": True,
+            "orders": queue_orders,
+            "total_count": len(queue_orders)
+        })
+    
+    except Exception as e:
+        logging.error(f"Sıradaki siparişler alınamadı: {e}")
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "orders": []
+        }), 500
