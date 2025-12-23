@@ -1,0 +1,686 @@
+{% extends "base.html" %}
+
+{% block title %}Amazon ASIN Eşleştirme{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <a href="{{ url_for('amazon.index') }}" class="btn btn-outline-secondary btn-sm mb-2">
+                        <i class="fas fa-arrow-left"></i> Amazon Paneli
+                    </a>
+                    <h2 class="mb-0">
+                        <i class="fab fa-amazon text-warning"></i> Amazon ASIN Eşleştirme
+                    </h2>
+                    <small class="text-muted">Amazon ürünlerini sistemdeki ürünlerle eşleştirin</small>
+                </div>
+                <div>
+                    <button class="btn btn-warning" onclick="fetchAmazonProducts()" id="syncBtn">
+                        <i class="fas fa-sync"></i> Amazon'dan Çek
+                    </button>
+                    <button class="btn btn-success" onclick="autoMatch()" id="autoMatchBtn">
+                        <i class="fas fa-magic"></i> Otomatik Eşleştir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- İstatistikler -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h3 id="totalAmazon">{{ amazon_products|length }}</h3>
+                    <small>Amazon Ürünü</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h3 id="matchedCount">{{ matched_count }}</h3>
+                    <small>Eşleştirilmiş</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h3 id="unmatchedCount">{{ unmatched_count }}</h3>
+                    <small>Eşleştirilmemiş</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h3 id="matchRate">{{ match_rate }}%</h3>
+                    <small>Eşleşme Oranı</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtreler -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <input type="text" class="form-control" id="searchInput" 
+                   placeholder="SKU, ASIN veya ürün adı ara..." 
+                   onkeyup="filterTable()">
+        </div>
+        <div class="col-md-3">
+            <select class="form-control" id="filterStatus" onchange="filterTable()">
+                <option value="">Tümü</option>
+                <option value="matched">✅ Eşleştirilmiş</option>
+                <option value="unmatched">❌ Eşleştirilmemiş</option>
+            </select>
+        </div>
+        <div class="col-md-5 text-right">
+            <button class="btn btn-primary" data-toggle="modal" data-target="#bulkMatchModal">
+                <i class="fas fa-list"></i> Toplu Barkod Eşleştirme
+            </button>
+        </div>
+    </div>
+    
+    <!-- Toplu Eşleştirme Kartı -->
+    <div class="card shadow-sm mb-4" id="bulkMatchCard">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-barcode"></i> Toplu Barkod Eşleştirme</h5>
+            <button class="btn btn-sm btn-light" onclick="toggleBulkCard()">
+                <i class="fas fa-chevron-up" id="bulkCardIcon"></i>
+            </button>
+        </div>
+        <div class="card-body" id="bulkCardBody">
+            <div class="row">
+                <div class="col-md-6">
+                    <label><strong>Barkodları Girin</strong> <small class="text-muted">(Her satıra bir barkod)</small></label>
+                    <textarea class="form-control" id="bulkBarcodes" rows="8" 
+                              placeholder="Barkodları buraya yapıştırın...&#10;Her satıra bir barkod yazın&#10;&#10;Örnek:&#10;0799653335910&#10;0799653335460&#10;07996533355563"></textarea>
+                    <small class="text-muted">Toplam: <span id="barcodeCount">0</span> barkod</small>
+                </div>
+                <div class="col-md-6">
+                    <label><strong>Eşleştirme Sonuçları</strong></label>
+                    <div id="bulkResults" class="border rounded p-3" style="height: 200px; overflow-y: auto; background: #f8f9fa;">
+                        <p class="text-muted text-center">Barkodları girip "Eşleştir" butonuna tıklayın</p>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <button class="btn btn-success btn-lg" onclick="bulkMatch()" id="bulkMatchBtn">
+                        <i class="fas fa-link"></i> Eşleştir
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearBulkForm()">
+                        <i class="fas fa-eraser"></i> Temizle
+                    </button>
+                    <span class="ml-3" id="bulkStatus"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+
+    <!-- Ürün Tablosu -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="matchTable">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th width="60">Görsel</th>
+                            <th>Amazon SKU</th>
+                            <th>ASIN</th>
+                            <th>Amazon Ürün Adı</th>
+                            <th>Fiyat</th>
+                            <th>Stok</th>
+                            <th width="300">Sistemdeki Ürün</th>
+                            <th width="100">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in amazon_products %}
+                        <tr data-sku="{{ product.sku }}" data-asin="{{ product.asin }}" 
+                            data-matched="{{ 'yes' if product.matched_barcode else 'no' }}">
+                            <td>
+                                {% if product.image_url %}
+                                <img src="{{ product.image_url }}" alt="" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
+                                {% else %}
+                                <div style="width: 50px; height: 50px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-image text-muted"></i>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <code>{{ product.sku }}</code>
+                            </td>
+                            <td>
+                                <a href="https://www.amazon.com.tr/dp/{{ product.asin }}" target="_blank" class="text-decoration-none">
+                                    {{ product.asin }} <i class="fas fa-external-link-alt fa-xs"></i>
+                                </a>
+                            </td>
+                            <td>
+                                <span title="{{ product.title }}">
+                                    {{ product.title[:50] }}{% if product.title|length > 50 %}...{% endif %}
+                                </span>
+                            </td>
+                            <td>₺{{ product.price }}</td>
+                            <td>
+                                <span class="badge {% if product.quantity|int > 10 %}badge-success{% elif product.quantity|int > 0 %}badge-warning{% else %}badge-danger{% endif %}">
+                                    {{ product.quantity }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if product.matched_barcode %}
+                                <div class="d-flex align-items-center">
+                                    <span class="badge badge-success mr-2">✓ Eşleşti</span>
+                                    <code class="small">{{ product.matched_barcode }}</code>
+                                    <button class="btn btn-sm btn-outline-danger ml-2" 
+                                            onclick="unmatch('{{ product.asin }}')" title="Eşleştirmeyi Kaldır">
+                                        <i class="fas fa-unlink"></i>
+                                    </button>
+                                </div>
+                                {% else %}
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control barcode-input match-barcode-input" 
+                                           id="barcode_{{ product.asin }}"
+                                           data-asin="{{ product.asin }}"
+                                           data-sku="{{ product.sku }}"
+                                           placeholder="Barkod girin veya seçin..."
+                                           list="barcodeList">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-success" 
+                                                onclick="matchProduct('{{ product.asin }}')">
+                                            <i class="fas fa-link"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-info" 
+                                        onclick="searchProduct('{{ product.sku }}', '{{ product.title[:30] }}')"
+                                        title="Ürün Ara">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <i class="fab fa-amazon fa-3x text-muted mb-3"></i>
+                                <p>Henüz Amazon ürünü yüklenmedi.</p>
+                                <button class="btn btn-warning" onclick="fetchAmazonProducts()">
+                                    <i class="fas fa-sync"></i> Amazon'dan Ürünleri Çek
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Tümünü Eşleştir - Sabit Alt Bar -->
+        <div class="card-footer bg-dark text-white" id="matchAllBar">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-info-circle"></i>
+                    <span id="filledCount">0 ürün barkod girildi</span>
+                </div>
+                <div>
+                    <button class="btn btn-lg btn-success" onclick="matchAllFilled()" id="matchAllBtn">
+                        <i class="fas fa-check-double"></i> Tümünü Eşleştir
+                    </button>
+                    <button class="btn btn-outline-light ml-2" onclick="clearAllInputs()">
+                        <i class="fas fa-eraser"></i> Temizle
+                    </button>
+                </div>
+            </div>
+            <div id="matchAllResults" class="mt-2"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Barkod Listesi (autocomplete için) -->
+<datalist id="barcodeList">
+    {% for bc in all_barcodes %}
+    <option value="{{ bc }}">
+    {% endfor %}
+</datalist>
+
+<!-- Ürün Arama Modal -->
+<div class="modal fade" id="searchModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ürün Ara</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="searchAsin">
+                <input type="text" class="form-control mb-3" id="productSearchInput" 
+                       placeholder="Ürün adı veya barkod ile ara..." onkeyup="searchProducts()">
+                <div id="searchResults"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" data-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-warning" role="status"></div>
+                <p class="mt-2 mb-0" id="loadingText">İşlem yapılıyor...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentSearchAsin = null;
+
+function fetchAmazonProducts() {
+    $('#loadingModal').modal('show');
+    $('#loadingText').text('Amazon ürünleri çekiliyor...');
+    
+    fetch('{{ url_for("amazon.api_fetch_products") }}', {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            $('#loadingModal').modal('hide');
+            if (data.success) {
+                alert('Başarılı! ' + data.total + ' ürün çekildi.');
+                window.location.reload();
+            } else {
+                alert('Hata: ' + data.error);
+            }
+        })
+        .catch(e => {
+            $('#loadingModal').modal('hide');
+            alert('Hata: ' + e);
+        });
+}
+
+function autoMatch() {
+    if (!confirm('Otomatik eşleştirme yapılacak. SKU ve barkod benzerliğine göre eşleştirilecek. Devam?')) return;
+    
+    $('#loadingModal').modal('show');
+    $('#loadingText').text('Otomatik eşleştirme yapılıyor...');
+    
+    fetch('{{ url_for("amazon.api_auto_match") }}', {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            $('#loadingModal').modal('hide');
+            if (data.success) {
+                alert('Başarılı! ' + data.matched + ' ürün eşleştirildi.');
+                window.location.reload();
+            } else {
+                alert('Hata: ' + data.error);
+            }
+        })
+        .catch(e => {
+            $('#loadingModal').modal('hide');
+            alert('Hata: ' + e);
+        });
+}
+
+function matchProduct(asin) {
+    const barcode = document.getElementById('barcode_' + asin).value.trim();
+    if (!barcode) {
+        alert('Lütfen bir barkod girin');
+        return;
+    }
+    
+    fetch('{{ url_for("amazon.api_match_product") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({asin: asin, barcode: barcode})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Hata: ' + data.error);
+        }
+    });
+}
+
+function unmatch(asin) {
+    if (!confirm('Bu eşleştirmeyi kaldırmak istiyor musunuz?')) return;
+    
+    fetch('{{ url_for("amazon.api_unmatch_product") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({asin: asin})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Hata: ' + data.error);
+        }
+    });
+}
+
+function searchProduct(sku, title) {
+    currentSearchAsin = null;
+    // Satırın asin'ini bul
+    const row = document.querySelector(`tr[data-sku="${sku}"]`);
+    if (row) {
+        currentSearchAsin = row.dataset.asin;
+    }
+    
+    document.getElementById('productSearchInput').value = sku;
+    $('#searchModal').modal('show');
+    searchProducts();
+}
+
+function searchProducts() {
+    const query = document.getElementById('productSearchInput').value;
+    if (query.length < 2) {
+        document.getElementById('searchResults').innerHTML = '<p class="text-muted">En az 2 karakter girin</p>';
+        return;
+    }
+    
+    fetch('/api/search-products?q=' + encodeURIComponent(query))
+        .then(r => r.json())
+        .then(data => {
+            let html = '<div class="list-group">';
+            if (data.products && data.products.length > 0) {
+                data.products.forEach(p => {
+                    html += `
+                        <a href="#" class="list-group-item list-group-item-action" 
+                           onclick="selectProduct('${p.barcode}')">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>${p.title || 'İsimsiz'}</strong><br>
+                                    <small class="text-muted">Barkod: ${p.barcode} | Beden: ${p.size || '-'} | Renk: ${p.color || '-'}</small>
+                                </div>
+                                <span class="badge badge-info">${p.quantity || 0} adet</span>
+                            </div>
+                        </a>
+                    `;
+                });
+            } else {
+                html += '<p class="text-muted p-3">Ürün bulunamadı</p>';
+            }
+            html += '</div>';
+            document.getElementById('searchResults').innerHTML = html;
+        });
+}
+
+function selectProduct(barcode) {
+    if (currentSearchAsin) {
+        document.getElementById('barcode_' + currentSearchAsin).value = barcode;
+        $('#searchModal').modal('hide');
+        matchProduct(currentSearchAsin);
+    }
+}
+
+function filterTable() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const status = document.getElementById('filterStatus').value;
+    
+    document.querySelectorAll('#matchTable tbody tr').forEach(row => {
+        const sku = (row.dataset.sku || '').toLowerCase();
+        const asin = (row.dataset.asin || '').toLowerCase();
+        const text = row.textContent.toLowerCase();
+        const matched = row.dataset.matched;
+        
+        let show = true;
+        
+        // Arama filtresi
+        if (search && !sku.includes(search) && !asin.includes(search) && !text.includes(search)) {
+            show = false;
+        }
+        
+        // Durum filtresi
+        if (status === 'matched' && matched !== 'yes') show = false;
+        if (status === 'unmatched' && matched !== 'no') show = false;
+        
+        row.style.display = show ? '' : 'none';
+    });
+}
+
+// Toplu Eşleştirme Fonksiyonları
+document.getElementById('bulkBarcodes').addEventListener('input', function() {
+    const lines = this.value.split('\n').filter(line => line.trim());
+    document.getElementById('barcodeCount').textContent = lines.length;
+});
+
+function toggleBulkCard() {
+    const body = document.getElementById('bulkCardBody');
+    const icon = document.getElementById('bulkCardIcon');
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+        icon.className = 'fas fa-chevron-up';
+    } else {
+        body.style.display = 'none';
+        icon.className = 'fas fa-chevron-down';
+    }
+}
+
+function clearBulkForm() {
+    document.getElementById('bulkBarcodes').value = '';
+    document.getElementById('barcodeCount').textContent = '0';
+    document.getElementById('bulkResults').innerHTML = '<p class="text-muted text-center">Barkodları girip "Eşleştir" butonuna tıklayın</p>';
+    document.getElementById('bulkStatus').textContent = '';
+}
+
+function bulkMatch() {
+    const barcodes = document.getElementById('bulkBarcodes').value
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+    
+    if (barcodes.length === 0) {
+        alert('Lütfen en az bir barkod girin');
+        return;
+    }
+    
+    const btn = document.getElementById('bulkMatchBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Eşleştiriliyor...';
+    
+    document.getElementById('bulkResults').innerHTML = '<p class="text-center"><span class="spinner-border spinner-border-sm"></span> İşleniyor...</p>';
+    
+    fetch('{{ url_for("amazon.api_bulk_match") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({barcodes: barcodes})
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-link"></i> Eşleştir';
+        
+        if (data.success) {
+            let html = '<div class="small">';
+            html += `<div class="alert alert-success py-2 mb-2">
+                <strong>✅ ${data.matched} eşleşti</strong> | 
+                ❌ ${data.not_found} bulunamadı | 
+                ⏭️ ${data.already_matched} zaten eşleşik
+            </div>`;
+            
+            // Eşleşenleri göster
+            if (data.results && data.results.length > 0) {
+                html += '<ul class="list-unstyled mb-0">';
+                data.results.forEach(r => {
+                    if (r.status === 'matched') {
+                        html += `<li class="text-success">✅ ${r.barcode} → ${r.amazon_sku}</li>`;
+                    } else if (r.status === 'already') {
+                        html += `<li class="text-info">⏭️ ${r.barcode} (zaten eşleşik)</li>`;
+                    } else if (r.status === 'not_found') {
+                        html += `<li class="text-danger">❌ ${r.barcode} (bulunamadı)</li>`;
+                    } else if (r.status === 'no_amazon') {
+                        html += `<li class="text-warning">⚠️ ${r.barcode} (Amazon SKU eşleşmedi)</li>`;
+                    }
+                });
+                html += '</ul>';
+            }
+            html += '</div>';
+            
+            document.getElementById('bulkResults').innerHTML = html;
+            document.getElementById('bulkStatus').innerHTML = 
+                `<span class="badge badge-success">İşlem tamamlandı!</span>`;
+            
+            // 3 saniye sonra sayfayı yenile
+            if (data.matched > 0) {
+                setTimeout(() => window.location.reload(), 3000);
+            }
+        } else {
+            document.getElementById('bulkResults').innerHTML = 
+                `<div class="alert alert-danger">Hata: ${data.error}</div>`;
+        }
+    })
+    .catch(e => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-link"></i> Eşleştir';
+        document.getElementById('bulkResults').innerHTML = 
+            `<div class="alert alert-danger">Hata: ${e}</div>`;
+    });
+}
+
+// Tablodaki tüm dolu inputları bul ve eşleştir
+function matchAllFilled() {
+    const inputs = document.querySelectorAll('.match-barcode-input');
+    const pairs = [];
+    
+    inputs.forEach(input => {
+        const barcode = input.value.trim();
+        const asin = input.dataset.asin;
+        const sku = input.dataset.sku;
+        
+        if (barcode && asin) {
+            pairs.push({
+                asin: asin,
+                sku: sku,
+                barcode: barcode
+            });
+        }
+    });
+    
+    if (pairs.length === 0) {
+        document.getElementById('matchAllResults').innerHTML = 
+            '<div class="alert alert-warning mb-0 py-1 small">Hiç barkod girilmemiş!</div>';
+        return;
+    }
+    
+    const btn = document.getElementById('matchAllBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eşleştiriliyor...';
+    document.getElementById('matchAllResults').innerHTML = '';
+    
+    // Her bir eşleşmeyi işle
+    let processed = 0;
+    let success = 0;
+    let failed = 0;
+    const results = [];
+    
+    const processNext = (index) => {
+        if (index >= pairs.length) {
+            // Tamamlandı
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-link"></i> Tümünü Eşleştir';
+            
+            let html = `<div class="alert ${success > 0 ? 'alert-success' : 'alert-warning'} mb-0 py-1 small">
+                ✅ ${success} eşleşti | ❌ ${failed} hata
+            </div>`;
+            document.getElementById('matchAllResults').innerHTML = html;
+            
+            if (success > 0) {
+                setTimeout(() => window.location.reload(), 2000);
+            }
+            return;
+        }
+        
+        const pair = pairs[index];
+        
+        fetch('/amazon/api/match-product', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                asin: pair.asin,
+                sku: pair.sku,
+                barcode: pair.barcode
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                success++;
+                // Input alanını yeşil yap
+                const input = document.querySelector(`.match-barcode-input[data-asin="${pair.asin}"]`);
+                if (input) {
+                    input.classList.remove('border-danger');
+                    input.classList.add('border-success', 'bg-light');
+                    input.disabled = true;
+                }
+            } else {
+                failed++;
+                // Input alanını kırmızı yap
+                const input = document.querySelector(`.match-barcode-input[data-asin="${pair.asin}"]`);
+                if (input) {
+                    input.classList.add('border-danger');
+                }
+            }
+            
+            // Sayacı güncelle
+            document.getElementById('filledCount').textContent = 
+                `${index + 1}/${pairs.length} işleniyor...`;
+            
+            // Sonraki öğeye geç (rate limit için biraz bekle)
+            setTimeout(() => processNext(index + 1), 100);
+        })
+        .catch(e => {
+            failed++;
+            setTimeout(() => processNext(index + 1), 100);
+        });
+    };
+    
+    // İşlemi başlat
+    processNext(0);
+}
+
+// Tüm inputları temizle
+function clearAllInputs() {
+    const inputs = document.querySelectorAll('.match-barcode-input');
+    inputs.forEach(input => {
+        if (!input.disabled) {
+            input.value = '';
+            input.classList.remove('border-success', 'border-danger', 'bg-light');
+        }
+    });
+    updateFilledCount();
+    document.getElementById('matchAllResults').innerHTML = '';
+}
+
+// Dolu input sayısını güncelle
+function updateFilledCount() {
+    const inputs = document.querySelectorAll('.match-barcode-input');
+    let filled = 0;
+    inputs.forEach(input => {
+        if (input.value.trim()) filled++;
+    });
+    document.getElementById('filledCount').textContent = 
+        `${filled} ürün barkod girildi`;
+}
+
+// Input değişikliklerini dinle
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('.match-barcode-input');
+    inputs.forEach(input => {
+        input.addEventListener('input', updateFilledCount);
+    });
+    updateFilledCount();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Amazon Ürünleri{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <a href="{{ url_for('amazon.index') }}" class="btn btn-outline-secondary btn-sm mb-2">
+                        <i class="fas fa-arrow-left"></i> Amazon Paneli
+                    </a>
+                    <h2 class="mb-0">
+                        <i class="fab fa-amazon text-warning"></i> Amazon Ürünleri
+                    </h2>
+                </div>
+                <div>
+                    <span class="badge badge-info" style="font-size: 1rem;">
+                        Toplam: <strong>{{ total }}</strong> ürün
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtreler ve İşlemler -->
+    <div class="row mb-3">
+        <div class="col-md-5">
+            <form method="GET" class="input-group">
+                <input type="text" class="form-control" name="search" id="search" 
+                       placeholder="SKU, ASIN veya ürün adı ile ara..." 
+                       value="{{ search or '' }}">
+                <div class="input-group-append">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-search"></i> Ara
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-7 text-right">
+            <button class="btn btn-warning" onclick="refreshProducts()" id="refreshBtn">
+                <i class="fas fa-sync"></i> Ürünleri Yenile (Rapor)
+            </button>
+            <button class="btn btn-success" onclick="quickProducts()" id="quickBtn">
+                <i class="fas fa-bolt"></i> Hızlı Liste (Stok)
+            </button>
+        </div>
+    </div>
+
+    {% if products %}
+    <!-- Ürün Kartları -->
+    <div class="row" id="productCards">
+        {% for product in products %}
+        <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 shadow-sm product-card">
+                <!-- Ürün Görseli -->
+                <div class="card-img-top text-center p-3" style="background: #f8f9fa; min-height: 150px;">
+                    {% if product.image_url %}
+                    <img src="{{ product.image_url }}" alt="{{ product.title }}" 
+                         style="max-height: 130px; max-width: 100%; object-fit: contain;">
+                    {% else %}
+                    <div class="d-flex align-items-center justify-content-center h-100">
+                        <i class="fas fa-box fa-3x text-muted"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="card-body">
+                    <!-- SKU & ASIN -->
+                    <div class="mb-2">
+                        <span class="badge badge-dark">SKU: {{ product.sku }}</span>
+                        <span class="badge badge-secondary">ASIN: {{ product.asin }}</span>
+                    </div>
+                    
+                    <!-- Ürün Adı -->
+                    <h6 class="card-title" style="min-height: 40px; font-size: 0.9rem;">
+                        {{ product.title[:60] }}{% if product.title|length > 60 %}...{% endif %}
+                    </h6>
+                    
+                    <!-- Fiyat ve Stok -->
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="h5 mb-0 text-success">
+                            {% if product.price %}₺{{ product.price }}{% else %}-{% endif %}
+                        </span>
+                        <span class="badge {% if product.quantity|int > 10 %}badge-success{% elif product.quantity|int > 0 %}badge-warning{% else %}badge-danger{% endif %}">
+                            Stok: {{ product.quantity }}
+                        </span>
+                    </div>
+                    
+                    <!-- Durum ve Kanal -->
+                    <div class="mb-2">
+                        <small>
+                            {% if product.fulfillment_channel == 'AFN' or product.fulfillment_channel == 'FBA' %}
+                            <span class="badge badge-info"><i class="fas fa-warehouse"></i> FBA</span>
+                            {% else %}
+                            <span class="badge badge-outline-secondary"><i class="fas fa-store"></i> FBM</span>
+                            {% endif %}
+                            
+                            {% if product.status == 'Active' %}
+                            <span class="badge badge-success">Aktif</span>
+                            {% else %}
+                            <span class="badge badge-secondary">{{ product.status }}</span>
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="card-footer bg-transparent">
+                    <div class="btn-group btn-block">
+                        <a href="https://www.amazon.com.tr/dp/{{ product.asin }}" target="_blank" 
+                           class="btn btn-sm btn-outline-warning">
+                            <i class="fab fa-amazon"></i> Görüntüle
+                        </a>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editProduct('{{ product.sku }}')">
+                            <i class="fas fa-edit"></i> Düzenle
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Sayfalama -->
+    {% if total_pages and total_pages > 1 %}
+    <nav aria-label="Sayfa navigasyonu">
+        <ul class="pagination justify-content-center">
+            {% if page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}">
+                    <i class="fas fa-chevron-left"></i> Önceki
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+                {% elif p <= 3 or p > total_pages - 2 or (p >= page - 1 and p <= page + 1) %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ p }}{% if search %}&search={{ search }}{% endif %}">{{ p }}</a>
+                </li>
+                {% elif p == 4 or p == total_pages - 2 %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page < total_pages %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}">
+                    Sonraki <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    
+    {% else %}
+    <!-- Boş Durum -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="fab fa-amazon fa-4x text-muted mb-3"></i>
+                    <h4>Ürün Bulunamadı</h4>
+                    <p class="text-muted">
+                        {% if search %}
+                        "{{ search }}" aramasına uygun ürün bulunamadı.
+                        {% else %}
+                        Amazon'dan ürün listesi çekmek için yukarıdaki butonları kullanın.
+                        {% endif %}
+                    </p>
+                    <div class="mt-3">
+                        <button class="btn btn-lg btn-warning" onclick="refreshProducts()">
+                            <i class="fas fa-sync"></i> Ürünleri Çek
+                        </button>
+                    </div>
+                    <small class="text-muted d-block mt-3">
+                        <i class="fas fa-info-circle"></i> İlk seferde rapor oluşturulacağı için biraz zaman alabilir (30-60 saniye)
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" data-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-warning" style="width: 3rem; height: 3rem;" role="status">
+                    <span class="sr-only">Yükleniyor...</span>
+                </div>
+                <h5 class="mt-3" id="loadingText">Amazon'dan ürünler çekiliyor...</h5>
+                <p class="text-muted" id="loadingSubText">Bu işlem 30-60 saniye sürebilir</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.product-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15) !important;
+}
+</style>
+
+<script>
+function refreshProducts() {
+    const btn = document.getElementById('refreshBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Çekiliyor...';
+    
+    $('#loadingModal').modal('show');
+    document.getElementById('loadingText').textContent = 'Amazon Ürün Raporu Oluşturuluyor...';
+    document.getElementById('loadingSubText').textContent = 'Rapor oluşturulup indirilecek. Bu işlem 30-60 saniye sürebilir.';
+    
+    // Sayfayı yenile - bu server-side'da raporu çekecek
+    window.location.href = '{{ url_for("amazon.products") }}';
+}
+
+function quickProducts() {
+    const btn = document.getElementById('quickBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Yükleniyor...';
+    
+    fetch('{{ url_for("amazon.api_products") }}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('Hata: ' + data.error);
+            } else {
+                alert('Toplam ' + data.total + ' ürün bulundu. Sayfayı yenileyiniz.');
+                window.location.reload();
+            }
+        })
+        .catch(error => {
+            alert('API hatası: ' + error);
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-bolt"></i> Hızlı Liste (Stok)';
+        });
+}
+
+function editProduct(sku) {
+    alert('Ürün düzenleme: ' + sku + '\nBu özellik yakında eklenecek.');
+}
+
+// Arama formu
+document.getElementById('search')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        this.form.submit();
+    }
+});
+</script>
+{% endblock %}

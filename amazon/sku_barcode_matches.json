@@ -1,0 +1,3622 @@
+[
+  {
+    "amazon_sku": "099-35 Beige",
+    "amazon_asin": "B0G6F8DB7L",
+    "barcode": "0799653335910"
+  },
+  {
+    "amazon_sku": "099-35 Fuchsia",
+    "amazon_asin": "B0G6F11QGY",
+    "barcode": "0799653335460"
+  },
+  {
+    "amazon_sku": "099-35 Green",
+    "amazon_asin": "B0G44MDXWW",
+    "barcode": "07996533355563"
+  },
+  {
+    "amazon_sku": "099-35 Jeans",
+    "amazon_asin": "B0G6F8W8V7",
+    "barcode": "73025681542855"
+  },
+  {
+    "amazon_sku": "099-35 Leopar",
+    "amazon_asin": "B0G44M64KM",
+    "barcode": "730734349970"
+  },
+  {
+    "amazon_sku": "099-35 Light Blue",
+    "amazon_asin": "B0G6FY5W6S",
+    "barcode": "0799653335606"
+  },
+  {
+    "amazon_sku": "099-35 Navy Blue",
+    "amazon_asin": "B0G6FWT4PC",
+    "barcode": "0799653335538"
+  },
+  {
+    "amazon_sku": "099-35 Red",
+    "amazon_asin": "B0G6FBYM4W",
+    "barcode": "0799653335989"
+  },
+  {
+    "amazon_sku": "099-35 White",
+    "amazon_asin": "B0G44SFV3H",
+    "barcode": "07996533556223"
+  },
+  {
+    "amazon_sku": "099-36 Beige",
+    "amazon_asin": "B0G6FDH6PG",
+    "barcode": "0799653335903"
+  },
+  {
+    "amazon_sku": "099-36 Fuchsia",
+    "amazon_asin": "B0G6FF1JB8",
+    "barcode": "0799653335453"
+  },
+  {
+    "amazon_sku": "099-36 Green",
+    "amazon_asin": "B0G44M4F3C",
+    "barcode": "0799653335555"
+  },
+  {
+    "amazon_sku": "099-36 Jeans",
+    "amazon_asin": "B0G6FQGWM7",
+    "barcode": "730256855685"
+  },
+  {
+    "amazon_sku": "099-36 Leopar",
+    "amazon_asin": "B0G44NL2J8",
+    "barcode": "730734349971"
+  },
+  {
+    "amazon_sku": "099-36 Light Blue",
+    "amazon_asin": "B0G6FS2H4P",
+    "barcode": "0799653335590"
+  },
+  {
+    "amazon_sku": "099-36 Navy Blue",
+    "amazon_asin": "B0G6FBMWH1",
+    "barcode": "0799653335521"
+  },
+  {
+    "amazon_sku": "099-36 Red",
+    "amazon_asin": "B0G6F11965",
+    "barcode": "0799653335972"
+  },
+  {
+    "amazon_sku": "099-36 White",
+    "amazon_asin": "B0G44NQB83",
+    "barcode": "079965335565252"
+  },
+  {
+    "amazon_sku": "099-37 Beige",
+    "amazon_asin": "B0G6FL7HRR",
+    "barcode": "0799653335897"
+  },
+  {
+    "amazon_sku": "099-37 Fuchsia",
+    "amazon_asin": "B0G6DZX7FD",
+    "barcode": "0799653335446"
+  },
+  {
+    "amazon_sku": "099-37 Green",
+    "amazon_asin": "B0G44K3DNP",
+    "barcode": "079965335555"
+  },
+  {
+    "amazon_sku": "099-37 Jeans",
+    "amazon_asin": "B0G6FQL9RB",
+    "barcode": "7302568154255"
+  },
+  {
+    "amazon_sku": "099-37 Leopar",
+    "amazon_asin": "B0G44K68CZ",
+    "barcode": "730734349972"
+  },
+  {
+    "amazon_sku": "099-37 Light Blue",
+    "amazon_asin": "B0BGXQWPQJ",
+    "barcode": "0799653335583"
+  },
+  {
+    "amazon_sku": "099-37 Navy Blue",
+    "amazon_asin": "B0G6FLVW8P",
+    "barcode": "0799653335514"
+  },
+  {
+    "amazon_sku": "099-37 Red",
+    "amazon_asin": "B0G6FM669X",
+    "barcode": "0799653335965"
+  },
+  {
+    "amazon_sku": "099-37 White",
+    "amazon_asin": "B0G4CS8TJS",
+    "barcode": "07996533556855252"
+  },
+  {
+    "amazon_sku": "099-38 Beige",
+    "amazon_asin": "B0G6FM1HYG",
+    "barcode": "0799653335880"
+  },
+  {
+    "amazon_sku": "099-38 Fuchsia",
+    "amazon_asin": "B0G6FGHVPT",
+    "barcode": "0799653335439"
+  },
+  {
+    "amazon_sku": "099-38 Green",
+    "amazon_asin": "B0G44N3JPL",
+    "barcode": "079914523335555"
+  },
+  {
+    "amazon_sku": "099-38 Jeans",
+    "amazon_asin": "B0G6DVWQJ1",
+    "barcode": "730256815552"
+  },
+  {
+    "amazon_sku": "099-38 Leopar",
+    "amazon_asin": "B0G44LBNBF",
+    "barcode": "730734349973"
+  },
+  {
+    "amazon_sku": "099-38 Light Blue",
+    "amazon_asin": "B0G6FJCP8F",
+    "barcode": "0799653335576"
+  },
+  {
+    "amazon_sku": "099-38 Navy Blue",
+    "amazon_asin": "B0G6F27H99",
+    "barcode": "0799653335507"
+  },
+  {
+    "amazon_sku": "099-38 Red",
+    "amazon_asin": "B0G6FSP6MM",
+    "barcode": "0799653335958"
+  },
+  {
+    "amazon_sku": "099-38 White",
+    "amazon_asin": "B0G4CSYMQ2",
+    "barcode": "0799653355855263"
+  },
+  {
+    "amazon_sku": "099-39 Beige",
+    "amazon_asin": "B0G6FDTCPF",
+    "barcode": "0799653335873"
+  },
+  {
+    "amazon_sku": "099-39 Fuchsia",
+    "amazon_asin": "B0G6F4TQ12",
+    "barcode": "0799653335422"
+  },
+  {
+    "amazon_sku": "099-39 Green",
+    "amazon_asin": "B0G44KYRHK",
+    "barcode": "07996533353622"
+  },
+  {
+    "amazon_sku": "099-39 Jeans",
+    "amazon_asin": "B0G6GBJDS9",
+    "barcode": "730256855635"
+  },
+  {
+    "amazon_sku": "099-39 Leopar",
+    "amazon_asin": "B0G4CT7VMM",
+    "barcode": "730734349974"
+  },
+  {
+    "amazon_sku": "099-39 Light Blue",
+    "amazon_asin": "B0G6FJ2CDF",
+    "barcode": "0799653335569"
+  },
+  {
+    "amazon_sku": "099-39 Navy Blue",
+    "amazon_asin": "B0G6FBPJZ6",
+    "barcode": "0799653335491"
+  },
+  {
+    "amazon_sku": "099-39 Red",
+    "amazon_asin": "B0G6FSRLX7",
+    "barcode": "0799653335941"
+  },
+  {
+    "amazon_sku": "099-39 White",
+    "amazon_asin": "B0G44GLWKB",
+    "barcode": "07996533556455"
+  },
+  {
+    "amazon_sku": "099-40 Beige",
+    "amazon_asin": "B0G6FDJ87V",
+    "barcode": "0799653335866"
+  },
+  {
+    "amazon_sku": "099-40 Fuchsia",
+    "amazon_asin": "B0G6FTSQGP",
+    "barcode": "0799653335415"
+  },
+  {
+    "amazon_sku": "099-40 Green",
+    "amazon_asin": "B0G44NH3PK",
+    "barcode": "07996533552"
+  },
+  {
+    "amazon_sku": "099-40 Jeans",
+    "amazon_asin": "B0G6FG6CGG",
+    "barcode": "7302568156265"
+  },
+  {
+    "amazon_sku": "099-40 Leopar",
+    "amazon_asin": "B0G44LW75B",
+    "barcode": "730734349975"
+  },
+  {
+    "amazon_sku": "099-40 Light Blue",
+    "amazon_asin": "B0G6FX1DJ9",
+    "barcode": "0799653335552"
+  },
+  {
+    "amazon_sku": "099-40 Navy Blue",
+    "amazon_asin": "B0G6FKJ48V",
+    "barcode": "0799653335484"
+  },
+  {
+    "amazon_sku": "099-40 Red",
+    "amazon_asin": "B0G6FJ1DN1",
+    "barcode": "0799653335934"
+  },
+  {
+    "amazon_sku": "099-40 White",
+    "amazon_asin": "B0G44FYQZX",
+    "barcode": "079965335565225"
+  },
+  {
+    "amazon_sku": "099-41 Beige",
+    "amazon_asin": "B0G6FF9CQF",
+    "barcode": "0799653335859"
+  },
+  {
+    "amazon_sku": "099-41 Fuchsia",
+    "amazon_asin": "B0G6FWCT3R",
+    "barcode": "0799653335408"
+  },
+  {
+    "amazon_sku": "099-41 Green",
+    "amazon_asin": "B0G44G2TD7",
+    "barcode": "07996533563614"
+  },
+  {
+    "amazon_sku": "099-41 Jeans",
+    "amazon_asin": "B0G6FGDYP8",
+    "barcode": "730256815555"
+  },
+  {
+    "amazon_sku": "099-41 Leopar",
+    "amazon_asin": "B0G6FMZG4H",
+    "barcode": "730734349976"
+  },
+  {
+    "amazon_sku": "099-41 Light Blue",
+    "amazon_asin": "B0G6FS7HRM",
+    "barcode": "0799653335545"
+  },
+  {
+    "amazon_sku": "099-41 Navy Blue",
+    "amazon_asin": "B0G6FHKP3X",
+    "barcode": "0799653335477"
+  },
+  {
+    "amazon_sku": "099-41 Red",
+    "amazon_asin": "B0G6FTB9V7",
+    "barcode": "0799653335927"
+  },
+  {
+    "amazon_sku": "099-41 White",
+    "amazon_asin": "B0G44P1R71",
+    "barcode": "07996533555563"
+  },
+  {
+    "amazon_sku": "009-35 Açık Mavi",
+    "amazon_asin": "B0G728H6GH",
+    "barcode": "73025681554"
+  },
+  {
+    "amazon_sku": "009-35 Açık Yeşil",
+    "amazon_asin": "B0G727Y8NT",
+    "barcode": "73025681555"
+  },
+  {
+    "amazon_sku": "009-35 Beyaz",
+    "amazon_asin": "B0G44M4D6W",
+    "barcode": "Güllüayakkabı049"
+  },
+  {
+    "amazon_sku": "009-35 Bordo",
+    "amazon_asin": "B0G6D9GQML",
+    "barcode": "1277097964"
+  },
+  {
+    "amazon_sku": "009-35 Fuşya",
+    "amazon_asin": "B0G44K43JG",
+    "barcode": "730734347775"
+  },
+  {
+    "amazon_sku": "009-35 Kot Mavi",
+    "amazon_asin": "B0G44N3CF6",
+    "barcode": "730256845552"
+  },
+  {
+    "amazon_sku": "009-35 Kırmızı",
+    "amazon_asin": "B0G44NQ8BM",
+    "barcode": "güllü5245"
+  },
+  {
+    "amazon_sku": "009-35 Lacivert",
+    "amazon_asin": "B0G44MBTH3",
+    "barcode": "730734347768"
+  },
+  {
+    "amazon_sku": "009-35 Leopar",
+    "amazon_asin": "B0G44NYQ47",
+    "barcode": "730734347970"
+  },
+  {
+    "amazon_sku": "009-35 Nar Çiçeği",
+    "amazon_asin": "B0G44MFBWF",
+    "barcode": "730256815713"
+  },
+  {
+    "amazon_sku": "009-35 Siyah",
+    "amazon_asin": "B0G44PMHKS",
+    "barcode": "Güllü5287"
+  },
+  {
+    "amazon_sku": "009-35 Ten Rengi",
+    "amazon_asin": "B0G44LWDGB",
+    "barcode": "dsFdsfSRG"
+  },
+  {
+    "amazon_sku": "009-36 Açık Mavi",
+    "amazon_asin": "B0G71WXB5D",
+    "barcode": "73025681558"
+  },
+  {
+    "amazon_sku": "009-36 Açık Yeşil",
+    "amazon_asin": "B0G72PB72G",
+    "barcode": "73025681556"
+  },
+  {
+    "amazon_sku": "009-36 Beyaz",
+    "amazon_asin": "B0G44MDX54",
+    "barcode": "Güllüayakkabı01"
+  },
+  {
+    "amazon_sku": "009-36 Bordo",
+    "amazon_asin": "B0G6DJJ29H",
+    "barcode": "1277097965"
+  },
+  {
+    "amazon_sku": "009-36 Fuşya",
+    "amazon_asin": "B0G44MH5MX",
+    "barcode": "730734347776"
+  },
+  {
+    "amazon_sku": "009-36 Kot Mavi",
+    "amazon_asin": "B0G44H1MMD",
+    "barcode": "73025685555"
+  },
+  {
+    "amazon_sku": "009-36 Kırmızı",
+    "amazon_asin": "B0G44L243Q",
+    "barcode": "gll009"
+  },
+  {
+    "amazon_sku": "009-36 Lacivert",
+    "amazon_asin": "B0G44NJTKR",
+    "barcode": "730734347769"
+  },
+  {
+    "amazon_sku": "009-36 Leopar",
+    "amazon_asin": "B0G44K2915",
+    "barcode": "730734347971"
+  },
+  {
+    "amazon_sku": "009-36 Nar Çiçeği",
+    "amazon_asin": "B0G72CF6TW",
+    "barcode": "gll015"
+  },
+  {
+    "amazon_sku": "009-36 Siyah",
+    "amazon_asin": "B0G44JDC5S",
+    "barcode": "Güllüayakkabı563"
+  },
+  {
+    "amazon_sku": "009-36 Ten Rengi",
+    "amazon_asin": "B0G44JXVZQ",
+    "barcode": "Güllüayakkabı444"
+  },
+  {
+    "amazon_sku": "009-37 Açık Mavi",
+    "amazon_asin": "B0G731SPFM",
+    "barcode": "73025681559"
+  },
+  {
+    "amazon_sku": "009-37 Açık Yeşil",
+    "amazon_asin": "B0G725HB5P",
+    "barcode": "73025681568"
+  },
+  {
+    "amazon_sku": "009-37 Beyaz",
+    "amazon_asin": "B0G44K3ZVB",
+    "barcode": "Güllüayakkabı02"
+  },
+  {
+    "amazon_sku": "009-37 Bordo",
+    "amazon_asin": "B0G6DNX8S5",
+    "barcode": "1277097966"
+  },
+  {
+    "amazon_sku": "009-37 Fuşya",
+    "amazon_asin": "B0G4CS7Q6Y",
+    "barcode": "730734347777"
+  },
+  {
+    "amazon_sku": "009-37 Kot Mavi",
+    "amazon_asin": "B0G44NJ1DD",
+    "barcode": "73025681545465"
+  },
+  {
+    "amazon_sku": "009-37 Kırmızı",
+    "amazon_asin": "B0G44H7LFF",
+    "barcode": "gll011"
+  },
+  {
+    "amazon_sku": "009-37 Lacivert",
+    "amazon_asin": "B0G44HKSSV",
+    "barcode": "730734347770"
+  },
+  {
+    "amazon_sku": "009-37 Leopar",
+    "amazon_asin": "B0G73586JP",
+    "barcode": "730734347974"
+  },
+  {
+    "amazon_sku": "009-37 Nar Çiçeği",
+    "amazon_asin": "B0G44KZDJS",
+    "barcode": "gll016"
+  },
+  {
+    "amazon_sku": "009-37 Siyah",
+    "amazon_asin": "B0G44HH154",
+    "barcode": "Güllüayakkabı741"
+  },
+  {
+    "amazon_sku": "009-37 Ten Rengi",
+    "amazon_asin": "B0G4CRJHJP",
+    "barcode": "Güllüayakkabı3331"
+  },
+  {
+    "amazon_sku": "009-38 Açık Mavi",
+    "amazon_asin": "B0G725GSB4",
+    "barcode": "73025681560"
+  },
+  {
+    "amazon_sku": "009-38 Açık Yeşil",
+    "amazon_asin": "B0G72DM6N6",
+    "barcode": "73025681569"
+  },
+  {
+    "amazon_sku": "009-38 Beyaz",
+    "amazon_asin": "B0G44JW2D3",
+    "barcode": "Güllüayakkabı03"
+  },
+  {
+    "amazon_sku": "009-38 Bordo",
+    "amazon_asin": "B0G6D6YMNH",
+    "barcode": "1277097967"
+  },
+  {
+    "amazon_sku": "009-38 Fuşya",
+    "amazon_asin": "B0G71SG443",
+    "barcode": "730734347778"
+  },
+  {
+    "amazon_sku": "009-38 Kot Mavi",
+    "amazon_asin": "B0G4CWT35S",
+    "barcode": "73025681547565256"
+  },
+  {
+    "amazon_sku": "009-38 Kırmızı",
+    "amazon_asin": "B0G72HJQJN",
+    "barcode": "gll012"
+  },
+  {
+    "amazon_sku": "009-38 Lacivert",
+    "amazon_asin": "B0G44PZS88",
+    "barcode": "730734347771"
+  },
+  {
+    "amazon_sku": "009-38 Leopar",
+    "amazon_asin": "B0G71PFGY1",
+    "barcode": "730734347973"
+  },
+  {
+    "amazon_sku": "009-38 Nar Çiçeği",
+    "amazon_asin": "B0G44KPWRF",
+    "barcode": "gll017"
+  },
+  {
+    "amazon_sku": "009-38 Siyah",
+    "amazon_asin": "B0G44HYGR3",
+    "barcode": "Güllüayakkab2450"
+  },
+  {
+    "amazon_sku": "009-38 Ten Rengi",
+    "amazon_asin": "B0G4CV16BH",
+    "barcode": "Güllüayakkabı47945"
+  },
+  {
+    "amazon_sku": "009-39 Açık Mavi",
+    "amazon_asin": "B0G72G8TS1",
+    "barcode": "73025681561"
+  },
+  {
+    "amazon_sku": "009-39 Açık Yeşil",
+    "amazon_asin": "B0G729G4ZB",
+    "barcode": "73025681570"
+  },
+  {
+    "amazon_sku": "009-39 Beyaz",
+    "amazon_asin": "B0G44KXSM4",
+    "barcode": "Güllüayakkabı04"
+  },
+  {
+    "amazon_sku": "009-39 Bordo",
+    "amazon_asin": "B0G6DKDJLR",
+    "barcode": "1277097968"
+  },
+  {
+    "amazon_sku": "009-39 Fuşya",
+    "amazon_asin": "B0G727MV5B",
+    "barcode": "730734347779"
+  },
+  {
+    "amazon_sku": "009-39 Kot Mavi",
+    "amazon_asin": "B0G44KPTCB",
+    "barcode": "73025681547543"
+  },
+  {
+    "amazon_sku": "009-39 Kırmızı",
+    "amazon_asin": "B0G44L2592",
+    "barcode": "gll013"
+  },
+  {
+    "amazon_sku": "009-39 Lacivert",
+    "amazon_asin": "B0G44J7NTM",
+    "barcode": "730734347772"
+  },
+  {
+    "amazon_sku": "009-39 Leopar",
+    "amazon_asin": "B0G71P67WC",
+    "barcode": "730734347975"
+  },
+  {
+    "amazon_sku": "009-39 Nar Çiçeği",
+    "amazon_asin": "B0G44GWSV8",
+    "barcode": "gll018"
+  },
+  {
+    "amazon_sku": "009-39 Siyah",
+    "amazon_asin": "B0G725NJC5",
+    "barcode": "Güllüayakkabı0099"
+  },
+  {
+    "amazon_sku": "009-39 Ten Rengi",
+    "amazon_asin": "B0G4CX9PZ8",
+    "barcode": "Güllüayakkabı9889"
+  },
+  {
+    "amazon_sku": "009-40 Açık Mavi",
+    "amazon_asin": "B0G72VLD99",
+    "barcode": "73025681562"
+  },
+  {
+    "amazon_sku": "009-40 Açık Yeşil",
+    "amazon_asin": "B0G71ZFF79",
+    "barcode": "73025681571"
+  },
+  {
+    "amazon_sku": "009-40 Beyaz",
+    "amazon_asin": "B0G71V85K2",
+    "barcode": "730734347620"
+  },
+  {
+    "amazon_sku": "009-40 Bordo",
+    "amazon_asin": "B0G6DM4RZR",
+    "barcode": "1277097969"
+  },
+  {
+    "amazon_sku": "009-40 Fuşya",
+    "amazon_asin": "B0G72NPVCH",
+    "barcode": "730734347781"
+  },
+  {
+    "amazon_sku": "009-40 Kot Mavi",
+    "amazon_asin": "B0G4CT9Z5V",
+    "barcode": "73025681542786526"
+  },
+  {
+    "amazon_sku": "009-40 Kırmızı",
+    "amazon_asin": "B0G44HF3F1",
+    "barcode": "gll014"
+  },
+  {
+    "amazon_sku": "009-40 Lacivert",
+    "amazon_asin": "B0G44MK72P",
+    "barcode": "730734347773"
+  },
+  {
+    "amazon_sku": "009-40 Leopar",
+    "amazon_asin": "B0G71YQPVQ",
+    "barcode": "730734347976"
+  },
+  {
+    "amazon_sku": "009-40 Nar Çiçeği",
+    "amazon_asin": "B0G44NCD9P",
+    "barcode": "gll019"
+  },
+  {
+    "amazon_sku": "009-40 Siyah",
+    "amazon_asin": "B0G72FTQB3",
+    "barcode": "730734347699"
+  },
+  {
+    "amazon_sku": "009-40 Ten Rengi",
+    "amazon_asin": "B0G71VDV3H",
+    "barcode": "730734347767"
+  },
+  {
+    "amazon_sku": "009-41 Açık Mavi",
+    "amazon_asin": "B0G72CJ2BV",
+    "barcode": "73025381551"
+  },
+  {
+    "amazon_sku": "009-41 Açık Yeşil",
+    "amazon_asin": "B0G7299VWG",
+    "barcode": "73326681369"
+  },
+  {
+    "amazon_sku": "009-41 Beyaz",
+    "amazon_asin": "B0G44NSQ3X",
+    "barcode": "Güllüayakkabı048"
+  },
+  {
+    "amazon_sku": "009-41 Bordo",
+    "amazon_asin": "B0G6D96R8H",
+    "barcode": "1277097970"
+  },
+  {
+    "amazon_sku": "009-41 Fuşya",
+    "amazon_asin": "B0G4CQPQRV",
+    "barcode": "730734347780"
+  },
+  {
+    "amazon_sku": "009-41 Kot Mavi",
+    "amazon_asin": "B0G44NK232",
+    "barcode": "730256815425525"
+  },
+  {
+    "amazon_sku": "009-41 Kırmızı",
+    "amazon_asin": "B0G44R4D1B",
+    "barcode": "güllü5240"
+  },
+  {
+    "amazon_sku": "009-41 Lacivert",
+    "amazon_asin": "B0G72156KT",
+    "barcode": "730734347774"
+  },
+  {
+    "amazon_sku": "009-41 Leopar",
+    "amazon_asin": "B0G44MYJYL",
+    "barcode": "730734347977"
+  },
+  {
+    "amazon_sku": "009-41 Nar Çiçeği",
+    "amazon_asin": "B0G44K932G",
+    "barcode": "7302568157154"
+  },
+  {
+    "amazon_sku": "009-41 Siyah",
+    "amazon_asin": "B0G4CVF49F",
+    "barcode": "Güllü5286"
+  },
+  {
+    "amazon_sku": "009-41 Ten Rengi",
+    "amazon_asin": "B0G44MYJYV",
+    "barcode": "fdbfadghnbstafg"
+  },
+  {
+    "amazon_sku": "0106-35 BORDO",
+    "amazon_asin": "B0G6LYTZNF",
+    "barcode": "53073430110"
+  },
+  {
+    "amazon_sku": "0106-35 Beyaz Mat",
+    "amazon_asin": "B0G6LV4FNZ",
+    "barcode": "53073430120"
+  },
+  {
+    "amazon_sku": "0106-35Bej",
+    "amazon_asin": "B0G44KL2LD",
+    "barcode": "73073433196"
+  },
+  {
+    "amazon_sku": "0106-35Gri",
+    "amazon_asin": "B0G44MBTH1",
+    "barcode": "73073433189"
+  },
+  {
+    "amazon_sku": "0106-35Koyu Kahverengi",
+    "amazon_asin": "B0G44JQB66",
+    "barcode": "73073433182"
+  },
+  {
+    "amazon_sku": "0106-35Siyah",
+    "amazon_asin": "B0G44MKRJY",
+    "barcode": "73073433175"
+  },
+  {
+    "amazon_sku": "0106-36 BORDO",
+    "amazon_asin": "B0G6LQ4JL7",
+    "barcode": "53073430131"
+  },
+  {
+    "amazon_sku": "0106-36 Beyaz Mat",
+    "amazon_asin": "B0G6LTJL8M",
+    "barcode": "53073430121"
+  },
+  {
+    "amazon_sku": "0106-36Bej",
+    "amazon_asin": "B0G44H9XKK",
+    "barcode": "73073433197"
+  },
+  {
+    "amazon_sku": "0106-36Gri",
+    "amazon_asin": "B0G44MJD3S",
+    "barcode": "73073433190"
+  },
+  {
+    "amazon_sku": "0106-36Koyu Kahverengi",
+    "amazon_asin": "B0G44K3BLM",
+    "barcode": "73073433183"
+  },
+  {
+    "amazon_sku": "0106-36Siyah",
+    "amazon_asin": "B0G6LH8ZDH",
+    "barcode": "73073433176"
+  },
+  {
+    "amazon_sku": "0106-37 BORDO",
+    "amazon_asin": "B0G6KZBV61",
+    "barcode": "53073430112"
+  },
+  {
+    "amazon_sku": "0106-37 Beyaz Mat",
+    "amazon_asin": "B0G6LLCB3R",
+    "barcode": "53073430122"
+  },
+  {
+    "amazon_sku": "0106-37Bej",
+    "amazon_asin": "B0G44LQSGG",
+    "barcode": "73073433198"
+  },
+  {
+    "amazon_sku": "0106-37Gri",
+    "amazon_asin": "B0G6LYWTD7",
+    "barcode": "73073433191"
+  },
+  {
+    "amazon_sku": "0106-37Koyu Kahverengi",
+    "amazon_asin": "B0G44GMXWF",
+    "barcode": "73073433184"
+  },
+  {
+    "amazon_sku": "0106-37Siyah",
+    "amazon_asin": "B0G6LCHS3Z",
+    "barcode": "73073433177"
+  },
+  {
+    "amazon_sku": "0106-38 BORDO",
+    "amazon_asin": "B0G6LLJ1BR",
+    "barcode": "53073430113"
+  },
+  {
+    "amazon_sku": "0106-38 Beyaz Mat",
+    "amazon_asin": "B0G44K6YW9",
+    "barcode": "53073430123"
+  },
+  {
+    "amazon_sku": "0106-38Bej",
+    "amazon_asin": "B0G4CV4G4P",
+    "barcode": "73073433199"
+  },
+  {
+    "amazon_sku": "0106-38Gri",
+    "amazon_asin": "B0G6LJVL5C",
+    "barcode": "73073433192"
+  },
+  {
+    "amazon_sku": "0106-38Koyu Kahverengi",
+    "amazon_asin": "B0G44KN2SH",
+    "barcode": "73073433185"
+  },
+  {
+    "amazon_sku": "0106-38Siyah",
+    "amazon_asin": "B0G6LW1LK6",
+    "barcode": "73073433178"
+  },
+  {
+    "amazon_sku": "0106-39 BORDO",
+    "amazon_asin": "B0G6LJMBGG",
+    "barcode": "53073430114"
+  },
+  {
+    "amazon_sku": "0106-39 Beyaz Mat",
+    "amazon_asin": "B0G6M1DFPS",
+    "barcode": "53073430124"
+  },
+  {
+    "amazon_sku": "0106-39Bej",
+    "amazon_asin": "B0G44LYQK2",
+    "barcode": "73073433200"
+  },
+  {
+    "amazon_sku": "0106-39Gri",
+    "amazon_asin": "B0G44JDC62",
+    "barcode": "73073433193"
+  },
+  {
+    "amazon_sku": "0106-39Koyu Kahverengi",
+    "amazon_asin": "B0G44HC35V",
+    "barcode": "73073433186"
+  },
+  {
+    "amazon_sku": "0106-39Siyah",
+    "amazon_asin": "B0G44M41Z9",
+    "barcode": "73073433179"
+  },
+  {
+    "amazon_sku": "0106-40 BORDO",
+    "amazon_asin": "B0G6LMBBLZ",
+    "barcode": "53073430115"
+  },
+  {
+    "amazon_sku": "0106-40 Beyaz Mat",
+    "amazon_asin": "B0G44NCZJX",
+    "barcode": "53073430125"
+  },
+  {
+    "amazon_sku": "0106-40Bej",
+    "amazon_asin": "B0G44M99MK",
+    "barcode": "73073433201"
+  },
+  {
+    "amazon_sku": "0106-40Gri",
+    "amazon_asin": "B0G44N2TB6",
+    "barcode": "73073433194"
+  },
+  {
+    "amazon_sku": "0106-40Koyu Kahverengi",
+    "amazon_asin": "B0G44LQX6F",
+    "barcode": "73073433187"
+  },
+  {
+    "amazon_sku": "0106-40Siyah",
+    "amazon_asin": "B0G44G15VT",
+    "barcode": "73073433180"
+  },
+  {
+    "amazon_sku": "0106-41 BORDO",
+    "amazon_asin": "B0G6LHWC19",
+    "barcode": "53073430116"
+  },
+  {
+    "amazon_sku": "0106-41 Beyaz Mat",
+    "amazon_asin": "B0G44N1391",
+    "barcode": "53073430126"
+  },
+  {
+    "amazon_sku": "0106-41Bej",
+    "amazon_asin": "B0G44K3J4Y",
+    "barcode": "73073433202"
+  },
+  {
+    "amazon_sku": "0106-41Gri",
+    "amazon_asin": "B0G44KRXXS",
+    "barcode": "73073433195"
+  },
+  {
+    "amazon_sku": "0106-41Koyu Kahverengi",
+    "amazon_asin": "B0G44JT5C8",
+    "barcode": "73073433188"
+  },
+  {
+    "amazon_sku": "0106-41Siyah",
+    "amazon_asin": "B0G44N4QT9",
+    "barcode": "73073433181"
+  },
+  {
+    "amazon_sku": "0109 - 35 Siyah Mat",
+    "amazon_asin": "B0G44HJ3LX",
+    "barcode": "73073433260"
+  },
+  {
+    "amazon_sku": "0109 - 36 Siyah Mat",
+    "amazon_asin": "B0G6MBBCX6",
+    "barcode": "73073433261"
+  },
+  {
+    "amazon_sku": "0109 - 37 Siyah Mat",
+    "amazon_asin": "B0G6MHBJBM",
+    "barcode": "73073433262"
+  },
+  {
+    "amazon_sku": "0109 - 38 Siyah Mat",
+    "amazon_asin": "B0G6LP1RRT",
+    "barcode": "73073433263"
+  },
+  {
+    "amazon_sku": "0109 - 39 Siyah Mat",
+    "amazon_asin": "B0G44LPZNN",
+    "barcode": "73073433264"
+  },
+  {
+    "amazon_sku": "0109 - 40 Siyah Mat",
+    "amazon_asin": "B0G44KW37M",
+    "barcode": "73073433265"
+  },
+  {
+    "amazon_sku": "0109-35Bej Kırışık",
+    "amazon_asin": "B0G44PZ582",
+    "barcode": "73073433203"
+  },
+  {
+    "amazon_sku": "0109-35Bej Mat",
+    "amazon_asin": "B0G44MK4WQ",
+    "barcode": "73073433210"
+  },
+  {
+    "amazon_sku": "0109-35Bej Rugan",
+    "amazon_asin": "B0G44KS659",
+    "barcode": "73073433217"
+  },
+  {
+    "amazon_sku": "0109-35Bordo Mat",
+    "amazon_asin": "B0G44HHVT9",
+    "barcode": "73073433245"
+  },
+  {
+    "amazon_sku": "0109-35Bordo Rugan",
+    "amazon_asin": "B0G6MC6SB1",
+    "barcode": "73073433224"
+  },
+  {
+    "amazon_sku": "0109-35Kırmızı Kırışık",
+    "amazon_asin": "B0G44HCF7T",
+    "barcode": "73073433231"
+  },
+  {
+    "amazon_sku": "0109-35Siyah Kırışık",
+    "amazon_asin": "B0G44LW75N",
+    "barcode": "73073433238"
+  },
+  {
+    "amazon_sku": "0109-36Bej Kırışık",
+    "amazon_asin": "B0G44N41T1",
+    "barcode": "73073433204"
+  },
+  {
+    "amazon_sku": "0109-36Bej Mat",
+    "amazon_asin": "B0G6M3H43T",
+    "barcode": "73073433211"
+  },
+  {
+    "amazon_sku": "0109-36Bej Rugan",
+    "amazon_asin": "B0G6LLLBV5",
+    "barcode": "73073433218"
+  },
+  {
+    "amazon_sku": "0109-36Bordo Mat",
+    "amazon_asin": "B0G44JTF5H",
+    "barcode": "73073433246"
+  },
+  {
+    "amazon_sku": "0109-36Bordo Rugan",
+    "amazon_asin": "B0G44NH3P6",
+    "barcode": "73073433225"
+  },
+  {
+    "amazon_sku": "0109-36Kırmızı Kırışık",
+    "amazon_asin": "B0G4CQ3HBS",
+    "barcode": "73073433232"
+  },
+  {
+    "amazon_sku": "0109-36Siyah Kırışık",
+    "amazon_asin": "B0G44M6S8W",
+    "barcode": "73073433239"
+  },
+  {
+    "amazon_sku": "0109-37Bej Kırışık",
+    "amazon_asin": "B0G44J4RF9",
+    "barcode": "73073433205"
+  },
+  {
+    "amazon_sku": "0109-37Bej Mat",
+    "amazon_asin": "B0G6LZYX7S",
+    "barcode": "73073433212"
+  },
+  {
+    "amazon_sku": "0109-37Bej Rugan",
+    "amazon_asin": "B0G44K12N4",
+    "barcode": "73073433219"
+  },
+  {
+    "amazon_sku": "0109-37Bordo Mat",
+    "amazon_asin": "B0G6LWVGJP",
+    "barcode": "73073433247"
+  },
+  {
+    "amazon_sku": "0109-37Bordo Rugan",
+    "amazon_asin": "B0G44PQPLZ",
+    "barcode": "73073433226"
+  },
+  {
+    "amazon_sku": "0109-37Kırmızı Kırışık",
+    "amazon_asin": "B0G44LPKMW",
+    "barcode": "73073433233"
+  },
+  {
+    "amazon_sku": "0109-37Siyah Kırışık",
+    "amazon_asin": "B0G44KBVX4",
+    "barcode": "73073433240"
+  },
+  {
+    "amazon_sku": "0109-38Bej Kırışık",
+    "amazon_asin": "B0G44JJ5PJ",
+    "barcode": "73073433206"
+  },
+  {
+    "amazon_sku": "0109-38Bej Mat",
+    "amazon_asin": "B0G44KKDY5",
+    "barcode": "73073433213"
+  },
+  {
+    "amazon_sku": "0109-38Bej Rugan",
+    "amazon_asin": "B0G4CSQQJ7",
+    "barcode": "73073433220"
+  },
+  {
+    "amazon_sku": "0109-38Bordo Mat",
+    "amazon_asin": "B0G44PK7KG",
+    "barcode": "73073433248"
+  },
+  {
+    "amazon_sku": "0109-38Bordo Rugan",
+    "amazon_asin": "B0G44PCFTP",
+    "barcode": "73073433227"
+  },
+  {
+    "amazon_sku": "0109-38Kırmızı Kırışık",
+    "amazon_asin": "B0G44KL6PJ",
+    "barcode": "73073433234"
+  },
+  {
+    "amazon_sku": "0109-38Siyah Kırışık",
+    "amazon_asin": "B0G44KV55T",
+    "barcode": "73073433241"
+  },
+  {
+    "amazon_sku": "0109-39Bej Kırışık",
+    "amazon_asin": "B0G44H7GCL",
+    "barcode": "73073433207"
+  },
+  {
+    "amazon_sku": "0109-39Bej Mat",
+    "amazon_asin": "B0G44NC841",
+    "barcode": "73073433214"
+  },
+  {
+    "amazon_sku": "0109-39Bej Rugan",
+    "amazon_asin": "B0G44KW75R",
+    "barcode": "73073433221"
+  },
+  {
+    "amazon_sku": "0109-39Bordo Mat",
+    "amazon_asin": "B0G44NVJRP",
+    "barcode": "73073433249"
+  },
+  {
+    "amazon_sku": "0109-39Bordo Rugan",
+    "amazon_asin": "B0G44KNLLM",
+    "barcode": "73073433228"
+  },
+  {
+    "amazon_sku": "0109-39Kırmızı Kırışık",
+    "amazon_asin": "B0G44JRNQH",
+    "barcode": "73073433235"
+  },
+  {
+    "amazon_sku": "0109-39Siyah Kırışık",
+    "amazon_asin": "B0G44M64KJ",
+    "barcode": "73073433242"
+  },
+  {
+    "amazon_sku": "0109-40Bej Kırışık",
+    "amazon_asin": "B0G44Q44MJ",
+    "barcode": "73073433208"
+  },
+  {
+    "amazon_sku": "0109-40Bej Mat",
+    "amazon_asin": "B0G44PMHKW",
+    "barcode": "73073433215"
+  },
+  {
+    "amazon_sku": "0109-40Bej Rugan",
+    "amazon_asin": "B0G44JDLMN",
+    "barcode": "73073433222"
+  },
+  {
+    "amazon_sku": "0109-40Bordo Mat",
+    "amazon_asin": "B0G44NBWQV",
+    "barcode": "73073433250"
+  },
+  {
+    "amazon_sku": "0109-40Bordo Rugan",
+    "amazon_asin": "B0G44HXWZ5",
+    "barcode": "73073433229"
+  },
+  {
+    "amazon_sku": "0109-40Kırmızı Kırışık",
+    "amazon_asin": "B0G44D4RH2",
+    "barcode": "73073433236"
+  },
+  {
+    "amazon_sku": "0109-40Siyah Kırışık",
+    "amazon_asin": "B0G44HYD9T",
+    "barcode": "73073433243"
+  },
+  {
+    "amazon_sku": "0109-41Bej Kırışık",
+    "amazon_asin": "B0G44L27XN",
+    "barcode": "73073433209"
+  },
+  {
+    "amazon_sku": "0109-41Bej Mat",
+    "amazon_asin": "B0G44H9JHG",
+    "barcode": "73073433216"
+  },
+  {
+    "amazon_sku": "0109-41Bej Rugan",
+    "amazon_asin": "B0G44NXJVH",
+    "barcode": "73073433223"
+  },
+  {
+    "amazon_sku": "0109-41Bordo Mat",
+    "amazon_asin": "B0G44H3V58",
+    "barcode": "73073433251"
+  },
+  {
+    "amazon_sku": "0109-41Bordo Rugan",
+    "amazon_asin": "B0G44K4YPL",
+    "barcode": "73073433230"
+  },
+  {
+    "amazon_sku": "0109-41Kırmızı Kırışık",
+    "amazon_asin": "B0G44NHWR4",
+    "barcode": "73073433237"
+  },
+  {
+    "amazon_sku": "0109-41Siyah Kırışık",
+    "amazon_asin": "B0G44PCH1K",
+    "barcode": "73073433244"
+  },
+  {
+    "amazon_sku": "0112-35Siyah",
+    "amazon_asin": "B0G44FYJPJ",
+    "barcode": "7307343900"
+  },
+  {
+    "amazon_sku": "0112-36Siyah",
+    "amazon_asin": "B0G44JT5C2",
+    "barcode": "7307343901"
+  },
+  {
+    "amazon_sku": "0112-37Siyah",
+    "amazon_asin": "B0G44JXK2S",
+    "barcode": "7307343902"
+  },
+  {
+    "amazon_sku": "0112-38Siyah",
+    "amazon_asin": "B0G44JP2MQ",
+    "barcode": "7307343903"
+  },
+  {
+    "amazon_sku": "0112-39Siyah",
+    "amazon_asin": "B0G44H9XKJ",
+    "barcode": "7307343904"
+  },
+  {
+    "amazon_sku": "0112-40Siyah",
+    "amazon_asin": "B0G44GLWKG",
+    "barcode": "7307343905"
+  },
+  {
+    "amazon_sku": "0112-41Siyah",
+    "amazon_asin": "B0G44KBNXS",
+    "barcode": "7307343906"
+  },
+  {
+    "amazon_sku": "017-35 Krem Rugan",
+    "amazon_asin": "B0G6LCB57M",
+    "barcode": "730734345042"
+  },
+  {
+    "amazon_sku": "017-35 Siyah Kadife",
+    "amazon_asin": "B0G6L11TCF",
+    "barcode": "730734345035"
+  },
+  {
+    "amazon_sku": "017-35Beyaz",
+    "amazon_asin": "B0G6L7J9ZD",
+    "barcode": "730734345000"
+  },
+  {
+    "amazon_sku": "017-35Bordo Kadife",
+    "amazon_asin": "B0G6L3D15X",
+    "barcode": "730734345021"
+  },
+  {
+    "amazon_sku": "017-35Kırmızı Rugan",
+    "amazon_asin": "B0G6L42WDT",
+    "barcode": "730734345007"
+  },
+  {
+    "amazon_sku": "017-35Siyah",
+    "amazon_asin": "B0G6L2XLND",
+    "barcode": "730734345014"
+  },
+  {
+    "amazon_sku": "017-35Vizon Kadife",
+    "amazon_asin": "B0G6KZGTQF",
+    "barcode": "730734345028"
+  },
+  {
+    "amazon_sku": "017-36 Krem Rugan",
+    "amazon_asin": "B0G6LD4MTC",
+    "barcode": "730734345043"
+  },
+  {
+    "amazon_sku": "017-36 Siyah Kadife",
+    "amazon_asin": "B0G6LGB15L",
+    "barcode": "730734345036"
+  },
+  {
+    "amazon_sku": "017-36Beyaz",
+    "amazon_asin": "B0G44H3FL7",
+    "barcode": "730734345001"
+  },
+  {
+    "amazon_sku": "017-36Bordo Kadife",
+    "amazon_asin": "B0G6KTKMF2",
+    "barcode": "730734345022"
+  },
+  {
+    "amazon_sku": "017-36Kırmızı Rugan",
+    "amazon_asin": "B0G44JDL35",
+    "barcode": "730734345008"
+  },
+  {
+    "amazon_sku": "017-36Siyah",
+    "amazon_asin": "B0G44MKGTX",
+    "barcode": "730734345015"
+  },
+  {
+    "amazon_sku": "017-36Vizon Kadife",
+    "amazon_asin": "B0G6L7YBYB",
+    "barcode": "730734345029"
+  },
+  {
+    "amazon_sku": "017-37 Krem Rugan",
+    "amazon_asin": "B0G6L7QQ7D",
+    "barcode": "730734345044"
+  },
+  {
+    "amazon_sku": "017-37 Siyah Kadife",
+    "amazon_asin": "B0G6LD3MG8",
+    "barcode": "730734345037"
+  },
+  {
+    "amazon_sku": "017-37Beyaz",
+    "amazon_asin": "B0G44FKMKD",
+    "barcode": "730734345002"
+  },
+  {
+    "amazon_sku": "017-37Bordo Kadife",
+    "amazon_asin": "B0G6LCRK6L",
+    "barcode": "730734345023"
+  },
+  {
+    "amazon_sku": "017-37Kırmızı Rugan",
+    "amazon_asin": "B0G44NYQ45",
+    "barcode": "730734345009"
+  },
+  {
+    "amazon_sku": "017-37Siyah",
+    "amazon_asin": "B0G44JPNM7",
+    "barcode": "730734345016"
+  },
+  {
+    "amazon_sku": "017-37Vizon Kadife",
+    "amazon_asin": "B0G6L8JCG3",
+    "barcode": "730734345030"
+  },
+  {
+    "amazon_sku": "017-38 Krem Rugan",
+    "amazon_asin": "B0G6L8C92B",
+    "barcode": "730734345045"
+  },
+  {
+    "amazon_sku": "017-38 Siyah Kadife",
+    "amazon_asin": "B0G6LBD7VQ",
+    "barcode": "730734345038"
+  },
+  {
+    "amazon_sku": "017-38Beyaz",
+    "amazon_asin": "B0G4CPKV53",
+    "barcode": "730734345003"
+  },
+  {
+    "amazon_sku": "017-38Bordo Kadife",
+    "amazon_asin": "B0G6L2CS74",
+    "barcode": "730734345024"
+  },
+  {
+    "amazon_sku": "017-38Kırmızı Rugan",
+    "amazon_asin": "B0G44HZLTB",
+    "barcode": "730734345010"
+  },
+  {
+    "amazon_sku": "017-38Siyah",
+    "amazon_asin": "B0G44M5P7P",
+    "barcode": "730734345017"
+  },
+  {
+    "amazon_sku": "017-38Vizon Kadife",
+    "amazon_asin": "B0G6LHLTFD",
+    "barcode": "730734345031"
+  },
+  {
+    "amazon_sku": "017-39 Krem Rugan",
+    "amazon_asin": "B0G6KG7PDQ",
+    "barcode": "730734345046"
+  },
+  {
+    "amazon_sku": "017-39 Siyah Kadife",
+    "amazon_asin": "B0G6KWYHK7",
+    "barcode": "730734345039"
+  },
+  {
+    "amazon_sku": "017-39Beyaz",
+    "amazon_asin": "B0G44MK734",
+    "barcode": "730734345004"
+  },
+  {
+    "amazon_sku": "017-39Bordo Kadife",
+    "amazon_asin": "B0G6L31L84",
+    "barcode": "730734345025"
+  },
+  {
+    "amazon_sku": "017-39Kırmızı Rugan",
+    "amazon_asin": "B0G4CQTV2M",
+    "barcode": "730734345011"
+  },
+  {
+    "amazon_sku": "017-39Siyah",
+    "amazon_asin": "B0G44K12NF",
+    "barcode": "730734345018"
+  },
+  {
+    "amazon_sku": "017-39Vizon Kadife",
+    "amazon_asin": "B0G6LBDC7F",
+    "barcode": "730734345032"
+  },
+  {
+    "amazon_sku": "017-40 Krem Rugan",
+    "amazon_asin": "B0G6L1Y97P",
+    "barcode": "730734345047"
+  },
+  {
+    "amazon_sku": "017-40 Siyah Kadife",
+    "amazon_asin": "B0G6L3V7ZD",
+    "barcode": "730734345040"
+  },
+  {
+    "amazon_sku": "017-40Beyaz",
+    "amazon_asin": "B0G44MK732",
+    "barcode": "730734345005"
+  },
+  {
+    "amazon_sku": "017-40Bordo Kadife",
+    "amazon_asin": "B0G6KQ7GPZ",
+    "barcode": "730734345026"
+  },
+  {
+    "amazon_sku": "017-40Kırmızı Rugan",
+    "amazon_asin": "B0G4CVD7Y2",
+    "barcode": "730734345012"
+  },
+  {
+    "amazon_sku": "017-40Siyah",
+    "amazon_asin": "B0G44K6RMP",
+    "barcode": "730734345019"
+  },
+  {
+    "amazon_sku": "017-40Vizon Kadife",
+    "amazon_asin": "B0G6KYXQ99",
+    "barcode": "730734345033"
+  },
+  {
+    "amazon_sku": "017-41 Krem Rugan",
+    "amazon_asin": "B0G6L217WF",
+    "barcode": "730734345048"
+  },
+  {
+    "amazon_sku": "017-41 Siyah Kadife",
+    "amazon_asin": "B0G6L3RHTF",
+    "barcode": "730734345041"
+  },
+  {
+    "amazon_sku": "017-41Beyaz",
+    "amazon_asin": "B0G6LGB5FZ",
+    "barcode": "730734345006"
+  },
+  {
+    "amazon_sku": "017-41Bordo Kadife",
+    "amazon_asin": "B0G6L6YDPR",
+    "barcode": "730734345027"
+  },
+  {
+    "amazon_sku": "017-41Kırmızı Rugan",
+    "amazon_asin": "B0G6L6C88T",
+    "barcode": "730734345013"
+  },
+  {
+    "amazon_sku": "017-41Siyah",
+    "amazon_asin": "B0G6LC814J",
+    "barcode": "730734345020"
+  },
+  {
+    "amazon_sku": "017-41Vizon Kadife",
+    "amazon_asin": "B0G6L8MG52",
+    "barcode": "730734345034"
+  },
+  {
+    "amazon_sku": "0172-35 BEYAZ SİVRİ BURUN",
+    "amazon_asin": "B0G4CRDK95",
+    "barcode": "22709419"
+  },
+  {
+    "amazon_sku": "0172-35 Bej Kırışık",
+    "amazon_asin": "B0G7XW4179",
+    "barcode": "1277097957"
+  },
+  {
+    "amazon_sku": "0172-35 Beyaz Kırışık",
+    "amazon_asin": "B0G4CV4MZR",
+    "barcode": "1277097631"
+  },
+  {
+    "amazon_sku": "0172-35 Gül Kurusu Kırışık",
+    "amazon_asin": "B0G4CVF49C",
+    "barcode": "1277097610"
+  },
+  {
+    "amazon_sku": "0172-35 Krem Kırışık",
+    "amazon_asin": "B0G44NH3P2",
+    "barcode": "1277097617"
+  },
+  {
+    "amazon_sku": "0172-35 Krem Mat",
+    "amazon_asin": "B0G7XKH3QD",
+    "barcode": "1277097950"
+  },
+  {
+    "amazon_sku": "0172-35 Lacivert Kırışık",
+    "amazon_asin": "B0G44LSN9P",
+    "barcode": "1277097624"
+  },
+  {
+    "amazon_sku": "0172-35 RUGAN SİVRİ BURUN",
+    "amazon_asin": "B0G44M8CDJ",
+    "barcode": "22709431"
+  },
+  {
+    "amazon_sku": "0172-35 SİYAH BANTLI",
+    "amazon_asin": "B0G7X6YDSW",
+    "barcode": "22709463"
+  },
+  {
+    "amazon_sku": "0172-35 SİYAH SİVRİ BURUN",
+    "amazon_asin": "B0G4CW4QK7",
+    "barcode": "22709450"
+  },
+  {
+    "amazon_sku": "0172-35-GÜL-KURUSU",
+    "amazon_asin": "B0G44H6G68",
+    "barcode": "1277096682"
+  },
+  {
+    "amazon_sku": "0172-36 BEYAZ SİVRİ BURUN",
+    "amazon_asin": "B0G4CNX3KH",
+    "barcode": "22709423"
+  },
+  {
+    "amazon_sku": "0172-36 Bej Kırışık",
+    "amazon_asin": "B0G7WY2T6W",
+    "barcode": "1277097958"
+  },
+  {
+    "amazon_sku": "0172-36 Beyaz Kırışık",
+    "amazon_asin": "B0G4CPSTWN",
+    "barcode": "1277097632"
+  },
+  {
+    "amazon_sku": "0172-36 Gül Kurusu Kırışık",
+    "amazon_asin": "B0G7WZLSSY",
+    "barcode": "1277097611"
+  },
+  {
+    "amazon_sku": "0172-36 Krem Kırışık",
+    "amazon_asin": "B0G4CSZ27W",
+    "barcode": "1277097618"
+  },
+  {
+    "amazon_sku": "0172-36 Krem Mat",
+    "amazon_asin": "B0G7WXDKVZ",
+    "barcode": "1277097951"
+  },
+  {
+    "amazon_sku": "0172-36 Lacivert Kırışık",
+    "amazon_asin": "B0G4CRWTNJ",
+    "barcode": "1277097625"
+  },
+  {
+    "amazon_sku": "0172-36 RUGAN SİVRİ BURUN",
+    "amazon_asin": "B0G4CQMDBZ",
+    "barcode": "22709432"
+  },
+  {
+    "amazon_sku": "0172-36 SİYAH BANTLI",
+    "amazon_asin": "B0G4CQPXMJ",
+    "barcode": "22709461"
+  },
+  {
+    "amazon_sku": "0172-36 SİYAH SİVRİ BURUN",
+    "amazon_asin": "B0G4CXJ383",
+    "barcode": "22709451"
+  },
+  {
+    "amazon_sku": "0172-36-GÜL-KURUSU",
+    "amazon_asin": "B0G44MW1WS",
+    "barcode": "1277096689"
+  },
+  {
+    "amazon_sku": "0172-37 BEYAZ SİVRİ BURUN",
+    "amazon_asin": "B0G4CRD376",
+    "barcode": "22709420"
+  },
+  {
+    "amazon_sku": "0172-37 Bej Kırışık",
+    "amazon_asin": "B0G7WXDZBN",
+    "barcode": "1277097959"
+  },
+  {
+    "amazon_sku": "0172-37 Beyaz Kırışık",
+    "amazon_asin": "B0G44FKMKH",
+    "barcode": "1277097633"
+  },
+  {
+    "amazon_sku": "0172-37 Gül Kurusu Kırışık",
+    "amazon_asin": "B0G7WWWK2S",
+    "barcode": "1277097612"
+  },
+  {
+    "amazon_sku": "0172-37 Krem Kırışık",
+    "amazon_asin": "B0G44PKVX3",
+    "barcode": "1277097619"
+  },
+  {
+    "amazon_sku": "0172-37 Krem Mat",
+    "amazon_asin": "B0G7X65S5B",
+    "barcode": "1277097952"
+  },
+  {
+    "amazon_sku": "0172-37 Lacivert Kırışık",
+    "amazon_asin": "B0G4CP9Z53",
+    "barcode": "1277097626"
+  },
+  {
+    "amazon_sku": "0172-37 RUGAN SİVRİ BURUN",
+    "amazon_asin": "B0G4CWGQSX",
+    "barcode": "22709433"
+  },
+  {
+    "amazon_sku": "0172-37 SİYAH BANTLI",
+    "amazon_asin": "B0G44M55FR",
+    "barcode": "22709462"
+  },
+  {
+    "amazon_sku": "0172-37 SİYAH SİVRİ BURUN",
+    "amazon_asin": "B0G4CRKNPJ",
+    "barcode": "22709452"
+  },
+  {
+    "amazon_sku": "0172-37-GÜL-KURUSU",
+    "amazon_asin": "B0G44DSQ5F",
+    "barcode": "1277096684"
+  },
+  {
+    "amazon_sku": "0172-38 BEYAZ SİVRİ BURUN",
+    "amazon_asin": "B0G4CWJ4LB",
+    "barcode": "22709421"
+  },
+  {
+    "amazon_sku": "0172-38 Bej Kırışık",
+    "amazon_asin": "B0G7WXTXKL",
+    "barcode": "1277097960"
+  },
+  {
+    "amazon_sku": "0172-38 Beyaz Kırışık",
+    "amazon_asin": "B0G44MGXFW",
+    "barcode": "1277097634"
+  },
+  {
+    "amazon_sku": "0172-38 Gül Kurusu Kırışık",
+    "amazon_asin": "B0G44LZ3ZW",
+    "barcode": "1277097613"
+  },
+  {
+    "amazon_sku": "0172-38 Krem Kırışık",
+    "amazon_asin": "B0G44QN749",
+    "barcode": "1277097620"
+  },
+  {
+    "amazon_sku": "0172-38 Krem Mat",
+    "amazon_asin": "B0G7WCXM27",
+    "barcode": "1277097953"
+  },
+  {
+    "amazon_sku": "0172-38 Lacivert Kırışık",
+    "amazon_asin": "B0G44L4NDY",
+    "barcode": "1277097627"
+  },
+  {
+    "amazon_sku": "0172-38 RUGAN SİVRİ BURUN",
+    "amazon_asin": "B0G4CPHVWP",
+    "barcode": "22709434"
+  },
+  {
+    "amazon_sku": "0172-38 SİYAH SİVRİ BURUN",
+    "amazon_asin": "B0G4CVCD1Y",
+    "barcode": "22709453"
+  },
+  {
+    "amazon_sku": "0172-38-GÜL-KURUSU",
+    "amazon_asin": "B0G44KKPBV",
+    "barcode": "1277096685"
+  },
+  {
+    "amazon_sku": "0172-39 BEYAZ SİVRİ BURUN",
+    "amazon_asin": "B0G4CRZVTK",
+    "barcode": "22709422"
+  },
+  {
+    "amazon_sku": "0172-39 Bej Kırışık",
+    "amazon_asin": "B0G7X542F6",
+    "barcode": "1277097961"
+  },
+  {
+    "amazon_sku": "0172-39 Beyaz Kırışık",
+    "amazon_asin": "B0G44H8MG4",
+    "barcode": "1277097635"
+  },
+  {
+    "amazon_sku": "0172-39 Gül Kurusu Kırışık",
+    "amazon_asin": "B0G44GVPZW",
+    "barcode": "1277097614"
+  },
+  {
+    "amazon_sku": "0172-39 Krem Kırışık",
+    "amazon_asin": "B0G44K68CX",
+    "barcode": "1277097621"
+  },
+  {
+    "amazon_sku": "0172-39 Krem Mat",
+    "amazon_asin": "B0G7WYNGY1",
+    "barcode": "1277097954"
+  },
+  {
+    "amazon_sku": "0172-39 Lacivert Kırışık",
+    "amazon_asin": "B0G44N8PGZ",
+    "barcode": "1277097628"
+  },
+  {
+    "amazon_sku": "0172-39 RUGAN SİVRİ BURUN",
+    "amazon_asin": "B0G4CNX5ZH",
+    "barcode": "22709435"
+  },
+  {
+    "amazon_sku": "0172-39 SİYAH BANTLI",
+    "amazon_asin": "B0G4CQ47Q2",
+    "barcode": "22709464"
+  },
+  {
+    "amazon_sku": "0172-39 SİYAH SİVRİ BURUN",
+    "amazon_asin": "B0G4CV6SJT",
+    "barcode": "22709454"
+  },
+  {
+    "amazon_sku": "0172-39-GÜL-KURUSU",
+    "amazon_asin": "B0G44LMWR9",
+    "barcode": "1277096686"
+  },
+  {
+    "amazon_sku": "0172-40 BEYAZ SİVRİ BURUN",
+    "amazon_asin": "B0G44DQKGW",
+    "barcode": "22709424"
+  },
+  {
+    "amazon_sku": "0172-40 Bej Kırışık",
+    "amazon_asin": "B0G7X558DS",
+    "barcode": "1277097962"
+  },
+  {
+    "amazon_sku": "0172-40 Beyaz Kırışık",
+    "amazon_asin": "B0G44LNKFM",
+    "barcode": "1277097636"
+  },
+  {
+    "amazon_sku": "0172-40 Gül Kurusu Kırışık",
+    "amazon_asin": "B0G7XF7J16",
+    "barcode": "1277097615"
+  },
+  {
+    "amazon_sku": "0172-40 Krem Kırışık",
+    "amazon_asin": "B0G44N9G8J",
+    "barcode": "1277097622"
+  },
+  {
+    "amazon_sku": "0172-40 Krem Mat",
+    "amazon_asin": "B0G7XCK9MZ",
+    "barcode": "1277097955"
+  },
+  {
+    "amazon_sku": "0172-40 Lacivert Kırışık",
+    "amazon_asin": "B0G4CQ94WL",
+    "barcode": "1277097629"
+  },
+  {
+    "amazon_sku": "0172-40 RUGAN SİVRİ BURUN",
+    "amazon_asin": "B0G4CQMGWD",
+    "barcode": "22709436"
+  },
+  {
+    "amazon_sku": "0172-40 SİYAH BANTLI",
+    "amazon_asin": "B0G4CT8YNX",
+    "barcode": "22709465"
+  },
+  {
+    "amazon_sku": "0172-40 SİYAH SİVRİ BURUN",
+    "amazon_asin": "B0G7XHKM68",
+    "barcode": "22709455"
+  },
+  {
+    "amazon_sku": "0172-40-GÜL-KURUSU",
+    "amazon_asin": "B0G44FVNJY",
+    "barcode": "1277096687"
+  },
+  {
+    "amazon_sku": "0172-41 BEYAZ SİVRİ BURUN",
+    "amazon_asin": "B0G4CRRR4Q",
+    "barcode": "22709425"
+  },
+  {
+    "amazon_sku": "0172-41 Bej Kırışık",
+    "amazon_asin": "B0G7XP4S5N",
+    "barcode": "1277097963"
+  },
+  {
+    "amazon_sku": "0172-41 Beyaz Kırışık",
+    "amazon_asin": "B0G4CTB1DB",
+    "barcode": "1277097637"
+  },
+  {
+    "amazon_sku": "0172-41 Gül Kurusu Kırışık",
+    "amazon_asin": "B0G44L1LWY",
+    "barcode": "1277097616"
+  },
+  {
+    "amazon_sku": "0172-41 Krem Kırışık",
+    "amazon_asin": "B0G44KPTC7",
+    "barcode": "1277097623"
+  },
+  {
+    "amazon_sku": "0172-41 Krem Mat",
+    "amazon_asin": "B0G7XGDDPT",
+    "barcode": "1277097956"
+  },
+  {
+    "amazon_sku": "0172-41 Lacivert Kırışık",
+    "amazon_asin": "B0G44HC35P",
+    "barcode": "1277097630"
+  },
+  {
+    "amazon_sku": "0172-41 RUGAN SİVRİ BURUN",
+    "amazon_asin": "B0G4CV5HMJ",
+    "barcode": "22709430"
+  },
+  {
+    "amazon_sku": "0172-41 SİYAH BANTLI",
+    "amazon_asin": "B0G4CSR12W",
+    "barcode": "22709466"
+  },
+  {
+    "amazon_sku": "0172-41 SİYAH SİVRİ BURUN",
+    "amazon_asin": "B0G4CY6L2D",
+    "barcode": "22709456"
+  },
+  {
+    "amazon_sku": "0172-41-GÜL-KURUSU",
+    "amazon_asin": "B0G44LXXZC",
+    "barcode": "1277096688"
+  },
+  {
+    "amazon_sku": "03155- Siyah Rugan 35",
+    "amazon_asin": "B0G81F1NLV",
+    "barcode": "03523709816"
+  },
+  {
+    "amazon_sku": "03155- Siyah Rugan 36",
+    "amazon_asin": "B0G44LWQ17",
+    "barcode": "03523709826"
+  },
+  {
+    "amazon_sku": "03155- Siyah Rugan 37",
+    "amazon_asin": "B0G44GS2H9",
+    "barcode": "03523709846"
+  },
+  {
+    "amazon_sku": "03155- Siyah Rugan 38",
+    "amazon_asin": "B0G4CSYNWZ",
+    "barcode": "03523709856"
+  },
+  {
+    "amazon_sku": "03155- Siyah Rugan 39",
+    "amazon_asin": "B0G44MK4WH",
+    "barcode": "03523709876"
+  },
+  {
+    "amazon_sku": "03155- Siyah Rugan 40",
+    "amazon_asin": "B0G44KSB9Y",
+    "barcode": "03523709806"
+  },
+  {
+    "amazon_sku": "03155- Siyah Rugan 41",
+    "amazon_asin": "B0G82M3651",
+    "barcode": "03523709886"
+  },
+  {
+    "amazon_sku": "03155-35 Kahverengi",
+    "amazon_asin": "B0G82H97LJ",
+    "barcode": "03523709823"
+  },
+  {
+    "amazon_sku": "03155-35 Siyah",
+    "amazon_asin": "B0G81VX4NX",
+    "barcode": "03523709321"
+  },
+  {
+    "amazon_sku": "03155-36 Kahverengi",
+    "amazon_asin": "B0G4CRHJV9",
+    "barcode": "03523709841"
+  },
+  {
+    "amazon_sku": "03155-36 Siyah",
+    "amazon_asin": "B0G44K57GQ",
+    "barcode": "03523709417"
+  },
+  {
+    "amazon_sku": "03155-37 Kahverengi",
+    "amazon_asin": "B0G81PKB7V",
+    "barcode": "03523709878"
+  },
+  {
+    "amazon_sku": "03155-37 Siyah",
+    "amazon_asin": "B0G4CPJD1H",
+    "barcode": "03523709357"
+  },
+  {
+    "amazon_sku": "03155-38 Kahverengi",
+    "amazon_asin": "B0G44NHWRB",
+    "barcode": "03523709896"
+  },
+  {
+    "amazon_sku": "03155-38 Siyah",
+    "amazon_asin": "B0G44MY6XH",
+    "barcode": "03523709865"
+  },
+  {
+    "amazon_sku": "03155-39 Kahverengi",
+    "amazon_asin": "B0G44N6XKP",
+    "barcode": "03523709745"
+  },
+  {
+    "amazon_sku": "03155-39 Siyah",
+    "amazon_asin": "B0G44K1GSM",
+    "barcode": "03523709866"
+  },
+  {
+    "amazon_sku": "03155-40 Kahverengi",
+    "amazon_asin": "B0G4CPSCRK",
+    "barcode": "03523709825"
+  },
+  {
+    "amazon_sku": "03155-40 Siyah",
+    "amazon_asin": "B0G822Q7MY",
+    "barcode": "03523709847"
+  },
+  {
+    "amazon_sku": "03155-41 Kahverengi",
+    "amazon_asin": "B0G825G924",
+    "barcode": "03523709827"
+  },
+  {
+    "amazon_sku": "03155-41 Siyah",
+    "amazon_asin": "B0G81MNWKM",
+    "barcode": "03523709836"
+  },
+  {
+    "amazon_sku": "03155-Siyah Timsah DSN 35",
+    "amazon_asin": "B0G81BG6KC",
+    "barcode": "03523709818"
+  },
+  {
+    "amazon_sku": "03155-Siyah Timsah DSN 36",
+    "amazon_asin": "B0G44KV564",
+    "barcode": "03523709828"
+  },
+  {
+    "amazon_sku": "03155-Siyah Timsah DSN 37",
+    "amazon_asin": "B0G44H5S46",
+    "barcode": "03523709838"
+  },
+  {
+    "amazon_sku": "03155-Siyah Timsah DSN 38",
+    "amazon_asin": "B0G44H6YSZ",
+    "barcode": "03523709848"
+  },
+  {
+    "amazon_sku": "03155-Siyah Timsah DSN 39",
+    "amazon_asin": "B0G44NKZGY",
+    "barcode": "03523709858"
+  },
+  {
+    "amazon_sku": "03155-Siyah Timsah DSN 40",
+    "amazon_asin": "B0G44HG1R9",
+    "barcode": "03523709888"
+  },
+  {
+    "amazon_sku": "03155-Siyah Timsah DSN 41",
+    "amazon_asin": "B0G8176CGX",
+    "barcode": "03523709868"
+  },
+  {
+    "amazon_sku": "0419 - 35 Bej",
+    "amazon_asin": "B0G7YVSJYW",
+    "barcode": "985237080231884"
+  },
+  {
+    "amazon_sku": "0419 - 35 Siyah",
+    "amazon_asin": "B0G7ZN52JL",
+    "barcode": "985237080231870"
+  },
+  {
+    "amazon_sku": "0419 - 36 Bej",
+    "amazon_asin": "B0G7YGYTL2",
+    "barcode": "985237080231885"
+  },
+  {
+    "amazon_sku": "0419 - 36 Siyah",
+    "amazon_asin": "B0G44GLWK4",
+    "barcode": "985237080231871"
+  },
+  {
+    "amazon_sku": "0419 - 37 Bej",
+    "amazon_asin": "B0G7YJ8ZZZ",
+    "barcode": "985237080231886"
+  },
+  {
+    "amazon_sku": "0419 - 37 Siyah",
+    "amazon_asin": "B0G44JCKXZ",
+    "barcode": "985237080231872"
+  },
+  {
+    "amazon_sku": "0419 - 38 Bej",
+    "amazon_asin": "B0G44MYJYH",
+    "barcode": "985237080231887"
+  },
+  {
+    "amazon_sku": "0419 - 38 Siyah",
+    "amazon_asin": "B0G44M29QJ",
+    "barcode": "985237080231873"
+  },
+  {
+    "amazon_sku": "0419 - 39 Bej",
+    "amazon_asin": "B0G44J97JD",
+    "barcode": "985237080231888"
+  },
+  {
+    "amazon_sku": "0419 - 39 Siyah",
+    "amazon_asin": "B0G44NCZK5",
+    "barcode": "985237080231874"
+  },
+  {
+    "amazon_sku": "0419 - 40 Bej",
+    "amazon_asin": "B0G7YZHC7Z",
+    "barcode": "985237080231889"
+  },
+  {
+    "amazon_sku": "0419 - 40 Siyah",
+    "amazon_asin": "B0G44PMG8H",
+    "barcode": "985237080231875"
+  },
+  {
+    "amazon_sku": "0419 - 41 Bej",
+    "amazon_asin": "B0G7YYKT9L",
+    "barcode": "985237080231890"
+  },
+  {
+    "amazon_sku": "0419 - 41 Siyah",
+    "amazon_asin": "B0G7Z965HY",
+    "barcode": "985237080231876"
+  },
+  {
+    "amazon_sku": "0419- 35 Gri",
+    "amazon_asin": "B0G7YD9VXB",
+    "barcode": "985237080231920"
+  },
+  {
+    "amazon_sku": "0419- 36 Gri",
+    "amazon_asin": "B0G7YQT7T9",
+    "barcode": "985237080231921"
+  },
+  {
+    "amazon_sku": "0419- 37 Gri",
+    "amazon_asin": "B0G44L96FP",
+    "barcode": "985237080231922"
+  },
+  {
+    "amazon_sku": "0419- 38 Gri",
+    "amazon_asin": "B0G44JDYV5",
+    "barcode": "985237080231923"
+  },
+  {
+    "amazon_sku": "0419- 39 Gri",
+    "amazon_asin": "B0G44L5WMZ",
+    "barcode": "985237080231924"
+  },
+  {
+    "amazon_sku": "0419- 40 Gri",
+    "amazon_asin": "B0G44NC9C9",
+    "barcode": "985237080231925"
+  },
+  {
+    "amazon_sku": "0419- 41 Gri",
+    "amazon_asin": "B0G7Z7D31V",
+    "barcode": "985237080231926"
+  },
+  {
+    "amazon_sku": "0419-35 Beyaz",
+    "amazon_asin": "B0G7ZL5LHG",
+    "barcode": "985237080231910"
+  },
+  {
+    "amazon_sku": "0419-35 Leopar",
+    "amazon_asin": "B0G7ZKG2MR",
+    "barcode": "985237080231900"
+  },
+  {
+    "amazon_sku": "0419-36 Beyaz",
+    "amazon_asin": "B0G44JNDHW",
+    "barcode": "985237080231911"
+  },
+  {
+    "amazon_sku": "0419-36 Leopar",
+    "amazon_asin": "B0G44J6P4M",
+    "barcode": "985237080231901"
+  },
+  {
+    "amazon_sku": "0419-37 Beyaz",
+    "amazon_asin": "B0G44Q32JY",
+    "barcode": "985237080231912"
+  },
+  {
+    "amazon_sku": "0419-37 Leopar",
+    "amazon_asin": "B0G44KNQ2B",
+    "barcode": "985237080231902"
+  },
+  {
+    "amazon_sku": "0419-38 Beyaz",
+    "amazon_asin": "B0G44KNQ2H",
+    "barcode": "985237080231913"
+  },
+  {
+    "amazon_sku": "0419-38 Leopar",
+    "amazon_asin": "B0G7ZFBH59",
+    "barcode": "985237080231903"
+  },
+  {
+    "amazon_sku": "0419-39 Beyaz",
+    "amazon_asin": "B0G44K6TFF",
+    "barcode": "985237080231914"
+  },
+  {
+    "amazon_sku": "0419-39 Leopar",
+    "amazon_asin": "B0G44MJBVF",
+    "barcode": "985237080231904"
+  },
+  {
+    "amazon_sku": "0419-40 Beyaz",
+    "amazon_asin": "B0G44HNBF7",
+    "barcode": "985237080231915"
+  },
+  {
+    "amazon_sku": "0419-40 Leopar",
+    "amazon_asin": "B0G44N2TB7",
+    "barcode": "985237080231905"
+  },
+  {
+    "amazon_sku": "0419-41 Beyaz",
+    "amazon_asin": "B0G7Y9YR1H",
+    "barcode": "985237080231916"
+  },
+  {
+    "amazon_sku": "0419-41 Leopar",
+    "amazon_asin": "B0G7Z4L6N2",
+    "barcode": "985237080231906"
+  },
+  {
+    "amazon_sku": "140-35 Bej",
+    "amazon_asin": "B0G4CSJV94",
+    "barcode": "0198523709900"
+  },
+  {
+    "amazon_sku": "140-35 Bordo",
+    "amazon_asin": "B0G7HGT1M6",
+    "barcode": "0198523709814"
+  },
+  {
+    "amazon_sku": "140-35 Gül Kurusu",
+    "amazon_asin": "B0G44K9VVN",
+    "barcode": "0198523709914"
+  },
+  {
+    "amazon_sku": "140-35 Kahverengi",
+    "amazon_asin": "B0G44J466Q",
+    "barcode": "0198523709807"
+  },
+  {
+    "amazon_sku": "140-35 Lacivert",
+    "amazon_asin": "B0G44LZVM2",
+    "barcode": "0198523709907"
+  },
+  {
+    "amazon_sku": "140-35 Lila",
+    "amazon_asin": "B0G44PZ57W",
+    "barcode": "0198523709860"
+  },
+  {
+    "amazon_sku": "140-35 Siyah",
+    "amazon_asin": "B0G44KYNTH",
+    "barcode": "0198523709800"
+  },
+  {
+    "amazon_sku": "140-36 Bej",
+    "amazon_asin": "B0G44JL14S",
+    "barcode": "0198523709901"
+  },
+  {
+    "amazon_sku": "140-36 Bordo",
+    "amazon_asin": "B0G44LVK4N",
+    "barcode": "0198523709815"
+  },
+  {
+    "amazon_sku": "140-36 Gül Kurusu",
+    "amazon_asin": "B0G44L2Y46",
+    "barcode": "0198523709915"
+  },
+  {
+    "amazon_sku": "140-36 Kahverengi",
+    "amazon_asin": "B0G4CSRGTC",
+    "barcode": "0198523709808"
+  },
+  {
+    "amazon_sku": "140-36 Lacivert",
+    "amazon_asin": "B0G44N2TBB",
+    "barcode": "0198523709908"
+  },
+  {
+    "amazon_sku": "140-36 Lila",
+    "amazon_asin": "B0G4CPSZTV",
+    "barcode": "0198523709861"
+  },
+  {
+    "amazon_sku": "140-36 Siyah",
+    "amazon_asin": "B0G44JCC86",
+    "barcode": "0198523709801"
+  },
+  {
+    "amazon_sku": "140-37 Bej",
+    "amazon_asin": "B0G4CWY4VC",
+    "barcode": "0198523709902"
+  },
+  {
+    "amazon_sku": "140-37 Bordo",
+    "amazon_asin": "B0G44MMBN9",
+    "barcode": "0198523709816"
+  },
+  {
+    "amazon_sku": "140-37 Gül Kurusu",
+    "amazon_asin": "B0G44K7D4Q",
+    "barcode": "0198523709916"
+  },
+  {
+    "amazon_sku": "140-37 Kahverengi",
+    "amazon_asin": "B0G44NFG3V",
+    "barcode": "0198523709809"
+  },
+  {
+    "amazon_sku": "140-37 Lacivert",
+    "amazon_asin": "B0G44ND6K2",
+    "barcode": "0198523709909"
+  },
+  {
+    "amazon_sku": "140-37 Lila",
+    "amazon_asin": "B0G44JTK62",
+    "barcode": "0198523709862"
+  },
+  {
+    "amazon_sku": "140-37 Siyah",
+    "amazon_asin": "B0G44M8YHK",
+    "barcode": "0198523709802"
+  },
+  {
+    "amazon_sku": "140-38 Bej",
+    "amazon_asin": "B0G44DLGNL",
+    "barcode": "0198523709903"
+  },
+  {
+    "amazon_sku": "140-38 Bordo",
+    "amazon_asin": "B0G44NYQ3Y",
+    "barcode": "0198523709817"
+  },
+  {
+    "amazon_sku": "140-38 Gül Kurusu",
+    "amazon_asin": "B0G44J61N1",
+    "barcode": "0198523709917"
+  },
+  {
+    "amazon_sku": "140-38 Kahverengi",
+    "amazon_asin": "B0G44P24LP",
+    "barcode": "0198523709810"
+  },
+  {
+    "amazon_sku": "140-38 Lacivert",
+    "amazon_asin": "B0G4CSK949",
+    "barcode": "0198523709910"
+  },
+  {
+    "amazon_sku": "140-38 Lila",
+    "amazon_asin": "B0G44R77BD",
+    "barcode": "0198523709863"
+  },
+  {
+    "amazon_sku": "140-38 Siyah",
+    "amazon_asin": "B0G44L4DD7",
+    "barcode": "0198523709803"
+  },
+  {
+    "amazon_sku": "140-39 Bej",
+    "amazon_asin": "B0G44P9DMW",
+    "barcode": "0198523709904"
+  },
+  {
+    "amazon_sku": "140-39 Bordo",
+    "amazon_asin": "B0G44L2FHJ",
+    "barcode": "0198523709818"
+  },
+  {
+    "amazon_sku": "140-39 Gül Kurusu",
+    "amazon_asin": "B0G44NZKFT",
+    "barcode": "0198523709918"
+  },
+  {
+    "amazon_sku": "140-39 Kahverengi",
+    "amazon_asin": "B0G44KFN9D",
+    "barcode": "0198523709811"
+  },
+  {
+    "amazon_sku": "140-39 Lacivert",
+    "amazon_asin": "B0G4CRH5BJ",
+    "barcode": "0198523709911"
+  },
+  {
+    "amazon_sku": "140-39 Lila",
+    "amazon_asin": "B0G44KX9L4",
+    "barcode": "0198523709864"
+  },
+  {
+    "amazon_sku": "140-39 Siyah",
+    "amazon_asin": "B0G44LQYGF",
+    "barcode": "0198523709804"
+  },
+  {
+    "amazon_sku": "140-40 Bej",
+    "amazon_asin": "B0G44JQ8PK",
+    "barcode": "0198523709905"
+  },
+  {
+    "amazon_sku": "140-40 Bordo",
+    "amazon_asin": "B0G7JFF3FJ",
+    "barcode": "0198523709819"
+  },
+  {
+    "amazon_sku": "140-40 Gül Kurusu",
+    "amazon_asin": "B0G44NF6M4",
+    "barcode": "0198523709919"
+  },
+  {
+    "amazon_sku": "140-40 Kahverengi",
+    "amazon_asin": "B0G44FSLK6",
+    "barcode": "0198523709812"
+  },
+  {
+    "amazon_sku": "140-40 Lacivert",
+    "amazon_asin": "B0G4CRKNX6",
+    "barcode": "0198523709912"
+  },
+  {
+    "amazon_sku": "140-40 Lila",
+    "amazon_asin": "B0G44K5QD6",
+    "barcode": "0198523709865"
+  },
+  {
+    "amazon_sku": "140-40 Siyah",
+    "amazon_asin": "B0G44PZPQ2",
+    "barcode": "0198523709805"
+  },
+  {
+    "amazon_sku": "140-41 Bej",
+    "amazon_asin": "B0G44LQX6J",
+    "barcode": "0198523709906"
+  },
+  {
+    "amazon_sku": "140-41 Bordo",
+    "amazon_asin": "B0G7HQ4GLF",
+    "barcode": "0198523709820"
+  },
+  {
+    "amazon_sku": "140-41 Gül Kurusu",
+    "amazon_asin": "B0G44G1BXZ",
+    "barcode": "0198523709920"
+  },
+  {
+    "amazon_sku": "140-41 Kahverengi",
+    "amazon_asin": "B0G44JRNQD",
+    "barcode": "0198523709813"
+  },
+  {
+    "amazon_sku": "140-41 Lacivert",
+    "amazon_asin": "B0G44KYK4K",
+    "barcode": "0198523709913"
+  },
+  {
+    "amazon_sku": "140-41 Lila",
+    "amazon_asin": "B0G44DV91D",
+    "barcode": "0198523709866"
+  },
+  {
+    "amazon_sku": "140-41 Siyah",
+    "amazon_asin": "B0G4CRF5ZT",
+    "barcode": "0198523709806"
+  },
+  {
+    "amazon_sku": "142 - 35 Bej Mat",
+    "amazon_asin": "B0G7JWZ9NR",
+    "barcode": "0198523711490"
+  },
+  {
+    "amazon_sku": "142 - 36 Bej Mat",
+    "amazon_asin": "B0G7K8BZYX",
+    "barcode": "0198523711491"
+  },
+  {
+    "amazon_sku": "142 - 37 Bej Mat",
+    "amazon_asin": "B0G7JKXJTL",
+    "barcode": "0198523711492"
+  },
+  {
+    "amazon_sku": "142 - 38 Bej Mat",
+    "amazon_asin": "B0G7JPX31L",
+    "barcode": "0198523711493"
+  },
+  {
+    "amazon_sku": "142 - 39 Bej Mat",
+    "amazon_asin": "B0G7J5NW9J",
+    "barcode": "0198523711494"
+  },
+  {
+    "amazon_sku": "142 - 40 Bej Mat",
+    "amazon_asin": "B0G7K8NVNS",
+    "barcode": "0198523711495"
+  },
+  {
+    "amazon_sku": "142 - 41 Bej Mat",
+    "amazon_asin": "B0G7JPXZV4",
+    "barcode": "0198523711496"
+  },
+  {
+    "amazon_sku": "142-35 Bej Rugan",
+    "amazon_asin": "B0G7JCBC9G",
+    "barcode": "0198523711429"
+  },
+  {
+    "amazon_sku": "142-35 Bordo Rugan",
+    "amazon_asin": "B0G7JYLNFR",
+    "barcode": "0198523701421"
+  },
+  {
+    "amazon_sku": "142-35 Siyah Rugan",
+    "amazon_asin": "B0G7JGK396",
+    "barcode": "0198523731425"
+  },
+  {
+    "amazon_sku": "142-35Bordo Mat",
+    "amazon_asin": "B0G7KH47KH",
+    "barcode": "0198523711430"
+  },
+  {
+    "amazon_sku": "142-35Krem Rugan",
+    "amazon_asin": "B0G44JN1ZJ",
+    "barcode": "0198523711444"
+  },
+  {
+    "amazon_sku": "142-35Lacivert",
+    "amazon_asin": "B0G44L5656",
+    "barcode": "0198523711451"
+  },
+  {
+    "amazon_sku": "142-35Pembe Rugan",
+    "amazon_asin": "B0G7JCMB33",
+    "barcode": "0198523711458"
+  },
+  {
+    "amazon_sku": "142-35Siyah Mat",
+    "amazon_asin": "B0G44LP6V3",
+    "barcode": "0198523711437"
+  },
+  {
+    "amazon_sku": "142-36 Bej Rugan",
+    "amazon_asin": "B0G7JWSMGN",
+    "barcode": "0198523711421"
+  },
+  {
+    "amazon_sku": "142-36 Bordo Rugan",
+    "amazon_asin": "B0G7K5WXGZ",
+    "barcode": "0198523701422"
+  },
+  {
+    "amazon_sku": "142-36 Siyah Rugan",
+    "amazon_asin": "B0G7K4XYKP",
+    "barcode": "0198523731426"
+  },
+  {
+    "amazon_sku": "142-36Bordo Mat",
+    "amazon_asin": "B0G7JGSL9P",
+    "barcode": "0198523711431"
+  },
+  {
+    "amazon_sku": "142-36Krem Rugan",
+    "amazon_asin": "B0G44K8GHG",
+    "barcode": "0198523711445"
+  },
+  {
+    "amazon_sku": "142-36Lacivert",
+    "amazon_asin": "B0G44FCLH3",
+    "barcode": "0198523711452"
+  },
+  {
+    "amazon_sku": "142-36Pembe Rugan",
+    "amazon_asin": "B0G7JLMQDX",
+    "barcode": "0198523711459"
+  },
+  {
+    "amazon_sku": "142-36Siyah Mat",
+    "amazon_asin": "B0G44KJLLF",
+    "barcode": "0198523711438"
+  },
+  {
+    "amazon_sku": "142-37 Bej Rugan",
+    "amazon_asin": "B0G7KM1Q3G",
+    "barcode": "0198523711422"
+  },
+  {
+    "amazon_sku": "142-37 Bordo Rugan",
+    "amazon_asin": "B0G7JSS1BZ",
+    "barcode": "0198523701423"
+  },
+  {
+    "amazon_sku": "142-37 Siyah Rugan",
+    "amazon_asin": "B0G7JWRPC4",
+    "barcode": "0198523731427"
+  },
+  {
+    "amazon_sku": "142-37Bordo Mat",
+    "amazon_asin": "B0G44KLDHW",
+    "barcode": "0198523711432"
+  },
+  {
+    "amazon_sku": "142-37Krem Rugan",
+    "amazon_asin": "B0G4CP9GHB",
+    "barcode": "0198523711446"
+  },
+  {
+    "amazon_sku": "142-37Lacivert",
+    "amazon_asin": "B0G44NC9D1",
+    "barcode": "0198523711453"
+  },
+  {
+    "amazon_sku": "142-37Pembe Rugan",
+    "amazon_asin": "B0G7JTHVM6",
+    "barcode": "0198523711460"
+  },
+  {
+    "amazon_sku": "142-37Siyah Mat",
+    "amazon_asin": "B0G4CTTC3L",
+    "barcode": "0198523711439"
+  },
+  {
+    "amazon_sku": "142-38 Bej Rugan",
+    "amazon_asin": "B0G7K9PWBJ",
+    "barcode": "0198523711423"
+  },
+  {
+    "amazon_sku": "142-38 Bordo Rugan",
+    "amazon_asin": "B0G7JXLRC6",
+    "barcode": "0198523701424"
+  },
+  {
+    "amazon_sku": "142-38 Siyah Rugan",
+    "amazon_asin": "B0G7JNRKNW",
+    "barcode": "0198523731428"
+  },
+  {
+    "amazon_sku": "142-38Bordo Mat",
+    "amazon_asin": "B0G7JP19S5",
+    "barcode": "0198523711433"
+  },
+  {
+    "amazon_sku": "142-38Krem Rugan",
+    "amazon_asin": "B0G4CRDC8S",
+    "barcode": "0198523711447"
+  },
+  {
+    "amazon_sku": "142-38Lacivert",
+    "amazon_asin": "B0G44MXXF4",
+    "barcode": "0198523711454"
+  },
+  {
+    "amazon_sku": "142-38Pembe Rugan",
+    "amazon_asin": "B0G7J72V55",
+    "barcode": "0198523711461"
+  },
+  {
+    "amazon_sku": "142-38Siyah Mat",
+    "amazon_asin": "B0G44KX3HP",
+    "barcode": "0198523711440"
+  },
+  {
+    "amazon_sku": "142-39 Bej Rugan",
+    "amazon_asin": "B0G7KMLX7N",
+    "barcode": "0198523711424"
+  },
+  {
+    "amazon_sku": "142-39 Bordo Rugan",
+    "amazon_asin": "B0G7JFRBTN",
+    "barcode": "0198523701425"
+  },
+  {
+    "amazon_sku": "142-39 Siyah Rugan",
+    "amazon_asin": "B0G7J9THLL",
+    "barcode": "0198523731429"
+  },
+  {
+    "amazon_sku": "142-39Bordo Mat",
+    "amazon_asin": "B0G7JQ8PJH",
+    "barcode": "0198523711434"
+  },
+  {
+    "amazon_sku": "142-39Krem Rugan",
+    "amazon_asin": "B0G44L6MCF",
+    "barcode": "0198523711448"
+  },
+  {
+    "amazon_sku": "142-39Lacivert",
+    "amazon_asin": "B0G44KSQ24",
+    "barcode": "0198523711455"
+  },
+  {
+    "amazon_sku": "142-39Pembe Rugan",
+    "amazon_asin": "B0G7JXD3KQ",
+    "barcode": "0198523711462"
+  },
+  {
+    "amazon_sku": "142-39Siyah Mat",
+    "amazon_asin": "B0G44J6SMB",
+    "barcode": "0198523711441"
+  },
+  {
+    "amazon_sku": "142-40 Bej Rugan",
+    "amazon_asin": "B0G7JWL2R7",
+    "barcode": "0198523711426"
+  },
+  {
+    "amazon_sku": "142-40 Bordo Rugan",
+    "amazon_asin": "B0G7K3ZZJ4",
+    "barcode": "0198523701426"
+  },
+  {
+    "amazon_sku": "142-40 Siyah Rugan",
+    "amazon_asin": "B0G7K95V2D",
+    "barcode": "0198523731420"
+  },
+  {
+    "amazon_sku": "142-40Bordo Mat",
+    "amazon_asin": "B0G7JSHNF8",
+    "barcode": "0198523711435"
+  },
+  {
+    "amazon_sku": "142-40Krem Rugan",
+    "amazon_asin": "B0G44N6XKM",
+    "barcode": "0198523711449"
+  },
+  {
+    "amazon_sku": "142-40Lacivert",
+    "amazon_asin": "B0G44M7DT4",
+    "barcode": "0198523711456"
+  },
+  {
+    "amazon_sku": "142-40Pembe Rugan",
+    "amazon_asin": "B0G7K27NWW",
+    "barcode": "0198523711463"
+  },
+  {
+    "amazon_sku": "142-40Siyah Mat",
+    "amazon_asin": "B0G44KQFHR",
+    "barcode": "0198523711442"
+  },
+  {
+    "amazon_sku": "142-41 Bej Rugan",
+    "amazon_asin": "B0G7JPWPJM",
+    "barcode": "0198523711425"
+  },
+  {
+    "amazon_sku": "142-41 Bordo Rugan",
+    "amazon_asin": "B0G7JCCTX1",
+    "barcode": "0198523701427"
+  },
+  {
+    "amazon_sku": "142-41 Siyah Rugan",
+    "amazon_asin": "B0G7JSGDGH",
+    "barcode": "0198523731421"
+  },
+  {
+    "amazon_sku": "142-41Bordo Mat",
+    "amazon_asin": "B0G7JKSVCR",
+    "barcode": "0198523711436"
+  },
+  {
+    "amazon_sku": "142-41Krem Rugan",
+    "amazon_asin": "B0G44MBMM9",
+    "barcode": "0198523711450"
+  },
+  {
+    "amazon_sku": "142-41Lacivert",
+    "amazon_asin": "B0G4CRXXKN",
+    "barcode": "0198523711457"
+  },
+  {
+    "amazon_sku": "142-41Pembe Rugan",
+    "amazon_asin": "B0G7JX217R",
+    "barcode": "0198523711464"
+  },
+  {
+    "amazon_sku": "142-41Siyah Mat",
+    "amazon_asin": "B0G44NVJRL",
+    "barcode": "0198523711443"
+  },
+  {
+    "amazon_sku": "145-35 SİYAH TİMSAH DESENLİ",
+    "amazon_asin": "B0G44HL5CZ",
+    "barcode": "0198523709836"
+  },
+  {
+    "amazon_sku": "145-35 siyah süet detaylı",
+    "amazon_asin": "B0G44K6646",
+    "barcode": "0198523709840"
+  },
+  {
+    "amazon_sku": "145-36 SİYAH TİMSAH DESENLİ",
+    "amazon_asin": "B0G44NRFBN",
+    "barcode": "0198523709835"
+  },
+  {
+    "amazon_sku": "145-36 siyah süet detaylı",
+    "amazon_asin": "B0G44LFTGV",
+    "barcode": "0198523709841"
+  },
+  {
+    "amazon_sku": "145-37 SİYAH TİMSAH DESENLİ",
+    "amazon_asin": "B0G44VMPKR",
+    "barcode": "0198523709834"
+  },
+  {
+    "amazon_sku": "145-37 siyah süet detaylı",
+    "amazon_asin": "B0G44LVL5M",
+    "barcode": "0198523709842"
+  },
+  {
+    "amazon_sku": "145-38 SİYAH TİMSAH DESENLİ",
+    "amazon_asin": "B0G44KJYH4",
+    "barcode": "0198523709833"
+  },
+  {
+    "amazon_sku": "145-38 siyah süet detaylı",
+    "amazon_asin": "B0G44HB9L5",
+    "barcode": "0198523709843"
+  },
+  {
+    "amazon_sku": "145-39 SİYAH TİMSAH DESENLİ",
+    "amazon_asin": "B0G44M5DGH",
+    "barcode": "0198523709832"
+  },
+  {
+    "amazon_sku": "145-39 siyah süet detaylı",
+    "amazon_asin": "B0G44LRCV1",
+    "barcode": "0198523709844"
+  },
+  {
+    "amazon_sku": "145-40 SİYAH TİMSAH DESENLİ",
+    "amazon_asin": "B0G44K6RMQ",
+    "barcode": "0198523709830"
+  },
+  {
+    "amazon_sku": "145-40 siyah süet detaylı",
+    "amazon_asin": "B0G44K6KKY",
+    "barcode": "0198523709846"
+  },
+  {
+    "amazon_sku": "145-41 SİYAH TİMSAH DESENLİ",
+    "amazon_asin": "B0G44JYLYS",
+    "barcode": "0198523709831"
+  },
+  {
+    "amazon_sku": "145-41 siyah süet detaylı",
+    "amazon_asin": "B0G44FSLJV",
+    "barcode": "0198523709845"
+  },
+  {
+    "amazon_sku": "147 - 35 Siyah Beyaz",
+    "amazon_asin": "B0G44J61MY",
+    "barcode": "0195237098260"
+  },
+  {
+    "amazon_sku": "147 - 36 Siyah Beyaz",
+    "amazon_asin": "B0G44G2TD5",
+    "barcode": "0195237098261"
+  },
+  {
+    "amazon_sku": "147 - 37 Siyah Beyaz",
+    "amazon_asin": "B0G44M55FX",
+    "barcode": "0195237098262"
+  },
+  {
+    "amazon_sku": "147 - 38 Siyah Beyaz",
+    "amazon_asin": "B0G44MY6XJ",
+    "barcode": "0195237098263"
+  },
+  {
+    "amazon_sku": "147 - 39 Siyah Beyaz",
+    "amazon_asin": "B0G44JCKXP",
+    "barcode": "0195237098264"
+  },
+  {
+    "amazon_sku": "147 - 40 Siyah Beyaz",
+    "amazon_asin": "B0G4CRH538",
+    "barcode": "0195237098265"
+  },
+  {
+    "amazon_sku": "147 - 41 Siyah Beyaz",
+    "amazon_asin": "B0G4CVDJ9L",
+    "barcode": "0195237098266"
+  },
+  {
+    "amazon_sku": "147-35 BEYAZ",
+    "amazon_asin": "B0G44LWDG2",
+    "barcode": "0198523709823"
+  },
+  {
+    "amazon_sku": "147-35 Bej",
+    "amazon_asin": "B0G44KMFN6",
+    "barcode": "0195237098231"
+  },
+  {
+    "amazon_sku": "147-35 Lacivert",
+    "amazon_asin": "B0G44LNKFP",
+    "barcode": "0195237098238"
+  },
+  {
+    "amazon_sku": "147-35 Lila",
+    "amazon_asin": "B0G4CX258H",
+    "barcode": "0195237098245"
+  },
+  {
+    "amazon_sku": "147-35 SİYAH",
+    "amazon_asin": "B0G44N94LV",
+    "barcode": "019852370982"
+  },
+  {
+    "amazon_sku": "147-36 BEYAZ",
+    "amazon_asin": "B0G44MF8XG",
+    "barcode": "019523709823"
+  },
+  {
+    "amazon_sku": "147-36 Bej",
+    "amazon_asin": "B0G44M8ZCG",
+    "barcode": "0195237098232"
+  },
+  {
+    "amazon_sku": "147-36 Lacivert",
+    "amazon_asin": "B0G4CRXKYW",
+    "barcode": "0195237098239"
+  },
+  {
+    "amazon_sku": "147-36 Lila",
+    "amazon_asin": "B0G44NDHNC",
+    "barcode": "0195237098246"
+  },
+  {
+    "amazon_sku": "147-36 SİYAH",
+    "amazon_asin": "B0G44L19ZY",
+    "barcode": "0198523709822"
+  },
+  {
+    "amazon_sku": "147-37 BEYAZ",
+    "amazon_asin": "B0G44LRW9F",
+    "barcode": "018523709823"
+  },
+  {
+    "amazon_sku": "147-37 Bej",
+    "amazon_asin": "B0G44PN8CF",
+    "barcode": "0195237098233"
+  },
+  {
+    "amazon_sku": "147-37 Lacivert",
+    "amazon_asin": "B0G44HLFBK",
+    "barcode": "0195237098240"
+  },
+  {
+    "amazon_sku": "147-37 Lila",
+    "amazon_asin": "B0G44JDLXF",
+    "barcode": "0195237098247"
+  },
+  {
+    "amazon_sku": "147-37 SİYAH",
+    "amazon_asin": "B0G44KZYX4",
+    "barcode": "019852370981"
+  },
+  {
+    "amazon_sku": "147-38 BEYAZ",
+    "amazon_asin": "B0G44L5V2S",
+    "barcode": "019852379823"
+  },
+  {
+    "amazon_sku": "147-38 Bej",
+    "amazon_asin": "B0G44H7VQ7",
+    "barcode": "0195237098234"
+  },
+  {
+    "amazon_sku": "147-38 Lacivert",
+    "amazon_asin": "B0G4CRYRQ5",
+    "barcode": "0195237098241"
+  },
+  {
+    "amazon_sku": "147-38 Lila",
+    "amazon_asin": "B0G44LZTVW",
+    "barcode": "0195237098248"
+  },
+  {
+    "amazon_sku": "147-38 SİYAH",
+    "amazon_asin": "B0G44P1R72",
+    "barcode": "0198523709847"
+  },
+  {
+    "amazon_sku": "147-39 BEYAZ",
+    "amazon_asin": "B0G44JDLMF",
+    "barcode": "01923709823"
+  },
+  {
+    "amazon_sku": "147-39 Bej",
+    "amazon_asin": "B0G44NK5VC",
+    "barcode": "0195237098235"
+  },
+  {
+    "amazon_sku": "147-39 Lacivert",
+    "amazon_asin": "B0G44MKQQ7",
+    "barcode": "0195237098242"
+  },
+  {
+    "amazon_sku": "147-39 Lila",
+    "amazon_asin": "B0G44LWQ11",
+    "barcode": "0195237098249"
+  },
+  {
+    "amazon_sku": "147-39 SİYAH",
+    "amazon_asin": "B0G44L63TJ",
+    "barcode": "0197523709823"
+  },
+  {
+    "amazon_sku": "147-40 BEYAZ",
+    "amazon_asin": "B0G44NDY7P",
+    "barcode": "0195237098230"
+  },
+  {
+    "amazon_sku": "147-40 Bej",
+    "amazon_asin": "B0G44H1BNC",
+    "barcode": "0195237098236"
+  },
+  {
+    "amazon_sku": "147-40 Lacivert",
+    "amazon_asin": "B0G44C421V",
+    "barcode": "0195237098243"
+  },
+  {
+    "amazon_sku": "147-40 Lila",
+    "amazon_asin": "B0G44K8JRQ",
+    "barcode": "0195237098250"
+  },
+  {
+    "amazon_sku": "147-40 SİYAH",
+    "amazon_asin": "B0G44KJ1WR",
+    "barcode": "0128523709823"
+  },
+  {
+    "amazon_sku": "147-41 BEYAZ",
+    "amazon_asin": "B0G7KCBHDQ",
+    "barcode": "01985209823"
+  },
+  {
+    "amazon_sku": "147-41 Bej",
+    "amazon_asin": "B0G44MY5SL",
+    "barcode": "0195237098237"
+  },
+  {
+    "amazon_sku": "147-41 Lacivert",
+    "amazon_asin": "B0G44K6279",
+    "barcode": "0195237098244"
+  },
+  {
+    "amazon_sku": "147-41 Lila",
+    "amazon_asin": "B0G44LT43B",
+    "barcode": "0195237098251"
+  },
+  {
+    "amazon_sku": "147-41 SİYAH",
+    "amazon_asin": "B0G7KK5K8F",
+    "barcode": "0138523709823"
+  },
+  {
+    "amazon_sku": "2183-35Bej Fiyonklu Stiletto",
+    "amazon_asin": "B0G44GJXJF",
+    "barcode": "730734349900"
+  },
+  {
+    "amazon_sku": "2183-35Bordo Rugan",
+    "amazon_asin": "B0G44S66HX",
+    "barcode": "730734349910"
+  },
+  {
+    "amazon_sku": "2183-35Siyah Rugan",
+    "amazon_asin": "B0G44NCGKK",
+    "barcode": "730734349917"
+  },
+  {
+    "amazon_sku": "2183-36Bej Fiyonklu Stiletto",
+    "amazon_asin": "B0G7ZQQKH3",
+    "barcode": "730734349901"
+  },
+  {
+    "amazon_sku": "2183-36Bordo Rugan",
+    "amazon_asin": "B0G44KZDK6",
+    "barcode": "730734349911"
+  },
+  {
+    "amazon_sku": "2183-36Siyah Rugan",
+    "amazon_asin": "B0G7Z3T7TJ",
+    "barcode": "730734349918"
+  },
+  {
+    "amazon_sku": "2183-37Bej Fiyonklu Stiletto",
+    "amazon_asin": "B0G7ZVT3W4",
+    "barcode": "730734349902"
+  },
+  {
+    "amazon_sku": "2183-37Bordo Rugan",
+    "amazon_asin": "B0G44LZVK7",
+    "barcode": "730734349912"
+  },
+  {
+    "amazon_sku": "2183-37Siyah Rugan",
+    "amazon_asin": "B0G7Z81R1Y",
+    "barcode": "730734349919"
+  },
+  {
+    "amazon_sku": "2183-38Bej Fiyonklu Stiletto",
+    "amazon_asin": "B0G44JDLXD",
+    "barcode": "730734349903"
+  },
+  {
+    "amazon_sku": "2183-38Bordo Rugan",
+    "amazon_asin": "B0G44JMKBK",
+    "barcode": "730734349913"
+  },
+  {
+    "amazon_sku": "2183-38Siyah Rugan",
+    "amazon_asin": "B0G44M21GC",
+    "barcode": "730734349920"
+  },
+  {
+    "amazon_sku": "2183-39Bordo Rugan",
+    "amazon_asin": "B0G81BLTWD",
+    "barcode": "730734349914"
+  },
+  {
+    "amazon_sku": "2183-39Siyah Rugan",
+    "amazon_asin": "B0G7ZNHMXS",
+    "barcode": "730734349921"
+  },
+  {
+    "amazon_sku": "2183-40Bej Fiyonklu Stiletto",
+    "amazon_asin": "B0G7ZMVC9V",
+    "barcode": "730734349905"
+  },
+  {
+    "amazon_sku": "2183-40Bordo Rugan",
+    "amazon_asin": "B0G44KXPXL",
+    "barcode": "730734349915"
+  },
+  {
+    "amazon_sku": "2183-40Siyah Rugan",
+    "amazon_asin": "B0G4CSGK31",
+    "barcode": "730734349922"
+  },
+  {
+    "amazon_sku": "2183-41Bej Fiyonklu Stiletto",
+    "amazon_asin": "B0G7ZQZ8LR",
+    "barcode": "730734349906"
+  },
+  {
+    "amazon_sku": "2183-41Bordo Rugan",
+    "amazon_asin": "B0G44GBJ4D",
+    "barcode": "730734349916"
+  },
+  {
+    "amazon_sku": "2183-41Siyah Rugan",
+    "amazon_asin": "B0G44KBLX2",
+    "barcode": "730734349923"
+  },
+  {
+    "amazon_sku": "259-35 Bej",
+    "amazon_asin": "B0G44KNQ1W",
+    "barcode": "852654123256"
+  },
+  {
+    "amazon_sku": "259-35 Beyaz",
+    "amazon_asin": "B0G44LWDGD",
+    "barcode": "852536223"
+  },
+  {
+    "amazon_sku": "259-35 Bordo",
+    "amazon_asin": "B0G44JTRH7",
+    "barcode": "845632633602"
+  },
+  {
+    "amazon_sku": "259-35 GRİ",
+    "amazon_asin": "B0G44HF3DS",
+    "barcode": "845632633610"
+  },
+  {
+    "amazon_sku": "259-35 Kırmızı",
+    "amazon_asin": "B0G44LX77Q",
+    "barcode": "825458445"
+  },
+  {
+    "amazon_sku": "259-35 Mavi",
+    "amazon_asin": "B0G7ZJM5ZY",
+    "barcode": "8525143632"
+  },
+  {
+    "amazon_sku": "259-35 Siyah",
+    "amazon_asin": "B0G4CPP198",
+    "barcode": "85463241"
+  },
+  {
+    "amazon_sku": "259-35 Siyah-Süet",
+    "amazon_asin": "B0G44N2WP6",
+    "barcode": "8555233622"
+  },
+  {
+    "amazon_sku": "259-36 Bej",
+    "amazon_asin": "B0G4CWLZ92",
+    "barcode": "8525414253"
+  },
+  {
+    "amazon_sku": "259-36 Beyaz",
+    "amazon_asin": "B0G44MWKD2",
+    "barcode": "85252321536"
+  },
+  {
+    "amazon_sku": "259-36 Bordo",
+    "amazon_asin": "B0G4CRPCHM",
+    "barcode": "845632633601"
+  },
+  {
+    "amazon_sku": "259-36 GRİ",
+    "amazon_asin": "B0G7YMLR33",
+    "barcode": "845632633611"
+  },
+  {
+    "amazon_sku": "259-36 Kırmızı",
+    "amazon_asin": "B0G44KXSM6",
+    "barcode": "858852562"
+  },
+  {
+    "amazon_sku": "259-36 Mavi",
+    "amazon_asin": "B0G7YN61Q3",
+    "barcode": "855521255"
+  },
+  {
+    "amazon_sku": "259-36 Siyah",
+    "amazon_asin": "B0G44M8ZCJ",
+    "barcode": "854582348"
+  },
+  {
+    "amazon_sku": "259-36 Siyah-Süet",
+    "amazon_asin": "B0G44MHV49",
+    "barcode": "852322133"
+  },
+  {
+    "amazon_sku": "259-37 Bej",
+    "amazon_asin": "B0G44HZH9H",
+    "barcode": "8524232336"
+  },
+  {
+    "amazon_sku": "259-37 Beyaz",
+    "amazon_asin": "B0G4CSGK2T",
+    "barcode": "85455425"
+  },
+  {
+    "amazon_sku": "259-37 Bordo",
+    "amazon_asin": "B0G44JFY83",
+    "barcode": "845632633600"
+  },
+  {
+    "amazon_sku": "259-37 GRİ",
+    "amazon_asin": "B0G44N3ZQ2",
+    "barcode": "845632633612"
+  },
+  {
+    "amazon_sku": "259-37 Kırmızı",
+    "amazon_asin": "B0G4CRVBY3",
+    "barcode": "85546466"
+  },
+  {
+    "amazon_sku": "259-37 Mavi",
+    "amazon_asin": "B0G44M29QF",
+    "barcode": "852454556"
+  },
+  {
+    "amazon_sku": "259-37 Siyah",
+    "amazon_asin": "B0G44N4QT7",
+    "barcode": "854482525"
+  },
+  {
+    "amazon_sku": "259-37 Siyah-Süet",
+    "amazon_asin": "B0G7Y8N7PY",
+    "barcode": "85456222"
+  },
+  {
+    "amazon_sku": "259-38 Bej",
+    "amazon_asin": "B0G44KYK4G",
+    "barcode": "8216352514"
+  },
+  {
+    "amazon_sku": "259-38 Beyaz",
+    "amazon_asin": "B0G44Q44MC",
+    "barcode": "852321234145"
+  },
+  {
+    "amazon_sku": "259-38 Bordo",
+    "amazon_asin": "B0G44NT7P5",
+    "barcode": "845632633647"
+  },
+  {
+    "amazon_sku": "259-38 GRİ",
+    "amazon_asin": "B0G44JPMDJ",
+    "barcode": "845632633613"
+  },
+  {
+    "amazon_sku": "259-38 Kırmızı",
+    "amazon_asin": "B0G44MF8XD",
+    "barcode": "855453163"
+  },
+  {
+    "amazon_sku": "259-38 Mavi",
+    "amazon_asin": "B0G7YVXDZ3",
+    "barcode": "855514633"
+  },
+  {
+    "amazon_sku": "259-38 Siyah",
+    "amazon_asin": "B0G4CR6WWL",
+    "barcode": "85458966"
+  },
+  {
+    "amazon_sku": "259-38 Siyah-Süet",
+    "amazon_asin": "B0G4CQDT3P",
+    "barcode": "85556223"
+  },
+  {
+    "amazon_sku": "259-39 Bej",
+    "amazon_asin": "B0G44LZVMD",
+    "barcode": "8525324536"
+  },
+  {
+    "amazon_sku": "259-39 Beyaz",
+    "amazon_asin": "B0G4CQ5KYB",
+    "barcode": "85452425"
+  },
+  {
+    "amazon_sku": "259-39 Bordo",
+    "amazon_asin": "B0G44NDB6L",
+    "barcode": "84563426336"
+  },
+  {
+    "amazon_sku": "259-39 GRİ",
+    "amazon_asin": "B0G44M5P7X",
+    "barcode": "845632633614"
+  },
+  {
+    "amazon_sku": "259-39 Kırmızı",
+    "amazon_asin": "B0G4CQM7W2",
+    "barcode": "852456345"
+  },
+  {
+    "amazon_sku": "259-39 Mavi",
+    "amazon_asin": "B0G7Z2WYVM",
+    "barcode": "85545361"
+  },
+  {
+    "amazon_sku": "259-39 Siyah",
+    "amazon_asin": "B0G4CSJSVS",
+    "barcode": "85554433"
+  },
+  {
+    "amazon_sku": "259-39 Siyah-Süet",
+    "amazon_asin": "B0G44KTBSW",
+    "barcode": "855562233"
+  },
+  {
+    "amazon_sku": "259-40 Bej",
+    "amazon_asin": "B0G4CRWTNW",
+    "barcode": "85541366"
+  },
+  {
+    "amazon_sku": "259-40 Beyaz",
+    "amazon_asin": "B0G44GY87C",
+    "barcode": "85212563213"
+  },
+  {
+    "amazon_sku": "259-40 Bordo",
+    "amazon_asin": "B0G44GY87J",
+    "barcode": "84556326336"
+  },
+  {
+    "amazon_sku": "259-40 GRİ",
+    "amazon_asin": "B0G44LR2X5",
+    "barcode": "845632633615"
+  },
+  {
+    "amazon_sku": "259-40 Kırmızı",
+    "amazon_asin": "B0G44JN1ZL",
+    "barcode": "855256631"
+  },
+  {
+    "amazon_sku": "259-40 Mavi",
+    "amazon_asin": "B0G7Y5GT4V",
+    "barcode": "852341563"
+  },
+  {
+    "amazon_sku": "259-40 Siyah",
+    "amazon_asin": "B0G44KHXR1",
+    "barcode": "8545545"
+  },
+  {
+    "amazon_sku": "259-40 Siyah-Süet",
+    "amazon_asin": "B0G44K43WB",
+    "barcode": "852524563"
+  },
+  {
+    "amazon_sku": "259-41 Bej",
+    "amazon_asin": "B0G4CWC374",
+    "barcode": "85231223"
+  },
+  {
+    "amazon_sku": "259-41 Beyaz",
+    "amazon_asin": "B0G44MG7YR",
+    "barcode": "8528545"
+  },
+  {
+    "amazon_sku": "259-41 Bordo",
+    "amazon_asin": "B0G44L6C5Y",
+    "barcode": "84563216336"
+  },
+  {
+    "amazon_sku": "259-41 GRİ",
+    "amazon_asin": "B0G44KL6PF",
+    "barcode": "845632633616"
+  },
+  {
+    "amazon_sku": "259-41 Kırmızı",
+    "amazon_asin": "B0G44MC2PR",
+    "barcode": "854552345523"
+  },
+  {
+    "amazon_sku": "259-41 Mavi",
+    "amazon_asin": "B0G7YFL4W3",
+    "barcode": "852565215632"
+  },
+  {
+    "amazon_sku": "259-41 Siyah",
+    "amazon_asin": "B0G44MJJ6R",
+    "barcode": "8521255522"
+  },
+  {
+    "amazon_sku": "259-41 Siyah-Süet",
+    "amazon_asin": "B0G44M8YJ6",
+    "barcode": "8456326336"
+  },
+  {
+    "amazon_sku": "777-35-Bej",
+    "amazon_asin": "B0G44KNTMJ",
+    "barcode": "9852370982310865"
+  },
+  {
+    "amazon_sku": "777-35-Gülkurusu",
+    "amazon_asin": "B0G44KC4PW",
+    "barcode": "98523709823112"
+  },
+  {
+    "amazon_sku": "777-35-Sedef",
+    "amazon_asin": "B0G44K981X",
+    "barcode": "9852370982310878"
+  },
+  {
+    "amazon_sku": "777-35-Siyah",
+    "amazon_asin": "B0G44MM3F3",
+    "barcode": "9852370982310851"
+  },
+  {
+    "amazon_sku": "777-36-Bej",
+    "amazon_asin": "B0G44LQX69",
+    "barcode": "9852370982310866"
+  },
+  {
+    "amazon_sku": "777-36-Gülkurusu",
+    "amazon_asin": "B0G44N84N3",
+    "barcode": "98523709823113"
+  },
+  {
+    "amazon_sku": "777-36-Sedef",
+    "amazon_asin": "B0G44JLXFM",
+    "barcode": "985237098231088"
+  },
+  {
+    "amazon_sku": "777-36-Siyah",
+    "amazon_asin": "B0G44L6C6C",
+    "barcode": "9852370982310852"
+  },
+  {
+    "amazon_sku": "777-37-Bej",
+    "amazon_asin": "B0G44MGDCN",
+    "barcode": "9852370982310867"
+  },
+  {
+    "amazon_sku": "777-37-Gülkurusu",
+    "amazon_asin": "B0G44KW75P",
+    "barcode": "98523709823114"
+  },
+  {
+    "amazon_sku": "777-37-Sedef",
+    "amazon_asin": "B0G44FKMKC",
+    "barcode": "985237098231089"
+  },
+  {
+    "amazon_sku": "777-37-Siyah",
+    "amazon_asin": "B0G4CQLBML",
+    "barcode": "9852370982310853"
+  },
+  {
+    "amazon_sku": "777-38-Bej",
+    "amazon_asin": "B0G7Z129S6",
+    "barcode": "9852370982310868"
+  },
+  {
+    "amazon_sku": "777-38-Gülkurusu",
+    "amazon_asin": "B0G7ZMZ11P",
+    "barcode": "98523709823115"
+  },
+  {
+    "amazon_sku": "777-38-Sedef",
+    "amazon_asin": "B0G7ZQQZLQ",
+    "barcode": "985237098231090"
+  },
+  {
+    "amazon_sku": "777-38-Siyah",
+    "amazon_asin": "B0G7YYHLGM",
+    "barcode": "9852370982310854"
+  },
+  {
+    "amazon_sku": "777-39-Bej",
+    "amazon_asin": "B0G44NDB68",
+    "barcode": "9852370982310869"
+  },
+  {
+    "amazon_sku": "777-39-Gülkurusu",
+    "amazon_asin": "B0G44JK8P7",
+    "barcode": "98523709823116"
+  },
+  {
+    "amazon_sku": "777-39-Sedef",
+    "amazon_asin": "B0G4CNXCLB",
+    "barcode": "985237098231091"
+  },
+  {
+    "amazon_sku": "777-39-Siyah",
+    "amazon_asin": "B0G44LS7LX",
+    "barcode": "9852370982310855"
+  },
+  {
+    "amazon_sku": "777-40-Bej",
+    "amazon_asin": "B0G44JD666",
+    "barcode": "9852370982310870"
+  },
+  {
+    "amazon_sku": "777-40-Gülkurusu",
+    "amazon_asin": "B0G4CTZPT5",
+    "barcode": "98523709823117"
+  },
+  {
+    "amazon_sku": "777-40-Sedef",
+    "amazon_asin": "B0G44J6SM6",
+    "barcode": "985237098231092"
+  },
+  {
+    "amazon_sku": "777-40-Siyah",
+    "amazon_asin": "B0G44KSRCV",
+    "barcode": "9852370982310856"
+  },
+  {
+    "amazon_sku": "777-41-Bej",
+    "amazon_asin": "B0G4CSLBDJ",
+    "barcode": "9852370982310871"
+  },
+  {
+    "amazon_sku": "777-41-Gülkurusu",
+    "amazon_asin": "B0G44F625Q",
+    "barcode": "98523709823118"
+  },
+  {
+    "amazon_sku": "777-41-Siyah",
+    "amazon_asin": "B0G44M5S69",
+    "barcode": "9852370982310857"
+  },
+  {
+    "amazon_sku": "777-Siyah-Süet-35",
+    "amazon_asin": "B0G44N4ZZ8",
+    "barcode": "98523709823456"
+  },
+  {
+    "amazon_sku": "777-Siyah-Süet-36",
+    "amazon_asin": "B0G44NG6NC",
+    "barcode": "98523709823457"
+  },
+  {
+    "amazon_sku": "777-Siyah-Süet-37",
+    "amazon_asin": "B0G44N5633",
+    "barcode": "98523709823458"
+  },
+  {
+    "amazon_sku": "777-Siyah-Süet-38",
+    "amazon_asin": "B0G7YC2SVV",
+    "barcode": "98523709823459"
+  },
+  {
+    "amazon_sku": "777-Siyah-Süet-39",
+    "amazon_asin": "B0G44NHDFM",
+    "barcode": "98523709823460"
+  },
+  {
+    "amazon_sku": "777-Siyah-Süet-40",
+    "amazon_asin": "B0G44MG7YL",
+    "barcode": "98523709823461"
+  },
+  {
+    "amazon_sku": "777-Siyah-Süet-41",
+    "amazon_asin": "B0G44M8771",
+    "barcode": "98523709823463"
+  },
+  {
+    "amazon_sku": "777-süet-gülkurusu-35",
+    "amazon_asin": "B0G7ZMGBCD",
+    "barcode": "98523709823032"
+  },
+  {
+    "amazon_sku": "777-süet-gülkurusu-36",
+    "amazon_asin": "B0G7ZDDF5T",
+    "barcode": "98523709823033"
+  },
+  {
+    "amazon_sku": "777-süet-gülkurusu-37",
+    "amazon_asin": "B0G7ZZQY3C",
+    "barcode": "98523709823034"
+  },
+  {
+    "amazon_sku": "777-süet-gülkurusu-38",
+    "amazon_asin": "B0G7ZCJ7Z5",
+    "barcode": "98523709823035"
+  },
+  {
+    "amazon_sku": "777-süet-gülkurusu-39",
+    "amazon_asin": "B0G814FTPS",
+    "barcode": "98523709823036"
+  },
+  {
+    "amazon_sku": "777-süet-gülkurusu-41",
+    "amazon_asin": "B0G7ZLRP11",
+    "barcode": "98523709823038"
+  },
+  {
+    "amazon_sku": "777",
+    "amazon_asin": "B0G7YZZY12",
+    "barcode": "98523709823037"
+  }
+]

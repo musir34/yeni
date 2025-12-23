@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Amazon Ayarları{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>
+                <i class="fab fa-amazon"></i> Amazon Ayarları
+            </h2>
+        </div>
+    </div>
+
+    <!-- Durum Kartı -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card {% if config.is_configured %}border-success{% else %}border-danger{% endif %}">
+                <div class="card-header {% if config.is_configured %}bg-success{% else %}bg-danger{% endif %} text-white">
+                    <h5 class="mb-0">
+                        {% if config.is_configured %}
+                        <i class="fas fa-check-circle"></i> API Bağlantısı Aktif
+                        {% else %}
+                        <i class="fas fa-times-circle"></i> API Yapılandırılmamış
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Marketplace ID:</strong></td>
+                            <td>{{ config.marketplace_id or 'Ayarlanmamış' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Seller ID:</strong></td>
+                            <td>{{ config.seller_id }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>AWS Region:</strong></td>
+                            <td>{{ config.region or 'Ayarlanmamış' }}</td>
+                        </tr>
+                    </table>
+                    
+                    <button class="btn btn-primary" onclick="testConnection()">
+                        <i class="fas fa-plug"></i> Bağlantı Testi
+                    </button>
+                    
+                    <div id="testResult" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Marketplace ID'leri</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Ülke</th>
+                                <th>Marketplace ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="table-warning"><td>🇹🇷 Türkiye</td><td><code>A33AVAJ2PDY3EV</code></td></tr>
+                            <tr><td>🇩🇪 Almanya</td><td><code>A1PA6795UKMFR9</code></td></tr>
+                            <tr><td>🇬🇧 İngiltere</td><td><code>A1F83G8C2ARO7P</code></td></tr>
+                            <tr><td>🇫🇷 Fransa</td><td><code>A13V1IB3VIYBER</code></td></tr>
+                            <tr><td>🇮🇹 İtalya</td><td><code>APJ6JRA9NG5V4</code></td></tr>
+                            <tr><td>🇪🇸 İspanya</td><td><code>A1RKKUPIHCS9HS</code></td></tr>
+                            <tr><td>🇳🇱 Hollanda</td><td><code>A1805IZSGTT6HS</code></td></tr>
+                            <tr><td>🇵🇱 Polonya</td><td><code>A1C3SOZRARQ6R3</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Yapılandırma Rehberi -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-book"></i> Yapılandırma Rehberi</h5>
+                </div>
+                <div class="card-body">
+                    <h6>1. .env dosyasına eklenecek değişkenler:</h6>
+                    <pre class="bg-dark text-light p-3 rounded"><code># ═══════════════════════════════════════════════════════════════
+# AMAZON SP-API AYARLARI
+# ═══════════════════════════════════════════════════════════════
+
+# LWA (Login with Amazon) Credentials
+# https://developer.amazon.com/apps-and-games/login-with-amazon
+AMAZON_LWA_CLIENT_ID=amzn1.application-oa2-client.xxxxxxxxxxxx
+AMAZON_LWA_CLIENT_SECRET=your_lwa_client_secret_here
+
+# Refresh Token (SP-API uygulaması yetkilendirildikten sonra alınır)
+AMAZON_REFRESH_TOKEN=Atzr|xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Seller ID (Seller Central > Settings > Account Info)
+AMAZON_SELLER_ID=AXXXXXXXXXXXX
+
+# Marketplace ID (Türkiye için A33AVAJ2PDY3EV)
+AMAZON_MARKETPLACE_ID=A33AVAJ2PDY3EV
+
+# AWS IAM Credentials
+AMAZON_AWS_ACCESS_KEY=AKIAXXXXXXXXXXXX
+AMAZON_AWS_SECRET_KEY=your_aws_secret_key_here
+AMAZON_AWS_REGION=eu-west-1
+
+# Opsiyonel: Role ARN (STS assume role için)
+# AMAZON_ROLE_ARN=arn:aws:iam::xxxxxxxxxxxx:role/SellerPartnerAPIRole</code></pre>
+
+                    <hr>
+                    
+                    <h6>2. Gerekli Python Paketini Yükleyin:</h6>
+                    <pre class="bg-dark text-light p-3 rounded"><code>pip install python-amazon-sp-api</code></pre>
+                    
+                    <hr>
+                    
+                    <h6>3. Adım Adım Kurulum:</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6><span class="badge badge-primary">1</span> Developer Kaydı</h6>
+                                    <p class="mb-0 small">Amazon Seller Central > Settings > User Permissions > "Register yourself as a developer"</p>
+                                </div>
+                            </div>
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6><span class="badge badge-primary">2</span> AWS IAM Kullanıcısı</h6>
+                                    <p class="mb-0 small">AWS Console > IAM > Users > Add user (Programmatic access)</p>
+                                </div>
+                            </div>
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6><span class="badge badge-primary">3</span> LWA Credentials</h6>
+                                    <p class="mb-0 small">developer.amazon.com > Login with Amazon > Security Profile oluştur</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6><span class="badge badge-primary">4</span> SP-API Uygulaması</h6>
+                                    <p class="mb-0 small">Seller Central > Apps & Services > Develop Apps > Add new app client</p>
+                                </div>
+                            </div>
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6><span class="badge badge-primary">5</span> Uygulamayı Yetkilendir</h6>
+                                    <p class="mb-0 small">Manage Your Apps > Authorize > Refresh Token alın</p>
+                                </div>
+                            </div>
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6><span class="badge badge-primary">6</span> .env Güncelleyin</h6>
+                                    <p class="mb-0 small">Tüm bilgileri .env dosyasına ekleyin ve uygulamayı yeniden başlatın</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function testConnection() {
+    document.getElementById('testResult').innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Test ediliyor...</div>';
+    
+    fetch('{{ url_for("amazon.test_connection") }}')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('testResult').innerHTML = '<div class="alert alert-success"><i class="fas fa-check"></i> ' + data.message + '</div>';
+            } else {
+                document.getElementById('testResult').innerHTML = '<div class="alert alert-danger"><i class="fas fa-times"></i> ' + data.message + '</div>';
+            }
+        });
+}
+</script>
+{% endblock %}

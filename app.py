@@ -462,10 +462,39 @@ def push_central_stock_to_trendyol():
         logger.info("[PUSH] 🏁 Stok gönderme işlemi sona erdi")
         logger.info("=" * 80)
 
+def push_central_stock_to_amazon():
+    """
+    CentralStock (Created rezerv düşülmüş) → Amazon
+    Listings API ile stok güncelleme
+    Sadece amazon_sku eşleşmeli ürünleri gönderir
+    Arka plan thread'inde çalışır (uzun sürdüğü için)
+    """
+    import threading
+    
+    def _run_amazon_push():
+        with app.app_context():
+            try:
+                from amazon.amazon_service import amazon_service
+                result = amazon_service.push_central_stock()
+                
+                if result.get('success'):
+                    logger.info(f"[AMAZON-PUSH] ✅ Amazon stok gönderimi tamamlandı: {result.get('success_count')}/{result.get('items_count')} ürün ({result.get('elapsed_seconds')}sn)")
+                else:
+                    logger.error(f"[AMAZON-PUSH] ❌ Amazon stok gönderimi başarısız: {result.get('error')}")
+                    
+            except Exception as e:
+                logger.error(f"[AMAZON-PUSH] ❌ KRITIK HATA: {e}", exc_info=True)
+    
+    # Arka plan thread'inde başlat
+    thread = threading.Thread(target=_run_amazon_push, name="AmazonStockPush", daemon=True)
+    thread.start()
+    logger.info("[AMAZON-PUSH] 🚀 Amazon stok gönderimi arka planda başlatıldı...")
+
 def push_stock_job():
     """Zamanlayıcı tetiklemesinde direkt stok gönderir (zamanlamayı schedule ayarlar)."""
     push_central_stock_to_trendyol()
     push_central_stock_to_idefix()
+    push_central_stock_to_amazon()  # Amazon arka planda çalışır
     # Trendyol fiyatlarını Idefix'e senkronize et
     sync_trendyol_prices_to_idefix()
 

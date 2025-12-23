@@ -657,6 +657,12 @@ class Product(db.Model):
     idefix_product_id = db.Column(db.String(255), nullable=True)  # Idefix'teki ürün reference ID
     idefix_status = db.Column(db.String(50), nullable=True)  # approved, pending, not_matched vs.
     idefix_last_sync = db.Column(db.DateTime, nullable=True)  # Son senkronizasyon tarihi
+    
+    # Amazon spesifik alanlar
+    amazon_asin = db.Column(db.String(20), index=True, nullable=True)  # Amazon ASIN
+    amazon_sku = db.Column(db.String(100), nullable=True)  # Amazon Seller SKU
+    amazon_status = db.Column(db.String(50), nullable=True)  # Active, Inactive vs.
+    amazon_last_sync = db.Column(db.DateTime, nullable=True)  # Son senkronizasyon tarihi
 
 
 # Eğer farklıysa, buradan da original_product_barcode'u kaldıralım.

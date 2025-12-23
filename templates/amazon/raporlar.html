@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Amazon Raporları{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>
+                <i class="fab fa-amazon"></i> Amazon Raporları
+            </h2>
+        </div>
+    </div>
+
+    <!-- Tarih Filtresi -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <label>Başlangıç Tarihi</label>
+            <input type="date" class="form-control" id="startDate">
+        </div>
+        <div class="col-md-3">
+            <label>Bitiş Tarihi</label>
+            <input type="date" class="form-control" id="endDate">
+        </div>
+        <div class="col-md-3">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary btn-block" onclick="generateReport()">
+                <i class="fas fa-chart-bar"></i> Rapor Oluştur
+            </button>
+        </div>
+    </div>
+
+    <!-- Özet Kartları -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h4 id="totalSales">₺0</h4>
+                    <p class="mb-0">Toplam Satış</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h4 id="orderCount">0</h4>
+                    <p class="mb-0">Sipariş Sayısı</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h4 id="itemsSold">0</h4>
+                    <p class="mb-0">Satılan Ürün</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h4 id="avgOrder">₺0</h4>
+                    <p class="mb-0">Ortalama Sipariş</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rapor Türleri -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-line"></i> Satış Raporu</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="salesChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Sipariş Durumları</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- En Çok Satan Ürünler -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-trophy"></i> En Çok Satan Ürünler</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>SKU</th>
+                                <th>Ürün Adı</th>
+                                <th>Satış Adedi</th>
+                                <th>Toplam Gelir</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topProductsBody">
+                            <tr>
+                                <td colspan="5" class="text-center">Rapor oluşturmak için tarih seçin</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let salesChart, statusChart;
+
+function generateReport() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    if (!startDate || !endDate) {
+        alert('Lütfen tarih aralığı seçin');
+        return;
+    }
+    
+    fetch(`{{ url_for('amazon.sales_report') }}?start_date=${startDate}&end_date=${endDate}`)
+        .then(r => r.json())
+        .then(data => {
+            // Özet kartları güncelle
+            document.getElementById('totalSales').textContent = '₺' + (data.total_sales || 0).toLocaleString();
+            document.getElementById('orderCount').textContent = data.order_count || 0;
+            document.getElementById('itemsSold').textContent = data.items_sold || 0;
+            
+            const avgOrder = data.order_count ? (data.total_sales / data.order_count).toFixed(2) : 0;
+            document.getElementById('avgOrder').textContent = '₺' + avgOrder;
+            
+            // Grafikleri güncelle
+            updateCharts(data);
+        });
+}
+
+function updateCharts(data) {
+    // Satış grafiği
+    const salesCtx = document.getElementById('salesChart').getContext('2d');
+    if (salesChart) salesChart.destroy();
+    
+    salesChart = new Chart(salesCtx, {
+        type: 'line',
+        data: {
+            labels: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'],
+            datasets: [{
+                label: 'Günlük Satış',
+                data: [0, 0, 0, 0, 0, 0, 0],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        }
+    });
+    
+    // Durum grafiği
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    if (statusChart) statusChart.destroy();
+    
+    statusChart = new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Teslim Edildi', 'Kargoda', 'Hazırlanıyor', 'Beklemede'],
+            datasets: [{
+                data: [60, 25, 10, 5],
+                backgroundColor: ['#28a745', '#17a2b8', '#ffc107', '#6c757d']
+            }]
+        }
+    });
+}
+
+// Sayfa yüklendiğinde
+document.addEventListener('DOMContentLoaded', function() {
+    // Bugün ve 30 gün öncesi
+    const today = new Date().toISOString().split('T')[0];
+    const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    document.getElementById('startDate').value = monthAgo;
+    document.getElementById('endDate').value = today;
+    
+    // Boş grafikler oluştur
+    updateCharts({});
+});
+</script>
+{% endblock %}

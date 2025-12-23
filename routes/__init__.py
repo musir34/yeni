@@ -42,6 +42,7 @@ def register_blueprints(app):
     from woocommerce_site.test_routes import test_bp  # 🧪 WOOCOMMERCE TEST - GEÇİCİ AKTİF
     # Preview: Woo barcode mapping
     from routes.woo_barcodes_preview import woo_preview_bp
+    from amazon import amazon_bp  # 🛍️ AMAZON SP-API SİSTEMİ
 
 
 
@@ -86,5 +87,6 @@ def register_blueprints(app):
         woo_bp,  # 🛒 WOOCOMMERCE SİPARİŞ SİSTEMİ
         test_bp,  # 🧪 WOOCOMMERCE TEST - GEÇİCİ AKTİF
         woo_preview_bp,
+        amazon_bp,  # 🛍️ AMAZON SP-API SİSTEMİ
     ]:
         app.register_blueprint(bp)

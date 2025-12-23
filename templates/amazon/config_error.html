@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Amazon API Hatası{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Amazon API Yapılandırma Hatası
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Amazon SP-API bağlantısı için gerekli ayarlar yapılmamış.</p>
+                    
+                    <hr>
+                    
+                    <h5>Gerekli Ayarlar</h5>
+                    <p>Aşağıdaki ortam değişkenlerini <code>.env</code> dosyanıza ekleyin:</p>
+                    
+                    <pre class="bg-light p-3 rounded"><code># Amazon SP-API Ayarları
+AMAZON_LWA_CLIENT_ID=amzn1.application-oa2-client.xxxxx
+AMAZON_LWA_CLIENT_SECRET=your_lwa_client_secret
+AMAZON_REFRESH_TOKEN=Atzr|xxxxxxxx
+AMAZON_SELLER_ID=your_seller_id
+AMAZON_MARKETPLACE_ID=A33AVAJ2PDY3EV
+AMAZON_AWS_ACCESS_KEY=AKIAXXXXXXXXXXXX
+AMAZON_AWS_SECRET_KEY=your_aws_secret_key
+AMAZON_AWS_REGION=eu-west-1</code></pre>
+                    
+                    <hr>
+                    
+                    <h5>Bu Bilgileri Nereden Alırım?</h5>
+                    
+                    <div class="accordion" id="helpAccordion">
+                        <div class="card">
+                            <div class="card-header" id="heading1">
+                                <h6 class="mb-0">
+                                    <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse1">
+                                        1️⃣ LWA Client ID ve Secret
+                                    </button>
+                                </h6>
+                            </div>
+                            <div id="collapse1" class="collapse" data-parent="#helpAccordion">
+                                <div class="card-body">
+                                    <ol>
+                                        <li>Amazon Developer Console'a gidin: <a href="https://developer.amazon.com" target="_blank">developer.amazon.com</a></li>
+                                        <li>"Login with Amazon" bölümünden Security Profile oluşturun</li>
+                                        <li>Client ID ve Client Secret'ı kopyalayın</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header" id="heading2">
+                                <h6 class="mb-0">
+                                    <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse2">
+                                        2️⃣ Refresh Token
+                                    </button>
+                                </h6>
+                            </div>
+                            <div id="collapse2" class="collapse" data-parent="#helpAccordion">
+                                <div class="card-body">
+                                    <ol>
+                                        <li>Seller Central'a gidin > Apps & Services > Develop Apps</li>
+                                        <li>Uygulamanızı yetkilendirin (Authorize)</li>
+                                        <li>OAuth işlemi sonrası Refresh Token alacaksınız</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header" id="heading3">
+                                <h6 class="mb-0">
+                                    <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse3">
+                                        3️⃣ Seller ID
+                                    </button>
+                                </h6>
+                            </div>
+                            <div id="collapse3" class="collapse" data-parent="#helpAccordion">
+                                <div class="card-body">
+                                    <ol>
+                                        <li>Seller Central'a gidin</li>
+                                        <li>Settings > Account Info</li>
+                                        <li>"Merchant Token" veya "Seller ID"yi kopyalayın</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header" id="heading4">
+                                <h6 class="mb-0">
+                                    <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse4">
+                                        4️⃣ AWS Credentials
+                                    </button>
+                                </h6>
+                            </div>
+                            <div id="collapse4" class="collapse" data-parent="#helpAccordion">
+                                <div class="card-body">
+                                    <ol>
+                                        <li>AWS Console'a gidin: <a href="https://console.aws.amazon.com/iam" target="_blank">IAM Console</a></li>
+                                        <li>Users > Add user > Programmatic access</li>
+                                        <li>Gerekli policy'yi ekleyin (execute-api:Invoke)</li>
+                                        <li>Access Key ve Secret Key'i kaydedin</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="text-center">
+                        <a href="{{ url_for('amazon.settings') }}" class="btn btn-primary">
+                            <i class="fas fa-cog"></i> Ayarlar Sayfasına Git
+                        </a>
+                        <a href="{{ url_for('home.home') }}" class="btn btn-secondary">
+                            <i class="fas fa-home"></i> Ana Sayfaya Dön
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

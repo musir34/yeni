@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Amazon Stok Yönetimi{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>
+                <i class="fab fa-amazon"></i> Amazon Stok Yönetimi
+            </h2>
+        </div>
+    </div>
+
+    <!-- Stok Özeti -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h4 id="inStockCount">{{ inventory|length }}</h4>
+                    <p class="mb-0">Stokta</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h4 id="lowStockCount">-</h4>
+                    <p class="mb-0">Düşük Stok</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body text-center">
+                    <h4 id="outOfStockCount">-</h4>
+                    <p class="mb-0">Stok Yok</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h4 id="totalSkuCount">{{ total }}</h4>
+                    <p class="mb-0">Toplam SKU</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- İşlemler -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <input type="text" class="form-control" id="searchSku" placeholder="SKU veya ürün adı ara...">
+        </div>
+        <div class="col-md-6">
+            <button class="btn btn-primary" onclick="refreshInventory()">
+                <i class="fas fa-sync"></i> Yenile
+            </button>
+            <button class="btn btn-success" onclick="syncWithCentral()">
+                <i class="fas fa-exchange-alt"></i> Merkezi Stokla Senkronize Et
+            </button>
+        </div>
+    </div>
+
+    <!-- Stok Tablosu -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Stok Listesi</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="inventoryTable">
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>ASIN</th>
+                                    <th>Ürün Adı</th>
+                                    <th>FBA Stok</th>
+                                    <th>FBM Stok</th>
+                                    <th>Toplam</th>
+                                    <th>Durum</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventoryTableBody">
+                                {% if inventory %}
+                                    {% for item in inventory %}
+                                    <tr>
+                                        <td>{{ item.sellerSku or '-' }}</td>
+                                        <td>{{ item.asin or '-' }}</td>
+                                        <td>{{ item.productName or '-' }}</td>
+                                        <td>{{ item.inventoryDetails.fulfillableQuantity or 0 if item.inventoryDetails else 0 }}</td>
+                                        <td>-</td>
+                                        <td>{{ item.totalQuantity or 0 }}</td>
+                                        <td>
+                                            {% if item.totalQuantity and item.totalQuantity > 10 %}
+                                                <span class="badge badge-success">Stokta</span>
+                                            {% elif item.totalQuantity and item.totalQuantity > 0 %}
+                                                <span class="badge badge-warning">Düşük</span>
+                                            {% else %}
+                                                <span class="badge badge-danger">Yok</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary" onclick="updateStock('{{ item.sellerSku }}')">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="8" class="text-center">Stok verisi bulunamadı</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stok Güncelleme Modal -->
+<div class="modal fade" id="updateStockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Stok Güncelle</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="updateStockForm">
+                    <div class="form-group">
+                        <label>SKU</label>
+                        <input type="text" class="form-control" id="modalSku" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Yeni Stok Miktarı</label>
+                        <input type="number" class="form-control" id="modalQuantity" min="0">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="saveStock()">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateStock(sku) {
+    document.getElementById('modalSku').value = sku;
+    document.getElementById('modalQuantity').value = '';
+    $('#updateStockModal').modal('show');
+}
+
+function saveStock() {
+    const sku = document.getElementById('modalSku').value;
+    const quantity = parseInt(document.getElementById('modalQuantity').value);
+    
+    if (isNaN(quantity) || quantity < 0) {
+        alert('Geçerli bir miktar girin');
+        return;
+    }
+    
+    fetch('{{ url_for("amazon.update_inventory") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({sku: sku, quantity: quantity})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('Stok güncellendi');
+            $('#updateStockModal').modal('hide');
+            refreshInventory();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    });
+}
+
+function refreshInventory() {
+    location.reload();
+}
+
+function syncWithCentral() {
+    if (confirm('Merkezi stok ile senkronize edilsin mi?')) {
+        fetch('{{ url_for("amazon.sync_inventory") }}', {method: 'POST'})
+            .then(r => r.json())
+            .then(data => {
+                alert(data.message || 'Senkronizasyon tamamlandı');
+                refreshInventory();
+            });
+    }
+}
+
+// Arama
+document.getElementById('searchSku').addEventListener('input', function(e) {
+    const search = e.target.value.toLowerCase();
+    const rows = document.querySelectorAll('#inventoryTableBody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(search) ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}
