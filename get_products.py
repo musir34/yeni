@@ -792,7 +792,6 @@ def product_list():
     try:
         page = request.args.get('page', 1, type=int)
         per_page = 12
-        marketplace_filter = request.args.get('marketplace', '')  # Pazaryeri filtresi
 
         # Ürünleri çek
         all_products = Product.query.order_by(Product.product_main_id).all()
@@ -805,62 +804,17 @@ def product_list():
         raf_rows = RafUrun.query.with_entities(RafUrun.urun_barkodu, RafUrun.raf_kodu).all()
         raf_map = {b: rk for b, rk in raf_rows}
 
-        # Görünüm için CENTRAL stok ile override + platform sayısı hesapla
+        # Görünüm için CENTRAL stok ile override
         for p in all_products:
             p.raf_bilgisi = raf_map.get(p.barcode)
             p.central_qty = cs_map.get(p.barcode, 0)
-            p.quantity = p.central_qty
-            
-            # Platform sayısını hesapla
-            platform_count = 0
-            platforms = p.platforms or '[]'
-            if 'trendyol' in platforms:
-                platform_count += 1
-            if 'idefix' in platforms:
-                platform_count += 1
-            if 'hepsiburada' in platforms:
-                platform_count += 1
-            if p.woo_product_id:
-                platform_count += 1
-            if p.amazon_asin:
-                platform_count += 1
-            p.platform_count = platform_count
-
-        # Pazaryeri filtresi uygula
-        if marketplace_filter:
-            filtered_products = []
-            for p in all_products:
-                platforms = p.platforms or '[]'
-                if marketplace_filter == 'amazon' and p.amazon_asin:
-                    filtered_products.append(p)
-                elif marketplace_filter == 'trendyol' and 'trendyol' in platforms:
-                    filtered_products.append(p)
-                elif marketplace_filter == 'idefix' and 'idefix' in platforms:
-                    filtered_products.append(p)
-                elif marketplace_filter == 'hepsiburada' and 'hepsiburada' in platforms:
-                    filtered_products.append(p)
-                elif marketplace_filter == 'woocommerce' and p.woo_product_id:
-                    filtered_products.append(p)
-                elif marketplace_filter == 'none' and p.platform_count == 0:
-                    filtered_products.append(p)
-            all_products = filtered_products
+            p.quantity = p.central_qty  # şablon {{ variant.quantity }} ise artık central_stock görünür
 
         # Model → Renk → Ürün hiyerarşisi
         hierarchical_products = group_products_by_model_and_then_color(all_products)
 
-        # Her modelin platform sayısını hesapla (ana ürünün platform sayısı)
-        model_platform_counts = {}
-        for model_id, model_data in hierarchical_products.items():
-            main_product = model_data.get('main_product_info')
-            if main_product:
-                model_platform_counts[model_id] = getattr(main_product, 'platform_count', 0)
-            else:
-                model_platform_counts[model_id] = 0
-
-        # Sayfalama - platform sayısına göre sırala (çoktan aza)
-        model_keys = sorted(hierarchical_products.keys(), 
-                           key=lambda x: model_platform_counts.get(x, 0), 
-                           reverse=True)
+        # Sayfalama
+        model_keys = sorted(hierarchical_products.keys())
         total_models = len(model_keys)
         start_idx = (page - 1) * per_page
         end_idx = start_idx + per_page
@@ -885,8 +839,7 @@ def product_list():
             'product_list.html',
             grouped_products=current_page_products,
             pagination=pagination,
-            search_mode=False,
-            marketplace_filter=marketplace_filter
+            search_mode=False
         )
 
     except Exception as e:

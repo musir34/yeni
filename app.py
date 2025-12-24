@@ -126,6 +126,10 @@ register_blueprints(app)
 from idefix.idefix_routes import idefix_bp
 app.register_blueprint(idefix_bp)
 
+# Central Stock Pusher Blueprint
+from central_stock_routes import central_stock_bp
+app.register_blueprint(central_stock_bp)
+
 # >>> Forecast cache fonksiyonlarını blueprint yüklendikten sonra import et
 try:
     # Eğer uretim_oneri blueprint'in kök dizindeyse:
@@ -358,6 +362,7 @@ def push_central_stock_to_trendyol():
         items = []
         zero_stock_count = 0
         negative_adjusted_count = 0
+        discrepancy_items = []  # 🔍 Fark bulunduğu ürünler
         
         for r in rows:
             central_qty = _i(r.qty, 0)
@@ -371,14 +376,58 @@ def push_central_stock_to_trendyol():
             
             if available == 0:
                 zero_stock_count += 1
+            
+            # 🔍 Barkodu normalize et: trim + EAN-13 pad
+            barcode_normalized = r.barcode.strip()
+            barcode_len = len(barcode_normalized)
+            
+            # EAN-13 (13 karakter) değilse sol tarafına 0 ekle
+            if barcode_len < 13 and barcode_len > 0:
+                barcode_normalized = barcode_normalized.zfill(13)
+                discrepancy_items.append({
+                    "barcode_original": r.barcode,
+                    "barcode_normalized": barcode_normalized,
+                    "reason": f"EAN-13 pad: {barcode_len} → 13 karakter",
+                    "central_qty": central_qty,
+                    "reserved_qty": reserved_qty,
+                    "available": available
+                })
+            elif barcode_len > 13:
+                discrepancy_items.append({
+                    "barcode_original": r.barcode,
+                    "barcode_normalized": barcode_normalized,
+                    "reason": f"13+ karakter (kısaltılmadı): {barcode_len} karakter",
+                    "central_qty": central_qty,
+                    "reserved_qty": reserved_qty,
+                    "available": available
+                })
+            elif not barcode_normalized:
+                discrepancy_items.append({
+                    "barcode_original": r.barcode,
+                    "barcode_normalized": barcode_normalized,
+                    "reason": "Boş barkod",
+                    "central_qty": central_qty,
+                    "reserved_qty": reserved_qty,
+                    "available": available
+                })
                 
-            items.append({"barcode": r.barcode.strip(), "quantity": available})
+            items.append({"barcode": barcode_normalized, "quantity": available})
 
         logger.info(f"[PUSH] 📊 Stok İstatistikleri:")
         logger.info(f"[PUSH]   • Toplam ürün: {len(items)}")
         logger.info(f"[PUSH]   • Sıfır stoklu: {zero_stock_count}")
         logger.info(f"[PUSH]   • Negatif düzeltilen: {negative_adjusted_count}")
         logger.info(f"[PUSH]   • Pozitif stoklu: {len(items) - zero_stock_count}")
+        
+        # 🔍 Barkod formatlama sorunlarını logla
+        if discrepancy_items:
+            logger.warning(f"[PUSH] ⚠️ {len(discrepancy_items)} barkodda normalizasyon yapıldı:")
+            for idx, item in enumerate(discrepancy_items[:15], 1):  # İlk 15'i göster
+                logger.warning(f"[PUSH]   {idx}. Original: '{item['barcode_original']}' → Normalized: '{item['barcode_normalized']}'")
+                logger.warning(f"[PUSH]      Sebep: {item.get('reason', 'Bilinmeyen')}")
+                logger.warning(f"[PUSH]      Central: {item['central_qty']}, Rezerve: {item['reserved_qty']}, Available: {item['available']}")
+            if len(discrepancy_items) > 15:
+                logger.warning(f"[PUSH]   ... ve {len(discrepancy_items) - 15} barkod daha")
 
         if not items:
             logger.warning("[PUSH] ⚠️ Gönderilecek kalem yok!")
@@ -418,15 +467,27 @@ def push_central_stock_to_trendyol():
             success_count = 0
             error_count = 0
             timeout = aiohttp.ClientTimeout(total=60)
+            total_sent_items = 0
+            total_filtered_out = 0
             
             async with aiohttp.ClientSession() as session:
                 for i in range(0, total, BATCH_SIZE):
                     batch_num = i//BATCH_SIZE + 1
                     batch = items[i:i+BATCH_SIZE]
-                    payload = {"items": [{"barcode": it["barcode"], "quantity": max(0, int(it["quantity"]))}
-                                         for it in batch if it.get("barcode")]}
                     
-                    logger.info(f"[PUSH] 📮 Batch {batch_num}/{parts} gönderiliyor ({len(payload['items'])} ürün)...")
+                    # 🔍 Barkodları filtre et (boş olanları çıkar)
+                    valid_items = [{"barcode": it["barcode"], "quantity": max(0, int(it["quantity"]))}
+                                   for it in batch if it.get("barcode") and it.get("barcode").strip()]
+                    
+                    filtered_count = len(batch) - len(valid_items)
+                    if filtered_count > 0:
+                        total_filtered_out += filtered_count
+                        logger.warning(f"[PUSH] ⚠️ Batch {batch_num}/{parts}: {filtered_count} ürün boş barkod nedeniyle filtrelendi!")
+                    
+                    payload = {"items": valid_items}
+                    total_sent_items += len(valid_items)
+                    
+                    logger.info(f"[PUSH] 📮 Batch {batch_num}/{parts} gönderiliyor ({len(valid_items)} ürün)...")
                     
                     try:
                         async with session.post(url, headers=headers, json=payload, timeout=timeout) as resp:
@@ -451,6 +512,7 @@ def push_central_stock_to_trendyol():
                     await asyncio.sleep(0.4)
             
             logger.info(f"[PUSH] 📊 Gönderim özeti: Başarılı: {success_count}/{parts}, Hatalı: {error_count}/{parts}")
+            logger.info(f"[PUSH] 📊 Toplam gönderilen ürün: {total_sent_items}, Filtrelen çıkarılan: {total_filtered_out}")
 
         try:
             logger.info("[PUSH] 🚀 Asenkron döngü başlatılıyor...")
@@ -462,41 +524,30 @@ def push_central_stock_to_trendyol():
         logger.info("[PUSH] 🏁 Stok gönderme işlemi sona erdi")
         logger.info("=" * 80)
 
-def push_central_stock_to_amazon():
-    """
-    CentralStock (Created rezerv düşülmüş) → Amazon
-    Listings API ile stok güncelleme
-    Sadece amazon_sku eşleşmeli ürünleri gönderir
-    Arka plan thread'inde çalışır (uzun sürdüğü için)
-    """
-    import threading
-    
-    def _run_amazon_push():
-        with app.app_context():
-            try:
-                from amazon.amazon_service import amazon_service
-                result = amazon_service.push_central_stock()
-                
-                if result.get('success'):
-                    logger.info(f"[AMAZON-PUSH] ✅ Amazon stok gönderimi tamamlandı: {result.get('success_count')}/{result.get('items_count')} ürün ({result.get('elapsed_seconds')}sn)")
-                else:
-                    logger.error(f"[AMAZON-PUSH] ❌ Amazon stok gönderimi başarısız: {result.get('error')}")
-                    
-            except Exception as e:
-                logger.error(f"[AMAZON-PUSH] ❌ KRITIK HATA: {e}", exc_info=True)
-    
-    # Arka plan thread'inde başlat
-    thread = threading.Thread(target=_run_amazon_push, name="AmazonStockPush", daemon=True)
-    thread.start()
-    logger.info("[AMAZON-PUSH] 🚀 Amazon stok gönderimi arka planda başlatıldı...")
-
 def push_stock_job():
-    """Zamanlayıcı tetiklemesinde direkt stok gönderir (zamanlamayı schedule ayarlar)."""
-    push_central_stock_to_trendyol()
-    push_central_stock_to_idefix()
-    push_central_stock_to_amazon()  # Amazon arka planda çalışır
-    # Trendyol fiyatlarını Idefix'e senkronize et
-    sync_trendyol_prices_to_idefix()
+    """
+    Zamanlayıcı tetiklemesinde direkt stok gönderir.
+    YENİ: Merkezi stok pusher kullanılıyor (Hepsiburada hariç tüm platformlar)
+    """
+    from central_stock_pusher import push_stocks_sync
+    
+    logger.info("[SCHEDULER] 🕐 Zamanlanmış stok gönderimi başlatılıyor...")
+    
+    with app.app_context():
+        try:
+            # Yeni merkezi sistem ile tüm platformlara gönder (Hepsiburada hariç)
+            result = push_stocks_sync()
+            
+            if result.get("success"):
+                logger.info("[SCHEDULER] ✅ Zamanlanmış stok gönderimi başarılı!")
+            else:
+                logger.error(f"[SCHEDULER] ⚠️ Zamanlanmış stok gönderimi kısmen başarısız: {result.get('summary')}")
+            
+            # Fiyat senkronizasyonu (eski sistem devam ediyor)
+            sync_trendyol_prices_to_idefix()
+            
+        except Exception as e:
+            logger.error(f"[SCHEDULER] ❌ Zamanlanmış stok gönderim hatası: {e}", exc_info=True)
 
 def push_central_stock_to_idefix():
     """
@@ -559,17 +610,28 @@ def push_central_stock_to_idefix():
             # 4. Stok hesapla ve hazırla
             logger.info("[IDEFIX-PUSH] 🧮 Step 4: Kullanılabilir stok hesaplanıyor...")
             items = []
+            padded_count_idefix = 0
             for product in idefix_products:
                 bc = product.barcode
                 if not bc:
                     continue
+                
+                # 🔍 Barkodu normalize et: EAN-13 pad
+                bc_normalized = bc.strip()
+                if len(bc_normalized) < 13:
+                    bc_normalized = bc_normalized.zfill(13)
+                    padded_count_idefix += 1
+                
                 central_qty = central_stocks.get(bc, 0)
                 reserved_qty = reserved.get(bc, 0)
                 available = max(0, central_qty - reserved_qty)
                 items.append({
-                    "barcode": bc,
+                    "barcode": bc_normalized,
                     "inventoryQuantity": available
                 })
+            
+            if padded_count_idefix > 0:
+                logger.info(f"[IDEFIX-PUSH] 🔧 {padded_count_idefix} barkod EAN-13 formatına dönüştürüldü")
             
             logger.info(f"[IDEFIX-PUSH] 📊 {len(items)} ürün hazırlandı")
             
