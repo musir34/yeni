@@ -65,13 +65,26 @@ async def update_order_status_to_picking(supplier_id, shipment_package_id, lines
                 status = response.status
                 text = await response.text()
 
-        logger.info(f"API yanıtı: Status Code={status}, Response Text={text}")
+        # Yanıtı detaylı logla
+        if text:
+            logger.info(f"API yanıtı: Status={status}, Response={text}")
+            # Trendyol bazen hata mesajını body'de döndürebilir
+            try:
+                response_json = json.loads(text)
+                if "error" in response_json or "message" in response_json:
+                    logger.error(f"✗ Trendyol API Hata Mesajı: {response_json}")
+                    return False
+            except:
+                pass  # JSON değilse devam et
+        else:
+            logger.info(f"API yanıtı: Status={status}, Response=<boş>")
 
-        if status == 200:
-            logger.info(f"Paket {shipment_package_id} Trendyol'da 'Picking' statüsüne güncellendi.")
+        # Başarılı durum kodları: 200, 201, 204
+        if status in [200, 201, 204]:
+            logger.info(f"✓ Paket {shipment_package_id} Trendyol'da 'Picking' statüsüne güncellendi.")
             return True
         else:
-            logger.error(f"Beklenmeyen durum kodu veya hata: {status}, Yanıt: {text}")
+            logger.error(f"✗ Trendyol API Hatası: Status={status}, Paket={shipment_package_id}, Yanıt={text}")
             return False
 
     except Exception as e:
@@ -219,6 +232,7 @@ async def confirm_packing():
         try:
             uyarilar = []
             toplam_dusen = 0
+            toplam_beklenen = 0  # Düşmesi gereken toplam adet
 
             for d in details:
                 # 🔥 WooCommerce için woo_id'den gerçek barkod al
@@ -238,7 +252,8 @@ async def confirm_packing():
                 if not bc or adet <= 0:
                     logger.debug(f"[STOCK] atla bc={bc} adet={adet}")
                     continue
-
+                
+                toplam_beklenen += adet  # Beklenen toplamı artır
                 chosen_raf = request.form.get(f"pick_{d.get('barcode')}")  # Form'dan gelen key (woo_id veya barkod)
                 kalan = adet
                 logger.info(f"[STOCK] basla bc={bc} adet={adet} chosen_raf={chosen_raf}")
@@ -295,7 +310,17 @@ async def confirm_packing():
                     logger.warning(f"[STOCK][WARN] {warn}")
 
             db.session.commit()
-            logger.info(f"[STOCK][OK] commit; toplam_dusen(adet)={toplam_dusen}")
+            logger.info(f"[STOCK][OK] commit; toplam_dusen={toplam_dusen}/{toplam_beklenen}")
+            
+            # ⚠️ Kritik: Stok yetersizse Trendyol'a güncelleme GÖNDERME
+            if toplam_beklenen > 0 and toplam_dusen == 0:
+                logger.error(f"[STOCK][CRITICAL] Hiç stok düşmedi! Trendyol'a güncelleme gönderilmiyor.")
+                flash("❌ Stok yetersiz! Hiçbir ürün raflardan çekilemedi. Sipariş Picking'e geçirilemedi.", 'danger')
+                return redirect(url_for('siparis_hazirla.index'))
+            elif toplam_dusen < toplam_beklenen:
+                logger.warning(f"[STOCK][PARTIAL] Kısmi stok düşümü: {toplam_dusen}/{toplam_beklenen}")
+                flash(f"⚠️ Kısmi hazırlandı: {toplam_dusen}/{toplam_beklenen} adet. Devam ediliyor...", 'warning')
+            
             if uyarilar:
                 flash(" / ".join(uyarilar), "warning")
         except Exception as e:
@@ -344,18 +369,29 @@ async def confirm_packing():
             logger.debug(f"[TYL] lines_by_sp: { {k: len(v) for k,v in lines_by_sp.items()} }")
 
             trendyol_success = True
+            trendyol_failed_packages = []
             for sp_id, ln in lines_by_sp.items():
                 logger.info(f"[TYL][PUT] sp_id={sp_id} lines={ln}")
                 ok = await update_order_status_to_picking(SUPPLIER_ID, sp_id, ln)
                 if ok:
-                    flash(f"Paket {sp_id} Trendyol'da 'Picking' oldu.", 'success')
+                    flash(f"✓ Paket {sp_id} Trendyol'da 'Picking' oldu.", 'success')
                     logger.info(f"[TYL][OK] sp_id={sp_id}")
                 else:
                     trendyol_success = False
-                    flash(f"Trendyol güncellemesi hatası. Paket: {sp_id}", 'danger')
+                    trendyol_failed_packages.append(sp_id)
+                    flash(f"✗ Trendyol güncellemesi hatası. Paket: {sp_id}", 'danger')
                     logger.error(f"[TYL][FAIL] sp_id={sp_id}")
+            
             if not trendyol_success:
-                logger.warning("[TYL] bazı paketlerde hata var; süreç devam etti")
+                logger.error(f"[TYL][CRITICAL] Bazı paketler güncellenemedi: {trendyol_failed_packages}")
+                flash(f"⚠️ Trendyol güncellemesi BAŞARISIZ! Paketler: {', '.join(map(str, trendyol_failed_packages))}", 'danger')
+                # Trendyol güncellemesi başarısızsa, stok düşümünü geri al ve çık
+                try:
+                    db.session.rollback()
+                    logger.warning("[TYL][ROLLBACK] Stok düşümü geri alındı")
+                except:
+                    pass
+                return redirect(url_for('siparis_hazirla.index'))
         except Exception as e:
             logger.exception("[TYL][EXC]")
             flash(f"Trendyol API çağrısında istisna: {e}", 'danger')

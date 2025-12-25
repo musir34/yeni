@@ -37,7 +37,7 @@ class IdefixService:
     def _get_headers(self) -> Dict[str, str]:
         """API istekleri için gerekli header'ları döndürür"""
         return {
-            "X-API-KEY": self._get_vendor_token(),
+            "Authorization": f"Basic {self._get_vendor_token()}",
             "Content-Type": "application/json",
             "Accept": "application/json"
         }

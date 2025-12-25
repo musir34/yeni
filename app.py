@@ -204,7 +204,9 @@ def check_authentication():
 @app.errorhandler(404)
 def not_found_error(error):
     """404 - Sayfa Bulunamadı"""
-    logger.warning(f"404 Hatası - Yol: {request.path}, IP: {request.remote_addr}")
+    # Static dosyalar için loglama yapma (gereksiz spam'i önler)
+    if not request.path.startswith('/static/'):
+        logger.warning(f"404 Hatası - Yol: {request.path}, IP: {request.remote_addr}")
     if request.path.startswith('/api/'):
         return {'error': 'Endpoint bulunamadı', 'path': request.path}, 404
     return render_template('errors/404.html'), 404
