@@ -803,6 +803,39 @@ class UserLog(db.Model):
     user = db.relationship('User', backref=db.backref('logs', lazy='dynamic')) # lazy='dynamic' çok sayıda log varsa performansı artırır
 
 # Mevcut Kasa modelini silip bunu yapıştır
+# Ana Kasa Modeli - Tüm gelirlerin kaynağı
+class AnaKasa(db.Model):
+    __tablename__ = 'ana_kasa'
+    id = db.Column(db.Integer, primary_key=True)
+    bakiye = db.Column(db.Numeric(12, 2), nullable=False, default=0)  # Mevcut bakiye
+    guncelleme_tarihi = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    def __repr__(self):
+        return f'<AnaKasa {self.id} - Bakiye: {self.bakiye}>'
+
+
+# Ana Kasa İşlem Geçmişi - Her işlemi kaydet
+class AnaKasaIslem(db.Model):
+    __tablename__ = 'ana_kasa_islemler'
+    id = db.Column(db.Integer, primary_key=True)
+    islem_tipi = db.Column(db.String(20), nullable=False)  # 'gelir_eklendi', 'normal_kasaya_aktarildi', 'manuel_ekleme', 'manuel_cikis'
+    tutar = db.Column(db.Numeric(12, 2), nullable=False)
+    aciklama = db.Column(db.String(500), nullable=False)
+    onceki_bakiye = db.Column(db.Numeric(12, 2), nullable=False)
+    yeni_bakiye = db.Column(db.Numeric(12, 2), nullable=False)
+    tarih = db.Column(db.DateTime, default=datetime.now)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    # İlişkili kasa kaydı (eğer varsa)
+    kasa_id = db.Column(db.Integer, db.ForeignKey('kasa.id'), nullable=True)
+    
+    kullanici = db.relationship('User', backref=db.backref('ana_kasa_islemleri', lazy='dynamic'))
+    kasa_kaydi = db.relationship('Kasa', backref=db.backref('ana_kasa_islemi', uselist=False))
+    
+    def __repr__(self):
+        return f'<AnaKasaIslem {self.id} - {self.islem_tipi}: {self.tutar}>'
+
+
 class Kasa(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tip = db.Column(db.String(10), nullable=False) # gelir, gider
@@ -812,6 +845,9 @@ class Kasa(db.Model):
     tarih = db.Column(db.DateTime, default=datetime.now)
     kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     fis_yolu = db.Column(db.String(255))
+    
+    # Ana Kasadan çekildi mi? (Sadece gelir tipleri için)
+    ana_kasadan = db.Column(db.Boolean, default=False, nullable=False)
 
     # DURUM ARTIK ENUM OLDU
     durum = db.Column(db.Enum(KasaDurum, native_enum=False), default=KasaDurum.ODENMEDI, nullable=False)

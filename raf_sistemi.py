@@ -296,8 +296,13 @@ def raf_sil(kod):
         if not raf:
             return jsonify({"error": "Raf bulunamadı."}), 404
 
+        # RafUrun kayıtlarını sil ve CentralStock'tan düş
         urunler = RafUrun.query.filter_by(raf_kodu=raf.kod).all()
         for urun in urunler:
+            # CentralStock'tan düş
+            cs = CentralStock.query.get(urun.urun_barkodu)
+            if cs:
+                cs.qty = max(0, (cs.qty or 0) - (urun.adet or 0))
             db.session.delete(urun)
 
         if raf.barcode_path and os.path.exists(raf.barcode_path):
@@ -311,6 +316,89 @@ def raf_sil(kod):
         return jsonify({
             "success": True,
             "message": f"{kod} başarıyla silindi."
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@raf_bp.route("/toplu-sil", methods=["POST"])
+def toplu_raf_sil():
+    """Seçili rafları toplu olarak siler. 
+    - Ana raf kodu verilirse (örn: 'Z') o ana rafla başlayan tüm rafları siler.
+    - İkincil raf kodu verilirse (örn: 'A-01') o ikincil raftaki tüm katları siler.
+    - Tam raf kodu verilirse (örn: 'A-01-02') sadece o rafı siler."""
+    try:
+        data = request.json
+        raf_kodlari = data.get("raf_kodlari", [])
+        
+        if not raf_kodlari:
+            return jsonify({"error": "Silinecek raf seçilmedi."}), 400
+        
+        silinen_raflar = []
+        toplam_stok_dusurme = {}  # barkod: adet
+        silinecek_raflar = []  # Raf objelerini sakla
+        
+        # 1. Önce tüm silinecek rafları ve ürünlerini topla
+        for kod in raf_kodlari:
+            # Eğer kod tek harf ise (ana raf), o harfle başlayan tüm rafları bul
+            if len(kod) == 1 or (len(kod) <= 2 and '-' not in kod):
+                # Ana raf kodu - tüm alt rafları bul
+                raflar = Raf.query.filter(Raf.kod.like(f"{kod}%")).all()
+            # Eğer kod A-01 formatında ise (ikincil raf), o ikincil raftaki tüm katları bul
+            elif kod.count('-') == 1:
+                # İkincil raf kodu - tüm katları bul
+                raflar = Raf.query.filter(Raf.kod.like(f"{kod}-%")).all()
+            else:
+                # Tek raf kodu
+                raflar = [Raf.query.filter_by(kod=kod).first()]
+                raflar = [r for r in raflar if r is not None]
+            
+            silinecek_raflar.extend(raflar)
+        
+        # 2. Önce tüm RafUrun kayıtlarını sil
+        for raf in silinecek_raflar:
+            urunler = RafUrun.query.filter_by(raf_kodu=raf.kod).all()
+            for urun in urunler:
+                # Toplam düşürmeler için biriktir
+                if urun.urun_barkodu not in toplam_stok_dusurme:
+                    toplam_stok_dusurme[urun.urun_barkodu] = 0
+                toplam_stok_dusurme[urun.urun_barkodu] += urun.adet or 0
+                db.session.delete(urun)
+        
+        # 3. RafUrun silmelerini commit et
+        db.session.flush()
+        
+        # 4. Şimdi Raf kayıtlarını sil
+        for raf in silinecek_raflar:
+            # Dosyaları sil
+            try:
+                if raf.barcode_path and os.path.exists(raf.barcode_path):
+                    os.remove(raf.barcode_path)
+            except:
+                pass
+            try:
+                if raf.qr_path and os.path.exists(raf.qr_path):
+                    os.remove(raf.qr_path)
+            except:
+                pass
+            
+            silinen_raflar.append(raf.kod)
+            db.session.delete(raf)
+        
+        # 5. CentralStock güncellemelerini yap
+        for barkod, adet in toplam_stok_dusurme.items():
+            cs = CentralStock.query.get(barkod)
+            if cs:
+                cs.qty = max(0, (cs.qty or 0) - adet)
+        
+        # 6. Tüm değişiklikleri commit et
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"{len(silinen_raflar)} raf başarıyla silindi.",
+            "silinen_raflar": silinen_raflar
         })
     except Exception as e:
         db.session.rollback()

@@ -314,6 +314,13 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Ana Kasa Uyarısı - Sadece gelir seçildiğinde göster -->
+                <div class="alert alert-warning" id="ana-kasa-uyari" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i> <strong>Dikkat!</strong> 
+                    Gelir eklerken tutar <strong>Ana Kasa</strong>'dan düşülecektir. 
+                    Ana Kasa bakiyesi: <strong id="ana-kasa-bakiye-text">Yükleniyor...</strong>
+                </div>
 
                 <div class="form-group">
                     <label for="aciklama">Açıklama <span class="required">*</span></label>
@@ -341,6 +348,23 @@
                         </select>
                         <small class="form-text text-muted">
                             "Ödenen" seçilirse, ödeme tarihi ekleme tarihi ile aynı olur.
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Ana Kasa Seçeneği (Sadece Gelir için) -->
+                <div class="form-group" id="ana-kasa-group" style="display: none;">
+                    <div class="alert alert-info">
+                        <i class="fas fa-wallet"></i>
+                        <strong>Ana Kasa Kullan:</strong>
+                        <div class="custom-control custom-checkbox mt-2">
+                            <input type="checkbox" class="custom-control-input" id="ana_kasa_kullan" name="ana_kasa_kullan">
+                            <label class="custom-control-label" for="ana_kasa_kullan">
+                                Bu geliri Ana Kasa'dan çek
+                            </label>
+                        </div>
+                        <small class="form-text text-muted">
+                            İşaretlerseniz, bu tutar Ana Kasa bakiyesinden düşecektir.
                         </small>
                     </div>
                 </div>
@@ -403,6 +427,8 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
     
     <script>
+        let anaKasaBakiye = 0;
+        
         function selectRadio(value) {
             const radio = document.getElementById(value);
             radio.checked = true;
@@ -411,6 +437,41 @@
                 option.classList.remove('selected');
             });
             radio.parentElement.classList.add('selected');
+            
+            // Ana Kasa uyarısını göster/gizle
+            toggleAnaKasaUyari();
+        }
+        
+        function toggleAnaKasaUyari() {
+            const tipGelir = document.getElementById('gelir');
+            const anaKasaUyari = document.getElementById('ana-kasa-uyari');
+            
+            if (tipGelir && tipGelir.checked) {
+                anaKasaUyari.style.display = 'block';
+                // Ana Kasa bakiyesini çek
+                fetchAnaKasaBakiye();
+            } else {
+                anaKasaUyari.style.display = 'none';
+            }
+        }
+        
+        function fetchAnaKasaBakiye() {
+            fetch('{{ url_for("kasa.ana_kasa_bakiye") }}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        anaKasaBakiye = data.bakiye;
+                        const bakiyeText = new Intl.NumberFormat('tr-TR', { 
+                            style: 'currency', 
+                            currency: 'TRY' 
+                        }).format(anaKasaBakiye);
+                        document.getElementById('ana-kasa-bakiye-text').textContent = bakiyeText;
+                    }
+                })
+                .catch(error => {
+                    console.error('Ana Kasa bakiyesi alınamadı:', error);
+                    document.getElementById('ana-kasa-bakiye-text').textContent = 'Yüklenemedi';
+                });
         }
         
         function selectKategori(kategoriAdi, element) {
@@ -430,7 +491,25 @@
         }
         
         document.addEventListener('DOMContentLoaded', function() {
-            // ... Diğer DOMContentLoaded kodları aynı kalıyor ...
+            // Form submit kontrolü
+            const form = document.querySelector('form');
+            form.addEventListener('submit', function(e) {
+                const tipGelir = document.getElementById('gelir');
+                const tutarInput = document.getElementById('tutar');
+                
+                if (tipGelir && tipGelir.checked) {
+                    // Tutarı temizle ve parse et
+                    let tutarStr = tutarInput.value.replace(/[^\d,]/g, '').replace(',', '.');
+                    let tutar = parseFloat(tutarStr);
+                    
+                    if (tutar > anaKasaBakiye) {
+                        e.preventDefault();
+                        alert('Ana Kasa\'da yeterli bakiye yok! Mevcut bakiye: ' + 
+                              new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(anaKasaBakiye));
+                        return false;
+                    }
+                }
+            });
         });
     </script>
     
