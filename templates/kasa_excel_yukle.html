@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel ile Gelir Ekle - Güllü Ayakkabı</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin-top: 20px;
+            padding: 0 15px;
+        }
+        
+        .header-section {
+            background: linear-gradient(135deg, #667db6 0%, #0082c8 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .header-section h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            font-weight: 600;
+        }
+        
+        .info-card {
+            background: #e8f4fd;
+            border-left: 4px solid #0082c8;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .info-card h5 {
+            color: #0082c8;
+            margin-bottom: 10px;
+        }
+        
+        .info-card ul {
+            margin-bottom: 0;
+            padding-left: 20px;
+        }
+        
+        .info-card li {
+            margin-bottom: 5px;
+        }
+        
+        .file-upload-wrapper {
+            position: relative;
+            width: 100%;
+            height: 150px;
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+        
+        .file-upload-wrapper:hover {
+            border-color: #0082c8;
+            background: #f0f8ff;
+        }
+        
+        .file-upload-wrapper.dragover {
+            border-color: #28a745;
+            background: #e8f5e9;
+        }
+        
+        .file-upload-wrapper i {
+            font-size: 3rem;
+            color: #ccc;
+            margin-bottom: 10px;
+        }
+        
+        .file-upload-wrapper.has-file i {
+            color: #28a745;
+        }
+        
+        .file-upload-wrapper input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+        
+        .preview-table {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .preview-table table {
+            font-size: 0.9rem;
+        }
+        
+        .row-valid {
+            background-color: #d4edda !important;
+        }
+        
+        .row-invalid {
+            background-color: #f8d7da !important;
+        }
+        
+        .btn-group-custom {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-section">
+            <h1><i class="fas fa-file-excel"></i> Excel ile Gelir Ekle</h1>
+            <p>İşbankası hesap özeti Excel dosyasından gelir kayıtlarını aktarın</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'warning' if category == 'warning' else 'info' }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="info-card">
+            <h5><i class="fas fa-info-circle"></i> İşbankası Excel Format Bilgisi</h5>
+            <ul>
+                <li><strong>A Sütunu (Tarih/Saat):</strong> Tarih ve saat bilgisi (örn: 28/11/2025-12:55:35)</li>
+                <li><strong>D Sütunu (İşlem Tutarı):</strong> Gelir tutarı (sadece pozitif değerler alınır)</li>
+                <li><strong>I Sütunu (Açıklama):</strong> İşlem açıklaması</li>
+            </ul>
+            <small class="text-muted">
+                <i class="fas fa-lightbulb"></i> İlk 6 satır (başlık bilgileri) otomatik olarak atlanır. Sadece D sütununda pozitif tutar olan satırlar gelir olarak eklenir.
+            </small>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-upload"></i> Excel Dosyası Yükle
+            </div>
+            <div class="card-body">
+                <form id="excelForm" action="{{ url_for('kasa.excel_gelir_yukle') }}" method="POST" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <div class="file-upload-wrapper" id="dropZone">
+                            <i class="fas fa-file-excel"></i>
+                            <span id="fileLabel">Excel dosyasını sürükleyip bırakın veya tıklayın</span>
+                            <input type="file" name="excel_file" id="excelFile" accept=".xlsx,.xls" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="kategori"><i class="fas fa-tag"></i> Kategori</label>
+                                <input type="text" class="form-control" id="kategori" name="kategori" 
+                                       value="Banka Geliri" placeholder="Örn: Banka Geliri, Havale, EFT">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="durum"><i class="fas fa-check-circle"></i> Kayıt Durumu</label>
+                                <select class="form-control" id="durum" name="durum">
+                                    <option value="odenen" selected>Ödenen (Tamamlandı)</option>
+                                    <option value="bekleyen">Bekleyen</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Önizleme Alanı -->
+                    <div id="previewSection" style="display: none;">
+                        <hr>
+                        <h5><i class="fas fa-eye"></i> Önizleme (İlk 10 Satır)</h5>
+                        <div class="alert alert-info">
+                            <span id="previewStats"></span>
+                        </div>
+                        <div class="preview-table">
+                            <table class="table table-sm table-bordered" id="previewTable">
+                                <thead class="thead-dark">
+                                    <tr>
+                                        <th>Satır</th>
+                                        <th>Tarih</th>
+                                        <th>Tutar</th>
+                                        <th>Açıklama</th>
+                                        <th>Durum</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="previewBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <div class="btn-group-custom">
+                        <button type="button" class="btn btn-secondary" id="btnOnizle" disabled>
+                            <i class="fas fa-search"></i> Önizle
+                        </button>
+                        <button type="submit" class="btn btn-success" id="btnYukle" disabled>
+                            <i class="fas fa-upload"></i> Gelirleri Yükle
+                        </button>
+                        <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Geri Dön
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <i class="fas fa-exclamation-triangle"></i> Dikkat Edilmesi Gerekenler
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li>Excel dosyasının ilk satırından itibaren veriler okunur</li>
+                    <li>Başlık satırı varsa, o satır da okunmaya çalışılır (tutar 0 veya boş ise atlanır)</li>
+                    <li>Sadece D sütununda pozitif değer olan satırlar gelir olarak eklenir</li>
+                    <li>Negatif veya boş tutar değerleri atlanır</li>
+                    <li>Aynı dosyayı tekrar yüklerseniz, kayıtlar çift olarak eklenir</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('excelFile');
+            const fileLabel = document.getElementById('fileLabel');
+            const btnOnizle = document.getElementById('btnOnizle');
+            const btnYukle = document.getElementById('btnYukle');
+            const previewSection = document.getElementById('previewSection');
+            
+            // Drag & Drop
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+            });
+            
+            dropZone.addEventListener('drop', function(e) {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    handleFileSelect(files[0]);
+                }
+            });
+            
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    handleFileSelect(this.files[0]);
+                }
+            });
+            
+            function handleFileSelect(file) {
+                if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                    fileLabel.innerHTML = '<i class="fas fa-check-circle text-success"></i> ' + file.name;
+                    dropZone.classList.add('has-file');
+                    btnOnizle.disabled = false;
+                    btnYukle.disabled = false;
+                    previewSection.style.display = 'none';
+                } else {
+                    fileLabel.textContent = 'Sadece Excel dosyaları (.xlsx, .xls) kabul edilir!';
+                    dropZone.classList.remove('has-file');
+                    btnOnizle.disabled = true;
+                    btnYukle.disabled = true;
+                }
+            }
+            
+            // Önizleme
+            btnOnizle.addEventListener('click', async function() {
+                const formData = new FormData();
+                formData.append('excel_file', fileInput.files[0]);
+                
+                btnOnizle.disabled = true;
+                btnOnizle.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yükleniyor...';
+                
+                try {
+                    const response = await fetch("{{ url_for('kasa.excel_onizleme') }}", {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        previewSection.style.display = 'block';
+                        document.getElementById('previewStats').innerHTML = 
+                            `<strong>Toplam ${data.toplam_satir} satır</strong> bulundu. ` +
+                            `<span class="text-success">Yaklaşık ${data.gecerli_satir} geçerli gelir kaydı</span> eklenecek.`;
+                        
+                        const tbody = document.getElementById('previewBody');
+                        tbody.innerHTML = '';
+                        
+                        data.onizleme.forEach(row => {
+                            const tr = document.createElement('tr');
+                            tr.className = row.gecerli ? 'row-valid' : 'row-invalid';
+                            tr.innerHTML = `
+                                <td>${row.satir}</td>
+                                <td>${row.tarih}</td>
+                                <td class="text-right">${row.tutar} ₺</td>
+                                <td>${row.aciklama}</td>
+                                <td>${row.gecerli ? '<span class="badge badge-success">Geçerli</span>' : '<span class="badge badge-danger">Atlanacak</span>'}</td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    } else {
+                        alert(data.message || 'Önizleme yüklenemedi');
+                    }
+                } catch (error) {
+                    alert('Bir hata oluştu: ' + error.message);
+                } finally {
+                    btnOnizle.disabled = false;
+                    btnOnizle.innerHTML = '<i class="fas fa-search"></i> Önizle';
+                }
+            });
+            
+            // Form gönderilmeden önce onay
+            document.getElementById('excelForm').addEventListener('submit', function(e) {
+                if (!confirm('Excel dosyasındaki gelirleri sisteme eklemek istediğinizden emin misiniz?')) {
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

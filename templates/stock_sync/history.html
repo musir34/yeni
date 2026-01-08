@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1">
+                <i class="bi bi-clock-history me-2"></i>
+                Senkronizasyon Geçmişi
+            </h1>
+            <p class="text-muted mb-0">Tüm stok senkronizasyon işlemlerinin kaydı</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('stock_sync.dashboard') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtreler -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Platform</label>
+                    <select name="platform" class="form-select">
+                        <option value="">Tümü</option>
+                        <option value="trendyol" {% if selected_platform == 'trendyol' %}selected{% endif %}>Trendyol</option>
+                        <option value="idefix" {% if selected_platform == 'idefix' %}selected{% endif %}>Idefix</option>
+                        <option value="amazon" {% if selected_platform == 'amazon' %}selected{% endif %}>Amazon</option>
+                        <option value="woocommerce" {% if selected_platform == 'woocommerce' %}selected{% endif %}>WooCommerce</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Limit</label>
+                    <select name="limit" class="form-select">
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="200">200</option>
+                        <option value="500">500</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-funnel"></i> Filtrele
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tablo -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Tarih</th>
+                            <th>Platform</th>
+                            <th>Durum</th>
+                            <th>Toplam</th>
+                            <th>Başarılı</th>
+                            <th>Hata</th>
+                            <th>Başarı %</th>
+                            <th>Süre</th>
+                            <th>Tetikleyen</th>
+                            <th>Kullanıcı</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in sessions %}
+                        <tr>
+                            <td><code>{{ session.session_id[:8] }}...</code></td>
+                            <td>{{ session.created_at[:19] if session.created_at else '-' }}</td>
+                            <td><span class="badge bg-primary text-uppercase">{{ session.platform }}</span></td>
+                            <td>
+                                {% if session.status == 'completed' %}
+                                    <span class="badge bg-success">Tamamlandı</span>
+                                {% elif session.status == 'running' %}
+                                    <span class="badge bg-warning text-dark">Devam Ediyor</span>
+                                {% elif session.status == 'failed' %}
+                                    <span class="badge bg-danger">Hata</span>
+                                {% elif session.status == 'cancelled' %}
+                                    <span class="badge bg-secondary">İptal</span>
+                                {% else %}
+                                    <span class="badge bg-info">{{ session.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ session.total_products }}</td>
+                            <td class="text-success fw-bold">{{ session.success_count }}</td>
+                            <td class="text-danger fw-bold">{{ session.error_count }}</td>
+                            <td>
+                                {% if session.success_rate %}
+                                    <span class="{% if session.success_rate > 90 %}text-success{% elif session.success_rate > 70 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ session.success_rate }}%
+                                    </span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>{{ "%.1f"|format(session.duration_seconds) if session.duration_seconds else '-' }}s</td>
+                            <td><span class="badge bg-secondary">{{ session.triggered_by }}</span></td>
+                            <td>{{ session.triggered_by_user or '-' }}</td>
+                            <td>
+                                <a href="{{ url_for('stock_sync.session_detail', session_id=session.session_id) }}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> Detay
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="12" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                Kayıt bulunamadı
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

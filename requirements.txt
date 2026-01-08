@@ -68,10 +68,12 @@ multidict==6.6.3
 narwhals==1.46.0
 numpy>=2.0,<3
 openai==1.65.4
+openpyxl==3.1.2
 order==2.1.7
 ordered-set==4.1.0
 packaging==25.0
 pandas==2.2.3
+xlrd==2.0.2
 patsy==1.0.1
 plotly==6.0.0
 pluggy==1.6.0
@@ -129,3 +131,5 @@ yarl==1.20.1
 Pillow>=10.0.0,<11
 qrcode>=7.4
 Pillow==10.4.0
+
+python-amazon-sp-api==0.18.1

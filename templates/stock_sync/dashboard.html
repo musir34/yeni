@@ -1,0 +1,484 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Başlık -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1">
+                <i class="bi bi-arrow-repeat me-2"></i>
+                Stok Senkronizasyon Merkezi
+            </h1>
+            <p class="text-muted mb-0">Tüm platformlara stok gönderimini buradan yönetin</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button id="btnRefresh" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-clockwise"></i> Yenile
+            </button>
+            <button id="btnSyncAll" class="btn btn-primary btn-lg">
+                <i class="bi bi-cloud-upload"></i> Tüm Platformlara Gönder
+            </button>
+        </div>
+    </div>
+
+    <!-- Özet Kartları -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Toplam Ürün</h6>
+                            <h2 class="card-title mb-0" id="totalProducts">{{ total_products }}</h2>
+                        </div>
+                        <i class="bi bi-box-seam fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card bg-warning text-dark h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Rezerv Ürün</h6>
+                            <h2 class="card-title mb-0" id="reservedProducts">-</h2>
+                            <small class="opacity-75" id="reservedInfo">Siparişteki ürünler</small>
+                        </div>
+                        <i class="bi bi-lock-fill fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Aktif Platform</h6>
+                            <h2 class="card-title mb-0" id="activePlatforms">
+                                {{ platform_status.values()|selectattr('configured')|list|length }}
+                            </h2>
+                        </div>
+                        <i class="bi bi-check-circle fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Aktif Sync</h6>
+                            <h2 class="card-title mb-0" id="activeSyncs">{{ active_sessions|length }}</h2>
+                        </div>
+                        <i class="bi bi-hourglass-split fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card bg-secondary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Son 24 Saat</h6>
+                            <h2 class="card-title mb-0" id="last24h">-</h2>
+                        </div>
+                        <i class="bi bi-clock-history fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Platform Kartları -->
+    <h4 class="mb-3"><i class="bi bi-grid me-2"></i>Platformlar</h4>
+    <div class="row mb-4">
+        {% for platform_name, status in platform_status.items() %}
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 platform-card {% if status.configured %}border-success{% else %}border-secondary{% endif %}">
+                <div class="card-header d-flex justify-content-between align-items-center 
+                            {% if status.configured %}bg-success text-white{% else %}bg-secondary text-white{% endif %}">
+                    <span class="fw-bold text-uppercase d-flex align-items-center">
+                        <img src="/static/logo/{{ platform_name }}.png" 
+                             alt="{{ platform_name }}" 
+                             class="me-2 platform-logo"
+                             style="height: 24px; width: 24px; object-fit: contain; background: white; border-radius: 4px; padding: 2px;"
+                             onerror="this.style.display='none'">
+                        {{ platform_name }}
+                    </span>
+                    <span class="badge {% if status.configured %}bg-light text-success{% else %}bg-light text-secondary{% endif %}">
+                        {% if status.configured %}Aktif{% else %}Pasif{% endif %}
+                    </span>
+                </div>
+                <div class="card-body">
+                    {% if status.configured %}
+                        {% set config = platform_configs.get(platform_name) %}
+                        <p class="small text-muted mb-2">
+                            <i class="bi bi-clock me-1"></i>
+                            Son Sync: 
+                            {% if config and config.last_sync_at %}
+                                {{ config.last_sync_at.strftime('%d.%m.%Y %H:%M') }}
+                            {% else %}
+                                Henüz yok
+                            {% endif %}
+                        </p>
+                        <p class="small text-muted mb-3">
+                            <i class="bi bi-speedometer me-1"></i>
+                            Batch: {{ status.batch_size }} | Delay: {{ status.rate_limit_delay }}s
+                        </p>
+                        <button class="btn btn-outline-primary btn-sm w-100 btn-sync-platform" 
+                                data-platform="{{ platform_name }}">
+                            <i class="bi bi-send me-1"></i> Sync Başlat
+                        </button>
+                    {% else %}
+                        <p class="text-muted small mb-0">
+                            <i class="bi bi-exclamation-circle me-1"></i>
+                            Platform yapılandırılmamış. API bilgilerini .env dosyasına ekleyin.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Aktif Session'lar -->
+    {% if active_sessions %}
+    <div class="card mb-4 border-warning">
+        <div class="card-header bg-warning text-dark">
+            <i class="bi bi-hourglass-split me-2"></i>
+            Devam Eden Senkronizasyonlar
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Platform</th>
+                            <th>Durum</th>
+                            <th>İlerleme</th>
+                            <th>Başlangıç</th>
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in active_sessions %}
+                        <tr>
+                            <td><span class="badge bg-primary">{{ session.platform }}</span></td>
+                            <td>{{ session.status }}</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                         style="width: {{ session.progress_percent }}%">
+                                        {{ session.sent_count }}/{{ session.total_products }}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ session.started_at }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-danger btn-cancel-session" 
+                                        data-session="{{ session.session_id }}">
+                                    <i class="bi bi-x-circle"></i> İptal
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Son Senkronizasyonlar -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-clock-history me-2"></i>Son Senkronizasyonlar</span>
+            <a href="{{ url_for('stock_sync.history') }}" class="btn btn-sm btn-outline-primary">
+                Tümünü Gör <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Tarih</th>
+                            <th>Platform</th>
+                            <th>Durum</th>
+                            <th>Toplam</th>
+                            <th>Başarılı</th>
+                            <th>Hata</th>
+                            <th>Süre</th>
+                            <th>Tetikleyen</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in recent_sessions %}
+                        <tr>
+                            <td>{{ session.created_at[:16] if session.created_at else '-' }}</td>
+                            <td><span class="badge bg-primary">{{ session.platform }}</span></td>
+                            <td>
+                                {% if session.status == 'completed' %}
+                                    <span class="badge bg-success">Tamamlandı</span>
+                                {% elif session.status == 'running' %}
+                                    <span class="badge bg-warning text-dark">Devam Ediyor</span>
+                                {% elif session.status == 'failed' %}
+                                    <span class="badge bg-danger">Hata</span>
+                                {% elif session.status == 'cancelled' %}
+                                    <span class="badge bg-secondary">İptal</span>
+                                {% else %}
+                                    <span class="badge bg-info">{{ session.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ session.total_products }}</td>
+                            <td class="text-success">{{ session.success_count }}</td>
+                            <td class="text-danger">{{ session.error_count }}</td>
+                            <td>{{ "%.1f"|format(session.duration_seconds) if session.duration_seconds else '-' }}s</td>
+                            <td>{{ session.triggered_by_user or session.triggered_by }}</td>
+                            <td>
+                                <a href="{{ url_for('stock_sync.session_detail', session_id=session.session_id) }}" 
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                Henüz senkronizasyon yapılmamış
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="syncModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-arrow-repeat spin me-2"></i>
+                    Senkronizasyon
+                </h5>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Yükleniyor...</span>
+                </div>
+                <h5 id="syncStatus">Stoklar gönderiliyor...</h5>
+                <p class="text-muted mb-0" id="syncDetails">Lütfen bekleyin</p>
+                <div class="progress mt-3" style="height: 25px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         id="syncProgress" style="width: 0%">0%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Result Modal -->
+<div class="modal fade" id="resultModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" id="resultModalHeader">
+                <h5 class="modal-title" id="resultModalTitle">Sonuç</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="resultModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.spin {
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.platform-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.platform-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const syncModal = new bootstrap.Modal(document.getElementById('syncModal'));
+    const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
+    
+    // İstatistikleri yükle
+    fetch('/stock-sync/api/stats')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('last24h').textContent = data.stats.syncs_last_24h;
+            }
+        });
+    
+    // Rezerv sayısını yükle
+    fetch('/stock-sync/api/status')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.reserved_count !== undefined) {
+                document.getElementById('reservedProducts').textContent = data.reserved_count;
+            }
+        });
+    
+    // Tüm platformlara sync
+    document.getElementById('btnSyncAll').addEventListener('click', function() {
+        if (!confirm('Tüm platformlara stok gönderilecek. Devam edilsin mi?')) return;
+        
+        syncModal.show();
+        document.getElementById('syncStatus').textContent = 'Tüm platformlara gönderiliyor...';
+        
+        fetch('/stock-sync/api/sync/all', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        })
+        .then(r => r.json())
+        .then(data => {
+            syncModal.hide();
+            showResult(data);
+        })
+        .catch(err => {
+            syncModal.hide();
+            showResult({success: false, error: err.message});
+        });
+    });
+    
+    // Tek platform sync
+    document.querySelectorAll('.btn-sync-platform').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const platform = this.dataset.platform;
+            
+            if (!confirm(`${platform.toUpperCase()} platformuna stok gönderilecek. Devam edilsin mi?`)) return;
+            
+            syncModal.show();
+            document.getElementById('syncStatus').textContent = `${platform.toUpperCase()} platformuna gönderiliyor...`;
+            
+            fetch(`/stock-sync/api/sync/${platform}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(r => r.json())
+            .then(data => {
+                syncModal.hide();
+                showResult(data);
+            })
+            .catch(err => {
+                syncModal.hide();
+                showResult({success: false, error: err.message});
+            });
+        });
+    });
+    
+    // Session iptal
+    document.querySelectorAll('.btn-cancel-session').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const sessionId = this.dataset.session;
+            
+            if (!confirm('Bu senkronizasyon iptal edilecek. Emin misiniz?')) return;
+            
+            fetch(`/stock-sync/api/session/${sessionId}/cancel`, {method: 'POST'})
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(data.error);
+                    }
+                });
+        });
+    });
+    
+    // Yenile
+    document.getElementById('btnRefresh').addEventListener('click', () => location.reload());
+    
+    function showResult(data) {
+        const header = document.getElementById('resultModalHeader');
+        const title = document.getElementById('resultModalTitle');
+        const body = document.getElementById('resultModalBody');
+        
+        if (data.success) {
+            header.className = 'modal-header bg-success text-white';
+            title.innerHTML = '<i class="bi bi-check-circle me-2"></i>Senkronizasyon Tamamlandı';
+            
+            if (data.platforms) {
+                // Tüm platformlar
+                let html = '<div class="table-responsive"><table class="table">';
+                html += '<thead><tr><th>Platform</th><th>Durum</th><th>Başarılı</th><th>Hata</th><th>Süre</th></tr></thead><tbody>';
+                
+                for (const [platform, result] of Object.entries(data.platforms)) {
+                    const statusClass = result.success ? 'success' : 'danger';
+                    html += `<tr>
+                        <td><span class="badge bg-primary">${platform}</span></td>
+                        <td><span class="badge bg-${statusClass}">${result.success ? 'OK' : 'HATA'}</span></td>
+                        <td class="text-success">${result.success_count || 0}</td>
+                        <td class="text-danger">${result.error_count || 0}</td>
+                        <td>${result.duration_seconds ? result.duration_seconds.toFixed(1) + 's' : '-'}</td>
+                    </tr>`;
+                }
+                
+                html += '</tbody></table></div>';
+                html += `<p class="text-muted mt-3 mb-0">Toplam süre: ${data.total_duration_seconds?.toFixed(1) || '-'}s</p>`;
+                body.innerHTML = html;
+            } else {
+                // Tek platform
+                body.innerHTML = `
+                    <div class="text-center py-3">
+                        <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
+                        <h4 class="mt-3">${data.platform?.toUpperCase() || 'Sync'} Tamamlandı</h4>
+                        <p class="text-muted">Başarı oranı: ${data.success_rate || '-'}</p>
+                        <div class="row text-center mt-4">
+                            <div class="col-4">
+                                <h3>${data.total || 0}</h3>
+                                <small class="text-muted">Toplam</small>
+                            </div>
+                            <div class="col-4">
+                                <h3 class="text-success">${data.success_count || 0}</h3>
+                                <small class="text-muted">Başarılı</small>
+                            </div>
+                            <div class="col-4">
+                                <h3 class="text-danger">${data.error_count || 0}</h3>
+                                <small class="text-muted">Hata</small>
+                            </div>
+                        </div>
+                        <p class="text-muted mt-3">Süre: ${data.duration_seconds?.toFixed(1) || '-'}s</p>
+                    </div>
+                `;
+            }
+        } else {
+            header.className = 'modal-header bg-danger text-white';
+            title.innerHTML = '<i class="bi bi-x-circle me-2"></i>Hata';
+            body.innerHTML = `
+                <div class="alert alert-danger mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    ${data.error || 'Bilinmeyen hata'}
+                </div>
+            `;
+        }
+        
+        resultModal.show();
+    }
+});
+</script>
+{% endblock %}

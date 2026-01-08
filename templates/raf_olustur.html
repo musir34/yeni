@@ -179,6 +179,9 @@
                 color: var(--color-primary-dark);
                 margin: 0;
             }
+            .raf-checkbox {
+                display: none;
+            }
             .stok-listesi-container {
                 display: none;
                 background-color: #fff;
@@ -252,6 +255,122 @@
             }.code{
               background:#0f172a; color:#e2e8f0; border-radius:8px; padding:.5rem .75rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:.85rem; overflow:auto;
             }ul.clean{ margin: .25rem 0 .25rem 1.1rem; }ul.clean li{ margin:.15rem 0; }
+            
+            /* GÜZEL UYARI MODALı */
+            .custom-modal-backdrop {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.6);
+                z-index: 10000;
+                backdrop-filter: blur(4px);
+            }
+            .custom-modal-wrap {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 10001;
+                align-items: center;
+                justify-content: center;
+                padding: 1rem;
+            }
+            .custom-modal-wrap.active {
+                display: flex !important;
+            }
+            .custom-modal-box {
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                max-width: 500px;
+                width: 100%;
+                padding: 2rem;
+                animation: modalSlideIn 0.3s ease-out;
+                position: relative;
+            }
+            @keyframes modalSlideIn {
+                from {
+                    transform: translateY(-20px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+            .custom-modal-icon {
+                width: 64px;
+                height: 64px;
+                margin: 0 auto 1.5rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                font-size: 32px;
+            }
+            .custom-modal-icon.warning {
+                background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+                color: white;
+            }
+            .custom-modal-icon.success {
+                background: linear-gradient(135deg, #51cf66, #37b24d);
+                color: white;
+            }
+            .custom-modal-title {
+                font-size: 1.5rem;
+                font-weight: 700;
+                text-align: center;
+                margin-bottom: 1rem;
+                color: var(--color-secondary);
+            }
+            .custom-modal-message {
+                font-size: 1rem;
+                line-height: 1.6;
+                text-align: center;
+                color: #666;
+                margin-bottom: 2rem;
+                white-space: pre-line;
+            }
+            .custom-modal-buttons {
+                display: flex;
+                gap: 1rem;
+                justify-content: center;
+            }
+            .custom-modal-btn {
+                padding: 0.75rem 2rem;
+                border: none;
+                border-radius: 8px;
+                font-size: 1rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+                min-width: 120px;
+            }
+            .custom-modal-btn.confirm {
+                background: linear-gradient(45deg, #dc3545, #c82333);
+                color: white;
+            }
+            .custom-modal-btn.confirm:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+            }
+            .custom-modal-btn.cancel {
+                background: #e9ecef;
+                color: #495057;
+            }
+            .custom-modal-btn.cancel:hover {
+                background: #dee2e6;
+            }
+            .custom-modal-btn.ok {
+                background: linear-gradient(45deg, var(--color-primary), var(--color-primary-dark));
+                color: white;
+            }
+            .custom-modal-btn.ok:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(183, 110, 121, 0.4);
+            }
         </style>
     </head>
     <body>
@@ -269,6 +388,18 @@
                 <a href="{{ url_for('raf.stok_form') }}" class="btn btn-primary"
                     ><i class="bi bi-plus-circle"></i> Stok Ekle</a
                 >
+                <button class="btn btn-primary" onclick="tumRaflariYazdir()">
+                    <i class="bi bi-printer-fill"></i> Tüm Rafları Yazdır
+                </button>
+                <button id="secimModuBtn" class="btn btn-secondary" onclick="secimModuToggle()" style="background: linear-gradient(45deg, #6c757d, #5a6268);">
+                    <i class="bi bi-ui-checks"></i> Seçmeyi Etkinleştir
+                </button>
+                <button id="seciliYazdirBtn" class="btn btn-primary" onclick="seciliRaflariYazdir()" style="background: linear-gradient(45deg, #28a745, #20873a); display: none;">
+                    <i class="bi bi-check2-square"></i> Seçili Rafları Yazdır
+                </button>
+                <button id="seciliSilBtn" class="btn btn-danger" onclick="seciliRaflariSil()" style="display: none;">
+                    <i class="bi bi-trash-fill"></i> Seçili Rafları Sil
+                </button>
             </div>
 
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -389,7 +520,13 @@
                             );
                             const anaHeader = document.createElement("div");
                             anaHeader.className = "collapsible-header";
-                            anaHeader.innerHTML = `<h3><i class="bi bi-folder"></i> Ana Raf: ${anaKod}</h3><i class="bi bi-chevron-down collapse-icon"></i>`;
+                            anaHeader.innerHTML = `
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" class="raf-checkbox ana-raf-cb" value="${anaKod}" style="width: 18px; height: 18px; cursor: pointer; display: none;">
+                                    <h3 style="margin: 0;"><i class="bi bi-folder"></i> Ana Raf: ${anaKod}</h3>
+                                </div>
+                                <i class="bi bi-chevron-down collapse-icon"></i>
+                            `;
                             const anaContent = document.createElement("div");
                             anaContent.className = "collapsible-content";
                             const ikincilRaflar = Object.keys(
@@ -406,7 +543,13 @@
                                 const ikincilHeader =
                                     document.createElement("div");
                                 ikincilHeader.className = "collapsible-header";
-                                ikincilHeader.innerHTML = `<h4><i class="bi bi-collection"></i> ${ikincilKod}</h4><i class="bi bi-chevron-down collapse-icon"></i>`;
+                                ikincilHeader.innerHTML = `
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="checkbox" class="raf-checkbox ikincil-raf-cb" value="${ikincilKod}" style="width: 18px; height: 18px; cursor: pointer; display: none;">
+                                        <h4 style="margin: 0;"><i class="bi bi-collection"></i> ${ikincilKod}</h4>
+                                    </div>
+                                    <i class="bi bi-chevron-down collapse-icon"></i>
+                                `;
                                 const ikincilContent =
                                     document.createElement("div");
                                 ikincilContent.className =
@@ -419,8 +562,7 @@
                                 );
                                 katlar.forEach((katObj) => {
                                     const tamRafKodu = `${ikincilKod}-${katObj.kat}`;
-                                    const katDiv =
-                                        document.createElement("div");
+                                    const katDiv = document.createElement("div");
                                     katDiv.className = "kat-item";
                                     katDiv.setAttribute(
                                         "data-search-text",
@@ -430,7 +572,10 @@
                                     // Yazdır butonu artık en başından itibaren aktif ve basit
                                     katDiv.innerHTML = `
                                 <div class="kat-item-header">
-                                    <h5><i class="bi bi-layers-fill"></i> Kat: ${katObj.kat} (Kod: ${tamRafKodu})</h5>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="checkbox" class="raf-checkbox kat-raf-cb" value="${tamRafKodu}" style="width: 18px; height: 18px; cursor: pointer; display: none;">
+                                        <h5 style="margin: 0;"><i class="bi bi-layers-fill"></i> Kat: ${katObj.kat} (Kod: ${tamRafKodu})</h5>
+                                    </div>
                                     <div style="display: flex; gap: 0.5rem;">
                                         <button class="btn btn-secondary btn-sm" onclick="yazdirRafEtiketi('${tamRafKodu}')">
                                             <i class="bi bi-printer"></i> Yazdır
@@ -750,6 +895,323 @@
                 printWindow.document.close();
             }
 
+            // SEÇİM MODU TOGGLE
+            let secimModuAktif = false;
+            
+            function secimModuToggle() {
+                secimModuAktif = !secimModuAktif;
+                const checkboxlar = document.querySelectorAll('.raf-checkbox');
+                const secimBtn = document.getElementById('secimModuBtn');
+                const yazdirBtn = document.getElementById('seciliYazdirBtn');
+                const silBtn = document.getElementById('seciliSilBtn');
+                
+                if (secimModuAktif) {
+                    checkboxlar.forEach(cb => cb.style.display = 'inline-block');
+                    secimBtn.innerHTML = '<i class="bi bi-x-circle"></i> Seçimi Kapat';
+                    secimBtn.style.background = 'linear-gradient(45deg, #dc3545, #c82333)';
+                    yazdirBtn.style.display = 'inline-flex';
+                    silBtn.style.display = 'inline-flex';
+                } else {
+                    checkboxlar.forEach(cb => {
+                        cb.style.display = 'none';
+                        cb.checked = false;
+                    });
+                    secimBtn.innerHTML = '<i class="bi bi-ui-checks"></i> Seçmeyi Etkinleştir';
+                    secimBtn.style.background = 'linear-gradient(45deg, #6c757d, #5a6268)';
+                    yazdirBtn.style.display = 'none';
+                    silBtn.style.display = 'none';
+                }
+            }
+
+            // SEÇİLİ RAFLARI SİL
+            async function seciliRaflariSil() {
+                const katRafCheckboxes = document.querySelectorAll('.kat-raf-cb:checked');
+                const anaRafCheckboxes = document.querySelectorAll('.ana-raf-cb:checked');
+                const ikincilRafCheckboxes = document.querySelectorAll('.ikincil-raf-cb:checked');
+                
+                if (katRafCheckboxes.length === 0 && anaRafCheckboxes.length === 0 && ikincilRafCheckboxes.length === 0) {
+                    await showCustomModal({
+                        type: 'warning',
+                        title: 'Seçim Yok',
+                        message: 'Lütfen silmek istediğiniz rafları seçin!',
+                        buttons: 'ok'
+                    });
+                    return;
+                }
+                
+                const seciliRafKodlari = [
+                    ...Array.from(katRafCheckboxes).map(cb => cb.value),
+                    ...Array.from(anaRafCheckboxes).map(cb => cb.value),
+                    ...Array.from(ikincilRafCheckboxes).map(cb => cb.value)
+                ];
+                
+                const anaRafSayisi = anaRafCheckboxes.length;
+                const ikincilRafSayisi = ikincilRafCheckboxes.length;
+                const tekRafSayisi = katRafCheckboxes.length;
+                let mesaj = '';
+                
+                if (anaRafSayisi > 0) {
+                    mesaj += `• ${anaRafSayisi} ana raf (tüm alt raflarıyla birlikte)\n`;
+                }
+                if (ikincilRafSayisi > 0) {
+                    mesaj += `• ${ikincilRafSayisi} ikincil raf (tüm katlarıyla birlikte)\n`;
+                }
+                if (tekRafSayisi > 0) {
+                    mesaj += `• ${tekRafSayisi} adet tekil raf\n`;
+                }
+                mesaj += '\n⚠️ Bu işlem:\n';
+                mesaj += '✗ Seçili rafları\n';
+                mesaj += '✗ Raflardaki TÜM ürünleri\n';
+                mesaj += '✗ CentralStock\'tan bu ürünlerin miktarlarını\n';
+                mesaj += '\nKALICI OLARAK SİLECEK!\n\nBu işlem geri alınamaz.';
+                
+                const onay = await showCustomModal({
+                    type: 'warning',
+                    title: '⚠️ Raf Silme Onayı',
+                    message: mesaj,
+                    buttons: 'confirm'
+                });
+                
+                if (!onay) {
+                    return;
+                }
+                
+                try {
+                    const res = await fetch('/raf/toplu-sil', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ raf_kodlari: seciliRafKodlari })
+                    });
+                    
+                    const result = await res.json();
+                    
+                    if (res.ok) {
+                        await showCustomModal({
+                            type: 'success',
+                            title: '✅ Başarılı',
+                            message: `${result.message}\n\nSilinen raflar:\n${result.silinen_raflar.join(', ')}`,
+                            buttons: 'ok'
+                        });
+                        // Seçim modunu kapat
+                        secimModuToggle();
+                        // Sayfayı yenile
+                        location.reload();
+                    } else {
+                        await showCustomModal({
+                            type: 'warning',
+                            title: '❌ Hata',
+                            message: `Silme işlemi başarısız:\n${result.error}`,
+                            buttons: 'ok'
+                        });
+                    }
+                } catch (err) {
+                    console.error('Silme hatası:', err);
+                    await showCustomModal({
+                        type: 'warning',
+                        title: '❌ Hata',
+                        message: 'Raflar silinirken bir hata oluştu!',
+                        buttons: 'ok'
+                    });
+                }
+            }
+
+            // SEÇİLİ RAFLARI YAZDIRMA
+            async function seciliRaflariYazdir() {
+                const katCheckboxes = document.querySelectorAll('.kat-raf-cb:checked');
+                const anaCheckboxes = document.querySelectorAll('.ana-raf-cb:checked');
+                const ikincilCheckboxes = document.querySelectorAll('.ikincil-raf-cb:checked');
+                
+                if (katCheckboxes.length === 0 && anaCheckboxes.length === 0 && ikincilCheckboxes.length === 0) {
+                    await showCustomModal({
+                        type: 'warning',
+                        title: 'Seçim Yok',
+                        message: 'Lütfen yazdırmak istediğiniz rafları seçin!',
+                        buttons: 'ok'
+                    });
+                    return;
+                }
+                
+                // Tüm rafları al
+                const res = await fetch("/raf/api/liste");
+                let tumRaflar = await res.json();
+                
+                let seciliRafKodlari = [];
+                
+                // Direkt seçili katları ekle
+                seciliRafKodlari.push(...Array.from(katCheckboxes).map(cb => cb.value));
+                
+                // Ana raf seçiliyse, o ana rafa ait TÜM rafları ekle
+                anaCheckboxes.forEach(anaCheckbox => {
+                    const anaKod = anaCheckbox.value;
+                    const anaRaflar = tumRaflar.filter(r => r.kod.startsWith(anaKod + '-'));
+                    seciliRafKodlari.push(...anaRaflar.map(r => r.kod));
+                });
+                
+                // İkincil raf seçiliyse, o ikincil rafa ait TÜM katları ekle
+                ikincilCheckboxes.forEach(ikincilCheckbox => {
+                    const ikincilKod = ikincilCheckbox.value;
+                    const ikincilRaflar = tumRaflar.filter(r => r.kod.startsWith(ikincilKod + '-'));
+                    seciliRafKodlari.push(...ikincilRaflar.map(r => r.kod));
+                });
+                
+                // Tekrarlananları temizle
+                seciliRafKodlari = [...new Set(seciliRafKodlari)];
+                
+                if (seciliRafKodlari.length === 0) {
+                    await showCustomModal({
+                        type: 'warning',
+                        title: 'Raf Bulunamadı',
+                        message: 'Seçili raflara ait hiçbir kat bulunamadı!',
+                        buttons: 'ok'
+                    });
+                    return;
+                }
+                
+                await raflariYazdir(seciliRafKodlari);
+            }
+
+            // TÜM RAFLARI YAZDIRMA FONKSİYONU (100x100mm etiket, 9'lu grid, ana gruplara göre sıralı)
+            async function tumRaflariYazdir() {
+                const res = await fetch("/raf/api/liste");
+                const tumRaflar = await res.json();
+                const tumRafKodlari = tumRaflar.map(r => r.kod);
+                await raflariYazdir(tumRafKodlari);
+            }
+
+            // ORTAK YAZDIRMA FONKSİYONU
+            async function raflariYazdir(rafKodlari) {
+                try {
+                    // Tüm rafları al
+                    const res = await fetch("/raf/api/liste");
+                    let tumRaflar = await res.json();
+                    
+                    // Sadece seçili rafları filtrele
+                    let raflar = tumRaflar.filter(r => rafKodlari.includes(r.kod));
+                    
+                    if (raflar.length === 0) {
+                        alert("Yazdırılacak raf bulunamadı!");
+                        return;
+                    }
+
+                    // Ana kodlara göre grupla ve sırala (A, B, C...)
+                    raflar.sort((a, b) => {
+                        // Ana kodu çıkar (örn: "A-01-02" -> "A")
+                        const anaA = a.kod.split('-')[0];
+                        const anaB = b.kod.split('-')[0];
+                        
+                        // Önce ana koda göre, sonra tüm koda göre sırala
+                        if (anaA !== anaB) {
+                            return anaA.localeCompare(anaB);
+                        }
+                        return a.kod.localeCompare(b.kod);
+                    });
+
+                    const printWindow = window.open("", "_blank");
+                    
+                    // 9'lu bloklara böl (3x3 grid = 100x100mm etiket)
+                    let sayfalar = '';
+                    for (let i = 0; i < raflar.length; i += 9) {
+                        const blok = raflar.slice(i, i + 9);
+                        const etiketlerHTML = blok.map(raf => `
+                            <div class="mini-etiket">
+                                <img class="qr-img" src="/raf/etiket/qr/${raf.kod}">
+                                <div class="kod-text">${raf.kod}</div>
+                            </div>
+                        `).join('');
+                        
+                        sayfalar += `
+                            <div class="sayfa">
+                                <div class="grid-container">
+                                    ${etiketlerHTML}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    printWindow.document.write(`
+                        <html>
+                            <head>
+                                <title>Tüm Raf Etiketleri - ${raflar.length} Adet</title>
+                                <style>
+                                    @page { 
+                                        size: 100mm 100mm; 
+                                        margin: 0; 
+                                    }
+                                    * {
+                                        box-sizing: border-box;
+                                    }
+                                    body { 
+                                        margin: 0;
+                                        padding: 0;
+                                        font-family: Arial, sans-serif;
+                                    }
+                                    .sayfa {
+                                        width: 100mm;
+                                        height: 100mm;
+                                        page-break-after: always;
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        padding: 2mm;
+                                    }
+                                    .sayfa:last-child {
+                                        page-break-after: auto;
+                                    }
+                                    .grid-container {
+                                        display: grid;
+                                        grid-template-columns: repeat(3, 1fr);
+                                        grid-template-rows: repeat(3, 1fr);
+                                        gap: 1mm;
+                                        width: 100%;
+                                        height: 100%;
+                                    }
+                                    .mini-etiket {
+                                        display: flex;
+                                        flex-direction: column;
+                                        align-items: center;
+                                        justify-content: center;
+                                        border: 0.5px solid #ddd;
+                                        padding: 1mm;
+                                    }
+                                    .qr-img {
+                                        width: 20mm;
+                                        height: 20mm;
+                                        object-fit: contain;
+                                    }
+                                    .kod-text {
+                                        font-size: 15pt;
+                                        font-weight: 900;
+                                        text-align: center;
+                                        margin-top: 1mm;
+                                        word-break: break-all;
+                                        line-height: 1.1;
+                                    }
+                                </style>
+                            </head>
+                            <body>
+                                ${sayfalar}
+                                <script>
+                                    window.onload = function() {
+                                        setTimeout(function() {
+                                            window.print();
+                                        }, 800);
+
+                                        window.onafterprint = function() {
+                                           window.close();
+                                        }
+                                    }
+                                <\/script>
+                            </body>
+                        </html>
+                    `);
+                    printWindow.document.close();
+                    
+                } catch (err) {
+                    console.error("Yazdırma hatası:", err);
+                    alert("Etiketler yüklenirken bir hata oluştu!");
+                }
+            }
+
             async function barkodAra(e) {
                 e.preventDefault();
                 const barkod = document.getElementById("barkodInput").value.trim();
@@ -799,6 +1261,62 @@
                 detayBtn.classList.add('active'); kisaBtn.classList.remove('active');
                 detay.classList.add('active'); kisa.classList.remove('active');
               }
+            }
+            
+            // ÖZEL MODAL FONKSİYONLARI
+            function showCustomModal(options) {
+                return new Promise((resolve) => {
+                    const backdrop = document.getElementById('customModalBackdrop');
+                    const wrap = document.getElementById('customModalWrap');
+                    const icon = document.getElementById('customModalIcon');
+                    const title = document.getElementById('customModalTitle');
+                    const message = document.getElementById('customModalMessage');
+                    const buttons = document.getElementById('customModalButtons');
+                    
+                    // Icon ayarla
+                    if (options.type === 'warning') {
+                        icon.className = 'custom-modal-icon warning';
+                        icon.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i>';
+                    } else if (options.type === 'success') {
+                        icon.className = 'custom-modal-icon success';
+                        icon.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
+                    }
+                    
+                    // İçerikleri ayarla
+                    title.textContent = options.title;
+                    message.textContent = options.message;
+                    
+                    // Butonları ayarla
+                    buttons.innerHTML = '';
+                    if (options.buttons === 'confirm') {
+                        buttons.innerHTML = `
+                            <button class="custom-modal-btn cancel" onclick="closeCustomModal(false)">İptal</button>
+                            <button class="custom-modal-btn confirm" onclick="closeCustomModal(true)">Sil</button>
+                        `;
+                    } else {
+                        buttons.innerHTML = `
+                            <button class="custom-modal-btn ok" onclick="closeCustomModal(true)">Tamam</button>
+                        `;
+                    }
+                    
+                    // Modalı göster
+                    backdrop.style.display = 'block';
+                    wrap.classList.add('active');
+                    
+                    // Promise'i sakla
+                    window.customModalResolve = resolve;
+                });
+            }
+            
+            function closeCustomModal(result) {
+                const backdrop = document.getElementById('customModalBackdrop');
+                const wrap = document.getElementById('customModalWrap');
+                backdrop.style.display = 'none';
+                wrap.classList.remove('active');
+                if (window.customModalResolve) {
+                    window.customModalResolve(result);
+                    window.customModalResolve = null;
+                }
             }
         </script>
         <div class="modal-backdrop" id="infoModalBackdrop"></div><div class="modal-wrap" id="infoModalWrap" aria-hidden="true">
@@ -859,5 +1377,18 @@
               </p>
             </div>
           </div></div>
+        
+        <!-- ÖZEL UYARI MODALI -->
+        <div class="custom-modal-backdrop" id="customModalBackdrop"></div>
+        <div class="custom-modal-wrap" id="customModalWrap">
+            <div class="custom-modal-box">
+                <div class="custom-modal-icon" id="customModalIcon">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <h3 class="custom-modal-title" id="customModalTitle">Dikkat</h3>
+                <p class="custom-modal-message" id="customModalMessage"></p>
+                <div class="custom-modal-buttons" id="customModalButtons"></div>
+            </div>
+        </div>
     </body>
 </html>

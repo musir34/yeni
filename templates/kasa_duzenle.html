@@ -82,7 +82,7 @@
 
                 <div class="form-group">
                     <label for="aciklama">Açıklama <span class="required">*</span></label>
-                    <textarea class="form-control" id="aciklama" name="aciklama" rows="3" placeholder="Kasa kaydı hakkında açıklama..." required>{{ kayit.aciklama }}</textarea>
+                    <textarea class="form-control" id="aciklama" name="aciklama" rows="3" placeholder="Kasa kaydı hakkında açıklama..." required spellcheck="true" autocapitalize="sentences" autocomplete="on">{{ kayit.aciklama }}</textarea>
                 </div>
                 
                 <div class="form-group">
@@ -174,6 +174,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const tutarInput = document.getElementById('tutar');
             const form = document.querySelector('form');
+            const aciklamaTextarea = document.getElementById('aciklama');
 
             // Sayfa yüklendiğinde mevcut tutarı Türkçe formatla
             if (tutarInput && tutarInput.value) {
@@ -227,6 +228,11 @@
             // 2. Form Gönderilmeden Önce Tutar Alanını Temizleme Fonksiyonu
             if (form) {
                 form.addEventListener('submit', function(e) {
+                    // Açıklamaya gelişmiş otomatik düzeltme uygula
+                    if (aciklamaTextarea && aciklamaTextarea.value) {
+                        aciklamaTextarea.value = applyFullFormatting(aciklamaTextarea.value);
+                    }
+
                     if (tutarInput) {
                         // Türkçe formatı temizle: "1.000,50" -> "1000.50"
                         tutarInput.value = tutarInput.value.replace(/\./g, '').replace(',', '.');
@@ -235,5 +241,80 @@
             }
         });
     </script>
+
+        <script>
+                // Rapor sayfasındakiyle uyumlu otomatik metin düzeltme fonksiyonları
+                document.addEventListener('DOMContentLoaded', function () {
+                    const correctionMap = {
+                        'haıyr': 'hayır',
+                        'kardesım': 'kardeşim',
+                        'kardesim': 'kardeşim',
+                        'gelcem': 'geleceğim',
+                        'gelcemiş': 'gelecekmiş',
+                        'tnk': 'teşekkürler',
+                        'tsk': 'teşekkürler',
+                    };
+
+                    window.applyBasicCorrections = function(text) {
+                        if (!text) return text;
+                        return text
+                            .split(/(\s+)/)
+                            .map(part => {
+                                if (/^\s+$/.test(part)) {
+                                    return part;
+                                }
+
+                                const lower = part.toLocaleLowerCase('tr-TR');
+                                if (correctionMap[lower]) {
+                                    const corrected = correctionMap[lower];
+                                    if (part === part.toUpperCase()) {
+                                        return corrected.toUpperCase();
+                                    }
+                                    if (part[0] === part[0].toUpperCase()) {
+                                        return corrected.charAt(0).toUpperCase() + corrected.slice(1);
+                                    }
+                                    return corrected;
+                                }
+                                return part;
+                            })
+                            .join('');
+                    }
+
+                    window.applyFullFormatting = function(text) {
+                        if (!text) return text;
+
+                        let result = window.applyBasicCorrections(text);
+                        result = result.replace(/\s+/g, ' ');
+
+                        const sentences = result
+                            .split(/([.!?]+)/)
+                            .reduce((acc, part) => {
+                                if (!part.trim()) return acc;
+                                if (/^[.!?]+$/.test(part) && acc.length) {
+                                    acc[acc.length - 1] += part;
+                                } else {
+                                    acc.push(part.trim());
+                                }
+                                return acc;
+                            }, []);
+
+                        const formatted = sentences
+                            .map(sentence => {
+                                if (!sentence) return '';
+                                const firstChar = sentence.charAt(0);
+                                const rest = sentence.slice(1);
+                                const capitalized = firstChar.toLocaleUpperCase('tr-TR') + rest;
+
+                                if (!/[.!?]$/.test(capitalized)) {
+                                    return capitalized + '.';
+                                }
+                                return capitalized;
+                            })
+                            .join(' ');
+
+                        return formatted.trim();
+                    }
+                });
+        </script>
 </body>
 </html>

@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="weather-description" content="{{ weather.description if weather else 'Açık Hava' }}" />
+  <meta name="weather-clouds" content="{{ weather.clouds if weather else 0 }}" />
+  <meta name="weather-code" content="{{ weather.weather_code if weather else 0 }}" />
+  <meta name="weather-wind" content="{{ weather.wind_speed if weather else 10 }}" />
+  <meta name="weather-wind-direction" content="{{ weather.wind_direction_deg if weather else 180 }}" />
   <title>Paketleme Ekranı - Güllü Ayakkabı</title>
 
   <!-- Bootstrap & Icons -->
@@ -12,15 +16,15 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"/>
 
   <style>
-    /* Sayfa Düzeni */
-    body{margin:0;padding:0;font-family:"Roboto",sans-serif;background:#f5f5f5}
+    /* Sayfa Düzeni - 14.9 inç ekrana optimize */
+    body{margin:0;padding:0;font-family:"Roboto",sans-serif;background:#f5f5f5;overflow-x:hidden;font-size:14px}
     /* Canvas: Arka plan */
     #weatherCanvas{position:fixed;top:0;left:0;z-index:-1;width:100vw;height:100vh}
 
-    .container{max-width:1200px;margin-top:60px;margin-left:auto;margin-right:auto;padding:0 15px}
+    .container{max-width:98vw;margin-top:45px;margin-left:auto;margin-right:auto;padding:0 8px}
 
-    .user-info{position:fixed;top:15px;left:20px;z-index:10;font-size:14px;color:#333;display:flex;align-items:center;gap:10px;padding:10px 15px;border-radius:10px;background:rgba(255,255,255,.7);backdrop-filter:blur(6px);box-shadow:0 6px 18px rgba(0,0,0,.08);max-width:450px;}
-    .user-info img{max-width:100px;height:auto;border-radius:5px;box-shadow:0 8px 18px rgba(0,0,0,.12)}
+    .user-info{position:fixed;top:15px;left:20px;z-index:10;font-size:10px;color:#333;display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,.7);backdrop-filter:blur(6px);box-shadow:0 6px 18px rgba(0,0,0,.08);max-width:350px;}
+    .user-info img{max-width:60px;height:auto;border-radius:5px;box-shadow:0 8px 18px rgba(0,0,0,.12)}
 
     .btn-group-top{position:fixed;top:15px;right:20px;display:flex;gap:10px;z-index:10;flex-wrap:wrap;justify-content:flex-end;align-items:center}
 
@@ -44,19 +48,20 @@
     .dropdown-item{font-size:.85rem;padding:.5rem 1rem;color:#333;transition:background-color .3s}
     .dropdown-item:hover{background:#efefef}
 
-    .order-container{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;justify-content:center}
-    .card{width:200px;border:none;border-radius:10px;box-shadow:0 4px 8px rgba(0,0,0,.05);margin-bottom:20px;transition:transform .2s;overflow:hidden;background:#fff}
-    .card:hover{transform:translateY(-5px);box-shadow:0 6px 12px rgba(0,0,0,.1)}
-    .product-image{width:100%;height:250px;border-radius:10px 10px 0 0;object-fit:cover;cursor:zoom-in;transition:transform .3s}
-    .product-image:hover{transform:scale(1.05)}
-    .card-title{font-weight:bold;color:#444;text-align:center;margin:10px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .card-text{font-size:.9rem;color:#666;text-align:center}
+    .order-container{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;justify-content:center}
+    .card{width:220px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.1);margin-bottom:8px;transition:transform .2s;overflow:hidden;background:rgba(255,255,255,0.98)}
+    .card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+    .product-image{width:100%;height:140px;border-radius:8px 8px 0 0;object-fit:cover;cursor:zoom-in;transition:transform .3s}
+    .product-image:hover{transform:scale(1.02)}
+    .card-body{padding:8px 10px}
+    .card-title{font-weight:bold;color:#333;text-align:left;margin:0 0 6px;font-size:0.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .card-text{font-size:0.9rem;color:#555;text-align:left;margin-bottom:4px}
 
-    .form-control{border-radius:10px;padding:8px;font-size:.85rem;box-shadow:inset 0 1px 3px rgba(0,0,0,.1);border:1px solid #ddd}
-    .form-control:focus{border-color:#6dd5ed;box-shadow:inset 0 1px 3px rgba(0,0,0,.1),0 0 5px rgba(109,213,237,.5)}
+    .form-control{border-radius:6px;padding:6px 8px;font-size:0.9rem;box-shadow:inset 0 1px 2px rgba(0,0,0,.08);border:1px solid #ccc}
+    .form-control:focus{border-color:#667eea;box-shadow:inset 0 1px 2px rgba(0,0,0,.08),0 0 4px rgba(102,126,234,.4)}
 
-    .form-group{position:relative;margin-bottom:35px}
-    .alert{position:absolute;top:-30px;left:0;right:0;font-size:12px;padding:5px;border-radius:5px;opacity:0;transition:opacity .3s;text-align:center;z-index:10;pointer-events:none;width:100%;box-sizing:border-box;visibility:hidden}
+    .form-group{position:relative;margin-bottom:12px}
+    .alert{position:absolute;top:-18px;left:0;right:0;font-size:0.75rem;padding:2px 4px;border-radius:4px;opacity:0;transition:opacity .2s;text-align:center;z-index:10;pointer-events:none;width:100%;box-sizing:border-box;visibility:hidden}
     .alert-show{opacity:1;visibility:visible}
     .alert-success{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
     .alert-danger{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
@@ -67,81 +72,293 @@
     @keyframes shine{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
     .shipping-header h3{margin:0 0 10px;font-size:1.5rem;font-weight:bold;color:#fff}
     .shipping-header p{margin:0 0 20px;font-size:1rem;color:rgba(255,255,255,.8)}
-    .shipping-barcode{background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2);border-radius:10px;padding:20px;margin-top:15px}
-    .shipping-barcode strong{font-size:2rem;font-weight:bold;color:#fff;letter-spacing:2px;text-shadow:0 2px 4px rgba(0,0,0,.3)}
+    .shipping-barcode{background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2);border-radius:8px;padding:12px;margin-top:10px}
+    .shipping-barcode strong{font-size:1.5rem;font-weight:bold;color:#fff;letter-spacing:2px;text-shadow:0 2px 4px rgba(0,0,0,.3)}
     #autoShipMessage.show{opacity:1;visibility:visible}
 
-    .copy-container{position:relative;cursor:pointer;display:inline-block;margin-left:5px;color:#007bff;transition:color .2s}
+    .copy-container{position:relative;cursor:pointer;display:inline-block;margin-left:4px;color:#007bff;transition:color .2s}
     .copy-container:hover{color:#0056b3}
-    .copy-confirmation{color:green;font-size:1em;margin-left:5px;display:none}
+    .copy-confirmation{color:green;font-size:0.9em;margin-left:3px;display:none}
     .copy-confirmation.show{display:inline-block}
 
-    .btn-bottom{max-width:200px;margin:10px 0;padding:8px 15px;border-radius:10px}
-    .bottom-buttons{text-align:left;margin-top:20px;display:flex;gap:10px;flex-wrap:wrap}
+    .btn-bottom{max-width:180px;margin:6px 0;padding:6px 12px;border-radius:8px;font-size:0.85rem}
+    .bottom-buttons{text-align:left;margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
 
     /* Görsel Modal (custom lightbox) */
-    .image-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);backdrop-filter:blur(5px);z-index:1060;display:none;align-items:center;justify-content:center;opacity:0;transition:opacity .3s}
+    .image-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);backdrop-filter:blur(4px);z-index:1060;display:none;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
     .image-modal-overlay.is-visible{display:flex;opacity:1}
-    .image-modal-content{background:#fff;border-radius:15px;box-shadow:0 10px 30px rgba(0,0,0,.3);max-width:90vw;max-height:90vh;position:relative;overflow:hidden;transform:scale(.8);transition:transform .3s}
+    .image-modal-content{background:#fff;border-radius:12px;box-shadow:0 8px 25px rgba(0,0,0,.3);max-width:85vw;max-height:85vh;position:relative;overflow:hidden;transform:scale(.9);transition:transform .2s}
     .image-modal-overlay.is-visible .image-modal-content{transform:scale(1)}
-    .image-modal-header{padding:1rem 1.5rem;border-bottom:1px solid #dee2e6;display:flex;justify-content:space-between;align-items:center;background:#f8f9fa}
-    .image-modal-header h4{margin:0;font-size:1.2rem;color:#333}
-    .image-modal-close{background:none;border:none;font-size:2rem;cursor:pointer;color:#999;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:all .2s}
+    .image-modal-header{padding:0.75rem 1rem;border-bottom:1px solid #dee2e6;display:flex;justify-content:space-between;align-items:center;background:#f8f9fa}
+    .image-modal-header h4{margin:0;font-size:1rem;color:#333}
+    .image-modal-close{background:none;border:none;font-size:1.5rem;cursor:pointer;color:#999;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:all .2s}
     .image-modal-close:hover{background:#f1f1f1;color:#333}
-    .image-modal-body{padding:1rem;text-align:center;max-height:80vh;overflow-y:auto}
-    .image-modal-body img{max-width:100%;max-height:70vh;object-fit:contain;border-radius:10px;box-shadow:0 4px 8px rgba(0,0,0,.1)}
-    .image-modal-footer{padding:1rem 1.5rem;background:#f8f9fa;border-top:1px solid #dee2e6;text-align:center}
-    .image-modal-footer p{margin:0;color:#666;font-size:.9rem}
+    .image-modal-body{padding:0.75rem;text-align:center;max-height:75vh;overflow-y:auto}
+    .image-modal-body img{max-width:100%;max-height:65vh;object-fit:contain;border-radius:8px;box-shadow:0 3px 8px rgba(0,0,0,.1)}
+    .image-modal-footer{padding:0.5rem 1rem;background:#f8f9fa;border-top:1px solid #dee2e6;text-align:center}
+    .image-modal-footer p{margin:0;color:#666;font-size:0.8rem}
 
-    .fixed-header{background:#fff;border-radius:10px;padding:15px;margin-top:20px;box-shadow:0 4px 8px rgba(0,0,0,.05)}
-    .fixed-header h4{margin-top:0;margin-bottom:10px;color:#333}
-    .fixed-header p{margin:0;line-height:1.5;color:#555}
+    .fixed-header{background:#fff;border-radius:6px;padding:8px 10px;margin-top:6px;box-shadow:0 2px 5px rgba(0,0,0,.04)}
+    .fixed-header h4{margin-top:0;margin-bottom:4px;color:#333;font-size:0.95rem;font-weight:600}
+    .fixed-header p{margin:0;line-height:1.35;color:#444;font-size:0.9rem}
     .fixed-header .copy-container{color:#555}
 
-    .modal-content{border-radius:15px;padding:20px}
+    .modal-content{border-radius:12px;padding:15px}
     .modal-header{border-bottom:none;justify-content:center}
     .modal-footer{border-top:none;justify-content:center}
 
-    .highlight-quantity{color:red;font-size:1.3em;font-weight:bold}
+    .highlight-quantity{color:#dc3545;font-size:1.2em;font-weight:bold}
 
     .custom-control{position:relative;display:inline-flex;min-height:1.5rem;padding-left:1.5rem;align-items:center}
     .custom-switch{padding-left:2.25rem}
     .custom-control-input{position:absolute;left:0;z-index:-1;width:1rem;height:1.25rem;opacity:0}
-    .custom-control-label{margin-bottom:0;line-height:1.5;cursor:pointer}
+    .custom-control-label{margin-bottom:0;line-height:1.5;cursor:pointer;font-size:0.85rem}
     .custom-control-label::before{position:absolute;top:.25rem;left:-2.25rem;display:block;width:1.75rem;height:1rem;content:"";background:#adb5bd;border:#adb5bd solid 1px;border-radius:1rem;transition:background-color .15s,border-color .15s,box-shadow .15s}
     .custom-control-label::after{position:absolute;top:.25rem;left:-2rem;display:block;width:1rem;height:1rem;content:"";background:#fff;border-radius:1rem;transition:transform .15s,background-color .15s,border-color .15s,box-shadow .15s}
     .custom-switch .custom-control-input:checked ~ .custom-control-label::before{color:#fff;border-color:#28a745;background:#28a745}
     .custom-switch .custom-control-input:checked ~ .custom-control-label::after{transform:translateX(.75rem)}
 
     /* Raf seçimi (mavi tik) */
-    .raf-option{display:block;text-align:left;margin-bottom:6px;position:relative;padding-left:28px}
-    .raf-option input[type="radio"]{position:absolute;left:0;top:2px}
-    .raf-option .tick{margin-left:6px;font-weight:bold;color:#0d6efd;opacity:0;transition:opacity .15s}
+    .raf-option{display:block;text-align:left;margin-bottom:4px;position:relative;padding-left:22px;font-size:0.9rem}
+    .raf-option input[type="radio"]{position:absolute;left:0;top:3px}
+    .raf-option .tick{margin-left:4px;font-weight:bold;color:#0d6efd;opacity:0;transition:opacity .15s}
     .raf-option input[type="radio"]:checked ~ .tick{opacity:1}
 
+    /* 🔥 Sipariş Kuyruğu Stilleri - 14.9 inç optimize */
+    .order-queue-wrapper{
+      position:relative;
+      width:100%;
+      margin-bottom:8px;
+      padding:6px 0;
+      background:rgba(255,255,255,0.95);
+      border-radius:8px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.08);
+      overflow:hidden;
+    }
+    .order-queue-header{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      padding:0 10px 6px;
+      border-bottom:1px solid #ddd;
+      margin-bottom:6px;
+    }
+    .order-queue-header h5{
+      margin:0;
+      font-weight:600;
+      color:#333;
+      font-size:0.9rem;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .order-queue-header .queue-count{
+      background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color:#fff;
+      padding:2px 8px;
+      border-radius:10px;
+      font-size:0.8rem;
+      font-weight:bold;
+    }
+    .order-queue-scroll{
+      display:flex;
+      flex-direction:row-reverse;
+      gap:8px;
+      padding:0 10px;
+      overflow-x:auto;
+      scroll-behavior:smooth;
+      scrollbar-width:thin;
+      scrollbar-color:#667eea #f0f0f0;
+    }
+    .order-queue-scroll::-webkit-scrollbar{
+      height:5px;
+    }
+    .order-queue-scroll::-webkit-scrollbar-track{
+      background:#f0f0f0;
+      border-radius:6px;
+    }
+    .order-queue-scroll::-webkit-scrollbar-thumb{
+      background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius:6px;
+    }
+    .queue-order-card{
+      flex:0 0 130px;
+      min-width:130px;
+      background:rgba(255,255,255,0.98);
+      border-radius:6px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.12);
+      overflow:hidden;
+      cursor:pointer;
+      transition:all 0.2s ease;
+      border:2px solid transparent;
+      position:relative;
+    }
+    .queue-order-card:hover{
+      transform:translateY(-2px);
+      box-shadow:0 4px 12px rgba(0,0,0,0.18);
+      border-color:#667eea;
+    }
+    .queue-order-image{
+      width:100%;
+      height:65px;
+      object-fit:cover;
+      border-bottom:1px solid #ddd;
+    }
+    /* Raf bilgisi rozeti */
+    .queue-order-raf{
+      position:absolute;
+      top:3px;
+      left:3px;
+      background:linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      color:#fff;
+      font-size:0.7rem;
+      padding:2px 5px;
+      border-radius:4px;
+      font-weight:600;
+      z-index:5;
+      box-shadow:0 1px 3px rgba(0,0,0,0.25);
+    }
+    .queue-order-raf.no-stock{
+      background:linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+    }
+    .queue-order-info{
+      padding:5px 6px;
+    }
+    .queue-order-number{
+      font-size:0.75rem;
+      font-weight:bold;
+      color:#333;
+      margin-bottom:2px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .queue-order-source{
+      display:inline-block;
+      font-size:0.7rem;
+      padding:1px 5px;
+      border-radius:4px;
+      margin-bottom:2px;
+    }
+    .queue-order-source.woo{
+      background:#17a2b8;
+      color:#fff;
+    }
+    .queue-order-source.trendyol{
+      background:#f7971e;
+      color:#fff;
+    }
+    .queue-order-sku{
+      font-size:0.85rem;
+      font-weight:bold;
+      color:#333;
+      margin-bottom:3px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      background:linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      padding:2px 5px;
+      border-radius:4px;
+      border-left:3px solid #667eea;
+    }
+    .queue-order-customer{
+      font-size:0.7rem;
+      color:#666;
+      margin-bottom:1px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .queue-order-product{
+      display:none;
+    }
+    .queue-order-product-count{
+      font-size:0.7rem;
+      color:#888;
+      margin-top:1px;
+    }
+    .queue-nav-btn{
+      position:absolute;
+      top:50%;
+      transform:translateY(-50%);
+      width:28px;
+      height:28px;
+      border-radius:50%;
+      background:rgba(255,255,255,0.95);
+      border:none;
+      box-shadow:0 2px 6px rgba(0,0,0,0.12);
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:10;
+      transition:all 0.2s;
+      font-size:0.85rem;
+    }
+    .queue-nav-btn:hover{
+      background:#667eea;
+      color:#fff;
+    }
+    .queue-nav-btn.left{left:2px;}
+    .queue-nav-btn.right{right:2px;}
+
+    /* Aktif Sipariş Bölümü - 14.9 inç optimize */
+    .active-order-section{
+      background:rgba(255,255,255,0.95);
+      border-radius:8px;
+      padding:10px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom:8px;
+    }
+    .active-order-title{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-bottom:10px;
+      padding-bottom:8px;
+      border-bottom:2px solid #667eea;
+    }
+    .active-order-title h4{
+      margin:0;
+      font-weight:600;
+      color:#333;
+      font-size:1.05rem;
+    }
+    .active-order-title .order-badge{
+      background:linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+      color:#fff;
+      padding:3px 10px;
+      border-radius:12px;
+      font-size:0.85rem;
+      font-weight:600;
+    }
+
     @media (max-width:768px){
-      .btn{font-size:.8rem;padding:8px 12px}
-      .card-title{font-size:.9rem}
-      .card-text{font-size:.8rem}
-      .user-info{top:10px;left:10px;gap:5px;font-size:12px}
-      .user-info img{max-width:60px}
-      .btn-group-top{top:10px;right:10px;gap:5px;flex-direction:column;align-items:flex-end}
-      .btn{width:100%;text-align:center;padding:6px 10px;font-size:.8rem}
+      .btn{font-size:.75rem;padding:6px 10px}
+      .card-title{font-size:.85rem}
+      .card-text{font-size:.75rem}
+      .user-info{top:8px;left:8px;gap:4px;font-size:8px;padding:4px 6px;max-width:250px}
+      .user-info img{max-width:40px}
+      .btn-group-top{top:8px;right:8px;gap:4px;flex-direction:column;align-items:flex-end}
+      .btn{width:100%;text-align:center;padding:5px 8px;font-size:.75rem}
       .dropdown-toggle{width:100%;text-align:center!important}
       .dropdown-menu{left:auto!important;right:0!important;min-width:auto;width:auto}
-      .dropdown-item{text-align:right;font-size:.8rem}
-      .custom-switch{margin-top:10px;width:100%;justify-content:flex-end;padding-right:2.25rem;padding-left:0}
+      .dropdown-item{text-align:right;font-size:.75rem}
+      .custom-switch{margin-top:8px;width:100%;justify-content:flex-end;padding-right:2rem;padding-left:0}
       .custom-control-label::before{left:auto;right:0}
-      .custom-control-label::after{left:auto;right:.25rem}
+      .custom-control-label::after{left:auto;right:.2rem}
       .custom-switch .custom-control-input:checked ~ .custom-control-label::after{transform:translateX(-.75rem)}
-      #autoShipMessage{min-width:300px;max-width:90%;margin:0 5%}
-      .auto-ship-card{padding:20px}
-      .shipping-header h3{font-size:1.2rem}
-      .shipping-barcode strong{font-size:1.5rem}
-      .container{margin-top:180px;padding:0 10px}
-      .fixed-header{margin-top:10px;padding:10px}
+      #autoShipMessage{min-width:280px;max-width:90%;margin:0 5%}
+      .auto-ship-card{padding:15px}
+      .shipping-header h3{font-size:1rem}
+      .shipping-barcode strong{font-size:1.2rem}
+      .container{margin-top:140px;padding:0 8px}
+      .fixed-header{margin-top:8px;padding:8px}
+      .queue-order-card{flex:0 0 120px;min-width:120px;}
+      .queue-order-image{height:60px;}
+      .queue-order-raf{font-size:0.5rem;padding:1px 4px;}
     }
-    @media (max-width:576px){.card{width:calc(50% - 15px)}}
+    @media (max-width:576px){.card{width:calc(50% - 8px)}}
 
     /* 🔔 Arşiv uyarısı kritik modları */
     .aw-critical .modal-content{background:#ffe3e3!important}
@@ -179,17 +396,17 @@
     <div style="display:flex;flex-direction:column;gap:2px;">
       <div>Giriş Yapan: <strong>{{ session['first_name'] }} {{ session['last_name'] }}</strong></div>
       {% if weather %}
-      <div style="font-size:12px;color:#555;">
+      <div style="font-size:9px;color:#555;">
         {{ weather.icon }} {{ weather.description }} • {{ weather.temperature }}°C
         {% if weather.feels_like %}(Hissedilen: {{ weather.feels_like }}°C){% endif %}
       </div>
-      <div style="font-size:11px;color:#666;">
+      <div style="font-size:8px;color:#666;">
         💨 {{ weather.wind_speed }} km/h {{ weather.wind_direction }} • 💧 Nem: {{ weather.humidity }}%
         {% if weather.visibility %} • 👁️ Görüş: {{ weather.visibility|round(1) }} km{% endif %}
       </div>
       {% endif %}
       {% if current_time %}
-      <div style="font-size:11px;color:#666;">
+      <div style="font-size:8px;color:#666;">
         🕐 {{ current_time.strftime('%d %B %Y, %A - %H:%M:%S') }}
       </div>
       {% endif %}
@@ -218,6 +435,7 @@
         <a class="dropdown-item" href="{{ url_for('siparisler_bp.yeni_siparis') }}">Yeni Sipariş</a>
         <a class="dropdown-item" href="{{ url_for('order_list_all') }}">Sipariş Listesi</a>
         <a class="dropdown-item" href="{{ url_for('degisim_talep') }}">Değişim Talepleri</a>
+        <a class="dropdown-item" href="{{ url_for('woo.orders') }}"><i class="fas fa-shopping-cart"></i> WooCommerce Siparişleri</a>
       </div>
     </div>
 
@@ -270,113 +488,188 @@
   </div>
 
   <div class="container">
-    <form method="POST" action="{{ url_for('update_service.confirm_packing') }}" id="packingForm" autocomplete="off">
-      <input type="hidden" name="order_number" value="{{ order.order_number if order else '' }}"/>
-
-      <div class="order-container">
-        {% for product in order.products if order %}
-        <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
-          <div class="card product-card">
-            <img src="{{ product['image_url'] }}" alt="Ürün Görseli" class="card-img-top product-image zoomable-image" data-image-src="{{ product['image_url'] }}"/>
-            <div class="card-body">
-              <h5 class="card-title">{{ product['sku'] }}</h5>
-
-              <p class="card-text">
-                <strong>Miktar:</strong>
-                <span class="{% if product['quantity']|int > 1 %}highlight-quantity{% endif %}">{{ product['quantity'] }}</span>
-              </p>
-
-              <p class="card-text">
-                <strong>Barkod:</strong>
-                <span id="productBarcode-{{ loop.index0 }}">{{ product['barcode'] }}</span>
-                <span class="copy-container">
-                  <span class="clipboard-icon" onclick="copyToClipboard('productBarcode-{{ loop.index0 }}', this)">📋</span>
-                  <span class="copy-confirmation">✔️</span>
-                </span>
-              </p>
-
-              <div class="card-text">
-                {% set aktif_raflar = product['raflar']|selectattr('adet','gt',0)|sort(attribute='adet', reverse=True)|list %}
-                {% if aktif_raflar %}
-                  <p style="margin-bottom:5px;"><strong>Raf Seçimi (aktif olanların tamamı):</strong></p>
-                  {% for raf in aktif_raflar %}
-                    <label class="raf-option">
-                      <input type="radio" name="pick_{{ product['barcode'] }}" value="{{ raf.kod }}" {% if loop.first %}checked{% endif %}>
-                      {{ raf.kod }} — {{ raf.adet }} adet
-                      <span class="tick">✔</span>
-                    </label>
-                  {% endfor %}
-                {% else %}
-                  <p><em>Bu ürün için aktif raf stoğu yok.</em></p>
-                {% endif %}
-              </div>
-
-              {% for q in range(product['quantity']|int) %}
-                <div class="form-group">
-                  <div id="barkodMatchMessage-right-{{ loop.index0 }}-{{ q }}" class="alert"></div>
-                  <input type="text"
-                    class="form-control barkod-input"
-                    data-product-index="{{ loop.index0 }}"
-                    data-quantity-index="{{ q }}"
-                    data-side="right"
-                    id="barkodInput-right-{{ loop.index0 }}-{{ q }}"
-                    name="barkod_right_{{ loop.index0 }}_{{ q }}"
-                    placeholder="{{ product['sku'] }} Sağ Tek ({{ q+1 }})"
-                    required autocomplete="off"/>
-                </div>
-
-                <div class="form-group">
-                  <div id="barkodMatchMessage-left-{{ loop.index0 }}-{{ q }}" class="alert"></div>
-                  <input type="text"
-                    class="form-control barkod-input"
-                    data-product-index="{{ loop.index0 }}"
-                    data-quantity-index="{{ q }}"
-                    data-side="left"
-                    id="barkodInput-left-{{ loop.index0 }}-{{ q }}"
-                    name="barkod_left_{{ loop.index0 }}_{{ q }}"
-                    placeholder="{{ product['sku'] }} Sol Tek ({{ q+1 }})"
-                    required autocomplete="off"/>
-                </div>
-              {% endfor %}
-
-              {% for q in range(product['quantity']|int) %}
-                <input type="hidden" id="expectedBarcode-right-{{ loop.index0 }}-{{ q }}" value="{{ product['barcode'] }}"/>
-                <input type="hidden" id="expectedBarcode-left-{{ loop.index0 }}-{{ q }}" value="{{ product['barcode'] }}"/>
-              {% endfor %}
-            </div><!-- card-body -->
-          </div>
+    <!-- 🔥 Sipariş Kuyruğu - Sıradaki Siparişler -->
+    <div class="order-queue-wrapper" id="orderQueueWrapper">
+      <div class="order-queue-header">
+        <h5>
+          <i class="fas fa-layer-group"></i>
+          Sıradaki Siparişler
+          <span class="queue-count" id="queueCount">0</span>
+        </h5>
+      </div>
+      <button class="queue-nav-btn left" onclick="scrollQueue(-200)">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <div class="order-queue-scroll" id="orderQueueScroll">
+        <!-- Siparişler JavaScript ile dinamik yüklenecek -->
+        <div class="text-center w-100 py-4" id="queueLoading">
+          <i class="fas fa-spinner fa-spin"></i> Siparişler yükleniyor...
         </div>
+      </div>
+      <button class="queue-nav-btn right" onclick="scrollQueue(200)">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+
+    <!-- 🔥 Aktif Sipariş Başlığı -->
+    {% if order %}
+    <div class="active-order-section">
+      <div class="active-order-title">
+        <i class="fas fa-box-open" style="color:#667eea;font-size:1.5rem;"></i>
+        <h4>Aktif Sipariş</h4>
+        <span class="order-badge">{{ order.order_number }}</span>
+        {% if order.source == 'WOOCOMMERCE' %}
+          <span class="badge badge-info">🛒 WooCommerce</span>
         {% else %}
-          <p class="text-center w-100">İşlenecek yeni sipariş bulunamadı.</p>
-        {% endfor %}
+          <span class="badge badge-warning">📦 Trendyol</span>
+        {% endif %}
       </div>
-
-      <div class="bottom-buttons">
-        <button type="submit" class="btn btn-primary btn-bottom disabled" id="onaylaBtn" disabled>Paketlemeyi Onayla</button>
-      </div>
-    </form>
-
-    <div class="bottom-buttons">
-      <form method="POST" action="{{ url_for('order_label') }}" target="_blank" id="yazdirForm" autocomplete="off">
+    
+      <form method="POST" action="{{ url_for('update_service.confirm_packing') }}" id="packingForm" autocomplete="off">
         <input type="hidden" name="order_number" value="{{ order.order_number if order else '' }}"/>
-        <input type="hidden" name="shipping_barcode" value="{{ order.shipping_barcode if order else '' }}"/>
-        <input type="hidden" name="cargo_provider" value="{{ order.cargo_provider_name if order else '' }}"/>
-        <input type="hidden" name="customer_name" value="{{ order.customer_name if order else '' }}"/>
-        <input type="hidden" name="customer_surname" value="{{ order.customer_surname if order else '' }}"/>
-        <input type="hidden" name="customer_address" value="{{ order.customer_address if order else '' }}"/>
-        <button type="submit" class="btn btn-warning btn-bottom disabled" id="yazdirBtn" disabled>Yazdır</button>
+
+        <div class="order-container">
+          {% for product in order.products if order %}
+          <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
+            <div class="card product-card">
+              <img src="{{ product['image_url'] }}" alt="Ürün Görseli" class="card-img-top product-image zoomable-image" data-image-src="{{ product['image_url'] }}"/>
+              <div class="card-body">
+                <h5 class="card-title">{{ product['sku'] }}</h5>
+
+                <p class="card-text">
+                  <strong>Miktar:</strong>
+                  <span class="{% if product['quantity']|int > 1 %}highlight-quantity{% endif %}">{{ product['quantity'] }}</span>
+                </p>
+
+                <p class="card-text">
+                  <strong>Barkod:</strong>
+                  {# 🔥 Görüntüde display_barcode göster (varsa), yoksa barcode #}
+                  <span id="productBarcode-{{ loop.index0 }}">{{ product['display_barcode'] or product['barcode'] }}</span>
+                  <span class="copy-container">
+                    <span class="clipboard-icon" onclick="copyToClipboard('productBarcode-{{ loop.index0 }}', this)">📋</span>
+                    <span class="copy-confirmation">✔️</span>
+                  </span>
+                  {% if product['woo_id'] %}
+                    <br><small style="color:#17a2b8;">🛒 WooCommerce ID: {{ product['woo_id'] }}</small>
+                  {% elif product['normalized_barcode'] != product['barcode'] %}
+                    <br><small style="color:#666;">Ana Barkod: {{ product['normalized_barcode'] }}</small>
+                  {% endif %}
+                </p>
+
+                <div class="card-text">
+                  {% set aktif_raflar = product['raflar']|selectattr('adet','gt',0)|sort(attribute='adet', reverse=True)|list %}
+                  {% if aktif_raflar %}
+                    <p style="margin-bottom:5px;"><strong>Raf Seçimi (aktif olanların tamamı):</strong></p>
+                    {% for raf in aktif_raflar %}
+                      <label class="raf-option">
+                        <input type="radio" name="pick_{{ product['barcode'] }}" value="{{ raf.kod }}" {% if loop.first %}checked{% endif %}>
+                        {{ raf.kod }} — {{ raf.adet }} adet
+                        <span class="tick">✔</span>
+                      </label>
+                    {% endfor %}
+                  {% else %}
+                    <p><em>Bu ürün için aktif raf stoğu yok.</em></p>
+                  {% endif %}
+                </div>
+
+                {% for q in range(product['quantity']|int) %}
+                  <div class="form-group">
+                    <div id="barkodMatchMessage-right-{{ loop.index0 }}-{{ q }}" class="alert"></div>
+                    <input type="text"
+                      class="form-control barkod-input"
+                      data-product-index="{{ loop.index0 }}"
+                      data-quantity-index="{{ q }}"
+                      data-side="right"
+                      id="barkodInput-right-{{ loop.index0 }}-{{ q }}"
+                      name="barkod_right_{{ loop.index0 }}_{{ q }}"
+                      placeholder="{{ product['sku'] }} Sağ Tek ({{ q+1 }})"
+                      required autocomplete="off"/>
+                  </div>
+
+                  <div class="form-group">
+                    <div id="barkodMatchMessage-left-{{ loop.index0 }}-{{ q }}" class="alert"></div>
+                    <input type="text"
+                      class="form-control barkod-input"
+                      data-product-index="{{ loop.index0 }}"
+                      data-quantity-index="{{ q }}"
+                      data-side="left"
+                      id="barkodInput-left-{{ loop.index0 }}-{{ q }}"
+                      name="barkod_left_{{ loop.index0 }}_{{ q }}"
+                      placeholder="{{ product['sku'] }} Sol Tek ({{ q+1 }})"
+                      required autocomplete="off"/>
+                  </div>
+                {% endfor %}
+
+                {% for q in range(product['quantity']|int) %}
+                  <input type="hidden" id="expectedBarcode-right-{{ loop.index0 }}-{{ q }}" value="{{ product['normalized_barcode'] }}"/>
+                  <input type="hidden" id="expectedBarcode-left-{{ loop.index0 }}-{{ q }}" value="{{ product['normalized_barcode'] }}"/>
+                  <!-- 🔥 Orijinal barkod da kabul edilsin -->
+                  <input type="hidden" id="originalBarcode-right-{{ loop.index0 }}-{{ q }}" value="{{ product['barcode'] }}"/>
+                  <input type="hidden" id="originalBarcode-left-{{ loop.index0 }}-{{ q }}" value="{{ product['barcode'] }}"/>
+                {% endfor %}
+              </div><!-- card-body -->
+            </div>
+          </div>
+          {% else %}
+            <p class="text-center w-100">İşlenecek yeni sipariş bulunamadı.</p>
+          {% endfor %}
+        </div>
+
+        <div class="bottom-buttons">
+          <button type="submit" class="btn btn-primary btn-bottom disabled" id="onaylaBtn" disabled>Paketlemeyi Onayla</button>
+        </div>
       </form>
 
-      {% if order %}
-        <button type="button" class="btn btn-danger btn-bottom" onclick="showArchiveModal('{{ order.order_number }}')">Arşive Gönder</button>
-      {% endif %}
+      <div class="bottom-buttons">
+        {% if order and order.source == 'WOOCOMMERCE' %}
+          <!-- WooCommerce için etiket -->
+          <a href="{{ url_for('woo.shipping_label_by_number', order_number=order.order_number) }}" 
+             target="_blank" 
+             class="btn btn-warning btn-bottom disabled" 
+             id="yazdirBtn"
+             style="pointer-events: none; opacity: 0.6;">
+            Yazdır
+          </a>
+        {% else %}
+          <!-- Trendyol için etiket -->
+          <form method="POST" action="{{ url_for('order_label') }}" target="_blank" id="yazdirForm" autocomplete="off">
+            <input type="hidden" name="order_number" value="{{ order.order_number if order else '' }}"/>
+            <input type="hidden" name="shipping_barcode" value="{{ order.shipping_barcode if order else '' }}"/>
+            <input type="hidden" name="cargo_provider" value="{{ order.cargo_provider_name if order else '' }}"/>
+            <input type="hidden" name="customer_name" value="{{ order.customer_name if order else '' }}"/>
+            <input type="hidden" name="customer_surname" value="{{ order.customer_surname if order else '' }}"/>
+            <input type="hidden" name="customer_address" value="{{ order.customer_address if order else '' }}"/>
+            <button type="submit" class="btn btn-warning btn-bottom disabled" id="yazdirBtn" disabled>Yazdır</button>
+          </form>
+        {% endif %}
+
+        {% if order %}
+          <button type="button" class="btn btn-danger btn-bottom" onclick="showArchiveModal('{{ order.order_number }}')">Arşive Gönder</button>
+        {% endif %}
+      </div>
     </div>
+    {% else %}
+    <!-- Sipariş yoksa -->
+    <div class="active-order-section">
+      <div class="text-center py-5">
+        <i class="fas fa-inbox" style="font-size:4rem;color:#ccc;"></i>
+        <h4 class="mt-3" style="color:#666;">İşlenecek Sipariş Yok</h4>
+        <p style="color:#999;">Tüm siparişler tamamlandı veya arşivlendi.</p>
+      </div>
+    </div>
+    {% endif %}
 
     {% if order %}
     <div class="fixed-header">
       <h4>Kargo Bilgileri</h4>
       <p>
-        <strong>Sipariş No:</strong> {{ order.order_number }}<br/>
+        <strong>Sipariş No:</strong> {{ order.order_number }}
+        {% if order.source == 'WOOCOMMERCE' %}
+          <span class="badge badge-info" style="font-size:0.75rem;margin-left:5px;">🛒 WooCommerce</span>
+        {% else %}
+          <span class="badge badge-warning" style="font-size:0.75rem;margin-left:5px;">📦 Trendyol</span>
+        {% endif %}
+        <br/>
         <strong>Müşteri:</strong> {{ order.customer_name }} {{ order.customer_surname }}<br/>
         <strong>Kargoya Kalan Süre:</strong> {{ remaining_time }}<br/>
         <strong>Kargo Firması:</strong> {{ order.cargo_provider_name }}<br/>
@@ -471,58 +764,87 @@
   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.bundle.min.js"></script>
 
-  <!-- Hava durumu gradient animasyonu -->
+  <!-- 🔥 Sipariş Kuyruğu JavaScript -->
   <script>
-    (function(){
-      const canvas = document.getElementById('weatherCanvas');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
+    // Aktif sipariş numarası
+    const activeOrderNumber = "{{ order.order_number if order else '' }}";
+    
+    // Kuyruk scroll fonksiyonu
+    function scrollQueue(amount) {
+      const scrollContainer = document.getElementById('orderQueueScroll');
+      if (scrollContainer) {
+        scrollContainer.scrollBy({ left: amount, behavior: 'smooth' });
+      }
+    }
+    
+    // Sıradaki siparişleri yükle (aktif sipariş hariç)
+    function loadQueueOrders() {
+      const container = document.getElementById('orderQueueScroll');
+      const countBadge = document.getElementById('queueCount');
       
-      function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-      }
-      resize();
-      window.addEventListener('resize', resize);
-
-      const weatherDesc = document.querySelector('meta[name="weather-description"]')?.content || 'Açık';
-      let colors = { top: [135, 206, 250], bottom: [255, 255, 255] }; // Varsayılan: Açık mavi
-
-      // Hava durumuna göre renk paleti
-      if (weatherDesc.includes('Yağmur') || weatherDesc.includes('yağmur')) {
-        colors = { top: [70, 130, 180], bottom: [176, 196, 222] }; // Gri-Mavi
-      } else if (weatherDesc.includes('Kar') || weatherDesc.includes('kar')) {
-        colors = { top: [176, 224, 230], bottom: [240, 248, 255] }; // Açık mavi-beyaz
-      } else if (weatherDesc.includes('Bulut') || weatherDesc.includes('bulut')) {
-        colors = { top: [135, 206, 235], bottom: [211, 211, 211] }; // Mavi-Gri
-      } else if (weatherDesc.includes('Güneş') || weatherDesc.includes('açık') || weatherDesc.includes('Açık')) {
-        colors = { top: [135, 206, 250], bottom: [255, 250, 205] }; // Mavi-Sarı
-      } else if (weatherDesc.includes('Gece') || weatherDesc.includes('gece')) {
-        colors = { top: [25, 25, 112], bottom: [72, 61, 139] }; // Koyu mavi
-      }
-
-      let offset = 0;
-      function animate() {
-        offset += 0.0005;
-        
-        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        
-        // Dinamik renk geçişi
-        const wave = Math.sin(offset) * 0.1 + 0.9;
-        const top = colors.top.map(c => Math.floor(c * wave));
-        const bottom = colors.bottom.map(c => Math.floor(c * (2 - wave)));
-        
-        gradient.addColorStop(0, `rgb(${top[0]}, ${top[1]}, ${top[2]})`);
-        gradient.addColorStop(1, `rgb(${bottom[0]}, ${bottom[1]}, ${bottom[2]})`);
-        
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        requestAnimationFrame(animate);
-      }
-      animate();
-    })();
+      // Aktif siparişi parametrede gönder (kuyrukta gösterilmeyecek)
+      const url = activeOrderNumber 
+        ? `/api/siradaki-siparisler?active=${encodeURIComponent(activeOrderNumber)}`
+        : '/api/siradaki-siparisler';
+      
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success && data.orders.length > 0) {
+            countBadge.textContent = data.total_count;
+            
+            let html = '';
+            data.orders.forEach((order, index) => {
+              const sourceClass = order.source === 'WOOCOMMERCE' ? 'woo' : 'trendyol';
+              const sourceLabel = order.source === 'WOOCOMMERCE' ? '🛒' : '📦';
+              
+              // Raf bilgisi rozeti
+              let rafBadge = '';
+              if (order.first_raf && order.first_raf.kod) {
+                rafBadge = `<div class="queue-order-raf">📍 ${order.first_raf.kod}</div>`;
+              } else {
+                rafBadge = `<div class="queue-order-raf no-stock">⚠️ Raf Yok</div>`;
+              }
+              
+              // 🔥 SKU göster (yoksa sipariş numarası kısalt)
+              const skuDisplay = order.first_sku || order.first_product_name || '';
+              
+              html += `
+                <div class="queue-order-card" data-order="${order.order_number}">
+                  ${rafBadge}
+                  <img src="${order.first_image}" alt="Ürün" class="queue-order-image" onerror="this.src='/static/images/default.jpg'"/>
+                  <div class="queue-order-info">
+                    <div class="queue-order-sku" title="${skuDisplay}">${skuDisplay}</div>
+                    <div class="queue-order-number">#${order.order_number}</div>
+                    <span class="queue-order-source ${sourceClass}">${sourceLabel}</span>
+                    <div class="queue-order-product-count">${order.product_count} ürün</div>
+                  </div>
+                </div>
+              `;
+            });
+            
+            container.innerHTML = html;
+          } else {
+            container.innerHTML = '<div class="text-center w-100 py-3 text-muted" style="font-size:0.85rem;">Sırada başka sipariş yok</div>';
+            countBadge.textContent = '0';
+          }
+        })
+        .catch(err => {
+          console.error('Kuyruk yüklenirken hata:', err);
+          container.innerHTML = '<div class="text-center w-100 py-3 text-danger" style="font-size:0.85rem;">Yüklenemedi</div>';
+        });
+    }
+    
+    // Sayfa yüklendiğinde kuyruğu yükle
+    document.addEventListener('DOMContentLoaded', function() {
+      loadQueueOrders();
+      
+      // Her 30 saniyede bir kuyruğu güncelle
+      setInterval(loadQueueOrders, 30000);
+    });
   </script>
+
+  <!-- Hava durumu animasyonu weather-canvas.js dosyasından yükleniyor -->
 
   <!-- Uygulama JS -->
   <script>
@@ -567,21 +889,53 @@
         barkodInputs.forEach(input=>{
           const pi=input.dataset.productIndex, qi=input.dataset.quantityIndex, side=input.dataset.side;
           const cardBody=input.closest('.card-body'); if(!cardBody){ok=false;return;}
+          
+          // 🔥 Hem ana barkod hem orijinal barkod kontrolü
           const expectedEl=cardBody.querySelector(`input[type="hidden"][id="expectedBarcode-${side}-${pi}-${qi}"]`);
+          const originalEl=cardBody.querySelector(`input[type="hidden"][id="originalBarcode-${side}-${pi}-${qi}"]`);
+          
           const exp=expectedEl? expectedEl.value.trim():'';
+          const orig=originalEl? originalEl.value.trim():'';
           const val=input.value.trim();
-          if(val===''||val!==exp) ok=false;
+          
+          // 🔥 Hem ana hem alias kabul edilir
+          if(val===''|| (val!==exp && val!==orig)) ok=false;
         });
 
         if(ok){
-          onaylaBtn.classList.remove('disabled');yazdirBtn.classList.remove('disabled');
-          onaylaBtn.disabled=false;yazdirBtn.disabled=false;
+          onaylaBtn.classList.remove('disabled');
+          onaylaBtn.disabled=false;
+          yazdirBtn.classList.remove('disabled');
+          
+          // WooCommerce için link, Trendyol için button
+          if(yazdirBtn.tagName === 'A'){
+            yazdirBtn.style.pointerEvents = 'auto';
+            yazdirBtn.style.opacity = '1';
+          } else {
+            yazdirBtn.disabled=false;
+          }
+          
           confirmTimer=setTimeout(()=>packingForm.submit(),15000);
           if(autoShipToggle.checked){showAutoShip();}
-          else{printTimer=setTimeout(()=>yazdirForm.submit(),5000);}
+          else{
+            if(yazdirBtn.tagName === 'A'){
+              setTimeout(()=>yazdirBtn.click(),5000);
+            } else {
+              printTimer=setTimeout(()=>yazdirForm.submit(),5000);
+            }
+          }
         }else{
-          onaylaBtn.classList.add('disabled');yazdirBtn.classList.add('disabled');
-          onaylaBtn.disabled=true;yazdirBtn.disabled=true;
+          onaylaBtn.classList.add('disabled');
+          onaylaBtn.disabled=true;
+          yazdirBtn.classList.add('disabled');
+          
+          // WooCommerce için link, Trendyol için button
+          if(yazdirBtn.tagName === 'A'){
+            yazdirBtn.style.pointerEvents = 'none';
+            yazdirBtn.style.opacity = '0.6';
+          } else {
+            yazdirBtn.disabled=true;
+          }
         }
       }
 
@@ -591,13 +945,36 @@
           const fg=this.closest('.form-group'); if(!fg) return;
           const msg=fg.querySelector('.alert'); if(!msg) return;
           const cb=this.closest('.card-body'); if(!cb) return;
-          const expectedEl=cb.querySelector(`input[type="hidden"][id="expectedBarcode-${side}-${pi}-${qi}"]`); if(!expectedEl) return;
-          const exp=expectedEl.value.trim(), val=this.value.trim();
+          
+          // 🔥 Hem ana barkod hem orijinal barkod kabul edilmeli
+          const expectedEl=cb.querySelector(`input[type="hidden"][id="expectedBarcode-${side}-${pi}-${qi}"]`); 
+          const originalEl=cb.querySelector(`input[type="hidden"][id="originalBarcode-${side}-${pi}-${qi}"]`); 
+          
+          if(!expectedEl) return;
+          
+          const exp=expectedEl.value.trim();
+          const orig=originalEl ? originalEl.value.trim() : exp;
+          const val=this.value.trim();
 
-          if(val===exp){ msg.textContent='Doğru!'; msg.className='alert alert-success alert-show'; this.style.backgroundColor='#e9ffe9';
-            const next=barkodInputs[idx+1]; if(next) setTimeout(()=>next.focus(),150); else onaylaBtn.focus();
-          }else if(val.length>0){ msg.textContent='Yanlış!'; msg.className='alert alert-danger alert-show'; this.style.backgroundColor=''; }
-          else{ msg.className='alert'; msg.style.opacity='0'; msg.style.visibility='hidden'; this.style.backgroundColor=''; }
+          // 🔥 Hem ana barkod hem alias kabul edilir
+          if(val===exp || val===orig){ 
+            msg.textContent='Doğru!'; 
+            msg.className='alert alert-success alert-show'; 
+            this.style.backgroundColor='#e9ffe9';
+            const next=barkodInputs[idx+1]; 
+            if(next) setTimeout(()=>next.focus(),150); 
+            else onaylaBtn.focus();
+          }else if(val.length>0){ 
+            msg.textContent='Yanlış!'; 
+            msg.className='alert alert-danger alert-show'; 
+            this.style.backgroundColor=''; 
+          }
+          else{ 
+            msg.className='alert'; 
+            msg.style.opacity='0'; 
+            msg.style.visibility='hidden'; 
+            this.style.backgroundColor=''; 
+          }
 
           updateButtons();
         });

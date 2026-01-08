@@ -1,10 +1,7 @@
 import os
 import json
 import logging
-import base64
 from datetime import datetime
-import asyncio
-import aiohttp
 import hashlib
 import time
 from sqlalchemy.orm import joinedload
@@ -15,12 +12,6 @@ from flask_limiter.util import get_remote_address
 
 # Modeller
 from models import db, Product, RafUrun, CentralStock
-
-# Trendyol API bilgileri
-try:
-    from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID, BASE_URL
-except ImportError:
-    API_KEY, API_SECRET, SUPPLIER_ID, BASE_URL = None, None, None, "https://api.trendyol.com/sapigw/"
 
 # --- Loglama ---
 logging.basicConfig(level=logging.INFO,
@@ -60,81 +51,6 @@ def log_failed_items(failed_items, reason=""):
 
 
 # -------------------------------
-# Trendyol STOCK-ONLY push (PUT stock-quantity)
-# -------------------------------
-async def send_trendyol_stock_only_async(items):
-    """
-    items: [{"barcode": "...", "quantity": int}]
-    Trendyol stock-quantity endpoint (sadece stok).
-    """
-    if not all([API_KEY, API_SECRET, SUPPLIER_ID]):
-        logger.error("Trendyol API bilgileri eksik. Stok push iptal.")
-        return {"general_error": "API creds missing"}
-
-    # Base URL sapigw; sonuna suppliers/... eklenir
-    url = f"{BASE_URL}suppliers/{SUPPLIER_ID}/products/stock-quantity"
-    auth = base64.b64encode(f"{API_KEY}:{API_SECRET}".encode("utf-8")).decode("utf-8")
-    headers = {
-        "Authorization": f"Basic {auth}",
-        "Content-Type": "application/json",
-        "User-Agent": f"GulluAyakkabi-StockSync/{SUPPLIER_ID}"
-    }
-
-    # Temizle ve negatifleri 0’a sabitle
-    cleaned = []
-    for it in items:
-        bc = (it.get("barcode") or "").strip()
-        if not bc:
-            continue
-        try:
-            q = int(it.get("quantity", 0))
-        except (TypeError, ValueError):
-            q = 0
-        if q < 0:
-            q = 0
-        cleaned.append({"barcode": bc, "quantity": q})
-
-    if not cleaned:
-        logger.info("Push edilecek stok yok.")
-        return {}
-
-    batches = [cleaned[i:i + BATCH_SIZE] for i in range(0, len(cleaned), BATCH_SIZE)]
-    errors = {}
-
-    async with aiohttp.ClientSession(headers=headers) as session:
-        for idx, batch in enumerate(batches, start=1):
-            # Rate limit nazikliği
-            if idx > 1:
-                await asyncio.sleep(0.5)
-            payload = {"items": batch}
-            try:
-                async with session.put(url, json=payload, timeout=60) as resp:
-                    text = await resp.text()
-                    logger.info("[STOCK %d/%d] %s %s", idx, len(batches), resp.status, text[:200])
-                    if resp.status not in (200, 202):
-                        for it in batch:
-                            errors[it["barcode"]] = f"http {resp.status}"
-            except Exception as e:
-                logger.error("Batch %d exception: %s", idx, e, exc_info=True)
-                for it in batch:
-                    errors[it["barcode"]] = f"exc {str(e)[:120]}"
-
-    if errors:
-        log_failed_items(list(errors.keys()), "stock-quantity errors")
-    return errors
-
-
-# Fire-and-forget helper (Flask senkron bağlamda async tetikleme)
-def _spawn_async(coro):
-    try:
-        loop = asyncio.get_running_loop()
-        loop.create_task(coro)
-    except RuntimeError:
-        asyncio.run(coro)
-
-
-# -------------------------------
-# HTML Sayfası
 # -------------------------------
 @stock_management_bp.route('/stock-addition', methods=['GET'])
 def stock_addition_page():

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barkod Alias Yönetimi - Güllü Ayakkabı</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            font-weight: bold;
+        }
+        .group-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .main-barcode {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .alias-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .alias-barcode {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        .btn-delete {
+            padding: 5px 10px;
+            font-size: 0.85em;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="text-center mb-4">
+            <h1 class="text-white">
+                <i class="fas fa-barcode"></i> Barkod Alias Yönetimi
+            </h1>
+            <p class="text-white">Birden fazla barkodu aynı ürüne bağlayın</p>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Yeni Alias Ekleme Formu -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-plus"></i> Yeni Alias Ekle
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('barcode_alias.add_alias_route') }}">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="alias_barcode">
+                                    <i class="fas fa-barcode"></i> Alternatif Barkod (Alias)
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="alias_barcode" 
+                                       name="alias_barcode" 
+                                       placeholder="Örn: ABC123"
+                                       required>
+                                <small class="form-text text-muted">Raflarda yapıştırılı olan barkod</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="main_barcode">
+                                    <i class="fas fa-check"></i> Ana Barkod (Gerçek)
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="main_barcode" 
+                                       name="main_barcode" 
+                                       placeholder="Örn: XYZ789"
+                                       required>
+                                <small class="form-text text-muted">Sistemde kayıtlı olan asıl barkod</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="note">
+                                    <i class="fas fa-sticky-note"></i> Not (Opsiyonel)
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="note" 
+                                       name="note" 
+                                       placeholder="Açıklama">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="custom-control custom-checkbox mb-3">
+                                <input type="checkbox" 
+                                       class="custom-control-input" 
+                                       id="merge_stocks" 
+                                       name="merge_stocks" 
+                                       checked>
+                                <label class="custom-control-label" for="merge_stocks">
+                                    <strong>📦 Stokları Otomatik Birleştir</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        Alias barkodun merkez ve raf stoklarını ana barkoda aktar
+                                    </small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Kaydet
+                    </button>
+                    <a href="{{ url_for('home.home') }}" class="btn btn-secondary">
+                        <i class="fas fa-home"></i> Anasayfa
+                    </a>
+                </form>
+            </div>
+        </div>
+
+        <!-- Alias Listesi -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list"></i> Mevcut Alias'lar
+            </div>
+            <div class="card-body">
+                {% if grouped %}
+                    {% for main_barcode, aliases in grouped.items() %}
+                    <div class="group-card">
+                        <div class="main-barcode">
+                            <i class="fas fa-tag"></i> Ana Barkod: {{ main_barcode }}
+                        </div>
+                        <div class="alias-list">
+                            {% for alias in aliases %}
+                            <div class="alias-item">
+                                <div>
+                                    <span class="alias-barcode">{{ alias.alias_barcode }}</span>
+                                    {% if alias.note %}
+                                        <span class="text-muted"> — {{ alias.note }}</span>
+                                    {% endif %}
+                                    {% if alias.created_by %}
+                                        <br><small class="text-muted">Ekleyen: {{ alias.created_by }}</small>
+                                    {% endif %}
+                                </div>
+                                <form method="POST" 
+                                      action="{{ url_for('barcode_alias.delete_alias_route', alias_barcode=alias.alias_barcode) }}"
+                                      style="display: inline;"
+                                      onsubmit="return confirm('Bu alias silinecek. Emin misiniz?');">
+                                    <button type="submit" class="btn btn-danger btn-sm btn-delete">
+                                        <i class="fas fa-trash"></i> Sil
+                                    </button>
+                                </form>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <p>Henüz hiç alias eklenmemiş.</p>
+                        <p>Yukarıdaki formu kullanarak yeni alias ekleyebilirsiniz.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Bilgi Kartı -->
+        <div class="card mt-4">
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-info-circle"></i> Nasıl Kullanılır?
+            </div>
+            <div class="card-body">
+                <ol>
+                    <li><strong>Alternatif Barkod (Alias):</strong> Raflara yapıştırdığınız veya kullanmak istediğiniz farklı barkod</li>
+                    <li><strong>Ana Barkod:</strong> Sistemde kayıtlı olan asıl ürün barkodu</li>
+                    <li>Bir alias eklediğinizde:
+                        <ul>
+                            <li>Raf sisteminde her iki barkod da aynı ürünü bulur</li>
+                            <li>Sipariş hazırlamada her iki barkod da kabul edilir</li>
+                            <li>Stok işlemlerinde otomatik olarak ana barkod kullanılır</li>
+                        </ul>
+                    </li>
+                    <li><strong>Örnek:</strong> ABC123 (alias) → XYZ789 (ana barkod) bağlantısı kurulunca, ABC123 barkodunu okuttuğunuzda sistem XYZ789'u kullanır</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

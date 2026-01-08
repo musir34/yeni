@@ -1,55 +1,155 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Siparişler</h2>
-    <button class="btn btn-primary" onclick="showOrderForm()">
+<style>
+  :root{
+    --color-primary:#B76E79; --color-primary-dark:#A05F6A;
+    --color-secondary:#212529; --color-text:#343a40;
+    --color-bg:#f8f9fa; --color-white:#fff; --color-border:#dee2e6;
+    --color-success:#28a745; --color-warning:#ffc107; --color-danger:#dc3545; --color-info:#0dcaf0;
+    --font-family-base:'Inter',sans-serif; --border-radius:.5rem;
+    --shadow-sm:0 1px 3px rgba(0,0,0,.04); --shadow-md:0 5px 15px rgba(0,0,0,.08);
+    --transition:all .25s ease-in-out;
+  }
+  body{font-family:var(--font-family-base);background:var(--color-bg);color:var(--color-text)}
+  .container-xl{max-width:1600px}
+  h2{color:var(--color-secondary);font-weight:600}
+  .btn{border-radius:var(--border-radius);font-weight:600;transition:var(--transition);border:none;padding:.6rem 1.2rem}
+  .btn:hover{transform:translateY(-2px);box-shadow:var(--shadow-sm)}
+  .btn-primary{background:var(--color-primary);color:#fff}.btn-primary:hover{background:var(--color-primary-dark)}
+  .btn-secondary{background:var(--color-secondary);color:#fff}.btn-secondary:hover{background:#343a40}
+  .btn-success{background:var(--color-success)}
+  .btn-danger{background:var(--color-danger)}
+  .btn-info{background:var(--color-info)}
+  .btn-warning{background:var(--color-warning);color:var(--color-secondary)}
+  
+  .bg-orange{background:#fd7e14!important}
+  .bg-cyan{background:#0dcaf0!important}
+  .bg-purple{background:#6f42c1!important}
+  
+  .card{border:none;border-radius:var(--border-radius);box-shadow:var(--shadow-sm);transition:var(--transition);animation:fadeIn .5s}
+  .card:hover{transform:translateY(-5px);box-shadow:var(--shadow-md)}
+  .card-header{background:var(--color-white);border-bottom:1px solid var(--color-border);font-weight:600}
+  
+  .filter-area{background:var(--color-white);padding:1.5rem;border-radius:var(--border-radius);box-shadow:var(--shadow-sm);margin-bottom:2rem}
+  .form-control:focus,.form-select:focus{border-color:var(--color-primary);box-shadow:0 0 0 .25rem rgba(183,110,121,.25)}
+  
+  .status-select{font-weight:600;padding:.4rem .8rem;border-radius:var(--border-radius)}
+  .status-yeni-sipariş{background:#007bff!important;color:white!important}
+  .status-hazırlanıyor{background:#fd7e14!important;color:white!important}
+  .status-kargoya-hazır{background:#0dcaf0!important;color:white!important}
+  .status-kargoda{background:#6f42c1!important;color:white!important}
+  .status-teslim-edildi{background:#28a745!important;color:white!important}
+  .status-iptal-edildi{background:#dc3545!important;color:white!important}
+  
+  @keyframes fadeIn{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+</style>
+
+<div class="container-xl mt-4 mb-5">
+  <div class="text-center mb-4">
+    <h2>
+      <i class="bi bi-cart-check"></i> Siparişler 
+      <i class="bi bi-info-circle text-primary" style="cursor:pointer;font-size:0.8em" 
+         onclick="document.getElementById('usageInfoModal').style.display='block'"
+         data-bs-toggle="tooltip" title="Nasıl Kullanılır?"></i>
+    </h2>
+    <p class="text-muted">Manuel olarak oluşturulan siparişler</p>
+  </div>
+  
+  <div class="text-center mb-4">
+    <button class="btn btn-success me-2" onclick="showOrderForm()">
       <i class="bi bi-plus-circle"></i> Yeni Sipariş Oluştur
     </button>
+    <a href="{{ url_for('home.home') }}" class="btn btn-primary">
+      <i class="bi bi-house"></i> Anasayfa
+    </a>
   </div>
 
   <div id="ordersList" class="mb-4">
-    <div class="table-responsive">
-      <table class="table table-striped table-hover">
-        <thead class="table-dark">
-          <tr>
-            <th>Sipariş No</th>
-            <th>Müşteri</th>
-            <th>Toplam Tutar</th>
-            <th>Tarih</th>
-            <th>Durum</th>
-            <th>İşlemler</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for siparis in siparisler %}
-          <tr>
-            <td>{{ siparis.siparis_no }}</td>
-            <td>{{ siparis.musteri_adi }} {{ siparis.musteri_soyadi }}</td>
-              <td>{{ siparis.toplam_tutar|default(0)|float|round(2) }} TL</td>
-            <td>{{ siparis.siparis_tarihi.strftime('%d.%m.%Y %H:%M') if siparis.siparis_tarihi else 'N/A' }}</td> {# GÜNCELLENDİ #}
-            <td>
-              <span class="badge bg-{{ 'success' if siparis.durum == 'Tamamlandı' else ('primary' if siparis.durum == 'Yeni Sipariş' else 'warning') }}">
-                {{ siparis.durum }}
-              </span>
-            </td>
-            <td>
-              <button class="btn btn-sm btn-info me-1" onclick="showOrderDetails('{{ siparis.siparis_no }}')" type="button">
+    <!-- Toplu İşlemler Toolbar -->
+    <div class="filter-area">
+      <div class="d-flex gap-2 align-items-center flex-wrap">
+        <button class="btn btn-danger" onclick="deleteSelectedOrders()" id="deleteSelectedBtn" style="display:none;">
+          <i class="bi bi-trash"></i> Seçili Siparişleri Sil (<span id="selectedCount">0</span>)
+        </button>
+        <button class="btn btn-secondary" onclick="selectAllOrders()" id="selectAllBtn">
+          <i class="bi bi-check-square"></i> Tümünü Seç
+        </button>
+        <button class="btn btn-secondary" onclick="deselectAllOrders()" id="deselectAllBtn" style="display:none;">
+          <i class="bi bi-square"></i> Seçimi Kaldır
+        </button>
+      </div>
+    </div>
+
+    <div class="row">
+      {% for siparis in siparisler %}
+      <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+              <input type="checkbox" class="order-checkbox me-2" value="{{ siparis.siparis_no }}" onchange="updateSelectedCount()">
+              <strong class="text-primary">{{ siparis.siparis_no }}</strong><br>
+              <small class="text-muted">{{ siparis.siparis_tarihi.strftime('%d.%m.%Y %H:%M') if siparis.siparis_tarihi else 'N/A' }}</small>
+            </div>
+            <select class="form-select form-select-sm status-select status-{{ siparis.durum|replace(' ', '-')|lower }}" 
+                    style="width:auto;max-width:150px" 
+                    data-siparis-no="{{ siparis.siparis_no }}" 
+                    onchange="updateOrderStatus('{{ siparis.siparis_no }}', this.value)">
+              <option value="Yeni Sipariş" {% if siparis.durum == 'Yeni Sipariş' %}selected{% endif %}>🆕 Yeni</option>
+              <option value="Hazırlanıyor" {% if siparis.durum == 'Hazırlanıyor' %}selected{% endif %}>📦 Hazırlanıyor</option>
+              <option value="Kargoya Hazır" {% if siparis.durum == 'Kargoya Hazır' %}selected{% endif %}>✅ Hazır</option>
+              <option value="Kargoda" {% if siparis.durum == 'Kargoda' %}selected{% endif %}>🚚 Kargoda</option>
+              <option value="Teslim Edildi" {% if siparis.durum == 'Teslim Edildi' %}selected{% endif %}>✔️ Teslim</option>
+              <option value="İptal Edildi" {% if siparis.durum == 'İptal Edildi' %}selected{% endif %}>❌ İptal</option>
+            </select>
+          </div>
+          
+          <div class="card-body">
+            <h6 class="card-title">{{ siparis.musteri_adi }} {{ siparis.musteri_soyadi }}</h6>
+            <p class="card-text text-muted small mb-2">
+              <i class="bi bi-telephone"></i> {{ siparis.musteri_telefon }}
+            </p>
+            <p class="card-text text-muted small mb-2">
+              <i class="bi bi-geo-alt"></i> {{ siparis.musteri_adres[:50] }}{% if siparis.musteri_adres|length > 50 %}...{% endif %}
+            </p>
+            <hr class="my-2">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fs-5 fw-bold text-primary">{{ siparis.toplam_tutar|default(0)|float|round(2) }} TL</span>
+              {% if siparis.kapida_odeme %}
+              <span class="badge bg-danger fs-6">💰 Kapıda Ödeme</span>
+              {% endif %}
+            </div>
+            {% if siparis.notlar %}
+            <hr class="my-2">
+            <p class="card-text text-muted small fst-italic">
+              <i class="bi bi-sticky"></i> {{ siparis.notlar[:60] }}{% if siparis.notlar|length > 60 %}...{% endif %}
+            </p>
+            {% endif %}
+          </div>
+          
+          <div class="card-footer bg-white">
+            <div class="btn-group w-100" role="group">
+              <button class="btn btn-sm btn-info" onclick="showOrderDetails('{{ siparis.siparis_no }}')" type="button" 
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Sipariş Detaylarını Görüntüle">
                 <i class="bi bi-eye"></i> Detay
               </button>
-              <button class="btn btn-sm btn-success" onclick="printCustomerInfo('{{ siparis.siparis_no }}')" type="button">
-                <i class="bi bi-printer"></i> Müşteri Bilgileri
+              <button class="btn btn-sm btn-success" onclick="printCustomerInfo('{{ siparis.siparis_no }}')" type="button"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Müşteri Bilgilerini Yazdır">
+                <i class="bi bi-printer"></i> Müşteri
               </button>
-            </td>
-          </tr>
-          {% else %}
-          <tr>
-            <td colspan="6" class="text-center">Listelenecek sipariş bulunamadı.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+              <button class="btn btn-sm btn-danger" onclick="deleteSingleOrder('{{ siparis.siparis_no }}')" type="button"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Siparişi Sil">
+                <i class="bi bi-trash"></i> Sil
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="col-12">
+        <div class="alert alert-warning text-center">Listelenecek sipariş bulunamadı.</div>
+      </div>
+      {% endfor %}
     </div>
   </div>
 
@@ -174,6 +274,22 @@
                     <p><strong>Toplam Ürün Adedi:</strong> <span id="total-items-summary">0</span></p>
                     <p class="h5"><strong>Genel Toplam:</strong> <span id="total-amount-summary" class="fw-bold">0.00 TL</span></p>
                     <input type="hidden" id="toplam_tutar_hidden" name="toplam_tutar" value="0">
+                    
+                    <!-- Kapıda Ödeme Alanı -->
+                    <hr class="my-3">
+                    <div class="form-check mb-2">
+                      <input class="form-check-input" type="checkbox" id="kapida_odeme" name="kapida_odeme" onchange="toggleKapidaOdemeTutar()">
+                      <label class="form-check-label fw-bold text-danger" for="kapida_odeme">
+                        💰 Kapıda Ödeme Var
+                      </label>
+                    </div>
+                    <div id="kapida_odeme_tutar_container" class="d-none">
+                      <label for="kapida_odeme_tutari" class="form-label">Kapıda Ödenecek Tutar:</label>
+                      <div class="input-group">
+                        <input type="number" step="0.01" class="form-control" id="kapida_odeme_tutari" name="kapida_odeme_tutari" placeholder="0.00">
+                        <span class="input-group-text">TL</span>
+                      </div>
+                    </div>
                 </div>
             </div>
           </div>
@@ -262,12 +378,312 @@
     0%, 100% { background-color: #fff3cd; }
     50% { background-color: #ffeeba; } /* Biraz daha açık ton */
   }
+
+  /* Durum Dropdown Renkleri */
+  .status-select {
+    font-weight: 600;
+    border: 2px solid;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .status-select:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  /* Yeni Sipariş - Mavi */
+  .status-yeni-sipariş,
+  .status-select option[value="Yeni Sipariş"]:checked {
+    background-color: #cfe2ff !important;
+    border-color: #0d6efd !important;
+    color: #084298 !important;
+  }
+
+  /* Hazırlanıyor - Turuncu */
+  .status-hazırlanıyor,
+  .status-select option[value="Hazırlanıyor"]:checked {
+    background-color: #ffe69c !important;
+    border-color: #ffc107 !important;
+    color: #664d03 !important;
+  }
+
+  /* Kargoya Hazır - Cyan */
+  .status-kargoya-hazır,
+  .status-select option[value="Kargoya Hazır"]:checked {
+    background-color: #9eeaf9 !important;
+    border-color: #0dcaf0 !important;
+    color: #055160 !important;
+  }
+
+  /* Kargoda - Mor */
+  .status-kargoda,
+  .status-select option[value="Kargoda"]:checked {
+    background-color: #e0cffc !important;
+    border-color: #6f42c1 !important;
+    color: #3d2465 !important;
+  }
+
+  /* Teslim Edildi - Yeşil */
+  .status-teslim-edildi,
+  .status-select option[value="Teslim Edildi"]:checked {
+    background-color: #a3cfbb !important;
+    border-color: #198754 !important;
+    color: #0f5132 !important;
+  }
+
+  /* İptal Edildi - Kırmızı */
+  .status-iptal-edildi,
+  .status-select option[value="İptal Edildi"]:checked {
+    background-color: #f1aeb5 !important;
+    border-color: #dc3545 !important;
+    color: #58151c !important;
+  }
+
+  /* Dropdown açıkken seçeneklere hover efekti */
+  .status-select option {
+    padding: 8px;
+    font-weight: 600;
+  }
+
+  .status-select option:hover {
+    background-color: #f0f0f0 !important;
+  }
+
+  /* Buton grubu düzenlemeleri */
+  .btn-group .btn {
+    white-space: nowrap;
+  }
+
+  /* Tooltip stilleri (Bootstrap'in varsayılan tooltip'lerini güçlendir) */
+  .tooltip {
+    font-size: 0.875rem;
+  }
+
+  /* Küçük ekranlarda buton metinlerini gizle */
+  @media (max-width: 992px) {
+    .btn-group .btn span {
+      display: none !important;
+    }
+  }
+
 </style>
 
 <script>
 // Global değişkenler
 let orderItems = []; // Siparişe eklenen ürünleri tutar
 let currentOrderSiparisNo = null; // Düzenlenen siparişin numarasını tutar
+
+// ==================== TOPLU İŞLEMLER ====================
+
+// Tüm checkboxları seç/kaldır
+function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const checkboxes = document.querySelectorAll('.order-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
+    updateSelectedCount();
+}
+
+// Tüm siparişleri seç
+function selectAllOrders() {
+    const checkboxes = document.querySelectorAll('.order-checkbox');
+    checkboxes.forEach(checkbox => checkbox.checked = true);
+    document.getElementById('selectAllCheckbox').checked = true;
+    updateSelectedCount();
+}
+
+// Tüm seçimleri kaldır
+function deselectAllOrders() {
+    const checkboxes = document.querySelectorAll('.order-checkbox');
+    checkboxes.forEach(checkbox => checkbox.checked = false);
+    document.getElementById('selectAllCheckbox').checked = false;
+    updateSelectedCount();
+}
+
+// Seçili sipariş sayısını güncelle
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.order-checkbox:checked');
+    const count = checkboxes.length;
+    document.getElementById('selectedCount').textContent = count;
+    
+    // Butonların görünürlüğünü ayarla
+    const deleteBtn = document.getElementById('deleteSelectedBtn');
+    const deselectBtn = document.getElementById('deselectAllBtn');
+    
+    if (count > 0) {
+        deleteBtn.style.display = 'inline-block';
+        deselectBtn.style.display = 'inline-block';
+    } else {
+        deleteBtn.style.display = 'none';
+        deselectBtn.style.display = 'none';
+    }
+}
+
+// Seçili siparişleri sil
+async function deleteSelectedOrders() {
+    const checkboxes = document.querySelectorAll('.order-checkbox:checked');
+    const siparisNolar = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (siparisNolar.length === 0) {
+        alert('Lütfen silmek için en az bir sipariş seçin.');
+        return;
+    }
+    
+    if (!confirm(`${siparisNolar.length} adet siparişi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/siparis-toplu-sil', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ siparis_nolar: siparisNolar })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`${result.deleted_count} sipariş başarıyla silindi.`);
+            window.location.reload();
+        } else {
+            alert(`Siparişler silinirken hata: ${result.message || 'Bilinmeyen hata'}`);
+        }
+    } catch (error) {
+        console.error('Toplu silme hatası:', error);
+        alert('Siparişler silinirken bir ağ hatası oluştu.');
+    }
+}
+
+// Tekil sipariş sil
+async function deleteSingleOrder(siparisNo) {
+    if (!confirm(`"${siparisNo}" numaralı siparişi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/siparis-sil/${siparisNo}`, { method: 'DELETE' });
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Sipariş başarıyla silindi.');
+            // Satırı tablodan kaldır
+            const row = document.querySelector(`tr[data-siparis-no="${siparisNo}"]`);
+            if (row) {
+                row.remove();
+            }
+            updateSelectedCount();
+        } else {
+            alert(`Sipariş silinirken hata: ${result.message || 'Bilinmeyen hata'}`);
+        }
+    } catch (error) {
+        console.error('Sipariş silme hatası:', error);
+        alert('Sipariş silinirken bir ağ hatası oluştu.');
+    }
+}
+
+// ==================== DURUM GÜNCELLEME ====================
+
+async function updateOrderStatus(siparisNo, yeniDurum) {
+    try {
+        const response = await fetch(`/siparis-durum-guncelle/${siparisNo}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ durum: yeniDurum })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Başarılı güncelleme bildirimi
+            showToast(`Sipariş ${siparisNo} durumu "${yeniDurum}" olarak güncellendi`, 'success');
+            
+            // Select elementinin rengini güncelle
+            const selectElement = document.querySelector(`select[data-siparis-no="${siparisNo}"]`);
+            if (selectElement) {
+                // Eski renk sınıflarını kaldır
+                selectElement.classList.remove('status-yeni-sipariş', 'status-hazırlanıyor', 
+                    'status-kargoya-hazır', 'status-kargoda', 'status-teslim-edildi', 'status-iptal-edildi');
+                
+                // Yeni renk sınıfını ekle
+                const statusClass = 'status-' + yeniDurum.toLowerCase().replace(/ /g, '-');
+                selectElement.classList.add(statusClass);
+            }
+        } else {
+            alert(`Durum güncellenirken hata: ${result.message || 'Bilinmeyen hata'}`);
+            // Dropdown'u eski haline döndür
+            const selectElement = document.querySelector(`select[data-siparis-no="${siparisNo}"]`);
+            if (selectElement) {
+                selectElement.selectedIndex = 0;
+            }
+        }
+    } catch (error) {
+        console.error('Durum güncelleme hatası:', error);
+        alert('Durum güncellenirken bir ağ hatası oluştu.');
+        // Dropdown'u eski haline döndür
+        const selectElement = document.querySelector(`select[data-siparis-no="${siparisNo}"]`);
+        if (selectElement) {
+            selectElement.selectedIndex = 0;
+        }
+    }
+}
+
+// ==================== KARGO ETİKETİ ====================
+
+function printShippingLabel(siparisNo) {
+    // Yeni pencerede kargo etiketini aç
+    const url = `/siparis-kargo-etiketi/${siparisNo}`;
+    window.open(url, '_blank', 'width=400,height=600');
+}
+
+// ==================== TOAST BİLDİRİM SİSTEMİ ====================
+
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        const container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+        document.body.appendChild(container);
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} alert-dismissible fade show`;
+    toast.style.cssText = 'min-width: 250px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.getElementById('toastContainer').appendChild(toast);
+    
+    // 3 saniye sonra otomatik kapat
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 150);
+    }, 3000);
+}
+
+// ==================== MEVCUT FONKSİYONLAR ====================
+
+// Kapıda ödeme checkbox değiştiğinde
+function toggleKapidaOdemeTutar() {
+    const checkbox = document.getElementById('kapida_odeme');
+    const tutarContainer = document.getElementById('kapida_odeme_tutar_container');
+    const tutarInput = document.getElementById('kapida_odeme_tutari');
+    
+    if (checkbox.checked) {
+        tutarContainer.classList.remove('d-none');
+        tutarInput.required = true;
+        tutarInput.focus();
+    } else {
+        tutarContainer.classList.add('d-none');
+        tutarInput.required = false;
+        tutarInput.value = '';
+    }
+}
+
 
 // Sayfa yüklendiğinde
 document.addEventListener('DOMContentLoaded', function() {
@@ -281,6 +697,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             form.classList.add('was-validated');
         }, false);
+    });
+
+    // Bootstrap Tooltip'lerini başlat
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 });
 
@@ -670,6 +1092,8 @@ document.querySelector('#orderForm form').addEventListener('submit', async funct
         toplam_tutar: parseFloat(document.getElementById('toplam_tutar_hidden').value),
         notlar: document.getElementById('order_notes').value,
         durum: document.getElementById('status').value,
+        kapida_odeme: document.getElementById('kapida_odeme').checked,
+        kapida_odeme_tutari: parseFloat(document.getElementById('kapida_odeme_tutari').value) || 0,
         urunler: JSON.parse(document.getElementById('urunler_hidden').value) // JSON string'i parse et
     };
 
@@ -793,39 +1217,120 @@ async function processMultipleProducts() {
     alert(summaryMessage);
 }
 
-// Müşteri Bilgilerini Yazdırma (Bu fonksiyon HTML yapınıza göre ayarlanmalı)
+// Müşteri Bilgilerini Yazdırma (JSON endpoint kullanarak)
 async function printCustomerInfo(siparisNo) {
     try {
-        const response = await fetch(`/siparis-detay/${siparisNo}`);
+        const response = await fetch(`/siparis-musteri-bilgisi/${siparisNo}`);
         if (!response.ok) throw new Error('Müşteri bilgileri alınamadı.');
-        const htmlText = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlText, 'text/html');
+        const data = await response.json();
+        
+        if (!data.success) {
+            alert('Müşteri bilgileri alınamadı: ' + (data.message || 'Bilinmeyen hata'));
+            return;
+        }
+        
+        console.log('📦 Sipariş Verileri:', data);
+        
+        const musteriAdi = data.musteri_adi || 'N/A';
+        const musteriSoyadi = data.musteri_soyadi || '';
+        const musteriTelefon = data.musteri_telefon || 'N/A';
+        const musteriAdres = data.musteri_adres || 'N/A';
+        const kapidaOdeme = data.kapida_odeme || false;
+        const kapidaOdemeTutari = parseFloat(data.kapida_odeme_tutari) || 0;
+        
+        console.log('💰 Kapıda Ödeme:', kapidaOdeme);
+        console.log('💵 Tutar:', kapidaOdemeTutari);
 
-        // data-* özniteliklerinden müşteri bilgilerini al
-        const musteriAdi = doc.querySelector('[data-musteri-adi]')?.textContent.trim() || 'N/A';
-        const musteriSoyadi = doc.querySelector('[data-musteri-soyadi]')?.textContent.trim() || '';
-        const musteriTelefon = doc.querySelector('[data-musteri-telefon]')?.textContent.trim() || 'N/A';
-        const musteriAdres = doc.querySelector('[data-musteri-adres]')?.textContent.trim() || 'N/A';
+        // Kapıda ödeme için özel vurgu HTML'i
+        let kapidaOdemeHTML = '';
+        if (kapidaOdeme && kapidaOdemeTutari > 0) {
+            console.log('✅ KAPIDA ÖDEME KUTUSU OLUŞTURULUYOR!');
+            kapidaOdemeHTML = `
+                <div class="kapida-odeme-box">
+                    <div style="background: #ff0000; color: white; text-align: center; padding: 8px; border: 4px solid #000; margin: 8px 0;">
+                        <div style="font-size: 18pt; font-weight: bold; letter-spacing: 1px; border-bottom: 3px solid white; padding-bottom: 5px;">
+                            ⚠️ KAPIDA ÖDEME ⚠️
+                        </div>
+                        <div style="font-size: 32pt; font-weight: bold; margin: 8px 0; line-height: 1.2;">
+                            ${kapidaOdemeTutari.toFixed(2)} TL
+                        </div>
+                        <div style="font-size: 14pt; font-weight: bold; background: white; color: #ff0000; padding: 4px; margin-top: 5px;">
+                            TAHSİL EDİLECEK
+                        </div>
+                    </div>
+                </div>`;
+        } else {
+            console.log('❌ Kapıda ödeme yok veya tutar 0');
+        }
 
         const printContent = `
             <html><head><title>Müşteri Bilgileri - ${siparisNo}</title>
             <style>
-                @page { size: 100mm 70mm; margin: 5mm; }
-                body { font-family: Arial, sans-serif; font-size: 10pt; }
-                h4 { margin-bottom: 5px; font-size: 12pt; }
-                p { margin: 2px 0; }
-                strong { min-width: 70px; display: inline-block;}
-                .adres { white-space: pre-line; }
+                @page { 
+                    size: 100mm 100mm; 
+                    margin: 3mm; 
+                }
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                body { 
+                    font-family: 'Arial Black', Arial, sans-serif; 
+                    font-size: 9pt;
+                    width: 94mm;
+                    height: 94mm;
+                    padding: 3mm;
+                }
+                .header {
+                    font-size: 11pt;
+                    font-weight: bold;
+                    margin-bottom: 3mm;
+                    padding-bottom: 2mm;
+                    border-bottom: 2px solid #000;
+                }
+                .info-row { 
+                    margin: 1mm 0;
+                    font-size: 8pt;
+                    line-height: 1.3;
+                }
+                .label { 
+                    font-weight: bold;
+                    display: inline-block;
+                    width: 20mm;
+                }
+                .adres { 
+                    white-space: pre-line;
+                    margin: 2mm 0;
+                    font-size: 8pt;
+                    line-height: 1.3;
+                    max-height: 15mm;
+                    overflow: hidden;
+                }
+                .kapida-odeme-box { 
+                    break-inside: avoid;
+                    page-break-inside: avoid;
+                    margin: 3mm 0;
+                }
+                .footer {
+                    position: absolute;
+                    bottom: 3mm;
+                    left: 3mm;
+                    right: 3mm;
+                    text-align: center;
+                    font-size: 7pt;
+                    border-top: 1px solid #ccc;
+                    padding-top: 1mm;
+                }
             </style></head><body>
-                <h4>Müşteri Kargo Bilgileri</h4>
-                <p><strong>Sipariş No:</strong> ${siparisNo}</p>
-                <p><strong>Alıcı:</strong> ${musteriAdi} ${musteriSoyadi}</p>
-                <p><strong>Telefon:</strong> ${musteriTelefon}</p>
-                <p><strong>Adres:</strong></p>
+                <div class="header">KARGO BİLGİLERİ</div>
+                <div class="info-row"><span class="label">Sipariş:</span> ${siparisNo}</div>
+                <div class="info-row"><span class="label">Alıcı:</span> ${musteriAdi} ${musteriSoyadi}</div>
+                <div class="info-row"><span class="label">Telefon:</span> ${musteriTelefon}</div>
+                <div class="info-row"><span class="label">Adres:</span></div>
                 <div class="adres">${musteriAdres}</div>
-                <hr>
-                <p style="text-align:center; font-size:8pt;">${new Date().toLocaleDateString('tr-TR')} ${new Date().toLocaleTimeString('tr-TR')}</p>
+                ${kapidaOdemeHTML}
+                <div class="footer">${new Date().toLocaleDateString('tr-TR')} ${new Date().toLocaleTimeString('tr-TR')}</div>
             </body></html>`;
 
         const printWindow = window.open('', '_blank', 'width=400,height=300');
@@ -846,4 +1351,189 @@ async function printCustomerInfo(siparisNo) {
 
 </script>
   <div id="toastContainer"></div>
+
+<!-- Kullanım Bilgisi Modal -->
+<div id="usageInfoModal" style="display:none;position:fixed;z-index:9999;left:0;top:0;width:100%;height:100%;background-color:rgba(0,0,0,0.5)">
+  <div style="background-color:white;margin:5% auto;padding:0;width:90%;max-width:900px;border-radius:10px;max-height:85vh;overflow-y:auto">
+    <div style="background:#B76E79;color:white;padding:20px;border-radius:10px 10px 0 0">
+      <h3 style="margin:0"><i class="bi bi-info-circle"></i> Siparişler Sayfası - Kullanım Kılavuzu</h3>
+      <button onclick="document.getElementById('usageInfoModal').style.display='none'" 
+              style="position:absolute;top:15px;right:20px;background:none;border:none;color:white;font-size:30px;cursor:pointer">&times;</button>
+    </div>
+    <div style="padding:30px;line-height:1.8">
+      
+      <!-- NASIL KULLANILIR -->
+      <div style="background:#f8f9fa;padding:20px;border-radius:8px;margin-bottom:25px">
+        <h4 style="color:#B76E79;margin-bottom:15px"><i class="bi bi-book"></i> NASIL KULLANILIR?</h4>
+        
+        <div style="margin-bottom:20px">
+          <h5 style="color:#212529"><i class="bi bi-1-circle-fill text-success"></i> Yeni Sipariş Oluşturma</h5>
+          <ol style="margin-left:20px">
+            <li><strong>"Yeni Sipariş Oluştur"</strong> butonuna tıklayın</li>
+            <li><strong>Müşteri Bilgilerini</strong> doldurun (Ad, Soyad, Telefon, Adres)</li>
+            <li><strong>Ürün Ekleyin:</strong>
+              <ul>
+                <li>Barkod alanına ürün barkodunu yazın</li>
+                <li>"Ara" butonuna tıklayın</li>
+                <li>Ürün bilgileri gelecek, adet ve fiyat kontrol edin</li>
+                <li>"Ekle" butonuna basın</li>
+                <li>Birden fazla ürün ekleyebilirsiniz</li>
+              </ul>
+            </li>
+            <li><strong>Kapıda Ödeme:</strong> Eğer kapıda ödeme varsa checkbox'ı işaretleyin ve tutarı girin</li>
+            <li><strong>Sipariş Durumu:</strong> Varsayılan "Yeni Sipariş" olarak gelir, değiştirebilirsiniz</li>
+            <li><strong>"Siparişi Kaydet"</strong> butonuna tıklayın</li>
+          </ol>
+        </div>
+
+        <div style="margin-bottom:20px">
+          <h5 style="color:#212529"><i class="bi bi-2-circle-fill text-info"></i> Sipariş Yönetimi</h5>
+          <ul style="margin-left:20px">
+            <li><strong>Durum Değiştirme:</strong> Her sipariş kartındaki dropdown'dan durumu değiştirin (Yeni Sipariş → Hazırlanıyor → Kargoya Hazır → Kargoda → Teslim Edildi)</li>
+            <li><strong>Detay Görüntüleme:</strong> "Detay" butonuyla siparişteki ürünleri, raf kodlarını görün</li>
+            <li><strong>Müşteri Etiketi:</strong> "Müşteri" butonuyla 100x100mm etiket yazdırın (kapıda ödeme varsa kırmızı kutu ile gösterilir)</li>
+            <li><strong>Sipariş Silme:</strong> "Sil" butonuyla siparişi tamamen kaldırabilirsiniz</li>
+          </ul>
+        </div>
+
+        <div style="margin-bottom:20px">
+          <h5 style="color:#212529"><i class="bi bi-3-circle-fill text-warning"></i> Toplu İşlemler</h5>
+          <ul style="margin-left:20px">
+            <li><strong>"Tümünü Seç":</strong> Tüm siparişleri seçer</li>
+            <li><strong>Checkbox:</strong> İstediğiniz siparişleri tek tek seçin</li>
+            <li><strong>"Seçili Siparişleri Sil":</strong> Seçili olanları toplu siler</li>
+            <li><strong>"Seçimi Kaldır":</strong> Tüm seçimleri iptal eder</li>
+          </ul>
+        </div>
+
+        <div style="background:#fff3cd;padding:15px;border-left:4px solid #ffc107;border-radius:5px">
+          <strong><i class="bi bi-exclamation-triangle text-warning"></i> ÖNEMLİ:</strong>
+          <ul style="margin:10px 0 0 20px">
+            <li>Ürün eklerken otomatik olarak <strong>en fazla stoklu raftan</strong> tahsis edilir</li>
+            <li>Stok hem <strong>raf</strong> hem de <strong>merkez stok</strong>tan düşer</li>
+            <li>Silinen siparişler <strong>geri alınamaz</strong>, stok iade edilmez</li>
+            <li>Kapıda ödeme etiketi <strong>100mm x 100mm</strong> termal yazıcı için optimize edilmiştir</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- TEKNİK DETAYLAR -->
+      <div style="background:#e7f3ff;padding:20px;border-radius:8px">
+        <h4 style="color:#0066cc;margin-bottom:15px"><i class="bi bi-gear"></i> TEKNİK DETAYLAR</h4>
+        
+        <div style="margin-bottom:15px">
+          <h5 style="color:#212529"><i class="bi bi-file-code"></i> Backend Dosyaları (Python)</h5>
+          <table style="width:100%;border-collapse:collapse">
+            <tr style="background:#f8f9fa">
+              <th style="padding:10px;text-align:left;border:1px solid #dee2e6;width:30%">Dosya</th>
+              <th style="padding:10px;text-align:left;border:1px solid #dee2e6">Görevi</th>
+            </tr>
+            <tr>
+              <td style="padding:10px;border:1px solid #dee2e6"><code>siparisler.py</code></td>
+              <td style="padding:10px;border:1px solid #dee2e6">
+                Ana route dosyası. Tüm sipariş işlemlerini yönetir:<br>
+                • <code>/yeni-siparis</code> - Liste gösterimi ve sipariş oluşturma<br>
+                • <code>/siparis-detay/&lt;no&gt;</code> - Sipariş detayları<br>
+                • <code>/siparis-musteri-bilgisi/&lt;no&gt;</code> - Müşteri bilgisi JSON<br>
+                • <code>/siparis-durum-guncelle/&lt;no&gt;</code> - Durum değiştirme<br>
+                • <code>/siparis-sil/&lt;no&gt;</code> - Tekil silme<br>
+                • <code>/siparis-toplu-sil</code> - Toplu silme
+              </td>
+            </tr>
+            <tr style="background:#f8f9fa">
+              <td style="padding:10px;border:1px solid #dee2e6"><code>models.py</code></td>
+              <td style="padding:10px;border:1px solid #dee2e6">
+                Veritabanı modelleri tanımlı:<br>
+                • <code>YeniSiparis</code> - Sipariş bilgileri (müşteri, tutar, kapıda ödeme)<br>
+                • <code>SiparisUrun</code> - Siparişteki ürünler (barkod, adet, fiyat, raf_kodu)<br>
+                • <code>RafUrun</code> - Raf stok bilgileri<br>
+                • <code>CentralStock</code> - Merkez stok bilgileri<br>
+                • <code>Product</code> - Ürün bilgileri (model, renk, beden, görsel)
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:10px;border:1px solid #dee2e6"><code>app.py</code></td>
+              <td style="padding:10px;border:1px solid #dee2e6">Ana Flask uygulaması. Blueprint'leri register eder</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="margin-bottom:15px">
+          <h5 style="color:#212529"><i class="bi bi-file-earmark-code"></i> Frontend Dosyaları (HTML/CSS/JS)</h5>
+          <table style="width:100%;border-collapse:collapse">
+            <tr style="background:#f8f9fa">
+              <th style="padding:10px;text-align:left;border:1px solid #dee2e6;width:30%">Dosya</th>
+              <th style="padding:10px;text-align:left;border:1px solid #dee2e6">Görevi</th>
+            </tr>
+            <tr>
+              <td style="padding:10px;border:1px solid #dee2e6"><code>yeni_siparis.html</code></td>
+              <td style="padding:10px;border:1px solid #dee2e6">
+                Ana sayfa template'i. İçerir:<br>
+                • Sipariş listesi (card layout)<br>
+                • Sipariş oluşturma formu<br>
+                • JavaScript fonksiyonları (AJAX, form işlemleri)<br>
+                • CSS stil tanımlamaları<br>
+                • Modal'lar (detay, toplu ürün ekleme)
+              </td>
+            </tr>
+            <tr style="background:#f8f9fa">
+              <td style="padding:10px;border:1px solid #dee2e6"><code>siparis_detay_partial.html</code></td>
+              <td style="padding:10px;border:1px solid #dee2e6">
+                Sipariş detay modal içeriği. Gösterir:<br>
+                • Sipariş bilgileri<br>
+                • Müşteri bilgileri (kapıda ödeme uyarısı ile)<br>
+                • Ürün listesi (görsel, barkod, raf kodu, fiyat)
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:10px;border:1px solid #dee2e6"><code>base.html</code></td>
+              <td style="padding:10px;border:1px solid #dee2e6">Ana layout template. Menu ve footer içerir</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="margin-bottom:15px">
+          <h5 style="color:#212529"><i class="bi bi-database"></i> Veritabanı Tabloları</h5>
+          <table style="width:100%;border-collapse:collapse">
+            <tr style="background:#f8f9fa">
+              <th style="padding:10px;text-align:left;border:1px solid #dee2e6;width:30%">Tablo</th>
+              <th style="padding:10px;text-align:left;border:1px solid #dee2e6">Önemli Sütunlar</th>
+            </tr>
+            <tr>
+              <td style="padding:10px;border:1px solid #dee2e6"><code>yeni_siparisler</code></td>
+              <td style="padding:10px;border:1px solid #dee2e6">
+                siparis_no, musteri_adi, musteri_soyadi, musteri_telefon, musteri_adres, 
+                toplam_tutar, durum, siparis_tarihi, <strong>kapida_odeme (Boolean)</strong>, 
+                <strong>kapida_odeme_tutari (Numeric)</strong>, notlar
+              </td>
+            </tr>
+            <tr style="background:#f8f9fa">
+              <td style="padding:10px;border:1px solid #dee2e6"><code>siparis_urunler</code></td>
+              <td style="padding:10px;border:1px solid #dee2e6">
+                siparis_id, urun_barkod, urun_adi, adet, birim_fiyat, toplam_fiyat, 
+                renk, beden, urun_gorseli, <strong>raf_kodu (String)</strong>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="background:#d1ecf1;padding:15px;border-left:4px solid #0dcaf0;border-radius:5px">
+          <strong><i class="bi bi-lightbulb text-info"></i> İŞ AKIŞI:</strong>
+          <ol style="margin:10px 0 0 20px">
+            <li>Kullanıcı form doldurur → JavaScript AJAX ile <code>/yeni-siparis</code> POST</li>
+            <li>Backend (<code>siparisler.py</code>) ürünleri alır</li>
+            <li>Her ürün için <code>allocate_from_shelf_and_decrement()</code> çağrılır</li>
+            <li>En yüksek stoğa sahip raf bulunur (<code>RafUrun</code>)</li>
+            <li>Stok düşürülür (hem <code>RafUrun</code> hem <code>CentralStock</code>)</li>
+            <li>Raf kodu ürün kaydına eklenir</li>
+            <li>Sipariş ve ürünler veritabanına kaydedilir</li>
+            <li>Sayfa yenilenir ve yeni sipariş listede görünür</li>
+          </ol>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 {% endblock %}

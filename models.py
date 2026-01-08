@@ -23,6 +23,32 @@ import enum
 db = SQLAlchemy()
 
 
+# ════════════════════════════════════════════════════════════════════
+# BARKOD ALIAS SİSTEMİ
+# ════════════════════════════════════════════════════════════════════
+class BarcodeAlias(db.Model):
+    """
+    Barkod alias (takma ad) sistemi.
+    Birden fazla barkod aynı ürünü gösterebilir.
+    
+    Örnek:
+    alias_barcode='ABC123' -> main_barcode='XYZ789'
+    alias_barcode='DEF456' -> main_barcode='XYZ789'
+    
+    Tüm barkod işlemleri ana barkod üzerinden yapılır.
+    """
+    __tablename__ = 'barcode_aliases'
+    
+    alias_barcode = db.Column(db.String(100), primary_key=True)  # Alternatif barkod
+    main_barcode = db.Column(db.String(100), nullable=False, index=True)  # Ana (gerçek) barkod
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.String(100))  # Hangi kullanıcı ekledi
+    note = db.Column(db.String(255))  # Açıklama (opsiyonel)
+    
+    def __repr__(self):
+        return f"<BarcodeAlias {self.alias_barcode} -> {self.main_barcode}>"
+
+
 # Bu Enum'ı ve Odeme modelini Kasa modelinden ÖNCE ekle
 class KasaDurum(enum.Enum):
     ODENMEDI = 'ödenmedi'
@@ -145,25 +171,6 @@ class CentralStock(db.Model):
     barcode = db.Column(db.String, primary_key=True)   # Ürün barkodu
     qty = db.Column(db.Integer, nullable=False, default=0)  # Merkezdeki toplam adet
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    last_push_date = db.Column(db.DateTime(timezone=True), nullable=True)  # Son Trendyol'a gönderim tarihi
-
-
-class StockPushLog(db.Model):
-    """Trendyol'a stok gönderim logları"""
-    __tablename__ = "stock_push_log"
-
-    id = db.Column(db.Integer, primary_key=True)
-    push_time = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
-    total_items = db.Column(db.Integer, nullable=False, default=0)  # Gönderilen toplam ürün sayısı
-    total_quantity = db.Column(db.Integer, nullable=False, default=0)  # Gönderilen toplam adet
-    reserved_quantity = db.Column(db.Integer, nullable=False, default=0)  # Rezerve edilen miktar
-    batch_count = db.Column(db.Integer, nullable=False, default=0)  # Kaç batch gönderildi
-    success = db.Column(db.Boolean, nullable=False, default=True)  # Başarılı mı?
-    error_message = db.Column(db.Text, nullable=True)  # Hata mesajı varsa
-    duration_seconds = db.Column(db.Float, nullable=True)  # İşlem süresi
-    
-    def __repr__(self):
-        return f'<StockPushLog {self.push_time} - {self.total_items} items, success={self.success}>'
 
 
 ### --- YENİ EKLENEN GÜNLÜK RAPOR MODELİ --- ###
@@ -414,6 +421,9 @@ class OrderBase(db.Model):
     # Kayıt Zaman Damgaları
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # 🆕 Sipariş Kaynağı (TRENDYOL / WOOCOMMERCE)
+    source = db.Column(db.String(20), default='TRENDYOL', nullable=False)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -585,6 +595,9 @@ class Product(db.Model):
     __tablename__ = 'products'
 
     barcode = db.Column(db.String, primary_key=True)
+    # WooCommerce mapping
+    woo_product_id = db.Column(db.Integer, index=True, nullable=True)  # WooCommerce product_id
+    woo_barcode = db.Column(db.String(64), index=True, nullable=True)   # Gerçek barkod (CSV'den)
     title = db.Column(db.String)
     hidden = db.Column(db.Boolean, default=False)
     product_main_id = db.Column(db.String)
@@ -635,6 +648,18 @@ class Product(db.Model):
     status = db.Column(db.String(50), nullable=True)
     gtin = db.Column(db.String(255), nullable=True)
     last_update_date = db.Column(db.DateTime, nullable=True)
+    
+    # --- PLATFORM BİLGİLERİ ---
+    # Ürünün satıldığı platformlar (JSON array: ["trendyol", "idefix", "hepsiburada", "woocommerce"])
+    platforms = db.Column(db.Text, nullable=True, default='["trendyol"]')
+    
+    # Idefix spesifik alanlar
+    idefix_product_id = db.Column(db.String(255), nullable=True)  # Idefix'teki ürün reference ID
+    idefix_status = db.Column(db.String(50), nullable=True)  # approved, pending, not_matched vs.
+    idefix_last_sync = db.Column(db.DateTime, nullable=True)  # Son senkronizasyon tarihi
+    
+    # Amazon spesifik alanlar
+    amazon_asin = db.Column(db.String(20), nullable=True)  # Amazon ASIN kodu
 
 
 # Eğer farklıysa, buradan da original_product_barcode'u kaldıralım.
@@ -677,6 +702,7 @@ class Archive(db.Model):
     details = db.Column(db.Text)
     archive_date = db.Column(db.DateTime, default=datetime.utcnow)
     archive_reason = db.Column(db.String)
+    source = db.Column(db.String(20), default='trendyol')  # 'trendyol' veya 'woocommerce'
     # quantity, commission gibi alanlar eksikse OrderArchived'dan eklenebilir.
 
     def __repr__(self):
@@ -695,6 +721,8 @@ class YeniSiparis(db.Model):
     toplam_tutar = db.Column(db.Float)
     durum = db.Column(db.String, default='Yeni') # Değişim durumu? (Bekliyor, Onaylandı, Kargoda...)
     notlar = db.Column(db.Text)
+    kapida_odeme = db.Column(db.Boolean, default=False)  # Kapıda ödeme var mı?
+    kapida_odeme_tutari = db.Column(db.Numeric(10, 2))  # Kapıda ödenecek tutar
     # İlişki
     urunler = db.relationship('SiparisUrun', backref='yeni_siparis', lazy=True, cascade="all, delete-orphan")
 
@@ -710,6 +738,7 @@ class SiparisUrun(db.Model):
     renk = db.Column(db.String)
     beden = db.Column(db.String)
     urun_gorseli = db.Column(db.String)
+    raf_kodu = db.Column(db.String)  # Hangi raftan alındığı
 
 
 
@@ -777,6 +806,39 @@ class UserLog(db.Model):
     user = db.relationship('User', backref=db.backref('logs', lazy='dynamic')) # lazy='dynamic' çok sayıda log varsa performansı artırır
 
 # Mevcut Kasa modelini silip bunu yapıştır
+# Ana Kasa Modeli - Tüm gelirlerin kaynağı
+class AnaKasa(db.Model):
+    __tablename__ = 'ana_kasa'
+    id = db.Column(db.Integer, primary_key=True)
+    bakiye = db.Column(db.Numeric(12, 2), nullable=False, default=0)  # Mevcut bakiye
+    guncelleme_tarihi = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    def __repr__(self):
+        return f'<AnaKasa {self.id} - Bakiye: {self.bakiye}>'
+
+
+# Ana Kasa İşlem Geçmişi - Her işlemi kaydet
+class AnaKasaIslem(db.Model):
+    __tablename__ = 'ana_kasa_islemler'
+    id = db.Column(db.Integer, primary_key=True)
+    islem_tipi = db.Column(db.String(20), nullable=False)  # 'gelir_eklendi', 'normal_kasaya_aktarildi', 'manuel_ekleme', 'manuel_cikis'
+    tutar = db.Column(db.Numeric(12, 2), nullable=False)
+    aciklama = db.Column(db.String(500), nullable=False)
+    onceki_bakiye = db.Column(db.Numeric(12, 2), nullable=False)
+    yeni_bakiye = db.Column(db.Numeric(12, 2), nullable=False)
+    tarih = db.Column(db.DateTime, default=datetime.now)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    # İlişkili kasa kaydı (eğer varsa)
+    kasa_id = db.Column(db.Integer, db.ForeignKey('kasa.id'), nullable=True)
+    
+    kullanici = db.relationship('User', backref=db.backref('ana_kasa_islemleri', lazy='dynamic'))
+    kasa_kaydi = db.relationship('Kasa', backref=db.backref('ana_kasa_islemi', uselist=False))
+    
+    def __repr__(self):
+        return f'<AnaKasaIslem {self.id} - {self.islem_tipi}: {self.tutar}>'
+
+
 class Kasa(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tip = db.Column(db.String(10), nullable=False) # gelir, gider
@@ -786,6 +848,9 @@ class Kasa(db.Model):
     tarih = db.Column(db.DateTime, default=datetime.now)
     kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     fis_yolu = db.Column(db.String(255))
+    
+    # Ana Kasadan çekildi mi? (Sadece gelir tipleri için)
+    ana_kasadan = db.Column(db.Boolean, default=False, nullable=False)
 
     # DURUM ARTIK ENUM OLDU
     durum = db.Column(db.Enum(KasaDurum, native_enum=False), default=KasaDurum.ODENMEDI, nullable=False)
@@ -895,5 +960,115 @@ class MasterTask(db.Model):
     default_priority = db.Column(db.Integer, default=2, nullable=False)
     proof_required = db.Column(db.Boolean, default=False, nullable=False)
     active = db.Column(db.Boolean, default=True, nullable=False)
+
+
+# ════════════════════════════════════════════════════════════════════
+# STOK SENKRONİZASYON SİSTEMİ MODELLERİ
+# ════════════════════════════════════════════════════════════════════
+
+class PlatformConfig(db.Model):
+    """Platform yapılandırmaları"""
+    __tablename__ = 'platform_configs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    platform = db.Column(db.String(50), unique=True, nullable=False)  # trendyol, idefix, amazon, woocommerce
+    is_active = db.Column(db.Boolean, default=True)
+    batch_size = db.Column(db.Integer, default=100)
+    rate_limit_delay = db.Column(db.Float, default=0.1)
+    max_retries = db.Column(db.Integer, default=3)
+    last_sync_at = db.Column(db.DateTime)
+    sync_interval_minutes = db.Column(db.Integer, default=60)
+    extra_config = db.Column(db.JSON, default={})
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SyncSession(db.Model):
+    """Senkronizasyon oturumu"""
+    __tablename__ = 'sync_sessions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.String(36), unique=True, nullable=False)
+    platform = db.Column(db.String(50), nullable=False)
+    status = db.Column(db.String(20), default='pending')
+    
+    total_products = db.Column(db.Integer, default=0)
+    sent_count = db.Column(db.Integer, default=0)
+    success_count = db.Column(db.Integer, default=0)
+    error_count = db.Column(db.Integer, default=0)
+    skipped_count = db.Column(db.Integer, default=0)
+    
+    started_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
+    duration_seconds = db.Column(db.Float)
+    
+    triggered_by = db.Column(db.String(50))
+    triggered_by_user = db.Column(db.String(100))
+    error_message = db.Column(db.Text)
+    
+    details = db.relationship('SyncDetail', backref='session', lazy='dynamic', cascade='all, delete-orphan')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    @property
+    def progress_percent(self):
+        if self.total_products == 0:
+            return 0
+        return round((self.sent_count / self.total_products) * 100, 1)
+    
+    @property
+    def success_rate(self):
+        if self.sent_count == 0:
+            return 0
+        return round((self.success_count / self.sent_count) * 100, 1)
+    
+    def to_dict(self):
+        return {
+            'id': self.id, 'session_id': self.session_id, 'platform': self.platform,
+            'status': self.status, 'total_products': self.total_products,
+            'sent_count': self.sent_count, 'success_count': self.success_count,
+            'error_count': self.error_count, 'skipped_count': self.skipped_count,
+            'progress_percent': self.progress_percent, 'success_rate': self.success_rate,
+            'started_at': self.started_at.isoformat() if self.started_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'duration_seconds': self.duration_seconds, 'triggered_by': self.triggered_by,
+            'triggered_by_user': self.triggered_by_user, 'error_message': self.error_message,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class SyncDetail(db.Model):
+    """Senkronizasyon detayı - Her ürün için kayıt"""
+    __tablename__ = 'sync_details'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('sync_sessions.id'), nullable=False)
+    
+    barcode = db.Column(db.String(100), nullable=False, index=True)
+    platform = db.Column(db.String(50), nullable=False)
+    
+    stock_before = db.Column(db.Integer)
+    stock_sent = db.Column(db.Integer, nullable=False)
+    
+    status = db.Column(db.String(20), default='pending')
+    error_message = db.Column(db.Text)
+    response_data = db.Column(db.JSON)
+    
+    sent_at = db.Column(db.DateTime)
+    response_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        db.Index('ix_sync_detail_session_status', 'session_id', 'status'),
+        db.Index('ix_sync_detail_barcode_platform', 'barcode', 'platform'),
+    )
+    
+    def to_dict(self):
+        return {
+            'id': self.id, 'barcode': self.barcode, 'platform': self.platform,
+            'stock_before': self.stock_before, 'stock_sent': self.stock_sent,
+            'status': self.status, 'error_message': self.error_message,
+            'sent_at': self.sent_at.isoformat() if self.sent_at else None
+        }
+
 
         

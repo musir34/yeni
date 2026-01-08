@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WooCommerce Siparişler</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .order-card {
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        .order-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .status-badge {
+            font-size: 0.85rem;
+            padding: 0.35rem 0.75rem;
+        }
+        /* 🔥 Statü dropdown için stiller */
+        .status-badge.dropdown-toggle::after {
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+        .status-badge.dropdown-toggle:hover {
+            opacity: 0.85;
+        }
+        .dropdown-menu .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+        }
+        .dropdown-menu .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+        .dropdown-menu .badge {
+            width: 12px;
+            height: 12px;
+            padding: 0;
+            border-radius: 50%;
+        }
+        .search-box {
+            max-width: 400px;
+        }
+        /* 🔥 Özel Modal ve Bildirim Stilleri */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .custom-modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .custom-modal-box {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transform: scale(0.8) translateY(-20px);
+            transition: all 0.3s ease;
+            pointer-events: auto;
+            position: relative;
+        }
+        .custom-modal-overlay.show .custom-modal-box {
+            transform: scale(1) translateY(0);
+        }
+        .custom-modal-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+        }
+        .custom-modal-icon.warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffc107 100%);
+            color: #856404;
+        }
+        .custom-modal-icon.danger {
+            background: linear-gradient(135deg, #f8d7da 0%, #dc3545 100%);
+            color: white;
+        }
+        .custom-modal-icon.success {
+            background: linear-gradient(135deg, #d4edda 0%, #28a745 100%);
+            color: white;
+        }
+        .custom-modal-icon.info {
+            background: linear-gradient(135deg, #d1ecf1 0%, #17a2b8 100%);
+            color: white;
+        }
+        .custom-modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 0.75rem;
+            color: #333;
+        }
+        .custom-modal-message {
+            text-align: center;
+            color: #666;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+        .custom-modal-buttons {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            position: relative;
+            z-index: 10;
+        }
+        .custom-modal-btn {
+            padding: 0.6rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            min-width: 100px;
+            pointer-events: auto;
+            position: relative;
+            z-index: 11;
+        }
+        .custom-modal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .custom-modal-btn:active {
+            transform: translateY(0);
+        }
+        .custom-modal-btn.primary {
+            background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+            color: white;
+        }
+        .custom-modal-btn.danger {
+            background: linear-gradient(135deg, #dc3545 0%, #bb2d3b 100%);
+            color: white;
+        }
+        .custom-modal-btn.secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        /* Toast Bildirimleri */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .custom-toast {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            transform: translateX(120%);
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            min-width: 280px;
+        }
+        .custom-toast.show {
+            transform: translateX(0);
+        }
+        .custom-toast.success {
+            border-left: 4px solid #28a745;
+        }
+        .custom-toast.error {
+            border-left: 4px solid #dc3545;
+        }
+        .custom-toast.warning {
+            border-left: 4px solid #ffc107;
+        }
+        .custom-toast-icon {
+            font-size: 1.5rem;
+        }
+        .custom-toast.success .custom-toast-icon {
+            color: #28a745;
+        }
+        .custom-toast.error .custom-toast-icon {
+            color: #dc3545;
+        }
+        .custom-toast.warning .custom-toast-icon {
+            color: #ffc107;
+        }
+        .custom-toast-content {
+            flex: 1;
+        }
+        .custom-toast-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        .custom-toast-message {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .custom-toast-close {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
+        }
+        .filter-section {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="h3 mb-0">
+                    {% if current_status == 'trash' %}
+                    <i class="bi bi-trash3 text-secondary"></i>
+                    Çöp Kutusu
+                    <a href="{{ url_for('woo.orders') }}" class="btn btn-sm btn-outline-primary ms-2">
+                        <i class="bi bi-arrow-left"></i> Siparişlere Dön
+                    </a>
+                    {% else %}
+                    <i class="bi bi-bag-check text-primary"></i>
+                    WooCommerce Siparişler
+                    <button type="button" class="btn btn-sm btn-outline-info ms-2" data-bs-toggle="modal" data-bs-target="#infoModal">
+                        <i class="bi bi-info-circle"></i>
+                    </button>
+                    {% endif %}
+                </h1>
+            </div>
+            <div class="col-auto">
+                <a href="{{ url_for('home.home') }}" class="btn btn-secondary me-2">
+                    <i class="bi bi-house"></i> Anasayfa
+                </a>
+                <a href="{{ url_for('siparis_hazirla.index') }}" class="btn btn-danger me-2">
+                    <i class="bi bi-box-seam"></i> Sipariş Hazırla
+                </a>
+                <!-- 🗑️ Çöp Kutusu Butonu -->
+                <a href="{{ url_for('woo.orders', status='trash') }}" class="btn btn-outline-dark me-2 {% if current_status == 'trash' %}active{% endif %}">
+                    <i class="bi bi-trash3"></i> Çöp Kutusu
+                </a>
+                <a href="{{ url_for('woo.sync_orders') }}?days=30" class="btn btn-success">
+                    <i class="bi bi-arrow-clockwise"></i> Siparişleri Senkronize Et
+                </a>
+            </div>
+        </div>
+
+        <!-- Filtreler -->
+        <div class="filter-section">
+            <form method="get" action="{{ url_for('woo.orders') }}" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Durum Filtresi</label>
+                    <select name="status" class="form-select">
+                        <option value="">Tümü</option>
+                        {% for status_key, status_name in statuses.items() %}
+                        {# 🔥 Çöp kutusu (trash) dropdown'da gösterilmez, ayrı buton var #}
+                        {% if status_key != 'trash' %}
+                        <option value="{{ status_key }}" {% if current_status == status_key %}selected{% endif %}>
+                            {{ status_name }}
+                        </option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Arama</label>
+                    <input type="text" 
+                           name="search" 
+                           class="form-control" 
+                           placeholder="Sipariş numarası, müşteri adı veya email..."
+                           value="{{ search_term or '' }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Filtrele
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sipariş Listesi -->
+        <div class="row">
+            {% if orders %}
+                {% for order in orders %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card order-card h-100">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <strong>#{{ order.order_number }}</strong>
+                            <!-- 🔥 Tıklanabilir Statü Dropdown -->
+                            <div class="dropdown">
+                                <span class="badge status-badge dropdown-toggle
+                                    {% if order.status == 'completed' %}bg-success
+                                    {% elif order.status == 'processing' %}bg-info
+                                    {% elif order.status == 'pending' %}bg-warning
+                                    {% elif order.status == 'cancelled' %}bg-danger
+                                    {% elif order.status == 'shipped' %}bg-primary
+                                    {% elif order.status == 'on-hold' %}bg-secondary
+                                    {% elif order.status == 'trash' %}bg-dark
+                                    {% else %}bg-dark{% endif %}"
+                                    style="cursor: pointer;"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                    onclick="event.stopPropagation();">
+                                    {{ statuses.get(order.status, order.status) }}
+                                </span>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    {% for status_key, status_name in statuses.items() %}
+                                    {% if status_key != order.status %}
+                                    <li>
+                                        <a class="dropdown-item status-change-item" 
+                                           href="#" 
+                                           data-order-id="{{ order.id }}"
+                                           data-new-status="{{ status_key }}"
+                                           onclick="event.stopPropagation(); changeStatus({{ order.id }}, '{{ status_key }}');">
+                                            <span class="badge 
+                                                {% if status_key == 'completed' %}bg-success
+                                                {% elif status_key == 'processing' %}bg-info
+                                                {% elif status_key == 'pending' %}bg-warning
+                                                {% elif status_key == 'cancelled' %}bg-danger
+                                                {% elif status_key == 'shipped' %}bg-primary
+                                                {% elif status_key == 'on-hold' %}bg-secondary
+                                                {% elif status_key == 'trash' %}bg-dark
+                                                {% else %}bg-dark{% endif %} me-2">
+                                            </span>
+                                            {{ status_name }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="card-body" onclick="window.location.href='{{ url_for('woo.order_detail', order_id=order.id) }}'" style="cursor: pointer;">
+                            <div class="mb-2">
+                                <i class="bi bi-person text-muted"></i>
+                                {% if order.customer.first_name and order.customer.last_name %}
+                                    <strong>{{ order.customer.first_name }} {{ order.customer.last_name }}</strong>
+                                {% else %}
+                                    <span class="text-warning">
+                                        <i class="bi bi-exclamation-triangle"></i> Bilgi Eksik
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="mb-2 small text-muted">
+                                <i class="bi bi-envelope"></i>
+                                {{ order.customer.email or 'Belirtilmemiş' }}
+                            </div>
+                            <div class="mb-2 small text-muted">
+                                <i class="bi bi-telephone"></i>
+                                {{ order.customer.phone or 'Belirtilmemiş' }}
+                            </div>
+                            <div class="mb-2 small">
+                                <i class="bi bi-credit-card text-muted"></i>
+                                <strong>{{ order.payment_method or 'Belirtilmemiş' }}</strong>
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="text-muted">Toplam</small>
+                                    <div class="h5 mb-0 text-success">
+                                        {{ order.total }} {{ order.currency }}
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">Ürün Sayısı</small>
+                                    <div class="h6 mb-0">
+                                        {{ order.line_items|length }} adet
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2 small text-muted">
+                                <i class="bi bi-calendar"></i>
+                                {{ order.date_created[:10] if order.date_created else 'Belirtilmemiş' }}
+                            </div>
+                            
+                            <!-- Hızlı Sipariş Bilgi Gir Butonu -->
+                            {% if not order.customer.first_name or not order.customer.phone or not order.billing_address.address_1 %}
+                            <div class="mt-2">
+                                <a href="{{ url_for('woo.order_detail', order_id=order.id) }}" 
+                                   class="btn btn-warning btn-sm w-100" 
+                                   onclick="event.stopPropagation();">
+                                    <i class="bi bi-person-plus"></i> Bilgi Gir
+                                </a>
+                            </div>
+                            {% else %}
+                            <!-- Teslimat Etiketi Butonu -->
+                            <div class="mt-2">
+                                <a href="{{ url_for('woo.shipping_label', order_id=order.id) }}" 
+                                   class="btn btn-success btn-sm w-100" 
+                                   target="_blank"
+                                   onclick="event.stopPropagation();">
+                                    <i class="bi bi-printer"></i> Teslimat Etiketi
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <i class="bi bi-info-circle"></i>
+                        Sipariş bulunamadı. Filtrelerinizi değiştirmeyi deneyin.
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Sayfalama -->
+        {% if orders %}
+        <div class="row mt-4">
+            <div class="col text-center">
+                <div class="btn-group" role="group">
+                    {% if current_page > 1 %}
+                    <a href="{{ url_for('woo.orders', page=current_page-1, status=current_status, search=search_term) }}" 
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-chevron-left"></i> Önceki
+                    </a>
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-primary" disabled>
+                        Sayfa {{ current_page }}
+                    </button>
+                    
+                    {% if orders|length >= 50 %}
+                    <a href="{{ url_for('woo.orders', page=current_page+1, status=current_status, search=search_term) }}" 
+                       class="btn btn-outline-primary">
+                        Sonraki <i class="bi bi-chevron-right"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Bilgi Modal -->
+    <div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="infoModalLabel">
+                        <i class="bi bi-info-circle-fill"></i> WooCommerce Entegrasyonu - Kullanım Kılavuzu
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    
+                    <!-- Genel Bakış -->
+                    <h5 class="text-primary"><i class="bi bi-diagram-3"></i> Sistem Mimarisi</h5>
+                    <p>WooCommerce ve Trendyol siparişleri <strong>tamamen ayrı</strong> sistemlerde yönetilir:</p>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">🛒 WooCommerce</div>
+                                <div class="card-body">
+                                    <ul class="small mb-0">
+                                        <li>Tablo: <code>woo_orders</code></li>
+                                        <li>Tek tabloda tüm yaşam döngüsü</li>
+                                        <li>Sadece status değişir</li>
+                                        <li>Tablolar arası taşıma YOK</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning">📦 Trendyol</div>
+                                <div class="card-body">
+                                    <ul class="small mb-0">
+                                        <li>Tablolar: <code>orders_created → picking → packing</code></li>
+                                        <li>Aşamalı tablo geçişleri</li>
+                                        <li>Status + tablo değişir</li>
+                                        <li>Tablolar arası taşıma VAR</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Sipariş Akışı -->
+                    <h5 class="text-primary"><i class="bi bi-arrow-right-circle"></i> Sipariş Yaşam Döngüsü</h5>
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge bg-secondary me-2">1</span>
+                                <strong>pending</strong>
+                                <span class="ms-2 text-muted">→ Ödeme bekleniyor</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge bg-warning me-2">2</span>
+                                <strong>on-hold</strong>
+                                <span class="ms-2 text-success">→ ⭐ Sipariş Hazırla ekranına düşer</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge bg-info me-2">3</span>
+                                <strong>processing</strong>
+                                <span class="ms-2 text-muted">→ Paketleme tamamlandı, kargo bekleniyor</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge bg-primary me-2">4</span>
+                                <strong>shipped</strong>
+                                <span class="ms-2 text-muted">→ Kargoya verildi</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-success me-2">5</span>
+                                <strong>completed</strong>
+                                <span class="ms-2 text-muted">→ Müşteriye teslim edildi</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Sipariş Hazırla -->
+                    <h5 class="text-primary"><i class="bi bi-box-seam"></i> Sipariş Hazırla Öncelik Sistemi</h5>
+                    <div class="alert alert-info">
+                        <strong>Öncelik Sırası:</strong>
+                        <ol class="mb-0 mt-2">
+                            <li><strong>WooCommerce on-hold siparişler</strong> (öncelikli)</li>
+                            <li><strong>Trendyol Created siparişler</strong> (WooCommerce yoksa)</li>
+                        </ol>
+                        <p class="mt-3 mb-0"><i class="bi bi-lightbulb"></i> <small>WooCommerce siparişi varsa, Trendyol beklemeye alınır.</small></p>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header bg-warning">
+                            <i class="bi bi-exclamation-triangle"></i> Paketleme Onayı Sonrası
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li>WooCommerce API'ye status güncelleme gönderilir: <code>on-hold → processing</code></li>
+                                <li>Yerel veritabanı da güncellenir</li>
+                                <li>Sipariş <code>woo_orders</code> tablosunda <strong>KALIR</strong> (taşınmaz)</li>
+                                <li>Website'de müşteri "Hazırlanıyor" durumunu görür</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Etiket Sistemi -->
+                    <h5 class="text-primary"><i class="bi bi-printer"></i> Akıllı Etiket Sistemi</h5>
+                    <p>"Yazdır" butonu siparişin kaynağını otomatik algılar:</p>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6><i class="bi bi-cart"></i> WooCommerce Etiketi</h6>
+                                    <ul class="small">
+                                        <li>100x100mm termal format</li>
+                                        <li>Kapıda ödeme algılama (COD)</li>
+                                        <li>Tutar uyarısı gösterimi</li>
+                                        <li>Siyah-beyaz tasarım</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6><i class="bi bi-truck"></i> Trendyol Etiketi</h6>
+                                    <ul class="small">
+                                        <li>Standart kargo etiketi</li>
+                                        <li>Trendyol API bilgileri</li>
+                                        <li>Kargo barkodu dahil</li>
+                                        <li>Firma logosu</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Barkod Eşleşmesi -->
+                    <h5 class="text-primary"><i class="bi bi-upc-scan"></i> Ürün Barkod Eşleşmesi</h5>
+                    <div class="alert alert-warning">
+                        <strong><i class="bi bi-exclamation-triangle"></i> Önemli:</strong> WooCommerce API barkod bilgisi vermez!
+                    </div>
+                    <p><strong>Çözüm:</strong> Product tablosunda WooCommerce product_id → barkod mapping</p>
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h6>Nasıl Çalışır?</h6>
+                            <ol>
+                                <li>WooCommerce'den ürün ID'si gelir (örn: 12345)</li>
+                                <li>Product tablosunda <code>woo_product_id = 12345</code> aranır</li>
+                                <li>Eşleşen kayıttaki <code>barcode</code> kullanılır</li>
+                                <li>Barkod okutma ekranında bu barkod beklenir</li>
+                            </ol>
+                            <p class="mb-0">
+                                <i class="bi bi-pencil-square text-primary"></i> 
+                                <strong>Manuel Düzenleme:</strong> Ürün listesinde "Woo ID" sütunundaki edit butonuyla mapping güncellenebilir.
+                            </p>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Senkronizasyon -->
+                    <h5 class="text-primary"><i class="bi bi-arrow-clockwise"></i> Otomatik Senkronizasyon</h5>
+                    
+                    <div class="alert alert-success mb-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-robot fs-4 me-2"></i>
+                            <strong>Trendyol Gibi Otomatik Çalışır!</strong>
+                        </div>
+                        <p class="mb-0 small">
+                            WooCommerce siparişleri, Trendyol siparişleri gibi <strong>otomatik olarak</strong> sisteme çekilir ve veritabanına kaydedilir. Manuel işlem gerekmez!
+                        </p>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <strong><i class="bi bi-gear"></i> Scheduler Job: woo_sync</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-primary">Çalışma Mantığı:</h6>
+                                    <ul class="small mb-0">
+                                        <li><strong>Sıklık:</strong> Her 10 dakika</li>
+                                        <li><strong>Fonksiyon:</strong> <code>sync_woocommerce_orders()</code></li>
+                                        <li><strong>Konum:</strong> gorev.py</li>
+                                        <li><strong>Durum:</strong> <span class="badge bg-success">Aktif</span></li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-warning">Çekilen Statüler:</h6>
+                                    <ul class="small mb-0">
+                                        <li><code>on-hold</code> - Sipariş hazırla ekranına düşer</li>
+                                        <li><code>processing</code> - Paketleme tamamlanmış</li>
+                                        <li><code>pending</code> - Ödeme bekleniyor</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <strong><i class="bi bi-diagram-3"></i> Trendyol ile Karşılaştırma</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Özellik</th>
+                                            <th><i class="bi bi-box text-warning"></i> Trendyol</th>
+                                            <th><i class="bi bi-cart text-primary"></i> WooCommerce</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="small">
+                                        <tr>
+                                            <td><strong>Job Adı</strong></td>
+                                            <td><code>pull_orders_job</code></td>
+                                            <td><code>woo_sync</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Sıklık</strong></td>
+                                            <td>Her 4 dakika</td>
+                                            <td>Her 10 dakika</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Otomatik mi?</strong></td>
+                                            <td><span class="badge bg-success">✓ Evet</span></td>
+                                            <td><span class="badge bg-success">✓ Evet</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Kayıt Tablosu</strong></td>
+                                            <td><code>orders_created</code></td>
+                                            <td><code>woo_orders</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Manuel Tetik</strong></td>
+                                            <td>-</td>
+                                            <td>"Siparişleri Senkronize Et" butonu</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border-info">
+                        <div class="card-header bg-info text-white">
+                            <i class="bi bi-info-circle"></i> İş Akışı
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex flex-column gap-2">
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-secondary me-2">1</span>
+                                    <code>Scheduler</code>
+                                    <i class="bi bi-arrow-right mx-2"></i>
+                                    <span class="small">Her 10 dakikada job tetiklenir</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-secondary me-2">2</span>
+                                    <code>sync_woocommerce_orders()</code>
+                                    <i class="bi bi-arrow-right mx-2"></i>
+                                    <span class="small">Fonksiyon çalışır</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-secondary me-2">3</span>
+                                    <code>WooCommerce API</code>
+                                    <i class="bi bi-arrow-right mx-2"></i>
+                                    <span class="small">Son 7 günün siparişleri çekilir</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-secondary me-2">4</span>
+                                    <code>save_order_to_db()</code>
+                                    <i class="bi bi-arrow-right mx-2"></i>
+                                    <span class="small">Her sipariş kaydedilir/güncellenir</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-success me-2">5</span>
+                                    <code>woo_orders</code>
+                                    <i class="bi bi-arrow-right mx-2"></i>
+                                    <span class="small">Veritabanında hazır!</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Loglama -->
+                    <h5 class="text-primary"><i class="bi bi-journal-text"></i> Log Örnekleri</h5>
+                    <div class="card mb-4">
+                        <div class="card-body bg-dark text-light font-monospace small">
+                            <div class="mb-2"><span class="text-info">🛒 WooCommerce sipariş senkronizasyonu başlıyor...</span></div>
+                            <div class="mb-2"><span class="text-muted">[SAVE_ORDER] Sipariş kaydediliyor: order_id=49798, number=49798</span></div>
+                            <div class="mb-2"><span class="text-muted">[SAVE_ORDER] Yeni kayıt oluşturuluyor...</span></div>
+                            <div class="mb-2"><span class="text-success">[SAVE_ORDER] ✅ Yeni kayıt başarılı: DB ID=60, #49798</span></div>
+                            <div class="mb-2"><span class="text-info">🛒 WooCommerce on-hold: 2 sipariş kaydedildi</span></div>
+                            <div class="mb-2"><span class="text-info">🛒 WooCommerce processing: 5 sipariş kaydedildi</span></div>
+                            <div><span class="text-success">🛒 WooCommerce senkronizasyonu tamamlandı: 7 sipariş</span></div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Kısayol Tuşları -->
+                    <h5 class="text-primary"><i class="bi bi-keyboard"></i> İpuçları</h5>
+                    <ul>
+                        <li><strong>Filtreler:</strong> Durum ve arama filtrelerini kullanarak siparişleri hızlıca bulun</li>
+                        <li><strong>Detay Görünüm:</strong> Sipariş kartına tıklayarak tüm detayları görün</li>
+                        <li><strong>Teslimat Etiketi:</strong> "processing" durumundaki siparişler için etiket yazdırılabilir</li>
+                        <li><strong>Kapıda Ödeme:</strong> COD siparişlerde etiket üzerinde tutar uyarısı görünür</li>
+                    </ul>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Özel Onay Modal -->
+    <div id="customModalOverlay" class="custom-modal-overlay">
+        <div class="custom-modal-box">
+            <div id="customModalIcon" class="custom-modal-icon warning">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <h5 id="customModalTitle" class="custom-modal-title">Onay Gerekiyor</h5>
+            <p id="customModalMessage" class="custom-modal-message">Bu işlemi gerçekleştirmek istediğinize emin misiniz?</p>
+            <div class="custom-modal-buttons">
+                <button type="button" id="customModalCancel" class="custom-modal-btn secondary">İptal</button>
+                <button type="button" id="customModalConfirm" class="custom-modal-btn primary">Tamam</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // 🔥 Özel Modal Sistemi
+        let modalResolve = null;
+        
+        // Sayfa yüklendiğinde event listener'ları bir kez ekle
+        document.addEventListener('DOMContentLoaded', function() {
+            const overlay = document.getElementById('customModalOverlay');
+            const modalBox = document.querySelector('.custom-modal-box');
+            const cancelBtn = document.getElementById('customModalCancel');
+            const confirmBtn = document.getElementById('customModalConfirm');
+            
+            // Modal box'a tıklamayı durdur
+            modalBox.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+            
+            // Cancel butonu
+            cancelBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                overlay.classList.remove('show');
+                if (modalResolve) {
+                    modalResolve(false);
+                    modalResolve = null;
+                }
+            });
+            
+            // Confirm butonu
+            confirmBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                overlay.classList.remove('show');
+                if (modalResolve) {
+                    modalResolve(true);
+                    modalResolve = null;
+                }
+            });
+            
+            // Overlay'e tıklama ile kapatma
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    overlay.classList.remove('show');
+                    if (modalResolve) {
+                        modalResolve(false);
+                        modalResolve = null;
+                    }
+                }
+            });
+        });
+        
+        function showModal(options) {
+            return new Promise((resolve) => {
+                modalResolve = resolve;
+                
+                const overlay = document.getElementById('customModalOverlay');
+                const icon = document.getElementById('customModalIcon');
+                const title = document.getElementById('customModalTitle');
+                const message = document.getElementById('customModalMessage');
+                const cancelBtn = document.getElementById('customModalCancel');
+                const confirmBtn = document.getElementById('customModalConfirm');
+                
+                // İkon ayarla
+                const iconMap = {
+                    'warning': { icon: 'bi-exclamation-triangle', class: 'warning' },
+                    'danger': { icon: 'bi-trash3', class: 'danger' },
+                    'success': { icon: 'bi-check-circle', class: 'success' },
+                    'info': { icon: 'bi-info-circle', class: 'info' },
+                    'question': { icon: 'bi-question-circle', class: 'warning' }
+                };
+                
+                const iconConfig = iconMap[options.type || 'warning'];
+                icon.className = `custom-modal-icon ${iconConfig.class}`;
+                icon.innerHTML = `<i class="bi ${iconConfig.icon}"></i>`;
+                
+                // İçerikleri ayarla
+                title.textContent = options.title || 'Onay';
+                message.textContent = options.message || 'Devam etmek istiyor musunuz?';
+                cancelBtn.textContent = options.cancelText || 'İptal';
+                confirmBtn.textContent = options.confirmText || 'Tamam';
+                
+                // Buton stillerini ayarla
+                confirmBtn.className = `custom-modal-btn ${options.confirmClass || 'primary'}`;
+                
+                // Sadece onay butonu göster (alert modu)
+                if (options.alertMode) {
+                    cancelBtn.style.display = 'none';
+                } else {
+                    cancelBtn.style.display = 'inline-block';
+                }
+                
+                // Modal'ı göster
+                overlay.classList.add('show');
+            });
+        }
+        
+        // 🔥 Toast Bildirim Sistemi
+        function showToast(options) {
+            const container = document.getElementById('toastContainer');
+            
+            const toast = document.createElement('div');
+            toast.className = `custom-toast ${options.type || 'success'}`;
+            
+            const iconMap = {
+                'success': 'bi-check-circle-fill',
+                'error': 'bi-x-circle-fill',
+                'warning': 'bi-exclamation-triangle-fill'
+            };
+            
+            toast.innerHTML = `
+                <i class="bi ${iconMap[options.type || 'success']} custom-toast-icon"></i>
+                <div class="custom-toast-content">
+                    <div class="custom-toast-title">${options.title || 'Bildirim'}</div>
+                    <div class="custom-toast-message">${options.message || ''}</div>
+                </div>
+                <button class="custom-toast-close" onclick="this.parentElement.remove()">
+                    <i class="bi bi-x"></i>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Animasyon için küçük gecikme
+            setTimeout(() => toast.classList.add('show'), 50);
+            
+            // Otomatik kaldırma
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, options.duration || 4000);
+        }
+        
+        // 🔥 Hızlı Statü Değiştirme Fonksiyonu
+        async function changeStatus(orderId, newStatus) {
+            // Çöp kutusuna taşıma için onay iste
+            if (newStatus === 'trash') {
+                const confirmed = await showModal({
+                    type: 'danger',
+                    title: 'Çöp Kutusuna Taşı',
+                    message: 'Bu siparişi çöp kutusuna taşımak istediğinize emin misiniz?',
+                    confirmText: 'Evet, Taşı',
+                    cancelText: 'Vazgeç',
+                    confirmClass: 'danger'
+                });
+                
+                if (!confirmed) return;
+            }
+            
+            try {
+                const response = await fetch(`/site/orders/${orderId}/update-status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast({
+                        type: 'success',
+                        title: 'Başarılı!',
+                        message: 'Sipariş durumu güncellendi'
+                    });
+                    // Kısa bir gecikme sonra sayfa yenile
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast({
+                        type: 'error',
+                        title: 'Hata!',
+                        message: data.message || 'İşlem başarısız oldu'
+                    });
+                }
+            } catch (error) {
+                showToast({
+                    type: 'error',
+                    title: 'Bağlantı Hatası',
+                    message: error.message || 'Sunucuya bağlanılamadı'
+                });
+            }
+        }
+    </script>
+</body>
+</html>

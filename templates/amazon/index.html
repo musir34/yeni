@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}Amazon Satıcı Paneli{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background-color: #f8f9fa;
+    }
+    
+    .loading-spinner {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #333;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 0.5rem;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* Amazon Header */
+    .amazon-header {
+        background: linear-gradient(135deg, #FF9900 0%, #232F3E 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 15px rgba(255, 153, 0, 0.3);
+    }
+    
+    .amazon-header h4 {
+        margin: 0;
+        font-weight: 600;
+    }
+    
+    /* Kart Stilleri */
+    .card {
+        border: 1px solid #e9ecef;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        border-radius: 12px;
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+    }
+    
+    /* Panel Kartları */
+    .panel-card {
+        border-radius: 12px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .panel-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .panel-card .card-body {
+        padding: 2rem 1.5rem;
+    }
+    
+    .panel-card i {
+        opacity: 0.9;
+    }
+    
+    #syncResult {
+        margin-top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Amazon Header -->
+    <div class="amazon-header d-flex justify-content-between align-items-center flex-wrap">
+        <div>
+            <h4><i class="fab fa-amazon me-2"></i> Amazon Satıcı Paneli</h4>
+            <p class="mb-0 opacity-75">Marketplace: Türkiye (A33AVAJ2PDY3EV)</p>
+        </div>
+        <div class="d-flex flex-wrap" style="gap: 0.5rem;">
+            <a href="{{ url_for('home.home') }}" class="btn btn-light">
+                <i class="fas fa-home"></i> Anasayfa
+            </a>
+            <button class="btn btn-warning" id="pushStockBtn" onclick="pushStock()">
+                <i class="fas fa-upload"></i> Stok Gönder
+            </button>
+            <button class="btn btn-light" id="syncOrdersBtn" onclick="syncOrders()">
+                <i class="fas fa-download"></i> Siparişleri Çek
+            </button>
+            <button class="btn btn-light" id="testConnBtn" onclick="testConnection()">
+                <i class="fas fa-plug"></i> Bağlantı Testi
+            </button>
+        </div>
+    </div>
+
+    {% if not is_configured %}
+    <div class="alert alert-warning">
+        <h5><i class="fas fa-exclamation-triangle"></i> API Ayarları Yapılmamış</h5>
+        <p class="mb-2">Amazon SP-API bağlantısı için .env dosyanızı yapılandırın.</p>
+        <a href="{{ url_for('amazon.settings') }}" class="btn btn-primary">
+            <i class="fas fa-cog"></i> Ayarlara Git
+        </a>
+    </div>
+    {% else %}
+    
+    <div id="syncResult"></div>
+    
+    <!-- Panel Kartları -->
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card panel-card bg-info text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-shopping-cart fa-3x mb-3"></i>
+                    <h5 class="mb-3">Siparişler</h5>
+                    <p class="mb-3 opacity-75">Amazon siparişlerini görüntüle</p>
+                    <a href="{{ url_for('amazon.orders') }}" class="btn btn-light">
+                        <i class="fas fa-eye"></i> Görüntüle
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card panel-card bg-success text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-box fa-3x mb-3"></i>
+                    <h5 class="mb-3">Ürünler</h5>
+                    <p class="mb-3 opacity-75">Ürün listesini görüntüle</p>
+                    <a href="{{ url_for('amazon.products') }}" class="btn btn-light">
+                        <i class="fas fa-list"></i> Görüntüle
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card panel-card h-100" style="background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);">
+                <div class="card-body text-center text-white">
+                    <i class="fas fa-link fa-3x mb-3"></i>
+                    <h5 class="mb-3">ASIN Eşleştirme</h5>
+                    <p class="mb-3 opacity-75">Ürünleri sisteme eşleştir</p>
+                    <a href="{{ url_for('amazon.matching') }}" class="btn btn-light">
+                        <i class="fas fa-exchange-alt"></i> Eşleştir
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function pushStock() {
+    const btn = document.getElementById('pushStockBtn');
+    btn.innerHTML = '<span class="loading-spinner"></span> Başlatılıyor...';
+    btn.disabled = true;
+    
+    fetch('{{ url_for("amazon.push_stock") }}', {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            btn.innerHTML = '<i class="fas fa-upload"></i> Stok Gönder';
+            btn.disabled = false;
+            if (data.success) {
+                if (data.background) {
+                    document.getElementById('syncResult').innerHTML = 
+                        `<div class="alert alert-info">
+                            <i class="fas fa-spinner fa-spin"></i> ${data.message}
+                            <br><small>Bu pencereyi kapatabilirsiniz, işlem arka planda devam edecek.</small>
+                        </div>`;
+                } else {
+                    document.getElementById('syncResult').innerHTML = 
+                        `<div class="alert alert-success">
+                            <i class="fas fa-check"></i> ${data.message}
+                        </div>`;
+                }
+            } else {
+                document.getElementById('syncResult').innerHTML = 
+                    '<div class="alert alert-danger"><i class="fas fa-times"></i> ' + (data.error || 'Hata oluştu') + '</div>';
+            }
+        })
+        .catch(e => {
+            btn.innerHTML = '<i class="fas fa-upload"></i> Stok Gönder';
+            btn.disabled = false;
+            document.getElementById('syncResult').innerHTML = 
+                '<div class="alert alert-danger"><i class="fas fa-times"></i> Bağlantı hatası</div>';
+        });
+}
+
+function syncOrders() {
+    const btn = document.getElementById('syncOrdersBtn');
+    btn.innerHTML = '<span class="loading-spinner"></span> Çekiliyor...';
+    btn.disabled = true;
+    
+    fetch('{{ url_for("amazon.sync_orders") }}', {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            btn.innerHTML = '<i class="fas fa-download"></i> Siparişleri Çek';
+            btn.disabled = false;
+            if (data.success) {
+                document.getElementById('syncResult').innerHTML = '<div class="alert alert-success"><i class="fas fa-check"></i> ' + data.message + '</div>';
+            } else {
+                document.getElementById('syncResult').innerHTML = '<div class="alert alert-danger"><i class="fas fa-times"></i> ' + (data.error || 'Hata oluştu') + '</div>';
+            }
+        });
+}
+
+function testConnection() {
+    const btn = document.getElementById('testConnBtn');
+    btn.innerHTML = '<span class="loading-spinner"></span> Test ediliyor...';
+    btn.disabled = true;
+    
+    fetch('{{ url_for("amazon.test_connection") }}')
+        .then(r => r.json())
+        .then(data => {
+            btn.innerHTML = '<i class="fas fa-plug"></i> Bağlantı Testi';
+            btn.disabled = false;
+            if (data.success) {
+                document.getElementById('syncResult').innerHTML = '<div class="alert alert-success"><i class="fas fa-check"></i> ' + data.message + '</div>';
+            } else {
+                document.getElementById('syncResult').innerHTML = '<div class="alert alert-danger"><i class="fas fa-times"></i> ' + data.message + '</div>';
+            }
+        });
+}
+</script>
+{% endblock %}

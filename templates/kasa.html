@@ -187,7 +187,7 @@
                     <i class="fas fa-question"></i>
                 </button>
             </h1>
-            <p><strong>{{ ay }}. Ay / {{ yil }}</strong> dönemi gelir ve gider kayıtları</p>
+            <p>Gelir ve gider kayıtlarınızı takip edin</p>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -204,6 +204,130 @@
                 </div>
             {% endif %}
         {% endwith %}
+
+        <!-- Minimal Toplam Filtresi -->
+        <div class="card mb-3" style="background: linear-gradient(135deg, #667db6 0%, #0082c8 100%); border: none;">
+            <div class="card-body py-2">
+                <form method="GET" action="{{ url_for('kasa.kasa_sayfasi') }}" class="form-inline justify-content-center">
+                    <label class="text-white mr-2 mb-0"><i class="fas fa-chart-line"></i> Toplam Filtre:</label>
+                    <input type="number" name="toplam_yil" class="form-control form-control-sm mr-2" 
+                           style="width: 80px;" placeholder="Yıl" 
+                           value="{{ toplam_yil if toplam_yil else bugun.year }}" min="2000" max="2100">
+                    <input type="number" name="toplam_ay" class="form-control form-control-sm mr-2" 
+                           style="width: 70px;" placeholder="Ay" 
+                           value="{{ toplam_ay if toplam_ay else bugun.month }}" min="1" max="12">
+                    
+                    <!-- Kayıt filtre değerlerini koru -->
+                    {% if yil %}<input type="hidden" name="yil" value="{{ yil }}">{% endif %}
+                    {% if ay %}<input type="hidden" name="ay" value="{{ ay }}">{% endif %}
+                    {% if tip %}<input type="hidden" name="tip" value="{{ tip }}">{% endif %}
+                    {% if durum %}<input type="hidden" name="durum" value="{{ durum }}">{% endif %}
+                    {% if arama %}<input type="hidden" name="arama" value="{{ arama }}">{% endif %}
+                    {% if baslangic_tarihi %}<input type="hidden" name="baslangic_tarihi" value="{{ baslangic_tarihi }}">{% endif %}
+                    {% if bitis_tarihi %}<input type="hidden" name="bitis_tarihi" value="{{ bitis_tarihi }}">{% endif %}
+                    
+                    <button type="submit" class="btn btn-light btn-sm mr-2">
+                        <i class="fas fa-filter"></i> Uygula
+                    </button>
+                    <a href="{{ url_for('kasa.kasa_sayfasi', yil=yil, ay=ay, tip=tip, durum=durum, arama=arama, baslangic_tarihi=baslangic_tarihi, bitis_tarihi=bitis_tarihi) }}" 
+                       class="btn btn-outline-light btn-sm">
+                        <i class="fas fa-infinity"></i> Tümü
+                    </a>
+                    <span class="badge badge-light ml-2 px-3 py-2">{{ toplam_filtre_metni }}</span>
+                </form>
+            </div>
+        </div>
+
+        <!-- Ana Kasa Widget -->
+        <div class="ana-kasa-widget" style="background: linear-gradient(135deg, #667db6 0%, #0082c8 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 6px 20px rgba(0,0,0,0.15);">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h2 style="margin: 0; font-size: 1.8rem;">
+                        <i class="fas fa-wallet"></i> Ana Kasa
+                    </h2>
+                    <p style="margin: 10px 0 0 0; opacity: 0.9;">Merkezi Gelir Yönetim Sistemi</p>
+                </div>
+                <div class="col-md-6 text-right">
+                    <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 5px;">Mevcut Bakiye</div>
+                    <div style="font-size: 2.5rem; font-weight: 700;" id="ana-kasa-bakiye">
+                        {{ ana_kasa.bakiye|tl_format if ana_kasa else '0,00' }} ₺
+                    </div>
+                    <small style="opacity: 0.8;">
+                        <i class="far fa-clock"></i> 
+                        {{ ana_kasa.guncelleme_tarihi.strftime('%d.%m.%Y %H:%M') if ana_kasa and ana_kasa.guncelleme_tarihi else 'Henüz güncellenmedi' }}
+                    </small>
+                </div>
+            </div>
+            <hr style="border-color: rgba(255,255,255,0.3); margin: 20px 0;">
+            <div class="row">
+                <div class="col-md-12">
+                    <button class="btn btn-light btn-sm" onclick="document.getElementById('ana-kasa-gelir-form').style.display='block'; this.style.display='none';">
+                        <i class="fas fa-plus-circle"></i> Ana Kasa'ya Gelir Ekle
+                    </button>
+                    <button class="btn btn-outline-light btn-sm" data-toggle="collapse" data-target="#anaKasaManuel">
+                        <i class="fas fa-tools"></i> Manuel İşlemler
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Gelir Ekleme Formu -->
+            <div id="ana-kasa-gelir-form" style="display: none; margin-top: 20px; background: rgba(255,255,255,0.15); padding: 20px; border-radius: 10px;">
+                <h4 style="margin-bottom: 15px;"><i class="fas fa-plus-circle"></i> Gelir Ekle</h4>
+                <form method="POST" action="{{ url_for('kasa.ana_kasa_gelir_ekle') }}">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <input type="text" name="tutar" class="form-control" placeholder="Tutar (₺)" required>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" name="kategori" class="form-control" placeholder="Kategori (opsiyonel)">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="datetime-local" name="tarih" class="form-control" value="{{ bugun.strftime('%Y-%m-%dT%H:%M') }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" name="aciklama" class="form-control" placeholder="Açıklama" required>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check"></i> Ekle ve Kasaya Aktar
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="this.parentElement.parentElement.parentElement.style.display='none'; document.querySelector('.btn-light.btn-sm').style.display='inline-block';">
+                                İptal
+                            </button>
+                            <small class="text-white ml-3">
+                                <i class="fas fa-info-circle"></i> Gelir Ana Kasa'ya eklenecek ve otomatik olarak Normal Kasa'ya aktarılacak
+                            </small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Manuel İşlemler -->
+            <div id="anaKasaManuel" class="collapse" style="margin-top: 20px; background: rgba(255,255,255,0.15); padding: 20px; border-radius: 10px;">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-plus text-success"></i> Para Ekle</h5>
+                        <form method="POST" action="{{ url_for('kasa.ana_kasa_guncelle') }}" class="form-inline">
+                            <input type="hidden" name="islem_tipi" value="ekle">
+                            <input type="text" name="tutar" class="form-control form-control-sm mr-2" placeholder="Tutar" style="width: 150px;" required>
+                            <input type="text" name="aciklama" class="form-control form-control-sm mr-2" placeholder="Açıklama" style="width: 200px;" required>
+                            <button type="submit" class="btn btn-success btn-sm">Ekle</button>
+                        </form>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-minus text-danger"></i> Para Çıkar</h5>
+                        <form method="POST" action="{{ url_for('kasa.ana_kasa_guncelle') }}" class="form-inline">
+                            <input type="hidden" name="islem_tipi" value="cikar">
+                            <input type="text" name="tutar" class="form-control form-control-sm mr-2" placeholder="Tutar" style="width: 150px;" required>
+                            <input type="text" name="aciklama" class="form-control form-control-sm mr-2" placeholder="Açıklama" style="width: 200px;" required>
+                            <button type="submit" class="btn btn-danger btn-sm">Çıkar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="stats-cards">
             <div class="stat-card gelir">
@@ -240,7 +364,7 @@
         <div class="top-actions">
             <div class="action-buttons">
                 <a href="{{ url_for('kasa.yeni_kasa_kaydi') }}" class="btn btn-success">
-                    <i class="fas fa-plus"></i> Yeni Kayıt
+                    <i class="fas fa-plus"></i> Yeni Kayıt (Gelir/Gider)
                 </a>
                 <a href="{{ url_for('kasa.kategoriler') }}" class="btn btn-primary">
                     <i class="fas fa-tags"></i> Kategori Yönetimi
@@ -252,7 +376,7 @@
         </div>
 
         <div class="filter-section">
-            <h5><i class="fas fa-filter"></i> Filtreleme</h5>
+            <h5><i class="fas fa-filter"></i> Kayıt Filtreleme</h5>
             <form method="GET" action="{{ url_for('kasa.kasa_sayfasi') }}">
                 <div class="row">
                     <div class="col-md-2 col-sm-6">
@@ -289,7 +413,7 @@
                             <button type="submit" class="btn btn-primary mr-2">
                                 <i class="fas fa-search"></i> Filtrele
                             </button>
-                            <a href="{{ url_for('kasa.kasa_sayfasi', yil=yil, ay=ay) }}" class="btn btn-secondary">
+                            <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-secondary">
                                 <i class="fas fa-times"></i> Temizle
                             </a>
                         </div>
@@ -311,12 +435,19 @@
 
         <div class="table-section">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0"><i class="fas fa-list"></i> Tüm Giriş ve Çıkışlar</h5>
+                <h5 class="mb-0">
+                    <i class="fas fa-list"></i> 
+                    {% if ay_filtresi_var %}
+                        {{ ay }}. Ay / {{ yil }} Kayıtları
+                    {% else %}
+                        Tüm Kayıtlar
+                    {% endif %}
+                </h5>
                 <span class="badge badge-primary badge-pill" style="font-size: 1rem; padding: 8px 15px;">{{ toplam_kayit }} kayıt</span>
             </div>
-            {% if toplam_kayit > 100 %}
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> Çok sayıda kayıt bulunmaktadır. Daha hızlı sonuç için filtreleme kullanabilirsiniz.
+            {% if not ay_filtresi_var and toplam_kayit > sayfa_basina %}
+            <div class="alert alert-info py-2">
+                <i class="fas fa-info-circle"></i> Sayfa başına {{ sayfa_basina }} kayıt gösteriliyor. Belirli bir ayı görmek için filtreleme kullanın.
             </div>
             {% endif %}
             <div class="table-responsive">
@@ -393,46 +524,219 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="8" class="text-center text-muted">Bu filtreye uygun kayıt bulunmamaktadır.</td>
+                            <td colspan="7" class="text-center text-muted">Bu filtreye uygun kayıt bulunmamaktadır.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+            
+            <!-- Sayfalama - Sadece ay filtresi YOKSA göster -->
+            {% if not ay_filtresi_var and toplam_sayfa > 1 %}
+            <nav aria-label="Sayfalama" class="mt-4">
+                <ul class="pagination justify-content-center flex-wrap">
+                    <!-- Önceki Sayfa -->
+                    <li class="page-item {{ 'disabled' if sayfa <= 1 }}">
+                        <a class="page-link" href="{{ url_for('kasa.kasa_sayfasi', sayfa=sayfa-1, adet=sayfa_basina, tip=tip, durum=durum, arama=arama, baslangic_tarihi=baslangic_tarihi, bitis_tarihi=bitis_tarihi, toplam_yil=toplam_yil, toplam_ay=toplam_ay) }}">
+                            <i class="fas fa-chevron-left"></i> Önceki
+                        </a>
+                    </li>
+                    
+                    <!-- İlk Sayfa -->
+                    {% if sayfa > 3 %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('kasa.kasa_sayfasi', sayfa=1, adet=sayfa_basina, tip=tip, durum=durum, arama=arama, baslangic_tarihi=baslangic_tarihi, bitis_tarihi=bitis_tarihi, toplam_yil=toplam_yil, toplam_ay=toplam_ay) }}">1</a>
+                    </li>
+                    {% if sayfa > 4 %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                    {% endif %}
+                    
+                    <!-- Sayfa Numaraları -->
+                    {% for p in range([1, sayfa-2]|max, [toplam_sayfa+1, sayfa+3]|min) %}
+                    <li class="page-item {{ 'active' if p == sayfa }}">
+                        <a class="page-link" href="{{ url_for('kasa.kasa_sayfasi', sayfa=p, adet=sayfa_basina, tip=tip, durum=durum, arama=arama, baslangic_tarihi=baslangic_tarihi, bitis_tarihi=bitis_tarihi, toplam_yil=toplam_yil, toplam_ay=toplam_ay) }}">{{ p }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    <!-- Son Sayfa -->
+                    {% if sayfa < toplam_sayfa - 2 %}
+                    {% if sayfa < toplam_sayfa - 3 %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('kasa.kasa_sayfasi', sayfa=toplam_sayfa, adet=sayfa_basina, tip=tip, durum=durum, arama=arama, baslangic_tarihi=baslangic_tarihi, bitis_tarihi=bitis_tarihi, toplam_yil=toplam_yil, toplam_ay=toplam_ay) }}">{{ toplam_sayfa }}</a>
+                    </li>
+                    {% endif %}
+                    
+                    <!-- Sonraki Sayfa -->
+                    <li class="page-item {{ 'disabled' if sayfa >= toplam_sayfa }}">
+                        <a class="page-link" href="{{ url_for('kasa.kasa_sayfasi', sayfa=sayfa+1, adet=sayfa_basina, tip=tip, durum=durum, arama=arama, baslangic_tarihi=baslangic_tarihi, bitis_tarihi=bitis_tarihi, toplam_yil=toplam_yil, toplam_ay=toplam_ay) }}">
+                            Sonraki <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+                <div class="text-center text-muted small mb-3">
+                    Sayfa {{ sayfa }} / {{ toplam_sayfa }} (Toplam {{ toplam_kayit }} kayıt)
+                </div>
+                
+                <!-- Sayfa Başına Kayıt Seçici -->
+                <div class="d-flex justify-content-center align-items-center">
+                    <span class="mr-2 text-muted">Sayfa başına:</span>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a href="{{ url_for('kasa.kasa_sayfasi', sayfa=1, adet=10, tip=tip, durum=durum, arama=arama, baslangic_tarihi=baslangic_tarihi, bitis_tarihi=bitis_tarihi, toplam_yil=toplam_yil, toplam_ay=toplam_ay) }}" 
+                           class="btn {{ 'btn-primary' if sayfa_basina == 10 else 'btn-outline-primary' }}">10</a>
+                        <a href="{{ url_for('kasa.kasa_sayfasi', sayfa=1, adet=20, tip=tip, durum=durum, arama=arama, baslangic_tarihi=baslangic_tarihi, bitis_tarihi=bitis_tarihi, toplam_yil=toplam_yil, toplam_ay=toplam_ay) }}" 
+                           class="btn {{ 'btn-primary' if sayfa_basina == 20 else 'btn-outline-primary' }}">20</a>
+                        <a href="{{ url_for('kasa.kasa_sayfasi', sayfa=1, adet=50, tip=tip, durum=durum, arama=arama, baslangic_tarihi=baslangic_tarihi, bitis_tarihi=bitis_tarihi, toplam_yil=toplam_yil, toplam_ay=toplam_ay) }}" 
+                           class="btn {{ 'btn-primary' if sayfa_basina == 50 else 'btn-outline-primary' }}">50</a>
+                    </div>
+                </div>
+            </nav>
+            {% elif not ay_filtresi_var and toplam_kayit > 0 %}
+            <!-- Tek sayfa ama kayıt var - sadece adet seçici göster -->
+            <div class="d-flex justify-content-center align-items-center mt-3">
+                <span class="mr-2 text-muted">Sayfa başına:</span>
+                <div class="btn-group btn-group-sm" role="group">
+                    <a href="{{ url_for('kasa.kasa_sayfasi', sayfa=1, adet=10, tip=tip, durum=durum, arama=arama, baslangic_tarihi=baslangic_tarihi, bitis_tarihi=bitis_tarihi, toplam_yil=toplam_yil, toplam_ay=toplam_ay) }}" 
+                       class="btn {{ 'btn-primary' if sayfa_basina == 10 else 'btn-outline-primary' }}">10</a>
+                    <a href="{{ url_for('kasa.kasa_sayfasi', sayfa=1, adet=20, tip=tip, durum=durum, arama=arama, baslangic_tarihi=baslangic_tarihi, bitis_tarihi=bitis_tarihi, toplam_yil=toplam_yil, toplam_ay=toplam_ay) }}" 
+                       class="btn {{ 'btn-primary' if sayfa_basina == 20 else 'btn-outline-primary' }}">20</a>
+                    <a href="{{ url_for('kasa.kasa_sayfasi', sayfa=1, adet=50, tip=tip, durum=durum, arama=arama, baslangic_tarihi=baslangic_tarihi, bitis_tarihi=bitis_tarihi, toplam_yil=toplam_yil, toplam_ay=toplam_ay) }}" 
+                       class="btn {{ 'btn-primary' if sayfa_basina == 50 else 'btn-outline-primary' }}">50</a>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if ay_filtresi_var %}
+            <div class="text-center text-muted small mt-3">
+                <i class="fas fa-calendar-alt"></i> {{ ay }}. Ay / {{ yil }} için toplam {{ toplam_kayit }} kayıt gösteriliyor
+            </div>
+            {% endif %}
         </div>
+
+
     </div>
 
     <div class="modal fade" id="infoModal" tabindex="-1" role="dialog" aria-labelledby="infoModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="infoModalLabel"><i class="fas fa-info-circle"></i> Kasa Sistemi Nasıl Çalışır?</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="infoModalLabel"><i class="fas fa-info-circle"></i> Kasa Sistemi - Kullanım Rehberi & Güncelleme Notları</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
-                    <h4><i class="fas fa-chart-pie"></i> Üstteki Kartlar</h4>
-                    <p>Sayfanın üst kısmında gördüğün özet kartları, filtrelediğin ay ve yıla ait finansal durumu gösterir.</p>
-                    <ul>
-                        <li><strong>Toplam Gelir/Gider (Ödenen):</strong> Bu kartlar, durumu <strong>"Ödendi"</strong> olarak işaretlenmiş kayıtların toplamını gösterir. Kasaya fiilen giren veya çıkan net parayı temsil eder.</li>
-                        <li><strong>Bekleyen Gelir/Gider:</strong> Ana kartların altındaki bu küçük alanlar, durumu <strong>"Bekleyen"</strong> olan kayıtların toplamını gösterir. Bunlar henüz gerçekleşmemiş, beklenen ödemeler veya alacaklardır.</li>
-                        <li><strong>Net Durum (Ödenen):</strong> Ödenmiş gelirler ve ödenmiş giderler arasındaki farkı gösterir. Ay sonu kasada kalması gereken net rakam budur.</li>
-                        <li><strong>Bekleyen Dahil Net Toplam:</strong> Eğer tüm bekleyen gelirler alınır ve tüm bekleyen giderler ödenirse, ay sonunda kasanın ulaşacağı potansiyel durumu gösterir.</li>
-                    </ul>
+                    <!-- Güncelleme Notları -->
+                    <div class="alert alert-success">
+                        <h5><i class="fas fa-code-branch"></i> Son Güncellemeler (Aralık 2025)</h5>
+                    </div>
+                    
+                    <div class="card mb-3">
+                        <div class="card-header bg-primary text-white">
+                            <strong>v2.5 - Excel ile Gelir Yükleme</strong> <span class="badge badge-light">10.12.2025</span>
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li><strong>Excel Import:</strong> İşbankası hesap özeti Excel formatında toplu gelir yükleme</li>
+                                <li><strong>Otomatik Parse:</strong> Tarih (A sütunu), Tutar (D sütunu), Açıklama (I sütunu) otomatik algılanır</li>
+                                <li><strong>Önizleme:</strong> Yüklemeden önce verileri kontrol edebilme</li>
+                                <li><strong>Tarih Formatları:</strong> DD/MM/YYYY-HH:MM:SS ve diğer formatlar desteklenir</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-3">
+                        <div class="card-header bg-success text-white">
+                            <strong>v2.4 - Kısmi Ödeme Bekleyen Hesaplaması</strong> <span class="badge badge-light">10.12.2025</span>
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li><strong>Düzeltme:</strong> Kısmi ödenen kayıtların kalan tutarı artık "Bekleyen Gelir/Gider"de gösteriliyor</li>
+                                <li><strong>Örnek:</strong> 10.000₺ gider, 3.000₺ ödendi → Bekleyen Gider: 7.000₺</li>
+                                <li><strong>ODENMEDI:</strong> Tam tutar bekleyen olarak sayılır</li>
+                                <li><strong>KISMI_ODENDI:</strong> (Toplam - Ödenen) = Kalan tutar bekleyen olarak sayılır</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-3">
+                        <div class="card-header bg-warning text-dark">
+                            <strong>v2.3 - Toplam Hesaplama İyileştirmesi</strong> <span class="badge badge-dark">10.12.2025</span>
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li><strong>Tüm Zamanlar:</strong> Ay filtresi yoksa toplamlar tüm zamanlar için hesaplanır</li>
+                                <li><strong>Tutarlılık:</strong> Liste ve toplamlar artık aynı dönemi gösterir</li>
+                                <li><strong>Badge:</strong> Üstteki kartlarda hangi dönemin gösterildiği belirtilir</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-3">
+                        <div class="card-header bg-secondary text-white">
+                            <strong>v2.2 - Sayfalama & Performans</strong> <span class="badge badge-light">10.12.2025</span>
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li><strong>Sayfalama:</strong> Varsayılan 10 kayıt/sayfa, 20 veya 50 seçilebilir</li>
+                                <li><strong>Ay Filtresi:</strong> Ay seçildiğinde tüm kayıtlar tek sayfada gösterilir</li>
+                                <li><strong>Performans:</strong> Gereksiz loglar kaldırıldı, sayfa yükleme hızlandı</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
                     <hr>
-                    <h4><i class="fas fa-list"></i> Kasa Kayıtları Tablosu</h4>
-                    <p>Bu tablo, seçtiğin döneme ait tüm gelir ve gider kalemlerini listeler.</p>
-                    <ul>
-                        <li><strong>Durum Kolonu:</strong> Bir kaydın "Ödendi" mi yoksa "Bekleyen" mi olduğunu gösterir.</li>
-                        <li><strong>Öde Butonu:</strong> "Bekleyen" durumundaki bir kaydın yanındaki yeşil "Öde" butonuna basarak o kaydı "Ödendi" olarak işaretleyebilirsin. Bu işlemden sonra tutar, üstteki "Ödenen" toplamlarına dahil edilir.</li>
-                    </ul>
-                     <hr>
-                    <h4><i class="fas fa-filter"></i> Filtreleme</h4>
-                    <p>Filtreleme bölümünü kullanarak istediğin zaman aralığına, tipe (gelir/gider) veya duruma (ödenen/bekleyen) göre kayıtları süzebilirsin. Arama kutusu ise açıklama, kategori ve kullanıcı adıyla arama yapmanı sağlar.</p>
+                    
+                    <!-- Kullanım Rehberi -->
+                    <h4><i class="fas fa-book"></i> Kullanım Rehberi</h4>
+                    
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <i class="fas fa-chart-pie"></i> Üstteki Kartlar (Yeşil/Kırmızı/Gri)
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li><strong>Toplam Gelir (Ödenen):</strong> Ödeme kaydı olan gelirlerin toplamı</li>
+                                <li><strong>Toplam Gider (Ödenen):</strong> Ödeme kaydı olan giderlerin toplamı</li>
+                                <li><strong>Bekleyen Gelir:</strong> Henüz ödenmemiş + kısmi ödenen gelirlerin kalan tutarı</li>
+                                <li><strong>Bekleyen Gider:</strong> Henüz ödenmemiş + kısmi ödenen giderlerin kalan tutarı</li>
+                                <li><strong>Net Durum:</strong> Ödenen gelir - Ödenen gider</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <i class="fas fa-filter"></i> Kayıt Filtreleme
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li><strong>Ay Filtresi:</strong> Belirli bir ay seçildiğinde hem liste hem toplamlar o aya göre filtrelenir</li>
+                                <li><strong>Filtresiz:</strong> Tüm kayıtlar listelenir, toplamlar "Tüm Zamanlar" için hesaplanır</li>
+                                <li><strong>Tip/Durum:</strong> Sadece listeyi etkiler, toplamları etkilemez</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <i class="fas fa-file-excel"></i> Excel ile Gelir Yükleme
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li><strong>Desteklenen Format:</strong> İşbankası hesap özeti (.xlsx, .xls)</li>
+                                <li><strong>Sütun Eşlemesi:</strong> A=Tarih, D=Tutar, I=Açıklama</li>
+                                <li><strong>Başlık Satırları:</strong> Otomatik atlanır (Tarih/Saat, Net Bakiye vb.)</li>
+                                <li><strong>Negatif Tutarlar:</strong> Otomatik atlanır (sadece pozitif = gelir)</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Anladım, Kapat</button>
+                    <span class="text-muted mr-auto"><i class="fas fa-code"></i> Kasa v2.5</span>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Kapat</button>
                 </div>
             </div>
         </div>

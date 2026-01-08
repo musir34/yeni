@@ -38,6 +38,17 @@
           </p>
           <p class="mb-1"><strong>Telefon:</strong> <span data-musteri-telefon>{{ siparis.musteri_telefon }}</span></p>
           <p class="mb-0"><strong>Adres:</strong> <span data-musteri-adres class="d-block" style="white-space: pre-wrap;">{{ siparis.musteri_adres }}</span></p>
+          
+          <!-- Kapıda Ödeme Bilgisi -->
+          <span data-kapida-odeme class="d-none">{% if siparis.kapida_odeme %}1{% else %}0{% endif %}</span>
+          <span data-kapida-odeme-tutari class="d-none">{{ siparis.kapida_odeme_tutari|default(0, true) }}</span>
+          {% if siparis.kapida_odeme %}
+          <hr class="my-2">
+          <div class="alert alert-danger mb-0" role="alert">
+            <h6 class="alert-heading mb-1"><i class="bi bi-cash-coin me-2"></i>💰 KAPIDA ÖDEME VAR!</h6>
+            <p class="mb-0 fw-bold fs-5">Tahsil Edilecek: {{ "%.2f"|format((siparis.kapida_odeme_tutari|default(0, true))|float) }} TL</p>
+          </div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -55,6 +66,7 @@
           <th>Barkod</th>
           <th>Model Kod</th>
           <th>Renk / Beden</th>
+          <th>Raf</th>
           <th class="text-end">Adet</th>
           <th class="text-end">Birim Fiyat</th>
           <th class="text-end">Toplam Fiyat</th>
@@ -86,6 +98,13 @@
               {% endif %}
             </td>
             <td><span data-urun-renk>{{ urun.renk }}</span> / <span data-urun-beden>{{ urun.beden }}</span></td>
+            <td>
+              {% if urun.raf_kodu %}
+                <span class="badge bg-info">{{ urun.raf_kodu }}</span>
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
             <td class="text-end" data-urun-adet>{{ (urun.adet|default(0, true))|int }}</td>
             <td class="text-end" data-urun-birim-fiyat>{{ "%.2f"|format((urun.birim_fiyat|default(0, true))|float) }} TL</td>
             <td class="text-end fw-bold" data-urun-toplam-fiyat>{{ "%.2f"|format((urun.toplam_fiyat|default(0, true))|float) }} TL</td>
@@ -93,14 +112,14 @@
           {% endfor %}
         {% else %}
           <tr>
-            <td colspan="8" class="text-center text-muted">Bu siparişte ürün bulunmamaktadır.</td>
+            <td colspan="9" class="text-center text-muted">Bu siparişte ürün bulunmamaktadır.</td>
           </tr>
         {% endif %}
       </tbody>
       {% if urunler %}
       <tfoot>
         <tr class="table-light">
-          <td colspan="7" class="text-end fw-bold"><h5>Genel Toplam:</h5></td>
+          <td colspan="8" class="text-end fw-bold"><h5>Genel Toplam:</h5></td>
           <td class="text-end fw-bold"><h5 data-genel-toplam>{{ "%.2f"|format((siparis.toplam_tutar|default(0, true))|float) }} TL</h5></td>
         </tr>
       </tfoot>

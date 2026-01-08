@@ -105,6 +105,7 @@
       <span class="hint" id="zaman">Yükleniyor…</span>
     </div>
     <div class="filters">
+      <!-- Tarih Preset -->
       <div class="seg" id="segPreset">
         <button data-preset="today" class="active">Bugün</button>
         <button data-preset="yesterday">Dün</button>
@@ -118,6 +119,14 @@
         <input id="start" class="inp" type="date" />
         <input id="end"   class="inp" type="date" />
       </div>
+
+      <!-- 🔥 Kaynak Filtresi -->
+      <div class="seg" id="segSource">
+        <button data-source="all" class="active">Tümü</button>
+        <button data-source="trendyol">Trendyol</button>
+        <button data-source="woocommerce">Web Sitesi</button>
+      </div>
+
       <input id="filtreModel" class="inp" type="text" placeholder="Model filtresi (örn: 099)" />
       <button class="btn btn-primary" id="uygulaBtn">Uygula</button>
       <button class="btn" id="yenileBtn">Yenile</button>
@@ -128,6 +137,7 @@
   <!-- Content -->
   <main class="container">
     <section class="toprow">
+      {% if is_admin %}
       <div class="kpi">
         <div class="kpi-icon">💰</div>
         <div>
@@ -144,6 +154,7 @@
           <div class="sub" id="kpiAvgSub"></div>
         </div>
       </div>
+      {% endif %}
       <div class="kpi">
         <div class="kpi-icon">🧮</div>
         <div>
@@ -202,6 +213,9 @@
   };
   Chart.register(ShadowPlugin);
 
+  // Admin kontrolü (backend'den gelen)
+  const isAdmin = {{ 'true' if is_admin else 'false' }};
+
   // Elements
   const elZaman   = document.getElementById('zaman');
   const elKartlar = document.getElementById('kartlar');
@@ -229,6 +243,14 @@
     e.target.classList.add('active');
     const p = e.target.dataset.preset;
     customRange.style.display = (p === 'custom') ? '' : 'none';
+  });
+
+  // 🔥 Kaynak segment
+  const segSource = document.getElementById('segSource');
+  segSource.addEventListener('click', (e)=>{
+    if(e.target.tagName !== 'BUTTON') return;
+    [...segSource.children].forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
   });
 
   // Chart.js instances (with rounded bars)
@@ -259,10 +281,16 @@
     const active = seg.querySelector('.active');
     return active ? active.dataset.preset : 'today';
   }
+  function getSource(){
+    const active = segSource.querySelector('.active');
+    return active ? active.dataset.source : 'all';
+  }
   function buildQuery(model){
     const p = new URLSearchParams();
     const preset = getPreset();
+    const source = getSource();
     if(model) p.set('model', model);
+    if(source && source !== 'all') p.set('source', source);  // 🔥 Kaynak parametresi
     // Varsayılan model grubu:
     p.set('group','model');
     if (preset === 'custom' && inpStart.value && inpEnd.value){
@@ -286,11 +314,16 @@
         : (kartlar.reduce((a,k)=>a+(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0));
     elToplam.textContent = toplamNet ?? 0;
     elOrders.textContent = (typeof toplamSiparis === 'number') ? toplamSiparis : '—';
-    const netAvg = (typeof genelAvg === 'number') ? genelAvg
-                    : (kartlar.reduce((acc,k)=>acc+(k.ortalama_fiyat ?? 0)*(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0)) /
-                      Math.max(1,kartlar.reduce((acc,k)=>acc+(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0));
-    elAvg.textContent = tl(netAvg);
-    elCiro.textContent = (typeof toplamCiro === 'number') ? tl(toplamCiro) : tl(0);
+    
+    // Sadece admin için ciro ve ortalama fiyat güncelle
+    if (isAdmin) {
+      const netAvg = (typeof genelAvg === 'number') ? genelAvg
+                      : (kartlar.reduce((acc,k)=>acc+(k.ortalama_fiyat ?? 0)*(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0)) /
+                        Math.max(1,kartlar.reduce((acc,k)=>acc+(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0));
+      if (elAvg) elAvg.textContent = tl(netAvg);
+      if (elCiro) elCiro.textContent = (typeof toplamCiro === 'number') ? tl(toplamCiro) : tl(0);
+    }
+    
     // Toplam iade ve oran
     const totalReturns = kartlar.reduce((a,k)=>a+(k.toplam_iade ?? 0),0);
     elRet.textContent = totalReturns;
@@ -326,6 +359,16 @@
       const badgeLow  = k.dusuk_stok ? `<span class="badge warn">DÜŞÜK STOK</span>` : ``;
       const badgeHigh = k.iade_uyari ? `<span class="badge danger">⚠️ YÜKSEK İADE</span>` : ``;
 
+      // Stats içeriği - ortalama fiyatı sadece adminlere göster
+      const statsHTML = isAdmin 
+        ? `<div class="mini"><div class="label">Satış (NET)</div><div class="num">${net}</div></div>
+           <div class="mini"><div class="label">İade</div><div class="num">${ret} <span style="font-size:12px;color:var(--muted)">(%${retP})</span></div></div>
+           <div class="mini"><div class="label">Kalan Stok</div><div class="num">${k.toplam_stok ?? 0}</div></div>
+           <div class="mini"><div class="label">Net Ortalama</div><div class="num">${avg}</div></div>`
+        : `<div class="mini"><div class="label">Satış (NET)</div><div class="num">${net}</div></div>
+           <div class="mini"><div class="label">İade</div><div class="num">${ret} <span style="font-size:12px;color:var(--muted)">(%${retP})</span></div></div>
+           <div class="mini" style="grid-column: span 2;"><div class="label">Kalan Stok</div><div class="num">${k.toplam_stok ?? 0}</div></div>`;
+
       div.innerHTML = `
         <div class="card-head">
           <div class="head-left">
@@ -340,10 +383,7 @@
         </div>
         ${k.image ? `<div class="media"><img class="card-img" src="${k.image}" alt="${k.model ?? ''} ${k.renk ?? ''}"></div>` : ``}
         <div class="stats">
-          <div class="mini"><div class="label">Satış (NET)</div><div class="num">${net}</div></div>
-          <div class="mini"><div class="label">İade</div><div class="num">${ret} <span style="font-size:12px;color:var(--muted)">(%${retP})</span></div></div>
-          <div class="mini"><div class="label">Kalan Stok</div><div class="num">${k.toplam_stok ?? 0}</div></div>
-          <div class="mini"><div class="label">Net Ortalama</div><div class="num">${avg}</div></div>
+          ${statsHTML}
         </div>
         <div class="bar"><i style="width:${barP}%"></i></div>
         <div class="details" id="${detayId}">

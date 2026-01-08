@@ -97,6 +97,21 @@
         .image-modal-footer{padding:1rem 1.5rem;background:#f8f9fa;border-top:1px solid var(--color-border);text-align:center}
         .image-modal-close{background:none;border:none;font-size:2rem;cursor:pointer;color:#999;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%}
         .image-modal-close:hover{background:#f1f1f1;color:#212529}
+        
+        /* Platform ikonları */
+        .platform-icons{position:absolute;top:10px;right:10px;display:flex;gap:5px;z-index:5}
+        .platform-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.2s;box-shadow:0 2px 5px rgba(0,0,0,0.2);overflow:hidden;background:white}
+        .platform-icon:hover{transform:scale(1.2)}
+        .platform-icon img{width:100%;height:100%;object-fit:contain}
+        .platform-tooltip{position:absolute;background:#333;color:white;padding:5px 10px;border-radius:5px;font-size:11px;white-space:nowrap;top:-30px;left:50%;transform:translateX(-50%);opacity:0;transition:opacity 0.2s;pointer-events:none}
+        .platform-icon:hover .platform-tooltip{opacity:1}
+        .model-image-container{position:relative}
+        
+        /* Pazaryeri filtresi */
+        .marketplace-filter{display:flex;align-items:center;flex-wrap:wrap;gap:10px;background:#f8f9fa;padding:12px 15px;border-radius:8px;border:1px solid #e9ecef}
+        .marketplace-filter label{font-weight:600;color:#495057;margin:0}
+        .marketplace-filter select{border:2px solid #dee2e6;border-radius:6px;padding:6px 12px;font-size:14px;cursor:pointer;transition:border-color 0.2s}
+        .marketplace-filter select:focus{border-color:#007bff;outline:none;box-shadow:0 0 0 3px rgba(0,123,255,0.15)}
     </style>
 </head>
 <body>
@@ -105,6 +120,7 @@
 
     <div class="header-actions">
         <a href="{{ url_for('home.home') }}" class="btn btn-sm btn-outline-secondary">Ana Sayfa</a>
+        <a href="{{ url_for('siparis_hazirla.index') }}" class="btn btn-info"><i class="fas fa-box"></i> Sipariş Hazırla</a>
 
         <div class="dropdown" id="updateDropdown">
             <button class="btn btn-primary dropdown-toggle"><i class="fas fa-sync-alt"></i> Güncelle</button>
@@ -124,6 +140,25 @@
         </div>
 
         <a href="/uretim-oneri-haftalik" class="btn btn-primary"><i class="fa-solid fa-lightbulb"></i> Stok Önerileri</a>
+    </div>
+
+    <!-- Pazaryeri Filtresi -->
+    <div class="marketplace-filter mb-3">
+        <label class="mr-2"><i class="fas fa-filter"></i> Pazaryeri:</label>
+        <select id="marketplaceFilter" class="form-control d-inline-block" style="width: auto; min-width: 180px;" onchange="filterByMarketplace()">
+            <option value="" {% if not marketplace_filter %}selected{% endif %}>Tümü</option>
+            <option value="amazon" {% if marketplace_filter == 'amazon' %}selected{% endif %}>🛒 Amazon</option>
+            <option value="trendyol" {% if marketplace_filter == 'trendyol' %}selected{% endif %}>🟠 Trendyol</option>
+            <option value="idefix" {% if marketplace_filter == 'idefix' %}selected{% endif %}>📚 Idefix</option>
+            <option value="hepsiburada" {% if marketplace_filter == 'hepsiburada' %}selected{% endif %}>🟡 Hepsiburada</option>
+            <option value="woocommerce" {% if marketplace_filter == 'woocommerce' %}selected{% endif %}>🌐 WooCommerce</option>
+            <option value="none" {% if marketplace_filter == 'none' %}selected{% endif %}>❌ Hiçbir Pazaryeri Yok</option>
+        </select>
+        {% if marketplace_filter %}
+        <a href="{{ url_for('get_products.product_list') }}" class="btn btn-sm btn-outline-secondary ml-2" title="Filtreyi Temizle">
+            <i class="fas fa-times"></i>
+        </a>
+        {% endif %}
     </div>
 
     <form action="{{ url_for('get_products.search_products') }}" method="GET" class="search-container">
@@ -177,9 +212,17 @@
                                 <span>{{ "%.2f"|format(variant.sale_price) }} TL</span>
                                 <span class="barcode-info">
                                     Barkod: {{ variant.barcode }}
+                                    {% if variant.woo_product_id %}| Woo ID: {{ variant.woo_product_id }}{% endif %}
                                     {% if variant.raf_bilgisi %}| Raf: {{ variant.raf_bilgisi }}{% endif %}
                                     <button class="btn-copy copy-barcode-btn" data-barcode="{{ variant.barcode }}" title="Barkodu Kopyala">
                                         <i class="fas fa-copy"></i>
+                                    </button>
+                                    <button class="btn-copy edit-woo-id-btn" 
+                                            data-barcode="{{ variant.barcode }}" 
+                                            data-woo-id="{{ variant.woo_product_id or '' }}"
+                                            data-woo-barcode="{{ variant.woo_barcode or '' }}"
+                                            title="{% if variant.woo_product_id %}Woo ID Düzenle{% else %}Woo ID Ekle{% endif %}">
+                                        <i class="fas fa-{% if variant.woo_product_id %}edit{% else %}plus{% endif %}"></i>
                                     </button>
                                 </span>
                             </li>
@@ -191,9 +234,42 @@
         {% else %}
             {% for model_id, model_data in grouped_products.items() %}
                 {% set product = model_data.main_product_info %}
+                {% set platforms = product.platforms | default('[]') %}
                 <div class="model-card">
                     <div class="model-image-container zoomable-image" data-image-src="{{ product.images.split(',')[0] if product.images else '' }}">
                         <img src="{{ product.images.split(',')[0] if product.images else 'https://via.placeholder.com/350x350/eee/888?text=Gorsel+Yok' }}" alt="{{ product.title }}">
+                        <div class="platform-icons">
+                            {% if 'trendyol' in platforms %}
+                            <div class="platform-icon" title="Trendyol'da satılıyor">
+                                <span class="platform-tooltip">Trendyol</span>
+                                <img src="{{ url_for('static', filename='logo/trendyol.png') }}" alt="Trendyol">
+                            </div>
+                            {% endif %}
+                            {% if 'idefix' in platforms %}
+                            <div class="platform-icon" title="Idefix'te satılıyor">
+                                <span class="platform-tooltip">Idefix</span>
+                                <img src="{{ url_for('static', filename='logo/idefix.png') }}" alt="Idefix">
+                            </div>
+                            {% endif %}
+                            {% if 'hepsiburada' in platforms %}
+                            <div class="platform-icon" title="Hepsiburada'da satılıyor">
+                                <span class="platform-tooltip">Hepsiburada</span>
+                                <img src="{{ url_for('static', filename='logo/hepsiburada.png') }}" alt="Hepsiburada">
+                            </div>
+                            {% endif %}
+                            {% if product.amazon_asin %}
+                            <div class="platform-icon" title="Amazon'da satılıyor">
+                                <span class="platform-tooltip">Amazon</span>
+                                <img src="{{ url_for('static', filename='logo/amazon.png') }}" alt="Amazon">
+                            </div>
+                            {% endif %}
+                            {% if product.woo_product_id %}
+                            <div class="platform-icon" title="WooCommerce'de satılıyor">
+                                <span class="platform-tooltip">WooCommerce</span>
+                                <img src="{{ url_for('static', filename='logo/woocommerce.png') }}" alt="WooCommerce">
+                            </div>
+                            {% endif %}
+                        </div>
                     </div>
                     <div class="model-info">
                         <div>
@@ -237,9 +313,17 @@
                                         <span>Fiyat: {{ "%.2f"|format(variant.sale_price) }} TL</span>
                                         <span class="barcode-info">
                                             Barkod: {{ variant.barcode }}
+                                            {% if variant.woo_product_id %}| Woo ID: {{ variant.woo_product_id }}{% endif %}
                                             {% if variant.raf_bilgisi %}| Raf: {{ variant.raf_bilgisi }}{% endif %}
                                             <button class="btn-copy copy-barcode-btn" data-barcode="{{ variant.barcode }}" title="Barkodu Kopyala">
                                                 <i class="fas fa-copy"></i>
+                                            </button>
+                                            <button class="btn-copy edit-woo-id-btn" 
+                                                    data-barcode="{{ variant.barcode }}" 
+                                                    data-woo-id="{{ variant.woo_product_id or '' }}"
+                                                    data-woo-barcode="{{ variant.woo_barcode or '' }}"
+                                                    title="{% if variant.woo_product_id %}Woo ID Düzenle{% else %}Woo ID Ekle{% endif %}">
+                                                <i class="fas fa-{% if variant.woo_product_id %}edit{% else %}plus{% endif %}"></i>
                                             </button>
                                         </span>
                                     </li>
@@ -364,7 +448,7 @@ $(function(){
             $('#modalSaveBtn').hide();
             $.get(`/api/get_variants_for_stock_update?model=${modelId}`, function(res){
                 if(res.success && res.products.length>0){
-                    let html='<table class="form-table"><thead><tr><th>Renk</th><th>Beden</th><th>Stok</th><th>Barkod</th><th>Raf</th></tr></thead><tbody>';
+                    let html='<table class="form-table"><thead><tr><th>Renk</th><th>Beden</th><th>Stok</th><th>Barkod</th><th>Woo ID</th><th>Raf</th></tr></thead><tbody>';
                     res.products.forEach(p=>{
                         html+=`<tr>
                             <td>${p.color}</td>
@@ -375,6 +459,7 @@ $(function(){
                                     <i class="fas fa-copy"></i>
                                 </button>
                             </td>
+                            <td>${p.woo_product_id || '-'}</td>
                             <td>${p.raf_bilgisi || '-'}</td>
                         </tr>`;
                     });
@@ -401,6 +486,7 @@ $(function(){
         let url='', formId='';
         if(currentAction==='update_model_cost'){ url='/api/update-product-cost'; formId='#singleInputForm'; }
         else if(currentAction==='update_model_price'){ url='/api/update_model_price'; formId='#singleInputForm'; }
+        else if(currentAction==='edit_woo_id'){ url='/api/update-woo-mapping'; formId='#wooIdForm'; }
         else return;
 
         $.post(url, $(formId).serialize(), res=>{
@@ -461,7 +547,54 @@ $(function(){
         }else{ alert('Tarayıcınız bu özelliği desteklemiyor.'); }
     });
 
+    // Woo ID Ekleme/Düzenleme
+    $(document).on('click', '.edit-woo-id-btn', function(e){
+        e.stopPropagation();
+        const $btn = $(this);
+        const barcode = $btn.data('barcode');
+        const currentWooId = $btn.data('woo-id') || '';
+        const currentWooBarcode = $btn.data('woo-barcode') || '';
+        
+        currentAction = 'edit_woo_id';
+        $('#modalTitle').text(`Woo ID ${currentWooId ? 'Düzenle' : 'Ekle'} - ${barcode}`);
+        $('#modalSaveBtn').show().text('Kaydet');
+        
+        $('#modalBody').html(`
+            <form id="wooIdForm">
+                <input type="hidden" name="barcode" value="${barcode}">
+                <div class="prompt-input-group">
+                    <label>WooCommerce Product ID:</label>
+                    <input type="number" name="woo_product_id" value="${currentWooId}" 
+                           class="form-control" placeholder="Örn: 37710" min="0">
+                </div>
+                <div class="prompt-input-group">
+                    <label>WooCommerce Barkod (isteğe bağlı):</label>
+                    <input type="text" name="woo_barcode" value="${currentWooBarcode}" 
+                           class="form-control" placeholder="Örn: 9857498231635">
+                </div>
+                <p style="color:#6c757d;font-size:0.85rem;margin-top:0.5rem;">
+                    <i class="fas fa-info-circle"></i> Bu değerler WooCommerce siparişlerinde ürün eşleştirmesi için kullanılır.
+                </p>
+            </form>
+        `);
+        
+        $modal.addClass('is-visible');
+    });
+
 });
+
+// Pazaryeri filtresi
+function filterByMarketplace() {
+    const value = document.getElementById('marketplaceFilter').value;
+    const url = new URL(window.location.href);
+    if (value) {
+        url.searchParams.set('marketplace', value);
+    } else {
+        url.searchParams.delete('marketplace');
+    }
+    url.searchParams.delete('page'); // Sayfa 1'e dön
+    window.location.href = url.toString();
+}
 </script>
 </body>
 </html>

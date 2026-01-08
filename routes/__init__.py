@@ -37,6 +37,13 @@ def register_blueprints(app):
     from siparis_hazirla import siparis_hazirla_bp
     from gorev import gorev_bp, attach_jobs
     from uretim_oneri import uretim_oneri_bp
+    from barcode_alias_routes import barcode_alias_bp  # 🔥 BARKOD ALIAS SİSTEMİ
+    from woocommerce_site import woo_bp  # 🛒 WOOCOMMERCE SİPARİŞ SİSTEMİ
+    from woocommerce_site.test_routes import test_bp  # 🧪 WOOCOMMERCE TEST - GEÇİCİ AKTİF
+    # Preview: Woo barcode mapping
+    from routes.woo_barcodes_preview import woo_preview_bp
+    from amazon import amazon_bp  # 🛍️ AMAZON SP-API SİSTEMİ
+    from stock_sync.routes import stock_sync_bp  # 📦 STOK SENKRONİZASYON SİSTEMİ
 
 
 
@@ -77,5 +84,11 @@ def register_blueprints(app):
         siparis_hazirla_bp,
         gorev_bp,
         uretim_oneri_bp,
+        barcode_alias_bp,  # 🔥 BARKOD ALIAS SİSTEMİ
+        woo_bp,  # 🛒 WOOCOMMERCE SİPARİŞ SİSTEMİ
+        test_bp,  # 🧪 WOOCOMMERCE TEST - GEÇİCİ AKTİF
+        woo_preview_bp,
+        amazon_bp,  # 🛍️ AMAZON SP-API SİSTEMİ
+        stock_sync_bp,  # 📦 STOK SENKRONİZASYON SİSTEMİ
     ]:
         app.register_blueprint(bp)

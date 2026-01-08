@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teslimat Etiketi #{{ order.order_number }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        @page {
+            size: 100mm 100mm;
+            margin: 0;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            width: 100mm;
+            height: 100mm;
+            padding: 5mm;
+            background: white;
+            position: relative;
+            color: #000;
+        }
+        
+        .label-container {
+            width: 100%;
+            height: 100%;
+            border: 3px solid #000;
+            padding: 4mm;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background: white;
+        }
+        
+        /* Kapıda Ödeme Uyarısı - Siyah Beyaz */
+        .cod-warning {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            color: #000;
+            text-align: center;
+            padding: 3mm 0;
+            font-weight: bold;
+            font-size: 14pt;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border: 4px solid #000;
+        }
+        
+        .cod-amount {
+            background: #fff;
+            color: #000;
+            padding: 2mm 4mm;
+            margin-top: 2mm;
+            font-size: 18pt;
+            font-weight: bold;
+            display: inline-block;
+            border: 4px solid #000;
+        }
+        
+        /* Header */
+        .label-header {
+            text-align: center;
+            padding-bottom: 2mm;
+            margin-bottom: 3mm;
+        }
+        
+        .cod-header {
+            margin-top: 20mm;
+        }
+        
+        .normal-header {
+            margin-top: 0;
+        }
+        
+        .company-name {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 1mm;
+            letter-spacing: 1px;
+        }
+        
+        .order-number {
+            font-size: 10pt;
+            color: #000;
+            font-weight: bold;
+        }
+        
+        /* Alıcı Bilgileri */
+        .recipient-section {
+            flex: 1;
+            margin-bottom: 3mm;
+        }
+        
+        .section-title {
+            font-size: 9pt;
+            font-weight: bold;
+            color: #000;
+            text-transform: uppercase;
+            margin-bottom: 2mm;
+            padding-bottom: 1mm;
+            letter-spacing: 1px;
+        }
+        
+        .recipient-name {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 2mm;
+        }
+        
+        .recipient-phone {
+            font-size: 11pt;
+            color: #000;
+            margin-bottom: 2mm;
+            font-weight: bold;
+        }
+        
+        .recipient-address {
+            font-size: 10pt;
+            color: #000;
+            line-height: 1.5;
+            margin-bottom: 1mm;
+        }
+        
+        .address-city {
+            font-weight: bold;
+            color: #000;
+            margin-top: 1.5mm;
+            font-size: 10pt;
+        }
+        
+        /* Footer */
+        .label-footer {
+            padding-top: 2mm;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .footer-item {
+            font-size: 8pt;
+            color: #000;
+            font-weight: bold;
+        }
+        
+        .footer-date {
+            font-weight: bold;
+        }
+        
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            .label-container {
+                page-break-after: always;
+            }
+        }
+        
+        /* Yazdır Butonu */
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #000;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        
+        .print-button:hover {
+            background: #333;
+        }
+        
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #666;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            text-decoration: none;
+            display: inline-block;
+            z-index: 1000;
+        }
+        
+        .back-button:hover {
+            background: #888;
+        }
+    </style>
+</head>
+<body>
+    <a href="{{ url_for('woo.order_detail', order_id=order.id) }}" class="back-button no-print">Geri</a>
+    <button onclick="window.print()" class="print-button no-print">Yazdir</button>
+    
+    <div class="label-container">
+        <!-- Kapıda Ödeme Uyarısı - Sadece COD için -->
+        {% if is_cod %}
+        <div class="cod-warning">
+            KAPIDA ODEME
+            <div class="cod-amount">
+                {{ order.total }} {{ order.currency }}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Header -->
+        <div class="label-header {% if is_cod %}cod-header{% else %}normal-header{% endif %}">
+            <div class="company-name">GULLU SHOES</div>
+            <div class="order-number">Siparis: #{{ order.order_number }}</div>
+        </div>
+        
+        <!-- Alıcı Bilgileri -->
+        <div class="recipient-section">
+            <div class="section-title">ALICI BILGILERI</div>
+            
+            <div class="recipient-name">
+                {{ order.customer.first_name }} {{ order.customer.last_name }}
+            </div>
+            
+            <div class="recipient-phone">
+                Tel: {{ order.customer.phone or 'Telefon belirtilmemis' }}
+            </div>
+            
+            <div class="recipient-address">
+                {{ order.shipping_address.address_1 or order.billing_address.address_1 }}
+                {% if order.shipping_address.address_2 or order.billing_address.address_2 %}
+                <br>{{ order.shipping_address.address_2 or order.billing_address.address_2 }}
+                {% endif %}
+            </div>
+            
+            <div class="address-city">
+                {{ order.shipping_address.city or order.billing_address.city }}
+                {% if order.shipping_address.state or order.billing_address.state %}
+                / {{ order.shipping_address.state or order.billing_address.state }}
+                {% endif %}
+                {% if order.shipping_address.postcode or order.billing_address.postcode %}
+                - {{ order.shipping_address.postcode or order.billing_address.postcode }}
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="label-footer">
+            <div class="footer-item">
+                Urun: {{ order.line_items|length }} adet
+            </div>
+            <div class="footer-item footer-date">
+                {{ order.date_created[:10] if order.date_created else '' }}
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Sayfa yüklendiğinde otomatik yazdır
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        }
+    </script>
+</body>
+</html>

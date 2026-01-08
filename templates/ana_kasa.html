@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ana Kasa - Güllü Ayakkabı</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        .header-section {
+            background: linear-gradient(135deg, #667db6 0%, #0082c8 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .header-section h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+        
+        .balance-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .balance-label {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .balance-amount {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #0082c8;
+        }
+        
+        .stat-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card h4 {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            border-radius: 20px;
+            padding: 10px 25px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-section {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .form-section h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .table-section {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .islem-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .badge-gelir { background: #d4edda; color: #155724; }
+        .badge-aktarim { background: #fff3cd; color: #856404; }
+        .badge-manuel-ekle { background: #cce5ff; color: #004085; }
+        .badge-manuel-cikis { background: #f8d7da; color: #721c24; }
+        
+        .filter-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .pagination {
+            justify-content: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Başlık -->
+        <div class="header-section">
+            <h1><i class="fas fa-wallet"></i> Ana Kasa Yönetimi</h1>
+            <p class="mb-0">Merkezi Gelir Yönetim Sistemi</p>
+        </div>
+        
+        <!-- Flash Mesajları -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- Bakiye Kartı -->
+        <div class="balance-card">
+            <div class="balance-label">Mevcut Bakiye</div>
+            <div class="balance-amount">{{ ana_kasa.bakiye|tl_format }} ₺</div>
+            <small class="text-muted">
+                Son Güncelleme: {{ ana_kasa.guncelleme_tarihi.strftime('%d.%m.%Y %H:%M') if ana_kasa.guncelleme_tarihi else 'Henüz güncellenmedi' }}
+            </small>
+        </div>
+        
+        <!-- Aksiyon Butonları -->
+        <div class="action-buttons">
+            <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Kasa Sayfası
+            </a>
+            <a href="{{ url_for('home.home') }}" class="btn btn-info">
+                <i class="fas fa-home"></i> Ana Sayfa
+            </a>
+        </div>
+        
+        <!-- Gelir Ekleme Formu -->
+        <div class="form-section">
+            <h3><i class="fas fa-plus-circle text-success"></i> Gelir Ekle</h3>
+            <form method="POST" action="{{ url_for('kasa.ana_kasa_gelir_ekle') }}">
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="tutar">Tutar (₺) <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="tutar" name="tutar" 
+                               placeholder="Örn: 5.000,00" required>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="kategori">Kategori</label>
+                        <input type="text" class="form-control" id="kategori" name="kategori" 
+                               placeholder="Örn: Trendyol Geliri">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="tarih">Tarih ve Saat <span class="text-danger">*</span></label>
+                        <input type="datetime-local" class="form-control" id="tarih" name="tarih" 
+                               value="{{ bugun.strftime('%Y-%m-%dT%H:%M') }}" required>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="aciklama">Açıklama <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="aciklama" name="aciklama" 
+                               placeholder="Örn: Trendyol haftalık gelir" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success btn-block">
+                    <i class="fas fa-check"></i> Gelir Ekle ve Normal Kasaya Aktar
+                </button>
+                <small class="form-text text-muted">
+                    <i class="fas fa-info-circle"></i> Gelir önce Ana Kasa'ya eklenecek, sonra otomatik olarak Normal Kasa'ya aktarılacaktır.
+                </small>
+            </form>
+        </div>
+        
+        <!-- Manuel İşlemler -->
+        <div class="form-section">
+            <h3><i class="fas fa-tools text-warning"></i> Manuel İşlemler</h3>
+            <div class="row">
+                <!-- Para Ekle -->
+                <div class="col-md-6">
+                    <h5><i class="fas fa-plus text-success"></i> Ana Kasa'ya Para Ekle</h5>
+                    <form method="POST" action="{{ url_for('kasa.ana_kasa_guncelle') }}">
+                        <input type="hidden" name="islem_tipi" value="ekle">
+                        <div class="form-group">
+                            <input type="text" class="form-control" name="tutar" placeholder="Tutar" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" class="form-control" name="aciklama" placeholder="Açıklama" required>
+                        </div>
+                        <button type="submit" class="btn btn-success btn-block">
+                            <i class="fas fa-check"></i> Para Ekle
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Para Çıkar -->
+                <div class="col-md-6">
+                    <h5><i class="fas fa-minus text-danger"></i> Ana Kasa'dan Para Çıkar</h5>
+                    <form method="POST" action="{{ url_for('kasa.ana_kasa_guncelle') }}">
+                        <input type="hidden" name="islem_tipi" value="cikar">
+                        <div class="form-group">
+                            <input type="text" class="form-control" name="tutar" placeholder="Tutar" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" class="form-control" name="aciklama" placeholder="Açıklama" required>
+                        </div>
+                        <button type="submit" class="btn btn-danger btn-block">
+                            <i class="fas fa-check"></i> Para Çıkar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- İşlem Geçmişi -->
+        <div class="table-section">
+            <h3><i class="fas fa-history"></i> İşlem Geçmişi ({{ toplam_kayit }} kayıt)</h3>
+            
+            <!-- Filtreler -->
+            <div class="filter-section">
+                <form method="GET" action="{{ url_for('kasa.ana_kasa') }}">
+                    <div class="form-row">
+                        <div class="col-md-3">
+                            <select name="yil" class="form-control">
+                                <option value="">Tüm Yıllar</option>
+                                {% for y in range(bugun.year, bugun.year - 5, -1) %}
+                                    <option value="{{ y }}" {% if yil == y %}selected{% endif %}>{{ y }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select name="ay" class="form-control">
+                                <option value="">Tüm Aylar</option>
+                                {% for m in range(1, 13) %}
+                                    <option value="{{ m }}" {% if ay == m %}selected{% endif %}>{{ m }}. Ay</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <select name="islem_tipi" class="form-control">
+                                <option value="">Tüm İşlemler</option>
+                                <option value="gelir_eklendi" {% if islem_tipi_filtre == 'gelir_eklendi' %}selected{% endif %}>Gelir Eklendi</option>
+                                <option value="normal_kasaya_aktarildi" {% if islem_tipi_filtre == 'normal_kasaya_aktarildi' %}selected{% endif %}>Normal Kasaya Aktarıldı</option>
+                                <option value="manuel_ekleme" {% if islem_tipi_filtre == 'manuel_ekleme' %}selected{% endif %}>Manuel Ekleme</option>
+                                <option value="manuel_cikis" {% if islem_tipi_filtre == 'manuel_cikis' %}selected{% endif %}>Manuel Çıkış</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary btn-block">
+                                <i class="fas fa-filter"></i> Filtrele
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Tablo -->
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Tarih</th>
+                            <th>İşlem Tipi</th>
+                            <th>Açıklama</th>
+                            <th class="text-right">Tutar</th>
+                            <th class="text-right">Önceki Bakiye</th>
+                            <th class="text-right">Yeni Bakiye</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if islemler %}
+                            {% for islem in islemler %}
+                                <tr>
+                                    <td>{{ islem.tarih.strftime('%d.%m.%Y %H:%M') }}</td>
+                                    <td>
+                                        {% if islem.islem_tipi == 'gelir_eklendi' %}
+                                            <span class="islem-badge badge-gelir">Gelir Eklendi</span>
+                                        {% elif islem.islem_tipi == 'normal_kasaya_aktarildi' %}
+                                            <span class="islem-badge badge-aktarim">Kasaya Aktarıldı</span>
+                                        {% elif islem.islem_tipi == 'manuel_ekleme' %}
+                                            <span class="islem-badge badge-manuel-ekle">Manuel Ekleme</span>
+                                        {% elif islem.islem_tipi == 'manuel_cikis' %}
+                                            <span class="islem-badge badge-manuel-cikis">Manuel Çıkış</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ islem.aciklama }}</td>
+                                    <td class="text-right">
+                                        <strong>
+                                            {% if islem.islem_tipi in ['gelir_eklendi', 'manuel_ekleme'] %}
+                                                <span class="text-success">+{{ islem.tutar|tl_format }} ₺</span>
+                                            {% else %}
+                                                <span class="text-danger">-{{ islem.tutar|tl_format }} ₺</span>
+                                            {% endif %}
+                                        </strong>
+                                    </td>
+                                    <td class="text-right">{{ islem.onceki_bakiye|tl_format }} ₺</td>
+                                    <td class="text-right"><strong>{{ islem.yeni_bakiye|tl_format }} ₺</strong></td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center">Henüz işlem kaydı bulunmamaktadır.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Sayfalama -->
+            {% if toplam_sayfa > 1 %}
+                <nav>
+                    <ul class="pagination">
+                        {% if sayfa > 1 %}
+                            <li class="page-item">
+                                <a class="page-link" href="?sayfa={{ sayfa - 1 }}{% if yil %}&yil={{ yil }}{% endif %}{% if ay %}&ay={{ ay }}{% endif %}{% if islem_tipi_filtre %}&islem_tipi={{ islem_tipi_filtre }}{% endif %}">Önceki</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for p in range(1, toplam_sayfa + 1) %}
+                            {% if p == sayfa %}
+                                <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+                            {% elif p >= sayfa - 2 and p <= sayfa + 2 %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?sayfa={{ p }}{% if yil %}&yil={{ yil }}{% endif %}{% if ay %}&ay={{ ay }}{% endif %}{% if islem_tipi_filtre %}&islem_tipi={{ islem_tipi_filtre }}{% endif %}">{{ p }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if sayfa < toplam_sayfa %}
+                            <li class="page-item">
+                                <a class="page-link" href="?sayfa={{ sayfa + 1 }}{% if yil %}&yil={{ yil }}{% endif %}{% if ay %}&ay={{ ay }}{% endif %}{% if islem_tipi_filtre %}&islem_tipi={{ islem_tipi_filtre }}{% endif %}">Sonraki</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+    
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Alert otomatik kapanma
+        setTimeout(function() {
+            $('.alert').fadeOut('slow');
+        }, 5000);
+    </script>
+</body>
+</html>

@@ -15,7 +15,7 @@ from flask_cors import CORS
 from werkzeug.routing import BuildError
 from flask_login import LoginManager, current_user
 from archive import format_turkish_date_filter
-from models import db, User, CentralStock, StockPushLog  # OrderCreated içerden import edilecek
+from models import db, User, CentralStock  # OrderCreated içerden import edilecek
 from logger_config import app_logger as logger
 from cache_config import cache
 from flask_restx import Api
@@ -124,6 +124,10 @@ app.jinja_env.filters['format_date'] = format_turkish_date_filter
 # ──────────────────────────────────────────────────────────────────────────────
 register_blueprints(app)
 
+# Idefix Blueprint
+from idefix.idefix_routes import idefix_bp
+app.register_blueprint(idefix_bp)
+
 # >>> Forecast cache fonksiyonlarını blueprint yüklendikten sonra import et
 try:
     # Eğer uretim_oneri blueprint'in kök dizindeyse:
@@ -198,7 +202,9 @@ def check_authentication():
 @app.errorhandler(404)
 def not_found_error(error):
     """404 - Sayfa Bulunamadı"""
-    logger.warning(f"404 Hatası - Yol: {request.path}, IP: {request.remote_addr}")
+    # Static dosyalar için loglama yapma (gereksiz spam'i önler)
+    if not request.path.startswith('/static/'):
+        logger.warning(f"404 Hatası - Yol: {request.path}, IP: {request.remote_addr}")
     if request.path.startswith('/api/'):
         return {'error': 'Endpoint bulunamadı', 'path': request.path}, 404
     return render_template('errors/404.html'), 404
@@ -284,163 +290,33 @@ def pull_orders_job():
         except Exception as e:
             logger.error(f"pull_orders_job hata: {e}", exc_info=True)
 
-def push_central_stock_to_trendyol():
-    """
-    🔄 CentralStock'tan Trendyol'a stok gönderimi
-    
-    MANTIK:
-    1. OrderCreated (Yeni) siparişler → REZERVE sayılır (stoktan düşülmez)
-    2. Available Stock = CentralStock.qty - OrderCreated rezerv
-    3. Trendyol'a bu "müsait stok" gönderilir
-    4. OrderPicking'e geçen siparişler → CentralStock'tan düşülür (update_service.py)
-    
-    ZAMANLAMA: Her 5-10 dakikada bir otomatik çalışır
-    LOG: StockPushLog tablosuna detay kaydedilir
-    """
-    start_time = time.time()
-    push_success = False
-    error_msg = None
-    
+def sync_woo_orders_background():
+    """WooCommerce siparişlerini arka planda senkronize eder (zamanlayıcı için)"""
     with app.app_context():
-        import base64, aiohttp, asyncio, math
-        from models import OrderCreated, StockPushLog
-
-        def _parse(raw):
-            try:
-                if not raw: return []
-                d = json.loads(raw) if isinstance(raw, str) else raw
-                return d if isinstance(d, list) else [d]
-            except Exception:
-                return []
-
-        def _i(x, d=0):
-            try:
-                return int(str(x).strip())
-            except Exception:
-                return d
-
         try:
-            rows = CentralStock.query.all()
-            if not rows:
-                logger.info("[PUSH] CentralStock boş; gönderim yok.")
-                # Boş gönderim de log'a yazalım
-                log = StockPushLog(
-                    total_items=0,
-                    total_quantity=0,
-                    reserved_quantity=0,
-                    batch_count=0,
-                    success=True,
-                    duration_seconds=time.time() - start_time
-                )
-                db.session.add(log)
-                db.session.commit()
-                return
-
-            # 1️⃣ Created (Yeni) siparişlerdeki REZERV hesapla
-            reserved = {}
-            total_reserved = 0
-            for (details_str,) in OrderCreated.query.with_entities(OrderCreated.details).all():
-                for it in _parse(details_str):
-                    bc = (it.get("barcode") or "").strip()
-                    q  = _i(it.get("quantity"), 0)
-                    if bc and q > 0:
-                        reserved[bc] = reserved.get(bc, 0) + q
-                        total_reserved += q
-
-            logger.info(f"[PUSH] 📦 Toplam rezerv (Created siparişler): {total_reserved} adet, {len(reserved)} farklı barkod")
-
-            # 2️⃣ Available = CentralStock - Reserved
-            items = []
-            total_qty = 0
-            barcode_to_obj = {}  # Barkod -> CentralStock object mapping
-            for r in rows:
-                central_qty = _i(r.qty, 0)
-                reserved_qty = reserved.get(r.barcode, 0)
-                available = max(0, central_qty - reserved_qty)
-                items.append({"barcode": r.barcode.strip(), "quantity": available})
-                total_qty += available
-                barcode_to_obj[r.barcode.strip()] = r  # Sonra update için
-
-            if not items:
-                logger.info("[PUSH] Gönderilecek kalem yok.")
-                log = StockPushLog(
-                    total_items=0,
-                    total_quantity=0,
-                    reserved_quantity=total_reserved,
-                    batch_count=0,
-                    success=True,
-                    duration_seconds=time.time() - start_time
-                )
-                db.session.add(log)
-                db.session.commit()
-                return
-
-            # 3️⃣ Trendyol API'ye gönder
-            url = f"https://api.trendyol.com/sapigw/suppliers/{SUPPLIER_ID}/products/price-and-inventory"
-            auth = base64.b64encode(f"{API_KEY}:{API_SECRET}".encode()).decode()
-            headers = {
-                "Authorization": f"Basic {auth}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "User-Agent": f"GulluAyakkabiApp-V2/{SUPPLIER_ID}"
-            }
-
-            BATCH_SIZE = 100
-            total = len(items)
-            parts = math.ceil(total / BATCH_SIZE)
-            logger.info(f"[PUSH] 🚀 Trendyol'a gönderiliyor: {total} ürün ({total_qty} adet), {parts} batch")
-
-            async def _run():
-                async with aiohttp.ClientSession() as session:
-                    for i in range(0, total, BATCH_SIZE):
-                        batch = items[i:i+BATCH_SIZE]
-                        payload = {"items": [{"barcode": it["barcode"], "quantity": max(0, int(it["quantity"]))}
-                                             for it in batch if it.get("barcode")]}
-                        async with session.post(url, headers=headers, json=payload, timeout=60) as resp:
-                            body = await resp.text()
-                            status_icon = "✅" if resp.status == 200 else "❌"
-                            logger.info(f"[PUSH {status_icon}] Batch {i//BATCH_SIZE+1}/{parts}: {resp.status} - {body[:200]}")
-                            if resp.status != 200:
-                                raise Exception(f"API Hatası: {resp.status} - {body}")
-                        await asyncio.sleep(0.4)
-
-            asyncio.run(_run())
-            push_success = True
+            from woocommerce_site.woo_service import WooCommerceService
+            from woocommerce_site.woo_config import WooConfig
             
-            # 4️⃣ Gönderilen her barkodun last_push_date'ini güncelle
-            push_time = datetime.now(ZoneInfo("Europe/Istanbul"))
-            for item in items:
-                barcode = item["barcode"]
-                if barcode in barcode_to_obj:
-                    barcode_to_obj[barcode].last_push_date = push_time
-            db.session.commit()
+            # API ayarları kontrolü
+            if not WooConfig.is_configured():
+                logger.debug("WooCommerce API ayarları yapılmamış, senkronizasyon atlandı")
+                return
             
-            logger.info("[PUSH] ✅ Trendyol stok güncellemesi BAŞARILI!")
-
+            woo_service = WooCommerceService()
+            
+            # Son 3 günün siparişlerini çek (sadece aktif olanlar)
+            active_statuses = ['pending', 'processing', 'on-hold']
+            total = 0
+            
+            for status in active_statuses:
+                result = woo_service.sync_orders_to_db(status=status, days=3)
+                total += result.get('total_saved', 0)
+            
+            if total > 0:
+                logger.info(f"WooCommerce otomatik senkronizasyon: {total} sipariş güncellendi")
+                
         except Exception as e:
-            push_success = False
-            error_msg = str(e)
-            logger.error(f"[PUSH] ❌ Hata: {e}", exc_info=True)
-
-        finally:
-            # 4️⃣ Log kaydı oluştur
-            duration = time.time() - start_time
-            log = StockPushLog(
-                total_items=len(items) if 'items' in locals() else 0,
-                total_quantity=total_qty if 'total_qty' in locals() else 0,
-                reserved_quantity=total_reserved if 'total_reserved' in locals() else 0,
-                batch_count=parts if 'parts' in locals() else 0,
-                success=push_success,
-                error_message=error_msg,
-                duration_seconds=duration
-            )
-            db.session.add(log)
-            db.session.commit()
-            logger.info(f"[PUSH] 📝 Log kaydedildi: {len(items) if 'items' in locals() else 0} ürün, {duration:.2f}s")
-
-def push_stock_job():
-    """Zamanlayıcı tetiklemesinde direkt stok gönderir (zamanlamayı schedule ayarlar)."""
-    push_central_stock_to_trendyol()
+            logger.error(f"WooCommerce arka plan senkronizasyon hatası: {str(e)}")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Forecast cache wrapper'ları (app context ile)
@@ -465,7 +341,7 @@ scheduler = BackgroundScheduler(
 
 # ENV bayrakları
 # DISABLE_JOBS=1  -> tüm job'lar kapalı (local test için birebir)
-# DISABLE_JOBS_IDS=pull_orders,push_stock -> seçili job'lar kapalı (virgülle ayır)
+# DISABLE_JOBS_IDS=pull_orders -> seçili job'lar kapalı (virgülle ayır)
 ENABLE_JOBS = str(os.getenv("DISABLE_JOBS", "0")).lower() not in ("1", "true", "yes")
 DISABLED_IDS = set([s.strip() for s in os.getenv("DISABLE_JOBS_IDS", "").split(",") if s.strip()])
 
@@ -535,15 +411,6 @@ def schedule_jobs():
         next_run_time=now
     )
 
-    # PUSHA: 3 dk sonra başla, her 10 dakikada (stok senkronizasyonu)
-    _add_job_safe(
-        push_stock_job,
-        trigger='interval',
-        id="push_stock",
-        minutes=10,  # 🔧 10 dakikada bir stok gönder
-        next_run_time=now + timedelta(minutes=3)
-    )
-
     # İade: her gece 23:50
     _add_job_safe(
         fetch_and_save_returns,
@@ -569,6 +436,30 @@ def schedule_jobs():
         hour=3,
         minute=10
     )
+
+    # >>> Stok Sync: 15 dakikada bir (Idefix hariç)
+    from stock_sync.service import auto_sync_platforms_except_idefix
+    
+    def _stock_sync_job():
+        with app.app_context():
+            auto_sync_platforms_except_idefix()
+    
+    _add_job_safe(
+        _stock_sync_job,
+        trigger='interval',
+        id="stock_sync_auto",
+        minutes=15,
+        next_run_time=now + timedelta(minutes=2)  # İlk çalışma 2 dk sonra
+    )
+
+    # >>> WooCommerce sipariş senkronizasyonu: her 10 dakika - DEVRE DIŞI
+    # _add_job_safe(
+    #     sync_woo_orders_background,
+    #     trigger='interval',
+    #     id="woo_sync_orders",
+    #     minutes=10,
+    #     next_run_time=now + timedelta(minutes=1)  # 1 dk sonra başlasın
+    # )
 
 # ENV ve liderlik kontrolü
 _leader_ok = False

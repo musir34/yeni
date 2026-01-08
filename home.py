@@ -40,6 +40,9 @@ ITEM_PRICE_CANDS = ["payablePrice","payable_price","totalPrice","total_price",
 @home_bp.route("/home", endpoint="home")
 @home_bp.route("/anasayfa", endpoint="home")
 def index():
+    # WooCommerce modelini import et
+    from woocommerce_site.models import WooOrder
+    
     # Toplam stok
     toplam_stok = db.session.query(func.sum(CentralStock.qty)).scalar() or 0
 
@@ -54,19 +57,43 @@ def index():
     gun_basi = datetime(now.year, now.month, now.day, tzinfo=IST)
     gun_sonu = datetime(now.year, now.month, now.day, tzinfo=IST).replace(hour=23, minute=59, second=59, microsecond=999000)
 
-    # 1) Birleşik sipariş kümesi (CANLI PANEL MANTIĞIyla)
+    # 1) Birleşik sipariş kümesi (CANLI PANEL MANTIĞIyla) - Trendyol
     best_rows = _collect_month_orders_unified(ay_basi, sonraki_ay)
 
-    # 2) Toplam sipariş sayısı (benzersiz order_id)
-    aylik_toplam_siparis = len(best_rows)
+    # 2) Toplam sipariş sayısı (benzersiz order_id) - Trendyol
+    aylik_trendyol_siparis = len(best_rows)
+    
+    # 🛒 WooCommerce siparişlerini say (aylık)
+    aylik_woo_siparis = (
+        db.session.query(func.count(WooOrder.id))
+        .filter(_ist_between(WooOrder.date_created, ay_basi, sonraki_ay))
+        .scalar()
+    ) or 0
+    
+    # Toplam sipariş = Trendyol + WooCommerce
+    aylik_toplam_siparis = aylik_trendyol_siparis + aylik_woo_siparis
 
     # 3) Ortalama sipariş tutarı (CANLI PANEL MANTIĞIyla - sipariş başına NET)
     # avg_per_order, total_net_ciro, order_count
     ortalama_siparis_tutari, toplam_ciro, siparis_sayisi = _monthly_aov_from_unified_rows(best_rows)
 
-    # Created ve Picking sayıları
+    # Created ve Picking sayıları - Trendyol
     created_count = db.session.query(func.count()).select_from(OrderCreated).scalar() or 0
     picking_count = db.session.query(func.count()).select_from(OrderPicking).scalar() or 0
+    
+    # 🛒 WooCommerce siparişlerini say (on-hold = beklemede)
+    woo_onhold_count = (
+        db.session.query(func.count(WooOrder.id))
+        .filter(WooOrder.status == 'on-hold')
+        .scalar()
+    ) or 0
+    
+    # 🛒 WooCommerce siparişlerini say (processing = işlemde)
+    woo_processing_count = (
+        db.session.query(func.count(WooOrder.id))
+        .filter(WooOrder.status == 'processing')
+        .scalar()
+    ) or 0
 
     # İadeler (ilgili ay)
     iade_adedi = (
@@ -90,8 +117,12 @@ def index():
 
     stats = {
         "toplam_siparis": aylik_toplam_siparis,
+        "trendyol_siparis": aylik_trendyol_siparis,  # 🔥 Yeni: Trendyol ayrı
+        "woo_siparis": aylik_woo_siparis,            # 🔥 Yeni: WooCommerce ayrı
         "created": created_count,
         "picking": picking_count,
+        "woo_onhold": woo_onhold_count,              # 🔥 Yeni: WooCommerce beklemede
+        "woo_processing": woo_processing_count,      # 🔥 Yeni: WooCommerce işlemde
         "hazirlanan": 0,
         "iade": iade_adedi,
         "kritik_stok": 0,

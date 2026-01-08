@@ -573,59 +573,6 @@ def upsert_products(products):
     db.session.commit()
 
 
-async def update_stock_levels_with_items_async(items):
-    if not items:
-        logger.error("Güncellenecek ürün bulunamadı.")
-        return False
-
-    url = f"{BASE_URL}products/price-and-inventory"
-    credentials = f"{API_KEY}:{API_SECRET}"
-    encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
-    headers = {"Authorization": f"Basic {encoded_credentials}", "Content-Type": "application/json"}
-
-    # fiyat için Product, adet için CentralStock kullan
-    product_map = {p.barcode: p for p in Product.query.all()}
-    cs_map = {c.barcode: c.qty for c in CentralStock.query.all()}
-
-    payload_items = []
-    for it in items:
-        barcode = it['barcode']
-        p = product_map.get(barcode)
-        if not p:
-            logger.warning(f"Barkod için ürün bulunamadı: {barcode}")
-            continue
-
-        qty = int(cs_map.get(barcode, 0))  # <<<< MERKEZ STOK
-        try:
-            sale_price = float(p.sale_price or 0)
-            list_price = float(p.list_price or 0)
-            _currency = p.currency_type or 'TRY'
-        except ValueError as e:
-            logger.error(f"Fiyat bilgileri hatalı: {e}")
-            continue
-
-        payload_items.append({"barcode": barcode, "quantity": qty})
-
-    if not payload_items:
-        logger.info("Gönderilecek item yok.")
-        return True
-
-    payload = {"items": payload_items}
-    async with aiohttp.ClientSession() as session:
-        try:
-            timeout = aiohttp.ClientTimeout(total=30)
-            async with session.post(url, headers=headers, json=payload, timeout=timeout) as response:
-                if response.status != 200:
-                    logger.error(f"HTTP Hatası: {response.status}, Yanıt: {await response.text()}")
-                    return False
-                data = await response.json()
-                logger.info(f"API yanıtı: {data}")
-                return bool(data.get('batchRequestId'))
-        except aiohttp.ClientError as e:
-            logger.error(f"İstek Hatası: {e}")
-            return False
-
-
 @get_products_bp.route('/fetch-products')
 async def fetch_products_route():
     try:
@@ -884,24 +831,6 @@ def get_product_variants():
     except Exception as e:
         logger.error(f"get_product_variants hata: {e}", exc_info=True)
         return jsonify({'success': False, 'message': 'Sunucu hatası.'}), 500
-
-
-"""@get_products_bp.route('/update_stocks_ajax', methods=['POST'])
-async def update_stocks_ajax():
-    form_data = request.form
-    if not form_data:
-        return jsonify({'success': False, 'message': 'Güncellenecek ürün bulunamadı.'})
-    items_to_update = []
-    for barcode, quantity in form_data.items():
-        try:
-            items_to_update.append({'barcode': barcode, 'quantity': int(quantity)})
-        except ValueError:
-            return jsonify({'success': False, 'message': f"Barkod {barcode} için geçersiz miktar girdiniz."})
-    result = await update_stock_levels_with_items_async(items_to_update)
-    if result:
-        return jsonify({'success': True})
-    else:
-        return jsonify({'success': False, 'message': 'Stok güncelleme başarısız oldu.'})"""
 
 
 @get_products_bp.route('/delete_product_variants', methods=['POST'])
@@ -1446,6 +1375,83 @@ def update_model_price():
         return jsonify({'success': False, 'message': f'Model fiyat güncelleme sırasında hata oluştu: {str(e)}'})
 
 
+@get_products_bp.route('/api/update-woo-mapping', methods=['POST'])
+@roles_required('admin', 'manager')
+def update_woo_mapping():
+    """Bir ürünün WooCommerce mapping bilgilerini günceller"""
+    try:
+        # Yetki kontrolü
+        if not session.get('user_id'):
+            return jsonify({'success': False, 'message': 'Oturum açmanız gerekli'})
+
+        barcode = request.form.get('barcode', '').strip()
+        woo_product_id_str = request.form.get('woo_product_id', '').strip()
+        woo_barcode = request.form.get('woo_barcode', '').strip()
+
+        if not barcode:
+            return jsonify({'success': False, 'message': 'Barkod gerekli'})
+
+        # Ürünü bul
+        product = Product.query.filter_by(barcode=barcode).first()
+        if not product:
+            return jsonify({'success': False, 'message': 'Ürün bulunamadı'})
+
+        # Woo Product ID'yi kontrol et ve kaydet
+        woo_product_id = None
+        if woo_product_id_str:
+            try:
+                woo_product_id = int(woo_product_id_str)
+            except (ValueError, TypeError):
+                return jsonify({'success': False, 'message': 'Geçersiz WooCommerce Product ID'})
+
+        # Güncelleme yap
+        old_woo_id = product.woo_product_id
+        old_woo_barcode = product.woo_barcode
+        
+        product.woo_product_id = woo_product_id
+        product.woo_barcode = woo_barcode if woo_barcode else None
+        
+        db.session.add(product)
+        db.session.commit()
+
+        # Kullanıcı işlemini logla
+        try:
+            from user_logs import log_user_action
+            log_details = {
+                'sayfa': 'Ürün Listesi',
+                'barkod': barcode,
+                'eski_woo_id': old_woo_id,
+                'yeni_woo_id': woo_product_id,
+                'eski_woo_barcode': old_woo_barcode,
+                'yeni_woo_barcode': woo_barcode,
+                'işlem_açıklaması': f'{barcode} barkodlu ürünün WooCommerce mapping bilgileri güncellendi'
+            }
+            log_user_action(
+                action='WOO_MAPPING_UPDATE',
+                details=log_details
+            )
+        except Exception as e:
+            logger.error(f"Kullanıcı log hatası: {e}")
+
+        message = f'WooCommerce mapping bilgileri başarıyla güncellendi.'
+        if woo_product_id:
+            message += f' Woo ID: {woo_product_id}'
+        if woo_barcode:
+            message += f', Woo Barkod: {woo_barcode}'
+
+        return jsonify({
+            'success': True,
+            'message': message,
+            'woo_product_id': woo_product_id,
+            'woo_barcode': woo_barcode
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Woo mapping güncelleme hatası: {e}")
+        return jsonify({'success': False, 'message': f'Güncelleme sırasında hata oluştu: {str(e)}'})
+
+
 @get_products_bp.route('/api/bulk-delete-products', methods=['POST'])
 @roles_required('admin', 'manager')
 def bulk_delete_products():
@@ -1549,7 +1555,8 @@ def get_variants_for_stock_update():
                 'color': p.color,
                 'size': p.size,
                 'quantity': qty,
-                'raf_bilgisi': raf_bilgisi
+                'raf_bilgisi': raf_bilgisi,
+                'woo_product_id': p.woo_product_id
             })
 
         return jsonify({'success': True, 'products': variants})

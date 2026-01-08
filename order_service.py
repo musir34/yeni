@@ -607,7 +607,8 @@ def combine_line_items(order_data, status):
         'agreed_delivery_date': ts_to_dt(order_data.get('agreedDeliveryDate')),
         'details': dumps(details_list, ensure_ascii=False, indent=None, separators=(',', ':')),
         'quantity': total_qty,
-        'commission': sum(item.get('commissionFee', 0.0) for item in details_list)
+        'commission': sum(item.get('commissionFee', 0.0) for item in details_list),
+        'source': 'TRENDYOL'  # 🔥 KAYNAK BİLGİSİ
     }
     return db_record_dict
 

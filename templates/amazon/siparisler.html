@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Amazon Siparişleri{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>
+                <i class="fab fa-amazon text-warning"></i> Amazon Siparişleri
+                <small class="text-muted">({{ total }} sipariş)</small>
+            </h2>
+        </div>
+    </div>
+
+    <!-- Filtreler -->
+    <div class="row mb-3">
+        <div class="col-md-2">
+            <label>Gün Aralığı</label>
+            <select class="form-control" id="days" onchange="applyFilters()">
+                <option value="1" {% if days == 1 %}selected{% endif %}>Bugün</option>
+                <option value="7" {% if days == 7 %}selected{% endif %}>Son 7 Gün</option>
+                <option value="14" {% if days == 14 %}selected{% endif %}>Son 14 Gün</option>
+                <option value="30" {% if days == 30 %}selected{% endif %}>Son 30 Gün</option>
+                <option value="90" {% if days == 90 %}selected{% endif %}>Son 90 Gün</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label>Sipariş Durumu</label>
+            <select class="form-control" id="order_status" onchange="applyFilters()">
+                <option value="">Tümü</option>
+                <option value="Pending" {% if status == 'Pending' %}selected{% endif %}>Beklemede</option>
+                <option value="Unshipped" {% if status == 'Unshipped' %}selected{% endif %}>Hazırlanıyor</option>
+                <option value="Shipped" {% if status == 'Shipped' %}selected{% endif %}>Kargoda</option>
+                <option value="Delivered" {% if status == 'Delivered' %}selected{% endif %}>Teslim Edildi</option>
+                <option value="Canceled" {% if status == 'Canceled' %}selected{% endif %}>İptal Edildi</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label>Ara</label>
+            <input type="text" class="form-control" id="search" placeholder="Sipariş no, müşteri...">
+        </div>
+        <div class="col-md-3">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary btn-block" onclick="applyFilters()">
+                <i class="fas fa-search"></i> Filtrele
+            </button>
+        </div>
+        <div class="col-md-2">
+            <label>&nbsp;</label>
+            <button class="btn btn-success btn-block" onclick="syncOrders()">
+                <i class="fas fa-sync"></i> Senkronize
+            </button>
+        </div>
+    </div>
+
+    <!-- Sipariş Listesi -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Sipariş Listesi</h5>
+                    <span class="badge badge-info">{{ orders|length }} kayıt</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="ordersTable">
+                            <thead>
+                                <tr>
+                                    <th>Sipariş No</th>
+                                    <th>Tarih</th>
+                                    <th>Müşteri</th>
+                                    <th>Durum</th>
+                                    <th>Fulfillment</th>
+                                    <th class="text-right">Tutar</th>
+                                    <th class="text-center">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTableBody">
+                                {% if orders %}
+                                    {% for order in orders %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('amazon.order_detail', order_id=order.AmazonOrderId) }}">
+                                                <strong>{{ order.AmazonOrderId }}</strong>
+                                            </a>
+                                        </td>
+                                        <td>{{ order.PurchaseDate[:10] if order.PurchaseDate else '-' }}</td>
+                                        <td>
+                                            {% if order.ShippingAddress %}
+                                                {{ order.ShippingAddress.Name or '-' }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% set status_class = {
+                                                'Pending': 'warning',
+                                                'Unshipped': 'info',
+                                                'PartiallyShipped': 'primary',
+                                                'Shipped': 'success',
+                                                'Delivered': 'success',
+                                                'Canceled': 'danger',
+                                                'Unfulfillable': 'dark'
+                                            } %}
+                                            <span class="badge badge-{{ status_class.get(order.OrderStatus, 'secondary') }}">
+                                                {{ order.OrderStatus }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if order.FulfillmentChannel == 'AFN' %}
+                                                <span class="badge badge-primary">FBA</span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">FBM</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-right">
+                                            {% if order.OrderTotal %}
+                                                <strong>{{ order.OrderTotal.Amount }}</strong>
+                                                <small>{{ order.OrderTotal.CurrencyCode }}</small>
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="{{ url_for('amazon.order_detail', order_id=order.AmazonOrderId) }}" 
+                                               class="btn btn-sm btn-primary" title="Detay">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-4">
+                                            <i class="fas fa-inbox fa-3x mb-3"></i>
+                                            <p>Sipariş bulunamadı</p>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function applyFilters() {
+    const days = document.getElementById('days').value;
+    const status = document.getElementById('order_status').value;
+    
+    let url = '{{ url_for("amazon.orders") }}?days=' + days;
+    if (status) url += '&status=' + status;
+    
+    window.location.href = url;
+}
+
+function syncOrders() {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Senkronize ediliyor...';
+    
+    fetch('{{ url_for("amazon.sync_orders") }}', {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync"></i> Senkronize';
+            }
+        });
+}
+
+// Arama
+document.getElementById('search').addEventListener('input', function(e) {
+    const search = e.target.value.toLowerCase();
+    const rows = document.querySelectorAll('#ordersTableBody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(search) ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}

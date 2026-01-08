@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}Amazon Sipariş #{{ order.AmazonOrderId }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Başlık -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('amazon.index') }}">Amazon</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('amazon.orders') }}">Siparişler</a></li>
+                    <li class="breadcrumb-item active">{{ order.AmazonOrderId }}</li>
+                </ol>
+            </nav>
+            <h2>
+                <i class="fab fa-amazon"></i> Sipariş Detayı
+                <span class="badge badge-{{ 
+                    'success' if order.OrderStatus == 'Shipped' else 
+                    'warning' if order.OrderStatus == 'Pending' else 
+                    'info' if order.OrderStatus == 'Unshipped' else 
+                    'secondary' 
+                }}">{{ order.OrderStatus }}</span>
+            </h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Sipariş Bilgileri -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Sipariş Bilgileri</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Sipariş No:</strong></td>
+                            <td>{{ order.AmazonOrderId }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Sipariş Tarihi:</strong></td>
+                            <td>{{ order.PurchaseDate }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Son Güncelleme:</strong></td>
+                            <td>{{ order.LastUpdateDate }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Sipariş Durumu:</strong></td>
+                            <td>{{ order.OrderStatus }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Fulfillment:</strong></td>
+                            <td>{{ order.FulfillmentChannel }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Satış Kanalı:</strong></td>
+                            <td>{{ order.SalesChannel }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Marketplace:</strong></td>
+                            <td>{{ order.MarketplaceId }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Müşteri ve Teslimat -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-user"></i> Müşteri Bilgileri</h5>
+                </div>
+                <div class="card-body">
+                    {% if order.ShippingAddress %}
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Ad Soyad:</strong></td>
+                            <td>{{ order.ShippingAddress.Name or '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Adres:</strong></td>
+                            <td>
+                                {{ order.ShippingAddress.AddressLine1 or '' }}<br>
+                                {{ order.ShippingAddress.AddressLine2 or '' }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Şehir:</strong></td>
+                            <td>{{ order.ShippingAddress.City or '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>İlçe/Bölge:</strong></td>
+                            <td>{{ order.ShippingAddress.StateOrRegion or '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Posta Kodu:</strong></td>
+                            <td>{{ order.ShippingAddress.PostalCode or '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ülke:</strong></td>
+                            <td>{{ order.ShippingAddress.CountryCode or '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Telefon:</strong></td>
+                            <td>{{ order.ShippingAddress.Phone or '-' }}</td>
+                        </tr>
+                    </table>
+                    {% else %}
+                    <p class="text-muted">Teslimat adresi bilgisi mevcut değil</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ödeme Bilgileri -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-credit-card"></i> Ödeme Bilgileri</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Ödeme Yöntemi:</strong></td>
+                            <td>{{ order.PaymentMethod or '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Toplam Tutar:</strong></td>
+                            <td class="h5 text-success">
+                                {{ order.OrderTotal.Amount if order.OrderTotal else '0' }} 
+                                {{ order.OrderTotal.CurrencyCode if order.OrderTotal else 'TRY' }}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-truck"></i> Kargo Bilgileri</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Kargo Türü:</strong></td>
+                            <td>{{ order.ShipmentServiceLevelCategory or '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tahmini Teslimat:</strong></td>
+                            <td>
+                                {{ order.EarliestDeliveryDate or '-' }} - 
+                                {{ order.LatestDeliveryDate or '' }}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sipariş Ürünleri -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-box"></i> Sipariş Ürünleri</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ASIN</th>
+                                    <th>SKU</th>
+                                    <th>Ürün Adı</th>
+                                    <th class="text-center">Adet</th>
+                                    <th class="text-right">Birim Fiyat</th>
+                                    <th class="text-right">Toplam</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order.OrderItems %}
+                                <tr>
+                                    <td>{{ item.ASIN }}</td>
+                                    <td>{{ item.SellerSKU }}</td>
+                                    <td>{{ item.Title }}</td>
+                                    <td class="text-center">{{ item.QuantityOrdered }}</td>
+                                    <td class="text-right">
+                                        {{ item.ItemPrice.Amount if item.ItemPrice else '-' }}
+                                        {{ item.ItemPrice.CurrencyCode if item.ItemPrice else '' }}
+                                    </td>
+                                    <td class="text-right font-weight-bold">
+                                        {% if item.ItemPrice %}
+                                            {{ (item.ItemPrice.Amount|float * item.QuantityOrdered)|round(2) }}
+                                            {{ item.ItemPrice.CurrencyCode }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">Ürün bilgisi bulunamadı</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Eylemler -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <a href="{{ url_for('amazon.orders') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Siparişlere Dön
+            </a>
+            {% if order.OrderStatus == 'Unshipped' %}
+            <button class="btn btn-success" onclick="markAsShipped()">
+                <i class="fas fa-truck"></i> Kargoya Ver
+            </button>
+            {% endif %}
+            <button class="btn btn-primary" onclick="window.print()">
+                <i class="fas fa-print"></i> Yazdır
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function markAsShipped() {
+    if (confirm('Bu siparişi kargoya verildi olarak işaretlemek istiyor musunuz?')) {
+        // TODO: Kargo işleme API'si
+        alert('Bu özellik yakında eklenecek');
+    }
+}
+</script>
+{% endblock %}
