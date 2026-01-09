@@ -14,6 +14,9 @@ from flask import send_file
 # 🔥 BARKOD ALIAS DESTEĞİ
 from barcode_alias_helper import normalize_barcode
 
+# 🔥 MERKEZ STOK SENKRONİZASYONU
+from stock_sync_service import sync_central_stock, sync_multiple_barcodes
+
 raf_bp = Blueprint("raf", __name__, url_prefix="/raf")
 
 
@@ -170,18 +173,18 @@ def raf_stok_guncelle():
         return redirect(url_for("raf.raf_yonetimi"))  # 👈
 
     if yeni_adet <= 0:
-        # 0'a çekilirse kaydı sil + CentralStock düş
-        cs = CentralStock.query.get(normalized)
-        if cs:
-            cs.qty = max(0, (cs.qty or 0) - (urun.adet or 0))
-            cs.updated_at = datetime.utcnow()  # 🔧 Manuel güncelleme
+        # 0'a çekilirse kaydı sil
         db.session.delete(urun)
         db.session.commit()
-        flash(f"{raf_kodu} rafından {normalized} kaldırıldı. CentralStock düşürüldü.", "success")
+        # 🔥 CentralStock'u raflardan yeniden hesapla
+        sync_central_stock(normalized)
+        flash(f"{raf_kodu} rafından {normalized} kaldırıldı. CentralStock güncellendi.", "success")
         return redirect(url_for("raf.raf_yonetimi"))  # 👈
 
     urun.adet = yeni_adet
     db.session.commit()
+    # 🔥 CentralStock'u raflardan yeniden hesapla
+    sync_central_stock(normalized)
     flash(f"{raf_kodu} rafındaki {normalized} adet {yeni_adet} olarak güncellendi.", "success")
     return redirect(url_for("raf.raf_yonetimi"))  # 👈
 
@@ -298,13 +301,12 @@ def raf_sil(kod):
         if not raf:
             return jsonify({"error": "Raf bulunamadı."}), 404
 
-        # RafUrun kayıtlarını sil ve CentralStock'tan düş
+        # 🔥 Etkilenen barkodları kaydet
         urunler = RafUrun.query.filter_by(raf_kodu=raf.kod).all()
+        affected_barcodes = [urun.urun_barkodu for urun in urunler]
+        
+        # RafUrun kayıtlarını sil
         for urun in urunler:
-            # CentralStock'tan düş
-            cs = CentralStock.query.get(urun.urun_barkodu)
-            if cs:
-                cs.qty = max(0, (cs.qty or 0) - (urun.adet or 0))
             db.session.delete(urun)
 
         if raf.barcode_path and os.path.exists(raf.barcode_path):
@@ -314,6 +316,9 @@ def raf_sil(kod):
 
         db.session.delete(raf)
         db.session.commit()
+        
+        # 🔥 CentralStock'u raflardan yeniden hesapla
+        sync_multiple_barcodes(affected_barcodes)
 
         return jsonify({
             "success": True,
@@ -338,7 +343,7 @@ def toplu_raf_sil():
             return jsonify({"error": "Silinecek raf seçilmedi."}), 400
         
         silinen_raflar = []
-        toplam_stok_dusurme = {}  # barkod: adet
+        affected_barcodes = set()  # 🔥 Etkilenen barkodlar
         silinecek_raflar = []  # Raf objelerini sakla
         
         # 1. Önce tüm silinecek rafları ve ürünlerini topla
@@ -358,14 +363,12 @@ def toplu_raf_sil():
             
             silinecek_raflar.extend(raflar)
         
-        # 2. Önce tüm RafUrun kayıtlarını sil
+        # 2. Önce tüm RafUrun kayıtlarını sil ve etkilenen barkodları kaydet
         for raf in silinecek_raflar:
             urunler = RafUrun.query.filter_by(raf_kodu=raf.kod).all()
             for urun in urunler:
-                # Toplam düşürmeler için biriktir
-                if urun.urun_barkodu not in toplam_stok_dusurme:
-                    toplam_stok_dusurme[urun.urun_barkodu] = 0
-                toplam_stok_dusurme[urun.urun_barkodu] += urun.adet or 0
+                # 🔥 Etkilenen barkodları kaydet
+                affected_barcodes.add(urun.urun_barkodu)
                 db.session.delete(urun)
         
         # 3. RafUrun silmelerini commit et
@@ -388,14 +391,11 @@ def toplu_raf_sil():
             silinen_raflar.append(raf.kod)
             db.session.delete(raf)
         
-        # 5. CentralStock güncellemelerini yap
-        for barkod, adet in toplam_stok_dusurme.items():
-            cs = CentralStock.query.get(barkod)
-            if cs:
-                cs.qty = max(0, (cs.qty or 0) - adet)
-        
-        # 6. Tüm değişiklikleri commit et
+        # 5. Tüm değişiklikleri commit et
         db.session.commit()
+        
+        # 🔥 6. CentralStock'u raflardan yeniden hesapla
+        sync_multiple_barcodes(list(affected_barcodes))
         
         return jsonify({
             "success": True,
@@ -420,14 +420,12 @@ def raf_urun_sil():
         flash("Ürün rafta bulunamadı.", "warning")
         return redirect(url_for("raf.raf_yonetimi"))  # 👈
 
-    # CentralStock'u raftaki miktar kadar azalt
-    cs = CentralStock.query.get(barkod)
-    if cs:
-        cs.qty = max(0, (cs.qty or 0) - (urun.adet or 0))
-        cs.updated_at = datetime.utcnow()  # 🔧 Manuel güncelleme
-
     db.session.delete(urun)
     db.session.commit()
+    
+    # 🔥 CentralStock'u raflardan yeniden hesapla
+    sync_central_stock(barkod)
+    
     flash(f"{raf_kodu} rafından {barkod} silindi. CentralStock güncellendi.", "success")
     return redirect(url_for("raf.raf_yonetimi"))  # 👈
 
@@ -449,6 +447,10 @@ def stok_ekle_api():
             yeni = RafUrun(raf_kodu=raf_kodu, urun_barkodu=barkod, adet=1)
             db.session.add(yeni)
     db.session.commit()
+    
+    # 🔥 CentralStock'u raflardan yeniden hesapla
+    sync_multiple_barcodes(urunler)
+    
     return jsonify({"message": "Stok başarıyla eklendi."}), 200
 
 

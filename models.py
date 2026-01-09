@@ -821,7 +821,7 @@ class AnaKasa(db.Model):
 class AnaKasaIslem(db.Model):
     __tablename__ = 'ana_kasa_islemler'
     id = db.Column(db.Integer, primary_key=True)
-    islem_tipi = db.Column(db.String(20), nullable=False)  # 'gelir_eklendi', 'normal_kasaya_aktarildi', 'manuel_ekleme', 'manuel_cikis'
+    islem_tipi = db.Column(db.String(50), nullable=False)  # 'gelir_eklendi', 'normal_kasaya_aktarildi', 'manuel_ekleme', 'manuel_cikis'
     tutar = db.Column(db.Numeric(12, 2), nullable=False)
     aciklama = db.Column(db.String(500), nullable=False)
     onceki_bakiye = db.Column(db.Numeric(12, 2), nullable=False)

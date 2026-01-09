@@ -18,6 +18,57 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+
+# -------------------------------
+# CentralStock Senkronizasyon Fonksiyonları
+# -------------------------------
+def sync_central_stock(barcode: str) -> int:
+    """
+    Tek bir barkod için CentralStock'u raflardaki toplamla senkronize eder.
+    
+    Args:
+        barcode: Senkronize edilecek ürün barkodu
+        
+    Returns:
+        int: Yeni stok miktarı
+    """
+    # Raflardaki toplam miktarı hesapla
+    raf_toplam = db.session.query(
+        func.coalesce(func.sum(RafUrun.adet), 0)
+    ).filter(
+        RafUrun.urun_barkodu == barcode,
+        RafUrun.adet > 0
+    ).scalar()
+    
+    raf_toplam = int(raf_toplam or 0)
+    
+    # CentralStock kaydını bul veya oluştur
+    cs = CentralStock.query.get(barcode)
+    
+    if cs:
+        if cs.qty != raf_toplam:
+            logger.info(f"🔄 CentralStock senkronize: {barcode} | {cs.qty} → {raf_toplam}")
+            cs.qty = raf_toplam
+            cs.updated_at = datetime.utcnow()
+    else:
+        if raf_toplam > 0:
+            cs = CentralStock(barcode=barcode, qty=raf_toplam)
+            db.session.add(cs)
+            logger.info(f"➕ CentralStock oluşturuldu: {barcode} = {raf_toplam}")
+    
+    return raf_toplam
+
+
+def sync_multiple_barcodes(barcodes: list) -> dict:
+    """
+    Birden fazla barkod için CentralStock'u senkronize eder.
+    """
+    results = {}
+    for barcode in barcodes:
+        results[barcode] = sync_central_stock(barcode)
+    return results
+
+
 # --- Çift İşlem Önleme Cache ---
 # {request_hash: timestamp} - Son 60 saniyedeki istekleri tutar
 _request_cache = {}
@@ -145,6 +196,7 @@ def handle_stock_update_from_frontend():
 
     errors = {}
     results = []
+    affected_barcodes = set()  # 🔥 Etkilenen barkodları takip et
 
     try:
         with db.session.begin():  # Tek transaction
@@ -171,16 +223,9 @@ def handle_stock_update_from_frontend():
                 raftaki_eski_urunler = RafUrun.query.filter_by(raf_kodu=raf_kodu).all()
                 logger.info(f"📋 Rafta mevcut {len(raftaki_eski_urunler)} kayıt bulundu.")
 
-                # 2. Bu ürünlerin stoklarını merkezi stoktan düş
-                if raftaki_eski_urunler:
-                    logger.info(f"⬇️ CentralStock'tan düşülen ürünler:")
+                # 2. Eski ürünleri affected_barcodes'a ekle (senkronizasyon için)
                 for eski_urun in raftaki_eski_urunler:
-                    cs_eski = CentralStock.query.get(eski_urun.urun_barkodu)
-                    if cs_eski and cs_eski.qty is not None:
-                        eski_qty = cs_eski.qty
-                        cs_eski.qty = max(0, cs_eski.qty - eski_urun.adet)
-                        cs_eski.updated_at = datetime.utcnow()  # 🔧 Manuel güncelleme
-                        logger.info(f"   - {eski_urun.urun_barkodu}: {eski_qty} → {cs_eski.qty} (Düşülen: -{eski_urun.adet})")
+                    affected_barcodes.add(eski_urun.urun_barkodu)
                 
                 # 3. Raftaki tüm eski kayıtları tek seferde sil
                 if raftaki_eski_urunler:
@@ -205,13 +250,6 @@ def handle_stock_update_from_frontend():
                     errors[barcode] = "Ürün veritabanında yok"
                     continue
                 
-                # CentralStock kaydını bul veya oluştur
-                cs = CentralStock.query.get(barcode)
-                if not cs:
-                    cs = CentralStock(barcode=barcode, qty=0)
-                    db.session.add(cs)
-                    logger.info(f"Yeni CentralStock kaydı oluşturuldu: {barcode}")
-                
                 # RafUrun kaydını bul veya oluştur
                 rec = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barcode).first()
                 
@@ -225,19 +263,32 @@ def handle_stock_update_from_frontend():
                     db.session.add(rec)
                     logger.info(f"Raf: {raf_kodu}, Barkod: {barcode}, İlk kez eklendi, Adet: {count}")
                 
-                # Merkezi stoğu GÜNCEL adede göre artır
-                cs.qty = (cs.qty or 0) + count
-                cs.updated_at = datetime.utcnow()  # 🔧 Manuel güncelleme
+                # Etkilenen barkodları takip et
+                affected_barcodes.add(barcode)
+                
+                results.append({
+                    "barcode": barcode,
+                    "count": count,
+                    "raf_kodu": raf_kodu
+                })
 
-                results.append({"barcode": barcode, "central_qty": int(cs.qty or 0)})
-
+            # 🔥 TÜM ETKİLENEN BARKODLAR İÇİN CENTRALSTOCK'U YENİDEN HESAPLA
+            logger.info(f"📊 {len(affected_barcodes)} barkod için CentralStock senkronize ediliyor...")
+            for barcode in affected_barcodes:
+                new_qty = sync_central_stock(barcode)
+                # results listesinde bu barkodu güncelle
+                for r in results:
+                    if r["barcode"] == barcode:
+                        r["central_qty"] = new_qty
+                        break
+            
             # Transaction başarıyla tamamlandı
             logger.info(f"✅ Transaction başarıyla tamamlandı - {len(results)} ürün işlendi, {len(errors)} hata.")
 
         # --- SONUÇLARI DÖNDÜR ---
         if errors:
             logger.warning(f"⚠️ '{raf_kodu}' rafı güncellenirken bazı ürünler eklenemedi:")
-            for err_barcode, err_msg in list(errors.items())[:10]:  # İlk 10 hatayı logla
+            for err_barcode, err_msg in list(errors.items())[:10]:
                 logger.warning(f"   - {err_barcode}: {err_msg}")
             if len(errors) > 10:
                 logger.warning(f"   ... ve {len(errors) - 10} hata daha.")
