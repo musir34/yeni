@@ -15,7 +15,7 @@ from flask import send_file
 from barcode_alias_helper import normalize_barcode
 
 # 🔥 MERKEZ STOK SENKRONİZASYONU
-from stock_sync_service import sync_central_stock, sync_multiple_barcodes
+from stock_management import sync_central_stock
 
 raf_bp = Blueprint("raf", __name__, url_prefix="/raf")
 

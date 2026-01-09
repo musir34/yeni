@@ -129,8 +129,6 @@ from idefix.idefix_routes import idefix_bp
 app.register_blueprint(idefix_bp)
 
 # 🔥 Stok Senkronizasyon Blueprint
-from stock_sync_service import stock_sync_bp
-app.register_blueprint(stock_sync_bp)
 
 # >>> Forecast cache fonksiyonlarını blueprint yüklendikten sonra import et
 try:
