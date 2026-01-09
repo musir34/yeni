@@ -207,6 +207,55 @@ margin-bottom: 1.5mm; font-weight: 600; line-height: 1.2; text-align: left;
 .label-item-fixed-a4-content .info-clone .label { font-weight: bold; }
 .label-item-fixed-a4-content .info-clone .value { font-weight: normal; }
 
+/* 50x35mm İkili Rulo Etiket Stilleri */
+.label-dual-content {
+display: flex;
+flex-direction: row;
+width: 100%;
+height: 100%;
+padding: 1.5mm;
+box-sizing: border-box;
+align-items: center;
+}
+.label-dual-content .dual-left {
+display: flex;
+align-items: center;
+justify-content: center;
+width: 30%;
+padding-right: 1mm;
+box-sizing: border-box;
+}
+.label-dual-content .dual-right {
+display: flex;
+flex-direction: column;
+justify-content: center;
+width: 70%;
+padding-left: 1mm;
+box-sizing: border-box;
+}
+.label-dual-content .dual-info {
+font-size: 12pt;
+line-height: 1.15;
+margin-bottom: 0.3mm;
+}
+.label-dual-content .dual-info .lbl {
+font-weight: normal;
+}
+.label-dual-content .dual-info .val {
+font-weight: bold;
+}
+.label-dual-content .dual-barcode {
+font-size: 9pt;
+font-weight: bold;
+margin-top: 0.5mm;
+line-height: 1.1;
+}
+.label-dual-content img.qr-code-clone {
+max-width: 14mm;
+max-height: 14mm;
+object-fit: contain;
+}
+
 .nav-buttons { display: flex; justify-content: center; width: 100%; margin-top: 20px; gap:15px; }
 .nav-buttons a { text-decoration: none; color: white; background-color: #007bff; padding: 10px 15px; border-radius: 4px; font-size: 16px; text-align: center; transition: background-color 0.3s; }
 .nav-buttons a:hover { background-color: #0056b3; }
@@ -268,8 +317,9 @@ margin-bottom: 1.5mm; font-weight: 600; line-height: 1.2; text-align: left;
 <div class="form-section">
 <h3>Kağıt/Etiket Ayarları</h3>
 <select id="paper-type" onchange="updateCustomFields()">
+<option value="50x35_dual" selected>Rulo Etiket - 50x35mm (İkili)</option>
 <option value="custom">Özel Boyut (Tek Etiket)</option>
-<option value="60x40" selected>Etiket - 60x40mm (Tek)</option>
+<option value="60x40">Etiket - 60x40mm (Tek)</option>
 <option value="100x100">Etiket - 100x100mm (Tek)</option>
 <option value="a4_fixed">A4 Standart (3x7 Etiket)</option>
 <option value="custom_multi">Özel Sayfa (Çoklu Etiket)</option>
@@ -318,7 +368,7 @@ margin-bottom: 1.5mm; font-weight: 600; line-height: 1.2; text-align: left;
 {/* A4_INFO_PLACEHOLDER */}
 </div>
 </div>
-<div class="form-section">
+<div class="form-section" id="visual-settings-section">
 <h4>Görsel & Yazı Ayarları</h4>
 <div>
 <label for="qr-code-size-input">QR Kodu Boyutu (mm): <small>(A4 Standart hariç)</small></label>
@@ -357,6 +407,7 @@ margin-bottom: 1.5mm; font-weight: 600; line-height: 1.2; text-align: left;
 </div>
 <div id="multi-label-container-custom" style="display: none; width:100%; height:100%;"></div>
 <div id="multi-label-container-fixed-a4" style="display: none; width:100%; height:100%;"></div>
+<div id="multi-label-container-dual" style="display: none; width:100%; height:100%; flex-direction: row; gap: 0;"></div>
 </div>
 <button type="button" id="execute-print-button" class="no-print" onclick="executePrint()" style="margin-top: 10px; width:210mm; max-width: 90%; display:none;">Önizlemeyi Yazdır</button>
 
@@ -591,9 +642,11 @@ applyVisualsToSingleLabelPreview();
 function updateCustomFields() {
 const paperType = document.getElementById('paper-type').value;
 const mainPreviewArea = document.getElementById('main-label-preview-area');
+const visualSettingsSection = document.getElementById('visual-settings-section');
 document.getElementById('single-label-container').style.display = 'none';
 document.getElementById('multi-label-container-custom').style.display = 'none';
 document.getElementById('multi-label-container-fixed-a4').style.display = 'none';
+document.getElementById('multi-label-container-dual').style.display = 'none';
 document.getElementById('custom-size-fields-single').style.display = 'none';
 document.getElementById('custom-page-size-fields-multi').style.display = 'none';
 document.getElementById('multi-label-layout-settings').style.display = 'none';
@@ -602,6 +655,10 @@ mainPreviewArea.classList.remove('paper-a4-fixed', 'paper-100x100');
 mainPreviewArea.style.width = ''; mainPreviewArea.style.height = '';
 mainPreviewArea.style.alignItems = 'center';
 const qrSizeInput = document.getElementById('qr-code-size-input');
+
+// Görsel & Yazı Ayarları sadece özel veya A4 seçildiğinde görünsün
+const showVisualSettings = (paperType === 'custom' || paperType === 'a4_fixed' || paperType === 'custom_multi');
+visualSettingsSection.style.display = showVisualSettings ? 'block' : 'none';
 
 if (paperType === 'custom') {
 document.getElementById('custom-size-fields-single').style.display = 'block';
@@ -612,6 +669,12 @@ document.getElementById('single-label-container').style.display = 'flex';
 mainPreviewArea.style.width = '60mm'; mainPreviewArea.style.height = '40mm';
 document.getElementById('single-label-width-input').value = '60';
 document.getElementById('single-label-height-input').value = '40';
+qrSizeInput.disabled = false;
+} else if (paperType === '50x35_dual') {
+// 50x35mm ikili rulo etiket - toplam genişlik 100mm (2x50mm)
+document.getElementById('multi-label-container-dual').style.display = 'flex';
+mainPreviewArea.style.width = '100mm'; mainPreviewArea.style.height = '35mm';
+mainPreviewArea.style.alignItems = 'flex-start';
 qrSizeInput.disabled = false;
 } else if (paperType === '100x100') {
 document.getElementById('single-label-container').style.display = 'flex';
@@ -675,6 +738,32 @@ let effectiveQrSize = isA4Fixed ? A4_FIXED_CONFIG.QR_SIZE_MM : currentQrSize;
 let labelWidthForCalc = 60, labelHeightForCalc = 40;
 const currentPaperType = document.getElementById('paper-type').value;
 
+// 50x35mm ikili rulo etiket için özel düzen
+if (currentPaperType === '50x35_dual' && !isA4Fixed) {
+labelWidthForCalc = 50;
+labelHeightForCalc = 35;
+effectiveQrSize = Math.min(currentQrSize, 14); // QR max 14mm
+const qrStyle = `width:${effectiveQrSize}mm; height:${effectiveQrSize}mm; object-fit: contain;`;
+
+// Barkod 20 karakterden fazlaysa alt satıra geç
+const barcodeStyle = barcode.length > 20 
+? 'word-break: break-all; white-space: normal;' 
+: 'white-space: nowrap;';
+
+return `
+<div class="label-dual-content">
+<div class="dual-left">
+<img class="qr-code-clone" src="${qrSrc}" alt="QR" style="${qrStyle}">
+</div>
+<div class="dual-right">
+<div class="dual-info"><span class="lbl">Model:</span> <span class="val">${model}</span></div>
+<div class="dual-info"><span class="lbl">Renk:</span> <span class="val">${color}</span></div>
+<div class="dual-info"><span class="lbl">Beden:</span> <span class="val">${size}</span></div>
+<div class="dual-barcode" style="${barcodeStyle}">${barcode}</div>
+</div>
+</div>`;
+}
+
 if (currentPaperType === 'custom_multi' && !isA4Fixed) {
 labelWidthForCalc = parseFloat(document.getElementById('multi-label-width')?.value) || 60;
 labelHeightForCalc = parseFloat(document.getElementById('multi-label-height')?.value) || 40;
@@ -720,6 +809,7 @@ if (barcodeList.length === 0) {
 populateMainLabelPreview(null, null, null, null);
 document.getElementById('multi-label-container-fixed-a4').innerHTML = '';
 document.getElementById('multi-label-container-custom').innerHTML = '';
+document.getElementById('multi-label-container-dual').innerHTML = '';
 document.getElementById('execute-print-button').style.display = 'none';
 updatePrintStyles();
 return;
@@ -737,8 +827,9 @@ const paperType = document.getElementById('paper-type').value;
 document.getElementById('single-label-container').style.display = 'none';
 const a4Container = document.getElementById('multi-label-container-fixed-a4');
 const customMultiContainer = document.getElementById('multi-label-container-custom');
-a4Container.innerHTML = ''; customMultiContainer.innerHTML = '';
-a4Container.style.display = 'none'; customMultiContainer.style.display = 'none';
+const dualContainer = document.getElementById('multi-label-container-dual');
+a4Container.innerHTML = ''; customMultiContainer.innerHTML = ''; dualContainer.innerHTML = '';
+a4Container.style.display = 'none'; customMultiContainer.style.display = 'none'; dualContainer.style.display = 'none';
 
 if (barcodeList.length === 0) {
 document.getElementById('single-label-container').style.display = 'flex';
@@ -766,6 +857,27 @@ labelItem.className = 'label-item';
 labelItem.style.height = A4_FIXED_CONFIG.LABEL_HEIGHT_APPROX.toFixed(2) + 'mm';
 labelItem.innerHTML = labelsToDisplayHtml[i];
 a4Container.appendChild(labelItem);
+}
+} else if (paperType === '50x35_dual') {
+// 50x35mm ikili rulo etiket - yan yana 2 etiket
+dualContainer.style.display = 'flex';
+dualContainer.style.flexDirection = 'row';
+dualContainer.style.gap = '0';
+dualContainer.style.padding = '0';
+dualContainer.style.alignItems = 'stretch';
+
+// En fazla 2 etiket göster (önizleme için)
+const displayCount = Math.min(labelsToDisplayHtml.length, 2);
+for (let i = 0; i < displayCount; i++) {
+if (!labelsToDisplayHtml[i]) break;
+const labelItem = document.createElement('div');
+labelItem.className = 'label-item';
+labelItem.style.width = '50mm';
+labelItem.style.height = '35mm';
+labelItem.style.boxSizing = 'border-box';
+labelItem.style.border = '0.1mm solid #ddd';
+labelItem.innerHTML = labelsToDisplayHtml[i];
+dualContainer.appendChild(labelItem);
 }
 } else if (paperType === 'custom_multi') {
 customMultiContainer.style.display = 'flex';
@@ -800,12 +912,40 @@ printSpecificCSS = `
 body > *:not(#main-label-preview-area):not(style):not(script) { display: none !important; }
 #main-label-preview-area { display: block !important; }
 #main-label-preview-area > #multi-label-container-custom,
-#main-label-preview-area > #multi-label-container-fixed-a4 { display: none !important; }
+#main-label-preview-area > #multi-label-container-fixed-a4,
+#main-label-preview-area > #multi-label-container-dual { display: none !important; }
 #main-label-preview-area > #single-label-container { display: flex !important; }
 #main-label-preview-area, #main-label-preview-area > #single-label-container {
 width: ${pageWidth}mm !important; height: ${pageHeight}mm !important;
 border: none !important; padding: 0 !important; margin: 0 !important;
 box-sizing: border-box !important; overflow: hidden !important;
+}`;
+} else if (paperType === '50x35_dual') {
+// 50x35mm ikili rulo etiket - toplam genişlik 100mm, yükseklik 35mm
+pageWidth = 100;
+pageHeight = 35;
+marginTop = marginRight = marginBottom = marginLeft = "0mm";
+printSpecificCSS = `
+body > *:not(#main-label-preview-area):not(style):not(script) { display: none !important; }
+#main-label-preview-area { display: block !important; }
+#main-label-preview-area > #single-label-container,
+#main-label-preview-area > #multi-label-container-custom,
+#main-label-preview-area > #multi-label-container-fixed-a4 { display: none !important; }
+#main-label-preview-area > #multi-label-container-dual {
+display: flex !important;
+flex-direction: row !important;
+width: 100mm !important;
+height: 35mm !important;
+border: none !important; padding: 0 !important; margin: 0 !important;
+box-sizing: border-box !important; overflow: hidden !important;
+gap: 0 !important;
+}
+#main-label-preview-area > #multi-label-container-dual .label-item {
+width: 50mm !important;
+height: 35mm !important;
+border: none !important;
+box-sizing: border-box !important;
+overflow: hidden !important;
 }`;
 } else if (paperType === 'a4_fixed') {
 pageWidth = A4_FIXED_CONFIG.PAGE_WIDTH;
@@ -827,7 +967,8 @@ padding: 0 !important;
 margin: 0 !important;
 }
 #main-label-preview-area > #single-label-container,
-#main-label-preview-area > #multi-label-container-custom { display: none !important; }
+#main-label-preview-area > #multi-label-container-custom,
+#main-label-preview-area > #multi-label-container-dual { display: none !important; }
 #main-label-preview-area > #multi-label-container-fixed-a4 {
 display: grid !important;
 width: 100% !important;
@@ -868,7 +1009,8 @@ margin:0 !important;
 box-sizing: border-box !important;
 }
 #main-label-preview-area > #single-label-container,
-#main-label-preview-area > #multi-label-container-fixed-a4 { display: none !important; }
+#main-label-preview-area > #multi-label-container-fixed-a4,
+#main-label-preview-area > #multi-label-container-dual { display: none !important; }
 #main-label-preview-area > #multi-label-container-custom {
 display: flex !important;
 flex-wrap: wrap !important;
@@ -1047,6 +1189,131 @@ body { margin: 0; font-family: Arial, sans-serif; -webkit-print-color-adjust: ex
 </style></head><body>${allLabelsForPrintHTML_single}
 <script> window.onload = function() { setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 300); }, 500); }; <\/script></body></html>`);
 printWindow.document.close();
+
+} else if (paperType === '50x35_dual') {
+// 50x35mm ikili rulo etiket yazdırma - her sayfada yan yana 2 etiket
+const labelWidthForPrint = 50;
+const labelHeightForPrint = 35;
+const pageWidth = 100; // 2 x 50mm
+const pageHeight = 35;
+
+let allDualPagesHTML = "";
+const printPromises_dual = [];
+
+// Tüm etiketleri düzleştir
+let allLabelItems = [];
+barcodeList.forEach(item => {
+for (let i = 0; i < item.quantity; i++) {
+allLabelItems.push({
+barcode: item.barcode,
+model: item.model,
+color: item.color,
+size: item.size
+});
+}
+});
+
+// Her 2 etiketi bir sayfa olarak grupla
+for (let i = 0; i < allLabelItems.length; i += 2) {
+const pageItems = allLabelItems.slice(i, i + 2);
+const pagePromises = pageItems.map(item => 
+getQrDataURL(item.barcode).then(qrDataUrl => ({
+html: getLabelHTML(item.barcode, item.model, item.color, item.size, qrDataUrl, false),
+item: item
+}))
+);
+printPromises_dual.push(Promise.all(pagePromises));
+}
+
+const resolvedPages = await Promise.all(printPromises_dual);
+
+resolvedPages.forEach((pageLabels, pageIndex) => {
+const isLastPage = pageIndex === resolvedPages.length - 1;
+const pageBreak = isLastPage ? 'page-break-after: auto;' : 'page-break-after: always;';
+
+let labelsInPageHTML = '';
+pageLabels.forEach(labelData => {
+labelsInPageHTML += `<div class="dual-label-item" style="width: ${labelWidthForPrint}mm; height: ${labelHeightForPrint}mm; box-sizing: border-box; overflow: hidden;">${labelData.html}</div>`;
+});
+
+// Eğer sayfada tek etiket varsa boş bir alan ekle
+if (pageLabels.length === 1) {
+labelsInPageHTML += `<div class="dual-label-item" style="width: ${labelWidthForPrint}mm; height: ${labelHeightForPrint}mm; box-sizing: border-box;"></div>`;
+}
+
+allDualPagesHTML += `<div class="dual-page" style="display: flex; flex-direction: row; width: ${pageWidth}mm; height: ${pageHeight}mm; ${pageBreak}">${labelsInPageHTML}</div>`;
+});
+
+const printWindow = window.open('', '_blank');
+printWindow.document.write(`
+<!DOCTYPE html><html><head><title>Rulo Etiketler (50x35mm İkili)</title>
+<style>
+@page { size: ${pageWidth}mm ${pageHeight}mm; margin: 0; }
+body { margin: 0; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact !important; color-adjust: exact !important;}
+.dual-page { display: flex; flex-direction: row; gap: 0; }
+.dual-label-item { display: flex; align-items: stretch; justify-content: center; }
+
+/* Yeni 50x35mm ikili etiket stilleri */
+.label-dual-content {
+display: flex;
+flex-direction: row;
+width: 100%;
+height: 100%;
+padding: 1.5mm;
+box-sizing: border-box;
+align-items: center;
+}
+.label-dual-content .dual-left {
+display: flex;
+align-items: center;
+justify-content: center;
+width: 30%;
+padding-right: 1mm;
+box-sizing: border-box;
+}
+.label-dual-content .dual-right {
+display: flex;
+flex-direction: column;
+justify-content: center;
+width: 70%;
+padding-left: 1mm;
+box-sizing: border-box;
+}
+.label-dual-content .dual-info {
+font-size: 12pt;
+line-height: 1.15;
+margin-bottom: 0.3mm;
+}
+.label-dual-content .dual-info .lbl {
+font-weight: normal;
+}
+.label-dual-content .dual-info .val {
+font-weight: bold;
+}
+.label-dual-content .dual-barcode {
+font-size: 9pt;
+font-weight: bold;
+margin-top: 0.5mm;
+line-height: 1.1;
+}
+.label-dual-content img.qr-code-clone {
+max-width: 14mm;
+max-height: 14mm;
+object-fit: contain;
+}
+
+/* Eski stiller (diğer formatlar için) */
+.label-item-fixed-a4-content { display: flex; flex-direction: row; width: 100%; height: 100%; padding: 1mm; box-sizing: border-box; align-items: center;}
+.label-item-fixed-a4-content .left { display: flex; flex-direction: column; align-items: center; justify-content: center; padding-right: 0.5mm; box-sizing: border-box; width: 35%;}
+.label-item-fixed-a4-content .right { display: flex; flex-direction: column; justify-content: center; text-align: left; padding-left: 1mm; box-sizing: border-box; flex-grow: 1; width: 65%;}
+.label-item-fixed-a4-content img.qr-code-clone { object-fit: contain; max-width: 14mm; max-height: 14mm; }
+.label-item-fixed-a4-content .barcode-text-clone { text-align: center; font-weight: bold; word-break: break-all; line-height: 1.1; font-size: 6pt; max-width: 16mm;}
+.label-item-fixed-a4-content .info-clone { margin-bottom: 0.5mm; font-weight: 600; line-height: 1.1; text-align: left; font-size: 7pt;}
+.label-item-fixed-a4-content .info-clone .label { font-weight: bold; }
+.label-item-fixed-a4-content .info-clone .value { font-weight: normal; }
+</style></head><body>${allDualPagesHTML}
+<script> window.onload = function() { setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 300); }, 500); }; <\/script></body></html>`);
+printWindow.document.close();
 }
 } catch (error) {
 console.error("Yazdırma sırasında hata:", error);
@@ -1055,7 +1322,7 @@ alert("Etiketler yazdırılırken bir hata oluştu: " + error.message);
 setTimeout(() => {
 printButton.disabled = false;
 printButton.textContent = 'Önizlemeyi Yazdır';
-if (paperType === 'a4_fixed' || paperType === 'custom_multi') {
+if (paperType === 'a4_fixed' || paperType === 'custom_multi' || paperType === '50x35_dual') {
 generateAndPreparePreview();
 } else {
 if(barcodeList.length > 0) {
