@@ -238,14 +238,14 @@
             </div>
         </div>
 
-        <!-- Ana Kasa Widget -->
+        <!-- Ana Kasa Widget - Basitleştirilmiş -->
         <div class="ana-kasa-widget" style="background: linear-gradient(135deg, #667db6 0%, #0082c8 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 6px 20px rgba(0,0,0,0.15);">
             <div class="row align-items-center">
                 <div class="col-md-6">
                     <h2 style="margin: 0; font-size: 1.8rem;">
                         <i class="fas fa-wallet"></i> Ana Kasa
                     </h2>
-                    <p style="margin: 10px 0 0 0; opacity: 0.9;">Merkezi Gelir Yönetim Sistemi</p>
+                    <p style="margin: 10px 0 0 0; opacity: 0.9;">Tüm gelirlerin toplanacağı merkezi kasa</p>
                 </div>
                 <div class="col-md-6 text-right">
                     <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 5px;">Mevcut Bakiye</div>
@@ -259,72 +259,25 @@
                 </div>
             </div>
             <hr style="border-color: rgba(255,255,255,0.3); margin: 20px 0;">
-            <div class="row">
-                <div class="col-md-12">
-                    <button class="btn btn-light btn-sm" onclick="document.getElementById('ana-kasa-gelir-form').style.display='block'; this.style.display='none';">
-                        <i class="fas fa-plus-circle"></i> Ana Kasa'ya Gelir Ekle
-                    </button>
-                    <button class="btn btn-outline-light btn-sm" data-toggle="collapse" data-target="#anaKasaManuel">
-                        <i class="fas fa-tools"></i> Manuel İşlemler
-                    </button>
+            <div class="row align-items-center">
+                <div class="col-md-5">
+                    <h5 style="margin-bottom: 15px;"><i class="fas fa-plus"></i> Manuel Para Ekle</h5>
+                    <form method="POST" action="{{ url_for('kasa.ana_kasa_guncelle') }}" class="form-inline">
+                        <input type="hidden" name="islem_tipi" value="ekle">
+                        <input type="text" name="tutar" class="form-control form-control-sm mr-2" placeholder="Tutar (₺)" style="width: 120px;" required>
+                        <input type="text" name="aciklama" class="form-control form-control-sm mr-2" placeholder="Açıklama" style="width: 180px;" required>
+                        <button type="submit" class="btn btn-light btn-sm">
+                            <i class="fas fa-check"></i> Ekle
+                        </button>
+                    </form>
                 </div>
-            </div>
-            
-            <!-- Gelir Ekleme Formu -->
-            <div id="ana-kasa-gelir-form" style="display: none; margin-top: 20px; background: rgba(255,255,255,0.15); padding: 20px; border-radius: 10px;">
-                <h4 style="margin-bottom: 15px;"><i class="fas fa-plus-circle"></i> Gelir Ekle</h4>
-                <form method="POST" action="{{ url_for('kasa.ana_kasa_gelir_ekle') }}">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <input type="text" name="tutar" class="form-control" placeholder="Tutar (₺)" required>
-                        </div>
-                        <div class="col-md-3">
-                            <input type="text" name="kategori" class="form-control" placeholder="Kategori (opsiyonel)">
-                        </div>
-                        <div class="col-md-3">
-                            <input type="datetime-local" name="tarih" class="form-control" value="{{ bugun.strftime('%Y-%m-%dT%H:%M') }}" required>
-                        </div>
-                        <div class="col-md-3">
-                            <input type="text" name="aciklama" class="form-control" placeholder="Açıklama" required>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-12">
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-check"></i> Ekle ve Kasaya Aktar
-                            </button>
-                            <button type="button" class="btn btn-secondary" onclick="this.parentElement.parentElement.parentElement.style.display='none'; document.querySelector('.btn-light.btn-sm').style.display='inline-block';">
-                                İptal
-                            </button>
-                            <small class="text-white ml-3">
-                                <i class="fas fa-info-circle"></i> Gelir Ana Kasa'ya eklenecek ve otomatik olarak Normal Kasa'ya aktarılacak
-                            </small>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            
-            <!-- Manuel İşlemler -->
-            <div id="anaKasaManuel" class="collapse" style="margin-top: 20px; background: rgba(255,255,255,0.15); padding: 20px; border-radius: 10px;">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h5><i class="fas fa-plus text-success"></i> Para Ekle</h5>
-                        <form method="POST" action="{{ url_for('kasa.ana_kasa_guncelle') }}" class="form-inline">
-                            <input type="hidden" name="islem_tipi" value="ekle">
-                            <input type="text" name="tutar" class="form-control form-control-sm mr-2" placeholder="Tutar" style="width: 150px;" required>
-                            <input type="text" name="aciklama" class="form-control form-control-sm mr-2" placeholder="Açıklama" style="width: 200px;" required>
-                            <button type="submit" class="btn btn-success btn-sm">Ekle</button>
-                        </form>
-                    </div>
-                    <div class="col-md-6">
-                        <h5><i class="fas fa-minus text-danger"></i> Para Çıkar</h5>
-                        <form method="POST" action="{{ url_for('kasa.ana_kasa_guncelle') }}" class="form-inline">
-                            <input type="hidden" name="islem_tipi" value="cikar">
-                            <input type="text" name="tutar" class="form-control form-control-sm mr-2" placeholder="Tutar" style="width: 150px;" required>
-                            <input type="text" name="aciklama" class="form-control form-control-sm mr-2" placeholder="Açıklama" style="width: 200px;" required>
-                            <button type="submit" class="btn btn-danger btn-sm">Çıkar</button>
-                        </form>
-                    </div>
+                <div class="col-md-7 text-right">
+                    <a href="{{ url_for('kasa.ana_kasa_kayit_defteri') }}" class="btn btn-outline-light btn-lg mr-2" style="margin-top: 5px;">
+                        <i class="fas fa-book"></i> Kayıt Defteri
+                    </a>
+                    <a href="{{ url_for('kasa.excel_gelir_yukle') }}" class="btn btn-light btn-lg" style="margin-top: 5px;">
+                        <i class="fas fa-file-excel"></i> Excel ile Gelir Yükle
+                    </a>
                 </div>
             </div>
         </div>

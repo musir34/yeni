@@ -143,8 +143,8 @@
 <body>
     <div class="container">
         <div class="header-section">
-            <h1><i class="fas fa-file-excel"></i> Excel ile Gelir Ekle</h1>
-            <p>İşbankası hesap özeti Excel dosyasından gelir kayıtlarını aktarın</p>
+            <h1><i class="fas fa-file-excel"></i> Ana Kasa'ya Excel ile Gelir Yükle</h1>
+            <p>İşbankası hesap özeti Excel dosyasından Ana Kasa'ya gelir aktarın</p>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -189,20 +189,14 @@
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <div class="form-group">
                                 <label for="kategori"><i class="fas fa-tag"></i> Kategori</label>
                                 <input type="text" class="form-control" id="kategori" name="kategori" 
                                        value="Banka Geliri" placeholder="Örn: Banka Geliri, Havale, EFT">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="durum"><i class="fas fa-check-circle"></i> Kayıt Durumu</label>
-                                <select class="form-control" id="durum" name="durum">
-                                    <option value="odenen" selected>Ödenen (Tamamlandı)</option>
-                                    <option value="bekleyen">Bekleyen</option>
-                                </select>
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-info-circle"></i> Gelirler Ana Kasa'ya eklenecek
+                                </small>
                             </div>
                         </div>
                     </div>

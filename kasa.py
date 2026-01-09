@@ -969,7 +969,6 @@ def excel_gelir_yukle():
         return redirect(url_for('kasa.excel_gelir_yukle'))
     
     kategori = request.form.get('kategori', 'Banka Geliri')
-    durum_secim = request.form.get('durum', 'odenen')
     
     try:
         df = pd.read_excel(file, header=None)
@@ -1307,11 +1306,16 @@ def ana_kasa():
 @login_required
 @roles_required('admin')
 def ana_kasa_guncelle():
-    """Ana Kasa'ya para ekle veya çıkar - İşlem geçmişi ile"""
+    """Ana Kasa'ya manuel para ekle - Basitleştirilmiş"""
     try:
-        islem_tipi = request.form.get('islem_tipi')  # 'ekle' veya 'cikar'
+        islem_tipi = request.form.get('islem_tipi')
         tutar_raw = request.form.get('tutar', '0')
         aciklama = request.form.get('aciklama', '')
+        
+        # Sadece ekleme yapabilir
+        if islem_tipi != 'ekle':
+            flash('Sadece ekleme işlemi yapılabilir!', 'warning')
+            return redirect(url_for('kasa.kasa_sayfasi'))
         
         # Tutarı parse et
         if isinstance(tutar_raw, str):
@@ -1320,165 +1324,39 @@ def ana_kasa_guncelle():
         
         if tutar <= 0:
             flash('Geçersiz tutar!', 'danger')
-            return redirect(url_for('kasa.ana_kasa'))
+            return redirect(url_for('kasa.kasa_sayfasi'))
         
         # Ana Kasa kaydını al veya oluştur
         ana_kasa = AnaKasa.query.first()
         if not ana_kasa:
-            ana_kasa = AnaKasa(bakiye=0)
+            ana_kasa = AnaKasa(bakiye=Decimal('0'))
             db.session.add(ana_kasa)
             db.session.flush()
         
         onceki_bakiye = ana_kasa.bakiye
-        
-        if islem_tipi == 'ekle':
-            ana_kasa.bakiye += tutar
-            yeni_bakiye = ana_kasa.bakiye
-            
-            # İşlem kaydı oluştur
-            islem = AnaKasaIslem(
-                islem_tipi='manuel_ekleme',
-                tutar=tutar,
-                aciklama=aciklama,
-                onceki_bakiye=onceki_bakiye,
-                yeni_bakiye=yeni_bakiye,
-                kullanici_id=session.get('user_id')
-            )
-            db.session.add(islem)
-            flash(f'{tutar} TL Ana Kasa\'ya eklendi. ({aciklama})', 'success')
-            
-        elif islem_tipi == 'cikar':
-            if ana_kasa.bakiye < tutar:
-                flash('Ana Kasa\'da yeterli bakiye yok!', 'danger')
-                return redirect(url_for('kasa.ana_kasa'))
-            
-            ana_kasa.bakiye -= tutar
-            yeni_bakiye = ana_kasa.bakiye
-            
-            # İşlem kaydı oluştur
-            islem = AnaKasaIslem(
-                islem_tipi='manuel_cikis',
-                tutar=tutar,
-                aciklama=aciklama,
-                onceki_bakiye=onceki_bakiye,
-                yeni_bakiye=yeni_bakiye,
-                kullanici_id=session.get('user_id')
-            )
-            db.session.add(islem)
-            flash(f'{tutar} TL Ana Kasa\'dan çıkarıldı. ({aciklama})', 'success')
-        else:
-            flash('Geçersiz işlem tipi!', 'danger')
-            return redirect(url_for('kasa.ana_kasa'))
-        
-        ana_kasa.guncelleme_tarihi = datetime.now()
-        db.session.commit()
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Hata: {str(e)}', 'danger')
-    
-    return redirect(url_for('kasa.ana_kasa'))
-
-
-@kasa_bp.route('/kasa/ana-kasa/gelir-ekle', methods=['POST'])
-@login_required
-@roles_required('admin')
-def ana_kasa_gelir_ekle():
-    """Ana Kasa'ya gelir ekle ve normal kasaya aktar"""
-    try:
-        tutar_raw = request.form.get('tutar', '0')
-        aciklama = request.form.get('aciklama', '')
-        kategori = request.form.get('kategori', '')
-        tarih_str = request.form.get('tarih', '')
-        
-        # Tutarı parse et
-        if isinstance(tutar_raw, str):
-            tutar_raw = tutar_raw.replace('.', '').replace(',', '.')
-        tutar = Decimal(str(tutar_raw))
-        
-        if tutar <= 0:
-            flash('Geçersiz tutar!', 'danger')
-            return redirect(url_for('kasa.ana_kasa'))
-        
-        # Tarih parse et
-        try:
-            gelir_tarihi = datetime.strptime(tarih_str, '%Y-%m-%dT%H:%M')
-        except (ValueError, TypeError):
-            gelir_tarihi = datetime.now()
-        
-        # Ana Kasa kaydını al veya oluştur
-        ana_kasa = AnaKasa.query.first()
-        if not ana_kasa:
-            ana_kasa = AnaKasa(bakiye=0)
-            db.session.add(ana_kasa)
-            db.session.flush()
-        
-        onceki_bakiye = ana_kasa.bakiye
-        
-        # 1. Ana Kasa'ya gelir ekle
         ana_kasa.bakiye += tutar
-        yeni_bakiye = ana_kasa.bakiye
         ana_kasa.guncelleme_tarihi = datetime.now()
         
-        # 2. Ana Kasa işlem kaydı oluştur
+        # İşlem kaydı oluştur
         islem = AnaKasaIslem(
-            islem_tipi='gelir_eklendi',
+            islem_tipi='manuel_ekleme',
             tutar=tutar,
-            aciklama=f"GELİR: {aciklama}",
-            onceki_bakiye=onceki_bakiye,
-            yeni_bakiye=yeni_bakiye,
-            kullanici_id=session.get('user_id'),
-            tarih=gelir_tarihi
-        )
-        db.session.add(islem)
-        db.session.flush()
-        
-        # 3. Normal kasaya gelir kaydı ekle (Ana Kasa'dan düşerek)
-        ana_kasa.bakiye -= tutar
-        
-        yeni_gelir = Kasa(
-            tip='gelir',
             aciklama=aciklama,
-            tutar=tutar,
-            kategori=kategori if kategori else None,
-            kullanici_id=session.get('user_id'),
-            durum=KasaDurum.TAMAMLANDI,
-            tarih=gelir_tarihi,
-            ana_kasadan=True
-        )
-        db.session.add(yeni_gelir)
-        db.session.flush()
-        
-        # 4. Otomatik ödeme kaydı oluştur
-        otomatik_odeme = Odeme(
-            kasa_id=yeni_gelir.id,
-            tutar=tutar,
-            odeme_tarihi=gelir_tarihi,
-            kullanici_id=session.get('user_id')
-        )
-        db.session.add(otomatik_odeme)
-        
-        # 5. Normal kasaya aktarım için Ana Kasa işlem kaydı
-        aktarim_islem = AnaKasaIslem(
-            islem_tipi='normal_kasaya_aktarildi',
-            tutar=tutar,
-            aciklama=f"Normal kasaya aktarıldı: {aciklama}",
-            onceki_bakiye=yeni_bakiye,
+            onceki_bakiye=onceki_bakiye,
             yeni_bakiye=ana_kasa.bakiye,
             kullanici_id=session.get('user_id'),
-            kasa_id=yeni_gelir.id,
-            tarih=gelir_tarihi
+            tarih=datetime.now()
         )
-        db.session.add(aktarim_islem)
-        
+        db.session.add(islem)
         db.session.commit()
-        flash(f'✅ {tutar} TL gelir eklendi ve normal kasaya aktarıldı!', 'success')
+        
+        flash(f'✅ {tutar} ₺ Ana Kasa\'ya eklendi. ({aciklama})', 'success')
         
     except Exception as e:
         db.session.rollback()
         flash(f'Hata: {str(e)}', 'danger')
     
-    return redirect(url_for('kasa.ana_kasa'))
+    return redirect(url_for('kasa.kasa_sayfasi'))
 
 
 @kasa_bp.route('/kasa/ana-kasa/bakiye', methods=['GET'])
@@ -1488,7 +1366,7 @@ def ana_kasa_bakiye():
     """Ana Kasa bakiyesini JSON olarak döndür"""
     ana_kasa = AnaKasa.query.first()
     if not ana_kasa:
-        ana_kasa = AnaKasa(bakiye=0)
+        ana_kasa = AnaKasa(bakiye=Decimal('0'))
         db.session.add(ana_kasa)
         db.session.commit()
     
@@ -1496,3 +1374,157 @@ def ana_kasa_bakiye():
         'success': True,
         'bakiye': float(ana_kasa.bakiye)
     })
+
+
+@kasa_bp.route('/kasa/ana-kasa/kayit-defteri', methods=['GET'])
+@login_required
+@roles_required('admin')
+def ana_kasa_kayit_defteri():
+    """Ana Kasa kayıt defterini görüntüle"""
+    ana_kasa = AnaKasa.query.first()
+    if not ana_kasa:
+        ana_kasa = AnaKasa(bakiye=Decimal('0'))
+        db.session.add(ana_kasa)
+        db.session.commit()
+    
+    # Tüm Ana Kasa işlemlerini tarih sırasına göre getir (en yeni en üstte)
+    islemler = AnaKasaIslem.query.order_by(AnaKasaIslem.tarih.desc()).all()
+    
+    return render_template('ana_kasa_kayit_defteri.html', 
+                          ana_kasa=ana_kasa,
+                          islemler=islemler)
+
+
+@kasa_bp.route('/kasa/ana-kasa/islem-duzenle', methods=['POST'])
+@login_required
+@roles_required('admin')
+def ana_kasa_islem_duzenle():
+    """Ana Kasa işlem kaydını düzenle ve bakiyeyi yeniden hesapla"""
+    try:
+        islem_id = request.form.get('islem_id')
+        yeni_tutar_raw = request.form.get('tutar', '0')
+        yeni_aciklama = request.form.get('aciklama', '')
+        yeni_tarih_str = request.form.get('tarih', '')
+        
+        # İşlemi bul
+        islem = AnaKasaIslem.query.get_or_404(islem_id)
+        
+        # Eski tutarı sakla
+        eski_tutar = islem.tutar
+        
+        # Yeni tutarı parse et
+        if isinstance(yeni_tutar_raw, str):
+            yeni_tutar_raw = yeni_tutar_raw.replace('.', '').replace(',', '.')
+        yeni_tutar = Decimal(str(yeni_tutar_raw))
+        
+        if yeni_tutar <= 0:
+            flash('Geçersiz tutar!', 'danger')
+            return redirect(url_for('kasa.ana_kasa_kayit_defteri'))
+        
+        # Tarihi parse et
+        try:
+            yeni_tarih = datetime.strptime(yeni_tarih_str, '%Y-%m-%dT%H:%M')
+        except (ValueError, TypeError):
+            yeni_tarih = islem.tarih
+        
+        # İşlem kaydını güncelle
+        islem.tutar = yeni_tutar
+        islem.aciklama = yeni_aciklama
+        islem.tarih = yeni_tarih
+        
+        # Bakiyeyi yeniden hesapla
+        # Bu işlemden sonraki tüm işlemlerin bakiyelerini güncelle
+        ana_kasa = AnaKasa.query.first()
+        
+        # İşlem tipine göre bakiye farkını hesapla
+        tutar_farki = yeni_tutar - eski_tutar
+        
+        if islem.islem_tipi in ['gelir_eklendi', 'manuel_ekleme']:
+            # Artırıcı işlemler
+            islem.yeni_bakiye = islem.onceki_bakiye + yeni_tutar
+            ana_kasa.bakiye += tutar_farki
+        elif islem.islem_tipi == 'normal_kasaya_aktarildi':
+            # Azaltıcı işlemler
+            islem.yeni_bakiye = islem.onceki_bakiye - yeni_tutar
+            ana_kasa.bakiye -= tutar_farki
+        
+        # Bu işlemden sonraki tüm işlemleri güncelle
+        sonraki_islemler = AnaKasaIslem.query.filter(
+            AnaKasaIslem.tarih > islem.tarih
+        ).order_by(AnaKasaIslem.tarih.asc()).all()
+        
+        for sonraki in sonraki_islemler:
+            onceki = sonraki.onceki_bakiye
+            if sonraki.islem_tipi in ['gelir_eklendi', 'manuel_ekleme']:
+                sonraki.onceki_bakiye = onceki + tutar_farki
+                sonraki.yeni_bakiye = sonraki.onceki_bakiye + sonraki.tutar
+            elif sonraki.islem_tipi == 'normal_kasaya_aktarildi':
+                sonraki.onceki_bakiye = onceki + tutar_farki
+                sonraki.yeni_bakiye = sonraki.onceki_bakiye - sonraki.tutar
+        
+        ana_kasa.guncelleme_tarihi = datetime.now()
+        db.session.commit()
+        
+        flash(f'✅ İşlem kaydı güncellendi ve bakiyeler yeniden hesaplandı!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Hata: {str(e)}', 'danger')
+    
+    return redirect(url_for('kasa.ana_kasa_kayit_defteri'))
+
+
+@kasa_bp.route('/kasa/ana-kasa/islem-sil', methods=['POST'])
+@login_required
+@roles_required('admin')
+def ana_kasa_islem_sil():
+    """Ana Kasa işlem kaydını sil ve bakiyeyi yeniden hesapla"""
+    try:
+        islem_id = request.form.get('islem_id')
+        
+        # İşlemi bul
+        islem = AnaKasaIslem.query.get_or_404(islem_id)
+        
+        # İşlem tutarını sakla
+        tutar = islem.tutar
+        islem_tipi = islem.islem_tipi
+        islem_tarihi = islem.tarih
+        
+        # Ana Kasa'yı güncelle
+        ana_kasa = AnaKasa.query.first()
+        
+        if islem_tipi in ['gelir_eklendi', 'manuel_ekleme']:
+            # Artırıcı işlem silindi, bakiyeden düş
+            ana_kasa.bakiye -= tutar
+        elif islem_tipi == 'normal_kasaya_aktarildi':
+            # Azaltıcı işlem silindi, bakiyeye ekle
+            ana_kasa.bakiye += tutar
+        
+        # Bu işlemden sonraki tüm işlemlerin bakiyelerini güncelle
+        sonraki_islemler = AnaKasaIslem.query.filter(
+            AnaKasaIslem.tarih > islem_tarihi
+        ).order_by(AnaKasaIslem.tarih.asc()).all()
+        
+        for sonraki in sonraki_islemler:
+            if islem_tipi in ['gelir_eklendi', 'manuel_ekleme']:
+                # Silinen işlem artırıcıydı, sonraki bakiyeleri azalt
+                sonraki.onceki_bakiye -= tutar
+                sonraki.yeni_bakiye -= tutar
+            elif islem_tipi == 'normal_kasaya_aktarildi':
+                # Silinen işlem azaltıcıydı, sonraki bakiyeleri artır
+                sonraki.onceki_bakiye += tutar
+                sonraki.yeni_bakiye += tutar
+        
+        # İşlemi sil
+        db.session.delete(islem)
+        
+        ana_kasa.guncelleme_tarihi = datetime.now()
+        db.session.commit()
+        
+        flash(f'✅ İşlem kaydı silindi ve bakiyeler yeniden hesaplandı!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Hata: {str(e)}', 'danger')
+    
+    return redirect(url_for('kasa.ana_kasa_kayit_defteri'))
