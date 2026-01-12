@@ -32,18 +32,21 @@ def sync_central_stock(barcode: str) -> int:
     Returns:
         int: Yeni stok miktarı
     """
-    # Raflardaki toplam miktarı hesapla
+    # 🔧 Barkodu küçük harfe normalize et (case-insensitive)
+    barcode = barcode.lower().strip()
+    
+    # Raflardaki toplam miktarı hesapla (case-insensitive)
     raf_toplam = db.session.query(
         func.coalesce(func.sum(RafUrun.adet), 0)
     ).filter(
-        RafUrun.urun_barkodu == barcode,
+        func.lower(RafUrun.urun_barkodu) == barcode,
         RafUrun.adet > 0
     ).scalar()
     
     raf_toplam = int(raf_toplam or 0)
     
-    # CentralStock kaydını bul veya oluştur
-    cs = CentralStock.query.get(barcode)
+    # CentralStock kaydını bul veya oluştur (case-insensitive arama)
+    cs = CentralStock.query.filter(func.lower(CentralStock.barcode) == barcode).first()
     
     if cs:
         if cs.qty != raf_toplam:
@@ -52,6 +55,7 @@ def sync_central_stock(barcode: str) -> int:
             cs.updated_at = datetime.utcnow()
     else:
         if raf_toplam > 0:
+            # Yeni kayıtta küçük harfli barkod kullan
             cs = CentralStock(barcode=barcode, qty=raf_toplam)
             db.session.add(cs)
             logger.info(f"➕ CentralStock oluşturuldu: {barcode} = {raf_toplam}")
@@ -115,8 +119,9 @@ def stock_addition_page():
 @limiter.limit("120/minute")
 def get_product_details(barcode):
     try:
-        product = Product.query.filter(func.lower(Product.barcode) == barcode.lower()).first()
-        cs = CentralStock.query.get(barcode)
+        barcode_lower = barcode.lower().strip()
+        product = Product.query.filter(func.lower(Product.barcode) == barcode_lower).first()
+        cs = CentralStock.query.filter(func.lower(CentralStock.barcode) == barcode_lower).first()
 
         if not product:
             return jsonify(success=False, message="Ürün bulunamadı"), 404
@@ -235,7 +240,7 @@ def handle_stock_update_from_frontend():
             # --- YENİ ÜRÜNLERİ İŞLEME (HEM 'ADD' HEM DE 'RENEW' İÇİN) ---
             logger.info(f"➕ '{raf_kodu}' rafına eklenecek ürün sayısı: {len(items)}")
             for it in items:
-                barcode = (it.get('barcode') or '').strip()
+                barcode = (it.get('barcode') or '').strip().lower()  # 🔧 Küçük harfe normalize et
                 try:
                     count = int(it.get('count', 0))
                 except (TypeError, ValueError):
@@ -250,8 +255,11 @@ def handle_stock_update_from_frontend():
                     errors[barcode] = "Ürün veritabanında yok"
                     continue
                 
-                # RafUrun kaydını bul veya oluştur
-                rec = RafUrun.query.filter_by(raf_kodu=raf_kodu, urun_barkodu=barcode).first()
+                # RafUrun kaydını bul veya oluştur (case-insensitive arama)
+                rec = RafUrun.query.filter(
+                    RafUrun.raf_kodu == raf_kodu,
+                    func.lower(RafUrun.urun_barkodu) == barcode
+                ).first()
                 
                 # 'add' ise adedi ekle, 'renew' ise zaten silindiği için sıfırdan oluştur
                 if rec:

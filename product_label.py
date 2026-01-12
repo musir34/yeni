@@ -66,7 +66,7 @@ def generate_product_label():
         return render_template("product_label_simple.html")
 
     # ------------------------------ POST ----------------------------- #
-    barcode_number: str = (request.form.get("barcode") or "").strip()
+    barcode_number: str = (request.form.get("barcode") or "").strip().lower()  # 🔧 Küçük harfe
     if not barcode_number:
         abort(400, description="Barkod numarası gerekli.")
 
@@ -191,10 +191,11 @@ def get_product_details(model_code):
                     try:
                         # Bedeni float'a çevirip sonra int'e çevirerek .0 kısmını at
                         size_key = str(int(float(product.size)))
-                        product_data[color][size_key] = product.barcode
+                        # 🔧 Barkodu küçük harfe normalize et
+                        product_data[color][size_key] = product.barcode.lower() if product.barcode else product.barcode
                     except (ValueError, TypeError):
                         # Eğer beden numerik değilse, olduğu gibi string olarak kaydet
-                        product_data[color][str(product.size)] = product.barcode
+                        product_data[color][str(product.size)] = product.barcode.lower() if product.barcode else product.barcode
         
         print(f"Döndürülen veri: {product_data}")
         return jsonify({"success": True, "data": product_data})

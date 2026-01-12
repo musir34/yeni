@@ -405,7 +405,8 @@
             // Her beden için kutu oluştur
             for (var i = 0; i < sizes.length; i++) {
                 var size = sizes[i];
-                var barcode = sizeData[size];
+                // 🔧 Barkodu küçük harfe normalize et
+                var barcode = (sizeData[size] || '').toLowerCase();
                 
                 var sizeBox = document.createElement('div');
                 sizeBox.className = 'size-box';
@@ -439,8 +440,9 @@
                 var quantity = parseInt(input.value) || 0;
                 
                 if (quantity > 0) {
+                    // 🔧 Barkodu küçük harfe normalize et
                     barcodeList.push({
-                        barcode: input.getAttribute('data-barcode'),
+                        barcode: (input.getAttribute('data-barcode') || '').toLowerCase(),
                         size: input.getAttribute('data-size'),
                         model: selectedModel,
                         color: selectedColor,
