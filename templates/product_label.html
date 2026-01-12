@@ -529,8 +529,7 @@ const sizeBoxesContainer = document.getElementById('size-boxes');
 sizeBoxesContainer.innerHTML = '';
 sizes.sort((a, b) => (parseFloat(a) || a) - (parseFloat(b) || b));
 sizes.forEach(size => {
-// 🔧 Barkodu küçük harfe normalize et
-const barcode = (productData[selectedColor][size] || '').toLowerCase();
+const barcode = productData[selectedColor][size];
 const sizeBox = document.createElement('div');
 sizeBox.style.cssText = 'border: 1px solid #ccc; border-radius: 4px; padding: 8px; min-width: 80px; text-align:center;';
 const sizeInfo = document.createElement('div');
@@ -555,8 +554,7 @@ document.querySelectorAll('#size-boxes input[type="number"]').forEach(input => {
 const quantity = parseInt(input.value);
 if (quantity > 0) {
 barcodeList.push({
-// 🔧 Barkodu küçük harfe normalize et
-barcode: (input.dataset.barcode || '').toLowerCase(), model: selectedModel,
+barcode: input.dataset.barcode, model: selectedModel,
 color: selectedColor, size: input.dataset.size, quantity: quantity
 });
 newItemsAdded = true;

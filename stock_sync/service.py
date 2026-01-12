@@ -126,7 +126,7 @@ class StockSyncService:
                 barcodes = row.product_barcode if isinstance(row.product_barcode, list) else [row.product_barcode]
                 for barcode in barcodes:
                     if barcode:
-                        barcode = str(barcode).strip().lower()  # 🔧 Küçük harfe normalize et
+                        barcode = str(barcode).strip()
                         reserved_map[barcode] = reserved_map.get(barcode, 0) + (row.total_qty or 1)
         
         return reserved_map
@@ -156,7 +156,7 @@ class StockSyncService:
                 Product.amazon_asin.isnot(None),
                 Product.amazon_asin != ''
             ).all()
-            asin_map = {p.barcode.lower(): p.amazon_asin for p in products_with_asin}  # 🔧 Küçük harfle
+            asin_map = {p.barcode: p.amazon_asin for p in products_with_asin}
             logger.info(f"[SYNC] Amazon için {len(asin_map)} ASIN eşleşmesi bulundu")
         
         # WooCommerce için woo_product_id eşleştirmesi
@@ -164,21 +164,20 @@ class StockSyncService:
             products_with_woo = Product.query.filter(
                 Product.woo_product_id.isnot(None)
             ).all()
-            woo_id_map = {p.barcode.lower(): p.woo_product_id for p in products_with_woo}  # 🔧 Küçük harfle
+            woo_id_map = {p.barcode: p.woo_product_id for p in products_with_woo}
             # woo_barcode ile de eşleştir (farklı barkod olabilir)
             for p in products_with_woo:
                 if p.woo_barcode and p.woo_barcode != p.barcode:
-                    woo_id_map[p.woo_barcode.lower()] = p.woo_product_id
+                    woo_id_map[p.woo_barcode] = p.woo_product_id
             logger.info(f"[SYNC] WooCommerce için {len(woo_id_map)} product_id eşleşmesi bulundu")
         
         for stock in stocks:
-            barcode_lower = stock.barcode.lower() if stock.barcode else ''  # 🔧 Küçük harfe normalize et
             # Rezerv edilen ürünleri atla
-            if barcode_lower in reserved_barcodes:
+            if stock.barcode in reserved_barcodes:
                 continue
                 
-            asin = asin_map.get(barcode_lower) if platform == "amazon" else None
-            woo_id = woo_id_map.get(barcode_lower) if platform == "woocommerce" else None
+            asin = asin_map.get(stock.barcode) if platform == "amazon" else None
+            woo_id = woo_id_map.get(stock.barcode) if platform == "woocommerce" else None
             
             # Amazon için ASIN'i olmayan ürünleri atla
             if platform == "amazon" and not asin:

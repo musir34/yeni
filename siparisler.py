@@ -66,9 +66,6 @@ def allocate_from_shelf_and_decrement(barcode, qty=1):
     if not barcode or qty <= 0:
         return {"allocated": 0, "shelf_codes": []}
     
-    # 🔧 Barkodu küçük harfe normalize et
-    barcode = str(barcode).strip().lower()
-    
     # Raflardan stok çoktan aza sırala
     raflar = (RafUrun.query
               .filter_by(urun_barkodu=barcode)

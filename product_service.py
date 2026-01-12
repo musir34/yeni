@@ -111,7 +111,7 @@ def process_all_products(all_products_data):
         api_barcodes = set()
 
         for product_data in all_products_data:
-            barcode = product_data.get('barcode', '').strip().lower()  # 🔧 Küçük harfe normalize et
+            barcode = product_data.get('barcode', '').strip()
             if not barcode: continue
 
             api_barcodes.add(barcode)
@@ -121,7 +121,7 @@ def process_all_products(all_products_data):
             size = next((attr.get('attributeValue', '') for attr in attributes if attr.get('attributeName') == 'Beden'), '')
 
             product_data_dict = {
-                'barcode': barcode, 'title': product_data.get('title', ''),  # Küçük harfli barkod
+                'barcode': barcode, 'title': product_data.get('title', ''),
                 'product_main_id': str(product_data.get('productMainId', '')),
                 'category_name': product_data.get('categoryName', ''),
                 'quantity': product_data.get('quantity', 0),

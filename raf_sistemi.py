@@ -410,7 +410,7 @@ def toplu_raf_sil():
 @raf_bp.route("/stok-sil", methods=["POST"])
 def raf_urun_sil():
     raf_kodu = request.form.get("raf_kodu")
-    barkod = (request.form.get("barkod") or "").strip().replace(" ", "").lower()  # 🔧 Küçük harfe
+    barkod = (request.form.get("barkod") or "").strip().replace(" ", "")
     if not raf_kodu or not barkod:
         flash("Geçersiz istek. Raf kodu ve barkod gerekli.", "danger")
         return redirect(url_for("raf.raf_yonetimi"))  # 👈
@@ -438,10 +438,6 @@ def stok_ekle_api():
     urunler = data.get("urunler")
     if not raf_kodu or not urunler:
         return jsonify({"error": "Raf kodu ve ürün listesi zorunludur."}), 400
-    
-    # 🔧 Barkodları küçük harfe normalize et
-    urunler = [str(b).strip().lower() for b in urunler if b]
-    
     for barkod in urunler:
         mevcut_kayit = RafUrun.query.filter_by(raf_kodu=raf_kodu,
                                                urun_barkodu=barkod).first()

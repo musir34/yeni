@@ -299,7 +299,7 @@ async def save_products_to_db_async(products):
     image_downloads = [] # DÜZELTME: İndirilecek görseller için boş liste oluşturuldu.
 
     for product_data in products:
-        original_barcode = product_data.get('barcode', '').strip().lower()  # 🔧 Küçük harfe normalize et
+        original_barcode = product_data.get('barcode', '').strip()
         if not original_barcode or original_barcode in seen_barcodes or original_barcode in archived_barcodes:
             continue
         seen_barcodes.add(original_barcode)

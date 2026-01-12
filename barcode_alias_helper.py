@@ -12,35 +12,29 @@ from functools import lru_cache
 
 def normalize_barcode(barcode: str) -> str:
     """
-    Verilen barkodu ana barkoda çevirir ve küçük harfe dönüştürür.
+    Verilen barkodu ana barkoda çevirir.
     Eğer alias ise -> ana barkod döner
     Eğer alias değilse -> kendisi döner
     
-    🔧 TÜM BARKODLAR KÜÇÜK HARFE NORMALİZE EDİLİR!
-    
     Örnek:
-        normalize_barcode('ABC123')  # 'ABC123' alias ise -> 'xyz789' döner
-        normalize_barcode('XYZ789')  # alias değil -> 'xyz789' döner (küçük harfle)
-        normalize_barcode('Gll012')  # -> 'gll012' döner
+        normalize_barcode('ABC123')  # 'ABC123' alias ise -> 'XYZ789' döner
+        normalize_barcode('XYZ789')  # alias değil -> 'XYZ789' döner (kendisi)
     
     Args:
         barcode: Normalize edilecek barkod
         
     Returns:
-        Ana barkod (main_barcode) veya kendisi - HER ZAMAN KÜÇÜK HARF
+        Ana barkod (main_barcode) veya kendisi
     """
     if not barcode:
         return ""
     
-    # 🔧 Önce temizle ve KÜÇÜK HARFE çevir
-    barcode = str(barcode).strip().replace(" ", "").lower()
+    barcode = str(barcode).strip().replace(" ", "")
     
     # Veritabanında bu alias var mı?
-    alias = BarcodeAlias.query.filter(
-        db.func.lower(BarcodeAlias.alias_barcode) == barcode
-    ).first()
+    alias = BarcodeAlias.query.get(barcode)
     if alias:
-        return alias.main_barcode.lower()
+        return alias.main_barcode
     
     return barcode
 

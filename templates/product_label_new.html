@@ -444,8 +444,7 @@
             
             // Her beden için bir kutu oluştur
             sizes.forEach(size => {
-                // 🔧 Barkodu küçük harfe normalize et
-                const barcode = (sizeData[size] || '').toLowerCase();
+                const barcode = sizeData[size];
                 
                 const sizeBox = document.createElement('div');
                 sizeBox.className = 'size-box';
@@ -478,9 +477,9 @@
             sizeInputs.forEach(input => {
                 const quantity = parseInt(input.value) || 0;
                 if (quantity > 0) {
-                    // Barkodu listeye ekle - 🔧 Küçük harfe normalize et
+                    // Barkodu listeye ekle
                     barcodeList.push({
-                        barcode: (input.dataset.barcode || '').toLowerCase(),
+                        barcode: input.dataset.barcode,
                         size: input.dataset.size,
                         model: selectedModel,
                         color: selectedColor,
