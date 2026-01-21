@@ -221,7 +221,7 @@ align-items: center;
 display: flex;
 align-items: center;
 justify-content: center;
-width: 30%;
+width: 42%;
 padding-right: 1mm;
 box-sizing: border-box;
 }
@@ -229,7 +229,7 @@ box-sizing: border-box;
 display: flex;
 flex-direction: column;
 justify-content: center;
-width: 70%;
+width: 58%;
 padding-left: 1mm;
 box-sizing: border-box;
 }
@@ -251,8 +251,8 @@ margin-top: 0.5mm;
 line-height: 1.1;
 }
 .label-dual-content img.qr-code-clone {
-max-width: 14mm;
-max-height: 14mm;
+max-width: 18mm;
+max-height: 18mm;
 object-fit: contain;
 }
 
@@ -742,7 +742,7 @@ const currentPaperType = document.getElementById('paper-type').value;
 if (currentPaperType === '50x35_dual' && !isA4Fixed) {
 labelWidthForCalc = 50;
 labelHeightForCalc = 35;
-effectiveQrSize = Math.min(currentQrSize, 14); // QR max 14mm
+effectiveQrSize = A4_FIXED_CONFIG.QR_SIZE_MM; // A4 ile aynı QR boyutu (18mm)
 const qrStyle = `width:${effectiveQrSize}mm; height:${effectiveQrSize}mm; object-fit: contain;`;
 
 // Barkod 20 karakterden fazlaysa alt satıra geç

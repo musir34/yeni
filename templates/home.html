@@ -18,8 +18,8 @@
     body{margin:0;padding:0;font-family:"Roboto",sans-serif;background:#f5f5f5}
     #weatherCanvas{position:fixed;top:0;left:0;z-index:-1;width:100vw;height:100vh;filter:contrast(1.02) saturate(1.02)}
     .container{max-width:1200px;margin-top:60px;margin-left:auto;margin-right:auto;padding:0 15px}
-    .user-info{position:fixed;top:15px;left:20px;z-index:10;font-size:10px;color:#333;display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,.7);backdrop-filter:blur(6px);box-shadow:0 6px 18px rgba(0,0,0,.08);max-width:350px;}
-    .user-info img{max-width:60px;height:auto;border-radius:5px;box-shadow:0 8px 18px rgba(0,0,0,.12)}
+    .user-info{position:fixed;top:15px;left:20px;z-index:10;font-size:14px;color:#333;display:flex;align-items:center;gap:10px;padding:10px 15px;border-radius:10px;background:rgba(255,255,255,.7);backdrop-filter:blur(6px);box-shadow:0 6px 18px rgba(0,0,0,.08);max-width:450px;}
+    .user-info img{max-width:100px;height:auto;border-radius:5px;box-shadow:0 8px 18px rgba(0,0,0,.12)}
     .btn-group-top{position:fixed;top:15px;right:20px;display:flex;gap:10px;z-index:10;flex-wrap:wrap;justify-content:flex-end;align-items:center}
     .btn{border-radius:20px;padding:10px 20px;font-size:.9rem;transition:all .25s ease;box-shadow:var(--btn-shadow);border:none;color:#fff;position:relative;overflow:hidden}
     .btn::after{content:"";position:absolute;inset:0;transform:translateX(-120%);background:var(--shine);transition:transform .6s ease}
@@ -48,10 +48,9 @@
     @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(203,45,62,.4)}70%{box-shadow:0 0 0 20px rgba(203,45,62,0)}100%{box-shadow:0 0 0 0 rgba(203,45,62,0)}}
     @media (max-width:768px){
       .btn{font-size:.8rem;padding:8px 12px}
-      .user-info{font-size:8px;padding:4px 6px;gap:4px;max-width:250px}
-      .user-info img{max-width:40px}
+      .user-info img{max-width:60px}
       .btn-group-top{top:10px;right:10px;gap:5px;flex-direction:column;align-items:flex-end}
-      .container{margin-top:120px;padding:0 10px}
+      .container{margin-top:180px;padding:0 10px}
     }
   </style>
 </head>
@@ -63,11 +62,11 @@
     <div style="display:flex;flex-direction:column;gap:2px;">
       <div>Giriş Yapan: <strong>{{ session.get('first_name','') }} {{ session.get('last_name','') }}</strong></div>
       {% if weather %}
-      <div style="font-size:9px;color:#555;">
+      <div style="font-size:12px;color:#555;">
         {{ weather.icon }} {{ weather.description }} • {{ weather.temperature }}°C
         {% if weather.feels_like %}(Hissedilen: {{ weather.feels_like }}°C){% endif %}
       </div>
-      <div style="font-size:8px;color:#666;">
+      <div style="font-size:11px;color:#666;">
         💨 {{ weather.wind_speed }} km/h {{ weather.wind_direction }}
         {% if weather.wind_gusts and weather.wind_gusts > weather.wind_speed %} (🌪️ Şiddetli: {{ weather.wind_gusts }} km/h){% endif %}
         • 💧 Nem: {{ weather.humidity }}% • ☁️ Bulutluluk: {{ weather.clouds }}%
@@ -75,7 +74,7 @@
       </div>
       {% endif %}
       {% if current_time %}
-      <div style="font-size:8px;color:#666;">
+      <div style="font-size:11px;color:#666;">
         🕐 {{ current_time.strftime('%d %B %Y, %A - %H:%M:%S') }}
       </div>
       {% endif %}
@@ -116,8 +115,8 @@
         <a class="dropdown-item" href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}"><i class="fas fa-dolly"></i> Ürün Tedarik</a>
         <a class="dropdown-item" href="{{ url_for('product_list') }}"><i class="fas fa-tags"></i> Ürün Listesi</a>
         <a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="fas fa-warehouse"></i> Stok Ekleme</a>
-        <a class="dropdown-item" href="{{ url_for('stock_sync.dashboard') }}"><i class="fas fa-sync-alt"></i> 📦 Stok Senkronizasyon</a>
         <a class="dropdown-item" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="fas fa-archive"></i> Raf Listesi</a>
+        <a class="dropdown-item" href="{{ url_for('stock_sync.dashboard') }}"><i class="fas fa-sync-alt"></i> 📦 Stok Senkronizasyon</a>
         <a class="dropdown-item" href="{{ url_for('iade_listesi') }}"><i class="fas fa-undo"></i> İade Listesi</a>
         <div class="dropdown-divider"></div>
         <a class="dropdown-item" href="{{ url_for('barcode_alias.index') }}"><i class="fas fa-barcode"></i> 🔖 Barkod Alias Yönetimi</a>
@@ -254,10 +253,6 @@
         <!-- Idefix Paneli -->
         <a class="btn m-1" href="{{ url_for('idefix.index') }}" title="Idefix Satıcı Paneli" style="background: linear-gradient(135deg, #6a1b9a 0%, #8e24aa 100%); color: white;">
           <i class="fas fa-store"></i> Idefix Paneli
-        </a>
-        <!-- Amazon Paneli -->
-        <a class="btn m-1" href="{{ url_for('amazon.index') }}" title="Amazon Satıcı Paneli" style="background: linear-gradient(135deg, #FF9900 0%, #232F3E 100%); color: white;">
-          <i class="fab fa-amazon"></i> Amazon Paneli
         </a>
       </div>
     </div>
