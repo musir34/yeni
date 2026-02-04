@@ -11,6 +11,7 @@ from collections import Counter, defaultdict
 
 # Yeni tablolar (Created, Picking vs.) ve DB objesi
 from models import db, OrderCreated, OrderPicking, Product, RafUrun, CentralStock
+from stock_management import sync_central_stock
 # Trendyol API kimlikleri ve BASE_URL
 from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID
 
@@ -293,17 +294,9 @@ async def confirm_packing():
                         toplam_dusen += use
                         logger.debug(f"[STOCK][RAF2] {r.raf_kodu}/{bc} {eski}->{r.adet} (use={use})")
 
-                # 6c) CentralStock: quantity kadar düş
-                cs = CentralStock.query.get(bc)
-                if not cs:
-                    cs = CentralStock(barcode=bc, qty=0)
-                    db.session.add(cs)
-                    logger.debug(f"[CENTRAL] yeni kayıt olustu bc={bc}")
-
-                eski_cs = cs.qty or 0
-                cs.qty = max(0, eski_cs - adet)
-                cs.updated_at = datetime.utcnow()  # 🔧 Manuel güncelleme
-                logger.debug(f"[CENTRAL] bc={bc} {eski_cs}->{cs.qty} (dusen={adet})")
+                # 6c) CentralStock: Raflardaki toplam ile senkronize et (tutarsızlık önleme)
+                new_qty = sync_central_stock(bc)
+                logger.debug(f"[CENTRAL] bc={bc} -> {new_qty} (senkronize edildi)")
 
                 if kalan > 0:
                     warn = f"{bc} için {kalan} adet eksik (raf yetersiz)"

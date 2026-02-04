@@ -70,6 +70,216 @@ def history():
                            selected_platform=platform)
 
 
+@stock_sync_bp.route('/central-stock')
+@login_required
+def central_stock():
+    """Central Stock listesi sayfası"""
+    from models import CentralStock, Product
+    from sqlalchemy import func
+    
+    log_user_action("PAGE_VIEW", "central_stock")
+    
+    # Sayfalama parametreleri
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    search = request.args.get('search', '').strip()
+    sort_by = request.args.get('sort_by', 'barcode')
+    sort_order = request.args.get('sort_order', 'asc')
+    
+    # Base query - CentralStock ile Product birleştir
+    query = db.session.query(
+        CentralStock.barcode,
+        CentralStock.qty,
+        CentralStock.updated_at,
+        Product.product_main_id,
+        Product.title,
+        Product.color,
+        Product.size,
+        Product.images
+    ).outerjoin(Product, func.lower(CentralStock.barcode) == func.lower(Product.barcode))
+    
+    # Arama filtresi
+    if search:
+        search_lower = f"%{search.lower()}%"
+        query = query.filter(
+            db.or_(
+                func.lower(CentralStock.barcode).like(search_lower),
+                func.lower(Product.product_main_id).like(search_lower),
+                func.lower(Product.title).like(search_lower)
+            )
+        )
+    
+    # Sıralama
+    if sort_by == 'qty':
+        order_col = CentralStock.qty
+    elif sort_by == 'updated_at':
+        order_col = CentralStock.updated_at
+    else:
+        order_col = CentralStock.barcode
+    
+    if sort_order == 'desc':
+        query = query.order_by(order_col.desc())
+    else:
+        query = query.order_by(order_col.asc())
+    
+    # Sayfalama
+    total = query.count()
+    stocks = query.offset((page - 1) * per_page).limit(per_page).all()
+    
+    # Toplam stok
+    total_qty = db.session.query(func.sum(CentralStock.qty)).scalar() or 0
+    
+    return render_template('stock_sync/central_stock.html',
+                           stocks=stocks,
+                           page=page,
+                           per_page=per_page,
+                           total=total,
+                           total_pages=(total + per_page - 1) // per_page,
+                           search=search,
+                           sort_by=sort_by,
+                           sort_order=sort_order,
+                           total_qty=total_qty)
+
+
+@stock_sync_bp.route('/api/central-stock/sync', methods=['POST'])
+@login_required
+def api_sync_central_stock():
+    """CentralStock tablosunu raflardaki toplamlarla senkronize et"""
+    from models import CentralStock, RafUrun
+    from sqlalchemy import func
+    from datetime import datetime, timezone
+    
+    log_user_action("STOCK_SYNC", "central_stock_sync")
+    
+    try:
+        # 1. Adet 0 veya altı olan RafUrun kayıtlarını sil
+        deleted_count = RafUrun.query.filter(RafUrun.adet <= 0).delete()
+        
+        # 2. Raflardaki toplam stokları hesapla
+        raf_totals = db.session.query(
+            func.lower(RafUrun.urun_barkodu).label('barcode'),
+            func.sum(RafUrun.adet).label('total')
+        ).filter(
+            RafUrun.adet > 0
+        ).group_by(
+            func.lower(RafUrun.urun_barkodu)
+        ).all()
+        
+        raf_dict = {r.barcode: int(r.total) for r in raf_totals}
+        
+        # 3. CentralStock kayıtlarını güncelle
+        fixed_count = 0
+        cs_all = CentralStock.query.all()
+        
+        for cs in cs_all:
+            raf_toplam = raf_dict.get(cs.barcode.lower(), 0)
+            
+            if cs.qty != raf_toplam:
+                cs.qty = raf_toplam
+                cs.updated_at = datetime.now(timezone.utc)
+                fixed_count += 1
+        
+        db.session.commit()
+        
+        logger.info(f"[CENTRAL_STOCK] Senkronizasyon tamamlandı: {fixed_count} düzeltildi, {deleted_count} silindi")
+        
+        return jsonify({
+            "success": True,
+            "message": "Senkronizasyon tamamlandı",
+            "fixed_count": fixed_count,
+            "deleted_count": deleted_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[CENTRAL_STOCK] Senkronizasyon hatası: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@stock_sync_bp.route('/central-stock/export')
+@login_required
+def central_stock_export():
+    """Central Stock listesini Excel olarak indir"""
+    from models import CentralStock, Product
+    from sqlalchemy import func
+    from flask import Response
+    import csv
+    import io
+    
+    log_user_action("EXPORT", "central_stock_excel")
+    
+    search = request.args.get('search', '').strip()
+    sort_by = request.args.get('sort_by', 'barcode')
+    sort_order = request.args.get('sort_order', 'asc')
+    
+    # Base query
+    query = db.session.query(
+        CentralStock.barcode,
+        CentralStock.qty,
+        CentralStock.updated_at,
+        Product.product_main_id,
+        Product.title,
+        Product.color,
+        Product.size
+    ).outerjoin(Product, func.lower(CentralStock.barcode) == func.lower(Product.barcode))
+    
+    # Arama filtresi
+    if search:
+        search_lower = f"%{search.lower()}%"
+        query = query.filter(
+            db.or_(
+                func.lower(CentralStock.barcode).like(search_lower),
+                func.lower(Product.product_main_id).like(search_lower),
+                func.lower(Product.title).like(search_lower)
+            )
+        )
+    
+    # Sıralama
+    if sort_by == 'qty':
+        order_col = CentralStock.qty
+    elif sort_by == 'updated_at':
+        order_col = CentralStock.updated_at
+    else:
+        order_col = CentralStock.barcode
+    
+    if sort_order == 'desc':
+        query = query.order_by(order_col.desc())
+    else:
+        query = query.order_by(order_col.asc())
+    
+    stocks = query.all()
+    
+    # CSV oluştur
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    
+    # Header
+    writer.writerow(['Barkod', 'Model Kodu', 'Ürün Adı', 'Renk', 'Beden', 'Stok', 'Son Güncelleme'])
+    
+    # Data
+    for stock in stocks:
+        writer.writerow([
+            stock.barcode,
+            stock.product_main_id or '',
+            stock.title or '',
+            stock.color or '',
+            stock.size or '',
+            stock.qty,
+            stock.updated_at.strftime('%d.%m.%Y %H:%M') if stock.updated_at else ''
+        ])
+    
+    # Response
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={
+            'Content-Disposition': 'attachment; filename=central_stock.csv',
+            'Content-Type': 'text/csv; charset=utf-8'
+        }
+    )
+
+
 @stock_sync_bp.route('/session/<session_id>')
 @login_required
 def session_detail(session_id: str):

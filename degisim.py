@@ -13,6 +13,7 @@ from models import db, Degisim, Product
 from models import OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
 # Raf ve central stok
 from models import RafUrun, CentralStock
+from stock_management import sync_central_stock
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -91,15 +92,9 @@ def allocate_from_shelves_and_decrement_central(barcode, qty=1):
         allocated += take
         need -= take
 
-    # Central’ı tahsis edilen kadar düş
+    # Central'ı raflardaki toplamla senkronize et (tutarsızlık önleme)
     if allocated > 0:
-        cs = CentralStock.query.filter(cs_barcode_col == barcode).first()
-        if cs:
-            cur = getattr(cs, cs_qty_col.key) or 0
-            newv = cur - allocated
-            if newv < 0: newv = 0
-            setattr(cs, cs_qty_col.key, newv)
-            db.session.flush()
+        sync_central_stock(barcode)
 
     return {"allocated": allocated, "shelf_codes": shelf_codes}
 

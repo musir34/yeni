@@ -11,6 +11,7 @@ from sqlalchemy import or_
 # Eğer farklı bir yapıdaysa, bu kısmı kendi projenize göre düzenleyin.
 try:
     from models import db, Product, YeniSiparis, SiparisUrun, RafUrun, CentralStock
+    from stock_management import sync_central_stock
 except ImportError:
     print("UYARI: 'models' modülü bulunamadı. Lütfen doğru import yolunu kontrol edin.")
     class FakeDB:
@@ -92,12 +93,9 @@ def allocate_from_shelf_and_decrement(barcode, qty=1):
         allocated += take
         need -= take
     
-    # CentralStock'tan düş
+    # CentralStock: Raflardaki toplam ile senkronize et (tutarsızlık önleme)
     if allocated > 0:
-        cs = CentralStock.query.get(barcode)
-        if cs:
-            cs.qty = max(0, (cs.qty or 0) - allocated)
-            db.session.flush()
+        sync_central_stock(barcode)
     
     return {"allocated": allocated, "shelf_codes": shelf_codes}
 

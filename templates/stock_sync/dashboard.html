@@ -12,6 +12,9 @@
             <p class="text-muted mb-0">Tüm platformlara stok gönderimini buradan yönetin</p>
         </div>
         <div class="d-flex gap-2">
+            <a href="{{ url_for('stock_sync.central_stock') }}" class="btn btn-info">
+                <i class="bi bi-box-seam"></i> Central Stok
+            </a>
             <button id="btnRefresh" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-clockwise"></i> Yenile
             </button>

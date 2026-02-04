@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Başlık -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1">
+                <i class="bi bi-box-seam me-2"></i>
+                Central Stok Listesi
+            </h1>
+            <p class="text-muted mb-0">Merkezi stok havuzundaki tüm ürünleri görüntüleyin</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('stock_sync.dashboard') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Stok Senkronizasyon
+            </a>
+            <button id="btnSyncStock" class="btn btn-warning">
+                <i class="bi bi-arrow-repeat"></i> Stok Senkronize Et
+            </button>
+            <button id="btnExport" class="btn btn-success">
+                <i class="bi bi-download"></i> Excel İndir
+            </button>
+        </div>
+    </div>
+
+    <!-- Özet Kartları -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Toplam Çeşit</h6>
+                            <h2 class="card-title mb-0">{{ total }}</h2>
+                        </div>
+                        <i class="bi bi-upc-scan fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Toplam Stok</h6>
+                            <h2 class="card-title mb-0">{{ "{:,}".format(total_qty) }}</h2>
+                        </div>
+                        <i class="bi bi-stack fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Sayfa</h6>
+                            <h2 class="card-title mb-0">{{ page }} / {{ total_pages }}</h2>
+                        </div>
+                        <i class="bi bi-file-earmark-text fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Sayfa Başına</h6>
+                            <h2 class="card-title mb-0">{{ per_page }}</h2>
+                        </div>
+                        <i class="bi bi-list-ol fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Arama ve Filtreler -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Arama (Barkod, Model Kodu, Ürün Adı)</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" name="search" 
+                               value="{{ search }}" placeholder="Aramak için yazın...">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Sıralama</label>
+                    <select class="form-select" name="sort_by">
+                        <option value="barcode" {% if sort_by == 'barcode' %}selected{% endif %}>Barkod</option>
+                        <option value="qty" {% if sort_by == 'qty' %}selected{% endif %}>Stok Adedi</option>
+                        <option value="updated_at" {% if sort_by == 'updated_at' %}selected{% endif %}>Güncelleme Tarihi</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Sıra</label>
+                    <select class="form-select" name="sort_order">
+                        <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Artan (A-Z)</option>
+                        <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Azalan (Z-A)</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Sayfa Başına</label>
+                    <select class="form-select" name="per_page">
+                        <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                        <option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel"></i> Filtrele
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Stok Listesi -->
+    <div class="card">
+        <div class="card-header">
+            <i class="bi bi-table me-2"></i>
+            Central Stok Listesi ({{ total }} kayıt)
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th style="width: 60px;">Resim</th>
+                            <th>Barkod</th>
+                            <th>Model Kodu</th>
+                            <th>Ürün Adı</th>
+                            <th>Renk</th>
+                            <th>Beden</th>
+                            <th class="text-center">Stok</th>
+                            <th>Son Güncelleme</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stock in stocks %}
+                        <tr>
+                            <td class="text-muted">{{ (page - 1) * per_page + loop.index }}</td>
+                            <td>
+                                {% if stock.images %}
+                                    {% set images_list = stock.images | tojson | safe %}
+                                    {% if images_list and images_list != 'null' %}
+                                        <img src="{{ stock.images.split(',')[0].strip('[]\"') if stock.images.startswith('[') else stock.images }}" 
+                                             alt="Ürün" 
+                                             class="img-thumbnail"
+                                             style="width: 40px; height: 40px; object-fit: cover;"
+                                             onerror="this.src='/static/images/no-image.png'">
+                                    {% else %}
+                                        <div class="bg-light text-center" style="width: 40px; height: 40px; line-height: 40px;">
+                                            <i class="bi bi-image text-muted"></i>
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="bg-light text-center" style="width: 40px; height: 40px; line-height: 40px;">
+                                        <i class="bi bi-image text-muted"></i>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <code class="text-primary">{{ stock.barcode }}</code>
+                            </td>
+                            <td>{{ stock.product_main_id or '-' }}</td>
+                            <td>
+                                <span class="text-truncate d-inline-block" style="max-width: 200px;" title="{{ stock.title or '' }}">
+                                    {{ stock.title or '-' }}
+                                </span>
+                            </td>
+                            <td>{{ stock.color or '-' }}</td>
+                            <td>{{ stock.size or '-' }}</td>
+                            <td class="text-center">
+                                {% if stock.qty > 0 %}
+                                    <span class="badge bg-success fs-6">{{ stock.qty }}</span>
+                                {% else %}
+                                    <span class="badge bg-danger fs-6">0</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if stock.updated_at %}
+                                    <small class="text-muted">{{ stock.updated_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                                {% else %}
+                                    <small class="text-muted">-</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <i class="bi bi-inbox fs-1 text-muted"></i>
+                                <p class="text-muted mt-2">Kayıt bulunamadı</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Sayfalama -->
+        {% if total_pages > 1 %}
+        <div class="card-footer">
+            <nav aria-label="Sayfalama">
+                <ul class="pagination mb-0 justify-content-center">
+                    <!-- İlk Sayfa -->
+                    <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                        <a class="page-link" href="?page=1&per_page={{ per_page }}&search={{ search }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    
+                    <!-- Önceki -->
+                    <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                        <a class="page-link" href="?page={{ page - 1 }}&per_page={{ per_page }}&search={{ search }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    
+                    <!-- Sayfa Numaraları -->
+                    {% set start_page = [1, page - 2] | max %}
+                    {% set end_page = [total_pages, page + 2] | min %}
+                    
+                    {% if start_page > 1 %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                    
+                    {% for p in range(start_page, end_page + 1) %}
+                    <li class="page-item {% if p == page %}active{% endif %}">
+                        <a class="page-link" href="?page={{ p }}&per_page={{ per_page }}&search={{ search }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}">{{ p }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if end_page < total_pages %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                    
+                    <!-- Sonraki -->
+                    <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                        <a class="page-link" href="?page={{ page + 1 }}&per_page={{ per_page }}&search={{ search }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    
+                    <!-- Son Sayfa -->
+                    <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                        <a class="page-link" href="?page={{ total_pages }}&per_page={{ per_page }}&search={{ search }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Excel Export
+    document.getElementById('btnExport').addEventListener('click', function() {
+        const params = new URLSearchParams(window.location.search);
+        params.set('export', 'excel');
+        window.location.href = '{{ url_for("stock_sync.central_stock_export") }}?' + params.toString();
+    });
+    
+    // Stok Senkronizasyon
+    document.getElementById('btnSyncStock').addEventListener('click', function() {
+        if (!confirm('CentralStock tablosu, raflardaki gerçek toplamlarla senkronize edilecek. Devam etmek istiyor musunuz?')) {
+            return;
+        }
+        
+        const btn = this;
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Senkronize ediliyor...';
+        
+        fetch('{{ url_for("stock_sync.api_sync_central_stock") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            
+            if (data.success) {
+                alert(`✅ Senkronizasyon tamamlandı!\n\n• Düzeltilen kayıt: ${data.fixed_count}\n• Silinen boş kayıt: ${data.deleted_count}`);
+                if (data.fixed_count > 0) {
+                    location.reload();
+                }
+            } else {
+                alert('❌ Hata: ' + (data.error || 'Bilinmeyen hata'));
+            }
+        })
+        .catch(error => {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            alert('❌ Bağlantı hatası: ' + error.message);
+        });
+    });
+});
+</script>
+{% endblock %}
