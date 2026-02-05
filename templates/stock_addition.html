@@ -54,6 +54,8 @@
         .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .btn-secondary { background-color: var(--color-secondary); color: var(--color-white); }
         .btn-secondary:hover { background-color: #343a40; }
+        .btn-success { background-color: var(--color-success); color: var(--color-white); }
+        .btn-success:hover { background-color: #218838; }
         .btn-warning { background-color: #ffc107; color: #212529; }
         .btn:disabled { cursor: not-allowed; opacity: 0.65; }
 
@@ -168,7 +170,13 @@
 
                 <div class="mb-3">
                     <label for="barcodeInput" class="form-label">Barkod Okutun:</label>
-                    <input type="text" id="barcodeInput" class="form-control" autocomplete="off" disabled autofocus>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <input type="text" id="barcodeInput" class="form-control" autocomplete="off" disabled autofocus style="flex: 1;">
+                        <button type="button" id="autoEnterToggle" class="btn btn-secondary" title="Aktifken barkod okutulunca otomatik enter yapar">
+                            <i class="bi bi-keyboard"></i> Oto-Enter: Kapalı
+                        </button>
+                    </div>
+                    <small id="autoEnterHelp" class="form-text text-muted">💡 Barkod okuyucunuz enter göndermiyorsa "Oto-Enter" butonunu aktif edin</small>
                 </div>
             </form>
 
@@ -203,6 +211,8 @@
     <script>
         // --- Global Değişkenler ---
         let barcodeCounts = {}, selectedMode = null, isSubmitting = false;
+        let autoEnterEnabled = false;
+        let autoEnterTimeout = null;
         const allElements = {
             barcodeInput: document.getElementById('barcodeInput'),
             selectRenewModeBtn: document.getElementById('selectRenewMode'),
@@ -229,8 +239,46 @@
         allElements.selectRenewModeBtn.addEventListener('click', () => selectMode('renew', 'Raftaki Stokları Yenile'));
         allElements.selectAddModeBtn.addEventListener('click', () => selectMode('add', 'Yeni Gelenleri Ekle'));
         allElements.barcodeInput.addEventListener('keydown', handleBarcodeKeyDown);
+        allElements.barcodeInput.addEventListener('input', handleBarcodeInput);
         allElements.updateStockButton.addEventListener('click', handleUpdateClick, { once: false });
         allElements.resetButton.addEventListener('click', resetStockAddition);
+        
+        // Otomatik Enter Toggle Butonu
+        document.getElementById('autoEnterToggle').addEventListener('click', toggleAutoEnter);
+        
+        function toggleAutoEnter() {
+            autoEnterEnabled = !autoEnterEnabled;
+            const btn = document.getElementById('autoEnterToggle');
+            if (autoEnterEnabled) {
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-success');
+                btn.innerHTML = '<i class="bi bi-keyboard-fill"></i> Oto-Enter: Açık';
+            } else {
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-secondary');
+                btn.innerHTML = '<i class="bi bi-keyboard"></i> Oto-Enter: Kapalı';
+            }
+        }
+        
+        function handleBarcodeInput(e) {
+            if (!autoEnterEnabled) return;
+            
+            // Önceki timeout'u temizle
+            if (autoEnterTimeout) {
+                clearTimeout(autoEnterTimeout);
+            }
+            
+            const barcode = allElements.barcodeInput.value.trim();
+            if (!barcode) return;
+            
+            // 300ms boyunca yeni karakter gelmezse enter yap
+            autoEnterTimeout = setTimeout(() => {
+                if (allElements.barcodeInput.value.trim()) {
+                    const event = new KeyboardEvent('keydown', { key: 'Enter' });
+                    handleBarcodeKeyDown(event);
+                }
+            }, 300);
+        }
         window.onload = () => resetStockAddition();
 
         document.addEventListener('click', e => {
