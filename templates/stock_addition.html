@@ -213,6 +213,11 @@
         let barcodeCounts = {}, selectedMode = null, isSubmitting = false;
         let autoEnterEnabled = false;
         let autoEnterTimeout = null;
+        
+        // 🚀 HIZLI BARKOD BUFFER SİSTEMİ
+        let barcodeQueue = [];           // Bekleyen barkodlar kuyruğu
+        let isProcessingQueue = false;   // Kuyruk işleniyor mu?
+        let queueProcessDelay = 50;      // Barkodlar arası işlem gecikmesi (ms)
         const allElements = {
             barcodeInput: document.getElementById('barcodeInput'),
             selectRenewModeBtn: document.getElementById('selectRenewMode'),
@@ -271,13 +276,62 @@
             const barcode = allElements.barcodeInput.value.trim();
             if (!barcode) return;
             
-            // 50ms boyunca yeni karakter gelmezse enter yap (barkod okuyucular çok hızlı)
+            // 80ms boyunca yeni karakter gelmezse barkodu kuyruğa ekle (daha hızlı!)
             autoEnterTimeout = setTimeout(() => {
-                if (allElements.barcodeInput.value.trim()) {
-                    const event = new KeyboardEvent('keydown', { key: 'Enter' });
-                    handleBarcodeKeyDown(event);
+                const currentBarcode = allElements.barcodeInput.value.trim();
+                if (currentBarcode) {
+                    addToQueue(currentBarcode);
+                    allElements.barcodeInput.value = '';
                 }
-            }, 50);
+            }, 80);
+        }
+        
+        // 🚀 BARKOD KUYRUĞA EKLEME
+        function addToQueue(barcode) {
+            if (!barcode || !selectedMode) return;
+            barcodeQueue.push(barcode);
+            updateQueueIndicator();
+            processQueue();
+        }
+        
+        // 🚀 KUYRUK GÖSTERGESİ
+        function updateQueueIndicator() {
+            let indicator = document.getElementById('queueIndicator');
+            if (!indicator) {
+                indicator = document.createElement('span');
+                indicator.id = 'queueIndicator';
+                indicator.style.cssText = 'margin-left: 10px; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;';
+                document.querySelector('label[for="barcodeInput"]').appendChild(indicator);
+            }
+            
+            if (barcodeQueue.length > 0) {
+                indicator.textContent = `⏳ Kuyruk: ${barcodeQueue.length}`;
+                indicator.style.backgroundColor = '#ffc107';
+                indicator.style.color = '#212529';
+            } else {
+                indicator.textContent = '✓ Hazır';
+                indicator.style.backgroundColor = '#28a745';
+                indicator.style.color = '#fff';
+            }
+        }
+        
+        // 🚀 KUYRUĞU İŞLE (Asenkron)
+        async function processQueue() {
+            if (isProcessingQueue || barcodeQueue.length === 0) return;
+            
+            isProcessingQueue = true;
+            
+            while (barcodeQueue.length > 0) {
+                const barcode = barcodeQueue.shift();
+                processBarcode(barcode);
+                updateQueueIndicator();
+                
+                // Çok kısa bir bekleme - UI donmasını önler
+                await new Promise(resolve => setTimeout(resolve, queueProcessDelay));
+            }
+            
+            isProcessingQueue = false;
+            updateQueueIndicator();
         }
         window.onload = () => resetStockAddition();
 
@@ -350,7 +404,8 @@
                 const barcode = allElements.barcodeInput.value.trim();
                 allElements.barcodeInput.value = '';
                 if (!barcode || !selectedMode) return;
-                processBarcode(barcode);
+                // 🚀 Kuyruğa ekle (hem manuel hem otomatik enter için)
+                addToQueue(barcode);
             }
         }
 
@@ -548,6 +603,12 @@
             selectedMode = null;
             isSubmitting = false;
             lastCheckedRafKodu = null; // 🔧 Son kontrol edilen raf kodunu sıfırla
+            
+            // 🚀 Queue'yu sıfırla
+            barcodeQueue = [];
+            isProcessingQueue = false;
+            if (autoEnterTimeout) clearTimeout(autoEnterTimeout);
+            
             allElements.scannedBarcodesDiv.innerHTML = '';
             allElements.formContainer.classList.add('hidden');
             allElements.modeSelectionContainer.classList.remove('hidden');
@@ -561,6 +622,10 @@
             // 🔧 Raf durum göstergesini sıfırla
             const statusIcon = document.getElementById('rafStatusIcon');
             if (statusIcon) statusIcon.innerHTML = '';
+            
+            // 🚀 Queue göstergesini sıfırla
+            const queueIndicator = document.getElementById('queueIndicator');
+            if (queueIndicator) queueIndicator.remove();
             
             hideProgressContainer();
             updateTotals();
