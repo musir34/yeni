@@ -271,13 +271,13 @@
             const barcode = allElements.barcodeInput.value.trim();
             if (!barcode) return;
             
-            // 300ms boyunca yeni karakter gelmezse enter yap
+            // 50ms boyunca yeni karakter gelmezse enter yap (barkod okuyucular çok hızlı)
             autoEnterTimeout = setTimeout(() => {
                 if (allElements.barcodeInput.value.trim()) {
                     const event = new KeyboardEvent('keydown', { key: 'Enter' });
                     handleBarcodeKeyDown(event);
                 }
-            }, 300);
+            }, 50);
         }
         window.onload = () => resetStockAddition();
 
