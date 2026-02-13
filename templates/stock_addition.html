@@ -276,14 +276,15 @@
             const barcode = allElements.barcodeInput.value.trim();
             if (!barcode) return;
             
-            // 80ms boyunca yeni karakter gelmezse barkodu kuyruğa ekle (daha hızlı!)
+            // 200ms boyunca yeni karakter gelmezse barkodu kuyruğa ekle
+            // (Uzun barkodlarda karakterler arası 10-50ms olabiliyor, 200ms güvenli bir süre)
             autoEnterTimeout = setTimeout(() => {
                 const currentBarcode = allElements.barcodeInput.value.trim();
                 if (currentBarcode) {
                     addToQueue(currentBarcode);
                     allElements.barcodeInput.value = '';
                 }
-            }, 80);
+            }, 200);
         }
         
         // 🚀 BARKOD KUYRUĞA EKLEME
