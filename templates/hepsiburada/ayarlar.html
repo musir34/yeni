@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}HB - Ayarlar{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hb-header {
+        background: linear-gradient(135deg, #FF6000 0%, #1a1a2e 100%);
+        color: white; padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;
+    }
+    .config-card { border-left: 4px solid #FF6000; }
+    .env-badge-prod { background-color: #dc3545; }
+    .env-badge-test { background-color: #ffc107; color: #333; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="hb-header d-flex align-items-center justify-content-between">
+        <div>
+            <h5 class="mb-0"><i class="fas fa-cog me-2"></i> Hepsiburada Ayarları</h5>
+            <small class="opacity-75">API bağlantı yapılandırması & test</small>
+        </div>
+        <a href="{{ url_for('hepsiburada.index') }}" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Panel
+        </a>
+    </div>
+
+    <!-- Durum Kartı -->
+    <div class="card border-0 shadow-sm mb-3 config-card">
+        <div class="card-body">
+            <h6 class="card-title"><i class="fas fa-info-circle me-1 text-primary"></i> Bağlantı Durumu</h6>
+            {% if config.is_configured %}
+            <div class="alert alert-success mb-0">
+                <i class="fas fa-check-circle me-1"></i> API yapılandırması <strong>tamam</strong>.
+                <span class="badge {{ 'env-badge-prod' if config.environment == 'PRODUCTION' else 'env-badge-test' }} ms-2">{{ config.environment }}</span>
+            </div>
+            {% else %}
+            <div class="alert alert-danger mb-0">
+                <i class="fas fa-exclamation-triangle me-1"></i> API yapılandırması <strong>eksik</strong>. Lütfen environment değişkenlerini ayarlayın.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Yapılandırma Bilgileri -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white"><strong>Yapılandırma Bilgileri</strong></div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <tbody>
+                    <tr>
+                        <td class="fw-bold" style="width:220px">Merchant ID</td>
+                        <td>
+                            {% if config.merchant_id %}
+                            <code>{{ config.merchant_id[:8] }}...{{ config.merchant_id[-4:] }}</code>
+                            {% else %}
+                            <span class="text-danger">Ayarlanmamış</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">Ortam</td>
+                        <td>
+                            <span class="badge {{ 'env-badge-prod' if config.environment == 'PRODUCTION' else 'env-badge-test' }}">{{ config.environment }}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">Sipariş API URL</td>
+                        <td><code>{{ config.order_url }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">Listing API URL</td>
+                        <td><code>{{ config.listing_url }}</code></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Bağlantı Testi -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white"><strong>Bağlantı Testi</strong></div>
+        <div class="card-body">
+            <p class="text-muted small">API bağlantısının çalışıp çalışmadığını kontrol etmek için aşağıdaki butona tıklayın.</p>
+            <button class="btn btn-primary" onclick="testConnection()" id="btnTest">
+                <i class="fas fa-plug me-1"></i> Bağlantıyı Test Et
+            </button>
+            <div id="testResult" class="mt-3 d-none"></div>
+        </div>
+    </div>
+
+    <!-- Ortam Değişkenleri -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white"><strong>Gerekli Ortam Değişkenleri</strong></div>
+        <div class="card-body p-0">
+            <table class="table mb-0">
+                <thead class="table-light">
+                    <tr><th>Değişken</th><th>Açıklama</th><th>Zorunlu</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>HB_MERCHANT_ID</code></td>
+                        <td>Hepsiburada Merchant ID (GUID formatında)</td>
+                        <td><span class="badge bg-danger">Evet</span></td>
+                    </tr>
+                    <tr>
+                        <td><code>HB_USERNAME</code></td>
+                        <td>API kullanıcı adı</td>
+                        <td><span class="badge bg-danger">Evet</span></td>
+                    </tr>
+                    <tr>
+                        <td><code>HB_PASSWORD</code></td>
+                        <td>API şifresi / Secret Key</td>
+                        <td><span class="badge bg-danger">Evet</span></td>
+                    </tr>
+                    <tr>
+                        <td><code>HB_IS_PRODUCTION</code></td>
+                        <td>Üretim ortamı mı? (true/false, varsayılan: false)</td>
+                        <td><span class="badge bg-secondary">Hayır</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Replit'te .env Ayarı -->
+    <div class="card border-0 shadow-sm mt-3">
+        <div class="card-header bg-white"><strong>Nasıl Ayarlanır?</strong></div>
+        <div class="card-body">
+            <p class="small">Replit kullanıyorsanız <strong>Secrets</strong> sekmesinden, Linux/Mac'te <code>.env</code> dosyasına aşağıdakileri ekleyin:</p>
+            <pre class="bg-light p-3 rounded"><code>HB_MERCHANT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+HB_USERNAME=your_username
+HB_PASSWORD=your_password
+HB_IS_PRODUCTION=false</code></pre>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function testConnection() {
+    const btn = document.getElementById('btnTest');
+    const el = document.getElementById('testResult');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Test ediliyor...';
+    el.classList.remove('d-none');
+    el.className = 'mt-3 alert alert-info';
+    el.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Bağlantı kontrol ediliyor...';
+
+    fetch('{{ url_for("hepsiburada.test_connection") }}')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                el.className = 'mt-3 alert alert-success';
+                el.innerHTML = '<i class="fas fa-check-circle me-1"></i> ' + data.message;
+            } else {
+                el.className = 'mt-3 alert alert-danger';
+                el.innerHTML = '<i class="fas fa-times-circle me-1"></i> ' + (data.error || data.message || 'Bağlantı başarısız');
+            }
+        })
+        .catch(err => {
+            el.className = 'mt-3 alert alert-danger';
+            el.innerHTML = '<i class="fas fa-times-circle me-1"></i> Hata: ' + err.message;
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-plug me-1"></i> Bağlantıyı Test Et';
+        });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block title %}HB - Listeler / Envanter{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hb-header {
+        background: linear-gradient(135deg, #FF6000 0%, #1a1a2e 100%);
+        color: white; padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;
+    }
+    .stock-badge { font-size: 0.85rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="hb-header d-flex align-items-center justify-content-between">
+        <div>
+            <h5 class="mb-0"><i class="fas fa-list-alt me-2"></i> Listeler / Envanter</h5>
+            <small class="opacity-75">Fiyat ve stok yönetimi</small>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-light btn-sm" onclick="fetchListings()">
+                <i class="fas fa-cloud-download-alt me-1"></i> Tümünü Çek
+            </button>
+            <a href="{{ url_for('hepsiburada.index') }}" class="btn btn-outline-light btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Panel
+            </a>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger"><i class="fas fa-exclamation-circle me-1"></i> {{ error }}</div>
+    {% endif %}
+
+    <!-- Arama -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-8">
+                    <label class="form-label small">HepsiburadaSku veya MerchantSku ile Ara</label>
+                    <input type="text" name="search" class="form-control" placeholder="SKU kodu..." value="{{ search or '' }}">
+                </div>
+                <div class="col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-search me-1"></i> Ara</button>
+                    {% if search %}
+                    <a href="{{ url_for('hepsiburada.listings') }}" class="btn btn-outline-secondary">Temizle</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sonuç bilgisi -->
+    <div id="fetchStatus" class="alert alert-info d-none"></div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <strong>Toplam:</strong> {{ total }} listing
+        </div>
+        <div class="card-body p-0">
+            {% if listings %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>HB SKU</th>
+                            <th>Merchant SKU</th>
+                            <th>Ürün Adı</th>
+                            <th>Fiyat</th>
+                            <th>Stok</th>
+                            <th>Kargo Süresi</th>
+                            <th>Satışta</th>
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for l in listings %}
+                        <tr>
+                            <td><code>{{ l.HepsiburadaSku or l.get('hepsiburadaSku', '-') }}</code></td>
+                            <td><code>{{ l.MerchantSku or l.get('merchantSku', '-') }}</code></td>
+                            <td class="text-truncate" style="max-width:250px">{{ l.ProductName or l.get('productName', '-') }}</td>
+                            <td><strong>{{ l.Price or l.get('price', '-') }} ₺</strong></td>
+                            <td>
+                                {% set stock = l.AvailableStock or l.get('availableStock', 0) %}
+                                <span class="badge stock-badge {{ 'bg-success' if stock|int > 0 else 'bg-danger' }}">
+                                    {{ stock }}
+                                </span>
+                            </td>
+                            <td>{{ l.DispatchTime or l.get('dispatchTime', '-') }} gün</td>
+                            <td>
+                                {% set salable = l.IsSalable if l.IsSalable is defined else l.get('isSalable', false) %}
+                                {% if salable %}
+                                    <span class="badge bg-success">Evet</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Hayır</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        onclick="editListing('{{ l.HepsiburadaSku or l.get("hepsiburadaSku", "") }}', '{{ l.MerchantSku or l.get("merchantSku", "") }}', '{{ l.Price or l.get("price", "0") }}', '{{ l.AvailableStock or l.get("availableStock", "0") }}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-list fa-3x mb-3"></i>
+                <p>Henüz listing yok</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sayfalama -->
+    {% if total > limit %}
+    <nav class="mt-3">
+        <ul class="pagination justify-content-center">
+            {% if page > 0 %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page - 1 }}&limit={{ limit }}{% if search %}&search={{ search }}{% endif %}">Önceki</a>
+            </li>
+            {% endif %}
+            <li class="page-item active"><span class="page-link">{{ page + 1 }}</span></li>
+            {% if (page + 1) * limit < total %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page + 1 }}&limit={{ limit }}{% if search %}&search={{ search }}{% endif %}">Sonraki</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<!-- Düzenleme Modalı -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-edit me-1"></i> Listing Güncelle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">HB SKU</label>
+                    <input type="text" id="editHbSku" class="form-control" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Merchant SKU</label>
+                    <input type="text" id="editMerchantSku" class="form-control" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Fiyat (₺)</label>
+                    <input type="text" id="editPrice" class="form-control" placeholder="199,99">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Stok</label>
+                    <input type="number" id="editStock" class="form-control" min="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="saveListing()">
+                    <i class="fas fa-save me-1"></i> Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function editListing(hbsku, merchantSku, price, stock) {
+    document.getElementById('editHbSku').value = hbsku;
+    document.getElementById('editMerchantSku').value = merchantSku;
+    document.getElementById('editPrice').value = price;
+    document.getElementById('editStock').value = stock;
+    new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+
+function saveListing() {
+    const data = {
+        hepsiburadaSku: document.getElementById('editHbSku').value,
+        merchantSku: document.getElementById('editMerchantSku').value,
+        price: document.getElementById('editPrice').value,
+        stock: document.getElementById('editStock').value,
+    };
+
+    fetch('{{ url_for("hepsiburada.api_update_listing") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('Güncelleme isteği gönderildi!');
+            location.reload();
+        } else {
+            alert('Hata: ' + (result.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(err => alert('Hata: ' + err.message));
+}
+
+function fetchListings() {
+    const el = document.getElementById('fetchStatus');
+    el.classList.remove('d-none');
+    el.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Tüm listingler çekiliyor...';
+
+    fetch('{{ url_for("hepsiburada.api_fetch_listings") }}', {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                el.className = 'alert alert-success';
+                el.innerHTML = '<i class="fas fa-check-circle me-1"></i> ' + data.message;
+            } else {
+                el.className = 'alert alert-danger';
+                el.innerHTML = '<i class="fas fa-times-circle me-1"></i> Hata: ' + data.error;
+            }
+        })
+        .catch(err => {
+            el.className = 'alert alert-danger';
+            el.innerHTML = '<i class="fas fa-times-circle me-1"></i> ' + err.message;
+        });
+}
+</script>
+{% endblock %}

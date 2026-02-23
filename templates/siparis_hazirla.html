@@ -939,44 +939,81 @@
         }
       }
 
+      // 🔥 Doğrulama fonksiyonu (hem Enter hem klavye timer'ı için ortak)
+      function validateBarkodInput(input, idx){
+        const pi=input.dataset.productIndex, qi=input.dataset.quantityIndex, side=input.dataset.side;
+        const fg=input.closest('.form-group'); if(!fg) return;
+        const msg=fg.querySelector('.alert'); if(!msg) return;
+        const cb=input.closest('.card-body'); if(!cb) return;
+        
+        const expectedEl=cb.querySelector(`input[type="hidden"][id="expectedBarcode-${side}-${pi}-${qi}"]`); 
+        const originalEl=cb.querySelector(`input[type="hidden"][id="originalBarcode-${side}-${pi}-${qi}"]`); 
+        
+        if(!expectedEl) return;
+        
+        const exp=expectedEl.value.trim();
+        const orig=originalEl ? originalEl.value.trim() : exp;
+        const val=input.value.trim();
+
+        if(val===exp || val===orig){ 
+          msg.textContent='Doğru!'; 
+          msg.className='alert alert-success alert-show'; 
+          input.style.backgroundColor='#e9ffe9';
+          input.dataset.confirmed='true';
+          input.readOnly=true;
+          const next=barkodInputs[idx+1]; 
+          if(next) setTimeout(()=>next.focus(),150); 
+          else onaylaBtn.focus();
+        }else if(val.length>0){ 
+          msg.textContent='Yanlış!'; 
+          msg.className='alert alert-danger alert-show'; 
+          input.style.backgroundColor='#ffe9e9'; 
+          input.dataset.confirmed='';
+          const wrongVal=val;
+          setTimeout(()=>{
+            if(input.value.trim()===wrongVal){
+              input.value='';
+              input.style.backgroundColor='';
+              msg.className='alert'; msg.style.opacity='0'; msg.style.visibility='hidden';
+            }
+          },5000);
+          input.focus();
+        }
+        else{ 
+          msg.className='alert'; 
+          msg.style.opacity='0'; 
+          msg.style.visibility='hidden'; 
+          input.style.backgroundColor=''; 
+          input.dataset.confirmed='';
+        }
+
+        updateButtons();
+      }
+
       barkodInputs.forEach((input,idx)=>{
+        let typingTimer=null;
+
+        // Klavye ile yazarken: mesajı temizle + 1.5sn sonra otomatik doğrula
         input.addEventListener('input',function(){
-          const pi=this.dataset.productIndex, qi=this.dataset.quantityIndex, side=this.dataset.side;
           const fg=this.closest('.form-group'); if(!fg) return;
           const msg=fg.querySelector('.alert'); if(!msg) return;
-          const cb=this.closest('.card-body'); if(!cb) return;
-          
-          // 🔥 Hem ana barkod hem orijinal barkod kabul edilmeli
-          const expectedEl=cb.querySelector(`input[type="hidden"][id="expectedBarcode-${side}-${pi}-${qi}"]`); 
-          const originalEl=cb.querySelector(`input[type="hidden"][id="originalBarcode-${side}-${pi}-${qi}"]`); 
-          
-          if(!expectedEl) return;
-          
-          const exp=expectedEl.value.trim();
-          const orig=originalEl ? originalEl.value.trim() : exp;
-          const val=this.value.trim();
-
-          // 🔥 Hem ana barkod hem alias kabul edilir
-          if(val===exp || val===orig){ 
-            msg.textContent='Doğru!'; 
-            msg.className='alert alert-success alert-show'; 
-            this.style.backgroundColor='#e9ffe9';
-            const next=barkodInputs[idx+1]; 
-            if(next) setTimeout(()=>next.focus(),150); 
-            else onaylaBtn.focus();
-          }else if(val.length>0){ 
-            msg.textContent='Yanlış!'; 
-            msg.className='alert alert-danger alert-show'; 
-            this.style.backgroundColor=''; 
+          if(!this.dataset.confirmed){
+            msg.className='alert'; msg.style.opacity='0'; msg.style.visibility='hidden';
+            this.style.backgroundColor='';
           }
-          else{ 
-            msg.className='alert'; 
-            msg.style.opacity='0'; 
-            msg.style.visibility='hidden'; 
-            this.style.backgroundColor=''; 
+          // Klavye girişi için 1.5sn sonra otomatik doğrulama
+          if(typingTimer) clearTimeout(typingTimer);
+          if(this.value.trim().length>0 && !this.dataset.confirmed){
+            typingTimer=setTimeout(()=>validateBarkodInput(this,idx),300);
           }
+        });
 
-          updateButtons();
+        // 🔥 Barkod okuyucu Enter gönderdiğinde anında doğrulama
+        input.addEventListener('keydown',function(e){
+          if(e.key!=='Enter') return;
+          e.preventDefault();
+          if(typingTimer) clearTimeout(typingTimer); // Timer'ı iptal et, Enter ile anında doğrula
+          validateBarkodInput(this,idx);
         });
       });
 

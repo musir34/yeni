@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}HB - Sipariş Detay{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="d-flex align-items-center mb-3">
+        <a href="{{ url_for('hepsiburada.orders') }}" class="btn btn-outline-secondary btn-sm me-3">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h5 class="mb-0"><i class="fas fa-file-invoice me-2 text-primary"></i> Sipariş Detayı</h5>
+    </div>
+
+    {% if order %}
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <h6 class="text-muted mb-3">Sipariş Bilgileri</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-sm">
+                        <tr><th width="40%">Sipariş No</th><td>{{ order.orderNumber or order.get('OrderNumber', '-') }}</td></tr>
+                        <tr><th>Tarih</th><td>{{ order.orderDate or order.get('OrderDate', '-') }}</td></tr>
+                        <tr><th>Müşteri</th><td>{{ order.customerName or order.get('CustomerName', '-') }}</td></tr>
+                        <tr><th>Durum</th><td><span class="badge bg-info">{{ order.status or order.get('Status', '-') }}</span></td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <table class="table table-sm">
+                        <tr><th width="40%">SKU</th><td><code>{{ order.sku or order.get('Sku', '-') }}</code></td></tr>
+                        <tr><th>Merchant SKU</th><td><code>{{ order.merchantSku or order.get('MerchantSku', '-') }}</code></td></tr>
+                        <tr><th>Adet</th><td>{{ order.quantity or order.get('Quantity', '-') }}</td></tr>
+                        <tr><th>Tutar</th><td>
+                            {% if order.totalPrice %}
+                                {{ order.totalPrice.amount if order.totalPrice is mapping else order.totalPrice }} ₺
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Adres Bilgisi -->
+    {% if order.shippingAddress or order.get('ShippingAddress') %}
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <h6 class="text-muted mb-3"><i class="fas fa-map-marker-alt me-1"></i> Teslimat Adresi</h6>
+            {% set addr = order.shippingAddress or order.get('ShippingAddress', {}) %}
+            <p class="mb-0">{{ addr if addr is string else (addr.get('address', '') + ', ' + addr.get('district', '') + ' / ' + addr.get('town', '') + ' - ' + addr.get('city', '')) }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Ham JSON -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <a data-bs-toggle="collapse" href="#rawData" class="text-decoration-none">
+                <i class="fas fa-code me-1"></i> Ham Veri (JSON)
+            </a>
+        </div>
+        <div id="rawData" class="collapse">
+            <div class="card-body">
+                <pre class="bg-dark text-light p-3 rounded" style="max-height:400px; overflow:auto;">{{ order | tojson(indent=2) }}</pre>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">Sipariş verisi bulunamadı.</div>
+    {% endif %}
+</div>
+{% endblock %}

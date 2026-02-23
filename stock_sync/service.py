@@ -19,6 +19,7 @@ from .adapters.trendyol import TrendyolAdapter
 from .adapters.idefix import IdefixAdapter
 from .adapters.amazon import AmazonAdapter
 from .adapters.woocommerce import WooCommerceAdapter
+from .adapters.hepsiburada import HepsiburadaAdapter
 
 
 class StockSyncService:
@@ -42,7 +43,8 @@ class StockSyncService:
         "trendyol": TrendyolAdapter,
         "idefix": IdefixAdapter,
         "amazon": AmazonAdapter,
-        "woocommerce": WooCommerceAdapter
+        "woocommerce": WooCommerceAdapter,
+        "hepsiburada": HepsiburadaAdapter
     }
     
     def __init__(self):
@@ -639,6 +641,12 @@ def auto_sync_platforms_except_idefix() -> Dict[str, Any]:
     Otomatik stok senkronizasyonu - Idefix HARİÇ tüm platformlar.
     APScheduler tarafından 15 dakikada bir çağrılır.
     """
+    # Global otomatik sync kontrolü
+    global_config = PlatformConfig.query.filter_by(platform='global').first()
+    if global_config and not global_config.is_active:
+        logger.info("[AUTO-SYNC] Otomatik senkronizasyon DEVRE DIŞI - atlanıyor.")
+        return {"skipped": True, "reason": "auto_sync_disabled"}
+    
     logger.info("[AUTO-SYNC] Otomatik stok senkronizasyonu başlatılıyor (Idefix hariç)...")
     
     # İdefix hariç platformlar

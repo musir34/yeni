@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}HB - Paketler{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hb-header {
+        background: linear-gradient(135deg, #FF6000 0%, #1a1a2e 100%);
+        color: white; padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="hb-header d-flex align-items-center justify-content-between">
+        <div>
+            <h5 class="mb-0"><i class="fas fa-box me-2"></i> Paketler</h5>
+            <small class="opacity-75">Paketlenen siparişler ve kargo bilgileri</small>
+        </div>
+        <a href="{{ url_for('hepsiburada.index') }}" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Panel
+        </a>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger"><i class="fas fa-exclamation-circle me-1"></i> {{ error }}</div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <strong>Toplam:</strong> {{ total }} paket
+        </div>
+        <div class="card-body p-0">
+            {% if packages %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Paket No</th>
+                            <th>Sipariş No</th>
+                            <th>Barkod</th>
+                            <th>Kargo</th>
+                            <th>Durum</th>
+                            <th>Tarih</th>
+                            <th>Müşteri</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for pkg in packages %}
+                        <tr>
+                            <td><strong>{{ pkg.packageNumber or pkg.get('PackageNumber', '-') }}</strong></td>
+                            <td>{{ pkg.orderNumber or pkg.get('OrderNumber', '-') }}</td>
+                            <td><code>{{ pkg.barcode or pkg.get('Barcode', '-') }}</code></td>
+                            <td>{{ pkg.cargoCompany or pkg.get('CargoCompany', '-') }}</td>
+                            <td><span class="badge bg-success">{{ pkg.status or pkg.get('Status', 'Open') }}</span></td>
+                            <td>{{ (pkg.orderDate or pkg.get('OrderDate', ''))[:10] }}</td>
+                            <td>{{ pkg.recipientName or pkg.get('RecipientName', '-') }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-box-open fa-3x mb-3"></i>
+                <p>Henüz paket yok</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

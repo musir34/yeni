@@ -43,6 +43,7 @@ def register_blueprints(app):
     # Preview: Woo barcode mapping
     from routes.woo_barcodes_preview import woo_preview_bp
     from amazon import amazon_bp  # 🛍️ AMAZON SP-API SİSTEMİ
+    from hepsiburada import hb_bp  # 🟠 HEPSİBURADA ENTEGRASYONU
     from stock_sync.routes import stock_sync_bp  # 📦 STOK SENKRONİZASYON SİSTEMİ
 
 
@@ -89,6 +90,7 @@ def register_blueprints(app):
         test_bp,  # 🧪 WOOCOMMERCE TEST - GEÇİCİ AKTİF
         woo_preview_bp,
         amazon_bp,  # 🛍️ AMAZON SP-API SİSTEMİ
+        hb_bp,  # 🟠 HEPSİBURADA ENTEGRASYONU
         stock_sync_bp,  # 📦 STOK SENKRONİZASYON SİSTEMİ
     ]:
         app.register_blueprint(bp)

@@ -15,6 +15,10 @@
             <a href="{{ url_for('stock_sync.central_stock') }}" class="btn btn-info">
                 <i class="bi bi-box-seam"></i> Central Stok
             </a>
+            <button id="btnToggleAutoSync" class="btn {% if auto_sync_enabled %}btn-success{% else %}btn-danger{% endif %}">
+                <i class="bi {% if auto_sync_enabled %}bi-play-circle{% else %}bi-pause-circle{% endif %}"></i>
+                <span id="autoSyncLabel">Otomatik Sync: {% if auto_sync_enabled %}Aktif{% else %}Kapalı{% endif %}</span>
+            </button>
             <button id="btnRefresh" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-clockwise"></i> Yenile
             </button>
@@ -327,6 +331,42 @@
 document.addEventListener('DOMContentLoaded', function() {
     const syncModal = new bootstrap.Modal(document.getElementById('syncModal'));
     const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
+    
+    // Otomatik Sync Toggle Butonu
+    document.getElementById('btnToggleAutoSync').addEventListener('click', function() {
+        const btn = this;
+        const label = document.getElementById('autoSyncLabel');
+        const icon = btn.querySelector('i');
+        
+        btn.disabled = true;
+        
+        fetch('/stock-sync/api/auto-sync/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            if (data.success) {
+                if (data.enabled) {
+                    btn.className = 'btn btn-success';
+                    icon.className = 'bi bi-play-circle';
+                    label.textContent = 'Otomatik Sync: Aktif';
+                } else {
+                    btn.className = 'btn btn-danger';
+                    icon.className = 'bi bi-pause-circle';
+                    label.textContent = 'Otomatik Sync: Kapalı';
+                }
+                alert(data.message);
+            } else {
+                alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            alert('Bağlantı hatası: ' + err.message);
+        });
+    });
     
     // İstatistikleri yükle
     fetch('/stock-sync/api/stats')

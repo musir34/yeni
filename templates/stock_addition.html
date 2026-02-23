@@ -218,6 +218,10 @@
         let barcodeQueue = [];           // Bekleyen barkodlar kuyruğu
         let isProcessingQueue = false;   // Kuyruk işleniyor mu?
         let queueProcessDelay = 50;      // Barkodlar arası işlem gecikmesi (ms)
+        
+        // 🔥 KARAKTER ARASI SÜRE TESPİTİ
+        let lastCharTime = 0;            // Son karakter zamanı
+        let charGapThreshold = 50;       // 50ms'den uzun boşluk = yeni barkod başladı
         const allElements = {
             barcodeInput: document.getElementById('barcodeInput'),
             selectRenewModeBtn: document.getElementById('selectRenewMode'),
@@ -268,6 +272,27 @@
         function handleBarcodeInput(e) {
             if (!autoEnterEnabled) return;
             
+            const now = Date.now();
+            const timeSinceLastChar = now - lastCharTime;
+            
+            // 🔥 Eğer son karakterden bu yana 50ms'den fazla geçtiyse VE inputta veri varsa
+            // Bu yeni bir barkodun başladığı anlamına gelir - önceki barkodu kaydet
+            if (lastCharTime > 0 && timeSinceLastChar > charGapThreshold) {
+                // Önceki karakter grubunu değerlendir (son eklenen karakter hariç)
+                const currentValue = allElements.barcodeInput.value;
+                const newChar = e.data || ''; // Son eklenen karakter
+                const previousBarcode = currentValue.slice(0, -newChar.length).trim();
+                
+                if (previousBarcode && previousBarcode.length >= 5) {
+                    // Önceki barkodu kuyruğa ekle
+                    addToQueue(previousBarcode);
+                    // Input'u sadece yeni karaktere ayarla
+                    allElements.barcodeInput.value = newChar;
+                }
+            }
+            
+            lastCharTime = now;
+            
             // Önceki timeout'u temizle
             if (autoEnterTimeout) {
                 clearTimeout(autoEnterTimeout);
@@ -276,15 +301,15 @@
             const barcode = allElements.barcodeInput.value.trim();
             if (!barcode) return;
             
-            // 200ms boyunca yeni karakter gelmezse barkodu kuyruğa ekle
-            // (Uzun barkodlarda karakterler arası 10-50ms olabiliyor, 200ms güvenli bir süre)
+            // 250ms boyunca yeni karakter gelmezse barkodu kuyruğa ekle
             autoEnterTimeout = setTimeout(() => {
                 const currentBarcode = allElements.barcodeInput.value.trim();
-                if (currentBarcode) {
+                if (currentBarcode && currentBarcode.length >= 5) {
                     addToQueue(currentBarcode);
                     allElements.barcodeInput.value = '';
+                    lastCharTime = 0; // Sıfırla
                 }
-            }, 200);
+            }, 250);
         }
         
         // 🚀 BARKOD KUYRUĞA EKLEME
@@ -608,6 +633,7 @@
             // 🚀 Queue'yu sıfırla
             barcodeQueue = [];
             isProcessingQueue = false;
+            lastCharTime = 0; // 🔥 Karakter zamanını sıfırla
             if (autoEnterTimeout) clearTimeout(autoEnterTimeout);
             
             allElements.scannedBarcodesDiv.innerHTML = '';

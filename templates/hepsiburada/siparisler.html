@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}HB - Siparişler{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hb-header {
+        background: linear-gradient(135deg, #FF6000 0%, #1a1a2e 100%);
+        color: white; padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;
+    }
+    .order-card { border-radius: 10px; border: 1px solid #e9ecef; margin-bottom: 1rem; transition: box-shadow 0.2s; }
+    .order-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .badge-open { background: #28a745; }
+    .badge-unpacked { background: #ffc107; color: #000; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="hb-header d-flex align-items-center justify-content-between">
+        <div>
+            <h5 class="mb-0"><i class="fas fa-shopping-cart me-2"></i> Siparişler</h5>
+            <small class="opacity-75">Ödemesi tamamlanmış siparişler</small>
+        </div>
+        <a href="{{ url_for('hepsiburada.index') }}" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Panel
+        </a>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger"><i class="fas fa-exclamation-circle me-1"></i> {{ error }}</div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <span><strong>Toplam:</strong> {{ total }} sipariş</span>
+            <button class="btn btn-sm btn-outline-primary" onclick="location.reload()">
+                <i class="fas fa-sync-alt me-1"></i> Yenile
+            </button>
+        </div>
+        <div class="card-body p-0">
+            {% if orders %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Sipariş No</th>
+                            <th>SKU</th>
+                            <th>Adet</th>
+                            <th>Müşteri</th>
+                            <th>Tutar</th>
+                            <th>Durum</th>
+                            <th>Tarih</th>
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for order in orders %}
+                        <tr>
+                            <td><strong>{{ order.orderNumber or order.get('OrderNumber', '-') }}</strong></td>
+                            <td><code>{{ order.sku or order.get('Sku', '-') }}</code></td>
+                            <td>{{ order.quantity or order.get('Quantity', 1) }}</td>
+                            <td>{{ order.customerName or order.get('CustomerName', '-') }}</td>
+                            <td>
+                                {% if order.totalPrice %}
+                                    {{ order.totalPrice.amount if order.totalPrice is mapping else order.totalPrice }} ₺
+                                {% elif order.get('TotalPrice') %}
+                                    {{ order.TotalPrice.Amount if order.TotalPrice is mapping else order.TotalPrice }} ₺
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% set status = order.status or order.get('Status', 'Open') %}
+                                <span class="badge {{ 'badge-open' if status == 'Open' else 'badge-unpacked' }}">
+                                    {{ status }}
+                                </span>
+                            </td>
+                            <td>{{ (order.orderDate or order.get('OrderDate', ''))[:10] }}</td>
+                            <td>
+                                <a href="{{ url_for('hepsiburada.order_detail', order_number=order.orderNumber or order.get('OrderNumber', '')) }}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-inbox fa-3x mb-3"></i>
+                <p>Henüz sipariş yok</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sayfalama -->
+    {% if page_count > 1 %}
+    <nav class="mt-3">
+        <ul class="pagination justify-content-center">
+            {% if page > 0 %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page - 1 }}&limit={{ limit }}">Önceki</a>
+            </li>
+            {% endif %}
+            <li class="page-item active"><span class="page-link">{{ page + 1 }} / {{ page_count }}</span></li>
+            {% if page < page_count - 1 %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page + 1 }}&limit={{ limit }}">Sonraki</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

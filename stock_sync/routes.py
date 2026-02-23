@@ -46,12 +46,17 @@ def dashboard():
     # Platform son sync zamanları
     platform_configs = {p.platform: p for p in PlatformConfig.query.all()}
     
+    # Global otomatik sync durumu
+    global_config = PlatformConfig.query.filter_by(platform='global').first()
+    auto_sync_enabled = global_config.is_active if global_config else True
+    
     return render_template('stock_sync/dashboard.html',
                            platform_status=platform_status,
                            recent_sessions=recent_sessions,
                            active_sessions=active_sessions,
                            total_products=total_products,
-                           platform_configs=platform_configs)
+                           platform_configs=platform_configs,
+                           auto_sync_enabled=auto_sync_enabled)
 
 
 @stock_sync_bp.route('/history')
@@ -299,6 +304,58 @@ def session_detail(session_id: str):
 # ════════════════════════════════════════════════════════════════════
 # API ENDPOINTS
 # ════════════════════════════════════════════════════════════════════
+
+@stock_sync_bp.route('/api/auto-sync/toggle', methods=['POST'])
+@login_required
+def api_toggle_auto_sync():
+    """Otomatik senkronizasyonu aç/kapat"""
+    log_user_action("STOCK_SYNC", "toggle_auto_sync")
+    
+    try:
+        # Global config'i bul veya oluştur
+        global_config = PlatformConfig.query.filter_by(platform='global').first()
+        
+        if not global_config:
+            global_config = PlatformConfig(
+                platform='global',
+                is_active=True,
+                batch_size=100,
+                rate_limit_delay=0.1,
+                max_retries=3
+            )
+            db.session.add(global_config)
+        
+        # Toggle
+        global_config.is_active = not global_config.is_active
+        db.session.commit()
+        
+        status = "aktif" if global_config.is_active else "devre dışı"
+        logger.info(f"[AUTO-SYNC] Otomatik senkronizasyon {status} yapıldı")
+        
+        return jsonify({
+            "success": True,
+            "enabled": global_config.is_active,
+            "message": f"Otomatik senkronizasyon {status}"
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[AUTO-SYNC] Toggle hatası: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@stock_sync_bp.route('/api/auto-sync/status')
+@login_required
+def api_auto_sync_status():
+    """Otomatik senkronizasyon durumunu döndür"""
+    global_config = PlatformConfig.query.filter_by(platform='global').first()
+    enabled = global_config.is_active if global_config else True
+    
+    return jsonify({
+        "success": True,
+        "enabled": enabled
+    })
+
 
 @stock_sync_bp.route('/api/status')
 @login_required
