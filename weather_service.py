@@ -43,7 +43,7 @@ def get_weather_icon_emoji(weather_code, is_day=True):
         return "☀️" if is_day else "🌙"
     elif weather_code in [1, 2, 3]:  # Mainly clear, partly cloudy, overcast
         if weather_code == 1:
-            return "�️" if is_day else "☁️"
+            return "🌤️" if is_day else "☁️"
         elif weather_code == 2:
             return "⛅"
         else:
@@ -51,7 +51,7 @@ def get_weather_icon_emoji(weather_code, is_day=True):
     elif weather_code in [45, 48]:  # Fog
         return "🌫️"
     elif weather_code in [51, 53, 55]:  # Drizzle
-        return "�️"
+        return "🌦️"
     elif weather_code in [61, 63, 65]:  # Rain
         if weather_code == 61:
             return "🌧️"

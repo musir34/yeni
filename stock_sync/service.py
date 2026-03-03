@@ -636,16 +636,70 @@ def sync_platform_sync(platform: str, **kwargs) -> Dict[str, Any]:
         loop.close()
 
 
+def _sync_central_stock_from_raf():
+    """
+    CentralStock tablosunu raf stoklarıyla otomatik senkronize eder.
+    Platform sync'inden ÖNCE çağrılır, böylece güncel stoklar iletilir.
+    """
+    from models import CentralStock, RafUrun
+    from sqlalchemy import func
+    from datetime import datetime, timezone
+    
+    try:
+        # 1. Adet 0 veya altı olan RafUrun kayıtlarını sil
+        deleted_count = RafUrun.query.filter(RafUrun.adet <= 0).delete()
+        
+        # 2. Raflardaki toplam stokları hesapla
+        raf_totals = db.session.query(
+            func.lower(RafUrun.urun_barkodu).label('barcode'),
+            func.sum(RafUrun.adet).label('total')
+        ).filter(
+            RafUrun.adet > 0
+        ).group_by(
+            func.lower(RafUrun.urun_barkodu)
+        ).all()
+        
+        raf_dict = {r.barcode: int(r.total) for r in raf_totals}
+        
+        # 3. CentralStock kayıtlarını güncelle
+        fixed_count = 0
+        cs_all = CentralStock.query.all()
+        
+        for cs in cs_all:
+            raf_toplam = raf_dict.get(cs.barcode.lower(), 0)
+            
+            if cs.qty != raf_toplam:
+                cs.qty = raf_toplam
+                cs.updated_at = datetime.now(timezone.utc)
+                fixed_count += 1
+        
+        db.session.commit()
+        
+        logger.info(f"[AUTO-SYNC] CentralStock raf senkronizasyonu: {fixed_count} düzeltildi, {deleted_count} boş kayıt silindi")
+        return {"fixed": fixed_count, "deleted": deleted_count}
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[AUTO-SYNC] CentralStock raf senkronizasyon hatası: {e}")
+        return {"error": str(e)}
+
+
 def auto_sync_platforms_except_idefix() -> Dict[str, Any]:
     """
     Otomatik stok senkronizasyonu - Idefix HARİÇ tüm platformlar.
     APScheduler tarafından 15 dakikada bir çağrılır.
+    Önce CentralStock'u raf toplamlarıyla senkronize eder, sonra platformlara gönderir.
     """
     # Global otomatik sync kontrolü
     global_config = PlatformConfig.query.filter_by(platform='global').first()
     if global_config and not global_config.is_active:
         logger.info("[AUTO-SYNC] Otomatik senkronizasyon DEVRE DIŞI - atlanıyor.")
         return {"skipped": True, "reason": "auto_sync_disabled"}
+    
+    # ÖNCELİKLE: CentralStock'u raf stoklarıyla senkronize et
+    logger.info("[AUTO-SYNC] Önce CentralStock ↔ Raf senkronizasyonu yapılıyor...")
+    raf_sync_result = _sync_central_stock_from_raf()
+    logger.info(f"[AUTO-SYNC] CentralStock ↔ Raf sync sonucu: {raf_sync_result}")
     
     logger.info("[AUTO-SYNC] Otomatik stok senkronizasyonu başlatılıyor (Idefix hariç)...")
     

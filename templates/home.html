@@ -63,14 +63,7 @@
       <div>Giriş Yapan: <strong>{{ session.get('first_name','') }} {{ session.get('last_name','') }}</strong></div>
       {% if weather %}
       <div style="font-size:12px;color:#555;">
-        {{ weather.icon }} {{ weather.description }} • {{ weather.temperature }}°C
-        {% if weather.feels_like %}(Hissedilen: {{ weather.feels_like }}°C){% endif %}
-      </div>
-      <div style="font-size:11px;color:#666;">
-        💨 {{ weather.wind_speed }} km/h {{ weather.wind_direction }}
-        {% if weather.wind_gusts and weather.wind_gusts > weather.wind_speed %} (🌪️ Şiddetli: {{ weather.wind_gusts }} km/h){% endif %}
-        • 💧 Nem: {{ weather.humidity }}% • ☁️ Bulutluluk: {{ weather.clouds }}%
-        {% if weather.visibility %} • 👁️ Görüş: {{ weather.visibility|round(1) }} km{% endif %}
+        {{ weather.icon }} {{ weather.description }}
       </div>
       {% endif %}
       {% if current_time %}

@@ -212,6 +212,70 @@ class RafUrun(db.Model):
     __table_args__ = (db.UniqueConstraint("raf_kodu", "urun_barkodu", name="u_raf_urun"),)
 
 
+# ════════════════════════════════════════════════════════════════════
+# RAF → CENTRAL STOCK OTOMATİK SENK: SQLAlchemy Event Listeners
+# Her RafUrun değişikliğinde CentralStock otomatik güncellenir.
+# ════════════════════════════════════════════════════════════════════
+from sqlalchemy import event
+
+_SYNC_KEY = '_raf_barcodes_to_sync'
+
+
+def _track_raf_change(mapper, connection, target):
+    """RafUrun insert/update/delete olduğunda barkodu session.info'ya ekle"""
+    session = db.session
+    if target.urun_barkodu:
+        if _SYNC_KEY not in session.info:
+            session.info[_SYNC_KEY] = set()
+        session.info[_SYNC_KEY].add(target.urun_barkodu)
+
+
+def _sync_central_after_commit(session):
+    """Commit sonrası etkilenen barkodların CentralStock'unu güncelle"""
+    barcodes = session.info.pop(_SYNC_KEY, None)
+    
+    if not barcodes:
+        return
+    
+    try:
+        from sqlalchemy import func
+        
+        for barcode in barcodes:
+            # Raflardaki toplam miktarı hesapla
+            raf_toplam = session.query(
+                func.coalesce(func.sum(RafUrun.adet), 0)
+            ).filter(
+                RafUrun.urun_barkodu == barcode,
+                RafUrun.adet > 0
+            ).scalar()
+            
+            raf_toplam = int(raf_toplam or 0)
+            
+            # CentralStock kaydını bul veya oluştur
+            cs = session.get(CentralStock, barcode)
+            if cs:
+                if cs.qty != raf_toplam:
+                    cs.qty = raf_toplam
+                    cs.updated_at = datetime.utcnow()
+            else:
+                if raf_toplam > 0:
+                    cs = CentralStock(barcode=barcode, qty=raf_toplam)
+                    session.add(cs)
+        
+        session.commit()
+    except Exception:
+        import logging
+        logging.getLogger(__name__).error("[AUTO-SYNC] RafUrun -> CentralStock otomatik sync hatası", exc_info=True)
+        session.rollback()
+
+
+# Event listener'ları kaydet
+event.listen(RafUrun, 'after_insert', _track_raf_change)
+event.listen(RafUrun, 'after_update', _track_raf_change)
+event.listen(RafUrun, 'after_delete', _track_raf_change)
+event.listen(db.session, 'after_commit', _sync_central_after_commit)
+
+
 # Bu modeller db.Model'dan türetilmeli
 class Shipment(db.Model):
     __tablename__ = 'shipments'
@@ -1021,6 +1085,29 @@ class SyncSession(db.Model):
             return 0
         return round((self.success_count / self.sent_count) * 100, 1)
     
+    @staticmethod
+    def _utc_to_istanbul(dt):
+        """UTC datetime'ı Istanbul saat dilimine çevir"""
+        if dt is None:
+            return None
+        from zoneinfo import ZoneInfo
+        if dt.tzinfo is None:
+            from datetime import timezone
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(ZoneInfo('Europe/Istanbul'))
+    
+    @staticmethod
+    def _format_istanbul(dt):
+        """UTC datetime'ı Istanbul saatinde 'HH:MM DD/MM/YYYY' formatına çevir"""
+        if dt is None:
+            return None
+        from zoneinfo import ZoneInfo
+        if dt.tzinfo is None:
+            from datetime import timezone
+            dt = dt.replace(tzinfo=timezone.utc)
+        ist = dt.astimezone(ZoneInfo('Europe/Istanbul'))
+        return ist.strftime('%H:%M %d/%m/%Y')
+    
     def to_dict(self):
         return {
             'id': self.id, 'session_id': self.session_id, 'platform': self.platform,
@@ -1028,11 +1115,11 @@ class SyncSession(db.Model):
             'sent_count': self.sent_count, 'success_count': self.success_count,
             'error_count': self.error_count, 'skipped_count': self.skipped_count,
             'progress_percent': self.progress_percent, 'success_rate': self.success_rate,
-            'started_at': self.started_at.isoformat() if self.started_at else None,
-            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'started_at': self._format_istanbul(self.started_at),
+            'completed_at': self._format_istanbul(self.completed_at),
             'duration_seconds': self.duration_seconds, 'triggered_by': self.triggered_by,
             'triggered_by_user': self.triggered_by_user, 'error_message': self.error_message,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self._format_istanbul(self.created_at)
         }
 
 
