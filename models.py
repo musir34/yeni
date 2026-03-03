@@ -231,7 +231,11 @@ def _track_raf_change(mapper, connection, target):
 
 
 def _sync_central_after_commit(session):
-    """Commit sonrası etkilenen barkodların CentralStock'unu güncelle"""
+    """Commit sonrası etkilenen barkodların CentralStock'unu güncelle.
+    
+    NOT: after_commit event'ında aynı session 'committed' durumda olduğundan
+    yeni SQL çalıştırılamaz. Bu yüzden bağımsız bir session kullanıyoruz.
+    """
     barcodes = session.info.pop(_SYNC_KEY, None)
     
     if not barcodes:
@@ -239,34 +243,44 @@ def _sync_central_after_commit(session):
     
     try:
         from sqlalchemy import func
+        from sqlalchemy.orm import Session as SaSession
         
-        for barcode in barcodes:
-            # Raflardaki toplam miktarı hesapla
-            raf_toplam = session.query(
-                func.coalesce(func.sum(RafUrun.adet), 0)
-            ).filter(
-                RafUrun.urun_barkodu == barcode,
-                RafUrun.adet > 0
-            ).scalar()
-            
-            raf_toplam = int(raf_toplam or 0)
-            
-            # CentralStock kaydını bul veya oluştur
-            cs = session.get(CentralStock, barcode)
-            if cs:
-                if cs.qty != raf_toplam:
-                    cs.qty = raf_toplam
-                    cs.updated_at = datetime.utcnow()
-            else:
-                if raf_toplam > 0:
-                    cs = CentralStock(barcode=barcode, qty=raf_toplam)
-                    session.add(cs)
+        # after_commit içinde aynı session kullanılamaz - yeni session oluştur
+        bind = session.get_bind()
+        new_session = SaSession(bind=bind)
         
-        session.commit()
+        try:
+            for barcode in barcodes:
+                # Raflardaki toplam miktarı hesapla
+                raf_toplam = new_session.query(
+                    func.coalesce(func.sum(RafUrun.adet), 0)
+                ).filter(
+                    RafUrun.urun_barkodu == barcode,
+                    RafUrun.adet > 0
+                ).scalar()
+                
+                raf_toplam = int(raf_toplam or 0)
+                
+                # CentralStock kaydını bul veya oluştur
+                cs = new_session.get(CentralStock, barcode)
+                if cs:
+                    if cs.qty != raf_toplam:
+                        cs.qty = raf_toplam
+                        cs.updated_at = datetime.utcnow()
+                else:
+                    if raf_toplam > 0:
+                        cs = CentralStock(barcode=barcode, qty=raf_toplam)
+                        new_session.add(cs)
+            
+            new_session.commit()
+        except Exception:
+            new_session.rollback()
+            raise
+        finally:
+            new_session.close()
     except Exception:
         import logging
         logging.getLogger(__name__).error("[AUTO-SYNC] RafUrun -> CentralStock otomatik sync hatası", exc_info=True)
-        session.rollback()
 
 
 # Event listener'ları kaydet
