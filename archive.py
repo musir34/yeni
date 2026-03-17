@@ -1,4 +1,4 @@
-import os
+﻿import os
 import json
 import traceback
 from datetime import datetime
@@ -51,32 +51,16 @@ def format_turkish_date_filter(value):
 #############################
 def find_order_across_tables(order_number):
     """
-    Siparişi 6 tabloda arar: WooOrders, Created, Picking, Shipped, Delivered, Cancelled
+    Siparişi tablolarda arar: Created, Picking, Shipped, Delivered, Cancelled
     Bulursa (obj, tablo_sinifi), bulamazsa (None, None)
-    
-    🔥 ÖNCELİK: WooCommerce siparişleri (tire içermeyen) önce woo_orders tablosuna bakar
     """
-    from woocommerce_site.models import WooOrder
-    
     order_number_str = str(order_number)
-    
-    # 🔥 WooCommerce siparişi kontrolü (tire içermeyen = WooCommerce)
-    # WooCommerce siparişleri için önce woo_orders tablosuna bak
-    if '-' not in order_number_str:
-        found = WooOrder.query.filter_by(order_number=order_number_str).first()
-        if found:
-            return found, WooOrder
     
     # Trendyol tablolarına bak
     for cls in [OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled]:
         found = cls.query.filter_by(order_number=order_number_str).first()
         if found:
             return found, cls
-    
-    # Son çare: WooCommerce tablosuna tekrar bak (tire içerse bile)
-    found = WooOrder.query.filter_by(order_number=order_number_str).first()
-    if found:
-        return found, WooOrder
     
     return None, None
 
@@ -518,76 +502,29 @@ def archive_an_order():
     archive_reason = request.form.get('archive_reason')
     print(f"Sipariş arşivleniyor: {order_number}, neden: {archive_reason}")
 
-    # Siparişi 6 tablodan birinde ara (Trendyol + WooCommerce)
+    # Siparişi tablolardan birinde ara
     order_obj, table_cls = find_order_across_tables(order_number)
     if not order_obj:
         return jsonify({'success': False, 'message': 'Sipariş bulunamadı.'})
 
-    # WooCommerce siparişi mi kontrol et
-    from woocommerce_site.models import WooOrder
-    is_woo_order = table_cls == WooOrder
-    
-    if is_woo_order:
-        # WooCommerce siparişi için özel alan eşleştirmesi
-        # Adres birleştir
-        address_parts = [
-            order_obj.shipping_address_1 or order_obj.billing_address_1,
-            order_obj.shipping_address_2 or order_obj.billing_address_2,
-            order_obj.shipping_city or order_obj.billing_city,
-            order_obj.shipping_state or order_obj.billing_state,
-            order_obj.shipping_postcode or order_obj.billing_postcode,
-        ]
-        full_address = ' '.join([p for p in address_parts if p])
-        
-        # Details JSON oluştur
-        import json
-        details_list = []
-        for item in order_obj.line_items or []:
-            details_list.append({
-                'woo_product_id': item.get('product_id'),
-                'woo_variation_id': item.get('variation_id'),
-                'quantity': item.get('quantity', 1),
-                'price': item.get('price', 0),
-                'product_name': item.get('name', ''),
-                'sku': item.get('sku', '')
-            })
-        
-        new_archive = Archive(
-            order_number=order_obj.order_number,
-            status=order_obj.status,
-            order_date=order_obj.date_created,
-            details=json.dumps(details_list, ensure_ascii=False),
-            shipment_package_id=None,
-            package_number=order_obj.order_number,
-            shipping_barcode=None,
-            cargo_provider_name='MNG',
-            customer_name=order_obj.customer_first_name or '',
-            customer_surname=order_obj.customer_last_name or '',
-            customer_address=full_address,
-            agreed_delivery_date=None,
-            archive_reason=archive_reason,
-            archive_date=datetime.now(),
-            source='woocommerce'
-        )
-    else:
-        # Trendyol siparişi - standart alan eşleştirmesi
-        new_archive = Archive(
-            order_number=order_obj.order_number,
-            status=order_obj.status,
-            order_date=order_obj.order_date,
-            details=order_obj.details,
-            shipment_package_id=getattr(order_obj, 'shipment_package_id', None),
-            package_number=getattr(order_obj, 'package_number', None),
-            shipping_barcode=getattr(order_obj, 'shipping_barcode', None),
-            cargo_provider_name=getattr(order_obj, 'cargo_provider_name', None),
-            customer_name=getattr(order_obj, 'customer_name', None),
-            customer_surname=getattr(order_obj, 'customer_surname', None),
-            customer_address=getattr(order_obj, 'customer_address', None),
-            agreed_delivery_date=getattr(order_obj, 'agreed_delivery_date', None),
-            archive_reason=archive_reason,
-            archive_date=datetime.now(),
-            source='trendyol'
-        )
+    # Trendyol siparişi - standart alan eşleştirmesi
+    new_archive = Archive(
+        order_number=order_obj.order_number,
+        status=order_obj.status,
+        order_date=order_obj.order_date,
+        details=order_obj.details,
+        shipment_package_id=getattr(order_obj, 'shipment_package_id', None),
+        package_number=getattr(order_obj, 'package_number', None),
+        shipping_barcode=getattr(order_obj, 'shipping_barcode', None),
+        cargo_provider_name=getattr(order_obj, 'cargo_provider_name', None),
+        customer_name=getattr(order_obj, 'customer_name', None),
+        customer_surname=getattr(order_obj, 'customer_surname', None),
+        customer_address=getattr(order_obj, 'customer_address', None),
+        agreed_delivery_date=getattr(order_obj, 'agreed_delivery_date', None),
+        archive_reason=archive_reason,
+        archive_date=datetime.now(),
+        source='trendyol'
+    )
     
     try:
         db.session.add(new_archive)
@@ -621,143 +558,73 @@ def recover_from_archive():
     if not archived_order:
         return jsonify({'success': False, 'message': 'Sipariş arşivde bulunamadı.'})
 
-    # 🔥 Sipariş kaynağını kontrol et
-    # Önce source alanını kontrol et (varsa)
-    if hasattr(archived_order, 'source') and archived_order.source:
-        is_woocommerce = (archived_order.source == 'woocommerce')
-    else:
-        # Eski kayıtlar için fallback: sipariş numarasına bak
-        # WooCommerce sipariş numaraları genellikle 5 haneli (49787, 49797)
-        # Trendyol sipariş numaraları 11 haneli (10725318633)
-        order_num_str = str(order_number)
-        is_woocommerce = len(order_num_str) <= 6 and order_num_str.isdigit() and '-' not in order_num_str
-    
     try:
-        if is_woocommerce:
-            # 🛒 WooCommerce siparişini woo_orders tablosuna geri yükle
-            from woocommerce_site.models import WooOrder
-            
-            # Details JSON'dan line_items'ı parse et
-            details_json = archived_order.details or '[]'
-            if isinstance(details_json, str):
-                try:
-                    details_list = json.loads(details_json)
-                except json.JSONDecodeError:
-                    details_list = []
-            else:
-                details_list = details_json if isinstance(details_json, list) else []
-            
-            # WooOrder formatına çevir
-            line_items = []
-            for item in details_list:
-                line_items.append({
-                    'product_id': item.get('woo_product_id'),
-                    'variation_id': item.get('woo_variation_id'),
-                    'quantity': item.get('quantity', 1),
-                    'price': item.get('price', 0),
-                    'total': item.get('line_total_price', 0),
-                    'name': item.get('product_name', ''),
-                    'sku': item.get('sku', '')
-                })
-            
-            # Adres bilgisini parse et
-            address = archived_order.customer_address or ''
-            
-            # WooOrder objesi oluştur
-            restored_order = WooOrder()
-            # order_id için integer overflow kontrolü
-            try:
-                order_id_int = int(archived_order.order_number)
-                # PostgreSQL Integer max: 2147483647
-                if order_id_int <= 2147483647:
-                    restored_order.order_id = order_id_int
-                else:
-                    # Çok büyük sayı, NULL bırak
-                    restored_order.order_id = None
-                    print(f"⚠️  order_id çok büyük ({order_id_int}), NULL olarak ayarlandı")
-            except ValueError:
-                restored_order.order_id = None
-            
-            restored_order.order_number = archived_order.order_number
-            restored_order.status = 'on-hold'  # Geri yüklenince tekrar sipariş hazırla ekranına düşsün
-            restored_order.date_created = archived_order.order_date
-            restored_order.customer_first_name = archived_order.customer_name
-            restored_order.customer_last_name = archived_order.customer_surname
-            restored_order.total = 0.0  # Arşivde bu bilgi yok
-            restored_order.currency = 'TRY'
-            restored_order.line_items = line_items
-            restored_order.shipping_address_1 = address[:255] if address else None
-            restored_order.billing_address_1 = address[:255] if address else None
-            
-            print(f"WooCommerce siparişi {order_number} woo_orders tablosuna geri yükleniyor.")
-        else:
-            # 📦 Trendyol siparişini orders_created tablosuna geri yükle
-            from models import OrderCreated
-            
-            restored_order = OrderCreated()
-            restored_order.order_number = archived_order.order_number
-            restored_order.status = 'Created'  # Geri yüklenince 'Created' statüsüne alıyoruz
-            restored_order.order_date = archived_order.order_date
-            restored_order.details = archived_order.details
-            restored_order.shipment_package_id = archived_order.shipment_package_id
-            restored_order.package_number = archived_order.package_number
-            restored_order.shipping_barcode = archived_order.shipping_barcode
-            restored_order.cargo_provider_name = archived_order.cargo_provider_name
-            restored_order.customer_name = archived_order.customer_name
-            restored_order.customer_surname = archived_order.customer_surname
-            restored_order.customer_address = archived_order.customer_address
-            restored_order.agreed_delivery_date = archived_order.agreed_delivery_date
-            
-            # Ek alanlar (Archive'de varsa)
-            if hasattr(archived_order, 'merchant_sku'):
-                restored_order.merchant_sku = archived_order.merchant_sku
-            if hasattr(archived_order, 'product_barcode'):
-                restored_order.product_barcode = archived_order.product_barcode
-            if hasattr(archived_order, 'product_name'):
-                restored_order.product_name = archived_order.product_name
-            if hasattr(archived_order, 'product_code'):
-                restored_order.product_code = archived_order.product_code
-            if hasattr(archived_order, 'product_size'):
-                restored_order.product_size = archived_order.product_size
-            if hasattr(archived_order, 'product_color'):
-                restored_order.product_color = archived_order.product_color
-            if hasattr(archived_order, 'amount'):
-                restored_order.amount = archived_order.amount
-            if hasattr(archived_order, 'discount'):
-                restored_order.discount = archived_order.discount
-            if hasattr(archived_order, 'currency_code'):
-                restored_order.currency_code = archived_order.currency_code
-            if hasattr(archived_order, 'line_id'):
-                restored_order.line_id = archived_order.line_id
-            if hasattr(archived_order, 'images'):
-                restored_order.images = archived_order.images
-            if hasattr(archived_order, 'estimated_delivery_start'):
-                restored_order.estimated_delivery_start = archived_order.estimated_delivery_start
-            if hasattr(archived_order, 'estimated_delivery_end'):
-                restored_order.estimated_delivery_end = archived_order.estimated_delivery_end
-            if hasattr(archived_order, 'cargo_tracking_link'):
-                restored_order.cargo_tracking_link = archived_order.cargo_tracking_link
-            if hasattr(archived_order, 'product_main_id'):
-                restored_order.product_main_id = archived_order.product_main_id
-            if hasattr(archived_order, 'product_model_code'):
-                restored_order.product_model_code = archived_order.product_model_code
-            if hasattr(archived_order, 'stockCode'):
-                restored_order.stockCode = archived_order.stockCode
-            if hasattr(archived_order, 'vat_base_amount'):
-                restored_order.vat_base_amount = archived_order.vat_base_amount
-            if hasattr(archived_order, 'origin_shipment_date'):
-                restored_order.origin_shipment_date = archived_order.origin_shipment_date
-            
-            restored_order.source = 'TRENDYOL'
-            
-            print(f"Trendyol siparişi {order_number} orders_created tablosuna geri yükleniyor.")
+        # Trendyol siparişini orders_created tablosuna geri yükle
+        from models import OrderCreated
+        
+        restored_order = OrderCreated()
+        restored_order.order_number = archived_order.order_number
+        restored_order.status = 'Created'
+        restored_order.order_date = archived_order.order_date
+        restored_order.details = archived_order.details
+        restored_order.shipment_package_id = archived_order.shipment_package_id
+        restored_order.package_number = archived_order.package_number
+        restored_order.shipping_barcode = archived_order.shipping_barcode
+        restored_order.cargo_provider_name = archived_order.cargo_provider_name
+        restored_order.customer_name = archived_order.customer_name
+        restored_order.customer_surname = archived_order.customer_surname
+        restored_order.customer_address = archived_order.customer_address
+        restored_order.agreed_delivery_date = archived_order.agreed_delivery_date
+        
+        # Ek alanlar (Archive'de varsa)
+        if hasattr(archived_order, 'merchant_sku'):
+            restored_order.merchant_sku = archived_order.merchant_sku
+        if hasattr(archived_order, 'product_barcode'):
+            restored_order.product_barcode = archived_order.product_barcode
+        if hasattr(archived_order, 'product_name'):
+            restored_order.product_name = archived_order.product_name
+        if hasattr(archived_order, 'product_code'):
+            restored_order.product_code = archived_order.product_code
+        if hasattr(archived_order, 'product_size'):
+            restored_order.product_size = archived_order.product_size
+        if hasattr(archived_order, 'product_color'):
+            restored_order.product_color = archived_order.product_color
+        if hasattr(archived_order, 'amount'):
+            restored_order.amount = archived_order.amount
+        if hasattr(archived_order, 'discount'):
+            restored_order.discount = archived_order.discount
+        if hasattr(archived_order, 'currency_code'):
+            restored_order.currency_code = archived_order.currency_code
+        if hasattr(archived_order, 'line_id'):
+            restored_order.line_id = archived_order.line_id
+        if hasattr(archived_order, 'images'):
+            restored_order.images = archived_order.images
+        if hasattr(archived_order, 'estimated_delivery_start'):
+            restored_order.estimated_delivery_start = archived_order.estimated_delivery_start
+        if hasattr(archived_order, 'estimated_delivery_end'):
+            restored_order.estimated_delivery_end = archived_order.estimated_delivery_end
+        if hasattr(archived_order, 'cargo_tracking_link'):
+            restored_order.cargo_tracking_link = archived_order.cargo_tracking_link
+        if hasattr(archived_order, 'product_main_id'):
+            restored_order.product_main_id = archived_order.product_main_id
+        if hasattr(archived_order, 'product_model_code'):
+            restored_order.product_model_code = archived_order.product_model_code
+        if hasattr(archived_order, 'stockCode'):
+            restored_order.stockCode = archived_order.stockCode
+        if hasattr(archived_order, 'vat_base_amount'):
+            restored_order.vat_base_amount = archived_order.vat_base_amount
+        if hasattr(archived_order, 'origin_shipment_date'):
+            restored_order.origin_shipment_date = archived_order.origin_shipment_date
+        
+        restored_order.source = 'TRENDYOL'
+        
+        print(f"Trendyol siparişi {order_number} orders_created tablosuna geri yükleniyor.")
         
         db.session.add(restored_order)
         db.session.delete(archived_order)
         db.session.commit()
         
-        table_name = 'woo_orders' if is_woocommerce else 'orders_created'
-        print(f"Sipariş {order_number} arşivden çıkartıldı, '{table_name}' tablosuna eklendi.")
+        print(f"Sipariş {order_number} arşivden çıkartıldı, 'orders_created' tablosuna eklendi.")
         return jsonify({'success': True, 'message': 'Sipariş başarıyla geri yüklendi.'})
         
     except Exception as e:

@@ -1,4 +1,4 @@
-import json, time, hashlib
+﻿import json, time, hashlib
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 from flask import Blueprint, Response, jsonify, request, stream_with_context, render_template, redirect, url_for
@@ -149,24 +149,24 @@ def _tr_range_from_params(args):
 def _count_orders_between_distinct(start_ist, end_ist, source_filter="all"):
     """
     Seçilen aralıktaki benzersiz sipariş sayısını döndürür.
-    source_filter: "all", "trendyol", "woocommerce"
+    source_filter: "all", "trendyol", "Shopify"
     """
-    if source_filter == "woocommerce":
-        sources = [WooOrder]
+    if source_filter == "Shopify":
+        sources = [ShopifyOrder]
     elif source_filter == "trendyol":
         sources = [OrderCreated, OrderPicking, OrderShipped, OrderDelivered]
     else:  # "all"
-        sources = [OrderCreated, OrderPicking, OrderShipped, OrderDelivered, WooOrder]
+        sources = [OrderCreated, OrderPicking, OrderShipped, OrderDelivered, ShopifyOrder]
     
     ids = set()
     for cls in sources:
         # WooCommerce için özel işlem
-        if cls == WooOrder:
-            q = db.session.query(WooOrder).filter(
+        if cls == ShopifyOrder:
+            q = db.session.query(ShopifyOrder).filter(
                 or_(
-                    and_(func.timezone('Europe/Istanbul', WooOrder.date_created) >= start_ist,
-                         func.timezone('Europe/Istanbul', WooOrder.date_created) <  end_ist),
-                    and_(WooOrder.date_created >= start_ist, WooOrder.date_created < end_ist)
+                    and_(func.timezone('Europe/Istanbul', ShopifyOrder.date_created) >= start_ist,
+                         func.timezone('Europe/Istanbul', ShopifyOrder.date_created) <  end_ist),
+                    and_(ShopifyOrder.date_created >= start_ist, ShopifyOrder.date_created < end_ist)
                 )
             )
             for row in q.all():
@@ -233,7 +233,7 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
     Args:
         start_ist: Başlangıç tarihi (IST)
         end_ist: Bitiş tarihi (IST)
-        source_filter: Kaynak filtresi - "all", "trendyol", "woocommerce"
+        source_filter: Kaynak filtresi - "all", "trendyol", "Shopify"
     
     Returns:
         (qty_map, amt_map): Barkod bazında miktar ve NET tutar haritaları
@@ -250,11 +250,11 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
             amt_map[s] = amt_map.get(s, 0.0) + float(a)
 
     # 🔥 WooCommerce modeli ekle
-    from woocommerce_site.models import WooOrder
+    from shopify.models import ShopifyOrder
     
     # Kaynak filtresine göre source listesini belirle
-    if source_filter == "woocommerce":
-        sources = [("WooCommerce", WooOrder)]
+    if source_filter == "Shopify":
+        sources = [("Shopify", ShopifyOrder)]
     elif source_filter == "trendyol":
         sources = [
             ("Created", OrderCreated),
@@ -270,7 +270,7 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
             ("Shipped", OrderShipped),
             ("Delivered", OrderDelivered),
             ("Archive", Archive),
-            ("WooCommerce", WooOrder)  # 🛒 YENİ
+            ("Shopify", ShopifyOrder)  # 🛒 YENİ
         ]
     
     _info("collect_orders: source_filter", filter=source_filter, source_count=len(sources))
@@ -281,7 +281,7 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
         t1=_t0()
         try:
             # 🛒 WooCommerce için özel işlem
-            if cls == WooOrder:
+            if cls == ShopifyOrder:
                 # WooCommerce siparişlerini tarih aralığında filtrele
                 q = db.session.query(cls).filter(
                     or_(
@@ -313,7 +313,7 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
                         # Product tablosundan barkod bul
                         product = None
                         if woo_id:
-                            product = Product.query.filter_by(woo_product_id=str(woo_id)).first()
+                            product = Product.query.filter_by(shopify_variant_id=str(woo_id)).first()
                         
                         if not product:
                             # SKU fallback - önce direkt eşleşme
@@ -337,7 +337,7 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
                         else:
                             # Eşleşme bulunamadı - SKU'yu direkt kullan
                             bc = item.get('sku', str(woo_id))
-                            _info("WooOrder: ürün eşleşmedi", woo_id=woo_id, sku=item.get('sku'), order=row.order_number)
+                            _info("ShopifyOrder: ürün eşleşmedi", woo_id=woo_id, sku=item.get('sku'), order=row.order_number)
                         
                         items.append({"bc": bc, "qty": qty, "price": price})
                         total_qty += qty
@@ -861,7 +861,7 @@ def ozet_json():
 
         # 🔥 Kaynak filtresi
         source_filter = (request.args.get("source") or "all").lower().strip()
-        if source_filter not in ["all", "trendyol", "woocommerce"]:
+        if source_filter not in ["all", "trendyol", "Shopify"]:
             source_filter = "all"
 
         # 2) satış (adet + NET tutar) — barcode→qty / barcode→net_tutar
@@ -1020,7 +1020,7 @@ def akis_sse():
 
                     # 🔥 Kaynak filtresi
                     source_filter = (request.args.get("source") or "all").lower().strip()
-                    if source_filter not in ["all", "trendyol", "woocommerce"]:
+                    if source_filter not in ["all", "trendyol", "Shopify"]:
                         source_filter = "all"
 
                     # satış (adet + NET tutar)

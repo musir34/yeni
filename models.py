@@ -1172,4 +1172,34 @@ class SyncDetail(db.Model):
         }
 
 
-        
+class ShopifyMapping(db.Model):
+    """Shopify barkod eşleştirme tablosu - Panel barkodu <-> Shopify variant eşleşmesi"""
+    __tablename__ = 'shopify_mappings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    barcode = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    shopify_variant_id = db.Column(db.String(100), nullable=False)
+    shopify_inventory_item_id = db.Column(db.String(100), nullable=False)
+    shopify_product_title = db.Column(db.String(500), nullable=True)
+    shopify_variant_title = db.Column(db.String(500), nullable=True)
+    shopify_sku = db.Column(db.String(200), nullable=True)
+    shopify_barcode = db.Column(db.String(200), nullable=True)
+    last_stock_sent = db.Column(db.Integer, nullable=True)
+    last_sync_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id, 'barcode': self.barcode,
+            'shopify_variant_id': self.shopify_variant_id,
+            'shopify_inventory_item_id': self.shopify_inventory_item_id,
+            'shopify_product_title': self.shopify_product_title,
+            'shopify_variant_title': self.shopify_variant_title,
+            'shopify_sku': self.shopify_sku,
+            'shopify_barcode': self.shopify_barcode,
+            'last_stock_sent': self.last_stock_sent,
+            'last_sync_at': self.last_sync_at.isoformat() if self.last_sync_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+

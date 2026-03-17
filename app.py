@@ -500,6 +500,8 @@ with app.app_context():
 # ──────────────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     debug_mode = os.environ.get('FLASK_DEBUG', 'False') == 'True'
+    default_port = 443 if os.getenv("APP_ENV", "development") == "production" else 8080
+    port = int(os.getenv("PORT", str(default_port)))
 
     if os.environ.get("RUN_DB_SETUP") == "True":
         try:
@@ -514,10 +516,10 @@ if __name__ == '__main__':
 
     try:
         if app_env == "production":
-            app.run(host='0.0.0.0', port=443, debug=debug_mode, use_reloader=False,
+            app.run(host='0.0.0.0', port=port, debug=debug_mode, use_reloader=False,
                     ssl_context=(os.getenv("SSL_CERT"), os.getenv("SSL_KEY")) )
         else:
-            app.run(host='0.0.0.0', port=8080, debug=debug_mode, use_reloader=False)
+            app.run(host='0.0.0.0', port=port, debug=debug_mode, use_reloader=False)
     except Exception as e:
         print(f"Başlatma hatası: {e}")
         import traceback

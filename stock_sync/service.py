@@ -18,8 +18,8 @@ from .adapters.base import StockItem, SyncResult
 from .adapters.trendyol import TrendyolAdapter
 from .adapters.idefix import IdefixAdapter
 from .adapters.amazon import AmazonAdapter
-from .adapters.woocommerce import WooCommerceAdapter
 from .adapters.hepsiburada import HepsiburadaAdapter
+from .adapters.shopify import ShopifyAdapter
 
 
 class StockSyncService:
@@ -43,8 +43,8 @@ class StockSyncService:
         "trendyol": TrendyolAdapter,
         "idefix": IdefixAdapter,
         "amazon": AmazonAdapter,
-        "woocommerce": WooCommerceAdapter,
-        "hepsiburada": HepsiburadaAdapter
+        "hepsiburada": HepsiburadaAdapter,
+        "shopify": ShopifyAdapter
     }
     
     def __init__(self):
@@ -136,7 +136,7 @@ class StockSyncService:
     def get_reserved_count(self) -> int:
         """Toplam rezerv edilen ürün sayısı"""
         return sum(self.get_reserved_barcodes().values())
-    
+
     def _get_all_stocks(self, platform: str = None) -> List[StockItem]:
         """CentralStock'tan tüm stokları çek. Rezerv ürünler hariç tutulur."""
         stocks = CentralStock.query.all()
@@ -188,12 +188,12 @@ class StockSyncService:
             # WooCommerce için woo_product_id olmayan ürünleri atla
             if platform == "woocommerce" and not woo_id:
                 continue
-                
+            
             items.append(StockItem(
                 barcode=stock.barcode,
                 quantity=stock.qty if stock.qty else 0,
                 asin=asin,
-                woo_product_id=woo_id
+                woo_product_id=woo_id,
             ))
         
         logger.info(f"[SYNC] {len(items)} ürün CentralStock'tan alındı")
@@ -241,7 +241,7 @@ class StockSyncService:
                 barcode=barcode,
                 quantity=stock_dict.get(barcode, 0),
                 asin=asin,
-                woo_product_id=woo_id
+                woo_product_id=woo_id,
             ))
         
         return items
@@ -297,7 +297,7 @@ class StockSyncService:
         Tek bir platforma stok senkronizasyonu.
         
         Args:
-            platform: Platform adı (trendyol, idefix, amazon, woocommerce)
+            platform: Platform adı (trendyol, idefix, amazon, hepsiburada, shopify)
             barcodes: Belirli barkodlar (None ise tümü)
             triggered_by: Tetikleyici (manual, scheduler, webhook)
             triggered_by_user: Tetikleyen kullanıcı
@@ -704,7 +704,7 @@ def auto_sync_platforms_except_idefix() -> Dict[str, Any]:
     logger.info("[AUTO-SYNC] Otomatik stok senkronizasyonu başlatılıyor (Idefix hariç)...")
     
     # İdefix hariç platformlar
-    platforms_to_sync = ["trendyol", "amazon", "woocommerce"]
+    platforms_to_sync = ["trendyol", "amazon", "shopify"]
     
     results = {}
     loop = asyncio.new_event_loop()

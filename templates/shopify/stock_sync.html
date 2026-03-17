@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Başlık -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h1 class="mb-1"><i class="bi bi-shop me-2"></i>Shopify Stok Senkronizasyonu</h1>
+            <p class="text-muted mb-0">Barkod eşleştirme ve stok gönderimi</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button id="btnMatch" class="btn btn-warning" {% if not configured %}disabled{% endif %}>
+                <i class="bi bi-link-45deg"></i> Barkod Eşleştir
+            </button>
+            <button id="btnSync" class="btn btn-success btn-lg" {% if not configured %}disabled{% endif %}>
+                <i class="bi bi-cloud-upload"></i> Stokları Gönder
+            </button>
+        </div>
+    </div>
+
+    {% if not configured %}
+    <!-- Yapılandırma Uyarısı -->
+    <div class="alert alert-danger">
+        <h5><i class="bi bi-exclamation-triangle me-2"></i>Shopify API Yapılandırması Eksik</h5>
+        <p class="mb-2"><code>.env</code> dosyanıza aşağıdaki değişkenleri ekleyin:</p>
+        <pre class="bg-dark text-white p-3 rounded">SHOPIFY_SHOP_DOMAIN=gullu-shoes.myshopify.com
+SHOPIFY_CLIENT_ID=your_client_id
+SHOPIFY_CLIENT_SECRET=shpss_xxxxxxxxxxxxxxxxxxxxxxxx
+SHOPIFY_API_VERSION=2026-01</pre>
+        <p class="mb-0 mt-2">
+            <strong>Nereden alınır:</strong> Shopify Admin → <strong>Settings</strong> → <strong>Apps and sales channels</strong> → <strong>Develop apps</strong> →
+            Custom app oluşturun → <strong>Client ID</strong> ve <strong>Client Secret</strong> bilgilerini kopyalayın.
+            <br><em>Gerekli API izinleri: <code>read_products</code>, <code>read_inventory</code>, <code>write_inventory</code></em>
+        </p>
+    </div>
+    {% else %}
+
+    <!-- İstatistik Kartları -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="opacity-75 mb-1">Eşleşen Ürün</h6>
+                        <h2 id="statMappings" class="mb-0">{{ stats.total_mappings or 0 }}</h2>
+                    </div>
+                    <i class="bi bi-link-45deg fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="opacity-75 mb-1">Panel Ürünleri</h6>
+                        <h2 id="statProducts" class="mb-0">{{ stats.total_products or 0 }}</h2>
+                    </div>
+                    <i class="bi bi-box-seam fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="opacity-75 mb-1">Stok Kayıtları</h6>
+                        <h2 id="statStock" class="mb-0">{{ stats.total_stock_items or 0 }}</h2>
+                    </div>
+                    <i class="bi bi-archive fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-dark bg-warning h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">Son Sync</h6>
+                        <h5 id="statLastSync" class="mb-0">{{ stats.last_sync_at or 'Henüz yapılmadı' }}</h5>
+                    </div>
+                    <i class="bi bi-clock-history fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Durum / Log Alanı -->
+    <div id="statusArea" class="mb-4" style="display:none;">
+        <div class="alert" id="statusAlert">
+            <div class="d-flex align-items-center gap-2">
+                <div class="spinner-border spinner-border-sm" id="statusSpinner" role="status" style="display:none;"></div>
+                <span id="statusText"></span>
+            </div>
+            <div id="statusDetails" class="mt-2 small" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- Arama ve Filtre -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-table me-2"></i>Eşleştirme Listesi</h5>
+            <div class="d-flex gap-2 align-items-center">
+                <input type="text" id="searchInput" class="form-control form-control-sm" 
+                       placeholder="Barkod, ürün adı veya SKU ara..." style="width: 280px;">
+                <button id="btnSearch" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Panel Barkod</th>
+                            <th>Shopify Ürün</th>
+                            <th>Varyant</th>
+                            <th>SKU</th>
+                            <th>Shopify Barkod</th>
+                            <th class="text-center">Mevcut Stok</th>
+                            <th class="text-center">Son Gönderilen</th>
+                            <th>Son Sync</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mappingsTable">
+                        <tr><td colspan="8" class="text-center text-muted py-4">Yükleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <small class="text-muted">Toplam: <strong id="totalCount">0</strong> eşleşme</small>
+            <nav>
+                <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .card { border-radius: 0.75rem; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .table th { font-weight: 600; font-size: 0.85rem; }
+    .table td { vertical-align: middle; font-size: 0.9rem; }
+    .badge-stock { font-size: 0.85rem; padding: 0.35em 0.65em; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const configured = {{ 'true' if configured else 'false' }};
+    if (!configured) return;
+
+    let currentPage = 1;
+    const perPage = 50;
+
+    // Eşleştirme listesini yükle
+    function loadMappings(page, search) {
+        const params = new URLSearchParams({page: page, per_page: perPage});
+        if (search) params.set('search', search);
+
+        fetch('/shopify/api/mappings?' + params)
+            .then(r => r.json())
+            .then(data => {
+                renderTable(data.items || []);
+                renderPagination(data.page, data.pages, data.total);
+                document.getElementById('totalCount').textContent = data.total;
+            })
+            .catch(err => {
+                document.getElementById('mappingsTable').innerHTML = 
+                    '<tr><td colspan="8" class="text-center text-danger">Yükleme hatası: ' + err.message + '</td></tr>';
+            });
+    }
+
+    function renderTable(items) {
+        const tbody = document.getElementById('mappingsTable');
+        if (!items.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Eşleştirme bulunamadı. "Barkod Eşleştir" butonuna tıklayın.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = items.map(item => `
+            <tr>
+                <td><code>${item.barcode}</code></td>
+                <td>${item.shopify_product_title || '-'}</td>
+                <td>${item.shopify_variant_title || '-'}</td>
+                <td><small>${item.shopify_sku || '-'}</small></td>
+                <td><small>${item.shopify_barcode || '-'}</small></td>
+                <td class="text-center">
+                    <span class="badge ${item.current_stock > 0 ? 'bg-success' : 'bg-danger'} badge-stock">
+                        ${item.current_stock}
+                    </span>
+                </td>
+                <td class="text-center">
+                    ${item.last_stock_sent !== null ? '<span class="badge bg-secondary badge-stock">' + item.last_stock_sent + '</span>' : '-'}
+                </td>
+                <td><small>${item.last_sync_at ? new Date(item.last_sync_at).toLocaleString('tr-TR') : '-'}</small></td>
+            </tr>
+        `).join('');
+    }
+
+    function renderPagination(page, pages, total) {
+        const ul = document.getElementById('pagination');
+        if (pages <= 1) { ul.innerHTML = ''; return; }
+        let html = '';
+        html += `<li class="page-item ${page <= 1 ? 'disabled' : ''}"><a class="page-link" href="#" data-page="${page-1}">&laquo;</a></li>`;
+        for (let i = Math.max(1, page-2); i <= Math.min(pages, page+2); i++) {
+            html += `<li class="page-item ${i === page ? 'active' : ''}"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+        }
+        html += `<li class="page-item ${page >= pages ? 'disabled' : ''}"><a class="page-link" href="#" data-page="${page+1}">&raquo;</a></li>`;
+        ul.innerHTML = html;
+        ul.querySelectorAll('a[data-page]').forEach(a => {
+            a.addEventListener('click', e => { e.preventDefault(); loadMappings(+a.dataset.page, document.getElementById('searchInput').value); });
+        });
+    }
+
+    function showStatus(text, type, showSpinner) {
+        const area = document.getElementById('statusArea');
+        const alert = document.getElementById('statusAlert');
+        const spinner = document.getElementById('statusSpinner');
+        const textEl = document.getElementById('statusText');
+        area.style.display = 'block';
+        alert.className = 'alert alert-' + type;
+        textEl.textContent = text;
+        spinner.style.display = showSpinner ? 'inline-block' : 'none';
+        document.getElementById('statusDetails').style.display = 'none';
+    }
+
+    function showStatusDetails(html) {
+        const el = document.getElementById('statusDetails');
+        el.innerHTML = html;
+        el.style.display = 'block';
+    }
+
+    // Barkod Eşleştir butonu
+    document.getElementById('btnMatch').addEventListener('click', function() {
+        if (!confirm('Shopify barkodları panel ile eşleştirilecek. Mevcut eşleştirmeler güncellenecek. Devam?')) return;
+        const btn = this;
+        btn.disabled = true;
+        showStatus('Shopify\'dan ürünler çekiliyor ve barkodlar eşleştiriliyor...', 'info', true);
+
+        fetch('/shopify/api/match-barcodes', { method: 'POST', headers: {'Content-Type': 'application/json'} })
+            .then(r => r.json())
+            .then(data => {
+                btn.disabled = false;
+                if (data.success) {
+                    showStatus(`Eşleştirme tamamlandı! ${data.matched} eşleşti, ${data.unmatched} eşleşmedi (Shopify: ${data.total_shopify}, Panel: ${data.total_panel})`, 'success', false);
+                    if (data.unmatched_items && data.unmatched_items.length > 0) {
+                        let details = '<strong>Eşleşmeyen Shopify ürünleri (ilk 50):</strong><br>';
+                        details += '<table class="table table-sm table-bordered mt-1 mb-0"><thead><tr><th>Ürün</th><th>Varyant</th><th>SKU</th><th>Barkod</th></tr></thead><tbody>';
+                        data.unmatched_items.forEach(u => {
+                            details += `<tr><td>${u.product_title}</td><td>${u.variant_title}</td><td>${u.sku||'-'}</td><td>${u.barcode||'-'}</td></tr>`;
+                        });
+                        details += '</tbody></table>';
+                        showStatusDetails(details);
+                    }
+                    document.getElementById('statMappings').textContent = data.matched;
+                    loadMappings(1, '');
+                } else {
+                    showStatus('Hata: ' + (data.error || 'Bilinmeyen hata'), 'danger', false);
+                }
+            })
+            .catch(err => { btn.disabled = false; showStatus('Bağlantı hatası: ' + err.message, 'danger', false); });
+    });
+
+    // Stok Gönder butonu
+    document.getElementById('btnSync').addEventListener('click', function() {
+        if (!confirm('Tüm eşleşen ürünlerin stokları Shopify\'a gönderilecek. Devam?')) return;
+        const btn = this;
+        btn.disabled = true;
+        showStatus('Stoklar Shopify\'a gönderiliyor...', 'info', true);
+
+        fetch('/shopify/api/push-stock', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}' })
+            .then(r => r.json())
+            .then(data => {
+                btn.disabled = false;
+                if (data.success) {
+                    showStatus(`Stok gönderimi tamamlandı! ${data.success_count} başarılı, ${data.error_count} hata (Toplam: ${data.total})`, 
+                        data.error_count > 0 ? 'warning' : 'success', false);
+                    if (data.errors && data.errors.length > 0) {
+                        let details = '<strong>Hatalı ürünler:</strong><br><ul>';
+                        data.errors.forEach(e => { details += `<li><code>${e.barcode}</code>: ${e.error}</li>`; });
+                        details += '</ul>';
+                        showStatusDetails(details);
+                    }
+                    loadMappings(currentPage, document.getElementById('searchInput').value);
+                } else {
+                    showStatus('Hata: ' + (data.error || 'Bilinmeyen hata'), 'danger', false);
+                }
+            })
+            .catch(err => { btn.disabled = false; showStatus('Bağlantı hatası: ' + err.message, 'danger', false); });
+    });
+
+    // Arama
+    document.getElementById('btnSearch').addEventListener('click', () => loadMappings(1, document.getElementById('searchInput').value));
+    document.getElementById('searchInput').addEventListener('keypress', e => { if (e.key === 'Enter') loadMappings(1, e.target.value); });
+
+    // İlk yükleme
+    loadMappings(1, '');
+});
+</script>
+{% endblock %}

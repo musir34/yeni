@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from datetime import datetime
 import asyncio
 import aiohttp
+import ssl
+import certifi
 from logger_config import app_logger as logger
 
 
@@ -84,7 +86,9 @@ class BasePlatformAdapter(ABC):
         """HTTP session al veya oluştur"""
         if self._session is None or self._session.closed:
             timeout = aiohttp.ClientTimeout(total=self.TIMEOUT)
-            self._session = aiohttp.ClientSession(timeout=timeout)
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
+            connector = aiohttp.TCPConnector(ssl=ssl_context)
+            self._session = aiohttp.ClientSession(timeout=timeout, connector=connector)
         return self._session
     
     async def close_session(self):

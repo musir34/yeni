@@ -9,6 +9,7 @@ from .idefix import IdefixAdapter
 from .amazon import AmazonAdapter
 from .woocommerce import WooCommerceAdapter
 from .hepsiburada import HepsiburadaAdapter
+from .shopify import ShopifyAdapter
 
 __all__ = [
     'BasePlatformAdapter',
@@ -16,5 +17,6 @@ __all__ = [
     'IdefixAdapter',
     'AmazonAdapter',
     'WooCommerceAdapter',
-    'HepsiburadaAdapter'
+    'HepsiburadaAdapter',
+    'ShopifyAdapter'
 ]

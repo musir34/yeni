@@ -372,7 +372,8 @@ def api_status():
             "trendyol": "/static/logo/trendyol.png",
             "idefix": "/static/logo/idefix.png",
             "amazon": "/static/logo/amazon.png",
-            "woocommerce": "/static/logo/woocommerce.png"
+            "woocommerce": "/static/logo/woocommerce.png",
+            "shopify": "/static/logo/gullu.png"
         }
     })
 
@@ -601,7 +602,7 @@ def api_stats():
     
     # Platform bazlı istatistikler
     platform_stats = {}
-    for platform in ['trendyol', 'idefix', 'amazon', 'woocommerce']:
+    for platform in ['trendyol', 'idefix', 'amazon', 'woocommerce', 'shopify']:
         sessions = SyncSession.query.filter_by(platform=platform).all()
         if sessions:
             platform_stats[platform] = {

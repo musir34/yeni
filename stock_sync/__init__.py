@@ -2,7 +2,7 @@
 """
 Stock Sync Center - Merkezi Stok Senkronizasyon Sistemi
 ========================================================
-Tüm platformlara (Trendyol, Idefix, Amazon, WooCommerce) stok gönderimi.
+Tüm platformlara (Trendyol, Idefix, Amazon, Hepsiburada, Shopify) stok gönderimi.
 
 Kullanım:
     from stock_sync import stock_sync_service

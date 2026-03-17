@@ -40,6 +40,7 @@ def register_blueprints(app):
     from barcode_alias_routes import barcode_alias_bp  # 🔥 BARKOD ALIAS SİSTEMİ
     from woocommerce_site import woo_bp  # 🛒 WOOCOMMERCE SİPARİŞ SİSTEMİ
     from woocommerce_site.test_routes import test_bp  # 🧪 WOOCOMMERCE TEST - GEÇİCİ AKTİF
+    from shopify_site import shopify_bp  # 🛍️ SHOPIFY API SİSTEMİ
     # Preview: Woo barcode mapping
     from routes.woo_barcodes_preview import woo_preview_bp
     from amazon import amazon_bp  # 🛍️ AMAZON SP-API SİSTEMİ
@@ -88,6 +89,7 @@ def register_blueprints(app):
         barcode_alias_bp,  # 🔥 BARKOD ALIAS SİSTEMİ
         woo_bp,  # 🛒 WOOCOMMERCE SİPARİŞ SİSTEMİ
         test_bp,  # 🧪 WOOCOMMERCE TEST - GEÇİCİ AKTİF
+        shopify_bp,  # 🛍️ SHOPIFY API SİSTEMİ
         woo_preview_bp,
         amazon_bp,  # 🛍️ AMAZON SP-API SİSTEMİ
         hb_bp,  # 🟠 HEPSİBURADA ENTEGRASYONU
