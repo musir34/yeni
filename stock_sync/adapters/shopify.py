@@ -19,7 +19,7 @@ class ShopifyAdapter(BasePlatformAdapter):
     """Shopify stock sync adapter."""
 
     PLATFORM_NAME = "shopify"
-    BATCH_SIZE = 25
+    BATCH_SIZE = 100
     RATE_LIMIT_DELAY = 0.3
 
     def _init_config(self):

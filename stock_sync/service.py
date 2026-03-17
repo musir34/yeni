@@ -19,7 +19,6 @@ from .adapters.trendyol import TrendyolAdapter
 from .adapters.idefix import IdefixAdapter
 from .adapters.amazon import AmazonAdapter
 from .adapters.hepsiburada import HepsiburadaAdapter
-from .adapters.shopify import ShopifyAdapter
 
 
 class StockSyncService:
@@ -44,7 +43,6 @@ class StockSyncService:
         "idefix": IdefixAdapter,
         "amazon": AmazonAdapter,
         "hepsiburada": HepsiburadaAdapter,
-        "shopify": ShopifyAdapter
     }
     
     def __init__(self):
@@ -98,7 +96,12 @@ class StockSyncService:
     
     def get_configured_platforms(self) -> List[str]:
         """Yapılandırılmış platformları döndür"""
-        return [name for name, adapter in self._adapters.items() if adapter.is_configured]
+        platforms = [name for name, adapter in self._adapters.items() if adapter.is_configured]
+        # Shopify yeni dedicated servisten kontrol edilir
+        from shopify_site.shopify_stock_service import shopify_stock_service
+        if shopify_stock_service.is_configured():
+            platforms.append("shopify")
+        return platforms
     
     def get_platform_status(self) -> Dict[str, Dict]:
         """Tüm platformların durumunu döndür"""
@@ -109,6 +112,13 @@ class StockSyncService:
                 "batch_size": adapter.BATCH_SIZE,
                 "rate_limit_delay": adapter.RATE_LIMIT_DELAY
             }
+        # Shopify yeni dedicated servisten kontrol edilir
+        from shopify_site.shopify_stock_service import shopify_stock_service
+        status["shopify"] = {
+            "configured": shopify_stock_service.is_configured(),
+            "batch_size": 100,
+            "rate_limit_delay": 0.3
+        }
         return status
     
     def get_reserved_barcodes(self) -> Dict[str, int]:
@@ -285,6 +295,76 @@ class StockSyncService:
         
         db.session.commit()
     
+    def _sync_shopify(
+        self,
+        triggered_by: str = "manual",
+        triggered_by_user: Optional[str] = None,
+        barcodes: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Shopify stok senkronizasyonu - Yeni dedicated servis üzerinden.
+        ShopifyStockService.push_stock() kullanır.
+        """
+        from shopify_site.shopify_stock_service import shopify_stock_service
+
+        if not shopify_stock_service.is_configured():
+            return {"success": False, "error": "Shopify yapılandırılmamış"}
+
+        session = self._create_session("shopify", triggered_by, triggered_by_user)
+        self._update_session(session, status="running", started_at=datetime.utcnow())
+        self._active_sessions[session.session_id] = session
+
+        try:
+            result = shopify_stock_service.push_stock(barcodes=barcodes)
+
+            completed_at = datetime.utcnow()
+            duration = (completed_at - session.started_at).total_seconds()
+
+            success_count = result.get("success_count", 0)
+            error_count = result.get("error_count", 0)
+            total = result.get("total", 0)
+
+            self._update_session(session,
+                                 status="completed",
+                                 completed_at=completed_at,
+                                 duration_seconds=duration,
+                                 total_products=total,
+                                 sent_count=total,
+                                 success_count=success_count,
+                                 error_count=error_count)
+
+            # Platform config güncelle
+            self._update_platform_last_sync("shopify")
+
+            logger.info(f"[SYNC] SHOPIFY tamamlandı - Başarılı: {success_count}, Hata: {error_count}, Süre: {duration:.1f}s")
+
+            return {
+                "success": True,
+                "session_id": session.session_id,
+                "platform": "shopify",
+                "total": total,
+                "sent": total,
+                "success_count": success_count,
+                "error_count": error_count,
+                "duration_seconds": duration,
+                "success_rate": f"{(success_count / total * 100):.1f}%" if total else "0%"
+            }
+
+        except Exception as e:
+            logger.error(f"[SYNC] SHOPIFY hatası: {e}")
+            self._update_session(session,
+                                 status="failed",
+                                 completed_at=datetime.utcnow(),
+                                 error_message=str(e))
+            return {
+                "success": False,
+                "session_id": session.session_id,
+                "error": str(e)
+            }
+        finally:
+            if session.session_id in self._active_sessions:
+                del self._active_sessions[session.session_id]
+
     async def sync_platform(
         self, 
         platform: str,
@@ -306,6 +386,10 @@ class StockSyncService:
         Returns:
             Senkronizasyon sonuç raporu
         """
+        # Shopify dedicated servis üzerinden çalışır
+        if platform == "shopify":
+            return self._sync_shopify(triggered_by, triggered_by_user, barcodes=barcodes)
+
         if platform not in self._adapters:
             return {"success": False, "error": f"Bilinmeyen platform: {platform}"}
         
@@ -505,7 +589,8 @@ class StockSyncService:
             return {"success": False, "error": "Barkod listesi boş"}
         
         if platforms:
-            target_platforms = [p for p in platforms if p in self._adapters and self._adapters[p].is_configured]
+            configured = self.get_configured_platforms()
+            target_platforms = [p for p in platforms if p in configured]
         else:
             target_platforms = self.get_configured_platforms()
         
