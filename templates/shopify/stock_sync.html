@@ -242,15 +242,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 btn.disabled = false;
                 if (data.success) {
                     showStatus(`Eşleştirme tamamlandı! ${data.matched} eşleşti, ${data.unmatched} eşleşmedi (Shopify: ${data.total_shopify}, Panel: ${data.total_panel})`, 'success', false);
+                    
+                    let details = '';
+                    // Eşleşmeme nedenleri özeti
+                    if (data.unmatched_reasons) {
+                        const r = data.unmatched_reasons;
+                        details += '<div class="alert alert-info py-2 mb-2"><strong>Eşleşmeme nedenleri:</strong><br>';
+                        details += `• Barkod+SKU boş (Shopify'da girilmemiş): <strong>${r.no_barcode_no_sku || 0}</strong><br>`;
+                        details += `• SKU var ama panelde yok: <strong>${r.has_sku_not_in_panel || 0}</strong><br>`;
+                        details += `• Barkod var ama panelde yok: <strong>${r.has_barcode_not_in_panel || 0}</strong>`;
+                        details += '</div>';
+                    }
+
                     if (data.unmatched_items && data.unmatched_items.length > 0) {
-                        let details = '<strong>Eşleşmeyen Shopify ürünleri (ilk 50):</strong><br>';
+                        details += `<a href="/shopify/api/unmatched-csv" class="btn btn-sm btn-outline-primary mb-2">📥 Tüm eşleşmeyenleri CSV indir (${data.unmatched} adet)</a><br>`;
+                        details += `<strong>Eşleşmeyen Shopify ürünleri (ilk ${data.unmatched_items.length}):</strong><br>`;
                         details += '<table class="table table-sm table-bordered mt-1 mb-0"><thead><tr><th>Ürün</th><th>Varyant</th><th>SKU</th><th>Barkod</th></tr></thead><tbody>';
                         data.unmatched_items.forEach(u => {
                             details += `<tr><td>${u.product_title}</td><td>${u.variant_title}</td><td>${u.sku||'-'}</td><td>${u.barcode||'-'}</td></tr>`;
                         });
                         details += '</tbody></table>';
-                        showStatusDetails(details);
                     }
+                    if (details) showStatusDetails(details);
                     document.getElementById('statMappings').textContent = data.matched;
                     loadMappings(1, '');
                 } else {

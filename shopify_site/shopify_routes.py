@@ -214,3 +214,36 @@ def get_stats():
     """Dashboard istatistikleri."""
     stats = shopify_stock_service.get_stats()
     return jsonify(stats)
+
+
+@shopify_bp.route("/api/unmatched-csv")
+@login_required
+@check_shopify_config
+def unmatched_csv():
+    """Eşleşmeyen ürünleri CSV olarak indir."""
+    from flask import Response
+    import csv
+    import io
+
+    items = shopify_stock_service.get_unmatched_items()
+    if not items:
+        return jsonify({"success": False, "error": "Önce barkod eşleştirmesi yapın."}), 400
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Ürün Adı", "Varyant", "SKU", "Barkod", "Variant ID"])
+    for item in items:
+        writer.writerow([
+            item.get("product_title", ""),
+            item.get("variant_title", ""),
+            item.get("sku", ""),
+            item.get("barcode", ""),
+            item.get("variant_id", ""),
+        ])
+
+    csv_data = output.getvalue()
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=shopify_unmatched.csv"},
+    )

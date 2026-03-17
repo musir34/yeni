@@ -29,6 +29,7 @@ class ShopifyStockService:
     def __init__(self):
         self.config = ShopifyConfig
         self._location_id: Optional[str] = None
+        self._last_unmatched: List[Dict[str, Any]] = []  # Son eşleştirmede eşleşmeyenler
 
     def is_configured(self) -> bool:
         return self.config.is_configured()
@@ -235,7 +236,19 @@ class ShopifyStockService:
                     "barcode": shopify_barcode,
                 })
 
-        # 5. Eski eşleştirmeleri temizle ve yenilerini kaydet
+        # 5. Eski unique constraint varsa kaldır (barcode artık unique değil)
+        from sqlalchemy import text
+        try:
+            db.session.execute(text("DROP INDEX IF EXISTS ix_shopify_mappings_barcode"))
+            db.session.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_shopify_mappings_barcode_nouni "
+                "ON shopify_mappings (barcode)"
+            ))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        # 6. Eski eşleştirmeleri temizle ve yenilerini kaydet
         ShopifyMapping.query.delete()
         db.session.flush()
 
@@ -247,14 +260,43 @@ class ShopifyStockService:
         logger.info("[SHOPIFY] Eşleştirme tamamlandı: %d eşleşti, %d eşleşmedi",
                      matched, len(unmatched_shopify))
 
+        # Tüm eşleşmeyenleri cache'le (CSV export için)
+        self._last_unmatched = unmatched_shopify
+
+        # Eşleşmeme nedenlerini analiz et
+        no_barcode_no_sku = 0
+        no_barcode_has_sku = 0
+        has_barcode_no_match = 0
+        for item in unmatched_shopify:
+            has_bc = bool(item.get("barcode"))
+            has_sk = bool(item.get("sku"))
+            if not has_bc and not has_sk:
+                no_barcode_no_sku += 1
+            elif not has_bc and has_sk:
+                no_barcode_has_sku += 1
+            else:
+                has_barcode_no_match += 1
+
+        logger.info("[SHOPIFY] Eşleşmeme nedenleri: barcode+sku boş=%d, sadece sku var(panelde yok)=%d, barcode var ama panelde yok=%d",
+                     no_barcode_no_sku, no_barcode_has_sku, has_barcode_no_match)
+
         return {
             "success": True,
             "matched": matched,
             "unmatched": len(unmatched_shopify),
             "total_shopify": len(shopify_variants),
             "total_panel": len(panel_barcodes),
-            "unmatched_items": unmatched_shopify[:50],  # İlk 50 eşleşmeyeni göster
+            "unmatched_reasons": {
+                "no_barcode_no_sku": no_barcode_no_sku,
+                "has_sku_not_in_panel": no_barcode_has_sku,
+                "has_barcode_not_in_panel": has_barcode_no_match,
+            },
+            "unmatched_items": unmatched_shopify[:100],
         }
+
+    def get_unmatched_items(self) -> List[Dict[str, Any]]:
+        """Son eşleştirmede eşleşmeyen tüm ürünleri döndür."""
+        return self._last_unmatched
 
     # ─────────────────────────────────────────────────────────────
     # Stok Gönderimi
