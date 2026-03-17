@@ -375,7 +375,7 @@ class ShopifyStockService:
         }
 
     def _send_stock_batch(self, batch: List[Dict], location_id: str, results: Dict):
-        """Tek bir batch stok güncellemesi gönder."""
+        """Tek bir batch stok güncellemesi gönder (max 100 item tek API çağrısı)."""
         mutation = """
         mutation InventorySetQuantities($input: InventorySetQuantitiesInput!) {
           inventorySetQuantities(input: $input) {
@@ -389,42 +389,48 @@ class ShopifyStockService:
         }
         """
 
+        quantities = []
         for item in batch:
             mapping = item["mapping"]
-            qty = item["qty"]
+            quantities.append({
+                "inventoryItemId": mapping.shopify_inventory_item_id,
+                "locationId": location_id,
+                "quantity": item["qty"],
+            })
 
-            variables = {
-                "input": {
-                    "name": "available",
-                    "reason": "correction",
-                    "ignoreCompareQuantity": True,
-                    "quantities": [{
-                        "inventoryItemId": mapping.shopify_inventory_item_id,
-                        "locationId": location_id,
-                        "quantity": qty,
-                    }],
-                }
+        variables = {
+            "input": {
+                "name": "available",
+                "reason": "correction",
+                "ignoreCompareQuantity": True,
+                "quantities": quantities,
             }
+        }
 
-            try:
-                data = self._graphql(mutation, variables)
-                payload = data.get("inventorySetQuantities", {})
-                errors = payload.get("userErrors") or []
+        try:
+            data = self._graphql(mutation, variables)
+            payload = data.get("inventorySetQuantities", {})
+            errors = payload.get("userErrors") or []
 
-                if errors:
-                    err_msg = "; ".join(e.get("message", "") for e in errors)
+            if errors:
+                err_msg = "; ".join(e.get("message", "") for e in errors)
+                # Toplu hatada tüm batch hata sayılır
+                for item in batch:
                     results["error_count"] += 1
-                    results["errors"].append({"barcode": mapping.barcode, "error": err_msg})
-                    logger.warning("[SHOPIFY] Stok hatası %s: %s", mapping.barcode, err_msg)
-                else:
+                    results["errors"].append({"barcode": item["mapping"].barcode, "error": err_msg})
+                logger.warning("[SHOPIFY] Toplu stok hatası (%d item): %s", len(batch), err_msg)
+            else:
+                now = datetime.utcnow()
+                for item in batch:
                     results["success_count"] += 1
-                    mapping.last_stock_sent = qty
-                    mapping.last_sync_at = datetime.utcnow()
-                    results["details"].append({"barcode": mapping.barcode, "qty": qty})
-            except Exception as exc:
+                    item["mapping"].last_stock_sent = item["qty"]
+                    item["mapping"].last_sync_at = now
+                logger.info("[SHOPIFY] Toplu stok gönderildi: %d item başarılı", len(batch))
+        except Exception as exc:
+            for item in batch:
                 results["error_count"] += 1
-                results["errors"].append({"barcode": mapping.barcode, "error": str(exc)})
-                logger.error("[SHOPIFY] Stok gönderim hatası %s: %s", mapping.barcode, exc)
+                results["errors"].append({"barcode": item["mapping"].barcode, "error": str(exc)})
+            logger.error("[SHOPIFY] Toplu stok gönderim hatası (%d item): %s", len(batch), exc)
 
     # ─────────────────────────────────────────────────────────────
     # Eşleştirme Listesi

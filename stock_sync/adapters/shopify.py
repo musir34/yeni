@@ -151,6 +151,14 @@ class ShopifyAdapter(BasePlatformAdapter):
                         if key:
                             self._variant_map[key] = info
                             self._variant_map[key.lower()] = info
+                            # Leading-zero varyasyonları
+                            stripped = key.lstrip("0")
+                            if stripped and stripped != key:
+                                self._variant_map[stripped] = info
+                                self._variant_map[stripped.lower()] = info
+                            if not key.startswith("0"):
+                                self._variant_map["0" + key] = info
+                                self._variant_map[("0" + key).lower()] = info
                     total += 1
 
             page_info = block.get("pageInfo", {})
@@ -182,10 +190,21 @@ class ShopifyAdapter(BasePlatformAdapter):
             barcode = self._normalize_sku(item.barcode)
             sku = self._normalize_sku(item.sku)
             match = None
-            if barcode:
-                match = self._variant_map.get(barcode) or self._variant_map.get(barcode.lower())
-            if not match and sku:
-                match = self._variant_map.get(sku) or self._variant_map.get(sku.lower())
+
+            def _find(val):
+                if not val:
+                    return None
+                candidates = [val, val.lower(), val.lstrip("0"), val.lstrip("0").lower()]
+                if not val.startswith("0"):
+                    candidates.extend(["0" + val, ("0" + val).lower()])
+                for c in candidates:
+                    if c and c in self._variant_map:
+                        return self._variant_map[c]
+                return None
+
+            match = _find(barcode)
+            if not match:
+                match = _find(sku)
 
             if not match:
                 results.append(SyncResult(barcode=item.barcode, success=False,
@@ -194,29 +213,27 @@ class ShopifyAdapter(BasePlatformAdapter):
                 continue
             matched_items.append((item, match["inventory_item_id"]))
 
-        semaphore = asyncio.Semaphore(5)
-
-        async def _update(item: StockItem, inv_item_id: str) -> SyncResult:
-            async with semaphore:
-                r = await self._set_inventory(item, inv_item_id, location_id)
-                await asyncio.sleep(0.05)
-                return r
-
+        # Toplu gönderim: max 100 item tek API çağrısı
+        BULK_SIZE = 100
         if matched_items:
-            tasks = [_update(it, iid) for it, iid in matched_items]
-            batch_results = await asyncio.gather(*tasks, return_exceptions=True)
-            for (item, _), res in zip(matched_items, batch_results):
-                if isinstance(res, Exception):
-                    results.append(SyncResult(barcode=item.barcode, success=False,
-                                              quantity_sent=max(0, item.quantity), error_message=str(res)))
-                else:
-                    results.append(res)
+            for i in range(0, len(matched_items), BULK_SIZE):
+                chunk = matched_items[i:i + BULK_SIZE]
+                chunk_results = await self._set_inventory_bulk(chunk, location_id)
+                results.extend(chunk_results)
+                if i + BULK_SIZE < len(matched_items):
+                    await asyncio.sleep(self.RATE_LIMIT_DELAY)
 
         ok = sum(1 for r in results if r.success)
-        logger.info(f"[SHOPIFY] Batch: {len(items)} total, {ok} success, {len(results) - ok} error")
+        fail = len(results) - ok
+        logger.info(f"[SHOPIFY] Batch: {len(items)} total, {ok} success, {fail} error")
+        if fail > 0:
+            errors = [r for r in results if not r.success]
+            for e in errors[:5]:
+                logger.warning(f"[SHOPIFY] Error: barcode={e.barcode} msg={e.error_message}")
         return results
 
-    async def _set_inventory(self, item: StockItem, inv_item_id: str, location_id: str) -> SyncResult:
+    async def _set_inventory_bulk(self, items_with_ids: List, location_id: str) -> List[SyncResult]:
+        """Tek API çağrısında birden fazla item'ın stokunu güncelle."""
         sent_at = datetime.utcnow()
         mutation = """
         mutation InventorySetQuantities($input: InventorySetQuantitiesInput!) {
@@ -226,16 +243,20 @@ class ShopifyAdapter(BasePlatformAdapter):
           }
         }
         """
+        quantities = []
+        for item, inv_item_id in items_with_ids:
+            quantities.append({
+                "inventoryItemId": inv_item_id,
+                "locationId": location_id,
+                "quantity": max(0, item.quantity),
+            })
+
         variables = {
             "input": {
                 "name": "available",
                 "reason": "correction",
                 "ignoreCompareQuantity": True,
-                "quantities": [{
-                    "inventoryItemId": inv_item_id,
-                    "locationId": location_id,
-                    "quantity": max(0, item.quantity),
-                }],
+                "quantities": quantities,
             }
         }
         try:
@@ -244,14 +265,23 @@ class ShopifyAdapter(BasePlatformAdapter):
             payload = result["data"].get("inventorySetQuantities", {})
             errors = payload.get("userErrors") or []
             if errors:
-                return SyncResult(barcode=item.barcode, success=False, quantity_sent=max(0, item.quantity),
-                                  error_message="; ".join(e.get("message", "") for e in errors),
-                                  response_data=payload, sent_at=sent_at, response_at=response_at)
-            return SyncResult(barcode=item.barcode, success=True, quantity_sent=max(0, item.quantity),
-                              response_data=payload, sent_at=sent_at, response_at=response_at)
+                err_msg = "; ".join(e.get("message", "") for e in errors)
+                return [
+                    SyncResult(barcode=item.barcode, success=False, quantity_sent=max(0, item.quantity),
+                               error_message=err_msg, response_data=payload, sent_at=sent_at, response_at=response_at)
+                    for item, _ in items_with_ids
+                ]
+            return [
+                SyncResult(barcode=item.barcode, success=True, quantity_sent=max(0, item.quantity),
+                           response_data=payload, sent_at=sent_at, response_at=response_at)
+                for item, _ in items_with_ids
+            ]
         except Exception as exc:
-            return SyncResult(barcode=item.barcode, success=False, quantity_sent=max(0, item.quantity),
-                              error_message=str(exc), sent_at=sent_at)
+            return [
+                SyncResult(barcode=item.barcode, success=False, quantity_sent=max(0, item.quantity),
+                           error_message=str(exc), sent_at=sent_at)
+                for item, _ in items_with_ids
+            ]
 
     async def get_platform_products(self) -> List[Dict[str, Any]]:
         await self._ensure_variant_map()
