@@ -169,8 +169,18 @@ class ShopifyStockService:
         # 1. Shopify'dan tüm variant'ları çek
         shopify_variants = self.fetch_all_variants()
 
-        # 2. Panel barkodlarını al
-        panel_barcodes = {p.barcode.strip().lower(): p.barcode for p in Product.query.with_entities(Product.barcode).all()}
+        # 2. Panel barkodlarını al (normal + leading-zero varyasyonları)
+        panel_barcodes = {}
+        for p in Product.query.with_entities(Product.barcode).all():
+            bc = p.barcode.strip()
+            key = bc.lower()
+            panel_barcodes[key] = bc
+            # Leading-zero varyasyonları: "0123" -> "123" ve "123" -> "0123"
+            stripped = key.lstrip("0")
+            if stripped and stripped != key:
+                panel_barcodes[stripped] = bc
+            if key and not key.startswith("0"):
+                panel_barcodes["0" + key] = bc
 
         # 3. Alias barkodlarını al
         alias_map: Dict[str, str] = {}
@@ -200,21 +210,29 @@ class ShopifyStockService:
             # Panel barkodu bul
             panel_barcode = None
 
+            def _find_panel(val):
+                """Değeri panel barkodlarında veya alias'larda ara (leading-zero dahil)."""
+                if not val:
+                    return None
+                key = val.lower()
+                candidates = [key, key.lstrip("0")]
+                if not key.startswith("0"):
+                    candidates.append("0" + key)
+                for c in candidates:
+                    if not c:
+                        continue
+                    if c in panel_barcodes:
+                        return panel_barcodes[c]
+                    if c in alias_map:
+                        return alias_map[c]
+                return None
+
             # Yöntem 1: Barkod eşleşmesi
-            if shopify_barcode:
-                key = shopify_barcode.lower()
-                if key in panel_barcodes:
-                    panel_barcode = panel_barcodes[key]
-                elif key in alias_map:
-                    panel_barcode = alias_map[key]
+            panel_barcode = _find_panel(shopify_barcode)
 
             # Yöntem 2: SKU eşleşmesi
-            if not panel_barcode and shopify_sku:
-                key = shopify_sku.lower()
-                if key in panel_barcodes:
-                    panel_barcode = panel_barcodes[key]
-                elif key in alias_map:
-                    panel_barcode = alias_map[key]
+            if not panel_barcode:
+                panel_barcode = _find_panel(shopify_sku)
 
             if panel_barcode:
                 new_mappings.append(ShopifyMapping(
