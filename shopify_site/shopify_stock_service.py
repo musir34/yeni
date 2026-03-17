@@ -176,18 +176,25 @@ class ShopifyStockService:
         for alias in BarcodeAlias.query.all():
             alias_map[alias.alias_barcode.strip().lower()] = alias.main_barcode
 
-        # 4. Eşleştirme yap
+        # 4. Her Shopify varyantını ayrı ayrı eşleştir (varyant barkoduna göre)
         matched = 0
         unmatched_shopify = []
         new_mappings: List[ShopifyMapping] = []
+        seen_variant_ids = set()  # Aynı Shopify varyantı tekrar eklemesin
 
         for variant in shopify_variants:
             shopify_barcode = variant["barcode"]
             shopify_sku = variant["sku"]
             inventory_item_id = variant["inventory_item_id"]
+            variant_id = variant["variant_id"]
 
             if not inventory_item_id:
                 continue
+
+            # Aynı Shopify varyantı zaten işlendiyse atla
+            if variant_id in seen_variant_ids:
+                continue
+            seen_variant_ids.add(variant_id)
 
             # Panel barkodu bul
             panel_barcode = None
@@ -209,20 +216,19 @@ class ShopifyStockService:
                     panel_barcode = alias_map[key]
 
             if panel_barcode:
-                mapping = ShopifyMapping(
+                new_mappings.append(ShopifyMapping(
                     barcode=panel_barcode,
-                    shopify_variant_id=variant["variant_id"],
+                    shopify_variant_id=variant_id,
                     shopify_inventory_item_id=inventory_item_id,
                     shopify_product_title=variant["product_title"],
                     shopify_variant_title=variant["title"],
                     shopify_sku=shopify_sku,
                     shopify_barcode=shopify_barcode,
-                )
-                new_mappings.append(mapping)
+                ))
                 matched += 1
             else:
                 unmatched_shopify.append({
-                    "variant_id": variant["variant_id"],
+                    "variant_id": variant_id,
                     "product_title": variant["product_title"],
                     "variant_title": variant["title"],
                     "sku": shopify_sku,
@@ -234,7 +240,7 @@ class ShopifyStockService:
         db.session.flush()
 
         for mapping in new_mappings:
-            db.session.merge(mapping)
+            db.session.add(mapping)
 
         db.session.commit()
 

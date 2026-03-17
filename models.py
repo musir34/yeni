@@ -1177,8 +1177,8 @@ class ShopifyMapping(db.Model):
     __tablename__ = 'shopify_mappings'
 
     id = db.Column(db.Integer, primary_key=True)
-    barcode = db.Column(db.String(100), unique=True, nullable=False, index=True)
-    shopify_variant_id = db.Column(db.String(100), nullable=False)
+    barcode = db.Column(db.String(100), nullable=False, index=True)
+    shopify_variant_id = db.Column(db.String(100), unique=True, nullable=False)
     shopify_inventory_item_id = db.Column(db.String(100), nullable=False)
     shopify_product_title = db.Column(db.String(500), nullable=True)
     shopify_variant_title = db.Column(db.String(500), nullable=True)
