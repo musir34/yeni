@@ -160,8 +160,7 @@ class StockSyncService:
         
         # Platform'a göre eşleştirme map'leri
         asin_map = {}
-        woo_id_map = {}
-        
+
         # Amazon için ASIN eşleştirmesi
         if platform == "amazon":
             products_with_asin = Product.query.filter(
@@ -170,40 +169,22 @@ class StockSyncService:
             ).all()
             asin_map = {p.barcode: p.amazon_asin for p in products_with_asin}
             logger.info(f"[SYNC] Amazon için {len(asin_map)} ASIN eşleşmesi bulundu")
-        
-        # WooCommerce için woo_product_id eşleştirmesi
-        if platform == "woocommerce":
-            products_with_woo = Product.query.filter(
-                Product.woo_product_id.isnot(None)
-            ).all()
-            woo_id_map = {p.barcode: p.woo_product_id for p in products_with_woo}
-            # woo_barcode ile de eşleştir (farklı barkod olabilir)
-            for p in products_with_woo:
-                if p.woo_barcode and p.woo_barcode != p.barcode:
-                    woo_id_map[p.woo_barcode] = p.woo_product_id
-            logger.info(f"[SYNC] WooCommerce için {len(woo_id_map)} product_id eşleşmesi bulundu")
-        
+
         for stock in stocks:
             # Rezerv edilen ürünleri atla
             if stock.barcode in reserved_barcodes:
                 continue
-                
+
             asin = asin_map.get(stock.barcode) if platform == "amazon" else None
-            woo_id = woo_id_map.get(stock.barcode) if platform == "woocommerce" else None
-            
+
             # Amazon için ASIN'i olmayan ürünleri atla
             if platform == "amazon" and not asin:
                 continue
-            
-            # WooCommerce için woo_product_id olmayan ürünleri atla
-            if platform == "woocommerce" and not woo_id:
-                continue
-            
+
             items.append(StockItem(
                 barcode=stock.barcode,
                 quantity=stock.qty if stock.qty else 0,
                 asin=asin,
-                woo_product_id=woo_id,
             ))
         
         logger.info(f"[SYNC] {len(items)} ürün CentralStock'tan alındı")
@@ -218,8 +199,7 @@ class StockSyncService:
         
         # Amazon için ASIN eşleştirmesi
         asin_map = {}
-        woo_id_map = {}
-        
+
         if platform == "amazon":
             products_with_asin = Product.query.filter(
                 Product.barcode.in_(barcodes),
@@ -227,31 +207,18 @@ class StockSyncService:
                 Product.amazon_asin != ''
             ).all()
             asin_map = {p.barcode: p.amazon_asin for p in products_with_asin}
-        
-        if platform == "woocommerce":
-            products_with_woo = Product.query.filter(
-                Product.barcode.in_(barcodes),
-                Product.woo_product_id.isnot(None)
-            ).all()
-            woo_id_map = {p.barcode: p.woo_product_id for p in products_with_woo}
-        
+
         for barcode in barcodes:
             asin = asin_map.get(barcode) if platform == "amazon" else None
-            woo_id = woo_id_map.get(barcode) if platform == "woocommerce" else None
-            
+
             # Amazon için ASIN yoksa atla
             if platform == "amazon" and not asin:
                 continue
-            
-            # WooCommerce için woo_product_id yoksa atla
-            if platform == "woocommerce" and not woo_id:
-                continue
-                
+
             items.append(StockItem(
                 barcode=barcode,
                 quantity=stock_dict.get(barcode, 0),
                 asin=asin,
-                woo_product_id=woo_id,
             ))
         
         return items

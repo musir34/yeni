@@ -20,9 +20,12 @@
             <h5 class="mb-0"><i class="fas fa-cog me-2"></i> Hepsiburada Ayarları</h5>
             <small class="opacity-75">API bağlantı yapılandırması & test</small>
         </div>
-        <a href="{{ url_for('hepsiburada.index') }}" class="btn btn-outline-light btn-sm">
-            <i class="fas fa-arrow-left me-1"></i> Panel
-        </a>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('home.home') }}" class="btn btn-outline-light btn-sm"><i class="fas fa-home me-1"></i> Anasayfa</a>
+            <a href="{{ url_for('hepsiburada.index') }}" class="btn btn-outline-light btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Panel
+            </a>
+        </div>
     </div>
 
     <!-- Durum Kartı -->

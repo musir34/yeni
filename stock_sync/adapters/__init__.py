@@ -7,7 +7,6 @@ from .base import BasePlatformAdapter
 from .trendyol import TrendyolAdapter
 from .idefix import IdefixAdapter
 from .amazon import AmazonAdapter
-from .woocommerce import WooCommerceAdapter
 from .hepsiburada import HepsiburadaAdapter
 from .shopify import ShopifyAdapter
 
@@ -16,7 +15,6 @@ __all__ = [
     'TrendyolAdapter',
     'IdefixAdapter',
     'AmazonAdapter',
-    'WooCommerceAdapter',
     'HepsiburadaAdapter',
     'ShopifyAdapter'
 ]

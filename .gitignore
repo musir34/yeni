@@ -183,3 +183,12 @@ replit.nix
 # Yedek ve geçici dosyalar
 backup.sql
 yeni_20250724-*
+
+# Amazon cache dosyaları
+amazon/products_cache.json
+amazon/sku_barcode_matches.json
+amazon/image_cache.json
+
+# SQLite test DB
+instance/app.db
+

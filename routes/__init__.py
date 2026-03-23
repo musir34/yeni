@@ -19,14 +19,11 @@ def register_blueprints(app):
     from processed_orders_service import processed_orders_service_bp
     from iade_islemleri import iade_islemleri
     from siparis_fisi import siparis_fisi_bp
-    from analysis import analysis_bp
     from stock_report import stock_report_bp
-    from openai_service import openai_bp
     from user_logs import user_logs_bp
     from stock_management import stock_management_bp
     from commission_update_routes import commission_update_bp
     from product_label import product_label_bp
-    from intelligent_stock_analyzer import blueprint as intelligent_stock_bp
     from image_manager import image_manager_bp
     from routes.common.health import health_bp
     from kasa import kasa_bp
@@ -35,14 +32,7 @@ def register_blueprints(app):
     from profit import profit_bp
     from canli_panel import canli_panel_bp
     from siparis_hazirla import siparis_hazirla_bp
-    from gorev import gorev_bp, attach_jobs
-    from uretim_oneri import uretim_oneri_bp
-    from barcode_alias_routes import barcode_alias_bp  # 🔥 BARKOD ALIAS SİSTEMİ
-    from woocommerce_site import woo_bp  # 🛒 WOOCOMMERCE SİPARİŞ SİSTEMİ
-    from woocommerce_site.test_routes import test_bp  # 🧪 WOOCOMMERCE TEST - GEÇİCİ AKTİF
     from shopify_site import shopify_bp  # 🛍️ SHOPIFY API SİSTEMİ
-    # Preview: Woo barcode mapping
-    from routes.woo_barcodes_preview import woo_preview_bp
     from amazon import amazon_bp  # 🛍️ AMAZON SP-API SİSTEMİ
     from hepsiburada import hb_bp  # 🟠 HEPSİBURADA ENTEGRASYONU
     from stock_sync.routes import stock_sync_bp  # 📦 STOK SENKRONİZASYON SİSTEMİ
@@ -68,14 +58,11 @@ def register_blueprints(app):
         processed_orders_service_bp,
         iade_islemleri,
         siparis_fisi_bp,
-        analysis_bp,
         stock_report_bp,
-        openai_bp,
         user_logs_bp,
         stock_management_bp,
         commission_update_bp,
         product_label_bp,
-        intelligent_stock_bp,
         image_manager_bp,
         health_bp,
         raf_bp,
@@ -84,13 +71,7 @@ def register_blueprints(app):
         profit_bp,
         canli_panel_bp,
         siparis_hazirla_bp,
-        gorev_bp,
-        uretim_oneri_bp,
-        barcode_alias_bp,  # 🔥 BARKOD ALIAS SİSTEMİ
-        woo_bp,  # 🛒 WOOCOMMERCE SİPARİŞ SİSTEMİ
-        test_bp,  # 🧪 WOOCOMMERCE TEST - GEÇİCİ AKTİF
         shopify_bp,  # 🛍️ SHOPIFY API SİSTEMİ
-        woo_preview_bp,
         amazon_bp,  # 🛍️ AMAZON SP-API SİSTEMİ
         hb_bp,  # 🟠 HEPSİBURADA ENTEGRASYONU
         stock_sync_bp,  # 📦 STOK SENKRONİZASYON SİSTEMİ

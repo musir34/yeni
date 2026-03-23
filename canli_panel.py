@@ -5,7 +5,6 @@ from flask import Blueprint, Response, jsonify, request, stream_with_context, re
 from sqlalchemy import func, literal, text, and_, or_
 from models import db, Product, CentralStock
 from models import OrderCreated, OrderPicking, OrderShipped, Archive, ReturnOrder, ReturnProduct
-from woocommerce_site.models import WooOrder
 from login_logout import login_required, roles_required
 try:
     from models import OrderDelivered

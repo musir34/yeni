@@ -9,6 +9,7 @@
         <div class="col-12">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('home.home') }}">Anasayfa</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for('amazon.index') }}">Amazon</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for('amazon.orders') }}">Siparişler</a></li>
                     <li class="breadcrumb-item active">{{ order.AmazonOrderId }}</li>

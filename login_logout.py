@@ -230,42 +230,10 @@ def verify_totp():
     return render_template('verify_totp.html')
 
 
-# Direct delete without authentication - for debugging
-@login_logout_bp.route('/direct_delete/<username>', methods=['POST'])
-def direct_delete_user(username):
-    print(f"DIRECT DELETE: {username}")
-    try:
-        user = User.query.filter_by(username=username).first()
-        if user:
-            print(f"Kullanıcı bulundu: {user.username}, ID: {user.id}, Status: {user.status}")
-            
-            # İlk önce user_logs tablosundaki ilişkili kayıtları sil
-            from models import UserLog
-            UserLog.query.filter_by(user_id=user.id).delete()
-            print(f"Kullanıcının log kayıtları silindi")
-            
-            # Sonra kullanıcıyı sil
-            db.session.delete(user)
-            db.session.commit()
-            print(f"Kullanıcı silindi: {username}")
-            flash(f'{username} kullanıcısı başarıyla silindi.', 'success')
-            return redirect(url_for('login_logout.approve_users'))
-        else:
-            print(f"Kullanıcı bulunamadı: {username}")
-            flash(f'Kullanıcı {username} bulunamadı.', 'danger')
-            return redirect(url_for('login_logout.approve_users'))
-    except Exception as e:
-        print(f"Hata: {e}")
-
 @login_logout_bp.route('/home')
 @login_required
 def home_redirect():
-    try:
-        return redirect(url_for('home.home'))
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Kullanıcı silinirken hata: {e}', 'danger')
-        return redirect(url_for('login_logout.approve_users'))
+    return redirect(url_for('home.home'))
 
 
 
@@ -281,15 +249,24 @@ def delete_user(username):
         flash('Kullanıcı bulunamadı.', 'danger')
         return redirect(url_for('login_logout.approve_users'))
 
+    # Kendini silmesini engelle
+    if user.id == session.get('user_id'):
+        flash('Kendi hesabınızı silemezsiniz.', 'danger')
+        return redirect(url_for('login_logout.approve_users'))
+
     logger.info(f"Kullanıcı siliniyor - Username: {username}, ID: {user.id}")
     
     try:
-        # İlk önce user_logs tablosundaki ilişkili kayıtları sil
-        from models import UserLog
+        # İlişkili kayıtları sil
+        from models import UserLog, Rapor
         deleted_logs = UserLog.query.filter_by(user_id=user.id).delete()
         logger.debug(f"{deleted_logs} log kaydı silindi")
         
-        # Sonra kullanıcıyı sil
+        # Raporları sil
+        deleted_reports = Rapor.query.filter_by(kullanici_id=user.id).delete()
+        logger.debug(f"{deleted_reports} rapor kaydı silindi")
+        
+        # Kullanıcıyı sil
         db.session.delete(user)
         db.session.commit()
         logger.info(f"Kullanıcı başarıyla silindi: {username}")
@@ -375,10 +352,3 @@ def logout():
     session.clear()
     flash('Başarıyla çıkış yaptınız.', 'success')
     return redirect(url_for('login_logout.login'))
-
-
-# Ana Sayfa
-@login_logout_bp.route('/home')
-@login_required
-def home():
-    return render_template('home.home.html')

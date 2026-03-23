@@ -139,7 +139,6 @@
             </div>
         </div>
 
-        <a href="/uretim-oneri-haftalik" class="btn btn-primary"><i class="fa-solid fa-lightbulb"></i> Stok Önerileri</a>
     </div>
 
     <!-- Pazaryeri Filtresi -->
@@ -238,38 +237,6 @@
                 <div class="model-card">
                     <div class="model-image-container zoomable-image" data-image-src="{{ product.images.split(',')[0] if product.images else '' }}">
                         <img src="{{ product.images.split(',')[0] if product.images else 'https://via.placeholder.com/350x350/eee/888?text=Gorsel+Yok' }}" alt="{{ product.title }}">
-                        <div class="platform-icons">
-                            {% if 'trendyol' in platforms %}
-                            <div class="platform-icon" title="Trendyol'da satılıyor">
-                                <span class="platform-tooltip">Trendyol</span>
-                                <img src="{{ url_for('static', filename='logo/trendyol.png') }}" alt="Trendyol">
-                            </div>
-                            {% endif %}
-                            {% if 'idefix' in platforms %}
-                            <div class="platform-icon" title="Idefix'te satılıyor">
-                                <span class="platform-tooltip">Idefix</span>
-                                <img src="{{ url_for('static', filename='logo/idefix.png') }}" alt="Idefix">
-                            </div>
-                            {% endif %}
-                            {% if 'hepsiburada' in platforms %}
-                            <div class="platform-icon" title="Hepsiburada'da satılıyor">
-                                <span class="platform-tooltip">Hepsiburada</span>
-                                <img src="{{ url_for('static', filename='logo/hepsiburada.png') }}" alt="Hepsiburada">
-                            </div>
-                            {% endif %}
-                            {% if product.amazon_asin %}
-                            <div class="platform-icon" title="Amazon'da satılıyor">
-                                <span class="platform-tooltip">Amazon</span>
-                                <img src="{{ url_for('static', filename='logo/amazon.png') }}" alt="Amazon">
-                            </div>
-                            {% endif %}
-                            {% if product.woo_product_id %}
-                            <div class="platform-icon" title="WooCommerce'de satılıyor">
-                                <span class="platform-tooltip">WooCommerce</span>
-                                <img src="{{ url_for('static', filename='logo/woocommerce.png') }}" alt="WooCommerce">
-                            </div>
-                            {% endif %}
-                        </div>
                     </div>
                     <div class="model-info">
                         <div>

@@ -496,7 +496,6 @@ def display_archive():
 def archive_an_order():
     """
     Çok tablolu modelde, siparişi bul -> arşive ekle -> o tablodan sil.
-    WooCommerce siparişleri için özel işlem yapılır.
     """
     order_number = request.form.get('order_number')
     archive_reason = request.form.get('archive_reason')
@@ -531,8 +530,7 @@ def archive_an_order():
         db.session.delete(order_obj)
         db.session.commit()
         
-        table_name = 'woo_orders' if is_woo_order else table_cls.__tablename__
-        print(f"Sipariş {order_number}, {table_name} tablosundan silindi, arşive eklendi.")
+        print(f"Sipariş {order_number}, {table_cls.__tablename__} tablosundan silindi, arşive eklendi.")
         return jsonify({'success': True, 'message': 'Sipariş arşive eklendi.'})
     except Exception as e:
         db.session.rollback()
@@ -547,9 +545,7 @@ def archive_an_order():
 @archive_bp.route('/restore_from_archive', methods=['POST'])
 def recover_from_archive():
     """
-    Arşivdeki siparişi orijinal tablosuna geri taşır:
-    - WooCommerce siparişleri -> woo_orders tablosuna
-    - Trendyol siparişleri -> orders_created tablosuna
+    Arşivdeki siparişi orders_created tablosuna geri taşır.
     """
     order_number = request.form.get('order_number')
     print(f"Arşivden geri yükleniyor: {order_number}")

@@ -240,10 +240,6 @@
       border-radius:4px;
       margin-bottom:2px;
     }
-    .queue-order-source.woo{
-      background:#17a2b8;
-      color:#fff;
-    }
     .queue-order-source.trendyol{
       background:#f7971e;
       color:#fff;
@@ -413,16 +409,7 @@
     <a href="{{ url_for('home.home') }}" class="btn btn-secondary">Anasayfa</a>
     <a href="{{ url_for('display_archive') }}" class="btn btn-secondary">Arşiv</a>
 
-    <div class="dropdown">
-      <button class="btn btn-warning dropdown-toggle" type="button" id="kullaniciMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Kullanıcı İşlemleri</button>
-      <div class="dropdown-menu" aria-labelledby="kullaniciMenu">
-        <a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a>
-        <a class="dropdown-item" href="{{ url_for('rapor_gir.giris') }}"><i class="fas fa-file-alt"></i> Raporlama</a>
-        {% if session['role'] in ['admin','manager'] %}
-          <a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}"><i class="fas fa-history"></i> Kullanıcı Hareketleri</a>
-        {% endif %}
-      </div>
-    </div>
+
 
     <div class="dropdown">
       <button class="btn btn-primary dropdown-toggle" type="button" id="siparisMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Sipariş İşlemleri</button>
@@ -430,7 +417,6 @@
         <a class="dropdown-item" href="{{ url_for('siparisler_bp.yeni_siparis') }}">Yeni Sipariş</a>
         <a class="dropdown-item" href="{{ url_for('order_list_all') }}">Sipariş Listesi</a>
         <a class="dropdown-item" href="{{ url_for('degisim_talep') }}">Değişim Talepleri</a>
-        <a class="dropdown-item" href="{{ url_for('woo.orders') }}"><i class="fas fa-shopping-cart"></i> WooCommerce Siparişleri</a>
       </div>
     </div>
 
@@ -445,17 +431,7 @@
       </div>
     </div>
 
-    <div class="dropdown">
-      <button class="btn btn-info dropdown-toggle" type="button" id="analizMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Analizler</button>
-      <div class="dropdown-menu" aria-labelledby="analizMenu">
-        <a class="dropdown-item" href="{{ url_for('analysis.sales_analysis') }}">Satış Analizi</a>
-        <a class="dropdown-item" href="{{ url_for('openai_bp.ai_analiz') }}">AI Analiz</a>
-        <a class="dropdown-item" href="{{ url_for('commission_update_bp.update_commission_from_excel') }}">Excel Komisyon Yükle</a>
-        <a class="dropdown-item" href="/intelligent-stock/">🧠 Stok Zekası Paneli</a>
-        <a class="dropdown-item" href="{{ url_for('profit.profit_report') }}">💰 Kâr Analizi</a>
-        <a class="dropdown-item" href="{{ url_for('canli_panel.canli_panel_sayfa') }}">📊 Canlı Satış & Stok Paneli</a>
-      </div>
-    </div>
+
 
     {% if session['role'] in ['admin','manager'] %}
     <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-dark">
@@ -513,11 +489,7 @@
         <i class="fas fa-box-open" style="color:#667eea;font-size:1.5rem;"></i>
         <h4>Aktif Sipariş</h4>
         <span class="order-badge">{{ order.order_number }}</span>
-        {% if order.source == 'WOOCOMMERCE' %}
-          <span class="badge badge-info">🛒 WooCommerce</span>
-        {% else %}
-          <span class="badge badge-warning">📦 Trendyol</span>
-        {% endif %}
+        <span class="badge badge-warning">📦 Trendyol</span>
       </div>
     
       <form method="POST" action="{{ url_for('update_service.confirm_packing') }}" id="packingForm" autocomplete="off">
@@ -544,9 +516,7 @@
                     <span class="clipboard-icon" onclick="copyToClipboard('productBarcode-{{ loop.index0 }}', this)">📋</span>
                     <span class="copy-confirmation">✔️</span>
                   </span>
-                  {% if product['woo_id'] %}
-                    <br><small style="color:#17a2b8;">🛒 WooCommerce ID: {{ product['woo_id'] }}</small>
-                  {% elif product['normalized_barcode'] != product['barcode'] %}
+                  {% if product['normalized_barcode'] != product['barcode'] %}
                     <br><small style="color:#666;">Ana Barkod: {{ product['normalized_barcode'] }}</small>
                   {% endif %}
                 </p>
@@ -616,27 +586,15 @@
       </form>
 
       <div class="bottom-buttons">
-        {% if order and order.source == 'WOOCOMMERCE' %}
-          <!-- WooCommerce için etiket -->
-          <a href="{{ url_for('woo.shipping_label_by_number', order_number=order.order_number) }}" 
-             target="_blank" 
-             class="btn btn-warning btn-bottom disabled" 
-             id="yazdirBtn"
-             style="pointer-events: none; opacity: 0.6;">
-            Yazdır
-          </a>
-        {% else %}
-          <!-- Trendyol için etiket -->
-          <form method="POST" action="{{ url_for('order_label') }}" target="_blank" id="yazdirForm" autocomplete="off">
-            <input type="hidden" name="order_number" value="{{ order.order_number if order else '' }}"/>
-            <input type="hidden" name="shipping_barcode" value="{{ order.shipping_barcode if order else '' }}"/>
-            <input type="hidden" name="cargo_provider" value="{{ order.cargo_provider_name if order else '' }}"/>
-            <input type="hidden" name="customer_name" value="{{ order.customer_name if order else '' }}"/>
-            <input type="hidden" name="customer_surname" value="{{ order.customer_surname if order else '' }}"/>
-            <input type="hidden" name="customer_address" value="{{ order.customer_address if order else '' }}"/>
-            <button type="submit" class="btn btn-warning btn-bottom disabled" id="yazdirBtn" disabled>Yazdır</button>
-          </form>
-        {% endif %}
+        <form method="POST" action="{{ url_for('order_label') }}" target="_blank" id="yazdirForm" autocomplete="off">
+          <input type="hidden" name="order_number" value="{{ order.order_number if order else '' }}"/>
+          <input type="hidden" name="shipping_barcode" value="{{ order.shipping_barcode if order else '' }}"/>
+          <input type="hidden" name="cargo_provider" value="{{ order.cargo_provider_name if order else '' }}"/>
+          <input type="hidden" name="customer_name" value="{{ order.customer_name if order else '' }}"/>
+          <input type="hidden" name="customer_surname" value="{{ order.customer_surname if order else '' }}"/>
+          <input type="hidden" name="customer_address" value="{{ order.customer_address if order else '' }}"/>
+          <button type="submit" class="btn btn-warning btn-bottom disabled" id="yazdirBtn" disabled>Yazdır</button>
+        </form>
 
         {% if order %}
           <button type="button" class="btn btn-danger btn-bottom" onclick="showArchiveModal('{{ order.order_number }}')">Arşive Gönder</button>
@@ -659,11 +617,7 @@
       <h4>Kargo Bilgileri</h4>
       <p>
         <strong>Sipariş No:</strong> {{ order.order_number }}
-        {% if order.source == 'WOOCOMMERCE' %}
-          <span class="badge badge-info" style="font-size:0.75rem;margin-left:5px;">🛒 WooCommerce</span>
-        {% else %}
-          <span class="badge badge-warning" style="font-size:0.75rem;margin-left:5px;">📦 Trendyol</span>
-        {% endif %}
+        <span class="badge badge-warning" style="font-size:0.75rem;margin-left:5px;">📦 Trendyol</span>
         <br/>
         <strong>Müşteri:</strong> {{ order.customer_name }} {{ order.customer_surname }}<br/>
         <strong>Kargoya Kalan Süre:</strong> {{ remaining_time }}<br/>
@@ -790,8 +744,8 @@
             
             let html = '';
             data.orders.forEach((order, index) => {
-              const sourceClass = order.source === 'WOOCOMMERCE' ? 'woo' : 'trendyol';
-              const sourceLabel = order.source === 'WOOCOMMERCE' ? '🛒' : '📦';
+              const sourceClass = 'trendyol';
+              const sourceLabel = '📦';
               
               // Raf bilgisi rozeti
               let rafBadge = '';
@@ -901,36 +855,18 @@
           onaylaBtn.classList.remove('disabled');
           onaylaBtn.disabled=false;
           yazdirBtn.classList.remove('disabled');
-          
-          // WooCommerce için link, Trendyol için button
-          if(yazdirBtn.tagName === 'A'){
-            yazdirBtn.style.pointerEvents = 'auto';
-            yazdirBtn.style.opacity = '1';
-          } else {
-            yazdirBtn.disabled=false;
-          }
-          
+          yazdirBtn.disabled=false;
+
           confirmTimer=setTimeout(()=>packingForm.submit(),15000);
           if(autoShipToggle.checked){showAutoShip();}
           else{
-            if(yazdirBtn.tagName === 'A'){
-              setTimeout(()=>yazdirBtn.click(),5000);
-            } else {
-              printTimer=setTimeout(()=>yazdirForm.submit(),5000);
-            }
+            printTimer=setTimeout(()=>yazdirForm.submit(),5000);
           }
         }else{
           onaylaBtn.classList.add('disabled');
           onaylaBtn.disabled=true;
           yazdirBtn.classList.add('disabled');
-          
-          // WooCommerce için link, Trendyol için button
-          if(yazdirBtn.tagName === 'A'){
-            yazdirBtn.style.pointerEvents = 'none';
-            yazdirBtn.style.opacity = '0.6';
-          } else {
-            yazdirBtn.disabled=true;
-          }
+          yazdirBtn.disabled=true;
         }
       }
 

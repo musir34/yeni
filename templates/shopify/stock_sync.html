@@ -9,6 +9,7 @@
             <p class="text-muted mb-0">Barkod eşleştirme ve stok gönderimi</p>
         </div>
         <div class="d-flex gap-2">
+            <a href="{{ url_for('home.home') }}" class="btn btn-outline-dark"><i class="bi bi-house"></i> Anasayfa</a>
             <button id="btnMatch" class="btn btn-warning" {% if not configured %}disabled{% endif %}>
                 <i class="bi bi-link-45deg"></i> Barkod Eşleştir
             </button>

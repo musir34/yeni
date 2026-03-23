@@ -34,74 +34,6 @@ def to_ist(dt):
     return dt.astimezone(IST)
 
 
-def convert_woo_to_order_format(woo_order):
-    """
-    WooOrder modelini OrderCreated formatına çevir
-    (sipariş hazırla sayfası için uyumlu hale getir)
-    """
-    import json
-    
-    # Müşteri adres bilgisi
-    address_parts = [
-        woo_order.shipping_address_1 or woo_order.billing_address_1,
-        woo_order.shipping_address_2 or woo_order.billing_address_2,
-        woo_order.shipping_city or woo_order.billing_city,
-        woo_order.shipping_state or woo_order.billing_state,
-        woo_order.shipping_postcode or woo_order.billing_postcode,
-    ]
-    full_address = ' '.join([p for p in address_parts if p])
-    
-    # Details JSON oluştur (sipariş hazırla sayfası için)
-    details_list = []
-    total_qty = 0
-    
-    for item in woo_order.line_items or []:
-        product_id = item.get('product_id')
-        variation_id = item.get('variation_id')
-        woo_id = variation_id if variation_id else product_id
-        qty = int(item.get('quantity', 1))
-        total_qty += qty
-        
-        details_list.append({
-            'woo_product_id': product_id,
-            'woo_variation_id': variation_id,
-            'woo_id': woo_id,
-            'quantity': qty,
-            'price': float(item.get('price', 0)),
-            'line_total_price': float(item.get('total', 0)),
-            'product_name': item.get('name', ''),
-            'sku': item.get('sku', '')
-        })
-    
-    # OrderCreated benzeri obje oluştur (dict olarak)
-    class WooOrderAdapter:
-        def __init__(self, woo_order, details_list, total_qty, full_address):
-            self.order_number = woo_order.order_number
-            self.order_date = woo_order.date_created
-            self.status = woo_order.status
-            self.customer_name = woo_order.customer_first_name or ''
-            self.customer_surname = woo_order.customer_last_name or ''
-            self.customer_address = full_address
-            self.customer_id = woo_order.customer_email or ''
-            self.amount = float(woo_order.total)
-            self.currency_code = woo_order.currency
-            self.quantity = total_qty
-            self.details = json.dumps(details_list, ensure_ascii=False)
-            self.source = 'WOOCOMMERCE'
-            self.agreed_delivery_date = None  # WooCommerce'de yok
-            self.cargo_provider_name = 'MNG'  # Varsayılan
-            self.products = []  # Ürün listesi (sonradan doldurulacak)
-            self.from_woo_table = True  # 🔥 woo_orders tablosundan geldiğini işaretle
-            self.woo_order_id = woo_order.order_id  # 🔥 WooCommerce order ID
-            
-            # Ürün adı (ilk 3 ürün)
-            self.product_name = ', '.join([
-                item.get('name', '')[:30] 
-                for item in (woo_order.line_items or [])[:3]
-            ])
-    
-    return WooOrderAdapter(woo_order, details_list, total_qty, full_address)
-
 
 # 🔔 Arşivde bekleyen siparişlerden uyarılar üret
 def get_archive_warnings():
@@ -165,46 +97,14 @@ def index():
 def get_home():
     """
     En eski 'Created' sipariş ve ürünlerini hazırla.
-    
-    ÖNCELİK SIRASI:
-    1. woo_orders tablosu (status='processing' veya 'on-hold')
-    2. orders_created tablosu (Trendyol siparişleri)
-    
     Ayrıca arşiv ve değişim (İşleme Alındı) uyarılarını template'e gönderir.
     """
     try:
-        from woocommerce_site.models import WooOrder
-        
-        # 🛒 ÖNCELİK 1: woo_orders tablosundan hazırlanacak sipariş var mı?
-        # Sadece 'on-hold' (Beklemede) siparişler sipariş hazırla ekranına gelir
-        # 🔥 ARŞİVDE OLMAYAN siparişleri filtrele
-        # Arşivdeki sipariş numaralarını al
-        archived_order_numbers = db.session.query(Archive.order_number).all()
-        archived_order_numbers = [num[0] for num in archived_order_numbers]
-        
-        logging.info(f"[SIPARIS_HAZIRLA] Arşivdeki sipariş sayısı: {len(archived_order_numbers)}")
-        logging.info(f"[SIPARIS_HAZIRLA] Arşivdeki ilk 5 numara: {archived_order_numbers[:5]}")
-        
-        woo_order_db = (WooOrder.query
-                       .filter(WooOrder.status == 'on-hold')
-                       .filter(~WooOrder.order_number.in_(archived_order_numbers))
-                       .order_by(WooOrder.date_created)
-                       .first())
-        
-        if woo_order_db:
-            logging.info(f"[SIPARIS_HAZIRLA] WooOrder bulundu: {woo_order_db.order_number}")
-            # WooOrder'dan OrderCreated formatına çevir
-            oldest_order = convert_woo_to_order_format(woo_order_db)
-            is_from_woo_table = True
-        else:
-            logging.info("[SIPARIS_HAZIRLA] WooOrder bulunamadı, Trendyol'a geçiliyor")
-            # 🛒 ÖNCELİK 2: orders_created tablosundan al (Trendyol)
-            # Sadece 'Created' durumundaki siparişler
-            oldest_order = (OrderCreated.query
-                          .filter(OrderCreated.status == 'Created')
-                          .order_by(OrderCreated.order_date)
-                          .first())
-            is_from_woo_table = False
+        oldest_order = (OrderCreated.query
+                      .filter(OrderCreated.status == 'Created')
+                      .order_by(OrderCreated.order_date)
+                      .first())
+        is_from_woo_table = False
 
         # Hava durumu bilgisi
         weather_info = get_weather_info()
@@ -428,75 +328,19 @@ def get_queue_orders():
     """
     from flask import jsonify, request
     from sqlalchemy import desc
-    from woocommerce_site.models import WooOrder
-    
+
     try:
         queue_orders = []
-        
+
         # Aktif sipariş numarasını al (kuyrukta gösterilmeyecek)
         active_order_number = request.args.get('active', '')
-        
+
         # Arşivdeki sipariş numaralarını al
         archived_order_numbers = db.session.query(Archive.order_number).all()
         archived_order_numbers = [num[0] for num in archived_order_numbers]
-        
-        # 1. WooCommerce siparişleri (on-hold)
-        woo_query = (WooOrder.query
-                     .filter(WooOrder.status == 'on-hold')
-                     .filter(~WooOrder.order_number.in_(archived_order_numbers)))
-        
-        # Aktif siparişi hariç tut
-        if active_order_number:
-            woo_query = woo_query.filter(WooOrder.order_number != active_order_number)
-        
-        woo_orders = woo_query.order_by(WooOrder.date_created).limit(10).all()
-        
-        for woo in woo_orders:
-            # İlk ürünün görselini ve raf bilgisini al
-            first_image = "/static/images/default.jpg"
-            product_count = 0
-            first_product_name = "Ürün"
-            first_sku = ""
-            first_raf = None
-            
-            if woo.line_items:
-                product_count = len(woo.line_items)
-                first_item = woo.line_items[0] if woo.line_items else {}
-                woo_id = first_item.get('variation_id') or first_item.get('product_id')
-                first_product_name = first_item.get('name', 'Ürün')[:30]
-                first_sku = first_item.get('sku', '')  # 🔥 SKU al
-                
-                if woo_id:
-                    product_db = Product.query.filter_by(woo_product_id=int(woo_id)).first()
-                    if product_db:
-                        if product_db.images:
-                            first_image = product_db.images
-                        # 🔥 SKU yoksa Product tablosundan al
-                        if not first_sku and product_db.barcode:
-                            first_sku = product_db.barcode
-                        # Raf bilgisini al
-                        raf_kayit = (RafUrun.query
-                                    .filter(RafUrun.urun_barkodu == product_db.barcode, RafUrun.adet > 0)
-                                    .order_by(desc(RafUrun.adet))
-                                    .first())
-                        if raf_kayit:
-                            first_raf = {"kod": raf_kayit.raf_kodu, "adet": raf_kayit.adet}
-            
-            queue_orders.append({
-                "order_number": woo.order_number,
-                "source": "WOOCOMMERCE",
-                "customer_name": f"{woo.customer_first_name or ''} {woo.customer_last_name or ''}".strip(),
-                "product_count": product_count,
-                "first_product_name": first_product_name,
-                "first_sku": first_sku,  # 🔥 SKU ekle
-                "first_image": first_image,
-                "first_raf": first_raf,
-                "order_date": woo.date_created.isoformat() if woo.date_created else None,
-                "total": float(woo.total) if woo.total else 0
-            })
-        
-        # 2. Trendyol siparişleri (Created)
-        remaining_slots = 10 - len(queue_orders)
+
+        # Trendyol siparişleri (Created)
+        remaining_slots = 10
         if remaining_slots > 0:
             trendyol_query = (OrderCreated.query
                               .filter(OrderCreated.status == 'Created'))

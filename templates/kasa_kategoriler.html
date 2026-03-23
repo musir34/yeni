@@ -48,7 +48,10 @@
 </head>
 <body>
     <div class="container">
-        <h1 class="mb-4 text-center">Kasa Kategorileri Yönetimi</h1>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="mb-0">Kasa Kategorileri Yönetimi</h1>
+            <a href="/anasayfa" class="btn btn-outline-secondary btn-sm"><i class="fas fa-home"></i> Anasayfa</a>
+        </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}

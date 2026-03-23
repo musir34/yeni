@@ -290,11 +290,27 @@ data-image-url="{{ product.image_url if product.image_url else '/static/images/d
 </div>
 {% endif %}
 
-{% if order.products and order.products[0] %} {# İlk ürün varsa Barkod/SKU'yu göster #}
+{% if order.products and order.products|length > 0 %}
 <div class="product-details-text">
-<p><i class="fas fa-barcode me-1"></i><strong>Barkod:</strong> {{ order.products[0].barcode if order.products[0].barcode else '-' }}</p>
-<p><i class="fas fa-id-card me-1"></i><strong>SKU:</strong> {{ order.products[0].sku if order.products[0].sku else '-' }}</p>
-{# İstersen ilk ürünün model, renk, bedenini de buraya ekleyebilirsin #}
+{% for product in order.products %}
+<div class="{% if not loop.first %}mt-2 pt-2 border-top{% endif %}">
+<p class="mb-1"><i class="fas fa-barcode me-1"></i><strong>Barkod:</strong> {{ product.barcode if product.barcode else '-' }}
+  <span class="copy-container">
+    <i class="far fa-copy clipboard-icon" onclick="copyToClipboard('{{ product.barcode }}', this)"></i>
+    <span class="copy-confirmation">✔️</span>
+  </span>
+</p>
+<p class="mb-0"><i class="fas fa-id-card me-1"></i><strong>SKU:</strong> {{ product.sku if product.sku else '-' }}</p>
+{% if product.model and product.model != 'Model Bilgisi Yok' %}
+<p class="mb-0"><i class="fas fa-tag me-1"></i><strong>Model:</strong> {{ product.model }} {% if product.color and product.color != 'Renk Bilgisi Yok' %} / {{ product.color }}{% endif %} {% if product.size and product.size != 'Beden Bilgisi Yok' %} / {{ product.size }}{% endif %}</p>
+{% endif %}
+</div>
+{% endfor %}
+{% if order.products|length > 1 %}
+<div class="mt-2">
+  <span class="badge bg-info">{{ order.products|length }} ürün</span>
+</div>
+{% endif %}
 </div>
 {% endif %}
 

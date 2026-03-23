@@ -292,33 +292,6 @@ def pull_orders_job():
         except Exception as e:
             logger.error(f"pull_orders_job hata: {e}", exc_info=True)
 
-def sync_woo_orders_background():
-    """WooCommerce siparişlerini arka planda senkronize eder (zamanlayıcı için)"""
-    with app.app_context():
-        try:
-            from woocommerce_site.woo_service import WooCommerceService
-            from woocommerce_site.woo_config import WooConfig
-            
-            # API ayarları kontrolü
-            if not WooConfig.is_configured():
-                logger.debug("WooCommerce API ayarları yapılmamış, senkronizasyon atlandı")
-                return
-            
-            woo_service = WooCommerceService()
-            
-            # Son 3 günün siparişlerini çek (sadece aktif olanlar)
-            active_statuses = ['pending', 'processing', 'on-hold']
-            total = 0
-            
-            for status in active_statuses:
-                result = woo_service.sync_orders_to_db(status=status, days=3)
-                total += result.get('total_saved', 0)
-            
-            if total > 0:
-                logger.info(f"WooCommerce otomatik senkronizasyon: {total} sipariş güncellendi")
-                
-        except Exception as e:
-            logger.error(f"WooCommerce arka plan senkronizasyon hatası: {str(e)}")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Forecast cache wrapper'ları (app context ile)
@@ -470,9 +443,6 @@ if ENABLE_JOBS and is_main_proc:
     if _leader_ok:
         scheduler.start()
         schedule_jobs()
-        # GÖREV JOBLARI (scheduler start edildikten sonra ekle)
-        from gorev import attach_jobs
-        attach_jobs(scheduler, app)
         logger.info("Scheduler started (ENABLE_JOBS=on, leader ok).")
     else:
         logger.info("Scheduler NOT started (ENABLE_JOBS=on, leader=false)")
