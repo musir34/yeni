@@ -119,9 +119,20 @@ def yeni_siparis():
             if q_no:
                 query = query.filter(YeniSiparis.siparis_no.ilike(f'%{q_no}%'))
             if q_name:
-                query = query.filter(
-                    (YeniSiparis.musteri_adi + ' ' +
-                     YeniSiparis.musteri_soyadi).ilike(f'%{q_name}%'))
+                name_parts = q_name.split()
+                if len(name_parts) == 1:
+                    # Tek kelime: hem ad hem soyad alanlarında ara
+                    query = query.filter(
+                        or_(
+                            YeniSiparis.musteri_adi.ilike(f'%{name_parts[0]}%'),
+                            YeniSiparis.musteri_soyadi.ilike(f'%{name_parts[0]}%')
+                        )
+                    )
+                else:
+                    # Birden fazla kelime: ad+soyad birleşiminde tam eşleşme ara
+                    query = query.filter(
+                        (YeniSiparis.musteri_adi + ' ' +
+                         YeniSiparis.musteri_soyadi).ilike(f'%{q_name}%'))
             if q_stat:
                 query = query.filter(YeniSiparis.durum == q_stat)
 

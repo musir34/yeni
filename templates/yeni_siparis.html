@@ -66,8 +66,42 @@
   </div>
 
   <div id="ordersList" class="mb-4">
-    <!-- Toplu İşlemler Toolbar -->
+    <!-- Arama / Filtre Alanı -->
     <div class="filter-area">
+      <form method="GET" action="{{ url_for('siparisler_bp.yeni_siparis') }}" class="mb-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold"><i class="bi bi-hash"></i> Sipariş No</label>
+            <input type="text" class="form-control" name="siparis_no" placeholder="Sipariş numarası ile ara..." value="{{ request.args.get('siparis_no', '') }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold"><i class="bi bi-person"></i> Müşteri Adı / Soyadı</label>
+            <input type="text" class="form-control" name="musteri_adi" placeholder="Ad veya ad soyad ile ara..." value="{{ request.args.get('musteri_adi', '') }}">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold"><i class="bi bi-funnel"></i> Durum</label>
+            <select class="form-select" name="durum">
+              <option value="">Tümü</option>
+              <option value="Yeni Sipariş" {{ 'selected' if request.args.get('durum') == 'Yeni Sipariş' }}>🆕 Yeni Sipariş</option>
+              <option value="Hazırlanıyor" {{ 'selected' if request.args.get('durum') == 'Hazırlanıyor' }}>📦 Hazırlanıyor</option>
+              <option value="Kargoya Hazır" {{ 'selected' if request.args.get('durum') == 'Kargoya Hazır' }}>✅ Kargoya Hazır</option>
+              <option value="Kargoda" {{ 'selected' if request.args.get('durum') == 'Kargoda' }}>🚚 Kargoda</option>
+              <option value="Teslim Edildi" {{ 'selected' if request.args.get('durum') == 'Teslim Edildi' }}>✔️ Teslim Edildi</option>
+              <option value="İptal Edildi" {{ 'selected' if request.args.get('durum') == 'İptal Edildi' }}>❌ İptal Edildi</option>
+            </select>
+          </div>
+          <div class="col-md-2 d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-fill">
+              <i class="bi bi-search"></i> Ara
+            </button>
+            <a href="{{ url_for('siparisler_bp.yeni_siparis') }}" class="btn btn-secondary flex-fill">
+              <i class="bi bi-x-circle"></i> Temizle
+            </a>
+          </div>
+        </div>
+      </form>
+      <hr class="my-2">
+      <!-- Toplu İşlemler -->
       <div class="d-flex gap-2 align-items-center flex-wrap">
         <button class="btn btn-danger" onclick="deleteSelectedOrders()" id="deleteSelectedBtn" style="display:none;">
           <i class="bi bi-trash"></i> Seçili Siparişleri Sil (<span id="selectedCount">0</span>)

@@ -47,10 +47,24 @@
         .modal-content { border-radius: 12px; }
         .modal-header { background: linear-gradient(135deg, #3498db, #2980b9); color: white; border-radius: 12px 12px 0 0; }
         .search-section { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .search-form { display: flex; gap: 12px; align-items: end; }
-        .search-form .form-field { flex: 1; }
+        .search-form { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
+        .search-form .form-field { flex: 1; min-width: 200px; }
         .btn-search { background: linear-gradient(135deg, #3498db, #2980b9); border: none; padding: 12px 24px; border-radius: 8px; color: white; font-weight: 500; }
         .btn-search:hover { background: linear-gradient(135deg, #2980b9, #21618c); }
+        .filter-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+        .filter-btn { padding: 8px 16px; border-radius: 8px; border: 2px solid #ddd; background: white; cursor: pointer; font-weight: 500; transition: all 0.3s; text-decoration: none; color: #333; font-size: 0.9rem; }
+        .filter-btn:hover { border-color: #3498db; color: #3498db; }
+        .filter-btn.active { background: #3498db; color: white; border-color: #3498db; }
+        .filter-btn-warning.active { background: #e67e22; color: white; border-color: #e67e22; }
+        .pagination-bar { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px; flex-wrap: wrap; }
+        .page-btn { padding: 8px 14px; border: 2px solid #ddd; border-radius: 8px; background: white; cursor: pointer; font-weight: 500; transition: all 0.3s; text-decoration: none; color: #333; }
+        .page-btn:hover { border-color: #3498db; color: #3498db; }
+        .page-btn.active { background: #3498db; color: white; border-color: #3498db; }
+        .page-btn.disabled { opacity: 0.4; pointer-events: none; }
+        .page-info { color: #7f8c8d; font-size: 0.95rem; }
+        .no-image-card { border: 2px solid #e1e8ed; border-radius: 12px; padding: 16px; background: #fff5f5; transition: all 0.3s; }
+        .no-image-card:hover { border-color: #e74c3c; box-shadow: 0 4px 12px rgba(231, 76, 60, 0.15); }
+        .no-image-icon { font-size: 3rem; color: #e74c3c; opacity: 0.4; }
     </style>
 </head>
 <body style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh;">
@@ -109,53 +123,89 @@
             </div>
         </div>
 
-        <!-- Görsel Arama -->
+        <!-- Arama ve Filtre -->
         <div class="section-card">
             <h2 class="section-title">
                 <i class="fas fa-search"></i>
-                Görsel Ara
+                Ara & Filtrele
             </h2>
             
-            <div class="search-section">
-                <div class="search-form">
-                    <div class="form-field">
-                        <label class="form-label">Model Kodu</label>
-                        <input type="text" id="searchModel" class="form-control" placeholder="Model kodu girin...">
+            <form method="GET" action="{{ url_for('image_manager.image_manager') }}">
+                <div class="search-section">
+                    <div class="search-form">
+                        <div class="form-field">
+                            <label class="form-label">Barkod / Model / Dosya Adı</label>
+                            <input type="text" name="q" class="form-control" placeholder="Barkod, model kodu veya dosya adı ile arayın..." value="{{ search_query }}">
+                        </div>
+                        <input type="hidden" name="filter" value="{{ filter_type }}">
+                        <button type="submit" class="btn btn-search">
+                            <i class="fas fa-search"></i>
+                            Ara
+                        </button>
+                        <a href="{{ url_for('image_manager.image_manager') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i>
+                            Temizle
+                        </a>
                     </div>
-                    <div class="form-field">
-                        <label class="form-label">Renk</label>
-                        <input type="text" id="searchColor" class="form-control" placeholder="Renk girin...">
-                    </div>
-                    <button id="searchBtn" class="btn btn-search">
-                        <i class="fas fa-search"></i>
-                        Ara
-                    </button>
-                    <button id="clearBtn" class="btn btn-secondary">
-                        <i class="fas fa-times"></i>
-                        Temizle
-                    </button>
                 </div>
-            </div>
-            
-            <div id="searchResult" style="display: none;">
-                <h5>Arama Sonucu:</h5>
-                <div id="searchResultContent"></div>
-            </div>
+                <div class="filter-bar">
+                    <span style="font-weight:600;color:#555;"><i class="fas fa-filter"></i> Filtre:</span>
+                    <a href="{{ url_for('image_manager.image_manager', q=search_query) }}" class="filter-btn {{ 'active' if filter_type != 'no_image' }}">📸 Tüm Görseller</a>
+                    <a href="{{ url_for('image_manager.image_manager', q=search_query, filter='no_image') }}" class="filter-btn filter-btn-warning {{ 'active' if filter_type == 'no_image' }}">⚠️ Görseli Olmayan Ürünler</a>
+                </div>
+            </form>
         </div>
 
-        <!-- Mevcut Görseller -->
+        <!-- Mevcut Görseller / Görseli Olmayan Ürünler -->
         <div class="section-card">
+            {% if filter_type == 'no_image' %}
+            <h2 class="section-title">
+                <i class="fas fa-exclamation-triangle" style="color:#e67e22"></i>
+                Görseli Olmayan Ürünler
+                <span class="badge bg-warning text-dark ms-2">{{ total_images }}</span>
+            </h2>
+            
+            {% if no_image_products %}
+            <div class="image-grid" id="imageGrid">
+                {% for p in no_image_products %}
+                <div class="no-image-card">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-image-slash no-image-icon"></i>
+                    </div>
+                    <div class="image-info">
+                        <div class="image-model">{{ p.barcode }}</div>
+                        <div class="image-details">
+                            {% if p.title %}<strong>Ürün:</strong> {{ p.title[:60] }}<br>{% endif %}
+                            {% if p.model %}<strong>Model:</strong> {{ p.model }}<br>{% endif %}
+                            {% if p.color %}<strong>Renk:</strong> {{ p.color }}{% endif %}
+                        </div>
+                        <div class="image-actions mt-2">
+                            <button class="btn btn-action btn-upload" style="background:#27ae60;color:white;" onclick="quickUpload('{{ p.barcode }}', '{{ p.color }}')"
+                            ><i class="fas fa-upload"></i> Görsel Yükle</button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-check-circle fa-3x mb-3" style="color:#27ae60;opacity:0.6"></i>
+                <p>{{ 'Aramayla eşleşen görselsiz ürün yok' if search_query else 'Tüm ürünlerin görseli mevcut!' }}</p>
+            </div>
+            {% endif %}
+
+            {% else %}
             <h2 class="section-title">
                 <i class="fas fa-th-large"></i>
                 Mevcut Görseller
-                <span class="badge bg-primary ms-2">{{ existing_images|length }}</span>
+                <span class="badge bg-primary ms-2">{{ total_images }}</span>
             </h2>
             
             {% if existing_images %}
             <div class="image-grid" id="imageGrid">
                 {% for image in existing_images %}
                 <div class="image-card" data-model="{{ image.model }}" data-color="{{ image.color }}">
-                    <img src="{{ url_for('static', filename=image.path) }}" alt="{{ image.model }} - {{ image.color }}" class="image-preview">
+                    <img src="{{ url_for('static', filename=image.path) }}" alt="{{ image.model }} - {{ image.color }}" class="image-preview" loading="lazy">
                     <div class="image-info">
                         <div class="image-model">{{ image.model }}</div>
                         <div class="image-details">
@@ -184,7 +234,30 @@
             {% else %}
             <div class="text-center text-muted py-5">
                 <i class="fas fa-image fa-3x mb-3 opacity-50"></i>
-                <p>Henüz yüklenmiş görsel bulunmuyor</p>
+                <p>{{ 'Aramayla eşleşen görsel bulunamadı' if search_query else 'Henüz yüklenmiş görsel bulunmuyor' }}</p>
+            </div>
+            {% endif %}
+            {% endif %}
+
+            <!-- Sayfalama -->
+            {% if total_pages > 1 %}
+            <div class="pagination-bar">
+                <a href="{{ url_for('image_manager.image_manager', q=search_query, filter=filter_type, page=page-1) }}"
+                   class="page-btn {{ 'disabled' if page <= 1 }}">&laquo; Önceki</a>
+                
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == page %}
+                        <span class="page-btn active">{{ p }}</span>
+                    {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                        <a href="{{ url_for('image_manager.image_manager', q=search_query, filter=filter_type, page=p) }}" class="page-btn">{{ p }}</a>
+                    {% elif p == page - 3 or p == page + 3 %}
+                        <span class="page-info">...</span>
+                    {% endif %}
+                {% endfor %}
+                
+                <a href="{{ url_for('image_manager.image_manager', q=search_query, filter=filter_type, page=page+1) }}"
+                   class="page-btn {{ 'disabled' if page >= total_pages }}">&raquo; Sonraki</a>
+                <span class="page-info">Sayfa {{ page }}/{{ total_pages }} ({{ total_images }} kayıt)</span>
             </div>
             {% endif %}
         </div>
@@ -310,56 +383,19 @@
             }
         });
         
-        // Arama Fonksiyonları
-        document.getElementById('searchBtn').addEventListener('click', searchImages);
-        document.getElementById('clearBtn').addEventListener('click', clearSearch);
+        // Arama Fonksiyonları — artık form submit ile çalışıyor
         
-        async function searchImages() {
-            const model = document.getElementById('searchModel').value.trim();
-            const color = document.getElementById('searchColor').value.trim();
-            
-            if (!model && !color) {
-                showAlert('Model kodu veya renk girin', 'danger');
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/api/get_product_image?model_code=${encodeURIComponent(model)}&color=${encodeURIComponent(color)}`);
-                const data = await response.json();
-                
-                const resultDiv = document.getElementById('searchResult');
-                const contentDiv = document.getElementById('searchResultContent');
-                
-                if (data.success && data.found) {
-                    contentDiv.innerHTML = `
-                        <div class="image-card" style="max-width: 300px;">
-                            <img src="${data.path}" alt="${model} - ${color}" class="image-preview">
-                            <div class="image-info">
-                                <div class="image-model">${model}</div>
-                                <div class="image-details">
-                                    <strong>Renk:</strong> ${color}<br>
-                                    <strong>Dosya:</strong> ${data.filename}<br>
-                                    <strong>Boyut:</strong> ${data.size} KB
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    showAlert('Görsel bulundu', 'success');
-                } else {
-                    contentDiv.innerHTML = '<p class="text-muted">Bu model ve renk için görsel bulunamadı</p>';
-                    showAlert(data.message || 'Görsel bulunamadı', 'info');
-                }
-                
-                resultDiv.style.display = 'block';
-            } catch (error) {
-                showAlert('Arama sırasında hata oluştu', 'danger');
-            }
-        }
-        
-        function clearSearch() {
-            document.getElementById('searchModel').value = '';
-            document.getElementById('searchColor').value = '';
-            document.getElementById('searchResult').style.display = 'none';
+        // Görselsiz ürün için hızlı yükleme
+        function quickUpload(barcode, color) {
+            document.getElementById('modelCode').value = barcode;
+            document.getElementById('colorName').value = color || '';
+            document.querySelector('.section-card').scrollIntoView({behavior: 'smooth'});
+            // Upload alanını vurgula
+            const area = document.getElementById('uploadArea');
+            area.style.borderColor = '#27ae60';
+            area.style.background = '#d5f4e6';
+            setTimeout(() => { area.style.borderColor = ''; area.style.background = ''; }, 2000);
+            fileInput.click();
         }
         
         // Modal Fonksiyonları
@@ -450,31 +486,6 @@
             document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
         
-        // Filtreleme (opsiyonel)
-        function filterImages() {
-            const modelFilter = document.getElementById('searchModel').value.toLowerCase();
-            const colorFilter = document.getElementById('searchColor').value.toLowerCase();
-            const cards = document.querySelectorAll('.image-card');
-            
-            cards.forEach(card => {
-                const model = card.dataset.model.toLowerCase();
-                const color = card.dataset.color.toLowerCase();
-                
-                const matchModel = !modelFilter || model.includes(modelFilter);
-                const matchColor = !colorFilter || color.includes(colorFilter);
-                
-                card.style.display = (matchModel && matchColor) ? 'block' : 'none';
-            });
-        }
-        
-        // Enter tuşu ile arama
-        document.getElementById('searchModel').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') searchImages();
-        });
-        
-        document.getElementById('searchColor').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') searchImages();
-        });
     </script>
 </body>
 </html>

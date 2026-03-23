@@ -906,8 +906,7 @@ def search_products():
     if search_type == 'model_code':
         found_products = Product.query.filter(func.lower(Product.product_main_id) == query.lower()).all()
     elif search_type == 'barcode':
-        pbb = Product.query.filter_by(barcode=query).first()
-        found_products = Product.query.filter_by(product_main_id=pbb.product_main_id).all() if pbb and pbb.product_main_id else []
+        found_products = Product.query.filter_by(barcode=query).all()
     else:
         found_products = []
 

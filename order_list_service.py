@@ -1,7 +1,7 @@
 # order_list_service.py
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from sqlalchemy import literal, desc
+from sqlalchemy import literal, desc, or_
 from sqlalchemy.orm import aliased
 import json
 import os
@@ -120,7 +120,14 @@ def get_order_list():
 
         if search_query:
             search_query = search_query.strip()
-            q = q.filter(AllOrders.c.order_number.ilike(f"%{search_query}%"))
+            q = q.filter(
+                or_(
+                    AllOrders.c.order_number.ilike(f"%{search_query}%"),
+                    AllOrders.c.customer_name.ilike(f"%{search_query}%"),
+                    AllOrders.c.customer_surname.ilike(f"%{search_query}%"),
+                    (AllOrders.c.customer_name + ' ' + AllOrders.c.customer_surname).ilike(f"%{search_query}%")
+                )
+            )
             logger.debug(f"Arama sorgusuna göre filtre: {search_query}")
 
         q = q.order_by(desc(AllOrders.c.order_date))
@@ -131,10 +138,24 @@ def get_order_list():
 
         orders = []
         class MockOrder: pass
+        seen_orders = {}
         for r in rows:
+            on = r.order_number
+            if on in seen_orders:
+                # Aynı sipariş numaralı satırın details'ini mevcut siparişe ekle
+                existing = seen_orders[on]
+                if r.details:
+                    try:
+                        new_details = json.loads(r.details) if isinstance(r.details, str) else r.details
+                        cur_details = json.loads(existing.details) if isinstance(existing.details, str) else (existing.details or [])
+                        cur_details.extend(new_details)
+                        existing.details = json.dumps(cur_details)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+                continue
             mock = MockOrder()
             mock.id = r.id
-            mock.order_number = r.order_number
+            mock.order_number = on
             mock.order_date = r.order_date
             mock.details = r.details
             mock.merchant_sku = r.merchant_sku
@@ -147,6 +168,7 @@ def get_order_list():
             mock.shipping_barcode = getattr(r, 'shipping_barcode', '')
             mock.agreed_delivery_date = getattr(r, 'agreed_delivery_date', None)
             mock.estimated_delivery_end = getattr(r, 'estimated_delivery_end', None)
+            seen_orders[on] = mock
             orders.append(mock)
 
         process_order_details(orders)
@@ -233,11 +255,38 @@ def get_filtered_orders(status):
 
         orders_query = model_cls.query
         if search_query:
-            orders_query = orders_query.filter(model_cls.order_number.ilike(f"%{search_query.strip()}%"))
+            sq = search_query.strip()
+            orders_query = orders_query.filter(
+                or_(
+                    model_cls.order_number.ilike(f"%{sq}%"),
+                    model_cls.customer_name.ilike(f"%{sq}%"),
+                    model_cls.customer_surname.ilike(f"%{sq}%"),
+                    (model_cls.customer_name + ' ' + model_cls.customer_surname).ilike(f"%{sq}%")
+                )
+            )
 
         orders_query = orders_query.order_by(model_cls.order_date.desc())
         paginated_orders = orders_query.paginate(page=page, per_page=per_page, error_out=False)
-        orders = paginated_orders.items
+        raw_orders = paginated_orders.items
+
+        # Aynı sipariş numaralı satırları birleştir
+        seen = {}
+        orders = []
+        for order in raw_orders:
+            on = order.order_number
+            if on in seen:
+                existing = seen[on]
+                if order.details:
+                    try:
+                        new_d = json.loads(order.details) if isinstance(order.details, str) else order.details
+                        cur_d = json.loads(existing.details) if isinstance(existing.details, str) else (existing.details or [])
+                        cur_d.extend(new_d)
+                        existing.details = json.dumps(cur_d)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+                continue
+            seen[on] = order
+            orders.append(order)
 
         for order in orders:
             order.status = status_map[status].__name__.replace("Order", "")

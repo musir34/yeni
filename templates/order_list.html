@@ -144,7 +144,7 @@
                 </form>
                 <form method="GET" action="{{ url_for('order_list_service.order_list_all') }}">
                     <div class="input-group">
-                        <input type="text" class="form-control" name="search" placeholder="Sipariş No ile Ara" value="{{ request.args.get('search', '') }}">
+                        <input type="text" class="form-control" name="search" placeholder="Sipariş No veya Müşteri Adı" value="{{ request.args.get('search', '') }}">
                         <button class="btn btn-secondary" type="submit"><i class="fas fa-search"></i></button>
                     </div>
                 </form>
@@ -165,13 +165,14 @@
                     </form>
                 </div>
                 <div class="card-body">
+                    <p class="mb-1"><strong>{{ order.customer_name }} {{ order.customer_surname }}</strong></p>
                     <p class="mb-1"><small><strong>Tarih:</strong> {{ order.order_date.strftime('%d-%m-%Y %H:%M') if order.order_date else 'N/A' }}</small></p>
-                    <p class="mb-1"><small><strong>Kargo:</strong> <span class="cargo-provider {% if 'MNG Kargo' in order.cargo_provider_name %}orange{% endif %}">{{ order.cargo_provider_name }}</span></small></p>
-                    <p class="mb-2">
+                    <p class="mb-1">
                         {% set translated_status = {'Created': 'Yeni', 'Picking': 'İşleme Alındı', 'Shipped': 'Kargoda', 'Delivered': 'Teslim Edildi', 'Cancelled': 'İptal Edildi'}.get(order.status, order.status) %}
                         <strong>Durum:</strong>
                         <span class="badge {% if translated_status == 'Yeni' %}bg-warning{% elif translated_status == 'İşleme Alındı' %}bg-success{% elif translated_status == 'Kargoda' %}bg-danger{% elif translated_status == 'Teslim Edildi' %}bg-orange{% else %}bg-secondary{% endif %}">{{ translated_status }}</span>
                     </p>
+                    <p class="mb-1"><small><strong>Kargo:</strong> <span class="cargo-provider {% if order.cargo_provider_name and 'MNG Kargo' in order.cargo_provider_name %}orange{% endif %}">{{ order.cargo_provider_name or '-' }}</span></small></p>
                     {% if translated_status in ['Yeni','İşleme Alındı'] %}
                         <p class="mb-3"><strong>Kalan Süre:</strong> <span class="remaining-time red" data-end-time="{{ order.agreed_delivery_date or order.estimated_delivery_end }}">{{ order.remaining_time }}</span></p>
                     {% endif %}

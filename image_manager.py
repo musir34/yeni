@@ -48,15 +48,72 @@ def optimize_image(image_path, max_width=800, max_height=600, quality=85):
 
 @image_manager_bp.route('/image_manager')
 def image_manager():
-    """Görsel yönetim ana sayfası"""
-    # Mevcut görselleri listele
+    """Görsel yönetim ana sayfası - sayfalama, barkod arama, görselsiz ürün filtresi"""
+    from models import Product
+
     images_folder = os.path.join('static', 'images')
+    search_query = request.args.get('q', '').strip()
+    filter_type = request.args.get('filter', '')  # 'no_image' = görseli olmayan ürünler
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+
+    # --- Görseli olmayan ürünler filtresi ---
+    if filter_type == 'no_image':
+        # Mevcut görsel dosya adlarını topla (uzantısız)
+        image_names = set()
+        if os.path.exists(images_folder):
+            for fn in os.listdir(images_folder):
+                if fn.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+                    image_names.add(fn.rsplit('.', 1)[0].lower())
+
+        # Tüm ürün barkodlarını çek
+        products = Product.query.with_entities(
+            Product.barcode, Product.title, Product.color, Product.product_main_id
+        ).all()
+
+        no_image_products = []
+        for p in products:
+            barcode = (p.barcode or '').strip()
+            if not barcode:
+                continue
+            # Barkod ile eşleşen görsel var mı kontrol et
+            has_image = barcode.lower() in image_names
+            if not has_image:
+                # model_renk formatında da bak
+                model = (p.product_main_id or barcode).strip()
+                color = (p.color or '').strip().lower()
+                combo = f"{model}_{color}".lower()
+                has_image = combo in image_names
+            if not has_image:
+                if search_query and search_query.lower() not in barcode.lower() and search_query.lower() not in (p.title or '').lower():
+                    continue
+                no_image_products.append({
+                    'barcode': barcode,
+                    'title': p.title or '',
+                    'color': p.color or '',
+                    'model': p.product_main_id or '',
+                })
+
+        total = len(no_image_products)
+        total_pages = max(1, (total + per_page - 1) // per_page)
+        page = min(page, total_pages)
+        start = (page - 1) * per_page
+        paged_products = no_image_products[start:start + per_page]
+
+        return render_template('image_manager.html',
+                               existing_images=[],
+                               no_image_products=paged_products,
+                               filter_type='no_image',
+                               search_query=search_query,
+                               page=page,
+                               total_pages=total_pages,
+                               total_images=total)
+
+    # --- Normal görsel listesi ---
     existing_images = []
-    
     if os.path.exists(images_folder):
         for filename in os.listdir(images_folder):
             if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
-                # Dosya adından model ve renk bilgisini çıkarmaya çalış
                 name_parts = filename.rsplit('.', 1)[0].split('_')
                 if len(name_parts) >= 2:
                     model = '_'.join(name_parts[:-1])
@@ -64,20 +121,38 @@ def image_manager():
                 else:
                     model = filename.rsplit('.', 1)[0]
                     color = 'Bilinmiyor'
-                
+
+                # Barkod araması filtresi
+                if search_query:
+                    q_lower = search_query.lower()
+                    if q_lower not in filename.lower() and q_lower not in model.lower() and q_lower not in color.lower():
+                        continue
+
                 file_size = os.path.getsize(os.path.join(images_folder, filename))
                 existing_images.append({
                     'filename': filename,
                     'model': model,
                     'color': color,
                     'path': f'images/{filename}',
-                    'size': round(file_size / 1024, 1)  # KB cinsinden
+                    'size': round(file_size / 1024, 1)
                 })
-    
-    # Model ve renge göre sırala
+
     existing_images.sort(key=lambda x: (x['model'], x['color']))
-    
-    return render_template('image_manager.html', existing_images=existing_images)
+
+    total = len(existing_images)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    start = (page - 1) * per_page
+    paged_images = existing_images[start:start + per_page]
+
+    return render_template('image_manager.html',
+                           existing_images=paged_images,
+                           no_image_products=[],
+                           filter_type='',
+                           search_query=search_query,
+                           page=page,
+                           total_pages=total_pages,
+                           total_images=total)
 
 @image_manager_bp.route('/api/upload_product_image', methods=['POST'])
 def upload_product_image():
