@@ -7,8 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <!-- JsBarcode - Code128 barkod çizimi için -->
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
     <style>
         :root {
             --color-primary: #B76E79;
@@ -22,82 +20,34 @@
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
             --shadow-md: 0 5px 15px rgba(0,0,0,0.08);
             --transition: all 0.25s ease-in-out;
-            --font-family-base: 'Inter', sans-serif;
         }
-        body { font-family: var(--font-family-base); background-color: var(--color-bg); color: var(--color-text); }
+        body { font-family: 'Inter', sans-serif; background-color: var(--color-bg); color: var(--color-text); }
         .container { max-width: 960px; padding: 1.5rem; }
+
         .page-header { background: var(--color-white); padding: 1rem 1.5rem; border-radius: var(--border-radius); box-shadow: var(--shadow-sm); margin-bottom: 1.5rem; }
         .btn { border-radius: var(--border-radius); font-weight: 600; transition: var(--transition); border: none; padding: 0.55rem 1.1rem; }
         .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-        .btn-primary { background-color: var(--color-primary); color: #fff; }
-        .btn-primary:hover { background-color: var(--color-primary-dark); color: #fff; }
-        .btn-secondary { background-color: var(--color-secondary); color: #fff; }
-        .btn-success { background-color: #28a745; color: #fff; }
-        .btn-info { background-color: #0dcaf0; color: #000; }
-        .btn-warning { background-color: #ffc107; color: #000; }
-        .btn-danger { background-color: #dc3545; color: #fff; }
-        .btn-outline-secondary { border: 2px solid var(--color-secondary); color: var(--color-secondary); background: transparent; }
-        .btn-outline-secondary:hover { background: var(--color-secondary); color: #fff; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-primary   { background: var(--color-primary); color: #fff; }
+        .btn-primary:hover { background: var(--color-primary-dark); color: #fff; }
+        .btn-secondary { background: var(--color-secondary); color: #fff; }
+        .btn-success   { background: #28a745; color: #fff; }
+        .btn-warning   { background: #ffc107; color: #000; }
 
-        /* ── Bluetooth Panel ── */
-        #bt-panel {
-            background: var(--color-white);
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-sm);
-            padding: 1rem 1.4rem;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-        #bt-status {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-        .bt-dot {
-            width: 10px; height: 10px;
-            border-radius: 50%;
-            background: #aaa;
-            transition: background 0.3s;
-        }
-        .bt-dot.connected { background: #28a745; box-shadow: 0 0 6px #28a745; }
-        .bt-dot.connecting { background: #ffc107; animation: blink 0.8s infinite; }
-        .bt-dot.error { background: #dc3545; }
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
-
-        #progress-bar-wrap { display: none; width: 100%; margin-top: 0.5rem; }
-        #progress-bar-wrap .progress { height: 8px; border-radius: 4px; }
-
-        /* ── Shelf Blocks ── */
-        .shelf-block { background: var(--color-white); border-radius: var(--border-radius); box-shadow: var(--shadow-sm); margin-bottom: 1.25rem; overflow: hidden; transition: var(--transition); }
+        .shelf-block { background: var(--color-white); border-radius: var(--border-radius); box-shadow: var(--shadow-sm); margin-bottom: 1.25rem; overflow: hidden; }
         .shelf-block:hover { box-shadow: var(--shadow-md); }
         .shelf-header { background: var(--color-primary); color: #fff; padding: 0.65rem 1.2rem; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.6rem; }
-        .shelf-badge { background: rgba(255,255,255,0.25); border-radius: 20px; padding: 0.1rem 0.65rem; font-size: 0.82rem; }
+        .shelf-badge { background: rgba(255,255,255,.25); border-radius: 20px; padding: .1rem .65rem; font-size: .82rem; }
 
-        .order-row { display: flex; align-items: center; padding: 0.65rem 1.2rem; border-bottom: 1px solid var(--color-border); gap: 0.8rem; }
+        .order-row { display: flex; align-items: center; padding: .65rem 1.2rem; border-bottom: 1px solid var(--color-border); gap: .8rem; }
         .order-row:last-child { border-bottom: none; }
         .order-row:hover { background: #fdf5f6; }
-        .order-row.printed { background: #f0fff4; }
-        .order-row.printing { background: #fff9e6; }
 
-        .order-no { font-size: 0.8rem; color: #888; min-width: 125px; white-space: nowrap; }
+        .order-no { font-size: .8rem; color: #888; min-width: 125px; white-space: nowrap; }
         .product-info { font-weight: 700; font-size: 1rem; color: var(--color-secondary); flex: 1; }
-        .product-info .color-size { font-weight: 400; font-size: 0.88rem; color: #666; }
-
-        .btn-print-one { padding: 0.3rem 0.75rem; font-size: 0.82rem; border-radius: 0.4rem; white-space: nowrap; }
-        .printed-check { color: #28a745; font-size: 1rem; display: none; }
-        .order-row.printed .printed-check { display: inline; }
+        .product-info .cs { font-weight: 400; font-size: .88rem; color: #666; }
 
         .empty-state { text-align: center; padding: 4rem 2rem; color: #aaa; }
         .empty-state i { font-size: 3rem; margin-bottom: 1rem; }
-
-        /* Gizli canvas havuzu */
-        #canvas-pool { position: absolute; left: -9999px; top: -9999px; }
 
         @media print {
             .no-print { display: none !important; }
@@ -110,7 +60,7 @@
 <body>
 <div class="container">
 
-    <!-- ── Sayfa Başlığı ── -->
+    <!-- ── Başlık ── -->
     <div class="page-header d-flex justify-content-between align-items-center no-print flex-wrap gap-2">
         <div class="d-flex align-items-center gap-3">
             <img src="/static/logo/gullu.png" alt="Güllü Logo" style="height:40px;">
@@ -123,39 +73,13 @@
             <a href="{{ url_for('new_orders_service.prepare_new_orders_excel') }}" class="btn btn-success">
                 <i class="fas fa-file-excel"></i> Excel İndir
             </a>
-            <button onclick="window.print()" class="btn btn-secondary">
-                <i class="fas fa-print"></i> Yazdır
-            </button>
+            <a href="{{ url_for('new_orders_service.prepare_new_orders_labels_print') }}"
+               target="_blank" class="btn btn-warning">
+                <i class="fas fa-tags"></i> Etiket Yazdır (A4)
+            </a>
             <a href="{{ url_for('order_list_service.order_list_all') }}" class="btn btn-primary">
                 <i class="fas fa-arrow-left"></i> Geri
             </a>
-        </div>
-    </div>
-
-    <!-- ── Bluetooth Panel ── -->
-    <div id="bt-panel" class="no-print">
-        <div id="bt-status">
-            <span class="bt-dot" id="bt-dot"></span>
-            <span id="bt-status-text">Bağlı Değil</span>
-        </div>
-        <button id="btn-connect" class="btn btn-info" onclick="btConnect()">
-            <i class="fab fa-bluetooth-b"></i> NIIMBOT D11 Bağla
-        </button>
-        <button id="btn-disconnect" class="btn btn-outline-secondary" onclick="btDisconnect()" style="display:none;">
-            <i class="fas fa-times-circle"></i> Bağlantıyı Kes
-        </button>
-        <button id="btn-print-all" class="btn btn-warning" onclick="printAll()" disabled>
-            <i class="fas fa-print"></i> Tümünü Sırayla Yazdır
-            <span id="print-all-count" class="ms-1"></span>
-        </button>
-        <div id="progress-bar-wrap" class="w-100">
-            <div class="d-flex justify-content-between mb-1">
-                <small id="progress-text" class="text-muted">0 / 0</small>
-                <small id="progress-pct" class="text-muted">0%</small>
-            </div>
-            <div class="progress">
-                <div id="progress-bar" class="progress-bar bg-success" role="progressbar" style="width:0%"></div>
-            </div>
         </div>
     </div>
 
@@ -167,7 +91,6 @@
         </span>
     </div>
 
-    <!-- ── Sipariş Listesi ── -->
     {% for raf_kodu, items in sorted_shelves %}
     <div class="shelf-block">
         <div class="shelf-header">
@@ -176,26 +99,15 @@
             <span class="shelf-badge">{{ items | length }} sipariş</span>
         </div>
         {% for item in items %}
-        <div class="order-row" id="row-{{ item.order_number }}"
-             data-order="{{ item.order_number }}"
-             data-model="{{ item.model_code }}"
-             data-color="{{ item.color }}"
-             data-size="{{ item.size }}">
+        <div class="order-row">
             <div class="order-no">
                 <i class="fas fa-receipt" style="color:var(--color-primary);margin-right:4px;"></i>
                 {{ item.order_number }}
             </div>
             <div class="product-info">
                 {{ item.model_code }}
-                <span class="color-size"> — {{ item.color }} / {{ item.size }}</span>
+                <span class="cs"> — {{ item.color }} / {{ item.size }}</span>
             </div>
-            <span class="printed-check no-print" title="Yazdırıldı"><i class="fas fa-check-circle"></i></span>
-            <button class="btn btn-primary btn-print-one no-print"
-                    id="btn-one-{{ item.order_number }}"
-                    onclick="printOne('{{ item.order_number }}','{{ item.model_code }}','{{ item.color }}','{{ item.size }}')"
-                    disabled>
-                <i class="fas fa-bluetooth-b"></i> Yazdır
-            </button>
         </div>
         {% endfor %}
     </div>
@@ -210,287 +122,6 @@
     {% endif %}
 
 </div>
-
-<!-- Gizli canvas (etiket çizim alanı) -->
-<div id="canvas-pool">
-    <canvas id="label-canvas"></canvas>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-<script type="module">
-// ─────────────────────────────────────────────────────────────────────────────
-//  NiimBlueLib + Web Bluetooth Entegrasyonu
-//  Kütüphane: @mmote/niimbluelib (ESM)
-// ─────────────────────────────────────────────────────────────────────────────
-import { NiimbotBluetoothClient, ImageEncoder }
-    from 'https://esm.sh/@mmote/niimbluelib';
-
-// ── Durum ──
-let client      = null;
-let isConnected = false;
-let isPrinting  = false;
-
-// ── DOM Referansları ──
-const dot          = document.getElementById('bt-dot');
-const statusText   = document.getElementById('bt-status-text');
-const btnConnect   = document.getElementById('btn-connect');
-const btnDisconnect= document.getElementById('btn-disconnect');
-const btnPrintAll  = document.getElementById('btn-print-all');
-const canvas       = document.getElementById('label-canvas');
-const ctx          = canvas.getContext('2d');
-
-// Etiket boyutu: D11 40×12 mm @ 203 DPI (8 dots/mm)
-// Genişlik: 40mm × 8 = 320px  |  Yükseklik: 12mm × 8 = 96px
-// NOT: D11'in baskı yönüne göre (dikey etiket için) boyutları değiştir
-const LABEL_W = 320;
-const LABEL_H = 96;
-
-// ── Global erişim için window'a bağla (onclick handler'ları için) ──
-window.btConnect    = btConnect;
-window.btDisconnect = btDisconnect;
-window.printOne     = printOne;
-window.printAll     = printAll;
-
-// ── Bağlantı durumu UI güncellemesi ──
-function setStatus(state, text) {
-    dot.className = 'bt-dot ' + state;
-    statusText.textContent = text;
-}
-
-function onConnected() {
-    isConnected = true;
-    setStatus('connected', 'Bağlandı — NIIMBOT D11');
-    btnConnect.style.display    = 'none';
-    btnDisconnect.style.display = '';
-    btnPrintAll.disabled        = false;
-    document.querySelectorAll('.btn-print-one').forEach(b => b.disabled = false);
-    updatePrintAllCount();
-}
-
-function onDisconnected() {
-    isConnected = false;
-    client = null;
-    setStatus('', 'Bağlı Değil');
-    btnConnect.style.display    = '';
-    btnDisconnect.style.display = 'none';
-    btnPrintAll.disabled        = true;
-    document.querySelectorAll('.btn-print-one').forEach(b => b.disabled = true);
-}
-
-function updatePrintAllCount() {
-    const total = document.querySelectorAll('.order-row[data-order]').length;
-    const printed = document.querySelectorAll('.order-row.printed').length;
-    const remaining = total - printed;
-    document.getElementById('print-all-count').textContent =
-        remaining > 0 ? `(${remaining} kalan)` : '(hepsi yazdırıldı)';
-}
-
-// ── Web Bluetooth Bağlantısı ──
-async function btConnect() {
-    if (!navigator.bluetooth) {
-        alert('Bu tarayıcı Web Bluetooth desteklemiyor.\nLütfen Chrome veya Edge kullanın.');
-        return;
-    }
-    setStatus('connecting', 'Bağlanıyor…');
-    btnConnect.disabled = true;
-    try {
-        client = new NiimbotBluetoothClient();
-        client.on('disconnect', () => {
-            onDisconnected();
-        });
-        await client.connect();
-        onConnected();
-    } catch (err) {
-        setStatus('error', 'Bağlantı başarısız');
-        btnConnect.disabled = false;
-        if (err.name !== 'NotFoundError') {   // kullanıcı iptal etti — sessiz geç
-            console.error('[BT]', err);
-            alert('Bağlantı hatası: ' + err.message);
-        }
-    }
-}
-
-async function btDisconnect() {
-    if (client) {
-        try { await client.disconnect(); } catch (_) {}
-    }
-    onDisconnected();
-}
-
-// ── Etiket Canvas Çizimi ──
-// Etiket içeriği:
-//   Üst %65: Code128 barkod (sipariş numarası)
-//   Alt %35: Model Kodu — Renk / Beden  (küçük metin)
-function drawLabel(orderNumber, modelCode, color, size) {
-    canvas.width  = LABEL_W;
-    canvas.height = LABEL_H;
-
-    // Beyaz arkaplan
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, LABEL_W, LABEL_H);
-
-    // --- Barkod ---
-    const barcodeH = Math.floor(LABEL_H * 0.60);
-    try {
-        JsBarcode(canvas, String(orderNumber), {
-            format:      'CODE128',
-            width:       1,
-            height:      barcodeH - 4,
-            displayValue: false,
-            margin:      2,
-            background:  '#ffffff',
-            lineColor:   '#000000',
-        });
-    } catch (e) {
-        // Barkod çizilemezse sipariş no'yu düz yaz
-        ctx.fillStyle = '#000';
-        ctx.font = 'bold 14px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText(String(orderNumber), LABEL_W / 2, barcodeH / 2);
-    }
-
-    // --- Alt metin: Model — Renk / Beden ---
-    const textY = barcodeH + 4;
-    ctx.fillStyle = '#000000';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-
-    // Sipariş No (çok küçük, üst kısma)
-    ctx.font = '9px monospace';
-    ctx.fillText(String(orderNumber), LABEL_W / 2, textY);
-
-    // Model — Renk / Beden
-    ctx.font = 'bold 11px Inter, sans-serif';
-    const infoText = `${modelCode}  ${color} / ${size}`;
-    ctx.fillText(infoText, LABEL_W / 2, textY + 12);
-}
-
-// ── Tek Etiket Yazdır ──
-async function printOne(orderNumber, modelCode, color, size) {
-    if (!isConnected || isPrinting) return;
-
-    const row    = document.getElementById(`row-${orderNumber}`);
-    const btn    = document.getElementById(`btn-one-${orderNumber}`);
-    const origHTML = btn ? btn.innerHTML : '';
-
-    isPrinting = true;
-    if (row) row.classList.add('printing');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
-
-    try {
-        drawLabel(orderNumber, modelCode, color, size);
-        const encoded = ImageEncoder.encodeCanvas(canvas);
-
-        await client.abstraction.printLabel({
-            quantity:  1,
-            labelType: 1,
-            density:   3,
-            width:     encoded.width,
-            height:    encoded.height,
-            data:      encoded.data,
-        });
-
-        if (row) {
-            row.classList.remove('printing');
-            row.classList.add('printed');
-        }
-        updatePrintAllCount();
-    } catch (err) {
-        console.error('[PRINT]', err);
-        alert('Yazdırma hatası: ' + err.message);
-        if (row) row.classList.remove('printing');
-    } finally {
-        isPrinting = false;
-        if (btn) {
-            btn.disabled  = false;
-            btn.innerHTML = origHTML;
-        }
-    }
-}
-
-// ── Tümünü Sırayla Yazdır ──
-async function printAll() {
-    if (!isConnected || isPrinting) return;
-
-    const rows = Array.from(document.querySelectorAll('.order-row[data-order]:not(.printed)'));
-    if (rows.length === 0) {
-        alert('Yazdırılacak sipariş kalmadı.');
-        return;
-    }
-
-    isPrinting = true;
-    btnPrintAll.disabled = true;
-    document.querySelectorAll('.btn-print-one').forEach(b => b.disabled = true);
-
-    const wrap = document.getElementById('progress-bar-wrap');
-    const bar  = document.getElementById('progress-bar');
-    const pTxt = document.getElementById('progress-text');
-    const pPct = document.getElementById('progress-pct');
-    wrap.style.display = 'block';
-
-    let done = 0;
-    const total = rows.length;
-
-    for (const row of rows) {
-        const orderNo   = row.dataset.order;
-        const modelCode = row.dataset.model;
-        const color     = row.dataset.color;
-        const size      = row.dataset.size;
-        const btn       = document.getElementById(`btn-one-${orderNo}`);
-
-        row.classList.add('printing');
-        if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
-        try {
-            drawLabel(orderNo, modelCode, color, size);
-            const encoded = ImageEncoder.encodeCanvas(canvas);
-
-            await client.abstraction.printLabel({
-                quantity:  1,
-                labelType: 1,
-                density:   3,
-                width:     encoded.width,
-                height:    encoded.height,
-                data:      encoded.data,
-            });
-
-            row.classList.remove('printing');
-            row.classList.add('printed');
-            done++;
-
-            const pct = Math.round((done / total) * 100);
-            bar.style.width   = pct + '%';
-            pTxt.textContent  = `${done} / ${total}`;
-            pPct.textContent  = pct + '%';
-
-        } catch (err) {
-            console.error(`[PRINT] ${orderNo}:`, err);
-            row.classList.remove('printing');
-            if (btn) btn.innerHTML = '<i class="fas fa-bluetooth-b"></i> Yazdır';
-            const devam = confirm(`"${orderNo}" yazdırılırken hata:\n${err.message}\n\nDevam edilsin mi?`);
-            if (!devam) break;
-        }
-
-        // Yazıcıya nefes aldır (NIIMBOT ardışık baskılar arasında kısa bekleme ister)
-        if (done < total) await sleep(800);
-    }
-
-    isPrinting = false;
-    btnPrintAll.disabled = false;
-    document.querySelectorAll('.btn-print-one').forEach(b => b.disabled = false);
-    updatePrintAllCount();
-
-    if (done === total) {
-        pTxt.textContent = `Tümü tamamlandı (${done} etiket)`;
-        bar.classList.replace('bg-success', 'bg-primary');
-    }
-}
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-// İlk yükleme: count güncelle
-updatePrintAllCount();
-</script>
 </body>
 </html>

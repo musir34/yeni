@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Sipariş Etiketleri</title>
+  <style>
+    @page { size: A4; margin: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: white; font-family: Arial, Helvetica, sans-serif; }
+
+    .page {
+      width: 210mm;
+      height: 297mm;
+      padding: 15mm 8mm;
+      display: grid;
+      grid-template-columns: repeat(3, calc((100% - 4mm) / 3));
+      grid-template-rows: repeat(7, calc((100% - 6mm) / 7));
+      column-gap: 2mm;
+      row-gap: 1mm;
+    }
+    .page:not(.last-page) { page-break-after: always; }
+
+    /* ── Etiket kapsayıcı ── */
+    .label {
+      display: flex;
+      flex-direction: column;
+      border-radius: 1.2mm;
+      overflow: hidden;
+      border: 0.25mm solid #e0c8cc;
+      background: #fff;
+    }
+    .empty-label { border: none; background: none; }
+
+    /* ── Üst başlık: raf kodu + logo ── */
+    .label-header {
+      background: #B76E79;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.2mm 2mm;
+      flex-shrink: 0;
+    }
+    .label-header .raf {
+      color: #fff;
+      font-size: 9.5pt;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .label-header img {
+      height: 5.5mm;
+      width: auto;
+      flex-shrink: 0;
+      filter: brightness(0) invert(1);
+      opacity: 0.9;
+    }
+
+    /* ── Orta: ürün bilgisi tek satır ── */
+    .label-body {
+      display: flex;
+      align-items: center;
+      padding: 0 2mm;
+      background: #fff;
+      flex-shrink: 0;
+      height: 7mm;
+      gap: 1.5mm;
+    }
+    .label-body .model {
+      font-size: 8pt;
+      font-weight: 900;
+      color: #1a1a1a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 1;
+    }
+    .label-body .sep {
+      color: #ccc;
+      font-size: 8pt;
+      flex-shrink: 0;
+    }
+    .label-body .cs {
+      font-size: 8pt;
+      font-weight: 700;
+      color: #B76E79;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ── Alt: barkod tam genişlik ── */
+    .label-footer {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      background: #fff;
+      padding: 0.5mm 1mm 0.8mm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-top: 0.2mm solid #f0e0e3;
+    }
+    .label-footer img {
+      width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+{% set labels_per_page = 21 %}
+{% set total = labels | length %}
+{% set total_pages = ((total - 1) // labels_per_page + 1) if total > 0 else 1 %}
+
+{% for page_num in range(total_pages) %}
+  <div class="page {% if page_num == total_pages - 1 %}last-page{% endif %}">
+    {% for slot in range(labels_per_page) %}
+      {% set idx = page_num * labels_per_page + slot %}
+      {% if idx < total %}
+        {% set l = labels[idx] %}
+        <div class="label">
+
+          <div class="label-header">
+            <span class="raf">{{ l.raf_kodu }}</span>
+            <img src="/static/logo/gullu_mini_logo.png" alt="Güllü">
+          </div>
+
+          <div class="label-body">
+            <span class="model">{{ l.model_code }}</span>
+            <span class="sep">|</span>
+            <span class="cs">{{ l.color }} / {{ l.size }}</span>
+          </div>
+
+          <div class="label-footer">
+            <img src="{{ l.barcode_img }}" alt="{{ l.order_number }}">
+          </div>
+
+        </div>
+      {% else %}
+        <div class="label empty-label"></div>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endfor %}
+
+<script>
+  window.onload = function() { setTimeout(function() { window.print(); }, 400); };
+</script>
+</body>
+</html>

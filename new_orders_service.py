@@ -176,3 +176,35 @@ def prepare_new_orders_excel():
     except Exception as e:
         traceback.print_exc()
         return f"Excel oluşturulurken hata oluştu: {e}", 500
+
+
+# ─────────────────────────────────────────────────────────────
+#  A4 ETİKET YAZDIR
+# ─────────────────────────────────────────────────────────────
+
+@new_orders_service_bp.route('/prepare-new-orders/labels-print', methods=['GET'])
+def prepare_new_orders_labels_print():
+    """
+    Yeni siparişler için A4 etiket baskı sayfası.
+    Her etiket: sipariş no barkodu + raf kodu.
+    """
+    try:
+        from barcode_utils import generate_barcode_data_uri
+        sorted_shelves = _build_shelf_groups()
+
+        labels = []
+        for raf_kodu, items in sorted_shelves:
+            for item in items:
+                labels.append({
+                    'order_number': item['order_number'],
+                    'raf_kodu': raf_kodu,
+                    'model_code': item['model_code'],
+                    'color': item['color'],
+                    'size': item['size'],
+                    'barcode_img': generate_barcode_data_uri(item['order_number'], show_text=False),
+                })
+
+        return render_template('order_labels_print.html', labels=labels)
+    except Exception as e:
+        traceback.print_exc()
+        return f"Hata: {e}", 500

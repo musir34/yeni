@@ -3,7 +3,7 @@ import os
 import json
 import traceback
 from datetime import datetime
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, request
 from sqlalchemy import desc
 from zoneinfo import ZoneInfo
 
@@ -90,20 +90,34 @@ def get_exchange_warnings():
 @siparis_hazirla_bp.route("/siparis-hazirla", endpoint="index")
 @siparis_hazirla_bp.route("/hazirla")
 def index():
-    data = get_home()
+    order_number = request.args.get("order_number", "").strip()
+    manuel       = request.args.get("manuel", "0") == "1"
+    if manuel and not order_number:
+        # Manuel mod — sipariş yok, boş ekran
+        data = get_home(order_number="__empty__")
+    else:
+        data = get_home(order_number=order_number or None)
+    data["manuel_mod"] = manuel
     return render_template("siparis_hazirla.html", **data)
 
 
-def get_home():
+def get_home(order_number=None):
     """
-    En eski 'Created' sipariş ve ürünlerini hazırla.
-    Ayrıca arşiv ve değişim (İşleme Alındı) uyarılarını template'e gönderir.
+    order_number verilirse o siparişi yükler (manuel mod).
+    Verilmezse en eski 'Created' siparişi yükler (sıralı mod).
     """
     try:
-        oldest_order = (OrderCreated.query
-                      .filter(OrderCreated.status == 'Created')
-                      .order_by(OrderCreated.order_date)
-                      .first())
+        if order_number == "__empty__":
+            oldest_order = None
+        elif order_number:
+            oldest_order = (OrderCreated.query
+                          .filter(OrderCreated.order_number == order_number)
+                          .first())
+        else:
+            oldest_order = (OrderCreated.query
+                          .filter(OrderCreated.status == 'Created')
+                          .order_by(OrderCreated.order_date)
+                          .first())
         is_from_woo_table = False
 
         # Hava durumu bilgisi

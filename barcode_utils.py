@@ -61,17 +61,18 @@ def _draw_text_below(img, text, font_name="arial.ttf", font_size=16, extra_h=28)
     draw.text((x, y), text, fill="black", font=font)
     return canvas
 
-def generate_barcode_data_uri(value: str) -> str:
-    """Dosyaya KAYDETMEDEN barkodu base64 (data URI) olarak döndürür."""
+def generate_barcode_data_uri(value: str, show_text: bool = True) -> str:
+    """Dosyaya KAYDETMEDEN barkodu base64 (data URI) olarak döndürür.
+    show_text=False ise barkodun altına metin eklenmez."""
     writer_opts = {
-        "write_text": False,    # getsize hatasını by-pass
+        "write_text": False,
         "module_width": 0.2,
         "module_height": 15.0,
         "quiet_zone": 4.0,
     }
     bc = get_barcode("code128", value, writer=ImageWriter())
-    pil_img = bc.render(writer_opts)          # PIL.Image
-    final_img = _draw_text_below(pil_img, value)
+    pil_img = bc.render(writer_opts)
+    final_img = _draw_text_below(pil_img, value) if show_text else pil_img
 
     buf = io.BytesIO()
     final_img.save(buf, format="PNG")
