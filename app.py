@@ -287,6 +287,11 @@ def pull_orders_job():
     """Siparişleri Trendyol'dan çeker (Created rezervleri sistemde güncellenir)."""
     with app.app_context():
         try:
+            from models import PlatformConfig
+            cfg = PlatformConfig.query.filter_by(platform='order_pull').first()
+            if cfg and not cfg.is_active:
+                logger.info("[ORDER-PULL] Otomatik sipariş çekme devre dışı, atlanıyor.")
+                return
             from order_service import fetch_trendyol_orders_async
             asyncio.run(fetch_trendyol_orders_async())
         except Exception as e:

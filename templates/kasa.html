@@ -580,112 +580,219 @@
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body">
-                    <!-- Güncelleme Notları -->
-                    <div class="alert alert-success">
-                        <h5><i class="fas fa-code-branch"></i> Son Güncellemeler (Aralık 2025)</h5>
+                <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+
+                    <!-- GENEL BAKIŞ -->
+                    <div class="alert alert-info mb-3">
+                        <strong><i class="fas fa-info-circle"></i> Kasa Sistemi Nedir?</strong><br>
+                        İşletmenin tüm nakit gelir ve giderlerini takip eden, ödeme durumlarını yöneten ve Ana Kasa (banka/kasa) bakiyesiyle entegre çalışan finansal kayıt sistemidir.
                     </div>
-                    
+
+                    <!-- ANA KAVRAMLAR -->
+                    <h5 class="border-bottom pb-1 mb-3"><i class="fas fa-layer-group"></i> Temel Kavramlar</h5>
+
                     <div class="card mb-3">
-                        <div class="card-header bg-primary text-white">
-                            <strong>v2.5 - Excel ile Gelir Yükleme</strong> <span class="badge badge-light">10.12.2025</span>
-                        </div>
+                        <div class="card-header bg-success text-white"><i class="fas fa-arrow-up"></i> Gelir Kaydı</div>
                         <div class="card-body">
+                            <p class="mb-2">İşletmeye giren para akışlarıdır (satış gelirleri, tahsilatlar vb.).</p>
                             <ul class="mb-0">
-                                <li><strong>Excel Import:</strong> İşbankası hesap özeti Excel formatında toplu gelir yükleme</li>
-                                <li><strong>Otomatik Parse:</strong> Tarih (A sütunu), Tutar (D sütunu), Açıklama (I sütunu) otomatik algılanır</li>
-                                <li><strong>Önizleme:</strong> Yüklemeden önce verileri kontrol edebilme</li>
-                                <li><strong>Tarih Formatları:</strong> DD/MM/YYYY-HH:MM:SS ve diğer formatlar desteklenir</li>
+                                <li>Yeni gelir kaydı eklendiğinde <strong>Ana Kasa bakiyesinden otomatik düşülür</strong> — para fiziksel kasaya aktarılmış sayılır.</li>
+                                <li>Gelirin <strong>ödeme durumu</strong> ayrıca takip edilir: Ödenmedi / Kısmi Ödendi / Tamamlandı.</li>
+                                <li>Ödeme yapıldığında <strong>Ödeme Kaydı</strong> oluşturulur, tutar "Ödenen Gelir" toplamına eklenir.</li>
                             </ul>
                         </div>
                     </div>
-                    
+
                     <div class="card mb-3">
-                        <div class="card-header bg-success text-white">
-                            <strong>v2.4 - Kısmi Ödeme Bekleyen Hesaplaması</strong> <span class="badge badge-light">10.12.2025</span>
-                        </div>
+                        <div class="card-header bg-danger text-white"><i class="fas fa-arrow-down"></i> Gider Kaydı</div>
                         <div class="card-body">
+                            <p class="mb-2">İşletmeden çıkan para akışlarıdır (kira, tedarikçi ödemeleri, genel giderler vb.).</p>
                             <ul class="mb-0">
-                                <li><strong>Düzeltme:</strong> Kısmi ödenen kayıtların kalan tutarı artık "Bekleyen Gelir/Gider"de gösteriliyor</li>
-                                <li><strong>Örnek:</strong> 10.000₺ gider, 3.000₺ ödendi → Bekleyen Gider: 7.000₺</li>
-                                <li><strong>ODENMEDI:</strong> Tam tutar bekleyen olarak sayılır</li>
-                                <li><strong>KISMI_ODENDI:</strong> (Toplam - Ödenen) = Kalan tutar bekleyen olarak sayılır</li>
+                                <li>Gider kaydı eklendiğinde Ana Kasa bakiyesi <strong>değişmez</strong> — sadece kayıt oluşturulur.</li>
+                                <li>Ödeme durumu aynı şekilde takip edilir: Ödenmedi / Kısmi Ödendi / Tamamlandı.</li>
+                                <li>Fiş/fatura fotoğrafı yüklenebilir.</li>
                             </ul>
                         </div>
                     </div>
-                    
+
                     <div class="card mb-3">
-                        <div class="card-header bg-warning text-dark">
-                            <strong>v2.3 - Toplam Hesaplama İyileştirmesi</strong> <span class="badge badge-dark">10.12.2025</span>
-                        </div>
+                        <div class="card-header bg-primary text-white"><i class="fas fa-university"></i> Ana Kasa</div>
                         <div class="card-body">
+                            <p class="mb-2">Banka hesabı veya ana kasa bakiyesini temsil eder.</p>
                             <ul class="mb-0">
-                                <li><strong>Tüm Zamanlar:</strong> Ay filtresi yoksa toplamlar tüm zamanlar için hesaplanır</li>
-                                <li><strong>Tutarlılık:</strong> Liste ve toplamlar artık aynı dönemi gösterir</li>
-                                <li><strong>Badge:</strong> Üstteki kartlarda hangi dönemin gösterildiği belirtilir</li>
+                                <li><strong>Bakiye artırma:</strong> Manuel ekleme veya İşbankası Excel import ile.</li>
+                                <li><strong>Bakiye azalma:</strong> Her yeni gelir kaydı oluşturulduğunda otomatik düşülür.</li>
+                                <li><strong>Kayıt Defteri:</strong> Tüm bakiye hareketlerini tarih sırasıyla gösterir, geçmiş işlemler düzenlenebilir/silinebilir — kalan tüm bakiyeler otomatik yeniden hesaplanır.</li>
                             </ul>
                         </div>
                     </div>
-                    
+
                     <div class="card mb-3">
-                        <div class="card-header bg-secondary text-white">
-                            <strong>v2.2 - Sayfalama & Performans</strong> <span class="badge badge-light">10.12.2025</span>
+                        <div class="card-header"><i class="fas fa-credit-card"></i> Ödeme Durumları</div>
+                        <div class="card-body">
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead class="thead-light"><tr><th>Durum</th><th>Anlamı</th><th>Bekleyen Tutara Etkisi</th></tr></thead>
+                                <tbody>
+                                    <tr><td><span class="badge badge-danger">Ödenmedi</span></td><td>Hiç ödeme yapılmamış</td><td>Tam tutar "Bekleyen"e eklenir</td></tr>
+                                    <tr><td><span class="badge badge-warning text-dark">Kısmi Ödendi</span></td><td>Bir kısmı ödendi</td><td>Kalan tutar (Toplam − Ödenen) "Bekleyen"e eklenir</td></tr>
+                                    <tr><td><span class="badge badge-success">Tamamlandı</span></td><td>Tamamen ödendi</td><td>Bekleyene eklenmez</td></tr>
+                                </tbody>
+                            </table>
                         </div>
+                    </div>
+
+                    <!-- ÖZET KARTLAR -->
+                    <h5 class="border-bottom pb-1 mb-3 mt-4"><i class="fas fa-chart-pie"></i> Üstteki Özet Kartlar</h5>
+
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead class="thead-light"><tr><th>Kart</th><th>Hesaplama Yöntemi</th></tr></thead>
+                                <tbody>
+                                    <tr><td><strong class="text-success">Toplam Gelir (Ödenen)</strong></td><td>Ödeme tablosundaki tüm gelir ödemelerinin toplamı — ödeme tarihine göre filtrelenir</td></tr>
+                                    <tr><td><strong class="text-success">Bekleyen Gelir</strong></td><td>Ödenmedi → tam tutar; Kısmi Ödendi → kalan tutar — kayıt tarihine göre filtrelenir</td></tr>
+                                    <tr><td><strong class="text-danger">Toplam Gider (Ödenen)</strong></td><td>Ödeme tablosundaki tüm gider ödemelerinin toplamı</td></tr>
+                                    <tr><td><strong class="text-danger">Bekleyen Gider</strong></td><td>Gelirle aynı mantık, giderler için</td></tr>
+                                    <tr><td><strong>Net Durum</strong></td><td>Ödenen Gelir − Ödenen Gider</td></tr>
+                                    <tr><td><strong>Net (Bekleyen Dahil)</strong></td><td>(Ödenen Gelir + Bekleyen Gelir) − (Ödenen Gider + Bekleyen Gider)</td></tr>
+                                </tbody>
+                            </table>
+                            <p class="text-muted small mt-2 mb-0"><i class="fas fa-info-circle"></i> Sayfanın üstündeki <strong>ayrı dönem filtresi</strong> sadece bu kartları etkiler, alttaki kayıt listesini etkilemez.</p>
+                        </div>
+                    </div>
+
+                    <!-- FİLTRELEME -->
+                    <h5 class="border-bottom pb-1 mb-3 mt-4"><i class="fas fa-filter"></i> Filtreleme Sistemi</h5>
+
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <p class="mb-2"><strong>İki ayrı filtre katmanı vardır:</strong></p>
+                            <ul class="mb-2">
+                                <li><strong>Dönem Filtresi (üstte):</strong> Sadece özet kartları (Gelir/Gider/Net toplamları) etkiler. Listeyi etkilemez.</li>
+                                <li><strong>Kayıt Filtresi (altta):</strong> Sadece kayıt tablosunu etkiler. Toplamları etkilemez.</li>
+                            </ul>
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead class="thead-light"><tr><th>Filtre</th><th>Neyi Etkiler</th><th>Açıklama</th></tr></thead>
+                                <tbody>
+                                    <tr><td>Ay/Yıl seçimi</td><td>Liste + Toplamlar</td><td>Seçili ayın tüm kayıtları tek sayfada gösterilir, sayfalama devre dışı kalır</td></tr>
+                                    <tr><td>Başlangıç/Bitiş tarihi</td><td>Sadece liste</td><td>Gün bazında aralık filtresi</td></tr>
+                                    <tr><td>Tip (Gelir/Gider)</td><td>Sadece liste</td><td>Toplamları etkilemez</td></tr>
+                                    <tr><td>Durum</td><td>Sadece liste</td><td>Ödenmedi / Kısmi / Tamamlandı</td></tr>
+                                    <tr><td>Arama</td><td>Sadece liste</td><td>Açıklama, kategori ve kullanıcı adında arar</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- YENİ KAYIT -->
+                    <h5 class="border-bottom pb-1 mb-3 mt-4"><i class="fas fa-plus-circle"></i> Yeni Kayıt Ekleme</h5>
+
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead class="thead-light"><tr><th>Alan</th><th>Zorunlu</th><th>Açıklama</th></tr></thead>
+                                <tbody>
+                                    <tr><td><strong>Tip</strong></td><td><span class="badge badge-danger">Evet</span></td><td>Gelir veya Gider</td></tr>
+                                    <tr><td><strong>Açıklama</strong></td><td><span class="badge badge-danger">Evet</span></td><td>İşlem açıklaması (maks. 255 karakter)</td></tr>
+                                    <tr><td><strong>Tutar</strong></td><td><span class="badge badge-danger">Evet</span></td><td>Pozitif sayı, 0'dan büyük olmalı</td></tr>
+                                    <tr><td><strong>Tarih</strong></td><td><span class="badge badge-danger">Evet</span></td><td>İşlem tarihi ve saati</td></tr>
+                                    <tr><td><strong>Durum</strong></td><td><span class="badge badge-secondary">Hayır</span></td><td>Varsayılan: Ödenmedi. "Tamamlandı" seçilirse otomatik ödeme kaydı oluşturulur.</td></tr>
+                                    <tr><td><strong>Kategori</strong></td><td><span class="badge badge-secondary">Hayır</span></td><td>Mevcut kategori seçilebilir veya anında yeni kategori eklenebilir</td></tr>
+                                    <tr><td><strong>Fiş Fotoğrafı</strong></td><td><span class="badge badge-secondary">Hayır</span></td><td>PNG, JPG, JPEG, WEBP, HEIC, HEIF desteklenir</td></tr>
+                                </tbody>
+                            </table>
+                            <div class="alert alert-warning mt-2 mb-0 py-1 px-2 small">
+                                <i class="fas fa-exclamation-triangle"></i> <strong>Gelir eklerken dikkat:</strong> Ana Kasa bakiyesi yeterli değilse kayıt oluşturulamaz. Önce Ana Kasaya para ekleyin.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ÖDEME YAP -->
+                    <h5 class="border-bottom pb-1 mb-3 mt-4"><i class="fas fa-hand-holding-usd"></i> Ödeme Yapma</h5>
+
+                    <div class="card mb-3">
                         <div class="card-body">
                             <ul class="mb-0">
-                                <li><strong>Sayfalama:</strong> Varsayılan 10 kayıt/sayfa, 20 veya 50 seçilebilir</li>
-                                <li><strong>Ay Filtresi:</strong> Ay seçildiğinde tüm kayıtlar tek sayfada gösterilir</li>
-                                <li><strong>Performans:</strong> Gereksiz loglar kaldırıldı, sayfa yükleme hızlandı</li>
+                                <li>Kayıt satırında <strong>"Ödeme Yap"</strong> butonuna tıklayın.</li>
+                                <li>Kalan tutarın tamamını veya bir kısmını girebilirsiniz.</li>
+                                <li>Kalan tutardan fazla ödeme <strong>kabul edilmez</strong>.</li>
+                                <li>Ödeme yapıldıkça durum otomatik güncellenir: Ödenmedi → Kısmi Ödendi → Tamamlandı.</li>
+                                <li>Kayıt satırını genişleterek tüm ödeme geçmişini görebilirsiniz.</li>
                             </ul>
                         </div>
                     </div>
-                    
-                    <hr>
-                    
-                    <!-- Kullanım Rehberi -->
-                    <h4><i class="fas fa-book"></i> Kullanım Rehberi</h4>
-                    
+
+                    <!-- EXCEL IMPORT -->
+                    <h5 class="border-bottom pb-1 mb-3 mt-4"><i class="fas fa-file-excel"></i> Excel ile Toplu Gelir Yükleme</h5>
+
                     <div class="card mb-3">
-                        <div class="card-header">
-                            <i class="fas fa-chart-pie"></i> Üstteki Kartlar (Yeşil/Kırmızı/Gri)
-                        </div>
                         <div class="card-body">
-                            <ul class="mb-0">
-                                <li><strong>Toplam Gelir (Ödenen):</strong> Ödeme kaydı olan gelirlerin toplamı</li>
-                                <li><strong>Toplam Gider (Ödenen):</strong> Ödeme kaydı olan giderlerin toplamı</li>
-                                <li><strong>Bekleyen Gelir:</strong> Henüz ödenmemiş + kısmi ödenen gelirlerin kalan tutarı</li>
-                                <li><strong>Bekleyen Gider:</strong> Henüz ödenmemiş + kısmi ödenen giderlerin kalan tutarı</li>
-                                <li><strong>Net Durum:</strong> Ödenen gelir - Ödenen gider</li>
+                            <p class="mb-2"><strong>Desteklenen format:</strong> İşbankası hesap özeti (.xlsx veya .xls)</p>
+                            <table class="table table-sm table-bordered mb-2">
+                                <thead class="thead-light"><tr><th>Sütun</th><th>İçerik</th><th>Format</th></tr></thead>
+                                <tbody>
+                                    <tr><td><strong>A</strong></td><td>Tarih</td><td>DD/MM/YYYY-HH:MM:SS (ve benzeri)</td></tr>
+                                    <tr><td><strong>D</strong></td><td>Tutar</td><td>Türkçe format: 1.234,56</td></tr>
+                                    <tr><td><strong>I</strong></td><td>Açıklama</td><td>Serbest metin</td></tr>
+                                </tbody>
+                            </table>
+                            <ul class="mb-0 small">
+                                <li>Başlık satırları (Tarih/Saat, Net Bakiye, Hesap vb.) otomatik atlanır.</li>
+                                <li>Negatif ve sıfır tutarlar atlanır — sadece pozitif tutarlar gelir olarak yüklenir.</li>
+                                <li><strong>Önizleme:</strong> Yükle butonuna basmadan önce verileri gözden geçirebilirsiniz.</li>
+                                <li>Her yüklenen satır doğrudan <strong>Ana Kasaya</strong> gelir olarak işlenir.</li>
                             </ul>
                         </div>
                     </div>
-                    
+
+                    <!-- ANA KASA -->
+                    <h5 class="border-bottom pb-1 mb-3 mt-4"><i class="fas fa-university"></i> Ana Kasa Yönetimi</h5>
+
                     <div class="card mb-3">
-                        <div class="card-header">
-                            <i class="fas fa-filter"></i> Kayıt Filtreleme
-                        </div>
                         <div class="card-body">
                             <ul class="mb-0">
-                                <li><strong>Ay Filtresi:</strong> Belirli bir ay seçildiğinde hem liste hem toplamlar o aya göre filtrelenir</li>
-                                <li><strong>Filtresiz:</strong> Tüm kayıtlar listelenir, toplamlar "Tüm Zamanlar" için hesaplanır</li>
-                                <li><strong>Tip/Durum:</strong> Sadece listeyi etkiler, toplamları etkilemez</li>
+                                <li><strong>Manuel Para Ekleme:</strong> Ana Kasa widget'ından doğrudan bakiye artırılabilir.</li>
+                                <li><strong>Kayıt Defteri:</strong> Tüm bakiye hareketlerini (gelir eklendi, kasaya aktarıldı, manuel ekleme) tarihe göre listeler.</li>
+                                <li><strong>Düzenleme/Silme:</strong> Geçmiş bir işlem düzenlendiğinde veya silindiğinde sonrasındaki tüm işlemlerin bakiyeleri otomatik yeniden hesaplanır.</li>
+                                <li><strong>İşlem Tipleri:</strong>
+                                    <ul class="mt-1">
+                                        <li><code>gelir_eklendi</code> — Excel import ile gelen gelir</li>
+                                        <li><code>normal_kasaya_aktarildi</code> — Yeni gelir kaydı oluşturulunca düşülen tutar</li>
+                                        <li><code>manuel_ekleme</code> — Elle eklenen bakiye</li>
+                                        <li><code>manuel_cikis</code> — Elle çıkarılan bakiye</li>
+                                    </ul>
+                                </li>
                             </ul>
                         </div>
                     </div>
-                    
+
+                    <!-- KATEGORİLER -->
+                    <h5 class="border-bottom pb-1 mb-3 mt-4"><i class="fas fa-tags"></i> Kategori Yönetimi</h5>
+
                     <div class="card mb-3">
-                        <div class="card-header">
-                            <i class="fas fa-file-excel"></i> Excel ile Gelir Yükleme
-                        </div>
                         <div class="card-body">
                             <ul class="mb-0">
-                                <li><strong>Desteklenen Format:</strong> İşbankası hesap özeti (.xlsx, .xls)</li>
-                                <li><strong>Sütun Eşlemesi:</strong> A=Tarih, D=Tutar, I=Açıklama</li>
-                                <li><strong>Başlık Satırları:</strong> Otomatik atlanır (Tarih/Saat, Net Bakiye vb.)</li>
-                                <li><strong>Negatif Tutarlar:</strong> Otomatik atlanır (sadece pozitif = gelir)</li>
+                                <li>Kategoriler <strong>Kategori Yönetimi</strong> sayfasından oluşturulur, düzenlenir, aktif/pasif yapılır.</li>
+                                <li>Yeni kayıt formunda açılır listeden seçilebilir veya <strong>anında yeni kategori</strong> eklenebilir.</li>
+                                <li>Kullanımda olan bir kategori silinemez.</li>
+                                <li>Her kategoriye renk kodu atanabilir — listede renkli etiket olarak gösterilir.</li>
                             </ul>
                         </div>
                     </div>
+
+                    <!-- RAPOR -->
+                    <h5 class="border-bottom pb-1 mb-3 mt-4"><i class="fas fa-chart-bar"></i> Aylık Rapor</h5>
+
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li><strong>Rapor</strong> sayfası seçili aya ait kategori bazında gelir/gider dökümünü gösterir.</li>
+                                <li>Her kategori için toplam tutar ve kayıt sayısı listelenir.</li>
+                                <li>Gelir ve gider kategorileri ayrı ayrı gösterilir.</li>
+                            </ul>
+                        </div>
+                    </div>
+
                 </div>
                 <div class="modal-footer">
                     <span class="text-muted mr-auto"><i class="fas fa-code"></i> Kasa v2.5</span>

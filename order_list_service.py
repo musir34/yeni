@@ -10,13 +10,36 @@ import logging
 from datetime import datetime
 from barcode_utils import generate_barcode_data_uri
 
-from models import db, Product, OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
+from models import db, Product, OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled, PlatformConfig
 from barcode_utils import generate_barcode
 import qrcode
 import os
 
 order_list_service_bp = Blueprint('order_list_service', __name__)
 logger = logging.getLogger(__name__)
+
+
+def _get_order_pull_enabled() -> bool:
+    cfg = PlatformConfig.query.filter_by(platform='order_pull').first()
+    return cfg.is_active if cfg else True
+
+
+@order_list_service_bp.route('/api/order-pull/toggle', methods=['POST'])
+def api_toggle_order_pull():
+    from flask import jsonify
+    try:
+        cfg = PlatformConfig.query.filter_by(platform='order_pull').first()
+        if not cfg:
+            cfg = PlatformConfig(platform='order_pull', is_active=True, batch_size=100, rate_limit_delay=0.1, max_retries=3)
+            db.session.add(cfg)
+        cfg.is_active = not cfg.is_active
+        db.session.commit()
+        status = "aktif" if cfg.is_active else "devre dışı"
+        logger.info(f"[ORDER-PULL] Otomatik sipariş çekme {status} yapıldı")
+        return jsonify({"success": True, "enabled": cfg.is_active, "message": f"Otomatik sipariş çekme {status}"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
 
 def generate_qr_code(shipping_barcode):
     """
@@ -175,7 +198,8 @@ def get_order_list():
 
         return render_template(
             'order_list.html', orders=orders, page=page, total_pages=total_pages,
-            total_orders_count=total_orders_count, search_query=search_query
+            total_orders_count=total_orders_count, search_query=search_query,
+            order_pull_enabled=_get_order_pull_enabled()
         )
     except Exception as e:
         logger.error(f"Hata: get_order_list - {e}")
@@ -295,7 +319,8 @@ def get_filtered_orders(status):
 
         return render_template(
             'order_list.html', orders=orders, page=page, total_pages=paginated_orders.pages,
-            total_orders_count=paginated_orders.total, search_query=search_query
+            total_orders_count=paginated_orders.total, search_query=search_query,
+            order_pull_enabled=_get_order_pull_enabled()
         )
     except Exception as e:
         logger.error(f"Hata: get_filtered_orders - {e}")

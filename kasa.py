@@ -168,11 +168,17 @@ def serve_receipt(fname):
 @login_required
 @roles_required('admin')
 def kasa_sayfasi():
+    bugun = datetime.now()
+
+    # İlk girişte (hiç parametre yoksa) mevcut aya yönlendir
+    if not request.args:
+        from flask import redirect, url_for
+        return redirect(url_for('kasa.kasa_sayfasi', yil=bugun.year, ay=bugun.month))
+
     toplam_yil = request.args.get('toplam_yil', type=int)
     toplam_ay = request.args.get('toplam_ay', type=int)
-    bugun = datetime.now()
     ay_filtresi_var = 'ay' in request.args and request.args.get('ay')
-    
+
     yil = request.args.get('yil', type=int)
     ay = request.args.get('ay', type=int)
     baslangic_tarihi = request.args.get('baslangic_tarihi', '')
@@ -241,12 +247,8 @@ def kasa_sayfasi():
         offset = (sayfa - 1) * sayfa_basina
         kayitlar = base.order_by(desc(Kasa.tarih)).offset(offset).limit(sayfa_basina).all()
 
-    # 🎯 TOPLAMLAR: Eğer ay filtresi varsa o aya göre, yoksa TÜM ZAMANLAR
-    # Bu sayede kullanıcı listedeki kayıtlarla toplamları eşleşir görür
-    if ay_filtresi_var and yil and ay:
-        # Ay filtresi var - o aya göre hesapla
-        toplam_yil = yil
-        toplam_ay = ay
+    # 🎯 TOPLAMLAR: Sadece toplam_yil/toplam_ay parametrelerine göre — liste filtresinden bağımsız
+    if toplam_yil and toplam_ay:
         toplam_bas, toplam_son = month_bounds(toplam_yil, toplam_ay)
         toplam_filtre_metni = f"{toplam_ay}. Ay / {toplam_yil}"
         

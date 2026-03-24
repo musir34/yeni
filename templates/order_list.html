@@ -132,6 +132,12 @@
                 <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_shipped') }}" class="btn btn-danger text-white">Kargoda</a></div>
                 <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_delivered') }}" class="btn bg-orange text-white">Teslim Edilenler</a></div>
                 <div class="col-md col-6"><a href="{{ url_for('siparis_hazirla.index') }}" class="btn btn-primary text-white"><i class="fas fa-box"></i> Sipariş Hazırla</a></div>
+                <div class="col-md col-6">
+                    <button id="btnToggleOrderPull" class="btn {% if order_pull_enabled %}btn-success{% else %}btn-danger{% endif %} text-white w-100" title="Otomatik sipariş çekmeyi aç/kapat">
+                        <i id="orderPullIcon" class="fas {% if order_pull_enabled %}fa-play-circle{% else %}fa-pause-circle{% endif %}"></i>
+                        <span id="orderPullLabel">Oto Çekme: {% if order_pull_enabled %}Aktif{% else %}Kapalı{% endif %}</span>
+                    </button>
+                </div>
                 <div class="col-md col-12"><a href="{{ url_for('new_orders_service.prepare_new_orders') }}" class="btn btn-info text-white">Toplu Ürün Hazırla</a></div>
             </div>
         </div>
@@ -187,7 +193,13 @@
                                 <tr>
                                     <td>
                                         <strong>{{ detail.model_code or 'N/A' }}</strong><br>
-                                        <small>{{ detail.color or 'N/A' }} / {{ detail.size or 'N/A' }}</small>
+                                        <small>{{ detail.color or 'N/A' }} / {{ detail.size or 'N/A' }}</small><br>
+                                        <small class="text-muted d-flex align-items-center gap-1 mt-1">
+                                            <span>{{ detail.barcode or 'N/A' }}</span>
+                                            {% if detail.barcode %}
+                                            <button type="button" onclick="navigator.clipboard.writeText('{{ detail.barcode }}').then(()=>{this.innerHTML='✓';setTimeout(()=>this.innerHTML='⧉',1200)})" style="border:none;background:none;cursor:pointer;padding:0;font-size:.9rem;color:#888;" title="Kopyala">⧉</button>
+                                            {% endif %}
+                                        </small>
                                     </td>
                                     <td><img src="{{ detail.image_url }}" alt="Ürün" class="zoomable-image" data-image-src="{{ detail.image_url }}"></td>
                                     <td><strong>{{ detail.quantity }}</strong></td>
@@ -333,6 +345,34 @@
         }
         setInterval(updateRemainingTime, 60000);
         window.onload = updateRemainingTime;
+
+        // ── Otomatik Sipariş Çekme Toggle ──
+        document.getElementById('btnToggleOrderPull').addEventListener('click', function () {
+            const btn = this;
+            btn.disabled = true;
+            fetch('/api/order-pull/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+                .then(r => r.json())
+                .then(data => {
+                    btn.disabled = false;
+                    if (data.success) {
+                        const icon = document.getElementById('orderPullIcon');
+                        const label = document.getElementById('orderPullLabel');
+                        if (data.enabled) {
+                            btn.className = 'btn btn-success text-white w-100';
+                            icon.className = 'fas fa-play-circle';
+                            label.textContent = 'Oto Çekme: Aktif';
+                        } else {
+                            btn.className = 'btn btn-danger text-white w-100';
+                            icon.className = 'fas fa-pause-circle';
+                            label.textContent = 'Oto Çekme: Kapalı';
+                        }
+                        alert(data.message);
+                    } else {
+                        alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+                    }
+                })
+                .catch(err => { btn.disabled = false; alert('Bağlantı hatası: ' + err.message); });
+        });
     </script>
 </body>
 </html>

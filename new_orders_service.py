@@ -51,17 +51,21 @@ def _build_shelf_groups():
         products_dict = {p.barcode: p for p in products}
 
     # Raf bilgilerini toplu çek (en çok stoklu raf önce)
-    raf_dict = {}  # barcode -> raf_kodu
+    raf_dict = {}   # barcode -> raf_kodu (birincil raf)
+    stock_dict = {} # barcode -> toplam mevcut stok (tüm raflar)
     if all_barcodes:
         rafs = (RafUrun.query
                 .filter(RafUrun.urun_barkodu.in_(list(all_barcodes)))
                 .filter(RafUrun.adet > 0)
                 .order_by(RafUrun.raf_kodu.asc(), RafUrun.adet.desc())
                 .all())
-        # Her barkod için ilk (en fazla stoklu) rafı tut
         for raf in rafs:
             if raf.urun_barkodu not in raf_dict:
                 raf_dict[raf.urun_barkodu] = raf.raf_kodu
+            stock_dict[raf.urun_barkodu] = stock_dict.get(raf.urun_barkodu, 0) + raf.adet
+
+    # Her barkod için kalan stok takibi (sipariş tarihine göre sıralı atama)
+    remaining_stock = dict(stock_dict)
 
     # Grup oluştur
     shelf_groups = {}  # {raf_kodu: [item_dict, ...]}
@@ -75,6 +79,17 @@ def _build_shelf_groups():
 
         raf_kodu = raf_dict.get(barcode, 'RAF YOK')
 
+        # Stok kontrolü: sipariş tarihine göre sıralı, stok bitince işaretle
+        kalan = remaining_stock.get(barcode, 0)
+        stok_yetersiz = kalan <= 0
+        if not stok_yetersiz:
+            remaining_stock[barcode] = kalan - 1
+
+        # Raf atamasını siparişe kaydet (stok yetersizse temizle)
+        yeni_atanan_raf = None if stok_yetersiz else raf_kodu
+        if order.atanan_raf != yeni_atanan_raf:
+            order.atanan_raf = yeni_atanan_raf
+
         if raf_kodu not in shelf_groups:
             shelf_groups[raf_kodu] = []
 
@@ -84,7 +99,10 @@ def _build_shelf_groups():
             'color': color,
             'size': size,
             'barcode': barcode,
+            'stok_yetersiz': stok_yetersiz,
         })
+
+    db.session.commit()
 
     # Alfabetik raf sırası
     return sorted(shelf_groups.items(), key=lambda x: x[0])

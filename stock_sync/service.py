@@ -122,25 +122,27 @@ class StockSyncService:
         return status
     
     def get_reserved_barcodes(self) -> Dict[str, int]:
-        """orders_created tablosundan rezerv edilmiş barkodları ve miktarları al"""
-        from sqlalchemy import func
-        
-        # orders_created tablosundaki ürünlerin barkodlarını ve toplam miktarlarını al
-        reserved = db.session.query(
-            OrderCreated.product_barcode,
-            func.sum(OrderCreated.quantity).label('total_qty')
-        ).group_by(OrderCreated.product_barcode).all()
-        
+        """orders_created tablosundaki siparişlerin details JSON'undan rezerv barkodlarını ve miktarları çıkar"""
+        import json
+
+        rows = db.session.query(OrderCreated.details).all()
         reserved_map = {}
-        for row in reserved:
-            if row.product_barcode:
-                # product_barcode JSON veya comma-separated olabilir
-                barcodes = row.product_barcode if isinstance(row.product_barcode, list) else [row.product_barcode]
-                for barcode in barcodes:
+
+        for (details_str,) in rows:
+            if not details_str:
+                continue
+            try:
+                details = json.loads(details_str) if isinstance(details_str, str) else details_str
+                if not isinstance(details, list):
+                    continue
+                for item in details:
+                    barcode = str(item.get('barcode', '') or '').strip()
+                    qty = int(item.get('quantity', 1) or 1)
                     if barcode:
-                        barcode = str(barcode).strip()
-                        reserved_map[barcode] = reserved_map.get(barcode, 0) + (row.total_qty or 1)
-        
+                        reserved_map[barcode] = reserved_map.get(barcode, 0) + qty
+            except (json.JSONDecodeError, TypeError, ValueError):
+                continue
+
         return reserved_map
     
     def get_reserved_count(self) -> int:
@@ -171,32 +173,37 @@ class StockSyncService:
             logger.info(f"[SYNC] Amazon için {len(asin_map)} ASIN eşleşmesi bulundu")
 
         for stock in stocks:
-            # Rezerv edilen ürünleri atla
-            if stock.barcode in reserved_barcodes:
-                continue
-
             asin = asin_map.get(stock.barcode) if platform == "amazon" else None
 
             # Amazon için ASIN'i olmayan ürünleri atla
             if platform == "amazon" and not asin:
                 continue
 
+            reserved_qty = reserved_barcodes.get(stock.barcode, 0)
+            available_qty = max(0, (stock.qty or 0) - reserved_qty)
+
+            if reserved_qty > 0:
+                logger.debug(f"[SYNC] {stock.barcode}: stok={stock.qty}, rezerv={reserved_qty}, gönderilen={available_qty}")
+
             items.append(StockItem(
                 barcode=stock.barcode,
-                quantity=stock.qty if stock.qty else 0,
+                quantity=available_qty,
                 asin=asin,
             ))
-        
+
         logger.info(f"[SYNC] {len(items)} ürün CentralStock'tan alındı")
         return items
     
     def _get_stocks_by_barcodes(self, barcodes: List[str], platform: str = None) -> List[StockItem]:
-        """Belirli barkodlar için stokları çek"""
+        """Belirli barkodlar için stokları çek (rezerv düşülmüş)"""
         stocks = CentralStock.query.filter(CentralStock.barcode.in_(barcodes)).all()
         items = []
-        
+
         stock_dict = {s.barcode: s.qty for s in stocks}
-        
+
+        # Rezerv miktarlarını al
+        reserved_barcodes = self.get_reserved_barcodes()
+
         # Amazon için ASIN eşleştirmesi
         asin_map = {}
 
@@ -215,12 +222,15 @@ class StockSyncService:
             if platform == "amazon" and not asin:
                 continue
 
+            reserved_qty = reserved_barcodes.get(barcode, 0)
+            available_qty = max(0, stock_dict.get(barcode, 0) - reserved_qty)
+
             items.append(StockItem(
                 barcode=barcode,
-                quantity=stock_dict.get(barcode, 0),
+                quantity=available_qty,
                 asin=asin,
             ))
-        
+
         return items
     
     def _create_session(self, platform: str, triggered_by: str = "manual", 

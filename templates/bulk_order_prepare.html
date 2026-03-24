@@ -41,10 +41,13 @@
         .order-row { display: flex; align-items: center; padding: .65rem 1.2rem; border-bottom: 1px solid var(--color-border); gap: .8rem; }
         .order-row:last-child { border-bottom: none; }
         .order-row:hover { background: #fdf5f6; }
+        .order-row.stok-yetersiz { background: #fff3f3; }
+        .order-row.stok-yetersiz:hover { background: #ffe8e8; }
 
         .order-no { font-size: .8rem; color: #888; min-width: 125px; white-space: nowrap; }
         .product-info { font-weight: 700; font-size: 1rem; color: var(--color-secondary); flex: 1; }
         .product-info .cs { font-weight: 400; font-size: .88rem; color: #666; }
+        .stok-uyari { font-size: .75rem; font-weight: 600; color: #dc3545; background: #fde8e8; border: 1px solid #f5c6cb; border-radius: 4px; padding: .15rem .5rem; white-space: nowrap; }
 
         .empty-state { text-align: center; padding: 4rem 2rem; color: #aaa; }
         .empty-state i { font-size: 3rem; margin-bottom: 1rem; }
@@ -99,15 +102,18 @@
             <span class="shelf-badge">{{ items | length }} sipariş</span>
         </div>
         {% for item in items %}
-        <div class="order-row">
+        <div class="order-row{% if item.stok_yetersiz %} stok-yetersiz{% endif %}">
             <div class="order-no">
-                <i class="fas fa-receipt" style="color:var(--color-primary);margin-right:4px;"></i>
+                <i class="fas fa-receipt" style="color:{% if item.stok_yetersiz %}#dc3545{% else %}var(--color-primary){% endif %};margin-right:4px;"></i>
                 {{ item.order_number }}
             </div>
             <div class="product-info">
                 {{ item.model_code }}
                 <span class="cs"> — {{ item.color }} / {{ item.size }}</span>
             </div>
+            {% if item.stok_yetersiz %}
+            <span class="stok-uyari"><i class="fas fa-exclamation-triangle"></i> Stok Yetersiz</span>
+            {% endif %}
         </div>
         {% endfor %}
     </div>

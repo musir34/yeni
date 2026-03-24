@@ -511,7 +511,7 @@ class OrderBase(db.Model):
 # Yeni sipariş (Created)
 class OrderCreated(OrderBase):
     __tablename__ = 'orders_created'
-    # statüye özel alan gerekirse eklenir
+    atanan_raf = db.Column(db.String, nullable=True)  # Toplu hazırlamada atanan raf kodu
 
 
 # İşleme alınan (Picking)
