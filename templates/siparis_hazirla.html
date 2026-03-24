@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}"/>
 
   <style>
     /* Sayfa Düzeni - 14.9 inç ekrana optimize */
@@ -167,6 +168,10 @@
     html.gs-dark .copy-container{color:#7eaaef}
     html.gs-dark .btn-group-top .btn{box-shadow:0 2px 6px rgba(0,0,0,.3)}
     html.gs-dark #manuelOrderPanel input{background:#2a2a2a;color:#ddd;border-color:#444}
+    @media (max-width:768px){
+      html.gs-dark .user-info{background:rgba(18,18,18,.95);border-bottom:1px solid #333}
+      html.gs-dark .btn-group-top{background:rgba(18,18,18,.96);box-shadow:0 -2px 12px rgba(0,0,0,.4)}
+    }
 
     .highlight-quantity{color:#dc3545;font-size:1.2em;font-weight:bold}
 
@@ -390,32 +395,105 @@
       font-weight:600;
     }
 
+    @media (max-width:991px){
+      .container{margin-top:60px;padding:0 8px}
+      .order-container{gap:6px}
+      .card{width:200px}
+    }
     @media (max-width:768px){
-      .btn{font-size:.75rem;padding:6px 10px}
+      .btn{font-size:.78rem;padding:7px 12px}
       .card-title{font-size:.85rem}
-      .card-text{font-size:.75rem}
-      .user-info{top:8px;left:8px;gap:4px;font-size:8px;padding:4px 6px;max-width:250px}
-      .user-info img{max-width:40px}
-      .btn-group-top{top:8px;right:8px;gap:4px;flex-direction:column;align-items:flex-end}
-      .btn{width:100%;text-align:center;padding:5px 8px;font-size:.75rem}
-      .dropdown-toggle{width:100%;text-align:center!important}
+      .card-text{font-size:.78rem}
+
+      /* User info - mobilde üstte sabit şerit */
+      .user-info{
+        position:fixed;top:0;left:0;right:0;
+        max-width:none;width:100%;
+        border-radius:0;
+        padding:6px 10px;
+        gap:6px;font-size:9px;
+        z-index:20;
+        flex-wrap:nowrap;
+        box-shadow:0 2px 8px rgba(0,0,0,.12);
+      }
+      .user-info img{max-width:36px}
+      .user-info div[style*="flex-direction:column"]{gap:1px!important}
+      .user-info div[style*="Ayarlar"]{display:none}
+
+      /* Buton grubu - user info altına */
+      .btn-group-top{
+        position:fixed;top:auto;bottom:0;left:0;right:0;
+        flex-direction:row;flex-wrap:wrap;
+        justify-content:center;align-items:center;
+        gap:4px;padding:6px 8px;
+        background:rgba(255,255,255,.95);
+        backdrop-filter:blur(8px);
+        box-shadow:0 -2px 10px rgba(0,0,0,.1);
+        z-index:20;
+      }
+      .btn-group-top .btn{
+        width:auto;flex:1 1 auto;
+        text-align:center;padding:6px 10px;
+        font-size:.75rem;min-width:0;
+      }
+      .btn-group-top .dropdown{flex:1 1 auto}
+      .btn-group-top .dropdown .btn{width:100%}
       .dropdown-menu{left:auto!important;right:0!important;min-width:auto;width:auto}
-      .dropdown-item{text-align:right;font-size:.75rem}
-      .custom-switch{margin-top:8px;width:100%;justify-content:flex-end;padding-right:2rem;padding-left:0}
-      .custom-control-label::before{left:auto;right:0}
-      .custom-control-label::after{left:auto;right:.2rem}
-      .custom-switch .custom-control-input:checked ~ .custom-control-label::after{transform:translateX(-.75rem)}
-      #autoShipMessage{min-width:280px;max-width:90%;margin:0 5%}
+      .dropdown-item{font-size:.78rem}
+
+      /* Switch mobilde gizle */
+      .custom-switch{margin-top:4px}
+
+      #autoShipMessage{min-width:280px;max-width:92%;margin:0 4%}
       .auto-ship-card{padding:15px}
       .shipping-header h3{font-size:1rem}
       .shipping-barcode strong{font-size:1.2rem}
-      .container{margin-top:140px;padding:0 8px}
-      .fixed-header{margin-top:8px;padding:8px}
-      .queue-order-card{flex:0 0 120px;min-width:120px;}
-      .queue-order-image{height:60px;}
-      .queue-order-raf{font-size:0.5rem;padding:1px 4px;}
+
+      /* Container */
+      .container{margin-top:45px;margin-bottom:55px;padding:0 6px}
+
+      .fixed-header{margin-top:6px;padding:6px 8px}
+      .fixed-header h4{font-size:.88rem}
+      .fixed-header p{font-size:.82rem}
+
+      /* Queue */
+      .order-queue-wrapper{margin-bottom:6px;padding:4px 0}
+      .queue-order-card{flex:0 0 110px;min-width:110px}
+      .queue-order-image{height:55px}
+      .queue-order-raf{font-size:.55rem;padding:1px 3px}
+      .queue-order-sku{font-size:.78rem}
+      .queue-order-number{font-size:.7rem}
+
+      /* Cards */
+      .order-container{justify-content:center;gap:6px}
+      .card{width:calc(50% - 6px);min-width:150px}
+      .product-image{height:110px}
+      .card-body{padding:6px 8px}
+      .card-title{font-size:.82rem}
+      .card-text{font-size:.75rem}
+      .form-control{padding:5px 7px;font-size:.82rem}
+      .bottom-buttons{justify-content:center}
+      .btn-bottom{max-width:none;flex:1 1 auto;font-size:.78rem;padding:5px 8px}
+
+      /* Image modal */
+      .image-modal-content{max-width:95vw;max-height:95vh}
+
+      /* Active order section */
+      .active-order-section{padding:8px}
+      .active-order-title h4{font-size:.95rem}
     }
-    @media (max-width:576px){.card{width:calc(50% - 8px)}}
+    @media (max-width:480px){
+      .card{width:calc(50% - 4px);min-width:140px}
+      .product-image{height:95px}
+      .card-body{padding:5px 6px}
+      .card-title{font-size:.78rem}
+      .card-text{font-size:.7rem}
+      .queue-order-card{flex:0 0 95px;min-width:95px}
+      .queue-order-image{height:45px}
+      .btn-group-top .btn{font-size:.7rem;padding:5px 6px}
+      .user-info{font-size:8px;padding:4px 8px}
+      .user-info img{max-width:28px}
+    }
 
     /* 🔔 Arşiv uyarısı kritik modları */
     .aw-critical .modal-content{background:#ffe3e3!important}

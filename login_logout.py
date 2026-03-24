@@ -29,7 +29,7 @@ def login_user(user):
     session.permanent = True
     logger.debug(f"Oturumda atanan rol: {session['role']}")
 
-# Oturum gerektiren dekoratör
+# Oturum gerektiren dekoratör (2FA doğrulaması dahil)
 def login_required(f):
 
     @wraps(f)
@@ -37,6 +37,10 @@ def login_required(f):
         if 'user_id' not in session:
             flash('Lütfen giriş yapın.', 'warning')
             return redirect(url_for('login_logout.login'))
+        # 2FA doğrulaması yapılmamışsa erişim engelle
+        if not session.get('totp_verified'):
+            flash('İki adımlı doğrulama gereklidir.', 'warning')
+            return redirect(url_for('login_logout.verify_totp'))
         return f(*args, **kwargs)
 
     return decorated_function
@@ -55,6 +59,11 @@ def roles_required(*roles):
                 logger.warning("No role found in session.")
                 return redirect(url_for('login_logout.login'))
 
+            # 2FA doğrulaması yapılmamışsa erişim engelle
+            if not session.get('totp_verified'):
+                flash('İki adımlı doğrulama gereklidir.', 'warning')
+                return redirect(url_for('login_logout.verify_totp'))
+
             # Oturumdaki rolü kontrol et
             user_role = session.get('role')
             logger.debug(f"User role in session: {user_role}")
@@ -63,7 +72,7 @@ def roles_required(*roles):
             # Eğer kullanıcı rolü gereken roller arasında değilse, erişimi reddet
             if user_role not in roles:
                 flash('Bu sayfaya erişim yetkiniz yok.', 'warning')
-                return redirect(url_for('login_logout.home'))
+                return redirect(url_for('home.home'))
 
             return f(*args, **kwargs)
 
@@ -145,7 +154,7 @@ def login():
     # Eğer kullanıcı zaten doğrulanmışsa
     if 'user_id' in session and session.get(
             'authenticated', False) and session.get('totp_verified', False):
-        return redirect(url_for('login_logout.home'))
+        return redirect(url_for('home.home'))
 
     if request.method == 'POST':
         session.clear()
@@ -177,16 +186,18 @@ def login():
     return render_template('login.html')
 
 
-# TOTP Kurulum
+# TOTP Kurulum (2FA henüz kurulmamış kullanıcılar için — login_required yerine sadece user_id kontrolü)
 @login_logout_bp.route('/setup_totp', methods=['GET', 'POST'])
-@login_required
 def setup_totp():
+    if 'user_id' not in session:
+        flash('Lütfen giriş yapın.', 'warning')
+        return redirect(url_for('login_logout.login'))
     user = User.query.get(session['user_id'])
     if not user:
         return redirect(url_for('login_logout.login'))
 
     if user.totp_confirmed:
-        return redirect(url_for('login_logout.home'))
+        return redirect(url_for('home.home'))
 
     totp = pyotp.TOTP(user.totp_secret)
     provisioning_uri = totp.provisioning_uri(name=user.email or 'user',
@@ -198,10 +209,12 @@ def setup_totp():
         if token and totp.verify(token):
             user.totp_confirmed = True
             db.session.commit()
-            flash('TOTP başarıyla kuruldu.', 'success')
-            return redirect(url_for('login_logout.home'))
+            # Kurulum sonrası 2FA doğrulamasını da tamamla
+            session['totp_verified'] = True
+            flash('2FA kurulumu tamamlandı. Hoş geldiniz!', 'success')
+            return redirect(url_for('home.home'))
         flash('Geçersiz doğrulama kodu.', 'danger')
-    return render_template('verify_totp.html', qr_code_data=qr_code_data)
+    return render_template('setup_totp.html', qr_code_data=qr_code_data)
 
 
 # TOTP Doğrulama
@@ -225,7 +238,7 @@ def verify_totp():
             # 2FA tamamlandı
             session['totp_verified'] = True
             flash('Başarıyla giriş yaptınız.', 'success')
-            return redirect(url_for('login_logout.home'))
+            return redirect(url_for('home.home'))
         flash('Geçersiz doğrulama kodu.', 'danger')
     return render_template('verify_totp.html')
 

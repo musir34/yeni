@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}" />
     <style>
         :root {
             --color-primary: #B76E79; /* Gül Kurusu */
@@ -108,6 +109,70 @@
         #imageZoomModal.show { display: flex; }
         #imageZoomModal img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: var(--border-radius); }
         #imageZoomModal .close-btn { position:absolute; top:20px; right:30px; color:white; font-size:40px; font-weight:bold; cursor:pointer; background:none; border:none; }
+
+        /* ── Responsive ── */
+        @media (max-width: 991px) {
+            .container { padding: 10px; max-width: none; }
+            .order-list { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+        }
+        @media (max-width: 767px) {
+            .page-header {
+                flex-direction: column !important;
+                gap: 0.75rem;
+                text-align: center;
+                padding: 0.75rem;
+            }
+            .page-header .user-actions {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 0.5rem;
+                width: 100%;
+            }
+            .page-header .user-actions .btn,
+            .page-header .user-actions form {
+                flex: 1 1 auto;
+            }
+            .page-header .user-actions form .btn { width: 100%; }
+            .page-header img { height: 30px !important; margin-right: 8px !important; }
+
+            .filter-section { padding: 0.75rem; }
+            .filter-section .row { gap: 0; }
+            .filter-section .col-md { flex: 0 0 50%; max-width: 50%; }
+            .filter-section .col-12 { flex: 0 0 100%; max-width: 100%; }
+
+            .d-flex.justify-content-between.align-items-center.my-4 {
+                flex-direction: column;
+                gap: 0.75rem;
+                align-items: stretch !important;
+            }
+            .d-flex.justify-content-between.align-items-center.my-4 .d-flex.gap-2 {
+                flex-direction: column;
+                width: 100%;
+            }
+            .d-flex.justify-content-between.align-items-center.my-4 .d-flex.gap-2 form {
+                width: 100%;
+            }
+            .d-flex.justify-content-between.align-items-center.my-4 .d-flex.gap-2 .btn {
+                width: 100%;
+            }
+
+            .order-list { grid-template-columns: 1fr; gap: 0.75rem; }
+            .card:hover { transform: none; }
+            .card-body { padding: 0.75rem; }
+
+            .details-section table { font-size: 1.1rem; }
+            .details-section table strong { font-size: 1.05rem; }
+            .details-section img { max-width: 70px; }
+
+            h4 { font-size: 1rem; }
+        }
+        @media (max-width: 480px) {
+            .page-header .user-actions { flex-direction: column; }
+            .page-header .user-actions span { font-size: 0.85rem; }
+            .filter-section .col-md, .filter-section .col-6 { flex: 0 0 100%; max-width: 100%; }
+            .card-header { flex-direction: column; gap: 0.5rem; align-items: flex-start !important; }
+            .details-section table { font-size: 0.95rem; }
+        }
 
         /* ── Dark Mode ── */
         html.gs-dark body { background-color: #121212; color: #e0e0e0; }

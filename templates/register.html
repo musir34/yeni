@@ -1,84 +1,177 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="tr">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Kayıt Ol</title>
-        <link
-            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
-            rel="stylesheet"
-        />
-    </head>
-    <body>
-        <div class="container mt-5">
-            <h2 class="text-center">Kayıt Ol</h2>
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();if(m==='on'||(m==='auto'&&(h>=20||h<7)))document.documentElement.classList.add('gs-dark');})()</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Kayıt Ol - Güllü Ayakkabı</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      font-family:'Inter',sans-serif;
+      min-height:100vh;
+      display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(-45deg,#1a1a2e,#16213e,#0f3460,#533483,#e94560,#B76E79);
+      background-size:400% 400%;
+      animation:gradientShift 15s ease infinite;
+      overflow:hidden;position:relative;
+    }
+    @keyframes gradientShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 
-            <form
-                action="{{ url_for('login_logout.register') }}"
-                method="POST"
-                class="mt-3"
-            >
-                <div class="mb-3">
-                    <label for="first_name" class="form-label">Ad:</label>
-                    <input
-                        type="text"
-                        class="form-control"
-                        id="first_name"
-                        name="first_name"
-                        required
-                        autocomplete="off"
-                    />
-                </div>
-                <div class="mb-3">
-                    <label for="last_name" class="form-label">Soyad:</label>
-                    <input
-                        type="text"
-                        class="form-control"
-                        id="last_name"
-                        name="last_name"
-                        required
-                        autocomplete="off"
-                    />
-                </div>
-                <div class="mb-3">
-                    <label for="email" class="form-label">E-posta:</label>
-                    <input
-                        type="email"
-                        class="form-control"
-                        id="email"
-                        name="email"
-                        required
-                        autocomplete="off"
-                    />
-                </div>
-                <div class="mb-3">
-                    <label for="username" class="form-label"
-                        >Kullanıcı Adı:</label
-                    >
-                    <input
-                        type="text"
-                        class="form-control"
-                        id="username"
-                        name="username"
-                        required
-                        autocomplete="off"
-                    />
-                </div>
-                <div class="mb-3">
-                    <label for="password" class="form-label">Şifre:</label>
-                    <input
-                        type="password"
-                        class="form-control"
-                        id="password"
-                        name="password"
-                        required
-                        autocomplete="off"
-                    />
-                </div>
-                <button type="submit" class="btn btn-primary w-100">
-                    Kayıt Ol
-                </button>
-            </form>
+    .particles{position:fixed;inset:0;pointer-events:none;z-index:0}
+    .particle{position:absolute;border-radius:50%;background:rgba(255,255,255,.08);animation:floatUp linear infinite}
+    @keyframes floatUp{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-10vh) scale(1);opacity:0}}
+
+    .register-card{
+      position:relative;z-index:10;
+      width:100%;max-width:460px;margin:1rem;
+      background:rgba(255,255,255,.12);
+      backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+      border:1px solid rgba(255,255,255,.18);
+      border-radius:24px;padding:2.5rem 2rem;
+      box-shadow:0 25px 60px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.15);
+      animation:cardEntry .8s cubic-bezier(.16,1,.3,1) both;
+    }
+    @keyframes cardEntry{from{opacity:0;transform:translateY(40px) scale(.94)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+    .logo-container{text-align:center;margin-bottom:1.75rem;animation:logoEntry .6s .2s cubic-bezier(.16,1,.3,1) both}
+    @keyframes logoEntry{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+    .logo-container img{width:70px;height:70px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.3);object-fit:cover;border:2px solid rgba(255,255,255,.2)}
+    .logo-title{color:#fff;font-size:1.4rem;font-weight:800;margin-top:.6rem;text-shadow:0 2px 10px rgba(0,0,0,.3)}
+    .logo-subtitle{color:rgba(255,255,255,.6);font-size:.82rem;margin-top:.2rem}
+
+    .flash-msg{padding:.75rem 1rem;border-radius:12px;margin-bottom:1rem;font-size:.85rem;font-weight:500;backdrop-filter:blur(10px);display:flex;align-items:center;gap:.5rem}
+    .flash-danger{background:rgba(233,69,96,.25);color:#ff8a9e;border:1px solid rgba(233,69,96,.3)}
+    .flash-warning{background:rgba(255,193,7,.2);color:#ffe082;border:1px solid rgba(255,193,7,.3)}
+    .flash-success{background:rgba(58,196,125,.2);color:#7ef0ab;border:1px solid rgba(58,196,125,.3)}
+
+    .form-group{margin-bottom:1rem;animation:fieldSlide .5s cubic-bezier(.16,1,.3,1) both}
+    .form-group:nth-child(1){animation-delay:.25s}.form-group:nth-child(2){animation-delay:.3s}
+    .form-group:nth-child(3){animation-delay:.35s}.form-group:nth-child(4){animation-delay:.4s}
+    .form-group:nth-child(5){animation-delay:.45s}
+    @keyframes fieldSlide{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+    .form-label{display:flex;align-items:center;gap:.4rem;color:rgba(255,255,255,.8);font-size:.85rem;font-weight:600;margin-bottom:.4rem}
+    .form-label i{font-size:.85rem;color:rgba(183,110,121,.8)}
+
+    .input-wrapper{position:relative}
+    .input-wrapper i.input-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.35);font-size:.95rem;transition:color .3s;pointer-events:none}
+    .form-input{
+      width:100%;padding:.8rem .9rem .8rem 2.6rem;
+      background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.12);
+      border-radius:14px;color:#fff;font-size:.95rem;font-weight:500;
+      transition:all .3s ease;outline:none;
+    }
+    .form-input::placeholder{color:rgba(255,255,255,.3)}
+    .form-input:focus{background:rgba(255,255,255,.14);border-color:rgba(183,110,121,.6);box-shadow:0 0 0 4px rgba(183,110,121,.15)}
+    .form-input:focus ~ i.input-icon{color:rgba(183,110,121,.9)}
+
+    .pw-toggle{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:1rem;padding:4px;transition:color .3s}
+    .pw-toggle:hover{color:rgba(255,255,255,.8)}
+
+    .btn-submit{
+      width:100%;padding:.85rem;border:none;border-radius:14px;
+      background:linear-gradient(135deg,#B76E79,#A05F6A,#8B4F5A);
+      color:#fff;font-size:1rem;font-weight:700;cursor:pointer;
+      transition:all .3s ease;position:relative;overflow:hidden;
+      animation:fieldSlide .5s .5s cubic-bezier(.16,1,.3,1) both;
+      letter-spacing:.5px;box-shadow:0 8px 25px rgba(183,110,121,.35);
+    }
+    .btn-submit::before{content:'';position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.2) 50%,transparent 70%);transform:translateX(-100%);transition:transform .6s ease}
+    .btn-submit:hover{transform:translateY(-2px);box-shadow:0 12px 35px rgba(183,110,121,.45)}
+    .btn-submit:hover::before{transform:translateX(100%)}
+    .btn-submit .btn-text{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:.5rem}
+    .btn-submit.loading .btn-text{opacity:0}
+    .btn-submit.loading::after{content:'';position:absolute;width:24px;height:24px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .login-link{display:block;text-align:center;margin-top:1.25rem;color:rgba(255,255,255,.4);font-size:.82rem;text-decoration:none;transition:color .2s;animation:fieldSlide .5s .55s ease both}
+    .login-link:hover{color:rgba(255,255,255,.7)}
+
+    @media(max-width:480px){
+      .register-card{padding:2rem 1.25rem;margin:.75rem;border-radius:20px}
+      .logo-container img{width:56px;height:56px}
+      .logo-title{font-size:1.2rem}
+      .form-input{padding:.7rem .8rem .7rem 2.4rem;font-size:.9rem}
+    }
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+  </style>
+</head>
+<body>
+  <div class="particles" id="particles"></div>
+
+  <div class="register-card">
+    <div class="logo-container">
+      <img src="{{ url_for('static', filename='logo/gullu.png') }}" alt="Logo"/>
+      <div class="logo-title">Kayıt Ol</div>
+      <div class="logo-subtitle">Güllü Ayakkabı Yönetim Paneli</div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash-msg flash-{{ category }}">
+            <i class="fas {% if category == 'danger' %}fa-exclamation-circle{% elif category == 'warning' %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %}"></i>
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form action="{{ url_for('login_logout.register') }}" method="POST" id="registerForm" autocomplete="off">
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-user"></i> Ad</label>
+        <div class="input-wrapper">
+          <input type="text" class="form-input" name="first_name" placeholder="Adınız" required autofocus>
+          <i class="fas fa-user input-icon"></i>
         </div>
-    </body>
+      </div>
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-user"></i> Soyad</label>
+        <div class="input-wrapper">
+          <input type="text" class="form-input" name="last_name" placeholder="Soyadınız" required>
+          <i class="fas fa-user input-icon"></i>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-envelope"></i> E-posta</label>
+        <div class="input-wrapper">
+          <input type="email" class="form-input" name="email" placeholder="E-posta adresiniz" required>
+          <i class="fas fa-envelope input-icon"></i>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-id-badge"></i> Kullanıcı Adı</label>
+        <div class="input-wrapper">
+          <input type="text" class="form-input" name="username" placeholder="Kullanıcı adınız" required>
+          <i class="fas fa-id-badge input-icon"></i>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-lock"></i> Şifre</label>
+        <div class="input-wrapper">
+          <input type="password" class="form-input" id="password" name="password" placeholder="Şifreniz" required>
+          <i class="fas fa-lock input-icon"></i>
+          <button type="button" class="pw-toggle" id="pwToggle"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+      <button type="submit" class="btn-submit" id="submitBtn">
+        <span class="btn-text"><i class="fas fa-user-plus"></i> Kayıt Ol</span>
+      </button>
+    </form>
+    <a href="{{ url_for('login_logout.login') }}" class="login-link"><i class="fas fa-arrow-left"></i> Zaten hesabınız var mı? Giriş Yap</a>
+  </div>
+
+<script>
+(function(){
+  var c=document.getElementById('particles');
+  for(var i=0;i<30;i++){var p=document.createElement('div');p.className='particle';var s=Math.random()*5+2;p.style.cssText='width:'+s+'px;height:'+s+'px;left:'+Math.random()*100+'%;animation-duration:'+(Math.random()*8+6)+'s;animation-delay:'+(Math.random()*5)+'s;';c.appendChild(p)}
+  var toggle=document.getElementById('pwToggle');var pw=document.getElementById('password');
+  toggle.addEventListener('click',function(){var show=pw.type==='password';pw.type=show?'text':'password';toggle.innerHTML=show?'<i class="fas fa-eye-slash"></i>':'<i class="fas fa-eye"></i>'});
+  document.getElementById('registerForm').addEventListener('submit',function(){var btn=document.getElementById('submitBtn');btn.classList.add('loading');btn.disabled=true});
+})();
+</script>
+</body>
 </html>

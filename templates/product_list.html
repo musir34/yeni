@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-mode.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}" />
     <style>
         :root{
             --color-primary:#B76E79; --color-primary-dark:#A05F6A;
@@ -114,6 +115,45 @@
         .marketplace-filter label{font-weight:600;color:#495057;margin:0}
         .marketplace-filter select{border:2px solid #dee2e6;border-radius:6px;padding:6px 12px;font-size:14px;cursor:pointer;transition:border-color 0.2s}
         .marketplace-filter select:focus{border-color:#007bff;outline:none;box-shadow:0 0 0 3px rgba(0,123,255,0.15)}
+
+        /* ── Responsive ── */
+        @media (max-width:991px){
+            .container{padding:10px;max-width:none}
+            .model-grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}
+        }
+        @media (max-width:767px){
+            .header-actions{flex-direction:column;align-items:stretch;padding:.6rem;gap:.4rem}
+            .header-actions .btn,.header-actions .dropdown{width:100%}
+            .header-actions .dropdown .btn{width:100%;justify-content:center}
+            .header-actions .dropdown .dropdown-content{position:relative!important;left:0!important;right:0!important;top:0!important;transform:none!important;width:100%!important;box-shadow:none;border:1px solid var(--color-border);margin-top:.25rem}
+            .search-container{flex-direction:column;gap:.5rem}
+            .search-container input,.search-container select,.search-container .btn{width:100%}
+            .marketplace-filter{flex-direction:column;align-items:stretch;gap:.5rem}
+            .marketplace-filter select{width:100%}
+            .model-grid{grid-template-columns:1fr;gap:.75rem}
+            .model-image-container{height:220px}
+            .model-card:hover{transform:none}
+            .model-info{padding:.75rem}
+            .model-actions{flex-direction:column;gap:.5rem}
+            .model-actions .btn,.model-actions .main-actions,.model-actions .more-actions{width:100%}
+            .model-actions .main-actions{display:flex;flex-direction:column;gap:.5rem}
+            .model-actions .main-actions .btn{width:100%}
+            .color-header{flex-direction:column;align-items:flex-start;gap:.5rem}
+            .color-thumbnail{width:50px;height:50px}
+            .size-list li{flex-direction:column;align-items:flex-start;gap:.25rem}
+            .barcode-info{flex-basis:auto}
+            .image-modal-content{max-width:95vw;max-height:95vh}
+            .action-modal-content{width:95%!important}
+            .platform-icons{top:5px;right:5px;gap:3px}
+            .platform-icon{width:22px;height:22px}
+        }
+        @media (max-width:480px){
+            h1{font-size:1.2rem!important}
+            .model-image-container{height:180px}
+            .model-info h4{font-size:.9rem}
+            .model-info p{font-size:.8rem}
+            .pagination li a{padding:.35rem .6rem;min-width:34px;font-size:.8rem}
+        }
     </style>
 </head>
 <body>

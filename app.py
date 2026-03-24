@@ -187,16 +187,29 @@ def check_authentication():
         or request.path.startswith('/api/')
         or request.path.startswith('/health')):
         return None
+
+    # 2FA dahil tüm auth akışı sayfaları — bunlar giriş sürecinin parçası
     allowed = [
         'login_logout.login','login_logout.register','login_logout.static',
-        'login_logout.verify_totp','login_logout.logout','qr_utils.generate_qr_labels_pdf',
+        'login_logout.verify_totp','login_logout.setup_totp','login_logout.logout',
+        'qr_utils.generate_qr_labels_pdf',
         'health.health_check','enhanced_label.advanced_label_editor',
         'enhanced_label.enhanced_product_label'
     ]
+
     app.permanent_session_lifetime = timedelta(days=30)
+
+    # 1) Giriş yapmamışsa login'e yönlendir
     if request.endpoint not in allowed and not current_user.is_authenticated:
         flash('Lütfen giriş yapınız.', 'danger')
         return redirect(url_for('login_logout.login'))
+
+    # 2) Giriş yapmış ama 2FA doğrulanmamışsa → TOTP sayfasına yönlendir
+    if (request.endpoint not in allowed
+        and current_user.is_authenticated
+        and not session.get('totp_verified')):
+        flash('İki adımlı doğrulama gereklidir.', 'warning')
+        return redirect(url_for('login_logout.verify_totp'))
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Global Error Handlers

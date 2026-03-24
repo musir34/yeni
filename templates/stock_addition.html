@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-mode.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
 
     <style>
         :root {
@@ -128,6 +129,72 @@
         .barcode-item.is-updating { background-color: #fffbe6; border-color: #ffe58f; }
         .barcode-item.is-success { background-color: #e6ffed; border-color: #b7ebc3; transition: background-color 1s ease; }
         .barcode-item.is-danger { background-color: #fff5f5; border-color: #f5c6cb; }
+
+        /* ── Responsive ── */
+        @media (max-width: 991px) {
+            .container { max-width: none; padding: 1rem; }
+            .main-card { padding: 1.25rem; }
+        }
+        @media (max-width: 767px) {
+            .container { padding: 0.5rem; }
+            h1 { font-size: 1.3rem !important; margin-bottom: 1rem; }
+            .header-actions {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.4rem;
+                padding: 0.6rem;
+            }
+            .header-actions .btn { width: 100%; justify-content: center; }
+            .main-card { padding: 0.75rem; }
+
+            .mode-selection-buttons {
+                flex-direction: column !important;
+                gap: 0.5rem !important;
+            }
+            .mode-selection-buttons .btn { flex: none !important; width: 100%; }
+
+            #barcodeInput, #rafKoduInput { font-size: 1rem; }
+            #formContainer div[style*="display: flex"] {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            #autoEnterToggle { width: 100%; }
+
+            .barcode-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+                padding: 0.75rem;
+            }
+            .item-image img, .item-image .bi {
+                width: 60px;
+                height: 60px;
+            }
+            .item-details h4 { font-size: 0.9rem; }
+            .item-quantity {
+                text-align: left;
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .quantity-control { gap: 0.3rem; }
+            .quantity-control .barcode-count { min-width: 45px; font-size: 1rem; }
+
+            .barcode-list-container { max-height: 40vh; padding: 0.5rem; }
+
+            .update-button-group {
+                flex-direction: column !important;
+                gap: 0.5rem !important;
+            }
+            .update-button-group .btn { width: 100%; }
+
+            .progress { height: 20px; font-size: 0.75rem; }
+        }
+        @media (max-width: 480px) {
+            .item-image img, .item-image .bi { width: 50px; height: 50px; }
+            .item-details p { font-size: 0.8rem; }
+        }
     </style>
 </head>
 

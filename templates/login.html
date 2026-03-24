@@ -1,54 +1,335 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <script>(function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();if(m==='on'||(m==='auto'&&(h>=20||h<7)))document.documentElement.classList.add('gs-dark');})()</script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Giriş Yap</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-mode.css') }}">
-    <style>
-        /* Stil ayarları buraya eklenebilir */
-    </style>
+  <meta charset="UTF-8">
+  <script>(function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();if(m==='on'||(m==='auto'&&(h>=20||h<7)))document.documentElement.classList.add('gs-dark');})()</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Giriş Yap - Güllü Ayakkabı</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+
+    /* ── Animated Gradient Background ── */
+    body{
+      font-family:'Inter',sans-serif;
+      min-height:100vh;
+      display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(-45deg,#1a1a2e,#16213e,#0f3460,#533483,#e94560,#B76E79);
+      background-size:400% 400%;
+      animation:gradientShift 15s ease infinite;
+      overflow:hidden;
+      position:relative;
+    }
+    @keyframes gradientShift{
+      0%{background-position:0% 50%}
+      50%{background-position:100% 50%}
+      100%{background-position:0% 50%}
+    }
+
+    /* ── Floating Particles ── */
+    .particles{position:fixed;inset:0;pointer-events:none;z-index:0}
+    .particle{
+      position:absolute;
+      border-radius:50%;
+      background:rgba(255,255,255,.08);
+      animation:floatUp linear infinite;
+    }
+    @keyframes floatUp{
+      0%{transform:translateY(100vh) scale(0);opacity:0}
+      10%{opacity:1}
+      90%{opacity:1}
+      100%{transform:translateY(-10vh) scale(1);opacity:0}
+    }
+
+    /* ── Glassmorphism Card ── */
+    .login-card{
+      position:relative;z-index:10;
+      width:100%;max-width:440px;
+      margin:1rem;
+      background:rgba(255,255,255,.12);
+      backdrop-filter:blur(20px);
+      -webkit-backdrop-filter:blur(20px);
+      border:1px solid rgba(255,255,255,.18);
+      border-radius:24px;
+      padding:2.5rem 2rem;
+      box-shadow:0 25px 60px rgba(0,0,0,.3),
+                 inset 0 1px 0 rgba(255,255,255,.15);
+      animation:cardEntry .8s cubic-bezier(.16,1,.3,1) both;
+      overflow:hidden;
+    }
+    .login-card::before{
+      content:'';position:absolute;top:-50%;left:-50%;
+      width:200%;height:200%;
+      background:conic-gradient(from 0deg,transparent,rgba(183,110,121,.15),transparent 30%);
+      animation:rotateBg 8s linear infinite;
+      z-index:-1;
+    }
+    @keyframes rotateBg{to{transform:rotate(360deg)}}
+    @keyframes cardEntry{
+      from{opacity:0;transform:translateY(40px) scale(.94)}
+      to{opacity:1;transform:translateY(0) scale(1)}
+    }
+
+    /* ── Logo ── */
+    .logo-container{
+      text-align:center;
+      margin-bottom:2rem;
+      animation:logoEntry .6s .2s cubic-bezier(.16,1,.3,1) both;
+    }
+    @keyframes logoEntry{
+      from{opacity:0;transform:scale(.7) rotate(-5deg)}
+      to{opacity:1;transform:scale(1) rotate(0)}
+    }
+    .logo-container img{
+      width:90px;height:90px;
+      border-radius:20px;
+      box-shadow:0 10px 30px rgba(0,0,0,.3);
+      object-fit:cover;
+      border:2px solid rgba(255,255,255,.2);
+    }
+    .logo-title{
+      color:#fff;font-size:1.6rem;font-weight:800;
+      margin-top:.75rem;
+      text-shadow:0 2px 10px rgba(0,0,0,.3);
+      letter-spacing:.5px;
+    }
+    .logo-subtitle{
+      color:rgba(255,255,255,.6);font-size:.85rem;
+      margin-top:.25rem;font-weight:500;
+    }
+
+    /* ── Flash Messages ── */
+    .flash-msg{
+      padding:.75rem 1rem;
+      border-radius:12px;
+      margin-bottom:1.25rem;
+      font-size:.88rem;font-weight:500;
+      animation:flashIn .4s ease both;
+      backdrop-filter:blur(10px);
+    }
+    @keyframes flashIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+    .flash-danger{background:rgba(233,69,96,.25);color:#ff8a9e;border:1px solid rgba(233,69,96,.3)}
+    .flash-warning{background:rgba(255,193,7,.2);color:#ffe082;border:1px solid rgba(255,193,7,.3)}
+    .flash-success{background:rgba(58,196,125,.2);color:#7ef0ab;border:1px solid rgba(58,196,125,.3)}
+
+    /* ── Form Groups ── */
+    .form-group{
+      margin-bottom:1.25rem;
+      animation:fieldSlide .5s cubic-bezier(.16,1,.3,1) both;
+    }
+    .form-group:nth-child(1){animation-delay:.3s}
+    .form-group:nth-child(2){animation-delay:.4s}
+    @keyframes fieldSlide{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+
+    .form-label{
+      display:flex;align-items:center;gap:.5rem;
+      color:rgba(255,255,255,.8);font-size:.88rem;font-weight:600;
+      margin-bottom:.5rem;
+    }
+    .form-label i{font-size:.9rem;color:rgba(183,110,121,.8)}
+
+    .input-wrapper{position:relative}
+    .input-wrapper i.input-icon{
+      position:absolute;left:14px;top:50%;transform:translateY(-50%);
+      color:rgba(255,255,255,.35);font-size:1rem;
+      transition:color .3s;pointer-events:none;
+    }
+    .form-input{
+      width:100%;
+      padding:.85rem 1rem .85rem 2.75rem;
+      background:rgba(255,255,255,.08);
+      border:1.5px solid rgba(255,255,255,.12);
+      border-radius:14px;
+      color:#fff;
+      font-size:1rem;font-weight:500;
+      transition:all .3s ease;
+      outline:none;
+    }
+    .form-input::placeholder{color:rgba(255,255,255,.3)}
+    .form-input:focus{
+      background:rgba(255,255,255,.14);
+      border-color:rgba(183,110,121,.6);
+      box-shadow:0 0 0 4px rgba(183,110,121,.15),
+                 0 0 20px rgba(183,110,121,.1);
+    }
+    .form-input:focus ~ i.input-icon{color:rgba(183,110,121,.9)}
+
+    /* ── Password Toggle ── */
+    .pw-toggle{
+      position:absolute;right:14px;top:50%;transform:translateY(-50%);
+      background:none;border:none;color:rgba(255,255,255,.4);
+      cursor:pointer;font-size:1.1rem;padding:4px;
+      transition:color .3s;
+    }
+    .pw-toggle:hover{color:rgba(255,255,255,.8)}
+
+    /* ── Submit Button ── */
+    .btn-submit{
+      width:100%;
+      padding:.9rem;
+      border:none;border-radius:14px;
+      background:linear-gradient(135deg,#B76E79,#A05F6A,#8B4F5A);
+      background-size:200% 200%;
+      color:#fff;
+      font-size:1rem;font-weight:700;
+      cursor:pointer;
+      transition:all .3s ease;
+      position:relative;overflow:hidden;
+      animation:fieldSlide .5s .5s cubic-bezier(.16,1,.3,1) both;
+      letter-spacing:.5px;
+      box-shadow:0 8px 25px rgba(183,110,121,.35);
+    }
+    .btn-submit::before{
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.2) 50%,transparent 70%);
+      transform:translateX(-100%);
+      transition:transform .6s ease;
+    }
+    .btn-submit:hover{
+      transform:translateY(-2px);
+      box-shadow:0 12px 35px rgba(183,110,121,.45);
+      background-position:100% 0;
+    }
+    .btn-submit:hover::before{transform:translateX(100%)}
+    .btn-submit:active{transform:translateY(0);box-shadow:0 4px 15px rgba(183,110,121,.3)}
+
+    .btn-submit .btn-text{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:.5rem}
+    .btn-submit.loading .btn-text{opacity:0}
+    .btn-submit.loading::after{
+      content:'';position:absolute;
+      width:24px;height:24px;
+      border:3px solid rgba(255,255,255,.3);
+      border-top-color:#fff;
+      border-radius:50%;
+      animation:spin .7s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ── Security Badge ── */
+    .security-badge{
+      display:flex;align-items:center;justify-content:center;gap:.5rem;
+      margin-top:1.5rem;
+      color:rgba(255,255,255,.35);font-size:.78rem;font-weight:500;
+      animation:fieldSlide .5s .6s cubic-bezier(.16,1,.3,1) both;
+    }
+    .security-badge i{color:rgba(58,196,125,.5);font-size:.85rem}
+
+    /* ── Responsive ── */
+    @media(max-width:480px){
+      .login-card{padding:2rem 1.25rem;margin:.75rem;border-radius:20px}
+      .logo-container img{width:70px;height:70px;border-radius:16px}
+      .logo-title{font-size:1.3rem}
+      .form-input{padding:.75rem .9rem .75rem 2.5rem;font-size:.95rem}
+      .btn-submit{padding:.8rem}
+    }
+
+    /* ── prefers-reduced-motion ── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+      body{animation:none;background-size:100% 100%}
+    }
+  </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h2 class="text-center">Giriş Yap</h2>
 
-        <!-- Hata mesajı göstermek için -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} mt-3">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+  <!-- Floating Particles -->
+  <div class="particles" id="particles"></div>
 
-        <form action="{{ url_for('login_logout.login') }}" method="POST" class="mt-3">
-            <div class="mb-3">
-                <label for="username" class="form-label">Kullanıcı Adı:</label>
-                <input type="text" class="form-control" id="username" name="username" required autocomplete="off">
-            </div>
-            <div class="mb-3 position-relative">
-                <label for="password" class="form-label">Şifre:</label>
-                <input type="password" class="form-control" id="password" name="password" required autocomplete="off">
-                <button type="button" class="btn btn-outline-secondary btn-sm position-absolute end-0 top-0 mt-2 me-2" onclick="togglePassword()">Göster</button>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Giriş Yap</button>
-        </form>
-    <script>
-        function togglePassword() {
-            var passwordField = document.getElementById("password");
-            var showButton = event.target;
-            if (passwordField.type === "password") {
-                passwordField.type = "text";
-                showButton.innerText = "Gizle";
-            } else {
-                passwordField.type = "password";
-                showButton.innerText = "Göster";
-            }
-        }
-    </script>
+  <!-- Login Card -->
+  <div class="login-card">
+
+    <!-- Logo -->
+    <div class="logo-container">
+      <img src="{{ url_for('static', filename='logo/gullu.png') }}" alt="Güllü Ayakkabı Logo"/>
+      <div class="logo-title">Güllü Ayakkabı</div>
+      <div class="logo-subtitle">Yönetim Paneli</div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash-msg flash-{{ category }}">
+            <i class="fas {% if category == 'danger' %}fa-exclamation-circle{% elif category == 'warning' %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %}"></i>
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Login Form -->
+    <form action="{{ url_for('login_logout.login') }}" method="POST" id="loginForm" autocomplete="off">
+
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-user"></i> Kullanıcı Adı</label>
+        <div class="input-wrapper">
+          <input type="text" class="form-input" id="username" name="username" placeholder="Kullanıcı adınızı girin" required autofocus>
+          <i class="fas fa-user input-icon"></i>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-lock"></i> Şifre</label>
+        <div class="input-wrapper">
+          <input type="password" class="form-input" id="password" name="password" placeholder="Şifrenizi girin" required>
+          <i class="fas fa-lock input-icon"></i>
+          <button type="button" class="pw-toggle" id="pwToggle" title="Şifreyi göster/gizle">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-submit" id="submitBtn">
+        <span class="btn-text"><i class="fas fa-sign-in-alt"></i> Giriş Yap</span>
+      </button>
+    </form>
+
+    <div class="security-badge">
+      <i class="fas fa-shield-halved"></i>
+      <span>2FA Korumalı Güvenli Bağlantı</span>
+    </div>
+  </div>
+
+<script>
+(function(){
+  // ── Particles ──
+  var c=document.getElementById('particles');
+  for(var i=0;i<35;i++){
+    var p=document.createElement('div');
+    p.className='particle';
+    var size=Math.random()*6+2;
+    p.style.cssText='width:'+size+'px;height:'+size+'px;left:'+Math.random()*100+'%;animation-duration:'+(Math.random()*8+6)+'s;animation-delay:'+(Math.random()*5)+'s;';
+    c.appendChild(p);
+  }
+
+  // ── Password Toggle ──
+  var toggle=document.getElementById('pwToggle');
+  var pw=document.getElementById('password');
+  toggle.addEventListener('click',function(){
+    var show=pw.type==='password';
+    pw.type=show?'text':'password';
+    toggle.innerHTML=show?'<i class="fas fa-eye-slash"></i>':'<i class="fas fa-eye"></i>';
+  });
+
+  // ── Submit Loading ──
+  document.getElementById('loginForm').addEventListener('submit',function(){
+    var btn=document.getElementById('submitBtn');
+    btn.classList.add('loading');
+    btn.disabled=true;
+  });
+
+  // ── Input Focus Effects ──
+  document.querySelectorAll('.form-input').forEach(function(input){
+    input.addEventListener('focus',function(){
+      this.closest('.form-group').style.transform='translateX(4px)';
+      this.closest('.form-group').style.transition='transform .2s ease';
+    });
+    input.addEventListener('blur',function(){
+      this.closest('.form-group').style.transform='translateX(0)';
+    });
+  });
+})();
+</script>
 </body>
 </html>

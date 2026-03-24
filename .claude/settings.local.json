@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/MUS1R/Documents/yeni -maxdepth 2 -type f \\\\\\(-name *.json -o -name *.config.* \\\\\\))"
+    ]
+  }
+}

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();if(m==='on'||(m==='auto'&&(h>=20||h<7)))document.documentElement.classList.add('gs-dark');})()</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>2FA Kurulumu - Güllü Ayakkabı</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+
+    body{
+      font-family:'Inter',sans-serif;
+      min-height:100vh;
+      display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(-45deg,#0f3460,#16213e,#1a1a2e,#533483,#B76E79,#A05F6A);
+      background-size:400% 400%;
+      animation:gradientShift 18s ease infinite;
+      overflow:hidden;
+      position:relative;
+    }
+    @keyframes gradientShift{
+      0%{background-position:0% 50%}
+      50%{background-position:100% 50%}
+      100%{background-position:0% 50%}
+    }
+
+    .orb{
+      position:fixed;border-radius:50%;
+      filter:blur(80px);pointer-events:none;z-index:0;
+      animation:orbFloat 10s ease-in-out infinite;
+    }
+    .orb-1{width:300px;height:300px;background:rgba(183,110,121,.2);top:10%;left:15%}
+    .orb-2{width:250px;height:250px;background:rgba(83,52,131,.2);bottom:10%;right:15%;animation-delay:3s}
+    @keyframes orbFloat{
+      0%,100%{transform:translate(0,0) scale(1)}
+      33%{transform:translate(30px,-20px) scale(1.1)}
+      66%{transform:translate(-20px,30px) scale(.95)}
+    }
+
+    .setup-card{
+      position:relative;z-index:10;
+      width:100%;max-width:480px;
+      margin:1rem;
+      background:rgba(255,255,255,.1);
+      backdrop-filter:blur(24px);
+      -webkit-backdrop-filter:blur(24px);
+      border:1px solid rgba(255,255,255,.15);
+      border-radius:28px;
+      padding:2.5rem 2rem;
+      box-shadow:0 30px 70px rgba(0,0,0,.35),
+                 inset 0 1px 0 rgba(255,255,255,.12);
+      animation:cardEntry .8s cubic-bezier(.16,1,.3,1) both;
+    }
+    @keyframes cardEntry{
+      from{opacity:0;transform:translateY(50px) scale(.92)}
+      to{opacity:1;transform:translateY(0) scale(1)}
+    }
+
+    .setup-header{text-align:center;margin-bottom:1.5rem}
+    .setup-icon{
+      width:80px;height:80px;margin:0 auto 1rem;
+      border-radius:50%;
+      background:linear-gradient(135deg,rgba(58,196,125,.3),rgba(83,52,131,.3));
+      border:2px solid rgba(255,255,255,.15);
+      display:flex;align-items:center;justify-content:center;
+      animation:pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse{
+      0%,100%{box-shadow:0 0 0 0 rgba(58,196,125,.3)}
+      50%{box-shadow:0 0 0 15px rgba(58,196,125,0)}
+    }
+    .setup-icon i{font-size:1.8rem;color:rgba(255,255,255,.9)}
+    .setup-title{color:#fff;font-size:1.4rem;font-weight:800}
+    .setup-subtitle{color:rgba(255,255,255,.55);font-size:.85rem;margin-top:.3rem}
+
+    .step{
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:16px;
+      padding:1.25rem;
+      margin-bottom:1rem;
+      animation:fadeUp .5s ease both;
+    }
+    .step:nth-child(1){animation-delay:.3s}
+    .step:nth-child(2){animation-delay:.4s}
+    .step:nth-child(3){animation-delay:.5s}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+    .step-num{
+      display:inline-flex;align-items:center;justify-content:center;
+      width:28px;height:28px;border-radius:50%;
+      background:linear-gradient(135deg,#B76E79,#A05F6A);
+      color:#fff;font-size:.8rem;font-weight:700;
+      margin-right:.5rem;
+    }
+    .step-title{color:rgba(255,255,255,.85);font-size:.92rem;font-weight:600;margin-bottom:.75rem;display:flex;align-items:center}
+    .step-desc{color:rgba(255,255,255,.5);font-size:.82rem;line-height:1.5}
+
+    .qr-wrapper{
+      text-align:center;
+      padding:1rem;
+      background:rgba(255,255,255,.95);
+      border-radius:12px;
+      display:inline-block;
+      margin:0 auto;
+    }
+    .qr-wrapper img{
+      width:180px;height:180px;
+      border-radius:8px;
+    }
+    .qr-center{text-align:center}
+
+    .flash-msg{
+      padding:.75rem 1rem;border-radius:12px;
+      margin-bottom:1rem;
+      font-size:.88rem;font-weight:500;
+      backdrop-filter:blur(10px);
+      display:flex;align-items:center;gap:.5rem;
+    }
+    .flash-danger{background:rgba(233,69,96,.25);color:#ff8a9e;border:1px solid rgba(233,69,96,.3)}
+    .flash-success{background:rgba(58,196,125,.2);color:#7ef0ab;border:1px solid rgba(58,196,125,.3)}
+
+    .otp-container{
+      display:flex;gap:8px;justify-content:center;margin:.75rem 0 1rem;
+    }
+    .otp-box{
+      width:46px;height:56px;text-align:center;
+      font-size:1.4rem;font-weight:700;color:#fff;
+      background:rgba(255,255,255,.08);
+      border:2px solid rgba(255,255,255,.12);
+      border-radius:12px;outline:none;
+      transition:all .25s ease;
+    }
+    .otp-box:focus{
+      border-color:rgba(183,110,121,.7);
+      background:rgba(255,255,255,.14);
+      box-shadow:0 0 0 4px rgba(183,110,121,.15);
+      transform:scale(1.08);
+    }
+    .otp-box.filled{border-color:rgba(58,196,125,.5);background:rgba(58,196,125,.1)}
+    .hidden-input{position:absolute;opacity:0;pointer-events:none}
+
+    .btn-verify{
+      width:100%;padding:.85rem;
+      border:none;border-radius:14px;
+      background:linear-gradient(135deg,#3ac47d,#28a745);
+      color:#fff;font-size:1rem;font-weight:700;
+      cursor:pointer;transition:all .3s ease;
+      box-shadow:0 8px 25px rgba(58,196,125,.35);
+      opacity:.5;pointer-events:none;
+      position:relative;overflow:hidden;
+    }
+    .btn-verify.active{opacity:1;pointer-events:auto}
+    .btn-verify:hover{transform:translateY(-2px);box-shadow:0 12px 35px rgba(58,196,125,.45)}
+    .btn-verify .btn-text{display:flex;align-items:center;justify-content:center;gap:.5rem}
+    .btn-verify.loading .btn-text{opacity:0}
+    .btn-verify.loading::after{
+      content:'';position:absolute;
+      width:24px;height:24px;
+      border:3px solid rgba(255,255,255,.3);
+      border-top-color:#fff;border-radius:50%;
+      animation:spin .7s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    @media(max-width:480px){
+      .setup-card{padding:1.75rem 1.25rem;margin:.75rem;border-radius:22px}
+      .qr-wrapper img{width:150px;height:150px}
+      .otp-box{width:40px;height:48px;font-size:1.2rem}
+      .otp-container{gap:6px}
+    }
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+    }
+  </style>
+</head>
+<body>
+
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <div class="setup-card">
+    <div class="setup-header">
+      <div class="setup-icon"><i class="fas fa-key"></i></div>
+      <div class="setup-title">2FA Kurulumu</div>
+      <div class="setup-subtitle">Hesabınızı güvence altına alın</div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash-msg flash-{{ category }}">
+            <i class="fas {% if category == 'danger' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %}"></i>
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="step">
+      <div class="step-title"><span class="step-num">1</span> Uygulama İndirin</div>
+      <div class="step-desc">Google Authenticator veya Microsoft Authenticator uygulamasını telefonunuza indirin.</div>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><span class="step-num">2</span> QR Kodu Tarayın</div>
+      <div class="step-desc">Uygulamada "Hesap Ekle" seçeneğinden aşağıdaki QR kodu tarayın.</div>
+      <div class="qr-center" style="margin-top:.75rem">
+        <div class="qr-wrapper">
+          <img src="data:image/png;base64,{{ qr_code_data }}" alt="QR Kodu">
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><span class="step-num">3</span> Kodu Girin</div>
+      <div class="step-desc" style="margin-bottom:.5rem">Uygulamada görünen 6 haneli kodu aşağıya girin.</div>
+
+      <form method="POST" id="setupForm" autocomplete="off">
+        <input type="text" name="token" id="hiddenToken" class="hidden-input" maxlength="6">
+        <div class="otp-container" id="otpContainer">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="0" autofocus>
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="1">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="2">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="3">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="4">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="5">
+        </div>
+        <button type="submit" class="btn-verify" id="verifyBtn">
+          <span class="btn-text"><i class="fas fa-check-double"></i> Kurulumu Tamamla</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+<script>
+(function(){
+  var boxes=document.querySelectorAll('.otp-box');
+  var hidden=document.getElementById('hiddenToken');
+  var btn=document.getElementById('verifyBtn');
+  var form=document.getElementById('setupForm');
+
+  function updateHidden(){
+    var val='';
+    boxes.forEach(function(b){val+=b.value});
+    hidden.value=val;
+    btn.classList.toggle('active',val.length===6);
+    boxes.forEach(function(b){
+      b.classList.toggle('filled',!!b.value);
+    });
+  }
+
+  boxes.forEach(function(box,i){
+    box.addEventListener('input',function(){
+      var v=this.value.replace(/[^0-9]/g,'');
+      this.value=v?v[0]:'';
+      updateHidden();
+      if(v&&i<5)boxes[i+1].focus();
+      if(hidden.value.length===6){
+        setTimeout(function(){btn.classList.add('loading');btn.disabled=true;form.submit()},200);
+      }
+    });
+    box.addEventListener('keydown',function(e){
+      if(e.key==='Backspace'&&!this.value&&i>0){boxes[i-1].focus();boxes[i-1].value='';updateHidden()}
+      if(e.key==='ArrowLeft'&&i>0)boxes[i-1].focus();
+      if(e.key==='ArrowRight'&&i<5)boxes[i+1].focus();
+    });
+    box.addEventListener('focus',function(){this.select()});
+    box.addEventListener('paste',function(e){
+      e.preventDefault();
+      var data=(e.clipboardData||window.clipboardData).getData('text').replace(/[^0-9]/g,'');
+      for(var j=0;j<6&&j<data.length;j++)boxes[j].value=data[j];
+      updateHidden();
+      if(data.length>=6)setTimeout(function(){btn.classList.add('loading');btn.disabled=true;form.submit()},200);
+    });
+  });
+
+  form.addEventListener('submit',function(e){
+    if(hidden.value.length<6){e.preventDefault();return}
+    btn.classList.add('loading');btn.disabled=true;
+  });
+})();
+</script>
+</body>
+</html>
