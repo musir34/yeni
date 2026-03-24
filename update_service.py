@@ -1,4 +1,4 @@
-﻿from flask import Blueprint, render_template, request, redirect, url_for, flash
+﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, get_flashed_messages
 from datetime import datetime
 import traceback
 import json
@@ -93,10 +93,20 @@ async def update_order_status_to_picking(supplier_id, shipment_package_id, lines
         traceback.print_exc()
         return False
 
+def _respond(is_ajax, ok=False):
+    """AJAX isteğinde JSON, normal istekte redirect döner."""
+    if is_ajax:
+        msgs = get_flashed_messages(with_categories=True)
+        return jsonify({'ok': ok, 'messages': [{'cat': c, 'msg': m} for c, m in msgs]})
+    return redirect(url_for('siparis_hazirla.index'))
+
+
 @update_service_bp.route('/confirm_packing', methods=['POST'])
 async def confirm_packing():
     logger.info("======= [confirm_packing] START =======")
     logger.info(f"[REQ] method={request.method} form_keys={list(request.form.keys())}")
+
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
     try:
         # 1) Sipariş no
@@ -104,7 +114,7 @@ async def confirm_packing():
         if not order_number:
             logger.warning("[CHK] order_number yok")
             flash('Sipariş numarası bulunamadı.', 'danger')
-            return redirect(url_for('siparis_hazirla.index'))
+            return _respond(is_ajax)
         logger.info(f"[ORDER] num={order_number}")
 
         # 2) Okutulan barkodlar (normalize)
@@ -125,7 +135,7 @@ async def confirm_packing():
         if not order_created:
             logger.error("[DB] Sipariş hiçbir tabloda bulunamadı")
             flash('Sipariş bulunamadı.', 'danger')
-            return redirect(url_for('siparis_hazirla.index'))
+            return _respond(is_ajax)
 
         logger.info(f"[ORDER] Bulundu: {order_number}, Tablo: {table_cls.__name__}")
 
@@ -165,7 +175,7 @@ async def confirm_packing():
             msg = "Eksik okutma -> " + " | ".join(eksikler)
             logger.warning(f"[VERIFY][FAIL] {msg}")
             flash(f"Barkod doğrulama başarısız. {msg}", "danger")
-            return redirect(url_for('siparis_hazirla.index'))
+            return _respond(is_ajax)
 
         logger.info("[VERIFY][OK] Barkod doğrulama geçti. Stok düşümüne geçiliyor.")
 
@@ -239,7 +249,7 @@ async def confirm_packing():
             if toplam_beklenen > 0 and toplam_dusen == 0:
                 logger.error(f"[STOCK][CRITICAL] Hiç stok düşmedi! Trendyol'a güncelleme gönderilmiyor.")
                 flash("❌ Stok yetersiz! Hiçbir ürün raflardan çekilemedi. Sipariş Picking'e geçirilemedi.", 'danger')
-                return redirect(url_for('siparis_hazirla.index'))
+                return _respond(is_ajax)
             elif toplam_dusen < toplam_beklenen:
                 logger.warning(f"[STOCK][PARTIAL] Kısmi stok düşümü: {toplam_dusen}/{toplam_beklenen}")
                 flash(f"⚠️ Kısmi hazırlandı: {toplam_dusen}/{toplam_beklenen} adet. Devam ediliyor...", 'warning')
@@ -250,7 +260,7 @@ async def confirm_packing():
             db.session.rollback()
             logger.exception("[STOCK][ERR] rollback")
             flash("Stok düşümünde hata oluştu.", 'danger')
-            return redirect(url_for('siparis_hazirla.index'))
+            return _respond(is_ajax)
 
         # 7) Trendyol: Picking’e geçir (aynı, ama log zengin)
         try:
@@ -264,7 +274,7 @@ async def confirm_packing():
             if not shipment_package_ids:
                 logger.error("[TYL] shipmentPackageId yok; API atlanıyor")
                 flash("shipmentPackageId yok; API güncellenemiyor.", 'danger')
-                return redirect(url_for('siparis_hazirla.index'))
+                return _respond(is_ajax)
 
             lines = []
             for d in details:
@@ -272,7 +282,7 @@ async def confirm_packing():
                 if not lid:
                     logger.error("[TYL] line_id yok; iptal")
                     flash("'line_id' yok; Trendyol update mümkün değil.", 'danger')
-                    return redirect(url_for('siparis_hazirla.index'))
+                    return _respond(is_ajax)
                 q = int(d.get('quantity', 1))
                 lines.append({"lineId": int(lid), "quantity": q})
 
@@ -314,7 +324,7 @@ async def confirm_packing():
                     logger.warning("[TYL][ROLLBACK] Stok düşümü geri alındı")
                 except:
                     pass
-                return redirect(url_for('siparis_hazirla.index'))
+                return _respond(is_ajax)
         except Exception as e:
             logger.exception("[TYL][EXC]")
             flash(f"Trendyol API çağrısında istisna: {e}", 'danger')
@@ -339,7 +349,7 @@ async def confirm_packing():
             db.session.rollback()
             logger.exception("[MOVE][ERR] rollback")
             flash(f"Veritabanı taşıma hatası: {db_error}", 'danger')
-            return redirect(url_for('siparis_hazirla.index'))
+            return _respond(is_ajax)
 
         # 9) Sonraki sipariş info
         try:
@@ -356,9 +366,10 @@ async def confirm_packing():
     except Exception as e:
         logger.exception("[GLOBAL][ERR]")
         flash('Bir hata oluştu.', 'danger')
+        return _respond(is_ajax)
 
     logger.info("======= [confirm_packing] END =======")
-    return redirect(url_for('siparis_hazirla.index'))
+    return _respond(is_ajax, ok=True)
 
 
 

@@ -474,6 +474,9 @@
     </div>
   </div>
 
+  <!-- AJAX Toast -->
+  <div id="ajaxToast" style="position:fixed;bottom:30px;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:20px;font-size:0.9rem;z-index:9999;opacity:0;visibility:hidden;transition:opacity 0.4s;box-shadow:0 4px 12px rgba(0,0,0,0.2);pointer-events:none;max-width:80vw;text-align:center;"></div>
+
   <div class="container">
     <!-- 🔥 Sipariş Kuyruğu - Sıradaki Siparişler -->
     <div class="order-queue-wrapper" id="orderQueueWrapper" {% if manuel_mod %}style="display:none"{% endif %}>
@@ -498,6 +501,12 @@
       </button>
     </div>
 
+    <div id="order-content">
+    <div id="order-data"
+         data-shipping-barcode="{{ order.shipping_barcode if order else '' }}"
+         data-order-number="{{ order.order_number if order else '' }}"
+         data-manuel-mod="{{ 'true' if manuel_mod else 'false' }}"
+         style="display:none"></div>
     <!-- 🔥 Aktif Sipariş Başlığı -->
     {% if order %}
     <div class="active-order-section">
@@ -647,6 +656,7 @@
       </p>
     </div>
     {% endif %}
+    </div><!-- /order-content -->
   </div><!-- /container -->
 
   <!-- Arşiv modal (GLOBAL, TEK KEZ) -->
@@ -732,7 +742,7 @@
   <!-- 🔥 Sipariş Kuyruğu JavaScript -->
   <script>
     // Aktif sipariş numarası
-    const activeOrderNumber = "{{ order.order_number if order else '' }}";
+    var activeOrderNumber = "{{ order.order_number if order else '' }}";
     
     // Kuyruk scroll fonksiyonu
     function scrollQueue(amount) {
@@ -817,7 +827,7 @@
     (function(){
       const overlay=document.getElementById('imageModal');
       const img=document.getElementById('imageModalImg');
-      document.addEventListener('click',e=>{
+      document.addEventListener('click',function(e){
         const t=e.target;
         if(t.classList && t.classList.contains('zoomable-image')){
           img.src=t.getAttribute('data-image-src')||t.src; overlay.classList.add('is-visible');
@@ -826,152 +836,230 @@
       });
     })();
 
-    // DOM Hazır
-    document.addEventListener('DOMContentLoaded', function(){
-      const onaylaBtn=document.getElementById('onaylaBtn');
-      const yazdirBtn=document.getElementById('yazdirBtn');
-      const yazdirForm=document.getElementById('yazdirForm');
-      const packingForm=document.getElementById('packingForm');
-      const autoShipToggle=document.getElementById('autoShipToggle');
-      const autoShipMessage=document.getElementById('autoShipMessage');
-      const autoShipBarcodeSpan=document.getElementById('autoShipBarcode');
-      const shippingBarcode="{{ order.shipping_barcode if order else '' }}";
-      const barkodInputs=document.querySelectorAll('.barkod-input');
+    // ── AJAX yardımcıları ──
+    var _updateButtonsFn = null;
 
-      let printTimer=null, confirmTimer=null;
+    function showAjaxToast(msg, cat, delay) {
+      setTimeout(function() {
+        var el = document.getElementById('ajaxToast');
+        if (!el) return;
+        var colors = {success:'#28a745', danger:'#dc3545', warning:'#e6a817', info:'#17a2b8'};
+        el.style.background = colors[cat] || '#333';
+        el.style.color = (cat === 'warning') ? '#000' : '#fff';
+        el.textContent = msg;
+        el.style.opacity = '1';
+        el.style.visibility = 'visible';
+        setTimeout(function(){ el.style.opacity='0'; el.style.visibility='hidden'; }, 3500);
+      }, delay || 0);
+    }
 
-      // Toggle state (localStorage)
-      const savedToggleState=localStorage.getItem('autoShipEnabled');
-      if(savedToggleState!==null) autoShipToggle.checked = (savedToggleState==='true');
+    function submitPackingAjax() {
+      var form = document.getElementById('packingForm');
+      if (!form) return;
+      var onaylaBtn = document.getElementById('onaylaBtn');
+      if (onaylaBtn) { onaylaBtn.disabled = true; onaylaBtn.textContent = 'Gönderiliyor…'; }
 
-      function clearTimers(){ if(printTimer) clearTimeout(printTimer); if(confirmTimer) clearTimeout(confirmTimer); autoShipMessage.classList.remove('show'); }
-      function showAutoShip(){document.getElementById('autoShipBarcodeDisplay').innerText=shippingBarcode; autoShipBarcodeSpan.innerText=shippingBarcode; autoShipMessage.classList.add('show'); setTimeout(()=>autoShipMessage.classList.remove('show'),3000);}
+      fetch('/confirm_packing', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: new FormData(form)
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        (data.messages || []).forEach(function(m, i) { showAjaxToast(m.msg, m.cat, i * 600); });
+        if (data.ok) {
+          var delay = Math.max(1400, (data.messages || []).length * 600 + 500);
+          setTimeout(refreshOrderContent, delay);
+        } else {
+          if (onaylaBtn) { onaylaBtn.disabled = false; onaylaBtn.textContent = 'Paketlemeyi Onayla'; }
+        }
+      })
+      .catch(function(err) {
+        console.error('confirm_packing hatası:', err);
+        showAjaxToast('Sunucu hatası. Lütfen tekrar deneyin.', 'danger');
+        if (onaylaBtn) { onaylaBtn.disabled = false; onaylaBtn.textContent = 'Paketlemeyi Onayla'; }
+      });
+    }
 
-      function updateButtons(){
-        clearTimers();
-        let ok=true;
-        if(barkodInputs.length===0) ok=false;
-        barkodInputs.forEach(input=>{
-          const pi=input.dataset.productIndex, qi=input.dataset.quantityIndex, side=input.dataset.side;
-          const cardBody=input.closest('.card-body'); if(!cardBody){ok=false;return;}
-          
-          // 🔥 Hem ana barkod hem orijinal barkod kontrolü
-          const expectedEl=cardBody.querySelector(`input[type="hidden"][id="expectedBarcode-${side}-${pi}-${qi}"]`);
-          const originalEl=cardBody.querySelector(`input[type="hidden"][id="originalBarcode-${side}-${pi}-${qi}"]`);
-          
-          const exp=expectedEl? expectedEl.value.trim():'';
-          const orig=originalEl? originalEl.value.trim():'';
-          const val=input.value.trim();
-          
-          // 🔥 Hem ana hem alias kabul edilir
-          if(val===''|| (val!==exp && val!==orig)) ok=false;
-        });
+    function refreshOrderContent() {
+      var orderData = document.getElementById('order-data');
+      var isManuel = orderData && orderData.dataset.manuelMod === 'true';
+      var url = isManuel ? '/siparis-hazirla?manuel=1' : '/siparis-hazirla';
 
-        if(ok){
-          onaylaBtn.classList.remove('disabled');
-          onaylaBtn.disabled=false;
-          yazdirBtn.classList.remove('disabled');
-          yazdirBtn.disabled=false;
+      fetch(url)
+      .then(function(r) { return r.text(); })
+      .then(function(html) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        var newContent = doc.getElementById('order-content');
+        var oldContent = document.getElementById('order-content');
+        if (newContent && oldContent) {
+          oldContent.innerHTML = newContent.innerHTML;
+        }
+        var newOrderData = document.getElementById('order-data');
+        activeOrderNumber = (newOrderData && newOrderData.dataset.orderNumber) || '';
+        loadQueueOrders();
+        initOrderSection();
+      })
+      .catch(function(err) { console.error('Yenileme hatası:', err); });
+    }
 
-          confirmTimer=setTimeout(()=>packingForm.submit(),15000);
-          if(autoShipToggle.checked){showAutoShip();}
-          else{
-            printTimer=setTimeout(()=>yazdirForm.submit(),5000);
-          }
-        }else{
-          onaylaBtn.classList.add('disabled');
-          onaylaBtn.disabled=true;
-          yazdirBtn.classList.add('disabled');
-          yazdirBtn.disabled=true;
+    // ── initOrderSection: ilk yükleme + AJAX swap sonrası çalışır ──
+    function initOrderSection() {
+      var onaylaBtn = document.getElementById('onaylaBtn');
+      var yazdirBtn = document.getElementById('yazdirBtn');
+      var yazdirForm = document.getElementById('yazdirForm');
+      var packingForm = document.getElementById('packingForm');
+      var barkodInputs = document.querySelectorAll('.barkod-input');
+      var orderData = document.getElementById('order-data');
+      var shippingBarcode = orderData ? (orderData.dataset.shippingBarcode || '') : '';
+      var isManuelMod = orderData ? orderData.dataset.manuelMod === 'true' : false;
+      var autoShipToggle = document.getElementById('autoShipToggle');
+      var autoShipMessage = document.getElementById('autoShipMessage');
+      var manuelInput = document.getElementById('manuelOrderInput');
+
+      var printTimer = null, confirmTimer = null;
+
+      function clearTimers() {
+        if (printTimer) clearTimeout(printTimer);
+        if (confirmTimer) clearTimeout(confirmTimer);
+        if (autoShipMessage) autoShipMessage.classList.remove('show');
+      }
+
+      function showAutoShip() {
+        var disp = document.getElementById('autoShipBarcodeDisplay');
+        var span = document.getElementById('autoShipBarcode');
+        if (disp) disp.innerText = shippingBarcode;
+        if (span) span.innerText = shippingBarcode;
+        if (autoShipMessage) {
+          autoShipMessage.classList.add('show');
+          setTimeout(function(){ autoShipMessage.classList.remove('show'); }, 3000);
         }
       }
 
-      // 🔥 Doğrulama fonksiyonu (hem Enter hem klavye timer'ı için ortak)
-      function validateBarkodInput(input, idx){
-        const pi=input.dataset.productIndex, qi=input.dataset.quantityIndex, side=input.dataset.side;
-        const fg=input.closest('.form-group'); if(!fg) return;
-        const msg=fg.querySelector('.alert'); if(!msg) return;
-        const cb=input.closest('.card-body'); if(!cb) return;
-        
-        const expectedEl=cb.querySelector(`input[type="hidden"][id="expectedBarcode-${side}-${pi}-${qi}"]`); 
-        const originalEl=cb.querySelector(`input[type="hidden"][id="originalBarcode-${side}-${pi}-${qi}"]`); 
-        
-        if(!expectedEl) return;
-        
-        const exp=expectedEl.value.trim();
-        const orig=originalEl ? originalEl.value.trim() : exp;
-        const val=input.value.trim();
+      function updateButtons() {
+        clearTimers();
+        var ok = true;
+        if (barkodInputs.length === 0) ok = false;
+        barkodInputs.forEach(function(input) {
+          var pi = input.dataset.productIndex, qi = input.dataset.quantityIndex, side = input.dataset.side;
+          var cardBody = input.closest('.card-body');
+          if (!cardBody) { ok = false; return; }
+          var expectedEl = cardBody.querySelector('input[type="hidden"][id="expectedBarcode-' + side + '-' + pi + '-' + qi + '"]');
+          var originalEl = cardBody.querySelector('input[type="hidden"][id="originalBarcode-' + side + '-' + pi + '-' + qi + '"]');
+          var exp = expectedEl ? expectedEl.value.trim() : '';
+          var orig = originalEl ? originalEl.value.trim() : '';
+          var val = input.value.trim();
+          if (val === '' || (val !== exp && val !== orig)) ok = false;
+        });
 
-        if(val===exp || val===orig){ 
-          msg.textContent='Doğru!'; 
-          msg.className='alert alert-success alert-show'; 
-          input.style.backgroundColor='#e9ffe9';
-          input.dataset.confirmed='true';
-          input.readOnly=true;
-          const next=barkodInputs[idx+1]; 
-          if(next) setTimeout(()=>next.focus(),150); 
-          else onaylaBtn.focus();
-        }else if(val.length>0){ 
-          msg.textContent='Yanlış!'; 
-          msg.className='alert alert-danger alert-show'; 
-          input.style.backgroundColor='#ffe9e9'; 
-          input.dataset.confirmed='';
-          const wrongVal=val;
-          setTimeout(()=>{
-            if(input.value.trim()===wrongVal){
-              input.value='';
-              input.style.backgroundColor='';
-              msg.className='alert'; msg.style.opacity='0'; msg.style.visibility='hidden';
+        if (ok) {
+          if (onaylaBtn) { onaylaBtn.classList.remove('disabled'); onaylaBtn.disabled = false; }
+          if (yazdirBtn) { yazdirBtn.classList.remove('disabled'); yazdirBtn.disabled = false; }
+          confirmTimer = setTimeout(submitPackingAjax, 15000);
+          if (autoShipToggle && autoShipToggle.checked) { showAutoShip(); }
+          else if (yazdirForm) { printTimer = setTimeout(function(){ yazdirForm.submit(); }, 5000); }
+        } else {
+          if (onaylaBtn) { onaylaBtn.classList.add('disabled'); onaylaBtn.disabled = true; }
+          if (yazdirBtn) { yazdirBtn.classList.add('disabled'); yazdirBtn.disabled = true; }
+        }
+      }
+
+      _updateButtonsFn = updateButtons;
+
+      // Form submit'i AJAX'a yönlendir
+      if (packingForm) {
+        packingForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          submitPackingAjax();
+        });
+      }
+
+      function validateBarkodInput(input, idx) {
+        var pi = input.dataset.productIndex, qi = input.dataset.quantityIndex, side = input.dataset.side;
+        var fg = input.closest('.form-group'); if (!fg) return;
+        var msg = fg.querySelector('.alert'); if (!msg) return;
+        var cb = input.closest('.card-body'); if (!cb) return;
+        var expectedEl = cb.querySelector('input[type="hidden"][id="expectedBarcode-' + side + '-' + pi + '-' + qi + '"]');
+        var originalEl = cb.querySelector('input[type="hidden"][id="originalBarcode-' + side + '-' + pi + '-' + qi + '"]');
+        if (!expectedEl) return;
+        var exp = expectedEl.value.trim();
+        var orig = originalEl ? originalEl.value.trim() : exp;
+        var val = input.value.trim();
+
+        if (val === exp || val === orig) {
+          msg.textContent = 'Doğru!'; msg.className = 'alert alert-success alert-show';
+          input.style.backgroundColor = '#e9ffe9'; input.dataset.confirmed = 'true'; input.readOnly = true;
+          var next = barkodInputs[idx + 1];
+          if (next) setTimeout(function(){ next.focus(); }, 150);
+          else if (onaylaBtn) onaylaBtn.focus();
+        } else if (val.length > 0) {
+          msg.textContent = 'Yanlış!'; msg.className = 'alert alert-danger alert-show';
+          input.style.backgroundColor = '#ffe9e9'; input.dataset.confirmed = '';
+          var wrongVal = val;
+          setTimeout(function() {
+            if (input.value.trim() === wrongVal) {
+              input.value = ''; input.style.backgroundColor = '';
+              msg.className = 'alert'; msg.style.opacity = '0'; msg.style.visibility = 'hidden';
             }
-          },5000);
+          }, 5000);
           input.focus();
+        } else {
+          msg.className = 'alert'; msg.style.opacity = '0'; msg.style.visibility = 'hidden';
+          input.style.backgroundColor = ''; input.dataset.confirmed = '';
         }
-        else{ 
-          msg.className='alert'; 
-          msg.style.opacity='0'; 
-          msg.style.visibility='hidden'; 
-          input.style.backgroundColor=''; 
-          input.dataset.confirmed='';
-        }
-
         updateButtons();
       }
 
-      barkodInputs.forEach((input,idx)=>{
-        let typingTimer=null;
-
-        // Klavye ile yazarken: mesajı temizle + 1.5sn sonra otomatik doğrula
-        input.addEventListener('input',function(){
-          const fg=this.closest('.form-group'); if(!fg) return;
-          const msg=fg.querySelector('.alert'); if(!msg) return;
-          if(!this.dataset.confirmed){
-            msg.className='alert'; msg.style.opacity='0'; msg.style.visibility='hidden';
-            this.style.backgroundColor='';
+      barkodInputs.forEach(function(input, idx) {
+        var typingTimer = null;
+        input.addEventListener('input', function() {
+          var fg = this.closest('.form-group'); if (!fg) return;
+          var msg = fg.querySelector('.alert'); if (!msg) return;
+          if (!this.dataset.confirmed) {
+            msg.className = 'alert'; msg.style.opacity = '0'; msg.style.visibility = 'hidden';
+            this.style.backgroundColor = '';
           }
-          // Klavye girişi için 1.5sn sonra otomatik doğrulama
-          if(typingTimer) clearTimeout(typingTimer);
-          if(this.value.trim().length>0 && !this.dataset.confirmed){
-            typingTimer=setTimeout(()=>validateBarkodInput(this,idx),300);
+          if (typingTimer) clearTimeout(typingTimer);
+          var self = this;
+          if (this.value.trim().length > 0 && !this.dataset.confirmed) {
+            typingTimer = setTimeout(function(){ validateBarkodInput(self, idx); }, 300);
           }
         });
-
-        // 🔥 Barkod okuyucu Enter gönderdiğinde anında doğrulama
-        input.addEventListener('keydown',function(e){
-          if(e.key!=='Enter') return;
+        input.addEventListener('keydown', function(e) {
+          if (e.key !== 'Enter') return;
           e.preventDefault();
-          if(typingTimer) clearTimeout(typingTimer); // Timer'ı iptal et, Enter ile anında doğrula
-          validateBarkodInput(this,idx);
+          if (typingTimer) clearTimeout(typingTimer);
+          validateBarkodInput(this, idx);
         });
       });
 
-      autoShipToggle.addEventListener('change',function(){localStorage.setItem('autoShipEnabled',this.checked.toString()); updateButtons();});
+      // Odak
+      if (barkodInputs.length > 0) {
+        var firstRight = Array.from(barkodInputs).find(function(i){ return i.dataset.side === 'right'; }) || barkodInputs[0];
+        setTimeout(function(){ firstRight.focus(); }, 150);
+      } else if (isManuelMod && manuelInput) {
+        setTimeout(function(){ manuelInput.focus(); }, 100);
+      }
 
-      // ── Sıralı Mod Toggle ──
-      const siraliToggle = document.getElementById('siraliToggle');
-      const manuelPanel  = document.getElementById('manuelOrderPanel');
-      const manuelInput  = document.getElementById('manuelOrderInput');
+      updateButtons();
+    }
 
-      const isManuelMod = {{ 'true' if manuel_mod else 'false' }};
+    // ── Sayfa İlk Yükleme ──
+    document.addEventListener('DOMContentLoaded', function() {
+      var autoShipToggle = document.getElementById('autoShipToggle');
+      var savedToggleState = localStorage.getItem('autoShipEnabled');
+      if (savedToggleState !== null) autoShipToggle.checked = (savedToggleState === 'true');
+      autoShipToggle.addEventListener('change', function() {
+        localStorage.setItem('autoShipEnabled', this.checked.toString());
+        if (_updateButtonsFn) _updateButtonsFn();
+      });
+
+      // Sıralı Mod
+      var siraliToggle = document.getElementById('siraliToggle');
+      var manuelPanel  = document.getElementById('manuelOrderPanel');
+      var manuelInput  = document.getElementById('manuelOrderInput');
+      var isManuelMod  = {{ 'true' if manuel_mod else 'false' }};
 
       function applySiraliMode(isOn, redirect) {
         manuelPanel.style.display = isOn ? 'none' : 'flex';
@@ -983,57 +1071,47 @@
 
       siraliToggle.checked = !isManuelMod;
       applySiraliMode(siraliToggle.checked, false);
-
       siraliToggle.addEventListener('change', function() { applySiraliMode(this.checked, true); });
+      manuelInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') manuelYukle(); });
 
-      // Enter ile de yükle
-      manuelInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') manuelYukle();
-      });
-
-      // Odak: sipariş yüklüyse önce sağ barkod inputu, yoksa manuel inputu
-      if (barkodInputs.length > 0) {
-        const firstRight = Array.from(barkodInputs).find(i => i.dataset.side === 'right') || barkodInputs[0];
-        setTimeout(() => firstRight.focus(), 150);
-      } else if (isManuelMod) {
-        setTimeout(() => manuelInput.focus(), 100);
-      }
-      updateButtons();
+      initOrderSection();
     });
 
     function manuelYukle() {
-      const val = document.getElementById('manuelOrderInput').value.trim();
+      var val = document.getElementById('manuelOrderInput').value.trim();
       if (!val) { alert('Sipariş numarası girin.'); return; }
       window.location.href = '/siparis-hazirla?manuel=1&order_number=' + encodeURIComponent(val);
     }
 
-    function copyToClipboard(elementId, el){
-      const tag=document.getElementById(elementId); if(!tag) return;
-      const text=tag.innerText;
-      if(navigator.clipboard){
-        navigator.clipboard.writeText(text).then(()=>{const conf=el.nextElementSibling; if(conf){conf.classList.add('show'); setTimeout(()=>conf.classList.remove('show'),1500);}})
-          .catch(err=>console.error('Kopyalama hatası:',err));
+    function copyToClipboard(elementId, el) {
+      var tag = document.getElementById(elementId); if (!tag) return;
+      var text = tag.innerText;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(function() {
+          var conf = el.nextElementSibling;
+          if (conf) { conf.classList.add('show'); setTimeout(function(){ conf.classList.remove('show'); }, 1500); }
+        }).catch(function(err){ console.error('Kopyalama hatası:', err); });
       }
     }
 
-    function showArchiveModal(order_number){
-      document.getElementById('archiveOrderNumber').value=order_number;
+    function showArchiveModal(order_number) {
+      document.getElementById('archiveOrderNumber').value = order_number;
       $('#archiveModal').modal('show');
     }
 
     // Arşiv formu
-    $(document).on('change','#archiveReason',function(){
-      if ($(this).val()==='Diğer'){ $('#otherReasonDiv').show(); $('#otherReasonText').prop('required',true); }
-      else{ $('#otherReasonDiv').hide(); $('#otherReasonText').prop('required',false); }
+    $(document).on('change', '#archiveReason', function() {
+      if ($(this).val() === 'Diğer') { $('#otherReasonDiv').show(); $('#otherReasonText').prop('required', true); }
+      else { $('#otherReasonDiv').hide(); $('#otherReasonText').prop('required', false); }
     });
-    $(document).on('submit','#archiveForm',function(e){
+    $(document).on('submit', '#archiveForm', function(e) {
       e.preventDefault();
-      var postData={order_number:$('#archiveOrderNumber').val(),archive_reason:$('#archiveReason').val(),other_reason:$('#otherReasonText').val()};
-      if(!postData.archive_reason|| (postData.archive_reason==='Diğer' && !postData.other_reason.trim())){alert('Lütfen bir sebep belirtin.');return;}
-      $.post("/archive_order",postData,function(res){
-        if(res.success){ $('#archiveModal').modal('hide'); setTimeout(()=>window.location.reload(),2000); }
-        else{ alert('Hata: '+res.message); }
-      }).fail(()=>alert('Sunucu hatası.'));
+      var postData = {order_number: $('#archiveOrderNumber').val(), archive_reason: $('#archiveReason').val(), other_reason: $('#otherReasonText').val()};
+      if (!postData.archive_reason || (postData.archive_reason === 'Diğer' && !postData.other_reason.trim())) { alert('Lütfen bir sebep belirtin.'); return; }
+      $.post('/archive_order', postData, function(res) {
+        if (res.success) { $('#archiveModal').modal('hide'); setTimeout(function(){ window.location.reload(); }, 2000); }
+        else { alert('Hata: ' + res.message); }
+      }).fail(function(){ alert('Sunucu hatası.'); });
     });
   </script>
 
