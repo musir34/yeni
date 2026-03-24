@@ -610,42 +610,85 @@ document.addEventListener('DOMContentLoaded', function () {
             icon.className = 'bi bi-pause-circle';
             label.textContent = 'Otomatik Sync: Kapalı';
           }
-          alert(data.message);
-        } else { alert('Hata: ' + (data.error || 'Bilinmeyen hata')); }
+          if (window.GS) GS.showToast(data.message, 'success'); else alert(data.message);
+        } else {
+          var errMsg = 'Hata: ' + (data.error || 'Bilinmeyen hata');
+          if (window.GS) GS.showToast(errMsg, 'danger'); else alert(errMsg);
+        }
       })
-      .catch(err => { btn.disabled = false; alert('Bağlantı hatası: ' + err.message); });
+      .catch(err => {
+        btn.disabled = false;
+        var errMsg = 'Bağlantı hatası: ' + err.message;
+        if (window.GS) GS.showToast(errMsg, 'danger'); else alert(errMsg);
+      });
   });
 
   // ─── Tüm Platformlara Sync ─────────────────────────────────────
-  document.getElementById('btnSyncAll').addEventListener('click', function () {
-    if (!confirm('Tüm platformlara stok gönderilecek. Devam edilsin mi?')) return;
+  function _doSyncAll() {
     showSyncModal('Tüm platformlara gönderiliyor...');
     fetch('/stock-sync/api/sync/all', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
       .then(r => r.json())
       .then(data => { hideSyncModal(); showResult(data); })
       .catch(err => { hideSyncModal(); showResult({ success: false, error: err.message }); });
+  }
+  document.getElementById('btnSyncAll').addEventListener('click', function () {
+    if (window.GS) {
+      GS.showConfirmSheet('Tüm platformlara stok gönderilecek. Devam edilsin mi?', _doSyncAll);
+    } else {
+      if (!confirm('Tüm platformlara stok gönderilecek. Devam edilsin mi?')) return;
+      _doSyncAll();
+    }
   });
 
   // ─── Tek Platform Sync ──────────────────────────────────────────
   document.querySelectorAll('.btn-sync-platform').forEach(btn => {
     btn.addEventListener('click', function () {
       const platform = this.dataset.platform;
-      if (!confirm(`${platform.toUpperCase()} platformuna stok gönderilecek. Devam edilsin mi?`)) return;
-      showSyncModal(`${platform.toUpperCase()} platformuna gönderiliyor...`);
-      fetch(`/stock-sync/api/sync/${platform}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-        .then(r => r.json())
-        .then(data => { hideSyncModal(); showResult(data); })
-        .catch(err => { hideSyncModal(); showResult({ success: false, error: err.message }); });
+      function doSync() {
+        showSyncModal(`${platform.toUpperCase()} platformuna gönderiliyor...`);
+        fetch(`/stock-sync/api/sync/${platform}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+          .then(r => r.json())
+          .then(data => { hideSyncModal(); showResult(data); })
+          .catch(err => { hideSyncModal(); showResult({ success: false, error: err.message }); });
+      }
+      if (window.GS) {
+        GS.showConfirmSheet(`${platform.toUpperCase()} platformuna stok gönderilecek. Devam edilsin mi?`, doSync);
+      } else {
+        if (!confirm(`${platform.toUpperCase()} platformuna stok gönderilecek. Devam edilsin mi?`)) return;
+        doSync();
+      }
     });
   });
 
   // ─── Session İptal ─────────────────────────────────────────────
   document.querySelectorAll('.btn-cancel-session').forEach(btn => {
     btn.addEventListener('click', function () {
-      if (!confirm('Bu senkronizasyon iptal edilecek. Emin misiniz?')) return;
-      fetch(`/stock-sync/api/session/${this.dataset.session}/cancel`, { method: 'POST' })
-        .then(r => r.json())
-        .then(data => { if (data.success) location.reload(); else alert(data.error); });
+      const sessionBtn = this;
+      const sessionId = sessionBtn.dataset.session;
+      function doCancel() {
+        fetch(`/stock-sync/api/session/${sessionId}/cancel`, { method: 'POST' })
+          .then(r => r.json())
+          .then(data => {
+            if (data.success) {
+              // Satırı DOM'dan animasyonlu sil
+              const row = sessionBtn.closest('tr');
+              if (row && window.GS) {
+                GS.fadeRemove(row, 250, function(){ GS.showToast('Senkronizasyon iptal edildi.', 'success'); });
+              } else {
+                if (row) row.remove();
+                if (window.GS) GS.showToast('Senkronizasyon iptal edildi.', 'success');
+              }
+            } else {
+              if (window.GS) GS.showToast(data.error || 'Hata', 'danger'); else alert(data.error);
+            }
+          });
+      }
+      if (window.GS) {
+        GS.showConfirmSheet('Bu senkronizasyon iptal edilecek. Emin misiniz?', doCancel);
+      } else {
+        if (!confirm('Bu senkronizasyon iptal edilecek. Emin misiniz?')) return;
+        doCancel();
+      }
     });
   });
 

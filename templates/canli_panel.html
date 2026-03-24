@@ -2,6 +2,9 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8" />
+  <script>
+    (function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();var dark=m==='on'||(m==='auto'&&(h>=20||h<7));if(dark)document.documentElement.classList.add('gs-dark');})();
+  </script>
   <title>📊 Canlı Satış & Stok Paneli</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
@@ -91,6 +94,58 @@
 
     .fade-in{animation:fade .25s ease both}
     @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+    /* Skeleton loading */
+    .skeleton{background:linear-gradient(90deg,#e9ecef 25%,#f1f3f5 50%,#e9ecef 75%);background-size:200% 100%;animation:shimmer 1.2s ease-in-out infinite;border-radius:10px;min-height:200px;border:1px solid var(--color-border)}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+    /* Değişim vurgusu */
+    .val-changed{animation:valFlash .35s ease}
+    @keyframes valFlash{0%{color:var(--color-primary)}100%{color:var(--color-secondary)}}
+    .card-entered{animation:cardEnter .22s ease both}
+    @keyframes cardEnter{from{opacity:0;transform:scale(.95) translateY(6px)}to{opacity:1;transform:none}}
+    .card-exit{animation:cardExit .2s ease both;pointer-events:none}
+    @keyframes cardExit{to{opacity:0;transform:scale(.95)}}
+
+    /* prefers-reduced-motion */
+    @media (prefers-reduced-motion:reduce){
+      .skeleton,.val-changed,.card-entered,.card-exit,.fade-in{animation:none!important;transition:none!important}
+    }
+
+    /* ── Dark Mode ── */
+    html.gs-dark body{background:#121212;color:#e0e0e0}
+    html.gs-dark .appbar{background:linear-gradient(180deg,rgba(18,18,18,.96),rgba(18,18,18,.8));border-bottom-color:#333}
+    html.gs-dark .brand{color:#f0f0f0}
+    html.gs-dark .btn{background:#1e1e1e;color:#ddd;border-color:#333}
+    html.gs-dark .btn:hover{border-color:var(--color-primary);color:#fff}
+    html.gs-dark .btn-primary{background:var(--color-primary);color:#fff;border-color:transparent}
+    html.gs-dark .inp{background:#1e1e1e;color:#ddd;border-color:#333}
+    html.gs-dark .seg{background:#1e1e1e;border-color:#333}
+    html.gs-dark .seg button{background:#1e1e1e;color:#bbb}
+    html.gs-dark .seg button.active{background:var(--color-primary);color:#fff}
+    html.gs-dark .kpi{background:#1e1e1e;border-color:#333;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+    html.gs-dark .kpi .title{color:#999}
+    html.gs-dark .kpi .value{color:#f0f0f0}
+    html.gs-dark .kpi .sub{color:#888}
+    html.gs-dark .kpi-icon{background:linear-gradient(135deg,rgba(183,110,121,.25),rgba(183,110,121,.1));border-color:#333}
+    html.gs-dark .chartbox{background:#1e1e1e;border-color:#333;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+    html.gs-dark .chartbox h4{color:#eee}
+    html.gs-dark .card{background:#1e1e1e;border-color:#333;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+    html.gs-dark .card:hover{box-shadow:0 12px 30px rgba(0,0,0,.45)}
+    html.gs-dark .chip{background:#2a2a2a;border-color:#444;color:#ddd}
+    html.gs-dark .badge.warn{background:#332200;border-color:#664400;color:#ffaa00}
+    html.gs-dark .badge.danger{background:#330000;border-color:#660000;color:#ff6666}
+    html.gs-dark .mini{background:#1e1e1e;border-color:#333}
+    html.gs-dark .mini .label{color:#888}
+    html.gs-dark .mini .num{color:#f0f0f0}
+    html.gs-dark .bar{background:#2a2a2a;border-color:#333}
+    html.gs-dark .details{background:#1a1a1a;border-top-color:#333}
+    html.gs-dark thead th{background:#1a1a1a;color:#999}
+    html.gs-dark th,html.gs-dark td{border-top-color:#333;color:#ddd}
+    html.gs-dark tbody tr:hover{background:#222}
+    html.gs-dark .hint{color:#999}
+    html.gs-dark .switch{color:#999}
+    html.gs-dark .skeleton{background:linear-gradient(90deg,#1e1e1e 25%,#2a2a2a 50%,#1e1e1e 75%);border-color:#333}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -196,6 +251,7 @@
   <!-- Lightbox -->
   <div class="lightbox" id="lightbox"><img id="lightImg" alt=""></div>
 
+<script src="{{ url_for('static', filename='js/app-shell.js') }}"></script>
 <script>
   /* ---- CHART SHADOW PLUGIN ---- */
   const ShadowPlugin = {
@@ -301,20 +357,128 @@
     return p.toString() ? ('?'+p.toString()) : '';
   }
 
+  // ─── KPI Tracking ──────────────────────────────────────────────────────
+  let _prevKpi = { toplam:0, orders:0, returns:0 };
+  let _prevCardData = {}; // key → card data
+  let _isFirstRender = true;
+
+  function _tweenKpi(el, oldVal, newVal) {
+    if (window.GS && typeof oldVal === 'number' && typeof newVal === 'number' && oldVal !== newVal) {
+      GS.countTween(el, oldVal, newVal, 280);
+      el.classList.remove('val-changed'); void el.offsetWidth; el.classList.add('val-changed');
+    } else {
+      el.textContent = newVal;
+    }
+  }
+
+  // ─── Skeleton yükleyici ───────────────────────────────────────────────────
+  function showSkeleton() {
+    elKartlar.innerHTML = '';
+    for(let i=0;i<6;i++) {
+      const s = document.createElement('div');
+      s.className='skeleton';
+      s.style.minHeight='280px';
+      elKartlar.appendChild(s);
+    }
+  }
+  if (_isFirstRender) showSkeleton();
+
+  // ─── Kart oluştur / güncelle ──────────────────────────────────────────────
+  function _cardKey(k){ return (k.model||'')+'__'+(k.renk||''); }
+
+  function _buildCardHTML(k, detayId){
+    const net  = (k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0);
+    const ret  = (k.toplam_iade ?? 0);
+    const retP = pct(ret, (k.toplam_siparis_bugun ?? 0));
+    const cap  = (k.toplam_stok ?? 0) + (net);
+    const barP = pct((k.toplam_stok ?? 0), (cap || (k.toplam_stok ?? 1)));
+    const avg  = tl(k.ortalama_fiyat ?? 0);
+
+    const badgeLow  = k.dusuk_stok ? `<span class="badge warn">DÜŞÜK STOK</span>` : ``;
+    const badgeHigh = k.iade_uyari ? `<span class="badge danger">⚠️ YÜKSEK İADE</span>` : ``;
+
+    const statsHTML = isAdmin
+      ? `<div class="mini"><div class="label">Satış (NET)</div><div class="num" data-field="net">${net}</div></div>
+         <div class="mini"><div class="label">İade</div><div class="num" data-field="ret">${ret} <span style="font-size:12px;color:var(--muted)">(%${retP})</span></div></div>
+         <div class="mini"><div class="label">Kalan Stok</div><div class="num" data-field="stok">${k.toplam_stok ?? 0}</div></div>
+         <div class="mini"><div class="label">Net Ortalama</div><div class="num">${avg}</div></div>`
+      : `<div class="mini"><div class="label">Satış (NET)</div><div class="num" data-field="net">${net}</div></div>
+         <div class="mini"><div class="label">İade</div><div class="num" data-field="ret">${ret} <span style="font-size:12px;color:var(--muted)">(%${retP})</span></div></div>
+         <div class="mini" style="grid-column: span 2;"><div class="label">Kalan Stok</div><div class="num" data-field="stok">${k.toplam_stok ?? 0}</div></div>`;
+
+    return `
+      <div class="card-head">
+        <div class="head-left">
+          <span class="chip">${k.model ?? '-'}</span>
+          <span class="chip"><span class="dot"></span>${k.renk ?? '-'}</span>
+        </div>
+        <div class="head-right">
+          ${badgeHigh}
+          ${badgeLow}
+          <button class="btn ghost" data-target="${detayId}">Detay</button>
+        </div>
+      </div>
+      ${k.image ? `<div class="media"><img class="card-img" src="${k.image}" alt="${k.model ?? ''} ${k.renk ?? ''}"></div>` : ``}
+      <div class="stats">
+        ${statsHTML}
+      </div>
+      <div class="bar"><i style="width:${barP}%"></i></div>
+      <div class="details" id="${detayId}">
+        <table>
+          <thead><tr><th>Beden</th><th>Satış</th><th>İade ( % )</th><th>Net</th><th>Kalan Stok</th></tr></thead>
+          <tbody>
+            ${[...(k.detay||[])].sort((a,b)=>{const A=bedenKey(a.beden),B=bedenKey(b.beden);return A[0]-B[0]||A[1]-B[1];})
+               .map(d=>{
+                  const s = d.siparis ?? 0;
+                  const r = d.iade ?? 0;
+                  const n = (d.net ?? Math.max(0,s - r));
+                  const rp = pct(r, s);
+                  return `<tr>
+                    <td>${d.beden ?? '-'}</td>
+                    <td>${s}</td>
+                    <td>${r} <span style="color:var(--muted)">(%${rp})</span></td>
+                    <td>${n}</td>
+                    <td>${d.stok ?? 0}</td>
+                  </tr>`;
+               }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  function _bindCardEvents(el){
+    el.querySelectorAll('.btn.ghost').forEach(btn=>{
+      btn.onclick = ()=>{
+        const d = document.getElementById(btn.getAttribute('data-target'));
+        if(d) d.style.display = (d.style.display==='block') ? 'none' : 'block';
+      };
+    });
+    el.querySelectorAll('.card-img').forEach(img=>{
+      img.onclick=()=>{const lb=document.getElementById('lightbox'), li=document.getElementById('lightImg'); li.src=img.getAttribute('src'); lb.style.display='flex';};
+    });
+  }
+
   // Render
   function render(kartlar, ts, toplamNetAdet, toplamSiparis, genelAvg, toplamCiro){
     console.log('[RENDER] ts=', ts, 'kartlar=', Array.isArray(kartlar)?kartlar.length:kartlar);
     if (!Array.isArray(kartlar)) { elZaman.textContent = 'Hata: kartlar dizisi gelmedi'; return; }
 
-    // KPI
+    // ── KPI güncelleme (count tween) ──
     elZaman.textContent = 'Güncellendi: ' + ts;
     const toplamNet = (typeof toplamNetAdet === 'number')
         ? toplamNetAdet
         : (kartlar.reduce((a,k)=>a+(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0));
-    elToplam.textContent = toplamNet ?? 0;
-    elOrders.textContent = (typeof toplamSiparis === 'number') ? toplamSiparis : '—';
-    
-    // Sadece admin için ciro ve ortalama fiyat güncelle
+    const newOrders = (typeof toplamSiparis === 'number') ? toplamSiparis : 0;
+    const totalReturns = kartlar.reduce((a,k)=>a+(k.toplam_iade ?? 0),0);
+
+    _tweenKpi(elToplam, _prevKpi.toplam, toplamNet ?? 0);
+    _tweenKpi(elOrders, _prevKpi.orders, newOrders);
+    _tweenKpi(elRet, _prevKpi.returns, totalReturns);
+
+    _prevKpi.toplam = toplamNet ?? 0;
+    _prevKpi.orders = newOrders;
+    _prevKpi.returns = totalReturns;
+
     if (isAdmin) {
       const netAvg = (typeof genelAvg === 'number') ? genelAvg
                       : (kartlar.reduce((acc,k)=>acc+(k.ortalama_fiyat ?? 0)*(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0)) /
@@ -322,15 +486,12 @@
       if (elAvg) elAvg.textContent = tl(netAvg);
       if (elCiro) elCiro.textContent = (typeof toplamCiro === 'number') ? tl(toplamCiro) : tl(0);
     }
-    
-    // Toplam iade ve oran
-    const totalReturns = kartlar.reduce((a,k)=>a+(k.toplam_iade ?? 0),0);
-    elRet.textContent = totalReturns;
-    const totalSales  = kartlar.reduce((a,k)=>a+(k.toplam_siparis_bugun ?? 0),0);
-    const totalRate   = pct(totalReturns, totalSales);
+
+    const totalSales = kartlar.reduce((a,k)=>a+(k.toplam_siparis_bugun ?? 0),0);
+    const totalRate  = pct(totalReturns, totalSales);
     elRetRate.textContent = (totalSales>0) ? `%${totalRate} iade oranı` : '—';
 
-    // Charts (Top10)
+    // ── Charts (Top10) ──
     const topSatis = [...kartlar].sort((a,b)=>(b.toplam_net_satis??b.toplam_siparis_bugun)-(a.toplam_net_satis??a.toplam_siparis_bugun)).slice(0,10);
     cSatis.data.labels = topSatis.map(k=>`${k.model} ${k.renk}`);
     cSatis.data.datasets[0].data = topSatis.map(k=>k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0);
@@ -341,85 +502,77 @@
     cIade.data.datasets[0].data = topIade.map(k=>k.toplam_iade ?? 0);
     cIade.update();
 
-    // Cards
-    elKartlar.innerHTML = '';
-    kartlar.forEach((k,idx)=>{
-      const div = document.createElement('article'); div.className='card fade-in';
-      const detayId = 'detay-'+idx;
-
-      const net  = (k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0);
-      const ret  = (k.toplam_iade ?? 0);
-      const retP = pct(ret, (k.toplam_siparis_bugun ?? 0));
-      const cap  = (k.toplam_stok ?? 0) + (net);
-      const barP = pct((k.toplam_stok ?? 0), (cap || (k.toplam_stok ?? 1)));
-      const avg  = tl(k.ortalama_fiyat ?? 0);
-
-      // Badgeler artık head-right içinde, çakışmaz
-      const badgeLow  = k.dusuk_stok ? `<span class="badge warn">DÜŞÜK STOK</span>` : ``;
-      const badgeHigh = k.iade_uyari ? `<span class="badge danger">⚠️ YÜKSEK İADE</span>` : ``;
-
-      // Stats içeriği - ortalama fiyatı sadece adminlere göster
-      const statsHTML = isAdmin 
-        ? `<div class="mini"><div class="label">Satış (NET)</div><div class="num">${net}</div></div>
-           <div class="mini"><div class="label">İade</div><div class="num">${ret} <span style="font-size:12px;color:var(--muted)">(%${retP})</span></div></div>
-           <div class="mini"><div class="label">Kalan Stok</div><div class="num">${k.toplam_stok ?? 0}</div></div>
-           <div class="mini"><div class="label">Net Ortalama</div><div class="num">${avg}</div></div>`
-        : `<div class="mini"><div class="label">Satış (NET)</div><div class="num">${net}</div></div>
-           <div class="mini"><div class="label">İade</div><div class="num">${ret} <span style="font-size:12px;color:var(--muted)">(%${retP})</span></div></div>
-           <div class="mini" style="grid-column: span 2;"><div class="label">Kalan Stok</div><div class="num">${k.toplam_stok ?? 0}</div></div>`;
-
-      div.innerHTML = `
-        <div class="card-head">
-          <div class="head-left">
-            <span class="chip">${k.model ?? '-'}</span>
-            <span class="chip"><span class="dot"></span>${k.renk ?? '-'}</span>
-          </div>
-          <div class="head-right">
-            ${badgeHigh}
-            ${badgeLow}
-            <button class="btn ghost" data-target="${detayId}">Detay</button>
-          </div>
-        </div>
-        ${k.image ? `<div class="media"><img class="card-img" src="${k.image}" alt="${k.model ?? ''} ${k.renk ?? ''}"></div>` : ``}
-        <div class="stats">
-          ${statsHTML}
-        </div>
-        <div class="bar"><i style="width:${barP}%"></i></div>
-        <div class="details" id="${detayId}">
-          <table>
-            <thead><tr><th>Beden</th><th>Satış</th><th>İade ( % )</th><th>Net</th><th>Kalan Stok</th></tr></thead>
-            <tbody>
-              ${[...(k.detay||[])].sort((a,b)=>{const A=bedenKey(a.beden),B=bedenKey(b.beden);return A[0]-B[0]||A[1]-B[1];})
-                 .map(d=>{
-                    const s = d.siparis ?? 0;
-                    const r = d.iade ?? 0;
-                    const n = (d.net ?? Math.max(0,s - r));
-                    const rp = pct(r, s);
-                    return `<tr>
-                      <td>${d.beden ?? '-'}</td>
-                      <td>${s}</td>
-                      <td>${r} <span style="color:var(--muted)">(%${rp})</span></td>
-                      <td>${n}</td>
-                      <td>${d.stok ?? 0}</td>
-                    </tr>`;
-                 }).join('')}
-            </tbody>
-          </table>
-        </div>`;
-      elKartlar.appendChild(div);
+    // ── Akıllı kart güncelleme ──
+    const newKeys = new Set();
+    const newMap = {};
+    kartlar.forEach(k => {
+      const key = _cardKey(k);
+      newKeys.add(key);
+      newMap[key] = k;
     });
 
-    // Toggle detay
-    elKartlar.querySelectorAll('.btn.ghost').forEach(btn=>{
-      btn.onclick = ()=>{
-        const d = document.getElementById(btn.getAttribute('data-target'));
-        d.style.display = (d.style.display==='block') ? 'none' : 'block';
-      };
+    // Mevcut kartları topla
+    const existingEls = {};
+    elKartlar.querySelectorAll('[data-card-key]').forEach(el => {
+      existingEls[el.dataset.cardKey] = el;
     });
-    // Lightbox
-    elKartlar.querySelectorAll('.card-img').forEach(img=>{
-      img.onclick=()=>{const lb=document.getElementById('lightbox'), li=document.getElementById('lightImg'); li.src=img.getAttribute('src'); lb.style.display='flex';};
+
+    // Kaldırılan kartları fade-out
+    Object.keys(existingEls).forEach(key => {
+      if (!newKeys.has(key)) {
+        const el = existingEls[key];
+        el.classList.add('card-exit');
+        setTimeout(() => el.remove(), 220);
+        delete existingEls[key];
+      }
     });
+
+    // Sıralı oluştur/güncelle
+    const frag = document.createDocumentFragment();
+    kartlar.forEach((k, idx) => {
+      const key = _cardKey(k);
+      const detayId = 'detay-' + idx;
+
+      if (existingEls[key]) {
+        // Mevcut kartı güncelle — değişen sayıları vurgula
+        const el = existingEls[key];
+        const prev = _prevCardData[key];
+        if (prev) {
+          const oldNet = (prev.toplam_net_satis ?? prev.toplam_siparis_bugun ?? 0);
+          const newNet = (k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0);
+          if (oldNet !== newNet || (prev.toplam_stok ?? 0) !== (k.toplam_stok ?? 0)) {
+            // Detay ID güncelle ve yeniden çiz
+            el.innerHTML = _buildCardHTML(k, detayId);
+            _bindCardEvents(el);
+            // Değişen alanları vurgula
+            el.querySelectorAll('.num[data-field]').forEach(n => {
+              n.classList.remove('val-changed');
+              void n.offsetWidth;
+              n.classList.add('val-changed');
+            });
+          }
+        }
+        frag.appendChild(el);
+      } else {
+        // Yeni kart oluştur
+        const div = document.createElement('article');
+        div.className = 'card' + (_isFirstRender ? ' fade-in' : ' card-entered');
+        div.dataset.cardKey = key;
+        div.innerHTML = _buildCardHTML(k, detayId);
+        _bindCardEvents(div);
+        frag.appendChild(div);
+      }
+    });
+
+    // Skeleton'ları temizle ve kartları ekle
+    elKartlar.querySelectorAll('.skeleton').forEach(s => s.remove());
+    // Mevcut kartları kaldır (fragment'e taşınmış olmalı)
+    while(elKartlar.firstChild) elKartlar.removeChild(elKartlar.firstChild);
+    elKartlar.appendChild(frag);
+
+    // Önceki veriyi kaydet
+    _prevCardData = {...newMap};
+    _isFirstRender = false;
   }
 
   // Lightbox close

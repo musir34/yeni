@@ -166,27 +166,40 @@
 
 {% block scripts %}
 <script>
+function _showResult(msg, success) {
+    var el = document.getElementById('idefix-result');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'idefix-result';
+        el.style.cssText = 'margin-top:1rem;';
+        document.querySelector('.idefix-header').after(el);
+    }
+    var cls = success ? 'alert-success' : 'alert-danger';
+    el.innerHTML = '<div class="alert ' + cls + ' d-flex align-items-center gap-2">' +
+                   '<i class="fas ' + (success ? 'fa-check-circle' : 'fa-times-circle') + '"></i>' +
+                   '<span>' + msg + '</span></div>';
+    if (window.GS) GS.showToast(msg, success ? 'success' : 'danger', 4000);
+    setTimeout(function(){ el.innerHTML = ''; }, 6000);
+}
+
 async function pushAllStocks() {
     const btn = document.getElementById('pushStockBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="loading-spinner"></span>Gönderiliyor...';
-    
     try {
         const response = await fetch('/idefix/api/push-all-stocks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
-        
         const data = await response.json();
-        
         if (data.success) {
-            alert(`✅ Stok gönderimi tamamlandı!\n\nToplam: ${data.total_products} ürün\nBaşarılı batch: ${data.success_count}/${data.batches_sent}`);
+            _showResult(`Stok gönderimi tamamlandı! Toplam: ${data.total_products} ürün, Başarılı batch: ${data.success_count}/${data.batches_sent}`, true);
         } else {
-            alert('❌ Hata: ' + (data.error || 'Bilinmeyen hata'));
+            _showResult('Hata: ' + (data.error || 'Bilinmeyen hata'), false);
         }
     } catch (error) {
         console.error('Stok gönderimi hatası:', error);
-        alert('❌ Bağlantı hatası: ' + error.message);
+        _showResult('Bağlantı hatası: ' + error.message, false);
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-upload me-2"></i>Stokları Gönder';
@@ -197,23 +210,20 @@ async function syncPrices() {
     const btn = document.getElementById('syncPriceBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="loading-spinner"></span>Senkronize ediliyor...';
-    
     try {
         const response = await fetch('/idefix/api/sync-prices', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
-        
         const data = await response.json();
-        
         if (data.success) {
-            alert(`✅ Fiyat senkronizasyonu tamamlandı!\n\nToplam: ${data.total_products} ürün\nBaşarılı: ${data.total_success}\nHatalı: ${data.total_error}`);
+            _showResult(`Fiyat senkronizasyonu tamamlandı! Toplam: ${data.total_products}, Başarılı: ${data.total_success}, Hatalı: ${data.total_error}`, true);
         } else {
-            alert('❌ Hata: ' + (data.error || 'Bilinmeyen hata'));
+            _showResult('Hata: ' + (data.error || 'Bilinmeyen hata'), false);
         }
     } catch (error) {
         console.error('Fiyat senkronizasyonu hatası:', error);
-        alert('❌ Bağlantı hatası: ' + error.message);
+        _showResult('Bağlantı hatası: ' + error.message, false);
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-tags me-2"></i>Fiyatları Senkronize Et';

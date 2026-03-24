@@ -2,6 +2,10 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
+  <script>
+    // Dark mode FOUC engelle — CSS sınıfını render'dan önce ekle
+    (function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();var dark=m==='on'||(m==='auto'&&(h>=20||h<7));if(dark)document.documentElement.classList.add('gs-dark');})();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="weather-description" content="{{ weather.description if weather else 'Açık Hava' }}" />
   <meta name="weather-clouds" content="{{ weather.clouds if weather else 0 }}" />
@@ -9,54 +13,141 @@
   <meta name="weather-wind" content="{{ weather.wind_speed if weather else 10 }}" />
   <meta name="weather-wind-direction" content="{{ weather.wind_direction_deg if weather else 180 }}" />
   <title>Anasayfa - Güllü Ayakkabı</title>
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"/>
+  <!-- Bootstrap 5.3 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"/>
   <style>
-    :root{ --card-bg:#ffffff; --tile-shadow:0 14px 30px rgba(0,0,0,.08); --btn-shadow:0 10px 18px rgba(0,0,0,.12); --btn-hover-shadow:0 16px 26px rgba(0,0,0,.18); --shine:linear-gradient(120deg,rgba(255,255,255,0) 30%,rgba(255,255,255,.35) 45%,rgba(255,255,255,0) 60%); }
-    *{outline:0}
-    body{margin:0;padding:0;font-family:"Roboto",sans-serif;background:#f5f5f5}
-    #weatherCanvas{position:fixed;top:0;left:0;z-index:-1;width:100vw;height:100vh;filter:contrast(1.02) saturate(1.02)}
-    .container{max-width:1200px;margin-top:120px;margin-left:auto;margin-right:auto;padding:0 15px}
-    .user-info{position:fixed;top:15px;left:20px;z-index:10;font-size:14px;color:#333;display:flex;align-items:center;gap:10px;padding:10px 15px;border-radius:10px;background:rgba(255,255,255,.7);backdrop-filter:blur(6px);box-shadow:0 6px 18px rgba(0,0,0,.08);max-width:450px;}
-    .user-info img{max-width:100px;height:auto;border-radius:5px;box-shadow:0 8px 18px rgba(0,0,0,.12)}
-    .btn-group-top{position:fixed;top:15px;right:20px;display:flex;gap:10px;z-index:10;flex-wrap:wrap;justify-content:flex-end;align-items:center}
-    .btn{border-radius:20px;padding:10px 20px;font-size:.9rem;transition:all .25s ease;box-shadow:var(--btn-shadow);border:none;color:#fff;position:relative;overflow:hidden}
-    .btn::after{content:"";position:absolute;inset:0;transform:translateX(-120%);background:var(--shine);transition:transform .6s ease}
-    .btn:hover::after{transform:translateX(120%)}
-    .btn:hover{transform:translateY(-2px) scale(1.02);box-shadow:var(--btn-hover-shadow);text-decoration:none;color:#fff}
-    .btn-secondary{background:linear-gradient(135deg,#757f9a,#d7dde8)}
-    .btn-warning{background:linear-gradient(135deg,#f7971e,#ffd200)}
-    .btn-primary{background:linear-gradient(135deg,#2193b0,#6dd5ed)}
-    .btn-success{background:linear-gradient(135deg,#56ab2f,#a8e063)}
-    .btn-info{background:linear-gradient(135deg,#667db6,#0082c8)}
-    .btn-danger{background:linear-gradient(135deg,#cb2d3e,#ef473a)}
-    .btn-dark{background:linear-gradient(135deg,#343a40,#495057)}
-    .dropdown-menu{border:none;border-radius:12px;box-shadow:0 14px 30px rgba(0,0,0,.12)}
-    .dropdown-item{font-size:.9rem}
-    .card-soft{border:none;border-radius:16px;background:var(--card-bg);box-shadow:var(--tile-shadow);position:relative;overflow:hidden}
-    .card-soft::before{content:"";position:absolute;top:-60%;left:-30%;width:160%;height:220%;background:radial-gradient(ellipse at top left, rgba(255,255,255,.45), transparent 60%);transform:rotate(8deg);pointer-events:none}
-    .tile{transition:transform .2s ease}
-    .tile:hover{transform:translateY(-3px)}
-    .tile h5{margin:0;color:#666;font-weight:600}
-    .tile .num{font-size:2rem;font-weight:800;color:#222;letter-spacing:.5px}
-    .quick-links .btn{min-width:200px}
-    .quick-links .btn i{margin-right:6px}
-    .quick-links{animation:fadeUp .5s ease both}
-    @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-    .btn-pulse{animation:pulse 1.8s ease-in-out infinite}
-    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(203,45,62,.4)}70%{box-shadow:0 0 0 20px rgba(203,45,62,0)}100%{box-shadow:0 0 0 0 rgba(203,45,62,0)}}
-    @media (max-width:768px){
-      .btn{font-size:.8rem;padding:8px 12px}
-      .user-info img{max-width:60px}
-      .btn-group-top{top:10px;right:10px;gap:5px;flex-direction:column;align-items:flex-end}
-      .container{margin-top:180px;padding:0 10px}
+    :root {
+      --card-bg: #ffffff;
+      --tile-shadow: 0 14px 30px rgba(0,0,0,.08);
+      --btn-shadow: 0 10px 18px rgba(0,0,0,.12);
+      --btn-hover-shadow: 0 16px 26px rgba(0,0,0,.18);
+      --shine: linear-gradient(120deg,rgba(255,255,255,0) 30%,rgba(255,255,255,.35) 45%,rgba(255,255,255,0) 60%);
     }
+    * { outline: 0; }
+    body { margin:0; padding:0; font-family:'Inter',sans-serif; background:#f5f5f5; }
+    #weatherCanvas { position:fixed; top:0; left:0; z-index:-1; width:100vw; height:100vh; filter:contrast(1.02) saturate(1.02); }
+    .container { max-width:1200px; margin-top:120px; margin-left:auto; margin-right:auto; padding:0 15px; }
+
+    /* Kullanıcı bilgi kutusu */
+    .user-info {
+      position:fixed; top:15px; left:20px; z-index:10;
+      font-size:14px; color:#333; display:flex; align-items:center; gap:10px;
+      padding:10px 15px; border-radius:10px;
+      background:rgba(255,255,255,.7); backdrop-filter:blur(6px);
+      box-shadow:0 6px 18px rgba(0,0,0,.08); max-width:450px;
+    }
+    .user-info img { max-width:100px; height:auto; border-radius:5px; box-shadow:0 8px 18px rgba(0,0,0,.12); }
+
+    /* Üst sağ navigasyon */
+    .btn-group-top {
+      position:fixed; top:15px; right:20px;
+      display:flex; gap:10px; z-index:10;
+      flex-wrap:wrap; justify-content:flex-end; align-items:center;
+    }
+    .btn {
+      border-radius:20px; padding:10px 20px; font-size:.9rem;
+      transition:transform .25s ease, box-shadow .25s ease;
+      box-shadow:var(--btn-shadow); border:none; color:#fff;
+      position:relative; overflow:hidden;
+    }
+    .btn::after {
+      content:""; position:absolute; inset:0;
+      transform:translateX(-120%); background:var(--shine);
+      transition:transform .6s ease;
+    }
+    .btn:hover::after { transform:translateX(120%); }
+    .btn:hover { transform:translateY(-2px) scale(1.02); box-shadow:var(--btn-hover-shadow); text-decoration:none; color:#fff; }
+    .btn-secondary { background:linear-gradient(135deg,#757f9a,#d7dde8); }
+    .btn-warning  { background:linear-gradient(135deg,#f7971e,#ffd200); color:#333 !important; }
+    .btn-primary  { background:linear-gradient(135deg,#2193b0,#6dd5ed); }
+    .btn-success  { background:linear-gradient(135deg,#56ab2f,#a8e063); }
+    .btn-info     { background:linear-gradient(135deg,#667db6,#0082c8); }
+    .btn-danger   { background:linear-gradient(135deg,#cb2d3e,#ef473a); }
+    .btn-dark     { background:linear-gradient(135deg,#343a40,#495057); }
+
+    /* Bootstrap 5 dropdown */
+    .dropdown-menu { border:none; border-radius:12px; box-shadow:0 14px 30px rgba(0,0,0,.12); }
+    .dropdown-item { font-size:.9rem; }
+
+    /* KPI kartları */
+    .card-soft {
+      border:none; border-radius:16px; background:var(--card-bg);
+      box-shadow:var(--tile-shadow); position:relative; overflow:hidden;
+    }
+    .card-soft::before {
+      content:""; position:absolute; top:-60%; left:-30%; width:160%; height:220%;
+      background:radial-gradient(ellipse at top left, rgba(255,255,255,.45), transparent 60%);
+      transform:rotate(8deg); pointer-events:none;
+    }
+    .tile { transition:transform .2s ease; }
+    .tile:hover { transform:translateY(-3px); }
+    .tile h5 { margin:0; color:#666; font-weight:600; }
+    .tile .num {
+      font-size:2rem; font-weight:800; color:#222; letter-spacing:.5px;
+      transition:color .3s ease;
+    }
+    .tile .num.changed { color:#B76E79; }
+
+    /* Hızlı linkler */
+    .quick-links .btn { min-width:200px; }
+    .quick-links .btn i { margin-right:6px; }
+    .quick-links { animation:fadeUp .5s ease both; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+    /* Pulse — sadece bekleyen sipariş varsa .has-pending ekle */
+    .btn-pulse-active { animation:pulse 1.8s ease-in-out infinite; }
+    @keyframes pulse {
+      0%   { box-shadow:0 0 0 0 rgba(203,45,62,.4); }
+      70%  { box-shadow:0 0 0 20px rgba(203,45,62,0); }
+      100% { box-shadow:0 0 0 0 rgba(203,45,62,0); }
+    }
+
+    /* Sayı değiştiğinde kenar parlaması */
+    @keyframes glowBorder {
+      0%   { box-shadow:0 0 0 0 rgba(183,110,121,.0); }
+      40%  { box-shadow:0 0 0 6px rgba(183,110,121,.4); }
+      100% { box-shadow:0 0 0 0 rgba(183,110,121,.0); }
+    }
+    .kpi-flash { animation: glowBorder .35s ease; }
+
+    @media (max-width:768px) {
+      .btn { font-size:.8rem; padding:8px 12px; }
+      .user-info img { max-width:60px; }
+      .btn-group-top { top:10px; right:10px; gap:5px; flex-direction:column; align-items:flex-end; }
+      .container { margin-top:180px; padding:0 10px; }
+    }
+
+    /* prefers-reduced-motion */
+    @media (prefers-reduced-motion: reduce) {
+      .btn-pulse-active, .card-soft, .tile { animation: none !important; transition: none !important; }
+    }
+
+    /* ── Dark Mode ── */
+    html.gs-dark body { background: #121212; color: #e0e0e0; }
+    html.gs-dark #weatherCanvas { opacity: .25; filter: brightness(.6); }
+    html.gs-dark .user-info { background: rgba(30,30,30,.85); color: #ddd; border: 1px solid #333; }
+    html.gs-dark .user-info div { color: #ccc; }
+    html.gs-dark .card-soft {
+      background: #1e1e1e; color: #e0e0e0;
+      box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    }
+    html.gs-dark .card-soft::before { background: radial-gradient(ellipse at top left, rgba(255,255,255,.06), transparent 60%); }
+    html.gs-dark .tile h5 { color: #aaa; }
+    html.gs-dark .tile .num { color: #f0f0f0; }
+    html.gs-dark .quick-links { background: rgba(30,30,30,.85) !important; }
+    html.gs-dark .dropdown-menu { background: #1e1e1e; border-color: #333; }
+    html.gs-dark .dropdown-item { color: #ddd; }
+    html.gs-dark .dropdown-item:hover { background: #2a2a2a; color: #fff; }
+    html.gs-dark .badge { opacity: .9; }
+    html.gs-dark .text-muted, html.gs-dark .small { color: #999 !important; }
   </style>
 </head>
 <body>
   <canvas id="weatherCanvas"></canvas>
 
+  <!-- Kullanıcı bilgisi (sol üst) -->
   <div class="user-info">
     <img src="{{ url_for('static', filename='logo/gullu.png') }}" alt="Güllü Shoes Logo"/>
     <div style="display:flex;flex-direction:column;gap:2px;">
@@ -74,72 +165,103 @@
     </div>
   </div>
 
+  <!-- Navigasyon (sağ üst) — Bootstrap 5 dropdown -->
   <div class="btn-group-top">
     <a href="{{ url_for('home.home') }}" class="btn btn-secondary" title="Anasayfa"><i class="fas fa-home"></i> Anasayfa</a>
 
-    <button class="btn btn-warning dropdown-toggle" type="button" id="kullaniciMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Kullanıcı İşlemleri</button>
-    <div class="dropdown-menu" aria-labelledby="kullaniciMenu">
-      <a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a>
-      {% if session.get('role') in ['admin','manager'] %}
-        <a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}"><i class="fas fa-history"></i> Kullanıcı Hareketleri</a>
-      {% endif %}
+    <div class="dropdown">
+      <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Kullanıcı İşlemleri</button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a></li>
+        {% if session.get('role') in ['admin','manager'] %}
+        <li><a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}"><i class="fas fa-history me-2"></i>Kullanıcı Hareketleri</a></li>
+        {% endif %}
+      </ul>
     </div>
 
-    <a href="{{ url_for('siparis_hazirla.index') }}" class="btn btn-danger btn-pulse" title="Sipariş Hazırla"><i class="fas fa-box-open"></i> Sipariş Hazırla</a>
+    <!-- Sipariş Hazırla: pulse yalnızca bekleyen sipariş varsa -->
+    <a href="{{ url_for('siparis_hazirla.index') }}"
+       class="btn btn-danger {% if stats.created and stats.created > 0 %}btn-pulse-active{% endif %}"
+       title="Sipariş Hazırla" id="siparisHazirlaBtn">
+      <i class="fas fa-box-open"></i> Sipariş Hazırla
+    </a>
 
     <div class="dropdown">
-      <button class="btn btn-primary dropdown-toggle" data-toggle="dropdown">Sipariş İşlemleri</button>
-      <div class="dropdown-menu">
-        <a class="dropdown-item" href="{{ url_for('siparisler_bp.yeni_siparis') }}"><i class="fas fa-plus-circle"></i> Yeni Sipariş</a>
-        <a class="dropdown-item" href="{{ url_for('order_list_all') }}"><i class="fas fa-list"></i> Sipariş Listesi</a>
-        <a class="dropdown-item" href="{{ url_for('degisim_talep') }}"><i class="fas fa-exchange-alt"></i> Değişim Talepleri</a>
-        <div class="dropdown-divider"></div>
-        <a class="dropdown-item" href="{{ url_for('display_archive') }}"><i class="fas fa-box"></i> Arşiv</a>
-      </div>
-    </div>
-
-    <div class="dropdown">
-      <button class="btn btn-success dropdown-toggle" data-toggle="dropdown">Ürün İşlemleri</button>
-      <div class="dropdown-menu">
-        <a class="dropdown-item" href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}"><i class="fas fa-dolly"></i> Ürün Tedarik</a>
-        <a class="dropdown-item" href="{{ url_for('product_list') }}"><i class="fas fa-tags"></i> Ürün Listesi</a>
-        <a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="fas fa-warehouse"></i> Stok Ekleme</a>
-        <a class="dropdown-item" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="fas fa-archive"></i> Raf Listesi</a>
-        <a class="dropdown-item" href="{{ url_for('stock_sync.dashboard') }}"><i class="fas fa-sync-alt"></i> 📦 Stok Senkronizasyon</a>
-        <a class="dropdown-item" href="{{ url_for('iade_listesi') }}"><i class="fas fa-undo"></i> İade Listesi</a>
-        <a class="dropdown-item" href="{{ url_for('image_manager.image_manager') }}"><i class="fas fa-images"></i> 🖼️ Görsel Yönetimi</a>
-      </div>
+      <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Sipariş İşlemleri</button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{{ url_for('siparisler_bp.yeni_siparis') }}"><i class="fas fa-plus-circle me-2"></i>Yeni Sipariş</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('order_list_all') }}"><i class="fas fa-list me-2"></i>Sipariş Listesi</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('degisim_talep') }}"><i class="fas fa-exchange-alt me-2"></i>Değişim Talepleri</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="{{ url_for('display_archive') }}"><i class="fas fa-box me-2"></i>Arşiv</a></li>
+      </ul>
     </div>
 
     <div class="dropdown">
-      <button class="btn btn-info dropdown-toggle" data-toggle="dropdown">Analizler</button>
-      <div class="dropdown-menu">
-        <a class="dropdown-item" href="{{ url_for('commission_update_bp.update_commission_from_excel') }}"><i class="fas fa-file-upload"></i> Excel Komisyon Yükle</a>
-        <a class="dropdown-item" href="{{ url_for('profit.profit_report') }}"><i class="fas fa-coins"></i> 💰 Kâr Analizi</a>
-        <a class="dropdown-item" href="{{ url_for('canli_panel.canli_panel_sayfa') }}"><i class="fas fa-broadcast-tower"></i> 📊 Canlı Satış & Stok</a>
-      </div>
+      <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Ürün İşlemleri</button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}"><i class="fas fa-dolly me-2"></i>Ürün Tedarik</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('product_list') }}"><i class="fas fa-tags me-2"></i>Ürün Listesi</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="fas fa-warehouse me-2"></i>Stok Ekleme</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="fas fa-archive me-2"></i>Raf Listesi</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('stock_sync.dashboard') }}"><i class="fas fa-sync-alt me-2"></i>Stok Senkronizasyon</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('iade_listesi') }}"><i class="fas fa-undo me-2"></i>İade Listesi</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('image_manager.image_manager') }}"><i class="fas fa-images me-2"></i>Görsel Yönetimi</a></li>
+      </ul>
     </div>
 
     <div class="dropdown">
-      <button class="btn dropdown-toggle" data-toggle="dropdown" style="background:linear-gradient(135deg,#6a1b9a,#FF6000);color:white;"><i class="fas fa-store"></i> Paneller</button>
-      <div class="dropdown-menu">
-        <a class="dropdown-item" href="{{ url_for('idefix.index') }}"><i class="fas fa-store" style="color:#8e24aa"></i> Idefix</a>
-        <a class="dropdown-item" href="{{ url_for('hepsiburada.index') }}"><i class="fas fa-store" style="color:#FF6000"></i> Hepsiburada</a>
-      </div>
+      <button class="btn btn-info dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Analizler</button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{{ url_for('commission_update_bp.update_commission_from_excel') }}"><i class="fas fa-file-upload me-2"></i>Excel Komisyon Yükle</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('profit.profit_report') }}"><i class="fas fa-coins me-2"></i>Kâr Analizi</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('canli_panel.canli_panel_sayfa') }}"><i class="fas fa-broadcast-tower me-2"></i>Canlı Satış & Stok</a></li>
+      </ul>
+    </div>
+
+    <div class="dropdown">
+      <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+              style="background:linear-gradient(135deg,#6a1b9a,#FF6000);color:white;">
+        <i class="fas fa-store"></i> Paneller
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{{ url_for('idefix.index') }}"><i class="fas fa-store me-2" style="color:#8e24aa"></i>Idefix</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('hepsiburada.index') }}"><i class="fas fa-store me-2" style="color:#FF6000"></i>Hepsiburada</a></li>
+      </ul>
     </div>
 
     {% if session.get('role') in ['admin','manager'] %}
-      <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-dark" title="Kasa"><i class="fas fa-cash-register"></i> Kasa</a>
+    <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-dark" title="Kasa"><i class="fas fa-cash-register"></i> Kasa</a>
     {% endif %}
+
+    <!-- Ayarlar -->
+    <div class="dropdown">
+      <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+              style="background:linear-gradient(135deg,#495057,#212529);color:white;">
+        <i class="fas fa-cog"></i> Ayarlar
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end" style="min-width:200px;">
+        <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Görünüm</div></li>
+        <li><button class="dropdown-item d-flex align-items-center gap-2 gs-dm-opt" data-dm="off" onclick="window.GS&&GS.setDarkMode('off')">
+          <i class="fas fa-sun" style="color:#f59e0b"></i> Gündüz
+        </button></li>
+        <li><button class="dropdown-item d-flex align-items-center gap-2 gs-dm-opt" data-dm="on" onclick="window.GS&&GS.setDarkMode('on')">
+          <i class="fas fa-moon" style="color:#6366f1"></i> Gece
+        </button></li>
+        <li><button class="dropdown-item d-flex align-items-center gap-2 gs-dm-opt" data-dm="auto" onclick="window.GS&&GS.setDarkMode('auto')">
+          <i class="fas fa-clock" style="color:#0ea5e9"></i> Otomatik
+        </button></li>
+      </ul>
+    </div>
   </div>
 
+  <!-- KPI Kartları -->
   <div class="container" style="margin-top:60px;">
-    <!-- Hızlı istatistik kutuları -->
     <div class="row">
       <div class="col-md-3 mb-3">
-        <div class="card-soft p-3 tile">
+        <div class="card-soft p-3 tile" id="tileStok">
           <h5>🧰 Toplam Stok</h5>
-          <div class="num">{{ toplam_stok }}</div>
+          <div class="num" id="numStok">{{ toplam_stok }}</div>
         </div>
       </div>
 
@@ -147,7 +269,7 @@
       <div class="col-md-3 mb-3">
         <div class="card-soft p-3 tile">
           <h5>{{ ay_adi }} Aylık Toplam Sipariş</h5>
-          <div class="num">{{ stats.toplam_siparis }}</div>
+          <div class="num" id="numAylikSiparis">{{ stats.toplam_siparis }}</div>
           <div style="margin-top:8px;font-size:.85rem;color:#555;">
             <div style="display:flex;justify-content:space-between;padding:4px 0;">
               <span>📦 Trendyol:</span>
@@ -156,53 +278,48 @@
           </div>
           <div style="margin-top:6px;font-weight:600;color:#555;">
             Ortalama Sipariş Tutarı:
-            ₺{{ "{:,.2f}".format(ortalama_siparis_tutari).replace(",", "X").replace(".", ",").replace("X", ".") }}
+            ₺{{ "{:,.2f}".format(ortalama_siparis_tutari).replace(",","X").replace(".",",").replace("X",".") }}
           </div>
         </div>
       </div>
       {% endif %}
 
-      <!-- BURADA: 'Hazırlanan' yerine küçük canlı kart -->
+      <!-- Sipariş Durumu (canlı) -->
       <div class="col-md-3 mb-3">
-        <div class="card-soft p-3 tile">
+        <div class="card-soft p-3 tile" id="tileSiparisDurumu">
           <h5>📦 Sipariş Durumu</h5>
-          
-          <!-- Trendyol -->
           <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #e0e0e0;">
             <div style="font-size:.85rem;font-weight:600;color:#f27a1a;margin-bottom:6px;">📦 Trendyol</div>
             <div class="d-flex flex-column" style="gap:6px;">
               <div class="d-flex align-items-center" style="gap:8px;">
-                <span class="badge badge-warning badge-pill" style="font-size:.75rem;">Yeni</span>
+                <span class="badge bg-warning text-dark" style="font-size:.75rem;">Yeni</span>
                 <span id="count-created" class="num" style="font-size:1.3rem;">{{ stats.created if stats.get('created') is not none else 0 }}</span>
               </div>
               <div class="d-flex align-items-center" style="gap:8px;">
-                <span class="badge badge-success badge-pill" style="font-size:.75rem;">İşlemde</span>
+                <span class="badge bg-success" style="font-size:.75rem;">İşlemde</span>
                 <span id="count-picking" class="num" style="font-size:1.3rem;">{{ stats.picking if stats.get('picking') is not none else 0 }}</span>
               </div>
             </div>
           </div>
-          
           <div class="text-muted small mt-2" id="op-last-update">Son güncelleme: şimdi</div>
         </div>
       </div>
-      <!-- /canlı kart -->
 
       <div class="col-md-3 mb-3">
-  <div class="card-soft p-3 tile">
-    <h5>İade / Değişim</h5>
-    <div class="num" style="line-height:1;">{{ stats.iade }}</div>
-    <div class="mt-2 d-flex flex-wrap" style="gap:6px;">
-      <span class="badge" style="background:linear-gradient(135deg,#2193b0,#6dd5ed);font-size:.8rem;">
-      🔄 Günlük Değişim: {{ stats.degisim_gunluk or 0 }}
-      </span>
-      <span class="badge" style="background:linear-gradient(135deg,#f7971e,#ffd200);font-size:.8rem;">
-      📅 Aylık Değişim: {{ stats.degisim_aylik or 0 }}
-    </span>
-    </div>
-  </div>
-</div>
-
-    </div><!-- row sonu -->
+        <div class="card-soft p-3 tile">
+          <h5>İade / Değişim</h5>
+          <div class="num" style="line-height:1;">{{ stats.iade }}</div>
+          <div class="mt-2 d-flex flex-wrap" style="gap:6px;">
+            <span class="badge" style="background:linear-gradient(135deg,#2193b0,#6dd5ed);font-size:.8rem;">
+              🔄 Günlük Değişim: {{ stats.degisim_gunluk or 0 }}
+            </span>
+            <span class="badge" style="background:linear-gradient(135deg,#f7971e,#ffd200);font-size:.8rem;color:#333;">
+              📅 Aylık Değişim: {{ stats.degisim_aylik or 0 }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div><!-- /row -->
 
     <!-- Hızlı İşlemler -->
     <div class="card-soft p-2 quick-links mt-3" style="background:rgba(255,255,255,.85);backdrop-filter:blur(8px);">
@@ -212,67 +329,133 @@
         <a class="btn btn-success m-1" href="{{ url_for('product_list') }}"><i class="fas fa-tags"></i> Ürün Listesi</a>
         <a class="btn btn-success m-1" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="fas fa-plus-circle"></i> Stok Ekle</a>
         <a class="btn btn-warning m-1" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="fas fa-archive"></i> Raflar</a>
-        <a class="btn btn-info m-1" href="{{ url_for('canli_panel.canli_panel_sayfa') }}"><i class="fas fa-chart-line"></i> 📊 Canlı Satış & Stok</a>
+        <a class="btn btn-info m-1" href="{{ url_for('canli_panel.canli_panel_sayfa') }}"><i class="fas fa-chart-line"></i> Canlı Satış & Stok</a>
         <a class="btn btn-secondary m-1" href="{{ url_for('display_archive') }}"><i class="fas fa-box"></i> Arşiv</a>
         <a class="btn btn-danger m-1" href="{{ url_for('iade_listesi') }}"><i class="fas fa-undo"></i> İadeler</a>
       </div>
     </div>
+  </div><!-- /container -->
 
-  </div><!-- container end -->
+  <!-- Global Toast Container -->
+  <div id="gs-toast-container" aria-live="polite"
+       style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:99999;display:flex;flex-direction:column;gap:.5rem;pointer-events:none;max-width:340px;">
+  </div>
 
-  <!-- Hava durumu animasyonu weather-canvas.js dosyasından yükleniyor -->
-
-  <!-- Ripple -->
+  <!-- Ripple effect -->
   <script>
-    document.addEventListener('click', function(e){
-      const btn = e.target.closest('.btn');
-      if(!btn) return;
-      const circle = document.createElement('span');
-      const diameter = Math.max(btn.clientWidth, btn.clientHeight);
-      const radius = diameter / 2;
-      circle.style.width = circle.style.height = `${diameter}px`;
-      circle.style.left = `${e.clientX - (btn.getBoundingClientRect().left + radius)}px`;
-      circle.style.top  = `${e.clientY - (btn.getBoundingClientRect().top  + radius)}px`;
-      circle.style.position = 'absolute';
-      circle.style.borderRadius = '50%';
-      circle.style.background = 'rgba(255,255,255,.35)';
-      circle.style.transform = 'scale(0)';
-      circle.style.animation = 'ripple 600ms ease-out';
-      circle.style.pointerEvents='none';
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest('.btn');
+      if (!btn) return;
+      var circle = document.createElement('span');
+      var diameter = Math.max(btn.clientWidth, btn.clientHeight);
+      var radius = diameter / 2;
+      circle.style.cssText = [
+        'width:' + diameter + 'px',
+        'height:' + diameter + 'px',
+        'left:' + (e.clientX - btn.getBoundingClientRect().left - radius) + 'px',
+        'top:' + (e.clientY - btn.getBoundingClientRect().top - radius) + 'px',
+        'position:absolute',
+        'border-radius:50%',
+        'background:rgba(255,255,255,.35)',
+        'transform:scale(0)',
+        'animation:ripple 600ms ease-out',
+        'pointer-events:none',
+      ].join(';');
       btn.appendChild(circle);
-      setTimeout(()=>circle.remove(), 650);
+      setTimeout(function() { circle.remove(); }, 650);
     });
   </script>
-  <style>@keyframes ripple { to { transform: scale(3); opacity: 0; } }</style>
+  <style>@keyframes ripple { to { transform:scale(3); opacity:0; } }</style>
 
-  <!-- Canlı Yeni/İşleme Alınmış fetch -->
+  <!-- Canlı yenileme (Refresh Manager) -->
+  <script src="{{ url_for('static', filename='js/app-shell.js') }}"></script>
   <script>
     (function () {
-      const createdEl = document.getElementById('count-created');   // "Yeni"
-      const pickingEl = document.getElementById('count-picking');   // "İşleme Alınmış"
-      const lastEl    = document.getElementById('op-last-update');
-      const intervalMs = 150000; // 2.5 dk (120000-180000 arası yapabilirsin)
+      var createdEl = document.getElementById('count-created');
+      var pickingEl = document.getElementById('count-picking');
+      var lastEl    = document.getElementById('op-last-update');
+      var hazirlaBtn = document.getElementById('siparisHazirlaBtn');
 
-      async function refreshCounts() {
-        try {
-          const res = await fetch('/api/home/status-counts', { cache: 'no-store' });
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          const data = await res.json();
-          if (typeof data.created === 'number') createdEl.textContent = data.created;
-          if (typeof data.picking === 'number') pickingEl.textContent = data.picking;
-          lastEl.textContent = 'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR', {timeZone: 'Europe/Istanbul'});
-        } catch (err) {
-          console.error('status refresh failed', err);
+      var prevCreated = parseInt(createdEl.textContent, 10) || 0;
+      var prevPicking = parseInt(pickingEl.textContent, 10) || 0;
+
+      // Count-up animasyonu (sayfa ilk yüklemesinde)
+      if (window.GS) {
+        GS.countTween(createdEl, 0, prevCreated, 600);
+        GS.countTween(pickingEl, 0, prevPicking, 600);
+      }
+
+      function updatePulse(created) {
+        if (!hazirlaBtn) return;
+        if (created > 0) {
+          hazirlaBtn.classList.add('btn-pulse-active');
+        } else {
+          hazirlaBtn.classList.remove('btn-pulse-active');
         }
       }
 
-      refreshCounts(); // ilk yüklemede
-      setInterval(refreshCounts, intervalMs);
+      function flashTile(el) {
+        el.classList.remove('kpi-flash');
+        void el.offsetWidth; // reflow
+        el.classList.add('kpi-flash');
+        setTimeout(function() { el.classList.remove('kpi-flash'); }, 400);
+      }
+
+      function refreshCounts(signal) {
+        return fetch('/api/home/status-counts', { cache: 'no-store', signal: signal })
+          .then(function(res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+          })
+          .then(function(data) {
+            var newCreated = typeof data.created === 'number' ? data.created : prevCreated;
+            var newPicking = typeof data.picking === 'number' ? data.picking : prevPicking;
+
+            if (newCreated !== prevCreated) {
+              if (window.GS) GS.countTween(createdEl, prevCreated, newCreated, 220);
+              else createdEl.textContent = newCreated;
+              flashTile(document.getElementById('tileSiparisDurumu'));
+              prevCreated = newCreated;
+            }
+            if (newPicking !== prevPicking) {
+              if (window.GS) GS.countTween(pickingEl, prevPicking, newPicking, 220);
+              else pickingEl.textContent = newPicking;
+              prevPicking = newPicking;
+            }
+
+            updatePulse(newCreated);
+            lastEl.textContent = 'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' });
+          });
+      }
+
+      // İlk yükleme pulse kontrolü
+      updatePulse(prevCreated);
+
+      if (window.GS) {
+        GS.registerRefresh('home-status', refreshCounts, 150000);
+      } else {
+        setInterval(function() { refreshCounts(); }, 150000);
+      }
     })();
   </script>
 
-  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.bundle.min.js"></script>
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="{{ url_for('static', filename='js/weather-canvas.js') }}"></script>
+  <script>
+    // Aktif dark mode seçeneğini vurgula
+    (function(){
+      var m = localStorage.getItem('gs_dark_mode') || 'auto';
+      document.querySelectorAll('.gs-dm-opt').forEach(function(el){
+        if (el.dataset.dm === m) {
+          el.style.fontWeight = '700';
+          el.style.background = 'rgba(183,110,121,.12)';
+        } else {
+          el.style.fontWeight = '';
+          el.style.background = '';
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

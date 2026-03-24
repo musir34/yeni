@@ -15,6 +15,12 @@ import logging, traceback, time as _pytime
 from flask import current_app
 from datetime import timezone  # <-- eklendi
 
+# Shopify/WooCommerce modeli — modül yoksa None
+try:
+    from shopify_site.shopify_service import ShopifyOrder  # type: ignore
+except (ImportError, ModuleNotFoundError):
+    ShopifyOrder = None
+
 
 
 
@@ -150,12 +156,14 @@ def _count_orders_between_distinct(start_ist, end_ist, source_filter="all"):
     Seçilen aralıktaki benzersiz sipariş sayısını döndürür.
     source_filter: "all", "trendyol", "Shopify"
     """
-    if source_filter == "Shopify":
+    if source_filter == "Shopify" and ShopifyOrder:
         sources = [ShopifyOrder]
-    elif source_filter == "trendyol":
+    elif source_filter == "trendyol" or (source_filter == "Shopify" and not ShopifyOrder):
         sources = [OrderCreated, OrderPicking, OrderShipped, OrderDelivered]
     else:  # "all"
-        sources = [OrderCreated, OrderPicking, OrderShipped, OrderDelivered, ShopifyOrder]
+        sources = [OrderCreated, OrderPicking, OrderShipped, OrderDelivered]
+        if ShopifyOrder:
+            sources.append(ShopifyOrder)
     
     ids = set()
     for cls in sources:
@@ -248,13 +256,16 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
         if a is not None:
             amt_map[s] = amt_map.get(s, 0.0) + float(a)
 
-    # 🔥 WooCommerce modeli ekle
-    from shopify.models import ShopifyOrder
-    
+    # Shopify/WooCommerce modeli — modül yoksa atla
+    try:
+        from shopify_site.shopify_service import ShopifyOrder  # type: ignore
+    except (ImportError, ModuleNotFoundError):
+        ShopifyOrder = None
+
     # Kaynak filtresine göre source listesini belirle
-    if source_filter == "Shopify":
+    if source_filter == "Shopify" and ShopifyOrder:
         sources = [("Shopify", ShopifyOrder)]
-    elif source_filter == "trendyol":
+    elif source_filter == "trendyol" or (source_filter == "Shopify" and not ShopifyOrder):
         sources = [
             ("Created", OrderCreated),
             ("Picking", OrderPicking),
@@ -269,8 +280,9 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
             ("Shipped", OrderShipped),
             ("Delivered", OrderDelivered),
             ("Archive", Archive),
-            ("Shopify", ShopifyOrder)  # 🛒 YENİ
         ]
+        if ShopifyOrder:
+            sources.append(("Shopify", ShopifyOrder))
     
     _info("collect_orders: source_filter", filter=source_filter, source_count=len(sources))
     

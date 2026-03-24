@@ -2,7 +2,9 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
+  <script>(function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();if(m==='on'||(m==='auto'&&(h>=20||h<7)))document.documentElement.classList.add('gs-dark');})()</script>
   <title>Sipariş Oluştur</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-mode.css') }}">
   <style>
     body {
       margin: 0; 

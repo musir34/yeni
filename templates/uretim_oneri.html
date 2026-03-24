@@ -2,8 +2,10 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
+  <script>(function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();if(m==='on'||(m==='auto'&&(h>=20||h<7)))document.documentElement.classList.add('gs-dark');})()</script>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Haftalık Üretim Önerisi</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-mode.css') }}">
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:24px;}
     .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}

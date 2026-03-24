@@ -2,6 +2,9 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8" />
+    <script>
+      (function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();var dark=m==='on'||(m==='auto'&&(h>=20||h<7));if(dark)document.documentElement.classList.add('gs-dark');})();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Sipariş Takip - Güllü Ayakkabı</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -105,6 +108,29 @@
         #imageZoomModal.show { display: flex; }
         #imageZoomModal img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: var(--border-radius); }
         #imageZoomModal .close-btn { position:absolute; top:20px; right:30px; color:white; font-size:40px; font-weight:bold; cursor:pointer; background:none; border:none; }
+
+        /* ── Dark Mode ── */
+        html.gs-dark body { background-color: #121212; color: #e0e0e0; }
+        html.gs-dark .page-header { background-color: #1e1e1e; color: #ddd; }
+        html.gs-dark h2, html.gs-dark h4, html.gs-dark h5 { color: #f0f0f0; }
+        html.gs-dark .filter-section { background-color: #1e1e1e; }
+        html.gs-dark .card { background: #1e1e1e; border-color: #333; color: #ddd; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+        html.gs-dark .card:hover { box-shadow: 0 5px 20px rgba(0,0,0,.5); }
+        html.gs-dark .card-header { background-color: #1a1a1a; border-bottom-color: #333; color: #ddd; }
+        html.gs-dark .card-body { color: #ddd; }
+        html.gs-dark .card-body p { color: #ccc; }
+        html.gs-dark .card-body strong { color: #eee; }
+        html.gs-dark .card-footer { background-color: #1a1a1a !important; border-top-color: #333; }
+        html.gs-dark .form-control { background: #2a2a2a; color: #ddd; border-color: #444; }
+        html.gs-dark .form-select { background: #2a2a2a; color: #ddd; border-color: #444; }
+        html.gs-dark .modal-content { background: #1e1e1e; color: #ddd; }
+        html.gs-dark .table { color: #ddd; }
+        html.gs-dark .table-bordered th, html.gs-dark .table-bordered td { border-color: #333; }
+        html.gs-dark .pagination li a { background-color: #1e1e1e; color: #ddd; border-color: #333; }
+        html.gs-dark .pagination li.active a { background-color: var(--color-primary); }
+        html.gs-dark .text-muted { color: #999 !important; }
+        html.gs-dark .details-section table { color: #ddd; }
+        html.gs-dark .details-section table th { background: #1a1a1a; }
     </style>
 </head>
 <body>
@@ -261,9 +287,43 @@
     <textarea id="temp-copier" style="position: absolute; top: -1000px;"></textarea>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app-shell.js') }}"></script>
     <script>
-        // GÖRSEL BÜYÜTME İŞLEVİ
+        // ─── Kompakt Mod ─────────────────────────────────────────────────────────
+        (function(){
+            var btn = document.createElement('button');
+            btn.id = 'btnCompactMode';
+            btn.className = 'btn btn-sm btn-outline-secondary';
+            btn.innerHTML = '<i class="fas fa-compress-arrows-alt"></i> Kompakt';
+            btn.title = 'Liste/Kart görünümü';
+            var header = document.querySelector('.d-flex.justify-content-between.align-items-center.my-4');
+            if (header) header.querySelector('.d-flex.gap-2')?.appendChild(btn);
+
+            var compact = localStorage.getItem('orderListCompact') === '1';
+            function applyCompact(on) {
+                var list = document.querySelector('.order-list');
+                if (!list) return;
+                if (on) {
+                    list.style.gridTemplateColumns = 'repeat(auto-fill, minmax(240px, 1fr))';
+                    list.querySelectorAll('.card-body p').forEach(function(p){p.style.fontSize='.8rem';p.style.marginBottom='.25rem';});
+                    list.querySelectorAll('.details-section').forEach(function(d){d.style.display='none';});
+                    btn.innerHTML = '<i class="fas fa-expand-arrows-alt"></i> Genişlet';
+                } else {
+                    list.style.gridTemplateColumns = '';
+                    list.querySelectorAll('.card-body p').forEach(function(p){p.style.fontSize='';p.style.marginBottom='';});
+                    btn.innerHTML = '<i class="fas fa-compress-arrows-alt"></i> Kompakt';
+                }
+                localStorage.setItem('orderListCompact', on ? '1' : '0');
+            }
+            applyCompact(compact);
+            btn.addEventListener('click', function(){
+                compact = !compact;
+                applyCompact(compact);
+            });
+        })();
+
+        // ─── Görsel Büyütme ───────────────────────────────────────────────────────
         const $imageModal = $('#imageZoomModal');
         $('.order-list').on('click', '.zoomable-image', function(e) {
             e.stopPropagation();
@@ -273,11 +333,8 @@
                 $imageModal.addClass('show');
             }
         });
-        $imageModal.on('click', function() {
-            $(this).removeClass('show');
-        });
+        $imageModal.on('click', function() { $(this).removeClass('show'); });
 
-        // Bu sayfadaki diğer tüm JS kodları aynı kalabilir.
         function copyToClipboard(text, element) {
             const tempInput = document.getElementById('temp-copier');
             tempInput.value = text;
@@ -287,31 +344,48 @@
             confirmation.classList.add('show');
             setTimeout(() => { confirmation.classList.remove('show'); }, 2000);
         }
+
         function showArchiveModal(order_number) {
             document.getElementById('archiveOrderNumber').value = order_number;
-            var archiveModal = new bootstrap.Modal(document.getElementById('archiveModal'));
-            archiveModal.show();
+            new bootstrap.Modal(document.getElementById('archiveModal')).show();
         }
-        $('#archiveForm').submit(function (event) {
-            event.preventDefault();
-            var order_number = $('#archiveOrderNumber').val();
-            var archive_reason = $('#archiveReason').val();
-            if (!archive_reason) { alert('Lütfen bir sebep seçin.'); return; }
 
-            // SAĞLAMLAŞTIRILMIŞ AJAX İSTEĞİ
+        document.getElementById('archiveForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            var order_number = document.getElementById('archiveOrderNumber').value;
+            var archive_reason = document.getElementById('archiveReason').value;
+            if (!archive_reason) {
+                window.GS ? GS.showToast('Lütfen bir sebep seçin.', 'warning') : alert('Lütfen bir sebep seçin.');
+                return;
+            }
+
             $.post('/archive_order', { order_number: order_number, archive_reason: archive_reason })
-             .done(function (response) {
+             .done(function(response) {
+                bootstrap.Modal.getInstance(document.getElementById('archiveModal'))?.hide();
                 if (response.success) {
-                    alert('Sipariş arşivlendi!');
-                    $('#archiveModal').modal('hide');
-                    window.location.reload();
+                    // Kartı DOM'dan animasyonlu sil
+                    var cards = document.querySelectorAll('.order-list .card');
+                    cards.forEach(function(card) {
+                        var numEl = card.querySelector('.card-header strong:first-child');
+                        if (numEl && numEl.parentElement &&
+                            numEl.parentElement.textContent.includes(order_number)) {
+                            if (window.GS) {
+                                GS.fadeRemove(card, 250, function() {
+                                    GS.showToast('Sipariş arşivlendi — geri almak için Arşiv sayfasını ziyaret edin.', 'success', 4000);
+                                });
+                            } else {
+                                card.remove();
+                                alert('Sipariş arşivlendi!');
+                            }
+                        }
+                    });
                 } else {
-                    alert('Sipariş arşivlenirken bir hata oluştu: ' + (response.message || 'Bilinmeyen hata.'));
+                    var msg = response.message || 'Bilinmeyen hata.';
+                    window.GS ? GS.showToast('Arşivleme hatası: ' + msg, 'danger') : alert('Hata: ' + msg);
                 }
              })
-             .fail(function (jqXHR, textStatus, errorThrown) {
-                console.error("Arşivleme hatası:", textStatus, errorThrown);
-                alert('Sunucu ile iletişim kurulamadı. Lütfen internet bağlantınızı kontrol edin.');
+             .fail(function() {
+                window.GS ? GS.showToast('Sunucu ile iletişim kurulamadı.', 'danger') : alert('Sunucu ile iletişim kurulamadı.');
              });
         });
         function updateRemainingTime() {
@@ -361,12 +435,17 @@
                             icon.className = 'fas fa-pause-circle';
                             label.textContent = 'Oto Çekme: Kapalı';
                         }
-                        alert(data.message);
+                        window.GS ? GS.showToast(data.message, 'success') : alert(data.message);
                     } else {
-                        alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+                        var errMsg = 'Hata: ' + (data.error || 'Bilinmeyen hata');
+                        window.GS ? GS.showToast(errMsg, 'danger') : alert(errMsg);
                     }
                 })
-                .catch(err => { btn.disabled = false; alert('Bağlantı hatası: ' + err.message); });
+                .catch(err => {
+                    btn.disabled = false;
+                    var errMsg = 'Bağlantı hatası: ' + err.message;
+                    window.GS ? GS.showToast(errMsg, 'danger') : alert(errMsg);
+                });
         });
     </script>
 </body>

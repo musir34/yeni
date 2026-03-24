@@ -2,10 +2,12 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
+    <script>(function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();if(m==='on'||(m==='auto'&&(h>=20||h<7)))document.documentElement.classList.add('gs-dark');})()</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kasa Kaydını Düzenle - Güllü Ayakkabı</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-mode.css') }}">
     <style>
         /* ... CSS stilleri burada, hiç dokunmadım ... */
         body { font-family: 'Roboto', sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }

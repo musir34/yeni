@@ -1,0 +1,289 @@
+/**
+ * dark-mode.css — Güllü Shoes Global Dark Mode
+ * html.gs-dark sınıfı ile aktifleşir.
+ * Tüm standalone sayfalar bu dosyayı include eder.
+ */
+
+/* ── Temel ── */
+html.gs-dark body {
+  background-color: #121212 !important;
+  color: #e0e0e0 !important;
+}
+html.gs-dark .container,
+html.gs-dark .container-fluid {
+  color: #e0e0e0;
+}
+
+/* ── Başlıklar ── */
+html.gs-dark h1, html.gs-dark h2, html.gs-dark h3,
+html.gs-dark h4, html.gs-dark h5, html.gs-dark h6 {
+  color: #f0f0f0 !important;
+}
+
+/* ── Kartlar ── */
+html.gs-dark .card,
+html.gs-dark .model-card,
+html.gs-dark .color-card {
+  background-color: #1e1e1e !important;
+  border-color: #333 !important;
+  color: #ddd;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+html.gs-dark .card:hover,
+html.gs-dark .model-card:hover {
+  box-shadow: 0 5px 20px rgba(0,0,0,.5);
+}
+html.gs-dark .card-header {
+  background-color: #1a1a1a !important;
+  border-bottom-color: #333 !important;
+  color: #ddd !important;
+}
+html.gs-dark .card-body {
+  color: #ddd;
+}
+html.gs-dark .card-footer {
+  background-color: #1a1a1a !important;
+  border-top-color: #333 !important;
+}
+
+/* ── Header / Navbar / Toolbar ── */
+html.gs-dark .header-actions {
+  background-color: #1a1a1a !important;
+}
+html.gs-dark .header-actions .btn {
+  background-color: #2a2a2a;
+  color: #ddd;
+  border-color: #444;
+}
+html.gs-dark .header-actions .btn:hover {
+  border-color: #888;
+}
+html.gs-dark .navbar {
+  background-color: #1a1a1a !important;
+}
+html.gs-dark .navbar-brand,
+html.gs-dark .navbar-brand img {
+  filter: brightness(.9);
+}
+html.gs-dark .page-header {
+  background-color: #1e1e1e !important;
+  color: #ddd !important;
+}
+
+/* ── Formlar ── */
+html.gs-dark .form-control,
+html.gs-dark .form-select,
+html.gs-dark input[type="text"],
+html.gs-dark input[type="number"],
+html.gs-dark input[type="date"],
+html.gs-dark input[type="search"],
+html.gs-dark textarea,
+html.gs-dark select {
+  background-color: #2a2a2a !important;
+  color: #ddd !important;
+  border-color: #444 !important;
+}
+html.gs-dark .form-control:focus,
+html.gs-dark .form-select:focus {
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 .2rem rgba(102,126,234,.25) !important;
+}
+html.gs-dark .form-label,
+html.gs-dark label {
+  color: #ccc;
+}
+html.gs-dark .input-group-text {
+  background-color: #333;
+  color: #ddd;
+  border-color: #444;
+}
+
+/* ── Tablolar ── */
+html.gs-dark .table,
+html.gs-dark table {
+  color: #ddd;
+}
+html.gs-dark .table thead th,
+html.gs-dark thead th {
+  background-color: #1a1a1a !important;
+  color: #aaa;
+  border-color: #333;
+}
+html.gs-dark .table td,
+html.gs-dark .table th,
+html.gs-dark td, html.gs-dark th {
+  border-color: #333 !important;
+}
+html.gs-dark .table-striped > tbody > tr:nth-of-type(odd) {
+  background-color: rgba(255,255,255,.03);
+}
+html.gs-dark .table-hover > tbody > tr:hover {
+  background-color: rgba(255,255,255,.06);
+}
+html.gs-dark .table-bordered {
+  border-color: #333;
+}
+
+/* ── Modaller ── */
+html.gs-dark .modal-content {
+  background-color: #1e1e1e !important;
+  color: #ddd !important;
+  border-color: #333;
+}
+html.gs-dark .modal-header {
+  border-bottom-color: #333 !important;
+}
+html.gs-dark .modal-footer {
+  border-top-color: #333 !important;
+}
+html.gs-dark .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* ── Dropdown ── */
+html.gs-dark .dropdown-menu {
+  background-color: #1e1e1e !important;
+  border-color: #333 !important;
+}
+html.gs-dark .dropdown-item {
+  color: #ddd !important;
+}
+html.gs-dark .dropdown-item:hover,
+html.gs-dark .dropdown-item:focus {
+  background-color: #2a2a2a !important;
+  color: #fff !important;
+}
+html.gs-dark .dropdown-divider {
+  border-top-color: #333;
+}
+html.gs-dark .dropdown-content {
+  background-color: #1e1e1e;
+  border-color: #333;
+}
+html.gs-dark .dropdown-content button,
+html.gs-dark .dropdown-content a {
+  color: #ddd;
+}
+html.gs-dark .dropdown-content button:hover,
+html.gs-dark .dropdown-content a:hover {
+  background-color: #2a2a2a;
+}
+
+/* ── Butonlar ── */
+html.gs-dark .btn-outline-secondary {
+  color: #ccc;
+  border-color: #555;
+}
+html.gs-dark .btn-outline-secondary:hover {
+  background-color: #333;
+  color: #fff;
+}
+html.gs-dark .btn-light {
+  background-color: #2a2a2a;
+  color: #ddd;
+  border-color: #444;
+}
+
+/* ── Arama / Filtre ── */
+html.gs-dark .search-container input,
+html.gs-dark .search-container select,
+html.gs-dark .filter-section {
+  background-color: #1e1e1e !important;
+  color: #ddd;
+  border-color: #444;
+}
+
+/* ── Alert ── */
+html.gs-dark .alert {
+  border-color: #333;
+}
+html.gs-dark .alert-success { background: #1a3a1a; color: #6fdc6f; border-color: #2a5a2a; }
+html.gs-dark .alert-danger  { background: #3a1a1a; color: #f08080; border-color: #5a2a2a; }
+html.gs-dark .alert-warning { background: #3a3000; color: #ffd700; border-color: #5a4a00; }
+html.gs-dark .alert-info    { background: #0a2a3a; color: #6ad4ff; border-color: #0a4a6a; }
+
+/* ── Pagination ── */
+html.gs-dark .pagination .page-link,
+html.gs-dark .pagination li a {
+  background-color: #1e1e1e;
+  color: #ddd;
+  border-color: #333;
+}
+html.gs-dark .pagination .page-link:hover,
+html.gs-dark .pagination li a:hover {
+  background-color: #2a2a2a;
+}
+html.gs-dark .pagination .active .page-link,
+html.gs-dark .pagination li.active a {
+  background-color: #B76E79;
+  border-color: #B76E79;
+  color: #fff;
+}
+
+/* ── Model kartları (ürün listesi) ── */
+html.gs-dark .model-info h4 { color: #eee; }
+html.gs-dark .model-info p { color: #999; }
+html.gs-dark .model-image-container { background-color: #2a2a2a !important; }
+html.gs-dark .color-variants-container,
+html.gs-dark .variant-list-container {
+  background-color: #1a1a1a !important;
+  border-color: #333;
+}
+html.gs-dark .size-list li {
+  border-bottom-color: #333;
+  color: #ddd;
+}
+
+/* ── Action Modal ── */
+html.gs-dark .action-modal-overlay { background: rgba(0,0,0,.75); }
+html.gs-dark .action-modal-content { background: #1e1e1e; color: #ddd; }
+html.gs-dark .action-modal-header { border-bottom-color: #333; }
+html.gs-dark .action-modal-footer { background-color: #1a1a1a; border-top-color: #333; }
+html.gs-dark .action-modal-body th,
+html.gs-dark .action-modal-body td { border-color: #333; color: #ddd; }
+html.gs-dark .action-modal-body input { background: #2a2a2a; color: #ddd; border-color: #444; }
+html.gs-dark .prompt-input-group input { background: #2a2a2a; color: #ddd; border-color: #444; }
+
+/* ── Genel metin ── */
+html.gs-dark .text-muted { color: #999 !important; }
+html.gs-dark .text-dark { color: #ddd !important; }
+html.gs-dark p { color: #ccc; }
+html.gs-dark strong { color: #eee; }
+html.gs-dark small { color: #aaa; }
+html.gs-dark a { color: #8ab4f8; }
+html.gs-dark a:hover { color: #aecbfa; }
+html.gs-dark hr { border-color: #333; }
+html.gs-dark .list-group-item {
+  background-color: #1e1e1e;
+  border-color: #333;
+  color: #ddd;
+}
+
+/* ── Badge ── */
+html.gs-dark .badge { opacity: .95; }
+
+/* ── Scrollbar ── */
+html.gs-dark ::-webkit-scrollbar { width: 8px; height: 8px; }
+html.gs-dark ::-webkit-scrollbar-track { background: #1a1a1a; }
+html.gs-dark ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+html.gs-dark ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+/* ── Accordion ── */
+html.gs-dark .accordion-item { background-color: #1e1e1e; border-color: #333; }
+html.gs-dark .accordion-button { background-color: #1e1e1e; color: #ddd; }
+html.gs-dark .accordion-button:not(.collapsed) { background-color: #252525; color: #eee; }
+html.gs-dark .accordion-body { background-color: #1a1a1a; color: #ddd; }
+
+/* ── Tab / Nav ── */
+html.gs-dark .nav-tabs .nav-link { color: #aaa; border-color: #333; }
+html.gs-dark .nav-tabs .nav-link.active { background-color: #1e1e1e; color: #fff; border-color: #333; }
+html.gs-dark .tab-content { background-color: #1e1e1e; }
+
+/* ── Progress bar ── */
+html.gs-dark .progress { background-color: #2a2a2a; }
+
+/* ── Tooltip ── */
+html.gs-dark .tooltip-inner { background-color: #333; }
+
+/* ── Chart.js canvas arkaplanı ── */
+html.gs-dark canvas { filter: brightness(.92); }
