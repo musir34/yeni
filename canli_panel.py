@@ -763,6 +763,9 @@ def _fetch_product_info_for_barcodes(barcodes):
     if not barcodes: return {}
     cols = [PROD_BAR_RAW, PROD_MODEL, PROD_COLOR, PROD_SIZE]
     if PROD_IMG is not None: cols.append(PROD_IMG)
+    # Tedarikçi bilgilerini de çek
+    cols.append(Product.tedarikci_kodu)
+    cols.append(Product.tedarikci_adi)
     rows = db.session.query(*cols).filter(PROD_BAR_RAW.in_(list(barcodes))).all()
     info = {}
     for r in rows:
@@ -770,8 +773,15 @@ def _fetch_product_info_for_barcodes(barcodes):
         model = r[1] if r[1] not in (None, "") else "Bilinmiyor"
         renk  = r[2] if r[2] not in (None, "") else "Bilinmiyor"
         beden = r[3] if r[3] not in (None, "") else "—"
-        img   = _parse_first_image(r[4]) if len(r) > 4 else None
-        info[bc] = {"model": model, "renk": renk, "beden": beden, "image": img}
+        img_idx = 4
+        img   = _parse_first_image(r[img_idx]) if PROD_IMG is not None and len(r) > img_idx else None
+        ted_kodu_idx = (5 if PROD_IMG is not None else 4)
+        ted_kodu = r[ted_kodu_idx] if len(r) > ted_kodu_idx else None
+        ted_adi = r[ted_kodu_idx + 1] if len(r) > ted_kodu_idx + 1 else None
+        info[bc] = {
+            "model": model, "renk": renk, "beden": beden, "image": img,
+            "tedarikci_kodu": ted_kodu or "", "tedarikci_adi": ted_adi or "",
+        }
     return info
 
 def _fetch_stock_for_barcodes(barcodes):
@@ -895,12 +905,13 @@ def ozet_json():
         group_by_barcode = _want_group_by_barcode()
         tek_model = (request.args.get("model") or "").strip() or None
 
-        grp, rep_image = {}, {}
+        grp, rep_image, rep_tedarikci = {}, {}, {}
         for bc in barcodes:
             sat = int(qty_map.get(bc, 0))
             iad = int(ret_qty_map.get(bc, 0))
             net = _to_number(net_map.get(bc, None), None)   # NET tutar
-            info = pinfo.get(bc, {"model":"Bilinmiyor","renk":"Bilinmiyor","beden":"—","image":None})
+            info = pinfo.get(bc, {"model":"Bilinmiyor","renk":"Bilinmiyor","beden":"—","image":None,
+                                  "tedarikci_kodu":"","tedarikci_adi":""})
 
             if group_by_barcode:
                 rec = grp.setdefault(bc, {
@@ -919,6 +930,8 @@ def ozet_json():
             else:
                 key = (info["model"], info["renk"])
                 if key not in rep_image and info.get("image"): rep_image[key] = info["image"]
+                if key not in rep_tedarikci and info.get("tedarikci_kodu"):
+                    rep_tedarikci[key] = {"tedarikci_kodu": info["tedarikci_kodu"], "tedarikci_adi": info["tedarikci_adi"]}
                 d = grp.setdefault(key, {})
                 b = info["beden"]
                 rec = d.setdefault(b, {"siparis":0,"iade":0,"net_adet":0,"stok":0,"net_tutar":0.0,"tutarli_adet":0})
@@ -980,12 +993,15 @@ def ozet_json():
                 ort_net    = (top_net_tutar/top_tutarli_adet) if top_tutarli_adet>0 else 0.0
                 iade_uyari = (iade_oran >= IADE_UYARI_ORAN)
 
+                ted = rep_tedarikci.get((model, renk), {})
                 kartlar.append({
                     "model":model,"renk":renk,"image":rep_image.get((model,renk)),
                     "toplam_siparis_bugun":top_sat,"toplam_iade":top_iade,"toplam_net_satis":top_net_adet,
                     "iade_orani":round(iade_oran,2),"iade_uyari":iade_uyari,
-                    "toplam_stok":top_stok,"ortalama_fiyat":round(ort_net,2),   # NET ortalama
+                    "toplam_stok":top_stok,"ortalama_fiyat":round(ort_net,2),
                     "saatlik_hiz":round(top_net_adet/hours,2),"dusuk_stok":top_stok < DUSUK_STOK_ESIK,
+                    "tedarikci_kodu": ted.get("tedarikci_kodu", ""),
+                    "tedarikci_adi": ted.get("tedarikci_adi", ""),
                     "detay":detay
                 })
 
@@ -1047,12 +1063,13 @@ def akis_sse():
                     group_by_barcode = _want_group_by_barcode()
                     tek_model = (request.args.get("model") or "").strip() or None
 
-                    grp, rep_image = {}, {}
+                    grp, rep_image, rep_tedarikci = {}, {}, {}
                     for bc in barcodes:
                         sat=int(qty_map.get(bc,0))
                         iad=int(ret_qty_map.get(bc,0))
                         net=_to_number(net_map.get(bc,None), None)
-                        info = pinfo.get(bc, {"model":"Bilinmiyor","renk":"Bilinmiyor","beden":"—","image":None})
+                        info = pinfo.get(bc, {"model":"Bilinmiyor","renk":"Bilinmiyor","beden":"—","image":None,
+                                              "tedarikci_kodu":"","tedarikci_adi":""})
 
                         if group_by_barcode:
                             rec = grp.setdefault(bc, {
@@ -1064,6 +1081,8 @@ def akis_sse():
                         else:
                             key=(info["model"],info["renk"])
                             if key not in rep_image and info.get("image"): rep_image[key]=info["image"]
+                            if key not in rep_tedarikci and info.get("tedarikci_kodu"):
+                                rep_tedarikci[key] = {"tedarikci_kodu": info["tedarikci_kodu"], "tedarikci_adi": info["tedarikci_adi"]}
                             d=grp.setdefault(key,{})
                             b=info["beden"]
                             rec=d.setdefault(b,{"siparis":0,"iade":0,"net_adet":0,"stok":0,"net_tutar":0.0,"tutarli_adet":0})
@@ -1109,12 +1128,15 @@ def akis_sse():
                             iade_oran=(top_iade/top_sat) if top_sat>0 else 0.0
                             ort_net=(top_net_tutar/top_tutarli_adet) if top_tutarli_adet>0 else 0.0
                             iade_uyari=(iade_oran>=IADE_UYARI_ORAN)
+                            ted = rep_tedarikci.get((model, renk), {})
                             kartlar.append({
                                 "model":model,"renk":renk,"image":rep_image.get((model,renk)),
                                 "toplam_siparis_bugun":top_sat,"toplam_iade":top_iade,"toplam_net_satis":top_net_adet,
                                 "iade_orani":round(iade_oran,2),"iade_uyari":iade_uyari,
                                 "toplam_stok":top_stok,"ortalama_fiyat":round(ort_net,2),
                                 "saatlik_hiz":round(top_net_adet/hours,2),"dusuk_stok":top_stok < DUSUK_STOK_ESIK,
+                                "tedarikci_kodu": ted.get("tedarikci_kodu", ""),
+                                "tedarikci_adi": ted.get("tedarikci_adi", ""),
                                 "detay":detay
                             })
 

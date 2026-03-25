@@ -12,6 +12,7 @@ from flask_limiter.util import get_remote_address
 
 # Modeller
 from models import db, Product, RafUrun, CentralStock
+from user_logs import log_user_action
 
 # --- Loglama ---
 logging.basicConfig(level=logging.INFO,
@@ -303,6 +304,8 @@ def handle_stock_update_from_frontend():
             message = f"'{raf_kodu}' rafı başarıyla boşaltıldı."
         
         logger.info(f"🎉 '{raf_kodu}' rafı başarıyla güncellendi. Toplam {len(results)} ürün işlendi. (Mod: {update_type})")
+        try: log_user_action("STOCK_UPDATE", {"işlem_açıklaması": f"Stok {'eklendi' if update_type=='add' else 'yenilendi'} — {raf_kodu}, {len(results)} ürün", "sayfa": "Stok Ekleme", "raf_kodu": raf_kodu, "işlem_tipi": update_type, "ürün_sayısı": len(results)})
+        except: pass
 
         return jsonify(success=True,
                        message=message,

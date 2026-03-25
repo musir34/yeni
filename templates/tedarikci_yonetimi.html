@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();if(m==='on'||(m==='auto'&&(h>=20||h<7)))document.documentElement.classList.add('gs-dark');})()</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tedarikçi Yönetimi - Güllü Shoes</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-mode.css') }}">
+  <style>
+    :root {
+      --primary:#B76E79; --primary-dark:#A05F6A;
+      --bg:#f3f5f7; --card:#fff; --border:#e5e7eb; --text:#343a40; --muted:#6b7280;
+      --success:#22c55e; --warning:#f59e0b; --danger:#ef4444;
+      --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.06);
+    }
+    * { box-sizing:border-box; margin:0; padding:0 }
+    body { font-family:'Inter',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh }
+
+    .header {
+      background:var(--card); border-bottom:1px solid var(--border);
+      padding:16px 24px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+      position:sticky; top:0; z-index:50; box-shadow:var(--shadow)
+    }
+    .header h1 { font-size:18px; font-weight:800; color:var(--text) }
+    .header .back { text-decoration:none; color:var(--muted); font-size:14px; display:flex; align-items:center; gap:6px }
+    .header .back:hover { color:var(--primary) }
+    .spacer { flex:1 }
+
+    .tabs {
+      max-width:1100px; margin:20px auto 0; padding:0 20px;
+      display:flex; gap:4px; border-bottom:2px solid var(--border)
+    }
+    .tab {
+      padding:10px 20px; border:none; background:none; cursor:pointer;
+      font-size:14px; font-weight:600; color:var(--muted); border-bottom:2px solid transparent;
+      margin-bottom:-2px; transition:all .2s
+    }
+    .tab:hover { color:var(--text) }
+    .tab.active { color:var(--primary); border-bottom-color:var(--primary) }
+
+    .container { max-width:1100px; margin:20px auto; padding:0 20px }
+
+    .panel {
+      background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+      box-shadow:var(--shadow); padding:24px; display:none
+    }
+    .panel.active { display:block }
+
+    .form-row { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:20px }
+    .form-group { display:flex; flex-direction:column; gap:4px }
+    .form-group label { font-size:12px; font-weight:600; color:var(--muted) }
+    .form-group input, .form-group select {
+      padding:10px 12px; border:1px solid var(--border); border-radius:8px;
+      font-size:14px; color:var(--text); background:var(--card); min-width:180px
+    }
+    .form-group input:focus, .form-group select:focus { outline:none; border-color:var(--primary) }
+
+    .btn {
+      padding:10px 16px; border:1px solid var(--border); border-radius:8px;
+      font-size:13px; font-weight:600; cursor:pointer; transition:all .2s;
+      display:inline-flex; align-items:center; gap:6px; background:var(--card); color:var(--text)
+    }
+    .btn:hover { border-color:var(--primary); color:var(--primary) }
+    .btn-primary { background:var(--primary); color:#fff; border-color:transparent }
+    .btn-primary:hover { background:var(--primary-dark) }
+    .btn-success { background:var(--success); color:#fff; border-color:transparent }
+    .btn-success:hover { background:#16a34a }
+    .btn-danger { background:var(--danger); color:#fff; border-color:transparent }
+    .btn-danger:hover { background:#dc2626 }
+    .btn-sm { padding:6px 12px; font-size:12px }
+    .btn:disabled { opacity:.5; cursor:not-allowed }
+
+    .table-wrap { overflow-x:auto; margin-top:16px }
+    table { width:100%; border-collapse:collapse }
+    th, td { padding:10px 12px; text-align:left; border-bottom:1px solid var(--border); font-size:13px }
+    th { background:#f8f9fa; color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.3px }
+    tr:hover td { background:#fafbfc }
+    .badge { display:inline-block; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:700 }
+    .badge-primary { background:rgba(183,110,121,.1); color:var(--primary) }
+    .badge-muted { background:#f1f3f5; color:var(--muted) }
+
+    .row-cb { width:16px; height:16px; accent-color:var(--primary); cursor:pointer }
+
+    .select-bar {
+      display:none; align-items:center; gap:12px; padding:12px 16px;
+      background:rgba(183,110,121,.06); border:1px solid rgba(183,110,121,.2);
+      border-radius:8px; margin-bottom:12px; font-size:13px; flex-wrap:wrap
+    }
+    .select-bar.show { display:flex }
+
+
+    .empty { text-align:center; padding:40px; color:var(--muted) }
+    .empty i { font-size:40px; margin-bottom:12px; display:block; opacity:.4 }
+    .loading { text-align:center; padding:30px; color:var(--muted) }
+
+    /* Tedarikçi select in table */
+    .ted-select {
+      padding:6px 10px; border:1px solid var(--border); border-radius:6px;
+      font-size:13px; color:var(--text); background:var(--card); min-width:160px; cursor:pointer
+    }
+    .ted-select:focus { border-color:var(--primary); outline:none }
+
+    /* Dark */
+    html.gs-dark body { background:#121212; color:#e0e0e0 }
+    html.gs-dark .header { background:#1e1e1e; border-color:#333 }
+    html.gs-dark .header h1 { color:#f0f0f0 }
+    html.gs-dark .panel { background:#1e1e1e; border-color:#333 }
+    html.gs-dark .form-group input, html.gs-dark .form-group select { background:#2a2a2a; border-color:#444; color:#ddd }
+    html.gs-dark .btn { background:#2a2a2a; border-color:#444; color:#ddd }
+    html.gs-dark th { background:#1a1a1a; color:#999 }
+    html.gs-dark td { border-color:#333; color:#ddd }
+    html.gs-dark tr:hover td { background:#222 }
+    html.gs-dark .tabs { border-color:#333 }
+    html.gs-dark .tab { color:#888 }
+    html.gs-dark .tab.active { color:var(--primary) }
+    html.gs-dark .select-bar { background:rgba(183,110,121,.1); border-color:rgba(183,110,121,.3) }
+    html.gs-dark .ted-select { background:#2a2a2a; border-color:#444; color:#ddd }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <a href="{{ url_for('get_products.product_list') }}" class="back"><i class="fas fa-arrow-left"></i> Ürün Listesi</a>
+  <h1><i class="fas fa-truck"></i> Tedarikçi Yönetimi</h1>
+  <div class="spacer"></div>
+  <a href="{{ url_for('home') }}" class="btn btn-sm"><i class="fas fa-home"></i> Anasayfa</a>
+</div>
+
+<div class="tabs">
+  <button class="tab" data-tab="tedarikcilar">Tedarikçi Listesi</button>
+  <button class="tab active" data-tab="modeller">Modellere Tedarikçi Ata</button>
+</div>
+
+<div class="container">
+
+  <!-- TAB 1: Tedarikçi Listesi -->
+  <div class="panel" id="panel-tedarikcilar">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tedarikçi Kodu</label>
+        <input type="text" id="yeniKod" placeholder="Örn: TED-001">
+      </div>
+      <div class="form-group">
+        <label>Adı Soyadı</label>
+        <input type="text" id="yeniAdi" placeholder="Örn: Ahmet Yılmaz">
+      </div>
+      <button class="btn btn-primary" onclick="yeniTedarikciEkle()"><i class="fas fa-plus"></i> Tedarikçi Ekle</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Tedarikçi Kodu</th><th>Tedarikçi Adı</th><th style="width:80px">İşlem</th></tr>
+        </thead>
+        <tbody id="tedarikciBody">
+          <tr><td colspan="3" class="loading"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 2: Modellere Tedarikçi Ata -->
+  <div class="panel active" id="panel-modeller">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Model Ara</label>
+        <input type="text" id="searchModel" placeholder="Model kodu...">
+      </div>
+      <div class="form-group">
+        <label>Tedarikçiye Göre Filtrele</label>
+        <select id="filterTedarikci">
+          <option value="">Tümü</option>
+          <option value="__yok__">Tedarikçisi Yok</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="loadModeller()"><i class="fas fa-search"></i> Ara</button>
+    </div>
+
+    <!-- Toplu atama bar -->
+    <div class="select-bar" id="selectBar">
+      <span id="selectCount">0 model seçili</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="bulkTedarikci" class="ted-select">
+          <option value="">Tedarikçi seçin...</option>
+        </select>
+        <button class="btn btn-success btn-sm" onclick="topluAta()"><i class="fas fa-check"></i> Seçilenlere Ata</button>
+        <button class="btn btn-danger btn-sm" onclick="topluKaldir()"><i class="fas fa-times"></i> Tedarikçiyi Kaldır</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px"><input type="checkbox" class="row-cb" id="selectAll" onchange="toggleAll(this)"></th>
+            <th>Model Kodu</th>
+            <th>Atanmış Tedarikçi</th>
+            <th>Varyant</th>
+            <th style="width:160px">Tedarikçi Ata</th>
+          </tr>
+        </thead>
+        <tbody id="modellerBody">
+          <tr><td colspan="5" class="loading"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+
+<script src="{{ url_for('static', filename='js/gs-dialog.js') }}"></script>
+<script>
+let _tedarikciList = []; // { id, kod, adi }
+
+// Tabs
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  };
+});
+
+
+// ─── Tedarikçi option HTML oluştur ───
+function _tedOptions(selectedKod) {
+  let html = '<option value="">Seçin...</option>';
+  _tedarikciList.forEach(t => {
+    const sel = (t.kod === selectedKod) ? 'selected' : '';
+    html += `<option value="${t.kod}" ${sel}>${t.kod} — ${t.adi || '?'}</option>`;
+  });
+  return html;
+}
+
+function _updateAllDropdowns() {
+  // Filtre dropdown
+  const fil = document.getElementById('filterTedarikci');
+  const filVal = fil.value;
+  fil.innerHTML = '<option value="">Tümü</option><option value="__yok__">Tedarikçisi Yok</option>';
+  _tedarikciList.forEach(t => {
+    fil.innerHTML += `<option value="${t.kod}">${t.kod} — ${t.adi || '?'}</option>`;
+  });
+  fil.value = filVal;
+
+  // Toplu atama dropdown
+  const bulk = document.getElementById('bulkTedarikci');
+  bulk.innerHTML = '<option value="">Tedarikçi seçin...</option>';
+  _tedarikciList.forEach(t => {
+    bulk.innerHTML += `<option value="${t.kod}">${t.kod} — ${t.adi || '?'}</option>`;
+  });
+
+  // Tablodaki satır dropdown'ları
+  document.querySelectorAll('.row-ted-select').forEach(sel => {
+    const cur = sel.value;
+    sel.innerHTML = _tedOptions(cur);
+  });
+}
+
+// ─── Tedarikçi Listesi ───
+async function loadTedarikcilar() {
+  const body = document.getElementById('tedarikciBody');
+  body.innerHTML = '<tr><td colspan="3" class="loading"><i class="fas fa-spinner fa-spin"></i></td></tr>';
+  try {
+    const resp = await fetch('/api/tedarikcilar');
+    _tedarikciList = await resp.json();
+
+    if (_tedarikciList.length === 0) {
+      body.innerHTML = '<tr><td colspan="3" class="empty"><i class="fas fa-truck"></i>Henüz tedarikçi eklenmemiş</td></tr>';
+    } else {
+      body.innerHTML = _tedarikciList.map(t => `
+        <tr data-tid="${t.id}">
+          <td><span class="badge badge-primary">${t.kod}</span></td>
+          <td>${t.adi || '<span style="color:var(--muted)">—</span>'}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="tedarikciSil(${t.id}, this)"><i class="fas fa-trash"></i></button></td>
+        </tr>
+      `).join('');
+    }
+
+    _updateAllDropdowns();
+  } catch(e) {
+    body.innerHTML = '<tr><td colspan="3" class="empty">Hata: ' + e.message + '</td></tr>';
+  }
+}
+
+async function yeniTedarikciEkle() {
+  const kod = document.getElementById('yeniKod').value.trim();
+  const adi = document.getElementById('yeniAdi').value.trim();
+  if (!kod) { gsToast('Tedarikçi kodu gerekli', 'error'); return; }
+
+  try {
+    const resp = await fetch('/api/tedarikci_ekle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kod, adi })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      gsToast(data.message, 'success');
+      document.getElementById('yeniKod').value = '';
+      document.getElementById('yeniAdi').value = '';
+      loadTedarikcilar();
+    } else {
+      gsToast('Hata: ' + data.message, 'error');
+    }
+  } catch(e) { gsToast('Bağlantı hatası', 'error'); }
+}
+
+async function tedarikciSil(id, btn) {
+  const ok = await gsConfirm('Bu tedarikçiyi silmek istediğinize emin misiniz?', { danger: true, okText: 'Sil' });
+  if (!ok) return;
+  btn.disabled = true;
+  try {
+    const resp = await fetch(`/api/tedarikci_sil/${id}`, { method: 'DELETE' });
+    const data = await resp.json();
+    if (data.success) {
+      gsToast('Tedarikçi silindi', 'success');
+      loadTedarikcilar();
+    } else { gsToast('Hata: ' + data.message, 'error'); btn.disabled = false; }
+  } catch(e) { gsToast('Bağlantı hatası', 'error'); btn.disabled = false; }
+}
+
+// ─── Modeller Listesi ───
+async function loadModeller() {
+  const search = document.getElementById('searchModel').value.trim();
+  const tedarikci = document.getElementById('filterTedarikci').value;
+  const body = document.getElementById('modellerBody');
+  body.innerHTML = '<tr><td colspan="5" class="loading"><i class="fas fa-spinner fa-spin"></i></td></tr>';
+
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  if (tedarikci) params.set('tedarikci', tedarikci);
+
+  try {
+    const resp = await fetch('/api/tedarikci_modeller?' + params.toString());
+    const data = await resp.json();
+
+    if (data.length === 0) {
+      body.innerHTML = '<tr><td colspan="5" class="empty"><i class="fas fa-box-open"></i>Sonuç bulunamadı</td></tr>';
+      return;
+    }
+
+    body.innerHTML = data.map(m => `
+      <tr data-model="${m.model}">
+        <td><input type="checkbox" class="row-cb model-cb" value="${m.model}" onchange="updateSelectBar()"></td>
+        <td><strong>${m.model}</strong></td>
+        <td>${m.tedarikci_kodu
+              ? '<span class="badge badge-primary">' + m.tedarikci_kodu + '</span> ' + (m.tedarikci_adi || '')
+              : '<span style="color:var(--muted)">Atanmamış</span>'}</td>
+        <td><span class="badge badge-muted">${m.varyant_sayisi} varyant</span></td>
+        <td>
+          <div style="display:flex;gap:6px;align-items:center">
+            <select class="ted-select row-ted-select" data-model="${m.model}">
+              ${_tedOptions(m.tedarikci_kodu)}
+            </select>
+            <button class="btn btn-sm btn-primary" onclick="tekAta('${m.model}', this)"><i class="fas fa-check"></i></button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+
+    document.getElementById('selectAll').checked = false;
+    updateSelectBar();
+  } catch(e) {
+    body.innerHTML = '<tr><td colspan="5" class="empty">Hata: ' + e.message + '</td></tr>';
+  }
+}
+
+// Tek model ata
+async function tekAta(model, btn) {
+  const row = btn.closest('tr');
+  const sel = row.querySelector('.row-ted-select');
+  const kod = sel.value;
+  const ted = _tedarikciList.find(t => t.kod === kod);
+  const adi = ted ? (ted.adi || '') : '';
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+  try {
+    const resp = await fetch('/update_tedarikci', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model_code: model, tedarikci_kodu: kod, tedarikci_adi: adi })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      gsToast(model + ' — tedarikçi atandı', 'success');
+      // Atanmış sütunu güncelle
+      const tdAssigned = row.children[2];
+      tdAssigned.innerHTML = kod
+        ? '<span class="badge badge-primary">' + kod + '</span> ' + adi
+        : '<span style="color:var(--muted)">Atanmamış</span>';
+      btn.innerHTML = '<i class="fas fa-check"></i>';
+      setTimeout(() => { btn.innerHTML = '<i class="fas fa-check"></i>'; btn.disabled = false; }, 1000);
+    } else {
+      gsToast('Hata: ' + data.message, 'error');
+      btn.innerHTML = '<i class="fas fa-check"></i>'; btn.disabled = false;
+    }
+  } catch(e) {
+    gsToast('Bağlantı hatası', 'error');
+    btn.innerHTML = '<i class="fas fa-check"></i>'; btn.disabled = false;
+  }
+}
+
+// Toplu seçim
+function toggleAll(cb) {
+  document.querySelectorAll('.model-cb').forEach(c => { c.checked = cb.checked; });
+  updateSelectBar();
+}
+
+function updateSelectBar() {
+  const checked = document.querySelectorAll('.model-cb:checked').length;
+  document.getElementById('selectBar').classList.toggle('show', checked > 0);
+  document.getElementById('selectCount').textContent = checked + ' model seçili';
+}
+
+async function topluAta() {
+  const checked = document.querySelectorAll('.model-cb:checked');
+  const modeller = Array.from(checked).map(c => c.value);
+  const kod = document.getElementById('bulkTedarikci').value;
+
+  if (!modeller.length) return;
+  if (!kod) { gsToast('Lütfen tedarikçi seçin', 'error'); return; }
+
+  const ted = _tedarikciList.find(t => t.kod === kod);
+  const adi = ted ? (ted.adi || '') : '';
+
+  try {
+    const resp = await fetch('/api/toplu_tedarikci_ata', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ modeller, tedarikci_kodu: kod, tedarikci_adi: adi })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      gsToast(data.message, 'success');
+      loadModeller();
+    } else { gsToast('Hata: ' + data.message, 'error'); }
+  } catch(e) { gsToast('Bağlantı hatası', 'error'); }
+}
+
+async function topluKaldir() {
+  const checked = document.querySelectorAll('.model-cb:checked');
+  const modeller = Array.from(checked).map(c => c.value);
+  if (!modeller.length) return;
+
+  try {
+    const resp = await fetch('/api/toplu_tedarikci_ata', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ modeller, tedarikci_kodu: '', tedarikci_adi: '' })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      gsToast('Tedarikçi kaldırıldı', 'success');
+      loadModeller();
+    } else { gsToast('Hata: ' + data.message, 'error'); }
+  } catch(e) { gsToast('Bağlantı hatası', 'error'); }
+}
+
+document.getElementById('searchModel').addEventListener('keydown', e => { if (e.key === 'Enter') loadModeller(); });
+document.getElementById('yeniKod').addEventListener('keydown', e => { if (e.key === 'Enter') yeniTedarikciEkle(); });
+
+// Init
+loadTedarikcilar().then(() => loadModeller());
+</script>
+</body>
+</html>

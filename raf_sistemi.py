@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, render_template, flash, redirect, url_for
 from models import db, Raf, Product, RafUrun, CentralStock
+from user_logs import log_user_action
 import qrcode
 import barcode
 from barcode.writer import ImageWriter
@@ -173,18 +174,19 @@ def raf_stok_guncelle():
         return redirect(url_for("raf.raf_yonetimi"))  # 👈
 
     if yeni_adet <= 0:
-        # 0'a çekilirse kaydı sil
         db.session.delete(urun)
         db.session.commit()
-        # 🔥 CentralStock'u raflardan yeniden hesapla
         sync_central_stock(normalized)
+        try: log_user_action("DELETE", {"işlem_açıklaması": f"Raf stok kaldırıldı — {raf_kodu} / {normalized}", "sayfa": "Raf Yönetimi", "raf_kodu": raf_kodu, "barkod": normalized})
+        except: pass
         flash(f"{raf_kodu} rafından {normalized} kaldırıldı. CentralStock güncellendi.", "success")
-        return redirect(url_for("raf.raf_yonetimi"))  # 👈
+        return redirect(url_for("raf.raf_yonetimi"))
 
     urun.adet = yeni_adet
     db.session.commit()
-    # 🔥 CentralStock'u raflardan yeniden hesapla
     sync_central_stock(normalized)
+    try: log_user_action("STOCK_UPDATE", {"işlem_açıklaması": f"Raf stok güncellendi — {raf_kodu} / {normalized} → {yeni_adet} adet", "sayfa": "Raf Yönetimi", "raf_kodu": raf_kodu, "barkod": normalized, "yeni_adet": yeni_adet})
+    except: pass
     flash(f"{raf_kodu} rafındaki {normalized} adet {yeni_adet} olarak güncellendi.", "success")
     return redirect(url_for("raf.raf_yonetimi"))  # 👈
 
@@ -285,6 +287,8 @@ def raf_olustur_api():
                    qr_path=qr_path)
     db.session.add(yeni_raf)
     db.session.commit()
+    try: log_user_action("CREATE", {"işlem_açıklaması": f"Yeni raf oluşturuldu — {kod}", "sayfa": "Raf Yönetimi", "raf_kodu": kod})
+    except: pass
 
     return jsonify({
         "message": "Raf başarıyla oluşturuldu.",
@@ -316,8 +320,8 @@ def raf_sil(kod):
 
         db.session.delete(raf)
         db.session.commit()
-        
-        # 🔥 CentralStock'u raflardan yeniden hesapla
+        try: log_user_action("DELETE", {"işlem_açıklaması": f"Raf silindi — {raf.kod}", "sayfa": "Raf Yönetimi", "raf_kodu": raf.kod, "etkilenen_barkod": len(affected_barcodes)})
+        except: pass
         sync_multiple_barcodes(affected_barcodes)
 
         return jsonify({
@@ -391,10 +395,9 @@ def toplu_raf_sil():
             silinen_raflar.append(raf.kod)
             db.session.delete(raf)
         
-        # 5. Tüm değişiklikleri commit et
         db.session.commit()
-        
-        # 🔥 6. CentralStock'u raflardan yeniden hesapla
+        try: log_user_action("BULK_DELETE", {"işlem_açıklaması": f"Toplu raf silindi — {len(silinen_raflar)} raf ({', '.join(silinen_raflar[:5])}{'...' if len(silinen_raflar)>5 else ''})", "sayfa": "Raf Yönetimi", "silinen_raflar": len(silinen_raflar), "etkilenen_barkod": len(affected_barcodes)})
+        except: pass
         sync_multiple_barcodes(list(affected_barcodes))
         
         return jsonify({
@@ -422,8 +425,8 @@ def raf_urun_sil():
 
     db.session.delete(urun)
     db.session.commit()
-    
-    # 🔥 CentralStock'u raflardan yeniden hesapla
+    try: log_user_action("DELETE", {"işlem_açıklaması": f"Raf ürün silindi — {raf_kodu} / {barkod}", "sayfa": "Raf Yönetimi", "raf_kodu": raf_kodu, "barkod": barkod})
+    except: pass
     sync_central_stock(barkod)
     
     flash(f"{raf_kodu} rafından {barkod} silindi. CentralStock güncellendi.", "success")
@@ -447,8 +450,8 @@ def stok_ekle_api():
             yeni = RafUrun(raf_kodu=raf_kodu, urun_barkodu=barkod, adet=1)
             db.session.add(yeni)
     db.session.commit()
-    
-    # 🔥 CentralStock'u raflardan yeniden hesapla
+    try: log_user_action("STOCK_UPDATE", {"işlem_açıklaması": f"Rafa stok eklendi — {raf_kodu}, {len(urunler)} barkod", "sayfa": "Raf Yönetimi", "raf_kodu": raf_kodu, "ürün_sayısı": len(urunler)})
+    except: pass
     sync_multiple_barcodes(urunler)
     
     return jsonify({"message": "Stok başarıyla eklendi."}), 200

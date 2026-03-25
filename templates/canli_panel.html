@@ -75,7 +75,7 @@
     .badge.danger{background:#fef2f2;border-color:#fecaca;color:#991b1b}
     .ghost{margin-left:auto}
     .media{margin:12px;border-radius:12px;overflow:hidden;border:1px solid var(--color-border)}
-    .media img{display:block;width:100%;height:220px;object-fit:cover;cursor:pointer;transition:transform .3s}
+    .media img{display:block;width:100%;height:200px;object-fit:contain;background:#fafafa;cursor:pointer;transition:transform .3s}
     .media img:hover{transform:scale(1.01)}
     .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:0 12px 12px}
     .mini{border:1px solid var(--color-border);border-radius:12px;padding:12px;background:#fff}
@@ -88,6 +88,53 @@
     th,td{padding:10px;border-top:1px solid var(--color-border);text-align:left}
     thead th{background:#f6f7f8;color:var(--muted)}
     tbody tr:hover{background:#fafafa}
+
+    /* Tedarik Seçim */
+    .card{position:relative}
+    .card.selected{border-color:var(--color-primary);box-shadow:0 0 0 2px var(--color-primary),var(--shadow-md)}
+    .tedarik-cb-wrap{
+      width:30px;height:30px;border-radius:8px;border:1.5px solid var(--color-border);background:var(--color-white);
+      display:grid;place-items:center;cursor:pointer;transition:var(--transition);flex-shrink:0}
+    .tedarik-cb-wrap:hover{border-color:var(--color-primary);background:rgba(183,110,121,.04)}
+    .tedarik-cb-wrap.checked{border-color:var(--color-primary);background:var(--color-primary)}
+    .tedarik-cb-wrap .cb-icon{width:14px;height:14px;color:transparent;transition:color .15s}
+    .tedarik-cb-wrap.checked .cb-icon{color:#fff}
+    .tedarik-cb-wrap input{display:none}
+    .btn-tedarik{background:var(--color-success);color:#fff;border-color:transparent;font-weight:700}
+    .btn-tedarik:hover{background:#16a34a}
+    .btn-tedarik:disabled{background:#9ca3af;cursor:not-allowed;border-color:transparent}
+    .tedarik-count{background:var(--color-primary);color:#fff;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:6px}
+
+    /* Modal Overlay */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:10000;padding:16px}
+    .modal-overlay.show{display:flex}
+    .modal-box{background:#fff;border-radius:var(--radius);box-shadow:0 24px 60px rgba(0,0,0,.25);max-width:520px;width:100%;
+      max-height:85vh;overflow:hidden;display:flex;flex-direction:column;animation:modalIn .25s ease both}
+    @keyframes modalIn{from{opacity:0;transform:scale(.92) translateY(12px)}to{opacity:1;transform:none}}
+    .modal-header{padding:16px 20px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between}
+    .modal-header h3{margin:0;font-size:16px;color:var(--color-secondary)}
+    .modal-header .modal-step{font-size:12px;color:var(--muted);background:var(--chip);padding:4px 10px;border-radius:999px}
+    .modal-body{padding:20px;overflow-y:auto;flex:1}
+    .modal-footer{padding:14px 20px;border-top:1px solid var(--color-border);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+    .modal-footer .btn{min-width:100px;text-align:center;font-weight:600}
+    .btn-approve-all{background:#6366f1;color:#fff;border-color:transparent;margin-right:auto}
+    .btn-approve-all:hover{background:#4f46e5}
+
+    /* Modal içerik */
+    .tedarik-item{padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);margin-bottom:12px;background:#fafafa}
+    .tedarik-item h4{margin:0 0 8px;font-size:14px;color:var(--color-secondary)}
+    .tedarik-sizes{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .tedarik-size{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--color-border);border-radius:8px;background:#fff;font-size:13px}
+    .tedarik-size.has-sales{border-color:var(--color-primary);background:rgba(183,110,121,.06)}
+    .tedarik-size.zero-stock{border-color:var(--color-warning);background:rgba(245,158,11,.06)}
+    .tedarik-size input{width:50px;padding:4px 6px;border:1px solid var(--color-border);border-radius:6px;text-align:center;font-size:13px;font-weight:600}
+    .tedarik-size .size-label{font-weight:700;min-width:22px}
+    .tedarik-size .size-info{font-size:11px;color:var(--muted)}
+
+    .zero-stock-section{margin-top:12px;padding:10px;border:1px dashed var(--color-warning);border-radius:var(--radius-sm);background:rgba(245,158,11,.04)}
+    .zero-stock-section h5{margin:0 0 8px;font-size:13px;color:#92400e;display:flex;align-items:center;gap:6px}
+    .zero-stock-toggle{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;color:var(--color-secondary)}
+    .zero-stock-toggle input{accent-color:var(--color-warning)}
 
     .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:9999}
     .lightbox img{max-width:92vw;max-height:92vh;border-radius:16px;box-shadow:0 20px 40px rgba(0,0,0,.4)}
@@ -146,6 +193,20 @@
     html.gs-dark .hint{color:#999}
     html.gs-dark .switch{color:#999}
     html.gs-dark .skeleton{background:linear-gradient(90deg,#1e1e1e 25%,#2a2a2a 50%,#1e1e1e 75%);border-color:#333}
+    html.gs-dark .card.selected{border-color:var(--color-primary);box-shadow:0 0 0 2px var(--color-primary),0 8px 24px rgba(0,0,0,.35)}
+    html.gs-dark .tedarik-cb-wrap{background:#2a2a2a;border-color:#555}
+    html.gs-dark .tedarik-cb-wrap:hover{border-color:var(--color-primary);background:rgba(183,110,121,.15)}
+    html.gs-dark .tedarik-cb-wrap.checked{background:var(--color-primary);border-color:var(--color-primary)}
+    html.gs-dark .modal-box{background:#1e1e1e;border:1px solid #333}
+    html.gs-dark .modal-header{border-bottom-color:#333}
+    html.gs-dark .modal-header h3{color:#eee}
+    html.gs-dark .modal-footer{border-top-color:#333}
+    html.gs-dark .tedarik-item{background:#1a1a1a;border-color:#333}
+    html.gs-dark .tedarik-item h4{color:#eee}
+    html.gs-dark .tedarik-size{background:#1e1e1e;border-color:#333;color:#ddd}
+    html.gs-dark .tedarik-size input{background:#2a2a2a;border-color:#444;color:#eee}
+    html.gs-dark .zero-stock-section{background:rgba(245,158,11,.08);border-color:#664400}
+    html.gs-dark .media img{background:#1a1a1a}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -182,8 +243,12 @@
       </div>
 
       <input id="filtreModel" class="inp" type="text" placeholder="Model filtresi (örn: 099)" />
+      <select id="filtreTedarikci" class="inp" style="min-width:160px">
+        <option value="">Tüm Tedarikçiler</option>
+      </select>
       <button class="btn btn-primary" id="uygulaBtn">Uygula</button>
       <button class="btn" id="yenileBtn">Yenile</button>
+      <button class="btn btn-tedarik" id="tedarikBtn" disabled>Tedarik Oluştur<span class="tedarik-count" id="tedarikCount" style="display:none">0</span></button>
       <label class="switch"><input type="checkbox" id="liveToggle" checked /> Canlı (SSE)</label>
     </div>
   </header>
@@ -250,6 +315,23 @@
 
   <!-- Lightbox -->
   <div class="lightbox" id="lightbox"><img id="lightImg" alt=""></div>
+
+  <!-- Tedarik Modal -->
+  <div class="modal-overlay" id="tedarikModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modalTitle">Tedarik Siparişi</h3>
+        <span class="modal-step" id="modalStep">1/1</span>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer">
+        <button class="btn btn-approve-all" id="modalApproveAll">Tümünü Onayla</button>
+        <button class="btn" id="modalPrev" style="display:none">Önceki</button>
+        <button class="btn" id="modalSkip">Atla</button>
+        <button class="btn btn-primary" id="modalNext">Sonraki</button>
+      </div>
+    </div>
+  </div>
 
 <script src="{{ url_for('static', filename='js/app-shell.js') }}"></script>
 <script>
@@ -340,13 +422,14 @@
     const active = segSource.querySelector('.active');
     return active ? active.dataset.source : 'all';
   }
+  function getTedarikci(){ return document.getElementById('filtreTedarikci').value; }
+
   function buildQuery(model){
     const p = new URLSearchParams();
     const preset = getPreset();
     const source = getSource();
     if(model) p.set('model', model);
-    if(source && source !== 'all') p.set('source', source);  // 🔥 Kaynak parametresi
-    // Varsayılan model grubu:
+    if(source && source !== 'all') p.set('source', source);
     p.set('group','model');
     if (preset === 'custom' && inpStart.value && inpEnd.value){
       p.set('start', inpStart.value);
@@ -415,6 +498,10 @@
         <div class="head-right">
           ${badgeHigh}
           ${badgeLow}
+          <label class="tedarik-cb-wrap" onclick="event.stopPropagation()">
+            <input type="checkbox" class="tedarik-cb" onchange="tedarikToggle(this)">
+            <svg class="cb-icon" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </label>
           <button class="btn ghost" data-target="${detayId}">Detay</button>
         </div>
       </div>
@@ -458,17 +545,30 @@
     });
   }
 
+  // Tüm backend verisi (filtresiz)
+  let _allKartlar = [];
+
   // Render
   function render(kartlar, ts, toplamNetAdet, toplamSiparis, genelAvg, toplamCiro){
     console.log('[RENDER] ts=', ts, 'kartlar=', Array.isArray(kartlar)?kartlar.length:kartlar);
     if (!Array.isArray(kartlar)) { elZaman.textContent = 'Hata: kartlar dizisi gelmedi'; return; }
 
+    // Ham veriyi sakla (tedarikçi filtresi tekrar uygulanabilsin)
+    _allKartlar = kartlar;
+
+    // Frontend tedarikçi filtresi
+    const tedFilter = getTedarikci();
+    if (tedFilter) {
+      kartlar = kartlar.filter(k => (k.tedarikci_kodu || '') === tedFilter);
+    }
+
     // ── KPI güncelleme (count tween) ──
     elZaman.textContent = 'Güncellendi: ' + ts;
-    const toplamNet = (typeof toplamNetAdet === 'number')
-        ? toplamNetAdet
-        : (kartlar.reduce((a,k)=>a+(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0));
-    const newOrders = (typeof toplamSiparis === 'number') ? toplamSiparis : 0;
+    // KPI'ları filtrelenmiş kartlardan hesapla
+    const toplamNet = kartlar.reduce((a,k)=>a+(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0);
+    const newOrders = tedFilter
+        ? kartlar.reduce((a,k)=>a+(k.toplam_siparis_bugun ?? 0),0)
+        : ((typeof toplamSiparis === 'number') ? toplamSiparis : 0);
     const totalReturns = kartlar.reduce((a,k)=>a+(k.toplam_iade ?? 0),0);
 
     _tweenKpi(elToplam, _prevKpi.toplam, toplamNet ?? 0);
@@ -541,9 +641,18 @@
           const oldNet = (prev.toplam_net_satis ?? prev.toplam_siparis_bugun ?? 0);
           const newNet = (k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0);
           if (oldNet !== newNet || (prev.toplam_stok ?? 0) !== (k.toplam_stok ?? 0)) {
+            // Checkbox durumunu koru
+            const wasSelected = el.classList.contains('selected');
             // Detay ID güncelle ve yeniden çiz
             el.innerHTML = _buildCardHTML(k, detayId);
             _bindCardEvents(el);
+            if (wasSelected) {
+              el.classList.add('selected');
+              const cb = el.querySelector('.tedarik-cb');
+              const wrap = el.querySelector('.tedarik-cb-wrap');
+              if (cb) cb.checked = true;
+              if (wrap) wrap.classList.add('checked');
+            }
             // Değişen alanları vurgula
             el.querySelectorAll('.num[data-field]').forEach(n => {
               n.classList.remove('val-changed');
@@ -616,9 +725,16 @@
   }
 
   // Events
-  btnUygula.onclick=()=>{ const m=inpModel.value.trim(); startSSE(m); yukle(m); };
-  btnYenile.onclick = ()=>{ yukle(inpModel.value.trim()); };
+  btnUygula.onclick=()=>{ saveFilters(); const m=inpModel.value.trim(); _allKartlar=[]; startSSE(m); yukle(m); };
+  btnYenile.onclick = ()=>{ saveFilters(); _allKartlar=[]; yukle(inpModel.value.trim()); };
   liveToggle.onchange = ()=>{ const m=inpModel.value.trim(); if(liveToggle.checked){ startSSE(m); } else { if(ev){ev.close();ev=null;} } };
+  // Tedarikçi filtresi değiştiğinde mevcut veriyi tekrar render et (backend'e istek yok)
+  document.getElementById('filtreTedarikci').onchange = ()=>{
+    saveFilters();
+    if (_allKartlar.length > 0) {
+      render(_allKartlar, elZaman.textContent.replace('Güncellendi: ',''), null, null, null, null);
+    }
+  };
 
   // Defaults
   (function initDefaults(){
@@ -629,8 +745,344 @@
     document.getElementById('end').value   = `${yyyy}-${mm}-${dd}`;
   })();
 
-  // Init
-  startSSE(''); yukle('');
+  // ─── Tedarik Seçim Sistemi ─────────────────────────────────────────────
+  const tedarikBtn = document.getElementById('tedarikBtn');
+
+  function tedarikToggle(cb) {
+    const card = cb.closest('.card');
+    const wrap = cb.closest('.tedarik-cb-wrap');
+    card.classList.toggle('selected', cb.checked);
+    if (wrap) wrap.classList.toggle('checked', cb.checked);
+    _updateTedarikCount();
+  }
+
+  function _updateTedarikCount() {
+    const n = document.querySelectorAll('.tedarik-cb:checked').length;
+    tedarikBtn.disabled = (n === 0);
+    const c = document.getElementById('tedarikCount');
+    if (c) { c.textContent = n; c.style.display = n > 0 ? 'inline' : 'none'; }
+  }
+
+  // ─── Modal Tedarik Akışı ──────────────────────────────────────────────
+  const modal = document.getElementById('tedarikModal');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalStep = document.getElementById('modalStep');
+  const modalBody = document.getElementById('modalBody');
+  const modalPrev = document.getElementById('modalPrev');
+  const modalSkip = document.getElementById('modalSkip');
+  const modalNext = document.getElementById('modalNext');
+
+  let _tedarikKartlar = [];
+  let _tedarikStep = 0;
+  let _tedarikEdits = []; // her kart için düzenlenmiş beden adetleri
+
+  function _closeModal() { modal.classList.remove('show'); }
+
+  tedarikBtn.onclick = () => {
+    const checkedBoxes = document.querySelectorAll('.tedarik-cb:checked');
+    if (checkedBoxes.length === 0) return;
+
+    _tedarikKartlar = [];
+    _tedarikEdits = [];
+    checkedBoxes.forEach(cb => {
+      const card = cb.closest('.card');
+      const key = card.dataset.cardKey;
+      const kd = _prevCardData[key];
+      if (kd) {
+        _tedarikKartlar.push(kd);
+        // Her beden için net satış ve stok bilgisi
+        const edits = {};
+        (kd.detay || []).forEach(d => {
+          const b = String(d.beden || '').replace(',','.').trim();
+          try { const bn = parseInt(parseFloat(b)); if (bn >= 35 && bn <= 41) edits[bn] = { net: Math.max(0, d.net || 0), stok: d.stok || 0 }; } catch(e){}
+        });
+        // 35-41 arası tüm bedenleri doldur
+        for (let s = 35; s <= 41; s++) {
+          if (!edits[s]) edits[s] = { net: 0, stok: 0 };
+        }
+        _tedarikEdits.push(edits);
+      }
+    });
+
+    if (_tedarikKartlar.length === 0) return;
+    _tedarikStep = 0;
+    _renderTedarikStep();
+    modal.classList.add('show');
+  };
+
+  function _renderTedarikStep() {
+    const total = _tedarikKartlar.length;
+    const isLast = (_tedarikStep === total - 1);
+    const kart = _tedarikKartlar[_tedarikStep];
+    const edits = _tedarikEdits[_tedarikStep];
+
+    modalTitle.textContent = `${kart.model} — ${kart.renk}`;
+    modalStep.textContent = `${_tedarikStep + 1} / ${total}`;
+    modalPrev.style.display = _tedarikStep > 0 ? '' : 'none';
+    modalSkip.textContent = 'Bu Kartı Atla';
+    modalNext.textContent = isLast ? 'Tamamla ve Oluştur' : 'Sonraki';
+
+    let salesHTML = '';
+    let zeroStockHTML = '';
+    let hasZeroStock = false;
+
+    for (let s = 35; s <= 41; s++) {
+      const info = edits[s];
+      const stokBadge = info.stok <= 0
+        ? '<span style="color:var(--color-danger);font-size:11px;font-weight:700">stok: 0</span>'
+        : `<span class="size-info">stok: ${info.stok}</span>`;
+
+      if (info.net > 0) {
+        salesHTML += `
+          <div class="tedarik-size has-sales">
+            <span class="size-label">${s}</span>
+            <input type="number" min="0" value="${info.net}" data-size="${s}" class="tedarik-input" />
+            <span class="size-info">${info.net} satış</span>
+            ${stokBadge}
+          </div>`;
+      } else if (info.stok <= 0) {
+        hasZeroStock = true;
+        zeroStockHTML += `
+          <div class="tedarik-size zero-stock zero-stock-size" style="display:none">
+            <span class="size-label">${s}</span>
+            <input type="number" min="0" value="0" data-size="${s}" class="tedarik-input" />
+            <span style="color:var(--color-danger);font-size:11px;font-weight:700">stok: 0</span>
+          </div>`;
+      }
+    }
+
+    let bodyHTML = `<div class="tedarik-item">
+      <h4>Satışı Olan Bedenler</h4>
+      <div class="tedarik-sizes">${salesHTML || '<span style="color:var(--muted);font-size:13px">Satış yok</span>'}</div>`;
+
+    if (hasZeroStock) {
+      bodyHTML += `
+        <div class="zero-stock-section">
+          <h5>⚠️ Stoğu Sıfır Olan Bedenler</h5>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Bu bedenlerde stok sıfır — satış gelmemiş olabilir. Eklemek ister misin?</p>
+          <div class="zero-stock-toggle">
+            <input type="checkbox" id="zeroToggle_${_tedarikStep}" onchange="toggleZeroStock(this, ${_tedarikStep})">
+            <label for="zeroToggle_${_tedarikStep}">Evet, bu bedenlere de adet gireyim</label>
+          </div>
+          <div class="tedarik-sizes">${zeroStockHTML}</div>
+        </div>`;
+    }
+
+    bodyHTML += '</div>';
+    modalBody.innerHTML = bodyHTML;
+
+    // Tümünü Onayla butonu sadece birden fazla kart varsa göster
+    document.getElementById('modalApproveAll').style.display = (total > 1) ? '' : 'none';
+  }
+
+  window.toggleZeroStock = function(cb, step) {
+    const items = modalBody.querySelectorAll('.zero-stock-size');
+    items.forEach(el => { el.style.display = cb.checked ? 'flex' : 'none'; });
+  };
+
+  // Adımdaki input değerlerini kaydet
+  function _saveCurrentStep() {
+    const inputs = modalBody.querySelectorAll('.tedarik-input');
+    const edits = _tedarikEdits[_tedarikStep];
+    inputs.forEach(inp => {
+      const s = parseInt(inp.dataset.size);
+      if (edits[s]) edits[s].net = Math.max(0, parseInt(inp.value) || 0);
+    });
+  }
+
+  modalPrev.onclick = () => {
+    _saveCurrentStep();
+    _tedarikStep--;
+    _renderTedarikStep();
+  };
+
+  modalSkip.onclick = () => {
+    // Bu kartı sıfırla (dahil etme)
+    const edits = _tedarikEdits[_tedarikStep];
+    for (let s = 35; s <= 41; s++) { if(edits[s]) edits[s].net = 0; }
+
+    if (_tedarikStep < _tedarikKartlar.length - 1) {
+      _tedarikStep++;
+      _renderTedarikStep();
+    } else {
+      _submitTedarik();
+    }
+  };
+
+  modalNext.onclick = () => {
+    _saveCurrentStep();
+    if (_tedarikStep < _tedarikKartlar.length - 1) {
+      _tedarikStep++;
+      _renderTedarikStep();
+    } else {
+      _submitTedarik();
+    }
+  };
+
+  // Tümünü Onayla — mevcut adımı kaydet, kalan tüm kartları olduğu gibi kabul et ve gönder
+  document.getElementById('modalApproveAll').onclick = () => {
+    _saveCurrentStep();
+    _tedarikStep = _tedarikKartlar.length - 1; // son adıma atla
+    _submitTedarik();
+  };
+
+  // Modal overlay tıklama ile kapatma
+  modal.onclick = (e) => { if (e.target === modal) _closeModal(); };
+
+  async function _submitTedarik() {
+    // Son adımdaki inputları kaydet
+    _saveCurrentStep();
+
+    // Kartları hazırla
+    const payload = [];
+    _tedarikKartlar.forEach((kart, i) => {
+      const edits = _tedarikEdits[i];
+      const detay = [];
+      let toplamNet = 0;
+      for (let s = 35; s <= 41; s++) {
+        const net = edits[s]?.net || 0;
+        if (net > 0) {
+          detay.push({ beden: String(s), net: net });
+          toplamNet += net;
+        }
+      }
+      if (toplamNet > 0) {
+        payload.push({ model: kart.model, renk: kart.renk, detay: detay });
+      }
+    });
+
+    if (payload.length === 0) {
+      modalBody.innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px">Hiçbir üründe adet girilmedi.</p>';
+      modalNext.style.display = 'none';
+      modalSkip.textContent = 'Kapat';
+      modalSkip.onclick = _closeModal;
+      return;
+    }
+
+    // Loading durumu
+    modalBody.innerHTML = '<div style="text-align:center;padding:30px"><div class="skeleton" style="min-height:60px;max-width:200px;margin:0 auto"></div><p style="margin-top:12px;color:var(--muted)">Tedarik siparişi oluşturuluyor...</p></div>';
+    modalNext.disabled = true;
+    modalSkip.disabled = true;
+    modalPrev.style.display = 'none';
+
+    try {
+      const resp = await fetch('/siparis_fisi/tedarik_olustur', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kartlar: payload })
+      });
+      const result = await resp.json();
+
+      if (result.success) {
+        modalBody.innerHTML = `
+          <div style="text-align:center;padding:24px">
+            <div style="font-size:48px;margin-bottom:12px">✅</div>
+            <h4 style="margin:0 0 8px;color:var(--color-secondary)">${result.message}</h4>
+            <p style="color:var(--muted);font-size:13px">${payload.length} kalem ürün tedarik siparişine eklendi.</p>
+          </div>`;
+        modalNext.textContent = 'Fişi Görüntüle';
+        modalNext.disabled = false;
+        modalNext.onclick = () => {
+          if (result.redirect_url) window.open(result.redirect_url, '_blank');
+          _closeModal();
+          _resetTedarikSelection();
+        };
+        modalSkip.textContent = 'Kapat';
+        modalSkip.disabled = false;
+        modalSkip.onclick = () => { _closeModal(); _resetTedarikSelection(); };
+      } else {
+        modalBody.innerHTML = `<div style="text-align:center;padding:24px"><div style="font-size:48px;margin-bottom:12px">❌</div><p style="color:var(--color-danger)">${result.message || 'Bir hata oluştu'}</p></div>`;
+        modalSkip.textContent = 'Kapat';
+        modalSkip.disabled = false;
+        modalSkip.onclick = _closeModal;
+        modalNext.style.display = 'none';
+      }
+    } catch (err) {
+      modalBody.innerHTML = `<div style="text-align:center;padding:24px"><div style="font-size:48px;margin-bottom:12px">❌</div><p style="color:var(--color-danger)">Bağlantı hatası: ${err.message}</p></div>`;
+      modalSkip.textContent = 'Kapat';
+      modalSkip.disabled = false;
+      modalSkip.onclick = _closeModal;
+      modalNext.style.display = 'none';
+    }
+  }
+
+  function _resetTedarikSelection() {
+    document.querySelectorAll('.tedarik-cb:checked').forEach(cb => {
+      cb.checked = false;
+      cb.closest('.card').classList.remove('selected');
+      const wrap = cb.closest('.tedarik-cb-wrap');
+      if (wrap) wrap.classList.remove('checked');
+    });
+    _updateTedarikCount();
+    // Modal butonlarını resetle
+    modalNext.style.display = '';
+    modalNext.disabled = false;
+    modalSkip.disabled = false;
+  }
+
+  // ─── Filtre Durumunu Koru (localStorage) ───────────────────────────────
+  const FILTER_KEY = 'gs_canli_filters';
+
+  function saveFilters() {
+    localStorage.setItem(FILTER_KEY, JSON.stringify({
+      preset: getPreset(),
+      source: getSource(),
+      model: inpModel.value.trim(),
+      tedarikci: getTedarikci(),
+      customStart: inpStart.value,
+      customEnd: inpEnd.value,
+    }));
+  }
+
+  function restoreFilters() {
+    try {
+      const s = JSON.parse(localStorage.getItem(FILTER_KEY));
+      if (!s) return;
+      if (s.preset) {
+        [...seg.children].forEach(b => b.classList.toggle('active', b.dataset.preset === s.preset));
+        customRange.style.display = (s.preset === 'custom') ? '' : 'none';
+      }
+      if (s.source) {
+        [...segSource.children].forEach(b => b.classList.toggle('active', b.dataset.source === s.source));
+      }
+      if (s.model) inpModel.value = s.model;
+      if (s.customStart) inpStart.value = s.customStart;
+      if (s.customEnd) inpEnd.value = s.customEnd;
+      // Tedarikçi dropdown henüz dolmamış — pending olarak sakla
+      if (s.tedarikci) window._pendingTedarikci = s.tedarikci;
+    } catch(e) {}
+  }
+
+  // Filtre kaydı event'leri
+  seg.addEventListener('click', saveFilters);
+  segSource.addEventListener('click', saveFilters);
+
+  // ─── Tedarikçi Dropdown Doldur ─────────────────────────────────────────
+  (async function loadTedarikciFilter() {
+    try {
+      const resp = await fetch('/api/tedarikcilar');
+      const data = await resp.json();
+      const sel = document.getElementById('filtreTedarikci');
+      data.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.kod;
+        opt.textContent = t.kod + (t.adi ? ' — ' + t.adi : '');
+        sel.appendChild(opt);
+      });
+      // Pending filtreyi uygula
+      if (window._pendingTedarikci) {
+        sel.value = window._pendingTedarikci;
+        delete window._pendingTedarikci;
+      }
+    } catch(e) { console.error('Tedarikçi listesi yüklenemedi', e); }
+  })();
+
+  // Filtreleri geri yükle (tedarikçi hariç, o async doldurma sonrası uygulanır)
+  restoreFilters();
+
+  // Init — kaydedilmiş model filtresini kullan
+  const _initModel = inpModel.value.trim();
+  startSSE(_initModel); yukle(_initModel);
 </script>
 </body>
 </html>

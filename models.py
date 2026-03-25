@@ -739,6 +739,18 @@ class Product(db.Model):
     # Amazon spesifik alanlar
     amazon_asin = db.Column(db.String(20), nullable=True)  # Amazon ASIN kodu
 
+    # Tedarikçi bilgileri
+    tedarikci_kodu = db.Column(db.String(100), nullable=True, index=True)
+    tedarikci_adi = db.Column(db.String(255), nullable=True)
+
+
+class Tedarikci(db.Model):
+    __tablename__ = 'tedarikcilar'
+    id = db.Column(db.Integer, primary_key=True)
+    kod = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    adi = db.Column(db.String(255), nullable=True)
+    created_date = db.Column(db.DateTime, default=datetime.utcnow)
+
 
 # Eğer farklıysa, buradan da original_product_barcode'u kaldıralım.
 class Archive(db.Model):

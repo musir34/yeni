@@ -88,6 +88,17 @@
       white-space: nowrap;
       flex-shrink: 0;
     }
+    .label-body .customer {
+      font-size: 7pt;
+      font-weight: 600;
+      color: #555;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-left: auto;
+      flex-shrink: 1;
+      min-width: 0;
+    }
 
     /* ── Alt: barkod tam genişlik ── */
     .label-footer {
@@ -132,6 +143,7 @@
             <span class="model">{{ l.model_code }}</span>
             <span class="sep">|</span>
             <span class="cs">{{ l.color }} / {{ l.size }}</span>
+            {% if l.customer_name %}<span class="customer">{{ l.customer_name }}</span>{% endif %}
           </div>
 
           <div class="label-footer">

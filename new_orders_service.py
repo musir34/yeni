@@ -100,6 +100,7 @@ def _build_shelf_groups():
             'size': size,
             'barcode': barcode,
             'stok_yetersiz': stok_yetersiz,
+            'customer_name': ' '.join(filter(None, [order.customer_name, order.customer_surname])),
         })
 
     db.session.commit()
@@ -219,6 +220,7 @@ def prepare_new_orders_labels_print():
                     'model_code': item['model_code'],
                     'color': item['color'],
                     'size': item['size'],
+                    'customer_name': item.get('customer_name', ''),
                     'barcode_img': generate_barcode_data_uri(item['order_number'], show_text=False),
                 })
 

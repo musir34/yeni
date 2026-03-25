@@ -9,6 +9,7 @@ from models import OrderCreated, OrderPicking, OrderShipped, OrderDelivered, Ord
 # update_service ve trendyol_api importları
 from trendyol_api import SUPPLIER_ID
 from update_service import update_order_status_to_picking
+from user_logs import log_user_action
 
 archive_bp = Blueprint('archive', __name__)
 
@@ -195,7 +196,8 @@ def change_order_status():
         archived_order.status = new_status
         try:
             db.session.commit()
-            print(f"Arşivlenmiş sipariş {order_number} durumu {new_status} olarak güncellendi.")
+            try: log_user_action("UPDATE", {"işlem_açıklaması": f"Sipariş durumu güncellendi — {order_number} → {new_status}", "sayfa": "Sipariş Listesi", "sipariş_no": order_number, "yeni_durum": new_status})
+            except: pass
             return jsonify({'success': True, 'message': 'Durum güncellendi.'})
         except Exception as e:
             db.session.rollback()
@@ -214,7 +216,8 @@ def change_order_status():
     order_obj.status = new_status
     try:
         db.session.commit()
-        print(f"{table_cls.__tablename__} içindeki sipariş {order_number} statü {new_status} olarak güncellendi.")
+        try: log_user_action("UPDATE", {"işlem_açıklaması": f"Sipariş durumu güncellendi — {order_number} → {new_status} ({table_cls.__tablename__})", "sayfa": "Sipariş Listesi", "sipariş_no": order_number, "yeni_durum": new_status})
+        except: pass
         return jsonify({'success': True, 'message': 'Durum güncellendi.'})
     except Exception as e:
         db.session.rollback()
@@ -340,7 +343,8 @@ def execute_order_processing():
         db.session.add(new_picking)
         db.session.delete(archived_order)
         db.session.commit()
-        print(f"Sipariş {order_number} 'Picking' tablosuna taşındı (arşivden çıkarıldı).")
+        try: log_user_action("UPDATE", {"işlem_açıklaması": f"Sipariş işleme alındı — {order_number} (Arşiv → Picking)", "sayfa": "Sipariş Listesi", "sipariş_no": order_number, "ürün_satırı": len(lines)})
+        except: pass
         return jsonify({'success': True, 'message': 'Sipariş başarıyla işleme alındı.'})
     except Exception as e:
         db.session.rollback()
@@ -367,7 +371,8 @@ def order_cancellation():
         archived_order.status = 'İptal Edildi'
         try:
             db.session.commit()
-            print(f"Arşivdeki sipariş {order_number} 'İptal Edildi' statüsüne alındı.")
+            try: log_user_action("DELETE", {"işlem_açıklaması": f"Sipariş iptal edildi — {order_number} (Arşiv)", "sayfa": "Sipariş Listesi", "sipariş_no": order_number})
+            except: pass
             return jsonify({'success': True, 'message': 'Sipariş iptal edildi.'})
         except Exception as e:
             db.session.rollback()
@@ -385,7 +390,8 @@ def order_cancellation():
     order_obj.status = 'İptal Edildi'
     try:
         db.session.commit()
-        print(f"{table_cls.__tablename__} içindeki sipariş {order_number} iptal edildi.")
+        try: log_user_action("DELETE", {"işlem_açıklaması": f"Sipariş iptal edildi — {order_number} ({table_cls.__tablename__})", "sayfa": "Sipariş Listesi", "sipariş_no": order_number})
+        except: pass
         # İptal edilen siparişi OrderCancelled tablosuna taşımak isterseniz buraya ekleyin
         # from models import OrderCancelled
         # new_cancelled = OrderCancelled(...)
@@ -530,7 +536,8 @@ def archive_an_order():
         db.session.delete(order_obj)
         db.session.commit()
         
-        print(f"Sipariş {order_number}, {table_cls.__tablename__} tablosundan silindi, arşive eklendi.")
+        try: log_user_action("ARCHIVE", {"işlem_açıklaması": f"Sipariş arşivlendi — {order_number} ({table_cls.__tablename__} → Arşiv), Sebep: {archive_reason or '-'}", "sayfa": "Sipariş Listesi", "sipariş_no": order_number, "sebep": archive_reason or "-", "kaynak_tablo": table_cls.__tablename__})
+        except: pass
         return jsonify({'success': True, 'message': 'Sipariş arşive eklendi.'})
     except Exception as e:
         db.session.rollback()
@@ -620,7 +627,8 @@ def recover_from_archive():
         db.session.delete(archived_order)
         db.session.commit()
         
-        print(f"Sipariş {order_number} arşivden çıkartıldı, 'orders_created' tablosuna eklendi.")
+        try: log_user_action("RESTORE", {"işlem_açıklaması": f"Sipariş arşivden geri yüklendi — {order_number} (Arşiv → Created)", "sayfa": "Arşiv", "sipariş_no": order_number})
+        except: pass
         return jsonify({'success': True, 'message': 'Sipariş başarıyla geri yüklendi.'})
         
     except Exception as e:
@@ -662,7 +670,8 @@ def remove_archived_order():
         if deleted_count > 0:
             db.session.commit()
             message = f"{deleted_count} sipariş başarıyla silindi."
-            print(message)
+            try: log_user_action("DELETE", {"işlem_açıklaması": f"Arşivden kalıcı silindi — {deleted_count} sipariş ({', '.join(order_numbers[:5])}{'...' if len(order_numbers) > 5 else ''})", "sayfa": "Arşiv", "silinen_sayı": deleted_count, "sipariş_nolar": ", ".join(order_numbers[:10])})
+            except: pass
             return jsonify({'success': True, 'message': message})
         else:
             # Eğer order_numbers listesi boş değilse ama hiçbiri bulunamadıysa

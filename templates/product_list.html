@@ -178,6 +178,7 @@
             <div class="dropdown-content">
                 <a href="/product_label"><i class="fas fa-barcode"></i> Basit Barkod</a>
                 <a href="/image_manager"><i class="fas fa-images"></i> Görsel Yöneticisi</a>
+                <a href="{{ url_for('siparis_fisi_bp.tedarikci_sayfasi') }}"><i class="fas fa-truck"></i> Tedarikçi Yönetimi</a>
             </div>
         </div>
 
@@ -394,6 +395,7 @@
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{{ url_for('static', filename='js/gs-dialog.js') }}"></script>
 <script>
 $(function(){
 
@@ -499,21 +501,22 @@ $(function(){
         else return;
 
         $.post(url, $(formId).serialize(), res=>{
-            alert(res.message||'İşlem tamamlandı.');
-            if(res.success) location.reload();
-        }).fail(()=>alert('İşlem sırasında sunucu hatası oluştu.'));
+            gsToast(res.message||'İşlem tamamlandı.', res.success ? 'success' : 'error');
+            if(res.success) setTimeout(()=>location.reload(), 800);
+        }).fail(()=>gsToast('İşlem sırasında sunucu hatası oluştu.', 'error'));
     });
     $modal.on('click', function(e){
         if(e.target===this || $(e.target).hasClass('close-btn')){ $modal.removeClass('is-visible'); }
     });
 
     // Silme
-    $('.model-grid').on('click','.delete-model', function(){
+    $('.model-grid').on('click','.delete-model', async function(){
         const modelId=$(this).data('model');
-        if(confirm(`'${modelId}' modeline ait TÜM ürünleri kalıcı olarak silmek istediğinizden emin misiniz?`)){
+        const ok = await gsConfirm(`'${modelId}' modeline ait TÜM ürünleri kalıcı olarak silmek istediğinizden emin misiniz?`, { danger: true, okText: 'Sil' });
+        if(ok){
             $.post('/api/delete-model',{model_id:modelId},res=>{
-                alert(res.message);
-                if(res.success) location.reload();
+                gsToast(res.message, res.success ? 'success' : 'error');
+                if(res.success) setTimeout(()=>location.reload(), 800);
             });
         }
     });
@@ -552,8 +555,8 @@ $(function(){
                 const orig=$btn.html();
                 $btn.html('<i class="fas fa-check"></i>');
                 setTimeout(()=>$btn.html(orig),1500);
-            }).catch(()=>alert('Hata: Barkod kopyalanamadı!'));
-        }else{ alert('Tarayıcınız bu özelliği desteklemiyor.'); }
+            }).catch(()=>gsToast('Barkod kopyalanamadı!', 'error'));
+        }else{ gsToast('Tarayıcınız bu özelliği desteklemiyor.', 'warning'); }
     });
 
     // Woo ID Ekleme/Düzenleme

@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, current_app, send_from_directory
 from models import db, Kasa, User, KasaKategori, Odeme, KasaDurum, AnaKasa, AnaKasaIslem
+from user_logs import log_user_action
 from datetime import datetime, timedelta
 from sqlalchemy import or_, desc, func
 from login_logout import login_required, roles_required
@@ -83,6 +84,8 @@ def api_odeme_yap():
             kasa_kaydi.durum = KasaDurum.ODENMEDI
 
         db.session.commit()
+        try: log_user_action("CREATE", {"işlem_açıklaması": f"Ödeme yapıldı — {odeme_tutari}₺, Kalan: {kalan_sonra}₺", "sayfa": "Kasa", "kasa_id": kasa_id, "ödeme_tutarı": str(odeme_tutari), "kalan": str(kalan_sonra)})
+        except: pass
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Ödeme kaydedilemedi: {e}'}), 500
@@ -600,7 +603,9 @@ def yeni_kasa_kaydi():
                 db.session.add(islem)
             
             db.session.commit()
-            
+            try: log_user_action("CREATE", {"işlem_açıklaması": f"Kasa kaydı oluşturuldu — {tip}: {tutar}₺, {ad}, {kategori}", "sayfa": "Kasa", "tip": tip, "tutar": str(tutar), "ad": ad, "kategori": kategori})
+            except: pass
+
             if tip == 'gelir':
                 flash(f'✅ Gelir kaydı eklendi ve Ana Kasa\'dan {tutar} ₺ düşüldü!', 'success')
             else:
@@ -682,6 +687,8 @@ def kasa_duzenle(kayit_id):
 
         try:
             db.session.commit()
+            try: log_user_action("UPDATE", {"işlem_açıklaması": f"Kasa kaydı düzenlendi — #{kayit_id}", "sayfa": "Kasa", "kayıt_id": kayit_id})
+            except: pass
             flash('Kayıt başarıyla güncellendi!', 'success')
             return redirect(url_for('kasa.kasa_sayfasi', yil=secilen_tarih.year, ay=secilen_tarih.month))
         except Exception as e:
@@ -703,6 +710,8 @@ def kasa_odendi(kayit_id):
     kayit.durum = KasaDurum.TAMAMLANDI
     try:
         db.session.commit()
+        try: log_user_action("UPDATE", {"işlem_açıklaması": f"Kasa kaydı ödendi olarak işaretlendi — #{kayit_id}", "sayfa": "Kasa", "kayıt_id": kayit_id})
+        except: pass
         return redirect(url_for('kasa.kasa_sayfasi', yil=kayit.tarih.year, ay=kayit.tarih.month))
     except Exception as e:
         db.session.rollback()
@@ -719,6 +728,8 @@ def kasa_sil(kayit_id):
     try:
         db.session.delete(kayit)
         db.session.commit()
+        try: log_user_action("DELETE", {"işlem_açıklaması": f"Kasa kaydı silindi — #{kayit_id}", "sayfa": "Kasa", "kayıt_id": kayit_id})
+        except: pass
         flash('Kayıt silindi.', 'success')
     except Exception:
         db.session.rollback()
@@ -850,6 +861,8 @@ def yeni_kategori():
             )
             db.session.add(yeni_kategori)
             db.session.commit()
+            try: log_user_action("CREATE", {"işlem_açıklaması": f"Kasa kategorisi eklendi — {kategori_adi}", "sayfa": "Kasa Kategoriler", "kategori": kategori_adi})
+            except: pass
             flash('Kategori eklendi!', 'success')
             return redirect(url_for('kasa.kategoriler'))
         except Exception:
@@ -884,6 +897,8 @@ def kategori_duzenle(kategori_id):
             kategori.renk = renk
             kategori.aktif = aktif
             db.session.commit()
+            try: log_user_action("UPDATE", {"işlem_açıklaması": f"Kasa kategorisi güncellendi — {kategori_adi}", "sayfa": "Kasa Kategoriler", "kategori": kategori_adi})
+            except: pass
             flash('Kategori güncellendi!', 'success')
             return redirect(url_for('kasa.kategoriler'))
         except Exception:
@@ -901,9 +916,12 @@ def kategori_sil(kategori_id):
     if kullaniliyor:
         flash('Bu kategori aktif kayıtlarda kullanılıyor, silinemez!', 'error')
         return redirect(url_for('kasa.kategoriler'))
+    kat_adi = kategori.kategori_adi
     try:
         db.session.delete(kategori)
         db.session.commit()
+        try: log_user_action("DELETE", {"işlem_açıklaması": f"Kasa kategorisi silindi — {kat_adi}", "sayfa": "Kasa Kategoriler", "kategori": kat_adi})
+        except: pass
         flash('Kategori silindi!', 'success')
     except Exception:
         db.session.rollback()
@@ -934,6 +952,8 @@ def api_kategori_ekle():
         )
         db.session.add(yeni_kategori)
         db.session.commit()
+        try: log_user_action("CREATE", {"işlem_açıklaması": f"Kasa kategorisi eklendi (API) — {kategori_adi}", "sayfa": "Kasa", "kategori": kategori_adi})
+        except: pass
         return jsonify({
             'success': True,
             'message': 'Kategori başarıyla eklendi!',
@@ -1098,6 +1118,8 @@ def excel_gelir_yukle():
         
         if eklenen_kayit > 0:
             db.session.commit()
+            try: log_user_action("CREATE", {"işlem_açıklaması": f"Excel'den gelir yüklendi — {eklenen_kayit} kayıt, {atlanan_kayit} atlanan", "sayfa": "Kasa", "eklenen": eklenen_kayit, "atlanan": atlanan_kayit})
+            except: pass
             flash(f'✅ {eklenen_kayit} gelir kaydı başarıyla eklendi! ({atlanan_kayit} satır atlandı)', 'success')
         else:
             db.session.rollback()
@@ -1351,7 +1373,8 @@ def ana_kasa_guncelle():
         )
         db.session.add(islem)
         db.session.commit()
-        
+        try: log_user_action("UPDATE", {"işlem_açıklaması": f"Ana kasa güncellendi — {tutar}₺ ({aciklama})", "sayfa": "Ana Kasa", "tutar": str(tutar), "açıklama": aciklama})
+        except: pass
         flash(f'✅ {tutar} ₺ Ana Kasa\'ya eklendi. ({aciklama})', 'success')
         
     except Exception as e:
@@ -1466,7 +1489,8 @@ def ana_kasa_islem_duzenle():
         
         ana_kasa.guncelleme_tarihi = datetime.now()
         db.session.commit()
-        
+        try: log_user_action("UPDATE", {"işlem_açıklaması": f"Ana kasa işlem düzenlendi — #{islem_id}", "sayfa": "Ana Kasa", "işlem_id": islem_id})
+        except: pass
         flash(f'✅ İşlem kaydı güncellendi ve bakiyeler yeniden hesaplandı!', 'success')
         
     except Exception as e:
@@ -1522,7 +1546,8 @@ def ana_kasa_islem_sil():
         
         ana_kasa.guncelleme_tarihi = datetime.now()
         db.session.commit()
-        
+        try: log_user_action("DELETE", {"işlem_açıklaması": f"Ana kasa işlem silindi — #{islem_id}", "sayfa": "Ana Kasa", "işlem_id": islem_id})
+        except: pass
         flash(f'✅ İşlem kaydı silindi ve bakiyeler yeniden hesaplandı!', 'success')
         
     except Exception as e:

@@ -16,6 +16,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from models import db, ReturnOrder, ReturnProduct
 from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID
+try:
+    from user_logs import log_user_action
+except ImportError:
+    def log_user_action(*a, **kw): pass
 
 # ------------------------------------------------------------------ #
 # Genel ayarlar
@@ -341,6 +345,8 @@ def iade_onayla(claim_id):
             p.return_to_stock = (rts[idx] == "true") if idx < len(rts) else False
 
         session.commit()
+        try: log_user_action("UPDATE", {"işlem_açıklaması": f"İade onaylandı — {len(ids)} ürün", "sayfa": "İade Listesi", "onaylanan_ürün": len(ids)})
+        except: pass
         flash("İade onaylandı.", "success")
     except Exception as e:
         session.rollback()
@@ -364,6 +370,8 @@ def iade_guncelle(claim_id):
         order = _get_return_order_or_404(session, claim_id)
         order.status = new_status
         session.commit()
+        try: log_user_action("UPDATE", {"işlem_açıklaması": f"İade durumu güncellendi — {claim_id} → {new_status}", "sayfa": "İade Listesi", "claim_id": str(claim_id), "yeni_durum": new_status})
+        except: pass
         flash("İade durumu güncellendi.", "success")
     except Exception as e:
         session.rollback()

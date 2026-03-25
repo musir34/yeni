@@ -405,7 +405,6 @@
       .card-title{font-size:.85rem}
       .card-text{font-size:.78rem}
 
-      /* User info - mobilde üstte sabit şerit */
       .user-info{
         position:fixed;top:0;left:0;right:0;
         max-width:none;width:100%;
@@ -418,9 +417,8 @@
       }
       .user-info img{max-width:36px}
       .user-info div[style*="flex-direction:column"]{gap:1px!important}
-      .user-info div[style*="Ayarlar"]{display:none}
+      .user-info .mobile-hide{display:none}
 
-      /* Buton grubu - user info altına */
       .btn-group-top{
         position:fixed;top:auto;bottom:0;left:0;right:0;
         flex-direction:row;flex-wrap:wrap;
@@ -440,8 +438,6 @@
       .btn-group-top .dropdown .btn{width:100%}
       .dropdown-menu{left:auto!important;right:0!important;min-width:auto;width:auto}
       .dropdown-item{font-size:.78rem}
-
-      /* Switch mobilde gizle */
       .custom-switch{margin-top:4px}
 
       #autoShipMessage{min-width:280px;max-width:92%;margin:0 4%}
@@ -449,14 +445,11 @@
       .shipping-header h3{font-size:1rem}
       .shipping-barcode strong{font-size:1.2rem}
 
-      /* Container */
       .container{margin-top:45px;margin-bottom:55px;padding:0 6px}
-
       .fixed-header{margin-top:6px;padding:6px 8px}
       .fixed-header h4{font-size:.88rem}
       .fixed-header p{font-size:.82rem}
 
-      /* Queue */
       .order-queue-wrapper{margin-bottom:6px;padding:4px 0}
       .queue-order-card{flex:0 0 110px;min-width:110px}
       .queue-order-image{height:55px}
@@ -464,7 +457,6 @@
       .queue-order-sku{font-size:.78rem}
       .queue-order-number{font-size:.7rem}
 
-      /* Cards */
       .order-container{justify-content:center;gap:6px}
       .card{width:calc(50% - 6px);min-width:150px}
       .product-image{height:110px}
@@ -474,14 +466,11 @@
       .form-control{padding:5px 7px;font-size:.82rem}
       .bottom-buttons{justify-content:center}
       .btn-bottom{max-width:none;flex:1 1 auto;font-size:.78rem;padding:5px 8px}
-
-      /* Image modal */
       .image-modal-content{max-width:95vw;max-height:95vh}
-
-      /* Active order section */
       .active-order-section{padding:8px}
       .active-order-title h4{font-size:.95rem}
     }
+    html.gs-dark .btn-group-top{background:rgba(30,30,30,.9);border-bottom-color:#333}
     @media (max-width:480px){
       .card{width:calc(50% - 4px);min-width:140px}
       .product-image{height:95px}
@@ -540,8 +529,8 @@
         🕐 {{ current_time.strftime('%d %B %Y, %A - %H:%M:%S') }}
       </div>
       {% endif %}
-      <!-- Ayarlar -->
-      <div style="display:flex;flex-direction:column;gap:3px;margin-top:5px;border-top:1px solid #ddd;padding-top:5px;">
+      <!-- Ayarlar (mobilde gizlenir) -->
+      <div class="mobile-hide" style="display:flex;flex-direction:column;gap:3px;margin-top:5px;border-top:1px solid #ddd;padding-top:5px;">
         <div style="font-size:10px;font-weight:600;color:#444;">⚙ Ayarlar</div>
         <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:#555;">
           <span>Onaylama:</span>
@@ -906,6 +895,7 @@
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="{{ url_for('static', filename='js/app-shell.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/gs-dialog.js') }}"></script>
 
   <!-- 🔥 Sipariş Kuyruğu JavaScript -->
   <script>
@@ -1269,7 +1259,7 @@
 
     function manuelYukle() {
       var val = document.getElementById('manuelOrderInput').value.trim();
-      if (!val) { window.GS ? GS.showToast('Sipariş numarası girin.', 'warning') : alert('Sipariş numarası girin.'); return; }
+      if (!val) { gsToast('Sipariş numarası girin.', 'warning'); return; }
       window.location.href = '/siparis-hazirla?manuel=1&order_number=' + encodeURIComponent(val);
     }
 
@@ -1298,20 +1288,20 @@
       e.preventDefault();
       var postData = {order_number: $('#archiveOrderNumber').val(), archive_reason: $('#archiveReason').val(), other_reason: $('#otherReasonText').val()};
       if (!postData.archive_reason || (postData.archive_reason === 'Diğer' && !postData.other_reason.trim())) {
-        window.GS ? GS.showToast('Lütfen bir sebep belirtin.', 'warning') : alert('Lütfen bir sebep belirtin.');
+        gsToast('Lütfen bir sebep belirtin.', 'warning');
         return;
       }
       $.post('/archive_order', postData, function(res) {
         if (res.success) {
           var mdl = bootstrap.Modal.getInstance(document.getElementById('archiveModal'));
           if (mdl) mdl.hide();
-          window.GS ? GS.showToast('Sipariş arşivlendi!', 'success') : alert('Sipariş arşivlendi!');
+          gsToast('Sipariş arşivlendi!', 'success');
           setTimeout(function(){ refreshOrderContent(); }, 1200);
         } else {
-          window.GS ? GS.showToast('Hata: ' + res.message, 'danger') : alert('Hata: ' + res.message);
+          gsToast('Hata: ' + res.message, 'error');
         }
       }).fail(function(){
-        window.GS ? GS.showToast('Sunucu hatası.', 'danger') : alert('Sunucu hatası.');
+        gsToast('Sunucu hatası.', 'error');
       });
     });
   </script>

@@ -12,6 +12,7 @@ from sqlalchemy import or_
 try:
     from models import db, Product, YeniSiparis, SiparisUrun, RafUrun, CentralStock
     from stock_management import sync_central_stock
+    from user_logs import log_user_action
 except ImportError:
     print("UYARI: 'models' modülü bulunamadı. Lütfen doğru import yolunu kontrol edin.")
     class FakeDB:
@@ -308,6 +309,10 @@ def yeni_siparis():
 
         db.session.commit()
         logger.info(f"Sipariş {siparis_no} başarıyla veritabanına kaydedildi.")
+        try:
+            musteri = f"{data.get('musteri_adi','')} {data.get('musteri_soyadi','')}".strip()
+            log_user_action("CREATE", {"işlem_açıklaması": f"Yeni sipariş oluşturuldu — {siparis_no}, {musteri}, {len(data.get('urunler',[]))} ürün", "sayfa": "Sipariş Oluştur", "sipariş_no": siparis_no, "müşteri": musteri, "ürün_sayısı": len(data.get('urunler',[]))})
+        except: pass
         return jsonify(success=True, message='Sipariş başarıyla kaydedildi', siparis_no=siparis_no)
 
     except json.JSONDecodeError as je:
@@ -607,6 +612,10 @@ def siparis_guncelle(siparis_no):
                 logger.warning(f"Sipariş {siparis_no} için 'toplam_tutar' güncellenirken format hatası: {data.get('toplam_tutar')}")
 
         db.session.commit()
+        try:
+            musteri = f"{sip.musteri_adi or ''} {sip.musteri_soyadi or ''}".strip()
+            log_user_action("UPDATE", {"işlem_açıklaması": f"Sipariş güncellendi — {siparis_no}, {musteri}", "sayfa": "Sipariş Düzenle", "sipariş_no": siparis_no, "müşteri": musteri})
+        except: pass
         return jsonify(success=True, message='Sipariş güncellendi')
 
     except Exception as e:
@@ -627,9 +636,12 @@ def siparis_sil(siparis_no):
         if not sip:
             return jsonify(success=False, message='Sipariş bulunamadı'), 404
 
-        SiparisUrun.query.filter_by(siparis_id=sip.id).delete() # İlişkili ürünleri sil
-        db.session.delete(sip) # Siparişi sil
+        musteri = f"{sip.musteri_adi or ''} {sip.musteri_soyadi or ''}".strip()
+        SiparisUrun.query.filter_by(siparis_id=sip.id).delete()
+        db.session.delete(sip)
         db.session.commit()
+        try: log_user_action("DELETE", {"işlem_açıklaması": f"Sipariş silindi — {siparis_no}, {musteri}", "sayfa": "Sipariş Listesi", "sipariş_no": siparis_no, "müşteri": musteri})
+        except: pass
         return jsonify(success=True, message='Sipariş silindi')
 
     except Exception as e:
@@ -662,6 +674,8 @@ def siparis_toplu_sil():
 
         db.session.commit()
         logger.info(f"{silinen_sayisi} adet sipariş toplu olarak silindi")
+        try: log_user_action("BULK_DELETE", {"işlem_açıklaması": f"Toplu sipariş silindi — {silinen_sayisi} adet ({', '.join(siparis_nolar[:5])}{'...' if len(siparis_nolar) > 5 else ''})", "sayfa": "Sipariş Listesi", "silinen_sayı": silinen_sayisi})
+        except: pass
         return jsonify(success=True, message=f'{silinen_sayisi} sipariş silindi', deleted_count=silinen_sayisi)
 
     except Exception as e:
@@ -688,10 +702,11 @@ def siparis_durum_guncelle(siparis_no):
         if not sip:
             return jsonify(success=False, message='Sipariş bulunamadı'), 404
 
+        eski_durum = sip.durum
         sip.durum = yeni_durum
         db.session.commit()
-        
-        logger.info(f"Sipariş {siparis_no} durumu '{yeni_durum}' olarak güncellendi")
+        try: log_user_action("UPDATE", {"işlem_açıklaması": f"Sipariş durumu güncellendi — {siparis_no}: {eski_durum} → {yeni_durum}", "sayfa": "Sipariş Listesi", "sipariş_no": siparis_no, "eski_durum": eski_durum, "yeni_durum": yeni_durum})
+        except: pass
         return jsonify(success=True, message='Sipariş durumu güncellendi', new_status=yeni_durum)
 
     except Exception as e:

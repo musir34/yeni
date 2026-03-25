@@ -9,6 +9,7 @@ import os
 import json
 
 from models import db, Degisim, Product
+from user_logs import log_user_action
 # Çok tablolu sipariş modelleriniz
 from models import OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
 # Raf ve central stok
@@ -191,7 +192,8 @@ def degisim_kaydet():
 
         db.session.add(degisim_kaydi)
         db.session.commit()
-
+        try: log_user_action("CREATE", {"işlem_açıklaması": f"Değişim talebi oluşturuldu — {degisim_kaydi.degisim_no}, {toplam_tahsis} adet", "sayfa": "Değişim Talepleri", "değişim_no": degisim_kaydi.degisim_no, "toplam_tahsis": toplam_tahsis})
+        except: pass
         logger.info(f"Değişim kaydı oluşturuldu: {degisim_kaydi.degisim_no} | Toplam tahsis: {toplam_tahsis}")
         flash('Değişim talebiniz başarıyla oluşturuldu!', 'success')
         return redirect(url_for('degisim.degisim_talep'))
@@ -226,6 +228,8 @@ def update_status():
 
     rec.degisim_durumu = status
     db.session.commit()
+    try: log_user_action("UPDATE", {"işlem_açıklaması": f"Değişim durumu güncellendi — {degisim_no} → {status}", "sayfa": "Değişim Talepleri", "değişim_no": degisim_no, "yeni_durum": status})
+    except: pass
     return jsonify(success=True)
 
 
@@ -240,6 +244,8 @@ def delete_exchange():
     if degisim_kaydi:
         db.session.delete(degisim_kaydi)
         db.session.commit()
+        try: log_user_action("DELETE", {"işlem_açıklaması": f"Değişim talebi silindi — {degisim_no}", "sayfa": "Değişim Talepleri", "değişim_no": degisim_no})
+        except: pass
         return jsonify(success=True)
     return jsonify(success=False), 500
 
