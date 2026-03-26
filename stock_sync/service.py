@@ -713,12 +713,12 @@ def _sync_central_stock_from_raf():
         
         # 2. Raflardaki toplam stokları hesapla
         raf_totals = db.session.query(
-            func.lower(RafUrun.urun_barkodu).label('barcode'),
+            RafUrun.urun_barkodu.label('barcode'),
             func.sum(RafUrun.adet).label('total')
         ).filter(
             RafUrun.adet > 0
         ).group_by(
-            func.lower(RafUrun.urun_barkodu)
+            RafUrun.urun_barkodu
         ).all()
         
         raf_dict = {r.barcode: int(r.total) for r in raf_totals}
@@ -728,7 +728,7 @@ def _sync_central_stock_from_raf():
         cs_all = CentralStock.query.all()
         
         for cs in cs_all:
-            raf_toplam = raf_dict.get(cs.barcode.lower(), 0)
+            raf_toplam = raf_dict.get(cs.barcode, 0)
             
             if cs.qty != raf_toplam:
                 cs.qty = raf_toplam

@@ -209,7 +209,10 @@ class RafUrun(db.Model):
     urun_barkodu = db.Column(db.String, nullable=False)
     adet = db.Column(db.Integer, default=1)
 
-    __table_args__ = (db.UniqueConstraint("raf_kodu", "urun_barkodu", name="u_raf_urun"),)
+    __table_args__ = (
+        db.UniqueConstraint("raf_kodu", "urun_barkodu", name="u_raf_urun"),
+        db.CheckConstraint("adet >= 0", name="ck_raf_urun_adet_non_negative"),
+    )
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -232,55 +235,70 @@ def _track_raf_change(mapper, connection, target):
 
 def _sync_central_after_commit(session):
     """Commit sonrası etkilenen barkodların CentralStock'unu güncelle.
-    
+
     NOT: after_commit event'ında aynı session 'committed' durumda olduğundan
     yeni SQL çalıştırılamaz. Bu yüzden bağımsız bir session kullanıyoruz.
+    Başarısız olursa 2 kez daha dener (toplam 3 deneme).
     """
     barcodes = session.info.pop(_SYNC_KEY, None)
-    
+
     if not barcodes:
         return
-    
-    try:
-        from sqlalchemy import func
-        from sqlalchemy.orm import Session as SaSession
-        
-        # after_commit içinde aynı session kullanılamaz - yeni session oluştur
-        bind = session.get_bind()
-        new_session = SaSession(bind=bind)
-        
+
+    import logging
+    _logger = logging.getLogger(__name__)
+    max_retries = 2
+
+    for attempt in range(max_retries + 1):
         try:
-            for barcode in barcodes:
-                # Raflardaki toplam miktarı hesapla
-                raf_toplam = new_session.query(
-                    func.coalesce(func.sum(RafUrun.adet), 0)
-                ).filter(
-                    RafUrun.urun_barkodu == barcode,
-                    RafUrun.adet > 0
-                ).scalar()
-                
-                raf_toplam = int(raf_toplam or 0)
-                
-                # CentralStock kaydını bul veya oluştur
-                cs = new_session.get(CentralStock, barcode)
-                if cs:
-                    if cs.qty != raf_toplam:
-                        cs.qty = raf_toplam
-                        cs.updated_at = datetime.utcnow()
-                else:
-                    if raf_toplam > 0:
-                        cs = CentralStock(barcode=barcode, qty=raf_toplam)
-                        new_session.add(cs)
-            
-            new_session.commit()
+            from sqlalchemy import func
+            from sqlalchemy.orm import Session as SaSession
+
+            bind = session.get_bind()
+            new_session = SaSession(bind=bind)
+
+            try:
+                for barcode in barcodes:
+                    raf_toplam = new_session.query(
+                        func.coalesce(func.sum(RafUrun.adet), 0)
+                    ).filter(
+                        RafUrun.urun_barkodu == barcode,
+                        RafUrun.adet > 0
+                    ).scalar()
+
+                    raf_toplam = int(raf_toplam or 0)
+
+                    cs = new_session.get(CentralStock, barcode)
+                    if cs:
+                        if cs.qty != raf_toplam:
+                            cs.qty = raf_toplam
+                            cs.updated_at = datetime.utcnow()
+                    else:
+                        if raf_toplam > 0:
+                            cs = CentralStock(barcode=barcode, qty=raf_toplam)
+                            new_session.add(cs)
+
+                new_session.commit()
+                return  # Başarılı — çık
+            except Exception:
+                new_session.rollback()
+                raise
+            finally:
+                new_session.close()
         except Exception:
-            new_session.rollback()
-            raise
-        finally:
-            new_session.close()
-    except Exception:
-        import logging
-        logging.getLogger(__name__).error("[AUTO-SYNC] RafUrun -> CentralStock otomatik sync hatası", exc_info=True)
+            if attempt < max_retries:
+                _logger.warning(
+                    f"[AUTO-SYNC] Deneme {attempt + 1}/{max_retries + 1} başarısız, "
+                    f"tekrar deneniyor ({len(barcodes)} barkod)..."
+                )
+                import time
+                time.sleep(0.1 * (attempt + 1))
+            else:
+                _logger.error(
+                    "[AUTO-SYNC] RafUrun -> CentralStock otomatik sync hatası "
+                    f"(tüm {max_retries + 1} deneme başarısız)",
+                    exc_info=True
+                )
 
 
 # Event listener'ları kaydet

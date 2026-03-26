@@ -13,6 +13,7 @@ from flask_limiter.util import get_remote_address
 # Modeller
 from models import db, Product, RafUrun, CentralStock
 from user_logs import log_user_action
+from barcode_alias_helper import normalize_barcode
 
 # --- Loglama ---
 logging.basicConfig(level=logging.INFO,
@@ -23,13 +24,15 @@ logger = logging.getLogger(__name__)
 # -------------------------------
 # CentralStock Senkronizasyon Fonksiyonları
 # -------------------------------
-def sync_central_stock(barcode: str) -> int:
+def sync_central_stock(barcode: str, commit: bool = True) -> int:
     """
     Tek bir barkod için CentralStock'u raflardaki toplamla senkronize eder.
-    
+
     Args:
         barcode: Senkronize edilecek ürün barkodu
-        
+        commit: True ise değişiklikleri commit eder (varsayılan).
+                Bir transaction içinden çağrılıyorsa False geçin.
+
     Returns:
         int: Yeni stok miktarı
     """
@@ -56,18 +59,108 @@ def sync_central_stock(barcode: str) -> int:
             cs = CentralStock(barcode=barcode, qty=raf_toplam)
             db.session.add(cs)
             logger.info(f"➕ CentralStock oluşturuldu: {barcode} = {raf_toplam}")
-    
+
+    if commit:
+        db.session.commit()
     return raf_toplam
 
 
-def sync_multiple_barcodes(barcodes: list) -> dict:
+def sync_multiple_barcodes(barcodes: list, commit: bool = True) -> dict:
     """
     Birden fazla barkod için CentralStock'u senkronize eder.
     """
     results = {}
     for barcode in barcodes:
-        results[barcode] = sync_central_stock(barcode)
+        results[barcode] = sync_central_stock(barcode, commit=False)
+    if commit:
+        db.session.commit()
     return results
+
+
+# -------------------------------
+# Stok Tutarlılık Kontrolü
+# -------------------------------
+def verify_stock_integrity(auto_fix: bool = False) -> dict:
+    """
+    CentralStock ile RafUrun toplamlarını karşılaştırır, tutarsızlıkları tespit eder.
+
+    Args:
+        auto_fix: True ise tutarsızlıkları otomatik düzeltir
+
+    Returns:
+        Tutarlılık raporu
+    """
+    report = {
+        'checked_at': datetime.utcnow().isoformat(),
+        'auto_fix': auto_fix,
+        'issues': [],
+        'cleaned_zero_records': 0,
+        'orphaned_central_stock': 0,
+        'mismatched_quantities': 0,
+        'missing_central_stock': 0,
+        'total_checked': 0,
+        'all_ok': True
+    }
+
+    # 1. adet<=0 olan RafUrun kayıtlarını temizle
+    zero_count = RafUrun.query.filter(RafUrun.adet <= 0).count()
+    if zero_count > 0:
+        report['cleaned_zero_records'] = zero_count
+        report['all_ok'] = False
+        if auto_fix:
+            RafUrun.query.filter(RafUrun.adet <= 0).delete()
+            report['issues'].append(f"{zero_count} adet<=0 RafUrun kaydı silindi")
+        else:
+            report['issues'].append(f"{zero_count} adet<=0 RafUrun kaydı bulundu")
+
+    # 2. RafUrun'dan barkod toplamlarını hesapla
+    raf_totals = db.session.query(
+        RafUrun.urun_barkodu,
+        func.sum(RafUrun.adet).label('total')
+    ).filter(
+        RafUrun.adet > 0
+    ).group_by(
+        RafUrun.urun_barkodu
+    ).all()
+
+    raf_dict = {r.urun_barkodu: int(r.total) for r in raf_totals}
+
+    # 3. CentralStock ile karşılaştır
+    all_cs = CentralStock.query.all()
+    report['total_checked'] = len(all_cs)
+
+    for cs in all_cs:
+        raf_toplam = raf_dict.pop(cs.barcode, 0)
+
+        if cs.qty != raf_toplam:
+            report['mismatched_quantities'] += 1
+            report['all_ok'] = False
+            report['issues'].append(
+                f"TUTARSIZ: {cs.barcode} — CentralStock={cs.qty}, Raf toplam={raf_toplam}"
+            )
+            if auto_fix:
+                cs.qty = raf_toplam
+                cs.updated_at = datetime.utcnow()
+
+    # 4. RafUrun'da var ama CentralStock'ta yok
+    for barcode, total in raf_dict.items():
+        if total > 0:
+            report['missing_central_stock'] += 1
+            report['all_ok'] = False
+            report['issues'].append(
+                f"KAYIP: {barcode} — Rafta {total} adet var ama CentralStock kaydı yok"
+            )
+            if auto_fix:
+                db.session.add(CentralStock(barcode=barcode, qty=total))
+
+    if auto_fix and not report['all_ok']:
+        db.session.commit()
+        logger.info(f"[INTEGRITY] Otomatik düzeltme tamamlandı: "
+                     f"{report['mismatched_quantities']} tutarsız, "
+                     f"{report['missing_central_stock']} kayıp, "
+                     f"{report['cleaned_zero_records']} boş kayıt")
+
+    return report
 
 
 # --- Çift İşlem Önleme Cache ---
@@ -166,7 +259,8 @@ def handle_stock_update_from_frontend():
     raf_kodu = raf_kodu.replace('=', '-').replace('*', '-')
     
     # 🛡️ Çift işlem kontrolü - Aynı istek 60 saniye içinde tekrar gelirse engelle
-    request_data = f"{raf_kodu}|{update_type}|{len(items)}"
+    items_key = "|".join(sorted(f"{it.get('barcode','')}:{it.get('count',0)}" for it in items))
+    request_data = f"{raf_kodu}|{update_type}|{items_key}"
     request_hash = hashlib.md5(request_data.encode()).hexdigest()
     current_time = time.time()
     
@@ -236,13 +330,13 @@ def handle_stock_update_from_frontend():
             # --- YENİ ÜRÜNLERİ İŞLEME (HEM 'ADD' HEM DE 'RENEW' İÇİN) ---
             logger.info(f"➕ '{raf_kodu}' rafına eklenecek ürün sayısı: {len(items)}")
             for it in items:
-                barcode = (it.get('barcode') or '').strip()
+                barcode = normalize_barcode((it.get('barcode') or '').strip())
                 try:
                     count = int(it.get('count', 0))
                 except (TypeError, ValueError):
                     count = 0
 
-                if not barcode or count < 0:
+                if not barcode or count <= 0:
                     logger.warning(f"Geçersiz barkod veya adet: barkod={barcode}, count={count}")
                     errors[barcode or 'EMPTY'] = "Geçersiz barkod/adet"
                     continue
@@ -273,18 +367,19 @@ def handle_stock_update_from_frontend():
                     "raf_kodu": raf_kodu
                 })
 
-            # 🔥 TÜM ETKİLENEN BARKODLAR İÇİN CENTRALSTOCK'U YENİDEN HESAPLA
-            logger.info(f"📊 {len(affected_barcodes)} barkod için CentralStock senkronize ediliyor...")
-            for barcode in affected_barcodes:
-                new_qty = sync_central_stock(barcode)
-                # results listesinde bu barkodu güncelle
-                for r in results:
-                    if r["barcode"] == barcode:
-                        r["central_qty"] = new_qty
-                        break
-            
             # Transaction başarıyla tamamlandı
             logger.info(f"✅ Transaction başarıyla tamamlandı - {len(results)} ürün işlendi, {len(errors)} hata.")
+
+        # 🔥 TÜM ETKİLENEN BARKODLAR İÇİN CENTRALSTOCK'U YENİDEN HESAPLA (transaction dışında)
+        logger.info(f"📊 {len(affected_barcodes)} barkod için CentralStock senkronize ediliyor...")
+        for barcode in affected_barcodes:
+            new_qty = sync_central_stock(barcode, commit=False)
+            # results listesinde bu barkodu güncelle
+            for r in results:
+                if r["barcode"] == barcode:
+                    r["central_qty"] = new_qty
+                    break
+        db.session.commit()
 
         # --- SONUÇLARI DÖNDÜR ---
         if errors:

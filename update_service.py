@@ -20,11 +20,12 @@ update_service_bp = Blueprint('update_service', __name__)
 BASE_URL = "https://apigw.trendyol.com/integration/order/sellers/"
 
 
-# ==== yardımcı: barcode normalize ====
+# ==== yardımcı: barcode normalize (alias destekli) ====
 def _norm_bc(x: str) -> str:
     if not x:
         return ""
-    return x.strip().replace(" ", "")
+    from barcode_alias_helper import normalize_barcode
+    return normalize_barcode(x.strip().replace(" ", ""))
 
 # ==== ayar: sağ/sol okutma modu ====
 SCAN_MODE = "pair"  # "single" ya da "pair"
@@ -234,7 +235,7 @@ async def confirm_packing():
                         logger.debug(f"[STOCK][RAF2] {r.raf_kodu}/{bc} {eski}->{r.adet} (use={use})")
 
                 # 6c) CentralStock: Raflardaki toplam ile senkronize et (tutarsızlık önleme)
-                new_qty = sync_central_stock(bc)
+                new_qty = sync_central_stock(bc, commit=False)
                 logger.debug(f"[CENTRAL] bc={bc} -> {new_qty} (senkronize edildi)")
 
                 if kalan > 0:

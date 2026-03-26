@@ -21,6 +21,9 @@
         <i class="bi {% if auto_sync_enabled %}bi-play-circle{% else %}bi-pause-circle{% endif %}"></i>
         <span id="autoSyncLabel">Otomatik Sync: {% if auto_sync_enabled %}Aktif{% else %}Kapalı{% endif %}</span>
       </button>
+      <button id="btnIntegrity" class="ss-btn ss-btn-warning">
+        <i class="bi bi-shield-check"></i> Tutarlılık Kontrolü
+      </button>
       <button id="btnRefresh" class="ss-btn ss-btn-outline">
         <i class="bi bi-arrow-clockwise"></i> Yenile
       </button>
@@ -250,6 +253,26 @@
     <div class="ss-modal-body" id="resultModalBody"></div>
     <div class="ss-modal-footer">
       <button class="ss-btn ss-btn-secondary" id="resultCloseBtn">Kapat</button>
+    </div>
+  </div>
+</div>
+
+<!-- Integrity Check Modal -->
+<div class="ss-modal-overlay" id="integrityOverlay" style="display:none">
+  <div class="ss-modal ss-modal-lg">
+    <div class="ss-modal-header" id="integrityModalHeader" style="background:linear-gradient(135deg,#f7971e,#ffd200)">
+      <span><i class="bi bi-shield-check"></i> Stok Tutarlılık Kontrolü</span>
+      <button class="ss-modal-close" id="integrityClose"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ss-modal-body" id="integrityModalBody">
+      <div class="ss-spinner"></div>
+      <h5>Kontrol yapılıyor...</h5>
+    </div>
+    <div class="ss-modal-footer" id="integrityModalFooter" style="display:none">
+      <button class="ss-btn ss-btn-warning" id="btnIntegrityFix" style="display:none">
+        <i class="bi bi-wrench"></i> Otomatik Düzelt
+      </button>
+      <button class="ss-btn ss-btn-secondary" id="integrityCloseBtn">Kapat</button>
     </div>
   </div>
 </div>
@@ -744,6 +767,107 @@ document.addEventListener('DOMContentLoaded', function () {
         doCancel();
       }
     });
+  });
+
+  // ─── Tutarlılık Kontrolü ──────────────────────────────────────
+  document.getElementById('btnIntegrity').addEventListener('click', function () {
+    runIntegrityCheck(false);
+  });
+
+  function runIntegrityCheck(autoFix) {
+    var overlay = document.getElementById('integrityOverlay');
+    var body = document.getElementById('integrityModalBody');
+    var footer = document.getElementById('integrityModalFooter');
+    var fixBtn = document.getElementById('btnIntegrityFix');
+    var header = document.getElementById('integrityModalHeader');
+
+    body.innerHTML = '<div class="ss-spinner"></div><h5>' + (autoFix ? 'Düzeltiliyor...' : 'Kontrol yapılıyor...') + '</h5><p class="ss-modal-sub">Lütfen bekleyin</p>';
+    footer.style.display = 'none';
+    header.style.background = 'linear-gradient(135deg,#f7971e,#ffd200)';
+    overlay.style.display = 'flex';
+
+    if (window.Motion) {
+      window.Motion.animate(overlay.querySelector('.ss-modal'),
+        { opacity: [0, 1], scale: [0.92, 1] },
+        { duration: 0.35, easing: [0.22, 1, 0.36, 1] }
+      );
+    }
+
+    fetch('/stock-sync/api/integrity-check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ auto_fix: autoFix })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      footer.style.display = 'flex';
+
+      if (data.all_ok) {
+        header.style.background = 'linear-gradient(135deg,#56ab2f,#a8e063)';
+        body.innerHTML =
+          '<i class="bi bi-check-circle" style="font-size:3.5rem;color:#56ab2f"></i>' +
+          '<h5 style="color:#56ab2f">Tüm Stoklar Tutarlı</h5>' +
+          '<p class="ss-modal-sub">' + data.total_checked + ' CentralStock kaydı kontrol edildi. Sorun bulunamadı.</p>';
+        fixBtn.style.display = 'none';
+      } else {
+        if (autoFix) {
+          header.style.background = 'linear-gradient(135deg,#56ab2f,#a8e063)';
+          body.innerHTML =
+            '<i class="bi bi-wrench" style="font-size:3.5rem;color:#56ab2f"></i>' +
+            '<h5 style="color:#56ab2f">Düzeltme Tamamlandı</h5>';
+        } else {
+          header.style.background = 'linear-gradient(135deg,#cb2d3e,#ef473a)';
+          body.innerHTML =
+            '<i class="bi bi-exclamation-triangle" style="font-size:3.5rem;color:#cb2d3e"></i>' +
+            '<h5 style="color:#cb2d3e">Tutarsızlık Tespit Edildi</h5>';
+        }
+
+        var statsHtml =
+          '<div style="display:flex;justify-content:center;gap:1.5rem;margin:1rem 0;flex-wrap:wrap">' +
+            '<div><div style="font-size:1.5rem;font-weight:800">' + data.total_checked + '</div><small style="color:var(--ss-text-muted)">Kontrol</small></div>' +
+            '<div><div style="font-size:1.5rem;font-weight:800;color:#cb2d3e">' + data.mismatched_quantities + '</div><small style="color:var(--ss-text-muted)">Tutarsız</small></div>' +
+            '<div><div style="font-size:1.5rem;font-weight:800;color:#f7971e">' + data.missing_central_stock + '</div><small style="color:var(--ss-text-muted)">Kayıp</small></div>' +
+            '<div><div style="font-size:1.5rem;font-weight:800;color:#6c757d">' + data.cleaned_zero_records + '</div><small style="color:var(--ss-text-muted)">Boş Kayıt</small></div>' +
+          '</div>';
+
+        if (data.issues && data.issues.length > 0) {
+          statsHtml += '<div style="max-height:200px;overflow-y:auto;text-align:left;background:#f8f9fa;border-radius:8px;padding:.75rem;margin-top:.75rem;font-size:.82rem">';
+          data.issues.forEach(function (issue) {
+            var color = issue.indexOf('TUTARSIZ') === 0 ? '#cb2d3e' : issue.indexOf('KAYIP') === 0 ? '#f7971e' : '#6c757d';
+            statsHtml += '<div style="padding:.3rem 0;border-bottom:1px solid #e9ecef;color:' + color + '"><i class="bi bi-dot"></i>' + issue + '</div>';
+          });
+          statsHtml += '</div>';
+        }
+
+        body.innerHTML += statsHtml;
+        fixBtn.style.display = autoFix ? 'none' : 'inline-flex';
+      }
+    })
+    .catch(function (err) {
+      footer.style.display = 'flex';
+      fixBtn.style.display = 'none';
+      header.style.background = 'linear-gradient(135deg,#cb2d3e,#ef473a)';
+      body.innerHTML = '<div style="background:#fff5f5;border-left:4px solid #cb2d3e;padding:1rem;border-radius:8px;text-align:left"><i class="bi bi-exclamation-triangle" style="color:#cb2d3e"></i> Bağlantı hatası: ' + err.message + '</div>';
+    });
+  }
+
+  document.getElementById('btnIntegrityFix').addEventListener('click', function () {
+    if (window.GS) {
+      GS.showConfirmSheet('Tüm tutarsızlıklar otomatik düzeltilecek. Devam edilsin mi?', function () { runIntegrityCheck(true); });
+    } else {
+      if (!confirm('Tüm tutarsızlıklar otomatik düzeltilecek. Devam edilsin mi?')) return;
+      runIntegrityCheck(true);
+    }
+  });
+
+  document.getElementById('integrityClose').addEventListener('click', function () {
+    document.getElementById('integrityOverlay').style.display = 'none';
+  });
+  document.getElementById('integrityCloseBtn').addEventListener('click', function () {
+    document.getElementById('integrityOverlay').style.display = 'none';
+  });
+  document.getElementById('integrityOverlay').addEventListener('click', function (e) {
+    if (e.target === this) this.style.display = 'none';
   });
 
   // ─── Yenile ────────────────────────────────────────────────────

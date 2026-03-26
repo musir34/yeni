@@ -653,3 +653,35 @@ def api_errors():
         "errors": [e.to_dict() for e in errors],
         "count": len(errors)
     })
+
+
+# ════════════════════════════════════════════════════════════════════
+# STOK TUTARLILIK KONTROLÜ
+# ════════════════════════════════════════════════════════════════════
+
+@stock_sync_bp.route('/api/integrity-check', methods=['POST'])
+@login_required
+def api_integrity_check():
+    """
+    Stok tutarlılık kontrolü — CentralStock vs RafUrun karşılaştırması.
+
+    Body: {"auto_fix": true/false}
+    auto_fix=true → Tutarsızlıkları otomatik düzeltir
+    auto_fix=false → Sadece rapor döndürür (varsayılan)
+    """
+    from stock_management import verify_stock_integrity
+
+    data = request.get_json(silent=True) or {}
+    auto_fix = data.get('auto_fix', False)
+
+    report = verify_stock_integrity(auto_fix=auto_fix)
+
+    log_user_action("INTEGRITY_CHECK", {
+        "auto_fix": auto_fix,
+        "issues_found": len(report['issues']),
+        "mismatched": report['mismatched_quantities'],
+        "missing": report['missing_central_stock'],
+        "all_ok": report['all_ok']
+    })
+
+    return jsonify({"success": True, **report})

@@ -24,12 +24,12 @@ def sync_all_central_stock():
     
     # 2. Raflardaki toplam stokları hesapla
     raf_totals = db.session.query(
-        func.lower(RafUrun.urun_barkodu).label('barcode'),
+        RafUrun.urun_barkodu.label('barcode'),
         func.sum(RafUrun.adet).label('total')
     ).filter(
         RafUrun.adet > 0
     ).group_by(
-        func.lower(RafUrun.urun_barkodu)
+        RafUrun.urun_barkodu
     ).all()
     
     raf_dict = {r.barcode: int(r.total) for r in raf_totals}
@@ -40,7 +40,7 @@ def sync_all_central_stock():
     cs_all = CentralStock.query.all()
     
     for cs in cs_all:
-        raf_toplam = raf_dict.get(cs.barcode.lower(), 0)
+        raf_toplam = raf_dict.get(cs.barcode, 0)
         
         if cs.qty != raf_toplam:
             print(f'   ✏️ {cs.barcode}: {cs.qty} → {raf_toplam}')
@@ -64,7 +64,7 @@ def sync_all_central_stock():
     print(f'\n📊 Kalan tutarsızlık kontrolü:')
     tutarsiz = 0
     for cs in CentralStock.query.filter(CentralStock.qty > 0).all():
-        raf_toplam = raf_dict.get(cs.barcode.lower(), 0)
+        raf_toplam = raf_dict.get(cs.barcode, 0)
         if cs.qty != raf_toplam:
             tutarsiz += 1
     print(f'   Kalan tutarsız kayıt: {tutarsiz}')

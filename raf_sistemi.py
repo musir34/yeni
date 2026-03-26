@@ -16,7 +16,7 @@ from flask import send_file
 from barcode_alias_helper import normalize_barcode
 
 # 🔥 MERKEZ STOK SENKRONİZASYONU
-from stock_management import sync_central_stock
+from stock_management import sync_central_stock, sync_multiple_barcodes
 
 raf_bp = Blueprint("raf", __name__, url_prefix="/raf")
 
@@ -414,6 +414,7 @@ def toplu_raf_sil():
 def raf_urun_sil():
     raf_kodu = request.form.get("raf_kodu")
     barkod = (request.form.get("barkod") or "").strip().replace(" ", "")
+    barkod = normalize_barcode(barkod)
     if not raf_kodu or not barkod:
         flash("Geçersiz istek. Raf kodu ve barkod gerekli.", "danger")
         return redirect(url_for("raf.raf_yonetimi"))  # 👈
@@ -441,6 +442,7 @@ def stok_ekle_api():
     urunler = data.get("urunler")
     if not raf_kodu or not urunler:
         return jsonify({"error": "Raf kodu ve ürün listesi zorunludur."}), 400
+    urunler = [normalize_barcode(b) for b in urunler]
     for barkod in urunler:
         mevcut_kayit = RafUrun.query.filter_by(raf_kodu=raf_kodu,
                                                urun_barkodu=barkod).first()

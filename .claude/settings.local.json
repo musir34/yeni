@@ -11,7 +11,8 @@
       "Bash(node tests/run-all.js)",
       "Bash(./install.sh typescript:*)",
       "Bash(find /Users/abdurrahmankuli/Documents/Webs/yeni/templates -name *canli* -o -name *panel*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(python3:*)"
     ]
   }
 }

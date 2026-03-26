@@ -1,6 +1,7 @@
 # new_orders_service.py
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, send_file
 from models import db, OrderCreated, RafUrun, Product
+from barcode_alias_helper import normalize_barcode
 import json
 import traceback
 import io
@@ -39,7 +40,7 @@ def _build_shelf_groups():
         if len(details) != 1:
             continue
         item = details[0]
-        barcode = item.get('barcode', '')
+        barcode = normalize_barcode(item.get('barcode', ''))
         if barcode:
             all_barcodes.add(barcode)
         order_items.append((order, item, barcode))

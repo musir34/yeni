@@ -65,14 +65,18 @@ def allocate_from_shelf_and_decrement(barcode, qty=1):
     Raflardan stok tahsis eder ve central stoktan düşer.
     Returns: {"allocated": int, "shelf_codes": [..]}
     """
+    from barcode_alias_helper import normalize_barcode
+    barcode = normalize_barcode(barcode)
+
     if not barcode or qty <= 0:
         return {"allocated": 0, "shelf_codes": []}
-    
-    # Raflardan stok çoktan aza sırala
+
+    # Raflardan stok çoktan aza sırala (with_for_update: race condition önleme)
     raflar = (RafUrun.query
               .filter_by(urun_barkodu=barcode)
               .filter(RafUrun.adet > 0)
               .order_by(RafUrun.adet.desc())
+              .with_for_update()
               .all())
     
     shelf_codes = []
@@ -94,9 +98,9 @@ def allocate_from_shelf_and_decrement(barcode, qty=1):
         allocated += take
         need -= take
     
-    # CentralStock: Raflardaki toplam ile senkronize et (tutarsızlık önleme)
+    # CentralStock: Raflardaki toplam ile senkronize et (commit=False: caller commits)
     if allocated > 0:
-        sync_central_stock(barcode)
+        sync_central_stock(barcode, commit=False)
     
     return {"allocated": allocated, "shelf_codes": shelf_codes}
 
