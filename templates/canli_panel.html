@@ -135,6 +135,12 @@
     .zero-stock-section h5{margin:0 0 8px;font-size:13px;color:#92400e;display:flex;align-items:center;gap:6px}
     .zero-stock-toggle{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;color:var(--color-secondary)}
     .zero-stock-toggle input{accent-color:var(--color-warning)}
+    /* Acil Badge */
+    .acil-wrap{display:flex;align-items:center;gap:4px;margin-left:auto}
+    .acil-wrap input{accent-color:var(--color-danger);width:14px;height:14px;cursor:pointer}
+    .acil-wrap label{font-size:11px;color:var(--color-danger);font-weight:700;cursor:pointer;white-space:nowrap}
+    .tedarik-size.is-acil{border-color:var(--color-danger);background:rgba(239,68,68,.08)}
+    html.gs-dark .tedarik-size.is-acil{border-color:#ff6666;background:rgba(239,68,68,.15)}
 
     .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:9999}
     .lightbox img{max-width:92vw;max-height:92vh;border-radius:16px;box-shadow:0 20px 40px rgba(0,0,0,.4)}
@@ -207,6 +213,21 @@
     html.gs-dark .tedarik-size input{background:#2a2a2a;border-color:#444;color:#eee}
     html.gs-dark .zero-stock-section{background:rgba(245,158,11,.08);border-color:#664400}
     html.gs-dark .media img{background:#1a1a1a}
+
+    /* ── Pagination ── */
+    .pagination-bar{display:flex;align-items:center;justify-content:space-between;margin-top:16px;gap:12px;flex-wrap:wrap}
+    .pagination-info{font-size:13px;color:var(--muted)}
+    .pagination-controls{display:flex;align-items:center;gap:6px}
+    .pagination-controls button{min-width:36px;height:36px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-white);color:var(--color-secondary);cursor:pointer;font-size:13px;font-weight:600;transition:var(--transition)}
+    .pagination-controls button:hover:not(:disabled){border-color:var(--color-primary);color:var(--color-primary)}
+    .pagination-controls button.active{background:var(--color-primary);color:#fff;border-color:transparent}
+    .pagination-controls button:disabled{opacity:.4;cursor:not-allowed}
+    .page-size-wrap{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+    .page-size-wrap select{padding:6px 10px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-white);color:var(--color-secondary);font-size:13px;cursor:pointer;box-shadow:var(--shadow-sm)}
+    html.gs-dark .pagination-controls button{background:#1e1e1e;color:#ddd;border-color:#333}
+    html.gs-dark .pagination-controls button:hover:not(:disabled){border-color:var(--color-primary);color:#fff}
+    html.gs-dark .pagination-controls button.active{background:var(--color-primary);color:#fff}
+    html.gs-dark .page-size-wrap select{background:#1e1e1e;color:#ddd;border-color:#333}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -310,7 +331,27 @@
       </div>
     </section>
 
+    <!-- Pagination Bar -->
+    <div class="pagination-bar" id="paginationBar" style="display:none">
+      <div class="pagination-info" id="paginationInfo"></div>
+      <div class="pagination-controls" id="paginationControls"></div>
+      <div class="page-size-wrap">
+        Sayfa başına:
+        <select id="pageSize">
+          <option value="50" selected>50</option>
+          <option value="100">100</option>
+          <option value="200">200</option>
+        </select>
+      </div>
+    </div>
+
     <section class="grid" id="kartlar"></section>
+
+    <!-- Bottom Pagination -->
+    <div class="pagination-bar" id="paginationBarBottom" style="display:none">
+      <div class="pagination-info" id="paginationInfoBottom"></div>
+      <div class="pagination-controls" id="paginationControlsBottom"></div>
+    </div>
   </main>
 
   <!-- Lightbox -->
@@ -505,7 +546,7 @@
           <button class="btn ghost" data-target="${detayId}">Detay</button>
         </div>
       </div>
-      ${k.image ? `<div class="media"><img class="card-img" src="${k.image}" alt="${k.model ?? ''} ${k.renk ?? ''}"></div>` : ``}
+      ${k.image ? `<div class="media"><img class="card-img" src="${k.image}" alt="${k.model ?? ''} ${k.renk ?? ''}" loading="lazy" onerror="this.onerror=null;this.src='/static/logo/gullu.png';"></div>` : ``}
       <div class="stats">
         ${statsHTML}
       </div>
@@ -548,6 +589,172 @@
   // Tüm backend verisi (filtresiz)
   let _allKartlar = [];
 
+  // ─── Pagination State ──────────────────────────────────────────────────
+  let _currentPage = 1;
+  let _filteredKartlar = []; // tedarikçi filtresi uygulanmış kartlar
+  const elPageSize = document.getElementById('pageSize');
+  const elPaginationBar = document.getElementById('paginationBar');
+  const elPaginationInfo = document.getElementById('paginationInfo');
+  const elPaginationControls = document.getElementById('paginationControls');
+  const elPaginationBarBottom = document.getElementById('paginationBarBottom');
+  const elPaginationInfoBottom = document.getElementById('paginationInfoBottom');
+  const elPaginationControlsBottom = document.getElementById('paginationControlsBottom');
+
+  function _getPageSize(){ return parseInt(elPageSize.value) || 50; }
+
+  function _renderPagination(totalItems){
+    const ps = _getPageSize();
+    const totalPages = Math.max(1, Math.ceil(totalItems / ps));
+    if(_currentPage > totalPages) _currentPage = totalPages;
+
+    const start = ((_currentPage - 1) * ps) + 1;
+    const end = Math.min(_currentPage * ps, totalItems);
+    const infoText = totalItems > 0 ? `${start}–${end} / ${totalItems} ürün` : '0 ürün';
+
+    elPaginationInfo.textContent = infoText;
+    elPaginationInfoBottom.textContent = infoText;
+
+    // Show/hide bars
+    const show = totalItems > ps;
+    elPaginationBar.style.display = show ? 'flex' : 'none';
+    elPaginationBarBottom.style.display = show ? 'flex' : 'none';
+
+    // Build page buttons
+    let html = '';
+    html += `<button ${_currentPage<=1?'disabled':''} data-page="${_currentPage-1}">&laquo;</button>`;
+
+    // Smart page range
+    const maxButtons = 7;
+    let pages = [];
+    if(totalPages <= maxButtons){
+      for(let i=1;i<=totalPages;i++) pages.push(i);
+    } else {
+      pages.push(1);
+      let rangeStart = Math.max(2, _currentPage - 2);
+      let rangeEnd = Math.min(totalPages - 1, _currentPage + 2);
+      if(rangeStart > 2) pages.push('...');
+      for(let i=rangeStart;i<=rangeEnd;i++) pages.push(i);
+      if(rangeEnd < totalPages - 1) pages.push('...');
+      pages.push(totalPages);
+    }
+    pages.forEach(p => {
+      if(p === '...'){
+        html += `<button disabled style="border:none;background:none;min-width:24px">…</button>`;
+      } else {
+        html += `<button class="${p===_currentPage?'active':''}" data-page="${p}">${p}</button>`;
+      }
+    });
+    html += `<button ${_currentPage>=totalPages?'disabled':''} data-page="${_currentPage+1}">&raquo;</button>`;
+
+    elPaginationControls.innerHTML = html;
+    elPaginationControlsBottom.innerHTML = html;
+
+    // Bind clicks
+    [elPaginationControls, elPaginationControlsBottom].forEach(container => {
+      container.querySelectorAll('button[data-page]').forEach(btn => {
+        btn.onclick = () => {
+          const pg = parseInt(btn.dataset.page);
+          if(pg >= 1 && pg <= totalPages && pg !== _currentPage){
+            _currentPage = pg;
+            _renderPagedCards();
+            // Scroll to top of cards
+            elPaginationBar.scrollIntoView({behavior:'smooth', block:'start'});
+          }
+        };
+      });
+    });
+  }
+
+  function _renderPagedCards(){
+    const ps = _getPageSize();
+    const startIdx = (_currentPage - 1) * ps;
+    const pageKartlar = _filteredKartlar.slice(startIdx, startIdx + ps);
+
+    _renderPagination(_filteredKartlar.length);
+    _renderCardsToGrid(pageKartlar);
+  }
+
+  // Page size change
+  elPageSize.onchange = () => {
+    _currentPage = 1;
+    _renderPagedCards();
+  };
+
+  // Card grid render (sadece verilen kartları grid'e basar)
+  function _renderCardsToGrid(kartlar){
+    const newKeys = new Set();
+    const newMap = {};
+    kartlar.forEach(k => {
+      const key = _cardKey(k);
+      newKeys.add(key);
+      newMap[key] = k;
+    });
+
+    // Mevcut kartları topla
+    const existingEls = {};
+    elKartlar.querySelectorAll('[data-card-key]').forEach(el => {
+      existingEls[el.dataset.cardKey] = el;
+    });
+
+    // Kaldırılan kartları fade-out
+    Object.keys(existingEls).forEach(key => {
+      if (!newKeys.has(key)) {
+        const el = existingEls[key];
+        el.classList.add('card-exit');
+        setTimeout(() => el.remove(), 220);
+        delete existingEls[key];
+      }
+    });
+
+    // Sıralı oluştur/güncelle
+    const frag = document.createDocumentFragment();
+    kartlar.forEach((k, idx) => {
+      const key = _cardKey(k);
+      const detayId = 'detay-pg-' + _currentPage + '-' + idx;
+
+      if (existingEls[key]) {
+        const el = existingEls[key];
+        const prev = _prevCardData[key];
+        if (prev) {
+          const oldNet = (prev.toplam_net_satis ?? prev.toplam_siparis_bugun ?? 0);
+          const newNet = (k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0);
+          if (oldNet !== newNet || (prev.toplam_stok ?? 0) !== (k.toplam_stok ?? 0)) {
+            const wasSelected = el.classList.contains('selected');
+            el.innerHTML = _buildCardHTML(k, detayId);
+            _bindCardEvents(el);
+            if (wasSelected) {
+              el.classList.add('selected');
+              const cb = el.querySelector('.tedarik-cb');
+              const wrap = el.querySelector('.tedarik-cb-wrap');
+              if (cb) cb.checked = true;
+              if (wrap) wrap.classList.add('checked');
+            }
+            el.querySelectorAll('.num[data-field]').forEach(n => {
+              n.classList.remove('val-changed');
+              void n.offsetWidth;
+              n.classList.add('val-changed');
+            });
+          }
+        }
+        frag.appendChild(el);
+      } else {
+        const div = document.createElement('article');
+        div.className = 'card' + (_isFirstRender ? ' fade-in' : ' card-entered');
+        div.dataset.cardKey = key;
+        div.innerHTML = _buildCardHTML(k, detayId);
+        _bindCardEvents(div);
+        frag.appendChild(div);
+      }
+    });
+
+    elKartlar.querySelectorAll('.skeleton').forEach(s => s.remove());
+    while(elKartlar.firstChild) elKartlar.removeChild(elKartlar.firstChild);
+    elKartlar.appendChild(frag);
+
+    _prevCardData = {..._prevCardData, ...newMap};
+    _isFirstRender = false;
+  }
+
   // Render
   function render(kartlar, ts, toplamNetAdet, toplamSiparis, genelAvg, toplamCiro){
     console.log('[RENDER] ts=', ts, 'kartlar=', Array.isArray(kartlar)?kartlar.length:kartlar);
@@ -562,9 +769,11 @@
       kartlar = kartlar.filter(k => (k.tedarikci_kodu || '') === tedFilter);
     }
 
+    // Filtrelenmiş kartları sakla (pagination için)
+    _filteredKartlar = kartlar;
+
     // ── KPI güncelleme (count tween) ──
     elZaman.textContent = 'Güncellendi: ' + ts;
-    // KPI'ları filtrelenmiş kartlardan hesapla
     const toplamNet = kartlar.reduce((a,k)=>a+(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0);
     const newOrders = tedFilter
         ? kartlar.reduce((a,k)=>a+(k.toplam_siparis_bugun ?? 0),0)
@@ -602,86 +811,8 @@
     cIade.data.datasets[0].data = topIade.map(k=>k.toplam_iade ?? 0);
     cIade.update();
 
-    // ── Akıllı kart güncelleme ──
-    const newKeys = new Set();
-    const newMap = {};
-    kartlar.forEach(k => {
-      const key = _cardKey(k);
-      newKeys.add(key);
-      newMap[key] = k;
-    });
-
-    // Mevcut kartları topla
-    const existingEls = {};
-    elKartlar.querySelectorAll('[data-card-key]').forEach(el => {
-      existingEls[el.dataset.cardKey] = el;
-    });
-
-    // Kaldırılan kartları fade-out
-    Object.keys(existingEls).forEach(key => {
-      if (!newKeys.has(key)) {
-        const el = existingEls[key];
-        el.classList.add('card-exit');
-        setTimeout(() => el.remove(), 220);
-        delete existingEls[key];
-      }
-    });
-
-    // Sıralı oluştur/güncelle
-    const frag = document.createDocumentFragment();
-    kartlar.forEach((k, idx) => {
-      const key = _cardKey(k);
-      const detayId = 'detay-' + idx;
-
-      if (existingEls[key]) {
-        // Mevcut kartı güncelle — değişen sayıları vurgula
-        const el = existingEls[key];
-        const prev = _prevCardData[key];
-        if (prev) {
-          const oldNet = (prev.toplam_net_satis ?? prev.toplam_siparis_bugun ?? 0);
-          const newNet = (k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0);
-          if (oldNet !== newNet || (prev.toplam_stok ?? 0) !== (k.toplam_stok ?? 0)) {
-            // Checkbox durumunu koru
-            const wasSelected = el.classList.contains('selected');
-            // Detay ID güncelle ve yeniden çiz
-            el.innerHTML = _buildCardHTML(k, detayId);
-            _bindCardEvents(el);
-            if (wasSelected) {
-              el.classList.add('selected');
-              const cb = el.querySelector('.tedarik-cb');
-              const wrap = el.querySelector('.tedarik-cb-wrap');
-              if (cb) cb.checked = true;
-              if (wrap) wrap.classList.add('checked');
-            }
-            // Değişen alanları vurgula
-            el.querySelectorAll('.num[data-field]').forEach(n => {
-              n.classList.remove('val-changed');
-              void n.offsetWidth;
-              n.classList.add('val-changed');
-            });
-          }
-        }
-        frag.appendChild(el);
-      } else {
-        // Yeni kart oluştur
-        const div = document.createElement('article');
-        div.className = 'card' + (_isFirstRender ? ' fade-in' : ' card-entered');
-        div.dataset.cardKey = key;
-        div.innerHTML = _buildCardHTML(k, detayId);
-        _bindCardEvents(div);
-        frag.appendChild(div);
-      }
-    });
-
-    // Skeleton'ları temizle ve kartları ekle
-    elKartlar.querySelectorAll('.skeleton').forEach(s => s.remove());
-    // Mevcut kartları kaldır (fragment'e taşınmış olmalı)
-    while(elKartlar.firstChild) elKartlar.removeChild(elKartlar.firstChild);
-    elKartlar.appendChild(frag);
-
-    // Önceki veriyi kaydet
-    _prevCardData = {...newMap};
-    _isFirstRender = false;
+    // ── Sayfalı kart render ──
+    _renderPagedCards();
   }
 
   // Lightbox close
@@ -725,12 +856,13 @@
   }
 
   // Events
-  btnUygula.onclick=()=>{ saveFilters(); const m=inpModel.value.trim(); _allKartlar=[]; startSSE(m); yukle(m); };
-  btnYenile.onclick = ()=>{ saveFilters(); _allKartlar=[]; yukle(inpModel.value.trim()); };
+  btnUygula.onclick=()=>{ saveFilters(); _currentPage=1; const m=inpModel.value.trim(); _allKartlar=[]; startSSE(m); yukle(m); };
+  btnYenile.onclick = ()=>{ saveFilters(); _currentPage=1; _allKartlar=[]; yukle(inpModel.value.trim()); };
   liveToggle.onchange = ()=>{ const m=inpModel.value.trim(); if(liveToggle.checked){ startSSE(m); } else { if(ev){ev.close();ev=null;} } };
   // Tedarikçi filtresi değiştiğinde mevcut veriyi tekrar render et (backend'e istek yok)
   document.getElementById('filtreTedarikci').onchange = ()=>{
     saveFilters();
+    _currentPage = 1; // Filtre değişince sayfa 1'e dön
     if (_allKartlar.length > 0) {
       render(_allKartlar, elZaman.textContent.replace('Güncellendi: ',''), null, null, null, null);
     }
@@ -794,11 +926,11 @@
         const edits = {};
         (kd.detay || []).forEach(d => {
           const b = String(d.beden || '').replace(',','.').trim();
-          try { const bn = parseInt(parseFloat(b)); if (bn >= 35 && bn <= 41) edits[bn] = { net: Math.max(0, d.net || 0), stok: d.stok || 0 }; } catch(e){}
+          try { const bn = parseInt(parseFloat(b)); if (bn >= 35 && bn <= 41) edits[bn] = { net: Math.max(0, d.net || 0), stok: d.stok || 0, acil: (d.stok || 0) <= 0 }; } catch(e){}
         });
         // 35-41 arası tüm bedenleri doldur
         for (let s = 35; s <= 41; s++) {
-          if (!edits[s]) edits[s] = { net: 0, stok: 0 };
+          if (!edits[s]) edits[s] = { net: 0, stok: 0, acil: false };
         }
         _tedarikEdits.push(edits);
       }
@@ -833,20 +965,29 @@
         : `<span class="size-info">stok: ${info.stok}</span>`;
 
       if (info.net > 0) {
+        const autoAcil = info.stok <= 0;
         salesHTML += `
-          <div class="tedarik-size has-sales">
+          <div class="tedarik-size has-sales${autoAcil ? ' is-acil' : ''}">
             <span class="size-label">${s}</span>
             <input type="number" min="0" value="${info.net}" data-size="${s}" class="tedarik-input" />
             <span class="size-info">${info.net} satış</span>
             ${stokBadge}
+            <span class="acil-wrap">
+              <input type="checkbox" id="acil_${_tedarikStep}_${s}" data-size="${s}" class="tedarik-acil" ${autoAcil ? 'checked' : ''} onchange="toggleAcilStyle(this)">
+              <label for="acil_${_tedarikStep}_${s}">ACİL</label>
+            </span>
           </div>`;
       } else if (info.stok <= 0) {
         hasZeroStock = true;
         zeroStockHTML += `
-          <div class="tedarik-size zero-stock zero-stock-size" style="display:none">
+          <div class="tedarik-size zero-stock zero-stock-size is-acil" style="display:none">
             <span class="size-label">${s}</span>
             <input type="number" min="0" value="0" data-size="${s}" class="tedarik-input" />
             <span style="color:var(--color-danger);font-size:11px;font-weight:700">stok: 0</span>
+            <span class="acil-wrap">
+              <input type="checkbox" id="acil_${_tedarikStep}_z${s}" data-size="${s}" class="tedarik-acil" checked onchange="toggleAcilStyle(this)">
+              <label for="acil_${_tedarikStep}_z${s}">ACİL</label>
+            </span>
           </div>`;
       }
     }
@@ -880,6 +1021,11 @@
     items.forEach(el => { el.style.display = cb.checked ? 'flex' : 'none'; });
   };
 
+  window.toggleAcilStyle = function(cb) {
+    const sizeEl = cb.closest('.tedarik-size');
+    if (sizeEl) sizeEl.classList.toggle('is-acil', cb.checked);
+  };
+
   // Adımdaki input değerlerini kaydet
   function _saveCurrentStep() {
     const inputs = modalBody.querySelectorAll('.tedarik-input');
@@ -887,6 +1033,12 @@
     inputs.forEach(inp => {
       const s = parseInt(inp.dataset.size);
       if (edits[s]) edits[s].net = Math.max(0, parseInt(inp.value) || 0);
+    });
+    // Acil flag'lerini kaydet
+    const acilCbs = modalBody.querySelectorAll('.tedarik-acil');
+    acilCbs.forEach(cb => {
+      const s = parseInt(cb.dataset.size);
+      if (edits[s]) edits[s].acil = cb.checked;
     });
   }
 
@@ -942,7 +1094,7 @@
       for (let s = 35; s <= 41; s++) {
         const net = edits[s]?.net || 0;
         if (net > 0) {
-          detay.push({ beden: String(s), net: net });
+          detay.push({ beden: String(s), net: net, acil: !!(edits[s]?.acil) });
           toplamNet += net;
         }
       }

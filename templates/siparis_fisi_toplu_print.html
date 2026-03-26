@@ -110,6 +110,8 @@
             <span><b>Tarih:</b> {{ fis.created_date.strftime('%d/%m/%Y %H:%M') if fis.created_date else 'Belirtilmemiş' }}</span>
         </div>
 
+        {% set toplu_kalemler = fis.kalemler_json|json_loads if fis.kalemler_json else [] %}
+        {% for tk in toplu_kalemler %}
         <table class="beden-table">
             <tr>
                 <th>Beden</th>
@@ -123,15 +125,15 @@
             </tr>
             <tr>
                 <td>Adet</td>
-                <td>{{ fis.beden_35 }}</td>
-                <td>{{ fis.beden_36 }}</td>
-                <td>{{ fis.beden_37 }}</td>
-                <td>{{ fis.beden_38 }}</td>
-                <td>{{ fis.beden_39 }}</td>
-                <td>{{ fis.beden_40 }}</td>
-                <td>{{ fis.beden_41 }}</td>
+                {% for sz in range(35, 42) %}
+                <td{% if tk.get('acil_' ~ sz, false) %} style="background:#fef2f2;font-weight:bold"{% endif %}>
+                    {{ tk['beden_' ~ sz] | int(default=0) }}
+                    {% if tk.get('acil_' ~ sz, false) %}<br><b style="color:#dc2626;font-size:6pt">ACİL</b>{% endif %}
+                </td>
+                {% endfor %}
             </tr>
         </table>
+        {% endfor %}
 
         <div class="fis-toplam">
             <span>Çift Başı Fiyat: {{ "%.2f"|format(fis.cift_basi_fiyat) }} TL</span> |

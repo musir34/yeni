@@ -4,7 +4,14 @@
       "Bash(find /c/Users/MUS1R/Documents/yeni -maxdepth 2 -type f \\\\\\(-name *.json -o -name *.config.* \\\\\\))",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "Bash(git push:*)",
+      "Bash(git clone:*)",
+      "Bash(npm install:*)",
+      "Bash(node tests/run-all.js)",
+      "Bash(./install.sh typescript:*)",
+      "Bash(find /Users/abdurrahmankuli/Documents/Webs/yeni/templates -name *canli* -o -name *panel*)",
+      "Bash(python:*)"
     ]
   }
 }

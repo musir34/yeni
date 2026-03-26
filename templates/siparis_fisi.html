@@ -281,7 +281,19 @@
                 <img src="{{ url_for('static', filename='logo/gullu.png') }}" alt="Logo">
             {% endif %}
             <div class="card-body">
-                <div class="card-title">{{ fis.urun_model_kodu }}</div>
+                <div class="card-title">
+                    {{ fis.urun_model_kodu }}
+                    {% if fis.kalemler_json %}
+                        {% set _kk = fis.kalemler_json|json_loads %}
+                        {% set _has_acil = [] %}
+                        {% for _k in _kk %}
+                            {% for _sz in range(35, 42) %}
+                                {% if _k.get('acil_' ~ _sz, false) %}{% if _has_acil.append(1) %}{% endif %}{% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                        {% if _has_acil %}<span style="display:inline-block;background:#dc2626;color:#fff;font-size:10px;padding:2px 8px;border-radius:999px;margin-left:8px;font-weight:700;vertical-align:middle">ACİL</span>{% endif %}
+                    {% endif %}
+                </div>
                 <div class="card-text"><strong>Renk:</strong> {{ fis.renk }}</div>
                 <div class="card-text">
                     <strong>Oluşturma:</strong> {{ fis.created_date.strftime('%Y-%m-%d %H:%M') if fis.created_date else 'Tarih Yok' }}

@@ -106,13 +106,13 @@
                 </tr>
                 <tr>
                     <td>Adet</td>
-                    <td>{{ kalem.beden_35 }} {% if fis.teslim_kayitlari %}({{ kalem.beden_35 - (fis.teslim_kayitlari|json_loads|selectattr('model_code', 'equalto', kalem.model_code)|selectattr('color', 'equalto', kalem.color)|sum(attribute='beden_35')) }}){% endif %}</td>
-                    <td>{{ kalem.beden_36 }} {% if fis.teslim_kayitlari %}({{ kalem.beden_36 - (fis.teslim_kayitlari|json_loads|selectattr('model_code', 'equalto', kalem.model_code)|selectattr('color', 'equalto', kalem.color)|sum(attribute='beden_36')) }}){% endif %}</td>
-                    <td>{{ kalem.beden_37 }} {% if fis.teslim_kayitlari %}({{ kalem.beden_37 - (fis.teslim_kayitlari|json_loads|selectattr('model_code', 'equalto', kalem.model_code)|selectattr('color', 'equalto', kalem.color)|sum(attribute='beden_37')) }}){% endif %}</td>
-                    <td>{{ kalem.beden_38 }} {% if fis.teslim_kayitlari %}({{ kalem.beden_38 - (fis.teslim_kayitlari|json_loads|selectattr('model_code', 'equalto', kalem.model_code)|selectattr('color', 'equalto', kalem.color)|sum(attribute='beden_38')) }}){% endif %}</td>
-                    <td>{{ kalem.beden_39 }} {% if fis.teslim_kayitlari %}({{ kalem.beden_39 - (fis.teslim_kayitlari|json_loads|selectattr('model_code', 'equalto', kalem.model_code)|selectattr('color', 'equalto', kalem.color)|sum(attribute='beden_39')) }}){% endif %}</td>
-                    <td>{{ kalem.beden_40 }} {% if fis.teslim_kayitlari %}({{ kalem.beden_40 - (fis.teslim_kayitlari|json_loads|selectattr('model_code', 'equalto', kalem.model_code)|selectattr('color', 'equalto', kalem.color)|sum(attribute='beden_40')) }}){% endif %}</td>
-                    <td>{{ kalem.beden_41 }} {% if fis.teslim_kayitlari %}({{ kalem.beden_41 - (fis.teslim_kayitlari|json_loads|selectattr('model_code', 'equalto', kalem.model_code)|selectattr('color', 'equalto', kalem.color)|sum(attribute='beden_41')) }}){% endif %}</td>
+                    {% for sz in range(35, 42) %}
+                    <td{% if kalem.get('acil_' ~ sz, false) %} style="background:#fef2f2;font-weight:bold"{% endif %}>
+                        {{ kalem['beden_' ~ sz] }}
+                        {% if fis.teslim_kayitlari %}({{ kalem['beden_' ~ sz] - (fis.teslim_kayitlari|json_loads|selectattr('model_code', 'equalto', kalem.model_code)|selectattr('color', 'equalto', kalem.color)|sum(attribute='beden_' ~ sz)) }}){% endif %}
+                        {% if kalem.get('acil_' ~ sz, false) %}<br><strong style="color:#dc2626;font-size:9px">ACİL</strong>{% endif %}
+                    </td>
+                    {% endfor %}
                 </tr>
             </table>
 

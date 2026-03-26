@@ -229,9 +229,13 @@
               const barcode = barcodes[size.toString()];
               const div = document.createElement('div');
               div.className = 'form-group';
+              div.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap';
               div.innerHTML = `
-                <label>Beden ${size}</label>
-                <input type="number" name="beden_${size}[]" value="0" min="0">
+                <label style="min-width:70px">Beden ${size}</label>
+                <input type="number" name="beden_${size}[]" value="0" min="0" style="width:70px">
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#dc2626;font-weight:700;cursor:pointer">
+                  <input type="checkbox" name="acil_${size}[]" value="1" style="accent-color:#dc2626"> ACİL
+                </label>
                 ${barcode ? `<span class="barcode-info">Barkod: ${barcode}</span>` : ''}
               `;
               bedenContainer.appendChild(div);

@@ -445,13 +445,12 @@
             <tbody>
                 <tr>
                     <td>Sipariş Adet</td>
-                    <td>{{ kalem.beden_35 | int(default=0) }}</td>
-                    <td>{{ kalem.beden_36 | int(default=0) }}</td>
-                    <td>{{ kalem.beden_37 | int(default=0) }}</td>
-                    <td>{{ kalem.beden_38 | int(default=0) }}</td>
-                    <td>{{ kalem.beden_39 | int(default=0) }}</td>
-                    <td>{{ kalem.beden_40 | int(default=0) }}</td>
-                    <td>{{ kalem.beden_41 | int(default=0) }}</td>
+                    {% for sz in range(35, 42) %}
+                    <td{% if kalem.get('acil_' ~ sz, false) %} style="background:#fef2f2;color:#991b1b;font-weight:700"{% endif %}>
+                        {{ kalem['beden_' ~ sz] | int(default=0) }}
+                        {% if kalem.get('acil_' ~ sz, false) %}<br><span style="font-size:10px;color:#dc2626">ACİL</span>{% endif %}
+                    </td>
+                    {% endfor %}
                 </tr>
             </tbody>
         </table>

@@ -95,6 +95,10 @@
             .btn:hover {
                 opacity: 0.9;
                 transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(0,0,0,.12);
+            }
+            .btn:active {
+                transform: translateY(0) scale(.97);
             }
             .main-card {
                 background-color: var(--color-white);
@@ -376,6 +380,35 @@
                 box-shadow: 0 4px 12px rgba(183, 110, 121, 0.4);
             }
 
+            /* ── Animations ── */
+            @keyframes fadeSlideIn {
+                from { opacity: 0; transform: translateY(8px); }
+                to   { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes scaleIn {
+                from { opacity: 0; transform: scale(.96); }
+                to   { opacity: 1; transform: scale(1); }
+            }
+            .main-card {
+                animation: fadeSlideIn .4s ease both;
+            }
+            .main-card:nth-child(2) { animation-delay: .08s; }
+            .main-card:nth-child(3) { animation-delay: .16s; }
+            h1 { animation: fadeSlideIn .35s ease both; }
+            .header-actions { animation: fadeSlideIn .35s ease .05s both; }
+            .collapsible-header { transition: background .2s, box-shadow .2s, transform .15s; }
+            .collapsible-header:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); transform: translateY(-1px); }
+            .collapsible-content { animation: scaleIn .2s ease both; }
+            .kat-item { transition: box-shadow .2s, transform .15s; }
+            .kat-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); transform: translateY(-1px); }
+            .alert { animation: fadeSlideIn .3s ease both; }
+            @media (prefers-reduced-motion: reduce) {
+                *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }
+            }
+
+            /* ── Dark mode overrides for search results ── */
+            html.gs-dark .barkod-sonuc-row { color: #ddd; }
+
             /* ── Responsive ── */
             input, select, textarea { font-size: 16px !important; }
             @media (max-width: 991px) {
@@ -571,9 +604,10 @@
                         }
                         document.getElementById("rafYokMesaji").style.display =
                             "none";
-                        anaRaflar.forEach((anaKod) => {
+                        anaRaflar.forEach((anaKod, anaIdx) => {
                             const anaGrupDiv = document.createElement("div");
                             anaGrupDiv.className = "ana-raf-grup";
+                            anaGrupDiv.style.animation = `fadeSlideIn .35s ease ${anaIdx * 0.06}s both`;
                             anaGrupDiv.setAttribute(
                                 "data-search-text",
                                 anaKod.toLowerCase(),
@@ -757,8 +791,27 @@
 
             function toggleCollapse(contentElement, iconElement) {
                 const isVisible = contentElement.style.display === "block";
-                contentElement.style.display = isVisible ? "none" : "block";
+                if (isVisible) {
+                    contentElement.style.opacity = '0';
+                    contentElement.style.transform = 'translateY(-6px)';
+                    setTimeout(() => {
+                        contentElement.style.display = "none";
+                        contentElement.style.opacity = '';
+                        contentElement.style.transform = '';
+                    }, 180);
+                } else {
+                    contentElement.style.display = "block";
+                    contentElement.style.opacity = '0';
+                    contentElement.style.transform = 'translateY(-6px)';
+                    contentElement.style.transition = 'opacity .2s ease, transform .2s ease';
+                    requestAnimationFrame(() => {
+                        contentElement.style.opacity = '1';
+                        contentElement.style.transform = 'translateY(0)';
+                    });
+                }
                 if (iconElement) {
+                    iconElement.style.transition = 'transform .25s ease';
+                    iconElement.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
                     iconElement.classList.toggle("bi-chevron-down", isVisible);
                     iconElement.classList.toggle("bi-chevron-up", !isVisible);
                 }
@@ -1278,24 +1331,66 @@
                 if (!barkod) return;
 
                 const sonucDiv = document.getElementById("barkodSonuc");
-                sonucDiv.innerHTML = "⏳ Aranıyor...";
+                sonucDiv.innerHTML = '<p class="text-muted" style="animation:fadeSlideIn .3s ease">⏳ Aranıyor...</p>';
 
                 try {
                     const res = await fetch(`/raf/api/ara/${barkod}`);
                     if (!res.ok) {
-                        sonucDiv.innerHTML =
-                            "<p style='color:red;'>Ürün bulunamadı.</p>";
+                        sonucDiv.innerHTML = '<p style="color:#dc3545;animation:fadeSlideIn .3s ease">Ürün bulunamadı.</p>';
                         return;
                     }
                     const data = await res.json();
-                    let html = `<h5>📦 Barkod: ${data.barkod}</h5><ul>`;
-                    data.raflar.forEach((r) => {
-                        html += `<li>Raf: <b>${r.raf_kodu}</b> – Adet: ${r.adet}</li>`;
+                    if (data.raflar.length === 0) {
+                        sonucDiv.innerHTML = `<p class="text-muted" style="animation:fadeSlideIn .3s ease">📦 <b>${data.barkod}</b> — hiçbir rafta bulunamadı.</p>`;
+                        return;
+                    }
+                    let html = `<div style="animation:fadeSlideIn .3s ease"><p style="margin-bottom:.5rem;font-weight:600">📦 Barkod: ${data.barkod}</p><ul style="list-style:none;padding:0;margin:0;border-radius:var(--border-radius);overflow:hidden;border:1px solid var(--color-border)">`;
+                    data.raflar.forEach((r, i) => {
+                        const bg = i % 2 === 0 ? 'var(--color-white)' : '#f8f9fa';
+                        html += `<li class="barkod-sonuc-row" style="display:flex;align-items:center;justify-content:space-between;padding:.6rem .8rem;background:${bg};transition:background .15s" onmouseenter="this.style.background='#e9ecef'" onmouseleave="this.style.background='${bg}'">
+                            <span>Raf: <b>${r.raf_kodu}</b> — Adet: ${r.adet}</span>
+                            <button onclick="rafSil('${r.raf_kodu}','${data.barkod}',this)" class="btn btn-danger btn-sm" style="padding:.3rem .7rem;font-size:.75rem;white-space:nowrap"><i class="bi bi-trash"></i> Sil</button>
+                        </li>`;
                     });
-                    html += "</ul>";
+                    html += '</ul></div>';
                     sonucDiv.innerHTML = html;
                 } catch (err) {
-                    sonucDiv.innerHTML = `<p style='color:red;'>Hata: ${err}</p>`;
+                    sonucDiv.innerHTML = `<p style="color:#dc3545;animation:fadeSlideIn .3s ease">Hata: ${err}</p>`;
+                }
+            }
+
+            async function rafSil(rafKodu, barkod, btn) {
+                const li = btn.closest('li');
+                const confirmed = await showCustomModal({
+                    type: 'warning',
+                    title: 'Ürünü Sil',
+                    message: `"${barkod}" ürününü "${rafKodu}" rafından silmek istediğine emin misin?`,
+                    buttons: 'confirm'
+                });
+                if (!confirmed) return;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
+                try {
+                    const form = new FormData();
+                    form.append('raf_kodu', rafKodu);
+                    form.append('barkod', barkod);
+                    const res = await fetch('/raf/stok-sil', { method: 'POST', body: form });
+                    if (res.ok || res.redirected) {
+                        li.style.transition = 'all .25s ease';
+                        li.style.opacity = '0';
+                        li.style.transform = 'translateX(20px)';
+                        li.style.maxHeight = li.scrollHeight + 'px';
+                        setTimeout(() => { li.style.maxHeight = '0'; li.style.padding = '0'; li.style.margin = '0'; li.style.border = 'none'; }, 150);
+                        setTimeout(() => li.remove(), 350);
+                    } else {
+                        await showCustomModal({ type: 'warning', title: 'Hata', message: 'Silme işlemi başarısız oldu.', buttons: 'ok' });
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="bi bi-trash"></i> Sil';
+                    }
+                } catch (err) {
+                    await showCustomModal({ type: 'warning', title: 'Hata', message: 'Hata: ' + err, buttons: 'ok' });
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-trash"></i> Sil';
                 }
             }
 

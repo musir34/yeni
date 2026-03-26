@@ -1,4 +1,4 @@
-﻿import json, time, hashlib
+﻿import json, time, hashlib, os
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 from flask import Blueprint, Response, jsonify, request, stream_with_context, render_template, redirect, url_for
@@ -759,6 +759,19 @@ def _parse_first_image(val):
             if val.get(k): return val[k]
     return None
 
+_LOCAL_IMG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "images")
+
+def _local_image_fallback(model, renk):
+    """Yerel dosya sisteminde model_renk.jpg/png ara."""
+    if not model or not renk:
+        return None
+    for color_variant in [renk.lower(), renk]:
+        for ext in ["jpg", "png", "jpeg"]:
+            fname = f"{model}_{color_variant}.{ext}"
+            if os.path.exists(os.path.join(_LOCAL_IMG_DIR, fname)):
+                return f"/static/images/{fname}"
+    return None
+
 def _fetch_product_info_for_barcodes(barcodes):
     if not barcodes: return {}
     cols = [PROD_BAR_RAW, PROD_MODEL, PROD_COLOR, PROD_SIZE]
@@ -775,6 +788,9 @@ def _fetch_product_info_for_barcodes(barcodes):
         beden = r[3] if r[3] not in (None, "") else "—"
         img_idx = 4
         img   = _parse_first_image(r[img_idx]) if PROD_IMG is not None and len(r) > img_idx else None
+        # Görsel yoksa yerel dosyadan dene
+        if not img:
+            img = _local_image_fallback(model, renk)
         ted_kodu_idx = (5 if PROD_IMG is not None else 4)
         ted_kodu = r[ted_kodu_idx] if len(r) > ted_kodu_idx else None
         ted_adi = r[ted_kodu_idx + 1] if len(r) > ted_kodu_idx + 1 else None

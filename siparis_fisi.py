@@ -325,6 +325,10 @@ def siparis_fisi_olustur():
             size: request.form.getlist(f"beden_{size}[]")
             for size in range(35, 42)
         }
+        acil_lists = {
+            size: request.form.getlist(f"acil_{size}[]")
+            for size in range(35, 42)
+        }
 
         kalemler = []
         total_adet = 0
@@ -337,10 +341,13 @@ def siparis_fisi_olustur():
                 continue
 
             beden_vals = {}
+            acil_vals = {}
             satir_toplam_adet = 0
             for size in range(35, 42):
                 val = _parse_or_zero(beden_lists[size], i)
                 beden_vals[f"beden_{size}"] = val
+                acil_val = acil_lists[size][i] if i < len(acil_lists[size]) else "0"
+                acil_vals[f"acil_{size}"] = acil_val in ("1", "on", "true")
                 satir_toplam_adet += val
 
             cift_fiyat = _parse_or_float_zero(cift_basi_fiyat_list, i)
@@ -357,6 +364,7 @@ def siparis_fisi_olustur():
                 "model_code": mcode,
                 "color": clr,
                 **beden_vals,
+                **acil_vals,
                 "cift_basi_fiyat": cift_fiyat,
                 "satir_toplam_adet": satir_toplam_adet,
                 "satir_toplam_fiyat": satir_toplam_fiyat,
@@ -838,8 +846,9 @@ def tedarik_olustur_from_panel():
         if not mcode:
             continue
 
-        # Detaydan beden adetlerini çıkar
+        # Detaydan beden adetlerini ve acil flag'lerini çıkar
         beden_vals = {}
+        acil_vals = {}
         satir_toplam_adet = 0
         for d in (kart.get("detay") or []):
             beden_str = str(d.get("beden", "")).replace(",", ".").strip()
@@ -850,6 +859,7 @@ def tedarik_olustur_from_panel():
             net = max(0, int(d.get("net", 0)))
             if 35 <= int(beden_num) <= 41:
                 beden_vals[f"beden_{beden_num}"] = net
+                acil_vals[f"acil_{beden_num}"] = bool(d.get("acil", False))
                 satir_toplam_adet += net
 
         if satir_toplam_adet <= 0:
@@ -858,6 +868,7 @@ def tedarik_olustur_from_panel():
         # 35-41 arası eksik bedenleri 0 olarak doldur
         for size in range(35, 42):
             beden_vals.setdefault(f"beden_{size}", 0)
+            acil_vals.setdefault(f"acil_{size}", False)
 
         # Barkodları çek
         products_for_barcode = Product.query.filter_by(product_main_id=mcode, color=clr).all()
@@ -873,6 +884,7 @@ def tedarik_olustur_from_panel():
             "model_code": mcode,
             "color": clr,
             **beden_vals,
+            **acil_vals,
             "cift_basi_fiyat": 0,
             "satir_toplam_adet": satir_toplam_adet,
             "satir_toplam_fiyat": 0,
