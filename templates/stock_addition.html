@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-mode.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
     <style>
         :root {
@@ -130,6 +131,60 @@
         .barcode-item.is-success { background-color: #e6ffed; border-color: #b7ebc3; transition: background-color 1s ease; }
         .barcode-item.is-danger { background-color: #fff5f5; border-color: #f5c6cb; }
 
+        /* ── Kamera Barkod Tarayıcı ── */
+        #cameraOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 50vh;
+            background: #000; z-index: 8000; display: none;
+        }
+        #cameraOverlay.active { display: block; }
+        #cameraOverlay .camera-header {
+            position: absolute; top: 0; left: 0; right: 0;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.5rem 1rem; background: rgba(0,0,0,0.7); z-index: 10;
+        }
+        #cameraOverlay .camera-header span { color: #fff; font-weight: 600; font-size: 0.9rem; }
+        #cameraOverlay .camera-header .btn-close-cam {
+            background: var(--color-danger); color: #fff; border: none; border-radius: 50%;
+            width: 36px; height: 36px; font-size: 1.2rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #cameraVideo {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        #cameraScanResult {
+            position: absolute; bottom: 0; left: 0; right: 0; z-index: 15;
+            background: rgba(40,167,69,0.95); color: #fff; text-align: center;
+            padding: 0.75rem; font-weight: 700; font-size: 1.1rem;
+            transform: translateY(100%); transition: transform 0.3s ease;
+        }
+        #cameraScanResult.show { transform: translateY(0); }
+        /* Tarama rehber çerçevesi */
+        #cameraCrosshair {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 220px; height: 220px;
+            border: 3px solid rgba(255,255,255,0.7);
+            border-radius: 16px; z-index: 11;
+            box-shadow: 0 0 0 2000px rgba(0,0,0,0.3);
+        }
+        #cameraCrosshair .scan-line {
+            position: absolute; top: 0; left: 5%; width: 90%; height: 3px;
+            background: var(--color-primary);
+            animation: scan-sweep 2s ease-in-out infinite;
+            border-radius: 2px;
+        }
+        @keyframes scan-sweep { 0%,100% { top: 5%; } 50% { top: 95%; } }
+        body.camera-active { padding-top: 50vh; }
+        .btn-camera {
+            background: linear-gradient(135deg, #6f42c1, #5a32a3); color: #fff; border: none;
+            padding: 0.7rem 1rem; border-radius: var(--border-radius); cursor: pointer;
+            font-weight: 600; font-size: 0.9rem; transition: var(--transition);
+            display: inline-flex; align-items: center; gap: 0.4rem;
+        }
+        .btn-camera:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(111,66,193,0.4); }
+        .btn-camera.scanning { background: linear-gradient(135deg, #dc3545, #c82333); animation: pulse-cam 1.5s infinite; }
+        @keyframes pulse-cam { 0%,100% { box-shadow: 0 0 0 0 rgba(220,53,69,0.5); } 50% { box-shadow: 0 0 0 8px rgba(220,53,69,0); } }
+
         /* ── Responsive ── */
         @media (max-width: 991px) {
             .container { max-width: none; padding: 1rem; }
@@ -159,6 +214,9 @@
                 gap: 0.5rem;
             }
             #autoEnterToggle { width: 100%; }
+            .btn-camera { width: 100%; justify-content: center; }
+            #cameraOverlay { height: 45vh; }
+            body.camera-active { padding-top: 45vh; }
 
             .barcode-item {
                 flex-direction: column;
@@ -199,6 +257,18 @@
 </head>
 
 <body>
+<!-- Kamera QR Tarayıcı Overlay -->
+<div id="cameraOverlay">
+    <div class="camera-header">
+        <span><i class="bi bi-qr-code-scan"></i> QR Tarayıcı</span>
+        <button class="btn-close-cam" id="closeCameraBtn" title="Kamerayı Kapat">&times;</button>
+    </div>
+    <video id="cameraVideo" autoplay playsinline muted></video>
+    <canvas id="cameraCanvas" style="display:none;"></canvas>
+    <div id="cameraCrosshair"><div class="scan-line"></div></div>
+    <div id="cameraScanResult"></div>
+</div>
+
 <div class="container">
     <h1>Stok Ekleme Ekranı</h1>
 
@@ -239,13 +309,16 @@
 
                 <div class="mb-3">
                     <label for="barcodeInput" class="form-label">Barkod Okutun:</label>
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <input type="text" id="barcodeInput" class="form-control" autocomplete="off" disabled autofocus style="flex: 1;">
+                    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                        <input type="text" id="barcodeInput" class="form-control" autocomplete="off" disabled autofocus style="flex: 1; min-width: 150px;">
+                        <button type="button" id="cameraToggleBtn" class="btn-camera" title="Telefon kamerasıyla barkod okut">
+                            <i class="bi bi-phone-fill"></i> Kamera
+                        </button>
                         <button type="button" id="autoEnterToggle" class="btn btn-secondary" title="Aktifken barkod okutulunca otomatik enter yapar">
                             <i class="bi bi-keyboard"></i> Oto-Enter: Kapalı
                         </button>
                     </div>
-                    <small id="autoEnterHelp" class="form-text text-muted">💡 Barkod okuyucunuz enter göndermiyorsa "Oto-Enter" butonunu aktif edin</small>
+                    <small id="autoEnterHelp" class="form-text text-muted">💡 Barkod okuyucunuz bozuksa "Kamera" butonuyla telefon kamerasından okutun</small>
                 </div>
             </form>
 
@@ -694,6 +767,8 @@
 
         function resetStockAddition() {
             console.log("🔄 Stok ekleme formu sıfırlanıyor...");
+            // Kamera açıksa kapat
+            if (isCameraActive) stopCamera();
             barcodeCounts = {};
             selectedMode = null;
             isSubmitting = false;
@@ -743,6 +818,165 @@
             progressBar.style.width = `${percentage}%`;
             const statusClasses = { info: 'bg-primary progress-bar-animated', success: 'bg-success', danger: 'bg-danger' };
             progressBar.className = `progress-bar progress-bar-striped ${statusClasses[status]}`;
+        }
+    </script>
+
+    <!-- Kamera QR Tarayıcı Script (jsQR) -->
+    <script>
+        let cameraStream = null;
+        let scanAnimFrame = null;
+        let isCameraActive = false;
+        let lastScannedBarcode = '';
+        let lastScanTime = 0;
+        const SCAN_COOLDOWN = 1500;
+
+        document.getElementById('cameraToggleBtn').addEventListener('click', toggleCamera);
+        document.getElementById('closeCameraBtn').addEventListener('click', stopCamera);
+
+        async function toggleCamera() {
+            if (isCameraActive) { await stopCamera(); } else { await startCamera(); }
+        }
+
+        async function startCamera() {
+            const cameraBtn = document.getElementById('cameraToggleBtn');
+            const overlay = document.getElementById('cameraOverlay');
+            const video = document.getElementById('cameraVideo');
+            const canvas = document.getElementById('cameraCanvas');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+            if (allElements.barcodeInput.disabled) {
+                alert('Önce geçerli bir raf kodu girin!');
+                allElements.rafKoduInput.focus();
+                return;
+            }
+
+            try {
+                cameraBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Açılıyor...';
+                cameraBtn.disabled = true;
+
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false
+                });
+
+                video.srcObject = cameraStream;
+                await video.play();
+
+                overlay.classList.add('active');
+                document.body.classList.add('camera-active');
+
+                // Video boyutları hazır olunca taramayı başlat
+                video.addEventListener('loadedmetadata', function onMeta() {
+                    video.removeEventListener('loadedmetadata', onMeta);
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    console.log('Video boyut:', video.videoWidth, 'x', video.videoHeight);
+                    startScanning(video, canvas, ctx);
+                });
+
+                // Metadata zaten yüklüyse
+                if (video.videoWidth > 0) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    console.log('Video boyut (hemen):', video.videoWidth, 'x', video.videoHeight);
+                    startScanning(video, canvas, ctx);
+                }
+
+                isCameraActive = true;
+                cameraBtn.classList.add('scanning');
+                cameraBtn.innerHTML = '<i class="bi bi-stop-circle-fill"></i> Kamerayı Kapat';
+                cameraBtn.disabled = false;
+
+            } catch (err) {
+                console.error('Kamera hatası:', err);
+                overlay.classList.remove('active');
+                document.body.classList.remove('camera-active');
+                let msg = 'Kamera açılamadı: ';
+                if (err.name === 'NotAllowedError') msg += 'Kamera izni verilmedi!';
+                else if (err.name === 'NotFoundError') msg += 'Kamera bulunamadı!';
+                else msg += err.message;
+                alert(msg);
+                cameraBtn.innerHTML = '<i class="bi bi-phone-fill"></i> Kamera';
+                cameraBtn.disabled = false;
+                if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+            }
+        }
+
+        function startScanning(video, canvas, ctx) {
+            // Sadece ortadaki 300x300 kareyi tara (çok daha hafif)
+            const SCAN_SIZE = 300;
+            canvas.width = SCAN_SIZE;
+            canvas.height = SCAN_SIZE;
+
+            function tick() {
+                if (!isCameraActive || video.readyState < 2) {
+                    scanAnimFrame = setTimeout(tick, 250);
+                    return;
+                }
+
+                // Video ortasından SCAN_SIZE x SCAN_SIZE kare kırp
+                const sx = (video.videoWidth - SCAN_SIZE * (video.videoWidth / SCAN_SIZE)) / 2;
+                const sy = (video.videoHeight - SCAN_SIZE * (video.videoHeight / SCAN_SIZE)) / 2;
+                const cropSize = Math.min(video.videoWidth, video.videoHeight) * 0.6;
+                const cx = (video.videoWidth - cropSize) / 2;
+                const cy = (video.videoHeight - cropSize) / 2;
+
+                ctx.drawImage(video, cx, cy, cropSize, cropSize, 0, 0, SCAN_SIZE, SCAN_SIZE);
+                const imageData = ctx.getImageData(0, 0, SCAN_SIZE, SCAN_SIZE);
+                const code = jsQR(imageData.data, SCAN_SIZE, SCAN_SIZE, { inversionAttempts: 'dontInvert' });
+
+                if (code && code.data) onScanSuccess(code.data);
+
+                // 250ms aralıkla tara (mobilde hafif)
+                scanAnimFrame = setTimeout(tick, 250);
+            }
+
+            scanAnimFrame = setTimeout(tick, 100);
+            console.log('jsQR tarama başladı (optimize)');
+        }
+
+        function onScanSuccess(rawValue) {
+            const now = Date.now();
+            const barcode = rawValue.trim();
+            if (!barcode) return;
+
+            if (barcode === lastScannedBarcode && (now - lastScanTime) < SCAN_COOLDOWN) return;
+
+            lastScannedBarcode = barcode;
+            lastScanTime = now;
+
+            console.log('QR okundu:', barcode);
+
+            // Yeşil bildirim
+            const resultDiv = document.getElementById('cameraScanResult');
+            resultDiv.textContent = barcode;
+            resultDiv.classList.add('show');
+            setTimeout(() => resultDiv.classList.remove('show'), 1200);
+
+            // Titreşim
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+            // Kuyruğa ekle
+            if (selectedMode) addToQueue(barcode);
+        }
+
+        async function stopCamera() {
+            const cameraBtn = document.getElementById('cameraToggleBtn');
+            const overlay = document.getElementById('cameraOverlay');
+            const video = document.getElementById('cameraVideo');
+
+            isCameraActive = false;
+            if (scanAnimFrame) { clearTimeout(scanAnimFrame); scanAnimFrame = null; }
+            if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+            video.srcObject = null;
+
+            overlay.classList.remove('active');
+            document.body.classList.remove('camera-active');
+            cameraBtn.classList.remove('scanning');
+            cameraBtn.innerHTML = '<i class="bi bi-phone-fill"></i> Kamera';
+            cameraBtn.disabled = false;
+
+            if (!allElements.barcodeInput.disabled) allElements.barcodeInput.focus();
         }
     </script>
 

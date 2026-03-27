@@ -54,12 +54,30 @@ def shop_info():
     return jsonify(result), status_code
 
 
+@shopify_bp.route("/orders")
+@login_required
+def orders_dashboard():
+    """Shopify siparis yonetim sayfasi."""
+    configured = ShopifyConfig.is_configured()
+    return render_template("shopify/orders.html", configured=configured)
+
+
 @shopify_bp.route("/api/orders")
 @check_shopify_config
 def orders():
     limit = request.args.get("limit", 20, type=int)
     query_filter = request.args.get("query")
-    result = shopify_service.get_orders(limit=limit, query_filter=query_filter)
+    after = request.args.get("after")
+    result = shopify_service.get_orders(limit=limit, query_filter=query_filter, after=after)
+    status_code = 200 if result.get("success") else 502
+    return jsonify(result), status_code
+
+
+@shopify_bp.route("/api/orders/count")
+@check_shopify_config
+def orders_count():
+    query_filter = request.args.get("query")
+    result = shopify_service.get_orders_count(query_filter=query_filter)
     status_code = 200 if result.get("success") else 502
     return jsonify(result), status_code
 
@@ -73,6 +91,7 @@ def order_detail(order_id):
 
 
 @shopify_bp.route("/api/orders/<order_id>/cancel", methods=["POST"])
+@login_required
 @check_shopify_config
 def cancel_order(order_id):
     payload = request.get_json(silent=True) or {}
@@ -83,6 +102,49 @@ def cancel_order(order_id):
         restock=bool(payload.get("restock", False)),
         note=payload.get("note"),
     )
+    status_code = 200 if result.get("success") else 400
+    return jsonify(result), status_code
+
+
+@shopify_bp.route("/api/orders/<order_id>/fulfill", methods=["POST"])
+@login_required
+@check_shopify_config
+def fulfill_order(order_id):
+    """Siparisi karsila (fulfillment olustur)."""
+    payload = request.get_json(silent=True) or {}
+    result = shopify_service.create_fulfillment(
+        order_id=order_id,
+        tracking_number=payload.get("tracking_number"),
+        tracking_company=payload.get("tracking_company"),
+        tracking_url=payload.get("tracking_url"),
+        notify_customer=bool(payload.get("notify_customer", True)),
+    )
+    status_code = 200 if result.get("success") else 400
+    return jsonify(result), status_code
+
+
+@shopify_bp.route("/api/orders/<order_id>/note", methods=["POST"])
+@login_required
+@check_shopify_config
+def update_order_note(order_id):
+    """Siparis notunu guncelle."""
+    payload = request.get_json(silent=True) or {}
+    note = payload.get("note", "")
+    result = shopify_service.add_order_note(order_id=order_id, note=note)
+    status_code = 200 if result.get("success") else 400
+    return jsonify(result), status_code
+
+
+@shopify_bp.route("/api/orders/<order_id>/tags", methods=["POST"])
+@login_required
+@check_shopify_config
+def add_order_tags(order_id):
+    """Siparise etiket ekle."""
+    payload = request.get_json(silent=True) or {}
+    tags = payload.get("tags", [])
+    if not tags:
+        return jsonify({"success": False, "error": "En az bir etiket gerekli."}), 400
+    result = shopify_service.add_order_tags(order_id=order_id, tags=tags)
     status_code = 200 if result.get("success") else 400
     return jsonify(result), status_code
 

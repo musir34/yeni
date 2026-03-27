@@ -284,6 +284,9 @@
         <i class="fas fa-store"></i> Paneller
       </button>
       <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{{ url_for('shopify.orders_dashboard') }}"><i class="fab fa-shopify me-2" style="color:#96bf48"></i>Shopify Siparişler</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('shopify.stock_sync_dashboard') }}"><i class="fab fa-shopify me-2" style="color:#5c6ac4"></i>Shopify Stok Sync</a></li>
+        <li><hr class="dropdown-divider"></li>
         <li><a class="dropdown-item" href="{{ url_for('idefix.index') }}"><i class="fas fa-store me-2" style="color:#8e24aa"></i>Idefix</a></li>
         <li><a class="dropdown-item" href="{{ url_for('hepsiburada.index') }}"><i class="fas fa-store me-2" style="color:#FF6000"></i>Hepsiburada</a></li>
       </ul>

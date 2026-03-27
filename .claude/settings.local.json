@@ -12,7 +12,17 @@
       "Bash(./install.sh typescript:*)",
       "Bash(find /Users/abdurrahmankuli/Documents/Webs/yeni/templates -name *canli* -o -name *panel*)",
       "Bash(python:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(ls -la /Users/abdurrahmankuli/Documents/Webs/yeni/*.py)",
+      "Bash(ls -la /Users/abdurrahmankuli/Documents/Webs/yeni/.env*)",
+      "Bash(ls -la /Users/abdurrahmankuli/Documents/Webs/yeni/env*)",
+      "Bash(find /Users/abdurrahmankuli/Documents/Webs/yeni -type f -name *.json)",
+      "Bash(grep -E \"\\\\.\\(py|html\\)$\")",
+      "Bash(find /Users/abdurrahmankuli/Documents/Webs/yeni/routes -type f -name *.py)",
+      "Bash(grep -r \"scanner\\\\|Scanner\" /Users/abdurrahmankuli/Documents/Webs/yeni --include=*.py --include=*.js --include=*.html)",
+      "Bash(grep -r \"quagga\\\\|Quagga\\\\|zxing\" /Users/abdurrahmankuli/Documents/Webs/yeni --include=*.py --include=*.js --include=*.html)",
+      "Bash(grep -l \"barkod\\\\|scanner\\\\|scan\" /Users/abdurrahmankuli/Documents/Webs/yeni/templates/*.html)",
+      "Bash(pip show:*)"
     ]
   }
 }

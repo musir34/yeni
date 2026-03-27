@@ -507,7 +507,9 @@ if __name__ == '__main__':
             app.run(host='0.0.0.0', port=port, debug=debug_mode, use_reloader=False,
                     ssl_context=(os.getenv("SSL_CERT"), os.getenv("SSL_KEY")) )
         else:
-            app.run(host='0.0.0.0', port=port, debug=debug_mode, use_reloader=False)
+            # HTTPS gerekli: telefon kamerası (getUserMedia) sadece secure context'te çalışır
+            app.run(host='0.0.0.0', port=port, debug=debug_mode, use_reloader=False,
+                    ssl_context='adhoc')
     except Exception as e:
         print(f"Başlatma hatası: {e}")
         import traceback

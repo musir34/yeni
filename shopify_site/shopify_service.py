@@ -54,13 +54,40 @@ class ShopifyService:
             response.raise_for_status()
             body = response.json()
 
-            if body.get("errors"):
-                logger.error("[SHOPIFY] GraphQL errors: %s", body["errors"])
-                return {"success": False, "error": body["errors"]}
+            errors = body.get("errors")
+            data = body.get("data")
+
+            # Shopify GraphQL partial response: errors + data birlikte gelebilir
+            # (orn. read_customers scope yoksa customer=null doner ama siparis verisi gelir)
+            if errors and data:
+                # ACCESS_DENIED hatalarini uyari olarak logla, veriyi dondur
+                access_denied = all(
+                    e.get("extensions", {}).get("code") == "ACCESS_DENIED"
+                    for e in errors
+                )
+                if access_denied:
+                    scopes = {e.get("extensions", {}).get("requiredAccess", "?") for e in errors}
+                    logger.warning(
+                        "[SHOPIFY] Kismi erisim hatasi (veri dondu). Eksik scope: %s",
+                        ", ".join(scopes),
+                    )
+                else:
+                    logger.warning("[SHOPIFY] GraphQL partial errors: %s", errors)
+
+                return {
+                    "success": True,
+                    "data": data,
+                    "extensions": body.get("extensions", {}),
+                    "warnings": [e.get("message", "") for e in errors[:3]],
+                }
+
+            if errors:
+                logger.error("[SHOPIFY] GraphQL errors: %s", errors)
+                return {"success": False, "error": errors}
 
             return {
                 "success": True,
-                "data": body.get("data", {}),
+                "data": data or {},
                 "extensions": body.get("extensions", {}),
             }
         except requests.exceptions.RequestException as exc:
@@ -105,10 +132,21 @@ class ShopifyService:
     def run_graphql(self, query: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         return self._post_graphql(query, variables)
 
-    def get_orders(self, limit: int = 20, query_filter: Optional[str] = None) -> Dict[str, Any]:
+    def get_orders(
+        self,
+        limit: int = 20,
+        query_filter: Optional[str] = None,
+        after: Optional[str] = None,
+    ) -> Dict[str, Any]:
         query = """
-        query GetOrders($first: Int!, $query: String) {
-          orders(first: $first, query: $query, reverse: true, sortKey: PROCESSED_AT) {
+        query GetOrders($first: Int!, $query: String, $after: String) {
+          orders(first: $first, query: $query, after: $after, reverse: true, sortKey: PROCESSED_AT) {
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+              endCursor
+              startCursor
+            }
             edges {
               cursor
               node {
@@ -119,7 +157,15 @@ class ShopifyService:
                 displayFulfillmentStatus
                 createdAt
                 cancelledAt
+                tags
+                note
                 currentTotalPriceSet {
+                  shopMoney {
+                    amount
+                    currencyCode
+                  }
+                }
+                totalRefundedSet {
                   shopMoney {
                     amount
                     currencyCode
@@ -129,6 +175,22 @@ class ShopifyService:
                   firstName
                   lastName
                   email
+                  phone
+                }
+                shippingAddress {
+                  city
+                  province
+                  country
+                }
+                fulfillments {
+                  id
+                  status
+                  trackingInfo {
+                    number
+                    url
+                    company
+                  }
+                  createdAt
                 }
                 lineItems(first: 20) {
                   edges {
@@ -137,6 +199,18 @@ class ShopifyService:
                       sku
                       quantity
                       currentQuantity
+                      variant {
+                        id
+                        image {
+                          url
+                        }
+                      }
+                      originalTotalSet {
+                        shopMoney {
+                          amount
+                          currencyCode
+                        }
+                      }
                     }
                   }
                 }
@@ -145,15 +219,28 @@ class ShopifyService:
           }
         }
         """
-        result = self._post_graphql(query, {"first": max(1, min(limit, 100)), "query": query_filter})
+        variables: Dict[str, Any] = {
+            "first": max(1, min(limit, 100)),
+            "query": query_filter,
+        }
+        if after:
+            variables["after"] = after
+
+        result = self._post_graphql(query, variables)
         if not result.get("success"):
             return result
 
-        edges = result["data"].get("orders", {}).get("edges", [])
+        orders_data = result["data"].get("orders", {})
+        page_info = orders_data.get("pageInfo", {})
+        edges = orders_data.get("edges", [])
         orders = []
         for edge in edges:
             node = edge.get("node", {})
-            node["line_items"] = [item.get("node", {}) for item in node.get("lineItems", {}).get("edges", [])]
+            node["cursor"] = edge.get("cursor")
+            node["line_items"] = [
+                item.get("node", {})
+                for item in node.get("lineItems", {}).get("edges", [])
+            ]
             node.pop("lineItems", None)
             orders.append(node)
 
@@ -161,6 +248,199 @@ class ShopifyService:
             "success": True,
             "orders": orders,
             "count": len(orders),
+            "pageInfo": page_info,
+        }
+
+    def get_orders_count(self, query_filter: Optional[str] = None) -> Dict[str, Any]:
+        """Siparis sayisini dondurur."""
+        query = """
+        query OrdersCount($query: String) {
+          ordersCount(query: $query) {
+            count
+          }
+        }
+        """
+        result = self._post_graphql(query, {"query": query_filter})
+        if not result.get("success"):
+            return result
+
+        count = result["data"].get("ordersCount", {}).get("count", 0)
+        return {"success": True, "count": count}
+
+    def create_fulfillment(
+        self,
+        order_id: str | int,
+        tracking_number: Optional[str] = None,
+        tracking_company: Optional[str] = None,
+        tracking_url: Optional[str] = None,
+        notify_customer: bool = True,
+    ) -> Dict[str, Any]:
+        """Siparis icin fulfillment olusturur."""
+        # Once order'dan fulfillment order id'leri al
+        fo_query = """
+        query GetFulfillmentOrders($id: ID!) {
+          order(id: $id) {
+            fulfillmentOrders(first: 10) {
+              edges {
+                node {
+                  id
+                  status
+                  lineItems(first: 50) {
+                    edges {
+                      node {
+                        id
+                        remainingQuantity
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        """
+        gid = self._build_gid("Order", order_id)
+        fo_result = self._post_graphql(fo_query, {"id": gid})
+        if not fo_result.get("success"):
+            return fo_result
+
+        fo_edges = (
+            fo_result["data"]
+            .get("order", {})
+            .get("fulfillmentOrders", {})
+            .get("edges", [])
+        )
+
+        # Fulfill edilebilir fulfillment order'lari bul
+        fulfillment_line_items = []
+        for fo_edge in fo_edges:
+            fo_node = fo_edge.get("node", {})
+            if fo_node.get("status") in ("OPEN", "IN_PROGRESS"):
+                for li_edge in fo_node.get("lineItems", {}).get("edges", []):
+                    li_node = li_edge.get("node", {})
+                    if li_node.get("remainingQuantity", 0) > 0:
+                        fulfillment_line_items.append({
+                            "fulfillmentOrderId": fo_node["id"],
+                            "fulfillmentOrderLineItems": [{
+                                "id": li_node["id"],
+                                "quantity": li_node["remainingQuantity"],
+                            }],
+                        })
+
+        if not fulfillment_line_items:
+            return {
+                "success": False,
+                "error": "Karsilanacak urun bulunamadi (tumu zaten karsilanmis olabilir).",
+            }
+
+        # Fulfillment olustur
+        mutation = """
+        mutation FulfillOrder($fulfillment: FulfillmentV2Input!) {
+          fulfillmentCreateV2(fulfillment: $fulfillment) {
+            fulfillment {
+              id
+              status
+              trackingInfo {
+                number
+                url
+                company
+              }
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        tracking_info = {}
+        if tracking_number:
+            tracking_info["number"] = tracking_number
+        if tracking_company:
+            tracking_info["company"] = tracking_company
+        if tracking_url:
+            tracking_info["url"] = tracking_url
+
+        variables: Dict[str, Any] = {
+            "fulfillment": {
+                "lineItemsByFulfillmentOrder": fulfillment_line_items,
+                "notifyCustomer": notify_customer,
+            }
+        }
+        if tracking_info:
+            variables["fulfillment"]["trackingInfo"] = tracking_info
+
+        result = self._post_graphql(mutation, variables)
+        if not result.get("success"):
+            return result
+
+        payload = result["data"].get("fulfillmentCreateV2", {})
+        errors = payload.get("userErrors") or []
+        return {
+            "success": not errors,
+            "fulfillment": payload.get("fulfillment"),
+            "errors": errors,
+        }
+
+    def add_order_note(self, order_id: str | int, note: str) -> Dict[str, Any]:
+        """Siparise not ekler."""
+        mutation = """
+        mutation UpdateOrderNote($input: OrderInput!) {
+          orderUpdate(input: $input) {
+            order {
+              id
+              note
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        gid = self._build_gid("Order", order_id)
+        variables = {"input": {"id": gid, "note": note}}
+        result = self._post_graphql(mutation, variables)
+        if not result.get("success"):
+            return result
+
+        payload = result["data"].get("orderUpdate", {})
+        errors = payload.get("userErrors") or []
+        return {
+            "success": not errors,
+            "order": payload.get("order"),
+            "errors": errors,
+        }
+
+    def add_order_tags(self, order_id: str | int, tags: List[str]) -> Dict[str, Any]:
+        """Siparise etiket ekler."""
+        mutation = """
+        mutation AddOrderTags($id: ID!, $tags: [String!]!) {
+          tagsAdd(id: $id, tags: $tags) {
+            node {
+              ... on Order {
+                id
+                tags
+              }
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        gid = self._build_gid("Order", order_id)
+        result = self._post_graphql(mutation, {"id": gid, "tags": tags})
+        if not result.get("success"):
+            return result
+
+        payload = result["data"].get("tagsAdd", {})
+        errors = payload.get("userErrors") or []
+        return {
+            "success": not errors,
+            "node": payload.get("node"),
+            "errors": errors,
         }
 
     def get_order(self, order_id: str | int) -> Dict[str, Any]:

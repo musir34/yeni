@@ -1,0 +1,959 @@
+{% extends "base.html" %}
+
+{% block title %}Shopify Siparisler{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Baslik -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h1 class="mb-1"><i class="bi bi-bag-check me-2"></i>Shopify Siparis Yonetimi</h1>
+            <p class="text-muted mb-0">Siparisleri goruntule, karsila ve yonet</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('home.home') }}" class="btn btn-outline-dark btn-sm"><i class="bi bi-house"></i> Anasayfa</a>
+            <a href="{{ url_for('shopify.stock_sync_dashboard') }}" class="btn btn-outline-dark btn-sm"><i class="bi bi-arrow-repeat"></i> Stok Sync</a>
+            <button id="btnRefresh" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-clockwise"></i> Yenile</button>
+            <button id="btnExportCSV" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-spreadsheet"></i> CSV</button>
+        </div>
+    </div>
+
+    {% if not configured %}
+    <div class="alert alert-danger">
+        <h5><i class="bi bi-exclamation-triangle me-2"></i>Shopify Baglantisi Yapilandirilmamis</h5>
+        <p class="mb-0"><code>.env</code> dosyasindaki Shopify API bilgilerini kontrol edin. Yardim icin yoneticinize basvurun.</p>
+    </div>
+    {% else %}
+
+    <!-- Istatistik Kartlari -->
+    <div class="row mb-4 g-3" id="statsRow">
+        <div class="col-6 col-md-2">
+            <div class="card stats-card h-100 border-0">
+                <div class="card-body text-center py-3">
+                    <i class="bi bi-bag fs-4 text-primary"></i>
+                    <h3 id="statTotal" class="mb-0 mt-1">-</h3>
+                    <small class="text-muted">Toplam</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card stats-card h-100 border-0">
+                <div class="card-body text-center py-3">
+                    <i class="bi bi-clock fs-4 text-warning"></i>
+                    <h3 id="statUnfulfilled" class="mb-0 mt-1">-</h3>
+                    <small class="text-muted">Bekleyen</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card stats-card h-100 border-0">
+                <div class="card-body text-center py-3">
+                    <i class="bi bi-truck fs-4 text-info"></i>
+                    <h3 id="statFulfilled" class="mb-0 mt-1">-</h3>
+                    <small class="text-muted">Karsilanan</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card stats-card h-100 border-0">
+                <div class="card-body text-center py-3">
+                    <i class="bi bi-cash-stack fs-4 text-success"></i>
+                    <h3 id="statPaid" class="mb-0 mt-1">-</h3>
+                    <small class="text-muted">Odenen</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card stats-card h-100 border-0">
+                <div class="card-body text-center py-3">
+                    <i class="bi bi-x-circle fs-4 text-danger"></i>
+                    <h3 id="statCancelled" class="mb-0 mt-1">-</h3>
+                    <small class="text-muted">Iptal</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card stats-card h-100 border-0">
+                <div class="card-body text-center py-3">
+                    <i class="bi bi-currency-dollar fs-4 text-primary"></i>
+                    <h3 id="statRevenue" class="mb-0 mt-1">-</h3>
+                    <small class="text-muted">Gelir</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtre Alani -->
+    <div class="card mb-4 border-0">
+        <div class="card-body py-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Arama</label>
+                    <input type="text" id="searchInput" class="form-control form-control-sm"
+                           placeholder="Siparis no, musteri adi, e-posta...">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Karsilama Durumu</label>
+                    <select id="filterFulfillment" class="form-select form-select-sm">
+                        <option value="">Tumu</option>
+                        <option value="unfulfilled">Karsilanmadi</option>
+                        <option value="partial">Kismi</option>
+                        <option value="fulfilled">Karsilandi</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Odeme Durumu</label>
+                    <select id="filterFinancial" class="form-select form-select-sm">
+                        <option value="">Tumu</option>
+                        <option value="paid">Odendi</option>
+                        <option value="pending">Bekliyor</option>
+                        <option value="refunded">Iade Edildi</option>
+                        <option value="partially_refunded">Kismi Iade</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Tarih</label>
+                    <select id="filterDate" class="form-select form-select-sm">
+                        <option value="">Tumu</option>
+                        <option value="today">Bugun</option>
+                        <option value="week">Bu Hafta</option>
+                        <option value="month">Bu Ay</option>
+                        <option value="90days">Son 90 Gun</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small fw-bold">Adet</label>
+                    <select id="filterLimit" class="form-select form-select-sm">
+                        <option value="25">25</option>
+                        <option value="50" selected>50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-1">
+                    <button id="btnFilter" class="btn btn-primary btn-sm flex-fill">
+                        <i class="bi bi-funnel"></i> Filtrele
+                    </button>
+                    <button id="btnClearFilter" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Durum Alani -->
+    <div id="statusArea" class="mb-3" style="display:none;">
+        <div class="alert py-2" id="statusAlert">
+            <div class="d-flex align-items-center gap-2">
+                <div class="spinner-border spinner-border-sm" id="statusSpinner" role="status" style="display:none;"></div>
+                <span id="statusText"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Siparis Tablosu -->
+    <div class="card border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 orders-table">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Siparis</th>
+                            <th>Tarih</th>
+                            <th>Musteri</th>
+                            <th>Sehir</th>
+                            <th class="text-center">Urun</th>
+                            <th class="text-end">Tutar</th>
+                            <th class="text-center">Odeme</th>
+                            <th class="text-center">Karsilama</th>
+                            <th class="text-center">Islemler</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTable">
+                        <tr><td colspan="9" class="text-center text-muted py-5">
+                            <div class="spinner-border text-primary mb-2" role="status"></div>
+                            <br>Siparisler yukleniyor...
+                        </td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center py-2">
+            <small class="text-muted">Gosterilen: <strong id="showingCount">0</strong> siparis</small>
+            <div class="d-flex gap-2">
+                <button id="btnPrevPage" class="btn btn-sm btn-outline-secondary" disabled>
+                    <i class="bi bi-chevron-left"></i> Onceki
+                </button>
+                <button id="btnNextPage" class="btn btn-sm btn-outline-secondary" disabled>
+                    Sonraki <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Siparis Detay Modal -->
+    <div class="modal fade" id="orderDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-bag me-2"></i>Siparis Detayi</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="orderDetailBody">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status"></div>
+                    </div>
+                </div>
+                <div class="modal-footer" id="orderDetailFooter" style="display:none;">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fulfillment Modal -->
+    <div class="modal fade" id="fulfillModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-truck me-2"></i>Siparisi Karsila</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="fulfillOrderId">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Kargo Takip Numarasi</label>
+                        <input type="text" id="fulfillTrackingNumber" class="form-control" placeholder="ornegin: 1234567890">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Kargo Firmasi</label>
+                        <select id="fulfillTrackingCompany" class="form-select">
+                            <option value="">Seciniz...</option>
+                            <option value="Yurtici Kargo">Yurtici Kargo</option>
+                            <option value="Aras Kargo">Aras Kargo</option>
+                            <option value="MNG Kargo">MNG Kargo</option>
+                            <option value="Surat Kargo">Surat Kargo</option>
+                            <option value="PTT Kargo">PTT Kargo</option>
+                            <option value="UPS">UPS</option>
+                            <option value="DHL">DHL</option>
+                            <option value="FedEx">FedEx</option>
+                            <option value="Trendyol Express">Trendyol Express</option>
+                            <option value="Hepsijet">Hepsijet</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Takip URL (opsiyonel)</label>
+                        <input type="url" id="fulfillTrackingUrl" class="form-control" placeholder="https://...">
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="fulfillNotifyCustomer" checked>
+                        <label class="form-check-label" for="fulfillNotifyCustomer">Musteriye bildirim gonder</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgec</button>
+                    <button type="button" id="btnFulfillSubmit" class="btn btn-success btn-sm">
+                        <i class="bi bi-check-lg"></i> Karsila
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Iptal Modal -->
+    <div class="modal fade" id="cancelModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-x-circle me-2"></i>Siparisi Iptal Et</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="cancelOrderId">
+                    <div class="alert alert-warning py-2 mb-3">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Bu islem geri alinamaz. Siparis kalici olarak iptal edilecektir.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Iptal Nedeni</label>
+                        <select id="cancelReason" class="form-select">
+                            <option value="CUSTOMER">Musteri Talebi</option>
+                            <option value="FRAUD">Dolandiricilik Suphesi</option>
+                            <option value="INVENTORY">Stok Yetersizligi</option>
+                            <option value="DECLINED">Odeme Reddedildi</option>
+                            <option value="OTHER">Diger</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Not (opsiyonel)</label>
+                        <textarea id="cancelNote" class="form-control" rows="2" placeholder="Iptal aciklamasi..."></textarea>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="cancelRefund">
+                        <label class="form-check-label" for="cancelRefund">Iade yap</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="cancelRestock" checked>
+                        <label class="form-check-label" for="cancelRestock">Stogu geri yukle</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgec</button>
+                    <button type="button" id="btnCancelSubmit" class="btn btn-danger btn-sm">
+                        <i class="bi bi-x-lg"></i> Iptal Et
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Not Modal -->
+    <div class="modal fade" id="noteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-sticky me-2"></i>Siparis Notu</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="noteOrderId">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Not</label>
+                        <textarea id="noteText" class="form-control" rows="4" placeholder="Siparis notu yazin..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgec</button>
+                    <button type="button" id="btnNoteSubmit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-check-lg"></i> Kaydet
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% endif %}
+</div>
+
+<style>
+    .stats-card { border-radius: 0.75rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: transform 0.2s; }
+    .stats-card:hover { transform: translateY(-2px); }
+    .orders-table th { font-weight: 600; font-size: 0.8rem; text-transform: uppercase; color: #6c757d; border-bottom: 2px solid #dee2e6; white-space: nowrap; }
+    .orders-table td { vertical-align: middle; font-size: 0.88rem; }
+    .orders-table tr { cursor: pointer; transition: background-color 0.15s; }
+    .orders-table tbody tr:hover { background-color: rgba(183,110,121,0.06) !important; }
+    .badge-financial, .badge-fulfillment { font-size: 0.75rem; padding: 0.3em 0.65em; border-radius: 0.5rem; font-weight: 500; }
+    .card { border-radius: 0.75rem; }
+    .order-detail-section { margin-bottom: 1.25rem; }
+    .order-detail-section h6 { font-weight: 700; color: var(--color-primary); margin-bottom: 0.75rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .detail-label { font-size: 0.8rem; color: #6c757d; }
+    .detail-value { font-size: 0.9rem; font-weight: 500; }
+    .line-item-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0; border-bottom: 1px solid #f0f0f0; }
+    .line-item-row:last-child { border-bottom: none; }
+    .line-item-img { width: 40px; height: 40px; border-radius: 0.5rem; object-fit: cover; background: #f5f5f5; }
+    .actions-dropdown .dropdown-toggle::after { display: none; }
+
+    /* Dark mode */
+    html.gs-dark .orders-table th { color: #999; border-bottom-color: #333; }
+    html.gs-dark .orders-table tbody tr:hover { background-color: rgba(183,110,121,0.12) !important; }
+    html.gs-dark .order-detail-section h6 { border-bottom-color: #333; }
+    html.gs-dark .line-item-row { border-bottom-color: #333; }
+    html.gs-dark .stats-card { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const configured = {{ 'true' if configured else 'false' }};
+    if (!configured) return;
+
+    let allOrders = [];
+    let cursorStack = [null]; // pagination cursor stack
+    let currentCursorIndex = 0;
+
+    // ── Yardimci Fonksiyonlar ──
+    function financialBadge(status) {
+        const map = {
+            'PAID': ['bg-success', 'Odendi'],
+            'PENDING': ['bg-warning text-dark', 'Bekliyor'],
+            'AUTHORIZED': ['bg-info', 'Onaylandi'],
+            'PARTIALLY_PAID': ['bg-info', 'Kismi Odeme'],
+            'PARTIALLY_REFUNDED': ['bg-secondary', 'Kismi Iade'],
+            'REFUNDED': ['bg-dark', 'Iade Edildi'],
+            'VOIDED': ['bg-dark', 'Gecersiz'],
+            'EXPIRED': ['bg-secondary', 'Suresi Doldu'],
+        };
+        const [cls, label] = map[status] || ['bg-secondary', status || '-'];
+        return `<span class="badge badge-financial ${cls}">${label}</span>`;
+    }
+
+    function fulfillmentBadge(status) {
+        const map = {
+            'FULFILLED': ['bg-success', 'Karsilandi'],
+            'UNFULFILLED': ['bg-warning text-dark', 'Bekliyor'],
+            'PARTIALLY_FULFILLED': ['bg-info', 'Kismi'],
+            'RESTOCKED': ['bg-secondary', 'Iade Stok'],
+            'IN_PROGRESS': ['bg-primary', 'Isleniyor'],
+            'ON_HOLD': ['bg-dark', 'Beklemede'],
+            'SCHEDULED': ['bg-info', 'Planli'],
+        };
+        const [cls, label] = map[status] || ['bg-secondary', status || '-'];
+        return `<span class="badge badge-fulfillment ${cls}">${label}</span>`;
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+               ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function formatMoney(priceSet) {
+        if (!priceSet) return '-';
+        const money = priceSet.shopMoney || priceSet;
+        const amount = parseFloat(money.amount || 0);
+        const currency = money.currencyCode || 'TRY';
+        return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency }).format(amount);
+    }
+
+    function extractId(gid) {
+        if (!gid) return '';
+        return gid.split('/').pop();
+    }
+
+    function getCustomerName(customer) {
+        if (!customer) return 'Misafir';
+        return ((customer.firstName || '') + ' ' + (customer.lastName || '')).trim() || customer.email || 'Misafir';
+    }
+
+    function showStatus(text, type, showSpinner) {
+        const area = document.getElementById('statusArea');
+        const alert = document.getElementById('statusAlert');
+        const spinner = document.getElementById('statusSpinner');
+        area.style.display = 'block';
+        alert.className = 'alert alert-' + type + ' py-2';
+        document.getElementById('statusText').textContent = text;
+        spinner.style.display = showSpinner ? 'inline-block' : 'none';
+    }
+
+    function hideStatus() {
+        document.getElementById('statusArea').style.display = 'none';
+    }
+
+    // ── Query Builder ──
+    function buildQuery() {
+        const parts = [];
+        const search = document.getElementById('searchInput').value.trim();
+        const fulfillment = document.getElementById('filterFulfillment').value;
+        const financial = document.getElementById('filterFinancial').value;
+        const dateFilter = document.getElementById('filterDate').value;
+
+        if (search) parts.push(search);
+        if (fulfillment) parts.push('fulfillment_status:' + fulfillment);
+        if (financial) parts.push('financial_status:' + financial);
+
+        if (dateFilter) {
+            const now = new Date();
+            let fromDate;
+            if (dateFilter === 'today') {
+                fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            } else if (dateFilter === 'week') {
+                fromDate = new Date(now);
+                fromDate.setDate(now.getDate() - 7);
+            } else if (dateFilter === 'month') {
+                fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            } else if (dateFilter === '90days') {
+                fromDate = new Date(now);
+                fromDate.setDate(now.getDate() - 90);
+            }
+            if (fromDate) {
+                parts.push('created_at:>=' + fromDate.toISOString().split('T')[0]);
+            }
+        }
+
+        return parts.length > 0 ? parts.join(' ') : null;
+    }
+
+    // ── Siparis Yukleme ──
+    function loadOrders(afterCursor) {
+        const limit = parseInt(document.getElementById('filterLimit').value) || 50;
+        const query = buildQuery();
+        const params = new URLSearchParams({ limit: limit });
+        if (query) params.set('query', query);
+        if (afterCursor) params.set('after', afterCursor);
+
+        document.getElementById('ordersTable').innerHTML =
+            '<tr><td colspan="9" class="text-center text-muted py-5"><div class="spinner-border text-primary mb-2" role="status"></div><br>Yukleniyor...</td></tr>';
+
+        fetch('/shopify/api/orders?' + params)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    document.getElementById('ordersTable').innerHTML =
+                        `<tr><td colspan="9" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-2"></i>${data.error || 'Bilinmeyen hata'}</td></tr>`;
+                    return;
+                }
+                allOrders = data.orders || [];
+                renderOrders(allOrders);
+                updateStats(allOrders);
+
+                // Pagination
+                const pageInfo = data.pageInfo || {};
+                document.getElementById('btnNextPage').disabled = !pageInfo.hasNextPage;
+                document.getElementById('btnPrevPage').disabled = currentCursorIndex <= 0;
+
+                if (pageInfo.endCursor && pageInfo.hasNextPage) {
+                    if (cursorStack.length <= currentCursorIndex + 1) {
+                        cursorStack.push(pageInfo.endCursor);
+                    } else {
+                        cursorStack[currentCursorIndex + 1] = pageInfo.endCursor;
+                    }
+                }
+
+                document.getElementById('showingCount').textContent = allOrders.length;
+            })
+            .catch(err => {
+                document.getElementById('ordersTable').innerHTML =
+                    `<tr><td colspan="9" class="text-center text-danger py-4">Baglanti hatasi: ${err.message}</td></tr>`;
+            });
+    }
+
+    function renderOrders(orders) {
+        const tbody = document.getElementById('ordersTable');
+        if (!orders.length) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-5"><i class="bi bi-inbox fs-1 d-block mb-2"></i>Siparis bulunamadi</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = orders.map(order => {
+            const orderId = extractId(order.id);
+            const customer = getCustomerName(order.customer);
+            const city = order.shippingAddress ? order.shippingAddress.city || '' : '';
+            const itemCount = (order.line_items || []).reduce((sum, li) => sum + (li.quantity || 0), 0);
+            const total = formatMoney(order.currentTotalPriceSet);
+            const isCancelled = !!order.cancelledAt;
+
+            return `
+                <tr data-order-id="${orderId}" onclick="window.shopifyOrders.showDetail('${orderId}')" class="${isCancelled ? 'text-decoration-line-through opacity-50' : ''}">
+                    <td class="ps-3">
+                        <div class="fw-bold text-primary">${order.name || '#' + orderId}</div>
+                        ${order.tags && order.tags.length ? '<div class="mt-1">' + order.tags.slice(0, 3).map(t => '<span class="badge bg-light text-dark border me-1" style="font-size:0.7rem">' + t + '</span>').join('') + '</div>' : ''}
+                    </td>
+                    <td><small>${formatDate(order.createdAt)}</small></td>
+                    <td>
+                        <div>${customer}</div>
+                        ${order.customer && order.customer.email ? '<small class="text-muted">' + order.customer.email + '</small>' : ''}
+                    </td>
+                    <td><small>${city}</small></td>
+                    <td class="text-center"><span class="badge bg-light text-dark border">${itemCount}</span></td>
+                    <td class="text-end fw-bold">${total}</td>
+                    <td class="text-center">${financialBadge(order.displayFinancialStatus)}</td>
+                    <td class="text-center">${fulfillmentBadge(order.displayFulfillmentStatus)}</td>
+                    <td class="text-center" onclick="event.stopPropagation()">
+                        <div class="dropdown actions-dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#" onclick="window.shopifyOrders.showDetail('${orderId}')"><i class="bi bi-eye me-2"></i>Detay</a></li>
+                                ${!isCancelled && order.displayFulfillmentStatus !== 'FULFILLED' ? `<li><a class="dropdown-item" href="#" onclick="window.shopifyOrders.showFulfill('${orderId}')"><i class="bi bi-truck me-2"></i>Karsila</a></li>` : ''}
+                                <li><a class="dropdown-item" href="#" onclick="window.shopifyOrders.showNote('${orderId}', '${(order.note || '').replace(/'/g, "\\'")}')"><i class="bi bi-sticky me-2"></i>Not Ekle</a></li>
+                                ${!isCancelled ? `<li><hr class="dropdown-divider"></li><li><a class="dropdown-item text-danger" href="#" onclick="window.shopifyOrders.showCancel('${orderId}')"><i class="bi bi-x-circle me-2"></i>Iptal Et</a></li>` : ''}
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function updateStats(orders) {
+        let total = orders.length;
+        let unfulfilled = 0, fulfilled = 0, paid = 0, cancelled = 0;
+        let revenue = 0;
+
+        orders.forEach(o => {
+            if (o.cancelledAt) cancelled++;
+            if (o.displayFulfillmentStatus === 'UNFULFILLED') unfulfilled++;
+            if (o.displayFulfillmentStatus === 'FULFILLED') fulfilled++;
+            if (o.displayFinancialStatus === 'PAID') paid++;
+            const amount = parseFloat((o.currentTotalPriceSet?.shopMoney?.amount) || 0);
+            if (!o.cancelledAt) revenue += amount;
+        });
+
+        document.getElementById('statTotal').textContent = total;
+        document.getElementById('statUnfulfilled').textContent = unfulfilled;
+        document.getElementById('statFulfilled').textContent = fulfilled;
+        document.getElementById('statPaid').textContent = paid;
+        document.getElementById('statCancelled').textContent = cancelled;
+        document.getElementById('statRevenue').textContent = new Intl.NumberFormat('tr-TR', {
+            style: 'currency', currency: 'TRY', maximumFractionDigits: 0
+        }).format(revenue);
+    }
+
+    // ── Siparis Detayi ──
+    window.shopifyOrders = {
+        showDetail: function(orderId) {
+            const modal = new bootstrap.Modal(document.getElementById('orderDetailModal'));
+            const body = document.getElementById('orderDetailBody');
+            body.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></div>';
+            document.getElementById('orderDetailFooter').style.display = 'none';
+            modal.show();
+
+            fetch('/shopify/api/orders/' + orderId)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success || !data.order) {
+                        body.innerHTML = '<div class="alert alert-danger">Siparis bulunamadi: ' + (data.error || '') + '</div>';
+                        return;
+                    }
+                    const o = data.order;
+                    const customer = o.customer || {};
+                    const shipping = o.shippingAddress || {};
+                    const billing = o.billingAddress || {};
+                    const isCancelled = !!o.cancelledAt;
+
+                    let html = '';
+
+                    // Baslik
+                    html += `<div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h4 class="mb-1">${o.name || '#' + extractId(o.id)}</h4>
+                            <small class="text-muted">${formatDate(o.createdAt)}</small>
+                        </div>
+                        <div class="text-end">
+                            ${financialBadge(o.displayFinancialStatus)}
+                            ${fulfillmentBadge(o.displayFulfillmentStatus)}
+                            ${isCancelled ? '<br><span class="badge bg-danger mt-1">IPTAL EDILDI</span>' : ''}
+                        </div>
+                    </div>`;
+
+                    if (isCancelled) {
+                        html += `<div class="alert alert-danger py-2 mb-3">
+                            <strong>Iptal Nedeni:</strong> ${o.cancelReason || '-'} | <strong>Iptal Tarihi:</strong> ${formatDate(o.cancelledAt)}
+                        </div>`;
+                    }
+
+                    if (o.note) {
+                        html += `<div class="alert alert-info py-2 mb-3"><strong>Not:</strong> ${o.note}</div>`;
+                    }
+
+                    // Musteri & Adres
+                    html += `<div class="row">
+                        <div class="col-md-4">
+                            <div class="order-detail-section">
+                                <h6><i class="bi bi-person me-1"></i>Musteri</h6>
+                                <div class="detail-value">${(customer.firstName || '') + ' ' + (customer.lastName || '')}</div>
+                                <div class="detail-label">${customer.email || '-'}</div>
+                                <div class="detail-label">${customer.phone || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="order-detail-section">
+                                <h6><i class="bi bi-geo-alt me-1"></i>Teslimat Adresi</h6>
+                                <div class="detail-value">${shipping.name || '-'}</div>
+                                <div class="detail-label">${shipping.address1 || ''} ${shipping.address2 || ''}</div>
+                                <div class="detail-label">${shipping.city || ''} ${shipping.province || ''} ${shipping.zip || ''}</div>
+                                <div class="detail-label">${shipping.country || ''}</div>
+                                <div class="detail-label">${shipping.phone || ''}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="order-detail-section">
+                                <h6><i class="bi bi-receipt me-1"></i>Fatura Adresi</h6>
+                                <div class="detail-value">${billing.name || '-'}</div>
+                                <div class="detail-label">${billing.address1 || ''} ${billing.address2 || ''}</div>
+                                <div class="detail-label">${billing.city || ''} ${billing.province || ''} ${billing.zip || ''}</div>
+                                <div class="detail-label">${billing.country || ''}</div>
+                            </div>
+                        </div>
+                    </div>`;
+
+                    // Urunler
+                    html += `<div class="order-detail-section">
+                        <h6><i class="bi bi-box me-1"></i>Urunler</h6>`;
+
+                    (o.line_items || []).forEach(li => {
+                        const imgUrl = li.variant?.image?.url;
+                        const liTotal = formatMoney(li.originalTotalSet);
+                        html += `<div class="line-item-row">
+                            ${imgUrl ? `<img src="${imgUrl}" class="line-item-img" alt="">` : '<div class="line-item-img d-flex align-items-center justify-content-center"><i class="bi bi-image text-muted"></i></div>'}
+                            <div class="flex-fill">
+                                <div class="fw-bold" style="font-size:0.88rem">${li.title || '-'}</div>
+                                <small class="text-muted">SKU: ${li.sku || '-'}</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold">${liTotal}</div>
+                                <small class="text-muted">x${li.quantity} ${li.currentQuantity !== li.quantity ? '(kalan: ' + li.currentQuantity + ')' : ''}</small>
+                            </div>
+                        </div>`;
+                    });
+
+                    html += `</div>`;
+
+                    // Toplam
+                    html += `<div class="order-detail-section">
+                        <h6><i class="bi bi-calculator me-1"></i>Ozet</h6>
+                        <div class="d-flex justify-content-between py-2 border-bottom">
+                            <span>Toplam</span>
+                            <strong class="fs-5">${formatMoney(o.currentTotalPriceSet)}</strong>
+                        </div>`;
+
+                    if (o.totalRefundedSet) {
+                        const refunded = parseFloat(o.totalRefundedSet.shopMoney?.amount || 0);
+                        if (refunded > 0) {
+                            html += `<div class="d-flex justify-content-between py-2 text-danger">
+                                <span>Iade Edilen</span>
+                                <strong>-${formatMoney(o.totalRefundedSet)}</strong>
+                            </div>`;
+                        }
+                    }
+                    html += `</div>`;
+
+                    // Fulfillment Bilgisi
+                    if (o.fulfillments && o.fulfillments.length > 0) {
+                        html += `<div class="order-detail-section">
+                            <h6><i class="bi bi-truck me-1"></i>Kargo Bilgileri</h6>`;
+                        o.fulfillments.forEach((f, idx) => {
+                            html += `<div class="p-2 bg-light rounded mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <strong>Kargo #${idx + 1}</strong>
+                                    <span class="badge ${f.status === 'SUCCESS' ? 'bg-success' : 'bg-info'}">${f.status}</span>
+                                </div>`;
+                            if (f.trackingInfo && f.trackingInfo.length > 0) {
+                                f.trackingInfo.forEach(ti => {
+                                    html += `<div class="mt-1">
+                                        <small>${ti.company || ''} - ${ti.number || '-'}</small>
+                                        ${ti.url ? `<a href="${ti.url}" target="_blank" class="ms-2 small">Takip Et</a>` : ''}
+                                    </div>`;
+                                });
+                            }
+                            html += `<small class="text-muted">${formatDate(f.createdAt)}</small></div>`;
+                        });
+                        html += `</div>`;
+                    }
+
+                    // Islem Butonlari
+                    if (!isCancelled) {
+                        html += `<div class="d-flex gap-2 mt-3 flex-wrap">`;
+                        if (o.displayFulfillmentStatus !== 'FULFILLED') {
+                            html += `<button class="btn btn-success btn-sm" onclick="bootstrap.Modal.getInstance(document.getElementById('orderDetailModal')).hide(); window.shopifyOrders.showFulfill('${extractId(o.id)}')">
+                                <i class="bi bi-truck me-1"></i>Karsila</button>`;
+                        }
+                        html += `<button class="btn btn-outline-primary btn-sm" onclick="bootstrap.Modal.getInstance(document.getElementById('orderDetailModal')).hide(); window.shopifyOrders.showNote('${extractId(o.id)}', '${(o.note || '').replace(/'/g, "\\'")}')">
+                            <i class="bi bi-sticky me-1"></i>Not</button>`;
+                        html += `<button class="btn btn-outline-danger btn-sm" onclick="bootstrap.Modal.getInstance(document.getElementById('orderDetailModal')).hide(); window.shopifyOrders.showCancel('${extractId(o.id)}')">
+                            <i class="bi bi-x-circle me-1"></i>Iptal Et</button>`;
+                        html += `</div>`;
+                    }
+
+                    body.innerHTML = html;
+                    document.getElementById('orderDetailFooter').style.display = 'flex';
+                })
+                .catch(err => {
+                    body.innerHTML = '<div class="alert alert-danger">Yukleme hatasi: ' + err.message + '</div>';
+                });
+        },
+
+        showFulfill: function(orderId) {
+            document.getElementById('fulfillOrderId').value = orderId;
+            document.getElementById('fulfillTrackingNumber').value = '';
+            document.getElementById('fulfillTrackingCompany').value = '';
+            document.getElementById('fulfillTrackingUrl').value = '';
+            document.getElementById('fulfillNotifyCustomer').checked = true;
+            new bootstrap.Modal(document.getElementById('fulfillModal')).show();
+        },
+
+        showCancel: function(orderId) {
+            document.getElementById('cancelOrderId').value = orderId;
+            document.getElementById('cancelReason').value = 'CUSTOMER';
+            document.getElementById('cancelNote').value = '';
+            document.getElementById('cancelRefund').checked = false;
+            document.getElementById('cancelRestock').checked = true;
+            new bootstrap.Modal(document.getElementById('cancelModal')).show();
+        },
+
+        showNote: function(orderId, currentNote) {
+            document.getElementById('noteOrderId').value = orderId;
+            document.getElementById('noteText').value = currentNote || '';
+            new bootstrap.Modal(document.getElementById('noteModal')).show();
+        }
+    };
+
+    // ── Fulfillment Submit ──
+    document.getElementById('btnFulfillSubmit').addEventListener('click', function() {
+        const btn = this;
+        const orderId = document.getElementById('fulfillOrderId').value;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Isleniyor...';
+
+        const payload = {
+            tracking_number: document.getElementById('fulfillTrackingNumber').value.trim() || null,
+            tracking_company: document.getElementById('fulfillTrackingCompany').value || null,
+            tracking_url: document.getElementById('fulfillTrackingUrl').value.trim() || null,
+            notify_customer: document.getElementById('fulfillNotifyCustomer').checked,
+        };
+
+        fetch('/shopify/api/orders/' + orderId + '/fulfill', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg"></i> Karsila';
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('fulfillModal')).hide();
+                showStatus('Siparis basariyla karsilandi!', 'success', false);
+                setTimeout(hideStatus, 3000);
+                loadOrders(cursorStack[currentCursorIndex]);
+            } else {
+                const errMsg = data.errors ? data.errors.map(e => e.message).join(', ') : (data.error || 'Bilinmeyen hata');
+                showStatus('Hata: ' + errMsg, 'danger', false);
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg"></i> Karsila';
+            showStatus('Baglanti hatasi: ' + err.message, 'danger', false);
+        });
+    });
+
+    // ── Cancel Submit ──
+    document.getElementById('btnCancelSubmit').addEventListener('click', function() {
+        if (!confirm('Siparisi iptal etmek istediginizden emin misiniz?')) return;
+        const btn = this;
+        const orderId = document.getElementById('cancelOrderId').value;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Isleniyor...';
+
+        const payload = {
+            reason: document.getElementById('cancelReason').value,
+            note: document.getElementById('cancelNote').value.trim() || null,
+            refund: document.getElementById('cancelRefund').checked,
+            restock: document.getElementById('cancelRestock').checked,
+        };
+
+        fetch('/shopify/api/orders/' + orderId + '/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-x-lg"></i> Iptal Et';
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('cancelModal')).hide();
+                showStatus('Siparis basariyla iptal edildi.', 'success', false);
+                setTimeout(hideStatus, 3000);
+                loadOrders(cursorStack[currentCursorIndex]);
+            } else {
+                const errMsg = data.errors ? data.errors.map(e => e.message).join(', ') : (data.error || 'Bilinmeyen hata');
+                showStatus('Hata: ' + errMsg, 'danger', false);
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-x-lg"></i> Iptal Et';
+            showStatus('Baglanti hatasi: ' + err.message, 'danger', false);
+        });
+    });
+
+    // ── Note Submit ──
+    document.getElementById('btnNoteSubmit').addEventListener('click', function() {
+        const btn = this;
+        const orderId = document.getElementById('noteOrderId').value;
+        const note = document.getElementById('noteText').value.trim();
+        btn.disabled = true;
+
+        fetch('/shopify/api/orders/' + orderId + '/note', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ note: note }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('noteModal')).hide();
+                showStatus('Not basariyla kaydedildi.', 'success', false);
+                setTimeout(hideStatus, 3000);
+                loadOrders(cursorStack[currentCursorIndex]);
+            } else {
+                showStatus('Hata: ' + (data.error || 'Bilinmeyen hata'), 'danger', false);
+            }
+        })
+        .catch(err => { btn.disabled = false; showStatus('Hata: ' + err.message, 'danger', false); });
+    });
+
+    // ── CSV Export ──
+    document.getElementById('btnExportCSV').addEventListener('click', function() {
+        if (!allOrders.length) { showStatus('Disa aktarilacak siparis yok.', 'warning', false); return; }
+
+        let csv = 'Siparis No,Tarih,Musteri,E-posta,Sehir,Urun Sayisi,Tutar,Para Birimi,Odeme Durumu,Karsilama Durumu\n';
+        allOrders.forEach(o => {
+            const customer = getCustomerName(o.customer);
+            const email = o.customer?.email || '';
+            const city = o.shippingAddress?.city || '';
+            const itemCount = (o.line_items || []).reduce((sum, li) => sum + (li.quantity || 0), 0);
+            const amount = o.currentTotalPriceSet?.shopMoney?.amount || '0';
+            const currency = o.currentTotalPriceSet?.shopMoney?.currencyCode || 'TRY';
+            csv += `"${o.name || ''}","${formatDate(o.createdAt)}","${customer}","${email}","${city}",${itemCount},${amount},${currency},"${o.displayFinancialStatus || ''}","${o.displayFulfillmentStatus || ''}"\n`;
+        });
+
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'shopify_siparisler_' + new Date().toISOString().split('T')[0] + '.csv';
+        link.click();
+        URL.revokeObjectURL(link.href);
+    });
+
+    // ── Event Listeners ──
+    document.getElementById('btnFilter').addEventListener('click', function() {
+        currentCursorIndex = 0;
+        cursorStack = [null];
+        loadOrders(null);
+    });
+
+    document.getElementById('btnClearFilter').addEventListener('click', function() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('filterFulfillment').value = '';
+        document.getElementById('filterFinancial').value = '';
+        document.getElementById('filterDate').value = '';
+        currentCursorIndex = 0;
+        cursorStack = [null];
+        loadOrders(null);
+    });
+
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            currentCursorIndex = 0;
+            cursorStack = [null];
+            loadOrders(null);
+        }
+    });
+
+    document.getElementById('btnRefresh').addEventListener('click', function() {
+        loadOrders(cursorStack[currentCursorIndex]);
+    });
+
+    document.getElementById('btnNextPage').addEventListener('click', function() {
+        currentCursorIndex++;
+        loadOrders(cursorStack[currentCursorIndex]);
+    });
+
+    document.getElementById('btnPrevPage').addEventListener('click', function() {
+        if (currentCursorIndex > 0) {
+            currentCursorIndex--;
+            loadOrders(cursorStack[currentCursorIndex]);
+        }
+    });
+
+    // ── Ilk Yukleme ──
+    loadOrders(null);
+});
+</script>
+{% endblock %}
