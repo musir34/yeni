@@ -8,6 +8,8 @@ from datetime import datetime
 from werkzeug.utils import secure_filename
 from sqlalchemy import func
 
+from user_logs import log_user_action
+
 logger = logging.getLogger(__name__)
 
 # Veritabanı modellerinizi import edin
@@ -204,6 +206,7 @@ def update_commission_from_excel():
                 f"{total_updated} kayıt güncellendi, {total_not_found} kayıt bulunamadı.",
                 "success"
             )
+            log_user_action("UPDATE", {"işlem_açıklaması": f"Komisyon verileri Excel'den güncellendi — {total_updated} kayıt", "sayfa": "Komisyon Güncelleme"})
         if error_files:
             flash(f"Şu dosyalarda hata oluştu veya işlenemedi: {', '.join(error_files)}", "danger")
 

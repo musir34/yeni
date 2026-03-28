@@ -27,7 +27,7 @@
 
     <!-- Istatistik Kartlari -->
     <div class="row mb-4 g-3" id="statsRow">
-        <div class="col-6 col-md-2">
+        <div class="col-6 col-lg">
             <div class="card stats-card h-100 border-0">
                 <div class="card-body text-center py-3">
                     <i class="bi bi-bag fs-4 text-primary"></i>
@@ -36,51 +36,76 @@
                 </div>
             </div>
         </div>
-        <div class="col-6 col-md-2">
-            <div class="card stats-card h-100 border-0">
+        <div class="col-6 col-lg">
+            <div class="card stats-card h-100 border-0 border-start border-warning border-3">
                 <div class="card-body text-center py-3">
-                    <i class="bi bi-clock fs-4 text-warning"></i>
-                    <h3 id="statUnfulfilled" class="mb-0 mt-1">-</h3>
-                    <small class="text-muted">Bekleyen</small>
+                    <i class="bi bi-hourglass-split fs-4 text-warning"></i>
+                    <h3 id="statBeklemede" class="mb-0 mt-1">-</h3>
+                    <small class="text-muted">Beklemede</small>
                 </div>
             </div>
         </div>
-        <div class="col-6 col-md-2">
-            <div class="card stats-card h-100 border-0">
+        <div class="col-6 col-lg">
+            <div class="card stats-card h-100 border-0 border-start border-primary border-3">
+                <div class="card-body text-center py-3">
+                    <i class="bi bi-gear fs-4 text-primary"></i>
+                    <h3 id="statHazirlaniyor" class="mb-0 mt-1">-</h3>
+                    <small class="text-muted">Hazirlaniyor</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card stats-card h-100 border-0 border-start border-info border-3">
                 <div class="card-body text-center py-3">
                     <i class="bi bi-truck fs-4 text-info"></i>
-                    <h3 id="statFulfilled" class="mb-0 mt-1">-</h3>
-                    <small class="text-muted">Karsilanan</small>
+                    <h3 id="statKargoda" class="mb-0 mt-1">-</h3>
+                    <small class="text-muted">Kargoda</small>
                 </div>
             </div>
         </div>
-        <div class="col-6 col-md-2">
-            <div class="card stats-card h-100 border-0">
+        <div class="col-6 col-lg">
+            <div class="card stats-card h-100 border-0 border-start border-success border-3">
                 <div class="card-body text-center py-3">
-                    <i class="bi bi-cash-stack fs-4 text-success"></i>
-                    <h3 id="statPaid" class="mb-0 mt-1">-</h3>
-                    <small class="text-muted">Odenen</small>
+                    <i class="bi bi-check-circle fs-4 text-success"></i>
+                    <h3 id="statTeslim" class="mb-0 mt-1">-</h3>
+                    <small class="text-muted">Teslim Edildi</small>
                 </div>
             </div>
         </div>
-        <div class="col-6 col-md-2">
+        <div class="col-6 col-lg">
             <div class="card stats-card h-100 border-0">
                 <div class="card-body text-center py-3">
-                    <i class="bi bi-x-circle fs-4 text-danger"></i>
-                    <h3 id="statCancelled" class="mb-0 mt-1">-</h3>
-                    <small class="text-muted">Iptal</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-2">
-            <div class="card stats-card h-100 border-0">
-                <div class="card-body text-center py-3">
-                    <i class="bi bi-currency-dollar fs-4 text-primary"></i>
+                    <i class="bi bi-currency-dollar fs-4 text-success"></i>
                     <h3 id="statRevenue" class="mb-0 mt-1">-</h3>
                     <small class="text-muted">Gelir</small>
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Durum Tablari -->
+    <div class="d-flex gap-1 mb-3 flex-wrap" id="statusTabs">
+        <button class="btn btn-sm status-tab active" data-status="Beklemede">
+            <i class="bi bi-hourglass-split me-1"></i>Beklemede <span class="badge bg-white text-dark ms-1" id="tabBeklemede">0</span>
+        </button>
+        <button class="btn btn-sm status-tab" data-status="Hazirlaniyor">
+            <i class="bi bi-gear me-1"></i>Hazirlaniyor <span class="badge bg-white text-dark ms-1" id="tabHazirlaniyor">0</span>
+        </button>
+        <button class="btn btn-sm status-tab" data-status="Kargoda">
+            <i class="bi bi-truck me-1"></i>Kargoda <span class="badge bg-white text-dark ms-1" id="tabKargoda">0</span>
+        </button>
+        <button class="btn btn-sm status-tab" data-status="Teslim Edildi">
+            <i class="bi bi-check-circle me-1"></i>Teslim Edildi <span class="badge bg-white text-dark ms-1" id="tabTeslim">0</span>
+        </button>
+        <button class="btn btn-sm status-tab" data-status="Iade">
+            <i class="bi bi-arrow-return-left me-1"></i>Iade <span class="badge bg-white text-dark ms-1" id="tabIade">0</span>
+        </button>
+        <button class="btn btn-sm status-tab" data-status="Iptal">
+            <i class="bi bi-x-circle me-1"></i>Iptal <span class="badge bg-white text-dark ms-1" id="tabIptal">0</span>
+        </button>
+        <button class="btn btn-sm status-tab" data-status="">
+            <i class="bi bi-grid me-1"></i>Tumu
+        </button>
     </div>
 
     <!-- Filtre Alani -->
@@ -92,15 +117,7 @@
                     <input type="text" id="searchInput" class="form-control form-control-sm"
                            placeholder="Siparis no, musteri adi, e-posta...">
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-bold">Karsilama Durumu</label>
-                    <select id="filterFulfillment" class="form-select form-select-sm">
-                        <option value="">Tumu</option>
-                        <option value="unfulfilled">Karsilanmadi</option>
-                        <option value="partial">Kismi</option>
-                        <option value="fulfilled">Karsilandi</option>
-                    </select>
-                </div>
+                <input type="hidden" id="filterStatus" value="Beklemede">
                 <div class="col-md-2">
                     <label class="form-label small fw-bold">Odeme Durumu</label>
                     <select id="filterFinancial" class="form-select form-select-sm">
@@ -151,26 +168,64 @@
         </div>
     </div>
 
+    <!-- Toplu Islem Cubugu -->
+    <div id="bulkActionBar" class="card border-0 mb-3" style="display:none;">
+        <div class="card-body py-2 px-3 d-flex align-items-center gap-3 flex-wrap" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:0.75rem;">
+            <div class="text-white fw-bold">
+                <i class="bi bi-check2-square me-1"></i>
+                <span id="bulkSelectedCount">0</span> siparis secildi
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="bi bi-arrow-repeat me-1"></i>Durum Degistir
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="window.shopifyOrders.bulkChangeStatus('Beklemede')"><i class="bi bi-hourglass-split me-2" style="color:#f59e0b"></i>Beklemede</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="window.shopifyOrders.bulkChangeStatus('Hazirlaniyor')"><i class="bi bi-gear me-2" style="color:#3b82f6"></i>Hazirlaniyor</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="window.shopifyOrders.bulkChangeStatus('Kargoda')"><i class="bi bi-truck me-2" style="color:#8b5cf6"></i>Kargoda</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="window.shopifyOrders.bulkChangeStatus('Teslim Edildi')"><i class="bi bi-check-circle me-2" style="color:#10b981"></i>Teslim Edildi</a></li>
+                    </ul>
+                </div>
+                <button class="btn btn-sm btn-success" onclick="window.shopifyOrders.bulkChangeStatus('Teslim Edildi')">
+                    <i class="bi bi-check-all me-1"></i>Teslim Edildi Yap
+                </button>
+            </div>
+            <div class="ms-auto d-flex gap-2">
+                <button class="btn btn-sm btn-outline-light" onclick="window.shopifyOrders.selectAllOrders()">
+                    <i class="bi bi-check2-all me-1"></i>Tumunu Sec
+                </button>
+                <button class="btn btn-sm btn-outline-light" onclick="window.shopifyOrders.clearSelection()">
+                    <i class="bi bi-x-lg me-1"></i>Secimi Kaldir
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Siparis Tablosu -->
     <div class="card border-0">
         <div class="card-body p-0">
-            <div class="table-responsive">
+            <div class="table-responsive" style="overflow:visible;">
                 <table class="table table-hover mb-0 orders-table">
                     <thead>
                         <tr>
-                            <th class="ps-3">Siparis</th>
+                            <th class="ps-3" style="width:40px;">
+                                <input type="checkbox" class="form-check-input" id="selectAllCheckbox" title="Tumunu sec/kaldir" style="cursor:pointer;">
+                            </th>
+                            <th>Siparis</th>
                             <th>Tarih</th>
                             <th>Musteri</th>
                             <th>Sehir</th>
                             <th class="text-center">Urun</th>
                             <th class="text-end">Tutar</th>
                             <th class="text-center">Odeme</th>
-                            <th class="text-center">Karsilama</th>
+                            <th class="text-center">Kargo</th>
+                            <th class="text-center">Durum</th>
                             <th class="text-center">Islemler</th>
                         </tr>
                     </thead>
                     <tbody id="ordersTable">
-                        <tr><td colspan="9" class="text-center text-muted py-5">
+                        <tr><td colspan="11" class="text-center text-muted py-5">
                             <div class="spinner-border text-primary mb-2" role="status"></div>
                             <br>Siparisler yukleniyor...
                         </td></tr>
@@ -228,14 +283,13 @@
                     <div class="mb-3">
                         <label class="form-label fw-bold">Kargo Firmasi</label>
                         <select id="fulfillTrackingCompany" class="form-select">
-                            <option value="">Seciniz...</option>
+                            <option value="DHL eCommerce" selected>DHL eCommerce</option>
                             <option value="Yurtici Kargo">Yurtici Kargo</option>
                             <option value="Aras Kargo">Aras Kargo</option>
-                            <option value="MNG Kargo">MNG Kargo</option>
                             <option value="Surat Kargo">Surat Kargo</option>
                             <option value="PTT Kargo">PTT Kargo</option>
                             <option value="UPS">UPS</option>
-                            <option value="DHL">DHL</option>
+                            <option value="DHL Express">DHL Express</option>
                             <option value="FedEx">FedEx</option>
                             <option value="Trendyol Express">Trendyol Express</option>
                             <option value="Hepsijet">Hepsijet</option>
@@ -332,40 +386,465 @@
         </div>
     </div>
 
+    <!-- Kargo Takip Modal -->
+    <div class="modal fade" id="kargoModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-purple text-white" style="background:#8b5cf6;">
+                    <h5 class="modal-title"><i class="bi bi-truck me-2"></i>Kargoya Ver</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="kargoOrderId">
+                    <div class="alert alert-info py-2 mb-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Kargo takip numarasini girin. Shopify'da fulfillment olusturulacak ve siparis "Kargoda" olarak guncellenecektir.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Kargo Takip Numarasi <span class="text-danger">*</span></label>
+                        <input type="text" id="kargoTrackingNumber" class="form-control" placeholder="ornegin: 1234567890">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Kargo Firmasi</label>
+                        <select id="kargoTrackingCompany" class="form-select">
+                            <option value="DHL eCommerce" selected>DHL eCommerce</option>
+                            <option value="Yurtici Kargo">Yurtici Kargo</option>
+                            <option value="Aras Kargo">Aras Kargo</option>
+                            <option value="Surat Kargo">Surat Kargo</option>
+                            <option value="PTT Kargo">PTT Kargo</option>
+                            <option value="UPS">UPS</option>
+                            <option value="DHL Express">DHL Express</option>
+                            <option value="FedEx">FedEx</option>
+                            <option value="Hepsijet">Hepsijet</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgec</button>
+                    <button type="button" id="btnKargoSubmit" class="btn btn-sm" style="background:#8b5cf6;color:#fff;">
+                        <i class="bi bi-truck me-1"></i> Kargoya Ver
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ozel Dialog Overlay -->
+    <div id="customDialogOverlay" class="custom-dialog-overlay" style="display:none;">
+        <div class="custom-dialog" id="customDialog">
+            <div class="custom-dialog-icon" id="customDialogIcon"></div>
+            <h5 class="custom-dialog-title" id="customDialogTitle"></h5>
+            <p class="custom-dialog-message" id="customDialogMessage"></p>
+            <div class="custom-dialog-buttons" id="customDialogButtons"></div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
     {% endif %}
 </div>
 
 <style>
-    .stats-card { border-radius: 0.75rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: transform 0.2s; }
-    .stats-card:hover { transform: translateY(-2px); }
+    /* ══════════════════════════════════════════════════════
+       ANIMASYONLAR
+       ══════════════════════════════════════════════════════ */
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeInLeft { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes fadeInRight { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes bounceIn { 0% { opacity:0; transform:scale(0.3); } 50% { opacity:1; transform:scale(1.05); } 70% { transform:scale(0.95); } 100% { transform:scale(1); } }
+    @keyframes pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.05); } }
+    @keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
+    @keyframes ripple { 0% { transform:scale(0); opacity:0.5; } 100% { transform:scale(4); opacity:0; } }
+    @keyframes glow { 0%,100% { box-shadow:0 0 5px rgba(118,75,162,0.3); } 50% { box-shadow:0 0 20px rgba(118,75,162,0.6); } }
+    @keyframes toastIn { from { transform:translateX(120%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+    @keyframes toastOut { from { transform:translateX(0); opacity:1; } to { transform:translateX(120%); opacity:0; } }
+    @keyframes dialogOverlayIn { from { opacity:0; } to { opacity:1; } }
+    @keyframes dialogIn { from { opacity:0; transform:scale(0.7) translateY(-20px); } to { opacity:1; transform:scale(1) translateY(0); } }
+    @keyframes dialogOut { to { opacity:0; transform:scale(0.7) translateY(-20px); } }
+    @keyframes iconBounce { 0% { transform:scale(0) rotate(-45deg); } 50% { transform:scale(1.2) rotate(10deg); } 100% { transform:scale(1) rotate(0deg); } }
+    @keyframes checkDraw { to { stroke-dashoffset:0; } }
+    @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
+    @keyframes countUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes rowAppear { from { opacity:0; transform:translateX(-15px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes badgePop { 0% { transform:scale(0); } 60% { transform:scale(1.3); } 100% { transform:scale(1); } }
+    @keyframes tabSwitch { 0% { transform:scaleX(0); } 100% { transform:scaleX(1); } }
+
+    /* ══════════════════════════════════════════════════════
+       SAYFA ELEMANLARI ANIMASYONLARI
+       ══════════════════════════════════════════════════════ */
+    .container-fluid > .d-flex:first-child { animation: fadeInDown 0.6s cubic-bezier(0.22,1,0.36,1); }
+    .container-fluid > .d-flex:first-child h1 { animation: fadeInLeft 0.7s cubic-bezier(0.22,1,0.36,1) 0.1s both; }
+    .container-fluid > .d-flex:first-child p { animation: fadeInLeft 0.7s cubic-bezier(0.22,1,0.36,1) 0.2s both; }
+
+    #statsRow .col-6 { animation: fadeInUp 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+    #statsRow .col-6:nth-child(1) { animation-delay: 0.1s; }
+    #statsRow .col-6:nth-child(2) { animation-delay: 0.15s; }
+    #statsRow .col-6:nth-child(3) { animation-delay: 0.2s; }
+    #statsRow .col-6:nth-child(4) { animation-delay: 0.25s; }
+    #statsRow .col-6:nth-child(5) { animation-delay: 0.3s; }
+    #statsRow .col-6:nth-child(6) { animation-delay: 0.35s; }
+
+    .stats-card { border-radius: 0.75rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: all 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .stats-card:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
+    .stats-card h3 { transition: all 0.3s; }
+    .stats-card:hover h3 { transform: scale(1.1); }
+    .stats-card i { transition: all 0.4s cubic-bezier(0.22,1,0.36,1); }
+    .stats-card:hover i { transform: scale(1.3) rotate(-5deg); }
+
+    #statusTabs { animation: fadeInUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.3s both; }
+    .status-tab {
+        background: #f0f0f0; color: #555; border: 1px solid #ddd;
+        transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
+        position: relative; overflow: hidden;
+    }
+    .status-tab::before {
+        content: ''; position: absolute; top: 50%; left: 50%; width: 10px; height: 10px;
+        background: rgba(255,255,255,0.3); border-radius: 50%;
+        transform: translate(-50%,-50%) scale(0); transition: transform 0.5s;
+    }
+    .status-tab:hover { background: #e0e0e0; transform: translateY(-2px); }
+    .status-tab:active::before { transform: translate(-50%,-50%) scale(10); transition: transform 0s; }
+    .status-tab.active { animation: badgePop 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .status-tab.active[data-status="Beklemede"] { background: #f59e0b; color: #fff; border-color: #f59e0b; box-shadow: 0 4px 15px rgba(245,158,11,0.4); }
+    .status-tab.active[data-status="Hazirlaniyor"] { background: #3b82f6; color: #fff; border-color: #3b82f6; box-shadow: 0 4px 15px rgba(59,130,246,0.4); }
+    .status-tab.active[data-status="Kargoda"] { background: #8b5cf6; color: #fff; border-color: #8b5cf6; box-shadow: 0 4px 15px rgba(139,92,246,0.4); }
+    .status-tab.active[data-status="Teslim Edildi"] { background: #10b981; color: #fff; border-color: #10b981; box-shadow: 0 4px 15px rgba(16,185,129,0.4); }
+    .status-tab.active[data-status="Iade"] { background: #f97316; color: #fff; border-color: #f97316; box-shadow: 0 4px 15px rgba(249,115,22,0.4); }
+    .status-tab.active[data-status="Iptal"] { background: #ef4444; color: #fff; border-color: #ef4444; box-shadow: 0 4px 15px rgba(239,68,68,0.4); }
+    .status-tab.active[data-status=""] { background: #333; color: #fff; border-color: #333; box-shadow: 0 4px 15px rgba(51,51,51,0.4); }
+    .status-tab .badge { transition: all 0.3s; }
+    .status-tab:hover .badge { transform: scale(1.15); }
+
+    /* ══════════════════════════════════════════════════════
+       TABLO
+       ══════════════════════════════════════════════════════ */
     .orders-table th { font-weight: 600; font-size: 0.8rem; text-transform: uppercase; color: #6c757d; border-bottom: 2px solid #dee2e6; white-space: nowrap; }
     .orders-table td { vertical-align: middle; font-size: 0.88rem; }
-    .orders-table tr { cursor: pointer; transition: background-color 0.15s; }
-    .orders-table tbody tr:hover { background-color: rgba(183,110,121,0.06) !important; }
-    .badge-financial, .badge-fulfillment { font-size: 0.75rem; padding: 0.3em 0.65em; border-radius: 0.5rem; font-weight: 500; }
-    .card { border-radius: 0.75rem; }
-    .order-detail-section { margin-bottom: 1.25rem; }
+    .orders-table tr { cursor: pointer; transition: all 0.25s cubic-bezier(0.22,1,0.36,1); }
+    .orders-table tbody tr { animation: rowAppear 0.4s cubic-bezier(0.22,1,0.36,1) both; }
+    .orders-table tbody tr:hover { background-color: rgba(183,110,121,0.06) !important; transform: scale(1.005); }
+    .badge-financial, .badge-fulfillment { font-size: 0.75rem; padding: 0.3em 0.65em; border-radius: 0.5rem; font-weight: 500; transition: all 0.2s; }
+    .badge-financial:hover, .badge-fulfillment:hover { transform: scale(1.1); }
+    .card { border-radius: 0.75rem; transition: all 0.3s; }
+    .order-detail-section { margin-bottom: 1.25rem; animation: fadeInUp 0.4s both; }
     .order-detail-section h6 { font-weight: 700; color: var(--color-primary); margin-bottom: 0.75rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
     .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
     .detail-label { font-size: 0.8rem; color: #6c757d; }
     .detail-value { font-size: 0.9rem; font-weight: 500; }
-    .line-item-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0; border-bottom: 1px solid #f0f0f0; }
+    .line-item-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0; border-bottom: 1px solid #f0f0f0; transition: all 0.2s; }
+    .line-item-row:hover { background: rgba(118,75,162,0.04); padding-left: 8px; }
     .line-item-row:last-child { border-bottom: none; }
-    .line-item-img { width: 40px; height: 40px; border-radius: 0.5rem; object-fit: cover; background: #f5f5f5; }
+    .line-item-img { width: 40px; height: 40px; border-radius: 0.5rem; object-fit: cover; background: #f5f5f5; transition: transform 0.3s; }
+    .line-item-img:hover { transform: scale(1.15); }
+    .line-item-img-lg { width: 60px; height: 60px; border-radius: 0.5rem; object-fit: cover; background: #f5f5f5; transition: transform 0.3s; }
+    .line-item-img-lg:hover { transform: scale(1.2) rotate(2deg); }
     .actions-dropdown .dropdown-toggle::after { display: none; }
+    .orders-table .dropdown-menu { position: fixed !important; animation: scaleIn 0.2s cubic-bezier(0.22,1,0.36,1); }
+    .dropdown-menu { animation: scaleIn 0.2s cubic-bezier(0.22,1,0.36,1); transform-origin: top center; }
+    .dropdown-item { transition: all 0.15s; }
+    .dropdown-item:hover { transform: translateX(4px); }
 
-    /* Dark mode */
+    /* Status badges */
+    .status-beklemede { background-color: #f59e0b; color: #fff; }
+    .status-hazirlaniyor { background-color: #3b82f6; color: #fff; }
+    .status-kargoda { background-color: #8b5cf6; color: #fff; }
+    .status-teslim-edildi { background-color: #10b981; color: #fff; }
+    .status-iptal { background-color: #ef4444; color: #fff; }
+    .status-iade { background-color: #f97316; color: #fff; }
+
+    /* ══════════════════════════════════════════════════════
+       BUTONLAR
+       ══════════════════════════════════════════════════════ */
+    .btn { position: relative; overflow: hidden; transition: all 0.25s cubic-bezier(0.22,1,0.36,1); }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0) scale(0.97); }
+    .btn::after {
+        content: ''; position: absolute; top: 50%; left: 50%; width: 5px; height: 5px;
+        background: rgba(255,255,255,0.4); border-radius: 50%; opacity: 0;
+        transform: translate(-50%,-50%) scale(0);
+    }
+    .btn:active::after { animation: ripple 0.5s ease-out; }
+
+    /* ══════════════════════════════════════════════════════
+       MODALLER
+       ══════════════════════════════════════════════════════ */
+    .modal.show .modal-dialog { animation: dialogIn 0.35s cubic-bezier(0.22,1,0.36,1); }
+    .modal .modal-content { border-radius: 1rem; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.2); }
+    .modal-header { transition: all 0.3s; }
+    .modal-body { animation: fadeInUp 0.3s 0.1s both; }
+
+    /* ══════════════════════════════════════════════════════
+       OZEL DIALOG
+       ══════════════════════════════════════════════════════ */
+    .custom-dialog-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999;
+        background: rgba(0,0,0,0.5); backdrop-filter: blur(6px);
+        display: flex; align-items: center; justify-content: center;
+        animation: dialogOverlayIn 0.25s ease-out;
+    }
+    .custom-dialog-overlay.closing { animation: dialogOverlayIn 0.2s ease-out reverse forwards; }
+    .custom-dialog {
+        background: #fff; border-radius: 1.25rem; padding: 2rem 2.5rem; text-align: center;
+        max-width: 420px; width: 90%; box-shadow: 0 30px 80px rgba(0,0,0,0.25);
+        animation: dialogIn 0.4s cubic-bezier(0.22,1,0.36,1);
+        position: relative; overflow: hidden;
+    }
+    .custom-dialog-overlay.closing .custom-dialog { animation: dialogOut 0.25s ease-in forwards; }
+    .custom-dialog::before {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+        background: linear-gradient(90deg, #667eea, #764ba2, #f59e0b, #10b981);
+        background-size: 300% 100%; animation: shimmer 3s linear infinite;
+    }
+    .custom-dialog-icon {
+        width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 1rem;
+        display: flex; align-items: center; justify-content: center; font-size: 2rem;
+        animation: iconBounce 0.6s cubic-bezier(0.22,1,0.36,1) 0.2s both;
+    }
+    .custom-dialog-icon.icon-warning { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #f59e0b; border: 3px solid #fbbf24; }
+    .custom-dialog-icon.icon-danger { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #ef4444; border: 3px solid #f87171; }
+    .custom-dialog-icon.icon-success { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #10b981; border: 3px solid #34d399; }
+    .custom-dialog-icon.icon-info { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #3b82f6; border: 3px solid #60a5fa; }
+    .custom-dialog-title {
+        font-weight: 700; margin-bottom: 0.5rem; font-size: 1.15rem;
+        animation: fadeInUp 0.4s cubic-bezier(0.22,1,0.36,1) 0.15s both;
+    }
+    .custom-dialog-message {
+        color: #6b7280; margin-bottom: 1.5rem; font-size: 0.92rem; line-height: 1.5;
+        animation: fadeInUp 0.4s cubic-bezier(0.22,1,0.36,1) 0.2s both;
+    }
+    .custom-dialog-buttons {
+        display: flex; gap: 0.75rem; justify-content: center;
+        animation: fadeInUp 0.4s cubic-bezier(0.22,1,0.36,1) 0.25s both;
+    }
+    .custom-dialog-buttons .btn { min-width: 110px; font-weight: 600; border-radius: 0.75rem; padding: 0.6rem 1.5rem; }
+    .dialog-btn-cancel {
+        background: #f3f4f6; color: #4b5563; border: 2px solid #e5e7eb;
+    }
+    .dialog-btn-cancel:hover { background: #e5e7eb; color: #374151; border-color: #d1d5db; }
+    .dialog-btn-confirm-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; border: none; }
+    .dialog-btn-confirm-warning:hover { background: linear-gradient(135deg, #d97706, #b45309); color: #fff; box-shadow: 0 4px 15px rgba(245,158,11,0.4); }
+    .dialog-btn-confirm-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; border: none; }
+    .dialog-btn-confirm-danger:hover { background: linear-gradient(135deg, #dc2626, #b91c1c); color: #fff; box-shadow: 0 4px 15px rgba(239,68,68,0.4); }
+    .dialog-btn-confirm-success { background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; }
+    .dialog-btn-confirm-success:hover { background: linear-gradient(135deg, #059669, #047857); color: #fff; box-shadow: 0 4px 15px rgba(16,185,129,0.4); }
+    .dialog-btn-confirm-info { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: none; }
+    .dialog-btn-confirm-info:hover { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; box-shadow: 0 4px 15px rgba(59,130,246,0.4); }
+
+    /* ══════════════════════════════════════════════════════
+       TOAST BILDIRIMLERI
+       ══════════════════════════════════════════════════════ */
+    .toast-container {
+        position: fixed; top: 20px; right: 20px; z-index: 10000;
+        display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+    }
+    .custom-toast {
+        pointer-events: all; display: flex; align-items: center; gap: 12px;
+        padding: 14px 20px; border-radius: 1rem; min-width: 320px; max-width: 450px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15); animation: toastIn 0.4s cubic-bezier(0.22,1,0.36,1);
+        backdrop-filter: blur(10px); position: relative; overflow: hidden;
+    }
+    .custom-toast.removing { animation: toastOut 0.3s ease-in forwards; }
+    .custom-toast::before {
+        content: ''; position: absolute; bottom: 0; left: 0; height: 3px;
+        background: rgba(255,255,255,0.5); animation: toastProgress var(--toast-duration, 3s) linear forwards;
+        border-radius: 0 0 1rem 1rem;
+    }
+    @keyframes toastProgress { from { width: 100%; } to { width: 0%; } }
+    .custom-toast.toast-success { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+    .custom-toast.toast-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; }
+    .custom-toast.toast-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+    .custom-toast.toast-info { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
+    .toast-icon { font-size: 1.4rem; animation: bounceIn 0.5s 0.2s both; flex-shrink: 0; }
+    .toast-body { flex: 1; }
+    .toast-title { font-weight: 700; font-size: 0.88rem; margin-bottom: 2px; }
+    .toast-message { font-size: 0.82rem; opacity: 0.9; }
+    .toast-close { background: none; border: none; color: #fff; opacity: 0.7; cursor: pointer; font-size: 1.1rem; padding: 0 4px; transition: all 0.2s; flex-shrink: 0; }
+    .toast-close:hover { opacity: 1; transform: scale(1.2) rotate(90deg); }
+
+    /* ══════════════════════════════════════════════════════
+       FILTRE ALANI
+       ══════════════════════════════════════════════════════ */
+    .card.mb-4.border-0 { animation: fadeInUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.35s both; }
+    .form-control, .form-select { transition: all 0.25s cubic-bezier(0.22,1,0.36,1); border-radius: 0.5rem; }
+    .form-control:focus, .form-select:focus { transform: scale(1.02); box-shadow: 0 0 0 3px rgba(118,75,162,0.2); border-color: #764ba2; }
+
+    /* ══════════════════════════════════════════════════════
+       PAGINATION
+       ══════════════════════════════════════════════════════ */
+    .card-footer { animation: fadeInUp 0.4s 0.3s both; }
+
+    /* ══════════════════════════════════════════════════════
+       DARK MODE
+       ══════════════════════════════════════════════════════ */
     html.gs-dark .orders-table th { color: #999; border-bottom-color: #333; }
     html.gs-dark .orders-table tbody tr:hover { background-color: rgba(183,110,121,0.12) !important; }
     html.gs-dark .order-detail-section h6 { border-bottom-color: #333; }
     html.gs-dark .line-item-row { border-bottom-color: #333; }
     html.gs-dark .stats-card { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    html.gs-dark .custom-dialog { background: #1f2937; color: #f3f4f6; }
+    html.gs-dark .custom-dialog-message { color: #9ca3af; }
+    html.gs-dark .dialog-btn-cancel { background: #374151; color: #d1d5db; border-color: #4b5563; }
+    html.gs-dark .dialog-btn-cancel:hover { background: #4b5563; color: #f3f4f6; }
+
+    /* ══════════════════════════════════════════════════════
+       BULK SELECTION
+       ══════════════════════════════════════════════════════ */
+    .order-checkbox { transition: all 0.2s; cursor: pointer; }
+    .order-checkbox:checked { accent-color: #764ba2; animation: badgePop 0.3s; }
+    .orders-table tbody tr:has(.order-checkbox:checked) { background-color: rgba(118,75,162,0.08) !important; }
+    html.gs-dark .orders-table tbody tr:has(.order-checkbox:checked) { background-color: rgba(118,75,162,0.15) !important; }
+    #bulkActionBar { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+
+    /* ══════════════════════════════════════════════════════
+       LOADING SHIMMER
+       ══════════════════════════════════════════════════════ */
+    .spinner-border { animation: spin 0.8s linear infinite, pulse 2s infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ══════════════════════════════════════════════════════
+       SCROLLBAR
+       ══════════════════════════════════════════════════════ */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: linear-gradient(135deg, #764ba2, #667eea); }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const configured = {{ 'true' if configured else 'false' }};
     if (!configured) return;
+
+    // ══════════════════════════════════════════════════════
+    // OZEL TOAST SISTEMI
+    // ══════════════════════════════════════════════════════
+    const TOAST_ICONS = {
+        success: '<i class="bi bi-check-circle-fill"></i>',
+        danger: '<i class="bi bi-exclamation-triangle-fill"></i>',
+        warning: '<i class="bi bi-exclamation-circle-fill"></i>',
+        info: '<i class="bi bi-info-circle-fill"></i>',
+    };
+    const TOAST_TITLES = {
+        success: 'Basarili',
+        danger: 'Hata',
+        warning: 'Uyari',
+        info: 'Bilgi',
+    };
+
+    function showToast(message, type = 'info', duration = 3000) {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `custom-toast toast-${type}`;
+        toast.style.setProperty('--toast-duration', duration + 'ms');
+        toast.innerHTML = `
+            <div class="toast-icon">${TOAST_ICONS[type] || TOAST_ICONS.info}</div>
+            <div class="toast-body">
+                <div class="toast-title">${TOAST_TITLES[type] || 'Bilgi'}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+            <button class="toast-close" onclick="this.parentElement.classList.add('removing'); setTimeout(() => this.parentElement.remove(), 300);">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        `;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.add('removing');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
+
+    // ══════════════════════════════════════════════════════
+    // OZEL DIALOG SISTEMI
+    // ══════════════════════════════════════════════════════
+    function showDialog({ title, message, type = 'warning', confirmText = 'Onayla', cancelText = 'Vazgec', showCancel = true, icon }) {
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('customDialogOverlay');
+            const iconEl = document.getElementById('customDialogIcon');
+            const titleEl = document.getElementById('customDialogTitle');
+            const messageEl = document.getElementById('customDialogMessage');
+            const buttonsEl = document.getElementById('customDialogButtons');
+
+            const iconMap = {
+                warning: '<i class="bi bi-exclamation-triangle-fill"></i>',
+                danger: '<i class="bi bi-x-circle-fill"></i>',
+                success: '<i class="bi bi-check-circle-fill"></i>',
+                info: '<i class="bi bi-info-circle-fill"></i>',
+            };
+
+            iconEl.className = 'custom-dialog-icon icon-' + type;
+            iconEl.innerHTML = icon || iconMap[type] || iconMap.info;
+            titleEl.textContent = title;
+            messageEl.innerHTML = message;
+
+            let html = '';
+            if (showCancel) {
+                html += `<button class="btn dialog-btn-cancel" id="dialogCancelBtn">${cancelText}</button>`;
+            }
+            html += `<button class="btn dialog-btn-confirm-${type}" id="dialogConfirmBtn">${confirmText}</button>`;
+            buttonsEl.innerHTML = html;
+
+            overlay.style.display = 'flex';
+            overlay.classList.remove('closing');
+
+            function closeDialog(result) {
+                overlay.classList.add('closing');
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    overlay.classList.remove('closing');
+                }, 250);
+                resolve(result);
+            }
+
+            document.getElementById('dialogConfirmBtn').onclick = () => closeDialog(true);
+            if (showCancel) {
+                document.getElementById('dialogCancelBtn').onclick = () => closeDialog(false);
+            }
+            overlay.onclick = (e) => { if (e.target === overlay) closeDialog(false); };
+
+            // ESC ile kapat
+            const escHandler = (e) => { if (e.key === 'Escape') { closeDialog(false); document.removeEventListener('keydown', escHandler); } };
+            document.addEventListener('keydown', escHandler);
+
+            // Confirm butonuna focus
+            setTimeout(() => document.getElementById('dialogConfirmBtn').focus(), 100);
+        });
+    }
+
+    function showAlert({ title, message, type = 'info', buttonText = 'Tamam' }) {
+        return showDialog({ title, message, type, confirmText: buttonText, showCancel: false });
+    }
+
+    // ══════════════════════════════════════════════════════
+    // ANIMASYONLU SAYAC
+    // ══════════════════════════════════════════════════════
+    function animateValue(el, start, end, duration, formatter) {
+        const startTime = performance.now();
+        const diff = end - start;
+        function step(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+            const current = start + diff * eased;
+            el.textContent = formatter ? formatter(current) : Math.round(current);
+            el.style.animation = 'none';
+            el.offsetHeight; // reflow
+            el.style.animation = 'countUp 0.3s both';
+            if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    }
+
+    function animateCounter(elementId, targetValue) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        const current = parseInt(el.textContent) || 0;
+        animateValue(el, current, targetValue, 600);
+    }
 
     let allOrders = [];
     let cursorStack = [null]; // pagination cursor stack
@@ -401,6 +880,55 @@ document.addEventListener('DOMContentLoaded', function() {
         return `<span class="badge badge-fulfillment ${cls}">${label}</span>`;
     }
 
+    const ORDER_STATUSES = ['Beklemede', 'Hazirlaniyor', 'Kargoda', 'Teslim Edildi'];
+    const STATUS_CONFIG = {
+        'Beklemede':     { cls: 'status-beklemede',     icon: 'hourglass-split', color: '#f59e0b' },
+        'Hazirlaniyor':  { cls: 'status-hazirlaniyor',  icon: 'gear',            color: '#3b82f6' },
+        'Kargoda':       { cls: 'status-kargoda',       icon: 'truck',           color: '#8b5cf6' },
+        'Teslim Edildi': { cls: 'status-teslim-edildi', icon: 'check-circle',    color: '#10b981' },
+        'Iade':          { cls: 'status-iade',          icon: 'arrow-return-left', color: '#f97316' },
+        'Iptal':         { cls: 'status-iptal',         icon: 'x-circle',        color: '#ef4444' },
+    };
+
+    function getOrderStatus(tags, cancelled, financialStatus) {
+        if (cancelled) return 'Iptal';
+        // Tam iade veya kismi iade
+        if (financialStatus === 'REFUNDED' || financialStatus === 'PARTIALLY_REFUNDED') return 'Iade';
+        if (!tags || !tags.length) return 'Beklemede';
+        for (const s of ORDER_STATUSES) {
+            if (tags.includes(s)) return s;
+        }
+        return 'Beklemede';
+    }
+
+    function orderStatusBadge(tags, cancelled, financialStatus) {
+        const status = getOrderStatus(tags, cancelled, financialStatus);
+        const cfg = STATUS_CONFIG[status];
+        let label = status;
+        if (status === 'Iade' && financialStatus === 'PARTIALLY_REFUNDED') label = 'Kismi Iade';
+        return `<span class="badge ${cfg.cls}" style="font-size:0.75rem">${label}</span>`;
+    }
+
+    function getCargoInfo(order) {
+        const fulfillments = order.fulfillments || [];
+        if (!fulfillments.length) return null;
+        const last = fulfillments[fulfillments.length - 1];
+        const ti = (last.trackingInfo && last.trackingInfo.length) ? last.trackingInfo[0] : {};
+        return {
+            company: ti.company || '',
+            number: ti.number || '',
+            url: ti.url || '',
+            status: last.status || '',
+            date: last.createdAt || ''
+        };
+    }
+
+    function isCOD(order) {
+        const gateways = order.paymentGatewayNames || [];
+        const codKeywords = ['cash on delivery', 'kapida', 'cod', 'manual'];
+        return gateways.some(gw => codKeywords.some(kw => gw.toLowerCase().includes(kw)));
+    }
+
     function formatDate(dateStr) {
         if (!dateStr) return '-';
         const d = new Date(dateStr);
@@ -421,9 +949,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return gid.split('/').pop();
     }
 
-    function getCustomerName(customer) {
-        if (!customer) return 'Misafir';
-        return ((customer.firstName || '') + ' ' + (customer.lastName || '')).trim() || customer.email || 'Misafir';
+    function getCustomerName(customer, shippingAddress) {
+        const fromCustomer = customer ? ((customer.firstName || '') + ' ' + (customer.lastName || '')).trim() : '';
+        if (fromCustomer) return fromCustomer;
+        if (shippingAddress && shippingAddress.name) return shippingAddress.name;
+        if (customer && customer.email) return customer.email;
+        return 'Misafir';
     }
 
     function showStatus(text, type, showSpinner) {
@@ -434,22 +965,59 @@ document.addEventListener('DOMContentLoaded', function() {
         alert.className = 'alert alert-' + type + ' py-2';
         document.getElementById('statusText').textContent = text;
         spinner.style.display = showSpinner ? 'inline-block' : 'none';
+        // Toast olarak da goster (spinner degilse)
+        if (!showSpinner) {
+            const toastType = type === 'success' ? 'success' : type === 'danger' ? 'danger' : type === 'warning' ? 'warning' : 'info';
+            showToast(text, toastType, 3500);
+        }
     }
 
     function hideStatus() {
         document.getElementById('statusArea').style.display = 'none';
     }
 
+    function switchToTab(status) {
+        document.querySelectorAll('.status-tab').forEach(t => t.classList.remove('active'));
+        const tab = document.querySelector('.status-tab[data-status="' + status + '"]');
+        if (tab) tab.classList.add('active');
+        document.getElementById('filterStatus').value = status;
+        currentCursorIndex = 0;
+        cursorStack = [null];
+        loadOrders(null);
+        loadGlobalStats();
+    }
+
     // ── Query Builder ──
     function buildQuery() {
         const parts = [];
         const search = document.getElementById('searchInput').value.trim();
-        const fulfillment = document.getElementById('filterFulfillment').value;
+        const statusFilter = document.getElementById('filterStatus').value;
         const financial = document.getElementById('filterFinancial').value;
         const dateFilter = document.getElementById('filterDate').value;
 
         if (search) parts.push(search);
-        if (fulfillment) parts.push('fulfillment_status:' + fulfillment);
+        if (statusFilter === 'Iptal') {
+            parts.push('status:cancelled');
+            parts.push('-financial_status:refunded');
+            parts.push('-financial_status:partially_refunded');
+        } else if (statusFilter === 'Iade') {
+            parts.push('financial_status:refunded OR financial_status:partially_refunded');
+            parts.push('-status:cancelled');
+        } else if (statusFilter === 'Beklemede') {
+            parts.push('-tag:Hazirlaniyor');
+            parts.push('-tag:Kargoda');
+            parts.push('-tag:"Teslim Edildi"');
+            parts.push('-status:cancelled');
+            parts.push('-financial_status:refunded');
+            parts.push('-financial_status:partially_refunded');
+        } else if (statusFilter) {
+            // Bosluk iceren tag'ler tirnak icinde olmali
+            const tagVal = statusFilter.includes(' ') ? '"' + statusFilter + '"' : statusFilter;
+            parts.push('tag:' + tagVal);
+            parts.push('-status:cancelled');
+            parts.push('-financial_status:refunded');
+            parts.push('-financial_status:partially_refunded');
+        }
         if (financial) parts.push('financial_status:' + financial);
 
         if (dateFilter) {
@@ -483,19 +1051,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (afterCursor) params.set('after', afterCursor);
 
         document.getElementById('ordersTable').innerHTML =
-            '<tr><td colspan="9" class="text-center text-muted py-5"><div class="spinner-border text-primary mb-2" role="status"></div><br>Yukleniyor...</td></tr>';
+            '<tr><td colspan="11" class="text-center text-muted py-5"><div class="spinner-border text-primary mb-2" role="status"></div><br>Yukleniyor...</td></tr>';
 
         fetch('/shopify/api/orders?' + params)
             .then(r => r.json())
             .then(data => {
                 if (!data.success) {
                     document.getElementById('ordersTable').innerHTML =
-                        `<tr><td colspan="9" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-2"></i>${data.error || 'Bilinmeyen hata'}</td></tr>`;
+                        `<tr><td colspan="11" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-2"></i>${data.error || 'Bilinmeyen hata'}</td></tr>`;
                     return;
                 }
                 allOrders = data.orders || [];
                 renderOrders(allOrders);
-                updateStats(allOrders);
+                updateShowingStats(allOrders);
 
                 // Pagination
                 const pageInfo = data.pageInfo || {};
@@ -514,30 +1082,53 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(err => {
                 document.getElementById('ordersTable').innerHTML =
-                    `<tr><td colspan="9" class="text-center text-danger py-4">Baglanti hatasi: ${err.message}</td></tr>`;
+                    `<tr><td colspan="11" class="text-center text-danger py-4">Baglanti hatasi: ${err.message}</td></tr>`;
             });
     }
 
     function renderOrders(orders) {
         const tbody = document.getElementById('ordersTable');
         if (!orders.length) {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-5"><i class="bi bi-inbox fs-1 d-block mb-2"></i>Siparis bulunamadi</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-5"><i class="bi bi-inbox fs-1 d-block mb-2"></i>Siparis bulunamadi</td></tr>';
             return;
         }
 
-        tbody.innerHTML = orders.map(order => {
+        tbody.innerHTML = orders.map((order, idx) => {
             const orderId = extractId(order.id);
-            const customer = getCustomerName(order.customer);
+            const customer = getCustomerName(order.customer, order.shippingAddress);
             const city = order.shippingAddress ? order.shippingAddress.city || '' : '';
             const itemCount = (order.line_items || []).reduce((sum, li) => sum + (li.quantity || 0), 0);
             const total = formatMoney(order.currentTotalPriceSet);
             const isCancelled = !!order.cancelledAt;
+            const codFlag = isCOD(order);
+            const currentStatus = getOrderStatus(order.tags, isCancelled, order.displayFinancialStatus);
+            const cargo = getCargoInfo(order);
+
+            // Statu degistirme dropdown HTML
+            let statusOptions = '';
+            ORDER_STATUSES.forEach(s => {
+                const cfg = STATUS_CONFIG[s];
+                const active = s === currentStatus ? 'active fw-bold' : '';
+                statusOptions += `<li><a class="dropdown-item ${active}" href="#" onclick="window.shopifyOrders.changeStatus('${orderId}', '${s}')"><i class="bi bi-${cfg.icon} me-2" style="color:${cfg.color}"></i>${s}</a></li>`;
+            });
 
             return `
-                <tr data-order-id="${orderId}" onclick="window.shopifyOrders.showDetail('${orderId}')" class="${isCancelled ? 'text-decoration-line-through opacity-50' : ''}">
-                    <td class="ps-3">
+                <tr data-order-id="${orderId}" onclick="window.shopifyOrders.showDetail('${orderId}')" class="${isCancelled ? 'opacity-75' : ''}" style="animation-delay:${idx * 0.03}s">
+                    <td class="ps-3" onclick="event.stopPropagation()">
+                        <input type="checkbox" class="form-check-input order-checkbox" value="${orderId}" data-order-name="${order.name || '#' + orderId}" onchange="window.shopifyOrders.updateBulkBar()" style="cursor:pointer;">
+                    </td>
+                    <td>
                         <div class="fw-bold text-primary">${order.name || '#' + orderId}</div>
-                        ${order.tags && order.tags.length ? '<div class="mt-1">' + order.tags.slice(0, 3).map(t => '<span class="badge bg-light text-dark border me-1" style="font-size:0.7rem">' + t + '</span>').join('') + '</div>' : ''}
+                        ${(() => {
+                            const firstLi = (order.line_items || [])[0];
+                            const firstBarcode = firstLi?.resolved_barcode || firstLi?.variant?.barcode || '';
+                            const firstSku = firstLi?.sku || '';
+                            let info = '';
+                            if (firstSku) info += '<small class="text-muted">SKU: ' + firstSku + '</small>';
+                            if (firstBarcode && firstBarcode !== firstSku) info += '<br><small class="text-muted">BC: ' + firstBarcode + '</small>';
+                            return info;
+                        })()}
+                        ${codFlag ? '<br><span class="badge bg-danger mt-1" style="font-size:0.65rem">KAPIDA ODEME</span>' : ''}
                     </td>
                     <td><small>${formatDate(order.createdAt)}</small></td>
                     <td>
@@ -547,8 +1138,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td><small>${city}</small></td>
                     <td class="text-center"><span class="badge bg-light text-dark border">${itemCount}</span></td>
                     <td class="text-end fw-bold">${total}</td>
-                    <td class="text-center">${financialBadge(order.displayFinancialStatus)}</td>
-                    <td class="text-center">${fulfillmentBadge(order.displayFulfillmentStatus)}</td>
+                    <td class="text-center" onclick="event.stopPropagation()">
+                        ${financialBadge(order.displayFinancialStatus)}
+                        ${order.displayFinancialStatus === 'PENDING' && !codFlag ? `<br><button class="btn btn-outline-success btn-sm mt-1" style="font-size:0.65rem;padding:1px 6px;" onclick="window.shopifyOrders.markPaid('${orderId}')">Onayla</button>` : ''}
+                    </td>
+                    <td class="text-center" style="font-size:0.78rem;">
+                        ${cargo ? `
+                            <div class="fw-bold">${cargo.company || '-'}</div>
+                            <div><small class="text-muted">${cargo.number || '-'}</small></div>
+                            ${cargo.url ? `<a href="${cargo.url}" target="_blank" onclick="event.stopPropagation()" class="small">Takip</a>` : ''}
+                        ` : '<small class="text-muted">-</small>'}
+                    </td>
+                    <td class="text-center" onclick="event.stopPropagation()">
+                        <div class="dropdown">
+                            <button class="btn btn-sm ${STATUS_CONFIG[currentStatus].cls} dropdown-toggle" data-bs-toggle="dropdown" style="font-size:0.75rem; min-width:110px;">
+                                ${currentStatus === 'Iade' && order.displayFinancialStatus === 'PARTIALLY_REFUNDED' ? 'Kismi Iade' : currentStatus}
+                            </button>
+                            <ul class="dropdown-menu">${statusOptions}</ul>
+                        </div>
+                    </td>
                     <td class="text-center" onclick="event.stopPropagation()">
                         <div class="dropdown actions-dropdown">
                             <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
@@ -556,6 +1164,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><a class="dropdown-item" href="#" onclick="window.shopifyOrders.showDetail('${orderId}')"><i class="bi bi-eye me-2"></i>Detay</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="window.shopifyOrders.printOrder('${orderId}')"><i class="bi bi-printer me-2"></i>Fis Yazdir</a></li>
                                 ${!isCancelled && order.displayFulfillmentStatus !== 'FULFILLED' ? `<li><a class="dropdown-item" href="#" onclick="window.shopifyOrders.showFulfill('${orderId}')"><i class="bi bi-truck me-2"></i>Karsila</a></li>` : ''}
                                 <li><a class="dropdown-item" href="#" onclick="window.shopifyOrders.showNote('${orderId}', '${(order.note || '').replace(/'/g, "\\'")}')"><i class="bi bi-sticky me-2"></i>Not Ekle</a></li>
                                 ${!isCancelled ? `<li><hr class="dropdown-divider"></li><li><a class="dropdown-item text-danger" href="#" onclick="window.shopifyOrders.showCancel('${orderId}')"><i class="bi bi-x-circle me-2"></i>Iptal Et</a></li>` : ''}
@@ -567,28 +1176,61 @@ document.addEventListener('DOMContentLoaded', function() {
         }).join('');
     }
 
-    function updateStats(orders) {
-        let total = orders.length;
-        let unfulfilled = 0, fulfilled = 0, paid = 0, cancelled = 0;
-        let revenue = 0;
+    // Sadece gorunen siparislerin sayisini goster
+    function updateShowingStats(orders) {
+        document.getElementById('showingCount').textContent = orders.length;
+    }
 
-        orders.forEach(o => {
-            if (o.cancelledAt) cancelled++;
-            if (o.displayFulfillmentStatus === 'UNFULFILLED') unfulfilled++;
-            if (o.displayFulfillmentStatus === 'FULFILLED') fulfilled++;
-            if (o.displayFinancialStatus === 'PAID') paid++;
-            const amount = parseFloat((o.currentTotalPriceSet?.shopMoney?.amount) || 0);
-            if (!o.cancelledAt) revenue += amount;
+    // Tum siparis sayilarini API'den cek (her tab icin ayri count)
+    function loadGlobalStats() {
+        const queries = {
+            beklemede: '-tag:Hazirlaniyor -tag:Kargoda -tag:"Teslim Edildi" -status:cancelled financial_status:paid -financial_status:refunded -financial_status:partially_refunded',
+            hazirlaniyor: 'tag:Hazirlaniyor -status:cancelled -financial_status:refunded -financial_status:partially_refunded',
+            kargoda: 'tag:Kargoda -status:cancelled -financial_status:refunded -financial_status:partially_refunded',
+            teslim: 'tag:"Teslim Edildi" -status:cancelled -financial_status:refunded -financial_status:partially_refunded',
+            iade: 'financial_status:refunded OR financial_status:partially_refunded -status:cancelled',
+            iptal: 'status:cancelled -financial_status:refunded -financial_status:partially_refunded',
+        };
+
+        let totalRevenue = 0;
+        let totalAll = 0;
+        const results = {};
+
+        const promises = Object.entries(queries).map(([key, q]) => {
+            return fetch('/shopify/api/orders?limit=100&query=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(data => {
+                    const orders = data.orders || [];
+                    results[key] = orders.length;
+                    totalAll += orders.length;
+                    orders.forEach(o => {
+                        if (!o.cancelledAt) {
+                            totalRevenue += parseFloat((o.currentTotalPriceSet?.shopMoney?.amount) || 0);
+                        }
+                    });
+                })
+                .catch(() => { results[key] = 0; });
         });
 
-        document.getElementById('statTotal').textContent = total;
-        document.getElementById('statUnfulfilled').textContent = unfulfilled;
-        document.getElementById('statFulfilled').textContent = fulfilled;
-        document.getElementById('statPaid').textContent = paid;
-        document.getElementById('statCancelled').textContent = cancelled;
-        document.getElementById('statRevenue').textContent = new Intl.NumberFormat('tr-TR', {
-            style: 'currency', currency: 'TRY', maximumFractionDigits: 0
-        }).format(revenue);
+        Promise.all(promises).then(() => {
+            animateCounter('statTotal', totalAll);
+            animateCounter('statBeklemede', results.beklemede || 0);
+            animateCounter('statHazirlaniyor', results.hazirlaniyor || 0);
+            animateCounter('statKargoda', results.kargoda || 0);
+            animateCounter('statTeslim', results.teslim || 0);
+
+            const el = document.getElementById('statRevenue');
+            const target = totalRevenue;
+            animateValue(el, 0, target, 800, v => new Intl.NumberFormat('tr-TR', {
+                style: 'currency', currency: 'TRY', maximumFractionDigits: 0
+            }).format(v));
+
+            // Tab badge'lari (animasyonlu)
+            ['tabBeklemede', 'tabHazirlaniyor', 'tabKargoda', 'tabTeslim', 'tabIade', 'tabIptal'].forEach(id => {
+                const val = results[id.replace('tab', '').toLowerCase()] || 0;
+                animateCounter(id, val);
+            });
+        });
     }
 
     // ── Siparis Detayi ──
@@ -623,10 +1265,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                         <div class="text-end">
                             ${financialBadge(o.displayFinancialStatus)}
-                            ${fulfillmentBadge(o.displayFulfillmentStatus)}
-                            ${isCancelled ? '<br><span class="badge bg-danger mt-1">IPTAL EDILDI</span>' : ''}
+                            ${orderStatusBadge(o.tags, isCancelled, o.displayFinancialStatus)}
                         </div>
                     </div>`;
+
+                    if (isCOD(o)) {
+                        html += `<div class="alert alert-danger py-2 mb-3 fw-bold">
+                            <i class="bi bi-exclamation-triangle me-1"></i>KAPIDA ODEME - ${formatMoney(o.currentTotalPriceSet)}
+                        </div>`;
+                    }
 
                     if (isCancelled) {
                         html += `<div class="alert alert-danger py-2 mb-3">
@@ -643,7 +1290,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="col-md-4">
                             <div class="order-detail-section">
                                 <h6><i class="bi bi-person me-1"></i>Musteri</h6>
-                                <div class="detail-value">${(customer.firstName || '') + ' ' + (customer.lastName || '')}</div>
+                                <div class="detail-value">${((customer.firstName || '') + ' ' + (customer.lastName || '')).trim() || (shipping.name || 'Misafir')}</div>
                                 <div class="detail-label">${customer.email || '-'}</div>
                                 <div class="detail-label">${customer.phone || '-'}</div>
                             </div>
@@ -674,13 +1321,33 @@ document.addEventListener('DOMContentLoaded', function() {
                         <h6><i class="bi bi-box me-1"></i>Urunler</h6>`;
 
                     (o.line_items || []).forEach(li => {
-                        const imgUrl = li.variant?.image?.url;
+                        const resolvedBarcode = li.resolved_barcode || li.variant?.barcode || '';
+                        const sku = li.sku || '';
+                        const shopifyImg = li.variant?.image?.url || '';
+                        // Gorseli panel barkodu ile static'ten al
+                        const staticImg = resolvedBarcode ? '/static/images/' + resolvedBarcode + '.jpg' : '';
+                        const imgSrc = staticImg || shopifyImg;
                         const liTotal = formatMoney(li.originalTotalSet);
+
+                        // Fallback zinciri: .jpg -> .jpeg -> .png -> shopify img -> placeholder
+                        const fallbackChain = resolvedBarcode ? [
+                            '/static/images/' + resolvedBarcode + '.jpeg',
+                            '/static/images/' + resolvedBarcode + '.png',
+                            shopifyImg,
+                        ].filter(Boolean) : [shopifyImg].filter(Boolean);
+                        const fallbackJs = fallbackChain.length > 0
+                            ? `var fb=${JSON.stringify(fallbackChain)};var fi=parseInt(this.dataset.fi||'0');if(fi<fb.length){this.dataset.fi=fi+1;this.src=fb[fi];}else{this.style.display='none';}`
+                            : `this.style.display='none';`;
+
                         html += `<div class="line-item-row">
-                            ${imgUrl ? `<img src="${imgUrl}" class="line-item-img" alt="">` : '<div class="line-item-img d-flex align-items-center justify-content-center"><i class="bi bi-image text-muted"></i></div>'}
+                            <img src="${imgSrc || ''}"
+                                 class="line-item-img-lg" alt=""
+                                 data-fi="0"
+                                 onerror="${fallbackJs}">
                             <div class="flex-fill">
                                 <div class="fw-bold" style="font-size:0.88rem">${li.title || '-'}</div>
-                                <small class="text-muted">SKU: ${li.sku || '-'}</small>
+                                <small class="text-muted">SKU: ${sku || '-'}</small>
+                                ${resolvedBarcode ? `<br><small class="text-muted"><strong>Barkod:</strong> ${resolvedBarcode}</small>` : ''}
                             </div>
                             <div class="text-end">
                                 <div class="fw-bold">${liTotal}</div>
@@ -710,32 +1377,110 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     html += `</div>`;
 
-                    // Fulfillment Bilgisi
+                    // Kargo Bilgileri (her zaman goster)
+                    html += `<div class="order-detail-section">
+                        <h6><i class="bi bi-truck me-1"></i>Kargo Bilgileri</h6>`;
                     if (o.fulfillments && o.fulfillments.length > 0) {
-                        html += `<div class="order-detail-section">
-                            <h6><i class="bi bi-truck me-1"></i>Kargo Bilgileri</h6>`;
                         o.fulfillments.forEach((f, idx) => {
-                            html += `<div class="p-2 bg-light rounded mb-2">
-                                <div class="d-flex justify-content-between">
-                                    <strong>Kargo #${idx + 1}</strong>
-                                    <span class="badge ${f.status === 'SUCCESS' ? 'bg-success' : 'bg-info'}">${f.status}</span>
+                            const statusMap = { 'SUCCESS': ['bg-success','Teslim Edildi'], 'IN_TRANSIT': ['bg-info','Yolda'], 'DELIVERED': ['bg-success','Teslim Edildi'], 'FAILURE': ['bg-danger','Hata'] };
+                            const [sCls, sLabel] = statusMap[f.status] || ['bg-secondary', f.status];
+                            html += `<div class="p-3 rounded mb-2" style="background:#f0f4ff;border-left:4px solid #8b5cf6;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong><i class="bi bi-truck me-1"></i>Kargo #${idx + 1}</strong>
+                                    <span class="badge ${sCls}">${sLabel}</span>
                                 </div>`;
                             if (f.trackingInfo && f.trackingInfo.length > 0) {
                                 f.trackingInfo.forEach(ti => {
-                                    html += `<div class="mt-1">
-                                        <small>${ti.company || ''} - ${ti.number || '-'}</small>
-                                        ${ti.url ? `<a href="${ti.url}" target="_blank" class="ms-2 small">Takip Et</a>` : ''}
+                                    html += `<div class="mb-1">
+                                        <div><strong>Firma:</strong> ${ti.company || '-'}</div>
+                                        <div><strong>Takip No:</strong> <span class="fw-bold text-primary" style="font-size:1rem;">${ti.number || '-'}</span></div>
+                                        ${ti.url ? `<div class="mt-1"><a href="${ti.url}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-box-arrow-up-right me-1"></i>Kargo Takip</a></div>` : ''}
                                     </div>`;
                                 });
+                            } else {
+                                html += `<div class="text-muted small">Takip bilgisi girilmemis</div>`;
                             }
-                            html += `<small class="text-muted">${formatDate(f.createdAt)}</small></div>`;
+                            html += `<div class="text-muted small mt-1">Gonderim: ${formatDate(f.createdAt)}</div></div>`;
                         });
+                    } else {
+                        html += `<div class="text-muted text-center py-2"><i class="bi bi-inbox me-1"></i>Henuz kargoya verilmedi</div>`;
+                    }
+                    html += `</div>`;
+
+                    // Iade Detaylari
+                    if (o.displayFinancialStatus === 'REFUNDED' || o.displayFinancialStatus === 'PARTIALLY_REFUNDED') {
+                        const isPartial = o.displayFinancialStatus === 'PARTIALLY_REFUNDED';
+                        html += `<div class="order-detail-section">
+                            <h6><i class="bi bi-arrow-return-left me-1"></i>${isPartial ? 'Kismi Iade Detayi' : 'Iade Detayi'}</h6>`;
+
+                        // Toplam iade tutari
+                        const refundedTotal = parseFloat(o.totalRefundedSet?.shopMoney?.amount || 0);
+                        if (refundedTotal > 0) {
+                            html += `<div class="alert ${isPartial ? 'alert-warning' : 'alert-danger'} py-2 mb-2">
+                                <strong>${isPartial ? 'Kismi Iade' : 'Tam Iade'}:</strong> ${formatMoney(o.totalRefundedSet)}
+                            </div>`;
+                        }
+
+                        // Kismi iade ise hangi urunler iade edilmis goster
+                        if (o.parsed_refunds && o.parsed_refunds.length > 0) {
+                            o.parsed_refunds.forEach((ref, ri) => {
+                                html += `<div class="p-2 rounded mb-2" style="background:#fff3e0;border-left:4px solid #f97316;">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <strong>Iade #${ri + 1}</strong>
+                                        <span class="fw-bold text-danger">${ref.total.toFixed(2)} TL</span>
+                                    </div>
+                                    <small class="text-muted">Tarih: ${formatDate(ref.created_at)}</small>
+                                    ${ref.note ? '<br><small class="text-muted">Not: ' + ref.note + '</small>' : ''}`;
+
+                                if (ref.items && ref.items.length > 0) {
+                                    html += `<table class="table table-sm mt-2 mb-0" style="font-size:0.8rem;">
+                                        <thead><tr><th>Urun</th><th>SKU</th><th class="text-center">Iade Adet</th><th class="text-center">Orijinal</th><th class="text-end">Tutar</th></tr></thead><tbody>`;
+                                    ref.items.forEach(item => {
+                                        html += `<tr>
+                                            <td>${item.title || '-'}</td>
+                                            <td><small>${item.sku || '-'}</small></td>
+                                            <td class="text-center fw-bold text-danger">${item.refunded_quantity}</td>
+                                            <td class="text-center">${item.original_quantity}</td>
+                                            <td class="text-end">${item.refund_amount.toFixed(2)} TL</td>
+                                        </tr>`;
+                                    });
+                                    html += `</tbody></table>`;
+                                }
+                                html += `</div>`;
+                            });
+                        }
                         html += `</div>`;
                     }
+
+                    // Durum Degistirme
+                    const detailTags = o.tags || [];
+                    const detailStatus = getOrderStatus(detailTags, isCancelled, o.displayFinancialStatus);
+                    html += `<div class="order-detail-section">
+                        <h6><i class="bi bi-arrow-repeat me-1"></i>Durum Degistir</h6>
+                        <div class="d-flex gap-2 flex-wrap">`;
+                    ORDER_STATUSES.forEach(s => {
+                        const cfg = STATUS_CONFIG[s];
+                        const isActive = s === detailStatus;
+                        html += `<button class="btn btn-sm ${isActive ? cfg.cls : 'btn-outline-secondary'}" ${isActive ? 'disabled' : ''} onclick="window.shopifyOrders.changeStatus('${extractId(o.id)}', '${s}'); bootstrap.Modal.getInstance(document.getElementById('orderDetailModal')).hide();">
+                            <i class="bi bi-${cfg.icon} me-1"></i>${s}</button>`;
+                    });
+                    html += `</div></div>`;
 
                     // Islem Butonlari
                     if (!isCancelled) {
                         html += `<div class="d-flex gap-2 mt-3 flex-wrap">`;
+                        // Odeme onaylama (PENDING ve COD degil ise)
+                        if (o.displayFinancialStatus === 'PENDING') {
+                            const detailCod = isCOD(o);
+                            if (detailCod) {
+                                html += `<span class="btn btn-sm btn-outline-secondary disabled"><i class="bi bi-cash me-1"></i>Kapida Odeme</span>`;
+                            } else {
+                                html += `<button class="btn btn-success btn-sm" onclick="window.shopifyOrders.markPaid('${extractId(o.id)}'); bootstrap.Modal.getInstance(document.getElementById('orderDetailModal')).hide();">
+                                    <i class="bi bi-check-circle me-1"></i>Odemeyi Onayla</button>`;
+                            }
+                        }
+                        html += `<button class="btn btn-primary btn-sm" onclick="window.shopifyOrders.printOrder('${extractId(o.id)}')">
+                            <i class="bi bi-printer me-1"></i>Fis Yazdir</button>`;
                         if (o.displayFulfillmentStatus !== 'FULFILLED') {
                             html += `<button class="btn btn-success btn-sm" onclick="bootstrap.Modal.getInstance(document.getElementById('orderDetailModal')).hide(); window.shopifyOrders.showFulfill('${extractId(o.id)}')">
                                 <i class="bi bi-truck me-1"></i>Karsila</button>`;
@@ -777,6 +1522,271 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('noteOrderId').value = orderId;
             document.getElementById('noteText').value = currentNote || '';
             new bootstrap.Modal(document.getElementById('noteModal')).show();
+        },
+
+        changeStatus: function(orderId, newStatus) {
+            // "Kargoda" secildiginde kargo takip no sor
+            if (newStatus === 'Kargoda') {
+                document.getElementById('kargoOrderId').value = orderId;
+                document.getElementById('kargoTrackingNumber').value = '';
+                document.getElementById('kargoTrackingCompany').value = '';
+                new bootstrap.Modal(document.getElementById('kargoModal')).show();
+                return;
+            }
+
+            showStatus(newStatus + ' olarak guncelleniyor...', 'info', true);
+            fetch('/shopify/api/orders/' + orderId + '/status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus }),
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus('Durum guncellendi: ' + newStatus, 'success', false);
+                    setTimeout(hideStatus, 2000);
+                    // Yeni statunun tabina gec
+                    switchToTab(newStatus);
+                } else {
+                    showStatus('Hata: ' + (data.error || 'Bilinmeyen hata'), 'danger', false);
+                }
+            })
+            .catch(err => showStatus('Baglanti hatasi: ' + err.message, 'danger', false));
+        },
+
+        markPaid: async function(orderId) {
+            const ok = await showDialog({
+                title: 'Odeme Onayi',
+                message: 'Bu siparisi <strong>odendi</strong> olarak isaretlemek istediginizden emin misiniz?',
+                type: 'success',
+                confirmText: 'Evet, Onayla',
+                cancelText: 'Vazgec',
+                icon: '<i class="bi bi-cash-coin"></i>',
+            });
+            if (!ok) return;
+            showStatus('Odeme onaylaniyor...', 'info', true);
+            fetch('/shopify/api/orders/' + orderId + '/mark-paid', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus('Odeme onaylandi!', 'success', false);
+                    setTimeout(hideStatus, 2000);
+                    loadOrders(cursorStack[currentCursorIndex]);
+                    loadGlobalStats();
+                } else {
+                    const errMsg = data.errors ? data.errors.map(e => e.message).join(', ') : (data.error || 'Bilinmeyen hata');
+                    showStatus('Hata: ' + errMsg, 'danger', false);
+                }
+            })
+            .catch(err => showStatus('Baglanti hatasi: ' + err.message, 'danger', false));
+        },
+
+        // ── Toplu Islem Fonksiyonlari ──
+        updateBulkBar: function() {
+            const checked = document.querySelectorAll('.order-checkbox:checked');
+            const bar = document.getElementById('bulkActionBar');
+            const countEl = document.getElementById('bulkSelectedCount');
+            const selectAllCb = document.getElementById('selectAllCheckbox');
+            const allCheckboxes = document.querySelectorAll('.order-checkbox');
+
+            countEl.textContent = checked.length;
+
+            if (checked.length > 0) {
+                bar.style.display = 'block';
+            } else {
+                bar.style.display = 'none';
+            }
+
+            // "Tumunu sec" checkbox durumu
+            if (allCheckboxes.length > 0 && checked.length === allCheckboxes.length) {
+                selectAllCb.checked = true;
+                selectAllCb.indeterminate = false;
+            } else if (checked.length > 0) {
+                selectAllCb.checked = false;
+                selectAllCb.indeterminate = true;
+            } else {
+                selectAllCb.checked = false;
+                selectAllCb.indeterminate = false;
+            }
+        },
+
+        selectAllOrders: function() {
+            document.querySelectorAll('.order-checkbox').forEach(cb => { cb.checked = true; });
+            this.updateBulkBar();
+        },
+
+        clearSelection: function() {
+            document.querySelectorAll('.order-checkbox').forEach(cb => { cb.checked = false; });
+            document.getElementById('selectAllCheckbox').checked = false;
+            document.getElementById('selectAllCheckbox').indeterminate = false;
+            this.updateBulkBar();
+        },
+
+        getSelectedOrderIds: function() {
+            return Array.from(document.querySelectorAll('.order-checkbox:checked')).map(cb => cb.value);
+        },
+
+        bulkChangeStatus: async function(newStatus) {
+            const orderIds = this.getSelectedOrderIds();
+            if (!orderIds.length) {
+                showToast('Lutfen en az bir siparis secin.', 'warning', 2500);
+                return;
+            }
+
+            const count = orderIds.length;
+            const statusIcons = { 'Beklemede': 'hourglass-split', 'Hazirlaniyor': 'gear', 'Kargoda': 'truck', 'Teslim Edildi': 'check-circle' };
+            const ok = await showDialog({
+                title: 'Toplu Durum Degisikligi',
+                message: `<strong>${count}</strong> siparis <strong>"${newStatus}"</strong> olarak guncellenecek.<br><small class="text-muted">Bu islem geri alinamaz.</small>`,
+                type: newStatus === 'Teslim Edildi' ? 'success' : 'warning',
+                confirmText: `${count} Siparisi Guncelle`,
+                cancelText: 'Vazgec',
+                icon: `<i class="bi bi-${statusIcons[newStatus] || 'arrow-repeat'}"></i>`,
+            });
+            if (!ok) return;
+
+            showStatus(`${count} siparis "${newStatus}" olarak guncelleniyor...`, 'info', true);
+
+            fetch('/shopify/api/orders/bulk-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order_ids: orderIds, status: newStatus }),
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus(`${data.success_count} siparis basariyla guncellendi!` + (data.fail_count > 0 ? ` (${data.fail_count} hata)` : ''), 'success', false);
+                    setTimeout(hideStatus, 3000);
+                    this.clearSelection();
+                    switchToTab(newStatus);
+                } else {
+                    showStatus('Hata: ' + (data.error || data.message || 'Bilinmeyen hata'), 'danger', false);
+                }
+            })
+            .catch(err => showStatus('Baglanti hatasi: ' + err.message, 'danger', false));
+        },
+
+        printOrder: function(orderId) {
+            fetch('/shopify/api/orders/' + orderId)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success || !data.order) {
+                        showStatus('Siparis bulunamadi', 'danger', false);
+                        return;
+                    }
+                    const o = data.order;
+                    const customer = o.customer || {};
+                    const shipping = o.shippingAddress || {};
+                    const musteriAdi = ((customer.firstName || '') + ' ' + (customer.lastName || '')).trim() || shipping.name || 'Misafir';
+                    const musteriTelefon = customer.phone || shipping.phone || 'N/A';
+                    const musteriAdres = [
+                        shipping.address1 || '', shipping.address2 || '',
+                        [shipping.city || '', shipping.province || '', shipping.zip || ''].filter(Boolean).join(' '),
+                        shipping.country || ''
+                    ].filter(Boolean).join('\n');
+
+                    const codCheck = isCOD(o);
+                    const priceSet = o.currentTotalPriceSet?.shopMoney || {};
+                    const kapidaOdemeTutari = parseFloat(priceSet.amount || 0);
+
+                    let kapidaOdemeHTML = '';
+                    if (codCheck && kapidaOdemeTutari > 0) {
+                        kapidaOdemeHTML = `
+                            <div class="kapida-odeme-box">
+                                <div style="background: #ff0000; color: white; text-align: center; padding: 8px; border: 4px solid #000; margin: 8px 0;">
+                                    <div style="font-size: 18pt; font-weight: bold; letter-spacing: 1px; border-bottom: 3px solid white; padding-bottom: 5px;">
+                                        ⚠️ KAPIDA ÖDEME ⚠️
+                                    </div>
+                                    <div style="font-size: 32pt; font-weight: bold; margin: 8px 0; line-height: 1.2;">
+                                        ${kapidaOdemeTutari.toFixed(2)} TL
+                                    </div>
+                                    <div style="font-size: 14pt; font-weight: bold; background: white; color: #ff0000; padding: 4px; margin-top: 5px;">
+                                        TAHSİL EDİLECEK
+                                    </div>
+                                </div>
+                            </div>`;
+                    }
+
+                    const printContent = `
+                        <html><head><title>Müşteri Bilgileri - ${o.name}</title>
+                        <style>
+                            @page {
+                                size: 100mm 100mm;
+                                margin: 3mm;
+                            }
+                            * {
+                                margin: 0;
+                                padding: 0;
+                                box-sizing: border-box;
+                            }
+                            body {
+                                font-family: 'Arial Black', Arial, sans-serif;
+                                font-size: 9pt;
+                                width: 94mm;
+                                height: 94mm;
+                                padding: 3mm;
+                            }
+                            .header {
+                                font-size: 11pt;
+                                font-weight: bold;
+                                margin-bottom: 3mm;
+                                padding-bottom: 2mm;
+                                border-bottom: 2px solid #000;
+                            }
+                            .info-row {
+                                margin: 1mm 0;
+                                font-size: 8pt;
+                                line-height: 1.3;
+                            }
+                            .label {
+                                font-weight: bold;
+                                display: inline-block;
+                                width: 20mm;
+                            }
+                            .adres {
+                                white-space: pre-line;
+                                margin: 2mm 0;
+                                font-size: 8pt;
+                                line-height: 1.3;
+                                max-height: 15mm;
+                                overflow: hidden;
+                            }
+                            .kapida-odeme-box {
+                                break-inside: avoid;
+                                page-break-inside: avoid;
+                                margin: 3mm 0;
+                            }
+                            .footer {
+                                position: absolute;
+                                bottom: 3mm;
+                                left: 3mm;
+                                right: 3mm;
+                                text-align: center;
+                                font-size: 7pt;
+                                border-top: 1px solid #ccc;
+                                padding-top: 1mm;
+                            }
+                        </style></head><body>
+                            <div class="header">KARGO BİLGİLERİ</div>
+                            <div class="info-row"><span class="label">Sipariş:</span> ${o.name}</div>
+                            <div class="info-row"><span class="label">Alıcı:</span> ${musteriAdi}</div>
+                            <div class="info-row"><span class="label">Telefon:</span> ${musteriTelefon}</div>
+                            <div class="info-row"><span class="label">Adres:</span></div>
+                            <div class="adres">${musteriAdres}</div>
+                            ${kapidaOdemeHTML}
+                            <div class="footer">${new Date().toLocaleDateString('tr-TR')} ${new Date().toLocaleTimeString('tr-TR')}</div>
+                        </body></html>`;
+
+                    const printWindow = window.open('', '_blank', 'width=400,height=300');
+                    printWindow.document.write(printContent);
+                    printWindow.document.close();
+                    printWindow.focus();
+                    setTimeout(() => { printWindow.print(); }, 250);
+                })
+                .catch(err => showStatus('Yazdir hatasi: ' + err.message, 'danger', false));
         }
     };
 
@@ -821,8 +1831,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ── Cancel Submit ──
-    document.getElementById('btnCancelSubmit').addEventListener('click', function() {
-        if (!confirm('Siparisi iptal etmek istediginizden emin misiniz?')) return;
+    document.getElementById('btnCancelSubmit').addEventListener('click', async function() {
+        const ok = await showDialog({
+            title: 'Siparis Iptali',
+            message: 'Bu siparisi <strong>kalici olarak iptal</strong> etmek istediginizden emin misiniz?<br><small class="text-muted">Bu islem geri alinamaz!</small>',
+            type: 'danger',
+            confirmText: 'Evet, Iptal Et',
+            cancelText: 'Hayir, Vazgec',
+            icon: '<i class="bi bi-x-octagon-fill"></i>',
+        });
+        if (!ok) return;
         const btn = this;
         const orderId = document.getElementById('cancelOrderId').value;
         btn.disabled = true;
@@ -888,19 +1906,107 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(err => { btn.disabled = false; showStatus('Hata: ' + err.message, 'danger', false); });
     });
 
+    // ── Kargo Submit (Kargoda + Fulfillment) ──
+    document.getElementById('btnKargoSubmit').addEventListener('click', function() {
+        const btn = this;
+        const orderId = document.getElementById('kargoOrderId').value;
+        const trackingNumber = document.getElementById('kargoTrackingNumber').value.trim();
+        const trackingCompany = document.getElementById('kargoTrackingCompany').value;
+
+        if (!trackingNumber) {
+            showAlert({
+                title: 'Eksik Bilgi',
+                message: 'Kargo takip numarasi zorunludur. Lutfen bir takip numarasi girin.',
+                type: 'warning',
+                buttonText: 'Anladim',
+            });
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Isleniyor...';
+
+        // Kargo firmasina gore takip URL olustur
+        let trackingUrl = null;
+        if (trackingCompany === 'DHL eCommerce') {
+            trackingUrl = 'https://www.dhlecommerce.com.tr/gonderitakip?gonderino=' + trackingNumber;
+        } else if (trackingCompany === 'Yurtici Kargo') {
+            trackingUrl = 'https://www.yurticikargo.com/tr/online-servisler/gonderi-sorgula?code=' + trackingNumber;
+        } else if (trackingCompany === 'Aras Kargo') {
+            trackingUrl = 'https://www.araskargo.com.tr/taki.aspx?code=' + trackingNumber;
+        } else if (trackingCompany === 'Surat Kargo') {
+            trackingUrl = 'https://suratkargo.com.tr/gonderi-takip?barcode=' + trackingNumber;
+        } else if (trackingCompany === 'PTT Kargo') {
+            trackingUrl = 'https://gonderitakip.ptt.gov.tr/Track/Verify?q=' + trackingNumber;
+        } else if (trackingCompany === 'UPS') {
+            trackingUrl = 'https://www.ups.com/track?tracknum=' + trackingNumber;
+        }
+
+        // 1) Fulfillment olustur (kargo bilgileri ile)
+        fetch('/shopify/api/orders/' + orderId + '/fulfill', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tracking_number: trackingNumber,
+                tracking_company: trackingCompany || null,
+                tracking_url: trackingUrl,
+                notify_customer: true,
+            }),
+        })
+        .then(r => r.json())
+        .then(fulfillData => {
+            if (!fulfillData.success) {
+                const errMsg = fulfillData.errors ? fulfillData.errors.map(e => e.message).join(', ') : (fulfillData.error || 'Fulfillment hatasi');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-truck me-1"></i> Kargoya Ver';
+                showStatus('Fulfillment hatasi: ' + errMsg, 'danger', false);
+                return;
+            }
+
+            // 2) Tag'i "Kargoda" yap
+            return fetch('/shopify/api/orders/' + orderId + '/status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'Kargoda' }),
+            }).then(r => r.json());
+        })
+        .then(statusData => {
+            if (!statusData) return; // fulfillment basarisiz idi
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-truck me-1"></i> Kargoya Ver';
+
+            if (statusData.success) {
+                bootstrap.Modal.getInstance(document.getElementById('kargoModal')).hide();
+                showStatus('Siparis kargoya verildi! Takip No: ' + trackingNumber, 'success', false);
+                setTimeout(hideStatus, 3000);
+                switchToTab('Kargoda');
+            } else {
+                showStatus('Tag guncelleme hatasi: ' + (statusData.error || ''), 'warning', false);
+                loadOrders(cursorStack[currentCursorIndex]);
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-truck me-1"></i> Kargoya Ver';
+            showStatus('Baglanti hatasi: ' + err.message, 'danger', false);
+        });
+    });
+
     // ── CSV Export ──
     document.getElementById('btnExportCSV').addEventListener('click', function() {
         if (!allOrders.length) { showStatus('Disa aktarilacak siparis yok.', 'warning', false); return; }
 
-        let csv = 'Siparis No,Tarih,Musteri,E-posta,Sehir,Urun Sayisi,Tutar,Para Birimi,Odeme Durumu,Karsilama Durumu\n';
+        let csv = 'Siparis No,Tarih,Musteri,E-posta,Sehir,Urun Sayisi,Tutar,Para Birimi,Odeme Durumu,Siparis Durumu,Kapida Odeme\n';
         allOrders.forEach(o => {
-            const customer = getCustomerName(o.customer);
+            const customer = getCustomerName(o.customer, o.shippingAddress);
             const email = o.customer?.email || '';
             const city = o.shippingAddress?.city || '';
             const itemCount = (o.line_items || []).reduce((sum, li) => sum + (li.quantity || 0), 0);
             const amount = o.currentTotalPriceSet?.shopMoney?.amount || '0';
             const currency = o.currentTotalPriceSet?.shopMoney?.currencyCode || 'TRY';
-            csv += `"${o.name || ''}","${formatDate(o.createdAt)}","${customer}","${email}","${city}",${itemCount},${amount},${currency},"${o.displayFinancialStatus || ''}","${o.displayFulfillmentStatus || ''}"\n`;
+            const status = getOrderStatus(o.tags, !!o.cancelledAt, o.displayFinancialStatus);
+            const cod = isCOD(o) ? 'Evet' : 'Hayir';
+            csv += `"${o.name || ''}","${formatDate(o.createdAt)}","${customer}","${email}","${city}",${itemCount},${amount},${currency},"${o.displayFinancialStatus || ''}","${status}","${cod}"\n`;
         });
 
         const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -920,12 +2026,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('btnClearFilter').addEventListener('click', function() {
         document.getElementById('searchInput').value = '';
-        document.getElementById('filterFulfillment').value = '';
+        document.getElementById('filterStatus').value = 'Beklemede';
         document.getElementById('filterFinancial').value = '';
         document.getElementById('filterDate').value = '';
+        // Aktif tabi Beklemede'ye cevir
+        document.querySelectorAll('.status-tab').forEach(t => t.classList.remove('active'));
+        document.querySelector('.status-tab[data-status="Beklemede"]').classList.add('active');
         currentCursorIndex = 0;
         cursorStack = [null];
         loadOrders(null);
+    });
+
+    // ── Status Tab Click ──
+    document.querySelectorAll('.status-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.status-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            document.getElementById('filterStatus').value = this.dataset.status;
+            currentCursorIndex = 0;
+            cursorStack = [null];
+            loadOrders(null);
+        });
     });
 
     document.getElementById('searchInput').addEventListener('keypress', function(e) {
@@ -938,6 +2059,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('btnRefresh').addEventListener('click', function() {
         loadOrders(cursorStack[currentCursorIndex]);
+        loadGlobalStats();
     });
 
     document.getElementById('btnNextPage').addEventListener('click', function() {
@@ -952,8 +2074,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // ── Tumunu Sec Checkbox ──
+    document.getElementById('selectAllCheckbox').addEventListener('change', function() {
+        const checked = this.checked;
+        document.querySelectorAll('.order-checkbox').forEach(cb => { cb.checked = checked; });
+        window.shopifyOrders.updateBulkBar();
+    });
+
     // ── Ilk Yukleme ──
     loadOrders(null);
+    loadGlobalStats();
 });
 </script>
 {% endblock %}

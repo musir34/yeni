@@ -2,6 +2,7 @@
 Shopify Admin API JSON route'ları.
 """
 
+from datetime import datetime
 from functools import wraps
 
 from flask import Blueprint, jsonify, request, render_template
@@ -10,6 +11,7 @@ from flask_login import login_required
 from .shopify_config import ShopifyConfig
 from .shopify_service import shopify_service
 from .shopify_stock_service import shopify_stock_service
+from user_logs import log_user_action
 
 
 shopify_bp = Blueprint("shopify", __name__, url_prefix="/shopify")
@@ -102,6 +104,8 @@ def cancel_order(order_id):
         restock=bool(payload.get("restock", False)),
         note=payload.get("note"),
     )
+    if result.get("success"):
+        log_user_action("UPDATE", {"işlem_açıklaması": f"Shopify sipariş iptal edildi — {order_id}", "sayfa": "Shopify Siparişler"})
     status_code = 200 if result.get("success") else 400
     return jsonify(result), status_code
 
@@ -119,6 +123,8 @@ def fulfill_order(order_id):
         tracking_url=payload.get("tracking_url"),
         notify_customer=bool(payload.get("notify_customer", True)),
     )
+    if result.get("success"):
+        log_user_action("UPDATE", {"işlem_açıklaması": f"Shopify sipariş karşılandı — {order_id}", "sayfa": "Shopify Siparişler"})
     status_code = 200 if result.get("success") else 400
     return jsonify(result), status_code
 
@@ -131,6 +137,69 @@ def update_order_note(order_id):
     payload = request.get_json(silent=True) or {}
     note = payload.get("note", "")
     result = shopify_service.add_order_note(order_id=order_id, note=note)
+    if result.get("success"):
+        log_user_action("UPDATE", {"işlem_açıklaması": f"Shopify sipariş notu güncellendi — {order_id}", "sayfa": "Shopify Siparişler"})
+    status_code = 200 if result.get("success") else 400
+    return jsonify(result), status_code
+
+
+@shopify_bp.route("/api/orders/<order_id>/status", methods=["POST"])
+@login_required
+@check_shopify_config
+def update_order_status(order_id):
+    """Siparis statusunu guncelle (tag tabanli)."""
+    payload = request.get_json(silent=True) or {}
+    new_status = payload.get("status", "")
+    if new_status not in shopify_service.ORDER_STATUSES:
+        return jsonify({"success": False, "error": f"Gecersiz status. Gecerli degerler: {', '.join(shopify_service.ORDER_STATUSES)}"}), 400
+    result = shopify_service.update_order_status(order_id=order_id, new_status=new_status)
+    if result.get("success"):
+        log_user_action("UPDATE", {"işlem_açıklaması": f"Shopify sipariş durumu güncellendi — {order_id} → {new_status}", "sayfa": "Shopify Siparişler"})
+    status_code = 200 if result.get("success") else 400
+    return jsonify(result), status_code
+
+
+@shopify_bp.route("/api/orders/bulk-status", methods=["POST"])
+@login_required
+@check_shopify_config
+def bulk_update_order_status():
+    """Birden fazla siparisi toplu olarak status guncelle."""
+    payload = request.get_json(silent=True) or {}
+    order_ids = payload.get("order_ids", [])
+    new_status = payload.get("status", "")
+
+    if not order_ids:
+        return jsonify({"success": False, "error": "En az bir siparis ID gerekli."}), 400
+    if new_status not in shopify_service.ORDER_STATUSES:
+        return jsonify({"success": False, "error": f"Gecersiz status. Gecerli degerler: {', '.join(shopify_service.ORDER_STATUSES)}"}), 400
+
+    results = {"success_count": 0, "fail_count": 0, "errors": []}
+    for oid in order_ids:
+        result = shopify_service.update_order_status(order_id=oid, new_status=new_status)
+        if result.get("success"):
+            results["success_count"] += 1
+        else:
+            results["fail_count"] += 1
+            results["errors"].append({"order_id": oid, "error": result.get("error") or result.get("errors", "Bilinmeyen hata")})
+
+    if results["success_count"] > 0:
+        log_user_action("UPDATE", {"işlem_açıklaması": f"Shopify toplu durum güncelleme — {results['success_count']} sipariş → {new_status}", "sayfa": "Shopify Siparişler"})
+
+    return jsonify({
+        "success": results["success_count"] > 0,
+        "message": f"{results['success_count']} siparis guncellendi, {results['fail_count']} hata.",
+        **results,
+    })
+
+
+@shopify_bp.route("/api/orders/<order_id>/mark-paid", methods=["POST"])
+@login_required
+@check_shopify_config
+def mark_order_paid(order_id):
+    """Siparisi odendi olarak isaretle."""
+    result = shopify_service.mark_as_paid(order_id)
+    if result.get("success"):
+        log_user_action("UPDATE", {"işlem_açıklaması": f"Shopify sipariş ödendi olarak işaretlendi — {order_id}", "sayfa": "Shopify Siparişler"})
     status_code = 200 if result.get("success") else 400
     return jsonify(result), status_code
 
@@ -145,8 +214,84 @@ def add_order_tags(order_id):
     if not tags:
         return jsonify({"success": False, "error": "En az bir etiket gerekli."}), 400
     result = shopify_service.add_order_tags(order_id=order_id, tags=tags)
+    if result.get("success"):
+        log_user_action("UPDATE", {"işlem_açıklaması": f"Shopify sipariş etiketi eklendi — {order_id}", "sayfa": "Shopify Siparişler"})
     status_code = 200 if result.get("success") else 400
     return jsonify(result), status_code
+
+
+@shopify_bp.route("/api/orders/<order_id>/print")
+@login_required
+@check_shopify_config
+def print_order(order_id):
+    """Siparis fisini yazdir."""
+    result = shopify_service.get_order(order_id)
+    if not result.get("success") or not result.get("order"):
+        return jsonify({"success": False, "error": "Siparis bulunamadi"}), 404
+
+    order = result["order"]
+
+    # Musteri adi
+    customer = order.get("customer") or {}
+    shipping = order.get("shippingAddress") or {}
+    customer_name = ((customer.get("firstName") or "") + " " + (customer.get("lastName") or "")).strip()
+    if not customer_name:
+        customer_name = shipping.get("name") or "Misafir"
+
+    # Odeme durumu Turkce
+    financial_map = {
+        "PAID": "Odendi",
+        "PENDING": "Bekliyor",
+        "AUTHORIZED": "Onaylandi",
+        "PARTIALLY_PAID": "Kismi Odeme",
+        "PARTIALLY_REFUNDED": "Kismi Iade",
+        "REFUNDED": "Iade Edildi",
+    }
+    financial_status = financial_map.get(order.get("displayFinancialStatus"), order.get("displayFinancialStatus") or "-")
+
+    # Siparis statusu (tag'lerden)
+    tags = order.get("tags") or []
+    order_status = "Beklemede"
+    for s in shopify_service.ORDER_STATUSES:
+        if s in tags:
+            order_status = s
+            break
+
+    # Kapida odeme tespiti
+    gateways = order.get("paymentGatewayNames") or []
+    cod_keywords = ["cash on delivery", "kapida", "cod", "manual"]
+    is_cod = any(
+        any(kw in gw.lower() for kw in cod_keywords)
+        for gw in gateways
+    )
+
+    # Fiyat bilgileri
+    price_set = order.get("currentTotalPriceSet", {}).get("shopMoney", {})
+    total_price = "%.2f" % float(price_set.get("amount", 0))
+    currency = price_set.get("currencyCode", "TRY")
+    cod_amount = total_price if is_cod else "0.00"
+
+    # Urun sayisi
+    line_items = order.get("line_items") or []
+    total_items = sum(li.get("quantity", 0) for li in line_items)
+
+    return render_template(
+        "shopify/order_print.html",
+        order=order,
+        customer_name=customer_name,
+        customer_email=customer.get("email") or "-",
+        customer_phone=customer.get("phone") or shipping.get("phone") or "-",
+        shipping=shipping,
+        financial_status=financial_status,
+        order_status=order_status,
+        is_cod=is_cod,
+        cod_amount=cod_amount,
+        total_price=total_price,
+        currency=currency,
+        line_items=line_items,
+        total_items=total_items,
+        print_date=datetime.now().strftime("%d/%m/%Y %H:%M"),
+    )
 
 
 @shopify_bp.route("/api/products")
@@ -238,6 +383,8 @@ def match_barcodes():
     """Shopify barkodlarını panel barkodlarıyla eşleştir."""
     try:
         result = shopify_stock_service.match_barcodes()
+        if result.get("success"):
+            log_user_action("UPDATE", {"işlem_açıklaması": "Shopify barkod eşleştirmesi yapıldı", "sayfa": "Shopify Stok Sync"})
         return jsonify(result)
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500
@@ -252,6 +399,8 @@ def push_stock():
         payload = request.get_json(silent=True) or {}
         barcodes = payload.get("barcodes")  # None ise tümü gönderilir
         result = shopify_stock_service.push_stock(barcodes=barcodes)
+        if result.get("success"):
+            log_user_action("STOCK_UPDATE", {"işlem_açıklaması": "Shopify stok senkronizasyonu yapıldı", "sayfa": "Shopify Stok Sync"})
         return jsonify(result)
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500

@@ -1,4 +1,4 @@
-﻿from flask import Blueprint, render_template, current_app
+﻿from flask import Blueprint, render_template, current_app, jsonify
 from sqlalchemy import func, cast, String, and_
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -10,9 +10,20 @@ except ImportError:
 
 # --- JSON & satır okuma helper'ları ---
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 # --- Hava Durumu Servisi ---
 from weather_service import get_weather_info, get_istanbul_time
+
+# --- Shopify Servisi ---
+try:
+    from shopify_site.shopify_service import shopify_service
+    from shopify_site.shopify_config import ShopifyConfig
+    _SHOPIFY_OK = True
+except ImportError:
+    _SHOPIFY_OK = False
 
 # ── Ayarlar
 LIVE_REFRESH_SECONDS = 150  # 2,5 dk. İstersen 120-180 arası ver
@@ -59,9 +70,12 @@ def index():
 
     # 2) Toplam sipariş sayısı (benzersiz order_id) - Trendyol
     aylik_trendyol_siparis = len(best_rows)
-    
-    # Toplam sipariş
-    aylik_toplam_siparis = aylik_trendyol_siparis
+
+    # 3) Shopify aylık sipariş sayısı
+    aylik_shopify_siparis = _get_shopify_monthly_count(ay_basi, sonraki_ay)
+
+    # Toplam sipariş (tüm pazaryerleri)
+    aylik_toplam_siparis = aylik_trendyol_siparis + aylik_shopify_siparis
 
     # 3) Ortalama sipariş tutarı (CANLI PANEL MANTIĞIyla - sipariş başına NET)
     # avg_per_order, total_net_ciro, order_count
@@ -70,6 +84,9 @@ def index():
     # Created ve Picking sayıları - Trendyol
     created_count = db.session.query(func.count()).select_from(OrderCreated).scalar() or 0
     picking_count = db.session.query(func.count()).select_from(OrderPicking).scalar() or 0
+
+    # Shopify sipariş durum sayıları
+    shopify_counts = _get_shopify_status_counts()
 
     # İadeler (ilgili ay)
     iade_adedi = (
@@ -94,14 +111,18 @@ def index():
     stats = {
         "toplam_siparis": aylik_toplam_siparis,
         "trendyol_siparis": aylik_trendyol_siparis,
+        "shopify_siparis": aylik_shopify_siparis,
         "created": created_count,
         "picking": picking_count,
         "hazirlanan": 0,
         "iade": iade_adedi,
         "kritik_stok": 0,
-        # ↓ yeni alanlar
         "degisim_gunluk": degisim_gunluk,
         "degisim_aylik": degisim_aylik,
+        # Shopify durum sayıları
+        "shopify_beklemede": shopify_counts.get("shopify_beklemede", 0),
+        "shopify_hazirlaniyor": shopify_counts.get("shopify_hazirlaniyor", 0),
+        "shopify_kargoda": shopify_counts.get("shopify_kargoda", 0),
     }
 
     return render_template(
@@ -378,6 +399,42 @@ def _monthly_aov_like_panel(start_ist, end_ist):
     return (total_net / order_count) if order_count > 0 else 0.0
 
 
+def _get_shopify_monthly_count(ay_basi, sonraki_ay):
+    """Shopify API'den aylik siparis sayisini dondurur."""
+    if not _SHOPIFY_OK or not ShopifyConfig.is_configured():
+        return 0
+    try:
+        date_from = ay_basi.strftime("%Y-%m-%d")
+        date_to = sonraki_ay.strftime("%Y-%m-%d")
+        query_str = f"created_at:>={date_from} created_at:<{date_to}"
+        result = shopify_service.get_orders_count(query_filter=query_str)
+        if result.get("success"):
+            return result.get("count", 0)
+    except Exception as exc:
+        logger.warning("[HOME] Shopify aylik siparis sayisi alinamadi: %s", exc)
+    return 0
+
+
+def _get_shopify_status_counts():
+    """Shopify API'den bekleyen siparis durumlarini dondurur."""
+    if not _SHOPIFY_OK or not ShopifyConfig.is_configured():
+        return {"shopify_beklemede": 0, "shopify_hazirlaniyor": 0, "shopify_kargoda": 0}
+    try:
+        counts = {}
+        queries = {
+            "shopify_beklemede": '-tag:Hazirlaniyor -tag:Kargoda -tag:"Teslim Edildi" -status:cancelled financial_status:paid -financial_status:refunded -financial_status:partially_refunded',
+            "shopify_hazirlaniyor": 'tag:Hazirlaniyor -status:cancelled -financial_status:refunded -financial_status:partially_refunded',
+            "shopify_kargoda": 'tag:Kargoda -status:cancelled -financial_status:refunded -financial_status:partially_refunded',
+        }
+        for key, q in queries.items():
+            result = shopify_service.get_orders_count(query_filter=q)
+            counts[key] = result.get("count", 0) if result.get("success") else 0
+        return counts
+    except Exception as exc:
+        logger.warning("[HOME] Shopify durum sayilari alinamadi: %s", exc)
+        return {"shopify_beklemede": 0, "shopify_hazirlaniyor": 0, "shopify_kargoda": 0}
+
+
 def _collect_month_orders_unified(start_ist, end_ist):
     """
     [start,end) IST penceresinde 4 tabloda görünen siparişleri TEK kümeye indirger.
@@ -412,8 +469,8 @@ def _collect_month_orders_unified(start_ist, end_ist):
 
 def _status_counts_now():
     """
-    Created ve Picking adetlerini döner.
-    USE_MONTH_WINDOW=True ise içinde bulunulan ay penceresinde sayar.
+    Created ve Picking adetlerini + Shopify durum sayilarini doner.
+    USE_MONTH_WINDOW=True ise icinde bulunulan ay penceresinde sayar.
     """
     if USE_MONTH_WINDOW:
         now = datetime.now(IST)
@@ -433,7 +490,13 @@ def _status_counts_now():
         created = (db.session.query(func.count()).select_from(OrderCreated).scalar() or 0)
         picking = (db.session.query(func.count()).select_from(OrderPicking).scalar() or 0)
 
-    return {"created": int(created), "picking": int(picking)}
+    result = {"created": int(created), "picking": int(picking)}
+
+    # Shopify durum sayıları
+    shopify_counts = _get_shopify_status_counts()
+    result.update(shopify_counts)
+
+    return result
 
 
 @home_bp.route("/api/home/status-counts")

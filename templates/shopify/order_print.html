@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Müşteri Bilgileri - {{ order.name }}</title>
+    <style>
+        @page {
+            size: 100mm 100mm;
+            margin: 3mm;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Arial Black', Arial, sans-serif;
+            font-size: 9pt;
+            width: 94mm;
+            height: 94mm;
+            padding: 3mm;
+        }
+        .header {
+            font-size: 11pt;
+            font-weight: bold;
+            margin-bottom: 3mm;
+            padding-bottom: 2mm;
+            border-bottom: 2px solid #000;
+        }
+        .info-row {
+            margin: 1mm 0;
+            font-size: 8pt;
+            line-height: 1.3;
+        }
+        .label {
+            font-weight: bold;
+            display: inline-block;
+            width: 20mm;
+        }
+        .adres {
+            white-space: pre-line;
+            margin: 2mm 0;
+            font-size: 8pt;
+            line-height: 1.3;
+            max-height: 15mm;
+            overflow: hidden;
+        }
+        .kapida-odeme-box {
+            break-inside: avoid;
+            page-break-inside: avoid;
+            margin: 3mm 0;
+        }
+        .footer {
+            position: absolute;
+            bottom: 3mm;
+            left: 3mm;
+            right: 3mm;
+            text-align: center;
+            font-size: 7pt;
+            border-top: 1px solid #ccc;
+            padding-top: 1mm;
+        }
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">KARGO BİLGİLERİ</div>
+    <div class="info-row"><span class="label">Sipariş:</span> {{ order.name }}</div>
+    <div class="info-row"><span class="label">Alıcı:</span> {{ customer_name }}</div>
+    <div class="info-row"><span class="label">Telefon:</span> {{ customer_phone }}</div>
+    <div class="info-row"><span class="label">Adres:</span></div>
+    <div class="adres">{% if shipping %}{{ shipping.address1 or '' }} {{ shipping.address2 or '' }}
+{{ shipping.city or '' }} {{ shipping.province or '' }} {{ shipping.zip or '' }}
+{{ shipping.country or '' }}{% else %}-{% endif %}</div>
+
+    {% if is_cod and cod_amount != '0.00' %}
+    <div class="kapida-odeme-box">
+        <div style="background: #ff0000; color: white; text-align: center; padding: 8px; border: 4px solid #000; margin: 8px 0;">
+            <div style="font-size: 18pt; font-weight: bold; letter-spacing: 1px; border-bottom: 3px solid white; padding-bottom: 5px;">
+                ⚠️ KAPIDA ÖDEME ⚠️
+            </div>
+            <div style="font-size: 32pt; font-weight: bold; margin: 8px 0; line-height: 1.2;">
+                {{ cod_amount }} TL
+            </div>
+            <div style="font-size: 14pt; font-weight: bold; background: white; color: #ff0000; padding: 4px; margin-top: 5px;">
+                TAHSİL EDİLECEK
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="footer">{{ print_date }}</div>
+
+    <script>
+        window.onload = function() {
+            window.print();
+        };
+    </script>
+</body>
+</html>

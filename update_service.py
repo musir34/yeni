@@ -14,6 +14,10 @@ from models import db, OrderCreated, OrderPicking, Product, RafUrun, CentralStoc
 from stock_management import sync_central_stock
 # Trendyol API kimlikleri ve BASE_URL
 from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID
+# 🛍️ Shopify desteği
+from shopify_site.shopify_service import shopify_service
+from shopify_site.shopify_config import ShopifyConfig
+from user_logs import log_user_action
 
 update_service_bp = Blueprint('update_service', __name__)
 
@@ -128,17 +132,38 @@ async def confirm_packing():
                     barkodlar.extend(vals)
         logger.info(f"[SCAN] toplam_okutma={len(barkodlar)}")
 
-        # 3) Sipariş kaydı - OrderCreated tablosundan bul
-        from archive import find_order_across_tables
+        # 3) Sipariş kaydı - Shopify veya DB'den bul
+        is_shopify_order = order_number.startswith("SH-")
+        order_created = None
+        table_cls = None
+        shopify_order_data = None
 
-        order_created, table_cls = find_order_across_tables(order_number)
+        if is_shopify_order:
+            # 🛍️ Shopify siparişi — API'den çek
+            shopify_id = order_number.replace("SH-", "")
+            shopify_result = shopify_service.get_order(shopify_id)
+            if shopify_result.get("success") and shopify_result.get("order"):
+                shopify_order_data = shopify_result["order"]
+                # Sahte order_created objesi oluştur (stok düşme için)
+                from siparis_hazirla import _shopify_order_to_hazirla_format
+                shopify_order_data["line_items"] = shopify_order_data.get("line_items") or []
+                order_created, _ = _shopify_order_to_hazirla_format(shopify_order_data)
+                table_cls = type(order_created)
+                logger.info(f"[ORDER] Shopify sipariş bulundu: {order_number}")
+            else:
+                logger.error(f"[SHOPIFY] Sipariş bulunamadı: {shopify_id}")
+                flash('Shopify siparişi bulunamadı.', 'danger')
+                return _respond(is_ajax)
+        else:
+            from archive import find_order_across_tables
+            order_created, table_cls = find_order_across_tables(order_number)
 
         if not order_created:
             logger.error("[DB] Sipariş hiçbir tabloda bulunamadı")
             flash('Sipariş bulunamadı.', 'danger')
             return _respond(is_ajax)
 
-        logger.info(f"[ORDER] Bulundu: {order_number}, Tablo: {table_cls.__name__}")
+        logger.info(f"[ORDER] Bulundu: {order_number}, Kaynak: {'SHOPIFY' if is_shopify_order else table_cls.__name__}")
 
         # 4) Detaylar
         try:
@@ -263,77 +288,110 @@ async def confirm_packing():
             flash("Stok düşümünde hata oluştu.", 'danger')
             return _respond(is_ajax)
 
-        # 7) Trendyol: Picking’e geçir (aynı, ama log zengin)
-        try:
-            shipment_package_ids = set()
-            for d in details:
-                sp = d.get('shipmentPackageId') or order_created.shipment_package_id or order_created.package_number
-                if sp:
-                    shipment_package_ids.add(sp)
-            logger.info(f"[TYL] paket_sayisi={len(shipment_package_ids)} ids={list(shipment_package_ids)}")
-
-            if not shipment_package_ids:
-                logger.error("[TYL] shipmentPackageId yok; API atlanıyor")
-                flash("shipmentPackageId yok; API güncellenemiyor.", 'danger')
-                return _respond(is_ajax)
-
-            lines = []
-            for d in details:
-                lid = d.get('line_id') or d.get('line_ids_api')
-                if not lid:
-                    logger.error("[TYL] line_id yok; iptal")
-                    flash("'line_id' yok; Trendyol update mümkün değil.", 'danger')
-                    return _respond(is_ajax)
-                q = int(d.get('quantity', 1))
-                lines.append({"lineId": int(lid), "quantity": q})
-
-            # paket -> lines eşleme
-            lines_by_sp = defaultdict(list)
-            for ln in lines:
-                sp_for_line = None
-                for d in details:
-                    lid = d.get('line_id') or d.get('line_ids_api')
-                    if str(lid) == str(ln["lineId"]):
-                        sp_for_line = d.get('shipmentPackageId')
-                        break
-                if not sp_for_line:
-                    sp_for_line = order_created.shipment_package_id or order_created.package_number
-                lines_by_sp[sp_for_line].append(ln)
-
-            logger.debug(f"[TYL] lines_by_sp: { {k: len(v) for k,v in lines_by_sp.items()} }")
-
-            trendyol_success = True
-            trendyol_failed_packages = []
-            for sp_id, ln in lines_by_sp.items():
-                logger.info(f"[TYL][PUT] sp_id={sp_id} lines={ln}")
-                ok = await update_order_status_to_picking(SUPPLIER_ID, sp_id, ln)
-                if ok:
-                    flash(f"✓ Paket {sp_id} Trendyol'da 'Picking' oldu.", 'success')
-                    logger.info(f"[TYL][OK] sp_id={sp_id}")
+        # 7-8-9) Platform'a göre dallan
+        if is_shopify_order:
+            # ═══════════════════════════════════════════
+            # 🛍️ SHOPIFY: Tag'i "Hazirlaniyor" yap
+            # ═══════════════════════════════════════════
+            try:
+                shopify_id = order_number.replace("SH-", "")
+                tag_result = shopify_service.update_order_status(shopify_id, "Hazirlaniyor")
+                if tag_result.get("success"):
+                    flash(f"Shopify siparis {order_number} Hazirlaniyor olarak guncellendi.", 'success')
+                    logger.info(f"[SHOPIFY][OK] {order_number} -> Hazirlaniyor")
                 else:
-                    trendyol_success = False
-                    trendyol_failed_packages.append(sp_id)
-                    flash(f"✗ Trendyol güncellemesi hatası. Paket: {sp_id}", 'danger')
-                    logger.error(f"[TYL][FAIL] sp_id={sp_id}")
-            
-            if not trendyol_success:
-                logger.error(f"[TYL][CRITICAL] Bazı paketler güncellenemedi: {trendyol_failed_packages}")
-                flash(f"⚠️ Trendyol güncellemesi BAŞARISIZ! Paketler: {', '.join(map(str, trendyol_failed_packages))}", 'danger')
-                # Trendyol güncellemesi başarısızsa, stok düşümünü geri al ve çık
+                    logger.error(f"[SHOPIFY][FAIL] Tag güncellenemedi: {tag_result}")
+                    flash(f"⚠️ Shopify tag güncellemesi başarısız: {tag_result.get('error', '')}", 'danger')
+                    try:
+                        db.session.rollback()
+                    except:
+                        pass
+                    return _respond(is_ajax)
+            except Exception as e:
+                logger.exception("[SHOPIFY][EXC]")
+                flash(f"Shopify güncellemesinde hata: {e}", 'danger')
                 try:
                     db.session.rollback()
-                    logger.warning("[TYL][ROLLBACK] Stok düşümü geri alındı")
                 except:
                     pass
                 return _respond(is_ajax)
-        except Exception as e:
-            logger.exception("[TYL][EXC]")
-            flash(f"Trendyol API çağrısında istisna: {e}", 'danger')
 
-        # 8) OrderCreated -> OrderPicking taşı
-        try:
-            if True:
-                # Normal akış: OrderCreated -> OrderPicking
+            # Shopify'da OrderCreated→OrderPicking taşıma YOK (DB'de kayıt yok)
+            flash(f'✓ Shopify sipariş hazırlandı.', 'success')
+            logger.info(f"[SHOPIFY] Sipariş hazırlandı: {order_number}")
+            log_user_action("UPDATE", {"işlem_açıklaması": f"Shopify sipariş hazırlandı — {order_number}", "sayfa": "Sipariş Hazırla", "stok_düşen": toplam_dusen})
+
+        else:
+            # ═══════════════════════════════════════════
+            # 📦 TRENDYOL: Picking'e geçir
+            # ═══════════════════════════════════════════
+            try:
+                shipment_package_ids = set()
+                for d in details:
+                    sp = d.get('shipmentPackageId') or order_created.shipment_package_id or order_created.package_number
+                    if sp:
+                        shipment_package_ids.add(sp)
+                logger.info(f"[TYL] paket_sayisi={len(shipment_package_ids)} ids={list(shipment_package_ids)}")
+
+                if not shipment_package_ids:
+                    logger.error("[TYL] shipmentPackageId yok; API atlanıyor")
+                    flash("shipmentPackageId yok; API güncellenemiyor.", 'danger')
+                    return _respond(is_ajax)
+
+                lines = []
+                for d in details:
+                    lid = d.get('line_id') or d.get('line_ids_api')
+                    if not lid:
+                        logger.error("[TYL] line_id yok; iptal")
+                        flash("'line_id' yok; Trendyol update mümkün değil.", 'danger')
+                        return _respond(is_ajax)
+                    q = int(d.get('quantity', 1))
+                    lines.append({"lineId": int(lid), "quantity": q})
+
+                # paket -> lines eşleme
+                lines_by_sp = defaultdict(list)
+                for ln in lines:
+                    sp_for_line = None
+                    for d in details:
+                        lid = d.get('line_id') or d.get('line_ids_api')
+                        if str(lid) == str(ln["lineId"]):
+                            sp_for_line = d.get('shipmentPackageId')
+                            break
+                    if not sp_for_line:
+                        sp_for_line = order_created.shipment_package_id or order_created.package_number
+                    lines_by_sp[sp_for_line].append(ln)
+
+                logger.debug(f"[TYL] lines_by_sp: { {k: len(v) for k,v in lines_by_sp.items()} }")
+
+                trendyol_success = True
+                trendyol_failed_packages = []
+                for sp_id, ln in lines_by_sp.items():
+                    logger.info(f"[TYL][PUT] sp_id={sp_id} lines={ln}")
+                    ok = await update_order_status_to_picking(SUPPLIER_ID, sp_id, ln)
+                    if ok:
+                        flash(f"✓ Paket {sp_id} Trendyol'da 'Picking' oldu.", 'success')
+                        logger.info(f"[TYL][OK] sp_id={sp_id}")
+                    else:
+                        trendyol_success = False
+                        trendyol_failed_packages.append(sp_id)
+                        flash(f"✗ Trendyol güncellemesi hatası. Paket: {sp_id}", 'danger')
+                        logger.error(f"[TYL][FAIL] sp_id={sp_id}")
+
+                if not trendyol_success:
+                    logger.error(f"[TYL][CRITICAL] Bazı paketler güncellenemedi: {trendyol_failed_packages}")
+                    flash(f"⚠️ Trendyol güncellemesi BAŞARISIZ! Paketler: {', '.join(map(str, trendyol_failed_packages))}", 'danger')
+                    try:
+                        db.session.rollback()
+                        logger.warning("[TYL][ROLLBACK] Stok düşümü geri alındı")
+                    except:
+                        pass
+                    return _respond(is_ajax)
+            except Exception as e:
+                logger.exception("[TYL][EXC]")
+                flash(f"Trendyol API çağrısında istisna: {e}", 'danger')
+
+            # 8) OrderCreated -> OrderPicking taşı
+            try:
                 data = order_created.__dict__.copy()
                 data.pop('_sa_instance_state', None)
                 picking_cols = {c.name for c in OrderPicking.__table__.columns}
@@ -346,11 +404,12 @@ async def confirm_packing():
                 db.session.delete(order_created)
                 db.session.commit()
                 logger.info(f"[MOVE] Created ➜ Picking OK (order={order_number})")
-        except Exception as db_error:
-            db.session.rollback()
-            logger.exception("[MOVE][ERR] rollback")
-            flash(f"Veritabanı taşıma hatası: {db_error}", 'danger')
-            return _respond(is_ajax)
+                log_user_action("UPDATE", {"işlem_açıklaması": f"Sipariş hazırlandı — {order_number} (Created → Picking)", "sayfa": "Sipariş Hazırla", "stok_düşen": toplam_dusen})
+            except Exception as db_error:
+                db.session.rollback()
+                logger.exception("[MOVE][ERR] rollback")
+                flash(f"Veritabanı taşıma hatası: {db_error}", 'danger')
+                return _respond(is_ajax)
 
         # 9) Sonraki sipariş info
         try:

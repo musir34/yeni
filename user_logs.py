@@ -1,5 +1,6 @@
-from flask import Blueprint, render_template, request, session
+from flask import Blueprint, render_template, request, session, jsonify
 from flask_login import current_user
+from sqlalchemy import or_
 from models import db, UserLog, User
 from login_logout import roles_required
 from datetime import datetime, timedelta
@@ -313,6 +314,9 @@ def view_logs():
     end_date_str = request.args.get('end_date')
     keyword = request.args.get('keyword', type=str)
 
+    # Barkod / sipariş no arama
+    barcode_search = request.args.get('barcode', '').strip()
+
     query = UserLog.query.join(User)
 
     if user_id:
@@ -320,7 +324,18 @@ def view_logs():
     if action_filter:
         query = query.filter(UserLog.action.ilike(f'%{action_filter}%'))
     if keyword:
-        query = query.filter(UserLog.details.ilike(f'%{keyword}%'))
+        query = query.filter(or_(
+            UserLog.details.ilike(f'%{keyword}%'),
+            UserLog.page_url.ilike(f'%{keyword}%'),
+        ))
+    if barcode_search:
+        # Barkod veya sipariş no araması — details JSON içinde ve page_url'de ara
+        query = query.filter(or_(
+            UserLog.details.ilike(f'%{barcode_search}%'),
+            UserLog.page_url.ilike(f'%{barcode_search}%'),
+        ))
+        # PAGE_VIEW loglarını hariç tut (sadece işlem loglarını göster)
+        query = query.filter(UserLog.action != 'PAGE_VIEW')
 
     try:
         if start_date_str:
@@ -364,6 +379,8 @@ def export_logs():
     end_date_str = request.args.get('end_date')
     keyword = request.args.get('keyword', type=str)
 
+    barcode_search = request.args.get('barcode', '').strip()
+
     query = UserLog.query.join(User)
 
     # Filtreler
@@ -372,7 +389,16 @@ def export_logs():
     if action_filter:
         query = query.filter(UserLog.action.ilike(f'%{action_filter}%'))
     if keyword:
-        query = query.filter(UserLog.details.ilike(f'%{keyword}%'))
+        query = query.filter(or_(
+            UserLog.details.ilike(f'%{keyword}%'),
+            UserLog.page_url.ilike(f'%{keyword}%'),
+        ))
+    if barcode_search:
+        query = query.filter(or_(
+            UserLog.details.ilike(f'%{barcode_search}%'),
+            UserLog.page_url.ilike(f'%{barcode_search}%'),
+        ))
+        query = query.filter(UserLog.action != 'PAGE_VIEW')
 
     # Tarih
     from datetime import datetime, timedelta

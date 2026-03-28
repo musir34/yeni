@@ -502,48 +502,95 @@ def display_archive():
 def archive_an_order():
     """
     Çok tablolu modelde, siparişi bul -> arşive ekle -> o tablodan sil.
+    Shopify siparişleri için DB kaydı olmadan arşiv oluşturur.
     """
     order_number = request.form.get('order_number')
     archive_reason = request.form.get('archive_reason')
     print(f"Sipariş arşivleniyor: {order_number}, neden: {archive_reason}")
 
-    # Siparişi tablolardan birinde ara
-    order_obj, table_cls = find_order_across_tables(order_number)
-    if not order_obj:
-        return jsonify({'success': False, 'message': 'Sipariş bulunamadı.'})
+    is_shopify = order_number and order_number.startswith("SH-")
 
-    # Trendyol siparişi - standart alan eşleştirmesi
-    new_archive = Archive(
-        order_number=order_obj.order_number,
-        status=order_obj.status,
-        order_date=order_obj.order_date,
-        details=order_obj.details,
-        shipment_package_id=getattr(order_obj, 'shipment_package_id', None),
-        package_number=getattr(order_obj, 'package_number', None),
-        shipping_barcode=getattr(order_obj, 'shipping_barcode', None),
-        cargo_provider_name=getattr(order_obj, 'cargo_provider_name', None),
-        customer_name=getattr(order_obj, 'customer_name', None),
-        customer_surname=getattr(order_obj, 'customer_surname', None),
-        customer_address=getattr(order_obj, 'customer_address', None),
-        agreed_delivery_date=getattr(order_obj, 'agreed_delivery_date', None),
-        archive_reason=archive_reason,
-        archive_date=datetime.now(),
-        source='trendyol'
-    )
-    
-    try:
-        db.session.add(new_archive)
-        db.session.delete(order_obj)
-        db.session.commit()
-        
-        try: log_user_action("ARCHIVE", {"işlem_açıklaması": f"Sipariş arşivlendi — {order_number} ({table_cls.__tablename__} → Arşiv), Sebep: {archive_reason or '-'}", "sayfa": "Sipariş Listesi", "sipariş_no": order_number, "sebep": archive_reason or "-", "kaynak_tablo": table_cls.__tablename__})
-        except: pass
-        return jsonify({'success': True, 'message': 'Sipariş arşive eklendi.'})
-    except Exception as e:
-        db.session.rollback()
-        print(f"Arşivleme DB hatası: {e}")
-        traceback.print_exc()
-        return jsonify({'success': False, 'message': 'Arşivleme sırasında veritabanı hatası oluştu.'})
+    if is_shopify:
+        # 🛍️ Shopify siparişi — DB'de kayıt yok, API'den bilgi alıp arşivle
+        try:
+            from shopify_site.shopify_service import shopify_service
+            from siparis_hazirla import _shopify_order_to_hazirla_format
+
+            shopify_id = order_number.replace("SH-", "")
+            shopify_result = shopify_service.get_order(shopify_id)
+
+            if shopify_result.get("success") and shopify_result.get("order"):
+                raw = shopify_result["order"]
+                raw["line_items"] = raw.get("line_items") or []
+                fake_order, _ = _shopify_order_to_hazirla_format(raw)
+
+                new_archive = Archive(
+                    order_number=order_number,
+                    status="Archived",
+                    order_date=fake_order.order_date,
+                    details=fake_order.details,
+                    shipment_package_id=None,
+                    package_number=None,
+                    shipping_barcode=None,
+                    cargo_provider_name=None,
+                    customer_name=fake_order.customer_name,
+                    customer_surname=fake_order.customer_surname,
+                    customer_address=fake_order.customer_address,
+                    agreed_delivery_date=None,
+                    archive_reason=archive_reason,
+                    archive_date=datetime.now(),
+                    source='shopify'
+                )
+                db.session.add(new_archive)
+                db.session.commit()
+
+                try: log_user_action("ARCHIVE", {"sayfa": "Sipariş Hazırla", "sipariş_no": order_number, "sebep": archive_reason or "-", "kaynak": "SHOPIFY"})
+                except: pass
+                return jsonify({'success': True, 'message': 'Shopify sipariş arşive eklendi.'})
+            else:
+                return jsonify({'success': False, 'message': 'Shopify siparişi bulunamadı.'})
+        except Exception as e:
+            db.session.rollback()
+            print(f"Shopify arşivleme hatası: {e}")
+            traceback.print_exc()
+            return jsonify({'success': False, 'message': f'Shopify arşivleme hatası: {str(e)}'})
+    else:
+        # 📦 Trendyol/WooCommerce siparişi — standart akış
+        order_obj, table_cls = find_order_across_tables(order_number)
+        if not order_obj:
+            return jsonify({'success': False, 'message': 'Sipariş bulunamadı.'})
+
+        new_archive = Archive(
+            order_number=order_obj.order_number,
+            status=order_obj.status,
+            order_date=order_obj.order_date,
+            details=order_obj.details,
+            shipment_package_id=getattr(order_obj, 'shipment_package_id', None),
+            package_number=getattr(order_obj, 'package_number', None),
+            shipping_barcode=getattr(order_obj, 'shipping_barcode', None),
+            cargo_provider_name=getattr(order_obj, 'cargo_provider_name', None),
+            customer_name=getattr(order_obj, 'customer_name', None),
+            customer_surname=getattr(order_obj, 'customer_surname', None),
+            customer_address=getattr(order_obj, 'customer_address', None),
+            agreed_delivery_date=getattr(order_obj, 'agreed_delivery_date', None),
+            archive_reason=archive_reason,
+            archive_date=datetime.now(),
+            source='trendyol'
+        )
+
+        try:
+            db.session.add(new_archive)
+            db.session.delete(order_obj)
+            db.session.commit()
+
+            try: log_user_action("ARCHIVE", {"işlem_açıklaması": f"Sipariş arşivlendi — {order_number} ({table_cls.__tablename__} → Arşiv), Sebep: {archive_reason or '-'}", "sayfa": "Sipariş Listesi", "sipariş_no": order_number, "sebep": archive_reason or "-", "kaynak_tablo": table_cls.__tablename__})
+            except: pass
+            return jsonify({'success': True, 'message': 'Sipariş arşive eklendi.'})
+        except Exception as e:
+            db.session.rollback()
+            print(f"Arşivleme DB hatası: {e}")
+            traceback.print_exc()
+            return jsonify({'success': False, 'message': 'Arşivleme sırasında veritabanı hatası oluştu.'})
 
 
 #############################

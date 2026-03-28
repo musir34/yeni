@@ -8,6 +8,7 @@ Bu modül barkod alias (takma ad) sistemini yönetir.
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
 from models import db, BarcodeAlias, Product
+from user_logs import log_user_action
 from barcode_alias_helper import (
     normalize_barcode, 
     add_alias, 
@@ -64,7 +65,8 @@ def add_alias_route():
     
     if result['success']:
         flash(result['message'], 'success')
-        
+        log_user_action("CREATE", {"işlem_açıklaması": f"Barkod alias eklendi — {alias_barcode} → {main_barcode}", "sayfa": "Barkod Alias"})
+
         # Stok birleştirme detayları
         if merge_stocks and result.get('stock_merged'):
             stock_info = result['stock_merged']
@@ -86,9 +88,10 @@ def delete_alias_route(alias_barcode):
     
     if result['success']:
         flash(result['message'], 'success')
+        log_user_action("DELETE", {"işlem_açıklaması": f"Barkod alias silindi — {alias_barcode}", "sayfa": "Barkod Alias"})
     else:
         flash(result['message'], 'danger')
-    
+
     return redirect(url_for('barcode_alias.index'))
 
 

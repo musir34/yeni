@@ -285,7 +285,6 @@
       </button>
       <ul class="dropdown-menu dropdown-menu-end">
         <li><a class="dropdown-item" href="{{ url_for('shopify.orders_dashboard') }}"><i class="fab fa-shopify me-2" style="color:#96bf48"></i>Shopify Siparişler</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('shopify.stock_sync_dashboard') }}"><i class="fab fa-shopify me-2" style="color:#5c6ac4"></i>Shopify Stok Sync</a></li>
         <li><hr class="dropdown-divider"></li>
         <li><a class="dropdown-item" href="{{ url_for('idefix.index') }}"><i class="fas fa-store me-2" style="color:#8e24aa"></i>Idefix</a></li>
         <li><a class="dropdown-item" href="{{ url_for('hepsiburada.index') }}"><i class="fas fa-store me-2" style="color:#FF6000"></i>Hepsiburada</a></li>
@@ -333,9 +332,13 @@
           <h5>{{ ay_adi }} Aylık Toplam Sipariş</h5>
           <div class="num" id="numAylikSiparis">{{ stats.toplam_siparis }}</div>
           <div style="margin-top:8px;font-size:.85rem;color:#555;">
-            <div style="display:flex;justify-content:space-between;padding:4px 0;">
-              <span>📦 Trendyol:</span>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #eee;">
+              <span style="color:#f27a1a;">📦 Trendyol:</span>
               <strong>{{ stats.trendyol_siparis }}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;">
+              <span style="color:#96bf48;">🛍 Shopify:</span>
+              <strong id="numShopifySiparis">{{ stats.shopify_siparis }}</strong>
             </div>
           </div>
           <div style="margin-top:6px;font-weight:600;color:#555;">
@@ -350,20 +353,37 @@
       <div class="col-md-3 mb-3">
         <div class="card-soft p-3 tile" id="tileSiparisDurumu">
           <h5>📦 Sipariş Durumu</h5>
-          <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #e0e0e0;">
+          <div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #e0e0e0;">
             <div style="font-size:.85rem;font-weight:600;color:#f27a1a;margin-bottom:6px;">📦 Trendyol</div>
-            <div class="d-flex flex-column" style="gap:6px;">
+            <div class="d-flex flex-column" style="gap:5px;">
               <div class="d-flex align-items-center" style="gap:8px;">
-                <span class="badge bg-warning text-dark" style="font-size:.75rem;">Yeni</span>
-                <span id="count-created" class="num" style="font-size:1.3rem;">{{ stats.created if stats.get('created') is not none else 0 }}</span>
+                <span class="badge bg-warning text-dark" style="font-size:.72rem;">Yeni</span>
+                <span id="count-created" class="num" style="font-size:1.2rem;">{{ stats.created if stats.get('created') is not none else 0 }}</span>
               </div>
               <div class="d-flex align-items-center" style="gap:8px;">
-                <span class="badge bg-success" style="font-size:.75rem;">İşlemde</span>
-                <span id="count-picking" class="num" style="font-size:1.3rem;">{{ stats.picking if stats.get('picking') is not none else 0 }}</span>
+                <span class="badge bg-success" style="font-size:.72rem;">İşlemde</span>
+                <span id="count-picking" class="num" style="font-size:1.2rem;">{{ stats.picking if stats.get('picking') is not none else 0 }}</span>
               </div>
             </div>
           </div>
-          <div class="text-muted small mt-2" id="op-last-update">Son güncelleme: şimdi</div>
+          <div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #e0e0e0;">
+            <div style="font-size:.85rem;font-weight:600;color:#96bf48;margin-bottom:6px;">🛍 Shopify</div>
+            <div class="d-flex flex-column" style="gap:5px;">
+              <div class="d-flex align-items-center" style="gap:8px;">
+                <span class="badge" style="font-size:.72rem;background:#f59e0b;color:#fff;">Beklemede</span>
+                <span id="count-shopify-beklemede" class="num" style="font-size:1.2rem;">{{ stats.shopify_beklemede or 0 }}</span>
+              </div>
+              <div class="d-flex align-items-center" style="gap:8px;">
+                <span class="badge" style="font-size:.72rem;background:#3b82f6;color:#fff;">Hazırlanıyor</span>
+                <span id="count-shopify-hazirlaniyor" class="num" style="font-size:1.2rem;">{{ stats.shopify_hazirlaniyor or 0 }}</span>
+              </div>
+              <div class="d-flex align-items-center" style="gap:8px;">
+                <span class="badge" style="font-size:.72rem;background:#8b5cf6;color:#fff;">Kargoda</span>
+                <span id="count-shopify-kargoda" class="num" style="font-size:1.2rem;">{{ stats.shopify_kargoda or 0 }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="text-muted small" id="op-last-update">Son güncelleme: şimdi</div>
         </div>
       </div>
 
@@ -435,16 +455,25 @@
     (function () {
       var createdEl = document.getElementById('count-created');
       var pickingEl = document.getElementById('count-picking');
+      var shopBekEl = document.getElementById('count-shopify-beklemede');
+      var shopHazEl = document.getElementById('count-shopify-hazirlaniyor');
+      var shopKrgEl = document.getElementById('count-shopify-kargoda');
       var lastEl    = document.getElementById('op-last-update');
       var hazirlaBtn = document.getElementById('siparisHazirlaBtn');
 
       var prevCreated = parseInt(createdEl.textContent, 10) || 0;
       var prevPicking = parseInt(pickingEl.textContent, 10) || 0;
+      var prevShopBek = parseInt(shopBekEl?.textContent, 10) || 0;
+      var prevShopHaz = parseInt(shopHazEl?.textContent, 10) || 0;
+      var prevShopKrg = parseInt(shopKrgEl?.textContent, 10) || 0;
 
       // Count-up animasyonu (sayfa ilk yüklemesinde)
       if (window.GS) {
         GS.countTween(createdEl, 0, prevCreated, 600);
         GS.countTween(pickingEl, 0, prevPicking, 600);
+        if (shopBekEl) GS.countTween(shopBekEl, 0, prevShopBek, 600);
+        if (shopHazEl) GS.countTween(shopHazEl, 0, prevShopHaz, 600);
+        if (shopKrgEl) GS.countTween(shopKrgEl, 0, prevShopKrg, 600);
       }
 
       function updatePulse(created) {
@@ -458,9 +487,16 @@
 
       function flashTile(el) {
         el.classList.remove('kpi-flash');
-        void el.offsetWidth; // reflow
+        void el.offsetWidth;
         el.classList.add('kpi-flash');
         setTimeout(function() { el.classList.remove('kpi-flash'); }, 400);
+      }
+
+      function tweenEl(el, prev, next) {
+        if (!el || next === prev) return prev;
+        if (window.GS) GS.countTween(el, prev, next, 220);
+        else el.textContent = next;
+        return next;
       }
 
       function refreshCounts(signal) {
@@ -472,25 +508,23 @@
           .then(function(data) {
             var newCreated = typeof data.created === 'number' ? data.created : prevCreated;
             var newPicking = typeof data.picking === 'number' ? data.picking : prevPicking;
+            var newShopBek = typeof data.shopify_beklemede === 'number' ? data.shopify_beklemede : prevShopBek;
+            var newShopHaz = typeof data.shopify_hazirlaniyor === 'number' ? data.shopify_hazirlaniyor : prevShopHaz;
+            var newShopKrg = typeof data.shopify_kargoda === 'number' ? data.shopify_kargoda : prevShopKrg;
 
-            if (newCreated !== prevCreated) {
-              if (window.GS) GS.countTween(createdEl, prevCreated, newCreated, 220);
-              else createdEl.textContent = newCreated;
-              flashTile(document.getElementById('tileSiparisDurumu'));
-              prevCreated = newCreated;
-            }
-            if (newPicking !== prevPicking) {
-              if (window.GS) GS.countTween(pickingEl, prevPicking, newPicking, 220);
-              else pickingEl.textContent = newPicking;
-              prevPicking = newPicking;
-            }
+            var changed = false;
+            if (newCreated !== prevCreated) { prevCreated = tweenEl(createdEl, prevCreated, newCreated); changed = true; }
+            if (newPicking !== prevPicking) { prevPicking = tweenEl(pickingEl, prevPicking, newPicking); changed = true; }
+            if (newShopBek !== prevShopBek) { prevShopBek = tweenEl(shopBekEl, prevShopBek, newShopBek); changed = true; }
+            if (newShopHaz !== prevShopHaz) { prevShopHaz = tweenEl(shopHazEl, prevShopHaz, newShopHaz); changed = true; }
+            if (newShopKrg !== prevShopKrg) { prevShopKrg = tweenEl(shopKrgEl, prevShopKrg, newShopKrg); changed = true; }
 
+            if (changed) flashTile(document.getElementById('tileSiparisDurumu'));
             updatePulse(newCreated);
             lastEl.textContent = 'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' });
           });
       }
 
-      // İlk yükleme pulse kontrolü
       updatePulse(prevCreated);
 
       if (window.GS) {

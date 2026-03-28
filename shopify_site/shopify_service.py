@@ -137,10 +137,12 @@ class ShopifyService:
         limit: int = 20,
         query_filter: Optional[str] = None,
         after: Optional[str] = None,
+        oldest_first: bool = False,
     ) -> Dict[str, Any]:
+        reverse_val = "false" if oldest_first else "true"
         query = """
         query GetOrders($first: Int!, $query: String, $after: String) {
-          orders(first: $first, query: $query, after: $after, reverse: true, sortKey: PROCESSED_AT) {
+          orders(first: $first, query: $query, after: $after, reverse: """ + reverse_val + """, sortKey: PROCESSED_AT) {
             pageInfo {
               hasNextPage
               hasPreviousPage
@@ -178,10 +180,12 @@ class ShopifyService:
                   phone
                 }
                 shippingAddress {
+                  name
                   city
                   province
                   country
                 }
+                paymentGatewayNames
                 fulfillments {
                   id
                   status
@@ -201,6 +205,7 @@ class ShopifyService:
                       currentQuantity
                       variant {
                         id
+                        barcode
                         image {
                           url
                         }
@@ -242,6 +247,27 @@ class ShopifyService:
                 for item in node.get("lineItems", {}).get("edges", [])
             ]
             node.pop("lineItems", None)
+            # Her line item'a resolved panel barkodunu ekle
+            try:
+                from models import ShopifyMapping, Product
+                from barcode_alias_helper import normalize_barcode as _nbc
+                for li in node["line_items"]:
+                    v = li.get("variant") or {}
+                    vbc = v.get("barcode") or ""
+                    vsku = li.get("sku") or ""
+                    res = None
+                    if vbc:
+                        p = Product.query.filter_by(barcode=_nbc(vbc)).first()
+                        if p: res = p.barcode
+                    if not res and vsku:
+                        m = ShopifyMapping.query.filter_by(shopify_sku=vsku).first()
+                        if m: res = m.barcode
+                    if not res and vbc:
+                        m = ShopifyMapping.query.filter_by(shopify_barcode=vbc).first()
+                        if m: res = m.barcode
+                    li["resolved_barcode"] = res or vbc or ""
+            except Exception:
+                pass
             orders.append(node)
 
         return {
@@ -312,20 +338,28 @@ class ShopifyService:
         )
 
         # Fulfill edilebilir fulfillment order'lari bul
-        fulfillment_line_items = []
+        # Her fulfillmentOrderId icin line item'lari grupla
+        fo_groups = {}
         for fo_edge in fo_edges:
             fo_node = fo_edge.get("node", {})
-            if fo_node.get("status") in ("OPEN", "IN_PROGRESS"):
+            fo_status = fo_node.get("status")
+            logger.debug("[SHOPIFY] FulfillmentOrder id=%s status=%s", fo_node.get("id"), fo_status)
+            if fo_status in ("OPEN", "IN_PROGRESS", "SCHEDULED"):
+                fo_id = fo_node["id"]
                 for li_edge in fo_node.get("lineItems", {}).get("edges", []):
                     li_node = li_edge.get("node", {})
                     if li_node.get("remainingQuantity", 0) > 0:
-                        fulfillment_line_items.append({
-                            "fulfillmentOrderId": fo_node["id"],
-                            "fulfillmentOrderLineItems": [{
-                                "id": li_node["id"],
-                                "quantity": li_node["remainingQuantity"],
-                            }],
+                        if fo_id not in fo_groups:
+                            fo_groups[fo_id] = []
+                        fo_groups[fo_id].append({
+                            "id": li_node["id"],
+                            "quantity": li_node["remainingQuantity"],
                         })
+
+        fulfillment_line_items = [
+            {"fulfillmentOrderId": fo_id, "fulfillmentOrderLineItems": items}
+            for fo_id, items in fo_groups.items()
+        ]
 
         if not fulfillment_line_items:
             return {
@@ -370,12 +404,18 @@ class ShopifyService:
         if tracking_info:
             variables["fulfillment"]["trackingInfo"] = tracking_info
 
+        logger.info("[SHOPIFY] Fulfillment olusturuluyor: fo_count=%d, tracking=%s", len(fulfillment_line_items), tracking_info)
         result = self._post_graphql(mutation, variables)
         if not result.get("success"):
+            logger.error("[SHOPIFY] Fulfillment GraphQL hatasi: %s", result.get("error"))
             return result
 
         payload = result["data"].get("fulfillmentCreateV2", {})
         errors = payload.get("userErrors") or []
+        if errors:
+            logger.error("[SHOPIFY] Fulfillment userErrors: %s", errors)
+        else:
+            logger.info("[SHOPIFY] Fulfillment basarili: %s", payload.get("fulfillment", {}).get("id"))
         return {
             "success": not errors,
             "fulfillment": payload.get("fulfillment"),
@@ -443,6 +483,121 @@ class ShopifyService:
             "errors": errors,
         }
 
+    # Özel sipariş statüleri (tag olarak yönetilir)
+    ORDER_STATUSES = ["Beklemede", "Hazirlaniyor", "Kargoda", "Teslim Edildi"]
+
+    def remove_order_tags(self, order_id: str | int, tags: List[str]) -> Dict[str, Any]:
+        """Siparisten etiket kaldirir."""
+        mutation = """
+        mutation RemoveOrderTags($id: ID!, $tags: [String!]!) {
+          tagsRemove(id: $id, tags: $tags) {
+            node {
+              ... on Order {
+                id
+                tags
+              }
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        gid = self._build_gid("Order", order_id)
+        result = self._post_graphql(mutation, {"id": gid, "tags": tags})
+        if not result.get("success"):
+            return result
+
+        payload = result["data"].get("tagsRemove", {})
+        errors = payload.get("userErrors") or []
+        return {
+            "success": not errors,
+            "node": payload.get("node"),
+            "errors": errors,
+        }
+
+    def update_order_status(self, order_id: str | int, new_status: str) -> Dict[str, Any]:
+        """Siparis statusunu gunceller (eski status tagini kaldirir, yenisini ekler)."""
+        if new_status not in self.ORDER_STATUSES:
+            return {"success": False, "error": f"Gecersiz status: {new_status}"}
+
+        # Önce mevcut statü taglerini kaldır
+        old_statuses = [s for s in self.ORDER_STATUSES if s != new_status]
+        remove_result = self.remove_order_tags(order_id, old_statuses)
+        if not remove_result.get("success"):
+            logger.warning("[SHOPIFY] Eski status tagleri kaldirilirken hata: %s", remove_result)
+
+        # Yeni statü tagini ekle
+        tag_result = self.add_order_tags(order_id, [new_status])
+
+        # Teslim Edildi ise siparisi Shopify'da da arsivle (close)
+        if new_status == "Teslim Edildi" and tag_result.get("success"):
+            close_result = self.close_order(order_id)
+            if not close_result.get("success"):
+                logger.warning("[SHOPIFY] Siparis arsivlenemedi: %s", close_result)
+
+        return tag_result
+
+    def close_order(self, order_id: str | int) -> Dict[str, Any]:
+        """Siparisi Shopify'da arsivler (kapatir)."""
+        mutation = """
+        mutation CloseOrder($input: OrderCloseInput!) {
+          orderClose(input: $input) {
+            order {
+              id
+              closed
+              closedAt
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        gid = self._build_gid("Order", order_id)
+        result = self._post_graphql(mutation, {"input": {"id": gid}})
+        if not result.get("success"):
+            return result
+
+        payload = result["data"].get("orderClose", {})
+        errors = payload.get("userErrors") or []
+        return {
+            "success": not errors,
+            "order": payload.get("order"),
+            "errors": errors,
+        }
+
+    def mark_as_paid(self, order_id: str | int) -> Dict[str, Any]:
+        """Siparisi odendi olarak isaretle."""
+        mutation = """
+        mutation MarkAsPaid($input: OrderMarkAsPaidInput!) {
+          orderMarkAsPaid(input: $input) {
+            order {
+              id
+              displayFinancialStatus
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        gid = self._build_gid("Order", order_id)
+        result = self._post_graphql(mutation, {"input": {"id": gid}})
+        if not result.get("success"):
+            return result
+
+        payload = result["data"].get("orderMarkAsPaid", {})
+        errors = payload.get("userErrors") or []
+        return {
+            "success": not errors,
+            "order": payload.get("order"),
+            "errors": errors,
+        }
+
     def get_order(self, order_id: str | int) -> Dict[str, Any]:
         query = """
         query GetOrder($id: ID!) {
@@ -454,8 +609,10 @@ class ShopifyService:
             cancelledAt
             cancelReason
             note
+            tags
             displayFinancialStatus
             displayFulfillmentStatus
+            paymentGatewayNames
             customer {
               firstName
               lastName
@@ -488,6 +645,41 @@ class ShopifyService:
                 currencyCode
               }
             }
+            totalRefundedSet {
+              shopMoney {
+                amount
+                currencyCode
+              }
+            }
+            refunds(first: 20) {
+              id
+              note
+              createdAt
+              totalRefundedSet {
+                shopMoney {
+                  amount
+                  currencyCode
+                }
+              }
+              refundLineItems(first: 50) {
+                edges {
+                  node {
+                    quantity
+                    lineItem {
+                      title
+                      sku
+                      quantity
+                    }
+                    subtotalSet {
+                      shopMoney {
+                        amount
+                        currencyCode
+                      }
+                    }
+                  }
+                }
+              }
+            }
             lineItems(first: 50) {
               edges {
                 node {
@@ -506,6 +698,10 @@ class ShopifyService:
                     id
                     legacyResourceId
                     sku
+                    barcode
+                    image {
+                      url
+                    }
                     inventoryItem {
                       id
                       sku
@@ -526,6 +722,55 @@ class ShopifyService:
         if order:
             order["line_items"] = [item.get("node", {}) for item in order.get("lineItems", {}).get("edges", [])]
             order.pop("lineItems", None)
+
+            # Her line item'a resolved panel barkodunu ekle
+            from models import ShopifyMapping, Product
+            for li in order["line_items"]:
+                variant = li.get("variant") or {}
+                v_barcode = variant.get("barcode") or ""
+                v_sku = li.get("sku") or ""
+                resolved = None
+                # 1) variant.barcode ile Product'ta ara
+                if v_barcode:
+                    from barcode_alias_helper import normalize_barcode
+                    p = Product.query.filter_by(barcode=normalize_barcode(v_barcode)).first()
+                    if p:
+                        resolved = p.barcode
+                # 2) ShopifyMapping ile SKU -> panel barkod
+                if not resolved and v_sku:
+                    m = ShopifyMapping.query.filter_by(shopify_sku=v_sku).first()
+                    if m:
+                        resolved = m.barcode
+                # 3) ShopifyMapping ile variant barcode -> panel barkod
+                if not resolved and v_barcode:
+                    m = ShopifyMapping.query.filter_by(shopify_barcode=v_barcode).first()
+                    if m:
+                        resolved = m.barcode
+                li["resolved_barcode"] = resolved or v_barcode or ""
+
+            # Refund detaylarini parse et
+            refunds_raw = order.get("refunds") or []
+            parsed_refunds = []
+            for ref in refunds_raw:
+                ref_items = []
+                for edge in (ref.get("refundLineItems") or {}).get("edges", []):
+                    node = edge.get("node", {})
+                    li = node.get("lineItem") or {}
+                    ref_items.append({
+                        "title": li.get("title", ""),
+                        "sku": li.get("sku", ""),
+                        "original_quantity": li.get("quantity", 0),
+                        "refunded_quantity": node.get("quantity", 0),
+                        "refund_amount": float((node.get("subtotalSet") or {}).get("shopMoney", {}).get("amount", 0)),
+                    })
+                parsed_refunds.append({
+                    "id": ref.get("id", ""),
+                    "note": ref.get("note", ""),
+                    "created_at": ref.get("createdAt", ""),
+                    "total": float((ref.get("totalRefundedSet") or {}).get("shopMoney", {}).get("amount", 0)),
+                    "items": ref_items,
+                })
+            order["parsed_refunds"] = parsed_refunds
 
         return {
             "success": bool(order),

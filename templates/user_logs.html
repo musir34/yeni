@@ -7,13 +7,50 @@
     <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-home"></i> Anasayfa</a>
   </div>
 
+  <!-- Barkod / Sipariş No Arama -->
+  <div class="card mb-3 shadow-sm border-0" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);">
+    <div class="card-body py-3">
+      <form method="GET" class="d-flex gap-2 align-items-center flex-wrap">
+        <div class="flex-grow-1" style="max-width:500px;">
+          <div class="input-group">
+            <span class="input-group-text bg-white border-0" style="border-radius:12px 0 0 12px;"><i class="fas fa-barcode text-muted"></i></span>
+            <input type="text" id="barcode" name="barcode" class="form-control border-0 shadow-none"
+                   value="{{ request.args.get('barcode', '') }}"
+                   placeholder="Barkod veya sipariş numarası ile ara..."
+                   style="font-size:1rem;padding:10px 14px;border-radius:0 12px 12px 0;"
+                   autofocus>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-light fw-bold" style="border-radius:12px;padding:10px 24px;">
+          <i class="fas fa-search me-1"></i> Ara
+        </button>
+        {% if request.args.get('barcode') %}
+        <a href="{{ url_for('user_logs.view_logs') }}" class="btn btn-outline-light btn-sm" style="border-radius:12px;">
+          <i class="fas fa-times me-1"></i> Temizle
+        </a>
+        <span class="text-white fw-bold ms-2" style="font-size:.9rem;">
+          <i class="fas fa-tag me-1"></i> "{{ request.args.get('barcode') }}" ile ilgili işlemler
+        </span>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
   <!-- Filtreler -->
   <div class="card mb-4 shadow-sm">
-    <div class="card-header bg-dark text-white">
-      <h5 class="mb-0"><i class="fas fa-filter"></i> Filtrele</h5>
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="fas fa-filter"></i> Detaylı Filtre</h5>
+      <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#filterPanel">
+        <i class="fas fa-chevron-down"></i>
+      </button>
     </div>
+    <div class="collapse {% if request.args.get('user_id') or request.args.get('action') or request.args.get('start_date') or request.args.get('keyword') %}show{% endif %}" id="filterPanel">
     <div class="card-body">
       <form method="GET" class="row g-3">
+        {# Barkod araması varsa gizli input olarak taşı #}
+        {% if request.args.get('barcode') %}
+        <input type="hidden" name="barcode" value="{{ request.args.get('barcode') }}">
+        {% endif %}
         <div class="col-md-3">
           <label for="user_id" class="form-label fw-bold">Kullanıcı</label>
           <select id="user_id" name="user_id" class="form-select">
@@ -34,6 +71,7 @@
             <option value="CREATE" {% if request.args.get('action') == 'CREATE' %}selected{% endif %}>Oluşturma</option>
             <option value="UPDATE" {% if request.args.get('action') == 'UPDATE' %}selected{% endif %}>Güncelleme</option>
             <option value="DELETE" {% if request.args.get('action') == 'DELETE' %}selected{% endif %}>Silme</option>
+            <option value="STOCK_UPDATE" {% if request.args.get('action') == 'STOCK_UPDATE' %}selected{% endif %}>Stok Güncelleme</option>
             <option value="PAGE_VIEW" {% if request.args.get('action') == 'PAGE_VIEW' %}selected{% endif %}>Sayfa Görüntüleme</option>
           </select>
         </div>
@@ -53,6 +91,7 @@
           <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i></button>
         </div>
       </form>
+    </div>
     </div>
   </div>
 
@@ -122,7 +161,11 @@
                   {# İşlem açıklaması varsa öne çıkar #}
                   {% if log.details_dict['işlem_açıklaması'] is defined %}
                     <div class="mb-1 fw-bold text-primary" style="font-size:0.95rem;">
-                      📝 {{ log.details_dict['işlem_açıklaması'] }}
+                      📝 {% if request.args.get('barcode') and request.args.get('barcode') in (log.details_dict['işlem_açıklaması']|string) %}
+                        {{ log.details_dict['işlem_açıklaması']|string|replace(request.args.get('barcode'), '<mark style="background:#ffe066;padding:1px 3px;border-radius:3px;font-weight:700;">' ~ request.args.get('barcode') ~ '</mark>')|safe }}
+                      {% else %}
+                        {{ log.details_dict['işlem_açıklaması'] }}
+                      {% endif %}
                     </div>
                   {% endif %}
 
@@ -133,7 +176,9 @@
                     {% if has_detail.append(1) %}{% endif %}
                     <div class="mb-1">
                       <span class="text-muted fw-bold">{{ key }}:</span>
-                      {% if value is string and value|length > 150 %}
+                      {% if request.args.get('barcode') and request.args.get('barcode') in (value|string) %}
+                        {{ (value|string)|replace(request.args.get('barcode'), '<mark style="background:#ffe066;padding:1px 3px;border-radius:3px;font-weight:700;">' ~ request.args.get('barcode') ~ '</mark>')|safe }}
+                      {% elif value is string and value|length > 150 %}
                         <span title="{{ value }}">{{ value[:150] }}...</span>
                       {% else %}
                         {{ value }}
@@ -165,13 +210,13 @@
     <ul class="pagination justify-content-center">
       {% if logs.has_prev %}
       <li class="page-item">
-        <a class="page-link" href="{{ url_for('user_logs.view_logs', page=logs.prev_num, user_id=request.args.get('user_id'), action=request.args.get('action'), start_date=request.args.get('start_date'), end_date=request.args.get('end_date'), keyword=request.args.get('keyword')) }}">&laquo;</a>
+        <a class="page-link" href="{{ url_for('user_logs.view_logs', page=logs.prev_num, user_id=request.args.get('user_id'), action=request.args.get('action'), start_date=request.args.get('start_date'), end_date=request.args.get('end_date'), keyword=request.args.get('keyword'), barcode=request.args.get('barcode')) }}">&laquo;</a>
       </li>
       {% endif %}
       {% for page in logs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
         {% if page %}
           <li class="page-item {% if page == logs.page %}active{% endif %}">
-            <a class="page-link" href="{{ url_for('user_logs.view_logs', page=page, user_id=request.args.get('user_id'), action=request.args.get('action'), start_date=request.args.get('start_date'), end_date=request.args.get('end_date'), keyword=request.args.get('keyword')) }}">{{ page }}</a>
+            <a class="page-link" href="{{ url_for('user_logs.view_logs', page=page, user_id=request.args.get('user_id'), action=request.args.get('action'), start_date=request.args.get('start_date'), end_date=request.args.get('end_date'), keyword=request.args.get('keyword'), barcode=request.args.get('barcode')) }}">{{ page }}</a>
           </li>
         {% else %}
           <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -179,7 +224,7 @@
       {% endfor %}
       {% if logs.has_next %}
       <li class="page-item">
-        <a class="page-link" href="{{ url_for('user_logs.view_logs', page=logs.next_num, user_id=request.args.get('user_id'), action=request.args.get('action'), start_date=request.args.get('start_date'), end_date=request.args.get('end_date'), keyword=request.args.get('keyword')) }}">&raquo;</a>
+        <a class="page-link" href="{{ url_for('user_logs.view_logs', page=logs.next_num, user_id=request.args.get('user_id'), action=request.args.get('action'), start_date=request.args.get('start_date'), end_date=request.args.get('end_date'), keyword=request.args.get('keyword'), barcode=request.args.get('barcode')) }}">&raquo;</a>
       </li>
       {% endif %}
     </ul>
