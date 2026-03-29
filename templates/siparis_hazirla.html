@@ -1192,6 +1192,9 @@
           autoShipMessage.classList.add('show');
           setTimeout(function(){ autoShipMessage.classList.remove('show'); }, 3000);
         }
+        if (shippingBarcode && navigator.clipboard) {
+          navigator.clipboard.writeText(shippingBarcode).catch(function(){});
+        }
       }
 
       function updateButtons() {
@@ -1285,10 +1288,30 @@
           }
         });
         input.addEventListener('keydown', function(e) {
-          if (e.key !== 'Enter') return;
-          e.preventDefault();
-          if (typingTimer) clearTimeout(typingTimer);
-          validateBarkodInput(this, idx);
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (typingTimer) clearTimeout(typingTimer);
+            validateBarkodInput(this, idx);
+            return;
+          }
+          {% if session['role'] == 'admin' %}
+          if (e.key === 'Tab') {
+            e.preventDefault();
+            if (typingTimer) clearTimeout(typingTimer);
+            // Onaylanmamış tüm inputları tek seferde doldur
+            barkodInputs.forEach(function(inp, i) {
+              if (inp.dataset.confirmed) return;
+              var pi = inp.dataset.productIndex, qi = inp.dataset.quantityIndex, side = inp.dataset.side;
+              var cb = inp.closest('.card-body');
+              if (!cb) return;
+              var expectedEl = cb.querySelector('input[type="hidden"][id="expectedBarcode-' + side + '-' + pi + '-' + qi + '"]');
+              if (expectedEl) {
+                inp.value = expectedEl.value.trim();
+                validateBarkodInput(inp, i);
+              }
+            });
+          }
+          {% endif %}
         });
       });
 

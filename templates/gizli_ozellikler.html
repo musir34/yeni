@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'menu.html' %}
+
+<div class="container" style="margin-top:90px; max-width:900px;">
+  <div class="card" style="border-radius:12px; overflow:hidden;">
+    <div class="card-header text-white" style="background:linear-gradient(135deg,#6a11cb,#2575fc); padding:20px 25px;">
+      <h4 style="margin:0;"><i class="fas fa-user-shield"></i> Gizli Ozellikler (Yonetici)</h4>
+      <small style="opacity:.8;">Sadece admin rolundeki kullanicilar icin ozel ozellikler</small>
+    </div>
+    <div class="card-body" style="padding:25px;">
+      {% if ozellikler %}
+        {% for oz in ozellikler %}
+        <div class="card mb-3" style="border-left:4px solid #6a11cb; border-radius:8px;">
+          <div class="card-body" style="padding:15px 20px;">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+              <i class="fas {{ oz.ikon }}" style="font-size:1.4rem; color:#6a11cb;"></i>
+              <h5 style="margin:0;">{{ oz.ad }}</h5>
+              <span class="badge" style="background:#6a11cb; color:#fff; font-size:.75rem; padding:4px 10px; border-radius:20px;">{{ oz.rol }}</span>
+            </div>
+            <p style="margin:0 0 8px; color:#666;">{{ oz.aciklama }}</p>
+            <div style="display:flex; gap:20px; font-size:.9rem;">
+              <span><i class="fas fa-file-alt" style="color:#2575fc;"></i> <strong>Sayfa:</strong> {{ oz.sayfa }}</span>
+              <span><i class="fas fa-keyboard" style="color:#2575fc;"></i> <strong>Kisayol:</strong> <kbd style="background:#eee; padding:2px 8px; border-radius:4px; font-size:.85rem;">{{ oz.kisayol }}</kbd></span>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-center py-4" style="color:#999;">
+          <i class="fas fa-ghost" style="font-size:3rem;"></i>
+          <p class="mt-2">Henuz gizli ozellik eklenmedi.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -524,6 +524,16 @@ Analizler
 <a class="dropdown-item" href="{{ url_for('profit.profit_report') }}">Kâr-Zarar Analizi</a>
 </div>
 </div>
+{% if session['role'] == 'admin' %}
+<div class="dropdown">
+<button class="btn btn-dark dropdown-toggle" type="button" id="ayarlarMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+<i class="fas fa-cog"></i> Ayarlar
+</button>
+<div class="dropdown-menu" aria-labelledby="ayarlarMenu">
+<a class="dropdown-item" href="{{ url_for('gizli_ozellikler.index') }}"><i class="fas fa-user-shield"></i> Gizli Ozellikler</a>
+</div>
+</div>
+{% endif %}
 <div class="custom-control custom-switch">
 <input type="checkbox" class="custom-control-input" id="autoShipToggle">
 <label class="custom-control-label" for="autoShipToggle">Otomatik Gönderim</label>

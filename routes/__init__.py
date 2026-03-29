@@ -36,8 +36,7 @@ def register_blueprints(app):
     from amazon import amazon_bp  # 🛍️ AMAZON SP-API SİSTEMİ
     from hepsiburada import hb_bp  # 🟠 HEPSİBURADA ENTEGRASYONU
     from stock_sync.routes import stock_sync_bp  # 📦 STOK SENKRONİZASYON SİSTEMİ
-
-
+    from gizli_ozellikler import gizli_ozellikler_bp  # 🔒 GİZLİ ÖZELLİKLER
 
     # Register all blueprints
     for bp in [
@@ -75,5 +74,6 @@ def register_blueprints(app):
         amazon_bp,  # 🛍️ AMAZON SP-API SİSTEMİ
         hb_bp,  # 🟠 HEPSİBURADA ENTEGRASYONU
         stock_sync_bp,  # 📦 STOK SENKRONİZASYON SİSTEMİ
+        gizli_ozellikler_bp,  # 🔒 GİZLİ ÖZELLİKLER
     ]:
         app.register_blueprint(bp)
