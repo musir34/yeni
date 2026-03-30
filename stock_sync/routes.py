@@ -685,3 +685,24 @@ def api_integrity_check():
     })
 
     return jsonify({"success": True, **report})
+
+
+@stock_sync_bp.route('/api/migrate-reserved-stock', methods=['POST'])
+@login_required
+def api_migrate_reserved_stock():
+    """
+    Mevcut OrderCreated kayıtları için raf stoğunu tahsis eder (tek seferlik migrasyon).
+    Yeni stok tahsis sistemi devreye alındıktan sonra bir kez çağrılmalıdır.
+    Bu endpoint mevcut siparişlerin raf stoklarını düşerek tutarlılığı sağlar.
+    """
+    from .service import migrate_existing_reserved_stock
+
+    result = migrate_existing_reserved_stock()
+
+    log_user_action("STOCK_MIGRATION", {
+        "processed": result.get('processed', 0),
+        "allocated": result.get('allocated', 0),
+        "errors": result.get('errors', 0)
+    })
+
+    return jsonify({"success": True, **result})

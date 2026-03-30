@@ -163,6 +163,178 @@ def verify_stock_integrity(auto_fix: bool = False) -> dict:
     return report
 
 
+# -------------------------------
+# Raf Stok Tahsis ve İade Fonksiyonları
+# -------------------------------
+def allocate_from_shelf_and_decrement(barcode: str, qty: int = 1) -> dict:
+    """
+    Raflardan stok tahsis eder ve CentralStock'u günceller.
+    Race condition önlemek için with_for_update() kullanır.
+
+    Returns: {"allocated": int, "shelf_codes": [...]}
+    """
+    barcode = normalize_barcode(barcode)
+
+    if not barcode or qty <= 0:
+        return {"allocated": 0, "shelf_codes": []}
+
+    raflar = (RafUrun.query
+              .filter_by(urun_barkodu=barcode)
+              .filter(RafUrun.adet > 0)
+              .order_by(RafUrun.adet.desc())
+              .with_for_update()
+              .all())
+
+    shelf_codes = []
+    allocated = 0
+    need = qty
+
+    for raf in raflar:
+        if need <= 0:
+            break
+        cur = raf.adet or 0
+        if cur <= 0:
+            continue
+        take = min(cur, need)
+        raf.adet = cur - take
+        db.session.flush()
+
+        shelf_codes.extend([raf.raf_kodu] * take)
+        allocated += take
+        need -= take
+
+    if allocated > 0:
+        sync_central_stock(barcode, commit=False)
+
+    if allocated < qty:
+        logger.warning(
+            f"[STOK-TAHSİS] Kısmi tahsis: {barcode} — istenen={qty}, tahsis={allocated}"
+        )
+
+    return {"allocated": allocated, "shelf_codes": shelf_codes}
+
+
+def restore_stock_to_shelf(barcode: str, qty: int, shelf_code: str = None, commit: bool = True) -> dict:
+    """
+    Stoğu rafa geri yükler. Sipariş silme/iptal durumlarında kullanılır.
+    shelf_code verilirse o rafa, yoksa ürünün mevcut olduğu ilk rafa ekler.
+
+    Returns: {"restored": int, "shelf_code": str|None}
+    """
+    barcode = normalize_barcode(barcode)
+
+    if not barcode or qty <= 0:
+        return {"restored": 0, "shelf_code": None}
+
+    target_raf = None
+
+    if shelf_code:
+        target_raf = (RafUrun.query
+                      .filter_by(raf_kodu=shelf_code, urun_barkodu=barcode)
+                      .with_for_update()
+                      .first())
+        if not target_raf:
+            target_raf = RafUrun(raf_kodu=shelf_code, urun_barkodu=barcode, adet=0)
+            db.session.add(target_raf)
+            db.session.flush()
+    else:
+        target_raf = (RafUrun.query
+                      .filter_by(urun_barkodu=barcode)
+                      .with_for_update()
+                      .first())
+
+    if not target_raf:
+        logger.warning(
+            f"[STOK-İADE] {barcode} için raf bulunamadı, {qty} adet iade edilemedi"
+        )
+        return {"restored": 0, "shelf_code": None}
+
+    target_raf.adet += qty
+    db.session.flush()
+    sync_central_stock(barcode, commit=False)
+
+    logger.info(
+        f"[STOK-İADE] {barcode} → {target_raf.raf_kodu} rafına {qty} adet iade edildi"
+    )
+
+    if commit:
+        db.session.commit()
+
+    return {"restored": qty, "shelf_code": target_raf.raf_kodu}
+
+
+def allocate_stock_for_order_details(details_json, commit: bool = True) -> dict:
+    """
+    Sipariş detayları JSON'unu parse edip her ürün için raf stoğunu düşer.
+    Platform siparişleri (OrderCreated) için kullanılır.
+
+    Args:
+        details_json: JSON string veya list — [{barcode, quantity}, ...]
+        commit: True ise transaction commit eder
+
+    Returns: {barcode: {"allocated": int, "shelf_codes": [...]}, ...}
+    """
+    import json as _json
+
+    results = {}
+    try:
+        details = _json.loads(details_json) if isinstance(details_json, str) else details_json
+        if not isinstance(details, list):
+            return results
+
+        for item in details:
+            barcode = normalize_barcode(str(item.get('barcode', '') or '').strip())
+            qty = int(item.get('quantity', 1) or 1)
+            if not barcode or qty <= 0:
+                continue
+
+            alloc = allocate_from_shelf_and_decrement(barcode, qty)
+            results[barcode] = alloc
+
+        if commit:
+            db.session.commit()
+    except Exception as e:
+        logger.error(f"[STOK-TAHSİS] Sipariş detayları işlenirken hata: {e}")
+        if commit:
+            db.session.rollback()
+
+    return results
+
+
+def restore_stock_for_order_details(details_json, commit: bool = True) -> dict:
+    """
+    Sipariş detayları JSON'unu parse edip her ürün için stoğu rafa geri yükler.
+    Sipariş silme/iptal durumlarında kullanılır.
+
+    Returns: {barcode: {"restored": int, "shelf_code": str|None}, ...}
+    """
+    import json as _json
+
+    results = {}
+    try:
+        details = _json.loads(details_json) if isinstance(details_json, str) else details_json
+        if not isinstance(details, list):
+            return results
+
+        for item in details:
+            barcode = normalize_barcode(str(item.get('barcode', '') or '').strip())
+            qty = int(item.get('quantity', 1) or 1)
+            if not barcode or qty <= 0:
+                continue
+
+            result = restore_stock_to_shelf(barcode, qty, commit=False)
+            results[barcode] = result
+
+        if commit:
+            db.session.commit()
+    except Exception as e:
+        logger.error(f"[STOK-İADE] Sipariş detayları işlenirken hata: {e}")
+        if commit:
+            db.session.rollback()
+
+    return results
+
+
 # --- Çift İşlem Önleme Cache ---
 # {request_hash: timestamp} - Son 60 saniyedeki istekleri tutar
 _request_cache = {}

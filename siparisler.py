@@ -11,7 +11,7 @@ from sqlalchemy import or_
 # Eğer farklı bir yapıdaysa, bu kısmı kendi projenize göre düzenleyin.
 try:
     from models import db, Product, YeniSiparis, SiparisUrun, RafUrun, CentralStock
-    from stock_management import sync_central_stock
+    from stock_management import sync_central_stock, allocate_from_shelf_and_decrement, restore_stock_to_shelf
     from user_logs import log_user_action
 except ImportError:
     print("UYARI: 'models' modülü bulunamadı. Lütfen doğru import yolunu kontrol edin.")
@@ -59,50 +59,8 @@ siparisler_bp = Blueprint('siparisler_bp', __name__)
 
 # ------------------------------------------------------------- #
 #  YARDIMCI FONKSİYON: RAF TAHSIS VE STOK DÜŞÜRME
+#  → stock_management.py'ye taşındı, oradan import ediliyor
 # ------------------------------------------------------------- #
-def allocate_from_shelf_and_decrement(barcode, qty=1):
-    """
-    Raflardan stok tahsis eder ve central stoktan düşer.
-    Returns: {"allocated": int, "shelf_codes": [..]}
-    """
-    from barcode_alias_helper import normalize_barcode
-    barcode = normalize_barcode(barcode)
-
-    if not barcode or qty <= 0:
-        return {"allocated": 0, "shelf_codes": []}
-
-    # Raflardan stok çoktan aza sırala (with_for_update: race condition önleme)
-    raflar = (RafUrun.query
-              .filter_by(urun_barkodu=barcode)
-              .filter(RafUrun.adet > 0)
-              .order_by(RafUrun.adet.desc())
-              .with_for_update()
-              .all())
-    
-    shelf_codes = []
-    allocated = 0
-    need = qty
-    
-    for raf in raflar:
-        if need <= 0:
-            break
-        cur = raf.adet or 0
-        if cur <= 0:
-            continue
-        take = min(cur, need)
-        raf.adet = cur - take
-        db.session.flush()
-        
-        # Tahsis edilen her adet için raf kodunu ekle
-        shelf_codes.extend([raf.raf_kodu] * take)
-        allocated += take
-        need -= take
-    
-    # CentralStock: Raflardaki toplam ile senkronize et (commit=False: caller commits)
-    if allocated > 0:
-        sync_central_stock(barcode, commit=False)
-    
-    return {"allocated": allocated, "shelf_codes": shelf_codes}
 
 
 # ------------------------------------------------------------- #
@@ -641,12 +599,27 @@ def siparis_sil(siparis_no):
             return jsonify(success=False, message='Sipariş bulunamadı'), 404
 
         musteri = f"{sip.musteri_adi or ''} {sip.musteri_soyadi or ''}".strip()
+
+        # Stok iade: Siparişe ait ürünleri rafa geri yükle
+        urunler = SiparisUrun.query.filter_by(siparis_id=sip.id).all()
+        for urun in urunler:
+            if urun.urun_barkod and urun.adet and urun.adet > 0:
+                restore_stock_to_shelf(
+                    barcode=urun.urun_barkod,
+                    qty=urun.adet,
+                    shelf_code=urun.raf_kodu,
+                    commit=False
+                )
+                logger.info(
+                    f"Stok iade: {urun.urun_barkod} x{urun.adet} → {urun.raf_kodu or 'ilk raf'}"
+                )
+
         SiparisUrun.query.filter_by(siparis_id=sip.id).delete()
         db.session.delete(sip)
         db.session.commit()
-        try: log_user_action("DELETE", {"işlem_açıklaması": f"Sipariş silindi — {siparis_no}, {musteri}", "sayfa": "Sipariş Listesi", "sipariş_no": siparis_no, "müşteri": musteri})
+        try: log_user_action("DELETE", {"işlem_açıklaması": f"Sipariş silindi (stok iade edildi) — {siparis_no}, {musteri}", "sayfa": "Sipariş Listesi", "sipariş_no": siparis_no, "müşteri": musteri})
         except: pass
-        return jsonify(success=True, message='Sipariş silindi')
+        return jsonify(success=True, message='Sipariş silindi, stok rafa iade edildi')
 
     except Exception as e:
         db.session.rollback()
@@ -672,6 +645,16 @@ def siparis_toplu_sil():
         for siparis_no in siparis_nolar:
             sip = YeniSiparis.query.filter_by(siparis_no=siparis_no).first()
             if sip:
+                # Stok iade: Her ürünü rafa geri yükle
+                urunler = SiparisUrun.query.filter_by(siparis_id=sip.id).all()
+                for urun in urunler:
+                    if urun.urun_barkod and urun.adet and urun.adet > 0:
+                        restore_stock_to_shelf(
+                            barcode=urun.urun_barkod,
+                            qty=urun.adet,
+                            shelf_code=urun.raf_kodu,
+                            commit=False
+                        )
                 SiparisUrun.query.filter_by(siparis_id=sip.id).delete()
                 db.session.delete(sip)
                 silinen_sayisi += 1

@@ -125,23 +125,35 @@ class StockSyncService:
         """orders_created tablosundaki siparişlerin details JSON'undan rezerv barkodlarını ve miktarları çıkar"""
         import json
 
-        rows = db.session.query(OrderCreated.details).all()
+        rows = db.session.query(OrderCreated.order_number, OrderCreated.details).all()
         reserved_map = {}
+        parse_errors = 0
 
-        for (details_str,) in rows:
+        for order_number, details_str in rows:
             if not details_str:
                 continue
             try:
                 details = json.loads(details_str) if isinstance(details_str, str) else details_str
                 if not isinstance(details, list):
+                    logger.warning(
+                        f"[REZERV] Sipariş {order_number}: details alanı list değil, atlanıyor"
+                    )
+                    parse_errors += 1
                     continue
                 for item in details:
                     barcode = str(item.get('barcode', '') or '').strip()
                     qty = int(item.get('quantity', 1) or 1)
                     if barcode:
                         reserved_map[barcode] = reserved_map.get(barcode, 0) + qty
-            except (json.JSONDecodeError, TypeError, ValueError):
+            except (json.JSONDecodeError, TypeError, ValueError) as e:
+                parse_errors += 1
+                logger.error(
+                    f"[REZERV] Sipariş {order_number}: details JSON parse hatası — {e}"
+                )
                 continue
+
+        if parse_errors > 0:
+            logger.warning(f"[REZERV] Toplam {parse_errors} sipariş detayı parse edilemedi")
 
         return reserved_map
     
@@ -150,16 +162,13 @@ class StockSyncService:
         return sum(self.get_reserved_barcodes().values())
 
     def _get_all_stocks(self, platform: str = None) -> List[StockItem]:
-        """CentralStock'tan tüm stokları çek. Rezerv ürünler hariç tutulur."""
+        """CentralStock'tan tüm stokları çek.
+        Stok, sipariş oluşturulduğunda raftan düşüldüğü için
+        CentralStock zaten gerçek kullanılabilir miktarı yansıtır.
+        """
         stocks = CentralStock.query.all()
         items = []
-        
-        # Rezerv edilen barkodları al (orders_created tablosundan)
-        reserved_barcodes = self.get_reserved_barcodes()
-        reserved_count = len(reserved_barcodes)
-        if reserved_count > 0:
-            logger.info(f"[SYNC] {reserved_count} barkod rezerv edilmiş (orders_created), hariç tutulacak")
-        
+
         # Platform'a göre eşleştirme map'leri
         asin_map = {}
 
@@ -179,11 +188,7 @@ class StockSyncService:
             if platform == "amazon" and not asin:
                 continue
 
-            reserved_qty = reserved_barcodes.get(stock.barcode, 0)
-            available_qty = max(0, (stock.qty or 0) - reserved_qty)
-
-            if reserved_qty > 0:
-                logger.debug(f"[SYNC] {stock.barcode}: stok={stock.qty}, rezerv={reserved_qty}, gönderilen={available_qty}")
+            available_qty = max(0, stock.qty or 0)
 
             items.append(StockItem(
                 barcode=stock.barcode,
@@ -195,14 +200,14 @@ class StockSyncService:
         return items
     
     def _get_stocks_by_barcodes(self, barcodes: List[str], platform: str = None) -> List[StockItem]:
-        """Belirli barkodlar için stokları çek (rezerv düşülmüş)"""
+        """Belirli barkodlar için stokları çek.
+        Stok, sipariş oluşturulduğunda raftan düşüldüğü için
+        CentralStock zaten gerçek kullanılabilir miktarı yansıtır.
+        """
         stocks = CentralStock.query.filter(CentralStock.barcode.in_(barcodes)).all()
         items = []
 
         stock_dict = {s.barcode: s.qty for s in stocks}
-
-        # Rezerv miktarlarını al
-        reserved_barcodes = self.get_reserved_barcodes()
 
         # Amazon için ASIN eşleştirmesi
         asin_map = {}
@@ -222,8 +227,7 @@ class StockSyncService:
             if platform == "amazon" and not asin:
                 continue
 
-            reserved_qty = reserved_barcodes.get(barcode, 0)
-            available_qty = max(0, stock_dict.get(barcode, 0) - reserved_qty)
+            available_qty = max(0, stock_dict.get(barcode, 0))
 
             items.append(StockItem(
                 barcode=barcode,
@@ -790,3 +794,43 @@ def auto_sync_platforms_except_idefix() -> Dict[str, Any]:
     
     logger.info(f"[AUTO-SYNC] Otomatik senkronizasyon tamamlandı: {len(results)} platform")
     return results
+
+
+def migrate_existing_reserved_stock() -> Dict[str, Any]:
+    """
+    Mevcut OrderCreated kayıtları için raf stoğunu tahsis eder (tek seferlik migrasyon).
+    Yeni stok tahsis sistemi devreye alındığında, eski siparişlerin
+    raf stoğundan düşülmesi için çağrılmalıdır.
+
+    Returns: {"processed": int, "allocated": int, "errors": int}
+    """
+    from stock_management import allocate_stock_for_order_details
+
+    orders = OrderCreated.query.all()
+    processed = 0
+    allocated = 0
+    errors = 0
+
+    for order in orders:
+        if not order.details:
+            continue
+        try:
+            results = allocate_stock_for_order_details(order.details, commit=False)
+            for barcode, alloc in results.items():
+                allocated += alloc.get('allocated', 0)
+            processed += 1
+        except Exception as e:
+            errors += 1
+            logger.error(
+                f"[MİGRASYON] Sipariş {order.order_number} stok tahsisi hatası: {e}"
+            )
+
+    if processed > 0:
+        db.session.commit()
+
+    logger.info(
+        f"[MİGRASYON] Tamamlandı: {processed} sipariş işlendi, "
+        f"{allocated} adet tahsis edildi, {errors} hata"
+    )
+
+    return {"processed": processed, "allocated": allocated, "errors": errors}

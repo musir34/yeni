@@ -51,7 +51,7 @@ def _build_shelf_groups():
         products = Product.query.filter(Product.barcode.in_(list(all_barcodes))).all()
         products_dict = {p.barcode: p for p in products}
 
-    # Raf bilgilerini toplu çek (en çok stoklu raf önce)
+    # Raf bilgilerini toplu çek (en çok stoklu raf önce, with_for_update ile stale read önleme)
     raf_dict = {}   # barcode -> raf_kodu (birincil raf)
     stock_dict = {} # barcode -> toplam mevcut stok (tüm raflar)
     if all_barcodes:
@@ -59,6 +59,7 @@ def _build_shelf_groups():
                 .filter(RafUrun.urun_barkodu.in_(list(all_barcodes)))
                 .filter(RafUrun.adet > 0)
                 .order_by(RafUrun.raf_kodu.asc(), RafUrun.adet.desc())
+                .with_for_update(read=True)
                 .all())
         for raf in rafs:
             if raf.urun_barkodu not in raf_dict:

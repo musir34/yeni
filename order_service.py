@@ -23,6 +23,7 @@ from models import (
     OrderCancelled,
     Archive
 )
+from stock_management import allocate_stock_for_order_details, restore_stock_for_order_details
 
 # Trendyol API kimlik bilgileri
 # trendyol_api.py dosyasından import ediliyorsa:
@@ -281,6 +282,10 @@ def _process_sync_orders_bulk(sync_orders):
         to_insert_created, to_insert_picking, to_insert_cancelled = [], [], []
         to_delete_ids = {tbl.__tablename__: [] for tbl in relevant_tables}
 
+        # Stok takibi: Yeni OrderCreated siparişleri ve iptal edilen siparişler
+        new_created_details = []       # Yeni oluşan siparişlerin details JSON'ları
+        cancelled_from_created = []    # OrderCreated → OrderCancelled geçişlerinin details
+
         for order_data in sync_orders:
             order_number = str(order_data.get('orderNumber') or order_data.get('id'))
             if not order_number:
@@ -305,6 +310,12 @@ def _process_sync_orders_bulk(sync_orders):
                 if current_table != target_table:
                     logger.info(f"Statü değişimi: {order_number} {current_table} ➝ {target_table}")
                     to_delete_ids[current_table].append(current_record.id)
+
+                    # OrderCreated → OrderCancelled: Stok iade edilecek
+                    if current_table == 'orders_created' and target_model == OrderCancelled:
+                        if current_record.details:
+                            cancelled_from_created.append(current_record.details)
+
                     if target_model == OrderCreated:
                         to_insert_created.append(new_data_dict)
                     elif target_model == OrderPicking:
@@ -316,6 +327,9 @@ def _process_sync_orders_bulk(sync_orders):
             else:
                 if target_model == OrderCreated:
                     to_insert_created.append(new_data_dict)
+                    # Yeni sipariş: Stok tahsis edilecek
+                    if new_data_dict.get('details'):
+                        new_created_details.append(new_data_dict['details'])
                 elif target_model == OrderPicking:
                     to_insert_picking.append(new_data_dict)
                 elif target_model == OrderCancelled:
@@ -333,6 +347,24 @@ def _process_sync_orders_bulk(sync_orders):
             db.session.bulk_insert_mappings(OrderPicking, to_insert_picking)
         if to_insert_cancelled:
             db.session.bulk_insert_mappings(OrderCancelled, to_insert_cancelled)
+
+        # Stok tahsisi: Yeni OrderCreated siparişleri için raf stoğunu düş
+        if new_created_details:
+            logger.info(f"[STOK] {len(new_created_details)} yeni sipariş için raf stok tahsisi yapılıyor...")
+            for details_json in new_created_details:
+                try:
+                    allocate_stock_for_order_details(details_json, commit=False)
+                except Exception as e:
+                    logger.error(f"[STOK] Tahsis hatası: {e}")
+
+        # Stok iade: OrderCreated → OrderCancelled geçişleri için stoğu geri yükle
+        if cancelled_from_created:
+            logger.info(f"[STOK] {len(cancelled_from_created)} iptal edilen sipariş için stok iade ediliyor...")
+            for details_json in cancelled_from_created:
+                try:
+                    restore_stock_for_order_details(details_json, commit=False)
+                except Exception as e:
+                    logger.error(f"[STOK] İade hatası: {e}")
 
         db.session.commit()
         logger.info("Senkron sipariş işlemleri başarıyla tamamlandı.")
