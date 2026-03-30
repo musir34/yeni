@@ -28,6 +28,7 @@
     .container{max-width:98vw;margin-top:45px;margin-left:auto;margin-right:auto;padding:0 8px}
 
     .user-info{position:fixed;top:15px;left:20px;z-index:10;font-size:10px;color:#333;display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,.7);backdrop-filter:blur(6px);box-shadow:0 6px 18px rgba(0,0,0,.08);max-width:350px;}
+    #mobileInfoToggle{display:none}
     .user-info img{max-width:60px;height:auto;border-radius:5px;box-shadow:0 8px 18px rgba(0,0,0,.12)}
 
     .btn-group-top{position:fixed;top:15px;right:20px;display:flex;gap:10px;z-index:10;flex-wrap:wrap;justify-content:flex-end;align-items:center}
@@ -168,6 +169,7 @@
     html.gs-dark .copy-container{color:#7eaaef}
     html.gs-dark .btn-group-top .btn{box-shadow:0 2px 6px rgba(0,0,0,.3)}
     html.gs-dark #manuelOrderPanel input{background:#2a2a2a;color:#ddd;border-color:#444}
+    html.gs-dark #mobileInfoToggle{background:rgba(30,30,30,.9);color:#ccc}
     @media (max-width:768px){
       html.gs-dark .user-info{background:rgba(18,18,18,.95);border-bottom:1px solid #333}
       html.gs-dark .btn-group-top{background:rgba(18,18,18,.96);box-shadow:0 -2px 12px rgba(0,0,0,.4)}
@@ -418,10 +420,13 @@
         z-index:20;
         flex-wrap:nowrap;
         box-shadow:0 2px 8px rgba(0,0,0,.12);
+        display:none;
       }
+      .user-info.mobile-open{display:flex}
       .user-info img{max-width:36px}
       .user-info div[style*="flex-direction:column"]{gap:1px!important}
       .user-info .mobile-hide{display:none}
+      #mobileInfoToggle{display:block;position:fixed;top:6px;left:6px;z-index:21;width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,255,255,.9);box-shadow:0 2px 6px rgba(0,0,0,.15);font-size:14px;cursor:pointer;}
 
       .btn-group-top{
         position:fixed;top:auto;bottom:0;left:0;right:0;
@@ -449,7 +454,7 @@
       .shipping-header h3{font-size:1rem}
       .shipping-barcode strong{font-size:1.2rem}
 
-      .container{margin-top:45px;margin-bottom:55px;padding:0 6px}
+      .container{margin-top:8px;margin-bottom:55px;padding:0 6px}
       .fixed-header{margin-top:6px;padding:6px 8px}
       .fixed-header h4{font-size:.88rem}
       .fixed-header p{font-size:.82rem}
@@ -518,18 +523,21 @@
     </div>
   </div>
 
+  <!-- Mobil: bilgi paneli aç/kapat butonu -->
+  <button id="mobileInfoToggle" onclick="document.querySelector('.user-info').classList.toggle('mobile-open');this.textContent=document.querySelector('.user-info').classList.contains('mobile-open')?'✕':'ℹ'">ℹ</button>
+
   <!-- Kullanıcı info -->
   <div class="user-info">
     <img src="{{ url_for('static', filename='logo/gullu.png') }}" alt="Güllü Shoes Logo"/>
     <div style="display:flex;flex-direction:column;gap:2px;">
       <div>Giriş Yapan: <strong>{{ session['first_name'] }} {{ session['last_name'] }}</strong></div>
       {% if weather %}
-      <div style="font-size:9px;color:#555;">
+      <div class="mobile-hide" style="font-size:9px;color:#555;">
         {{ weather.icon }} {{ weather.description }}
       </div>
       {% endif %}
       {% if current_time %}
-      <div style="font-size:8px;color:#666;">
+      <div class="mobile-hide" style="font-size:8px;color:#666;">
         🕐 {{ current_time.strftime('%d %B %Y, %A - %H:%M:%S') }}
       </div>
       {% endif %}
@@ -722,7 +730,7 @@
                     <p style="margin-bottom:5px;"><strong>Raf Seçimi (aktif olanların tamamı):</strong></p>
                     {% for raf in aktif_raflar %}
                       <label class="raf-option">
-                        <input type="radio" name="pick_{{ product['barcode'] }}" value="{{ raf.kod }}" {% if order.atanan_raf and raf.kod == order.atanan_raf %}checked{% elif not order.atanan_raf and loop.first %}checked{% endif %}>
+                        <input type="radio" name="pick_{{ product['barcode'] }}" value="{{ raf.kod }}" {% if not manuel_mod %}{% if loop.first %}checked{% endif %}{% else %}{% if order.atanan_raf and raf.kod == order.atanan_raf %}checked{% elif not order.atanan_raf and loop.first %}checked{% endif %}{% endif %}>
                         {{ raf.kod }} — {{ raf.adet }} adet
                         <span class="tick">✔</span>
                       </label>

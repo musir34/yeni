@@ -11,9 +11,11 @@ from io import BytesIO
 from models import db, User
 from logger_config import app_logger as logger
 from flask_login import login_user as flask_login_user
-from user_logs import log_user_action
-
 login_logout_bp = Blueprint('login_logout', __name__)
+
+def _log_action(*args, **kwargs):
+    from user_logs import log_user_action
+    return _log_action(*args, **kwargs)
 
 def login_user(user):
     logger.info(f"Giriş yapan kullanıcı: {user.username}, rolü: {user.role}")
@@ -135,7 +137,7 @@ def register():
 
         db.session.add(new_user)
         db.session.commit()
-        log_user_action("CREATE", {"işlem_açıklaması": f"Yeni kullanıcı kaydı — {username}", "sayfa": "Kayıt"}, force_log=True)
+        _log_action("CREATE", {"işlem_açıklaması": f"Yeni kullanıcı kaydı — {username}", "sayfa": "Kayıt"}, force_log=True)
         flash('Kayıt başarılı! Hesabınızın onaylanmasını bekleyin.', 'info')
         return redirect(url_for('login_logout.login'))
     return render_template('register.html')
@@ -181,12 +183,12 @@ def login():
 
             # Kullanıcı doğrulandıktan sonra oturum bilgilerini ayarla
             login_user(user)
-            log_user_action("LOGIN", {"işlem_açıklaması": f"{user.username} giriş yaptı", "sayfa": "Giriş"})
+            _log_action("LOGIN", {"işlem_açıklaması": f"{user.username} giriş yaptı", "sayfa": "Giriş"})
             session['pending_user'] = user.username
             return redirect(url_for('login_logout.verify_totp'))
         else:
             flash('Kullanıcı adı veya şifre yanlış!', 'danger')
-            log_user_action("LOGIN", {"işlem_açıklaması": f"Başarısız giriş denemesi — {username}", "sayfa": "Giriş", "durum": "Başarısız"}, force_log=True)
+            _log_action("LOGIN", {"işlem_açıklaması": f"Başarısız giriş denemesi — {username}", "sayfa": "Giriş", "durum": "Başarısız"}, force_log=True)
     return render_template('login.html')
 
 
@@ -213,7 +215,7 @@ def setup_totp():
         if token and totp.verify(token):
             user.totp_confirmed = True
             db.session.commit()
-            log_user_action("CREATE", {"işlem_açıklaması": f"{user.username} 2FA kurulumu tamamladı", "sayfa": "2FA Kurulum"})
+            _log_action("CREATE", {"işlem_açıklaması": f"{user.username} 2FA kurulumu tamamladı", "sayfa": "2FA Kurulum"})
             # Kurulum sonrası 2FA doğrulamasını da tamamla
             session['totp_verified'] = True
             flash('2FA kurulumu tamamlandı. Hoş geldiniz!', 'success')
@@ -242,7 +244,7 @@ def verify_totp():
             session.pop('pending_user', None)
             # 2FA tamamlandı
             session['totp_verified'] = True
-            log_user_action("LOGIN", {"işlem_açıklaması": f"{user.username} 2FA doğrulaması tamamlandı", "sayfa": "2FA Doğrulama"})
+            _log_action("LOGIN", {"işlem_açıklaması": f"{user.username} 2FA doğrulaması tamamlandı", "sayfa": "2FA Doğrulama"})
             flash('Başarıyla giriş yaptınız.', 'success')
             return redirect(url_for('home.home'))
         flash('Geçersiz doğrulama kodu.', 'danger')
@@ -290,7 +292,7 @@ def delete_user(username):
         db.session.commit()
         logger.info(f"Kullanıcı başarıyla silindi: {username}")
         flash(f'{username} kullanıcısı başarıyla silindi.', 'success')
-        log_user_action("DELETE", {"işlem_açıklaması": f"{username} kullanıcısı silindi", "sayfa": "Kullanıcı Yönetimi"})
+        _log_action("DELETE", {"işlem_açıklaması": f"{username} kullanıcısı silindi", "sayfa": "Kullanıcı Yönetimi"})
     except Exception as e:
         logger.error(f"Kullanıcı silme hatası: {username}", exc_info=True)
         db.session.rollback()
@@ -317,7 +319,7 @@ def approve_users():
                         role = request.form.get(f'role_{username}', 'worker')
                         user.role = role
                         db.session.commit()
-                        log_user_action("UPDATE", {"işlem_açıklaması": f"{username} kullanıcısı onaylandı — Rol: {role}", "sayfa": "Kullanıcı Yönetimi"})
+                        _log_action("UPDATE", {"işlem_açıklaması": f"{username} kullanıcısı onaylandı — Rol: {role}", "sayfa": "Kullanıcı Yönetimi"})
                         flash(
                             f"{username} kullanıcısı onaylandı ve rolü {role} olarak ayarlandı.",
                             'success')
@@ -325,13 +327,13 @@ def approve_users():
                         role = request.form.get(f'role_{username}', 'worker')
                         user.role = role
                         db.session.commit()
-                        log_user_action("UPDATE", {"işlem_açıklaması": f"{username} kullanıcısının rolü güncellendi — {role}", "sayfa": "Kullanıcı Yönetimi"})
+                        _log_action("UPDATE", {"işlem_açıklaması": f"{username} kullanıcısının rolü güncellendi — {role}", "sayfa": "Kullanıcı Yönetimi"})
                         flash(f"{username} kullanıcısının rolü güncellendi.",
                               'success')
                     elif action == 'revoke':
                         user.status = 'pending'
                         db.session.commit()
-                        log_user_action("UPDATE", {"işlem_açıklaması": f"{username} kullanıcısının onayı iptal edildi", "sayfa": "Kullanıcı Yönetimi"})
+                        _log_action("UPDATE", {"işlem_açıklaması": f"{username} kullanıcısının onayı iptal edildi", "sayfa": "Kullanıcı Yönetimi"})
                         flash(f"{username} kullanıcısının onayı iptal edildi.",
                               'warning')
                 else:
@@ -372,7 +374,7 @@ def show_qr_code(username):
 # Oturumu kapatma
 @login_logout_bp.route('/logout')
 def logout():
-    log_user_action("LOGOUT", {"işlem_açıklaması": "Oturum kapatıldı", "sayfa": "Çıkış"})
+    _log_action("LOGOUT", {"işlem_açıklaması": "Oturum kapatıldı", "sayfa": "Çıkış"})
     session.clear()
     flash('Başarıyla çıkış yaptınız.', 'success')
     return redirect(url_for('login_logout.login'))
