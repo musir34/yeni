@@ -258,7 +258,33 @@
       {% endif %}
     {% endwith %}
 
-    <!-- Login Form -->
+    {% if trusted_device and trusted_user %}
+    <!-- TANINAN CİHAZ: Sadece 2FA -->
+    <form action="{{ url_for('login_logout.login') }}" method="POST" id="loginForm" autocomplete="off">
+      <div style="text-align:center;margin-bottom:1.5rem;">
+        <div style="font-size:2.5rem;margin-bottom:.5rem;">👋</div>
+        <div style="color:rgba(255,255,255,.9);font-size:1.1rem;font-weight:700;">Hoş geldin, {{ trusted_user.first_name }}</div>
+        <div style="color:rgba(255,255,255,.5);font-size:.82rem;">Bu cihaz kayıtlı. Sadece doğrulama kodunu gir.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-shield-halved"></i> Doğrulama Kodu</label>
+        <div class="input-wrapper">
+          <input type="text" class="form-input" id="token" name="token" placeholder="6 haneli kodu girin" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" required autofocus style="text-align:center;font-size:1.4rem;letter-spacing:8px;">
+          <i class="fas fa-key input-icon"></i>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-submit" id="submitBtn">
+        <span class="btn-text"><i class="fas fa-check-double"></i> Doğrula ve Giriş Yap</span>
+      </button>
+
+      <div style="text-align:center;margin-top:1rem;">
+        <a href="{{ url_for('login_logout.login') }}?force_password=1" style="color:rgba(255,255,255,.4);font-size:.78rem;text-decoration:none;">Farklı hesapla giriş yap →</a>
+      </div>
+    </form>
+    {% else %}
+    <!-- YENİ CİHAZ: Şifre + 2FA -->
     <form action="{{ url_for('login_logout.login') }}" method="POST" id="loginForm" autocomplete="off">
 
       <div class="form-group">
@@ -284,6 +310,7 @@
         <span class="btn-text"><i class="fas fa-sign-in-alt"></i> Giriş Yap</span>
       </button>
     </form>
+    {% endif %}
 
     <div class="security-badge">
       <i class="fas fa-shield-halved"></i>

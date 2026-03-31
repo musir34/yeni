@@ -179,6 +179,7 @@
                             <th>Rol</th>
                             <th>QR Kodu Göster</th>
                             <th>Güncelle</th>
+                            <th>Sıfırlama</th>
                             <th>Onayı İptal Et</th>
                             <th>Sil</th>
                         </tr>
@@ -206,6 +207,37 @@
                                             <i class="fas fa-user-edit me-1"></i> Rolü Güncelle
                                         </button>
                                     </form>
+                                </td>
+                                <td>
+                                    <div class="dropdown d-inline-block">
+                                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-undo me-1"></i> Sıfırla
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <form method="POST" action="{{ url_for('login_logout.admin_reset_password', username=user.username) }}" style="display:inline;">
+                                                    <button type="submit" class="dropdown-item" onclick="return confirm('{{ user.username }} şifresi sıfırlanacak. Devam?')">
+                                                        <i class="fas fa-key me-2 text-warning"></i> Şifre Sıfırla
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            <li>
+                                                <form method="POST" action="{{ url_for('login_logout.admin_reset_2fa', username=user.username) }}" style="display:inline;">
+                                                    <button type="submit" class="dropdown-item" onclick="return confirm('{{ user.username }} 2FA sıfırlanacak. Kullanıcı yeniden QR kod tarayacak. Devam?')">
+                                                        <i class="fas fa-shield-halved me-2 text-info"></i> 2FA Sıfırla
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form method="POST" action="{{ url_for('login_logout.admin_reset_all', username=user.username) }}" style="display:inline;">
+                                                    <button type="submit" class="dropdown-item text-danger" onclick="return confirm('{{ user.username }} için şifre + 2FA + tüm cihazlar sıfırlanacak. Devam?')">
+                                                        <i class="fas fa-exclamation-triangle me-2"></i> Tam Sıfırlama
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </td>
                                 <td>
                                     <form method="POST" action="{{ url_for('login_logout.approve_users') }}" style="display:inline;">

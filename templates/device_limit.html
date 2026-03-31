@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cihaz Limiti - Güllü Ayakkabı</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(-45deg,#1a1a2e,#16213e,#0f3460);padding:1rem;}
+        .card{width:100%;max-width:500px;background:rgba(255,255,255,.1);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.15);border-radius:24px;padding:2rem;color:#fff;box-shadow:0 25px 60px rgba(0,0,0,.3);}
+        .card h2{font-size:1.3rem;margin-bottom:.5rem;text-align:center;}
+        .card p{font-size:.85rem;color:rgba(255,255,255,.6);text-align:center;margin-bottom:1.5rem;}
+        .device{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+        .device-info{flex:1;}
+        .device-name{font-weight:600;font-size:.95rem;}
+        .device-meta{font-size:.75rem;color:rgba(255,255,255,.4);margin-top:2px;}
+        .btn-remove{background:rgba(233,69,96,.3);border:1px solid rgba(233,69,96,.4);color:#ff8a9e;padding:6px 14px;border-radius:10px;font-size:.8rem;cursor:pointer;font-weight:600;transition:all .2s;}
+        .btn-remove:hover{background:rgba(233,69,96,.5);}
+        .btn-back{display:block;text-align:center;margin-top:1.5rem;color:rgba(255,255,255,.4);font-size:.82rem;text-decoration:none;}
+        .btn-back:hover{color:rgba(255,255,255,.7);}
+    </style>
+</head>
+<body>
+<div class="card">
+    <h2><i class="fas fa-exclamation-triangle" style="color:#f39c12;"></i> Cihaz Limitine Ulaşıldı</h2>
+    <p>Maksimum {{ max_pc }} PC + {{ max_mobile }} mobil cihaz kullanabilirsiniz.<br>Giriş yapabilmek için bir cihazı kaldırın.</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for category, message in messages %}
+    <div style="background:rgba(58,196,125,.2);border:1px solid rgba(58,196,125,.3);color:#7ef0ab;padding:.6rem 1rem;border-radius:10px;margin-bottom:1rem;font-size:.85rem;">{{ message }}</div>
+    {% endfor %}{% endif %}
+    {% endwith %}
+
+    {% for device in devices %}
+    <div class="device">
+        <div class="device-info">
+            <div class="device-name">
+                {% if device.device_type == 'mobile' %}<i class="fas fa-mobile-alt" style="color:#3498db;"></i>{% else %}<i class="fas fa-laptop" style="color:#2ecc71;"></i>{% endif %}
+                {{ device.device_name }}
+            </div>
+            <div class="device-meta">{{ device.device_type|upper }} · Son aktif: {{ device.last_active.strftime('%d.%m.%Y %H:%M') if device.last_active else '—' }}</div>
+        </div>
+        <form action="{{ url_for('login_logout.device_limit_reached') }}" method="POST">
+            <input type="hidden" name="remove_device_id" value="{{ device.id }}">
+            <button type="submit" class="btn-remove"><i class="fas fa-trash"></i> Kaldır</button>
+        </form>
+    </div>
+    {% endfor %}
+
+    <a href="{{ url_for('login_logout.login') }}" class="btn-back"><i class="fas fa-arrow-left"></i> Giriş ekranına dön</a>
+</div>
+</body>
+</html>

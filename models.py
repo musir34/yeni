@@ -429,7 +429,23 @@ class User(db.Model, UserMixin):
     status = db.Column(db.String(50), default='pending') # Onay bekliyor durumu
     totp_secret = db.Column(db.String(16))
     totp_confirmed = db.Column(db.Boolean, default=False)
+    session_version = db.Column(db.Integer, default=1)  # oturum geçersizleme için
     # backref ile UserLog ilişkisi UserLog modelinde tanımlandı
+
+
+class UserDevice(db.Model):
+    """Kayıtlı (güvenilen) cihaz. Cookie token ile eşleşir."""
+    __tablename__ = 'user_devices'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    device_token = db.Column(db.String(128), unique=True, nullable=False, index=True)
+    device_type = db.Column(db.String(10))   # 'pc' veya 'mobile'
+    device_name = db.Column(db.String(200))  # "Chrome - MacOS"
+    ip_address = db.Column(db.String(45))
+    last_active = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('devices', lazy=True, cascade='all, delete-orphan'))
 
 # Analiz ve hesaplar için kullanılacak OrderItem (Bu muhtemelen eski Order modeliyle ilişkili)
 # Eğer yeni sipariş yapısıyla (OrderBase) kullanılacaksa ilişkiler güncellenmeli.

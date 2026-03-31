@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Cihazlarım - Güllü Ayakkabı{% endblock %}
+{% block content %}
+<div style="max-width:700px;margin:0 auto;">
+    <div style="background:linear-gradient(135deg,#1a1a2e,#0f3460);color:#fff;padding:20px;border-radius:var(--border-radius);margin-bottom:20px;text-align:center;">
+        <h1 style="color:#fff;font-size:1.4rem;margin-bottom:4px;"><i class="bi bi-phone"></i> Kayıtlı Cihazlarım</h1>
+        <p style="opacity:.8;font-size:.85rem;margin:0;">Limit: {{ max_pc }} PC + {{ max_mobile }} Mobil</p>
+        <a href="/anasayfa" style="color:#fff;text-decoration:none;display:inline-block;margin-top:8px;padding:4px 12px;border:1px solid rgba(255,255,255,.4);border-radius:16px;font-size:12px;"><i class="bi bi-house"></i> Anasayfa</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else category }}" style="border-radius:var(--border-radius);margin-bottom:12px;">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    {% for device in devices %}
+    <div style="background:var(--color-bg-light);border:1px solid var(--color-border);border-radius:var(--border-radius);padding:16px 20px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;{% if device.device_token == current_token %}border-left:4px solid #2ecc71;{% endif %}">
+        <div>
+            <div style="font-size:1.1rem;">
+                {% if device.device_type == 'mobile' %}<i class="bi bi-phone" style="color:#3498db;"></i>{% else %}<i class="bi bi-laptop" style="color:#2ecc71;"></i>{% endif %}
+                <strong>{{ device.device_name }}</strong>
+                {% if device.device_token == current_token %}<span style="background:#2ecc71;color:#fff;padding:1px 8px;border-radius:10px;font-size:.7rem;font-weight:600;margin-left:6px;">Bu cihaz</span>{% endif %}
+            </div>
+            <div style="font-size:.78rem;color:#888;margin-top:4px;">
+                {{ device.device_type|upper }} · IP: {{ device.ip_address or '—' }} · Son aktif: {{ device.last_active.strftime('%d.%m.%Y %H:%M') if device.last_active else '—' }} · Kayıt: {{ device.created_at.strftime('%d.%m.%Y') if device.created_at else '—' }}
+            </div>
+        </div>
+        <form action="{{ url_for('login_logout.cihaz_sil', device_id=device.id) }}" method="POST" onsubmit="return confirm('Bu cihazı kaldırmak istediğinize emin misiniz?')">
+            <button type="submit" style="background:var(--color-danger);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:.8rem;cursor:pointer;"><i class="bi bi-trash"></i> Kaldır</button>
+        </form>
+    </div>
+    {% endfor %}
+
+    {% if not devices %}
+    <div style="text-align:center;padding:40px;color:#888;">
+        <i class="bi bi-phone" style="font-size:2rem;"></i>
+        <p style="margin-top:8px;">Kayıtlı cihaz bulunmuyor.</p>
+    </div>
+    {% endif %}
+
+    <div style="margin-top:20px;text-align:center;">
+        <form action="{{ url_for('login_logout.tum_cihazlardan_cikis') }}" method="POST" onsubmit="return confirm('Tüm cihazlardan çıkış yapılacak ve tekrar giriş yapmanız gerekecek. Devam etmek istiyor musunuz?')">
+            <button type="submit" style="background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;border:none;padding:10px 24px;border-radius:var(--border-radius);font-weight:600;cursor:pointer;font-size:.9rem;"><i class="bi bi-box-arrow-right"></i> Tüm Cihazlardan Çıkış Yap</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
