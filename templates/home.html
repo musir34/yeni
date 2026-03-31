@@ -295,6 +295,10 @@
     <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-dark" title="Kasa"><i class="fas fa-cash-register"></i> Kasa</a>
     {% endif %}
 
+    {% if session.get('role') == 'admin' %}
+    <a href="{{ url_for('akilli_motor.akilli_motor_sayfasi') }}" class="btn" style="background:linear-gradient(135deg,#1a1a2e,#0f3460);color:white;" title="Ürün Komisyon Tarifeleri"><i class="fas fa-percent"></i> Urun Komisyon Tarifeleri</a>
+    {% endif %}
+
     <!-- Ayarlar -->
     <div class="dropdown">
       <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"

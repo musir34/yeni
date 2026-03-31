@@ -28,7 +28,9 @@
       "Bash(ls C:/Users/MUS1R/Documents/yeni/static/images/default*)",
       "Bash(grep -rn \"Shopify Stock Sync\\\\|stock_sync_dashboard\\\\|shopify.*stock\" /c/Users/MUS1R/Documents/yeni --include=*.py --include=*.html)",
       "Bash(grep -l \"def.*route\\\\|@.*route\" /c/Users/MUS1R/Documents/yeni/*.py)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(ls /Users/abdurrahmankuli/Documents/Webs/yeni/*.py)",
+      "Bash(source .venv/bin/activate)"
     ]
   }
 }

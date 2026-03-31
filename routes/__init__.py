@@ -37,6 +37,8 @@ def register_blueprints(app):
     from hepsiburada import hb_bp  # 🟠 HEPSİBURADA ENTEGRASYONU
     from stock_sync.routes import stock_sync_bp  # 📦 STOK SENKRONİZASYON SİSTEMİ
     from gizli_ozellikler import gizli_ozellikler_bp  # 🔒 GİZLİ ÖZELLİKLER
+    from komisyon_tarife import komisyon_tarife_bp  # 📊 KOMİSYON TARİFE (liste API'si hala kullanılıyor)
+    from akilli_motor import akilli_motor_bp  # 🧠 AKILLI KOMİSYON MOTORU
 
     # Register all blueprints
     for bp in [
@@ -75,5 +77,7 @@ def register_blueprints(app):
         hb_bp,  # 🟠 HEPSİBURADA ENTEGRASYONU
         stock_sync_bp,  # 📦 STOK SENKRONİZASYON SİSTEMİ
         gizli_ozellikler_bp,  # 🔒 GİZLİ ÖZELLİKLER
+        komisyon_tarife_bp,  # 📊 KOMİSYON TARİFE OPTİMİZASYONU
+        akilli_motor_bp,  # 🧠 AKILLI KOMİSYON MOTORU
     ]:
         app.register_blueprint(bp)

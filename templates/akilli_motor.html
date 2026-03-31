@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+{% block title %}Akıllı Komisyon Motoru - Güllü Ayakkabı{% endblock %}
+{% block extra_css %}
+<style>
+    .motor-header{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);color:#fff;padding:24px;border-radius:var(--border-radius);margin-bottom:20px;text-align:center}
+    .motor-header h1{color:#fff;font-size:1.5rem;margin-bottom:4px}
+    .motor-header p{opacity:.85;margin:0;font-size:.9rem}
+
+    .config-panel{background:var(--color-bg-light);border:1px solid var(--color-border);border-radius:var(--border-radius);padding:20px;margin-bottom:20px}
+    .config-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+    .config-grid label{font-size:.78rem;font-weight:600;display:block;margin-bottom:3px;color:#555}
+    .config-grid input,.config-grid select,.config-grid textarea{width:100%;padding:7px 10px;border:1px solid var(--color-border);border-radius:6px;font-size:.85rem}
+
+    .alert-banner{background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;border-radius:var(--border-radius);padding:16px 20px;margin-bottom:16px;display:none}
+    .alert-banner.visible{display:block}
+    .alert-banner h5{margin:0 0 8px;font-size:1rem}
+    .alert-item{padding:4px 0;font-size:.85rem;border-bottom:1px solid rgba(255,255,255,.2)}
+
+    .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
+    .s-card{background:var(--color-bg-light);border-radius:var(--border-radius);padding:14px;text-align:center;box-shadow:var(--shadow-sm);border-left:4px solid var(--color-primary)}
+    .s-card.green{border-left-color:#2ecc71} .s-card.red{border-left-color:#e74c3c}
+    .s-card.blue{border-left-color:#3498db} .s-card.orange{border-left-color:#f39c12}
+    .s-card .sv{font-size:1.5rem;font-weight:700;color:var(--color-secondary)} .s-card .sl{font-size:.7rem;color:#777;text-transform:uppercase}
+
+    .portfolio-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:20px;max-width:500px;margin-left:auto;margin-right:auto}
+    .pq{padding:20px;text-align:center;border-radius:4px;font-weight:600}
+    .pq-yildiz{background:#d4edda;color:#155724} .pq-firsatci{background:#fff3cd;color:#856404}
+    .pq-nakit{background:#d1ecf1;color:#0c5460} .pq-sorun{background:#f8d7da;color:#721c24}
+    .pq .pq-num{font-size:2rem;display:block} .pq .pq-label{font-size:.75rem}
+
+    .results-section{display:none} .results-section.visible{display:block}
+
+    .rtable-wrap{overflow-x:auto;border-radius:var(--border-radius);box-shadow:var(--shadow-sm);background:var(--color-bg-light)}
+    .rtable{width:100%;border-collapse:collapse;font-size:.78rem;min-width:1200px}
+    .rtable thead{background:var(--color-secondary);color:#fff;position:sticky;top:0;z-index:10}
+    .rtable th{padding:10px 6px;text-align:center;font-size:.72rem;white-space:nowrap}
+    .rtable td{padding:8px 5px;text-align:center;border-bottom:1px solid var(--color-border);vertical-align:middle}
+    .rtable tbody tr:hover{background:#f8f0f1}
+
+    .badge-sm{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.68rem;font-weight:600;color:#fff}
+    .b-tut{background:#3498db} .b-dusur{background:#f39c12} .b-tasfiye{background:#e74c3c}
+    .b-motor{background:#2ecc71} .b-dengeli{background:#3498db} .b-yavas{background:#f39c12} .b-olu{background:#e74c3c} .b-yukselen{background:#9b59b6}
+    .b-lansman{background:#9b59b6} .b-yukselis{background:#2ecc71} .b-olgunluk{background:#3498db} .b-dusus{background:#f39c12} .b-olu2{background:#e74c3c}
+    .b-yildiz{background:#27ae60} .b-nakit{background:#2980b9} .b-firsatci{background:#f39c12} .b-sorun{background:#c0392b}
+
+    .trend-up{color:#2ecc71} .trend-down{color:#e74c3c} .trend-flat{color:#95a5a6}
+    .skor-bar{display:inline-block;height:6px;border-radius:3px;vertical-align:middle}
+    .pos{color:#2ecc71;font-weight:700} .neg{color:#e74c3c;font-weight:700} .neu{color:#95a5a6}
+
+    .detail-row{display:none} .detail-row.visible{display:table-row}
+    .detail-row td{padding:0}
+    .dc{background:var(--color-bg);padding:14px}
+    .tier-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+    .tc{background:var(--color-bg-light);border-radius:8px;padding:10px;text-align:center;border:2px solid transparent;font-size:.8rem}
+    .tc.best{border-color:#2ecc71;background:#e8f5e9} .tc h6{margin:0 0 4px;font-size:.75rem}
+
+    .loading-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:9999;justify-content:center;align-items:center}
+    .loading-overlay.active{display:flex}
+    .lo-box{background:#fff;padding:40px 60px;border-radius:var(--border-radius);text-align:center;box-shadow:var(--shadow-md)}
+    .lo-box p{margin-top:12px;font-weight:600}
+
+    .th-tip{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;font-size:8px;font-weight:700;background:rgba(255,255,255,.25);color:#fff;border-radius:50%;cursor:help;vertical-align:middle;margin-left:2px;position:relative}
+    .th-tip:hover::after{content:attr(data-tip);position:absolute;top:110%;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:400;white-space:normal;width:max-content;max-width:220px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.3);line-height:1.4;text-align:left}
+    .th-tip:hover::before{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-bottom-color:#222;z-index:999}
+
+    .filter-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+    .filter-row input,.filter-row select{padding:7px 10px;border:1px solid var(--color-border);border-radius:6px;font-size:.85rem}
+    .filter-row input{flex:1;min-width:180px}
+    .btn-dl{background:linear-gradient(45deg,#2ecc71,#27ae60);color:#fff;border:none;padding:10px 20px;font-weight:600;border-radius:var(--border-radius);cursor:pointer;transition:var(--transition)}
+    .btn-dl:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(46,204,113,.4)}
+
+    html.gs-dark .config-panel{background:#1e1e1e;border-color:#333}
+    html.gs-dark .config-grid input,html.gs-dark .config-grid select,html.gs-dark .config-grid textarea{background:#2a2a2a;color:#ddd;border-color:#444}
+    html.gs-dark .config-grid label{color:#aaa}
+    html.gs-dark .s-card{background:#1e1e1e} html.gs-dark .s-card .sv{color:#eee}
+    html.gs-dark .rtable-wrap{background:#1e1e1e} html.gs-dark .rtable td{border-bottom-color:#333}
+    html.gs-dark .rtable tbody tr:hover{background:#2a2a2a}
+    html.gs-dark .dc{background:#1a1a1a} html.gs-dark .tc{background:#1e1e1e}
+    html.gs-dark .tc.best{background:#1a3a1a}
+    html.gs-dark .lo-box{background:#1e1e1e;color:#ddd}
+    html.gs-dark .filter-row input,html.gs-dark .filter-row select{background:#2a2a2a;color:#ddd;border-color:#444}
+    html.gs-dark .pq-yildiz{background:#1a3a1a;color:#2ecc71} html.gs-dark .pq-firsatci{background:#332d00;color:#f39c12}
+    html.gs-dark .pq-nakit{background:#0c2a33;color:#3498db} html.gs-dark .pq-sorun{background:#3a1a1a;color:#e74c3c}
+
+    @media(max-width:767px){.config-grid{grid-template-columns:1fr 1fr}.stats-row{grid-template-columns:repeat(2,1fr)}.tier-grid{grid-template-columns:1fr 1fr}.filter-row{flex-direction:column}.filter-row input{min-width:100%}.motor-header h1{font-size:1.2rem}}
+    @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="motor-header">
+    <h1><i class="bi bi-cpu"></i> Akıllı Komisyon Motoru</h1>
+    <p>10 modüllü karar sistemi: satış hızı, üretim zekası, renk segmenti, yaşam döngüsü, portföy, maliyet, senaryo, sezon analizi</p>
+    <a href="/anasayfa" style="color:#fff;text-decoration:none;display:inline-block;margin-top:8px;padding:5px 14px;border:1px solid rgba(255,255,255,.4);border-radius:20px;font-size:12px"><i class="bi bi-house"></i> Anasayfa</a>
+</div>
+
+<!-- Config Panel -->
+<div class="config-panel" id="configPanel">
+    <h5 style="margin:0 0 14px"><i class="bi bi-sliders"></i> Parametreler ve Excel Yükle</h5>
+    <div class="config-grid">
+        <div><label>Excel Dosyası *</label><input type="file" id="excelFile" accept=".xlsx,.xls"></div>
+        <div><label>Üretim Maliyeti (TL)</label><input type="number" id="pMaliyet" value="300" step="1" min="0"></div>
+        <div><label>Üretim Süresi (gün)</label><input type="number" id="pUretim" value="25" step="1" min="1"></div>
+        <div><label>Kargo Maliyeti (TL)</label><input type="number" id="pKargo" value="20" step="1" min="0"></div>
+        <div><label>İade Oranı (%)</label><input type="number" id="pIade" value="8" step="0.5" min="0"></div>
+        <div><label>Paketleme (TL)</label><input type="number" id="pPaket" value="5" step="1" min="0"></div>
+        <div><label>Sermaye Maliyeti (%/ay) <span class="th-tip" data-tip="Stokta yatan paranın aylık kaybı. Örnek: 300 TL'lik ürün depoda 1 ay durursa %2.5'ten 7.5 TL kaybedersin. Kredi faizin veya paranla başka yatırım yapsan kazanacağın oran.">!</span></label><input type="number" id="pSermaye" value="2.5" step="0.1" min="0"></div>
+        <div><label>Güvenlik Payı (gün)</label><input type="number" id="pGuvenlik" value="5" step="1" min="0"></div>
+        <div>
+            <label>Strateji Modu</label>
+            <select id="pStrateji">
+                <option value="dengeli" selected>Dengeli</option>
+                <option value="buyume">Büyüme</option>
+                <option value="kar_odakli">Kâr Odaklı</option>
+                <option value="stok_eritme">Stok Eritme</option>
+            </select>
+        </div>
+        <div style="grid-column:span 2">
+            <label>Hariç Tutulacak Modeller</label>
+            <div class="d-flex gap-2 mb-1 flex-wrap align-items-center">
+                <select id="excludeListSelect" style="padding:5px 8px;border:1px solid var(--color-border);border-radius:6px;font-size:.82rem;flex:1;min-width:130px"><option value="">-- Kayıtlı Liste Seç --</option></select>
+                <button type="button" onclick="saveExcludeList()" style="background:var(--color-primary);color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:.75rem;cursor:pointer"><i class="bi bi-save"></i> Kaydet</button>
+                <button type="button" onclick="deleteExcludeList()" style="background:var(--color-danger);color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:.75rem;cursor:pointer"><i class="bi bi-trash"></i> Sil</button>
+            </div>
+            <textarea id="pExcluded" rows="1" placeholder="0172, 4407..." style="resize:vertical"></textarea>
+        </div>
+    </div>
+    <div class="text-center mt-3">
+        <button class="btn btn-primary" id="btnRun" disabled><i class="bi bi-cpu"></i> Motoru Çalıştır</button>
+    </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay"><div class="lo-box"><i class="bi bi-gear-wide-connected" style="font-size:2.5rem;color:var(--color-primary);animation:spin 1.5s linear infinite;display:inline-block"></i><p>10 modül çalışıyor...</p></div></div>
+
+<!-- Results -->
+<div class="results-section" id="resultsSection">
+    <!-- Production Alerts -->
+    <div class="alert-banner" id="alertBanner">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 style="margin:0"><i class="bi bi-exclamation-triangle"></i> Üretim Alarmları (<span id="alertCount">0</span>)</h5>
+            <button id="btnToggleAlerts" onclick="toggleAlertList()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;padding:4px 12px;border-radius:16px;font-size:.78rem;cursor:pointer"><i class="bi bi-eye-slash"></i> Gizle</button>
+        </div>
+        <div id="alertList"></div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" id="statsRow"></div>
+
+    <!-- Portfolio Matrix -->
+    <div class="portfolio-grid" id="portfolioGrid"></div>
+
+    <!-- Filter -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <div class="filter-row" style="flex:1;margin-bottom:0">
+            <input type="text" id="fSearch" placeholder="Model, renk, kategori ara...">
+            <select id="fAksiyon"><option value="all">Tüm Aksiyonlar</option><option value="TUT">TUT</option><option value="DÜŞÜR">DÜŞÜR</option><option value="TASFİYE">TASFİYE</option></select>
+            <select id="fSegment"><option value="all">Tüm Segmentler</option><option value="motor">Motor</option><option value="dengeli">Dengeli</option><option value="yavas">Yavaş</option><option value="olu">Ölü</option><option value="yukselen">Yükselen</option></select>
+            <select id="fSort">
+                <option value="skor_desc">Skor Farkı (Büyük→Küçük)</option>
+                <option value="kar_desc">Aylık Kâr Farkı</option>
+                <option value="alarm">Üretim Alarmı Öncelik</option>
+                <option value="stok_desc">Stok (Büyük→Küçük)</option>
+                <option value="satis_desc">Satış Hızı</option>
+            </select>
+        </div>
+        <button class="btn-dl" id="btnDownload" style="display:none"><i class="bi bi-download"></i> Excel İndir</button>
+    </div>
+
+    <!-- Table -->
+    <div class="rtable-wrap" style="max-height:70vh;overflow-y:auto">
+        <table class="rtable">
+            <thead><tr>
+                <th>Model-Renk <span class="th-tip" data-tip="Model kodu ve renk varyantı">!</span></th>
+                <th>Stok <span class="th-tip" data-tip="Toplam stok adedi">!</span></th>
+                <th>Satış/Gün <span class="th-tip" data-tip="Son 90 gündeki ortalama günlük satış">!</span></th>
+                <th>Trend <span class="th-tip" data-tip="Son 30 gün vs önceki 30 gün satış karşılaştırması">!</span></th>
+                <th>Kalan Gün <span class="th-tip" data-tip="Mevcut satış hızıyla stok kaç gün yeter (üretim süresi dahil)">!</span></th>
+                <th>Segment <span class="th-tip" data-tip="Renk performans segmenti: Motor (çok satan), Dengeli, Yavaş, Ölü, Yükselen">!</span></th>
+                <th>Yaşam <span class="th-tip" data-tip="Ürün yaşam döngüsü: Lansman, Yükseliş, Olgunluk, Düşüş, Ölü">!</span></th>
+                <th>BCG <span class="th-tip" data-tip="Portföy pozisyonu: Yıldız, Nakit İneği, Fırsatçı, Sorun">!</span></th>
+                <th>Aksiyon <span class="th-tip" data-tip="TUT: mevcut kademede kal, DÜŞÜR: alt kademeye geç, TASFİYE: en düşük fiyatla sat">!</span></th>
+                <th>Önerilen <span class="th-tip" data-tip="Motorun önerdiği kademe ve fiyat">!</span></th>
+                <th>Skor <span class="th-tip" data-tip="7 modülün ağırlıklı puanı (0-100). Yüksek = daha iyi">!</span></th>
+                <th>Aylık Kâr Fark <span class="th-tip" data-tip="Öneri uygulanırsa aylık kâr değişimi">!</span></th>
+                <th>Sezon <span class="th-tip" data-tip="Rengin mevcut mevsime uyumu">!</span></th>
+            </tr></thead>
+            <tbody id="resultsBody"></tbody>
+        </table>
+    </div>
+    <div class="text-center mt-2 mb-4"><small id="resultCount" class="text-muted"></small></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const fileInput=document.getElementById('excelFile'),btnRun=document.getElementById('btnRun'),
+          loading=document.getElementById('loadingOverlay'),results=document.getElementById('resultsSection');
+    let allData=[],downloadFile='';
+
+    fileInput.addEventListener('change',()=>{btnRun.disabled=!fileInput.files.length});
+
+    btnRun.addEventListener('click',async()=>{
+        if(!fileInput.files.length)return;
+        loading.classList.add('active');btnRun.disabled=true;
+        const fd=new FormData();
+        fd.append('excel_file',fileInput.files[0]);
+        ['maliyet','kargo','iade_orani','paketleme','sermaye_maliyeti','uretim_suresi','guvenlik_gun'].forEach(k=>{
+            const map={maliyet:'pMaliyet',kargo:'pKargo',iade_orani:'pIade',paketleme:'pPaket',sermaye_maliyeti:'pSermaye',uretim_suresi:'pUretim',guvenlik_gun:'pGuvenlik'};
+            fd.append(k,document.getElementById(map[k]).value);
+        });
+        fd.append('strateji',document.getElementById('pStrateji').value);
+        fd.append('excluded_models',document.getElementById('pExcluded').value);
+        try{
+            const r=await fetch('/akilli-motor/analiz',{method:'POST',body:fd});
+            const d=await r.json();
+            if(!d.success){alert(d.message||'Hata');return}
+            allData=d.results;downloadFile=d.download_file;
+            renderAlerts(d.alerts);renderStats(d.stats);renderPortfolio(d.portfolio);
+            sortAndRender();results.classList.add('visible');
+            if(downloadFile)document.getElementById('btnDownload').style.display='inline-flex';
+            results.scrollIntoView({behavior:'smooth'});
+        }catch(e){alert('Hata: '+e.message)}
+        finally{loading.classList.remove('active');btnRun.disabled=false}
+    });
+
+    function renderAlerts(alerts){
+        const b=document.getElementById('alertBanner'),l=document.getElementById('alertList'),c=document.getElementById('alertCount');
+        if(!alerts.length){b.classList.remove('visible');return}
+        b.classList.add('visible');
+        c.textContent=alerts.length;
+        l.innerHTML=alerts.map(a=>`<div class="alert-item"><strong>${esc(a.model)}-${esc(a.renk)}</strong>: ${a.kalan_gun} gün stok kaldı | ${a.gunluk_satis} adet/gün → <strong>${a.mesaj.split('→')[1]||'ÜRETİM BAŞLAT'}</strong></div>`).join('');
+    }
+
+    function renderStats(s){
+        const indirimli = s.dusur + s.tasfiye;
+        const indirimsiz = s.tut;
+        document.getElementById('statsRow').innerHTML=`
+            <div class="s-card blue"><div class="sv">${s.toplam_varyant}</div><div class="sl">Toplam Varyant</div></div>
+            <div class="s-card green"><div class="sv">${indirimli}</div><div class="sl">İndirim Uygulanan</div></div>
+            <div class="s-card"><div class="sv">${indirimsiz}</div><div class="sl">İndirim Uygulanmayan</div></div>
+            <div class="s-card red"><div class="sv">${s.uretim_alarm}</div><div class="sl">Üretim Alarmı</div></div>
+            <div class="s-card"><div class="sv">${fm(s.mevcut_aylik_kar)}</div><div class="sl">Mevcut Aylık Kâr</div></div>
+            <div class="s-card green"><div class="sv">${fm(s.onerilen_aylik_kar)}</div><div class="sl">Önerilen Aylık Kâr</div></div>
+            <div class="s-card ${s.kar_artis>=0?'green':'red'}"><div class="sv">${s.kar_artis>=0?'+':''}${fm(s.kar_artis)}</div><div class="sl">Kâr Değişimi</div></div>
+        `;
+    }
+
+    function renderPortfolio(p){
+        document.getElementById('portfolioGrid').innerHTML=`
+            <div class="pq pq-yildiz"><span class="pq-num">${p.yildiz||0}</span><span class="pq-label">⭐ Yıldız</span></div>
+            <div class="pq pq-firsatci"><span class="pq-num">${p.firsatci||0}</span><span class="pq-label">❓ Fırsatçı</span></div>
+            <div class="pq pq-nakit"><span class="pq-num">${p.nakit||0}</span><span class="pq-label">🐄 Nakit İneği</span></div>
+            <div class="pq pq-sorun"><span class="pq-num">${p.sorun||0}</span><span class="pq-label">🔴 Sorun</span></div>
+        `;
+    }
+
+    function sortData(data){
+        const s=document.getElementById('fSort').value,sorted=[...data];
+        switch(s){
+            case 'skor_desc':sorted.sort((a,b)=>b.skor_fark-a.skor_fark);break;
+            case 'kar_desc':sorted.sort((a,b)=>b.kar_fark_aylik-a.kar_fark_aylik);break;
+            case 'alarm':sorted.sort((a,b)=>{const o={kritik:0,uyari:1,yok:2};return(o[a.uretim_alarm]||2)-(o[b.uretim_alarm]||2)});break;
+            case 'stok_desc':sorted.sort((a,b)=>b.stok-a.stok);break;
+            case 'satis_desc':sorted.sort((a,b)=>b.gunluk_satis-a.gunluk_satis);break;
+        }
+        return sorted;
+    }
+
+    function sortAndRender(){renderTable(sortData(allData));applyFilters()}
+
+    function renderTable(data){
+        const tb=document.getElementById('resultsBody');tb.innerHTML='';
+        data.forEach((m,i)=>{
+            const rk=m.model_kodu+'_'+m.renk;
+            const tr=document.createElement('tr');tr.className='model-row';
+            tr.dataset.model=m.model_kodu.toLowerCase();tr.dataset.renk=(m.renk||'').toLowerCase();
+            tr.dataset.kategori=(m.kategori||'').toLowerCase();tr.dataset.aksiyon=m.aksiyon;tr.dataset.segment=m.renk_segment;
+            tr.style.cursor='pointer';tr.onclick=()=>toggleDetail(rk);
+
+            const segmentLabel={'motor':'Motor','dengeli':'Dengeli','yavas':'Yavaş','olu':'Ölü','yukselen':'Yükselen'};
+            const yasamLabel={'lansman':'Lansman','yukselis':'Yükseliş','olgunluk':'Olgunluk','dusus':'Düşüş','olu':'Ölü','veri_yok':'Veri Yok'};
+            const trendIcon=m.trend==='yukseliyor'?'<i class="bi bi-arrow-up-right trend-up"></i>':m.trend==='dusuyor'?'<i class="bi bi-arrow-down-right trend-down"></i>':'<i class="bi bi-arrow-right trend-flat"></i>';
+            const alarmBg=m.uretim_alarm==='kritik'?'background:#fde8e8;':'';
+            const kalanColor=m.kalan_gun<30?'color:#e74c3c;font-weight:700':m.kalan_gun<60?'color:#f39c12':'';
+            const skorW=Math.min(m.onerilen_skor,100);
+            const sezonIcon=m.sezon_uyum==='yuksek'?'☀️':m.sezon_uyum==='dusuk'?'❄️':'🔄';
+
+            tr.innerHTML=`
+                <td style="text-align:left;max-width:200px;${alarmBg}">
+                    <strong>${esc(m.model_kodu)}</strong>-${esc(m.renk)}
+                    <div style="font-size:.68rem;color:#888">${esc(m.kategori)}</div>
+                    ${m.uretim_alarm==='kritik'?'<div style="font-size:.65rem;color:#e74c3c;font-weight:700">⚠ ÜRETİM ALARMI</div>':''}
+                </td>
+                <td>${m.stok}</td>
+                <td><strong>${m.gunluk_satis}</strong></td>
+                <td>${trendIcon} ${m.trend_katsayi}x</td>
+                <td style="${kalanColor}">${m.kalan_gun>=999?'∞':m.kalan_gun}</td>
+                <td><span class="badge-sm b-${m.renk_segment}">${segmentLabel[m.renk_segment]||m.renk_segment}</span></td>
+                <td><span class="badge-sm b-${m.yasam_asama==='olu'?'olu2':m.yasam_asama}">${yasamLabel[m.yasam_asama]||m.yasam_asama}</span></td>
+                <td>${m.bcg_icon}</td>
+                <td><span class="badge-sm b-${m.aksiyon==='TUT'?'tut':m.aksiyon==='DÜŞÜR'?'dusur':'tasfiye'}">${m.aksiyon==='TASFİYE'?'TASFİYE':m.aksiyon}</span></td>
+                <td><strong>K${m.onerilen_kademe}</strong> ${fm(m.onerilen_fiyat)}</td>
+                <td>
+                    <div style="font-size:.75rem">${m.onerilen_skor}</div>
+                    <div style="background:#e0e0e0;border-radius:3px;height:5px;width:50px;margin:2px auto 0"><div class="skor-bar" style="background:${skorW>70?'#2ecc71':skorW>40?'#f39c12':'#e74c3c'};width:${skorW}%"></div></div>
+                </td>
+                <td class="${m.kar_fark_aylik>0?'pos':m.kar_fark_aylik<0?'neg':'neu'}">${m.kar_fark_aylik>0?'+':''}${fm(m.kar_fark_aylik)}</td>
+                <td title="${esc(m.sezon_uyari)}">${sezonIcon}</td>
+            `;
+            tb.appendChild(tr);
+
+            // Detail row
+            const dr=document.createElement('tr');dr.className='detail-row';dr.id='detail-'+rk;
+            dr.dataset.model=m.model_kodu.toLowerCase();dr.dataset.renk=(m.renk||'').toLowerCase();
+            dr.dataset.kategori=(m.kategori||'').toLowerCase();dr.dataset.aksiyon=m.aksiyon;dr.dataset.segment=m.renk_segment;
+
+            let tiersH='';
+            if(m.kademeler){tiersH=m.kademeler.map(t=>{
+                const best=t.kademe===m.onerilen_kademe;
+                return `<div class="tc ${best?'best':''}">
+                    <h6>K${t.kademe} ${best?'(EN IYI)':''}</h6>
+                    <div style="font-size:1rem;font-weight:700">${fm(t.fiyat)} TL</div>
+                    <div style="font-size:.75rem;color:#888">Kom: %${t.komisyon_oran} | Marj: %${t.kar_marji}</div>
+                    <div style="font-size:.8rem">Net: ${fm(t.net_kar)} TL</div>
+                    <div style="font-size:.75rem;color:#888">Tah. satış: ${t.tahmini_gunluk}/${t.tahmini_aylik} adet</div>
+                    <div style="font-size:.85rem;font-weight:600;color:${best?'#2ecc71':'inherit'}">Aylık: ${fm(t.aylik_kar)} TL</div>
+                    <div style="font-size:.75rem">Stok biter: ${t.stok_bitis_gun>=999?'∞':t.stok_bitis_gun+' gün'}</div>
+                    <div style="font-size:.85rem;font-weight:700;margin-top:4px">Skor: ${t.skor}</div>
+                    ${t.uretim_uyari?'<div style="font-size:.7rem;color:#e74c3c;margin-top:2px">⚠ '+esc(t.uretim_uyari)+'</div>':''}
+                </div>`;
+            }).join('')}
+
+            dr.innerHTML=`<td colspan="13"><div class="dc">
+                <div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
+                    <div><strong>${esc(m.model_kodu)}-${esc(m.renk)}</strong> | ${m.varyant} beden | ${m.stok} stok</div>
+                    <div style="font-size:.8rem;color:#888">${esc(m.segment_aciklama)} | ${esc(m.yasam_aciklama)} | ${esc(m.bcg_aksiyon)}${m.sezon_uyari?' | '+esc(m.sezon_uyari):''}</div>
+                </div>
+                <div class="tier-grid">${tiersH}</div>
+            </div></td>`;
+            tb.appendChild(dr);
+        });
+        document.getElementById('resultCount').textContent=data.length+' varyant listeleniyor';
+    }
+
+    function toggleDetail(k){const r=document.getElementById('detail-'+k);if(r)r.classList.toggle('visible')}
+
+    function applyFilters(){
+        const q=document.getElementById('fSearch').value.toLowerCase().trim(),
+              fa=document.getElementById('fAksiyon').value,
+              fs=document.getElementById('fSegment').value;
+        let cnt=0;
+        document.querySelectorAll('#resultsBody tr').forEach(r=>{
+            const m=r.dataset.model||'',rk=r.dataset.renk||'',k=r.dataset.kategori||'',
+                  a=r.dataset.aksiyon||'',s=r.dataset.segment||'';
+            const mq=!q||m.includes(q)||rk.includes(q)||k.includes(q);
+            const ma=fa==='all'||a===fa;
+            const ms=fs==='all'||s===fs;
+            const vis=mq&&ma&&ms;r.style.display=vis?'':'none';
+            if(vis&&r.classList.contains('model-row'))cnt++;
+        });
+        document.getElementById('resultCount').textContent=cnt+' varyant listeleniyor';
+    }
+
+    document.getElementById('fSearch').addEventListener('input',applyFilters);
+    document.getElementById('fAksiyon').addEventListener('change',applyFilters);
+    document.getElementById('fSegment').addEventListener('change',applyFilters);
+    document.getElementById('fSort').addEventListener('change',sortAndRender);
+    document.getElementById('btnDownload').addEventListener('click',()=>{if(downloadFile)window.location.href='/akilli-motor/indir/'+encodeURIComponent(downloadFile)});
+
+    function fm(v){if(v==null)return'0';return Number(v).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:0})}
+    function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+    // --- Haric Tutma Listesi Yonetimi ---
+    const exSel=document.getElementById('excludeListSelect'),exTa=document.getElementById('pExcluded');
+
+    async function loadExLists(){
+        try{
+            const r=await fetch('/komisyon-tarife/listeler');const d=await r.json();
+            if(!d.success)return;
+            exSel.innerHTML='<option value="">-- Kayıtlı Liste Seç --</option>';
+            for(const[n,info]of Object.entries(d.lists)){
+                const o=document.createElement('option');o.value=n;
+                o.textContent=n+' ('+info.models.length+' model)';exSel.appendChild(o);
+            }
+            exSel._data=d.lists;
+        }catch(e){}
+    }
+
+    exSel.addEventListener('change',function(){
+        const n=this.value;
+        if(n&&exSel._data&&exSel._data[n])exTa.value=exSel._data[n].models.join(', ');
+    });
+
+    loadExLists();
+});
+
+// Global fonksiyonlar (onclick icin)
+function toggleAlertList(){
+    const l=document.getElementById('alertList'),b=document.getElementById('btnToggleAlerts');
+    if(l.style.display==='none'){l.style.display='';b.innerHTML='<i class="bi bi-eye-slash"></i> Gizle';}
+    else{l.style.display='none';b.innerHTML='<i class="bi bi-eye"></i> Göster';}
+}
+
+async function saveExcludeList(){
+    const sel=document.getElementById('excludeListSelect'),ta=document.getElementById('pExcluded');
+    const models=ta.value.split(/[,;\n]/).map(m=>m.trim()).filter(Boolean);
+    let name=sel.value;
+    if(!name){name=prompt('Yeni liste adı:');if(!name||!name.trim())return;name=name.trim()}
+    if(!models.length){alert('En az 1 model kodu girin');return}
+    try{
+        const r=await fetch('/komisyon-tarife/listeler',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,models})});
+        const d=await r.json();alert(d.message);
+        // Refresh
+        const lr=await fetch('/komisyon-tarife/listeler');const ld=await lr.json();
+        if(ld.success){
+            sel.innerHTML='<option value="">-- Kayıtlı Liste Seç --</option>';
+            for(const[n,info]of Object.entries(ld.lists)){
+                const o=document.createElement('option');o.value=n;
+                o.textContent=n+' ('+info.models.length+' model)';if(n===name)o.selected=true;sel.appendChild(o);
+            }
+            sel._data=ld.lists;
+        }
+    }catch(e){alert('Hata: '+e.message)}
+}
+
+async function deleteExcludeList(){
+    const sel=document.getElementById('excludeListSelect'),name=sel.value;
+    if(!name){alert('Silinecek bir liste seçin');return}
+    if(!confirm('"'+name+'" silinsin mi?'))return;
+    try{
+        const r=await fetch('/komisyon-tarife/listeler/'+encodeURIComponent(name),{method:'DELETE'});
+        const d=await r.json();alert(d.message);
+        document.getElementById('pExcluded').value='';
+        const lr=await fetch('/komisyon-tarife/listeler');const ld=await lr.json();
+        if(ld.success){
+            sel.innerHTML='<option value="">-- Kayıtlı Liste Seç --</option>';
+            for(const[n,info]of Object.entries(ld.lists)){
+                const o=document.createElement('option');o.value=n;
+                o.textContent=n+' ('+info.models.length+' model)';sel.appendChild(o);
+            }
+            sel._data=ld.lists;
+        }
+    }catch(e){alert('Hata: '+e.message)}
+}
+</script>
+{% endblock %}

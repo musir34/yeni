@@ -15,7 +15,7 @@ login_logout_bp = Blueprint('login_logout', __name__)
 
 def _log_action(*args, **kwargs):
     from user_logs import log_user_action
-    return _log_action(*args, **kwargs)
+    return log_user_action(*args, **kwargs)
 
 def login_user(user):
     logger.info(f"Giriş yapan kullanıcı: {user.username}, rolü: {user.role}")
