@@ -79,18 +79,20 @@ def _build_shelf_groups():
         color = product.color if product and product.color else item.get('color', 'N/A')
         size = product.size if product and product.size else item.get('size', 'N/A')
 
-        raf_kodu = raf_dict.get(barcode, 'RAF YOK')
-
-        # Stok kontrolü: sipariş tarihine göre sıralı, stok bitince işaretle
-        kalan = remaining_stock.get(barcode, 0)
-        stok_yetersiz = kalan <= 0
-        if not stok_yetersiz:
-            remaining_stock[barcode] = kalan - 1
-
-        # Raf atamasını siparişe kaydet (stok yetersizse temizle)
-        yeni_atanan_raf = None if stok_yetersiz else raf_kodu
-        if order.atanan_raf != yeni_atanan_raf:
-            order.atanan_raf = yeni_atanan_raf
+        # Önceden tahsis edilmiş sipariş: atanan_raf zaten kayıtlı, stoğu zaten düşürülmüş
+        if order.atanan_raf:
+            raf_kodu = order.atanan_raf
+            stok_yetersiz = False
+        else:
+            # Henüz tahsis edilmemiş sipariş: mevcut raf stoğundan ata
+            raf_kodu = raf_dict.get(barcode, 'RAF YOK')
+            kalan = remaining_stock.get(barcode, 0)
+            stok_yetersiz = kalan <= 0
+            if not stok_yetersiz:
+                remaining_stock[barcode] = kalan - 1
+            yeni_atanan_raf = None if stok_yetersiz else raf_kodu
+            if order.atanan_raf != yeni_atanan_raf:
+                order.atanan_raf = yeni_atanan_raf
 
         if raf_kodu not in shelf_groups:
             shelf_groups[raf_kodu] = []

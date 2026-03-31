@@ -282,8 +282,8 @@ def _process_sync_orders_bulk(sync_orders):
         to_insert_created, to_insert_picking, to_insert_cancelled = [], [], []
         to_delete_ids = {tbl.__tablename__: [] for tbl in relevant_tables}
 
-        # Stok takibi: Yeni OrderCreated siparişleri ve iptal edilen siparişler
-        new_created_details = []       # Yeni oluşan siparişlerin details JSON'ları
+        # Stok takibi
+        new_order_dicts = []           # Yeni oluşan siparişler (stok tahsisi + raf ataması için)
         cancelled_from_created = []    # OrderCreated → OrderCancelled geçişlerinin details
 
         for order_data in sync_orders:
@@ -314,7 +314,9 @@ def _process_sync_orders_bulk(sync_orders):
                     # OrderCreated → OrderCancelled: Stok iade edilecek
                     if current_table == 'orders_created' and target_model == OrderCancelled:
                         if current_record.details:
-                            cancelled_from_created.append(current_record.details)
+                            cancelled_from_created.append(
+                                (current_record.details, getattr(current_record, 'atanan_raf', None))
+                            )
 
                     if target_model == OrderCreated:
                         to_insert_created.append(new_data_dict)
@@ -327,9 +329,7 @@ def _process_sync_orders_bulk(sync_orders):
             else:
                 if target_model == OrderCreated:
                     to_insert_created.append(new_data_dict)
-                    # Yeni sipariş: Stok tahsis edilecek
-                    if new_data_dict.get('details'):
-                        new_created_details.append(new_data_dict['details'])
+                    new_order_dicts.append(new_data_dict)
                 elif target_model == OrderPicking:
                     to_insert_picking.append(new_data_dict)
                 elif target_model == OrderCancelled:
@@ -341,6 +341,22 @@ def _process_sync_orders_bulk(sync_orders):
                 model.query.filter(model.id.in_(ids)).delete(synchronize_session=False)
                 logger.info(f"{len(ids)} kayıt {table_name} tablosundan silindi.")
 
+        # Stok tahsisi: Yeni OrderCreated siparişleri için raf stoğunu düş ve atanan_raf'ı kaydet
+        if new_order_dicts:
+            logger.info(f"[STOK] {len(new_order_dicts)} yeni sipariş için raf stok tahsisi yapılıyor...")
+            for order_dict in new_order_dicts:
+                details_json = order_dict.get('details')
+                if details_json:
+                    try:
+                        alloc_result = allocate_stock_for_order_details(details_json, commit=False)
+                        for barcode_key, info in alloc_result.items():
+                            codes = info.get('shelf_codes', [])
+                            if codes:
+                                order_dict['atanan_raf'] = codes[0]
+                                break
+                    except Exception as e:
+                        logger.error(f"[STOK] Tahsis hatası: {e}")
+
         if to_insert_created:
             db.session.bulk_insert_mappings(OrderCreated, to_insert_created)
         if to_insert_picking:
@@ -348,21 +364,12 @@ def _process_sync_orders_bulk(sync_orders):
         if to_insert_cancelled:
             db.session.bulk_insert_mappings(OrderCancelled, to_insert_cancelled)
 
-        # Stok tahsisi: Yeni OrderCreated siparişleri için raf stoğunu düş
-        if new_created_details:
-            logger.info(f"[STOK] {len(new_created_details)} yeni sipariş için raf stok tahsisi yapılıyor...")
-            for details_json in new_created_details:
-                try:
-                    allocate_stock_for_order_details(details_json, commit=False)
-                except Exception as e:
-                    logger.error(f"[STOK] Tahsis hatası: {e}")
-
         # Stok iade: OrderCreated → OrderCancelled geçişleri için stoğu geri yükle
         if cancelled_from_created:
             logger.info(f"[STOK] {len(cancelled_from_created)} iptal edilen sipariş için stok iade ediliyor...")
-            for details_json in cancelled_from_created:
+            for details_json, shelf_code in cancelled_from_created:
                 try:
-                    restore_stock_for_order_details(details_json, commit=False)
+                    restore_stock_for_order_details(details_json, shelf_code=shelf_code, commit=False)
                 except Exception as e:
                     logger.error(f"[STOK] İade hatası: {e}")
 

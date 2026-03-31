@@ -30,7 +30,14 @@
       "Bash(grep -l \"def.*route\\\\|@.*route\" /c/Users/MUS1R/Documents/yeni/*.py)",
       "Bash(grep:*)",
       "Bash(ls /Users/abdurrahmankuli/Documents/Webs/yeni/*.py)",
-      "Bash(source .venv/bin/activate)"
+      "Bash(source .venv/bin/activate)",
+      "Bash(git log)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(pip3 install:*)",
+      "Bash(ls /Users/abdurrahmankuli/Documents/Webs/yeni/venv/bin/python*)",
+      "Bash(ls /Users/abdurrahmankuli/Documents/Webs/yeni/.venv/bin/python*)",
+      "Bash(.venv/bin/python3 -c \":*)"
     ]
   }
 }

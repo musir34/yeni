@@ -301,10 +301,16 @@ def allocate_stock_for_order_details(details_json, commit: bool = True) -> dict:
     return results
 
 
-def restore_stock_for_order_details(details_json, commit: bool = True) -> dict:
+def restore_stock_for_order_details(details_json, shelf_code: str = None, commit: bool = True) -> dict:
     """
     Sipariş detayları JSON'unu parse edip her ürün için stoğu rafa geri yükler.
     Sipariş silme/iptal durumlarında kullanılır.
+
+    Args:
+        details_json: JSON string veya list — [{barcode, quantity}, ...]
+        shelf_code: Hedef raf kodu (siparişin atanan_raf'ı). Verilirse o rafa iade eder,
+                    yoksa ürünün mevcut olduğu ilk rafa ekler.
+        commit: True ise transaction commit eder
 
     Returns: {barcode: {"restored": int, "shelf_code": str|None}, ...}
     """
@@ -322,7 +328,7 @@ def restore_stock_for_order_details(details_json, commit: bool = True) -> dict:
             if not barcode or qty <= 0:
                 continue
 
-            result = restore_stock_to_shelf(barcode, qty, commit=False)
+            result = restore_stock_to_shelf(barcode, qty, shelf_code=shelf_code, commit=False)
             results[barcode] = result
 
         if commit:
