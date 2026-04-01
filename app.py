@@ -300,6 +300,9 @@ def pull_orders_job():
     """Siparişleri Trendyol'dan çeker (Created rezervleri sistemde güncellenir)."""
     with app.app_context():
         try:
+            # Stale cache'i temizle — toggle değişikliği farklı worker/request'te
+            # commit edilmiş olabilir, session expire ile taze veriyi oku
+            db.session.expire_all()
             from models import PlatformConfig
             cfg = PlatformConfig.query.filter_by(platform='order_pull').first()
             if cfg and not cfg.is_active:
