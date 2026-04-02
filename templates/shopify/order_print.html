@@ -2,11 +2,11 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Müşteri Bilgileri - {{ order.name }}</title>
+    <title>Siparis Fisi - {{ order.name }}</title>
     <style>
         @page {
-            size: 100mm 100mm;
-            margin: 3mm;
+            size: A5;
+            margin: 8mm;
         }
         * {
             margin: 0;
@@ -14,84 +14,200 @@
             box-sizing: border-box;
         }
         body {
-            font-family: 'Arial Black', Arial, sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
             font-size: 9pt;
-            width: 94mm;
-            height: 94mm;
-            padding: 3mm;
+            color: #333;
         }
-        .header {
+        .fis-border {
+            border: 2px solid #333;
+            padding: 12px;
+        }
+        .fis-header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
+        .fis-header h1 {
+            font-size: 14pt;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin: 0;
+        }
+        .fis-header .sub {
+            font-size: 8pt;
+            color: #666;
+            margin-top: 2px;
+        }
+        .info-table {
+            width: 100%;
+            font-size: 9pt;
+            margin-bottom: 10px;
+        }
+        .info-table td {
+            vertical-align: top;
+            width: 50%;
+        }
+        .info-table .left { padding-right: 8px; }
+        .info-table .right { padding-left: 8px; border-left: 1px solid #ddd; }
+        .section-title {
+            font-weight: bold;
+            font-size: 8pt;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+            margin-bottom: 10px;
+        }
+        .products-table th {
+            padding: 6px 8px;
+            text-align: left;
+            border-bottom: 2px solid #333;
+            font-size: 8pt;
+            background: #f5f5f5;
+        }
+        .products-table th.center { text-align: center; }
+        .products-table th.right { text-align: right; }
+        .products-table td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        .products-table td.sku { font-size: 8pt; color: #666; }
+        .products-table td.center { text-align: center; font-weight: bold; }
+        .products-table td.right { text-align: right; }
+        .kapida-odeme-box {
+            background: #ff0000;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            border: 3px solid #000;
+            margin: 12px 0;
+        }
+        .kapida-odeme-box .title {
+            font-size: 14pt;
+            font-weight: bold;
+            letter-spacing: 1px;
+            border-bottom: 2px solid white;
+            padding-bottom: 4px;
+        }
+        .kapida-odeme-box .amount {
+            font-size: 24pt;
+            font-weight: bold;
+            margin: 6px 0;
+        }
+        .kapida-odeme-box .label {
+            font-size: 10pt;
+            font-weight: bold;
+            background: white;
+            color: #ff0000;
+            padding: 3px;
+            margin-top: 4px;
+            display: inline-block;
+        }
+        .total-row {
+            text-align: right;
+            border-top: 2px solid #333;
+            padding-top: 8px;
+            margin-top: 8px;
             font-size: 11pt;
             font-weight: bold;
-            margin-bottom: 3mm;
-            padding-bottom: 2mm;
-            border-bottom: 2px solid #000;
         }
-        .info-row {
-            margin: 1mm 0;
-            font-size: 8pt;
-            line-height: 1.3;
-        }
-        .label {
-            font-weight: bold;
-            display: inline-block;
-            width: 20mm;
-        }
-        .adres {
-            white-space: pre-line;
-            margin: 2mm 0;
-            font-size: 8pt;
-            line-height: 1.3;
-            max-height: 15mm;
-            overflow: hidden;
-        }
-        .kapida-odeme-box {
-            break-inside: avoid;
-            page-break-inside: avoid;
-            margin: 3mm 0;
-        }
-        .footer {
-            position: absolute;
-            bottom: 3mm;
-            left: 3mm;
-            right: 3mm;
+        .fis-footer {
             text-align: center;
+            margin-top: 10px;
+            padding-top: 6px;
+            border-top: 1px solid #ddd;
             font-size: 7pt;
-            border-top: 1px solid #ccc;
-            padding-top: 1mm;
+            color: #999;
         }
+        .paid { color: #28a745; font-weight: bold; }
+        .cod { color: #ff0000; font-weight: bold; }
         @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
 </head>
 <body>
-    <div class="header">KARGO BİLGİLERİ</div>
-    <div class="info-row"><span class="label">Sipariş:</span> {{ order.name }}</div>
-    <div class="info-row"><span class="label">Alıcı:</span> {{ customer_name }}</div>
-    <div class="info-row"><span class="label">Telefon:</span> {{ customer_phone }}</div>
-    <div class="info-row"><span class="label">Adres:</span></div>
-    <div class="adres">{% if shipping %}{{ shipping.address1 or '' }} {{ shipping.address2 or '' }}
-{{ shipping.city or '' }} {{ shipping.province or '' }} {{ shipping.zip or '' }}
-{{ shipping.country or '' }}{% else %}-{% endif %}</div>
+    <div class="fis-border">
+        <!-- Baslik -->
+        <div class="fis-header">
+            <h1>SIPARIS FISI</h1>
+            <div class="sub">Gullu Ayakkabi</div>
+        </div>
 
-    {% if is_cod and cod_amount != '0.00' %}
-    <div class="kapida-odeme-box">
-        <div style="background: #ff0000; color: white; text-align: center; padding: 8px; border: 4px solid #000; margin: 8px 0;">
-            <div style="font-size: 18pt; font-weight: bold; letter-spacing: 1px; border-bottom: 3px solid white; padding-bottom: 5px;">
-                ⚠️ KAPIDA ÖDEME ⚠️
-            </div>
-            <div style="font-size: 32pt; font-weight: bold; margin: 8px 0; line-height: 1.2;">
-                {{ cod_amount }} TL
-            </div>
-            <div style="font-size: 14pt; font-weight: bold; background: white; color: #ff0000; padding: 4px; margin-top: 5px;">
-                TAHSİL EDİLECEK
-            </div>
+        <!-- Siparis & Musteri Bilgileri -->
+        <table class="info-table">
+            <tr>
+                <td class="left">
+                    <div class="section-title">Siparis Bilgileri</div>
+                    <div><strong>No:</strong> {{ order.name }}</div>
+                    <div><strong>Tarih:</strong> {{ print_date }}</div>
+                    <div><strong>Tutar:</strong> {{ total_price }} {{ currency }}</div>
+                    <div><strong>Durum:</strong> {{ financial_status }}</div>
+                    {% if is_cod %}
+                    <div class="cod">KAPIDA ODEME</div>
+                    {% else %}
+                    <div class="paid">ODENDI</div>
+                    {% endif %}
+                </td>
+                <td class="right">
+                    <div class="section-title">Musteri Bilgileri</div>
+                    <div><strong>Ad:</strong> {{ customer_name }}</div>
+                    {% if customer_phone and customer_phone != '-' %}
+                    <div><strong>Tel:</strong> {{ customer_phone }}</div>
+                    {% endif %}
+                    {% if shipping %}
+                    <div><strong>Adres:</strong> {{ shipping.address1 or '' }} {{ shipping.address2 or '' }}, {{ shipping.city or '' }} {{ shipping.province or '' }} {{ shipping.zip or '' }} {{ shipping.country or '' }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+
+        <!-- Urunler -->
+        <div class="section-title">Urunler ({{ total_items }} adet)</div>
+        <table class="products-table">
+            <thead>
+                <tr>
+                    <th>Urun Adi</th>
+                    <th>SKU</th>
+                    <th class="center">Adet</th>
+                    <th class="right">Tutar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for li in line_items %}
+                <tr>
+                    <td>{{ li.title or '' }}</td>
+                    <td class="sku">{{ li.sku or '' }}</td>
+                    <td class="center">{{ li.quantity or 1 }}</td>
+                    <td class="right">{{ "%.2f"|format((li.originalTotalSet.shopMoney.amount|float) if li.originalTotalSet and li.originalTotalSet.shopMoney else 0) }} {{ currency }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if is_cod and cod_amount != '0.00' %}
+        <div class="kapida-odeme-box">
+            <div class="title">KAPIDA ODEME</div>
+            <div class="amount">{{ cod_amount }} TL</div>
+            <div><span class="label">TAHSIL EDILECEK</span></div>
+        </div>
+        {% endif %}
+
+        <!-- Toplam -->
+        <div class="total-row">
+            Toplam: {{ total_price }} {{ currency }}
+        </div>
+
+        <!-- Footer -->
+        <div class="fis-footer">
+            {{ print_date }} | Gullu Ayakkabi Siparis Sistemi
         </div>
     </div>
-    {% endif %}
-
-    <div class="footer">{{ print_date }}</div>
 
     <script>
         window.onload = function() {

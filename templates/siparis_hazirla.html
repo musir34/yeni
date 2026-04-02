@@ -942,56 +942,111 @@
       }
     }
     
-    // 🛍️ Shopify etiket yazdırma (kapıda ödeme destekli)
+    // 🛍️ Shopify sipariş fişi yazdırma (Shopify panel formatında)
     function printShopifyLabel() {
         const orderName = '{{ order.shopify_order_name if order and order.source == "SHOPIFY" else "" }}';
+        const orderDate = '{{ order.order_date.strftime("%d.%m.%Y %H:%M") if order and order.order_date else "" }}';
         const custName = '{{ order.customer_name if order else "" }}';
         const custSurname = '{{ order.customer_surname if order else "" }}';
         const custAddress = '{{ order.customer_address|default("", true)|replace("\n", " ")|replace("'", "\\'") if order else "" }}';
+        const orderAmount = {{ order.amount if order and order.amount else 0 }};
         const kapidaOdeme = {{ 'true' if order and order.source == 'SHOPIFY' and order.kapida_odeme else 'false' }};
         const kapidaTutar = {{ order.kapida_odeme_tutari if order and order.source == 'SHOPIFY' and order.kapida_odeme else 0 }};
+
+        // Ürün bilgilerini topla
+        const products = [
+            {% if order and order.products %}
+            {% for p in order.products %}
+            { name: '{{ p.product_name|default(p.sku, true)|replace("'", "\\'") }}', sku: '{{ p.sku|replace("'", "\\'") }}', qty: {{ p.quantity|default(1) }} },
+            {% endfor %}
+            {% endif %}
+        ];
+
+        let productsHTML = '';
+        products.forEach((p, i) => {
+            productsHTML += `
+                <tr>
+                    <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;">${p.name}</td>
+                    <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;font-size:8pt;color:#666;">${p.sku}</td>
+                    <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;text-align:center;font-weight:bold;">${p.qty}</td>
+                </tr>`;
+        });
 
         let kapidaOdemeHTML = '';
         if (kapidaOdeme && kapidaTutar > 0) {
             kapidaOdemeHTML = `
-                <div class="kapida-odeme-box">
-                    <div style="background: #ff0000; color: white; text-align: center; padding: 8px; border: 4px solid #000; margin: 8px 0;">
-                        <div style="font-size: 18pt; font-weight: bold; letter-spacing: 1px; border-bottom: 3px solid white; padding-bottom: 5px;">
-                            ⚠️ KAPIDA ÖDEME ⚠️
-                        </div>
-                        <div style="font-size: 32pt; font-weight: bold; margin: 8px 0; line-height: 1.2;">
-                            ${kapidaTutar.toFixed(2)} TL
-                        </div>
-                        <div style="font-size: 14pt; font-weight: bold; background: white; color: #ff0000; padding: 4px; margin-top: 5px;">
-                            TAHSİL EDİLECEK
-                        </div>
-                    </div>
+                <div style="background:#ff0000;color:white;text-align:center;padding:10px;border:3px solid #000;margin:12px 0;">
+                    <div style="font-size:14pt;font-weight:bold;letter-spacing:1px;border-bottom:2px solid white;padding-bottom:4px;">KAPIDA ODEME</div>
+                    <div style="font-size:24pt;font-weight:bold;margin:6px 0;">${kapidaTutar.toFixed(2)} TL</div>
+                    <div style="font-size:10pt;font-weight:bold;background:white;color:#ff0000;padding:3px;margin-top:4px;">TAHSIL EDILECEK</div>
                 </div>`;
         }
 
         const printContent = `
-            <html><head><title>Kargo Bilgileri - ${orderName}</title>
+            <html><head><title>Siparis Fisi - ${orderName}</title>
             <style>
-                @page { size: 100mm 100mm; margin: 3mm; }
+                @page { size: A5; margin: 8mm; }
                 * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { font-family: 'Arial Black', Arial, sans-serif; font-size: 9pt; width: 94mm; height: 94mm; padding: 3mm; }
-                .header { font-size: 11pt; font-weight: bold; margin-bottom: 3mm; padding-bottom: 2mm; border-bottom: 2px solid #000; }
-                .info-row { margin: 1mm 0; font-size: 8pt; line-height: 1.3; }
-                .label { font-weight: bold; display: inline-block; width: 20mm; }
-                .adres { white-space: pre-line; margin: 2mm 0; font-size: 8pt; line-height: 1.3; max-height: 15mm; overflow: hidden; }
-                .kapida-odeme-box { break-inside: avoid; page-break-inside: avoid; margin: 3mm 0; }
-                .footer { position: absolute; bottom: 3mm; left: 3mm; right: 3mm; text-align: center; font-size: 7pt; border-top: 1px solid #ccc; padding-top: 1mm; }
+                body { font-family: Arial, Helvetica, sans-serif; font-size: 9pt; color: #333; }
+                @media print {
+                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                }
             </style></head><body>
-                <div class="header">KARGO BİLGİLERİ</div>
-                <div class="info-row"><span class="label">Sipariş:</span> ${orderName}</div>
-                <div class="info-row"><span class="label">Alıcı:</span> ${custName} ${custSurname}</div>
-                <div class="info-row"><span class="label">Adres:</span></div>
-                <div class="adres">${custAddress}</div>
-                ${kapidaOdemeHTML}
-                <div class="footer">${new Date().toLocaleDateString('tr-TR')} ${new Date().toLocaleTimeString('tr-TR')}</div>
+                <div style="border:2px solid #333;padding:12px;">
+                    <!-- Baslik -->
+                    <div style="text-align:center;border-bottom:2px solid #333;padding-bottom:8px;margin-bottom:10px;">
+                        <div style="font-size:14pt;font-weight:bold;letter-spacing:1px;">SIPARIS FISI</div>
+                        <div style="font-size:8pt;color:#666;margin-top:2px;">Gullu Ayakkabi</div>
+                    </div>
+
+                    <!-- Siparis & Musteri Bilgileri -->
+                    <table style="width:100%;font-size:9pt;margin-bottom:10px;">
+                        <tr>
+                            <td style="width:50%;vertical-align:top;padding-right:8px;">
+                                <div style="font-weight:bold;font-size:8pt;color:#666;text-transform:uppercase;margin-bottom:4px;">Siparis Bilgileri</div>
+                                <div><strong>No:</strong> ${orderName}</div>
+                                <div><strong>Tarih:</strong> ${orderDate}</div>
+                                <div><strong>Tutar:</strong> ${orderAmount.toFixed(2)} TL</div>
+                                ${kapidaOdeme ? '<div style="color:#ff0000;font-weight:bold;">KAPIDA ODEME</div>' : '<div style="color:#28a745;font-weight:bold;">ODENDI</div>'}
+                            </td>
+                            <td style="width:50%;vertical-align:top;padding-left:8px;border-left:1px solid #ddd;">
+                                <div style="font-weight:bold;font-size:8pt;color:#666;text-transform:uppercase;margin-bottom:4px;">Musteri Bilgileri</div>
+                                <div><strong>Ad:</strong> ${custName} ${custSurname}</div>
+                                <div><strong>Adres:</strong> ${custAddress}</div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- Urunler -->
+                    <div style="font-weight:bold;font-size:8pt;color:#666;text-transform:uppercase;margin-bottom:4px;">Urunler</div>
+                    <table style="width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:10px;">
+                        <thead>
+                            <tr style="background:#f5f5f5;">
+                                <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #333;font-size:8pt;">Urun Adi</th>
+                                <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #333;font-size:8pt;">SKU</th>
+                                <th style="padding:6px 8px;text-align:center;border-bottom:2px solid #333;font-size:8pt;">Adet</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${productsHTML}
+                        </tbody>
+                    </table>
+
+                    ${kapidaOdemeHTML}
+
+                    <!-- Toplam -->
+                    <div style="text-align:right;border-top:2px solid #333;padding-top:8px;margin-top:8px;">
+                        <span style="font-size:11pt;font-weight:bold;">Toplam: ${orderAmount.toFixed(2)} TL</span>
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="text-align:center;margin-top:10px;padding-top:6px;border-top:1px solid #ddd;font-size:7pt;color:#999;">
+                        ${new Date().toLocaleDateString('tr-TR')} ${new Date().toLocaleTimeString('tr-TR')} | Gullu Ayakkabi Siparis Sistemi
+                    </div>
+                </div>
             </body></html>`;
 
-        const printWindow = window.open('', '_blank', 'width=400,height=300');
+        const printWindow = window.open('', '_blank', 'width=600,height=800');
         printWindow.document.write(printContent);
         printWindow.document.close();
         printWindow.focus();
@@ -1218,7 +1273,7 @@
           var exp = expectedEl ? expectedEl.value.trim() : '';
           var orig = originalEl ? originalEl.value.trim() : '';
           var val = input.value.trim();
-          if (val === '' || (val !== exp && val !== orig)) ok = false;
+          if (val === '' || (!barcodeMatch(val, exp) && !barcodeMatch(val, orig))) ok = false;
         });
 
         if (ok) {
@@ -1244,6 +1299,18 @@
         });
       }
 
+      // Türkçe karakterleri ASCII karşılığına çevir (barkod okuyucu uyumluluğu)
+      function stripTurkish(s) {
+        if (!s) return '';
+        var map = {'ç':'c','ğ':'g','ı':'i','ö':'o','ş':'s','ü':'u','Ç':'C','Ğ':'G','İ':'I','Ö':'O','Ş':'S','Ü':'U'};
+        return s.replace(/[çğıöşüÇĞİÖŞÜ]/g, function(c) { return map[c] || c; });
+      }
+      function barcodeMatch(scanned, expected) {
+        if (!scanned || !expected) return false;
+        if (scanned === expected) return true;
+        return stripTurkish(scanned) === stripTurkish(expected);
+      }
+
       function validateBarkodInput(input, idx) {
         var pi = input.dataset.productIndex, qi = input.dataset.quantityIndex, side = input.dataset.side;
         var fg = input.closest('.form-group'); if (!fg) return;
@@ -1256,7 +1323,7 @@
         var orig = originalEl ? originalEl.value.trim() : exp;
         var val = input.value.trim();
 
-        if (val === exp || val === orig) {
+        if (barcodeMatch(val, exp) || barcodeMatch(val, orig)) {
           msg.textContent = 'Doğru!'; msg.className = 'alert alert-success alert-show';
           input.style.backgroundColor = '#e9ffe9'; input.dataset.confirmed = 'true'; input.readOnly = true;
           var next = barkodInputs[idx + 1];

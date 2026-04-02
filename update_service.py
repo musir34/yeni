@@ -209,79 +209,77 @@ async def confirm_packing():
         try:
             uyarilar = []
             toplam_dusen = 0
-            toplam_beklenen = 0  # Düşmesi gereken toplam adet
+            toplam_beklenen = 0
+            stok_hareketleri = []  # Detaylı log için
 
             for d in details:
                 bc = _norm_bc(d.get("barcode"))
-                
+
                 adet = int(d.get("quantity") or 0)
                 if not bc or adet <= 0:
                     logger.debug(f"[STOCK] atla bc={bc} adet={adet}")
                     continue
-                
-                toplam_beklenen += adet  # Beklenen toplamı artır
-                chosen_raf = request.form.get(f"pick_{d.get('barcode')}")  # Form'dan gelen key (woo_id veya barkod)
+
+                toplam_beklenen += adet
+                chosen_raf = request.form.get(f"pick_{d.get('barcode')}")
                 kalan = adet
                 logger.info(f"[STOCK] basla bc={bc} adet={adet} chosen_raf={chosen_raf}")
 
-                # 6a) Seçilen raftan düş
+                # 6a) Seçilen raftan düş (başka raftan otomatik tamamlama YAPILMAZ)
                 if chosen_raf:
                     rec = (RafUrun.query
                            .filter_by(raf_kodu=chosen_raf, urun_barkodu=bc)
                            .with_for_update()
                            .first())
-                    if rec:
-                        use = min(rec.adet or 0, kalan)
+                    if rec and (rec.adet or 0) >= kalan:
                         eski = rec.adet or 0
-                        rec.adet = max(0, eski - use)
-                        kalan -= use
-                        toplam_dusen += use
-                        logger.debug(f"[STOCK][RAF1] {chosen_raf}/{bc} {eski}->{rec.adet} (use={use})")
+                        rec.adet = eski - kalan
+                        toplam_dusen += kalan
+                        stok_hareketleri.append({
+                            "barkod": bc,
+                            "raf": chosen_raf,
+                            "onceki": eski,
+                            "sonraki": rec.adet,
+                            "dusen": kalan,
+                        })
+                        logger.debug(f"[STOCK][RAF] {chosen_raf}/{bc} {eski}->{rec.adet} (use={kalan})")
+                        kalan = 0
                     else:
-                        logger.debug(f"[STOCK][RAF1] kayıt yok: {chosen_raf}/{bc}")
+                        mevcut = (rec.adet or 0) if rec else 0
+                        logger.warning(f"[STOCK][YETERSIZ] {chosen_raf}/{bc} mevcut={mevcut} istenen={kalan}")
+                        uyarilar.append(f"{bc}: {chosen_raf} rafında {mevcut} adet var, {kalan} adet gerekli — başka raf seçin")
+                else:
+                    logger.warning(f"[STOCK][NO-RAF] {bc} için raf seçilmedi")
+                    uyarilar.append(f"{bc}: Raf seçilmedi")
 
-                # 6b) Diğer raflardan (çok stoklu)
-                if kalan > 0:
-                    digerler = (RafUrun.query
-                                .filter(RafUrun.urun_barkodu == bc, RafUrun.adet > 0)
-                                .order_by(RafUrun.adet.desc())
-                                .with_for_update()
-                                .all())
-                    for r in digerler:
-                        if chosen_raf and r.raf_kodu == chosen_raf:
-                            continue
-                        if kalan == 0:
-                            break
-                        eski = r.adet or 0
-                        use = min(eski, kalan)
-                        r.adet = max(0, eski - use)
-                        kalan -= use
-                        toplam_dusen += use
-                        logger.debug(f"[STOCK][RAF2] {r.raf_kodu}/{bc} {eski}->{r.adet} (use={use})")
+                if kalan == 0:
+                    new_qty = sync_central_stock(bc, commit=False)
+                    logger.debug(f"[CENTRAL] bc={bc} -> {new_qty} (senkronize edildi)")
 
-                # 6c) CentralStock: Raflardaki toplam ile senkronize et (tutarsızlık önleme)
-                new_qty = sync_central_stock(bc, commit=False)
-                logger.debug(f"[CENTRAL] bc={bc} -> {new_qty} (senkronize edildi)")
-
-                if kalan > 0:
-                    warn = f"{bc} için {kalan} adet eksik (raf yetersiz)"
-                    uyarilar.append(warn)
-                    logger.warning(f"[STOCK][WARN] {warn}")
+            # Stok yetersizse hiçbir şeyi commit etme, işlemi durdur
+            if toplam_dusen < toplam_beklenen:
+                db.session.rollback()
+                logger.warning(f"[STOCK][YETERSIZ] {toplam_dusen}/{toplam_beklenen} — rollback yapıldı")
+                for u in uyarilar:
+                    flash(f"❌ {u}", "danger")
+                if not uyarilar:
+                    flash("❌ Seçilen raflarda yeterli stok yok! Doğru rafı seçtiğinizden emin olun.", "danger")
+                try:
+                    log_user_action("UPDATE", {
+                        "işlem_açıklaması": f"Paketleme BAŞARISIZ — {order_number} (stok yetersiz)",
+                        "sayfa": "Sipariş Hazırla",
+                        "sipariş_no": order_number,
+                        "durum": "BASARISIZ",
+                        "sebep": " | ".join(uyarilar) if uyarilar else "Stok yetersiz",
+                        "beklenen_adet": toplam_beklenen,
+                        "düşen_adet": 0,
+                    })
+                except Exception:
+                    pass
+                return _respond(is_ajax)
 
             db.session.commit()
             logger.info(f"[STOCK][OK] commit; toplam_dusen={toplam_dusen}/{toplam_beklenen}")
-            
-            # ⚠️ Kritik: Stok yetersizse Trendyol'a güncelleme GÖNDERME
-            if toplam_beklenen > 0 and toplam_dusen == 0:
-                logger.error(f"[STOCK][CRITICAL] Hiç stok düşmedi! Trendyol'a güncelleme gönderilmiyor.")
-                flash("❌ Stok yetersiz! Hiçbir ürün raflardan çekilemedi. Sipariş Picking'e geçirilemedi.", 'danger')
-                return _respond(is_ajax)
-            elif toplam_dusen < toplam_beklenen:
-                logger.warning(f"[STOCK][PARTIAL] Kısmi stok düşümü: {toplam_dusen}/{toplam_beklenen}")
-                flash(f"⚠️ Kısmi hazırlandı: {toplam_dusen}/{toplam_beklenen} adet. Devam ediliyor...", 'warning')
-            
-            if uyarilar:
-                flash(" / ".join(uyarilar), "warning")
         except Exception as e:
             db.session.rollback()
             logger.exception("[STOCK][ERR] rollback")
@@ -319,7 +317,17 @@ async def confirm_packing():
             # Shopify'da OrderCreated→OrderPicking taşıma YOK (DB'de kayıt yok)
             flash(f'✓ Shopify sipariş hazırlandı.', 'success')
             logger.info(f"[SHOPIFY] Sipariş hazırlandı: {order_number}")
-            log_user_action("UPDATE", {"işlem_açıklaması": f"Shopify sipariş hazırlandı — {order_number}", "sayfa": "Sipariş Hazırla", "stok_düşen": toplam_dusen})
+            log_user_action("UPDATE", {
+                "işlem_açıklaması": f"Shopify sipariş hazırlandı — {order_number} (Created → Hazirlaniyor)",
+                "sayfa": "Sipariş Hazırla",
+                "sipariş_no": order_number,
+                "kaynak": "SHOPIFY",
+                "durum": "BASARILI",
+                "toplam_adet": toplam_beklenen,
+                "düşen_adet": toplam_dusen,
+                "stok_hareketleri": stok_hareketleri,
+                "müşteri": f"{getattr(order_created, 'customer_name', '')} {getattr(order_created, 'customer_surname', '')}".strip(),
+            })
 
         else:
             # ═══════════════════════════════════════════
@@ -404,7 +412,18 @@ async def confirm_packing():
                 db.session.delete(order_created)
                 db.session.commit()
                 logger.info(f"[MOVE] Created ➜ Picking OK (order={order_number})")
-                log_user_action("UPDATE", {"işlem_açıklaması": f"Sipariş hazırlandı — {order_number} (Created → Picking)", "sayfa": "Sipariş Hazırla", "stok_düşen": toplam_dusen})
+                log_user_action("UPDATE", {
+                    "işlem_açıklaması": f"Sipariş hazırlandı — {order_number} (Created → Picking)",
+                    "sayfa": "Sipariş Hazırla",
+                    "sipariş_no": order_number,
+                    "kaynak": getattr(order_created, 'source', 'TRENDYOL'),
+                    "durum": "BASARILI",
+                    "toplam_adet": toplam_beklenen,
+                    "düşen_adet": toplam_dusen,
+                    "stok_hareketleri": stok_hareketleri,
+                    "müşteri": f"{getattr(order_created, 'customer_name', '')} {getattr(order_created, 'customer_surname', '')}".strip(),
+                    "atanan_raf": getattr(order_created, 'atanan_raf', None),
+                })
             except Exception as db_error:
                 db.session.rollback()
                 logger.exception("[MOVE][ERR] rollback")

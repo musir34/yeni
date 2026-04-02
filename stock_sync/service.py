@@ -144,7 +144,9 @@ class StockSyncService:
                     barcode = str(item.get('barcode', '') or '').strip()
                     qty = int(item.get('quantity', 1) or 1)
                     if barcode:
-                        reserved_map[barcode] = reserved_map.get(barcode, 0) + qty
+                        from barcode_alias_helper import normalize_barcode
+                        normalized = normalize_barcode(barcode)
+                        reserved_map[normalized] = reserved_map.get(normalized, 0) + qty
             except (json.JSONDecodeError, TypeError, ValueError) as e:
                 parse_errors += 1
                 logger.error(
@@ -163,11 +165,15 @@ class StockSyncService:
 
     def _get_all_stocks(self, platform: str = None) -> List[StockItem]:
         """CentralStock'tan tüm stokları çek.
-        Stok, sipariş oluşturulduğunda raftan düşüldüğü için
-        CentralStock zaten gerçek kullanılabilir miktarı yansıtır.
+        Bekleyen siparişlerdeki (OrderCreated) ürün miktarları rezerv olarak düşülür.
         """
         stocks = CentralStock.query.all()
         items = []
+
+        # Rezerv: Bekleyen siparişlerdeki ürün miktarlarını hesapla
+        reserved_map = self.get_reserved_barcodes()
+        if reserved_map:
+            logger.info(f"[SYNC] {len(reserved_map)} barkod için rezerv hesaplandı (toplam {sum(reserved_map.values())} adet)")
 
         # Platform'a göre eşleştirme map'leri
         asin_map = {}
@@ -188,7 +194,8 @@ class StockSyncService:
             if platform == "amazon" and not asin:
                 continue
 
-            available_qty = max(0, stock.qty or 0)
+            reserved = reserved_map.get(stock.barcode, 0)
+            available_qty = max(0, (stock.qty or 0) - reserved)
 
             items.append(StockItem(
                 barcode=stock.barcode,
@@ -201,13 +208,15 @@ class StockSyncService:
     
     def _get_stocks_by_barcodes(self, barcodes: List[str], platform: str = None) -> List[StockItem]:
         """Belirli barkodlar için stokları çek.
-        Stok, sipariş oluşturulduğunda raftan düşüldüğü için
-        CentralStock zaten gerçek kullanılabilir miktarı yansıtır.
+        Bekleyen siparişlerdeki (OrderCreated) ürün miktarları rezerv olarak düşülür.
         """
         stocks = CentralStock.query.filter(CentralStock.barcode.in_(barcodes)).all()
         items = []
 
         stock_dict = {s.barcode: s.qty for s in stocks}
+
+        # Rezerv: Bekleyen siparişlerdeki ürün miktarları
+        reserved_map = self.get_reserved_barcodes()
 
         # Amazon için ASIN eşleştirmesi
         asin_map = {}
@@ -227,7 +236,8 @@ class StockSyncService:
             if platform == "amazon" and not asin:
                 continue
 
-            available_qty = max(0, stock_dict.get(barcode, 0))
+            reserved = reserved_map.get(barcode, 0)
+            available_qty = max(0, stock_dict.get(barcode, 0) - reserved)
 
             items.append(StockItem(
                 barcode=barcode,

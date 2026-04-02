@@ -544,6 +544,12 @@ def archive_an_order():
                 db.session.add(new_archive)
                 db.session.commit()
 
+                # Shopify'da siparişi "Arsivlendi" olarak etiketle (tekrar gelmemesi için)
+                try:
+                    shopify_service.add_order_tags(shopify_id, ["Arsivlendi"])
+                except Exception as tag_err:
+                    print(f"Shopify tag ekleme hatası (arşiv): {tag_err}")
+
                 try: log_user_action("ARCHIVE", {"sayfa": "Sipariş Hazırla", "sipariş_no": order_number, "sebep": archive_reason or "-", "kaynak": "SHOPIFY"})
                 except: pass
                 return jsonify({'success': True, 'message': 'Shopify sipariş arşive eklendi.'})

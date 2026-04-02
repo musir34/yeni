@@ -341,15 +341,20 @@ class ShopifyStockService:
         mapping_barcodes = [m.barcode for m in mappings]
         stocks = {cs.barcode: cs.qty for cs in CentralStock.query.filter(CentralStock.barcode.in_(mapping_barcodes)).all()}
 
+        # Rezerv: Bekleyen siparişlerdeki (OrderCreated) ürün miktarlarını düş
+        from stock_sync.service import stock_sync_service
+        reserved_map = stock_sync_service.get_reserved_barcodes()
+
         # Batch olarak gönder (aynı mutation ile max 100 öğe)
         results = {"success_count": 0, "error_count": 0, "skipped_count": 0, "details": [], "errors": []}
         batch: List[Dict] = []
 
         for mapping in mappings:
-            qty = stocks.get(mapping.barcode, 0)
+            raw_qty = stocks.get(mapping.barcode, 0)
+            reserved = reserved_map.get(mapping.barcode, 0)
             batch.append({
                 "mapping": mapping,
-                "qty": max(0, qty),
+                "qty": max(0, raw_qty - reserved),
             })
 
         # Shopify inventorySetQuantities max 100 item per call

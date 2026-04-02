@@ -145,7 +145,7 @@ def _fetch_shopify_beklemede_orders(limit=20):
         return []
     try:
         # Genel filtre: hazırlanan/kargoda/teslim/iptal/iade hariç
-        base_filter = "-tag:Hazirlaniyor -tag:Kargoda -tag:\"Teslim Edildi\" -status:cancelled -financial_status:refunded -financial_status:partially_refunded"
+        base_filter = "-tag:Hazirlaniyor -tag:Kargoda -tag:\"Teslim Edildi\" -tag:Arsivlendi -status:cancelled -financial_status:refunded -financial_status:partially_refunded"
 
         # 1) Ödemesi onaylanmış siparişler
         result_paid = shopify_service.get_orders(
@@ -289,9 +289,17 @@ def get_home(order_number=None):
                           .first())
         else:
             # 🛍️ Öncelik: Shopify Beklemede siparişleri, sonra Trendyol
-            shopify_orders = _fetch_shopify_beklemede_orders(limit=1)
-            if shopify_orders:
-                oldest_order, _ = _shopify_order_to_hazirla_format(shopify_orders[0])
+            # Arşivdekileri atla (Shopify tag filtresi + yerel kontrol)
+            archived_numbers = {r[0] for r in db.session.query(Archive.order_number).all()}
+            shopify_orders = _fetch_shopify_beklemede_orders(limit=5)
+            shopify_match = None
+            for so in shopify_orders:
+                so_id = so.get("legacyResourceId") or so.get("id", "").split("/")[-1]
+                if f"SH-{so_id}" not in archived_numbers:
+                    shopify_match = so
+                    break
+            if shopify_match:
+                oldest_order, _ = _shopify_order_to_hazirla_format(shopify_match)
             else:
                 oldest_order = (OrderCreated.query
                               .filter(OrderCreated.status == 'Created')
@@ -589,7 +597,7 @@ def get_queue_orders():
             s_id = s_order.get("legacyResourceId") or s_order.get("id", "").split("/")[-1]
             s_order_number = f"SH-{s_id}"
 
-            if s_order_number == active_order_number:
+            if s_order_number == active_order_number or s_order_number in archived_order_numbers:
                 continue
 
             customer = s_order.get("customer") or {}

@@ -38,7 +38,8 @@
       "Bash(ls /Users/abdurrahmankuli/Documents/Webs/yeni/venv/bin/python*)",
       "Bash(ls /Users/abdurrahmankuli/Documents/Webs/yeni/.venv/bin/python*)",
       "Bash(.venv/bin/python3 -c \":*)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

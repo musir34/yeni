@@ -1681,106 +1681,104 @@ document.addEventListener('DOMContentLoaded', function() {
                     const customer = o.customer || {};
                     const shipping = o.shippingAddress || {};
                     const musteriAdi = ((customer.firstName || '') + ' ' + (customer.lastName || '')).trim() || shipping.name || 'Misafir';
-                    const musteriTelefon = customer.phone || shipping.phone || 'N/A';
+                    const musteriTelefon = customer.phone || shipping.phone || '';
                     const musteriAdres = [
                         shipping.address1 || '', shipping.address2 || '',
                         [shipping.city || '', shipping.province || '', shipping.zip || ''].filter(Boolean).join(' '),
                         shipping.country || ''
-                    ].filter(Boolean).join('\n');
+                    ].filter(Boolean).join(', ');
+                    const orderDate = o.createdAt ? new Date(o.createdAt).toLocaleDateString('tr-TR') + ' ' + new Date(o.createdAt).toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'}) : '';
 
                     const codCheck = isCOD(o);
                     const priceSet = o.currentTotalPriceSet?.shopMoney || {};
-                    const kapidaOdemeTutari = parseFloat(priceSet.amount || 0);
+                    const orderAmount = parseFloat(priceSet.amount || 0);
+
+                    // Urun satirlari
+                    const lineItems = o.line_items || [];
+                    let productsHTML = '';
+                    lineItems.forEach(li => {
+                        const liPrice = li.originalTotalSet?.shopMoney?.amount || '0';
+                        productsHTML += `
+                            <tr>
+                                <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;">${li.title || ''}</td>
+                                <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;font-size:8pt;color:#666;">${li.sku || ''}</td>
+                                <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;text-align:center;font-weight:bold;">${li.quantity || 1}</td>
+                                <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;text-align:right;">${parseFloat(liPrice).toFixed(2)} TL</td>
+                            </tr>`;
+                    });
 
                     let kapidaOdemeHTML = '';
-                    if (codCheck && kapidaOdemeTutari > 0) {
+                    if (codCheck && orderAmount > 0) {
                         kapidaOdemeHTML = `
-                            <div class="kapida-odeme-box">
-                                <div style="background: #ff0000; color: white; text-align: center; padding: 8px; border: 4px solid #000; margin: 8px 0;">
-                                    <div style="font-size: 18pt; font-weight: bold; letter-spacing: 1px; border-bottom: 3px solid white; padding-bottom: 5px;">
-                                        ⚠️ KAPIDA ÖDEME ⚠️
-                                    </div>
-                                    <div style="font-size: 32pt; font-weight: bold; margin: 8px 0; line-height: 1.2;">
-                                        ${kapidaOdemeTutari.toFixed(2)} TL
-                                    </div>
-                                    <div style="font-size: 14pt; font-weight: bold; background: white; color: #ff0000; padding: 4px; margin-top: 5px;">
-                                        TAHSİL EDİLECEK
-                                    </div>
-                                </div>
+                            <div style="background:#ff0000;color:white;text-align:center;padding:10px;border:3px solid #000;margin:12px 0;">
+                                <div style="font-size:14pt;font-weight:bold;letter-spacing:1px;border-bottom:2px solid white;padding-bottom:4px;">KAPIDA ODEME</div>
+                                <div style="font-size:24pt;font-weight:bold;margin:6px 0;">${orderAmount.toFixed(2)} TL</div>
+                                <div style="font-size:10pt;font-weight:bold;background:white;color:#ff0000;padding:3px;margin-top:4px;">TAHSIL EDILECEK</div>
                             </div>`;
                     }
 
                     const printContent = `
-                        <html><head><title>Müşteri Bilgileri - ${o.name}</title>
+                        <html><head><title>Siparis Fisi - ${o.name}</title>
                         <style>
-                            @page {
-                                size: 100mm 100mm;
-                                margin: 3mm;
-                            }
-                            * {
-                                margin: 0;
-                                padding: 0;
-                                box-sizing: border-box;
-                            }
-                            body {
-                                font-family: 'Arial Black', Arial, sans-serif;
-                                font-size: 9pt;
-                                width: 94mm;
-                                height: 94mm;
-                                padding: 3mm;
-                            }
-                            .header {
-                                font-size: 11pt;
-                                font-weight: bold;
-                                margin-bottom: 3mm;
-                                padding-bottom: 2mm;
-                                border-bottom: 2px solid #000;
-                            }
-                            .info-row {
-                                margin: 1mm 0;
-                                font-size: 8pt;
-                                line-height: 1.3;
-                            }
-                            .label {
-                                font-weight: bold;
-                                display: inline-block;
-                                width: 20mm;
-                            }
-                            .adres {
-                                white-space: pre-line;
-                                margin: 2mm 0;
-                                font-size: 8pt;
-                                line-height: 1.3;
-                                max-height: 15mm;
-                                overflow: hidden;
-                            }
-                            .kapida-odeme-box {
-                                break-inside: avoid;
-                                page-break-inside: avoid;
-                                margin: 3mm 0;
-                            }
-                            .footer {
-                                position: absolute;
-                                bottom: 3mm;
-                                left: 3mm;
-                                right: 3mm;
-                                text-align: center;
-                                font-size: 7pt;
-                                border-top: 1px solid #ccc;
-                                padding-top: 1mm;
+                            @page { size: A5; margin: 8mm; }
+                            * { margin: 0; padding: 0; box-sizing: border-box; }
+                            body { font-family: Arial, Helvetica, sans-serif; font-size: 9pt; color: #333; }
+                            @media print {
+                                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                             }
                         </style></head><body>
-                            <div class="header">KARGO BİLGİLERİ</div>
-                            <div class="info-row"><span class="label">Sipariş:</span> ${o.name}</div>
-                            <div class="info-row"><span class="label">Alıcı:</span> ${musteriAdi}</div>
-                            <div class="info-row"><span class="label">Telefon:</span> ${musteriTelefon}</div>
-                            <div class="info-row"><span class="label">Adres:</span></div>
-                            <div class="adres">${musteriAdres}</div>
-                            ${kapidaOdemeHTML}
-                            <div class="footer">${new Date().toLocaleDateString('tr-TR')} ${new Date().toLocaleTimeString('tr-TR')}</div>
+                            <div style="border:2px solid #333;padding:12px;">
+                                <div style="text-align:center;border-bottom:2px solid #333;padding-bottom:8px;margin-bottom:10px;">
+                                    <div style="font-size:14pt;font-weight:bold;letter-spacing:1px;">SIPARIS FISI</div>
+                                    <div style="font-size:8pt;color:#666;margin-top:2px;">Gullu Ayakkabi</div>
+                                </div>
+
+                                <table style="width:100%;font-size:9pt;margin-bottom:10px;">
+                                    <tr>
+                                        <td style="width:50%;vertical-align:top;padding-right:8px;">
+                                            <div style="font-weight:bold;font-size:8pt;color:#666;text-transform:uppercase;margin-bottom:4px;">Siparis Bilgileri</div>
+                                            <div><strong>No:</strong> ${o.name}</div>
+                                            <div><strong>Tarih:</strong> ${orderDate}</div>
+                                            <div><strong>Tutar:</strong> ${orderAmount.toFixed(2)} TL</div>
+                                            ${codCheck ? '<div style="color:#ff0000;font-weight:bold;">KAPIDA ODEME</div>' : '<div style="color:#28a745;font-weight:bold;">ODENDI</div>'}
+                                        </td>
+                                        <td style="width:50%;vertical-align:top;padding-left:8px;border-left:1px solid #ddd;">
+                                            <div style="font-weight:bold;font-size:8pt;color:#666;text-transform:uppercase;margin-bottom:4px;">Musteri Bilgileri</div>
+                                            <div><strong>Ad:</strong> ${musteriAdi}</div>
+                                            ${musteriTelefon ? '<div><strong>Tel:</strong> ' + musteriTelefon + '</div>' : ''}
+                                            <div><strong>Adres:</strong> ${musteriAdres}</div>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <div style="font-weight:bold;font-size:8pt;color:#666;text-transform:uppercase;margin-bottom:4px;">Urunler</div>
+                                <table style="width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:10px;">
+                                    <thead>
+                                        <tr style="background:#f5f5f5;">
+                                            <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #333;font-size:8pt;">Urun Adi</th>
+                                            <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #333;font-size:8pt;">SKU</th>
+                                            <th style="padding:6px 8px;text-align:center;border-bottom:2px solid #333;font-size:8pt;">Adet</th>
+                                            <th style="padding:6px 8px;text-align:right;border-bottom:2px solid #333;font-size:8pt;">Tutar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${productsHTML}
+                                    </tbody>
+                                </table>
+
+                                ${kapidaOdemeHTML}
+
+                                <div style="text-align:right;border-top:2px solid #333;padding-top:8px;margin-top:8px;">
+                                    <span style="font-size:11pt;font-weight:bold;">Toplam: ${orderAmount.toFixed(2)} TL</span>
+                                </div>
+
+                                <div style="text-align:center;margin-top:10px;padding-top:6px;border-top:1px solid #ddd;font-size:7pt;color:#999;">
+                                    ${new Date().toLocaleDateString('tr-TR')} ${new Date().toLocaleTimeString('tr-TR')} | Gullu Ayakkabi Siparis Sistemi
+                                </div>
+                            </div>
                         </body></html>`;
 
-                    const printWindow = window.open('', '_blank', 'width=400,height=300');
+                    const printWindow = window.open('', '_blank', 'width=600,height=800');
                     printWindow.document.write(printContent);
                     printWindow.document.close();
                     printWindow.focus();

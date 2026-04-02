@@ -10,32 +10,64 @@ from models import db, BarcodeAlias
 from functools import lru_cache
 
 
+# Türkçe → ASCII karakter dönüşüm tablosu
+_TR_MAP = str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU")
+
+
+def strip_turkish(text: str) -> str:
+    """Türkçe karakterleri ASCII karşılıklarına çevirir.
+    ç→c, ğ→g, ı→i, ö→o, ş→s, ü→u (ve büyük harfler)"""
+    if not text:
+        return ""
+    return text.translate(_TR_MAP)
+
+
 def normalize_barcode(barcode: str) -> str:
     """
     Verilen barkodu ana barkoda çevirir.
     Eğer alias ise -> ana barkod döner
     Eğer alias değilse -> kendisi döner
-    
+    Türkçe karakterli barkodlar ASCII versiyonuyla da eşleşir.
+
     Örnek:
         normalize_barcode('ABC123')  # 'ABC123' alias ise -> 'XYZ789' döner
         normalize_barcode('XYZ789')  # alias değil -> 'XYZ789' döner (kendisi)
-    
+        normalize_barcode('gulluayakkabi5234')  # DB'de 'güllüayakkabı5234' varsa -> onu döner
+
     Args:
         barcode: Normalize edilecek barkod
-        
+
     Returns:
         Ana barkod (main_barcode) veya kendisi
     """
     if not barcode:
         return ""
-    
+
     barcode = str(barcode).strip().replace(" ", "")
-    
-    # Veritabanında bu alias var mı?
+
+    # 1) Tam eşleşme ile alias ara
     alias = BarcodeAlias.query.get(barcode)
     if alias:
         return alias.main_barcode
-    
+
+    # 2) Türkçe karakter farkı kontrolü
+    ascii_bc = strip_turkish(barcode)
+    if ascii_bc != barcode:
+        # Barkodun kendisi Türkçe karakter içeriyor — olduğu gibi dön
+        return barcode
+
+    # Okutulan barkod ASCII ama DB'deki Türkçeli olabilir
+    # translate() ile DB tarafında karşılaştır (verimli, tek sorgu)
+    from models import Product
+    from sqlalchemy import func
+    tr_chars = "çğıöşüÇĞİÖŞÜ"
+    en_chars = "cgiosuCGIOSU"
+    p = Product.query.filter(
+        func.translate(Product.barcode, tr_chars, en_chars) == ascii_bc
+    ).first()
+    if p:
+        return p.barcode
+
     return barcode
 
 

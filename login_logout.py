@@ -228,6 +228,7 @@ def register():
             password=generate_password_hash(password),
             role='worker', status='pending',
             totp_secret=pyotp.random_base32(),
+            totp_confirmed=True,
             session_version=1,
         )
         db.session.add(new_user)
@@ -287,10 +288,6 @@ def login():
                 if user.status == 'pending':
                     flash('Hesabınız onay bekliyor.', 'warning')
                     return redirect(url_for('login_logout.login'))
-
-                if not user.totp_confirmed:
-                    login_user(user)
-                    return redirect(url_for('login_logout.setup_totp'))
 
                 # Cihaz limiti kontrolü
                 ua = request.headers.get('User-Agent', '')
@@ -603,7 +600,7 @@ def admin_reset_2fa(username):
         return redirect(url_for('login_logout.approve_users'))
 
     user.totp_secret = pyotp.random_base32()
-    user.totp_confirmed = False
+    user.totp_confirmed = True
     # Oturumları geçersiz kıl
     user.session_version = (user.session_version or 1) + 1
     # Cihazları temizle
@@ -612,7 +609,7 @@ def admin_reset_2fa(username):
 
     _log_action("UPDATE", {"işlem_açıklaması": f"Admin 2FA sıfırladı: {username}", "sayfa": "Kullanıcı Yönetimi"})
     logger.info(f"2FA sıfırlandı: {username} (admin tarafından)")
-    flash(f'{username} için 2FA sıfırlandı. Kullanıcı sonraki girişte yeniden kurulum yapacak.', 'success')
+    flash(f'{username} için 2FA sıfırlandı. Yeni QR kodu admin panelinden gösterilebilir.', 'success')
     return redirect(url_for('login_logout.approve_users'))
 
 
@@ -628,14 +625,14 @@ def admin_reset_all(username):
     new_password = secrets.token_urlsafe(8)
     user.password = generate_password_hash(new_password)
     user.totp_secret = pyotp.random_base32()
-    user.totp_confirmed = False
+    user.totp_confirmed = True
     user.session_version = (user.session_version or 1) + 1
     UserDevice.query.filter_by(user_id=user.id).delete()
     db.session.commit()
 
     _log_action("UPDATE", {"işlem_açıklaması": f"Admin tam sıfırlama: {username}", "sayfa": "Kullanıcı Yönetimi"})
     logger.info(f"Tam sıfırlama: {username} (şifre + 2FA + cihazlar)")
-    flash(f'{username} için tam sıfırlama yapıldı. Yeni geçici şifre: {new_password} — Kullanıcı 2FA\'yı yeniden kuracak.', 'success')
+    flash(f'{username} için tam sıfırlama yapıldı. Yeni geçici şifre: {new_password} — Yeni QR kodu admin panelinden gösterilebilir.', 'success')
     return redirect(url_for('login_logout.approve_users'))
 
 

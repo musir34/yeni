@@ -341,21 +341,63 @@ def _process_sync_orders_bulk(sync_orders):
                 model.query.filter(model.id.in_(ids)).delete(synchronize_session=False)
                 logger.info(f"{len(ids)} kayıt {table_name} tablosundan silindi.")
 
-        # Stok tahsisi: Yeni OrderCreated siparişleri için raf stoğunu düş ve atanan_raf'ı kaydet
+        # Raf ataması: Stok düşmeden sadece hangi rafta olduğunu kaydet
+        # (Stok düşümü yalnızca paketleme onayında yapılır — çift düşümü önlemek için)
         if new_order_dicts:
-            logger.info(f"[STOK] {len(new_order_dicts)} yeni sipariş için raf stok tahsisi yapılıyor...")
+            logger.info(f"[RAF] {len(new_order_dicts)} yeni sipariş için raf ataması yapılıyor...")
             for order_dict in new_order_dicts:
                 details_json = order_dict.get('details')
                 if details_json:
                     try:
-                        alloc_result = allocate_stock_for_order_details(details_json, commit=False)
-                        for barcode_key, info in alloc_result.items():
-                            codes = info.get('shelf_codes', [])
-                            if codes:
-                                order_dict['atanan_raf'] = codes[0]
-                                break
+                        import json as _json
+                        details = _json.loads(details_json) if isinstance(details_json, str) else details_json
+                        urun_raf_bilgileri = []
+                        atanan_raf = None
+                        if isinstance(details, list):
+                            for item in details:
+                                bc = normalize_barcode(str(item.get('barcode', '') or '').strip())
+                                qty = int(item.get('quantity', 1) or 1)
+                                if not bc:
+                                    continue
+                                raf = (RafUrun.query
+                                       .filter(RafUrun.urun_barkodu == bc, RafUrun.adet > 0)
+                                       .order_by(RafUrun.adet.desc())
+                                       .first())
+                                raf_kodu = raf.raf_kodu if raf else None
+                                raf_stok = raf.adet if raf else 0
+                                urun_raf_bilgileri.append({
+                                    "barkod": bc,
+                                    "adet": qty,
+                                    "atanan_raf": raf_kodu,
+                                    "raf_mevcut_stok": raf_stok,
+                                })
+                                if not atanan_raf and raf_kodu:
+                                    atanan_raf = raf_kodu
+                                    order_dict['atanan_raf'] = raf_kodu
+
+                        siparis_no = order_dict.get('order_number', '')
+                        musteri = f"{order_dict.get('customer_name', '')} {order_dict.get('customer_surname', '')}".strip()
+                        logger.info(f"[RAF] Sipariş {siparis_no} raf ataması: {atanan_raf} | Ürünler: {urun_raf_bilgileri}")
+
+                        # Kullanıcı hareketlerine yaz (arka plan işlemi olduğu için force_log)
+                        try:
+                            from user_logs import log_user_action
+                            log_user_action("CREATE", {
+                                "işlem_açıklaması": f"Yeni sipariş geldi — {siparis_no} (stok rezerv edildi, raftan düşülmedi)",
+                                "sayfa": "Sipariş Senkronizasyonu",
+                                "sipariş_no": siparis_no,
+                                "kaynak": order_dict.get('source', 'TRENDYOL'),
+                                "durum": "REZERV",
+                                "müşteri": musteri,
+                                "atanan_raf": atanan_raf,
+                                "ürün_detayları": urun_raf_bilgileri,
+                                "toplam_adet": sum(u["adet"] for u in urun_raf_bilgileri),
+                            }, force_log=True)
+                        except Exception:
+                            pass
+
                     except Exception as e:
-                        logger.error(f"[STOK] Tahsis hatası: {e}")
+                        logger.error(f"[RAF] Atama hatası: {e}")
 
         if to_insert_created:
             db.session.bulk_insert_mappings(OrderCreated, to_insert_created)
@@ -364,14 +406,25 @@ def _process_sync_orders_bulk(sync_orders):
         if to_insert_cancelled:
             db.session.bulk_insert_mappings(OrderCancelled, to_insert_cancelled)
 
-        # Stok iade: OrderCreated → OrderCancelled geçişleri için stoğu geri yükle
+        # OrderCreated → OrderCancelled: Stok iadesi gerekmiyor
+        # (Stok düşümü yalnızca paketleme onayında yapılır, Created aşamasında stok düşülmez)
         if cancelled_from_created:
-            logger.info(f"[STOK] {len(cancelled_from_created)} iptal edilen sipariş için stok iade ediliyor...")
+            logger.info(f"[STOK] {len(cancelled_from_created)} sipariş iptal edildi (stok düşülmemişti, iade gerekmiyor).")
             for details_json, shelf_code in cancelled_from_created:
                 try:
-                    restore_stock_for_order_details(details_json, shelf_code=shelf_code, commit=False)
-                except Exception as e:
-                    logger.error(f"[STOK] İade hatası: {e}")
+                    import json as _json
+                    det = _json.loads(details_json) if isinstance(details_json, str) else details_json
+                    barkodlar = [f"{d.get('barcode')} x{d.get('quantity',1)}" for d in (det if isinstance(det, list) else [])]
+                    from user_logs import log_user_action
+                    log_user_action("DELETE", {
+                        "işlem_açıklaması": f"Sipariş iptal edildi — rezerv kaldırıldı (stok iade gerekmiyor)",
+                        "sayfa": "Sipariş Senkronizasyonu",
+                        "durum": "İPTAL",
+                        "atanan_raf": shelf_code,
+                        "ürünler": ", ".join(barkodlar),
+                    }, force_log=True)
+                except Exception:
+                    pass
 
         db.session.commit()
         logger.info("Senkron sipariş işlemleri başarıyla tamamlandı.")
