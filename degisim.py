@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import base64
+import requests
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from datetime import datetime, timedelta
 import uuid
@@ -15,6 +17,7 @@ from models import OrderCreated, OrderPicking, OrderShipped, OrderDelivered, Ord
 # Raf ve central stok
 from models import RafUrun, CentralStock
 from stock_management import sync_central_stock
+from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -44,6 +47,74 @@ def find_order_across_tables(order_number):
         if order:
             return order, table_cls
     return None, None
+
+
+def _fetch_trendyol_phone(order_number: str) -> str:
+    """Trendyol API'den sipariş numarasıyla müşteri telefonunu çeker."""
+    try:
+        auth = base64.b64encode(f"{API_KEY}:{API_SECRET}".encode()).decode()
+        url = f"https://api.trendyol.com/sapigw/suppliers/{SUPPLIER_ID}/orders"
+        resp = requests.get(url, headers={
+            "Authorization": f"Basic {auth}",
+            "Content-Type": "application/json"
+        }, params={"orderNumber": order_number, "size": 1}, timeout=10)
+        data = resp.json()
+        orders = data.get("content", [])
+        if orders:
+            return orders[0].get("shipmentAddress", {}).get("phone", "") or ""
+    except Exception as e:
+        logger.warning(f"Trendyol telefon çekme hatası ({order_number}): {e}")
+    return ""
+
+
+def _fetch_shopify_order_info(order_number: str) -> dict | None:
+    """Shopify sipariş numarasıyla müşteri bilgilerini ve ürünleri çeker."""
+    try:
+        from shopify_site.shopify_service import shopify_service
+
+        shopify_id = order_number.replace("SH-", "")
+        result = shopify_service.get_order(shopify_id)
+        if not result.get("success") or not result.get("order"):
+            return None
+
+        order = result["order"]
+        customer = order.get("customer") or {}
+        shipping = order.get("shippingAddress") or {}
+        billing = order.get("billingAddress") or {}
+
+        phone = (customer.get("phone") or shipping.get("phone")
+                 or billing.get("phone") or "")
+
+        address_parts = [
+            shipping.get("address1", ""),
+            shipping.get("address2", ""),
+            shipping.get("city", ""),
+            shipping.get("province", ""),
+            shipping.get("country", ""),
+        ]
+        address = " ".join(p for p in address_parts if p).strip()
+
+        line_items = order.get("lineItems", {}).get("edges", [])
+        details_list = []
+        for edge in line_items:
+            li = edge.get("node", {})
+            variant = li.get("variant") or {}
+            details_list.append({
+                "sku": li.get("sku") or variant.get("sku") or "",
+                "barcode": variant.get("barcode") or "",
+                "image_url": (variant.get("image") or {}).get("url", ""),
+            })
+
+        return {
+            "ad": customer.get("firstName") or (shipping.get("name", "").split(" ")[0] if shipping.get("name") else ""),
+            "soyad": customer.get("lastName") or (" ".join(shipping.get("name", "").split(" ")[1:]) if shipping.get("name") else ""),
+            "adres": address,
+            "telefon_no": phone,
+            "details": details_list,
+        }
+    except Exception as e:
+        logger.warning(f"Shopify sipariş bilgisi çekme hatası ({order_number}): {e}")
+    return None
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Yardımcı: Raflardan tahsis (qty kadar), Central’dan düş (aynı miktar)
@@ -276,6 +347,15 @@ def get_product_details():
 @degisim_bp.route('/get_order_details', methods=['POST'])
 def get_order_details():
     siparis_no = request.form['siparis_no']
+
+    # Shopify siparişi
+    if siparis_no and siparis_no.startswith("SH-"):
+        info = _fetch_shopify_order_info(siparis_no)
+        if info:
+            return jsonify({'success': True, **info})
+        return jsonify({'success': False, 'message': 'Shopify siparişi bulunamadı'})
+
+    # Trendyol / WooCommerce — DB'den
     order, _table_cls = find_order_across_tables(siparis_no)
     if order:
         details_list = []
@@ -286,12 +366,18 @@ def get_order_details():
                 'barcode': detail.get('barcode'),
                 'image_url': f"static/images/{detail.get('barcode')}.jpg"
             })
+
+        # Telefon: DB'de yoksa Trendyol API'den çek
+        telefon = getattr(order, 'telefon_no', '') or ''
+        if not telefon:
+            telefon = _fetch_trendyol_phone(siparis_no)
+
         return jsonify({
             'success': True,
             'ad': order.customer_name,
             'soyad': order.customer_surname,
             'adres': order.customer_address,
-            'telefon_no': getattr(order, 'telefon_no', ''),
+            'telefon_no': telefon,
             'details': details_list
         })
     return jsonify({'success': False, 'message': 'Sipariş bulunamadı'})
@@ -376,6 +462,22 @@ def degisim_talep():
 def yeni_degisim_talebi():
     if request.method == 'POST':
         siparis_no = request.form['siparis_no']
+
+        # Shopify siparişi
+        if siparis_no and siparis_no.startswith("SH-"):
+            info = _fetch_shopify_order_info(siparis_no)
+            if info:
+                return jsonify({
+                    'success': True,
+                    'ad': info['ad'],
+                    'soyad': info['soyad'],
+                    'adres': info['adres'],
+                    'telefon_no': info['telefon_no'],
+                    'urunler': info['details'],
+                })
+            return jsonify({'success': False, 'message': 'Shopify siparişi bulunamadı'})
+
+        # Trendyol / WooCommerce
         order, _table_cls = find_order_across_tables(siparis_no)
         if order:
             details_list = []
@@ -385,11 +487,17 @@ def yeni_degisim_talebi():
                     'sku': detail.get('sku'),
                     'barcode': detail.get('barcode')
                 })
+
+            telefon = getattr(order, 'telefon_no', '') or ''
+            if not telefon:
+                telefon = _fetch_trendyol_phone(siparis_no)
+
             return jsonify({
                 'success': True,
                 'ad': order.customer_name,
                 'soyad': order.customer_surname,
                 'adres': order.customer_address,
+                'telefon_no': telefon,
                 'urunler': details_list
             })
         else:

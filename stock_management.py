@@ -387,6 +387,7 @@ def stock_addition_page():
 @limiter.limit("120/minute")
 def get_product_details(barcode):
     try:
+        barcode = normalize_barcode(barcode)
         product = Product.query.filter(func.lower(Product.barcode) == barcode.lower()).first()
         cs = CentralStock.query.get(barcode)
 
@@ -476,7 +477,7 @@ def handle_stock_update_from_frontend():
             logger.info(f"📦 Transaction başlatıldı - Raf: {raf_kodu}")
             
             # Gelen ürünlerin barkodlarını ve Product tablosundaki varlıklarını kontrol et
-            barcode_set = [it.get('barcode') for it in items if it.get('barcode')]
+            barcode_set = [normalize_barcode(it.get('barcode')) for it in items if it.get('barcode')]
             valid_products = {}
             if barcode_set:
                 logger.info(f"🔍 {len(barcode_set)} barkod için Product tablosunda kontrol yapılıyor...")

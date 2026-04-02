@@ -57,13 +57,13 @@ def normalize_barcode(barcode: str) -> str:
         return barcode
 
     # Okutulan barkod ASCII ama DB'deki Türkçeli olabilir
-    # translate() ile DB tarafında karşılaştır (verimli, tek sorgu)
+    # translate() + lower() ile DB tarafında case-insensitive karşılaştır
     from models import Product
     from sqlalchemy import func
     tr_chars = "çğıöşüÇĞİÖŞÜ"
     en_chars = "cgiosuCGIOSU"
     p = Product.query.filter(
-        func.translate(Product.barcode, tr_chars, en_chars) == ascii_bc
+        func.lower(func.translate(Product.barcode, tr_chars, en_chars)) == ascii_bc.lower()
     ).first()
     if p:
         return p.barcode
