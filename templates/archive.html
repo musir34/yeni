@@ -756,12 +756,33 @@ confirmation.classList.remove('show'); // show class'ı kaldırarak gizle
 
 // Durum güncelleme, işleme alma, iptal etme, arşivden çıkarma fonksiyonları aynı kalabilir
 // Bunlar zaten AJAX çağrıları yapıp sayfayı yeniliyor.
+function getStatusBadgeClass(status) {
+var map = {
+'Beklemede': 'bg-warning',
+'İşleme Alındı': 'bg-success',
+'Kontrol Ediliyor': 'bg-info',
+'Üretiliyor': 'bg-primary',
+'Hazır': 'bg-success',
+'Kargoya Verildi': 'bg-orange',
+'İptal Edildi': 'bg-red'
+};
+return map[status] || 'bg-secondary';
+}
+
+function updateStatusBadge(orderNumber, newStatus) {
+var card = $('[data-order-number="' + orderNumber + '"]');
+var badge = card.find('.badge.rounded-pill');
+badge.removeClass('bg-warning bg-success bg-info bg-primary bg-orange bg-red bg-secondary');
+badge.addClass(getStatusBadgeClass(newStatus));
+badge.text(newStatus);
+}
+
 function updateStatus(orderNumber, status) {
 if (confirm(`Sipariş durumunu '${status}' olarak güncellemek istediğinize emin misiniz?`)) {
 $.post("/update_order_status", { order_number: orderNumber, status: status }, function(response) {
 if (response.success) {
+updateStatusBadge(orderNumber, status);
 showMessage("Durum güncellendi!", true);
-setTimeout(() => location.reload(), 1000);
 } else { showMessage(response.message || "Durum güncellenirken bir hata oluştu", false); }
 }).fail(function() { showMessage("Sunucu ile iletişimde hata oluştu.", false); });
 }
@@ -772,8 +793,8 @@ function cancelOrder(orderNumber) {
 if (confirm("Siparişi iptal etmek istediğinize emin misiniz?")) {
 $.post("/cancel_order", { order_number: orderNumber }, function(response) {
 if (response.success) {
+updateStatusBadge(orderNumber, 'İptal Edildi');
 showMessage("Sipariş iptal edildi!", true);
-setTimeout(() => location.reload(), 1000);
 } else { showMessage(response.message || "Sipariş iptal edilirken bir hata oluştu", false); }
 }).fail(function() { showMessage("Sunucu ile iletişimde hata oluştu.", false); });
 }
@@ -783,8 +804,9 @@ function restoreOrder(orderNumber) {
 if (confirm("Siparişi arşivden çıkarmak istediğinize emin misiniz?")) {
 $.post("/restore_from_archive", { order_number: orderNumber }, function(response) {
 if (response.success) {
+var card = $('[data-order-number="' + orderNumber + '"]');
+card.fadeOut(400, function() { $(this).remove(); });
 showMessage("Sipariş arşivden çıkarıldı!", true);
-setTimeout(() => location.reload(), 1000);
 } else { showMessage(response.message || "Sipariş arşivden çıkarılırken bir hata oluştu", false); }
 }).fail(function() { showMessage("Sunucu ile iletişimde hata oluştu.", false); });
 }

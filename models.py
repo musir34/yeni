@@ -430,6 +430,7 @@ class User(db.Model, UserMixin):
     totp_secret = db.Column(db.String(16))
     totp_confirmed = db.Column(db.Boolean, default=False)
     session_version = db.Column(db.Integer, default=1)  # oturum geçersizleme için
+    notify_events = db.Column(db.Text, default='')  # virgülle ayrılmış bildirim olayları
     # backref ile UserLog ilişkisi UserLog modelinde tanımlandı
 
 

@@ -180,6 +180,7 @@
                             <th>QR Kodu Göster</th>
                             <th>Güncelle</th>
                             <th>Sıfırlama</th>
+                            <th>Mail Bildirim</th>
                             <th>Onayı İptal Et</th>
                             <th>Sil</th>
                         </tr>
@@ -236,6 +237,23 @@
                                                     </button>
                                                 </form>
                                             </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="dropdown d-inline-block">
+                                        <button class="btn btn-sm {{ 'btn-success' if user.notify_events else 'btn-outline-secondary' }} dropdown-toggle" type="button" data-bs-toggle="dropdown" id="notifyBtn-{{ user.username }}">
+                                            <i class="fas fa-envelope me-1"></i>
+                                            {% if user.notify_events %}{{ user.notify_events.split(',')|length }} aktif{% else %}Kapalı{% endif %}
+                                        </button>
+                                        <ul class="dropdown-menu p-2" style="min-width:250px;" onclick="event.stopPropagation()">
+                                            {% set user_events = user.notify_events.split(',') if user.notify_events else [] %}
+                                            <li class="mb-1"><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="archive_added" {{ 'checked' if 'archive_added' in user_events }}><label class="form-check-label">Arşive eklendiğinde</label></div></li>
+                                            <li class="mb-1"><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="status_kontrol" {{ 'checked' if 'status_kontrol' in user_events }}><label class="form-check-label">Kontrol Ediliyor</label></div></li>
+                                            <li class="mb-1"><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="status_uretiliyor" {{ 'checked' if 'status_uretiliyor' in user_events }}><label class="form-check-label">Üretiliyor</label></div></li>
+                                            <li class="mb-1"><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="status_hazir" {{ 'checked' if 'status_hazir' in user_events }}><label class="form-check-label">Hazır</label></div></li>
+                                            <li class="mb-1"><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="status_iptal" {{ 'checked' if 'status_iptal' in user_events }}><label class="form-check-label">İptal edildiğinde</label></div></li>
+                                            <li><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="archive_restored" {{ 'checked' if 'archive_restored' in user_events }}><label class="form-check-label">Arşivden çıkarıldığında</label></div></li>
                                         </ul>
                                     </div>
                                 </td>
@@ -301,6 +319,31 @@
                 hiddenInput.value = roleSelect.value;
             }
         }
+
+        // Mail bildirim checkbox değişikliği
+        document.addEventListener('change', function(e) {
+            if (!e.target.classList.contains('notify-cb')) return;
+            var username = e.target.dataset.user;
+            var checkboxes = document.querySelectorAll('.notify-cb[data-user="' + username + '"]');
+            var events = [];
+            checkboxes.forEach(function(cb) { if (cb.checked) events.push(cb.value); });
+            fetch('/admin/update-notify/' + username, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ events: events })
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.success) {
+                    var btn = document.getElementById('notifyBtn-' + username);
+                    if (events.length > 0) {
+                        btn.className = 'btn btn-sm btn-success dropdown-toggle';
+                        btn.innerHTML = '<i class="fas fa-envelope me-1"></i> ' + events.length + ' aktif';
+                    } else {
+                        btn.className = 'btn btn-sm btn-outline-secondary dropdown-toggle';
+                        btn.innerHTML = '<i class="fas fa-envelope me-1"></i> Kapalı';
+                    }
+                }
+            });
+        });
 
         // Form Gönderimlerini Yönetme
         document.addEventListener('DOMContentLoaded', function() {

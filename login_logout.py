@@ -567,6 +567,18 @@ def approve_users():
     return render_template('approve_users.html', pending_users=pending_users, approved_users=approved_users)
 
 
+@login_logout_bp.route('/admin/update-notify/<username>', methods=['POST'])
+@roles_required('admin')
+def update_notify(username):
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({'success': False, 'message': 'Kullanıcı bulunamadı.'}), 404
+    events = request.json.get('events', [])
+    user.notify_events = ','.join(events)
+    db.session.commit()
+    return jsonify({'success': True, 'events': events})
+
+
 @login_logout_bp.route('/admin/reset-password/<username>', methods=['POST'])
 @roles_required('admin')
 def admin_reset_password(username):

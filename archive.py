@@ -10,6 +10,7 @@ from models import OrderCreated, OrderPicking, OrderShipped, OrderDelivered, Ord
 from trendyol_api import SUPPLIER_ID
 from update_service import update_order_status_to_picking
 from user_logs import log_user_action
+from mail_service import notify, build_email_html, STATUS_EVENT_MAP, _parse_products
 
 archive_bp = Blueprint('archive', __name__)
 
@@ -198,6 +199,20 @@ def change_order_status():
             db.session.commit()
             try: log_user_action("UPDATE", {"işlem_açıklaması": f"Sipariş durumu güncellendi — {order_number} → {new_status}", "sayfa": "Sipariş Listesi", "sipariş_no": order_number, "yeni_durum": new_status})
             except: pass
+            event = STATUS_EVENT_MAP.get(new_status)
+            if event:
+                notify(event,
+                    subject=f"Arşiv Statü: {order_number} → {new_status}",
+                    body=build_email_html(
+                        event=event,
+                        order_number=order_number,
+                        customer_name=f"{archived_order.customer_name or '-'} {archived_order.customer_surname or '-'}",
+                        source=getattr(archived_order, 'source', 'trendyol'),
+                        products=_parse_products(archived_order.details),
+                        new_status=new_status,
+                        base_url=request.host_url.rstrip('/')
+                    )
+                )
             return jsonify({'success': True, 'message': 'Durum güncellendi.'})
         except Exception as e:
             db.session.rollback()
@@ -555,6 +570,19 @@ def archive_an_order():
 
                 try: log_user_action("ARCHIVE", {"sayfa": "Sipariş Hazırla", "sipariş_no": order_number, "sebep": archive_reason or "-", "kaynak": "SHOPIFY"})
                 except: pass
+                notify(
+                    'archive_added',
+                    subject=f"Arşive Eklendi: {order_number}",
+                    body=build_email_html(
+                        event='archive_added',
+                        order_number=order_number,
+                        customer_name=f"{fake_order.customer_name} {fake_order.customer_surname}",
+                        source='shopify',
+                        products=_parse_products(fake_order.details),
+                        reason=archive_reason,
+                        base_url=request.host_url.rstrip('/')
+                    )
+                )
                 return jsonify({'success': True, 'message': 'Shopify sipariş arşive eklendi.'})
             else:
                 return jsonify({'success': False, 'message': 'Shopify siparişi bulunamadı.'})
@@ -594,6 +622,19 @@ def archive_an_order():
 
             try: log_user_action("ARCHIVE", {"işlem_açıklaması": f"Sipariş arşivlendi — {order_number} ({table_cls.__tablename__} → Arşiv), Sebep: {archive_reason or '-'}", "sayfa": "Sipariş Listesi", "sipariş_no": order_number, "sebep": archive_reason or "-", "kaynak_tablo": table_cls.__tablename__})
             except: pass
+            notify(
+                'archive_added',
+                subject=f"Arşive Eklendi: {order_number}",
+                body=build_email_html(
+                    event='archive_added',
+                    order_number=order_number,
+                    customer_name=f"{getattr(order_obj, 'customer_name', '-')} {getattr(order_obj, 'customer_surname', '-')}",
+                    source=getattr(new_archive, 'source', 'trendyol'),
+                    products=_parse_products(order_obj.details),
+                    reason=archive_reason,
+                    base_url=request.host_url.rstrip('/')
+                )
+            )
             return jsonify({'success': True, 'message': 'Sipariş arşive eklendi.'})
         except Exception as e:
             db.session.rollback()
@@ -685,6 +726,17 @@ def recover_from_archive():
         
         try: log_user_action("RESTORE", {"işlem_açıklaması": f"Sipariş arşivden geri yüklendi — {order_number} (Arşiv → Created)", "sayfa": "Arşiv", "sipariş_no": order_number})
         except: pass
+        notify('archive_restored',
+            subject=f"Arşivden Çıkarıldı: {order_number}",
+            body=build_email_html(
+                event='archive_restored',
+                order_number=order_number,
+                customer_name=f"{archived_order.customer_name or '-'} {archived_order.customer_surname or '-'}",
+                source=getattr(archived_order, 'source', 'trendyol'),
+                products=_parse_products(archived_order.details),
+                base_url=request.host_url.rstrip('/')
+            )
+        )
         return jsonify({'success': True, 'message': 'Sipariş başarıyla geri yüklendi.'})
         
     except Exception as e:
