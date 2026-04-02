@@ -265,6 +265,9 @@ Seç
 <span class="badge rounded-pill
 {% if order.status == 'Beklemede' %} bg-warning
 {% elif order.status == 'İşleme Alındı' %} bg-success
+{% elif order.status == 'Kontrol Ediliyor' %} bg-info
+{% elif order.status == 'Üretiliyor' %} bg-primary
+{% elif order.status == 'Hazır' %} bg-success
 {% elif order.status == 'Kargoya Verildi' %} bg-orange
 {% elif order.status == 'İptal Edildi' %} bg-red
 {% else %} bg-secondary
@@ -390,8 +393,11 @@ data-image-url="{{ product.image_url if product.image_url else '/static/images/d
 <button class="btn btn-outline-secondary btn-sm" onclick="updateStatus('{{ order.order_number }}', 'Kontrol Ediliyor')">
 <i class="fas fa-eye me-1"></i>Kontrol
 </button>
-<button class="btn btn-outline-success btn-sm" onclick="processOrder('{{ order.order_number }}')">
-<i class="fas fa-check me-1"></i>İşleme Al
+<button class="btn btn-outline-warning btn-sm" onclick="updateStatus('{{ order.order_number }}', 'Üretiliyor')">
+<i class="fas fa-cogs me-1"></i>Üretiliyor
+</button>
+<button class="btn btn-outline-success btn-sm" onclick="updateStatus('{{ order.order_number }}', 'Hazır')">
+<i class="fas fa-check-circle me-1"></i>Hazır
 </button>
 <button class="btn btn-outline-danger btn-sm" onclick="cancelOrder('{{ order.order_number }}')">
 <i class="fas fa-times me-1"></i>İptal
@@ -761,16 +767,6 @@ setTimeout(() => location.reload(), 1000);
 }
 }
 
-function processOrder(orderNumber) {
-if (confirm("Siparişi işleme almak istediğinize emin misiniz?")) {
-$.post("/process_order", { order_number: orderNumber }, function(response) {
-if (response.success) {
-showMessage("Sipariş işleme alındı!", true);
-setTimeout(() => location.reload(), 1000);
-} else { showMessage(response.message || "Sipariş işleme alınırken bir hata oluştu", false); }
-}).fail(function() { showMessage("Sunucu ile iletişimde hata oluştu.", false); });
-}
-}
 
 function cancelOrder(orderNumber) {
 if (confirm("Siparişi iptal etmek istediğinize emin misiniz?")) {

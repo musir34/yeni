@@ -506,6 +506,9 @@ def archive_an_order():
     """
     order_number = request.form.get('order_number')
     archive_reason = request.form.get('archive_reason')
+    other_reason = request.form.get('other_reason', '').strip()
+    if archive_reason == 'Diğer' and other_reason:
+        archive_reason = f"Diğer: {other_reason}"
     print(f"Sipariş arşivleniyor: {order_number}, neden: {archive_reason}")
 
     is_shopify = order_number and order_number.startswith("SH-")
