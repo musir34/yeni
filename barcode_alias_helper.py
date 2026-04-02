@@ -50,16 +50,17 @@ def normalize_barcode(barcode: str) -> str:
     if alias:
         return alias.main_barcode
 
-    # 2) Türkçe karakter farkı kontrolü
-    ascii_bc = strip_turkish(barcode)
-    if ascii_bc != barcode:
-        # Barkodun kendisi Türkçe karakter içeriyor — olduğu gibi dön
-        return barcode
-
-    # Okutulan barkod ASCII ama DB'deki Türkçeli olabilir
-    # translate() + lower() ile DB tarafında case-insensitive karşılaştır
+    # 2) Tam eşleşme ile Product ara
     from models import Product
     from sqlalchemy import func
+    p = Product.query.filter(func.lower(Product.barcode) == barcode.lower()).first()
+    if p:
+        return p.barcode
+
+    # 3) Türkçe karakterleri ASCII'ye çevirip DB'de ara
+    # Hem tam ASCII hem yarı dönüşmüş barkodları yakalar
+    # (ör: "Gulluayakkabı741" → "gulluayakkabi741" ile DB'deki "Güllüayakkabı741" eşleşir)
+    ascii_bc = strip_turkish(barcode)
     tr_chars = "çğıöşüÇĞİÖŞÜ"
     en_chars = "cgiosuCGIOSU"
     p = Product.query.filter(
