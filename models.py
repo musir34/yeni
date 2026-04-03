@@ -431,6 +431,7 @@ class User(db.Model, UserMixin):
     totp_confirmed = db.Column(db.Boolean, default=False)
     session_version = db.Column(db.Integer, default=1)  # oturum geçersizleme için
     notify_events = db.Column(db.Text, default='')  # virgülle ayrılmış bildirim olayları
+    max_pc = db.Column(db.Integer, default=1)  # kullanıcı başına izin verilen PC sayısı
     # backref ile UserLog ilişkisi UserLog modelinde tanımlandı
 
 

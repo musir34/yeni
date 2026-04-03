@@ -224,7 +224,7 @@ def add_order_tags(order_id):
 @login_required
 @check_shopify_config
 def print_order(order_id):
-    """Siparis fisini yazdir."""
+    """Siparis fisini yazdir — order_label.html formatinda (musteri etiketi)."""
     result = shopify_service.get_order(order_id)
     if not result.get("success") or not result.get("order"):
         return jsonify({"success": False, "error": "Siparis bulunamadi"}), 404
@@ -238,24 +238,16 @@ def print_order(order_id):
     if not customer_name:
         customer_name = shipping.get("name") or "Misafir"
 
-    # Odeme durumu Turkce
-    financial_map = {
-        "PAID": "Odendi",
-        "PENDING": "Bekliyor",
-        "AUTHORIZED": "Onaylandi",
-        "PARTIALLY_PAID": "Kismi Odeme",
-        "PARTIALLY_REFUNDED": "Kismi Iade",
-        "REFUNDED": "Iade Edildi",
-    }
-    financial_status = financial_map.get(order.get("displayFinancialStatus"), order.get("displayFinancialStatus") or "-")
+    customer_phone = customer.get("phone") or shipping.get("phone") or "Bilinmiyor"
 
-    # Siparis statusu (tag'lerden)
-    tags = order.get("tags") or []
-    order_status = "Beklemede"
-    for s in shopify_service.ORDER_STATUSES:
-        if s in tags:
-            order_status = s
-            break
+    # Adres birleştir
+    address_parts = [
+        shipping.get("address1") or "",
+        shipping.get("address2") or "",
+        " ".join(filter(None, [shipping.get("city"), shipping.get("province"), shipping.get("zip")])),
+        shipping.get("country") or "",
+    ]
+    customer_address = ", ".join(p for p in address_parts if p.strip())
 
     # Kapida odeme tespiti
     gateways = order.get("paymentGatewayNames") or []
@@ -267,30 +259,21 @@ def print_order(order_id):
 
     # Fiyat bilgileri
     price_set = order.get("currentTotalPriceSet", {}).get("shopMoney", {})
-    total_price = "%.2f" % float(price_set.get("amount", 0))
-    currency = price_set.get("currencyCode", "TRY")
-    cod_amount = total_price if is_cod else "0.00"
-
-    # Urun sayisi
-    line_items = order.get("line_items") or []
-    total_items = sum(li.get("quantity", 0) for li in line_items)
+    total_amount = float(price_set.get("amount", 0))
 
     return render_template(
-        "shopify/order_print.html",
-        order=order,
+        "order_label.html",
+        order_number=order.get("name", ""),
+        shipping_barcode="",
+        barcode_data_uri=None,
+        qr_code_path=None,
+        cargo_provider_name="",
         customer_name=customer_name,
-        customer_email=customer.get("email") or "-",
-        customer_phone=customer.get("phone") or shipping.get("phone") or "-",
-        shipping=shipping,
-        financial_status=financial_status,
-        order_status=order_status,
-        is_cod=is_cod,
-        cod_amount=cod_amount,
-        total_price=total_price,
-        currency=currency,
-        line_items=line_items,
-        total_items=total_items,
-        print_date=datetime.now().strftime("%d/%m/%Y %H:%M"),
+        customer_surname="",
+        customer_address=customer_address,
+        telefon_no=customer_phone,
+        kapida_odeme=is_cod,
+        kapida_odeme_tutari=total_amount if is_cod else 0,
     )
 
 

@@ -345,6 +345,9 @@ class ShopifyStockService:
         from stock_sync.service import stock_sync_service
         reserved_map = stock_sync_service.get_reserved_barcodes()
 
+        # Envanter takibi kapalı olan ürünlerde tracking'i aç
+        self._enable_tracking_for_mappings(mappings)
+
         # Batch olarak gönder (aynı mutation ile max 100 öğe)
         results = {"success_count": 0, "error_count": 0, "skipped_count": 0, "details": [], "errors": []}
         batch: List[Dict] = []
@@ -378,6 +381,61 @@ class ShopifyStockService:
             "skipped_count": results["skipped_count"],
             "errors": results["errors"][:20],
         }
+
+    def _enable_tracking_for_mappings(self, mappings) -> None:
+        """Envanter takibi (tracked) kapalı olan ürünlerde tracking'i toplu olarak açar."""
+        # Batch halinde tracked durumunu kontrol et
+        CHUNK = 50
+        all_inv_ids = [m.shopify_inventory_item_id for m in mappings if m.shopify_inventory_item_id]
+
+        untracked_ids: List[str] = []
+        for i in range(0, len(all_inv_ids), CHUNK):
+            chunk_ids = all_inv_ids[i:i + CHUNK]
+            # Shopify nodes query ile toplu kontrol
+            gid_list = ", ".join(f'"{gid}"' for gid in chunk_ids)
+            query = f"""
+            query {{
+              nodes(ids: [{gid_list}]) {{
+                ... on InventoryItem {{ id tracked }}
+              }}
+            }}
+            """
+            try:
+                data = self._graphql(query)
+                for node in (data.get("nodes") or []):
+                    if node and not node.get("tracked"):
+                        untracked_ids.append(node["id"])
+            except Exception as exc:
+                logger.warning("[SHOPIFY] Tracking kontrol hatası: %s", exc)
+
+        if not untracked_ids:
+            return
+
+        logger.info("[SHOPIFY] %d üründe envanter takibi kapalı — açılıyor", len(untracked_ids))
+
+        # Tek tek tracking'i aç (mutation tek item alıyor)
+        mutation = """
+        mutation EnableTracking($id: ID!) {
+          inventoryItemUpdate(id: $id, input: { tracked: true }) {
+            inventoryItem { id tracked }
+            userErrors { field message }
+          }
+        }
+        """
+        enabled = 0
+        for inv_id in untracked_ids:
+            try:
+                data = self._graphql(mutation, {"id": inv_id})
+                errors = (data.get("inventoryItemUpdate") or {}).get("userErrors") or []
+                if not errors:
+                    enabled += 1
+                else:
+                    logger.warning("[SHOPIFY] Tracking açılamadı %s: %s", inv_id,
+                                   "; ".join(e.get("message", "") for e in errors))
+            except Exception as exc:
+                logger.warning("[SHOPIFY] Tracking açma hatası %s: %s", inv_id, exc)
+
+        logger.info("[SHOPIFY] Envanter takibi açıldı: %d / %d", enabled, len(untracked_ids))
 
     def _send_stock_batch(self, batch: List[Dict], location_id: str, results: Dict):
         """Tek bir batch stok güncellemesi gönder (max 100 item tek API çağrısı)."""

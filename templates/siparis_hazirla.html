@@ -789,21 +789,19 @@
       </form>
 
       <div class="bottom-buttons">
-        {% if order and order.source == 'SHOPIFY' %}
-        {# Shopify siparis etiketi - kapida odeme destekli #}
-        <button type="button" class="btn btn-warning btn-bottom disabled" id="yazdirBtn" disabled
-                onclick="printShopifyLabel()">Yazdır</button>
-        {% else %}
         <form method="POST" action="{{ url_for('order_label') }}" target="_blank" id="yazdirForm" autocomplete="off">
-          <input type="hidden" name="order_number" value="{{ order.order_number if order else '' }}"/>
+          <input type="hidden" name="order_number" value="{{ (order.shopify_order_name if order.source == 'SHOPIFY' else order.order_number) if order else '' }}"/>
           <input type="hidden" name="shipping_barcode" value="{{ order.shipping_barcode if order else '' }}"/>
           <input type="hidden" name="cargo_provider" value="{{ order.cargo_provider_name if order else '' }}"/>
           <input type="hidden" name="customer_name" value="{{ order.customer_name if order else '' }}"/>
           <input type="hidden" name="customer_surname" value="{{ order.customer_surname if order else '' }}"/>
           <input type="hidden" name="customer_address" value="{{ order.customer_address if order else '' }}"/>
+          {% if order and order.source == 'SHOPIFY' %}
+          <input type="hidden" name="kapida_odeme" value="{{ '1' if order.kapida_odeme else '0' }}"/>
+          <input type="hidden" name="kapida_odeme_tutari" value="{{ order.kapida_odeme_tutari|default(0) }}"/>
+          {% endif %}
           <button type="submit" class="btn btn-warning btn-bottom disabled" id="yazdirBtn" disabled>Yazdır</button>
         </form>
-        {% endif %}
 
         {% if order %}
           <button type="button" class="btn btn-danger btn-bottom" onclick="showArchiveModal('{{ order.order_number }}')">Arşive Gönder</button>
@@ -942,117 +940,6 @@
       }
     }
     
-    // 🛍️ Shopify sipariş fişi yazdırma (Shopify panel formatında)
-    function printShopifyLabel() {
-        const orderName = '{{ order.shopify_order_name if order and order.source == "SHOPIFY" else "" }}';
-        const orderDate = '{{ order.order_date.strftime("%d.%m.%Y %H:%M") if order and order.order_date else "" }}';
-        const custName = '{{ order.customer_name if order else "" }}';
-        const custSurname = '{{ order.customer_surname if order else "" }}';
-        const custAddress = '{{ order.customer_address|default("", true)|replace("\n", " ")|replace("'", "\\'") if order else "" }}';
-        const orderAmount = {{ order.amount if order and order.amount else 0 }};
-        const kapidaOdeme = {{ 'true' if order and order.source == 'SHOPIFY' and order.kapida_odeme else 'false' }};
-        const kapidaTutar = {{ order.kapida_odeme_tutari if order and order.source == 'SHOPIFY' and order.kapida_odeme else 0 }};
-
-        // Ürün bilgilerini topla
-        const products = [
-            {% if order and order.products %}
-            {% for p in order.products %}
-            { name: '{{ p.product_name|default(p.sku, true)|replace("'", "\\'") }}', sku: '{{ p.sku|replace("'", "\\'") }}', qty: {{ p.quantity|default(1) }} },
-            {% endfor %}
-            {% endif %}
-        ];
-
-        let productsHTML = '';
-        products.forEach((p, i) => {
-            productsHTML += `
-                <tr>
-                    <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;">${p.name}</td>
-                    <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;font-size:8pt;color:#666;">${p.sku}</td>
-                    <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;text-align:center;font-weight:bold;">${p.qty}</td>
-                </tr>`;
-        });
-
-        let kapidaOdemeHTML = '';
-        if (kapidaOdeme && kapidaTutar > 0) {
-            kapidaOdemeHTML = `
-                <div style="background:#ff0000;color:white;text-align:center;padding:10px;border:3px solid #000;margin:12px 0;">
-                    <div style="font-size:14pt;font-weight:bold;letter-spacing:1px;border-bottom:2px solid white;padding-bottom:4px;">KAPIDA ODEME</div>
-                    <div style="font-size:24pt;font-weight:bold;margin:6px 0;">${kapidaTutar.toFixed(2)} TL</div>
-                    <div style="font-size:10pt;font-weight:bold;background:white;color:#ff0000;padding:3px;margin-top:4px;">TAHSIL EDILECEK</div>
-                </div>`;
-        }
-
-        const printContent = `
-            <html><head><title>Siparis Fisi - ${orderName}</title>
-            <style>
-                @page { size: A5; margin: 8mm; }
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { font-family: Arial, Helvetica, sans-serif; font-size: 9pt; color: #333; }
-                @media print {
-                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                }
-            </style></head><body>
-                <div style="border:2px solid #333;padding:12px;">
-                    <!-- Baslik -->
-                    <div style="text-align:center;border-bottom:2px solid #333;padding-bottom:8px;margin-bottom:10px;">
-                        <div style="font-size:14pt;font-weight:bold;letter-spacing:1px;">SIPARIS FISI</div>
-                        <div style="font-size:8pt;color:#666;margin-top:2px;">Gullu Ayakkabi</div>
-                    </div>
-
-                    <!-- Siparis & Musteri Bilgileri -->
-                    <table style="width:100%;font-size:9pt;margin-bottom:10px;">
-                        <tr>
-                            <td style="width:50%;vertical-align:top;padding-right:8px;">
-                                <div style="font-weight:bold;font-size:8pt;color:#666;text-transform:uppercase;margin-bottom:4px;">Siparis Bilgileri</div>
-                                <div><strong>No:</strong> ${orderName}</div>
-                                <div><strong>Tarih:</strong> ${orderDate}</div>
-                                <div><strong>Tutar:</strong> ${orderAmount.toFixed(2)} TL</div>
-                                ${kapidaOdeme ? '<div style="color:#ff0000;font-weight:bold;">KAPIDA ODEME</div>' : '<div style="color:#28a745;font-weight:bold;">ODENDI</div>'}
-                            </td>
-                            <td style="width:50%;vertical-align:top;padding-left:8px;border-left:1px solid #ddd;">
-                                <div style="font-weight:bold;font-size:8pt;color:#666;text-transform:uppercase;margin-bottom:4px;">Musteri Bilgileri</div>
-                                <div><strong>Ad:</strong> ${custName} ${custSurname}</div>
-                                <div><strong>Adres:</strong> ${custAddress}</div>
-                            </td>
-                        </tr>
-                    </table>
-
-                    <!-- Urunler -->
-                    <div style="font-weight:bold;font-size:8pt;color:#666;text-transform:uppercase;margin-bottom:4px;">Urunler</div>
-                    <table style="width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:10px;">
-                        <thead>
-                            <tr style="background:#f5f5f5;">
-                                <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #333;font-size:8pt;">Urun Adi</th>
-                                <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #333;font-size:8pt;">SKU</th>
-                                <th style="padding:6px 8px;text-align:center;border-bottom:2px solid #333;font-size:8pt;">Adet</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${productsHTML}
-                        </tbody>
-                    </table>
-
-                    ${kapidaOdemeHTML}
-
-                    <!-- Toplam -->
-                    <div style="text-align:right;border-top:2px solid #333;padding-top:8px;margin-top:8px;">
-                        <span style="font-size:11pt;font-weight:bold;">Toplam: ${orderAmount.toFixed(2)} TL</span>
-                    </div>
-
-                    <!-- Footer -->
-                    <div style="text-align:center;margin-top:10px;padding-top:6px;border-top:1px solid #ddd;font-size:7pt;color:#999;">
-                        ${new Date().toLocaleDateString('tr-TR')} ${new Date().toLocaleTimeString('tr-TR')} | Gullu Ayakkabi Siparis Sistemi
-                    </div>
-                </div>
-            </body></html>`;
-
-        const printWindow = window.open('', '_blank', 'width=600,height=800');
-        printWindow.document.write(printContent);
-        printWindow.document.close();
-        printWindow.focus();
-        setTimeout(() => { printWindow.print(); }, 250);
-    }
-
     // Sıradaki siparişleri yükle (aktif sipariş hariç)
     function loadQueueOrders() {
       const container = document.getElementById('orderQueueScroll');

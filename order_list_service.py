@@ -374,9 +374,13 @@ def order_label():
         customer_address = unquote(unquote(request.form.get('customer_address', '')))
         telefon_no = request.form.get('telefon_no', 'Bilinmiyor')
 
+        # Kapıda ödeme bilgileri
+        kapida_odeme = request.form.get('kapida_odeme', '0') == '1'
+        kapida_odeme_tutari = float(request.form.get('kapida_odeme_tutari', 0) or 0)
+
         # Barkod dosya YOK: inline (base64) veri
         barcode_data_uri = generate_barcode_data_uri(shipping_barcode) if shipping_barcode else None
-        # QR kaydetmeye devam (istersen bunu da inline’a çevirebiliriz)
+        # QR kaydetmeye devam (istersen bunu da inline'a çevirebiliriz)
         qr_code_path = generate_qr_code(shipping_barcode) if shipping_barcode else None
 
         return render_template(
@@ -389,7 +393,9 @@ def order_label():
             customer_name=customer_name,
             customer_surname=customer_surname,
             customer_address=customer_address,
-            telefon_no=telefon_no
+            telefon_no=telefon_no,
+            kapida_odeme=kapida_odeme,
+            kapida_odeme_tutari=kapida_odeme_tutari,
         )
     except Exception as e:
         logger.error(f"🔥 Hata: order_label - {e}", exc_info=True)

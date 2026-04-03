@@ -39,30 +39,53 @@
     margin:2.5mm 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:0 0 auto;
   }
 
+  /* Kapıda Ödeme kutusu */
+  .kapida-odeme-box{
+    background:#ff0000; color:white; text-align:center; padding:2mm 3mm;
+    border:0.5mm solid #000; margin:1.5mm 0; flex:0 0 auto;
+  }
+  .kapida-odeme-box .title{ font-size:10pt; font-weight:bold; letter-spacing:0.5px; }
+  .kapida-odeme-box .amount{ font-size:16pt; font-weight:bold; margin:1mm 0; }
+  .kapida-odeme-box .label-tag{
+    font-size:8pt; font-weight:bold; background:white; color:#ff0000;
+    padding:1mm 2mm; display:inline-block;
+  }
+
   /* Alt: Müşteri bilgileri — kalan alan */
   .customer-info{
-    flex:1 1 auto; overflow:hidden; display:flex; flex-direction:column; gap:2.2mm; /* ↑ */
-    min-height:0; font-size:10.5pt; /* ↑ genel metin */
+    flex:1 1 auto; overflow:hidden; display:flex; flex-direction:column; gap:1.5mm;
+    min-height:0; font-size:11pt;
   }
-  .customer-info p{ margin:0; line-height:1.28; } /* ↑ satır aralığı */
-  .order-number{ font-weight:bold; font-size:11.5pt; } /* ↑ */
-  .name{ font-weight:bold; font-size:11pt; } /* ↑ */
+  .customer-info .info-row{ margin:0; line-height:1.35; display:flex; gap:1.5mm; }
+  .customer-info .info-label{
+    font-size:8pt; font-weight:bold; color:#555; text-transform:uppercase;
+    letter-spacing:0.3px; min-width:18mm; flex-shrink:0;
+  }
+  .customer-info .info-value{ font-weight:600; color:#111; }
+  .order-number{
+    font-weight:900; font-size:13pt; text-align:center;
+    border-bottom:0.4mm solid #333; padding-bottom:1.5mm; margin-bottom:0.5mm;
+  }
+  .name{ font-weight:bold; font-size:12pt; }
+  .address-value{ font-size:10pt; font-weight:600; color:#111; line-height:1.3; }
   /* Satır kırpma */
   .clamp-1{ display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
   .clamp-3{ display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
 
-  @media print { .label{ border:0; } }
+  @media print {
+    .label{ border:0; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
 </style>
 </head>
 <body>
   <div class="label">
-    <!-- ÜST: Barkod (sol) + QR (sağ) -->
+    <!-- ÜST: Barkod (sol) + QR (sağ) — sadece barkod veya QR varsa göster -->
+    {% if barcode_data_uri or qr_code_path %}
     <div class="top-row">
       <div class="barcode-wrap">
         {% if barcode_data_uri %}
           <img src="{{ barcode_data_uri }}" alt="Kargo Barkodu">
-        {% else %}
-          <div style="font-size:9pt">Barkod mevcut değil</div>
         {% endif %}
         {% if shipping_barcode %}
           <div class="barcode-number clamp-1">{{ shipping_barcode }}</div>
@@ -77,16 +100,40 @@
         {% endif %}
       </div>
     </div>
+    {% endif %}
 
     <!-- Kargo Firması -->
+    {% if cargo_provider_name %}
     <div class="cargo-provider clamp-1">{{ cargo_provider_name }}</div>
+    {% endif %}
+
+    <!-- Kapıda Ödeme -->
+    {% if kapida_odeme and kapida_odeme_tutari %}
+    <div class="kapida-odeme-box">
+      <div class="title">KAPIDA ÖDEME</div>
+      <div class="amount">{{ "%.2f"|format(kapida_odeme_tutari) }} TL</div>
+      <div><span class="label-tag">TAHSİL EDİLECEK</span></div>
+    </div>
+    {% endif %}
 
     <!-- Müşteri Bilgileri -->
     <div class="customer-info">
-      <p class="order-number clamp-1">Sipariş No: {{ order_number }}</p>
-      <p class="name clamp-1">Alıcı: {{ customer_name }} {{ customer_surname }}</p>
-      <p class="address clamp-3">{{ customer_address }}</p> <!-- ↑ adresi 3 satırla sınırladık -->
-      <p class="phone clamp-1">Telefon: {{ telefon_no }}</p>
+      <div class="order-number clamp-1">{{ order_number }}</div>
+
+      <div class="info-row">
+        <span class="info-label">Alıcı:</span>
+        <span class="info-value name clamp-1">{{ customer_name }} {{ customer_surname }}</span>
+      </div>
+
+      <div class="info-row">
+        <span class="info-label">Tel:</span>
+        <span class="info-value clamp-1">{{ telefon_no }}</span>
+      </div>
+
+      <div style="margin-top:0.5mm;">
+        <span class="info-label" style="display:block; margin-bottom:0.8mm;">Adres:</span>
+        <span class="address-value clamp-3">{{ customer_address }}</span>
+      </div>
     </div>
   </div>
 

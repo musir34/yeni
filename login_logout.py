@@ -100,8 +100,9 @@ def _check_device_limit(user: User, device_type: str) -> tuple[bool, str]:
     pc_count = sum(1 for d in devices if d.device_type == 'pc')
     mobile_count = sum(1 for d in devices if d.device_type == 'mobile')
 
-    if device_type == 'pc' and pc_count >= MAX_PC:
-        return False, f'PC cihaz limitine ulaştınız ({MAX_PC} PC). Mevcut bir cihazı kaldırmanız gerekiyor.'
+    user_max_pc = getattr(user, 'max_pc', None) or MAX_PC
+    if device_type == 'pc' and pc_count >= user_max_pc:
+        return False, f'PC cihaz limitine ulaştınız ({user_max_pc} PC). Mevcut bir cihazı kaldırmanız gerekiyor.'
     if device_type == 'mobile' and mobile_count >= MAX_MOBILE:
         return False, f'Mobil cihaz limitine ulaştınız ({MAX_MOBILE} mobil). Mevcut bir cihazı kaldırmanız gerekiyor.'
     return True, ''
@@ -577,6 +578,24 @@ def update_notify(username):
     user.notify_events = ','.join(events)
     db.session.commit()
     return jsonify({'success': True, 'events': events})
+
+
+@login_logout_bp.route('/admin/update-max-pc/<username>', methods=['POST'])
+@roles_required('admin')
+def update_max_pc(username):
+    """Admin: kullanıcının PC cihaz limitini gunceller."""
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({'success': False, 'message': 'Kullanici bulunamadi.'}), 404
+    max_pc = request.json.get('max_pc', 1)
+    max_pc = max(1, min(int(max_pc), 10))  # 1-10 arasi sinirla
+    user.max_pc = max_pc
+    db.session.commit()
+    _log_action('ADMIN_UPDATE_MAX_PC', {
+        'hedef_kullanici': username,
+        'yeni_pc_limiti': max_pc,
+    })
+    return jsonify({'success': True, 'max_pc': max_pc})
 
 
 @login_logout_bp.route('/admin/reset-password/<username>', methods=['POST'])
