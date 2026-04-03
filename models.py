@@ -432,6 +432,7 @@ class User(db.Model, UserMixin):
     session_version = db.Column(db.Integer, default=1)  # oturum geçersizleme için
     notify_events = db.Column(db.Text, default='')  # virgülle ayrılmış bildirim olayları
     max_pc = db.Column(db.Integer, default=1)  # kullanıcı başına izin verilen PC sayısı
+    notification_image = db.Column(db.String(300), nullable=True)  # admin tarafından atanan bildirim görseli
     # backref ile UserLog ilişkisi UserLog modelinde tanımlandı
 
 

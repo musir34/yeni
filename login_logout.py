@@ -346,7 +346,7 @@ def device_limit_reached():
                 return redirect(url_for('login_logout.login'))
 
     return render_template('device_limit.html', user=user, devices=devices,
-                           max_pc=MAX_PC, max_mobile=MAX_MOBILE)
+                           max_pc=user.max_pc or MAX_PC, max_mobile=MAX_MOBILE)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -578,6 +578,85 @@ def update_notify(username):
     user.notify_events = ','.join(events)
     db.session.commit()
     return jsonify({'success': True, 'events': events})
+
+
+@login_logout_bp.route('/admin/set-notification-image/<username>', methods=['POST'])
+@roles_required('admin')
+def set_notification_image(username):
+    """Admin: kullanıcıya bildirim görseli ata."""
+    import os
+    from werkzeug.utils import secure_filename
+
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        flash('Kullanıcı bulunamadı.', 'danger')
+        return redirect(url_for('login_logout.approve_users'))
+
+    file = request.files.get('notification_image')
+    if not file or not file.filename:
+        flash('Dosya seçilmedi.', 'warning')
+        return redirect(url_for('login_logout.approve_users'))
+
+    allowed_ext = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in allowed_ext:
+        flash('Geçersiz dosya türü. PNG, JPG, GIF, WEBP yükleyin.', 'danger')
+        return redirect(url_for('login_logout.approve_users'))
+
+    filename = f"notif_{username}_{int(datetime.utcnow().timestamp())}{ext}"
+    upload_dir = os.path.join(os.path.dirname(__file__), 'static', 'uploads', 'notifications')
+    os.makedirs(upload_dir, exist_ok=True)
+    filepath = os.path.join(upload_dir, filename)
+    file.save(filepath)
+
+    # Eski görseli sil
+    if user.notification_image:
+        old_path = os.path.join(upload_dir, os.path.basename(user.notification_image))
+        if os.path.exists(old_path):
+            os.remove(old_path)
+
+    user.notification_image = f"uploads/notifications/{filename}"
+    db.session.commit()
+    _log_action('ADMIN_SET_NOTIFICATION', {
+        'hedef_kullanici': username,
+        'gorsel': filename,
+    })
+    flash(f'{user.first_name} {user.last_name} için bildirim görseli ayarlandı.', 'success')
+    return redirect(url_for('login_logout.approve_users'))
+
+
+@login_logout_bp.route('/admin/clear-notification-image/<username>', methods=['POST'])
+@roles_required('admin')
+def clear_notification_image(username):
+    """Admin: kullanıcının bildirim görselini kaldır."""
+    import os
+
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({'success': False, 'message': 'Kullanıcı bulunamadı.'}), 404
+
+    if user.notification_image:
+        old_path = os.path.join(os.path.dirname(__file__), 'static', os.path.basename(user.notification_image))
+        full_path = os.path.join(os.path.dirname(__file__), 'static', user.notification_image)
+        if os.path.exists(full_path):
+            os.remove(full_path)
+        user.notification_image = None
+        db.session.commit()
+
+    _log_action('ADMIN_CLEAR_NOTIFICATION', {'hedef_kullanici': username})
+    return jsonify({'success': True})
+
+
+@login_logout_bp.route('/api/my-notification-image')
+def my_notification_image():
+    """Mevcut kullanıcının bildirim görselini döndür."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'image': None})
+    user = User.query.get(user_id)
+    if not user or not user.notification_image:
+        return jsonify({'image': None})
+    return jsonify({'image': url_for('static', filename=user.notification_image)})
 
 
 @login_logout_bp.route('/admin/update-max-pc/<username>', methods=['POST'])

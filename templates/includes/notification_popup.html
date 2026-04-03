@@ -1,0 +1,17 @@
+<!-- Bildirim Görseli Popup -->
+<div id="notifImageOverlay" style="display:none;position:fixed;inset:0;background:#000;z-index:99999;align-items:center;justify-content:center;cursor:pointer;" onclick="this.style.display='none'">
+    <div style="position:relative;width:96vw;height:96vh;display:flex;align-items:center;justify-content:center;" onclick="event.stopPropagation()">
+        <img id="notifImageSrc" src="" style="max-width:96vw;max-height:96vh;object-fit:contain;">
+        <div style="position:fixed;bottom:12px;left:0;right:0;text-align:center;color:#555;font-size:12px;">Kapatmak için siyah alana tıklayın</div>
+    </div>
+</div>
+<script>
+(function(){
+    fetch('/api/my-notification-image').then(function(r){return r.json()}).then(function(d){
+        if(d.image){
+            document.getElementById('notifImageSrc').src=d.image;
+            document.getElementById('notifImageOverlay').style.display='flex';
+        }
+    }).catch(function(){});
+})();
+</script>

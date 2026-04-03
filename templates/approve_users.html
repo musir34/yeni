@@ -182,6 +182,7 @@
                             <th>Güncelle</th>
                             <th>Sıfırlama</th>
                             <th>Mail Bildirim</th>
+                            <th>Bildirim Görseli</th>
                             <th>Onayı İptal Et</th>
                             <th>Sil</th>
                         </tr>
@@ -269,6 +270,23 @@
                                     </div>
                                 </td>
                                 <td>
+                                    {% if user.notification_image %}
+                                    <div class="d-flex align-items-center gap-1">
+                                        <img src="{{ url_for('static', filename=user.notification_image) }}" style="width:32px;height:32px;object-fit:cover;border-radius:4px;border:1px solid #ddd;" title="Aktif bildirim">
+                                        <button class="btn btn-outline-danger btn-sm" onclick="clearNotifImage('{{ user.username }}')" title="Kaldır">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    {% else %}
+                                    <form method="POST" action="{{ url_for('login_logout.set_notification_image', username=user.username) }}" enctype="multipart/form-data" style="display:inline;">
+                                        <label class="btn btn-outline-info btn-sm mb-0" style="cursor:pointer;" title="Görsel Ata">
+                                            <i class="fas fa-image me-1"></i> Ata
+                                            <input type="file" name="notification_image" accept="image/*" hidden onchange="this.form.submit()">
+                                        </label>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                                <td>
                                     <form method="POST" action="{{ url_for('login_logout.approve_users') }}" style="display:inline;">
                                         <input type="hidden" name="role_{{ user.username }}" value="{{ user.role }}">
                                         <button type="submit" name="action" value="revoke_{{ user.username }}" class="btn btn-warning btn-sm">
@@ -329,6 +347,14 @@
             if (roleSelect && hiddenInput) {
                 hiddenInput.value = roleSelect.value;
             }
+        }
+
+        // Bildirim görseli kaldır
+        function clearNotifImage(username) {
+            if (!confirm(username + ' kullanıcısının bildirim görseli kaldırılsın mı?')) return;
+            fetch('/admin/clear-notification-image/' + username, { method: 'POST' })
+                .then(r => r.json())
+                .then(data => { if (data.success) location.reload(); });
         }
 
         // PC limiti güncelleme
@@ -398,5 +424,6 @@
             });
         });
     </script>
+{% include 'includes/notification_popup.html' ignore missing %}
 </body>
 </html>
