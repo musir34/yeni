@@ -538,6 +538,19 @@ def sync_stock(barcode):
         return jsonify(success=False, error=str(e)), 500
 
 
+@agent_api.route('/stock/sync-all', methods=['POST'])
+@require_agent_key
+def sync_all_stock():
+    """Tüm CentralStock → Product.quantity toplu senkronizasyon."""
+    try:
+        from stock_management import verify_stock_integrity
+        report = verify_stock_integrity(auto_fix=True)
+        return jsonify(success=True, report=report)
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False, error=str(e)), 500
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  4. DEĞİŞİM (EXCHANGE) ENDPOİNT'LERİ
 # ══════════════════════════════════════════════════════════════════════════════
