@@ -278,6 +278,11 @@ def _sync_central_after_commit(session):
                             cs = CentralStock(barcode=barcode, qty=raf_toplam)
                             new_session.add(cs)
 
+                    # Product.quantity'yi de CentralStock ile senkronize et
+                    product = new_session.get(Product, barcode)
+                    if product and product.quantity != raf_toplam:
+                        product.quantity = raf_toplam
+
                 new_session.commit()
                 return  # Başarılı — çık
             except Exception:

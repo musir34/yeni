@@ -60,6 +60,12 @@ def sync_central_stock(barcode: str, commit: bool = True) -> int:
             db.session.add(cs)
             logger.info(f"➕ CentralStock oluşturuldu: {barcode} = {raf_toplam}")
 
+    # Product.quantity'yi de senkronize et
+    product = Product.query.get(barcode)
+    if product and product.quantity != raf_toplam:
+        product.quantity = raf_toplam
+        logger.info(f"🔄 Product.quantity senkronize: {barcode} | → {raf_toplam}")
+
     if commit:
         db.session.commit()
     return raf_toplam
@@ -153,12 +159,24 @@ def verify_stock_integrity(auto_fix: bool = False) -> dict:
             if auto_fix:
                 db.session.add(CentralStock(barcode=barcode, qty=total))
 
-    if auto_fix and not report['all_ok']:
+    # 5. Product.quantity'yi CentralStock ile eşitle
+    product_synced = 0
+    if auto_fix:
+        all_cs_fresh = CentralStock.query.all()
+        for cs in all_cs_fresh:
+            product = Product.query.get(cs.barcode)
+            if product and product.quantity != cs.qty:
+                product.quantity = cs.qty
+                product_synced += 1
+    report['product_quantity_synced'] = product_synced
+
+    if auto_fix and (not report['all_ok'] or product_synced > 0):
         db.session.commit()
         logger.info(f"[INTEGRITY] Otomatik düzeltme tamamlandı: "
                      f"{report['mismatched_quantities']} tutarsız, "
                      f"{report['missing_central_stock']} kayıp, "
-                     f"{report['cleaned_zero_records']} boş kayıt")
+                     f"{report['cleaned_zero_records']} boş kayıt, "
+                     f"{product_synced} Product.quantity güncellendi")
 
     return report
 
