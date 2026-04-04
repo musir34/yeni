@@ -42,7 +42,12 @@
       "Bash(git checkout:*)",
       "Bash(xargs basename:*)",
       "Bash(wc -l /Users/abdurrahmankuli/Documents/Webs/yeni/*.py)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(ls:*)",
+      "Bash(.venv/Scripts/python -c \"from agent_api import agent_api; print\\('Import basarili! Blueprint:', agent_api.name, 'Prefix:', agent_api.url_prefix\\)\" 2>&1)",
+      "Bash(.venv/Scripts/python -c \"import sys; sys.path.insert\\(0,'.'\\); from agent_api import agent_api; print\\('OK -', agent_api.name, agent_api.url_prefix\\)\" 2>&1)",
+      "Bash(.venv/Scripts/pip list:*)",
+      "Bash(.venv/Scripts/python -c \"\nimport ast\nwith open\\('agent_api.py'\\) as f:\n    ast.parse\\(f.read\\(\\)\\)\nprint\\('Syntax OK - agent_api.py'\\)\n\" 2>&1)"
     ]
   }
 }
