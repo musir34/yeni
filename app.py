@@ -165,7 +165,7 @@ app.jinja_env.globals['url_for'] = custom_url_for
 def log_request():
     if request.path.startswith('/static/'):
         return
-    if request.path.startswith('/api/'):
+    if request.path.startswith('/api/') or request.path.startswith('/agent/api/'):
         return  # API isteklerini loglama
     try:
         endpoint_name = request.endpoint or 'bilinmeyen'
@@ -185,6 +185,7 @@ def check_authentication():
     if (request.path.startswith('/enhanced_product_label')
         or request.path.startswith('/static/')
         or request.path.startswith('/api/')
+        or request.path.startswith('/agent/api/')
         or request.path.startswith('/health')):
         return None
 
@@ -220,7 +221,7 @@ def not_found_error(error):
     # Static dosyalar için loglama yapma (gereksiz spam'i önler)
     if not request.path.startswith('/static/'):
         logger.warning(f"404 Hatası - Yol: {request.path}, IP: {request.remote_addr}")
-    if request.path.startswith('/api/'):
+    if request.path.startswith('/api/') or request.path.startswith('/agent/api/'):
         return {'error': 'Endpoint bulunamadı', 'path': request.path}, 404
     return render_template('errors/404.html'), 404
 
@@ -228,7 +229,7 @@ def not_found_error(error):
 def forbidden_error(error):
     """403 - Yetkisiz Erişim"""
     logger.warning(f"403 Hatası - Kullanıcı: {current_user.username if current_user.is_authenticated else 'Anonim'}, Yol: {request.path}")
-    if request.path.startswith('/api/'):
+    if request.path.startswith('/api/') or request.path.startswith('/agent/api/'):
         return {'error': 'Bu işlem için yetkiniz yok', 'path': request.path}, 403
     return render_template('errors/403.html'), 403
 
@@ -239,7 +240,7 @@ def internal_error(error):
     error_id = str(uuid.uuid4())[:8]
     logger.error(f"500 Hatası [ID: {error_id}] - Yol: {request.path}, Kullanıcı: {current_user.username if current_user.is_authenticated else 'Anonim'}", exc_info=True)
     db.session.rollback()  # Veritabanı işlemini geri al
-    if request.path.startswith('/api/'):
+    if request.path.startswith('/api/') or request.path.startswith('/agent/api/'):
         return {'error': 'Sunucu hatası oluştu', 'error_id': error_id}, 500
     return render_template('errors/500.html', error_id=error_id), 500
 
@@ -262,7 +263,7 @@ def handle_exception(error):
     logger.error(f"Beklenmeyen Hata [ID: {error_id}] - Yol: {request.path}, Tip: {type(error).__name__}, Mesaj: {str(error)}", exc_info=True)
     db.session.rollback()
     
-    if request.path.startswith('/api/'):
+    if request.path.startswith('/api/') or request.path.startswith('/agent/api/'):
         return {
             'error': 'Beklenmeyen bir hata oluştu',
             'error_id': error_id,
