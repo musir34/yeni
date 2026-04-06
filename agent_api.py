@@ -13,6 +13,7 @@ import json
 import uuid
 import logging
 from datetime import datetime, timedelta
+from decimal import Decimal, InvalidOperation
 from functools import wraps
 
 from flask import Blueprint, request, jsonify
@@ -1162,6 +1163,105 @@ def list_transactions():
         total_pages=pagination.pages,
         transactions=items,
     )
+
+
+@agent_api.route('/finance/categories', methods=['GET'])
+@require_agent_key
+def list_finance_categories():
+    """Kasa kategorilerini listele."""
+    kategoriler = KasaKategori.query.filter_by(aktif=True).order_by(KasaKategori.kategori_adi).all()
+    return jsonify(
+        success=True,
+        categories=[
+            {'id': k.id, 'kategori_adi': k.kategori_adi, 'renk': k.renk}
+            for k in kategoriler
+        ],
+    )
+
+
+@agent_api.route('/finance/transactions', methods=['POST'])
+@require_agent_key
+def create_transaction():
+    """Normal kasaya gelir veya gider kaydı ekle (ana kasa değil)."""
+    data = request.get_json(silent=True) or {}
+
+    tip = (data.get('tip') or '').strip().lower()
+    if tip not in ('gelir', 'gider'):
+        return jsonify(success=False, error="'tip' zorunlu: 'gelir' veya 'gider'"), 400
+
+    aciklama = (data.get('aciklama') or '').strip()
+    if not aciklama:
+        return jsonify(success=False, error="'aciklama' zorunlu"), 400
+
+    try:
+        tutar = Decimal(str(data.get('tutar', 0)))
+        if tutar <= 0:
+            raise ValueError
+    except (ValueError, TypeError, InvalidOperation):
+        return jsonify(success=False, error="'tutar' geçerli ve 0'dan büyük olmalı"), 400
+
+    kategori = (data.get('kategori') or '').strip() or None
+
+    durum_str = (data.get('durum') or 'odenmedi').strip().lower()
+    durum_map = {
+        'odenmedi': KasaDurum.ODENMEDI,
+        'kismi_odendi': KasaDurum.KISMI_ODENDI,
+        'tamamlandi': KasaDurum.TAMAMLANDI,
+    }
+    kayit_durumu = durum_map.get(durum_str, KasaDurum.ODENMEDI)
+
+    tarih_str = (data.get('tarih') or '').strip()
+    if tarih_str:
+        try:
+            secilen_tarih = datetime.strptime(tarih_str, '%Y-%m-%d')
+        except ValueError:
+            return jsonify(success=False, error="'tarih' formatı YYYY-MM-DD olmalı"), 400
+    else:
+        secilen_tarih = datetime.now()
+
+    try:
+        yeni_kayit = Kasa(
+            tip=tip,
+            aciklama=aciklama,
+            tutar=tutar,
+            kategori=kategori,
+            kullanici_id=data.get('kullanici_id', 1),
+            durum=kayit_durumu,
+            tarih=secilen_tarih,
+            ana_kasadan=False,
+        )
+        db.session.add(yeni_kayit)
+        db.session.flush()
+
+        if kayit_durumu == KasaDurum.TAMAMLANDI:
+            otomatik_odeme = Odeme(
+                kasa_id=yeni_kayit.id,
+                tutar=tutar,
+                odeme_tarihi=secilen_tarih,
+                kullanici_id=data.get('kullanici_id', 1),
+            )
+            db.session.add(otomatik_odeme)
+
+        db.session.commit()
+
+        return jsonify(
+            success=True,
+            message=f"{tip.capitalize()} kaydı eklendi",
+            transaction={
+                'id': yeni_kayit.id,
+                'tip': yeni_kayit.tip,
+                'aciklama': yeni_kayit.aciklama,
+                'tutar': float(yeni_kayit.tutar),
+                'kategori': yeni_kayit.kategori,
+                'tarih': yeni_kayit.tarih.isoformat() if yeni_kayit.tarih else None,
+                'durum': yeni_kayit.durum.value if yeni_kayit.durum else None,
+            },
+        ), 201
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Agent API: Kasa kaydı hatası: {e}', exc_info=True)
+        return jsonify(success=False, error=str(e)), 500
 
 
 # ══════════════════════════════════════════════════════════════════════════════

@@ -607,6 +607,84 @@ Kasa kayıtlarını listele.
 }
 ```
 
+### `GET /finance/categories`
+Kasada kullanılabilecek kategori listesini döner. Gelir/gider eklerken `kategori` alanına bu listeden bir değer gönder.
+
+**Response:**
+```json
+{
+  "success": true,
+  "categories": [
+    { "id": 1, "kategori_adi": "Kargo", "renk": "#007bff" },
+    { "id": 2, "kategori_adi": "Kira", "renk": "#dc3545" },
+    { "id": 3, "kategori_adi": "Satış", "renk": "#28a745" }
+  ]
+}
+```
+
+### `POST /finance/transactions`
+Normal kasaya gelir veya gider kaydı ekle (ana kasa etkilenmez).
+
+> **Agent için önemli notlar:**
+> - Kullanıcı "şuna 500 lira gider ekle" derse → `tip: "gider"` kullan.
+> - Kullanıcı "gelir yaz" derse → `tip: "gelir"` kullan.
+> - `aciklama` alanına kullanıcının verdiği açıklamayı yaz. Kullanıcı açıklama vermediyse kısa ve anlaşılır bir açıklama üret (örn: "Kargo gideri", "Ürün satış geliri").
+> - `tarih` verilmezse bugünün tarihi kullanılır. Kullanıcı "dünkü" derse dünün tarihini hesapla ve YYYY-MM-DD formatında gönder.
+> - `kategori` için önce `GET /finance/categories` ile mevcut kategorileri çek, kullanıcının söylediğiyle en yakın eşleşeni kullan. Eşleşen yoksa boş bırak.
+> - `durum`: Kullanıcı "ödendi" / "ödedim" derse → `tamamlandi`. "Henüz ödenmedi" / "borç" derse → `odenmedi`. Default: `odenmedi`.
+
+**Body (JSON):**
+
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| `tip` | string | Evet | `gelir` \| `gider` |
+| `aciklama` | string | Evet | Ne için olduğunu açıkla |
+| `tutar` | number | Evet | TL cinsinden tutar (0'dan büyük, kuruş için ondalık kullan: `1500.50`) |
+| `kategori` | string | Hayır | Kategori adı (`GET /finance/categories`'den al) |
+| `durum` | string | Hayır | `odenmedi` \| `kismi_odendi` \| `tamamlandi` (default: `odenmedi`) |
+| `tarih` | string | Hayır | `YYYY-MM-DD` formatında (default: bugün) |
+| `kullanici_id` | int | Hayır | Kullanıcı ID (default: 1) |
+
+**Örnek — Gider ekleme:**
+```json
+{
+  "tip": "gider",
+  "aciklama": "Nisan ayı kargo ödemesi - Yurtiçi Kargo",
+  "tutar": 1500.00,
+  "kategori": "Kargo",
+  "durum": "tamamlandi",
+  "tarih": "2026-04-06"
+}
+```
+
+**Örnek — Gelir ekleme:**
+```json
+{
+  "tip": "gelir",
+  "aciklama": "Mağaza içi nakit satış",
+  "tutar": 3200.00,
+  "kategori": "Satış",
+  "durum": "tamamlandi"
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Gider kaydı eklendi",
+  "transaction": {
+    "id": 42,
+    "tip": "gider",
+    "aciklama": "Nisan ayı kargo ödemesi - Yurtiçi Kargo",
+    "tutar": 1500.00,
+    "kategori": "Kargo",
+    "tarih": "2026-04-06T00:00:00",
+    "durum": "tamamlandı"
+  }
+}
+```
+
 ---
 
 ## 10. Raflar (Shelves / Depo)
@@ -750,6 +828,8 @@ Barkodun alias olup olmadığını kontrol et.
 | 22 | POST | `/manual-orders` | Manuel sipariş oluştur |
 | 23 | GET | `/finance/summary` | Finansal özet |
 | 24 | GET | `/finance/transactions` | Kasa kayıtları |
-| 25 | GET | `/shelves` | Raf listesi |
-| 26 | GET | `/shelves/{code}/products` | Raftaki ürünler |
-| 27 | GET | `/barcode-alias/check/{barcode}` | Barkod alias kontrolü |
+| 25 | GET | `/finance/categories` | Kasa kategorileri |
+| 26 | POST | `/finance/transactions` | Gelir/gider kaydı ekle |
+| 27 | GET | `/shelves` | Raf listesi |
+| 28 | GET | `/shelves/{code}/products` | Raftaki ürünler |
+| 29 | GET | `/barcode-alias/check/{barcode}` | Barkod alias kontrolü |
