@@ -613,9 +613,12 @@ def create_order_details(lines):
         size_ = line.get('productSize', '')
         quantity = safe_int(line.get('quantity'), 0)
         total_order_quantity += quantity
-        commission_fee = safe_float(line.get('commissionFee'), 0.0)
-        line_id = str(line.get('id', ''))
-        amount = safe_float(line.get('amount'), 0.0)
+        # Trendyol API alan adı değişikliği: commissionFee → commission
+        commission_fee = safe_float(line.get('commission') or line.get('commissionFee'), 0.0)
+        # Trendyol API alan adı değişikliği: id → lineId
+        line_id = str(line.get('lineId') or line.get('id') or '')
+        # Trendyol API alan adı değişikliği: amount → lineUnitPrice
+        amount = safe_float(line.get('lineUnitPrice') or line.get('amount'), 0.0)
 
         key = (barcode, color, size_)
         if key not in details_dict:
@@ -623,10 +626,12 @@ def create_order_details(lines):
                 'barcode': barcode,
                 'color': color,
                 'size': size_,
-                'sku': line.get('merchantSku', ''),
+                # Trendyol API alan adı değişikliği: merchantSku → stockCode
+                'sku': line.get('stockCode') or line.get('merchantSku', ''),
                 'productName': line.get('productName', ''),
-                'productCode': str(line.get('productCode', '')),
-                'product_main_id': str(line.get('productId', '')),
+                # Trendyol API v3: productCode → stockCode
+                'productCode': str(line.get('stockCode') or line.get('productCode') or ''),
+                'product_main_id': str(line.get('contentId') or line.get('productId') or ''),
                 'quantity': quantity,
                 'commissionFee': commission_fee,
                 'line_id': [line_id],
