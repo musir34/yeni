@@ -1,257 +1,297 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8" />
-    <script>(function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();if(m==='on'||(m==='auto'&&(h>=20||h<7)))document.documentElement.classList.add('gs-dark');})()</script>
-    <title>Excel Komisyon Güncelle</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-mode.css') }}">
+  <meta charset="UTF-8">
+  <script>(function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();if(m==='on'||(m==='auto'&&(h>=20||h<7)))document.documentElement.classList.add('gs-dark');})()</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sipariş Veri Güncelleme - Güllü Shoes</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-mode.css') }}">
+  <style>
+    :root {
+      --primary:#B76E79; --primary-dark:#A05F6A;
+      --bg:#f3f5f7; --card:#fff; --border:#e5e7eb; --text:#343a40; --muted:#6b7280;
+      --success:#22c55e; --warning:#f59e0b; --danger:#ef4444;
+      --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.06);
+    }
+    * { box-sizing:border-box; margin:0; padding:0 }
+    body { font-family:'Inter',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh }
 
-    <style>
-        body {
-            background-color: #f8f9fa;
-            padding-top: 20px; /* İçeriği biraz aşağı almak için */
-            padding-bottom: 50px;
-        }
-        .upload-container {
-            max-width: 850px; /* Biraz daha geniş */
-            margin: 30px auto;
-        }
-        .card {
-            border-radius: 0.5rem; /* Biraz daha yuvarlak köşeler */
-            border: none; /* Kenarlığı kaldırıp shadow'a güvenelim */
-        }
-        .card-header {
-            background-color: #0d6efd; /* Bootstrap primary rengi */
-            color: #fff;
-            border-radius: 0.5rem 0.5rem 0 0;
-            padding: 1rem 1.5rem;
-        }
-        .card-body {
-            padding: 1.5rem;
-        }
-        .btn-custom-upload {
-            background-color: #198754; /* Bootstrap success rengi */
-            border-color: #198754;
-            color: white;
-        }
-        .btn-custom-upload:hover {
-            background-color: #157347;
-            border-color: #146c43;
-        }
-        .file-list-container {
-            margin-top: 30px;
-            background-color: #fff;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-        }
-        .table thead th {
-            background-color: #e9ecef; /* Açık gri tablo başlığı */
-            border-bottom-width: 1px; /* Başlık alt çizgisini incelt */
-        }
-        .table-striped>tbody>tr:nth-of-type(odd)>* { /* Satır renklendirmesini düzeltme */
-           background-color: rgba(0,0,0,.03);
-        }
-        #selectedFiles li {
-            font-size: 0.9em;
-            background-color: #e9ecef;
-            padding: 5px 10px;
-            margin-bottom: 5px;
-            border-radius: 4px;
-        }
-         /* Spinner için stil */
-        .spinner-border-sm {
-            width: 1rem;
-            height: 1rem;
-            border-width: 0.2em;
-        }
-    </style>
+    .header {
+      background:var(--card); border-bottom:1px solid var(--border);
+      padding:16px 24px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+      position:sticky; top:0; z-index:50; box-shadow:var(--shadow)
+    }
+    .header h1 { font-size:18px; font-weight:800 }
+    .header .back { text-decoration:none; color:var(--muted); font-size:14px; display:flex; align-items:center; gap:6px }
+    .header .back:hover { color:var(--primary) }
+    .spacer { flex:1 }
+    .btn {
+      padding:10px 16px; border:1px solid var(--border); border-radius:8px;
+      font-size:13px; font-weight:600; cursor:pointer; transition:all .2s;
+      display:inline-flex; align-items:center; gap:6px; background:var(--card); color:var(--text); text-decoration:none
+    }
+    .btn:hover { border-color:var(--primary); color:var(--primary) }
+    .btn-primary { background:var(--primary); color:#fff; border-color:transparent }
+    .btn-primary:hover { background:var(--primary-dark); color:#fff }
+    .btn-sm { padding:6px 12px; font-size:12px }
+
+    .container { max-width:900px; margin:24px auto; padding:0 20px }
+
+    .upload-card {
+      background:var(--card); border:2px dashed var(--border); border-radius:var(--radius);
+      padding:40px; text-align:center; cursor:pointer; transition:all .3s;
+      position:relative; overflow:hidden;
+    }
+    .upload-card:hover, .upload-card.dragover { border-color:var(--primary); background:rgba(183,110,121,.03) }
+    .upload-card .icon { font-size:48px; color:var(--primary); opacity:.4; margin-bottom:12px }
+    .upload-card p { color:var(--muted); font-size:14px; margin-top:8px }
+    .upload-card input[type=file] { display:none }
+
+    .file-chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; justify-content:center }
+    .file-chip {
+      background:rgba(183,110,121,.08); color:var(--primary); padding:6px 14px;
+      border-radius:20px; font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px
+    }
+    .file-chip .remove { cursor:pointer; opacity:.6 }
+    .file-chip .remove:hover { opacity:1 }
+
+    .upload-btn-area { margin-top:20px; text-align:center }
+    .upload-btn-area .btn { font-size:15px; padding:12px 32px }
+
+    /* Progress overlay */
+    .progress-overlay {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.6);
+      z-index:1000; justify-content:center; align-items:center;
+    }
+    .progress-overlay.active { display:flex }
+    .progress-box {
+      background:var(--card); border-radius:16px; padding:40px 50px;
+      text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.2); max-width:420px; width:90%;
+    }
+    .progress-box .spinner {
+      width:60px; height:60px; border:4px solid var(--border); border-top:4px solid var(--primary);
+      border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 20px;
+    }
+    @keyframes spin { to { transform:rotate(360deg) } }
+    .progress-box .status { font-size:15px; font-weight:600; color:var(--text); margin-bottom:8px }
+    .progress-box .detail { font-size:13px; color:var(--muted) }
+
+    /* Success animation */
+    .success-icon { font-size:64px; color:var(--success); animation:popIn .4s ease }
+    .error-icon { font-size:64px; color:var(--danger); animation:popIn .4s ease }
+    @keyframes popIn { 0% { transform:scale(0); opacity:0 } 60% { transform:scale(1.2) } 100% { transform:scale(1); opacity:1 } }
+
+    .result-table { width:100%; margin-top:16px; font-size:13px; text-align:left }
+    .result-table th { color:var(--muted); font-weight:600; padding:6px 8px; border-bottom:1px solid var(--border) }
+    .result-table td { padding:6px 8px; border-bottom:1px solid var(--border) }
+
+    /* History */
+    .history-card {
+      background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+      box-shadow:var(--shadow); padding:20px; margin-top:24px
+    }
+    .history-card h3 { font-size:15px; font-weight:700; margin-bottom:12px }
+    .history-table { width:100%; border-collapse:collapse }
+    .history-table th, .history-table td { padding:8px 12px; font-size:13px; border-bottom:1px solid var(--border); text-align:left }
+    .history-table th { color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase }
+
+    /* Dark mode */
+    html.gs-dark body { background:#121212; color:#e0e0e0 }
+    html.gs-dark .header { background:#1e1e1e; border-color:#333 }
+    html.gs-dark .upload-card { background:#1e1e1e; border-color:#444 }
+    html.gs-dark .upload-card:hover, html.gs-dark .upload-card.dragover { border-color:var(--primary); background:rgba(183,110,121,.08) }
+    html.gs-dark .progress-box { background:#1e1e1e }
+    html.gs-dark .history-card { background:#1e1e1e; border-color:#333 }
+    html.gs-dark .btn { background:#2a2a2a; border-color:#444; color:#ddd }
+    html.gs-dark .history-table th { color:#888 }
+    html.gs-dark .history-table td { border-color:#333; color:#ddd }
+  </style>
 </head>
-
 <body>
-    <div class="container upload-container">
-        <div class="mb-3 text-end"><a href="/anasayfa" class="btn btn-outline-secondary btn-sm"><i class="bi bi-house"></i> Anasayfa</a></div>
-        <div class="card shadow-sm mb-4">
-            <div class="card-header">
-                <h4 class="mb-0"><i class="bi bi-file-earmark-arrow-up-fill me-2"></i>Excel Dosyası Yükleme (Komisyon Güncelle)</h4>
-            </div>
-            <div class="card-body">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            {# Kategoriye göre alert sınıfını ve ikonu ayarla #}
-                            {% set alert_class = 'alert-' + category if category in ['primary', 'secondary', 'success', 'danger', 'warning', 'info', 'light', 'dark'] else 'alert-info' %}
-                            {% set icon_class = 'bi-check-circle-fill' if category == 'success' else ('bi-exclamation-triangle-fill' if category == 'danger' or category == 'warning' else 'bi-info-circle-fill') %}
 
-                            <div class="alert {{ alert_class }} d-flex align-items-center alert-dismissible fade show" role="alert">
-                                <i class="bi {{ icon_class }} me-2"></i>
-                                <div>
-                                    {{ message }}
-                                </div>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
+<div class="header">
+  <a href="/anasayfa" class="back"><i class="fas fa-arrow-left"></i> Geri</a>
+  <h1><i class="fas fa-file-excel"></i> Sipariş Veri Güncelleme</h1>
+  <div class="spacer"></div>
+  <a href="/anasayfa" class="btn btn-sm"><i class="fas fa-home"></i> Anasayfa</a>
+</div>
 
-                <p class="text-secondary mb-4">
-                    Buradan tek veya birden fazla Excel dosyası <strong>(.xlsx, .xls)</strong> yükleyebilirsiniz.
-                    Dosyaları seçtikten sonra <em><i class="bi bi-cloud-upload"></i> Yükle ve Gönder</em> butonuna basarak işleme başlayabilirsiniz.
-                </p>
+<div class="container">
+  <!-- Upload Area -->
+  <div class="upload-card" id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <div class="icon"><i class="fas fa-cloud-upload-alt"></i></div>
+    <p><strong>Excel dosyalarını sürükle bırak</strong> veya tıklayarak seç</p>
+    <p style="font-size:12px;margin-top:4px">.xlsx / .xls — Birden fazla dosya seçebilirsin</p>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" multiple>
+  </div>
 
-                <form
-                    id="uploadForm"
-                    action="{{ url_for('commission_update_bp.update_commission_from_excel') }}"
-                    method="POST"
-                    enctype="multipart/form-data"
-                >
-                    <div class="mb-3">
-                        <label for="excelFiles" class="form-label fw-bold">Excel Dosyaları Seçin:</label>
-                        <input
-                            class="form-control"
-                            type="file"
-                            id="excelFiles"
-                            name="excel_files"
-                            accept=".xlsx, .xls"
-                            multiple
-                            required
-                        />
-                    </div>
+  <div class="file-chips" id="fileChips"></div>
 
-                    <div id="selectedFilesContainer" class="mb-3" style="display: none;">
-                        <label class="form-label fw-bold">Seçilen Dosyalar:</label>
-                        <ul id="selectedFiles" class="list-unstyled"></ul>
-                    </div>
+  <div class="upload-btn-area" id="uploadBtnArea" style="display:none">
+    <button class="btn btn-primary" onclick="startUpload()">
+      <i class="fas fa-rocket"></i> Yükle ve Güncelle
+    </button>
+  </div>
 
-                    <div class="d-grid gap-2"> {# Butonun tam genişlikte olması için d-grid #}
-                        <button type="submit" id="submitButton" class="btn btn-custom-upload btn-lg">
-                             <span id="buttonText"><i class="bi bi-cloud-upload"></i> Yükle ve Gönder</span>
-                             <span id="loadingSpinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+  <!-- Info -->
+  <div style="margin-top:16px; padding:12px 16px; background:rgba(183,110,121,.05); border:1px solid rgba(183,110,121,.15); border-radius:8px; font-size:12px; color:var(--muted)">
+    <i class="fas fa-info-circle" style="color:var(--primary)"></i>
+    Excel'de <strong>Sipariş No</strong>, <strong>Sipariş Tutarı</strong>, <strong>Komisyon</strong> ve <strong>İndirim</strong> sütunları gerekli.
+    Her sipariş için <code>amount = Tutarı - İndirim</code>, <code>commission = |Komisyon|</code>, <code>discount = |İndirim|</code> olarak güncellenir.
+  </div>
 
-        <div class="file-list-container">
-            <h5><i class="bi bi-list-ul me-2"></i>Yüklenen Excel Dosyaları Geçmişi</h5>
-             <p class="text-muted small">Dosyaları ada veya yükleme tarihine göre sıralayabilir, tümünü veya sadece son 10 tanesini listeleyebilirsiniz.</p>
-
-            <div class="btn-toolbar mb-3" role="toolbar" aria-label="Liste kontrol butonları">
-                 <div class="btn-group me-2" role="group" aria-label="Sıralama grubu">
-                     <a href="{{ url_for('commission_update_bp.update_commission_from_excel', sort='name', all=('1' if show_all else '0')) }}"
-                       class="btn btn-sm btn-outline-secondary {% if sort_by == 'name' %}active{% endif %}">
-                        <i class="bi bi-sort-alpha-down"></i> Ada Göre
-                    </a>
-                     <a href="{{ url_for('commission_update_bp.update_commission_from_excel', sort='date', all=('1' if show_all else '0')) }}"
-                       class="btn btn-sm btn-outline-secondary {% if sort_by == 'date' %}active{% endif %}">
-                        <i class="bi bi-sort-down"></i> Tarihe Göre
-                    </a>
-                </div>
-                 <div class="btn-group" role="group" aria-label="Listeleme grubu">
-                     {% if not show_all %}
-                        <a href="{{ url_for('commission_update_bp.update_commission_from_excel', sort=sort_by, all='1') }}"
-                           class="btn btn-sm btn-outline-secondary">
-                             <i class="bi bi-list-stars"></i> Tümünü Listele
-                        </a>
-                     {% else %}
-                        <a href="{{ url_for('commission_update_bp.update_commission_from_excel', sort=sort_by, all='0') }}"
-                           class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-list-ol"></i> Son 10 Tane
-                        </a>
-                     {% endif %}
-                </div>
-            </div>
-
-            {% if uploads %}
-            <div class="table-responsive"> {# Küçük ekranlarda tabloyu kaydırılabilir yap #}
-                <table class="table table-bordered table-striped table-hover">
-                    <thead class="table-light">
-                        <tr>
-                            <th><i class="bi bi-file-earmark-excel"></i> Dosya Adı</th>
-                            <th><i class="bi bi-calendar-check"></i> Yükleme Tarihi (Dosyadan)</th>
-                            <th><i class="bi bi-download"></i> İndir</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in uploads %}
-                        <tr>
-                            <td>{{ item.filename }}</td>
-                            {# Tarih formatını kontrol et, None ise boş göster #}
-                            <td>{{ item.upload_time.strftime('%Y-%m-%d %H:%M:%S') if item.upload_time else '-' }}</td>
-                            <td>
-                                <a
-                                    href="{{ url_for('commission_update_bp.download_excel', filename=item.filename) }}"
-                                    class="btn btn-sm btn-primary"
-                                    title="{{ item.filename }} dosyasını indir"
-                                >
-                                    <i class="bi bi-download"></i> İndir
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-                <div class="alert alert-secondary" role="alert">
-                    <i class="bi bi-info-circle me-2"></i>Hiç yüklenmiş Excel dosyası kaydı bulunmamaktadır.
-                </div>
-            {% endif %}
-        </div>
+  <!-- History -->
+  <div class="history-card">
+    <h3><i class="fas fa-history"></i> Yükleme Geçmişi</h3>
+    {% if uploads %}
+    <table class="history-table">
+      <thead><tr><th>Dosya</th><th>Tarih</th></tr></thead>
+      <tbody>
+        {% for item in uploads %}
+        <tr>
+          <td><i class="fas fa-file-excel" style="color:var(--success);margin-right:6px"></i>{{ item.filename }}</td>
+          <td>{{ item.upload_time.strftime('%d.%m.%Y %H:%M') if item.upload_time else '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if not show_all %}
+    <div style="text-align:center;margin-top:12px">
+      <a href="?all=1" class="btn btn-sm"><i class="fas fa-list"></i> Tümünü Göster</a>
     </div>
+    {% endif %}
+    {% else %}
+    <p style="text-align:center;color:var(--muted);padding:20px">Henüz dosya yüklenmemiş</p>
+    {% endif %}
+  </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Progress Overlay -->
+<div class="progress-overlay" id="progressOverlay">
+  <div class="progress-box" id="progressBox">
+    <div class="spinner" id="progressSpinner"></div>
+    <div class="status" id="progressStatus">Dosyalar yükleniyor...</div>
+    <div class="detail" id="progressDetail">Lütfen bekleyin</div>
+  </div>
+</div>
 
-    <script>
-        const fileInput = document.getElementById('excelFiles');
-        const selectedFilesContainer = document.getElementById('selectedFilesContainer');
-        const selectedFilesList = document.getElementById('selectedFiles');
-        const uploadForm = document.getElementById('uploadForm');
-        const submitButton = document.getElementById('submitButton');
-        const buttonText = document.getElementById('buttonText');
-        const loadingSpinner = document.getElementById('loadingSpinner');
+<script src="{{ url_for('static', filename='js/gs-dialog.js') }}"></script>
+<script>
+let selectedFiles = [];
 
-        // Dosya seçildiğinde seçilen dosyaların listesini göster
-        fileInput.addEventListener('change', function() {
-            selectedFilesList.innerHTML = ''; // Önceki listeyi temizle
-            if (this.files.length > 0) {
-                selectedFilesContainer.style.display = 'block';
-                for (const file of this.files) {
-                    const listItem = document.createElement('li');
-                    listItem.textContent = file.name + ' (' + (file.size / 1024).toFixed(2) + ' KB)';
-                    selectedFilesList.appendChild(listItem);
-                }
-            } else {
-                selectedFilesContainer.style.display = 'none';
-            }
+// Drag & Drop
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+['dragenter', 'dragover'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('dragover'); }));
+['dragleave', 'drop'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('dragover'); }));
+
+dropZone.addEventListener('drop', e => {
+  const files = [...e.dataTransfer.files].filter(f => f.name.match(/\.xlsx?$/i));
+  addFiles(files);
+});
+
+fileInput.addEventListener('change', () => {
+  addFiles([...fileInput.files]);
+  fileInput.value = '';
+});
+
+function addFiles(files) {
+  files.forEach(f => {
+    if (!selectedFiles.find(sf => sf.name === f.name)) selectedFiles.push(f);
+  });
+  renderChips();
+}
+
+function removeFile(name) {
+  selectedFiles = selectedFiles.filter(f => f.name !== name);
+  renderChips();
+}
+
+function renderChips() {
+  const container = document.getElementById('fileChips');
+  const btnArea = document.getElementById('uploadBtnArea');
+  if (selectedFiles.length === 0) {
+    container.innerHTML = '';
+    btnArea.style.display = 'none';
+    return;
+  }
+  btnArea.style.display = 'block';
+  container.innerHTML = selectedFiles.map(f =>
+    `<div class="file-chip">
+      <i class="fas fa-file-excel"></i> ${f.name} (${(f.size/1024).toFixed(0)} KB)
+      <span class="remove" onclick="removeFile('${f.name}')"><i class="fas fa-times"></i></span>
+    </div>`
+  ).join('');
+}
+
+function startUpload() {
+  if (selectedFiles.length === 0) return;
+
+  const overlay = document.getElementById('progressOverlay');
+  const spinner = document.getElementById('progressSpinner');
+  const status = document.getElementById('progressStatus');
+  const detail = document.getElementById('progressDetail');
+  const box = document.getElementById('progressBox');
+
+  overlay.classList.add('active');
+  spinner.style.display = 'block';
+  status.textContent = `${selectedFiles.length} dosya yükleniyor...`;
+  detail.textContent = 'Siparişler güncelleniyor, lütfen bekleyin';
+
+  const formData = new FormData();
+  selectedFiles.forEach(f => formData.append('excel_files', f));
+
+  fetch('/api/upload-commission-excel', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => {
+      spinner.style.display = 'none';
+
+      if (data.success) {
+        // Success animation
+        let totalUpdated = 0, totalNotFound = 0, totalRows = 0;
+        let resultsHtml = '<table class="result-table"><thead><tr><th>Dosya</th><th>Satır</th><th>Güncellenen</th><th>Bulunamayan</th></tr></thead><tbody>';
+        (data.results || []).forEach(r => {
+          if (r.error) {
+            resultsHtml += `<tr><td>${r.file}</td><td colspan="3" style="color:var(--danger)">${r.error}</td></tr>`;
+          } else {
+            totalUpdated += r.updated || 0;
+            totalNotFound += r.not_found || 0;
+            totalRows += r.total_rows || 0;
+            resultsHtml += `<tr><td>${r.file}</td><td>${r.total_rows}</td><td style="color:var(--success);font-weight:700">${r.updated}</td><td style="color:var(--warning)">${r.not_found}</td></tr>`;
+          }
         });
+        resultsHtml += '</tbody></table>';
 
-        // Form gönderildiğinde butonu devre dışı bırak ve spinner göster
-        uploadForm.addEventListener('submit', function() {
-            submitButton.disabled = true;
-            buttonText.style.display = 'none'; // Yazıyı gizle
-            loadingSpinner.style.display = 'inline-block'; // Spinner'ı göster
-             // İsteğe bağlı: Çok uzun süren işlemler için bir timeout eklenebilir
-             // setTimeout(() => {
-             //     // Eğer işlem hala bitmediyse bir mesaj gösterilebilir veya buton tekrar aktif edilebilir
-             // }, 30000); // Örnek: 30 saniye
-        });
-
-         // Sayfa yüklendiğinde, eğer form gönderimi sonrası bir hata nedeniyle
-         // sayfa yeniden yüklenirse, butonun tekrar aktif olmasını sağla
-         // (Tarayıcıların bfcache özelliği bazen JS durumunu koruyabilir)
-         window.addEventListener('pageshow', function (event) {
-            if (submitButton.disabled) {
-                submitButton.disabled = false;
-                buttonText.style.display = 'inline-block';
-                loadingSpinner.style.display = 'none';
-            }
-         });
-
-    </script>
+        box.innerHTML = `
+          <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+          <div class="status" style="margin-top:16px">Güncelleme Tamamlandı!</div>
+          <div class="detail">${totalUpdated} sipariş güncellendi${totalNotFound > 0 ? `, ${totalNotFound} bulunamadı` : ''}</div>
+          ${resultsHtml}
+          <button class="btn btn-primary" style="margin-top:20px" onclick="location.reload()"><i class="fas fa-check"></i> Tamam</button>
+        `;
+      } else {
+        box.innerHTML = `
+          <div class="error-icon"><i class="fas fa-times-circle"></i></div>
+          <div class="status" style="margin-top:16px;color:var(--danger)">Hata!</div>
+          <div class="detail">${data.message || 'Bilinmeyen hata'}</div>
+          <button class="btn" style="margin-top:20px" onclick="location.reload()"><i class="fas fa-redo"></i> Tekrar Dene</button>
+        `;
+      }
+    })
+    .catch(err => {
+      spinner.style.display = 'none';
+      box.innerHTML = `
+        <div class="error-icon"><i class="fas fa-times-circle"></i></div>
+        <div class="status" style="margin-top:16px;color:var(--danger)">Bağlantı Hatası</div>
+        <div class="detail">${err.message}</div>
+        <button class="btn" style="margin-top:20px" onclick="location.reload()"><i class="fas fa-redo"></i> Tekrar Dene</button>
+      `;
+    });
+}
+</script>
 {% include 'includes/notification_popup.html' ignore missing %}
 </body>
 </html>

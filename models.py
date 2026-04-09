@@ -489,7 +489,6 @@ class OrderBase(db.Model):
     status = db.Column(db.String, nullable=True)
 
     # Müşteri Bilgileri
-    customer_id = db.Column(db.String, index=True, nullable=True)
     customer_name = db.Column(db.String, nullable=True)
     customer_surname = db.Column(db.String, nullable=True)
     customer_address = db.Column(db.Text, nullable=True)
@@ -510,33 +509,22 @@ class OrderBase(db.Model):
     # Fiyat ve Finansal Bilgiler
     amount = db.Column(db.Float, nullable=True)
     discount = db.Column(db.Float, default=0.0, nullable=True)
-    gross_amount = db.Column(db.Float, nullable=True)
-    tax_amount = db.Column(db.Float, nullable=True)
     vat_base_amount = db.Column(db.Float, nullable=True)
     commission = db.Column(db.Float, default=0.0, nullable=True)
     currency_code = db.Column(db.String(10), nullable=True)
-    product_cost_total = db.Column(db.Float, default=0.0, nullable=True)
 
     # Kargo ve Paket Bilgileri
     package_number = db.Column(db.String, index=True, nullable=True)
     shipment_package_id = db.Column(db.String, index=True, nullable=True)
-    shipping_barcode = db.Column(db.String, nullable=True)
     cargo_tracking_number = db.Column(db.String, index=True, nullable=True)
     cargo_provider_name = db.Column(db.String, nullable=True)
     cargo_tracking_link = db.Column(db.String, nullable=True)
-    shipment_package_status = db.Column(db.String, nullable=True)
 
     # Tarihler
     origin_shipment_date = db.Column(db.DateTime, nullable=True)
     estimated_delivery_start = db.Column(db.DateTime, nullable=True)
     estimated_delivery_end = db.Column(db.DateTime, index=True, nullable=True)
     agreed_delivery_date = db.Column(db.DateTime, nullable=True)
-    last_modified_date = db.Column(db.DateTime, index=True, nullable=True)
-
-    # Diğer Alanlar
-    match_status = db.Column(db.String, nullable=True)
-    images = db.Column(db.Text, nullable=True)
-    product_model_code = db.Column(db.Text, nullable=True)
 
     # Kayıt Zaman Damgaları
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -573,7 +561,6 @@ class OrderShipped(OrderBase):
 # Teslim (Delivered)
 class OrderDelivered(OrderBase):
     __tablename__ = 'orders_delivered'
-    delivery_date = db.Column(db.DateTime)
     delivery_confirmed = db.Column(db.Boolean, default=False)
 
 
