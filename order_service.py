@@ -613,12 +613,22 @@ def create_order_details(lines):
         size_ = line.get('productSize', '')
         quantity = safe_int(line.get('quantity'), 0)
         total_order_quantity += quantity
-        # Trendyol API alan adı değişikliği: commissionFee → commission
-        commission_fee = safe_float(line.get('commission') or line.get('commissionFee'), 0.0)
+        # Trendyol API: commission alanı YÜZDE olarak gelir (ör: 17.2 = %17.2)
+        commission_rate = safe_float(line.get('commission') or line.get('commissionFee'), 0.0)
+        # Brüt tutar (indirimden ÖNCE)
+        line_gross = safe_float(line.get('lineGrossAmount'), 0.0)
+        # Net tutar (indirim düşmüş) - komisyon bu üzerinden hesaplanır
+        line_net = safe_float(line.get('lineUnitPrice') or line.get('amount'), 0.0)
+        # Komisyonu TL'ye çevir: net tutar × yüzde / 100 (Trendyol komisyonu net üzerinden keser)
+        # Oran 0 gelirse fallback: %17 varsayılan oran
+        if commission_rate <= 0 and line_net > 0:
+            commission_rate = 17.0
+            logger.warning(f"Komisyon oranı 0 geldi, varsayılan %17 uygulanıyor. Barcode: {barcode}")
+        commission_fee = (line_net * quantity * commission_rate / 100.0) if line_net > 0 and commission_rate > 0 else 0.0
         # Trendyol API alan adı değişikliği: id → lineId
         line_id = str(line.get('lineId') or line.get('id') or '')
-        # Trendyol API alan adı değişikliği: amount → lineUnitPrice
-        amount = safe_float(line.get('lineUnitPrice') or line.get('amount'), 0.0)
+        # Net fiyat (müşterinin ödediği, indirim düşmüş) kullan
+        amount = line_net
 
         key = (barcode, color, size_)
         if key not in details_dict:
@@ -693,7 +703,7 @@ def combine_line_items(order_data, status):
         'product_main_id': ', '.join(item.get('product_main_id', '') for item in details_list),
         'stockCode': ', '.join(item.get('sku', '') for item in details_list),
         'amount': sum(item.get('line_total_price', 0.0) for item in details_list),
-        'discount': sum(safe_float(line.get('discount'), 0) for line in lines),
+        'discount': sum(safe_float(line.get('lineTotalDiscount') or line.get('discount'), 0) for line in lines),
         'currency_code': order_data.get('currencyCode', 'TRY'),
         'vat_base_amount': sum(safe_float(line.get('vatBaseAmount'), 0) for line in lines),
         'package_number': str(order_data.get('id', '')),

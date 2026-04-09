@@ -5,86 +5,89 @@
     <script>(function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();if(m==='on'||(m==='auto'&&(h>=20||h<7)))document.documentElement.classList.add('gs-dark');})()</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kâr Analiz Raporu - Güllü Ayakkabı</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-mode.css') }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        /* --- Önceki CSS stilleri (değişiklik yok) --- */
+        :root {
+            --primary:#B76E79; --primary-dark:#A05F6A;
+            --bg:#f3f5f7; --card:#fff; --border:#e5e7eb; --text:#343a40; --muted:#6b7280;
+            --success:#22c55e; --warning:#f59e0b; --danger:#ef4444;
+            --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.06);
+        }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f8f9fa;
-            color: #495057;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
             line-height: 1.6;
-            font-size: 16px;
+            font-size: 15px;
+            min-height: 100vh;
         }
-        header {
-            background: linear-gradient(90deg, #4e54c8, #8f94fb);
-            color: #fff;
-            padding: 1.2rem 1rem;
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+
+        /* --- Header --- */
+        .header {
+            background: var(--card); border-bottom: 1px solid var(--border);
+            padding: 16px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+            position: sticky; top: 0; z-index: 50; box-shadow: var(--shadow);
         }
-        header h1 {
-            margin: 0;
-            font-size: 2rem;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
+        .header h1 { font-size: 18px; font-weight: 800; color: var(--text); }
+        .header .back { text-decoration: none; color: var(--muted); font-size: 14px; display: flex; align-items: center; gap: 6px; }
+        .header .back:hover { color: var(--primary); }
+        .spacer { flex: 1; }
+        .header .btn { font-size: 13px; }
+
+        /* --- Container --- */
         .container {
             width: 95%;
-            max-width: 1500px;
-            margin: 2rem auto;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            padding: 2.5rem;
+            max-width: 1400px;
+            margin: 24px auto;
+            padding: 0;
         }
+
+        /* --- Card Panel --- */
+        .panel {
+            background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+            box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px;
+        }
+
         h2 {
-            margin-bottom: 1.8rem;
-            font-size: 1.6rem;
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
             font-weight: 700;
-            color: #4e54c8;
-            border-bottom: 2px solid #eaeaef;
+            color: var(--primary);
+            border-bottom: 2px solid var(--border);
             padding-bottom: 0.6rem;
-            margin-top: 2.5rem;
+            margin-top: 2rem;
         }
         h2:first-of-type { margin-top: 0; }
-        p { margin-bottom: 1.2rem; color: #6c757d; }
+        p { margin-bottom: 1rem; color: var(--muted); font-size: 14px; }
 
-        /* --- Ana Parametre Formu Stilleri --- */
+        /* --- Form Styles --- */
         form#analysis-params-form {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-            padding: 2rem;
-            background-color: #fdfdff;
-            border: 1px solid #eaeaef;
-            border-radius: 8px;
+            gap: 16px;
+            margin-bottom: 2rem;
         }
-        form#analysis-params-form .form-group { display: flex; flex-direction: column; }
+        form#analysis-params-form .form-group { display: flex; flex-direction: column; gap: 4px; }
         form#analysis-params-form .form-group label {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-            color: #5a5f6f;
+            font-size: 12px; font-weight: 600; color: var(--muted);
         }
         form#analysis-params-form .form-group input {
-            padding: 0.7rem;
-            border: 1px solid #ced4da;
-            border-radius: 5px;
-            font-size: 1rem;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
             font-family: inherit;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            color: var(--text);
+            background: var(--card);
+            transition: border-color 0.2s ease;
         }
         form#analysis-params-form .form-group input:focus {
-            border-color: #8f94fb;
+            border-color: var(--primary);
             outline: 0;
-            box-shadow: 0 0 0 0.2rem rgba(78, 84, 200, 0.2);
         }
         form#analysis-params-form .form-submit-area {
             grid-column: 1 / -1;
@@ -93,92 +96,122 @@
             margin-top: 0.5rem;
         }
         form#analysis-params-form button[type="submit"] {
-            background: linear-gradient(90deg, #1fa2ff, #12d8fa, #a6ffcb);
+            background: var(--primary);
             color: #fff;
             border: none;
-            border-radius: 5px;
-            padding: 0.8rem 2rem;
-            font-size: 1rem;
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-size: 14px;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
         form#analysis-params-form button[type="submit"]:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 10px rgba(0,0,0,0.15);
+            background: var(--primary-dark);
+            transform: translateY(-1px);
         }
 
-        /* --- Flash Mesaj Stilleri --- */
+        /* --- Flash Messages --- */
         .flash-messages { list-style: none; padding: 0; margin-bottom: 1.5rem; }
         .flash-messages li {
-            padding: 1rem 1.5rem; margin-bottom: 0.8rem; border-radius: 6px; font-weight: 600;
+            padding: 12px 16px; margin-bottom: 0.6rem; border-radius: 8px; font-weight: 600; font-size: 14px;
             display: flex; align-items: center;
         }
         .flash-messages li::before {
             content: ''; display: inline-block; width: 20px; height: 20px; margin-right: 10px;
             background-size: contain; background-repeat: no-repeat; font-size: 16px; flex-shrink: 0;
         }
-        .flash-messages .error { background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
-        .flash-messages .error::before { content: '❌'; }
-        .flash-messages .info { background-color: #e3f2fd; color: #0d47a1; border: 1px solid #90caf9; }
-        .flash-messages .info::before { content: 'ℹ️'; }
-        .flash-messages .warning { background-color: #fff8e1; color: #f57f17; border: 1px solid #ffe082; }
-        .flash-messages .warning::before { content: '⚠️'; }
-        .flash-messages .success { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
-        .flash-messages .success::before { content: '✅'; }
+        .flash-messages .error { background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        .flash-messages .error::before { content: '\2716'; }
+        .flash-messages .info { background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+        .flash-messages .info::before { content: '\2139'; }
+        .flash-messages .warning { background-color: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+        .flash-messages .warning::before { content: '\26A0'; }
+        .flash-messages .success { background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+        .flash-messages .success::before { content: '\2714'; }
 
-        /* --- Özet Bölümü Stilleri --- */
-        .summary {
-            margin-bottom: 3rem; padding: 2rem; background-color: #f8f8ff;
-            border-left: 6px solid #8f94fb; border-radius: 8px;
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 1.2rem 1.5rem; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        /* --- Summary Section --- */
+        .summary-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+            margin-bottom: 2rem;
         }
-        .summary p {
-            margin-bottom: 0; font-size: 1.05rem; display: grid;
-            grid-template-columns: auto 1fr; gap: 0.5rem 1rem; align-items: start;
-            border-bottom: 1px dashed #e0e0f0; padding-bottom: 0.8rem;
+        .summary-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 16px 18px; box-shadow: var(--shadow); position: relative; overflow: hidden;
         }
-        .summary p:last-child { border-bottom: none; }
-        .summary strong {
-            grid-column: 1 / 2; color: #4e54c8; font-weight: 600;
-            word-break: break-word; text-align: left; padding-top: 2px;
+        .summary-card .s-label {
+            font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+            letter-spacing: .3px; margin-bottom: 6px;
         }
-        .summary .value-container {
-            grid-column: 2 / 3; font-weight: 700; color: #333; text-align: right;
-            white-space: nowrap; align-self: center; position: relative;
-            display: inline-block; margin-left: auto; width: fit-content;
+        .summary-card .s-value {
+            font-size: 20px; font-weight: 800; color: var(--text);
         }
-        .profit-positive { color: #38a169 !important; }
-        .profit-negative { color: #e53e3e !important; }
-        .profit-zero { color: #718096 !important; }
-        .text-danger { color: #e53e3e !important; font-weight: 700 !important; } /* YENİ: Negatif kâr için genel sınıf */
+        .summary-card .s-sub {
+            font-size: 11px; color: var(--muted); margin-top: 4px;
+        }
+        .summary-card.highlight {
+            border-left: 4px solid var(--primary); background: rgba(183,110,121,.03);
+        }
+        .summary-card.profit-card .s-value { font-size: 24px; }
+        .summary-card .s-icon {
+            position: absolute; top: 14px; right: 16px; font-size: 20px; opacity: .15; color: var(--primary);
+        }
+        .summary-wide { grid-column: span 2; }
+        .summary-full { grid-column: 1 / -1; }
 
+        .gider-breakdown {
+            display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px;
+        }
+        .gider-item {
+            display: flex; flex-direction: column; gap: 2px; min-width: 120px;
+        }
+        .gider-item .g-label { font-size: 11px; color: var(--muted); font-weight: 500; }
+        .gider-item .g-value { font-size: 14px; font-weight: 700; color: var(--text); }
 
-        /* --- Tablo Genel Stilleri --- */
-        .table-container { overflow-x: auto; margin-top: 1rem; border: 1px solid #eaeaef; border-radius: 8px; }
+        .profit-positive { color: var(--success) !important; }
+        .profit-negative { color: var(--danger) !important; }
+        .profit-zero { color: var(--muted) !important; }
+        .text-danger { color: var(--danger) !important; font-weight: 700 !important; }
+
+        html.gs-dark .summary-card { background: #1e1e1e; border-color: #333; }
+        html.gs-dark .summary-card.highlight { background: rgba(183,110,121,.06); }
+        html.gs-dark .summary-card .s-value { color: #e0e0e0; }
+        html.gs-dark .gider-item .g-value { color: #ddd; }
+
+        @media (max-width: 900px) {
+            .summary-grid { grid-template-columns: repeat(2, 1fr); }
+            .summary-wide { grid-column: span 2; }
+        }
+        @media (max-width: 500px) {
+            .summary-grid { grid-template-columns: 1fr; }
+            .summary-wide, .summary-full { grid-column: span 1; }
+        }
+
+        /* --- Table Styles --- */
+        .table-container { overflow-x: auto; margin-top: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius); }
         table { width: 100%; border-collapse: collapse; }
         th, td {
-            border-bottom: 1px solid #eaeaef; padding: 1rem 1.2rem; text-align: left;
-            vertical-align: middle; font-size: 0.95rem; white-space: nowrap;
+            border-bottom: 1px solid var(--border); padding: 10px 12px; text-align: left;
+            vertical-align: middle; font-size: 13px; white-space: nowrap;
         }
         th {
-            background-color: #f8f9fc; color: #6c757d; font-weight: 700;
-            text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px;
+            background: #f8f9fa; color: var(--muted); font-weight: 600;
+            text-transform: uppercase; font-size: 12px; letter-spacing: 0.3px;
             position: sticky; top: 0; z-index: 1; border-top: none;
         }
-        tbody tr:nth-child(even) { background-color: #fdfdff; }
-        tbody tr:hover { background-color: #f1f3f9; }
+        tbody tr:hover { background-color: #fafbfc; }
         th.align-right, td.align-right { text-align: right; }
         td:last-child .value { display: inline-block; font-weight: 600; }
         td:nth-last-child(1), td:nth-last-child(2) { font-weight: 600; }
 
-        /* --- Tooltip Stilleri --- */
+        /* --- Tooltip Styles --- */
         .tooltip-base-container { position: relative; cursor: help; display: inline-block; }
         .tooltip-base-content {
             visibility: hidden; opacity: 0; position: absolute; background-color: rgba(51, 51, 51, 0.95);
-            color: #fff; text-align: left; padding: 10px 15px; border-radius: 6px; z-index: 10;
+            color: #fff; text-align: left; padding: 10px 15px; border-radius: 8px; z-index: 10;
             width: max-content; min-width: 200px; bottom: 115%; left: 50%; transform: translateX(-50%);
             transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
             box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2); font-size: 0.9em; line-height: 1.5; white-space: normal;
@@ -189,7 +222,7 @@
         }
         .tooltip-base-container:hover .tooltip-base-content { visibility: visible; opacity: 1; }
         .tooltip-base-content strong {
-            display: block; margin-bottom: 8px; font-weight: 700; color: #a6ffcb;
+            display: block; margin-bottom: 8px; font-weight: 700; color: #f5b7bd;
             border-bottom: 1px solid #555; padding-bottom: 4px;
         }
         .tooltip-base-content span { display: block; margin-bottom: 3px; }
@@ -199,101 +232,128 @@
         .summary-tooltip-content label { width: auto; margin-right: 5px; flex-shrink: 0; }
         .summary-tooltip-content .value { text-align: right; }
 
-        /* --- Hariç Tutulan Tabloların Stilleri --- */
-        .excluded-table-container, .cancelled-table-container, .returned-table-container, .warned-table-container { /* YENİ: warned-table-container eklendi */
-            border-color: #ced4da !important; margin-top: 1rem;
+        /* --- Excluded/Cancelled/Returned/Warned Table Styles --- */
+        .excluded-table-container, .cancelled-table-container, .returned-table-container, .warned-table-container {
+            border-color: var(--border) !important; margin-top: 0.5rem;
         }
-        .excluded-table thead, .cancelled-table thead, .returned-table thead, .warned-table thead { /* YENİ: warned-table thead eklendi */
-            background-color: #e9ecef !important;
+        .excluded-table thead, .cancelled-table thead, .returned-table thead, .warned-table thead {
+            background-color: #f8f9fa !important;
         }
-        .excluded-table th, .cancelled-table th, .returned-table th, .warned-table th { color: #495057 !important; } /* YENİ: warned-table th eklendi */
-        .excluded-table td, .cancelled-table td, .returned-table td, .warned-table td { /* YENİ: warned-table td eklendi */
-            font-size: 0.9em; vertical-align: top;
+        .excluded-table th, .cancelled-table th, .returned-table th, .warned-table th { color: var(--muted) !important; }
+        .excluded-table td, .cancelled-table td, .returned-table td, .warned-table td {
+            font-size: 13px; vertical-align: top;
         }
-        .analysis-table-title { color: #4e54c8 !important; }
-        .warned-table-title { color: #fd7e14 !important; margin-top: 3rem; } /* YENİ */
-        .cancelled-table-title { color: #dc3545 !important; margin-top: 3rem; }
-        .returned-table-title { color: #ffc107 !important; margin-top: 3rem; }
-        .excluded-table-title { color: #6c757d !important; margin-top: 3rem; }
+        .analysis-table-title { color: var(--primary) !important; }
+        .warned-table-title { color: var(--warning) !important; margin-top: 2.5rem; }
+        .cancelled-table-title { color: var(--danger) !important; margin-top: 2.5rem; }
+        .returned-table-title { color: #eab308 !important; margin-top: 2.5rem; }
+        .excluded-table-title { color: var(--muted) !important; margin-top: 2.5rem; }
         .col-order-no, .col-status { white-space: nowrap; width: 1%; }
         .col-sku { white-space: normal; word-break: break-all; max-width: 300px; }
         .col-reason { white-space: normal; word-break: break-word; }
 
-        /* --- Tablo Kontrolleri ve Gizleme --- */
+        /* --- Table Controls & Hidden --- */
         .initially-hidden { display: none; }
         .search-input {
-            padding: 0.6rem 0.8rem; border: 1px solid #ced4da; border-radius: 5px;
-            font-size: 0.95rem; margin-bottom: 1rem; width: 100%; max-width: 400px; display: block;
+            padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+            font-size: 14px; margin-bottom: 0.8rem; width: 100%; max-width: 400px; display: block;
+            font-family: inherit; color: var(--text); background: var(--card);
         }
+        .search-input:focus { outline: none; border-color: var(--primary); }
         .show-all-button {
-            background-color: #6c757d; color: white; border: none; padding: 0.5rem 1rem;
-            border-radius: 4px; cursor: pointer; margin-top: 1rem; font-size: 0.9rem;
+            background: var(--muted); color: white; border: none; padding: 8px 16px;
+            border-radius: 8px; cursor: pointer; margin-top: 0.8rem; font-size: 13px;
             font-weight: 600; display: block; width: fit-content; margin-left: auto; margin-right: auto;
+            transition: all 0.2s;
         }
-        .show-all-button:hover { background-color: #5a6268; }
-        .table-controls { margin-top: 1rem; margin-bottom: 0.5rem; }
+        .show-all-button:hover { background: #4b5563; }
+        .table-controls { margin-top: 0.8rem; margin-bottom: 0.5rem; }
 
-        /* --- Grafik Stilleri --- */
+        /* --- Chart Styles --- */
         .charts-container {
             display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 2rem; margin-top: 3rem; padding-top: 2rem; border-top: 2px solid #eaeaef;
+            gap: 20px; margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--border);
         }
         .chart-box {
-            border: 1px solid #eaeaef; border-radius: 8px; padding: 1.5rem;
-            background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;
+            background: var(--card); box-shadow: var(--shadow);
         }
-        .chart-box h3 { margin-bottom: 1rem; font-size: 1.2rem; color: #4e54c8; text-align: center; }
+        .chart-box h3 { margin-bottom: 1rem; font-size: 1.1rem; color: var(--primary); text-align: center; font-weight: 700; }
         .chart-box canvas { max-height: 400px; }
 
-        /* --- EKSİK MALİYET GİRİŞ FORMU ÖZEL STİLLERİ --- */
+        /* --- Missing Cost Form --- */
         #missing-cost-section {
-             margin-top: 2.5rem;
-             margin-bottom: 3rem;
-             border: 2px dashed #ffc107;
-             border-radius: 8px;
-             padding: 1.5rem 2rem;
-             background-color: #fff9e6;
+             margin-top: 2rem;
+             margin-bottom: 2rem;
+             border: 2px dashed var(--warning);
+             border-radius: var(--radius);
+             padding: 20px 24px;
+             background-color: #fffbeb;
         }
         #missing-cost-section h2 {
-            color: #d39e00; margin-top: 0; margin-bottom: 1rem;
-            border-bottom: none; font-size: 1.4rem;
+            color: #92400e; margin-top: 0; margin-bottom: 0.8rem;
+            border-bottom: none; font-size: 1.2rem;
         }
-        #missing-cost-section p { color: #856404; margin-bottom: 1.5rem; }
+        #missing-cost-section p { color: #92400e; margin-bottom: 1.2rem; }
         #cost-form table {
-            margin-bottom: 1.5rem; background-color: #fff;
-            border: 1px solid #ffeeba;
+            margin-bottom: 1.2rem; background: var(--card);
+            border: 1px solid #fde68a;
         }
-        #cost-form th { background-color: #fff3cd; color: #856404; font-size: 0.9rem; }
-        #cost-form td { vertical-align: middle; padding: 0.6rem 1rem; }
+        #cost-form th { background-color: #fef3c7; color: #92400e; font-size: 12px; }
+        #cost-form td { vertical-align: middle; padding: 8px 12px; }
         #cost-form input[type="number"] {
-            padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px;
-            font-size: 0.95rem; width: 100px; text-align: right;
+            padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+            font-size: 14px; width: 100px; text-align: right; font-family: inherit;
         }
         #cost-form input[type="number"]:focus {
-            border-color: #ffc107;
-            box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+            border-color: var(--warning);
+            outline: none;
         }
         #cost-form button[type="submit"] {
-            background: linear-gradient(90deg, #fd7e14, #ffc107);
-            color: #212529; font-weight: 700; padding: 0.7rem 1.8rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1); float: right;
+            background: var(--warning); color: #fff; border: none;
+            font-weight: 700; padding: 10px 20px; border-radius: 8px;
+            cursor: pointer; font-size: 14px; float: right;
+            transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
         }
         #cost-form button[type="submit"]:hover {
+            background: #d97706;
             transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
         #cost-form::after { content: ""; display: table; clear: both; }
-        .cost-input { /* JS'in hedeflemesi için class */ }
+        .cost-input { /* JS targeting class */ }
+
+        /* --- Button --- */
+        .btn {
+            padding: 10px 16px; border: 1px solid var(--border); border-radius: 8px;
+            font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s;
+            display: inline-flex; align-items: center; gap: 6px; background: var(--card); color: var(--text);
+            text-decoration: none;
+        }
+        .btn:hover { border-color: var(--primary); color: var(--primary); }
+
+        .date-preset {
+            padding:6px 14px; border:1px solid var(--border); border-radius:20px;
+            font-size:12px; font-weight:600; cursor:pointer; transition:all .2s;
+            background:var(--card); color:var(--muted); white-space:nowrap;
+        }
+        .date-preset:hover { border-color:var(--primary); color:var(--primary); }
+        .date-preset.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+        html.gs-dark .date-preset { background:#2a2a2a; border-color:#444; color:#999; }
+        html.gs-dark .date-preset:hover { border-color:var(--primary); color:var(--primary); }
+        html.gs-dark .date-preset.active { background:var(--primary); color:#fff; }
 
     </style>
 </head>
 <body>
-    <header>
+    <div class="header">
+        <a href="/anasayfa" class="back"><i class="fas fa-arrow-left"></i> Geri</a>
         <h1>Kâr Analiz Raporu</h1>
-        <a href="/anasayfa" style="color:white;text-decoration:none;display:inline-block;margin-top:6px;padding:5px 14px;border:1px solid rgba(255,255,255,.5);border-radius:20px;font-size:13px;"><i class="fas fa-home"></i> Anasayfa</a>
-    </header>
+        <div class="spacer"></div>
+        <a href="/anasayfa" class="btn"><i class="fas fa-home"></i> Anasayfa</a>
+    </div>
 
     <div class="container">
+        <div class="panel" style="display:block;">
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
@@ -312,6 +372,23 @@
         </p>
 
         <form method="POST" action="{{ url_for('profit.profit_report') }}" id="analysis-params-form">
+            <!-- Hızlı Tarih Seçimi -->
+            <div class="form-group" style="grid-column:1/-1">
+                <label>Hızlı Tarih Seçimi</label>
+                <div id="datePresets" style="display:flex;gap:6px;flex-wrap:wrap">
+                    <button type="button" class="date-preset active" data-preset="7">Son 7 Gün</button>
+                    <button type="button" class="date-preset" data-preset="30">Son 30 Gün</button>
+                    <button type="button" class="date-preset" data-preset="90">Son 90 Gün</button>
+                    <span style="border-left:1px solid var(--border);margin:0 4px"></span>
+                    <button type="button" class="date-preset" data-preset="this_month">Bu Ay</button>
+                    <button type="button" class="date-preset" data-preset="last_month">Geçen Ay</button>
+                    <button type="button" class="date-preset" data-preset="2months">Son 2 Ay</button>
+                    <button type="button" class="date-preset" data-preset="3months">Son 3 Ay</button>
+                    <span style="border-left:1px solid var(--border);margin:0 4px"></span>
+                    <button type="button" class="date-preset" data-preset="this_year">Bu Yıl</button>
+                    <button type="button" class="date-preset" data-preset="last_year">Geçen Yıl</button>
+                </div>
+            </div>
             <div class="form-group">
                 <label for="start_date">Başlangıç Tarihi</label>
                 <input type="date" id="start_date" name="start_date" value="{{ start_date or '' }}" required />
@@ -332,128 +409,101 @@
                 <label for="shipping_cost">Kargo Maliyeti / Sipariş (TL)</label>
                 <input type="text" id="shipping_cost" name="shipping_cost" value="{{ shipping_cost or '0' }}" placeholder="Ör: 65,00" inputmode="decimal" />
             </div>
+            <div class="form-group">
+                <label for="exchange_rate">Döviz Kuru (USD/TL) <span id="kurKaynak" style="font-weight:400;color:var(--muted);font-size:11px"></span></label>
+                <input type="text" id="exchange_rate" name="exchange_rate" value="{{ exchange_rate or '0' }}" placeholder="Otomatik yükleniyor..." inputmode="decimal" />
+            </div>
             <div class="form-submit-area">
-                <button type="submit">Analiz Et</button>
+                <button type="submit"><i class="fas fa-chart-line"></i> Analiz Et</button>
             </div>
         </form>
 
-        {# --- SONUÇLAR BÖLÜMÜ --- #}
+        {# --- SONUCLAR BOLUMU --- #}
         {% if (request.method == 'POST' or request.args.get('auto_reload') == '1') %}
 
-            {# --- EKSİK MALİYET GİRİŞ FORMU --- #}
-            {% if missing_cost_entries %}
-            <div id="missing-cost-section">
-                <h2><i class="fas fa-exclamation-triangle"></i> Eksik Maliyet Girişi Gerekiyor!</h2>
-                <p>Abdurrahman abi, aşağıdaki ürünler için sistemde maliyet bilgisi bulamadım. Bunları girmezsen analiz eksik kalır. Lütfen maliyetleri (TL cinsinden, örn: 45,50) girip aşağıdaki butona bas.</p>
-
-                <form action="{{ url_for('profit.save_missing_costs') }}" method="post" id="cost-form">
-                    <input type="hidden" name="start_date" value="{{ start_date }}">
-                    <input type="hidden" name="end_date" value="{{ end_date }}">
-                    <input type="hidden" name="package_cost" value="{{ package_cost }}">
-                    <input type="hidden" name="monthly_employee_salary" value="{{ monthly_employee_salary }}">
-                    <input type="hidden" name="shipping_cost" value="{{ shipping_cost }}">
-
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Barkod</th>
-                                    <th>Satıcı Stok Kodu (SKU)</th>
-                                    <th style="width: 150px;">Maliyet (TL)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for entry in missing_cost_entries %}
-                                <tr>
-                                    <td>{{ entry.barcode }}</td>
-                                    <td>{{ entry.merchant_sku }}</td>
-                                    <td>
-                                        <input type="number" step="0.01" min="0" class="cost-input"
-                                               name="cost_{{ entry.barcode }}" placeholder="0,00"
-                                               required inputmode="decimal">
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    <button type="submit">
-                        <i class="fas fa-save"></i> Girilen Maliyetleri Kaydet ve Raporu Yenile
-                    </button>
-                </form>
-            </div>
-            {% endif %}
-            {# --- /Eksik Maliyet Giriş Formu --- #}
+            {# Eksik maliyet formu kaldırıldı - üretim maliyeti sistemi kullanılıyor #}
 
 
-            {# --- ANALİZ ÖZETİ --- #}
+            {# --- ANALIZ OZETI --- #}
             {% if order_count > 0 or warned_order_count > 0 or total_return_shipping_cost > 0 %}
                 <h2 class="analysis-table-title">Analiz Özeti ({{ start_date }} - {{ end_date }})</h2>
-                <div class="summary">
-                     <p>
-                        <strong>Bulunan Toplam Kayıt:</strong>
-                        <div class="value-container tooltip-base-container">
-                             <span class="summary-tooltip-container">{{ total_records_found }} adet</span>
-                             <div class="summary-tooltip-content tooltip-base-content">
-                                 <strong>Kayıt Dağılımı:</strong>
-                                 <span><label>Dahil Edilen:</label><span class="value">{{ order_count }} ad.</span></span>
-                                 <span><label>Uyarı ile Dahil:</label><span class="value">{{ warned_order_count }} ad.</span></span>
-                                 <span><label>İptal Edilen:</label><span class="value">{{ cancelled_orders|length }} ad.</span></span>
-                                 <span><label>İade Edilen:</label><span class="value">{{ returned_orders|length }} ad.</span></span>
-                                 <span><label>Diğer Hariç:</label><span class="value">{{ other_excluded_orders|length }} ad.</span></span>
+                <div class="summary-grid">
+                    <!-- Satır 1: Temel metrikler -->
+                    <div class="summary-card">
+                        <i class="fas fa-receipt s-icon"></i>
+                        <div class="s-label">Dahil Edilen Sipariş</div>
+                        <div class="s-value">{{ order_count }}</div>
+                        <div class="s-sub">Toplam kayıt: {{ total_records_found }}</div>
+                    </div>
+                    <div class="summary-card">
+                        <i class="fas fa-coins s-icon"></i>
+                        <div class="s-label">Brüt Gelir</div>
+                        <div class="s-value">{{ total_revenue_str }} <small style="font-size:13px">TL</small></div>
+                    </div>
+                    <div class="summary-card">
+                        <i class="fas fa-tags s-icon"></i>
+                        <div class="s-label">Toplam İndirim</div>
+                        <div class="s-value">{{ total_discount_sum_str }} <small style="font-size:13px">TL</small></div>
+                    </div>
+                    <div class="summary-card">
+                        <i class="fas fa-percentage s-icon"></i>
+                        <div class="s-label">Kâr Marjı</div>
+                        <div class="s-value {{ 'profit-positive' if avg_profit_margin > 0 else 'profit-negative' if avg_profit_margin < 0 else 'profit-zero' }}">{{ avg_profit_margin_str }} %</div>
+                    </div>
+
+                    <!-- Satır 2: Gider dökümü -->
+                    <div class="summary-card summary-wide">
+                        <i class="fas fa-file-invoice-dollar s-icon"></i>
+                        <div class="s-label">Toplam Gider</div>
+                        <div class="s-value">{{ total_expenses_sum_str }} <small style="font-size:13px">TL</small></div>
+                        <div class="gider-breakdown">
+                            <div class="gider-item">
+                                <span class="g-label">Üretim Maliyeti</span>
+                                <span class="g-value">{{ total_uretim_cost_sum_str }} TL</span>
+                            </div>
+                            <div class="gider-item">
+                                <span class="g-label">Komisyon</span>
+                                <span class="g-value">{{ total_commission_sum_str }} TL</span>
+                            </div>
+                            <div class="gider-item">
+                                <span class="g-label">Kargo</span>
+                                <span class="g-value">{{ total_shipping_cost_period_str }} TL</span>
+                            </div>
+                            <div class="gider-item">
+                                <span class="g-label">Paket</span>
+                                <span class="g-value">{{ total_package_cost_period_str }} TL</span>
+                            </div>
+                            <div class="gider-item">
+                                <span class="g-label">Personel</span>
+                                <span class="g-value">{{ total_employee_cost_period_str }} TL</span>
+                            </div>
+                            <div class="gider-item">
+                                <span class="g-label">İade Kargo</span>
+                                <span class="g-value">{{ total_return_shipping_cost_str }} TL</span>
                             </div>
                         </div>
-                    </p>
-                    <p>
-                        <strong>Toplam Brüt Gelir:</strong>
-                        <span class="value-container">{{ total_revenue_str }} TL</span>
-                    </p>
-                    <p>
-                        <strong>Toplam İndirim:</strong>
-                        <span class="value-container">{{ total_discount_sum_str }} TL</span>
-                    </p>
-                     <p>
-                        <strong>Toplam Gider (Dahil Edilenler):</strong>
-                        <div class="value-container tooltip-base-container">
-                             <span class="summary-tooltip-container">{{ total_expenses_sum_str }} TL</span>
-                             <div class="summary-tooltip-content tooltip-base-content">
-                                 <strong>Gider Dağılımı:</strong>
-                                 <span><label>Ürün Maliyeti:</label><span class="value">{{ total_product_cost_sum_str }} TL</span></span>
-                                 <span><label>Komisyon:</label><span class="value">{{ total_commission_sum_str }} TL</span></span>
-                                 <span><label>Paket Gideri:</label><span class="value">{{ total_package_cost_period_str }} TL</span></span>
-                                 <span><label>Kargo Gideri (Gidiş):</label><span class="value">{{ total_shipping_cost_period_str }} TL</span></span>
-                                 <span><label>Personel:</label><span class="value">{{ total_employee_cost_period_str }} TL</span></span>
-                                 <span><label>İade Kargo:</label><span class="value">{{ total_return_shipping_cost_str }} TL</span></span>
-                            </div>
-                        </div>
-                     </p>
-                    <p>
-                         <strong>Ortalama Kâr / Sipariş:</strong>
-                         <span class="value-container {{ 'profit-positive' if avg_profit > 0 else 'profit-negative' if avg_profit < 0 else 'profit-zero' }}">
-                             {{ avg_profit_str }} TL
-                         </span>
-                    </p>
-                    <p>
-                         <strong>Ortalama Kâr Marjı:</strong>
-                         <span class="value-container {{ 'profit-positive' if avg_profit_margin > 0 else 'profit-negative' if avg_profit_margin < 0 else 'profit-zero' }}">
-                             {{ avg_profit_margin_str }} %
-                         </span>
-                    </p>
-                    <p>
-                        <strong>Net Toplam Kâr:</strong>
-                        <span class="value-container {{ 'profit-positive' if total_profit > 0 else 'profit-negative' if total_profit < 0 else 'profit-zero' }}">
-                            {{ total_profit_str }} TL
-                        </span>
-                    </p>
+                    </div>
+
+                    <!-- Satır 2 devam: Kâr kartları -->
+                    <div class="summary-card">
+                        <i class="fas fa-chart-bar s-icon"></i>
+                        <div class="s-label">Ortalama Kâr / Sipariş</div>
+                        <div class="s-value {{ 'profit-positive' if avg_profit > 0 else 'profit-negative' if avg_profit < 0 else 'profit-zero' }}">{{ avg_profit_str }} <small style="font-size:13px">TL</small></div>
+                    </div>
+                    <div class="summary-card highlight profit-card">
+                        <i class="fas fa-trophy s-icon" style="opacity:.25"></i>
+                        <div class="s-label">Net Toplam Kâr</div>
+                        <div class="s-value {{ 'profit-positive' if total_profit > 0 else 'profit-negative' if total_profit < 0 else 'profit-zero' }}">{{ total_profit_str }} <small style="font-size:13px">TL</small></div>
+                    </div>
                 </div>
-            {% elif not missing_cost_entries %}
-                 <p style="text-align: center; font-weight: 600; color: #007bff; margin-top:2rem;">
+            {% else %}
+                 <p style="text-align: center; font-weight: 600; color: var(--primary); margin-top:2rem;">
                      Belirtilen kriterlere uygun analiz edilecek veya hariç tutulacak bir kayıt bulunamadı. Tarih aralığını kontrol et.
                  </p>
             {% endif %}
 
 
-            {# --- ANALİZ DETAY TABLOSU --- #}
+            {# --- ANALIZ DETAY TABLOSU --- #}
             {% if analysis %}
                 {% set analysis_limit = 15 %}
                 <h2 class="analysis-table-title">
@@ -486,7 +536,7 @@
                                         <span>{{ item.total_expenses_str }}</span>
                                         <div class="tooltip-base-content summary-tooltip-content">
                                             <strong>Gider Detayları:</strong>
-                                            <span><label>Ürün M.:</label><span class="value">{{ item.product_cost_str }} TL</span></span>
+                                            <span><label>Üretim M.:</label><span class="value">{{ item.uretim_cost_str }} TL</span></span>
                                             <span><label>Komisyon:</label><span class="value">{{ item.commission_str }} TL</span></span>
                                             <span><label>Kargo:</label><span class="value">{{ item.shipping_cost_str }} TL</span></span>
                                             <span><label>Paket:</label><span class="value">{{ item.package_cost_str }} TL</span></span>
@@ -507,7 +557,7 @@
             {% endif %}
 
 
-            {# YENİ BÖLÜM: UYARI İLE DAHİL EDİLENLER #}
+            {# YENI BOLUM: UYARI ILE DAHIL EDILENLER #}
             {% if warned_orders %}
                 {% set warned_limit = 10 %}
                 <h2 class="warned-table-title">
@@ -548,7 +598,7 @@
             {% endif %}
 
 
-            {# --- İPTAL EDİLEN SİPARİŞLER TABLOSU --- #}
+            {# --- IPTAL EDILEN SIPARISLER TABLOSU --- #}
             {% if cancelled_orders %}
                 {% set cancelled_limit = 10 %}
                 <h2 class="cancelled-table-title">
@@ -584,7 +634,7 @@
             {% endif %}
 
 
-            {# --- İADE EDİLEN SİPARİŞLER TABLOSU --- #}
+            {# --- IADE EDILEN SIPARISLER TABLOSU --- #}
             {% if returned_orders %}
                 {% set returned_limit = 10 %}
                 <h2 class="returned-table-title">
@@ -620,7 +670,7 @@
             {% endif %}
 
 
-            {# --- DİĞER HARİÇ TUTULANLAR TABLOSU --- #}
+            {# --- DIGER HARIC TUTULANLAR TABLOSU --- #}
             {% if other_excluded_orders %}
                 {% set other_excluded_limit = 10 %}
                 <h2 class="excluded-table-title">
@@ -659,7 +709,7 @@
             {% endif %}
 
 
-            {# --- GRAFİKLER --- #}
+            {# --- GRAFIKLER --- #}
             {% if analysis or warned_orders %}
                 <div class="charts-container">
                     {% if top_profit_products %}
@@ -691,15 +741,101 @@
             {% endif %}
 
         {% elif not request.method == 'POST' and not request.args.get('auto_reload') %}
-            <p style="text-align: center; font-weight: 600; color: #007bff; margin-top: 3rem;">
+            <p style="text-align: center; font-weight: 600; color: var(--primary); margin-top: 3rem;">
                 Raporu görmek için yukarıdaki formu doldur ve "Analiz Et" butonuna bas. Kolay gelsin! 👍
             </p>
         {% endif %}
 
+        </div>
     </div>
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+
+        // ── Hızlı Tarih Seçimi ──
+        (function initDatePresets() {
+            const startInp = document.getElementById('start_date');
+            const endInp = document.getElementById('end_date');
+            const fmt = d => d.toISOString().slice(0, 10);
+            const today = new Date();
+
+            function setRange(start, end) {
+                startInp.value = fmt(start);
+                endInp.value = fmt(end);
+            }
+
+            function applyPreset(preset) {
+                const now = new Date();
+                const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
+
+                if (preset === '7') {
+                    const s = new Date(y, m, d - 6); setRange(s, now);
+                } else if (preset === '30') {
+                    const s = new Date(y, m, d - 29); setRange(s, now);
+                } else if (preset === '90') {
+                    const s = new Date(y, m, d - 89); setRange(s, now);
+                } else if (preset === 'this_month') {
+                    setRange(new Date(y, m, 1), now);
+                } else if (preset === 'last_month') {
+                    setRange(new Date(y, m - 1, 1), new Date(y, m, 0));
+                } else if (preset === '2months') {
+                    setRange(new Date(y, m - 1, 1), now);
+                } else if (preset === '3months') {
+                    setRange(new Date(y, m - 2, 1), now);
+                } else if (preset === 'this_year') {
+                    setRange(new Date(y, 0, 1), now);
+                } else if (preset === 'last_year') {
+                    setRange(new Date(y - 1, 0, 1), new Date(y - 1, 11, 31));
+                }
+            }
+
+            document.querySelectorAll('.date-preset').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    applyPreset(this.dataset.preset);
+                });
+            });
+
+            // Sayfa ilk açılışında: tarih boşsa son 7 gün seç
+            if (!startInp.value && !endInp.value) {
+                applyPreset('7');
+            } else {
+                // Mevcut tarihle eşleşen preset'i aktif yap
+                document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active'));
+            }
+
+            // Tarih input'ları manuel değişirse active'i kaldır
+            [startInp, endInp].forEach(inp => {
+                inp.addEventListener('change', () => {
+                    document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active'));
+                });
+            });
+        })();
+
+        // Otomatik döviz kuru çek
+        (function fetchExchangeRate() {
+            const inp = document.getElementById('exchange_rate');
+            const label = document.getElementById('kurKaynak');
+            const currentVal = (inp.value || '').replace(',', '.').trim();
+            // Sadece boş veya 0 ise otomatik doldur
+            if (!currentVal || currentVal === '0' || currentVal === '0.00') {
+                if (label) label.textContent = '(yükleniyor...)';
+                fetch('/profit/api/exchange-rate')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success && data.rate > 0) {
+                            inp.value = data.rate.toFixed(2).replace('.', ',');
+                            if (label) label.textContent = '(otomatik - güncel)';
+                        } else {
+                            if (label) label.textContent = '(alınamadı)';
+                        }
+                    })
+                    .catch(() => { if (label) label.textContent = '(bağlantı hatası)'; });
+            } else {
+                if (label) label.textContent = '(manuel)';
+            }
+        })();
 
         function setupShowAllButton(buttonId, tbodyId, rowSelector) {
             const button = document.getElementById(buttonId);
@@ -712,7 +848,7 @@
             }
         }
         setupShowAllButton('show-all-analysis', '#analysis-tbody', 'tr.analysis-row');
-        setupShowAllButton('show-all-warned', '#warned-tbody', 'tr.warned-row'); // YENİ
+        setupShowAllButton('show-all-warned', '#warned-tbody', 'tr.warned-row');
         setupShowAllButton('show-all-cancelled', '#cancelled-tbody', 'tr.cancelled-row');
         setupShowAllButton('show-all-returned', '#returned-tbody', 'tr.returned-row');
         setupShowAllButton('show-all-other-excluded', '#other-excluded-tbody', 'tr.other-excluded-row');
@@ -736,7 +872,7 @@
             }
         }
         setupSearchFilter('analysis-search-input', '#analysis-tbody', 'tr.analysis-row');
-        setupSearchFilter('warned-search-input', '#warned-tbody', 'tr.warned-row'); // YENİ
+        setupSearchFilter('warned-search-input', '#warned-tbody', 'tr.warned-row');
         setupSearchFilter('cancelled-search-input', '#cancelled-tbody', 'tr.cancelled-row');
         setupSearchFilter('returned-search-input', '#returned-tbody', 'tr.returned-row');
         setupSearchFilter('other-excluded-search-input', '#other-excluded-tbody', 'tr.other-excluded-row');
@@ -761,17 +897,16 @@
             });
         }
 
-        // --- GÜNCELLENMİŞ GRAFİK OLUŞTURMA ---
+        // --- CHART CREATION ---
         try {
             const chartDataElement = document.getElementById('chartData');
             if (chartDataElement) {
                 const chartData = JSON.parse(chartDataElement.textContent);
 
-                // GÜNCELLENDİ: Tek renk şeması
-                const chartBackgroundColor = 'rgba(78, 84, 200, 0.7)'; // #4e54c8
-                const chartBorderColor = 'rgba(78, 84, 200, 1)';
-                const chartHoverBackgroundColor = 'rgba(143, 148, 251, 0.9)'; // #8f94fb
-                const chartHoverBorderColor = 'rgba(143, 148, 251, 1)';
+                const chartBackgroundColor = 'rgba(183, 110, 121, 0.7)';
+                const chartBorderColor = 'rgba(183, 110, 121, 1)';
+                const chartHoverBackgroundColor = 'rgba(160, 95, 106, 0.9)';
+                const chartHoverBorderColor = 'rgba(160, 95, 106, 1)';
 
                 const chartOptions = {
                     indexAxis: 'y',
@@ -815,7 +950,7 @@
                             options: chartOptions
                         });
                     } else if (ctx) {
-                        ctx.font = "16px 'Nunito'";
+                        ctx.font = "16px 'Inter'";
                         ctx.fillStyle = "#aaa";
                         ctx.textAlign = "center";
                         ctx.fillText("Bu kategori için grafik verisi yok.", ctx.canvas.width / 2, ctx.canvas.height / 2);
@@ -831,6 +966,7 @@
 
     });
     </script>
+    <script src="{{ url_for('static', filename='js/gs-dialog.js') }}"></script>
 {% include 'includes/notification_popup.html' ignore missing %}
 </body>
 </html>

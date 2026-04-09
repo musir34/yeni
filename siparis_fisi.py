@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, jsonif
 import json
 import logging
 from datetime import datetime
-from models import db, SiparisFisi, Product, Tedarikci
+from models import db, SiparisFisi, Product, Tedarikci, MaliyetKategori, MaliyetKalem, ModelMaliyet, ModelDirekMaliyet
 from user_logs import log_user_action
 import os
 import qrcode
@@ -931,3 +931,330 @@ def tedarik_olustur_from_panel():
         siparis_id=yeni_fis.siparis_id,
         redirect_url=url_for("siparis_fisi_bp.siparis_fisi_detay", siparis_id=yeni_fis.siparis_id),
     ), 201
+
+
+# ════════════════════════════════════════════════════════════════════
+# MALİYET KALEMLERİ API'leri
+# ════════════════════════════════════════════════════════════════════
+
+def _ensure_maliyet_tables():
+    """Maliyet tablolarını oluştur (yoksa), eksik kolonları ekle."""
+    from sqlalchemy import inspect as sa_inspect, text
+    inspector = sa_inspect(db.engine)
+    if not inspector.has_table('maliyet_kategori'):
+        MaliyetKategori.__table__.create(db.engine)
+    if not inspector.has_table('maliyet_kalem'):
+        MaliyetKalem.__table__.create(db.engine)
+    else:
+        # model_id kolonu yoksa ekle
+        columns = {c["name"] for c in inspector.get_columns("maliyet_kalem")}
+        if "model_id" not in columns:
+            db.session.execute(text("ALTER TABLE maliyet_kalem ADD COLUMN model_id VARCHAR(255)"))
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS ix_maliyet_kalem_model_id ON maliyet_kalem (model_id)"))
+            db.session.commit()
+    if not inspector.has_table('model_maliyet'):
+        ModelMaliyet.__table__.create(db.engine)
+    if not inspector.has_table('model_direk_maliyet'):
+        ModelDirekMaliyet.__table__.create(db.engine)
+
+
+def seed_maliyet_sablonu():
+    """Varsayılan maliyet kalemlerini oluşturur (sadece tablo boşsa)."""
+    _ensure_maliyet_tables()
+    if MaliyetKategori.query.first():
+        return
+
+    sablon = [
+        ("Kesim Giderleri", [
+            ("Malzemeler", [
+                ("Astar", 0.50),
+                ("Kırışık Rugan", 1.50),
+                ("Mat", 1.20),
+                ("Süet", 1.20),
+                ("Düz Rugan", 1.25),
+            ]),
+            ("İşçilik", [
+                ("Kesim İşçiliği", 0.40),
+            ]),
+        ]),
+        ("Kalfa Giderleri", [
+            ("Malzemeler", [
+                ("Çelik Taban", 1.00),
+                ("Ökçe", 0.90),
+                ("Neolit Jurdan", 0.80),
+                ("Beyaz İlaç", 0.36),
+                ("Sarı İlaç", 0.15),
+                ("Fort", 0.05),
+                ("Silme Suyu", 0.10),
+                ("Çivi ve Zımba", 0.15),
+            ]),
+            ("İşçilik", [
+                ("Kalfa İşçiliği", 2.05),
+            ]),
+        ]),
+        ("Sayacı Giderleri", [
+            ("Malzemeler", [
+                ("Tranta", 0.09),
+            ]),
+            ("İşçilik", [
+                ("Sayacı İşçiliği", 1.12),
+            ]),
+        ]),
+        ("Ökçe Çakma / Temizleme", [
+            ("Malzemeler", [
+                ("Temizleme Malzemesi", 0.50),
+            ]),
+            ("İşçilik", [
+                ("Ökçe Çakma/Temizleme İşçiliği", 1.55),
+            ]),
+        ]),
+        ("Kiralar ve Diğer Giderler", [
+            ("Genel", [
+                ("Dükkan Kirası", 0.0),
+                ("Elektrik", 0.0),
+                ("Çay / Su / Şeker", 0.0),
+                ("Kira+Elektrik Çift Başı", 0.67),
+            ]),
+        ]),
+    ]
+
+    kalem_sira = 0
+    for kat_sira, (kat_ad, alt_basliklar) in enumerate(sablon):
+        kat = MaliyetKategori(ad=kat_ad, sira=kat_sira)
+        db.session.add(kat)
+        db.session.flush()
+        for alt_baslik, kalemler_list in alt_basliklar:
+            for kalem_ad, varsayilan in kalemler_list:
+                kalem = MaliyetKalem(
+                    kategori_id=kat.id,
+                    alt_baslik=alt_baslik,
+                    ad=kalem_ad,
+                    varsayilan_deger=varsayilan,
+                    birim="USD",
+                    sira=kalem_sira,
+                )
+                db.session.add(kalem)
+                kalem_sira += 1
+
+    db.session.commit()
+
+
+@siparis_fisi_bp.route("/api/maliyet/sablon", methods=["GET"])
+def api_maliyet_sablon():
+    """Maliyet şablonunu döndür. ?model_id= verilirse modele özel kalemler de dahil."""
+    seed_maliyet_sablonu()
+    model_id = (request.args.get("model_id") or "").strip()
+    kategoriler = MaliyetKategori.query.order_by(MaliyetKategori.sira).all()
+    result = []
+    for kat in kategoriler:
+        # Şablon kalemleri (model_id IS NULL) + modele özel kalemler
+        query = MaliyetKalem.query.filter_by(kategori_id=kat.id).filter(
+            db.or_(MaliyetKalem.model_id.is_(None), MaliyetKalem.model_id == model_id)
+        ).order_by(MaliyetKalem.sira) if model_id else \
+            MaliyetKalem.query.filter_by(kategori_id=kat.id, model_id=None).order_by(MaliyetKalem.sira)
+        kalemler = query.all()
+        kalemler_data = []
+        for k in kalemler:
+            kalemler_data.append({
+                "id": k.id,
+                "alt_baslik": k.alt_baslik or "",
+                "ad": k.ad,
+                "varsayilan_deger": k.varsayilan_deger,
+                "birim": k.birim,
+                "ozel": k.model_id is not None,  # modele özel mi?
+            })
+        result.append({
+            "id": kat.id,
+            "ad": kat.ad,
+            "kalemler": kalemler_data,
+        })
+    return jsonify(result)
+
+
+@siparis_fisi_bp.route("/api/maliyet/kategori_ekle", methods=["POST"])
+def api_maliyet_kategori_ekle():
+    """Yeni maliyet kategorisi (başlık) ekle."""
+    data = request.get_json(force=True) or {}
+    ad = (data.get("ad") or "").strip()
+    if not ad:
+        return jsonify(success=False, message="Kategori adı gerekli"), 400
+
+    max_sira = db.session.query(db.func.max(MaliyetKategori.sira)).scalar() or 0
+    kat = MaliyetKategori(ad=ad, sira=max_sira + 1)
+    db.session.add(kat)
+    db.session.commit()
+    return jsonify(success=True, message="Kategori eklendi", id=kat.id), 201
+
+
+@siparis_fisi_bp.route("/api/maliyet/kategori_sil/<int:kat_id>", methods=["DELETE"])
+def api_maliyet_kategori_sil(kat_id):
+    """Maliyet kategorisi sil (alt kalemler cascade silinir)."""
+    kat = MaliyetKategori.query.get(kat_id)
+    if not kat:
+        return jsonify(success=False, message="Kategori bulunamadı"), 404
+    db.session.delete(kat)
+    db.session.commit()
+    return jsonify(success=True, message="Kategori silindi")
+
+
+@siparis_fisi_bp.route("/api/maliyet/kalem_ekle", methods=["POST"])
+def api_maliyet_kalem_ekle():
+    """Kategoriye yeni maliyet kalemi ekle. model_id verilirse modele özel olur."""
+    data = request.get_json(force=True) or {}
+    kategori_id = data.get("kategori_id")
+    alt_baslik = (data.get("alt_baslik") or "").strip()
+    ad = (data.get("ad") or "").strip()
+    varsayilan = data.get("varsayilan_deger", 0.0)
+    birim = (data.get("birim") or "USD").strip()
+    model_id = (data.get("model_id") or "").strip() or None  # None = şablon
+
+    if not kategori_id or not ad:
+        return jsonify(success=False, message="Kategori ID ve kalem adı gerekli"), 400
+
+    kat = MaliyetKategori.query.get(kategori_id)
+    if not kat:
+        return jsonify(success=False, message="Kategori bulunamadı"), 404
+
+    max_sira = db.session.query(db.func.max(MaliyetKalem.sira)).filter_by(kategori_id=kategori_id).scalar() or 0
+    kalem = MaliyetKalem(
+        kategori_id=kategori_id,
+        model_id=model_id,
+        alt_baslik=alt_baslik or None,
+        ad=ad,
+        varsayilan_deger=float(varsayilan or 0),
+        birim=birim,
+        sira=max_sira + 1,
+    )
+    db.session.add(kalem)
+    db.session.commit()
+    tip = "modele özel" if model_id else "şablon"
+    return jsonify(success=True, message=f"Kalem eklendi ({tip})", id=kalem.id), 201
+
+
+@siparis_fisi_bp.route("/api/maliyet/kalem_sil/<int:kalem_id>", methods=["DELETE"])
+def api_maliyet_kalem_sil(kalem_id):
+    """Maliyet kalemi sil. Şablon kalemler sadece şablon yönetiminden, modele özel kalemler model görünümünden silinebilir."""
+    kalem = MaliyetKalem.query.get(kalem_id)
+    if not kalem:
+        return jsonify(success=False, message="Kalem bulunamadı"), 404
+    if kalem.model_id is None:
+        # Şablon kalemi - şablon yönetiminden siliniyor, force parametresi lazım
+        force = request.args.get("force") == "1"
+        if not force:
+            return jsonify(success=False, message="Bu şablon kalemi tüm modelleri etkiler. Şablon yönetiminden silin."), 400
+    db.session.delete(kalem)
+    db.session.commit()
+    return jsonify(success=True, message="Kalem silindi")
+
+
+@siparis_fisi_bp.route("/api/maliyet/model/<model_id>", methods=["GET"])
+def api_maliyet_model_get(model_id):
+    """Bir modelin tüm maliyet değerlerini getir (kalem + direkt)."""
+    kayitlar = ModelMaliyet.query.filter_by(model_id=model_id).all()
+    result = {str(k.kalem_id): k.deger for k in kayitlar}
+
+    direk = ModelDirekMaliyet.query.get(model_id)
+    direk_deger = direk.deger if direk else None
+
+    return jsonify(success=True, degerler=result, direk_maliyet=direk_deger)
+
+
+@siparis_fisi_bp.route("/api/maliyet/model/<model_id>", methods=["POST"])
+def api_maliyet_model_kaydet(model_id):
+    """Bir modelin maliyet değerlerini toplu kaydet (kalem + direkt)."""
+    data = request.get_json(force=True) or {}
+    degerler = data.get("degerler", {})  # {kalem_id: deger}
+    direk_maliyet = data.get("direk_maliyet")  # float veya None
+
+    for kalem_id_str, deger in degerler.items():
+        kalem_id = int(kalem_id_str)
+        existing = ModelMaliyet.query.filter_by(model_id=model_id, kalem_id=kalem_id).first()
+        if existing:
+            existing.deger = float(deger or 0)
+            existing.updated_at = datetime.utcnow()
+        else:
+            yeni = ModelMaliyet(model_id=model_id, kalem_id=kalem_id, deger=float(deger or 0))
+            db.session.add(yeni)
+
+    # Direkt toplam maliyet
+    if direk_maliyet is not None and direk_maliyet != "":
+        direk = ModelDirekMaliyet.query.get(model_id)
+        if direk:
+            direk.deger = float(direk_maliyet)
+            direk.updated_at = datetime.utcnow()
+        else:
+            direk = ModelDirekMaliyet(model_id=model_id, deger=float(direk_maliyet))
+            db.session.add(direk)
+    elif direk_maliyet == "":
+        # Boş gönderilirse direkt maliyeti sil
+        direk = ModelDirekMaliyet.query.get(model_id)
+        if direk:
+            db.session.delete(direk)
+
+    db.session.commit()
+
+    try:
+        log_user_action("UPDATE", {
+            "işlem_açıklaması": f"Model maliyeti güncellendi — {model_id}, {len(degerler)} kalem" + (f", direkt: {direk_maliyet}$" if direk_maliyet else ""),
+            "sayfa": "Maliyet Yönetimi",
+            "model": model_id,
+        })
+    except Exception:
+        pass
+
+    return jsonify(success=True, message="Maliyet kaydedildi")
+
+
+@siparis_fisi_bp.route("/api/maliyet/model_listesi", methods=["GET"])
+def api_maliyet_model_listesi():
+    """Maliyeti girilmiş modellerin listesi."""
+    _ensure_maliyet_tables()
+    search = (request.args.get("search") or "").strip()
+
+    query = db.session.query(
+        Product.product_main_id,
+        db.func.count(Product.barcode).label("varyant"),
+    ).filter(
+        Product.product_main_id.isnot(None),
+        Product.product_main_id != "",
+    ).group_by(Product.product_main_id).order_by(Product.product_main_id)
+
+    if search:
+        query = query.filter(Product.product_main_id.ilike(f"%{search}%"))
+
+    rows = query.limit(200).all()
+
+    # Maliyet girilmiş modeller
+    maliyet_modeller = db.session.query(
+        ModelMaliyet.model_id,
+        db.func.sum(ModelMaliyet.deger).label("toplam"),
+    ).group_by(ModelMaliyet.model_id).all()
+    maliyet_map = {m.model_id: float(m.toplam or 0) for m in maliyet_modeller}
+
+    # Direkt maliyet girilmiş modeller
+    direk_modeller = ModelDirekMaliyet.query.all()
+    direk_map = {d.model_id: float(d.deger or 0) for d in direk_modeller}
+
+    filtre = (request.args.get("filtre") or "").strip()  # "var" veya "yok"
+
+    result = []
+    for r in rows:
+        model_id = r[0]
+        kalem_toplam = maliyet_map.get(model_id, 0)
+        direk = direk_map.get(model_id, 0)
+        toplam = direk if direk > 0 else kalem_toplam
+        girilmis = model_id in maliyet_map or model_id in direk_map
+
+        if filtre == "var" and not girilmis:
+            continue
+        if filtre == "yok" and girilmis:
+            continue
+
+        result.append({
+            "model": model_id,
+            "varyant": r[1],
+            "toplam_maliyet": toplam,
+            "maliyet_girilmis": girilmis,
+            "direk": model_id in direk_map,
+        })
+    return jsonify(result)

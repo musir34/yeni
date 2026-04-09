@@ -6,10 +6,12 @@ from flask import (
     flash,
     redirect,
     url_for,
+    jsonify,
 )
 from datetime import datetime, timedelta
 import logging
 import calendar
+import requests as http_requests
 from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation, getcontext
 
@@ -26,6 +28,8 @@ from models import (
     OrderCancelled,
     Product,
     ReturnOrder,
+    ModelMaliyet,
+    ModelDirekMaliyet,
 )
 # --------------------------------------------------------------------------
 
@@ -35,6 +39,66 @@ profit_bp = Blueprint("profit", __name__, url_prefix="/profit")
 
 # Parasal hesaplar için hassasiyet
 getcontext().prec = 28
+
+# --------------------------------------------------------------------------
+# Döviz Kuru (Harem Altın → fallback: exchangerate-api)
+# --------------------------------------------------------------------------
+_kur_cache = {"value": None, "ts": None}
+
+def _fetch_usd_try() -> float | None:
+    """Güncel USD/TL kurunu çek. Önce Harem Altın, sonra fallback."""
+    # Cache: 10 dakika
+    if _kur_cache["value"] and _kur_cache["ts"] and (datetime.utcnow() - _kur_cache["ts"]).seconds < 600:
+        return _kur_cache["value"]
+
+    # 1) Harem Altın
+    try:
+        resp = http_requests.get(
+            "https://www.haremaltin.com/dashboard/ajax/doviz",
+            headers={"X-Requested-With": "XMLHttpRequest",
+                     "User-Agent": "Mozilla/5.0",
+                     "Referer": "https://www.haremaltin.com/"},
+            timeout=5,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            # Harem formatı: data["data"]["USDTRY"]["satis"] veya data["USD"]["spidr_sell"]
+            usd = None
+            if isinstance(data, dict):
+                if "data" in data and "USDTRY" in data["data"]:
+                    usd = float(data["data"]["USDTRY"].get("satis") or data["data"]["USDTRY"].get("alis") or 0)
+                elif "USD" in data:
+                    usd = float(data["USD"].get("spidr_sell") or data["USD"].get("satis") or 0)
+            if usd and usd > 0:
+                _kur_cache.update({"value": usd, "ts": datetime.utcnow()})
+                logging.info(f"Harem Altın USD/TL: {usd}")
+                return usd
+    except Exception as e:
+        logging.warning(f"Harem Altın kur çekme hatası: {e}")
+
+    # 2) Fallback: exchangerate-api (ücretsiz, limitsiz)
+    try:
+        resp = http_requests.get("https://api.exchangerate-api.com/v4/latest/USD", timeout=5)
+        if resp.status_code == 200:
+            rate = float(resp.json().get("rates", {}).get("TRY", 0))
+            if rate > 0:
+                _kur_cache.update({"value": rate, "ts": datetime.utcnow()})
+                logging.info(f"ExchangeRate API USD/TL: {rate}")
+                return rate
+    except Exception as e:
+        logging.warning(f"ExchangeRate API kur çekme hatası: {e}")
+
+    return _kur_cache.get("value")
+
+
+@profit_bp.route("/api/exchange-rate", methods=["GET"])
+def api_exchange_rate():
+    """Güncel USD/TL kurunu JSON olarak döndür."""
+    rate = _fetch_usd_try()
+    if rate:
+        return jsonify(success=True, rate=rate)
+    return jsonify(success=False, rate=0, message="Kur alınamadı"), 503
+
 
 # --------------------------------------------------------------------------
 # Yardımcı Fonksiyonlar
@@ -108,6 +172,7 @@ def save_missing_costs():
                 package_cost=request.form.get("package_cost", ""),
                 monthly_employee_salary=request.form.get("monthly_employee_salary", ""),
                 shipping_cost=request.form.get("shipping_cost", ""),
+                exchange_rate=request.form.get("exchange_rate", ""),
                 auto_reload="1",
             )
            )
@@ -189,6 +254,7 @@ def profit_report():
         "total_revenue": Decimal("0.0"), "total_discount_sum": Decimal("0.0"),
         "total_expenses_sum": Decimal("0.0"), "total_commission_sum": Decimal("0.0"),
         "total_product_cost_sum": Decimal("0.0"),
+        "total_uretim_cost_sum": Decimal("0.0"),
         "total_employee_cost_period": Decimal("0.0"), "total_package_cost_period": Decimal("0.0"),
         "total_shipping_cost_period": Decimal("0.0"), "total_return_shipping_cost": Decimal("0.0"),
         "avg_profit_margin": Decimal("0.0"), "order_count": 0, "total_barcodes_processed": 0,
@@ -196,9 +262,11 @@ def profit_report():
         "package_cost": form_source.get("package_cost", ""),
         "monthly_employee_salary": form_source.get("monthly_employee_salary", ""),
         "shipping_cost": form_source.get("shipping_cost", ""),  # Formdaki değer (baz ve iade için)
+        "exchange_rate": form_source.get("exchange_rate", ""),
         "total_profit_str": "0,00", "avg_profit_str": "0,00", "total_revenue_str": "0,00",
         "total_discount_sum_str": "0,00", "total_expenses_sum_str": "0,00",
         "total_commission_sum_str": "0,00", "total_product_cost_sum_str": "0,00",
+        "total_uretim_cost_sum_str": "0,00",
         "total_employee_cost_period_str": "0,00", "total_package_cost_period_str": "0,00",
         "total_shipping_cost_period_str": "0,00", "total_return_shipping_cost_str": "0,00",
         "shipping_cost_str": "0,00", "avg_profit_margin_str": "0.00",
@@ -207,6 +275,10 @@ def profit_report():
     # Formdaki kargo baz maliyetini oku (Decimal)
     form_shipping_cost = d(context["shipping_cost"])
     context["shipping_cost_str"] = format_number(form_shipping_cost)
+
+    # Döviz kuru (USD → TL)
+    form_exchange_rate = d(context["exchange_rate"])
+    context["exchange_rate_str"] = format_number(form_exchange_rate)
 
     if request.method == "POST" or request.args.get("auto_reload") == "1":
         analysis_temp = []
@@ -229,6 +301,7 @@ def profit_report():
         total_package_cost_period = Decimal("0.0")
         total_outgoing_shipping_cost_period = Decimal("0.0")  # GİDEN kargo maliyeti toplamı
         total_return_shipping_cost = Decimal("0.0")  # İade kargo maliyeti toplamı
+        total_uretim_cost_sum = Decimal("0.0")  # Üretim maliyeti toplamı (USD→TL)
         processed_order_count = 0
         total_barcodes_processed = 0
         total_records_found = 0
@@ -367,20 +440,41 @@ def profit_report():
                 context["total_return_shipping_cost_str"] = format_number(total_return_shipping_cost)
                 return render_template("profit.html", **context)
 
-            # --- Ürün maliyetlerini çek ---
-            product_costs = {}
+            # --- Barkod → Model eşlemesi (üretim maliyeti için) ---
+            barcode_to_model = {}
             if all_individual_barcodes:
                 try:
                     products = Product.query.filter(Product.barcode.in_(all_individual_barcodes)).all()
-                    product_costs = { (p.barcode or "").strip(): d(p.cost_try)
-                                      for p in products
-                                      if p.barcode and p.barcode.strip() in all_individual_barcodes and p.cost_try is not None}
-                    logging.info(f"{len(product_costs)}/{len(all_individual_barcodes)} *tekil* barkod için maliyet bulundu (None olmayan).")
+                    for p in products:
+                        bc = (p.barcode or "").strip()
+                        mid = (p.product_main_id or "").strip()
+                        if bc and mid:
+                            barcode_to_model[bc] = mid
                 except Exception as e:
-                    logging.error("Ürün maliyetleri çekilirken hata: %s", e, exc_info=True)
-                    flash("Ürün maliyetleri alınırken bir veritabanı hatası oluştu.", "error")
-            else:
-                logging.warning("Maliyet çekmek için geçerli tekil barkod bulunamadı.")
+                    logging.error("Barkod-model eşlemesi çekilirken hata: %s", e, exc_info=True)
+
+            # --- Üretim maliyetlerini çek (model bazlı, USD) ---
+            model_uretim_costs = {}  # model_id → USD maliyet
+            if form_exchange_rate > 0:
+                try:
+                    # Direkt maliyet girilmişler
+                    direk_rows = ModelDirekMaliyet.query.all()
+                    for dr in direk_rows:
+                        if dr.deger and dr.deger > 0:
+                            model_uretim_costs[dr.model_id] = Decimal(str(dr.deger))
+
+                    # Kalem toplam (direkt yoksa)
+                    kalem_rows = db.session.query(
+                        ModelMaliyet.model_id,
+                        db.func.sum(ModelMaliyet.deger).label("toplam"),
+                    ).group_by(ModelMaliyet.model_id).all()
+                    for kr in kalem_rows:
+                        if kr.model_id not in model_uretim_costs and kr.toplam and kr.toplam > 0:
+                            model_uretim_costs[kr.model_id] = Decimal(str(kr.toplam))
+
+                    logging.info(f"{len(model_uretim_costs)} model için üretim maliyeti bulundu. Kur: {form_exchange_rate}")
+                except Exception as e:
+                    logging.error("Üretim maliyetleri çekilirken hata: %s", e, exc_info=True)
 
             processed_order_ids = set()
 
@@ -405,63 +499,68 @@ def profit_report():
 
                     if not product_barcode_raw or not product_barcode_raw.strip():
                         reason = "Barkod Boş/Yok"
-                        cost_calculation_possible = False
                     else:
                         individual_barcodes_in_order = [b.strip() for b in product_barcode_raw.split(',') if b.strip()]
                         num_barcodes_in_order = len(individual_barcodes_in_order)
                         if num_barcodes_in_order == 0:
                             reason = "Geçersiz Barkod Formatı"
-                            cost_calculation_possible = False
-                        else:
-                            missing_barcodes_in_this_order = []
-                            for bc in individual_barcodes_in_order:
-                                cost = product_costs.get(bc)
-                                if cost is None:
-                                    cost_calculation_possible = False
-                                    missing_barcodes_in_this_order.append(bc)
-                                    if bc not in missing_cost_barcodes:
-                                        missing_cost_entries_list.append({"barcode": bc, "merchant_sku": f"{merchant_sku} ({bc})"})
-                                        missing_cost_barcodes.add(bc)
-                                elif cost <= 0:
-                                    logging.warning(f"Sipariş {order_number}, Barkod '{bc}' maliyeti sıfır veya negatif. Hesaplamada 0 kullanıldı.")
-                                    order_total_product_cost += Decimal("0.0")
-                                else:
-                                    order_total_product_cost += cost
-                            if not cost_calculation_possible:
-                                reason = f"Ürün Maliyeti Bulunamadı ({', '.join(missing_barcodes_in_this_order)})"
 
-                    if not cost_calculation_possible or reason:
+                    if reason:
                         other_excluded_temp.append({
                             "order_number": order_number, "merchant_sku": merchant_sku,
-                            "status": order_status, "reason": reason or "Bilinmeyen Maliyet Hatası",
+                            "status": order_status, "reason": reason,
                             "barcode": display_barcode_in_excluded,
                         })
                         if order_id: processed_order_ids.add(order_id)
                         continue
 
                     # ----- Geçerli Sipariş Maliyetleri -----
-                    cost_try_val = order_total_product_cost
                     commission_val = d(getattr(o, 'commission', 0) or 0)
+
+                    # --- Üretim Maliyeti (USD → TL) ---
+                    line_uretim_cost = Decimal("0.0")
+                    if form_exchange_rate > 0 and model_uretim_costs:
+                        seen_models = set()
+                        for bc in individual_barcodes_in_order:
+                            mid = barcode_to_model.get(bc)
+                            if mid and mid not in seen_models:
+                                usd_cost = model_uretim_costs.get(mid, Decimal("0.0"))
+                                line_uretim_cost += usd_cost * form_exchange_rate
+                                seen_models.add(mid)
+
+                    # --- Komisyon veya üretim maliyeti yoksa hariç tut ---
+                    if commission_val <= 0 or line_uretim_cost <= 0:
+                        reasons = []
+                        if commission_val <= 0:
+                            reasons.append("Komisyon Yok")
+                        if line_uretim_cost <= 0:
+                            reasons.append("Üretim Maliyeti Yok")
+                        other_excluded_temp.append({
+                            "order_number": order_number, "merchant_sku": merchant_sku,
+                            "status": order_status, "reason": " / ".join(reasons),
+                            "barcode": display_barcode_in_excluded,
+                        })
+                        if order_id: processed_order_ids.add(order_id)
+                        continue
 
                     # Paket Maliyeti (adet × paket/adet)
                     line_package_cost = package_cost_per_item * Decimal(num_barcodes_in_order)
 
                     # --- KARGO MALİYETİ (SABİT BAZ) ---
-                    # Her aktif sipariş için 1 × baz kargo (ek ürün başına +30 kuralı kaldırıldı)
                     line_shipping_cost = form_shipping_cost
 
                     # --- Kâr Hesapları ---
                     amount_val = d(getattr(o, 'amount', 0) or 0)
                     discount_val = d(getattr(o, 'discount', 0) or 0)
                     net_income = amount_val - discount_val
-                    order_expenses_initial = commission_val + cost_try_val + line_package_cost + line_shipping_cost
+                    order_expenses_initial = commission_val + line_package_cost + line_shipping_cost + line_uretim_cost
                     profit_initial = net_income - order_expenses_initial
 
                     # --- Toplamları Güncelle ---
                     total_revenue += amount_val
                     total_discount_sum += discount_val
                     total_commission_sum += commission_val
-                    total_product_cost_sum += cost_try_val
+                    total_uretim_cost_sum += line_uretim_cost
                     total_package_cost_period += line_package_cost
                     total_outgoing_shipping_cost_period += line_shipping_cost
                     total_expenses_minus_employee += order_expenses_initial
@@ -482,7 +581,8 @@ def profit_report():
                         "product_barcode": product_barcode_raw,
                         "num_barcodes": num_barcodes_in_order,
                         "amount": amount_val, "discount": discount_val, "net_income": net_income,
-                        "commission": commission_val, "product_cost": cost_try_val,
+                        "commission": commission_val,
+                        "uretim_cost": line_uretim_cost,
                         "package_cost": line_package_cost,
                         "shipping_cost": line_shipping_cost,
                         "employee_cost": Decimal("0.0"),
@@ -572,7 +672,7 @@ def profit_report():
 
             # Analiz listesini formatla
             for item in analysis_temp:
-                for key in ['amount', 'discount', 'net_income', 'commission', 'product_cost', 'package_cost', 'shipping_cost', 'employee_cost', 'total_expenses', 'profit']:
+                for key in ['amount', 'discount', 'net_income', 'commission', 'uretim_cost', 'package_cost', 'shipping_cost', 'employee_cost', 'total_expenses', 'profit']:
                     item[key + '_str'] = format_number(item[key])
                 # Yüzde için nokta kullanımı isteniyordu
                 item['profit_margin_str'] = format_number(item['profit_margin']).replace(",", ".")
@@ -588,6 +688,7 @@ def profit_report():
                 "total_revenue": total_revenue, "total_discount_sum": total_discount_sum,
                 "total_expenses_sum": final_total_expenses,
                 "total_commission_sum": total_commission_sum, "total_product_cost_sum": total_product_cost_sum,
+                "total_uretim_cost_sum": total_uretim_cost_sum,
                 "avg_profit_margin": final_avg_profit_margin,
                 "total_employee_cost_period": total_employee_cost_period,
                 "total_package_cost_period": total_package_cost_period,
@@ -600,6 +701,7 @@ def profit_report():
                 "total_expenses_sum_str": format_number(final_total_expenses),
                 "total_commission_sum_str": format_number(total_commission_sum),
                 "total_product_cost_sum_str": format_number(total_product_cost_sum),
+                "total_uretim_cost_sum_str": format_number(total_uretim_cost_sum),
                 "total_employee_cost_period_str": format_number(total_employee_cost_period),
                 "total_package_cost_period_str": format_number(total_package_cost_period),
                 "total_shipping_cost_period_str": format_number(total_outgoing_shipping_cost_period),

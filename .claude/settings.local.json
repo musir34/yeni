@@ -46,7 +46,14 @@
       "WebSearch",
       "WebFetch(domain:developers.trendyol.com)",
       "WebFetch(domain:www.postman.com)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(python3.11:*)",
+      "WebFetch(domain:www.haremaltin.com)",
+      "WebFetch(domain:finans.truncgil.com)",
+      "WebFetch(domain:api.genelpara.com)",
+      "WebFetch(domain:api.exchangerate-api.com)",
+      "Bash(tee fix_commissions_run.log)",
+      "Bash(echo \"PID: $!\")"
     ]
   }
 }

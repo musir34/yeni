@@ -794,6 +794,55 @@ class Tedarikci(db.Model):
     created_date = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+# ════════════════════════════════════════════════════════════════════
+# MALİYET KALEMLERİ SİSTEMİ
+# ════════════════════════════════════════════════════════════════════
+class MaliyetKategori(db.Model):
+    """Maliyet ana başlıkları: Kesim Giderleri, Kalfa Giderleri, vb."""
+    __tablename__ = 'maliyet_kategori'
+    id = db.Column(db.Integer, primary_key=True)
+    ad = db.Column(db.String(255), nullable=False)
+    sira = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    kalemler = db.relationship('MaliyetKalem', backref='kategori', lazy=True,
+                               cascade='all, delete-orphan', order_by='MaliyetKalem.sira')
+
+
+class MaliyetKalem(db.Model):
+    """Maliyet kalemleri: Astar, Çelik Taban, vb. Alt başlık ile gruplandırılır.
+    model_id NULL = şablon (tüm modellerde), dolu = sadece o modele özel."""
+    __tablename__ = 'maliyet_kalem'
+    id = db.Column(db.Integer, primary_key=True)
+    kategori_id = db.Column(db.Integer, db.ForeignKey('maliyet_kategori.id', ondelete='CASCADE'), nullable=False)
+    model_id = db.Column(db.String(255), nullable=True, index=True)  # NULL=şablon, değer=modele özel
+    alt_baslik = db.Column(db.String(255), nullable=True)  # "Malzemeler", "İşçilik", vb.
+    ad = db.Column(db.String(255), nullable=False)
+    varsayilan_deger = db.Column(db.Float, default=0.0)
+    birim = db.Column(db.String(10), default='USD')  # USD veya TRY
+    sira = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class ModelMaliyet(db.Model):
+    """Model bazlı gerçek maliyet değerleri."""
+    __tablename__ = 'model_maliyet'
+    id = db.Column(db.Integer, primary_key=True)
+    model_id = db.Column(db.String(255), nullable=False, index=True)
+    kalem_id = db.Column(db.Integer, db.ForeignKey('maliyet_kalem.id', ondelete='CASCADE'), nullable=False)
+    deger = db.Column(db.Float, default=0.0)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    __table_args__ = (db.UniqueConstraint('model_id', 'kalem_id', name='uq_model_kalem'),)
+
+
+class ModelDirekMaliyet(db.Model):
+    """Model bazlı direkt toplam maliyet (kalem kalem girmek istemeyenler için)."""
+    __tablename__ = 'model_direk_maliyet'
+    model_id = db.Column(db.String(255), primary_key=True)
+    deger = db.Column(db.Float, default=0.0)
+    birim = db.Column(db.String(10), default='USD')
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 # Eğer farklıysa, buradan da original_product_barcode'u kaldıralım.
 class Archive(db.Model):
     __tablename__ = 'archive' # Bu tablo adı OrderArchived ile çakışıyor mu? Dikkat!

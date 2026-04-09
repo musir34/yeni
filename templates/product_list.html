@@ -239,7 +239,6 @@
                                 <button class="btn btn-sm dropdown-toggle"><i class="fas fa-ellipsis-v"></i></button>
                                 <div class="dropdown-content">
                                     <button class="open-action-modal" data-action="list_variants" data-model="{{ model_id }}"><i class="fas fa-list-ul"></i> Tüm Varyantları Listele</button>
-                                    <button class="update-model-cost" data-model="{{ model_id }}"><i class="fas fa-dollar-sign"></i> Model Maliyeti</button>
                                     <button class="delete-action" data-model="{{ model_id }}" data-color="{{ color }}"><i class="fas fa-trash"></i> Rengi Sil</button>
                                 </div>
                             </div>
@@ -295,7 +294,6 @@
                                 <button class="btn btn-sm dropdown-toggle"><i class="fas fa-ellipsis-v"></i></button>
                                 <div class="dropdown-content">
                                     <button class="open-action-modal" data-action="list_variants" data-model="{{ model_id }}"><i class="fas fa-list-ul"></i> Tüm Varyantları Listele</button>
-                                    <button class="update-model-cost" data-model="{{ model_id }}"><i class="fas fa-dollar-sign"></i> Model Maliyeti Gir</button>
                                     <button class="delete-model delete-action" data-model="{{ model_id }}"><i class="fas fa-trash"></i> Modeli Sil</button>
                                 </div>
                             </div>
@@ -429,20 +427,17 @@ $(function(){
         $('#modalBody').html('<div class="text-center p-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>');
         $('#modalSaveBtn').show();
 
-        if(action==='update_model_price' || action==='update_model_cost'){
-            const isPrice=(action==='update_model_price');
-            const title=`${modelId} - Model ${isPrice?'Fiyatı':'Maliyeti'} Gir`;
-            const currency=isPrice?'TL':'USD';
-            const inputName=isPrice?'sale_price':'cost_usd';
+        if(action==='update_model_price'){
+            const title=`${modelId} - Model Fiyatı Gir`;
             $('#modalTitle').text(title);
             $.get(`/api/get_model_info?model_id=${modelId}`, function(res){
                 if(res.success){
-                    const val=isPrice?res.sale_price:res.cost_usd;
+                    const val=res.sale_price;
                     $('#modalBody').html(`
                         <form id="singleInputForm">
                             <div class="prompt-input-group">
-                                <label>Bu modele ait tüm varyantlar için yeni ${isPrice?'satış fiyatını':'maliyeti'} (${currency}) girin:</label>
-                                <input type="number" id="promptInput" name="${inputName}" value="${Number(val||0).toFixed(2)}" class="form-control" step="0.01" min="0" required>
+                                <label>Bu modele ait tüm varyantlar için yeni satış fiyatını (TL) girin:</label>
+                                <input type="number" id="promptInput" name="sale_price" value="${Number(val||0).toFixed(2)}" class="form-control" step="0.01" min="0" required>
                                 <input type="hidden" name="model_id" value="${modelId}">
                             </div>
                         </form>
@@ -489,14 +484,11 @@ $(function(){
     $('.model-grid').on('click','.update-model-price',function(){
         openActionModal('update_model_price', $(this).data('model'));
     });
-    $('.model-grid').on('click','.update-model-cost',function(){
-        openActionModal('update_model_cost', $(this).data('model'));
-    });
+
 
     $('#modalSaveBtn').on('click', function(){
         let url='', formId='';
-        if(currentAction==='update_model_cost'){ url='/api/update-product-cost'; formId='#singleInputForm'; }
-        else if(currentAction==='update_model_price'){ url='/api/update_model_price'; formId='#singleInputForm'; }
+        if(currentAction==='update_model_price'){ url='/api/update_model_price'; formId='#singleInputForm'; }
         else if(currentAction==='edit_woo_id'){ url='/api/update-woo-mapping'; formId='#wooIdForm'; }
         else return;
 
