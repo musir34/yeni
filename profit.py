@@ -552,7 +552,7 @@ def profit_report():
                     # --- Kâr Hesapları ---
                     amount_val = d(getattr(o, 'amount', 0) or 0)
                     discount_val = d(getattr(o, 'discount', 0) or 0)
-                    net_income = amount_val - discount_val
+                    net_income = amount_val  # amount zaten net (indirim düşmüş)
                     order_expenses_initial = commission_val + line_package_cost + line_shipping_cost + line_uretim_cost
                     profit_initial = net_income - order_expenses_initial
 
@@ -653,7 +653,7 @@ def profit_report():
             # İade dönüş kargosu zaten total_return_shipping_cost'ta tutuluyor ve genel gidere eklenmeli
             final_total_expenses = total_expenses_minus_employee + total_employee_cost_period + total_return_shipping_cost
             final_avg_profit = (final_total_profit / Decimal(processed_order_count)) if processed_order_count > 0 else Decimal("0.0")
-            total_net_income_sum = total_revenue - total_discount_sum
+            total_net_income_sum = total_revenue  # total_revenue zaten net (indirim düşmüş amount toplamı)
             final_avg_profit_margin = (final_total_profit / total_net_income_sum * Decimal("100") if total_net_income_sum > 0 else Decimal("0.0"))
 
             # Top listeler (SKU karı yaklaşık)
