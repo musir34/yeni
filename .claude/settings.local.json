@@ -53,7 +53,8 @@
       "WebFetch(domain:api.genelpara.com)",
       "WebFetch(domain:api.exchangerate-api.com)",
       "Bash(tee fix_commissions_run.log)",
-      "Bash(echo \"PID: $!\")"
+      "Bash(echo \"PID: $!\")",
+      "Bash(sqlite3 /Users/abdurrahmankuli/Documents/Webs/yeni/instance/app.db \".schema orders_created\")"
     ]
   }
 }

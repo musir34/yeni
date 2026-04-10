@@ -671,7 +671,7 @@
 
     <div id="order-content">
     <div id="order-data"
-         data-shipping-barcode="{{ order.shipping_barcode if order else '' }}"
+         data-shipping-barcode="{{ order.cargo_tracking_number if order else '' }}"
          data-order-number="{{ order.order_number if order else '' }}"
          data-manuel-mod="{{ 'true' if manuel_mod else 'false' }}"
          style="display:none"></div>
@@ -791,7 +791,7 @@
       <div class="bottom-buttons">
         <form method="POST" action="{{ url_for('order_label') }}" target="_blank" id="yazdirForm" autocomplete="off">
           <input type="hidden" name="order_number" value="{{ (order.shopify_order_name if order.source == 'SHOPIFY' else order.order_number) if order else '' }}"/>
-          <input type="hidden" name="shipping_barcode" value="{{ order.shipping_barcode if order else '' }}"/>
+          <input type="hidden" name="shipping_barcode" value="{{ order.cargo_tracking_number if order else '' }}"/>
           <input type="hidden" name="cargo_provider" value="{{ order.cargo_provider_name if order else '' }}"/>
           <input type="hidden" name="customer_name" value="{{ order.customer_name if order else '' }}"/>
           <input type="hidden" name="customer_surname" value="{{ order.customer_surname if order else '' }}"/>
@@ -834,7 +834,7 @@
         <strong>Kargoya Kalan Süre:</strong> {{ remaining_time }}<br/>
         <strong>Kargo Firması:</strong> {{ order.cargo_provider_name }}<br/>
         <strong>Kargo Kodu:</strong>
-        <span id="shippingBarcode">{{ order.shipping_barcode }}</span>
+        <span id="shippingBarcode">{{ order.cargo_tracking_number }}</span>
         <span class="copy-container">
           <span class="clipboard-icon" onclick="copyToClipboard('shippingBarcode', this)">📋</span>
           <span class="copy-confirmation">✔️</span>
