@@ -90,7 +90,7 @@ def get_union_all_orders():
         OrderCreated.merchant_sku.label('merchant_sku'), OrderCreated.product_barcode.label('product_barcode'),
         OrderCreated.cargo_provider_name.label('cargo_provider_name'), OrderCreated.customer_name.label('customer_name'),
         OrderCreated.customer_surname.label('customer_surname'), OrderCreated.customer_address.label('customer_address'),
-        OrderCreated.shipping_barcode.label('shipping_barcode'), OrderCreated.agreed_delivery_date.label('agreed_delivery_date'),
+        OrderCreated.cargo_tracking_number.label('cargo_tracking_number'), OrderCreated.agreed_delivery_date.label('agreed_delivery_date'),
         OrderCreated.estimated_delivery_end.label('estimated_delivery_end'), literal('Created').label('status_name')
     )
     p = db.session.query(
@@ -99,7 +99,7 @@ def get_union_all_orders():
         OrderPicking.merchant_sku.label('merchant_sku'), OrderPicking.product_barcode.label('product_barcode'),
         OrderPicking.cargo_provider_name.label('cargo_provider_name'), OrderPicking.customer_name.label('customer_name'),
         OrderPicking.customer_surname.label('customer_surname'), OrderPicking.customer_address.label('customer_address'),
-        OrderPicking.shipping_barcode.label('shipping_barcode'), OrderPicking.agreed_delivery_date.label('agreed_delivery_date'),
+        OrderPicking.cargo_tracking_number.label('cargo_tracking_number'), OrderPicking.agreed_delivery_date.label('agreed_delivery_date'),
         OrderPicking.estimated_delivery_end.label('estimated_delivery_end'), literal('Picking').label('status_name')
     )
     s = db.session.query(
@@ -108,7 +108,7 @@ def get_union_all_orders():
         OrderShipped.merchant_sku.label('merchant_sku'), OrderShipped.product_barcode.label('product_barcode'),
         OrderShipped.cargo_provider_name.label('cargo_provider_name'), OrderShipped.customer_name.label('customer_name'),
         OrderShipped.customer_surname.label('customer_surname'), OrderShipped.customer_address.label('customer_address'),
-        OrderShipped.shipping_barcode.label('shipping_barcode'), OrderShipped.agreed_delivery_date.label('agreed_delivery_date'),
+        OrderShipped.cargo_tracking_number.label('cargo_tracking_number'), OrderShipped.agreed_delivery_date.label('agreed_delivery_date'),
         OrderShipped.estimated_delivery_end.label('estimated_delivery_end'), literal('Shipped').label('status_name')
     )
     d = db.session.query(
@@ -117,7 +117,7 @@ def get_union_all_orders():
         OrderDelivered.merchant_sku.label('merchant_sku'), OrderDelivered.product_barcode.label('product_barcode'),
         OrderDelivered.cargo_provider_name.label('cargo_provider_name'), OrderDelivered.customer_name.label('customer_name'),
         OrderDelivered.customer_surname.label('customer_surname'), OrderDelivered.customer_address.label('customer_address'),
-        OrderDelivered.shipping_barcode.label('shipping_barcode'), OrderDelivered.agreed_delivery_date.label('agreed_delivery_date'),
+        OrderDelivered.cargo_tracking_number.label('cargo_tracking_number'), OrderDelivered.agreed_delivery_date.label('agreed_delivery_date'),
         OrderDelivered.estimated_delivery_end.label('estimated_delivery_end'), literal('Delivered').label('status_name')
     )
     x = db.session.query(
@@ -126,7 +126,7 @@ def get_union_all_orders():
         OrderCancelled.merchant_sku.label('merchant_sku'), OrderCancelled.product_barcode.label('product_barcode'),
         OrderCancelled.cargo_provider_name.label('cargo_provider_name'), OrderCancelled.customer_name.label('customer_name'),
         OrderCancelled.customer_surname.label('customer_surname'), OrderCancelled.customer_address.label('customer_address'),
-        OrderCancelled.shipping_barcode.label('shipping_barcode'), OrderCancelled.agreed_delivery_date.label('agreed_delivery_date'),
+        OrderCancelled.cargo_tracking_number.label('cargo_tracking_number'), OrderCancelled.agreed_delivery_date.label('agreed_delivery_date'),
         OrderCancelled.estimated_delivery_end.label('estimated_delivery_end'), literal('Cancelled').label('status_name')
     )
     return c.union_all(p, s, d, x)
@@ -188,7 +188,7 @@ def get_order_list():
             mock.customer_name = getattr(r, 'customer_name', '')
             mock.customer_surname = getattr(r, 'customer_surname', '')
             mock.customer_address = getattr(r, 'customer_address', '')
-            mock.shipping_barcode = getattr(r, 'shipping_barcode', '')
+            mock.cargo_tracking_number = getattr(r, 'cargo_tracking_number', '')
             mock.agreed_delivery_date = getattr(r, 'agreed_delivery_date', None)
             mock.estimated_delivery_end = getattr(r, 'estimated_delivery_end', None)
             seen_orders[on] = mock

@@ -252,7 +252,7 @@
                         <span class="copy-confirmation">✔️</span>
                     </div>
                     <form method="POST" action="{{ url_for('order_list_service.order_label') }}" target="_blank">
-                        <input type="hidden" name="order_number" value="{{ order.order_number }}"><input type="hidden" name="shipping_barcode" value="{{ order.shipping_barcode }}"><input type="hidden" name="cargo_provider" value="{{ order.cargo_provider_name }}"><input type="hidden" name="customer_name" value="{{ order.customer_name }}"><input type="hidden" name="customer_surname" value="{{ order.customer_surname }}"><input type="hidden" name="customer_address" value="{{ order.customer_address }}">
+                        <input type="hidden" name="order_number" value="{{ order.order_number }}"><input type="hidden" name="shipping_barcode" value="{{ order.cargo_tracking_number }}"><input type="hidden" name="cargo_provider" value="{{ order.cargo_provider_name }}"><input type="hidden" name="customer_name" value="{{ order.customer_name }}"><input type="hidden" name="customer_surname" value="{{ order.customer_surname }}"><input type="hidden" name="customer_address" value="{{ order.customer_address }}">
                         <button type="submit" class="btn p-0" title="Kargo Etiketi Yazdır"><img src="/static/logo/kargo.png" alt="Kargo Yazdır" style="width:36px; height:36px; border-radius:5px;"></button>
                     </form>
                 </div>
