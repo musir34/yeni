@@ -51,9 +51,10 @@ def _build_shelf_groups():
         products = Product.query.filter(Product.barcode.in_(list(all_barcodes))).all()
         products_dict = {p.barcode: p for p in products}
 
-    # Raf bilgilerini toplu çek (en çok stoklu raf önce, with_for_update ile stale read önleme)
-    raf_dict = {}   # barcode -> raf_kodu (birincil raf)
-    stock_dict = {} # barcode -> toplam mevcut stok (tüm raflar)
+    # Raf bilgilerini toplu çek — barkod başına TÜM rafları kalan adetleriyle tut.
+    # Her "Toplu Hazırla" çağrısında sıfırdan tahsis yapacağız: stale atanan_raf'ları
+    # düzeltir ve bir rafta tek ürün varken iki siparişe atanmasını engeller.
+    barcode_rafs: dict[str, list[list]] = {}  # barcode -> [[raf_kodu, kalan_adet], ...]
     if all_barcodes:
         rafs = (RafUrun.query
                 .filter(RafUrun.urun_barkodu.in_(list(all_barcodes)))
@@ -62,16 +63,13 @@ def _build_shelf_groups():
                 .with_for_update(read=True)
                 .all())
         for raf in rafs:
-            if raf.urun_barkodu not in raf_dict:
-                raf_dict[raf.urun_barkodu] = raf.raf_kodu
-            stock_dict[raf.urun_barkodu] = stock_dict.get(raf.urun_barkodu, 0) + raf.adet
-
-    # Her barkod için kalan stok takibi (sipariş tarihine göre sıralı atama)
-    remaining_stock = dict(stock_dict)
+            barcode_rafs.setdefault(raf.urun_barkodu, []).append([raf.raf_kodu, raf.adet])
 
     # Grup oluştur
-    shelf_groups = {}  # {raf_kodu: [item_dict, ...]}
+    shelf_groups: dict[str, list[dict]] = {}
 
+    # Her siparişi sıfırdan yeniden tahsis et — eski atanan_raf değerine güvenmiyoruz.
+    # Sipariş tarihine göre sıralı geldiği için ilk gelen ilk rezerv eder.
     for order, item, barcode in order_items:
         product = products_dict.get(barcode)
         model_code = (product.product_main_id if product and product.product_main_id
@@ -79,25 +77,23 @@ def _build_shelf_groups():
         color = product.color if product and product.color else item.get('color', 'N/A')
         size = product.size if product and product.size else item.get('size', 'N/A')
 
-        # Önceden tahsis edilmiş sipariş: atanan_raf zaten kayıtlı, stoğu zaten düşürülmüş
-        if order.atanan_raf:
-            raf_kodu = order.atanan_raf
-            stok_yetersiz = False
-        else:
-            # Henüz tahsis edilmemiş sipariş: mevcut raf stoğundan ata
-            raf_kodu = raf_dict.get(barcode, 'RAF YOK')
-            kalan = remaining_stock.get(barcode, 0)
-            stok_yetersiz = kalan <= 0
-            if not stok_yetersiz:
-                remaining_stock[barcode] = kalan - 1
-            yeni_atanan_raf = None if stok_yetersiz else raf_kodu
-            if order.atanan_raf != yeni_atanan_raf:
-                order.atanan_raf = yeni_atanan_raf
+        # Bu barkodun henüz boşalmamış ilk rafını seç ve 1 adet rezerve et.
+        raf_kodu: str | None = None
+        for raf_entry in barcode_rafs.get(barcode, []):
+            if raf_entry[1] > 0:
+                raf_kodu = raf_entry[0]
+                raf_entry[1] -= 1
+                break
 
-        if raf_kodu not in shelf_groups:
-            shelf_groups[raf_kodu] = []
+        stok_yetersiz = raf_kodu is None
+        yeni_atanan_raf = None if stok_yetersiz else raf_kodu
 
-        shelf_groups[raf_kodu].append({
+        # Stale atamayı her zaman geçersiz kıl — eski değer ne olursa olsun yenisini yaz.
+        if order.atanan_raf != yeni_atanan_raf:
+            order.atanan_raf = yeni_atanan_raf
+
+        display_raf = raf_kodu if raf_kodu else 'RAF YOK'
+        shelf_groups.setdefault(display_raf, []).append({
             'order_number': order.order_number,
             'model_code': model_code,
             'color': color,
