@@ -2,9 +2,11 @@
 
 import logging
 import base64
+import re
 import requests
+from collections import Counter
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from datetime import datetime, timedelta
+from datetime import datetime
 import uuid
 import random
 import os
@@ -16,8 +18,10 @@ from user_logs import log_user_action
 from models import OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
 # Raf ve central stok
 from models import RafUrun, CentralStock
-from stock_management import sync_central_stock
 from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID
+
+# Güvenli barkod deseni: harf, rakam, tire, alt çizgi (dosya adı olarak kullanılabilecek kadar güvenli)
+_SAFE_BARCODE_RE = re.compile(r'^[A-Za-z0-9_\-]{1,64}$')
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -37,6 +41,45 @@ def _get_attr(obj, candidates, default=None):
         if hasattr(obj, name):
             return getattr(obj, name)
     return default
+
+
+def _safe_barcode(barcode: str) -> str | None:
+    """Barkodu doğrular; geçersizse None döner. Path traversal koruması."""
+    if not barcode:
+        return None
+    barcode = barcode.strip()
+    if not _SAFE_BARCODE_RE.match(barcode):
+        return None
+    return barcode
+
+
+def _safe_image_url(barcode: str) -> str:
+    """Barkoda göre güvenli görsel yolu üretir; barkod geçersizse default döner."""
+    safe = _safe_barcode(barcode)
+    if not safe:
+        return "static/images/default.jpg"
+    path = f"static/images/{safe}.jpg"
+    return path if os.path.exists(path) else "static/images/default.jpg"
+
+
+def _safe_json_loads(raw, default=None):
+    """raw hem str hem dict/list olabilir; güvenli şekilde deserialize eder."""
+    if raw is None or raw == "":
+        return default if default is not None else []
+    if isinstance(raw, (list, dict)):
+        return raw
+    try:
+        return json.loads(raw)
+    except (TypeError, ValueError) as exc:
+        logger.warning(f"JSON parse hatası: {exc} — veri: {str(raw)[:120]}")
+        return default if default is not None else []
+
+
+def _safe_log(action: str, details: dict) -> None:
+    try:
+        log_user_action(action, details)
+    except Exception as exc:
+        logger.warning(f"Kullanıcı log kaydı başarısız ({action}): {exc}")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Yardımcı: Siparişi her tabloda ara
@@ -99,10 +142,14 @@ def _fetch_shopify_order_info(order_number: str) -> dict | None:
         for edge in line_items:
             li = edge.get("node", {})
             variant = li.get("variant") or {}
+            remote_img = (variant.get("image") or {}).get("url", "") or ""
+            barcode = variant.get("barcode") or ""
+            # Shopify mutlak URL dönebilir; frontend aynı mantıkla handle eder
+            image_url = remote_img if remote_img else _safe_image_url(barcode)
             details_list.append({
                 "sku": li.get("sku") or variant.get("sku") or "",
-                "barcode": variant.get("barcode") or "",
-                "image_url": (variant.get("image") or {}).get("url", ""),
+                "barcode": barcode,
+                "image_url": image_url,
             })
 
         return {
@@ -117,121 +164,176 @@ def _fetch_shopify_order_info(order_number: str) -> dict | None:
     return None
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Yardımcı: Raflardan tahsis (qty kadar), Central’dan düş (aynı miktar)
+# Yardımcı: Raflardan tahsis (qty kadar). CentralStock, models.py içindeki
+# event listener tarafından commit sonrası OTOMATİK senkronize edilir — burada
+# manuel commit yapılmaz, böylece çok ürünlü bir değişimde tek transaction'da
+# atomik çalışır.
 # ──────────────────────────────────────────────────────────────────────────────
-def allocate_from_shelves_and_decrement_central(barcode, qty=1):
+def allocate_from_shelves(barcode: str, qty: int = 1) -> dict:
     """
     RafUrun.urun_barkodu üzerinden raflardan 'qty' adet tahsis eder.
-    Raf miktar kolonu dinamik: (adet/miktar/qty/quantity/stok).
-    Tahsis edildiği kadar CentralStock’tan da düşer.
+    Hiçbir commit yapmaz — çağıran transaction'ı yönetir.
     Dönüş: {"allocated": int, "shelf_codes": [..]}
     """
     if not barcode or qty <= 0:
         return {"allocated": 0, "shelf_codes": []}
 
-    # Raf alanları
-    raf_barcode_col = RafUrun.urun_barkodu                      # ✅ sabit
-    raf_qty_col, raf_qty_name = _resolve_col(
-        RafUrun, ["adet", "miktar", "qty", "quantity", "stok"]  # ❗ sende hangisiyse otomatik bulunur
+    raflar = (
+        RafUrun.query
+        .filter(RafUrun.urun_barkodu == barcode, RafUrun.adet > 0)
+        .order_by(RafUrun.adet.desc())
+        .with_for_update()  # Eşzamanlı değişim taleplerinde yarış koşulunu önle
+        .all()
     )
-    shelf_code_attr_candidates = ["raf_kodu", "rafKodu", "shelf_code", "raf_code", "code"]
 
-    # Central alanları (gerekirse sırayı değiştir)
-    cs_barcode_col, _ = _resolve_col(CentralStock, ["barcode", "barkod", "urun_barkodu", "product_barcode"])
-    cs_qty_col, _     = _resolve_col(CentralStock, ["qty", "quantity", "adet", "miktar", "stok"])
-
-    # Rafları stok Çoktan→Aza sırala
-    raflar = (RafUrun.query
-              .filter(raf_barcode_col == barcode, raf_qty_col > 0)
-              .order_by(raf_qty_col.desc())
-              .all())
-
-    shelf_codes, allocated, need = [], 0, qty
+    shelf_codes: list[str] = []
+    allocated = 0
+    need = qty
 
     for raf in raflar:
         if need <= 0:
             break
-        cur = getattr(raf, raf_qty_col.key) or 0
+        cur = raf.adet or 0
         if cur <= 0:
             continue
         take = min(cur, need)
-        setattr(raf, raf_qty_col.key, cur - take)
-        db.session.flush()
-
-        shelf_code_val = _get_attr(raf, shelf_code_attr_candidates)
-        shelf_codes.extend([shelf_code_val] * take)
-
+        raf.adet = cur - take
+        shelf_codes.extend([raf.raf_kodu] * take)
         allocated += take
         need -= take
-
-    # Central'ı raflardaki toplamla senkronize et (tutarsızlık önleme)
-    if allocated > 0:
-        sync_central_stock(barcode)
 
     return {"allocated": allocated, "shelf_codes": shelf_codes}
 
 
+def restore_to_shelves(shelf_code_counts: dict) -> int:
+    """
+    Silinen/iptal edilen değişim kaydının stoğunu raflara geri yazar.
+    shelf_code_counts: { (raf_kodu, barcode): adet } sözlüğü.
+    Dönüş: toplam iade edilen adet.
+    """
+    if not shelf_code_counts:
+        return 0
+
+    toplam = 0
+    for (raf_kodu, barcode), adet in shelf_code_counts.items():
+        if not raf_kodu or not barcode or adet <= 0:
+            continue
+        rec = (
+            RafUrun.query
+            .filter_by(raf_kodu=raf_kodu, urun_barkodu=barcode)
+            .with_for_update()
+            .first()
+        )
+        if rec:
+            rec.adet = (rec.adet or 0) + adet
+        else:
+            db.session.add(RafUrun(raf_kodu=raf_kodu, urun_barkodu=barcode, adet=adet))
+        toplam += adet
+    return toplam
+
+
+def _aggregate_shelf_restore(urunler: list) -> dict:
+    """urunler_json'dan (raf_kodu, barcode) → adet toplamı çıkarır."""
+    counts: Counter = Counter()
+    for urun in urunler or []:
+        barcode = (urun.get("barkod") or "").strip()
+        if not barcode:
+            continue
+        shelf_list = urun.get("raf_kodlari") or []
+        if shelf_list:
+            for rk in shelf_list:
+                if rk:
+                    counts[(rk, barcode)] += 1
+        else:
+            # Tek raf_kodu alanı (virgülle ayrılmış olabilir)
+            raf_kodu = urun.get("raf_kodu")
+            if raf_kodu:
+                for rk in str(raf_kodu).split(","):
+                    rk = rk.strip()
+                    if rk:
+                        counts[(rk, barcode)] += 1
+    return dict(counts)
+
+
 # ──────────────────────────────────────────────────────────────────────────────
-# 1) Değişim Kaydetme (Raf + Central stok düşme entegre)
+# 1) Değişim Kaydetme (Tek transaction — raf düşüşü + kayıt atomik)
 # ──────────────────────────────────────────────────────────────────────────────
 @degisim_bp.route('/degisim-kaydet', methods=['POST'])
 def degisim_kaydet():
     try:
         logger.info("--- /degisim-kaydet isteği alındı ---")
-        logger.info(f"Form Verisi (request.form): {request.form}")
 
-        siparis_no = request.form['siparis_no']
-        ad         = request.form['ad']
-        soyad      = request.form['soyad']
-        adres      = request.form['adres']
-        telefon_no = request.form.get('telefon_no', '')
-        degisim_nedeni = request.form.get('degisim_nedeni', '')
+        siparis_no     = (request.form.get('siparis_no') or '').strip()
+        ad             = (request.form.get('ad') or '').strip()
+        soyad          = (request.form.get('soyad') or '').strip()
+        adres          = (request.form.get('adres') or '').strip()
+        telefon_no     = (request.form.get('telefon_no') or '').strip()
+        degisim_nedeni = (request.form.get('degisim_nedeni') or '').strip()
 
-        # Birden çok ürün satırı
+        if not siparis_no:
+            flash('Sipariş numarası zorunludur.', 'danger')
+            return redirect(url_for('degisim.yeni_degisim_talebi'))
+        if not degisim_nedeni:
+            flash('Değişim sebebi zorunludur.', 'danger')
+            return redirect(url_for('degisim.yeni_degisim_talebi'))
+
         urun_barkodlari = request.form.getlist('urun_barkod')
         urun_modelleri  = request.form.getlist('urun_model_kodu')
         urun_renkleri   = request.form.getlist('urun_renk')
         urun_bedenleri  = request.form.getlist('urun_beden')
-        # (opsiyonel) adet listesi varsa kullan, yoksa hepsi 1 kabul
-        urun_adetleri   = request.form.getlist('urun_adet')  # varsa formda
+        urun_adetleri   = request.form.getlist('urun_adet')
 
-        logger.info(f"Gelen Barkod Sayısı: {len(urun_barkodlari)} | Model Sayısı: {len(urun_modelleri)}")
-
-        if (not urun_barkodlari or not urun_modelleri
-            or len(urun_barkodlari) != len(urun_modelleri)
-            or len(urun_barkodlari) != len(urun_renkleri)
-            or len(urun_barkodlari) != len(urun_bedenleri)):
+        n = len(urun_barkodlari)
+        if (n == 0
+                or len(urun_modelleri) != n
+                or len(urun_renkleri) != n
+                or len(urun_bedenleri) != n):
             flash('Ürün bilgileri eksik veya hatalı. Lütfen tekrar deneyin.', 'danger')
-            logger.error("Ürün listeleri eşleşmiyor veya boş!")
+            logger.error(
+                f"Form liste uzunlukları uyuşmuyor: "
+                f"barkod={n}, model={len(urun_modelleri)}, "
+                f"renk={len(urun_renkleri)}, beden={len(urun_bedenleri)}"
+            )
             return redirect(url_for('degisim.yeni_degisim_talebi'))
 
-        # Normalize adet listesi
+        # Adet normalizasyonu (form adet göndermiyorsa varsayılan 1)
         adet_listesi = []
-        for i in range(len(urun_barkodlari)):
+        for i in range(n):
             try:
                 adet_val = int(urun_adetleri[i]) if i < len(urun_adetleri) else 1
-                adet_listesi.append(max(1, adet_val))
-            except Exception:
-                adet_listesi.append(1)
+            except (ValueError, TypeError):
+                adet_val = 1
+            adet_listesi.append(max(1, adet_val))
 
         urunler_listesi = []
         toplam_tahsis = 0
+        stok_hatalari = []
 
-        # Aynı transaction içinde raf/central düşeceğiz
-        for i in range(len(urun_barkodlari)):
-            barkod = (urun_barkodlari[i] or "").strip()
-            model  = urun_modelleri[i]
-            renk   = urun_renkleri[i]
-            beden  = urun_bedenleri[i]
-            adet   = adet_listesi[i]
+        # Tek transaction: herhangi bir ürün yetersizse rollback olur.
+        for i in range(n):
+            barkod = _safe_barcode(urun_barkodlari[i])
+            if not barkod:
+                stok_hatalari.append(f"{i+1}. satır: geçersiz barkod")
+                continue
 
-            # Raflardan tahsis + central düş (adet kadar)
-            alloc = allocate_from_shelves_and_decrement_central(barkod, qty=adet)
+            model = (urun_modelleri[i] or '').strip()
+            renk  = (urun_renkleri[i]  or '').strip()
+            beden = (urun_bedenleri[i] or '').strip()
+            adet  = adet_listesi[i]
+
+            alloc = allocate_from_shelves(barkod, qty=adet)
+
+            if alloc["allocated"] < adet:
+                stok_hatalari.append(
+                    f"{barkod}: istenen {adet}, mevcut {alloc['allocated']}"
+                )
+                continue
+
             toplam_tahsis += alloc["allocated"]
-
-            # Kartta göstermek üzere raf kodları (1’den fazlaysa liste döner)
-            # UI tarafında tek alan istiyorsan join edebilirsin:
-            raf_kodu_gosterim = ", ".join([rk for rk in alloc["shelf_codes"] if rk]) if alloc["shelf_codes"] else None
+            raf_kodu_gosterim = (
+                ", ".join([rk for rk in alloc["shelf_codes"] if rk])
+                if alloc["shelf_codes"] else None
+            )
 
             urunler_listesi.append({
                 "barkod": barkod,
@@ -239,10 +341,17 @@ def degisim_kaydet():
                 "renk": renk,
                 "beden": beden,
                 "adet": adet,
-                "raf_kodlari": alloc["shelf_codes"],   # detay
-                "raf_kodu": raf_kodu_gosterim,         # kartta pratik gösterim
-                "tahsis_edilen": alloc["allocated"]    # güvenlik için kayıt
+                "raf_kodlari": alloc["shelf_codes"],
+                "raf_kodu": raf_kodu_gosterim,
+                "tahsis_edilen": alloc["allocated"],
             })
+
+        if stok_hatalari:
+            db.session.rollback()
+            hata_mesaji = "Stok yetersiz veya hatalı: " + "; ".join(stok_hatalari)
+            logger.warning(hata_mesaji)
+            flash(hata_mesaji, 'danger')
+            return redirect(url_for('degisim.yeni_degisim_talebi'))
 
         urunler_json_str = json.dumps(urunler_listesi, ensure_ascii=False)
 
@@ -253,19 +362,29 @@ def degisim_kaydet():
             soyad=soyad,
             adres=adres,
             telefon_no=telefon_no,
-            degisim_tarihi=datetime.now(),
-            degisim_durumu='Oluşturuldu',   # <-- değişti
+            degisim_tarihi=datetime.utcnow(),
+            degisim_durumu='Oluşturuldu',
             kargo_kodu=generate_kargo_kodu(),
             degisim_nedeni=degisim_nedeni,
             urunler_json=urunler_json_str,
-            musteri_kargo_takip=None        # <-- modelde varsa; yoksa bkz. Not
+            musteri_kargo_takip=None,
         )
 
         db.session.add(degisim_kaydi)
         db.session.commit()
-        try: log_user_action("CREATE", {"işlem_açıklaması": f"Değişim talebi oluşturuldu — {degisim_kaydi.degisim_no}, {toplam_tahsis} adet", "sayfa": "Değişim Talepleri", "değişim_no": degisim_kaydi.degisim_no, "toplam_tahsis": toplam_tahsis})
-        except: pass
-        logger.info(f"Değişim kaydı oluşturuldu: {degisim_kaydi.degisim_no} | Toplam tahsis: {toplam_tahsis}")
+        # CentralStock & Product.quantity event listener tarafından commit sonrası
+        # otomatik senkronize edilir (models.py).
+
+        _safe_log("CREATE", {
+            "işlem_açıklaması": f"Değişim talebi oluşturuldu — {degisim_kaydi.degisim_no}, {toplam_tahsis} adet",
+            "sayfa": "Değişim Talepleri",
+            "değişim_no": degisim_kaydi.degisim_no,
+            "toplam_tahsis": toplam_tahsis,
+        })
+        logger.info(
+            f"Değişim kaydı oluşturuldu: {degisim_kaydi.degisim_no} | "
+            f"Toplam tahsis: {toplam_tahsis}"
+        )
         flash('Değişim talebiniz başarıyla oluşturuldu!', 'success')
         return redirect(url_for('degisim.degisim_talep'))
 
@@ -280,64 +399,103 @@ def degisim_kaydet():
 # ──────────────────────────────────────────────────────────────────────────────
 @degisim_bp.route('/update_status', methods=['POST'])
 def update_status():
-    degisim_no = request.form.get('degisim_no')
-    status = request.form.get('status')
-    musteri_kargo_takip = request.form.get('musteri_kargo_takip', '').strip()
+    degisim_no = (request.form.get('degisim_no') or '').strip()
+    status = (request.form.get('status') or '').strip()
+    musteri_kargo_takip = (request.form.get('musteri_kargo_takip') or '').strip()
 
-    rec = Degisim.query.filter_by(degisim_no=degisim_no).first()
-    if not rec:
-        return jsonify(success=False, message="Kayıt bulunamadı"), 404
+    if not degisim_no or not status:
+        return jsonify(success=False, message="Eksik parametre"), 400
 
-    # Takip no kontrolü (her statü için)
-    if not (rec.musteri_kargo_takip or musteri_kargo_takip):
-        return jsonify(success=False, need_tracking=True,
-                       message="Müşteri kargo takip numarası olmadan statü güncellenemez.")
+    try:
+        rec = Degisim.query.filter_by(degisim_no=degisim_no).first()
+        if not rec:
+            return jsonify(success=False, message="Kayıt bulunamadı"), 404
 
-    # varsa güncelle
-    if musteri_kargo_takip:
-        rec.musteri_kargo_takip = musteri_kargo_takip
+        # Takip no kontrolü (her statü için)
+        if not (rec.musteri_kargo_takip or musteri_kargo_takip):
+            return jsonify(
+                success=False,
+                need_tracking=True,
+                message="Müşteri kargo takip numarası olmadan statü güncellenemez.",
+            )
 
-    rec.degisim_durumu = status
-    db.session.commit()
-    try: log_user_action("UPDATE", {"işlem_açıklaması": f"Değişim durumu güncellendi — {degisim_no} → {status}", "sayfa": "Değişim Talepleri", "değişim_no": degisim_no, "yeni_durum": status})
-    except: pass
-    return jsonify(success=True)
+        if musteri_kargo_takip:
+            rec.musteri_kargo_takip = musteri_kargo_takip
+
+        rec.degisim_durumu = status
+        db.session.commit()
+
+        _safe_log("UPDATE", {
+            "işlem_açıklaması": f"Değişim durumu güncellendi — {degisim_no} → {status}",
+            "sayfa": "Değişim Talepleri",
+            "değişim_no": degisim_no,
+            "yeni_durum": status,
+        })
+        return jsonify(success=True)
+    except Exception as exc:
+        db.session.rollback()
+        logger.error(f"update_status hatası: {exc}", exc_info=True)
+        return jsonify(success=False, message="Sunucu hatası"), 500
 
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 3) Sil
+# 3) Sil (silerken raflardan düşülen stok geri iade edilir)
 # ──────────────────────────────────────────────────────────────────────────────
 @degisim_bp.route('/delete_exchange', methods=['POST'])
 def delete_exchange():
-    degisim_no = request.form.get('degisim_no')
-    degisim_kaydi = Degisim.query.filter_by(degisim_no=degisim_no).first()
-    if degisim_kaydi:
-        db.session.delete(degisim_kaydi)
+    degisim_no = (request.form.get('degisim_no') or '').strip()
+    if not degisim_no:
+        return jsonify(success=False, message="degisim_no eksik"), 400
+
+    try:
+        rec = Degisim.query.filter_by(degisim_no=degisim_no).first()
+        if not rec:
+            return jsonify(success=False, message="Kayıt bulunamadı"), 404
+
+        # Stok iadesi — kayıttaki urunler_json'dan raf kodlarını topla, geri yaz
+        urunler = _safe_json_loads(rec.urunler_json, default=[])
+        shelf_counts = _aggregate_shelf_restore(urunler if isinstance(urunler, list) else [])
+        iade_edilen = restore_to_shelves(shelf_counts)
+
+        db.session.delete(rec)
         db.session.commit()
-        try: log_user_action("DELETE", {"işlem_açıklaması": f"Değişim talebi silindi — {degisim_no}", "sayfa": "Değişim Talepleri", "değişim_no": degisim_no})
-        except: pass
-        return jsonify(success=True)
-    return jsonify(success=False), 500
+        # CentralStock otomatik senkronize edilir (models.py event listener).
+
+        _safe_log("DELETE", {
+            "işlem_açıklaması": f"Değişim talebi silindi — {degisim_no} (stok iade: {iade_edilen})",
+            "sayfa": "Değişim Talepleri",
+            "değişim_no": degisim_no,
+            "stok_iade": iade_edilen,
+        })
+        logger.info(
+            f"Değişim silindi: {degisim_no} | İade edilen adet: {iade_edilen}"
+        )
+        return jsonify(success=True, stok_iade=iade_edilen)
+    except Exception as exc:
+        db.session.rollback()
+        logger.error(f"delete_exchange hatası: {exc}", exc_info=True)
+        return jsonify(success=False, message="Sunucu hatası"), 500
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 4) Ürün detay getir
 # ──────────────────────────────────────────────────────────────────────────────
 @degisim_bp.route('/get_product_details', methods=['POST'])
 def get_product_details():
-    barcode = request.form['barcode']
+    raw_barcode = (request.form.get('barcode') or '').strip()
+    barcode = _safe_barcode(raw_barcode)
+    if not barcode:
+        return jsonify({'success': False, 'message': 'Geçersiz barkod'}), 400
+
     product = Product.query.filter_by(barcode=barcode).first()
     if product:
-        image_path = f"static/images/{barcode}.jpg"
-        if not os.path.exists(image_path):
-            image_path = "static/images/default.jpg"
         return jsonify({
             'success': True,
             'product_main_id': product.product_main_id,
             'size': product.size,
             'color': product.color,
             'barcode': barcode,
-            'image_url': image_path
+            'image_url': _safe_image_url(barcode),
         })
     return jsonify({'success': False, 'message': 'Ürün bulunamadı'})
 
@@ -346,10 +504,12 @@ def get_product_details():
 # ──────────────────────────────────────────────────────────────────────────────
 @degisim_bp.route('/get_order_details', methods=['POST'])
 def get_order_details():
-    siparis_no = request.form['siparis_no']
+    siparis_no = (request.form.get('siparis_no') or '').strip()
+    if not siparis_no:
+        return jsonify({'success': False, 'message': 'Sipariş numarası eksik'}), 400
 
     # Shopify siparişi
-    if siparis_no and siparis_no.startswith("SH-"):
+    if siparis_no.startswith("SH-"):
         info = _fetch_shopify_order_info(siparis_no)
         if info:
             return jsonify({'success': True, **info})
@@ -357,30 +517,31 @@ def get_order_details():
 
     # Trendyol / WooCommerce — DB'den
     order, _table_cls = find_order_across_tables(siparis_no)
-    if order:
-        details_list = []
-        order_details = json.loads(order.details) if order.details else []
-        for detail in order_details:
-            details_list.append({
-                'sku': detail.get('sku'),
-                'barcode': detail.get('barcode'),
-                'image_url': f"static/images/{detail.get('barcode')}.jpg"
-            })
+    if not order:
+        return jsonify({'success': False, 'message': 'Sipariş bulunamadı'})
 
-        # Telefon: DB'de yoksa Trendyol API'den çek
-        telefon = getattr(order, 'telefon_no', '') or ''
-        if not telefon:
-            telefon = _fetch_trendyol_phone(siparis_no)
-
-        return jsonify({
-            'success': True,
-            'ad': order.customer_name,
-            'soyad': order.customer_surname,
-            'adres': order.customer_address,
-            'telefon_no': telefon,
-            'details': details_list
+    order_details = _safe_json_loads(getattr(order, 'details', None), default=[])
+    details_list = []
+    for detail in order_details if isinstance(order_details, list) else []:
+        bc = detail.get('barcode') or ''
+        details_list.append({
+            'sku': detail.get('sku') or '',
+            'barcode': bc,
+            'image_url': _safe_image_url(bc),
         })
-    return jsonify({'success': False, 'message': 'Sipariş bulunamadı'})
+
+    telefon = getattr(order, 'telefon_no', '') or ''
+    if not telefon:
+        telefon = _fetch_trendyol_phone(siparis_no)
+
+    return jsonify({
+        'success': True,
+        'ad': getattr(order, 'customer_name', '') or '',
+        'soyad': getattr(order, 'customer_surname', '') or '',
+        'adres': getattr(order, 'customer_address', '') or '',
+        'telefon_no': telefon,
+        'details': details_list,
+    })
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 6) Listeleme (kartlarda raf_kodu/raf_kodlari görünür)
@@ -432,13 +593,9 @@ def degisim_talep():
 
     for exchange in degisim_kayitlari:
         exchange.urunler = []
-        if hasattr(exchange, 'urunler_json') and exchange.urunler_json:
-            try:
-                urun_listesi = json.loads(exchange.urunler_json)
-                if isinstance(urun_listesi, list):
-                    exchange.urunler = urun_listesi
-            except json.JSONDecodeError:
-                logger.error(f"JSON Decode Hatası - degisim_no: {exchange.degisim_no} - Hatalı Veri: '{exchange.urunler_json}'")
+        urun_listesi = _safe_json_loads(getattr(exchange, 'urunler_json', None), default=[])
+        if isinstance(urun_listesi, list):
+            exchange.urunler = urun_listesi
 
     current_filters = {
         'per_page': per_page, 'filter_status': filter_status,
@@ -461,10 +618,11 @@ def degisim_talep():
 @degisim_bp.route('/yeni-degisim-talebi', methods=['GET', 'POST'])
 def yeni_degisim_talebi():
     if request.method == 'POST':
-        siparis_no = request.form['siparis_no']
+        siparis_no = (request.form.get('siparis_no') or '').strip()
+        if not siparis_no:
+            return jsonify({'success': False, 'message': 'Sipariş numarası eksik'}), 400
 
-        # Shopify siparişi
-        if siparis_no and siparis_no.startswith("SH-"):
+        if siparis_no.startswith("SH-"):
             info = _fetch_shopify_order_info(siparis_no)
             if info:
                 return jsonify({
@@ -477,35 +635,38 @@ def yeni_degisim_talebi():
                 })
             return jsonify({'success': False, 'message': 'Shopify siparişi bulunamadı'})
 
-        # Trendyol / WooCommerce
         order, _table_cls = find_order_across_tables(siparis_no)
-        if order:
-            details_list = []
-            order_details = json.loads(order.details) if order.details else []
-            for detail in order_details:
-                details_list.append({
-                    'sku': detail.get('sku'),
-                    'barcode': detail.get('barcode')
-                })
-
-            telefon = getattr(order, 'telefon_no', '') or ''
-            if not telefon:
-                telefon = _fetch_trendyol_phone(siparis_no)
-
-            return jsonify({
-                'success': True,
-                'ad': order.customer_name,
-                'soyad': order.customer_surname,
-                'adres': order.customer_address,
-                'telefon_no': telefon,
-                'urunler': details_list
-            })
-        else:
+        if not order:
             return jsonify({'success': False, 'message': 'Sipariş bulunamadı'})
+
+        order_details = _safe_json_loads(getattr(order, 'details', None), default=[])
+        details_list = [
+            {'sku': d.get('sku') or '', 'barcode': d.get('barcode') or ''}
+            for d in (order_details if isinstance(order_details, list) else [])
+        ]
+
+        telefon = getattr(order, 'telefon_no', '') or ''
+        if not telefon:
+            telefon = _fetch_trendyol_phone(siparis_no)
+
+        return jsonify({
+            'success': True,
+            'ad': getattr(order, 'customer_name', '') or '',
+            'soyad': getattr(order, 'customer_surname', '') or '',
+            'adres': getattr(order, 'customer_address', '') or '',
+            'telefon_no': telefon,
+            'urunler': details_list,
+        })
     return render_template('yeni_degisim_talebi.html')
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 8) Kargo Kodu Üretme
+# 8) Kargo Kodu Üretme (DB'de benzersizlik garanti)
 # ──────────────────────────────────────────────────────────────────────────────
-def generate_kargo_kodu():
-    return "555" + str(random.randint(1000000, 9999999))
+def generate_kargo_kodu(max_attempts: int = 10) -> str:
+    """Benzersiz bir kargo kodu üretir. 10 denemede bulamazsa UUID suffix ekler."""
+    for _ in range(max_attempts):
+        kod = "555" + str(random.randint(1000000, 9999999))
+        if not Degisim.query.filter_by(kargo_kodu=kod).first():
+            return kod
+    # Son çare: çakışmayı garanti önlemek için UUID parçası ekle
+    return "555" + uuid.uuid4().hex[:10].upper()

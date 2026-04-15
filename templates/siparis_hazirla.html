@@ -1362,12 +1362,26 @@
           var mdl = bootstrap.Modal.getInstance(document.getElementById('archiveModal'));
           if (mdl) mdl.hide();
           gsToast('Sipariş arşivlendi!', 'success');
-          setTimeout(function(){ refreshOrderContent(); }, 1200);
+          // Arşivledikten sonra URL'deki order_number parametresini temizle — aksi halde
+          // aynı sipariş refresh'te tekrar yüklenir.
+          setTimeout(function(){
+            try {
+              var u = new URL(window.location.href);
+              if (u.searchParams.has('order_number')) {
+                u.searchParams.delete('order_number');
+                window.location.replace(u.toString());
+                return;
+              }
+            } catch (e) { /* IE fallback: manuel reload */ }
+            refreshOrderContent();
+          }, 800);
         } else {
-          gsToast('Hata: ' + res.message, 'error');
+          gsToast('Hata: ' + (res.message || 'Bilinmeyen hata'), 'error');
         }
-      }).fail(function(){
-        gsToast('Sunucu hatası.', 'error');
+      }).fail(function(xhr){
+        var msg = 'Sunucu hatası.';
+        try { msg = (xhr.responseJSON && xhr.responseJSON.message) || msg; } catch (e) {}
+        gsToast(msg, 'error');
       });
     });
   </script>

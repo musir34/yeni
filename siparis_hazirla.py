@@ -270,27 +270,39 @@ def get_home(order_number=None):
     Verilmezse en eski 'Created' siparişi yükler (sıralı mod).
     """
     try:
+        # Arşivdeki sipariş numaralarını başta bir kez çek (tüm dallar kullanır)
+        archived_numbers = {r[0] for r in db.session.query(Archive.order_number).all()}
+
         if order_number == "__empty__":
             oldest_order = None
         elif order_number and order_number.startswith("SH-"):
-            # 🛍️ Shopify siparişi — API'den çek
-            shopify_id = order_number.replace("SH-", "")
-            shopify_result = shopify_service.get_order(shopify_id)
-            if shopify_result.get("success") and shopify_result.get("order"):
-                raw = shopify_result["order"]
-                # line_items formatla
-                raw["line_items"] = raw.get("line_items") or []
-                oldest_order, _ = _shopify_order_to_hazirla_format(raw)
-            else:
+            # 🛍️ Shopify siparişi — ÖNCE arşiv kontrolü, sonra API'den çek.
+            # (Manuel URL ile arşive gitmiş sipariş açılamamalı.)
+            if order_number in archived_numbers:
+                logging.info(f"Manuel istek engellendi — sipariş arşivde: {order_number}")
                 oldest_order = None
+            else:
+                shopify_id = order_number.replace("SH-", "")
+                shopify_result = shopify_service.get_order(shopify_id)
+                if shopify_result.get("success") and shopify_result.get("order"):
+                    raw = shopify_result["order"]
+                    raw["line_items"] = raw.get("line_items") or []
+                    oldest_order, _ = _shopify_order_to_hazirla_format(raw)
+                else:
+                    oldest_order = None
         elif order_number:
-            oldest_order = (OrderCreated.query
-                          .filter(OrderCreated.order_number == order_number)
-                          .first())
+            # Trendyol/WooCommerce — aynı şekilde arşiv kontrolü
+            if order_number in archived_numbers:
+                logging.info(f"Manuel istek engellendi — sipariş arşivde: {order_number}")
+                oldest_order = None
+            else:
+                oldest_order = (OrderCreated.query
+                              .filter(OrderCreated.order_number == order_number)
+                              .first())
         else:
             # 🛍️ Öncelik: Shopify Beklemede siparişleri, sonra Trendyol
-            # Arşivdekileri atla (Shopify tag filtresi + yerel kontrol)
-            archived_numbers = {r[0] for r in db.session.query(Archive.order_number).all()}
+            # Arşivdekileri atla (Shopify tag filtresi + yerel kontrol).
+            # archived_numbers yukarıda zaten hesaplandı.
             shopify_orders = _fetch_shopify_beklemede_orders(limit=5)
             shopify_match = None
             for so in shopify_orders:
@@ -301,10 +313,11 @@ def get_home(order_number=None):
             if shopify_match:
                 oldest_order, _ = _shopify_order_to_hazirla_format(shopify_match)
             else:
-                oldest_order = (OrderCreated.query
-                              .filter(OrderCreated.status == 'Created')
-                              .order_by(OrderCreated.order_date)
-                              .first())
+                # Trendyol/WooCommerce fallback — arşivdekileri dışarıda bırak
+                trendyol_q = OrderCreated.query.filter(OrderCreated.status == 'Created')
+                if archived_numbers:
+                    trendyol_q = trendyol_q.filter(~OrderCreated.order_number.in_(archived_numbers))
+                oldest_order = trendyol_q.order_by(OrderCreated.order_date).first()
         is_from_woo_table = False
 
         # Hava durumu bilgisi

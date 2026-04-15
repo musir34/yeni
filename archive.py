@@ -1,9 +1,12 @@
 ﻿import os
 import json
+import logging
 import traceback
 from datetime import datetime
 from flask import Blueprint, render_template, request, jsonify
 from models import db, Archive, Product
+
+logger = logging.getLogger(__name__)
 # Çok tablolu sipariş modelleri
 from models import OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
 # update_service ve trendyol_api importları
@@ -518,58 +521,106 @@ def archive_an_order():
     """
     Çok tablolu modelde, siparişi bul -> arşive ekle -> o tablodan sil.
     Shopify siparişleri için DB kaydı olmadan arşiv oluşturur.
+
+    Shopify API çağrısı başarısız olsa bile sipariş yerel Archive tablosuna
+    minimum bilgiyle eklenir — böylece kullanıcının sipariş hazırla ekranından
+    garantili şekilde düşer.
     """
-    order_number = request.form.get('order_number')
-    archive_reason = request.form.get('archive_reason')
+    order_number = (request.form.get('order_number') or '').strip()
+    archive_reason = (request.form.get('archive_reason') or '').strip()
     other_reason = request.form.get('other_reason', '').strip()
     if archive_reason == 'Diğer' and other_reason:
         archive_reason = f"Diğer: {other_reason}"
-    print(f"Sipariş arşivleniyor: {order_number}, neden: {archive_reason}")
 
-    is_shopify = order_number and order_number.startswith("SH-")
+    if not order_number:
+        return jsonify({'success': False, 'message': 'Sipariş numarası eksik.'}), 400
+
+    logger.info(f"Sipariş arşivleniyor: {order_number}, neden: {archive_reason}")
+
+    # İdempotans: zaten arşivdeyse başarılı dön — kullanıcının retry spam'i hataya düşmesin
+    existing = Archive.query.filter_by(order_number=order_number).first()
+    if existing:
+        logger.info(f"Sipariş zaten arşivde: {order_number}")
+        return jsonify({'success': True, 'message': 'Sipariş zaten arşivde.'})
+
+    is_shopify = order_number.startswith("SH-")
 
     if is_shopify:
-        # 🛍️ Shopify siparişi — DB'de kayıt yok, API'den bilgi alıp arşivle
+        # 🛍️ Shopify siparişi — API'den bilgi çekmeyi dene, olmazsa minimum bilgiyle arşivle
+        from shopify_site.shopify_service import shopify_service
+        from siparis_hazirla import _shopify_order_to_hazirla_format
+
+        shopify_id = order_number.replace("SH-", "")
+        fake_order = None
         try:
-            from shopify_site.shopify_service import shopify_service
-            from siparis_hazirla import _shopify_order_to_hazirla_format
-
-            shopify_id = order_number.replace("SH-", "")
             shopify_result = shopify_service.get_order(shopify_id)
-
             if shopify_result.get("success") and shopify_result.get("order"):
                 raw = shopify_result["order"]
                 raw["line_items"] = raw.get("line_items") or []
                 fake_order, _ = _shopify_order_to_hazirla_format(raw)
+        except Exception as api_err:
+            logger.error(f"Shopify API hata (arşivleme): {api_err}")
 
-                new_archive = Archive(
-                    order_number=order_number,
-                    status="Archived",
-                    order_date=fake_order.order_date,
-                    details=fake_order.details,
-                    shipment_package_id=None,
-                    package_number=None,
-                    shipping_barcode=None,
-                    cargo_provider_name=None,
-                    customer_name=fake_order.customer_name,
-                    customer_surname=fake_order.customer_surname,
-                    customer_address=fake_order.customer_address,
-                    agreed_delivery_date=None,
-                    archive_reason=archive_reason,
-                    archive_date=datetime.now(),
-                    source='shopify'
-                )
-                db.session.add(new_archive)
-                db.session.commit()
+        try:
+            new_archive = Archive(
+                order_number=order_number,
+                status="Archived",
+                order_date=getattr(fake_order, 'order_date', None) or datetime.now(),
+                details=getattr(fake_order, 'details', None),
+                shipment_package_id=None,
+                package_number=None,
+                shipping_barcode=None,
+                cargo_provider_name=None,
+                customer_name=getattr(fake_order, 'customer_name', None),
+                customer_surname=getattr(fake_order, 'customer_surname', None),
+                customer_address=getattr(fake_order, 'customer_address', None),
+                agreed_delivery_date=None,
+                archive_reason=archive_reason or 'Manuel Arşiv',
+                archive_date=datetime.now(),
+                source='shopify',
+            )
+            db.session.add(new_archive)
 
-                # Shopify'da siparişi "Arsivlendi" olarak etiketle (tekrar gelmemesi için)
-                try:
-                    shopify_service.add_order_tags(shopify_id, ["Arsivlendi"])
-                except Exception as tag_err:
-                    print(f"Shopify tag ekleme hatası (arşiv): {tag_err}")
+            # Shopify siparişi daha önce sipariş çekme servisi tarafından
+            # OrderCreated'a senkronize edilmiş olabilir — aynı order_number ile
+            # tüm pipeline tablolarından kopyalarını temizle (çift kayıt önleme).
+            from models import OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
+            for cls in (OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled):
+                dup = cls.query.filter_by(order_number=order_number).all()
+                for d in dup:
+                    logger.info(f"Arşivleme sırasında çift kayıt silindi: {cls.__tablename__} id={d.id}")
+                    db.session.delete(d)
 
-                try: log_user_action("ARCHIVE", {"sayfa": "Sipariş Hazırla", "sipariş_no": order_number, "sebep": archive_reason or "-", "kaynak": "SHOPIFY"})
-                except: pass
+            db.session.commit()
+        except Exception as db_err:
+            db.session.rollback()
+            logger.error(f"Shopify arşiv DB hatası: {db_err}")
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'message': f'Arşiv kaydı oluşturulamadı: {db_err}',
+            }), 500
+
+        # Shopify'da siparişi "Arsivlendi" olarak etiketle (best-effort)
+        try:
+            shopify_service.add_order_tags(shopify_id, ["Arsivlendi"])
+        except Exception as tag_err:
+            logger.warning(f"Shopify tag ekleme hatası (arşiv): {tag_err}")
+
+        try:
+            log_user_action("ARCHIVE", {
+                "sayfa": "Sipariş Hazırla",
+                "sipariş_no": order_number,
+                "sebep": archive_reason or "-",
+                "kaynak": "SHOPIFY",
+                "api_bilgi_alindi": fake_order is not None,
+            })
+        except Exception as log_err:
+            logger.warning(f"log_user_action hatası: {log_err}")
+
+        # Bildirim — API bilgisi çekilebildiyse
+        if fake_order is not None:
+            try:
                 notify(
                     'archive_added',
                     subject=f"Arşive Eklendi: {order_number}",
@@ -583,14 +634,10 @@ def archive_an_order():
                         base_url=request.host_url.rstrip('/')
                     )
                 )
-                return jsonify({'success': True, 'message': 'Shopify sipariş arşive eklendi.'})
-            else:
-                return jsonify({'success': False, 'message': 'Shopify siparişi bulunamadı.'})
-        except Exception as e:
-            db.session.rollback()
-            print(f"Shopify arşivleme hatası: {e}")
-            traceback.print_exc()
-            return jsonify({'success': False, 'message': f'Shopify arşivleme hatası: {str(e)}'})
+            except Exception as notify_err:
+                logger.warning(f"Bildirim gönderilemedi: {notify_err}")
+
+        return jsonify({'success': True, 'message': 'Shopify sipariş arşive eklendi.'})
     else:
         # 📦 Trendyol/WooCommerce siparişi — standart akış
         order_obj, table_cls = find_order_across_tables(order_number)

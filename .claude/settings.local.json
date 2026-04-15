@@ -58,7 +58,9 @@
       "Bash(.venv/bin/python:*)",
       "Bash(env)",
       "Bash(poetry run:*)",
-      "Bash(pip list:*)"
+      "Bash(pip list:*)",
+      "Bash(ls -la *.db instance/*.db)",
+      "Bash(git -C /Users/abdurrahmankuli/Documents/Webs/yeni remote -v)"
     ]
   }
 }

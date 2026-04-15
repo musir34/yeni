@@ -89,6 +89,16 @@
             height: 150px;
             object-fit: cover;
         }
+        /* Değişim formundaki "Getir" sonrası ürün önizleme görseli */
+        #exchangeProductsContainer .thumbnail {
+            display: block;
+            width: 120px;
+            height: 120px;
+            max-width: 100%;
+            object-fit: cover;
+            border-radius: var(--border-radius);
+            margin-top: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -182,6 +192,23 @@
 
     <script>
         let productFieldIndex = 0;
+        let isFetchingOrder = false;
+
+        // ────────────────────────────────────────────────────────────────
+        // Güvenlik yardımcıları
+        // ────────────────────────────────────────────────────────────────
+        function safeText(value) {
+            // null/undefined'ı boş stringe çevirir
+            return (value === null || value === undefined) ? '' : String(value);
+        }
+
+        function safeImgSrc(url) {
+            // Mutlak URL ise doğrudan kullan, değilse /static... prefiksle
+            const s = safeText(url).trim();
+            if (!s) return '/static/images/default.jpg';
+            if (/^https?:\/\//i.test(s)) return s;
+            return '/' + s.replace(/^\/+/, '');
+        }
 
         function showMessage(message, success=true) {
             const box = document.getElementById('messageBox');
@@ -192,9 +219,98 @@
             setTimeout(() => { box.style.display = 'none'; }, 4000);
         }
 
+        // ────────────────────────────────────────────────────────────────
+        // DOM yardımcıları (XSS'e karşı textContent kullanıyoruz)
+        // ────────────────────────────────────────────────────────────────
+        function buildProductCard(product) {
+            const col = document.createElement('div');
+            col.className = 'col-md-4 mb-4';
+
+            const card = document.createElement('div');
+            card.className = 'card product-card';
+
+            const img = document.createElement('img');
+            img.className = 'card-img-top thumbnail';
+            img.alt = 'Ürün';
+            img.src = safeImgSrc(product.image_url);
+            img.addEventListener('error', () => { img.src = '/static/images/default.jpg'; });
+
+            const body = document.createElement('div');
+            body.className = 'card-body text-center';
+
+            const title = document.createElement('h5');
+            title.className = 'card-title';
+            title.textContent = safeText(product.sku);
+
+            const text = document.createElement('p');
+            text.className = 'card-text';
+            text.textContent = 'Barkod: ' + safeText(product.barcode);
+
+            body.appendChild(title);
+            body.appendChild(text);
+            card.appendChild(img);
+            card.appendChild(body);
+            col.appendChild(card);
+            return col;
+        }
+
+        function renderProductDetails(detailsDiv, data) {
+            detailsDiv.replaceChildren();
+
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success p-2';
+
+            const mkLine = (label, value) => {
+                const p = document.createElement('p');
+                p.className = 'mb-1';
+                const strong = document.createElement('strong');
+                strong.textContent = label + ': ';
+                p.appendChild(strong);
+                p.appendChild(document.createTextNode(safeText(value)));
+                return p;
+            };
+
+            alert.appendChild(mkLine('Model', data.product_main_id));
+            alert.appendChild(mkLine('Beden',  data.size));
+            alert.appendChild(mkLine('Renk',   data.color));
+
+            const img = document.createElement('img');
+            img.className = 'thumbnail';
+            img.alt = 'Ürün Görseli';
+            img.src = safeImgSrc(data.image_url);
+            img.addEventListener('error', () => { img.src = '/static/images/default.jpg'; });
+            alert.appendChild(img);
+
+            detailsDiv.appendChild(alert);
+
+            // Gizli input'lar
+            const addHidden = (name, value) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = safeText(value);
+                detailsDiv.appendChild(input);
+            };
+            addHidden('urun_model_kodu', data.product_main_id);
+            addHidden('urun_renk',       data.color);
+            addHidden('urun_beden',      data.size);
+        }
+
+        // ────────────────────────────────────────────────────────────────
+        // Ana akış
+        // ────────────────────────────────────────────────────────────────
         async function fetchOrderDetails() {
+            if (isFetchingOrder) return;
             const siparisNo = document.getElementById('siparis_no_input').value.trim();
             if (!siparisNo) return showMessage("Lütfen sipariş numarasını girin.", false);
+
+            isFetchingOrder = true;
+            const fetchBtn = document.querySelector('button[onclick="fetchOrderDetails()"]');
+            const originalFetchHTML = fetchBtn ? fetchBtn.innerHTML : '';
+            if (fetchBtn) {
+                fetchBtn.disabled = true;
+                fetchBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Yükleniyor...';
+            }
 
             try {
                 const response = await fetch("/get_order_details", {
@@ -205,26 +321,17 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    document.getElementById('siparis_no').value = siparisNo;
-                    document.getElementById('ad').value = data.ad;
-                    document.getElementById('soyad').value = data.soyad;
-                    document.getElementById('adres').value = data.adres;
-                    document.getElementById('telefon_no').value = data.telefon_no || '';
+                    document.getElementById('siparis_no').value  = siparisNo;
+                    document.getElementById('ad').value          = safeText(data.ad);
+                    document.getElementById('soyad').value       = safeText(data.soyad);
+                    document.getElementById('adres').value       = safeText(data.adres);
+                    document.getElementById('telefon_no').value  = safeText(data.telefon_no);
 
                     const productList = document.getElementById('productList');
-                    productList.innerHTML = '';
-                    data.details.forEach(product => {
-                        const productCard = `
-                            <div class="col-md-4 mb-4">
-                                <div class="card product-card">
-                                    <img src="/${product.image_url}" class="card-img-top thumbnail" alt="Ürün" onerror="this.src='/static/images/default.jpg'">
-                                    <div class="card-body text-center">
-                                        <h5 class="card-title">${product.sku}</h5>
-                                        <p class="card-text">Barkod: ${product.barcode}</p>
-                                    </div>
-                                </div>
-                            </div>`;
-                        productList.innerHTML += productCard;
+                    productList.replaceChildren();
+                    const details = Array.isArray(data.details) ? data.details : [];
+                    details.forEach(product => {
+                        productList.appendChild(buildProductCard(product));
                     });
                     document.getElementById('orderDetails').style.display = 'block';
                     document.getElementById('exchangeForm').style.display = 'none';
@@ -233,54 +340,93 @@
                 }
             } catch (error) {
                 showMessage("Sipariş bilgileri alınırken bir hata oluştu.", false);
+            } finally {
+                isFetchingOrder = false;
+                if (fetchBtn) {
+                    fetchBtn.disabled = false;
+                    fetchBtn.innerHTML = originalFetchHTML;
+                }
             }
         }
 
         function showExchangeForm() {
-            productFieldIndex = 0;
-            document.getElementById('exchangeProductsContainer').innerHTML = '';
-            addNewProductField();
+            const container = document.getElementById('exchangeProductsContainer');
+            // Mevcut girilmiş ürünleri koru — sadece hiç yoksa ilk alanı ekle
+            if (!container.children.length) {
+                productFieldIndex = 0;
+                addNewProductField();
+            }
             document.getElementById('exchangeForm').style.display = 'block';
         }
 
         function addNewProductField() {
-            const index = productFieldIndex;
+            const index = productFieldIndex++;
             const container = document.getElementById('exchangeProductsContainer');
 
-            const newFieldWrapper = document.createElement('div');
-            newFieldWrapper.className = 'border p-3 mb-4 rounded bg-light position-relative';
-            newFieldWrapper.id = `product-field-block-${index}`;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'border p-3 mb-4 rounded bg-light position-relative product-field-block';
+            wrapper.id = `product-field-block-${index}`;
 
-            const removeButton = document.createElement('button');
-            removeButton.type = 'button';
-            removeButton.className = 'btn-close position-absolute top-0 end-0 m-2';
-            removeButton.setAttribute('aria-label', 'Close');
-            removeButton.onclick = function() { this.parentElement.remove(); };
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn-close position-absolute top-0 end-0 m-2';
+            removeBtn.setAttribute('aria-label', 'Close');
+            removeBtn.onclick = function() { wrapper.remove(); };
+            wrapper.appendChild(removeBtn);
 
-            newFieldWrapper.appendChild(removeButton);
+            const heading = document.createElement('h6');
+            heading.textContent = `Yeni Eklenecek Ürün #${index + 1}`;
+            wrapper.appendChild(heading);
 
-            const fieldContent = `
-                <h6>Yeni Eklenecek Ürün #${index + 1}</h6>
-                <div class="mb-3">
-                    <label class="form-label" for="new_barcode_${index}">Yeni Ürün Barkodu</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="urun_barkod" id="new_barcode_${index}" required>
-                        <button type="button" class="btn btn-primary" onclick="fetchProductDetails(${index})">Getir</button>
-                    </div>
-                </div>
-                <div id="newProductDetails_${index}" class="mt-2"></div>
-            `;
-            newFieldWrapper.innerHTML += fieldContent;
-            container.appendChild(newFieldWrapper);
-            productFieldIndex++;
+            const group = document.createElement('div');
+            group.className = 'mb-3';
+
+            const label = document.createElement('label');
+            label.className = 'form-label';
+            label.setAttribute('for', `new_barcode_${index}`);
+            label.textContent = 'Yeni Ürün Barkodu';
+            group.appendChild(label);
+
+            const inputGroup = document.createElement('div');
+            inputGroup.className = 'input-group';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-control';
+            input.name = 'urun_barkod';
+            input.id = `new_barcode_${index}`;
+            input.required = true;
+
+            const getBtn = document.createElement('button');
+            getBtn.type = 'button';
+            getBtn.className = 'btn btn-primary';
+            getBtn.textContent = 'Getir';
+            getBtn.addEventListener('click', () => fetchProductDetails(index));
+
+            inputGroup.appendChild(input);
+            inputGroup.appendChild(getBtn);
+            group.appendChild(inputGroup);
+            wrapper.appendChild(group);
+
+            const details = document.createElement('div');
+            details.id = `newProductDetails_${index}`;
+            details.className = 'mt-2';
+            wrapper.appendChild(details);
+
+            container.appendChild(wrapper);
         }
 
         async function fetchProductDetails(index) {
-            const newBarcode = document.getElementById(`new_barcode_${index}`).value.trim();
+            const input = document.getElementById(`new_barcode_${index}`);
+            if (!input) return;
+            const newBarcode = input.value.trim();
             if (!newBarcode) return showMessage("Lütfen yeni ürün barkodunu girin.", false);
 
             const detailsDiv = document.getElementById(`newProductDetails_${index}`);
-            detailsDiv.innerHTML = '<div class="spinner-border spinner-border-sm"></div>';
+            detailsDiv.replaceChildren();
+            const spinner = document.createElement('div');
+            spinner.className = 'spinner-border spinner-border-sm';
+            detailsDiv.appendChild(spinner);
 
             try {
                 const response = await fetch("/get_product_details", {
@@ -291,45 +437,37 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    detailsDiv.innerHTML = `
-                        <div class='alert alert-success p-2'>
-                            <p class="mb-1"><strong>Model:</strong> ${data.product_main_id}</p>
-                            <p class="mb-1"><strong>Beden:</strong> ${data.size}</p>
-                            <p class="mb-1"><strong>Renk:</strong> ${data.color}</p>
-                            <img src="/${data.image_url}" alt="Ürün Görseli" class="thumbnail" onerror="this.src='/static/images/default.jpg'">
-                        </div>
-                        <input type="hidden" name="urun_model_kodu" value="${data.product_main_id}">
-                        <input type="hidden" name="urun_renk" value="${data.color}">
-                        <input type="hidden" name="urun_beden" value="${data.size}">
-                    `;
+                    renderProductDetails(detailsDiv, data);
                 } else {
-                    detailsDiv.innerHTML = `<div class='alert alert-danger p-2'>Ürün bulunamadı.</div>`;
+                    detailsDiv.replaceChildren();
+                    const err = document.createElement('div');
+                    err.className = 'alert alert-danger p-2';
+                    err.textContent = 'Ürün bulunamadı.';
+                    detailsDiv.appendChild(err);
                     showMessage(data.message || "Ürün bilgileri bulunamadı.", false);
                 }
             } catch (error) {
-                detailsDiv.innerHTML = '';
+                detailsDiv.replaceChildren();
                 showMessage("Ürün bilgileri alınırken bir hata oluştu.", false);
             }
         }
 
-        // DEĞİŞİM NEDENİ SEÇİMİNİ YÖNETEN FONKSİYON
         function handleReasonChange(selectElement) {
             const customReasonDiv = document.getElementById('custom_reason_div');
             const hiddenReasonInput = document.getElementById('degisim_nedeni');
 
             if (selectElement.value === 'Özel') {
                 customReasonDiv.style.display = 'block';
-                hiddenReasonInput.value = ''; // Özel seçildiğinde gizli input'u boşalt
+                hiddenReasonInput.value = '';
             } else {
                 customReasonDiv.style.display = 'none';
-                hiddenReasonInput.value = selectElement.value; // Seçilen değeri gizli input'a ata
+                hiddenReasonInput.value = selectElement.value;
             }
         }
 
         document.getElementById('degisimKayitForm').addEventListener('submit', async function(event) {
             event.preventDefault();
 
-            // Değişim nedenini ayarla
             const reasonSelect = document.getElementById('reason_select');
             const hiddenReasonInput = document.getElementById('degisim_nedeni');
             if (reasonSelect.value === 'Özel') {
@@ -348,17 +486,18 @@
             }
 
             for (let i = 0; i < productInputs.length; i++) {
-                const block = productInputs[i].closest('.border');
-                const hiddenModelInput = block.querySelector('input[name="urun_model_kodu"]');
+                const block = productInputs[i].closest('.product-field-block');
+                const hiddenModelInput = block ? block.querySelector('input[name="urun_model_kodu"]') : null;
 
-                if (!productInputs[i].value || !hiddenModelInput || !hiddenModelInput.value) {
+                if (!productInputs[i].value.trim() || !hiddenModelInput || !hiddenModelInput.value) {
                     showMessage(`Lütfen ${i + 1}. ürün için barkodu girip 'Getir' butonuna basın ve bilgilerin geldiğinden emin olun.`, false);
                     return;
                 }
             }
 
-            const formData = new FormData(this);
             const submitButton = this.querySelector('button[type="submit"]');
+            const originalSubmitHTML = submitButton.innerHTML;
+            const formData = new FormData(this);
             submitButton.disabled = true;
             submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Kaydediliyor...';
 
@@ -369,16 +508,16 @@
                 });
 
                 if (response.ok && response.redirected) {
-                     window.location.href = response.url;
-                } else {
-                    const errorData = await response.json().catch(() => ({ message: "Bilinmeyen bir sunucu hatası oluştu." }));
-                    showMessage(errorData.message || "Kayıt sırasında hata oluştu.", false);
+                    window.location.href = response.url;
+                    return; // yeni sayfaya gidiliyor
                 }
+                const errorData = await response.json().catch(() => ({ message: "Bilinmeyen bir sunucu hatası oluştu." }));
+                showMessage(errorData.message || "Kayıt sırasında hata oluştu.", false);
             } catch (error) {
                 showMessage("Ağ hatası: Sunucuya ulaşılamadı.", false);
             } finally {
                 submitButton.disabled = false;
-                submitButton.innerHTML = 'Değişimi Tamamla';
+                submitButton.innerHTML = originalSubmitHTML;
             }
         });
     </script>
