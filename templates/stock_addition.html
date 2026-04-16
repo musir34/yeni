@@ -522,13 +522,26 @@
                  allElements.barcodeInput.focus();
             }
         }
+        // 🔧 Etkileşimli öğeleri (buton/link/input) forceFocus dışında bırak
+        // Aksi halde Zebra TC21 gibi dokunmatik cihazlarda "Stokları İşle" butonuna basıldığında
+        // focusin yakalayıcı sayfayı barkod inputuna scroll'luyor ve click butona ulaşamıyor.
+        function isInteractiveTarget(el) {
+            return !!(el && el.closest && el.closest('button, a, input, textarea, select, label, [role="button"], .btn, .btn-camera'));
+        }
         document.addEventListener('keydown', e => {
             const activeEl = document.activeElement;
+            // Buton/link fokuslu ise Enter/Tab'ın native davranışını engelleme
+            if (activeEl && (activeEl.tagName === 'BUTTON' || activeEl.tagName === 'A')) return;
             if ((e.key === 'Enter' || e.key === 'Tab') && activeEl !== allElements.barcodeInput && activeEl !== allElements.rafKoduInput) {
                  e.preventDefault(); e.stopPropagation(); forceFocus();
             }
         });
-        ['click', 'focusin', 'keydown'].forEach(ev => { document.addEventListener(ev, forceFocus, true); });
+        ['click', 'focusin', 'keydown'].forEach(ev => {
+            document.addEventListener(ev, (e) => {
+                if (isInteractiveTarget(e.target)) return;
+                forceFocus();
+            }, true);
+        });
 
         document.getElementById('syncTrendyolForm').addEventListener('submit', async function(e) {
             e.preventDefault();
