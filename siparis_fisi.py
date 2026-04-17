@@ -229,34 +229,70 @@ def siparis_fisi_detay(siparis_id):
 # ── 7) Teslimat Kaydı Ekle ──
 @siparis_fisi_bp.route("/siparis_fisi/<int:siparis_id>/teslimat", methods=["POST"])
 def teslimat_kaydi_ekle(siparis_id):
+    wants_json = (
+        request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        or "application/json" in (request.headers.get("Accept") or "")
+    )
+
+    def _fail(msg, status=400):
+        if wants_json:
+            return jsonify({"ok": False, "error": msg}), status
+        return redirect(url_for("siparis_fisi_bp.siparis_fisi_detay",
+                                siparis_id=siparis_id, error=msg))
+
     try:
         fis = SiparisFisi.query.get(siparis_id)
         if not fis:
-            return jsonify({"mesaj": "Sipariş fişi bulunamadı"}), 404
+            return _fail("Sipariş fişi bulunamadı", 404)
 
         kayitlar = json.loads(fis.teslim_kayitlari or "[]")
+        kalemler_list = json.loads(fis.kalemler_json or "[]")
 
         model_code = request.form.get("model_code")
         color = request.form.get("color")
+
+        target_kalem = next(
+            (k for k in kalemler_list
+             if k.get("model_code") == model_code and k.get("color") == color),
+            None,
+        )
 
         beden_adetleri = {}
         toplam = 0
         for size in range(35, 42):
             key = f"beden_{size}"
-            adet = int(request.form.get(key, 0))
+            try:
+                adet = int(request.form.get(key, 0) or 0)
+            except (TypeError, ValueError):
+                adet = 0
+            if adet < 0:
+                adet = 0
             beden_adetleri[key] = adet
             toplam += adet
 
         if toplam <= 0:
-            return redirect(url_for("siparis_fisi_bp.siparis_fisi_detay", siparis_id=siparis_id,
-                                    error="Teslim edilecek ürün adeti 0'dan büyük olmalı."))
+            return _fail("Teslim edilecek ürün adeti 0'dan büyük olmalı.")
+
+        # Kalan kontrolü (server-side güvenlik)
+        if target_kalem:
+            for size in range(35, 42):
+                size_s = str(size)
+                siparis_adet = int(target_kalem.get(f"beden_{size}", 0) or 0)
+                onceden_teslim = sum(
+                    int(k.get(f"beden_{size}", 0) or 0)
+                    for k in kayitlar
+                    if k.get("model_code") == model_code and k.get("color") == color
+                )
+                kalan = siparis_adet - onceden_teslim
+                if beden_adetleri[f"beden_{size}"] > kalan:
+                    return _fail(f"Beden {size} için kalandan fazla giremezsiniz (kalan: {kalan}).")
 
         yeni_kayit = {
             "tarih": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "model_code": model_code,
             "color": color,
             **beden_adetleri,
-            "toplam": toplam
+            "toplam": toplam,
         }
         kayitlar.append(yeni_kayit)
 
@@ -265,22 +301,20 @@ def teslimat_kaydi_ekle(siparis_id):
         fis.teslim_kayitlari = json.dumps(kayitlar, ensure_ascii=False)
         fis.kalan_adet = fis.toplam_adet - total_teslim
 
-        # Stokları güncelle
-        for size_key, adet in beden_adetleri.items():
-            if adet > 0:
-                size_num = size_key.split('_')[1]
-                kalemler_list = json.loads(fis.kalemler_json or "[]")
-                target_kalem = next(
-                    (k for k in kalemler_list
-                     if k.get('model_code') == model_code and k.get('color') == color),
-                    None
-                )
-                if target_kalem:
-                    barkod = target_kalem.get('barkodlar', {}).get(size_num)
+        # Stokları güncelle (tek seferde barkodları topla, tek sorgu ile çek)
+        if target_kalem:
+            barkodlar_map = target_kalem.get("barkodlar", {}) or {}
+            barkod_adet = {}
+            for size_key, adet in beden_adetleri.items():
+                if adet > 0:
+                    size_num = size_key.split("_")[1]
+                    barkod = barkodlar_map.get(size_num)
                     if barkod:
-                        product = Product.query.filter_by(barcode=barkod).first()
-                        if product:
-                            product.quantity -= adet
+                        barkod_adet[barkod] = adet
+            if barkod_adet:
+                products = Product.query.filter(Product.barcode.in_(list(barkod_adet.keys()))).all()
+                for p in products:
+                    p.quantity = (p.quantity or 0) - barkod_adet[p.barcode]
 
         db.session.commit()
 
@@ -296,12 +330,33 @@ def teslimat_kaydi_ekle(siparis_id):
         except Exception:
             pass
 
-        return redirect(url_for("siparis_fisi_bp.siparis_fisi_detay", siparis_id=siparis_id))
+        if wants_json:
+            # Güncel kalanları (bu kalem) döndür
+            kalanlar = {}
+            if target_kalem:
+                for size in range(35, 42):
+                    siparis_adet = int(target_kalem.get(f"beden_{size}", 0) or 0)
+                    teslim_toplam = sum(
+                        int(k.get(f"beden_{size}", 0) or 0)
+                        for k in kayitlar
+                        if k.get("model_code") == model_code and k.get("color") == color
+                    )
+                    kalanlar[str(size)] = siparis_adet - teslim_toplam
+            return jsonify({
+                "ok": True,
+                "toplam": toplam,
+                "yeni_kayit": yeni_kayit,
+                "kalanlar": kalanlar,
+                "fis_kalan_adet": fis.kalan_adet,
+                "fis_toplam_teslim": total_teslim,
+            })
+
+        return redirect(url_for("siparis_fisi_bp.siparis_fisi_detay", siparis_id=siparis_id,
+                                success=f"Teslimat eklendi ({toplam} adet)"))
 
     except Exception as e:
         logger.error(f"Teslimat kaydı eklerken hata: {e}", exc_info=True)
-        return redirect(url_for("siparis_fisi_bp.siparis_fisi_detay", siparis_id=siparis_id,
-                                error=f"Teslimat eklenirken bir hata oluştu: {str(e)}"))
+        return _fail(f"Teslimat eklenirken bir hata oluştu: {str(e)}", 500)
 
 
 # ── 8) Fiş Oluştur ──
