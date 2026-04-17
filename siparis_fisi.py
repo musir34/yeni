@@ -123,6 +123,53 @@ def siparis_fisi_urunler():
     )
 
 
+# ── Canlı USD Maliyet Yardımcıları ──
+def _usd_maliyet_map(model_ids):
+    """Model kodlarına karşılık gelen güncel USD birim maliyetini döndürür.
+    Öncelik: ModelDirekMaliyet (>0); aksi halde ModelMaliyet toplamı."""
+    ids = [m for m in (model_ids or []) if m]
+    if not ids:
+        return {}
+    ids = list(set(ids))
+
+    # Direkt maliyet
+    direk_rows = ModelDirekMaliyet.query.filter(ModelDirekMaliyet.model_id.in_(ids)).all()
+    direk = {d.model_id: float(d.deger or 0) for d in direk_rows}
+
+    # Kalem toplamı
+    kalem_rows = db.session.query(
+        ModelMaliyet.model_id,
+        db.func.sum(ModelMaliyet.deger).label("toplam"),
+    ).filter(ModelMaliyet.model_id.in_(ids)).group_by(ModelMaliyet.model_id).all()
+    kalem = {r.model_id: float(r.toplam or 0) for r in kalem_rows}
+
+    result = {}
+    for m in ids:
+        dv = direk.get(m, 0.0)
+        kv = kalem.get(m, 0.0)
+        result[m] = dv if dv > 0 else kv
+    return result
+
+
+@siparis_fisi_bp.route("/api/model_maliyet/<model_id>", methods=["GET"])
+def api_model_maliyet_tek(model_id):
+    """Tek bir modelin canlı USD birim maliyetini döndür."""
+    try:
+        mp = _usd_maliyet_map([model_id])
+        toplam = mp.get(model_id, 0.0)
+        direk = ModelDirekMaliyet.query.get(model_id)
+        return jsonify({
+            "ok": True,
+            "model": model_id,
+            "toplam_usd": round(toplam, 2),
+            "direk": bool(direk and (direk.deger or 0) > 0),
+            "girilmis": toplam > 0,
+        })
+    except Exception as e:
+        logger.error(f"Model maliyet hatası: {e}", exc_info=True)
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 # ── 1) Fiş Liste Sayfası ──
 @siparis_fisi_bp.route("/siparis_fisi_sayfasi", methods=["GET"])
 def siparis_fisi_sayfasi():
@@ -142,10 +189,39 @@ def siparis_fisi_sayfasi():
         page=page, per_page=per_page, error_out=False
     )
 
+    # Tüm model kodlarını topla, canlı USD maliyetlerini bir kerede çek
+    tum_modeller = set()
+    fis_kalemler_cache = {}
+    for fis in pagination.items:
+        try:
+            kk = json.loads(fis.kalemler_json or "[]")
+        except Exception:
+            kk = []
+        fis_kalemler_cache[fis.siparis_id] = kk
+        for k in kk:
+            mc = k.get("model_code")
+            if mc:
+                tum_modeller.add(mc)
+
+    usd_map = _usd_maliyet_map(list(tum_modeller))
+
+    # Her fiş için canlı USD toplamı
+    canli_toplam_map = {}
+    for fis in pagination.items:
+        kk = fis_kalemler_cache.get(fis.siparis_id, [])
+        toplam = 0.0
+        for k in kk:
+            birim = usd_map.get(k.get("model_code"), 0.0)
+            adet = int(k.get("satir_toplam_adet") or 0)
+            toplam += birim * adet
+        canli_toplam_map[fis.siparis_id] = round(toplam, 2)
+
     return render_template(
         "siparis_fisi.html",
         fisler=pagination.items,
         pagination=pagination,
+        canli_toplam_usd=canli_toplam_map,
+        usd_map=usd_map,
     )
 
 
@@ -223,7 +299,27 @@ def siparis_fisi_detay(siparis_id):
         fis.teslim_kayitlari = "[]"
         db.session.commit()
 
-    return render_template("siparis_fisi_detay.html", fis=fis)
+    # Kalemlerdeki modeller için canlı USD maliyet
+    try:
+        kalemler = json.loads(fis.kalemler_json or "[]")
+    except Exception:
+        kalemler = []
+    model_ids = [k.get("model_code") for k in kalemler if k.get("model_code")]
+    usd_map = _usd_maliyet_map(model_ids)
+
+    # Fiş canlı USD toplamı
+    canli_toplam_usd = 0.0
+    for k in kalemler:
+        birim = usd_map.get(k.get("model_code"), 0.0)
+        adet = int(k.get("satir_toplam_adet") or 0)
+        canli_toplam_usd += birim * adet
+
+    return render_template(
+        "siparis_fisi_detay.html",
+        fis=fis,
+        usd_map=usd_map,
+        canli_toplam_usd=round(canli_toplam_usd, 2),
+    )
 
 
 # ── 7) Teslimat Kaydı Ekle ──

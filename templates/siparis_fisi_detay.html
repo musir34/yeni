@@ -515,10 +515,23 @@
             </tbody>
         </table>
 
+        {% set _usd_birim = (usd_map.get(kalem.model_code, 0) if usd_map else 0) | float %}
+        {% set _adet = kalem.satir_toplam_adet | int(default=0) %}
+        {% set _usd_kalem_toplam = _usd_birim * _adet %}
         <div class="info-box">
-            <p>Çift Başı Fiyat: {{ "%.2f"|format(kalem.cift_basi_fiyat | float(default=0.0)) }} TL</p>
-            <p>Bu Kalem Toplam Sipariş Adet: {{ kalem.satir_toplam_adet | int(default=0) }}</p>
-            <p>Bu Kalem Toplam Tutar: {{ "%.2f"|format(kalem.satir_toplam_fiyat | float(default=0.0)) }} TL</p>
+            <p>
+                <strong>Çift Başı Maliyet (USD):</strong>
+                <span style="color:#0d6efd;font-weight:700">${{ "%.2f"|format(_usd_birim) }}</span>
+                {% if _usd_birim > 0 %}
+                    <span style="font-size:11px;color:#6c757d">— tedarikçi sayfasından canlı</span>
+                {% else %}
+                    <span style="font-size:11px;color:#dc2626">— maliyet girilmemiş</span>
+                {% endif %}
+            </p>
+            <p>Bu Kalem Toplam Sipariş Adet: {{ _adet }}</p>
+            <p><strong>Bu Kalem Toplam Maliyet:</strong>
+                <span style="color:#0d6efd;font-weight:700">${{ "%.2f"|format(_usd_kalem_toplam) }}</span>
+            </p>
         </div>
 
         <div class="delivery-form fancy-border">
@@ -610,7 +623,11 @@
     {% endfor %}
 
     <div class="results-section">
-        <div class="result-item">Genel Toplam Fiyat: {{ "%.2f"|format(fis.toplam_fiyat | float(default=0.0)) }} TL</div>
+        <div class="result-item">
+            Genel Toplam Maliyet:
+            <span style="color:#0d6efd">${{ "%.2f"|format(canli_toplam_usd or 0) }}</span>
+            <span style="font-size:11px;color:#6c757d;font-weight:400">(tedarikçi maliyetlerinden canlı)</span>
+        </div>
         <div class="result-item">Toplam Sipariş Adet: {{ fis.toplam_adet | int(default=0) }}</div>
         <div class="result-item">Teslim Edilen Toplam Adet:
              {% set toplam_teslim = 0 %}

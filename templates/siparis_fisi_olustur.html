@@ -125,8 +125,11 @@
             </div>
           </div>
           <div class="form-group">
-            <label>Çift Başı Fiyat (TL)</label>
-            <input type="number" step="0.01" name="cift_basi_fiyat[]" value="0">
+            <label>Çift Başı Maliyet ($ - Tedarikçi sayfasından otomatik)</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="number" step="0.01" name="cift_basi_fiyat[]" class="cift-basi-fiyat-input" value="0" style="flex:1">
+              <span class="cift-basi-fiyat-hint" style="font-size:12px;color:#6c757d">—</span>
+            </div>
           </div>
           <div class="beden-container" style="display: none;">
             <!-- Seçilen renk için her beden inputu buraya eklenecek -->
@@ -151,6 +154,8 @@
       const tedKoduInput = productEntry.querySelector('.tedarikci-kodu-input');
       const tedAdiInput = productEntry.querySelector('.tedarikci-adi-input');
       const tedKaydetBtn = productEntry.querySelector('.tedarikci-kaydet-btn');
+      const ciftFiyatInput = productEntry.querySelector('.cift-basi-fiyat-input');
+      const ciftFiyatHint = productEntry.querySelector('.cift-basi-fiyat-hint');
 
       modelSelect.addEventListener('change', function() {
           const selectedModel = this.value;
@@ -161,7 +166,31 @@
           tedAdiInput.value = '';
           tedKaydetBtn.disabled = true;
 
+          if (ciftFiyatInput) ciftFiyatInput.value = 0;
+          if (ciftFiyatHint) { ciftFiyatHint.textContent = '—'; ciftFiyatHint.style.color = '#6c757d'; }
+
           if (!selectedModel) return;
+
+          // Tedarikçi sayfasındaki model maliyetini otomatik çek
+          fetch(`/api/model_maliyet/${encodeURIComponent(selectedModel)}`)
+              .then(r => r.json())
+              .then(d => {
+                  if (d && d.ok) {
+                      if (d.toplam_usd > 0) {
+                          if (ciftFiyatInput) ciftFiyatInput.value = d.toplam_usd.toFixed(2);
+                          if (ciftFiyatHint) {
+                              ciftFiyatHint.textContent = '$' + d.toplam_usd.toFixed(2) + (d.direk ? ' (direkt)' : ' (kalem toplamı)');
+                              ciftFiyatHint.style.color = '#16a34a';
+                          }
+                      } else {
+                          if (ciftFiyatHint) {
+                              ciftFiyatHint.textContent = 'Maliyet girilmemiş — Tedarikçi sayfasından ekleyin';
+                              ciftFiyatHint.style.color = '#dc2626';
+                          }
+                      }
+                  }
+              })
+              .catch(err => console.error('maliyet fetch:', err));
 
           fetch(`/get_product_details/${selectedModel}`)
               .then(response => response.json())

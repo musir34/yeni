@@ -305,7 +305,10 @@
                 {% endif %}
                 <div class="card-text">
                     <strong>Toplam Adet:</strong> {{ fis.toplam_adet | int(default=0) }}<br>
-                    <strong>Toplam Fiyat:</strong> {{ "%.2f"|format(fis.toplam_fiyat | float(default=0.0)) }} TL
+                    {% set _canli = canli_toplam_usd.get(fis.siparis_id, 0) if canli_toplam_usd else 0 %}
+                    <strong>Toplam Maliyet:</strong>
+                    <span style="color:#0d6efd;font-weight:700">${{ "%.2f"|format(_canli) }}</span>
+                    <span style="font-size:11px;color:#6c757d">(tedarikçi maliyetlerinden canlı)</span>
                 </div>
 
                 <div class="btn-actions">
