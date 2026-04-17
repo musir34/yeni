@@ -1,0 +1,624 @@
+openapi: 3.1.0
+info:
+  title: OpenClaw Agent API
+  description: Güllü Shoes OpenClaw panel agent API — sipariş, ürün, stok, değişim, iade, kasa ve raf yönetimi.
+  version: 1.0.0
+servers:
+  - url: https://gullupanel.com/agent/api/v1
+    description: Production
+security:
+  - AgentKey: []
+paths:
+  /dashboard:
+    get:
+      operationId: getDashboard
+      summary: Panel genel özeti
+      description: Sipariş sayıları, stok, aktif değişim/iade ve kasa bakiyesi dahil hızlı durum özeti.
+      responses:
+        "200":
+          description: Başarılı
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericResponse'
+
+  /search:
+    get:
+      operationId: globalSearch
+      summary: Tüm sistemde arama (ürün, sipariş, değişim, iade)
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 2 }
+          description: Arama terimi (min 2 karakter)
+        - name: limit
+          in: query
+          schema: { type: integer, default: 5, maximum: 20 }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /orders:
+    get:
+      operationId: listOrders
+      summary: Siparişleri listele
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Oluşturuldu, Hazırlanıyor, Kargoda, Teslim Edildi, İptal]
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Sipariş no, müşteri adı veya barkod
+        - name: start_date
+          in: query
+          schema: { type: string, format: date }
+        - name: end_date
+          in: query
+          schema: { type: string, format: date }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [date_asc, date_desc], default: date_desc }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 50, maximum: 200 }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /orders/stats:
+    get:
+      operationId: getOrderStats
+      summary: Sipariş istatistikleri (duruma göre sayılar)
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /orders/{order_number}:
+    get:
+      operationId: getOrder
+      summary: Tek sipariş detayı
+      parameters:
+        - name: order_number
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+        "404": { description: Bulunamadı }
+
+  /products:
+    get:
+      operationId: listProducts
+      summary: Ürünleri listele
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: model
+          in: query
+          schema: { type: string }
+        - name: color
+          in: query
+          schema: { type: string }
+        - name: size
+          in: query
+          schema: { type: string }
+        - name: brand
+          in: query
+          schema: { type: string }
+        - name: in_stock
+          in: query
+          schema: { type: boolean }
+        - name: archived
+          in: query
+          schema: { type: boolean, default: false }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [title, price_asc, price_desc, barcode] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 50, maximum: 200 }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /products/models:
+    get:
+      operationId: listProductModels
+      summary: Benzersiz model kodlarını listele
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /products/{barcode}:
+    get:
+      operationId: getProduct
+      summary: Ürün detayı + stok + alias bilgisi
+      parameters:
+        - name: barcode
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+        "404": { description: Bulunamadı }
+
+  /stock:
+    get:
+      operationId: listStock
+      summary: Stok listesi
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: min_qty
+          in: query
+          schema: { type: integer }
+        - name: max_qty
+          in: query
+          schema: { type: integer }
+        - name: zero_stock
+          in: query
+          schema: { type: boolean }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 100, maximum: 500 }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /stock/summary:
+    get:
+      operationId: getStockSummary
+      summary: Genel stok özeti
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /stock/{barcode}:
+    get:
+      operationId: getStockByBarcode
+      summary: Barkod bazlı stok detayı (raf dağılımı dahil)
+      parameters:
+        - name: barcode
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /stock/sync/{barcode}:
+    post:
+      operationId: syncStock
+      summary: Barkodun CentralStock'unu raflarla senkronize et
+      parameters:
+        - name: barcode
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /exchanges:
+    get:
+      operationId: listExchanges
+      summary: Değişim taleplerini listele
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Oluşturuldu, Kargoda, Tamamlandı, İptal]
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: start_date
+          in: query
+          schema: { type: string, format: date }
+        - name: end_date
+          in: query
+          schema: { type: string, format: date }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+    post:
+      operationId: createExchange
+      summary: Yeni değişim talebi oluştur (stok raftan tahsis edilir)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [siparis_no, ad, soyad, adres, urunler]
+              properties:
+                siparis_no: { type: string }
+                ad: { type: string }
+                soyad: { type: string }
+                adres: { type: string }
+                telefon_no: { type: string }
+                degisim_nedeni: { type: string }
+                urunler:
+                  type: array
+                  items:
+                    type: object
+                    required: [barkod, adet]
+                    properties:
+                      barkod: { type: string }
+                      model_kodu: { type: string }
+                      renk: { type: string }
+                      beden: { type: string }
+                      adet: { type: integer, minimum: 1 }
+      responses:
+        "201": { description: Oluşturuldu, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /exchanges/stats:
+    get:
+      operationId: getExchangeStats
+      summary: Değişim istatistikleri
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /exchanges/{degisim_no}:
+    get:
+      operationId: getExchange
+      summary: Tek değişim detayı
+      parameters:
+        - name: degisim_no
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+    delete:
+      operationId: deleteExchange
+      summary: Değişim kaydını sil
+      parameters:
+        - name: degisim_no
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Silindi, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /exchanges/{degisim_no}/status:
+    put:
+      operationId: updateExchangeStatus
+      summary: Değişim durumunu güncelle
+      description: Kargo takip numarası olmadan durum güncellenemez.
+      parameters:
+        - name: degisim_no
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [Oluşturuldu, Kargoda, Tamamlandı, İptal]
+                musteri_kargo_takip: { type: string }
+      responses:
+        "200": { description: Güncellendi, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /returns:
+    get:
+      operationId: listReturns
+      summary: İade taleplerini listele
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /returns/{return_id}:
+    get:
+      operationId: getReturn
+      summary: Tek iade detayı
+      parameters:
+        - name: return_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /manual-orders:
+    get:
+      operationId: listManualOrders
+      summary: Manuel siparişleri listele
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+    post:
+      operationId: createManualOrder
+      summary: Manuel sipariş oluştur (stok raftan tahsis edilir)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [musteri_adi, musteri_soyadi, musteri_adres, urunler]
+              properties:
+                musteri_adi: { type: string }
+                musteri_soyadi: { type: string }
+                musteri_adres: { type: string }
+                musteri_telefon: { type: string }
+                notlar: { type: string }
+                kapida_odeme: { type: boolean }
+                kapida_odeme_tutari: { type: number }
+                urunler:
+                  type: array
+                  items:
+                    type: object
+                    required: [barkod, adet]
+                    properties:
+                      barkod: { type: string }
+                      adet: { type: integer, minimum: 1 }
+                      birim_fiyat: { type: number, description: "0 veya eksikse sale_price kullanılır" }
+      responses:
+        "201": { description: Oluşturuldu, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /finance/summary:
+    get:
+      operationId: getFinanceSummary
+      summary: Finansal özet
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /finance/transactions:
+    get:
+      operationId: listFinanceTransactions
+      summary: Kasa kayıtlarını listele
+      parameters:
+        - name: tip
+          in: query
+          schema: { type: string, enum: [gelir, gider] }
+        - name: kategori
+          in: query
+          schema: { type: string }
+        - name: durum
+          in: query
+          schema: { type: string, enum: [odenmedi, kismi_odendi, tamamlandi] }
+        - name: start_date
+          in: query
+          schema: { type: string, format: date }
+        - name: end_date
+          in: query
+          schema: { type: string, format: date }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+    post:
+      operationId: createFinanceTransaction
+      summary: Gelir veya gider kaydı ekle
+      description: Kullanıcı "gider ekle/gelir yaz" dediğinde bu endpoint kullanılır. Kategori için önce /finance/categories çek.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tip, aciklama, tutar]
+              properties:
+                tip:
+                  type: string
+                  enum: [gelir, gider]
+                aciklama: { type: string }
+                tutar: { type: number, minimum: 0.01 }
+                kategori: { type: string }
+                durum:
+                  type: string
+                  enum: [odenmedi, kismi_odendi, tamamlandi]
+                  default: odenmedi
+                tarih: { type: string, format: date }
+                kullanici_id: { type: integer, default: 1 }
+      responses:
+        "201": { description: Oluşturuldu, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /finance/categories:
+    get:
+      operationId: listFinanceCategories
+      summary: Kasa kategorileri
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /shelves:
+    get:
+      operationId: listShelves
+      summary: Rafları listele
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 100 }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /shelves/{shelf_code}/products:
+    get:
+      operationId: getShelfProducts
+      summary: Belirli raftaki ürünleri listele
+      parameters:
+        - name: shelf_code
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+    post:
+      operationId: addProductToShelf
+      summary: Rafa ürün ekle
+      parameters:
+        - name: shelf_code
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [barkod]
+              properties:
+                barkod: { type: string }
+                adet: { type: integer, default: 1, minimum: 1 }
+      responses:
+        "201": { description: Eklendi, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /shelves/{shelf_code}/products/{barcode}:
+    delete:
+      operationId: removeProductFromShelf
+      summary: Raftan ürünü tamamen sil
+      parameters:
+        - name: shelf_code
+          in: path
+          required: true
+          schema: { type: string }
+        - name: barcode
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Silindi, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+    put:
+      operationId: updateShelfProductQty
+      summary: Raftaki ürün adedini güncelle
+      parameters:
+        - name: shelf_code
+          in: path
+          required: true
+          schema: { type: string }
+        - name: barcode
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [adet]
+              properties:
+                adet: { type: integer, description: "0 verilirse ürün raftan kaldırılır" }
+      responses:
+        "200": { description: Güncellendi, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /shelves/{shelf_code}/move:
+    post:
+      operationId: moveProductBetweenShelves
+      summary: Ürünü bir raftan diğerine taşı
+      parameters:
+        - name: shelf_code
+          in: path
+          required: true
+          schema: { type: string }
+          description: Kaynak raf kodu
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [barkod, hedef_raf]
+              properties:
+                barkod: { type: string }
+                hedef_raf: { type: string, description: Hedef raf kodu }
+                adet: { type: integer, default: 1, minimum: 1 }
+      responses:
+        "200": { description: Taşındı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /stock/sync-all:
+    post:
+      operationId: syncAllStock
+      summary: Tüm CentralStock toplu senkronizasyonu
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+  /barcode-alias/check/{barcode}:
+    get:
+      operationId: checkBarcodeAlias
+      summary: Barkodun alias olup olmadığını kontrol et
+      parameters:
+        - name: barcode
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Başarılı, content: { application/json: { schema: { $ref: '#/components/schemas/GenericResponse' } } } }
+
+components:
+  securitySchemes:
+    AgentKey:
+      type: apiKey
+      in: header
+      name: X-Agent-Key
+  schemas:
+    GenericResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        error:
+          type: string
+        data:
+          type: object
+          additionalProperties: true

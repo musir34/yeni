@@ -60,7 +60,10 @@
       "Bash(poetry run:*)",
       "Bash(pip list:*)",
       "Bash(ls -la *.db instance/*.db)",
-      "Bash(git -C /Users/abdurrahmankuli/Documents/Webs/yeni remote -v)"
+      "Bash(git -C /Users/abdurrahmankuli/Documents/Webs/yeni remote -v)",
+      "Bash(ls /Users/abdurrahmankuli/Documents/Webs/yeni/.env*)",
+      "Bash(host panel.gullushoes.com)",
+      "Bash(host www.gullushoes.com)"
     ]
   }
 }

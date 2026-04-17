@@ -19,7 +19,7 @@ X-Agent-Key: <AGENT_API_KEY>
 **Örnek:**
 ```bash
 curl -H "X-Agent-Key: gullu-openclaw-agent-2026-secret" \
-     https://panel.gullushoes.com/agent/api/v1/dashboard
+     https://gullupanel.com/agent/api/v1/dashboard
 ```
 
 ---

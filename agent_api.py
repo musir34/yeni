@@ -31,7 +31,8 @@ from models import (
     BarcodeAlias,
     Rapor, User, UserLog,
 )
-from stock_management import sync_central_stock
+from stock_management import sync_central_stock, sync_multiple_barcodes
+from barcode_alias_helper import normalize_barcode
 
 logger = logging.getLogger(__name__)
 
@@ -1346,6 +1347,151 @@ def shelf_products(shelf_code):
         },
         products=products,
         total_products=len(products),
+    )
+
+
+@agent_api.route('/shelves/<shelf_code>/products', methods=['POST'])
+@require_agent_key
+def add_product_to_shelf(shelf_code):
+    """Rafa ürün ekle. Body: {"barkod": "ABC123", "adet": 1}"""
+    raf = Raf.query.filter_by(kod=shelf_code).first()
+    if not raf:
+        return jsonify(success=False, error='Raf bulunamadı.'), 404
+
+    data = request.get_json(force=True)
+    barkod = normalize_barcode((data.get('barkod') or '').strip())
+    adet = data.get('adet', 1)
+
+    if not barkod:
+        return jsonify(success=False, error='barkod zorunludur.'), 400
+    if not isinstance(adet, int) or adet < 1:
+        return jsonify(success=False, error='adet en az 1 olmalı.'), 400
+
+    product = Product.query.get(barkod)
+    if not product:
+        return jsonify(success=False, error=f'{barkod} ürün bulunamadı.'), 404
+
+    mevcut = RafUrun.query.filter_by(raf_kodu=shelf_code, urun_barkodu=barkod).first()
+    if mevcut:
+        mevcut.adet += adet
+    else:
+        yeni = RafUrun(raf_kodu=shelf_code, urun_barkodu=barkod, adet=adet)
+        db.session.add(yeni)
+
+    db.session.commit()
+    sync_central_stock(barkod)
+
+    return jsonify(
+        success=True,
+        message=f'{shelf_code} rafına {barkod} x{adet} eklendi.',
+        shelf_code=shelf_code,
+        barcode=barkod,
+        adet=mevcut.adet if mevcut else adet,
+    ), 201
+
+
+@agent_api.route('/shelves/<shelf_code>/products/<barcode>', methods=['DELETE'])
+@require_agent_key
+def remove_product_from_shelf(shelf_code, barcode):
+    """Raftan ürün sil (tamamen kaldır)."""
+    barcode = normalize_barcode(barcode)
+    urun = RafUrun.query.filter_by(raf_kodu=shelf_code, urun_barkodu=barcode).first()
+    if not urun:
+        return jsonify(success=False, error=f'{barcode} bu rafta bulunamadı.'), 404
+
+    db.session.delete(urun)
+    db.session.commit()
+    sync_central_stock(barcode)
+
+    return jsonify(
+        success=True,
+        message=f'{shelf_code} rafından {barcode} silindi. CentralStock güncellendi.',
+    )
+
+
+@agent_api.route('/shelves/<shelf_code>/products/<barcode>', methods=['PUT'])
+@require_agent_key
+def update_shelf_product_qty(shelf_code, barcode):
+    """Raf ürün adedini güncelle. Body: {"adet": 5}"""
+    barcode = normalize_barcode(barcode)
+    data = request.get_json(force=True)
+    yeni_adet = data.get('adet')
+
+    if yeni_adet is None or not isinstance(yeni_adet, int):
+        return jsonify(success=False, error='adet (integer) zorunludur.'), 400
+
+    urun = RafUrun.query.filter_by(raf_kodu=shelf_code, urun_barkodu=barcode).first()
+    if not urun:
+        return jsonify(success=False, error=f'{barcode} bu rafta bulunamadı.'), 404
+
+    if yeni_adet <= 0:
+        db.session.delete(urun)
+        db.session.commit()
+        sync_central_stock(barcode)
+        return jsonify(
+            success=True,
+            message=f'{shelf_code} rafından {barcode} kaldırıldı (adet 0).',
+        )
+
+    urun.adet = yeni_adet
+    db.session.commit()
+    sync_central_stock(barcode)
+
+    return jsonify(
+        success=True,
+        message=f'{shelf_code} / {barcode} adet → {yeni_adet}',
+        shelf_code=shelf_code,
+        barcode=barcode,
+        adet=yeni_adet,
+    )
+
+
+@agent_api.route('/shelves/<shelf_code>/move', methods=['POST'])
+@require_agent_key
+def move_product_between_shelves(shelf_code, ):
+    """Ürünü bir raftan diğerine taşı. Body: {"barkod": "ABC123", "hedef_raf": "B-02-1", "adet": 3}"""
+    data = request.get_json(force=True)
+    barkod = normalize_barcode((data.get('barkod') or '').strip())
+    hedef_raf = (data.get('hedef_raf') or '').strip()
+    adet = data.get('adet', 1)
+
+    if not barkod or not hedef_raf:
+        return jsonify(success=False, error='barkod ve hedef_raf zorunludur.'), 400
+    if not isinstance(adet, int) or adet < 1:
+        return jsonify(success=False, error='adet en az 1 olmalı.'), 400
+
+    hedef = Raf.query.filter_by(kod=hedef_raf).first()
+    if not hedef:
+        return jsonify(success=False, error=f'Hedef raf {hedef_raf} bulunamadı.'), 404
+
+    kaynak_urun = RafUrun.query.filter_by(raf_kodu=shelf_code, urun_barkodu=barkod).first()
+    if not kaynak_urun or kaynak_urun.adet < adet:
+        mevcut = kaynak_urun.adet if kaynak_urun else 0
+        return jsonify(success=False, error=f'{shelf_code} rafında {barkod} yetersiz (mevcut: {mevcut}).'), 400
+
+    # Kaynaktan düş
+    kaynak_urun.adet -= adet
+    if kaynak_urun.adet <= 0:
+        db.session.delete(kaynak_urun)
+
+    # Hedefe ekle
+    hedef_urun = RafUrun.query.filter_by(raf_kodu=hedef_raf, urun_barkodu=barkod).first()
+    if hedef_urun:
+        hedef_urun.adet += adet
+    else:
+        yeni = RafUrun(raf_kodu=hedef_raf, urun_barkodu=barkod, adet=adet)
+        db.session.add(yeni)
+
+    db.session.commit()
+    sync_central_stock(barkod)
+
+    return jsonify(
+        success=True,
+        message=f'{barkod} x{adet}: {shelf_code} → {hedef_raf} taşındı.',
+        kaynak_raf=shelf_code,
+        hedef_raf=hedef_raf,
+        barcode=barkod,
+        tasinan_adet=adet,
     )
 
 
