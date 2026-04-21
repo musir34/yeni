@@ -363,7 +363,10 @@
         
         // 🔥 KARAKTER ARASI SÜRE TESPİTİ
         let lastCharTime = 0;            // Son karakter zamanı
-        let charGapThreshold = 50;       // 50ms'den uzun boşluk = yeni barkod başladı
+        // Not: Zebra TC21 gibi Android el terminalleri keyboard-wedge üzerinden karakterleri
+        // daha yavaş iletebiliyor (50-150ms). Eski 50ms eşiği barkodu ortadan kesip
+        // kısa parçaları düşürüyordu. 250ms hem hızlı okuyucular hem TC21 için güvenli.
+        let charGapThreshold = 250;      // Karakterler arası bu eşiği aşarsa yeni barkod başladı sayılır
         const allElements = {
             barcodeInput: document.getElementById('barcodeInput'),
             selectRenewModeBtn: document.getElementById('selectRenewMode'),
@@ -515,12 +518,12 @@
 
         function forceFocus() {
             if (isSubmitting) return;
-            // Raf kodu girilmediyse veya yanlışsa ürün barkoduna değil, raf barkoduna odaklan
-            if (allElements.rafKoduInput.value.trim() === '' || allElements.barcodeInput.disabled) {
-                allElements.rafKoduInput.focus();
-            } else {
-                 allElements.barcodeInput.focus();
-            }
+            // Hedef input zaten odaklıysa tekrar .focus() çağırma — Zebra TC21'de
+            // her tuşta .focus() yeniden tetiklemek karakterler arası gecikmeyi artırıyor.
+            const desired = (allElements.rafKoduInput.value.trim() === '' || allElements.barcodeInput.disabled)
+                ? allElements.rafKoduInput
+                : allElements.barcodeInput;
+            if (document.activeElement !== desired) desired.focus();
         }
         // 🔧 Etkileşimli öğeleri (buton/link/input) forceFocus dışında bırak
         // Aksi halde Zebra TC21 gibi dokunmatik cihazlarda "Stokları İşle" butonuna basıldığında
@@ -536,7 +539,9 @@
                  e.preventDefault(); e.stopPropagation(); forceFocus();
             }
         });
-        ['click', 'focusin', 'keydown'].forEach(ev => {
+        // Not: 'keydown' bu listesinden çıkarıldı — Zebra TC21'de her tuşta forceFocus
+        // çağırmak barkod akışını bozuyordu. Tab/Enter için yukarıdaki keydown handler yeterli.
+        ['click', 'focusin'].forEach(ev => {
             document.addEventListener(ev, (e) => {
                 if (isInteractiveTarget(e.target)) return;
                 forceFocus();
