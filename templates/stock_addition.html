@@ -548,6 +548,73 @@
             }, true);
         });
 
+        // 🔫 GLOBAL SCANNER BUFFER (Zebra TC21 fallback)
+        // Bazı Android WebView konfigürasyonlarında DataWedge 'input' event'i
+        // tetiklemeden tuşları sentezliyor -> input alanı boş kalıyor.
+        // Bu buffer focus'tan bağımsız olarak keydown'ları yakalar, hızlı diziler
+        // (karakterler arası ort. ≤ 120ms) + Enter/Tab terminatör ile biterse
+        // scanner kabul edip raf/barkod alanına doğrudan yönlendirir.
+        // İnsan yazımı genelde >150ms aralıkla olduğu için normal typing etkilenmez.
+        (function setupGlobalScannerBuffer() {
+            const MAX_AVG_GAP_MS = 120;
+            const RESET_MS = 500;
+            const MIN_LEN = 5;
+            let buf = '';
+            let times = [];
+
+            function reset() { buf = ''; times = []; }
+
+            function route(value) {
+                if (!value || value.length < MIN_LEN) return;
+                const rafEmpty = allElements.rafKoduInput.value.trim() === '' || allElements.barcodeInput.disabled;
+                if (rafEmpty) {
+                    allElements.rafKoduInput.value = value;
+                    // raf doğrulamasını tetikle (mevcut input handler debounce'lu)
+                    allElements.rafKoduInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    if (typeof checkRafKodu === 'function') checkRafKodu();
+                } else if (selectedMode) {
+                    addToQueue(value);
+                }
+            }
+
+            document.addEventListener('keydown', (e) => {
+                if (isSubmitting) return;
+                if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+                const now = (performance && performance.now) ? performance.now() : Date.now();
+
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                    if (buf.length >= MIN_LEN && times.length >= 2) {
+                        const totalGap = times[times.length - 1] - times[0];
+                        const avgGap = totalGap / (times.length - 1);
+                        if (avgGap <= MAX_AVG_GAP_MS) {
+                            // Scanner dizisi olarak kabul et
+                            e.preventDefault();
+                            e.stopImmediatePropagation();
+                            const value = buf;
+                            reset();
+                            // Echo'yu temizle (normal input akışı chars'ları zaten yazmış olabilir)
+                            if (document.activeElement === allElements.barcodeInput) {
+                                allElements.barcodeInput.value = '';
+                            } else if (document.activeElement === allElements.rafKoduInput) {
+                                allElements.rafKoduInput.value = '';
+                            }
+                            route(value);
+                            return;
+                        }
+                    }
+                    reset();
+                    return;
+                }
+
+                if (e.key && e.key.length === 1) {
+                    if (times.length && (now - times[times.length - 1]) > RESET_MS) reset();
+                    buf += e.key;
+                    times.push(now);
+                }
+            }, true);
+        })();
+
         document.getElementById('syncTrendyolForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const form = e.target;
