@@ -266,6 +266,10 @@
                                             <li class="mb-1"><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="status_hazir" {{ 'checked' if 'status_hazir' in user_events }}><label class="form-check-label">Hazır</label></div></li>
                                             <li class="mb-1"><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="status_iptal" {{ 'checked' if 'status_iptal' in user_events }}><label class="form-check-label">İptal edildiğinde</label></div></li>
                                             <li><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="archive_restored" {{ 'checked' if 'archive_restored' in user_events }}><label class="form-check-label">Arşivden çıkarıldığında</label></div></li>
+                                            <li><hr class="dropdown-divider my-1"></li>
+                                            <li class="mb-1"><small class="text-muted ps-1">Sistem Uyarıları</small></li>
+                                            <li class="mb-1"><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="stock_sync_stale" {{ 'checked' if 'stock_sync_stale' in user_events }}><label class="form-check-label">Shopify stok senkronu donduğunda</label></div></li>
+                                            <li><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="shopify_oversell_risk" {{ 'checked' if 'shopify_oversell_risk' in user_events }}><label class="form-check-label">Oversell riski oluştuğunda</label></div></li>
                                         </ul>
                                     </div>
                                 </td>

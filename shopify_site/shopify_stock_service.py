@@ -475,19 +475,54 @@ class ShopifyStockService:
             payload = data.get("inventorySetQuantities", {})
             errors = payload.get("userErrors") or []
 
-            if errors:
-                err_msg = "; ".join(e.get("message", "") for e in errors)
-                # Toplu hatada tüm batch hata sayılır
+            # userErrors içindeki field path'inden hangi quantities[index] başarısız olduğunu tespit et.
+            # Shopify field formatı: ["input", "quantities", "3", "inventoryItemId"] gibi.
+            failed_indices: Dict[int, str] = {}
+            global_errors: List[str] = []
+            for err in errors:
+                field = err.get("field") or []
+                msg = err.get("message", "")
+                idx = None
+                if isinstance(field, list):
+                    for i, part in enumerate(field):
+                        if part == "quantities" and i + 1 < len(field):
+                            try:
+                                idx = int(field[i + 1])
+                                break
+                            except (TypeError, ValueError):
+                                pass
+                if idx is not None and 0 <= idx < len(batch):
+                    failed_indices[idx] = msg
+                else:
+                    global_errors.append(msg)
+
+            # Global (batch-geneli) hata varsa tüm batch'i hata say — mutation hiç çalışmadı.
+            if global_errors:
+                err_msg = "; ".join(global_errors)
                 for item in batch:
                     results["error_count"] += 1
                     results["errors"].append({"barcode": item["mapping"].barcode, "error": err_msg})
-                logger.warning("[SHOPIFY] Toplu stok hatası (%d item): %s", len(batch), err_msg)
-            else:
-                now = datetime.utcnow()
-                for item in batch:
+                logger.warning("[SHOPIFY] Batch-geneli hata (%d item): %s", len(batch), err_msg)
+                return
+
+            # Item-özel hatalar: sadece hatalıyı error say, kalanı başarılı kabul et ve güncelle.
+            now = datetime.utcnow()
+            for idx, item in enumerate(batch):
+                mapping = item["mapping"]
+                if idx in failed_indices:
+                    results["error_count"] += 1
+                    results["errors"].append({"barcode": mapping.barcode, "error": failed_indices[idx]})
+                else:
                     results["success_count"] += 1
-                    item["mapping"].last_stock_sent = item["qty"]
-                    item["mapping"].last_sync_at = now
+                    mapping.last_stock_sent = item["qty"]
+                    mapping.last_sync_at = now
+
+            if failed_indices:
+                logger.warning(
+                    "[SHOPIFY] Batch kısmi: %d başarılı, %d hata (%d item)",
+                    len(batch) - len(failed_indices), len(failed_indices), len(batch),
+                )
+            else:
                 logger.info("[SHOPIFY] Toplu stok gönderildi: %d item başarılı", len(batch))
         except Exception as exc:
             for item in batch:

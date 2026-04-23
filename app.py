@@ -449,6 +449,21 @@ def schedule_jobs():
         next_run_time=now + timedelta(minutes=2)  # İlk çalışma 2 dk sonra
     )
 
+    # >>> Shopify Stok Sağlık İzleme: her 6 saatte bir
+    from stock_sync.health_monitor import run_all_checks as _stock_health_checks
+
+    def _stock_health_job():
+        with app.app_context():
+            _stock_health_checks()
+
+    _add_job_safe(
+        _stock_health_job,
+        trigger='interval',
+        id="stock_sync_health_monitor",
+        hours=6,
+        next_run_time=now + timedelta(minutes=10)  # İlk çalışma 10 dk sonra
+    )
+
     # >>> WooCommerce sipariş senkronizasyonu: her 10 dakika - DEVRE DIŞI
     # _add_job_safe(
     #     sync_woo_orders_background,

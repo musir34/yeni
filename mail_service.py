@@ -13,6 +13,8 @@ NOTIFY_EVENTS = {
     'status_hazir':      'Hazır statüsüne geçtiğinde',
     'status_iptal':      'İptal edildiğinde',
     'archive_restored':  'Arşivden çıkarıldığında',
+    'stock_sync_stale':      'Shopify stok senkronu durduğunda',
+    'shopify_oversell_risk': 'Shopify oversell riski tespit edildiğinde',
 }
 
 # Statü -> olay eşlemesi
@@ -49,6 +51,8 @@ EVENT_COLORS = {
     'status_hazir':      '#28A745',
     'status_iptal':      '#DC3545',
     'archive_restored':  '#6F42C1',
+    'stock_sync_stale':      '#B02A37',
+    'shopify_oversell_risk': '#DC3545',
 }
 
 # Olay başlıkları
@@ -59,6 +63,8 @@ EVENT_TITLES = {
     'status_hazir':      'Statü Değişti → Hazır',
     'status_iptal':      'Sipariş İptal Edildi',
     'archive_restored':  'Sipariş Arşivden Çıkarıldı',
+    'stock_sync_stale':      '⚠️ Shopify Stok Senkronu Donmuş',
+    'shopify_oversell_risk': '🚨 Shopify Oversell Riski',
 }
 
 
@@ -179,6 +185,81 @@ def build_email_html(event: str, order_number: str, customer_name: str,
 </div>
 </body>
 </html>'''
+
+
+def build_alert_email_html(event: str, headline: str, summary_rows: list[tuple[str, str]],
+                            detail_rows: list[dict] | None = None,
+                            action_hint: str | None = None) -> str:
+    """Stok/sistem uyarıları için jenerik HTML email oluşturur.
+
+    summary_rows: [(etiket, değer), ...] — başlık altında özet tablosu
+    detail_rows:  [{"barkod": ..., "panel": ..., "shopify": ..., "note": ...}, ...] opsiyonel detay
+    """
+    title = EVENT_TITLES.get(event, 'Sistem Uyarısı')
+    title_color = EVENT_COLORS.get(event, '#B02A37')
+
+    summary_html = ''
+    for label, value in summary_rows:
+        summary_html += f'''<tr>
+            <td style="padding:8px 0;color:#666;width:180px;">{label}</td>
+            <td style="padding:8px 0;font-weight:600;">{value}</td>
+        </tr>'''
+
+    detail_html = ''
+    if detail_rows:
+        rows = ''
+        for d in detail_rows[:30]:
+            rows += (
+                f'<tr>'
+                f'<td style="padding:6px 8px;border-bottom:1px solid #f0f0f0;font-family:monospace;">{d.get("barkod","-")}</td>'
+                f'<td style="padding:6px 8px;border-bottom:1px solid #f0f0f0;text-align:right;">{d.get("panel","-")}</td>'
+                f'<td style="padding:6px 8px;border-bottom:1px solid #f0f0f0;text-align:right;">{d.get("shopify","-")}</td>'
+                f'<td style="padding:6px 8px;border-bottom:1px solid #f0f0f0;color:#666;font-size:12px;">{d.get("note","")}</td>'
+                f'</tr>'
+            )
+        extra = ''
+        if len(detail_rows) > 30:
+            extra = f'<div style="text-align:center;padding:8px;color:#999;font-size:12px;">… ve {len(detail_rows) - 30} kayıt daha</div>'
+        detail_html = f'''
+        <div style="margin-top:20px;padding-top:16px;border-top:2px solid #f0f0f0;">
+            <h3 style="margin:0 0 12px;font-size:15px;color:#333;">Etkilenen Kayıtlar</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <tr style="background:#f8f9fa;">
+                    <th style="padding:8px;text-align:left;font-size:11px;color:#999;">BARKOD</th>
+                    <th style="padding:8px;text-align:right;font-size:11px;color:#999;">PANEL</th>
+                    <th style="padding:8px;text-align:right;font-size:11px;color:#999;">SHOPIFY</th>
+                    <th style="padding:8px;text-align:left;font-size:11px;color:#999;">NOT</th>
+                </tr>
+                {rows}
+            </table>
+            {extra}
+        </div>'''
+
+    action_html = ''
+    if action_hint:
+        action_html = f'''
+        <div style="margin-top:20px;padding:12px 16px;background:#fff3cd;border-left:4px solid #ffc107;border-radius:4px;">
+            <strong style="color:#856404;">Önerilen aksiyon:</strong>
+            <div style="margin-top:4px;color:#856404;">{action_hint}</div>
+        </div>'''
+
+    return f'''<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div style="max-width:620px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+    <div style="background:{title_color};padding:20px 24px;">
+        <h2 style="margin:0;color:#fff;font-size:18px;">{title}</h2>
+        <div style="margin-top:6px;color:rgba(255,255,255,0.9);font-size:14px;">{headline}</div>
+    </div>
+    <div style="padding:24px;">
+        <table style="width:100%;border-collapse:collapse;">{summary_html}</table>
+        {detail_html}
+        {action_html}
+    </div>
+    <div style="padding:16px 24px;background:#f8f9fa;text-align:center;border-top:1px solid #eee;">
+        <p style="margin:0;font-size:12px;color:#aaa;">Güllü Ayakkabı — Sistem İzleme</p>
+    </div>
+</div></body></html>'''
 
 
 def _get_recipients_for_event(event: str) -> list[str]:
