@@ -54,6 +54,13 @@
 </head>
 <body>
   <div class="container-xl mt-4 mb-5">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'danger' if category == 'danger' else ('success' if category == 'success' else 'info') }} text-center">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
     <div class="text-center mb-4">
       <h2><i class="fas fa-sync-alt"></i> Değişim Talepleri Listesi</h2>
       <p class="text-muted">Toplam {{ total_exchanges_count }} talep bulundu.</p>

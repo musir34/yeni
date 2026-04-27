@@ -20,8 +20,9 @@ from models import OrderCreated, OrderPicking, OrderShipped, OrderDelivered, Ord
 from models import RafUrun, CentralStock
 from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID
 
-# Güvenli barkod deseni: harf, rakam, tire, alt çizgi (dosya adı olarak kullanılabilecek kadar güvenli)
-_SAFE_BARCODE_RE = re.compile(r'^[A-Za-z0-9_\-]{1,64}$')
+# Güvenli barkod deseni: Unicode harf/rakam (Türkçe karakterler dahil), tire, alt çizgi.
+# Path traversal koruması için /, \, ., null byte ve diğer ayraçlar dışlanır.
+_SAFE_BARCODE_RE = re.compile(r'^[\w\-]{1,64}$', re.UNICODE)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -271,11 +272,9 @@ def degisim_kaydet():
         degisim_nedeni = (request.form.get('degisim_nedeni') or '').strip()
 
         if not siparis_no:
-            flash('Sipariş numarası zorunludur.', 'danger')
-            return redirect(url_for('degisim.yeni_degisim_talebi'))
+            return jsonify(success=False, message='Sipariş numarası zorunludur.'), 400
         if not degisim_nedeni:
-            flash('Değişim sebebi zorunludur.', 'danger')
-            return redirect(url_for('degisim.yeni_degisim_talebi'))
+            return jsonify(success=False, message='Değişim sebebi zorunludur.'), 400
 
         urun_barkodlari = request.form.getlist('urun_barkod')
         urun_modelleri  = request.form.getlist('urun_model_kodu')
@@ -288,13 +287,15 @@ def degisim_kaydet():
                 or len(urun_modelleri) != n
                 or len(urun_renkleri) != n
                 or len(urun_bedenleri) != n):
-            flash('Ürün bilgileri eksik veya hatalı. Lütfen tekrar deneyin.', 'danger')
             logger.error(
                 f"Form liste uzunlukları uyuşmuyor: "
                 f"barkod={n}, model={len(urun_modelleri)}, "
                 f"renk={len(urun_renkleri)}, beden={len(urun_bedenleri)}"
             )
-            return redirect(url_for('degisim.yeni_degisim_talebi'))
+            return jsonify(
+                success=False,
+                message='Ürün bilgileri eksik veya hatalı. Lütfen barkod girip "Getir" ile bilgileri doldurun.'
+            ), 400
 
         # Adet normalizasyonu (form adet göndermiyorsa varsayılan 1)
         adet_listesi = []
@@ -350,8 +351,7 @@ def degisim_kaydet():
             db.session.rollback()
             hata_mesaji = "Stok yetersiz veya hatalı: " + "; ".join(stok_hatalari)
             logger.warning(hata_mesaji)
-            flash(hata_mesaji, 'danger')
-            return redirect(url_for('degisim.yeni_degisim_talebi'))
+            return jsonify(success=False, message=hata_mesaji), 400
 
         urunler_json_str = json.dumps(urunler_listesi, ensure_ascii=False)
 
@@ -391,8 +391,7 @@ def degisim_kaydet():
     except Exception as e:
         logger.error(f"Değişim kaydında kritik hata: {e}", exc_info=True)
         db.session.rollback()
-        flash(f'Beklenmedik bir hata oluştu: {e}', 'danger')
-        return redirect(url_for('degisim.yeni_degisim_talebi'))
+        return jsonify(success=False, message=f'Beklenmedik bir hata oluştu: {e}'), 500
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 2) Durum Güncelle
