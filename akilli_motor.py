@@ -522,7 +522,15 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
         ), axis=1,
     )
 
-    excluded = {m.strip().upper() for m in (excluded_models or []) if m.strip()}
+    # Hariç model setleri: hem ham hem de baştaki sıfırlar atılmış halini ekle
+    # (Excel hücresi sayı saklıyorsa "0172" → 172, kullanıcı "0172" yazmış olabilir)
+    excluded = set()
+    for m in (excluded_models or []):
+        s = m.strip().upper()
+        if not s:
+            continue
+        excluded.add(s)
+        excluded.add(s.lstrip('0') or '0')
 
     # Sipariş verisini çek
     sales_df = _query_sales_data()
@@ -544,7 +552,8 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
     pre_data = []
     for (model_kodu, renk), group in grouped:
         model_str = str(model_kodu).strip()
-        if model_str.upper() in excluded:
+        model_upper = model_str.upper()
+        if model_upper in excluded or (model_upper.lstrip('0') or '0') in excluded:
             continue
         first = group.iloc[0]
         stok = int(group['STOK'].sum()) if 'STOK' in group.columns else 0
@@ -747,7 +756,9 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
             updated_df.loc[mask, 'YENİ TSF (FİYAT GÜNCELLE)'] = r['onerilen_fiyat']
 
     if excluded:
-        mask_exc = updated_df['MODEL KODU'].astype(str).str.strip().str.upper().isin(excluded)
+        _norm = updated_df['MODEL KODU'].astype(str).str.strip().str.upper()
+        _norm_stripped = _norm.str.lstrip('0').replace('', '0')
+        mask_exc = _norm.isin(excluded) | _norm_stripped.isin(excluded)
         updated_df = updated_df[~mask_exc]
 
     updated_df = updated_df.drop(columns=['_RENK'], errors='ignore')
@@ -804,6 +815,15 @@ def akilli_motor_analiz():
         file.save(save_path)
         ext = filename.rsplit('.', 1)[1].lower()
         df = pd.read_excel(save_path, engine='openpyxl' if ext == 'xlsx' else None)
+        # MODEL KODU baştaki sıfırları korumak için string'e zorla (örn: "0172" → 172 olmasın)
+        if 'MODEL KODU' in df.columns:
+            def _normalize_model_kodu(v):
+                if pd.isna(v):
+                    return ''
+                if isinstance(v, float) and v.is_integer():
+                    return str(int(v))
+                return str(v).strip()
+            df['MODEL KODU'] = df['MODEL KODU'].apply(_normalize_model_kodu)
 
         params = {
             'maliyet': float(request.form.get('maliyet', 0) or 0),
