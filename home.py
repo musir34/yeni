@@ -77,6 +77,11 @@ def index():
     # Toplam sipariş (tüm pazaryerleri)
     aylik_toplam_siparis = aylik_trendyol_siparis + aylik_shopify_siparis
 
+    # GÜNLÜK sipariş sayıları (bugün)
+    gunluk_trendyol_siparis = len(_collect_month_orders_unified(gun_basi, gun_sonu))
+    gunluk_shopify_siparis = _get_shopify_daily_count(gun_basi, gun_sonu)
+    gunluk_toplam_siparis = gunluk_trendyol_siparis + gunluk_shopify_siparis
+
     # 3) Ortalama sipariş tutarı (CANLI PANEL MANTIĞIyla - sipariş başına NET)
     # avg_per_order, total_net_ciro, order_count
     ortalama_siparis_tutari, toplam_ciro, siparis_sayisi = _monthly_aov_from_unified_rows(best_rows)
@@ -112,6 +117,10 @@ def index():
         "toplam_siparis": aylik_toplam_siparis,
         "trendyol_siparis": aylik_trendyol_siparis,
         "shopify_siparis": aylik_shopify_siparis,
+        "gunluk_toplam_siparis": gunluk_toplam_siparis,
+        "gunluk_trendyol_siparis": gunluk_trendyol_siparis,
+        "gunluk_shopify_siparis": gunluk_shopify_siparis,
+        "gun_etiketi": now.strftime("%d/%m"),
         "created": created_count,
         "picking": picking_count,
         "hazirlanan": 0,
@@ -412,6 +421,24 @@ def _get_shopify_monthly_count(ay_basi, sonraki_ay):
             return result.get("count", 0)
     except Exception as exc:
         logger.warning("[HOME] Shopify aylik siparis sayisi alinamadi: %s", exc)
+    return 0
+
+
+def _get_shopify_daily_count(gun_basi, gun_sonu):
+    """Shopify API'den bugünkü siparis sayisini dondurur."""
+    if not _SHOPIFY_OK or not ShopifyConfig.is_configured():
+        return 0
+    try:
+        date_from = gun_basi.strftime("%Y-%m-%d")
+        # gun_sonu aynı gün içinde olduğundan, ertesi günü üst sınır olarak kullan
+        from datetime import timedelta
+        date_to = (gun_basi + timedelta(days=1)).strftime("%Y-%m-%d")
+        query_str = f"created_at:>={date_from} created_at:<{date_to}"
+        result = shopify_service.get_orders_count(query_filter=query_str)
+        if result.get("success"):
+            return result.get("count", 0)
+    except Exception as exc:
+        logger.warning("[HOME] Shopify gunluk siparis sayisi alinamadi: %s", exc)
     return 0
 
 

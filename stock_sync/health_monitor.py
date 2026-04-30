@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # Eşik değerleri — aşılırsa uyarı gönderilir
 STALE_SYNC_DAYS = 2           # Son sync'ten kaç gün geçerse "stale" sayılır
 STALE_COUNT_ALERT = 20        # Kaç stale mapping olursa uyarı gönderilir
-MISMATCH_ALERT_THRESHOLD = 10 # Kaç tutarsız mapping olursa uyarı gönderilir
+MISMATCH_ALERT_THRESHOLD = 150 # Kaç tutarsız mapping olursa uyarı gönderilir (15dk sync penceresinde gelen normal siparişlerin üstünde olmalı)
 OVERSELL_ALERT_THRESHOLD = 1  # Oversell riski tespit edilirse hep uyarı (min 1)
 
 

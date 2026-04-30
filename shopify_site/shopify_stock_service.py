@@ -522,6 +522,13 @@ class ShopifyStockService:
                     "[SHOPIFY] Batch kısmi: %d başarılı, %d hata (%d item)",
                     len(batch) - len(failed_indices), len(failed_indices), len(batch),
                 )
+                for idx, msg in failed_indices.items():
+                    if 0 <= idx < len(batch):
+                        m = batch[idx]["mapping"]
+                        logger.warning(
+                            "[SHOPIFY] FAIL barcode=%s qty=%s inv_id=%s msg=%s",
+                            m.barcode, batch[idx]["qty"], m.shopify_inventory_item_id, msg,
+                        )
             else:
                 logger.info("[SHOPIFY] Toplu stok gönderildi: %d item başarılı", len(batch))
         except Exception as exc:

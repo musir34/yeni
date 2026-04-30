@@ -66,7 +66,11 @@
       "Bash(host www.gullushoes.com)",
       "Bash(git *)",
       "Bash(lsof -i :5000 -i :8000 -i :5001 -sTCP:LISTEN)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(DISABLE_JOBS=1 python scripts/check_sync_health.py)",
+      "Bash(DISABLE_JOBS=1 python /tmp/check_stale_shopify.py)",
+      "Bash(DISABLE_JOBS=1 python scripts/diagnose_stale_shopify_mappings.py)",
+      "Bash(DISABLE_JOBS=1 python scripts/cleanup_dead_shopify_mappings.py)"
     ]
   }
 }
