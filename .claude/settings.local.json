@@ -65,7 +65,8 @@
       "Bash(host panel.gullushoes.com)",
       "Bash(host www.gullushoes.com)",
       "Bash(git *)",
-      "Bash(lsof -i :5000 -i :8000 -i :5001 -sTCP:LISTEN)"
+      "Bash(lsof -i :5000 -i :8000 -i :5001 -sTCP:LISTEN)",
+      "Bash(node *)"
     ]
   }
 }

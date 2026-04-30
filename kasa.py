@@ -726,14 +726,49 @@ def kasa_sil(kayit_id):
     kayit = Kasa.query.get_or_404(kayit_id)
     y, a = kayit.tarih.year, kayit.tarih.month
     try:
+        # Eğer bu kayıt Ana Kasa'dan aktarılmış bir gelir ise, tutarı Ana Kasa'ya geri iade et
+        iade_edildi = False
+        if kayit.tip == 'gelir' and kayit.ana_kasadan:
+            ana_kasa = AnaKasa.query.first()
+            if not ana_kasa:
+                ana_kasa = AnaKasa(bakiye=Decimal('0'))
+                db.session.add(ana_kasa)
+                db.session.flush()
+
+            tutar_dec = Decimal(str(kayit.tutar))
+            onceki_bakiye = ana_kasa.bakiye
+            ana_kasa.bakiye += tutar_dec
+            ana_kasa.guncelleme_tarihi = datetime.now()
+
+            # Audit: iade işlem kaydı (kasa silindiği için kasa_id=None)
+            iade_islem = AnaKasaIslem(
+                islem_tipi='manuel_ekleme',
+                tutar=tutar_dec,
+                aciklama=f"Kasa kaydı silindi, tutar iade edildi: {kayit.aciklama} (#{kayit_id})",
+                onceki_bakiye=onceki_bakiye,
+                yeni_bakiye=ana_kasa.bakiye,
+                kullanici_id=session.get('user_id'),
+                kasa_id=None,
+                tarih=datetime.now()
+            )
+            db.session.add(iade_islem)
+
+            # Bu kasa kaydına bağlı eski AnaKasaIslem kayıtlarının kasa_id'sini boşalt (FK kırılmasın)
+            AnaKasaIslem.query.filter_by(kasa_id=kayit_id).update({AnaKasaIslem.kasa_id: None})
+
+            iade_edildi = True
+
         db.session.delete(kayit)
         db.session.commit()
-        try: log_user_action("DELETE", {"işlem_açıklaması": f"Kasa kaydı silindi — #{kayit_id}", "sayfa": "Kasa", "kayıt_id": kayit_id})
+        try: log_user_action("DELETE", {"işlem_açıklaması": f"Kasa kaydı silindi — #{kayit_id}" + (" (Ana Kasa'ya iade edildi)" if iade_edildi else ""), "sayfa": "Kasa", "kayıt_id": kayit_id})
         except: pass
-        flash('Kayıt silindi.', 'success')
-    except Exception:
+        if iade_edildi:
+            flash(f'✅ Kayıt silindi ve {kayit.tutar} ₺ Ana Kasa\'ya iade edildi.', 'success')
+        else:
+            flash('Kayıt silindi.', 'success')
+    except Exception as e:
         db.session.rollback()
-        flash('Kayıt silinirken hata oluştu!', 'error')
+        flash(f'Kayıt silinirken hata oluştu! Detay: {e}', 'error')
     return redirect(url_for('kasa.kasa_sayfasi', yil=y, ay=a))
 
 
