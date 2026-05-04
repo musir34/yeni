@@ -516,6 +516,72 @@ def api_cancel_session(session_id: str):
         return jsonify({"success": False, "error": "Session bulunamadı veya aktif değil"}), 404
 
 
+@stock_sync_bp.route('/api/barcode-history/<path:barcode>')
+@login_required
+def api_barcode_history(barcode: str):
+    """Bir barkodun her platformdaki son sync durumunu döndür.
+
+    Trendyol/Amazon/Idefix/Hepsiburada: en son SyncDetail kaydı.
+    Shopify: SyncDetail'a yazmıyor → ShopifyMapping.last_sync_at kullanılır.
+    """
+    from sqlalchemy import desc
+    from models import ShopifyMapping, CentralStock
+
+    barcode = (barcode or "").strip()
+    if not barcode:
+        return jsonify({"success": False, "error": "Barkod boş"}), 400
+
+    platforms = ["trendyol", "amazon", "idefix", "hepsiburada"]
+    results = []
+
+    for platform in platforms:
+        detail = (SyncDetail.query
+                  .filter_by(barcode=barcode, platform=platform)
+                  .order_by(desc(SyncDetail.created_at))
+                  .first())
+        if not detail:
+            results.append({"platform": platform, "found": False})
+            continue
+
+        sent_at = detail.sent_at or detail.created_at
+        results.append({
+            "platform": platform,
+            "found": True,
+            "stock_sent": detail.stock_sent,
+            "stock_before": detail.stock_before,
+            "status": detail.status,
+            "error_message": detail.error_message,
+            "sent_at": sent_at.isoformat() if sent_at else None,
+        })
+
+    # Shopify - ShopifyMapping üzerinden
+    shopify_mappings = ShopifyMapping.query.filter_by(barcode=barcode).all()
+    if shopify_mappings:
+        last = max(shopify_mappings, key=lambda m: m.last_sync_at or datetime.min)
+        results.append({
+            "platform": "shopify",
+            "found": last.last_sync_at is not None,
+            "stock_sent": last.last_stock_sent,
+            "status": "success" if last.last_sync_at else "pending",
+            "sent_at": last.last_sync_at.isoformat() if last.last_sync_at else None,
+            "variant_count": len(shopify_mappings),
+            "product_title": last.shopify_product_title,
+        })
+    else:
+        results.append({"platform": "shopify", "found": False, "note": "Eşleşme yok"})
+
+    # Mevcut central stock
+    cs = CentralStock.query.filter_by(barcode=barcode).first()
+    central_qty = cs.qty if cs else None
+
+    return jsonify({
+        "success": True,
+        "barcode": barcode,
+        "central_stock": central_qty,
+        "platforms": results,
+    })
+
+
 @stock_sync_bp.route('/api/history')
 @login_required
 def api_history():

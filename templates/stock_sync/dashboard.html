@@ -161,6 +161,23 @@
   </div>
   {% endif %}
 
+  <!-- Barkod Sorgulama -->
+  <div class="ss-card" id="ssBarcodeLookup">
+    <div class="ss-card-header">
+      <i class="bi bi-upc-scan"></i> Barkod Sorgulama
+      <span class="ss-card-sub">Bir barkodun her pazaryerine en son ne zaman ne kadar gittiğini gör</span>
+    </div>
+    <div class="ss-card-body">
+      <form id="barcodeLookupForm" class="ss-barcode-form" autocomplete="off">
+        <input type="text" id="barcodeLookupInput" class="ss-input" placeholder="Barkod yaz veya okut..." autofocus>
+        <button type="submit" class="ss-btn ss-btn-primary">
+          <i class="bi bi-search"></i> Sorgula
+        </button>
+      </form>
+      <div id="barcodeLookupResult" class="ss-barcode-result" style="display:none"></div>
+    </div>
+  </div>
+
   <!-- Son Senkronizasyonlar -->
   <div class="ss-card" id="ssRecentSessions">
     <div class="ss-card-header ss-card-header-flex">
@@ -399,6 +416,58 @@
 .ss-stat-label { font-size: .8rem; color: var(--ss-text-muted); font-weight: 500; }
 .ss-stat-value { font-size: 1.8rem; font-weight: 800; color: var(--ss-text); line-height: 1; }
 .ss-stat-sub { font-size: .75rem; color: var(--ss-text-muted); }
+
+/* Barkod Sorgulama */
+.ss-card-sub {
+  display: block;
+  font-size: .8rem;
+  color: var(--ss-text-muted);
+  font-weight: 400;
+  margin-top: .15rem;
+}
+.ss-barcode-form {
+  display: flex;
+  gap: .6rem;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+.ss-barcode-form .ss-input {
+  flex: 1 1 280px;
+  min-width: 240px;
+  padding: .6rem .9rem;
+  border: 1px solid var(--ss-border, #e2e2e2);
+  border-radius: 10px;
+  font-size: 1rem;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  background: var(--ss-card-bg, #fff);
+  color: var(--ss-text);
+  transition: border-color .2s, box-shadow .2s;
+}
+.ss-barcode-form .ss-input:focus {
+  outline: none;
+  border-color: #B76E79;
+  box-shadow: 0 0 0 3px rgba(183, 110, 121, .18);
+}
+.ss-barcode-result {
+  margin-top: 1rem;
+  border-top: 1px dashed var(--ss-border, #e2e2e2);
+  padding-top: 1rem;
+}
+.ss-barcode-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .6rem;
+  margin-bottom: .8rem;
+}
+.ss-barcode-code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-right: .6rem;
+}
+.ss-row-muted td { color: var(--ss-text-muted); }
 
 /* Section Title */
 .ss-section-title {
@@ -872,6 +941,102 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ─── Yenile ────────────────────────────────────────────────────
   document.getElementById('btnRefresh').addEventListener('click', () => location.reload());
+
+  // ─── Barkod Sorgulama ──────────────────────────────────────────
+  const PLATFORM_LABEL = {
+    trendyol: 'Trendyol', amazon: 'Amazon', idefix: 'Idefix',
+    hepsiburada: 'Hepsiburada', shopify: 'Shopify',
+  };
+  function fmtDate(iso) {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' });
+  }
+  function relTime(iso) {
+    if (!iso) return '';
+    const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (isNaN(diff)) return '';
+    if (diff < 60) return 'az önce';
+    if (diff < 3600) return `${Math.floor(diff / 60)} dk önce`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} sa önce`;
+    return `${Math.floor(diff / 86400)} gün önce`;
+  }
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function renderBarcodeResult(data) {
+    const wrap = document.getElementById('barcodeLookupResult');
+    if (!data.success) {
+      wrap.innerHTML = `<div class="ss-empty"><i class="bi bi-exclamation-triangle"></i><span>${escapeHtml(data.error || 'Hata')}</span></div>`;
+      wrap.style.display = 'block';
+      return;
+    }
+    const cs = data.central_stock;
+    const csHtml = cs === null
+      ? '<span class="ss-badge ss-badge-passive">CentralStock\'ta yok</span>'
+      : `<span class="ss-badge ss-badge-active">Mevcut Stok: ${cs}</span>`;
+
+    const rows = data.platforms.map(p => {
+      const label = PLATFORM_LABEL[p.platform] || p.platform;
+      if (!p.found) {
+        const note = p.note ? ` (${escapeHtml(p.note)})` : '';
+        return `
+          <tr class="ss-row-muted">
+            <td><span class="ss-badge ss-badge-platform">${label}</span></td>
+            <td colspan="3" class="text-muted">Henüz gönderilmemiş${note}</td>
+          </tr>`;
+      }
+      const statusBadge = p.status === 'success' || p.status === 'completed'
+        ? '<span class="ss-badge ss-badge-active">Başarılı</span>'
+        : p.status === 'error' || p.status === 'failed'
+          ? `<span class="ss-badge ss-badge-danger" title="${escapeHtml(p.error_message || '')}">Hata</span>`
+          : `<span class="ss-badge">${escapeHtml(p.status || '-')}</span>`;
+      const qty = p.stock_sent != null ? p.stock_sent : '-';
+      const when = `${fmtDate(p.sent_at)} <span class="text-muted">(${relTime(p.sent_at)})</span>`;
+      return `
+        <tr>
+          <td><span class="ss-badge ss-badge-platform">${label}</span></td>
+          <td class="fw-bold">${qty}</td>
+          <td>${statusBadge}</td>
+          <td>${when}</td>
+        </tr>`;
+    }).join('');
+
+    wrap.innerHTML = `
+      <div class="ss-barcode-head">
+        <div>
+          <span class="ss-barcode-code">${escapeHtml(data.barcode)}</span>
+          ${csHtml}
+        </div>
+      </div>
+      <div class="ss-table-wrap">
+        <table class="ss-table">
+          <thead><tr><th>Pazaryeri</th><th>Gönderilen Stok</th><th>Durum</th><th>Tarih</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    wrap.style.display = 'block';
+  }
+
+  function lookupBarcode(barcode) {
+    const wrap = document.getElementById('barcodeLookupResult');
+    wrap.innerHTML = '<div class="ss-empty"><div class="ss-spinner"></div><span>Sorgulanıyor...</span></div>';
+    wrap.style.display = 'block';
+    fetch(`/stock-sync/api/barcode-history/${encodeURIComponent(barcode)}`)
+      .then(r => r.json())
+      .then(renderBarcodeResult)
+      .catch(err => {
+        wrap.innerHTML = `<div class="ss-empty"><i class="bi bi-x-circle"></i><span>Sorgu hatası: ${escapeHtml(err.message || err)}</span></div>`;
+      });
+  }
+
+  document.getElementById('barcodeLookupForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const v = document.getElementById('barcodeLookupInput').value.trim();
+    if (v) lookupBarcode(v);
+  });
 
   // ─── Result Modal Kapat ────────────────────────────────────────
   document.getElementById('resultClose').addEventListener('click', hideResultModal);
