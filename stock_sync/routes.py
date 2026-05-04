@@ -400,19 +400,42 @@ def api_sync_all():
 @stock_sync_bp.route('/api/sync/<platform>', methods=['POST'])
 @login_required
 def api_sync_platform(platform: str):
-    """Tek platforma sync başlat"""
+    """Tek platforma sync başlat.
+
+    Uzun sürebilen platformlar (shopify) gunicorn worker timeout'una takılmasın
+    diye varsayılan olarak arka plan thread'inde çalışır; istemci hemen
+    session_id ile yanıt alır ve ilerlemeyi /api/session/<id> ile poll'lar.
+    İstemci ?sync=1 query param ile blocking modu zorlayabilir.
+    """
     log_user_action("STOCK_SYNC", f"sync_{platform}")
-    
+
     data = request.get_json(silent=True) or {}
     barcodes = data.get('barcodes')
-    
+    force_sync = request.args.get('sync') == '1'
+
+    long_running = {"shopify"}
+    user = current_user.username if current_user.is_authenticated else None
+
+    if not force_sync and platform in long_running:
+        session_id = stock_sync_service.run_sync_in_background(
+            platform=platform,
+            barcodes=barcodes,
+            triggered_by="manual",
+            triggered_by_user=user,
+        )
+        return jsonify({
+            "success": True,
+            "background": True,
+            "session_id": session_id,
+            "message": f"{platform} sync arka planda başlatıldı",
+        })
+
     result = sync_platform_sync(
         platform=platform,
         barcodes=barcodes,
         triggered_by="manual",
-        triggered_by_user=current_user.username if current_user.is_authenticated else None
+        triggered_by_user=user,
     )
-    
     return jsonify(result)
 
 

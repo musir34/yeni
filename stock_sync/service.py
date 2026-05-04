@@ -668,23 +668,28 @@ class StockSyncService:
     def run_sync_in_background(self, platform: str = "all", **kwargs) -> str:
         """
         Sync'i arka planda çalıştır (blocking olmayan).
-        
+
         Returns:
             Session ID
         """
+        from flask import current_app
         session_id = str(uuid.uuid4())
-        
+        app = current_app._get_current_object()
+
         def _run():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                if platform == "all":
-                    loop.run_until_complete(self.sync_all_platforms(**kwargs))
-                else:
-                    loop.run_until_complete(self.sync_platform(platform=platform, **kwargs))
-            finally:
-                loop.close()
-        
+            with app.app_context():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    if platform == "all":
+                        loop.run_until_complete(self.sync_all_platforms(**kwargs))
+                    else:
+                        loop.run_until_complete(self.sync_platform(platform=platform, **kwargs))
+                except Exception as exc:
+                    logger.error(f"[BG-SYNC] {platform} hata: {exc}", exc_info=True)
+                finally:
+                    loop.close()
+
         self._executor.submit(_run)
         return session_id
 

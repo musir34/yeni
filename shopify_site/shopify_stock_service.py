@@ -30,6 +30,7 @@ class ShopifyStockService:
         self.config = ShopifyConfig
         self._location_id: Optional[str] = None
         self._last_unmatched: List[Dict[str, Any]] = []  # Son eşleştirmede eşleşmeyenler
+        self._tracking_checked_at: Optional[datetime] = None  # Tracking kontrolü cache
 
     def is_configured(self) -> bool:
         return self.config.is_configured()
@@ -345,8 +346,15 @@ class ShopifyStockService:
         from stock_sync.service import stock_sync_service
         reserved_map = stock_sync_service.get_reserved_barcodes()
 
-        # Envanter takibi kapalı olan ürünlerde tracking'i aç
-        self._enable_tracking_for_mappings(mappings)
+        # Envanter takibi kapalı olan ürünlerde tracking'i aç.
+        # Yavaş bir işlem (1000+ ardışık mutation olabilir); 6 saatte bir yeterli.
+        from datetime import timedelta
+        now = datetime.utcnow()
+        if self._tracking_checked_at is None or (now - self._tracking_checked_at) > timedelta(hours=6):
+            self._enable_tracking_for_mappings(mappings)
+            self._tracking_checked_at = now
+        else:
+            logger.info("[SHOPIFY] Tracking kontrolü atlandı (son kontrol %s)", self._tracking_checked_at.isoformat())
 
         # Batch olarak gönder (aynı mutation ile max 100 öğe)
         results = {"success_count": 0, "error_count": 0, "skipped_count": 0, "details": [], "errors": []}
@@ -360,14 +368,25 @@ class ShopifyStockService:
                 "qty": max(0, raw_qty - reserved),
             })
 
-        # Shopify inventorySetQuantities max 100 item per call
+        # Shopify inventorySetQuantities max 100 item per call.
+        # Her batch sonrası commit + kısa sleep:
+        #  - kısmi ilerleme DB'ye yazılır (ortada kesilirse last_sync_at korunur)
+        #  - Shopify GraphQL cost-bucket'a nefes verir, 429/timeout azalır.
+        import time as _time
         BATCH_SIZE = 100
-        for i in range(0, len(batch), BATCH_SIZE):
+        BATCH_SLEEP = 0.25
+        total_batches = (len(batch) + BATCH_SIZE - 1) // BATCH_SIZE
+
+        for idx, i in enumerate(range(0, len(batch), BATCH_SIZE), start=1):
             chunk = batch[i:i + BATCH_SIZE]
             self._send_stock_batch(chunk, location_id, results)
-
-        # Sonuçları kaydet
-        db.session.commit()
+            try:
+                db.session.commit()
+            except Exception as commit_exc:
+                db.session.rollback()
+                logger.warning("[SHOPIFY] Batch %d/%d commit hatası: %s", idx, total_batches, commit_exc)
+            if idx < total_batches:
+                _time.sleep(BATCH_SLEEP)
 
         total = results["success_count"] + results["error_count"] + results["skipped_count"]
         logger.info("[SHOPIFY] Stok gönderimi: %d başarılı, %d hata, %d atlandı / %d toplam",
