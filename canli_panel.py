@@ -1134,6 +1134,11 @@ def akis_sse():
                     group_by_barcode = _want_group_by_barcode()
                     tek_model = (request.args.get("model") or "").strip() or None
 
+                    # Model+renk modunda: aynı (model,renk) için satışı olmayan barkodları
+                    # da ekle ki tüm bedenlerin gerçek stoğu modal/Tedarik Oluştur'da görünsün.
+                    if not group_by_barcode:
+                        barcodes = _expand_with_all_sizes(barcodes, pinfo, sdict)
+
                     grp, rep_image, rep_tedarikci = {}, {}, {}
                     for bc in barcodes:
                         sat=int(qty_map.get(bc,0))

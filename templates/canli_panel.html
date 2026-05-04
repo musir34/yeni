@@ -511,8 +511,17 @@
   // ─── Kart oluştur / güncelle ──────────────────────────────────────────────
   function _cardKey(k){ return (k.model||'')+'__'+(k.renk||''); }
 
+  // Net satış rengi: 1 (kırmızı) → 10 (yeşil) arası tonlama
+  function _netSatisColor(n){
+    if (!n || n <= 0) return '';
+    const v = Math.min(10, Math.max(1, n));
+    const hue = Math.round(((v - 1) / 9) * 120); // 0=kırmızı, 120=yeşil
+    return `color:hsl(${hue},78%,45%);font-weight:800`;
+  }
+
   function _buildCardHTML(k, detayId){
     const net  = (k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0);
+    const netStyle = _netSatisColor(net);
     const ret  = (k.toplam_iade ?? 0);
     const retP = pct(ret, (k.toplam_siparis_bugun ?? 0));
     const cap  = (k.toplam_stok ?? 0) + (net);
@@ -523,11 +532,11 @@
     const badgeHigh = k.iade_uyari ? `<span class="badge danger">⚠️ YÜKSEK İADE</span>` : ``;
 
     const statsHTML = isAdmin
-      ? `<div class="mini"><div class="label">Satış (NET)</div><div class="num" data-field="net">${net}</div></div>
+      ? `<div class="mini"><div class="label">Satış (NET)</div><div class="num" data-field="net" style="${netStyle}">${net}</div></div>
          <div class="mini"><div class="label">İade</div><div class="num" data-field="ret">${ret} <span style="font-size:12px;color:var(--muted)">(%${retP})</span></div></div>
          <div class="mini"><div class="label">Kalan Stok</div><div class="num" data-field="stok">${k.toplam_stok ?? 0}</div></div>
          <div class="mini"><div class="label">Net Ortalama</div><div class="num">${avg}</div></div>`
-      : `<div class="mini"><div class="label">Satış (NET)</div><div class="num" data-field="net">${net}</div></div>
+      : `<div class="mini"><div class="label">Satış (NET)</div><div class="num" data-field="net" style="${netStyle}">${net}</div></div>
          <div class="mini"><div class="label">İade</div><div class="num" data-field="ret">${ret} <span style="font-size:12px;color:var(--muted)">(%${retP})</span></div></div>
          <div class="mini" style="grid-column: span 2;"><div class="label">Kalan Stok</div><div class="num" data-field="stok">${k.toplam_stok ?? 0}</div></div>`;
 
@@ -554,7 +563,7 @@
       <div class="bar"><i style="width:${barP}%"></i></div>
       <div class="details" id="${detayId}">
         <table>
-          <thead><tr><th>Beden</th><th>Satış</th><th>İade ( % )</th><th>Net</th><th>Kalan Stok</th></tr></thead>
+          <thead><tr><th>Beden</th><th>Satış (NET)</th><th>İade ( % )</th><th>Kalan Stok</th></tr></thead>
           <tbody>
             ${[...(k.detay||[])].sort((a,b)=>{const A=bedenKey(a.beden),B=bedenKey(b.beden);return A[0]-B[0]||A[1]-B[1];})
                .map(d=>{
@@ -562,11 +571,11 @@
                   const r = d.iade ?? 0;
                   const n = (d.net ?? Math.max(0,s - r));
                   const rp = pct(r, s);
+                  const nStyle = n > 0 ? _netSatisColor(n) : 'color:#000;font-weight:700';
                   return `<tr>
                     <td>${d.beden ?? '-'}</td>
-                    <td>${s}</td>
+                    <td style="${nStyle}">${n}</td>
                     <td>${r} <span style="color:var(--muted)">(%${rp})</span></td>
-                    <td>${n}</td>
                     <td>${d.stok ?? 0}</td>
                   </tr>`;
                }).join('')}
