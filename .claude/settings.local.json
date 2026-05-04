@@ -71,7 +71,8 @@
       "Bash(DISABLE_JOBS=1 python /tmp/check_stale_shopify.py)",
       "Bash(DISABLE_JOBS=1 python scripts/diagnose_stale_shopify_mappings.py)",
       "Bash(DISABLE_JOBS=1 python scripts/cleanup_dead_shopify_mappings.py)",
-      "Bash(findstr /I \"\\\\.db .env .sqlite\")"
+      "Bash(findstr /I \"\\\\.db .env .sqlite\")",
+      "Bash(xxd)"
     ]
   }
 }
