@@ -241,6 +241,13 @@
                                                     </button>
                                                 </form>
                                             </li>
+                                            <li>
+                                                <form method="POST" action="{{ url_for('login_logout.admin_force_logout_user', username=user.username) }}" style="display:inline;">
+                                                    <button type="submit" class="dropdown-item" onclick="return confirm('{{ user.username }} kullanıcısının tüm açık oturumları kapatılacak. Devam?')">
+                                                        <i class="fas fa-right-from-bracket me-2 text-warning"></i> Oturumları Kapat
+                                                    </button>
+                                                </form>
+                                            </li>
                                             <li><hr class="dropdown-divider"></li>
                                             <li>
                                                 <form method="POST" action="{{ url_for('login_logout.admin_reset_all', username=user.username) }}" style="display:inline;">

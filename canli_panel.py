@@ -809,12 +809,62 @@ def _fetch_stock_for_barcodes(barcodes):
     )
     return {str(bc).strip(): int(st or 0) for bc, st in rows}
 
+def _fetch_pinfo_for_model_color_pairs(pairs):
+    """(model, renk) çiftleri için Product tablosundan TÜM barkod/beden satırlarını çek."""
+    if not pairs: return {}
+    pair_set = {(str(m), str(r)) for m, r in pairs if m is not None and r is not None}
+    if not pair_set: return {}
+    models = {m for m, _ in pair_set}
+    cols = [PROD_BAR_RAW, PROD_MODEL, PROD_COLOR, PROD_SIZE]
+    if PROD_IMG is not None: cols.append(PROD_IMG)
+    cols.append(Product.tedarikci_kodu)
+    cols.append(Product.tedarikci_adi)
+    rows = db.session.query(*cols).filter(PROD_MODEL_RAW.in_(list(models))).all()
+    info = {}
+    for r in rows:
+        bc = str(r[0]).strip() if r[0] is not None else ""
+        if not bc: continue
+        model = r[1] if r[1] not in (None, "") else "Bilinmiyor"
+        renk  = r[2] if r[2] not in (None, "") else "Bilinmiyor"
+        if (str(model), str(renk)) not in pair_set:
+            continue
+        beden = r[3] if r[3] not in (None, "") else "—"
+        img_idx = 4
+        img   = _parse_first_image(r[img_idx]) if PROD_IMG is not None and len(r) > img_idx else None
+        if not img:
+            img = _local_image_fallback(model, renk)
+        ted_kodu_idx = (5 if PROD_IMG is not None else 4)
+        ted_kodu = r[ted_kodu_idx] if len(r) > ted_kodu_idx else None
+        ted_adi = r[ted_kodu_idx + 1] if len(r) > ted_kodu_idx + 1 else None
+        info[bc] = {
+            "model": model, "renk": renk, "beden": beden, "image": img,
+            "tedarikci_kodu": ted_kodu or "", "tedarikci_adi": ted_adi or "",
+        }
+    return info
+
+def _expand_with_all_sizes(barcodes, pinfo, sdict):
+    """Mevcut pinfo'daki (model,renk) çiftleri için satışı olmayan barkodları da ekle."""
+    pairs = {(i["model"], i["renk"]) for i in pinfo.values()
+             if i.get("model") not in (None, "", "Bilinmiyor")
+             and i.get("renk")  not in (None, "", "Bilinmiyor")}
+    if not pairs:
+        return barcodes
+    extra = _fetch_pinfo_for_model_color_pairs(pairs)
+    new_bcs = set(extra.keys()) - set(barcodes)
+    if not new_bcs:
+        return barcodes
+    for bc in new_bcs:
+        pinfo[bc] = extra[bc]
+    sdict.update(_fetch_stock_for_barcodes(new_bcs))
+    return set(barcodes) | new_bcs
+
 # ── Kart üretimi + toplam satış + ortalama fiyat
 def _build_cards_from_orders():
     qty_map, amt_map = _collect_orders_today_strict()
     barcodes = set(qty_map.keys()) | set(amt_map.keys())
     pinfo = _fetch_product_info_for_barcodes(barcodes)
     sdict = _fetch_stock_for_barcodes(barcodes)
+    barcodes = _expand_with_all_sizes(barcodes, pinfo, sdict)
 
     grp = {}
     rep_image = {}  # (model,renk) → image
@@ -919,6 +969,11 @@ def ozet_json():
 
         # 5) gruplama: default MODEL+RENK, ?group=barcode ise barkod
         group_by_barcode = _want_group_by_barcode()
+
+        # Model+renk modunda: aynı (model,renk) için satışı olmayan barkodları
+        # da ekle ki tüm bedenlerin gerçek stoğu görünsün (modal/Tedarik Oluştur).
+        if not group_by_barcode:
+            barcodes = _expand_with_all_sizes(barcodes, pinfo, sdict)
         tek_model = (request.args.get("model") or "").strip() or None
 
         grp, rep_image, rep_tedarikci = {}, {}, {}

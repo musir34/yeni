@@ -761,6 +761,46 @@ def show_qr_code(username):
 @login_logout_bp.route('/logout')
 def logout():
     _log_action("LOGOUT", {"işlem_açıklaması": "Oturum kapatıldı", "sayfa": "Çıkış"})
+    # Trusted device kaydını ve çerezini temizle ki sonraki /login farklı bir
+    # hesaba geçmek isteyen kullanıcıyı eski hesabın 2FA ekranıyla karşılamasın.
+    token = request.cookies.get(DEVICE_COOKIE_NAME)
+    if token:
+        try:
+            UserDevice.query.filter_by(device_token=token).delete()
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.exception("logout: trusted device temizlenemedi")
     session.clear()
+    resp = make_response(redirect(url_for('login_logout.login')))
+    resp.delete_cookie(DEVICE_COOKIE_NAME)
     flash('Başarıyla çıkış yaptınız.', 'success')
-    return redirect(url_for('login_logout.login'))
+    return resp
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  ADMIN: BELİRLİ BİR KULLANICININ TÜM OTURUMLARINI KAPAT
+# ═══════════════════════════════════════════════════════════════════════
+
+@login_logout_bp.route('/admin/force-logout-user/<username>', methods=['POST'])
+@roles_required('admin')
+def admin_force_logout_user(username):
+    """Belirli bir kullanıcının tüm aktif oturumlarını ve trusted cihazlarını
+    sonlandırır. session_version artırılır → tüm açık tarayıcı oturumları
+    bir sonraki istekte geçersiz sayılır."""
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        flash('Kullanıcı bulunamadı.', 'danger')
+        return redirect(url_for('login_logout.approve_users'))
+
+    user.session_version = (user.session_version or 1) + 1
+    UserDevice.query.filter_by(user_id=user.id).delete()
+    db.session.commit()
+
+    _log_action("DELETE", {
+        "işlem_açıklaması": f"Admin {username} için tüm oturumları sonlandırdı",
+        "sayfa": "Kullanıcı Yönetimi"
+    })
+    logger.info(f"Admin force-logout: {username} (tüm oturum + cihazlar)")
+    flash(f'{username} için tüm oturumlar kapatıldı.', 'success')
+    return redirect(url_for('login_logout.approve_users'))
