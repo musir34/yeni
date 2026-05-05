@@ -250,6 +250,52 @@ def _shopify_order_to_hazirla_format(shopify_order):
     return fake_order, details_list
 
 
+def _build_raf_payload(barcode, atanan_raf=None, alt_barcode=None):
+    """Bir ürün için raf listesi ve öneri/uyarı bayrakları üretir.
+
+    atanan_raf: Siparişe atanmış raf kodu (OrderCreated.atanan_raf). Varsa o raf
+                listenin başına alınır ve 'onerilen' bayrağı ile işaretlenir.
+                Atanan raf artık dolu rafların arasında değilse 'onerilen_bosaldi'
+                True döner — kullanıcı "rafa gittim, ürün yoktu" yaşamasın diye.
+
+    Returns:
+        {
+          'raflar': [{'kod','adet','onerilen': bool}, ...],   # önerilen başta
+          'onerilen_raf_kodu': str|None,
+          'onerilen_bosaldi':  bool,
+          'stok_yok':          bool,   # hiç dolu raf yok
+        }
+    """
+    raf_kayitlari = (RafUrun.query
+                     .filter(RafUrun.urun_barkodu == barcode, RafUrun.adet > 0)
+                     .order_by(desc(RafUrun.adet))
+                     .all())
+    if not raf_kayitlari and alt_barcode and alt_barcode != barcode:
+        raf_kayitlari = (RafUrun.query
+                         .filter(RafUrun.urun_barkodu == alt_barcode, RafUrun.adet > 0)
+                         .order_by(desc(RafUrun.adet))
+                         .all())
+
+    raflar = [{"kod": r.raf_kodu, "adet": r.adet, "onerilen": False}
+              for r in raf_kayitlari]
+
+    onerilen_bosaldi = False
+    if atanan_raf:
+        match_idx = next((i for i, r in enumerate(raflar) if r["kod"] == atanan_raf), None)
+        if match_idx is not None:
+            raflar[match_idx]["onerilen"] = True
+            raflar.insert(0, raflar.pop(match_idx))
+        else:
+            onerilen_bosaldi = True
+
+    return {
+        "raflar": raflar,
+        "onerilen_raf_kodu": atanan_raf,
+        "onerilen_bosaldi": onerilen_bosaldi,
+        "stok_yok": len(raflar) == 0,
+    }
+
+
 @siparis_hazirla_bp.route("/siparis-hazirla", endpoint="index")
 @siparis_hazirla_bp.route("/hazirla")
 def index():
@@ -366,8 +412,13 @@ def get_home(order_number=None):
         )
 
         # Ürün kartları
+        # Not: OrderCreated.atanan_raf tek bir alan tutuyor ve order_service.py
+        # bunu siparişin İLK barkoduna atıyor. Bu yüzden öneriyi yalnızca
+        # details_list'in ilk elemanına uyguluyoruz.
         products = []
-        for d in details_list:
+        for idx, d in enumerate(details_list):
+            item_atanan_raf = oldest_order.atanan_raf if (idx == 0 and getattr(oldest_order, 'atanan_raf', None)) else None
+
             # 🛍️ Shopify siparişi
             if is_shopify:
                 sku_raw = d.get("sku") or ""
@@ -392,14 +443,8 @@ def get_home(order_number=None):
 
                 logging.info(f"[SHOPIFY][IMG] barcode={bc} sku={sku_raw} normalized={normalized_bc} image={image_url}")
 
-                # Raf bilgisi (barkod ile ara)
-                raf_kayitlari = (
-                    RafUrun.query
-                    .filter(RafUrun.urun_barkodu == normalized_bc, RafUrun.adet > 0)
-                    .order_by(desc(RafUrun.adet))
-                    .all()
-                )
-                raflar = [{"kod": r.raf_kodu, "adet": r.adet} for r in raf_kayitlari]
+                # Raf bilgisi (önerilen raf, boş raf uyarısı, stok yok bayrağı dahil)
+                raf_payload = _build_raf_payload(normalized_bc, atanan_raf=item_atanan_raf)
 
                 products.append({
                     "sku": sku_raw,
@@ -409,7 +454,10 @@ def get_home(order_number=None):
                     "product_name": product_name,
                     "quantity": d.get("quantity", 1),
                     "image_url": image_url,
-                    "raflar": raflar,
+                    "raflar": raf_payload["raflar"],
+                    "onerilen_raf_kodu": raf_payload["onerilen_raf_kodu"],
+                    "onerilen_bosaldi": raf_payload["onerilen_bosaldi"],
+                    "stok_yok": raf_payload["stok_yok"],
                     "woo_id": None
                 })
                 continue
@@ -462,26 +510,11 @@ def get_home(order_number=None):
                     image_url = d.get("image_url") or get_product_image(normalized_bc)
 
             # Aktif tüm raflar (adet > 0) - Her iki platform için de barkod bazlı raf kontrolü
-            # WooCommerce için display_barcode (gerçek barkod), Trendyol için normalized_bc kullanılır
+            # WooCommerce için display_barcode (gerçek barkod), Trendyol için normalized_bc kullanılır.
+            # Alias durumunda normalized_bc fallback olarak _build_raf_payload içinde denenir.
             raf_barkod = display_barcode if is_woocommerce else normalized_bc
-            
-            raf_kayitlari = (
-                RafUrun.query
-                .filter(RafUrun.urun_barkodu == raf_barkod, RafUrun.adet > 0)
-                .order_by(desc(RafUrun.adet))
-                .all()
-            )
-            raflar = [{"kod": r.raf_kodu, "adet": r.adet} for r in raf_kayitlari]
-            
-            # Eğer bulunamazsa normalized_bc ile de dene (alias durumu için)
-            if not raflar and is_woocommerce and display_barcode != normalized_bc:
-                raf_kayitlari = (
-                    RafUrun.query
-                    .filter(RafUrun.urun_barkodu == normalized_bc, RafUrun.adet > 0)
-                    .order_by(desc(RafUrun.adet))
-                    .all()
-                )
-                raflar = [{"kod": r.raf_kodu, "adet": r.adet} for r in raf_kayitlari]
+            raf_alt = normalized_bc if (is_woocommerce and display_barcode != normalized_bc) else None
+            raf_payload = _build_raf_payload(raf_barkod, atanan_raf=item_atanan_raf, alt_barcode=raf_alt)
 
             products.append({
                 "sku": d.get("sku", display_barcode if is_woocommerce else bc),  # SKU veya görüntü barkodu
@@ -491,7 +524,10 @@ def get_home(order_number=None):
                 "product_name": product_name,  # 🔥 Product tablosundan
                 "quantity": d.get("quantity", 1),
                 "image_url": image_url,  # 🔥 Product tablosundan
-                "raflar": raflar,
+                "raflar": raf_payload["raflar"],
+                "onerilen_raf_kodu": raf_payload["onerilen_raf_kodu"],
+                "onerilen_bosaldi": raf_payload["onerilen_bosaldi"],
+                "stok_yok": raf_payload["stok_yok"],
                 "woo_id": d.get("woo_id") or d.get("woo_product_id") if is_woocommerce else None  # WooCommerce ID
             })
 

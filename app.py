@@ -434,18 +434,19 @@ def schedule_jobs():
         minute=10
     )
 
-    # >>> Stok Sync: 15 dakikada bir (Idefix hariç)
+    # >>> Stok Sync: 3 dakikada bir (Idefix hariç)
+    # Önceden 15 dk idi — overselling penceresini küçültmek için 3 dk'ya indirildi.
     from stock_sync.service import auto_sync_platforms_except_idefix
-    
+
     def _stock_sync_job():
         with app.app_context():
             auto_sync_platforms_except_idefix()
-    
+
     _add_job_safe(
         _stock_sync_job,
         trigger='interval',
         id="stock_sync_auto",
-        minutes=15,
+        minutes=3,
         next_run_time=now + timedelta(minutes=2)  # İlk çalışma 2 dk sonra
     )
 

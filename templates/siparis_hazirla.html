@@ -725,18 +725,33 @@
                 </p>
 
                 <div class="card-text">
-                  {% set aktif_raflar = product['raflar']|selectattr('adet','gt',0)|sort(attribute='adet', reverse=True)|list %}
+                  {# raflar zaten backend'de sıralı geliyor: önerilen başta, sonra adet desc.
+                     onerilen_bosaldi = atanan_raf vardı ama o raf artık dolu listede yok.
+                     stok_yok          = hiç dolu raf yok. #}
+                  {% set aktif_raflar = product['raflar'] %}
+
+                  {% if product.get('onerilen_bosaldi') %}
+                    <div class="alert alert-warning" style="padding:6px 10px; margin-bottom:6px; font-size:0.85em;">
+                      ⚠️ Bu siparişe atanan <strong>{{ product['onerilen_raf_kodu'] }}</strong> rafı boşalmış.
+                      {% if aktif_raflar %}Alternatif raf seçin:{% else %}Başka rafta da yok!{% endif %}
+                    </div>
+                  {% endif %}
+
                   {% if aktif_raflar %}
-                    <p style="margin-bottom:5px;"><strong>Raf Seçimi (aktif olanların tamamı):</strong></p>
+                    <p style="margin-bottom:5px;"><strong>Raf Seçimi:</strong></p>
                     {% for raf in aktif_raflar %}
-                      <label class="raf-option">
-                        <input type="radio" name="pick_{{ product['barcode'] }}" value="{{ raf.kod }}" {% if not manuel_mod %}{% if loop.first %}checked{% endif %}{% else %}{% if order.atanan_raf and raf.kod == order.atanan_raf %}checked{% elif not order.atanan_raf and loop.first %}checked{% endif %}{% endif %}>
-                        {{ raf.kod }} — {{ raf.adet }} adet
+                      <label class="raf-option {% if raf.onerilen %}raf-onerilen{% endif %}"
+                             {% if raf.onerilen %}style="border:2px solid #2e7d32; background:#e8f5e9; padding:4px 8px; border-radius:4px;"{% endif %}>
+                        <input type="radio" name="pick_{{ product['barcode'] }}" value="{{ raf.kod }}"
+                               {% if raf.onerilen %}checked{% elif not product.get('onerilen_raf_kodu') and loop.first %}checked{% endif %}>
+                        {% if raf.onerilen %}<strong>📌 {{ raf.kod }}</strong> — {{ raf.adet }} adet <small style="color:#2e7d32;">(sistem önerisi)</small>{% else %}{{ raf.kod }} — {{ raf.adet }} adet{% endif %}
                         <span class="tick">✔</span>
                       </label>
                     {% endfor %}
-                  {% else %}
-                    <p><em>Bu ürün için aktif raf stoğu yok.</em></p>
+                  {% elif not product.get('onerilen_bosaldi') %}
+                    <div class="alert alert-danger" style="padding:6px 10px; margin-bottom:0; font-size:0.9em;">
+                      ❌ <strong>Stokta yok</strong> — bu ürün hiçbir rafta bulunmuyor.
+                    </div>
                   {% endif %}
                 </div>
 

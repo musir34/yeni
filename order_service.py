@@ -359,9 +359,12 @@ def _process_sync_orders_bulk(sync_orders):
                                 qty = int(item.get('quantity', 1) or 1)
                                 if not bc:
                                     continue
+                                # with_for_update: Aynı sync turunda gelen birden çok sipariş
+                                # için aynı rafın paralel atanmasını engeller (overselling fix).
                                 raf = (RafUrun.query
                                        .filter(RafUrun.urun_barkodu == bc, RafUrun.adet > 0)
                                        .order_by(RafUrun.adet.desc())
+                                       .with_for_update()
                                        .first())
                                 raf_kodu = raf.raf_kodu if raf else None
                                 raf_stok = raf.adet if raf else 0
