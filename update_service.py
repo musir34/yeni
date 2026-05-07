@@ -424,6 +424,44 @@ async def confirm_packing():
                     "müşteri": f"{getattr(order_created, 'customer_name', '')} {getattr(order_created, 'customer_surname', '')}".strip(),
                     "atanan_raf": getattr(order_created, 'atanan_raf', None),
                 })
+
+                # AUDIT: order_picked + her stok hareketi için ayrı event
+                try:
+                    from order_audit import log_many as _audit_many
+                    ev = [{
+                        "event_type": "order_picked",
+                        "order_number": order_number,
+                        "package_number": getattr(order_created, 'package_number', None),
+                        "status_from": "Created",
+                        "status_to": "Picking",
+                        "source": "USER",
+                        "severity": "info",
+                        "quantity": toplam_dusen,
+                        "raf_kodu": getattr(order_created, 'atanan_raf', None),
+                        "message": f"Sipariş paketlendi · {toplam_dusen}/{toplam_beklenen} adet düşüldü",
+                        "details": {"stok_hareketleri": stok_hareketleri},
+                    }]
+                    for h in stok_hareketleri:
+                        ev.append({
+                            "event_type": "stock_decremented",
+                            "order_number": order_number,
+                            "package_number": getattr(order_created, 'package_number', None),
+                            "barcode": h.get("barkod"),
+                            "raf_kodu": h.get("raf"),
+                            "quantity": h.get("dusen"),
+                            "raf_total_before": h.get("onceki"),
+                            "raf_total_after": h.get("sonraki"),
+                            "source": "USER",
+                            "severity": "info",
+                            "message": (
+                                f"Raf {h.get('raf')}: {h.get('onceki')} → {h.get('sonraki')} "
+                                f"({h.get('dusen')} adet düşüldü)"
+                            ),
+                            "snapshot": True,
+                        })
+                    _audit_many(ev)
+                except Exception:
+                    logger.exception("[AUDIT] order_picked yazma hatası")
             except Exception as db_error:
                 db.session.rollback()
                 logger.exception("[MOVE][ERR] rollback")

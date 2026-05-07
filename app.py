@@ -128,6 +128,16 @@ register_blueprints(app)
 from idefix.idefix_routes import idefix_bp
 app.register_blueprint(idefix_bp)
 
+# 🔎 Sipariş audit log: tablo + event listener'lar
+try:
+    from order_audit import ensure_table_exists as _audit_ensure, install_listeners as _audit_install
+    with app.app_context():
+        _audit_ensure()
+    _audit_install()
+except Exception as _e:
+    import logging as _logging
+    _logging.getLogger(__name__).exception("[ORDER_AUDIT] init başarısız: %s", _e)
+
 # 🔥 Stok Senkronizasyon Blueprint
 
 # >>> Forecast cache fonksiyonlarını blueprint yüklendikten sonra import et

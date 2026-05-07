@@ -234,6 +234,7 @@
         <li><a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a></li>
         {% if session.get('role') in ['admin','manager'] %}
         <li><a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}"><i class="fas fa-history me-2"></i>Kullanıcı Hareketleri</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('order_audit.page') }}"><i class="fas fa-search-location me-2"></i>Sipariş İz Sürme</a></li>
         {% endif %}
         <li><hr class="dropdown-divider"></li>
         <li><a class="dropdown-item" href="{{ url_for('login_logout.cihazlarim') }}"><i class="fas fa-mobile-alt me-2"></i>Cihazlarım</a></li>

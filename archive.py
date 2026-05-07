@@ -669,6 +669,24 @@ def archive_an_order():
 
             try: log_user_action("ARCHIVE", {"işlem_açıklaması": f"Sipariş arşivlendi — {order_number} ({table_cls.__tablename__} → Arşiv), Sebep: {archive_reason or '-'}", "sayfa": "Sipariş Listesi", "sipariş_no": order_number, "sebep": archive_reason or "-", "kaynak_tablo": table_cls.__tablename__})
             except: pass
+
+            # AUDIT: arşivlendi
+            try:
+                from order_audit import log_event as _audit_log
+                _audit_log(
+                    "order_archived",
+                    order_number=order_number,
+                    package_number=getattr(order_obj, 'package_number', None),
+                    barcode=getattr(order_obj, 'product_barcode', None),
+                    status_from=table_cls.__tablename__.replace('orders_', ''),
+                    status_to="Archived",
+                    source="USER",
+                    severity="info",
+                    message=f"Arşivlendi · sebep: {archive_reason or '-'}",
+                    details={"reason": archive_reason},
+                )
+            except Exception:
+                pass
             notify(
                 'archive_added',
                 subject=f"Arşive Eklendi: {order_number}",

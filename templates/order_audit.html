@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sipariş İz Sürme - Güllü Ayakkabı</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    body { background:#f5f5f5; font-family:'Inter','Segoe UI',sans-serif; padding:24px 14px; }
+    .wrap { max-width:1200px; margin:0 auto; }
+    .card-soft {
+      border:none; border-radius:14px; box-shadow:0 8px 22px rgba(0,0,0,.06);
+      padding:18px; background:#fff; margin-bottom:16px;
+    }
+    .lbl { font-size:.78rem; color:#6c757d; text-transform:uppercase; letter-spacing:.4px; }
+    .num { font-size:1.6rem; font-weight:700; }
+    .timeline { position:relative; padding-left:30px; }
+    .timeline::before {
+      content:""; position:absolute; left:9px; top:0; bottom:0;
+      width:2px; background:linear-gradient(#0d6efd,#dee2e6);
+    }
+    .tl-item { position:relative; margin-bottom:14px; padding:10px 14px;
+               background:#fff; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,.04); }
+    .tl-item::before {
+      content:""; position:absolute; left:-25px; top:14px;
+      width:14px; height:14px; border-radius:50%; background:#0d6efd;
+      box-shadow:0 0 0 3px #fff;
+    }
+    .tl-item.sev-warning::before  { background:#ffc107; }
+    .tl-item.sev-critical::before { background:#dc3545; }
+    .tl-item .ts { font-size:.78rem; color:#6c757d; }
+    .tl-item .et {
+      display:inline-block; font-size:.72rem; font-weight:700;
+      padding:2px 8px; border-radius:8px; background:#e7f1ff; color:#0d6efd;
+      text-transform:uppercase; letter-spacing:.4px;
+    }
+    .tl-item .et.s-warning  { background:#fff3cd; color:#856404; }
+    .tl-item .et.s-critical { background:#f8d7da; color:#721c24; }
+    .tl-snap {
+      display:inline-block; font-size:.75rem; padding:2px 6px; border-radius:6px;
+      background:#f1f3f5; margin-right:6px;
+    }
+    code { background:#f1f3f5; padding:2px 4px; border-radius:4px; font-size:.85rem; }
+    .pill {
+      display:inline-block; font-size:.72rem; font-weight:600; padding:3px 8px;
+      border-radius:10px; margin-right:4px; margin-bottom:4px;
+    }
+    .pill-Created      { background:#cfe2ff; color:#0a3a72; }
+    .pill-Picking      { background:#fff3cd; color:#7a5a00; }
+    .pill-Shipped      { background:#d1e7dd; color:#0f5132; }
+    .pill-Delivered    { background:#cff4fc; color:#055160; }
+    .pill-Cancelled    { background:#f8d7da; color:#842029; }
+    .pill-Archive      { background:#e2e3e5; color:#41464b; }
+    .pill-ReadyToShip  { background:#fde2e4; color:#7a1f2c; }
+    .pill-Archived     { background:#e2e3e5; color:#41464b; }
+    pre.kv { background:#f8f9fa; padding:10px; border-radius:8px; font-size:.78rem;
+             max-height:240px; overflow:auto; margin:0; }
+    .filter-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h3 class="mb-0"><i class="fas fa-search-location me-2"></i>Sipariş İz Sürme</h3>
+    <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="fas fa-home"></i> Anasayfa
+    </a>
+  </div>
+
+  <div class="card-soft">
+    <form id="lookupForm" class="row g-2 align-items-end">
+      <div class="col-md-8">
+        <label class="form-label">Sipariş No / Paket No / Shipment ID</label>
+        <input type="text" class="form-control" id="q" autocomplete="off"
+               placeholder="örn: 11206696023 ya da 3823721539" required />
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-fill">
+          <i class="fas fa-search"></i> Bul
+        </button>
+      </div>
+    </form>
+    <div class="text-muted mt-2" style="font-size:.82rem;">
+      Aşağıda <strong>sipariş kayıtları</strong>, <strong>ürün anlık stok durumu</strong> ve
+      <strong>tüm event log timeline'ı</strong> birlikte gösterilir.
+      Eksik bir bilgi varsa "Not Ekle" ile manuel kayıt düşürebilirsin (post-mortem için).
+    </div>
+  </div>
+
+  <div id="status" class="text-muted text-center my-4 d-none">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div class="mt-2">Aranıyor…</div>
+  </div>
+  <div id="error" class="alert alert-danger d-none"></div>
+
+  <div id="result" class="d-none">
+
+    <div class="card-soft">
+      <h5 class="mb-2"><i class="fas fa-receipt me-1"></i>Sipariş Kayıtları (DB)</h5>
+      <div id="orderRecords"></div>
+    </div>
+
+    <div class="card-soft">
+      <h5 class="mb-2"><i class="fas fa-boxes me-1"></i>Ürünler (anlık stok)</h5>
+      <div id="snapshots" class="row g-2"></div>
+    </div>
+
+    <div class="card-soft">
+      <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+        <h5 class="mb-0"><i class="fas fa-stream me-1"></i>Event Timeline</h5>
+        <div class="filter-bar">
+          <select id="sevFilter" class="form-select form-select-sm" style="max-width:160px;">
+            <option value="">Tüm önemler</option>
+            <option value="info">Info</option>
+            <option value="warning">Warning</option>
+            <option value="critical">Critical</option>
+          </select>
+          <select id="typeFilter" class="form-select form-select-sm" style="max-width:200px;">
+            <option value="">Tüm event tipleri</option>
+          </select>
+          <button class="btn btn-sm btn-outline-success" id="btnNote">
+            <i class="fas fa-sticky-note"></i> Not Ekle
+          </button>
+        </div>
+      </div>
+      <div id="timeline" class="timeline"></div>
+    </div>
+
+    <div class="card-soft">
+      <h5 class="mb-2"><i class="fas fa-history me-1"></i>UserLog İzleri</h5>
+      <div id="userLogs"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let currentData = null;
+
+  function show(el){ el.classList.remove('d-none'); }
+  function hide(el){ el.classList.add('d-none'); }
+  function escapeHtml(s){
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
+  }
+
+  function renderOrderRecords(list){
+    const box = $('orderRecords');
+    if (!list || !list.length) {
+      box.innerHTML = '<div class="text-muted">Bu numarayla ilgili herhangi bir sipariş tablosunda kayıt bulunamadı.</div>';
+      return;
+    }
+    box.innerHTML = list.map(r => {
+      const det = r.details ? `<pre class="kv">${escapeHtml(JSON.stringify(r.details, null, 2))}</pre>` : '';
+      return `
+        <div class="border rounded p-2 mb-2">
+          <span class="pill pill-${escapeHtml(r.table.split('(')[0])}">${escapeHtml(r.table)}</span>
+          <strong>${escapeHtml(r.order_number || '-')}</strong>
+          <span class="text-muted">pkg=${escapeHtml(r.package_number || '-')}</span>
+          <div class="mt-1" style="font-size:.85rem;">
+            order_date: <code>${escapeHtml(r.order_date || '-')}</code> ·
+            status: <code>${escapeHtml(r.status || '-')}</code> ·
+            qty: <code>${escapeHtml(r.quantity ?? '-')}</code> ·
+            atanan_raf: <code>${escapeHtml(r.atanan_raf || '-')}</code>
+          </div>
+          <div style="font-size:.85rem;" class="text-muted">
+            müşteri: ${escapeHtml(r.customer || '-')} ·
+            kargo: ${escapeHtml(r.cargo_provider_name || '-')} ${escapeHtml(r.cargo_tracking_number || '')} ·
+            picked_by: ${escapeHtml(r.picked_by || '-')} ·
+            picking_start: ${escapeHtml(r.picking_start_time || '-')}
+          </div>
+          ${det}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderSnapshots(list){
+    const box = $('snapshots');
+    if (!list.length) { box.innerHTML = '<div class="text-muted">Sipariş içinde barkod bulunamadı.</div>'; return; }
+    box.innerHTML = list.map(s => `
+      <div class="col-md-6">
+        <div class="border rounded p-2 h-100">
+          <div><strong>${escapeHtml(s.barcode)}</strong>
+            ${s.product ? `<span class="text-muted">— ${escapeHtml((s.product.title||'').slice(0,60))}</span>` : ''}
+          </div>
+          <div class="row mt-1" style="font-size:.85rem;">
+            <div class="col-6">
+              <div class="lbl">Raf Toplam</div>
+              <div class="num">${s.raf_total ?? '-'}</div>
+            </div>
+            <div class="col-6">
+              <div class="lbl">Merkez Stok</div>
+              <div class="num">${s.central_stock ? s.central_stock.qty : '-'}</div>
+              <div class="text-muted" style="font-size:.72rem;">
+                ${s.central_stock?.updated_at ? 'updated: '+escapeHtml(s.central_stock.updated_at) : ''}
+              </div>
+            </div>
+          </div>
+          ${s.raf_distribution.length ? `<div class="mt-1" style="font-size:.8rem;"><strong>Raf:</strong> ${
+            s.raf_distribution.map(r => `<code>${escapeHtml(r.raf_kodu)}=${r.adet}</code>`).join(' ')
+          }</div>` : '<div class="text-danger" style="font-size:.8rem;"><i class="fas fa-exclamation-triangle"></i> Hiçbir rafta yok</div>'}
+          ${s.alias ? `<div class="mt-1" style="font-size:.8rem;"><span class="badge bg-warning text-dark">ALIAS</span> Ana barkod: <code>${escapeHtml(s.alias.alias_of)}</code></div>` : ''}
+          ${s.shopify_mappings.length ? `<div class="mt-1" style="font-size:.78rem;color:#666;">Shopify: last_sent=${s.shopify_mappings[0].last_stock_sent} · ${escapeHtml(s.shopify_mappings[0].last_sync_at||'-')}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderTimeline(events){
+    // Filter dropdown'a unique tipleri ekle
+    const types = [...new Set(events.map(e => e.event_type))].sort();
+    const tf = $('typeFilter');
+    tf.innerHTML = '<option value="">Tüm event tipleri</option>' +
+      types.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+
+    const sev = $('sevFilter').value;
+    const ty = $('typeFilter').value;
+    const list = events.filter(e =>
+      (!sev || e.severity === sev) &&
+      (!ty  || e.event_type === ty)
+    );
+    const tl = $('timeline');
+    if (!list.length) {
+      tl.innerHTML = '<div class="text-muted">Bu sipariş için henüz audit event yok. ' +
+        'İlerleyen siparişler için sipariş geldiği andan itibaren tüm hareketler burada görünecek.</div>';
+      return;
+    }
+    tl.innerHTML = list.map(e => {
+      const snap = [];
+      if (e.central_qty_before !== null && e.central_qty_after !== null && e.central_qty_before !== e.central_qty_after) {
+        snap.push(`Merkez: ${e.central_qty_before} → ${e.central_qty_after}`);
+      } else if (e.central_qty_after !== null) {
+        snap.push(`Merkez: ${e.central_qty_after}`);
+      }
+      if (e.raf_total_before !== null && e.raf_total_after !== null && e.raf_total_before !== e.raf_total_after) {
+        snap.push(`Raf: ${e.raf_total_before} → ${e.raf_total_after}`);
+      } else if (e.raf_total_after !== null) {
+        snap.push(`Raf: ${e.raf_total_after}`);
+      }
+      if (e.status_from || e.status_to) {
+        snap.push(`${e.status_from || '?'} → ${e.status_to || '?'}`);
+      }
+      if (e.raf_kodu) snap.push(`raf=${e.raf_kodu}`);
+      if (e.quantity != null) snap.push(`qty=${e.quantity}`);
+      if (e.source) snap.push(`src=${e.source}`);
+
+      return `
+        <div class="tl-item sev-${escapeHtml(e.severity)}">
+          <div class="d-flex justify-content-between flex-wrap">
+            <div>
+              <span class="et s-${escapeHtml(e.severity)}">${escapeHtml(e.event_type)}</span>
+              <span class="ts ms-2">${escapeHtml(e.ts)}</span>
+              ${e.barcode ? `<span class="ms-2"><code>${escapeHtml(e.barcode)}</code></span>` : ''}
+            </div>
+            <div>${snap.map(s => `<span class="tl-snap">${escapeHtml(s)}</span>`).join('')}</div>
+          </div>
+          ${e.message ? `<div class="mt-1">${escapeHtml(e.message)}</div>` : ''}
+          ${e.details ? `<details class="mt-1"><summary class="text-muted" style="font-size:.78rem;">details</summary>
+             <pre class="kv">${escapeHtml(JSON.stringify(e.details, null, 2))}</pre></details>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderUserLogs(list){
+    const box = $('userLogs');
+    if (!list.length) { box.innerHTML = '<div class="text-muted">UserLog kaydı yok.</div>'; return; }
+    box.innerHTML = list.map(u => `
+      <div class="border-bottom py-2" style="font-size:.85rem;">
+        <div class="text-muted">${escapeHtml(u.ts)} · user=${u.user_id ?? '-'} · <strong>${escapeHtml(u.action)}</strong></div>
+        <pre class="kv">${escapeHtml(u.details)}</pre>
+      </div>
+    `).join('');
+  }
+
+  async function lookup(q){
+    hide($('error')); hide($('result'));
+    show($('status'));
+    try {
+      const resp = await fetch(`{{ url_for('order_audit.lookup') }}?q=${encodeURIComponent(q)}`);
+      const data = await resp.json();
+      hide($('status'));
+      if (!data.success) {
+        $('error').textContent = data.error || 'Hata';
+        show($('error'));
+        return;
+      }
+      currentData = data;
+      renderOrderRecords(data.order_records);
+      renderSnapshots(data.snapshots);
+      renderTimeline(data.events);
+      renderUserLogs(data.user_logs);
+      show($('result'));
+    } catch (e) {
+      hide($('status'));
+      $('error').textContent = 'İstek başarısız: ' + e.message;
+      show($('error'));
+    }
+  }
+
+  $('lookupForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const q = $('q').value.trim();
+    if (q) lookup(q);
+  });
+
+  $('sevFilter').addEventListener('change', () => currentData && renderTimeline(currentData.events));
+  $('typeFilter').addEventListener('change', () => currentData && renderTimeline(currentData.events));
+
+  $('btnNote').addEventListener('click', async () => {
+    if (!currentData) return alert('Önce bir sipariş ara.');
+    const msg = prompt('Not içeriği:');
+    if (!msg) return;
+    const resp = await fetch(`{{ url_for('order_audit.add_note') }}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ order_number: currentData.query, message: msg })
+    });
+    const data = await resp.json();
+    if (data.success) lookup(currentData.query);
+    else alert('Not eklenemedi: ' + (data.error||''));
+  });
+
+  // URL ?q=... ile direkt aç
+  const url = new URL(location.href);
+  if (url.searchParams.get('q')) {
+    $('q').value = url.searchParams.get('q');
+    lookup($('q').value);
+  }
+</script>
+</body>
+</html>

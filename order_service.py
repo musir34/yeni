@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 import threading
 import os
 from barcode_utils import generate_barcode
+from barcode_alias_helper import normalize_barcode
 # Tablolar: Created, Picking, Shipped, Delivered, Cancelled, Archive
 # models.py içindeki doğru import yolu varsayılıyor
 from models import (
@@ -311,6 +312,23 @@ def _process_sync_orders_bulk(sync_orders):
                     logger.info(f"Statü değişimi: {order_number} {current_table} ➝ {target_table}")
                     to_delete_ids[current_table].append(current_record.id)
 
+                    # AUDIT: statü değişikliğini logla
+                    try:
+                        from order_audit import log_event as _audit_log
+                        _audit_log(
+                            "status_changed",
+                            order_number=order_number,
+                            package_number=new_data_dict.get('package_number'),
+                            barcode=new_data_dict.get('product_barcode'),
+                            status_from=current_table.replace('orders_', ''),
+                            status_to=target_table.replace('orders_', ''),
+                            source="TRENDYOL_SYNC",
+                            message=f"Sipariş statü değişti {current_table} → {target_table}",
+                            details={"raw_status": new_data_dict.get('status')},
+                        )
+                    except Exception:
+                        pass
+
                     # OrderCreated → OrderCancelled: Stok iade edilecek
                     if current_table == 'orders_created' and target_model == OrderCancelled:
                         if current_record.details:
@@ -399,6 +417,62 @@ def _process_sync_orders_bulk(sync_orders):
                         except Exception:
                             pass
 
+                        # AUDIT: order_received + raf_assigned event'leri
+                        try:
+                            from order_audit import log_many as _audit_many
+                            ev_list = []
+                            for u in urun_raf_bilgileri:
+                                ev_list.append({
+                                    "event_type": "order_received",
+                                    "order_number": siparis_no,
+                                    "package_number": order_dict.get('package_number'),
+                                    "barcode": u["barkod"],
+                                    "quantity": u["adet"],
+                                    "raf_kodu": u.get("atanan_raf"),
+                                    "status_to": "Created",
+                                    "source": order_dict.get('source', 'TRENDYOL'),
+                                    "severity": "info" if u.get("atanan_raf") else "warning",
+                                    "message": (
+                                        f"Sipariş geldi · {u['adet']} adet · "
+                                        f"raf={u.get('atanan_raf') or 'BULUNAMADI'}"
+                                    ),
+                                    "details": {
+                                        "musteri": musteri,
+                                        "raf_mevcut_stok": u.get("raf_mevcut_stok"),
+                                        "order_date": str(order_dict.get('order_date') or ''),
+                                    },
+                                    "snapshot": True,
+                                })
+                                if u.get("atanan_raf"):
+                                    ev_list.append({
+                                        "event_type": "raf_assigned",
+                                        "order_number": siparis_no,
+                                        "package_number": order_dict.get('package_number'),
+                                        "barcode": u["barkod"],
+                                        "raf_kodu": u["atanan_raf"],
+                                        "quantity": u["adet"],
+                                        "source": "SYSTEM",
+                                        "severity": "info",
+                                        "message": f"Otomatik raf ataması: {u['atanan_raf']}",
+                                        "details": {"raf_mevcut_stok": u.get("raf_mevcut_stok")},
+                                        "snapshot": False,
+                                    })
+                                else:
+                                    ev_list.append({
+                                        "event_type": "warning",
+                                        "order_number": siparis_no,
+                                        "package_number": order_dict.get('package_number'),
+                                        "barcode": u["barkod"],
+                                        "quantity": u["adet"],
+                                        "source": "SYSTEM",
+                                        "severity": "critical",
+                                        "message": "Raf bulunamadı — bu barkodun rafta stoğu yok!",
+                                        "snapshot": True,
+                                    })
+                            _audit_many(ev_list)
+                        except Exception:
+                            logger.exception("[AUDIT] order_received yazma hatası")
+
                     except Exception as e:
                         logger.error(f"[RAF] Atama hatası: {e}")
 
@@ -426,6 +500,26 @@ def _process_sync_orders_bulk(sync_orders):
                         "atanan_raf": shelf_code,
                         "ürünler": ", ".join(barkodlar),
                     }, force_log=True)
+                    # AUDIT
+                    try:
+                        from order_audit import log_many as _audit_many
+                        evs = []
+                        for it in (det if isinstance(det, list) else []):
+                            evs.append({
+                                "event_type": "order_cancelled",
+                                "barcode": it.get("barcode"),
+                                "quantity": int(it.get("quantity") or 1),
+                                "raf_kodu": shelf_code,
+                                "status_to": "Cancelled",
+                                "source": "TRENDYOL_SYNC",
+                                "severity": "info",
+                                "message": "Created → Cancelled · rezerv iptal",
+                                "snapshot": True,
+                            })
+                        if evs:
+                            _audit_many(evs)
+                    except Exception:
+                        pass
                 except Exception:
                     pass
 
@@ -546,6 +640,22 @@ def process_bg_orders_bulk(bg_orders, app):
                             to_insert_shipped.append(new_data_dict)
                         elif target_model == OrderDelivered:
                             to_insert_delivered.append(new_data_dict)
+
+                        # AUDIT
+                        try:
+                            from order_audit import log_event as _audit_log
+                            _audit_log(
+                                "status_changed",
+                                order_number=order_number,
+                                package_number=new_data_dict.get('package_number'),
+                                barcode=new_data_dict.get('product_barcode'),
+                                status_from=current_table.replace('orders_', ''),
+                                status_to=target_table.replace('orders_', ''),
+                                source="TRENDYOL_SYNC",
+                                message=f"BG sync · {current_table} → {target_table}",
+                            )
+                        except Exception:
+                            pass
                     else:
                         _minimal_update_if_needed(current_record, new_data_dict)
                 else:
@@ -553,6 +663,22 @@ def process_bg_orders_bulk(bg_orders, app):
                         to_insert_shipped.append(new_data_dict)
                     elif target_model == OrderDelivered:
                         to_insert_delivered.append(new_data_dict)
+                    # AUDIT: doğrudan Shipped/Delivered olarak gelen
+                    try:
+                        from order_audit import log_event as _audit_log
+                        _audit_log(
+                            "status_changed",
+                            order_number=order_number,
+                            package_number=new_data_dict.get('package_number'),
+                            barcode=new_data_dict.get('product_barcode'),
+                            status_from=None,
+                            status_to=norm,
+                            source="TRENDYOL_SYNC",
+                            severity="info",
+                            message=f"İlk kez senkronlandı: {norm}",
+                        )
+                    except Exception:
+                        pass
 
             for table_name, ids in to_delete_ids.items():
                 if ids:

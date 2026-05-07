@@ -40,6 +40,7 @@ def register_blueprints(app):
     from komisyon_tarife import komisyon_tarife_bp  # 📊 KOMİSYON TARİFE (liste API'si hala kullanılıyor)
     from akilli_motor import akilli_motor_bp  # 🧠 AKILLI KOMİSYON MOTORU
     from agent_api import agent_api  # 🤖 OPENCLAW AGENT API
+    from order_audit_routes import order_audit_bp  # 🔎 SİPARİŞ İZ SÜRME
 
     # Register all blueprints
     for bp in [
@@ -81,5 +82,6 @@ def register_blueprints(app):
         komisyon_tarife_bp,  # 📊 KOMİSYON TARİFE OPTİMİZASYONU
         akilli_motor_bp,  # 🧠 AKILLI KOMİSYON MOTORU
         agent_api,  # 🤖 OPENCLAW AGENT API
+        order_audit_bp,  # 🔎 SİPARİŞ İZ SÜRME
     ]:
         app.register_blueprint(bp)

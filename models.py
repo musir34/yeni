@@ -173,6 +173,68 @@ class CentralStock(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+### --- SİPARİŞ + STOK AUDİT LOG MODELİ ---
+# Sipariş yaşam döngüsü ve stok hareketleri için event tabanlı log.
+# Sipariş kaybolursa/raftan çıkmazsa bu tablodan iz sürülür.
+class OrderAuditLog(db.Model):
+    __tablename__ = 'order_audit_logs'
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    ts = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    # Sipariş kimlikleri (en az biri olmalı; index'li arama)
+    order_number = db.Column(db.String(64), index=True, nullable=True)
+    package_number = db.Column(db.String(64), index=True, nullable=True)
+    barcode = db.Column(db.String(64), index=True, nullable=True)
+
+    # event_type — küçük bir kontrollü kelime listesi:
+    # "order_received"    → Trendyol'dan ilk kez DB'ye yazıldı
+    # "raf_assigned"      → Otomatik raf ataması
+    # "status_changed"    → Created→Picking, Picking→Shipped vs.
+    # "stock_changed"     → CentralStock.qty değişti (otomatik)
+    # "raf_changed"       → RafUrun.adet değişti (otomatik)
+    # "trendyol_stock_pushed" → Trendyol API'a stok push edildi
+    # "shopify_stock_pushed"  → Shopify'a push
+    # "order_picked"      → Personel paketledi
+    # "order_archived"    → Arşive taşındı (iptal vs.)
+    # "warning"           → Anomali (stok 0 ama sipariş geldi vs.)
+    # "manual_note"       → Operatör notu
+    event_type = db.Column(db.String(32), nullable=False, index=True)
+
+    # Stok snapshot'ı (event anında)
+    central_qty_before = db.Column(db.Integer, nullable=True)
+    central_qty_after = db.Column(db.Integer, nullable=True)
+    raf_total_before = db.Column(db.Integer, nullable=True)
+    raf_total_after = db.Column(db.Integer, nullable=True)
+
+    # Bağlam
+    raf_kodu = db.Column(db.String(64), nullable=True, index=True)
+    status_from = db.Column(db.String(32), nullable=True)
+    status_to = db.Column(db.String(32), nullable=True)
+    quantity = db.Column(db.Integer, nullable=True)
+    source = db.Column(db.String(32), nullable=True)  # SYSTEM / TRENDYOL_SYNC / USER / SHOPIFY_SYNC ...
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+
+    severity = db.Column(db.String(8), nullable=False, default='info')  # info / warning / critical
+
+    message = db.Column(db.Text, nullable=True)  # tek satır insanca özet
+    details = db.Column(JSON, nullable=True)     # serbest yapı: ekstra alanlar
+
+    user = db.relationship('User', backref=db.backref('order_audit_events', lazy='dynamic'))
+
+    __table_args__ = (
+        db.Index('ix_oal_order_ts', 'order_number', 'ts'),
+        db.Index('ix_oal_pkg_ts', 'package_number', 'ts'),
+        db.Index('ix_oal_barcode_ts', 'barcode', 'ts'),
+    )
+
+    def __repr__(self):
+        return (
+            f"<OrderAuditLog {self.id} {self.event_type} "
+            f"ord={self.order_number} bar={self.barcode} ts={self.ts}>"
+        )
+
+
 ### --- YENİ EKLENEN GÜNLÜK RAPOR MODELİ --- ###
 class Rapor(db.Model):
     __tablename__ = 'raporlar'
