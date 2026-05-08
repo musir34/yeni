@@ -526,6 +526,21 @@ def _process_sync_orders_bulk(sync_orders):
         db.session.commit()
         logger.info("Senkron sipariş işlemleri başarıyla tamamlandı.")
 
+        # AUTO-HEAL: Bu sync turunda raf atanamamış (atanan_raf=NULL) Created siparişleri
+        # otomatik olarak rafa bağla + audit event'lerini yaz.
+        # Bug öncesi düşmüş siparişler veya geçici raf yokluğu yüzünden boş kalanlar
+        # bir sonraki sync turunda kendiliğinden iyileşir.
+        try:
+            from raf_recovery import recover_missing_raf
+            res = recover_missing_raf(source="AUTO_HEAL", limit=500)
+            if res.get("fixed_atanan_raf") or res.get("warnings"):
+                logger.info(
+                    "[AUTO_HEAL] taranan=%d düzelen=%d uyarı=%d",
+                    res["scanned"], res["fixed_atanan_raf"], res["warnings"],
+                )
+        except Exception:
+            logger.exception("[AUTO_HEAL] başarısız (yutuldu)")
+
     except SQLAlchemyError as e:
         db.session.rollback()
         logger.error(f"SQLAlchemy Hatası (Sync Orders): {e}", exc_info=True)

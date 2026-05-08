@@ -334,6 +334,27 @@ def lookup():
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
+@order_audit_bp.route("/siparis-iz/backfill", methods=["POST"], endpoint="backfill")
+def backfill():
+    """atanan_raf=NULL olan Created siparişleri için raf ataması + retro event yazar."""
+    from raf_recovery import recover_missing_raf
+
+    target_order = (request.json or {}).get("order_number") if request.is_json else request.args.get("order_number")
+    target_order = (target_order or "").strip() or None
+
+    try:
+        result = recover_missing_raf(order_number=target_order, source="BACKFILL")
+    except Exception as exc:
+        logger.exception("backfill hatası")
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+    return jsonify({
+        "success": True,
+        **result,
+        "filter": {"order_number": target_order} if target_order else "all_null",
+    })
+
+
 @order_audit_bp.route("/siparis-iz/note", methods=["POST"], endpoint="add_note")
 def add_note():
     """Operatörün manuel notu ekler (post-mortem için)."""

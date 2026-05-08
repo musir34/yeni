@@ -123,6 +123,14 @@
           <button class="btn btn-sm btn-outline-success" id="btnNote">
             <i class="fas fa-sticky-note"></i> Not Ekle
           </button>
+          <button class="btn btn-sm btn-outline-primary" id="btnBackfillThis"
+                  title="Bu siparişin atanan_raf'ını otomatik doldur ve retro event yaz">
+            <i class="fas fa-magic"></i> Bunu Onar
+          </button>
+          <button class="btn btn-sm btn-outline-warning" id="btnBackfillAll"
+                  title="atanan_raf=NULL olan tüm Created siparişleri için backfill">
+            <i class="fas fa-broom"></i> Geçmişi Tara
+          </button>
         </div>
       </div>
       <div id="timeline" class="timeline"></div>
@@ -311,6 +319,36 @@
 
   $('sevFilter').addEventListener('change', () => currentData && renderTimeline(currentData.events));
   $('typeFilter').addEventListener('change', () => currentData && renderTimeline(currentData.events));
+
+  async function callBackfill(orderNumber) {
+    const body = {};
+    if (orderNumber) body.order_number = orderNumber;
+    const resp = await fetch(`{{ url_for('order_audit.backfill') }}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (!data.success) { alert('Backfill hata: ' + (data.error||'')); return; }
+    alert(
+      `Backfill tamam.\n` +
+      `Taranan: ${data.scanned}\n` +
+      `atanan_raf düzelen: ${data.fixed_atanan_raf}\n` +
+      `raf_assigned event: ${data.raf_assigned_events}\n` +
+      `warning (raf bulunamadı): ${data.warnings}\n` +
+      `details boş (atlandı): ${data.skipped_no_details}`
+    );
+    if (currentData) lookup(currentData.query);
+  }
+
+  $('btnBackfillThis').addEventListener('click', () => {
+    if (!currentData) return alert('Önce bir sipariş ara.');
+    callBackfill(currentData.query);
+  });
+  $('btnBackfillAll').addEventListener('click', () => {
+    if (!confirm('atanan_raf=NULL olan TÜM Created siparişleri için backfill çalıştırılsın mı?')) return;
+    callBackfill(null);
+  });
 
   $('btnNote').addEventListener('click', async () => {
     if (!currentData) return alert('Önce bir sipariş ara.');
