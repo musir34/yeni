@@ -133,16 +133,20 @@ class AmazonAdapter(BasePlatformAdapter):
         return results
     
     async def _update_single_inventory(self, session: aiohttp.ClientSession, access_token: str, item: StockItem) -> SyncResult:
-        """Tek ürün için inventory güncelle - Listings API (ASIN kullanarak)"""
-        # Amazon için ASIN'i SKU olarak kullan (veya SKU varsa onu)
-        sku = item.asin or item.sku or item.barcode
-        
+        """Tek ürün için inventory güncelle - Listings API (seller SKU kullanarak).
+
+        Amazon Listings API, satıcının kendi SKU'su (örn. '777-36-Sedef') üzerinden
+        çalışır. ASIN URL path'te SKU yerine kullanılırsa Amazon 202 dönse de gerçek
+        listing güncellenmez. Bu yüzden gerçek seller SKU zorunludur.
+        """
+        sku = item.sku
+
         if not sku:
             return SyncResult(
                 barcode=item.barcode,
                 success=False,
                 quantity_sent=max(0, item.quantity),
-                error_message="ASIN/SKU bulunamadı"
+                error_message="Amazon seller SKU bulunamadı (products.amazon_sku boş)"
             )
         
         url = f"{self.SP_API_ENDPOINT}/listings/2021-08-01/items/{self.seller_id}/{sku}"

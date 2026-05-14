@@ -829,6 +829,9 @@ class Product(db.Model):
     
     # Amazon spesifik alanlar
     amazon_asin = db.Column(db.String(20), nullable=True)  # Amazon ASIN kodu
+    amazon_sku = db.Column(db.String(100), nullable=True)  # Amazon'daki gerçek seller SKU
+    amazon_status = db.Column(db.String(50), nullable=True)
+    amazon_last_sync = db.Column(db.DateTime, nullable=True)
 
     # Tedarikçi bilgileri
     tedarikci_kodu = db.Column(db.String(100), nullable=True, index=True)

@@ -177,21 +177,31 @@ class StockSyncService:
 
         # Platform'a göre eşleştirme map'leri
         asin_map = {}
+        sku_map = {}
 
-        # Amazon için ASIN eşleştirmesi
+        # Amazon için ASIN + seller SKU eşleştirmesi
         if platform == "amazon":
             products_with_asin = Product.query.filter(
                 Product.amazon_asin.isnot(None),
                 Product.amazon_asin != ''
             ).all()
             asin_map = {p.barcode: p.amazon_asin for p in products_with_asin}
-            logger.info(f"[SYNC] Amazon için {len(asin_map)} ASIN eşleşmesi bulundu")
+            sku_map = {
+                p.barcode: p.amazon_sku
+                for p in products_with_asin
+                if p.amazon_sku and p.amazon_sku.strip()
+            }
+            logger.info(
+                f"[SYNC] Amazon için {len(asin_map)} ASIN eşleşmesi, "
+                f"{len(sku_map)} seller SKU eşleşmesi bulundu"
+            )
 
         for stock in stocks:
             asin = asin_map.get(stock.barcode) if platform == "amazon" else None
+            sku = sku_map.get(stock.barcode) if platform == "amazon" else None
 
-            # Amazon için ASIN'i olmayan ürünleri atla
-            if platform == "amazon" and not asin:
+            # Amazon için seller SKU yoksa stok güncellenemez, atla
+            if platform == "amazon" and not sku:
                 continue
 
             reserved = reserved_map.get(stock.barcode, 0)
@@ -200,6 +210,7 @@ class StockSyncService:
             items.append(StockItem(
                 barcode=stock.barcode,
                 quantity=available_qty,
+                sku=sku,
                 asin=asin,
             ))
 
@@ -218,8 +229,9 @@ class StockSyncService:
         # Rezerv: Bekleyen siparişlerdeki ürün miktarları
         reserved_map = self.get_reserved_barcodes()
 
-        # Amazon için ASIN eşleştirmesi
+        # Amazon için ASIN + seller SKU eşleştirmesi
         asin_map = {}
+        sku_map = {}
 
         if platform == "amazon":
             products_with_asin = Product.query.filter(
@@ -228,12 +240,18 @@ class StockSyncService:
                 Product.amazon_asin != ''
             ).all()
             asin_map = {p.barcode: p.amazon_asin for p in products_with_asin}
+            sku_map = {
+                p.barcode: p.amazon_sku
+                for p in products_with_asin
+                if p.amazon_sku and p.amazon_sku.strip()
+            }
 
         for barcode in barcodes:
             asin = asin_map.get(barcode) if platform == "amazon" else None
+            sku = sku_map.get(barcode) if platform == "amazon" else None
 
-            # Amazon için ASIN yoksa atla
-            if platform == "amazon" and not asin:
+            # Amazon için seller SKU yoksa stok güncellenemez, atla
+            if platform == "amazon" and not sku:
                 continue
 
             reserved = reserved_map.get(barcode, 0)
@@ -242,6 +260,7 @@ class StockSyncService:
             items.append(StockItem(
                 barcode=barcode,
                 quantity=available_qty,
+                sku=sku,
                 asin=asin,
             ))
 
