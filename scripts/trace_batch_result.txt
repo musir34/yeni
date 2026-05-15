@@ -1,0 +1,257 @@
+======================================================================
+SIPARIS 11236232878
+  tablo=Created status=Created atanan_raf=F-A-01 pkg=3850983488
+  BARKOD 730734345002: central={'qty': 9, 'updated_at': '2026-05-12 13:46:01.172618'} raf_total=9 raf_dist=[{'raf_kodu': 'H-D-02', 'adet': 1}, {'raf_kodu': 'I-E-01', 'adet': 1}, {'raf_kodu': 'F-F-02', 'adet': 1}, {'raf_kodu': 'N-C-01', 'adet': 1}, {'raf_kodu': 'G-A-03', 'adet': 1}, {'raf_kodu': 'F-A-01', 'adet': 1}, {'raf_kodu': 'I-B-02', 'adet': 1}, {'raf_kodu': 'K-H-01', 'adet': 1}, {'raf_kodu': 'E-E-01', 'adet': 1}] alias=None
+  EVENTS (30):
+    2026-05-08 08:11:39 order_received bc=730734345002 raf=F-A-01 cb=None ca=12 rb=None ra=12 | [AUTO_HEAL] Raf ataması yapıldı: F-A-01
+    2026-05-08 08:11:39 raf_assigned bc=730734345002 raf=F-A-01 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: F-A-01
+    2026-05-08 08:11:45 order_received bc=730734345002 raf=F-A-01 cb=None ca=12 rb=None ra=12 | [AUTO_HEAL] Raf ataması yapıldı: F-A-01
+    2026-05-08 08:11:45 raf_assigned bc=730734345002 raf=F-A-01 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: F-A-01
+    2026-05-08 10:05:59 stock_changed bc=730734345002 raf=None cb=12 ca=11 rb=None ra=None | CentralStock 12 → 11
+    2026-05-08 10:05:59 raf_changed bc=730734345002 raf=None cb=None ca=11 rb=None ra=11 | 1 raf satırı değişti
+    2026-05-08 10:05:59 stock_decremented bc=730734345002 raf=D-H-03 cb=None ca=11 rb=1 ra=0 | Raf D-H-03: 1 → 0 (1 adet düşüldü)
+    2026-05-08 11:29:22 status_changed bc=730734345002 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-08 11:39:56 stock_changed bc=730734345002 raf=None cb=11 ca=10 rb=None ra=None | CentralStock 11 → 10
+    2026-05-08 11:39:56 raf_changed bc=730734345002 raf=None cb=None ca=10 rb=None ra=10 | 1 raf satırı değişti
+    2026-05-08 11:39:56 stock_decremented bc=730734345002 raf=F-A-01 cb=None ca=10 rb=2 ra=1 | Raf F-A-01: 2 → 1 (1 adet düşüldü)
+    2026-05-11 10:18:11 order_received bc=730734345002 raf=G-H-02 cb=None ca=10 rb=None ra=10 | [AUTO_HEAL] Raf ataması yapıldı: G-H-02
+    2026-05-11 10:18:11 raf_assigned bc=730734345002 raf=G-H-02 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: G-H-02
+    2026-05-11 14:02:11 status_changed bc=730734345002 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-11 16:14:11 order_received bc=730734345002 raf=G-H-02 cb=None ca=10 rb=None ra=10 | [AUTO_HEAL] Raf ataması yapıldı: G-H-02
+    2026-05-11 16:14:11 raf_assigned bc=730734345002 raf=G-H-02 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: G-H-02
+    2026-05-12 08:27:31 stock_changed bc=730734345002 raf=None cb=10 ca=11 rb=None ra=None | CentralStock 10 → 11
+    2026-05-12 08:27:31 raf_changed bc=730734345002 raf=None cb=None ca=11 rb=None ra=11 | 1 raf satırı değişti
+    2026-05-12 09:16:37 stock_changed bc=730734345002 raf=None cb=11 ca=10 rb=None ra=None | CentralStock 11 → 10
+    2026-05-12 09:16:37 raf_changed bc=730734345002 raf=None cb=None ca=10 rb=None ra=10 | 1 raf satırı değişti
+    2026-05-12 09:16:37 stock_decremented bc=730734345002 raf=E-D-01 cb=None ca=10 rb=1 ra=0 | Raf E-D-01: 1 → 0 (1 adet düşüldü)
+    2026-05-12 12:54:11 status_changed bc=730734345002 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-12 13:46:01 stock_changed bc=730734345002 raf=None cb=10 ca=9 rb=None ra=None | CentralStock 10 → 9
+    2026-05-12 13:46:01 raf_changed bc=730734345002 raf=None cb=None ca=9 rb=None ra=9 | 1 raf satırı değişti
+    2026-05-12 13:46:01 stock_decremented bc=730734345002 raf=G-H-02 cb=None ca=9 rb=1 ra=0 | Raf G-H-02: 1 → 0 (1 adet düşüldü)
+    2026-05-13 12:42:11 status_changed bc=730734345002 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-14 15:13:22 order_received bc=730734345002 raf=H-D-02 cb=None ca=9 rb=None ra=9 | [AUTO_HEAL] Raf ataması yapıldı: H-D-02
+    2026-05-14 15:13:22 raf_assigned bc=730734345002 raf=H-D-02 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: H-D-02
+    2026-05-15 06:49:23 order_received bc=730734345002 raf=H-D-02 cb=None ca=9 rb=None ra=9 | [AUTO_HEAL] Raf ataması yapıldı: H-D-02
+    2026-05-15 06:49:23 raf_assigned bc=730734345002 raf=H-D-02 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: H-D-02
+======================================================================
+SIPARIS 11236810472
+  tablo=Created status=Created atanan_raf=F-A-02 pkg=3851516082
+  BARKOD 73073433198: central={'qty': 9, 'updated_at': '2026-04-29 12:08:36.883330'} raf_total=9 raf_dist=[{'raf_kodu': 'X-I-01', 'adet': 1}, {'raf_kodu': 'F-A-02', 'adet': 1}, {'raf_kodu': 'O-B-02', 'adet': 1}, {'raf_kodu': 'O-C-01', 'adet': 2}, {'raf_kodu': 'O-C-03', 'adet': 2}, {'raf_kodu': 'I-C-02', 'adet': 1}, {'raf_kodu': 'M-D-02', 'adet': 1}] alias=None
+  EVENTS (2):
+    2026-05-15 10:02:05 order_received bc=73073433198 raf=O-C-01 cb=None ca=9 rb=None ra=9 | [AUTO_HEAL] Raf ataması yapıldı: O-C-01
+    2026-05-15 10:02:05 raf_assigned bc=73073433198 raf=O-C-01 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: O-C-01
+======================================================================
+SIPARIS 11234634837
+  tablo=Created status=Created atanan_raf=E-E-01 pkg=3849495824
+  BARKOD 730734345002: central={'qty': 9, 'updated_at': '2026-05-12 13:46:01.172618'} raf_total=9 raf_dist=[{'raf_kodu': 'H-D-02', 'adet': 1}, {'raf_kodu': 'I-E-01', 'adet': 1}, {'raf_kodu': 'F-F-02', 'adet': 1}, {'raf_kodu': 'N-C-01', 'adet': 1}, {'raf_kodu': 'G-A-03', 'adet': 1}, {'raf_kodu': 'F-A-01', 'adet': 1}, {'raf_kodu': 'I-B-02', 'adet': 1}, {'raf_kodu': 'K-H-01', 'adet': 1}, {'raf_kodu': 'E-E-01', 'adet': 1}] alias=None
+  EVENTS (30):
+    2026-05-08 08:11:39 order_received bc=730734345002 raf=F-A-01 cb=None ca=12 rb=None ra=12 | [AUTO_HEAL] Raf ataması yapıldı: F-A-01
+    2026-05-08 08:11:39 raf_assigned bc=730734345002 raf=F-A-01 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: F-A-01
+    2026-05-08 08:11:45 order_received bc=730734345002 raf=F-A-01 cb=None ca=12 rb=None ra=12 | [AUTO_HEAL] Raf ataması yapıldı: F-A-01
+    2026-05-08 08:11:45 raf_assigned bc=730734345002 raf=F-A-01 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: F-A-01
+    2026-05-08 10:05:59 stock_changed bc=730734345002 raf=None cb=12 ca=11 rb=None ra=None | CentralStock 12 → 11
+    2026-05-08 10:05:59 raf_changed bc=730734345002 raf=None cb=None ca=11 rb=None ra=11 | 1 raf satırı değişti
+    2026-05-08 10:05:59 stock_decremented bc=730734345002 raf=D-H-03 cb=None ca=11 rb=1 ra=0 | Raf D-H-03: 1 → 0 (1 adet düşüldü)
+    2026-05-08 11:29:22 status_changed bc=730734345002 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-08 11:39:56 stock_changed bc=730734345002 raf=None cb=11 ca=10 rb=None ra=None | CentralStock 11 → 10
+    2026-05-08 11:39:56 raf_changed bc=730734345002 raf=None cb=None ca=10 rb=None ra=10 | 1 raf satırı değişti
+    2026-05-08 11:39:56 stock_decremented bc=730734345002 raf=F-A-01 cb=None ca=10 rb=2 ra=1 | Raf F-A-01: 2 → 1 (1 adet düşüldü)
+    2026-05-11 10:18:11 order_received bc=730734345002 raf=G-H-02 cb=None ca=10 rb=None ra=10 | [AUTO_HEAL] Raf ataması yapıldı: G-H-02
+    2026-05-11 10:18:11 raf_assigned bc=730734345002 raf=G-H-02 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: G-H-02
+    2026-05-11 14:02:11 status_changed bc=730734345002 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-11 16:14:11 order_received bc=730734345002 raf=G-H-02 cb=None ca=10 rb=None ra=10 | [AUTO_HEAL] Raf ataması yapıldı: G-H-02
+    2026-05-11 16:14:11 raf_assigned bc=730734345002 raf=G-H-02 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: G-H-02
+    2026-05-12 08:27:31 stock_changed bc=730734345002 raf=None cb=10 ca=11 rb=None ra=None | CentralStock 10 → 11
+    2026-05-12 08:27:31 raf_changed bc=730734345002 raf=None cb=None ca=11 rb=None ra=11 | 1 raf satırı değişti
+    2026-05-12 09:16:37 stock_changed bc=730734345002 raf=None cb=11 ca=10 rb=None ra=None | CentralStock 11 → 10
+    2026-05-12 09:16:37 raf_changed bc=730734345002 raf=None cb=None ca=10 rb=None ra=10 | 1 raf satırı değişti
+    2026-05-12 09:16:37 stock_decremented bc=730734345002 raf=E-D-01 cb=None ca=10 rb=1 ra=0 | Raf E-D-01: 1 → 0 (1 adet düşüldü)
+    2026-05-12 12:54:11 status_changed bc=730734345002 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-12 13:46:01 stock_changed bc=730734345002 raf=None cb=10 ca=9 rb=None ra=None | CentralStock 10 → 9
+    2026-05-12 13:46:01 raf_changed bc=730734345002 raf=None cb=None ca=9 rb=None ra=9 | 1 raf satırı değişti
+    2026-05-12 13:46:01 stock_decremented bc=730734345002 raf=G-H-02 cb=None ca=9 rb=1 ra=0 | Raf G-H-02: 1 → 0 (1 adet düşüldü)
+    2026-05-13 12:42:11 status_changed bc=730734345002 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-14 15:13:22 order_received bc=730734345002 raf=H-D-02 cb=None ca=9 rb=None ra=9 | [AUTO_HEAL] Raf ataması yapıldı: H-D-02
+    2026-05-14 15:13:22 raf_assigned bc=730734345002 raf=H-D-02 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: H-D-02
+    2026-05-15 06:49:23 order_received bc=730734345002 raf=H-D-02 cb=None ca=9 rb=None ra=9 | [AUTO_HEAL] Raf ataması yapıldı: H-D-02
+    2026-05-15 06:49:23 raf_assigned bc=730734345002 raf=H-D-02 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: H-D-02
+======================================================================
+SIPARIS 11235429001
+  tablo=Created status=Created atanan_raf=F-G-02 pkg=3850129959
+  BARKOD 723008291: central={'qty': 6, 'updated_at': '2026-05-13 13:39:03.064914'} raf_total=6 raf_dist=[{'raf_kodu': 'G-H-01', 'adet': 1}, {'raf_kodu': 'F-G-02', 'adet': 1}, {'raf_kodu': 'L-D-03', 'adet': 1}, {'raf_kodu': 'I-H-01', 'adet': 2}, {'raf_kodu': 'I-B-03', 'adet': 1}] alias=None
+  EVENTS (32):
+    2026-05-07 15:31:46 status_changed bc=723008291 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-08 08:11:37 order_received bc=723008291 raf=G-H-01 cb=None ca=9 rb=None ra=9 | [AUTO_HEAL] Raf ataması yapıldı: G-H-01
+    2026-05-08 08:11:37 raf_assigned bc=723008291 raf=G-H-01 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: G-H-01
+    2026-05-08 08:53:22 status_changed bc=723008291 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-08 10:41:42 stock_changed bc=723008291 raf=None cb=9 ca=8 rb=None ra=None | CentralStock 9 → 8
+    2026-05-08 10:41:42 raf_changed bc=723008291 raf=None cb=None ca=8 rb=None ra=8 | 1 raf satırı değişti
+    2026-05-08 10:41:42 stock_decremented bc=723008291 raf=D-D-02 cb=None ca=8 rb=1 ra=0 | Raf D-D-02: 1 → 0 (1 adet düşüldü)
+    2026-05-08 10:53:22 status_changed bc=723008291 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-08 11:29:22 status_changed bc=723008291 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-10 10:27:41 order_received bc=723008291 raf=G-H-01 cb=None ca=8 rb=None ra=8 | [AUTO_HEAL] Raf ataması yapıldı: G-H-01
+    2026-05-10 10:27:41 raf_assigned bc=723008291 raf=G-H-01 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: G-H-01
+    2026-05-11 13:54:11 status_changed bc=723008291 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-11 13:57:44 stock_changed bc=723008291 raf=None cb=8 ca=9 rb=None ra=None | CentralStock 8 → 9
+    2026-05-11 13:57:44 raf_changed bc=723008291 raf=None cb=None ca=9 rb=None ra=9 | 1 raf satırı değişti
+    2026-05-12 12:59:47 stock_changed bc=723008291 raf=None cb=9 ca=8 rb=None ra=None | CentralStock 9 → 8
+    2026-05-12 12:59:47 raf_changed bc=723008291 raf=None cb=None ca=8 rb=None ra=8 | 1 raf satırı değişti
+    2026-05-12 12:59:47 stock_decremented bc=723008291 raf=G-H-01 cb=None ca=8 rb=2 ra=1 | Raf G-H-01: 2 → 1 (1 adet düşüldü)
+    2026-05-13 10:18:11 order_received bc=723008291 raf=F-G-02 cb=None ca=8 rb=None ra=8 | [AUTO_HEAL] Raf ataması yapıldı: F-G-02
+    2026-05-13 10:18:11 raf_assigned bc=723008291 raf=F-G-02 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: F-G-02
+    2026-05-13 11:58:11 order_received bc=723008291 raf=F-G-02 cb=None ca=8 rb=None ra=8 | [AUTO_HEAL] Raf ataması yapıldı: F-G-02
+    2026-05-13 11:58:11 raf_assigned bc=723008291 raf=F-G-02 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: F-G-02
+    2026-05-13 13:38:13 stock_changed bc=723008291 raf=None cb=8 ca=7 rb=None ra=None | CentralStock 8 → 7
+    2026-05-13 13:38:13 raf_changed bc=723008291 raf=None cb=None ca=7 rb=None ra=7 | 1 raf satırı değişti
+    2026-05-13 13:38:13 stock_decremented bc=723008291 raf=F-G-02 cb=None ca=7 rb=2 ra=1 | Raf F-G-02: 2 → 1 (1 adet düşüldü)
+    2026-05-13 13:39:03 stock_changed bc=723008291 raf=None cb=7 ca=6 rb=None ra=None | CentralStock 7 → 6
+    2026-05-13 13:39:03 raf_changed bc=723008291 raf=None cb=None ca=6 rb=None ra=6 | 1 raf satırı değişti
+    2026-05-13 13:39:03 stock_decremented bc=723008291 raf=C-C-02 cb=None ca=6 rb=1 ra=0 | Raf C-C-02: 1 → 0 (1 adet düşüldü)
+    2026-05-14 09:50:12 status_changed bc=723008291 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-14 09:50:12 status_changed bc=723008291 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-14 19:05:21 order_received bc=723008291 raf=I-H-01 cb=None ca=6 rb=None ra=6 | [AUTO_HEAL] Raf ataması yapıldı: I-H-01
+    2026-05-14 19:05:21 raf_assigned bc=723008291 raf=I-H-01 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: I-H-01
+    2026-05-15 09:17:22 status_changed bc=723008291 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+======================================================================
+SIPARIS 11233041051
+  tablo=Created status=Created atanan_raf=C-E-02 pkg=3848137393
+  BARKOD 7307341039: central={'qty': 4, 'updated_at': '2026-05-12 08:01:43.512992'} raf_total=4 raf_dist=[{'raf_kodu': 'F-F-02', 'adet': 1}, {'raf_kodu': 'C-E-02', 'adet': 1}, {'raf_kodu': 'L-C-01', 'adet': 1}, {'raf_kodu': 'H-D-02', 'adet': 1}] alias=None
+  EVENTS (17):
+    2026-05-08 12:30:26 stock_changed bc=7307341039 raf=None cb=4 ca=5 rb=None ra=None | CentralStock 4 → 5
+    2026-05-08 12:30:26 raf_changed bc=7307341039 raf=None cb=None ca=5 rb=None ra=5 | 1 raf satırı değişti
+    2026-05-11 17:30:11 order_received bc=7307341039 raf=B-E-01 cb=None ca=5 rb=None ra=5 | [AUTO_HEAL] Raf ataması yapıldı: B-E-01
+    2026-05-11 17:30:11 raf_assigned bc=7307341039 raf=B-E-01 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: B-E-01
+    2026-05-11 20:34:11 order_received bc=7307341039 raf=B-E-01 cb=None ca=5 rb=None ra=5 | [AUTO_HEAL] Raf ataması yapıldı: B-E-01
+    2026-05-11 20:34:11 raf_assigned bc=7307341039 raf=B-E-01 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: B-E-01
+    2026-05-12 02:10:11 order_received bc=7307341039 raf=B-E-01 cb=None ca=5 rb=None ra=5 | [AUTO_HEAL] Raf ataması yapıldı: B-E-01
+    2026-05-12 02:10:11 raf_assigned bc=7307341039 raf=B-E-01 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: B-E-01
+    2026-05-12 08:01:43 stock_changed bc=7307341039 raf=None cb=5 ca=4 rb=None ra=None | CentralStock 5 → 4
+    2026-05-12 08:01:43 raf_changed bc=7307341039 raf=None cb=None ca=4 rb=None ra=4 | 1 raf satırı değişti
+    2026-05-12 08:01:43 stock_decremented bc=7307341039 raf=B-E-01 cb=None ca=4 rb=1 ra=0 | Raf B-E-01: 1 → 0 (1 adet düşüldü)
+    2026-05-12 09:26:11 status_changed bc=7307341039 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-12 14:12:59 order_received bc=7307341039 raf=F-F-02 cb=None ca=4 rb=None ra=4 | [AUTO_HEAL] Raf ataması yapıldı: F-F-02
+    2026-05-12 14:12:59 raf_assigned bc=7307341039 raf=F-F-02 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: F-F-02
+    2026-05-14 06:34:11 order_received bc=7307341039 raf=F-F-02 cb=None ca=4 rb=None ra=4 | [AUTO_HEAL] Raf ataması yapıldı: F-F-02
+    2026-05-14 06:34:11 raf_assigned bc=7307341039 raf=F-F-02 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: F-F-02
+    2026-05-14 09:50:12 status_changed bc=7307341039 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+======================================================================
+SIPARIS 11233534939
+  tablo=Created status=Created atanan_raf=C-G-02 pkg=3848594970
+  BARKOD Güllüayakkabı0099: central={'qty': 17, 'updated_at': '2026-05-15 09:57:25.151487'} raf_total=17 raf_dist=[{'raf_kodu': 'C-G-02', 'adet': 1}, {'raf_kodu': 'I-A-02', 'adet': 1}, {'raf_kodu': 'O-B-02', 'adet': 1}, {'raf_kodu': 'U-A-01', 'adet': 1}, {'raf_kodu': 'H-H-02', 'adet': 1}, {'raf_kodu': 'L-G-01', 'adet': 1}, {'raf_kodu': 'G-C-01', 'adet': 1}, {'raf_kodu': 'L-F-01', 'adet': 1}, {'raf_kodu': 'U-A-03', 'adet': 1}, {'raf_kodu': 'U-D-01', 'adet': 1}, {'raf_kodu': 'I-B-02', 'adet': 1}, {'raf_kodu': 'U-D-03', 'adet': 1}, {'raf_kodu': 'M-B-02', 'adet': 1}, {'raf_kodu': 'M-E-03', 'adet': 1}, {'raf_kodu': 'P-B-01', 'adet': 2}, {'raf_kodu': 'P-B-02', 'adet': 1}] alias=None
+  EVENTS (9):
+    2026-05-12 08:00:33 stock_changed bc=Güllüayakkabı0099 raf=None cb=17 ca=18 rb=None ra=None | CentralStock 17 → 18
+    2026-05-12 08:00:33 raf_changed bc=Güllüayakkabı0099 raf=None cb=None ca=18 rb=None ra=18 | 1 raf satırı değişti
+    2026-05-14 09:38:11 order_received bc=Güllüayakkabı0099 raf=P-B-01 cb=None ca=18 rb=None ra=18 | [AUTO_HEAL] Raf ataması yapıldı: P-B-01
+    2026-05-14 09:38:11 raf_assigned bc=Güllüayakkabı0099 raf=P-B-01 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: P-B-01
+    2026-05-14 12:29:33 order_received bc=Güllüayakkabı0099 raf=P-B-01 cb=None ca=18 rb=None ra=18 | [AUTO_HEAL] Raf ataması yapıldı: P-B-01
+    2026-05-14 12:29:33 raf_assigned bc=Güllüayakkabı0099 raf=P-B-01 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: P-B-01
+    2026-05-15 09:57:25 stock_changed bc=Güllüayakkabı0099 raf=None cb=18 ca=17 rb=None ra=None | CentralStock 18 → 17
+    2026-05-15 09:57:25 raf_changed bc=Güllüayakkabı0099 raf=None cb=None ca=17 rb=None ra=17 | 1 raf satırı değişti
+    2026-05-15 09:57:25 stock_decremented bc=Güllüayakkabı0099 raf=P-B-01 cb=None ca=17 rb=3 ra=2 | Raf P-B-01: 3 → 2 (1 adet düşüldü)
+======================================================================
+SIPARIS 11235070901
+  tablo=Created status=Created atanan_raf=G-E-02 pkg=3849817307
+  BARKOD 985237080231876: central={'qty': 9, 'updated_at': '2026-05-14 13:44:43.161559'} raf_total=9 raf_dist=[{'raf_kodu': 'K-B-03', 'adet': 1}, {'raf_kodu': 'G-E-02', 'adet': 1}, {'raf_kodu': 'L-C-01', 'adet': 1}, {'raf_kodu': 'K-G-02', 'adet': 1}, {'raf_kodu': 'K-E-01', 'adet': 1}, {'raf_kodu': 'J-E-02', 'adet': 1}, {'raf_kodu': 'K-D-01', 'adet': 1}, {'raf_kodu': 'H-E-02', 'adet': 1}, {'raf_kodu': 'J-E-01', 'adet': 1}] alias=None
+  EVENTS (17):
+    2026-05-08 09:45:22 status_changed bc=985237080231876 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-12 19:50:12 order_received bc=985237080231876 raf=G-D-02 cb=None ca=11 rb=None ra=11 | [AUTO_HEAL] Raf ataması yapıldı: G-D-02
+    2026-05-12 19:50:12 raf_assigned bc=985237080231876 raf=G-D-02 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: G-D-02
+    2026-05-13 07:55:43 stock_changed bc=985237080231876 raf=None cb=11 ca=10 rb=None ra=None | CentralStock 11 → 10
+    2026-05-13 07:55:43 raf_changed bc=985237080231876 raf=None cb=None ca=10 rb=None ra=10 | 1 raf satırı değişti
+    2026-05-13 07:55:44 stock_decremented bc=985237080231876 raf=G-D-02 cb=None ca=10 rb=2 ra=1 | Raf G-D-02: 2 → 1 (1 adet düşüldü)
+    2026-05-13 09:22:11 status_changed bc=985237080231876 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-14 07:26:11 order_received bc=985237080231876 raf=K-B-03 cb=None ca=10 rb=None ra=10 | [AUTO_HEAL] Raf ataması yapıldı: K-B-03
+    2026-05-14 07:26:11 raf_assigned bc=985237080231876 raf=K-B-03 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: K-B-03
+    2026-05-14 09:38:11 status_changed bc=985237080231876 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-14 13:44:43 stock_changed bc=985237080231876 raf=None cb=10 ca=9 rb=None ra=None | CentralStock 10 → 9
+    2026-05-14 13:44:43 raf_changed bc=985237080231876 raf=None cb=None ca=9 rb=None ra=9 | 1 raf satırı değişti
+    2026-05-14 13:44:43 stock_decremented bc=985237080231876 raf=G-D-02 cb=None ca=9 rb=1 ra=0 | Raf G-D-02: 1 → 0 (1 adet düşüldü)
+    2026-05-14 17:21:22 order_received bc=985237080231876 raf=K-B-03 cb=None ca=9 rb=None ra=9 | [AUTO_HEAL] Raf ataması yapıldı: K-B-03
+    2026-05-14 17:21:22 raf_assigned bc=985237080231876 raf=K-B-03 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: K-B-03
+    2026-05-15 11:02:05 order_received bc=985237080231876 raf=K-B-03 cb=None ca=9 rb=None ra=9 | [AUTO_HEAL] Raf ataması yapıldı: K-B-03
+    2026-05-15 11:02:05 raf_assigned bc=985237080231876 raf=K-B-03 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: K-B-03
+======================================================================
+SIPARIS 11236886231
+  tablo=Created status=Created atanan_raf=G-F-02 pkg=3851579314
+  BARKOD 07995003184: central={'qty': 1, 'updated_at': '2026-05-14 13:50:41.576834'} raf_total=1 raf_dist=[{'raf_kodu': 'G-F-02', 'adet': 1}] alias=None
+  EVENTS (34):
+    2026-05-09 10:39:41 status_changed bc=07995003184 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-09 10:39:41 status_changed bc=07995003184 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-09 11:27:41 order_received bc=07995003184 raf=E-H-03 cb=None ca=5 rb=None ra=5 | [AUTO_HEAL] Raf ataması yapıldı: E-H-03
+    2026-05-09 11:27:41 raf_assigned bc=07995003184 raf=E-H-03 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: E-H-03
+    2026-05-09 13:11:42 status_changed bc=07995003184 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-11 06:59:41 order_received bc=07995003184 raf=E-H-03 cb=None ca=5 rb=None ra=5 | [AUTO_HEAL] Raf ataması yapıldı: E-H-03
+    2026-05-11 06:59:41 raf_assigned bc=07995003184 raf=E-H-03 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: E-H-03
+    2026-05-11 09:26:11 order_received bc=07995003184 raf=E-H-03 cb=None ca=5 rb=None ra=5 | [AUTO_HEAL] Raf ataması yapıldı: E-H-03
+    2026-05-11 09:26:11 raf_assigned bc=07995003184 raf=E-H-03 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: E-H-03
+    2026-05-11 12:19:33 stock_changed bc=07995003184 raf=None cb=5 ca=4 rb=None ra=None | CentralStock 5 → 4
+    2026-05-11 12:19:33 raf_changed bc=07995003184 raf=None cb=None ca=4 rb=None ra=4 | 1 raf satırı değişti
+    2026-05-11 12:19:33 stock_decremented bc=07995003184 raf=E-H-03 cb=None ca=4 rb=2 ra=1 | Raf E-H-03: 2 → 1 (1 adet düşüldü)
+    2026-05-11 12:33:47 status_changed bc=07995003184 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-11 12:34:11 status_changed bc=07995003184 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-12 09:13:29 stock_changed bc=07995003184 raf=None cb=4 ca=3 rb=None ra=None | CentralStock 4 → 3
+    2026-05-12 09:13:29 raf_changed bc=07995003184 raf=None cb=None ca=3 rb=None ra=3 | 1 raf satırı değişti
+    2026-05-12 09:13:30 stock_decremented bc=07995003184 raf=E-H-03 cb=None ca=3 rb=1 ra=0 | Raf E-H-03: 1 → 0 (1 adet düşüldü)
+    2026-05-12 09:26:11 status_changed bc=07995003184 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-13 09:58:11 order_received bc=07995003184 raf=G-F-02 cb=None ca=3 rb=None ra=3 | [AUTO_HEAL] Raf ataması yapıldı: G-F-02
+    2026-05-13 09:58:11 raf_assigned bc=07995003184 raf=G-F-02 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: G-F-02
+    2026-05-13 10:18:11 status_changed bc=07995003184 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-13 13:49:09 stock_changed bc=07995003184 raf=None cb=3 ca=2 rb=None ra=None | CentralStock 3 → 2
+    2026-05-13 13:49:09 raf_changed bc=07995003184 raf=None cb=None ca=2 rb=None ra=2 | 1 raf satırı değişti
+    2026-05-13 13:49:09 stock_decremented bc=07995003184 raf=E-I-03 cb=None ca=2 rb=1 ra=0 | Raf E-I-03: 1 → 0 (1 adet düşüldü)
+    2026-05-14 09:54:11 status_changed bc=07995003184 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-14 11:53:33 order_received bc=07995003184 raf=G-F-02 cb=None ca=2 rb=None ra=2 | [AUTO_HEAL] Raf ataması yapıldı: G-F-02
+    2026-05-14 11:53:33 raf_assigned bc=07995003184 raf=G-F-02 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: G-F-02
+    2026-05-14 13:50:41 stock_changed bc=07995003184 raf=None cb=2 ca=1 rb=None ra=None | CentralStock 2 → 1
+    2026-05-14 13:50:41 raf_changed bc=07995003184 raf=None cb=None ca=1 rb=None ra=1 | 1 raf satırı değişti
+    2026-05-14 13:50:41 stock_decremented bc=07995003184 raf=F-A-02 cb=None ca=1 rb=1 ra=0 | Raf F-A-02: 1 → 0 (1 adet düşüldü)
+    2026-05-14 14:09:21 status_changed bc=07995003184 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-14 14:13:22 status_changed bc=07995003184 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-15 10:26:06 order_received bc=07995003184 raf=G-F-02 cb=None ca=1 rb=None ra=1 | [AUTO_HEAL] Raf ataması yapıldı: G-F-02
+    2026-05-15 10:26:06 raf_assigned bc=07995003184 raf=G-F-02 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: G-F-02
+======================================================================
+SIPARIS 11235587834
+  tablo=Created status=Created atanan_raf=G-E-02 pkg=3850285357
+  BARKOD 985237080231903: central={'qty': 7, 'updated_at': '2026-05-14 14:29:13.694650'} raf_total=7 raf_dist=[{'raf_kodu': 'G-E-02', 'adet': 1}, {'raf_kodu': 'J-F-02', 'adet': 1}, {'raf_kodu': 'K-F-01', 'adet': 1}, {'raf_kodu': 'K-F-03', 'adet': 2}, {'raf_kodu': 'K-F-02', 'adet': 1}, {'raf_kodu': 'J-H-02', 'adet': 1}] alias=None
+  EVENTS (41):
+    2026-05-09 21:07:41 order_received bc=985237080231903 raf=K-F-03 cb=None ca=11 rb=None ra=11 | [AUTO_HEAL] Raf ataması yapıldı: K-F-03
+    2026-05-09 21:07:41 raf_assigned bc=985237080231903 raf=K-F-03 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: K-F-03
+    2026-05-11 09:54:05 stock_changed bc=985237080231903 raf=None cb=11 ca=10 rb=None ra=None | CentralStock 11 → 10
+    2026-05-11 09:54:05 raf_changed bc=985237080231903 raf=None cb=None ca=10 rb=None ra=10 | 1 raf satırı değişti
+    2026-05-11 09:54:05 stock_decremented bc=985237080231903 raf=G-A-01 cb=None ca=10 rb=1 ra=0 | Raf G-A-01: 1 → 0 (1 adet düşüldü)
+    2026-05-11 11:53:37 status_changed bc=985237080231903 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-11 11:54:11 status_changed bc=985237080231903 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-11 12:33:44 status_changed bc=985237080231903 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-11 12:34:11 status_changed bc=985237080231903 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-11 21:30:11 order_received bc=985237080231903 raf=K-F-03 cb=None ca=10 rb=None ra=10 | [AUTO_HEAL] Raf ataması yapıldı: K-F-03
+    2026-05-11 21:30:11 raf_assigned bc=985237080231903 raf=K-F-03 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: K-F-03
+    2026-05-12 08:42:11 order_received bc=985237080231903 raf=K-F-03 cb=None ca=10 rb=None ra=10 | [AUTO_HEAL] Raf ataması yapıldı: K-F-03
+    2026-05-12 08:42:11 raf_assigned bc=985237080231903 raf=K-F-03 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: K-F-03
+    2026-05-12 10:26:11 status_changed bc=985237080231903 raf=None cb=None ca=None rb=None ra=None | Sipariş statü değişti orders_created → orders_cancelled
+    2026-05-12 11:26:11 order_received bc=985237080231903 raf=K-F-03 cb=None ca=10 rb=None ra=10 | [AUTO_HEAL] Raf ataması yapıldı: K-F-03
+    2026-05-12 11:26:11 raf_assigned bc=985237080231903 raf=K-F-03 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: K-F-03
+    2026-05-12 11:42:11 status_changed bc=985237080231903 raf=None cb=None ca=None rb=None ra=None | Sipariş statü değişti orders_created → orders_cancelled
+    2026-05-13 07:54:59 stock_changed bc=985237080231903 raf=None cb=10 ca=9 rb=None ra=None | CentralStock 10 → 9
+    2026-05-13 07:54:59 raf_changed bc=985237080231903 raf=None cb=None ca=9 rb=None ra=9 | 1 raf satırı değişti
+    2026-05-13 07:54:59 stock_decremented bc=985237080231903 raf=G-B-01 cb=None ca=9 rb=1 ra=0 | Raf G-B-01: 1 → 0 (1 adet düşüldü)
+    2026-05-13 09:22:11 status_changed bc=985237080231903 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-13 09:26:11 status_changed bc=985237080231903 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-13 09:30:11 status_changed bc=985237080231903 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-13 12:30:11 order_received bc=985237080231903 raf=K-F-03 cb=None ca=9 rb=None ra=9 | [AUTO_HEAL] Raf ataması yapıldı: K-F-03
+    2026-05-13 12:30:11 raf_assigned bc=985237080231903 raf=K-F-03 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: K-F-03
+    2026-05-13 13:36:18 stock_changed bc=985237080231903 raf=None cb=9 ca=8 rb=None ra=None | CentralStock 9 → 8
+    2026-05-13 13:36:18 raf_changed bc=985237080231903 raf=None cb=None ca=8 rb=None ra=8 | 1 raf satırı değişti
+    2026-05-13 13:36:18 stock_decremented bc=985237080231903 raf=G-C-01 cb=None ca=8 rb=1 ra=0 | Raf G-C-01: 1 → 0 (1 adet düşüldü)
+    2026-05-14 09:50:12 status_changed bc=985237080231903 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_picking → orders_shipped
+    2026-05-14 10:46:11 order_received bc=985237080231903 raf=K-F-03 cb=None ca=8 rb=None ra=8 | [AUTO_HEAL] Raf ataması yapıldı: K-F-03
+    2026-05-14 10:46:11 raf_assigned bc=985237080231903 raf=K-F-03 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: K-F-03
+    2026-05-14 13:21:22 status_changed bc=985237080231903 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-14 14:29:13 stock_changed bc=985237080231903 raf=None cb=8 ca=7 rb=None ra=None | CentralStock 8 → 7
+    2026-05-14 14:29:13 raf_changed bc=985237080231903 raf=None cb=None ca=7 rb=None ra=7 | 1 raf satırı değişti
+    2026-05-14 14:29:13 stock_decremented bc=985237080231903 raf=K-F-03 cb=None ca=7 rb=3 ra=2 | Raf K-F-03: 3 → 2 (1 adet düşüldü)
+    2026-05-14 19:57:22 order_received bc=985237080231903 raf=K-F-03 cb=None ca=7 rb=None ra=7 | [AUTO_HEAL] Raf ataması yapıldı: K-F-03
+    2026-05-14 19:57:22 raf_assigned bc=985237080231903 raf=K-F-03 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: K-F-03
+    2026-05-15 03:13:21 order_received bc=985237080231903 raf=K-F-03 cb=None ca=7 rb=None ra=7 | [AUTO_HEAL] Raf ataması yapıldı: K-F-03
+    2026-05-15 03:13:21 raf_assigned bc=985237080231903 raf=K-F-03 cb=None ca=None rb=None ra=None | [AUTO_HEAL] Otomatik raf ataması: K-F-03
+    2026-05-15 10:53:51 status_changed bc=985237080231903 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered
+    2026-05-15 10:54:06 status_changed bc=985237080231903 raf=None cb=None ca=None rb=None ra=None | BG sync · orders_shipped → orders_delivered

@@ -43,6 +43,63 @@ def _current_user_id() -> int | None:
     return None
 
 
+def _request_origin() -> dict:
+    """Değişikliğin hangi bağlamdan geldiğini tespit et (teşhis için).
+
+    Arka plan job'u (request yok) → kind=JOB
+    Agent API (X-Agent-Key) → kind=AGENT_API
+    Kullanıcı oturumu → kind=USER
+    Oturumsuz request → kind=REQUEST
+    Asla exception fırlatmaz; her şey boşsa {} döner.
+    """
+    try:
+        if not has_request_context():
+            return {"kind": "JOB"}
+        from flask import request
+
+        endpoint = getattr(request, "endpoint", None)
+        blueprint = getattr(request, "blueprint", None)
+        try:
+            has_agent_key = bool(request.headers.get("X-Agent-Key"))
+        except Exception:
+            has_agent_key = False
+        uid = _current_user_id()
+
+        if has_agent_key:
+            kind = "AGENT_API"
+        elif uid:
+            kind = "USER"
+        else:
+            kind = "REQUEST"
+
+        origin = {
+            "kind": kind,
+            "endpoint": endpoint,
+            "blueprint": blueprint,
+            "agent_key": has_agent_key,
+        }
+        if uid:
+            origin["user_id"] = uid
+        return origin
+    except Exception:
+        return {}
+
+
+def _origin_source(origin: dict) -> str:
+    """origin dict'inden audit `source` etiketi türet."""
+    kind = (origin or {}).get("kind")
+    if kind == "AGENT_API":
+        return "AGENT_API"
+    if kind == "USER":
+        return "USER"
+    if kind == "REQUEST":
+        ep = (origin or {}).get("endpoint")
+        return (f"REQ:{ep}"[:32]) if ep else "REQUEST"
+    if kind == "JOB":
+        return "JOB"
+    return "SYSTEM"
+
+
 def _snapshot(barcode: str | None, sa_sess: SaSession) -> tuple[int | None, int | None]:
     """Verilen barkod için (central_qty, raf_total) anlık değer."""
     if not barcode:
@@ -192,7 +249,8 @@ def _track_central_change(mapper, connection, target):
     except Exception:
         old = None
     sess.info.setdefault(_STOCK_KEY, []).append(
-        {"barcode": target.barcode, "old": old, "new": target.qty}
+        {"barcode": target.barcode, "old": old, "new": target.qty,
+         "origin": _request_origin()}
     )
 
 
@@ -203,6 +261,7 @@ def _track_raf_change(mapper, connection, target):
             "barcode": target.urun_barkodu,
             "raf_kodu": target.raf_kodu,
             "adet": target.adet,
+            "origin": _request_origin(),
         }
     )
 
@@ -225,15 +284,17 @@ def _flush_audit_after_commit(sess):
             new = None
         if old == new:
             continue
+        origin = ch.get("origin") or {}
         events.append(
             {
                 "event_type": "stock_changed",
                 "barcode": ch["barcode"],
                 "central_qty_before": old,
                 "central_qty_after": new,
-                "source": "SYSTEM",
+                "source": _origin_source(origin),
                 "severity": "info",
                 "message": f"CentralStock {old} → {new}",
+                "details": {"origin": origin},
                 "snapshot": False,
             }
         )
@@ -242,14 +303,15 @@ def _flush_audit_after_commit(sess):
     for ch in raf_changes:
         by_barcode.setdefault(ch["barcode"], []).append(ch)
     for bc, lst in by_barcode.items():
+        origin = next((c.get("origin") for c in lst if c.get("origin")), {}) or {}
         events.append(
             {
                 "event_type": "raf_changed",
                 "barcode": bc,
-                "source": "SYSTEM",
+                "source": _origin_source(origin),
                 "severity": "info",
                 "message": f"{len(lst)} raf satırı değişti",
-                "details": {"changes": lst},
+                "details": {"changes": lst, "origin": origin},
                 "snapshot": True,  # current after değerini doldursun
             }
         )

@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 
 from flask import Blueprint, jsonify, render_template, request
-from sqlalchemy import or_, text
+from sqlalchemy import func, or_, text
 
 from models import (
     Archive,
@@ -303,6 +303,107 @@ def _user_logs(needle: str, limit: int = 50) -> list[dict]:
 @order_audit_bp.route("/siparis-iz", endpoint="page")
 def page():
     return render_template("order_audit.html")
+
+
+# ════════════════════════════════════════════════════════════════════
+# Stok Kaynak Analizi — RafUrun/CentralStock'u kim/ne değiştiriyor?
+# ════════════════════════════════════════════════════════════════════
+
+def _stock_source_breakdown(hours: int) -> dict:
+    since = datetime.utcnow() - timedelta(hours=hours)
+    base = db.session.query(OrderAuditLog).filter(
+        OrderAuditLog.ts >= since,
+        OrderAuditLog.event_type.in_(["stock_changed", "raf_changed"]),
+    )
+
+    # Kaynak x olay tipi kırılımı
+    rows = (
+        db.session.query(
+            OrderAuditLog.event_type,
+            OrderAuditLog.source,
+            func.count(),
+        )
+        .filter(
+            OrderAuditLog.ts >= since,
+            OrderAuditLog.event_type.in_(["stock_changed", "raf_changed"]),
+        )
+        .group_by(OrderAuditLog.event_type, OrderAuditLog.source)
+        .order_by(func.count().desc())
+        .all()
+    )
+    breakdown = [
+        {"event_type": et, "source": src or "?", "count": int(c)}
+        for et, src, c in rows
+    ]
+
+    # Fiziksel olmayan ŞİŞME: central artışı (cb < ca), kaynağa göre
+    inc_rows = (
+        db.session.query(OrderAuditLog.source, func.count())
+        .filter(
+            OrderAuditLog.ts >= since,
+            OrderAuditLog.event_type == "stock_changed",
+            OrderAuditLog.central_qty_after > OrderAuditLog.central_qty_before,
+        )
+        .group_by(OrderAuditLog.source)
+        .order_by(func.count().desc())
+        .all()
+    )
+    inflate = [{"source": s or "?", "count": int(c)} for s, c in inc_rows]
+
+    # Şüpheli örnekler: JOB/SYSTEM dışı kaynaklı son central artışları
+    ex = (
+        db.session.query(OrderAuditLog)
+        .filter(
+            OrderAuditLog.ts >= since,
+            OrderAuditLog.event_type == "stock_changed",
+            OrderAuditLog.central_qty_after > OrderAuditLog.central_qty_before,
+        )
+        .order_by(OrderAuditLog.ts.desc())
+        .limit(60)
+        .all()
+    )
+    samples = []
+    for r in ex:
+        origin = None
+        if isinstance(r.details, dict):
+            origin = r.details.get("origin")
+        samples.append({
+            "ts": r.ts.isoformat() if r.ts else None,
+            "barcode": r.barcode,
+            "before": r.central_qty_before,
+            "after": r.central_qty_after,
+            "source": r.source,
+            "order_number": r.order_number,
+            "origin": origin,
+        })
+
+    return {
+        "hours": hours,
+        "since": since.isoformat(),
+        "total": base.count(),
+        "breakdown": breakdown,
+        "inflate": inflate,
+        "samples": samples,
+    }
+
+
+@order_audit_bp.route("/stok-kaynak", endpoint="stock_source_page")
+def stock_source_page():
+    return render_template("stock_source.html")
+
+
+@order_audit_bp.route("/stok-kaynak/data", endpoint="stock_source_data")
+def stock_source_data():
+    try:
+        hours = int(request.args.get("hours", "6"))
+    except (TypeError, ValueError):
+        hours = 6
+    hours = max(1, min(hours, 168))
+    try:
+        return jsonify({"success": True, **_stock_source_breakdown(hours)})
+    except Exception as exc:
+        logger.exception("stok-kaynak data hatası")
+        return jsonify({"success": False, "error": str(exc)}), 500
 
 
 @order_audit_bp.route("/siparis-iz/lookup", endpoint="lookup")

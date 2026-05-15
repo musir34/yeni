@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stok Kaynak Analizi - Güllü Ayakkabı</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    body { background:#f5f5f5; font-family:'Inter','Segoe UI',sans-serif; padding:24px 14px; }
+    .wrap { max-width:1200px; margin:0 auto; }
+    .card-soft { border:none; border-radius:14px; box-shadow:0 8px 22px rgba(0,0,0,.06);
+      padding:18px; background:#fff; margin-bottom:16px; }
+    .lbl { font-size:.78rem; color:#6c757d; text-transform:uppercase; letter-spacing:.4px; }
+    .num { font-size:1.6rem; font-weight:700; }
+    table { font-size:.88rem; }
+    .src-tag { font-weight:600; padding:2px 8px; border-radius:6px; font-size:.8rem; }
+    .src-JOB    { background:#e7f1ff; color:#0d6efd; }
+    .src-SYSTEM { background:#eee; color:#555; }
+    .src-USER   { background:#e6f7ec; color:#198754; }
+    .src-AGENT_API { background:#fde8e8; color:#dc3545; }
+    .src-REQ    { background:#fff3cd; color:#997404; }
+    .danger-row { background:#fff5f5; }
+    code.sm { font-size:.8rem; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="card-soft d-flex flex-wrap align-items-center justify-content-between">
+    <div>
+      <h4 class="mb-1"><i class="fa-solid fa-magnifying-glass-chart text-primary"></i> Stok Kaynak Analizi</h4>
+      <div class="text-muted small">RafUrun / CentralStock'u <b>kim / ne</b> değiştiriyor? Fiziksel olmayan stok şişmesini bul.</div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <label class="small text-muted mb-0">Son</label>
+      <select id="hours" class="form-select form-select-sm" style="width:auto">
+        <option value="1">1 saat</option>
+        <option value="3">3 saat</option>
+        <option value="6" selected>6 saat</option>
+        <option value="12">12 saat</option>
+        <option value="24">24 saat</option>
+        <option value="72">3 gün</option>
+        <option value="168">7 gün</option>
+      </select>
+      <button id="reload" class="btn btn-primary btn-sm"><i class="fa-solid fa-rotate"></i> Yenile</button>
+    </div>
+  </div>
+
+  <div id="status" class="text-center text-muted py-4">Yükleniyor…</div>
+
+  <div id="content" style="display:none">
+
+    <div class="row g-3 mb-1">
+      <div class="col-md-4"><div class="card-soft"><div class="lbl">Toplam stok/raf olayı</div><div class="num" id="kpiTotal">-</div></div></div>
+      <div class="col-md-4"><div class="card-soft"><div class="lbl">Pencere</div><div class="num" id="kpiWin">-</div></div></div>
+      <div class="col-md-4"><div class="card-soft"><div class="lbl">Şişme (central artış) olayı</div><div class="num text-danger" id="kpiInfl">-</div></div></div>
+    </div>
+
+    <div class="card-soft">
+      <h6 class="mb-2"><i class="fa-solid fa-arrow-trend-up text-danger"></i> Fiziksel olmayan ŞİŞME — central artışı kaynağa göre</h6>
+      <div class="text-muted small mb-2">Sipariş/okutma olmadan stok artıran kaynaklar. <b>AGENT_API</b> ve <b>REQ:</b> kaynakları şüphelidir.</div>
+      <table class="table table-sm table-bordered mb-0">
+        <thead class="table-light"><tr><th>Kaynak</th><th class="text-end">Artış olayı</th></tr></thead>
+        <tbody id="tblInflate"></tbody>
+      </table>
+    </div>
+
+    <div class="card-soft">
+      <h6 class="mb-2"><i class="fa-solid fa-table-list text-primary"></i> Kaynak × olay tipi kırılımı</h6>
+      <table class="table table-sm table-bordered mb-0">
+        <thead class="table-light"><tr><th>Olay</th><th>Kaynak</th><th class="text-end">Adet</th></tr></thead>
+        <tbody id="tblBreak"></tbody>
+      </table>
+    </div>
+
+    <div class="card-soft">
+      <h6 class="mb-2"><i class="fa-solid fa-list-ul text-warning"></i> Son şişme örnekleri (detay)</h6>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light"><tr>
+            <th>Zaman</th><th>Barkod</th><th>Önce→Sonra</th><th>Kaynak</th><th>Endpoint / Origin</th>
+          </tr></thead>
+          <tbody id="tblSamples"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function srcTag(s){
+  s = s || '?';
+  let cls = 'src-SYSTEM';
+  if (s.startsWith('REQ:')) cls='src-REQ';
+  else if (['JOB','SYSTEM','USER','AGENT_API'].includes(s)) cls='src-'+s;
+  return '<span class="src-tag '+cls+'">'+s+'</span>';
+}
+function isSuspect(s){ return s && (s==='AGENT_API' || s.startsWith('REQ:')); }
+
+async function load(){
+  const h = document.getElementById('hours').value;
+  document.getElementById('status').style.display='';
+  document.getElementById('content').style.display='none';
+  document.getElementById('status').textContent='Yükleniyor…';
+  try {
+    const r = await fetch('/stok-kaynak/data?hours='+h);
+    const d = await r.json();
+    if(!d.success){ document.getElementById('status').textContent='Hata: '+d.error; return; }
+
+    document.getElementById('kpiTotal').textContent = d.total;
+    document.getElementById('kpiWin').textContent   = 'Son '+d.hours+' saat';
+    const inflTotal = d.inflate.reduce((a,x)=>a+x.count,0);
+    document.getElementById('kpiInfl').textContent  = inflTotal;
+
+    document.getElementById('tblInflate').innerHTML = d.inflate.length
+      ? d.inflate.map(x=>'<tr class="'+(isSuspect(x.source)?'danger-row':'')+'"><td>'+srcTag(x.source)+'</td><td class="text-end fw-bold">'+x.count+'</td></tr>').join('')
+      : '<tr><td colspan="2" class="text-muted text-center">Bu pencerede central artışı yok ✅</td></tr>';
+
+    document.getElementById('tblBreak').innerHTML = d.breakdown.map(x=>
+      '<tr><td>'+x.event_type+'</td><td>'+srcTag(x.source)+'</td><td class="text-end">'+x.count+'</td></tr>').join('')
+      || '<tr><td colspan="3" class="text-muted text-center">Veri yok</td></tr>';
+
+    document.getElementById('tblSamples').innerHTML = d.samples.map(x=>{
+      const o = x.origin || {};
+      const ep = o.endpoint ? '<code class="sm">'+o.endpoint+'</code>' : '<span class="text-muted">-</span>';
+      const ak = o.agent_key ? ' <span class="badge bg-danger">agent_key</span>' : '';
+      const uid = o.user_id ? ' <span class="badge bg-success">user '+o.user_id+'</span>' : '';
+      return '<tr class="'+(isSuspect(x.source)?'danger-row':'')+'">'+
+        '<td class="text-nowrap small">'+(x.ts||'').replace('T',' ').slice(0,19)+'</td>'+
+        '<td><code class="sm">'+x.barcode+'</code></td>'+
+        '<td>'+x.before+' → <b>'+x.after+'</b></td>'+
+        '<td>'+srcTag(x.source)+'</td>'+
+        '<td>'+ep+ak+uid+'</td></tr>';
+    }).join('') || '<tr><td colspan="5" class="text-muted text-center">Şişme örneği yok ✅</td></tr>';
+
+    document.getElementById('status').style.display='none';
+    document.getElementById('content').style.display='';
+  } catch(e){
+    document.getElementById('status').textContent='İstek hatası: '+e;
+  }
+}
+document.getElementById('reload').addEventListener('click', load);
+document.getElementById('hours').addEventListener('change', load);
+load();
+</script>
+</body>
+</html>

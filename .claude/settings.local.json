@@ -82,7 +82,20 @@
       "Bash(PGPASSWORD='musgyt-9nYgs@-fimpok' psql -h 138.199.218.72 -U musir -d gulludb -c \"SELECT DATE_TRUNC\\('hour', sent_at\\) AS hr, status, COUNT\\(*\\) FROM sync_details WHERE platform='amazon' AND sent_at > NOW\\(\\) - INTERVAL '6 hours' GROUP BY 1,2 ORDER BY 1 DESC, 2;\")",
       "Bash(PGPASSWORD='musgyt-9nYgs@-fimpok' psql -h 138.199.218.72 -U musir -d gulludb -c \"SELECT LEFT\\(error_message,120\\) AS err, COUNT\\(*\\) FROM sync_details WHERE platform='amazon' AND status='error' AND sent_at > NOW\\(\\) - INTERVAL '6 hours' GROUP BY 1 ORDER BY 2 DESC LIMIT 10;\")",
       "Bash(PGPASSWORD='musgyt-9nYgs@-fimpok' psql *)",
-      "Bash(PGPASSWORD=musgyt-9nYgs@-fimpok psql -h 138.199.218.72 -U musir -d gulludb -c ' *)"
+      "Bash(PGPASSWORD=musgyt-9nYgs@-fimpok psql -h 138.199.218.72 -U musir -d gulludb -c ' *)",
+      "Bash(ENABLE_JOBS=off python scripts/check_central_zero_alias.py)",
+      "Bash(echo \"exit=$?\")",
+      "Read(//tmp/**)",
+      "Bash(ENABLE_JOBS=off python scripts/check_real_product_zero.py)",
+      "Bash(ENABLE_JOBS=off python /tmp/trace.py)",
+      "Bash(ENABLE_JOBS=off python /tmp/why.py)",
+      "Bash(awk -F: '$1>150 && $1<260')",
+      "Bash(ENABLE_JOBS=off python scripts/trace_batch.py)",
+      "Bash(ENABLE_JOBS=off python /tmp/inc.py)",
+      "Bash(sed -n '1,5p')",
+      "Bash(sed -n '595,660p' siparisler.py)",
+      "Bash(ENABLE_JOBS=off python -c ' *)",
+      "Bash(cd *)"
     ]
   }
 }

@@ -1,0 +1,87 @@
+=== 73008433001  (canonical=73008433001) ===
+  alias_info       : {'is_alias': False, 'main_barcode': '73008433001', 'aliases': [], 'note': None}
+  CentralStock[73008433001] : KAYIT YOK
+  Raf kayitlari    : YOK (toplam 0)
+  Product.quantity : PRODUCT YOK
+  Rezerv(bekleyen) : canon=0 raw=0
+  ShopifyMapping   : YOK (panel bu barkodu Shopify'a mapli bilmiyor!)
+
+=== 73008433002  (canonical=73008433002) ===
+  alias_info       : {'is_alias': False, 'main_barcode': '73008433002', 'aliases': [], 'note': None}
+  CentralStock[73008433002] : KAYIT YOK
+  Raf kayitlari    : YOK (toplam 0)
+  Product.quantity : PRODUCT YOK
+  Rezerv(bekleyen) : canon=0 raw=0
+  ShopifyMapping   : YOK (panel bu barkodu Shopify'a mapli bilmiyor!)
+
+=== 73008433003  (canonical=73008433003) ===
+  alias_info       : {'is_alias': False, 'main_barcode': '73008433003', 'aliases': [], 'note': None}
+  CentralStock[73008433003] : KAYIT YOK
+  Raf kayitlari    : YOK (toplam 0)
+  Product.quantity : PRODUCT YOK
+  Rezerv(bekleyen) : canon=0 raw=0
+  ShopifyMapping   : YOK (panel bu barkodu Shopify'a mapli bilmiyor!)
+
+=== 73008433004  (canonical=73008433004) ===
+  alias_info       : {'is_alias': False, 'main_barcode': '73008433004', 'aliases': [], 'note': None}
+  CentralStock[73008433004] : KAYIT YOK
+  Raf kayitlari    : YOK (toplam 0)
+  Product.quantity : PRODUCT YOK
+  Rezerv(bekleyen) : canon=0 raw=0
+  ShopifyMapping   : YOK (panel bu barkodu Shopify'a mapli bilmiyor!)
+
+=== 73008433005  (canonical=73008433005) ===
+  alias_info       : {'is_alias': False, 'main_barcode': '73008433005', 'aliases': [], 'note': None}
+  CentralStock[73008433005] : KAYIT YOK
+  Raf kayitlari    : YOK (toplam 0)
+  Product.quantity : PRODUCT YOK
+  Rezerv(bekleyen) : canon=0 raw=0
+  ShopifyMapping   : YOK (panel bu barkodu Shopify'a mapli bilmiyor!)
+
+=== 73008433006  (canonical=73008433006) ===
+  alias_info       : {'is_alias': False, 'main_barcode': '73008433006', 'aliases': [], 'note': None}
+  CentralStock[73008433006] : KAYIT YOK
+  Raf kayitlari    : YOK (toplam 0)
+  Product.quantity : PRODUCT YOK
+  Rezerv(bekleyen) : canon=0 raw=0
+  ShopifyMapping   : YOK (panel bu barkodu Shopify'a mapli bilmiyor!)
+
+=== 73008433007  (canonical=73008433007) ===
+  alias_info       : {'is_alias': False, 'main_barcode': '73008433007', 'aliases': [], 'note': None}
+  CentralStock[73008433007] : KAYIT YOK
+  Raf kayitlari    : YOK (toplam 0)
+  Product.quantity : PRODUCT YOK
+  Rezerv(bekleyen) : canon=0 raw=0
+  ShopifyMapping   : YOK (panel bu barkodu Shopify'a mapli bilmiyor!)
+
+=== 0198523701411  (canonical=0198523701411) ===
+  alias_info       : {'is_alias': False, 'main_barcode': '0198523701411', 'aliases': [], 'note': None}
+  CentralStock[0198523701411] : KAYIT YOK
+  Raf kayitlari    : YOK (toplam 0)
+  Product.quantity : PRODUCT YOK
+  Rezerv(bekleyen) : canon=0 raw=0
+  ShopifyMapping   : YOK (panel bu barkodu Shopify'a mapli bilmiyor!)
+
+=== 0198523701412  (canonical=0198523701412) ===
+  alias_info       : {'is_alias': False, 'main_barcode': '0198523701412', 'aliases': [], 'note': None}
+  CentralStock[0198523701412] : KAYIT YOK
+  Raf kayitlari    : YOK (toplam 0)
+  Product.quantity : PRODUCT YOK
+  Rezerv(bekleyen) : canon=0 raw=0
+  ShopifyMapping   : YOK (panel bu barkodu Shopify'a mapli bilmiyor!)
+
+=== 0198523701428  (canonical=0198523701428) ===
+  alias_info       : {'is_alias': False, 'main_barcode': '0198523701428', 'aliases': [], 'note': None}
+  CentralStock[0198523701428] : KAYIT YOK
+  Raf kayitlari    : YOK (toplam 0)
+  Product.quantity : PRODUCT YOK
+  Rezerv(bekleyen) : canon=0 raw=0
+  ShopifyMapping   : YOK (panel bu barkodu Shopify'a mapli bilmiyor!)
+
+=== 0198523714210  (canonical=0198523714210) ===
+  alias_info       : {'is_alias': False, 'main_barcode': '0198523714210', 'aliases': [], 'note': None}
+  CentralStock[0198523714210] : KAYIT YOK
+  Raf kayitlari    : YOK (toplam 0)
+  Product.quantity : PRODUCT YOK
+  Rezerv(bekleyen) : canon=0 raw=0
+  ShopifyMapping   : YOK (panel bu barkodu Shopify'a mapli bilmiyor!)

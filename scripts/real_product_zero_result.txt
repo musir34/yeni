@@ -1,0 +1,5 @@
+=== URUN LISTESINDE OLAN + CENTRAL 0 + SHOPIFY >0 ===
+Toplam: 0 barkod, Shopify'da asili 0 adet
+
+BARKOD                CANONICAL              CENTRAL REZERV SHOPIFY  TRNDYL
+---------------------------------------------------------------------------

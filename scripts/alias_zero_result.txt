@@ -1,0 +1,54 @@
+=== ALIAS-NORMALIZE: CENTRAL 0 AMA PLATFORMDA >0 ===
+Ortak barkod: 3720
+Shopify'da sapma : 41 barkod, toplam 265 adet
+Trendyol'da sapma: 3 barkod, toplam 3 adet
+
+--- SHOPIFY central 0 ama >0 (41) ---
+BARKOD                  CANONICAL               ADET
+73008433001             73008433001               31
+73008433002             73008433002               31
+73008433003             73008433003               31
+73008433004             73008433004               31
+73008433005             73008433005               31
+73008433006             73008433006               31
+73008433007             73008433007               31
+0198523701411           0198523701411              3
+0198523701412           0198523701412              3
+0198523701413           0198523701413              3
+0198523701414           0198523701414              3
+0198523701428           0198523701428              3
+0198523701429           0198523701429              3
+0198523714210           0198523714210              3
+07995003184             07995003184                1
+10lutesterdeneme        10lutesterdeneme           1
+730734347610            730734347610               1
+730734347611            730734347611               1
+730734347612            730734347612               1
+730734347613            730734347613               1
+730734347615            730734347615               1
+967113                  967113                     1
+98523983114912          98523983114912             1
+DU-200-Beyaz            DU-200-Beyaz               1
+DU-200-Krem             DU-200-Krem                1
+DU-200-Rose             DU-200-Rose                1
+FD-550-Turkuaz          FD-550-Turkuaz             1
+GüllüBot3722            GüllüBot3722               1
+Prfm-MK222              Prfm-MK222                 1
+Prfm-MK232              Prfm-MK232                 1
+Prfm-MK288              Prfm-MK288                 1
+Prfm-MK311              Prfm-MK311                 1
+Prfm-MK474              Prfm-MK474                 1
+Prfm-MK611              Prfm-MK611                 1
+Prfm-MK663              Prfm-MK663                 1
+Prfm-MK877              Prfm-MK877                 1
+Prfm-MK920              Prfm-MK920                 1
+Prfm-MK955              Prfm-MK955                 1
+Y-900-Siyah             Y-900-Siyah                1
+denemekeşif             denemekeşif                1
+mktester10lu            mktester10lu               1
+
+--- TRENDYOL central 0 ama >0 (3) ---
+BARKOD                  CANONICAL               ADET
+07995003184             07995003184                1
+73073434624             73073434624                1
+98580009854             98580009854                1
