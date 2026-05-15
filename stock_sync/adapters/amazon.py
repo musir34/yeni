@@ -109,12 +109,13 @@ class AmazonAdapter(BasePlatformAdapter):
         session = await self.get_session()
         
         # Paralel istekler (semaphore ile rate limit kontrolü)
-        semaphore = asyncio.Semaphore(3)  # Max 3 paralel istek (Amazon rate limit sıkı)
-        
+        # Listings API PATCH kotası sıkı; eşzamanlılık düşük tutulur.
+        semaphore = asyncio.Semaphore(2)
+
         async def update_with_semaphore(item):
             async with semaphore:
                 result = await self._update_single_inventory(session, access_token, item)
-                await asyncio.sleep(0.5)  # Rate limit için 500ms bekleme
+                await asyncio.sleep(1.0)  # Rate limit için bekleme
                 return result
         
         tasks = [update_with_semaphore(item) for item in items]
@@ -173,27 +174,43 @@ class AmazonAdapter(BasePlatformAdapter):
         }
         
         sent_at = datetime.utcnow()
-        
+        max_retries = 4
+
         try:
-            async with session.patch(url, json=payload, params=params, headers=self._get_headers(access_token)) as response:
-                response_at = datetime.utcnow()
-                response_text = await response.text()
-                
-                if response.status in [200, 201, 202]:
-                    try:
-                        response_data = await response.json()
-                    except:
-                        response_data = {"status": "accepted"}
-                    
-                    return SyncResult(
-                        barcode=item.barcode,
-                        success=True,
-                        quantity_sent=max(0, item.quantity),
-                        response_data=response_data,
-                        sent_at=sent_at,
-                        response_at=response_at
-                    )
-                else:
+            for attempt in range(max_retries + 1):
+                async with session.patch(url, json=payload, params=params, headers=self._get_headers(access_token)) as response:
+                    response_at = datetime.utcnow()
+                    response_text = await response.text()
+
+                    if response.status in [200, 201, 202]:
+                        try:
+                            response_data = await response.json()
+                        except:
+                            response_data = {"status": "accepted"}
+
+                        return SyncResult(
+                            barcode=item.barcode,
+                            success=True,
+                            quantity_sent=max(0, item.quantity),
+                            response_data=response_data,
+                            sent_at=sent_at,
+                            response_at=response_at
+                        )
+
+                    # 429 (QuotaExceeded) için Retry-After'a göre bekleyip yeniden dene
+                    if response.status == 429 and attempt < max_retries:
+                        try:
+                            retry_after = float(response.headers.get("Retry-After", 0))
+                        except (TypeError, ValueError):
+                            retry_after = 0
+                        wait_s = retry_after if retry_after > 0 else min(2 ** attempt, 30)
+                        logger.warning(
+                            f"[AMAZON] 429 QuotaExceeded (SKU={sku}), "
+                            f"{wait_s:.0f}s bekleniyor (deneme {attempt + 1}/{max_retries})"
+                        )
+                        await asyncio.sleep(wait_s)
+                        continue
+
                     return SyncResult(
                         barcode=item.barcode,
                         success=False,
