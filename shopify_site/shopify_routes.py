@@ -11,6 +11,7 @@ from flask_login import login_required
 from .shopify_config import ShopifyConfig
 from .shopify_service import shopify_service
 from .shopify_stock_service import shopify_stock_service
+from .shopify_price_compare import price_compare_service
 from user_logs import log_user_action
 
 
@@ -440,4 +441,93 @@ def unmatched_csv():
         csv_data,
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=shopify_unmatched.csv"},
+    )
+
+
+# ════════════════════════════════════════════════════════════════════
+# SHOPIFY ↔ TRENDYOL FİYAT KARŞILAŞTIRMA
+# ════════════════════════════════════════════════════════════════════
+
+@shopify_bp.route("/fiyat-karsilastir")
+@login_required
+def price_compare_dashboard():
+    """Shopify ↔ Trendyol fiyat karşılaştırma sayfası."""
+    configured = ShopifyConfig.is_configured()
+    return render_template("shopify/price_compare.html", configured=configured)
+
+
+@shopify_bp.route("/api/price-compare")
+@login_required
+@check_shopify_config
+def price_compare_api():
+    """Shopify ↔ Trendyol satış fiyatı karşılaştırma JSON sonucu."""
+    only_differences = request.args.get("only_differences", "1") in ("1", "true", "True")
+    try:
+        min_diff_percent = float(request.args.get("min_diff_percent", "0") or 0)
+    except ValueError:
+        min_diff_percent = 0.0
+    try:
+        result = price_compare_service.compare(
+            only_differences=only_differences,
+            min_diff_percent=min_diff_percent,
+        )
+        return jsonify(result)
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
+@shopify_bp.route("/api/price-compare/export")
+@login_required
+@check_shopify_config
+def price_compare_export():
+    """Karşılaştırma sonucunu CSV indir."""
+    from flask import Response
+    import csv
+    import io
+
+    only_differences = request.args.get("only_differences", "1") in ("1", "true", "True")
+    try:
+        min_diff_percent = float(request.args.get("min_diff_percent", "0") or 0)
+    except ValueError:
+        min_diff_percent = 0.0
+
+    result = price_compare_service.compare(
+        only_differences=only_differences,
+        min_diff_percent=min_diff_percent,
+    )
+    groups = result.get("groups", [])
+
+    status_label = {
+        "equal": "Aynı",
+        "shopify_higher": "Shopify daha pahalı",
+        "trendyol_higher": "Trendyol daha pahalı",
+        "only_shopify": "Sadece Shopify'da fiyat",
+        "only_trendyol": "Sadece Trendyol'da fiyat",
+    }
+
+    output = io.StringIO()
+    output.write("﻿")  # Excel UTF-8 BOM
+    writer = csv.writer(output, delimiter=";")
+    writer.writerow(["Model Kodu", "Ürün", "Barkod", "Renk", "Beden",
+                     "Shopify Fiyat (TL)", "Trendyol Fiyat (TL)",
+                     "Fark (TL)", "Fark (%)", "Durum"])
+    for g in groups:
+        for v in g.get("variants", []):
+            writer.writerow([
+                g["model_code"],
+                g["product_title"] or "",
+                v["barcode"],
+                v.get("color", ""),
+                v.get("size", ""),
+                f"{v['shopify_price']:.2f}" if v["shopify_price"] is not None else "",
+                f"{v['trendyol_price']:.2f}" if v["trendyol_price"] is not None else "",
+                f"{v['diff']:.2f}" if v["diff"] is not None else "",
+                f"{v['diff_percent']:.2f}" if v["diff_percent"] is not None else "",
+                status_label.get(v["status"], v["status"]),
+            ])
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=shopify_trendyol_fiyat_karsilastirma.csv"},
     )

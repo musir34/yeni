@@ -73,7 +73,16 @@
       "Bash(DISABLE_JOBS=1 python scripts/cleanup_dead_shopify_mappings.py)",
       "Bash(findstr /I \"\\\\.db .env .sqlite\")",
       "Bash(xxd)",
-      "Bash(DATABASE_URL=\"sqlite:///:memory:\" DISABLE_JOBS=1 python scripts/test_stok_fixleri.py)"
+      "Bash(DATABASE_URL=\"sqlite:///:memory:\" DISABLE_JOBS=1 python scripts/test_stok_fixleri.py)",
+      "Bash(awk '/2026-05-11 14:35:48.*AMAZON senkronizasyonu/,/2026-05-11 14:38:47.*AMAZON tamamlandı/' /Users/abdurrahmankuli/Documents/Webs/yeni/logs/app.log)",
+      "Bash(sqlite3 *)",
+      "Bash(PGPASSWORD='musgyt-9nYgs@-fimpok' psql -h 138.199.218.72 -U musir -d gulludb -c \"SELECT LEFT\\(error_message, 80\\) AS err, COUNT\\(*\\) AS cnt FROM sync_details WHERE platform='amazon' AND status='error' AND sent_at >= '2026-05-11 14:00:00' GROUP BY LEFT\\(error_message,80\\) ORDER BY cnt DESC LIMIT 15;\")",
+      "Bash(PGPASSWORD='musgyt-9nYgs@-fimpok' psql -h 138.199.218.72 -U musir -d gulludb -c \"SELECT MAX\\(sent_at\\) FROM sync_details WHERE platform='amazon';\")",
+      "Bash(PGPASSWORD='musgyt-9nYgs@-fimpok' psql -h 138.199.218.72 -U musir -d gulludb -c \"SELECT status, COUNT\\(*\\) FROM sync_details WHERE platform='amazon' AND sent_at > NOW\\(\\) - INTERVAL '2 hours' GROUP BY status;\")",
+      "Bash(PGPASSWORD='musgyt-9nYgs@-fimpok' psql -h 138.199.218.72 -U musir -d gulludb -c \"SELECT DATE_TRUNC\\('hour', sent_at\\) AS hr, status, COUNT\\(*\\) FROM sync_details WHERE platform='amazon' AND sent_at > NOW\\(\\) - INTERVAL '6 hours' GROUP BY 1,2 ORDER BY 1 DESC, 2;\")",
+      "Bash(PGPASSWORD='musgyt-9nYgs@-fimpok' psql -h 138.199.218.72 -U musir -d gulludb -c \"SELECT LEFT\\(error_message,120\\) AS err, COUNT\\(*\\) FROM sync_details WHERE platform='amazon' AND status='error' AND sent_at > NOW\\(\\) - INTERVAL '6 hours' GROUP BY 1 ORDER BY 2 DESC LIMIT 10;\")",
+      "Bash(PGPASSWORD='musgyt-9nYgs@-fimpok' psql *)",
+      "Bash(PGPASSWORD=musgyt-9nYgs@-fimpok psql -h 138.199.218.72 -U musir -d gulludb -c ' *)"
     ]
   }
 }

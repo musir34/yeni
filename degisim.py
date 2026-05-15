@@ -6,7 +6,7 @@ import re
 import requests
 from collections import Counter
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 import random
 import os
@@ -439,6 +439,133 @@ def update_status():
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# 2b) Toplu Durum Güncelle / Toplu Sil
+# ──────────────────────────────────────────────────────────────────────────────
+def _parse_no_list(raw) -> list[str]:
+    """request.form.getlist veya virgülle ayrılmış string'i temizle."""
+    if isinstance(raw, list):
+        items = raw
+    else:
+        items = (raw or "").split(",")
+    return [s.strip() for s in items if s and s.strip()]
+
+
+@degisim_bp.route('/bulk_update_status', methods=['POST'])
+def bulk_update_status():
+    nos = _parse_no_list(request.form.getlist('degisim_no') or request.form.get('degisim_no_list'))
+    status = (request.form.get('status') or '').strip()
+    force_tracking = (request.form.get('force_tracking') or '').strip()  # tüm seçilenler için ortak takip no (opsiyonel)
+
+    if not nos or not status:
+        return jsonify(success=False, message="Eksik parametre"), 400
+
+    try:
+        records = Degisim.query.filter(Degisim.degisim_no.in_(nos)).all()
+        if not records:
+            return jsonify(success=False, message="Kayıt bulunamadı"), 404
+
+        missing_tracking: list[str] = []
+        updated = 0
+        for rec in records:
+            if not rec.musteri_kargo_takip and not force_tracking:
+                missing_tracking.append(rec.degisim_no)
+                continue
+            if force_tracking and not rec.musteri_kargo_takip:
+                rec.musteri_kargo_takip = force_tracking
+            rec.degisim_durumu = status
+            updated += 1
+
+        if missing_tracking and updated == 0:
+            return jsonify(
+                success=False,
+                need_tracking=True,
+                missing=missing_tracking,
+                message=f"{len(missing_tracking)} kayıtta müşteri takip numarası eksik.",
+            )
+
+        db.session.commit()
+
+        _safe_log("UPDATE", {
+            "işlem_açıklaması": f"Toplu değişim durumu güncellendi — {updated} kayıt → {status}",
+            "sayfa": "Değişim Talepleri",
+            "yeni_durum": status,
+            "kayit_sayisi": updated,
+            "eksik_takip": len(missing_tracking),
+        })
+        return jsonify(success=True, updated=updated, skipped_missing_tracking=missing_tracking)
+    except Exception as exc:
+        db.session.rollback()
+        logger.error(f"bulk_update_status hatası: {exc}", exc_info=True)
+        return jsonify(success=False, message="Sunucu hatası"), 500
+
+
+@degisim_bp.route('/bulk_delete', methods=['POST'])
+def bulk_delete():
+    nos = _parse_no_list(request.form.getlist('degisim_no') or request.form.get('degisim_no_list'))
+    if not nos:
+        return jsonify(success=False, message="Kayıt seçilmedi"), 400
+
+    try:
+        records = Degisim.query.filter(Degisim.degisim_no.in_(nos)).all()
+        if not records:
+            return jsonify(success=False, message="Kayıt bulunamadı"), 404
+
+        total_restored = 0
+        deleted_nos: list[str] = []
+        for rec in records:
+            urunler = _safe_json_loads(rec.urunler_json, default=[])
+            shelf_counts = _aggregate_shelf_restore(urunler if isinstance(urunler, list) else [])
+            total_restored += restore_to_shelves(shelf_counts)
+            deleted_nos.append(rec.degisim_no)
+            db.session.delete(rec)
+
+        db.session.commit()
+        _safe_log("DELETE", {
+            "işlem_açıklaması": f"Toplu değişim silindi — {len(deleted_nos)} kayıt (stok iade: {total_restored})",
+            "sayfa": "Değişim Talepleri",
+            "kayit_sayisi": len(deleted_nos),
+            "stok_iade": total_restored,
+        })
+        return jsonify(success=True, deleted=len(deleted_nos), restored=total_restored)
+    except Exception as exc:
+        db.session.rollback()
+        logger.error(f"bulk_delete hatası: {exc}", exc_info=True)
+        return jsonify(success=False, message="Sunucu hatası"), 500
+
+
+def _auto_deliver_old_shipped(min_days: int = 7) -> int:
+    """`degisim_tarihi` 7+ gün öncesi olan 'Kargoya Verildi' kayıtları 'Teslim Edildi' yap.
+
+    Returns:
+        Güncellenen kayıt sayısı.
+    """
+    cutoff = datetime.utcnow() - timedelta(days=min_days)
+    try:
+        q = Degisim.query.filter(
+            Degisim.degisim_durumu == 'Kargoya Verildi',
+            Degisim.degisim_tarihi < cutoff,
+        )
+        records = q.all()
+        if not records:
+            return 0
+        for rec in records:
+            rec.degisim_durumu = 'Teslim Edildi'
+        db.session.commit()
+        _safe_log("UPDATE", {
+            "işlem_açıklaması": f"Otomatik teslim — {min_days}+ gün önce kargoya verilen {len(records)} değişim 'Teslim Edildi' yapıldı",
+            "sayfa": "Değişim Talepleri",
+            "kayit_sayisi": len(records),
+            "min_days": min_days,
+        })
+        logger.info("[DEGISIM] Otomatik teslim: %d kayıt güncellendi", len(records))
+        return len(records)
+    except Exception as exc:
+        db.session.rollback()
+        logger.error(f"_auto_deliver_old_shipped hatası: {exc}", exc_info=True)
+        return 0
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # 3) Sil (silerken raflardan düşülen stok geri iade edilir)
 # ──────────────────────────────────────────────────────────────────────────────
 @degisim_bp.route('/delete_exchange', methods=['POST'])
@@ -547,6 +674,14 @@ def get_order_details():
 # ──────────────────────────────────────────────────────────────────────────────
 @degisim_bp.route('/degisim_talep')
 def degisim_talep():
+    # 7+ gün önce kargoya verilenleri otomatik teslim et (sessiz; sayı flash mesajı olarak gösterilir)
+    auto_delivered = _auto_deliver_old_shipped(min_days=7)
+    if auto_delivered > 0:
+        flash(
+            f"{auto_delivered} adet 7+ gün önceki 'Kargoya Verildi' kayıt otomatik olarak 'Teslim Edildi' yapıldı.",
+            "success",
+        )
+
     page = request.args.get('page', 1, type=int)
     try:
         per_page = int(request.args.get('per_page', 12))

@@ -28,6 +28,7 @@ def check_sync_staleness() -> Dict[str, Any]:
     """Donmuş veya tutarsız mapping'leri tespit et, eşik aşılırsa mail gönder."""
     from models import db, ShopifyMapping, CentralStock
     from mail_service import notify, build_alert_email_html
+    from stock_sync.service import stock_sync_service
 
     cutoff = datetime.utcnow() - timedelta(days=STALE_SYNC_DAYS)
 
@@ -36,17 +37,24 @@ def check_sync_staleness() -> Dict[str, Any]:
     )
     stale_count = stale_q.count()
 
+    # Shopify'a gönderilen miktar `max(0, panel - reserved)` olduğu için
+    # tutarsızlık kontrolünü de aynı efektif değerle yapmak gerekiyor; aksi halde
+    # bekleyen siparişi olan her variant kalıcı "tutarsız" olarak işaretlenir.
+    reserved_map = stock_sync_service.get_reserved_barcodes()
+
     mismatches: List[Dict[str, Any]] = []
     rows = db.session.query(ShopifyMapping, CentralStock).outerjoin(
         CentralStock, CentralStock.barcode == ShopifyMapping.barcode
     ).all()
     for m, cs in rows:
-        panel = cs.qty if cs else 0
+        raw_panel = cs.qty if cs else 0
+        reserved = reserved_map.get(m.barcode, 0)
+        effective_panel = max(0, raw_panel - reserved)
         sent = m.last_stock_sent if m.last_stock_sent is not None else -1
-        if panel != sent:
+        if effective_panel != sent:
             mismatches.append({
                 "barkod": m.barcode,
-                "panel": panel,
+                "panel": effective_panel,
                 "shopify": sent,
                 "note": (m.last_sync_at.strftime("%Y-%m-%d %H:%M")
                          if m.last_sync_at else "hiç sync olmamış"),

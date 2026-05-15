@@ -50,6 +50,20 @@
     .pagination .page-item.active .page-link{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
     .pagination .page-item:not(.active) .page-link:hover{background:#f1f1f1}
     @keyframes fadeIn{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+
+    /* Bulk toolbar */
+    .bulk-toolbar{
+      position:sticky;top:0;z-index:1020;background:var(--color-white);
+      border:1px solid var(--color-border);border-radius:var(--border-radius);
+      padding:.75rem 1rem;box-shadow:var(--shadow-sm);
+      margin-bottom:1rem;display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;
+    }
+    .bulk-toolbar .selected-count{font-weight:600;color:var(--color-primary)}
+    .bulk-toolbar.has-selection{border-color:var(--color-primary);box-shadow:0 0 0 .15rem rgba(183,110,121,.18)}
+    .card.is-selected{outline:3px solid var(--color-primary);outline-offset:-3px}
+    .row-check{position:absolute;top:.5rem;left:.5rem;z-index:5;width:1.25rem;height:1.25rem;cursor:pointer;background:#fff;border-radius:.25rem;border:1.5px solid var(--color-primary)}
+    .card{position:relative}
+    .card .card-header{padding-left:2.5rem}
   </style>
 </head>
 <body>
@@ -112,10 +126,31 @@
       <a href="{{ url_for('home.home') }}" class="btn btn-secondary"><i class="fas fa-home"></i> Anasayfa</a>
     </div>
 
+    <!-- Toplu İşlem Toolbarı -->
+    <div id="bulkToolbar" class="bulk-toolbar">
+      <div class="form-check me-2">
+        <input class="form-check-input" type="checkbox" id="selectAllChk">
+        <label class="form-check-label" for="selectAllChk">Bu sayfadakileri seç</label>
+      </div>
+      <span class="selected-count me-3"><span id="selectedCount">0</span> seçili</span>
+      <div class="btn-group btn-group-sm me-2" role="group">
+        <button class="btn btn-success" data-bulk="İşleme Alındı" disabled><i class="fas fa-play"></i> İşleme Al</button>
+        <button class="btn btn-warning" data-bulk="Kargoya Verildi" disabled><i class="fas fa-truck"></i> Kargola</button>
+        <button class="btn btn-info" data-bulk="Teslim Edildi" disabled><i class="fas fa-check-circle"></i> Teslim Et</button>
+      </div>
+      <div class="btn-group btn-group-sm" role="group">
+        <button class="btn btn-danger" id="bulkDeleteBtn" disabled><i class="fas fa-trash"></i> Seçilenleri Sil</button>
+      </div>
+      <button class="btn btn-sm btn-outline-secondary ms-auto" id="bulkClearBtn" disabled>
+        <i class="fas fa-times"></i> Seçimi Temizle
+      </button>
+    </div>
+
     <div class="row">
       {% for exchange in degisim_kayitlari %}
       <div class="col-md-6 col-lg-4 mb-4" id="card-{{ exchange.degisim_no }}">
-        <div class="card h-100">
+        <div class="card h-100" data-degisim-no="{{ exchange.degisim_no }}">
+          <input type="checkbox" class="row-check form-check-input" title="Seç" data-no="{{ exchange.degisim_no }}">
           <div class="card-header d-flex justify-content-between align-items-center">
             <div>
               <strong class="text-primary">{{ exchange.siparis_no }}</strong>
@@ -323,6 +358,150 @@
           else{ alert('Silme işlemi sırasında hata: '+(res.message||'')); }
         }).fail(()=>alert('Sunucuyla iletişim kurulamadı.'));
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // TOPLU SEÇİM & İŞLEM
+    // ─────────────────────────────────────────────────────────────
+    (function () {
+      const selectAll = document.getElementById('selectAllChk');
+      const checks = () => Array.from(document.querySelectorAll('.row-check'));
+      const selected = () => checks().filter(c => c.checked);
+      const toolbar = document.getElementById('bulkToolbar');
+      const countEl = document.getElementById('selectedCount');
+      const actionBtns = document.querySelectorAll('#bulkToolbar [data-bulk], #bulkDeleteBtn, #bulkClearBtn');
+
+      function refreshState() {
+        const n = selected().length;
+        countEl.textContent = n;
+        actionBtns.forEach(b => b.disabled = (n === 0));
+        toolbar.classList.toggle('has-selection', n > 0);
+        // Card outline
+        checks().forEach(c => {
+          const card = c.closest('.card');
+          if (card) card.classList.toggle('is-selected', c.checked);
+        });
+        // Select-all checkbox state
+        const all = checks();
+        selectAll.indeterminate = n > 0 && n < all.length;
+        selectAll.checked = n > 0 && n === all.length;
+      }
+
+      selectAll.addEventListener('change', function () {
+        checks().forEach(c => c.checked = selectAll.checked);
+        refreshState();
+      });
+
+      checks().forEach(c => c.addEventListener('change', refreshState));
+
+      // Card body üzerine basınca toggle (checkbox dışına basılırsa)
+      document.querySelectorAll('.card[data-degisim-no]').forEach(card => {
+        card.addEventListener('click', function (e) {
+          if (e.target.closest('.row-check')) return;
+          if (e.target.closest('button, a, input, .modal, form')) return;
+          if (!e.shiftKey && !e.metaKey && !e.ctrlKey) return; // sadece shift/ctrl/cmd+click ile toggle
+          const cb = card.querySelector('.row-check');
+          if (cb) { cb.checked = !cb.checked; refreshState(); }
+        });
+      });
+
+      document.getElementById('bulkClearBtn').addEventListener('click', function () {
+        checks().forEach(c => c.checked = false);
+        refreshState();
+      });
+
+      function postBulk(url, body, okMsg) {
+        return $.post(url, body, null, 'json')
+          .done(res => {
+            if (res.success) {
+              if (okMsg) {
+                let msg = okMsg.replace('{n}', res.updated || res.deleted || selected().length);
+                if (res.skipped_missing_tracking && res.skipped_missing_tracking.length) {
+                  msg += `\n${res.skipped_missing_tracking.length} kayıt müşteri takip no eksik olduğu için atlandı.`;
+                }
+                alert(msg);
+              }
+              location.reload();
+            } else if (res.need_tracking) {
+              const code = prompt(
+                `${res.missing.length} kayıtta müşteri takip numarası yok. Bunların hepsi için ortak bir takip no girin (boş bırakırsanız atlanır):`
+              );
+              if (code === null) return;
+              if (code.trim()) {
+                body.force_tracking = code.trim();
+                postBulk(url, body, okMsg);
+              }
+            } else {
+              alert(res.message || 'İşlem başarısız.');
+            }
+          })
+          .fail(() => alert('Sunucuyla iletişim kurulamadı.'));
+      }
+
+      document.querySelectorAll('#bulkToolbar [data-bulk]').forEach(btn => {
+        btn.addEventListener('click', function () {
+          const sel = selected();
+          if (!sel.length) return;
+          const status = btn.dataset.bulk;
+          if (!confirm(`${sel.length} kayıt için durum "${status}" yapılacak. Onaylıyor musunuz?`)) return;
+          const nos = sel.map(c => c.dataset.no);
+          // jQuery $.post Array değerlerini key[]= olarak göndermez; manuel ekle
+          const fd = new FormData();
+          nos.forEach(n => fd.append('degisim_no', n));
+          fd.append('status', status);
+          fetch("{{ url_for('degisim.bulk_update_status') }}", { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(res => {
+              if (res.success) {
+                let msg = `${res.updated} kayıt güncellendi.`;
+                if (res.skipped_missing_tracking && res.skipped_missing_tracking.length) {
+                  msg += `\n${res.skipped_missing_tracking.length} kayıt müşteri takip no eksik olduğu için atlandı.`;
+                }
+                alert(msg);
+                location.reload();
+              } else if (res.need_tracking) {
+                const code = prompt(`${res.missing.length} kayıtta müşteri takip numarası yok. Hepsine ortak bir takip no atayıp devam etmek için girin (iptal = vazgeç):`);
+                if (!code || !code.trim()) return;
+                const fd2 = new FormData();
+                nos.forEach(n => fd2.append('degisim_no', n));
+                fd2.append('status', status);
+                fd2.append('force_tracking', code.trim());
+                fetch("{{ url_for('degisim.bulk_update_status') }}", { method: 'POST', body: fd2 })
+                  .then(r => r.json())
+                  .then(res2 => {
+                    if (res2.success) { alert(`${res2.updated} kayıt güncellendi.`); location.reload(); }
+                    else alert(res2.message || 'İşlem başarısız.');
+                  })
+                  .catch(() => alert('Sunucuyla iletişim kurulamadı.'));
+              } else {
+                alert(res.message || 'İşlem başarısız.');
+              }
+            })
+            .catch(() => alert('Sunucuyla iletişim kurulamadı.'));
+        });
+      });
+
+      document.getElementById('bulkDeleteBtn').addEventListener('click', function () {
+        const sel = selected();
+        if (!sel.length) return;
+        if (!confirm(`${sel.length} kayıt SİLİNECEK ve rafa stok iadesi yapılacak. Onaylıyor musunuz?`)) return;
+        const nos = sel.map(c => c.dataset.no);
+        const fd = new FormData();
+        nos.forEach(n => fd.append('degisim_no', n));
+        fetch("{{ url_for('degisim.bulk_delete') }}", { method: 'POST', body: fd })
+          .then(r => r.json())
+          .then(res => {
+            if (res.success) {
+              alert(`${res.deleted} kayıt silindi, ${res.restored} adet stok iade edildi.`);
+              location.reload();
+            } else {
+              alert(res.message || 'İşlem başarısız.');
+            }
+          })
+          .catch(() => alert('Sunucuyla iletişim kurulamadı.'));
+      });
+
+      refreshState();
+    })();
   </script>
 {% include 'includes/notification_popup.html' ignore missing %}
 </body>
