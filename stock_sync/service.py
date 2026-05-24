@@ -6,6 +6,7 @@ Tüm platformlara stok gönderimini yöneten ana servis.
 """
 
 import asyncio
+import os
 import uuid
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Callable
@@ -19,6 +20,19 @@ from .adapters.trendyol import TrendyolAdapter
 from .adapters.idefix import IdefixAdapter
 from .adapters.amazon import AmazonAdapter
 from .adapters.hepsiburada import HepsiburadaAdapter
+
+
+def get_safety_stock_buffer() -> int:
+    """Tüm platformlara gönderilen stoktan düşülecek güvenlik tamponu.
+
+    Env değişkeni `SAFETY_STOCK_BUFFER` ile kontrol edilir (default=1).
+    Bayram sonrası normale dönmek için: `SAFETY_STOCK_BUFFER=0` ayarla ve
+    uygulamayı yeniden başlat.
+    """
+    try:
+        return max(0, int(os.environ.get("SAFETY_STOCK_BUFFER", "1")))
+    except (TypeError, ValueError):
+        return 1
 
 
 class StockSyncService:
@@ -175,6 +189,10 @@ class StockSyncService:
         if reserved_map:
             logger.info(f"[SYNC] {len(reserved_map)} barkod için rezerv hesaplandı (toplam {sum(reserved_map.values())} adet)")
 
+        safety_buffer = get_safety_stock_buffer()
+        if safety_buffer:
+            logger.info(f"[SYNC] Güvenlik stoğu tamponu aktif: -{safety_buffer} adet/ürün")
+
         # Platform'a göre eşleştirme map'leri
         asin_map = {}
         sku_map = {}
@@ -205,7 +223,7 @@ class StockSyncService:
                 continue
 
             reserved = reserved_map.get(stock.barcode, 0)
-            available_qty = max(0, (stock.qty or 0) - reserved)
+            available_qty = max(0, (stock.qty or 0) - reserved - safety_buffer)
 
             items.append(StockItem(
                 barcode=stock.barcode,
@@ -228,6 +246,7 @@ class StockSyncService:
 
         # Rezerv: Bekleyen siparişlerdeki ürün miktarları
         reserved_map = self.get_reserved_barcodes()
+        safety_buffer = get_safety_stock_buffer()
 
         # Amazon için ASIN + seller SKU eşleştirmesi
         asin_map = {}
@@ -255,7 +274,7 @@ class StockSyncService:
                 continue
 
             reserved = reserved_map.get(barcode, 0)
-            available_qty = max(0, stock_dict.get(barcode, 0) - reserved)
+            available_qty = max(0, stock_dict.get(barcode, 0) - reserved - safety_buffer)
 
             items.append(StockItem(
                 barcode=barcode,

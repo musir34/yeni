@@ -343,8 +343,11 @@ class ShopifyStockService:
         stocks = {cs.barcode: cs.qty for cs in CentralStock.query.filter(CentralStock.barcode.in_(mapping_barcodes)).all()}
 
         # Rezerv: Bekleyen siparişlerdeki (OrderCreated) ürün miktarlarını düş
-        from stock_sync.service import stock_sync_service
+        from stock_sync.service import stock_sync_service, get_safety_stock_buffer
         reserved_map = stock_sync_service.get_reserved_barcodes()
+        safety_buffer = get_safety_stock_buffer()
+        if safety_buffer:
+            logger.info("[SHOPIFY] Güvenlik stoğu tamponu aktif: -%s adet/ürün", safety_buffer)
 
         # Envanter takibi kapalı olan ürünlerde tracking'i aç.
         # Yavaş bir işlem (1000+ ardışık mutation olabilir); 6 saatte bir yeterli.
@@ -365,7 +368,7 @@ class ShopifyStockService:
             reserved = reserved_map.get(mapping.barcode, 0)
             batch.append({
                 "mapping": mapping,
-                "qty": max(0, raw_qty - reserved),
+                "qty": max(0, raw_qty - reserved - safety_buffer),
             })
 
         # Shopify inventorySetQuantities max 100 item per call.
