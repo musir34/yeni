@@ -618,13 +618,15 @@
       </div>
     </div>
 
-    <!-- Manuel sipariş no girişi (Sıralı Mod kapalıyken görünür) -->
-    <div id="manuelOrderPanel" style="display:none; align-items:center; gap:6px;">
-      <input type="text" id="manuelOrderInput" placeholder="Sipariş No girin…"
-             style="border:1px solid #ccc; border-radius:6px; padding:4px 10px; font-size:0.9rem; width:200px;">
+    <!-- Ürün barkodu okut (Sıralı Mod kapalıyken görünür) — okutunca en acil sipariş ekrana gelir -->
+    <div id="manuelOrderPanel" style="display:none; align-items:center; gap:8px;">
+      <input type="text" id="manuelOrderInput" placeholder="Ürün barkodunu okutun…"
+             autocomplete="off"
+             style="border:1px solid #ccc; border-radius:6px; padding:4px 10px; font-size:0.9rem; width:220px;">
       <button onclick="manuelYukle()" class="btn btn-sm btn-primary">
-        <i class="fas fa-search"></i> Yükle
+        <i class="fas fa-barcode"></i> Getir
       </button>
+      <span id="manuelScanStatus" style="font-size:0.8rem; font-weight:600; color:#666; white-space:nowrap;"></span>
     </div>
 
   </div>
@@ -755,6 +757,7 @@
                   {% endif %}
                 </div>
 
+                {# 🔥 Tek okutma: kutu barkodu. (Eskiden sağ/sol çift okutma vardı.) #}
                 {% for q in range(product['quantity']|int) %}
                   <div class="form-group">
                     <div id="barkodMatchMessage-right-{{ loop.index0 }}-{{ q }}" class="alert"></div>
@@ -765,30 +768,15 @@
                       data-side="right"
                       id="barkodInput-right-{{ loop.index0 }}-{{ q }}"
                       name="barkod_right_{{ loop.index0 }}_{{ q }}"
-                      placeholder="{{ product['sku'] }} Sağ Tek ({{ q+1 }})"
-                      required autocomplete="off"/>
-                  </div>
-
-                  <div class="form-group">
-                    <div id="barkodMatchMessage-left-{{ loop.index0 }}-{{ q }}" class="alert"></div>
-                    <input type="text"
-                      class="form-control barkod-input"
-                      data-product-index="{{ loop.index0 }}"
-                      data-quantity-index="{{ q }}"
-                      data-side="left"
-                      id="barkodInput-left-{{ loop.index0 }}-{{ q }}"
-                      name="barkod_left_{{ loop.index0 }}_{{ q }}"
-                      placeholder="{{ product['sku'] }} Sol Tek ({{ q+1 }})"
+                      placeholder="{{ product['sku'] }} Kutu Barkodu ({{ q+1 }})"
                       required autocomplete="off"/>
                   </div>
                 {% endfor %}
 
                 {% for q in range(product['quantity']|int) %}
                   <input type="hidden" id="expectedBarcode-right-{{ loop.index0 }}-{{ q }}" value="{{ product['normalized_barcode'] }}"/>
-                  <input type="hidden" id="expectedBarcode-left-{{ loop.index0 }}-{{ q }}" value="{{ product['normalized_barcode'] }}"/>
                   <!-- 🔥 Orijinal barkod da kabul edilsin -->
                   <input type="hidden" id="originalBarcode-right-{{ loop.index0 }}-{{ q }}" value="{{ product['barcode'] }}"/>
-                  <input type="hidden" id="originalBarcode-left-{{ loop.index0 }}-{{ q }}" value="{{ product['barcode'] }}"/>
                 {% endfor %}
               </div><!-- card-body -->
             </div>
@@ -1338,10 +1326,40 @@
       initOrderSection();
     });
 
+    // Ürün barkodunu okut → en acil siparişi (yeni scan mantığı) ekrana getir.
+    var _manuelBusy = false;
     function manuelYukle() {
-      var val = document.getElementById('manuelOrderInput').value.trim();
-      if (!val) { gsToast('Sipariş numarası girin.', 'warning'); return; }
-      window.location.href = '/siparis-hazirla?manuel=1&order_number=' + encodeURIComponent(val);
+      if (_manuelBusy) return;
+      var input  = document.getElementById('manuelOrderInput');
+      var status = document.getElementById('manuelScanStatus');
+      var bc = (input ? input.value.trim() : '');
+      if (!bc) { gsToast('Ürün barkodunu okutun.', 'warning'); return; }
+      _manuelBusy = true;
+      if (status) { status.textContent = 'Aranıyor…'; status.style.color = '#666'; }
+      fetch("{{ url_for('new_orders_service.scan_barcode_to_order') }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barcode: bc })
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (data.found) {
+          if (status) {
+            status.textContent = (data.urgent ? '🔴 ACİL — ' : '') + 'Sipariş ' + data.order_number + ' açılıyor…';
+            status.style.color = data.urgent ? '#dc3545' : '#28a745';
+          }
+          window.location.href = data.redirect_url;  // /hazirla?order_number=...&manuel=1
+        } else {
+          _manuelBusy = false;
+          if (status) { status.textContent = data.message || 'Sipariş bulunamadı.'; status.style.color = '#dc3545'; }
+          if (input) { input.value = ''; input.focus(); }
+        }
+      })
+      .catch(function(err){
+        _manuelBusy = false;
+        if (status) { status.textContent = 'Bağlantı hatası: ' + err.message; status.style.color = '#dc3545'; }
+        if (input) input.focus();
+      });
     }
 
     function copyToClipboard(elementId, el) {

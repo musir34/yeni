@@ -8,7 +8,7 @@ from models import db, Archive, Product
 
 logger = logging.getLogger(__name__)
 # Çok tablolu sipariş modelleri
-from models import OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
+from models import OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
 # update_service ve trendyol_api importları
 from trendyol_api import SUPPLIER_ID
 from update_service import update_order_status_to_picking
@@ -62,7 +62,7 @@ def find_order_across_tables(order_number):
     order_number_str = str(order_number)
     
     # Trendyol tablolarına bak
-    for cls in [OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled]:
+    for cls in [OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled]:
         found = cls.query.filter_by(order_number=order_number_str).first()
         if found:
             return found, cls

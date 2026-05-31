@@ -95,7 +95,9 @@
       "Bash(sed -n '1,5p')",
       "Bash(sed -n '595,660p' siparisler.py)",
       "Bash(ENABLE_JOBS=off python -c ' *)",
-      "Bash(cd *)"
+      "Bash(cd *)",
+      "Bash(.venv/Scripts/python.exe *)",
+      "PowerShell(py *)"
     ]
   }
 }

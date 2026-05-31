@@ -18,6 +18,7 @@ from barcode_alias_helper import normalize_barcode
 from models import (
     db,
     OrderCreated,
+    OrderHazirlaniyor,
     OrderPicking,
     OrderShipped,
     OrderDelivered,
@@ -155,6 +156,12 @@ async def fetch_trendyol_orders_async():
             if all_orders_data:
                 with current_app.app_context():
                     process_all_orders(all_orders_data)
+                    # 🔁 Stoğu teyit edilen Yeni siparişleri otomatik Hazırlanıyor'a (Trendyol Picking) çek.
+                    try:
+                        from promotion_service import promote_eligible_orders
+                        await promote_eligible_orders()
+                    except Exception as _pe:
+                        logger.error(f"[TERFI] Otomatik terfi sırasında hata: {_pe}", exc_info=True)
             else:
                 logger.info("İşlenecek yeni sipariş verisi bulunamadı.")
 
@@ -268,7 +275,9 @@ def _process_sync_orders_bulk(sync_orders):
         }
 
         existing_orders = {}
-        relevant_tables = [OrderCreated, OrderPicking, OrderCancelled]
+        # OrderHazirlaniyor dahil: senkron, hazirlaniyor'daki siparişin de farkında olmalı ki
+        # Trendyol "Picking" dediğinde onu yanlışlıkla orders_picking'e taşımasın.
+        relevant_tables = [OrderCreated, OrderHazirlaniyor, OrderPicking, OrderCancelled]
 
         for table_model in relevant_tables:
             try:
@@ -307,6 +316,13 @@ def _process_sync_orders_bulk(sync_orders):
                 current_record = existing_info['record']
                 current_table = existing_info['table']
                 target_table = target_model.__tablename__
+
+                # 🔒 Hazırlanıyor bizim iç ara statümüz; Trendyol'da 'Picking' olarak görünür.
+                # Trendyol "Picking"/"Created" dese de yerinde bırak — onu orders_picking'e
+                # YALNIZCA bizim paketleme akışımız taşır. Senkron sadece iptalde devreye girsin.
+                if current_table == 'orders_hazirlaniyor' and target_model is not OrderCancelled:
+                    _minimal_update_if_needed(current_record, new_data_dict)
+                    continue
 
                 if current_table != target_table:
                     logger.info(f"Statü değişimi: {order_number} {current_table} ➝ {target_table}")

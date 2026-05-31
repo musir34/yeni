@@ -15,7 +15,7 @@ import json
 from models import db, Degisim, Product
 from user_logs import log_user_action
 # Çok tablolu sipariş modelleriniz
-from models import OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
+from models import OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled
 # Raf ve central stok
 from models import RafUrun, CentralStock
 from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID
@@ -86,7 +86,7 @@ def _safe_log(action: str, details: dict) -> None:
 # Yardımcı: Siparişi her tabloda ara
 # ──────────────────────────────────────────────────────────────────────────────
 def find_order_across_tables(order_number):
-    for table_cls in [OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled]:
+    for table_cls in [OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled]:
         order = table_cls.query.filter_by(order_number=order_number).first()
         if order:
             return order, table_cls

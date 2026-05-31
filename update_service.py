@@ -10,7 +10,7 @@ from sqlalchemy import asc
 from collections import Counter, defaultdict
 
 # Yeni tablolar (Created, Picking vs.) ve DB objesi
-from models import db, OrderCreated, OrderPicking, Product, RafUrun, CentralStock
+from models import db, OrderCreated, OrderHazirlaniyor, OrderPicking, Product, RafUrun, CentralStock
 from stock_management import sync_central_stock
 # Trendyol API kimlikleri ve BASE_URL
 from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID
@@ -31,8 +31,9 @@ def _norm_bc(x: str) -> str:
     from barcode_alias_helper import normalize_barcode
     return normalize_barcode(x.strip().replace(" ", ""))
 
-# ==== ayar: sağ/sol okutma modu ====
-SCAN_MODE = "pair"  # "single" ya da "pair"
+# ==== ayar: okutma modu ====
+# "single" = tek kutu barkodu okut (varsayılan), "pair" = sağ/sol çift okutma (eski mod)
+SCAN_MODE = "single"
 REQ_PER_UNIT = 2 if SCAN_MODE == "pair" else 1
 
 
@@ -162,6 +163,10 @@ async def confirm_packing():
             logger.error("[DB] Sipariş hiçbir tabloda bulunamadı")
             flash('Sipariş bulunamadı.', 'danger')
             return _respond(is_ajax)
+
+        # Sipariş 'Hazırlanıyor' tablosundan mı geldi? Öyleyse terfi anında Trendyol'da
+        # zaten Picking'e çekilmişti → pakette TEKRAR API çağırma (idempotent atla).
+        is_from_hazirlaniyor = (table_cls is OrderHazirlaniyor)
 
         logger.info(f"[ORDER] Bulundu: {order_number}, Kaynak: {'SHOPIFY' if is_shopify_order else table_cls.__name__}")
 
@@ -373,17 +378,21 @@ async def confirm_packing():
 
                 trendyol_success = True
                 trendyol_failed_packages = []
-                for sp_id, ln in lines_by_sp.items():
-                    logger.info(f"[TYL][PUT] sp_id={sp_id} lines={ln}")
-                    ok = await update_order_status_to_picking(SUPPLIER_ID, sp_id, ln)
-                    if ok:
-                        flash(f"✓ Paket {sp_id} Trendyol'da 'Picking' oldu.", 'success')
-                        logger.info(f"[TYL][OK] sp_id={sp_id}")
-                    else:
-                        trendyol_success = False
-                        trendyol_failed_packages.append(sp_id)
-                        flash(f"✗ Trendyol güncellemesi hatası. Paket: {sp_id}", 'danger')
-                        logger.error(f"[TYL][FAIL] sp_id={sp_id}")
+                if is_from_hazirlaniyor:
+                    # Terfi anında Trendyol'da zaten Picking'e çekildi — pakette tekrar çağırma.
+                    logger.info(f"[TYL] {order_number} zaten Hazırlanıyor (Picking); pakette Trendyol API atlanıyor.")
+                else:
+                    for sp_id, ln in lines_by_sp.items():
+                        logger.info(f"[TYL][PUT] sp_id={sp_id} lines={ln}")
+                        ok = await update_order_status_to_picking(SUPPLIER_ID, sp_id, ln)
+                        if ok:
+                            flash(f"✓ Paket {sp_id} Trendyol'da 'Picking' oldu.", 'success')
+                            logger.info(f"[TYL][OK] sp_id={sp_id}")
+                        else:
+                            trendyol_success = False
+                            trendyol_failed_packages.append(sp_id)
+                            flash(f"✗ Trendyol güncellemesi hatası. Paket: {sp_id}", 'danger')
+                            logger.error(f"[TYL][FAIL] sp_id={sp_id}")
 
                 if not trendyol_success:
                     logger.error(f"[TYL][CRITICAL] Bazı paketler güncellenemedi: {trendyol_failed_packages}")
@@ -468,14 +477,14 @@ async def confirm_packing():
                 flash(f"Veritabanı taşıma hatası: {db_error}", 'danger')
                 return _respond(is_ajax)
 
-        # 9) Sonraki sipariş info
+        # 9) Sonraki sipariş info (sıradaki hazırlanacak = Hazırlanıyor)
         try:
-            nxt = OrderCreated.query.order_by(OrderCreated.order_date).first()
+            nxt = OrderHazirlaniyor.query.order_by(OrderHazirlaniyor.order_date).first()
             if nxt:
-                flash(f'Bir sonraki Created: {nxt.order_number}', 'info')
+                flash(f'Bir sonraki Hazırlanıyor: {nxt.order_number}', 'info')
                 logger.info(f"[NEXT] {nxt.order_number}")
             else:
-                flash('Yeni Created sipariş yok.', 'info')
+                flash('Hazırlanacak sipariş yok.', 'info')
                 logger.info("[NEXT] yok")
         except Exception:
             logger.exception("[NEXT] hata (önemsiz)")

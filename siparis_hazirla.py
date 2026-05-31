@@ -8,7 +8,12 @@ from sqlalchemy import desc
 from zoneinfo import ZoneInfo
 
 # Modeller
-from models import db, OrderCreated, RafUrun, Product, Archive, Degisim, ShopifyMapping
+from models import db, OrderCreated, OrderHazirlaniyor, RafUrun, Product, Archive, Degisim, ShopifyMapping
+
+
+def _prep_model():
+    """Hazırlama kuyruğu = Hazırlanıyor (stoğu teyit edilmiş) siparişler."""
+    return OrderHazirlaniyor
 
 # Hava Durumu Servisi
 from weather_service import get_weather_info, get_istanbul_time
@@ -342,8 +347,9 @@ def get_home(order_number=None):
                 logging.info(f"Manuel istek engellendi — sipariş arşivde: {order_number}")
                 oldest_order = None
             else:
-                oldest_order = (OrderCreated.query
-                              .filter(OrderCreated.order_number == order_number)
+                PrepModel = _prep_model()
+                oldest_order = (PrepModel.query
+                              .filter(PrepModel.order_number == order_number)
                               .first())
         else:
             # 🛍️ Öncelik: Shopify Beklemede siparişleri, sonra Trendyol
@@ -360,10 +366,11 @@ def get_home(order_number=None):
                 oldest_order, _ = _shopify_order_to_hazirla_format(shopify_match)
             else:
                 # Trendyol/WooCommerce fallback — arşivdekileri dışarıda bırak
-                trendyol_q = OrderCreated.query.filter(OrderCreated.status == 'Created')
+                PrepModel = _prep_model()
+                trendyol_q = PrepModel.query
                 if archived_numbers:
-                    trendyol_q = trendyol_q.filter(~OrderCreated.order_number.in_(archived_numbers))
-                oldest_order = trendyol_q.order_by(OrderCreated.order_date).first()
+                    trendyol_q = trendyol_q.filter(~PrepModel.order_number.in_(archived_numbers))
+                oldest_order = trendyol_q.order_by(PrepModel.order_date).first()
         is_from_woo_table = False
 
         # Hava durumu bilgisi
@@ -719,14 +726,14 @@ def get_queue_orders():
 
         # ÖNCELİK 2: Trendyol siparişleri (Created)
         if remaining_slots > 0:
-            trendyol_query = (OrderCreated.query
-                              .filter(OrderCreated.status == 'Created'))
+            PrepModel = _prep_model()
+            trendyol_query = PrepModel.query
 
             # Aktif siparişi hariç tut
             if active_order_number:
-                trendyol_query = trendyol_query.filter(OrderCreated.order_number != active_order_number)
+                trendyol_query = trendyol_query.filter(PrepModel.order_number != active_order_number)
 
-            trendyol_orders = trendyol_query.order_by(OrderCreated.order_date).limit(remaining_slots).all()
+            trendyol_orders = trendyol_query.order_by(PrepModel.order_date).limit(remaining_slots).all()
 
             for order in trendyol_orders:
                 first_image = "/static/images/default.jpg"

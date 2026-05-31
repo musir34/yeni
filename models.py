@@ -606,6 +606,15 @@ class OrderCreated(OrderBase):
     atanan_raf = db.Column(db.String, nullable=True)  # Toplu hazırlamada atanan raf kodu
 
 
+# Hazırlanıyor — stoğu teyit edilip Trendyol'da Picking'e çekilmiş, fiziksel toplanmayı bekleyen.
+# Stok REZERVİ bu statüde tutulur (get_reserved_barcodes buradan okur). Fiziksel stok hâlâ
+# paketleme onayında düşer. Yeni (Created) ile Picking arasındaki ara statü.
+class OrderHazirlaniyor(OrderBase):
+    __tablename__ = 'orders_hazirlaniyor'
+    atanan_raf = db.Column(db.String, nullable=True)            # Toplamada atanan raf kodu
+    hazirlaniyor_since = db.Column(db.DateTime, default=datetime.utcnow)  # bu statüye geçtiği an
+
+
 # İşleme alınan (Picking)
 class OrderPicking(OrderBase):
     __tablename__ = 'orders_picking'

@@ -1,18 +1,62 @@
 # new_orders_service.py
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, send_file
-from models import db, OrderCreated, RafUrun, Product
-from barcode_alias_helper import normalize_barcode
+from models import db, OrderHazirlaniyor, RafUrun, Product, Archive, BarcodeAlias
+from barcode_alias_helper import normalize_barcode, strip_turkish
+from weather_service import get_istanbul_time
+from sqlalchemy.orm import load_only
 import json
 import traceback
 import io
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from qr_utils import qr_utils_bp  # routes/__init__.py bu modülden export ediyor
 
 new_orders_service_bp = Blueprint('new_orders_service', __name__)
 
+IST = ZoneInfo("Europe/Istanbul")
+
+# Kargo cut-off'una bu saatten az kalan siparişler "acil" kovasına düşer.
+# Pazaryeri/kargo bazında ileride parametrik yapılabilir.
+KARGO_ACIL_ESIK_SAAT = 24
+
+
+def _to_ist(dt):
+    """Naive ise IST varsay, aware ise IST'ye çevir."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=IST)
+    return dt.astimezone(IST)
+
+
+def _remaining_seconds(agreed_delivery_date):
+    """agreed_delivery_date'e kalan saniye. Tarih yoksa None (sıralamada en sona)."""
+    dd = _to_ist(agreed_delivery_date)
+    if dd is None:
+        return None
+    return (dd - get_istanbul_time()).total_seconds()
+
+
+def _format_remaining(seconds):
+    """Kalan saniyeyi 'X gün Y saat Z dakika' metnine çevirir."""
+    if seconds is None:
+        return "Kalan Süre Yok"
+    if seconds <= 0:
+        return "0 dakika"
+    total = int(seconds)
+    days, rem = divmod(total, 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes = rem // 60
+    return f"{days} gün {hours} saat {minutes} dakika"
+
+
+def _prep_model():
+    """Hazırlama/toplama kuyruğu = Hazırlanıyor (stoğu teyit edilmiş) siparişler."""
+    return OrderHazirlaniyor
+
 
 def _parse_details(order):
-    """OrderCreated.details alanını güvenli şekilde liste olarak döndürür."""
+    """details alanını güvenli şekilde liste olarak döndürür."""
     if not order.details:
         return []
     try:
@@ -24,11 +68,12 @@ def _parse_details(order):
 
 def _build_shelf_groups():
     """
-    Yeni (OrderCreated) statüsündeki TÜM tek ürünlü siparişleri raf bazında gruplar.
+    Hazırlanıyor (OrderHazirlaniyor — stoğu teyit edilmiş) TÜM tek ürünlü siparişleri raf bazında gruplar.
     Dönüş: [(raf_kodu, [{'order_number', 'model_code', 'color', 'size', 'barcode'}, ...]), ...]
             Alfabetik raf sırasına göre.
     """
-    new_orders = OrderCreated.query.order_by(OrderCreated.order_date.asc()).all()
+    PrepModel = _prep_model()
+    new_orders = PrepModel.query.order_by(PrepModel.order_date.asc()).all()
 
     # Önce tüm barkodları toplayıp Product'ları tek sorguda çekelim
     all_barcodes = set()
@@ -228,3 +273,134 @@ def prepare_new_orders_labels_print():
     except Exception as e:
         traceback.print_exc()
         return f"Hata: {e}", 500
+
+
+# ─────────────────────────────────────────────────────────────
+#  BARKOD OKUT → EN ACİL SİPARİŞİ GETİR
+# ─────────────────────────────────────────────────────────────
+
+@new_orders_service_bp.route('/prepare-new-orders/scan', methods=['POST'])
+def scan_barcode_to_order():
+    """
+    Okutulan ürün barkoduna ait, 'Hazırlanıyor' (OrderHazirlaniyor — stoğu teyit edilmiş) TEK ürünlü
+    siparişlerden en acilini bulur. Etiket basmaya gerek kalmaz; picker ürünü
+    raftan alıp barkodunu okutur, sistem o adedi en acil siparişe atar.
+
+    Sıralama (iki kovalı):
+      1) Kargoya KARGO_ACIL_ESIK_SAAT saatten az kalanlar → en az süre kalan önce
+         (cut-off'u geçmiş/gecikmiş olanlar en başta).
+      2) Diğerleri → standart: cut-off tarihine göre, tarihi olmayan en sona,
+         eşitlikte en eski sipariş (FIFO) önce.
+
+    Dönüş (JSON):
+      { "found": true, "order_number": ..., "redirect_url": "/hazirla?...",
+        "model_code", "color", "size", "barcode", "raf", "customer_name",
+        "remaining_time", "urgent" }
+      veya { "found": false, "message": ... }
+    """
+    try:
+        payload = request.get_json(silent=True) or request.form
+        raw_barcode = (payload.get('barcode') or '').strip()
+        if not raw_barcode:
+            return jsonify({"found": False, "message": "Barkod boş."}), 400
+
+        # Scanned barkodu BİR KEZ normalize et (alias/Product sorguları burada biter).
+        scanned = normalize_barcode(raw_barcode)
+        if not scanned:
+            return jsonify({"found": False, "message": "Geçersiz barkod."}), 400
+
+        # scanned'e eşlenen TÜM ham barkod biçimlerini önceden çıkar (tek alias sorgusu).
+        # Böylece sipariş döngüsünde normalize_barcode() çağırıp DB'ye gitmeyiz.
+        accepted_exact = {scanned}
+        for a in BarcodeAlias.query.filter_by(main_barcode=scanned).all():
+            accepted_exact.add(a.alias_barcode)
+        accepted_ascii = {strip_turkish(x).lower() for x in accepted_exact}
+
+        def _matches(raw):
+            if not raw:
+                return False
+            rb = str(raw).strip().replace(' ', '')
+            if rb in accepted_exact:
+                return True
+            return strip_turkish(rb).lower() in accepted_ascii
+
+        # Arşivdeki siparişleri ele (onlar /hazirla ekranında zaten açılmaz).
+        archived_numbers = {r[0] for r in db.session.query(Archive.order_number).all()}
+
+        threshold_seconds = KARGO_ACIL_ESIK_SAAT * 3600
+
+        # Sadece gereken kolonları çek — uzak DB'den tam satır transferini azalt.
+        PrepModel = _prep_model()
+        orders = (PrepModel.query
+                  .options(load_only(
+                      PrepModel.order_number,
+                      PrepModel.details,
+                      PrepModel.agreed_delivery_date,
+                      PrepModel.order_date,
+                      PrepModel.customer_name,
+                      PrepModel.customer_surname,
+                  ))
+                  .all())
+
+        candidates = []  # (sort_bucket, sort_remaining, order_date, order, item)
+        for order in orders:
+            if order.order_number in archived_numbers:
+                continue
+            details = _parse_details(order)
+            # Sadece TEK ürünlü siparişler
+            if len(details) != 1:
+                continue
+            item = details[0]
+            if not _matches(item.get('barcode', '')):
+                continue
+
+            rs = _remaining_seconds(order.agreed_delivery_date)
+            order_date = order.order_date or datetime.min
+            if rs is not None and rs < threshold_seconds:
+                # Kova 1 — acil: en az kalan (gecikmiş = en negatif) önce
+                candidates.append((0, rs, order_date, order, item))
+            else:
+                # Kova 2 — standart: cut-off asc (tarihi yoksa +inf = en sona), sonra FIFO
+                rs_key = rs if rs is not None else float('inf')
+                candidates.append((1, rs_key, order_date, order, item))
+
+        if not candidates:
+            return jsonify({
+                "found": False,
+                "message": "Bu barkod için bekleyen tek ürünlü yeni sipariş yok.",
+            }), 200
+
+        candidates.sort(key=lambda c: (c[0], c[1], c[2]))
+        _bucket, rs_sel, _od, order, item = candidates[0]
+
+        # Ürün görüntü bilgileri (Product tablosundan, yoksa sipariş detayından)
+        product = Product.query.filter_by(barcode=scanned).first()
+        model_code = (product.product_main_id if product and product.product_main_id
+                      else item.get('sku', 'N/A'))
+        color = product.color if product and product.color else item.get('color', 'N/A')
+        size = product.size if product and product.size else item.get('size', 'N/A')
+
+        # Bilgi amaçlı raf önerisi (stoklu ilk raf) — picker zaten ürünü elinde tutuyor.
+        raf = (RafUrun.query
+               .filter(RafUrun.urun_barkodu == scanned, RafUrun.adet > 0)
+               .order_by(RafUrun.raf_kodu.asc())
+               .first())
+
+        return jsonify({
+            "found": True,
+            "order_number": order.order_number,
+            "redirect_url": url_for('siparis_hazirla.index',
+                                    order_number=order.order_number, manuel=1),
+            "model_code": model_code,
+            "color": color,
+            "size": size,
+            "barcode": scanned,
+            "raf": raf.raf_kodu if raf else None,
+            "customer_name": ' '.join(filter(None, [order.customer_name, order.customer_surname])),
+            "remaining_time": _format_remaining(rs_sel if rs_sel != float('inf') else None),
+            "urgent": _bucket == 0,
+        }), 200
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"found": False, "message": f"Hata: {e}"}), 500

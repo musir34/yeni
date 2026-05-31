@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any, Callable
 from concurrent.futures import ThreadPoolExecutor
 
-from models import db, CentralStock, Product, SyncSession, SyncDetail, PlatformConfig, OrderCreated
+from models import db, CentralStock, Product, SyncSession, SyncDetail, PlatformConfig, OrderCreated, OrderHazirlaniyor
 from logger_config import app_logger as logger
 
 from .adapters.base import StockItem, SyncResult
@@ -136,10 +136,21 @@ class StockSyncService:
         return status
     
     def get_reserved_barcodes(self) -> Dict[str, int]:
-        """orders_created tablosundaki siparişlerin details JSON'undan rezerv barkodlarını ve miktarları çıkar"""
+        """orders_hazirlaniyor tablosundaki siparişlerin details JSON'undan rezerv barkodlarını ve miktarları çıkar.
+
+        REZERV ARTIK 'HAZIRLANIYOR' STATÜSÜNDE TUTULUR (eskiden 'Created' idi).
+        Yeni (Created) siparişler henüz stok teyidi yapılmadığı için rezerv etmez;
+        yalnızca stoğu teyit edilip Hazırlanıyor'a (Trendyol Picking) geçenler rezerv eder.
+        Hazırlanıyor'da fiziksel stok hâlâ düşmemiştir; paketlemede düşer ve Picking'e geçince
+        rezerv tablosundan çıkar (çift düşüm olmaz).
+        """
         import json
 
-        rows = db.session.query(OrderCreated.order_number, OrderCreated.details).all()
+        # Rezerv = Yeni (Created) + Hazırlanıyor. Sipariş, gelişinden paketlemeye kadar
+        # KESİNTİSİZ rezerve kalır; statü geçişinde (Created→Hazırlanıyor) oversatış penceresi
+        # oluşmaz. Fiziksel stok hâlâ paketlemede düşer ve Picking'e geçince rezervden çıkar.
+        rows = (db.session.query(OrderCreated.order_number, OrderCreated.details).all()
+                + db.session.query(OrderHazirlaniyor.order_number, OrderHazirlaniyor.details).all())
         reserved_map = {}
         parse_errors = 0
 
