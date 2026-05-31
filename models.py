@@ -604,6 +604,7 @@ class OrderBase(db.Model):
 class OrderCreated(OrderBase):
     __tablename__ = 'orders_created'
     atanan_raf = db.Column(db.String, nullable=True)  # Toplu hazırlamada atanan raf kodu
+    stok_yok_mail_at = db.Column(db.DateTime, nullable=True)  # anlık stok-yok bildirimi gönderildiği an
 
 
 # Hazırlanıyor — stoğu teyit edilip Trendyol'da Picking'e çekilmiş, fiziksel toplanmayı bekleyen.

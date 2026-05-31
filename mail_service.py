@@ -15,6 +15,8 @@ NOTIFY_EVENTS = {
     'archive_restored':  'Arşivden çıkarıldığında',
     'stock_sync_stale':      'Shopify stok senkronu durduğunda',
     'shopify_oversell_risk': 'Shopify oversell riski tespit edildiğinde',
+    'stok_yok_siparis':      'Sipariş stok yetersizliğinden hazırlanamadığında (anlık)',
+    'stok_yok_hatirlatma':   'Stoksuz bekleyen siparişler (periyodik hatırlatma)',
 }
 
 # Statü -> olay eşlemesi
@@ -53,6 +55,8 @@ EVENT_COLORS = {
     'archive_restored':  '#6F42C1',
     'stock_sync_stale':      '#B02A37',
     'shopify_oversell_risk': '#DC3545',
+    'stok_yok_siparis':      '#DC3545',
+    'stok_yok_hatirlatma':   '#FD7E14',
 }
 
 # Olay başlıkları
@@ -65,6 +69,8 @@ EVENT_TITLES = {
     'archive_restored':  'Sipariş Arşivden Çıkarıldı',
     'stock_sync_stale':      '⚠️ Shopify Stok Senkronu Donmuş',
     'shopify_oversell_risk': '🚨 Shopify Oversell Riski',
+    'stok_yok_siparis':      '⚠️ Stoksuz Sipariş — Hazırlanamıyor',
+    'stok_yok_hatirlatma':   '📋 Stoksuz Bekleyen Siparişler',
 }
 
 
@@ -258,6 +264,64 @@ def build_alert_email_html(event: str, headline: str, summary_rows: list[tuple[s
     </div>
     <div style="padding:16px 24px;background:#f8f9fa;text-align:center;border-top:1px solid #eee;">
         <p style="margin:0;font-size:12px;color:#aaa;">Güllü Ayakkabı — Sistem İzleme</p>
+    </div>
+</div></body></html>'''
+
+
+def build_stock_shortage_email(event: str, headline: str, orders: list[dict]) -> str:
+    """
+    Stok yetersizliğinden hazırlanamayan siparişler için sipariş-bazlı HTML email.
+    orders: [{ 'order_number', 'customer_name', 'source', 'agreed', 'products':
+              [{'sku','barcode','quantity'}, ...] }, ...]
+    """
+    title = EVENT_TITLES.get(event, 'Stoksuz Sipariş')
+    title_color = EVENT_COLORS.get(event, '#DC3545')
+
+    cards = ''
+    for o in orders[:80]:
+        src_label, src_color = SOURCE_LABELS.get((o.get('source') or '').lower(), ('Trendyol', '#FF6F00'))
+        prod_lines = ''
+        for p in (o.get('products') or []):
+            sku = p.get('sku') or '-'
+            barcode = p.get('barcode') or '-'
+            qty = p.get('quantity', 1)
+            prod_lines += (
+                f'<div style="font-size:13px;color:#444;padding:2px 0;">'
+                f'• <strong>{sku}</strong> <span style="color:#888;">({barcode})</span> × {qty}</div>'
+            )
+        agreed = o.get('agreed') or '-'
+        cards += f'''
+        <div style="border:1px solid #f0d0d0;border-left:4px solid {title_color};border-radius:6px;padding:12px 14px;margin-bottom:10px;background:#fffafa;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span style="font-weight:700;font-size:15px;">{o.get('order_number','-')}</span>
+                <span style="background:{src_color};color:#fff;padding:2px 10px;border-radius:20px;font-size:11px;">{src_label}</span>
+            </div>
+            <div style="font-size:13px;color:#666;margin-bottom:6px;">{o.get('customer_name','-')} · Kargoya kalan: {agreed}</div>
+            {prod_lines}
+        </div>'''
+
+    extra = ''
+    if len(orders) > 80:
+        extra = f'<div style="text-align:center;padding:8px;color:#999;font-size:12px;">… ve {len(orders) - 80} sipariş daha</div>'
+
+    return f'''<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div style="max-width:620px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+    <div style="background:{title_color};padding:20px 24px;">
+        <h2 style="margin:0;color:#fff;font-size:18px;">{title}</h2>
+        <div style="margin-top:6px;color:rgba(255,255,255,0.9);font-size:14px;">{headline}</div>
+    </div>
+    <div style="padding:24px;">
+        {cards}
+        {extra}
+        <div style="margin-top:16px;padding:12px 16px;background:#fff3cd;border-left:4px solid #ffc107;border-radius:4px;">
+            <strong style="color:#856404;">Önerilen aksiyon:</strong>
+            <div style="margin-top:4px;color:#856404;">Bu ürünleri rafa stok girişi yapın; stok girilince siparişler otomatik hazırlanmaya alınacak.</div>
+        </div>
+    </div>
+    <div style="padding:16px 24px;background:#f8f9fa;text-align:center;border-top:1px solid #eee;">
+        <p style="margin:0;font-size:12px;color:#aaa;">Güllü Ayakkabı — Stok Uyarı Sistemi</p>
     </div>
 </div></body></html>'''
 

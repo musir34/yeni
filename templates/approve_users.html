@@ -276,7 +276,9 @@
                                             <li><hr class="dropdown-divider my-1"></li>
                                             <li class="mb-1"><small class="text-muted ps-1">Sistem Uyarıları</small></li>
                                             <li class="mb-1"><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="stock_sync_stale" {{ 'checked' if 'stock_sync_stale' in user_events }}><label class="form-check-label">Shopify stok senkronu donduğunda</label></div></li>
-                                            <li><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="shopify_oversell_risk" {{ 'checked' if 'shopify_oversell_risk' in user_events }}><label class="form-check-label">Oversell riski oluştuğunda</label></div></li>
+                                            <li class="mb-1"><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="shopify_oversell_risk" {{ 'checked' if 'shopify_oversell_risk' in user_events }}><label class="form-check-label">Oversell riski oluştuğunda</label></div></li>
+                                            <li class="mb-1"><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="stok_yok_siparis" {{ 'checked' if 'stok_yok_siparis' in user_events }}><label class="form-check-label">Sipariş stoksuz kaldığında (anlık)</label></div></li>
+                                            <li><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="stok_yok_hatirlatma" {{ 'checked' if 'stok_yok_hatirlatma' in user_events }}><label class="form-check-label">Stoksuz bekleyen siparişler (günlük hatırlatma)</label></div></li>
                                         </ul>
                                     </div>
                                 </td>

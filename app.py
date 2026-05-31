@@ -475,6 +475,20 @@ def schedule_jobs():
         next_run_time=now + timedelta(minutes=10)  # İlk çalışma 10 dk sonra
     )
 
+    # >>> Stoksuz bekleyen siparişler — günlük hatırlatma maili (her gün 09:00)
+    def _stock_shortage_reminder_job():
+        with app.app_context():
+            from stock_alert_service import send_periodic_reminder
+            send_periodic_reminder()
+
+    _add_job_safe(
+        _stock_shortage_reminder_job,
+        trigger='cron',
+        id="stock_shortage_reminder",
+        hour=9,
+        minute=0
+    )
+
     # >>> WooCommerce sipariş senkronizasyonu: her 10 dakika - DEVRE DIŞI
     # _add_job_safe(
     #     sync_woo_orders_background,

@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 
 def _get_order_pull_enabled() -> bool:
+    # Toggle başka worker/request'te commit edilmiş olabilir; taze oku (stale read'i önle).
+    # pull_orders_job de aynı sebeple expire_all yapıyor.
+    db.session.expire_all()
     cfg = PlatformConfig.query.filter_by(platform='order_pull').first()
     return cfg.is_active if cfg else True
 

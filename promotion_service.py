@@ -136,6 +136,7 @@ async def promote_eligible_orders(max_promotions=MAX_PROMOTIONS_PER_RUN):
 
     stats = {'promoted': 0, 'checked': 0, 'skipped_stock': 0, 'skipped_api': 0}
     consecutive_api_fail = 0  # devre kesici sayacı
+    uncovered = []  # stok yetersizliğinden terfi edilemeyenler (anlık mail için)
 
     central = _physical_central()
     committed = _committed_in_hazirlaniyor()
@@ -157,6 +158,7 @@ async def promote_eligible_orders(max_promotions=MAX_PROMOTIONS_PER_RUN):
         ok, need = _order_can_be_covered(order, available)
         if not ok:
             stats['skipped_stock'] += 1
+            uncovered.append(order)
             continue
 
         lines_by_sp = _build_trendyol_lines(order)
@@ -213,6 +215,15 @@ async def promote_eligible_orders(max_promotions=MAX_PROMOTIONS_PER_RUN):
             db.session.rollback()
             stats['skipped_api'] += 1
             logger.error(f"[TERFI] {order.order_number}: DB taşıma hatası: {e}")
+
+    # Anlık stok-yok bildirimi: bu turda terfi edilemeyen (stoksuz) ve henüz
+    # bildirilmemiş siparişler için tek bir mail gönder + işaretle.
+    if uncovered:
+        try:
+            from stock_alert_service import alert_uncovered_orders
+            alert_uncovered_orders(uncovered)
+        except Exception as e:
+            logger.error(f"[TERFI] Stok-yok anlık bildirim hatası: {e}", exc_info=True)
 
     if stats['promoted'] or stats['checked']:
         logger.info(f"[TERFI] Tur bitti: {stats}")
