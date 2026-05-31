@@ -2,7 +2,7 @@
 from sqlalchemy import func, cast, String, and_
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from models import db, CentralStock, OrderCreated, OrderPicking, OrderShipped, Return, Degisim
+from models import db, CentralStock, OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, Return, Degisim
 try:
     from models import OrderDelivered
 except ImportError:
@@ -86,8 +86,9 @@ def index():
     # avg_per_order, total_net_ciro, order_count
     ortalama_siparis_tutari, toplam_ciro, siparis_sayisi = _monthly_aov_from_unified_rows(best_rows)
 
-    # Created ve Picking sayıları - Trendyol
+    # Created, Hazırlanıyor ve Picking sayıları - Trendyol
     created_count = db.session.query(func.count()).select_from(OrderCreated).scalar() or 0
+    hazirlaniyor_count = db.session.query(func.count()).select_from(OrderHazirlaniyor).scalar() or 0
     picking_count = db.session.query(func.count()).select_from(OrderPicking).scalar() or 0
 
     # Shopify sipariş durum sayıları
@@ -122,8 +123,8 @@ def index():
         "gunluk_shopify_siparis": gunluk_shopify_siparis,
         "gun_etiketi": now.strftime("%d/%m"),
         "created": created_count,
+        "hazirlanan": hazirlaniyor_count,
         "picking": picking_count,
-        "hazirlanan": 0,
         "iade": iade_adedi,
         "kritik_stok": 0,
         "degisim_gunluk": degisim_gunluk,
@@ -337,10 +338,10 @@ def _monthly_aov_like_panel(start_ist, end_ist):
     Panel ile aynı NET hesap:
       - order_net = sum(line.price*qty)  (satır fiyatı varsa)
       - aksi halde order_net = amount - discount  (kargo/kupon düşülmez)
-    Öncelik: Delivered > Shipped > Picking > Created
+    Öncelik: Delivered > Shipped > Picking > Hazırlanıyor > Created
     DÖNÜŞ: float (avg)
     """
-    sources = [OrderDelivered, OrderShipped, OrderPicking, OrderCreated]
+    sources = [OrderDelivered, OrderShipped, OrderPicking, OrderHazirlaniyor, OrderCreated]
     seen_orders = set()
     total_net = 0.0
     order_count = 0
@@ -512,12 +513,14 @@ def _status_counts_now():
                 .scalar()
             ) or 0
         created = _count_in_window(OrderCreated)
+        hazirlaniyor = _count_in_window(OrderHazirlaniyor)
         picking = _count_in_window(OrderPicking)
     else:
         created = (db.session.query(func.count()).select_from(OrderCreated).scalar() or 0)
+        hazirlaniyor = (db.session.query(func.count()).select_from(OrderHazirlaniyor).scalar() or 0)
         picking = (db.session.query(func.count()).select_from(OrderPicking).scalar() or 0)
 
-    result = {"created": int(created), "picking": int(picking)}
+    result = {"created": int(created), "hazirlaniyor": int(hazirlaniyor), "picking": int(picking)}
 
     # Shopify durum sayıları
     shopify_counts = _get_shopify_status_counts()

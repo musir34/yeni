@@ -241,9 +241,9 @@
       </ul>
     </div>
 
-    <!-- Sipariş Hazırla: pulse yalnızca bekleyen sipariş varsa -->
+    <!-- Sipariş Hazırla: pulse yalnızca hazırlanacak (Hazırlanıyor) sipariş varsa -->
     <a href="{{ url_for('siparis_hazirla.index') }}"
-       class="btn btn-danger {% if stats.created and stats.created > 0 %}btn-pulse-active{% endif %}"
+       class="btn btn-danger {% if stats.hazirlanan and stats.hazirlanan > 0 %}btn-pulse-active{% endif %}"
        title="Sipariş Hazırla" id="siparisHazirlaBtn">
       <i class="fas fa-box-open"></i> Sipariş Hazırla
     </a>
@@ -384,6 +384,10 @@
                 <span id="count-created" class="num" style="font-size:1.2rem;">{{ stats.created if stats.get('created') is not none else 0 }}</span>
               </div>
               <div class="d-flex align-items-center" style="gap:8px;">
+                <span class="badge bg-info text-white" style="font-size:.72rem;">Hazırlanıyor</span>
+                <span id="count-hazirlaniyor" class="num" style="font-size:1.2rem;">{{ stats.hazirlanan if stats.get('hazirlanan') is not none else 0 }}</span>
+              </div>
+              <div class="d-flex align-items-center" style="gap:8px;">
                 <span class="badge bg-success" style="font-size:.72rem;">İşlemde</span>
                 <span id="count-picking" class="num" style="font-size:1.2rem;">{{ stats.picking if stats.get('picking') is not none else 0 }}</span>
               </div>
@@ -477,6 +481,7 @@
   <script>
     (function () {
       var createdEl = document.getElementById('count-created');
+      var hazEl     = document.getElementById('count-hazirlaniyor');
       var pickingEl = document.getElementById('count-picking');
       var shopBekEl = document.getElementById('count-shopify-beklemede');
       var shopHazEl = document.getElementById('count-shopify-hazirlaniyor');
@@ -485,6 +490,7 @@
       var hazirlaBtn = document.getElementById('siparisHazirlaBtn');
 
       var prevCreated = parseInt(createdEl.textContent, 10) || 0;
+      var prevHaz     = parseInt(hazEl?.textContent, 10) || 0;
       var prevPicking = parseInt(pickingEl.textContent, 10) || 0;
       var prevShopBek = parseInt(shopBekEl?.textContent, 10) || 0;
       var prevShopHaz = parseInt(shopHazEl?.textContent, 10) || 0;
@@ -493,6 +499,7 @@
       // Count-up animasyonu (sayfa ilk yüklemesinde)
       if (window.GS) {
         GS.countTween(createdEl, 0, prevCreated, 600);
+        if (hazEl) GS.countTween(hazEl, 0, prevHaz, 600);
         GS.countTween(pickingEl, 0, prevPicking, 600);
         if (shopBekEl) GS.countTween(shopBekEl, 0, prevShopBek, 600);
         if (shopHazEl) GS.countTween(shopHazEl, 0, prevShopHaz, 600);
@@ -530,6 +537,7 @@
           })
           .then(function(data) {
             var newCreated = typeof data.created === 'number' ? data.created : prevCreated;
+            var newHaz     = typeof data.hazirlaniyor === 'number' ? data.hazirlaniyor : prevHaz;
             var newPicking = typeof data.picking === 'number' ? data.picking : prevPicking;
             var newShopBek = typeof data.shopify_beklemede === 'number' ? data.shopify_beklemede : prevShopBek;
             var newShopHaz = typeof data.shopify_hazirlaniyor === 'number' ? data.shopify_hazirlaniyor : prevShopHaz;
@@ -537,18 +545,19 @@
 
             var changed = false;
             if (newCreated !== prevCreated) { prevCreated = tweenEl(createdEl, prevCreated, newCreated); changed = true; }
+            if (newHaz !== prevHaz) { prevHaz = tweenEl(hazEl, prevHaz, newHaz); changed = true; }
             if (newPicking !== prevPicking) { prevPicking = tweenEl(pickingEl, prevPicking, newPicking); changed = true; }
             if (newShopBek !== prevShopBek) { prevShopBek = tweenEl(shopBekEl, prevShopBek, newShopBek); changed = true; }
             if (newShopHaz !== prevShopHaz) { prevShopHaz = tweenEl(shopHazEl, prevShopHaz, newShopHaz); changed = true; }
             if (newShopKrg !== prevShopKrg) { prevShopKrg = tweenEl(shopKrgEl, prevShopKrg, newShopKrg); changed = true; }
 
             if (changed) flashTile(document.getElementById('tileSiparisDurumu'));
-            updatePulse(newCreated);
+            updatePulse(newHaz);
             lastEl.textContent = 'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' });
           });
       }
 
-      updatePulse(prevCreated);
+      updatePulse(prevHaz);
 
       if (window.GS) {
         GS.registerRefresh('home-status', refreshCounts, 150000);

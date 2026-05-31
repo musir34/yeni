@@ -220,6 +220,7 @@
             <div class="row g-2">
                 <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_all') }}" class="btn btn-secondary">Tümü</a></div>
                 <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_new') }}" class="btn btn-warning">Yeni Siparişler</a></div>
+                <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_hazirlaniyor') }}" class="btn text-white" style="background:#0dcaf0;">Hazırlanıyor</a></div>
                 <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_processed') }}" class="btn btn-success">İşleme Alınanlar</a></div>
                 <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_shipped') }}" class="btn btn-danger text-white">Kargoda</a></div>
                 <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_delivered') }}" class="btn bg-orange text-white">Teslim Edilenler</a></div>
@@ -260,9 +261,9 @@
                     <p class="mb-1"><strong>{{ order.customer_name }} {{ order.customer_surname }}</strong></p>
                     <p class="mb-1"><small><strong>Tarih:</strong> {{ order.order_date.strftime('%d-%m-%Y %H:%M') if order.order_date else 'N/A' }}</small></p>
                     <p class="mb-1">
-                        {% set translated_status = {'Created': 'Yeni', 'Picking': 'İşleme Alındı', 'Shipped': 'Kargoda', 'Delivered': 'Teslim Edildi', 'Cancelled': 'İptal Edildi'}.get(order.status, order.status) %}
+                        {% set translated_status = {'Created': 'Yeni', 'Hazirlaniyor': 'Hazırlanıyor', 'Picking': 'İşleme Alındı', 'Shipped': 'Kargoda', 'Delivered': 'Teslim Edildi', 'Cancelled': 'İptal Edildi'}.get(order.status, order.status) %}
                         <strong>Durum:</strong>
-                        <span class="badge {% if translated_status == 'Yeni' %}bg-warning{% elif translated_status == 'İşleme Alındı' %}bg-success{% elif translated_status == 'Kargoda' %}bg-danger{% elif translated_status == 'Teslim Edildi' %}bg-orange{% else %}bg-secondary{% endif %}">{{ translated_status }}</span>
+                        <span class="badge {% if translated_status == 'Yeni' %}bg-warning{% elif translated_status == 'Hazırlanıyor' %}bg-info text-white{% elif translated_status == 'İşleme Alındı' %}bg-success{% elif translated_status == 'Kargoda' %}bg-danger{% elif translated_status == 'Teslim Edildi' %}bg-orange{% else %}bg-secondary{% endif %}">{{ translated_status }}</span>
                     </p>
                     <p class="mb-1"><small><strong>Kargo:</strong> <span class="cargo-provider {% if order.cargo_provider_name and 'MNG Kargo' in order.cargo_provider_name %}orange{% endif %}">{{ order.cargo_provider_name or '-' }}</span></small></p>
                     {% if translated_status in ['Yeni','İşleme Alındı'] %}

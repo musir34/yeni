@@ -10,7 +10,7 @@ import logging
 from datetime import datetime
 from barcode_utils import generate_barcode_data_uri
 
-from models import db, Product, OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled, PlatformConfig
+from models import db, Product, OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled, PlatformConfig
 from barcode_utils import generate_barcode
 import qrcode
 import os
@@ -93,6 +93,15 @@ def get_union_all_orders():
         OrderCreated.cargo_tracking_number.label('cargo_tracking_number'), OrderCreated.agreed_delivery_date.label('agreed_delivery_date'),
         OrderCreated.estimated_delivery_end.label('estimated_delivery_end'), literal('Created').label('status_name')
     )
+    h = db.session.query(
+        OrderHazirlaniyor.id.label('id'), OrderHazirlaniyor.order_number.label('order_number'),
+        OrderHazirlaniyor.order_date.label('order_date'), OrderHazirlaniyor.details.label('details'),
+        OrderHazirlaniyor.merchant_sku.label('merchant_sku'), OrderHazirlaniyor.product_barcode.label('product_barcode'),
+        OrderHazirlaniyor.cargo_provider_name.label('cargo_provider_name'), OrderHazirlaniyor.customer_name.label('customer_name'),
+        OrderHazirlaniyor.customer_surname.label('customer_surname'), OrderHazirlaniyor.customer_address.label('customer_address'),
+        OrderHazirlaniyor.cargo_tracking_number.label('cargo_tracking_number'), OrderHazirlaniyor.agreed_delivery_date.label('agreed_delivery_date'),
+        OrderHazirlaniyor.estimated_delivery_end.label('estimated_delivery_end'), literal('Hazirlaniyor').label('status_name')
+    )
     p = db.session.query(
         OrderPicking.id.label('id'), OrderPicking.order_number.label('order_number'),
         OrderPicking.order_date.label('order_date'), OrderPicking.details.label('details'),
@@ -129,7 +138,7 @@ def get_union_all_orders():
         OrderCancelled.cargo_tracking_number.label('cargo_tracking_number'), OrderCancelled.agreed_delivery_date.label('agreed_delivery_date'),
         OrderCancelled.estimated_delivery_end.label('estimated_delivery_end'), literal('Cancelled').label('status_name')
     )
-    return c.union_all(p, s, d, x)
+    return c.union_all(h, p, s, d, x)
 
 def get_order_list():
     try:
@@ -266,7 +275,9 @@ def get_filtered_orders(status):
         per_page = 50
         search_query = request.args.get('search', None)
         status_map = {
-            'Yeni': OrderCreated, 'Created': OrderCreated, 'İşleme Alındı': OrderPicking,
+            'Yeni': OrderCreated, 'Created': OrderCreated,
+            'Hazırlanıyor': OrderHazirlaniyor, 'Hazirlaniyor': OrderHazirlaniyor,
+            'İşleme Alındı': OrderPicking,
             'Picking': OrderPicking, 'Kargoda': OrderShipped, 'Shipped': OrderShipped,
             'Teslim Edildi': OrderDelivered, 'Delivered': OrderDelivered,
             'İptal Edildi': OrderCancelled, 'Cancelled': OrderCancelled
@@ -331,7 +342,7 @@ def get_filtered_orders(status):
 def search_order_by_number(order_number):
     try:
         logger.debug(f"Sipariş aranıyor: {order_number}")
-        for model_cls in (OrderCreated, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled):
+        for model_cls in (OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled):
             order = model_cls.query.filter_by(order_number=order_number).first()
             if order:
                 logger.debug(f"Buldum: {order} tablo {model_cls.__tablename__}")
@@ -348,6 +359,9 @@ def order_list_all(): return get_order_list()
 
 @order_list_service_bp.route('/order-list/new', methods=['GET'])
 def order_list_new(): return get_filtered_orders('Yeni')
+
+@order_list_service_bp.route('/order-list/hazirlaniyor', methods=['GET'])
+def order_list_hazirlaniyor(): return get_filtered_orders('Hazırlanıyor')
 
 @order_list_service_bp.route('/order-list/processed', methods=['GET'])
 def order_list_processed(): return get_filtered_orders('İşleme Alındı')
