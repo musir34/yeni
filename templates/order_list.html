@@ -320,31 +320,62 @@
     </div>
 
     <div class="modal fade" id="archiveModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <form id="archiveForm">
                 <div class="modal-content" style="border-radius: var(--border-radius);">
-                    <div class="modal-header"><h5 class="modal-title">Arşivleme Sebebi</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-header"><h5 class="modal-title">Siparişi Arşivle — sebep seç</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                     <div class="modal-body">
                         <input type="hidden" id="archiveOrderNumber" name="order_number" value="">
-                        <div class="mb-3">
-                            <label for="archiveReason" class="form-label">Sebep</label>
-                            <select class="form-select" id="archiveReason" name="archive_reason" required>
-                                <option value="">Sebep Seçin</option>
-                                <option value="Stok Tükendi">Stok Tükendi</option>
-                                <option value="Kusurlu/Defolu Ürün">Kusurlu/Defolu Ürün</option>
-                                <option value="Paket İçeriği Eksik">Paket İçeriği Eksik</option>
-                                <option value="Ürün Sorunu Gideriliyor">Ürün Sorunu Gideriliyor</option>
-                            </select>
+                        <input type="hidden" id="archiveReason" name="archive_reason" required>
+                        <div class="archive-reason-grid">
+                            <button type="button" class="archive-reason-btn" data-reason="Stokta Yok/Rafta Yok">
+                                <span class="ar-ico">📦</span>
+                                <span class="ar-lbl">Stokta Yok / Rafta Yok</span>
+                            </button>
+                            <button type="button" class="archive-reason-btn" data-reason="Ürün Sorunu Düzeltiliyor (Atölyeye Gönderildi)">
+                                <span class="ar-ico">🛠️</span>
+                                <span class="ar-lbl">Ürün Sorunu Düzeltiliyor<br><small>(Atölyeye Gönderildi)</small></span>
+                            </button>
+                            <button type="button" class="archive-reason-btn" data-reason="Sistem Hatası (Hazırlandı)">
+                                <span class="ar-ico">✅</span>
+                                <span class="ar-lbl">Sistem Hatası<br><small>(Hazırlandı)</small></span>
+                            </button>
+                            <button type="button" class="archive-reason-btn" data-reason="Sistem Hatası (Hazırlanmadı)">
+                                <span class="ar-ico">⚠️</span>
+                                <span class="ar-lbl">Sistem Hatası<br><small>(Hazırlanmadı)</small></span>
+                            </button>
+                            <button type="button" class="archive-reason-btn archive-reason-other" data-reason="Diğer">
+                                <span class="ar-ico">✏️</span>
+                                <span class="ar-lbl">Diğer...</span>
+                            </button>
+                        </div>
+                        <div class="mb-3 mt-3" id="otherReasonDiv" style="display:none;">
+                            <label for="otherReasonText" class="form-label">Diğer Sebep Açıklaması</label>
+                            <textarea id="otherReasonText" name="other_reason" class="form-control" rows="3" placeholder="Sebebi kısaca yaz..."></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
+                        <span id="archiveSelectedLabel" class="me-auto text-muted small">Bir sebep seç — tek tıkla arşivlenir</span>
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                        <button type="submit" class="btn btn-primary">Arşivle</button>
+                        <button type="submit" id="archiveSubmitBtn" class="btn btn-danger" disabled style="display:none;">Arşivle</button>
                     </div>
                 </div>
             </form>
         </div>
     </div>
+    <style>
+        .archive-reason-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+        @media (max-width:576px){.archive-reason-grid{grid-template-columns:1fr;}}
+        .archive-reason-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;
+            gap:6px;padding:18px 12px;border:2px solid #e3e6ea;border-radius:12px;background:#fff;
+            transition:all .15s ease;cursor:pointer;min-height:96px;text-align:center;font-weight:500;color:#333;}
+        .archive-reason-btn:hover{border-color:#dc3545;background:#fff5f5;transform:translateY(-1px);}
+        .archive-reason-btn.active{border-color:#dc3545;background:#dc3545;color:#fff;box-shadow:0 4px 12px rgba(220,53,69,.25);}
+        .archive-reason-btn .ar-ico{font-size:1.6rem;line-height:1;}
+        .archive-reason-btn .ar-lbl{font-size:.95rem;line-height:1.2;}
+        .archive-reason-btn .ar-lbl small{opacity:.8;font-size:.78rem;}
+        .archive-reason-other{grid-column:1 / -1;}
+    </style>
 
     <div id="imageZoomModal">
       <button class="close-btn">&times;</button>
@@ -414,19 +445,68 @@
 
         function showArchiveModal(order_number) {
             document.getElementById('archiveOrderNumber').value = order_number;
+            // reset
+            document.getElementById('archiveReason').value = '';
+            var otherTxt = document.getElementById('otherReasonText');
+            if (otherTxt) { otherTxt.value = ''; otherTxt.required = false; }
+            var otherDiv = document.getElementById('otherReasonDiv');
+            if (otherDiv) otherDiv.style.display = 'none';
+            document.querySelectorAll('.archive-reason-btn').forEach(function(b){ b.classList.remove('active'); });
+            document.getElementById('archiveSelectedLabel').textContent = 'Bir sebep seç — tek tıkla arşivlenir';
+            var submitBtn0 = document.getElementById('archiveSubmitBtn');
+            submitBtn0.disabled = true;
+            submitBtn0.style.display = 'none';
             new bootstrap.Modal(document.getElementById('archiveModal')).show();
         }
+
+        // Sebep butonu tıklaması — Diğer dışındakiler ANINDA arşivler
+        document.addEventListener('click', function(ev) {
+            var btn = ev.target.closest('.archive-reason-btn');
+            if (!btn) return;
+            var reason = btn.getAttribute('data-reason');
+            document.querySelectorAll('.archive-reason-btn').forEach(function(b){ b.classList.remove('active'); });
+            btn.classList.add('active');
+            document.getElementById('archiveReason').value = reason;
+            document.getElementById('archiveSelectedLabel').textContent = 'Seçili: ' + reason;
+            var otherDiv = document.getElementById('otherReasonDiv');
+            var otherTxt = document.getElementById('otherReasonText');
+            var submitBtn = document.getElementById('archiveSubmitBtn');
+            if (reason === 'Diğer') {
+                otherDiv.style.display = '';
+                otherTxt.required = true;
+                otherTxt.focus();
+                submitBtn.disabled = !otherTxt.value.trim();
+                submitBtn.style.display = '';
+            } else {
+                otherDiv.style.display = 'none';
+                otherTxt.required = false;
+                // Tek tıkla arşivle
+                if (typeof window.jQuery !== 'undefined') {
+                    window.jQuery('#archiveForm').trigger('submit');
+                } else {
+                    document.getElementById('archiveForm').dispatchEvent(new Event('submit', { cancelable: true }));
+                }
+            }
+        });
+        document.addEventListener('input', function(ev) {
+            if (ev.target && ev.target.id === 'otherReasonText') {
+                if (document.getElementById('archiveReason').value === 'Diğer') {
+                    document.getElementById('archiveSubmitBtn').disabled = !ev.target.value.trim();
+                }
+            }
+        });
 
         document.getElementById('archiveForm').addEventListener('submit', function(event) {
             event.preventDefault();
             var order_number = document.getElementById('archiveOrderNumber').value;
             var archive_reason = document.getElementById('archiveReason').value;
-            if (!archive_reason) {
+            var other_reason = (document.getElementById('otherReasonText')?.value || '').trim();
+            if (!archive_reason || (archive_reason === 'Diğer' && !other_reason)) {
                 window.GS ? GS.showToast('Lütfen bir sebep seçin.', 'warning') : alert('Lütfen bir sebep seçin.');
                 return;
             }
 
-            $.post('/archive_order', { order_number: order_number, archive_reason: archive_reason })
+            $.post('/archive_order', { order_number: order_number, archive_reason: archive_reason, other_reason: other_reason })
              .done(function(response) {
                 bootstrap.Modal.getInstance(document.getElementById('archiveModal'))?.hide();
                 if (response.success) {

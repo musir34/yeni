@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 from flask import Blueprint, Response, jsonify, request, stream_with_context, render_template, redirect, url_for
 from sqlalchemy import func, literal, text, and_, or_
 from models import db, Product, CentralStock
-from models import OrderCreated, OrderPicking, OrderShipped, Archive, ReturnOrder, ReturnProduct
+from models import OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, Archive, ReturnOrder, ReturnProduct
 from login_logout import login_required, roles_required
 try:
     from models import OrderDelivered
@@ -159,9 +159,9 @@ def _count_orders_between_distinct(start_ist, end_ist, source_filter="all"):
     if source_filter == "Shopify" and ShopifyOrder:
         sources = [ShopifyOrder]
     elif source_filter == "trendyol" or (source_filter == "Shopify" and not ShopifyOrder):
-        sources = [OrderCreated, OrderPicking, OrderShipped, OrderDelivered]
+        sources = [OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered]
     else:  # "all"
-        sources = [OrderCreated, OrderPicking, OrderShipped, OrderDelivered]
+        sources = [OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered]
         if ShopifyOrder:
             sources.append(ShopifyOrder)
     
@@ -205,11 +205,12 @@ def _order_numbers_created_between(start_ist: datetime, end_ist: datetime) -> se
     Europe/Istanbul aralığı [start,end) için order_number seti döner.
     """
     order_nos = set()
-    sources = [("Created", OrderCreated),
-               ("Picking", OrderPicking),
-               ("Shipped", OrderShipped),
-               ("Delivered", OrderDelivered),
-               ("Archive",  Archive)]
+    sources = [("Created",      OrderCreated),
+               ("Hazirlaniyor", OrderHazirlaniyor),
+               ("Picking",      OrderPicking),
+               ("Shipped",      OrderShipped),
+               ("Delivered",    OrderDelivered),
+               ("Archive",      Archive)]
     for name, cls in sources:
         # order_number kolon yoksa atla
         if not hasattr(cls, "order_number"):
@@ -267,19 +268,21 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
         sources = [("Shopify", ShopifyOrder)]
     elif source_filter == "trendyol" or (source_filter == "Shopify" and not ShopifyOrder):
         sources = [
-            ("Created", OrderCreated),
-            ("Picking", OrderPicking),
-            ("Shipped", OrderShipped),
-            ("Delivered", OrderDelivered),
-            ("Archive", Archive)
+            ("Created",      OrderCreated),
+            ("Hazirlaniyor", OrderHazirlaniyor),
+            ("Picking",      OrderPicking),
+            ("Shipped",      OrderShipped),
+            ("Delivered",    OrderDelivered),
+            ("Archive",      Archive)
         ]
     else:  # "all"
         sources = [
-            ("Created", OrderCreated),
-            ("Picking", OrderPicking),
-            ("Shipped", OrderShipped),
-            ("Delivered", OrderDelivered),
-            ("Archive", Archive),
+            ("Created",      OrderCreated),
+            ("Hazirlaniyor", OrderHazirlaniyor),
+            ("Picking",      OrderPicking),
+            ("Shipped",      OrderShipped),
+            ("Delivered",    OrderDelivered),
+            ("Archive",      Archive),
         ]
         if ShopifyOrder:
             sources.append(("Shopify", ShopifyOrder))
@@ -501,9 +504,9 @@ _log("Seçilen kolonlar (Product/Stock)", {
 def _get_order_created_ts(order_number):
     if not order_number:
         return None
-    for cls_name, cls in [("Created",OrderCreated),("Picking",OrderPicking),
-                          ("Shipped",OrderShipped),("Delivered",OrderDelivered),
-                          ("Archive",Archive)]:
+    for cls_name, cls in [("Created",OrderCreated),("Hazirlaniyor",OrderHazirlaniyor),
+                          ("Picking",OrderPicking),("Shipped",OrderShipped),
+                          ("Delivered",OrderDelivered),("Archive",Archive)]:
         try:
             # order_number kolonu yoksa getattr None döner → filtre atlanır
             if not hasattr(cls, "order_number"):
@@ -654,11 +657,12 @@ def _collect_orders_today():
     seen_orders = set()  # order_id (Created/… tüm tablolarda aynı olacak)
 
     sources = [
-    ("Created",   OrderCreated),
-    ("Picking",   OrderPicking),
-    ("Shipped",   OrderShipped),
-    ("Delivered", OrderDelivered),  # ← eklendi
-    ("Archive",   Archive)          # ← geçmiş gün
+    ("Created",      OrderCreated),
+    ("Hazirlaniyor", OrderHazirlaniyor),
+    ("Picking",      OrderPicking),
+    ("Shipped",      OrderShipped),
+    ("Delivered",    OrderDelivered),  # ← eklendi
+    ("Archive",      Archive)          # ← geçmiş gün
 ]
     start_tr, end_tr = tr_today_bounds_sql()  # sadece log/debug için
 
@@ -1273,11 +1277,12 @@ def _collect_orders_today_strict():
             amt_map[s] = amt_map.get(s, 0.0) + float(a)
 
     sources = [
-        ("Created",   OrderCreated),
-        ("Picking",   OrderPicking),
-        ("Shipped",   OrderShipped),
-        ("Delivered", OrderDelivered),
-        ("Archive",   Archive)
+        ("Created",      OrderCreated),
+        ("Hazirlaniyor", OrderHazirlaniyor),
+        ("Picking",      OrderPicking),
+        ("Shipped",      OrderShipped),
+        ("Delivered",    OrderDelivered),
+        ("Archive",      Archive)
     ]
     for name, cls in sources:
         ts_col, _, ts_name   = _col(cls, ORD_TS_CANDS,  "ts")
@@ -1338,7 +1343,7 @@ def _collect_orders_today_strict():
 
 def _count_orders_today_distinct():
     start_tr, end_tr = tr_today_bounds_sql()
-    sources = [OrderCreated, OrderPicking, OrderShipped, OrderDelivered]
+    sources = [OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered]
     ids = set()
     for cls in sources:
         ts_col, _, _ = _col(cls, ORD_TS_CANDS, "ts")

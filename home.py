@@ -469,10 +469,11 @@ def _collect_month_orders_unified(start_ist, end_ist):
     Her order_id için statü önceliği: Delivered > Shipped > Picking > Created.
     DÖNÜŞ: dict[order_id] = row (seçilen tablo kaydı)
     """
-    priority = [("Delivered", OrderDelivered),
-                ("Shipped",   OrderShipped),
-                ("Picking",   OrderPicking),
-                ("Created",   OrderCreated)]
+    priority = [("Delivered",    OrderDelivered),
+                ("Shipped",      OrderShipped),
+                ("Picking",      OrderPicking),
+                ("Hazirlaniyor", OrderHazirlaniyor),
+                ("Created",      OrderCreated)]
     best = {}  # oid -> row
     for _, M in priority:
         try:

@@ -97,7 +97,10 @@
       "Bash(ENABLE_JOBS=off python -c ' *)",
       "Bash(cd *)",
       "Bash(.venv/Scripts/python.exe *)",
-      "PowerShell(py *)"
+      "PowerShell(py *)",
+      "Bash(lsof -ti:8080)",
+      "Bash(PORT=8080 FLASK_DEBUG=False .venv/bin/python app.py)",
+      "Bash(kill 55253)"
     ]
   }
 }
