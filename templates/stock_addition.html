@@ -130,6 +130,11 @@
         .barcode-item.is-updating { background-color: #fffbe6; border-color: #ffe58f; }
         .barcode-item.is-success { background-color: #e6ffed; border-color: #b7ebc3; transition: background-color 1s ease; }
         .barcode-item.is-danger { background-color: #fff5f5; border-color: #f5c6cb; }
+        /* ── Kardeş-barkod (önek çakışması) uyarısı ── */
+        .barcode-item.has-sibling { border-color: #ffc107; border-width: 2px; box-shadow: 0 0 0 2px rgba(255,193,7,.25); }
+        .sibling-warn { margin-top: .5rem; padding: .5rem .65rem; background-color: #fff8e1; border: 1px solid #ffe082; border-left: 4px solid #ffc107; border-radius: 6px; font-size: .82rem; color: #7a5b00; line-height: 1.45; }
+        .sibling-warn .sibling-bc { font-family: monospace; font-weight: 700; }
+        .sibling-warn-hint { display: inline-block; margin-top: .25rem; font-style: italic; opacity: .85; }
 
         /* ── Kamera Barkod Tarayıcı ── */
         #cameraOverlay {
@@ -721,9 +726,20 @@
                 } else {
                     const p = item.details;
                     imageHTML = `<div class="item-image"><img src="${p.image_url || 'https://via.placeholder.com/80x80/eee/888?text=?'}" alt="${p.title || ''}"></div>`;
-                    detailsHTML = `<div class="item-details"><h4>Model: ${p.product_main_id || 'N/A'}</h4><p>Renk: <strong>${p.color || 'N/A'}</strong> / Beden: <strong>${p.size || 'N/A'}</strong></p><p class="barcode-value">Barkod: ${code}</p></div>`;
+                    let siblingWarn = '';
+                    if (p.siblings && p.siblings.length) {
+                        const list = p.siblings.map(s => `<span class="sibling-bc">${s.barcode}</span> (${s.color || '?'}/${s.size || '?'})`).join('<br>');
+                        siblingWarn = `<div class="sibling-warn">⚠️ <strong>Dikkat — karışabilir barkod!</strong><br>${list}<br><span class="sibling-warn-hint">Doğru varyantı (renk/beden) taradığından emin ol.</span></div>`;
+                    }
+                    detailsHTML = `<div class="item-details"><h4>Model: ${p.product_main_id || 'N/A'}</h4><p>Renk: <strong>${p.color || 'N/A'}</strong> / Beden: <strong>${p.size || 'N/A'}</strong></p><p class="barcode-value">Barkod: ${code}</p>${siblingWarn}</div>`;
                 }
                 div.innerHTML = generateItemHTML(code, item, imageHTML, detailsHTML);
+                // Kardeş-barkod varsa öğeyi görsel olarak işaretle.
+                if (item.details && item.details.siblings && item.details.siblings.length) {
+                    div.classList.add('has-sibling');
+                } else {
+                    div.classList.remove('has-sibling');
+                }
                 addEventListenersToItem(div, code);
             }
             updateTotals();

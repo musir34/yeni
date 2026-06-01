@@ -1381,6 +1381,10 @@ def add_product_to_shelf(shelf_code):
     db.session.commit()
     sync_central_stock(barkod)
 
+    # İzlenebilirlik: agent ucundan hangi barkod hangi rafa eklendi.
+    logger.info("[AGENT_API][STOK_EKLE] raf=%s barkod=%s adet=%s yeni_toplam=%s",
+                shelf_code, barkod, adet, mevcut.adet if mevcut else adet)
+
     return jsonify(
         success=True,
         message=f'{shelf_code} rafına {barkod} x{adet} eklendi.',
@@ -1484,6 +1488,10 @@ def move_product_between_shelves(shelf_code, ):
 
     db.session.commit()
     sync_central_stock(barkod)
+
+    # İzlenebilirlik: agent ucundan raf-arası taşıma.
+    logger.info("[AGENT_API][TASIMA] barkod=%s adet=%s %s → %s",
+                barkod, adet, shelf_code, hedef_raf)
 
     return jsonify(
         success=True,

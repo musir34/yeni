@@ -13,7 +13,7 @@ from flask_limiter.util import get_remote_address
 # Modeller
 from models import db, Product, RafUrun, CentralStock
 from user_logs import log_user_action
-from barcode_alias_helper import normalize_barcode
+from barcode_alias_helper import normalize_barcode, find_barcode_siblings
 
 # --- Loglama ---
 logging.basicConfig(level=logging.INFO,
@@ -421,13 +421,27 @@ def get_product_details(barcode):
             except (json.JSONDecodeError, TypeError):
                 image_url = product.images
 
+        # ⚠️ Önek-çakışması olan "kardeş" barkodları bul (yanlış-tarama uyarısı için).
+        siblings = []
+        try:
+            for sp in find_barcode_siblings(product.barcode):
+                siblings.append({
+                    "barcode": sp.barcode,
+                    "product_main_id": sp.product_main_id,
+                    "color": sp.color,
+                    "size": sp.size,
+                })
+        except Exception as sib_err:
+            logger.warning("Kardeş barkod kontrolü başarısız (barkod: %s): %s", barcode, sib_err)
+
         return jsonify(success=True, product={
             "barcode": product.barcode,
             "product_main_id": product.product_main_id,
             "color": product.color,
             "size": product.size,
             "quantity": (cs.qty if cs else 0),
-            "image_url": image_url
+            "image_url": image_url,
+            "siblings": siblings,
         })
     except Exception as e:
         logger.error("Ürün detayı alınırken hata (barkod: %s): %s", barcode, e, exc_info=True)
@@ -596,7 +610,19 @@ def handle_stock_update_from_frontend():
             message = f"'{raf_kodu}' rafı başarıyla boşaltıldı."
         
         logger.info(f"🎉 '{raf_kodu}' rafı başarıyla güncellendi. Toplam {len(results)} ürün işlendi. (Mod: {update_type})")
-        try: log_user_action("STOCK_UPDATE", {"işlem_açıklaması": f"Stok {'eklendi' if update_type=='add' else 'yenilendi'} — {raf_kodu}, {len(results)} ürün", "sayfa": "Stok Ekleme", "raf_kodu": raf_kodu, "işlem_tipi": update_type, "ürün_sayısı": len(results)})
+        try:
+            # Eklenen/yenilenen barkodları "barkod×adet" formatında loga yaz.
+            # Böylece "bu ürün bu rafa hangi işlemde, kim tarafından eklendi" araması
+            # tek seferde bulunabilir (önceden sadece raf kodu + adet loglanıyordu).
+            eklenen_barkodlar = [f"{r['barcode']}×{r['count']}" for r in results]
+            log_user_action("STOCK_UPDATE", {
+                "işlem_açıklaması": f"Stok {'eklendi' if update_type=='add' else 'yenilendi'} — {raf_kodu}, {len(results)} ürün",
+                "sayfa": "Stok Ekleme",
+                "raf_kodu": raf_kodu,
+                "işlem_tipi": update_type,
+                "ürün_sayısı": len(results),
+                "barkodlar": eklenen_barkodlar,
+            })
         except: pass
 
         return jsonify(success=True,

@@ -452,7 +452,8 @@ def stok_ekle_api():
             yeni = RafUrun(raf_kodu=raf_kodu, urun_barkodu=barkod, adet=1)
             db.session.add(yeni)
     db.session.commit()
-    try: log_user_action("STOCK_UPDATE", {"işlem_açıklaması": f"Rafa stok eklendi — {raf_kodu}, {len(urunler)} barkod", "sayfa": "Raf Yönetimi", "raf_kodu": raf_kodu, "ürün_sayısı": len(urunler)})
+    # Eklenen barkodları loga yaz (izlenebilirlik: hangi ürün hangi rafa girdi).
+    try: log_user_action("STOCK_UPDATE", {"işlem_açıklaması": f"Rafa stok eklendi — {raf_kodu}, {len(urunler)} barkod", "sayfa": "Raf Yönetimi", "raf_kodu": raf_kodu, "ürün_sayısı": len(urunler), "barkodlar": list(urunler)})
     except: pass
     sync_multiple_barcodes(urunler)
     

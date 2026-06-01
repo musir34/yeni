@@ -72,6 +72,68 @@ def normalize_barcode(barcode: str) -> str:
     return barcode
 
 
+def find_barcode_siblings(barcode: str, max_len_diff: int = 2, limit: int = 8) -> list:
+    """Verilen barkodla ÖNEK-ÇAKIŞMASI olan ürünleri döndürür.
+
+    Tehlikeli ilişki: bir barkod, başka bir ürün barkodunun tam öneki olması.
+    Örn: '985237098231085' (altın sarısı/41) → '9852370982310855' (siyah/39).
+    Tek/iki hanelik tarama hatasında (son hane düşer/eklenir) ürün sessizce
+    YANLIŞ varyanta yazılır. Bu fonksiyon o riskli "kardeş" barkodları bulur.
+
+    Args:
+        barcode: Kontrol edilecek barkod (normalize edilmiş olmalı).
+        max_len_diff: Kaç haneye kadar uzun/kısa farkına bakılacağı.
+        limit: Her yönde dönecek max kardeş sayısı.
+
+    Returns:
+        Product nesnelerinin listesi (çakışma yoksa boş liste).
+    """
+    from models import Product
+    from sqlalchemy import func
+
+    bc = str(barcode or "").strip()
+    # Çok kısa barkodlarda her şey "kardeş" gibi görünür; anlamsız uyarıyı önle.
+    if len(bc) < 6 or not bc.isalnum():
+        return []
+
+    siblings = []
+    seen = set()
+
+    # 1) Bu barkod, DAHA UZUN barkodların öneki mi?  (bc → bc + 1..N hane)
+    #    LIKE '_' kalıbı tam bir karakter eşler; uzunluk filtresiyle birleştirilir.
+    for n in range(1, max_len_diff + 1):
+        rows = (
+            Product.query
+            .filter(
+                Product.barcode.like(bc + ("_" * n)),
+                func.length(Product.barcode) == len(bc) + n,
+                func.lower(Product.barcode) != bc.lower(),
+            )
+            .limit(limit)
+            .all()
+        )
+        for p in rows:
+            if p.barcode not in seen:
+                seen.add(p.barcode)
+                siblings.append(p)
+
+    # 2) Bu barkod, DAHA KISA bir barkodun uzantısı mı?  (bc[:-n] mevcut bir ürün mü?)
+    for n in range(1, max_len_diff + 1):
+        if len(bc) - n < 6:
+            break
+        prefix = bc[:-n]
+        p = (
+            Product.query
+            .filter(func.lower(Product.barcode) == prefix.lower())
+            .first()
+        )
+        if p and p.barcode not in seen:
+            seen.add(p.barcode)
+            siblings.append(p)
+
+    return siblings
+
+
 def is_alias(barcode: str) -> bool:
     """
     Verilen barkodun bir alias olup olmadığını kontrol eder.
