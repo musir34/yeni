@@ -90,6 +90,16 @@
       transition:color .3s ease;
     }
     .tile .num.changed { color:#B76E79; }
+    .stock-substats {
+      margin-top:12px; padding-top:12px; border-top:1px solid rgba(0,0,0,.08);
+      display:flex; flex-direction:column; gap:7px;
+    }
+    .stock-substats__row {
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      font-size:.85rem; color:#555;
+    }
+    .stock-substats__row strong { color:#222; font-size:1rem; }
+    .stock-substats__badges { display:flex; flex-wrap:wrap; gap:6px; }
 
     /* Hızlı linkler */
     .quick-links .btn { min-width:200px; }
@@ -158,6 +168,8 @@
       .tile { padding:0.5rem !important; }
       .tile h5 { font-size:.75rem; }
       .tile .num { font-size:1.3rem; }
+      .stock-substats { margin-top:10px; padding-top:10px; }
+      .stock-substats__row { font-size:.78rem; }
 
       /* Quick links */
       .quick-links { padding:15px !important; }
@@ -192,6 +204,9 @@
     html.gs-dark .tile h5 { color: #aaa; }
     html.gs-dark .tile .num { color: #f0f0f0; }
     html.gs-dark .quick-links { background: rgba(30,30,30,.85) !important; }
+    html.gs-dark .stock-substats { border-top-color:#333; }
+    html.gs-dark .stock-substats__row { color:#aaa; }
+    html.gs-dark .stock-substats__row strong { color:#f0f0f0; }
     html.gs-dark .dropdown-menu { background: #1e1e1e; border-color: #333; }
     html.gs-dark .dropdown-item { color: #ddd; }
     html.gs-dark .dropdown-item:hover { background: #2a2a2a; color: #fff; }
@@ -263,7 +278,7 @@
       <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Ürün İşlemleri</button>
       <ul class="dropdown-menu dropdown-menu-end">
         <li><a class="dropdown-item" href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}"><i class="fas fa-dolly me-2"></i>Ürün Tedarik</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('product_list') }}"><i class="fas fa-tags me-2"></i>Ürün Listesi</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('get_products.product_list') }}"><i class="fas fa-tags me-2"></i>Ürün Listesi</a></li>
         <li><a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="fas fa-warehouse me-2"></i>Stok Ekleme</a></li>
         <li><a class="dropdown-item" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="fas fa-archive me-2"></i>Raf Listesi</a></li>
         <li><a class="dropdown-item" href="{{ url_for('stock_sync.dashboard') }}"><i class="fas fa-sync-alt me-2"></i>Stok Senkronizasyon</a></li>
@@ -326,16 +341,30 @@
 
   <!-- KPI Kartları -->
   <div class="container" style="margin-top:60px;">
-    <div class="row">
-      <div class="col-md-3 mb-3">
+    <div class="row g-3 home-kpi-grid">
+      <div class="col-12 col-md-6 col-xl-3">
         <div class="card-soft p-3 tile" id="tileStok">
           <h5>🧰 Toplam Stok</h5>
           <div class="num" id="numStok">{{ toplam_stok }}</div>
+          <div class="stock-substats">
+            <div class="stock-substats__row">
+              <span>İade</span>
+              <strong>{{ stats.iade }}</strong>
+            </div>
+            <div class="stock-substats__badges">
+              <span class="badge" style="background:linear-gradient(135deg,#2193b0,#6dd5ed);font-size:.8rem;">
+                🔄 Günlük Değişim: {{ stats.degisim_gunluk or 0 }}
+              </span>
+              <span class="badge" style="background:linear-gradient(135deg,#f7971e,#ffd200);font-size:.8rem;color:#333;">
+                📅 Aylık Değişim: {{ stats.degisim_aylik or 0 }}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
       {% if session.get('role') == 'admin' %}
-      <div class="col-md-3 mb-3">
+      <div class="col-12 col-md-6 col-xl-3">
         <div class="card-soft p-3 tile">
           <h5>{{ ay_adi }} Aylık Toplam Sipariş</h5>
           <div class="num" id="numAylikSiparis">{{ stats.toplam_siparis }}</div>
@@ -365,7 +394,7 @@
             </div>
           </div>
           <div style="margin-top:6px;font-weight:600;color:#555;">
-            Ortalama Sipariş Tutarı:
+            Ortalama Ürün Tutarı:
             ₺{{ "{:,.2f}".format(ortalama_siparis_tutari).replace(",","X").replace(".",",").replace("X",".") }}
           </div>
         </div>
@@ -373,7 +402,7 @@
       {% endif %}
 
       <!-- Sipariş Durumu (canlı) -->
-      <div class="col-md-3 mb-3">
+      <div class="col-12 col-md-6 col-xl-3">
         <div class="card-soft p-3 tile" id="tileSiparisDurumu">
           <h5>📦 Sipariş Durumu</h5>
           <div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #e0e0e0;">
@@ -414,17 +443,27 @@
         </div>
       </div>
 
-      <div class="col-md-3 mb-3">
-        <div class="card-soft p-3 tile">
-          <h5>İade / Değişim</h5>
-          <div class="num" style="line-height:1;">{{ stats.iade }}</div>
-          <div class="mt-2 d-flex flex-wrap" style="gap:6px;">
-            <span class="badge" style="background:linear-gradient(135deg,#2193b0,#6dd5ed);font-size:.8rem;">
-              🔄 Günlük Değişim: {{ stats.degisim_gunluk or 0 }}
-            </span>
-            <span class="badge" style="background:linear-gradient(135deg,#f7971e,#ffd200);font-size:.8rem;color:#333;">
-              📅 Aylık Değişim: {{ stats.degisim_aylik or 0 }}
-            </span>
+      <!-- Geciken Siparişler (teslim süresi dolmuş) -->
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="card-soft p-3 tile" id="tileGecikenSiparisler" style="border:2px solid #dc3545;">
+          <h5 style="color:#dc3545;">⏰ Geciken Siparişler</h5>
+          <div class="d-flex align-items-baseline" style="gap:8px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #f1c4c4;">
+            <span id="geciken-total" style="font-size:2rem;font-weight:800;color:#dc3545;line-height:1;">{{ stats.geciken_total or 0 }}</span>
+            <span class="text-muted small">toplam geciken</span>
+          </div>
+          <div class="d-flex flex-column" style="gap:6px;">
+            <a href="{{ url_for('order_list_service.order_list_new') }}" class="d-flex align-items-center text-decoration-none" style="gap:8px;">
+              <span class="badge bg-warning text-dark" style="font-size:.72rem;">Yeni</span>
+              <span class="num" style="font-size:1.1rem;color:#dc3545;font-weight:700;"><span id="geciken-created">{{ stats.geciken_created or 0 }}</span> Adet</span>
+            </a>
+            <a href="{{ url_for('order_list_service.order_list_hazirlaniyor') }}" class="d-flex align-items-center text-decoration-none" style="gap:8px;">
+              <span class="badge bg-info text-white" style="font-size:.72rem;">Hazırlanıyor</span>
+              <span class="num" style="font-size:1.1rem;color:#dc3545;font-weight:700;"><span id="geciken-hazirlaniyor">{{ stats.geciken_hazirlaniyor or 0 }}</span> Adet</span>
+            </a>
+            <a href="{{ url_for('order_list_service.order_list_processed') }}" class="d-flex align-items-center text-decoration-none" style="gap:8px;">
+              <span class="badge bg-success" style="font-size:.72rem;">İşleme Alınanlar</span>
+              <span class="num" style="font-size:1.1rem;color:#dc3545;font-weight:700;"><span id="geciken-picking">{{ stats.geciken_picking or 0 }}</span> Adet</span>
+            </a>
           </div>
         </div>
       </div>
@@ -435,7 +474,7 @@
       <div class="d-flex flex-wrap justify-content-center">
         <a class="btn btn-danger m-1" href="{{ url_for('siparis_hazirla.index') }}"><i class="fas fa-box-open"></i> Sipariş Hazırla</a>
         <a class="btn btn-primary m-1" href="{{ url_for('order_list_all') }}"><i class="fas fa-list"></i> Siparişler</a>
-        <a class="btn btn-success m-1" href="{{ url_for('product_list') }}"><i class="fas fa-tags"></i> Ürün Listesi</a>
+        <a class="btn btn-success m-1" href="{{ url_for('get_products.product_list') }}"><i class="fas fa-tags"></i> Ürün Listesi</a>
         <a class="btn btn-success m-1" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="fas fa-plus-circle"></i> Stok Ekle</a>
         <a class="btn btn-warning m-1" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="fas fa-archive"></i> Raflar</a>
         <a class="btn btn-info m-1" href="{{ url_for('canli_panel.canli_panel_sayfa') }}"><i class="fas fa-chart-line"></i> Canlı Satış & Stok</a>
@@ -486,6 +525,10 @@
       var shopBekEl = document.getElementById('count-shopify-beklemede');
       var shopHazEl = document.getElementById('count-shopify-hazirlaniyor');
       var shopKrgEl = document.getElementById('count-shopify-kargoda');
+      var gecikenTotalEl = document.getElementById('geciken-total');
+      var gecikenCreatedEl = document.getElementById('geciken-created');
+      var gecikenHazEl = document.getElementById('geciken-hazirlaniyor');
+      var gecikenPickingEl = document.getElementById('geciken-picking');
       var lastEl    = document.getElementById('op-last-update');
       var hazirlaBtn = document.getElementById('siparisHazirlaBtn');
 
@@ -495,6 +538,10 @@
       var prevShopBek = parseInt(shopBekEl?.textContent, 10) || 0;
       var prevShopHaz = parseInt(shopHazEl?.textContent, 10) || 0;
       var prevShopKrg = parseInt(shopKrgEl?.textContent, 10) || 0;
+      var prevGecikenTotal = parseInt(gecikenTotalEl?.textContent, 10) || 0;
+      var prevGecikenCreated = parseInt(gecikenCreatedEl?.textContent, 10) || 0;
+      var prevGecikenHaz = parseInt(gecikenHazEl?.textContent, 10) || 0;
+      var prevGecikenPicking = parseInt(gecikenPickingEl?.textContent, 10) || 0;
 
       // Count-up animasyonu (sayfa ilk yüklemesinde)
       if (window.GS) {
@@ -504,6 +551,10 @@
         if (shopBekEl) GS.countTween(shopBekEl, 0, prevShopBek, 600);
         if (shopHazEl) GS.countTween(shopHazEl, 0, prevShopHaz, 600);
         if (shopKrgEl) GS.countTween(shopKrgEl, 0, prevShopKrg, 600);
+        if (gecikenTotalEl) GS.countTween(gecikenTotalEl, 0, prevGecikenTotal, 600);
+        if (gecikenCreatedEl) GS.countTween(gecikenCreatedEl, 0, prevGecikenCreated, 600);
+        if (gecikenHazEl) GS.countTween(gecikenHazEl, 0, prevGecikenHaz, 600);
+        if (gecikenPickingEl) GS.countTween(gecikenPickingEl, 0, prevGecikenPicking, 600);
       }
 
       function updatePulse(created) {
@@ -542,16 +593,26 @@
             var newShopBek = typeof data.shopify_beklemede === 'number' ? data.shopify_beklemede : prevShopBek;
             var newShopHaz = typeof data.shopify_hazirlaniyor === 'number' ? data.shopify_hazirlaniyor : prevShopHaz;
             var newShopKrg = typeof data.shopify_kargoda === 'number' ? data.shopify_kargoda : prevShopKrg;
+            var newGecikenTotal = typeof data.geciken_total === 'number' ? data.geciken_total : prevGecikenTotal;
+            var newGecikenCreated = typeof data.geciken_created === 'number' ? data.geciken_created : prevGecikenCreated;
+            var newGecikenHaz = typeof data.geciken_hazirlaniyor === 'number' ? data.geciken_hazirlaniyor : prevGecikenHaz;
+            var newGecikenPicking = typeof data.geciken_picking === 'number' ? data.geciken_picking : prevGecikenPicking;
 
             var changed = false;
+            var overdueChanged = false;
             if (newCreated !== prevCreated) { prevCreated = tweenEl(createdEl, prevCreated, newCreated); changed = true; }
             if (newHaz !== prevHaz) { prevHaz = tweenEl(hazEl, prevHaz, newHaz); changed = true; }
             if (newPicking !== prevPicking) { prevPicking = tweenEl(pickingEl, prevPicking, newPicking); changed = true; }
             if (newShopBek !== prevShopBek) { prevShopBek = tweenEl(shopBekEl, prevShopBek, newShopBek); changed = true; }
             if (newShopHaz !== prevShopHaz) { prevShopHaz = tweenEl(shopHazEl, prevShopHaz, newShopHaz); changed = true; }
             if (newShopKrg !== prevShopKrg) { prevShopKrg = tweenEl(shopKrgEl, prevShopKrg, newShopKrg); changed = true; }
+            if (newGecikenTotal !== prevGecikenTotal) { prevGecikenTotal = tweenEl(gecikenTotalEl, prevGecikenTotal, newGecikenTotal); overdueChanged = true; }
+            if (newGecikenCreated !== prevGecikenCreated) { prevGecikenCreated = tweenEl(gecikenCreatedEl, prevGecikenCreated, newGecikenCreated); overdueChanged = true; }
+            if (newGecikenHaz !== prevGecikenHaz) { prevGecikenHaz = tweenEl(gecikenHazEl, prevGecikenHaz, newGecikenHaz); overdueChanged = true; }
+            if (newGecikenPicking !== prevGecikenPicking) { prevGecikenPicking = tweenEl(gecikenPickingEl, prevGecikenPicking, newGecikenPicking); overdueChanged = true; }
 
             if (changed) flashTile(document.getElementById('tileSiparisDurumu'));
+            if (overdueChanged) flashTile(document.getElementById('tileGecikenSiparisler'));
             updatePulse(newHaz);
             lastEl.textContent = 'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' });
           });

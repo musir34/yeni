@@ -14,11 +14,11 @@ from io import BytesIO
 from sqlalchemy import case
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_from_directory, send_file, current_app, session
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from login_logout import roles_required
 from sqlalchemy.dialects.postgresql import insert
 from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID
-from models import db, Product, ProductArchive, RafUrun, CentralStock
+from models import db, Product, ProductArchive, RafUrun, CentralStock, ShopifyMapping
 from cache_config import cache, CACHE_TIMES
 from sqlalchemy import event
 
@@ -712,8 +712,19 @@ def group_products_by_model_and_then_color(products):
         if model_id not in grouped_by_model:
             grouped_by_model[model_id] = {
                 'main_product_info': product, # Ana görsel, başlık vs. için temsilci ürün
-                'colors': {}
+                'colors': {},
+                'platforms': {
+                    'trendyol': False,
+                    'amazon': False,
+                    'idefix': False,
+                    'shopify': False,
+                }
             }
+        platform_text = product.platforms or ''
+        grouped_by_model[model_id]['platforms']['trendyol'] |= bool(product.trendyol_id or '"trendyol"' in platform_text)
+        grouped_by_model[model_id]['platforms']['amazon'] |= bool(product.amazon_asin)
+        grouped_by_model[model_id]['platforms']['idefix'] |= bool(product.idefix_product_id or '"idefix"' in platform_text)
+        grouped_by_model[model_id]['platforms']['shopify'] |= bool(getattr(product, 'shopify_variant_id', None) or '"shopify"' in platform_text)
 
         color = product.color or 'Diğer'
         # Renk için anahtar daha önce oluşturulmadıysa oluştur
@@ -733,41 +744,133 @@ def group_products_by_model_and_then_color(products):
     return grouped_by_model
 
 
+MARKETPLACE_OPTIONS = ('amazon', 'trendyol', 'idefix', 'hepsiburada', 'shopify', 'none')
+
+
+def _attach_shopify_mappings(products):
+    barcodes = [p.barcode for p in products if p.barcode]
+    if not barcodes:
+        return
+
+    mappings = (
+        ShopifyMapping.query
+        .filter(ShopifyMapping.barcode.in_(barcodes))
+        .order_by(ShopifyMapping.updated_at.desc().nullslast(), ShopifyMapping.id.desc())
+        .all()
+    )
+    mapping_by_barcode = {}
+    for mapping in mappings:
+        mapping_by_barcode.setdefault(mapping.barcode, mapping)
+
+    for product in products:
+        mapping = mapping_by_barcode.get(product.barcode)
+        product.shopify_variant_id = mapping.shopify_variant_id if mapping else None
+        product.shopify_inventory_item_id = mapping.shopify_inventory_item_id if mapping else None
+        product.shopify_sku = mapping.shopify_sku if mapping else None
+        product.shopify_barcode = mapping.shopify_barcode if mapping else None
+        product.shopify_product_title = mapping.shopify_product_title if mapping else None
+
+
+def _get_marketplace_filter():
+    marketplace = request.args.get('marketplace', '').strip().lower()
+    return marketplace if marketplace in MARKETPLACE_OPTIONS else ''
+
+
+def _apply_marketplace_filter(query, marketplace):
+    if marketplace == 'amazon':
+        return query.filter(Product.amazon_asin.isnot(None), Product.amazon_asin != '')
+    if marketplace == 'trendyol':
+        return query.filter(or_(Product.trendyol_id.isnot(None), Product.platforms.ilike('%"trendyol"%')))
+    if marketplace == 'idefix':
+        return query.filter(or_(Product.idefix_product_id.isnot(None), Product.platforms.ilike('%"idefix"%')))
+    if marketplace == 'hepsiburada':
+        return query.filter(Product.platforms.ilike('%"hepsiburada"%'))
+    if marketplace == 'shopify':
+        return query.filter(or_(Product.barcode.in_(db.session.query(ShopifyMapping.barcode)), Product.platforms.ilike('%"shopify"%')))
+    if marketplace == 'none':
+        return query.filter(
+            Product.amazon_asin.is_(None),
+            Product.idefix_product_id.is_(None),
+            ~Product.barcode.in_(db.session.query(ShopifyMapping.barcode)),
+            or_(Product.trendyol_id.is_(None), Product.trendyol_id == ''),
+            or_(Product.platforms.is_(None), Product.platforms == '', Product.platforms == '[]')
+        )
+    return query
+
+
+def _page_bounds(page, per_page, total):
+    total_pages = (total + per_page - 1) // per_page if total else 0
+    if page < 1:
+        page = 1
+    if total_pages and page > total_pages:
+        page = total_pages
+    return page, total_pages
+
+
 # get_products.py içindeki GÜNCELLENECEK ROUTE
 @get_products_bp.route('/product_list')
 def product_list():
     try:
         page = request.args.get('page', 1, type=int)
         per_page = 12
+        marketplace_filter = _get_marketplace_filter()
 
-        # Ürünleri çek
-        all_products = Product.query.order_by(Product.product_main_id).all()
+        base_query = Product.query.filter(
+            Product.product_main_id.isnot(None),
+            Product.product_main_id != ''
+        )
+        base_query = _apply_marketplace_filter(base_query, marketplace_filter)
 
-        # CentralStock map
-        cs_rows = db.session.query(CentralStock.barcode, CentralStock.qty).all()
-        cs_map = {b: int(q or 0) for b, q in cs_rows}
+        model_query = (
+            base_query
+            .with_entities(Product.product_main_id.label('model_id'))
+            .group_by(Product.product_main_id)
+            .order_by(Product.product_main_id)
+        )
+        total_models = model_query.count()
+        page, total_pages = _page_bounds(page, per_page, total_models)
+        current_page_keys = [
+            row.model_id for row in
+            model_query.offset((page - 1) * per_page).limit(per_page).all()
+        ] if total_models else []
 
-        # Raf map
-        raf_rows = RafUrun.query.with_entities(RafUrun.urun_barkodu, RafUrun.raf_kodu).all()
-        raf_map = {b: rk for b, rk in raf_rows}
+        page_products = []
+        if current_page_keys:
+            page_products = (
+                base_query
+                .filter(Product.product_main_id.in_(current_page_keys))
+                .order_by(Product.product_main_id, Product.color, Product.size)
+                .all()
+            )
+
+        page_barcodes = [p.barcode for p in page_products if p.barcode]
+        cs_map = {}
+        raf_map = {}
+        if page_barcodes:
+            cs_rows = (
+                db.session.query(CentralStock.barcode, CentralStock.qty)
+                .filter(CentralStock.barcode.in_(page_barcodes))
+                .all()
+            )
+            cs_map = {b: int(q or 0) for b, q in cs_rows}
+
+            raf_rows = (
+                RafUrun.query
+                .with_entities(RafUrun.urun_barkodu, RafUrun.raf_kodu)
+                .filter(RafUrun.urun_barkodu.in_(page_barcodes))
+                .all()
+            )
+            raf_map = {b: rk for b, rk in raf_rows}
 
         # Görünüm için CENTRAL stok ile override
-        for p in all_products:
+        for p in page_products:
             p.raf_bilgisi = raf_map.get(p.barcode)
             p.central_qty = cs_map.get(p.barcode, 0)
             p.quantity = p.central_qty  # şablon {{ variant.quantity }} ise artık central_stock görünür
+        _attach_shopify_mappings(page_products)
 
         # Model → Renk → Ürün hiyerarşisi
-        hierarchical_products = group_products_by_model_and_then_color(all_products)
-
-        # Sayfalama
-        model_keys = sorted(hierarchical_products.keys())
-        total_models = len(model_keys)
-        start_idx = (page - 1) * per_page
-        end_idx = start_idx + per_page
-        current_page_keys = model_keys[start_idx:end_idx]
-        current_page_products = {k: hierarchical_products[k] for k in current_page_keys}
-        total_pages = (total_models + per_page - 1) // per_page
+        hierarchical_products = group_products_by_model_and_then_color(page_products)
 
         pagination = {
             'page': page,
@@ -784,16 +887,17 @@ def product_list():
 
         return render_template(
             'product_list.html',
-            grouped_products=current_page_products,
+            grouped_products=hierarchical_products,
             pagination=pagination,
-            search_mode=False
+            search_mode=False,
+            marketplace_filter=marketplace_filter
         )
 
     except Exception as e:
         logger = logging.getLogger(__name__)
         logger.error(f"Ürün listesi oluşturulurken hata: {e}", exc_info=True)
         flash("Ürün listesi yüklenirken bir hata oluştu.", "danger")
-        return render_template('product_list.html', grouped_products={}, pagination=None)
+        return render_template('product_list.html', grouped_products={}, pagination=None, marketplace_filter='')
 
 
 
@@ -834,6 +938,7 @@ def get_product_variants():
 
 
 @get_products_bp.route('/delete_product_variants', methods=['POST'])
+@roles_required('admin', 'manager')
 def delete_product_variants():
     """
     Bir modele ve renge ait tüm varyantları sil
@@ -898,15 +1003,24 @@ def delete_product_variants():
 def search_products():
     query = request.args.get('query', '').strip()
     search_type = request.args.get('search_type', 'model_code').strip()
+    marketplace_filter = _get_marketplace_filter()
 
     if not query:
-        return redirect(url_for('get_products.product_list'))
+        return redirect(url_for('get_products.product_list', marketplace=marketplace_filter or None))
 
     # Ürünleri bul
+    products_query = _apply_marketplace_filter(Product.query, marketplace_filter)
     if search_type == 'model_code':
-        found_products = Product.query.filter(func.lower(Product.product_main_id) == query.lower()).all()
+        found_products = products_query.filter(func.lower(Product.product_main_id) == query.lower()).all()
     elif search_type == 'barcode':
-        found_products = Product.query.filter_by(barcode=query).all()
+        found_products = products_query.filter_by(barcode=query).all()
+    elif search_type == 'product_name':
+        found_products = (
+            products_query
+            .filter(Product.title.ilike(f"%{query}%"))
+            .order_by(Product.product_main_id, Product.color, Product.size)
+            .all()
+        )
     else:
         found_products = []
 
@@ -921,6 +1035,7 @@ def search_products():
             p.raf_bilgisi = raf_map.get(p.barcode)
             p.central_qty = cs_map.get(p.barcode, 0)
             p.quantity = p.central_qty
+        _attach_shopify_mappings(found_products)
 
     # (model, renk) gruplu gönder
     grouped_results = group_products_by_model_and_color(found_products)
@@ -931,7 +1046,8 @@ def search_products():
         pagination=None,
         search_mode=True,
         search_query=query,
-        search_type=search_type
+        search_type=search_type,
+        marketplace_filter=marketplace_filter
     )
 
 
@@ -1464,14 +1580,31 @@ def get_variants_for_stock_update():
                     .filter_by(product_main_id=model_id)
                     .order_by(Product.color, Product.size)
                     .all())
+        _attach_shopify_mappings(products)
+        barcodes = [p.barcode for p in products if p.barcode]
+        raf_map = {}
+        cs_map = {}
+        if barcodes:
+            raf_rows = (
+                RafUrun.query
+                .with_entities(RafUrun.urun_barkodu, RafUrun.raf_kodu)
+                .filter(RafUrun.urun_barkodu.in_(barcodes))
+                .all()
+            )
+            for barcode, raf_kodu in raf_rows:
+                raf_map.setdefault(barcode, []).append(raf_kodu)
+
+            cs_rows = (
+                db.session.query(CentralStock.barcode, CentralStock.qty)
+                .filter(CentralStock.barcode.in_(barcodes))
+                .all()
+            )
+            cs_map = {barcode: int(qty or 0) for barcode, qty in cs_rows}
 
         variants = []
         for p in products:
-            raflar = RafUrun.query.filter_by(urun_barkodu=p.barcode).all()
-            raf_bilgisi = ', '.join([r.raf_kodu for r in raflar]) if raflar else '-'
-
-            cs = CentralStock.query.get(p.barcode)
-            qty = int(cs.qty) if cs and cs.qty is not None else 0
+            raf_bilgisi = ', '.join(raf_map.get(p.barcode, [])) or '-'
+            qty = cs_map.get(p.barcode, 0)
 
             variants.append({
                 'barcode': p.barcode,
@@ -1479,7 +1612,9 @@ def get_variants_for_stock_update():
                 'size': p.size,
                 'quantity': qty,
                 'raf_bilgisi': raf_bilgisi,
-                'woo_product_id': p.woo_product_id
+                'shopify_variant_id': getattr(p, 'shopify_variant_id', None),
+                'shopify_sku': getattr(p, 'shopify_sku', None),
+                'shopify_barcode': getattr(p, 'shopify_barcode', None)
             })
 
         return jsonify({'success': True, 'products': variants})

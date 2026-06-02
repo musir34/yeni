@@ -1,16 +1,18 @@
 # order_list_service.py
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from sqlalchemy import literal, desc, or_
+from sqlalchemy import literal, desc, or_, func, nullslast
 from sqlalchemy.orm import aliased
 import json
 import os
 from cache_config import cache, CACHE_TIMES
 import logging
+import math
 from datetime import datetime
 from barcode_utils import generate_barcode_data_uri
 
 from models import db, Product, OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled, PlatformConfig
+from overdue_orders import OVERDUE_STATUSES, STATUS_CODE, overdue_orders_query
 from barcode_utils import generate_barcode
 import qrcode
 import os
@@ -29,7 +31,11 @@ def _get_order_pull_enabled() -> bool:
 
 @order_list_service_bp.route('/api/order-pull/toggle', methods=['POST'])
 def api_toggle_order_pull():
-    from flask import jsonify
+    from flask import jsonify, session
+    from flask_login import current_user
+    if not current_user.is_authenticated or not session.get('totp_verified'):
+        return jsonify({"success": False, "error": "Yetkisiz erişim"}), 401
+
     try:
         cfg = PlatformConfig.query.filter_by(platform='order_pull').first()
         if not cfg:
@@ -143,15 +149,172 @@ def get_union_all_orders():
     )
     return c.union_all(h, p, s, d, x)
 
+# Geçerli sıralama seçenekleri (UI dropdown ile eşleşir)
+SORT_OPTIONS = ('date_desc', 'deadline_asc', 'deadline_desc')
+DEFAULT_SORT = 'date_desc'
+PER_PAGE_OPTIONS = (50, 100, 200)
+DEFAULT_PER_PAGE = 50
+
+
+def _get_sort_key():
+    """Query param'dan güvenli sıralama anahtarı döndürür (whitelist)."""
+    sort_key = request.args.get('sort', DEFAULT_SORT)
+    return sort_key if sort_key in SORT_OPTIONS else DEFAULT_SORT
+
+
+def _get_per_page():
+    """Sayfa başına sipariş adedini güvenli seçeneklerle sınırla."""
+    per_page = request.args.get('per_page', DEFAULT_PER_PAGE, type=int)
+    return per_page if per_page in PER_PAGE_OPTIONS else DEFAULT_PER_PAGE
+
+
+def _sort_clause(sort_key, order_date_col, agreed_col, estimated_col):
+    """Sıralama anahtarına göre SQLAlchemy order_by ifadesi üretir.
+
+    deadline_* seçeneklerinde teslimata kalan süre, taahhüt teslim tarihi
+    (yoksa tahmini teslim sonu) baz alınır. Tarihi olmayan siparişler en sona.
+    """
+    deadline = func.coalesce(agreed_col, estimated_col)
+    if sort_key == 'deadline_asc':
+        # Son teslim tarihi en yakın (en acil) en üstte
+        return (nullslast(deadline.asc()), desc(order_date_col))
+    if sort_key == 'deadline_desc':
+        return (nullslast(deadline.desc()), desc(order_date_col))
+    return (desc(order_date_col),)
+
+
+def _group_sort_clause(sort_key, order_date_col, agreed_col, estimated_col):
+    """Benzersiz order_number sayfalaması için aggregate sıralama üretir."""
+    deadline = func.coalesce(agreed_col, estimated_col)
+    if sort_key == 'deadline_asc':
+        return (nullslast(func.min(deadline).asc()), desc(func.max(order_date_col)))
+    if sort_key == 'deadline_desc':
+        return (nullslast(func.max(deadline).desc()), desc(func.max(order_date_col)))
+    return (desc(func.max(order_date_col)),)
+
+
+def _normalize_details(details):
+    if not details:
+        return []
+    try:
+        parsed = json.loads(details) if isinstance(details, str) else details
+    except (json.JSONDecodeError, TypeError):
+        return []
+    if isinstance(parsed, list):
+        return parsed
+    if isinstance(parsed, dict):
+        return [parsed]
+    return []
+
+
+def _append_details(existing, new_details):
+    merged = _normalize_details(existing.details)
+    merged.extend(_normalize_details(new_details))
+    existing.details = json.dumps(merged)
+
+
+def _page_bounds(page, per_page, total):
+    total_pages = math.ceil(total / per_page) if total else 0
+    if page < 1:
+        page = 1
+    if total_pages and page > total_pages:
+        page = total_pages
+    offset = (page - 1) * per_page if total else 0
+    return page, total_pages, offset
+
+
+def _merge_order_rows(rows, status_getter):
+    class MockOrder:
+        pass
+
+    orders = []
+    seen_orders = {}
+    for r in rows:
+        on = r.order_number
+        if on in seen_orders:
+            _append_details(seen_orders[on], r.details)
+            continue
+
+        mock = MockOrder()
+        mock.id = r.id
+        mock.order_number = on
+        mock.order_date = r.order_date
+        mock.details = r.details
+        mock.merchant_sku = r.merchant_sku
+        mock.product_barcode = r.product_barcode
+        mock.status = status_getter(r)
+        mock.cargo_provider_name = getattr(r, 'cargo_provider_name', '')
+        mock.customer_name = getattr(r, 'customer_name', '')
+        mock.customer_surname = getattr(r, 'customer_surname', '')
+        mock.customer_address = getattr(r, 'customer_address', '')
+        mock.cargo_tracking_number = getattr(r, 'cargo_tracking_number', '')
+        mock.agreed_delivery_date = getattr(r, 'agreed_delivery_date', None)
+        mock.estimated_delivery_end = getattr(r, 'estimated_delivery_end', None)
+        seen_orders[on] = mock
+        orders.append(mock)
+    return orders
+
+
+def _get_overdue_orders():
+    """Yeni/Hazırlanıyor/İşleme statülerindeki teslim süresi geçmiş (geciken) siparişler.
+
+    En gecikmiş (teslim tarihi en eski) önce gelir. Varsayılan görünümde bu
+    siparişler kart listesinden ayrılır; deadline_asc statü sıralamasında tekrar
+    listeye dahil edilip en üstte gösterilir.
+    """
+    raw_overdue = []
+    for key, model, _label in OVERDUE_STATUSES:
+        for order in overdue_orders_query(model).all():
+            order._display_status = STATUS_CODE[key]
+            raw_overdue.append(order)
+
+    raw_overdue.sort(key=lambda o: (
+        o.agreed_delivery_date or o.estimated_delivery_end,
+        o.order_number or ''
+    ))
+    overdue = _merge_order_rows(raw_overdue, lambda r: getattr(r, '_display_status', ''))
+    process_order_details(overdue)
+    return overdue
+
+
+def _overdue_order_numbers(overdue_orders):
+    """Geciken siparişleri normal listeden ayırmak için order_number kümesi."""
+    return {o.order_number for o in overdue_orders if getattr(o, 'order_number', None)}
+
+
+def _decorate_order_priority(orders):
+    """Kartlarda hızlı öncelik sinyali için süre durumunu ekle."""
+    now = datetime.utcnow()
+    for order in orders:
+        deadline = getattr(order, 'agreed_delivery_date', None) or getattr(order, 'estimated_delivery_end', None)
+        order.is_overdue = False
+        order.is_urgent = False
+        if not deadline:
+            continue
+        remaining_seconds = (deadline - now).total_seconds()
+        order.is_overdue = remaining_seconds <= 0
+        order.is_urgent = 0 < remaining_seconds <= 7200
+
+
 def get_order_list():
     try:
         page = request.args.get('page', 1, type=int)
-        per_page = 50
+        per_page = _get_per_page()
         search_query = request.args.get('search', None)
+        sort_key = _get_sort_key()
+        show_overdue = sort_key == 'deadline_asc' and request.args.get('show_overdue') == '1'
+        overdue_orders = _get_overdue_orders()
+        overdue_numbers = _overdue_order_numbers(overdue_orders)
         union_query = get_union_all_orders()
         sub = union_query.subquery()
         AllOrders = aliased(sub)
         q = db.session.query(AllOrders)
+
+        if overdue_numbers and not show_overdue:
+            q = q.filter(~(
+                AllOrders.c.status_name.in_(('Created', 'Hazirlaniyor', 'Picking')) &
+                AllOrders.c.order_number.in_(overdue_numbers)
+            ))
 
         if search_query:
             search_query = search_query.strip()
@@ -165,52 +328,48 @@ def get_order_list():
             )
             logger.debug(f"Arama sorgusuna göre filtre: {search_query}")
 
-        q = q.order_by(desc(AllOrders.c.order_date))
-        paginated_orders = q.paginate(page=page, per_page=per_page, error_out=False)
-        rows = paginated_orders.items
-        total_pages = paginated_orders.pages
-        total_orders_count = paginated_orders.total
+        grouped_orders = (
+            q.with_entities(AllOrders.c.order_number.label('order_number'))
+            .group_by(AllOrders.c.order_number)
+        )
+        total_orders_count = grouped_orders.count()
+        page, total_pages, offset = _page_bounds(page, per_page, total_orders_count)
+        page_order_rows = (
+            grouped_orders
+            .order_by(*_group_sort_clause(
+                sort_key, AllOrders.c.order_date,
+                AllOrders.c.agreed_delivery_date, AllOrders.c.estimated_delivery_end
+            ))
+            .offset(offset)
+            .limit(per_page)
+            .all()
+        ) if total_orders_count else []
+        page_order_numbers = [r.order_number for r in page_order_rows]
 
-        orders = []
-        class MockOrder: pass
-        seen_orders = {}
-        for r in rows:
-            on = r.order_number
-            if on in seen_orders:
-                # Aynı sipariş numaralı satırın details'ini mevcut siparişe ekle
-                existing = seen_orders[on]
-                if r.details:
-                    try:
-                        new_details = json.loads(r.details) if isinstance(r.details, str) else r.details
-                        cur_details = json.loads(existing.details) if isinstance(existing.details, str) else (existing.details or [])
-                        cur_details.extend(new_details)
-                        existing.details = json.dumps(cur_details)
-                    except (json.JSONDecodeError, TypeError):
-                        pass
-                continue
-            mock = MockOrder()
-            mock.id = r.id
-            mock.order_number = on
-            mock.order_date = r.order_date
-            mock.details = r.details
-            mock.merchant_sku = r.merchant_sku
-            mock.product_barcode = r.product_barcode
-            mock.status = r.status_name
-            mock.cargo_provider_name = getattr(r, 'cargo_provider_name', '')
-            mock.customer_name = getattr(r, 'customer_name', '')
-            mock.customer_surname = getattr(r, 'customer_surname', '')
-            mock.customer_address = getattr(r, 'customer_address', '')
-            mock.cargo_tracking_number = getattr(r, 'cargo_tracking_number', '')
-            mock.agreed_delivery_date = getattr(r, 'agreed_delivery_date', None)
-            mock.estimated_delivery_end = getattr(r, 'estimated_delivery_end', None)
-            seen_orders[on] = mock
-            orders.append(mock)
+        rows = []
+        if page_order_numbers:
+            order_index = {order_number: idx for idx, order_number in enumerate(page_order_numbers)}
+            rows = (
+                q.filter(AllOrders.c.order_number.in_(page_order_numbers))
+                .order_by(*_sort_clause(
+                    sort_key, AllOrders.c.order_date,
+                    AllOrders.c.agreed_delivery_date, AllOrders.c.estimated_delivery_end
+                ))
+                .all()
+            )
+            rows.sort(key=lambda r: order_index.get(r.order_number, len(order_index)))
+
+        orders = _merge_order_rows(rows, lambda r: r.status_name)
 
         process_order_details(orders)
+        _decorate_order_priority(orders)
 
         return render_template(
             'order_list.html', orders=orders, page=page, total_pages=total_pages,
             total_orders_count=total_orders_count, search_query=search_query,
+            sort_key=sort_key, overdue_orders=overdue_orders,
+            active_list='all', per_page=per_page, per_page_options=PER_PAGE_OPTIONS,
+            show_overdue=show_overdue,
             order_pull_enabled=_get_order_pull_enabled()
         )
     except Exception as e:
@@ -275,8 +434,11 @@ def process_order_details(orders):
 def get_filtered_orders(status):
     try:
         page = request.args.get('page', 1, type=int)
-        per_page = 50
+        per_page = _get_per_page()
         search_query = request.args.get('search', None)
+        sort_key = _get_sort_key()
+        overdue_orders = _get_overdue_orders()
+        overdue_numbers = _overdue_order_numbers(overdue_orders)
         status_map = {
             'Yeni': OrderCreated, 'Created': OrderCreated,
             'Hazırlanıyor': OrderHazirlaniyor, 'Hazirlaniyor': OrderHazirlaniyor,
@@ -285,6 +447,14 @@ def get_filtered_orders(status):
             'Teslim Edildi': OrderDelivered, 'Delivered': OrderDelivered,
             'İptal Edildi': OrderCancelled, 'Cancelled': OrderCancelled
         }
+        active_map = {
+            OrderCreated: 'new',
+            OrderHazirlaniyor: 'hazirlaniyor',
+            OrderPicking: 'processed',
+            OrderShipped: 'shipped',
+            OrderDelivered: 'delivered',
+            OrderCancelled: 'cancelled',
+        }
         model_cls = status_map.get(status)
         if not model_cls:
             flash(f"{status} durumuna ait tablo bulunamadı.", "warning")
@@ -292,6 +462,10 @@ def get_filtered_orders(status):
 
 
         orders_query = model_cls.query
+        hide_overdue_in_status = sort_key != 'deadline_asc'
+        if hide_overdue_in_status and overdue_numbers and model_cls in (OrderCreated, OrderHazirlaniyor, OrderPicking):
+            orders_query = orders_query.filter(~model_cls.order_number.in_(overdue_numbers))
+
         if search_query:
             sq = search_query.strip()
             orders_query = orders_query.filter(
@@ -303,37 +477,50 @@ def get_filtered_orders(status):
                 )
             )
 
-        orders_query = orders_query.order_by(model_cls.order_date.desc())
-        paginated_orders = orders_query.paginate(page=page, per_page=per_page, error_out=False)
-        raw_orders = paginated_orders.items
+        grouped_orders = (
+            orders_query.with_entities(model_cls.order_number.label('order_number'))
+            .group_by(model_cls.order_number)
+        )
+        total_orders_count = grouped_orders.count()
+        page, total_pages, offset = _page_bounds(page, per_page, total_orders_count)
+        page_order_rows = (
+            grouped_orders
+            .order_by(*_group_sort_clause(
+                sort_key, model_cls.order_date,
+                model_cls.agreed_delivery_date, model_cls.estimated_delivery_end
+            ))
+            .offset(offset)
+            .limit(per_page)
+            .all()
+        ) if total_orders_count else []
+        page_order_numbers = [r.order_number for r in page_order_rows]
 
-        # Aynı sipariş numaralı satırları birleştir
-        seen = {}
-        orders = []
-        for order in raw_orders:
-            on = order.order_number
-            if on in seen:
-                existing = seen[on]
-                if order.details:
-                    try:
-                        new_d = json.loads(order.details) if isinstance(order.details, str) else order.details
-                        cur_d = json.loads(existing.details) if isinstance(existing.details, str) else (existing.details or [])
-                        cur_d.extend(new_d)
-                        existing.details = json.dumps(cur_d)
-                    except (json.JSONDecodeError, TypeError):
-                        pass
-                continue
-            seen[on] = order
-            orders.append(order)
+        raw_orders = []
+        if page_order_numbers:
+            order_index = {order_number: idx for idx, order_number in enumerate(page_order_numbers)}
+            raw_orders = (
+                orders_query
+                .filter(model_cls.order_number.in_(page_order_numbers))
+                .order_by(*_sort_clause(
+                    sort_key, model_cls.order_date,
+                    model_cls.agreed_delivery_date, model_cls.estimated_delivery_end
+                ))
+                .all()
+            )
+            raw_orders.sort(key=lambda r: order_index.get(r.order_number, len(order_index)))
 
-        for order in orders:
-            order.status = status_map[status].__name__.replace("Order", "")
+        status_code = status_map[status].__name__.replace("Order", "")
+        orders = _merge_order_rows(raw_orders, lambda _r: status_code)
 
         process_order_details(orders)
+        _decorate_order_priority(orders)
 
         return render_template(
-            'order_list.html', orders=orders, page=page, total_pages=paginated_orders.pages,
-            total_orders_count=paginated_orders.total, search_query=search_query,
+            'order_list.html', orders=orders, page=page, total_pages=total_pages,
+            total_orders_count=total_orders_count, search_query=search_query,
+            sort_key=sort_key, overdue_orders=overdue_orders,
+            active_list=active_map.get(model_cls), per_page=per_page,
+            per_page_options=PER_PAGE_OPTIONS, show_overdue=False,
             order_pull_enabled=_get_order_pull_enabled()
         )
     except Exception as e:

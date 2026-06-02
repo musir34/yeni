@@ -100,26 +100,33 @@ def compute_archived_duration(archive_date):
         return "Süre Hesaplanamıyor"
 
 
-# compute_time_left fonksiyonu artık kullanılmıyor, yerine compute_archived_duration var.
-# İsterseniz silebilirsiniz veya başka yerlerde kullanıyorsanız bırakabilirsiniz.
-# def compute_time_left(delivery_date):
-#     """
-#     Kalan teslim süresini (gün saat dakika) string olarak döndürür.
-#     """
-#     if not delivery_date:
-#         return "Kalan Süre Yok"
-#     try:
-#         now = datetime.now()
-#         diff = delivery_date - now
-#         if diff.total_seconds() <= 0:
-#             return "0 dakika"
-#         days, seconds = divmod(diff.total_seconds(), 86400)
-#         hours, seconds = divmod(seconds, 3600)
-#         minutes = int(seconds // 60)
-#         return f"{int(days)} gün {int(hours)} saat {minutes} dakika"
-#     except Exception as e:
-#         print(f"Zaman hesaplama hatası: {e}")
-#         return "Kalan Süre Yok"
+def compute_shipping_time_left(order):
+    """
+    Kargoya kalan süreyi agreed_delivery_date, yoksa estimated_delivery_end ile hesaplar.
+    """
+    deadline = getattr(order, 'agreed_delivery_date', None) or getattr(order, 'estimated_delivery_end', None)
+    if not deadline:
+        return "Kalan süre yok", "missing"
+    try:
+        now = datetime.utcnow()
+        diff = deadline - now
+        total_minutes = int(diff.total_seconds() // 60)
+        if total_minutes <= 0:
+            return "Süre Doldu", "overdue"
+
+        days = total_minutes // 1440
+        hours = (total_minutes % 1440) // 60
+        minutes = total_minutes % 60
+        parts = []
+        if days:
+            parts.append(f"{days} gün")
+        if hours:
+            parts.append(f"{hours} saat")
+        parts.append(f"{minutes} dakika")
+        return " ".join(parts), "urgent" if total_minutes <= 120 else "normal"
+    except Exception as e:
+        print(f"Kargoya kalan süre hesaplama hatası: {e}")
+        return "Kalan süre yok", "missing"
 
 
 def fetch_product_image(barcode):
@@ -145,38 +152,21 @@ def fetch_product_image(barcode):
     return "/static/images/default.jpg"
 
 
-# ✅ Yeni Jinja Filtresi: Türkçe Ay Adları ile Tarih Formatlama
-# Bu fonksiyonu Flask uygulamanızın ana dosyasında (genellikle app.py veya run.py)
-# Jinja environment'ına filtre olarak eklemeniz GEREKİR.
-# Örnek kullanım: app.jinja_env.filters['format_turkish_date'] = format_turkish_date_filter
-def format_turkish_date_filter(value):
-    """
-    Datetime objesini Türkçe ay adıyla "Gün Ay Yıl" formatına çevirir.
-    Örnek: 2023-10-27 -> "27 Ekim 2023"
-    """
-    if not value:
-        return ""
-    try:
-        # Ay adlarını Türkçe olarak tanımla
-        turkish_months = [
-            "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
-            "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
-        ]
-        # Datetime objesinden gün, ay ve yıl al
-        day = value.day
-        month_index = value.month
-        year = value.year
-
-        # Türkçe ay adını al
-        turkish_month_name = turkish_months[month_index]
-
-        # İstenen formatta string oluştur
-        # Yılı istemediğin için "Gün Ay" formatı:
-        return f"{day} {turkish_month_name}"
-    except Exception as e:
-        print(f"Tarih formatlama hatası: {e}")
-        return str(value) # Hata olursa orijinal değeri döndür
-
+def parse_order_details(details):
+    if not details:
+        return []
+    if isinstance(details, str):
+        try:
+            parsed = json.loads(details)
+        except json.JSONDecodeError:
+            return []
+    else:
+        parsed = details
+    if isinstance(parsed, list):
+        return parsed
+    if isinstance(parsed, dict):
+        return [parsed]
+    return []
 
 #############################
 # 2) Sipariş Statüsü Güncelleme
@@ -354,6 +344,8 @@ def execute_order_processing():
         customer_surname=archived_order.customer_surname,
         customer_address=archived_order.customer_address,
         agreed_delivery_date=archived_order.agreed_delivery_date,
+        estimated_delivery_start=getattr(archived_order, 'estimated_delivery_start', None),
+        estimated_delivery_end=getattr(archived_order, 'estimated_delivery_end', None),
         # Eksik kolonları da ekleyin (örneğin: total_amount, currency, etc.)
     )
 
@@ -451,44 +443,39 @@ def display_archive():
         # Frontend'e hata mesajı göndermek için flash kullanılabilir veya template'e hata flag'i gönderilebilir
 
 
-    # Ürün dictionary (barkod -> product) - Sadece arşivdeki ürünler için çekmek daha verimli olabilir
-    # Ancak şu anki yapı tüm ürünleri çekiyor, bu da çalışır.
-    products_list = Product.query.all()
-    products_dict = {p.barcode: p for p in products_list}
+    barcodes = set()
+    for order in orders_to_show:
+        details_list = parse_order_details(order.details)
+        order._details_list = details_list
+        for detail in details_list:
+            barcode = detail.get('barcode')
+            if barcode:
+                barcodes.add(barcode)
+
+    products_dict = {}
+    if barcodes:
+        products_list = Product.query.filter(Product.barcode.in_(barcodes)).all()
+        products_dict = {p.barcode: p for p in products_list}
 
     for order in orders_to_show:
         # ✅ Düzeltme: Arşivde Geçen Süre
         order.archived_duration_string = compute_archived_duration(order.archive_date)
-
-        # Kalan süre (bu artık kullanılmıyor ama obje üzerinde durabilir)
-        # order.remaining_time = compute_time_left(order.agreed_delivery_date)
-        # order.remaining_time_in_hours = ... # Bu da artık kullanılmıyor
-
+        order.shipping_time_left, order.shipping_time_status = compute_shipping_time_left(order)
 
         # Detay parse ve Ürünler listesi oluşturma
-        details_json = order.details or '[]'
-        if isinstance(details_json, str):
-            try:
-                details_list = json.loads(details_json)
-            except json.JSONDecodeError:
-                print(f"Hata: Sipariş {order.order_number} detayları JSON formatında değil.")
-                details_list = []
-        else:
-            # Eğer details zaten liste/dict ise doğrudan kullan
-            details_list = details_json if isinstance(details_json, list) else [details_json] if isinstance(details_json, dict) else []
-
-
+        details_list = getattr(order, '_details_list', [])
         products = []
         for detail in details_list:
             product_barcode = detail.get('barcode', '')
-            # product_info = products_dict.get(product_barcode) # Ürün detaylarını Product tablosundan çekiyorsanız kullanın
+            product_info = products_dict.get(product_barcode)
 
             # Detay objesinden SKU, Model, Renk, Beden gibi bilgileri al
             # Eğer details JSON'unuz bu alanları içeriyorsa buradan alabilirsiniz.
             sku = detail.get('sku', 'Bilinmeyen SKU')
-            model = detail.get('model', 'Model Bilgisi Yok')
-            color = detail.get('color', 'Renk Bilgisi Yok')
-            size = detail.get('size', 'Beden Bilgisi Yok')
+            model = detail.get('model') or detail.get('product_main_id') or (product_info.product_main_id if product_info else 'Model Bilgisi Yok')
+            color = detail.get('color') or (product_info.color if product_info else 'Renk Bilgisi Yok')
+            size = detail.get('size') or (product_info.size if product_info else 'Beden Bilgisi Yok')
+            quantity = detail.get('quantity', 0)
             # Görsel URL'si Trendyol detaylarında varsa onu kullan, yoksa fetch_product_image ile yerel dosyayı dene
             image_url = detail.get('imageUrl') # Trendyol API'den geliyorsa
             if not image_url: # Trendyol'dan gelmiyorsa veya boşsa yerel dosyayı dene
@@ -501,6 +488,7 @@ def display_archive():
                 'model': model, # Frontend'de kullanmak için ekledik
                 'color': color, # Frontend'de kullanmak için ekledik
                 'size': size,  # Frontend'de kullanmak için ekledik
+                'quantity': quantity,
                 'image_url': image_url
             })
         order.products = products
@@ -575,6 +563,8 @@ def archive_an_order():
                 customer_surname=getattr(fake_order, 'customer_surname', None),
                 customer_address=getattr(fake_order, 'customer_address', None),
                 agreed_delivery_date=None,
+                estimated_delivery_start=getattr(fake_order, 'estimated_delivery_start', None),
+                estimated_delivery_end=getattr(fake_order, 'estimated_delivery_end', None),
                 archive_reason=archive_reason or 'Manuel Arşiv',
                 archive_date=datetime.now(),
                 source='shopify',
@@ -651,12 +641,15 @@ def archive_an_order():
             details=order_obj.details,
             shipment_package_id=getattr(order_obj, 'shipment_package_id', None),
             package_number=getattr(order_obj, 'package_number', None),
-            shipping_barcode=getattr(order_obj, 'shipping_barcode', None),
+            shipping_barcode=getattr(order_obj, 'shipping_barcode', None) or getattr(order_obj, 'cargo_tracking_number', None),
             cargo_provider_name=getattr(order_obj, 'cargo_provider_name', None),
             customer_name=getattr(order_obj, 'customer_name', None),
             customer_surname=getattr(order_obj, 'customer_surname', None),
             customer_address=getattr(order_obj, 'customer_address', None),
             agreed_delivery_date=getattr(order_obj, 'agreed_delivery_date', None),
+            estimated_delivery_start=getattr(order_obj, 'estimated_delivery_start', None),
+            estimated_delivery_end=getattr(order_obj, 'estimated_delivery_end', None),
+            cargo_tracking_link=getattr(order_obj, 'cargo_tracking_link', None),
             archive_reason=archive_reason,
             archive_date=datetime.now(),
             source='trendyol'

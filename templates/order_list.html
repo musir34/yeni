@@ -80,14 +80,50 @@
         .red { color: var(--color-danger); }
         .badge { font-size: 0.8rem; padding: 0.4em 0.7em; }
 
+        .overdue-pill { display: inline-flex; align-items: center; gap: .4rem; background: var(--color-danger); color: #fff; font-weight: 700; padding: .45rem 1rem; border-radius: 999px; text-decoration: none; white-space: nowrap; box-shadow: 0 2px 6px rgba(220,53,69,.35); }
+        .overdue-pill:hover { color: #fff; filter: brightness(.93); }
+        .filter-section .btn.active-filter { box-shadow: 0 0 0 3px rgba(183,110,121,.35), inset 0 0 0 2px rgba(255,255,255,.7); transform: translateY(-1px); }
+        .priority-badge { display: inline-flex; align-items: center; gap: .25rem; margin-left: .5rem; padding: .25rem .5rem; border-radius: 999px; font-size: .72rem; font-weight: 800; }
+        .priority-badge.overdue { background: rgba(220,53,69,.12); color: var(--color-danger); border: 1px solid rgba(220,53,69,.45); }
+        .priority-badge.urgent { background: rgba(255,193,7,.18); color: #946300; border: 1px solid rgba(255,193,7,.55); }
+        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; min-height: 180px; padding: 2rem; border: 1px dashed var(--color-border); border-radius: var(--border-radius); background: var(--color-white); color: #6c757d; text-align: center; }
+        .empty-state i { font-size: 2rem; color: var(--color-primary); }
+
         .copy-container { cursor: pointer; color: var(--color-primary); margin-left: 8px; }
         .copy-container:hover { transform: scale(1.1); }
         .copy-confirmation { color: var(--color-success); font-size: 1em; display: none; margin-left: 5px; }
         .copy-confirmation.show { display: inline-block; }
 
-        .details-section table { font-size: 1.5rem; } /* DÜZELTME 1: YAZI BOYUTU BÜYÜTÜLDÜ */
-        .details-section table strong { font-size: 1.45rem; } /* Model kodu daha da belirgin */
-        .details-section img { max-width: 100px; border-radius: 8px; cursor: pointer; }
+        .details-section { margin-top: .85rem; }
+        .product-detail-list { display: flex; flex-direction: column; gap: .75rem; }
+        .product-detail-item {
+            display: grid;
+            grid-template-columns: 64px minmax(0, 1fr) auto;
+            gap: .75rem;
+            align-items: center;
+            padding: .75rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius);
+            background: #fbfbfc;
+        }
+        .product-detail-image {
+            width: 64px;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--color-border);
+            background: #fff;
+            cursor: pointer;
+        }
+        .product-detail-main { min-width: 0; }
+        .product-model { display: block; color: var(--color-secondary); font-size: .98rem; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+        .product-meta { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .35rem; color: #6c757d; font-size: .82rem; }
+        .product-chip { display: inline-flex; align-items: center; max-width: 100%; padding: .2rem .45rem; border-radius: 999px; background: #eef1f4; color: #495057; line-height: 1.2; overflow-wrap: anywhere; }
+        .product-barcode { display: inline-flex; align-items: center; gap: .35rem; max-width: 100%; margin-top: .45rem; color: #6c757d; font-size: .78rem; }
+        .product-barcode span { overflow-wrap: anywhere; min-width: 0; }
+        .barcode-copy-btn { border: 0; background: transparent; color: var(--color-primary); padding: 0 .15rem; line-height: 1; font-size: .95rem; flex: 0 0 auto; }
+        .product-qty { min-width: 44px; text-align: center; padding: .4rem .55rem; border-radius: var(--border-radius); background: var(--color-secondary); color: #fff; font-weight: 800; }
+        .product-qty span { display: block; font-size: .68rem; font-weight: 600; opacity: .72; }
 
         .pagination-container { display: flex; justify-content: center; align-items: center; padding: 2.5rem 0 1rem; }
         .pagination { display: flex; align-items: center; gap: 0.5rem; list-style: none; }
@@ -155,14 +191,26 @@
             .d-flex.justify-content-between.align-items-center.my-4 .d-flex.gap-2 .btn {
                 width: 100%;
             }
+            .list-toolbar .form-select,
+            .list-toolbar .input-group {
+                width: 100% !important;
+            }
+            .list-toolbar-actions {
+                width: 100%;
+            }
 
             .order-list { grid-template-columns: 1fr; gap: 0.75rem; }
             .card:hover { transform: none; }
             .card-body { padding: 0.75rem; }
 
-            .details-section table { font-size: 1.1rem; }
-            .details-section table strong { font-size: 1.05rem; }
-            .details-section img { max-width: 70px; }
+            .product-detail-item {
+                grid-template-columns: 56px minmax(0, 1fr) auto;
+                gap: .6rem;
+                padding: .65rem;
+            }
+            .product-detail-image { width: 56px; }
+            .product-model { font-size: .92rem; }
+            .product-meta { font-size: .78rem; }
 
             h4 { font-size: 1rem; }
         }
@@ -171,7 +219,9 @@
             .page-header .user-actions span { font-size: 0.85rem; }
             .filter-section .col-md, .filter-section .col-6 { flex: 0 0 100%; max-width: 100%; }
             .card-header { flex-direction: column; gap: 0.5rem; align-items: flex-start !important; }
-            .details-section table { font-size: 0.95rem; }
+            .product-detail-item { grid-template-columns: 52px minmax(0, 1fr); }
+            .product-detail-image { width: 52px; }
+            .product-qty { grid-column: 2; justify-self: start; min-width: 40px; padding: .32rem .5rem; }
         }
 
         /* ── Dark Mode ── */
@@ -189,22 +239,42 @@
         html.gs-dark .form-control { background: #2a2a2a; color: #ddd; border-color: #444; }
         html.gs-dark .form-select { background: #2a2a2a; color: #ddd; border-color: #444; }
         html.gs-dark .modal-content { background: #1e1e1e; color: #ddd; }
-        html.gs-dark .table { color: #ddd; }
-        html.gs-dark .table-bordered th, html.gs-dark .table-bordered td { border-color: #333; }
         html.gs-dark .pagination li a { background-color: #1e1e1e; color: #ddd; border-color: #333; }
         html.gs-dark .pagination li.active a { background-color: var(--color-primary); }
         html.gs-dark .text-muted { color: #999 !important; }
-        html.gs-dark .details-section table { color: #ddd; }
-        html.gs-dark .details-section table th { background: #1a1a1a; }
+        html.gs-dark .empty-state { background: #1e1e1e; border-color: #333; color: #aaa; }
+        html.gs-dark .product-detail-item { background: #181818; border-color: #333; }
+        html.gs-dark .product-detail-image { background: #242424; border-color: #333; }
+        html.gs-dark .product-model { color: #f1f1f1; }
+        html.gs-dark .product-meta { color: #aaa; }
+        html.gs-dark .product-chip { background: #2a2a2a; color: #d0d0d0; }
+        html.gs-dark .product-barcode { color: #aaa; }
+        html.gs-dark .barcode-copy-btn { color: #d994a0; }
+        html.gs-dark .product-qty { background: #30343a; color: #fff; }
     </style>
 </head>
 <body>
     <div class="container">
+        {% set sort_key = sort_key|default('date_desc', true) %}
+        {% set active_list = active_list|default('all', true) %}
+        {% set per_page = per_page|default(50, true) %}
+        {% set show_overdue = show_overdue|default(false, true) %}
+        {% macro filter_button(endpoint, label, button_classes, key) -%}
+            <a href="{{ url_for(endpoint, search=request.args.get('search', ''), sort=sort_key, per_page=per_page) }}" class="btn {{ button_classes }} {% if active_list == key %}active-filter{% endif %}">{{ label }}</a>
+        {%- endmacro %}
+        {% macro page_url(page_no) -%}
+            {{ url_for(request.endpoint, page=page_no, search=request.args.get('search', ''), sort=sort_key, per_page=per_page, show_overdue=(1 if show_overdue else none)) }}
+        {%- endmacro %}
         <div class="page-header d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
                 <img src="/static/logo/gullu.png" alt="Güllü Logo" style="height:40px; margin-right: 15px;">
                 <h2 class="mb-0">Sipariş Takip</h2>
             </div>
+            {% if overdue_orders %}
+            <a class="overdue-pill" href="{{ url_for('order_list_service.order_list_all', sort='deadline_asc', show_overdue=1, search=request.args.get('search', ''), per_page=per_page) }}" title="Geciken siparişleri teslim süresine göre göster">
+                <i class="fas fa-exclamation-triangle"></i> Geciken: {{ overdue_orders|length }}
+            </a>
+            {% endif %}
             <div class="user-actions d-flex align-items-center gap-3">
                 <span><i class="fas fa-user-circle"></i> {{ session['first_name'] }} {{ session['last_name'] }}</span>
                 <button id="btnToggleOrderPull" class="btn btn-sm {% if order_pull_enabled %}btn-success{% else %}btn-danger{% endif %} text-white" title="Otomatik sipariş çekmeyi aç/kapat">
@@ -220,23 +290,36 @@
 
         <div class="filter-section mt-4">
             <div class="row g-2">
-                <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_all') }}" class="btn btn-secondary">Tümü</a></div>
-                <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_new') }}" class="btn btn-warning">Yeni Siparişler</a></div>
-                <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_hazirlaniyor') }}" class="btn text-white" style="background:#0dcaf0;">Hazırlanıyor</a></div>
-                <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_processed') }}" class="btn btn-success">İşleme Alınanlar</a></div>
-                <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_shipped') }}" class="btn btn-danger text-white">Kargoda</a></div>
-                <div class="col-md col-6"><a href="{{ url_for('order_list_service.order_list_delivered') }}" class="btn bg-orange text-white">Teslim Edilenler</a></div>
+                <div class="col-md col-6">{{ filter_button('order_list_service.order_list_all', 'Tümü', 'btn-secondary', 'all') }}</div>
+                <div class="col-md col-6">{{ filter_button('order_list_service.order_list_new', 'Yeni Siparişler', 'btn-warning', 'new') }}</div>
+                <div class="col-md col-6">{{ filter_button('order_list_service.order_list_hazirlaniyor', 'Hazırlanıyor', 'btn-info text-white', 'hazirlaniyor') }}</div>
+                <div class="col-md col-6">{{ filter_button('order_list_service.order_list_processed', 'İşleme Alınanlar', 'btn-success', 'processed') }}</div>
+                <div class="col-md col-6">{{ filter_button('order_list_service.order_list_shipped', 'Kargoda', 'btn-danger text-white', 'shipped') }}</div>
+                <div class="col-md col-6">{{ filter_button('order_list_service.order_list_delivered', 'Teslim Edilenler', 'bg-orange text-white', 'delivered') }}</div>
                 <div class="col-md col-6"><a href="{{ url_for('new_orders_service.prepare_new_orders') }}" class="btn btn-info text-white">Toplu Ürün Hazırla</a></div>
             </div>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center my-4 gap-3">
+        <div class="list-toolbar d-flex justify-content-between align-items-center my-4 gap-3">
              <h4>Toplam Sipariş: {{ total_orders_count }}</h4>
-             <div class="d-flex gap-2">
+             <div class="list-toolbar-actions d-flex gap-2 flex-wrap align-items-center">
                 <form method="POST" action="{{ url_for('order_service.fetch_trendyol_orders_route') }}">
                     <button type="submit" class="btn btn-primary"><i class="fas fa-sync-alt"></i> Siparişleri Güncelle</button>
                 </form>
-                <form method="GET" action="{{ url_for('order_list_service.order_list_all') }}">
+                <select class="form-select w-auto" aria-label="Sıralama" onchange="applySort(this.value)">
+                    <option value="date_desc" {% if sort_key == 'date_desc' or not sort_key %}selected{% endif %}>Sipariş Tarihi (Yeni → Eski)</option>
+                    <option value="deadline_asc" {% if sort_key == 'deadline_asc' %}selected{% endif %}>Teslimata Kalan Süre (Az → Çok)</option>
+                    <option value="deadline_desc" {% if sort_key == 'deadline_desc' %}selected{% endif %}>Teslimata Kalan Süre (Çok → Az)</option>
+                </select>
+                <select class="form-select w-auto" aria-label="Sayfa başına sipariş" onchange="applyPerPage(this.value)">
+                    {% for option in per_page_options|default([50, 100, 200], true) %}
+                    <option value="{{ option }}" {% if per_page == option %}selected{% endif %}>{{ option }} / sayfa</option>
+                    {% endfor %}
+                </select>
+                <form method="GET" action="{{ url_for(request.endpoint) }}">
+                    <input type="hidden" name="sort" value="{{ sort_key }}">
+                    <input type="hidden" name="per_page" value="{{ per_page }}">
+                    {% if show_overdue %}<input type="hidden" name="show_overdue" value="1">{% endif %}
                     <div class="input-group">
                         <input type="text" class="form-control" name="search" placeholder="Sipariş No veya Müşteri Adı" value="{{ request.args.get('search', '') }}">
                         <button class="btn btn-secondary" type="submit"><i class="fas fa-search"></i></button>
@@ -245,8 +328,7 @@
              </div>
         </div>
 
-        <div class="order-list">
-        {% for order in orders %}
+        {% macro order_card(order, uid) %}
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div><strong>Sipariş No:</strong> {{ order.order_number }}
@@ -260,6 +342,11 @@
                 </div>
                 <div class="card-body">
                     <p class="mb-1"><strong>{{ order.customer_name }} {{ order.customer_surname }}</strong></p>
+                    {% if order.is_overdue %}
+                        <span class="priority-badge overdue"><i class="fas fa-exclamation-circle"></i> Süresi Doldu</span>
+                    {% elif order.is_urgent %}
+                        <span class="priority-badge urgent"><i class="fas fa-clock"></i> Acil</span>
+                    {% endif %}
                     <p class="mb-1"><small><strong>Tarih:</strong> {{ order.order_date.strftime('%d-%m-%Y %H:%M') if order.order_date else 'N/A' }}</small></p>
                     <p class="mb-1">
                         {% set translated_status = {'Created': 'Yeni', 'Hazirlaniyor': 'Hazırlanıyor', 'Picking': 'İşleme Alındı', 'Shipped': 'Kargoda', 'Delivered': 'Teslim Edildi', 'Cancelled': 'İptal Edildi'}.get(order.status, order.status) %}
@@ -267,56 +354,100 @@
                         <span class="badge {% if translated_status == 'Yeni' %}bg-warning{% elif translated_status == 'Hazırlanıyor' %}bg-info text-white{% elif translated_status == 'İşleme Alındı' %}bg-success{% elif translated_status == 'Kargoda' %}bg-danger{% elif translated_status == 'Teslim Edildi' %}bg-orange{% else %}bg-secondary{% endif %}">{{ translated_status }}</span>
                     </p>
                     <p class="mb-1"><small><strong>Kargo:</strong> <span class="cargo-provider {% if order.cargo_provider_name and 'MNG Kargo' in order.cargo_provider_name %}orange{% endif %}">{{ order.cargo_provider_name or '-' }}</span></small></p>
-                    {% if translated_status in ['Yeni','İşleme Alındı'] %}
+                    {% if translated_status in ['Yeni','Hazırlanıyor','İşleme Alındı'] %}
                         <p class="mb-3"><strong>Kalan Süre:</strong> <span class="remaining-time red" data-end-time="{{ order.agreed_delivery_date or order.estimated_delivery_end }}">{{ order.remaining_time }}</span></p>
                     {% endif %}
-                    <button class="btn btn-outline-secondary w-100" data-bs-toggle="collapse" data-bs-target="#details-{{ loop.index }}">
+                    <button class="btn btn-outline-secondary w-100" data-bs-toggle="collapse" data-bs-target="#details-{{ uid }}">
                         Ürün Detayları <i class="fas fa-chevron-down fa-xs"></i>
                     </button>
-                    <div id="details-{{ loop.index }}" class="collapse details-section">
-                        <table class="table table-sm table-bordered mt-3">
-                            <thead><tr><th>Ürün Detayı</th><th>Görsel</th><th>Adet</th></tr></thead>
-                            <tbody>
+                    <div id="details-{{ uid }}" class="collapse details-section">
+                        <div class="product-detail-list">
                             {% for detail in order.processed_details %}
-                                <tr>
-                                    <td>
-                                        <strong>{{ detail.model_code or 'N/A' }}</strong><br>
-                                        <small>{{ detail.color or 'N/A' }} / {{ detail.size or 'N/A' }}</small><br>
-                                        <small class="text-muted d-flex align-items-center gap-1 mt-1">
-                                            <span>{{ detail.barcode or 'N/A' }}</span>
-                                            {% if detail.barcode %}
-                                            <button type="button" onclick="navigator.clipboard.writeText('{{ detail.barcode }}').then(()=>{this.innerHTML='✓';setTimeout(()=>this.innerHTML='⧉',1200)})" style="border:none;background:none;cursor:pointer;padding:0;font-size:.9rem;color:#888;" title="Kopyala">⧉</button>
-                                            {% endif %}
-                                        </small>
-                                    </td>
-                                    <td><img src="{{ detail.image_url }}" alt="Ürün" class="zoomable-image" data-image-src="{{ detail.image_url }}"></td>
-                                    <td><strong>{{ detail.quantity }}</strong></td>
-                                </tr>
+                            <div class="product-detail-item">
+                                <img src="{{ detail.image_url }}" alt="Ürün" class="product-detail-image zoomable-image" data-image-src="{{ detail.image_url }}">
+                                <div class="product-detail-main">
+                                    <strong class="product-model">{{ detail.model_code or 'N/A' }}</strong>
+                                    <div class="product-meta">
+                                        <span class="product-chip">{{ detail.color or 'N/A' }}</span>
+                                        <span class="product-chip">{{ detail.size or 'N/A' }}</span>
+                                    </div>
+                                    <div class="product-barcode">
+                                        <span>{{ detail.barcode or 'N/A' }}</span>
+                                        {% if detail.barcode %}
+                                        <button type="button" class="barcode-copy-btn" onclick="copyInlineValue({{ detail.barcode|tojson }}, this)" title="Barkodu kopyala">
+                                            <i class="far fa-copy"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="product-qty">
+                                    <span>Adet</span>
+                                    {{ detail.quantity }}
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="product-detail-item">
+                                <div class="product-detail-main">
+                                    <strong class="product-model">Ürün detayı bulunamadı</strong>
+                                </div>
+                            </div>
                             {% endfor %}
-                            </tbody>
-                        </table>
+                        </div>
                     </div>
                 </div>
                  <div class="card-footer bg-light text-center">
                     <button class="btn btn-secondary btn-sm" onclick="showArchiveModal('{{ order.order_number }}')">Arşivle</button>
                  </div>
             </div>
+        {% endmacro %}
+
+        <div class="order-list">
+        {% for order in orders %}
+            {{ order_card(order, loop.index) }}
         {% endfor %}
         </div>
+        {% if not orders %}
+        <div class="empty-state">
+            <i class="fas fa-search"></i>
+            <strong>Bu filtreyle sipariş bulunamadı</strong>
+            <span>Arama metnini veya filtreleri değiştirerek tekrar deneyebilirsin.</span>
+        </div>
+        {% endif %}
 
+        {% if total_pages > 1 %}
         <nav aria-label="Sayfa gezintisi" class="mt-4">
             <ul class="pagination justify-content-center">
                 {% if page > 1 %}
-                <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, page=page-1, search=request.args.get('search', '')) }}">Önceki</a></li>
+                <li class="page-item"><a class="page-link" href="{{ page_url(page-1) }}">Önceki</a></li>
                 {% endif %}
-                {% for i in range(1, total_pages + 1) %}
-                <li class="page-item {% if i == page %}active{% endif %}"><a class="page-link" href="{{ url_for(request.endpoint, page=i, search=request.args.get('search', '')) }}">{{ i }}</a></li>
+
+                {% set window_start = [1, page - 2]|max %}
+                {% set window_end = [total_pages, page + 2]|min %}
+
+                {% if window_start > 1 %}
+                <li class="page-item"><a class="page-link" href="{{ page_url(1) }}">1</a></li>
+                {% if window_start > 2 %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+                {% endif %}
+
+                {% for i in range(window_start, window_end + 1) %}
+                <li class="page-item {% if i == page %}active{% endif %}"><a class="page-link" href="{{ page_url(i) }}">{{ i }}</a></li>
                 {% endfor %}
+
+                {% if window_end < total_pages %}
+                {% if window_end < total_pages - 1 %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+                <li class="page-item"><a class="page-link" href="{{ page_url(total_pages) }}">{{ total_pages }}</a></li>
+                {% endif %}
+
                 {% if page < total_pages %}
-                <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, page=page+1, search=request.args.get('search', '')) }}">Sonraki</a></li>
+                <li class="page-item"><a class="page-link" href="{{ page_url(page+1) }}">Sonraki</a></li>
                 {% endif %}
             </ul>
         </nav>
+        {% endif %}
     </div>
 
     <div class="modal fade" id="archiveModal" tabindex="-1">
@@ -400,16 +531,19 @@
 
             var compact = localStorage.getItem('orderListCompact') === '1';
             function applyCompact(on) {
-                var list = document.querySelector('.order-list');
-                if (!list) return;
+                var lists = document.querySelectorAll('.order-list');
+                if (!lists.length) return;
                 if (on) {
-                    list.style.gridTemplateColumns = 'repeat(auto-fill, minmax(240px, 1fr))';
-                    list.querySelectorAll('.card-body p').forEach(function(p){p.style.fontSize='.8rem';p.style.marginBottom='.25rem';});
-                    list.querySelectorAll('.details-section').forEach(function(d){d.style.display='none';});
+                    lists.forEach(function(list) {
+                        list.style.gridTemplateColumns = 'repeat(auto-fill, minmax(240px, 1fr))';
+                        list.querySelectorAll('.card-body p').forEach(function(p){p.style.fontSize='.8rem';p.style.marginBottom='.25rem';});
+                    });
                     btn.innerHTML = '<i class="fas fa-expand-arrows-alt"></i> Genişlet';
                 } else {
-                    list.style.gridTemplateColumns = '';
-                    list.querySelectorAll('.card-body p').forEach(function(p){p.style.fontSize='';p.style.marginBottom='';});
+                    lists.forEach(function(list) {
+                        list.style.gridTemplateColumns = '';
+                        list.querySelectorAll('.card-body p').forEach(function(p){p.style.fontSize='';p.style.marginBottom='';});
+                    });
                     btn.innerHTML = '<i class="fas fa-compress-arrows-alt"></i> Kompakt';
                 }
                 localStorage.setItem('orderListCompact', on ? '1' : '0');
@@ -441,6 +575,24 @@
             const confirmation = element.nextElementSibling;
             confirmation.classList.add('show');
             setTimeout(() => { confirmation.classList.remove('show'); }, 2000);
+        }
+
+        function copyInlineValue(text, button) {
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(function(){ markInlineCopied(button); });
+                return;
+            }
+            const tempInput = document.getElementById('temp-copier');
+            tempInput.value = text;
+            tempInput.select();
+            document.execCommand('copy');
+            markInlineCopied(button);
+        }
+
+        function markInlineCopied(button) {
+            const original = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(function(){ button.innerHTML = original; }, 1200);
         }
 
         function showArchiveModal(order_number) {
@@ -561,6 +713,22 @@
         }
         setInterval(updateRemainingTime, 60000);
         window.onload = updateRemainingTime;
+
+        // ── Sıralama ── aktif filtre rotasını ve aramayı koruyarak sort paramını uygular
+        function applySort(value) {
+            const params = new URLSearchParams(window.location.search);
+            params.set('sort', value);
+            params.delete('page'); // sıralama değişince ilk sayfaya dön
+            if (value !== 'deadline_asc') params.delete('show_overdue');
+            window.location.search = params.toString();
+        }
+
+        function applyPerPage(value) {
+            const params = new URLSearchParams(window.location.search);
+            params.set('per_page', value);
+            params.delete('page');
+            window.location.search = params.toString();
+        }
 
         // ── Otomatik Sipariş Çekme Toggle ──
         document.getElementById('btnToggleOrderPull').addEventListener('click', function () {

@@ -1,4 +1,5 @@
-﻿from flask import Blueprint, render_template, current_app, jsonify
+﻿from flask import Blueprint, render_template, current_app, jsonify, session
+from flask_login import current_user
 from sqlalchemy import func, cast, String, and_
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -16,6 +17,9 @@ logger = logging.getLogger(__name__)
 
 # --- Hava Durumu Servisi ---
 from weather_service import get_weather_info, get_istanbul_time
+
+# --- Geciken (teslim süresi dolmuş) sipariş sayıları ---
+from overdue_orders import overdue_counts
 
 # --- Shopify Servisi ---
 try:
@@ -91,6 +95,9 @@ def index():
     hazirlaniyor_count = db.session.query(func.count()).select_from(OrderHazirlaniyor).scalar() or 0
     picking_count = db.session.query(func.count()).select_from(OrderPicking).scalar() or 0
 
+    # Geciken sipariş sayıları (Yeni / Hazırlanıyor / İşleme - teslim süresi dolmuş)
+    geciken = overdue_counts()
+
     # Shopify sipariş durum sayıları
     shopify_counts = _get_shopify_status_counts()
 
@@ -125,6 +132,11 @@ def index():
         "created": created_count,
         "hazirlanan": hazirlaniyor_count,
         "picking": picking_count,
+        # Geciken (teslim süresi dolmuş) sipariş sayıları
+        "geciken_created": geciken["created"],
+        "geciken_hazirlaniyor": geciken["hazirlaniyor"],
+        "geciken_picking": geciken["picking"],
+        "geciken_total": geciken["total"],
         "iade": iade_adedi,
         "kritik_stok": 0,
         "degisim_gunluk": degisim_gunluk,
@@ -523,6 +535,14 @@ def _status_counts_now():
 
     result = {"created": int(created), "hazirlaniyor": int(hazirlaniyor), "picking": int(picking)}
 
+    geciken = overdue_counts()
+    result.update({
+        "geciken_created": int(geciken.get("created", 0) or 0),
+        "geciken_hazirlaniyor": int(geciken.get("hazirlaniyor", 0) or 0),
+        "geciken_picking": int(geciken.get("picking", 0) or 0),
+        "geciken_total": int(geciken.get("total", 0) or 0),
+    })
+
     # Shopify durum sayıları
     shopify_counts = _get_shopify_status_counts()
     result.update(shopify_counts)
@@ -533,4 +553,6 @@ def _status_counts_now():
 @home_bp.route("/api/home/status-counts")
 def api_status_counts():
     """AJAX/Fetch için hafif JSON endpoint."""
+    if not current_user.is_authenticated or not session.get("totp_verified"):
+        return jsonify({"error": "Yetkisiz erişim"}), 401
     return _status_counts_now()

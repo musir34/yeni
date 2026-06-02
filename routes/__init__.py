@@ -47,10 +47,12 @@ def register_blueprints(app):
         siparisler_bp,
         product_service_bp,
         claims_service_bp,
+        # Sipariş listesi route'ları eski order_service route'larıyla aynı URL'leri
+        # paylaşıyor; canonical liste blueprint'i önce kaydedilmeli.
+        order_list_service_bp,
         order_service_bp,
         update_service_bp,
         archive_bp,
-        order_list_service_bp,
         login_logout_bp,
         degisim_bp,
         home_bp,
