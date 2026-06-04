@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Etiket Yazı Tipi Karşılaştırma — 50x35 İkili Rulo (Tasarım A)</title>
+<!-- Google Fonts: Inter, IBM Plex Sans, Roboto, Source Sans 3, Open Sans -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=IBM+Plex+Sans:wght@400;700&family=Roboto:wght@400;700&family=Source+Sans+3:wght@400;700&family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:24px; color:#222; }
+h1 { font-size:20px; }
+p.note { color:#555; max-width:760px; line-height:1.5; }
+.font-block { background:#fff; border:1px solid #ddd; border-radius:8px; padding:16px 18px; margin:18px 0; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.font-title { font-size:16px; font-weight:bold; margin:0 0 4px; }
+.font-tag { font-size:12px; color:#888; margin:0 0 12px; }
+.row { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }
+/* Gerçek etiket: 50x35mm */
+.label { width:50mm; height:35mm; border:1px solid #000; box-sizing:border-box; background:#fff; }
+.label-inner { display:flex; flex-direction:row; width:100%; height:100%; padding:1.2mm; box-sizing:border-box; align-items:center; color:#000; }
+.lab-left { display:flex; align-items:center; justify-content:center; width:36%; padding-right:1mm; box-sizing:border-box; }
+.lab-right { display:flex; flex-direction:column; justify-content:center; width:64%; box-sizing:border-box; text-align:left; overflow:hidden; }
+.lab-info { line-height:1.25; margin-bottom:0.6mm; }
+.lab-info .k { font-weight:normal; }
+.lab-info .v { font-weight:bold; }
+.lab-size { line-height:1.05; margin-bottom:0.6mm; white-space:nowrap; }
+.lab-size .k { font-weight:bold; }
+.lab-size .v { font-weight:bold; }
+.lab-barcode { font-weight:bold; line-height:1.1; white-space:nowrap; }
+.cap { font-size:11px; color:#999; margin-top:4px; text-align:center; }
+.qr { width:17mm; height:17mm; }
+</style>
+</head>
+<body>
+<h1>Etiket Yazı Tipi Karşılaştırma</h1>
+<p class="note">
+Aşağıdaki her blok, gerçek <b>50×35mm İkili Rulo</b> etiketini (Tasarım A) o yazı tipiyle gösterir.
+Soldaki örnek kısa renk (<b>Siyah</b>), sağdaki uzun renk (<b>Altın Sarısı</b>) — taşma kontrolü için.
+Model/Renk = 14pt, Beden = 18pt, barkod = 8pt. Beğendiğin fontu söyle, üretim sayfasında sabitleyeyim.<br>
+<small>Not: Inter / IBM Plex / Roboto / Source Sans / Open Sans için internet gerekir (Google Fonts). Tahoma & Verdana sistemden gelir.</small>
+</p>
+
+<div id="container"></div>
+
+<script>
+// Pseudo-QR placeholder (içerik önemli değil, yazı tipini karşılaştırıyoruz)
+const QR = `<svg class="qr" viewBox="0 0 29 29" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+<rect width="29" height="29" fill="#fff"/>
+<path fill="#000" d="M0 0h7v7h-7zM2 2h3v3h-3zM22 0h7v7h-7zM24 2h3v3h-3zM0 22h7v7h-7zM2 24h3v3h-3zM9 0h1v1h-1zM11 0h2v2h-2zM14 1h1v3h-1zM16 0h1v1h-1zM18 2h1v2h-1zM9 2h1v3h-1zM12 4h2v1h-2zM10 6h3v1h-3zM16 5h2v1h-2zM20 9h1v2h-1zM23 9h2v1h-2zM26 10h3v2h-3zM9 9h2v2h-2zM12 10h1v3h-1zM15 9h3v1h-3zM0 9h1v3h-1zM3 10h2v1h-2zM6 9h1v4h-1zM9 14h1v2h-1zM12 15h3v1h-3zM17 14h1v3h-1zM20 16h2v1h-2zM24 14h1v3h-1zM27 15h2v1h-2zM2 14h3v1h-3zM5 16h1v3h-1zM9 18h3v1h-3zM14 19h2v2h-2zM18 18h1v3h-1zM22 19h3v1h-3zM26 20h2v2h-2zM10 22h1v3h-1zM13 24h3v1h-3zM17 22h2v2h-2zM21 23h1v3h-1zM24 22h3v1h-3zM27 25h2v3h-2zM12 26h1v2h-1zM15 27h3v1h-3zM20 26h1v2h-1z"/>
+</svg>`;
+
+// Test fontları (görünen ad → CSS font-family)
+const FONTS = [
+{ name: "Tahoma (şu anki)", css: "Tahoma, Verdana, Arial, sans-serif" },
+{ name: "Verdana", css: "Verdana, Geneva, sans-serif" },
+{ name: "Segoe UI", css: "'Segoe UI', Tahoma, sans-serif" },
+{ name: "Inter (Google)", css: "'Inter', sans-serif" },
+{ name: "IBM Plex Sans (Google)", css: "'IBM Plex Sans', sans-serif" },
+{ name: "Roboto (Google)", css: "'Roboto', sans-serif" },
+{ name: "Source Sans 3 (Google)", css: "'Source Sans 3', sans-serif" },
+{ name: "Open Sans (Google)", css: "'Open Sans', sans-serif" }
+];
+
+// Örnek veriler: [model, renk, beden, barkod]
+const SAMPLES = [
+{ model: "099", color: "Siyah",        size: "35", barcode: "0799653335842" },
+{ model: "777", color: "Altın Sarısı", size: "41", barcode: "985237098231085" }
+];
+
+function labelHTML(s, fontCss) {
+return `
+<div>
+<div class="label">
+<div class="label-inner" style="font-family:${fontCss};">
+<div class="lab-left">${QR}</div>
+<div class="lab-right">
+<div class="lab-info" style="font-size:14pt;"><span class="k">Model: </span><span class="v">${s.model}</span></div>
+<div class="lab-info" style="font-size:14pt;"><span class="k">Renk: </span><span class="v">${s.color}</span></div>
+<div class="lab-size"><span class="k" style="font-size:14pt;">Beden: </span><span class="v" style="font-size:18pt;">${s.size}</span></div>
+<div class="lab-barcode" style="font-size:8pt;">${s.barcode}</div>
+</div>
+</div>
+</div>
+<div class="cap">${s.color}</div>
+</div>`;
+}
+
+const container = document.getElementById('container');
+FONTS.forEach(f => {
+const block = document.createElement('div');
+block.className = 'font-block';
+block.innerHTML = `
+<div class="font-title" style="font-family:${f.css};">${f.name} — Örnek: Model 099 / Renk Siyah / Beden 35</div>
+<div class="font-tag">${f.css}</div>
+<div class="row">${SAMPLES.map(s => labelHTML(s, f.css)).join('')}</div>`;
+container.appendChild(block);
+});
+</script>
+</body>
+</html>

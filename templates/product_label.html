@@ -6,6 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QR Kod Etiketi Oluştur - Güllü Ayakkabı</title>
 <style>
+/* Roboto — YEREL (internetsiz). woff2 dosyaları static/fonts/ içinde. latin + latin-ext (Türkçe ı/ş/ğ kapsanır) */
+@font-face{font-family:'Roboto';font-style:normal;font-weight:400;font-display:swap;src:url('/static/fonts/Roboto-400-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'Roboto';font-style:normal;font-weight:400;font-display:swap;src:url('/static/fonts/Roboto-400-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}
+@font-face{font-family:'Roboto';font-style:normal;font-weight:500;font-display:swap;src:url('/static/fonts/Roboto-500-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'Roboto';font-style:normal;font-weight:500;font-display:swap;src:url('/static/fonts/Roboto-500-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}
+@font-face{font-family:'Roboto';font-style:normal;font-weight:700;font-display:swap;src:url('/static/fonts/Roboto-700-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'Roboto';font-style:normal;font-weight:700;font-display:swap;src:url('/static/fonts/Roboto-700-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}
 body {
 display: flex;
 flex-direction: column;
@@ -259,8 +266,6 @@ object-fit: contain;
 .nav-buttons { display: flex; justify-content: center; width: 100%; margin-top: 20px; gap:15px; }
 .nav-buttons a { text-decoration: none; color: white; background-color: #007bff; padding: 10px 15px; border-radius: 4px; font-size: 16px; text-align: center; transition: background-color 0.3s; }
 .nav-buttons a:hover { background-color: #0056b3; }
-
-.no-print { /* Yazdırmada gizlenecek elemanlar için genel sınıf */ }
 </style>
 </head>
 
@@ -392,7 +397,7 @@ object-fit: contain;
 <div id="single-label-content-wrapper">
 <div class="qr-and-barcode-area">
 <div class="qr-area">
-<img id="qr-code-image-main" src="https://via.placeholder.com/100x100?text=QR" alt="QR Kod Placeholder">
+<img id="qr-code-image-main" alt="QR Kod Placeholder">
 </div>
 <div class="barcode-text-under-qr" id="barcode-text-main">BARKOD</div>
 </div>
@@ -404,11 +409,13 @@ object-fit: contain;
 </div>
 </div>
 </div>
+<div id="single-label-rendered" style="display:none; width:100%; height:100%;"></div>
 </div>
 <div id="multi-label-container-custom" style="display: none; width:100%; height:100%;"></div>
 <div id="multi-label-container-fixed-a4" style="display: none; width:100%; height:100%;"></div>
 <div id="multi-label-container-dual" style="display: none; width:100%; height:100%; flex-direction: row; gap: 0;"></div>
 </div>
+<div id="preview-note" class="no-print" style="width:210mm; max-width:90%; margin-top:8px; padding:6px 10px; font-size:13px; color:#856404; background:#fff3cd; border:1px solid #ffeeba; border-radius:4px; text-align:center; box-sizing:border-box; display:none;"></div>
 <button type="button" id="execute-print-button" class="no-print" onclick="executePrint()" style="margin-top: 10px; width:210mm; max-width: 90%; display:none;">Önizlemeyi Yazdır</button>
 
 
@@ -436,9 +443,45 @@ LABEL_WIDTH_APPROX: ((210 - 8 - 8 - (2 * 2)) / 3),
 LABEL_HEIGHT_APPROX: (Math.floor(((297 - 15 - 15 - (7 - 1) * 1) / 7) * 100) / 100) - 0.08
 };
 
+// Ağ gerektirmeyen yerel QR placeholder'ları (eski via.placeholder.com servisi kapandı)
+const QR_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23eeeeee'/%3E%3Ctext x='50' y='55' font-family='Arial' font-size='18' fill='%23999999' text-anchor='middle'%3EQR%3C/text%3E%3C/svg%3E";
+const QR_ERROR_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23fdecea'/%3E%3Ctext x='50' y='48' font-family='Arial' font-size='13' fill='%23c0392b' text-anchor='middle'%3EQR%3C/text%3E%3Ctext x='50' y='64' font-family='Arial' font-size='12' fill='%23c0392b' text-anchor='middle'%3EHata%3C/text%3E%3C/svg%3E";
+
+// Etiketler için yazı tipi (kullanıcı seçimi: Roboto — YEREL woff2, internetsiz)
+const LABEL_FONT = "'Roboto', Arial, sans-serif";
+
+// Baskı pencereleri (window.open) about:blank olduğundan @font-face mutlak URL ister.
+const ROBOTO_RANGES = {
+'latin': "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD",
+'latin-ext': "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+};
+function robotoFaceCss() {
+const origin = window.location.origin;
+const files = [[400,'latin'],[400,'latin-ext'],[500,'latin'],[500,'latin-ext'],[700,'latin'],[700,'latin-ext']];
+return files.map(([w,s]) =>
+`@font-face{font-family:'Roboto';font-style:normal;font-weight:${w};font-display:swap;src:url('${origin}/static/fonts/Roboto-${w}-${s}.woff2') format('woff2');unicode-range:${ROBOTO_RANGES[s]};}`
+).join('');
+}
+
+// 60x40mm etiket "Klasik+ (A)" tasarımı için sabitler (okunabilirlik ince ayarı buradan)
+const LABEL_6040 = {
+qrMM: 18,           // QR kod boyutu (mm)
+barcodeFontPt: 10,  // QR altı barkod metni (pt)
+infoFontPt: 14,     // MODEL / RENK / BEDEN etiket fontu (pt)
+sizeFontPt: 22      // BEDEN değeri (büyük, pt)
+};
+
+// 50x35mm İkili Rulo etiket "Klasik+ (A)" tasarımı için sabitler
+const LABEL_DUAL = {
+qrMM: 17,           // QR kod boyutu (mm)
+barcodeFontPt: 10,  // barkod metni (pt)
+infoFontPt: 14,     // Model / Renk / Beden etiket fontu (pt)
+sizeFontPt: 18      // Beden değeri (büyük, pt)
+};
+
 let currentQrSize = 25;
 let currentBarcodeFont = 10;
-let currentInfoFont = 13; // Default 13pt olarak kalmış, formda 11pt idi. Tutarlılık için formdaki değerle eşleşebilir.
+let currentInfoFont = 11; // Formdaki varsayılan (value="11") ile tutarlı.
 let barcodeList = [];
 let productData = {};
 let selectedModel = '';
@@ -449,9 +492,11 @@ window.onload = function() {
 currentQrSize = parseFloat(document.getElementById('qr-code-size-input').value) || 25;
 currentBarcodeFont = parseFloat(document.getElementById('barcode-font-size-input').value) || 10;
 currentInfoFont = parseFloat(document.getElementById('info-font-size-input').value) || 11; // Formdaki varsayılan değerle eşleştirildi.
+document.getElementById('qr-code-image-main').src = QR_PLACEHOLDER;
 updateCustomFields();
 document.getElementById('search-model-btn').addEventListener('click', searchModel);
 document.getElementById('color-select').addEventListener('change', handleColorSelect);
+document.getElementById('preview-all-btn').addEventListener('click', handlePreviewAll);
 
 const urlParams = new URLSearchParams(window.location.search);
 const paper = urlParams.get('paper');
@@ -547,8 +592,7 @@ sizeBoxesContainer.appendChild(sizeBox);
 });
 }
 
-window.addEventListener('DOMContentLoaded', function() {
-document.getElementById('preview-all-btn').addEventListener('click', function() {
+function handlePreviewAll() {
 let newItemsAdded = false;
 document.querySelectorAll('#size-boxes input[type="number"]').forEach(input => {
 const quantity = parseInt(input.value);
@@ -564,8 +608,7 @@ if (!newItemsAdded && barcodeList.length === 0) { alert('Lütfen en az bir beden
 if (newItemsAdded || barcodeList.length > 0) {
 updateBarcodeList(); updateTotalLabelCount(); generateAndPreparePreview();
 }
-});
-});
+}
 
 function updateBarcodeList() {
 const listBody = document.getElementById('barcode-list-body');
@@ -634,7 +677,7 @@ const qrImgMain = document.getElementById('qr-code-image-main');
 if (barcode) {
 qrImgMain.src = `/product_label/generate_qr?data=${encodeURIComponent(barcode)}&t=${new Date().getTime()}`;
 } else {
-qrImgMain.src = "https://via.placeholder.com/100x100?text=QR";
+qrImgMain.src = QR_PLACEHOLDER;
 }
 applyVisualsToSingleLabelPreview();
 }
@@ -644,6 +687,9 @@ const paperType = document.getElementById('paper-type').value;
 const mainPreviewArea = document.getElementById('main-label-preview-area');
 const visualSettingsSection = document.getElementById('visual-settings-section');
 document.getElementById('single-label-container').style.display = 'none';
+document.getElementById('single-label-rendered').style.display = 'none';
+document.getElementById('single-label-rendered').innerHTML = '';
+document.getElementById('single-label-content-wrapper').style.display = 'flex';
 document.getElementById('multi-label-container-custom').style.display = 'none';
 document.getElementById('multi-label-container-fixed-a4').style.display = 'none';
 document.getElementById('multi-label-container-dual').style.display = 'none';
@@ -738,28 +784,44 @@ let effectiveQrSize = isA4Fixed ? A4_FIXED_CONFIG.QR_SIZE_MM : currentQrSize;
 let labelWidthForCalc = 60, labelHeightForCalc = 40;
 const currentPaperType = document.getElementById('paper-type').value;
 
-// 50x35mm ikili rulo etiket için özel düzen
+// 50x35mm ikili rulo etiket — "Klasik+ (A)" tasarımı (tamamen inline; önizleme ve baskı birebir)
 if (currentPaperType === '50x35_dual' && !isA4Fixed) {
 labelWidthForCalc = 50;
 labelHeightForCalc = 35;
-effectiveQrSize = A4_FIXED_CONFIG.QR_SIZE_MM; // A4 ile aynı QR boyutu (18mm)
-const qrStyle = `width:${effectiveQrSize}mm; height:${effectiveQrSize}mm; object-fit: contain;`;
-
-// Barkod 20 karakterden fazlaysa alt satıra geç
-const barcodeStyle = barcode.length > 20 
-? 'word-break: break-all; white-space: normal;' 
-: 'white-space: nowrap;';
-
+const d = LABEL_DUAL;
+const bcStyle = (barcode && barcode.length > 18)
+? 'word-break:break-all; white-space:normal;'
+: 'white-space:nowrap;';
 return `
-<div class="label-dual-content">
-<div class="dual-left">
-<img class="qr-code-clone" src="${qrSrc}" alt="QR" style="${qrStyle}">
+<div style="display:flex; flex-direction:row; width:100%; height:100%; padding:1.2mm; box-sizing:border-box; align-items:center; font-family:${LABEL_FONT}; color:#000;">
+<div style="display:flex; align-items:center; justify-content:center; width:36%; padding-right:1mm; box-sizing:border-box;">
+<img class="qr-code-clone" src="${qrSrc}" alt="QR ${barcode}" style="width:${d.qrMM}mm; height:${d.qrMM}mm; object-fit:contain;">
 </div>
-<div class="dual-right">
-<div class="dual-info"><span class="lbl">Model:</span> <span class="val">${model}</span></div>
-<div class="dual-info"><span class="lbl">Renk:</span> <span class="val">${color}</span></div>
-<div class="dual-info"><span class="lbl">Beden:</span> <span class="val">${size}</span></div>
-<div class="dual-barcode" style="${barcodeStyle}">${barcode}</div>
+<div style="display:flex; flex-direction:column; justify-content:center; width:64%; box-sizing:border-box; text-align:left; overflow:hidden;">
+<div style="font-size:${d.infoFontPt}pt; line-height:1.25; margin-bottom:0.6mm;"><span style="font-weight:normal;">Model: </span><span style="font-weight:bold;">${model}</span></div>
+<div style="font-size:${d.infoFontPt}pt; line-height:1.25; margin-bottom:0.6mm;"><span style="font-weight:normal;">Renk: </span><span style="font-weight:bold;">${color}</span></div>
+<div style="line-height:1.05; margin-bottom:0.6mm; white-space:nowrap;"><span style="font-size:${d.infoFontPt}pt; font-weight:normal;">Beden: </span><span style="font-size:${d.sizeFontPt}pt; font-weight:bold;">${size}</span></div>
+<div style="font-size:${d.barcodeFontPt}pt; font-weight:bold; line-height:1.1; ${bcStyle}">${barcode}</div>
+</div>
+</div>`;
+}
+
+// 60x40mm tek etiket — "Klasik+ (A)" tasarımı: QR+barkod solda, MODEL/RENK/BEDEN sağda, BEDEN büyük
+if (currentPaperType === '60x40' && !isA4Fixed) {
+const qr = LABEL_6040.qrMM;
+const bcStyle = (barcode && barcode.length > 18)
+? 'word-break:break-all; white-space:normal;'
+: 'white-space:nowrap;';
+return `
+<div style="display:flex; flex-direction:row; width:100%; height:100%; padding:1.5mm; box-sizing:border-box; align-items:center; font-family:${LABEL_FONT}; color:#000;">
+<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:42%; padding-right:1.5mm; box-sizing:border-box;">
+<img class="qr-code-clone" src="${qrSrc}" alt="QR ${barcode}" style="width:${qr}mm; height:${qr}mm; object-fit:contain;">
+<div style="font-size:${LABEL_6040.barcodeFontPt}pt; font-weight:bold; text-align:center; line-height:1.1; margin-top:0.8mm; max-width:100%; ${bcStyle}">${barcode}</div>
+</div>
+<div style="display:flex; flex-direction:column; justify-content:center; width:58%; box-sizing:border-box; text-align:left; overflow:hidden;">
+<div style="font-size:${LABEL_6040.infoFontPt}pt; line-height:1.25; margin-bottom:1mm;"><span style="font-weight:normal;">MODEL </span><span style="font-weight:bold;">${model}</span></div>
+<div style="font-size:${LABEL_6040.infoFontPt}pt; line-height:1.25; margin-bottom:1.5mm;"><span style="font-weight:normal;">RENK </span><span style="font-weight:bold;">${color}</span></div>
+<div style="line-height:1.05; white-space:nowrap;"><span style="font-size:${LABEL_6040.infoFontPt}pt; font-weight:normal;">BEDEN </span><span style="font-size:${LABEL_6040.sizeFontPt}pt; font-weight:bold;">${size}</span></div>
 </div>
 </div>`;
 }
@@ -804,6 +866,32 @@ return `
 </div>`;
 }
 
+function updatePreviewNote() {
+const note = document.getElementById('preview-note');
+if (!note) return;
+const total = barcodeList.reduce((t, item) => t + item.quantity, 0);
+if (total === 0) { note.style.display = 'none'; return; }
+const paperType = document.getElementById('paper-type').value;
+let shown, pages = null;
+if (paperType === 'a4_fixed') {
+shown = Math.min(total, A4_FIXED_CONFIG.LABELS_PER_PAGE * 2);
+pages = Math.ceil(total / A4_FIXED_CONFIG.LABELS_PER_PAGE);
+} else if (paperType === '50x35_dual') {
+shown = Math.min(total, 2);
+pages = Math.ceil(total / 2);
+} else if (paperType === 'custom_multi') {
+shown = total; // tüm etiketler önizlemede gösterilir
+} else {
+shown = 1; // tek etiket tipleri: önizlemede sadece ilk etiket
+pages = total; // her etiket 1 sayfa
+}
+let msg = `Önizlemede örnek ${shown} etiket gösteriliyor — baskıda toplam ${total} etiket`;
+if (pages) msg += ` (~${pages} sayfa)`;
+msg += ' çıkacak.';
+note.textContent = msg;
+note.style.display = 'block';
+}
+
 function generateAndPreparePreview() {
 if (barcodeList.length === 0) {
 populateMainLabelPreview(null, null, null, null);
@@ -811,6 +899,7 @@ document.getElementById('multi-label-container-fixed-a4').innerHTML = '';
 document.getElementById('multi-label-container-custom').innerHTML = '';
 document.getElementById('multi-label-container-dual').innerHTML = '';
 document.getElementById('execute-print-button').style.display = 'none';
+updatePreviewNote();
 updatePrintStyles();
 return;
 }
@@ -819,6 +908,7 @@ populateMainLabelPreview(firstItemForPreview.barcode, firstItemForPreview.model,
 generateMultipleLabelsLayout();
 updatePrintStyles();
 document.getElementById('execute-print-button').style.display = 'block';
+updatePreviewNote();
 console.log("Önizleme hazırlandı/güncellendi.");
 }
 
@@ -833,6 +923,8 @@ a4Container.style.display = 'none'; customMultiContainer.style.display = 'none';
 
 if (barcodeList.length === 0) {
 document.getElementById('single-label-container').style.display = 'flex';
+document.getElementById('single-label-rendered').style.display = 'none';
+document.getElementById('single-label-content-wrapper').style.display = 'flex';
 return;
 }
 let labelsToDisplayHtml = [];
@@ -891,7 +983,20 @@ labelItem.style.width = labelWidth + 'mm'; labelItem.style.height = labelHeight 
 labelItem.innerHTML = labelHtml; customMultiContainer.appendChild(labelItem);
 });
 } else {
-document.getElementById('single-label-container').style.display = 'flex';
+const slc = document.getElementById('single-label-container');
+const wrapper = document.getElementById('single-label-content-wrapper');
+const rendered = document.getElementById('single-label-rendered');
+slc.style.display = 'flex';
+if (paperType === '60x40' && labelsToDisplayHtml[0]) {
+// 60x40 önizlemesi: gerçek baskı şablonuyla (getLabelHTML) birebir göster
+wrapper.style.display = 'none';
+rendered.style.display = 'block';
+rendered.innerHTML = labelsToDisplayHtml[0];
+} else {
+rendered.style.display = 'none';
+rendered.innerHTML = '';
+wrapper.style.display = 'flex';
+}
 }
 }
 
@@ -1087,7 +1192,7 @@ reader.readAsDataURL(blob);
 });
 } catch (error) {
 console.error("QR Data URL çevirme hatası (barcode: "+barcode+"):", error);
-return "https://via.placeholder.com/100x100?text=QR+Hata";
+return QR_ERROR_PLACEHOLDER;
 }
 }
 
@@ -1163,7 +1268,7 @@ allLabelsForPrintHTML_single.substring(lastBreak).replace('page-break-after: alw
 const printWindow = window.open('', '_blank');
 printWindow.document.write(`
 <!DOCTYPE html><html><head><title>Etiketler</title>
-<style>
+<style>${robotoFaceCss()}
 @page { size: ${labelWidthForPrint}mm ${labelHeightForPrint}mm; margin: 0; }
 body { margin: 0; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact !important; color-adjust: exact !important;}
 /* Styles for label-item-fixed-a4-content when printed individually */
@@ -1247,7 +1352,7 @@ allDualPagesHTML += `<div class="dual-page" style="display: flex; flex-direction
 const printWindow = window.open('', '_blank');
 printWindow.document.write(`
 <!DOCTYPE html><html><head><title>Rulo Etiketler (50x35mm İkili)</title>
-<style>
+<style>${robotoFaceCss()}
 @page { size: ${pageWidth}mm ${pageHeight}mm; margin: 0; }
 body { margin: 0; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact !important; color-adjust: exact !important;}
 .dual-page { display: flex; flex-direction: row; gap: 0; }
@@ -1267,7 +1372,7 @@ align-items: center;
 display: flex;
 align-items: center;
 justify-content: center;
-width: 30%;
+width: 42%;
 padding-right: 1mm;
 box-sizing: border-box;
 }
@@ -1275,7 +1380,7 @@ box-sizing: border-box;
 display: flex;
 flex-direction: column;
 justify-content: center;
-width: 70%;
+width: 58%;
 padding-left: 1mm;
 box-sizing: border-box;
 }
@@ -1297,20 +1402,10 @@ margin-top: 0.5mm;
 line-height: 1.1;
 }
 .label-dual-content img.qr-code-clone {
-max-width: 14mm;
-max-height: 14mm;
+max-width: 18mm;
+max-height: 18mm;
 object-fit: contain;
 }
-
-/* Eski stiller (diğer formatlar için) */
-.label-item-fixed-a4-content { display: flex; flex-direction: row; width: 100%; height: 100%; padding: 1mm; box-sizing: border-box; align-items: center;}
-.label-item-fixed-a4-content .left { display: flex; flex-direction: column; align-items: center; justify-content: center; padding-right: 0.5mm; box-sizing: border-box; width: 35%;}
-.label-item-fixed-a4-content .right { display: flex; flex-direction: column; justify-content: center; text-align: left; padding-left: 1mm; box-sizing: border-box; flex-grow: 1; width: 65%;}
-.label-item-fixed-a4-content img.qr-code-clone { object-fit: contain; max-width: 14mm; max-height: 14mm; }
-.label-item-fixed-a4-content .barcode-text-clone { text-align: center; font-weight: bold; word-break: break-all; line-height: 1.1; font-size: 6pt; max-width: 16mm;}
-.label-item-fixed-a4-content .info-clone { margin-bottom: 0.5mm; font-weight: 600; line-height: 1.1; text-align: left; font-size: 7pt;}
-.label-item-fixed-a4-content .info-clone .label { font-weight: bold; }
-.label-item-fixed-a4-content .info-clone .value { font-weight: normal; }
 </style></head><body>${allDualPagesHTML}
 <script> window.onload = function() { setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 300); }, 500); }; <\/script></body></html>`);
 printWindow.document.close();
