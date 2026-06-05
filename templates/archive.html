@@ -1156,12 +1156,9 @@ showMessage("Sipariş arşivden çıkarıldı!", true);
 } else { showMessage(response.message || "Sipariş arşivden çıkarılırken bir hata oluştu", false); }
 }
 function onFail() { showMessage("Sunucu ile iletişimde hata oluştu.", false); }
-if (choice === 'picking') {
-// İşleme Alınmış = Trendyol Picking update + OrderPicking (mevcut, denenmiş akış)
-$.post("/process_order", { order_number: orderNumber }, onDone).fail(onFail);
-} else {
-$.post("/restore_order_from_archive", { order_number: orderNumber, target_status: 'hazirlaniyor' }, onDone).fail(onFail);
-}
+// İşleme Alınmış de dahil her iki seçim de SADECE panelde statü değiştirir;
+// Trendyol'a istek gönderilmez.
+$.post("/restore_order_from_archive", { order_number: orderNumber, target_status: choice }, onDone).fail(onFail);
 });
 }
 

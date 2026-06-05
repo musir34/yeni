@@ -795,10 +795,14 @@ def recover_from_archive():
         # mı seçti? "İşleme Alınmış" seçimi frontend'de doğrudan /process_order'a gider
         # (Trendyol Picking update + OrderPicking). Burada Hazırlanıyor (varsayılan) ve
         # geriye-dönük Created destekleniyor.
-        from models import OrderCreated, OrderHazirlaniyor
+        from models import OrderCreated, OrderHazirlaniyor, OrderPicking
         target_status = (request.form.get('target_status') or 'hazirlaniyor').strip().lower()
         if target_status == 'created':
             _model, _status_value, _restore_label = OrderCreated, 'Created', 'Created'
+        elif target_status == 'picking':
+            # İşleme Alınmış — SADECE panelde statü. Trendyol'a istek GÖNDERİLMEZ
+            # (kullanıcı isteği), stok mutasyonu da yapılmaz.
+            _model, _status_value, _restore_label = OrderPicking, 'Picking', 'Picking'
         else:
             _model, _status_value, _restore_label = OrderHazirlaniyor, 'Hazırlanıyor', 'Hazırlanıyor'
 
