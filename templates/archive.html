@@ -289,6 +289,45 @@ transition: opacity 0.5s ease-in-out; /* Fade animasyonu */
 opacity: 1;
 }
 
+/* Şık Onay Modalı (gsConfirm) — native confirm() yerine */
+.gs-confirm-overlay {
+position: fixed;
+inset: 0;
+background: rgba(15, 23, 42, 0.55);
+backdrop-filter: blur(3px);
+display: flex;
+align-items: center;
+justify-content: center;
+z-index: 1080;
+opacity: 0;
+visibility: hidden;
+transition: opacity 0.2s ease, visibility 0.2s ease;
+padding: 16px;
+}
+.gs-confirm-overlay.show { opacity: 1; visibility: visible; }
+.gs-confirm-box {
+background: #fff;
+border-radius: 16px;
+box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+width: 100%;
+max-width: 400px;
+padding: 28px 24px 20px;
+text-align: center;
+transform: translateY(12px) scale(0.97);
+transition: transform 0.22s cubic-bezier(.2,.8,.2,1);
+}
+.gs-confirm-overlay.show .gs-confirm-box { transform: translateY(0) scale(1); }
+.gs-confirm-icon { font-size: 2.6rem; color: #3b82f6; margin-bottom: 10px; line-height: 1; }
+.gs-confirm-box.danger .gs-confirm-icon { color: #ef4444; }
+.gs-confirm-title { font-size: 1.15rem; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+.gs-confirm-msg { font-size: 0.95rem; color: #64748b; margin-bottom: 22px; line-height: 1.45; }
+.gs-confirm-actions { display: flex; gap: 10px; justify-content: center; }
+.gs-confirm-actions .btn { min-width: 110px; border-radius: 10px; font-weight: 600; }
+/* Dark mode */
+.gs-dark .gs-confirm-box { background: #1e293b; }
+.gs-dark .gs-confirm-title { color: #f1f5f9; }
+.gs-dark .gs-confirm-msg { color: #94a3b8; }
+
 
 /* Ürün Detayları Collapse İçindeki Tablo */
 .table-sm th, .table-sm td {
@@ -348,6 +387,19 @@ html.gs-dark .pagination .page-link { background: #1e1e1e; color: #ddd; border-c
 <div class="container mt-5">
 <div id="messageBox" class="alert" role="alert"></div>
 
+<!-- Şık Onay Modalı (native confirm() yerine) -->
+<div id="gsConfirmOverlay" class="gs-confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="gsConfirmTitle">
+  <div class="gs-confirm-box" id="gsConfirmBox">
+    <div class="gs-confirm-icon"><i class="fas fa-question-circle"></i></div>
+    <div class="gs-confirm-title" id="gsConfirmTitle">Emin misiniz?</div>
+    <div class="gs-confirm-msg" id="gsConfirmMsg"></div>
+    <div class="gs-confirm-actions">
+      <button type="button" class="btn btn-light" id="gsConfirmCancel">Vazgeç</button>
+      <button type="button" class="btn btn-primary" id="gsConfirmOk">Evet</button>
+    </div>
+  </div>
+</div>
+
 <div class="text-center mb-4">
 <h2 class="mb-3">Arşivlenmiş Siparişler <i class="fas fa-archive"></i></h2>
 <p class="lead">Şu anki sayfa: <span class="badge bg-primary">{{ page }}</span></p>
@@ -391,7 +443,7 @@ Seç
 <small class="text-muted"><i class="fas fa-clock me-1"></i>Arşiv Saati: {{ order.archive_date.strftime('%H:%M') if order.archive_date else '-' }}</small><br>
 <strong>Sipariş No:</strong> {{ order.order_number }}
 <span class="copy-container">
-<i class="far fa-copy clipboard-icon" onclick="copyToClipboard({{ order.order_number|tojson }}, this)"></i>
+<i class="far fa-copy clipboard-icon" onclick="copyToClipboard({{ order.order_number|tojson|forceescape }}, this)"></i>
 <span class="copy-confirmation">✔️</span>
 </span>
 </div>
@@ -450,7 +502,7 @@ data-image-url="{{ product.image_url if product.image_url else '/static/images/d
 <span>{{ product.barcode if product.barcode else '-' }}</span>
 {% if product.barcode %}
   <span class="copy-container">
-    <i class="far fa-copy clipboard-icon" onclick="copyToClipboard({{ product.barcode|tojson }}, this)"></i>
+    <i class="far fa-copy clipboard-icon" onclick="copyToClipboard({{ product.barcode|tojson|forceescape }}, this)"></i>
     <span class="copy-confirmation">✔️</span>
   </span>
 {% endif %}
@@ -494,7 +546,7 @@ data-image-url="{{ product.image_url if product.image_url else '/static/images/d
 <span>{{ product.barcode if product.barcode else '-' }}</span>
 {% if product.barcode %}
 <span class="copy-container">
-<i class="far fa-copy clipboard-icon" onclick="copyToClipboard({{ product.barcode|tojson }}, this)"></i>
+<i class="far fa-copy clipboard-icon" onclick="copyToClipboard({{ product.barcode|tojson|forceescape }}, this)"></i>
 <span class="copy-confirmation">✔️</span>
 </span>
 {% endif %}
@@ -534,19 +586,19 @@ data-image-url="{{ product.image_url if product.image_url else '/static/images/d
 </form>
 
 {# Diğer İşlem Butonları #}
-<button class="btn btn-outline-secondary btn-sm" onclick="updateStatus({{ order.order_number|tojson }}, 'Kontrol Ediliyor')">
+<button class="btn btn-outline-secondary btn-sm" onclick="updateStatus({{ order.order_number|tojson|forceescape }}, 'Kontrol Ediliyor')">
 <i class="fas fa-eye me-1"></i>Kontrol
 </button>
-<button class="btn btn-outline-warning btn-sm" onclick="updateStatus({{ order.order_number|tojson }}, 'Üretiliyor')">
+<button class="btn btn-outline-warning btn-sm" onclick="updateStatus({{ order.order_number|tojson|forceescape }}, 'Üretiliyor')">
 <i class="fas fa-cogs me-1"></i>Üretiliyor
 </button>
-<button class="btn btn-outline-success btn-sm" onclick="updateStatus({{ order.order_number|tojson }}, 'Hazır')">
+<button class="btn btn-outline-success btn-sm" onclick="updateStatus({{ order.order_number|tojson|forceescape }}, 'Hazır')">
 <i class="fas fa-check-circle me-1"></i>Hazır
 </button>
-<button class="btn btn-outline-danger btn-sm" onclick="cancelOrder({{ order.order_number|tojson }})">
+<button class="btn btn-outline-danger btn-sm" onclick="cancelOrder({{ order.order_number|tojson|forceescape }})">
 <i class="fas fa-times me-1"></i>İptal
 </button>
-<button class="btn btn-outline-primary btn-sm" onclick="restoreOrder({{ order.order_number|tojson }})">
+<button class="btn btn-outline-primary btn-sm" onclick="restoreOrder({{ order.order_number|tojson|forceescape }})">
 <i class="fas fa-undo me-1"></i>Arşivden Çıkar
 </button>
 </div>
@@ -780,8 +832,13 @@ console.error("Görsel modal elementi (#imageModal) sayfada bulunamadı!");
 
 
 function deleteSelected() {
-if (!confirm('Seçili siparişleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz!')) return; // Uyarı metni güçlendirildi
+gsConfirm('Seçili siparişleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz!', {danger: true, okText: 'Sil', cancelText: 'Vazgeç'}).then(function(ok) {
+if (!ok) return;
+_deleteSelectedConfirmed();
+});
+}
 
+function _deleteSelectedConfirmed() {
 const selectedOrders = Array.from(document.querySelectorAll('.order-checkbox:checked')).map(cb => cb.value);
 
 // ✅ Düzeltme: currentDeleteSelectedBtn ve currentSelectedCountDisplay referanslarını fonksiyon içinde al
@@ -846,6 +903,46 @@ if(currentSelectedCountDisplay) currentSelectedCountDisplay.textContent = select
 }
 showMessage("Sunucu ile iletişimde hata oluştu.", false);
 console.log("deleteSelected Fail Sonrası -> Seçili Sayısı:", selectedCount, "Buton Disabled:", (currentDeleteSelectedBtn ? currentDeleteSelectedBtn.disabled : 'Bulunamadı'));
+});
+}
+
+// Şık, site temasına uygun onay penceresi — native confirm() yerine. Promise<bool> döner.
+function gsConfirm(message, opts) {
+opts = opts || {};
+return new Promise(function(resolve) {
+const overlay = document.getElementById('gsConfirmOverlay');
+const box = document.getElementById('gsConfirmBox');
+const msgEl = document.getElementById('gsConfirmMsg');
+const titleEl = document.getElementById('gsConfirmTitle');
+const okBtn = document.getElementById('gsConfirmOk');
+const cancelBtn = document.getElementById('gsConfirmCancel');
+const iconEl = overlay.querySelector('.gs-confirm-icon i');
+if (!overlay) { resolve(window.confirm(message)); return; } // güvenli geri dönüş
+msgEl.textContent = message || '';
+titleEl.textContent = opts.title || 'Emin misiniz?';
+okBtn.textContent = opts.okText || 'Evet';
+cancelBtn.textContent = opts.cancelText || 'Vazgeç';
+okBtn.className = 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary');
+box.classList.toggle('danger', !!opts.danger);
+if (iconEl) iconEl.className = opts.danger ? 'fas fa-exclamation-triangle' : 'fas fa-question-circle';
+overlay.classList.add('show');
+function cleanup(result) {
+overlay.classList.remove('show');
+okBtn.removeEventListener('click', onOk);
+cancelBtn.removeEventListener('click', onCancel);
+overlay.removeEventListener('mousedown', onBackdrop);
+document.removeEventListener('keydown', onKey);
+resolve(result);
+}
+function onOk() { cleanup(true); }
+function onCancel() { cleanup(false); }
+function onBackdrop(e) { if (e.target === overlay) cleanup(false); }
+function onKey(e) { if (e.key === 'Escape') cleanup(false); else if (e.key === 'Enter') cleanup(true); }
+okBtn.addEventListener('click', onOk);
+cancelBtn.addEventListener('click', onCancel);
+overlay.addEventListener('mousedown', onBackdrop);
+document.addEventListener('keydown', onKey);
+setTimeout(function() { okBtn.focus(); }, 50);
 });
 }
 
@@ -961,30 +1058,33 @@ badge.text(newStatus);
 }
 
 function updateStatus(orderNumber, status) {
-if (confirm(`Sipariş durumunu '${status}' olarak güncellemek istediğinize emin misiniz?`)) {
+gsConfirm(`Sipariş durumunu '${status}' olarak güncellemek istediğinize emin misiniz?`, {okText: 'Güncelle'}).then(function(ok) {
+if (!ok) return;
 $.post("/update_order_status", { order_number: orderNumber, status: status }, function(response) {
 if (response.success) {
 updateStatusBadge(orderNumber, status);
 showMessage("Durum güncellendi!", true);
 } else { showMessage(response.message || "Durum güncellenirken bir hata oluştu", false); }
 }).fail(function() { showMessage("Sunucu ile iletişimde hata oluştu.", false); });
-}
+});
 }
 
 
 function cancelOrder(orderNumber) {
-if (confirm("Siparişi iptal etmek istediğinize emin misiniz?")) {
+gsConfirm("Siparişi iptal etmek istediğinize emin misiniz?", {danger: true, okText: 'İptal Et', cancelText: 'Vazgeç'}).then(function(ok) {
+if (!ok) return;
 $.post("/cancel_order", { order_number: orderNumber }, function(response) {
 if (response.success) {
 updateStatusBadge(orderNumber, 'İptal Edildi');
 showMessage("Sipariş iptal edildi!", true);
 } else { showMessage(response.message || "Sipariş iptal edilirken bir hata oluştu", false); }
 }).fail(function() { showMessage("Sunucu ile iletişimde hata oluştu.", false); });
-}
+});
 }
 
 function restoreOrder(orderNumber) {
-if (confirm("Siparişi arşivden çıkarmak istediğinize emin misiniz?")) {
+gsConfirm("Siparişi arşivden çıkarmak istediğinize emin misiniz?", {okText: 'Arşivden Çıkar'}).then(function(ok) {
+if (!ok) return;
 $.post("/restore_order_from_archive", { order_number: orderNumber }, function(response) {
 if (response.success) {
 var card = $('[data-order-number="' + orderNumber + '"]');
@@ -992,7 +1092,7 @@ card.fadeOut(400, function() { $(this).remove(); });
 showMessage("Sipariş arşivden çıkarıldı!", true);
 } else { showMessage(response.message || "Sipariş arşivden çıkarılırken bir hata oluştu", false); }
 }).fail(function() { showMessage("Sunucu ile iletişimde hata oluştu.", false); });
-}
+});
 }
 
 </script>
