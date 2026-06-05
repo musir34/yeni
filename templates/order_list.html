@@ -632,12 +632,10 @@
             } else {
                 otherDiv.style.display = 'none';
                 otherTxt.required = false;
-                // Tek tıkla arşivle
-                if (typeof window.jQuery !== 'undefined') {
-                    window.jQuery('#archiveForm').trigger('submit');
-                } else {
-                    document.getElementById('archiveForm').dispatchEvent(new Event('submit', { cancelable: true }));
-                }
+                // Tek tıkla arşivle — submit event'ine güvenme (jQuery.trigger('submit')
+                // addEventListener handler'ını çağırmaz, native form.submit() ile sayfayı
+                // yeniler ve AJAX hiç çalışmazdı). Doğrudan fonksiyonu çağır.
+                performArchiveSubmit();
             }
         });
         document.addEventListener('input', function(ev) {
@@ -650,6 +648,12 @@
 
         document.getElementById('archiveForm').addEventListener('submit', function(event) {
             event.preventDefault();
+            performArchiveSubmit();
+        });
+
+        // Asıl arşivleme isteği — hem tek-tıkla sebep seçiminden hem de "Diğer" submit
+        // butonundan doğrudan çağrılır.
+        function performArchiveSubmit() {
             var order_number = document.getElementById('archiveOrderNumber').value;
             var archive_reason = document.getElementById('archiveReason').value;
             var other_reason = (document.getElementById('otherReasonText')?.value || '').trim();
@@ -686,7 +690,7 @@
              .fail(function() {
                 window.GS ? GS.showToast('Sunucu ile iletişim kurulamadı.', 'danger') : alert('Sunucu ile iletişim kurulamadı.');
              });
-        });
+        }
         function updateRemainingTime() {
             const remainingTimeElements = document.querySelectorAll('.remaining-time');
             const now = new Date();

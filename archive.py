@@ -791,12 +791,20 @@ def recover_from_archive():
             return jsonify({'success': False, 'message': f'Shopify arşivden çıkarma hatası: {str(e)}'})
 
     try:
-        # Trendyol siparişini orders_created tablosuna geri yükle
-        from models import OrderCreated
-        
-        restored_order = OrderCreated()
+        # Hedef statü: kullanıcı arşivden çıkarırken "Hazırlanıyor" mı "İşleme Alınmış"
+        # mı seçti? "İşleme Alınmış" seçimi frontend'de doğrudan /process_order'a gider
+        # (Trendyol Picking update + OrderPicking). Burada Hazırlanıyor (varsayılan) ve
+        # geriye-dönük Created destekleniyor.
+        from models import OrderCreated, OrderHazirlaniyor
+        target_status = (request.form.get('target_status') or 'hazirlaniyor').strip().lower()
+        if target_status == 'created':
+            _model, _status_value, _restore_label = OrderCreated, 'Created', 'Created'
+        else:
+            _model, _status_value, _restore_label = OrderHazirlaniyor, 'Hazırlanıyor', 'Hazırlanıyor'
+
+        restored_order = _model()
         restored_order.order_number = archived_order.order_number
-        restored_order.status = 'Created'
+        restored_order.status = _status_value
         restored_order.order_date = archived_order.order_date
         restored_order.details = archived_order.details
         restored_order.shipment_package_id = archived_order.shipment_package_id
@@ -849,8 +857,12 @@ def recover_from_archive():
             restored_order.origin_shipment_date = archived_order.origin_shipment_date
         
         restored_order.source = 'TRENDYOL'
-        
-        print(f"Trendyol siparişi {order_number} orders_created tablosuna geri yükleniyor.")
+
+        # Hazırlanıyor tablosunda terfi zamanı kolonu var — overdue/sayaç mantığı için doldur.
+        if _model is OrderHazirlaniyor and hasattr(restored_order, 'hazirlaniyor_since'):
+            restored_order.hazirlaniyor_since = datetime.utcnow()
+
+        print(f"Trendyol siparişi {order_number} '{_restore_label}' tablosuna geri yükleniyor.")
         
         # Bildirim için gereken değerleri commit'ten ÖNCE al — commit sonrası
         # archived_order silinmiş + expire olduğu için alanlarına erişmek
@@ -865,7 +877,7 @@ def recover_from_archive():
         db.session.delete(archived_order)
         db.session.commit()
 
-        try: log_user_action("RESTORE", {"işlem_açıklaması": f"Sipariş arşivden geri yüklendi — {order_number} (Arşiv → Created)", "sayfa": "Arşiv", "sipariş_no": order_number})
+        try: log_user_action("RESTORE", {"işlem_açıklaması": f"Sipariş arşivden geri yüklendi — {order_number} (Arşiv → {_restore_label})", "sayfa": "Arşiv", "sipariş_no": order_number})
         except: pass
 
         # Bildirim/e-posta hatası restore'un başarısını ETKİLEMEMELİ (commit zaten yapıldı).

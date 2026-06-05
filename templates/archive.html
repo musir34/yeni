@@ -395,6 +395,7 @@ html.gs-dark .pagination .page-link { background: #1e1e1e; color: #ddd; border-c
     <div class="gs-confirm-msg" id="gsConfirmMsg"></div>
     <div class="gs-confirm-actions">
       <button type="button" class="btn btn-light" id="gsConfirmCancel">Vazgeç</button>
+      <span id="gsConfirmChoices"></span>
       <button type="button" class="btn btn-primary" id="gsConfirmOk">Evet</button>
     </div>
   </div>
@@ -946,6 +947,61 @@ setTimeout(function() { okBtn.focus(); }, 50);
 });
 }
 
+// Çok seçenekli onay penceresi — gsConfirm ile aynı görünüm, birden çok buton.
+// choices: [{value, label, danger?, primary?}]. Seçilen value ile resolve eder; iptalde null.
+function gsChoose(message, choices, opts) {
+opts = opts || {};
+return new Promise(function(resolve) {
+const overlay = document.getElementById('gsConfirmOverlay');
+const box = document.getElementById('gsConfirmBox');
+const msgEl = document.getElementById('gsConfirmMsg');
+const titleEl = document.getElementById('gsConfirmTitle');
+const okBtn = document.getElementById('gsConfirmOk');
+const cancelBtn = document.getElementById('gsConfirmCancel');
+const choicesEl = document.getElementById('gsConfirmChoices');
+const iconEl = overlay ? overlay.querySelector('.gs-confirm-icon i') : null;
+if (!overlay || !choicesEl) { // güvenli geri dönüş
+const ok = window.confirm(message + '\n\nTamam = ' + (choices[0] && choices[0].label));
+resolve(ok && choices[0] ? choices[0].value : null);
+return;
+}
+msgEl.textContent = message || '';
+titleEl.textContent = opts.title || 'Bir seçim yapın';
+cancelBtn.textContent = opts.cancelText || 'Vazgeç';
+if (iconEl) iconEl.className = 'fas fa-question-circle';
+okBtn.style.display = 'none'; // tek "Evet" butonu gizli; yerine seçenekler
+choicesEl.innerHTML = '';
+const made = [];
+choices.forEach(function(c) {
+const b = document.createElement('button');
+b.type = 'button';
+b.className = 'btn ' + (c.danger ? 'btn-danger' : (c.primary ? 'btn-primary' : 'btn-outline-primary'));
+b.style.marginLeft = '8px';
+b.textContent = c.label;
+b.addEventListener('click', function() { cleanup(c.value); });
+choicesEl.appendChild(b);
+made.push(b);
+});
+overlay.classList.add('show');
+function cleanup(result) {
+overlay.classList.remove('show');
+okBtn.style.display = ''; // diğer çağrılar için geri aç
+choicesEl.innerHTML = '';
+cancelBtn.removeEventListener('click', onCancel);
+overlay.removeEventListener('mousedown', onBackdrop);
+document.removeEventListener('keydown', onKey);
+resolve(result);
+}
+function onCancel() { cleanup(null); }
+function onBackdrop(e) { if (e.target === overlay) cleanup(null); }
+function onKey(e) { if (e.key === 'Escape') cleanup(null); }
+cancelBtn.addEventListener('click', onCancel);
+overlay.addEventListener('mousedown', onBackdrop);
+document.addEventListener('keydown', onKey);
+setTimeout(function() { if (made[0]) made[0].focus(); }, 50);
+});
+}
+
 function showMessage(message, success=true) {
 const box = document.getElementById('messageBox');
 if (!box) {
@@ -1083,15 +1139,29 @@ showMessage("Sipariş iptal edildi!", true);
 }
 
 function restoreOrder(orderNumber) {
-gsConfirm("Siparişi arşivden çıkarmak istediğinize emin misiniz?", {okText: 'Arşivden Çıkar'}).then(function(ok) {
-if (!ok) return;
-$.post("/restore_order_from_archive", { order_number: orderNumber }, function(response) {
+gsChoose(
+"Sipariş hangi statüye çıkarılsın?",
+[
+{ value: 'hazirlaniyor', label: 'Hazırlanıyor', primary: true },
+{ value: 'picking', label: 'İşleme Alınmış' }
+],
+{ title: 'Arşivden Çıkar' }
+).then(function(choice) {
+if (!choice) return;
+function onDone(response) {
 if (response.success) {
 var card = $('[data-order-number="' + orderNumber + '"]');
 card.fadeOut(400, function() { $(this).remove(); });
 showMessage("Sipariş arşivden çıkarıldı!", true);
 } else { showMessage(response.message || "Sipariş arşivden çıkarılırken bir hata oluştu", false); }
-}).fail(function() { showMessage("Sunucu ile iletişimde hata oluştu.", false); });
+}
+function onFail() { showMessage("Sunucu ile iletişimde hata oluştu.", false); }
+if (choice === 'picking') {
+// İşleme Alınmış = Trendyol Picking update + OrderPicking (mevcut, denenmiş akış)
+$.post("/process_order", { order_number: orderNumber }, onDone).fail(onFail);
+} else {
+$.post("/restore_order_from_archive", { order_number: orderNumber, target_status: 'hazirlaniyor' }, onDone).fail(onFail);
+}
 });
 }
 
