@@ -985,7 +985,7 @@ showMessage("Sipariş iptal edildi!", true);
 
 function restoreOrder(orderNumber) {
 if (confirm("Siparişi arşivden çıkarmak istediğinize emin misiniz?")) {
-$.post("/restore_from_archive", { order_number: orderNumber }, function(response) {
+$.post("/restore_order_from_archive", { order_number: orderNumber }, function(response) {
 if (response.success) {
 var card = $('[data-order-number="' + orderNumber + '"]');
 card.fadeOut(400, function() { $(this).remove(); });

@@ -755,7 +755,7 @@ def archive_an_order():
 #############################
 # 7) Arşivden Geri Yükleme
 #############################
-@archive_bp.route('/restore_from_archive', methods=['POST'])
+@archive_bp.route('/restore_order_from_archive', methods=['POST'])
 def recover_from_archive():
     """
     Arşivdeki siparişi orders_created tablosuna geri taşır.
