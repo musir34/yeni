@@ -452,15 +452,15 @@
             <span class="text-muted small">toplam geciken</span>
           </div>
           <div class="d-flex flex-column" style="gap:6px;">
-            <a href="{{ url_for('order_list_service.order_list_new') }}" class="d-flex align-items-center text-decoration-none" style="gap:8px;">
+            <a href="{{ url_for('order_list_service.order_list_new', sort='deadline_asc') }}" class="d-flex align-items-center text-decoration-none" style="gap:8px;">
               <span class="badge bg-warning text-dark" style="font-size:.72rem;">Yeni</span>
               <span class="num" style="font-size:1.1rem;color:#dc3545;font-weight:700;"><span id="geciken-created">{{ stats.geciken_created or 0 }}</span> Adet</span>
             </a>
-            <a href="{{ url_for('order_list_service.order_list_hazirlaniyor') }}" class="d-flex align-items-center text-decoration-none" style="gap:8px;">
+            <a href="{{ url_for('order_list_service.order_list_hazirlaniyor', sort='deadline_asc') }}" class="d-flex align-items-center text-decoration-none" style="gap:8px;">
               <span class="badge bg-info text-white" style="font-size:.72rem;">Hazırlanıyor</span>
               <span class="num" style="font-size:1.1rem;color:#dc3545;font-weight:700;"><span id="geciken-hazirlaniyor">{{ stats.geciken_hazirlaniyor or 0 }}</span> Adet</span>
             </a>
-            <a href="{{ url_for('order_list_service.order_list_processed') }}" class="d-flex align-items-center text-decoration-none" style="gap:8px;">
+            <a href="{{ url_for('order_list_service.order_list_processed', sort='deadline_asc') }}" class="d-flex align-items-center text-decoration-none" style="gap:8px;">
               <span class="badge bg-success" style="font-size:.72rem;">İşleme Alınanlar</span>
               <span class="num" style="font-size:1.1rem;color:#dc3545;font-weight:700;"><span id="geciken-picking">{{ stats.geciken_picking or 0 }}</span> Adet</span>
             </a>

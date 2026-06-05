@@ -269,7 +269,7 @@ def _get_overdue_orders():
             raw_overdue.append(order)
 
     raw_overdue.sort(key=lambda o: (
-        o.agreed_delivery_date or o.estimated_delivery_end,
+        o.agreed_delivery_date or o.estimated_delivery_end or datetime.max,
         o.order_number or ''
     ))
     overdue = _merge_order_rows(raw_overdue, lambda r: getattr(r, '_display_status', ''))

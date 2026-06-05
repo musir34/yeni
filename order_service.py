@@ -65,6 +65,7 @@ STATUS_NORMALIZE = {
     'Invoiced': 'Picking',     # ← normalize
     'ReadyToShip': 'Created',  # ← normalize (kritik)
     'Cancelled': 'Cancelled',
+    'UnSupplied': 'Cancelled',  # ← satıcı tedarik edemedi = iptal (yoksa Picking'de takılı kalır)
     'Shipped': 'Shipped',
     'Delivered': 'Delivered',
 }
@@ -104,7 +105,7 @@ async def fetch_trendyol_orders_async():
         }
 
         # ← ReadyToShip eklendi
-        statuses_to_fetch = "Created,Picking,Invoiced,ReadyToShip,Shipped,Delivered,Cancelled"
+        statuses_to_fetch = "Created,Picking,Invoiced,ReadyToShip,Shipped,Delivered,Cancelled,UnSupplied"
         params = {
             "status": statuses_to_fetch,
             "page": 0,
@@ -202,6 +203,85 @@ async def fetch_orders_page(session, url, headers, params, semaphore):
             return []
 
 
+############################
+# 1b) Mutabakat (reconciliation) — takılı kalan eski siparişleri orderNumber ile sorgula
+############################
+async def _fetch_order_by_number(session, headers, order_number, semaphore):
+    """Tek bir siparişi orderNumber ile çeker. Bu sorgu Trendyol'un varsayılan
+    ~2 haftalık tarih penceresinden ETKİLENMEZ — eski siparişin güncel statüsünü
+    de döndürür. Sipariş listesi için içerik (content) listesini döner."""
+    url = f"{BASE_URL}suppliers/{SUPPLIER_ID}/orders"
+    params = {"orderNumber": order_number}
+    async with semaphore:
+        try:
+            async with session.get(url, headers=headers, params=params, timeout=60) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return data.get('content', []) or []
+                logger.warning(f"[RECONCILE] {order_number} sorgusu başarısız: HTTP {response.status}")
+                return []
+        except Exception as e:
+            logger.warning(f"[RECONCILE] {order_number} sorgu hatası: {e}")
+            return []
+
+
+async def reconcile_active_orders_async(max_orders=300, min_age_days=12):
+    """Aktif tablolarda (Yeni/Hazırlanıyor/İşleme Alındı) takılı kalan ESKİ Trendyol
+    siparişlerini orderNumber ile tek tek Trendyol'a sorup gerçek statüsüne göre
+    senkronlar.
+
+    GEREKÇE: Normal sync (fetch_trendyol_orders_async) tarihsiz çalışır ve Trendyol
+    yalnızca son ~2 haftayı döndürür. Bir sipariş aktif statüdeyken 2 haftadan SONRA
+    iptal/UnSupplied/teslim olursa, normal sync onu bir daha görmez → ilgili tabloda
+    sonsuza dek takılı kalır (ör. anasayfada hayalet "geciken" sipariş). orderNumber
+    sorgusu tarih penceresinden bağımsız olduğu için bu açığı kapatır.
+    """
+    from datetime import timedelta
+    try:
+        cutoff = datetime.utcnow() - timedelta(days=min_age_days)
+        numbers = []
+        seen = set()
+        for model in (OrderCreated, OrderHazirlaniyor, OrderPicking):
+            rows = (
+                model.query
+                .with_entities(model.order_number)
+                .filter(model.source == 'TRENDYOL', model.order_date < cutoff)
+                .all()
+            )
+            for (on,) in rows:
+                on = str(on) if on else None
+                if on and on not in seen:
+                    seen.add(on)
+                    numbers.append(on)
+        numbers = numbers[:max_orders]
+        if not numbers:
+            logger.info("[RECONCILE] Sorgulanacak eski aktif sipariş yok.")
+            return
+
+        logger.info(f"[RECONCILE] {len(numbers)} eski aktif sipariş Trendyol'da gerçek statüsü için sorgulanıyor...")
+        auth_str = f"{API_KEY}:{API_SECRET}"
+        b64_auth_str = base64.b64encode(auth_str.encode()).decode('utf-8')
+        headers = {"Authorization": f"Basic {b64_auth_str}", "Content-Type": "application/json"}
+
+        collected = []
+        sem = asyncio.Semaphore(5)
+        async with aiohttp.ClientSession() as session:
+            tasks = [_fetch_order_by_number(session, headers, on, sem) for on in numbers]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+        for res in results:
+            if isinstance(res, list):
+                collected.extend(res)
+
+        logger.info(f"[RECONCILE] {len(collected)} sipariş verisi çekildi, process_all_orders'a veriliyor.")
+        if collected:
+            with current_app.app_context():
+                # process_all_orders mevcut statü→tablo taşıma + audit + stok mantığını
+                # aynen kullanır; UnSupplied artık Cancelled'a normalize edilir.
+                process_all_orders(collected)
+    except Exception as e:
+        logger.error(f"Hata: reconcile_active_orders_async - {e}", exc_info=True)
+
+
 
 ############################
 # 2) Gelen Siparişleri İşleme (Senkron ve Arka Plan Ayrımı)
@@ -295,6 +375,7 @@ def _process_sync_orders_bulk(sync_orders):
         # Stok takibi
         new_order_dicts = []           # Yeni oluşan siparişler (stok tahsisi + raf ataması için)
         cancelled_from_created = []    # OrderCreated → OrderCancelled geçişlerinin details
+        cancelled_from_picking = []    # OrderPicking → OrderCancelled: fiziksel raf stoğu iade edilecek
 
         for order_data in sync_orders:
             order_number = str(order_data.get('orderNumber') or order_data.get('id'))
@@ -345,10 +426,16 @@ def _process_sync_orders_bulk(sync_orders):
                     except Exception:
                         pass
 
-                    # OrderCreated → OrderCancelled: Stok iade edilecek
+                    # OrderCreated → OrderCancelled: stok düşülmemişti (sadece rezerv), iade gerekmez.
                     if current_table == 'orders_created' and target_model == OrderCancelled:
                         if current_record.details:
                             cancelled_from_created.append(
+                                (current_record.details, getattr(current_record, 'atanan_raf', None))
+                            )
+                    # OrderPicking → OrderCancelled: paketlemede fiziksel raf stoğu DÜŞÜLMÜŞTÜ → iade gerekli.
+                    if current_table == 'orders_picking' and target_model == OrderCancelled:
+                        if current_record.details:
+                            cancelled_from_picking.append(
                                 (current_record.details, getattr(current_record, 'atanan_raf', None))
                             )
 
@@ -539,6 +626,23 @@ def _process_sync_orders_bulk(sync_orders):
                 except Exception:
                     pass
 
+        # OrderPicking → OrderCancelled: paketlemede düşülen fiziksel raf stoğunu geri yükle.
+        # (Aynı transaction içinde commit=False ile; aşağıdaki commit kapsar.)
+        if cancelled_from_picking:
+            from stock_management import restore_stock_to_shelf
+            import json as _json
+            logger.info(f"[STOK] {len(cancelled_from_picking)} Picking→İptal siparişi için stok iadesi yapılıyor.")
+            for details_json, shelf_code in cancelled_from_picking:
+                try:
+                    det = _json.loads(details_json) if isinstance(details_json, str) else details_json
+                    for it in (det if isinstance(det, list) else []):
+                        bc = it.get('barcode')
+                        qty = int(it.get('quantity') or 1)
+                        if bc and qty > 0:
+                            restore_stock_to_shelf(bc, qty, shelf_code=shelf_code, commit=False)
+                except Exception:
+                    logger.exception("[STOK] Picking→İptal stok iadesi hatası (yutuldu)")
+
         db.session.commit()
         logger.info("Senkron sipariş işlemleri başarıyla tamamlandı.")
 
@@ -627,7 +731,10 @@ def process_bg_orders_bulk(bg_orders, app):
             order_numbers = {
                 str(od.get('orderNumber') or od.get('id')) for od in bg_orders if od.get('orderNumber') or od.get('id')
             }
-            relevant_tables = [OrderPicking, OrderShipped, OrderDelivered]
+            # OrderCreated + OrderHazirlaniyor DAHİL: sipariş Created/Hazırlanıyor'dayken
+            # Trendyol doğrudan Shipped/Delivered derse, bu tablolar listede yoksa eski
+            # satır silinmez ve sipariş ÇİFT kayıt olur (hem Yeni/Hazırlanıyor hem Kargoda).
+            relevant_tables = [OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered]
 
             existing_orders = {}
             for table_model in relevant_tables:
@@ -851,7 +958,6 @@ def combine_line_items(order_data, status):
         'customer_name': order_data.get('shipmentAddress', {}).get('firstName', ''),
         'customer_surname': order_data.get('shipmentAddress', {}).get('lastName', ''),
         'customer_address': order_data.get('shipmentAddress', {}).get('fullAddress', ''),
-        'cargo_tracking_number': order_data.get('cargoTrackingNumber', ''),
         'cargo_tracking_number': order_data.get('cargoTrackingNumber', ''),
         'cargo_provider_name': order_data.get('cargoProviderName', ''),
         'cargo_tracking_link': order_data.get('cargoTrackingLink', ''),

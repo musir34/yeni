@@ -188,10 +188,23 @@ def change_order_status():
     archived_order = Archive.query.filter_by(order_number=order_number).first()
     if archived_order:
         archived_order.status = new_status
+        # Bildirim için gereken değerleri commit'ten ÖNCE al (tutarlılık + güvenlik).
+        _notify_customer = f"{archived_order.customer_name or '-'} {archived_order.customer_surname or '-'}"
+        _notify_source = getattr(archived_order, 'source', 'trendyol')
+        _notify_products = _parse_products(archived_order.details)
+        _notify_base_url = request.host_url.rstrip('/')
         try:
             db.session.commit()
-            try: log_user_action("UPDATE", {"işlem_açıklaması": f"Sipariş durumu güncellendi — {order_number} → {new_status}", "sayfa": "Sipariş Listesi", "sipariş_no": order_number, "yeni_durum": new_status})
-            except: pass
+        except Exception as e:
+            db.session.rollback()
+            print(f"Arşiv statü güncelleme DB hatası: {e}")
+            return jsonify({'success': False, 'message': 'Veritabanı hatası oluştu.'})
+
+        try: log_user_action("UPDATE", {"işlem_açıklaması": f"Sipariş durumu güncellendi — {order_number} → {new_status}", "sayfa": "Sipariş Listesi", "sipariş_no": order_number, "yeni_durum": new_status})
+        except: pass
+
+        # Bildirim/e-posta hatası güncellemenin başarısını ETKİLEMEMELİ (commit zaten yapıldı).
+        try:
             event = STATUS_EVENT_MAP.get(new_status)
             if event:
                 notify(event,
@@ -199,18 +212,17 @@ def change_order_status():
                     body=build_email_html(
                         event=event,
                         order_number=order_number,
-                        customer_name=f"{archived_order.customer_name or '-'} {archived_order.customer_surname or '-'}",
-                        source=getattr(archived_order, 'source', 'trendyol'),
-                        products=_parse_products(archived_order.details),
+                        customer_name=_notify_customer,
+                        source=_notify_source,
+                        products=_notify_products,
                         new_status=new_status,
-                        base_url=request.host_url.rstrip('/')
+                        base_url=_notify_base_url
                     )
                 )
-            return jsonify({'success': True, 'message': 'Durum güncellendi.'})
-        except Exception as e:
-            db.session.rollback()
-            print(f"Arşiv statü güncelleme DB hatası: {e}")
-            return jsonify({'success': False, 'message': 'Veritabanı hatası oluştu.'})
+        except Exception as notify_err:
+            logger.warning(f"Statü güncelleme bildirimi gönderilemedi (güncelleme yine de başarılı): {notify_err}")
+
+        return jsonify({'success': True, 'message': 'Durum güncellendi.'})
 
 
     # 2) Yoksa çok tablodan birinde mi?
@@ -396,22 +408,46 @@ def order_cancellation():
         print("Sipariş hem ana listede hem de arşivde bulunamadı.")
         return jsonify({'success': False, 'message': 'Sipariş bulunamadı.'})
 
-    # Basitçe 'status' kolonu set ediyorsanız
-    order_obj.status = 'İptal Edildi'
+    # Siparişi OrderCancelled tablosuna TAŞI — sadece status string'ini değiştirmek yetmez:
+    # aksi halde sipariş Created/Hazırlanıyor/Picking tablosunda kalır ve teslim tarihi
+    # geçmişse "geciken" olarak sayılmaya devam eder (status kolonu overdue sorgusunda
+    # kontrol edilmiyor).
+    from models import OrderCancelled
+    from datetime import datetime as _dt
+    import json as _json
+    _shared = [c.name for c in OrderCancelled.__table__.columns
+               if c.name not in ('id', 'cancellation_date', 'cancellation_reason')]
+    _src_cols = {c.name for c in table_cls.__table__.columns}
     try:
+        data = {c: getattr(order_obj, c) for c in _shared if c in _src_cols}
+        data['status'] = 'İptal Edildi'
+        data['cancellation_date'] = _dt.utcnow()
+        data['cancellation_reason'] = 'Manuel iptal'
+        new_cancelled = OrderCancelled(**data)
+
+        # İşleme Alındı (Picking) aşamasındaysa fiziksel raf stoğu paketlemede DÜŞÜLMÜŞTÜ → iade et.
+        if table_cls.__tablename__ == 'orders_picking' and getattr(order_obj, 'details', None):
+            try:
+                from stock_management import restore_stock_to_shelf
+                det = _json.loads(order_obj.details) if isinstance(order_obj.details, str) else order_obj.details
+                _shelf = getattr(order_obj, 'atanan_raf', None)
+                for it in (det if isinstance(det, list) else []):
+                    bc = it.get('barcode'); qty = int(it.get('quantity') or 1)
+                    if bc and qty > 0:
+                        restore_stock_to_shelf(bc, qty, shelf_code=_shelf, commit=False)
+            except Exception:
+                logger.exception("[STOK] Manuel iptal (Picking) stok iadesi hatası (yutuldu)")
+
+        db.session.add(new_cancelled)
+        db.session.delete(order_obj)
         db.session.commit()
-        try: log_user_action("DELETE", {"işlem_açıklaması": f"Sipariş iptal edildi — {order_number} ({table_cls.__tablename__})", "sayfa": "Sipariş Listesi", "sipariş_no": order_number})
+        try: log_user_action("DELETE", {"işlem_açıklaması": f"Sipariş iptal edildi — {order_number} ({table_cls.__tablename__} → İptal)", "sayfa": "Sipariş Listesi", "sipariş_no": order_number})
         except: pass
-        # İptal edilen siparişi OrderCancelled tablosuna taşımak isterseniz buraya ekleyin
-        # from models import OrderCancelled
-        # new_cancelled = OrderCancelled(...)
-        # db.session.add(new_cancelled)
-        # db.session.delete(order_obj)
-        # db.session.commit() # Tekrar commit etmeniz gerekebilir
         return jsonify({'success': True, 'message': 'Sipariş iptal edildi.'})
     except Exception as e:
         db.session.rollback()
         print(f"Ana tablo iptal DB hatası: {e}")
+        traceback.print_exc()
         return jsonify({'success': False, 'message': 'Veritabanı hatası oluştu.'})
 
 
@@ -552,7 +588,7 @@ def archive_an_order():
         try:
             new_archive = Archive(
                 order_number=order_number,
-                status="Archived",
+                status=getattr(fake_order, 'status', None) or "Archived",
                 order_date=getattr(fake_order, 'order_date', None) or datetime.now(),
                 details=getattr(fake_order, 'details', None),
                 shipment_package_id=None,
@@ -655,6 +691,15 @@ def archive_an_order():
             source='trendyol'
         )
 
+        # Audit/bildirim için gereken değerleri commit'ten ÖNCE al — commit sonrası
+        # order_obj silinmiş + expire olduğu için alanlarına erişmek
+        # ObjectDeletedError fırlatır (getattr default'u bunu yakalamaz).
+        _pkg = getattr(order_obj, 'package_number', None)
+        _barcode = getattr(order_obj, 'product_barcode', None)
+        _notify_customer = f"{getattr(order_obj, 'customer_name', '-')} {getattr(order_obj, 'customer_surname', '-')}"
+        _notify_products = _parse_products(order_obj.details)
+        _notify_base_url = request.host_url.rstrip('/')
+
         try:
             db.session.add(new_archive)
             db.session.delete(order_obj)
@@ -669,8 +714,8 @@ def archive_an_order():
                 _audit_log(
                     "order_archived",
                     order_number=order_number,
-                    package_number=getattr(order_obj, 'package_number', None),
-                    barcode=getattr(order_obj, 'product_barcode', None),
+                    package_number=_pkg,
+                    barcode=_barcode,
                     status_from=table_cls.__tablename__.replace('orders_', ''),
                     status_to="Archived",
                     source="USER",
@@ -680,19 +725,25 @@ def archive_an_order():
                 )
             except Exception:
                 pass
-            notify(
-                'archive_added',
-                subject=f"Arşive Eklendi: {order_number}",
-                body=build_email_html(
-                    event='archive_added',
-                    order_number=order_number,
-                    customer_name=f"{getattr(order_obj, 'customer_name', '-')} {getattr(order_obj, 'customer_surname', '-')}",
-                    source=getattr(new_archive, 'source', 'trendyol'),
-                    products=_parse_products(order_obj.details),
-                    reason=archive_reason,
-                    base_url=request.host_url.rstrip('/')
+
+            # Bildirim/e-posta hatası arşivlemenin başarısını ETKİLEMEMELİ (commit zaten yapıldı).
+            try:
+                notify(
+                    'archive_added',
+                    subject=f"Arşive Eklendi: {order_number}",
+                    body=build_email_html(
+                        event='archive_added',
+                        order_number=order_number,
+                        customer_name=_notify_customer,
+                        source='trendyol',
+                        products=_notify_products,
+                        reason=archive_reason,
+                        base_url=_notify_base_url
+                    )
                 )
-            )
+            except Exception as notify_err:
+                logger.warning(f"Arşive ekleme bildirimi gönderilemedi (arşivleme yine de başarılı): {notify_err}")
+
             return jsonify({'success': True, 'message': 'Sipariş arşive eklendi.'})
         except Exception as e:
             db.session.rollback()
@@ -715,6 +766,29 @@ def recover_from_archive():
     archived_order = Archive.query.filter_by(order_number=order_number).first()
     if not archived_order:
         return jsonify({'success': False, 'message': 'Sipariş arşivde bulunamadı.'})
+
+    # Shopify siparişleri DB pipeline tablolarında TUTULMAZ (runtime'da API'den çekilir,
+    # statü Shopify'da tag ile yönetilir). Bu yüzden "arşivden çıkarma" = Shopify'da
+    # "Arsivlendi" tag'ini kaldır + Archive kaydını sil. OrderCreated'a YAZMA — aksi
+    # halde sipariş hayalet bir Trendyol kaydına dönüşür (eski bug).
+    if str(order_number or '').startswith('SH-'):
+        try:
+            from shopify_site.shopify_service import shopify_service
+            shopify_id = order_number.replace('SH-', '')
+            try:
+                shopify_service.remove_order_tags(shopify_id, ['Arsivlendi'])
+            except Exception as tag_err:
+                logger.warning(f"Shopify 'Arsivlendi' tag kaldırılamadı (restore yine de sürüyor): {tag_err}")
+            db.session.delete(archived_order)
+            db.session.commit()
+            try: log_user_action("RESTORE", {"işlem_açıklaması": f"Shopify siparişi arşivden çıkarıldı — {order_number} (tag temizlendi, Beklemede'ye döndü)", "sayfa": "Arşiv", "sipariş_no": order_number})
+            except: pass
+            return jsonify({'success': True, 'message': 'Shopify siparişi arşivden çıkarıldı.'})
+        except Exception as e:
+            db.session.rollback()
+            print(f"Shopify arşivden çıkarma hatası: {e}")
+            traceback.print_exc()
+            return jsonify({'success': False, 'message': f'Shopify arşivden çıkarma hatası: {str(e)}'})
 
     try:
         # Trendyol siparişini orders_created tablosuna geri yükle
@@ -778,23 +852,38 @@ def recover_from_archive():
         
         print(f"Trendyol siparişi {order_number} orders_created tablosuna geri yükleniyor.")
         
+        # Bildirim için gereken değerleri commit'ten ÖNCE al — commit sonrası
+        # archived_order silinmiş + expire olduğu için alanlarına erişmek
+        # ObjectDeletedError fırlatır (commit başarılı olsa bile restore'u "hata"
+        # gibi gösteren asıl bug buydu).
+        _notify_customer = f"{archived_order.customer_name or '-'} {archived_order.customer_surname or '-'}"
+        _notify_source = getattr(archived_order, 'source', 'trendyol')
+        _notify_products = _parse_products(archived_order.details)
+        _notify_base_url = request.host_url.rstrip('/')
+
         db.session.add(restored_order)
         db.session.delete(archived_order)
         db.session.commit()
-        
+
         try: log_user_action("RESTORE", {"işlem_açıklaması": f"Sipariş arşivden geri yüklendi — {order_number} (Arşiv → Created)", "sayfa": "Arşiv", "sipariş_no": order_number})
         except: pass
-        notify('archive_restored',
-            subject=f"Arşivden Çıkarıldı: {order_number}",
-            body=build_email_html(
-                event='archive_restored',
-                order_number=order_number,
-                customer_name=f"{archived_order.customer_name or '-'} {archived_order.customer_surname or '-'}",
-                source=getattr(archived_order, 'source', 'trendyol'),
-                products=_parse_products(archived_order.details),
-                base_url=request.host_url.rstrip('/')
+
+        # Bildirim/e-posta hatası restore'un başarısını ETKİLEMEMELİ (commit zaten yapıldı).
+        try:
+            notify('archive_restored',
+                subject=f"Arşivden Çıkarıldı: {order_number}",
+                body=build_email_html(
+                    event='archive_restored',
+                    order_number=order_number,
+                    customer_name=_notify_customer,
+                    source=_notify_source,
+                    products=_notify_products,
+                    base_url=_notify_base_url
+                )
             )
-        )
+        except Exception as notify_err:
+            logger.warning(f"Arşivden çıkarma bildirimi gönderilemedi (restore yine de başarılı): {notify_err}")
+
         return jsonify({'success': True, 'message': 'Sipariş başarıyla geri yüklendi.'})
         
     except Exception as e:

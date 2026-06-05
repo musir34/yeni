@@ -325,6 +325,16 @@ def pull_orders_job():
             logger.error(f"pull_orders_job hata: {e}", exc_info=True)
 
 
+def reconcile_orders_job():
+    """Aktif tablolarda takılı kalan eski siparişleri Trendyol'da gerçek statüsüne göre senkronlar."""
+    with app.app_context():
+        try:
+            from order_service import reconcile_active_orders_async
+            asyncio.run(reconcile_active_orders_async())
+        except Exception as e:
+            logger.error(f"reconcile_orders_job hata: {e}", exc_info=True)
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Forecast cache wrapper'ları (app context ile)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -425,6 +435,18 @@ def schedule_jobs():
         id="pull_returns_daily",
         hour=23,
         minute=50
+    )
+
+    # >>> Sipariş mutabakatı: her 3 saatte bir
+    # Normal sync tarihsiz ~2 hafta baktığı için, 2 haftadan sonra iptal/UnSupplied/
+    # teslim olan eski aktif siparişler tabloda takılı kalır. Bu job onları orderNumber
+    # ile (tarih penceresinden bağımsız) sorgulayıp gerçek statüsüne taşır.
+    _add_job_safe(
+        reconcile_orders_job,
+        trigger='interval',
+        id="reconcile_orders",
+        hours=3,
+        next_run_time=now + timedelta(minutes=5)
     )
 
     # >>> Forecast cache worker: her 10 saniye
