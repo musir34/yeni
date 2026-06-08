@@ -1655,3 +1655,165 @@ def global_search():
     total = sum(len(v) for v in results.values())
 
     return jsonify(success=True, query=query, total_results=total, results=results)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MODEL MALİYET API'si  (indirim programı için)
+#  ----------------------------------------------------------------------------
+#  Maliyet kaynağı: tedarikçi sayfasındaki model maliyetleri.
+#  Hesaplama mantığı siparis_fisi._usd_maliyet_map ile birebir aynı:
+#    ModelDirekMaliyet (>0) öncelikli, yoksa ModelMaliyet kalem toplamı (USD).
+#  model_id == Product.product_main_id (model kodu).
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _maliyet_payload(model_ids, rate):
+    """Verilen model kodları için {model_id: {cost_usd, cost_try, has_cost}} döndür.
+
+    Tek SQL turunda toplu hesaplama yapar (_usd_maliyet_map zaten in_ kullanır).
+    rate: USD/TL kuru (None ise cost_try null bırakılır).
+    """
+    # Lazy import — döngüsel import riskini önlemek için fonksiyon içinde.
+    from siparis_fisi import _usd_maliyet_map
+
+    usd_map = _usd_maliyet_map(model_ids)
+    out = {}
+    for mid in model_ids:
+        if not mid:
+            continue
+        usd = float(usd_map.get(mid, 0.0) or 0.0)
+        out[mid] = {
+            'model': mid,
+            'cost_usd': round(usd, 2),
+            'cost_try': round(usd * rate, 2) if rate else None,
+            'has_cost': usd > 0,
+        }
+    return out
+
+
+def _maliyet_rate(want_try):
+    """İstenmişse güncel USD/TL kurunu getir (10 dk cache'li)."""
+    if not want_try:
+        return None
+    try:
+        from profit import _fetch_usd_try
+        return _fetch_usd_try()
+    except Exception as e:
+        logger.warning(f"Maliyet API kur çekme hatası: {e}")
+        return None
+
+
+def _want_try():
+    """?with_try=0 ile TL dönüşümü kapatılabilir (varsayılan açık)."""
+    return request.args.get('with_try', '1').lower() not in ('0', 'false', 'no')
+
+
+@agent_api.route('/model-cost/<path:model_id>', methods=['GET'])
+@require_agent_key
+def model_cost_single(model_id):
+    """Tek bir model kodunun güncel maliyetini döndürür.
+
+    GET /agent/api/v1/model-cost/<model_kodu>[?with_try=0]
+    """
+    model_id = (model_id or '').strip()
+    if not model_id:
+        return jsonify(success=False, error='model_id (model kodu) gerekli.'), 400
+    try:
+        rate = _maliyet_rate(_want_try())
+        payload = _maliyet_payload([model_id], rate)
+        data = payload.get(model_id, {
+            'model': model_id, 'cost_usd': 0.0,
+            'cost_try': None, 'has_cost': False,
+        })
+        return jsonify(success=True, exchange_rate=rate, **data)
+    except Exception as e:
+        logger.error(f"model_cost_single hatası ({model_id}): {e}", exc_info=True)
+        return jsonify(success=False, error=str(e)), 500
+
+
+@agent_api.route('/model-costs', methods=['POST'])
+@require_agent_key
+def model_cost_batch():
+    """Birden çok model kodunun maliyetini tek istekte döndürür.
+
+    POST /agent/api/v1/model-costs[?with_try=0]
+    Body: {"models": ["gll012", "gll088", ...]}
+    """
+    body = request.get_json(silent=True) or {}
+    models = body.get('models') or body.get('model_ids') or []
+    if not isinstance(models, list) or not models:
+        return jsonify(success=False, error='Body içinde "models" listesi gerekli.'), 400
+
+    # Tekilleştir + boşları temizle
+    clean = []
+    seen = set()
+    for m in models:
+        m = str(m).strip() if m is not None else ''
+        if m and m not in seen:
+            seen.add(m)
+            clean.append(m)
+    if not clean:
+        return jsonify(success=False, error='Geçerli model kodu bulunamadı.'), 400
+
+    try:
+        rate = _maliyet_rate(_want_try())
+        payload = _maliyet_payload(clean, rate)
+        # Sorgulanan ama maliyeti olmayan modeller için de kayıt döndür
+        for mid in clean:
+            payload.setdefault(mid, {
+                'model': mid, 'cost_usd': 0.0,
+                'cost_try': None, 'has_cost': False,
+            })
+        return jsonify(
+            success=True,
+            exchange_rate=rate,
+            count=len(payload),
+            costs=list(payload.values()),
+        )
+    except Exception as e:
+        logger.error(f"model_cost_batch hatası: {e}", exc_info=True)
+        return jsonify(success=False, error=str(e)), 500
+
+
+@agent_api.route('/model-costs', methods=['GET'])
+@require_agent_key
+def model_cost_list():
+    """Maliyeti girilmiş tüm modelleri sayfalı döndürür (ilk senkron/import için).
+
+    GET /agent/api/v1/model-costs?page=1&per_page=200[&with_try=0]
+    """
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+        per_page = min(1000, max(1, int(request.args.get('per_page', 200))))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error='page / per_page sayı olmalı.'), 400
+
+    try:
+        from models import ModelDirekMaliyet, ModelMaliyet
+        # Maliyeti olan tüm model kodları (direk + kalem)
+        ids = set()
+        for (mid,) in db.session.query(ModelDirekMaliyet.model_id).all():
+            if mid:
+                ids.add(mid)
+        for (mid,) in db.session.query(ModelMaliyet.model_id).distinct().all():
+            if mid:
+                ids.add(mid)
+        all_ids = sorted(ids)
+        total = len(all_ids)
+
+        start = (page - 1) * per_page
+        page_ids = all_ids[start:start + per_page]
+
+        rate = _maliyet_rate(_want_try())
+        payload = _maliyet_payload(page_ids, rate)
+        return jsonify(
+            success=True,
+            exchange_rate=rate,
+            page=page,
+            per_page=per_page,
+            total=total,
+            count=len(page_ids),
+            costs=[payload[m] for m in page_ids if m in payload],
+        )
+    except Exception as e:
+        logger.error(f"model_cost_list hatası: {e}", exc_info=True)
+        return jsonify(success=False, error=str(e)), 500
