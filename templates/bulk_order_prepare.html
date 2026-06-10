@@ -175,6 +175,29 @@
     if (s) { s.textContent = text; s.style.color = color || '#666'; }
   }
 
+  // Toplanabilir satırlar (raf alanı olan, henüz toplanmamış) — sıralı odak için.
+  function pickableRows() {
+    return Array.from(document.querySelectorAll('.order-row'))
+      .filter(function (r) { return r.querySelector('.raf-input') && !r.classList.contains('toplandi'); });
+  }
+
+  function focusNextRaf(afterRow) {
+    const rows = pickableRows();
+    let target = null;
+    if (afterRow) {
+      const all = Array.from(document.querySelectorAll('.order-row'));
+      const idx = all.indexOf(afterRow);
+      for (let i = idx + 1; i < all.length; i++) {
+        if (all[i].querySelector('.raf-input') && !all[i].classList.contains('toplandi')) { target = all[i]; break; }
+      }
+    }
+    if (!target) target = rows[0];  // baştan devam et (kalan ilk toplanabilir)
+    if (target) {
+      const rafIn = target.querySelector('.raf-input');
+      if (rafIn) setTimeout(function () { rafIn.focus(); rafIn.scrollIntoView({ block: 'center' }); }, 80);
+    }
+  }
+
   async function submitPick(row) {
     const order = row.dataset.order;
     const raf = (row.querySelector('.raf-input')?.value || '').trim();
@@ -191,6 +214,7 @@
       if (data.success) {
         row.classList.add('toplandi');
         setStatus(row, '✓ Toplandı (' + (data.toplandi_raf || raf) + ')', '#28a745');
+        focusNextRaf(row);   // sonraki siparişin raf alanına geç
       } else {
         setStatus(row, '✗ ' + (data.error || 'Hata'), '#dc3545');
         const rafIn = row.querySelector('.raf-input');
@@ -217,6 +241,9 @@
       if (e.key === 'Enter') { e.preventDefault(); submitPick(row); }
     });
   });
+
+  // Sayfa açılınca EN BAŞTAKİ toplanabilir siparişin raf alanına odaklan.
+  focusNextRaf(null);
 })();
 </script>
 {% include 'includes/notification_popup.html' ignore missing %}
