@@ -51,6 +51,14 @@
         .product-info .cs { font-weight: 400; font-size: .88rem; color: #666; }
         .stok-uyari { font-size: .75rem; font-weight: 600; color: #dc3545; background: #fde8e8; border: 1px solid #f5c6cb; border-radius: 4px; padding: .15rem .5rem; white-space: nowrap; }
 
+        .raf-bilgi { display:block; font-weight:400; font-size:.72rem; color:#999; margin-top:2px; }
+        .pick-fields { display:flex; align-items:center; gap:.4rem; }
+        .pick-input { width:130px; padding:.3rem .5rem; border:1px solid var(--color-border); border-radius:6px; font-size:.85rem; }
+        .pick-input.raf-input { border-color:#B76E79; }
+        .pick-status { font-size:.8rem; font-weight:600; min-width:90px; }
+        .order-row.toplandi { background:#eafaf0; opacity:.7; }
+        .order-row.toplandi .pick-fields { display:none; }
+
         .empty-state { text-align: center; padding: 4rem 2rem; color: #aaa; }
         .empty-state i { font-size: 3rem; margin-bottom: 1rem; }
 
@@ -104,7 +112,8 @@
             <span class="shelf-badge">{{ items | length }} sipariş</span>
         </div>
         {% for item in items %}
-        <div class="order-row{% if item.stok_yetersiz %} stok-yetersiz{% endif %}">
+        <div class="order-row{% if item.stok_yetersiz %} stok-yetersiz{% endif %}"
+             data-order="{{ item.order_number }}" data-barcode="{{ item.barcode }}">
             <div class="order-no">
                 <i class="fas fa-receipt" style="color:{% if item.stok_yetersiz %}#dc3545{% else %}var(--color-primary){% endif %};margin-right:4px;"></i>
                 {{ item.order_number }}
@@ -112,9 +121,18 @@
             <div class="product-info">
                 {{ item.model_code }}
                 <span class="cs"> — {{ item.color }} / {{ item.size }}</span>
+                {% if item.raf_secenekleri %}
+                <span class="raf-bilgi">Raflar: {{ item.raf_secenekleri | join(', ') }}</span>
+                {% endif %}
             </div>
             {% if item.stok_yetersiz %}
             <span class="stok-uyari"><i class="fas fa-exclamation-triangle"></i> Stok Yetersiz</span>
+            {% else %}
+            <div class="pick-fields">
+                <input class="pick-input raf-input" placeholder="RAF BARKODU" autocomplete="off" inputmode="text">
+                <input class="pick-input urun-input" placeholder="ÜRÜN BARKODU" autocomplete="off" inputmode="text">
+                <span class="pick-status"></span>
+            </div>
             {% endif %}
         </div>
         {% endfor %}
@@ -131,6 +149,61 @@
 
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function () {
+  // Manuel raf-okutmalı toplama: her satırda raf barkodu + ürün barkodu okutulur,
+  // ikisi de dolunca POST /prepare-new-orders/pick → o raftan fiziksel düşüm.
+  const PICK_URL = "{{ url_for('new_orders_service.pick_order') }}";
+
+  function setStatus(row, text, color) {
+    const s = row.querySelector('.pick-status');
+    if (s) { s.textContent = text; s.style.color = color || '#666'; }
+  }
+
+  async function submitPick(row) {
+    const order = row.dataset.order;
+    const raf = (row.querySelector('.raf-input')?.value || '').trim();
+    const urun = (row.querySelector('.urun-input')?.value || '').trim();
+    if (!raf || !urun) return;
+    setStatus(row, '...', '#888');
+    try {
+      const resp = await fetch(PICK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_number: order, raf_barkodu: raf, urun_barkodu: urun }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        row.classList.add('toplandi');
+        setStatus(row, '✓ Toplandı (' + (data.toplandi_raf || raf) + ')', '#28a745');
+      } else {
+        setStatus(row, '✗ ' + (data.error || 'Hata'), '#dc3545');
+        const rafIn = row.querySelector('.raf-input');
+        const urunIn = row.querySelector('.urun-input');
+        if (rafIn) rafIn.value = '';
+        if (urunIn) urunIn.value = '';
+        if (rafIn) rafIn.focus();
+      }
+    } catch (e) {
+      setStatus(row, '✗ Ağ hatası', '#dc3545');
+    }
+  }
+
+  document.querySelectorAll('.order-row').forEach(function (row) {
+    const rafIn = row.querySelector('.raf-input');
+    const urunIn = row.querySelector('.urun-input');
+    if (!rafIn || !urunIn) return;
+    // Raf okununca (Zebra Enter) → ürün alanına geç.
+    rafIn.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); if (rafIn.value.trim()) urunIn.focus(); }
+    });
+    // Ürün okununca → ikisi de doluysa gönder.
+    urunIn.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); submitPick(row); }
+    });
+  });
+})();
+</script>
 {% include 'includes/notification_popup.html' ignore missing %}
 </body>
 </html>
