@@ -73,7 +73,11 @@ def _build_shelf_groups():
             Alfabetik raf sırasına göre.
     """
     PrepModel = _prep_model()
-    new_orders = PrepModel.query.order_by(PrepModel.order_date.asc()).all()
+    # Yalnızca henüz TOPLANMAMIŞ (raftan düşülmemiş) siparişler listede kalır.
+    new_orders = (PrepModel.query
+                  .filter(PrepModel.toplandi_at.is_(None))
+                  .order_by(PrepModel.order_date.asc())
+                  .all())
 
     # Önce tüm barkodları toplayıp Product'ları tek sorguda çekelim
     all_barcodes = set()
@@ -96,25 +100,21 @@ def _build_shelf_groups():
         products = Product.query.filter(Product.barcode.in_(list(all_barcodes))).all()
         products_dict = {p.barcode: p for p in products}
 
-    # Raf bilgilerini toplu çek — barkod başına TÜM rafları kalan adetleriyle tut.
-    # Her "Toplu Hazırla" çağrısında sıfırdan tahsis yapacağız: stale atanan_raf'ları
-    # düzeltir ve bir rafta tek ürün varken iki siparişe atanmasını engeller.
-    barcode_rafs: dict[str, list[list]] = {}  # barcode -> [[raf_kodu, kalan_adet], ...]
+    # Raf bilgisi yalnızca BİLGİ AMAÇLI — OTOMATİK ATAMA YOK. Stok düşümü artık
+    # çalışan toplu ekranda raf+ürün okutunca (picking_service) yapılır.
+    # Her barkod için stoklu ilk (alfabetik) rafı sadece görüntü için tutarız.
+    barcode_rafs: dict[str, list[str]] = {}  # barcode -> [raf_kodu, ...] (alfabetik)
     if all_barcodes:
         rafs = (RafUrun.query
                 .filter(RafUrun.urun_barkodu.in_(list(all_barcodes)))
                 .filter(RafUrun.adet > 0)
-                .order_by(RafUrun.raf_kodu.asc(), RafUrun.adet.desc())
-                .with_for_update(read=True)
+                .order_by(RafUrun.raf_kodu.asc())
                 .all())
         for raf in rafs:
-            barcode_rafs.setdefault(raf.urun_barkodu, []).append([raf.raf_kodu, raf.adet])
+            barcode_rafs.setdefault(raf.urun_barkodu, []).append(raf.raf_kodu)
 
-    # Grup oluştur
+    # Grup oluştur (raf koduna göre). ATAMA YOK — yalnızca ürünün bulunduğu ilk raf gösterilir.
     shelf_groups: dict[str, list[dict]] = {}
-
-    # Her siparişi sıfırdan yeniden tahsis et — eski atanan_raf değerine güvenmiyoruz.
-    # Sipariş tarihine göre sıralı geldiği için ilk gelen ilk rezerv eder.
     for order, item, barcode in order_items:
         product = products_dict.get(barcode)
         model_code = (product.product_main_id if product and product.product_main_id
@@ -122,22 +122,10 @@ def _build_shelf_groups():
         color = product.color if product and product.color else item.get('color', 'N/A')
         size = product.size if product and product.size else item.get('size', 'N/A')
 
-        # Bu barkodun henüz boşalmamış ilk rafını seç ve 1 adet rezerve et.
-        raf_kodu: str | None = None
-        for raf_entry in barcode_rafs.get(barcode, []):
-            if raf_entry[1] > 0:
-                raf_kodu = raf_entry[0]
-                raf_entry[1] -= 1
-                break
+        rafs_for_bc = barcode_rafs.get(barcode, [])
+        stok_yetersiz = not rafs_for_bc
+        display_raf = rafs_for_bc[0] if rafs_for_bc else 'RAF YOK'
 
-        stok_yetersiz = raf_kodu is None
-        yeni_atanan_raf = None if stok_yetersiz else raf_kodu
-
-        # Stale atamayı her zaman geçersiz kıl — eski değer ne olursa olsun yenisini yaz.
-        if order.atanan_raf != yeni_atanan_raf:
-            order.atanan_raf = yeni_atanan_raf
-
-        display_raf = raf_kodu if raf_kodu else 'RAF YOK'
         shelf_groups.setdefault(display_raf, []).append({
             'order_number': order.order_number,
             'model_code': model_code,
@@ -145,12 +133,11 @@ def _build_shelf_groups():
             'size': size,
             'barcode': barcode,
             'stok_yetersiz': stok_yetersiz,
+            'raf_secenekleri': rafs_for_bc,  # ürünün bulunduğu tüm raflar (bilgi)
             'customer_name': ' '.join(filter(None, [order.customer_name, order.customer_surname])),
         })
 
-    db.session.commit()
-
-    # Alfabetik raf sırası
+    # Alfabetik raf sırası (çalışanın yürüme sırası)
     return sorted(shelf_groups.items(), key=lambda x: x[0])
 
 
@@ -170,6 +157,40 @@ def prepare_new_orders():
     except Exception as e:
         traceback.print_exc()
         return f"Bir hata oluştu: {e}", 500
+
+
+@new_orders_service_bp.route('/prepare-new-orders/pick', methods=['POST'])
+def pick_order():
+    """Toplu ekranda raf+ürün okutarak o raftan fiziksel düşüm yapar (tek-ürünlü).
+
+    Body: {order_number, raf_barkodu, urun_barkodu}
+    Stok düşümü + 'toplandı' damgası picking_service üzerinden tek noktadan yapılır.
+    """
+    try:
+        payload = request.get_json(silent=True) or request.form
+        order_number = (payload.get('order_number') or '').strip()
+        raf_barkodu = (payload.get('raf_barkodu') or '').strip()
+        urun_barkodu = (payload.get('urun_barkodu') or '').strip()
+        if not order_number:
+            return jsonify({"success": False, "error": "Sipariş numarası yok."}), 400
+
+        order = OrderHazirlaniyor.query.filter_by(order_number=order_number).first()
+        if not order:
+            return jsonify({"success": False, "error": "Sipariş bulunamadı (Hazırlanıyor değil)."}), 404
+
+        from picking_service import pick_order_from_shelf
+        items = _parse_details(order)
+        qty = int(items[0].get('quantity', 1)) if items else 1
+        res = pick_order_from_shelf(order=order, barcode=urun_barkodu,
+                                    raf_kodu=raf_barkodu, qty=qty, source="USER")
+        if not res["success"]:
+            return jsonify(res), 400
+        return jsonify({"success": True, "order_number": order_number,
+                        "toplandi_raf": order.toplandi_raf,
+                        "already": res.get("already", False)}), 200
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": f"Hata: {e}"}), 500
 
 
 @new_orders_service_bp.route('/prepare-new-orders/excel', methods=['GET'])
