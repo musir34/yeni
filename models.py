@@ -667,8 +667,10 @@ class OrderCreated(OrderBase):
 # paketleme onayında düşer. Yeni (Created) ile Picking arasındaki ara statü.
 class OrderHazirlaniyor(OrderBase):
     __tablename__ = 'orders_hazirlaniyor'
-    atanan_raf = db.Column(db.String, nullable=True)            # Toplamada atanan raf kodu
+    atanan_raf = db.Column(db.String, nullable=True)            # Toplamada atanan raf kodu (bilgi amaçlı; artık otomatik atanmaz)
     hazirlaniyor_since = db.Column(db.DateTime, default=datetime.utcnow)  # bu statüye geçtiği an
+    toplandi_at = db.Column(db.DateTime, nullable=True)        # fiziksel toplandığı (raftan düşüldüğü) an
+    toplandi_raf = db.Column(db.String, nullable=True)         # okutulan/düşülen raf kodu
 
 
 # İşleme alınan (Picking)
