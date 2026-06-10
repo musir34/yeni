@@ -52,15 +52,30 @@
         .stok-uyari { font-size: .75rem; font-weight: 600; color: #dc3545; background: #fde8e8; border: 1px solid #f5c6cb; border-radius: 4px; padding: .15rem .5rem; white-space: nowrap; }
 
         .raf-bilgi { display:block; font-weight:400; font-size:.72rem; color:#999; margin-top:2px; }
-        .pick-fields { display:flex; align-items:center; gap:.4rem; }
-        .pick-input { width:130px; padding:.3rem .5rem; border:1px solid var(--color-border); border-radius:6px; font-size:.85rem; }
-        .pick-input.raf-input { border-color:#B76E79; }
-        .pick-status { font-size:.8rem; font-weight:600; min-width:90px; }
-        .order-row.toplandi { background:#eafaf0; opacity:.7; }
+        .pick-fields { display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
+        /* 16px font = mobil tarayıcıda otomatik zoom'u önler; min 44px = dokunmatik hedef */
+        .pick-input { width:130px; min-height:44px; padding:.4rem .6rem; border:1px solid var(--color-border); border-radius:8px; font-size:16px; }
+        .pick-input.raf-input { border:2px solid #B76E79; }
+        .pick-status { font-size:.85rem; font-weight:600; min-width:90px; }
+        .order-row.toplandi { background:#eafaf0; opacity:.75; }
         .order-row.toplandi .pick-fields { display:none; }
 
         .empty-state { text-align: center; padding: 4rem 2rem; color: #aaa; }
         .empty-state i { font-size: 3rem; margin-bottom: 1rem; }
+
+        /* ── MOBİL / EL TERMİNALİ (Zebra TC21 ~5") ── */
+        @media (max-width: 640px) {
+            .container { padding: .75rem; }
+            .page-header { padding: .75rem 1rem; }
+            .shelf-header { font-size: 1rem; padding: .55rem .9rem; }
+            .order-row { flex-wrap: wrap; gap: .5rem; padding: .7rem .9rem; }
+            .order-no { min-width: 100%; font-size: .8rem; }
+            .product-info { flex: 1 1 100%; font-size: 1.05rem; }
+            .pick-fields { flex: 1 1 100%; }
+            .pick-input { flex: 1 1 45%; width: auto; min-width: 0; }
+            .pick-status { flex: 1 1 100%; min-width: 0; }
+            .page-header .btn { padding: .5rem .75rem; font-size: .9rem; }
+        }
 
         @media print {
             .no-print { display: none !important; }
