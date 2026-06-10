@@ -695,6 +695,8 @@
       </div>
     
       <form method="POST" action="{{ url_for('update_service.confirm_packing') }}" id="packingForm" autocomplete="off">
+        {# Sıralı mod: AÇIK=1 (raf okutarak manuel düşüm), KAPALI=0 (stok zaten toplu ekranda düştü) #}
+        <input type="hidden" name="sirali" id="siraliField" value="{{ '0' if manuel_mod else '1' }}">
         <input type="hidden" name="order_number" value="{{ order.order_number if order else '' }}"/>
 
         <div class="order-container">
@@ -740,16 +742,25 @@
                   {% endif %}
 
                   {% if aktif_raflar %}
-                    <p style="margin-bottom:5px;"><strong>Raf Seçimi:</strong></p>
-                    {% for raf in aktif_raflar %}
-                      <label class="raf-option {% if raf.onerilen %}raf-onerilen{% endif %}"
-                             {% if raf.onerilen %}style="border:2px solid #2e7d32; background:#e8f5e9; padding:4px 8px; border-radius:4px;"{% endif %}>
-                        <input type="radio" name="pick_{{ product['barcode'] }}" value="{{ raf.kod }}"
-                               {% if raf.onerilen %}checked{% elif not product.get('onerilen_raf_kodu') and loop.first %}checked{% endif %}>
-                        {% if raf.onerilen %}<strong>📌 {{ raf.kod }}</strong> — {{ raf.adet }} adet <small style="color:#2e7d32;">(sistem önerisi)</small>{% else %}{{ raf.kod }} — {{ raf.adet }} adet{% endif %}
-                        <span class="tick">✔</span>
-                      </label>
-                    {% endfor %}
+                    {# Otomatik raf seçimi KALDIRILDI — yalnızca hangi raflarda olduğu gösterilir.
+                       Stok düşümü çalışanın okuttuğu raftan yapılır. #}
+                    <p style="margin-bottom:5px;"><strong>Bu ürün şu raflarda:</strong></p>
+                    <div class="raf-bilgi-list" style="margin-bottom:6px; font-size:.9em;">
+                      {% for raf in aktif_raflar %}
+                        <span style="display:inline-block; margin:2px 4px; padding:2px 8px; border:1px solid #ccc; border-radius:4px;{% if raf.onerilen %} border-color:#2e7d32; background:#e8f5e9;{% endif %}">
+                          {{ raf.kod }} — {{ raf.adet }} adet
+                        </span>
+                      {% endfor %}
+                    </div>
+                    {% if not manuel_mod %}
+                      {# Sıralı mod AÇIK: çalışan aldığı rafın barkodunu okutur (ürün barkodunun üstünde). #}
+                      <div class="form-group">
+                        <input type="text" class="form-control raf-kodu-input"
+                               name="raf_{{ product['barcode'] }}"
+                               placeholder="📍 RAF BARKODU OKUT"
+                               autocomplete="off" style="border:2px solid #B76E79;"/>
+                      </div>
+                    {% endif %}
                   {% elif not product.get('onerilen_bosaldi') %}
                     <div class="alert alert-danger" style="padding:6px 10px; margin-bottom:0; font-size:0.9em;">
                       ❌ <strong>Stokta yok</strong> — bu ürün hiçbir rafta bulunmuyor.
