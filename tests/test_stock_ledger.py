@@ -313,3 +313,22 @@ def test_audit_page_lookup_includes_ledger_movements():
     assert any(r["reason"] == "ship_out" and r["delta"] == -2 for r in rows)
     # tablo yoksa bile çökmemeli — boş barkod listesiyle de güvenli
     assert _ledger_movements("YOK", []) == []
+
+
+# ════════════════════════════════════════════════════════════════════════
+# 13) enforce_shelfless_central_zero — raf bilgisi olmayan barkod her zaman 0
+# ════════════════════════════════════════════════════════════════════════
+def test_enforce_shelfless_central_zero():
+    # A: rafta var (listener CentralStock A=3 oluşturur)
+    _seed_shelf(barcode="A", shelf="R1", adet=3)
+    # B: raf YOK ama CentralStock'ta stale değer
+    db.session.add(CentralStock(barcode="B", qty=7))
+    db.session.commit()
+
+    from stock_management import enforce_shelfless_central_zero
+    n = enforce_shelfless_central_zero()
+    assert n == 1                                  # sadece B etkilendi
+    assert CentralStock.query.get("B").qty == 0    # raf-bilgisi-olmayan → 0
+    assert CentralStock.query.get("A").qty == 3    # raf-bilgisi-olan dokunulmadı
+    # idempotent: ikinci çağrı 0 etkiler
+    assert enforce_shelfless_central_zero() == 0

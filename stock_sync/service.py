@@ -192,6 +192,14 @@ class StockSyncService:
         """CentralStock'tan tüm stokları çek.
         Bekleyen siparişlerdeki (OrderCreated) ürün miktarları rezerv olarak düşülür.
         """
+        # INVARIANT: raf bilgisi olmayan barkodlar pazaryerine ASLA stok göstermesin.
+        # Push'tan hemen önce stale (raf-bilgisi-olmayan, sıfır-olmayan) kayıtları 0'a çek.
+        try:
+            from stock_management import enforce_shelfless_central_zero
+            enforce_shelfless_central_zero(commit=True)
+        except Exception:
+            logger.exception("[SYNC] enforce_shelfless_central_zero hatası (yutuldu)")
+
         stocks = CentralStock.query.all()
         items = []
 

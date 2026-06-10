@@ -71,6 +71,47 @@ def sync_central_stock(barcode: str, commit: bool = True) -> int:
     return raf_toplam
 
 
+def enforce_shelfless_central_zero(commit: bool = True) -> int:
+    """Raf bilgisi OLMAYAN barkodların CentralStock.qty'sini 0'a çeker (invariant).
+
+    Kural: bir barkodun stoklu (adet>0) hiçbir RafUrun satırı yoksa, CentralStock'ta
+    0 görünmeli — asla stale bir değer kalmamalı. Raf bilgisi olanlara DOKUNMAZ
+    (onlar zaten sync_central_stock ile raf toplamında tutulur). Yalnızca mevcut,
+    sıfır-olmayan ve raf-bilgisi-olmayan kayıtları sıfırlar (yeni satır oluşturmaz).
+
+    Returns: sıfırlanan CentralStock kayıt sayısı.
+    """
+    # Stoklu raflarda görünen barkodlar (raf bilgisi OLAN)
+    shelf_barcodes = (
+        db.session.query(RafUrun.urun_barkodu)
+        .filter(RafUrun.adet > 0)
+        .distinct()
+    )
+    cond = (
+        CentralStock.qty != 0,
+        CentralStock.barcode.notin_(shelf_barcodes),
+    )
+    affected = (
+        CentralStock.query
+        .filter(*cond)
+        .update(
+            {CentralStock.qty: 0, CentralStock.updated_at: datetime.utcnow()},
+            synchronize_session=False,
+        )
+    )
+    # Product.quantity'yi de eşitle (raf-bilgisi-olmayanlar → 0)
+    Product.query.filter(
+        Product.quantity != 0,
+        Product.barcode.notin_(shelf_barcodes),
+    ).update({Product.quantity: 0}, synchronize_session=False)
+
+    if affected:
+        logger.info(f"[ENFORCE] Raf bilgisi olmayan {affected} barkodun CentralStock'u 0'a çekildi.")
+    if commit:
+        db.session.commit()
+    return int(affected or 0)
+
+
 def sync_multiple_barcodes(barcodes: list, commit: bool = True) -> dict:
     """
     Birden fazla barkod için CentralStock'u senkronize eder.
