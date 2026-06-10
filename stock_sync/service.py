@@ -138,19 +138,19 @@ class StockSyncService:
     def get_reserved_barcodes(self) -> Dict[str, int]:
         """orders_hazirlaniyor tablosundaki siparişlerin details JSON'undan rezerv barkodlarını ve miktarları çıkar.
 
-        REZERV ARTIK 'HAZIRLANIYOR' STATÜSÜNDE TUTULUR (eskiden 'Created' idi).
-        Yeni (Created) siparişler henüz stok teyidi yapılmadığı için rezerv etmez;
-        yalnızca stoğu teyit edilip Hazırlanıyor'a (Trendyol Picking) geçenler rezerv eder.
-        Hazırlanıyor'da fiziksel stok hâlâ düşmemiştir; paketlemede düşer ve Picking'e geçince
-        rezerv tablosundan çıkar (çift düşüm olmaz).
+        REZERV = Yeni (Created) + Hazırlanıyor (henüz TOPLANMAMIŞ).
+        Fiziksel stok rafta dururken sipariş kesintisiz rezerve kalır; oversatış olmaz.
+
+        KRİTİK (manuel toplama): Hazırlanıyor sipariş TOPLANINCA (toplandi_at dolar)
+        stok raftan/ CentralStock'tan ZATEN düşülür. O yüzden toplanmış siparişler
+        rezervden ÇIKARILIR — yoksa hem CentralStock düşer hem rezerv sayar = ÇİFT
+        düşüm = available olduğundan az = satış kaybı.
         """
         import json
 
-        # Rezerv = Yeni (Created) + Hazırlanıyor. Sipariş, gelişinden paketlemeye kadar
-        # KESİNTİSİZ rezerve kalır; statü geçişinde (Created→Hazırlanıyor) oversatış penceresi
-        # oluşmaz. Fiziksel stok hâlâ paketlemede düşer ve Picking'e geçince rezervden çıkar.
         rows = (db.session.query(OrderCreated.order_number, OrderCreated.details).all()
-                + db.session.query(OrderHazirlaniyor.order_number, OrderHazirlaniyor.details).all())
+                + db.session.query(OrderHazirlaniyor.order_number, OrderHazirlaniyor.details)
+                    .filter(OrderHazirlaniyor.toplandi_at.is_(None)).all())
         reserved_map = {}
         parse_errors = 0
 

@@ -160,6 +160,26 @@ def test_confirm_packing_packs_picked_without_decrement(client):
         assert OrderHazirlaniyor.query.filter_by(order_number="O6").count() == 0
 
 
+def test_reserved_excludes_picked_hazirlaniyor(client):
+    # Rezerv: toplanmamış Hazırlanıyor sayılmalı; TOPLANINCA çıkmalı (stok zaten düştü).
+    import types
+    from stock_sync.service import StockSyncService
+    _seed_shelf(barcode="BC1", shelf="A1", adet=5)
+    _mk_hazirlaniyor("RX1", "BC1", qty=2)
+
+    with app.app_context():
+        res = StockSyncService.get_reserved_barcodes(types.SimpleNamespace())
+        assert res.get("BC1", 0) == 2   # toplanmamış → rezerv
+
+    # Topla (stok 5→3, toplandi_at dolar)
+    client.post("/prepare-new-orders/pick", json={
+        "order_number": "RX1", "raf_barkodu": "A1", "urun_barkodu": "BC1"})
+
+    with app.app_context():
+        res2 = StockSyncService.get_reserved_barcodes(types.SimpleNamespace())
+        assert res2.get("BC1", 0) == 0   # toplandı → rezervden çıktı (çift düşüm yok)
+
+
 def test_confirm_packing_picked_then_sequential_on_no_double(client):
     # Toplu ekranda toplanmış sipariş, sıralı-AÇIK pakete gelse bile tekrar düşmemeli.
     _seed_shelf(barcode="BC1", shelf="A1", adet=5)
