@@ -496,8 +496,10 @@ def _process_sync_orders_bulk(sync_orders):
                                     "raf_mevcut_stok": raf_stok,
                                 })
                                 if not atanan_raf and raf_kodu:
+                                    # OTOMATİK ATAMA KALDIRILDI (manuel raf-okutmalı toplama).
+                                    # raf_kodu yalnızca audit/log'da "ürün şu rafta" bilgisi olarak
+                                    # kullanılır; siparişe atanan_raf YAZILMAZ.
                                     atanan_raf = raf_kodu
-                                    order_dict['atanan_raf'] = raf_kodu
 
                         siparis_no = order_dict.get('order_number', '')
                         musteri = f"{order_dict.get('customer_name', '')} {order_dict.get('customer_surname', '')}".strip()
