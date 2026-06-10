@@ -436,7 +436,7 @@ def _process_sync_orders_bulk(sync_orders):
                     if current_table == 'orders_picking' and target_model == OrderCancelled:
                         if current_record.details:
                             cancelled_from_picking.append(
-                                (current_record.details, getattr(current_record, 'atanan_raf', None))
+                                (order_number, current_record.details, getattr(current_record, 'atanan_raf', None))
                             )
 
                     if target_model == OrderCreated:
@@ -629,17 +629,21 @@ def _process_sync_orders_bulk(sync_orders):
         # OrderPicking → OrderCancelled: paketlemede düşülen fiziksel raf stoğunu geri yükle.
         # (Aynı transaction içinde commit=False ile; aşağıdaki commit kapsar.)
         if cancelled_from_picking:
-            from stock_management import restore_stock_to_shelf
-            import json as _json
+            from stock_ledger import apply_lifecycle_effect
             logger.info(f"[STOK] {len(cancelled_from_picking)} Picking→İptal siparişi için stok iadesi yapılıyor.")
-            for details_json, shelf_code in cancelled_from_picking:
+            for _on, details_json, shelf_code in cancelled_from_picking:
                 try:
-                    det = _json.loads(details_json) if isinstance(details_json, str) else details_json
-                    for it in (det if isinstance(det, list) else []):
-                        bc = it.get('barcode')
-                        qty = int(it.get('quantity') or 1)
-                        if bc and qty > 0:
-                            restore_stock_to_shelf(bc, qty, shelf_code=shelf_code, commit=False)
+                    # STOK DEFTERİ: Picking→Cancelled = cancel_return (rafa iade).
+                    # İdempotency_key aynı iptalin tekrar sync'inde çift-iadeyi önler.
+                    apply_lifecycle_effect(
+                        order_number=_on,
+                        from_status="Picking",
+                        to_status="Cancelled",
+                        details=details_json,
+                        shelf_code=shelf_code,
+                        source="TRENDYOL_SYNC",
+                        commit=False,
+                    )
                 except Exception:
                     logger.exception("[STOK] Picking→İptal stok iadesi hatası (yutuldu)")
 
@@ -778,6 +782,44 @@ def process_bg_orders_bulk(bg_orders, app):
                             to_insert_shipped.append(new_data_dict)
                         elif target_model == OrderDelivered:
                             to_insert_delivered.append(new_data_dict)
+
+                        # 🔑 STOK DEFTERİ (ledger): Created/Hazırlanıyor → Shipped/Delivered
+                        # geçişinde fiziksel stok DÜŞÜLMELİ. Bu geçiş paketlemeden (Picking)
+                        # geçmediği için eskiden hiç düşülmüyordu → kalıcı hayalet stok.
+                        # Picking → Shipped/Delivered ise harita no-op döner (zaten pakette düştü).
+                        # İdempotency_key çift-apply'ı (3 saatlik reconcile) önler.
+                        try:
+                            from stock_ledger import apply_lifecycle_effect
+                            # Saklı orijinal details'i tercih et (API terminal statüde
+                            # lines'ı eksik/parçalı dönebilir); yoksa API yanıtına düş.
+                            _det = getattr(current_record, 'details', None) or new_data_dict.get('details')
+                            apply_lifecycle_effect(
+                                order_number=order_number,
+                                from_status=current_table.replace('orders_', ''),
+                                to_status=norm,
+                                details=_det,
+                                shelf_code=getattr(current_record, 'atanan_raf', None),
+                                source="TRENDYOL_SYNC",
+                                commit=False,  # aşağıdaki db.session.commit() kapsar
+                            )
+                        except Exception:
+                            logger.exception(f"BG: {order_number} ledger ship_out hatası")
+                            # Stok düşülemedi ama sipariş kargoya taşınıyor → hayalet
+                            # stok riski. Audit'e KRİTİK işaretle ki görünür olsun.
+                            try:
+                                from order_audit import log_event as _audit_log
+                                _audit_log(
+                                    "warning",
+                                    order_number=order_number,
+                                    barcode=new_data_dict.get('product_barcode'),
+                                    status_from=current_table.replace('orders_', ''),
+                                    status_to=norm,
+                                    source="TRENDYOL_SYNC",
+                                    severity="critical",
+                                    message="Ledger ship_out BAŞARISIZ — stok düşülemedi (hayalet stok riski)",
+                                )
+                            except Exception:
+                                pass
 
                         # AUDIT
                         try:

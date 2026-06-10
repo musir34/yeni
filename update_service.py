@@ -247,6 +247,19 @@ async def confirm_packing():
                             "sonraki": rec.adet,
                             "dusen": kalan,
                         })
+                        # STOK DEFTERİ: paketleme düşümünü kaydet. RafUrun düşümü
+                        # yukarıda seçili raftan yapıldı (kullanıcı seçimi), o yüzden
+                        # mutate_shelf=False — defter yalnızca hareketi loglar.
+                        try:
+                            from stock_ledger import record_movement, REASON_PACK_OUT
+                            record_movement(
+                                barcode=bc, delta=-kalan, reason=REASON_PACK_OUT,
+                                shelf_code=chosen_raf, order_number=order_number,
+                                idempotency_key=f"{order_number}:pack:{bc}:{chosen_raf}",
+                                source="USER", mutate_shelf=False, commit=False,
+                            )
+                        except Exception:
+                            logger.exception("[LEDGER] pack_out kaydı hatası (yutuldu)")
                         logger.debug(f"[STOCK][RAF] {chosen_raf}/{bc} {eski}->{rec.adet} (use={kalan})")
                         kalan = 0
                     else:

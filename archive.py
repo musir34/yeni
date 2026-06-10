@@ -426,15 +426,19 @@ def order_cancellation():
         new_cancelled = OrderCancelled(**data)
 
         # İşleme Alındı (Picking) aşamasındaysa fiziksel raf stoğu paketlemede DÜŞÜLMÜŞTÜ → iade et.
+        # STOK DEFTERİ: Picking→Cancelled = cancel_return; idempotency çift-iadeyi önler.
         if table_cls.__tablename__ == 'orders_picking' and getattr(order_obj, 'details', None):
             try:
-                from stock_management import restore_stock_to_shelf
-                det = _json.loads(order_obj.details) if isinstance(order_obj.details, str) else order_obj.details
-                _shelf = getattr(order_obj, 'atanan_raf', None)
-                for it in (det if isinstance(det, list) else []):
-                    bc = it.get('barcode'); qty = int(it.get('quantity') or 1)
-                    if bc and qty > 0:
-                        restore_stock_to_shelf(bc, qty, shelf_code=_shelf, commit=False)
+                from stock_ledger import apply_lifecycle_effect
+                apply_lifecycle_effect(
+                    order_number=order_number,
+                    from_status="Picking",
+                    to_status="Cancelled",
+                    details=order_obj.details,
+                    shelf_code=getattr(order_obj, 'atanan_raf', None),
+                    source="USER",
+                    commit=False,
+                )
             except Exception:
                 logger.exception("[STOK] Manuel iptal (Picking) stok iadesi hatası (yutuldu)")
 

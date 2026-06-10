@@ -281,6 +281,42 @@ def _audit_events(needle: str, barcodes: list[str], limit: int = 500) -> list[di
     ]
 
 
+def _ledger_movements(needle: str, barcodes: list[str], limit: int = 500) -> list[dict]:
+    """StockMovement (stok hareket defteri) kayıtları — sipariş no veya barkod.
+
+    Tablo henüz deploy edilmemişse (migration çalışmadıysa) sessizce boş döner.
+    """
+    try:
+        from models import StockMovement
+    except Exception:
+        return []
+    try:
+        q = db.session.query(StockMovement).filter(
+            or_(
+                StockMovement.order_number == needle,
+                StockMovement.barcode.in_(barcodes) if barcodes else False,
+            )
+        )
+        rows = q.order_by(StockMovement.created_at.asc()).limit(limit).all()
+    except Exception:
+        db.session.rollback()
+        logger.info("StockMovement okunamadı (muhtemelen tablo henüz yok)")
+        return []
+    return [
+        {
+            "ts": r.created_at.strftime("%Y-%m-%d %H:%M:%S") if r.created_at else "",
+            "barcode": r.barcode,
+            "delta": r.delta,
+            "reason": r.reason,
+            "shelf_code": r.shelf_code,
+            "order_number": r.order_number,
+            "source": r.source,
+            "note": r.note,
+        }
+        for r in rows
+    ]
+
+
 def _user_logs(needle: str, limit: int = 50) -> list[dict]:
     rows = (
         db.session.query(UserLog)
@@ -417,6 +453,7 @@ def lookup():
         barcodes = _extract_barcodes(order_records)
         snapshots = [_barcode_snapshot(b) for b in barcodes]
         events = _audit_events(needle, barcodes)
+        movements = _ledger_movements(needle, barcodes)
         ulogs = _user_logs(needle)
 
         return jsonify(
@@ -427,6 +464,7 @@ def lookup():
                 "barcodes": barcodes,
                 "snapshots": snapshots,
                 "events": events,
+                "movements": movements,
                 "user_logs": ulogs,
             }
         )

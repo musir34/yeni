@@ -137,6 +137,14 @@
     </div>
 
     <div class="card-soft">
+      <h5 class="mb-2"><i class="fas fa-book me-1"></i>Stok Hareket Defteri (ledger)</h5>
+      <div class="text-muted mb-2" style="font-size:.8rem;">
+        Fiziksel stok hareketleri (giriş/çıkış). <code>ship_out</code> = paketlemeden geçmeden kargolanan düşüm.
+      </div>
+      <div id="ledger"></div>
+    </div>
+
+    <div class="card-soft">
       <h5 class="mb-2"><i class="fas fa-history me-1"></i>UserLog İzleri</h5>
       <div id="userLogs"></div>
     </div>
@@ -275,6 +283,31 @@
     }).join('');
   }
 
+  function renderLedger(list){
+    const box = $('ledger');
+    if (!list || !list.length) {
+      box.innerHTML = '<div class="text-muted">Bu sipariş/barkod için defter hareketi yok. ' +
+        '(Ledger deploy edildikten sonra oluşan hareketler burada görünür.)</div>';
+      return;
+    }
+    box.innerHTML = list.map(m => {
+      const sign = m.delta >= 0 ? '+' : '';
+      const cls  = m.delta < 0 ? 'text-danger' : 'text-success';
+      return `
+        <div class="border-bottom py-2" style="font-size:.85rem;">
+          <span class="ts">${escapeHtml(m.ts)}</span>
+          <span class="badge bg-dark ms-1">${escapeHtml(m.reason)}</span>
+          <strong class="${cls} ms-1">${sign}${m.delta}</strong>
+          <code class="ms-1">${escapeHtml(m.barcode)}</code>
+          ${m.shelf_code ? ` · raf=<code>${escapeHtml(m.shelf_code)}</code>` : ''}
+          ${m.order_number ? ` · sip=<code>${escapeHtml(m.order_number)}</code>` : ''}
+          ${m.source ? ` · <span class="text-muted">${escapeHtml(m.source)}</span>` : ''}
+          ${m.note ? `<div class="text-muted">${escapeHtml(m.note)}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
   function renderUserLogs(list){
     const box = $('userLogs');
     if (!list.length) { box.innerHTML = '<div class="text-muted">UserLog kaydı yok.</div>'; return; }
@@ -302,6 +335,7 @@
       renderOrderRecords(data.order_records);
       renderSnapshots(data.snapshots);
       renderTimeline(data.events);
+      renderLedger(data.movements);
       renderUserLogs(data.user_logs);
       show($('result'));
     } catch (e) {

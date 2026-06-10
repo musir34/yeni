@@ -173,6 +173,61 @@ class CentralStock(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+### --- STOK HAREKET DEFTERİ (LEDGER) ---
+# Append-only fiziksel stok hareketleri. Her giriş/çıkış (mal kabul, paketleme,
+# kargo, iptal iadesi, manuel düzeltme) buraya bir satır olarak yazılır.
+# Amaç: stok mutasyonunu tek merkezden, bildirimsel ve idempotent yönetmek —
+# "her statü-geçişinde elle stok düş" deseninin yarattığı hayalet stok bug
+# sınıfını kökten bitirmek. RafUrun.adet operasyonel kaynak olarak KALIR;
+# bu defter paralel doğruluk/audit + mutabakat zeminidir.
+class StockMovement(db.Model):
+    __tablename__ = "stock_movement"
+
+    # Geçerli reason değerleri (CHECK constraint ile eşleşmeli):
+    REASONS = (
+        "goods_in",        # mal kabul / rafa ekleme
+        "pack_out",        # paketleme onayı (Picking) — seçili raftan düşüm
+        "ship_out",        # paketlemeden geçmeden Shipped/Delivered (eksik olan düşüm)
+        "cancel_return",   # Picking→İptal: rafa iade
+        "manual_adjust",   # operatör manuel düzeltme
+        "opening_balance", # ledger devreye alınırken mevcut raf snapshot'ı
+        "exchange",        # değişim/iade hareketleri
+        "reconcile",       # hayalet stok mutabakatı (fiziksel gerçeğe indirme)
+    )
+
+    # BigInteger tek-kolon PK Postgres'te BIGSERIAL olur (otomatik artar);
+    # SQLite (test) BIGINT PK'yi rowid'e bağlamadığından Integer varyantı ekle.
+    id = db.Column(db.BigInteger().with_variant(db.Integer(), "sqlite"), primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    barcode = db.Column(db.String(64), nullable=False, index=True)   # normalize_barcode'dan geçmiş
+    shelf_code = db.Column(db.String(64), nullable=True)
+    delta = db.Column(db.Integer, nullable=False)                    # +giriş / -çıkış
+    reason = db.Column(db.String(32), nullable=False, index=True)
+    order_number = db.Column(db.String(64), nullable=True, index=True)
+
+    # Anahtarlı (lifecycle) hareketler çift-apply'a karşı korunur; NULL anahtarlar
+    # (manuel/mal kabul) Postgres'te unique constraint'i ihlal etmez.
+    idempotency_key = db.Column(db.String(128), nullable=True, unique=True)
+    source = db.Column(db.String(32), nullable=True)   # order_audit ile aynı etiket sözlüğü
+    note = db.Column(db.Text, nullable=True)
+
+    __table_args__ = (
+        db.Index("ix_stock_movement_barcode_created", "barcode", "created_at"),
+        db.CheckConstraint(
+            "reason IN ('goods_in','pack_out','ship_out','cancel_return',"
+            "'manual_adjust','opening_balance','exchange','reconcile')",
+            name="ck_stock_movement_reason",
+        ),
+    )
+
+    def __repr__(self):
+        return (
+            f"<StockMovement {self.id} {self.reason} {self.barcode} "
+            f"delta={self.delta} ord={self.order_number}>"
+        )
+
+
 ### --- SİPARİŞ + STOK AUDİT LOG MODELİ ---
 # Sipariş yaşam döngüsü ve stok hareketleri için event tabanlı log.
 # Sipariş kaybolursa/raftan çıkmazsa bu tablodan iz sürülür.
