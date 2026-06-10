@@ -47,11 +47,14 @@ def pick_order_from_shelf(
     if getattr(order, "toplandi_at", None):
         return {"success": True, "error": None, "already": True}
 
-    # Ürün siparişle eşleşiyor mu? (tek-ürünlü; product_barcode'un ilk barkodunu karşılaştır)
-    order_bc = normalize_barcode(
-        (getattr(order, "product_barcode", "") or "").split(",")[0].strip()
-    )
-    if order_bc and order_bc != bc:
+    # Ürün siparişle eşleşiyor mu? product_barcode virgülle ayrılmış olabilir;
+    # TÜM segmentleri normalize edip karşılaştır (ikinci barkod okutulursa reddetme).
+    order_bcs = [
+        normalize_barcode(seg.strip())
+        for seg in (getattr(order, "product_barcode", "") or "").split(",")
+        if seg.strip()
+    ]
+    if order_bcs and bc not in order_bcs:
         return {"success": False, "error": "Okutulan ürün bu siparişle eşleşmiyor.", "already": False}
 
     # Okutulan rafta bu üründen yeterli var mı?

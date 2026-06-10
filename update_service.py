@@ -276,7 +276,11 @@ async def confirm_packing():
                                 source="USER", mutate_shelf=False, commit=False,
                             )
                         except Exception:
-                            logger.exception("[LEDGER] pack_out kaydı hatası (yutuldu)")
+                            # Raf düşümü + ledger ATOMİK olmalı: ledger yazılamazsa
+                            # idempotency anahtarı oluşmaz → ikinci submit çift düşürür.
+                            # Bu yüzden yutma — dış except'e taşı, tüm düşüm geri alınsın.
+                            logger.exception("[LEDGER] pack_out kaydı hatası — stok düşümü geri alınacak")
+                            raise
                         logger.debug(f"[STOCK][RAF] {chosen_raf}/{bc} {eski}->{rec.adet} (use={kalan})")
                         kalan = 0
                     else:
@@ -409,7 +413,7 @@ async def confirm_packing():
                         "event_type": "order_picked",
                         "order_number": order_number,
                         "package_number": getattr(order_created, 'package_number', None),
-                        "status_from": "Created",
+                        "status_from": "Hazirlaniyor" if is_from_hazirlaniyor else "Created",
                         "status_to": "Picking",
                         "source": "USER",
                         "severity": "info",

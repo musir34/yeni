@@ -123,6 +123,16 @@ def test_pick_idempotent_no_double_decrement():
     assert _shelf_qty("BC1", "A1") == 4   # yalnızca bir kez düştü
 
 
+def test_pick_accepts_second_barcode_segment():
+    # product_barcode virgüllü ("BC1,BC2") iken ikinci barkod okutulursa kabul edilmeli.
+    _seed_shelf(barcode="BC2", shelf="A1", adet=5)
+    o = _mk_order(order_number="OC", barcode="BC1,BC2", qty=1)
+    from picking_service import pick_order_from_shelf
+    res = pick_order_from_shelf(order=o, barcode="BC2", raf_kodu="A1", qty=1)
+    assert res["success"] is True
+    assert _shelf_qty("BC2", "A1") == 4
+
+
 def test_pick_insufficient_qty_rejected():
     _seed_shelf(barcode="BC1", shelf="A1", adet=1)
     o = _mk_order(qty=3)

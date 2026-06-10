@@ -158,3 +158,19 @@ def test_confirm_packing_packs_picked_without_decrement(client):
     with app.app_context():
         assert OrderPicking.query.filter_by(order_number="O6").count() == 1
         assert OrderHazirlaniyor.query.filter_by(order_number="O6").count() == 0
+
+
+def test_confirm_packing_picked_then_sequential_on_no_double(client):
+    # Toplu ekranda toplanmış sipariş, sıralı-AÇIK pakete gelse bile tekrar düşmemeli.
+    _seed_shelf(barcode="BC1", shelf="A1", adet=5)
+    _mk_hazirlaniyor("O7", "BC1")
+    client.post("/prepare-new-orders/pick", json={
+        "order_number": "O7", "raf_barkodu": "A1", "urun_barkodu": "BC1"})
+    assert _shelf_qty("BC1", "A1") == 4
+    client.post("/confirm_packing", data={
+        "order_number": "O7", "sirali": "1", "raf_BC1": "A1",
+        "barkod_right_0_0": "BC1"},
+        headers={"X-Requested-With": "XMLHttpRequest"})
+    assert _shelf_qty("BC1", "A1") == 4   # toplandı kilidi → ikinci düşüm yok
+    with app.app_context():
+        assert OrderPicking.query.filter_by(order_number="O7").count() == 1

@@ -180,7 +180,10 @@ def pick_order():
 
         from picking_service import pick_order_from_shelf
         items = _parse_details(order)
-        qty = int(items[0].get('quantity', 1)) if items else 1
+        if len(items) != 1:
+            return jsonify({"success": False,
+                            "error": "Bu ekran yalnızca tek-ürünlü sipariş destekler."}), 400
+        qty = int(items[0].get('quantity', 1))
         res = pick_order_from_shelf(order=order, barcode=urun_barkodu,
                                     raf_kodu=raf_barkodu, qty=qty, source="USER")
         if not res["success"]:
