@@ -1194,6 +1194,10 @@
         clearTimers();
         var ok = true;
         if (barkodInputs.length === 0) ok = false;
+        // Sıralı mod: raf kodu girilmeden paketleme YAPILMAZ — tüm raf alanları dolu olmalı.
+        document.querySelectorAll('.raf-kodu-input').forEach(function(r) {
+          if (r.value.trim() === '') ok = false;
+        });
         barkodInputs.forEach(function(input) {
           var pi = input.dataset.productIndex, qi = input.dataset.quantityIndex, side = input.dataset.side;
           var cardBody = input.closest('.card-body');
@@ -1257,7 +1261,14 @@
           msg.textContent = 'Doğru!'; msg.className = 'alert alert-success alert-show';
           input.style.backgroundColor = '#e9ffe9'; input.dataset.confirmed = 'true'; input.readOnly = true;
           var next = barkodInputs[idx + 1];
-          if (next) setTimeout(function(){ next.focus(); }, 150);
+          if (next) {
+            // Çok-ürünlü: sonraki barkod farklı karttaysa o kartın boş raf alanına geç.
+            var curCard = input.closest('.card-body');
+            var nextCard = next.closest('.card-body');
+            var nextRaf = (nextCard && nextCard !== curCard) ? nextCard.querySelector('.raf-kodu-input') : null;
+            if (nextRaf && !nextRaf.value.trim()) setTimeout(function(){ nextRaf.focus(); }, 150);
+            else setTimeout(function(){ next.focus(); }, 150);
+          }
           else if (onaylaBtn) onaylaBtn.focus();
         } else if (val.length > 0) {
           msg.textContent = 'Yanlış!'; msg.className = 'alert alert-danger alert-show';
@@ -1320,8 +1331,26 @@
         });
       });
 
-      // Odak
-      if (barkodInputs.length > 0) {
+      // Sıralı mod: raf kodu alanları — okutunca o kartın ürün barkoduna geç,
+      // değişince butonları yeniden değerlendir (raf dolmadan paketleme açılmaz).
+      var rafKoduInputs = Array.from(document.querySelectorAll('.raf-kodu-input'));
+      rafKoduInputs.forEach(function(rafIn) {
+        rafIn.addEventListener('input', function(){ updateButtons(); });
+        rafIn.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            var card = rafIn.closest('.card-body');
+            var firstBc = card ? card.querySelector('.barkod-input') : null;
+            if (firstBc) setTimeout(function(){ firstBc.focus(); }, 50);
+          }
+        });
+      });
+
+      // Odak: sıralı modda ÖNCE raf kodu, yoksa ilk ürün barkodu
+      var ilkRaf = rafKoduInputs[0];
+      if (ilkRaf) {
+        setTimeout(function(){ ilkRaf.focus(); }, 150);
+      } else if (barkodInputs.length > 0) {
         var firstRight = Array.from(barkodInputs).find(function(i){ return i.dataset.side === 'right'; }) || barkodInputs[0];
         setTimeout(function(){ firstRight.focus(); }, 150);
       } else if (isManuelMod && manuelInput) {
