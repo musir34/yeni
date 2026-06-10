@@ -755,8 +755,10 @@
                     {% if not manuel_mod %}
                       {# Sıralı mod AÇIK: çalışan aldığı rafın barkodunu okutur (ürün barkodunun üstünde). #}
                       <div class="form-group">
+                        <div class="alert raf-mesaj" style="display:none;"></div>
                         <input type="text" class="form-control raf-kodu-input"
                                name="raf_{{ product['barcode'] }}"
+                               data-raflar="{{ aktif_raflar | map(attribute='kod') | join(',') }}"
                                placeholder="📍 RAF BARKODU OKUT"
                                autocomplete="off" style="border:2px solid #B76E79;"/>
                       </div>
@@ -1194,9 +1196,15 @@
         clearTimers();
         var ok = true;
         if (barkodInputs.length === 0) ok = false;
-        // Sıralı mod: raf kodu girilmeden paketleme YAPILMAZ — tüm raf alanları dolu olmalı.
+        // Sıralı mod: raf GİRİLMEDEN veya GEÇERSİZ rafla paketleme YAPILMAZ.
         document.querySelectorAll('.raf-kodu-input').forEach(function(r) {
-          if (r.value.trim() === '') ok = false;
+          var val = r.value.trim();
+          if (val === '') { ok = false; return; }
+          var nv = val.toUpperCase().replace(/[=*]/g, '-');
+          var valid = (r.dataset.raflar || '').split(',')
+            .map(function(x){ return x.trim().toUpperCase().replace(/[=*]/g, '-'); })
+            .filter(Boolean);
+          if (valid.length && valid.indexOf(nv) === -1) ok = false;
         });
         barkodInputs.forEach(function(input) {
           var pi = input.dataset.productIndex, qi = input.dataset.quantityIndex, side = input.dataset.side;
@@ -1333,16 +1341,36 @@
 
       // Sıralı mod: raf kodu alanları — okutunca o kartın ürün barkoduna geç,
       // değişince butonları yeniden değerlendir (raf dolmadan paketleme açılmaz).
+      // Raf kodu normalize: büyük harf + Zebra/telefon '='/'*' → '-' düzeltmesi.
+      function normRaf(s){ return (s||'').trim().toUpperCase().replace(/[=*]/g,'-'); }
+
       var rafKoduInputs = Array.from(document.querySelectorAll('.raf-kodu-input'));
       rafKoduInputs.forEach(function(rafIn) {
+        var mesaj = rafIn.closest('.form-group') ? rafIn.closest('.form-group').querySelector('.raf-mesaj') : null;
+        function rafGecerli(scanned) {
+          var valid = (rafIn.dataset.raflar || '').split(',').map(normRaf).filter(Boolean);
+          if (!valid.length) return true;  // bilgi yoksa engelleme (backend yine doğrular)
+          return valid.indexOf(normRaf(scanned)) !== -1;
+        }
         rafIn.addEventListener('input', function(){ updateButtons(); });
         rafIn.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            var card = rafIn.closest('.card-body');
-            var firstBc = card ? card.querySelector('.barkod-input') : null;
-            if (firstBc) setTimeout(function(){ firstBc.focus(); }, 50);
+          if (e.key !== 'Enter') return;
+          e.preventDefault();
+          var v = rafIn.value.trim();
+          if (!v) return;
+          if (!rafGecerli(v)) {
+            if (mesaj) { mesaj.textContent = '❌ Bu ürün bu rafta yok, doğru rafı okut'; mesaj.className = 'alert alert-danger raf-mesaj alert-show'; mesaj.style.display = 'block'; }
+            rafIn.style.borderColor = '#dc3545';
+            rafIn.value = ''; rafIn.focus();
+            updateButtons();
+            return;
           }
+          if (mesaj) { mesaj.textContent = '✓ Raf doğru'; mesaj.className = 'alert alert-success raf-mesaj alert-show'; mesaj.style.display = 'block'; }
+          rafIn.style.borderColor = '#28a745';
+          updateButtons();
+          var card = rafIn.closest('.card-body');
+          var firstBc = card ? card.querySelector('.barkod-input') : null;
+          if (firstBc) setTimeout(function(){ firstBc.focus(); }, 50);
         });
       });
 

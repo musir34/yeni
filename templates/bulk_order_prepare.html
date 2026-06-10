@@ -128,7 +128,8 @@
         </div>
         {% for item in items %}
         <div class="order-row{% if item.stok_yetersiz %} stok-yetersiz{% endif %}"
-             data-order="{{ item.order_number }}" data-barcode="{{ item.barcode }}">
+             data-order="{{ item.order_number }}" data-barcode="{{ item.barcode }}"
+             data-raflar="{{ item.raf_secenekleri | join(',') }}">
             <div class="order-no">
                 <i class="fas fa-receipt" style="color:{% if item.stok_yetersiz %}#dc3545{% else %}var(--color-primary){% endif %};margin-right:4px;"></i>
                 {{ item.order_number }}
@@ -173,6 +174,17 @@
   function setStatus(row, text, color) {
     const s = row.querySelector('.pick-status');
     if (s) { s.textContent = text; s.style.color = color || '#666'; }
+  }
+
+  // Raf kodu normalize: boşluk/büyük harf + Zebra/telefon '='/'*' → '-' düzeltmesi.
+  function normRaf(s) {
+    return (s || '').trim().toUpperCase().replace(/[=*]/g, '-');
+  }
+  // Okutulan raf, bu siparişin ürününün bulunduğu raflardan biri mi?
+  function rafGecerli(row, scanned) {
+    const valid = (row.dataset.raflar || '').split(',').map(normRaf).filter(Boolean);
+    if (!valid.length) return true;  // bilgi yoksa engelleme (backend yine doğrular)
+    return valid.indexOf(normRaf(scanned)) !== -1;
   }
 
   // Toplanabilir satırlar (raf alanı olan, henüz toplanmamış) — sıralı odak için.
@@ -232,9 +244,21 @@
     const rafIn = row.querySelector('.raf-input');
     const urunIn = row.querySelector('.urun-input');
     if (!rafIn || !urunIn) return;
-    // Raf okununca (Zebra Enter) → ürün alanına geç.
+    // Raf okununca (Zebra Enter) → DOĞRULA → geçerliyse ürün alanına geç.
     rafIn.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); if (rafIn.value.trim()) urunIn.focus(); }
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const v = rafIn.value.trim();
+      if (!v) return;
+      if (!rafGecerli(row, v)) {
+        setStatus(row, '✗ Bu ürün bu rafta yok, doğru rafı okut', '#dc3545');
+        rafIn.style.borderColor = '#dc3545';
+        rafIn.value = ''; rafIn.focus();
+        return;
+      }
+      rafIn.style.borderColor = '#28a745';
+      setStatus(row, '✓ Raf doğru, ürünü okut', '#28a745');
+      urunIn.focus();
     });
     // Ürün okununca → ikisi de doluysa gönder.
     urunIn.addEventListener('keydown', function (e) {
