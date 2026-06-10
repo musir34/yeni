@@ -24,17 +24,20 @@ from sqlalchemy import event  # noqa: E402
 
 from models import (  # noqa: E402
     db, Raf, RafUrun, CentralStock, StockMovement, Product, BarcodeAlias,
-    OrderHazirlaniyor, OrderPicking, OrderAuditLog, Archive,
+    OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered,
+    OrderCancelled, OrderAuditLog, Archive,
 )
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ["DATABASE_URL"]
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["TESTING"] = True
+app.secret_key = "test-secret"   # flash() için
 db.init_app(app)
 
 _NEEDED = (Raf, RafUrun, CentralStock, StockMovement, Product, BarcodeAlias,
-           OrderHazirlaniyor, OrderPicking, OrderAuditLog, Archive)
+           OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped,
+           OrderDelivered, OrderCancelled, OrderAuditLog, Archive)
 
 
 def _install_udf():
@@ -54,12 +57,16 @@ with app.app_context():
 from new_orders_service import new_orders_service_bp  # noqa: E402
 app.register_blueprint(new_orders_service_bp)
 
+from update_service import update_service_bp  # noqa: E402
+app.register_blueprint(update_service_bp)
+
 
 @pytest.fixture(autouse=True)
 def _ctx_clean():
     with app.app_context():
-        for m in (StockMovement, RafUrun, CentralStock, OrderHazirlaniyor,
-                  OrderPicking, Raf, Archive):
+        for m in (StockMovement, RafUrun, CentralStock, OrderCreated,
+                  OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered,
+                  OrderCancelled, Raf, Archive):
             m.query.delete()
         db.session.commit()
         yield
@@ -122,3 +129,32 @@ def test_pick_endpoint_unknown_order_404(client):
     resp = client.post("/prepare-new-orders/pick", json={
         "order_number": "YOK", "raf_barkodu": "A1", "urun_barkodu": "BC1"})
     assert resp.status_code == 404
+
+
+# ── confirm_packing: Trendyol API kaldırıldı + sıralı-kapalı toplandı kontrolü ──
+def test_confirm_packing_blocks_unpicked_sequential_off(client):
+    _seed_shelf(barcode="BC1", shelf="A1", adet=5)
+    _mk_hazirlaniyor("O5", "BC1")  # toplandi_at = None
+    resp = client.post("/confirm_packing", data={"order_number": "O5", "sirali": "0"},
+                       headers={"X-Requested-With": "XMLHttpRequest"})
+    data = resp.get_json()
+    assert data["ok"] is False           # toplanmadığı için engellendi
+    assert _shelf_qty("BC1", "A1") == 5   # düşmedi
+    with app.app_context():
+        assert OrderPicking.query.filter_by(order_number="O5").count() == 0
+
+
+def test_confirm_packing_packs_picked_without_decrement(client):
+    _seed_shelf(barcode="BC1", shelf="A1", adet=5)
+    _mk_hazirlaniyor("O6", "BC1")
+    # önce toplu ekranda topla (5→4, toplandı)
+    client.post("/prepare-new-orders/pick", json={
+        "order_number": "O6", "raf_barkodu": "A1", "urun_barkodu": "BC1"})
+    assert _shelf_qty("BC1", "A1") == 4
+    # sıralı-kapalı paketle → tekrar DÜŞMEDEN Picking'e geçmeli
+    resp = client.post("/confirm_packing", data={"order_number": "O6", "sirali": "0"},
+                       headers={"X-Requested-With": "XMLHttpRequest"})
+    assert _shelf_qty("BC1", "A1") == 4   # ikinci düşüm YOK
+    with app.app_context():
+        assert OrderPicking.query.filter_by(order_number="O6").count() == 1
+        assert OrderHazirlaniyor.query.filter_by(order_number="O6").count() == 0
