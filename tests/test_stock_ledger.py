@@ -73,7 +73,7 @@ def _ctx_and_clean():
     """Her testte temiz tablolarla app context."""
     with app.app_context():
         for model in (StockMovement, RafUrun, CentralStock, OrderCreated,
-                      OrderPicking, OrderDelivered, Raf):
+                      OrderPicking, OrderDelivered, Raf, OrderAuditLog):
             model.query.delete()
         db.session.commit()
         yield
@@ -124,17 +124,54 @@ def test_apply_hazirlaniyor_to_shipped_decrements():
 
 
 # ════════════════════════════════════════════════════════════════════════
-# 2) Picking→Shipped: zaten pakette düşmüştü → TEKRAR DÜŞME
+# 2) Picking→Shipped: NORMAL paketlenmiş sipariş (pack_out var) → TEKRAR DÜŞME
+#    (confirm_packing zaten seçili raftan düşüp pack_out yazdı)
 # ════════════════════════════════════════════════════════════════════════
-def test_picking_to_shipped_no_double_decrement():
+def test_picking_to_shipped_with_prior_packout_no_double_decrement():
     _seed_shelf(adet=5)
+    # confirm_packing'in yaptığı: seçili raftan fiziksel düşüm + pack_out kaydı
+    ledger.record_movement(
+        barcode="BC1", delta=-2, reason=ledger.REASON_PACK_OUT,
+        order_number="O3", shelf_code="A1", mutate_shelf=True,
+    )
+    assert _shelf_qty() == 3
     res = ledger.apply_lifecycle_effect(
         order_number="O3", from_status="picking", to_status="Shipped",
         details='[{"barcode":"BC1","quantity":2}]',
     )
     assert res == []
-    assert _shelf_qty() == 5
+    assert _shelf_qty() == 3, "pack_out zaten varken picking→shipped tekrar düşmemeliydi"
     assert _movements(reason="ship_out") == []
+
+
+# ════════════════════════════════════════════════════════════════════════
+# 2b) GÜVENLİK AĞI: PAKETLENMEDEN orders_picking'e düşmüş sipariş (arşiv→resync
+#     bulk_insert) picking→shipped olunca — daha önce HİÇ çıkış yoksa ship_out uygula.
+#     (Kronik hayalet: 11309996335 — picking'e bulk-insert, pack_out yok, kargo gitti.)
+# ════════════════════════════════════════════════════════════════════════
+def test_picking_to_shipped_unpacked_safety_net_decrements():
+    _seed_shelf(adet=5)
+    res = ledger.apply_lifecycle_effect(
+        order_number="PH1", from_status="picking", to_status="Shipped",
+        details='[{"barcode":"BC1","quantity":2}]',
+    )
+    assert _shelf_qty() == 3, "Paketlenmemiş picking→shipped'de güvenlik ağı 5→3 düşmeliydi"
+    ship = _movements(reason="ship_out")
+    assert len(ship) == 1 and ship[0].delta == -2
+    assert any(r.applied for r in res)
+
+
+# ════════════════════════════════════════════════════════════════════════
+# 2c) İdempotency: güvenlik ağı iki kez tetiklenirse raf yalnızca bir kez düşer
+# ════════════════════════════════════════════════════════════════════════
+def test_picking_to_shipped_safety_net_idempotent():
+    _seed_shelf(adet=5)
+    common = dict(order_number="PH2", from_status="picking", to_status="Shipped",
+                  details='[{"barcode":"BC1","quantity":2}]')
+    ledger.apply_lifecycle_effect(**common)
+    ledger.apply_lifecycle_effect(**common)
+    assert _shelf_qty() == 3, "Güvenlik ağı ikinci kez düşmemeliydi"
+    assert len(_movements(reason="ship_out")) == 1
 
 
 # ════════════════════════════════════════════════════════════════════════
@@ -234,6 +271,72 @@ def test_bg_handler_created_to_delivered_decrements():
         assert _shelf_qty() == 3, "BG handler Created→Delivered'da raf 5→3 düşmeliydi (hayalet stok fix)"
         assert OrderDelivered.query.filter_by(order_number="BG1").count() == 1
         assert len(_movements(reason="ship_out")) == 1
+
+
+# ════════════════════════════════════════════════════════════════════════
+# 8b) ENTEGRASYON (KÖK NEDEN): arşiv→resync ile paketlenmeden orders_picking'e
+#     düşmüş sipariş, process_bg ile picking→shipped olunca güvenlik ağı düşmeli.
+#     (11309996335 senaryosu: pack_out yok, kargo gitti, eskiden hayalet kalırdı.)
+# ════════════════════════════════════════════════════════════════════════
+def test_bg_handler_unpacked_picking_to_shipped_decrements():
+    from order_service import process_bg_orders_bulk
+
+    _seed_shelf(adet=5)
+    db.session.add(OrderPicking(
+        order_number="PHB1", status="Picking", source="TRENDYOL",
+        product_barcode="BC1",
+        details='[{"barcode":"BC1","quantity":2}]',
+        order_date=datetime.utcnow(), package_number="PKGPH",
+    ))
+    db.session.commit()
+
+    bg_orders = [{
+        "orderNumber": "PHB1", "id": "PKGPH", "status": "Shipped",
+        "_normalizedStatus": "Shipped",
+        "lines": [{"barcode": "BC1", "quantity": 2}],
+    }]
+    process_bg_orders_bulk(bg_orders, app)
+
+    with app.app_context():
+        assert _shelf_qty() == 3, "Paketlenmemiş picking→shipped'de güvenlik ağı 5→3 düşmeliydi"
+        assert OrderShipped.query.filter_by(order_number="PHB1").count() == 1
+        assert OrderPicking.query.filter_by(order_number="PHB1").count() == 0
+        assert len(_movements(reason="ship_out")) == 1
+
+
+# ════════════════════════════════════════════════════════════════════════
+# 8c) ENTEGRASYON regresyon: NORMAL paketlenmiş picking sipariş (pack_out var)
+#     process_bg ile shipped olunca TEKRAR düşmemeli (çift düşüm yok).
+# ════════════════════════════════════════════════════════════════════════
+def test_bg_handler_packed_picking_to_shipped_no_double():
+    from order_service import process_bg_orders_bulk
+
+    _seed_shelf(adet=5)
+    db.session.add(OrderPicking(
+        order_number="PKB1", status="Picking", source="TRENDYOL",
+        product_barcode="BC1",
+        details='[{"barcode":"BC1","quantity":2}]',
+        order_date=datetime.utcnow(), package_number="PKGOK",
+    ))
+    # confirm_packing'in yaptığı: seçili raftan düş + pack_out
+    ledger.record_movement(
+        barcode="BC1", delta=-2, reason=ledger.REASON_PACK_OUT,
+        order_number="PKB1", shelf_code="A1", mutate_shelf=True,
+    )
+    assert _shelf_qty() == 3
+
+    bg_orders = [{
+        "orderNumber": "PKB1", "id": "PKGOK", "status": "Shipped",
+        "_normalizedStatus": "Shipped",
+        "lines": [{"barcode": "BC1", "quantity": 2}],
+    }]
+    process_bg_orders_bulk(bg_orders, app)
+
+    with app.app_context():
+        assert _shelf_qty() == 3, "pack_out varken picking→shipped tekrar düşmemeliydi"
+        assert OrderShipped.query.filter_by(order_number="PKB1").count() == 1
+        assert len(_movements(reason="ship_out")) == 0
+        assert len(_movements(reason="pack_out")) == 1
 
 
 # ════════════════════════════════════════════════════════════════════════

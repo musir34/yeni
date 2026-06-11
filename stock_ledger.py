@@ -84,6 +84,18 @@ LIFECYCLE_EFFECTS: dict[tuple[str | None, str], str | None] = {
     ("Picking", "Created"): REASON_CANCEL_RETURN,  # nadir geri-dönüş
 }
 
+# Picking→Shipped/Delivered normalde no-op'tur (stok pakette düşmüştü). ANCAK
+# arşivlenip senkronla DOĞRUDAN orders_picking'e bulk_insert edilen sipariş
+# confirm_packing'den hiç geçmez → pack_out yazılmaz. Sonra picking→shipped
+# olunca eski mantık "zaten düştü" sanıp atlardı → kalıcı hayalet stok
+# (kronik kök neden; ör. 11309996335). GÜVENLİK AĞI: bu geçişlerde sipariş için
+# ledger'da HİÇ fiziksel çıkış (pack_out/ship_out) yoksa, paketlenmemiş demektir
+# → ship_out uygula. pack_out varsa (normal paketleme) dokunma.
+SAFETY_NET_SHIP_TRANSITIONS: set[tuple[str, str]] = {
+    ("Picking", "Shipped"),
+    ("Picking", "Delivered"),
+}
+
 
 @dataclass(frozen=True)
 class MovementResult:
@@ -185,6 +197,26 @@ def record_movement(
     return MovementResult(row.id if row else None, True, actual_delta, barcode, reason)
 
 
+def _order_has_prior_outflow(order_number) -> bool:
+    """Bu sipariş için ledger'da fiziksel çıkış (pack_out/ship_out, delta<0) var mı.
+
+    Güvenlik ağının çift düşümü önleyen koruması: normal paketlenmiş sipariş
+    (confirm_packing → pack_out) için True döner → picking→shipped tekrar düşmez.
+    """
+    if not order_number:
+        return False
+    return (
+        db.session.query(StockMovement.id)
+        .filter(
+            StockMovement.order_number == str(order_number),
+            StockMovement.reason.in_((REASON_PACK_OUT, REASON_SHIP_OUT)),
+            StockMovement.delta < 0,
+        )
+        .first()
+        is not None
+    )
+
+
 def _canon_status(s: str | None) -> str | None:
     """Statü etiketini kanonik forma getirir.
 
@@ -227,6 +259,16 @@ def apply_lifecycle_effect(
     cfrom = _canon_status(from_status)
     cto = _canon_status(to_status)
     reason = LIFECYCLE_EFFECTS.get((cfrom, cto), None)
+
+    # GÜVENLİK AĞI: paketlenmeden picking'e düşmüş sipariş kargolanıyorsa düş.
+    if reason is None and (cfrom, cto) in SAFETY_NET_SHIP_TRANSITIONS:
+        if not _order_has_prior_outflow(order_number):
+            reason = REASON_SHIP_OUT
+            logger.warning(
+                "[LEDGER] güvenlik ağı: %s paketlenmeden %s→%s (pack_out yok) → ship_out",
+                order_number, cfrom, cto,
+            )
+
     if reason is None:
         return []
 
