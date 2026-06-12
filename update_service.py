@@ -31,6 +31,15 @@ def _norm_bc(x: str) -> str:
     from barcode_alias_helper import normalize_barcode
     return normalize_barcode(x.strip().replace(" ", ""))
 
+
+# ==== yardımcı: raf kodu normalize (Zebra/telefon klavyesi uyumu) ====
+# Zebra TC21 keyboard-wedge bazı düzenlerde "-" yerine "=" veya "*" gönderir.
+# Frontend (siparis_hazirla.html normRaf) bunu "-" yapıp doğrular ama input'un
+# HAM değeri submit edilir → backend ham kodu RafUrun'da bulamaz → "0 adet var".
+# Burada frontend ile BİREBİR aynı normalizasyon yapılır (upper + =/* → -).
+def _norm_raf(s: str) -> str:
+    return (s or "").strip().upper().replace("=", "-").replace("*", "-")
+
 # ==== ayar: okutma modu ====
 # "single" = tek kutu barkodu okut (varsayılan), "pair" = sağ/sol çift okutma (eski mod)
 SCAN_MODE = "single"
@@ -247,19 +256,28 @@ async def confirm_packing():
                 kalan = adet
                 logger.info(f"[STOCK] basla bc={bc} adet={adet} chosen_raf={chosen_raf}")
 
-                # 6a) Seçilen raftan düş (başka raftan otomatik tamamlama YAPILMAZ)
+                # 6a) Seçilen raftan düş (başka raftan otomatik tamamlama YAPILMAZ).
+                # chosen_raf normalize edilir (Zebra =/* → -, upper) ve depodaki
+                # raf_kodu de normalize edilerek eşleştirilir → frontend doğrulamasıyla
+                # birebir tutarlı. Aksi halde "A=1" gibi ham kod RafUrun'da bulunamaz.
                 if chosen_raf:
-                    rec = (RafUrun.query
-                           .filter_by(raf_kodu=chosen_raf, urun_barkodu=bc)
-                           .with_for_update()
-                           .first())
+                    hedef = _norm_raf(chosen_raf)
+                    rec = next(
+                        (r for r in (RafUrun.query
+                                     .filter(RafUrun.urun_barkodu == bc, RafUrun.adet > 0)
+                                     .with_for_update()
+                                     .all())
+                         if _norm_raf(r.raf_kodu) == hedef),
+                        None,
+                    )
                     if rec and (rec.adet or 0) >= kalan:
+                        gercek_raf = rec.raf_kodu
                         eski = rec.adet or 0
                         rec.adet = eski - kalan
                         toplam_dusen += kalan
                         stok_hareketleri.append({
                             "barkod": bc,
-                            "raf": chosen_raf,
+                            "raf": gercek_raf,
                             "onceki": eski,
                             "sonraki": rec.adet,
                             "dusen": kalan,
@@ -271,7 +289,7 @@ async def confirm_packing():
                             from stock_ledger import record_movement, REASON_PACK_OUT
                             record_movement(
                                 barcode=bc, delta=-kalan, reason=REASON_PACK_OUT,
-                                shelf_code=chosen_raf, order_number=order_number,
+                                shelf_code=gercek_raf, order_number=order_number,
                                 idempotency_key=f"{order_number}:pick:{bc}",
                                 source="USER", mutate_shelf=False, commit=False,
                             )
@@ -281,7 +299,7 @@ async def confirm_packing():
                             # Bu yüzden yutma — dış except'e taşı, tüm düşüm geri alınsın.
                             logger.exception("[LEDGER] pack_out kaydı hatası — stok düşümü geri alınacak")
                             raise
-                        logger.debug(f"[STOCK][RAF] {chosen_raf}/{bc} {eski}->{rec.adet} (use={kalan})")
+                        logger.debug(f"[STOCK][RAF] {gercek_raf}/{bc} {eski}->{rec.adet} (use={kalan})")
                         kalan = 0
                     else:
                         mevcut = (rec.adet or 0) if rec else 0

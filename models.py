@@ -234,7 +234,10 @@ class StockMovement(db.Model):
 class OrderAuditLog(db.Model):
     __tablename__ = 'order_audit_logs'
 
-    id = db.Column(db.BigInteger, primary_key=True)
+    # BigInteger tek-kolon PK Postgres'te BIGSERIAL olur (otomatik artar);
+    # sqlite'ta BIGINT PRIMARY KEY rowid alias OLMADIĞI için autoincrement
+    # etmez → testlerde NOT NULL hatası. with_variant ile sqlite=INTEGER.
+    id = db.Column(db.BigInteger().with_variant(db.Integer(), "sqlite"), primary_key=True)
     ts = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
 
     # Sipariş kimlikleri (en az biri olmalı; index'li arama)

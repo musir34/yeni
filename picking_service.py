@@ -19,6 +19,12 @@ from stock_ledger import record_movement, REASON_PACK_OUT
 logger = logging.getLogger(__name__)
 
 
+def _norm_raf(s: str) -> str:
+    """Raf kodu normalize — Zebra/telefon klavyesi '-' yerine '='/'*' gönderebilir.
+    Frontend (bulk_order_prepare.html / siparis_hazirla.html normRaf) ile birebir."""
+    return (s or "").strip().upper().replace("=", "-").replace("*", "-")
+
+
 def pick_order_from_shelf(
     *,
     order,
@@ -36,6 +42,7 @@ def pick_order_from_shelf(
     """
     bc = normalize_barcode((barcode or "").strip())
     raf_kodu = (raf_kodu or "").strip()
+    raf_hedef = _norm_raf(raf_kodu)
     if not bc:
         return {"success": False, "error": "Geçersiz ürün barkodu.", "already": False}
     if not raf_kodu:
@@ -57,11 +64,16 @@ def pick_order_from_shelf(
     if order_bcs and bc not in order_bcs:
         return {"success": False, "error": "Okutulan ürün bu siparişle eşleşmiyor.", "already": False}
 
-    # Okutulan rafta bu üründen yeterli var mı?
-    rec = (RafUrun.query
-           .filter_by(raf_kodu=raf_kodu, urun_barkodu=bc)
-           .with_for_update()
-           .first())
+    # Okutulan rafta bu üründen yeterli var mı? Raf kodu normalize edilerek
+    # eşleştirilir (Zebra =/* → -) → ham "A=1" depodaki "A-1" ile eşleşir.
+    rec = next(
+        (r for r in (RafUrun.query
+                     .filter(RafUrun.urun_barkodu == bc, RafUrun.adet > 0)
+                     .with_for_update()
+                     .all())
+         if _norm_raf(r.raf_kodu) == raf_hedef),
+        None,
+    )
     if not rec or (rec.adet or 0) < qty:
         mevcut = (rec.adet or 0) if rec else 0
         return {
@@ -70,19 +82,20 @@ def pick_order_from_shelf(
             "already": False,
         }
 
-    # Düş + ledger + damga (aynı transaction)
+    # Düş + ledger + damga (aynı transaction). Gerçek depo raf kodunu kullan.
+    gercek_raf = rec.raf_kodu
     rec.adet = (rec.adet or 0) - qty
     db.session.flush()
     record_movement(
-        barcode=bc, delta=-qty, reason=REASON_PACK_OUT, shelf_code=raf_kodu,
+        barcode=bc, delta=-qty, reason=REASON_PACK_OUT, shelf_code=gercek_raf,
         order_number=order.order_number, idempotency_key=f"{order.order_number}:pick:{bc}",
         source=source, mutate_shelf=False, commit=False,
     )
     sync_central_stock(bc, commit=False)
     order.toplandi_at = datetime.utcnow()
-    order.toplandi_raf = raf_kodu
+    order.toplandi_raf = gercek_raf
 
-    logger.info("[PICK] %s · %s rafından %s × %s düşüldü (toplandı)", order.order_number, raf_kodu, bc, qty)
+    logger.info("[PICK] %s · %s rafından %s × %s düşüldü (toplandı)", order.order_number, gercek_raf, bc, qty)
 
     if commit:
         db.session.commit()

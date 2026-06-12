@@ -35,6 +35,19 @@ app.config["TESTING"] = True
 app.secret_key = "test-secret"   # flash() için
 db.init_app(app)
 
+# flask-login: confirm_packing → log_user_action içinde current_user kullanılır.
+# Prod app.py'de LoginManager kurulu; testte de kurmazsak 'login_manager yok'
+# AttributeError'ı başarılı paketlemeyi rollback'e düşürür. Null user_loader →
+# current_user anonim (is_authenticated=False) → log_user_action güvenle atlar.
+from flask_login import LoginManager  # noqa: E402
+_login_manager = LoginManager()
+_login_manager.init_app(app)
+
+
+@_login_manager.user_loader
+def _load_user(_uid):  # pragma: no cover - test stub
+    return None
+
 _NEEDED = (Raf, RafUrun, CentralStock, StockMovement, Product, BarcodeAlias,
            OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped,
            OrderDelivered, OrderCancelled, OrderAuditLog, Archive)
@@ -125,6 +138,21 @@ def test_pick_endpoint_wrong_shelf_rejected(client):
     assert _shelf_qty("BC1", "A1") == 5
 
 
+def test_pick_endpoint_zebra_shelf_decrements(client):
+    # Toplu ekran: Zebra '-' yerine '=' gönderse de (depo "A-1", okutma "A=1")
+    # picking_service normalize edip doğru raftan düşmeli ve GERÇEK kodu damgalamalı.
+    _seed_shelf(barcode="BC1", shelf="A-1", adet=5)
+    _mk_hazirlaniyor("OZ3", "BC1")
+    resp = client.post("/prepare-new-orders/pick", json={
+        "order_number": "OZ3", "raf_barkodu": "A=1", "urun_barkodu": "BC1"})
+    data = resp.get_json()
+    assert data["success"] is True
+    assert _shelf_qty("BC1", "A-1") == 4
+    with app.app_context():
+        o = OrderHazirlaniyor.query.filter_by(order_number="OZ3").first()
+        assert o.toplandi_raf == "A-1"   # ham "A=1" değil, gerçek depo kodu
+
+
 def test_pick_endpoint_unknown_order_404(client):
     resp = client.post("/prepare-new-orders/pick", json={
         "order_number": "YOK", "raf_barkodu": "A1", "urun_barkodu": "BC1"})
@@ -178,6 +206,36 @@ def test_reserved_excludes_picked_hazirlaniyor(client):
     with app.app_context():
         res2 = StockSyncService.get_reserved_barcodes(types.SimpleNamespace())
         assert res2.get("BC1", 0) == 0   # toplandı → rezervden çıktı (çift düşüm yok)
+
+
+def test_confirm_packing_sequential_zebra_shelf_decrements(client):
+    # Sıralı-AÇIK, TOPLANMAMIŞ sipariş: Zebra rafı '-' yerine '=' gönderse de
+    # (depo "A-1", okutma "A=1") backend normalize edip doğru raftan düşmeli.
+    # Eski hata: ham "A=1" RafUrun'da bulunamaz → "0 adet var" → rollback.
+    _seed_shelf(barcode="BC1", shelf="A-1", adet=5)
+    _mk_hazirlaniyor("OZ1", "BC1")  # toplandi_at = None → pakette düşüm yapılır
+    resp = client.post("/confirm_packing", data={
+        "order_number": "OZ1", "sirali": "1", "raf_BC1": "A=1",
+        "barkod_right_0_0": "BC1"},
+        headers={"X-Requested-With": "XMLHttpRequest"})
+    data = resp.get_json()
+    assert data["ok"] is True              # normalize edilip başarıyla paketlendi
+    assert _shelf_qty("BC1", "A-1") == 4   # doğru raftan 1 adet düştü
+    with app.app_context():
+        assert OrderPicking.query.filter_by(order_number="OZ1").count() == 1
+        assert OrderHazirlaniyor.query.filter_by(order_number="OZ1").count() == 0
+
+
+def test_confirm_packing_sequential_lowercase_shelf_decrements(client):
+    # Büyük/küçük harf farkı da reddedilmemeli (frontend normRaf uppercase yapıyor).
+    _seed_shelf(barcode="BC2", shelf="B-2", adet=3)
+    _mk_hazirlaniyor("OZ2", "BC2")
+    resp = client.post("/confirm_packing", data={
+        "order_number": "OZ2", "sirali": "1", "raf_BC2": "b-2",
+        "barkod_right_0_0": "BC2"},
+        headers={"X-Requested-With": "XMLHttpRequest"})
+    assert resp.get_json()["ok"] is True
+    assert _shelf_qty("BC2", "B-2") == 2
 
 
 def test_confirm_packing_picked_then_sequential_on_no_double(client):
