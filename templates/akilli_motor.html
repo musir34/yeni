@@ -124,6 +124,13 @@
             </div>
             <textarea id="pExcluded" rows="1" placeholder="0172, 4407..." style="resize:vertical"></textarea>
         </div>
+        <div style="grid-column:span 2">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="checkbox" id="pIncludeOnly" style="width:auto;margin:0">
+                <span>Sadece Bu Modellere İndirim Uygula <span class="th-tip" data-tip="Etkinleştirirsen motor SADECE buraya yazdığın modelleri analiz edip fiyat günceller. Diğer tüm modeller dokunulmadan kalır (indirim uygulanmaz).">!</span></span>
+            </label>
+            <textarea id="pIncluded" rows="1" placeholder="0172, 4407... (her zaman değil; üstteki kutuyu işaretlersen geçerli)" style="resize:vertical" disabled></textarea>
+        </div>
     </div>
     <div class="text-center mt-3">
         <button class="btn btn-primary" id="btnRun" disabled><i class="bi bi-cpu"></i> Motoru Çalıştır</button>
@@ -200,6 +207,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
     fileInput.addEventListener('change',()=>{btnRun.disabled=!fileInput.files.length});
 
+    const incOnly=document.getElementById('pIncludeOnly'),incBox=document.getElementById('pIncluded');
+    incOnly.addEventListener('change',()=>{incBox.disabled=!incOnly.checked;if(incOnly.checked)incBox.focus()});
+
     btnRun.addEventListener('click',async()=>{
         if(!fileInput.files.length)return;
         loading.classList.add('active');btnRun.disabled=true;
@@ -211,6 +221,8 @@ document.addEventListener('DOMContentLoaded', function(){
         });
         fd.append('strateji',document.getElementById('pStrateji').value);
         fd.append('excluded_models',document.getElementById('pExcluded').value);
+        fd.append('include_only',document.getElementById('pIncludeOnly').checked?'1':'0');
+        fd.append('included_models',document.getElementById('pIncluded').value);
         try{
             const r=await fetch('/akilli-motor/analiz',{method:'POST',body:fd});
             const d=await r.json();

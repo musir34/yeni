@@ -328,7 +328,7 @@
             </form>
 
             <div class="mt-4">
-                <h5 style="font-weight:600;">Okutulan Farklı Ürünler (<span id="totalBarcodeCount" class="fw-bold">0</span>)</h5>
+                <h5 style="font-weight:600;">Okutulan Farklı Ürünler (<span id="totalBarcodeCount" class="fw-bold">0</span>)<span id="totalItemSummary" style="display:none;"> · Toplam <span id="totalItemCount" class="fw-bold">0</span> ürün</span></h5>
                 <hr>
                 <div id="barcodeListContainer" class="barcode-list-container">
                     <div id="scannedBarcodes"></div>
@@ -389,6 +389,8 @@
             progressMessage: document.getElementById('progressMessage'),
             errorDetails: document.getElementById('errorDetails'),
             totalBarcodeCount: document.getElementById('totalBarcodeCount'),
+            totalItemSummary: document.getElementById('totalItemSummary'),
+            totalItemCount: document.getElementById('totalItemCount'),
             rafKoduInput: document.getElementById('rafKoduInput') // Raf inputunu da ekleyelim
         };
 
@@ -771,10 +773,16 @@
         }
 
         function updateTotals() {
-            const total = Object.keys(barcodeCounts).length;
+            const items = Object.values(barcodeCounts);
+            const total = items.length;
             allElements.totalBarcodeCount.textContent = total;
             allElements.updateStockButton.disabled = total === 0 || isSubmitting;
             allElements.noBarcodeMessage.style.display = total === 0 ? 'block' : 'none';
+
+            // Toplam okutulan ürün adedi (her barkodun count toplamı)
+            const totalItems = items.reduce((sum, item) => sum + (item.count || 0), 0);
+            allElements.totalItemCount.textContent = totalItems;
+            allElements.totalItemSummary.style.display = total === 0 ? 'none' : 'inline';
         }
 
         async function handleUpdateClick() {

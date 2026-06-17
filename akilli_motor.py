@@ -500,8 +500,15 @@ def mod9_sezon(renk: str) -> dict:
 # ═══════════════════════════════════════════════════════════════════════
 
 def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
-                      excluded_models: list[str] | None = None) -> dict:
-    """Tüm modülleri çalıştırıp birleşik sonuç üretir."""
+                      excluded_models: list[str] | None = None,
+                      included_models: list[str] | None = None,
+                      include_only: bool = False) -> dict:
+    """Tüm modülleri çalıştırıp birleşik sonuç üretir.
+
+    include_only=True ve included_models dolu ise SADECE bu modeller analiz
+    edilip fiyat güncellemesi (indirim) alır; diğer tüm modeller dokunulmadan
+    kalır (beyaz liste modu).
+    """
 
     # ── Veri Hazırlığı ──────────────────────────────────────────────
     tariff_df.columns = [str(c).strip() for c in tariff_df.columns]
@@ -532,6 +539,16 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
         excluded.add(s)
         excluded.add(s.lstrip('0') or '0')
 
+    # Beyaz liste (yalnız bu modellere indirim uygula): excluded ile aynı normalize
+    included = set()
+    for m in (included_models or []):
+        s = m.strip().upper()
+        if not s:
+            continue
+        included.add(s)
+        included.add(s.lstrip('0') or '0')
+    include_only = include_only and bool(included)
+
     # Sipariş verisini çek
     sales_df = _query_sales_data()
 
@@ -554,6 +571,9 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
         model_str = str(model_kodu).strip()
         model_upper = model_str.upper()
         if model_upper in excluded or (model_upper.lstrip('0') or '0') in excluded:
+            continue
+        # Beyaz liste modu: listede olmayan modeli atla (indirim uygulanmaz, dokunulmaz)
+        if include_only and not (model_upper in included or (model_upper.lstrip('0') or '0') in included):
             continue
         first = group.iloc[0]
         stok = int(group['STOK'].sum()) if 'STOK' in group.columns else 0
@@ -839,7 +859,11 @@ def akilli_motor_analiz():
         excluded_raw = request.form.get('excluded_models', '')
         excluded = [m.strip() for m in excluded_raw.replace('\n', ',').replace(';', ',').split(',') if m.strip()]
 
-        analysis = run_full_analysis(df, params, excluded)
+        included_raw = request.form.get('included_models', '')
+        included = [m.strip() for m in included_raw.replace('\n', ',').replace(';', ',').split(',') if m.strip()]
+        include_only = request.form.get('include_only', '') in ('1', 'true', 'True', 'on')
+
+        analysis = run_full_analysis(df, params, excluded, included, include_only)
 
         if not analysis['success']:
             return jsonify(analysis), 400
