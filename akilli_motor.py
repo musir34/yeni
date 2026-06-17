@@ -781,6 +781,16 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
         mask_exc = _norm.isin(excluded) | _norm_stripped.isin(excluded)
         updated_df = updated_df[~mask_exc]
 
+    # Sadece indirim/fiyat güncellemesi uygulanan (YENİ TSF dolu) satırları bırak;
+    # değişmeyen (TUT) modellerin satırlarını çıkar — indirilen Excel temiz olsun.
+    fiyat_col = 'YENİ TSF (FİYAT GÜNCELLE)'
+    if fiyat_col in updated_df.columns:
+        _yeni = pd.to_numeric(updated_df[fiyat_col], errors='coerce')
+        updated_df = updated_df[_yeni.notna() & (_yeni > 0)]
+    else:
+        # Hiçbir modele fiyat güncellemesi uygulanmadı → boş çıktı
+        updated_df = updated_df.iloc[0:0]
+
     updated_df = updated_df.drop(columns=['_RENK'], errors='ignore')
 
     # ── İstatistikler ───────────────────────────────────────────────
