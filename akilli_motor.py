@@ -82,6 +82,122 @@ def _resolve_commission_columns(columns, period: str = '3') -> list[str]:
     return ['1.KOMİSYON', '2.KOMİSYON', '3.KOMİSYON', '4.KOMİSYON']
 
 
+def _write_tariff_output(src_path: str, out_path: str, header: list,
+                         row_updates: dict, donem: str) -> int:
+    """Trendyol komisyon tarife Excel'ini BİREBİR koruyarak çıktı üretir.
+
+    openpyxl ile tüm workbook'u yeniden kaydetmek Trendyol'un kabul ettiği
+    dosya yapısını bozuyordu (sharedStrings→inline string, calcChain kaybı,
+    formül/stil farkları) → Trendyol reddediyordu. Oysa kullanıcı aynı dosyayı
+    elle Excel'de doldurunca kabul ediliyor.
+
+    Bu yüzden xlsx'i ZIP/XML seviyesinde açıp SADECE iki sütunun
+    (YENİ TSF (FİYAT GÜNCELLE) + Tarife Seçimi) boş hücrelerini doldururuz;
+    diğer her şey (stiller, formüller, paylaşılan metinler, tüm satır/sütunlar)
+    byte-byte korunur. Değiştirilen hücre sayısını döndürür.
+    """
+    import re
+    import zipfile
+    from openpyxl.utils import get_column_letter
+
+    def _col(name):
+        return get_column_letter(header.index(name) + 1) if name in header else None
+
+    yeni_letter = _col('YENİ TSF (FİYAT GÜNCELLE)')
+    tarife_letter = _col('Tarife Seçimi')
+    hes3_letter = _col('Hesaplanan Komisyon (3 Gün)')
+    hes4_letter = _col('Hesaplanan Komisyon (4 Gün)')
+
+    if not yeni_letter:
+        import shutil
+        shutil.copy(src_path, out_path)
+        return 0
+
+    tarife_value = f'{donem} Günlük Fiyat'
+
+    def _esc(s: str) -> str:
+        return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+    def _num(v) -> str:
+        return '%g' % round(float(v), 2)
+
+    # row_updates değerleri dict: {'yeni_tsf', 'hes3', 'hes4'} (geriye dönük:
+    # düz sayı da kabul edilir).
+    def _unpack(val):
+        if isinstance(val, dict):
+            return val.get('yeni_tsf'), val.get('hes3'), val.get('hes4')
+        return val, None, None
+
+    # Boş hücre güncellemeleri (YENİ TSF sayı, Tarife Seçimi metin)
+    empty_updates: dict[str, tuple[str, str]] = {}
+    # Formül hücresine cached değer enjeksiyonu (Hesaplanan Komisyon 3/4 Gün)
+    formula_updates: dict[str, object] = {}  # ref → sayı (float) veya None ('-')
+    for pos, val in row_updates.items():
+        excel_row = int(pos) + 2  # 1. satır başlık
+        yeni_tsf, hes3, hes4 = _unpack(val)
+        empty_updates[f'{yeni_letter}{excel_row}'] = ('num', _num(yeni_tsf))
+        if tarife_letter:
+            empty_updates[f'{tarife_letter}{excel_row}'] = ('str', tarife_value)
+        if hes3_letter:
+            formula_updates[f'{hes3_letter}{excel_row}'] = hes3
+        if hes4_letter:
+            formula_updates[f'{hes4_letter}{excel_row}'] = hes4
+
+    zin = zipfile.ZipFile(src_path)
+    sheet_names = [n for n in zin.namelist()
+                   if re.match(r'xl/worksheets/sheet1\.xml$', n)] or \
+                  [n for n in zin.namelist()
+                   if n.startswith('xl/worksheets/') and n.endswith('.xml')]
+    sheet = sheet_names[0]
+    xml = zin.read(sheet).decode('utf-8')
+
+    changed = 0
+
+    # 1) Boş hücreleri doldur (YENİ TSF + Tarife Seçimi)
+    cell_re = re.compile(r'<c r="([A-Z]+\d+)"((?: [a-z]+="[^"]*")*)\s*(?:/>|></c>)')
+
+    def _repl_empty(m):
+        nonlocal changed
+        ref = m.group(1)
+        if ref not in empty_updates:
+            return m.group(0)
+        attrs = re.sub(r' t="[^"]*"', '', m.group(2))
+        kind, val = empty_updates[ref]
+        changed += 1
+        if kind == 'num':
+            return f'<c r="{ref}"{attrs}><v>{val}</v></c>'
+        return f'<c r="{ref}"{attrs} t="inlineStr"><is><t>{_esc(val)}</t></is></c>'
+
+    new_xml = cell_re.sub(_repl_empty, xml)
+
+    # 2) Hesaplanan Komisyon formül hücrelerine cached değer ekle (formülü koru)
+    fcell_re = re.compile(
+        r'<c r="([A-Z]+\d+)"((?: [a-z]+="[^"]*")*)>(<f[^>]*>.*?</f>|<f[^>]*/>)(<v>.*?</v>)?</c>'
+    )
+
+    def _repl_formula(m):
+        nonlocal changed
+        ref = m.group(1)
+        if ref not in formula_updates:
+            return m.group(0)
+        attrs = re.sub(r' t="[^"]*"', '', m.group(2))
+        fpart = m.group(3)
+        hv = formula_updates[ref]
+        changed += 1
+        if hv is None:
+            return f'<c r="{ref}"{attrs} t="str">{fpart}<v>-</v></c>'
+        return f'<c r="{ref}"{attrs}>{fpart}<v>{_num(hv)}</v></c>'
+
+    new_xml = fcell_re.sub(_repl_formula, new_xml)
+
+    with zipfile.ZipFile(out_path, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            data = new_xml.encode('utf-8') if item.filename == sheet else zin.read(item.filename)
+            zout.writestr(item, data)
+    zin.close()
+    return changed
+
+
 def _extract_model_from_sku(sku: str) -> str | None:
     """merchant_sku'dan model kodunu çıkarır: '0172-35 Bej' → '0172'."""
     if not sku:
@@ -535,14 +651,26 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
     # ── Veri Hazırlığı ──────────────────────────────────────────────
     tariff_df.columns = [str(c).strip() for c in tariff_df.columns]
 
-    # Seçilen teslimat tarifesine göre komisyon kademesi sütunları
-    tarife_donemi = '4' if str(tarife_donemi).strip() == '4' else '3'
-    kom_cols = _resolve_commission_columns(tariff_df.columns, tarife_donemi)
+    # Seçilen teslimat tarifesine göre komisyon kademesi sütunları.
+    # '7 Günlük' için Excel'de ayrı komisyon bloğu yoktur (yalnızca 3/4 Gün);
+    # komisyon 3 Gün setinden okunur ama çıktıya '7 Günlük Fiyat' yazılır.
+    tarife_donemi = str(tarife_donemi).strip()
+    if tarife_donemi not in ('3', '4', '7'):
+        tarife_donemi = '3'
+    kom_period = '4' if tarife_donemi == '4' else '3'
+    kom_cols = _resolve_commission_columns(tariff_df.columns, kom_period)
+    # Hesaplanan Komisyon (3/4 Gün) cached değerlerini üretmek için her iki
+    # tarife setinin komisyon sütunlarını da sayısala çeviririz.
+    kom_cols_3 = _resolve_commission_columns(tariff_df.columns, '3')
+    kom_cols_4 = _resolve_commission_columns(tariff_df.columns, '4')
 
-    numeric_cols = [
+    limit_cols = [
         '1.Fiyat Alt Limit', '2.Fiyat Üst Limiti', '2.Fiyat Alt Limit',
         '3.Fiyat Üst Limiti', '3.Fiyat Alt Limit', '4.Fiyat Üst Limiti',
-        *kom_cols,
+    ]
+    numeric_cols = [
+        *limit_cols,
+        *kom_cols, *kom_cols_3, *kom_cols_4,
         'KOMİSYONA ESAS FİYAT', 'GÜNCEL KOMİSYON', 'GÜNCEL TSF',
     ]
     for col in numeric_cols:
@@ -799,14 +927,38 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
     # haritasını döndürüyoruz. Böylece formüller (Hesaplanan Komisyon), veri
     # tipleri (BARKOD/BEDEN/STOK) ve TÜM satırlar birebir korunur.
     # df konum indeksi i → Excel satırı i+2 (1. satır başlık).
+    # Her güncellenen satır için Trendyol'un 'Hesaplanan Komisyon (3/4 Gün)'
+    # formülünün vereceği değeri de hesaplarız (Excel'in cached value'su yerine).
+    apply3 = tarife_donemi in ('3', '7')
+    apply4 = tarife_donemi in ('4', '7')
+
+    def _calc_hes(price, lims, koms):
+        """Trendyol formül mantığı: fiyata göre uygun komisyon kademesi."""
+        alt1, ust2, alt2, ust3, alt3, ust4 = lims
+        k1, k2, k3, k4 = koms
+        if price >= alt1:
+            return k1 if k1 else None
+        if alt2 <= price <= ust2:
+            return k2 if k2 else None
+        if alt3 <= price <= ust3:
+            return k3 if k3 else None
+        if price <= ust4:
+            return k4 if k4 else None
+        return None
+
     model_norm = tariff_df['MODEL KODU'].astype(str).str.strip()
     row_updates = {}
     for r in results:
         if r['aksiyon'] == 'TUT':
             continue
         mask = (model_norm == r['model_kodu']) & (tariff_df['_RENK'] == r['renk'])
+        fiyat = round(float(r['onerilen_fiyat']), 2)
         for pos in np.where(mask.to_numpy())[0]:
-            row_updates[int(pos)] = round(float(r['onerilen_fiyat']), 2)
+            row = tariff_df.iloc[pos]
+            lims = [float(row.get(c, 0) or 0) for c in limit_cols]
+            hes3 = _calc_hes(fiyat, lims, [float(row.get(c, 0) or 0) for c in kom_cols_3]) if apply3 else None
+            hes4 = _calc_hes(fiyat, lims, [float(row.get(c, 0) or 0) for c in kom_cols_4]) if apply4 else None
+            row_updates[int(pos)] = {'yeni_tsf': fiyat, 'hes3': hes3, 'hes4': hes4}
 
     # ── İstatistikler ───────────────────────────────────────────────
     stats = {
@@ -896,34 +1048,20 @@ def akilli_motor_analiz():
         if not analysis['success']:
             return jsonify(analysis), 400
 
-        # ── Çıktı: orijinal dosyayı BİREBİR koru, sadece 2 hücreyi yaz ──
-        # YENİ TSF (FİYAT GÜNCELLE) ve Tarife Seçimi dışında her şey (formüller,
-        # veri tipleri, tüm satırlar, sütun yapısı) yüklenen dosyayla aynı kalır.
+        # ── Çıktı: yüklenen dosyayı BİREBİR koru, sadece 2 sütunu yaz ──
+        # ZIP/XML seviyesinde cerrahi düzenleme → formüller, stiller, paylaşılan
+        # metinler ve tüm yapı korunur (openpyxl yeniden-kaydı Trendyol'u
+        # reddettiriyordu). Bkz. _write_tariff_output.
         import openpyxl
         row_updates = analysis.get('row_updates', {})
         donem = analysis.get('tarife_donemi', tarife_donemi)
 
-        wb = openpyxl.load_workbook(save_path)
-        ws = wb.active
-        header = [str(c.value).strip() if c.value is not None else '' for c in ws[1]]
-
-        try:
-            yeni_col = header.index('YENİ TSF (FİYAT GÜNCELLE)') + 1
-        except ValueError:
-            yeni_col = None
-        tarife_col = (header.index('Tarife Seçimi') + 1) if 'Tarife Seçimi' in header else None
-
-        if yeni_col:
-            for pos, fiyat in row_updates.items():
-                excel_row = int(pos) + 2  # 1. satır başlık
-                ws.cell(row=excel_row, column=yeni_col, value=fiyat)
-                if tarife_col:
-                    # Trendyol 'Tarife Seçimi' açılır listesinin kabul ettiği
-                    # tam değer: '3 Günlük Fiyat' / '4 Günlük Fiyat'.
-                    ws.cell(row=excel_row, column=tarife_col, value=f'{donem} Günlük Fiyat')
+        wb_h = openpyxl.load_workbook(save_path)
+        header = [c.value for c in wb_h.active[1]]
+        wb_h.close()
 
         output_path = save_path.replace('.xls', '_motor_optimized.xls')
-        wb.save(output_path)
+        _write_tariff_output(save_path, output_path, header, row_updates, donem)
 
         analysis.pop('row_updates', None)
         analysis['download_file'] = os.path.basename(output_path)
