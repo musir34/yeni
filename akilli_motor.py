@@ -23,7 +23,6 @@ from flask import (
 import pandas as pd
 import numpy as np
 import os
-import re
 import json
 import logging
 from datetime import datetime, timedelta
@@ -81,14 +80,6 @@ def _resolve_commission_columns(columns, period: str = '3') -> list[str]:
         i = cols.index(marker)
         return cols[i + 1:i + 5]
     return ['1.KOMİSYON', '2.KOMİSYON', '3.KOMİSYON', '4.KOMİSYON']
-
-
-def _restore_dupe_header(col) -> str:
-    """pandas'ın tekrar eden komisyon başlığını ('1.KOMİSYON.1') orijinal
-    haline ('1.KOMİSYON') çevirir; indirilen Excel Trendyol'a uyumlu kalsın."""
-    c = str(col)
-    m = re.match(r'^(\d+\.KOMİSYON)\.\d+$', c)
-    return m.group(1) if m else c
 
 
 def _extract_model_from_sku(sku: str) -> str | None:
@@ -638,7 +629,8 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
         })
 
     if not pre_data:
-        return {'success': True, 'results': [], 'alerts': [], 'stats': {}, 'portfolio': {}}
+        return {'success': True, 'results': [], 'alerts': [], 'stats': {},
+                'portfolio': {}, 'row_updates': {}, 'tarife_donemi': tarife_donemi}
 
     ort_gunluk = np.mean([p['gunluk_satis'] for p in pre_data]) if pre_data else 0.01
     ort_birim_kar = np.mean([p['birim_kar'] for p in pre_data]) if pre_data else 0
@@ -800,42 +792,21 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
     for r in results:
         portfolio[r['bcg_grup']] = portfolio.get(r['bcg_grup'], 0) + 1
 
-    # ── Excel Güncelleme ────────────────────────────────────────────
-    updated_df = tariff_df.copy()
-    # Yeni format 'Tarife Seçimi' sütununu kullanır; eski format ise
-    # 'Tarife Sonuna Kadar Uygula'. Hangisinin geçerli olduğunu tespit et.
-    is_new_format = 'Tarife Seçimi' in updated_df.columns
-    if not is_new_format:
-        updated_df['Tarife Sonuna Kadar Uygula'] = 'Evet'
-
+    # ── Satır Bazında Güncelleme Haritası ───────────────────────────
+    # Çıktı Excel'i, orijinal yüklenen dosya openpyxl ile açılıp SADECE iki
+    # hücre (YENİ TSF + Tarife Seçimi) yazılarak üretilir. Bu yüzden burada
+    # DataFrame'i yeniden yazmıyoruz; yalnızca "hangi satır → hangi yeni fiyat"
+    # haritasını döndürüyoruz. Böylece formüller (Hesaplanan Komisyon), veri
+    # tipleri (BARKOD/BEDEN/STOK) ve TÜM satırlar birebir korunur.
+    # df konum indeksi i → Excel satırı i+2 (1. satır başlık).
+    model_norm = tariff_df['MODEL KODU'].astype(str).str.strip()
+    row_updates = {}
     for r in results:
-        if r['aksiyon'] != 'TUT':
-            mask = (updated_df['MODEL KODU'].astype(str).str.strip() == r['model_kodu']) & \
-                   (updated_df['_RENK'] == r['renk'])
-            updated_df.loc[mask, 'YENİ TSF (FİYAT GÜNCELLE)'] = r['onerilen_fiyat']
-
-    if excluded:
-        _norm = updated_df['MODEL KODU'].astype(str).str.strip().str.upper()
-        _norm_stripped = _norm.str.lstrip('0').replace('', '0')
-        mask_exc = _norm.isin(excluded) | _norm_stripped.isin(excluded)
-        updated_df = updated_df[~mask_exc]
-
-    # Sadece indirim/fiyat güncellemesi uygulanan (YENİ TSF dolu) satırları bırak;
-    # değişmeyen (TUT) modellerin satırlarını çıkar — indirilen Excel temiz olsun.
-    fiyat_col = 'YENİ TSF (FİYAT GÜNCELLE)'
-    if fiyat_col in updated_df.columns:
-        _yeni = pd.to_numeric(updated_df[fiyat_col], errors='coerce')
-        updated_df = updated_df[_yeni.notna() & (_yeni > 0)]
-    else:
-        # Hiçbir modele fiyat güncellemesi uygulanmadı → boş çıktı
-        updated_df = updated_df.iloc[0:0]
-
-    # Yeni format: Trendyol'un okuduğu 'Tarife Seçimi' sütununu, fiyat
-    # güncellemesi uygulanan satırlar için seçilen teslimat tarifesiyle doldur.
-    if is_new_format:
-        updated_df['Tarife Seçimi'] = f'{tarife_donemi} Günlük'
-
-    updated_df = updated_df.drop(columns=['_RENK'], errors='ignore')
+        if r['aksiyon'] == 'TUT':
+            continue
+        mask = (model_norm == r['model_kodu']) & (tariff_df['_RENK'] == r['renk'])
+        for pos in np.where(mask.to_numpy())[0]:
+            row_updates[int(pos)] = round(float(r['onerilen_fiyat']), 2)
 
     # ── İstatistikler ───────────────────────────────────────────────
     stats = {
@@ -856,7 +827,8 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
         'alerts': sorted(production_alerts, key=lambda x: x['kalan_gun']),
         'stats': stats,
         'portfolio': portfolio,
-        'updated_df': updated_df,
+        'row_updates': row_updates,
+        'tarife_donemi': tarife_donemi,
     }
 
 
@@ -924,16 +896,36 @@ def akilli_motor_analiz():
         if not analysis['success']:
             return jsonify(analysis), 400
 
-        # Excel kaydet — pandas'ın tekrarlı komisyon başlıklarını
-        # ('1.KOMİSYON.1') orijinaline çevir ki Trendyol formatı bozulmasın.
-        out_df = analysis['updated_df']
-        out_df.columns = [_restore_dupe_header(c) for c in out_df.columns]
-        output_path = save_path.replace('.xls', '_motor_optimized.xls')
-        out_df.to_excel(output_path, index=False, engine='openpyxl')
+        # ── Çıktı: orijinal dosyayı BİREBİR koru, sadece 2 hücreyi yaz ──
+        # YENİ TSF (FİYAT GÜNCELLE) ve Tarife Seçimi dışında her şey (formüller,
+        # veri tipleri, tüm satırlar, sütun yapısı) yüklenen dosyayla aynı kalır.
+        import openpyxl
+        row_updates = analysis.get('row_updates', {})
+        donem = analysis.get('tarife_donemi', tarife_donemi)
 
-        # DataFrame'i response'tan çıkar
-        del analysis['updated_df']
+        wb = openpyxl.load_workbook(save_path)
+        ws = wb.active
+        header = [str(c.value).strip() if c.value is not None else '' for c in ws[1]]
+
+        try:
+            yeni_col = header.index('YENİ TSF (FİYAT GÜNCELLE)') + 1
+        except ValueError:
+            yeni_col = None
+        tarife_col = (header.index('Tarife Seçimi') + 1) if 'Tarife Seçimi' in header else None
+
+        if yeni_col:
+            for pos, fiyat in row_updates.items():
+                excel_row = int(pos) + 2  # 1. satır başlık
+                ws.cell(row=excel_row, column=yeni_col, value=fiyat)
+                if tarife_col:
+                    ws.cell(row=excel_row, column=tarife_col, value=f'{donem} Günlük')
+
+        output_path = save_path.replace('.xls', '_motor_optimized.xls')
+        wb.save(output_path)
+
+        analysis.pop('row_updates', None)
         analysis['download_file'] = os.path.basename(output_path)
+        analysis['guncellenen_satir'] = len(row_updates)
 
         return jsonify(analysis)
 
