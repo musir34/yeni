@@ -918,7 +918,9 @@ def akilli_motor_analiz():
                 excel_row = int(pos) + 2  # 1. satır başlık
                 ws.cell(row=excel_row, column=yeni_col, value=fiyat)
                 if tarife_col:
-                    ws.cell(row=excel_row, column=tarife_col, value=f'{donem} Günlük')
+                    # Trendyol 'Tarife Seçimi' açılır listesinin kabul ettiği
+                    # tam değer: '3 Günlük Fiyat' / '4 Günlük Fiyat'.
+                    ws.cell(row=excel_row, column=tarife_col, value=f'{donem} Günlük Fiyat')
 
         output_path = save_path.replace('.xls', '_motor_optimized.xls')
         wb.save(output_path)
