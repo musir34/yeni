@@ -23,6 +23,7 @@ from flask import (
 import pandas as pd
 import numpy as np
 import os
+import re
 import json
 import logging
 from datetime import datetime, timedelta
@@ -62,6 +63,32 @@ ELASTICITY_MULTIPLIER = {
 
 def _allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _resolve_commission_columns(columns, period: str = '3') -> list[str]:
+    """Komisyon kademesi sütunlarını seçilen teslimat tarifesine göre çözer.
+
+    Yeni Trendyol formatında '1.KOMİSYON'..'4.KOMİSYON' başlıkları İKİ kez
+    geçer: 'Tarih aralığı (3 Gün)' ve 'Tarih aralığı (4 Gün)' bloklarından
+    hemen sonra. pandas tekrar eden ikinci seti '.1' ekiyle adlandırdığı için
+    güvenilir yöntem konumdur: ilgili marker'dan sonraki 4 sütun. Eski
+    tek-tarifeli formatta marker yoktur; doğrudan '1.KOMİSYON'..'4.KOMİSYON'
+    döner.
+    """
+    cols = [str(c) for c in columns]
+    marker = f'Tarih aralığı ({period} Gün)'
+    if marker in cols:
+        i = cols.index(marker)
+        return cols[i + 1:i + 5]
+    return ['1.KOMİSYON', '2.KOMİSYON', '3.KOMİSYON', '4.KOMİSYON']
+
+
+def _restore_dupe_header(col) -> str:
+    """pandas'ın tekrar eden komisyon başlığını ('1.KOMİSYON.1') orijinal
+    haline ('1.KOMİSYON') çevirir; indirilen Excel Trendyol'a uyumlu kalsın."""
+    c = str(col)
+    m = re.match(r'^(\d+\.KOMİSYON)\.\d+$', c)
+    return m.group(1) if m else c
 
 
 def _extract_model_from_sku(sku: str) -> str | None:
@@ -502,21 +529,29 @@ def mod9_sezon(renk: str) -> dict:
 def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
                       excluded_models: list[str] | None = None,
                       included_models: list[str] | None = None,
-                      include_only: bool = False) -> dict:
+                      include_only: bool = False,
+                      tarife_donemi: str = '3') -> dict:
     """Tüm modülleri çalıştırıp birleşik sonuç üretir.
 
     include_only=True ve included_models dolu ise SADECE bu modeller analiz
     edilip fiyat güncellemesi (indirim) alır; diğer tüm modeller dokunulmadan
     kalır (beyaz liste modu).
+
+    tarife_donemi ('3' veya '4'): Yeni Trendyol formatında komisyon oranları
+    hangi teslimat tarifesinden ('3 Gün' / '4 Gün') okunacağını belirler.
     """
 
     # ── Veri Hazırlığı ──────────────────────────────────────────────
     tariff_df.columns = [str(c).strip() for c in tariff_df.columns]
 
+    # Seçilen teslimat tarifesine göre komisyon kademesi sütunları
+    tarife_donemi = '4' if str(tarife_donemi).strip() == '4' else '3'
+    kom_cols = _resolve_commission_columns(tariff_df.columns, tarife_donemi)
+
     numeric_cols = [
         '1.Fiyat Alt Limit', '2.Fiyat Üst Limiti', '2.Fiyat Alt Limit',
         '3.Fiyat Üst Limiti', '3.Fiyat Alt Limit', '4.Fiyat Üst Limiti',
-        '1.KOMİSYON', '2.KOMİSYON', '3.KOMİSYON', '4.KOMİSYON',
+        *kom_cols,
         'KOMİSYONA ESAS FİYAT', 'GÜNCEL KOMİSYON', 'GÜNCEL TSF',
     ]
     for col in numeric_cols:
@@ -620,10 +655,10 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
         guncel_tsf = float(first.get('GÜNCEL TSF', 0) or 0)
         guncel_kom = float(first.get('GÜNCEL KOMİSYON', 0) or 0)
 
-        k1 = float(first.get('1.KOMİSYON', 0) or 0)
-        k2 = float(first.get('2.KOMİSYON', 0) or 0)
-        k3 = float(first.get('3.KOMİSYON', 0) or 0)
-        k4 = float(first.get('4.KOMİSYON', 0) or 0)
+        k1 = float(first.get(kom_cols[0], 0) or 0)
+        k2 = float(first.get(kom_cols[1], 0) or 0)
+        k3 = float(first.get(kom_cols[2], 0) or 0)
+        k4 = float(first.get(kom_cols[3], 0) or 0)
         ust2 = float(first.get('2.Fiyat Üst Limiti', 0) or 0)
         ust3 = float(first.get('3.Fiyat Üst Limiti', 0) or 0)
         ust4 = float(first.get('4.Fiyat Üst Limiti', 0) or 0)
@@ -767,7 +802,11 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
 
     # ── Excel Güncelleme ────────────────────────────────────────────
     updated_df = tariff_df.copy()
-    updated_df['Tarife Sonuna Kadar Uygula'] = 'Evet'
+    # Yeni format 'Tarife Seçimi' sütununu kullanır; eski format ise
+    # 'Tarife Sonuna Kadar Uygula'. Hangisinin geçerli olduğunu tespit et.
+    is_new_format = 'Tarife Seçimi' in updated_df.columns
+    if not is_new_format:
+        updated_df['Tarife Sonuna Kadar Uygula'] = 'Evet'
 
     for r in results:
         if r['aksiyon'] != 'TUT':
@@ -790,6 +829,11 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
     else:
         # Hiçbir modele fiyat güncellemesi uygulanmadı → boş çıktı
         updated_df = updated_df.iloc[0:0]
+
+    # Yeni format: Trendyol'un okuduğu 'Tarife Seçimi' sütununu, fiyat
+    # güncellemesi uygulanan satırlar için seçilen teslimat tarifesiyle doldur.
+    if is_new_format:
+        updated_df['Tarife Seçimi'] = f'{tarife_donemi} Günlük'
 
     updated_df = updated_df.drop(columns=['_RENK'], errors='ignore')
 
@@ -866,6 +910,8 @@ def akilli_motor_analiz():
             'strateji': request.form.get('strateji', 'dengeli'),
         }
 
+        tarife_donemi = request.form.get('tarife_donemi', '3')
+
         excluded_raw = request.form.get('excluded_models', '')
         excluded = [m.strip() for m in excluded_raw.replace('\n', ',').replace(';', ',').split(',') if m.strip()]
 
@@ -873,14 +919,17 @@ def akilli_motor_analiz():
         included = [m.strip() for m in included_raw.replace('\n', ',').replace(';', ',').split(',') if m.strip()]
         include_only = request.form.get('include_only', '') in ('1', 'true', 'True', 'on')
 
-        analysis = run_full_analysis(df, params, excluded, included, include_only)
+        analysis = run_full_analysis(df, params, excluded, included, include_only, tarife_donemi)
 
         if not analysis['success']:
             return jsonify(analysis), 400
 
-        # Excel kaydet
+        # Excel kaydet — pandas'ın tekrarlı komisyon başlıklarını
+        # ('1.KOMİSYON.1') orijinaline çevir ki Trendyol formatı bozulmasın.
+        out_df = analysis['updated_df']
+        out_df.columns = [_restore_dupe_header(c) for c in out_df.columns]
         output_path = save_path.replace('.xls', '_motor_optimized.xls')
-        analysis['updated_df'].to_excel(output_path, index=False, engine='openpyxl')
+        out_df.to_excel(output_path, index=False, engine='openpyxl')
 
         # DataFrame'i response'tan çıkar
         del analysis['updated_df']

@@ -115,6 +115,13 @@
                 <option value="stok_eritme">Stok Eritme</option>
             </select>
         </div>
+        <div>
+            <label>Tarife Dönemi <span class="th-tip" data-tip="Trendyol komisyon tarifesi teslimat süresine göre 2 set sunar. Motor komisyon oranlarını bu dönemden okur ve indirilen Excel'in 'Tarife Seçimi' sütununa bunu yazar. Genelde 4 Gün komisyonu daha düşüktür.">!</span></label>
+            <select id="pTarifeDonemi">
+                <option value="3" selected>3 Gün (3 Günlük)</option>
+                <option value="4">4 Gün (4 Günlük)</option>
+            </select>
+        </div>
         <div style="grid-column:span 2">
             <label>Hariç Tutulacak Modeller</label>
             <div class="d-flex gap-2 mb-1 flex-wrap align-items-center">
@@ -220,6 +227,7 @@ document.addEventListener('DOMContentLoaded', function(){
             fd.append(k,document.getElementById(map[k]).value);
         });
         fd.append('strateji',document.getElementById('pStrateji').value);
+        fd.append('tarife_donemi',document.getElementById('pTarifeDonemi').value);
         fd.append('excluded_models',document.getElementById('pExcluded').value);
         fd.append('include_only',document.getElementById('pIncludeOnly').checked?'1':'0');
         fd.append('included_models',document.getElementById('pIncluded').value);
