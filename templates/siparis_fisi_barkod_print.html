@@ -46,6 +46,17 @@
       color: #4caf50;
       font-weight: bold;
     }
+    .count-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: #2196f3;
+      color: #fff;
+      font-weight: bold;
+      font-size: 13px;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
     .barcode-image {
       max-width: 120px;
       max-height: 120px;
@@ -131,19 +142,21 @@
       <h3>Barkod Yazdırma</h3>
       <p>1. Her barkod için "Bu Barkodu Yazdır" butonuna tıklayarak ayrı ayrı yazdırabilirsiniz.</p>
       <p>2. Aşağıdaki yeşil buton ile tüm barkodları A4 kağıtta düzenli biçimde yazdırabilirsiniz.</p>
-      <p><strong>Not:</strong> A4 yazdırma düzeni, sayfa kenarlarında üst/alt 1.5cm, sağ/sol 0.8cm boşluk ve etiketler arasında yan yana 2mm, alt alta 1mm boşluk olacak şekilde ayarlanmıştır. Bu durumda her bir etiketin alanı yaklaşık 63.3mm x 37.3mm olacaktır.</p>
+      <p><strong>Not:</strong> A4 yazdırma düzeni, sayfa kenarlarında üst/alt 1.5cm, sağ/sol 0.8cm boşluk ve etiketler arasında yan yana 2mm, alt alta 1mm boşluk olacak şekilde ayarlanmıştır. Bu durumda her bir etiketin alanı yaklaşık 62.67mm x 37.20mm olacaktır (Ürün Listesi A4 tasarımı ile aynı).</p>
     </div>
 
     <button class="a4-button" id="a4Button">Tüm Barkodları A4 Kağıtta Düzenle</button>
 
     <div class="barcode-grid">
+      {# Her benzersiz barkod TEK kart olarak gösterilir; adet "× N" rozetiyle belirtilir. #}
+      {# Yazdırma (A4 / tek) yine tam adetle (print_count) çalışır — aşağıdaki JS dizisine bak. #}
       {% for item in barcodes %}
-        {% for j in range(item.print_count) %}
           <div class="barcode-card {% if item.is_printed %}printed{% endif %}" data-barcode="{{ item.barcode }}">
             {% if item.is_printed %}
               <span class="print-status">✓ Yazdırıldı</span>
             {% endif %}
-            <img class="barcode-image" src="{{ item.qr_image_path }}" alt="QR Kod: {{ item.barcode }}">
+            <span class="count-badge">× {{ item.print_count }}</span>
+            <img class="barcode-image" src="{{ item.qr_image_path }}" alt="QR Kod: {{ item.barcode }}" loading="lazy" decoding="async">
             <div class="barcode-text">{{ item.barcode }}</div>
             <div class="barcode-info">
               <span><strong>Model:</strong> {{ item.model }}</span>
@@ -154,7 +167,6 @@
               Bu Barkodu Yazdır
             </button>
           </div>
-        {% endfor %}
       {% endfor %}
     </div>
 
@@ -165,19 +177,24 @@
   </div>
 
   <script>
-    // Bütün barkodları topla
-    const allBarcodes = [];
+    // Benzersiz barkodlar + adet (count = print_count). Yazdırırken count kadar çoğaltılır.
+    const uniqueBarcodes = [];
     {% for item in barcodes %}
-      {% for j in range(item.print_count) %}
-        allBarcodes.push({
-          barcode: "{{ item.barcode }}",
-          model: "{{ item.model }}",
-          color: "{{ item.color }}",
-          size: "{{ item.size }}",
-          qrPath: "{{ item.qr_image_path }}"
-        });
-      {% endfor %}
+      uniqueBarcodes.push({
+        barcode: "{{ item.barcode }}",
+        model: "{{ item.model }}",
+        color: "{{ item.color }}",
+        size: "{{ item.size }}",
+        qrPath: "{{ item.qr_image_path }}",
+        count: {{ item.print_count }}
+      });
     {% endfor %}
+
+    // Yazdırma için tam (çoğaltılmış) liste — DOM/resim yükü yok, sadece bellekte dizi.
+    const allBarcodes = uniqueBarcodes.flatMap(item => {
+      const { count, ...rest } = item;
+      return Array.from({ length: count }, () => ({ ...rest }));
+    });
 
     const siparisId = Number(document.body.dataset.siparisId || 0);
 
@@ -276,130 +293,124 @@
       }, 2000);
     }
 
-    // A4 düzeninde tüm barkodları yazdırma
-    document.getElementById('a4Button').addEventListener('click', function() {
-      const printWindow = window.open('', '_blank');
-      const totalBarcodes = allBarcodes.length;
-      const barcodesPerPage = 21; // 3 sütun x 7 satır
-      const totalPages = Math.ceil(totalBarcodes / barcodesPerPage);
+    // ── A4 düzeni: Ürün Listesi (product_label.html) A4 tasarımı ile BİREBİR AYNI ──
+    // Sabit konfig (product_label.html A4_FIXED_CONFIG ile aynı)
+    const A4_FIXED_CONFIG = {
+      PAGE_WIDTH: 210, PAGE_HEIGHT: 297,
+      MARGIN_TOP: 15, MARGIN_BOTTOM: 15, MARGIN_LEFT: 8, MARGIN_RIGHT: 8,
+      COLUMNS: 3, ROWS: 7, COLUMN_GAP: 2, ROW_GAP: 1,
+      LABELS_PER_PAGE: 21, QR_SIZE_MM: 18,
+      // Taşma sorununu azaltmak için etiket yüksekliğinden 0.08mm çalıyoruz (product_label ile aynı).
+      LABEL_HEIGHT_APPROX: (Math.floor(((297 - 15 - 15 - (7 - 1) * 1) / 7) * 100) / 100) - 0.08
+    };
 
-      let printContent = `
+    // Etiket yazı tipi (product_label ile aynı: Roboto — yerel woff2, internetsiz)
+    const LABEL_FONT = "'Roboto', Arial, sans-serif";
+    const ROBOTO_RANGES = {
+      'latin': "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD",
+      'latin-ext': "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+    };
+    function robotoFaceCss() {
+      const origin = window.location.origin;
+      const files = [[400,'latin'],[400,'latin-ext'],[500,'latin'],[500,'latin-ext'],[700,'latin'],[700,'latin-ext']];
+      return files.map(([w,s]) =>
+        `@font-face{font-family:'Roboto';font-style:normal;font-weight:${w};font-display:swap;src:url('${origin}/static/fonts/Roboto-${w}-${s}.woff2') format('woff2');unicode-range:${ROBOTO_RANGES[s]};}`
+      ).join('');
+    }
+
+    // product_label.html getLabelHTML(isA4Fixed=true) ile BİREBİR AYNI etiket içeriği
+    function getA4LabelHTML(barcode, model, color, size, qrSrc) {
+      const qr = A4_FIXED_CONFIG.QR_SIZE_MM; // 18mm
+      return `
+      <div class="label-item-fixed-a4-content">
+        <div class="left" style="width: 40%; padding-right: 1mm;">
+          <img class="qr-code-clone" src="${qrSrc}" alt="QR Kod ${barcode}" style="width:${qr}mm; height:${qr}mm; max-width:95%; max-height:95%; margin-bottom: 1mm; object-fit: contain;">
+          <div class="barcode-text-clone" style="font-size:8pt; max-width: ${qr + 2}mm;">${barcode}</div>
+        </div>
+        <div class="right" style="width: 60%; padding-left: 1.5mm;">
+          <div class="info-clone" style="font-size:9pt; margin-bottom:1mm;"><span class="label">Model:</span> <span class="value">${model}</span></div>
+          <div class="info-clone" style="font-size:9pt; margin-bottom:1mm;"><span class="label">Renk:</span> <span class="value">${color}</span></div>
+          <div class="info-clone" style="font-size:9pt;"><span class="label">Beden:</span> <span class="value">${size}</span></div>
+        </div>
+      </div>`;
+    }
+
+    // A4 düzeninde tüm barkodları yazdırma (product_label A4 görünümünün birebir kopyası)
+    document.getElementById('a4Button').addEventListener('click', function() {
+      if (!allBarcodes.length) { alert('Yazdırılacak barkod bulunmuyor.'); return; }
+
+      const C = A4_FIXED_CONFIG;
+      const labelH = C.LABEL_HEIGHT_APPROX.toFixed(2);
+
+      let labelsHTML = '';
+      allBarcodes.forEach(item => {
+        labelsHTML += `<div class="label-item">${getA4LabelHTML(item.barcode, item.model, item.color, item.size, item.qrPath)}</div>`;
+      });
+
+      // product_label ile aynı: tek bir grid; sayfa geçişleri @page kenar boşlukları +
+      // page-break-inside:avoid ile otomatik. grid-auto-rows + gap (1mm/2mm) ile akar.
+      const printContent = `
         <!DOCTYPE html>
         <html>
         <head>
+          <meta charset="UTF-8">
           <title>A4 Barkod Düzeni</title>
           <style>
+            ${robotoFaceCss()}
             @page {
-              size: A4;
-              margin: 0; /* Yazıcının kendi minimum marjini olabilir, bunu sıfırlıyoruz */
+              size: ${C.PAGE_WIDTH}mm ${C.PAGE_HEIGHT}mm;
+              margin: ${C.MARGIN_TOP}mm ${C.MARGIN_RIGHT}mm ${C.MARGIN_BOTTOM}mm ${C.MARGIN_LEFT}mm;
             }
-            body {
-              margin: 0;
-              padding: 0;
-              background: white;
-              font-family: Arial, sans-serif;
+            html, body {
+              margin: 0; padding: 0; background: white;
+              font-family: ${LABEL_FONT}; color: #000;
+              -webkit-print-color-adjust: exact !important;
+              color-adjust: exact !important;
             }
-            .page {
-              width: 210mm; /* A4 genişliği */
-              height: 297mm; /* A4 yüksekliği */
-              box-sizing: border-box; /* Padding ve border'ı width/height'e dahil et */
-              padding: 15mm 8mm 15mm 8mm; /* Üst/Alt: 1.5cm, Sağ/Sol: 0.8cm */
-
+            .a4-grid {
               display: grid;
-              /* Grid, padding sonrası kalan alanda (194mm x 267mm) çalışacak. */
-              /* Sütun genişliği: (100% - (2 * 2mm sütun arası boşluk)) / 3 sütun */
-              grid-template-columns: repeat(3, calc((100% - 4mm) / 3)); 
-              /* Satır yüksekliği: (100% - (6 * 1mm satır arası boşluk)) / 7 satır */
-              grid-template-rows: repeat(7, calc((100% - 6mm) / 7));
-
-              column-gap: 2mm; /* Sütunlar arası boşluk */
-              row-gap: 1mm;    /* Satırlar arası boşluk */
+              grid-template-columns: repeat(${C.COLUMNS}, 1fr);
+              grid-auto-rows: ${labelH}mm;
+              gap: ${C.ROW_GAP}mm ${C.COLUMN_GAP}mm;
             }
-            .page:not(.last-page) {
-                page-break-after: always;
+            .label-item {
+              page-break-inside: avoid;
+              border: 0.1mm solid #eee;
+              background-color: white;
+              overflow: hidden;
+              height: ${labelH}mm;
+              box-sizing: border-box;
+              display: flex; flex-direction: row; align-items: center;
             }
-            .page.last-page {
-                page-break-after: auto;
+            .label-item-fixed-a4-content {
+              display: flex; flex-direction: row;
+              width: 100%; height: 100%;
+              padding: 1mm; box-sizing: border-box;
             }
-            .label {
-              display: flex; /* Etiket içeriğini flex ile ortalamak/düzenlemek için */
-              /* width ve height grid tarafından otomatik sağlanacak */
-              border: none; 
-              box-sizing: border-box; /* Padding ve border etiket boyutuna dahil */
-              /* Etiket içeriğinin taşmasını önlemek ve görmek için: */
-              /* overflow: hidden; */ 
-              /* Sınırları görmek istersen: border: 0.1mm solid #eee; */
-            }
-            .left {
-              width: 50%;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              padding: 1mm; /* Daha az padding, çünkü etiket alanı küçüldü */
+            .label-item-fixed-a4-content .left {
+              display: flex; flex-direction: column;
+              align-items: center; justify-content: center;
               box-sizing: border-box;
             }
-            .right {
-              width: 50%;
-              display: flex;
-              flex-direction: column;
-              justify-content: center;
-              text-align: center;
-              padding: 1mm; /* Daha az padding */
+            .label-item-fixed-a4-content .right {
+              display: flex; flex-direction: column;
+              justify-content: center; text-align: left;
               box-sizing: border-box;
             }
-            img {
-              max-width: 18mm; /* Yeni etiket boyutuna göre küçültüldü */
-              max-height: 18mm;
-              margin-bottom: 1mm; /* Boşluk azaltıldı */
+            .label-item-fixed-a4-content img.qr-code-clone { object-fit: contain; }
+            .label-item-fixed-a4-content .barcode-text-clone {
+              text-align: center; font-weight: bold;
+              word-break: break-all; line-height: 1.2;
             }
-            .barcode-text {
-              font-size: 8pt; /* Biraz küçültüldü */
-              text-align: center;
-              font-weight: bold;
-              word-break: break-all;
-              line-height: 1.2;
+            .label-item-fixed-a4-content .info-clone {
+              font-weight: 600; line-height: 1.2; text-align: left;
             }
-            .info {
-              margin-bottom: 1.5mm; /* Boşluk azaltıldı */
-              font-size: 8.5pt; /* Biraz küçültüldü */
-              font-weight: 600;
-              line-height: 1.2;
-            }
+            .label-item-fixed-a4-content .info-clone .label { font-weight: bold; }
+            .label-item-fixed-a4-content .info-clone .value { font-weight: normal; }
           </style>
         </head>
         <body>
-      `;
-
-      for (let page = 0; page < totalPages; page++) {
-        const pageClass = (page === totalPages - 1) ? "page last-page" : "page";
-        printContent += `<div class="${pageClass}">`; 
-
-        for (let i = 0; i < barcodesPerPage; i++) {
-          const index = page * barcodesPerPage + i;
-          if (index < totalBarcodes) {
-            const item = allBarcodes[index];
-            printContent += `
-              <div class="label">
-                <div class="left">
-                  <img src="${item.qrPath}" alt="QR Kod">
-                  <div class="barcode-text">${item.barcode}</div>
-                </div>
-                <div class="right">
-                  <div class="info">Model: ${item.model}</div>
-                  <div class="info">Renk: ${item.color}</div>
-                  <div class="info">Beden: ${item.size}</div>
-                </div>
-              </div>
-            `;
-          } else {
-            printContent += `<div class="label"></div>`; // Boş etiketler için
-          }
-        }
-        printContent += `</div>`;
-      }
-
-      printContent += `
+          <div class="a4-grid">${labelsHTML}</div>
           <script>
             window.onload = function() {
               setTimeout(function() {
@@ -411,6 +422,7 @@
         </html>
       `;
 
+      const printWindow = window.open('', '_blank');
       printWindow.document.open();
       printWindow.document.write(printContent);
       printWindow.document.close();
