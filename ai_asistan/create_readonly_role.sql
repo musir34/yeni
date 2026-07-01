@@ -10,11 +10,14 @@
 -- Sonra ai_ro_password'ü güçlü bir parolayla değiştir ve .env'e AI_DB_URL olarak koy.
 -- ============================================================
 
--- 1) Rolü oluştur (parolayı MUTLAKA değiştir)
+-- 1) Rolü oluştur; ZATEN VARSA şifreyi/LOGIN'i kesinleştir (idempotent).
+--    .env'deki AI_DB_URL şifresiyle BİREBİR AYNI olmalı.
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ai_readonly') THEN
         CREATE ROLE ai_readonly LOGIN PASSWORD 'DEGISTIR_guclu_parola_buraya';
+    ELSE
+        ALTER ROLE ai_readonly LOGIN PASSWORD 'DEGISTIR_guclu_parola_buraya';
     END IF;
 END
 $$;
