@@ -1,75 +1,54 @@
 # Veritabanı Tabloları (gerçek şema)
 
-> Kesin kolon adlarını gerekirse information_schema ile doğrula ama aşağıdakiler günceldir.
+## ⭐ SİPARİŞLER İÇİN TEK KAYNAK: `ai_orders_all` VIEW'İ
+Siparişlerle ilgili HER soruda (sayım, dağılım, ciro, saat, pazaryeri...) **yalnızca
+`ai_orders_all` view'ini kullan.** Bu view 8 statü tablosunu (yeni→arşiv) birleştirir ve
+tarihleri **Türkiye saatine (Europe/Istanbul) çevrilmiş hazır kolonlarla** verir.
 
-## Siparişler — statüye göre 8 AYRI tabloya bölünür (KRİTİK)
-Sipariş "durumuna" göre farklı tablolarda tutulur (hepsi aynı OrderBase kolonlarını paylaşır).
-Bir sipariş yaşam döngüsünde tablodan tabloya taşınır. `orders` tablosu BOŞTUR, kullanma.
+🚫 Tek tek statü tablolarına (orders_created, orders_shipped...) ELLE bakma, UNION yazma,
+ham `created_at`/`order_date` ile TR dönüşümü yapma — hepsi bu view'de HAZIR.
 
-### 📅 HANGİ TARİH? (created_at vs order_date) — KARIŞTIRMA
-- `created_at` = siparişin **bizim sistemimize düştüğü/geldiği** an. **"Bugün kaç sipariş geldi",
-  "bugünkü siparişler", "saat kaçta geldi" → HER ZAMAN `created_at` kullan.**
-- `order_date` = pazaryerinin (Trendyol vb.) orijinal sipariş tarihi; günler önce olabilir.
-  Sadece kullanıcı açıkça "müşteri ne zaman sipariş verdi / pazaryeri sipariş tarihi" derse kullan.
-- İkisi çok farklı sonuç verir (örn. bugün created_at=100, order_date=29). Varsayılan: **created_at**.
+### View'in hazır kolonları
+- `statu` — sipariş durumu (Yeni / Hazırlanıyor / Toplanıyor / Kargoya Hazır / Kargolandı /
+  Teslim Edildi / İptal / Arşiv)
+- `siparis_tarihi_tr` (date) — **müşterinin sipariş verdiği tarih (TR)**. "Bugün gelen sipariş"
+  bu demektir. → **VARSAYILAN "bugün" kolonu budur.**
+- `siparis_tr` (timestamp) — müşteri sipariş anı, TR saati (saat gösterimi için).
+- `giris_tarihi_tr` (date) — siparişin bizim sisteme senkron olduğu tarih (TR). Sadece kullanıcı
+  "sisteme ne zaman düştü / ne zaman senkron oldu" derse kullan.
+- `giris_tr` (timestamp) — sisteme giriş anı, TR saati.
+- `source` — pazaryeri (TRENDYOL, SHOPIFY_SYNC... NULL olabilir). Shopify: `source ILIKE '%SHOPIFY%'`.
+- Ayrıca: `order_number, status, amount, quantity, discount, commission, customer_name,
+  customer_surname, product_name, product_barcode, product_code, product_size,
+  cargo_tracking_number, estimated_delivery_end, created_at, order_date`.
+- Her satır bir sipariştir (order_number benzersiz).
 
-### Sipariş kimliği
-- Her satır bir sipariştir; gerekirse `COUNT(DISTINCT order_number)` de aynı sonucu verir.
-
-🚫 **ASLA tek bir statü tablosuna bakıp "toplam sipariş" sayma!** Örn. sadece `orders_shipped`'e
-bakmak yanlış sayı verir (bugün 100 yerine 27 gibi). Sipariş SAYISI/analizi gereken HER soruda
-AŞAĞIDAKİ 8-TABLO BİRLEŞİMİNİ (`tum_siparisler` CTE, **created_at ile**) kullan — istisnasız:
-
-```sql
-WITH tum_siparisler AS (
-  SELECT 'Yeni'         AS statu, source, created_at, amount, order_number, estimated_delivery_end FROM orders_created
-  UNION ALL SELECT 'Hazırlanıyor',  source, created_at, amount, order_number, estimated_delivery_end FROM orders_hazirlaniyor
-  UNION ALL SELECT 'Toplanıyor',    source, created_at, amount, order_number, estimated_delivery_end FROM orders_picking
-  UNION ALL SELECT 'Kargoya Hazır', source, created_at, amount, order_number, estimated_delivery_end FROM orders_ready_to_ship
-  UNION ALL SELECT 'Kargolandı',    source, created_at, amount, order_number, estimated_delivery_end FROM orders_shipped
-  UNION ALL SELECT 'Teslim Edildi', source, created_at, amount, order_number, estimated_delivery_end FROM orders_delivered
-  UNION ALL SELECT 'İptal',         source, created_at, amount, order_number, estimated_delivery_end FROM orders_cancelled
-  UNION ALL SELECT 'Arşiv',         source, created_at, amount, order_number, estimated_delivery_end FROM orders_archived
-)
-SELECT count(*) FROM tum_siparisler
-WHERE (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Istanbul')::date
-      = (now() AT TIME ZONE 'Europe/Istanbul')::date;
-```
-Diğer sütun gerekiyorsa CTE'ye ekle (ortak OrderBase kolonları: customer_name, product_name,
-product_barcode, quantity, discount, commission, status, order_date, cargo_tracking_number...).
-
-### Ortak (OrderBase) önemli kolonlar
-- `created_at` (DateTime, **UTC**) — siparişin oluşturulma anı → "bugünkü sipariş" bununla.
-- `source` (String) — **PAZARYERİ/KAYNAK**. Örn: `TRENDYOL`, `SHOPIFY_SYNC` vb.
-  Kesin değerleri gör: `SELECT DISTINCT source FROM orders_created;`
-- `estimated_delivery_end` (DateTime) — tahmini teslim tarihi (geciken hesabı için).
-
-## Sık sorulan kalıplar
-> ⚠️ "Bugün" = TÜRKİYE saati. created_at UTC'dir → MUTLAKA çevir (bkz. 00_asistan_kimligi).
-> Tüm statü tablolarını UNION ALL ile birleştir (sipariş bugün gelip Shipped'e geçmiş olabilir).
-
-- **"Bugün kaç sipariş geldi?"** → yukarıdaki `tum_siparisler` CTE'sini kullan (8 tablo!),
-  TR saatiyle bugüne filtrele. Tek tabloya ASLA bakma.
-- **"Shopify'dan kaç sipariş?"** → aynı CTE + `WHERE ... AND source ILIKE '%SHOPIFY%'`.
-  Not: `source` NULL da olabilir; "Shopify değilse" derken NULL'ı ayrı değerlendir.
-  (Shopify siparişleri de gulludb'ye senkron edilir — dış API/MCP KULLANMA.)
-- **"Saat kaçtan beri / saatlik dağılım?"** → `tum_siparisler` CTE'sinden, TR saatine çevirip grupla:
+### Hazır sorgular (kopyala-kullan)
+- **"Bugün kaç sipariş geldi?"** (varsayılan = müşteri sipariş tarihi):
   ```sql
-  WITH tum_siparisler AS ( ... 8 tablo UNION ALL ... )
-  SELECT to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Istanbul','HH24') AS saat,
-         count(*)
-  FROM tum_siparisler
-  WHERE (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Istanbul')::date
-        = (now() AT TIME ZONE 'Europe/Istanbul')::date
-  GROUP BY 1 ORDER BY 1;
+  SELECT count(*) FROM ai_orders_all
+  WHERE siparis_tarihi_tr = (now() AT TIME ZONE 'Europe/Istanbul')::date;
   ```
-- **"Kaç sipariş gecikti?"** → `estimated_delivery_end < now()` ve henüz kargolanmamış
-  (orders_shipped/delivered dışındaki statülerde).
+- **"Shopify'dan bugün kaç sipariş?"** → yukarıya `AND source ILIKE '%SHOPIFY%'` ekle.
+- **"Pazaryeri dağılımı bugün":**
+  ```sql
+  SELECT source, count(*) FROM ai_orders_all
+  WHERE siparis_tarihi_tr=(now() AT TIME ZONE 'Europe/Istanbul')::date GROUP BY source ORDER BY 2 DESC;
+  ```
+- **"Saatlik dağılım / saat kaçtan beri":**
+  ```sql
+  SELECT to_char(siparis_tr,'HH24') AS saat, count(*) FROM ai_orders_all
+  WHERE siparis_tarihi_tr=(now() AT TIME ZONE 'Europe/Istanbul')::date GROUP BY 1 ORDER BY 1;
+  ```
+- **"Bugünkü ciro":** `SELECT sum(amount) FROM ai_orders_all WHERE siparis_tarihi_tr=(now() AT TIME ZONE 'Europe/Istanbul')::date;`
+- **"Statü dağılımı":** `SELECT statu, count(*) FROM ai_orders_all WHERE siparis_tarihi_tr=... GROUP BY statu;`
+- **"Kaç sipariş gecikti?"** → `estimated_delivery_end < now()` ve statu NOT IN ('Kargolandı','Teslim Edildi','İptal','Arşiv').
+- **"Dün / bu ay / son 7 gün"** → `siparis_tarihi_tr` üzerinde tarih aralığı filtrele.
 
-## Diğer tablolar
-- Sipariş satırları/kalemleri: `order_items`
-- Ürün/model, stok, ledger, kasa/kâr tabloları ayrıca mevcut — şemadan keşfet.
+> Saat gösterirken `siparis_tr`/`giris_tr` zaten TR'dir, ekstra çevirme.
 
-## Şema keşfi
-- Tablolar: `SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY 1;`
-- Kolonlar: `SELECT column_name, data_type FROM information_schema.columns WHERE table_name='orders_created';`
+## Diğer tablolar (view kapsamı dışı)
+- Sipariş ürün kalemleri: `order_items`
+- Ürün/model, stok, ledger, kasa/kâr tabloları — şemadan keşfet:
+  - Tablolar: `SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY 1;`
+  - Kolonlar: `SELECT column_name, data_type FROM information_schema.columns WHERE table_name='<tablo>';`
