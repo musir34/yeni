@@ -23,8 +23,10 @@ from flask_login import login_required
 
 ai_asistan_bp = Blueprint("ai_asistan", __name__, url_prefix="/ai-asistan")
 
-# Bu dosyanın bulunduğu klasör: .mcp.json ve IS_KURALLARI.md burada.
+# Bu dosyanın bulunduğu klasör: .mcp.json burada.
 BASE_DIR = Path(__file__).resolve().parent
+# İş bilgisi: Obsidian vault klasöründeki tüm notlar (yoksa IS_KURALLARI.md'ye düş).
+VAULT_DIR = BASE_DIR / "vault"
 IS_KURALLARI = BASE_DIR / "IS_KURALLARI.md"
 
 # Sadece bu araca izin ver: postgres MCP'nin salt-okunur sorgu aracı.
@@ -36,11 +38,26 @@ MAX_SORU_UZUNLUK = 2000        # aşırı uzun promptları reddet
 
 
 def _system_prompt() -> str:
-    """İş kuralları dosyasını sistem promptu olarak yükle."""
+    """
+    İş bilgisini sistem promptu olarak yükle.
+    Öncelik: Obsidian vault klasöründeki tüm .md notları (ada göre sıralı, birleştirilmiş).
+    Vault yoksa IS_KURALLARI.md; o da yoksa asgari bir prompt.
+    """
+    if VAULT_DIR.is_dir():
+        notlar = sorted(VAULT_DIR.glob("*.md"))
+        parcalar = []
+        for not_dosyasi in notlar:
+            try:
+                parcalar.append(not_dosyasi.read_text(encoding="utf-8"))
+            except OSError:
+                continue
+        if parcalar:
+            return "\n\n---\n\n".join(parcalar)
+
     try:
         return IS_KURALLARI.read_text(encoding="utf-8")
     except OSError:
-        # Dosya yoksa asistan yine çalışır, sadece bağlam olmadan.
+        # Hiçbir bağlam yoksa asistan yine çalışır.
         return "Sen Güllü panelinin AI asistanısın. Soruları gulludb veritabanını sorgulayarak Türkçe yanıtla."
 
 
