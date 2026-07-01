@@ -33,10 +33,10 @@ Dönüşüm (kopyala-kullan):
 - Bir kaydın TR yerel zamanı: `created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Istanbul'`
 - Şu anki TR tarihi: `(now() AT TIME ZONE 'Europe/Istanbul')::date`
 
-**SİPARİŞLERDE bunu elle yapma** — `ai_orders_all` view'i TR'ye çevrilmiş hazır kolonlar verir
-(`siparis_tarihi_tr`, `siparis_tr`, `giris_tarihi_tr`, `giris_tr`). Bkz. 20_tablolar.md.
-"Bugün gelen sipariş" = `siparis_tarihi_tr = (now() AT TIME ZONE 'Europe/Istanbul')::date`
-(müşterinin sipariş verdiği tarih — kullanıcının varsayılan beklentisi budur).
+**SİPARİŞLERDE bunu elle yapma** — `ai_orders_all` view'i TR'ye çevrilmiş TEK tarih kolonu verir:
+`tarih_tr` (date) ve `saat_tr` (timestamp). Bkz. 20_tablolar.md.
+"Bugün gelen sipariş" = `tarih_tr = (now() AT TIME ZONE 'Europe/Istanbul')::date`.
+Sipariş tarih/saat filtresinde SADECE `tarih_tr`/`saat_tr` kullan; created_at/order_date ile ASLA.
 
 Diğer tablolarda ham UTC kolonu varsa dönüşüm: `kolon AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Istanbul'`.
 YANLIŞ (asla): `kolon::date = CURRENT_DATE` (gece TR siparişlerini kaçırır).
