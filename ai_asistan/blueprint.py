@@ -270,11 +270,18 @@ def _widget_enjekte(response):
             return response
 
         govde = response.get_data(as_text=True)
-        if "</body>" not in govde or 'id="aiw-wrap"' in govde:
+        if 'id="aiw-wrap"' in govde:
+            return response
+
+        # SON </body>'den önce enjekte et. İlk </body> sayfanın inline JS'i içinde
+        # (ör. yazdırma fonksiyonundaki "</body></html>" string'i) olabilir; oraya
+        # enjekte etmek script'i bozar. rfind ile gerçek kapanış etiketini hedefliyoruz.
+        idx = govde.rfind("</body>")
+        if idx == -1:
             return response
 
         widget = render_template("includes/ai_widget.html")
-        response.set_data(govde.replace("</body>", widget + "\n</body>", 1))
+        response.set_data(govde[:idx] + widget + "\n" + govde[idx:])
     except Exception:
         current_app.logger.exception("AI widget enjeksiyonu başarısız")
     return response
