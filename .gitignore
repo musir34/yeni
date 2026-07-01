@@ -198,3 +198,6 @@ instance/app.db
 
 # AI asistanı kişiye özel sohbet geçmişi (kullanıcı verisi)
 ai_asistan/gecmis/
+
+# .env yedekleri (şifre içerir — asla commit etme)
+.env.bak*
