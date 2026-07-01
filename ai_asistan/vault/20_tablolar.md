@@ -6,9 +6,19 @@
 Sipariş "durumuna" göre farklı tablolarda tutulur (hepsi aynı OrderBase kolonlarını paylaşır).
 Bir sipariş yaşam döngüsünde tablodan tabloya taşınır. `orders` tablosu BOŞTUR, kullanma.
 
+### 📅 HANGİ TARİH? (created_at vs order_date) — KARIŞTIRMA
+- `created_at` = siparişin **bizim sistemimize düştüğü/geldiği** an. **"Bugün kaç sipariş geldi",
+  "bugünkü siparişler", "saat kaçta geldi" → HER ZAMAN `created_at` kullan.**
+- `order_date` = pazaryerinin (Trendyol vb.) orijinal sipariş tarihi; günler önce olabilir.
+  Sadece kullanıcı açıkça "müşteri ne zaman sipariş verdi / pazaryeri sipariş tarihi" derse kullan.
+- İkisi çok farklı sonuç verir (örn. bugün created_at=100, order_date=29). Varsayılan: **created_at**.
+
+### Sipariş kimliği
+- Her satır bir sipariştir; gerekirse `COUNT(DISTINCT order_number)` de aynı sonucu verir.
+
 🚫 **ASLA tek bir statü tablosuna bakıp "toplam sipariş" sayma!** Örn. sadece `orders_shipped`'e
-bakmak yanlış sayı verir (bugün 96 yerine 27 gibi). Sipariş SAYISI/analizi gereken HER soruda
-AŞAĞIDAKİ 8-TABLO BİRLEŞİMİNİ (`tum_siparisler` CTE) kullan — istisnasız:
+bakmak yanlış sayı verir (bugün 100 yerine 27 gibi). Sipariş SAYISI/analizi gereken HER soruda
+AŞAĞIDAKİ 8-TABLO BİRLEŞİMİNİ (`tum_siparisler` CTE, **created_at ile**) kullan — istisnasız:
 
 ```sql
 WITH tum_siparisler AS (
