@@ -2,16 +2,31 @@
 
 > Kesin kolon adlarını gerekirse information_schema ile doğrula ama aşağıdakiler günceldir.
 
-## Siparişler — statüye göre AYRI tablolara bölünür
-Sipariş "durumuna" göre farklı tablolarda tutulur (hepsi aynı OrderBase kolonlarını paylaşır):
-- `orders_created` — yeni sipariş
-- `orders_hazirlaniyor` — hazırlanıyor
-- `orders_picking` — toplanıyor
-- `orders_ready_to_ship` — kargoya hazır
-- `orders_shipped` — kargolandı
-- `orders_delivered` — teslim edildi
-- `orders_cancelled` — iptal
-- `orders_archived` — arşiv
+## Siparişler — statüye göre 8 AYRI tabloya bölünür (KRİTİK)
+Sipariş "durumuna" göre farklı tablolarda tutulur (hepsi aynı OrderBase kolonlarını paylaşır).
+Bir sipariş yaşam döngüsünde tablodan tabloya taşınır. `orders` tablosu BOŞTUR, kullanma.
+
+🚫 **ASLA tek bir statü tablosuna bakıp "toplam sipariş" sayma!** Örn. sadece `orders_shipped`'e
+bakmak yanlış sayı verir (bugün 96 yerine 27 gibi). Sipariş SAYISI/analizi gereken HER soruda
+AŞAĞIDAKİ 8-TABLO BİRLEŞİMİNİ (`tum_siparisler` CTE) kullan — istisnasız:
+
+```sql
+WITH tum_siparisler AS (
+  SELECT 'Yeni'         AS statu, source, created_at, amount, order_number, estimated_delivery_end FROM orders_created
+  UNION ALL SELECT 'Hazırlanıyor',  source, created_at, amount, order_number, estimated_delivery_end FROM orders_hazirlaniyor
+  UNION ALL SELECT 'Toplanıyor',    source, created_at, amount, order_number, estimated_delivery_end FROM orders_picking
+  UNION ALL SELECT 'Kargoya Hazır', source, created_at, amount, order_number, estimated_delivery_end FROM orders_ready_to_ship
+  UNION ALL SELECT 'Kargolandı',    source, created_at, amount, order_number, estimated_delivery_end FROM orders_shipped
+  UNION ALL SELECT 'Teslim Edildi', source, created_at, amount, order_number, estimated_delivery_end FROM orders_delivered
+  UNION ALL SELECT 'İptal',         source, created_at, amount, order_number, estimated_delivery_end FROM orders_cancelled
+  UNION ALL SELECT 'Arşiv',         source, created_at, amount, order_number, estimated_delivery_end FROM orders_archived
+)
+SELECT count(*) FROM tum_siparisler
+WHERE (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Istanbul')::date
+      = (now() AT TIME ZONE 'Europe/Istanbul')::date;
+```
+Diğer sütun gerekiyorsa CTE'ye ekle (ortak OrderBase kolonları: customer_name, product_name,
+product_barcode, quantity, discount, commission, status, order_date, cargo_tracking_number...).
 
 ### Ortak (OrderBase) önemli kolonlar
 - `created_at` (DateTime, **UTC**) — siparişin oluşturulma anı → "bugünkü sipariş" bununla.
@@ -23,28 +38,17 @@ Sipariş "durumuna" göre farklı tablolarda tutulur (hepsi aynı OrderBase kolo
 > ⚠️ "Bugün" = TÜRKİYE saati. created_at UTC'dir → MUTLAKA çevir (bkz. 00_asistan_kimligi).
 > Tüm statü tablolarını UNION ALL ile birleştir (sipariş bugün gelip Shipped'e geçmiş olabilir).
 
-- **"Bugün kaç sipariş geldi?"**
-  ```sql
-  SELECT count(*) FROM (
-    SELECT source, created_at FROM orders_created
-    UNION ALL SELECT source, created_at FROM orders_hazirlaniyor
-    UNION ALL SELECT source, created_at FROM orders_picking
-    UNION ALL SELECT source, created_at FROM orders_ready_to_ship
-    UNION ALL SELECT source, created_at FROM orders_shipped
-    UNION ALL SELECT source, created_at FROM orders_delivered
-    UNION ALL SELECT source, created_at FROM orders_cancelled
-  ) t
-  WHERE (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Istanbul')::date
-        = (now() AT TIME ZONE 'Europe/Istanbul')::date;
-  ```
-- **"Shopify'dan kaç sipariş?"** → aynı sorguya `AND source ILIKE '%SHOPIFY%'` ekle.
+- **"Bugün kaç sipariş geldi?"** → yukarıdaki `tum_siparisler` CTE'sini kullan (8 tablo!),
+  TR saatiyle bugüne filtrele. Tek tabloya ASLA bakma.
+- **"Shopify'dan kaç sipariş?"** → aynı CTE + `WHERE ... AND source ILIKE '%SHOPIFY%'`.
   Not: `source` NULL da olabilir; "Shopify değilse" derken NULL'ı ayrı değerlendir.
   (Shopify siparişleri de gulludb'ye senkron edilir — dış API/MCP KULLANMA.)
-- **"Saat kaçtan beri / saatlik dağılım?"** → TR saatine çevirip grupla:
+- **"Saat kaçtan beri / saatlik dağılım?"** → `tum_siparisler` CTE'sinden, TR saatine çevirip grupla:
   ```sql
+  WITH tum_siparisler AS ( ... 8 tablo UNION ALL ... )
   SELECT to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Istanbul','HH24') AS saat,
          count(*)
-  FROM ( ... yukarıdaki UNION ALL ... ) t
+  FROM tum_siparisler
   WHERE (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Istanbul')::date
         = (now() AT TIME ZONE 'Europe/Istanbul')::date
   GROUP BY 1 ORDER BY 1;
