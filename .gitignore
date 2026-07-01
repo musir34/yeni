@@ -195,3 +195,6 @@ instance/app.db
 
 # Claude Code yerel izinler (sızıntı önleme)
 .claude/settings.local.json
+
+# AI asistanı kişiye özel sohbet geçmişi (kullanıcı verisi)
+ai_asistan/gecmis/

@@ -15,11 +15,19 @@ GÜVENLİK:
 """
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
-from flask import Blueprint, jsonify, render_template, request
-from flask_login import login_required
+from flask import (
+    Blueprint,
+    current_app,
+    jsonify,
+    render_template,
+    request,
+    session,
+)
+from flask_login import current_user, login_required
 
 ai_asistan_bp = Blueprint("ai_asistan", __name__, url_prefix="/ai-asistan")
 
@@ -28,13 +36,83 @@ BASE_DIR = Path(__file__).resolve().parent
 # İş bilgisi: Obsidian vault klasöründeki tüm notlar (yoksa IS_KURALLARI.md'ye düş).
 VAULT_DIR = BASE_DIR / "vault"
 IS_KURALLARI = BASE_DIR / "IS_KURALLARI.md"
+# Kişiye özel sohbet geçmişi (her kullanıcı için ayrı JSON dosyası).
+GECMIS_DIR = BASE_DIR / "gecmis"
 
 # Sadece bu araca izin ver: postgres MCP'nin salt-okunur sorgu aracı.
 ALLOWED_TOOLS = "mcp__gulludb__query"
 
+# Widget'ı yalnızca bu rollere göster.
+YONETICI_ROLLER = ("admin", "manager")
+
 # Güvenlik sınırları
 QUERY_TIMEOUT_SN = 90          # Claude Code'a verilen azami süre
 MAX_SORU_UZUNLUK = 2000        # aşırı uzun promptları reddet
+GECMIS_MAX_TUR = 12            # bağlama katılacak azami geçmiş tur (soru+cevap)
+
+
+def _yonetici_mi() -> bool:
+    """Aktif kullanıcı yönetici (admin/manager) mı?"""
+    return session.get("role") in YONETICI_ROLLER
+
+
+def _kullanici_id() -> str:
+    """Geçmiş dosyası için güvenli kullanıcı kimliği (yalnızca alfanümerik)."""
+    try:
+        ham = str(current_user.get_id() or "anon")
+    except Exception:
+        ham = "anon"
+    return "".join(ch for ch in ham if ch.isalnum()) or "anon"
+
+
+def _gecmis_yolu() -> Path:
+    return GECMIS_DIR / f"{_kullanici_id()}.json"
+
+
+def _gecmis_oku() -> list[dict]:
+    """Kullanıcının sohbet geçmişini oku (liste: {rol, metin})."""
+    try:
+        return json.loads(_gecmis_yolu().read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+
+
+def _gecmis_yaz(gecmis: list[dict]) -> None:
+    """Geçmişi son GECMIS_MAX_TUR*2 mesaja kırparak kaydet."""
+    try:
+        GECMIS_DIR.mkdir(exist_ok=True)
+        kirpik = gecmis[-(GECMIS_MAX_TUR * 2):]
+        _gecmis_yolu().write_text(json.dumps(kirpik, ensure_ascii=False), encoding="utf-8")
+    except OSError:
+        pass  # geçmiş yazılamazsa asistan yine çalışır
+
+
+def _claude_bin() -> str | None:
+    """
+    'claude' çalıştırılabilirinin tam yolunu bul.
+    systemd servisleri dar PATH ile çalışır ve ~/.bashrc'yi okumaz; bu yüzden
+    interaktif shell'de bulunan 'claude' serviste bulunamaz. Sırayla dene:
+    1) CLAUDE_BIN env değişkeni (en güvenilir — .env'de ayarla)
+    2) PATH'te 'claude'
+    3) Bilinen kurulum konumları
+    """
+    env_bin = os.getenv("CLAUDE_BIN")
+    if env_bin and Path(env_bin).is_file():
+        return env_bin
+
+    found = shutil.which("claude")
+    if found:
+        return found
+
+    for aday in (
+        Path.home() / ".local/bin/claude",
+        Path("/usr/local/bin/claude"),
+        Path("/usr/bin/claude"),
+        Path.home() / ".npm-global/bin/claude",
+    ):
+        if aday.is_file():
+            return str(aday)
+    return None
 
 
 def _system_prompt() -> str:
@@ -61,17 +139,38 @@ def _system_prompt() -> str:
         return "Sen Güllü panelinin AI asistanısın. Soruları gulludb veritabanını sorgulayarak Türkçe yanıtla."
 
 
-def _claude_calistir(soru: str) -> dict:
+def _prompt_olustur(soru: str, gecmis: list[dict]) -> str:
+    """Önceki konuşmayı bağlam olarak yeni sorunun önüne ekle (kişiye özel hafıza)."""
+    if not gecmis:
+        return soru
+    satirlar = ["Önceki konuşma (bağlam):"]
+    for m in gecmis[-(GECMIS_MAX_TUR * 2):]:
+        etiket = "Kullanıcı" if m.get("rol") == "kullanici" else "Asistan"
+        satirlar.append(f"{etiket}: {m.get('metin', '')}")
+    satirlar.append(f"\nYeni soru: {soru}")
+    return "\n".join(satirlar)
+
+
+def _claude_calistir(soru: str, gecmis: list[dict] | None = None) -> dict:
     """
     Headless Claude Code'u çağırır ve {'ok': bool, 'cevap'/'hata': str} döner.
+    gecmis verilirse önceki konuşma bağlam olarak eklenir (kişiye özel hafıza).
     """
+    claude_bin = _claude_bin()
+    if not claude_bin:
+        return {
+            "ok": False,
+            "hata": "Claude Code bulunamadı. Sunucuda 'which claude' ile yolu bulup "
+                    ".env'e CLAUDE_BIN=<tam yol> ekleyin (systemd dar PATH kullanır).",
+        }
+
     # Abonelik kullanılsın diye API anahtarını bu alt-süreçten temizle.
     env = os.environ.copy()
     env.pop("ANTHROPIC_API_KEY", None)
 
     cmd = [
-        "claude",
-        "-p", soru,
+        claude_bin,
+        "-p", _prompt_olustur(soru, gecmis or []),
         "--append-system-prompt", _system_prompt(),
         "--allowedTools", ALLOWED_TOOLS,
         "--output-format", "json",
@@ -117,7 +216,7 @@ def sayfa():
 @ai_asistan_bp.route("/sor", methods=["POST"])
 @login_required
 def sor():
-    """Soruyu al, doğrula, Claude Code'a ilet, cevabı JSON döndür."""
+    """Soruyu al, doğrula, geçmişle birlikte Claude'a ilet, kaydet, JSON döndür."""
     payload = request.get_json(silent=True) or {}
     soru = (payload.get("soru") or "").strip()
 
@@ -127,4 +226,55 @@ def sor():
     if len(soru) > MAX_SORU_UZUNLUK:
         return jsonify({"ok": False, "hata": "Soru çok uzun."}), 400
 
-    return jsonify(_claude_calistir(soru))
+    gecmis = _gecmis_oku()
+    sonuc = _claude_calistir(soru, gecmis)
+
+    # Başarılı cevabı kişiye özel geçmişe ekle
+    if sonuc.get("ok"):
+        gecmis.append({"rol": "kullanici", "metin": soru})
+        gecmis.append({"rol": "asistan", "metin": sonuc["cevap"]})
+        _gecmis_yaz(gecmis)
+
+    return jsonify(sonuc)
+
+
+@ai_asistan_bp.route("/gecmis", methods=["GET"])
+@login_required
+def gecmis():
+    """Aktif kullanıcının sohbet geçmişini döndür (widget açılışında yüklenir)."""
+    return jsonify({"ok": True, "gecmis": _gecmis_oku()})
+
+
+@ai_asistan_bp.route("/temizle", methods=["POST"])
+@login_required
+def temizle():
+    """Aktif kullanıcının sohbet geçmişini sil."""
+    try:
+        _gecmis_yolu().unlink(missing_ok=True)
+    except OSError:
+        pass
+    return jsonify({"ok": True})
+
+
+@ai_asistan_bp.after_app_request
+def _widget_enjekte(response):
+    """
+    Her HTML sayfasının sonuna, kullanıcı yönetici ise AI widget'ını ekle.
+    Böylece 66 şablonu tek tek düzenlemeye gerek kalmaz — tek kaynak, tüm sayfalar.
+    """
+    try:
+        if not _yonetici_mi():
+            return response
+        ctype = response.headers.get("Content-Type", "")
+        if "text/html" not in ctype or response.direct_passthrough:
+            return response
+
+        govde = response.get_data(as_text=True)
+        if "</body>" not in govde or 'id="aiw-wrap"' in govde:
+            return response
+
+        widget = render_template("includes/ai_widget.html")
+        response.set_data(govde.replace("</body>", widget + "\n</body>", 1))
+    except Exception:
+        current_app.logger.exception("AI widget enjeksiyonu başarısız")
+    return response
