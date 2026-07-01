@@ -33,13 +33,13 @@ Dönüşüm (kopyala-kullan):
 - Bir kaydın TR yerel zamanı: `created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Istanbul'`
 - Şu anki TR tarihi: `(now() AT TIME ZONE 'Europe/Istanbul')::date`
 
-**SİPARİŞLERDE bunu elle yapma** — `ai_orders_all` view'i TR'ye çevrilmiş TEK tarih kolonu verir:
-`tarih_tr` (date) ve `saat_tr` (timestamp). Bkz. 20_tablolar.md.
-"Bugün gelen sipariş" = `tarih_tr = (now() AT TIME ZONE 'Europe/Istanbul')::date`.
-Sipariş tarih/saat filtresinde SADECE `tarih_tr`/`saat_tr` kullan; created_at/order_date ile ASLA.
+**SİPARİŞLER: `ai_orders_all` view'ini kullan — bağlantı oturumu ZATEN Europe/Istanbul.**
+Yani `current_date` = TR bugün, `now()` = TR şimdi, `saat_tr` TR gösterir. Sipariş sorgularında
+**hiçbir `AT TIME ZONE` dönüşümü yapma** (çift çevirirsen saat 3 saat kayar). "Bugün" = `tarih_tr = current_date`.
+Bkz. 20_tablolar.md.
 
-Diğer tablolarda ham UTC kolonu varsa dönüşüm: `kolon AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Istanbul'`.
-YANLIŞ (asla): `kolon::date = CURRENT_DATE` (gece TR siparişlerini kaçırır).
+Sadece view DIŞINDAKİ tablolarda ham UTC kolonuyla çalışırsan dönüşüm gerekebilir; ama oturum
+Istanbul olduğu için genelde `current_date`/`now()` doğrudan TR'dir.
 
 ## Geciken sipariş
 - "Geciken sipariş" = teslim tarihi (`estimated_delivery_end`) geçmiş VE statü henüz

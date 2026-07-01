@@ -9,33 +9,29 @@ tarihleri **Türkiye saatine (Europe/Istanbul) çevrilmiş hazır kolonlarla** v
 ham `created_at`/`order_date` ile TR dönüşümü yapma — hepsi bu view'de HAZIR.
 
 ### View'in hazır kolonları
-- `statu` — sipariş durumu (Yeni / Hazırlanıyor / Toplanıyor / Kargoya Hazır / Kargolandı /
-  Teslim Edildi / İptal / Arşiv)
-- **`tarih_tr` (date) — sipariş tarihi, TR. TÜM "bugün/dün/tarih" filtreleri İÇİN TEK VE
-  ZORUNLU KOLON BUDUR.** Başka tarih kolonu (created_at, order_date) ile filtre YAPMA.
-- `saat_tr` (timestamp) — sipariş anı, TR saati. Saat/saatlik dağılım için bunu kullan.
-- `teslim_tarihi_tr` (timestamp) — tahmini teslim tarihi, TR (geciken hesabı için).
+> ⚠️ Bu view'de her şey ZATEN Türkiye saatinde. Bağlantı oturumu da Europe/Istanbul.
+> Dolayısıyla `current_date` = TR bugün, `now()` = TR şimdi. **HİÇBİR `AT TIME ZONE` dönüşümü
+> YAPMA** — çift çevirirsen saat 3 saat kayar. Sadece kolonları olduğu gibi kullan.
+
+- `statu` — durum (Yeni / Hazırlanıyor / Toplanıyor / Kargoya Hazır / Kargolandı / Teslim Edildi / İptal / Arşiv)
+- **`tarih_tr` (date) — sipariş tarihi (TR). TÜM tarih filtreleri için TEK kolon: `tarih_tr = current_date`.**
+- `saat_tr` (timestamptz) — sipariş anı; TR saatinde gösterilir. Saat için `to_char(saat_tr,'HH24:MI')`.
+- `teslim_tarihi_tr` (timestamptz) — tahmini teslim; geciken için `teslim_tarihi_tr < now()`.
 - `source` — pazaryeri (TRENDYOL, SHOPIFY_SYNC... NULL olabilir). Shopify: `source ILIKE '%SHOPIFY%'`.
 - Ayrıca: `order_number, status, amount, quantity, discount, commission, customer_name,
-  customer_surname, product_name, product_barcode, product_code, product_size,
-  cargo_tracking_number`. Her satır bir sipariştir (order_number benzersiz).
-- NOT: view'de ham UTC tarih kolonu YOKTUR; tüm zaman kolonları zaten TR'dir.
+  customer_surname, product_name, product_barcode, product_code, product_size, cargo_tracking_number`.
+- Her satır bir sipariştir (order_number benzersiz). Ham UTC kolonu YOKTUR.
 
-### Hazır sorgular (kopyala-kullan) — tarih filtresi HER ZAMAN `tarih_tr`
-Kısaltma: `BUGUN = (now() AT TIME ZONE 'Europe/Istanbul')::date`
-- **"Bugün kaç sipariş geldi?"**
-  `SELECT count(*) FROM ai_orders_all WHERE tarih_tr = (now() AT TIME ZONE 'Europe/Istanbul')::date;`
-- **"Shopify'dan bugün kaç sipariş?"** → yukarıya `AND source ILIKE '%SHOPIFY%'` ekle.
-- **"Pazaryeri dağılımı bugün":**
-  `SELECT source, count(*) FROM ai_orders_all WHERE tarih_tr=(now() AT TIME ZONE 'Europe/Istanbul')::date GROUP BY source ORDER BY 2 DESC;`
-- **"Saatlik dağılım / saat kaçtan beri":**
-  `SELECT to_char(saat_tr,'HH24') AS saat, count(*) FROM ai_orders_all WHERE tarih_tr=(now() AT TIME ZONE 'Europe/Istanbul')::date GROUP BY 1 ORDER BY 1;`
-- **"Bugünkü ciro":** `SELECT sum(amount) FROM ai_orders_all WHERE tarih_tr=(now() AT TIME ZONE 'Europe/Istanbul')::date;`
-- **"Statü dağılımı":** `SELECT statu, count(*) FROM ai_orders_all WHERE tarih_tr=(now() AT TIME ZONE 'Europe/Istanbul')::date GROUP BY statu;`
-- **"Kaç sipariş gecikti?"** → `teslim_tarihi_tr < (now() AT TIME ZONE 'Europe/Istanbul')` ve statu NOT IN ('Kargolandı','Teslim Edildi','İptal','Arşiv').
-- **"Dün / bu ay / son 7 gün"** → `tarih_tr` üzerinde aralık filtrele (ör. `tarih_tr >= date_trunc('month', BUGUN)`).
-
-> `saat_tr` zaten TR'dir, ekstra çevirme. Tarih için ASLA created_at/order_date kullanma, sadece `tarih_tr`.
+### Hazır sorgular (kopyala-kullan) — dönüşüm YOK, sade
+- **"Bugün kaç sipariş geldi?"** `SELECT count(*) FROM ai_orders_all WHERE tarih_tr = current_date;`
+- **"Shopify'dan bugün kaç sipariş?"** → `... WHERE tarih_tr=current_date AND source ILIKE '%SHOPIFY%';`
+- **"Pazaryeri dağılımı bugün":** `SELECT source, count(*) FROM ai_orders_all WHERE tarih_tr=current_date GROUP BY source ORDER BY 2 DESC;`
+- **"Saatlik dağılım / saat kaçtan beri":** `SELECT to_char(saat_tr,'HH24') saat, count(*) FROM ai_orders_all WHERE tarih_tr=current_date GROUP BY 1 ORDER BY 1;`
+  (ilk/son saat için: `min(saat_tr), max(saat_tr)`)
+- **"Bugünkü ciro":** `SELECT sum(amount) FROM ai_orders_all WHERE tarih_tr=current_date;`
+- **"Statü dağılımı":** `SELECT statu, count(*) FROM ai_orders_all WHERE tarih_tr=current_date GROUP BY statu;`
+- **"Kaç sipariş gecikti?"** `... WHERE teslim_tarihi_tr < now() AND statu NOT IN ('Kargolandı','Teslim Edildi','İptal','Arşiv');`
+- **"Dün":** `tarih_tr = current_date - 1` · **"Bu ay":** `tarih_tr >= date_trunc('month',current_date)` · **"Son 7 gün":** `tarih_tr >= current_date - 6`
 
 ## Diğer tablolar (view kapsamı dışı)
 - Sipariş ürün kalemleri: `order_items`
