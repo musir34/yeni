@@ -646,6 +646,48 @@
       });
     })();
   </script>
+{% if session.get('role') in ['admin','manager'] %}
+<!-- ══ AI Asistanı — yüzen animasyonlu orb (sadece yönetici) ══ -->
+<style>
+  .ai-orb-wrap{position:fixed;right:26px;bottom:26px;z-index:1050;display:flex;align-items:center;gap:12px}
+  .ai-orb-label{background:rgba(20,22,40,.92);color:#fff;font-size:.82rem;font-weight:600;padding:8px 14px;border-radius:20px;white-space:nowrap;
+    opacity:0;transform:translateX(10px);transition:all .3s ease;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+  .ai-orb-label b{background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .ai-orb-wrap:hover .ai-orb-label{opacity:1;transform:translateX(0)}
+  .ai-orb{position:relative;width:64px;height:64px;border-radius:50%;text-decoration:none;display:grid;place-items:center;
+    background:radial-gradient(circle at 30% 30%,#8b5cf6,#4f46e5 55%,#312e81);
+    box-shadow:0 8px 26px rgba(99,102,241,.55),inset 0 0 14px rgba(255,255,255,.25);
+    animation:aiBob 4s ease-in-out infinite;cursor:pointer}
+  .ai-orb i{color:#fff;font-size:1.5rem;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35));animation:aiFloatIcon 4s ease-in-out infinite}
+  /* dönen ışık halkası */
+  .ai-orb::before{content:"";position:absolute;inset:-4px;border-radius:50%;padding:4px;
+    background:conic-gradient(from 0deg,#a78bfa,#60a5fa,#f0abfc,#a78bfa);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;
+    animation:aiSpin 6s linear infinite;opacity:.9}
+  /* dışa yayılan nabız halkaları */
+  .ai-orb::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid rgba(139,92,246,.6);animation:aiRipple 2.4s ease-out infinite}
+  .ai-orb-wrap .ripple2{position:absolute;right:0;bottom:0;width:64px;height:64px;border-radius:50%;border:2px solid rgba(96,165,250,.5);
+    animation:aiRipple 2.4s ease-out infinite;animation-delay:1.2s;pointer-events:none}
+  /* parlayan yıldız */
+  .ai-orb .ai-spark{position:absolute;top:8px;right:10px;font-size:.55rem;color:#fde68a;animation:aiSpark 2.8s ease-in-out infinite}
+  @keyframes aiBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  @keyframes aiFloatIcon{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+  @keyframes aiSpin{to{transform:rotate(360deg)}}
+  @keyframes aiRipple{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.9);opacity:0}}
+  @keyframes aiSpark{0%,100%{opacity:0;transform:scale(.5) rotate(0)}50%{opacity:1;transform:scale(1) rotate(20deg)}}
+  @media (max-width:576px){.ai-orb-wrap{right:16px;bottom:16px}.ai-orb{width:56px;height:56px}.ai-orb i{font-size:1.3rem}}
+  @media (prefers-reduced-motion:reduce){.ai-orb,.ai-orb i,.ai-orb::before,.ai-orb::after,.ai-orb-wrap .ripple2,.ai-orb .ai-spark{animation:none}}
+</style>
+<div class="ai-orb-wrap">
+  <span class="ai-orb-label"><b>AI Asistanı</b> — verilerine soru sor</span>
+  <a href="{{ url_for('ai_asistan.sayfa') }}" class="ai-orb" title="AI Asistanı" aria-label="AI Asistanı">
+    <span class="ripple2"></span>
+    <i class="fas fa-robot"></i>
+    <i class="fas fa-star ai-spark"></i>
+  </a>
+</div>
+{% endif %}
+
 {% include 'includes/notification_popup.html' ignore missing %}
 </body>
 </html>

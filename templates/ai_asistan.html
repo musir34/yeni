@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}AI Asistanı - Güllü Ayakkabı{% endblock %}
+{% block extra_css %}
+<style>
+    .ai-header{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);color:#fff;padding:20px;border-radius:var(--border-radius);margin-bottom:16px;text-align:center}
+    .ai-header h1{color:#fff;font-size:1.4rem;margin-bottom:4px}
+    .ai-header p{opacity:.85;margin:0;font-size:.85rem}
+
+    .ai-chat{background:var(--color-bg-light);border:1px solid var(--color-border);border-radius:var(--border-radius);display:flex;flex-direction:column;height:65vh}
+    .ai-mesajlar{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+    .ai-msg{max-width:80%;padding:10px 14px;border-radius:12px;font-size:.9rem;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
+    .ai-msg.kullanici{align-self:flex-end;background:var(--color-primary);color:#fff;border-bottom-right-radius:2px}
+    .ai-msg.asistan{align-self:flex-start;background:#f1f3f5;color:#222;border-bottom-left-radius:2px}
+    .ai-msg.hata{align-self:flex-start;background:#fdecea;color:#c0392b}
+    .ai-bos{color:#888;text-align:center;margin:auto;font-size:.9rem}
+
+    .ai-giris{display:flex;gap:8px;padding:12px;border-top:1px solid var(--color-border)}
+    .ai-giris textarea{flex:1;resize:none;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:.9rem;font-family:inherit;height:44px}
+    .ai-giris button{padding:0 20px;border:none;border-radius:8px;background:var(--color-primary);color:#fff;font-weight:600;cursor:pointer;font-size:.9rem}
+    .ai-giris button:disabled{opacity:.5;cursor:not-allowed}
+    .ai-ipucu{font-size:.75rem;color:#888;margin:8px 4px 0}
+</style>
+{% endblock %}
+{% block content %}
+<div class="ai-header">
+    <h1>🤖 AI Asistanı</h1>
+    <p>Sipariş, stok, satış ve kasa verilerini doğal dille sorgula (salt-okunur)</p>
+</div>
+
+<div class="ai-chat">
+    <div class="ai-mesajlar" id="aiMesajlar">
+        <div class="ai-bos" id="aiBos">
+            Örnek: "Bugün kaç sipariş geldi?" &nbsp;·&nbsp; "En çok satan 5 model?" &nbsp;·&nbsp; "Kaç sipariş gecikti?"
+        </div>
+    </div>
+    <div class="ai-giris">
+        <textarea id="aiSoru" placeholder="Sorunuzu yazın... (Enter ile gönder)"></textarea>
+        <button id="aiGonder">Sor</button>
+    </div>
+</div>
+<div class="ai-ipucu">⚠️ Asistan veritabanını yalnızca okur; hiçbir kaydı değiştiremez.</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+    const mesajlar = document.getElementById('aiMesajlar');
+    const bos = document.getElementById('aiBos');
+    const soruEl = document.getElementById('aiSoru');
+    const gonderBtn = document.getElementById('aiGonder');
+
+    function ekle(metin, tip) {
+        if (bos) bos.remove();
+        const div = document.createElement('div');
+        div.className = 'ai-msg ' + tip;
+        div.textContent = metin;
+        mesajlar.appendChild(div);
+        mesajlar.scrollTop = mesajlar.scrollHeight;
+        return div;
+    }
+
+    async function gonder() {
+        const soru = soruEl.value.trim();
+        if (!soru) return;
+        soruEl.value = '';
+        gonderBtn.disabled = true;
+        ekle(soru, 'kullanici');
+        const bekle = ekle('Düşünüyor…', 'asistan');
+
+        try {
+            const res = await fetch('/ai-asistan/sor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ soru })
+            });
+            const data = await res.json();
+            bekle.remove();
+            if (data.ok) {
+                ekle(data.cevap, 'asistan');
+            } else {
+                ekle(data.hata || 'Bir hata oluştu.', 'hata');
+            }
+        } catch (e) {
+            bekle.remove();
+            ekle('Sunucuya ulaşılamadı.', 'hata');
+        } finally {
+            gonderBtn.disabled = false;
+            soruEl.focus();
+        }
+    }
+
+    gonderBtn.addEventListener('click', gonder);
+    soruEl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            gonder();
+        }
+    });
+})();
+</script>
+{% endblock %}

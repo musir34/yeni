@@ -1,0 +1,15 @@
+{
+  "_aciklama": "Claude Code'un PostgreSQL'e SALT-OKUNUR bağlanması için MCP config. Sunucuda ai_asistan/ klasörüne koy. Claude Code buradan çalıştırıldığında bu MCP'yi otomatik yükler.",
+  "_guvenlik": "İKİ KATMANLI: (1) ai_readonly rolü zaten yazamaz. (2) postgres MCP tüm sorguları READ ONLY transaction'da çalıştırır. Parola BURAYA YAZILMAZ — .env'deki AI_DB_URL'den okunur (git'e sızmaz).",
+  "_kurulum": "AI_DB_URL'yi .env'e ekle: AI_DB_URL=postgresql://ai_readonly:<PAROLA>@138.199.218.72:5432/gulludb ve Claude Code'u çalıştırmadan önce ortama yükle.",
+  "mcpServers": {
+    "gulludb": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "${AI_DB_URL}"
+      ]
+    }
+  }
+}

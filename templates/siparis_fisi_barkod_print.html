@@ -163,7 +163,12 @@
               <span><strong>Renk:</strong> {{ item.color }}</span>
               <span><strong>Beden:</strong> {{ item.size }}</span>
             </div>
-            <button class="print-button" onclick="printSingleBarcode('{{ item.barcode }}', '{{ item.model }}', '{{ item.color }}', '{{ item.size }}', '{{ item.qr_image_path }}')">
+            <button type="button" class="print-button"
+                    data-barcode="{{ item.barcode }}"
+                    data-model="{{ item.model }}"
+                    data-color="{{ item.color }}"
+                    data-size="{{ item.size }}"
+                    data-qr="{{ item.qr_image_path }}">
               Bu Barkodu Yazdır
             </button>
           </div>
@@ -181,11 +186,11 @@
     const uniqueBarcodes = [];
     {% for item in barcodes %}
       uniqueBarcodes.push({
-        barcode: "{{ item.barcode }}",
-        model: "{{ item.model }}",
-        color: "{{ item.color }}",
-        size: "{{ item.size }}",
-        qrPath: "{{ item.qr_image_path }}",
+        barcode: {{ item.barcode | tojson }},
+        model: {{ item.model | tojson }},
+        color: {{ item.color | tojson }},
+        size: {{ item.size | tojson }},
+        qrPath: {{ item.qr_image_path | tojson }},
         count: {{ item.print_count }}
       });
     {% endfor %}
@@ -198,10 +203,30 @@
 
     const siparisId = Number(document.body.dataset.siparisId || 0);
 
+    // Tek-barkod yazdırma: event delegation (onclick yerine — değerlerde tırnak vb. olsa bile güvenli)
+    document.querySelector('.barcode-grid').addEventListener('click', function (e) {
+      const btn = e.target.closest('.print-button');
+      if (!btn) return;
+      const d = btn.dataset;
+      printSingleBarcode(d.barcode, d.model, d.color, d.size, d.qr);
+    });
+
+    // HTML-kaçış: print pencerelerine (document.write) yazılan kullanıcı/DB değerleri için.
+    function escapeHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
     // Tek barkod yazdırma fonksiyonu - Etiket boyutları 67mm x 41mm varsayımı ile devam ediyor
     // Eğer bu da A4 düzenine benzer şekilde dinamik olmalıysa ayrı bir konu.
     // Şimdilik bu fonksiyonu değiştirmedim, sadece A4 düzenini etkiliyor yeni ölçüler.
     function printSingleBarcode(barcode, model, color, size, qrPath) {
+      // Ham barkod markAsPrinted için saklanır (DB değeriyle eşleşmeli).
+      const rawBarcode = barcode;
+      // Print penceresine yazılmadan önce kaçış (XSS / bozuk HTML önlenir)
+      barcode = escapeHtml(barcode); model = escapeHtml(model);
+      color = escapeHtml(color); size = escapeHtml(size); qrPath = escapeHtml(qrPath);
       const printWindow = window.open("", "_blank");
       printWindow.document.write(`
         <!DOCTYPE html>
@@ -289,7 +314,7 @@
       printWindow.document.close();
 
       setTimeout(function() {
-        markAsPrinted([barcode]);
+        markAsPrinted([rawBarcode]);
       }, 2000);
     }
 
@@ -320,6 +345,9 @@
 
     // product_label.html getLabelHTML(isA4Fixed=true) ile BİREBİR AYNI etiket içeriği
     function getA4LabelHTML(barcode, model, color, size, qrSrc) {
+      // Print penceresine yazılmadan önce kaçış (XSS / bozuk HTML önlenir)
+      barcode = escapeHtml(barcode); model = escapeHtml(model);
+      color = escapeHtml(color); size = escapeHtml(size); qrSrc = escapeHtml(qrSrc);
       const qr = A4_FIXED_CONFIG.QR_SIZE_MM; // 18mm
       return `
       <div class="label-item-fixed-a4-content">
