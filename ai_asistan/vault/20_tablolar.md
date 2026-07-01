@@ -14,10 +14,12 @@ ham `created_at`/`order_date` ile TR dönüşümü yapma — hepsi bu view'de HA
 - **`tarih_tr` (date) — sipariş tarihi, TR. TÜM "bugün/dün/tarih" filtreleri İÇİN TEK VE
   ZORUNLU KOLON BUDUR.** Başka tarih kolonu (created_at, order_date) ile filtre YAPMA.
 - `saat_tr` (timestamp) — sipariş anı, TR saati. Saat/saatlik dağılım için bunu kullan.
+- `teslim_tarihi_tr` (timestamp) — tahmini teslim tarihi, TR (geciken hesabı için).
 - `source` — pazaryeri (TRENDYOL, SHOPIFY_SYNC... NULL olabilir). Shopify: `source ILIKE '%SHOPIFY%'`.
 - Ayrıca: `order_number, status, amount, quantity, discount, commission, customer_name,
   customer_surname, product_name, product_barcode, product_code, product_size,
-  cargo_tracking_number, estimated_delivery_end`. Her satır bir sipariştir (order_number benzersiz).
+  cargo_tracking_number`. Her satır bir sipariştir (order_number benzersiz).
+- NOT: view'de ham UTC tarih kolonu YOKTUR; tüm zaman kolonları zaten TR'dir.
 
 ### Hazır sorgular (kopyala-kullan) — tarih filtresi HER ZAMAN `tarih_tr`
 Kısaltma: `BUGUN = (now() AT TIME ZONE 'Europe/Istanbul')::date`
@@ -30,7 +32,7 @@ Kısaltma: `BUGUN = (now() AT TIME ZONE 'Europe/Istanbul')::date`
   `SELECT to_char(saat_tr,'HH24') AS saat, count(*) FROM ai_orders_all WHERE tarih_tr=(now() AT TIME ZONE 'Europe/Istanbul')::date GROUP BY 1 ORDER BY 1;`
 - **"Bugünkü ciro":** `SELECT sum(amount) FROM ai_orders_all WHERE tarih_tr=(now() AT TIME ZONE 'Europe/Istanbul')::date;`
 - **"Statü dağılımı":** `SELECT statu, count(*) FROM ai_orders_all WHERE tarih_tr=(now() AT TIME ZONE 'Europe/Istanbul')::date GROUP BY statu;`
-- **"Kaç sipariş gecikti?"** → `estimated_delivery_end < now()` ve statu NOT IN ('Kargolandı','Teslim Edildi','İptal','Arşiv').
+- **"Kaç sipariş gecikti?"** → `teslim_tarihi_tr < (now() AT TIME ZONE 'Europe/Istanbul')` ve statu NOT IN ('Kargolandı','Teslim Edildi','İptal','Arşiv').
 - **"Dün / bu ay / son 7 gün"** → `tarih_tr` üzerinde aralık filtrele (ör. `tarih_tr >= date_trunc('month', BUGUN)`).
 
 > `saat_tr` zaten TR'dir, ekstra çevirme. Tarih için ASLA created_at/order_date kullanma, sadece `tarih_tr`.
