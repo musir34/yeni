@@ -196,7 +196,7 @@ def _claude_calistir(soru: str, gecmis: list[dict] | None = None) -> dict:
     # açmasın diye TÜM Anthropic/Claude env'lerini temizle (CLAUDE_BIN hariç).
     env = {
         k: v for k, v in os.environ.items()
-        if not (k.startswith("ANTHROPIC") or (k.startswith("CLAUDE") and k != "CLAUDE_BIN"))
+        if not (k.startswith("ANTHROPIC") or (k.startswith("CLAUDE") and k not in ("CLAUDE_BIN", "CLAUDE_CODE_OAUTH_TOKEN")))
     }
 
     cmd = [
