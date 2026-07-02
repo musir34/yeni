@@ -218,7 +218,22 @@ def _claude_calistir(soru: str, gecmis: list[dict] | None = None) -> dict:
         return {"ok": False, "hata": "Claude Code sunucuda kurulu değil (PATH'te 'claude' yok)."}
 
     if sonuc.returncode != 0:
-        return {"ok": False, "hata": f"Asistan hatası: {sonuc.stderr[:500] or 'bilinmeyen hata'}"}
+        # claude CLI hata detayını çoğu zaman stderr yerine stdout'a JSON
+        # olarak yazar (ör. abonelik/limit/oturum hataları) — ikisine de bak.
+        detay = (sonuc.stderr or "").strip()
+        if not detay:
+            ham = (sonuc.stdout or "").strip()
+            try:
+                j = json.loads(ham)
+                detay = j.get("result") or j.get("error") or ham[:500]
+            except (json.JSONDecodeError, AttributeError):
+                detay = ham[:500]
+        import logging
+        logging.getLogger(__name__).error(
+            "[AI-ASISTAN] claude rc=%s stderr=%r stdout=%r",
+            sonuc.returncode, (sonuc.stderr or "")[:500], (sonuc.stdout or "")[:500],
+        )
+        return {"ok": False, "hata": f"Asistan hatası: {detay or 'bilinmeyen hata'}"}
 
     # --output-format json → {"result": "...", ...} bekleniyor
     try:
