@@ -191,9 +191,13 @@ def _claude_calistir(soru: str, gecmis: list[dict] | None = None) -> dict:
                     ".env'e CLAUDE_BIN=<tam yol> ekleyin (systemd dar PATH kullanır).",
         }
 
-    # Abonelik kullanılsın diye API anahtarını bu alt-süreçten temizle.
-    env = os.environ.copy()
-    env.pop("ANTHROPIC_API_KEY", None)
+    # Abonelik kullanılsın ve üst süreçten sızan oturum değişkenleri
+    # (CLAUDECODE, CLAUDE_CODE_SSE_PORT vb.) nested-session/401 hatasına yol
+    # açmasın diye TÜM Anthropic/Claude env'lerini temizle (CLAUDE_BIN hariç).
+    env = {
+        k: v for k, v in os.environ.items()
+        if not (k.startswith("ANTHROPIC") or (k.startswith("CLAUDE") and k != "CLAUDE_BIN"))
+    }
 
     cmd = [
         claude_bin,

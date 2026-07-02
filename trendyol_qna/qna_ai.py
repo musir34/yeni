@@ -60,8 +60,12 @@ def _run_claude(prompt: str) -> str | None:
         logger.warning("[QNA-AI] claude binary bulunamadı (CLAUDE_BIN ayarlayın)")
         return None
 
-    env = os.environ.copy()
-    env.pop("ANTHROPIC_API_KEY", None)  # abonelik kullanılsın, API faturası oluşmasın
+    # Abonelik kullanılsın (API faturası yok) + üst süreçten sızan Claude
+    # oturum değişkenleri nested-session/401 hatası yaratmasın.
+    env = {
+        k: v for k, v in os.environ.items()
+        if not (k.startswith("ANTHROPIC") or (k.startswith("CLAUDE") and k != "CLAUDE_BIN"))
+    }
 
     cmd = [
         claude_bin,
