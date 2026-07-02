@@ -41,6 +41,7 @@ def register_blueprints(app):
     from akilli_motor import akilli_motor_bp  # 🧠 AKILLI KOMİSYON MOTORU
     from agent_api import agent_api  # 🤖 OPENCLAW AGENT API
     from order_audit_routes import order_audit_bp  # 🔎 SİPARİŞ İZ SÜRME
+    from trendyol_qna import qna_bp  # 💬 TRENDYOL SORU-CEVAP
 
     # Register all blueprints
     for bp in [
@@ -85,5 +86,6 @@ def register_blueprints(app):
         akilli_motor_bp,  # 🧠 AKILLI KOMİSYON MOTORU
         agent_api,  # 🤖 OPENCLAW AGENT API
         order_audit_bp,  # 🔎 SİPARİŞ İZ SÜRME
+        qna_bp,  # 💬 TRENDYOL SORU-CEVAP
     ]:
         app.register_blueprint(bp)

@@ -17,6 +17,7 @@ NOTIFY_EVENTS = {
     'shopify_oversell_risk': 'Shopify oversell riski tespit edildiğinde',
     'stok_yok_siparis':      'Sipariş stok yetersizliğinden hazırlanamadığında (anlık)',
     'stok_yok_hatirlatma':   'Stoksuz bekleyen siparişler (periyodik hatırlatma)',
+    'yeni_soru':             "Trendyol'da yeni müşteri sorusu geldiğinde",
 }
 
 # Statü -> olay eşlemesi

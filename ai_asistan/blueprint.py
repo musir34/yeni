@@ -21,6 +21,7 @@ from pathlib import Path
 
 from flask import (
     Blueprint,
+    abort,
     current_app,
     jsonify,
     render_template,
@@ -30,6 +31,18 @@ from flask import (
 from flask_login import current_user, login_required
 
 ai_asistan_bp = Blueprint("ai_asistan", __name__, url_prefix="/ai-asistan")
+
+
+@ai_asistan_bp.before_request
+def _iki_adim_kalkani():
+    """
+    Derinlemesine savunma: app-level check_authentication zaten 2FA'sız
+    istekleri yönlendiriyor; burada blueprint seviyesinde de kesiyoruz ki
+    global kalkanda bir gedik açılsa bile AI endpoint'leri (DB erişimli!)
+    2FA doğrulanmadan ASLA çalışmasın.
+    """
+    if not _tam_dogrulanmis_mi():
+        abort(403)
 
 # Bu dosyanın bulunduğu klasör: .mcp.json burada.
 BASE_DIR = Path(__file__).resolve().parent
@@ -51,9 +64,23 @@ MAX_SORU_UZUNLUK = 2000        # aşırı uzun promptları reddet
 GECMIS_MAX_TUR = 12            # bağlama katılacak azami geçmiş tur (soru+cevap)
 
 
+def _tam_dogrulanmis_mi() -> bool:
+    """
+    Kullanıcı girişi TAMAMLAMIŞ mı: login + 2FA (TOTP) doğrulaması.
+    Rol bilgisi session'a 2FA'dan ÖNCE yazıldığı için tek başına role
+    bakmak yeterli değil — widget/endpoint'ler 2FA ekranına sızmasın.
+    """
+    try:
+        if not current_user.is_authenticated:
+            return False
+    except Exception:
+        return False
+    return bool(session.get("totp_verified"))
+
+
 def _yonetici_mi() -> bool:
-    """Aktif kullanıcı yönetici (admin/manager) mı?"""
-    return session.get("role") in YONETICI_ROLLER
+    """Aktif kullanıcı tam doğrulanmış (login + 2FA) yönetici mi?"""
+    return _tam_dogrulanmis_mi() and session.get("role") in YONETICI_ROLLER
 
 
 def _kullanici_id() -> str:

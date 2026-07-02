@@ -121,7 +121,15 @@ def index():
         .scalar()
     ) or 0
 
+    # Trendyol cevap bekleyen müşteri sorusu sayısı (tablo henüz yoksa 0)
+    try:
+        from trendyol_qna.qna_service import waiting_count
+        soru_bekleyen = waiting_count()
+    except Exception:
+        soru_bekleyen = 0
+
     stats = {
+        "soru_bekleyen": soru_bekleyen,
         "toplam_siparis": aylik_toplam_siparis,
         "trendyol_siparis": aylik_trendyol_siparis,
         "shopify_siparis": aylik_shopify_siparis,

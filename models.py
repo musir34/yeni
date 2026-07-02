@@ -1428,3 +1428,48 @@ class ShopifyMapping(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
 
+
+
+### --- TRENDYOL MÜŞTERİ SORULARI (SORU-CEVAP) ---
+# Trendyol Q&A API'sinden 10 sn'de bir çekilen müşteri soruları.
+# id = Trendyol'un soru ID'si (upsert anahtarı). raw_json ham API cevabını
+# saklar; API'ye yeni alan eklenirse veri kaybolmaz.
+class TrendyolQuestion(db.Model):
+    __tablename__ = 'trendyol_questions'
+
+    id = db.Column(db.BigInteger().with_variant(db.Integer(), "sqlite"), primary_key=True, autoincrement=False)
+    text = db.Column(db.Text, nullable=False)
+    user_name = db.Column(db.String(255))
+    show_user_name = db.Column(db.Boolean)
+    customer_id = db.Column(db.BigInteger)
+
+    product_name = db.Column(db.Text)
+    product_main_id = db.Column(db.String(255), index=True)   # model kodu → canlı stok eşleşmesi
+    image_url = db.Column(db.Text)
+    web_url = db.Column(db.Text)
+
+    status = db.Column(db.String(40), index=True)  # WAITING_FOR_ANSWER / ANSWERED / REJECTED / REPORTED / UNANSWERED
+    public = db.Column(db.Boolean)
+    reason = db.Column(db.Text)
+    report_reason = db.Column(db.Text)
+    creation_date = db.Column(db.DateTime(timezone=True), index=True)  # sorunun Trendyol'daki tarihi (UTC)
+
+    # Trendyol'daki aktif cevap
+    answer_id = db.Column(db.BigInteger)
+    answer_text = db.Column(db.Text)
+    answer_date = db.Column(db.DateTime(timezone=True))
+    rejected_answer_text = db.Column(db.Text)
+    rejected_date = db.Column(db.DateTime(timezone=True))
+
+    # Panel tarafı
+    answered_by = db.Column(db.String(120))            # cevabı panelden gönderen kullanıcı
+    answered_via_panel_at = db.Column(db.DateTime(timezone=True))
+
+    # AI taslak
+    ai_draft = db.Column(db.Text)
+    ai_draft_status = db.Column(db.String(20), default='none')  # none|pending|ready|failed
+    ai_draft_at = db.Column(db.DateTime(timezone=True))
+
+    raw_json = db.Column(db.Text)
+    first_seen_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
+    last_synced_at = db.Column(db.DateTime(timezone=True))

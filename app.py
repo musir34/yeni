@@ -142,6 +142,15 @@ except Exception as _e:
     import logging as _logging
     _logging.getLogger(__name__).exception("[ORDER_AUDIT] init başarısız: %s", _e)
 
+# 💬 Trendyol Soru-Cevap: tablo garantisi
+try:
+    from trendyol_qna.qna_service import ensure_table_exists as _qna_ensure
+    with app.app_context():
+        _qna_ensure()
+except Exception as _e:
+    import logging as _logging
+    _logging.getLogger(__name__).exception("[QNA] init başarısız: %s", _e)
+
 # 🔥 Stok Senkronizasyon Blueprint
 
 # >>> Forecast cache fonksiyonlarını blueprint yüklendikten sonra import et
@@ -329,6 +338,26 @@ def pull_orders_job():
             logger.error(f"pull_orders_job hata: {e}", exc_info=True)
 
 
+def pull_qna_job():
+    """Trendyol'dan cevap bekleyen müşteri sorularını çeker (10 sn'de bir, hafif tur)."""
+    with app.app_context():
+        try:
+            from trendyol_qna.qna_service import quick_poll
+            quick_poll()
+        except Exception as e:
+            logger.error(f"pull_qna_job hata: {e}", exc_info=True)
+
+
+def qna_reconcile_job():
+    """Soru statülerini geniş pencerede (14 gün, tüm statüler) mutabakata alır."""
+    with app.app_context():
+        try:
+            from trendyol_qna.qna_service import sync_questions
+            sync_questions(days=14)
+        except Exception as e:
+            logger.error(f"qna_reconcile_job hata: {e}", exc_info=True)
+
+
 def reconcile_orders_job():
     """Aktif tablolarda takılı kalan eski siparişleri Trendyol'da gerçek statüsüne göre senkronlar."""
     with app.app_context():
@@ -451,6 +480,25 @@ def schedule_jobs():
         id="reconcile_orders",
         hours=3,
         next_run_time=now + timedelta(minutes=5)
+    )
+
+    # >>> Trendyol Soru-Cevap: 10 sn'de bir hafif poll (limit: 1000 istek/dk, biz 6/dk)
+    _add_job_safe(
+        pull_qna_job,
+        trigger='interval',
+        id="pull_qna",
+        seconds=10,
+        next_run_time=now + timedelta(seconds=20)
+    )
+
+    # >>> Soru-Cevap mutabakatı: 3 saatte bir tüm statüler (reddedilen cevap,
+    # süre dolan, Trendyol tarafında değişen statüler yakalanır)
+    _add_job_safe(
+        qna_reconcile_job,
+        trigger='interval',
+        id="qna_reconcile",
+        hours=3,
+        next_run_time=now + timedelta(minutes=3)
     )
 
     # >>> Forecast cache worker: her 10 saniye

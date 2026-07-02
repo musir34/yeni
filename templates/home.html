@@ -256,6 +256,15 @@
       </ul>
     </div>
 
+    <!-- SORU-CEVAP: Trendyol müşteri soruları — bekleyen soru varsa nabız atar -->
+    <a href="{{ url_for('qna.index') }}"
+       class="btn {% if stats.soru_bekleyen and stats.soru_bekleyen > 0 %}btn-pulse-active{% endif %}"
+       style="background:linear-gradient(135deg,#f27121,#e94057);color:#fff;"
+       title="Trendyol Müşteri Soruları" id="soruCevapBtn">
+      <i class="fas fa-comments"></i>
+      <span id="soruCevapText">{% if stats.soru_bekleyen and stats.soru_bekleyen > 0 %}SORU-CEVAP — {{ stats.soru_bekleyen }} Soru Var!{% else %}SORU-CEVAP{% endif %}</span>
+    </a>
+
     <!-- Sipariş Hazırla: pulse yalnızca hazırlanacak (Hazırlanıyor) sipariş varsa -->
     <a href="{{ url_for('siparis_hazirla.index') }}"
        class="btn btn-danger {% if stats.hazirlanan and stats.hazirlanan > 0 %}btn-pulse-active{% endif %}"
@@ -625,6 +634,26 @@
       } else {
         setInterval(function() { refreshCounts(); }, 150000);
       }
+
+      // SORU-CEVAP butonu canlı sayaç (30 sn'de bir)
+      var soruBtn = document.getElementById('soruCevapBtn');
+      var soruText = document.getElementById('soruCevapText');
+      function refreshSoru() {
+        fetch('/soru-cevap/api/bekleyen-sayi', { cache: 'no-store' })
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            if (!d.ok || !soruBtn) return;
+            if (d.sayi > 0) {
+              soruBtn.classList.add('btn-pulse-active');
+              soruText.textContent = 'SORU-CEVAP — ' + d.sayi + ' Soru Var!';
+            } else {
+              soruBtn.classList.remove('btn-pulse-active');
+              soruText.textContent = 'SORU-CEVAP';
+            }
+          })
+          .catch(function() {});
+      }
+      setInterval(refreshSoru, 30000);
     })();
   </script>
 

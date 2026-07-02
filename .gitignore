@@ -201,3 +201,6 @@ ai_asistan/gecmis/
 
 # .env yedekleri (şifre içerir — asla commit etme)
 .env.bak*
+
+# Trendyol Soru-Cevap bilgi bankası (müşteri verisi içerir — git'e girmez, sunucuya scp ile taşınır)
+trendyol_qna/vault/
