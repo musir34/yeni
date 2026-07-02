@@ -29,6 +29,7 @@ BASE_URL = "https://apigw.trendyol.com/integration/qna/sellers"
 TIMEOUT = 15                 # HTTP istek zaman aşımı (sn)
 PAGE_SIZE = 50               # Trendyol max 50
 ANSWER_MIN, ANSWER_MAX = 10, 2000
+SIGNATURE = "Güllü Shoes🌹"  # her cevabın sonunda zorunlu imza
 
 # Cevaplanabilir tek statü (Trendyol kuralı)
 ANSWERABLE_STATUS = "WAITING_FOR_ANSWER"
@@ -245,8 +246,11 @@ def answer_question(question_id: int, text: str, username: str | None = None) ->
     text = (text or "").strip()
     if len(text) < ANSWER_MIN:
         return {"ok": False, "hata": f"Cevap en az {ANSWER_MIN} karakter olmalı."}
+    # İmza garantisi: cevap 'Güllü Shoes🌹' ile bitmiyorsa otomatik ekle
+    if not text.endswith(SIGNATURE):
+        text = f"{text}\n\n{SIGNATURE}"
     if len(text) > ANSWER_MAX:
-        return {"ok": False, "hata": f"Cevap en fazla {ANSWER_MAX} karakter olabilir."}
+        return {"ok": False, "hata": f"Cevap imzayla birlikte en fazla {ANSWER_MAX} karakter olabilir, lütfen kısaltın."}
 
     row = db.session.get(TrendyolQuestion, question_id)
     if not row:
