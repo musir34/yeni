@@ -3,6 +3,46 @@
 {% block title %}Trendyol Soru-Cevap{% endblock %}
 
 {% block content %}
+<!-- Üst hızlı erişim barı (anasayfa stiliyle) -->
+<div class="qna-topbar">
+  <a href="{{ url_for('home.home') }}" class="btn btn-sm qna-nav-btn" style="background:linear-gradient(135deg,#757f9a,#d7dde8);">
+    <i class="bi bi-house-fill"></i> Anasayfa
+  </a>
+  <a href="{{ url_for('siparis_hazirla.index') }}" class="btn btn-sm qna-nav-btn" style="background:linear-gradient(135deg,#cb2d3e,#ef473a);">
+    <i class="bi bi-box-seam"></i> Sipariş Hazırla
+  </a>
+  <div class="dropdown">
+    <button class="btn btn-sm qna-nav-btn dropdown-toggle" data-bs-toggle="dropdown"
+            style="background:linear-gradient(135deg,#2193b0,#6dd5ed);">Sipariş İşlemleri</button>
+    <ul class="dropdown-menu">
+      <li><a class="dropdown-item" href="{{ url_for('siparisler_bp.yeni_siparis') }}"><i class="bi bi-plus-circle me-2"></i>Yeni Sipariş</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('order_list_all') }}"><i class="bi bi-list-ul me-2"></i>Sipariş Listesi</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('degisim_talep') }}"><i class="bi bi-arrow-left-right me-2"></i>Değişim Talepleri</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item" href="{{ url_for('display_archive') }}"><i class="bi bi-archive me-2"></i>Arşiv</a></li>
+    </ul>
+  </div>
+  <div class="dropdown">
+    <button class="btn btn-sm qna-nav-btn dropdown-toggle" data-bs-toggle="dropdown"
+            style="background:linear-gradient(135deg,#56ab2f,#a8e063);">Ürün İşlemleri</button>
+    <ul class="dropdown-menu">
+      <li><a class="dropdown-item" href="{{ url_for('get_products.product_list') }}"><i class="bi bi-tags me-2"></i>Ürün Listesi</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="bi bi-building me-2"></i>Stok Ekleme</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="bi bi-bookshelf me-2"></i>Raf Listesi</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('stock_sync.dashboard') }}"><i class="bi bi-arrow-repeat me-2"></i>Stok Senkronizasyon</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('iade_listesi') }}"><i class="bi bi-arrow-counterclockwise me-2"></i>İade Listesi</a></li>
+    </ul>
+  </div>
+  <div class="dropdown">
+    <button class="btn btn-sm qna-nav-btn dropdown-toggle" data-bs-toggle="dropdown"
+            style="background:linear-gradient(135deg,#667db6,#0082c8);">Analizler</button>
+    <ul class="dropdown-menu">
+      <li><a class="dropdown-item" href="{{ url_for('profit.profit_report') }}"><i class="bi bi-coin me-2"></i>Kâr Analizi</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('canli_panel.canli_panel_sayfa') }}"><i class="bi bi-broadcast me-2"></i>Canlı Satış &amp; Stok</a></li>
+    </ul>
+  </div>
+</div>
+
 <div class="container-fluid py-3" id="qnaApp">
   <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
     <h4 class="mb-0"><i class="bi bi-chat-left-question text-warning"></i> Trendyol Soru-Cevap</h4>
@@ -31,6 +71,22 @@
 </div>
 
 <style>
+  .qna-topbar {
+    display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+    padding:10px 12px; margin-bottom:4px;
+    position:sticky; top:0; z-index:100;
+    background:rgba(255,255,255,.95); backdrop-filter:blur(6px);
+    border-bottom:1px solid rgba(0,0,0,.06);
+  }
+  .qna-nav-btn {
+    color:#fff !important; border:none; border-radius:10px; font-weight:600;
+    box-shadow:0 6px 12px rgba(0,0,0,.12); padding:6px 14px;
+  }
+  .qna-nav-btn:hover { transform:translateY(-1px); box-shadow:0 10px 16px rgba(0,0,0,.18); }
+  @media (max-width: 576px) {
+    .qna-topbar { gap:5px; padding:8px 6px; }
+    .qna-nav-btn { font-size:.75rem; padding:5px 8px; }
+  }
   .qna-card { border:none; border-radius:14px; box-shadow:0 4px 14px rgba(0,0,0,.07); margin-bottom:14px; }
   .qna-card .card-body { padding:16px 18px; }
   .qna-img { width:64px; height:64px; object-fit:cover; border-radius:10px; background:#f2f2f2; }
