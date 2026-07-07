@@ -1,0 +1,17 @@
+---
+source_file: "uretim_oneri.py"
+type: "code"
+community: "Üretim Önerisi & Satış Tahmini"
+location: "L435"
+tags:
+  - graphify/code
+  - graphify/EXTRACTED
+  - community/retim_nerisi__Sat_Tahmini
+---
+
+# daily_sales_status()
+
+## Connections
+- [[uretim_oneri.py]] - `contains` [EXTRACTED]
+
+#graphify/code #graphify/EXTRACTED #community/retim_nerisi__Sat_Tahmini

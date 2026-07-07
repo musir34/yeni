@@ -39,7 +39,7 @@
 
     .badge-sm{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.68rem;font-weight:600;color:#fff}
     .b-tut{background:#3498db} .b-dusur{background:#f39c12} .b-tasfiye{background:#e74c3c}
-    .b-motor{background:#2ecc71} .b-dengeli{background:#3498db} .b-yavas{background:#f39c12} .b-olu{background:#e74c3c} .b-yukselen{background:#9b59b6}
+    .b-motor{background:#2ecc71} .b-dengeli{background:#3498db} .b-yavas{background:#f39c12} .b-olu{background:#e74c3c} .b-yukselen{background:#9b59b6} .b-veri_az{background:#95a5a6}
     .b-lansman{background:#9b59b6} .b-yukselis{background:#2ecc71} .b-olgunluk{background:#3498db} .b-dusus{background:#f39c12} .b-olu2{background:#e74c3c}
     .b-yildiz{background:#27ae60} .b-nakit{background:#2980b9} .b-firsatci{background:#f39c12} .b-sorun{background:#c0392b}
 
@@ -106,6 +106,7 @@
         <div><label>Paketleme (TL)</label><input type="number" id="pPaket" value="5" step="1" min="0"></div>
         <div><label>Sermaye Maliyeti (%/ay) <span class="th-tip" data-tip="Stokta yatan paranın aylık kaybı. Örnek: 300 TL'lik ürün depoda 1 ay durursa %2.5'ten 7.5 TL kaybedersin. Kredi faizin veya paranla başka yatırım yapsan kazanacağın oran.">!</span></label><input type="number" id="pSermaye" value="2.5" step="0.1" min="0"></div>
         <div><label>Güvenlik Payı (gün)</label><input type="number" id="pGuvenlik" value="5" step="1" min="0"></div>
+        <div><label>Haftalık Üretim Kapasitesi <span class="th-tip" data-tip="Atölyenin haftada üretebileceği toplam çift sayısı. Girersen motor, üretim alarmı veren ürünlere bu kapasiteyi aciliyet sırasıyla dağıtır (Modül 8). 0 = kapasite kısıtı yok.">!</span></label><input type="number" id="pKapasite" value="0" step="10" min="0"></div>
         <div>
             <label>Strateji Modu</label>
             <select id="pStrateji">
@@ -161,15 +162,21 @@
     <!-- Stats -->
     <div class="stats-row" id="statsRow"></div>
 
+    <!-- Kapasite Planı (Modül 8) -->
+    <div class="config-panel" id="kapasitePlan" style="display:none"></div>
+
     <!-- Portfolio Matrix -->
     <div class="portfolio-grid" id="portfolioGrid"></div>
+
+    <!-- Model Verimlilik (Modül 10) -->
+    <div class="config-panel" id="verimlilikSection" style="display:none"></div>
 
     <!-- Filter -->
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
         <div class="filter-row" style="flex:1;margin-bottom:0">
             <input type="text" id="fSearch" placeholder="Model, renk, kategori ara...">
             <select id="fAksiyon"><option value="all">Tüm Aksiyonlar</option><option value="TUT">TUT</option><option value="DÜŞÜR">DÜŞÜR</option><option value="TASFİYE">TASFİYE</option></select>
-            <select id="fSegment"><option value="all">Tüm Segmentler</option><option value="motor">Motor</option><option value="dengeli">Dengeli</option><option value="yavas">Yavaş</option><option value="olu">Ölü</option><option value="yukselen">Yükselen</option></select>
+            <select id="fSegment"><option value="all">Tüm Segmentler</option><option value="motor">Motor</option><option value="dengeli">Dengeli</option><option value="yavas">Yavaş</option><option value="olu">Ölü</option><option value="yukselen">Yükselen</option><option value="veri_az">Veri Az</option></select>
             <select id="fSort">
                 <option value="skor_desc">Skor Farkı (Büyük→Küçük)</option>
                 <option value="kar_desc">Aylık Kâr Farkı</option>
@@ -204,6 +211,15 @@
     </div>
     <div class="text-center mt-2 mb-4"><small id="resultCount" class="text-muted"></small></div>
 </div>
+
+<!-- Öneri Geçmişi (geri besleme) -->
+<div class="config-panel" style="margin-top:10px">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 style="margin:0"><i class="bi bi-clock-history"></i> Öneri Geçmişi <span class="th-tip" data-tip="Motorun geçmişte verdiği DÜŞÜR/TASFİYE önerileri ve sonrasında satış hızının gerçekte ne yaptığı. Motorun isabetini buradan takip edersin.">!</span></h5>
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnOneriGecmisi"><i class="bi bi-arrow-clockwise"></i> Geçmişi Yükle</button>
+    </div>
+    <div id="oneriGecmisiBody" style="margin-top:10px"></div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -229,6 +245,7 @@ document.addEventListener('DOMContentLoaded', function(){
         });
         fd.append('strateji',document.getElementById('pStrateji').value);
         fd.append('tarife_donemi',document.getElementById('pTarifeDonemi').value);
+        fd.append('haftalik_kapasite',document.getElementById('pKapasite').value);
         fd.append('excluded_models',document.getElementById('pExcluded').value);
         fd.append('include_only',document.getElementById('pIncludeOnly').checked?'1':'0');
         fd.append('included_models',document.getElementById('pIncluded').value);
@@ -238,6 +255,7 @@ document.addEventListener('DOMContentLoaded', function(){
             if(!d.success){alert(d.message||'Hata');return}
             allData=d.results;downloadFile=d.download_file;
             renderAlerts(d.alerts);renderStats(d.stats);renderPortfolio(d.portfolio);
+            renderKapasite(d.kapasite_plan);renderVerimlilik(d.model_verimlilik);
             sortAndRender();results.classList.add('visible');
             if(downloadFile)document.getElementById('btnDownload').style.display='inline-flex';
             results.scrollIntoView({behavior:'smooth'});
@@ -256,6 +274,9 @@ document.addEventListener('DOMContentLoaded', function(){
     function renderStats(s){
         const indirimli = s.dusur + s.tasfiye;
         const indirimsiz = s.tut;
+        const elastikTip = s.elastikiyet_kaynak==='olcum'
+            ? `Kendi satış geçmişinizden ölçüldü (${s.elastikiyet_gozlem} gözlem)`
+            : 'Yeterli fiyat değişimi verisi yok — varsayılan kullanıldı';
         document.getElementById('statsRow').innerHTML=`
             <div class="s-card blue"><div class="sv">${s.toplam_varyant}</div><div class="sl">Toplam Varyant</div></div>
             <div class="s-card green"><div class="sv">${indirimli}</div><div class="sl">İndirim Uygulanan</div></div>
@@ -264,7 +285,54 @@ document.addEventListener('DOMContentLoaded', function(){
             <div class="s-card"><div class="sv">${fm(s.mevcut_aylik_kar)}</div><div class="sl">Mevcut Aylık Kâr</div></div>
             <div class="s-card green"><div class="sv">${fm(s.onerilen_aylik_kar)}</div><div class="sl">Önerilen Aylık Kâr</div></div>
             <div class="s-card ${s.kar_artis>=0?'green':'red'}"><div class="sv">${s.kar_artis>=0?'+':''}${fm(s.kar_artis)}</div><div class="sl">Kâr Değişimi</div></div>
+            <div class="s-card blue" title="${elastikTip}"><div class="sv">${s.elastikiyet??''}</div><div class="sl">Elastikiyet ${s.elastikiyet_kaynak==='olcum'?'(ölçüm)':'(varsayılan)'}</div></div>
+            <div class="s-card ${s.maliyet_db_model>0?'green':'orange'}" title="Tedarikçi sayfasındaki model maliyetleri (USD→TL) otomatik kullanıldı; kalanlar formdaki manuel maliyetle hesaplandı"><div class="sv">${s.maliyet_db_model||0}/${s.toplam_model||0}</div><div class="sl">DB Maliyetli Model</div></div>
         `;
+    }
+
+    function renderKapasite(k){
+        const el=document.getElementById('kapasitePlan');
+        if(!k||!k.plan||!k.plan.length){el.style.display='none';return}
+        el.style.display='block';
+        const ozet=k.sinirli
+            ?`Haftalık kapasite: <strong>${fm(k.kapasite)}</strong> çift | İhtiyaç: <strong>${fm(k.toplam_ihtiyac)}</strong> | Karşılanan: <strong>${fm(k.karsilanan)}</strong>${k.acik>0?` | <span style="color:#e74c3c">Açık: ${fm(k.acik)} çift</span>`:''}`
+            :`Toplam üretim ihtiyacı: <strong>${fm(k.toplam_ihtiyac)}</strong> çift (kapasite kısıtı girilmedi)`;
+        const rows=k.plan.map(p=>`<tr>
+            <td style="text-align:left"><strong>${esc(p.model_kodu)}</strong>-${esc(p.renk)}</td>
+            <td><span class="badge-sm ${p.alarm==='kritik'?'b-tasfiye':'b-dusur'}">${p.alarm==='kritik'?'KRİTİK':'UYARI'}</span></td>
+            <td>${p.kalan_gun>=999?'∞':p.kalan_gun}</td>
+            <td>${p.gunluk_satis}</td>
+            <td>${p.stok}</td>
+            <td>${fm(p.ihtiyac)}</td>
+            <td><strong>${fm(p.tahsis)}</strong>${k.sinirli?` <small style="color:${p.karsilama>=100?'#2ecc71':p.karsilama>0?'#f39c12':'#e74c3c'}">%${p.karsilama}</small>`:''}</td>
+        </tr>`).join('');
+        el.innerHTML=`<h5 style="margin:0 0 10px"><i class="bi bi-tools"></i> Üretim Kapasite Planı (Modül 8)</h5>
+            <div style="font-size:.85rem;margin-bottom:10px">${ozet}</div>
+            <div class="rtable-wrap"><table class="rtable" style="min-width:700px">
+            <thead><tr><th>Model-Renk</th><th>Alarm</th><th>Kalan Gün</th><th>Satış/Gün</th><th>Stok</th><th>İhtiyaç <span class="th-tip" data-tip="Üretim süresi + güvenlik payı + 14 gün tampon boyunca satışı karşılamak için gereken çift">!</span></th><th>Tahsis</th></tr></thead>
+            <tbody>${rows}</tbody></table></div>`;
+    }
+
+    function renderVerimlilik(liste){
+        const el=document.getElementById('verimlilikSection');
+        if(!liste||!liste.length){el.style.display='none';return}
+        el.style.display='block';
+        const rows=liste.map((m,i)=>`<tr>
+            <td>${i+1}</td>
+            <td style="text-align:left"><strong>${esc(m.model_kodu)}</strong><div style="font-size:.68rem;color:#888">${esc(m.kategori)}</div></td>
+            <td>${m.varyant}</td>
+            <td>${fm(m.stok)}</td>
+            <td>${m.gunluk_satis}</td>
+            <td>${fm(m.onerilen_aylik_kar)}</td>
+            <td><strong>${m.verim}</strong></td>
+            <td>${m.en_iyi_skor}</td>
+            <td>${m.kritik_alarm>0?`<span class="badge-sm b-tasfiye">${m.kritik_alarm}</span>`:'-'}</td>
+        </tr>`).join('');
+        el.innerHTML=`<h5 style="margin:0 0 10px"><i class="bi bi-bar-chart-line"></i> Model Verimlilik Sıralaması (Modül 10)</h5>
+            <div style="font-size:.8rem;color:#888;margin-bottom:10px">Verim = önerilen aylık kâr / toplam stok (TL/çift·ay). Rafta yatan parayı en iyi paraya çeviren modeller üstte — üretim ve indirim önceliği buradan okunur.</div>
+            <div class="rtable-wrap" style="max-height:45vh;overflow-y:auto"><table class="rtable" style="min-width:800px">
+            <thead><tr><th>#</th><th>Model</th><th>Renk Sayısı</th><th>Stok</th><th>Satış/Gün</th><th>Aylık Kâr (öneri)</th><th>Verim <span class="th-tip" data-tip="Stok başına aylık kâr — TL/çift·ay">!</span></th><th>En İyi Skor</th><th>Kritik Alarm</th></tr></thead>
+            <tbody>${rows}</tbody></table></div>`;
     }
 
     function renderPortfolio(p){
@@ -299,7 +367,7 @@ document.addEventListener('DOMContentLoaded', function(){
             tr.dataset.kategori=(m.kategori||'').toLowerCase();tr.dataset.aksiyon=m.aksiyon;tr.dataset.segment=m.renk_segment;
             tr.style.cursor='pointer';tr.onclick=()=>toggleDetail(rk);
 
-            const segmentLabel={'motor':'Motor','dengeli':'Dengeli','yavas':'Yavaş','olu':'Ölü','yukselen':'Yükselen'};
+            const segmentLabel={'motor':'Motor','dengeli':'Dengeli','yavas':'Yavaş','olu':'Ölü','yukselen':'Yükselen','veri_az':'Veri Az'};
             const yasamLabel={'lansman':'Lansman','yukselis':'Yükseliş','olgunluk':'Olgunluk','dusus':'Düşüş','olu':'Ölü','veri_yok':'Veri Yok'};
             const trendIcon=m.trend==='yukseliyor'?'<i class="bi bi-arrow-up-right trend-up"></i>':m.trend==='dusuyor'?'<i class="bi bi-arrow-down-right trend-down"></i>':'<i class="bi bi-arrow-right trend-flat"></i>';
             const alarmBg=m.uretim_alarm==='kritik'?'background:#fde8e8;':'';
@@ -354,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
             dr.innerHTML=`<td colspan="13"><div class="dc">
                 <div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
-                    <div><strong>${esc(m.model_kodu)}-${esc(m.renk)}</strong> | ${m.varyant} beden | ${m.stok} stok</div>
+                    <div><strong>${esc(m.model_kodu)}-${esc(m.renk)}</strong> | ${m.varyant} beden | ${m.stok} stok | Maliyet: ${fm(m.maliyet)} TL <small style="color:${m.maliyet_kaynak==='db'?'#2ecc71':'#f39c12'}">(${m.maliyet_kaynak==='db'?'tedarikçi kaydı':'manuel'})</small></div>
                     <div style="font-size:.8rem;color:#888">${esc(m.segment_aciklama)} | ${esc(m.yasam_aciklama)} | ${esc(m.bcg_aksiyon)}${m.sezon_uyari?' | '+esc(m.sezon_uyari):''}</div>
                 </div>
                 <div class="tier-grid">${tiersH}</div>
@@ -414,6 +482,40 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 
     loadExLists();
+
+    // --- Öneri Geçmişi (geri besleme döngüsü) ---
+    document.getElementById('btnOneriGecmisi').addEventListener('click',async function(){
+        const body=document.getElementById('oneriGecmisiBody');
+        this.disabled=true;body.innerHTML='<div style="padding:10px;font-size:.85rem">Yükleniyor...</div>';
+        try{
+            const r=await fetch('/akilli-motor/oneri-gecmisi');const d=await r.json();
+            if(!d.success){body.innerHTML=`<div style="padding:10px;font-size:.85rem;color:#e74c3c">${esc(d.message||'Hata')}</div>`;return}
+            if(!d.oneriler.length){body.innerHTML='<div style="padding:10px;font-size:.85rem;color:#888">Henüz kayıtlı öneri yok. Motor her koşuda DÜŞÜR/TASFİYE önerilerini otomatik kaydeder.</div>';return}
+            const durumBadge={artti:'<span class="badge-sm" style="background:#2ecc71">✓ Arttı</span>',
+                              dustu:'<span class="badge-sm" style="background:#e74c3c">✗ Düştü</span>',
+                              ayni:'<span class="badge-sm" style="background:#95a5a6">≈ Aynı</span>',
+                              cok_yeni:'<span class="badge-sm" style="background:#3498db">Çok Yeni</span>',
+                              olculemedi:'<span class="badge-sm" style="background:#95a5a6">Ölçülemedi</span>'};
+            const olculen=d.oneriler.filter(o=>o.durum==='artti'||o.durum==='dustu'||o.durum==='ayni');
+            const isabet=olculen.length?Math.round(olculen.filter(o=>o.durum==='artti').length/olculen.length*100):null;
+            const rows=d.oneriler.map(o=>`<tr>
+                <td>${o.tarih}</td>
+                <td style="text-align:left"><strong>${esc(o.model_kodu)}</strong>-${esc(o.renk)}</td>
+                <td><span class="badge-sm b-${o.aksiyon==='TASFİYE'?'tasfiye':'dusur'}">${esc(o.aksiyon)}</span></td>
+                <td>${fm(o.mevcut_fiyat)} → <strong>${fm(o.onerilen_fiyat)}</strong> (K${o.onerilen_kademe})</td>
+                <td>${o.onceki_hiz??'-'}</td>
+                <td>${o.sonraki_hiz??'-'}</td>
+                <td>${o.degisim_pct!=null?(o.degisim_pct>0?'+':'')+o.degisim_pct+'%':'-'}</td>
+                <td>${durumBadge[o.durum]||''}</td>
+            </tr>`).join('');
+            body.innerHTML=`
+                ${isabet!=null?`<div style="font-size:.85rem;margin-bottom:8px">Ölçülebilen ${olculen.length} öneride satış hızı artış oranı: <strong>%${isabet}</strong> <span class="th-tip" data-tip="İndirim önerisi sonrası satış hızı artan önerilerin payı. Not: öneri Trendyol'a gerçekten yüklendiyse anlamlıdır.">!</span></div>`:''}
+                <div class="rtable-wrap" style="max-height:45vh;overflow-y:auto"><table class="rtable" style="min-width:800px">
+                <thead><tr><th>Tarih</th><th>Model-Renk</th><th>Aksiyon</th><th>Fiyat Önerisi</th><th>Önceki Hız <span class="th-tip" data-tip="Öneriden önceki 30 günün ortalama günlük satışı">!</span></th><th>Sonraki Hız <span class="th-tip" data-tip="Öneriden sonraki (en fazla 30) günün ortalama günlük satışı">!</span></th><th>Değişim</th><th>Durum</th></tr></thead>
+                <tbody>${rows}</tbody></table></div>`;
+        }catch(e){body.innerHTML=`<div style="padding:10px;color:#e74c3c;font-size:.85rem">Hata: ${esc(e.message)}</div>`}
+        finally{this.disabled=false}
+    });
 });
 
 // Global fonksiyonlar (onclick icin)

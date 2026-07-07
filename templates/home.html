@@ -324,7 +324,16 @@
     {% endif %}
 
     {% if session.get('role') == 'admin' %}
-    <a href="{{ url_for('akilli_motor.akilli_motor_sayfasi') }}" class="btn" style="background:linear-gradient(135deg,#1a1a2e,#0f3460);color:white;" title="Ürün Komisyon Tarifeleri"><i class="fas fa-percent"></i> Urun Komisyon Tarifeleri</a>
+    <div class="dropdown">
+      <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+              style="background:linear-gradient(135deg,#1a1a2e,#0f3460);color:white;">
+        <i class="fas fa-percent"></i> İndirimler
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{{ url_for('akilli_motor.akilli_motor_sayfasi') }}"><i class="fas fa-microchip me-2"></i>Ürün Komisyon Tarifeleri</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('flas_indirim.flas_indirim_sayfasi') }}"><i class="fas fa-bolt me-2" style="color:#e67e22"></i>Flaş İndirimler</a></li>
+      </ul>
+    </div>
     {% endif %}
 
     <!-- Ayarlar -->

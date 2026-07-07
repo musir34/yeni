@@ -3,16 +3,20 @@
 Trendyol komisyon tarifelerini, sipariş geçmişini ve stok verilerini
 birleştirerek her model+renk varyantı için optimal kademe önerisi üretir.
 
+Saf analiz modülleri (mod1..mod10) akilli_motor_moduller.py'dedir; bu dosya
+veri erişimi (DB satış/maliyet), orkestrasyon (run_full_analysis), Excel
+giriş/çıkışı ve Flask route'larını içerir.
+
 Modüller:
   1. Satış Hızı + Üretim Zekası
   2. Renk Segment Zekası
   3. Ürün Yaşam Döngüsü
   4. Portföy Matrisi (BCG)
-  5. Gerçek Maliyet + Nakit Akış
-  6. Senaryo Simülatörü
-  7. Karar Motoru (Skor Kartı)
+  5. Gerçek Maliyet + Nakit Akış (iade beklenen-değerli)
+  6. Senaryo Simülatörü (ölçülmüş elastikiyet)
+  7. Karar Motoru (Skor Kartı, portföy-p90 normalizasyonu)
   8. Üretim Kapasite Tahsisi
-  9. Sezon + Takvim Zekası
+  9. Sezon + Takvim Zekası (kategori öncelikli)
   10. Model Verimlilik Karşılaştırma
 """
 
@@ -23,11 +27,20 @@ from flask import (
 import pandas as pd
 import numpy as np
 import os
-import json
 import logging
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from login_logout import login_required, roles_required
+
+from akilli_motor_moduller import (
+    STRATEGY_WEIGHTS, ELASTICITY_BASE,
+    _resolve_commission_columns, _extract_model_from_sku,
+    _extract_color_from_sku, _extract_color_from_tariff,
+    beklenen_birim_kar, estimate_elasticity, hesapla_skor_olcek,
+    mod1_satis_hizi, mod2_renk_segment, mod3_yasam_dongusu, mod4_portfoy,
+    mod5_gercek_maliyet, mod6_senaryo, mod7_skor, mod8_kapasite,
+    mod9_sezon, mod10_model_verimlilik,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,49 +50,13 @@ UPLOAD_FOLDER = './uploads'
 ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ── Varsayılan Strateji Ağırlıkları ────────────────────────────────────
-STRATEGY_WEIGHTS = {
-    'buyume':      {'kar': 10, 'hacim': 30, 'stok_devir': 15, 'nakit': 15, 'yasam': 10, 'uretim': 10, 'renk': 10},
-    'dengeli':     {'kar': 20, 'hacim': 20, 'stok_devir': 15, 'nakit': 15, 'yasam': 10, 'uretim': 10, 'renk': 10},
-    'kar_odakli':  {'kar': 35, 'hacim': 10, 'stok_devir': 10, 'nakit': 15, 'yasam': 10, 'uretim': 10, 'renk': 10},
-    'stok_eritme': {'kar': 5,  'hacim': 15, 'stok_devir': 35, 'nakit': 15, 'yasam': 10, 'uretim': 10, 'renk': 10},
-}
-
-# ── Fiyat Elastikiyeti Çarpanları ───────────────────────────────────────
-ELASTICITY_BASE = -1.5
-ELASTICITY_MULTIPLIER = {
-    'motor': 0.5,
-    'dengeli': 1.0,
-    'yavas': 1.5,
-    'olu': 2.0,
-    'yukselen': 1.2,
-}
-
 
 # ═══════════════════════════════════════════════════════════════════════
-#  YARDIMCI FONKSİYONLAR
+#  YARDIMCI FONKSİYONLAR (dosya / Excel çıkışı)
 # ═══════════════════════════════════════════════════════════════════════
 
 def _allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
-def _resolve_commission_columns(columns, period: str = '3') -> list[str]:
-    """Komisyon kademesi sütunlarını seçilen teslimat tarifesine göre çözer.
-
-    Yeni Trendyol formatında '1.KOMİSYON'..'4.KOMİSYON' başlıkları İKİ kez
-    geçer: 'Tarih aralığı (3 Gün)' ve 'Tarih aralığı (4 Gün)' bloklarından
-    hemen sonra. pandas tekrar eden ikinci seti '.1' ekiyle adlandırdığı için
-    güvenilir yöntem konumdur: ilgili marker'dan sonraki 4 sütun. Eski
-    tek-tarifeli formatta marker yoktur; doğrudan '1.KOMİSYON'..'4.KOMİSYON'
-    döner.
-    """
-    cols = [str(c) for c in columns]
-    marker = f'Tarih aralığı ({period} Gün)'
-    if marker in cols:
-        i = cols.index(marker)
-        return cols[i + 1:i + 5]
-    return ['1.KOMİSYON', '2.KOMİSYON', '3.KOMİSYON', '4.KOMİSYON']
 
 
 def _write_tariff_output(src_path: str, out_path: str, header: list,
@@ -198,40 +175,15 @@ def _write_tariff_output(src_path: str, out_path: str, header: list,
     return changed
 
 
-def _extract_model_from_sku(sku: str) -> str | None:
-    """merchant_sku'dan model kodunu çıkarır: '0172-35 Bej' → '0172'."""
-    if not sku:
-        return None
-    sku = str(sku).strip()
-    if ',' in sku and '-' in sku.split(',')[1]:
-        return None  # çoklu ürün satırı
-    parts = sku.split('-', 1)
-    code = parts[0].strip()
-    return code if code else None
+# ═══════════════════════════════════════════════════════════════════════
+#  VERİ ERİŞİMİ (DB)
+# ═══════════════════════════════════════════════════════════════════════
 
+def _query_sales_data(days: int = 90) -> pd.DataFrame:
+    """Son N günlük sipariş verisini DB'den çeker (varsayılan 90)."""
+    from models import OrderShipped, OrderDelivered
 
-def _extract_color_from_sku(sku: str, model: str, beden: str = '') -> str:
-    """merchant_sku'dan renk çıkarır."""
-    if not sku or not model:
-        return 'Standart'
-    sku = str(sku).strip()
-    prefix = f"{model}-"
-    if sku.startswith(prefix):
-        rest = sku[len(prefix):]
-        # beden numarasını atla
-        i = 0
-        while i < len(rest) and (rest[i].isdigit()):
-            i += 1
-        color = rest[i:].lstrip(' -')
-        return color if color else 'Standart'
-    return 'Standart'
-
-
-def _query_sales_data() -> pd.DataFrame:
-    """Son 90 günlük sipariş verisini DB'den çeker."""
-    from models import db, OrderShipped, OrderDelivered
-
-    cutoff = datetime.now() - timedelta(days=90)
+    cutoff = datetime.now() - timedelta(days=days)
     rows = []
 
     for model_cls in [OrderShipped, OrderDelivered]:
@@ -270,363 +222,97 @@ def _query_sales_data() -> pd.DataFrame:
     return df
 
 
-def _extract_color_from_tariff(sku: str, model_kodu: str, beden) -> str:
-    """Tarife Excel'indeki SATICI STOK KODU'ndan renk çıkarır."""
-    sku = str(sku).strip()
-    beden_str = str(int(beden)) if pd.notna(beden) else ''
-    prefix = f"{model_kodu}-{beden_str}"
-    if sku.startswith(prefix):
-        rest = sku[len(prefix):].lstrip(' -')
-        return rest if rest else 'Standart'
-    if beden_str and beden_str in sku:
-        idx = sku.index(beden_str) + len(beden_str)
-        rest = sku[idx:].lstrip(' -')
-        return rest if rest else 'Standart'
-    return 'Standart'
+def _model_cost_map_tl(model_codes: list[str]) -> dict[str, float]:
+    """Tedarikçi sayfasındaki model maliyetlerini TL olarak döndürür.
+
+    Kaynak agent_api model-cost API'siyle aynı: ModelDirekMaliyet (>0)
+    öncelikli, yoksa ModelMaliyet kalem toplamı (USD) → güncel kurla TL.
+    Model kodları baştaki sıfır farkına karşı iki varyantla da aranır
+    ("0172" ↔ "172"). Kur/DB hatasında boş dict döner ve motor formdaki
+    manuel maliyete düşer — analiz asla bu yüzden patlamaz.
+    """
+    try:
+        from siparis_fisi import _usd_maliyet_map
+        from profit import _fetch_usd_try
+
+        rate = _fetch_usd_try()
+        if not rate or rate <= 0:
+            logger.warning("Model maliyeti: USD/TL kuru alınamadı, manuel maliyete düşülüyor")
+            return {}
+
+        arananlar = set()
+        for m in model_codes:
+            s = str(m).strip()
+            if not s:
+                continue
+            arananlar.add(s)
+            arananlar.add(s.lstrip('0') or '0')
+
+        usd_map = _usd_maliyet_map(list(arananlar))
+        sonuc = {}
+        for m in model_codes:
+            s = str(m).strip()
+            usd = usd_map.get(s) or usd_map.get(s.lstrip('0') or '0') or 0
+            if usd > 0:
+                sonuc[s] = round(float(usd) * float(rate), 2)
+        return sonuc
+    except Exception as e:
+        logger.warning(f"Model maliyet haritası çekilemedi: {e}")
+        return {}
 
 
-# ═══════════════════════════════════════════════════════════════════════
-#  MODÜL 1: SATIŞ HIZI + ÜRETİM ZEKASI
-# ═══════════════════════════════════════════════════════════════════════
+def _kaydet_oneri_gecmisi(results: list[dict], strateji: str,
+                          tarife_donemi: str) -> int:
+    """TUT dışındaki önerileri geri besleme için MotorOneriLog'a yazar.
 
-def mod1_satis_hizi(sales_df: pd.DataFrame, model: str, renk: str,
-                    stok: int, uretim_suresi: int, guvenlik_gun: int,
-                    stok_eritme: bool = False) -> dict:
-    """Satış hızı, stok tükenme ve üretim alarm hesabı."""
-    mask = (sales_df['model_kodu'] == model) & (sales_df['renk'] == renk)
-    subset = sales_df[mask].copy()
+    Aynı model+renk için günde bir kayıt (tekrar koşular spam üretmesin).
+    Tablo henüz migrate edilmemişse sessizce 0 döner — analiz akışını bozmaz.
+    """
+    from models import db, MotorOneriLog
 
-    if subset.empty:
-        return {
-            'gunluk_satis': 0, 'haftalik_satis': 0, 'aylik_satis': 0,
-            'toplam_90gun': 0, 'kalan_gun': 999, 'uretim_alarm': 'yok',
-            'uretim_emri_gun': 999, 'trend': 'veri_yok',
-            'trend_katsayi': 1.0,
+    try:
+        gun_basi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        bugunkuler = {
+            (r.model_kodu, r.renk)
+            for r in MotorOneriLog.query.filter(
+                MotorOneriLog.created_at >= gun_basi
+            ).with_entities(MotorOneriLog.model_kodu, MotorOneriLog.renk).all()
         }
 
-    now = datetime.now()
-    gun_sayisi = max((now - subset['tarih'].min()).days, 1)
-    toplam_adet = int(subset['adet'].sum())
-    gunluk = toplam_adet / gun_sayisi
-
-    kalan_gun = stok / gunluk if gunluk > 0 else 999
-    kritik_esik = uretim_suresi + guvenlik_gun
-    uretim_emri_gun = kalan_gun - uretim_suresi
-
-    if stok_eritme:
-        alarm = 'yok'
-    elif kalan_gun <= kritik_esik:
-        alarm = 'kritik'
-    elif kalan_gun <= kritik_esik * 2:
-        alarm = 'uyari'
-    else:
-        alarm = 'yok'
-
-    # Trend: son 30 gün vs önceki 30 gün
-    d30 = now - timedelta(days=30)
-    d60 = now - timedelta(days=60)
-    son30 = subset[subset['tarih'] >= d30]['adet'].sum()
-    onceki30 = subset[(subset['tarih'] >= d60) & (subset['tarih'] < d30)]['adet'].sum()
-    trend_katsayi = son30 / onceki30 if onceki30 > 0 else (1.5 if son30 > 0 else 0.5)
-
-    if trend_katsayi > 1.15:
-        trend = 'yukseliyor'
-    elif trend_katsayi < 0.85:
-        trend = 'dusuyor'
-    else:
-        trend = 'sabit'
-
-    return {
-        'gunluk_satis': round(gunluk, 2),
-        'haftalik_satis': round(gunluk * 7, 1),
-        'aylik_satis': round(gunluk * 30, 1),
-        'toplam_90gun': toplam_adet,
-        'kalan_gun': round(kalan_gun, 0),
-        'uretim_alarm': alarm,
-        'uretim_emri_gun': round(max(uretim_emri_gun, 0), 0),
-        'trend': trend,
-        'trend_katsayi': round(trend_katsayi, 2),
-    }
-
-
-# ═══════════════════════════════════════════════════════════════════════
-#  MODÜL 2: RENK SEGMENT ZEKASI
-# ═══════════════════════════════════════════════════════════════════════
-
-def mod2_renk_segment(sales_df: pd.DataFrame, model: str, renk: str) -> dict:
-    """Renk segmentini otomatik belirler: motor/dengeli/yavas/olu/yukselen."""
-    model_mask = sales_df['model_kodu'] == model
-    model_sales = sales_df[model_mask]
-
-    if model_sales.empty:
-        return {'segment': 'olu', 'satis_orani': 0, 'aciklama': 'Modelde hiç satış yok'}
-
-    renk_mask = model_sales['renk'] == renk
-    renk_sales = model_sales[renk_mask]
-
-    model_toplam = model_sales['adet'].sum()
-    renk_toplam = renk_sales['adet'].sum()
-    renk_orani = renk_toplam / model_toplam if model_toplam > 0 else 0
-
-    # Renk sayısına göre beklenen oran
-    renk_sayisi = model_sales['renk'].nunique()
-    beklenen_oran = 1 / renk_sayisi if renk_sayisi > 0 else 0.5
-
-    # Trend
-    now = datetime.now()
-    d30 = now - timedelta(days=30)
-    d60 = now - timedelta(days=60)
-    son30 = renk_sales[renk_sales['tarih'] >= d30]['adet'].sum()
-    onceki30 = renk_sales[(renk_sales['tarih'] >= d60) & (renk_sales['tarih'] < d30)]['adet'].sum()
-
-    if renk_toplam == 0:
-        segment = 'olu'
-        aciklama = '21+ gündür satış yok'
-    elif son30 > 0 and onceki30 == 0:
-        segment = 'yukselen'
-        aciklama = 'Son dönemde satış başladı'
-    elif renk_orani >= beklenen_oran * 1.5:
-        segment = 'motor'
-        aciklama = f'Ortalamadan {renk_orani/beklenen_oran:.1f}x daha hızlı'
-    elif renk_orani >= beklenen_oran * 0.5:
-        segment = 'dengeli'
-        aciklama = 'Ortalama satış hızında'
-    else:
-        segment = 'yavas'
-        aciklama = f'Ortalamanın {renk_orani/beklenen_oran:.1f}x altında'
-
-    return {'segment': segment, 'satis_orani': round(renk_orani * 100, 1), 'aciklama': aciklama}
-
-
-# ═══════════════════════════════════════════════════════════════════════
-#  MODÜL 3: ÜRÜN YAŞAM DÖNGÜSÜ
-# ═══════════════════════════════════════════════════════════════════════
-
-def mod3_yasam_dongusu(sales_df: pd.DataFrame, model: str, renk: str) -> dict:
-    """Ürün aşamasını tespit eder: lansman/yukselis/olgunluk/dusus/olu."""
-    mask = (sales_df['model_kodu'] == model) & (sales_df['renk'] == renk)
-    subset = sales_df[mask]
-
-    if subset.empty:
-        return {'asama': 'olu', 'yas_gun': 999, 'momentum': 0, 'aciklama': 'Satış verisi yok'}
-
-    now = datetime.now()
-    ilk_satis = subset['tarih'].min()
-    yas_gun = (now - ilk_satis).days if pd.notna(ilk_satis) else 999
-    toplam_adet = int(subset['adet'].sum())
-
-    d7 = now - timedelta(days=7)
-    d30 = now - timedelta(days=30)
-    son7 = subset[subset['tarih'] >= d7]['adet'].sum()
-    son30 = subset[subset['tarih'] >= d30]['adet'].sum()
-    son30_ort_7 = son30 / 4.3 if son30 > 0 else 0
-    momentum = son7 / son30_ort_7 if son30_ort_7 > 0 else 0
-
-    son21 = subset[subset['tarih'] >= (now - timedelta(days=21))]['adet'].sum()
-
-    if son21 == 0:
-        asama, aciklama = 'olu', '21+ gündür satış yok'
-    elif yas_gun < 45 and toplam_adet < 15:
-        asama, aciklama = 'lansman', f'{yas_gun} günlük ürün, {toplam_adet} satış'
-    elif momentum > 1.2:
-        asama, aciklama = 'yukselis', f'Momentum {momentum:.1f}x (satışlar artıyor)'
-    elif momentum < 0.8:
-        asama, aciklama = 'dusus', f'Momentum {momentum:.1f}x (satışlar azalıyor)'
-    else:
-        asama, aciklama = 'olgunluk', f'Momentum {momentum:.1f}x (stabil)'
-
-    return {'asama': asama, 'yas_gun': yas_gun, 'momentum': round(momentum, 2), 'aciklama': aciklama}
-
-
-# ═══════════════════════════════════════════════════════════════════════
-#  MODÜL 4: PORTFÖY MATRİSİ (BCG)
-# ═══════════════════════════════════════════════════════════════════════
-
-def mod4_portfoy(gunluk_satis: float, birim_kar: float,
-                 ort_gunluk_satis: float, ort_birim_kar: float) -> dict:
-    """BCG matrisinde pozisyon belirler."""
-    yuksek_satis = gunluk_satis >= ort_gunluk_satis
-    yuksek_kar = birim_kar >= ort_birim_kar
-
-    if yuksek_satis and yuksek_kar:
-        return {'grup': 'yildiz', 'aksiyon': 'Stok koparma, üretimde öncelik', 'icon': '⭐'}
-    elif not yuksek_satis and yuksek_kar:
-        return {'grup': 'nakit', 'aksiyon': 'Marjı koru, üretim azalt', 'icon': '🐄'}
-    elif yuksek_satis and not yuksek_kar:
-        return {'grup': 'firsatci', 'aksiyon': 'Kademe düşür, marj artır', 'icon': '❓'}
-    else:
-        return {'grup': 'sorun', 'aksiyon': 'Tasfiye et veya üretimden çıkar', 'icon': '🔴'}
-
-
-# ═══════════════════════════════════════════════════════════════════════
-#  MODÜL 5: GERÇEK MALİYET + NAKİT AKIŞ
-# ═══════════════════════════════════════════════════════════════════════
-
-def mod5_gercek_maliyet(fiyat: float, komisyon_oran: float, params: dict,
-                        ort_stokta_gun: float) -> dict:
-    """Tam maliyet hesabı ve nakit akış hızı."""
-    maliyet = params.get('maliyet', 0)
-    kargo = params.get('kargo', 20)
-    iade_orani = params.get('iade_orani', 8) / 100
-    paketleme = params.get('paketleme', 5)
-    sermaye_aylik = params.get('sermaye_maliyeti', 2.5) / 100
-
-    komisyon_tutar = fiyat * komisyon_oran / 100
-    iade_maliyet = iade_orani * (kargo + 10)  # kargo + işçilik
-    depo_gun = maliyet * sermaye_aylik / 30 * ort_stokta_gun if maliyet > 0 else 0
-
-    toplam_maliyet = maliyet + kargo + iade_maliyet + paketleme + komisyon_tutar
-    net_kar = fiyat - toplam_maliyet
-    kar_marji = (net_kar / fiyat * 100) if fiyat > 0 else 0
-
-    # ROI Hızı: kar/maliyet oranının stokta kalma süresine bölümü
-    roi_hizi = 0
-    if maliyet > 0 and ort_stokta_gun > 0:
-        roi_hizi = (net_kar / maliyet) / ort_stokta_gun * 30
-
-    return {
-        'komisyon_tutar': round(komisyon_tutar, 2),
-        'toplam_maliyet': round(toplam_maliyet, 2),
-        'net_kar': round(net_kar, 2),
-        'kar_marji': round(kar_marji, 1),
-        'roi_hizi': round(roi_hizi, 3),
-        'depo_maliyet': round(depo_gun, 2),
-    }
-
-
-# ═══════════════════════════════════════════════════════════════════════
-#  MODÜL 6: SENARYO SİMÜLATÖRÜ
-# ═══════════════════════════════════════════════════════════════════════
-
-def mod6_senaryo(fiyat: float, komisyon_oran: float, gunluk_satis: float,
-                 stok: int, renk_segment: str, params: dict,
-                 uretim_suresi: int) -> dict:
-    """Belirli bir kademe için 3 aylık projeksiyon."""
-    maliyet = params.get('maliyet', 0)
-    elastikiyet = ELASTICITY_BASE * ELASTICITY_MULTIPLIER.get(renk_segment, 1.0)
-
-    # Mevcut fiyata göre tahmini satış değişimi
-    mevcut_fiyat = params.get('_mevcut_fiyat', fiyat)
-    fiyat_degisim = (fiyat - mevcut_fiyat) / mevcut_fiyat if mevcut_fiyat > 0 else 0
-    tahmini_satis = gunluk_satis * (1 + elastikiyet * fiyat_degisim)
-    tahmini_satis = max(tahmini_satis, 0.01)  # minimum
-
-    net_kar = fiyat * (1 - komisyon_oran / 100) - maliyet if maliyet > 0 else fiyat * (1 - komisyon_oran / 100)
-    aylik_kar = tahmini_satis * 30 * net_kar
-    stok_bitis_gun = stok / tahmini_satis if tahmini_satis > 0 else 999
-
-    # Üretim uyarısı
-    uretim_uyari = ''
-    if stok_bitis_gun < (uretim_suresi + 5):
-        uretim_uyari = 'Hemen üretim emri ver!'
-    elif stok_bitis_gun < (uretim_suresi + 5) * 2:
-        uretim_uyari = 'Üretim planla'
-
-    return {
-        'tahmini_gunluk_satis': round(tahmini_satis, 2),
-        'tahmini_aylik_satis': round(tahmini_satis * 30, 0),
-        'birim_kar': round(net_kar, 2),
-        'aylik_kar': round(aylik_kar, 0),
-        '3aylik_kar': round(aylik_kar * 3, 0),
-        'stok_bitis_gun': round(stok_bitis_gun, 0),
-        'uretim_uyari': uretim_uyari,
-    }
-
-
-# ═══════════════════════════════════════════════════════════════════════
-#  MODÜL 7: KARAR MOTORU (SKOR KARTI)
-# ═══════════════════════════════════════════════════════════════════════
-
-def mod7_skor(senaryo: dict, mod1: dict, mod2: dict, mod3: dict,
-              mod4: dict, mod5: dict, weights: dict, stok: int,
-              uretim_suresi: int, kademe: int = 1) -> float:
-    """0-100 arası ağırlıklı skor hesaplar."""
-    # Kar skoru (0-100): aylik kara göre normalize
-    kar_skor = min(senaryo['aylik_kar'] / 500, 100) if senaryo['aylik_kar'] > 0 else 0
-
-    # Hacim skoru (0-100): tahmini günlük satışa göre
-    hacim_skor = min(senaryo['tahmini_gunluk_satis'] / 3 * 100, 100)
-
-    # Stok devir skoru (0-100): stok ne kadar hızlı eritiliyor
-    bitis = senaryo['stok_bitis_gun']
-    stok_skor = max(0, min(100, 100 - (bitis - 30) * 2)) if bitis < 999 else 0
-
-    # Nakit akış skoru (0-100): ROI hızına göre
-    nakit_skor = min(mod5['roi_hizi'] * 50, 100) if mod5['roi_hizi'] > 0 else 0
-
-    # Yaşam döngüsü uyum skoru
-    yasam_map = {
-        'lansman': {'1': 40, '2': 80, '3': 90, '4': 60},
-        'yukselis': {'1': 95, '2': 40, '3': 20, '4': 5},
-        'olgunluk': {'1': 85, '2': 60, '3': 40, '4': 20},
-        'dusus': {'1': 30, '2': 70, '3': 80, '4': 60},
-        'olu': {'1': 5, '2': 30, '3': 60, '4': 90},
-    }
-    asama = mod3['asama']
-    kademe_str = str(kademe)
-    yasam_skor = yasam_map.get(asama, {}).get(kademe_str, 50)
-
-    # Üretim güvenlik skoru (0-100)
-    kalan = mod1['kalan_gun']
-    kritik = uretim_suresi + 5
-    if kalan >= kritik * 3:
-        uretim_skor = 100
-    elif kalan >= kritik:
-        uretim_skor = 60
-    elif kalan > 0:
-        uretim_skor = 20
-    else:
-        uretim_skor = 0
-
-    # Renk segment skoru
-    segment_skor_map = {'motor': 90, 'dengeli': 70, 'yukselen': 60, 'yavas': 40, 'olu': 10}
-    renk_skor = segment_skor_map.get(mod2['segment'], 50)
-
-    w = weights
-    total = w['kar'] + w['hacim'] + w['stok_devir'] + w['nakit'] + w['yasam'] + w['uretim'] + w['renk']
-
-    skor = (
-        w['kar'] * kar_skor +
-        w['hacim'] * hacim_skor +
-        w['stok_devir'] * stok_skor +
-        w['nakit'] * nakit_skor +
-        w['yasam'] * yasam_skor +
-        w['uretim'] * uretim_skor +
-        w['renk'] * renk_skor
-    ) / total
-
-    return round(skor, 1)
-
-
-# ═══════════════════════════════════════════════════════════════════════
-#  MODÜL 9: SEZON + TAKVİM ZEKASI
-# ═══════════════════════════════════════════════════════════════════════
-
-def mod9_sezon(renk: str) -> dict:
-    """Mevsim bazlı renk uyarısı."""
-    now = datetime.now()
-    ay = now.month
-    renk_lower = renk.lower()
-
-    acik_renkler = ['beyaz', 'krem', 'bej', 'pembe', 'lila', 'saks', 'açık']
-    koyu_renkler = ['siyah', 'lacivert', 'bordo', 'kahve', 'füme', 'koyu']
-
-    is_acik = any(r in renk_lower for r in acik_renkler)
-    is_koyu = any(r in renk_lower for r in koyu_renkler)
-
-    # Bahar/yaz: Mart-Ağustos, Güz/kış: Eylül-Şubat
-    if 3 <= ay <= 8:  # bahar-yaz
-        if is_acik:
-            return {'sezon_uyum': 'yuksek', 'uyari': '', 'skor': 90}
-        elif is_koyu:
-            return {'sezon_uyum': 'dusuk', 'uyari': 'Koyu renk bahar/yaz döneminde yavaşlar', 'skor': 50}
-    else:  # güz-kış
-        if is_koyu:
-            return {'sezon_uyum': 'yuksek', 'uyari': '', 'skor': 90}
-        elif is_acik:
-            return {'sezon_uyum': 'dusuk', 'uyari': 'Açık renk güz/kış döneminde yavaşlar', 'skor': 50}
-
-    return {'sezon_uyum': 'normal', 'uyari': '', 'skor': 70}
+        eklenen = 0
+        for r in results:
+            if r['aksiyon'] == 'TUT':
+                continue
+            if (r['model_kodu'], r['renk']) in bugunkuler:
+                continue
+            db.session.add(MotorOneriLog(
+                model_kodu=r['model_kodu'],
+                renk=r['renk'],
+                eff_renk=r.get('eff_renk', r['renk']),
+                aksiyon=r['aksiyon'],
+                mevcut_fiyat=r['guncel_tsf'],
+                onerilen_fiyat=r['onerilen_fiyat'],
+                onerilen_kademe=r['onerilen_kademe'],
+                skor=r['onerilen_skor'],
+                gunluk_satis=r['gunluk_satis'],
+                stok=r['stok'],
+                strateji=strateji,
+                tarife_donemi=str(tarife_donemi),
+            ))
+            eklenen += 1
+        if eklenen:
+            db.session.commit()
+        return eklenen
+    except Exception as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        logger.warning(
+            "Öneri geçmişi kaydedilemedi (tablo migrate edilmemiş olabilir: "
+            f"scripts/create_motor_oneri_log_table.py): {e}"
+        )
+        return 0
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -637,7 +323,8 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
                       excluded_models: list[str] | None = None,
                       included_models: list[str] | None = None,
                       include_only: bool = False,
-                      tarife_donemi: str = '3') -> dict:
+                      tarife_donemi: str = '3',
+                      haftalik_kapasite: int = 0) -> dict:
     """Tüm modülleri çalıştırıp birleşik sonuç üretir.
 
     include_only=True ve included_models dolu ise SADECE bu modeller analiz
@@ -646,6 +333,9 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
 
     tarife_donemi ('3' veya '4'): Yeni Trendyol formatında komisyon oranları
     hangi teslimat tarifesinden ('3 Gün' / '4 Gün') okunacağını belirler.
+
+    haftalik_kapasite: Modül 8 için haftalık üretim kapasitesi (çift);
+    0 = kapasite kısıtı yok.
     """
 
     # ── Veri Hazırlığı ──────────────────────────────────────────────
@@ -706,6 +396,17 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
     # Sipariş verisini çek
     sales_df = _query_sales_data()
 
+    # Ölçülmüş fiyat elastikiyeti (yetersiz veri → ELASTICITY_BASE yedeği)
+    olculen_elastikiyet, elastikiyet_gozlem = estimate_elasticity(sales_df)
+    elastic_base = olculen_elastikiyet if olculen_elastikiyet is not None else ELASTICITY_BASE
+
+    # Model bazlı gerçek maliyet (tedarikçi sayfası, USD→TL); yoksa form değeri
+    model_codes = sorted({
+        str(m).strip() for m in tariff_df.get('MODEL KODU', pd.Series(dtype=object)).dropna()
+        if str(m).strip()
+    })
+    cost_map = _model_cost_map_tl(model_codes)
+
     uretim_suresi = params.get('uretim_suresi', 25)
     guvenlik_gun = params.get('guvenlik_gun', 5)
     strategy = params.get('strateji', 'dengeli')
@@ -716,10 +417,8 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
 
     results = []
     production_alerts = []
-    all_gunluk_satis = []
-    all_birim_kar = []
 
-    # İlk geçiş: temel verileri topla (portföy ortalamaları için)
+    # İlk geçiş: temel verileri topla (portföy ortalamaları + skor ölçeği için)
     pre_data = []
     for (model_kodu, renk), group in grouped:
         model_str = str(model_kodu).strip()
@@ -732,9 +431,13 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
         first = group.iloc[0]
         stok = int(group['STOK'].sum()) if 'STOK' in group.columns else 0
         guncel_tsf = float(first.get('GÜNCEL TSF', 0) or 0)
-        maliyet = params.get('maliyet', 0)
         guncel_kom = float(first.get('GÜNCEL KOMİSYON', 0) or 0)
-        birim_kar = guncel_tsf * (1 - guncel_kom / 100) - maliyet if maliyet > 0 else guncel_tsf * (1 - guncel_kom / 100)
+
+        # Model bazlı maliyet; DB'de yoksa formdaki manuel değer
+        maliyet = cost_map.get(model_str, params.get('maliyet', 0))
+        maliyet_kaynak = 'db' if model_str in cost_map else 'manuel'
+        vparams = {**params, 'maliyet': maliyet}
+        birim_kar = beklenen_birim_kar(guncel_tsf, guncel_kom, vparams)
 
         # Renk eşleştirme (pre-pass)
         eff_renk = renk
@@ -753,15 +456,20 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
         pre_data.append({
             'model': model_str, 'renk': renk, 'eff_renk': eff_renk, 'stok': stok,
             'gunluk_satis': m1['gunluk_satis'], 'birim_kar': birim_kar,
+            'maliyet': maliyet, 'maliyet_kaynak': maliyet_kaynak,
             'group': group, 'first': first, 'm1': m1,
         })
 
     if not pre_data:
         return {'success': True, 'results': [], 'alerts': [], 'stats': {},
-                'portfolio': {}, 'row_updates': {}, 'tarife_donemi': tarife_donemi}
+                'portfolio': {}, 'row_updates': {}, 'tarife_donemi': tarife_donemi,
+                'kapasite_plan': None, 'model_verimlilik': []}
 
     ort_gunluk = np.mean([p['gunluk_satis'] for p in pre_data]) if pre_data else 0.01
     ort_birim_kar = np.mean([p['birim_kar'] for p in pre_data]) if pre_data else 0
+
+    # Skor normalizasyonu: portföyün kendi p90 dağılımı (sabit eşik yerine)
+    skor_olcek = hesapla_skor_olcek(pre_data)
 
     # ── İkinci Geçiş: Tüm Modülleri Çalıştır ───────────────────────
     for p in pre_data:
@@ -771,9 +479,12 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
         first = p['first']
         stok = p['stok']
         m1 = p['m1']
+        effective_renk = p['eff_renk']
+        vparams = {**params, 'maliyet': p['maliyet']}
 
         guncel_tsf = float(first.get('GÜNCEL TSF', 0) or 0)
         guncel_kom = float(first.get('GÜNCEL KOMİSYON', 0) or 0)
+        kategori = str(first.get('KATEGORİ', ''))
 
         k1 = float(first.get(kom_cols[0], 0) or 0)
         k2 = float(first.get(kom_cols[1], 0) or 0)
@@ -782,20 +493,6 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
         ust2 = float(first.get('2.Fiyat Üst Limiti', 0) or 0)
         ust3 = float(first.get('3.Fiyat Üst Limiti', 0) or 0)
         ust4 = float(first.get('4.Fiyat Üst Limiti', 0) or 0)
-
-        # Renk eşleştirme: Excel renk adı ile DB renk adı farklı olabilir
-        # Önce birebir eşleşmeyi dene, yoksa model bazlı en yakın rengi bul
-        effective_renk = renk
-        model_mask = sales_df['model_kodu'] == model_str
-        if model_mask.any():
-            db_renkler = sales_df[model_mask]['renk'].unique()
-            if renk not in db_renkler:
-                # Basit içerik eşleştirmesi: "Bej Kırışık" ↔ "Bej Kırışık Rugan"
-                renk_lower = renk.lower()
-                for db_renk in db_renkler:
-                    if renk_lower in db_renk.lower() or db_renk.lower() in renk_lower:
-                        effective_renk = db_renk
-                        break
 
         # Modül 2: Renk Segment
         m2 = mod2_renk_segment(sales_df, model_str, effective_renk)
@@ -806,12 +503,12 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
         # Modül 4: Portföy (BCG)
         m4 = mod4_portfoy(m1['gunluk_satis'], p['birim_kar'], ort_gunluk, ort_birim_kar)
 
-        # Modül 9: Sezon
-        m9 = mod9_sezon(renk)
+        # Modül 9: Sezon (kategori öncelikli, renk ikincil)
+        m9 = mod9_sezon(renk, kategori)
 
         # ── Her Kademe İçin Senaryo + Skor ──────────────────────────
         tiers = []
-        params_with_price = {**params, '_mevcut_fiyat': guncel_tsf}
+        params_with_price = {**vparams, '_mevcut_fiyat': guncel_tsf}
 
         tier_configs = [
             (1, guncel_tsf, k1),
@@ -825,10 +522,12 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
                 continue
 
             ort_stokta_gun = stok / m1['gunluk_satis'] / 2 if m1['gunluk_satis'] > 0 else 90
-            m5 = mod5_gercek_maliyet(fiyat, kom, params, ort_stokta_gun)
+            m5 = mod5_gercek_maliyet(fiyat, kom, vparams, ort_stokta_gun)
             m6 = mod6_senaryo(fiyat, kom, m1['gunluk_satis'], stok,
-                              m2['segment'], params_with_price, uretim_suresi)
-            skor = mod7_skor(m6, m1, m2, m3, m4, m5, weights, stok, uretim_suresi, kademe)
+                              m2['segment'], params_with_price, uretim_suresi,
+                              elastic_base=elastic_base)
+            skor = mod7_skor(m6, m1, m2, m3, m4, m5, weights, stok,
+                             uretim_suresi, kademe, olcek=skor_olcek)
 
             tiers.append({
                 'kademe': kademe,
@@ -871,12 +570,15 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
         results.append({
             'model_kodu': model_str,
             'renk': renk,
+            'eff_renk': effective_renk,
             'urun_ismi': str(first.get('ÜRÜN İSMİ', '')),
-            'kategori': str(first.get('KATEGORİ', '')),
+            'kategori': kategori,
             'stok': stok,
             'varyant': len(group),
             'guncel_tsf': guncel_tsf,
             'guncel_komisyon': guncel_kom,
+            'maliyet': round(p['maliyet'], 2),
+            'maliyet_kaynak': p['maliyet_kaynak'],
             # Modül 1
             'gunluk_satis': m1['gunluk_satis'],
             'aylik_satis': m1['aylik_satis'],
@@ -920,6 +622,12 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
     for r in results:
         portfolio[r['bcg_grup']] = portfolio.get(r['bcg_grup'], 0) + 1
 
+    # ── Modül 8: Üretim Kapasite Tahsisi ────────────────────────────
+    kapasite_plan = mod8_kapasite(results, uretim_suresi, guvenlik_gun, haftalik_kapasite)
+
+    # ── Modül 10: Model Verimlilik Karşılaştırma ────────────────────
+    model_verimlilik = mod10_model_verimlilik(results)
+
     # ── Satır Bazında Güncelleme Haritası ───────────────────────────
     # Çıktı Excel'i, orijinal yüklenen dosya openpyxl ile açılıp SADECE iki
     # hücre (YENİ TSF + Tarife Seçimi) yazılarak üretilir. Bu yüzden burada
@@ -961,6 +669,7 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
             row_updates[int(pos)] = {'yeni_tsf': fiyat, 'hes3': hes3, 'hes4': hes4}
 
     # ── İstatistikler ───────────────────────────────────────────────
+    db_maliyetli_modeller = {r['model_kodu'] for r in results if r['maliyet_kaynak'] == 'db'}
     stats = {
         'toplam_varyant': len(results),
         'tut': sum(1 for r in results if r['aksiyon'] == 'TUT'),
@@ -970,6 +679,12 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
         'toplam_stok': sum(r['stok'] for r in results),
         'mevcut_aylik_kar': sum(r['mevcut_aylik_kar'] for r in results),
         'onerilen_aylik_kar': sum(r['onerilen_aylik_kar'] for r in results),
+        'maliyet_db_model': len(db_maliyetli_modeller),
+        'toplam_model': len({r['model_kodu'] for r in results}),
+        'satis_kaydi': int(len(sales_df)),
+        'elastikiyet': round(elastic_base, 2),
+        'elastikiyet_kaynak': 'olcum' if olculen_elastikiyet is not None else 'varsayilan',
+        'elastikiyet_gozlem': elastikiyet_gozlem,
     }
     stats['kar_artis'] = round(stats['onerilen_aylik_kar'] - stats['mevcut_aylik_kar'], 0)
 
@@ -981,6 +696,8 @@ def run_full_analysis(tariff_df: pd.DataFrame, params: dict,
         'portfolio': portfolio,
         'row_updates': row_updates,
         'tarife_donemi': tarife_donemi,
+        'kapasite_plan': kapasite_plan,
+        'model_verimlilik': model_verimlilik,
     }
 
 
@@ -1035,6 +752,7 @@ def akilli_motor_analiz():
         }
 
         tarife_donemi = request.form.get('tarife_donemi', '3')
+        haftalik_kapasite = int(float(request.form.get('haftalik_kapasite', 0) or 0))
 
         excluded_raw = request.form.get('excluded_models', '')
         excluded = [m.strip() for m in excluded_raw.replace('\n', ',').replace(';', ',').split(',') if m.strip()]
@@ -1043,10 +761,20 @@ def akilli_motor_analiz():
         included = [m.strip() for m in included_raw.replace('\n', ',').replace(';', ',').split(',') if m.strip()]
         include_only = request.form.get('include_only', '') in ('1', 'true', 'True', 'on')
 
-        analysis = run_full_analysis(df, params, excluded, included, include_only, tarife_donemi)
+        analysis = run_full_analysis(df, params, excluded, included, include_only,
+                                     tarife_donemi, haftalik_kapasite)
 
         if not analysis['success']:
             return jsonify(analysis), 400
+
+        # Geri besleme: TUT dışı önerileri logla (başarısızlık analizi bozmaz).
+        # Satış verisi hiç çekilemediyse LOGLAMA: veri kesintisinde her şey
+        # 'olu'→TASFİYE görünür ve geçmiş çöp kayıtlarla kirlenir.
+        if analysis.get('stats', {}).get('satis_kaydi', 0) > 0:
+            analysis['oneri_kayit'] = _kaydet_oneri_gecmisi(
+                analysis['results'], params['strateji'], analysis.get('tarife_donemi', tarife_donemi))
+        else:
+            analysis['oneri_kayit'] = 0
 
         # ── Çıktı: yüklenen dosyayı BİREBİR koru, sadece 2 sütunu yaz ──
         # ZIP/XML seviyesinde cerrahi düzenleme → formüller, stiller, paylaşılan
@@ -1078,6 +806,81 @@ def akilli_motor_analiz():
                 os.remove(save_path)
         except OSError:
             pass
+
+
+@akilli_motor_bp.route('/akilli-motor/oneri-gecmisi', methods=['GET'])
+@login_required
+@roles_required('admin')
+def akilli_motor_oneri_gecmisi():
+    """Geçmiş önerileri gerçekleşen satış hızıyla karşılaştırır.
+
+    Her öneri için: öneri tarihinden önceki 30 günün satış hızı vs sonraki
+    (en fazla 30 günün) satış hızı. 7 günden taze öneriler 'çok yeni' sayılır.
+    """
+    try:
+        from models import MotorOneriLog
+        kayitlar = (MotorOneriLog.query
+                    .order_by(MotorOneriLog.created_at.desc())
+                    .limit(300).all())
+    except Exception as e:
+        logger.warning(f"Öneri geçmişi okunamadı: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Öneri geçmişi tablosu bulunamadı. Sunucuda '
+                       'scripts/create_motor_oneri_log_table.py çalıştırılmalı.',
+        }), 200
+
+    if not kayitlar:
+        return jsonify({'success': True, 'oneriler': []})
+
+    sales = _query_sales_data(days=180)
+    now = datetime.now()
+
+    oneriler = []
+    for k in kayitlar:
+        item = {
+            'tarih': k.created_at.strftime('%d.%m.%Y'),
+            'model_kodu': k.model_kodu,
+            'renk': k.renk,
+            'aksiyon': k.aksiyon,
+            'mevcut_fiyat': k.mevcut_fiyat,
+            'onerilen_fiyat': k.onerilen_fiyat,
+            'onerilen_kademe': k.onerilen_kademe,
+            'skor': k.skor,
+            'strateji': k.strateji,
+            'onceki_hiz': None, 'sonraki_hiz': None,
+            'degisim_pct': None, 'durum': 'cok_yeni',
+        }
+
+        gecen_gun = (now - k.created_at).days
+        if gecen_gun >= 7 and not sales.empty:
+            eslesme_renk = k.eff_renk or k.renk
+            mask = (sales['model_kodu'] == k.model_kodu) & (sales['renk'] == eslesme_renk)
+            once_bas = k.created_at - timedelta(days=30)
+            once_adet = sales[mask & (sales['tarih'] >= once_bas) & (sales['tarih'] < k.created_at)]['adet'].sum()
+            onceki_hiz = once_adet / 30
+
+            sonra_gun = min(gecen_gun, 30)
+            sonra_bit = k.created_at + timedelta(days=sonra_gun)
+            sonra_adet = sales[mask & (sales['tarih'] >= k.created_at) & (sales['tarih'] < sonra_bit)]['adet'].sum()
+            sonraki_hiz = sonra_adet / max(sonra_gun, 1)
+
+            item['onceki_hiz'] = round(onceki_hiz, 2)
+            item['sonraki_hiz'] = round(sonraki_hiz, 2)
+            if onceki_hiz > 0:
+                item['degisim_pct'] = round((sonraki_hiz - onceki_hiz) / onceki_hiz * 100)
+                if sonraki_hiz > onceki_hiz * 1.1:
+                    item['durum'] = 'artti'
+                elif sonraki_hiz < onceki_hiz * 0.9:
+                    item['durum'] = 'dustu'
+                else:
+                    item['durum'] = 'ayni'
+            else:
+                item['durum'] = 'olculemedi'
+
+        oneriler.append(item)
+
+    return jsonify({'success': True, 'oneriler': oneriler})
 
 
 @akilli_motor_bp.route('/akilli-motor/indir/<filename>', methods=['GET'])

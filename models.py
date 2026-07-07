@@ -1473,3 +1473,36 @@ class TrendyolQuestion(db.Model):
     raw_json = db.Column(db.Text)
     first_seen_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
     last_synced_at = db.Column(db.DateTime(timezone=True))
+
+
+class MotorOneriLog(db.Model):
+    """Akıllı motor öneri geçmişi — geri besleme döngüsü.
+
+    Her analiz koşusunda TUT dışındaki öneriler (DÜŞÜR/TASFİYE) günde bir kez
+    kaydedilir. /akilli-motor/oneri-gecmisi bu kayıtları önerinin öncesi ve
+    sonrasındaki 30 günün gerçekleşen satış hızıyla karşılaştırır; motorun
+    isabet oranı buradan izlenir.
+
+    Tablo oluşturma: scripts/create_motor_oneri_log_table.py (additive,
+    idempotent — stock_movement deseniyle aynı).
+    """
+    __tablename__ = 'motor_oneri_log'
+
+    id = db.Column(db.Integer, primary_key=True)
+    # Yerel saat (TZ=Europe/Istanbul): karşılaştıran kod datetime.now()
+    # kullanıyor; utcnow karışımı ~3 saatlik kayma yaratır (bkz. geciken
+    # siparişler UTC hatası).
+    created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+    model_kodu = db.Column(db.String(64), nullable=False, index=True)
+    renk = db.Column(db.String(128), nullable=False, default='')
+    # Satış eşleşmesinde kullanılan DB renk adı (tarife renk adından farklı olabilir)
+    eff_renk = db.Column(db.String(128), nullable=False, default='')
+    aksiyon = db.Column(db.String(16), nullable=False)          # DÜŞÜR | TASFİYE
+    mevcut_fiyat = db.Column(db.Float)
+    onerilen_fiyat = db.Column(db.Float)
+    onerilen_kademe = db.Column(db.Integer)
+    skor = db.Column(db.Float)
+    gunluk_satis = db.Column(db.Float)                          # öneri anındaki hız
+    stok = db.Column(db.Integer)
+    strateji = db.Column(db.String(24))
+    tarife_donemi = db.Column(db.String(4))

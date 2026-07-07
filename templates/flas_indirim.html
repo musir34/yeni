@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+{% block title %}Flaş İndirim Motoru - Güllü Ayakkabı{% endblock %}
+{% block extra_css %}
+<style>
+    .flas-header{background:linear-gradient(135deg,#7b1f00,#c0392b,#e67e22);color:#fff;padding:24px;border-radius:var(--border-radius);margin-bottom:20px;text-align:center}
+    .flas-header h1{color:#fff;font-size:1.5rem;margin-bottom:4px}
+    .flas-header p{opacity:.85;margin:0;font-size:.9rem}
+
+    .config-panel{background:var(--color-bg-light);border:1px solid var(--color-border);border-radius:var(--border-radius);padding:20px;margin-bottom:20px}
+    .config-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+    .config-grid label{font-size:.78rem;font-weight:600;display:block;margin-bottom:3px;color:#555}
+    .config-grid input,.config-grid select,.config-grid textarea{width:100%;padding:7px 10px;border:1px solid var(--color-border);border-radius:6px;font-size:.85rem}
+
+    .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
+    .s-card{background:var(--color-bg-light);border-radius:var(--border-radius);padding:14px;text-align:center;box-shadow:var(--shadow-sm);border-left:4px solid #e67e22}
+    .s-card.green{border-left-color:#2ecc71} .s-card.red{border-left-color:#e74c3c}
+    .s-card.blue{border-left-color:#3498db} .s-card.gray{border-left-color:#95a5a6}
+    .s-card .sv{font-size:1.5rem;font-weight:700;color:var(--color-secondary)} .s-card .sl{font-size:.7rem;color:#777;text-transform:uppercase}
+
+    .results-section{display:none} .results-section.visible{display:block}
+    .rtable-wrap{overflow-x:auto;border-radius:var(--border-radius);box-shadow:var(--shadow-sm);background:var(--color-bg-light)}
+    .rtable{width:100%;border-collapse:collapse;font-size:.78rem;min-width:1250px}
+    .rtable thead{background:var(--color-secondary);color:#fff;position:sticky;top:0;z-index:10}
+    .rtable th{padding:10px 6px;text-align:center;font-size:.72rem;white-space:nowrap}
+    .rtable td{padding:8px 5px;text-align:center;border-bottom:1px solid var(--color-border);vertical-align:middle}
+    .rtable tbody tr:hover{background:#fdf3ec}
+
+    .badge-sm{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.68rem;font-weight:600;color:#fff}
+    .b-katil{background:#2ecc71} .b-katilma{background:#95a5a6}
+    .pos{color:#2ecc71;font-weight:700} .neg{color:#e74c3c;font-weight:700} .neu{color:#95a5a6}
+
+    .loading-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:9999;justify-content:center;align-items:center}
+    .loading-overlay.active{display:flex}
+    .lo-box{background:#fff;padding:40px 60px;border-radius:var(--border-radius);text-align:center;box-shadow:var(--shadow-md)}
+    .lo-box p{margin-top:12px;font-weight:600}
+
+    .th-tip{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;font-size:8px;font-weight:700;background:rgba(255,255,255,.25);color:#fff;border-radius:50%;cursor:help;vertical-align:middle;margin-left:2px;position:relative}
+    .th-tip:hover::after{content:attr(data-tip);position:absolute;top:110%;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:400;white-space:normal;width:max-content;max-width:220px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.3);line-height:1.4;text-align:left}
+    .th-tip:hover::before{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-bottom-color:#222;z-index:999}
+    .cfg-tip{width:13px;height:13px;font-size:8px;background:#d5dbdb;color:#333}
+
+    .filter-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+    .filter-row input,.filter-row select{padding:7px 10px;border:1px solid var(--color-border);border-radius:6px;font-size:.85rem}
+    .filter-row input{flex:1;min-width:180px}
+    .btn-dl{background:linear-gradient(45deg,#2ecc71,#27ae60);color:#fff;border:none;padding:10px 20px;font-weight:600;border-radius:var(--border-radius);cursor:pointer;transition:var(--transition)}
+    .btn-dl:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(46,204,113,.4)}
+
+    html.gs-dark .config-panel{background:#1e1e1e;border-color:#333}
+    html.gs-dark .config-grid input,html.gs-dark .config-grid select,html.gs-dark .config-grid textarea{background:#2a2a2a;color:#ddd;border-color:#444}
+    html.gs-dark .config-grid label{color:#aaa}
+    html.gs-dark .s-card{background:#1e1e1e} html.gs-dark .s-card .sv{color:#eee}
+    html.gs-dark .rtable-wrap{background:#1e1e1e} html.gs-dark .rtable td{border-bottom-color:#333}
+    html.gs-dark .rtable tbody tr:hover{background:#2a2a2a}
+    html.gs-dark .lo-box{background:#1e1e1e;color:#ddd}
+    html.gs-dark .filter-row input,html.gs-dark .filter-row select{background:#2a2a2a;color:#ddd;border-color:#444}
+
+    @media(max-width:767px){.config-grid{grid-template-columns:1fr 1fr}.stats-row{grid-template-columns:repeat(2,1fr)}.filter-row{flex-direction:column}.filter-row input{min-width:100%}.flas-header h1{font-size:1.2rem}}
+    @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flas-header">
+    <h1><i class="bi bi-lightning-charge-fill"></i> Flaş İndirim Motoru</h1>
+    <p>Trendyol flaş teklif Excel'ini yükle — her teklif için taban fiyat korumalı KATIL/KATILMA kararı ve satış-kâr tahmini</p>
+    <a href="/anasayfa" style="color:#fff;text-decoration:none;display:inline-block;margin-top:8px;padding:5px 14px;border:1px solid rgba(255,255,255,.4);border-radius:20px;font-size:12px"><i class="bi bi-house"></i> Anasayfa</a>
+</div>
+
+<!-- Config Panel -->
+<div class="config-panel" id="configPanel">
+    <h5 style="margin:0 0 14px"><i class="bi bi-sliders"></i> Parametreler ve Excel Yükle</h5>
+    <div class="config-grid">
+        <div><label>Flaş Teklif Excel'i *</label><input type="file" id="excelFile" accept=".xlsx,.xls"></div>
+        <div><label>Manuel Maliyet (TL) <span class="th-tip cfg-tip" data-tip="Yalnızca tedarikçi sayfasında maliyeti girilmemiş modeller için kullanılır. Maliyeti kayıtlı modeller otomatik DB'den (USD→TL) çekilir.">!</span></label><input type="number" id="pMaliyet" value="300" step="1" min="0"></div>
+        <div><label>Kargo Maliyeti (TL)</label><input type="number" id="pKargo" value="20" step="1" min="0"></div>
+        <div><label>İade Oranı (%)</label><input type="number" id="pIade" value="20" step="0.5" min="0"></div>
+        <div><label>Paketleme (TL)</label><input type="number" id="pPaket" value="5" step="1" min="0"></div>
+        <div><label>Min. Birim Kâr (TL) <span class="th-tip cfg-tip" data-tip="Taban fiyat bu kârı koruyacak şekilde hesaplanır. 0 = başabaş (zarar etme yeter).">!</span></label><input type="number" id="pMinKar" value="0" step="5"></div>
+        <div><label>Flaş Görünürlük Çarpanı <span class="th-tip cfg-tip" data-tip="Flaş sayfasındaki vitrin etkisi: normal günlük satışın kaç katı trafik varsayılsın. Tahmini satış/kâr hesabını etkiler, kararı etkilemez. Varsayılan 3x.">!</span></label><input type="number" id="pGorunurluk" value="3" step="0.5" min="0.5"></div>
+        <div>
+            <label>Taban Altında Kalırsa <span class="th-tip cfg-tip" data-tip="Trendyol'un önerdiği flaş fiyat taban fiyatın (zarar sınırı) altındaysa ne yapılsın? KATILMA: satır boş bırakılır. Tabanı Yaz: taban fiyat yazılır ama Trendyol önerisinden yüksek olduğu için kabul edilmeyebilir.">!</span></label>
+            <select id="pTabanAsim">
+                <option value="katilma" selected>Katılma (satırı boş bırak)</option>
+                <option value="taban_yaz">Tabanı yaz (riskli)</option>
+            </select>
+        </div>
+        <div style="grid-column:span 2">
+            <label>Hariç Tutulacak Modeller</label>
+            <div class="d-flex gap-2 mb-1 flex-wrap align-items-center">
+                <select id="excludeListSelect" style="padding:5px 8px;border:1px solid var(--color-border);border-radius:6px;font-size:.82rem;flex:1;min-width:130px"><option value="">-- Kayıtlı Liste Seç --</option></select>
+                <button type="button" onclick="saveExcludeList()" style="background:var(--color-primary);color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:.75rem;cursor:pointer"><i class="bi bi-save"></i> Kaydet</button>
+                <button type="button" onclick="deleteExcludeList()" style="background:var(--color-danger);color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:.75rem;cursor:pointer"><i class="bi bi-trash"></i> Sil</button>
+            </div>
+            <textarea id="pExcluded" rows="1" placeholder="0172, 4407..." style="resize:vertical"></textarea>
+        </div>
+        <div style="grid-column:span 2">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="checkbox" id="pIncludeOnly" style="width:auto;margin:0">
+                <span>Sadece Bu Modellere Flaş Uygula <span class="th-tip cfg-tip" data-tip="Etkinleştirirsen motor SADECE buraya yazdığın modellerin tekliflerini değerlendirir; diğer satırlar boş kalır (flaşa girmez).">!</span></span>
+            </label>
+            <textarea id="pIncluded" rows="1" placeholder="0172, 4407... (üstteki kutuyu işaretlersen geçerli)" style="resize:vertical" disabled></textarea>
+        </div>
+    </div>
+    <div class="text-center mt-3">
+        <button class="btn btn-primary" id="btnRun" disabled><i class="bi bi-lightning-charge"></i> Motoru Çalıştır</button>
+    </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay"><div class="lo-box"><i class="bi bi-lightning-charge" style="font-size:2.5rem;color:#e67e22;animation:spin 1.5s linear infinite;display:inline-block"></i><p>Flaş teklifler analiz ediliyor...</p></div></div>
+
+<!-- Results -->
+<div class="results-section" id="resultsSection">
+    <div class="stats-row" id="statsRow"></div>
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <div class="filter-row" style="flex:1;margin-bottom:0">
+            <input type="text" id="fSearch" placeholder="Model, ürün, kategori ara...">
+            <select id="fAksiyon"><option value="all">Tüm Kararlar</option><option value="KATIL">KATIL</option><option value="KATILMA">KATILMA</option></select>
+            <select id="fGun"><option value="all">Tüm Günler</option></select>
+        </div>
+        <button class="btn-dl" id="btnDownload" style="display:none"><i class="bi bi-download"></i> Excel İndir</button>
+    </div>
+
+    <div class="rtable-wrap" style="max-height:70vh;overflow-y:auto">
+        <table class="rtable">
+            <thead><tr>
+                <th>Model / Ürün</th>
+                <th>Gün <span class="th-tip" data-tip="Flaş teklifinin geçerli olduğu tarih penceresi">!</span></th>
+                <th>Stok</th>
+                <th>Satış/Gün <span class="th-tip" data-tip="Modelin son 90 gündeki ortalama günlük satışı (tüm renkler)">!</span></th>
+                <th>Müşteri Fiyatı <span class="th-tip" data-tip="Müşterinin şu an gördüğü (indirimli) fiyat">!</span></th>
+                <th>Kom. %</th>
+                <th>Trendyol Flaş <span class="th-tip" data-tip="Trendyol'un bu teklif için önerdiği flaş fiyat">!</span></th>
+                <th>Taban <span class="th-tip" data-tip="Maliyet + kargo + paketleme + %iade beklenen değeri + komisyon sonrası minimum kârı koruyan en düşük fiyat. Bunun altı zarardır.">!</span></th>
+                <th>Öneri <span class="th-tip" data-tip="Motorun 'Senin Belirlediğin Flaş Fiyatı' sütununa yazacağı fiyat">!</span></th>
+                <th>İndirim <span class="th-tip" data-tip="Müşterinin gördüğü fiyata göre ek indirim oranı">!</span></th>
+                <th>Birim Kâr</th>
+                <th>Tah. Satış <span class="th-tip" data-tip="Pencere boyunca tahmini satış adedi (elastikiyet × görünürlük çarpanı, stokla sınırlı)">!</span></th>
+                <th>Tah. Kâr</th>
+                <th>Karar</th>
+            </tr></thead>
+            <tbody id="resultsBody"></tbody>
+        </table>
+    </div>
+    <div class="text-center mt-2 mb-4"><small id="resultCount" class="text-muted"></small></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const fileInput=document.getElementById('excelFile'),btnRun=document.getElementById('btnRun'),
+          loading=document.getElementById('loadingOverlay'),results=document.getElementById('resultsSection');
+    let allData=[],downloadFile='';
+
+    fileInput.addEventListener('change',()=>{btnRun.disabled=!fileInput.files.length});
+
+    const incOnly=document.getElementById('pIncludeOnly'),incBox=document.getElementById('pIncluded');
+    incOnly.addEventListener('change',()=>{incBox.disabled=!incOnly.checked;if(incOnly.checked)incBox.focus()});
+
+    btnRun.addEventListener('click',async()=>{
+        if(!fileInput.files.length)return;
+        loading.classList.add('active');btnRun.disabled=true;
+        const fd=new FormData();
+        fd.append('excel_file',fileInput.files[0]);
+        fd.append('maliyet',document.getElementById('pMaliyet').value);
+        fd.append('kargo',document.getElementById('pKargo').value);
+        fd.append('iade_orani',document.getElementById('pIade').value);
+        fd.append('paketleme',document.getElementById('pPaket').value);
+        fd.append('min_kar',document.getElementById('pMinKar').value);
+        fd.append('gorunurluk',document.getElementById('pGorunurluk').value);
+        fd.append('taban_asiminda',document.getElementById('pTabanAsim').value);
+        fd.append('excluded_models',document.getElementById('pExcluded').value);
+        fd.append('include_only',document.getElementById('pIncludeOnly').checked?'1':'0');
+        fd.append('included_models',document.getElementById('pIncluded').value);
+        try{
+            const r=await fetch('/flas-indirim/analiz',{method:'POST',body:fd});
+            const d=await r.json();
+            if(!d.success){alert(d.message||'Hata');return}
+            allData=d.results;downloadFile=d.download_file;
+            renderStats(d.stats,d.guncellenen_satir);
+            buildGunFilter();renderTable(allData);applyFilters();
+            results.classList.add('visible');
+            if(downloadFile)document.getElementById('btnDownload').style.display='inline-flex';
+            results.scrollIntoView({behavior:'smooth'});
+        }catch(e){alert('Hata: '+e.message)}
+        finally{loading.classList.remove('active');btnRun.disabled=false}
+    });
+
+    function renderStats(s,yazilan){
+        const elastikTip = s.elastikiyet_kaynak==='olcum'
+            ? `Kendi satış geçmişinizden ölçüldü (${s.elastikiyet_gozlem} gözlem)`
+            : 'Yeterli fiyat değişimi verisi yok — varsayılan kullanıldı';
+        document.getElementById('statsRow').innerHTML=`
+            <div class="s-card blue"><div class="sv">${s.toplam_teklif}</div><div class="sl">Teklif (${s.urun_sayisi} ürün × ${s.gun_sayisi} gün)</div></div>
+            <div class="s-card green"><div class="sv">${s.katil}</div><div class="sl">Katıl</div></div>
+            <div class="s-card gray"><div class="sv">${s.katilma}</div><div class="sl">Katılma</div></div>
+            <div class="s-card green"><div class="sv">${fm(s.tahmini_toplam_kar)}</div><div class="sl">Tahmini Flaş Kârı (TL)</div></div>
+            <div class="s-card"><div class="sv">${fm(s.tahmini_toplam_satis)}</div><div class="sl">Tahmini Satış (çift)</div></div>
+            <div class="s-card ${s.stok_uyari>0?'red':'gray'}"><div class="sv">${s.stok_uyari}</div><div class="sl">Stok Uyarısı</div></div>
+            <div class="s-card blue" title="${elastikTip}"><div class="sv">${s.elastikiyet??''}</div><div class="sl">Elastikiyet ${s.elastikiyet_kaynak==='olcum'?'(ölçüm)':'(varsayılan)'}</div></div>
+            <div class="s-card ${s.maliyet_db_model>0?'green':'red'}" title="Tedarikçi sayfasındaki model maliyetleri otomatik kullanıldı; kalanlar manuel maliyetle hesaplandı"><div class="sv">${s.maliyet_db_model||0}/${s.toplam_model||0}</div><div class="sl">DB Maliyetli Model</div></div>
+            ${yazilan!=null?`<div class="s-card green"><div class="sv">${yazilan}</div><div class="sl">Excel'e Yazılan Satır</div></div>`:''}
+        `;
+    }
+
+    function buildGunFilter(){
+        const sel=document.getElementById('fGun');
+        const gunler=[...new Set(allData.map(r=>r.gun).filter(Boolean))].sort();
+        sel.innerHTML='<option value="all">Tüm Günler</option>'+gunler.map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join('');
+    }
+
+    function renderTable(data){
+        const tb=document.getElementById('resultsBody');tb.innerHTML='';
+        data.forEach(m=>{
+            const tr=document.createElement('tr');
+            tr.dataset.model=(m.model_kodu||'').toLowerCase();tr.dataset.urun=(m.urun_adi||'').toLowerCase();
+            tr.dataset.kategori=(m.kategori||'').toLowerCase();tr.dataset.aksiyon=m.aksiyon;tr.dataset.gun=m.gun||'';
+            const katil=m.aksiyon==='KATIL';
+            const maliyetTip=`Maliyet: ${fm(m.maliyet)} TL (${m.maliyet_kaynak==='db'?'tedarikçi kaydı':'manuel'})`;
+            tr.innerHTML=`
+                <td style="text-align:left;max-width:260px" title="${esc(maliyetTip)}">
+                    <strong>${esc(m.model_kodu)}</strong> <small style="color:${m.maliyet_kaynak==='db'?'#2ecc71':'#f39c12'}">●</small>
+                    <div style="font-size:.68rem;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:250px">${esc(m.urun_adi)}</div>
+                </td>
+                <td>${esc(m.gun)}<div style="font-size:.65rem;color:#888">${esc(m.pencere)}</div></td>
+                <td>${m.stok}${m.stok_uyari?' <span title="Tahmini satış stoğa yaklaşıyor — stok yetmeyebilir">⚠</span>':''}</td>
+                <td>${m.gunluk_satis}</td>
+                <td>${fm(m.musteri_fiyat)}</td>
+                <td>${m.komisyon}</td>
+                <td>${fm(m.trendyol_fiyat)}</td>
+                <td>${m.taban_fiyat!=null?fm(m.taban_fiyat):'-'}</td>
+                <td>${katil?'<strong>'+fm(m.oneri_fiyat)+'</strong>':'-'}</td>
+                <td>${m.indirim_pct!=null?(m.indirim_pct>0?'-':'+')+Math.abs(m.indirim_pct)+'%':'-'}</td>
+                <td class="${m.birim_kar>0?'pos':m.birim_kar<0?'neg':'neu'}">${m.birim_kar!=null?fm(m.birim_kar):'-'}</td>
+                <td>${katil?m.tahmini_satis:'-'}</td>
+                <td class="${m.tahmini_kar>0?'pos':'neu'}">${katil?fm(m.tahmini_kar):'-'}</td>
+                <td>
+                    <span class="badge-sm ${katil?'b-katil':'b-katilma'}">${esc(m.aksiyon)}</span>
+                    ${m.neden?'<div style="font-size:.65rem;color:#888;max-width:170px">'+esc(m.neden)+'</div>':''}
+                    ${m.uyari?'<div style="font-size:.65rem;color:#e67e22;max-width:170px">⚠ '+esc(m.uyari)+'</div>':''}
+                </td>
+            `;
+            tb.appendChild(tr);
+        });
+    }
+
+    function applyFilters(){
+        const q=document.getElementById('fSearch').value.toLowerCase().trim(),
+              fa=document.getElementById('fAksiyon').value,
+              fg=document.getElementById('fGun').value;
+        let cnt=0;
+        document.querySelectorAll('#resultsBody tr').forEach(r=>{
+            const mq=!q||(r.dataset.model||'').includes(q)||(r.dataset.urun||'').includes(q)||(r.dataset.kategori||'').includes(q);
+            const ma=fa==='all'||r.dataset.aksiyon===fa;
+            const mg=fg==='all'||r.dataset.gun===fg;
+            const vis=mq&&ma&&mg;r.style.display=vis?'':'none';
+            if(vis)cnt++;
+        });
+        document.getElementById('resultCount').textContent=cnt+' teklif listeleniyor';
+    }
+
+    document.getElementById('fSearch').addEventListener('input',applyFilters);
+    document.getElementById('fAksiyon').addEventListener('change',applyFilters);
+    document.getElementById('fGun').addEventListener('change',applyFilters);
+    document.getElementById('btnDownload').addEventListener('click',()=>{if(downloadFile)window.location.href='/flas-indirim/indir/'+encodeURIComponent(downloadFile)});
+
+    function fm(v){if(v==null)return'0';return Number(v).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})}
+    function esc(s){if(s==null)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+    window._flasEsc=esc;
+
+    // --- Hariç tutma listeleri (komisyon-tarife kayıtlı listeleriyle ortak) ---
+    const exSel=document.getElementById('excludeListSelect'),exTa=document.getElementById('pExcluded');
+
+    async function loadExLists(sel){
+        try{
+            const r=await fetch('/komisyon-tarife/listeler');const d=await r.json();
+            if(!d.success)return;
+            exSel.innerHTML='<option value="">-- Kayıtlı Liste Seç --</option>';
+            for(const[n,info]of Object.entries(d.lists)){
+                const o=document.createElement('option');o.value=n;
+                o.textContent=n+' ('+info.models.length+' model)';if(n===sel)o.selected=true;exSel.appendChild(o);
+            }
+            exSel._data=d.lists;
+        }catch(e){}
+    }
+
+    exSel.addEventListener('change',function(){
+        const n=this.value;
+        if(n&&exSel._data&&exSel._data[n])exTa.value=exSel._data[n].models.join(', ');
+    });
+
+    window._flasLoadExLists=loadExLists;
+    loadExLists();
+});
+
+async function saveExcludeList(){
+    const sel=document.getElementById('excludeListSelect'),ta=document.getElementById('pExcluded');
+    const models=ta.value.split(/[,;\n]/).map(m=>m.trim()).filter(Boolean);
+    let name=sel.value;
+    if(!name){name=prompt('Yeni liste adı:');if(!name||!name.trim())return;name=name.trim()}
+    if(!models.length){alert('En az 1 model kodu girin');return}
+    try{
+        const r=await fetch('/komisyon-tarife/listeler',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,models})});
+        const d=await r.json();alert(d.message);
+        window._flasLoadExLists&&window._flasLoadExLists(name);
+    }catch(e){alert('Hata: '+e.message)}
+}
+
+async function deleteExcludeList(){
+    const sel=document.getElementById('excludeListSelect'),name=sel.value;
+    if(!name){alert('Silinecek bir liste seçin');return}
+    if(!confirm('"'+name+'" silinsin mi?'))return;
+    try{
+        const r=await fetch('/komisyon-tarife/listeler/'+encodeURIComponent(name),{method:'DELETE'});
+        const d=await r.json();alert(d.message);
+        document.getElementById('pExcluded').value='';
+        window._flasLoadExLists&&window._flasLoadExLists();
+    }catch(e){alert('Hata: '+e.message)}
+}
+</script>
+{% endblock %}

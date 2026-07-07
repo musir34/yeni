@@ -39,6 +39,7 @@ def register_blueprints(app):
     from gizli_ozellikler import gizli_ozellikler_bp  # 🔒 GİZLİ ÖZELLİKLER
     from komisyon_tarife import komisyon_tarife_bp  # 📊 KOMİSYON TARİFE (liste API'si hala kullanılıyor)
     from akilli_motor import akilli_motor_bp  # 🧠 AKILLI KOMİSYON MOTORU
+    from flas_indirim import flas_indirim_bp  # ⚡ FLAŞ İNDİRİM MOTORU
     from agent_api import agent_api  # 🤖 OPENCLAW AGENT API
     from order_audit_routes import order_audit_bp  # 🔎 SİPARİŞ İZ SÜRME
     from trendyol_qna import qna_bp  # 💬 TRENDYOL SORU-CEVAP
@@ -84,6 +85,7 @@ def register_blueprints(app):
         gizli_ozellikler_bp,  # 🔒 GİZLİ ÖZELLİKLER
         komisyon_tarife_bp,  # 📊 KOMİSYON TARİFE OPTİMİZASYONU
         akilli_motor_bp,  # 🧠 AKILLI KOMİSYON MOTORU
+        flas_indirim_bp,  # ⚡ FLAŞ İNDİRİM MOTORU
         agent_api,  # 🤖 OPENCLAW AGENT API
         order_audit_bp,  # 🔎 SİPARİŞ İZ SÜRME
         qna_bp,  # 💬 TRENDYOL SORU-CEVAP

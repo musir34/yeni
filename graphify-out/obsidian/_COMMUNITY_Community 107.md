@@ -1,0 +1,22 @@
+---
+type: community
+cohesion: 0.67
+members: 3
+---
+
+# Community 107
+
+**Cohesion:** 0.67 - moderately connected
+**Members:** 3 nodes
+
+## Members
+- [[add_atanan_raf_to_order_created.py]] - code - migrations/versions/add_atanan_raf_to_order_created.py
+- [[downgrade()]] - code - migrations/versions/add_atanan_raf_to_order_created.py
+- [[upgrade()]] - code - migrations/versions/add_atanan_raf_to_order_created.py
+
+## Live Query (requires Dataview plugin)
+
+```dataview
+TABLE source_file, type FROM #community/Community_107
+SORT file.name ASC
+```
