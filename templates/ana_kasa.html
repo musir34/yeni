@@ -159,7 +159,7 @@
             <div class="balance-label">Mevcut Bakiye</div>
             <div class="balance-amount">{{ ana_kasa.bakiye|tl_format }} ₺</div>
             <small class="text-muted">
-                Son Güncelleme: {{ ana_kasa.guncelleme_tarihi.strftime('%d.%m.%Y %H:%M') if ana_kasa.guncelleme_tarihi else 'Henüz güncellenmedi' }}
+                Son Güncelleme: {{ ana_kasa.guncelleme_tarihi | ist('%d.%m.%Y %H:%M') if ana_kasa.guncelleme_tarihi else 'Henüz güncellenmedi' }}
             </small>
         </div>
         
@@ -309,7 +309,7 @@
                         {% if islemler %}
                             {% for islem in islemler %}
                                 <tr>
-                                    <td>{{ islem.tarih.strftime('%d.%m.%Y %H:%M') }}</td>
+                                    <td>{{ islem.tarih | ist('%d.%m.%Y %H:%M') }}</td>
                                     <td>
                                         {% if islem.islem_tipi == 'gelir_eklendi' %}
                                             <span class="islem-badge badge-gelir">Gelir Eklendi</span>

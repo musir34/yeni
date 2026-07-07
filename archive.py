@@ -40,6 +40,16 @@ def format_turkish_date_filter(value):
             except Exception:
                 pass
 
+        # datetime (saat içeren) → Europe/Istanbul (naive=UTC konvansiyonu).
+        # Böylece gece yarısına yakın UTC kayıtları doğru GÜN'ü gösterir.
+        # Sade date/gün değerleri (tz yok) olduğu gibi kalır.
+        if isinstance(value, datetime):
+            try:
+                from time_utils import to_ist
+                value = to_ist(value) or value
+            except Exception:
+                pass
+
         day = getattr(value, "day", None)
         month_index = getattr(value, "month", None)
         if not day or not month_index:

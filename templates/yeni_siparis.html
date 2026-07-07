@@ -123,7 +123,7 @@
             <div>
               <input type="checkbox" class="order-checkbox me-2" value="{{ siparis.siparis_no }}" onchange="updateSelectedCount()">
               <strong class="text-primary">{{ siparis.siparis_no }}</strong><br>
-              <small class="text-muted">{{ siparis.siparis_tarihi.strftime('%d.%m.%Y %H:%M') if siparis.siparis_tarihi else 'N/A' }}</small>
+              <small class="text-muted">{{ siparis.siparis_tarihi | ist('%d.%m.%Y %H:%M') if siparis.siparis_tarihi else 'N/A' }}</small>
             </div>
             <select class="form-select form-select-sm status-select status-{{ siparis.durum|replace(' ', '-')|lower }}" 
                     style="width:auto;max-width:150px" 

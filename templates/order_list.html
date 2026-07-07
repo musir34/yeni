@@ -347,7 +347,7 @@
                     {% elif order.is_urgent %}
                         <span class="priority-badge urgent"><i class="fas fa-clock"></i> Acil</span>
                     {% endif %}
-                    <p class="mb-1"><small><strong>Tarih:</strong> {{ order.order_date.strftime('%d-%m-%Y %H:%M') if order.order_date else 'N/A' }}</small></p>
+                    <p class="mb-1"><small><strong>Tarih:</strong> {{ order.order_date | ist('%d-%m-%Y %H:%M') if order.order_date else 'N/A' }}</small></p>
                     <p class="mb-1">
                         {% set translated_status = {'Created': 'Yeni', 'Hazirlaniyor': 'Hazırlanıyor', 'Picking': 'İşleme Alındı', 'Shipped': 'Kargoda', 'Delivered': 'Teslim Edildi', 'Cancelled': 'İptal Edildi'}.get(order.status, order.status) %}
                         <strong>Durum:</strong>

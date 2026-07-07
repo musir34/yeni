@@ -97,7 +97,7 @@
             <i class="bi bi-clock"></i>
             Son Sync:
             {% if config and config.last_sync_at %}
-              {{ config.last_sync_at.strftime('%d.%m.%Y %H:%M') }}
+              {{ config.last_sync_at | ist('%d.%m.%Y %H:%M') }}
             {% else %}
               Henüz yok
             {% endif %}

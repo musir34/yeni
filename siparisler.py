@@ -239,6 +239,7 @@ def yeni_siparis():
             db.session.rollback()
             return jsonify(success=False, message='Sipariş oluşturulurken ID alınamadı.'), 500
 
+        ledger_entries = []  # (barkod, raf_kodu, 1) — ledger izi için birim başına
         for idx, u_data in enumerate(data['urunler']):
             adet_raw, fiyat_raw = u_data.get('adet'), u_data.get('birim_fiyat')
             try:
@@ -254,6 +255,7 @@ def yeni_siparis():
             barkod = u_data.get('barkod', '')
             alloc = allocate_from_shelf_and_decrement(barkod, qty=urun_adet)
             raf_kodu = ", ".join([rk for rk in alloc["shelf_codes"] if rk]) if alloc["shelf_codes"] else None
+            ledger_entries.extend((barkod, rk, 1) for rk in alloc["shelf_codes"] if rk)
 
             db.session.add(SiparisUrun(
                 siparis_id   = sip_id,
@@ -268,6 +270,19 @@ def yeni_siparis():
                 raf_kodu     = raf_kodu  # Hangi raftan alındığı
             ))
         logger.info(f"{len(data['urunler'])} adet ürün SiparisUrun tablosuna eklenecek.")
+
+        # Stok hareket defterine (ledger) yaz — raf ZATEN allocate_from_shelf_and_decrement
+        # ile düşürüldü; burada yalnızca iz kaydı bırakılır (mutate_shelf=False).
+        # key_ref sip_id içerir: aynı siparis_no silinip tekrar oluşturulursa idempotency
+        # eski kaydı bloklamasın. Ledger denetim izidir → hata siparişi bloklamamalı.
+        try:
+            from stock_ledger import record_shelf_movements, REASON_MANUAL
+            record_shelf_movements(
+                ledger_entries, reason=REASON_MANUAL, order_number=siparis_no,
+                key_ref=f"{siparis_no}#{sip_id}", source="MANUAL_ORDER", commit=False,
+            )
+        except Exception:
+            logger.exception("Manuel sipariş ledger yazımı başarısız (yutuldu, sipariş korunur)")
 
         db.session.commit()
         logger.info(f"Sipariş {siparis_no} başarıyla veritabanına kaydedildi.")
@@ -601,6 +616,7 @@ def siparis_sil(siparis_no):
         musteri = f"{sip.musteri_adi or ''} {sip.musteri_soyadi or ''}".strip()
 
         # Stok iade: Siparişe ait ürünleri rafa geri yükle
+        from stock_ledger import record_shelf_movements, REASON_MANUAL
         urunler = SiparisUrun.query.filter_by(siparis_id=sip.id).all()
         for urun in urunler:
             if urun.urun_barkod and urun.adet and urun.adet > 0:
@@ -610,6 +626,15 @@ def siparis_sil(siparis_no):
                     shelf_code=urun.raf_kodu,
                     commit=False
                 )
+                try:
+                    record_shelf_movements(
+                        [(urun.urun_barkod, urun.raf_kodu, urun.adet)],
+                        reason=REASON_MANUAL, order_number=siparis_no,
+                        key_ref=f"{siparis_no}#{sip.id}", source="MANUAL_ORDER",
+                        restore=True, commit=False,
+                    )
+                except Exception:
+                    logger.exception("Manuel sipariş iade ledger yazımı başarısız (yutuldu)")
                 logger.info(
                     f"Stok iade: {urun.urun_barkod} x{urun.adet} → {urun.raf_kodu or 'ilk raf'}"
                 )
@@ -646,6 +671,7 @@ def siparis_toplu_sil():
             sip = YeniSiparis.query.filter_by(siparis_no=siparis_no).first()
             if sip:
                 # Stok iade: Her ürünü rafa geri yükle
+                from stock_ledger import record_shelf_movements, REASON_MANUAL
                 urunler = SiparisUrun.query.filter_by(siparis_id=sip.id).all()
                 for urun in urunler:
                     if urun.urun_barkod and urun.adet and urun.adet > 0:
@@ -655,6 +681,15 @@ def siparis_toplu_sil():
                             shelf_code=urun.raf_kodu,
                             commit=False
                         )
+                        try:
+                            record_shelf_movements(
+                                [(urun.urun_barkod, urun.raf_kodu, urun.adet)],
+                                reason=REASON_MANUAL, order_number=siparis_no,
+                                key_ref=f"{siparis_no}#{sip.id}", source="MANUAL_ORDER",
+                                restore=True, commit=False,
+                            )
+                        except Exception:
+                            logger.exception("Toplu sil iade ledger yazımı başarısız (yutuldu)")
                 SiparisUrun.query.filter_by(siparis_id=sip.id).delete()
                 db.session.delete(sip)
                 silinen_sayisi += 1

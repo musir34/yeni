@@ -371,6 +371,23 @@ def degisim_kaydet():
         )
 
         db.session.add(degisim_kaydi)
+
+        # Stok hareket defterine (ledger) yaz — raf ZATEN allocate_from_shelves ile
+        # düşürüldü; burada yalnızca iz kaydı bırakılır (mutate_shelf=False).
+        # Ledger yalnızca denetim izidir: hata olsa bile değişim kaydı bloklanmamalı.
+        try:
+            from stock_ledger import record_shelf_movements, REASON_EXCHANGE
+            for u in urunler_listesi:
+                record_shelf_movements(
+                    [(u["barkod"], sc, 1) for sc in (u.get("raf_kodlari") or [])],
+                    reason=REASON_EXCHANGE,
+                    order_number=degisim_kaydi.degisim_no,
+                    source="EXCHANGE",
+                    commit=False,
+                )
+        except Exception:
+            logger.exception("[DEGISIM] ledger yazımı başarısız (yutuldu, değişim kaydı korunur)")
+
         db.session.commit()
         # CentralStock & Product.quantity event listener tarafından commit sonrası
         # otomatik senkronize edilir (models.py).
@@ -510,12 +527,22 @@ def bulk_delete():
         if not records:
             return jsonify(success=False, message="Kayıt bulunamadı"), 404
 
+        from stock_ledger import record_shelf_movements, REASON_EXCHANGE
         total_restored = 0
         deleted_nos: list[str] = []
         for rec in records:
             urunler = _safe_json_loads(rec.urunler_json, default=[])
             shelf_counts = _aggregate_shelf_restore(urunler if isinstance(urunler, list) else [])
             total_restored += restore_to_shelves(shelf_counts)
+            # Ledger iade izi (raf restore_to_shelves ile geri yazıldı) — best-effort
+            try:
+                record_shelf_movements(
+                    [(barcode, raf, adet) for (raf, barcode), adet in shelf_counts.items()],
+                    reason=REASON_EXCHANGE, order_number=rec.degisim_no,
+                    source="EXCHANGE", restore=True, commit=False,
+                )
+            except Exception:
+                logger.exception("[DEGISIM] iade ledger yazımı başarısız (yutuldu)")
             deleted_nos.append(rec.degisim_no)
             db.session.delete(rec)
 
@@ -583,6 +610,17 @@ def delete_exchange():
         urunler = _safe_json_loads(rec.urunler_json, default=[])
         shelf_counts = _aggregate_shelf_restore(urunler if isinstance(urunler, list) else [])
         iade_edilen = restore_to_shelves(shelf_counts)
+
+        # Ledger iade izi (raf restore_to_shelves ile geri yazıldı) — best-effort
+        try:
+            from stock_ledger import record_shelf_movements, REASON_EXCHANGE
+            record_shelf_movements(
+                [(barcode, raf, adet) for (raf, barcode), adet in shelf_counts.items()],
+                reason=REASON_EXCHANGE, order_number=rec.degisim_no,
+                source="EXCHANGE", restore=True, commit=False,
+            )
+        except Exception:
+            logger.exception("[DEGISIM] iade ledger yazımı başarısız (yutuldu)")
 
         db.session.delete(rec)
         db.session.commit()

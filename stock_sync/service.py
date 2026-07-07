@@ -212,6 +212,13 @@ class StockSyncService:
         if safety_buffer:
             logger.info(f"[SYNC] Güvenlik stoğu tamponu aktif: -{safety_buffer} adet/ürün")
 
+        # İptal-eğilimli ürünler için barkod bazlı EKSTRA listeleme tamponu
+        # (son-adet yarışını kapatır). Tablo yoksa boş harita → eski davranış.
+        from stock_sync.listing_policy import get_extra_buffer_map
+        extra_buffer_map = get_extra_buffer_map()
+        if extra_buffer_map:
+            logger.info(f"[SYNC] {len(extra_buffer_map)} ürüne ekstra listeleme tamponu uygulanıyor")
+
         # Platform'a göre eşleştirme map'leri
         asin_map = {}
         sku_map = {}
@@ -242,7 +249,8 @@ class StockSyncService:
                 continue
 
             reserved = reserved_map.get(stock.barcode, 0)
-            available_qty = max(0, (stock.qty or 0) - reserved - safety_buffer)
+            effective_buffer = safety_buffer + extra_buffer_map.get(stock.barcode, 0)
+            available_qty = max(0, (stock.qty or 0) - reserved - effective_buffer)
 
             items.append(StockItem(
                 barcode=stock.barcode,
@@ -266,6 +274,9 @@ class StockSyncService:
         # Rezerv: Bekleyen siparişlerdeki ürün miktarları
         reserved_map = self.get_reserved_barcodes()
         safety_buffer = get_safety_stock_buffer()
+
+        from stock_sync.listing_policy import get_extra_buffer_map
+        extra_buffer_map = get_extra_buffer_map()
 
         # Amazon için ASIN + seller SKU eşleştirmesi
         asin_map = {}
@@ -293,7 +304,8 @@ class StockSyncService:
                 continue
 
             reserved = reserved_map.get(barcode, 0)
-            available_qty = max(0, stock_dict.get(barcode, 0) - reserved - safety_buffer)
+            effective_buffer = safety_buffer + extra_buffer_map.get(barcode, 0)
+            available_qty = max(0, stock_dict.get(barcode, 0) - reserved - effective_buffer)
 
             items.append(StockItem(
                 barcode=barcode,

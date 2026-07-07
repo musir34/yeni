@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from models import db, Kasa, User, KasaKategori, Odeme, KasaDurum, AnaKasa, AnaKasaIslem
 from user_logs import log_user_action
 from datetime import datetime, timedelta
+from time_utils import ist_to_utc  # İstanbul form/ay-sınırı → naive UTC (saklama konvansiyonu)
 from sqlalchemy import or_, desc, func
 from login_logout import login_required, roles_required
 from werkzeug.utils import secure_filename
@@ -146,9 +147,12 @@ def setup_kasa_filters(state):
 #   YARDIMCI                    #
 # ============================== #
 def month_bounds(yil: int, ay: int):
+    # İstanbul ay sınırları → UTC'ye çevrilir (kolonlar naive UTC saklanıyor).
+    # Saklanan değer ve sınır birlikte kaydığı için filtrelenen satır kümesi
+    # (İstanbul ayı) DEĞİŞMEZ — rapor birebir aynı kalır.
     bas = datetime(yil, ay, 1)
     son = datetime(yil + 1, 1, 1) if ay == 12 else datetime(yil, ay + 1, 1)
-    return bas, son
+    return ist_to_utc(bas), ist_to_utc(son)
 
 def allowed_image(filename: str):
     ext = (filename.rsplit('.', 1)[-1] if '.' in filename else '').lower()
@@ -209,14 +213,14 @@ def kasa_sayfasi():
 
     if baslangic_tarihi:
         try:
-            bas_f = datetime.strptime(baslangic_tarihi, '%Y-%m-%d')
+            bas_f = ist_to_utc(datetime.strptime(baslangic_tarihi, '%Y-%m-%d'))
             base = base.filter(Kasa.tarih >= bas_f)
         except ValueError:
             pass
 
     if bitis_tarihi:
         try:
-            bitis_f = datetime.strptime(bitis_tarihi, '%Y-%m-%d') + timedelta(days=1)
+            bitis_f = ist_to_utc(datetime.strptime(bitis_tarihi, '%Y-%m-%d') + timedelta(days=1))
             base = base.filter(Kasa.tarih < bitis_f)
         except ValueError:
             pass
@@ -510,12 +514,12 @@ def yeni_kasa_kaydi():
 
         tarih_str = request.form.get('tarih')
         try:
-            secilen_tarih = datetime.strptime(tarih_str, '%Y-%m-%dT%H:%M')
+            secilen_tarih = ist_to_utc(datetime.strptime(tarih_str, '%Y-%m-%dT%H:%M'))
         except (ValueError, TypeError):
             try:
-                secilen_tarih = datetime.strptime(tarih_str, '%Y-%m-%d')
+                secilen_tarih = ist_to_utc(datetime.strptime(tarih_str, '%Y-%m-%d'))
             except (ValueError, TypeError):
-                secilen_tarih = datetime.now()
+                secilen_tarih = datetime.utcnow()
 
         durum_raw = request.form.get('durum') or ''
         kayit_durumu = _parse_durum_input(durum_raw)
@@ -587,7 +591,7 @@ def yeni_kasa_kaydi():
             if tip == 'gelir':
                 onceki_bakiye = ana_kasa.bakiye
                 ana_kasa.bakiye -= Decimal(str(tutar))
-                ana_kasa.guncelleme_tarihi = datetime.now()
+                ana_kasa.guncelleme_tarihi = datetime.utcnow()
                 
                 # Ana Kasa işlem kaydı
                 islem = AnaKasaIslem(
@@ -643,14 +647,14 @@ def kasa_duzenle(kayit_id):
 
         tarih_str = request.form.get('tarih')
         try:
-            # Önce datetime-local formatını dene (YYYY-MM-DDTHH:MM)
-            secilen_tarih = datetime.strptime(tarih_str, '%Y-%m-%dT%H:%M')
+            # Önce datetime-local formatını dene (YYYY-MM-DDTHH:MM) — İstanbul → UTC
+            secilen_tarih = ist_to_utc(datetime.strptime(tarih_str, '%Y-%m-%dT%H:%M'))
         except (ValueError, TypeError):
             try:
                 # Eski format (sadece tarih) için fallback
-                secilen_tarih = datetime.strptime(tarih_str, '%Y-%m-%d')
+                secilen_tarih = ist_to_utc(datetime.strptime(tarih_str, '%Y-%m-%d'))
             except (ValueError, TypeError):
-                secilen_tarih = kayit.tarih
+                secilen_tarih = kayit.tarih  # zaten UTC (saklı değer)
 
         kayit.tarih = secilen_tarih
 
@@ -738,7 +742,7 @@ def kasa_sil(kayit_id):
             tutar_dec = Decimal(str(kayit.tutar))
             onceki_bakiye = ana_kasa.bakiye
             ana_kasa.bakiye += tutar_dec
-            ana_kasa.guncelleme_tarihi = datetime.now()
+            ana_kasa.guncelleme_tarihi = datetime.utcnow()
 
             # Audit: iade işlem kaydı (kasa silindiği için kasa_id=None)
             iade_islem = AnaKasaIslem(
@@ -749,7 +753,7 @@ def kasa_sil(kayit_id):
                 yeni_bakiye=ana_kasa.bakiye,
                 kullanici_id=session.get('user_id'),
                 kasa_id=None,
-                tarih=datetime.now()
+                tarih=datetime.utcnow()
             )
             db.session.add(iade_islem)
 
@@ -1130,7 +1134,7 @@ def excel_gelir_yukle():
                 
                 onceki_bakiye = ana_kasa.bakiye
                 ana_kasa.bakiye += Decimal(str(round(tutar, 2)))
-                ana_kasa.guncelleme_tarihi = datetime.now()
+                ana_kasa.guncelleme_tarihi = datetime.utcnow()
                 
                 # Ana Kasa işlemi kaydet
                 ana_kasa_islem = AnaKasaIslem(
@@ -1394,7 +1398,7 @@ def ana_kasa_guncelle():
         
         onceki_bakiye = ana_kasa.bakiye
         ana_kasa.bakiye += tutar
-        ana_kasa.guncelleme_tarihi = datetime.now()
+        ana_kasa.guncelleme_tarihi = datetime.utcnow()
         
         # İşlem kaydı oluştur
         islem = AnaKasaIslem(
@@ -1404,7 +1408,7 @@ def ana_kasa_guncelle():
             onceki_bakiye=onceki_bakiye,
             yeni_bakiye=ana_kasa.bakiye,
             kullanici_id=session.get('user_id'),
-            tarih=datetime.now()
+            tarih=datetime.utcnow()
         )
         db.session.add(islem)
         db.session.commit()
@@ -1483,9 +1487,9 @@ def ana_kasa_islem_duzenle():
         
         # Tarihi parse et
         try:
-            yeni_tarih = datetime.strptime(yeni_tarih_str, '%Y-%m-%dT%H:%M')
+            yeni_tarih = ist_to_utc(datetime.strptime(yeni_tarih_str, '%Y-%m-%dT%H:%M'))
         except (ValueError, TypeError):
-            yeni_tarih = islem.tarih
+            yeni_tarih = islem.tarih  # zaten UTC (saklı değer)
         
         # İşlem kaydını güncelle
         islem.tutar = yeni_tutar
@@ -1522,7 +1526,7 @@ def ana_kasa_islem_duzenle():
                 sonraki.onceki_bakiye = onceki + tutar_farki
                 sonraki.yeni_bakiye = sonraki.onceki_bakiye - sonraki.tutar
         
-        ana_kasa.guncelleme_tarihi = datetime.now()
+        ana_kasa.guncelleme_tarihi = datetime.utcnow()
         db.session.commit()
         try: log_user_action("UPDATE", {"işlem_açıklaması": f"Ana kasa işlem düzenlendi — #{islem_id}", "sayfa": "Ana Kasa", "işlem_id": islem_id})
         except: pass
@@ -1579,7 +1583,7 @@ def ana_kasa_islem_sil():
         # İşlemi sil
         db.session.delete(islem)
         
-        ana_kasa.guncelleme_tarihi = datetime.now()
+        ana_kasa.guncelleme_tarihi = datetime.utcnow()
         db.session.commit()
         try: log_user_action("DELETE", {"işlem_açıklaması": f"Ana kasa işlem silindi — #{islem_id}", "sayfa": "Ana Kasa", "işlem_id": islem_id})
         except: pass

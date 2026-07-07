@@ -7,7 +7,7 @@
         </div>
         <div class="card-body">
           <p class="mb-1"><strong>Sipariş No:</strong> <span data-siparis-no>{{ siparis.siparis_no }}</span></p>
-          <p class="mb-1"><strong>Tarih:</strong> <span data-siparis-tarihi>{{ siparis.siparis_tarihi.strftime('%d.%m.%Y %H:%M') if siparis.siparis_tarihi else 'N/A' }}</span></p> {# GÜNCELLENDİ #}
+          <p class="mb-1"><strong>Tarih:</strong> <span data-siparis-tarihi>{{ siparis.siparis_tarihi | ist('%d.%m.%Y %H:%M') if siparis.siparis_tarihi else 'N/A' }}</span></p> {# GÜNCELLENDİ #}
           <p class="mb-0"><strong>Durum:</strong> 
             <span class="badge 
               {% if siparis.durum == 'Tamamlandı' %}bg-success

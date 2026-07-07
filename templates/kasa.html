@@ -256,7 +256,7 @@
                     </div>
                     <small style="opacity: 0.8;">
                         <i class="far fa-clock"></i> 
-                        {{ ana_kasa.guncelleme_tarihi.strftime('%d.%m.%Y %H:%M') if ana_kasa and ana_kasa.guncelleme_tarihi else 'Henüz güncellenmedi' }}
+                        {{ ana_kasa.guncelleme_tarihi | ist('%d.%m.%Y %H:%M') if ana_kasa and ana_kasa.guncelleme_tarihi else 'Henüz güncellenmedi' }}
                     </small>
                 </div>
             </div>
@@ -422,10 +422,10 @@
                         {% for kayit in kayitlar %}
                         <tr id="kayit-{{ kayit.id }}">
                             <td>
-                                {{ kayit.tarih.strftime('%d.%m.%Y') }} <span class="text-muted">{{ kayit.tarih.strftime('%H:%M') }}</span>
+                                {{ kayit.tarih | ist('%d.%m.%Y') }} <span class="text-muted">{{ kayit.tarih | ist('%H:%M') }}</span>
                                 <div id="odeme-detay-{{ kayit.id }}" class="text-muted small">
                                     {% for odeme in kayit.odemeler %}
-                                        <div>Ödeme: {{ odeme.odeme_tarihi.strftime('%d.%m.%Y %H:%M') }}</div>
+                                        <div>Ödeme: {{ odeme.odeme_tarihi | ist('%d.%m.%Y %H:%M') }}</div>
                                     {% endfor %}
                                 </div>
                             </td>

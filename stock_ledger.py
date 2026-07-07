@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections import Counter
 from dataclasses import dataclass
 
 from sqlalchemy.exc import IntegrityError
@@ -195,6 +196,77 @@ def record_movement(
         db.session.commit()
 
     return MovementResult(row.id if row else None, True, actual_delta, barcode, reason)
+
+
+def record_shelf_movements(
+    entries,
+    *,
+    reason: str,
+    order_number=None,
+    key_ref=None,
+    source: str | None = None,
+    restore: bool = False,
+    commit: bool = False,
+) -> list[MovementResult]:
+    """Rafı ZATEN mutasyona uğratmış tahsis/iade işlemlerini deftere yazar.
+
+    Manuel sipariş (``/yeni-siparis``) ve değişim (``/degisim-kaydet``) akışları rafı
+    kendi fonksiyonlarıyla (``allocate_from_shelves`` / ``restore_to_shelves``) düşürür
+    veya iade eder; bu yardımcı yalnızca ledger satırlarını yazar
+    (``mutate_shelf=False``) — böylece raf İKİNCİ kez değişmez (çift düşüm yok).
+
+    Args:
+        entries: ``(barcode, shelf_code, qty)`` üçlüleri. ``qty`` her zaman pozitif
+                 adettir; yön ``restore`` ile belirlenir. Aynı (barkod, raf) birden
+                 fazla satırdan gelirse TEK harekette toplanır.
+        reason: ledger reason — CHECK constraint'teki değerlerden biri olmalı
+                (``REASON_EXCHANGE`` / ``REASON_MANUAL`` ...).
+        order_number: ``stock_movement.order_number`` alanına yazılacak referans
+                      (sipariş no / değişim no) — iz sürme için.
+        key_ref: idempotency anahtarı için kullanılacak referans; verilmezse
+                 ``order_number`` kullanılır. Aynı sipariş no'nun silinip tekrar
+                 oluşturulabildiği durumda instance'a özel (ör. ``"S1#42"``) verilir.
+        source: hareket kaynağı etiketi (ör. ``"MANUAL_ORDER"``, ``"EXCHANGE"``).
+        restore: ``True`` → iade (delta>0, yön ``in``); ``False`` → çıkış (delta<0,
+                 yön ``out``). Çıkış ve iade farklı anahtar alır → defterde net sıfır.
+        commit: ``True`` ise sonda tek ``commit``.
+
+    İdempotency anahtarı: ``"{key_ref}:{reason}:{'in'|'out'}:{barcode}:{shelf}"``.
+    """
+    ref_for_key = key_ref if key_ref is not None else order_number
+    agg: Counter = Counter()
+    for barcode, shelf_code, qty in entries:
+        try:
+            qty = int(qty or 0)
+        except (TypeError, ValueError):
+            qty = 0
+        norm = normalize_barcode(barcode)
+        if not norm or qty <= 0:
+            continue
+        agg[(norm, shelf_code or None)] += qty
+
+    results: list[MovementResult] = []
+    direction = "in" if restore else "out"
+    for (norm, shelf_code), qty in agg.items():
+        delta = qty if restore else -qty
+        idem = (
+            f"{ref_for_key}:{reason}:{direction}:{norm}:{shelf_code or '-'}"
+            if ref_for_key is not None else None
+        )
+        results.append(record_movement(
+            barcode=norm,
+            delta=delta,
+            reason=reason,
+            shelf_code=shelf_code,
+            order_number=str(order_number) if order_number is not None else None,
+            idempotency_key=idem,
+            source=source,
+            mutate_shelf=False,
+            commit=False,
+        ))
+    if commit:
+        db.session.commit()
+    return results
 
 
 def _order_has_prior_outflow(order_number) -> bool:

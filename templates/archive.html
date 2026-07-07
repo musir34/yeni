@@ -441,7 +441,7 @@ Seç
 <div class="order-info">
 {# ✅ Düzeltme: Tarih ve Saat formatı #}
 <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i>Arşiv Tarihi: {{ order.archive_date | format_turkish_date | default(order.archive_date) }}</small><br>
-<small class="text-muted"><i class="fas fa-clock me-1"></i>Arşiv Saati: {{ order.archive_date.strftime('%H:%M') if order.archive_date else '-' }}</small><br>
+<small class="text-muted"><i class="fas fa-clock me-1"></i>Arşiv Saati: {{ order.archive_date | ist('%H:%M') if order.archive_date else '-' }}</small><br>
 <strong>Sipariş No:</strong> {{ order.order_number }}
 <span class="copy-container">
 <i class="far fa-copy clipboard-icon" onclick="copyToClipboard({{ order.order_number|tojson|forceescape }}, this)"></i>

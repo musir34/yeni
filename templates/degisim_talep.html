@@ -155,7 +155,7 @@
             <div>
               <strong class="text-primary">{{ exchange.siparis_no }}</strong>
               <i class="far fa-copy ms-2" style="cursor:pointer" onclick="copyToClipboard('{{ exchange.siparis_no }}', this)"></i><br>
-              <small class="text-muted">{{ exchange.degisim_tarihi.strftime('%d.%m.%Y %H:%M') }}</small>
+              <small class="text-muted">{{ exchange.degisim_tarihi | ist('%d.%m.%Y %H:%M') }}</small>
             </div>
             <span class="badge fs-6 rounded-pill
               {% if exchange.degisim_durumu == 'Oluşturuldu' %} bg-warning

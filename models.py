@@ -59,7 +59,7 @@ class Odeme(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     kasa_id = db.Column(db.Integer, db.ForeignKey('kasa.id'), nullable=False)
     tutar = db.Column(db.Numeric(10, 2), nullable=False)
-    odeme_tarihi = db.Column(db.DateTime, default=datetime.now)
+    odeme_tarihi = db.Column(db.DateTime, default=datetime.utcnow)  # naive=UTC
     kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
     def __repr__(self):
@@ -171,6 +171,31 @@ class CentralStock(db.Model):
     barcode = db.Column(db.String, primary_key=True)   # Ürün barkodu
     qty = db.Column(db.Integer, nullable=False, default=0)  # Merkezdeki toplam adet
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class StockListingPolicy(db.Model):
+    """Barkod bazlı ekstra listeleme tamponu — iptal-eğilimli (çok satan + son-adet
+    yarışında iptal edilen) ürünleri korumak için.
+
+    Pazaryerine gönderilen adet ``max(0, stok - rezerv - (global_tampon + extra_buffer))``
+    olur. ``extra_buffer=2`` bir SKU için son 2 adedi ilana açmaz → aynı senkron
+    penceresinde iki müşteri son adedi kapıp birinin iptal edilmesini engeller.
+
+    ``auto=True`` kayıtlar iptal geçmişinden otomatik türetilir ve ürün artık
+    iptal-eğilimli değilse ``refresh_policies`` tarafından temizlenir. ``auto=False``
+    kayıtlar operatörün elle koyduğu kalıcı override'lardır, otomatik silinmez.
+    """
+    __tablename__ = "stock_listing_policy"
+
+    barcode = db.Column(db.String, primary_key=True)
+    extra_buffer = db.Column(db.Integer, nullable=False, default=0)
+    cancel_count = db.Column(db.Integer, nullable=False, default=0)  # policy'yi doğuran iptal sayısı
+    reason = db.Column(db.String(200))
+    auto = db.Column(db.Boolean, nullable=False, default=True)       # otomatik mi, elle mi
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<StockListingPolicy {self.barcode} +{self.extra_buffer} auto={self.auto}>"
 
 
 ### --- STOK HAREKET DEFTERİ (LEDGER) ---
@@ -1114,7 +1139,7 @@ class AnaKasa(db.Model):
     __tablename__ = 'ana_kasa'
     id = db.Column(db.Integer, primary_key=True)
     bakiye = db.Column(db.Numeric(12, 2), nullable=False, default=0)  # Mevcut bakiye
-    guncelleme_tarihi = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    guncelleme_tarihi = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # naive=UTC
     
     def __repr__(self):
         return f'<AnaKasa {self.id} - Bakiye: {self.bakiye}>'
@@ -1129,7 +1154,7 @@ class AnaKasaIslem(db.Model):
     aciklama = db.Column(db.String(500), nullable=False)
     onceki_bakiye = db.Column(db.Numeric(12, 2), nullable=False)
     yeni_bakiye = db.Column(db.Numeric(12, 2), nullable=False)
-    tarih = db.Column(db.DateTime, default=datetime.now)
+    tarih = db.Column(db.DateTime, default=datetime.utcnow)  # naive=UTC
     kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     
     # İlişkili kasa kaydı (eğer varsa)
@@ -1148,7 +1173,7 @@ class Kasa(db.Model):
     aciklama = db.Column(db.String(255), nullable=False)
     tutar = db.Column(db.Numeric(10, 2), nullable=False) # Bu artık BORCUN/ALACAĞIN TOPLAM TUTARI
     kategori = db.Column(db.String(100))
-    tarih = db.Column(db.DateTime, default=datetime.now)
+    tarih = db.Column(db.DateTime, default=datetime.utcnow)  # naive=UTC
     kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     fis_yolu = db.Column(db.String(255))
     

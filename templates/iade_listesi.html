@@ -247,7 +247,7 @@
                             </td>
                             <td>{{ claim.order_number }}</td>
                             <td>{{ claim.customer_first_name }} {{ claim.customer_last_name }}</td>
-                            <td>{{ claim.return_date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>{{ claim.return_date | ist('%Y-%m-%d %H:%M:%S') }}</td>
                             <td>
                                 {% set translated_status = {
                                     'Created': 'Oluşturuldu',

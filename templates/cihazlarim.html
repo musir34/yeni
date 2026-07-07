@@ -25,7 +25,7 @@
                 {% if device.device_token == current_token %}<span style="background:#2ecc71;color:#fff;padding:1px 8px;border-radius:10px;font-size:.7rem;font-weight:600;margin-left:6px;">Bu cihaz</span>{% endif %}
             </div>
             <div style="font-size:.78rem;color:#888;margin-top:4px;">
-                {{ device.device_type|upper }} · IP: {{ device.ip_address or '—' }} · Son aktif: {{ device.last_active.strftime('%d.%m.%Y %H:%M') if device.last_active else '—' }} · Kayıt: {{ device.created_at.strftime('%d.%m.%Y') if device.created_at else '—' }}
+                {{ device.device_type|upper }} · IP: {{ device.ip_address or '—' }} · Son aktif: {{ device.last_active | ist('%d.%m.%Y %H:%M') if device.last_active else '—' }} · Kayıt: {{ device.created_at | ist('%d.%m.%Y') if device.created_at else '—' }}
             </div>
         </div>
         <form action="{{ url_for('login_logout.cihaz_sil', device_id=device.id) }}" method="POST" onsubmit="return confirm('Bu cihazı kaldırmak istediğinize emin misiniz?')">

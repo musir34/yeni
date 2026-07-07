@@ -40,7 +40,7 @@
                 {% if device.device_type == 'mobile' %}<i class="fas fa-mobile-alt" style="color:#3498db;"></i>{% else %}<i class="fas fa-laptop" style="color:#2ecc71;"></i>{% endif %}
                 {{ device.device_name }}
             </div>
-            <div class="device-meta">{{ device.device_type|upper }} · Son aktif: {{ device.last_active.strftime('%d.%m.%Y %H:%M') if device.last_active else '—' }}</div>
+            <div class="device-meta">{{ device.device_type|upper }} · Son aktif: {{ device.last_active | ist('%d.%m.%Y %H:%M') if device.last_active else '—' }}</div>
         </div>
         <form action="{{ url_for('login_logout.device_limit_reached') }}" method="POST">
             <input type="hidden" name="remove_device_id" value="{{ device.id }}">

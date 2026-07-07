@@ -116,8 +116,8 @@
             {% for log in logs.items %}
             <tr>
               <td class="text-nowrap">
-                <div class="fw-bold">{{ log.timestamp.strftime('%d.%m.%Y') }}</div>
-                <small class="text-muted">{{ log.timestamp.strftime('%H:%M:%S') }}</small>
+                <div class="fw-bold">{{ log.timestamp | ist('%d.%m.%Y') }}</div>
+                <small class="text-muted">{{ log.timestamp | ist('%H:%M:%S') }}</small>
               </td>
               <td>
                 <div class="fw-bold">{{ log.user.first_name }} {{ log.user.last_name }}</div>

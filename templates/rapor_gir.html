@@ -300,7 +300,7 @@
           <div class="card report-card">
             <div class="card-header">
               <h4>{{ rapor.kategori }}</h4>
-              <span>{{ rapor.zaman_damgasi.strftime('%H:%M') }}</span>
+              <span>{{ rapor.zaman_damgasi | ist('%H:%M') }}</span>
             </div>
             <div class="card-body">
               <p><strong>Açıklama:</strong><br><pre>{{ rapor.aciklama }}</pre></p>

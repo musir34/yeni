@@ -419,6 +419,81 @@ def test_audit_page_lookup_includes_ledger_movements():
 
 
 # ════════════════════════════════════════════════════════════════════════
+# 14) record_shelf_movements — manuel sipariş / değişim akışlarının ledger izi
+#     Raf ZATEN düşürülmüş/iade edilmiş (allocate_from_shelves / restore_to_shelves);
+#     helper yalnızca deftere yazar (mutate_shelf=False → rafı ikinci kez değiştirmez).
+# ════════════════════════════════════════════════════════════════════════
+def test_shelf_movements_outflow_logs_without_mutating_shelf():
+    _seed_shelf(adet=5)
+    res = ledger.record_shelf_movements(
+        [("BC1", "A1", 2)],
+        reason=ledger.REASON_EXCHANGE, order_number="D1", source="EXCHANGE", commit=True,
+    )
+    assert _shelf_qty() == 5, "helper rafı DEĞİŞTİRMEMELİ (raf zaten düşürülmüştü)"
+    mv = _movements(reason="exchange")
+    assert len(mv) == 1 and mv[0].delta == -2
+    assert mv[0].order_number == "D1" and mv[0].source == "EXCHANGE"
+    assert all(r.applied for r in res)
+
+
+def test_shelf_movements_aggregates_same_shelf_lines():
+    # Aynı barkod+raf birden fazla satırdan geliyorsa TEK satırda toplanmalı
+    # (yoksa aynı idempotency anahtarıyla ikincisi düşerdi).
+    _seed_shelf(adet=5)
+    ledger.record_shelf_movements(
+        [("BC1", "A1", 1), ("BC1", "A1", 1)],
+        reason=ledger.REASON_MANUAL, order_number="S1", source="MANUAL_ORDER", commit=True,
+    )
+    mv = _movements(reason="manual_adjust")
+    assert len(mv) == 1 and mv[0].delta == -2
+
+
+def test_shelf_movements_multi_shelf_one_row_each():
+    _seed_shelf(adet=5)
+    ledger.record_shelf_movements(
+        [("BC1", "A1", 2), ("BC1", "B2", 1)],
+        reason=ledger.REASON_EXCHANGE, order_number="D2", commit=True,
+    )
+    mv = sorted(_movements(reason="exchange"), key=lambda m: m.shelf_code)
+    assert [(m.shelf_code, m.delta) for m in mv] == [("A1", -2), ("B2", -1)]
+
+
+def test_shelf_movements_idempotent_same_ref():
+    _seed_shelf(adet=5)
+    common = dict(reason=ledger.REASON_MANUAL, order_number="S2", source="MANUAL_ORDER")
+    ledger.record_shelf_movements([("BC1", "A1", 2)], commit=True, **common)
+    ledger.record_shelf_movements([("BC1", "A1", 2)], commit=True, **common)
+    mv = _movements(reason="manual_adjust")
+    assert len(mv) == 1, "aynı referans+yön+barkod+raf ikinci kez yazılmamalı"
+
+
+def test_shelf_movements_restore_nets_to_zero_with_outflow():
+    # Çıkış (out) + iade (in) aynı referansla → defter NET SIFIR, iki ayrı satır.
+    _seed_shelf(adet=5)
+    ledger.record_shelf_movements(
+        [("BC1", "A1", 2)], reason=ledger.REASON_MANUAL,
+        order_number="S3", key_ref="S3#7", source="MANUAL_ORDER", commit=True,
+    )
+    ledger.record_shelf_movements(
+        [("BC1", "A1", 2)], reason=ledger.REASON_MANUAL,
+        order_number="S3", key_ref="S3#7", source="MANUAL_ORDER", restore=True, commit=True,
+    )
+    mv = _movements(reason="manual_adjust")
+    assert len(mv) == 2
+    assert sum(m.delta for m in mv) == 0, "çıkış + iade defterde nete sıfırlanmalı"
+
+
+def test_shelf_movements_skips_invalid_entries():
+    _seed_shelf(adet=5)
+    res = ledger.record_shelf_movements(
+        [("", "A1", 2), ("BC1", "A1", 0), ("BC1", "A1", -1)],
+        reason=ledger.REASON_EXCHANGE, order_number="D3", commit=True,
+    )
+    assert res == []
+    assert _movements(reason="exchange") == []
+
+
+# ════════════════════════════════════════════════════════════════════════
 # 13) enforce_shelfless_central_zero — raf bilgisi olmayan barkod her zaman 0
 # ════════════════════════════════════════════════════════════════════════
 def test_enforce_shelfless_central_zero():

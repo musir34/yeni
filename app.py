@@ -74,6 +74,11 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Jinja filtre kaydı
 app.add_template_filter(format_turkish_date_filter, name='turkce_tarih')
 
+# Saat dilimi filtresi: naive(UTC varsay) / tz-aware datetime → Europe/Istanbul
+# Kullanım: {{ dt | ist }}  veya  {{ dt | ist('%H:%M') }}
+from time_utils import fmt_ist as _fmt_ist
+app.add_template_filter(_fmt_ist, name='ist')
+
 cache.init_app(app)
 db.init_app(app)
 CORS(app)
@@ -561,6 +566,29 @@ def schedule_jobs():
         id="stock_shortage_reminder",
         hour=9,
         minute=0
+    )
+
+    # >>> İptal-eğilimli listeleme tamponu: her 24 saatte bir
+    # Son 30 günde >=2 iptali olan ürünlere ekstra listeleme tamponu uygular (son-adet
+    # yarışı iptallerini azaltır); artık eğilimli olmayan OTOMATİK kayıtları temizler.
+    # Elle (auto=False) override'lara dokunmaz. İlk çalışma başlangıçtan 15 dk sonra.
+    def _listing_policy_refresh_job():
+        with app.app_context():
+            try:
+                from models import db, StockListingPolicy
+                StockListingPolicy.__table__.create(bind=db.engine, checkfirst=True)
+                from stock_sync.listing_policy import refresh_policies
+                res = refresh_policies()
+                logger.info(f"[LISTING-POLICY] günlük güncelleme: {res}")
+            except Exception:
+                logger.exception("[LISTING-POLICY] refresh job hatası (yutuldu)")
+
+    _add_job_safe(
+        _listing_policy_refresh_job,
+        trigger='interval',
+        id="listing_policy_refresh",
+        hours=24,
+        next_run_time=now + timedelta(minutes=15)
     )
 
     # >>> WooCommerce sipariş senkronizasyonu: her 10 dakika - DEVRE DIŞI

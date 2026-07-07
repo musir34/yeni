@@ -192,7 +192,7 @@
                             </td>
                             <td>
                                 {% if stock.updated_at %}
-                                    <small class="text-muted">{{ stock.updated_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                                    <small class="text-muted">{{ stock.updated_at | ist('%d.%m.%Y %H:%M') }}</small>
                                 {% else %}
                                     <small class="text-muted">-</small>
                                 {% endif %}

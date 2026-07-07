@@ -152,7 +152,7 @@
                         <small>Mevcut Bakiye</small>
                         <h3>{{ ana_kasa.bakiye|tl_format if ana_kasa else '0,00' }} ₺</h3>
                         <small class="bakiye-info">
-                            {{ ana_kasa.guncelleme_tarihi.strftime('%d.%m.%Y %H:%M') if ana_kasa and ana_kasa.guncelleme_tarihi else '' }}
+                            {{ ana_kasa.guncelleme_tarihi | ist('%d.%m.%Y %H:%M') if ana_kasa and ana_kasa.guncelleme_tarihi else '' }}
                         </small>
                     </div>
                 </div>
@@ -202,7 +202,7 @@
                         {% for islem in islemler %}
                         <tr>
                             <td><strong>#{{ islem.id }}</strong></td>
-                            <td>{{ islem.tarih.strftime('%d.%m.%Y %H:%M') if islem.tarih else '-' }}</td>
+                            <td>{{ islem.tarih | ist('%d.%m.%Y %H:%M') if islem.tarih else '-' }}</td>
                             <td>
                                 {% if islem.islem_tipi == 'gelir_eklendi' %}
                                     <span class="badge badge-gelir">Gelir Eklendi</span>
@@ -227,7 +227,7 @@
                             <td>{{ islem.kullanici.username if islem.kullanici else '-' }}</td>
                             <td>
                                 <button class="btn btn-edit btn-sm" 
-                                        onclick="editIslem({{ islem.id }}, '{{ islem.tutar }}', '{{ islem.aciklama }}', '{{ islem.tarih.strftime('%Y-%m-%dT%H:%M') if islem.tarih else '' }}')"
+                                        onclick="editIslem({{ islem.id }}, '{{ islem.tutar }}', '{{ islem.aciklama }}', '{{ islem.tarih | ist('%Y-%m-%dT%H:%M') if islem.tarih else '' }}')"
                                         title="Düzenle">
                                     <i class="fas fa-edit"></i>
                                 </button>
