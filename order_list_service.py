@@ -1,7 +1,7 @@
 # order_list_service.py
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from sqlalchemy import literal, desc, or_, func, nullslast
+from sqlalchemy import literal, desc, or_, func, nullslast, false
 from sqlalchemy.orm import aliased
 import json
 import os
@@ -310,11 +310,22 @@ def get_order_list():
         AllOrders = aliased(sub)
         q = db.session.query(AllOrders)
 
-        if overdue_numbers and not show_overdue:
-            q = q.filter(~(
-                AllOrders.c.status_name.in_(('Created', 'Hazirlaniyor', 'Picking')) &
-                AllOrders.c.order_number.in_(overdue_numbers)
-            ))
+        # Geciken = SADECE Yeni/Hazırlanıyor/İşleme Alındı statülerinde teslim
+        # süresi geçmiş sipariş. (Teslim Edildi/Kargoda/İptal asla geciken sayılmaz.)
+        _overdue_clause = (
+            AllOrders.c.status_name.in_(('Created', 'Hazirlaniyor', 'Picking')) &
+            AllOrders.c.order_number.in_(overdue_numbers)
+        ) if overdue_numbers else None
+
+        if show_overdue:
+            # "Geciken" rozetine tıklama → YALNIZCA geciken siparişler gösterilir;
+            # teslim edilenler vb. listeye karışmaz.
+            q = q.filter(_overdue_clause if _overdue_clause is not None else false())
+        elif _overdue_clause is not None and not search_query:
+            # Normal liste (arama yok) → geciken siparişleri ana listeden gizle
+            # (ayrı rozette toplanır). ARAMADA gizleme YOK → geciken sipariş no'su
+            # normal aramada da bulunabilsin.
+            q = q.filter(~_overdue_clause)
 
         if search_query:
             search_query = search_query.strip()
@@ -462,7 +473,8 @@ def get_filtered_orders(status):
 
 
         orders_query = model_cls.query
-        hide_overdue_in_status = sort_key != 'deadline_asc'
+        # Arama varken geciken gizleme UYGULANMAZ → aranan geciken sipariş no'su bulunur.
+        hide_overdue_in_status = sort_key != 'deadline_asc' and not search_query
         if hide_overdue_in_status and overdue_numbers and model_cls in (OrderCreated, OrderHazirlaniyor, OrderPicking):
             orders_query = orders_query.filter(~model_cls.order_number.in_(overdue_numbers))
 
