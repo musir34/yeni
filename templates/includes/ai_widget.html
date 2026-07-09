@@ -20,10 +20,10 @@
     background:#fff;border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,.3);display:none;flex-direction:column;overflow:hidden;
     transform:translateY(12px) scale(.96);opacity:0;transition:all .22s ease}
   #aiw-panel.acik{display:flex;transform:translateY(0) scale(1);opacity:1}
-  .aiw-head{background:linear-gradient(135deg,#1a1a2e,#312e81,#4f46e5);color:#fff;padding:12px 14px;display:flex;align-items:center;gap:10px}
-  .aiw-head .aiw-ttl{font-weight:700;font-size:.95rem;flex:1}
-  .aiw-head .aiw-sub{font-size:.68rem;opacity:.8;display:block;font-weight:400}
-  .aiw-head button{background:rgba(255,255,255,.15);border:none;color:#fff;width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:.8rem}
+  .aiw-head{background:linear-gradient(135deg,#1a1a2e,#312e81,#4f46e5);color:#fff;padding:12px 14px;display:flex;align-items:center;gap:8px}
+  .aiw-head .aiw-ttl{font-weight:700;font-size:.95rem;flex:1;min-width:0}
+  .aiw-head .aiw-sub{font-size:.68rem;opacity:.8;display:block;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .aiw-head button{background:rgba(255,255,255,.15);border:none;color:#fff;width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:.8rem;flex:none}
   .aiw-head button:hover{background:rgba(255,255,255,.3)}
   #aiw-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#f7f8fa}
   .aiw-msg{max-width:85%;padding:9px 12px;border-radius:12px;font-size:.86rem;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
@@ -35,6 +35,17 @@
   .aiw-giris textarea{flex:1;resize:none;height:40px;padding:9px 11px;border:1px solid #d1d5db;border-radius:10px;font-size:.86rem;font-family:inherit}
   .aiw-giris button{border:none;border-radius:10px;background:#4f46e5;color:#fff;padding:0 16px;font-weight:600;cursor:pointer}
   .aiw-giris button:disabled{opacity:.5;cursor:not-allowed}
+  /* Geçmiş sohbetler overlay'i */
+  #aiw-gecmis{position:absolute;inset:52px 0 0 0;background:#fff;display:none;flex-direction:column;z-index:5}
+  #aiw-gecmis.acik{display:flex}
+  .aiw-gec-bas{padding:10px 14px;font-weight:700;font-size:.85rem;color:#374151;border-bottom:1px solid #eee}
+  #aiw-gecmis-liste{flex:1;overflow-y:auto}
+  .aiw-gec-item{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #f3f4f6;cursor:pointer}
+  .aiw-gec-item:hover{background:#f7f8fa}
+  .aiw-gec-item .aiw-gec-ttl{flex:1;min-width:0;font-size:.84rem;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .aiw-gec-item .aiw-gec-tar{font-size:.7rem;color:#9ca3af;flex:none}
+  .aiw-gec-item button{background:none;border:none;color:#c0392b;cursor:pointer;font-size:.8rem;flex:none;padding:4px}
+  .aiw-gec-bos{margin:auto;color:#9ca3af;font-size:.82rem;text-align:center;padding:20px}
   @media (prefers-reduced-motion:reduce){ #aiw-orb,#aiw-orb::before,#aiw-orb::after{animation:none} }
   /* Mobil: alttaki sabit navigasyon barının üstünü örtmesin (butonlar tıklanabilir kalsın) */
   @media (max-width:768px){
@@ -49,8 +60,14 @@
     <div class="aiw-head">
       <i class="fas fa-robot"></i>
       <span class="aiw-ttl">AI Asistanı<span class="aiw-sub">Verilerine soru sor · salt-okunur</span></span>
-      <button id="aiw-temizle" title="Sohbeti temizle"><i class="fas fa-trash"></i></button>
+      <button id="aiw-yeni" title="Yeni sohbet"><i class="fas fa-plus"></i></button>
+      <button id="aiw-gecmis-btn" title="Geçmiş sohbetler"><i class="fas fa-history"></i></button>
+      <button id="aiw-sil" title="Bu sohbeti sil"><i class="fas fa-trash"></i></button>
       <button id="aiw-kapat" title="Kapat"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="aiw-gecmis">
+      <div class="aiw-gec-bas">Geçmiş Sohbetler</div>
+      <div id="aiw-gecmis-liste"></div>
     </div>
     <div id="aiw-msgs"><div class="aiw-bos" id="aiw-bos">Merhaba! Sipariş, stok veya satış verilerin hakkında soru sorabilirsin.</div></div>
     <div class="aiw-giris">
@@ -63,13 +80,23 @@
 <script>
 (function(){
   if (window.__aiwYuklendi) return; window.__aiwYuklendi = true;
-  var wrap=document.getElementById('aiw-wrap'), panel=document.getElementById('aiw-panel'),
-      orb=document.getElementById('aiw-orb'), msgs=document.getElementById('aiw-msgs'),
-      bos=document.getElementById('aiw-bos'), soruEl=document.getElementById('aiw-soru'),
-      gonder=document.getElementById('aiw-gonder'), kapat=document.getElementById('aiw-kapat'),
-      temizle=document.getElementById('aiw-temizle');
-  var gecmisYuklendi=false;
+  var panel=document.getElementById('aiw-panel'), orb=document.getElementById('aiw-orb'),
+      msgs=document.getElementById('aiw-msgs'), bos=document.getElementById('aiw-bos'),
+      soruEl=document.getElementById('aiw-soru'), gonder=document.getElementById('aiw-gonder'),
+      kapat=document.getElementById('aiw-kapat'), yeniBtn=document.getElementById('aiw-yeni'),
+      gecmisBtn=document.getElementById('aiw-gecmis-btn'), silBtn=document.getElementById('aiw-sil'),
+      gecmisPanel=document.getElementById('aiw-gecmis'), gecmisListe=document.getElementById('aiw-gecmis-liste');
+  var sohbetYuklendi=false;
 
+  function sohbetId(){ var v=localStorage.getItem('aiw_sohbet'); return v?parseInt(v,10):null; }
+  function sohbetIdYaz(id){ if(id) localStorage.setItem('aiw_sohbet',id); else localStorage.removeItem('aiw_sohbet'); }
+  function bekleyen(){ try{ return JSON.parse(localStorage.getItem('aiw_bekleyen')||'null'); }catch(e){ return null; } }
+  function bekleyenYaz(v){ if(v) localStorage.setItem('aiw_bekleyen',JSON.stringify(v)); else localStorage.removeItem('aiw_bekleyen'); }
+
+  function bosGoster(metin){
+    msgs.innerHTML='<div class="aiw-bos"></div>';
+    bos=msgs.firstChild; bos.textContent=metin;
+  }
   function ekle(metin,tip){
     if(bos){bos.remove();bos=null;}
     var d=document.createElement('div'); d.className='aiw-msg '+tip; d.textContent=metin;
@@ -77,43 +104,136 @@
   }
   function ac(){
     panel.classList.add('acik'); localStorage.setItem('aiw_acik','1');
-    if(!gecmisYuklendi){ gecmisYuklendi=true; gecmisYukle(); }
+    if(!sohbetYuklendi){ sohbetYuklendi=true; sohbetYukle(); }
     setTimeout(function(){soruEl.focus();},100);
   }
   function kapatFn(){ panel.classList.remove('acik'); localStorage.setItem('aiw_acik','0'); }
 
-  async function gecmisYukle(){
+  // ── Aktif sohbeti yükle (sayfa geçişlerinde kaldığı yerden devam) ──
+  async function sohbetYukle(){
+    var id=sohbetId(); if(!id) return;
     try{
-      var r=await fetch('/ai-asistan/gecmis'); var d=await r.json();
-      if(d.ok && d.gecmis && d.gecmis.length){
-        if(bos){bos.remove();bos=null;}
-        d.gecmis.forEach(function(m){ ekle(m.metin, m.rol==='kullanici'?'kul':'bot'); });
+      var r=await fetch('/ai-asistan/sohbet/'+id);
+      if(r.status===404){ sohbetIdYaz(null); bekleyenYaz(null); return; }
+      var d=await r.json();
+      if(d.ok && d.mesajlar && d.mesajlar.length){
+        msgs.innerHTML=''; bos=null;
+        var bekleyenVar=false;
+        d.mesajlar.forEach(function(m){
+          if(m.durum==='bekliyor'){ bekleyenVar=true; return; }
+          ekle(m.metin, m.rol==='kullanici'?'kul':(m.durum==='hata'?'err':'bot'));
+        });
+        // Cevap hâlâ hazırlanıyorsa yoklamaya kaldığı yerden devam et.
+        var b=bekleyen();
+        if(bekleyenVar && b && b.sohbetId===id){
+          var beklDiv=ekle('Düşünüyor…','bot');
+          gonder.disabled=true;
+          yokla(b.mesajId, beklDiv);
+        } else if(!bekleyenVar){ bekleyenYaz(null); }
       }
     }catch(e){/* sessiz */}
+  }
+
+  // ── Cevap yoklama (2 sn aralıkla; geçici ağ hatasına dayanıklı) ──
+  async function yokla(mesajId, beklDiv){
+    var hataUst=0;
+    var timer=setInterval(async function(){
+      try{
+        var r=await fetch('/ai-asistan/durum/'+mesajId);
+        if(r.status===404){ clearInterval(timer); beklDiv.remove(); bekleyenYaz(null); gonder.disabled=false; return; }
+        var d=await r.json(); hataUst=0;
+        if(d.ok && d.durum!=='bekliyor'){
+          clearInterval(timer); beklDiv.remove(); bekleyenYaz(null);
+          ekle(d.metin, d.durum==='hata'?'err':'bot');
+          gonder.disabled=false; soruEl.focus();
+        }
+      }catch(e){
+        if(++hataUst>=15){ clearInterval(timer); beklDiv.textContent='Bağlantı koptu — sayfayı yenileyince cevap gelecektir.'; gonder.disabled=false; }
+      }
+    },2000);
   }
 
   async function sor(){
     var soru=soruEl.value.trim(); if(!soru) return;
     soruEl.value=''; gonder.disabled=true;
+    gecmisPanel.classList.remove('acik');
     ekle(soru,'kul');
-    var bekle=ekle('Düşünüyor…','bot');
+    var beklDiv=ekle('Düşünüyor…','bot');
     try{
-      var r=await fetch('/ai-asistan/sor',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({soru:soru})});
-      var d=await r.json(); bekle.remove();
-      if(d.ok) ekle(d.cevap,'bot'); else ekle(d.hata||'Bir hata oluştu.','err');
-    }catch(e){ bekle.remove(); ekle('Sunucuya ulaşılamadı.','err'); }
-    finally{ gonder.disabled=false; soruEl.focus(); }
+      var r=await fetch('/ai-asistan/sor',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({soru:soru, sohbet_id:sohbetId()})});
+      var d=await r.json();
+      if(d.ok){
+        sohbetIdYaz(d.sohbet_id);
+        bekleyenYaz({mesajId:d.mesaj_id, sohbetId:d.sohbet_id});
+        yokla(d.mesaj_id, beklDiv);
+      } else {
+        beklDiv.remove(); ekle(d.hata||'Bir hata oluştu.','err'); gonder.disabled=false;
+      }
+    }catch(e){ beklDiv.remove(); ekle('Sunucuya ulaşılamadı.','err'); gonder.disabled=false; }
   }
 
-  async function temizleFn(){
-    try{ await fetch('/ai-asistan/temizle',{method:'POST'}); }catch(e){}
-    msgs.innerHTML='<div class="aiw-bos">Sohbet temizlendi. Yeni bir soru sorabilirsin.</div>';
-    bos=msgs.firstChild;
+  // ── Yeni sohbet: aktif id sıfırlanır; sohbet ilk soruyla oluşur ──
+  function yeniSohbet(){
+    sohbetIdYaz(null); bekleyenYaz(null);
+    gecmisPanel.classList.remove('acik');
+    bosGoster('Yeni sohbet. Sipariş, stok veya satış verilerin hakkında soru sorabilirsin.');
+    soruEl.focus();
+  }
+
+  // ── Geçmiş sohbetler listesi ──
+  async function gecmisAcKapa(){
+    if(gecmisPanel.classList.contains('acik')){ gecmisPanel.classList.remove('acik'); return; }
+    gecmisPanel.classList.add('acik');
+    gecmisListe.innerHTML='<div class="aiw-gec-bos">Yükleniyor…</div>';
+    try{
+      var r=await fetch('/ai-asistan/sohbetler'); var d=await r.json();
+      if(!d.ok || !d.sohbetler.length){ gecmisListe.innerHTML='<div class="aiw-gec-bos">Henüz geçmiş sohbet yok.</div>'; return; }
+      gecmisListe.innerHTML='';
+      d.sohbetler.forEach(function(s){
+        var item=document.createElement('div'); item.className='aiw-gec-item';
+        var ttl=document.createElement('span'); ttl.className='aiw-gec-ttl'; ttl.textContent=s.baslik;
+        var tar=document.createElement('span'); tar.className='aiw-gec-tar';
+        tar.textContent=s.updated_at?new Date(s.updated_at).toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+        var sil=document.createElement('button'); sil.title='Sil'; sil.innerHTML='<i class="fas fa-trash"></i>';
+        sil.addEventListener('click',function(e){ e.stopPropagation(); sohbetSil(s.id,item); });
+        item.appendChild(ttl); item.appendChild(tar); item.appendChild(sil);
+        item.addEventListener('click',function(){ sohbetSec(s.id); });
+        gecmisListe.appendChild(item);
+      });
+    }catch(e){ gecmisListe.innerHTML='<div class="aiw-gec-bos">Liste yüklenemedi.</div>'; }
+  }
+
+  function sohbetSec(id){
+    sohbetIdYaz(id);
+    gecmisPanel.classList.remove('acik');
+    bosGoster('Yükleniyor…');
+    sohbetYukle();
+  }
+
+  async function sohbetSil(id,item){
+    try{
+      var r=await fetch('/ai-asistan/sohbet/'+id+'/sil',{method:'POST'});
+      var d=await r.json();
+      if(d.ok){
+        if(item) item.remove();
+        if(sohbetId()===id){ sohbetIdYaz(null); bekleyenYaz(null); bosGoster('Sohbet silindi. Yeni bir soru sorabilirsin.'); }
+        if(!gecmisListe.children.length) gecmisListe.innerHTML='<div class="aiw-gec-bos">Henüz geçmiş sohbet yok.</div>';
+      }
+    }catch(e){/* sessiz */}
+  }
+
+  function aktifSil(){
+    var id=sohbetId();
+    if(!id){ bosGoster('Silinecek sohbet yok. Yeni bir soru sorabilirsin.'); return; }
+    sohbetSil(id,null);
   }
 
   orb.addEventListener('click',function(){ panel.classList.contains('acik')?kapatFn():ac(); });
   kapat.addEventListener('click',kapatFn);
-  temizle.addEventListener('click',temizleFn);
+  yeniBtn.addEventListener('click',yeniSohbet);
+  gecmisBtn.addEventListener('click',gecmisAcKapa);
+  silBtn.addEventListener('click',aktifSil);
   gonder.addEventListener('click',sor);
   soruEl.addEventListener('keydown',function(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sor();} });
 

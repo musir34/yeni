@@ -2,11 +2,14 @@
 {% block title %}AI Asistanı - Güllü Ayakkabı{% endblock %}
 {% block extra_css %}
 <style>
-    .ai-header{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);color:#fff;padding:20px;border-radius:var(--border-radius);margin-bottom:16px;text-align:center}
+    .ai-header{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);color:#fff;padding:20px;border-radius:var(--border-radius);margin-bottom:16px;text-align:center;position:relative}
     .ai-header h1{color:#fff;font-size:1.4rem;margin-bottom:4px}
     .ai-header p{opacity:.85;margin:0;font-size:.85rem}
+    .ai-araclar{position:absolute;top:14px;right:14px;display:flex;gap:6px}
+    .ai-araclar button{background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:.85rem}
+    .ai-araclar button:hover{background:rgba(255,255,255,.3)}
 
-    .ai-chat{background:var(--color-bg-light);border:1px solid var(--color-border);border-radius:var(--border-radius);display:flex;flex-direction:column;height:65vh}
+    .ai-chat{background:var(--color-bg-light);border:1px solid var(--color-border);border-radius:var(--border-radius);display:flex;flex-direction:column;height:65vh;position:relative;overflow:hidden}
     .ai-mesajlar{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
     .ai-msg{max-width:80%;padding:10px 14px;border-radius:12px;font-size:.9rem;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
     .ai-msg.kullanici{align-self:flex-end;background:var(--color-primary);color:#fff;border-bottom-right-radius:2px}
@@ -19,15 +22,36 @@
     .ai-giris button{padding:0 20px;border:none;border-radius:8px;background:var(--color-primary);color:#fff;font-weight:600;cursor:pointer;font-size:.9rem}
     .ai-giris button:disabled{opacity:.5;cursor:not-allowed}
     .ai-ipucu{font-size:.75rem;color:#888;margin:8px 4px 0}
+
+    /* Geçmiş sohbetler overlay'i */
+    .ai-gecmis{position:absolute;inset:0;background:var(--color-bg-light);display:none;flex-direction:column;z-index:5}
+    .ai-gecmis.acik{display:flex}
+    .ai-gec-bas{padding:12px 16px;font-weight:700;font-size:.9rem;border-bottom:1px solid var(--color-border)}
+    .ai-gecmis-liste{flex:1;overflow-y:auto}
+    .ai-gec-item{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--color-border);cursor:pointer}
+    .ai-gec-item:hover{background:rgba(0,0,0,.04)}
+    .ai-gec-item .ai-gec-ttl{flex:1;min-width:0;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ai-gec-item .ai-gec-tar{font-size:.75rem;color:#9ca3af;flex:none}
+    .ai-gec-item button{background:none;border:none;color:#c0392b;cursor:pointer;font-size:.85rem;flex:none;padding:4px}
+    .ai-gec-bos{margin:auto;color:#9ca3af;font-size:.85rem;text-align:center;padding:24px}
 </style>
 {% endblock %}
 {% block content %}
 <div class="ai-header">
     <h1>🤖 AI Asistanı</h1>
     <p>Sipariş, stok, satış ve kasa verilerini doğal dille sorgula (salt-okunur)</p>
+    <div class="ai-araclar">
+        <button id="aiYeni" title="Yeni sohbet"><i class="fas fa-plus"></i></button>
+        <button id="aiGecmisBtn" title="Geçmiş sohbetler"><i class="fas fa-history"></i></button>
+        <button id="aiSil" title="Bu sohbeti sil"><i class="fas fa-trash"></i></button>
+    </div>
 </div>
 
 <div class="ai-chat">
+    <div class="ai-gecmis" id="aiGecmis">
+        <div class="ai-gec-bas">Geçmiş Sohbetler</div>
+        <div class="ai-gecmis-liste" id="aiGecmisListe"></div>
+    </div>
     <div class="ai-mesajlar" id="aiMesajlar">
         <div class="ai-bos" id="aiBos">
             Örnek: "Bugün kaç sipariş geldi?" &nbsp;·&nbsp; "En çok satan 5 model?" &nbsp;·&nbsp; "Kaç sipariş gecikti?"
@@ -44,12 +68,26 @@
 <script>
 (function () {
     const mesajlar = document.getElementById('aiMesajlar');
-    const bos = document.getElementById('aiBos');
+    let bos = document.getElementById('aiBos');
     const soruEl = document.getElementById('aiSoru');
     const gonderBtn = document.getElementById('aiGonder');
+    const yeniBtn = document.getElementById('aiYeni');
+    const gecmisBtn = document.getElementById('aiGecmisBtn');
+    const silBtn = document.getElementById('aiSil');
+    const gecmisPanel = document.getElementById('aiGecmis');
+    const gecmisListe = document.getElementById('aiGecmisListe');
 
+    function sohbetId() { const v = localStorage.getItem('aip_sohbet'); return v ? parseInt(v, 10) : null; }
+    function sohbetIdYaz(id) { if (id) localStorage.setItem('aip_sohbet', id); else localStorage.removeItem('aip_sohbet'); }
+    function bekleyen() { try { return JSON.parse(localStorage.getItem('aip_bekleyen') || 'null'); } catch (e) { return null; } }
+    function bekleyenYaz(v) { if (v) localStorage.setItem('aip_bekleyen', JSON.stringify(v)); else localStorage.removeItem('aip_bekleyen'); }
+
+    function bosGoster(metin) {
+        mesajlar.innerHTML = '<div class="ai-bos"></div>';
+        bos = mesajlar.firstChild; bos.textContent = metin;
+    }
     function ekle(metin, tip) {
-        if (bos) bos.remove();
+        if (bos) { bos.remove(); bos = null; }
         const div = document.createElement('div');
         div.className = 'ai-msg ' + tip;
         div.textContent = metin;
@@ -58,43 +96,150 @@
         return div;
     }
 
+    // ── Aktif sohbeti yükle (sayfa yenilemeye dayanıklı) ──
+    async function sohbetYukle() {
+        const id = sohbetId(); if (!id) return;
+        try {
+            const r = await fetch('/ai-asistan/sohbet/' + id);
+            if (r.status === 404) { sohbetIdYaz(null); bekleyenYaz(null); return; }
+            const d = await r.json();
+            if (d.ok && d.mesajlar && d.mesajlar.length) {
+                mesajlar.innerHTML = ''; bos = null;
+                let bekleyenVar = false;
+                d.mesajlar.forEach(function (m) {
+                    if (m.durum === 'bekliyor') { bekleyenVar = true; return; }
+                    ekle(m.metin, m.rol === 'kullanici' ? 'kullanici' : (m.durum === 'hata' ? 'hata' : 'asistan'));
+                });
+                const b = bekleyen();
+                if (bekleyenVar && b && b.sohbetId === id) {
+                    const beklDiv = ekle('Düşünüyor…', 'asistan');
+                    gonderBtn.disabled = true;
+                    yokla(b.mesajId, beklDiv);
+                } else if (!bekleyenVar) { bekleyenYaz(null); }
+            }
+        } catch (e) { /* sessiz */ }
+    }
+
+    // ── Cevap yoklama (2 sn aralıkla; geçici ağ hatasına dayanıklı) ──
+    function yokla(mesajId, beklDiv) {
+        let hataUst = 0;
+        const timer = setInterval(async function () {
+            try {
+                const r = await fetch('/ai-asistan/durum/' + mesajId);
+                if (r.status === 404) { clearInterval(timer); beklDiv.remove(); bekleyenYaz(null); gonderBtn.disabled = false; return; }
+                const d = await r.json(); hataUst = 0;
+                if (d.ok && d.durum !== 'bekliyor') {
+                    clearInterval(timer); beklDiv.remove(); bekleyenYaz(null);
+                    ekle(d.metin, d.durum === 'hata' ? 'hata' : 'asistan');
+                    gonderBtn.disabled = false; soruEl.focus();
+                }
+            } catch (e) {
+                if (++hataUst >= 15) { clearInterval(timer); beklDiv.textContent = 'Bağlantı koptu — sayfayı yenileyince cevap gelecektir.'; gonderBtn.disabled = false; }
+            }
+        }, 2000);
+    }
+
     async function gonder() {
         const soru = soruEl.value.trim();
         if (!soru) return;
         soruEl.value = '';
         gonderBtn.disabled = true;
+        gecmisPanel.classList.remove('acik');
         ekle(soru, 'kullanici');
-        const bekle = ekle('Düşünüyor…', 'asistan');
+        const beklDiv = ekle('Düşünüyor…', 'asistan');
 
         try {
             const res = await fetch('/ai-asistan/sor', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ soru })
+                body: JSON.stringify({ soru: soru, sohbet_id: sohbetId() })
             });
             const data = await res.json();
-            bekle.remove();
             if (data.ok) {
-                ekle(data.cevap, 'asistan');
+                sohbetIdYaz(data.sohbet_id);
+                bekleyenYaz({ mesajId: data.mesaj_id, sohbetId: data.sohbet_id });
+                yokla(data.mesaj_id, beklDiv);
             } else {
+                beklDiv.remove();
                 ekle(data.hata || 'Bir hata oluştu.', 'hata');
+                gonderBtn.disabled = false;
             }
         } catch (e) {
-            bekle.remove();
+            beklDiv.remove();
             ekle('Sunucuya ulaşılamadı.', 'hata');
-        } finally {
             gonderBtn.disabled = false;
-            soruEl.focus();
         }
     }
 
+    // ── Yeni sohbet: aktif id sıfırlanır; sohbet ilk soruyla oluşur ──
+    function yeniSohbet() {
+        sohbetIdYaz(null); bekleyenYaz(null);
+        gecmisPanel.classList.remove('acik');
+        bosGoster('Yeni sohbet. Sipariş, stok veya satış verilerin hakkında soru sorabilirsin.');
+        soruEl.focus();
+    }
+
+    // ── Geçmiş sohbetler listesi ──
+    async function gecmisAcKapa() {
+        if (gecmisPanel.classList.contains('acik')) { gecmisPanel.classList.remove('acik'); return; }
+        gecmisPanel.classList.add('acik');
+        gecmisListe.innerHTML = '<div class="ai-gec-bos">Yükleniyor…</div>';
+        try {
+            const r = await fetch('/ai-asistan/sohbetler');
+            const d = await r.json();
+            if (!d.ok || !d.sohbetler.length) { gecmisListe.innerHTML = '<div class="ai-gec-bos">Henüz geçmiş sohbet yok.</div>'; return; }
+            gecmisListe.innerHTML = '';
+            d.sohbetler.forEach(function (s) {
+                const item = document.createElement('div'); item.className = 'ai-gec-item';
+                const ttl = document.createElement('span'); ttl.className = 'ai-gec-ttl'; ttl.textContent = s.baslik;
+                const tar = document.createElement('span'); tar.className = 'ai-gec-tar';
+                tar.textContent = s.updated_at ? new Date(s.updated_at).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+                const sil = document.createElement('button'); sil.title = 'Sil'; sil.innerHTML = '<i class="fas fa-trash"></i>';
+                sil.addEventListener('click', function (e) { e.stopPropagation(); sohbetSil(s.id, item); });
+                item.appendChild(ttl); item.appendChild(tar); item.appendChild(sil);
+                item.addEventListener('click', function () { sohbetSec(s.id); });
+                gecmisListe.appendChild(item);
+            });
+        } catch (e) { gecmisListe.innerHTML = '<div class="ai-gec-bos">Liste yüklenemedi.</div>'; }
+    }
+
+    function sohbetSec(id) {
+        sohbetIdYaz(id);
+        gecmisPanel.classList.remove('acik');
+        bosGoster('Yükleniyor…');
+        sohbetYukle();
+    }
+
+    async function sohbetSil(id, item) {
+        try {
+            const r = await fetch('/ai-asistan/sohbet/' + id + '/sil', { method: 'POST' });
+            const d = await r.json();
+            if (d.ok) {
+                if (item) item.remove();
+                if (sohbetId() === id) { sohbetIdYaz(null); bekleyenYaz(null); bosGoster('Sohbet silindi. Yeni bir soru sorabilirsin.'); }
+                if (!gecmisListe.children.length) gecmisListe.innerHTML = '<div class="ai-gec-bos">Henüz geçmiş sohbet yok.</div>';
+            }
+        } catch (e) { /* sessiz */ }
+    }
+
+    function aktifSil() {
+        const id = sohbetId();
+        if (!id) { bosGoster('Silinecek sohbet yok. Yeni bir soru sorabilirsin.'); return; }
+        sohbetSil(id, null);
+    }
+
     gonderBtn.addEventListener('click', gonder);
+    yeniBtn.addEventListener('click', yeniSohbet);
+    gecmisBtn.addEventListener('click', gecmisAcKapa);
+    silBtn.addEventListener('click', aktifSil);
     soruEl.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             gonder();
         }
     });
+
+    sohbetYukle();
 })();
 </script>
 {% endblock %}

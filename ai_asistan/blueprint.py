@@ -5,18 +5,30 @@ Panel içindeki sohbet kutusundan gelen soruyu, sunucuda headless çalışan
 Claude Code'a (Max aboneliğiyle giriş yapılmış) iletir. Claude Code, salt-okunur
 PostgreSQL MCP üzerinden veritabanını sorgulayıp Türkçe cevap döner.
 
+MİMARİ (2026-07-10 revizyonu):
+- Çoklu sohbet: kullanıcı başına ai_sohbet/ai_mesaj tabloları (JSON dosya yerine DB).
+- ASENKRON cevap: /sor mesajı DB'ye yazar, Claude'u arka plan thread'inde başlatır
+  ve anında döner; frontend /durum/<id> ile yoklar. Böylece gunicorn worker'ı
+  90+ sn bloklanmaz → worker timeout kaynaklı "sunucu hatası" (502) biter.
+- Bağlam: geçmişi prompta metin olarak yapıştırmak yerine claude --resume
+  <session_id> ile gerçek oturum devamlılığı (sohbet başına session_id saklanır).
+- Model: opus (premium cevap kalitesi).
+
 GÜVENLİK:
 - Terminal/keyfi komut YOK. Sadece 'sor' endpoint'i var.
 - Claude Code yalnızca postgres MCP'nin salt-okunur 'query' aracını kullanabilir
   (--allowedTools ile beyaz listelenmiş).
 - Veritabanı bağlantısı ai_readonly rolüyle → yazma fiziksel olarak imkânsız.
 - login_required → sadece panele girmiş kullanıcılar sorabilir.
+- Sohbet erişiminde sahiplik kontrolü (başkasının sohbet_id'si → 404).
 - ANTHROPIC_API_KEY ortamdan TEMİZLENİR → abonelik kullanılır, API faturası oluşmaz.
 """
 import json
 import os
 import shutil
 import subprocess
+import threading
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from flask import (
@@ -29,6 +41,8 @@ from flask import (
     session,
 )
 from flask_login import current_user, login_required
+
+from models import db, AiSohbet, AiMesaj
 
 ai_asistan_bp = Blueprint("ai_asistan", __name__, url_prefix="/ai-asistan")
 
@@ -49,7 +63,7 @@ BASE_DIR = Path(__file__).resolve().parent
 # İş bilgisi: Obsidian vault klasöründeki tüm notlar (yoksa IS_KURALLARI.md'ye düş).
 VAULT_DIR = BASE_DIR / "vault"
 IS_KURALLARI = BASE_DIR / "IS_KURALLARI.md"
-# Kişiye özel sohbet geçmişi (her kullanıcı için ayrı JSON dosyası).
+# Eski (dosya tabanlı) sohbet geçmişi — ilk listelemede DB'ye bir kez içeri alınır.
 GECMIS_DIR = BASE_DIR / "gecmis"
 
 # Sadece bu araca izin ver: postgres MCP'nin salt-okunur sorgu aracı.
@@ -59,9 +73,12 @@ ALLOWED_TOOLS = "mcp__gulludb__query"
 YONETICI_ROLLER = ("admin", "manager")
 
 # Güvenlik sınırları
-QUERY_TIMEOUT_SN = 90          # Claude Code'a verilen azami süre
+QUERY_TIMEOUT_SN = 240         # Claude Code'a verilen azami süre (asenkron: worker bloklanmaz)
 MAX_SORU_UZUNLUK = 2000        # aşırı uzun promptları reddet
-GECMIS_MAX_TUR = 12            # bağlama katılacak azami geçmiş tur (soru+cevap)
+MAX_SOHBET_LISTE = 50          # geçmiş listesinde gösterilecek azami sohbet
+BASLIK_UZUNLUK = 60            # sohbet başlığı = ilk sorunun ilk N karakteri
+
+CLAUDE_MODEL = "opus"          # premium cevap kalitesi (abonelik dahilinde)
 
 
 def _tam_dogrulanmis_mi() -> bool:
@@ -84,7 +101,7 @@ def _yonetici_mi() -> bool:
 
 
 def _kullanici_id() -> str:
-    """Geçmiş dosyası için güvenli kullanıcı kimliği (yalnızca alfanümerik)."""
+    """Sohbet sahipliği için güvenli kullanıcı kimliği (yalnızca alfanümerik)."""
     try:
         ham = str(current_user.get_id() or "anon")
     except Exception:
@@ -92,26 +109,40 @@ def _kullanici_id() -> str:
     return "".join(ch for ch in ham if ch.isalnum()) or "anon"
 
 
-def _gecmis_yolu() -> Path:
-    return GECMIS_DIR / f"{_kullanici_id()}.json"
+def _sohbet_getir(sohbet_id: int) -> AiSohbet:
+    """Sohbeti sahiplik kontrolüyle getir; başkasının sohbeti → 404."""
+    sohbet = db.session.get(AiSohbet, sohbet_id)
+    if sohbet is None or sohbet.kullanici != _kullanici_id():
+        abort(404)
+    return sohbet
 
 
-def _gecmis_oku() -> list[dict]:
-    """Kullanıcının sohbet geçmişini oku (liste: {rol, metin})."""
+def _eski_json_ice_al(uid: str) -> None:
+    """
+    Eski dosya tabanlı geçmişi (gecmis/<uid>.json) bir kez DB'ye taşı.
+    Başarılı taşımada dosya .imported uzantısına alınır; hata asistanı durdurmaz.
+    """
+    eski = GECMIS_DIR / f"{uid}.json"
+    if not eski.is_file():
+        return
     try:
-        return json.loads(_gecmis_yolu().read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return []
-
-
-def _gecmis_yaz(gecmis: list[dict]) -> None:
-    """Geçmişi son GECMIS_MAX_TUR*2 mesaja kırparak kaydet."""
-    try:
-        GECMIS_DIR.mkdir(exist_ok=True)
-        kirpik = gecmis[-(GECMIS_MAX_TUR * 2):]
-        _gecmis_yolu().write_text(json.dumps(kirpik, ensure_ascii=False), encoding="utf-8")
-    except OSError:
-        pass  # geçmiş yazılamazsa asistan yine çalışır
+        mesajlar = json.loads(eski.read_text(encoding="utf-8"))
+        if mesajlar:
+            sohbet = AiSohbet(kullanici=uid, baslik="Eski sohbet")
+            db.session.add(sohbet)
+            db.session.flush()
+            for m in mesajlar:
+                db.session.add(AiMesaj(
+                    sohbet_id=sohbet.id,
+                    rol=m.get("rol") or "asistan",
+                    metin=m.get("metin") or "",
+                    durum="hazir",
+                ))
+            db.session.commit()
+        eski.rename(eski.with_suffix(".json.imported"))
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("[AI-ASISTAN] eski JSON geçmişi içeri alınamadı")
 
 
 def _claude_bin() -> str | None:
@@ -166,27 +197,18 @@ def _system_prompt() -> str:
         return "Sen Güllü panelinin AI asistanısın. Soruları gulludb veritabanını sorgulayarak Türkçe yanıtla."
 
 
-def _prompt_olustur(soru: str, gecmis: list[dict]) -> str:
-    """Önceki konuşmayı bağlam olarak yeni sorunun önüne ekle (kişiye özel hafıza)."""
-    if not gecmis:
-        return soru
-    satirlar = ["Önceki konuşma (bağlam):"]
-    for m in gecmis[-(GECMIS_MAX_TUR * 2):]:
-        etiket = "Kullanıcı" if m.get("rol") == "kullanici" else "Asistan"
-        satirlar.append(f"{etiket}: {m.get('metin', '')}")
-    satirlar.append(f"\nYeni soru: {soru}")
-    return "\n".join(satirlar)
-
-
-def _claude_calistir(soru: str, gecmis: list[dict] | None = None) -> dict:
+def _claude_calistir(soru: str, resume_session_id: str | None = None) -> dict:
     """
-    Headless Claude Code'u çağırır ve {'ok': bool, 'cevap'/'hata': str} döner.
-    gecmis verilirse önceki konuşma bağlam olarak eklenir (kişiye özel hafıza).
+    Headless Claude Code'u çağırır.
+    Dönen: {'ok': bool, 'cevap'/'hata': str, 'session_id': str|None}
+    resume_session_id verilirse oturum --resume ile sürdürülür (tam bağlam);
+    resume başarısız olursa (oturum dosyası silinmiş vb.) taze oturumla
+    bir kez daha denenir — kullanıcıya hata yansımaz, sadece bağlam tazelenir.
     """
     claude_bin = _claude_bin()
     if not claude_bin:
         return {
-            "ok": False,
+            "ok": False, "session_id": None,
             "hata": "Claude Code bulunamadı. Sunucuda 'which claude' ile yolu bulup "
                     ".env'e CLAUDE_BIN=<tam yol> ekleyin (systemd dar PATH kullanır).",
         }
@@ -199,57 +221,142 @@ def _claude_calistir(soru: str, gecmis: list[dict] | None = None) -> dict:
         if not (k.startswith("ANTHROPIC") or (k.startswith("CLAUDE") and k not in ("CLAUDE_BIN", "CLAUDE_CODE_OAUTH_TOKEN")))
     }
 
-    cmd = [
-        claude_bin,
-        "-p", _prompt_olustur(soru, gecmis or []),
-        "--append-system-prompt", _system_prompt(),
-        "--allowedTools", ALLOWED_TOOLS,
-        "--output-format", "json",
-    ]
+    def _dene(resume_id: str | None) -> dict:
+        cmd = [
+            claude_bin,
+            "-p", soru,
+            "--model", CLAUDE_MODEL,
+            "--allowedTools", ALLOWED_TOOLS,
+            "--output-format", "json",
+        ]
+        if resume_id:
+            # Oturum sürüyor: sistem promptu ve önceki konuşma oturumda zaten var.
+            cmd += ["--resume", resume_id]
+        else:
+            cmd += ["--append-system-prompt", _system_prompt()]
 
-    try:
-        sonuc = subprocess.run(
-            cmd,
-            cwd=str(BASE_DIR),          # .mcp.json buradan yüklenir
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=QUERY_TIMEOUT_SN,
-        )
-    except subprocess.TimeoutExpired:
-        return {"ok": False, "hata": "Sorgu zaman aşımına uğradı. Lütfen soruyu sadeleştirin."}
-    except FileNotFoundError:
-        return {"ok": False, "hata": "Claude Code sunucuda kurulu değil (PATH'te 'claude' yok)."}
+        try:
+            sonuc = subprocess.run(
+                cmd,
+                cwd=str(BASE_DIR),          # .mcp.json buradan yüklenir
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=QUERY_TIMEOUT_SN,
+            )
+        except subprocess.TimeoutExpired:
+            return {"ok": False, "session_id": None,
+                    "hata": "Sorgu zaman aşımına uğradı. Lütfen soruyu sadeleştirin."}
+        except FileNotFoundError:
+            return {"ok": False, "session_id": None,
+                    "hata": "Claude Code sunucuda kurulu değil (PATH'te 'claude' yok)."}
 
-    if sonuc.returncode != 0:
-        # claude CLI hata detayını çoğu zaman stderr yerine stdout'a JSON
-        # olarak yazar (ör. abonelik/limit/oturum hataları) — ikisine de bak.
-        detay = (sonuc.stderr or "").strip()
-        if not detay:
-            ham = (sonuc.stdout or "").strip()
+        if sonuc.returncode != 0:
+            # claude CLI hata detayını çoğu zaman stderr yerine stdout'a JSON
+            # olarak yazar (ör. abonelik/limit/oturum hataları) — ikisine de bak.
+            detay = (sonuc.stderr or "").strip()
+            if not detay:
+                ham = (sonuc.stdout or "").strip()
+                try:
+                    j = json.loads(ham)
+                    detay = j.get("result") or j.get("error") or ham[:500]
+                except (json.JSONDecodeError, AttributeError):
+                    detay = ham[:500]
+            import logging
+            logging.getLogger(__name__).error(
+                "[AI-ASISTAN] claude rc=%s resume=%s stderr=%r stdout=%r",
+                sonuc.returncode, bool(resume_id),
+                (sonuc.stderr or "")[:500], (sonuc.stdout or "")[:500],
+            )
+            return {"ok": False, "session_id": None,
+                    "hata": f"Asistan hatası: {detay or 'bilinmeyen hata'}"}
+
+        # --output-format json → {"result": "...", "session_id": "...", ...} bekleniyor
+        try:
+            data = json.loads(sonuc.stdout)
+            cevap = data.get("result") or data.get("text") or ""
+            session_id = data.get("session_id")
+        except (json.JSONDecodeError, AttributeError):
+            cevap = sonuc.stdout.strip()
+            session_id = None
+
+        if not cevap:
+            return {"ok": False, "session_id": None, "hata": "Asistandan boş cevap geldi."}
+
+        return {"ok": True, "cevap": cevap, "session_id": session_id}
+
+    sonuc = _dene(resume_session_id)
+    if not sonuc["ok"] and resume_session_id:
+        # Oturum kayıp/bozuk olabilir → taze oturumla tek yeniden deneme.
+        sonuc = _dene(None)
+    return sonuc
+
+
+def _arka_planda_cevapla(app, mesaj_id: int, sohbet_id: int, soru: str) -> None:
+    """
+    Thread gövdesi: Claude'u çalıştır, sonucu 'bekliyor' durumundaki asistan
+    mesajına yaz. İstek worker'ı bloklanmaz; frontend /durum/<id> ile yoklar.
+    """
+    with app.app_context():
+        try:
+            sohbet = db.session.get(AiSohbet, sohbet_id)
+            resume_id = sohbet.claude_session_id if sohbet else None
+
+            sonuc = _claude_calistir(soru, resume_id)
+
+            mesaj = db.session.get(AiMesaj, mesaj_id)
+            if mesaj is None:                      # sohbet bu arada silinmiş
+                return
+            if sonuc["ok"]:
+                mesaj.metin = sonuc["cevap"]
+                mesaj.durum = "hazir"
+                if sohbet is not None and sonuc.get("session_id"):
+                    sohbet.claude_session_id = sonuc["session_id"]
+            else:
+                mesaj.metin = sonuc.get("hata") or "Bilinmeyen hata."
+                mesaj.durum = "hata"
+            db.session.commit()
+        except Exception:
+            app.logger.exception("[AI-ASISTAN] arka plan cevaplama hatası")
             try:
-                j = json.loads(ham)
-                detay = j.get("result") or j.get("error") or ham[:500]
-            except (json.JSONDecodeError, AttributeError):
-                detay = ham[:500]
-        import logging
-        logging.getLogger(__name__).error(
-            "[AI-ASISTAN] claude rc=%s stderr=%r stdout=%r",
-            sonuc.returncode, (sonuc.stderr or "")[:500], (sonuc.stdout or "")[:500],
-        )
-        return {"ok": False, "hata": f"Asistan hatası: {detay or 'bilinmeyen hata'}"}
+                db.session.rollback()
+                mesaj = db.session.get(AiMesaj, mesaj_id)
+                if mesaj is not None and mesaj.durum == "bekliyor":
+                    mesaj.metin = "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
+                    mesaj.durum = "hata"
+                    db.session.commit()
+            except Exception:
+                db.session.rollback()
+        finally:
+            db.session.remove()
 
-    # --output-format json → {"result": "...", ...} bekleniyor
-    try:
-        data = json.loads(sonuc.stdout)
-        cevap = data.get("result") or data.get("text") or ""
-    except (json.JSONDecodeError, AttributeError):
-        cevap = sonuc.stdout.strip()
 
-    if not cevap:
-        return {"ok": False, "hata": "Asistandan boş cevap geldi."}
+def _bayat_bekleyenleri_isaretle(uid: str) -> None:
+    """
+    Zaman aşımını çoktan geçmiş 'bekliyor' mesajlarını 'hata'ya düşür.
+    Cevap thread'i worker restart'ında (deploy, OOM) ölürse mesaj sonsuza dek
+    bekliyor'da kalır ve tek-bekleyen kilidi kullanıcıyı kilitlerdi.
+    """
+    esik = datetime.utcnow() - timedelta(seconds=QUERY_TIMEOUT_SN + 60)
+    bayatlar = (
+        AiMesaj.query
+        .join(AiSohbet, AiMesaj.sohbet_id == AiSohbet.id)
+        .filter(AiSohbet.kullanici == uid,
+                AiMesaj.durum == "bekliyor",
+                AiMesaj.created_at < esik)
+        .all()
+    )
+    if not bayatlar:
+        return
+    for m in bayatlar:
+        m.metin = "Cevap tamamlanamadı (sunucu yeniden başlamış olabilir). Lütfen soruyu tekrar sorun."
+        m.durum = "hata"
+    db.session.commit()
 
-    return {"ok": True, "cevap": cevap}
+
+def _utc_iso(dt) -> str | None:
+    """Naive-UTC timestamp'ı JS'in yerel saate çevirebilmesi için 'Z' ekiyle döndür."""
+    return (dt.isoformat() + "Z") if dt else None
 
 
 @ai_asistan_bp.route("/", methods=["GET"])
@@ -262,9 +369,13 @@ def sayfa():
 @ai_asistan_bp.route("/sor", methods=["POST"])
 @login_required
 def sor():
-    """Soruyu al, doğrula, geçmişle birlikte Claude'a ilet, kaydet, JSON döndür."""
+    """
+    Soruyu al, doğrula, DB'ye yaz, Claude'u ARKA PLANDA başlat ve anında dön.
+    Dönen: {ok, sohbet_id, mesaj_id, baslik} — frontend /durum/<mesaj_id> yoklar.
+    """
     payload = request.get_json(silent=True) or {}
     soru = (payload.get("soru") or "").strip()
+    sohbet_id = payload.get("sohbet_id")
 
     # Girdi doğrulama (sistem sınırında)
     if not soru:
@@ -272,33 +383,103 @@ def sor():
     if len(soru) > MAX_SORU_UZUNLUK:
         return jsonify({"ok": False, "hata": "Soru çok uzun."}), 400
 
-    gecmis = _gecmis_oku()
-    sonuc = _claude_calistir(soru, gecmis)
+    uid = _kullanici_id()
+    _bayat_bekleyenleri_isaretle(uid)
 
-    # Başarılı cevabı kişiye özel geçmişe ekle
-    if sonuc.get("ok"):
-        gecmis.append({"rol": "kullanici", "metin": soru})
-        gecmis.append({"rol": "asistan", "metin": sonuc["cevap"]})
-        _gecmis_yaz(gecmis)
+    # Aynı anda kullanıcı başına tek bekleyen soru (Claude süreçleri yığılmasın).
+    bekleyen = (
+        db.session.query(AiMesaj.id)
+        .join(AiSohbet, AiMesaj.sohbet_id == AiSohbet.id)
+        .filter(AiSohbet.kullanici == uid, AiMesaj.durum == "bekliyor")
+        .first()
+    )
+    if bekleyen:
+        return jsonify({"ok": False, "hata": "Önceki sorunun cevabı hazırlanıyor; lütfen bekleyin."}), 429
 
-    return jsonify(sonuc)
+    if sohbet_id:
+        sohbet = _sohbet_getir(int(sohbet_id))
+    else:
+        sohbet = AiSohbet(kullanici=uid, baslik=soru[:BASLIK_UZUNLUK])
+        db.session.add(sohbet)
+        db.session.flush()
+
+    sohbet.updated_at = datetime.utcnow()
+    db.session.add(AiMesaj(sohbet_id=sohbet.id, rol="kullanici", metin=soru, durum="hazir"))
+    cevap_mesaj = AiMesaj(sohbet_id=sohbet.id, rol="asistan", metin="", durum="bekliyor")
+    db.session.add(cevap_mesaj)
+    db.session.commit()
+
+    t = threading.Thread(
+        target=_arka_planda_cevapla,
+        args=(current_app._get_current_object(), cevap_mesaj.id, sohbet.id, soru),
+        daemon=True,
+    )
+    t.start()
+
+    return jsonify({
+        "ok": True,
+        "sohbet_id": sohbet.id,
+        "mesaj_id": cevap_mesaj.id,
+        "baslik": sohbet.baslik,
+    })
 
 
-@ai_asistan_bp.route("/gecmis", methods=["GET"])
+@ai_asistan_bp.route("/durum/<int:mesaj_id>", methods=["GET"])
 @login_required
-def gecmis():
-    """Aktif kullanıcının sohbet geçmişini döndür (widget açılışında yüklenir)."""
-    return jsonify({"ok": True, "gecmis": _gecmis_oku()})
+def durum(mesaj_id: int):
+    """Bekleyen cevabın durumunu döndür (frontend 2 sn'de bir yoklar)."""
+    mesaj = db.session.get(AiMesaj, mesaj_id)
+    if mesaj is None:
+        abort(404)
+    _sohbet_getir(mesaj.sohbet_id)   # sahiplik kontrolü
+    if mesaj.durum == "bekliyor":
+        _bayat_bekleyenleri_isaretle(_kullanici_id())
+        db.session.refresh(mesaj)
+    return jsonify({"ok": True, "durum": mesaj.durum, "metin": mesaj.metin})
 
 
-@ai_asistan_bp.route("/temizle", methods=["POST"])
+@ai_asistan_bp.route("/sohbetler", methods=["GET"])
 @login_required
-def temizle():
-    """Aktif kullanıcının sohbet geçmişini sil."""
-    try:
-        _gecmis_yolu().unlink(missing_ok=True)
-    except OSError:
-        pass
+def sohbetler():
+    """Kullanıcının sohbet listesi (en yeni üstte)."""
+    uid = _kullanici_id()
+    _eski_json_ice_al(uid)
+    kayitlar = (
+        AiSohbet.query.filter_by(kullanici=uid)
+        .order_by(AiSohbet.updated_at.desc())
+        .limit(MAX_SOHBET_LISTE)
+        .all()
+    )
+    return jsonify({"ok": True, "sohbetler": [
+        {"id": s.id, "baslik": s.baslik, "updated_at": _utc_iso(s.updated_at)}
+        for s in kayitlar
+    ]})
+
+
+@ai_asistan_bp.route("/sohbet/<int:sohbet_id>", methods=["GET"])
+@login_required
+def sohbet_detay(sohbet_id: int):
+    """Bir sohbetin mesajlarını döndür (tıkla-devam-et)."""
+    sohbet = _sohbet_getir(sohbet_id)
+    mesajlar = (
+        AiMesaj.query.filter_by(sohbet_id=sohbet.id)
+        .order_by(AiMesaj.id.asc())
+        .all()
+    )
+    return jsonify({"ok": True, "baslik": sohbet.baslik, "mesajlar": [
+        {"id": m.id, "rol": m.rol, "metin": m.metin, "durum": m.durum}
+        for m in mesajlar
+    ]})
+
+
+@ai_asistan_bp.route("/sohbet/<int:sohbet_id>/sil", methods=["POST"])
+@login_required
+def sohbet_sil(sohbet_id: int):
+    """Sohbeti ve mesajlarını sil."""
+    sohbet = _sohbet_getir(sohbet_id)
+    AiMesaj.query.filter_by(sohbet_id=sohbet.id).delete()
+    db.session.delete(sohbet)
+    db.session.commit()
     return jsonify({"ok": True})
 
 

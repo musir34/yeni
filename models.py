@@ -1531,3 +1531,40 @@ class MotorOneriLog(db.Model):
     stok = db.Column(db.Integer)
     strateji = db.Column(db.String(24))
     tarife_donemi = db.Column(db.String(4))
+
+
+class AiSohbet(db.Model):
+    """AI asistanı sohbet başlığı — kullanıcı başına çoklu sohbet.
+
+    claude_session_id: headless Claude Code oturumu; --resume ile gerçek
+    bağlam devamlılığı sağlar (geçmişi prompta metin olarak yapıştırmak yerine).
+    Tablo: migrations/versions/add_ai_sohbet.py (additive, idempotent).
+    """
+    __tablename__ = 'ai_sohbet'
+
+    id = db.Column(db.Integer, primary_key=True)
+    kullanici = db.Column(db.String(64), nullable=False, index=True)
+    baslik = db.Column(db.String(120), nullable=False, default='Yeni sohbet')
+    claude_session_id = db.Column(db.String(64))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+
+class AiMesaj(db.Model):
+    """AI asistanı sohbet mesajı.
+
+    durum: 'hazir' | 'bekliyor' (arka planda Claude çalışıyor) | 'hata'.
+    Asenkron akış: /sor mesajı 'bekliyor' yazar, thread cevabı doldurur,
+    frontend /durum/<id> ile yoklar — gunicorn worker'ı bloklanmaz.
+    """
+    __tablename__ = 'ai_mesaj'
+
+    DURUMLAR = ('hazir', 'bekliyor', 'hata')
+
+    id = db.Column(db.Integer, primary_key=True)
+    sohbet_id = db.Column(db.Integer, db.ForeignKey('ai_sohbet.id', ondelete='CASCADE'),
+                          nullable=False, index=True)
+    rol = db.Column(db.String(16), nullable=False)              # kullanici | asistan
+    metin = db.Column(db.Text, nullable=False, default='')
+    durum = db.Column(db.String(16), nullable=False, default='hazir')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
