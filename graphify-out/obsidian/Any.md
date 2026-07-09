@@ -1,11 +1,11 @@
 ---
 source_file: ""
 type: "code"
-community: "Hepsiburada Servisi"
+community: "Anasayfa Özet & Sayımlar"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Hepsiburada_Servisi
+  - community/Anasayfa_zet__Saymlar
 ---
 
 # Any
@@ -13,4 +13,4 @@ tags:
 ## Connections
 - [[._make_request()]] - `references` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Hepsiburada_Servisi
+#graphify/code #graphify/EXTRACTED #community/Anasayfa_zet__Saymlar

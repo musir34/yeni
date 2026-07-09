@@ -1,12 +1,12 @@
 ---
 source_file: "degisim.py"
 type: "code"
-community: "Değişim / İade Talepleri"
+community: "Kimlik Doğrulama & Kullanıcı Yönetimi"
 location: "L79"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Deiim_/_ade_Talepleri
+  - community/Kimlik_Dorulama__Kullanc_Ynetimi
 ---
 
 # _safe_log()
@@ -21,4 +21,4 @@ tags:
 - [[log_user_action()_1]] - `calls` [EXTRACTED]
 - [[update_status()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Deiim_/_ade_Talepleri
+#graphify/code #graphify/EXTRACTED #community/Kimlik_Dorulama__Kullanc_Ynetimi

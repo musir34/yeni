@@ -1,12 +1,12 @@
 ---
 source_file: "get_products.py"
 type: "code"
-community: "Community 124"
+community: "Community 130"
 location: "L1496"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_124
+  - community/Community_130
 ---
 
 # bulk_delete_products()
@@ -16,4 +16,4 @@ tags:
 - [[get_products.py]] - `contains` [EXTRACTED]
 - [[log_user_action()_1]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_124
+#graphify/code #graphify/EXTRACTED #community/Community_130

@@ -1,12 +1,12 @@
 ---
 source_file: "amazon/amazon_routes.py"
 type: "code"
-community: "Community 120"
+community: "Community 126"
 location: "L231"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_120
+  - community/Community_126
 ---
 
 # matching()
@@ -15,4 +15,4 @@ tags:
 - [[Amazon ASIN eşleştirme sayfası]] - `rationale_for` [EXTRACTED]
 - [[amazon_routes.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_120
+#graphify/code #graphify/EXTRACTED #community/Community_126

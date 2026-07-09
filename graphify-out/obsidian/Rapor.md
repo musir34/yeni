@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Community 59"
+community: "Community 90"
 location: "L297"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_59
+  - community/Community_90
 ---
 
 # Rapor
@@ -19,4 +19,4 @@ tags:
 - [[models.py]] - `contains` [EXTRACTED]
 - [[rapor_gir.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_59
+#graphify/code #graphify/EXTRACTED #community/Community_90

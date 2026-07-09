@@ -1,11 +1,11 @@
 ---
 source_file: "requirements.txt"
 type: "document"
-community: "Community 95"
+community: "Uygulama Çekirdeği & Zamanlı İşler"
 tags:
   - graphify/document
   - graphify/INFERRED
-  - community/Community_95
+  - community/Uygulama_ekirdei__Zamanl_ler
 ---
 
 # Python bağımlılıkları (Flask/SQLAlchemy/openai/prophet)
@@ -13,4 +13,4 @@ tags:
 ## Connections
 - [[AI Asistanı sunucu kurulumu (headless Claude Code)]] - `conceptually_related_to` [INFERRED]
 
-#graphify/document #graphify/INFERRED #community/Community_95
+#graphify/document #graphify/INFERRED #community/Uygulama_ekirdei__Zamanl_ler

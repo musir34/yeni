@@ -1,11 +1,11 @@
 ---
 source_file: "AGENT_API_DOCS.md"
 type: "document"
-community: "Community 52"
+community: "Community 75"
 tags:
   - graphify/document
   - graphify/EXTRACTED
-  - community/Community_52
+  - community/Community_75
 ---
 
 # OpenClaw Agent API (REST)
@@ -17,4 +17,4 @@ tags:
 - [[Ortak JSON response zarfı (successdataerror)]] - `references` [EXTRACTED]
 - [[X-Agent-Key kimlik doğrulama]] - `references` [EXTRACTED]
 
-#graphify/document #graphify/EXTRACTED #community/Community_52
+#graphify/document #graphify/EXTRACTED #community/Community_75

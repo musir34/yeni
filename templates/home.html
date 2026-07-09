@@ -1,23 +1,11 @@
-<!doctype html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8" />
-  <script>
-    // Dark mode FOUC engelle — CSS sınıfını render'dan önce ekle
-    (function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();var dark=m==='on'||(m==='auto'&&(h>=20||h<7));if(dark)document.documentElement.classList.add('gs-dark');})();
-  </script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+{% extends "base.html" %}
+{% block title %}Anasayfa - Güllü Ayakkabı{% endblock %}
+{% block extra_css %}
   <meta name="weather-description" content="{{ weather.description if weather else 'Açık Hava' }}" />
   <meta name="weather-clouds" content="{{ weather.clouds if weather else 0 }}" />
   <meta name="weather-code" content="{{ weather.weather_code if weather else 0 }}" />
   <meta name="weather-wind" content="{{ weather.wind_speed if weather else 10 }}" />
   <meta name="weather-wind-direction" content="{{ weather.wind_direction_deg if weather else 180 }}" />
-  <title>Anasayfa - Güllü Ayakkabı</title>
-  <!-- Bootstrap 5.3 -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}"/>
   <style>
     :root {
       --card-bg: #ffffff;
@@ -26,6 +14,9 @@
       --btn-hover-shadow: 0 16px 26px rgba(0,0,0,.18);
       --shine: linear-gradient(120deg,rgba(255,255,255,0) 30%,rgba(255,255,255,.35) 45%,rgba(255,255,255,0) 60%);
     }
+    /* base.html'in dış .container.mt-5 sarmalayıcısını nötrle — sabit (fixed) üst çubuklar
+       ve sayfanın kendi .container'ı orijinal düzeniyle kalsın. */
+    .container.mt-5 { max-width: none; margin: 0; padding: 0; }
     * { outline: 0; }
     body { margin:0; padding:0; font-family:'Inter',sans-serif; background:#f5f5f5; }
     #weatherCanvas { position:fixed; top:0; left:0; z-index:-1; width:100vw; height:100vh; filter:contrast(1.02) saturate(1.02); }
@@ -89,7 +80,7 @@
       font-size:2rem; font-weight:800; color:#222; letter-spacing:.5px;
       transition:color .3s ease;
     }
-    .tile .num.changed { color:#B76E79; }
+    .tile .num.changed { color:var(--color-primary); }
     .stock-substats {
       margin-top:12px; padding-top:12px; border-top:1px solid rgba(0,0,0,.08);
       display:flex; flex-direction:column; gap:7px;
@@ -216,9 +207,13 @@
       html.gs-dark .user-info { background:rgba(18,18,18,.95); border-bottom:1px solid #333; }
       html.gs-dark .btn-group-top { background:rgba(18,18,18,.96); box-shadow:0 -2px 12px rgba(0,0,0,.3); }
     }
+
+    /* Buton ripple efekti */
+    @keyframes ripple { to { transform:scale(3); opacity:0; } }
   </style>
-</head>
-<body>
+{% endblock %}
+
+{% block content %}
   <canvas id="weatherCanvas"></canvas>
 
   <!-- Kullanıcı bilgisi (sol üst) -->
@@ -501,12 +496,9 @@
       </div>
     </div>
   </div><!-- /container -->
+{% endblock %}
 
-  <!-- Global Toast Container -->
-  <div id="gs-toast-container" aria-live="polite"
-       style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:99999;display:flex;flex-direction:column;gap:.5rem;pointer-events:none;max-width:340px;">
-  </div>
-
+{% block scripts %}
   <!-- Ripple effect -->
   <script>
     document.addEventListener('click', function(e) {
@@ -531,10 +523,8 @@
       setTimeout(function() { circle.remove(); }, 650);
     });
   </script>
-  <style>@keyframes ripple { to { transform:scale(3); opacity:0; } }</style>
 
   <!-- Canlı yenileme (Refresh Manager) -->
-  <script src="{{ url_for('static', filename='js/app-shell.js') }}"></script>
   <script>
     (function () {
       var createdEl = document.getElementById('count-created');
@@ -666,8 +656,6 @@
     })();
   </script>
 
-  <!-- Bootstrap 5 JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="{{ url_for('static', filename='js/weather-canvas.js') }}"></script>
   <script>
     // Aktif dark mode seçeneğini vurgula
@@ -684,7 +672,4 @@
       });
     })();
   </script>
-
-{% include 'includes/notification_popup.html' ignore missing %}
-</body>
-</html>
+{% endblock %}

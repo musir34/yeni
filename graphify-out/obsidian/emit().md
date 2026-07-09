@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/check_central_zero_alias.py"
 type: "code"
-community: "Community 62"
+community: "Değişim / İade Talepleri"
 location: "L25"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_62
+  - community/Deiim_/_ade_Talepleri
 ---
 
 # emit()
@@ -16,4 +16,4 @@ tags:
 - [[main()_5]] - `calls` [EXTRACTED]
 - [[main()_31]] - `calls` [INFERRED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_62
+#graphify/code #graphify/EXTRACTED #community/Deiim_/_ade_Talepleri

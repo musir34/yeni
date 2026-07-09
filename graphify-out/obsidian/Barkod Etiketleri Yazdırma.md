@@ -1,11 +1,11 @@
 ---
 source_file: "templates/siparis_fisi_barkod_print.html"
 type: "concept"
-community: "Community 89"
+community: "Community 38"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_89
+  - community/Community_38
 ---
 
 # Barkod Etiketleri Yazdırma
@@ -15,4 +15,4 @@ tags:
 - [[Tedarik Bilgileri (Sipariş Fişi) Sayfası]] - `references` [EXTRACTED]
 - [[Ürün QR Etiketi Oluşturma]] - `semantically_similar_to` [INFERRED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_89
+#graphify/concept #graphify/EXTRACTED #community/Community_38

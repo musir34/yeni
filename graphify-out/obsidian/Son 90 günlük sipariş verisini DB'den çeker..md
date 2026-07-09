@@ -1,12 +1,12 @@
 ---
 source_file: "akilli_motor.py"
 type: "rationale"
-community: "Akıllı Motor (İndirim & Fiyat)"
+community: "Stok Hareket Defteri (Ledger)"
 location: "L231"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Akll_Motor_ndirim__Fiyat
+  - community/Stok_Hareket_Defteri_Ledger
 ---
 
 # Son 90 günlük sipariş verisini DB'den çeker.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_query_sales_data()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Akll_Motor_ndirim__Fiyat
+#graphify/rationale #graphify/EXTRACTED #community/Stok_Hareket_Defteri_Ledger

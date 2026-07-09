@@ -1,12 +1,12 @@
 ---
 source_file: "akilli_motor.py"
 type: "rationale"
-community: "Akıllı Motor (İndirim & Fiyat)"
+community: "Stok Hareket Defteri (Ledger)"
 location: "L214"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Akll_Motor_ndirim__Fiyat
+  - community/Stok_Hareket_Defteri_Ledger
 ---
 
 # merchant_sku'dan renk çıkarır.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_extract_color_from_sku()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Akll_Motor_ndirim__Fiyat
+#graphify/rationale #graphify/EXTRACTED #community/Stok_Hareket_Defteri_Ledger

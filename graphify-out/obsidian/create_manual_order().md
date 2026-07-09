@@ -1,12 +1,12 @@
 ---
 source_file: "agent_api.py"
 type: "code"
-community: "Manuel Sipariş Oluşturma"
+community: "Hepsiburada Servisi"
 location: "L971"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Manuel_Sipari_Oluturma
+  - community/Hepsiburada_Servisi
 ---
 
 # create_manual_order()
@@ -17,4 +17,4 @@ tags:
 - [[YeniSiparis]] - `calls` [EXTRACTED]
 - [[agent_api.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Manuel_Sipari_Oluturma
+#graphify/code #graphify/EXTRACTED #community/Hepsiburada_Servisi

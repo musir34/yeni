@@ -1,12 +1,12 @@
 ---
 source_file: "archive.py"
 type: "code"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "E-posta Bildirimleri"
 location: "L548"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/E-posta_Bildirimleri
 ---
 
 # archive_an_order()
@@ -27,4 +27,4 @@ tags:
 - [[notify()]] - `calls` [EXTRACTED]
 - [[Çok tablolu modelde, siparişi bul - arşive ekle - o tablodan sil.     Shopify]] - `rationale_for` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri

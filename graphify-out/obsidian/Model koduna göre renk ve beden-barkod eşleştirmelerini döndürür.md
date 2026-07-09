@@ -1,12 +1,12 @@
 ---
 source_file: "product_label.py"
 type: "rationale"
-community: "Community 74"
+community: "Community 83"
 location: "L166"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_74
+  - community/Community_83
 ---
 
 # Model koduna göre renk ve beden-barkod eşleştirmelerini döndürür
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[get_product_details()_1]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_74
+#graphify/rationale #graphify/EXTRACTED #community/Community_83

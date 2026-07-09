@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/routes.py"
 type: "rationale"
-community: "Community 103"
+community: "Community 134"
 location: "L384"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_103
+  - community/Community_134
 ---
 
 # Tüm platformlara sync başlat
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[api_sync_all()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_103
+#graphify/rationale #graphify/EXTRACTED #community/Community_134

@@ -1,12 +1,12 @@
 ---
 source_file: "siparis_fisi.py"
 type: "rationale"
-community: "Maliyet Fişi & Tedarikçi"
+community: "Veri Modelleri (SQLAlchemy)"
 location: "L156"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Maliyet_Fii__Tedariki
+  - community/Veri_Modelleri_SQLAlchemy
 ---
 
 # Tek bir modelin canlı USD birim maliyetini döndür.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[api_model_maliyet_tek()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki
+#graphify/rationale #graphify/EXTRACTED #community/Veri_Modelleri_SQLAlchemy

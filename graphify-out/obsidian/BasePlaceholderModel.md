@@ -1,12 +1,12 @@
 ---
 source_file: "siparisler.py"
 type: "code"
-community: "Manuel Sipariş Oluşturma"
+community: "Hepsiburada Servisi"
 location: "L22"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Manuel_Sipari_Oluturma
+  - community/Hepsiburada_Servisi
 ---
 
 # BasePlaceholderModel
@@ -27,4 +27,4 @@ tags:
 - [[YeniSiparis]] - `uses` [INFERRED]
 - [[siparisler.py]] - `indirect_call` [INFERRED]
 
-#graphify/code #graphify/EXTRACTED #community/Manuel_Sipari_Oluturma
+#graphify/code #graphify/EXTRACTED #community/Hepsiburada_Servisi

@@ -1,11 +1,11 @@
 ---
 source_file: "templates/siparis_fisi_bos_print.html"
 type: "concept"
-community: "Community 89"
+community: "Community 38"
 tags:
   - graphify/concept
   - graphify/INFERRED
-  - community/Community_89
+  - community/Community_38
 ---
 
 # Boş Teslimat Fişi Yazdırma
@@ -14,4 +14,4 @@ tags:
 - [[Maliyet Fişi Yazdırma]] - `semantically_similar_to` [INFERRED]
 - [[Tedarik Bilgileri (Sipariş Fişi) Sayfası]] - `references` [EXTRACTED]
 
-#graphify/concept #graphify/INFERRED #community/Community_89
+#graphify/concept #graphify/INFERRED #community/Community_38

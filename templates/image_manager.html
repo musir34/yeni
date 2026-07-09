@@ -1,14 +1,12 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <script>(function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();if(m==='on'||(m==='auto'&&(h>=20||h<7)))document.documentElement.classList.add('gs-dark');})()</script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ürün Görsel Yöneticisi - Güllü Shoes</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-mode.css') }}">
+{% extends "base.html" %}
+{% block title %}Ürün Görsel Yöneticisi - Güllü Shoes{% endblock %}
+{% block extra_css %}
     <style>
+        /* base.html'in dış .container.mt-5 sarmalayıcısını nötrle — sayfanın kendi .main-container'ı aktif kalsın */
+        .container.mt-5 { max-width: none; margin: 0; padding: 0; }
+        /* Sayfa arka planı (eski <body> inline gradyanı) */
+        body { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; }
+
         .main-container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         .section-card { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 24px; margin-bottom: 24px; }
         .section-title { font-size: 1.4rem; font-weight: 600; color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
@@ -68,8 +66,9 @@
         .no-image-card:hover { border-color: #e74c3c; box-shadow: 0 4px 12px rgba(231, 76, 60, 0.15); }
         .no-image-icon { font-size: 3rem; color: #e74c3c; opacity: 0.4; }
     </style>
-</head>
-<body style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh;">
+{% endblock %}
+
+{% block content %}
     <div class="main-container">
         <!-- Sayfa Başlığı -->
         <div class="page-header">
@@ -87,7 +86,7 @@
                 <i class="fas fa-cloud-upload-alt"></i>
                 Yeni Görsel Yükle
             </h2>
-            
+
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">
                     <i class="fas fa-cloud-upload-alt"></i>
@@ -99,10 +98,10 @@
                     PNG, JPG, JPEG, GIF, WEBP formatları desteklenir (Maks. 16MB)
                 </div>
             </div>
-            
+
             <form id="uploadForm" enctype="multipart/form-data">
                 <input type="file" id="imageFile" name="image_file" accept=".png,.jpg,.jpeg,.gif,.webp" style="display: none;">
-                
+
                 <div class="form-upload">
                     <div>
                         <label class="form-label">Model Kodu</label>
@@ -118,7 +117,7 @@
                     </button>
                 </div>
             </form>
-            
+
             <div id="loading" class="loading">
                 <div class="spinner"></div>
                 <p>Görsel yükleniyor...</p>
@@ -131,7 +130,7 @@
                 <i class="fas fa-search"></i>
                 Ara & Filtrele
             </h2>
-            
+
             <form method="GET" action="{{ url_for('image_manager.image_manager') }}">
                 <div class="search-section">
                     <div class="search-form">
@@ -166,7 +165,7 @@
                 Görseli Olmayan Ürünler
                 <span class="badge bg-warning text-dark ms-2">{{ total_images }}</span>
             </h2>
-            
+
             {% if no_image_products %}
             <div class="image-grid" id="imageGrid">
                 {% for p in no_image_products %}
@@ -202,7 +201,7 @@
                 Mevcut Görseller
                 <span class="badge bg-primary ms-2">{{ total_images }}</span>
             </h2>
-            
+
             {% if existing_images %}
             <div class="image-grid" id="imageGrid">
                 {% for image in existing_images %}
@@ -246,7 +245,7 @@
             <div class="pagination-bar">
                 <a href="{{ url_for('image_manager.image_manager', q=search_query, filter=filter_type, page=page-1) }}"
                    class="page-btn {{ 'disabled' if page <= 1 }}">&laquo; Önceki</a>
-                
+
                 {% for p in range(1, total_pages + 1) %}
                     {% if p == page %}
                         <span class="page-btn active">{{ p }}</span>
@@ -256,7 +255,7 @@
                         <span class="page-info">...</span>
                     {% endif %}
                 {% endfor %}
-                
+
                 <a href="{{ url_for('image_manager.image_manager', q=search_query, filter=filter_type, page=page+1) }}"
                    class="page-btn {{ 'disabled' if page >= total_pages }}">&raquo; Sonraki</a>
                 <span class="page-info">Sayfa {{ page }}/{{ total_pages }} ({{ total_images }} kayıt)</span>
@@ -309,67 +308,68 @@
             </div>
         </div>
     </div>
+{% endblock %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}
     <script>
         // Drag & Drop ve Dosya Seçme
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('imageFile');
         const uploadForm = document.getElementById('uploadForm');
-        
+
         uploadArea.addEventListener('click', () => fileInput.click());
-        
+
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
         });
-        
+
         uploadArea.addEventListener('dragleave', () => {
             uploadArea.classList.remove('dragover');
         });
-        
+
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            
+
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 fileInput.files = files;
                 updateUploadAreaText(files[0].name);
             }
         });
-        
+
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 updateUploadAreaText(e.target.files[0].name);
             }
         });
-        
+
         function updateUploadAreaText(filename) {
             uploadArea.querySelector('.upload-text').textContent = `Seçilen dosya: ${filename}`;
         }
-        
+
         // Form Gönderme
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const formData = new FormData(uploadForm);
-            
+
             if (!fileInput.files[0]) {
                 showAlert('Lütfen bir görsel dosyası seçin', 'danger');
                 return;
             }
-            
+
             showLoading(true);
-            
+
             try {
                 const response = await fetch('/api/upload_product_image', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     showAlert(data.message, 'success');
                     uploadForm.reset();
@@ -384,9 +384,9 @@
                 showLoading(false);
             }
         });
-        
+
         // Arama Fonksiyonları — artık form submit ile çalışıyor
-        
+
         // Görselsiz ürün için hızlı yükleme
         function quickUpload(barcode, color) {
             document.getElementById('modelCode').value = barcode;
@@ -399,7 +399,7 @@
             setTimeout(() => { area.style.borderColor = ''; area.style.background = ''; }, 2000);
             fileInput.click();
         }
-        
+
         // Modal Fonksiyonları
         function viewImage(path, model, color) {
             document.getElementById('modalImage').src = path;
@@ -409,35 +409,35 @@
             `;
             new bootstrap.Modal(document.getElementById('imageModal')).show();
         }
-        
+
         function editImage(filename, model, color) {
             document.getElementById('editOriginalFilename').value = filename;
             document.getElementById('editModelCode').value = model;
             document.getElementById('editColorName').value = color;
             new bootstrap.Modal(document.getElementById('editModal')).show();
         }
-        
+
         async function saveEdit() {
             const data = {
                 old_filename: document.getElementById('editOriginalFilename').value,
                 new_model: document.getElementById('editModelCode').value.trim(),
                 new_color: document.getElementById('editColorName').value.trim()
             };
-            
+
             if (!data.new_model || !data.new_color) {
                 showAlert('Model kodu ve renk gereklidir', 'danger');
                 return;
             }
-            
+
             try {
                 const response = await fetch('/api/rename_product_image', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     showAlert(result.message, 'success');
                     bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
@@ -449,21 +449,21 @@
                 showAlert('Düzenleme sırasında hata oluştu', 'danger');
             }
         }
-        
+
         async function deleteImage(filename) {
             if (!confirm('Bu görseli silmek istediğinizden emin misiniz?')) {
                 return;
             }
-            
+
             try {
                 const response = await fetch('/api/delete_product_image', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ filename })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     showAlert(data.message, 'success');
                     setTimeout(() => location.reload(), 1500);
@@ -474,7 +474,7 @@
                 showAlert('Silme sırasında hata oluştu', 'danger');
             }
         }
-        
+
         // Yardımcı Fonksiyonlar
         function showAlert(message, type) {
             const alertDiv = document.createElement('div');
@@ -483,12 +483,10 @@
             document.querySelector('.main-container').insertBefore(alertDiv, document.querySelector('.section-card'));
             setTimeout(() => alertDiv.remove(), 5000);
         }
-        
+
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
-        
+
     </script>
-{% include 'includes/notification_popup.html' ignore missing %}
-</body>
-</html>
+{% endblock %}

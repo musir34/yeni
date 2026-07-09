@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/diag_real_mismatch.py"
 type: "code"
-community: "Barkod Alias Yardımcıları"
+community: "Community 61"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Barkod_Alias_Yardmclar
+  - community/Community_61
 ---
 
 # diag_real_mismatch.py
@@ -25,4 +25,4 @@ tags:
 - [[normalize_barcode()]] - `imports` [EXTRACTED]
 - [[service.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Barkod_Alias_Yardmclar
+#graphify/code #graphify/EXTRACTED #community/Community_61

@@ -1,22 +1,25 @@
 ---
 type: community
-cohesion: 0.29
-members: 7
+cohesion: 0.33
+members: 10
 ---
 
 # Community 86
 
-**Cohesion:** 0.29 - loosely connected
-**Members:** 7 nodes
+**Cohesion:** 0.33 - loosely connected
+**Members:** 10 nodes
 
 ## Members
-- [[.is_configured()]] - code - amazon/amazon_config.py
-- [[API ayarlarının yapılıp yapılmadığını kontrol et (AWS artık zorunlu değil)]] - rationale - amazon/amazon_config.py
-- [[Amazon ana sayfa - Dashboard]] - rationale - amazon/amazon_routes.py
-- [[Amazon ayarları sayfası]] - rationale - amazon/amazon_routes.py
-- [[index()]] - code - amazon/amazon_routes.py
-- [[settings()]] - code - amazon/amazon_routes.py
-- [[test_connection()]] - code - amazon/amazon_routes.py
+- [[_load_csv()]] - code - scripts/backfill_opening_balance.py
+- [[_parse_details()_3]] - code - scripts/measure_phantom_stock.py
+- [[backfill_opening_balance.py]] - code - scripts/backfill_opening_balance.py
+- [[barkod,adet biçimindeki CSV'yi {barcode qty} olarak yükler.]] - rationale - scripts/backfill_opening_balance.py
+- [[csv_rows()]] - code - scripts/backfill_opening_balance.py
+- [[main()_4]] - code - scripts/backfill_opening_balance.py
+- [[main()_23]] - code - scripts/measure_phantom_stock.py
+- [[measure_phantom_stock.py]] - code - scripts/measure_phantom_stock.py
+- [[run_opening()]] - code - scripts/backfill_opening_balance.py
+- [[run_reconcile()]] - code - scripts/backfill_opening_balance.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -26,11 +29,15 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 3 edges to [[_COMMUNITY_Community 47]]
-- 1 edge to [[_COMMUNITY_Community 72]]
+- 8 edges to [[_COMMUNITY_E-posta Bildirimleri]]
+- 3 edges to [[_COMMUNITY_Community 48]]
+- 2 edges to [[_COMMUNITY_Community 76]]
+- 2 edges to [[_COMMUNITY_Stok Fix Testleri & Yardımcılar]]
+- 1 edge to [[_COMMUNITY_Değişim  İade Talepleri]]
 
 ## Top bridge nodes
-- [[.is_configured()]] - degree 5, connects to 1 community
-- [[index()]] - degree 3, connects to 1 community
-- [[settings()]] - degree 3, connects to 1 community
-- [[test_connection()]] - degree 2, connects to 1 community
+- [[backfill_opening_balance.py]] - degree 12, connects to 5 communities
+- [[measure_phantom_stock.py]] - degree 6, connects to 3 communities
+- [[main()_4]] - degree 7, connects to 1 community
+- [[main()_23]] - degree 4, connects to 1 community
+- [[run_opening()]] - degree 3, connects to 1 community

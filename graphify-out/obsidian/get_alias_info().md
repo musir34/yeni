@@ -1,12 +1,12 @@
 ---
 source_file: "barcode_alias_helper.py"
 type: "code"
-community: "Barkod Alias Yardımcıları"
+community: "Community 61"
 location: "L310"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Barkod_Alias_Yardmclar
+  - community/Community_61
 ---
 
 # get_alias_info()
@@ -19,4 +19,4 @@ tags:
 - [[diag_real_mismatch.py]] - `imports` [EXTRACTED]
 - [[main()_17]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Barkod_Alias_Yardmclar
+#graphify/code #graphify/EXTRACTED #community/Community_61

@@ -1,12 +1,12 @@
 ---
 source_file: "stock_management.py"
 type: "rationale"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Barkod Alias Yardımcıları"
 location: "L28"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Barkod_Alias_Yardmclar
 ---
 
 # Tek bir barkod için CentralStock'u raflardaki toplamla senkronize eder.      Arg
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[sync_central_stock()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/rationale #graphify/EXTRACTED #community/Barkod_Alias_Yardmclar

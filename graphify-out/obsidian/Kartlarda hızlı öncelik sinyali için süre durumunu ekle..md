@@ -1,12 +1,12 @@
 ---
 source_file: "order_list_service.py"
 type: "rationale"
-community: "Barkod Üretimi & Sipariş Listesi"
+community: "Raf Yönetimi & Barkod Çakışması"
 location: "L286"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Barkod_retimi__Sipari_Listesi
+  - community/Raf_Ynetimi__Barkod_akmas
 ---
 
 # Kartlarda hızlı öncelik sinyali için süre durumunu ekle.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_decorate_order_priority()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi
+#graphify/rationale #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas

@@ -1,12 +1,12 @@
 ---
 source_file: "siparis_hazirla.py"
 type: "code"
-community: "Stok Fix Testleri & Yardımcılar"
+community: "Barkod Üretimi & Sipariş Listesi"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Stok_Fix_Testleri__Yardmclar
+  - community/Barkod_retimi__Sipari_Listesi
 ---
 
 # siparis_hazirla.py
@@ -45,4 +45,4 @@ tags:
 - [[to_ist()]] - `contains` [EXTRACTED]
 - [[weather_service.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar
+#graphify/code #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi

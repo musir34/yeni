@@ -1,39 +1,38 @@
 ---
 type: community
-cohesion: 0.12
-members: 24
+cohesion: 0.11
+members: 23
 ---
 
 # Silme & Toplu Yazdırma İşlemleri
 
-**Cohesion:** 0.12 - loosely connected
-**Members:** 24 nodes
+**Cohesion:** 0.11 - loosely connected
+**Members:** 23 nodes
 
 ## Members
-- [[Ana Kasa işlem kaydını sil ve bakiyeyi yeniden hesapla]] - rationale - kasa.py
-- [[Arşivdeki siparişi kalıcı olarak silmek.]] - rationale - archive.py
-- [[Birden fazla modele aynı tedarikçiyi ata.]] - rationale - siparis_fisi.py
-- [[Geliştirilmiş kullanıcı işlem loglama fonksiyonu          Args         action]] - rationale - user_logs.py
-- [[JavaScript'ten gelen kullanıcı hareketlerini toplu olarak kaydetmek için API end]] - rationale - user_logs.py
-- [[UserLog]] - code - models.py
-- [[ana_kasa_islem_sil()]] - code - kasa.py
-- [[api_tedarikci_sil()]] - code - siparis_fisi.py
-- [[delete_siparis_fisi()]] - code - siparis_fisi.py
-- [[extract_page_from_referrer()]] - code - user_logs.py
-- [[get_browser_info()]] - code - user_logs.py
-- [[get_platform_info()]] - code - user_logs.py
-- [[history()]] - code - stock_sync/routes.py
-- [[log_user_action()_1]] - code - user_logs.py
-- [[log_user_activity_api()]] - code - user_logs.py
-- [[remove_archived_order()]] - code - archive.py
-- [[siparis_fisi_yazdir()]] - code - siparis_fisi.py
-- [[teslimat_kaydi_ekle()]] - code - siparis_fisi.py
-- [[toplu_tedarikci_ata()]] - code - siparis_fisi.py
-- [[toplu_yazdir()]] - code - siparis_fisi.py
-- [[translate_action_type()]] - code - user_logs.py
-- [[translate_page_name()]] - code - user_logs.py
-- [[update_tedarikci()]] - code - siparis_fisi.py
-- [[user_logs.py]] - code - user_logs.py
+- [[AJAX isteğinde JSON, normal istekte redirect döner.]] - rationale - update_service.py
+- [[Hatice Göker siparişindeki ürünlerin raf konumlarını kontrol eder.]] - rationale - scripts/check_hatice_raf.py
+- [[Shopify Admin API konfigürasyonu. Yeni API client_id + client_secret ile OAuth]] - rationale - shopify_site/shopify_config.py
+- [[Shopify Admin GraphQL servis katmanı.]] - rationale - shopify_site/shopify_service.py
+- [[Shopify sipariş verisini siparis_hazirla ekranının beklediği formata dönüştürür.]] - rationale - siparis_hazirla.py
+- [[Shopify variant barkodu veya SKU'dan panel barkodunu bul.     ShopifyMapping tab]] - rationale - siparis_hazirla.py
+- [[Tek bir lineId ve quantity için (daha eski örnek). Yukarıda 'update_order_status]] - rationale - update_service.py
+- [[Trendyol API'den siparişleri asenkron olarak çeker.]] - rationale - update_service.py
+- [[_norm_bc()]] - code - update_service.py
+- [[_norm_raf()_1]] - code - update_service.py
+- [[_resolve_shopify_barcode()]] - code - siparis_hazirla.py
+- [[_respond()]] - code - update_service.py
+- [[_shopify_order_to_hazirla_format()]] - code - siparis_hazirla.py
+- [[check_hatice_raf.py]] - code - scripts/check_hatice_raf.py
+- [[confirm_packing()]] - code - update_service.py
+- [[fetch_orders_from_api()]] - code - update_service.py
+- [[main()_7]] - code - scripts/check_hatice_raf.py
+- [[resolve_panel_barcode()]] - code - scripts/check_hatice_raf.py
+- [[shelf_for()]] - code - scripts/check_hatice_raf.py
+- [[shopify_config.py]] - code - shopify_site/shopify_config.py
+- [[shopify_service.py]] - code - shopify_site/shopify_service.py
+- [[update_package_to_picking()]] - code - update_service.py
+- [[update_service.py]] - code - update_service.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -43,44 +42,36 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 13 edges to [[_COMMUNITY_Stok Senkron API]]
-- 12 edges to [[_COMMUNITY_Maliyet Fişi & Tedarikçi]]
-- 11 edges to [[_COMMUNITY_Kasa & Gelir-Gider]]
-- 9 edges to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
-- 9 edges to [[_COMMUNITY_Shopify Route Katmanı]]
-- 8 edges to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
-- 7 edges to [[_COMMUNITY_Manuel Sipariş Oluşturma]]
-- 5 edges to [[_COMMUNITY_Raf Sistemi & Etiket]]
-- 4 edges to [[_COMMUNITY_Barkod Alias Yardımcıları]]
-- 4 edges to [[_COMMUNITY_Ürün Çekme & Görsel İndirme]]
-- 4 edges to [[_COMMUNITY_Ana Kasa Defteri]]
-- 4 edges to [[_COMMUNITY_Kimlik Doğrulama & Kullanıcı Yönetimi]]
-- 3 edges to [[_COMMUNITY_Uygulama Çekirdeği & Zamanlı İşler]]
-- 3 edges to [[_COMMUNITY_Community 80]]
-- 3 edges to [[_COMMUNITY_Değişim  İade Talepleri]]
-- 3 edges to [[_COMMUNITY_Community 59]]
-- 2 edges to [[_COMMUNITY_Community 91]]
-- 2 edges to [[_COMMUNITY_Community 44]]
-- 2 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 2 edges to [[_COMMUNITY_Sipariş Denetim Kaydı (Audit Log)]]
-- 2 edges to [[_COMMUNITY_Trendyol Sipariş Çekme & Komisyon]]
-- 2 edges to [[_COMMUNITY_Community 100]]
-- 2 edges to [[_COMMUNITY_Community 75]]
-- 1 edge to [[_COMMUNITY_Agent API & Sipariş Sorguları]]
-- 1 edge to [[_COMMUNITY_Community 60]]
-- 1 edge to [[_COMMUNITY_Community 106]]
-- 1 edge to [[_COMMUNITY_Community 125]]
-- 1 edge to [[_COMMUNITY_Community 41]]
-- 1 edge to [[_COMMUNITY_Community 124]]
-- 1 edge to [[_COMMUNITY_Community 82]]
-- 1 edge to [[_COMMUNITY_Community 64]]
-- 1 edge to [[_COMMUNITY_Community 93]]
-- 1 edge to [[_COMMUNITY_Community 103]]
-- 1 edge to [[_COMMUNITY_Community 102]]
+- 10 edges to [[_COMMUNITY_Değişim  İade Talepleri]]
+- 6 edges to [[_COMMUNITY_E-posta Bildirimleri]]
+- 6 edges to [[_COMMUNITY_Barkod Üretimi & Sipariş Listesi]]
+- 3 edges to [[_COMMUNITY_Trendyol Sipariş Çekme & Komisyon]]
+- 3 edges to [[_COMMUNITY_Community 61]]
+- 3 edges to [[_COMMUNITY_Ana Kasa Defteri]]
+- 3 edges to [[_COMMUNITY_Shopify Admin Servisi]]
+- 3 edges to [[_COMMUNITY_Community 39]]
+- 2 edges to [[_COMMUNITY_Community 41]]
+- 2 edges to [[_COMMUNITY_Kasa & Gelir-Gider]]
+- 2 edges to [[_COMMUNITY_Community 69]]
+- 2 edges to [[_COMMUNITY_Community 66]]
+- 2 edges to [[_COMMUNITY_Idefix Entegrasyonu]]
+- 2 edges to [[_COMMUNITY_Community 48]]
+- 2 edges to [[_COMMUNITY_Barkod Alias Yardımcıları]]
+- 2 edges to [[_COMMUNITY_Community 42]]
+- 1 edge to [[_COMMUNITY_Stok Senkron API]]
+- 1 edge to [[_COMMUNITY_Üretim Önerisi & Satış Tahmini]]
+- 1 edge to [[_COMMUNITY_Community 76]]
+- 1 edge to [[_COMMUNITY_Stok Fix Testleri & Yardımcılar]]
+- 1 edge to [[_COMMUNITY_Community 71]]
+- 1 edge to [[_COMMUNITY_Community 74]]
+- 1 edge to [[_COMMUNITY_Community 52]]
+- 1 edge to [[_COMMUNITY_Maliyet Fişi & Tedarikçi]]
+- 1 edge to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
+- 1 edge to [[_COMMUNITY_Community 57]]
 
 ## Top bridge nodes
-- [[log_user_action()_1]] - degree 109, connects to 28 communities
-- [[user_logs.py]] - degree 29, connects to 18 communities
-- [[UserLog]] - degree 8, connects to 4 communities
-- [[remove_archived_order()]] - degree 3, connects to 1 community
-- [[ana_kasa_islem_sil()]] - degree 3, connects to 1 community
+- [[update_service.py]] - degree 32, connects to 18 communities
+- [[shopify_service.py]] - degree 13, connects to 9 communities
+- [[shopify_config.py]] - degree 10, connects to 7 communities
+- [[check_hatice_raf.py]] - degree 13, connects to 6 communities
+- [[confirm_packing()]] - degree 10, connects to 4 communities

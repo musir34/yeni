@@ -1,12 +1,12 @@
 ---
 source_file: "shopify_site/shopify_routes.py"
 type: "rationale"
-community: "Shopify Route Katmanı"
+community: "Idefix Entegrasyonu"
 location: "L200"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Shopify_Route_Katman
+  - community/Idefix_Entegrasyonu
 ---
 
 # Siparisi odendi olarak isaretle.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[mark_order_paid()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Shopify_Route_Katman
+#graphify/rationale #graphify/EXTRACTED #community/Idefix_Entegrasyonu

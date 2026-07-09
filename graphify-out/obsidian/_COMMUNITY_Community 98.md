@@ -1,20 +1,21 @@
 ---
 type: community
-cohesion: 0.80
-members: 5
+cohesion: 0.33
+members: 6
 ---
 
 # Community 98
 
-**Cohesion:** 0.80 - tightly connected
-**Members:** 5 nodes
+**Cohesion:** 0.33 - loosely connected
+**Members:** 6 nodes
 
 ## Members
-- [[_barcodes_for()]] - code - scripts/trace_orders_phantom.py
-- [[_locate()_1]] - code - scripts/trace_orders_phantom.py
-- [[_prod_label()]] - code - scripts/trace_orders_phantom.py
-- [[main()_30]] - code - scripts/trace_orders_phantom.py
-- [[trace_orders_phantom.py]] - code - scripts/trace_orders_phantom.py
+- [[Bir modelin tüm varyantlarının satış fiyatını günceller]] - rationale - get_products.py
+- [[Trendyol'da toplu fiyat güncelleme yapar]] - rationale - get_products.py
+- [[update_model_price()]] - code - get_products.py
+- [[update_prices_in_trendyol_bulk()]] - code - get_products.py
+- [[update_product_prices()]] - code - get_products.py
+- [[Ürün varyantlarının satış fiyatlarını günceller]] - rationale - get_products.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -24,14 +25,10 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 5 edges to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
-- 2 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 1 edge to [[_COMMUNITY_Uygulama Çekirdeği & Zamanlı İşler]]
-- 1 edge to [[_COMMUNITY_Community 38]]
-- 1 edge to [[_COMMUNITY_Stok Hareket Defteri (Ledger)]]
-- 1 edge to [[_COMMUNITY_Sipariş Denetim Kaydı (Audit Log)]]
-- 1 edge to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
-- 1 edge to [[_COMMUNITY_Community 50]]
+- 3 edges to [[_COMMUNITY_Hepsiburada Route Katmanı]]
+- 2 edges to [[_COMMUNITY_Community 42]]
 
 ## Top bridge nodes
-- [[trace_orders_phantom.py]] - degree 17, connects to 8 communities
+- [[update_model_price()]] - degree 4, connects to 2 communities
+- [[update_product_prices()]] - degree 4, connects to 2 communities
+- [[update_prices_in_trendyol_bulk()]] - degree 4, connects to 1 community

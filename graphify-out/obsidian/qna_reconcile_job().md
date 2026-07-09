@@ -1,12 +1,12 @@
 ---
 source_file: "app.py"
 type: "code"
-community: "Uygulama Çekirdeği & Zamanlı İşler"
+community: "Stok Senkron API"
 location: "L351"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Uygulama_ekirdei__Zamanl_ler
+  - community/Stok_Senkron_API
 ---
 
 # qna_reconcile_job()
@@ -17,4 +17,4 @@ tags:
 - [[schedule_jobs()]] - `indirect_call` [INFERRED]
 - [[sync_questions()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Uygulama_ekirdei__Zamanl_ler
+#graphify/code #graphify/EXTRACTED #community/Stok_Senkron_API

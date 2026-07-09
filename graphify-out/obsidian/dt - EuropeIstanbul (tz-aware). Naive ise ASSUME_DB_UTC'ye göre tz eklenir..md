@@ -1,12 +1,12 @@
 ---
 source_file: "canli_panel.py"
 type: "rationale"
-community: "Canlı Panel (SSE)"
+community: "Community 129"
 location: "L61"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Canl_Panel_SSE
+  - community/Community_129
 ---
 
 # dt -> Europe/Istanbul (tz-aware). Naive ise ASSUME_DB_UTC'ye göre tz eklenir.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_to_ist_aware()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Canl_Panel_SSE
+#graphify/rationale #graphify/EXTRACTED #community/Community_129

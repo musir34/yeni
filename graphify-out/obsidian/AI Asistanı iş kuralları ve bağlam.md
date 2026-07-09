@@ -1,11 +1,11 @@
 ---
 source_file: "ai_asistan/IS_KURALLARI.md"
 type: "document"
-community: "Community 51"
+community: "Community 56"
 tags:
   - graphify/document
   - graphify/INFERRED
-  - community/Community_51
+  - community/Community_56
 ---
 
 # AI Asistanı iş kuralları ve bağlam
@@ -14,4 +14,4 @@ tags:
 - [[AI Asistanı iş kavramları özeti]] - `semantically_similar_to` [INFERRED]
 - [[AI Asistanı örnek sorular]] - `conceptually_related_to` [INFERRED]
 
-#graphify/document #graphify/INFERRED #community/Community_51
+#graphify/document #graphify/INFERRED #community/Community_56

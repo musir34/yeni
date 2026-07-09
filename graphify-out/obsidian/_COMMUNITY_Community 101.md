@@ -1,19 +1,21 @@
 ---
 type: community
-cohesion: 0.50
-members: 4
+cohesion: 0.53
+members: 6
 ---
 
 # Community 101
 
-**Cohesion:** 0.50 - moderately connected
-**Members:** 4 nodes
+**Cohesion:** 0.53 - moderately connected
+**Members:** 6 nodes
 
 ## Members
-- [[Dashboard istatistikleri.]] - rationale - shopify_site/shopify_routes.py
-- [[Shopify stok senkronizasyon sayfası.]] - rationale - shopify_site/shopify_routes.py
-- [[get_stats()]] - code - shopify_site/shopify_routes.py
-- [[stock_sync_dashboard()]] - code - shopify_site/shopify_routes.py
+- [[Path_1]] - code
+- [[Trendyol Ürün Sorularınız Excel dışa aktarımlarını Soru-Cevap AI bilgi bankası]] - rationale - scripts/import_qna_excel.py
+- [[import_qna_excel.py]] - code - scripts/import_qna_excel.py
+- [[kategori()]] - code - scripts/import_qna_excel.py
+- [[main()_22]] - code - scripts/import_qna_excel.py
+- [[oku()]] - code - scripts/import_qna_excel.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -21,11 +23,3 @@ members: 4
 TABLE source_file, type FROM #community/Community_101
 SORT file.name ASC
 ```
-
-## Connections to other communities
-- 2 edges to [[_COMMUNITY_Shopify Route Katmanı]]
-- 1 edge to [[_COMMUNITY_Anasayfa Özet & Sayımlar]]
-
-## Top bridge nodes
-- [[stock_sync_dashboard()]] - degree 4, connects to 2 communities
-- [[get_stats()]] - degree 3, connects to 1 community

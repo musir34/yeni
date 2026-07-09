@@ -1,11 +1,11 @@
 ---
 source_file: "templates/maliyet_fisi_print.html"
 type: "concept"
-community: "Community 89"
+community: "Community 38"
 tags:
   - graphify/concept
   - graphify/INFERRED
-  - community/Community_89
+  - community/Community_38
 ---
 
 # Maliyet Fişi Yazdırma
@@ -14,4 +14,4 @@ tags:
 - [[Boş Teslimat Fişi Yazdırma]] - `semantically_similar_to` [INFERRED]
 - [[Tedarik Bilgileri (Sipariş Fişi) Sayfası]] - `references` [EXTRACTED]
 
-#graphify/concept #graphify/INFERRED #community/Community_89
+#graphify/concept #graphify/INFERRED #community/Community_38

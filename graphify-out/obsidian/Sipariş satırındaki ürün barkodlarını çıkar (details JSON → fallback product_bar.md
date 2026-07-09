@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/audit_today_picking.py"
 type: "rationale"
-community: "Barkod Üretimi & Sipariş Listesi"
+community: "Community 105"
 location: "L48"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Barkod_retimi__Sipari_Listesi
+  - community/Community_105
 ---
 
 # Sipariş satırındaki ürün barkodlarını çıkar (details JSON → fallback product_bar
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_parse_barcodes()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi
+#graphify/rationale #graphify/EXTRACTED #community/Community_105

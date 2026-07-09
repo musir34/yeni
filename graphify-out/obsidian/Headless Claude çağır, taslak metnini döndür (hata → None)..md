@@ -1,12 +1,12 @@
 ---
 source_file: "trendyol_qna/qna_ai.py"
 type: "rationale"
-community: "Community 58"
+community: "Community 62"
 location: "L57"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_58
+  - community/Community_62
 ---
 
 # Headless Claude çağır, taslak metnini döndür (hata → None).
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_run_claude()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_58
+#graphify/rationale #graphify/EXTRACTED #community/Community_62

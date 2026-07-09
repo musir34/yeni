@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/audit_today_picking.py"
 type: "code"
-community: "Barkod Üretimi & Sipariş Listesi"
+community: "Community 105"
 location: "L47"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Barkod_retimi__Sipari_Listesi
+  - community/Community_105
 ---
 
 # _parse_barcodes()
@@ -17,4 +17,4 @@ tags:
 - [[main()_2]] - `calls` [EXTRACTED]
 - [[normalize_barcode()_1]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi
+#graphify/code #graphify/EXTRACTED #community/Community_105

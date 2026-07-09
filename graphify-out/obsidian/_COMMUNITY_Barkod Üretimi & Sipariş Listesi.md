@@ -1,71 +1,65 @@
 ---
 type: community
-cohesion: 0.06
-members: 56
+cohesion: 0.08
+members: 50
 ---
 
 # Barkod Üretimi & Sipariş Listesi
 
-**Cohesion:** 0.06 - loosely connected
-**Members:** 56 nodes
+**Cohesion:** 0.08 - loosely connected
+**Members:** 50 nodes
 
 ## Members
-- [[Barkodun altına yazıyı ekler (Pillow 10+ uyumlu).]] - rationale - barcode_utils.py
-- [[Benzersiz order_number sayfalaması için aggregate sıralama üretir.]] - rationale - order_list_service.py
-- [[Beş tabloda ortak kolonları seçip UNION ALL ile birleştirir.]] - rationale - order_list_service.py
-- [[Dosyaya KAYDETMEDEN barkodu base64 (data URI) olarak döndürür.     show_text=Fal]] - rationale - barcode_utils.py
-- [[Geciken siparişleri normal listeden ayırmak için order_number kümesi.]] - rationale - order_list_service.py
-- [[Geri uyumlu fonksiyon barkodu DOSYAYA kaydeder, STATIC'e göre RELATIF path döne]] - rationale - barcode_utils.py
-- [[Her sipariş için 'details' alanını işleyerek ve Product tablosundan sorgu yapara]] - rationale - order_list_service.py
-- [[Kargo barkodu için QR kod oluşturur ve statik klasöre kaydeder.]] - rationale - order_list_service.py
-- [[Kartlarda hızlı öncelik sinyali için süre durumunu ekle.]] - rationale - order_list_service.py
-- [[Query param'dan güvenli sıralama anahtarı döndürür (whitelist).]] - rationale - order_list_service.py
-- [[Sayfa başına sipariş adedini güvenli seçeneklerle sınırla.]] - rationale - order_list_service.py
-- [[Sipariş satırındaki ürün barkodlarını çıkar (details JSON → fallback product_bar]] - rationale - scripts/audit_today_picking.py
-- [[Sıralama anahtarına göre SQLAlchemy order_by ifadesi üretir.      deadline_ seç]] - rationale - order_list_service.py
-- [[YeniHazırlanıyorİşleme statülerindeki teslim süresi geçmiş (geciken) siparişle]] - rationale - order_list_service.py
-- [[_append_details()]] - code - order_list_service.py
-- [[_decorate_order_priority()]] - code - order_list_service.py
-- [[_draw_text_below()]] - code - barcode_utils.py
-- [[_get_order_pull_enabled()]] - code - order_list_service.py
-- [[_get_overdue_orders()]] - code - order_list_service.py
-- [[_get_per_page()]] - code - order_list_service.py
-- [[_get_sort_key()]] - code - order_list_service.py
-- [[_group_sort_clause()]] - code - order_list_service.py
-- [[_merge_order_rows()]] - code - order_list_service.py
-- [[_normalize_details()]] - code - order_list_service.py
-- [[_overdue_order_numbers()]] - code - order_list_service.py
-- [[_page_bounds()_1]] - code - order_list_service.py
-- [[_parse_barcodes()]] - code - scripts/audit_today_picking.py
-- [[_sort_clause()]] - code - order_list_service.py
-- [[api_toggle_order_pull()]] - code - order_list_service.py
-- [[audit_today_picking.py]] - code - scripts/audit_today_picking.py
-- [[barcode_utils.py]] - code - barcode_utils.py
-- [[generate_barcode()]] - code - barcode_utils.py
-- [[generate_barcode_data_uri()]] - code - barcode_utils.py
-- [[generate_qr_code()_1]] - code - order_list_service.py
-- [[get_cancelled_orders()]] - code - order_service.py
-- [[get_delivered_orders()]] - code - order_service.py
-- [[get_filtered_orders()]] - code - order_list_service.py
-- [[get_new_orders()]] - code - order_service.py
-- [[get_order_list()]] - code - order_list_service.py
-- [[get_picking_orders()]] - code - order_service.py
-- [[get_product_image()_1]] - code - order_list_service.py
-- [[get_shipped_orders()]] - code - order_service.py
-- [[get_union_all_orders()]] - code - order_list_service.py
-- [[main()_2]] - code - scripts/audit_today_picking.py
-- [[normalize_barcode()_1]] - code - scripts/audit_today_picking.py
-- [[order_label()]] - code - order_list_service.py
-- [[order_list_all()]] - code - order_list_service.py
-- [[order_list_cancelled()]] - code - order_list_service.py
-- [[order_list_delivered()]] - code - order_list_service.py
-- [[order_list_hazirlaniyor()]] - code - order_list_service.py
-- [[order_list_new()]] - code - order_list_service.py
-- [[order_list_processed()]] - code - order_list_service.py
-- [[order_list_service.py]] - code - order_list_service.py
-- [[order_list_shipped()]] - code - order_list_service.py
-- [[process_order_details()]] - code - order_list_service.py
-- [[Ürün barkoduna göre resim dosyası yolunu döndürür.]] - rationale - order_list_service.py
+- [['İşleme Alındı' statüsündeki değişimler için mesaj + max saat.     Dönüş (messa]] - rationale - siparis_hazirla.py
+- [[Bir ürün için raf listesi ve öneriuyarı bayrakları üretir.      atanan_raf Sip]] - rationale - siparis_hazirla.py
+- [[Hava durumu bilgisini formatlanmış string olarak döner]] - rationale - weather_service.py
+- [[Hava durumu koduna göre emoji döner     Open-Meteo WMO Weather Codes     https]] - rationale - weather_service.py
+- [[Hazırlama kuyruğu = Hazırlanıyor (stoğu teyit edilmiş) siparişler.]] - rationale - siparis_hazirla.py
+- [[Kapıda ödeme siparişi mi kontrol et.]] - rationale - siparis_hazirla.py
+- [[Naive ise IST varsay, aware ise IST'ye çevir._1]] - rationale - siparis_hazirla.py
+- [[Open-Meteo API'den hava durumu verisini çeker     TAMAMEN ÜCRETSİZ - API KEY GER]] - rationale - weather_service.py
+- [[Raf]] - code - models.py
+- [[Shopify'dan beklemedeki siparişleri çek.     - Ödemesi onaylanmış (PAID) sipariş]] - rationale - siparis_hazirla.py
+- [[Stok düzeltmelerinin uçtan uca test scripti.  Test edilen değişiklikler   1) or]] - rationale - scripts/test_stok_fixleri.py
+- [[Sıradaki siparişlerin özet bilgilerini döndürür.     Aktif sipariş hariç, en faz]] - rationale - siparis_hazirla.py
+- [[Türkiye saati ile tarih formatı]] - rationale - app.py
+- [[WMO Weather Code'u Türkçe açıklamaya çevirir     Open-Meteo WMO kodları]] - rationale - weather_service.py
+- [[_build_raf_payload()]] - code - siparis_hazirla.py
+- [[_fetch_shopify_beklemede_orders()]] - code - siparis_hazirla.py
+- [[_install_sqlite_udfs()]] - code - scripts/test_stok_fixleri.py
+- [[_is_cod_order()]] - code - siparis_hazirla.py
+- [[_prep_model()_1]] - code - siparis_hazirla.py
+- [[calculate_remaining_time()]] - code - siparis_hazirla.py
+- [[default_order_data()]] - code - siparis_hazirla.py
+- [[expect()]] - code - scripts/test_stok_fixleri.py
+- [[fetch_weather_data()]] - code - weather_service.py
+- [[format_datetime_filter()]] - code - app.py
+- [[format_weather_info()]] - code - weather_service.py
+- [[get_archive_warnings()]] - code - siparis_hazirla.py
+- [[get_exchange_warnings()]] - code - siparis_hazirla.py
+- [[get_home()]] - code - siparis_hazirla.py
+- [[get_istanbul_time()]] - code - weather_service.py
+- [[get_product_image()_2]] - code - siparis_hazirla.py
+- [[get_queue_orders()]] - code - siparis_hazirla.py
+- [[get_weather_description_tr()]] - code - weather_service.py
+- [[get_weather_icon_emoji()]] - code - weather_service.py
+- [[get_weather_info()]] - code - weather_service.py
+- [[index()_7]] - code - siparis_hazirla.py
+- [[main()_27]] - code - scripts/test_stok_fixleri.py
+- [[order_number verilirse o siparişi yükler (manuel mod).     Verilmezse en eski 'C]] - rationale - siparis_hazirla.py
+- [[reset_db()]] - code - scripts/test_stok_fixleri.py
+- [[siparis_hazirla.py]] - code - siparis_hazirla.py
+- [[test_build_raf_payload()]] - code - scripts/test_stok_fixleri.py
+- [[test_code_changes_present()]] - code - scripts/test_stok_fixleri.py
+- [[test_get_home_atanan_raf_bosaldi()]] - code - scripts/test_stok_fixleri.py
+- [[test_get_home_stok_yok()]] - code - scripts/test_stok_fixleri.py
+- [[test_get_home_with_atanan_raf()]] - code - scripts/test_stok_fixleri.py
+- [[test_stok_fixleri.py]] - code - scripts/test_stok_fixleri.py
+- [[test_template_render()]] - code - scripts/test_stok_fixleri.py
+- [[to_ist()]] - code - siparis_hazirla.py
+- [[weather_service.py]] - code - weather_service.py
+- [[Önbellekli hava durumu bilgisini döner     5 dakikada bir güncellenir]] - rationale - weather_service.py
+- [[İstanbul saatini döner]] - rationale - weather_service.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -75,25 +69,32 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 12 edges to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
-- 9 edges to [[_COMMUNITY_Trendyol Sipariş Çekme & Komisyon]]
-- 3 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 3 edges to [[_COMMUNITY_Anasayfa Özet & Sayımlar]]
-- 2 edges to [[_COMMUNITY_Yeni Sipariş Hazırlama & Toplama]]
-- 2 edges to [[_COMMUNITY_Community 50]]
-- 2 edges to [[_COMMUNITY_Community 75]]
-- 2 edges to [[_COMMUNITY_Manuel Sipariş Oluşturma]]
-- 1 edge to [[_COMMUNITY_Uygulama Çekirdeği & Zamanlı İşler]]
-- 1 edge to [[_COMMUNITY_Ürün Çekme & Görsel İndirme]]
-- 1 edge to [[_COMMUNITY_Community 38]]
-- 1 edge to [[_COMMUNITY_Stok Hareket Defteri (Ledger)]]
+- 10 edges to [[_COMMUNITY_Değişim  İade Talepleri]]
+- 8 edges to [[_COMMUNITY_E-posta Bildirimleri]]
+- 6 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
+- 5 edges to [[_COMMUNITY_Kasa & Gelir-Gider]]
+- 3 edges to [[_COMMUNITY_Community 66]]
+- 3 edges to [[_COMMUNITY_Community 67]]
+- 3 edges to [[_COMMUNITY_Community 61]]
+- 3 edges to [[_COMMUNITY_Yeni Sipariş Hazırlama & Toplama]]
+- 2 edges to [[_COMMUNITY_Stok Senkron API]]
+- 2 edges to [[_COMMUNITY_Community 76]]
+- 2 edges to [[_COMMUNITY_Barkod Alias Yardımcıları]]
+- 2 edges to [[_COMMUNITY_Community 52]]
+- 2 edges to [[_COMMUNITY_Canlı Panel (SSE)]]
+- 2 edges to [[_COMMUNITY_Trendyol Sipariş Çekme & Komisyon]]
+- 2 edges to [[_COMMUNITY_Üretim Önerisi & Satış Tahmini]]
+- 2 edges to [[_COMMUNITY_Kimlik Doğrulama & Kullanıcı Yönetimi]]
+- 2 edges to [[_COMMUNITY_Ana Kasa Defteri]]
+- 2 edges to [[_COMMUNITY_Community 39]]
+- 2 edges to [[_COMMUNITY_Hepsiburada Servisi]]
 - 1 edge to [[_COMMUNITY_Sipariş Denetim Kaydı (Audit Log)]]
-- 1 edge to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
-- 1 edge to [[_COMMUNITY_Community 64]]
+- 1 edge to [[_COMMUNITY_Community 69]]
+- 1 edge to [[_COMMUNITY_Community 71]]
 
 ## Top bridge nodes
-- [[order_list_service.py]] - degree 45, connects to 8 communities
-- [[audit_today_picking.py]] - degree 11, connects to 7 communities
-- [[get_filtered_orders()]] - degree 24, connects to 2 communities
-- [[process_order_details()]] - degree 12, connects to 1 community
-- [[generate_barcode_data_uri()]] - degree 7, connects to 1 community
+- [[siparis_hazirla.py]] - degree 32, connects to 11 communities
+- [[test_stok_fixleri.py]] - degree 22, connects to 8 communities
+- [[Raf]] - degree 19, connects to 7 communities
+- [[reset_db()]] - degree 10, connects to 4 communities
+- [[get_istanbul_time()]] - degree 14, connects to 3 communities

@@ -1,12 +1,12 @@
 ---
 source_file: "routes/common/health.py"
 type: "code"
-community: "Community 64"
+community: "Community 71"
 location: "L6"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_64
+  - community/Community_71
 ---
 
 # health_check()
@@ -15,4 +15,4 @@ tags:
 - [[Livenessreadiness probe endpoint]] - `rationale_for` [EXTRACTED]
 - [[health.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_64
+#graphify/code #graphify/EXTRACTED #community/Community_71

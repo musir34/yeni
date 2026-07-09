@@ -1,12 +1,12 @@
 ---
 source_file: "amazon/amazon_routes.py"
 type: "code"
-community: "Community 117"
+community: "Community 123"
 location: "L282"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_117
+  - community/Community_123
 ---
 
 # api_auto_match()
@@ -15,4 +15,4 @@ tags:
 - [[SKU-barkod benzerliğine göre otomatik eşleştir]] - `rationale_for` [EXTRACTED]
 - [[amazon_routes.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_117
+#graphify/code #graphify/EXTRACTED #community/Community_123

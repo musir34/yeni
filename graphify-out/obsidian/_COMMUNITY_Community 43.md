@@ -1,35 +1,35 @@
 ---
 type: community
-cohesion: 0.15
+cohesion: 0.14
 members: 20
 ---
 
 # Community 43
 
-**Cohesion:** 0.15 - loosely connected
+**Cohesion:** 0.14 - loosely connected
 **Members:** 20 nodes
 
 ## Members
-- [[Bilgi Bankasi (Knowledge base fitshippingreturns)]] - concept - trendyol_qna/CEVAP_KURALLARI.md
-- [[Central Stock Page]] - concept - templates/stock_sync/central_stock.html
-- [[Mandatory Gullu Shoes signature rule]] - concept - trendyol_qna/CEVAP_KURALLARI.md
-- [[No external platformoff-platform redirect rule]] - rationale - trendyol_qna/CEVAP_KURALLARI.md
-- [[No personalcontact data rule]] - rationale - trendyol_qna/CEVAP_KURALLARI.md
-- [[Price Compare APIExport endpoints]] - code - templates/shopify/price_compare.html
-- [[Shopify Order Management Page]] - concept - templates/shopify/orders.html
-- [[Shopify Orders API (shopifyapiorders)]] - code - templates/shopify/orders.html
-- [[Shopify Stock Synchronization Page]] - concept - templates/shopify/stock_sync.html
-- [[Shopify mappingsmatch-barcodespush-stock API]] - code - templates/shopify/stock_sync.html
-- [[Shopify-Trendyol Price Comparison Page]] - concept - templates/shopify/price_compare.html
-- [[Stock Questions rule (ground answer in live stock)]] - concept - trendyol_qna/CEVAP_KURALLARI.md
-- [[Stock Sync Dashboard]] - concept - templates/stock_sync/dashboard.html
-- [[Stock Sync Error Page]] - concept - templates/stock_sync/error.html
-- [[Stock Sync History Page]] - concept - templates/stock_sync/history.html
-- [[Stock Sync Session Detail Page]] - concept - templates/stock_sync/session_detail.html
-- [[Stock-sync API (statsstatussyncintegrity-check)]] - code - templates/stock_sync/dashboard.html
-- [[Trendyol Q&A Answer Rules]] - document - trendyol_qna/CEVAP_KURALLARI.md
-- [[Uslup (Tone warm, short, minimal emoji)]] - concept - trendyol_qna/CEVAP_KURALLARI.md
-- [[base.html Layout]] - code - templates/shopify/orders.html
+- [[API endpoint for deleting all variants of a product by model ID and color]] - rationale - get_products.py
+- [[Başarılı API yanıtı oluşturur.          Args         message (str) Başarı mesa]] - rationale - utils.py
+- [[Hata API yanıtı oluşturur.          Args         message (str) Hata mesajı]] - rationale - utils.py
+- [[Kayıt bulunamadı yanıtı oluşturur.          Args         resource (str) Buluna]] - rationale - utils.py
+- [[Sayfalı veri yanıtı oluşturur.          Args         items (list) Mevcut sayfa]] - rationale - utils.py
+- [[Sunucu hatası yanıtı oluşturur.          Args         message (str) Hata mesaj]] - rationale - utils.py
+- [[Utilities Module - Standart Response Fonksiyonları =============================]] - rationale - utils.py
+- [[Validasyon hatası yanıtı oluşturur.          Args         errors (dict) Alan a]] - rationale - utils.py
+- [[Yetkisiz erişim yanıtı oluşturur.          Args         message (str) Hata mes]] - rationale - utils.py
+- [[conflict_response()]] - code - utils.py
+- [[delete_product_api()]] - code - get_products.py
+- [[error_response()]] - code - utils.py
+- [[not_found_response()]] - code - utils.py
+- [[paginated_response()]] - code - utils.py
+- [[server_error_response()]] - code - utils.py
+- [[success_response()]] - code - utils.py
+- [[unauthorized_response()]] - code - utils.py
+- [[utils.py]] - code - utils.py
+- [[validation_error_response()]] - code - utils.py
+- [[Çakışmatekrar yanıtı oluşturur.          Args         message (str) Hata mesa]] - rationale - utils.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -37,3 +37,13 @@ members: 20
 TABLE source_file, type FROM #community/Community_43
 SORT file.name ASC
 ```
+
+## Connections to other communities
+- 4 edges to [[_COMMUNITY_Hepsiburada Route Katmanı]]
+- 1 edge to [[_COMMUNITY_Community 42]]
+
+## Top bridge nodes
+- [[delete_product_api()]] - degree 6, connects to 2 communities
+- [[error_response()]] - degree 8, connects to 1 community
+- [[success_response()]] - degree 5, connects to 1 community
+- [[validation_error_response()]] - degree 5, connects to 1 community

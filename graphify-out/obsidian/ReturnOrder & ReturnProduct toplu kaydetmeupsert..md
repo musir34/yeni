@@ -1,12 +1,12 @@
 ---
 source_file: "iade_islemleri.py"
 type: "rationale"
-community: "Community 44"
+community: "Maliyet Fişi & Tedarikçi"
 location: "L121"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_44
+  - community/Maliyet_Fii__Tedariki
 ---
 
 # ReturnOrder & ReturnProduct toplu kaydetme/upsert.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[save_to_database()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_44
+#graphify/rationale #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki

@@ -1,17 +1,16 @@
 ---
 source_file: "templates/order_label.html"
 type: "concept"
-community: "Community 88"
+community: "Community 136"
 tags:
   - graphify/concept
   - graphify/INFERRED
-  - community/Community_88
+  - community/Community_136
 ---
 
 # Kargo Etiketi Yazdırma
 
 ## Connections
 - [[Sipariş Etiketleri Toplu Yazdırma]] - `semantically_similar_to` [INFERRED]
-- [[Sipariş Takip Listesi]] - `references` [INFERRED]
 
-#graphify/concept #graphify/INFERRED #community/Community_88
+#graphify/concept #graphify/INFERRED #community/Community_136

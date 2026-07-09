@@ -10,7 +10,7 @@ members: 1
 **Members:** 1 nodes
 
 ## Members
-- [[İki Adımlı Doğrulama (TOTP) Sayfası]] - concept - templates/verify_totp.html
+- [[Lokal geliştirme SSH DB tüneli]] - rationale - memory/2026-07-09-ortak-css-faz1-ve-db-tuneli.md
 
 ## Live Query (requires Dataview plugin)
 

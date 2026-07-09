@@ -1,12 +1,12 @@
 ---
 source_file: "agent_api.py"
 type: "code"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "E-posta Bildirimleri"
 location: "L169"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/E-posta_Bildirimleri
 ---
 
 # list_orders()
@@ -21,4 +21,4 @@ tags:
 - [[_order_to_dict()]] - `calls` [EXTRACTED]
 - [[agent_api.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/code #graphify/INFERRED #community/E-posta_Bildirimleri

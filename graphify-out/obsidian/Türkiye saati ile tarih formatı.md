@@ -1,12 +1,12 @@
 ---
 source_file: "app.py"
 type: "rationale"
-community: "Stok Fix Testleri & Yardımcılar"
+community: "Barkod Üretimi & Sipariş Listesi"
 location: "L103"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Stok_Fix_Testleri__Yardmclar
+  - community/Barkod_retimi__Sipari_Listesi
 ---
 
 # Türkiye saati ile tarih formatı
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[format_datetime_filter()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar
+#graphify/rationale #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi

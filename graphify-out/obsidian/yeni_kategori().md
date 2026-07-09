@@ -1,12 +1,12 @@
 ---
 source_file: "kasa.py"
 type: "code"
-community: "Kasa & Gelir-Gider"
+community: "Community 42"
 location: "L878"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Kasa__Gelir-Gider
+  - community/Community_42
 ---
 
 # yeni_kategori()
@@ -16,4 +16,4 @@ tags:
 - [[kasa.py]] - `contains` [EXTRACTED]
 - [[log_user_action()_1]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Kasa__Gelir-Gider
+#graphify/code #graphify/EXTRACTED #community/Community_42

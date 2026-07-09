@@ -1,12 +1,12 @@
 ---
 source_file: "iade_islemleri.py"
 type: "code"
-community: "Community 44"
+community: "Maliyet Fişi & Tedarikçi"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_44
+  - community/Maliyet_Fii__Tedariki
 ---
 
 # iade_islemleri.py
@@ -35,4 +35,4 @@ tags:
 - [[user_logs.py]] - `imports_from` [EXTRACTED]
 - [[with_db_session()]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_44
+#graphify/code #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki

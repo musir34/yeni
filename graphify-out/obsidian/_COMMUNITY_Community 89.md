@@ -1,22 +1,23 @@
 ---
 type: community
-cohesion: 0.38
-members: 7
+cohesion: 0.25
+members: 8
 ---
 
 # Community 89
 
-**Cohesion:** 0.38 - loosely connected
-**Members:** 7 nodes
+**Cohesion:** 0.25 - loosely connected
+**Members:** 8 nodes
 
 ## Members
-- [[Barkod Etiketleri Yazdırma]] - concept - templates/siparis_fisi_barkod_print.html
-- [[Basit Ürün Etiket Yazdırma]] - concept - templates/product_label_simple.html
-- [[Boş Teslimat Fişi Yazdırma]] - concept - templates/siparis_fisi_bos_print.html
-- [[Maliyet Fişi Yazdırma]] - concept - templates/maliyet_fisi_print.html
-- [[Siparis Fisi Blueprint]] - code - templates/siparis_fisi.html
-- [[Tedarik Bilgileri (Sipariş Fişi) Sayfası]] - concept - templates/siparis_fisi.html
-- [[Ürün QR Etiketi Oluşturma]] - concept - templates/product_label.html
+- [[Aktif kullanıcı tam doğrulanmış (login + 2FA) yönetici mi]] - rationale - ai_asistan/blueprint.py
+- [[Derinlemesine savunma app-level check_authentication zaten 2FA'sız     istekler]] - rationale - ai_asistan/blueprint.py
+- [[Her HTML sayfasının sonuna, kullanıcı yönetici ise AI widget'ını ekle.     Böyle]] - rationale - ai_asistan/blueprint.py
+- [[Kullanıcı girişi TAMAMLAMIŞ mı login + 2FA (TOTP) doğrulaması.     Rol bilgisi]] - rationale - ai_asistan/blueprint.py
+- [[_iki_adim_kalkani()]] - code - ai_asistan/blueprint.py
+- [[_tam_dogrulanmis_mi()]] - code - ai_asistan/blueprint.py
+- [[_widget_enjekte()]] - code - ai_asistan/blueprint.py
+- [[_yonetici_mi()]] - code - ai_asistan/blueprint.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -26,8 +27,10 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 3 edges to [[_COMMUNITY_Community 48]]
+- 4 edges to [[_COMMUNITY_Raf Sistemi & Etiket]]
 
 ## Top bridge nodes
-- [[Tedarik Bilgileri (Sipariş Fişi) Sayfası]] - degree 6, connects to 1 community
-- [[Ürün QR Etiketi Oluşturma]] - degree 3, connects to 1 community
+- [[_tam_dogrulanmis_mi()]] - degree 4, connects to 1 community
+- [[_yonetici_mi()]] - degree 4, connects to 1 community
+- [[_iki_adim_kalkani()]] - degree 3, connects to 1 community
+- [[_widget_enjekte()]] - degree 3, connects to 1 community

@@ -1,12 +1,12 @@
 ---
 source_file: "trendyol_qna/qna_routes.py"
 type: "code"
-community: "Community 42"
+community: "Community 45"
 location: "L158"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Community_42
+  - community/Community_45
 ---
 
 # taslak_durum()
@@ -15,4 +15,4 @@ tags:
 - [[TrendyolQuestion]] - `indirect_call` [INFERRED]
 - [[qna_routes.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Community_42
+#graphify/code #graphify/INFERRED #community/Community_45

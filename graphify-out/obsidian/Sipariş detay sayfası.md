@@ -1,12 +1,12 @@
 ---
 source_file: "amazon/amazon_routes.py"
 type: "rationale"
-community: "Community 121"
+community: "Community 127"
 location: "L69"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_121
+  - community/Community_127
 ---
 
 # Sipariş detay sayfası
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[order_detail()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_121
+#graphify/rationale #graphify/EXTRACTED #community/Community_127

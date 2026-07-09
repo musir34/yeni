@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/adapters/trendyol.py"
 type: "code"
-community: "Community 71"
+community: "Community 81"
 location: "L18"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_71
+  - community/Community_81
 ---
 
 # TrendyolAdapter
@@ -25,4 +25,4 @@ tags:
 - [[service.py]] - `imports` [EXTRACTED]
 - [[trendyol.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_71
+#graphify/code #graphify/EXTRACTED #community/Community_81

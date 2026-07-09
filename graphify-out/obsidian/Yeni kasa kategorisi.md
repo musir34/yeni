@@ -1,17 +1,16 @@
 ---
 source_file: "templates/kasa_kategori_yeni.html"
 type: "concept"
-community: "Community 90"
+community: "Community 135"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_90
+  - community/Community_135
 ---
 
 # Yeni kasa kategorisi
 
 ## Connections
 - [[Kasa kategorileri yönetimi]] - `references` [EXTRACTED]
-- [[kasa blueprint (backend)]] - `references` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_90
+#graphify/concept #graphify/EXTRACTED #community/Community_135

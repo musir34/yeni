@@ -1,12 +1,12 @@
 ---
 source_file: "stock_alert_service.py"
 type: "rationale"
-community: "E-posta Bildirimleri"
+community: "Sipariş Yaşam Döngüsü & Arşiv"
 location: "L24"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/E-posta_Bildirimleri
+  - community/Sipari_Yaam_Dngs__Ariv
 ---
 
 # OrderCreated → mail için sipariş bilgisi (sipariş no, müşteri, ürünler).
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_order_to_info()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/E-posta_Bildirimleri
+#graphify/rationale #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv

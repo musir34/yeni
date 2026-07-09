@@ -1,12 +1,12 @@
 ---
 source_file: "siparis_fisi.py"
 type: "rationale"
-community: "Maliyet Fişi & Tedarikçi"
+community: "Veri Modelleri (SQLAlchemy)"
 location: "L968"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Maliyet_Fii__Tedariki
+  - community/Veri_Modelleri_SQLAlchemy
 ---
 
 # Canlı panelden seçilen kartların satış adetlerine göre     otomatik tedarik sipa
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[tedarik_olustur_from_panel()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki
+#graphify/rationale #graphify/EXTRACTED #community/Veri_Modelleri_SQLAlchemy

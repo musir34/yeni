@@ -1,12 +1,12 @@
 ---
 source_file: "stock_management.py"
 type: "code"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Değişim / İade Talepleri"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Deiim_/_ade_Talepleri
 ---
 
 # stock_management.py
@@ -43,4 +43,4 @@ tags:
 - [[user_logs.py]] - `imports_from` [EXTRACTED]
 - [[verify_stock_integrity()]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/code #graphify/EXTRACTED #community/Deiim_/_ade_Talepleri

@@ -1,11 +1,11 @@
 ---
 source_file: "templates/login.html"
 type: "code"
-community: "Community 96"
+community: "Community 102"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_96
+  - community/Community_102
 ---
 
 # Login/Logout Blueprint
@@ -14,4 +14,4 @@ tags:
 - [[Giriş (Login) Sayfası]] - `calls` [EXTRACTED]
 - [[Kayıt (Register) Sayfası]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_96
+#graphify/code #graphify/EXTRACTED #community/Community_102

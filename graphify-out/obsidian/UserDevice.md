@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Kimlik Doğrulama & Kullanıcı Yönetimi"
+community: "Community 65"
 location: "L564"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Kimlik_Dorulama__Kullanc_Ynetimi
+  - community/Community_65
 ---
 
 # UserDevice
@@ -18,4 +18,4 @@ tags:
 - [[login_logout.py]] - `imports` [EXTRACTED]
 - [[models.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Kimlik_Dorulama__Kullanc_Ynetimi
+#graphify/code #graphify/EXTRACTED #community/Community_65

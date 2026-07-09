@@ -1,12 +1,12 @@
 ---
 source_file: "trendyol_qna/qna_service.py"
 type: "code"
-community: "Community 42"
+community: "Community 45"
 location: "L287"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_42
+  - community/Community_45
 ---
 
 # waiting_count()
@@ -20,4 +20,4 @@ tags:
 - [[qna_routes.py]] - `imports` [EXTRACTED]
 - [[qna_service.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_42
+#graphify/code #graphify/EXTRACTED #community/Community_45

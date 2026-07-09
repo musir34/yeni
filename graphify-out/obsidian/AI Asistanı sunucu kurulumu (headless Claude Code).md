@@ -1,11 +1,11 @@
 ---
 source_file: "ai_asistan/KURULUM.md"
 type: "document"
-community: "Community 95"
+community: "Uygulama Çekirdeği & Zamanlı İşler"
 tags:
   - graphify/document
   - graphify/EXTRACTED
-  - community/Community_95
+  - community/Uygulama_ekirdei__Zamanl_ler
 ---
 
 # AI Asistanı sunucu kurulumu (headless Claude Code)
@@ -16,4 +16,4 @@ tags:
 - [[Salt-okunur Postgres MCP (gulludb query)]] - `references` [EXTRACTED]
 - [[ai_readonly salt-okunur DB rolü]] - `references` [EXTRACTED]
 
-#graphify/document #graphify/EXTRACTED #community/Community_95
+#graphify/document #graphify/EXTRACTED #community/Uygulama_ekirdei__Zamanl_ler

@@ -1,12 +1,12 @@
 ---
 source_file: "shopify_site/shopify_stock_service.py"
 type: "code"
-community: "Veri Modelleri (SQLAlchemy)"
+community: "Ana Kasa Defteri"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Veri_Modelleri_SQLAlchemy
+  - community/Ana_Kasa_Defteri
 ---
 
 # shopify_stock_service.py
@@ -29,4 +29,4 @@ tags:
 - [[shopify_config.py]] - `imports_from` [EXTRACTED]
 - [[shopify_routes.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Veri_Modelleri_SQLAlchemy
+#graphify/code #graphify/EXTRACTED #community/Ana_Kasa_Defteri

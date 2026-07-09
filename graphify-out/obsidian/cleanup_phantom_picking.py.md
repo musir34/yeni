@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/cleanup_phantom_picking.py"
 type: "code"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "Trendyol Sipariş Çekme & Komisyon"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/Trendyol_Sipari_ekme__Komisyon
 ---
 
 # cleanup_phantom_picking.py
@@ -18,4 +18,4 @@ tags:
 - [[app.py]] - `imports` [EXTRACTED]
 - [[models.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/code #graphify/EXTRACTED #community/Trendyol_Sipari_ekme__Komisyon

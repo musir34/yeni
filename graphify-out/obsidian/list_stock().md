@@ -1,12 +1,12 @@
 ---
 source_file: "agent_api.py"
 type: "code"
-community: "Community 38"
+community: "Community 61"
 location: "L415"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_38
+  - community/Community_61
 ---
 
 # list_stock()
@@ -17,4 +17,4 @@ tags:
 - [[Stok listesi.      Query params       - search barkod ile arama       - min_qt]] - `rationale_for` [EXTRACTED]
 - [[agent_api.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_38
+#graphify/code #graphify/EXTRACTED #community/Community_61

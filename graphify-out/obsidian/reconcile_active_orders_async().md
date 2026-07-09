@@ -1,12 +1,12 @@
 ---
 source_file: "order_service.py"
 type: "code"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "Trendyol Sipariş Çekme & Komisyon"
 location: "L228"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/Trendyol_Sipari_ekme__Komisyon
 ---
 
 # reconcile_active_orders_async()
@@ -22,4 +22,4 @@ tags:
 - [[process_all_orders()]] - `calls` [EXTRACTED]
 - [[reconcile_orders_job()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/code #graphify/EXTRACTED #community/Trendyol_Sipari_ekme__Komisyon

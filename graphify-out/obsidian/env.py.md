@@ -1,12 +1,12 @@
 ---
 source_file: "migrations/env.py"
 type: "code"
-community: "Community 84"
+community: "Community 92"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_84
+  - community/Community_92
 ---
 
 # env.py
@@ -18,4 +18,4 @@ tags:
 - [[run_migrations_offline()]] - `contains` [EXTRACTED]
 - [[run_migrations_online()]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_84
+#graphify/code #graphify/EXTRACTED #community/Community_92

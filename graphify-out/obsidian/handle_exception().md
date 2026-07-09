@@ -1,12 +1,12 @@
 ---
 source_file: "app.py"
 type: "code"
-community: "Community 87"
+community: "Stok Senkron API"
 location: "L271"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_87
+  - community/Stok_Senkron_API
 ---
 
 # handle_exception()
@@ -18,4 +18,4 @@ tags:
 - [[internal_error()]] - `calls` [EXTRACTED]
 - [[not_found_error()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_87
+#graphify/code #graphify/EXTRACTED #community/Stok_Senkron_API

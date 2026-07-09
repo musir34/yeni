@@ -1,11 +1,11 @@
 ---
 source_file: ""
 type: "code"
-community: "Ana Kasa Defteri"
+community: "Community 54"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Ana_Kasa_Defteri
+  - community/Community_54
 ---
 
 # Decimal
@@ -28,4 +28,4 @@ tags:
 - [[profit_report()]] - `calls` [EXTRACTED]
 - [[yeni_kasa_kaydi()]] - `calls` [INFERRED]
 
-#graphify/code #graphify/INFERRED #community/Ana_Kasa_Defteri
+#graphify/code #graphify/INFERRED #community/Community_54

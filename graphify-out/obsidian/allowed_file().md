@@ -1,12 +1,12 @@
 ---
 source_file: "image_manager.py"
 type: "code"
-community: "Community 61"
+community: "Community 64"
 location: "L17"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_61
+  - community/Community_64
 ---
 
 # allowed_file()
@@ -16,4 +16,4 @@ tags:
 - [[image_manager.py]] - `contains` [EXTRACTED]
 - [[upload_product_image()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_61
+#graphify/code #graphify/EXTRACTED #community/Community_64

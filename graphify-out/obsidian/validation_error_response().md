@@ -1,12 +1,12 @@
 ---
 source_file: "utils.py"
 type: "code"
-community: "Community 41"
+community: "Community 43"
 location: "L82"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_41
+  - community/Community_43
 ---
 
 # validation_error_response()
@@ -18,4 +18,4 @@ tags:
 - [[get_products.py]] - `imports` [EXTRACTED]
 - [[utils.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_41
+#graphify/code #graphify/EXTRACTED #community/Community_43

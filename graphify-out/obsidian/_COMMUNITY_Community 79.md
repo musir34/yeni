@@ -1,24 +1,27 @@
 ---
 type: community
-cohesion: 0.22
-members: 9
+cohesion: 0.18
+members: 12
 ---
 
 # Community 79
 
-**Cohesion:** 0.22 - loosely connected
-**Members:** 9 nodes
+**Cohesion:** 0.18 - loosely connected
+**Members:** 12 nodes
 
 ## Members
-- [['staticimages' klasöründe barkod.jpg vb. arar, yoksa default döndürür.]] - rationale - archive.py
-- [[Arşiv tablosundaki siparişleri listeler (sayfalı).]] - rationale - archive.py
-- [[Arşiv tarihinden itibaren geçen süreyi (gün, saat, dakika) string olarak döndürü]] - rationale - archive.py
-- [[Kargoya kalan süreyi agreed_delivery_date, yoksa estimated_delivery_end ile hesa]] - rationale - archive.py
-- [[compute_archived_duration()]] - code - archive.py
-- [[compute_shipping_time_left()]] - code - archive.py
-- [[display_archive()]] - code - archive.py
-- [[fetch_product_image()]] - code - archive.py
-- [[parse_order_details()]] - code - archive.py
+- [[analysis_functions.js]] - code - static/js/analysis_functions.js
+- [[calculateMovingAverage()]] - code - static/js/analysis_functions.js
+- [[determineCategoryFromProductId()]] - code - static/js/analysis_functions.js
+- [[exportToCSV()]] - code - static/js/analysis_functions.js
+- [[exportToPDF()]] - code - static/js/analysis_functions.js
+- [[formatCurrency()]] - code - static/js/analysis_functions.js
+- [[formatDate()]] - code - static/js/analysis_functions.js
+- [[getDashboardAnalysis()]] - code - static/js/analysis_functions.js
+- [[getSalesAnalysis()]] - code - static/js/analysis_functions.js
+- [[getTrendPrediction()]] - code - static/js/analysis_functions.js
+- [[groupProductsByCategory()]] - code - static/js/analysis_functions.js
+- [[predictSales()]] - code - static/js/analysis_functions.js
 
 ## Live Query (requires Dataview plugin)
 
@@ -26,13 +29,3 @@ members: 9
 TABLE source_file, type FROM #community/Community_79
 SORT file.name ASC
 ```
-
-## Connections to other communities
-- 5 edges to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
-
-## Top bridge nodes
-- [[display_archive()]] - degree 6, connects to 1 community
-- [[compute_archived_duration()]] - degree 3, connects to 1 community
-- [[compute_shipping_time_left()]] - degree 3, connects to 1 community
-- [[fetch_product_image()]] - degree 3, connects to 1 community
-- [[parse_order_details()]] - degree 2, connects to 1 community

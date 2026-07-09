@@ -1,12 +1,12 @@
 ---
 source_file: "amazon/amazon_routes.py"
 type: "code"
-community: "Community 47"
+community: "Community 50"
 location: "L47"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_47
+  - community/Community_50
 ---
 
 # orders()
@@ -15,4 +15,4 @@ tags:
 - [[Sipariş listesi sayfası]] - `rationale_for` [EXTRACTED]
 - [[amazon_routes.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_47
+#graphify/code #graphify/EXTRACTED #community/Community_50

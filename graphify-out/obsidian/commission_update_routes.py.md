@@ -1,12 +1,12 @@
 ---
 source_file: "commission_update_routes.py"
 type: "code"
-community: "Community 80"
+community: "E-posta Bildirimleri"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_80
+  - community/E-posta_Bildirimleri
 ---
 
 # commission_update_routes.py
@@ -27,4 +27,4 @@ tags:
 - [[update_commission_page()]] - `contains` [EXTRACTED]
 - [[user_logs.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_80
+#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri

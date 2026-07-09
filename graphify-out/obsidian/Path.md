@@ -1,11 +1,11 @@
 ---
 source_file: ""
 type: "code"
-community: "AI Asistanı (Headless Claude)"
+community: "Raf Sistemi & Etiket"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/AI_Asistan_Headless_Claude
+  - community/Raf_Sistemi__Etiket
 ---
 
 # Path
@@ -14,4 +14,4 @@ tags:
 - [[_claude_bin()]] - `calls` [EXTRACTED]
 - [[_gecmis_yolu()]] - `references` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/AI_Asistan_Headless_Claude
+#graphify/code #graphify/EXTRACTED #community/Raf_Sistemi__Etiket

@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Community 76"
+community: "Community 84"
 location: "L1289"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_76
+  - community/Community_84
 ---
 
 # SyncSession
@@ -28,4 +28,4 @@ tags:
 - [[routes.py]] - `imports` [EXTRACTED]
 - [[service.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_76
+#graphify/code #graphify/EXTRACTED #community/Community_84

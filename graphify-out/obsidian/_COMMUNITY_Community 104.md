@@ -1,19 +1,20 @@
 ---
 type: community
-cohesion: 0.50
-members: 4
+cohesion: 0.40
+members: 5
 ---
 
 # Community 104
 
-**Cohesion:** 0.50 - moderately connected
-**Members:** 4 nodes
+**Cohesion:** 0.40 - moderately connected
+**Members:** 5 nodes
 
 ## Members
-- [[Panelden Trendyol'a gönderilen (insan onaylı) cevabı vault'a not düş.     AI son]] - rationale - trendyol_qna/qna_notes.py
-- [[Trendyol Soru-Cevap bilgi bankası (Obsidian-uyumlu vault).  trendyol_qnavault]] - rationale - trendyol_qna/qna_notes.py
-- [[log_approved_answer()]] - code - trendyol_qna/qna_notes.py
-- [[qna_notes.py]] - code - trendyol_qna/qna_notes.py
+- [[.__repr__()]] - code - models.py
+- [[BarcodeAlias]] - code - models.py
+- [[Barkod alias (takma ad) sistemi.     Birden fazla barkod aynı ürünü gösterebilir]] - rationale - models.py
+- [[Manuel ürün eşleştirme     Idefix barkodunu mevcut bir ürün barkoduna eşleştirir]] - rationale - idefix/idefix_routes.py
+- [[api_match_product()_1]] - code - idefix/idefix_routes.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -23,10 +24,20 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 1 edge to [[_COMMUNITY_Community 58]]
-- 1 edge to [[_COMMUNITY_Community 37]]
-- 1 edge to [[_COMMUNITY_Community 42]]
+- 2 edges to [[_COMMUNITY_Community 53]]
+- 2 edges to [[_COMMUNITY_Community 37]]
+- 1 edge to [[_COMMUNITY_Sipariş Denetim Kaydı (Audit Log)]]
+- 1 edge to [[_COMMUNITY_Değişim  İade Talepleri]]
+- 1 edge to [[_COMMUNITY_Community 66]]
+- 1 edge to [[_COMMUNITY_Yeni Sipariş Hazırlama & Toplama]]
+- 1 edge to [[_COMMUNITY_Stok Fix Testleri & Yardımcılar]]
+- 1 edge to [[_COMMUNITY_Community 61]]
+- 1 edge to [[_COMMUNITY_Ana Kasa Defteri]]
+- 1 edge to [[_COMMUNITY_Community 35]]
+- 1 edge to [[_COMMUNITY_Community 52]]
+- 1 edge to [[_COMMUNITY_Community 67]]
+- 1 edge to [[_COMMUNITY_Canlı Panel (SSE)]]
 
 ## Top bridge nodes
-- [[log_approved_answer()]] - degree 4, connects to 2 communities
-- [[qna_notes.py]] - degree 3, connects to 1 community
+- [[BarcodeAlias]] - degree 17, connects to 13 communities
+- [[api_match_product()_1]] - degree 3, connects to 1 community

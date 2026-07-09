@@ -1,12 +1,12 @@
 ---
 source_file: "user_logs.py"
 type: "code"
-community: "Community 59"
+community: "Community 57"
 location: "L307"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Community_59
+  - community/Community_57
 ---
 
 # view_logs()
@@ -15,4 +15,4 @@ tags:
 - [[User]] - `indirect_call` [INFERRED]
 - [[user_logs.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Community_59
+#graphify/code #graphify/INFERRED #community/Community_57

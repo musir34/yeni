@@ -1,12 +1,12 @@
 ---
 source_file: "archive.py"
 type: "rationale"
-community: "Silme & Toplu Yazdırma İşlemleri"
+community: "Community 42"
 location: "L921"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Silme__Toplu_Yazdrma_lemleri
+  - community/Community_42
 ---
 
 # Arşivdeki siparişi kalıcı olarak silmek.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[remove_archived_order()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Silme__Toplu_Yazdrma_lemleri
+#graphify/rationale #graphify/EXTRACTED #community/Community_42

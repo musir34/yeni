@@ -1,11 +1,11 @@
 ---
 source_file: "docs/superpowers/specs/2026-06-10-manuel-raf-okutmali-toplama-design.md"
 type: "document"
-community: "Community 51"
+community: "Community 56"
 tags:
   - graphify/document
   - graphify/EXTRACTED
-  - community/Community_51
+  - community/Community_56
 ---
 
 # Manuel Raf-Okutmalı Toplama tasarım dokümanı
@@ -16,4 +16,4 @@ tags:
 - [[confirm_packing'den Trendyol API bildiriminin kaldırılması]] - `references` [EXTRACTED]
 - [[toplandi_attoplandi_raf tek-düşüm damgası]] - `references` [EXTRACTED]
 
-#graphify/document #graphify/EXTRACTED #community/Community_51
+#graphify/document #graphify/EXTRACTED #community/Community_56

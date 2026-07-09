@@ -1,12 +1,12 @@
 ---
 source_file: "rapor_gir.py"
 type: "code"
-community: "Community 59"
+community: "Community 90"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_59
+  - community/Community_90
 ---
 
 # rapor_gir.py
@@ -21,4 +21,4 @@ tags:
 - [[models.py]] - `imports_from` [EXTRACTED]
 - [[turkce_tarih_filter()]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_59
+#graphify/code #graphify/EXTRACTED #community/Community_90

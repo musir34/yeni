@@ -1,12 +1,12 @@
 ---
 source_file: "shopify_site/shopify_routes.py"
 type: "code"
-community: "Shopify Route Katmanı"
+community: "Idefix Entegrasyonu"
 location: "L293"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Shopify_Route_Katman
+  - community/Idefix_Entegrasyonu
 ---
 
 # product_detail()
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[shopify_routes.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Shopify_Route_Katman
+#graphify/code #graphify/EXTRACTED #community/Idefix_Entegrasyonu

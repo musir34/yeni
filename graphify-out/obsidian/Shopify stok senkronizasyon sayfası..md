@@ -1,12 +1,12 @@
 ---
 source_file: "shopify_site/shopify_routes.py"
 type: "rationale"
-community: "Community 101"
+community: "Community 110"
 location: "L357"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_101
+  - community/Community_110
 ---
 
 # Shopify stok senkronizasyon sayfası.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[stock_sync_dashboard()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_101
+#graphify/rationale #graphify/EXTRACTED #community/Community_110

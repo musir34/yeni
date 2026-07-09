@@ -1,31 +1,32 @@
 ---
 type: community
-cohesion: 0.17
-members: 16
+cohesion: 0.13
+members: 17
 ---
 
 # Community 53
 
-**Cohesion:** 0.17 - loosely connected
-**Members:** 16 nodes
+**Cohesion:** 0.13 - loosely connected
+**Members:** 17 nodes
 
 ## Members
-- [[Amazon Ayarlar Sayfası]] - concept - templates/amazon/ayarlar.html
-- [[Amazon Entegrasyon Panosu]] - concept - templates/amazon/index.html
-- [[Amazon Yapılandırma Hatası Sayfası]] - concept - templates/amazon/config_error.html
-- [[Amazon Ürün Eşleştirme Sayfası]] - concept - templates/amazon/eslestirme.html
-- [[Gizli özellikler sayfası]] - concept - templates/gizli_ozellikler.html
-- [[Kullanıcı İşlem Kayıtları Sayfası]] - concept - templates/user_logs.html
-- [[Sipariş Hazırla  Paketleme Ekranı]] - concept - templates/siparis_hazirla.html
-- [[Soru-Cevap (Trendyol Q&A) Sayfası]] - concept - templates/soru_cevap.html
-- [[Soru-Cevap AI Taslak API]] - code - templates/soru_cevap.html
-- [[Yeni Sipariş Sayfası]] - concept - templates/yeni_siparis.html
-- [[amazon Blueprint (SP-API Entegrasyonu)]] - code - templates/amazon/index.html
-- [[base.html taban şablonu]] - concept - templates/ai_asistan.html
-- [[confirm_packing Endpoint]] - code - templates/siparis_hazirla.html
-- [[scan_barcode_to_order Endpoint]] - code - templates/siparis_hazirla.html
-- [[siparisler_bp Blueprint]] - code - templates/yeni_siparis.html
-- [[user_logs Blueprint]] - code - templates/user_logs.html
+- [[Barkod Alias Yönetim Blueprint ═══════════════════════════════════  Bu modül bar]] - rationale - barcode_alias_routes.py
+- [[Barkod alias listesi ve yönetim sayfası]] - rationale - barcode_alias_routes.py
+- [[Barkodu normalize eder (API)]] - rationale - barcode_alias_routes.py
+- [[Bir barkod alias'ı siler.          Args         alias_barcode Silinecek alias]] - rationale - barcode_alias_helper.py
+- [[Bir barkod hakkında bilgi döner (API)]] - rationale - barcode_alias_routes.py
+- [[Tüm alias'ları listeler veya belirli bir ana barkoda ait alias'ları getirir.]] - rationale - barcode_alias_helper.py
+- [[Yeni alias ekle ve stokları birleştir]] - rationale - barcode_alias_routes.py
+- [[Yeni bir barkod alias ekler ve isteğe bağlı olarak stokları birleştirir.]] - rationale - barcode_alias_helper.py
+- [[add_alias()]] - code - barcode_alias_helper.py
+- [[add_alias_route()]] - code - barcode_alias_routes.py
+- [[api_check_barcode()]] - code - barcode_alias_routes.py
+- [[api_normalize()]] - code - barcode_alias_routes.py
+- [[barcode_alias_routes.py]] - code - barcode_alias_routes.py
+- [[delete_alias_route()]] - code - barcode_alias_routes.py
+- [[get_all_aliases()]] - code - barcode_alias_helper.py
+- [[index()_2]] - code - barcode_alias_routes.py
+- [[remove_alias()]] - code - barcode_alias_helper.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -35,13 +36,17 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 3 edges to [[_COMMUNITY_Community 40]]
-- 1 edge to [[_COMMUNITY_Community 95]]
-- 1 edge to [[_COMMUNITY_Community 51]]
-- 1 edge to [[_COMMUNITY_Community 48]]
-- 1 edge to [[_COMMUNITY_Community 73]]
+- 6 edges to [[_COMMUNITY_Değişim  İade Talepleri]]
+- 3 edges to [[_COMMUNITY_Community 61]]
+- 3 edges to [[_COMMUNITY_Community 42]]
+- 2 edges to [[_COMMUNITY_Community 104]]
+- 1 edge to [[_COMMUNITY_Community 76]]
+- 1 edge to [[_COMMUNITY_Community 66]]
+- 1 edge to [[_COMMUNITY_Community 57]]
 
 ## Top bridge nodes
-- [[base.html taban şablonu]] - degree 13, connects to 5 communities
-- [[Sipariş Hazırla  Paketleme Ekranı]] - degree 5, connects to 1 community
-- [[Amazon Ürün Eşleştirme Sayfası]] - degree 4, connects to 1 community
+- [[barcode_alias_routes.py]] - degree 17, connects to 6 communities
+- [[add_alias()]] - degree 6, connects to 3 communities
+- [[remove_alias()]] - degree 4, connects to 1 community
+- [[add_alias_route()]] - degree 4, connects to 1 community
+- [[get_all_aliases()]] - degree 3, connects to 1 community

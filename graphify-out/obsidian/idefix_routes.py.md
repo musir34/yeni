@@ -1,12 +1,12 @@
 ---
 source_file: "idefix/idefix_routes.py"
 type: "code"
-community: "Idefix Entegrasyonu"
+community: "Community 37"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Idefix_Entegrasyonu
+  - community/Community_37
 ---
 
 # idefix_routes.py
@@ -31,4 +31,4 @@ tags:
 - [[siparisler()]] - `contains` [EXTRACTED]
 - [[urunler()]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Idefix_Entegrasyonu
+#graphify/code #graphify/EXTRACTED #community/Community_37

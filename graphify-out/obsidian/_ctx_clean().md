@@ -1,12 +1,12 @@
 ---
 source_file: "tests/test_bulk_pick.py"
 type: "code"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "E-posta Bildirimleri"
 location: "L78"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/E-posta_Bildirimleri
 ---
 
 # _ctx_clean()
@@ -25,4 +25,4 @@ tags:
 - [[StockMovement]] - `indirect_call` [INFERRED]
 - [[test_bulk_pick.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/code #graphify/INFERRED #community/E-posta_Bildirimleri

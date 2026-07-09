@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "rationale"
-community: "Maliyet Fişi & Tedarikçi"
+community: "Community 58"
 location: "L934"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Maliyet_Fii__Tedariki
+  - community/Community_58
 ---
 
 # Maliyet kalemleri: Astar, Çelik Taban, vb. Alt başlık ile gruplandırılır.     mo
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[MaliyetKalem]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki
+#graphify/rationale #graphify/EXTRACTED #community/Community_58

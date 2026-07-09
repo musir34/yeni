@@ -1,12 +1,12 @@
 ---
 source_file: "trendyol_qna/qna_ai.py"
 type: "code"
-community: "Community 37"
+community: "Community 45"
 location: "L143"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_37
+  - community/Community_45
 ---
 
 # generate_drafts_async()
@@ -19,4 +19,4 @@ tags:
 - [[quick_poll()]] - `calls` [EXTRACTED]
 - [[taslak()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_37
+#graphify/code #graphify/EXTRACTED #community/Community_45

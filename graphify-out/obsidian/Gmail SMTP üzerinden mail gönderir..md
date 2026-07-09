@@ -1,12 +1,12 @@
 ---
 source_file: "mail_service.py"
 type: "rationale"
-community: "E-posta Bildirimleri"
+community: "Sipariş Yaşam Döngüsü & Arşiv"
 location: "L347"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/E-posta_Bildirimleri
+  - community/Sipari_Yaam_Dngs__Ariv
 ---
 
 # Gmail SMTP üzerinden mail gönderir.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[send_email()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/E-posta_Bildirimleri
+#graphify/rationale #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv

@@ -1,12 +1,12 @@
 ---
 source_file: "hepsiburada/hepsiburada_routes.py"
 type: "rationale"
-community: "Community 67"
+community: "Community 73"
 location: "L36"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_67
+  - community/Community_73
 ---
 
 # Hepsiburada ana sayfa - Dashboard
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[index()_4]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_67
+#graphify/rationale #graphify/EXTRACTED #community/Community_73

@@ -1,12 +1,12 @@
 ---
 source_file: "mail_service.py"
 type: "rationale"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "Community 41"
 location: "L79"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/Community_41
 ---
 
 # Sipariş details alanını ürün listesine çevirir.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_parse_products()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/rationale #graphify/EXTRACTED #community/Community_41

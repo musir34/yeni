@@ -1,12 +1,12 @@
 ---
 source_file: "migrations/versions/add_stok_yok_mail_at.py"
 type: "code"
-community: "Community 113"
+community: "Community 119"
 location: "L18"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_113
+  - community/Community_119
 ---
 
 # upgrade()
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[add_stok_yok_mail_at.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_113
+#graphify/code #graphify/EXTRACTED #community/Community_119

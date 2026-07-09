@@ -1,12 +1,12 @@
 ---
 source_file: "canli_panel.py"
 type: "rationale"
-community: "Canlı Panel (SSE)"
+community: "Üretim Önerisi & Satış Tahmini"
 location: "L203"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Canl_Panel_SSE
+  - community/retim_nerisi__Sat_Tahmini
 ---
 
 # Created/Picking/Shipped/Delivered/Archive tablolarında     Europe/Istanbul aralı
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_order_numbers_created_between()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Canl_Panel_SSE
+#graphify/rationale #graphify/EXTRACTED #community/retim_nerisi__Sat_Tahmini

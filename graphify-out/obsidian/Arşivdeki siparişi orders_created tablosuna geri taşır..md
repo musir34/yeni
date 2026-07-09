@@ -1,12 +1,12 @@
 ---
 source_file: "archive.py"
 type: "rationale"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "Community 41"
 location: "L764"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/Community_41
 ---
 
 # Arşivdeki siparişi orders_created tablosuna geri taşır.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[recover_from_archive()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/rationale #graphify/EXTRACTED #community/Community_41

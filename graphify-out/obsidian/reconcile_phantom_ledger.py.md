@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/reconcile_phantom_ledger.py"
 type: "code"
-community: "Community 50"
+community: "E-posta Bildirimleri"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_50
+  - community/E-posta_Bildirimleri
 ---
 
 # reconcile_phantom_ledger.py
@@ -20,4 +20,4 @@ tags:
 - [[main()_24]] - `contains` [EXTRACTED]
 - [[record_movement()]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_50
+#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri

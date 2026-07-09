@@ -1,12 +1,12 @@
 ---
 source_file: "stock_management.py"
 type: "code"
-community: "Agent API & Sipariş Sorguları"
+community: "Sipariş Denetim Kaydı (Audit Log)"
 location: "L130"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Agent_API__Sipari_Sorgular
+  - community/Sipari_Denetim_Kayd_Audit_Log
 ---
 
 # verify_stock_integrity()
@@ -20,4 +20,4 @@ tags:
 - [[stock_management.py]] - `contains` [EXTRACTED]
 - [[sync_all_stock()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Agent_API__Sipari_Sorgular
+#graphify/code #graphify/EXTRACTED #community/Sipari_Denetim_Kayd_Audit_Log

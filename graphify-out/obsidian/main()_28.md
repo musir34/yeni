@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/today_picking_pdf.py"
 type: "code"
-community: "Veri Modelleri (SQLAlchemy)"
+community: "Community 61"
 location: "L53"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Veri_Modelleri_SQLAlchemy
+  - community/Community_61
 ---
 
 # main()
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[today_picking_pdf.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Veri_Modelleri_SQLAlchemy
+#graphify/code #graphify/EXTRACTED #community/Community_61

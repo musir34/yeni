@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/trace_order.py"
 type: "rationale"
-community: "Stok Hareket Defteri (Ledger)"
+community: "Canlı Panel (SSE)"
 location: "L49"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Stok_Hareket_Defteri_Ledger
+  - community/Canl_Panel_SSE
 ---
 
 # StockMovement tablosu yoksa (deploy öncesi) sessizce boş döner.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_safe_movements_query()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Stok_Hareket_Defteri_Ledger
+#graphify/rationale #graphify/EXTRACTED #community/Canl_Panel_SSE

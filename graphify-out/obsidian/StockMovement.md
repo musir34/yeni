@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Stok Hareket Defteri (Ledger)"
+community: "Canlı Panel (SSE)"
 location: "L183"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Stok_Hareket_Defteri_Ledger
+  - community/Canl_Panel_SSE
 ---
 
 # StockMovement
@@ -39,4 +39,4 @@ tags:
 - [[trace_orders_phantom.py]] - `imports` [EXTRACTED]
 - [[verify_no_phantom_ledger.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Stok_Hareket_Defteri_Ledger
+#graphify/code #graphify/EXTRACTED #community/Canl_Panel_SSE

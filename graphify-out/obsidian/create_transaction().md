@@ -1,12 +1,12 @@
 ---
 source_file: "agent_api.py"
 type: "code"
-community: "Kasa & Gelir-Gider"
+community: "Ürün Çekme & Görsel İndirme"
 location: "L1185"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Kasa__Gelir-Gider
+  - community/rn_ekme__Grsel_ndirme
 ---
 
 # create_transaction()
@@ -18,4 +18,4 @@ tags:
 - [[Odeme]] - `calls` [EXTRACTED]
 - [[agent_api.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Kasa__Gelir-Gider
+#graphify/code #graphify/EXTRACTED #community/rn_ekme__Grsel_ndirme

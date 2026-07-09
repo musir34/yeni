@@ -1,12 +1,12 @@
 ---
 source_file: "hepsiburada/__init__.py"
 type: "code"
-community: "Community 66"
+community: "Community 72"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_66
+  - community/Community_72
 ---
 
 # __init__.py
@@ -19,4 +19,4 @@ tags:
 - [[hepsiburada_routes.py]] - `re_exports` [EXTRACTED]
 - [[hepsiburada_service.py]] - `re_exports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_66
+#graphify/code #graphify/EXTRACTED #community/Community_72

@@ -1,12 +1,12 @@
 ---
 source_file: "ai_asistan/blueprint.py"
 type: "code"
-community: "Community 58"
+community: "Community 62"
 location: "L117"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_58
+  - community/Community_62
 ---
 
 # _claude_bin()
@@ -19,4 +19,4 @@ tags:
 - [[blueprint.py]] - `contains` [EXTRACTED]
 - [[qna_ai.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_58
+#graphify/code #graphify/EXTRACTED #community/Community_62

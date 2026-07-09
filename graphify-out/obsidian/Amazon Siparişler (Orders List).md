@@ -1,11 +1,11 @@
 ---
 source_file: "templates/amazon/siparisler.html"
 type: "concept"
-community: "Community 45"
+community: "Community 47"
 tags:
   - graphify/concept
   - graphify/INFERRED
-  - community/Community_45
+  - community/Community_47
 ---
 
 # Amazon Siparişler (Orders List)
@@ -15,4 +15,4 @@ tags:
 - [[Hepsiburada Siparişler (Orders List)]] - `semantically_similar_to` [INFERRED]
 - [[Idefix Siparişler (Orders List)]] - `semantically_similar_to` [INFERRED]
 
-#graphify/concept #graphify/INFERRED #community/Community_45
+#graphify/concept #graphify/INFERRED #community/Community_47

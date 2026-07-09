@@ -1,11 +1,11 @@
 ---
 source_file: "templates/kasa_yeni.html"
 type: "code"
-community: "Community 48"
+community: "Community 38"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_48
+  - community/Community_38
 ---
 
 # Kasa Blueprint
@@ -13,4 +13,4 @@ tags:
 ## Connections
 - [[Yeni Kasa Kaydı Sayfası]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_48
+#graphify/code #graphify/EXTRACTED #community/Community_38

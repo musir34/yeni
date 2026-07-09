@@ -1,12 +1,12 @@
 ---
 source_file: "iade_islemleri.py"
 type: "rationale"
-community: "Community 127"
+community: "Maliyet Fişi & Tedarikçi"
 location: "L36"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_127
+  - community/Maliyet_Fii__Tedariki
 ---
 
 # Her çağrıda aynı `db.session`’ı verip otomatik kapatır.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[with_db_session()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_127
+#graphify/rationale #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki

@@ -1,12 +1,12 @@
 ---
 source_file: "home.py"
 type: "rationale"
-community: "Anasayfa Özet & Sayımlar"
+community: "Kasa & Gelir-Gider"
 location: "L467"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Anasayfa_zet__Saymlar
+  - community/Kasa__Gelir-Gider
 ---
 
 # Shopify API'den bekleyen siparis durumlarini dondurur.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_get_shopify_status_counts()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Anasayfa_zet__Saymlar
+#graphify/rationale #graphify/EXTRACTED #community/Kasa__Gelir-Gider

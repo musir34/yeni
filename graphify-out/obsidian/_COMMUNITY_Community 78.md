@@ -1,25 +1,27 @@
 ---
 type: community
-cohesion: 0.27
-members: 10
+cohesion: 0.26
+members: 12
 ---
 
 # Community 78
 
-**Cohesion:** 0.27 - loosely connected
-**Members:** 10 nodes
+**Cohesion:** 0.26 - loosely connected
+**Members:** 12 nodes
 
 ## Members
-- [[.__init__()]] - code - amazon/amazon_service.py
-- [[._get_access_token()]] - code - amazon/amazon_service.py
-- [[._is_configured()]] - code - amazon/amazon_service.py
-- [[._make_api_request()]] - code - amazon/amazon_service.py
-- [[Amazon SP-API Servis Sınıfı]] - rationale - amazon/amazon_service.py
-- [[Amazon SP-API'ye istek gönder]] - rationale - amazon/amazon_service.py
-- [[Amazon servisini başlat]] - rationale - amazon/amazon_service.py
-- [[AmazonService]] - code - amazon/amazon_service.py
-- [[LWA access token al (cache'den veya yeni)]] - rationale - amazon/amazon_service.py
-- [[Tüm credentials var mı]] - rationale - amazon/amazon_service.py
+- [[Shopify barkod - aktif lokasyondaki available envanter]] - rationale - scripts/check_random_stock_match.py
+- [[Trendyol barkod - quantity (guncel integration endpoint)]] - rationale - scripts/check_random_stock_match.py
+- [[check_central_zero_on_platforms.py]] - code - scripts/check_central_zero_on_platforms.py
+- [[check_random_stock_match.py]] - code - scripts/check_random_stock_match.py
+- [[check_real_product_zero.py]] - code - scripts/check_real_product_zero.py
+- [[e()]] - code - scripts/check_real_product_zero.py
+- [[fetch_shopify_map()]] - code - scripts/check_random_stock_match.py
+- [[fetch_trendyol_map()]] - code - scripts/check_random_stock_match.py
+- [[gather_platforms()]] - code - scripts/check_random_stock_match.py
+- [[main()_6]] - code - scripts/check_central_zero_on_platforms.py
+- [[main()_8]] - code - scripts/check_random_stock_match.py
+- [[main()_9]] - code - scripts/check_real_product_zero.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -29,8 +31,16 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 2 edges to [[_COMMUNITY_Community 72]]
-- 1 edge to [[_COMMUNITY_Community 47]]
+- 5 edges to [[_COMMUNITY_Değişim  İade Talepleri]]
+- 5 edges to [[_COMMUNITY_Community 69]]
+- 3 edges to [[_COMMUNITY_Stok Senkron API]]
+- 3 edges to [[_COMMUNITY_Community 66]]
+- 3 edges to [[_COMMUNITY_Community 76]]
+- 1 edge to [[_COMMUNITY_Community 61]]
 
 ## Top bridge nodes
-- [[AmazonService]] - degree 8, connects to 2 communities
+- [[check_real_product_zero.py]] - degree 10, connects to 6 communities
+- [[check_random_stock_match.py]] - degree 13, connects to 5 communities
+- [[check_central_zero_on_platforms.py]] - degree 6, connects to 4 communities
+- [[gather_platforms()]] - degree 7, connects to 1 community
+- [[main()_9]] - degree 4, connects to 1 community

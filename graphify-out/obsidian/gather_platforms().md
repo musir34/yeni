@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/check_random_stock_match.py"
 type: "code"
-community: "Community 62"
+community: "Community 78"
 location: "L99"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_62
+  - community/Community_78
 ---
 
 # gather_platforms()
@@ -20,4 +20,4 @@ tags:
 - [[main()_8]] - `calls` [EXTRACTED]
 - [[main()_9]] - `calls` [INFERRED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_62
+#graphify/code #graphify/EXTRACTED #community/Community_78

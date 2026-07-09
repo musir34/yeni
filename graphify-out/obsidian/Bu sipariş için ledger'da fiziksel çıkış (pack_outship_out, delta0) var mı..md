@@ -1,12 +1,12 @@
 ---
 source_file: "stock_ledger.py"
 type: "rationale"
-community: "Trendyol Sipariş Çekme & Komisyon"
+community: "Community 48"
 location: "L201"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Trendyol_Sipari_ekme__Komisyon
+  - community/Community_48
 ---
 
 # Bu sipariş için ledger'da fiziksel çıkış (pack_out/ship_out, delta<0) var mı.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_order_has_prior_outflow()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Trendyol_Sipari_ekme__Komisyon
+#graphify/rationale #graphify/EXTRACTED #community/Community_48

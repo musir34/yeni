@@ -1,12 +1,12 @@
 ---
 source_file: "mail_service.py"
 type: "code"
-community: "E-posta Bildirimleri"
+community: "Community 70"
 location: "L197"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/E-posta_Bildirimleri
+  - community/Community_70
 ---
 
 # build_alert_email_html()
@@ -18,4 +18,4 @@ tags:
 - [[health_monitor.py]] - `imports` [EXTRACTED]
 - [[mail_service.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri
+#graphify/code #graphify/EXTRACTED #community/Community_70

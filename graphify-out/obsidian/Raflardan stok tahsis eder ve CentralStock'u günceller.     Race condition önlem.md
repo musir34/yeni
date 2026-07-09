@@ -1,12 +1,12 @@
 ---
 source_file: "stock_management.py"
 type: "rationale"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Değişim / İade Talepleri"
 location: "L229"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Deiim_/_ade_Talepleri
 ---
 
 # Raflardan stok tahsis eder ve CentralStock'u günceller.     Race condition önlem
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[allocate_from_shelf_and_decrement()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/rationale #graphify/EXTRACTED #community/Deiim_/_ade_Talepleri

@@ -1,11 +1,11 @@
 ---
 source_file: "templates/siparis_fisi.html"
 type: "code"
-community: "Community 89"
+community: "Community 38"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_89
+  - community/Community_38
 ---
 
 # Siparis Fisi Blueprint
@@ -14,4 +14,4 @@ tags:
 - [[Barkod Etiketleri Yazdırma]] - `calls` [EXTRACTED]
 - [[Tedarik Bilgileri (Sipariş Fişi) Sayfası]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_89
+#graphify/code #graphify/EXTRACTED #community/Community_38

@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/test_stok_fixleri.py"
 type: "rationale"
-community: "Stok Fix Testleri & Yardımcılar"
+community: "Barkod Üretimi & Sipariş Listesi"
 location: "L1"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Stok_Fix_Testleri__Yardmclar
+  - community/Barkod_retimi__Sipari_Listesi
 ---
 
 # Stok düzeltmelerinin uçtan uca test scripti.  Test edilen değişiklikler:   1) or
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[test_stok_fixleri.py]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar
+#graphify/rationale #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi

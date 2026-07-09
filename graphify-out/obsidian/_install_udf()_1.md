@@ -1,12 +1,12 @@
 ---
 source_file: "tests/test_picking_service.py"
 type: "code"
-community: "Community 54"
+community: "Community 67"
 location: "L39"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_54
+  - community/Community_67
 ---
 
 # _install_udf()
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[test_picking_service.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_54
+#graphify/code #graphify/EXTRACTED #community/Community_67

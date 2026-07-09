@@ -1,12 +1,12 @@
 ---
 source_file: "stock_management.py"
 type: "code"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Barkod Alias Yardımcıları"
 location: "L27"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Barkod_Alias_Yardmclar
 ---
 
 # sync_central_stock()
@@ -35,4 +35,4 @@ tags:
 - [[update_service.py]] - `imports` [EXTRACTED]
 - [[update_shelf_product_qty()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/code #graphify/EXTRACTED #community/Barkod_Alias_Yardmclar

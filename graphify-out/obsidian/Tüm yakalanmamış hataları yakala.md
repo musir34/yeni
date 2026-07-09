@@ -1,12 +1,12 @@
 ---
 source_file: "app.py"
 type: "rationale"
-community: "Community 87"
+community: "Stok Senkron API"
 location: "L272"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_87
+  - community/Stok_Senkron_API
 ---
 
 # Tüm yakalanmamış hataları yakala
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[handle_exception()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_87
+#graphify/rationale #graphify/EXTRACTED #community/Stok_Senkron_API

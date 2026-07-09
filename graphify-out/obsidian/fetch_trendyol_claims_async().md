@@ -1,12 +1,12 @@
 ---
 source_file: "claims_service.py"
 type: "code"
-community: "Community 49"
+community: "Maliyet Fişi & Tedarikçi"
 location: "L43"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_49
+  - community/Maliyet_Fii__Tedariki
 ---
 
 # fetch_trendyol_claims_async()
@@ -18,4 +18,4 @@ tags:
 - [[fetch_trendyol_claims_route()]] - `calls` [EXTRACTED]
 - [[process_all_claims()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_49
+#graphify/code #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki

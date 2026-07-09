@@ -1,12 +1,12 @@
 ---
 source_file: "idefix/idefix_service.py"
 type: "code"
-community: "Idefix Entegrasyonu"
+community: "Community 44"
 location: "L13"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Idefix_Entegrasyonu
+  - community/Community_44
 ---
 
 # IdefixService
@@ -23,4 +23,4 @@ tags:
 - [[Idefix API entegrasyonu için servis sınıfı]] - `rationale_for` [EXTRACTED]
 - [[idefix_service.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Idefix_Entegrasyonu
+#graphify/code #graphify/EXTRACTED #community/Community_44

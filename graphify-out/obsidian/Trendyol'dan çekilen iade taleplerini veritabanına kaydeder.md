@@ -1,12 +1,12 @@
 ---
 source_file: "claims_service.py"
 type: "rationale"
-community: "Community 49"
+community: "Maliyet Fişi & Tedarikçi"
 location: "L130"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_49
+  - community/Maliyet_Fii__Tedariki
 ---
 
 # Trendyol'dan çekilen iade taleplerini veritabanına kaydeder
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[process_all_claims()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_49
+#graphify/rationale #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki

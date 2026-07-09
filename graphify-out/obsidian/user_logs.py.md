@@ -1,12 +1,12 @@
 ---
 source_file: "user_logs.py"
 type: "code"
-community: "Silme & Toplu Yazdırma İşlemleri"
+community: "Community 57"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Silme__Toplu_Yazdrma_lemleri
+  - community/Community_57
 ---
 
 # user_logs.py
@@ -42,4 +42,4 @@ tags:
 - [[update_service.py]] - `imports_from` [EXTRACTED]
 - [[view_logs()]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Silme__Toplu_Yazdrma_lemleri
+#graphify/code #graphify/EXTRACTED #community/Community_57

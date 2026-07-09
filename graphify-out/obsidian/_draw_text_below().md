@@ -1,12 +1,12 @@
 ---
 source_file: "barcode_utils.py"
 type: "code"
-community: "Barkod Üretimi & Sipariş Listesi"
+community: "Raf Yönetimi & Barkod Çakışması"
 location: "L47"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Barkod_retimi__Sipari_Listesi
+  - community/Raf_Ynetimi__Barkod_akmas
 ---
 
 # _draw_text_below()
@@ -17,4 +17,4 @@ tags:
 - [[generate_barcode()]] - `calls` [EXTRACTED]
 - [[generate_barcode_data_uri()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi
+#graphify/code #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas

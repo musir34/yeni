@@ -1,12 +1,12 @@
 ---
 source_file: "trendyol_qna/qna_routes.py"
 type: "code"
-community: "Community 42"
+community: "Community 45"
 location: "L170"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_42
+  - community/Community_45
 ---
 
 # senkron()
@@ -16,4 +16,4 @@ tags:
 - [[qna_routes.py]] - `contains` [EXTRACTED]
 - [[sync_questions()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_42
+#graphify/code #graphify/EXTRACTED #community/Community_45

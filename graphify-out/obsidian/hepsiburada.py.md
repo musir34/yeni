@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/adapters/hepsiburada.py"
 type: "code"
-community: "Community 65"
+community: "Community 69"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_65
+  - community/Community_69
 ---
 
 # hepsiburada.py
@@ -21,4 +21,4 @@ tags:
 - [[logger_config.py]] - `imports_from` [EXTRACTED]
 - [[service.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_65
+#graphify/code #graphify/EXTRACTED #community/Community_69

@@ -1,21 +1,27 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8">
-  <script>(function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();if(m==='on'||(m==='auto'&&(h>=20||h<7)))document.documentElement.classList.add('gs-dark');})()</script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sipariş Veri Güncelleme - Güllü Shoes</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-mode.css') }}">
+{% extends "base.html" %}
+{% block title %}Sipariş Veri Güncelleme - Güllü Shoes{% endblock %}
+{% block extra_css %}
+  <!-- Sayfa başlığı Inter 800 kullanıyor; base yalnızca 400-700 yüklüyor -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@800&display=swap" rel="stylesheet" />
   <style>
+    /* Sayfa kendi token sistemini kullanır (kanonik --color-* ile çakışmaz), aynen korunur. */
     :root {
       --primary:#B76E79; --primary-dark:#A05F6A;
       --bg:#f3f5f7; --card:#fff; --border:#e5e7eb; --text:#343a40; --muted:#6b7280;
       --success:#22c55e; --warning:#f59e0b; --danger:#ef4444;
       --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.06);
     }
-    * { box-sizing:border-box; margin:0; padding:0 }
+    /* base.html'in dış .container.mt-5 sarmalayıcısını nötrle — sayfanın kendi .container'ı aktif kalsın */
+    .container.mt-5 { max-width:none; margin:0; padding:0; }
+    /* base BS5 reboot'u <code>'u pembeye/.875em'e çekiyor; sayfanın orijinal görünümünü koru */
+    code { color: inherit; font-size: inherit; }
+    /* Orijinal sayfa BS yüklemiyordu; kendi `*` reset'i tüm margin'ları sıfırlıyordu.
+       BS reboot'un element default'larını, reset'e güvenen elementlerde hedefli geri al: */
+    .header h1 { margin: 0 }                    /* BS h1 margin-bottom:.5rem → flex header'da başlık kayar */
+    .upload-card p { margin-bottom: 0 }         /* BS p margin-bottom:1rem */
+    .history-card p { margin-bottom: 0 }        /* "Henüz dosya yüklenmemiş" fallback p'si */
+    .result-table { border-collapse: separate } /* BS reboot table'ı collapse yapar; orijinalde default (separate) idi */
+
     body { font-family:'Inter',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh }
 
     .header {
@@ -108,9 +114,9 @@
     html.gs-dark .history-table th { color:#888 }
     html.gs-dark .history-table td { border-color:#333; color:#ddd }
   </style>
-</head>
-<body>
+{% endblock %}
 
+{% block content %}
 <div class="header">
   <a href="/anasayfa" class="back"><i class="fas fa-arrow-left"></i> Geri</a>
   <h1><i class="fas fa-file-excel"></i> Sipariş Veri Güncelleme</h1>
@@ -176,7 +182,9 @@
     <div class="detail" id="progressDetail">Lütfen bekleyin</div>
   </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script src="{{ url_for('static', filename='js/gs-dialog.js') }}"></script>
 <script>
 let selectedFiles = [];
@@ -292,6 +300,4 @@ function startUpload() {
     });
 }
 </script>
-{% include 'includes/notification_popup.html' ignore missing %}
-</body>
-</html>
+{% endblock %}

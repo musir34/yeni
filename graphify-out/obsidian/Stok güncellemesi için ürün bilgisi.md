@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/adapters/base.py"
 type: "rationale"
-community: "Community 65"
+community: "Community 69"
 location: "L19"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_65
+  - community/Community_69
 ---
 
 # Stok güncellemesi için ürün bilgisi
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[StockItem]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_65
+#graphify/rationale #graphify/EXTRACTED #community/Community_69

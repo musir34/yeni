@@ -1,12 +1,12 @@
 ---
 source_file: "celery_app.py"
 type: "code"
-community: "Uygulama Çekirdeği & Zamanlı İşler"
+community: "Stok Senkron API"
 location: "L10"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Uygulama_ekirdei__Zamanl_ler
+  - community/Stok_Senkron_API
 ---
 
 # init_celery()
@@ -15,4 +15,4 @@ tags:
 - [[app.py]] - `imports` [EXTRACTED]
 - [[celery_app.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Uygulama_ekirdei__Zamanl_ler
+#graphify/code #graphify/EXTRACTED #community/Stok_Senkron_API

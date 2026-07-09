@@ -1,12 +1,12 @@
 ---
 source_file: "gizli_ozellikler.py"
 type: "code"
-community: "Community 64"
+community: "Community 71"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_64
+  - community/Community_71
 ---
 
 # gizli_ozellikler.py
@@ -15,4 +15,4 @@ tags:
 - [[__init__.py_4]] - `re_exports` [EXTRACTED]
 - [[index()_3]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_64
+#graphify/code #graphify/EXTRACTED #community/Community_71

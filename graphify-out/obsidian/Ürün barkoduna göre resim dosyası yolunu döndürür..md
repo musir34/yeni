@@ -1,12 +1,12 @@
 ---
 source_file: "order_list_service.py"
 type: "rationale"
-community: "Barkod Üretimi & Sipariş Listesi"
+community: "Raf Yönetimi & Barkod Çakışması"
 location: "L80"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Barkod_retimi__Sipari_Listesi
+  - community/Raf_Ynetimi__Barkod_akmas
 ---
 
 # Ürün barkoduna göre resim dosyası yolunu döndürür.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[get_product_image()_1]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi
+#graphify/rationale #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas

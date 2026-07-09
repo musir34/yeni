@@ -1,12 +1,12 @@
 ---
 source_file: "stock_alert_service.py"
 type: "code"
-community: "E-posta Bildirimleri"
+community: "Sipariş Yaşam Döngüsü & Arşiv"
 location: "L90"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/E-posta_Bildirimleri
+  - community/Sipari_Yaam_Dngs__Ariv
 ---
 
 # send_periodic_reminder()
@@ -21,4 +21,4 @@ tags:
 - [[schedule_jobs()]] - `calls` [EXTRACTED]
 - [[stock_alert_service.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri
+#graphify/code #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv

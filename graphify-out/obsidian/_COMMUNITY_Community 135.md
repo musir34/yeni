@@ -1,16 +1,17 @@
 ---
 type: community
 cohesion: 1.00
-members: 1
+members: 2
 ---
 
 # Community 135
 
 **Cohesion:** 1.00 - tightly connected
-**Members:** 1 nodes
+**Members:** 2 nodes
 
 ## Members
-- [[Hata sayfası]] - concept - templates/error.html
+- [[Kasa kategorileri yönetimi]] - concept - templates/kasa_kategoriler.html
+- [[Yeni kasa kategorisi]] - concept - templates/kasa_kategori_yeni.html
 
 ## Live Query (requires Dataview plugin)
 

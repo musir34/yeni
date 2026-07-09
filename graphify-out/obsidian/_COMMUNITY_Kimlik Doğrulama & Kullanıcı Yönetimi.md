@@ -1,63 +1,54 @@
 ---
 type: community
-cohesion: 0.07
-members: 48
+cohesion: 0.09
+members: 39
 ---
 
 # Kimlik Doğrulama & Kullanıcı Yönetimi
 
-**Cohesion:** 0.07 - loosely connected
-**Members:** 48 nodes
+**Cohesion:** 0.09 - loosely connected
+**Members:** 39 nodes
 
 ## Members
-- [[Admin kullanıcının 2FA'sını sıfırlar, yeniden kurulum gerektirir.]] - rationale - login_logout.py
-- [[Admin kullanıcının PC cihaz limitini gunceller.]] - rationale - login_logout.py
-- [[Admin kullanıcının bildirim görselini kaldır.]] - rationale - login_logout.py
-- [[Admin kullanıcının şifresini sıfırlar ve yeni geçici şifre oluşturur.]] - rationale - login_logout.py
-- [[Admin kullanıcıya bildirim görseli ata.]] - rationale - login_logout.py
-- [[Admin şifre + 2FA + cihazların hepsini sıfırlar.]] - rationale - login_logout.py
-- [[Belirli bir kullanıcının tüm aktif oturumlarını ve trusted cihazlarını     sonla]] - rationale - login_logout.py
-- [[Cihaz limitini kontrol eder. (izin_var, mesaj) döner.]] - rationale - login_logout.py
-- [[Kayıtlı (güvenilen) cihaz. Cookie token ile eşleşir.]] - rationale - models.py
-- [[Kimlik doğrulama, cihaz yönetimi ve oturum sistemi.  Giriş akışı   Tanınan ciha]] - rationale - login_logout.py
-- [[Tüm cihazları siler ve session_version artırarak tüm oturumları geçersiz kılar.]] - rationale - login_logout.py
-- [[Tüm kullanıcıların oturumlarını ve cihazlarını geçersiz kılar.]] - rationale - login_logout.py
-- [[User-Agent'tan cihaz tipini belirler 'mobile' veya 'pc'.]] - rationale - login_logout.py
-- [[User-Agent'tan okunabilir cihaz adı çıkarır.]] - rationale - login_logout.py
-- [[UserDevice]] - code - models.py
-- [[Yeni cihaz kaydeder ve çerez ayarlar.]] - rationale - login_logout.py
-- [[_check_device_limit()]] - code - login_logout.py
-- [[_detect_device_name()]] - code - login_logout.py
-- [[_detect_device_type()]] - code - login_logout.py
-- [[_get_trusted_device()]] - code - login_logout.py
-- [[_log_action()]] - code - login_logout.py
-- [[_register_device()]] - code - login_logout.py
-- [[admin_force_logout_user()]] - code - login_logout.py
-- [[admin_reset_2fa()]] - code - login_logout.py
-- [[admin_reset_all()]] - code - login_logout.py
-- [[admin_reset_password()]] - code - login_logout.py
-- [[approve_users()]] - code - login_logout.py
-- [[check_role()]] - code - login_logout.py
-- [[cihaz_sil()]] - code - login_logout.py
-- [[cihazlarim()]] - code - login_logout.py
-- [[clear_notification_image()]] - code - login_logout.py
-- [[delete_user()]] - code - login_logout.py
-- [[device_limit_reached()]] - code - login_logout.py
-- [[force_logout_all()]] - code - login_logout.py
-- [[generate_qr_code()]] - code - login_logout.py
-- [[home_redirect()]] - code - login_logout.py
-- [[login()]] - code - login_logout.py
-- [[login_logout.py]] - code - login_logout.py
-- [[login_user()]] - code - login_logout.py
-- [[logout()]] - code - login_logout.py
-- [[set_notification_image()]] - code - login_logout.py
-- [[setup_totp()]] - code - login_logout.py
-- [[show_qr_code()]] - code - login_logout.py
-- [[tum_cihazlardan_cikis()]] - code - login_logout.py
-- [[update_max_pc()]] - code - login_logout.py
-- [[update_notify()]] - code - login_logout.py
-- [[verify_totp()]] - code - login_logout.py
-- [[İstekteki çerezden güvenilen cihazı döner (varsa).]] - rationale - login_logout.py
+- [[.__repr__()_7]] - code - models.py
+- [[Barkoda göre güvenli görsel yolu üretir; barkod geçersizse default döner.]] - rationale - degisim.py
+- [[Barkodu doğrular; geçersizse None döner. Path traversal koruması.]] - rationale - degisim.py
+- [[Benzersiz bir kargo kodu üretir. 10 denemede bulamazsa UUID suffix ekler.]] - rationale - degisim.py
+- [[Degisim]] - code - models.py
+- [[RafUrun.urun_barkodu üzerinden raflardan 'qty' adet tahsis eder.     Hiçbir comm]] - rationale - degisim.py
+- [[Shopify sipariş numarasıyla müşteri bilgilerini ve ürünleri çeker.]] - rationale - degisim.py
+- [[Silineniptal edilen değişim kaydının stoğunu raflara geri yazar.     shelf_code]] - rationale - degisim.py
+- [[Trendyol API'den sipariş numarasıyla müşteri telefonunu çeker.]] - rationale - degisim.py
+- [[Yeni değişim talebi oluştur.      JSON body     {       siparis_no 123456,]] - rationale - agent_api.py
+- [[_aggregate_shelf_restore()]] - code - degisim.py
+- [[_auto_deliver_old_shipped()]] - code - degisim.py
+- [[_fetch_shopify_order_info()]] - code - degisim.py
+- [[_fetch_trendyol_phone()]] - code - degisim.py
+- [[_get_attr()]] - code - degisim.py
+- [[_parse_no_list()]] - code - degisim.py
+- [[_resolve_col()]] - code - degisim.py
+- [[_safe_barcode()]] - code - degisim.py
+- [[_safe_image_url()]] - code - degisim.py
+- [[_safe_json_loads()]] - code - degisim.py
+- [[_safe_log()]] - code - degisim.py
+- [[`degisim_tarihi` 7+ gün öncesi olan 'Kargoya Verildi' kayıtları 'Teslim Edildi']] - rationale - degisim.py
+- [[allocate_from_shelves()]] - code - degisim.py
+- [[bulk_delete()]] - code - degisim.py
+- [[bulk_update_status()]] - code - degisim.py
+- [[create_exchange()]] - code - agent_api.py
+- [[degisim.py]] - code - degisim.py
+- [[degisim_kaydet()]] - code - degisim.py
+- [[degisim_talep()]] - code - degisim.py
+- [[delete_exchange()_1]] - code - degisim.py
+- [[generate_kargo_kodu()]] - code - degisim.py
+- [[get_order_details()]] - code - degisim.py
+- [[get_product_details()]] - code - degisim.py
+- [[raw hem str hem dictlist olabilir; güvenli şekilde deserialize eder.]] - rationale - degisim.py
+- [[request.form.getlist veya virgülle ayrılmış string'i temizle.]] - rationale - degisim.py
+- [[restore_to_shelves()]] - code - degisim.py
+- [[update_status()]] - code - degisim.py
+- [[urunler_json'dan (raf_kodu, barcode) → adet toplamı çıkarır.]] - rationale - degisim.py
+- [[yeni_degisim_talebi()]] - code - degisim.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -67,21 +58,23 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 6 edges to [[_COMMUNITY_Community 59]]
-- 4 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
-- 3 edges to [[_COMMUNITY_Community 82]]
-- 2 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 1 edge to [[_COMMUNITY_Akıllı Motor (İndirim & Fiyat)]]
-- 1 edge to [[_COMMUNITY_Canlı Panel (SSE)]]
-- 1 edge to [[_COMMUNITY_Ürün Çekme & Görsel İndirme]]
+- 8 edges to [[_COMMUNITY_E-posta Bildirimleri]]
+- 4 edges to [[_COMMUNITY_Sipariş Denetim Kaydı (Audit Log)]]
+- 2 edges to [[_COMMUNITY_Community 66]]
+- 2 edges to [[_COMMUNITY_Değişim  İade Talepleri]]
+- 2 edges to [[_COMMUNITY_Community 42]]
+- 2 edges to [[_COMMUNITY_Barkod Üretimi & Sipariş Listesi]]
+- 1 edge to [[_COMMUNITY_Community 76]]
+- 1 edge to [[_COMMUNITY_Trendyol Sipariş Çekme & Komisyon]]
+- 1 edge to [[_COMMUNITY_Community 61]]
+- 1 edge to [[_COMMUNITY_Maliyet Fişi & Tedarikçi]]
+- 1 edge to [[_COMMUNITY_Community 57]]
+- 1 edge to [[_COMMUNITY_Community 71]]
 - 1 edge to [[_COMMUNITY_Kasa & Gelir-Gider]]
-- 1 edge to [[_COMMUNITY_Community 65]]
-- 1 edge to [[_COMMUNITY_Community 128]]
-- 1 edge to [[_COMMUNITY_Community 64]]
 
 ## Top bridge nodes
-- [[login_logout.py]] - degree 49, connects to 11 communities
-- [[_log_action()]] - degree 19, connects to 2 communities
-- [[_register_device()]] - degree 8, connects to 1 community
-- [[UserDevice]] - degree 5, connects to 1 community
-- [[_check_device_limit()]] - degree 4, connects to 1 community
+- [[degisim.py]] - degree 39, connects to 10 communities
+- [[Degisim]] - degree 9, connects to 4 communities
+- [[_safe_log()]] - degree 8, connects to 1 community
+- [[get_order_details()]] - degree 6, connects to 1 community
+- [[create_exchange()]] - degree 5, connects to 1 community

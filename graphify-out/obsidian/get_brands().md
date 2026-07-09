@@ -1,12 +1,12 @@
 ---
 source_file: "product_service.py"
 type: "code"
-community: "Community 77"
+community: "Maliyet Fişi & Tedarikçi"
 location: "L188"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_77
+  - community/Maliyet_Fii__Tedariki
 ---
 
 # get_brands()
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[product_service.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_77
+#graphify/code #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki

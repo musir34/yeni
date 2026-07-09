@@ -1,11 +1,11 @@
 ---
 source_file: ""
 type: "code"
-community: "Community 59"
+community: "Community 57"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_59
+  - community/Community_57
 ---
 
 # UserMixin
@@ -13,4 +13,4 @@ tags:
 ## Connections
 - [[User]] - `inherits` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_59
+#graphify/code #graphify/EXTRACTED #community/Community_57

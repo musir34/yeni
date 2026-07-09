@@ -1,12 +1,12 @@
 ---
 source_file: "login_logout.py"
 type: "code"
-community: "Kimlik Doğrulama & Kullanıcı Yönetimi"
+community: "Community 65"
 location: "L387"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Kimlik_Dorulama__Kullanc_Ynetimi
+  - community/Community_65
 ---
 
 # verify_totp()
@@ -17,4 +17,4 @@ tags:
 - [[login_logout.py]] - `contains` [EXTRACTED]
 - [[login_user()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Kimlik_Dorulama__Kullanc_Ynetimi
+#graphify/code #graphify/EXTRACTED #community/Community_65

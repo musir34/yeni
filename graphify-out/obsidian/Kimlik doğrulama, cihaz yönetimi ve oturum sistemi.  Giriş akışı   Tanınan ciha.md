@@ -1,12 +1,12 @@
 ---
 source_file: "login_logout.py"
 type: "rationale"
-community: "Kimlik Doğrulama & Kullanıcı Yönetimi"
+community: "Akıllı Motor (İndirim & Fiyat)"
 location: "L1"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Kimlik_Dorulama__Kullanc_Ynetimi
+  - community/Akll_Motor_ndirim__Fiyat
 ---
 
 # Kimlik doğrulama, cihaz yönetimi ve oturum sistemi.  Giriş akışı:   Tanınan ciha
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[login_logout.py]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Kimlik_Dorulama__Kullanc_Ynetimi
+#graphify/rationale #graphify/EXTRACTED #community/Akll_Motor_ndirim__Fiyat

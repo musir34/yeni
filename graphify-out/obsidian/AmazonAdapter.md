@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/adapters/amazon.py"
 type: "code"
-community: "Community 46"
+community: "Community 49"
 location: "L17"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_46
+  - community/Community_49
 ---
 
 # AmazonAdapter
@@ -28,4 +28,4 @@ tags:
 - [[amazon.py]] - `contains` [EXTRACTED]
 - [[service.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_46
+#graphify/code #graphify/EXTRACTED #community/Community_49

@@ -1,12 +1,12 @@
 ---
 source_file: "shopify_site/shopify_routes.py"
 type: "code"
-community: "Community 100"
+community: "Community 109"
 location: "L166"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_100
+  - community/Community_109
 ---
 
 # bulk_update_order_status()
@@ -17,4 +17,4 @@ tags:
 - [[shopify_routes.py]] - `contains` [EXTRACTED]
 - [[update_order_status()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_100
+#graphify/code #graphify/EXTRACTED #community/Community_109

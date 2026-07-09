@@ -1,11 +1,11 @@
 ---
 source_file: ""
 type: "code"
-community: "Sipariş Denetim Kaydı (Audit Log)"
+community: "Stok Fix Testleri & Yardımcılar"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Denetim_Kayd_Audit_Log
+  - community/Stok_Fix_Testleri__Yardmclar
 ---
 
 # Any
@@ -13,4 +13,4 @@ tags:
 ## Connections
 - [[_bind()]] - `references` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Denetim_Kayd_Audit_Log
+#graphify/code #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar

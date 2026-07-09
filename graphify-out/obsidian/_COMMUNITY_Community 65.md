@@ -1,29 +1,30 @@
 ---
 type: community
-cohesion: 0.44
-members: 14
+cohesion: 0.15
+members: 15
 ---
 
 # Community 65
 
-**Cohesion:** 0.44 - moderately connected
-**Members:** 14 nodes
+**Cohesion:** 0.15 - loosely connected
+**Members:** 15 nodes
 
 ## Members
-- [[Senkronizasyon sonucu]] - rationale - stock_sync/adapters/base.py
-- [[StockItem]] - code - stock_sync/adapters/base.py
-- [[Stok güncellemesi için ürün bilgisi]] - rationale - stock_sync/adapters/base.py
-- [[SyncResult]] - code - stock_sync/adapters/base.py
-- [[__init__.py_7]] - code - stock_sync/adapters/__init__.py
-- [[amazon.py]] - code - stock_sync/adapters/amazon.py
-- [[base.py]] - code - stock_sync/adapters/base.py
-- [[hepsiburada.py]] - code - stock_sync/adapters/hepsiburada.py
-- [[idefix.py]] - code - stock_sync/adapters/idefix.py
-- [[logger_config.py]] - code - logger_config.py
-- [[service.py]] - code - stock_sync/service.py
-- [[setup_logger()]] - code - logger_config.py
-- [[shopify.py]] - code - stock_sync/adapters/shopify.py
-- [[trendyol.py]] - code - stock_sync/adapters/trendyol.py
+- [[Cihaz limitini kontrol eder. (izin_var, mesaj) döner.]] - rationale - login_logout.py
+- [[Kayıtlı (güvenilen) cihaz. Cookie token ile eşleşir.]] - rationale - models.py
+- [[User-Agent'tan cihaz tipini belirler 'mobile' veya 'pc'.]] - rationale - login_logout.py
+- [[User-Agent'tan okunabilir cihaz adı çıkarır.]] - rationale - login_logout.py
+- [[UserDevice]] - code - models.py
+- [[Yeni cihaz kaydeder ve çerez ayarlar.]] - rationale - login_logout.py
+- [[_check_device_limit()]] - code - login_logout.py
+- [[_detect_device_name()]] - code - login_logout.py
+- [[_detect_device_type()]] - code - login_logout.py
+- [[_get_trusted_device()]] - code - login_logout.py
+- [[_register_device()]] - code - login_logout.py
+- [[login()]] - code - login_logout.py
+- [[login_user()]] - code - login_logout.py
+- [[verify_totp()]] - code - login_logout.py
+- [[İstekteki çerezden güvenilen cihazı döner (varsa).]] - rationale - login_logout.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -33,37 +34,13 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 12 edges to [[_COMMUNITY_Community 39]]
-- 11 edges to [[_COMMUNITY_Community 63]]
-- 10 edges to [[_COMMUNITY_Community 46]]
-- 7 edges to [[_COMMUNITY_Community 57]]
-- 7 edges to [[_COMMUNITY_Community 70]]
-- 7 edges to [[_COMMUNITY_Community 71]]
-- 6 edges to [[_COMMUNITY_Community 62]]
-- 4 edges to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
-- 4 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 3 edges to [[_COMMUNITY_Community 75]]
-- 3 edges to [[_COMMUNITY_Merkezi Stok Senkronizasyonu]]
-- 3 edges to [[_COMMUNITY_Community 36]]
-- 2 edges to [[_COMMUNITY_Idefix Entegrasyonu]]
-- 2 edges to [[_COMMUNITY_Stok Senkron API]]
-- 2 edges to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
-- 2 edges to [[_COMMUNITY_Community 76]]
-- 1 edge to [[_COMMUNITY_Uygulama Çekirdeği & Zamanlı İşler]]
-- 1 edge to [[_COMMUNITY_Kimlik Doğrulama & Kullanıcı Yönetimi]]
-- 1 edge to [[_COMMUNITY_Manuel Sipariş Oluşturma]]
-- 1 edge to [[_COMMUNITY_Stok Fix Testleri & Yardımcılar]]
-- 1 edge to [[_COMMUNITY_Community 38]]
-- 1 edge to [[_COMMUNITY_Barkod Alias Yardımcıları]]
-- 1 edge to [[_COMMUNITY_Community 55]]
-- 1 edge to [[_COMMUNITY_Stok Hareket Defteri (Ledger)]]
-- 1 edge to [[_COMMUNITY_E-posta Bildirimleri]]
-- 1 edge to [[_COMMUNITY_Community 102]]
-- 1 edge to [[_COMMUNITY_Community 103]]
+- 12 edges to [[_COMMUNITY_Akıllı Motor (İndirim & Fiyat)]]
+- 2 edges to [[_COMMUNITY_Community 57]]
+- 1 edge to [[_COMMUNITY_Community 66]]
 
 ## Top bridge nodes
-- [[service.py]] - degree 39, connects to 19 communities
-- [[StockItem]] - degree 26, connects to 7 communities
-- [[SyncResult]] - degree 25, connects to 7 communities
-- [[logger_config.py]] - degree 16, connects to 7 communities
-- [[__init__.py_7]] - degree 12, connects to 6 communities
+- [[_register_device()]] - degree 8, connects to 2 communities
+- [[UserDevice]] - degree 5, connects to 2 communities
+- [[_check_device_limit()]] - degree 4, connects to 2 communities
+- [[login()]] - degree 6, connects to 1 community
+- [[_detect_device_type()]] - degree 4, connects to 1 community

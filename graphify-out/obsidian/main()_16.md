@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/create_stock_movement_table.py"
 type: "code"
-community: "Stok Hareket Defteri (Ledger)"
+community: "Canlı Panel (SSE)"
 location: "L24"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Stok_Hareket_Defteri_Ledger
+  - community/Canl_Panel_SSE
 ---
 
 # main()
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[create_stock_movement_table.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Stok_Hareket_Defteri_Ledger
+#graphify/code #graphify/EXTRACTED #community/Canl_Panel_SSE

@@ -1,12 +1,12 @@
 ---
 source_file: "home.py"
 type: "code"
-community: "Anasayfa Özet & Sayımlar"
+community: "Kasa & Gelir-Gider"
 location: "L519"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Anasayfa_zet__Saymlar
+  - community/Kasa__Gelir-Gider
 ---
 
 # _status_counts_now()
@@ -22,4 +22,4 @@ tags:
 - [[home.py]] - `contains` [EXTRACTED]
 - [[overdue_counts()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Anasayfa_zet__Saymlar
+#graphify/code #graphify/EXTRACTED #community/Kasa__Gelir-Gider

@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/routes.py"
 type: "code"
-community: "Stok Senkron API"
+community: "Shopify Route Katmanı"
 location: "L753"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Stok_Senkron_API
+  - community/Shopify_Route_Katman
 ---
 
 # api_integrity_check()
@@ -17,4 +17,4 @@ tags:
 - [[routes.py]] - `contains` [EXTRACTED]
 - [[verify_stock_integrity()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Stok_Senkron_API
+#graphify/code #graphify/EXTRACTED #community/Shopify_Route_Katman

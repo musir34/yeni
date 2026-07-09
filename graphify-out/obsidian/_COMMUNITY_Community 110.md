@@ -1,18 +1,19 @@
 ---
 type: community
-cohesion: 0.67
-members: 3
+cohesion: 0.50
+members: 4
 ---
 
 # Community 110
 
-**Cohesion:** 0.67 - moderately connected
-**Members:** 3 nodes
+**Cohesion:** 0.50 - moderately connected
+**Members:** 4 nodes
 
 ## Members
-- [[add_source_to_order_created.py]] - code - migrations/versions/add_source_to_order_created.py
-- [[downgrade()_3]] - code - migrations/versions/add_source_to_order_created.py
-- [[upgrade()_3]] - code - migrations/versions/add_source_to_order_created.py
+- [[Dashboard istatistikleri.]] - rationale - shopify_site/shopify_routes.py
+- [[Shopify stok senkronizasyon sayfası.]] - rationale - shopify_site/shopify_routes.py
+- [[get_stats()]] - code - shopify_site/shopify_routes.py
+- [[stock_sync_dashboard()]] - code - shopify_site/shopify_routes.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -20,3 +21,11 @@ members: 3
 TABLE source_file, type FROM #community/Community_110
 SORT file.name ASC
 ```
+
+## Connections to other communities
+- 2 edges to [[_COMMUNITY_Idefix Entegrasyonu]]
+- 1 edge to [[_COMMUNITY_Community 39]]
+
+## Top bridge nodes
+- [[stock_sync_dashboard()]] - degree 4, connects to 2 communities
+- [[get_stats()]] - degree 3, connects to 1 community

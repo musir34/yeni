@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/check_real_product_zero.py"
 type: "code"
-community: "Community 62"
+community: "Community 78"
 location: "L26"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_62
+  - community/Community_78
 ---
 
 # main()
@@ -17,4 +17,4 @@ tags:
 - [[gather_platforms()]] - `calls` [INFERRED]
 - [[normalize_barcode()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_62
+#graphify/code #graphify/EXTRACTED #community/Community_78

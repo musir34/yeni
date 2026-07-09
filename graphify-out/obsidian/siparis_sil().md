@@ -1,12 +1,12 @@
 ---
 source_file: "siparisler.py"
 type: "code"
-community: "Manuel Sipariş Oluşturma"
+community: "Hepsiburada Servisi"
 location: "L594"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Manuel_Sipari_Oluturma
+  - community/Hepsiburada_Servisi
 ---
 
 # siparis_sil()
@@ -19,4 +19,4 @@ tags:
 - [[restore_stock_to_shelf()]] - `calls` [EXTRACTED]
 - [[siparisler.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Manuel_Sipari_Oluturma
+#graphify/code #graphify/EXTRACTED #community/Hepsiburada_Servisi

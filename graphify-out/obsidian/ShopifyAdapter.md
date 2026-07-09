@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/adapters/shopify.py"
 type: "code"
-community: "Community 70"
+community: "Community 80"
 location: "L18"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_70
+  - community/Community_80
 ---
 
 # ShopifyAdapter
@@ -29,4 +29,4 @@ tags:
 - [[__init__.py_7]] - `imports` [EXTRACTED]
 - [[shopify.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_70
+#graphify/code #graphify/EXTRACTED #community/Community_80

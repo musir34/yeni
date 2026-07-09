@@ -1,40 +1,41 @@
 ---
 type: community
-cohesion: 0.18
-members: 25
+cohesion: 0.08
+members: 26
 ---
 
 # Manuel Sipariş Oluşturma
 
-**Cohesion:** 0.18 - loosely connected
-**Members:** 25 nodes
+**Cohesion:** 0.08 - loosely connected
+**Members:** 26 nodes
 
 ## Members
-- [[.__init__()_8]] - code - siparisler.py
-- [[.all()]] - code - siparisler.py
-- [[.delete()]] - code - siparisler.py
-- [[.desc()]] - code - siparisler.py
-- [[.filter_by()]] - code - siparisler.py
-- [[.first()]] - code - siparisler.py
-- [[.ilike()]] - code - siparisler.py
-- [[.order_by()]] - code - siparisler.py
-- [[BasePlaceholderModel]] - code - siparisler.py
-- [[Manuel sipariş oluştur.      JSON body     {       musteri_adi Ali,]] - rationale - agent_api.py
-- [[Müşteri bilgilerini JSON olarak döndürür (yazdırma için)]] - rationale - siparisler.py
-- [[SiparisUrun]] - code - models.py
-- [[YeniSiparis]] - code - models.py
-- [[create_manual_order()]] - code - agent_api.py
-- [[get_product()_1]] - code - siparisler.py
-- [[siparis_ara()]] - code - siparisler.py
-- [[siparis_detay()]] - code - siparisler.py
-- [[siparis_durum_guncelle()]] - code - siparisler.py
-- [[siparis_guncelle()]] - code - siparisler.py
-- [[siparis_kargo_etiketi()]] - code - siparisler.py
-- [[siparis_musteri_bilgisi()]] - code - siparisler.py
-- [[siparis_sil()]] - code - siparisler.py
-- [[siparis_toplu_sil()]] - code - siparisler.py
-- [[siparisler.py]] - code - siparisler.py
-- [[yeni_siparis()]] - code - siparisler.py
+- [[Hepsiburada API ayarlarının yapılıp yapılmadığını kontrol eden decorator]] - rationale - hepsiburada/hepsiburada_routes.py
+- [[Hepsiburada Marketplace Routes - Sipariş, Listeleme ve Ayar sayfaları]] - rationale - hepsiburada/hepsiburada_routes.py
+- [[Listing (envanter) listesi]] - rationale - hepsiburada/hepsiburada_routes.py
+- [[Paket bilgilerini listele]] - rationale - hepsiburada/hepsiburada_routes.py
+- [[Sipariş detay sayfası_1]] - rationale - hepsiburada/hepsiburada_routes.py
+- [[Sipariş kalemi iptal et]] - rationale - hepsiburada/hepsiburada_routes.py
+- [[Tek listing güncelleme (fiyatstok)]] - rationale - hepsiburada/hepsiburada_routes.py
+- [[Toplu stok güncelleme]] - rationale - hepsiburada/hepsiburada_routes.py
+- [[Tüm listingleri çekip cache'le]] - rationale - hepsiburada/hepsiburada_routes.py
+- [[api_bulk_update_stock()]] - code - hepsiburada/hepsiburada_routes.py
+- [[api_cancel_item()]] - code - hepsiburada/hepsiburada_routes.py
+- [[api_fetch_listings()]] - code - hepsiburada/hepsiburada_routes.py
+- [[api_listings()]] - code - hepsiburada/hepsiburada_routes.py
+- [[api_order_detail()]] - code - hepsiburada/hepsiburada_routes.py
+- [[api_orders()_1]] - code - hepsiburada/hepsiburada_routes.py
+- [[api_package_items()]] - code - hepsiburada/hepsiburada_routes.py
+- [[api_packages()]] - code - hepsiburada/hepsiburada_routes.py
+- [[api_unpack()]] - code - hepsiburada/hepsiburada_routes.py
+- [[api_update_listing()]] - code - hepsiburada/hepsiburada_routes.py
+- [[check_hb_config()]] - code - hepsiburada/hepsiburada_routes.py
+- [[hepsiburada_routes.py]] - code - hepsiburada/hepsiburada_routes.py
+- [[listings()]] - code - hepsiburada/hepsiburada_routes.py
+- [[order_detail()_1]] - code - hepsiburada/hepsiburada_routes.py
+- [[orders()_1]] - code - hepsiburada/hepsiburada_routes.py
+- [[packages()]] - code - hepsiburada/hepsiburada_routes.py
+- [[Ödemesi tamamlanmış sipariş listesi]] - rationale - hepsiburada/hepsiburada_routes.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -44,22 +45,9 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 9 edges to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
-- 7 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
-- 6 edges to [[_COMMUNITY_Community 38]]
-- 5 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 3 edges to [[_COMMUNITY_Agent API & Sipariş Sorguları]]
-- 2 edges to [[_COMMUNITY_Kasa & Gelir-Gider]]
-- 2 edges to [[_COMMUNITY_Barkod Üretimi & Sipariş Listesi]]
-- 2 edges to [[_COMMUNITY_Stok Fix Testleri & Yardımcılar]]
-- 1 edge to [[_COMMUNITY_Community 65]]
-- 1 edge to [[_COMMUNITY_Community 64]]
-- 1 edge to [[_COMMUNITY_Stok Senkron API]]
-- 1 edge to [[_COMMUNITY_Üretim Önerisi & Satış Tahmini]]
+- 4 edges to [[_COMMUNITY_Community 72]]
+- 3 edges to [[_COMMUNITY_Community 73]]
+- 1 edge to [[_COMMUNITY_Anasayfa Özet & Sayımlar]]
 
 ## Top bridge nodes
-- [[siparisler.py]] - degree 26, connects to 6 communities
-- [[.desc()]] - degree 12, connects to 6 communities
-- [[BasePlaceholderModel]] - degree 14, connects to 3 communities
-- [[SiparisUrun]] - degree 8, connects to 3 communities
-- [[YeniSiparis]] - degree 7, connects to 3 communities
+- [[hepsiburada_routes.py]] - degree 24, connects to 3 communities

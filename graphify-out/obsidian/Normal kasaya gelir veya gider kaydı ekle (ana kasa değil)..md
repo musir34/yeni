@@ -1,12 +1,12 @@
 ---
 source_file: "agent_api.py"
 type: "rationale"
-community: "Kasa & Gelir-Gider"
+community: "Ürün Çekme & Görsel İndirme"
 location: "L1186"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Kasa__Gelir-Gider
+  - community/rn_ekme__Grsel_ndirme
 ---
 
 # Normal kasaya gelir veya gider kaydı ekle (ana kasa değil).
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[create_transaction()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Kasa__Gelir-Gider
+#graphify/rationale #graphify/EXTRACTED #community/rn_ekme__Grsel_ndirme

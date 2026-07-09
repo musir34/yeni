@@ -1,11 +1,11 @@
 ---
 source_file: "openapi.yaml"
 type: "document"
-community: "Community 52"
+community: "Community 75"
 tags:
   - graphify/document
   - graphify/INFERRED
-  - community/Community_52
+  - community/Community_75
 ---
 
 # OpenClaw Agent API OpenAPI 3.1 spec
@@ -13,4 +13,4 @@ tags:
 ## Connections
 - [[OpenClaw Agent API (REST)]] - `semantically_similar_to` [INFERRED]
 
-#graphify/document #graphify/INFERRED #community/Community_52
+#graphify/document #graphify/INFERRED #community/Community_75

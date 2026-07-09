@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/check_hatice_raf.py"
 type: "code"
-community: "Veri Modelleri (SQLAlchemy)"
+community: "Silme & Toplu Yazdırma İşlemleri"
 location: "L36"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Veri_Modelleri_SQLAlchemy
+  - community/Silme__Toplu_Yazdrma_lemleri
 ---
 
 # main()
@@ -17,4 +17,4 @@ tags:
 - [[resolve_panel_barcode()]] - `calls` [EXTRACTED]
 - [[shelf_for()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Veri_Modelleri_SQLAlchemy
+#graphify/code #graphify/EXTRACTED #community/Silme__Toplu_Yazdrma_lemleri

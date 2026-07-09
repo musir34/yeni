@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/adapters/idefix.py"
 type: "code"
-community: "Community 63"
+community: "Community 68"
 location: "L18"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_63
+  - community/Community_68
 ---
 
 # IdefixAdapter
@@ -26,4 +26,4 @@ tags:
 - [[idefix.py]] - `contains` [EXTRACTED]
 - [[service.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_63
+#graphify/code #graphify/EXTRACTED #community/Community_68

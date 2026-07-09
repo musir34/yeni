@@ -1,12 +1,12 @@
 ---
 source_file: "get_products.py"
 type: "code"
-community: "Ürün Çekme & Görsel İndirme"
+community: "Hepsiburada Route Katmanı"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/rn_ekme__Grsel_ndirme
+  - community/Hepsiburada_Route_Katman
 ---
 
 # get_products.py
@@ -77,4 +77,4 @@ tags:
 - [[upsert_products()]] - `contains` [EXTRACTED]
 - [[validation_error_response()]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/rn_ekme__Grsel_ndirme
+#graphify/code #graphify/EXTRACTED #community/Hepsiburada_Route_Katman

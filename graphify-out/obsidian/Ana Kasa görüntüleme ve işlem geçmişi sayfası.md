@@ -1,12 +1,12 @@
 ---
 source_file: "kasa.py"
 type: "rationale"
-community: "Kasa & Gelir-Gider"
+community: "Community 54"
 location: "L1314"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Kasa__Gelir-Gider
+  - community/Community_54
 ---
 
 # Ana Kasa görüntüleme ve işlem geçmişi sayfası
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[ana_kasa()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Kasa__Gelir-Gider
+#graphify/rationale #graphify/EXTRACTED #community/Community_54

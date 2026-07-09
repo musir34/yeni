@@ -1,12 +1,12 @@
 ---
 source_file: "kasa.py"
 type: "rationale"
-community: "Kasa & Gelir-Gider"
+community: "Ürün Çekme & Görsel İndirme"
 location: "L504"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Kasa__Gelir-Gider
+  - community/rn_ekme__Grsel_ndirme
 ---
 
 # Kasa'ya gelir veya gider ekle. Gelir eklendiğinde Ana Kasa'dan düşer.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[yeni_kasa_kaydi()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Kasa__Gelir-Gider
+#graphify/rationale #graphify/EXTRACTED #community/rn_ekme__Grsel_ndirme

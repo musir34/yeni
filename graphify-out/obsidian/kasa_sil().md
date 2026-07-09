@@ -1,12 +1,12 @@
 ---
 source_file: "kasa.py"
 type: "code"
-community: "Ana Kasa Defteri"
+community: "Community 54"
 location: "L725"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Ana_Kasa_Defteri
+  - community/Community_54
 ---
 
 # kasa_sil()
@@ -18,4 +18,4 @@ tags:
 - [[kasa.py]] - `contains` [EXTRACTED]
 - [[log_user_action()_1]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Ana_Kasa_Defteri
+#graphify/code #graphify/EXTRACTED #community/Community_54

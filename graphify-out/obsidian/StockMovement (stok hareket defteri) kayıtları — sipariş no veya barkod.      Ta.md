@@ -1,12 +1,12 @@
 ---
 source_file: "order_audit_routes.py"
 type: "rationale"
-community: "Stok Hareket Defteri (Ledger)"
+community: "Canlı Panel (SSE)"
 location: "L285"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Stok_Hareket_Defteri_Ledger
+  - community/Canl_Panel_SSE
 ---
 
 # StockMovement (stok hareket defteri) kayıtları — sipariş no veya barkod.      Ta
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_ledger_movements()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Stok_Hareket_Defteri_Ledger
+#graphify/rationale #graphify/EXTRACTED #community/Canl_Panel_SSE

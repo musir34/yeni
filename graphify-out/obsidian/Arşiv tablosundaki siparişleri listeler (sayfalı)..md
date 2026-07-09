@@ -1,12 +1,12 @@
 ---
 source_file: "archive.py"
 type: "rationale"
-community: "Community 79"
+community: "Community 41"
 location: "L463"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_79
+  - community/Community_41
 ---
 
 # Arşiv tablosundaki siparişleri listeler (sayfalı).
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[display_archive()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_79
+#graphify/rationale #graphify/EXTRACTED #community/Community_41

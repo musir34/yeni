@@ -1,18 +1,19 @@
 ---
 type: community
 cohesion: 0.67
-members: 3
+members: 4
 ---
 
 # Community 108
 
 **Cohesion:** 0.67 - moderately connected
-**Members:** 3 nodes
+**Members:** 4 nodes
 
 ## Members
-- [[add_orders_hazirlaniyor_table.py]] - code - migrations/versions/add_orders_hazirlaniyor_table.py
-- [[downgrade()_1]] - code - migrations/versions/add_orders_hazirlaniyor_table.py
-- [[upgrade()_1]] - code - migrations/versions/add_orders_hazirlaniyor_table.py
+- [[Dark Mode Auto-Toggle (gs_dark_mode)]] - rationale - templates/kasa.html
+- [[Kasa (Cash Register)]] - document - templates/kasa.html
+- [[Kasa Kaydını Düzenle (Edit Cash Entry)]] - document - templates/kasa_duzenle.html
+- [[Raporlama (Report Entry)]] - document - templates/rapor_gir.html
 
 ## Live Query (requires Dataview plugin)
 
@@ -20,9 +21,3 @@ members: 3
 TABLE source_file, type FROM #community/Community_108
 SORT file.name ASC
 ```
-
-## Connections to other communities
-- 1 edge to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
-
-## Top bridge nodes
-- [[add_orders_hazirlaniyor_table.py]] - degree 3, connects to 1 community

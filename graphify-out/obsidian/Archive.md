@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "Üretim Önerisi & Satış Tahmini"
 location: "L969"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/retim_nerisi__Sat_Tahmini
 ---
 
 # Archive
@@ -32,4 +32,4 @@ tags:
 - [[test_stok_fixleri.py]] - `imports` [EXTRACTED]
 - [[trace_order.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/code #graphify/EXTRACTED #community/retim_nerisi__Sat_Tahmini

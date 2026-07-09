@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/check_sync_health.py"
 type: "code"
-community: "Community 38"
+community: "Community 76"
 location: "L15"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Community_38
+  - community/Community_76
 ---
 
 # main()
@@ -16,4 +16,4 @@ tags:
 - [[ShopifyMapping]] - `indirect_call` [INFERRED]
 - [[check_sync_health.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Community_38
+#graphify/code #graphify/INFERRED #community/Community_76

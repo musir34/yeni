@@ -1,29 +1,8 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8" />
-    <script>(function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();if(m==='on'||(m==='auto'&&(h>=20||h<7)))document.documentElement.classList.add('gs-dark');})()</script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Toplu Ürün Hazırla - Güllü Ayakkabı</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-mode.css') }}">
-    <style>
-        :root {
-            --color-primary: #B76E79;
-            --color-primary-dark: #A05F6A;
-            --color-secondary: #212529;
-            --color-text: #343a40;
-            --color-bg: #f8f9fa;
-            --color-white: #fff;
-            --color-border: #dee2e6;
-            --border-radius: 0.5rem;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
-            --shadow-md: 0 5px 15px rgba(0,0,0,0.08);
-            --transition: all 0.25s ease-in-out;
-        }
-        body { font-family: 'Inter', sans-serif; background-color: var(--color-bg); color: var(--color-text); }
+{% extends "base.html" %}
+{% block title %}Toplu Ürün Hazırla - Güllü Ayakkabı{% endblock %}
+{% block extra_css %}
+<style>
+    /* :root / * / body ortak stilleri gullu-common.css'ten gelir; burada yalnızca sayfaya özgü kurallar tutulur. */
         .container { max-width: 960px; padding: 1.5rem; }
 
         .page-header { background: var(--color-white); padding: 1rem 1.5rem; border-radius: var(--border-radius); box-shadow: var(--shadow-sm); margin-bottom: 1.5rem; }
@@ -83,10 +62,10 @@
             .page-header { display: none; }
             body { background: white; }
         }
-    </style>
-</head>
-<body>
-<div class="container">
+</style>
+{% endblock %}
+
+{% block content %}
 
     <!-- ── Başlık ── -->
     <div class="page-header d-flex justify-content-between align-items-center no-print flex-wrap gap-2">
@@ -163,8 +142,9 @@
     </div>
     {% endif %}
 
-</div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}
+
+{% block scripts %}
 <script>
 (function () {
   // Manuel raf-okutmalı toplama: her satırda raf barkodu + ürün barkodu okutulur,
@@ -270,6 +250,4 @@
   focusNextRaf(null);
 })();
 </script>
-{% include 'includes/notification_popup.html' ignore missing %}
-</body>
-</html>
+{% endblock %}

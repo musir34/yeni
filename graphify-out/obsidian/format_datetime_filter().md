@@ -1,12 +1,12 @@
 ---
 source_file: "app.py"
 type: "code"
-community: "Stok Fix Testleri & Yardımcılar"
+community: "Barkod Üretimi & Sipariş Listesi"
 location: "L102"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Stok_Fix_Testleri__Yardmclar
+  - community/Barkod_retimi__Sipari_Listesi
 ---
 
 # format_datetime_filter()
@@ -16,4 +16,4 @@ tags:
 - [[app.py]] - `indirect_call` [INFERRED]
 - [[get_istanbul_time()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar
+#graphify/code #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi

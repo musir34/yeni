@@ -10,8 +10,8 @@ members: 2
 **Members:** 2 nodes
 
 ## Members
-- [[Her çağrıda aynı `db.session`’ı verip otomatik kapatır.]] - rationale - iade_islemleri.py
-- [[with_db_session()]] - code - iade_islemleri.py
+- [[Sipariş detay sayfası]] - rationale - amazon/amazon_routes.py
+- [[order_detail()]] - code - amazon/amazon_routes.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -21,7 +21,7 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 1 edge to [[_COMMUNITY_Community 44]]
+- 1 edge to [[_COMMUNITY_Community 50]]
 
 ## Top bridge nodes
-- [[with_db_session()]] - degree 2, connects to 1 community
+- [[order_detail()]] - degree 2, connects to 1 community

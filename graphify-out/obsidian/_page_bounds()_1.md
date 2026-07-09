@@ -1,12 +1,12 @@
 ---
 source_file: "order_list_service.py"
 type: "code"
-community: "Barkod Üretimi & Sipariş Listesi"
+community: "Raf Yönetimi & Barkod Çakışması"
 location: "L216"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Barkod_retimi__Sipari_Listesi
+  - community/Raf_Ynetimi__Barkod_akmas
 ---
 
 # _page_bounds()
@@ -16,4 +16,4 @@ tags:
 - [[get_order_list()]] - `calls` [EXTRACTED]
 - [[order_list_service.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi
+#graphify/code #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas

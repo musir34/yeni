@@ -1,11 +1,11 @@
 ---
 source_file: "templates/shopify/price_compare.html"
 type: "code"
-community: "Community 43"
+community: "Community 87"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_43
+  - community/Community_87
 ---
 
 # Price Compare API/Export endpoints
@@ -13,4 +13,4 @@ tags:
 ## Connections
 - [[Shopify-Trendyol Price Comparison Page]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_43
+#graphify/code #graphify/EXTRACTED #community/Community_87

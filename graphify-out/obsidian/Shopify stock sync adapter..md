@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/adapters/shopify.py"
 type: "rationale"
-community: "Community 70"
+community: "Community 80"
 location: "L19"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_70
+  - community/Community_80
 ---
 
 # Shopify stock sync adapter.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[ShopifyAdapter]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_70
+#graphify/rationale #graphify/EXTRACTED #community/Community_80

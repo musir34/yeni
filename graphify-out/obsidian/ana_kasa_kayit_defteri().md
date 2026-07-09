@@ -1,12 +1,12 @@
 ---
 source_file: "kasa.py"
 type: "code"
-community: "Ana Kasa Defteri"
+community: "Community 54"
 location: "L1442"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Ana_Kasa_Defteri
+  - community/Community_54
 ---
 
 # ana_kasa_kayit_defteri()
@@ -17,4 +17,4 @@ tags:
 - [[Decimal]] - `calls` [INFERRED]
 - [[kasa.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Ana_Kasa_Defteri
+#graphify/code #graphify/EXTRACTED #community/Community_54

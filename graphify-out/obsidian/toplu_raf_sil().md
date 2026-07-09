@@ -1,12 +1,12 @@
 ---
 source_file: "raf_sistemi.py"
 type: "code"
-community: "Raf Sistemi & Etiket"
+community: "Barkod Alias Yardımcıları"
 location: "L337"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Raf_Sistemi__Etiket
+  - community/Barkod_Alias_Yardmclar
 ---
 
 # toplu_raf_sil()
@@ -17,4 +17,4 @@ tags:
 - [[raf_sistemi.py]] - `contains` [EXTRACTED]
 - [[sync_multiple_barcodes()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Raf_Sistemi__Etiket
+#graphify/code #graphify/EXTRACTED #community/Barkod_Alias_Yardmclar

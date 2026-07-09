@@ -10,26 +10,26 @@ members: 20
 **Members:** 20 nodes
 
 ## Members
-- [[API endpoint for deleting all variants of a product by model ID and color]] - rationale - get_products.py
-- [[Başarılı API yanıtı oluşturur.          Args         message (str) Başarı mesa]] - rationale - utils.py
-- [[Hata API yanıtı oluşturur.          Args         message (str) Hata mesajı]] - rationale - utils.py
-- [[Kayıt bulunamadı yanıtı oluşturur.          Args         resource (str) Buluna]] - rationale - utils.py
-- [[Sayfalı veri yanıtı oluşturur.          Args         items (list) Mevcut sayfa]] - rationale - utils.py
-- [[Sunucu hatası yanıtı oluşturur.          Args         message (str) Hata mesaj]] - rationale - utils.py
-- [[Utilities Module - Standart Response Fonksiyonları =============================]] - rationale - utils.py
-- [[Validasyon hatası yanıtı oluşturur.          Args         errors (dict) Alan a]] - rationale - utils.py
-- [[Yetkisiz erişim yanıtı oluşturur.          Args         message (str) Hata mes]] - rationale - utils.py
-- [[conflict_response()]] - code - utils.py
-- [[delete_product_api()]] - code - get_products.py
-- [[error_response()]] - code - utils.py
-- [[not_found_response()]] - code - utils.py
-- [[paginated_response()]] - code - utils.py
-- [[server_error_response()]] - code - utils.py
-- [[success_response()]] - code - utils.py
-- [[unauthorized_response()]] - code - utils.py
-- [[utils.py]] - code - utils.py
-- [[validation_error_response()]] - code - utils.py
-- [[Çakışmatekrar yanıtı oluşturur.          Args         message (str) Hata mesa]] - rationale - utils.py
+- [['staticimages' klasöründe barkod.jpg vb. arar, yoksa default döndürür.]] - rationale - archive.py
+- [[Arşiv tablosundaki siparişleri listeler (sayfalı).]] - rationale - archive.py
+- [[Arşiv tarihinden itibaren geçen süreyi (gün, saat, dakika) string olarak döndürü]] - rationale - archive.py
+- [[Arşivdeki siparişi 'Picking' statüsüne geçirmek için     1) Trendyol API'ye -]] - rationale - archive.py
+- [[Arşivdeki siparişi orders_created tablosuna geri taşır.]] - rationale - archive.py
+- [[Bir siparişin statüsünü güncelle.     Eğer çok tablolu modelde sipariş CreatedP]] - rationale - archive.py
+- [[Detaylı ve güzel HTML email oluşturur.]] - rationale - mail_service.py
+- [[Kargoya kalan süreyi agreed_delivery_date, yoksa estimated_delivery_end ile hesa]] - rationale - archive.py
+- [[Sipariş details alanını ürün listesine çevirir.]] - rationale - mail_service.py
+- [[_parse_products()]] - code - mail_service.py
+- [[archive.py]] - code - archive.py
+- [[build_email_html()]] - code - mail_service.py
+- [[change_order_status()]] - code - archive.py
+- [[compute_archived_duration()]] - code - archive.py
+- [[compute_shipping_time_left()]] - code - archive.py
+- [[display_archive()]] - code - archive.py
+- [[execute_order_processing()]] - code - archive.py
+- [[fetch_product_image()]] - code - archive.py
+- [[parse_order_details()]] - code - archive.py
+- [[recover_from_archive()]] - code - archive.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -39,11 +39,25 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 4 edges to [[_COMMUNITY_Ürün Çekme & Görsel İndirme]]
-- 1 edge to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
+- 14 edges to [[_COMMUNITY_E-posta Bildirimleri]]
+- 9 edges to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
+- 5 edges to [[_COMMUNITY_Community 42]]
+- 2 edges to [[_COMMUNITY_Community 90]]
+- 2 edges to [[_COMMUNITY_Trendyol Sipariş Çekme & Komisyon]]
+- 2 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
+- 1 edge to [[_COMMUNITY_Stok Senkron API]]
+- 1 edge to [[_COMMUNITY_Community 66]]
+- 1 edge to [[_COMMUNITY_Üretim Önerisi & Satış Tahmini]]
+- 1 edge to [[_COMMUNITY_Community 61]]
+- 1 edge to [[_COMMUNITY_Stok Fix Testleri & Yardımcılar]]
+- 1 edge to [[_COMMUNITY_Community 48]]
+- 1 edge to [[_COMMUNITY_Maliyet Fişi & Tedarikçi]]
+- 1 edge to [[_COMMUNITY_Community 57]]
+- 1 edge to [[_COMMUNITY_Community 71]]
 
 ## Top bridge nodes
-- [[delete_product_api()]] - degree 6, connects to 2 communities
-- [[error_response()]] - degree 8, connects to 1 community
-- [[success_response()]] - degree 5, connects to 1 community
-- [[validation_error_response()]] - degree 5, connects to 1 community
+- [[archive.py]] - degree 37, connects to 15 communities
+- [[recover_from_archive()]] - degree 9, connects to 4 communities
+- [[change_order_status()]] - degree 7, connects to 3 communities
+- [[execute_order_processing()]] - degree 5, connects to 3 communities
+- [[build_email_html()]] - degree 7, connects to 2 communities

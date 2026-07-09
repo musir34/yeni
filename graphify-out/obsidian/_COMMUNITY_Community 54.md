@@ -1,31 +1,32 @@
 ---
 type: community
-cohesion: 0.33
-members: 16
+cohesion: 0.16
+members: 17
 ---
 
 # Community 54
 
-**Cohesion:** 0.33 - loosely connected
-**Members:** 16 nodes
+**Cohesion:** 0.16 - loosely connected
+**Members:** 17 nodes
 
 ## Members
-- [[Okutulan raftan düş + 'toplandı' damgala.      Returns {success bool, error]] - rationale - picking_service.py
-- [[Raf kodu normalize — Zebratelefon klavyesi '-' yerine '=''' gönderebilir.]] - rationale - picking_service.py
-- [[_install_udf()_1]] - code - tests/test_picking_service.py
-- [[_mk_order()]] - code - tests/test_picking_service.py
-- [[_norm_raf()]] - code - picking_service.py
-- [[_seed_shelf()_1]] - code - tests/test_picking_service.py
-- [[_shelf_qty()_1]] - code - tests/test_picking_service.py
-- [[pick_order_from_shelf()]] - code - picking_service.py
-- [[picking_service.pick_order_from_shelf testleri — TDD, izole sqlite.]] - rationale - tests/test_picking_service.py
-- [[test_pick_accepts_second_barcode_segment()]] - code - tests/test_picking_service.py
-- [[test_pick_decrements_scanned_shelf_and_stamps()]] - code - tests/test_picking_service.py
-- [[test_pick_idempotent_no_double_decrement()]] - code - tests/test_picking_service.py
-- [[test_pick_insufficient_qty_rejected()]] - code - tests/test_picking_service.py
-- [[test_pick_wrong_product_rejected()]] - code - tests/test_picking_service.py
-- [[test_pick_wrong_shelf_rejected()]] - code - tests/test_picking_service.py
-- [[test_picking_service.py]] - code - tests/test_picking_service.py
+- [[.__repr__()_9]] - code - models.py
+- [[.__repr__()_10]] - code - models.py
+- [[Ana Kasa bakiyesini JSON olarak döndür]] - rationale - kasa.py
+- [[Ana Kasa görüntüleme ve işlem geçmişi sayfası]] - rationale - kasa.py
+- [[Ana Kasa kayıt defterini görüntüle]] - rationale - kasa.py
+- [[Ana Kasa'ya manuel para ekle - Basitleştirilmiş]] - rationale - kasa.py
+- [[AnaKasa]] - code - models.py
+- [[AnaKasaIslem]] - code - models.py
+- [[Decimal]] - code
+- [[ana_kasa()]] - code - kasa.py
+- [[ana_kasa_bakiye()]] - code - kasa.py
+- [[ana_kasa_guncelle()]] - code - kasa.py
+- [[ana_kasa_kayit_defteri()]] - code - kasa.py
+- [[api_odeme_yap()]] - code - kasa.py
+- [[excel_gelir_yukle()]] - code - kasa.py
+- [[kasa_sil()]] - code - kasa.py
+- [[İşbankası Excel formatında gelir yükleme]] - rationale - kasa.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -35,19 +36,16 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 7 edges to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
-- 2 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 2 edges to [[_COMMUNITY_Community 38]]
-- 2 edges to [[_COMMUNITY_Stok Fix Testleri & Yardımcılar]]
-- 2 edges to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
-- 2 edges to [[_COMMUNITY_Yeni Sipariş Hazırlama & Toplama]]
-- 1 edge to [[_COMMUNITY_Barkod Alias Yardımcıları]]
-- 1 edge to [[_COMMUNITY_Stok Hareket Defteri (Ledger)]]
-- 1 edge to [[_COMMUNITY_Sipariş Denetim Kaydı (Audit Log)]]
+- 17 edges to [[_COMMUNITY_Ürün Çekme & Görsel İndirme]]
+- 5 edges to [[_COMMUNITY_Community 42]]
+- 4 edges to [[_COMMUNITY_E-posta Bildirimleri]]
+- 3 edges to [[_COMMUNITY_Sipariş Denetim Kaydı (Audit Log)]]
+- 2 edges to [[_COMMUNITY_Community 66]]
+- 1 edge to [[_COMMUNITY_Hepsiburada Servisi]]
 
 ## Top bridge nodes
-- [[test_picking_service.py]] - degree 22, connects to 8 communities
-- [[pick_order_from_shelf()]] - degree 15, connects to 2 communities
-- [[_seed_shelf()_1]] - degree 9, connects to 2 communities
-- [[_mk_order()]] - degree 8, connects to 1 community
-- [[_norm_raf()]] - degree 3, connects to 1 community
+- [[Decimal]] - degree 16, connects to 4 communities
+- [[AnaKasa]] - degree 11, connects to 3 communities
+- [[AnaKasaIslem]] - degree 8, connects to 3 communities
+- [[ana_kasa_guncelle()]] - degree 6, connects to 2 communities
+- [[excel_gelir_yukle()]] - degree 6, connects to 2 communities

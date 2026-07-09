@@ -1,26 +1,28 @@
 ---
 type: community
-cohesion: 0.20
-members: 11
+cohesion: 0.19
+members: 13
 ---
 
 # Community 72
 
-**Cohesion:** 0.20 - loosely connected
-**Members:** 11 nodes
+**Cohesion:** 0.19 - loosely connected
+**Members:** 13 nodes
 
 ## Members
-- [[.get_credentials()]] - code - amazon/amazon_config.py
-- [[.get_marketplace_ids()]] - code - amazon/amazon_config.py
-- [[Aktif marketplace ID listesi]] - rationale - amazon/amazon_config.py
-- [[Amazon SP-API Konfigürasyonu Amazon Seller Partner API için gerekli ayarlar]] - rationale - amazon/amazon_config.py
-- [[Amazon SP-API Service - Gerçek Amazon SP-API Entegrasyonu]] - rationale - amazon/amazon_service.py
-- [[Amazon SP-API ayarları]] - rationale - amazon/amazon_config.py
-- [[AmazonConfig]] - code - amazon/amazon_config.py
-- [[SP-API için credentials dict döndür (AWS'siz - Grantless mode)]] - rationale - amazon/amazon_config.py
-- [[__init__.py_1]] - code - amazon/__init__.py
-- [[amazon_config.py]] - code - amazon/amazon_config.py
-- [[amazon_service.py]] - code - amazon/amazon_service.py
+- [[.__init__()_1]] - code - hepsiburada/hepsiburada_service.py
+- [[.get_auth()]] - code - hepsiburada/hepsiburada_config.py
+- [[.get_catalog_base_url()]] - code - hepsiburada/hepsiburada_config.py
+- [[Aktif katalog API base URL'ini döndür]] - rationale - hepsiburada/hepsiburada_config.py
+- [[HTTP Basic Auth tuple döndür]] - rationale - hepsiburada/hepsiburada_config.py
+- [[Hepsiburada Marketplace API Konfigürasyonu Hepsiburada Satıcı API entegrasyonu i]] - rationale - hepsiburada/hepsiburada_config.py
+- [[Hepsiburada Marketplace API Service Sipariş, Listeleme ve Katalog yönetimi]] - rationale - hepsiburada/hepsiburada_service.py
+- [[Hepsiburada Marketplace API ayarları]] - rationale - hepsiburada/hepsiburada_config.py
+- [[Hepsiburada servisini başlat]] - rationale - hepsiburada/hepsiburada_service.py
+- [[HepsiburadaConfig]] - code - hepsiburada/hepsiburada_config.py
+- [[__init__.py_2]] - code - hepsiburada/__init__.py
+- [[hepsiburada_config.py]] - code - hepsiburada/hepsiburada_config.py
+- [[hepsiburada_service.py]] - code - hepsiburada/hepsiburada_service.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -30,13 +32,14 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 4 edges to [[_COMMUNITY_Community 47]]
-- 2 edges to [[_COMMUNITY_Community 78]]
-- 1 edge to [[_COMMUNITY_Community 64]]
-- 1 edge to [[_COMMUNITY_Community 86]]
+- 4 edges to [[_COMMUNITY_Manuel Sipariş Oluşturma]]
+- 4 edges to [[_COMMUNITY_Anasayfa Özet & Sayımlar]]
+- 4 edges to [[_COMMUNITY_Community 73]]
+- 1 edge to [[_COMMUNITY_Community 71]]
 
 ## Top bridge nodes
-- [[__init__.py_1]] - degree 6, connects to 3 communities
-- [[AmazonConfig]] - degree 7, connects to 2 communities
-- [[amazon_service.py]] - degree 4, connects to 2 communities
-- [[amazon_config.py]] - degree 4, connects to 1 community
+- [[HepsiburadaConfig]] - degree 13, connects to 3 communities
+- [[__init__.py_2]] - degree 6, connects to 3 communities
+- [[hepsiburada_service.py]] - degree 6, connects to 2 communities
+- [[hepsiburada_config.py]] - degree 5, connects to 1 community
+- [[.__init__()_1]] - degree 3, connects to 1 community

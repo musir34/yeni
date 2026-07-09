@@ -1,12 +1,12 @@
 ---
 source_file: "agent_api.py"
 type: "rationale"
-community: "Agent API & Sipariş Sorguları"
+community: "Sipariş Denetim Kaydı (Audit Log)"
 location: "L1593"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Agent_API__Sipari_Sorgular
+  - community/Sipari_Denetim_Kayd_Audit_Log
 ---
 
 # Global arama — ürün, sipariş, değişim, iade hepsinde arar.      Query params:
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[global_search()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Agent_API__Sipari_Sorgular
+#graphify/rationale #graphify/EXTRACTED #community/Sipari_Denetim_Kayd_Audit_Log

@@ -1,12 +1,12 @@
 ---
 source_file: "barcode_alias_helper.py"
 type: "code"
-community: "Barkod Alias Yardımcıları"
+community: "Değişim / İade Talepleri"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Barkod_Alias_Yardmclar
+  - community/Deiim_/_ade_Talepleri
 ---
 
 # barcode_alias_helper.py
@@ -43,4 +43,4 @@ tags:
 - [[stock_management.py]] - `imports_from` [EXTRACTED]
 - [[strip_turkish()]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Barkod_Alias_Yardmclar
+#graphify/code #graphify/EXTRACTED #community/Deiim_/_ade_Talepleri

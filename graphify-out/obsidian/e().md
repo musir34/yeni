@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/check_real_product_zero.py"
 type: "code"
-community: "Community 62"
+community: "Community 78"
 location: "L22"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_62
+  - community/Community_78
 ---
 
 # e()
@@ -15,4 +15,4 @@ tags:
 - [[check_real_product_zero.py]] - `contains` [EXTRACTED]
 - [[main()_9]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_62
+#graphify/code #graphify/EXTRACTED #community/Community_78

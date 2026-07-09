@@ -1,12 +1,12 @@
 ---
 source_file: "user_logs.py"
 type: "code"
-community: "Community 59"
+community: "Community 57"
 location: "L372"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_59
+  - community/Community_57
 ---
 
 # export_logs()
@@ -16,4 +16,4 @@ tags:
 - [[User]] - `indirect_call` [INFERRED]
 - [[user_logs.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_59
+#graphify/code #graphify/EXTRACTED #community/Community_57

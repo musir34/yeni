@@ -1,12 +1,12 @@
 ---
 source_file: "kasa.py"
 type: "code"
-community: "Kasa & Gelir-Gider"
+community: "Ürün Çekme & Görsel İndirme"
 location: "L18"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Kasa__Gelir-Gider
+  - community/rn_ekme__Grsel_ndirme
 ---
 
 # _parse_durum_input()
@@ -17,4 +17,4 @@ tags:
 - [[kasa_sayfasi()]] - `calls` [EXTRACTED]
 - [[yeni_kasa_kaydi()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Kasa__Gelir-Gider
+#graphify/code #graphify/EXTRACTED #community/rn_ekme__Grsel_ndirme

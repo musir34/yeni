@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Community 49"
+community: "Maliyet Fişi & Tedarikçi"
 location: "L724"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_49
+  - community/Maliyet_Fii__Tedariki
 ---
 
 # Order
@@ -16,4 +16,4 @@ tags:
 - [[models.py]] - `contains` [EXTRACTED]
 - [[order_audit_routes.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_49
+#graphify/code #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki

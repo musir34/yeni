@@ -1,12 +1,12 @@
 ---
 source_file: "idefix/idefix_routes.py"
 type: "code"
-community: "Idefix Entegrasyonu"
+community: "Community 37"
 location: "L378"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Idefix_Entegrasyonu
+  - community/Community_37
 ---
 
 # api_get_platforms()
@@ -15,4 +15,4 @@ tags:
 - [[Bir ürünün platformlarını getirir]] - `rationale_for` [EXTRACTED]
 - [[idefix_routes.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Idefix_Entegrasyonu
+#graphify/code #graphify/EXTRACTED #community/Community_37

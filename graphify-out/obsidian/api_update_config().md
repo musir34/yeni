@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/routes.py"
 type: "code"
-community: "Community 75"
+community: "Community 77"
 location: "L650"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_75
+  - community/Community_77
 ---
 
 # api_update_config()
@@ -17,4 +17,4 @@ tags:
 - [[log_user_action()_1]] - `calls` [EXTRACTED]
 - [[routes.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_75
+#graphify/code #graphify/EXTRACTED #community/Community_77

@@ -1,12 +1,12 @@
 ---
 source_file: "agent_api.py"
 type: "rationale"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Sipariş Denetim Kaydı (Audit Log)"
 location: "L1419"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Sipari_Denetim_Kayd_Audit_Log
 ---
 
 # Raf ürün adedini güncelle. Body: {"adet": 5}
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[update_shelf_product_qty()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/rationale #graphify/EXTRACTED #community/Sipari_Denetim_Kayd_Audit_Log

@@ -1,12 +1,12 @@
 ---
 source_file: "overdue_orders.py"
 type: "rationale"
-community: "Anasayfa Özet & Sayımlar"
+community: "Kasa & Gelir-Gider"
 location: "L35"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Anasayfa_zet__Saymlar
+  - community/Kasa__Gelir-Gider
 ---
 
 # Teslim son tarihi ifadesi: agreed_delivery_date, yoksa estimated_delivery_end.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[deadline_expr()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Anasayfa_zet__Saymlar
+#graphify/rationale #graphify/EXTRACTED #community/Kasa__Gelir-Gider

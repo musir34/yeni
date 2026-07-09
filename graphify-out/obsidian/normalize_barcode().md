@@ -1,12 +1,12 @@
 ---
 source_file: "barcode_alias_helper.py"
 type: "code"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Değişim / İade Talepleri"
 location: "L25"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Deiim_/_ade_Talepleri
 ---
 
 # normalize_barcode()
@@ -71,4 +71,4 @@ tags:
 - [[update_service.py]] - `imports` [EXTRACTED]
 - [[update_shelf_product_qty()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/code #graphify/EXTRACTED #community/Deiim_/_ade_Talepleri

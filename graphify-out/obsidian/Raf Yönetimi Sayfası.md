@@ -1,18 +1,18 @@
 ---
 source_file: "templates/raf_olustur.html"
 type: "concept"
-community: "Community 48"
+community: "Community 38"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_48
+  - community/Community_38
 ---
 
 # Raf Yönetimi Sayfası
 
 ## Connections
-- [[Bildirim popup include]] - `references` [EXTRACTED]
+- [[apimy-notification-image endpoint]] - `references` [EXTRACTED]
 - [[Raf Blueprint]] - `calls` [EXTRACTED]
 - [[Ürün Yönetimi Listesi]] - `references` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_48
+#graphify/concept #graphify/EXTRACTED #community/Community_38

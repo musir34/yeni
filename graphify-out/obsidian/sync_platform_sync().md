@@ -14,7 +14,7 @@ tags:
 ## Connections
 - [[.sync_platform()]] - `calls` [EXTRACTED]
 - [[Any_13]] - `references` [EXTRACTED]
-- [[Sync wrapper for non-async contexts_1]] - `rationale_for` [EXTRACTED]
+- [[Sync wrapper for non-async contexts]] - `rationale_for` [EXTRACTED]
 - [[api_sync_platform()]] - `calls` [EXTRACTED]
 - [[routes.py]] - `imports` [EXTRACTED]
 - [[service.py]] - `contains` [EXTRACTED]

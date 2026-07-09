@@ -1,12 +1,12 @@
 ---
 source_file: "amazon/amazon_routes.py"
 type: "rationale"
-community: "Community 122"
+community: "Community 128"
 location: "L123"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_122
+  - community/Community_128
 ---
 
 # Stok güncelleme API endpoint
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[update_inventory()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_122
+#graphify/rationale #graphify/EXTRACTED #community/Community_128

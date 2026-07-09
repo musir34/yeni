@@ -1,20 +1,22 @@
 ---
 type: community
-cohesion: 0.60
-members: 5
+cohesion: 0.29
+members: 7
 ---
 
 # Community 95
 
-**Cohesion:** 0.60 - moderately connected
-**Members:** 5 nodes
+**Cohesion:** 0.29 - loosely connected
+**Members:** 7 nodes
 
 ## Members
-- [[AI Asistanı sohbet sayfası]] - concept - templates/ai_asistan.html
-- [[AI Asistanı sunucu kurulumu (headless Claude Code)]] - document - ai_asistan/KURULUM.md
-- [[Python bağımlılıkları (FlaskSQLAlchemyopenaiprophet)]] - document - requirements.txt
-- [[Salt-okunur Postgres MCP (gulludb query)]] - concept - ai_asistan/KURULUM.md
-- [[ai_readonly salt-okunur DB rolü]] - concept - ai_asistan/KURULUM.md
+- [[Bilgi Bankasi (Knowledge base fitshippingreturns)]] - concept - trendyol_qna/CEVAP_KURALLARI.md
+- [[Mandatory Gullu Shoes signature rule]] - concept - trendyol_qna/CEVAP_KURALLARI.md
+- [[No external platformoff-platform redirect rule]] - rationale - trendyol_qna/CEVAP_KURALLARI.md
+- [[No personalcontact data rule]] - rationale - trendyol_qna/CEVAP_KURALLARI.md
+- [[Stock Questions rule (ground answer in live stock)]] - concept - trendyol_qna/CEVAP_KURALLARI.md
+- [[Trendyol Q&A Answer Rules]] - document - trendyol_qna/CEVAP_KURALLARI.md
+- [[Uslup (Tone warm, short, minimal emoji)]] - concept - trendyol_qna/CEVAP_KURALLARI.md
 
 ## Live Query (requires Dataview plugin)
 
@@ -22,9 +24,3 @@ members: 5
 TABLE source_file, type FROM #community/Community_95
 SORT file.name ASC
 ```
-
-## Connections to other communities
-- 1 edge to [[_COMMUNITY_Community 53]]
-
-## Top bridge nodes
-- [[AI Asistanı sohbet sayfası]] - degree 3, connects to 1 community

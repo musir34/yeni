@@ -1,11 +1,11 @@
 ---
 source_file: ""
 type: "code"
-community: "Akıllı Motor (İndirim & Fiyat)"
+community: "Stok Hareket Defteri (Ledger)"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Akll_Motor_ndirim__Fiyat
+  - community/Stok_Hareket_Defteri_Ledger
 ---
 
 # DataFrame
@@ -17,4 +17,4 @@ tags:
 - [[mod3_yasam_dongusu()]] - `references` [EXTRACTED]
 - [[run_full_analysis()]] - `references` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Akll_Motor_ndirim__Fiyat
+#graphify/code #graphify/EXTRACTED #community/Stok_Hareket_Defteri_Ledger

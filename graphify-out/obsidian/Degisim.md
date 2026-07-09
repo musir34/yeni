@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Değişim / İade Talepleri"
+community: "Kimlik Doğrulama & Kullanıcı Yönetimi"
 location: "L1049"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Deiim_/_ade_Talepleri
+  - community/Kimlik_Dorulama__Kullanc_Ynetimi
 ---
 
 # Degisim
@@ -22,4 +22,4 @@ tags:
 - [[siparis_hazirla.py]] - `imports` [EXTRACTED]
 - [[test_stok_fixleri.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Deiim_/_ade_Talepleri
+#graphify/code #graphify/EXTRACTED #community/Kimlik_Dorulama__Kullanc_Ynetimi

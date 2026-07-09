@@ -1,12 +1,12 @@
 ---
 source_file: "trendyol_qna/qna_routes.py"
 type: "rationale"
-community: "Community 42"
+community: "Community 45"
 location: "L23"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_42
+  - community/Community_45
 ---
 
 # 1) 2FA kalkanı (derinlemesine savunma): app-level check_authentication        za
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_guvenlik_kalkani()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_42
+#graphify/rationale #graphify/EXTRACTED #community/Community_45

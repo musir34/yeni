@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Community 42"
+community: "Community 45"
 location: "L1437"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Community_42
+  - community/Community_45
 ---
 
 # TrendyolQuestion
@@ -26,4 +26,4 @@ tags:
 - [[taslak_durum()]] - `indirect_call` [INFERRED]
 - [[waiting_count()]] - `indirect_call` [INFERRED]
 
-#graphify/code #graphify/INFERRED #community/Community_42
+#graphify/code #graphify/INFERRED #community/Community_45

@@ -1,12 +1,12 @@
 ---
 source_file: "mail_service.py"
 type: "code"
-community: "E-posta Bildirimleri"
+community: "Sipariş Yaşam Döngüsü & Arşiv"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/E-posta_Bildirimleri
+  - community/Sipari_Yaam_Dngs__Ariv
 ---
 
 # mail_service.py
@@ -24,4 +24,4 @@ tags:
 - [[send_email()]] - `contains` [EXTRACTED]
 - [[stock_alert_service.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri
+#graphify/code #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv

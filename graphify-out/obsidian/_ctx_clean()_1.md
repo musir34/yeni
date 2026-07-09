@@ -1,12 +1,12 @@
 ---
 source_file: "tests/test_picking_service.py"
 type: "code"
-community: "Community 38"
+community: "Community 67"
 location: "L55"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Community_38
+  - community/Community_67
 ---
 
 # _ctx_clean()
@@ -19,4 +19,4 @@ tags:
 - [[StockMovement]] - `indirect_call` [INFERRED]
 - [[test_picking_service.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Community_38
+#graphify/code #graphify/INFERRED #community/Community_67

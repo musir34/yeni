@@ -1,12 +1,12 @@
 ---
 source_file: "trendyol_qna/qna_notes.py"
 type: "code"
-community: "Community 104"
+community: "Community 96"
 location: "L43"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_104
+  - community/Community_96
 ---
 
 # log_approved_answer()
@@ -17,4 +17,4 @@ tags:
 - [[qna_notes.py]] - `contains` [EXTRACTED]
 - [[qna_service.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_104
+#graphify/code #graphify/EXTRACTED #community/Community_96

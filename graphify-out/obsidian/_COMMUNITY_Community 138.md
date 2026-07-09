@@ -10,7 +10,7 @@ members: 1
 **Members:** 1 nodes
 
 ## Members
-- [[Temel Layout Şablonu]] - concept - templates/layout.html
+- [[__init__.py]] - code - ai_asistan/__init__.py
 
 ## Live Query (requires Dataview plugin)
 

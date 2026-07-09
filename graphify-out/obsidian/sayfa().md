@@ -1,12 +1,12 @@
 ---
 source_file: "ai_asistan/blueprint.py"
 type: "code"
-community: "AI Asistanı (Headless Claude)"
+community: "Raf Sistemi & Etiket"
 location: "L257"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/AI_Asistan_Headless_Claude
+  - community/Raf_Sistemi__Etiket
 ---
 
 # sayfa()
@@ -15,4 +15,4 @@ tags:
 - [[Sohbet kutusu sayfası.]] - `rationale_for` [EXTRACTED]
 - [[blueprint.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/AI_Asistan_Headless_Claude
+#graphify/code #graphify/EXTRACTED #community/Raf_Sistemi__Etiket

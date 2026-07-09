@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/adapters/idefix.py"
 type: "rationale"
-community: "Community 63"
+community: "Community 68"
 location: "L140"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_63
+  - community/Community_68
 ---
 
 # Idefix bulk stock update (varsa)         API: PUT /pim/pool/{sellerId}/stocks
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[.send_stock_bulk()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_63
+#graphify/rationale #graphify/EXTRACTED #community/Community_68

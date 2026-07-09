@@ -1,40 +1,39 @@
 ---
 type: community
-cohesion: 0.09
-members: 25
+cohesion: 0.12
+members: 24
 ---
 
 # Raf Sistemi & Etiket
 
-**Cohesion:** 0.09 - loosely connected
-**Members:** 25 nodes
+**Cohesion:** 0.12 - loosely connected
+**Members:** 24 nodes
 
 ## Members
-- [[Barkod girildiğinde ürünün hangi raflarda olduğunu döndürür.     Sadece adet  0]] - rationale - raf_sistemi.py
-- [[Birden fazla barkod için CentralStock'u senkronize eder.]] - rationale - stock_management.py
-- [[Raf kodunun sistemde olup olmadığını kontrol eder.     🔧 = ve  karakterleri]] - rationale - raf_sistemi.py
-- [[Rafları 3 katmanlı bir yapıda döndürür. Frontend'in artık path'lere ihtiyacı olm]] - rationale - raf_sistemi.py
-- [[Seçili rafları toplu olarak siler.      - Ana raf kodu verilirse (örn 'Z') o an]] - rationale - raf_sistemi.py
-- [[Verilen raf koduna göre anlık olarak Barkod resmi oluşturur ve döndürür.]] - rationale - raf_sistemi.py
-- [[Verilen raf koduna göre anlık olarak QR kod resmi oluşturur ve döndürür.]] - rationale - raf_sistemi.py
-- [[api_get_raf_stoklari()]] - code - raf_sistemi.py
-- [[barkod_ara()]] - code - raf_sistemi.py
-- [[check_raf_var_mi()]] - code - raf_sistemi.py
-- [[generate_barcode_etiket()]] - code - raf_sistemi.py
-- [[generate_qr_etiket()]] - code - raf_sistemi.py
-- [[qrcode_with_text()]] - code - raf_sistemi.py
-- [[raf_form_sayfasi()]] - code - raf_sistemi.py
-- [[raf_gruplu_liste()]] - code - raf_sistemi.py
-- [[raf_kademeli_liste()]] - code - raf_sistemi.py
-- [[raf_listesi_api()]] - code - raf_sistemi.py
-- [[raf_olustur_api()]] - code - raf_sistemi.py
-- [[raf_sil()]] - code - raf_sistemi.py
-- [[raf_sistemi.py]] - code - raf_sistemi.py
-- [[raf_stok_listesi()]] - code - raf_sistemi.py
-- [[raf_yonetimi()]] - code - raf_sistemi.py
-- [[stok_form()]] - code - raf_sistemi.py
-- [[sync_multiple_barcodes()]] - code - stock_management.py
-- [[toplu_raf_sil()]] - code - raf_sistemi.py
+- [[AI Asistanı — Flask blueprint.  Panel içindeki sohbet kutusundan gelen soruyu, s]] - rationale - ai_asistan/blueprint.py
+- [[Aktif kullanıcının sohbet geçmişini döndür (widget açılışında yüklenir).]] - rationale - ai_asistan/blueprint.py
+- [[Aktif kullanıcının sohbet geçmişini sil.]] - rationale - ai_asistan/blueprint.py
+- [[Geçmiş dosyası için güvenli kullanıcı kimliği (yalnızca alfanümerik).]] - rationale - ai_asistan/blueprint.py
+- [[Geçmişi son GECMIS_MAX_TUR2 mesaja kırparak kaydet.]] - rationale - ai_asistan/blueprint.py
+- [[Headless Claude Code'u çağırır ve {'ok' bool, 'cevap''hata' str} döner.     g]] - rationale - ai_asistan/blueprint.py
+- [[Kullanıcının sohbet geçmişini oku (liste {rol, metin}).]] - rationale - ai_asistan/blueprint.py
+- [[Path]] - code
+- [[Sohbet kutusu sayfası.]] - rationale - ai_asistan/blueprint.py
+- [[Soruyu al, doğrula, geçmişle birlikte Claude'a ilet, kaydet, JSON döndür.]] - rationale - ai_asistan/blueprint.py
+- [[_claude_calistir()]] - code - ai_asistan/blueprint.py
+- [[_gecmis_oku()]] - code - ai_asistan/blueprint.py
+- [[_gecmis_yaz()]] - code - ai_asistan/blueprint.py
+- [[_gecmis_yolu()]] - code - ai_asistan/blueprint.py
+- [[_kullanici_id()]] - code - ai_asistan/blueprint.py
+- [[_prompt_olustur()]] - code - ai_asistan/blueprint.py
+- [[_system_prompt()]] - code - ai_asistan/blueprint.py
+- [[blueprint.py]] - code - ai_asistan/blueprint.py
+- [[gecmis()]] - code - ai_asistan/blueprint.py
+- [[sayfa()]] - code - ai_asistan/blueprint.py
+- [[sor()]] - code - ai_asistan/blueprint.py
+- [[temizle()]] - code - ai_asistan/blueprint.py
+- [[Önceki konuşmayı bağlam olarak yeni sorunun önüne ekle (kişiye özel hafıza).]] - rationale - ai_asistan/blueprint.py
+- [[İş bilgisini sistem promptu olarak yükle.     Öncelik Obsidian vault klasöründe]] - rationale - ai_asistan/blueprint.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -44,18 +43,11 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 11 edges to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
-- 5 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
-- 2 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 2 edges to [[_COMMUNITY_Stok Fix Testleri & Yardımcılar]]
-- 1 edge to [[_COMMUNITY_Agent API & Sipariş Sorguları]]
-- 1 edge to [[_COMMUNITY_Barkod Alias Yardımcıları]]
-- 1 edge to [[_COMMUNITY_Community 38]]
-- 1 edge to [[_COMMUNITY_Community 64]]
+- 4 edges to [[_COMMUNITY_Community 62]]
+- 4 edges to [[_COMMUNITY_Community 89]]
+- 1 edge to [[_COMMUNITY_Stok Senkron API]]
 
 ## Top bridge nodes
-- [[raf_sistemi.py]] - degree 32, connects to 7 communities
-- [[sync_multiple_barcodes()]] - degree 8, connects to 2 communities
-- [[raf_olustur_api()]] - degree 4, connects to 2 communities
-- [[toplu_raf_sil()]] - degree 4, connects to 1 community
-- [[barkod_ara()]] - degree 3, connects to 1 community
+- [[blueprint.py]] - degree 19, connects to 3 communities
+- [[_claude_calistir()]] - degree 6, connects to 1 community
+- [[Path]] - degree 2, connects to 1 community

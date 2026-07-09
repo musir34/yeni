@@ -10,8 +10,8 @@ members: 2
 **Members:** 2 nodes
 
 ## Members
-- [[add_toplandi_columns.py]] - code - scripts/add_toplandi_columns.py
-- [[main()_1]] - code - scripts/add_toplandi_columns.py
+- [[_to_ist_aware()]] - code - canli_panel.py
+- [[dt - EuropeIstanbul (tz-aware). Naive ise ASSUME_DB_UTC'ye göre tz eklenir.]] - rationale - canli_panel.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -19,3 +19,10 @@ members: 2
 TABLE source_file, type FROM #community/Community_129
 SORT file.name ASC
 ```
+
+## Connections to other communities
+- 1 edge to [[_COMMUNITY_Üretim Önerisi & Satış Tahmini]]
+- 1 edge to [[_COMMUNITY_E-posta Bildirimleri]]
+
+## Top bridge nodes
+- [[_to_ist_aware()]] - degree 3, connects to 2 communities

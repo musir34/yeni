@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/adapters/base.py"
 type: "code"
-community: "Community 39"
+community: "Community 40"
 location: "L40"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_39
+  - community/Community_40
 ---
 
 # BasePlatformAdapter
@@ -36,4 +36,4 @@ tags:
 - [[shopify.py]] - `imports` [EXTRACTED]
 - [[trendyol.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_39
+#graphify/code #graphify/EXTRACTED #community/Community_40

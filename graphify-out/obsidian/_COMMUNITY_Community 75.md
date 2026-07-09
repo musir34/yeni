@@ -1,26 +1,27 @@
 ---
 type: community
-cohesion: 0.20
-members: 11
+cohesion: 0.17
+members: 12
 ---
 
 # Community 75
 
-**Cohesion:** 0.20 - loosely connected
-**Members:** 11 nodes
+**Cohesion:** 0.17 - loosely connected
+**Members:** 12 nodes
 
 ## Members
-- [[.to_dict()_1]] - code - models.py
-- [[Otomatik senkronizasyonu açkapat]] - rationale - stock_sync/routes.py
-- [[Platform config'ini güncelle]] - rationale - stock_sync/routes.py
-- [[Platform yapılandırmaları]] - rationale - models.py
-- [[PlatformConfig]] - code - models.py
-- [[Senkronizasyon detayı - Her ürün için kayıt]] - rationale - models.py
-- [[SyncDetail]] - code - models.py
-- [[__init__.py_6]] - code - stock_sync/__init__.py
-- [[api_toggle_auto_sync()]] - code - stock_sync/routes.py
-- [[api_update_config()]] - code - stock_sync/routes.py
-- [[models.py_1]] - code - stock_sync/models.py
+- [[Barkod alias kontrolü ucu]] - concept - AGENT_API_DOCS.md
+- [[Barkod tanısı CentralStockRafShopifyMapping YOK]] - document - scripts/diag_result.txt
+- [[Central 0 ama platformda 0 sapma raporu]] - document - scripts/alias_zero_result.txt
+- [[CentralStock.last_push_date kolonu]] - document - migrations/last_push_date_column.md
+- [[Etiket yazı tipi karşılaştırma (50x35 rulo)]] - concept - font_compare.html
+- [[FinansKasa API uçları]] - concept - AGENT_API_DOCS.md
+- [[OpenClaw Agent API (REST)]] - document - AGENT_API_DOCS.md
+- [[OpenClaw Agent API OpenAPI 3.1 spec]] - document - openapi.yaml
+- [[Ortak JSON response zarfı (successdataerror)]] - concept - AGENT_API_DOCS.md
+- [[X-Agent-Key kimlik doğrulama]] - concept - AGENT_API_DOCS.md
+- [[push_central_stock_to_trendyol 10dk job]] - concept - migrations/last_push_date_column.md
+- [[Ürün listesi + central 0 + Shopify0 sapma yok]] - document - scripts/real_product_zero_result.txt
 
 ## Live Query (requires Dataview plugin)
 
@@ -28,22 +29,3 @@ members: 11
 TABLE source_file, type FROM #community/Community_75
 SORT file.name ASC
 ```
-
-## Connections to other communities
-- 4 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 4 edges to [[_COMMUNITY_Stok Senkron API]]
-- 3 edges to [[_COMMUNITY_Community 65]]
-- 3 edges to [[_COMMUNITY_Merkezi Stok Senkronizasyonu]]
-- 3 edges to [[_COMMUNITY_Community 76]]
-- 2 edges to [[_COMMUNITY_Barkod Üretimi & Sipariş Listesi]]
-- 2 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
-- 1 edge to [[_COMMUNITY_Uygulama Çekirdeği & Zamanlı İşler]]
-- 1 edge to [[_COMMUNITY_Community 36]]
-- 1 edge to [[_COMMUNITY_Community 85]]
-
-## Top bridge nodes
-- [[PlatformConfig]] - degree 13, connects to 7 communities
-- [[SyncDetail]] - degree 9, connects to 5 communities
-- [[__init__.py_6]] - degree 6, connects to 4 communities
-- [[models.py_1]] - degree 5, connects to 3 communities
-- [[api_toggle_auto_sync()]] - degree 4, connects to 2 communities

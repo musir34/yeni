@@ -1,12 +1,12 @@
 ---
 source_file: "degisim.py"
 type: "code"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "E-posta Bildirimleri"
 location: "L88"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/E-posta_Bildirimleri
 ---
 
 # find_order_across_tables()
@@ -22,4 +22,4 @@ tags:
 - [[get_order_details()]] - `calls` [EXTRACTED]
 - [[yeni_degisim_talebi()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/code #graphify/INFERRED #community/E-posta_Bildirimleri

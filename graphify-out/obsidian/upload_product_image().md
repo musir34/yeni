@@ -1,12 +1,12 @@
 ---
 source_file: "image_manager.py"
 type: "code"
-community: "Community 61"
+community: "Community 64"
 location: "L158"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_61
+  - community/Community_64
 ---
 
 # upload_product_image()
@@ -17,4 +17,4 @@ tags:
 - [[optimize_image()]] - `calls` [EXTRACTED]
 - [[Ürün görseli yükleme API'si]] - `rationale_for` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_61
+#graphify/code #graphify/EXTRACTED #community/Community_64

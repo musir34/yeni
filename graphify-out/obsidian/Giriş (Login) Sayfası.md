@@ -1,11 +1,11 @@
 ---
 source_file: "templates/login.html"
 type: "concept"
-community: "Community 96"
+community: "Community 102"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_96
+  - community/Community_102
 ---
 
 # Giriş (Login) Sayfası
@@ -15,4 +15,4 @@ tags:
 - [[Kayıt (Register) Sayfası]] - `references` [EXTRACTED]
 - [[LoginLogout Blueprint]] - `calls` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_96
+#graphify/concept #graphify/EXTRACTED #community/Community_102

@@ -10,8 +10,8 @@ members: 2
 **Members:** 2 nodes
 
 ## Members
-- [[.get_all_listings_cached()]] - code - hepsiburada/hepsiburada_service.py
-- [[Cache'den tüm listingleri döndür (10 dk geçerli)]] - rationale - hepsiburada/hepsiburada_service.py
+- [[Amazon ASIN eşleştirme sayfası]] - rationale - amazon/amazon_routes.py
+- [[matching()]] - code - amazon/amazon_routes.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -21,7 +21,7 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 1 edge to [[_COMMUNITY_Hepsiburada Servisi]]
+- 1 edge to [[_COMMUNITY_Community 50]]
 
 ## Top bridge nodes
-- [[.get_all_listings_cached()]] - degree 2, connects to 1 community
+- [[matching()]] - degree 2, connects to 1 community

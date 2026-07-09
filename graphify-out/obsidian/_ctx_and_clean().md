@@ -1,12 +1,12 @@
 ---
 source_file: "tests/test_stock_ledger.py"
 type: "code"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "E-posta Bildirimleri"
 location: "L72"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/E-posta_Bildirimleri
 ---
 
 # _ctx_and_clean()
@@ -23,4 +23,4 @@ tags:
 - [[StockMovement]] - `indirect_call` [INFERRED]
 - [[test_stock_ledger.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/code #graphify/INFERRED #community/E-posta_Bildirimleri

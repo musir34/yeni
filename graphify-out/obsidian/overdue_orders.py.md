@@ -1,12 +1,12 @@
 ---
 source_file: "overdue_orders.py"
 type: "code"
-community: "Anasayfa Özet & Sayımlar"
+community: "Kasa & Gelir-Gider"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Anasayfa_zet__Saymlar
+  - community/Kasa__Gelir-Gider
 ---
 
 # overdue_orders.py
@@ -22,4 +22,4 @@ tags:
 - [[overdue_counts()]] - `contains` [EXTRACTED]
 - [[overdue_orders_query()]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Anasayfa_zet__Saymlar
+#graphify/code #graphify/EXTRACTED #community/Kasa__Gelir-Gider

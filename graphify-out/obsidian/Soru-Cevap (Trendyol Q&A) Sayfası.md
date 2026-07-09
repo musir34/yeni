@@ -1,18 +1,17 @@
 ---
 source_file: "templates/soru_cevap.html"
 type: "concept"
-community: "Community 53"
+community: "Uygulama Çekirdeği & Zamanlı İşler"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_53
+  - community/Uygulama_ekirdei__Zamanl_ler
 ---
 
 # Soru-Cevap (Trendyol Q&A) Sayfası
 
 ## Connections
-- [[Sipariş Hazırla  Paketleme Ekranı]] - `references` [EXTRACTED]
 - [[Soru-Cevap AI Taslak API]] - `calls` [EXTRACTED]
 - [[base.html taban şablonu]] - `references` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_53
+#graphify/concept #graphify/EXTRACTED #community/Uygulama_ekirdei__Zamanl_ler

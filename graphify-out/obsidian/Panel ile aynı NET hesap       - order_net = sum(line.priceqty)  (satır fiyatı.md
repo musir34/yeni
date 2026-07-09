@@ -1,12 +1,12 @@
 ---
 source_file: "home.py"
 type: "rationale"
-community: "Anasayfa Özet & Sayımlar"
+community: "Kasa & Gelir-Gider"
 location: "L357"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Anasayfa_zet__Saymlar
+  - community/Kasa__Gelir-Gider
 ---
 
 # Panel ile aynı NET hesap:       - order_net = sum(line.price*qty)  (satır fiyatı
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_monthly_aov_like_panel()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Anasayfa_zet__Saymlar
+#graphify/rationale #graphify/EXTRACTED #community/Kasa__Gelir-Gider

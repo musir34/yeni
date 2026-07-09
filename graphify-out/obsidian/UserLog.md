@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Silme & Toplu Yazdırma İşlemleri"
+community: "Stok Fix Testleri & Yardımcılar"
 location: "L1097"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Silme__Toplu_Yazdrma_lemleri
+  - community/Stok_Fix_Testleri__Yardmclar
 ---
 
 # UserLog
@@ -21,4 +21,4 @@ tags:
 - [[order_audit_routes.py]] - `imports` [EXTRACTED]
 - [[user_logs.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Silme__Toplu_Yazdrma_lemleri
+#graphify/code #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar

@@ -1,12 +1,12 @@
 ---
 source_file: "picking_service.py"
 type: "code"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Community 48"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Community_48
 ---
 
 # picking_service.py
@@ -24,4 +24,4 @@ tags:
 - [[stock_management.py]] - `imports_from` [EXTRACTED]
 - [[sync_central_stock()]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/code #graphify/EXTRACTED #community/Community_48

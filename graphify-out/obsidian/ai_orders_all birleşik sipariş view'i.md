@@ -1,11 +1,11 @@
 ---
 source_file: "ai_asistan/vault/20_tablolar.md"
 type: "concept"
-community: "Community 51"
+community: "Community 56"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_51
+  - community/Community_56
 ---
 
 # ai_orders_all birleşik sipariş view'i
@@ -16,4 +16,4 @@ tags:
 - [[Güllü AI Asistanı kimliği ve davranışı]] - `references` [EXTRACTED]
 - [[UTC→EuropeIstanbul saat dilimi kuralı]] - `conceptually_related_to` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_51
+#graphify/concept #graphify/EXTRACTED #community/Community_56

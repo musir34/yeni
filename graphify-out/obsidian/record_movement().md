@@ -1,12 +1,12 @@
 ---
 source_file: "stock_ledger.py"
 type: "code"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Community 48"
 location: "L121"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Community_48
 ---
 
 # record_movement()
@@ -31,4 +31,4 @@ tags:
 - [[stock_ledger.py]] - `contains` [EXTRACTED]
 - [[update_service.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/code #graphify/EXTRACTED #community/Community_48

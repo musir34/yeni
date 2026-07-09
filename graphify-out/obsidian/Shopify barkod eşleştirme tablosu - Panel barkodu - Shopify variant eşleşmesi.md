@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "rationale"
-community: "Veri Modelleri (SQLAlchemy)"
+community: "Ana Kasa Defteri"
 location: "L1401"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Veri_Modelleri_SQLAlchemy
+  - community/Ana_Kasa_Defteri
 ---
 
 # Shopify barkod eşleştirme tablosu - Panel barkodu <-> Shopify variant eşleşmesi
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[ShopifyMapping]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Veri_Modelleri_SQLAlchemy
+#graphify/rationale #graphify/EXTRACTED #community/Ana_Kasa_Defteri

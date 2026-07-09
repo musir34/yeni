@@ -1,12 +1,12 @@
 ---
 source_file: "order_audit_routes.py"
 type: "code"
-community: "Sipariş Denetim Kaydı (Audit Log)"
+community: "Stok Fix Testleri & Yardımcılar"
 location: "L477"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Denetim_Kayd_Audit_Log
+  - community/Stok_Fix_Testleri__Yardmclar
 ---
 
 # backfill()
@@ -16,4 +16,4 @@ tags:
 - [[order_audit_routes.py]] - `contains` [EXTRACTED]
 - [[recover_missing_raf()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Denetim_Kayd_Audit_Log
+#graphify/code #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar

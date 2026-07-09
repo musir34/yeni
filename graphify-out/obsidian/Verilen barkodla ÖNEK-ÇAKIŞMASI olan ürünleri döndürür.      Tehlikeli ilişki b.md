@@ -1,12 +1,12 @@
 ---
 source_file: "barcode_alias_helper.py"
 type: "rationale"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Değişim / İade Talepleri"
 location: "L76"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Deiim_/_ade_Talepleri
 ---
 
 # Verilen barkodla ÖNEK-ÇAKIŞMASI olan ürünleri döndürür.      Tehlikeli ilişki: b
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[find_barcode_siblings()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/rationale #graphify/EXTRACTED #community/Deiim_/_ade_Talepleri

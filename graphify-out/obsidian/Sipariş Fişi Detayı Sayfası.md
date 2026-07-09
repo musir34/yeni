@@ -1,11 +1,11 @@
 ---
 source_file: "templates/siparis_fisi_detay.html"
 type: "concept"
-community: "Community 40"
+community: "Uygulama Çekirdeği & Zamanlı İşler"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_40
+  - community/Uygulama_ekirdei__Zamanl_ler
 ---
 
 # Sipariş Fişi Detayı Sayfası
@@ -15,4 +15,4 @@ tags:
 - [[Sipariş Fişi Yazdırma Sayfası]] - `references` [EXTRACTED]
 - [[siparis_fisi_bp Blueprint (Tedarik Fişi)]] - `calls` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_40
+#graphify/concept #graphify/EXTRACTED #community/Uygulama_ekirdei__Zamanl_ler

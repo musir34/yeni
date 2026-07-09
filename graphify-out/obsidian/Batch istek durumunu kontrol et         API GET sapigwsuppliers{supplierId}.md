@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/adapters/trendyol.py"
 type: "rationale"
-community: "Community 71"
+community: "Community 81"
 location: "L187"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_71
+  - community/Community_81
 ---
 
 # Batch istek durumunu kontrol et         API: GET /sapigw/suppliers/{supplierId}/
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[.check_batch_status()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_71
+#graphify/rationale #graphify/EXTRACTED #community/Community_81

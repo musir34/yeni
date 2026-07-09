@@ -1,11 +1,11 @@
 ---
 source_file: "templates/idefix/index.html"
 type: "concept"
-community: "Community 45"
+community: "Community 47"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_45
+  - community/Community_47
 ---
 
 # Idefix Satıcı Paneli (Dashboard)
@@ -18,4 +18,4 @@ tags:
 - [[Idefix Ürün Eşleştirme (Product Matching)]] - `references` [EXTRACTED]
 - [[Idefix Ürünler (Products)]] - `references` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_45
+#graphify/concept #graphify/EXTRACTED #community/Community_47

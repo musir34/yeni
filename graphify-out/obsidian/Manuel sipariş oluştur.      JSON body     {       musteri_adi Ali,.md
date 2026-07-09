@@ -1,12 +1,12 @@
 ---
 source_file: "agent_api.py"
 type: "rationale"
-community: "Manuel Sipariş Oluşturma"
+community: "Hepsiburada Servisi"
 location: "L972"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Manuel_Sipari_Oluturma
+  - community/Hepsiburada_Servisi
 ---
 
 # Manuel sipariş oluştur.      JSON body:     {       "musteri_adi": "Ali",
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[create_manual_order()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Manuel_Sipari_Oluturma
+#graphify/rationale #graphify/EXTRACTED #community/Hepsiburada_Servisi

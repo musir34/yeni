@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/routes.py"
 type: "code"
-community: "Silme & Toplu Yazdırma İşlemleri"
+community: "Shopify Route Katmanı"
 location: "L64"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Silme__Toplu_Yazdrma_lemleri
+  - community/Shopify_Route_Katman
 ---
 
 # history()
@@ -15,4 +15,4 @@ tags:
 - [[log_user_action()_1]] - `calls` [EXTRACTED]
 - [[routes.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Silme__Toplu_Yazdrma_lemleri
+#graphify/code #graphify/EXTRACTED #community/Shopify_Route_Katman

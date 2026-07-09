@@ -1,43 +1,42 @@
 ---
 type: community
-cohesion: 0.11
-members: 28
+cohesion: 0.10
+members: 27
 ---
 
 # Ana Kasa Defteri
 
-**Cohesion:** 0.11 - loosely connected
-**Members:** 28 nodes
+**Cohesion:** 0.10 - loosely connected
+**Members:** 27 nodes
 
 ## Members
-- [[.__repr__()_9]] - code - models.py
-- [[.__repr__()_10]] - code - models.py
-- [[Ana Kasa bakiyesini JSON olarak döndür]] - rationale - kasa.py
-- [[Ana Kasa işlem kaydını düzenle ve bakiyeyi yeniden hesapla]] - rationale - kasa.py
-- [[Ana Kasa kayıt defterini görüntüle]] - rationale - kasa.py
-- [[Ana Kasa'ya manuel para ekle - Basitleştirilmiş]] - rationale - kasa.py
-- [[AnaKasa]] - code - models.py
-- [[AnaKasaIslem]] - code - models.py
-- [[Decimal]] - code
-- [[Eksik maliyet formundan gelen değerleri Product tablosuna yazar     ve aynı tari]] - rationale - profit.py
-- [[Güncel USDTL kurunu JSON olarak döndür.]] - rationale - profit.py
-- [[Güncel USDTL kurunu çek. Önce Harem Altın, sonra fallback.]] - rationale - profit.py
-- [[Ondalıklı sayıları '1.234,56' biçiminde döndürür.     Decimal veya sayısal tür b]] - rationale - profit.py
-- [[UI'dan gelen 123,45 gibi değerleri güvenli şekilde Decimal'e çevirir.     None]] - rationale - profit.py
-- [[_fetch_usd_try()]] - code - profit.py
-- [[ana_kasa_bakiye()]] - code - kasa.py
-- [[ana_kasa_guncelle()]] - code - kasa.py
-- [[ana_kasa_islem_duzenle()]] - code - kasa.py
-- [[ana_kasa_kayit_defteri()]] - code - kasa.py
-- [[api_exchange_rate()]] - code - profit.py
-- [[d()]] - code - profit.py
-- [[excel_gelir_yukle()]] - code - kasa.py
-- [[format_number()]] - code - profit.py
-- [[kasa_sil()]] - code - kasa.py
-- [[profit.py]] - code - profit.py
-- [[profit_report()]] - code - profit.py
-- [[save_missing_costs()]] - code - profit.py
-- [[İşbankası Excel formatında gelir yükleme]] - rationale - kasa.py
+- [[.to_dict()_2]] - code - models.py
+- [[21 stale Shopify mapping'inin gerçek durumunu Shopify GraphQL ile kontrol eder.]] - rationale - scripts/diagnose_stale_shopify_mappings.py
+- [[73073434828 barkodu için panel stoğu, raf, mapping ve Shopify envanterini karşıl]] - rationale - scripts/check_stock_sync_73073434828.py
+- [[730734501 için neden sync düzeltmiyor — tam tanı.]] - rationale - scripts/diagnose_730734501.py
+- [[Aynı barkodda birden çok mapping varsa, Shopify'da bulunmayan inventory item'lar]] - rationale - scripts/clean_all_stale_duplicates.py
+- [[Panel ≠ Shopify son gönderilen olan mapping'leri tespit edip zorla gönderir.]] - rationale - scripts/fix_mismatches.py
+- [[Shopify barkod eşleştirme tablosu - Panel barkodu - Shopify variant eşleşmesi]] - rationale - models.py
+- [[Shopify'da artık bulunmayan inventory item'lara ait stale mapping'leri temizle.]] - rationale - scripts/clean_stale_mappings.py
+- [[Shopify'da artık var olmayan ShopifyMapping kayıtlarını siler.  Önce diagnose_st]] - rationale - scripts/cleanup_dead_shopify_mappings.py
+- [[ShopifyMapping]] - code - models.py
+- [[Tüm platformlara gönderilen stoktan düşülecek güvenlik tamponu.      Env değişke]] - rationale - stock_sync/service.py
+- [[check_stock_sync_73073434828.py]] - code - scripts/check_stock_sync_73073434828.py
+- [[clean_all_stale_duplicates.py]] - code - scripts/clean_all_stale_duplicates.py
+- [[clean_stale_mappings.py]] - code - scripts/clean_stale_mappings.py
+- [[cleanup_dead_shopify_mappings.py]] - code - scripts/cleanup_dead_shopify_mappings.py
+- [[diagnose_730734501.py]] - code - scripts/diagnose_730734501.py
+- [[diagnose_stale_shopify_mappings.py]] - code - scripts/diagnose_stale_shopify_mappings.py
+- [[fix_mismatches.py]] - code - scripts/fix_mismatches.py
+- [[get_safety_stock_buffer()]] - code - stock_sync/service.py
+- [[main()_10]] - code - scripts/check_stock_sync_73073434828.py
+- [[main()_12]] - code - scripts/clean_all_stale_duplicates.py
+- [[main()_13]] - code - scripts/clean_stale_mappings.py
+- [[main()_14]] - code - scripts/cleanup_dead_shopify_mappings.py
+- [[main()_18]] - code - scripts/diagnose_730734501.py
+- [[main()_19]] - code - scripts/diagnose_stale_shopify_mappings.py
+- [[main()_21]] - code - scripts/fix_mismatches.py
+- [[shopify_stock_service.py]] - code - shopify_site/shopify_stock_service.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -47,20 +46,29 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 16 edges to [[_COMMUNITY_Kasa & Gelir-Gider]]
-- 7 edges to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
-- 5 edges to [[_COMMUNITY_Agent API & Sipariş Sorguları]]
-- 5 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 4 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
-- 3 edges to [[_COMMUNITY_Community 44]]
-- 2 edges to [[_COMMUNITY_Community 50]]
-- 2 edges to [[_COMMUNITY_Community 93]]
-- 1 edge to [[_COMMUNITY_Community 64]]
-- 1 edge to [[_COMMUNITY_Hava Durumu Animasyonu (Canvas)]]
+- 8 edges to [[_COMMUNITY_Community 66]]
+- 8 edges to [[_COMMUNITY_Community 76]]
+- 7 edges to [[_COMMUNITY_Stok Senkron API]]
+- 5 edges to [[_COMMUNITY_Community 61]]
+- 5 edges to [[_COMMUNITY_Community 70]]
+- 4 edges to [[_COMMUNITY_Community 35]]
+- 3 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
+- 2 edges to [[_COMMUNITY_Değişim  İade Talepleri]]
+- 2 edges to [[_COMMUNITY_Barkod Üretimi & Sipariş Listesi]]
+- 2 edges to [[_COMMUNITY_Community 74]]
+- 2 edges to [[_COMMUNITY_Community 69]]
+- 2 edges to [[_COMMUNITY_Merkezi Stok Senkronizasyonu]]
+- 1 edge to [[_COMMUNITY_Hepsiburada Route Katmanı]]
+- 1 edge to [[_COMMUNITY_Community 104]]
+- 1 edge to [[_COMMUNITY_Stok Fix Testleri & Yardımcılar]]
+- 1 edge to [[_COMMUNITY_Shopify Admin Servisi]]
+- 1 edge to [[_COMMUNITY_Shopify Route Katmanı]]
+- 1 edge to [[_COMMUNITY_Community 39]]
+- 1 edge to [[_COMMUNITY_Idefix Entegrasyonu]]
 
 ## Top bridge nodes
-- [[profit.py]] - degree 19, connects to 6 communities
-- [[AnaKasa]] - degree 11, connects to 3 communities
-- [[profit_report()]] - degree 9, connects to 3 communities
-- [[AnaKasaIslem]] - degree 8, connects to 3 communities
-- [[Decimal]] - degree 16, connects to 2 communities
+- [[ShopifyMapping]] - degree 31, connects to 12 communities
+- [[shopify_stock_service.py]] - degree 16, connects to 7 communities
+- [[check_stock_sync_73073434828.py]] - degree 10, connects to 6 communities
+- [[diagnose_730734501.py]] - degree 9, connects to 5 communities
+- [[get_safety_stock_buffer()]] - degree 8, connects to 4 communities

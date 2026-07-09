@@ -1,12 +1,12 @@
 ---
 source_file: "profit.py"
 type: "rationale"
-community: "Ana Kasa Defteri"
+community: "Community 55"
 location: "L96"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Ana_Kasa_Defteri
+  - community/Community_55
 ---
 
 # Güncel USD/TL kurunu JSON olarak döndür.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[api_exchange_rate()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Ana_Kasa_Defteri
+#graphify/rationale #graphify/EXTRACTED #community/Community_55

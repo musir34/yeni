@@ -1,12 +1,12 @@
 ---
 source_file: "order_audit_routes.py"
 type: "rationale"
-community: "Sipariş Denetim Kaydı (Audit Log)"
+community: "Stok Fix Testleri & Yardımcılar"
 location: "L499"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Sipari_Denetim_Kayd_Audit_Log
+  - community/Stok_Fix_Testleri__Yardmclar
 ---
 
 # Operatörün manuel notu ekler (post-mortem için).
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[add_note()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Sipari_Denetim_Kayd_Audit_Log
+#graphify/rationale #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar

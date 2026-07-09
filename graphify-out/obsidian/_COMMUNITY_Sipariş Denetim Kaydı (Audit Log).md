@@ -1,81 +1,75 @@
 ---
 type: community
-cohesion: 0.06
-members: 66
+cohesion: 0.04
+members: 60
 ---
 
 # Sipariş Denetim Kaydı (Audit Log)
 
-**Cohesion:** 0.06 - loosely connected
-**Members:** 66 nodes
+**Cohesion:** 0.04 - loosely connected
+**Members:** 60 nodes
 
 ## Members
-- [[.__repr__()_3]] - code - models.py
-- [[Any_2]] - code
-- [[Birden çok event'i tek transaction'da yazar.      Her dict, ``log_event`` argüma]] - rationale - order_audit.py
-- [[Değişikliğin hangi bağlamdan geldiğini tespit et (teşhis için).      Arka plan j]] - rationale - order_audit.py
-- [[Operatörün manuel notu ekler (post-mortem için).]] - rationale - order_audit_routes.py
-- [[OrderArchived]] - code - models.py
-- [[OrderAuditLog]] - code - models.py
-- [[OrderReadyToShip]] - code - models.py
-- [[SaSession]] - code
-- [[Sipariş + stok hareketleri için audit log helper.  Tek noktadan ``log_event(...)]] - rationale - order_audit.py
-- [[Sipariş iz sürme paneli.]] - rationale - order_audit_routes.py
-- [[Tablo yoksa oluştur (Alembic migration çalışmadıysa yedek).]] - rationale - order_audit.py
-- [[Tek event yazar. Asıl akışı kırmaz.      snapshot=True olursa (barcode verildiys]] - rationale - order_audit.py
-- [[Toplu pick endpoint + confirm_packing senaryoları — izole sqlite.]] - rationale - tests/test_bulk_pick.py
-- [[Verilen barkod için (central_qty, raf_total) anlık değer.]] - rationale - order_audit.py
-- [[_audit_events()]] - code - order_audit_routes.py
-- [[_bind()]] - code - order_audit.py
-- [[_current_user_id()]] - code - order_audit.py
-- [[_extract_barcodes()]] - code - order_audit_routes.py
-- [[_find_order_records()]] - code - order_audit_routes.py
-- [[_flush_audit_after_commit()]] - code - order_audit.py
-- [[_install_udf()]] - code - tests/test_bulk_pick.py
-- [[_load_user()]] - code - tests/test_bulk_pick.py
-- [[_mk_hazirlaniyor()]] - code - tests/test_bulk_pick.py
-- [[_origin_source()]] - code - order_audit.py
-- [[_parse_details()_1]] - code - order_audit_routes.py
-- [[_request_origin()]] - code - order_audit.py
-- [[_safe_get()]] - code - order_audit_routes.py
-- [[_seed_shelf()]] - code - tests/test_bulk_pick.py
-- [[_serialize_order_row()]] - code - order_audit_routes.py
-- [[_shelf_qty()]] - code - tests/test_bulk_pick.py
-- [[_snapshot()]] - code - order_audit.py
-- [[_stock_source_breakdown()]] - code - order_audit_routes.py
-- [[_track_central_change()]] - code - order_audit.py
-- [[_track_raf_change()_1]] - code - order_audit.py
-- [[_user_logs()]] - code - order_audit_routes.py
-- [[add_note()]] - code - order_audit_routes.py
-- [[app context içinde bir kez çağrılır — event listener'ları kayda geçer.]] - rationale - order_audit.py
-- [[atanan_raf=NULL olan Created siparişleri için raf ataması + retro event yazar.]] - rationale - order_audit_routes.py
-- [[backfill()]] - code - order_audit_routes.py
-- [[client()_1]] - code - tests/test_bulk_pick.py
-- [[e()_2]] - code - scripts/trace_batch.py
-- [[ensure_table_exists()]] - code - order_audit.py
-- [[install_listeners()]] - code - order_audit.py
-- [[log_event()]] - code - order_audit.py
-- [[log_many()]] - code - order_audit.py
-- [[lookup()]] - code - order_audit_routes.py
-- [[order_audit.py]] - code - order_audit.py
-- [[order_audit_routes.py]] - code - order_audit_routes.py
-- [[origin dict'inden audit `source` etiketi türet.]] - rationale - order_audit.py
-- [[page()]] - code - order_audit_routes.py
-- [[stock_source_data()]] - code - order_audit_routes.py
-- [[stock_source_page()]] - code - order_audit_routes.py
-- [[test_bulk_pick.py]] - code - tests/test_bulk_pick.py
-- [[test_confirm_packing_blocks_unpicked_sequential_off()]] - code - tests/test_bulk_pick.py
-- [[test_confirm_packing_packs_picked_without_decrement()]] - code - tests/test_bulk_pick.py
-- [[test_confirm_packing_picked_then_sequential_on_no_double()]] - code - tests/test_bulk_pick.py
-- [[test_confirm_packing_sequential_lowercase_shelf_decrements()]] - code - tests/test_bulk_pick.py
-- [[test_confirm_packing_sequential_zebra_shelf_decrements()]] - code - tests/test_bulk_pick.py
-- [[test_pick_endpoint_decrements_and_stamps()]] - code - tests/test_bulk_pick.py
-- [[test_pick_endpoint_unknown_order_404()]] - code - tests/test_bulk_pick.py
-- [[test_pick_endpoint_wrong_shelf_rejected()]] - code - tests/test_bulk_pick.py
-- [[test_pick_endpoint_zebra_shelf_decrements()]] - code - tests/test_bulk_pick.py
-- [[test_reserved_excludes_picked_hazirlaniyor()]] - code - tests/test_bulk_pick.py
-- [[trace_batch.py]] - code - scripts/trace_batch.py
-- [[İstek bağlamı varsa kullanıcı id'sini döner.]] - rationale - order_audit.py
+- [[Barkod alias kontrolü — asıl barkodu döner.]] - rationale - agent_api.py
+- [[Belirli raftaki ürünleri listele.]] - rationale - agent_api.py
+- [[Benzersiz model kodlarını listele (product_main_id).]] - rationale - agent_api.py
+- [[CentralStock ile RafUrun toplamlarını karşılaştırır, tutarsızlıkları tespit eder]] - rationale - stock_management.py
+- [[Değişim durumunu güncelle.      JSON body     {       status Kargoda,]] - rationale - agent_api.py
+- [[Değişim istatistikleri.]] - rationale - agent_api.py
+- [[Değişim objesini dict'e çevir.]] - rationale - agent_api.py
+- [[Değişim taleplerini listele.      Query params       - status Oluşturuldu  Ka]] - rationale - agent_api.py
+- [[Finansal özet — ana kasa bakiyesi ve kasa istatistikleri.]] - rationale - agent_api.py
+- [[Genel panel özeti — agent'ın hızlıca durum öğrenmesi için.]] - rationale - agent_api.py
+- [[Global arama — ürün, sipariş, değişim, iade hepsinde arar.      Query params]] - rationale - agent_api.py
+- [[Kasa kategorilerini listele.]] - rationale - agent_api.py
+- [[Kasa kayıtlarını listele.      Query params       - tip gelir  gider       -]] - rationale - agent_api.py
+- [[Manuel siparişleri listele.      Query params       - search sipariş no, müşte]] - rationale - agent_api.py
+- [[Raf ürün adedini güncelle. Body {adet 5}]] - rationale - agent_api.py
+- [[Rafları listele.      Query params       - search raf kodu ile arama       - p]] - rationale - agent_api.py
+- [[Raftan ürün sil (tamamen kaldır).]] - rationale - agent_api.py
+- [[Sipariş istatistikleri — durumlara göre sayılar.]] - rationale - agent_api.py
+- [[Sipariş numarasını tüm tablolarda ara.]] - rationale - agent_api.py
+- [[Sipariş objesini dict'e çevir.]] - rationale - agent_api.py
+- [[Tek barkod stok detayı (merkez + raf bazlı dağılım).]] - rationale - agent_api.py
+- [[Tek sipariş detayını getir (tüm tablolarda arar).]] - rationale - agent_api.py
+- [[Tek ürün detayı + stok bilgisi.]] - rationale - agent_api.py
+- [[Tüm CentralStock → Product.quantity toplu senkronizasyon.]] - rationale - agent_api.py
+- [[X-Agent-Key header kontrolü.]] - rationale - agent_api.py
+- [[_degisim_to_dict()]] - code - agent_api.py
+- [[_find_order_across_tables()]] - code - agent_api.py
+- [[_order_to_dict()]] - code - agent_api.py
+- [[_product_to_dict()]] - code - agent_api.py
+- [[agent_api.py]] - code - agent_api.py
+- [[check_barcode_alias()]] - code - agent_api.py
+- [[dashboard()]] - code - agent_api.py
+- [[delete_exchange()]] - code - agent_api.py
+- [[exchange_stats()]] - code - agent_api.py
+- [[finance_summary()]] - code - agent_api.py
+- [[get_exchange()]] - code - agent_api.py
+- [[get_order()]] - code - agent_api.py
+- [[get_product()]] - code - agent_api.py
+- [[get_return()]] - code - agent_api.py
+- [[get_stock()]] - code - agent_api.py
+- [[global_search()]] - code - agent_api.py
+- [[list_exchanges()]] - code - agent_api.py
+- [[list_finance_categories()]] - code - agent_api.py
+- [[list_manual_orders()]] - code - agent_api.py
+- [[list_models()]] - code - agent_api.py
+- [[list_products()]] - code - agent_api.py
+- [[list_returns()]] - code - agent_api.py
+- [[list_shelves()]] - code - agent_api.py
+- [[list_transactions()]] - code - agent_api.py
+- [[order_stats()]] - code - agent_api.py
+- [[remove_product_from_shelf()]] - code - agent_api.py
+- [[require_agent_key()]] - code - agent_api.py
+- [[shelf_products()]] - code - agent_api.py
+- [[sync_all_stock()]] - code - agent_api.py
+- [[update_exchange_status()]] - code - agent_api.py
+- [[update_shelf_product_qty()]] - code - agent_api.py
+- [[verify_stock_integrity()]] - code - stock_management.py
+- [[Ürün objesini dict'e çevir.]] - rationale - agent_api.py
+- [[Ürünleri listele.      Query params       - search barkod, başlık, model kodu]] - rationale - agent_api.py
+- [[İade taleplerini listele.      Query params       - status filtre       - sear]] - rationale - agent_api.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -85,30 +79,32 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 19 edges to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
-- 12 edges to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
-- 10 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 6 edges to [[_COMMUNITY_Stok Hareket Defteri (Ledger)]]
-- 5 edges to [[_COMMUNITY_Uygulama Çekirdeği & Zamanlı İşler]]
-- 5 edges to [[_COMMUNITY_Community 38]]
-- 5 edges to [[_COMMUNITY_Community 50]]
-- 5 edges to [[_COMMUNITY_Trendyol Sipariş Çekme & Komisyon]]
-- 4 edges to [[_COMMUNITY_Barkod Alias Yardımcıları]]
-- 2 edges to [[_COMMUNITY_Agent API & Sipariş Sorguları]]
-- 2 edges to [[_COMMUNITY_Stok Fix Testleri & Yardımcılar]]
-- 2 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
-- 2 edges to [[_COMMUNITY_E-posta Bildirimleri]]
-- 2 edges to [[_COMMUNITY_Merkezi Stok Senkronizasyonu]]
+- 9 edges to [[_COMMUNITY_Değişim  İade Talepleri]]
+- 7 edges to [[_COMMUNITY_E-posta Bildirimleri]]
+- 7 edges to [[_COMMUNITY_Community 55]]
+- 5 edges to [[_COMMUNITY_Barkod Alias Yardımcıları]]
+- 4 edges to [[_COMMUNITY_Kimlik Doğrulama & Kullanıcı Yönetimi]]
+- 4 edges to [[_COMMUNITY_Hepsiburada Servisi]]
+- 3 edges to [[_COMMUNITY_Ürün Çekme & Görsel İndirme]]
+- 3 edges to [[_COMMUNITY_Community 54]]
+- 3 edges to [[_COMMUNITY_Stok Fix Testleri & Yardımcılar]]
+- 3 edges to [[_COMMUNITY_Maliyet Fişi & Tedarikçi]]
+- 2 edges to [[_COMMUNITY_Community 61]]
+- 2 edges to [[_COMMUNITY_Community 66]]
+- 2 edges to [[_COMMUNITY_Community 76]]
+- 2 edges to [[_COMMUNITY_Community 100]]
+- 2 edges to [[_COMMUNITY_Shopify Route Katmanı]]
+- 1 edge to [[_COMMUNITY_Community 104]]
+- 1 edge to [[_COMMUNITY_Community 42]]
 - 1 edge to [[_COMMUNITY_Barkod Üretimi & Sipariş Listesi]]
-- 1 edge to [[_COMMUNITY_Community 98]]
-- 1 edge to [[_COMMUNITY_Community 54]]
-- 1 edge to [[_COMMUNITY_Community 49]]
-- 1 edge to [[_COMMUNITY_Yeni Sipariş Hazırlama & Toplama]]
-- 1 edge to [[_COMMUNITY_Community 64]]
+- 1 edge to [[_COMMUNITY_Community 90]]
+- 1 edge to [[_COMMUNITY_Community 57]]
+- 1 edge to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
+- 1 edge to [[_COMMUNITY_Community 71]]
 
 ## Top bridge nodes
-- [[order_audit_routes.py]] - degree 40, connects to 10 communities
-- [[test_bulk_pick.py]] - degree 36, connects to 10 communities
-- [[OrderAuditLog]] - degree 20, connects to 8 communities
-- [[order_audit.py]] - degree 18, connects to 4 communities
-- [[log_event()]] - degree 15, connects to 3 communities
+- [[agent_api.py]] - degree 86, connects to 21 communities
+- [[verify_stock_integrity()]] - degree 7, connects to 3 communities
+- [[remove_product_from_shelf()]] - degree 4, connects to 2 communities
+- [[update_shelf_product_qty()]] - degree 4, connects to 2 communities
+- [[_degisim_to_dict()]] - degree 7, connects to 1 community

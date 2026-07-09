@@ -1,25 +1,16 @@
-<!doctype html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8" />
-  <script>
-    (function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();var dark=m==='on'||(m==='auto'&&(h>=20||h<7));if(dark)document.documentElement.classList.add('gs-dark');})();
-  </script>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+{% extends "base.html" %}
+{% block title %}Paketleme Ekranı - Güllü Ayakkabı{% endblock %}
+{% block extra_css %}
   <meta name="weather-description" content="{{ weather.description if weather else 'Açık Hava' }}" />
   <meta name="weather-clouds" content="{{ weather.clouds if weather else 0 }}" />
   <meta name="weather-code" content="{{ weather.weather_code if weather else 0 }}" />
   <meta name="weather-wind" content="{{ weather.wind_speed if weather else 10 }}" />
   <meta name="weather-wind-direction" content="{{ weather.wind_direction_deg if weather else 180 }}" />
-  <title>Paketleme Ekranı - Güllü Ayakkabı</title>
-
-  <!-- Bootstrap 5 & Icons -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}"/>
-
   <style>
+    /* base.html'in dış .container.mt-5 sarmalayıcısını nötrle — sabit (fixed) üst çubuklar
+       ve sayfanın kendi .container'ı orijinal düzeniyle kalsın. */
+    .container.mt-5 { max-width: none; margin: 0; padding: 0; }
+
     /* Sayfa Düzeni - 14.9 inç ekrana optimize */
     body{margin:0;padding:0;font-family:"Inter","Roboto",sans-serif;background:#f5f5f5;overflow-x:hidden;font-size:14px}
     /* Canvas: Arka plan — opaklık düşürüldü, göz yormuyor */
@@ -501,10 +492,39 @@
     /* ✅ Değişim uyarısı (yeşil tema) */
     .dw-success .modal-content{background:#d4edda!important}
     .dw-success .modal-title{color:#155724!important}
-  </style>
-</head>
 
-<body>
+    /* Arşiv sebep grid (eski gövde-içi <style>'dan taşındı — birebir) */
+    .archive-reason-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+    @media (max-width:576px){.archive-reason-grid{grid-template-columns:1fr;}}
+    .archive-reason-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:6px;padding:18px 12px;border:2px solid #e3e6ea;border-radius:12px;background:#fff;
+      transition:all .15s ease;cursor:pointer;min-height:96px;text-align:center;font-weight:500;color:#333;}
+    .archive-reason-btn:hover{border-color:#dc3545;background:#fff5f5;transform:translateY(-1px);}
+    .archive-reason-btn.active{border-color:#dc3545;background:#dc3545;color:#fff;box-shadow:0 4px 12px rgba(220,53,69,.25);}
+    .archive-reason-btn .ar-ico{font-size:1.6rem;line-height:1;}
+    .archive-reason-btn .ar-lbl{font-size:.95rem;line-height:1.2;}
+    .archive-reason-btn .ar-lbl small{opacity:.8;font-size:.78rem;}
+    .archive-reason-other{grid-column:1 / -1;}
+
+    /* ── gullu-common.css'teki site-geneli input,select,textarea{font-size:16px!important}
+       kuralına karşı hedefli override'lar — sayfanın ORİJİNAL boyutları birebir geri getirilir.
+       !important'ı ancak !important + eşit/yüksek specificity + sonra-gelme yener (extra_css
+       gullu-common'dan sonra yüklenir). SİLME: silinirse inputlar 16px'e büyür, kompakt
+       Ayarlar satırı taşar, toplama kartlarında satır yükseklikleri bozulur. ── */
+    /* Ayarlar satırındaki onaylama süresi kutusu — inline font-size:10px korunur (42px genişliğe sığması için) */
+    #onaylamaSuresiInput{font-size:10px !important;}
+    /* Üst bar ürün-barkod okutma kutusu — inline font-size:0.9rem korunur */
+    #manuelOrderInput{font-size:0.9rem !important;}
+    /* Raf/barkod inputları + arşiv "Diğer" textarea'sı — sayfanın .form-control kuralındaki 0.9rem korunur */
+    .form-control{font-size:0.9rem !important;}
+    @media (max-width:768px){
+      /* Mobil: sayfanın orijinal .82rem form-control boyutu korunur */
+      .form-control{font-size:.82rem !important;}
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
   <canvas id="weatherCanvas"></canvas>
 
   <!-- Görsel Büyütme Modal -->
@@ -760,7 +780,7 @@
                                name="raf_{{ product['barcode'] }}"
                                data-raflar="{{ aktif_raflar | map(attribute='kod') | join(',') }}"
                                placeholder="📍 RAF BARKODU OKUT"
-                               autocomplete="off" style="border:2px solid #B76E79;"/>
+                               autocomplete="off" style="border:2px solid var(--color-primary);"/>
                       </div>
                     {% endif %}
                   {% elif not product.get('onerilen_bosaldi') %}
@@ -911,19 +931,6 @@
       </form>
     </div>
   </div>
-  <style>
-    .archive-reason-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
-    @media (max-width:576px){.archive-reason-grid{grid-template-columns:1fr;}}
-    .archive-reason-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;
-      gap:6px;padding:18px 12px;border:2px solid #e3e6ea;border-radius:12px;background:#fff;
-      transition:all .15s ease;cursor:pointer;min-height:96px;text-align:center;font-weight:500;color:#333;}
-    .archive-reason-btn:hover{border-color:#dc3545;background:#fff5f5;transform:translateY(-1px);}
-    .archive-reason-btn.active{border-color:#dc3545;background:#dc3545;color:#fff;box-shadow:0 4px 12px rgba(220,53,69,.25);}
-    .archive-reason-btn .ar-ico{font-size:1.6rem;line-height:1;}
-    .archive-reason-btn .ar-lbl{font-size:.95rem;line-height:1.2;}
-    .archive-reason-btn .ar-lbl small{opacity:.8;font-size:.78rem;}
-    .archive-reason-other{grid-column:1 / -1;}
-  </style>
 
   <!-- Arşiv Uyarısı (GLOBAL, TEK KEZ) -->
   <div id="archiveWarningModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
@@ -966,10 +973,10 @@
     </div>
   </div>
 
-  <!-- Vendor JS -->
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="{{ url_for('static', filename='js/app-shell.js') }}"></script>
+{% endblock %}
+
+{% block scripts %}
+  <!-- Sayfaya özgü yardımcı (base'de yok) -->
   <script src="{{ url_for('static', filename='js/gs-dialog.js') }}"></script>
 
   <!-- 🔥 Sipariş Kuyruğu JavaScript -->
@@ -1700,6 +1707,4 @@
     }
   })();
   </script>
-{% include 'includes/notification_popup.html' ignore missing %}
-</body>
-</html>
+{% endblock %}

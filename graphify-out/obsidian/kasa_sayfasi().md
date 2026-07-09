@@ -1,12 +1,12 @@
 ---
 source_file: "kasa.py"
 type: "code"
-community: "Kasa & Gelir-Gider"
+community: "Ürün Çekme & Görsel İndirme"
 location: "L173"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Kasa__Gelir-Gider
+  - community/rn_ekme__Grsel_ndirme
 ---
 
 # kasa_sayfasi()
@@ -20,4 +20,4 @@ tags:
 - [[kasa.py]] - `contains` [EXTRACTED]
 - [[month_bounds()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Kasa__Gelir-Gider
+#graphify/code #graphify/INFERRED #community/rn_ekme__Grsel_ndirme

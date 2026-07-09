@@ -1,12 +1,12 @@
 ---
 source_file: "image_manager.py"
 type: "rationale"
-community: "Community 61"
+community: "Community 64"
 location: "L51"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_61
+  - community/Community_64
 ---
 
 # Görsel yönetim ana sayfası - sayfalama, barkod arama, görselsiz ürün filtresi
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[image_manager()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_61
+#graphify/rationale #graphify/EXTRACTED #community/Community_64

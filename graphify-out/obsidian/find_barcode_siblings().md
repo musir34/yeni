@@ -1,12 +1,12 @@
 ---
 source_file: "barcode_alias_helper.py"
 type: "code"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Değişim / İade Talepleri"
 location: "L75"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Deiim_/_ade_Talepleri
 ---
 
 # find_barcode_siblings()
@@ -17,4 +17,4 @@ tags:
 - [[get_product_details()_3]] - `calls` [EXTRACTED]
 - [[stock_management.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/code #graphify/EXTRACTED #community/Deiim_/_ade_Talepleri

@@ -1,21 +1,23 @@
 ---
 type: community
-cohesion: 0.33
-members: 6
+cohesion: 0.43
+members: 8
 ---
 
 # Community 91
 
-**Cohesion:** 0.33 - loosely connected
-**Members:** 6 nodes
+**Cohesion:** 0.43 - moderately connected
+**Members:** 8 nodes
 
 ## Members
-- [[Bir modelin tüm varyantlarının satış fiyatını günceller]] - rationale - get_products.py
-- [[Trendyol'da toplu fiyat güncelleme yapar]] - rationale - get_products.py
-- [[update_model_price()]] - code - get_products.py
-- [[update_prices_in_trendyol_bulk()]] - code - get_products.py
-- [[update_product_prices()]] - code - get_products.py
-- [[Ürün varyantlarının satış fiyatlarını günceller]] - rationale - get_products.py
+- [[Komisyon Hariç Tutma Listesi API'si.  Akıllı Motor ve diğer sayfalar tarafından]] - rationale - komisyon_tarife.py
+- [[_load_exclude_lists()]] - code - komisyon_tarife.py
+- [[_save_exclude_lists()]] - code - komisyon_tarife.py
+- [[komisyon_tarife.py]] - code - komisyon_tarife.py
+- [[komisyon_tarife_liste_kaydet()]] - code - komisyon_tarife.py
+- [[komisyon_tarife_liste_sil()]] - code - komisyon_tarife.py
+- [[komisyon_tarife_listeler()]] - code - komisyon_tarife.py
+- [[login_required()]] - code - login_logout.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -25,10 +27,13 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 3 edges to [[_COMMUNITY_Ürün Çekme & Görsel İndirme]]
-- 2 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
+- 2 edges to [[_COMMUNITY_Akıllı Motor (İndirim & Fiyat)]]
+- 1 edge to [[_COMMUNITY_Stok Hareket Defteri (Ledger)]]
+- 1 edge to [[_COMMUNITY_Üretim Önerisi & Satış Tahmini]]
+- 1 edge to [[_COMMUNITY_Ürün Çekme & Görsel İndirme]]
+- 1 edge to [[_COMMUNITY_Community 57]]
+- 1 edge to [[_COMMUNITY_Community 71]]
 
 ## Top bridge nodes
-- [[update_model_price()]] - degree 4, connects to 2 communities
-- [[update_product_prices()]] - degree 4, connects to 2 communities
-- [[update_prices_in_trendyol_bulk()]] - degree 4, connects to 1 community
+- [[login_required()]] - degree 5, connects to 4 communities
+- [[komisyon_tarife.py]] - degree 10, connects to 3 communities

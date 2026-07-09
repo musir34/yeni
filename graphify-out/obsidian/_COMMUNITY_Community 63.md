@@ -1,30 +1,30 @@
 ---
 type: community
-cohesion: 0.17
+cohesion: 0.15
 members: 15
 ---
 
 # Community 63
 
-**Cohesion:** 0.17 - loosely connected
+**Cohesion:** 0.15 - loosely connected
 **Members:** 15 nodes
 
 ## Members
-- [[._get_headers()_3]] - code - stock_sync/adapters/idefix.py
-- [[._init_config()_3]] - code - stock_sync/adapters/idefix.py
-- [[._update_single_stock()]] - code - stock_sync/adapters/idefix.py
-- [[.get_platform_products()_3]] - code - stock_sync/adapters/idefix.py
-- [[.send_stock_batch()_3]] - code - stock_sync/adapters/idefix.py
-- [[.send_stock_bulk()]] - code - stock_sync/adapters/idefix.py
-- [[Any_9]] - code
-- [[ClientSession_2]] - code
-- [[Idefix API yapılandırması]] - rationale - stock_sync/adapters/idefix.py
-- [[Idefix bulk stock update (varsa)         API PUT pimpool{sellerId}stocks]] - rationale - stock_sync/adapters/idefix.py
-- [[Idefix stok senkronizasyon adaptörü]] - rationale - stock_sync/adapters/idefix.py
-- [[Idefix'e stok batch'i gönder.         Idefix tek tek güncelleme yapıyor, paralel]] - rationale - stock_sync/adapters/idefix.py
-- [[Idefix'teki tüm ürünleri çek         API GET pimpool{sellerId}list]] - rationale - stock_sync/adapters/idefix.py
-- [[IdefixAdapter]] - code - stock_sync/adapters/idefix.py
-- [[Tek bir ürünün stokunu güncelle]] - rationale - stock_sync/adapters/idefix.py
+- [[1) Trendyol 'archived=true' barkodlarını çek → DB’den sil     2) Trendyol 'appro]] - rationale - get_products.py
+- [[Sadece onaylı ve arşivde olmayan ürünleri Trendyol'dan çeker.]] - rationale - get_products.py
+- [[Trendyol ürün senkronu (tam)      1) approved=true & archived=false ürünleri çe]] - rationale - get_products.py
+- [[Trendyol'da ARŞİVDE olan ürünlerin barkod listesini döner.]] - rationale - get_products.py
+- [[delete_archived_in_db()]] - code - get_products.py
+- [[delete_missing_products_in_db()]] - code - get_products.py
+- [[extract_active_barcodes()]] - code - get_products.py
+- [[fetch_all_products_async ile gelen (approved=true, archived=false) ürünlerin bar]] - rationale - get_products.py
+- [[fetch_all_products_async()]] - code - get_products.py
+- [[fetch_archived_barcodes_async()]] - code - get_products.py
+- [[fetch_products_page()]] - code - get_products.py
+- [[fetch_products_route()]] - code - get_products.py
+- [[save_products_to_db_async()]] - code - get_products.py
+- [[sync_trendyol_deletions()]] - code - get_products.py
+- [[update_products_route()]] - code - get_products.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -34,11 +34,13 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 11 edges to [[_COMMUNITY_Community 65]]
-- 1 edge to [[_COMMUNITY_Community 39]]
+- 11 edges to [[_COMMUNITY_Hepsiburada Route Katmanı]]
+- 1 edge to [[_COMMUNITY_Community 61]]
+- 1 edge to [[_COMMUNITY_Community 42]]
 
 ## Top bridge nodes
-- [[IdefixAdapter]] - degree 13, connects to 2 communities
-- [[._update_single_stock()]] - degree 7, connects to 1 community
-- [[.send_stock_batch()_3]] - degree 5, connects to 1 community
-- [[.send_stock_bulk()]] - degree 5, connects to 1 community
+- [[save_products_to_db_async()]] - degree 5, connects to 2 communities
+- [[fetch_products_route()]] - degree 4, connects to 2 communities
+- [[sync_trendyol_deletions()]] - degree 7, connects to 1 community
+- [[fetch_all_products_async()]] - degree 5, connects to 1 community
+- [[update_products_route()]] - degree 5, connects to 1 community

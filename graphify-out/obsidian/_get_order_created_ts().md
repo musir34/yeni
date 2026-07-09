@@ -1,12 +1,12 @@
 ---
 source_file: "canli_panel.py"
 type: "code"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "E-posta Bildirimleri"
 location: "L504"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/E-posta_Bildirimleri
 ---
 
 # _get_order_created_ts()
@@ -23,4 +23,4 @@ tags:
 - [[_to_ist_aware()]] - `calls` [EXTRACTED]
 - [[canli_panel.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/code #graphify/INFERRED #community/E-posta_Bildirimleri

@@ -1,12 +1,12 @@
 ---
 source_file: "get_products.py"
 type: "rationale"
-community: "Community 91"
+community: "Community 98"
 location: "L1251"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_91
+  - community/Community_98
 ---
 
 # Ürün varyantlarının satış fiyatlarını günceller
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[update_product_prices()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_91
+#graphify/rationale #graphify/EXTRACTED #community/Community_98

@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/delete_phantom_shelf_rows.py"
 type: "code"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Değişim / İade Talepleri"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Deiim_/_ade_Talepleri
 ---
 
 # delete_phantom_shelf_rows.py
@@ -22,4 +22,4 @@ tags:
 - [[stock_management.py]] - `imports_from` [EXTRACTED]
 - [[sync_central_stock()]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/code #graphify/EXTRACTED #community/Deiim_/_ade_Talepleri

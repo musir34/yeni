@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/routes.py"
 type: "rationale"
-community: "Stok Senkron API"
+community: "Shopify Route Katmanı"
 location: "L81"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Stok_Senkron_API
+  - community/Shopify_Route_Katman
 ---
 
 # Central Stock listesi sayfası
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[central_stock()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Stok_Senkron_API
+#graphify/rationale #graphify/EXTRACTED #community/Shopify_Route_Katman

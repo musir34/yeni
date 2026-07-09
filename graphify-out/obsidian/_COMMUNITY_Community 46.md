@@ -1,34 +1,35 @@
 ---
 type: community
 cohesion: 0.15
-members: 19
+members: 20
 ---
 
 # Community 46
 
 **Cohesion:** 0.15 - loosely connected
-**Members:** 19 nodes
+**Members:** 20 nodes
 
 ## Members
-- [[._build_inventory_feed_xml()]] - code - stock_sync/adapters/amazon.py
-- [[._get_access_token()_1]] - code - stock_sync/adapters/amazon.py
-- [[._get_headers()_1]] - code - stock_sync/adapters/amazon.py
-- [[._init_config()]] - code - stock_sync/adapters/amazon.py
-- [[._update_single_inventory()]] - code - stock_sync/adapters/amazon.py
-- [[.get_feed_status()]] - code - stock_sync/adapters/amazon.py
-- [[.get_platform_products()]] - code - stock_sync/adapters/amazon.py
-- [[.send_stock_batch()]] - code - stock_sync/adapters/amazon.py
-- [[Amazon Inventory Feed XML oluştur]] - rationale - stock_sync/adapters/amazon.py
-- [[Amazon Listings API ile stok güncellemesi.         Paralel isteklerle hızlandırı]] - rationale - stock_sync/adapters/amazon.py
-- [[Amazon SP-API stok senkronizasyon adaptörü - Listings API ile güncelleme]] - rationale - stock_sync/adapters/amazon.py
-- [[Amazon SP-API yapılandırması]] - rationale - stock_sync/adapters/amazon.py
-- [[Amazon'daki ürünleri çek         Catalog Items API]] - rationale - stock_sync/adapters/amazon.py
-- [[AmazonAdapter]] - code - stock_sync/adapters/amazon.py
-- [[Any_6]] - code
-- [[ClientSession]] - code
-- [[Feed işleme durumunu kontrol et]] - rationale - stock_sync/adapters/amazon.py
-- [[LWA access token al (cache veya yeni)]] - rationale - stock_sync/adapters/amazon.py
-- [[Tek ürün için inventory güncelle - Listings API (seller SKU kullanarak).]] - rationale - stock_sync/adapters/amazon.py
+- [[10 sn'lik hafif tur sadece cevap bekleyen soruların son sayfasına bakar.     Ye]] - rationale - trendyol_qna/qna_service.py
+- [[API item'ını tabloya işle. (satır, yeni_mi) döner. Commit çağıranın işi.]] - rationale - trendyol_qna/qna_service.py
+- [[Bir sayfalık item'ı işleyip COMMIT eder; yeni soru ID'lerini döner.     Başka bi]] - rationale - trendyol_qna/qna_service.py
+- [[Tablo yoksa oluştur (migration çalışmadıysa yedek).]] - rationale - trendyol_qna/qna_service.py
+- [[Tek sayfa soru çek; hata durumunda None (job'lar sessizce loglayıp geçer).]] - rationale - trendyol_qna/qna_service.py
+- [[Trendyol Müşteri Soruları (Q&A) servisi.  API dokümanı httpsdevelopers.trend]] - rationale - trendyol_qna/qna_service.py
+- [[Trendyol epoch-millis → aware UTC datetime.]] - rationale - trendyol_qna/qna_service.py
+- [[Verilen pencerede tüm statüleri senkronla (upsert). Yeni soru ID'lerini döner.]] - rationale - trendyol_qna/qna_service.py
+- [[Yeni sorular için 'yeni_soru' olayına abone kullanıcılara mail at.]] - rationale - trendyol_qna/qna_service.py
+- [[_fetch_page()]] - code - trendyol_qna/qna_service.py
+- [[_headers()]] - code - trendyol_qna/qna_service.py
+- [[_ms_to_dt()]] - code - trendyol_qna/qna_service.py
+- [[_notify_new_questions()]] - code - trendyol_qna/qna_service.py
+- [[_upsert_batch()]] - code - trendyol_qna/qna_service.py
+- [[_upsert_question()]] - code - trendyol_qna/qna_service.py
+- [[datetime_2]] - code
+- [[ensure_table_exists()_1]] - code - trendyol_qna/qna_service.py
+- [[qna_service.py]] - code - trendyol_qna/qna_service.py
+- [[quick_poll()]] - code - trendyol_qna/qna_service.py
+- [[sync_questions()]] - code - trendyol_qna/qna_service.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -38,11 +39,19 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 10 edges to [[_COMMUNITY_Community 65]]
-- 1 edge to [[_COMMUNITY_Community 39]]
+- 8 edges to [[_COMMUNITY_Community 45]]
+- 6 edges to [[_COMMUNITY_Stok Senkron API]]
+- 3 edges to [[_COMMUNITY_Community 96]]
+- 2 edges to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
+- 1 edge to [[_COMMUNITY_Community 66]]
+- 1 edge to [[_COMMUNITY_Community 76]]
+- 1 edge to [[_COMMUNITY_Community 61]]
+- 1 edge to [[_COMMUNITY_Maliyet Fişi & Tedarikçi]]
+- 1 edge to [[_COMMUNITY_Community 62]]
 
 ## Top bridge nodes
-- [[AmazonAdapter]] - degree 15, connects to 2 communities
-- [[._update_single_inventory()]] - degree 6, connects to 1 community
-- [[.send_stock_batch()]] - degree 5, connects to 1 community
-- [[._build_inventory_feed_xml()]] - degree 3, connects to 1 community
+- [[qna_service.py]] - degree 23, connects to 9 communities
+- [[quick_poll()]] - degree 9, connects to 2 communities
+- [[sync_questions()]] - degree 8, connects to 2 communities
+- [[_upsert_question()]] - degree 5, connects to 1 community
+- [[_notify_new_questions()]] - degree 4, connects to 1 community

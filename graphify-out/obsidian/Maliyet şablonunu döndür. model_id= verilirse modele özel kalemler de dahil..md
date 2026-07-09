@@ -1,12 +1,12 @@
 ---
 source_file: "siparis_fisi.py"
 type: "rationale"
-community: "Maliyet Fişi & Tedarikçi"
+community: "Community 58"
 location: "L1195"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Maliyet_Fii__Tedariki
+  - community/Community_58
 ---
 
 # Maliyet şablonunu döndür. ?model_id= verilirse modele özel kalemler de dahil.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[api_maliyet_sablon()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki
+#graphify/rationale #graphify/EXTRACTED #community/Community_58

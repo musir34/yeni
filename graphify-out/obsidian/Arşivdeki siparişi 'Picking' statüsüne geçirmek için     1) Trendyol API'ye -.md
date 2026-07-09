@@ -1,12 +1,12 @@
 ---
 source_file: "archive.py"
 type: "rationale"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "Community 41"
 location: "L253"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/Community_41
 ---
 
 # Arşivdeki siparişi 'Picking' statüsüne geçirmek için:     1) Trendyol API'ye ->
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[execute_order_processing()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/rationale #graphify/EXTRACTED #community/Community_41

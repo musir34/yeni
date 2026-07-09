@@ -1,21 +1,23 @@
 ---
 type: community
-cohesion: 0.33
-members: 6
+cohesion: 0.36
+members: 8
 ---
 
 # Community 93
 
-**Cohesion:** 0.33 - loosely connected
-**Members:** 6 nodes
+**Cohesion:** 0.36 - loosely connected
+**Members:** 8 nodes
 
 ## Members
-- [[Bir modelin maliyet değerlerini toplu kaydet (kalem + direkt).]] - rationale - siparis_fisi.py
-- [[Model bazlı direkt toplam maliyet (kalem kalem girmek istemeyenler için).]] - rationale - models.py
-- [[Model bazlı gerçek maliyet değerleri.]] - rationale - models.py
-- [[ModelDirekMaliyet]] - code - models.py
-- [[ModelMaliyet]] - code - models.py
-- [[api_maliyet_model_kaydet()]] - code - siparis_fisi.py
+- [[CentralStock tablosundaki çift kayıtları düzelt]] - rationale - scripts/fix_duplicate_barcodes.py
+- [[RafUrun tablosundaki çift kayıtları düzelt]] - rationale - scripts/fix_duplicate_barcodes.py
+- [[SyncDetail tablosundaki çift kayıtları düzelt]] - rationale - scripts/fix_duplicate_barcodes.py
+- [[fix_central_stock_duplicates()]] - code - scripts/fix_duplicate_barcodes.py
+- [[fix_duplicate_barcodes.py]] - code - scripts/fix_duplicate_barcodes.py
+- [[fix_raf_urun_duplicates()]] - code - scripts/fix_duplicate_barcodes.py
+- [[fix_sync_detail_duplicates()]] - code - scripts/fix_duplicate_barcodes.py
+- [[main()_20]] - code - scripts/fix_duplicate_barcodes.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -25,13 +27,12 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 3 edges to [[_COMMUNITY_Maliyet Fişi & Tedarikçi]]
-- 2 edges to [[_COMMUNITY_Agent API & Sipariş Sorguları]]
-- 2 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 2 edges to [[_COMMUNITY_Ana Kasa Defteri]]
-- 1 edge to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
+- 1 edge to [[_COMMUNITY_Stok Senkron API]]
+- 1 edge to [[_COMMUNITY_Community 66]]
+- 1 edge to [[_COMMUNITY_Community 76]]
+- 1 edge to [[_COMMUNITY_Değişim  İade Talepleri]]
+- 1 edge to [[_COMMUNITY_Community 61]]
+- 1 edge to [[_COMMUNITY_Community 77]]
 
 ## Top bridge nodes
-- [[ModelDirekMaliyet]] - degree 6, connects to 4 communities
-- [[ModelMaliyet]] - degree 6, connects to 4 communities
-- [[api_maliyet_model_kaydet()]] - degree 5, connects to 2 communities
+- [[fix_duplicate_barcodes.py]] - degree 10, connects to 6 communities

@@ -1,59 +1,51 @@
 ---
 type: community
-cohesion: 0.05
-members: 44
+cohesion: 0.06
+members: 36
 ---
 
 # Idefix Entegrasyonu
 
-**Cohesion:** 0.05 - loosely connected
-**Members:** 44 nodes
+**Cohesion:** 0.06 - loosely connected
+**Members:** 36 nodes
 
 ## Members
-- [[TODO Sipariş durumu güncelleme endpoint'i eklenecek]] - rationale - idefix/idefix_service.py
-- [[TODO Sipariş entegrasyonu eklenecek]] - rationale - idefix/idefix_service.py
-- [[.__init__()_2]] - code - idefix/idefix_service.py
-- [[._get_headers()]] - code - idefix/idefix_service.py
-- [[._get_vendor_token()]] - code - idefix/idefix_service.py
-- [[.get_all_products()]] - code - idefix/idefix_service.py
-- [[.get_orders()]] - code - idefix/idefix_service.py
-- [[.get_product_by_barcode()]] - code - idefix/idefix_service.py
-- [[.get_products()]] - code - idefix/idefix_service.py
-- [[.update_order_status()]] - code - idefix/idefix_service.py
-- [[API Key ve Secret'tan vendor token oluşturur (base64 encode)]] - rationale - idefix/idefix_service.py
-- [[API istekleri için gerekli header'ları döndürür]] - rationale - idefix/idefix_service.py
-- [[Any_1]] - code
-- [[Bir ürünün platformlarını getirir]] - rationale - idefix/idefix_routes.py
-- [[Bizim ürünlerimizi arama için listeler]] - rationale - idefix/idefix_routes.py
-- [[Idefix API entegrasyonu için servis sınıfı]] - rationale - idefix/idefix_service.py
-- [[Idefix Satıcı Paneli Route'ları]] - rationale - idefix/idefix_routes.py
-- [[Idefix Satıcı Paneli Servisi Satıcı Güllü shoes Satıcı ID 10594]] - rationale - idefix/idefix_service.py
-- [[Idefix siparişler sayfası]] - rationale - idefix/idefix_routes.py
-- [[Idefix ürün eşleştirme sayfası]] - rationale - idefix/idefix_routes.py
-- [[Idefix ürünler sayfası]] - rationale - idefix/idefix_routes.py
-- [[Idefix ürünlerini çek ve mevcut ürünlerle eşleştir     Barkod eşleşen ürünlere ']] - rationale - idefix/idefix_routes.py
-- [[IdefixService]] - code - idefix/idefix_service.py
-- [[Manuel ürün eşleştirme     Idefix barkodunu mevcut bir ürün barkoduna eşleştirir]] - rationale - idefix/idefix_routes.py
-- [[Satıcının ürünlerini listeler                  Args             page Sayfa num]] - rationale - idefix/idefix_service.py
-- [[Sipariş durumunu günceller]] - rationale - idefix/idefix_service.py
-- [[Siparişleri JSON olarak döndürür]] - rationale - idefix/idefix_routes.py
-- [[Trendyol'daki fiyatları Idefix'e senkronize et     Eşleşen ürünlerin sale_price]] - rationale - idefix/idefix_routes.py
-- [[Tüm ürünleri sayfalama ile çeker                  Args             max_pages M]] - rationale - idefix/idefix_service.py
-- [[api_get_platforms()]] - code - idefix/idefix_routes.py
-- [[api_match_product()_1]] - code - idefix/idefix_routes.py
-- [[api_orders()_2]] - code - idefix/idefix_routes.py
-- [[api_our_products()]] - code - idefix/idefix_routes.py
-- [[api_products()_1]] - code - idefix/idefix_routes.py
-- [[api_search_products()]] - code - idefix/idefix_routes.py
-- [[api_sync_prices()]] - code - idefix/idefix_routes.py
-- [[api_sync_products()]] - code - idefix/idefix_routes.py
-- [[eslestirme()]] - code - idefix/idefix_routes.py
-- [[idefix_routes.py]] - code - idefix/idefix_routes.py
-- [[idefix_service.py]] - code - idefix/idefix_service.py
-- [[index()_6]] - code - idefix/idefix_routes.py
-- [[siparisler()]] - code - idefix/idefix_routes.py
-- [[urunler()]] - code - idefix/idefix_routes.py
-- [[Ürünleri JSON olarak döndürür - eşleşme bilgisiyle birlikte]] - rationale - idefix/idefix_routes.py
+- [[Eşleşmeyen ürünleri CSV olarak indir.]] - rationale - shopify_site/shopify_routes.py
+- [[Eşleştirme listesini döndür.]] - rationale - shopify_site/shopify_routes.py
+- [[Karşılaştırma sonucunu CSV indir.]] - rationale - shopify_site/shopify_routes.py
+- [[Shopify Admin API JSON route'ları.]] - rationale - shopify_site/shopify_routes.py
+- [[Shopify barkodlarını panel barkodlarıyla eşleştir.]] - rationale - shopify_site/shopify_routes.py
+- [[Shopify ↔ Trendyol satış fiyatı karşılaştırma JSON sonucu.]] - rationale - shopify_site/shopify_routes.py
+- [[Siparis fisini yazdir — order_label.html formatinda (musteri etiketi).]] - rationale - shopify_site/shopify_routes.py
+- [[Siparis notunu guncelle.]] - rationale - shopify_site/shopify_routes.py
+- [[Siparise etiket ekle.]] - rationale - shopify_site/shopify_routes.py
+- [[Siparisi karsila (fulfillment olustur).]] - rationale - shopify_site/shopify_routes.py
+- [[Siparisi odendi olarak isaretle.]] - rationale - shopify_site/shopify_routes.py
+- [[Stokları Shopify'a gönder.]] - rationale - shopify_site/shopify_routes.py
+- [[add_order_tags()]] - code - shopify_site/shopify_routes.py
+- [[adjust_inventory()]] - code - shopify_site/shopify_routes.py
+- [[cancel_order()]] - code - shopify_site/shopify_routes.py
+- [[check_shopify_config()]] - code - shopify_site/shopify_routes.py
+- [[fulfill_order()]] - code - shopify_site/shopify_routes.py
+- [[get_mappings()]] - code - shopify_site/shopify_routes.py
+- [[graphql_proxy()]] - code - shopify_site/shopify_routes.py
+- [[locations()]] - code - shopify_site/shopify_routes.py
+- [[mark_order_paid()]] - code - shopify_site/shopify_routes.py
+- [[match_barcodes()]] - code - shopify_site/shopify_routes.py
+- [[order_detail()_2]] - code - shopify_site/shopify_routes.py
+- [[orders()_2]] - code - shopify_site/shopify_routes.py
+- [[orders_count()]] - code - shopify_site/shopify_routes.py
+- [[price_compare_api()]] - code - shopify_site/shopify_routes.py
+- [[price_compare_export()]] - code - shopify_site/shopify_routes.py
+- [[print_order()]] - code - shopify_site/shopify_routes.py
+- [[product_detail()]] - code - shopify_site/shopify_routes.py
+- [[products()_1]] - code - shopify_site/shopify_routes.py
+- [[push_stock()]] - code - shopify_site/shopify_routes.py
+- [[shop_info()]] - code - shopify_site/shopify_routes.py
+- [[shopify_routes.py]] - code - shopify_site/shopify_routes.py
+- [[test_connection()_2]] - code - shopify_site/shopify_routes.py
+- [[unmatched_csv()]] - code - shopify_site/shopify_routes.py
+- [[update_order_note()]] - code - shopify_site/shopify_routes.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -63,12 +55,19 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 2 edges to [[_COMMUNITY_Community 65]]
-- 2 edges to [[_COMMUNITY_Barkod Alias Yardımcıları]]
-- 1 edge to [[_COMMUNITY_Uygulama Çekirdeği & Zamanlı İşler]]
-- 1 edge to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
+- 8 edges to [[_COMMUNITY_Community 42]]
+- 4 edges to [[_COMMUNITY_Community 39]]
+- 2 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
+- 2 edges to [[_COMMUNITY_Community 109]]
+- 2 edges to [[_COMMUNITY_Community 110]]
+- 1 edge to [[_COMMUNITY_Community 71]]
+- 1 edge to [[_COMMUNITY_Community 74]]
+- 1 edge to [[_COMMUNITY_Ana Kasa Defteri]]
+- 1 edge to [[_COMMUNITY_Community 57]]
 
 ## Top bridge nodes
-- [[idefix_routes.py]] - degree 18, connects to 4 communities
-- [[idefix_service.py]] - degree 6, connects to 1 community
-- [[api_match_product()_1]] - degree 3, connects to 1 community
+- [[shopify_routes.py]] - degree 39, connects to 9 communities
+- [[add_order_tags()]] - degree 3, connects to 1 community
+- [[fulfill_order()]] - degree 3, connects to 1 community
+- [[mark_order_paid()]] - degree 3, connects to 1 community
+- [[match_barcodes()]] - degree 3, connects to 1 community

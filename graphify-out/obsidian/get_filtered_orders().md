@@ -1,12 +1,12 @@
 ---
 source_file: "order_list_service.py"
 type: "code"
-community: "Barkod Üretimi & Sipariş Listesi"
+community: "Raf Yönetimi & Barkod Çakışması"
 location: "L434"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Barkod_retimi__Sipari_Listesi
+  - community/Raf_Ynetimi__Barkod_akmas
 ---
 
 # get_filtered_orders()
@@ -37,4 +37,4 @@ tags:
 - [[order_list_shipped()]] - `calls` [EXTRACTED]
 - [[process_order_details()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi
+#graphify/code #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas

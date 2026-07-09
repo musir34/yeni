@@ -1,12 +1,12 @@
 ---
 source_file: "degisim.py"
 type: "code"
-community: "Değişim / İade Talepleri"
+community: "Kimlik Doğrulama & Kullanıcı Yönetimi"
 location: "L209"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Deiim_/_ade_Talepleri
+  - community/Kimlik_Dorulama__Kullanc_Ynetimi
 ---
 
 # restore_to_shelves()
@@ -18,4 +18,4 @@ tags:
 - [[degisim.py]] - `contains` [EXTRACTED]
 - [[delete_exchange()_1]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Deiim_/_ade_Talepleri
+#graphify/code #graphify/EXTRACTED #community/Kimlik_Dorulama__Kullanc_Ynetimi

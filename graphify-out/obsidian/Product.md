@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Veri Modelleri (SQLAlchemy)"
+community: "Community 61"
 location: "L833"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Veri_Modelleri_SQLAlchemy
+  - community/Community_61
 ---
 
 # Product
@@ -75,4 +75,4 @@ tags:
 - [[upsert_products()]] - `indirect_call` [INFERRED]
 - [[uretim_oneri.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Veri_Modelleri_SQLAlchemy
+#graphify/code #graphify/EXTRACTED #community/Community_61

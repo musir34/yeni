@@ -1,12 +1,12 @@
 ---
 source_file: "update_service.py"
 type: "code"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Silme & Toplu Yazdırma İşlemleri"
 location: "L28"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Silme__Toplu_Yazdrma_lemleri
 ---
 
 # _norm_bc()
@@ -16,4 +16,4 @@ tags:
 - [[normalize_barcode()]] - `calls` [EXTRACTED]
 - [[update_service.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/code #graphify/EXTRACTED #community/Silme__Toplu_Yazdrma_lemleri

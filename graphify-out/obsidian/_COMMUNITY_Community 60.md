@@ -1,30 +1,31 @@
 ---
 type: community
-cohesion: 0.15
-members: 15
+cohesion: 0.17
+members: 16
 ---
 
 # Community 60
 
-**Cohesion:** 0.15 - loosely connected
-**Members:** 15 nodes
+**Cohesion:** 0.17 - loosely connected
+**Members:** 16 nodes
 
 ## Members
-- [[1) Trendyol 'archived=true' barkodlarını çek → DB’den sil     2) Trendyol 'appro]] - rationale - get_products.py
-- [[Sadece onaylı ve arşivde olmayan ürünleri Trendyol'dan çeker.]] - rationale - get_products.py
-- [[Trendyol ürün senkronu (tam)      1) approved=true & archived=false ürünleri çe]] - rationale - get_products.py
-- [[Trendyol'da ARŞİVDE olan ürünlerin barkod listesini döner.]] - rationale - get_products.py
-- [[delete_archived_in_db()]] - code - get_products.py
-- [[delete_missing_products_in_db()]] - code - get_products.py
-- [[extract_active_barcodes()]] - code - get_products.py
-- [[fetch_all_products_async ile gelen (approved=true, archived=false) ürünlerin bar]] - rationale - get_products.py
-- [[fetch_all_products_async()]] - code - get_products.py
-- [[fetch_archived_barcodes_async()]] - code - get_products.py
-- [[fetch_products_page()]] - code - get_products.py
-- [[fetch_products_route()]] - code - get_products.py
-- [[save_products_to_db_async()]] - code - get_products.py
-- [[sync_trendyol_deletions()]] - code - get_products.py
-- [[update_products_route()]] - code - get_products.py
+- [[._fetch_sku_map_from_api()]] - code - stock_sync/adapters/hepsiburada.py
+- [[._find_sku_info()]] - code - stock_sync/adapters/hepsiburada.py
+- [[._get_headers()_2]] - code - stock_sync/adapters/hepsiburada.py
+- [[._init_config()_2]] - code - stock_sync/adapters/hepsiburada.py
+- [[._load_sku_map()]] - code - stock_sync/adapters/hepsiburada.py
+- [[.get_platform_products()_2]] - code - stock_sync/adapters/hepsiburada.py
+- [[.send_stock_batch()_2]] - code - stock_sync/adapters/hepsiburada.py
+- [[API'den tüm listing'leri çekip SKU map oluştur]] - rationale - stock_sync/adapters/hepsiburada.py
+- [[Any_8]] - code
+- [[Barkoda karşılık gelen HB SKU bilgisini bul.         merchantSku genellikle bark]] - rationale - stock_sync/adapters/hepsiburada.py
+- [[Hepsiburada API yapılandırması]] - rationale - stock_sync/adapters/hepsiburada.py
+- [[Hepsiburada listing'lerinden merchantSku → hepsiburadaSku eşleştirmesini yükle.]] - rationale - stock_sync/adapters/hepsiburada.py
+- [[Hepsiburada stok senkronizasyon adaptörü - Listing API ile güncelleme]] - rationale - stock_sync/adapters/hepsiburada.py
+- [[Hepsiburada'daki tüm ürünleri çek (listing'ler).]] - rationale - stock_sync/adapters/hepsiburada.py
+- [[Hepsiburada'ya stok batch'i gönder.         API POST listingsmerchantid{merc]] - rationale - stock_sync/adapters/hepsiburada.py
+- [[HepsiburadaAdapter]] - code - stock_sync/adapters/hepsiburada.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -34,13 +35,9 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 11 edges to [[_COMMUNITY_Ürün Çekme & Görsel İndirme]]
-- 1 edge to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 1 edge to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
+- 7 edges to [[_COMMUNITY_Community 69]]
+- 1 edge to [[_COMMUNITY_Community 40]]
 
 ## Top bridge nodes
-- [[save_products_to_db_async()]] - degree 5, connects to 2 communities
-- [[fetch_products_route()]] - degree 4, connects to 2 communities
-- [[sync_trendyol_deletions()]] - degree 7, connects to 1 community
-- [[fetch_all_products_async()]] - degree 5, connects to 1 community
-- [[update_products_route()]] - degree 5, connects to 1 community
+- [[HepsiburadaAdapter]] - degree 14, connects to 2 communities
+- [[.send_stock_batch()_2]] - degree 7, connects to 1 community

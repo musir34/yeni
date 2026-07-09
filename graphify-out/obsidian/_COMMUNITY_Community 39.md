@@ -1,35 +1,36 @@
 ---
 type: community
-cohesion: 0.12
-members: 20
+cohesion: 0.13
+members: 21
 ---
 
 # Community 39
 
-**Cohesion:** 0.12 - loosely connected
-**Members:** 20 nodes
+**Cohesion:** 0.13 - loosely connected
+**Members:** 21 nodes
 
 ## Members
-- [[.__init__()_9]] - code - stock_sync/adapters/base.py
-- [[.__repr__()_13]] - code - stock_sync/adapters/base.py
-- [[._init_config()_1]] - code - stock_sync/adapters/base.py
-- [[.close_session()]] - code - stock_sync/adapters/base.py
-- [[.get_platform_products()_1]] - code - stock_sync/adapters/base.py
-- [[.get_session()]] - code - stock_sync/adapters/base.py
-- [[.send_all_stocks()]] - code - stock_sync/adapters/base.py
-- [[.send_stock_batch()_1]] - code - stock_sync/adapters/base.py
-- [[.validate_config()]] - code - stock_sync/adapters/base.py
-- [[ABC]] - code
-- [[Any_7]] - code
-- [[BasePlatformAdapter]] - code - stock_sync/adapters/base.py
-- [[Bir batch stok güncellemesi gönder.                  Args             items Gü]] - rationale - stock_sync/adapters/base.py
-- [[ClientSession_1]] - code
-- [[HTTP session al veya oluştur]] - rationale - stock_sync/adapters/base.py
-- [[Platform yapılandırmasını başlat (API keys, URLs vs.)]] - rationale - stock_sync/adapters/base.py
-- [[Platformdaki ürünleri çek (barkod eşleştirmesi için).                  Returns]] - rationale - stock_sync/adapters/base.py
-- [[Tüm platform adaptörlerinin temel sınıfı.     Her platform bu sınıftan türetilme]] - rationale - stock_sync/adapters/base.py
-- [[Tüm stokları batch'ler halinde gönder.                  Args             items]] - rationale - stock_sync/adapters/base.py
-- [[Yapılandırmanın geçerli olup olmadığını kontrol et]] - rationale - stock_sync/adapters/base.py
+- [[.__init__()_5]] - code - shopify_site/shopify_service.py
+- [[.__init__()_6]] - code - shopify_site/shopify_stock_service.py
+- [[._init_config()_4]] - code - stock_sync/adapters/shopify.py
+- [[._obtain_token()]] - code - shopify_site/shopify_config.py
+- [[.get_access_token()]] - code - shopify_site/shopify_config.py
+- [[.get_headers()]] - code - shopify_site/shopify_config.py
+- [[.graphql_url()]] - code - shopify_site/shopify_config.py
+- [[.is_configured()_2]] - code - shopify_site/shopify_config.py
+- [[.normalized_store_domain()]] - code - shopify_site/shopify_config.py
+- [[.reset_token()]] - code - shopify_site/shopify_config.py
+- [[.rest_base_url()]] - code - shopify_site/shopify_config.py
+- [[Geçerli access token döndür. Yoksa veya süresi dolmuşsa al.]] - rationale - shopify_site/shopify_config.py
+- [[Shopify Admin API ayarları — OAuth client credentials.]] - rationale - shopify_site/shopify_config.py
+- [[Shopify siparis yonetim sayfasi.]] - rationale - shopify_site/shopify_routes.py
+- [[Shopify ↔ Trendyol fiyat karşılaştırma sayfası.]] - rationale - shopify_site/shopify_routes.py
+- [[ShopifyConfig]] - code - shopify_site/shopify_config.py
+- [[Token'ı sıfırla (hata durumunda yeniden almak için).]] - rationale - shopify_site/shopify_config.py
+- [[client_id + client_secret ile access token al.]] - rationale - shopify_site/shopify_config.py
+- [[health()]] - code - shopify_site/shopify_routes.py
+- [[orders_dashboard()]] - code - shopify_site/shopify_routes.py
+- [[price_compare_dashboard()]] - code - shopify_site/shopify_routes.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -39,15 +40,21 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 12 edges to [[_COMMUNITY_Community 65]]
-- 1 edge to [[_COMMUNITY_Community 46]]
-- 1 edge to [[_COMMUNITY_Community 57]]
-- 1 edge to [[_COMMUNITY_Community 63]]
-- 1 edge to [[_COMMUNITY_Community 70]]
-- 1 edge to [[_COMMUNITY_Community 71]]
+- 5 edges to [[_COMMUNITY_Community 80]]
+- 4 edges to [[_COMMUNITY_Kasa & Gelir-Gider]]
+- 4 edges to [[_COMMUNITY_Idefix Entegrasyonu]]
+- 3 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
+- 3 edges to [[_COMMUNITY_Community 74]]
+- 2 edges to [[_COMMUNITY_Shopify Admin Servisi]]
+- 2 edges to [[_COMMUNITY_Community 35]]
+- 2 edges to [[_COMMUNITY_Barkod Üretimi & Sipariş Listesi]]
+- 1 edge to [[_COMMUNITY_Ana Kasa Defteri]]
+- 1 edge to [[_COMMUNITY_Community 69]]
+- 1 edge to [[_COMMUNITY_Community 110]]
 
 ## Top bridge nodes
-- [[BasePlatformAdapter]] - degree 23, connects to 6 communities
-- [[.send_all_stocks()]] - degree 6, connects to 1 community
-- [[.send_stock_batch()_1]] - degree 5, connects to 1 community
-- [[ABC]] - degree 2, connects to 1 community
+- [[ShopifyConfig]] - degree 25, connects to 10 communities
+- [[.is_configured()_2]] - degree 10, connects to 3 communities
+- [[.get_headers()]] - degree 3, connects to 1 community
+- [[.graphql_url()]] - degree 3, connects to 1 community
+- [[.reset_token()]] - degree 3, connects to 1 community

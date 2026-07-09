@@ -1,37 +1,37 @@
 ---
 type: community
-cohesion: 0.13
+cohesion: 0.09
 members: 22
 ---
 
 # Community 37
 
-**Cohesion:** 0.13 - loosely connected
+**Cohesion:** 0.09 - loosely connected
 **Members:** 22 nodes
 
 ## Members
-- [[10 sn'lik hafif tur sadece cevap bekleyen soruların son sayfasına bakar.     Ye]] - rationale - trendyol_qna/qna_service.py
-- [[API item'ını tabloya işle. (satır, yeni_mi) döner. Commit çağıranın işi.]] - rationale - trendyol_qna/qna_service.py
-- [[Bir sayfalık item'ı işleyip COMMIT eder; yeni soru ID'lerini döner.     Başka bi]] - rationale - trendyol_qna/qna_service.py
-- [[Tablo yoksa oluştur (migration çalışmadıysa yedek).]] - rationale - trendyol_qna/qna_service.py
-- [[Tek sayfa soru çek; hata durumunda None (job'lar sessizce loglayıp geçer).]] - rationale - trendyol_qna/qna_service.py
-- [[Trendyol Müşteri Soruları (Q&A) servisi.  API dokümanı httpsdevelopers.trend]] - rationale - trendyol_qna/qna_service.py
-- [[Trendyol epoch-millis → aware UTC datetime.]] - rationale - trendyol_qna/qna_service.py
-- [[Verilen pencerede tüm statüleri senkronla (upsert). Yeni soru ID'lerini döner.]] - rationale - trendyol_qna/qna_service.py
-- [[Yeni sorular için 'yeni_soru' olayına abone kullanıcılara mail at.]] - rationale - trendyol_qna/qna_service.py
-- [[Yeni sorular için taslakları arka plan thread'inde sırayla üret.]] - rationale - trendyol_qna/qna_ai.py
-- [[_fetch_page()]] - code - trendyol_qna/qna_service.py
-- [[_headers()]] - code - trendyol_qna/qna_service.py
-- [[_ms_to_dt()]] - code - trendyol_qna/qna_service.py
-- [[_notify_new_questions()]] - code - trendyol_qna/qna_service.py
-- [[_upsert_batch()]] - code - trendyol_qna/qna_service.py
-- [[_upsert_question()]] - code - trendyol_qna/qna_service.py
-- [[datetime_2]] - code
-- [[ensure_table_exists()_1]] - code - trendyol_qna/qna_service.py
-- [[generate_drafts_async()]] - code - trendyol_qna/qna_ai.py
-- [[qna_service.py]] - code - trendyol_qna/qna_service.py
-- [[quick_poll()]] - code - trendyol_qna/qna_service.py
-- [[sync_questions()]] - code - trendyol_qna/qna_service.py
+- [[Bir ürünün platformlarını getirir]] - rationale - idefix/idefix_routes.py
+- [[Bizim ürünlerimizi arama için listeler]] - rationale - idefix/idefix_routes.py
+- [[Idefix Satıcı Paneli Route'ları]] - rationale - idefix/idefix_routes.py
+- [[Idefix siparişler sayfası]] - rationale - idefix/idefix_routes.py
+- [[Idefix ürün eşleştirme sayfası]] - rationale - idefix/idefix_routes.py
+- [[Idefix ürünler sayfası]] - rationale - idefix/idefix_routes.py
+- [[Idefix ürünlerini çek ve mevcut ürünlerle eşleştir     Barkod eşleşen ürünlere ']] - rationale - idefix/idefix_routes.py
+- [[Siparişleri JSON olarak döndürür]] - rationale - idefix/idefix_routes.py
+- [[Trendyol'daki fiyatları Idefix'e senkronize et     Eşleşen ürünlerin sale_price]] - rationale - idefix/idefix_routes.py
+- [[api_get_platforms()]] - code - idefix/idefix_routes.py
+- [[api_orders()_2]] - code - idefix/idefix_routes.py
+- [[api_our_products()]] - code - idefix/idefix_routes.py
+- [[api_products()_1]] - code - idefix/idefix_routes.py
+- [[api_search_products()]] - code - idefix/idefix_routes.py
+- [[api_sync_prices()]] - code - idefix/idefix_routes.py
+- [[api_sync_products()]] - code - idefix/idefix_routes.py
+- [[eslestirme()]] - code - idefix/idefix_routes.py
+- [[idefix_routes.py]] - code - idefix/idefix_routes.py
+- [[index()_6]] - code - idefix/idefix_routes.py
+- [[siparisler()]] - code - idefix/idefix_routes.py
+- [[urunler()]] - code - idefix/idefix_routes.py
+- [[Ürünleri JSON olarak döndürür - eşleşme bilgisiyle birlikte]] - rationale - idefix/idefix_routes.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -41,18 +41,11 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 10 edges to [[_COMMUNITY_Community 42]]
-- 6 edges to [[_COMMUNITY_Uygulama Çekirdeği & Zamanlı İşler]]
-- 2 edges to [[_COMMUNITY_E-posta Bildirimleri]]
-- 2 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 2 edges to [[_COMMUNITY_Community 58]]
-- 1 edge to [[_COMMUNITY_Community 38]]
-- 1 edge to [[_COMMUNITY_Community 77]]
-- 1 edge to [[_COMMUNITY_Community 104]]
+- 2 edges to [[_COMMUNITY_Community 104]]
+- 1 edge to [[_COMMUNITY_Stok Senkron API]]
+- 1 edge to [[_COMMUNITY_Community 44]]
+- 1 edge to [[_COMMUNITY_Community 69]]
+- 1 edge to [[_COMMUNITY_Community 61]]
 
 ## Top bridge nodes
-- [[qna_service.py]] - degree 23, connects to 8 communities
-- [[quick_poll()]] - degree 9, connects to 2 communities
-- [[sync_questions()]] - degree 8, connects to 2 communities
-- [[generate_drafts_async()]] - degree 6, connects to 2 communities
-- [[_upsert_question()]] - degree 5, connects to 1 community
+- [[idefix_routes.py]] - degree 18, connects to 5 communities

@@ -1,12 +1,12 @@
 ---
 source_file: "order_audit_routes.py"
 type: "code"
-community: "Barkod Alias Yardımcıları"
+community: "Community 61"
 location: "L181"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Barkod_Alias_Yardmclar
+  - community/Community_61
 ---
 
 # _barcode_snapshot()
@@ -20,4 +20,4 @@ tags:
 - [[lookup()]] - `calls` [EXTRACTED]
 - [[order_audit_routes.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Barkod_Alias_Yardmclar
+#graphify/code #graphify/INFERRED #community/Community_61

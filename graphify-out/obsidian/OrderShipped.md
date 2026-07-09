@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Community 50"
+community: "E-posta Bildirimleri"
 location: "L687"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_50
+  - community/E-posta_Bildirimleri
 ---
 
 # OrderShipped
@@ -61,4 +61,4 @@ tags:
 - [[uretim_oneri.py]] - `imports` [EXTRACTED]
 - [[verify_no_phantom_ledger.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_50
+#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri

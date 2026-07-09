@@ -1,12 +1,12 @@
 ---
 source_file: "tests/conftest.py"
 type: "code"
-community: "Uygulama Çekirdeği & Zamanlı İşler"
+community: "Stok Senkron API"
 location: "L7"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Uygulama_ekirdei__Zamanl_ler
+  - community/Stok_Senkron_API
 ---
 
 # client()
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[conftest.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Uygulama_ekirdei__Zamanl_ler
+#graphify/code #graphify/EXTRACTED #community/Stok_Senkron_API

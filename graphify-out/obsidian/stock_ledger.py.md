@@ -1,12 +1,12 @@
 ---
 source_file: "stock_ledger.py"
 type: "code"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Community 48"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Community_48
 ---
 
 # stock_ledger.py
@@ -30,4 +30,4 @@ tags:
 - [[stock_management.py]] - `imports_from` [EXTRACTED]
 - [[test_stock_ledger.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/code #graphify/EXTRACTED #community/Community_48

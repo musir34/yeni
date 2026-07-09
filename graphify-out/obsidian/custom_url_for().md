@@ -1,12 +1,12 @@
 ---
 source_file: "app.py"
 type: "code"
-community: "Uygulama Çekirdeği & Zamanlı İşler"
+community: "Stok Senkron API"
 location: "L170"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Uygulama_ekirdei__Zamanl_ler
+  - community/Stok_Senkron_API
 ---
 
 # custom_url_for()
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[app.py]] - `indirect_call` [INFERRED]
 
-#graphify/code #graphify/INFERRED #community/Uygulama_ekirdei__Zamanl_ler
+#graphify/code #graphify/INFERRED #community/Stok_Senkron_API

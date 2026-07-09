@@ -1,12 +1,12 @@
 ---
 source_file: "picking_service.py"
 type: "code"
-community: "Community 54"
+community: "Community 48"
 location: "L22"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_54
+  - community/Community_48
 ---
 
 # _norm_raf()
@@ -16,4 +16,4 @@ tags:
 - [[pick_order_from_shelf()]] - `calls` [EXTRACTED]
 - [[picking_service.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_54
+#graphify/code #graphify/EXTRACTED #community/Community_48

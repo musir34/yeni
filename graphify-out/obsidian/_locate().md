@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/audit_today_prepared.py"
 type: "code"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "E-posta Bildirimleri"
 location: "L54"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/E-posta_Bildirimleri
 ---
 
 # _locate()
@@ -15,4 +15,4 @@ tags:
 - [[audit_today_prepared.py]] - `contains` [EXTRACTED]
 - [[main()_3]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri

@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/backfill_opening_balance.py"
 type: "rationale"
-community: "Community 50"
+community: "Community 86"
 location: "L46"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_50
+  - community/Community_86
 ---
 
 # barkod,adet biçimindeki CSV'yi {barcode: qty} olarak yükler.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_load_csv()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_50
+#graphify/rationale #graphify/EXTRACTED #community/Community_86

@@ -1,41 +1,19 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8" />
-    <script>
-      (function(){var m=localStorage.getItem('gs_dark_mode')||'auto';var h=new Date().getHours();var dark=m==='on'||(m==='auto'&&(h>=20||h<7));if(dark)document.documentElement.classList.add('gs-dark');})();
-    </script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Sipariş Takip - Güllü Ayakkabı</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}" />
+{% extends "base.html" %}
+{% block title %}Sipariş Takip - Güllü Ayakkabı{% endblock %}
+{% block extra_css %}
     <style>
+        /* Ortak :root değişkenleri gullu-common.css'ten gelir. Burada yalnızca kanonikten
+           FARKLI/EK değerler tutulur (success/warning/danger/info bu sayfada Bootstrap'ın
+           klasik tonlarını kullanıyor). */
         :root {
-            --color-primary: #B76E79; /* Gül Kurusu */
-            --color-primary-dark: #A05F6A;
-            --color-secondary: #212529; /* Siyah/Koyu Gri */
-            --color-text: #343a40;
-            --color-bg: #f8f9fa;
-            --color-white: #fff;
-            --color-border: #dee2e6;
             --color-success: #28a745;
             --color-warning: #ffc107;
             --color-danger: #dc3545;
             --color-info: #0dcaf0;
-            --font-family-base: 'Inter', sans-serif;
-            --border-radius: 0.5rem;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
-            --shadow-md: 0 5px 15px rgba(0,0,0,0.08);
-            --transition: all 0.25s ease-in-out;
         }
+        /* base.html'in dış .container.mt-5 sarmalayıcısını nötrle — sayfanın kendi .container'ı aktif kalsın */
+        .container.mt-5 { max-width: none; margin: 0; padding: 0; }
 
-        body {
-            font-family: var(--font-family-base);
-            background-color: var(--color-bg);
-            color: var(--color-text);
-        }
         .container { max-width: 1600px; padding: 1.5rem; }
         h2, h4, h5 { color: var(--color-secondary); font-weight: 600; }
 
@@ -251,9 +229,23 @@
         html.gs-dark .product-barcode { color: #aaa; }
         html.gs-dark .barcode-copy-btn { color: #d994a0; }
         html.gs-dark .product-qty { background: #30343a; color: #fff; }
+
+        /* Arşiv sebep modalı (sayfaya özgü) */
+        .archive-reason-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+        @media (max-width:576px){.archive-reason-grid{grid-template-columns:1fr;}}
+        .archive-reason-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;
+            gap:6px;padding:18px 12px;border:2px solid #e3e6ea;border-radius:12px;background:#fff;
+            transition:all .15s ease;cursor:pointer;min-height:96px;text-align:center;font-weight:500;color:#333;}
+        .archive-reason-btn:hover{border-color:#dc3545;background:#fff5f5;transform:translateY(-1px);}
+        .archive-reason-btn.active{border-color:#dc3545;background:#dc3545;color:#fff;box-shadow:0 4px 12px rgba(220,53,69,.25);}
+        .archive-reason-btn .ar-ico{font-size:1.6rem;line-height:1;}
+        .archive-reason-btn .ar-lbl{font-size:.95rem;line-height:1.2;}
+        .archive-reason-btn .ar-lbl small{opacity:.8;font-size:.78rem;}
+        .archive-reason-other{grid-column:1 / -1;}
     </style>
-</head>
-<body>
+{% endblock %}
+
+{% block content %}
     <div class="container">
         {% set sort_key = sort_key|default('date_desc', true) %}
         {% set active_list = active_list|default('all', true) %}
@@ -494,19 +486,6 @@
             </form>
         </div>
     </div>
-    <style>
-        .archive-reason-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
-        @media (max-width:576px){.archive-reason-grid{grid-template-columns:1fr;}}
-        .archive-reason-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;
-            gap:6px;padding:18px 12px;border:2px solid #e3e6ea;border-radius:12px;background:#fff;
-            transition:all .15s ease;cursor:pointer;min-height:96px;text-align:center;font-weight:500;color:#333;}
-        .archive-reason-btn:hover{border-color:#dc3545;background:#fff5f5;transform:translateY(-1px);}
-        .archive-reason-btn.active{border-color:#dc3545;background:#dc3545;color:#fff;box-shadow:0 4px 12px rgba(220,53,69,.25);}
-        .archive-reason-btn .ar-ico{font-size:1.6rem;line-height:1;}
-        .archive-reason-btn .ar-lbl{font-size:.95rem;line-height:1.2;}
-        .archive-reason-btn .ar-lbl small{opacity:.8;font-size:.78rem;}
-        .archive-reason-other{grid-column:1 / -1;}
-    </style>
 
     <div id="imageZoomModal">
       <button class="close-btn">&times;</button>
@@ -514,10 +493,9 @@
     </div>
 
     <textarea id="temp-copier" style="position: absolute; top: -1000px;"></textarea>
+{% endblock %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="{{ url_for('static', filename='js/app-shell.js') }}"></script>
+{% block scripts %}
     <script>
         // ─── Kompakt Mod ─────────────────────────────────────────────────────────
         (function(){
@@ -707,7 +685,7 @@
                     if (hours > 0) newTimeString += hours + ' saat ';
                     newTimeString += minutes + ' dakika';
                     element.innerText = newTimeString;
-                    if (totalMinutes <= 600) { element.classList.add('red'); } 
+                    if (totalMinutes <= 600) { element.classList.add('red'); }
                     else { element.classList.remove('red'); }
                 } else {
                     element.innerText = 'Süre Doldu';
@@ -767,6 +745,4 @@
                 });
         });
     </script>
-{% include 'includes/notification_popup.html' ignore missing %}
-</body>
-</html>
+{% endblock %}

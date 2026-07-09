@@ -1,11 +1,11 @@
 ---
 source_file: ""
 type: "code"
-community: "Canlı Panel (SSE)"
+community: "Üretim Önerisi & Satış Tahmini"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Canl_Panel_SSE
+  - community/retim_nerisi__Sat_Tahmini
 ---
 
 # datetime
@@ -16,4 +16,4 @@ tags:
 - [[_order_numbers_created_between()]] - `references` [EXTRACTED]
 - [[canli_panel.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Canl_Panel_SSE
+#graphify/code #graphify/EXTRACTED #community/retim_nerisi__Sat_Tahmini

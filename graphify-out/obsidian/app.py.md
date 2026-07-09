@@ -1,12 +1,12 @@
 ---
 source_file: "app.py"
 type: "code"
-community: "Uygulama Çekirdeği & Zamanlı İşler"
+community: "Stok Senkron API"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Uygulama_ekirdei__Zamanl_ler
+  - community/Stok_Senkron_API
 ---
 
 # app.py
@@ -99,4 +99,4 @@ tags:
 - [[uretim_oneri.py]] - `imports_from` [EXTRACTED]
 - [[user_logs.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Uygulama_ekirdei__Zamanl_ler
+#graphify/code #graphify/EXTRACTED #community/Stok_Senkron_API

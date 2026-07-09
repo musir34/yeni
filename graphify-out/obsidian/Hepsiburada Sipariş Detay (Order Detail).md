@@ -1,11 +1,11 @@
 ---
 source_file: "templates/hepsiburada/siparis_detay.html"
 type: "concept"
-community: "Community 45"
+community: "Community 47"
 tags:
   - graphify/concept
   - graphify/INFERRED
-  - community/Community_45
+  - community/Community_47
 ---
 
 # Hepsiburada Sipariş Detay (Order Detail)
@@ -14,4 +14,4 @@ tags:
 - [[Amazon Sipariş Detay (Order Detail)]] - `semantically_similar_to` [INFERRED]
 - [[Hepsiburada Siparişler (Orders List)]] - `references` [EXTRACTED]
 
-#graphify/concept #graphify/INFERRED #community/Community_45
+#graphify/concept #graphify/INFERRED #community/Community_47

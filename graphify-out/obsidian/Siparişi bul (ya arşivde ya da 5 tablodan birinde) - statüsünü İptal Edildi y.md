@@ -1,12 +1,12 @@
 ---
 source_file: "archive.py"
 type: "rationale"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "E-posta Bildirimleri"
 location: "L383"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/E-posta_Bildirimleri
 ---
 
 # Siparişi bul (ya arşivde ya da 5 tablodan birinde) -> statüsünü "İptal Edildi" y
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[order_cancellation()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/rationale #graphify/EXTRACTED #community/E-posta_Bildirimleri

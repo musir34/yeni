@@ -1,12 +1,12 @@
 ---
 source_file: "agent_api.py"
 type: "rationale"
-community: "Agent API & Sipariş Sorguları"
+community: "Community 55"
 location: "L1706"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Agent_API__Sipari_Sorgular
+  - community/Community_55
 ---
 
 # ?with_try=0 ile TL dönüşümü kapatılabilir (varsayılan açık).
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_want_try()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Agent_API__Sipari_Sorgular
+#graphify/rationale #graphify/EXTRACTED #community/Community_55

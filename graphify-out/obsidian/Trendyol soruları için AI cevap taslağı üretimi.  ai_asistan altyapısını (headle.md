@@ -1,12 +1,12 @@
 ---
 source_file: "trendyol_qna/qna_ai.py"
 type: "rationale"
-community: "Community 58"
+community: "Community 62"
 location: "L1"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_58
+  - community/Community_62
 ---
 
 # Trendyol soruları için AI cevap taslağı üretimi.  ai_asistan altyapısını (headle
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[qna_ai.py]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_58
+#graphify/rationale #graphify/EXTRACTED #community/Community_62

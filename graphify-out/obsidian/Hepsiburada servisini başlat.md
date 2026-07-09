@@ -1,12 +1,12 @@
 ---
 source_file: "hepsiburada/hepsiburada_service.py"
 type: "rationale"
-community: "Community 66"
+community: "Community 72"
 location: "L21"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_66
+  - community/Community_72
 ---
 
 # Hepsiburada servisini başlat
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[.__init__()_1]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_66
+#graphify/rationale #graphify/EXTRACTED #community/Community_72

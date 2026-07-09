@@ -1,12 +1,12 @@
 ---
 source_file: "kasa.py"
 type: "code"
-community: "Kasa & Gelir-Gider"
+community: "Community 54"
 location: "L1313"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Kasa__Gelir-Gider
+  - community/Community_54
 ---
 
 # ana_kasa()
@@ -18,4 +18,4 @@ tags:
 - [[kasa.py]] - `contains` [EXTRACTED]
 - [[month_bounds()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Kasa__Gelir-Gider
+#graphify/code #graphify/EXTRACTED #community/Community_54

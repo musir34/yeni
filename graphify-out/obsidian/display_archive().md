@@ -1,12 +1,12 @@
 ---
 source_file: "archive.py"
 type: "code"
-community: "Community 79"
+community: "Community 41"
 location: "L462"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_79
+  - community/Community_41
 ---
 
 # display_archive()
@@ -19,4 +19,4 @@ tags:
 - [[fetch_product_image()]] - `calls` [EXTRACTED]
 - [[parse_order_details()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_79
+#graphify/code #graphify/EXTRACTED #community/Community_41

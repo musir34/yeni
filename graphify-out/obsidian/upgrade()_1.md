@@ -1,12 +1,12 @@
 ---
 source_file: "migrations/versions/add_orders_hazirlaniyor_table.py"
 type: "code"
-community: "Community 108"
+community: "Trendyol Sipariş Çekme & Komisyon"
 location: "L19"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_108
+  - community/Trendyol_Sipari_ekme__Komisyon
 ---
 
 # upgrade()
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[add_orders_hazirlaniyor_table.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_108
+#graphify/code #graphify/EXTRACTED #community/Trendyol_Sipari_ekme__Komisyon

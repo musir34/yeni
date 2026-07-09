@@ -1,11 +1,11 @@
 ---
 source_file: "templates/includes/notification_popup.html"
 type: "concept"
-community: "Community 123"
+community: "Community 38"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_123
+  - community/Community_38
 ---
 
 # Notification Image Popup
@@ -13,4 +13,4 @@ tags:
 ## Connections
 - [[apimy-notification-image endpoint]] - `calls` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_123
+#graphify/concept #graphify/EXTRACTED #community/Community_38

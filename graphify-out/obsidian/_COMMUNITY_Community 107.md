@@ -1,18 +1,19 @@
 ---
 type: community
-cohesion: 0.67
-members: 3
+cohesion: 0.50
+members: 4
 ---
 
 # Community 107
 
-**Cohesion:** 0.67 - moderately connected
-**Members:** 3 nodes
+**Cohesion:** 0.50 - moderately connected
+**Members:** 4 nodes
 
 ## Members
-- [[add_atanan_raf_to_order_created.py]] - code - migrations/versions/add_atanan_raf_to_order_created.py
-- [[downgrade()]] - code - migrations/versions/add_atanan_raf_to_order_created.py
-- [[upgrade()]] - code - migrations/versions/add_atanan_raf_to_order_created.py
+- [[.mcp.json]] - code - ai_asistan/.mcp.json
+- [[@modelcontextprotocolserver-postgres]] - code - ai_asistan/.mcp.json
+- [[gulludb]] - code - ai_asistan/.mcp.json
+- [[npx]] - code - ai_asistan/.mcp.json
 
 ## Live Query (requires Dataview plugin)
 

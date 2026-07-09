@@ -1,12 +1,12 @@
 ---
 source_file: "promotion_service.py"
 type: "code"
-community: "E-posta Bildirimleri"
+community: "Sipariş Yaşam Döngüsü & Arşiv"
 location: "L83"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/E-posta_Bildirimleri
+  - community/Sipari_Yaam_Dngs__Ariv
 ---
 
 # _build_trendyol_lines()
@@ -17,4 +17,4 @@ tags:
 - [[promote_eligible_orders()]] - `calls` [EXTRACTED]
 - [[promotion_service.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri
+#graphify/code #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv

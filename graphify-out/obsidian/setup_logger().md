@@ -1,12 +1,12 @@
 ---
 source_file: "logger_config.py"
 type: "code"
-community: "Community 65"
+community: "Community 69"
 location: "L11"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_65
+  - community/Community_69
 ---
 
 # setup_logger()
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[logger_config.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_65
+#graphify/code #graphify/EXTRACTED #community/Community_69

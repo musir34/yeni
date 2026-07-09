@@ -1,12 +1,12 @@
 ---
 source_file: "amazon/amazon_routes.py"
 type: "code"
-community: "Community 122"
+community: "Community 128"
 location: "L122"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_122
+  - community/Community_128
 ---
 
 # update_inventory()
@@ -15,4 +15,4 @@ tags:
 - [[Stok güncelleme API endpoint]] - `rationale_for` [EXTRACTED]
 - [[amazon_routes.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_122
+#graphify/code #graphify/EXTRACTED #community/Community_128

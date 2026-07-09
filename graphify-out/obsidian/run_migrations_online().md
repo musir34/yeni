@@ -1,12 +1,12 @@
 ---
 source_file: "migrations/env.py"
 type: "code"
-community: "Community 84"
+community: "Community 92"
 location: "L75"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_84
+  - community/Community_92
 ---
 
 # run_migrations_online()
@@ -17,4 +17,4 @@ tags:
 - [[get_engine()]] - `calls` [EXTRACTED]
 - [[get_metadata()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_84
+#graphify/code #graphify/EXTRACTED #community/Community_92

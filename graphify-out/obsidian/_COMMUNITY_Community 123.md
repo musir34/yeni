@@ -10,8 +10,8 @@ members: 2
 **Members:** 2 nodes
 
 ## Members
-- [[apimy-notification-image endpoint]] - concept - templates/includes/notification_popup.html
-- [[Notification Image Popup]] - concept - templates/includes/notification_popup.html
+- [[SKU-barkod benzerliğine göre otomatik eşleştir]] - rationale - amazon/amazon_routes.py
+- [[api_auto_match()]] - code - amazon/amazon_routes.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -19,3 +19,9 @@ members: 2
 TABLE source_file, type FROM #community/Community_123
 SORT file.name ASC
 ```
+
+## Connections to other communities
+- 1 edge to [[_COMMUNITY_Community 50]]
+
+## Top bridge nodes
+- [[api_auto_match()]] - degree 2, connects to 1 community

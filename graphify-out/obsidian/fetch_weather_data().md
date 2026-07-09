@@ -1,12 +1,12 @@
 ---
 source_file: "weather_service.py"
 type: "code"
-community: "Stok Fix Testleri & Yardımcılar"
+community: "Barkod Üretimi & Sipariş Listesi"
 location: "L107"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Stok_Fix_Testleri__Yardmclar
+  - community/Barkod_retimi__Sipari_Listesi
 ---
 
 # fetch_weather_data()
@@ -16,4 +16,4 @@ tags:
 - [[get_weather_info()]] - `calls` [EXTRACTED]
 - [[weather_service.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar
+#graphify/code #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi

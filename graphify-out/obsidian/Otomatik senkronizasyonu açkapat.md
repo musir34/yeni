@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/routes.py"
 type: "rationale"
-community: "Community 75"
+community: "Community 77"
 location: "L311"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_75
+  - community/Community_77
 ---
 
 # Otomatik senkronizasyonu aç/kapat
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[api_toggle_auto_sync()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_75
+#graphify/rationale #graphify/EXTRACTED #community/Community_77

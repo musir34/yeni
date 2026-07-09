@@ -1,12 +1,12 @@
 ---
 source_file: "agent_api.py"
 type: "rationale"
-community: "Agent API & Sipariş Sorguları"
+community: "Community 55"
 location: "L1780"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Agent_API__Sipari_Sorgular
+  - community/Community_55
 ---
 
 # Maliyeti girilmiş tüm modelleri sayfalı döndürür (ilk senkron/import için).
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[model_cost_list()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Agent_API__Sipari_Sorgular
+#graphify/rationale #graphify/EXTRACTED #community/Community_55

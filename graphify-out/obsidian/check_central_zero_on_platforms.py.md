@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/check_central_zero_on_platforms.py"
 type: "code"
-community: "Community 62"
+community: "Community 78"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_62
+  - community/Community_78
 ---
 
 # check_central_zero_on_platforms.py
@@ -19,4 +19,4 @@ tags:
 - [[models.py]] - `imports_from` [EXTRACTED]
 - [[service.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_62
+#graphify/code #graphify/EXTRACTED #community/Community_78

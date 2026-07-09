@@ -1,12 +1,12 @@
 ---
 source_file: "utils.py"
 type: "rationale"
-community: "Community 41"
+community: "Community 43"
 location: "L83"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_41
+  - community/Community_43
 ---
 
 # Validasyon hatası yanıtı oluşturur.          Args:         errors (dict): Alan a
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[validation_error_response()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_41
+#graphify/rationale #graphify/EXTRACTED #community/Community_43

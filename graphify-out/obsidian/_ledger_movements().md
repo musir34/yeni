@@ -1,12 +1,12 @@
 ---
 source_file: "order_audit_routes.py"
 type: "code"
-community: "Stok Hareket Defteri (Ledger)"
+community: "Canlı Panel (SSE)"
 location: "L284"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Stok_Hareket_Defteri_Ledger
+  - community/Canl_Panel_SSE
 ---
 
 # _ledger_movements()
@@ -19,4 +19,4 @@ tags:
 - [[test_audit_page_lookup_includes_ledger_movements()]] - `calls` [EXTRACTED]
 - [[test_stock_ledger.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Stok_Hareket_Defteri_Ledger
+#graphify/code #graphify/EXTRACTED #community/Canl_Panel_SSE

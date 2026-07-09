@@ -1,12 +1,12 @@
 ---
 source_file: "profit.py"
 type: "code"
-community: "Ana Kasa Defteri"
+community: "E-posta Bildirimleri"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Ana_Kasa_Defteri
+  - community/E-posta_Bildirimleri
 ---
 
 # profit.py
@@ -32,4 +32,4 @@ tags:
 - [[profit_report()]] - `contains` [EXTRACTED]
 - [[save_missing_costs()]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Ana_Kasa_Defteri
+#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri

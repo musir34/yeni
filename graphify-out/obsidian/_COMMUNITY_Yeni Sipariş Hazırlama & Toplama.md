@@ -47,19 +47,21 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 5 edges to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
-- 3 edges to [[_COMMUNITY_Barkod Alias Yardımcıları]]
-- 3 edges to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
-- 3 edges to [[_COMMUNITY_Stok Fix Testleri & Yardımcılar]]
-- 2 edges to [[_COMMUNITY_Barkod Üretimi & Sipariş Listesi]]
-- 2 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 2 edges to [[_COMMUNITY_Community 54]]
-- 1 edge to [[_COMMUNITY_Community 64]]
-- 1 edge to [[_COMMUNITY_Sipariş Denetim Kaydı (Audit Log)]]
+- 7 edges to [[_COMMUNITY_Değişim  İade Talepleri]]
+- 3 edges to [[_COMMUNITY_Barkod Üretimi & Sipariş Listesi]]
+- 2 edges to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
+- 2 edges to [[_COMMUNITY_Trendyol Sipariş Çekme & Komisyon]]
+- 2 edges to [[_COMMUNITY_Community 67]]
+- 1 edge to [[_COMMUNITY_Community 66]]
+- 1 edge to [[_COMMUNITY_Community 104]]
+- 1 edge to [[_COMMUNITY_Community 61]]
+- 1 edge to [[_COMMUNITY_Üretim Önerisi & Satış Tahmini]]
+- 1 edge to [[_COMMUNITY_Community 71]]
+- 1 edge to [[_COMMUNITY_Community 52]]
 
 ## Top bridge nodes
-- [[new_orders_service.py]] - degree 27, connects to 9 communities
-- [[strip_turkish()]] - degree 5, connects to 2 communities
+- [[new_orders_service.py]] - degree 27, connects to 11 communities
 - [[_build_shelf_groups()]] - degree 8, connects to 1 community
 - [[scan_barcode_to_order()]] - degree 8, connects to 1 community
+- [[strip_turkish()]] - degree 5, connects to 1 community
 - [[_prep_model()]] - degree 5, connects to 1 community

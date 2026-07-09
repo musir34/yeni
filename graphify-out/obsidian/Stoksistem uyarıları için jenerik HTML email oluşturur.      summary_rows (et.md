@@ -1,12 +1,12 @@
 ---
 source_file: "mail_service.py"
 type: "rationale"
-community: "E-posta Bildirimleri"
+community: "Community 70"
 location: "L200"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/E-posta_Bildirimleri
+  - community/Community_70
 ---
 
 # Stok/sistem uyarıları için jenerik HTML email oluşturur.      summary_rows: [(et
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[build_alert_email_html()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/E-posta_Bildirimleri
+#graphify/rationale #graphify/EXTRACTED #community/Community_70

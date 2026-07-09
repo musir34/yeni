@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/clean_all_stale_duplicates.py"
 type: "code"
-community: "Veri Modelleri (SQLAlchemy)"
+community: "Ana Kasa Defteri"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Veri_Modelleri_SQLAlchemy
+  - community/Ana_Kasa_Defteri
 ---
 
 # clean_all_stale_duplicates.py
@@ -19,4 +19,4 @@ tags:
 - [[models.py]] - `imports_from` [EXTRACTED]
 - [[shopify_stock_service.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Veri_Modelleri_SQLAlchemy
+#graphify/code #graphify/EXTRACTED #community/Ana_Kasa_Defteri

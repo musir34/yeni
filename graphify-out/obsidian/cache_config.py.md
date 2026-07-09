@@ -1,12 +1,12 @@
 ---
 source_file: "cache_config.py"
 type: "code"
-community: "Ürün Çekme & Görsel İndirme"
+community: "Hepsiburada Route Katmanı"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/rn_ekme__Grsel_ndirme
+  - community/Hepsiburada_Route_Katman
 ---
 
 # cache_config.py
@@ -16,4 +16,4 @@ tags:
 - [[get_products.py]] - `imports_from` [EXTRACTED]
 - [[order_list_service.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/rn_ekme__Grsel_ndirme
+#graphify/code #graphify/EXTRACTED #community/Hepsiburada_Route_Katman

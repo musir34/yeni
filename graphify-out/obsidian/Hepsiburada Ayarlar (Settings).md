@@ -1,11 +1,11 @@
 ---
 source_file: "templates/hepsiburada/ayarlar.html"
 type: "concept"
-community: "Community 45"
+community: "Community 47"
 tags:
   - graphify/concept
   - graphify/INFERRED
-  - community/Community_45
+  - community/Community_47
 ---
 
 # Hepsiburada Ayarlar (Settings)
@@ -14,4 +14,4 @@ tags:
 - [[Hepsiburada Config Error Page]] - `references` [INFERRED]
 - [[Hepsiburada Satıcı Paneli (Dashboard)]] - `references` [EXTRACTED]
 
-#graphify/concept #graphify/INFERRED #community/Community_45
+#graphify/concept #graphify/INFERRED #community/Community_47

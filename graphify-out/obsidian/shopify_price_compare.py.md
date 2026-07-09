@@ -1,12 +1,12 @@
 ---
 source_file: "shopify_site/shopify_price_compare.py"
 type: "code"
-community: "Community 68"
+community: "Community 74"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_68
+  - community/Community_74
 ---
 
 # shopify_price_compare.py
@@ -21,4 +21,4 @@ tags:
 - [[shopify_config.py]] - `imports_from` [EXTRACTED]
 - [[shopify_routes.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_68
+#graphify/code #graphify/EXTRACTED #community/Community_74

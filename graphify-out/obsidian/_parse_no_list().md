@@ -1,12 +1,12 @@
 ---
 source_file: "degisim.py"
 type: "code"
-community: "Değişim / İade Talepleri"
+community: "Kimlik Doğrulama & Kullanıcı Yönetimi"
 location: "L444"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Deiim_/_ade_Talepleri
+  - community/Kimlik_Dorulama__Kullanc_Ynetimi
 ---
 
 # _parse_no_list()
@@ -17,4 +17,4 @@ tags:
 - [[degisim.py]] - `contains` [EXTRACTED]
 - [[request.form.getlist veya virgülle ayrılmış string'i temizle.]] - `rationale_for` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Deiim_/_ade_Talepleri
+#graphify/code #graphify/EXTRACTED #community/Kimlik_Dorulama__Kullanc_Ynetimi

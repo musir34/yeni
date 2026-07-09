@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/service.py"
 type: "rationale"
-community: "Community 76"
+community: "Community 84"
 location: "L329"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_76
+  - community/Community_84
 ---
 
 # Sync detaylarını kaydet
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[._save_sync_details()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_76
+#graphify/rationale #graphify/EXTRACTED #community/Community_84

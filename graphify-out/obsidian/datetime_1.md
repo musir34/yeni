@@ -1,11 +1,11 @@
 ---
 source_file: ""
 type: "code"
-community: "Community 44"
+community: "Maliyet Fişi & Tedarikçi"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_44
+  - community/Maliyet_Fii__Tedariki
 ---
 
 # datetime
@@ -14,4 +14,4 @@ tags:
 - [[fetch_data_from_api()]] - `references` [EXTRACTED]
 - [[iade_islemleri.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_44
+#graphify/code #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki

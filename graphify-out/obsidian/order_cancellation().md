@@ -1,12 +1,12 @@
 ---
 source_file: "archive.py"
 type: "code"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "E-posta Bildirimleri"
 location: "L382"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/E-posta_Bildirimleri
 ---
 
 # order_cancellation()
@@ -19,4 +19,4 @@ tags:
 - [[find_order_across_tables()]] - `calls` [EXTRACTED]
 - [[log_user_action()_1]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri

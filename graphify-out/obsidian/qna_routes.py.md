@@ -1,12 +1,12 @@
 ---
 source_file: "trendyol_qna/qna_routes.py"
 type: "code"
-community: "Community 42"
+community: "Community 45"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_42
+  - community/Community_45
 ---
 
 # qna_routes.py
@@ -31,4 +31,4 @@ tags:
 - [[taslak_durum()]] - `contains` [EXTRACTED]
 - [[waiting_count()]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_42
+#graphify/code #graphify/EXTRACTED #community/Community_45

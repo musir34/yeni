@@ -1,17 +1,18 @@
 ---
 type: community
-cohesion: 1.00
-members: 2
+cohesion: 0.67
+members: 3
 ---
 
 # Community 121
 
-**Cohesion:** 1.00 - tightly connected
-**Members:** 2 nodes
+**Cohesion:** 0.67 - moderately connected
+**Members:** 3 nodes
 
 ## Members
-- [[Sipariş detay sayfası]] - rationale - amazon/amazon_routes.py
-- [[order_detail()]] - code - amazon/amazon_routes.py
+- [[_createOverlay()]] - code - static/js/gs-dialog.js
+- [[_destroy()]] - code - static/js/gs-dialog.js
+- [[gs-dialog.js]] - code - static/js/gs-dialog.js
 
 ## Live Query (requires Dataview plugin)
 
@@ -19,9 +20,3 @@ members: 2
 TABLE source_file, type FROM #community/Community_121
 SORT file.name ASC
 ```
-
-## Connections to other communities
-- 1 edge to [[_COMMUNITY_Community 47]]
-
-## Top bridge nodes
-- [[order_detail()]] - degree 2, connects to 1 community

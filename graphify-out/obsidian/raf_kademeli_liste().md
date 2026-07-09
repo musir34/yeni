@@ -1,12 +1,12 @@
 ---
 source_file: "raf_sistemi.py"
 type: "code"
-community: "Raf Sistemi & Etiket"
+community: "Barkod Alias Yardımcıları"
 location: "L61"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Raf_Sistemi__Etiket
+  - community/Barkod_Alias_Yardmclar
 ---
 
 # raf_kademeli_liste()
@@ -15,4 +15,4 @@ tags:
 - [[Rafları 3 katmanlı bir yapıda döndürür. Frontend'in artık path'lere ihtiyacı olm]] - `rationale_for` [EXTRACTED]
 - [[raf_sistemi.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Raf_Sistemi__Etiket
+#graphify/code #graphify/EXTRACTED #community/Barkod_Alias_Yardmclar

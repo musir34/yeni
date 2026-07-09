@@ -1,12 +1,12 @@
 ---
 source_file: "shopify_site/shopify_routes.py"
 type: "rationale"
-community: "Shopify Route Katmanı"
+community: "Community 39"
 location: "L63"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Shopify_Route_Katman
+  - community/Community_39
 ---
 
 # Shopify siparis yonetim sayfasi.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[orders_dashboard()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Shopify_Route_Katman
+#graphify/rationale #graphify/EXTRACTED #community/Community_39

@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/trace_order.py"
 type: "code"
-community: "Stok Hareket Defteri (Ledger)"
+community: "Canlı Panel (SSE)"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Stok_Hareket_Defteri_Ledger
+  - community/Canl_Panel_SSE
 ---
 
 # trace_order.py
@@ -29,4 +29,4 @@ tags:
 - [[trace_barcode()]] - `contains` [EXTRACTED]
 - [[trace_order()]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Stok_Hareket_Defteri_Ledger
+#graphify/code #graphify/EXTRACTED #community/Canl_Panel_SSE

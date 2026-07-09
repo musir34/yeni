@@ -1,34 +1,35 @@
 ---
 type: community
-cohesion: 0.22
-members: 19
+cohesion: 0.14
+members: 20
 ---
 
 # Community 44
 
-**Cohesion:** 0.22 - loosely connected
-**Members:** 19 nodes
+**Cohesion:** 0.14 - loosely connected
+**Members:** 20 nodes
 
 ## Members
-- [[Otomatik retry’lı requests oturumu.]] - rationale - iade_islemleri.py
-- [[ReturnOrder]] - code - models.py
-- [[ReturnOrder & ReturnProduct toplu kaydetmeupsert.]] - rationale - iade_islemleri.py
-- [[ReturnProduct]] - code - models.py
-- [[_get_return_order_or_404()]] - code - iade_islemleri.py
-- [[datetime_1]] - code
-- [[fetch_and_save_daily_returns()]] - code - iade_islemleri.py
-- [[fetch_data_from_api()]] - code - iade_islemleri.py
-- [[get_requests_session()]] - code - iade_islemleri.py
-- [[iade_guncelle()]] - code - iade_islemleri.py
-- [[iade_islemleri.py]] - code - iade_islemleri.py
-- [[iade_listesi()]] - code - iade_islemleri.py
-- [[iade_onayla()]] - code - iade_islemleri.py
-- [[iade_verileri()]] - code - iade_islemleri.py
-- [[is_valid_uuid()]] - code - iade_islemleri.py
-- [[log_user_action()]] - code - iade_islemleri.py
-- [[safe_strip()]] - code - iade_islemleri.py
-- [[save_to_database()]] - code - iade_islemleri.py
-- [[schedule_daily_return_fetch()]] - code - iade_islemleri.py
+- [[TODO Sipariş durumu güncelleme endpoint'i eklenecek]] - rationale - idefix/idefix_service.py
+- [[TODO Sipariş entegrasyonu eklenecek]] - rationale - idefix/idefix_service.py
+- [[.__init__()_2]] - code - idefix/idefix_service.py
+- [[._get_headers()]] - code - idefix/idefix_service.py
+- [[._get_vendor_token()]] - code - idefix/idefix_service.py
+- [[.get_all_products()]] - code - idefix/idefix_service.py
+- [[.get_orders()]] - code - idefix/idefix_service.py
+- [[.get_product_by_barcode()]] - code - idefix/idefix_service.py
+- [[.get_products()]] - code - idefix/idefix_service.py
+- [[.update_order_status()]] - code - idefix/idefix_service.py
+- [[API Key ve Secret'tan vendor token oluşturur (base64 encode)]] - rationale - idefix/idefix_service.py
+- [[API istekleri için gerekli header'ları döndürür]] - rationale - idefix/idefix_service.py
+- [[Any_1]] - code
+- [[Idefix API entegrasyonu için servis sınıfı]] - rationale - idefix/idefix_service.py
+- [[Idefix Satıcı Paneli Servisi Satıcı Güllü shoes Satıcı ID 10594]] - rationale - idefix/idefix_service.py
+- [[IdefixService]] - code - idefix/idefix_service.py
+- [[Satıcının ürünlerini listeler                  Args             page Sayfa num]] - rationale - idefix/idefix_service.py
+- [[Sipariş durumunu günceller]] - rationale - idefix/idefix_service.py
+- [[Tüm ürünleri sayfalama ile çeker                  Args             max_pages M]] - rationale - idefix/idefix_service.py
+- [[idefix_service.py]] - code - idefix/idefix_service.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -38,19 +39,8 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 4 edges to [[_COMMUNITY_Uygulama Çekirdeği & Zamanlı İşler]]
-- 4 edges to [[_COMMUNITY_Canlı Panel (SSE)]]
-- 3 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 3 edges to [[_COMMUNITY_Ana Kasa Defteri]]
-- 2 edges to [[_COMMUNITY_Agent API & Sipariş Sorguları]]
-- 2 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
-- 1 edge to [[_COMMUNITY_Community 127]]
-- 1 edge to [[_COMMUNITY_Community 77]]
-- 1 edge to [[_COMMUNITY_Community 64]]
+- 1 edge to [[_COMMUNITY_Community 37]]
+- 1 edge to [[_COMMUNITY_Community 69]]
 
 ## Top bridge nodes
-- [[iade_islemleri.py]] - degree 22, connects to 5 communities
-- [[ReturnProduct]] - degree 10, connects to 4 communities
-- [[ReturnOrder]] - degree 9, connects to 4 communities
-- [[save_to_database()]] - degree 10, connects to 1 community
-- [[fetch_data_from_api()]] - degree 7, connects to 1 community
+- [[idefix_service.py]] - degree 6, connects to 2 communities

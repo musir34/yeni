@@ -1,12 +1,12 @@
 ---
 source_file: "migrations/env.py"
 type: "rationale"
-community: "Community 84"
+community: "Community 92"
 location: "L55"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_84
+  - community/Community_92
 ---
 
 # Run migrations in 'offline' mode.      This configures the context with just a U
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[run_migrations_offline()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_84
+#graphify/rationale #graphify/EXTRACTED #community/Community_92

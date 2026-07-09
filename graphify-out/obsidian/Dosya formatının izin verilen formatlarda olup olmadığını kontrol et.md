@@ -1,12 +1,12 @@
 ---
 source_file: "image_manager.py"
 type: "rationale"
-community: "Community 61"
+community: "Community 64"
 location: "L18"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_61
+  - community/Community_64
 ---
 
 # Dosya formatının izin verilen formatlarda olup olmadığını kontrol et
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[allowed_file()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_61
+#graphify/rationale #graphify/EXTRACTED #community/Community_64

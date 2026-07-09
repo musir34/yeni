@@ -1,12 +1,12 @@
 ---
 source_file: "user_logs.py"
 type: "rationale"
-community: "Silme & Toplu Yazdırma İşlemleri"
+community: "Community 42"
 location: "L167"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Silme__Toplu_Yazdrma_lemleri
+  - community/Community_42
 ---
 
 # Geliştirilmiş kullanıcı işlem loglama fonksiyonu          Args:         action:
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[log_user_action()_1]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Silme__Toplu_Yazdrma_lemleri
+#graphify/rationale #graphify/EXTRACTED #community/Community_42

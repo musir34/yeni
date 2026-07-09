@@ -1,12 +1,12 @@
 ---
 source_file: "order_audit_routes.py"
 type: "code"
-community: "Sipariş Denetim Kaydı (Audit Log)"
+community: "Stok Fix Testleri & Yardımcılar"
 location: "L432"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Denetim_Kayd_Audit_Log
+  - community/Stok_Fix_Testleri__Yardmclar
 ---
 
 # stock_source_data()
@@ -15,4 +15,4 @@ tags:
 - [[_stock_source_breakdown()]] - `calls` [EXTRACTED]
 - [[order_audit_routes.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Denetim_Kayd_Audit_Log
+#graphify/code #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar

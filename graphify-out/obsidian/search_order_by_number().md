@@ -1,12 +1,12 @@
 ---
 source_file: "order_list_service.py"
 type: "code"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "E-posta Bildirimleri"
 location: "L532"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/E-posta_Bildirimleri
 ---
 
 # search_order_by_number()
@@ -20,4 +20,4 @@ tags:
 - [[OrderShipped]] - `indirect_call` [INFERRED]
 - [[order_list_service.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/code #graphify/INFERRED #community/E-posta_Bildirimleri

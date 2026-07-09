@@ -1,12 +1,12 @@
 ---
 source_file: "get_products.py"
 type: "code"
-community: "Community 41"
+community: "Community 43"
 location: "L1057"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_41
+  - community/Community_43
 ---
 
 # delete_product_api()
@@ -19,4 +19,4 @@ tags:
 - [[success_response()]] - `calls` [EXTRACTED]
 - [[validation_error_response()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_41
+#graphify/code #graphify/EXTRACTED #community/Community_43

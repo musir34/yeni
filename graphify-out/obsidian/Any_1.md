@@ -1,11 +1,11 @@
 ---
 source_file: ""
 type: "code"
-community: "Idefix Entegrasyonu"
+community: "Community 44"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Idefix_Entegrasyonu
+  - community/Community_44
 ---
 
 # Any
@@ -17,4 +17,4 @@ tags:
 - [[.get_products()]] - `references` [EXTRACTED]
 - [[.update_order_status()]] - `references` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Idefix_Entegrasyonu
+#graphify/code #graphify/EXTRACTED #community/Community_44

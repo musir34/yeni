@@ -1,13 +1,13 @@
 ---
 source_file: "templates/shopify/order_print.html"
 type: "concept"
-community: "Community 139"
+community: "Community 149"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_139
+  - community/Community_149
 ---
 
 # Shopify Order Print (Sipariş Fişi A5)
 
-#graphify/concept #graphify/EXTRACTED #community/Community_139
+#graphify/concept #graphify/EXTRACTED #community/Community_149

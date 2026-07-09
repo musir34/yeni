@@ -1,12 +1,12 @@
 ---
 source_file: "hepsiburada/hepsiburada_config.py"
 type: "rationale"
-community: "Community 66"
+community: "Community 72"
 location: "L12"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_66
+  - community/Community_72
 ---
 
 # Hepsiburada Marketplace API ayarları
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[HepsiburadaConfig]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_66
+#graphify/rationale #graphify/EXTRACTED #community/Community_72

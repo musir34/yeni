@@ -1,12 +1,12 @@
 ---
 source_file: "akilli_motor.py"
 type: "code"
-community: "Akıllı Motor (İndirim & Fiyat)"
+community: "Stok Hareket Defteri (Ledger)"
 location: "L636"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Akll_Motor_ndirim__Fiyat
+  - community/Stok_Hareket_Defteri_Ledger
 ---
 
 # run_full_analysis()
@@ -28,4 +28,4 @@ tags:
 - [[mod7_skor()]] - `calls` [EXTRACTED]
 - [[mod9_sezon()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Akll_Motor_ndirim__Fiyat
+#graphify/code #graphify/EXTRACTED #community/Stok_Hareket_Defteri_Ledger

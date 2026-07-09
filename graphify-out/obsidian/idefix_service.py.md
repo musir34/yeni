@@ -1,12 +1,12 @@
 ---
 source_file: "idefix/idefix_service.py"
 type: "code"
-community: "Idefix Entegrasyonu"
+community: "Community 44"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Idefix_Entegrasyonu
+  - community/Community_44
 ---
 
 # idefix_service.py
@@ -19,4 +19,4 @@ tags:
 - [[idefix_routes.py]] - `imports_from` [EXTRACTED]
 - [[logger_config.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Idefix_Entegrasyonu
+#graphify/code #graphify/EXTRACTED #community/Community_44

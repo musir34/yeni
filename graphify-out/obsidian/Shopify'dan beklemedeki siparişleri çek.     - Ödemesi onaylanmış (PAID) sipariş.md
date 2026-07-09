@@ -1,12 +1,12 @@
 ---
 source_file: "siparis_hazirla.py"
 type: "rationale"
-community: "Stok Fix Testleri & Yardımcılar"
+community: "Barkod Üretimi & Sipariş Listesi"
 location: "L144"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Stok_Fix_Testleri__Yardmclar
+  - community/Barkod_retimi__Sipari_Listesi
 ---
 
 # Shopify'dan beklemedeki siparişleri çek.     - Ödemesi onaylanmış (PAID) sipariş
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_fetch_shopify_beklemede_orders()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar
+#graphify/rationale #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi

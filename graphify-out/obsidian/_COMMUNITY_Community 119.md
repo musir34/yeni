@@ -1,17 +1,18 @@
 ---
 type: community
-cohesion: 1.00
-members: 2
+cohesion: 0.67
+members: 3
 ---
 
 # Community 119
 
-**Cohesion:** 1.00 - tightly connected
-**Members:** 2 nodes
+**Cohesion:** 0.67 - moderately connected
+**Members:** 3 nodes
 
 ## Members
-- [[api_unmatch_product()]] - code - amazon/amazon_routes.py
-- [[Ürün eşleştirmesini kaldır]] - rationale - amazon/amazon_routes.py
+- [[add_stok_yok_mail_at.py]] - code - migrations/versions/add_stok_yok_mail_at.py
+- [[downgrade()_6]] - code - migrations/versions/add_stok_yok_mail_at.py
+- [[upgrade()_6]] - code - migrations/versions/add_stok_yok_mail_at.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -19,9 +20,3 @@ members: 2
 TABLE source_file, type FROM #community/Community_119
 SORT file.name ASC
 ```
-
-## Connections to other communities
-- 1 edge to [[_COMMUNITY_Community 47]]
-
-## Top bridge nodes
-- [[api_unmatch_product()]] - degree 2, connects to 1 community

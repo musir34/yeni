@@ -1,12 +1,12 @@
 ---
 source_file: "siparis_hazirla.py"
 type: "code"
-community: "Stok Fix Testleri & Yardımcılar"
+community: "Silme & Toplu Yazdırma İşlemleri"
 location: "L187"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Stok_Fix_Testleri__Yardmclar
+  - community/Silme__Toplu_Yazdrma_lemleri
 ---
 
 # _shopify_order_to_hazirla_format()
@@ -21,4 +21,4 @@ tags:
 - [[siparis_hazirla.py]] - `contains` [EXTRACTED]
 - [[update_service.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar
+#graphify/code #graphify/EXTRACTED #community/Silme__Toplu_Yazdrma_lemleri

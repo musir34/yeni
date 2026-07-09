@@ -1,12 +1,12 @@
 ---
 source_file: "config.py"
 type: "code"
-community: "Community 97"
+community: "Community 103"
 location: "L14"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_97
+  - community/Community_103
 ---
 
 # BaseConfig
@@ -16,4 +16,4 @@ tags:
 - [[ProductionConfig]] - `inherits` [EXTRACTED]
 - [[config.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_97
+#graphify/code #graphify/EXTRACTED #community/Community_103

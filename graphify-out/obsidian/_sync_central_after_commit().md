@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Veri Modelleri (SQLAlchemy)"
+community: "Community 61"
 location: "L356"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Veri_Modelleri_SQLAlchemy
+  - community/Community_61
 ---
 
 # _sync_central_after_commit()
@@ -18,4 +18,4 @@ tags:
 - [[SaSession]] - `calls` [INFERRED]
 - [[models.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Veri_Modelleri_SQLAlchemy
+#graphify/code #graphify/INFERRED #community/Community_61

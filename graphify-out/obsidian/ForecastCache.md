@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Üretim Önerisi & Satış Tahmini"
+community: "Agent API & Sipariş Sorguları"
 location: "L104"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/retim_nerisi__Sat_Tahmini
+  - community/Agent_API__Sipari_Sorgular
 ---
 
 # ForecastCache
@@ -16,4 +16,4 @@ tags:
 - [[uretim_oneri.py]] - `imports` [EXTRACTED]
 - [[uretim_oneri_haftalik_api()]] - `indirect_call` [INFERRED]
 
-#graphify/code #graphify/EXTRACTED #community/retim_nerisi__Sat_Tahmini
+#graphify/code #graphify/EXTRACTED #community/Agent_API__Sipari_Sorgular

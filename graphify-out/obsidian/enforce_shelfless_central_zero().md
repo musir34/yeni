@@ -1,12 +1,12 @@
 ---
 source_file: "stock_management.py"
 type: "code"
-community: "Stok Hareket Defteri (Ledger)"
+community: "Canlı Panel (SSE)"
 location: "L74"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Stok_Hareket_Defteri_Ledger
+  - community/Canl_Panel_SSE
 ---
 
 # enforce_shelfless_central_zero()
@@ -19,4 +19,4 @@ tags:
 - [[test_enforce_shelfless_central_zero()]] - `calls` [EXTRACTED]
 - [[test_stock_ledger.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Stok_Hareket_Defteri_Ledger
+#graphify/code #graphify/EXTRACTED #community/Canl_Panel_SSE

@@ -1,12 +1,12 @@
 ---
 source_file: "kasa.py"
 type: "rationale"
-community: "Ana Kasa Defteri"
+community: "Community 54"
 location: "L1010"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Ana_Kasa_Defteri
+  - community/Community_54
 ---
 
 # İşbankası Excel formatında gelir yükleme
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[excel_gelir_yukle()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Ana_Kasa_Defteri
+#graphify/rationale #graphify/EXTRACTED #community/Community_54

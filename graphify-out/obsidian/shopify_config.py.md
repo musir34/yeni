@@ -1,12 +1,12 @@
 ---
 source_file: "shopify_site/shopify_config.py"
 type: "code"
-community: "Veri Modelleri (SQLAlchemy)"
+community: "Silme & Toplu Yazdırma İşlemleri"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Veri_Modelleri_SQLAlchemy
+  - community/Silme__Toplu_Yazdrma_lemleri
 ---
 
 # shopify_config.py
@@ -23,4 +23,4 @@ tags:
 - [[siparis_hazirla.py]] - `imports_from` [EXTRACTED]
 - [[update_service.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Veri_Modelleri_SQLAlchemy
+#graphify/code #graphify/EXTRACTED #community/Silme__Toplu_Yazdrma_lemleri

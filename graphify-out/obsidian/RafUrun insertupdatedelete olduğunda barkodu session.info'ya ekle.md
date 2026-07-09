@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "rationale"
-community: "Veri Modelleri (SQLAlchemy)"
+community: "Community 66"
 location: "L348"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Veri_Modelleri_SQLAlchemy
+  - community/Community_66
 ---
 
 # RafUrun insert/update/delete olduğunda barkodu session.info'ya ekle
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_track_raf_change()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Veri_Modelleri_SQLAlchemy
+#graphify/rationale #graphify/EXTRACTED #community/Community_66

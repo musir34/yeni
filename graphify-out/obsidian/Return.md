@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Community 49"
+community: "Maliyet Fişi & Tedarikçi"
 location: "L1072"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_49
+  - community/Maliyet_Fii__Tedariki
 ---
 
 # Return
@@ -20,4 +20,4 @@ tags:
 - [[process_all_claims()]] - `calls` [EXTRACTED]
 - [[İade bilgilerini tutan tablo]] - `rationale_for` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_49
+#graphify/code #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki

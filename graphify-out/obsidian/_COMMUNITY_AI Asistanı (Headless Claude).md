@@ -1,39 +1,38 @@
 ---
 type: community
-cohesion: 0.12
-members: 24
+cohesion: 0.11
+members: 23
 ---
 
 # AI Asistanı (Headless Claude)
 
-**Cohesion:** 0.12 - loosely connected
-**Members:** 24 nodes
+**Cohesion:** 0.11 - loosely connected
+**Members:** 23 nodes
 
 ## Members
-- [[AI Asistanı — Flask blueprint.  Panel içindeki sohbet kutusundan gelen soruyu, s]] - rationale - ai_asistan/blueprint.py
-- [[Aktif kullanıcının sohbet geçmişini döndür (widget açılışında yüklenir).]] - rationale - ai_asistan/blueprint.py
-- [[Aktif kullanıcının sohbet geçmişini sil.]] - rationale - ai_asistan/blueprint.py
-- [[Geçmiş dosyası için güvenli kullanıcı kimliği (yalnızca alfanümerik).]] - rationale - ai_asistan/blueprint.py
-- [[Geçmişi son GECMIS_MAX_TUR2 mesaja kırparak kaydet.]] - rationale - ai_asistan/blueprint.py
-- [[Headless Claude Code'u çağırır ve {'ok' bool, 'cevap''hata' str} döner.     g]] - rationale - ai_asistan/blueprint.py
-- [[Kullanıcının sohbet geçmişini oku (liste {rol, metin}).]] - rationale - ai_asistan/blueprint.py
-- [[Path]] - code
-- [[Sohbet kutusu sayfası.]] - rationale - ai_asistan/blueprint.py
-- [[Soruyu al, doğrula, geçmişle birlikte Claude'a ilet, kaydet, JSON döndür.]] - rationale - ai_asistan/blueprint.py
-- [[_claude_calistir()]] - code - ai_asistan/blueprint.py
-- [[_gecmis_oku()]] - code - ai_asistan/blueprint.py
-- [[_gecmis_yaz()]] - code - ai_asistan/blueprint.py
-- [[_gecmis_yolu()]] - code - ai_asistan/blueprint.py
-- [[_kullanici_id()]] - code - ai_asistan/blueprint.py
-- [[_prompt_olustur()]] - code - ai_asistan/blueprint.py
-- [[_system_prompt()]] - code - ai_asistan/blueprint.py
-- [[blueprint.py]] - code - ai_asistan/blueprint.py
-- [[gecmis()]] - code - ai_asistan/blueprint.py
-- [[sayfa()]] - code - ai_asistan/blueprint.py
-- [[sor()]] - code - ai_asistan/blueprint.py
-- [[temizle()]] - code - ai_asistan/blueprint.py
-- [[Önceki konuşmayı bağlam olarak yeni sorunun önüne ekle (kişiye özel hafıza).]] - rationale - ai_asistan/blueprint.py
-- [[İş bilgisini sistem promptu olarak yükle.     Öncelik Obsidian vault klasöründe]] - rationale - ai_asistan/blueprint.py
+- [[Akıllı Komisyon Motoru sayfası]] - document - templates/akilli_motor.html
+- [[Ana Kasa Kayıt Defteri sayfası]] - document - templates/ana_kasa_kayit_defteri.html
+- [[Ana Kasa sayfası]] - document - templates/ana_kasa.html
+- [[Anasayfa sayfası]] - document - templates/home.html
+- [[Arşivlenmiş Siparişler sayfası]] - document - templates/archive.html
+- [[Base'e taşıma regresyon dersi (BS reboot + input !important)]] - rationale - memory/2026-07-09-ortak-css-faz1-ve-db-tuneli.md
+- [[Cihaz Limiti sayfası]] - document - templates/device_limit.html
+- [[Cihazlarım sayfası]] - document - templates/cihazlarim.html
+- [[Dark-mode erken localStorage inline scripti]] - concept - templates/base.html
+- [[Değişim Listesi sayfası]] - document - templates/degisim_talep.html
+- [[Faz 2 kalan iş (kasa ailesi, özel sayfalar, layout emekliliği)]] - rationale - memory/2026-07-09-ortak-css-faz1-ve-db-tuneli.md
+- [[Flaş İndirim Motoru sayfası]] - document - templates/flas_indirim.html
+- [[Kanonik root marka token bloğu]] - rationale - memory/2026-07-09-ortak-css-faz1-ve-db-tuneli.md
+- [[Kullanıcı Onay ve Rol Yönetimi sayfası]] - document - templates/approve_users.html
+- [[Toplu Ürün Hazırla sayfası]] - document - templates/bulk_order_prepare.html
+- [[app-shell.js (toastconfirmrefresh-manager)]] - concept - templates/base.html
+- [[archive.html base.html'e taşınması (12. taşıma)]] - rationale - memory/project_archive_base_migration.md
+- [[base.html ortak taban şablon]] - document - templates/base.html
+- [[gullu-common.css (kanonik ortak CSS)]] - concept - memory/2026-07-09-ortak-css-faz1-ve-db-tuneli.md
+- [[notification_popup.html include]] - concept - templates/base.html
+- [[Ürün Görsel Yöneticisi sayfası]] - document - templates/image_manager.html
+- [[İade Listesi sayfası]] - document - templates/iade_listesi.html
+- [[Şablon Ortaklaştırma Faz 1]] - rationale - memory/2026-07-09-ortak-css-faz1-ve-db-tuneli.md
 
 ## Live Query (requires Dataview plugin)
 
@@ -41,13 +40,3 @@ members: 24
 TABLE source_file, type FROM #community/AI_Asistan_Headless_Claude
 SORT file.name ASC
 ```
-
-## Connections to other communities
-- 4 edges to [[_COMMUNITY_Community 58]]
-- 4 edges to [[_COMMUNITY_Community 83]]
-- 1 edge to [[_COMMUNITY_Uygulama Çekirdeği & Zamanlı İşler]]
-
-## Top bridge nodes
-- [[blueprint.py]] - degree 19, connects to 3 communities
-- [[_claude_calistir()]] - degree 6, connects to 1 community
-- [[Path]] - degree 2, connects to 1 community

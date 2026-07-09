@@ -1,12 +1,12 @@
 ---
 source_file: "overdue_orders.py"
 type: "rationale"
-community: "Anasayfa Özet & Sayımlar"
+community: "Kasa & Gelir-Gider"
 location: "L62"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Anasayfa_zet__Saymlar
+  - community/Kasa__Gelir-Gider
 ---
 
 # Bir model için geciken siparişler; teslim tarihine göre en gecikmiş önce.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[overdue_orders_query()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Anasayfa_zet__Saymlar
+#graphify/rationale #graphify/EXTRACTED #community/Kasa__Gelir-Gider

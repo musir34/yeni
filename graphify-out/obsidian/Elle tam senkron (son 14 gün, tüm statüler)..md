@@ -1,12 +1,12 @@
 ---
 source_file: "trendyol_qna/qna_routes.py"
 type: "rationale"
-community: "Community 42"
+community: "Community 45"
 location: "L171"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_42
+  - community/Community_45
 ---
 
 # Elle tam senkron (son 14 gün, tüm statüler).
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[senkron()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_42
+#graphify/rationale #graphify/EXTRACTED #community/Community_45

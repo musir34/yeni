@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/health_monitor.py"
 type: "rationale"
-community: "E-posta Bildirimleri"
+community: "Community 70"
 location: "L28"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/E-posta_Bildirimleri
+  - community/Community_70
 ---
 
 # Donmuş veya tutarsız mapping'leri tespit et, eşik aşılırsa mail gönder.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[check_sync_staleness()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/E-posta_Bildirimleri
+#graphify/rationale #graphify/EXTRACTED #community/Community_70

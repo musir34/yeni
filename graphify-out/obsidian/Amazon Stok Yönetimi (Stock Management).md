@@ -1,11 +1,11 @@
 ---
 source_file: "templates/amazon/stok.html"
 type: "concept"
-community: "Community 45"
+community: "Community 47"
 tags:
   - graphify/concept
   - graphify/INFERRED
-  - community/Community_45
+  - community/Community_47
 ---
 
 # Amazon Stok Yönetimi (Stock Management)
@@ -14,4 +14,4 @@ tags:
 - [[Amazon Ürünler (Products)]] - `conceptually_related_to` [INFERRED]
 - [[Hepsiburada Listeler  Envanter (ListingsInventory)]] - `semantically_similar_to` [INFERRED]
 
-#graphify/concept #graphify/INFERRED #community/Community_45
+#graphify/concept #graphify/INFERRED #community/Community_47

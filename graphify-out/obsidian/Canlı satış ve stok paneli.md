@@ -1,16 +1,13 @@
 ---
 source_file: "templates/canli_panel.html"
 type: "concept"
-community: "Community 73"
+community: "Community 143"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_73
+  - community/Community_143
 ---
 
 # Canlı satış ve stok paneli
 
-## Connections
-- [[Anasayfa menü paneli]] - `references` [EXTRACTED]
-
-#graphify/concept #graphify/EXTRACTED #community/Community_73
+#graphify/concept #graphify/EXTRACTED #community/Community_143

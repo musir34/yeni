@@ -1,12 +1,12 @@
 ---
 source_file: "weather_service.py"
 type: "rationale"
-community: "Stok Fix Testleri & Yardımcılar"
+community: "Barkod Üretimi & Sipariş Listesi"
 location: "L108"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Stok_Fix_Testleri__Yardmclar
+  - community/Barkod_retimi__Sipari_Listesi
 ---
 
 # Open-Meteo API'den hava durumu verisini çeker     TAMAMEN ÜCRETSİZ - API KEY GER
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[fetch_weather_data()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar
+#graphify/rationale #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi

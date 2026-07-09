@@ -1,12 +1,12 @@
 ---
 source_file: "tests/test_bulk_pick.py"
 type: "code"
-community: "Sipariş Denetim Kaydı (Audit Log)"
+community: "Community 52"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Denetim_Kayd_Audit_Log
+  - community/Community_52
 ---
 
 # test_bulk_pick.py
@@ -49,4 +49,4 @@ tags:
 - [[test_reserved_excludes_picked_hazirlaniyor()]] - `contains` [EXTRACTED]
 - [[update_service.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Denetim_Kayd_Audit_Log
+#graphify/code #graphify/EXTRACTED #community/Community_52

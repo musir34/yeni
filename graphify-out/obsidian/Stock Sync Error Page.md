@@ -1,17 +1,16 @@
 ---
 source_file: "templates/stock_sync/error.html"
 type: "concept"
-community: "Community 43"
+community: "Community 87"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_43
+  - community/Community_87
 ---
 
 # Stock Sync Error Page
 
 ## Connections
-- [[Stock Sync Dashboard]] - `references` [EXTRACTED]
 - [[base.html Layout]] - `references` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_43
+#graphify/concept #graphify/EXTRACTED #community/Community_87

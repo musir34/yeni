@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Veri Modelleri (SQLAlchemy)"
+community: "Community 66"
 location: "L1203"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Veri_Modelleri_SQLAlchemy
+  - community/Community_66
 ---
 
 # TaskTemplate
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[models.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Veri_Modelleri_SQLAlchemy
+#graphify/code #graphify/EXTRACTED #community/Community_66

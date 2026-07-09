@@ -1,11 +1,11 @@
 ---
 source_file: "templates/amazon/config_error.html"
 type: "concept"
-community: "Community 53"
+community: "Uygulama Çekirdeği & Zamanlı İşler"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_53
+  - community/Uygulama_ekirdei__Zamanl_ler
 ---
 
 # Amazon Yapılandırma Hatası Sayfası
@@ -14,4 +14,4 @@ tags:
 - [[Amazon Ayarlar Sayfası]] - `references` [EXTRACTED]
 - [[base.html taban şablonu]] - `references` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_53
+#graphify/concept #graphify/EXTRACTED #community/Uygulama_ekirdei__Zamanl_ler

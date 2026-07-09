@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Ana Kasa Defteri"
+community: "Community 54"
 location: "L1124"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Ana_Kasa_Defteri
+  - community/Community_54
 ---
 
 # AnaKasaIslem
@@ -21,4 +21,4 @@ tags:
 - [[models.py]] - `contains` [EXTRACTED]
 - [[yeni_kasa_kaydi()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Ana_Kasa_Defteri
+#graphify/code #graphify/EXTRACTED #community/Community_54

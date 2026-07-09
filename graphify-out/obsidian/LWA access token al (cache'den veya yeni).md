@@ -1,12 +1,12 @@
 ---
 source_file: "amazon/amazon_service.py"
 type: "rationale"
-community: "Community 78"
+community: "Community 85"
 location: "L49"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_78
+  - community/Community_85
 ---
 
 # LWA access token al (cache'den veya yeni)
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[._get_access_token()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_78
+#graphify/rationale #graphify/EXTRACTED #community/Community_85

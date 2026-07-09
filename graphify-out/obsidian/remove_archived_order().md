@@ -1,12 +1,12 @@
 ---
 source_file: "archive.py"
 type: "code"
-community: "Silme & Toplu Yazdırma İşlemleri"
+community: "Community 42"
 location: "L920"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Silme__Toplu_Yazdrma_lemleri
+  - community/Community_42
 ---
 
 # remove_archived_order()
@@ -16,4 +16,4 @@ tags:
 - [[archive.py]] - `contains` [EXTRACTED]
 - [[log_user_action()_1]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Silme__Toplu_Yazdrma_lemleri
+#graphify/code #graphify/EXTRACTED #community/Community_42

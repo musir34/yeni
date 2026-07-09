@@ -1,80 +1,68 @@
 ---
 type: community
-cohesion: 0.05
-members: 65
+cohesion: 0.10
+members: 53
 ---
 
 # Üretim Önerisi & Satış Tahmini
 
-**Cohesion:** 0.05 - loosely connected
-**Members:** 65 nodes
+**Cohesion:** 0.10 - loosely connected
+**Members:** 53 nodes
 
 ## Members
-- [[DailySales]] - code - models.py
-- [[DailySalesStatus]] - code - models.py
-- [[ForecastCache]] - code - models.py
-- [[Geçmiş 'days' gününü baştan hesaplar ve o aralığı daily_sales'ta yeniler.     Pr]] - rationale - uretim_oneri.py
-- [[Haftalık üretim önerisi (BAŞTAN YAZILDI)      Özellikler       - Model → Renk s]] - rationale - uretim_oneri.py
-- [[UretimOneriDefaults]] - code - models.py
-- [[UretimOneriWatch]] - code - models.py
-- [[UretimPlan]] - code - models.py
-- [[UretimSecimPreset]] - code - models.py
-- [[_bind_columns_once()]] - code - uretim_oneri.py
-- [[_col()_1]] - code - uretim_oneri.py
-- [[_daily_series_from_cache()]] - code - uretim_oneri.py
-- [[_expand_barcodes_for_models()]] - code - uretim_oneri.py
-- [[_expand_barcodes_for_selection()]] - code - uretim_oneri.py
-- [[_fetch_product_info_for_barcodes()_1]] - code - uretim_oneri.py
-- [[_fetch_sales_totals_from_cache()]] - code - uretim_oneri.py
-- [[_fetch_stock_for_barcodes()_1]] - code - uretim_oneri.py
-- [[_get_or_create_defaults()]] - code - uretim_oneri.py
-- [[_iter_items_once()_2]] - code - uretim_oneri.py
-- [[_json_parse()_2]] - code - uretim_oneri.py
-- [[_moving_average()]] - code - uretim_oneri.py
-- [[_parse_first_image()_1]] - code - uretim_oneri.py
-- [[_pick()]] - code - uretim_oneri.py
-- [[_reserved_from_active_plans()]] - code - uretim_oneri.py
-- [[_run_fcache_loop()]] - code - app.py
-- [[_to_list()]] - code - uretim_oneri.py
-- [[_to_number()_2]] - code - uretim_oneri.py
-- [[ai_forecast_sales()]] - code - uretim_oneri.py
-- [[build_cache_for_barcode()]] - code - uretim_oneri.py
-- [[bulk_add_models()]] - code - uretim_oneri.py
-- [[bulk_delete_plans()]] - code - uretim_oneri.py
-- [[create_plan()]] - code - uretim_oneri.py
-- [[create_preset()]] - code - uretim_oneri.py
-- [[daily_sales_rebuild()]] - code - uretim_oneri.py
-- [[daily_sales_status()]] - code - uretim_oneri.py
-- [[date]] - code
-- [[datetime_3]] - code
-- [[delete_plan()]] - code - uretim_oneri.py
-- [[delete_plan_via_post()]] - code - uretim_oneri.py
-- [[delete_preset()]] - code - uretim_oneri.py
-- [[event_type 'create'  'cancel'  'return'     ts event timestamp (EuropeIstan]] - rationale - uretim_oneri.py
-- [[forecast_worker_loop()]] - code - uretim_oneri.py
-- [[get_defaults()]] - code - uretim_oneri.py
-- [[get_model_colors()]] - code - uretim_oneri.py
-- [[get_plan()]] - code - uretim_oneri.py
-- [[get_preset()]] - code - uretim_oneri.py
-- [[get_selected_models()]] - code - uretim_oneri.py
-- [[list_plans()]] - code - uretim_oneri.py
-- [[list_presets()]] - code - uretim_oneri.py
-- [[mark_forecast_dirty()]] - code - uretim_oneri.py
-- [[pop_dirty_batch()]] - code - uretim_oneri.py
-- [[print_plan()]] - code - uretim_oneri.py
-- [[prophet_forecast()]] - code - uretim_oneri.py
-- [[rebuild_daily_sales()]] - code - uretim_oneri.py
-- [[save_defaults()]] - code - uretim_oneri.py
-- [[selection {modelM123,colorsSiyah,Kırmızı}, ...     renk listesi]] - rationale - uretim_oneri.py
-- [[toggle_selected_model()]] - code - uretim_oneri.py
-- [[toggle_watch()]] - code - uretim_oneri.py
-- [[update_daily_from_event()]] - code - uretim_oneri.py
-- [[update_plan_status()]] - code - uretim_oneri.py
-- [[upsert_daily_sales()]] - code - uretim_oneri.py
-- [[uretim_oneri.py]] - code - uretim_oneri.py
-- [[uretim_oneri_haftalik_api()]] - code - uretim_oneri.py
-- [[uretim_oneri_haftalik_page()]] - code - uretim_oneri.py
-- [[uretim_oneri_page()]] - code - uretim_oneri.py
+- [[(model, renk) çiftleri için Product tablosundan TÜM barkodbeden satırlarını çek]] - rationale - canli_panel.py
+- [[.__repr__()_6]] - code - models.py
+- [[0000–2359 TR → Created + Picking + Shipped + Archive     - Dahil edilecek sipa]] - rationale - canli_panel.py
+- [[Archive]] - code - models.py
+- [[Aynı listeyi iki kez saymayı engelle (tek anahtar).]] - rationale - canli_panel.py
+- [[CreatedPickingShippedDeliveredArchive tablolarında     EuropeIstanbul aralı]] - rationale - canli_panel.py
+- [[Mevcut pinfo'daki (model,renk) çiftleri için satışı olmayan barkodları da ekle.]] - rationale - canli_panel.py
+- [[None'None''null'boş → default; '₺1.234,56 TL' → 1234.56; '1,234.56' → 1234.56]] - rationale - canli_panel.py
+- [[OrderId yoksa, içerik imzası (barcodesizeqty) ile stabil kimlik üret.]] - rationale - canli_panel.py
+- [[Sadece seçilen aralıkta OLUŞTURULAN siparişlere ait iadeleri toplar.     Döner]] - rationale - canli_panel.py
+- [[Seçilen aralıktaki benzersiz sipariş sayısını döndürür.     source_filter all]] - rationale - canli_panel.py
+- [[Siparişleri tarih aralığında topla.          Args         start_ist Başlangıç]] - rationale - canli_panel.py
+- [[Verilen order_number kümesi için iade satırlarını barkod bazında toplar.     Dön]] - rationale - canli_panel.py
+- [[Yerel dosya sisteminde model_renk.jpgpng ara.]] - rationale - canli_panel.py
+- [[_build_cards_between()]] - code - canli_panel.py
+- [[_build_cards_from_orders()]] - code - canli_panel.py
+- [[_col()]] - code - canli_panel.py
+- [[_collect_orders_between_strict()]] - code - canli_panel.py
+- [[_collect_orders_today()]] - code - canli_panel.py
+- [[_collect_orders_today_strict()]] - code - canli_panel.py
+- [[_collect_returns_by_order_created_between()]] - code - canli_panel.py
+- [[_collect_returns_for_order_numbers()]] - code - canli_panel.py
+- [[_collect_today_order_ids_by_created()]] - code - canli_panel.py
+- [[_content_signature()]] - code - canli_panel.py
+- [[_count_orders_between_distinct()]] - code - canli_panel.py
+- [[_count_orders_today_distinct()]] - code - canli_panel.py
+- [[_dt_ms()]] - code - canli_panel.py
+- [[_exc()]] - code - canli_panel.py
+- [[_expand_with_all_sizes()]] - code - canli_panel.py
+- [[_extract_order_id_from_row_or_payload()]] - code - canli_panel.py
+- [[_fetch_pinfo_for_model_color_pairs()]] - code - canli_panel.py
+- [[_fetch_product_info_for_barcodes()]] - code - canli_panel.py
+- [[_fetch_stock_for_barcodes()]] - code - canli_panel.py
+- [[_info()]] - code - canli_panel.py
+- [[_iter_items_once()]] - code - canli_panel.py
+- [[_json_parse()]] - code - canli_panel.py
+- [[_local_image_fallback()]] - code - canli_panel.py
+- [[_log()]] - code - canli_panel.py
+- [[_order_numbers_created_between()]] - code - canli_panel.py
+- [[_parse_first_image()]] - code - canli_panel.py
+- [[_parse_yyyy_mm_dd()]] - code - canli_panel.py
+- [[_pick_first()]] - code - canli_panel.py
+- [[_t0()]] - code - canli_panel.py
+- [[_to_number()]] - code - canli_panel.py
+- [[_tr_range_from_params()]] - code - canli_panel.py
+- [[_want_group_by_barcode()]] - code - canli_panel.py
+- [[akis_sse()]] - code - canli_panel.py
+- [[canli_panel.py]] - code - canli_panel.py
+- [[canli_panel_sayfa()]] - code - canli_panel.py
+- [[datetime]] - code
+- [[now_tr_str()]] - code - canli_panel.py
+- [[ozet_json()]] - code - canli_panel.py
+- [[tr_today_bounds_sql()]] - code - canli_panel.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -84,17 +72,29 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 10 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 6 edges to [[_COMMUNITY_Uygulama Çekirdeği & Zamanlı İşler]]
-- 6 edges to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
-- 2 edges to [[_COMMUNITY_Canlı Panel (SSE)]]
-- 2 edges to [[_COMMUNITY_Community 38]]
-- 2 edges to [[_COMMUNITY_Community 50]]
-- 1 edge to [[_COMMUNITY_Manuel Sipariş Oluşturma]]
+- 35 edges to [[_COMMUNITY_E-posta Bildirimleri]]
+- 8 edges to [[_COMMUNITY_Trendyol Sipariş Çekme & Komisyon]]
+- 4 edges to [[_COMMUNITY_Maliyet Fişi & Tedarikçi]]
+- 2 edges to [[_COMMUNITY_Community 66]]
+- 2 edges to [[_COMMUNITY_Agent API & Sipariş Sorguları]]
+- 2 edges to [[_COMMUNITY_Stok Fix Testleri & Yardımcılar]]
+- 2 edges to [[_COMMUNITY_Barkod Üretimi & Sipariş Listesi]]
+- 1 edge to [[_COMMUNITY_Community 41]]
+- 1 edge to [[_COMMUNITY_Community 129]]
+- 1 edge to [[_COMMUNITY_Akıllı Motor (İndirim & Fiyat)]]
+- 1 edge to [[_COMMUNITY_Community 91]]
+- 1 edge to [[_COMMUNITY_Community 57]]
+- 1 edge to [[_COMMUNITY_Community 76]]
+- 1 edge to [[_COMMUNITY_Community 61]]
+- 1 edge to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
+- 1 edge to [[_COMMUNITY_Community 71]]
+- 1 edge to [[_COMMUNITY_Yeni Sipariş Hazırlama & Toplama]]
+- 1 edge to [[_COMMUNITY_Canlı Panel (SSE)]]
+- 1 edge to [[_COMMUNITY_Community 52]]
 
 ## Top bridge nodes
-- [[uretim_oneri.py]] - degree 66, connects to 5 communities
-- [[rebuild_daily_sales()]] - degree 12, connects to 3 communities
-- [[_bind_columns_once()]] - degree 12, connects to 2 communities
-- [[date]] - degree 9, connects to 1 community
-- [[forecast_worker_loop()]] - degree 5, connects to 1 community
+- [[canli_panel.py]] - degree 56, connects to 12 communities
+- [[Archive]] - degree 19, connects to 9 communities
+- [[_collect_orders_between_strict()]] - degree 19, connects to 2 communities
+- [[_collect_orders_today()]] - degree 17, connects to 2 communities
+- [[_collect_orders_today_strict()]] - degree 13, connects to 2 communities

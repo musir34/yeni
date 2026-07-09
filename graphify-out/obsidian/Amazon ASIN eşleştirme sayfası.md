@@ -1,12 +1,12 @@
 ---
 source_file: "amazon/amazon_routes.py"
 type: "rationale"
-community: "Community 120"
+community: "Community 126"
 location: "L232"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_120
+  - community/Community_126
 ---
 
 # Amazon ASIN eşleştirme sayfası
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[matching()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_120
+#graphify/rationale #graphify/EXTRACTED #community/Community_126

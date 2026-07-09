@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/fix_central_stock_sync.py"
 type: "rationale"
-community: "Community 38"
+community: "Community 66"
 location: "L17"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_38
+  - community/Community_66
 ---
 
 # Tüm CentralStock kayıtlarını raflardaki toplamla senkronize et - SQL ile hızlı
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[sync_all_central_stock()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_38
+#graphify/rationale #graphify/EXTRACTED #community/Community_66

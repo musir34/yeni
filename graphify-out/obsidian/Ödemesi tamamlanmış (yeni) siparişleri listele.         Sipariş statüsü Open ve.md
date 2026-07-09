@@ -1,12 +1,12 @@
 ---
 source_file: "hepsiburada/hepsiburada_service.py"
 type: "rationale"
-community: "Hepsiburada Servisi"
+community: "Anasayfa Özet & Sayımlar"
 location: "L89"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Hepsiburada_Servisi
+  - community/Anasayfa_zet__Saymlar
 ---
 
 # Ödemesi tamamlanmış (yeni) siparişleri listele.         Sipariş statüsü: Open ve
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[.get_new_orders()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Hepsiburada_Servisi
+#graphify/rationale #graphify/EXTRACTED #community/Anasayfa_zet__Saymlar

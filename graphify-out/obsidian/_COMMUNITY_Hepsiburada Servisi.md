@@ -1,46 +1,45 @@
 ---
 type: community
-cohesion: 0.09
-members: 31
+cohesion: 0.14
+members: 30
 ---
 
 # Hepsiburada Servisi
 
-**Cohesion:** 0.09 - loosely connected
-**Members:** 31 nodes
+**Cohesion:** 0.14 - loosely connected
+**Members:** 30 nodes
 
 ## Members
-- [[._make_request()]] - code - hepsiburada/hepsiburada_service.py
-- [[.cancel_order_item()]] - code - hepsiburada/hepsiburada_service.py
-- [[.check_listing_update()]] - code - hepsiburada/hepsiburada_service.py
-- [[.get_cancelled_orders()]] - code - hepsiburada/hepsiburada_service.py
-- [[.get_cargo_companies()]] - code - hepsiburada/hepsiburada_service.py
-- [[.get_categories()]] - code - hepsiburada/hepsiburada_service.py
-- [[.get_category_attributes()]] - code - hepsiburada/hepsiburada_service.py
-- [[.get_delivered_orders()]] - code - hepsiburada/hepsiburada_service.py
-- [[.get_new_orders()]] - code - hepsiburada/hepsiburada_service.py
-- [[.get_order_detail()]] - code - hepsiburada/hepsiburada_service.py
-- [[.get_packages()]] - code - hepsiburada/hepsiburada_service.py
-- [[.package_items()]] - code - hepsiburada/hepsiburada_service.py
-- [[.unpack_package()]] - code - hepsiburada/hepsiburada_service.py
-- [[.update_listings()]] - code - hepsiburada/hepsiburada_service.py
-- [[Any]] - code
-- [[Hepsiburada API'ye HTTP Basic Auth ile istek gönder]] - rationale - hepsiburada/hepsiburada_service.py
-- [[Hepsiburada Marketplace API Servis Sınıfı]] - rationale - hepsiburada/hepsiburada_service.py
-- [[HepsiburadaService]] - code - hepsiburada/hepsiburada_service.py
-- [[Kalemleri paketle.         line_item_ids paketlenecek kalem ID'leri listesi]] - rationale - hepsiburada/hepsiburada_service.py
-- [[Kategori bilgilerini al]] - rationale - hepsiburada/hepsiburada_service.py
-- [[Kategori özelliklerini al]] - rationale - hepsiburada/hepsiburada_service.py
-- [[Kullanılabilir kargo firmalarını listele]] - rationale - hepsiburada/hepsiburada_service.py
-- [[Listing bilgilerini güncelle (fiyat, stok, kargoya veriliş süresi).         list]] - rationale - hepsiburada/hepsiburada_service.py
-- [[Listing güncelleme işlem kontrolü]] - rationale - hepsiburada/hepsiburada_service.py
-- [[Paket bilgilerini listele (paketlenen siparişler)]] - rationale - hepsiburada/hepsiburada_service.py
-- [[Response]] - code
-- [[Sipariş kalemini iptal et.         Sadece Open statüdeki siparişler iptal edileb]] - rationale - hepsiburada/hepsiburada_service.py
-- [[Siparişe ait detayları listele]] - rationale - hepsiburada/hepsiburada_service.py
-- [[Teslim edilen siparişleri listele]] - rationale - hepsiburada/hepsiburada_service.py
-- [[Ödemesi tamamlanmış (yeni) siparişleri listele.         Sipariş statüsü Open ve]] - rationale - hepsiburada/hepsiburada_service.py
-- [[İptal edilen siparişleri listele]] - rationale - hepsiburada/hepsiburada_service.py
+- [[.__init__()_8]] - code - siparisler.py
+- [[.__init__()_7]] - code - siparisler.py
+- [[.all()]] - code - siparisler.py
+- [[.delete()]] - code - siparisler.py
+- [[.desc()]] - code - siparisler.py
+- [[.filter_by()]] - code - siparisler.py
+- [[.first()]] - code - siparisler.py
+- [[.ilike()]] - code - siparisler.py
+- [[.order_by()]] - code - siparisler.py
+- [[BasePlaceholderModel]] - code - siparisler.py
+- [[Bir barkodun her platformdaki son sync durumunu döndür.      TrendyolAmazonIde]] - rationale - stock_sync/routes.py
+- [[FakeDB]] - code - siparisler.py
+- [[Manuel sipariş oluştur.      JSON body     {       musteri_adi Ali,]] - rationale - agent_api.py
+- [[Müşteri bilgilerini JSON olarak döndürür (yazdırma için)]] - rationale - siparisler.py
+- [[SiparisUrun]] - code - models.py
+- [[YeniSiparis]] - code - models.py
+- [[api_barcode_history()]] - code - stock_sync/routes.py
+- [[create_manual_order()]] - code - agent_api.py
+- [[get_product()_1]] - code - siparisler.py
+- [[siparis_ara()]] - code - siparisler.py
+- [[siparis_detay()]] - code - siparisler.py
+- [[siparis_durum_guncelle()]] - code - siparisler.py
+- [[siparis_guncelle()]] - code - siparisler.py
+- [[siparis_kargo_etiketi()]] - code - siparisler.py
+- [[siparis_musteri_bilgisi()]] - code - siparisler.py
+- [[siparis_sil()]] - code - siparisler.py
+- [[siparis_toplu_sil()]] - code - siparisler.py
+- [[siparisler.py]] - code - siparisler.py
+- [[stock_summary()]] - code - agent_api.py
+- [[yeni_siparis()]] - code - siparisler.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -50,11 +49,26 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 4 edges to [[_COMMUNITY_Community 66]]
-- 4 edges to [[_COMMUNITY_Community 92]]
-- 1 edge to [[_COMMUNITY_Hepsiburada Route Katmanı]]
-- 1 edge to [[_COMMUNITY_Community 126]]
+- 9 edges to [[_COMMUNITY_Değişim  İade Talepleri]]
+- 6 edges to [[_COMMUNITY_Community 42]]
+- 4 edges to [[_COMMUNITY_Sipariş Denetim Kaydı (Audit Log)]]
+- 4 edges to [[_COMMUNITY_Community 76]]
+- 3 edges to [[_COMMUNITY_Community 66]]
+- 3 edges to [[_COMMUNITY_Community 61]]
+- 2 edges to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
+- 2 edges to [[_COMMUNITY_Barkod Üretimi & Sipariş Listesi]]
+- 1 edge to [[_COMMUNITY_Ürün Çekme & Görsel İndirme]]
+- 1 edge to [[_COMMUNITY_Community 54]]
+- 1 edge to [[_COMMUNITY_Community 69]]
+- 1 edge to [[_COMMUNITY_Community 71]]
+- 1 edge to [[_COMMUNITY_Barkod Alias Yardımcıları]]
+- 1 edge to [[_COMMUNITY_Community 57]]
+- 1 edge to [[_COMMUNITY_Agent API & Sipariş Sorguları]]
+- 1 edge to [[_COMMUNITY_Shopify Route Katmanı]]
 
 ## Top bridge nodes
-- [[HepsiburadaService]] - degree 24, connects to 4 communities
-- [[._make_request()]] - degree 18, connects to 1 community
+- [[siparisler.py]] - degree 26, connects to 9 communities
+- [[.desc()]] - degree 12, connects to 5 communities
+- [[BasePlaceholderModel]] - degree 14, connects to 3 communities
+- [[FakeDB]] - degree 7, connects to 3 communities
+- [[SiparisUrun]] - degree 8, connects to 2 communities

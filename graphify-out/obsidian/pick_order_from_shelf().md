@@ -1,12 +1,12 @@
 ---
 source_file: "picking_service.py"
 type: "code"
-community: "Community 54"
+community: "Community 67"
 location: "L28"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_54
+  - community/Community_67
 ---
 
 # pick_order_from_shelf()
@@ -28,4 +28,4 @@ tags:
 - [[test_pick_wrong_shelf_rejected()]] - `calls` [EXTRACTED]
 - [[test_picking_service.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_54
+#graphify/code #graphify/EXTRACTED #community/Community_67

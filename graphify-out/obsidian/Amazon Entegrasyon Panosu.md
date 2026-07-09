@@ -1,11 +1,11 @@
 ---
 source_file: "templates/amazon/index.html"
 type: "concept"
-community: "Community 53"
+community: "Uygulama Çekirdeği & Zamanlı İşler"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_53
+  - community/Uygulama_ekirdei__Zamanl_ler
 ---
 
 # Amazon Entegrasyon Panosu
@@ -16,4 +16,4 @@ tags:
 - [[amazon Blueprint (SP-API Entegrasyonu)]] - `calls` [EXTRACTED]
 - [[base.html taban şablonu]] - `references` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_53
+#graphify/concept #graphify/EXTRACTED #community/Uygulama_ekirdei__Zamanl_ler

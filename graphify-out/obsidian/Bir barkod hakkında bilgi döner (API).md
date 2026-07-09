@@ -1,12 +1,12 @@
 ---
 source_file: "barcode_alias_routes.py"
 type: "rationale"
-community: "Barkod Alias Yardımcıları"
+community: "Community 53"
 location: "L100"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Barkod_Alias_Yardmclar
+  - community/Community_53
 ---
 
 # Bir barkod hakkında bilgi döner (API)
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[api_check_barcode()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Barkod_Alias_Yardmclar
+#graphify/rationale #graphify/EXTRACTED #community/Community_53

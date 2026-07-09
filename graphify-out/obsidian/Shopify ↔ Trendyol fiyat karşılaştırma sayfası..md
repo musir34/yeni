@@ -1,12 +1,12 @@
 ---
 source_file: "shopify_site/shopify_routes.py"
 type: "rationale"
-community: "Shopify Route Katmanı"
+community: "Community 39"
 location: "L454"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Shopify_Route_Katman
+  - community/Community_39
 ---
 
 # Shopify ↔ Trendyol fiyat karşılaştırma sayfası.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[price_compare_dashboard()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Shopify_Route_Katman
+#graphify/rationale #graphify/EXTRACTED #community/Community_39

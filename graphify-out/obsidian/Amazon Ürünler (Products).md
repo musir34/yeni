@@ -1,11 +1,11 @@
 ---
 source_file: "templates/amazon/urunler.html"
 type: "concept"
-community: "Community 45"
+community: "Community 47"
 tags:
   - graphify/concept
   - graphify/INFERRED
-  - community/Community_45
+  - community/Community_47
 ---
 
 # Amazon Ürünler (Products)
@@ -14,4 +14,4 @@ tags:
 - [[Amazon Stok Yönetimi (Stock Management)]] - `conceptually_related_to` [INFERRED]
 - [[Idefix Ürünler (Products)]] - `semantically_similar_to` [INFERRED]
 
-#graphify/concept #graphify/INFERRED #community/Community_45
+#graphify/concept #graphify/INFERRED #community/Community_47

@@ -1,12 +1,12 @@
 ---
 source_file: "idefix/idefix_routes.py"
 type: "rationale"
-community: "Idefix Entegrasyonu"
+community: "Community 37"
 location: "L31"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Idefix_Entegrasyonu
+  - community/Community_37
 ---
 
 # Idefix ürünler sayfası
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[urunler()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Idefix_Entegrasyonu
+#graphify/rationale #graphify/EXTRACTED #community/Community_37

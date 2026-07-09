@@ -1,56 +1,63 @@
 {
+  "collapse-filter": true,
+  "search": "",
+  "showTags": false,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "showOrphans": true,
+  "collapse-color-groups": true,
   "colorGroups": [
     {
-      "query": "tag:#community/Agent_API_&_Sipari\u015f_Sorgular\u0131",
+      "query": "tag:#community/Agent_API_&_Sipariş_Sorguları",
       "color": {
         "a": 1,
         "rgb": 5142951
       }
     },
     {
-      "query": "tag:#community/Sipari\u015f_Denetim_Kayd\u0131_(Audit_Log)",
+      "query": "tag:#community/Sipariş_Denetim_Kaydı_(Audit_Log)",
       "color": {
         "a": 1,
         "rgb": 15896107
       }
     },
     {
-      "query": "tag:#community/\u00dcretim_\u00d6nerisi_&_Sat\u0131\u015f_Tahmini",
+      "query": "tag:#community/Üretim_Önerisi_&_Satış_Tahmini",
       "color": {
         "a": 1,
         "rgb": 14767961
       }
     },
     {
-      "query": "tag:#community/Maliyet_Fi\u015fi_&_Tedarik\u00e7i",
+      "query": "tag:#community/Maliyet_Fişi_&_Tedarikçi",
       "color": {
         "a": 1,
         "rgb": 7780274
       }
     },
     {
-      "query": "tag:#community/Barkod_\u00dcretimi_&_Sipari\u015f_Listesi",
+      "query": "tag:#community/Barkod_Üretimi_&_Sipariş_Listesi",
       "color": {
         "a": 1,
         "rgb": 5873999
       }
     },
     {
-      "query": "tag:#community/Raf_Y\u00f6netimi_&_Barkod_\u00c7ak\u0131\u015fmas\u0131",
+      "query": "tag:#community/Raf_Yönetimi_&_Barkod_Çakışması",
       "color": {
         "a": 1,
         "rgb": 15583560
       }
     },
     {
-      "query": "tag:#community/Stok_Fix_Testleri_&_Yard\u0131mc\u0131lar",
+      "query": "tag:#community/Stok_Fix_Testleri_&_Yardımcılar",
       "color": {
         "a": 1,
         "rgb": 11565729
       }
     },
     {
-      "query": "tag:#community/Canl\u0131_Panel_(SSE)",
+      "query": "tag:#community/Canlı_Panel_(SSE)",
       "color": {
         "a": 1,
         "rgb": 16752039
@@ -71,7 +78,7 @@
       }
     },
     {
-      "query": "tag:#community/Kimlik_Do\u011frulama_&_Kullan\u0131c\u0131_Y\u00f6netimi",
+      "query": "tag:#community/Kimlik_Doğrulama_&_Kullanıcı_Yönetimi",
       "color": {
         "a": 1,
         "rgb": 5142951
@@ -85,7 +92,7 @@
       }
     },
     {
-      "query": "tag:#community/Sipari\u015f_Ya\u015fam_D\u00f6ng\u00fcs\u00fc_&_Ar\u015fiv",
+      "query": "tag:#community/Sipariş_Yaşam_Döngüsü_&_Arşiv",
       "color": {
         "a": 1,
         "rgb": 14767961
@@ -99,21 +106,21 @@
       }
     },
     {
-      "query": "tag:#community/Shopify_Route_Katman\u0131",
+      "query": "tag:#community/Shopify_Route_Katmanı",
       "color": {
         "a": 1,
         "rgb": 5873999
       }
     },
     {
-      "query": "tag:#community/De\u011fi\u015fim_/_\u0130ade_Talepleri",
+      "query": "tag:#community/Değişim_/_İade_Talepleri",
       "color": {
         "a": 1,
         "rgb": 15583560
       }
     },
     {
-      "query": "tag:#community/Ak\u0131ll\u0131_Motor_(\u0130ndirim_&_Fiyat)",
+      "query": "tag:#community/Akıllı_Motor_(İndirim_&_Fiyat)",
       "color": {
         "a": 1,
         "rgb": 11565729
@@ -134,7 +141,7 @@
       }
     },
     {
-      "query": "tag:#community/Anasayfa_\u00d6zet_&_Say\u0131mlar",
+      "query": "tag:#community/Anasayfa_Özet_&_Sayımlar",
       "color": {
         "a": 1,
         "rgb": 12234924
@@ -148,7 +155,7 @@
       }
     },
     {
-      "query": "tag:#community/Barkod_Alias_Yard\u0131mc\u0131lar\u0131",
+      "query": "tag:#community/Barkod_Alias_Yardımcıları",
       "color": {
         "a": 1,
         "rgb": 15896107
@@ -162,21 +169,21 @@
       }
     },
     {
-      "query": "tag:#community/Uygulama_\u00c7ekirde\u011fi_&_Zamanl\u0131_\u0130\u015fler",
+      "query": "tag:#community/Uygulama_Çekirdeği_&_Zamanlı_İşler",
       "color": {
         "a": 1,
         "rgb": 7780274
       }
     },
     {
-      "query": "tag:#community/Trendyol_Sipari\u015f_\u00c7ekme_&_Komisyon",
+      "query": "tag:#community/Trendyol_Sipariş_Çekme_&_Komisyon",
       "color": {
         "a": 1,
         "rgb": 5873999
       }
     },
     {
-      "query": "tag:#community/Yeni_Sipari\u015f_Haz\u0131rlama_&_Toplama",
+      "query": "tag:#community/Yeni_Sipariş_Hazırlama_&_Toplama",
       "color": {
         "a": 1,
         "rgb": 15583560
@@ -204,21 +211,21 @@
       }
     },
     {
-      "query": "tag:#community/\u00dcr\u00fcn_\u00c7ekme_&_G\u00f6rsel_\u0130ndirme",
+      "query": "tag:#community/Ürün_Çekme_&_Görsel_İndirme",
       "color": {
         "a": 1,
         "rgb": 12234924
       }
     },
     {
-      "query": "tag:#community/Hepsiburada_Route_Katman\u0131",
+      "query": "tag:#community/Hepsiburada_Route_Katmanı",
       "color": {
         "a": 1,
         "rgb": 5142951
       }
     },
     {
-      "query": "tag:#community/Manuel_Sipari\u015f_Olu\u015fturma",
+      "query": "tag:#community/Manuel_Sipariş_Oluşturma",
       "color": {
         "a": 1,
         "rgb": 15896107
@@ -232,14 +239,14 @@
       }
     },
     {
-      "query": "tag:#community/AI_Asistan\u0131_(Headless_Claude)",
+      "query": "tag:#community/AI_Asistanı_(Headless_Claude)",
       "color": {
         "a": 1,
         "rgb": 7780274
       }
     },
     {
-      "query": "tag:#community/Silme_&_Toplu_Yazd\u0131rma_\u0130\u015flemleri",
+      "query": "tag:#community/Silme_&_Toplu_Yazdırma_İşlemleri",
       "color": {
         "a": 1,
         "rgb": 5873999
@@ -987,5 +994,17 @@
         "rgb": 5142951
       }
     }
-  ]
+  ],
+  "collapse-display": true,
+  "showArrow": false,
+  "textFadeMultiplier": 0,
+  "nodeSizeMultiplier": 1,
+  "lineSizeMultiplier": 1,
+  "collapse-forces": true,
+  "centerStrength": 0.518713248970312,
+  "repelStrength": 10,
+  "linkStrength": 1,
+  "linkDistance": 250,
+  "scale": 0.26758366774343073,
+  "close": true
 }

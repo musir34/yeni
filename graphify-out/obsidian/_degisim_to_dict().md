@@ -1,12 +1,12 @@
 ---
 source_file: "agent_api.py"
 type: "code"
-community: "Agent API & Sipariş Sorguları"
+community: "Sipariş Denetim Kaydı (Audit Log)"
 location: "L129"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Agent_API__Sipari_Sorgular
+  - community/Sipari_Denetim_Kayd_Audit_Log
 ---
 
 # _degisim_to_dict()
@@ -20,4 +20,4 @@ tags:
 - [[list_exchanges()]] - `calls` [EXTRACTED]
 - [[update_exchange_status()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Agent_API__Sipari_Sorgular
+#graphify/code #graphify/EXTRACTED #community/Sipari_Denetim_Kayd_Audit_Log

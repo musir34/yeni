@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/check_stock_sync_73073434828.py"
 type: "code"
-community: "Veri Modelleri (SQLAlchemy)"
+community: "Ana Kasa Defteri"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Veri_Modelleri_SQLAlchemy
+  - community/Ana_Kasa_Defteri
 ---
 
 # check_stock_sync_73073434828.py
@@ -23,4 +23,4 @@ tags:
 - [[service.py]] - `imports_from` [EXTRACTED]
 - [[shopify_stock_service.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Veri_Modelleri_SQLAlchemy
+#graphify/code #graphify/EXTRACTED #community/Ana_Kasa_Defteri

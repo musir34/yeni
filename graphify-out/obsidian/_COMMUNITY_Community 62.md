@@ -1,30 +1,30 @@
 ---
 type: community
-cohesion: 0.21
+cohesion: 0.19
 members: 15
 ---
 
 # Community 62
 
-**Cohesion:** 0.21 - loosely connected
+**Cohesion:** 0.19 - loosely connected
 **Members:** 15 nodes
 
 ## Members
-- [[Shopify barkod - aktif lokasyondaki available envanter]] - rationale - scripts/check_random_stock_match.py
-- [[Trendyol barkod - quantity (guncel integration endpoint)]] - rationale - scripts/check_random_stock_match.py
-- [[check_central_zero_alias.py]] - code - scripts/check_central_zero_alias.py
-- [[check_central_zero_on_platforms.py]] - code - scripts/check_central_zero_on_platforms.py
-- [[check_random_stock_match.py]] - code - scripts/check_random_stock_match.py
-- [[check_real_product_zero.py]] - code - scripts/check_real_product_zero.py
-- [[e()]] - code - scripts/check_real_product_zero.py
-- [[emit()]] - code - scripts/check_central_zero_alias.py
-- [[fetch_shopify_map()]] - code - scripts/check_random_stock_match.py
-- [[fetch_trendyol_map()]] - code - scripts/check_random_stock_match.py
-- [[gather_platforms()]] - code - scripts/check_random_stock_match.py
-- [[main()_5]] - code - scripts/check_central_zero_alias.py
-- [[main()_6]] - code - scripts/check_central_zero_on_platforms.py
-- [[main()_8]] - code - scripts/check_random_stock_match.py
-- [[main()_9]] - code - scripts/check_real_product_zero.py
+- [['claude' çalıştırılabilirinin tam yolunu bul.     systemd servisleri dar PATH il]] - rationale - ai_asistan/blueprint.py
+- [[Headless Claude çağır, taslak metnini döndür (hata → None).]] - rationale - trendyol_qna/qna_ai.py
+- [[Model koduna ait varyantların CANLI stok özetini üret (AI promptu için).     Örn]] - rationale - trendyol_qna/qna_service.py
+- [[Sistem promptu cevap kuralları + Obsidian vault'taki bilgi notları.]] - rationale - trendyol_qna/qna_ai.py
+- [[Tek soru için taslak üret ve kaydet (senkron; app context İÇİNDE çağrılmalı).]] - rationale - trendyol_qna/qna_ai.py
+- [[Trendyol soruları için AI cevap taslağı üretimi.  ai_asistan altyapısını (headle]] - rationale - trendyol_qna/qna_ai.py
+- [[Vault'taki tüm .md notlarını (ada göre sıralı) birleştirip döndür.]] - rationale - trendyol_qna/qna_notes.py
+- [[_claude_bin()]] - code - ai_asistan/blueprint.py
+- [[_draft_prompt()]] - code - trendyol_qna/qna_ai.py
+- [[_kurallar()]] - code - trendyol_qna/qna_ai.py
+- [[_run_claude()]] - code - trendyol_qna/qna_ai.py
+- [[generate_draft()]] - code - trendyol_qna/qna_ai.py
+- [[load_vault_notes()]] - code - trendyol_qna/qna_notes.py
+- [[qna_ai.py]] - code - trendyol_qna/qna_ai.py
+- [[stock_context()]] - code - trendyol_qna/qna_service.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -34,17 +34,15 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 6 edges to [[_COMMUNITY_Community 65]]
-- 5 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 4 edges to [[_COMMUNITY_Uygulama Çekirdeği & Zamanlı İşler]]
-- 4 edges to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
-- 4 edges to [[_COMMUNITY_Community 38]]
-- 2 edges to [[_COMMUNITY_Barkod Alias Yardımcıları]]
-- 1 edge to [[_COMMUNITY_Community 50]]
+- 4 edges to [[_COMMUNITY_Raf Sistemi & Etiket]]
+- 3 edges to [[_COMMUNITY_Community 45]]
+- 1 edge to [[_COMMUNITY_Community 76]]
+- 1 edge to [[_COMMUNITY_Community 96]]
+- 1 edge to [[_COMMUNITY_Community 46]]
 
 ## Top bridge nodes
-- [[check_real_product_zero.py]] - degree 10, connects to 6 communities
-- [[check_central_zero_alias.py]] - degree 9, connects to 6 communities
-- [[check_random_stock_match.py]] - degree 13, connects to 4 communities
-- [[check_central_zero_on_platforms.py]] - degree 6, connects to 4 communities
-- [[main()_5]] - degree 4, connects to 1 community
+- [[qna_ai.py]] - degree 11, connects to 2 communities
+- [[stock_context()]] - degree 5, connects to 2 communities
+- [[_claude_bin()]] - degree 6, connects to 1 community
+- [[generate_draft()]] - degree 6, connects to 1 community
+- [[load_vault_notes()]] - degree 4, connects to 1 community

@@ -1,12 +1,12 @@
 ---
 source_file: "shopify_site/shopify_routes.py"
 type: "code"
-community: "Shopify Route Katmanı"
+community: "Idefix Entegrasyonu"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Shopify_Route_Katman
+  - community/Idefix_Entegrasyonu
 ---
 
 # shopify_routes.py
@@ -52,4 +52,4 @@ tags:
 - [[update_order_status()]] - `contains` [EXTRACTED]
 - [[user_logs.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Shopify_Route_Katman
+#graphify/code #graphify/EXTRACTED #community/Idefix_Entegrasyonu

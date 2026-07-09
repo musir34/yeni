@@ -1,11 +1,11 @@
 ---
 source_file: "templates/show_qr_code.html"
 type: "concept"
-community: "Community 96"
+community: "Community 102"
 tags:
   - graphify/concept
   - graphify/INFERRED
-  - community/Community_96
+  - community/Community_102
 ---
 
 # Kullanıcı QR Kodu Sayfası
@@ -13,4 +13,4 @@ tags:
 ## Connections
 - [[2FA (TOTP) Kurulum Sayfası]] - `conceptually_related_to` [INFERRED]
 
-#graphify/concept #graphify/INFERRED #community/Community_96
+#graphify/concept #graphify/INFERRED #community/Community_102

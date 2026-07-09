@@ -1,11 +1,11 @@
 ---
 source_file: "templates/ai_asistan.html"
 type: "concept"
-community: "Community 95"
+community: "Uygulama Çekirdeği & Zamanlı İşler"
 tags:
   - graphify/concept
   - graphify/INFERRED
-  - community/Community_95
+  - community/Uygulama_ekirdei__Zamanl_ler
 ---
 
 # AI Asistanı sohbet sayfası
@@ -15,4 +15,4 @@ tags:
 - [[Salt-okunur Postgres MCP (gulludb query)]] - `conceptually_related_to` [INFERRED]
 - [[base.html taban şablonu]] - `references` [EXTRACTED]
 
-#graphify/concept #graphify/INFERRED #community/Community_95
+#graphify/concept #graphify/INFERRED #community/Uygulama_ekirdei__Zamanl_ler

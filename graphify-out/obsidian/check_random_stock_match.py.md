@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/check_random_stock_match.py"
 type: "code"
-community: "Community 62"
+community: "Community 78"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_62
+  - community/Community_78
 ---
 
 # check_random_stock_match.py
@@ -26,4 +26,4 @@ tags:
 - [[shopify.py]] - `imports_from` [EXTRACTED]
 - [[trendyol.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_62
+#graphify/code #graphify/EXTRACTED #community/Community_78

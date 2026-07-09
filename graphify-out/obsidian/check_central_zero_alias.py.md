@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/check_central_zero_alias.py"
 type: "code"
-community: "Community 62"
+community: "Değişim / İade Talepleri"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_62
+  - community/Deiim_/_ade_Talepleri
 ---
 
 # check_central_zero_alias.py
@@ -22,4 +22,4 @@ tags:
 - [[normalize_barcode()]] - `imports` [EXTRACTED]
 - [[service.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_62
+#graphify/code #graphify/EXTRACTED #community/Deiim_/_ade_Talepleri

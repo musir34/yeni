@@ -1,12 +1,12 @@
 ---
 source_file: "stock_ledger.py"
 type: "rationale"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Community 48"
 location: "L110"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Community_48
 ---
 
 # Verilen idempotency anahtarıyla bir hareket zaten yazılmış mı.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[has_movement()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/rationale #graphify/EXTRACTED #community/Community_48

@@ -1,11 +1,11 @@
 ---
 source_file: "templates/idefix/eslestirme.html"
 type: "concept"
-community: "Community 45"
+community: "Community 47"
 tags:
   - graphify/concept
   - graphify/INFERRED
-  - community/Community_45
+  - community/Community_47
 ---
 
 # Idefix Ürün Eşleştirme (Product Matching)
@@ -14,4 +14,4 @@ tags:
 - [[Idefix Satıcı Paneli (Dashboard)]] - `references` [EXTRACTED]
 - [[Idefix Ürünler (Products)]] - `conceptually_related_to` [INFERRED]
 
-#graphify/concept #graphify/INFERRED #community/Community_45
+#graphify/concept #graphify/INFERRED #community/Community_47

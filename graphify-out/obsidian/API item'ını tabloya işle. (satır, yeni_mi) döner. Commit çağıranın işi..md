@@ -1,12 +1,12 @@
 ---
 source_file: "trendyol_qna/qna_service.py"
 type: "rationale"
-community: "Community 37"
+community: "Community 46"
 location: "L78"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_37
+  - community/Community_46
 ---
 
 # API item'ını tabloya işle. (satır, yeni_mi) döner. Commit çağıranın işi.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_upsert_question()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_37
+#graphify/rationale #graphify/EXTRACTED #community/Community_46

@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/__init__.py"
 type: "code"
-community: "Community 75"
+community: "Community 77"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_75
+  - community/Community_77
 ---
 
 # __init__.py
@@ -19,4 +19,4 @@ tags:
 - [[models.py]] - `re_exports` [EXTRACTED]
 - [[service.py]] - `re_exports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_75
+#graphify/code #graphify/EXTRACTED #community/Community_77

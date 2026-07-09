@@ -1,12 +1,12 @@
 ---
 source_file: "migrations/versions/add_source_to_order_created.py"
 type: "code"
-community: "Community 110"
+community: "Community 116"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_110
+  - community/Community_116
 ---
 
 # add_source_to_order_created.py
@@ -15,4 +15,4 @@ tags:
 - [[downgrade()_3]] - `contains` [EXTRACTED]
 - [[upgrade()_3]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_110
+#graphify/code #graphify/EXTRACTED #community/Community_116

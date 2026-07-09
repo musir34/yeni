@@ -1,12 +1,12 @@
 ---
 source_file: "siparis_fisi.py"
 type: "code"
-community: "Maliyet Fişi & Tedarikçi"
+community: "Community 58"
 location: "L1226"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Maliyet_Fii__Tedariki
+  - community/Community_58
 ---
 
 # api_maliyet_kategori_ekle()
@@ -16,4 +16,4 @@ tags:
 - [[Yeni maliyet kategorisi (başlık) ekle.]] - `rationale_for` [EXTRACTED]
 - [[siparis_fisi.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki
+#graphify/code #graphify/EXTRACTED #community/Community_58

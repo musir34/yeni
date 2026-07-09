@@ -1,12 +1,12 @@
 ---
 source_file: "app.py"
 type: "rationale"
-community: "Community 87"
+community: "Stok Senkron API"
 location: "L253"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_87
+  - community/Stok_Senkron_API
 ---
 
 # 403 - Yetkisiz Erişim
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[forbidden_error()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_87
+#graphify/rationale #graphify/EXTRACTED #community/Stok_Senkron_API

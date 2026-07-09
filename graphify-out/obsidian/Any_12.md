@@ -1,11 +1,11 @@
 ---
 source_file: ""
 type: "code"
-community: "E-posta Bildirimleri"
+community: "Community 70"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/E-posta_Bildirimleri
+  - community/Community_70
 ---
 
 # Any
@@ -15,4 +15,4 @@ tags:
 - [[check_sync_staleness()]] - `references` [EXTRACTED]
 - [[run_all_checks()]] - `references` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri
+#graphify/code #graphify/EXTRACTED #community/Community_70

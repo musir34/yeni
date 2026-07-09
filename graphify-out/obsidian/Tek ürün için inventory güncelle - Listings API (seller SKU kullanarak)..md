@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/adapters/amazon.py"
 type: "rationale"
-community: "Community 46"
+community: "Community 49"
 location: "L137"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_46
+  - community/Community_49
 ---
 
 # Tek ürün için inventory güncelle - Listings API (seller SKU kullanarak).
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[._update_single_inventory()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_46
+#graphify/rationale #graphify/EXTRACTED #community/Community_49

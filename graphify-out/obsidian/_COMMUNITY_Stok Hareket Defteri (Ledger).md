@@ -1,61 +1,52 @@
 ---
 type: community
-cohesion: 0.11
-members: 46
+cohesion: 0.08
+members: 37
 ---
 
 # Stok Hareket Defteri (Ledger)
 
-**Cohesion:** 0.11 - loosely connected
-**Members:** 46 nodes
+**Cohesion:** 0.08 - loosely connected
+**Members:** 37 nodes
 
 ## Members
-- [[.__repr__()_2]] - code - models.py
-- [[Değerin sipariş mi barkod mu olduğunu kabaca tahmin et.]] - rationale - scripts/trace_order.py
-- [[Raf bilgisi OLMAYAN barkodların CentralStock.qty'sini 0'a çeker (invariant).]] - rationale - stock_management.py
-- [[StockMovement]] - code - models.py
-- [[StockMovement (stok hareket defteri) kayıtları — sipariş no veya barkod.      Ta]] - rationale - order_audit_routes.py
-- [[StockMovement tablosu yoksa (deploy öncesi) sessizce boş döner.]] - rationale - scripts/trace_order.py
-- [[Stok Hareket Defteri (ledger) testleri — TDD.  İzole, dosya-tabanlı sqlite üzeri]] - rationale - tests/test_stock_ledger.py
-- [[_audit_detail()]] - code - scripts/trace_order.py
-- [[_audit_events()_1]] - code - scripts/trace_order.py
-- [[_auto_detect()]] - code - scripts/trace_order.py
-- [[_fmt_ts()]] - code - scripts/trace_order.py
-- [[_install_sqlite_translate()]] - code - tests/test_stock_ledger.py
-- [[_ledger_movements()]] - code - order_audit_routes.py
-- [[_movement_events()]] - code - scripts/trace_order.py
-- [[_movements()]] - code - tests/test_stock_ledger.py
-- [[_print_timeline()]] - code - scripts/trace_order.py
-- [[_safe_movements_query()]] - code - scripts/trace_order.py
-- [[_seed_shelf()_2]] - code - tests/test_stock_ledger.py
-- [[_shelf_qty()_2]] - code - tests/test_stock_ledger.py
-- [[create_stock_movement_table.py]] - code - scripts/create_stock_movement_table.py
-- [[enforce_shelfless_central_zero()]] - code - stock_management.py
-- [[main()_16]] - code - scripts/create_stock_movement_table.py
-- [[main()_29]] - code - scripts/trace_order.py
-- [[normalize_barcode() PostgreSQL translate() kullanıyor — SQLite UDF ekle.]] - rationale - tests/test_stock_ledger.py
-- [[test_apply_created_to_delivered_decrements_stock()]] - code - tests/test_stock_ledger.py
-- [[test_apply_hazirlaniyor_to_shipped_decrements()]] - code - tests/test_stock_ledger.py
-- [[test_audit_page_lookup_includes_ledger_movements()]] - code - tests/test_stock_ledger.py
-- [[test_bg_handler_created_to_delivered_decrements()]] - code - tests/test_stock_ledger.py
-- [[test_bg_handler_packed_picking_to_shipped_no_double()]] - code - tests/test_stock_ledger.py
-- [[test_bg_handler_unpacked_picking_to_shipped_decrements()]] - code - tests/test_stock_ledger.py
-- [[test_created_to_cancelled_no_effect()]] - code - tests/test_stock_ledger.py
-- [[test_enforce_shelfless_central_zero()]] - code - tests/test_stock_ledger.py
-- [[test_idempotency_no_double_apply()]] - code - tests/test_stock_ledger.py
-- [[test_partial_allocation_records_actual_delta()]] - code - tests/test_stock_ledger.py
-- [[test_picking_to_cancelled_restores()]] - code - tests/test_stock_ledger.py
-- [[test_picking_to_shipped_safety_net_idempotent()]] - code - tests/test_stock_ledger.py
-- [[test_picking_to_shipped_unpacked_safety_net_decrements()]] - code - tests/test_stock_ledger.py
-- [[test_picking_to_shipped_with_prior_packout_no_double_decrement()]] - code - tests/test_stock_ledger.py
-- [[test_record_movement_no_mutate_just_logs()]] - code - tests/test_stock_ledger.py
-- [[test_savepoint_preserves_outer_transaction_on_idem_race()]] - code - tests/test_stock_ledger.py
-- [[test_stock_ledger.py]] - code - tests/test_stock_ledger.py
-- [[test_trace_barcode_shows_movements()]] - code - tests/test_stock_ledger.py
-- [[test_trace_order_includes_ledger_and_location()]] - code - tests/test_stock_ledger.py
-- [[trace_barcode()]] - code - scripts/trace_order.py
-- [[trace_order()]] - code - scripts/trace_order.py
-- [[trace_order.py]] - code - scripts/trace_order.py
+- [[0-100 arası ağırlıklı skor hesaplar.]] - rationale - akilli_motor.py
+- [[Akıllı Komisyon Motoru – 10 Modüllü Karar Sistemi.  Trendyol komisyon tarifeleri]] - rationale - akilli_motor.py
+- [[BCG matrisinde pozisyon belirler.]] - rationale - akilli_motor.py
+- [[Belirli bir kademe için 3 aylık projeksiyon.]] - rationale - akilli_motor.py
+- [[DataFrame]] - code
+- [[Komisyon kademesi sütunlarını seçilen teslimat tarifesine göre çözer.      Yeni]] - rationale - akilli_motor.py
+- [[Mevsim bazlı renk uyarısı.]] - rationale - akilli_motor.py
+- [[Renk segmentini otomatik belirler motordengeliyavasoluyukselen.]] - rationale - akilli_motor.py
+- [[Satış hızı, stok tükenme ve üretim alarm hesabı.]] - rationale - akilli_motor.py
+- [[Son 90 günlük sipariş verisini DB'den çeker.]] - rationale - akilli_motor.py
+- [[Tam maliyet hesabı ve nakit akış hızı.]] - rationale - akilli_motor.py
+- [[Tarife Excel'indeki SATICI STOK KODU'ndan renk çıkarır.]] - rationale - akilli_motor.py
+- [[Trendyol komisyon tarife Excel'ini BİREBİR koruyarak çıktı üretir.      openpyxl]] - rationale - akilli_motor.py
+- [[Tüm modülleri çalıştırıp birleşik sonuç üretir.      include_only=True ve includ]] - rationale - akilli_motor.py
+- [[_allowed_file()]] - code - akilli_motor.py
+- [[_extract_color_from_sku()]] - code - akilli_motor.py
+- [[_extract_color_from_tariff()]] - code - akilli_motor.py
+- [[_extract_model_from_sku()]] - code - akilli_motor.py
+- [[_query_sales_data()]] - code - akilli_motor.py
+- [[_resolve_commission_columns()]] - code - akilli_motor.py
+- [[_write_tariff_output()]] - code - akilli_motor.py
+- [[akilli_motor.py]] - code - akilli_motor.py
+- [[akilli_motor_analiz()]] - code - akilli_motor.py
+- [[akilli_motor_indir()]] - code - akilli_motor.py
+- [[akilli_motor_sayfasi()]] - code - akilli_motor.py
+- [[merchant_sku'dan model kodunu çıkarır '0172-35 Bej' → '0172'.]] - rationale - akilli_motor.py
+- [[merchant_sku'dan renk çıkarır.]] - rationale - akilli_motor.py
+- [[mod1_satis_hizi()]] - code - akilli_motor.py
+- [[mod2_renk_segment()]] - code - akilli_motor.py
+- [[mod3_yasam_dongusu()]] - code - akilli_motor.py
+- [[mod4_portfoy()]] - code - akilli_motor.py
+- [[mod5_gercek_maliyet()]] - code - akilli_motor.py
+- [[mod6_senaryo()]] - code - akilli_motor.py
+- [[mod7_skor()]] - code - akilli_motor.py
+- [[mod9_sezon()]] - code - akilli_motor.py
+- [[run_full_analysis()]] - code - akilli_motor.py
+- [[Ürün aşamasını tespit eder lansmanyukselisolgunlukdususolu.]] - rationale - akilli_motor.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -65,24 +56,12 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 14 edges to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
-- 10 edges to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
-- 6 edges to [[_COMMUNITY_Sipariş Denetim Kaydı (Audit Log)]]
-- 4 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 4 edges to [[_COMMUNITY_Community 38]]
-- 4 edges to [[_COMMUNITY_Community 50]]
-- 4 edges to [[_COMMUNITY_Trendyol Sipariş Çekme & Komisyon]]
-- 2 edges to [[_COMMUNITY_Stok Fix Testleri & Yardımcılar]]
-- 1 edge to [[_COMMUNITY_Barkod Alias Yardımcıları]]
-- 1 edge to [[_COMMUNITY_Barkod Üretimi & Sipariş Listesi]]
-- 1 edge to [[_COMMUNITY_Community 98]]
-- 1 edge to [[_COMMUNITY_Community 54]]
-- 1 edge to [[_COMMUNITY_Community 65]]
-- 1 edge to [[_COMMUNITY_Merkezi Stok Senkronizasyonu]]
+- 4 edges to [[_COMMUNITY_E-posta Bildirimleri]]
+- 1 edge to [[_COMMUNITY_Akıllı Motor (İndirim & Fiyat)]]
+- 1 edge to [[_COMMUNITY_Community 91]]
+- 1 edge to [[_COMMUNITY_Community 57]]
+- 1 edge to [[_COMMUNITY_Community 71]]
 
 ## Top bridge nodes
-- [[test_stock_ledger.py]] - degree 44, connects to 9 communities
-- [[StockMovement]] - degree 26, connects to 9 communities
-- [[trace_order.py]] - degree 16, connects to 4 communities
-- [[enforce_shelfless_central_zero()]] - degree 6, connects to 3 communities
-- [[_seed_shelf()_2]] - degree 21, connects to 2 communities
+- [[akilli_motor.py]] - degree 26, connects to 5 communities
+- [[_query_sales_data()]] - degree 7, connects to 1 community

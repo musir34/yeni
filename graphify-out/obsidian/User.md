@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Community 59"
+community: "Community 57"
 location: "L545"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_59
+  - community/Community_57
 ---
 
 # User
@@ -30,4 +30,4 @@ tags:
 - [[user_logs.py]] - `imports` [EXTRACTED]
 - [[view_logs()]] - `indirect_call` [INFERRED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_59
+#graphify/code #graphify/EXTRACTED #community/Community_57

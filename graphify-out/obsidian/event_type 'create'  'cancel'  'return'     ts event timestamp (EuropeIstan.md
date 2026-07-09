@@ -1,12 +1,12 @@
 ---
 source_file: "uretim_oneri.py"
 type: "rationale"
-community: "Üretim Önerisi & Satış Tahmini"
+community: "Agent API & Sipariş Sorguları"
 location: "L212"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/retim_nerisi__Sat_Tahmini
+  - community/Agent_API__Sipari_Sorgular
 ---
 
 # event_type: 'create' | 'cancel' | 'return'     ts: event timestamp (Europe/Istan
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[update_daily_from_event()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/retim_nerisi__Sat_Tahmini
+#graphify/rationale #graphify/EXTRACTED #community/Agent_API__Sipari_Sorgular

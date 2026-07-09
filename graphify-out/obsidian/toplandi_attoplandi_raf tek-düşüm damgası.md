@@ -1,11 +1,11 @@
 ---
 source_file: "docs/superpowers/specs/2026-06-10-manuel-raf-okutmali-toplama-design.md"
 type: "concept"
-community: "Community 51"
+community: "Community 56"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_51
+  - community/Community_56
 ---
 
 # toplandi_at/toplandi_raf tek-düşüm damgası
@@ -14,4 +14,4 @@ tags:
 - [[Manuel Raf-Okutmalı Toplama tasarım dokümanı]] - `references` [EXTRACTED]
 - [[picking_service.pick_order_from_shelf (ortak düşüm)]] - `implements` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_51
+#graphify/concept #graphify/EXTRACTED #community/Community_56

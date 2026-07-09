@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/test_stok_fixleri.py"
 type: "code"
-community: "Stok Fix Testleri & Yardımcılar"
+community: "Barkod Üretimi & Sipariş Listesi"
 location: "L209"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Stok_Fix_Testleri__Yardmclar
+  - community/Barkod_retimi__Sipari_Listesi
 ---
 
 # test_get_home_atanan_raf_bosaldi()
@@ -21,4 +21,4 @@ tags:
 - [[reset_db()]] - `calls` [EXTRACTED]
 - [[test_stok_fixleri.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar
+#graphify/code #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi

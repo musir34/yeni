@@ -1,12 +1,12 @@
 ---
 source_file: "home.py"
 type: "code"
-community: "Anasayfa Özet & Sayımlar"
+community: "Kasa & Gelir-Gider"
 location: "L224"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Anasayfa_zet__Saymlar
+  - community/Kasa__Gelir-Gider
 ---
 
 # _month_range_ist()
@@ -16,4 +16,4 @@ tags:
 - [[home.py]] - `contains` [EXTRACTED]
 - [[index()_5]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Anasayfa_zet__Saymlar
+#graphify/code #graphify/EXTRACTED #community/Kasa__Gelir-Gider

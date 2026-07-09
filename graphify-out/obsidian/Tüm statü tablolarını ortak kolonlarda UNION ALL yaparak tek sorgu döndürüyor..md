@@ -1,12 +1,12 @@
 ---
 source_file: "all_orders_service.py"
 type: "rationale"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "E-posta Bildirimleri"
 location: "L9"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/E-posta_Bildirimleri
 ---
 
 # Tüm statü tablolarını ortak kolonlarda UNION ALL yaparak tek sorgu döndürüyor.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[all_orders_union()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/rationale #graphify/EXTRACTED #community/E-posta_Bildirimleri

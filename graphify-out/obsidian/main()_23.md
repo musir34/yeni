@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/measure_phantom_stock.py"
 type: "code"
-community: "Community 50"
+community: "Community 86"
 location: "L54"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Community_50
+  - community/Community_86
 ---
 
 # main()
@@ -17,4 +17,4 @@ tags:
 - [[_parse_details()_3]] - `calls` [EXTRACTED]
 - [[measure_phantom_stock.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Community_50
+#graphify/code #graphify/INFERRED #community/Community_86

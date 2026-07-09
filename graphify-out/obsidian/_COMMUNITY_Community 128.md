@@ -10,8 +10,8 @@ members: 2
 **Members:** 2 nodes
 
 ## Members
-- [[Mevcut kullanıcının bildirim görselini döndür.]] - rationale - login_logout.py
-- [[my_notification_image()]] - code - login_logout.py
+- [[Stok güncelleme API endpoint]] - rationale - amazon/amazon_routes.py
+- [[update_inventory()]] - code - amazon/amazon_routes.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -21,7 +21,7 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 1 edge to [[_COMMUNITY_Kimlik Doğrulama & Kullanıcı Yönetimi]]
+- 1 edge to [[_COMMUNITY_Community 50]]
 
 ## Top bridge nodes
-- [[my_notification_image()]] - degree 2, connects to 1 community
+- [[update_inventory()]] - degree 2, connects to 1 community

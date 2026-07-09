@@ -10,8 +10,8 @@ members: 2
 **Members:** 2 nodes
 
 ## Members
-- [[Birden fazla ürünü toplu halde silmek için API endpoint'i]] - rationale - get_products.py
-- [[bulk_delete_products()]] - code - get_products.py
+- [[Toplu barkod eşleştirme     Girilen barkodları Amazon SKU'larıyla karşılaştırır]] - rationale - amazon/amazon_routes.py
+- [[api_bulk_match()]] - code - amazon/amazon_routes.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -21,8 +21,7 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 1 edge to [[_COMMUNITY_Ürün Çekme & Görsel İndirme]]
-- 1 edge to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
+- 1 edge to [[_COMMUNITY_Community 50]]
 
 ## Top bridge nodes
-- [[bulk_delete_products()]] - degree 3, connects to 2 communities
+- [[api_bulk_match()]] - degree 2, connects to 1 community

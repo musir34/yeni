@@ -1,12 +1,12 @@
 ---
 source_file: "siparisler.py"
 type: "code"
-community: "Manuel Sipariş Oluşturma"
+community: "Hepsiburada Servisi"
 location: "L70"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Manuel_Sipari_Oluturma
+  - community/Hepsiburada_Servisi
 ---
 
 # yeni_siparis()
@@ -21,4 +21,4 @@ tags:
 - [[log_user_action()_1]] - `calls` [EXTRACTED]
 - [[siparisler.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Manuel_Sipari_Oluturma
+#graphify/code #graphify/EXTRACTED #community/Hepsiburada_Servisi

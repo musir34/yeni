@@ -1,17 +1,18 @@
 ---
 type: community
-cohesion: 1.00
-members: 2
+cohesion: 0.67
+members: 3
 ---
 
 # Community 118
 
-**Cohesion:** 1.00 - tightly connected
-**Members:** 2 nodes
+**Cohesion:** 0.67 - moderately connected
+**Members:** 3 nodes
 
 ## Members
-- [[Toplu barkod eşleştirme     Girilen barkodları Amazon SKU'larıyla karşılaştırır]] - rationale - amazon/amazon_routes.py
-- [[api_bulk_match()]] - code - amazon/amazon_routes.py
+- [[add_stock_push_log.py]] - code - migrations/versions/add_stock_push_log.py
+- [[downgrade()_5]] - code - migrations/versions/add_stock_push_log.py
+- [[upgrade()_5]] - code - migrations/versions/add_stock_push_log.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -19,9 +20,3 @@ members: 2
 TABLE source_file, type FROM #community/Community_118
 SORT file.name ASC
 ```
-
-## Connections to other communities
-- 1 edge to [[_COMMUNITY_Community 47]]
-
-## Top bridge nodes
-- [[api_bulk_match()]] - degree 2, connects to 1 community

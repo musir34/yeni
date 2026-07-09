@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "rationale"
-community: "Barkod Alias Yardımcıları"
+community: "Community 104"
 location: "L30"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Barkod_Alias_Yardmclar
+  - community/Community_104
 ---
 
 # Barkod alias (takma ad) sistemi.     Birden fazla barkod aynı ürünü gösterebilir
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[BarcodeAlias]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Barkod_Alias_Yardmclar
+#graphify/rationale #graphify/EXTRACTED #community/Community_104

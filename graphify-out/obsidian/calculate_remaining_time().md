@@ -1,12 +1,12 @@
 ---
 source_file: "siparis_hazirla.py"
 type: "code"
-community: "Stok Fix Testleri & Yardımcılar"
+community: "Barkod Üretimi & Sipariş Listesi"
 location: "L596"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Stok_Fix_Testleri__Yardmclar
+  - community/Barkod_retimi__Sipari_Listesi
 ---
 
 # calculate_remaining_time()
@@ -17,4 +17,4 @@ tags:
 - [[siparis_hazirla.py]] - `contains` [EXTRACTED]
 - [[to_ist()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar
+#graphify/code #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi

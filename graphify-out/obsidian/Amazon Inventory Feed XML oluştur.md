@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/adapters/amazon.py"
 type: "rationale"
-community: "Community 46"
+community: "Community 49"
 location: "L232"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_46
+  - community/Community_49
 ---
 
 # Amazon Inventory Feed XML oluştur
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[._build_inventory_feed_xml()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_46
+#graphify/rationale #graphify/EXTRACTED #community/Community_49

@@ -1,12 +1,12 @@
 ---
 source_file: "amazon/amazon_config.py"
 type: "code"
-community: "Community 72"
+community: "Community 82"
 location: "L11"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_72
+  - community/Community_82
 ---
 
 # AmazonConfig
@@ -20,4 +20,4 @@ tags:
 - [[amazon_config.py]] - `contains` [EXTRACTED]
 - [[amazon_routes.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_72
+#graphify/code #graphify/EXTRACTED #community/Community_82

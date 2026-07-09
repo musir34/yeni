@@ -1,12 +1,12 @@
 ---
 source_file: "login_logout.py"
 type: "code"
-community: "Kimlik Doğrulama & Kullanıcı Yönetimi"
+community: "Akıllı Motor (İndirim & Fiyat)"
 location: "L357"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Kimlik_Dorulama__Kullanc_Ynetimi
+  - community/Akll_Motor_ndirim__Fiyat
 ---
 
 # setup_totp()
@@ -17,4 +17,4 @@ tags:
 - [[generate_qr_code()]] - `calls` [EXTRACTED]
 - [[login_logout.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Kimlik_Dorulama__Kullanc_Ynetimi
+#graphify/code #graphify/EXTRACTED #community/Akll_Motor_ndirim__Fiyat

@@ -1,22 +1,25 @@
 ---
 type: community
-cohesion: 0.29
-members: 7
+cohesion: 0.22
+members: 10
 ---
 
 # Community 87
 
-**Cohesion:** 0.29 - loosely connected
-**Members:** 7 nodes
+**Cohesion:** 0.22 - loosely connected
+**Members:** 10 nodes
 
 ## Members
-- [[403 - Yetkisiz Erişim]] - rationale - app.py
-- [[404 - Sayfa Bulunamadı]] - rationale - app.py
-- [[Tüm yakalanmamış hataları yakala]] - rationale - app.py
-- [[forbidden_error()]] - code - app.py
-- [[handle_exception()]] - code - app.py
-- [[internal_error()]] - code - app.py
-- [[not_found_error()]] - code - app.py
+- [[Price Compare APIExport endpoints]] - code - templates/shopify/price_compare.html
+- [[Shopify Order Management Page]] - concept - templates/shopify/orders.html
+- [[Shopify Orders API (shopifyapiorders)]] - code - templates/shopify/orders.html
+- [[Shopify Stock Synchronization Page]] - concept - templates/shopify/stock_sync.html
+- [[Shopify mappingsmatch-barcodespush-stock API]] - code - templates/shopify/stock_sync.html
+- [[Shopify-Trendyol Price Comparison Page]] - concept - templates/shopify/price_compare.html
+- [[Stock Sync Error Page]] - concept - templates/stock_sync/error.html
+- [[Stock Sync History Page]] - concept - templates/stock_sync/history.html
+- [[Stock Sync Session Detail Page]] - concept - templates/stock_sync/session_detail.html
+- [[base.html Layout]] - code - templates/shopify/orders.html
 
 ## Live Query (requires Dataview plugin)
 
@@ -24,12 +27,3 @@ members: 7
 TABLE source_file, type FROM #community/Community_87
 SORT file.name ASC
 ```
-
-## Connections to other communities
-- 4 edges to [[_COMMUNITY_Uygulama Çekirdeği & Zamanlı İşler]]
-
-## Top bridge nodes
-- [[handle_exception()]] - degree 5, connects to 1 community
-- [[forbidden_error()]] - degree 3, connects to 1 community
-- [[not_found_error()]] - degree 3, connects to 1 community
-- [[internal_error()]] - degree 2, connects to 1 community

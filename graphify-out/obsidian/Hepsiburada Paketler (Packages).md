@@ -1,11 +1,11 @@
 ---
 source_file: "templates/hepsiburada/paketler.html"
 type: "concept"
-community: "Community 45"
+community: "Community 47"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_45
+  - community/Community_47
 ---
 
 # Hepsiburada Paketler (Packages)
@@ -13,4 +13,4 @@ tags:
 ## Connections
 - [[Hepsiburada Satıcı Paneli (Dashboard)]] - `references` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_45
+#graphify/concept #graphify/EXTRACTED #community/Community_47

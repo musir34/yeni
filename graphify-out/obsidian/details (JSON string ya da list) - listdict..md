@@ -1,12 +1,12 @@
 ---
 source_file: "promotion_service.py"
 type: "rationale"
-community: "E-posta Bildirimleri"
+community: "Sipariş Yaşam Döngüsü & Arşiv"
 location: "L34"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/E-posta_Bildirimleri
+  - community/Sipari_Yaam_Dngs__Ariv
 ---
 
 # details (JSON string ya da list) -> list[dict].
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_parse_details()_2]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/E-posta_Bildirimleri
+#graphify/rationale #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv

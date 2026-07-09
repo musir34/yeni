@@ -1,11 +1,11 @@
 ---
 source_file: "templates/hepsiburada/index.html"
 type: "concept"
-community: "Community 45"
+community: "Community 47"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_45
+  - community/Community_47
 ---
 
 # Hepsiburada Satıcı Paneli (Dashboard)
@@ -18,4 +18,4 @@ tags:
 - [[Idefix Satıcı Paneli (Dashboard)]] - `semantically_similar_to` [INFERRED]
 - [[hepsiburada.test_connection endpoint]] - `calls` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_45
+#graphify/concept #graphify/EXTRACTED #community/Community_47

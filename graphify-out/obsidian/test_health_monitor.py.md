@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/test_health_monitor.py"
 type: "code"
-community: "E-posta Bildirimleri"
+community: "Community 70"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/E-posta_Bildirimleri
+  - community/Community_70
 ---
 
 # test_health_monitor.py
@@ -18,4 +18,4 @@ tags:
 - [[main()_26]] - `contains` [EXTRACTED]
 - [[run_all_checks()]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri
+#graphify/code #graphify/EXTRACTED #community/Community_70

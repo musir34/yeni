@@ -1,12 +1,12 @@
 ---
 source_file: "hepsiburada/hepsiburada_config.py"
 type: "rationale"
-community: "Community 67"
+community: "Community 73"
 location: "L74"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_67
+  - community/Community_73
 ---
 
 # Aktif sipariş API base URL'ini döndür
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[.get_order_base_url()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_67
+#graphify/rationale #graphify/EXTRACTED #community/Community_73

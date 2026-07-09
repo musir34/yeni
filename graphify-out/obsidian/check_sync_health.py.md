@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/check_sync_health.py"
 type: "code"
-community: "Community 38"
+community: "Community 76"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_38
+  - community/Community_76
 ---
 
 # check_sync_health.py
@@ -19,4 +19,4 @@ tags:
 - [[main()_11]] - `contains` [EXTRACTED]
 - [[models.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_38
+#graphify/code #graphify/EXTRACTED #community/Community_76

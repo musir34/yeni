@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "rationale"
-community: "Kimlik Doğrulama & Kullanıcı Yönetimi"
+community: "Community 65"
 location: "L565"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Kimlik_Dorulama__Kullanc_Ynetimi
+  - community/Community_65
 ---
 
 # Kayıtlı (güvenilen) cihaz. Cookie token ile eşleşir.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[UserDevice]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Kimlik_Dorulama__Kullanc_Ynetimi
+#graphify/rationale #graphify/EXTRACTED #community/Community_65

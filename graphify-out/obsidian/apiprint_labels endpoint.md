@@ -1,11 +1,11 @@
 ---
 source_file: "templates/enhanced_product_label.html"
 type: "concept"
-community: "Community 105"
+community: "Community 112"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_105
+  - community/Community_112
 ---
 
 # /api/print_labels endpoint
@@ -13,4 +13,4 @@ tags:
 ## Connections
 - [[Otomatik etiket basımı]] - `calls` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_105
+#graphify/concept #graphify/EXTRACTED #community/Community_112

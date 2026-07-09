@@ -1,12 +1,12 @@
 ---
 source_file: "profit.py"
 type: "rationale"
-community: "Ana Kasa Defteri"
+community: "E-posta Bildirimleri"
 location: "L127"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Ana_Kasa_Defteri
+  - community/E-posta_Bildirimleri
 ---
 
 # Ondalıklı sayıları '1.234,56' biçiminde döndürür.     Decimal veya sayısal tür b
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[format_number()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Ana_Kasa_Defteri
+#graphify/rationale #graphify/EXTRACTED #community/E-posta_Bildirimleri

@@ -1,12 +1,12 @@
 ---
 source_file: "profit.py"
 type: "code"
-community: "Ana Kasa Defteri"
+community: "Community 55"
 location: "L48"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Ana_Kasa_Defteri
+  - community/Community_55
 ---
 
 # _fetch_usd_try()
@@ -18,4 +18,4 @@ tags:
 - [[api_exchange_rate()]] - `calls` [EXTRACTED]
 - [[profit.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Ana_Kasa_Defteri
+#graphify/code #graphify/EXTRACTED #community/Community_55

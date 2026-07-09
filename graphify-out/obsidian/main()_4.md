@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/backfill_opening_balance.py"
 type: "code"
-community: "Community 50"
+community: "Community 86"
 location: "L132"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_50
+  - community/Community_86
 ---
 
 # main()
@@ -20,4 +20,4 @@ tags:
 - [[run_opening()]] - `calls` [EXTRACTED]
 - [[run_reconcile()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_50
+#graphify/code #graphify/EXTRACTED #community/Community_86

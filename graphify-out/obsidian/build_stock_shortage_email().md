@@ -1,12 +1,12 @@
 ---
 source_file: "mail_service.py"
 type: "code"
-community: "E-posta Bildirimleri"
+community: "Sipariş Yaşam Döngüsü & Arşiv"
 location: "L272"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/E-posta_Bildirimleri
+  - community/Sipari_Yaam_Dngs__Ariv
 ---
 
 # build_stock_shortage_email()
@@ -18,4 +18,4 @@ tags:
 - [[send_periodic_reminder()]] - `calls` [EXTRACTED]
 - [[stock_alert_service.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri
+#graphify/code #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv

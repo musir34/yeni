@@ -1,12 +1,12 @@
 ---
 source_file: "app.py"
 type: "code"
-community: "Uygulama Çekirdeği & Zamanlı İşler"
+community: "Stok Senkron API"
 location: "L301"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Uygulama_ekirdei__Zamanl_ler
+  - community/Stok_Senkron_API
 ---
 
 # favicon()
@@ -15,4 +15,4 @@ tags:
 - [[Favicon için özel route]] - `rationale_for` [EXTRACTED]
 - [[app.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Uygulama_ekirdei__Zamanl_ler
+#graphify/code #graphify/EXTRACTED #community/Stok_Senkron_API

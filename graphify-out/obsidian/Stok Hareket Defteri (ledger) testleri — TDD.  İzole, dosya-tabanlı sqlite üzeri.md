@@ -1,12 +1,12 @@
 ---
 source_file: "tests/test_stock_ledger.py"
 type: "rationale"
-community: "Stok Hareket Defteri (Ledger)"
+community: "Canlı Panel (SSE)"
 location: "L1"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Stok_Hareket_Defteri_Ledger
+  - community/Canl_Panel_SSE
 ---
 
 # Stok Hareket Defteri (ledger) testleri — TDD.  İzole, dosya-tabanlı sqlite üzeri
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[test_stock_ledger.py]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Stok_Hareket_Defteri_Ledger
+#graphify/rationale #graphify/EXTRACTED #community/Canl_Panel_SSE

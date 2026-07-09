@@ -1,11 +1,11 @@
 ---
 source_file: "templates/uretim_oneri.html"
 type: "concept"
-community: "Community 40"
+community: "Uygulama Çekirdeği & Zamanlı İşler"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_40
+  - community/Uygulama_ekirdei__Zamanl_ler
 ---
 
 # Üretim Önerisi Sayfası
@@ -15,4 +15,4 @@ tags:
 - [[Notification Popup Include]] - `references` [EXTRACTED]
 - [[Üretim Önerisi & Plan API]] - `calls` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_40
+#graphify/concept #graphify/EXTRACTED #community/Uygulama_ekirdei__Zamanl_ler

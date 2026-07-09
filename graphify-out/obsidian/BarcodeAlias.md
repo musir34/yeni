@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Barkod Alias Yardımcıları"
+community: "Community 104"
 location: "L29"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Barkod_Alias_Yardmclar
+  - community/Community_104
 ---
 
 # BarcodeAlias
@@ -30,4 +30,4 @@ tags:
 - [[test_picking_service.py]] - `imports` [EXTRACTED]
 - [[test_stock_ledger.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Barkod_Alias_Yardmclar
+#graphify/code #graphify/EXTRACTED #community/Community_104

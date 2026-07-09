@@ -1,12 +1,12 @@
 ---
 source_file: "claims_service.py"
 type: "rationale"
-community: "Community 49"
+community: "Maliyet Fişi & Tedarikçi"
 location: "L112"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_49
+  - community/Maliyet_Fii__Tedariki
 ---
 
 # Belirli bir sayfadaki iade taleplerini çeker
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[fetch_claims_page()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_49
+#graphify/rationale #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki

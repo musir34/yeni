@@ -1,11 +1,11 @@
 ---
 source_file: "trendyol_qna/CEVAP_KURALLARI.md"
 type: "concept"
-community: "Community 43"
+community: "Community 95"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_43
+  - community/Community_95
 ---
 
 # Bilgi Bankasi (Knowledge base: fit/shipping/returns)
@@ -13,4 +13,4 @@ tags:
 ## Connections
 - [[Trendyol Q&A Answer Rules]] - `references` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_43
+#graphify/concept #graphify/EXTRACTED #community/Community_95

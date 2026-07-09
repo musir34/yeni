@@ -1,12 +1,12 @@
 ---
 source_file: "trendyol_qna/qna_routes.py"
 type: "rationale"
-community: "Community 42"
+community: "Community 45"
 location: "L1"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_42
+  - community/Community_45
 ---
 
 # Trendyol Soru-Cevap panel sayfası + JSON API'leri.  Tüm route'lar /soru-cevap al
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[qna_routes.py]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_42
+#graphify/rationale #graphify/EXTRACTED #community/Community_45

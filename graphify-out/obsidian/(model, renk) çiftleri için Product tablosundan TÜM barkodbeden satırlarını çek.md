@@ -1,12 +1,12 @@
 ---
 source_file: "canli_panel.py"
 type: "rationale"
-community: "Canlı Panel (SSE)"
+community: "Üretim Önerisi & Satış Tahmini"
 location: "L817"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Canl_Panel_SSE
+  - community/retim_nerisi__Sat_Tahmini
 ---
 
 # (model, renk) çiftleri için Product tablosundan TÜM barkod/beden satırlarını çek
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_fetch_pinfo_for_model_color_pairs()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Canl_Panel_SSE
+#graphify/rationale #graphify/EXTRACTED #community/retim_nerisi__Sat_Tahmini

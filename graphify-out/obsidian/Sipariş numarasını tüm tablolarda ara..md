@@ -1,12 +1,12 @@
 ---
 source_file: "agent_api.py"
 type: "rationale"
-community: "Agent API & Sipariş Sorguları"
+community: "Sipariş Denetim Kaydı (Audit Log)"
 location: "L155"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Agent_API__Sipari_Sorgular
+  - community/Sipari_Denetim_Kayd_Audit_Log
 ---
 
 # Sipariş numarasını tüm tablolarda ara.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_find_order_across_tables()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Agent_API__Sipari_Sorgular
+#graphify/rationale #graphify/EXTRACTED #community/Sipari_Denetim_Kayd_Audit_Log

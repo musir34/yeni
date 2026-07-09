@@ -1,12 +1,12 @@
 ---
 source_file: "siparis_hazirla.py"
 type: "rationale"
-community: "Stok Fix Testleri & Yardımcılar"
+community: "Barkod Üretimi & Sipariş Listesi"
 location: "L38"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Stok_Fix_Testleri__Yardmclar
+  - community/Barkod_retimi__Sipari_Listesi
 ---
 
 # Naive ise IST varsay, aware ise IST'ye çevir.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[to_ist()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar
+#graphify/rationale #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi

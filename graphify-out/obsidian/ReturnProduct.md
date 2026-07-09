@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Community 44"
+community: "Maliyet Fişi & Tedarikçi"
 location: "L525"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_44
+  - community/Maliyet_Fii__Tedariki
 ---
 
 # ReturnProduct
@@ -23,4 +23,4 @@ tags:
 - [[profit_report()]] - `indirect_call` [INFERRED]
 - [[save_to_database()]] - `indirect_call` [INFERRED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_44
+#graphify/code #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki

@@ -1,12 +1,12 @@
 ---
 source_file: "tests/test_bulk_pick.py"
 type: "code"
-community: "Sipariş Denetim Kaydı (Audit Log)"
+community: "Community 52"
 location: "L107"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Denetim_Kayd_Audit_Log
+  - community/Community_52
 ---
 
 # _mk_hazirlaniyor()
@@ -24,4 +24,4 @@ tags:
 - [[test_pick_endpoint_zebra_shelf_decrements()]] - `calls` [EXTRACTED]
 - [[test_reserved_excludes_picked_hazirlaniyor()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Denetim_Kayd_Audit_Log
+#graphify/code #graphify/EXTRACTED #community/Community_52

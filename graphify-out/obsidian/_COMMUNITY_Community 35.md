@@ -1,16 +1,15 @@
 ---
 type: community
-cohesion: 0.13
-members: 24
+cohesion: 0.14
+members: 23
 ---
 
 # Community 35
 
-**Cohesion:** 0.13 - loosely connected
-**Members:** 24 nodes
+**Cohesion:** 0.14 - loosely connected
+**Members:** 23 nodes
 
 ## Members
-- [[.__init__()_6]] - code - shopify_site/shopify_stock_service.py
 - [[._enable_tracking_for_mappings()]] - code - shopify_site/shopify_stock_service.py
 - [[._graphql()_1]] - code - shopify_site/shopify_stock_service.py
 - [[._send_stock_batch()]] - code - shopify_site/shopify_stock_service.py
@@ -43,14 +42,13 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 4 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 2 edges to [[_COMMUNITY_Community 55]]
-- 1 edge to [[_COMMUNITY_Barkod Alias Yardımcıları]]
-- 1 edge to [[_COMMUNITY_Community 38]]
-- 1 edge to [[_COMMUNITY_E-posta Bildirimleri]]
+- 4 edges to [[_COMMUNITY_Ana Kasa Defteri]]
+- 2 edges to [[_COMMUNITY_Community 39]]
+- 1 edge to [[_COMMUNITY_Community 104]]
+- 1 edge to [[_COMMUNITY_Community 76]]
+- 1 edge to [[_COMMUNITY_Community 61]]
 
 ## Top bridge nodes
-- [[ShopifyStockService]] - degree 19, connects to 4 communities
+- [[ShopifyStockService]] - degree 19, connects to 5 communities
 - [[.push_stock()]] - degree 7, connects to 1 community
 - [[.match_barcodes()]] - degree 5, connects to 1 community
-- [[.__init__()_6]] - degree 2, connects to 1 community

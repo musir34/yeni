@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Veri Modelleri (SQLAlchemy)"
+community: "Community 66"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Veri_Modelleri_SQLAlchemy
+  - community/Community_66
 ---
 
 # models.py
@@ -152,4 +152,4 @@ tags:
 - [[uretim_oneri.py]] - `imports_from` [EXTRACTED]
 - [[user_logs.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Veri_Modelleri_SQLAlchemy
+#graphify/code #graphify/EXTRACTED #community/Community_66

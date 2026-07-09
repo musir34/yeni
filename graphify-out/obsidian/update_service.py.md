@@ -1,12 +1,12 @@
 ---
 source_file: "update_service.py"
 type: "code"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Silme & Toplu Yazdırma İşlemleri"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Silme__Toplu_Yazdrma_lemleri
 ---
 
 # update_service.py
@@ -45,4 +45,4 @@ tags:
 - [[update_package_to_picking()]] - `contains` [EXTRACTED]
 - [[user_logs.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/code #graphify/EXTRACTED #community/Silme__Toplu_Yazdrma_lemleri

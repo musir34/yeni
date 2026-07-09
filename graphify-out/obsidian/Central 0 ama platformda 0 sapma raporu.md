@@ -1,11 +1,11 @@
 ---
 source_file: "scripts/alias_zero_result.txt"
 type: "document"
-community: "Community 52"
+community: "Community 75"
 tags:
   - graphify/document
   - graphify/INFERRED
-  - community/Community_52
+  - community/Community_75
 ---
 
 # Central 0 ama platformda >0 sapma raporu
@@ -15,4 +15,4 @@ tags:
 - [[push_central_stock_to_trendyol 10dk job]] - `conceptually_related_to` [INFERRED]
 - [[Ürün listesi + central 0 + Shopify0 sapma yok]] - `conceptually_related_to` [INFERRED]
 
-#graphify/document #graphify/INFERRED #community/Community_52
+#graphify/document #graphify/INFERRED #community/Community_75

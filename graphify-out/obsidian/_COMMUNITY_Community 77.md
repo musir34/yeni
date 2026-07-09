@@ -1,26 +1,27 @@
 ---
 type: community
-cohesion: 0.24
-members: 11
+cohesion: 0.18
+members: 12
 ---
 
 # Community 77
 
-**Cohesion:** 0.24 - loosely connected
-**Members:** 11 nodes
+**Cohesion:** 0.18 - loosely connected
+**Members:** 12 nodes
 
 ## Members
-- [[Trendyol API'den tüm ürünleri asenkron olarak çeker]] - rationale - product_service.py
-- [[fetch_products_page()_1]] - code - product_service.py
-- [[fetch_trendyol_products_async()]] - code - product_service.py
-- [[fetch_trendyol_products_route()]] - code - product_service.py
-- [[get_brands()]] - code - product_service.py
-- [[get_category_attributes()]] - code - product_service.py
-- [[get_product_categories()]] - code - product_service.py
-- [[process_all_products()]] - code - product_service.py
-- [[product_service.py]] - code - product_service.py
-- [[trendyol_api.py]] - code - trendyol_api.py
-- [[update_price_stock()]] - code - product_service.py
+- [[.to_dict()_1]] - code - models.py
+- [[Otomatik senkronizasyonu açkapat]] - rationale - stock_sync/routes.py
+- [[Platform config'ini güncelle]] - rationale - stock_sync/routes.py
+- [[Platform yapılandırmaları]] - rationale - models.py
+- [[PlatformConfig]] - code - models.py
+- [[Senkronizasyon detayı - Her ürün için kayıt]] - rationale - models.py
+- [[SyncDetail]] - code - models.py
+- [[__init__.py_6]] - code - stock_sync/__init__.py
+- [[api_toggle_auto_sync()]] - code - stock_sync/routes.py
+- [[api_toggle_order_pull()]] - code - order_list_service.py
+- [[api_update_config()]] - code - stock_sync/routes.py
+- [[models.py_1]] - code - stock_sync/models.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -30,19 +31,20 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 3 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 1 edge to [[_COMMUNITY_Uygulama Çekirdeği & Zamanlı İşler]]
-- 1 edge to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
-- 1 edge to [[_COMMUNITY_Community 49]]
-- 1 edge to [[_COMMUNITY_Değişim  İade Talepleri]]
-- 1 edge to [[_COMMUNITY_Ürün Çekme & Görsel İndirme]]
-- 1 edge to [[_COMMUNITY_Community 44]]
-- 1 edge to [[_COMMUNITY_Trendyol Sipariş Çekme & Komisyon]]
-- 1 edge to [[_COMMUNITY_Community 64]]
-- 1 edge to [[_COMMUNITY_Community 37]]
-- 1 edge to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
+- 4 edges to [[_COMMUNITY_Community 66]]
+- 4 edges to [[_COMMUNITY_Shopify Route Katmanı]]
+- 3 edges to [[_COMMUNITY_Community 69]]
+- 3 edges to [[_COMMUNITY_Merkezi Stok Senkronizasyonu]]
+- 3 edges to [[_COMMUNITY_Community 84]]
+- 2 edges to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
+- 2 edges to [[_COMMUNITY_Community 42]]
+- 1 edge to [[_COMMUNITY_Stok Senkron API]]
+- 1 edge to [[_COMMUNITY_Community 36]]
+- 1 edge to [[_COMMUNITY_Community 93]]
 
 ## Top bridge nodes
-- [[trendyol_api.py]] - degree 10, connects to 9 communities
-- [[product_service.py]] - degree 12, connects to 2 communities
-- [[process_all_products()]] - degree 3, connects to 1 community
+- [[PlatformConfig]] - degree 13, connects to 7 communities
+- [[SyncDetail]] - degree 9, connects to 5 communities
+- [[__init__.py_6]] - degree 6, connects to 4 communities
+- [[models.py_1]] - degree 5, connects to 3 communities
+- [[api_toggle_auto_sync()]] - degree 4, connects to 2 communities

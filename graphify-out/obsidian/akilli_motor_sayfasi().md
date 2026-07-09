@@ -1,12 +1,12 @@
 ---
 source_file: "akilli_motor.py"
 type: "code"
-community: "Akıllı Motor (İndirim & Fiyat)"
+community: "Stok Hareket Defteri (Ledger)"
 location: "L994"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Akll_Motor_ndirim__Fiyat
+  - community/Stok_Hareket_Defteri_Ledger
 ---
 
 # akilli_motor_sayfasi()
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[akilli_motor.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Akll_Motor_ndirim__Fiyat
+#graphify/code #graphify/EXTRACTED #community/Stok_Hareket_Defteri_Ledger

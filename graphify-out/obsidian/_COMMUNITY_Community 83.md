@@ -1,23 +1,26 @@
 ---
 type: community
-cohesion: 0.25
-members: 8
+cohesion: 0.20
+members: 11
 ---
 
 # Community 83
 
-**Cohesion:** 0.25 - loosely connected
-**Members:** 8 nodes
+**Cohesion:** 0.20 - loosely connected
+**Members:** 11 nodes
 
 ## Members
-- [[Aktif kullanıcı tam doğrulanmış (login + 2FA) yönetici mi]] - rationale - ai_asistan/blueprint.py
-- [[Derinlemesine savunma app-level check_authentication zaten 2FA'sız     istekler]] - rationale - ai_asistan/blueprint.py
-- [[Her HTML sayfasının sonuna, kullanıcı yönetici ise AI widget'ını ekle.     Böyle]] - rationale - ai_asistan/blueprint.py
-- [[Kullanıcı girişi TAMAMLAMIŞ mı login + 2FA (TOTP) doğrulaması.     Rol bilgisi]] - rationale - ai_asistan/blueprint.py
-- [[_iki_adim_kalkani()]] - code - ai_asistan/blueprint.py
-- [[_tam_dogrulanmis_mi()]] - code - ai_asistan/blueprint.py
-- [[_widget_enjekte()]] - code - ai_asistan/blueprint.py
-- [[_yonetici_mi()]] - code - ai_asistan/blueprint.py
+- [[ImageDraw]] - code
+- [[ImageFont]] - code
+- [[Model koduna göre renk ve beden-barkod eşleştirmelerini döndürür]] - rationale - product_label.py
+- [[Pillow 10+ için multiline_textbbox, önceki sürümler için multiline_textsize.]] - rationale - product_label.py
+- [[QR kod görselini PNG olarak döndür     Parametre data (URL ile geçilir)]] - rationale - product_label.py
+- [[_multiline_size()]] - code - product_label.py
+- [[generate_product_label()]] - code - product_label.py
+- [[generate_qr()_1]] - code - product_label.py
+- [[get_product_details()_1]] - code - product_label.py
+- [[product_label.py]] - code - product_label.py
+- [[product_label.py Ürün barkod + bilgi etiketi üretimi (PNG olarak indirme).  Blue]] - rationale - product_label.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -27,10 +30,9 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 4 edges to [[_COMMUNITY_AI Asistanı (Headless Claude)]]
+- 1 edge to [[_COMMUNITY_Community 66]]
+- 1 edge to [[_COMMUNITY_Community 61]]
+- 1 edge to [[_COMMUNITY_Community 71]]
 
 ## Top bridge nodes
-- [[_tam_dogrulanmis_mi()]] - degree 4, connects to 1 community
-- [[_yonetici_mi()]] - degree 4, connects to 1 community
-- [[_iki_adim_kalkani()]] - degree 3, connects to 1 community
-- [[_widget_enjekte()]] - degree 3, connects to 1 community
+- [[product_label.py]] - degree 8, connects to 3 communities

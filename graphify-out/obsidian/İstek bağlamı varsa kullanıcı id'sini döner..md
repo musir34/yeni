@@ -1,12 +1,12 @@
 ---
 source_file: "order_audit.py"
 type: "rationale"
-community: "Sipariş Denetim Kaydı (Audit Log)"
+community: "Stok Fix Testleri & Yardımcılar"
 location: "L32"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Sipari_Denetim_Kayd_Audit_Log
+  - community/Stok_Fix_Testleri__Yardmclar
 ---
 
 # İstek bağlamı varsa kullanıcı id'sini döner.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_current_user_id()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Sipari_Denetim_Kayd_Audit_Log
+#graphify/rationale #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar

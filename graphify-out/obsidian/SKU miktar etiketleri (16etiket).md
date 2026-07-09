@@ -1,11 +1,11 @@
 ---
 source_file: "templates/barcode_quantity_label.html"
 type: "concept"
-community: "Community 105"
+community: "Community 112"
 tags:
   - graphify/concept
   - graphify/INFERRED
-  - community/Community_105
+  - community/Community_112
 ---
 
 # SKU miktar etiketleri (16/etiket)
@@ -13,4 +13,4 @@ tags:
 ## Connections
 - [[Otomatik etiket basımı]] - `semantically_similar_to` [INFERRED]
 
-#graphify/concept #graphify/INFERRED #community/Community_105
+#graphify/concept #graphify/INFERRED #community/Community_112

@@ -1,12 +1,12 @@
 ---
 source_file: "stock_report.py"
 type: "code"
-community: "Veri Modelleri (SQLAlchemy)"
+community: "Community 61"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Veri_Modelleri_SQLAlchemy
+  - community/Community_61
 ---
 
 # stock_report.py
@@ -17,4 +17,4 @@ tags:
 - [[models.py]] - `imports_from` [EXTRACTED]
 - [[stock_report()]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Veri_Modelleri_SQLAlchemy
+#graphify/code #graphify/EXTRACTED #community/Community_61

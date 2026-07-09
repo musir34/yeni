@@ -1,12 +1,12 @@
 ---
 source_file: "tests/test_bulk_pick.py"
 type: "code"
-community: "Sipariş Denetim Kaydı (Audit Log)"
+community: "Community 52"
 location: "L131"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Denetim_Kayd_Audit_Log
+  - community/Community_52
 ---
 
 # test_pick_endpoint_wrong_shelf_rejected()
@@ -17,4 +17,4 @@ tags:
 - [[_shelf_qty()]] - `calls` [EXTRACTED]
 - [[test_bulk_pick.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Denetim_Kayd_Audit_Log
+#graphify/code #graphify/EXTRACTED #community/Community_52

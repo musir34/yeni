@@ -1,24 +1,27 @@
 ---
 type: community
-cohesion: 0.28
-members: 9
+cohesion: 0.33
+members: 12
 ---
 
 # Community 80
 
-**Cohesion:** 0.28 - loosely connected
-**Members:** 9 nodes
+**Cohesion:** 0.33 - loosely connected
+**Members:** 12 nodes
 
 ## Members
-- [[.__repr__()_5]] - code - models.py
-- [[Excel dosyalarını işler amount, discount, commission günceller. JSON döner.]] - rationale - commission_update_routes.py
-- [[Excel tarihini datetime'a çevirir.]] - rationale - commission_update_routes.py
-- [[ExcelUpload]] - code - models.py
-- [[_parse_date()]] - code - commission_update_routes.py
-- [[api_upload_commission_excel()]] - code - commission_update_routes.py
-- [[commission_update_routes.py]] - code - commission_update_routes.py
-- [[download_excel()]] - code - commission_update_routes.py
-- [[update_commission_page()]] - code - commission_update_routes.py
+- [[._ensure_location_id()]] - code - stock_sync/adapters/shopify.py
+- [[._ensure_variant_map()]] - code - stock_sync/adapters/shopify.py
+- [[._get_headers()_4]] - code - stock_sync/adapters/shopify.py
+- [[._graphql()_2]] - code - stock_sync/adapters/shopify.py
+- [[._normalize_sku()]] - code - stock_sync/adapters/shopify.py
+- [[._set_inventory_bulk()]] - code - stock_sync/adapters/shopify.py
+- [[.get_platform_products()_4]] - code - stock_sync/adapters/shopify.py
+- [[.send_stock_batch()_4]] - code - stock_sync/adapters/shopify.py
+- [[Any_10]] - code
+- [[Shopify stock sync adapter.]] - rationale - stock_sync/adapters/shopify.py
+- [[ShopifyAdapter]] - code - stock_sync/adapters/shopify.py
+- [[Tek API çağrısında birden fazla item'ın stokunu güncelle.]] - rationale - stock_sync/adapters/shopify.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -28,13 +31,13 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 4 edges to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
-- 3 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
-- 2 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 1 edge to [[_COMMUNITY_Community 50]]
-- 1 edge to [[_COMMUNITY_Community 64]]
+- 7 edges to [[_COMMUNITY_Community 69]]
+- 5 edges to [[_COMMUNITY_Community 39]]
+- 1 edge to [[_COMMUNITY_Community 40]]
 
 ## Top bridge nodes
-- [[commission_update_routes.py]] - degree 14, connects to 5 communities
-- [[api_upload_commission_excel()]] - degree 5, connects to 1 community
-- [[ExcelUpload]] - degree 4, connects to 1 community
+- [[ShopifyAdapter]] - degree 16, connects to 3 communities
+- [[._graphql()_2]] - degree 8, connects to 1 community
+- [[.send_stock_batch()_4]] - degree 7, connects to 1 community
+- [[._set_inventory_bulk()]] - degree 5, connects to 1 community
+- [[._get_headers()_4]] - degree 3, connects to 1 community

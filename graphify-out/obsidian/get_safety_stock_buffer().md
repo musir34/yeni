@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/service.py"
 type: "code"
-community: "E-posta Bildirimleri"
+community: "Ana Kasa Defteri"
 location: "L25"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/E-posta_Bildirimleri
+  - community/Ana_Kasa_Defteri
 ---
 
 # get_safety_stock_buffer()
@@ -21,4 +21,4 @@ tags:
 - [[service.py]] - `contains` [EXTRACTED]
 - [[shopify_stock_service.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri
+#graphify/code #graphify/EXTRACTED #community/Ana_Kasa_Defteri

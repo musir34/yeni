@@ -1,17 +1,16 @@
 ---
 source_file: "trendyol_qna/CEVAP_KURALLARI.md"
 type: "concept"
-community: "Community 43"
+community: "Community 95"
 tags:
   - graphify/concept
-  - graphify/INFERRED
-  - community/Community_43
+  - graphify/EXTRACTED
+  - community/Community_95
 ---
 
 # Stock Questions rule (ground answer in live stock)
 
 ## Connections
-- [[Stock Sync Dashboard]] - `conceptually_related_to` [INFERRED]
 - [[Trendyol Q&A Answer Rules]] - `references` [EXTRACTED]
 
-#graphify/concept #graphify/INFERRED #community/Community_43
+#graphify/concept #graphify/EXTRACTED #community/Community_95

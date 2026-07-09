@@ -1,12 +1,12 @@
 ---
 source_file: "trendyol_api.py"
 type: "code"
-community: "Community 77"
+community: "Maliyet Fişi & Tedarikçi"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_77
+  - community/Maliyet_Fii__Tedariki
 ---
 
 # trendyol_api.py
@@ -23,4 +23,4 @@ tags:
 - [[qna_service.py]] - `imports_from` [EXTRACTED]
 - [[update_service.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_77
+#graphify/code #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki

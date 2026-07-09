@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/routes.py"
 type: "code"
-community: "Community 102"
+community: "Community 111"
 location: "L781"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_102
+  - community/Community_111
 ---
 
 # api_migrate_reserved_stock()
@@ -17,4 +17,4 @@ tags:
 - [[migrate_existing_reserved_stock()]] - `calls` [EXTRACTED]
 - [[routes.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_102
+#graphify/code #graphify/EXTRACTED #community/Community_111

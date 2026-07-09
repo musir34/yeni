@@ -1,12 +1,12 @@
 ---
 source_file: "siparisler.py"
 type: "code"
-community: "Community 38"
+community: "Hepsiburada Servisi"
 location: "L18"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Community_38
+  - community/Hepsiburada_Servisi
 ---
 
 # FakeDB
@@ -20,4 +20,4 @@ tags:
 - [[YeniSiparis]] - `uses` [INFERRED]
 - [[siparisler.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Community_38
+#graphify/code #graphify/INFERRED #community/Hepsiburada_Servisi

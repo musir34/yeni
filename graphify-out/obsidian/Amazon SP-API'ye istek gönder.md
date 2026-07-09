@@ -1,12 +1,12 @@
 ---
 source_file: "amazon/amazon_service.py"
 type: "rationale"
-community: "Community 78"
+community: "Community 85"
 location: "L87"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_78
+  - community/Community_85
 ---
 
 # Amazon SP-API'ye istek gönder
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[._make_api_request()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_78
+#graphify/rationale #graphify/EXTRACTED #community/Community_85

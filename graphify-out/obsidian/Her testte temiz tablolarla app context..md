@@ -1,12 +1,12 @@
 ---
 source_file: "tests/test_stock_ledger.py"
 type: "rationale"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "E-posta Bildirimleri"
 location: "L73"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/E-posta_Bildirimleri
 ---
 
 # Her testte temiz tablolarla app context.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_ctx_and_clean()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/rationale #graphify/EXTRACTED #community/E-posta_Bildirimleri

@@ -1,12 +1,12 @@
 ---
 source_file: "login_logout.py"
 type: "code"
-community: "Community 82"
+community: "Community 91"
 location: "L154"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_82
+  - community/Community_91
 ---
 
 # login_required()
@@ -18,4 +18,4 @@ tags:
 - [[komisyon_tarife.py]] - `imports` [EXTRACTED]
 - [[login_logout.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_82
+#graphify/code #graphify/EXTRACTED #community/Community_91

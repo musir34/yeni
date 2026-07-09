@@ -1,12 +1,12 @@
 ---
 source_file: "hepsiburada/hepsiburada_service.py"
 type: "rationale"
-community: "Hepsiburada Servisi"
+community: "Anasayfa Özet & Sayımlar"
 location: "L179"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Hepsiburada_Servisi
+  - community/Anasayfa_zet__Saymlar
 ---
 
 # Kalemleri paketle.         line_item_ids: paketlenecek kalem ID'leri listesi
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[.package_items()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Hepsiburada_Servisi
+#graphify/rationale #graphify/EXTRACTED #community/Anasayfa_zet__Saymlar

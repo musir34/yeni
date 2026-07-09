@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/adapters/amazon.py"
 type: "rationale"
-community: "Community 46"
+community: "Community 49"
 location: "L258"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_46
+  - community/Community_49
 ---
 
 # Feed işleme durumunu kontrol et
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[.get_feed_status()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_46
+#graphify/rationale #graphify/EXTRACTED #community/Community_49

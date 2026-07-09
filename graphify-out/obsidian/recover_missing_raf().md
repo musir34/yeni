@@ -1,12 +1,12 @@
 ---
 source_file: "raf_recovery.py"
 type: "code"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Değişim / İade Talepleri"
 location: "L22"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Deiim_/_ade_Talepleri
 ---
 
 # recover_missing_raf()
@@ -23,4 +23,4 @@ tags:
 - [[order_service.py]] - `imports` [EXTRACTED]
 - [[raf_recovery.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/code #graphify/EXTRACTED #community/Deiim_/_ade_Talepleri

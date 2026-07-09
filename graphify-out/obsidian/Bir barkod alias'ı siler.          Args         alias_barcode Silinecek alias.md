@@ -1,12 +1,12 @@
 ---
 source_file: "barcode_alias_helper.py"
 type: "rationale"
-community: "Barkod Alias Yardımcıları"
+community: "Community 53"
 location: "L269"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Barkod_Alias_Yardmclar
+  - community/Community_53
 ---
 
 # Bir barkod alias'ı siler.          Args:         alias_barcode: Silinecek alias
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[remove_alias()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Barkod_Alias_Yardmclar
+#graphify/rationale #graphify/EXTRACTED #community/Community_53

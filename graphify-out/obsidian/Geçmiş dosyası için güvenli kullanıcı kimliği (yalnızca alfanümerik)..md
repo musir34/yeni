@@ -1,12 +1,12 @@
 ---
 source_file: "ai_asistan/blueprint.py"
 type: "rationale"
-community: "AI Asistanı (Headless Claude)"
+community: "Raf Sistemi & Etiket"
 location: "L87"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/AI_Asistan_Headless_Claude
+  - community/Raf_Sistemi__Etiket
 ---
 
 # Geçmiş dosyası için güvenli kullanıcı kimliği (yalnızca alfanümerik).
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_kullanici_id()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/AI_Asistan_Headless_Claude
+#graphify/rationale #graphify/EXTRACTED #community/Raf_Sistemi__Etiket

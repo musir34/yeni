@@ -1,12 +1,12 @@
 ---
 source_file: "home.py"
 type: "code"
-community: "Anasayfa Özet & Sayımlar"
+community: "Kasa & Gelir-Gider"
 location: "L170"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Anasayfa_zet__Saymlar
+  - community/Kasa__Gelir-Gider
 ---
 
 # _json_parse()
@@ -15,4 +15,4 @@ tags:
 - [[_iter_items_once()_1]] - `calls` [EXTRACTED]
 - [[home.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Anasayfa_zet__Saymlar
+#graphify/code #graphify/EXTRACTED #community/Kasa__Gelir-Gider

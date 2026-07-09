@@ -1,12 +1,12 @@
 ---
 source_file: "ai_asistan/blueprint.py"
 type: "code"
-community: "AI Asistanı (Headless Claude)"
+community: "Raf Sistemi & Etiket"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/AI_Asistan_Headless_Claude
+  - community/Raf_Sistemi__Etiket
 ---
 
 # blueprint.py
@@ -32,4 +32,4 @@ tags:
 - [[sor()]] - `contains` [EXTRACTED]
 - [[temizle()]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/AI_Asistan_Headless_Claude
+#graphify/code #graphify/EXTRACTED #community/Raf_Sistemi__Etiket

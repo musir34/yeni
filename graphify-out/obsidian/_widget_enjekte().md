@@ -1,12 +1,12 @@
 ---
 source_file: "ai_asistan/blueprint.py"
 type: "code"
-community: "Community 83"
+community: "Community 89"
 location: "L306"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_83
+  - community/Community_89
 ---
 
 # _widget_enjekte()
@@ -16,4 +16,4 @@ tags:
 - [[_yonetici_mi()]] - `calls` [EXTRACTED]
 - [[blueprint.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_83
+#graphify/code #graphify/EXTRACTED #community/Community_89

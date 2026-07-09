@@ -1,12 +1,12 @@
 ---
 source_file: "order_audit.py"
 type: "code"
-community: "Sipariş Denetim Kaydı (Audit Log)"
+community: "Stok Fix Testleri & Yardımcılar"
 location: "L257"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Denetim_Kayd_Audit_Log
+  - community/Stok_Fix_Testleri__Yardmclar
 ---
 
 # _track_raf_change()
@@ -16,4 +16,4 @@ tags:
 - [[install_listeners()]] - `indirect_call` [INFERRED]
 - [[order_audit.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Denetim_Kayd_Audit_Log
+#graphify/code #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar

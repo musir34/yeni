@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "E-posta Bildirimleri"
 location: "L700"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/E-posta_Bildirimleri
 ---
 
 # OrderCancelled
@@ -37,4 +37,4 @@ tags:
 - [[test_stock_ledger.py]] - `imports` [EXTRACTED]
 - [[trace_orders_phantom.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri

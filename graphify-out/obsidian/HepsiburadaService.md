@@ -1,12 +1,12 @@
 ---
 source_file: "hepsiburada/hepsiburada_service.py"
 type: "code"
-community: "Hepsiburada Servisi"
+community: "Anasayfa Özet & Sayımlar"
 location: "L17"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Hepsiburada_Servisi
+  - community/Anasayfa_zet__Saymlar
 ---
 
 # HepsiburadaService
@@ -37,4 +37,4 @@ tags:
 - [[hepsiburada_routes.py]] - `imports` [EXTRACTED]
 - [[hepsiburada_service.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Hepsiburada_Servisi
+#graphify/code #graphify/EXTRACTED #community/Anasayfa_zet__Saymlar

@@ -1,12 +1,12 @@
 ---
 source_file: "static/js/analysis_functions.js"
 type: "code"
-community: "Community 69"
+community: "Community 79"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_69
+  - community/Community_79
 ---
 
 # analysis_functions.js
@@ -24,4 +24,4 @@ tags:
 - [[groupProductsByCategory()]] - `contains` [EXTRACTED]
 - [[predictSales()]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_69
+#graphify/code #graphify/EXTRACTED #community/Community_79

@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Maliyet Fişi & Tedarikçi"
+community: "Veri Modelleri (SQLAlchemy)"
 location: "L467"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Maliyet_Fii__Tedariki
+  - community/Veri_Modelleri_SQLAlchemy
 ---
 
 # SiparisFisi
@@ -17,4 +17,4 @@ tags:
 - [[siparis_fisi_olustur()]] - `calls` [EXTRACTED]
 - [[tedarik_olustur_from_panel()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki
+#graphify/code #graphify/EXTRACTED #community/Veri_Modelleri_SQLAlchemy

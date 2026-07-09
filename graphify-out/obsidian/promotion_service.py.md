@@ -1,12 +1,12 @@
 ---
 source_file: "promotion_service.py"
 type: "code"
-community: "E-posta Bildirimleri"
+community: "Sipariş Yaşam Döngüsü & Arşiv"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/E-posta_Bildirimleri
+  - community/Sipari_Yaam_Dngs__Ariv
 ---
 
 # promotion_service.py
@@ -29,4 +29,4 @@ tags:
 - [[promote_eligible_orders()]] - `contains` [EXTRACTED]
 - [[update_order_status_to_picking()]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri
+#graphify/code #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv

@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Üretim Önerisi & Satış Tahmini"
+community: "Agent API & Sipariş Sorguları"
 location: "L156"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/retim_nerisi__Sat_Tahmini
+  - community/Agent_API__Sipari_Sorgular
 ---
 
 # UretimOneriWatch
@@ -16,4 +16,4 @@ tags:
 - [[toggle_watch()]] - `calls` [EXTRACTED]
 - [[uretim_oneri.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/retim_nerisi__Sat_Tahmini
+#graphify/code #graphify/EXTRACTED #community/Agent_API__Sipari_Sorgular

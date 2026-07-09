@@ -10,9 +10,9 @@ members: 3
 **Members:** 3 nodes
 
 ## Members
-- [[add_stok_yok_mail_at.py]] - code - migrations/versions/add_stok_yok_mail_at.py
-- [[downgrade()_6]] - code - migrations/versions/add_stok_yok_mail_at.py
-- [[upgrade()_6]] - code - migrations/versions/add_stok_yok_mail_at.py
+- [[.__init__()_3]] - code - models.py
+- [[ProductArchive]] - code - models.py
+- [[archive_product()]] - code - get_products.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -20,3 +20,13 @@ members: 3
 TABLE source_file, type FROM #community/Community_113
 SORT file.name ASC
 ```
+
+## Connections to other communities
+- 2 edges to [[_COMMUNITY_Hepsiburada Route Katmanı]]
+- 1 edge to [[_COMMUNITY_Stok Senkron API]]
+- 1 edge to [[_COMMUNITY_Community 42]]
+- 1 edge to [[_COMMUNITY_Community 66]]
+
+## Top bridge nodes
+- [[ProductArchive]] - degree 5, connects to 3 communities
+- [[archive_product()]] - degree 3, connects to 2 communities

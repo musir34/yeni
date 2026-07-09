@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/health_monitor.py"
 type: "code"
-community: "E-posta Bildirimleri"
+community: "Community 70"
 location: "L27"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/E-posta_Bildirimleri
+  - community/Community_70
 ---
 
 # check_sync_staleness()
@@ -22,4 +22,4 @@ tags:
 - [[notify()]] - `calls` [EXTRACTED]
 - [[run_all_checks()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri
+#graphify/code #graphify/EXTRACTED #community/Community_70

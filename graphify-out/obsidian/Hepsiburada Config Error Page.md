@@ -1,11 +1,11 @@
 ---
 source_file: "templates/hepsiburada/config_error.html"
 type: "concept"
-community: "Community 45"
+community: "Community 47"
 tags:
   - graphify/concept
   - graphify/INFERRED
-  - community/Community_45
+  - community/Community_47
 ---
 
 # Hepsiburada Config Error Page
@@ -13,4 +13,4 @@ tags:
 ## Connections
 - [[Hepsiburada Ayarlar (Settings)]] - `references` [INFERRED]
 
-#graphify/concept #graphify/INFERRED #community/Community_45
+#graphify/concept #graphify/INFERRED #community/Community_47

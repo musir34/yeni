@@ -1,12 +1,12 @@
 ---
 source_file: "amazon/amazon_routes.py"
 type: "rationale"
-community: "Community 47"
+community: "Community 50"
 location: "L272"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_47
+  - community/Community_50
 ---
 
 # Amazon'dan tüm ürünleri çek ve cache'le
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[api_fetch_products()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_47
+#graphify/rationale #graphify/EXTRACTED #community/Community_50

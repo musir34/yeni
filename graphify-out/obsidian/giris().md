@@ -1,12 +1,12 @@
 ---
 source_file: "rapor_gir.py"
 type: "code"
-community: "Community 59"
+community: "Community 90"
 location: "L14"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Community_59
+  - community/Community_90
 ---
 
 # giris()
@@ -16,4 +16,4 @@ tags:
 - [[User]] - `indirect_call` [INFERRED]
 - [[rapor_gir.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Community_59
+#graphify/code #graphify/INFERRED #community/Community_90

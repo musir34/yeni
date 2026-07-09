@@ -10,9 +10,9 @@ members: 3
 **Members:** 3 nodes
 
 ## Members
-- [[create_woo_orders_table.py]] - code - migrations/versions/create_woo_orders_table.py
-- [[downgrade()_7]] - code - migrations/versions/create_woo_orders_table.py
-- [[upgrade()_7]] - code - migrations/versions/create_woo_orders_table.py
+- [[add_atanan_raf_to_order_created.py]] - code - migrations/versions/add_atanan_raf_to_order_created.py
+- [[downgrade()]] - code - migrations/versions/add_atanan_raf_to_order_created.py
+- [[upgrade()]] - code - migrations/versions/add_atanan_raf_to_order_created.py
 
 ## Live Query (requires Dataview plugin)
 

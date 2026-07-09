@@ -10,9 +10,9 @@ members: 3
 **Members:** 3 nodes
 
 ## Members
-- [[add_stock_push_log.py]] - code - migrations/versions/add_stock_push_log.py
-- [[downgrade()_5]] - code - migrations/versions/add_stock_push_log.py
-- [[upgrade()_5]] - code - migrations/versions/add_stock_push_log.py
+- [[apiprint_labels endpoint]] - concept - templates/enhanced_product_label.html
+- [[Otomatik etiket basımı]] - concept - templates/enhanced_product_label.html
+- [[SKU miktar etiketleri (16etiket)]] - concept - templates/barcode_quantity_label.html
 
 ## Live Query (requires Dataview plugin)
 

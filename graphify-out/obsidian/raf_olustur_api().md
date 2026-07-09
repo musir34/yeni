@@ -1,12 +1,12 @@
 ---
 source_file: "raf_sistemi.py"
 type: "code"
-community: "Raf Sistemi & Etiket"
+community: "Barkod Alias Yardımcıları"
 location: "L260"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Raf_Sistemi__Etiket
+  - community/Barkod_Alias_Yardmclar
 ---
 
 # raf_olustur_api()
@@ -17,4 +17,4 @@ tags:
 - [[qrcode_with_text()]] - `calls` [EXTRACTED]
 - [[raf_sistemi.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Raf_Sistemi__Etiket
+#graphify/code #graphify/EXTRACTED #community/Barkod_Alias_Yardmclar

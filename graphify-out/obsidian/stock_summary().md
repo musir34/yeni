@@ -1,12 +1,12 @@
 ---
 source_file: "agent_api.py"
 type: "code"
-community: "Community 38"
+community: "Hepsiburada Servisi"
 location: "L494"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Community_38
+  - community/Hepsiburada_Servisi
 ---
 
 # stock_summary()
@@ -16,4 +16,4 @@ tags:
 - [[CentralStock]] - `indirect_call` [INFERRED]
 - [[agent_api.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Community_38
+#graphify/code #graphify/INFERRED #community/Hepsiburada_Servisi

@@ -1,12 +1,12 @@
 ---
 source_file: "barcode_alias_routes.py"
 type: "code"
-community: "Barkod Alias Yardımcıları"
+community: "Community 53"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Barkod_Alias_Yardmclar
+  - community/Community_53
 ---
 
 # barcode_alias_routes.py
@@ -30,4 +30,4 @@ tags:
 - [[remove_alias()]] - `imports` [EXTRACTED]
 - [[user_logs.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Barkod_Alias_Yardmclar
+#graphify/code #graphify/EXTRACTED #community/Community_53

@@ -47,19 +47,20 @@ SORT file.name ASC
 
 ## Connections to other communities
 - 11 edges to [[_COMMUNITY_Community 36]]
-- 3 edges to [[_COMMUNITY_Community 75]]
-- 3 edges to [[_COMMUNITY_Community 65]]
-- 2 edges to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
-- 2 edges to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
-- 2 edges to [[_COMMUNITY_Community 76]]
-- 2 edges to [[_COMMUNITY_E-posta Bildirimleri]]
-- 2 edges to [[_COMMUNITY_Sipariş Denetim Kaydı (Audit Log)]]
-- 1 edge to [[_COMMUNITY_Community 38]]
-- 1 edge to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 1 edge to [[_COMMUNITY_Stok Hareket Defteri (Ledger)]]
+- 3 edges to [[_COMMUNITY_Community 77]]
+- 3 edges to [[_COMMUNITY_Community 69]]
+- 2 edges to [[_COMMUNITY_Değişim  İade Talepleri]]
+- 2 edges to [[_COMMUNITY_Community 84]]
+- 2 edges to [[_COMMUNITY_Ana Kasa Defteri]]
+- 2 edges to [[_COMMUNITY_Community 52]]
+- 1 edge to [[_COMMUNITY_Community 76]]
+- 1 edge to [[_COMMUNITY_E-posta Bildirimleri]]
+- 1 edge to [[_COMMUNITY_Trendyol Sipariş Çekme & Komisyon]]
+- 1 edge to [[_COMMUNITY_Community 61]]
+- 1 edge to [[_COMMUNITY_Canlı Panel (SSE)]]
 
 ## Top bridge nodes
-- [[StockSyncService]] - degree 34, connects to 9 communities
+- [[StockSyncService]] - degree 34, connects to 10 communities
 - [[._get_all_stocks()]] - degree 7, connects to 4 communities
 - [[._get_stocks_by_barcodes()]] - degree 6, connects to 3 communities
 - [[.get_reserved_barcodes()]] - degree 8, connects to 2 communities

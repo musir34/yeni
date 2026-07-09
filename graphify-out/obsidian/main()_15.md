@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/clear_atanan_raf.py"
 type: "code"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "Trendyol Sipariş Çekme & Komisyon"
 location: "L22"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/Trendyol_Sipari_ekme__Komisyon
 ---
 
 # main()
@@ -16,4 +16,4 @@ tags:
 - [[OrderHazirlaniyor]] - `indirect_call` [INFERRED]
 - [[clear_atanan_raf.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/code #graphify/INFERRED #community/Trendyol_Sipari_ekme__Komisyon

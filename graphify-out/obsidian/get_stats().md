@@ -1,12 +1,12 @@
 ---
 source_file: "shopify_site/shopify_routes.py"
 type: "code"
-community: "Community 101"
+community: "Community 110"
 location: "L408"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_101
+  - community/Community_110
 ---
 
 # get_stats()
@@ -16,4 +16,4 @@ tags:
 - [[shopify_routes.py]] - `contains` [EXTRACTED]
 - [[stock_sync_dashboard()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_101
+#graphify/code #graphify/EXTRACTED #community/Community_110

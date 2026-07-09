@@ -1,12 +1,12 @@
 ---
 source_file: "archive.py"
 type: "code"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "Community 41"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/Community_41
 ---
 
 # archive.py
@@ -50,4 +50,4 @@ tags:
 - [[update_service.py]] - `imports_from` [EXTRACTED]
 - [[user_logs.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/code #graphify/EXTRACTED #community/Community_41

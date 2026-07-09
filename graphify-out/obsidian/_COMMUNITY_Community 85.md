@@ -1,23 +1,25 @@
 ---
 type: community
-cohesion: 0.36
-members: 8
+cohesion: 0.27
+members: 10
 ---
 
 # Community 85
 
-**Cohesion:** 0.36 - loosely connected
-**Members:** 8 nodes
+**Cohesion:** 0.27 - loosely connected
+**Members:** 10 nodes
 
 ## Members
-- [[CentralStock tablosundaki çift kayıtları düzelt]] - rationale - scripts/fix_duplicate_barcodes.py
-- [[RafUrun tablosundaki çift kayıtları düzelt]] - rationale - scripts/fix_duplicate_barcodes.py
-- [[SyncDetail tablosundaki çift kayıtları düzelt]] - rationale - scripts/fix_duplicate_barcodes.py
-- [[fix_central_stock_duplicates()]] - code - scripts/fix_duplicate_barcodes.py
-- [[fix_duplicate_barcodes.py]] - code - scripts/fix_duplicate_barcodes.py
-- [[fix_raf_urun_duplicates()]] - code - scripts/fix_duplicate_barcodes.py
-- [[fix_sync_detail_duplicates()]] - code - scripts/fix_duplicate_barcodes.py
-- [[main()_20]] - code - scripts/fix_duplicate_barcodes.py
+- [[.__init__()]] - code - amazon/amazon_service.py
+- [[._get_access_token()]] - code - amazon/amazon_service.py
+- [[._is_configured()]] - code - amazon/amazon_service.py
+- [[._make_api_request()]] - code - amazon/amazon_service.py
+- [[Amazon SP-API Servis Sınıfı]] - rationale - amazon/amazon_service.py
+- [[Amazon SP-API'ye istek gönder]] - rationale - amazon/amazon_service.py
+- [[Amazon servisini başlat]] - rationale - amazon/amazon_service.py
+- [[AmazonService]] - code - amazon/amazon_service.py
+- [[LWA access token al (cache'den veya yeni)]] - rationale - amazon/amazon_service.py
+- [[Tüm credentials var mı]] - rationale - amazon/amazon_service.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -27,11 +29,8 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 2 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 1 edge to [[_COMMUNITY_Uygulama Çekirdeği & Zamanlı İşler]]
-- 1 edge to [[_COMMUNITY_Community 38]]
-- 1 edge to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
-- 1 edge to [[_COMMUNITY_Community 75]]
+- 2 edges to [[_COMMUNITY_Community 82]]
+- 1 edge to [[_COMMUNITY_Community 50]]
 
 ## Top bridge nodes
-- [[fix_duplicate_barcodes.py]] - degree 10, connects to 5 communities
+- [[AmazonService]] - degree 8, connects to 2 communities

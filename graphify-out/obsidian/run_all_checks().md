@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/health_monitor.py"
 type: "code"
-community: "E-posta Bildirimleri"
+community: "Community 70"
 location: "L165"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/E-posta_Bildirimleri
+  - community/Community_70
 ---
 
 # run_all_checks()
@@ -22,4 +22,4 @@ tags:
 - [[schedule_jobs()]] - `calls` [EXTRACTED]
 - [[test_health_monitor.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/E-posta_Bildirimleri
+#graphify/code #graphify/EXTRACTED #community/Community_70

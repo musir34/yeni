@@ -1,12 +1,12 @@
 ---
 source_file: "siparis_fisi.py"
 type: "rationale"
-community: "Maliyet Fişi & Tedarikçi"
+community: "Veri Modelleri (SQLAlchemy)"
 location: "L1303"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Maliyet_Fii__Tedariki
+  - community/Veri_Modelleri_SQLAlchemy
 ---
 
 # Bir modelin tüm maliyet değerlerini getir (kalem + direkt).
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[api_maliyet_model_get()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki
+#graphify/rationale #graphify/EXTRACTED #community/Veri_Modelleri_SQLAlchemy

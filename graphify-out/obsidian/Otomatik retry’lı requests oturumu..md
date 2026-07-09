@@ -1,12 +1,12 @@
 ---
 source_file: "iade_islemleri.py"
 type: "rationale"
-community: "Community 44"
+community: "Maliyet Fişi & Tedarikçi"
 location: "L48"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_44
+  - community/Maliyet_Fii__Tedariki
 ---
 
 # Otomatik retry’lı requests oturumu.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[get_requests_session()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_44
+#graphify/rationale #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki

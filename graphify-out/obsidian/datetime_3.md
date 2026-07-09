@@ -1,11 +1,11 @@
 ---
 source_file: ""
 type: "code"
-community: "Üretim Önerisi & Satış Tahmini"
+community: "Agent API & Sipariş Sorguları"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/retim_nerisi__Sat_Tahmini
+  - community/Agent_API__Sipari_Sorgular
 ---
 
 # datetime
@@ -14,4 +14,4 @@ tags:
 - [[update_daily_from_event()]] - `references` [EXTRACTED]
 - [[uretim_oneri.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/retim_nerisi__Sat_Tahmini
+#graphify/code #graphify/EXTRACTED #community/Agent_API__Sipari_Sorgular

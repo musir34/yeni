@@ -1,12 +1,12 @@
 ---
 source_file: "stock_management.py"
 type: "code"
-community: "Raf Sistemi & Etiket"
+community: "Barkod Alias Yardımcıları"
 location: "L115"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Raf_Sistemi__Etiket
+  - community/Barkod_Alias_Yardmclar
 ---
 
 # sync_multiple_barcodes()
@@ -21,4 +21,4 @@ tags:
 - [[sync_central_stock()]] - `calls` [EXTRACTED]
 - [[toplu_raf_sil()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Raf_Sistemi__Etiket
+#graphify/code #graphify/EXTRACTED #community/Barkod_Alias_Yardmclar

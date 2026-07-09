@@ -1,11 +1,11 @@
 ---
 source_file: "templates/order_labels_print.html"
 type: "concept"
-community: "Community 88"
+community: "Community 136"
 tags:
   - graphify/concept
   - graphify/INFERRED
-  - community/Community_88
+  - community/Community_136
 ---
 
 # Sipariş Etiketleri Toplu Yazdırma
@@ -13,4 +13,4 @@ tags:
 ## Connections
 - [[Kargo Etiketi Yazdırma]] - `semantically_similar_to` [INFERRED]
 
-#graphify/concept #graphify/INFERRED #community/Community_88
+#graphify/concept #graphify/INFERRED #community/Community_136

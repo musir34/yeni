@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Maliyet Fişi & Tedarikçi"
+community: "Community 58"
 location: "L922"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Maliyet_Fii__Tedariki
+  - community/Community_58
 ---
 
 # MaliyetKategori
@@ -18,4 +18,4 @@ tags:
 - [[seed_maliyet_sablonu()]] - `calls` [EXTRACTED]
 - [[siparis_fisi.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki
+#graphify/code #graphify/EXTRACTED #community/Community_58

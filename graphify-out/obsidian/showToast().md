@@ -1,12 +1,12 @@
 ---
 source_file: "static/js/app-shell.js"
 type: "code"
-community: "Community 56"
+community: "Community 59"
 location: "L49"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_56
+  - community/Community_59
 ---
 
 # showToast()
@@ -17,4 +17,4 @@ tags:
 - [[app-shell.js]] - `contains` [EXTRACTED]
 - [[toggleDarkMode()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_56
+#graphify/code #graphify/EXTRACTED #community/Community_59

@@ -1,12 +1,12 @@
 ---
 source_file: "trendyol_qna/qna_ai.py"
 type: "code"
-community: "Community 58"
+community: "Community 62"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_58
+  - community/Community_62
 ---
 
 # qna_ai.py
@@ -24,4 +24,4 @@ tags:
 - [[load_vault_notes()]] - `imports` [EXTRACTED]
 - [[stock_context()]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_58
+#graphify/code #graphify/EXTRACTED #community/Community_62

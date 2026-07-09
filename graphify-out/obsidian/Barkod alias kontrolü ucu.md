@@ -1,11 +1,11 @@
 ---
 source_file: "AGENT_API_DOCS.md"
 type: "concept"
-community: "Community 52"
+community: "Community 75"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_52
+  - community/Community_75
 ---
 
 # Barkod alias kontrolü ucu
@@ -15,4 +15,4 @@ tags:
 - [[Etiket yazı tipi karşılaştırma (50x35 rulo)]] - `conceptually_related_to` [AMBIGUOUS]
 - [[OpenClaw Agent API (REST)]] - `references` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_52
+#graphify/concept #graphify/EXTRACTED #community/Community_75

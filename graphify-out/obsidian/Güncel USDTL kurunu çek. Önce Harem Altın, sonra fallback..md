@@ -1,12 +1,12 @@
 ---
 source_file: "profit.py"
 type: "rationale"
-community: "Ana Kasa Defteri"
+community: "Community 55"
 location: "L49"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Ana_Kasa_Defteri
+  - community/Community_55
 ---
 
 # Güncel USD/TL kurunu çek. Önce Harem Altın, sonra fallback.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_fetch_usd_try()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Ana_Kasa_Defteri
+#graphify/rationale #graphify/EXTRACTED #community/Community_55

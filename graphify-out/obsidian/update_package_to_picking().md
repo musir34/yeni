@@ -1,12 +1,12 @@
 ---
 source_file: "update_service.py"
 type: "code"
-community: "Trendyol Sipariş Çekme & Komisyon"
+community: "Silme & Toplu Yazdırma İşlemleri"
 location: "L517"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Trendyol_Sipari_ekme__Komisyon
+  - community/Silme__Toplu_Yazdrma_lemleri
 ---
 
 # update_package_to_picking()
@@ -16,4 +16,4 @@ tags:
 - [[order_service.py]] - `imports` [EXTRACTED]
 - [[update_service.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Trendyol_Sipari_ekme__Komisyon
+#graphify/code #graphify/EXTRACTED #community/Silme__Toplu_Yazdrma_lemleri

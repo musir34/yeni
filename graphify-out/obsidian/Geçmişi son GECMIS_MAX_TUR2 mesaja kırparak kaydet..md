@@ -1,12 +1,12 @@
 ---
 source_file: "ai_asistan/blueprint.py"
 type: "rationale"
-community: "AI Asistanı (Headless Claude)"
+community: "Raf Sistemi & Etiket"
 location: "L108"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/AI_Asistan_Headless_Claude
+  - community/Raf_Sistemi__Etiket
 ---
 
 # Geçmişi son GECMIS_MAX_TUR*2 mesaja kırparak kaydet.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_gecmis_yaz()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/AI_Asistan_Headless_Claude
+#graphify/rationale #graphify/EXTRACTED #community/Raf_Sistemi__Etiket

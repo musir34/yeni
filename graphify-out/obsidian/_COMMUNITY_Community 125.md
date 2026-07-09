@@ -10,8 +10,8 @@ members: 2
 **Members:** 2 nodes
 
 ## Members
-- [[Bir modele ve renge ait tüm varyantları sil]] - rationale - get_products.py
-- [[delete_product_variants()]] - code - get_products.py
+- [[api_unmatch_product()]] - code - amazon/amazon_routes.py
+- [[Ürün eşleştirmesini kaldır]] - rationale - amazon/amazon_routes.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -21,8 +21,7 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 1 edge to [[_COMMUNITY_Ürün Çekme & Görsel İndirme]]
-- 1 edge to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
+- 1 edge to [[_COMMUNITY_Community 50]]
 
 ## Top bridge nodes
-- [[delete_product_variants()]] - degree 3, connects to 2 communities
+- [[api_unmatch_product()]] - degree 2, connects to 1 community

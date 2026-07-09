@@ -1,12 +1,12 @@
 ---
 source_file: "order_audit.py"
 type: "code"
-community: "Sipariş Denetim Kaydı (Audit Log)"
+community: "Stok Fix Testleri & Yardımcılar"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Denetim_Kayd_Audit_Log
+  - community/Stok_Fix_Testleri__Yardmclar
 ---
 
 # order_audit.py
@@ -31,4 +31,4 @@ tags:
 - [[log_many()]] - `contains` [EXTRACTED]
 - [[models.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Denetim_Kayd_Audit_Log
+#graphify/code #graphify/EXTRACTED #community/Stok_Fix_Testleri__Yardmclar

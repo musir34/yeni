@@ -1,12 +1,12 @@
 ---
 source_file: "kasa.py"
 type: "code"
-community: "Kasa & Gelir-Gider"
+community: "Ürün Çekme & Görsel İndirme"
 location: "L116"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Kasa__Gelir-Gider
+  - community/rn_ekme__Grsel_ndirme
 ---
 
 # setup_kasa_filters()
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[kasa.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Kasa__Gelir-Gider
+#graphify/code #graphify/EXTRACTED #community/rn_ekme__Grsel_ndirme

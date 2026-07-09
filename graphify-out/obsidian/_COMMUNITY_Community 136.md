@@ -1,16 +1,17 @@
 ---
 type: community
 cohesion: 1.00
-members: 1
+members: 2
 ---
 
 # Community 136
 
 **Cohesion:** 1.00 - tightly connected
-**Members:** 1 nodes
+**Members:** 2 nodes
 
 ## Members
-- [[AI Asistanı Floating Chat Widget]] - concept - templates/includes/ai_widget.html
+- [[Kargo Etiketi Yazdırma]] - concept - templates/order_label.html
+- [[Sipariş Etiketleri Toplu Yazdırma]] - concept - templates/order_labels_print.html
 
 ## Live Query (requires Dataview plugin)
 

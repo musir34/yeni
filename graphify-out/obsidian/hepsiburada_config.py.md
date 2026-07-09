@@ -1,12 +1,12 @@
 ---
 source_file: "hepsiburada/hepsiburada_config.py"
 type: "code"
-community: "Community 66"
+community: "Community 72"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_66
+  - community/Community_72
 ---
 
 # hepsiburada_config.py
@@ -18,4 +18,4 @@ tags:
 - [[hepsiburada_routes.py]] - `imports_from` [EXTRACTED]
 - [[hepsiburada_service.py]] - `imports_from` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_66
+#graphify/code #graphify/EXTRACTED #community/Community_72

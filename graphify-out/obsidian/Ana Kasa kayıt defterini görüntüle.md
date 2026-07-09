@@ -1,12 +1,12 @@
 ---
 source_file: "kasa.py"
 type: "rationale"
-community: "Ana Kasa Defteri"
+community: "Community 54"
 location: "L1443"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Ana_Kasa_Defteri
+  - community/Community_54
 ---
 
 # Ana Kasa kayıt defterini görüntüle
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[ana_kasa_kayit_defteri()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Ana_Kasa_Defteri
+#graphify/rationale #graphify/EXTRACTED #community/Community_54

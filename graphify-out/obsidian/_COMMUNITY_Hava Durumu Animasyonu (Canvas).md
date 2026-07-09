@@ -46,7 +46,7 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 1 edge to [[_COMMUNITY_Ana Kasa Defteri]]
+- 1 edge to [[_COMMUNITY_E-posta Bildirimleri]]
 
 ## Top bridge nodes
 - [[drawRain()]] - degree 4, connects to 1 community

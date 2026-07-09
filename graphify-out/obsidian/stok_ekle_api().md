@@ -1,12 +1,12 @@
 ---
 source_file: "raf_sistemi.py"
 type: "code"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Değişim / İade Talepleri"
 location: "L439"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Deiim_/_ade_Talepleri
 ---
 
 # stok_ekle_api()
@@ -18,4 +18,4 @@ tags:
 - [[raf_sistemi.py]] - `contains` [EXTRACTED]
 - [[sync_multiple_barcodes()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/code #graphify/EXTRACTED #community/Deiim_/_ade_Talepleri

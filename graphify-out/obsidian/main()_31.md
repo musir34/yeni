@@ -1,12 +1,12 @@
 ---
 source_file: "scripts/verify_no_phantom_ledger.py"
 type: "code"
-community: "Community 50"
+community: "E-posta Bildirimleri"
 location: "L52"
 tags:
   - graphify/code
   - graphify/INFERRED
-  - community/Community_50
+  - community/E-posta_Bildirimleri
 ---
 
 # main()
@@ -20,4 +20,4 @@ tags:
 - [[emit()]] - `calls` [INFERRED]
 - [[verify_no_phantom_ledger.py]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/INFERRED #community/Community_50
+#graphify/code #graphify/INFERRED #community/E-posta_Bildirimleri

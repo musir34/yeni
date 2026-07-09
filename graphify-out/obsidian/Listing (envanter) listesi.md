@@ -1,12 +1,12 @@
 ---
 source_file: "hepsiburada/hepsiburada_routes.py"
 type: "rationale"
-community: "Hepsiburada Route Katmanı"
+community: "Manuel Sipariş Oluşturma"
 location: "L104"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Hepsiburada_Route_Katman
+  - community/Manuel_Sipari_Oluturma
 ---
 
 # Listing (envanter) listesi
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[listings()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Hepsiburada_Route_Katman
+#graphify/rationale #graphify/EXTRACTED #community/Manuel_Sipari_Oluturma

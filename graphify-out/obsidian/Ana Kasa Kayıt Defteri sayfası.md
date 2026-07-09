@@ -1,17 +1,17 @@
 ---
 source_file: "templates/ana_kasa_kayit_defteri.html"
-type: "concept"
-community: "Community 52"
+type: "document"
+community: "AI Asistanı (Headless Claude)"
 tags:
-  - graphify/concept
+  - graphify/document
   - graphify/INFERRED
-  - community/Community_52
+  - community/AI_Asistan_Headless_Claude
 ---
 
 # Ana Kasa Kayıt Defteri sayfası
 
 ## Connections
-- [[Ana Kasa bakiye sayfası]] - `conceptually_related_to` [INFERRED]
-- [[Karanlık mod (gs_dark_mode) inline toggle]] - `references` [EXTRACTED]
+- [[Ana Kasa sayfası]] - `semantically_similar_to` [INFERRED]
+- [[Faz 2 kalan iş (kasa ailesi, özel sayfalar, layout emekliliği)]] - `conceptually_related_to` [INFERRED]
 
-#graphify/concept #graphify/INFERRED #community/Community_52
+#graphify/document #graphify/INFERRED #community/AI_Asistan_Headless_Claude

@@ -1,12 +1,12 @@
 ---
 source_file: "picking_service.py"
 type: "rationale"
-community: "Raf Yönetimi & Barkod Çakışması"
+community: "Community 48"
 location: "L1"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Raf_Ynetimi__Barkod_akmas
+  - community/Community_48
 ---
 
 # Manuel raf-okutmalı toplama — ortak düşüm yardımcısı.  İki ekran (toplu `/pick`
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[picking_service.py]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas
+#graphify/rationale #graphify/EXTRACTED #community/Community_48

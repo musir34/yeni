@@ -1,12 +1,12 @@
 ---
 source_file: "komisyon_tarife.py"
 type: "code"
-community: "Community 82"
+community: "Community 91"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_82
+  - community/Community_91
 ---
 
 # komisyon_tarife.py
@@ -23,4 +23,4 @@ tags:
 - [[login_required()]] - `imports` [EXTRACTED]
 - [[roles_required()]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_82
+#graphify/code #graphify/EXTRACTED #community/Community_91

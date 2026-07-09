@@ -1,30 +1,31 @@
 ---
 type: community
-cohesion: 0.15
-members: 15
+cohesion: 0.21
+members: 16
 ---
 
 # Community 59
 
-**Cohesion:** 0.15 - loosely connected
-**Members:** 15 nodes
+**Cohesion:** 0.21 - loosely connected
+**Members:** 16 nodes
 
 ## Members
-- [[.__repr__()_4]] - code - models.py
-- [[Datetime objesini Türkçe ay adıyla Gün Ay formatına çevirir.     Örnek 2023-1]] - rationale - archive.py
-- [[Kullanıcı loglarını filtreye göre Excel'e aktaran endpoint.]] - rationale - user_logs.py
-- [[Rapor]] - code - models.py
-- [[User]] - code - models.py
-- [[UserMixin]] - code
-- [[export_logs()]] - code - user_logs.py
-- [[format_turkish_date_filter()]] - code - archive.py
-- [[giris()]] - code - rapor_gir.py
-- [[load_user()]] - code - app.py
-- [[rapor_gir.py]] - code - rapor_gir.py
-- [[register()]] - code - login_logout.py
-- [[turkce_tarih_filter()]] - code - rapor_gir.py
-- [[view_logs()]] - code - user_logs.py
-- [[Şablonda {{ r  turkce_tarih('full') }} gibi kullanımlar için.     archive.form]] - rationale - rapor_gir.py
+- [[_applyDark()]] - code - static/js/app-shell.js
+- [[_dismissToast()]] - code - static/js/app-shell.js
+- [[_highlightActiveOpt()]] - code - static/js/app-shell.js
+- [[_isDarkByTime()]] - code - static/js/app-shell.js
+- [[_resolveDark()]] - code - static/js/app-shell.js
+- [[_toastContainer()]] - code - static/js/app-shell.js
+- [[_updateAllToggles()]] - code - static/js/app-shell.js
+- [[app-shell.js]] - code - static/js/app-shell.js
+- [[countTween()]] - code - static/js/app-shell.js
+- [[fadeRemove()]] - code - static/js/app-shell.js
+- [[getDarkMode()]] - code - static/js/app-shell.js
+- [[registerRefresh()]] - code - static/js/app-shell.js
+- [[setDarkMode()]] - code - static/js/app-shell.js
+- [[showConfirmSheet()]] - code - static/js/app-shell.js
+- [[showToast()]] - code - static/js/app-shell.js
+- [[toggleDarkMode()]] - code - static/js/app-shell.js
 
 ## Live Query (requires Dataview plugin)
 
@@ -32,21 +33,3 @@ members: 15
 TABLE source_file, type FROM #community/Community_59
 SORT file.name ASC
 ```
-
-## Connections to other communities
-- 6 edges to [[_COMMUNITY_Kimlik Doğrulama & Kullanıcı Yönetimi]]
-- 3 edges to [[_COMMUNITY_Uygulama Çekirdeği & Zamanlı İşler]]
-- 3 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 3 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
-- 2 edges to [[_COMMUNITY_Agent API & Sipariş Sorguları]]
-- 2 edges to [[_COMMUNITY_Sipariş Yaşam Döngüsü & Arşiv]]
-- 2 edges to [[_COMMUNITY_Kasa & Gelir-Gider]]
-- 1 edge to [[_COMMUNITY_E-posta Bildirimleri]]
-- 1 edge to [[_COMMUNITY_Community 64]]
-
-## Top bridge nodes
-- [[User]] - degree 17, connects to 7 communities
-- [[rapor_gir.py]] - degree 8, connects to 3 communities
-- [[Rapor]] - degree 6, connects to 3 communities
-- [[format_turkish_date_filter()]] - degree 4, connects to 2 communities
-- [[register()]] - degree 3, connects to 1 community

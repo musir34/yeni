@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/adapters/base.py"
 type: "rationale"
-community: "Community 39"
+community: "Community 40"
 location: "L162"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_39
+  - community/Community_40
 ---
 
 # Yapılandırmanın geçerli olup olmadığını kontrol et
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[.validate_config()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_39
+#graphify/rationale #graphify/EXTRACTED #community/Community_40

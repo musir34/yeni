@@ -1,12 +1,12 @@
 ---
 source_file: "get_products.py"
 type: "code"
-community: "Community 91"
+community: "Community 98"
 location: "L1250"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_91
+  - community/Community_98
 ---
 
 # update_product_prices()
@@ -17,4 +17,4 @@ tags:
 - [[update_prices_in_trendyol_bulk()]] - `calls` [EXTRACTED]
 - [[Ürün varyantlarının satış fiyatlarını günceller]] - `rationale_for` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_91
+#graphify/code #graphify/EXTRACTED #community/Community_98

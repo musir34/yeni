@@ -1,12 +1,12 @@
 ---
 source_file: "ai_asistan/blueprint.py"
 type: "rationale"
-community: "AI Asistanı (Headless Claude)"
+community: "Raf Sistemi & Etiket"
 location: "L170"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/AI_Asistan_Headless_Claude
+  - community/Raf_Sistemi__Etiket
 ---
 
 # Önceki konuşmayı bağlam olarak yeni sorunun önüne ekle (kişiye özel hafıza).
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_prompt_olustur()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/AI_Asistan_Headless_Claude
+#graphify/rationale #graphify/EXTRACTED #community/Raf_Sistemi__Etiket

@@ -49,10 +49,12 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 5 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 2 edges to [[_COMMUNITY_Community 55]]
-- 1 edge to [[_COMMUNITY_Raf Yönetimi & Barkod Çakışması]]
+- 3 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
+- 2 edges to [[_COMMUNITY_Community 39]]
+- 1 edge to [[_COMMUNITY_Değişim  İade Talepleri]]
+- 1 edge to [[_COMMUNITY_Community 61]]
+- 1 edge to [[_COMMUNITY_Ana Kasa Defteri]]
 
 ## Top bridge nodes
-- [[ShopifyService]] - degree 28, connects to 2 communities
+- [[ShopifyService]] - degree 28, connects to 4 communities
 - [[.get_order()]] - degree 5, connects to 1 community

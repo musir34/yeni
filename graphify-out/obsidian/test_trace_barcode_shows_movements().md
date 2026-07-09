@@ -1,12 +1,12 @@
 ---
 source_file: "tests/test_stock_ledger.py"
 type: "code"
-community: "Stok Hareket Defteri (Ledger)"
+community: "Canlı Panel (SSE)"
 location: "L391"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Stok_Hareket_Defteri_Ledger
+  - community/Canl_Panel_SSE
 ---
 
 # test_trace_barcode_shows_movements()
@@ -17,4 +17,4 @@ tags:
 - [[test_stock_ledger.py]] - `contains` [EXTRACTED]
 - [[trace_barcode()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Stok_Hareket_Defteri_Ledger
+#graphify/code #graphify/EXTRACTED #community/Canl_Panel_SSE

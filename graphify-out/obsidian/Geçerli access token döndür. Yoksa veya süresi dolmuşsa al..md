@@ -1,12 +1,12 @@
 ---
 source_file: "shopify_site/shopify_config.py"
 type: "rationale"
-community: "Community 55"
+community: "Community 39"
 location: "L87"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_55
+  - community/Community_39
 ---
 
 # Geçerli access token döndür. Yoksa veya süresi dolmuşsa al.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[.get_access_token()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_55
+#graphify/rationale #graphify/EXTRACTED #community/Community_39

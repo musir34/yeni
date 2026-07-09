@@ -1,12 +1,12 @@
 ---
 source_file: "barcode_alias_helper.py"
 type: "rationale"
-community: "Community 38"
+community: "Community 76"
 location: "L348"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_38
+  - community/Community_76
 ---
 
 # Mevcut bir alias'ın stokunu ana barkoda birleştir.     Alias kaydını silmez, sad
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[merge_existing_alias_stocks()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_38
+#graphify/rationale #graphify/EXTRACTED #community/Community_76

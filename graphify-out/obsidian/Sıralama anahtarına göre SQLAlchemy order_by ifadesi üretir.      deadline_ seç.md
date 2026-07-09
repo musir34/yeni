@@ -1,12 +1,12 @@
 ---
 source_file: "order_list_service.py"
 type: "rationale"
-community: "Barkod Üretimi & Sipariş Listesi"
+community: "Raf Yönetimi & Barkod Çakışması"
 location: "L172"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Barkod_retimi__Sipari_Listesi
+  - community/Raf_Ynetimi__Barkod_akmas
 ---
 
 # Sıralama anahtarına göre SQLAlchemy order_by ifadesi üretir.      deadline_* seç
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_sort_clause()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Barkod_retimi__Sipari_Listesi
+#graphify/rationale #graphify/EXTRACTED #community/Raf_Ynetimi__Barkod_akmas

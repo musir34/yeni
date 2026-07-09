@@ -1,12 +1,12 @@
 ---
 source_file: "shopify_site/shopify_config.py"
 type: "code"
-community: "Community 55"
+community: "Community 39"
 location: "L16"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_55
+  - community/Community_39
 ---
 
 # ShopifyConfig
@@ -38,4 +38,4 @@ tags:
 - [[siparis_hazirla.py]] - `imports` [EXTRACTED]
 - [[update_service.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_55
+#graphify/code #graphify/EXTRACTED #community/Community_39

@@ -1,27 +1,30 @@
 ---
 type: community
-cohesion: 0.29
-members: 12
+cohesion: 0.17
+members: 15
 ---
 
 # Community 68
 
-**Cohesion:** 0.29 - loosely connected
-**Members:** 12 nodes
+**Cohesion:** 0.17 - loosely connected
+**Members:** 15 nodes
 
 ## Members
-- [[._graphql()]] - code - shopify_site/shopify_price_compare.py
-- [[.compare()]] - code - shopify_site/shopify_price_compare.py
-- [[.fetch_variant_prices()]] - code - shopify_site/shopify_price_compare.py
-- [[.is_configured()_3]] - code - shopify_site/shopify_price_compare.py
-- [[Any_3]] - code
-- [[Eşleşmiş varyantları model koduna (Product.product_main_id) göre grupla]] - rationale - shopify_site/shopify_price_compare.py
-- [[PriceCompareService]] - code - shopify_site/shopify_price_compare.py
-- [[Shopify ↔ Trendyol satış fiyatı karşılaştırma servisi.]] - rationale - shopify_site/shopify_price_compare.py
-- [[_empty_summary()]] - code - shopify_site/shopify_price_compare.py
-- [[_to_float()]] - code - shopify_site/shopify_price_compare.py
-- [[shopify_price_compare.py]] - code - shopify_site/shopify_price_compare.py
-- [[variant_id (GID) → {price, compareAtPrice, currency, title, product_title} sözlü]] - rationale - shopify_site/shopify_price_compare.py
+- [[._get_headers()_3]] - code - stock_sync/adapters/idefix.py
+- [[._init_config()_3]] - code - stock_sync/adapters/idefix.py
+- [[._update_single_stock()]] - code - stock_sync/adapters/idefix.py
+- [[.get_platform_products()_3]] - code - stock_sync/adapters/idefix.py
+- [[.send_stock_batch()_3]] - code - stock_sync/adapters/idefix.py
+- [[.send_stock_bulk()]] - code - stock_sync/adapters/idefix.py
+- [[Any_9]] - code
+- [[ClientSession_2]] - code
+- [[Idefix API yapılandırması]] - rationale - stock_sync/adapters/idefix.py
+- [[Idefix bulk stock update (varsa)         API PUT pimpool{sellerId}stocks]] - rationale - stock_sync/adapters/idefix.py
+- [[Idefix stok senkronizasyon adaptörü]] - rationale - stock_sync/adapters/idefix.py
+- [[Idefix'e stok batch'i gönder.         Idefix tek tek güncelleme yapıyor, paralel]] - rationale - stock_sync/adapters/idefix.py
+- [[Idefix'teki tüm ürünleri çek         API GET pimpool{sellerId}list]] - rationale - stock_sync/adapters/idefix.py
+- [[IdefixAdapter]] - code - stock_sync/adapters/idefix.py
+- [[Tek bir ürünün stokunu güncelle]] - rationale - stock_sync/adapters/idefix.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -31,10 +34,11 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 5 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 3 edges to [[_COMMUNITY_Community 55]]
-- 1 edge to [[_COMMUNITY_Shopify Route Katmanı]]
+- 11 edges to [[_COMMUNITY_Community 69]]
+- 1 edge to [[_COMMUNITY_Community 40]]
 
 ## Top bridge nodes
-- [[shopify_price_compare.py]] - degree 8, connects to 3 communities
-- [[PriceCompareService]] - degree 10, connects to 2 communities
+- [[IdefixAdapter]] - degree 13, connects to 2 communities
+- [[._update_single_stock()]] - degree 7, connects to 1 community
+- [[.send_stock_batch()_3]] - degree 5, connects to 1 community
+- [[.send_stock_bulk()]] - degree 5, connects to 1 community

@@ -1,55 +1,51 @@
 ---
 type: community
-cohesion: 0.05
-members: 40
+cohesion: 0.06
+members: 36
 ---
 
 # Shopify Route Katmanı
 
-**Cohesion:** 0.05 - loosely connected
-**Members:** 40 nodes
+**Cohesion:** 0.06 - loosely connected
+**Members:** 36 nodes
 
 ## Members
-- [[Eşleşmeyen ürünleri CSV olarak indir.]] - rationale - shopify_site/shopify_routes.py
-- [[Eşleştirme listesini döndür.]] - rationale - shopify_site/shopify_routes.py
-- [[Karşılaştırma sonucunu CSV indir.]] - rationale - shopify_site/shopify_routes.py
-- [[Shopify Admin API JSON route'ları.]] - rationale - shopify_site/shopify_routes.py
-- [[Shopify barkodlarını panel barkodlarıyla eşleştir.]] - rationale - shopify_site/shopify_routes.py
-- [[Shopify siparis yonetim sayfasi.]] - rationale - shopify_site/shopify_routes.py
-- [[Shopify ↔ Trendyol fiyat karşılaştırma sayfası.]] - rationale - shopify_site/shopify_routes.py
-- [[Shopify ↔ Trendyol satış fiyatı karşılaştırma JSON sonucu.]] - rationale - shopify_site/shopify_routes.py
-- [[Siparis fisini yazdir — order_label.html formatinda (musteri etiketi).]] - rationale - shopify_site/shopify_routes.py
-- [[Siparis notunu guncelle.]] - rationale - shopify_site/shopify_routes.py
-- [[Siparise etiket ekle.]] - rationale - shopify_site/shopify_routes.py
-- [[Siparisi karsila (fulfillment olustur).]] - rationale - shopify_site/shopify_routes.py
-- [[Siparisi odendi olarak isaretle.]] - rationale - shopify_site/shopify_routes.py
-- [[Stokları Shopify'a gönder.]] - rationale - shopify_site/shopify_routes.py
-- [[add_order_tags()]] - code - shopify_site/shopify_routes.py
-- [[adjust_inventory()]] - code - shopify_site/shopify_routes.py
-- [[cancel_order()]] - code - shopify_site/shopify_routes.py
-- [[check_shopify_config()]] - code - shopify_site/shopify_routes.py
-- [[fulfill_order()]] - code - shopify_site/shopify_routes.py
-- [[get_mappings()]] - code - shopify_site/shopify_routes.py
-- [[graphql_proxy()]] - code - shopify_site/shopify_routes.py
-- [[locations()]] - code - shopify_site/shopify_routes.py
-- [[mark_order_paid()]] - code - shopify_site/shopify_routes.py
-- [[match_barcodes()]] - code - shopify_site/shopify_routes.py
-- [[order_detail()_2]] - code - shopify_site/shopify_routes.py
-- [[orders()_2]] - code - shopify_site/shopify_routes.py
-- [[orders_count()]] - code - shopify_site/shopify_routes.py
-- [[orders_dashboard()]] - code - shopify_site/shopify_routes.py
-- [[price_compare_api()]] - code - shopify_site/shopify_routes.py
-- [[price_compare_dashboard()]] - code - shopify_site/shopify_routes.py
-- [[price_compare_export()]] - code - shopify_site/shopify_routes.py
-- [[print_order()]] - code - shopify_site/shopify_routes.py
-- [[product_detail()]] - code - shopify_site/shopify_routes.py
-- [[products()_1]] - code - shopify_site/shopify_routes.py
-- [[push_stock()]] - code - shopify_site/shopify_routes.py
-- [[shop_info()]] - code - shopify_site/shopify_routes.py
-- [[shopify_routes.py]] - code - shopify_site/shopify_routes.py
-- [[test_connection()_2]] - code - shopify_site/shopify_routes.py
-- [[unmatched_csv()]] - code - shopify_site/shopify_routes.py
-- [[update_order_note()]] - code - shopify_site/shopify_routes.py
+- [[Aktif session'ları döndür]] - rationale - stock_sync/routes.py
+- [[Aktif session'ı iptal et]] - rationale - stock_sync/routes.py
+- [[Arka planda sync başlat (non-blocking)]] - rationale - stock_sync/routes.py
+- [[Belirli barkodları sync et]] - rationale - stock_sync/routes.py
+- [[Central Stock listesi sayfası]] - rationale - stock_sync/routes.py
+- [[Central Stock listesini Excel olarak indir]] - rationale - stock_sync/routes.py
+- [[CentralStock tablosunu raflardaki toplamlarla senkronize et]] - rationale - stock_sync/routes.py
+- [[Otomatik senkronizasyon durumunu döndür]] - rationale - stock_sync/routes.py
+- [[Platform config'ini döndür]] - rationale - stock_sync/routes.py
+- [[Platform durumlarını döndür]] - rationale - stock_sync/routes.py
+- [[Session detay sayfası]] - rationale - stock_sync/routes.py
+- [[Session detaylarını JSON olarak döndür]] - rationale - stock_sync/routes.py
+- [[Stok senkronizasyon dashboard'u]] - rationale - stock_sync/routes.py
+- [[Stok tutarlılık kontrolü — CentralStock vs RafUrun karşılaştırması.      Body {]] - rationale - stock_sync/routes.py
+- [[Sync geçmişini JSON olarak döndür]] - rationale - stock_sync/routes.py
+- [[Tek platforma sync başlat.      Uzun sürebilen platformlar (shopify) gunicorn wo]] - rationale - stock_sync/routes.py
+- [[api_active_sessions()]] - code - stock_sync/routes.py
+- [[api_auto_sync_status()]] - code - stock_sync/routes.py
+- [[api_cancel_session()]] - code - stock_sync/routes.py
+- [[api_errors()]] - code - stock_sync/routes.py
+- [[api_get_config()]] - code - stock_sync/routes.py
+- [[api_history()]] - code - stock_sync/routes.py
+- [[api_integrity_check()]] - code - stock_sync/routes.py
+- [[api_session_detail()]] - code - stock_sync/routes.py
+- [[api_stats()]] - code - stock_sync/routes.py
+- [[api_status()]] - code - stock_sync/routes.py
+- [[api_sync_background()]] - code - stock_sync/routes.py
+- [[api_sync_barcodes()]] - code - stock_sync/routes.py
+- [[api_sync_central_stock()]] - code - stock_sync/routes.py
+- [[api_sync_platform()]] - code - stock_sync/routes.py
+- [[central_stock()]] - code - stock_sync/routes.py
+- [[central_stock_export()]] - code - stock_sync/routes.py
+- [[dashboard()_1]] - code - stock_sync/routes.py
+- [[history()]] - code - stock_sync/routes.py
+- [[routes.py]] - code - stock_sync/routes.py
+- [[session_detail()]] - code - stock_sync/routes.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -59,18 +55,27 @@ SORT file.name ASC
 ```
 
 ## Connections to other communities
-- 9 edges to [[_COMMUNITY_Silme & Toplu Yazdırma İşlemleri]]
-- 3 edges to [[_COMMUNITY_Veri Modelleri (SQLAlchemy)]]
-- 2 edges to [[_COMMUNITY_Community 55]]
-- 2 edges to [[_COMMUNITY_Anasayfa Özet & Sayımlar]]
-- 2 edges to [[_COMMUNITY_Community 100]]
-- 2 edges to [[_COMMUNITY_Community 101]]
-- 1 edge to [[_COMMUNITY_Community 64]]
-- 1 edge to [[_COMMUNITY_Community 68]]
+- 12 edges to [[_COMMUNITY_Community 42]]
+- 4 edges to [[_COMMUNITY_Community 77]]
+- 3 edges to [[_COMMUNITY_Community 61]]
+- 3 edges to [[_COMMUNITY_Community 36]]
+- 2 edges to [[_COMMUNITY_Community 69]]
+- 2 edges to [[_COMMUNITY_Sipariş Denetim Kaydı (Audit Log)]]
+- 2 edges to [[_COMMUNITY_Community 111]]
+- 1 edge to [[_COMMUNITY_Stok Senkron API]]
+- 1 edge to [[_COMMUNITY_Community 66]]
+- 1 edge to [[_COMMUNITY_Community 76]]
+- 1 edge to [[_COMMUNITY_Değişim  İade Talepleri]]
+- 1 edge to [[_COMMUNITY_Community 84]]
+- 1 edge to [[_COMMUNITY_Ana Kasa Defteri]]
+- 1 edge to [[_COMMUNITY_Community 71]]
+- 1 edge to [[_COMMUNITY_Hepsiburada Servisi]]
+- 1 edge to [[_COMMUNITY_Community 134]]
+- 1 edge to [[_COMMUNITY_Community 57]]
 
 ## Top bridge nodes
-- [[shopify_routes.py]] - degree 39, connects to 7 communities
-- [[add_order_tags()]] - degree 3, connects to 1 community
-- [[fulfill_order()]] - degree 3, connects to 1 community
-- [[mark_order_paid()]] - degree 3, connects to 1 community
-- [[match_barcodes()]] - degree 3, connects to 1 community
+- [[routes.py]] - degree 42, connects to 17 communities
+- [[api_integrity_check()]] - degree 4, connects to 2 communities
+- [[api_sync_platform()]] - degree 4, connects to 2 communities
+- [[central_stock()]] - degree 4, connects to 2 communities
+- [[central_stock_export()]] - degree 4, connects to 2 communities

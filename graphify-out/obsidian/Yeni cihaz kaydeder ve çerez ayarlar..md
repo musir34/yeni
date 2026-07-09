@@ -1,12 +1,12 @@
 ---
 source_file: "login_logout.py"
 type: "rationale"
-community: "Kimlik Doğrulama & Kullanıcı Yönetimi"
+community: "Community 65"
 location: "L112"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Kimlik_Dorulama__Kullanc_Ynetimi
+  - community/Community_65
 ---
 
 # Yeni cihaz kaydeder ve çerez ayarlar.
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_register_device()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Kimlik_Dorulama__Kullanc_Ynetimi
+#graphify/rationale #graphify/EXTRACTED #community/Community_65

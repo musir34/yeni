@@ -1,12 +1,12 @@
 ---
 source_file: "app.py"
 type: "code"
-community: "Uygulama Çekirdeği & Zamanlı İşler"
+community: "Maliyet Fişi & Tedarikçi"
 location: "L313"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Uygulama_ekirdei__Zamanl_ler
+  - community/Maliyet_Fii__Tedariki
 ---
 
 # fetch_and_save_returns()
@@ -17,4 +17,4 @@ tags:
 - [[save_to_database()]] - `calls` [EXTRACTED]
 - [[schedule_jobs()]] - `indirect_call` [INFERRED]
 
-#graphify/code #graphify/EXTRACTED #community/Uygulama_ekirdei__Zamanl_ler
+#graphify/code #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki

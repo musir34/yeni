@@ -1,12 +1,12 @@
 ---
 source_file: "amazon/amazon_routes.py"
 type: "rationale"
-community: "Community 118"
+community: "Community 124"
 location: "L415"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_118
+  - community/Community_124
 ---
 
 # Toplu barkod eşleştirme     Girilen barkodları Amazon SKU'larıyla karşılaştırır
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[api_bulk_match()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_118
+#graphify/rationale #graphify/EXTRACTED #community/Community_124

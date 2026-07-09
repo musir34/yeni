@@ -1,12 +1,12 @@
 ---
 source_file: "agent_api.py"
 type: "code"
-community: "Agent API & Sipariş Sorguları"
+community: "Community 55"
 location: "L1669"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Agent_API__Sipari_Sorgular
+  - community/Community_55
 ---
 
 # _maliyet_payload()
@@ -19,4 +19,4 @@ tags:
 - [[model_cost_list()]] - `calls` [EXTRACTED]
 - [[model_cost_single()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Agent_API__Sipari_Sorgular
+#graphify/code #graphify/EXTRACTED #community/Community_55

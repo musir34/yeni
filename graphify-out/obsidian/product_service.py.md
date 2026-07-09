@@ -1,12 +1,12 @@
 ---
 source_file: "product_service.py"
 type: "code"
-community: "Community 77"
+community: "Maliyet Fişi & Tedarikçi"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_77
+  - community/Maliyet_Fii__Tedariki
 ---
 
 # product_service.py
@@ -25,4 +25,4 @@ tags:
 - [[trendyol_api.py]] - `imports_from` [EXTRACTED]
 - [[update_price_stock()]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_77
+#graphify/code #graphify/EXTRACTED #community/Maliyet_Fii__Tedariki

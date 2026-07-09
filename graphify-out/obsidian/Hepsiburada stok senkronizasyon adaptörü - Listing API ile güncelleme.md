@@ -1,12 +1,12 @@
 ---
 source_file: "stock_sync/adapters/hepsiburada.py"
 type: "rationale"
-community: "Community 57"
+community: "Community 60"
 location: "L20"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Community_57
+  - community/Community_60
 ---
 
 # Hepsiburada stok senkronizasyon adaptörü - Listing API ile güncelleme
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[HepsiburadaAdapter]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Community_57
+#graphify/rationale #graphify/EXTRACTED #community/Community_60

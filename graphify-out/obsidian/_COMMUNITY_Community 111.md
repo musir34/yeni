@@ -1,18 +1,19 @@
 ---
 type: community
-cohesion: 0.67
-members: 3
+cohesion: 0.50
+members: 4
 ---
 
 # Community 111
 
-**Cohesion:** 0.67 - moderately connected
-**Members:** 3 nodes
+**Cohesion:** 0.50 - moderately connected
+**Members:** 4 nodes
 
 ## Members
-- [[add_stock_movement.py]] - code - migrations/versions/add_stock_movement.py
-- [[downgrade()_4]] - code - migrations/versions/add_stock_movement.py
-- [[upgrade()_4]] - code - migrations/versions/add_stock_movement.py
+- [[Mevcut OrderCreated kayıtları için raf stoğunu tahsis eder (tek seferlik migrasy]] - rationale - stock_sync/routes.py
+- [[Mevcut OrderCreated kayıtları için raf stoğunu tahsis eder (tek seferlik migrasy_1]] - rationale - stock_sync/service.py
+- [[api_migrate_reserved_stock()]] - code - stock_sync/routes.py
+- [[migrate_existing_reserved_stock()]] - code - stock_sync/service.py
 
 ## Live Query (requires Dataview plugin)
 
@@ -20,3 +21,14 @@ members: 3
 TABLE source_file, type FROM #community/Community_111
 SORT file.name ASC
 ```
+
+## Connections to other communities
+- 2 edges to [[_COMMUNITY_Shopify Route Katmanı]]
+- 1 edge to [[_COMMUNITY_Değişim  İade Talepleri]]
+- 1 edge to [[_COMMUNITY_Community 42]]
+- 1 edge to [[_COMMUNITY_Community 69]]
+- 1 edge to [[_COMMUNITY_Community 36]]
+
+## Top bridge nodes
+- [[migrate_existing_reserved_stock()]] - degree 6, connects to 4 communities
+- [[api_migrate_reserved_stock()]] - degree 4, connects to 2 communities

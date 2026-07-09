@@ -1,12 +1,12 @@
 ---
 source_file: "hepsiburada/hepsiburada_routes.py"
 type: "code"
-community: "Hepsiburada Route Katmanı"
+community: "Manuel Sipariş Oluşturma"
 location: "L1"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Hepsiburada_Route_Katman
+  - community/Manuel_Sipari_Oluturma
 ---
 
 # hepsiburada_routes.py
@@ -37,4 +37,4 @@ tags:
 - [[settings()_1]] - `contains` [EXTRACTED]
 - [[test_connection()_1]] - `contains` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Hepsiburada_Route_Katman
+#graphify/code #graphify/EXTRACTED #community/Manuel_Sipari_Oluturma

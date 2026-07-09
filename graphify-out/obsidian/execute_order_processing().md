@@ -1,12 +1,12 @@
 ---
 source_file: "archive.py"
 type: "code"
-community: "Sipariş Yaşam Döngüsü & Arşiv"
+community: "Community 41"
 location: "L252"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Sipari_Yaam_Dngs__Ariv
+  - community/Community_41
 ---
 
 # execute_order_processing()
@@ -18,4 +18,4 @@ tags:
 - [[log_user_action()_1]] - `calls` [EXTRACTED]
 - [[update_order_status_to_picking()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Sipari_Yaam_Dngs__Ariv
+#graphify/code #graphify/EXTRACTED #community/Community_41

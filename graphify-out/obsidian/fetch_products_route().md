@@ -1,12 +1,12 @@
 ---
 source_file: "get_products.py"
 type: "code"
-community: "Community 60"
+community: "Community 63"
 location: "L577"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_60
+  - community/Community_63
 ---
 
 # fetch_products_route()
@@ -17,4 +17,4 @@ tags:
 - [[log_user_action()_1]] - `calls` [EXTRACTED]
 - [[save_products_to_db_async()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_60
+#graphify/code #graphify/EXTRACTED #community/Community_63

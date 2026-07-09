@@ -1,12 +1,12 @@
 ---
 source_file: "canli_panel.py"
 type: "rationale"
-community: "Canlı Panel (SSE)"
+community: "Üretim Önerisi & Satış Tahmini"
 location: "L74"
 tags:
   - graphify/rationale
   - graphify/EXTRACTED
-  - community/Canl_Panel_SSE
+  - community/retim_nerisi__Sat_Tahmini
 ---
 
 # Sadece seçilen aralıkta OLUŞTURULAN siparişlere ait iadeleri toplar.     Döner:
@@ -14,4 +14,4 @@ tags:
 ## Connections
 - [[_collect_returns_by_order_created_between()]] - `rationale_for` [EXTRACTED]
 
-#graphify/rationale #graphify/EXTRACTED #community/Canl_Panel_SSE
+#graphify/rationale #graphify/EXTRACTED #community/retim_nerisi__Sat_Tahmini

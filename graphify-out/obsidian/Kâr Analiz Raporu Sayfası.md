@@ -1,18 +1,18 @@
 ---
 source_file: "templates/profit.html"
 type: "concept"
-community: "Community 48"
+community: "Community 38"
 tags:
   - graphify/concept
   - graphify/EXTRACTED
-  - community/Community_48
+  - community/Community_38
 ---
 
 # Kâr Analiz Raporu Sayfası
 
 ## Connections
+- [[apimy-notification-image endpoint]] - `references` [EXTRACTED]
 - [[Ana Menü Sayfası]] - `references` [EXTRACTED]
-- [[Bildirim popup include]] - `references` [EXTRACTED]
 - [[Profit Blueprint]] - `calls` [EXTRACTED]
 
-#graphify/concept #graphify/EXTRACTED #community/Community_48
+#graphify/concept #graphify/EXTRACTED #community/Community_38

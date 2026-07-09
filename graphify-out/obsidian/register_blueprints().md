@@ -1,12 +1,12 @@
 ---
 source_file: "routes/__init__.py"
 type: "code"
-community: "Community 64"
+community: "Community 71"
 location: "L4"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_64
+  - community/Community_71
 ---
 
 # register_blueprints()
@@ -15,4 +15,4 @@ tags:
 - [[__init__.py_4]] - `contains` [EXTRACTED]
 - [[app.py]] - `imports` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_64
+#graphify/code #graphify/EXTRACTED #community/Community_71

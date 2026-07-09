@@ -1,12 +1,12 @@
 ---
 source_file: "models.py"
 type: "code"
-community: "Community 38"
+community: "Community 76"
 location: "L168"
 tags:
   - graphify/code
   - graphify/EXTRACTED
-  - community/Community_38
+  - community/Community_76
 ---
 
 # CentralStock
@@ -89,4 +89,4 @@ tags:
 - [[verify_no_phantom_ledger.py]] - `imports` [EXTRACTED]
 - [[verify_stock_integrity()]] - `calls` [EXTRACTED]
 
-#graphify/code #graphify/EXTRACTED #community/Community_38
+#graphify/code #graphify/EXTRACTED #community/Community_76
