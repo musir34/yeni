@@ -449,16 +449,17 @@ Seç
 </span>
 </div>
 <div>
-{% set status_tr = {'Created': 'Yeni', 'Hazirlaniyor': 'Hazırlanıyor', 'Picking': 'İşleme Alındı', 'Shipped': 'Kargoda', 'Delivered': 'Teslim Edildi', 'Cancelled': 'İptal Edildi', 'UnSupplied': 'İptal Edildi', 'Archived': 'Arşivlendi'}.get(order.status, order.status) %}
+{% set reason_status = {'Stokta Yok/Rafta Yok': 'Tedarik Edilemedi', 'Ürün Sorunu Düzeltiliyor (Atölyeye Gönderildi)': 'Kontrol Edilmeli', 'Sistem Hatası (Hazırlandı)': 'Paket Hazır', 'Sistem Hatası (Hazırlanmadı)': 'Kontrol Edilmeli'} %}
+{% set status_tr = reason_status.get(order.archive_reason) or {'Created': 'Yeni', 'Hazirlaniyor': 'Hazırlanıyor', 'Picking': 'İşleme Alındı', 'Shipped': 'Kargoda', 'Delivered': 'Teslim Edildi', 'Cancelled': 'İptal Edildi', 'UnSupplied': 'İptal Edildi', 'Archived': 'Arşivlendi'}.get(order.status, order.status) %}
 <span class="badge rounded-pill
-{% if status_tr in ['Yeni', 'Beklemede'] %} bg-warning
+{% if status_tr in ['Yeni', 'Beklemede', 'Kontrol Edilmeli'] %} bg-warning
 {% elif status_tr == 'Hazırlanıyor' %} bg-info text-white
 {% elif status_tr == 'Kontrol Ediliyor' %} bg-info
 {% elif status_tr == 'Üretiliyor' %} bg-primary
-{% elif status_tr in ['İşleme Alındı', 'Hazır'] %} bg-success
+{% elif status_tr in ['İşleme Alındı', 'Hazır', 'Paket Hazır'] %} bg-success
 {% elif status_tr == 'Kargoda' %} bg-danger
 {% elif status_tr in ['Teslim Edildi', 'Kargoya Verildi'] %} bg-orange
-{% elif status_tr == 'İptal Edildi' %} bg-red
+{% elif status_tr in ['İptal Edildi', 'Tedarik Edilemedi'] %} bg-red
 {% else %} bg-secondary
 {% endif %}">
 {{ status_tr }}

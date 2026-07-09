@@ -1044,10 +1044,12 @@
                 if (content) {
                   content.classList.add('order-slide-out');
                   setTimeout(function(){
-                    window.location.href = '/siparis-hazirla?manuel=1&order_number=' + encodeURIComponent(orderNo);
+                    // Kuyruktan sipariş seçimi = hâlâ SIRALI mod (raf-okut alanı çıkmalı).
+                    // manuel=1 EKLENMEZ; aksi halde toplu-hazırlama moduna düşüp raf gizlenir.
+                    window.location.href = '/siparis-hazirla?order_number=' + encodeURIComponent(orderNo);
                   }, 220);
                 } else {
-                  window.location.href = '/siparis-hazirla?manuel=1&order_number=' + encodeURIComponent(orderNo);
+                  window.location.href = '/siparis-hazirla?order_number=' + encodeURIComponent(orderNo);
                 }
               });
             });
