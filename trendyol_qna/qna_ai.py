@@ -140,9 +140,15 @@ def generate_draft(question_id: int, talimat: str | None = None,
     row.ai_draft_at = datetime.now(timezone.utc)
     db.session.commit()
 
+    onceki_taslak = mevcut_metin or row.ai_draft
     taslak = _run_claude(_draft_prompt(row, stock_context(row.product_main_id),
                                        talimat=talimat, mevcut_metin=mevcut_metin))
     if taslak:
+        if talimat:
+            # Düzeltme talimatını ders olarak bilgi bankasına not düş
+            from trendyol_qna.qna_notes import log_correction
+            log_correction(row.product_name, row.product_main_id, row.text,
+                           talimat, onceki_taslak, taslak[:ANSWER_MAX])
         row.ai_draft = taslak[:ANSWER_MAX]
         row.ai_draft_status = "ready"
         row.ai_draft_at = datetime.now(timezone.utc)

@@ -270,6 +270,7 @@ def answer_question(question_id: int, text: str, username: str | None = None) ->
         return {"ok": False, "hata": f"Trendyol cevabı kabul etmedi ({resp.status_code}): {detail}"}
 
     now = datetime.now(timezone.utc)
+    onceki_taslak = row.ai_draft
     row.status = "ANSWERED"
     row.answer_text = text
     row.answer_date = now
@@ -279,8 +280,14 @@ def answer_question(question_id: int, text: str, username: str | None = None) ->
     logger.info("[QNA] soru %s cevaplandı (%s)", question_id, username)
 
     # İnsan onaylı cevabı bilgi bankasına not düş (AI sonraki taslaklarda öğrenir)
-    from trendyol_qna.qna_notes import log_approved_answer
+    from trendyol_qna.qna_notes import log_approved_answer, log_correction
     log_approved_answer(row.product_name, row.product_main_id, row.text, text, username)
+    # AI taslağı elle düzeltilerek gönderildiyse farkı ders olarak da not düş
+    def _norm(s):
+        return " ".join((s or "").replace(SIGNATURE, "").split())
+    if onceki_taslak and _norm(onceki_taslak) != _norm(text):
+        log_correction(row.product_name, row.product_main_id, row.text,
+                       None, onceki_taslak, text)
     return {"ok": True, "hata": None}
 
 

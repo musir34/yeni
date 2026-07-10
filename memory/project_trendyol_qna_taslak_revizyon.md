@@ -21,4 +21,13 @@ AI'a "şunu düzelt" diyebileceği bir alan yoktu (elle düzeltmek zorundaydı).
 - `soru_cevap.html`: cevap kutusunun altına talimat input'u + "Düzelttir" butonu
   (Enter da tetikler); mevcut tetikle-yokla akışı aynen kullanılır, DB değişikliği YOK.
 
+**Sürekli öğrenme (2026-07-10, 2. tur):**
+- Karar: her soru için TAZE oturum (günlük ortak sohbet DEĞİL — müşteriler arası
+  bağlam sızıntısı/kafa karışıklığı riski); öğrenme kalıcı vault bilgi bankasıyla.
+- `qna_notes.log_correction` + `vault/duzeltme-dersleri.md` (max 800 satır, `_trim_md`):
+  1) "Düzelttir" talimatı verildiğinde talimat + önce/sonra taslak ders olarak yazılır
+     (`generate_draft` içinde), 2) gönderim öncesi elle düzeltme yapıldıysa
+     (imza+boşluk normalize edilip taslak≠gönderilen) AI taslağı vs onaylı metin
+     dersi yazılır (`answer_question` içinde). Vault zaten her taslak promptuna giriyor.
+
 **Deploy:** `git pull && systemctl restart gullupanel.service` (migration yok).
