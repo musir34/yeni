@@ -28,6 +28,11 @@ AI asistanı büyük revizyon (2026-07-10). [[project-ai-asistan]] üzerine.
 **Test:** scratchpad'de 9 senaryoluk smoke test (sahte Claude, dosya-sqlite) 3/3 geçti.
 In-memory sqlite'ta flaky (tek bağlantı paylaşımı artefaktı) — Postgres'te geçerli değil.
 
-**Deploy (kullanıcıda):** `git pull` → migration çalıştır (alembic `add_ai_sohbet`,
-diğer additive migration'lar nasıl koşulduysa aynı yol) → `systemctl restart gullupanel.service`.
+**Deploy (kullanıcıda):** `git pull` → `DISABLE_JOBS=1 python scripts/create_ai_sohbet_tables.py`
+→ `systemctl restart gullupanel.service`.
+**2026-07-10 deploy sonrası "anında sunucu hatası":** kök neden tabloların prod'da olmaması
+(prod'da alembic koşulmuyor — `flask db` yok + multi-head; tablolar `scripts/create_*_table.py`
+idempotent script'leriyle açılır). `/sor`'un ilk DB sorgusu ai_mesaj/ai_sohbet'e dokunduğu için
+UndefinedTable → anında 500. Çözüm: `scripts/create_ai_sohbet_tables.py` eklendi
+(create_motor_oneri_log_table.py deseni).
 Spec: `docs/superpowers/specs/2026-07-10-ai-asistan-coklu-sohbet-design.md`.
