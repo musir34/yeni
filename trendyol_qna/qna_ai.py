@@ -13,7 +13,7 @@ import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from ai_asistan.blueprint import _claude_bin, BASE_DIR as AI_ASISTAN_DIR
+from ai_asistan.blueprint import _claude_bin, BASE_DIR as AI_ASISTAN_DIR, CLAUDE_MODEL
 
 logger = logging.getLogger(__name__)
 
@@ -43,14 +43,24 @@ def _kurallar() -> str:
     return kurallar
 
 
-def _draft_prompt(row, stok_bilgisi: str) -> str:
-    return (
+def _draft_prompt(row, stok_bilgisi: str, talimat: str | None = None,
+                  mevcut_metin: str | None = None) -> str:
+    prompt = (
         f"Ürün: {row.product_name or 'bilinmiyor'}\n"
         f"Model kodu: {row.product_main_id or 'bilinmiyor'}\n"
         f"CANLI STOK: {stok_bilgisi}\n\n"
         f"Müşteri sorusu:\n{row.text}\n\n"
-        "Bu soruya kurallara uygun, Trendyol'a gönderilmeye hazır TEK bir cevap taslağı yaz."
     )
+    if talimat:
+        prompt += (
+            f"Mevcut taslak (panelde görünen hali):\n{mevcut_metin or row.ai_draft or '(boş)'}\n\n"
+            f"Kullanıcının düzeltme talimatı: {talimat}\n\n"
+            "Mevcut taslağı bu talimata göre düzelt; talimatın dokunmadığı kısımları koru. "
+            "Kurallara uygun, Trendyol'a gönderilmeye hazır TEK bir cevap taslağı yaz."
+        )
+    else:
+        prompt += "Bu soruya kurallara uygun, Trendyol'a gönderilmeye hazır TEK bir cevap taslağı yaz."
+    return prompt
 
 
 def _run_claude(prompt: str) -> str | None:
@@ -70,6 +80,7 @@ def _run_claude(prompt: str) -> str | None:
     cmd = [
         claude_bin,
         "-p", prompt,
+        "--model", CLAUDE_MODEL,
         "--append-system-prompt", _kurallar(),
         "--allowedTools", ALLOWED_TOOLS,
         "--output-format", "json",
@@ -101,9 +112,11 @@ def _run_claude(prompt: str) -> str | None:
     return text or None
 
 
-def generate_draft(question_id: int) -> dict:
+def generate_draft(question_id: int, talimat: str | None = None,
+                   mevcut_metin: str | None = None) -> dict:
     """
     Tek soru için taslak üret ve kaydet (senkron; app context İÇİNDE çağrılmalı).
+    talimat verilirse mevcut taslak o talimata göre yeniden yazılır (revizyon).
     Dönen: {'ok': bool, 'taslak'/'hata': str}
     """
     from models import db, TrendyolQuestion
@@ -127,7 +140,8 @@ def generate_draft(question_id: int) -> dict:
     row.ai_draft_at = datetime.now(timezone.utc)
     db.session.commit()
 
-    taslak = _run_claude(_draft_prompt(row, stock_context(row.product_main_id)))
+    taslak = _run_claude(_draft_prompt(row, stock_context(row.product_main_id),
+                                       talimat=talimat, mevcut_metin=mevcut_metin))
     if taslak:
         row.ai_draft = taslak[:ANSWER_MAX]
         row.ai_draft_status = "ready"
@@ -140,7 +154,8 @@ def generate_draft(question_id: int) -> dict:
     return {"ok": False, "hata": "AI taslak üretilemedi (sunucu loglarına bakın)."}
 
 
-def generate_drafts_async(question_ids: list[int]) -> None:
+def generate_drafts_async(question_ids: list[int], talimat: str | None = None,
+                          mevcut_metin: str | None = None) -> None:
     """Yeni sorular için taslakları arka plan thread'inde sırayla üret."""
     if not question_ids:
         return
@@ -150,7 +165,7 @@ def generate_drafts_async(question_ids: list[int]) -> None:
         with app.app_context():
             for qid in question_ids:
                 try:
-                    generate_draft(qid)
+                    generate_draft(qid, talimat=talimat, mevcut_metin=mevcut_metin)
                 except Exception:
                     logger.exception("[QNA-AI] taslak hatası (soru %s)", qid)
 

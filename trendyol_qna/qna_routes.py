@@ -149,8 +149,11 @@ def taslak(qid: int):
     row = db.session.get(TrendyolQuestion, qid)
     if not row:
         return jsonify({"ok": False, "hata": "Soru bulunamadı."}), 404
+    payload = request.get_json(silent=True) or {}
+    talimat = (payload.get("talimat") or "").strip()[:500] or None
+    mevcut_metin = (payload.get("metin") or "").strip()[:2000] or None
     from trendyol_qna.qna_ai import generate_drafts_async
-    generate_drafts_async([qid])
+    generate_drafts_async([qid], talimat=talimat, mevcut_metin=mevcut_metin)
     return jsonify({"ok": True, "durum": "pending"})
 
 
