@@ -42,8 +42,19 @@ def load_vault_notes(max_chars: int = MAX_VAULT_CHARS) -> str:
     return metin
 
 
+def _etiket(model_kodu: str | None, renk: str | None) -> str:
+    """Kayıt başlığı için '(model X · renk Y)' etiketi — AI eşleştirmesi bu etikete göre."""
+    parcalar = []
+    if model_kodu:
+        parcalar.append(f"model {model_kodu}")
+    if renk:
+        parcalar.append(f"renk {renk}")
+    return f" ({' · '.join(parcalar)})" if parcalar else ""
+
+
 def log_approved_answer(product_name: str | None, model_kodu: str | None,
-                        soru: str, cevap: str, username: str | None) -> None:
+                        soru: str, cevap: str, username: str | None,
+                        renk: str | None = None) -> None:
     """
     Panelden Trendyol'a gönderilen (insan onaylı) cevabı vault'a not düş.
     AI sonraki taslaklarda bu örneklerden öğrenir. Hata asla yükseltilmez.
@@ -59,7 +70,7 @@ def log_approved_answer(product_name: str | None, model_kodu: str | None,
         tarih = datetime.now(IST).strftime("%d.%m.%Y %H:%M")
         blok = (
             f"\n### {tarih} — {(product_name or 'Ürün')[:70]}"
-            f"{f' (model {model_kodu})' if model_kodu else ''}\n"
+            f"{_etiket(model_kodu, renk)}\n"
             f"- **Soru:** {(soru or '').strip()[:400]}\n"
             f"- **Onaylı cevap ({username or 'panel'}):** {(cevap or '').strip()[:600]}\n"
         )
@@ -86,7 +97,8 @@ def _trim_md(path: Path, max_lines: int) -> None:
 
 
 def log_correction(product_name: str | None, model_kodu: str | None, soru: str,
-                   talimat: str | None, once: str | None, sonra: str | None) -> None:
+                   talimat: str | None, once: str | None, sonra: str | None,
+                   renk: str | None = None) -> None:
     """
     Kullanıcının düzeltmesini 'ders' olarak vault'a not düş — AI sonraki
     taslaklarda aynı hatayı tekrarlamamayı öğrenir. İki kaynak:
@@ -106,7 +118,7 @@ def log_correction(product_name: str | None, model_kodu: str | None, soru: str,
         tarih = datetime.now(IST).strftime("%d.%m.%Y %H:%M")
         blok = (
             f"\n### {tarih} — {(product_name or 'Ürün')[:70]}"
-            f"{f' (model {model_kodu})' if model_kodu else ''}\n"
+            f"{_etiket(model_kodu, renk)}\n"
             f"- **Soru:** {(soru or '').strip()[:300]}\n"
         )
         if talimat:

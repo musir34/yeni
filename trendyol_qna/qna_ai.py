@@ -37,17 +37,21 @@ def _kurallar() -> str:
             "\n\n---\n\n# Bilgi Bankası (geçmiş cevaplar ve notlar)\n"
             "Aşağıdaki notlar mağazanın GERÇEK geçmiş cevaplarından derlendi. "
             "Üslubu ve bilgileri örnek al; ama STOK için her zaman sana verilen "
-            "CANLI STOK verisini esas al (geçmiş 'üretimi sonlandı' notu bugün geçersiz olabilir).\n\n"
+            "CANLI STOK verisini esas al (geçmiş 'üretimi sonlandı' notu bugün geçersiz olabilir).\n"
+            "Kayıtlar '(model X · renk Y)' etiketlidir: cevapladığın ürünün model kodu "
+            "VE rengiyle eşleşen dersleri kural gibi uygula; yalnızca model kodu eşleşenleri "
+            "dikkate al ama başka renge özgü bilgiyi (kalıp, ton, malzeme vb.) bu renge TAŞIMA.\n\n"
             + notlar
         )
     return kurallar
 
 
 def _draft_prompt(row, stok_bilgisi: str, talimat: str | None = None,
-                  mevcut_metin: str | None = None) -> str:
+                  mevcut_metin: str | None = None, renk: str | None = None) -> str:
     prompt = (
         f"Ürün: {row.product_name or 'bilinmiyor'}\n"
         f"Model kodu: {row.product_main_id or 'bilinmiyor'}\n"
+        f"Renk: {renk or 'bilinmiyor'}\n"
         f"CANLI STOK: {stok_bilgisi}\n\n"
         f"Müşteri sorusu:\n{row.text}\n\n"
     )
@@ -120,7 +124,7 @@ def generate_draft(question_id: int, talimat: str | None = None,
     Dönen: {'ok': bool, 'taslak'/'hata': str}
     """
     from models import db, TrendyolQuestion
-    from trendyol_qna.qna_service import stock_context, ANSWER_MAX
+    from trendyol_qna.qna_service import stock_context, question_renk, ANSWER_MAX
 
     row = db.session.get(TrendyolQuestion, question_id)
     if not row:
@@ -141,14 +145,16 @@ def generate_draft(question_id: int, talimat: str | None = None,
     db.session.commit()
 
     onceki_taslak = mevcut_metin or row.ai_draft
+    renk = question_renk(row.product_main_id, row.product_name)
     taslak = _run_claude(_draft_prompt(row, stock_context(row.product_main_id),
-                                       talimat=talimat, mevcut_metin=mevcut_metin))
+                                       talimat=talimat, mevcut_metin=mevcut_metin,
+                                       renk=renk))
     if taslak:
         if talimat:
             # Düzeltme talimatını ders olarak bilgi bankasına not düş
             from trendyol_qna.qna_notes import log_correction
             log_correction(row.product_name, row.product_main_id, row.text,
-                           talimat, onceki_taslak, taslak[:ANSWER_MAX])
+                           talimat, onceki_taslak, taslak[:ANSWER_MAX], renk=renk)
         row.ai_draft = taslak[:ANSWER_MAX]
         row.ai_draft_status = "ready"
         row.ai_draft_at = datetime.now(timezone.utc)

@@ -281,13 +281,15 @@ def answer_question(question_id: int, text: str, username: str | None = None) ->
 
     # İnsan onaylı cevabı bilgi bankasına not düş (AI sonraki taslaklarda öğrenir)
     from trendyol_qna.qna_notes import log_approved_answer, log_correction
-    log_approved_answer(row.product_name, row.product_main_id, row.text, text, username)
+    renk = question_renk(row.product_main_id, row.product_name)
+    log_approved_answer(row.product_name, row.product_main_id, row.text, text, username,
+                        renk=renk)
     # AI taslağı elle düzeltilerek gönderildiyse farkı ders olarak da not düş
     def _norm(s):
         return " ".join((s or "").replace(SIGNATURE, "").split())
     if onceki_taslak and _norm(onceki_taslak) != _norm(text):
         log_correction(row.product_name, row.product_main_id, row.text,
-                       None, onceki_taslak, text)
+                       None, onceki_taslak, text, renk=renk)
     return {"ok": True, "hata": None}
 
 
@@ -298,6 +300,46 @@ def waiting_count() -> int:
     except Exception:
         logger.exception("[QNA] bekleyen sayısı okunamadı")
         return 0
+
+
+def _tr_lower(s: str) -> str:
+    """Türkçe-uyumlu küçük harf (İ→i, I→ı)."""
+    return (s or "").replace("İ", "i").replace("I", "ı").lower()
+
+
+def question_renk(product_main_id: str | None, product_name: str | None) -> str | None:
+    """
+    Sorunun hangi RENK varyantına ait olduğunu tespit et: modelin (product_main_id)
+    paneldeki renkleri içinden, soru ürün adında geçen en uzun eşleşme.
+    Bulunamazsa None (model tek renkliyse o renk döner).
+    """
+    if not product_main_id:
+        return None
+    try:
+        renkler = [
+            r[0] for r in (
+                db.session.query(Product.color)
+                .filter(Product.product_main_id == product_main_id)
+                .filter(Product.color.isnot(None))
+                .distinct()
+                .all()
+            ) if r[0]
+        ]
+    except Exception:
+        logger.exception("[QNA] renk tespiti sorgusu hata")
+        return None
+    if not renkler:
+        return None
+    if len(renkler) == 1:
+        return renkler[0]
+    # Kelime bazlı eşleşme: rengin TÜM kelimeleri ürün adında geçmeli
+    # (başlık 'Bej Parlak Kırışık' → renk 'Bej Kırışık' yakalanır).
+    ad_kelimeler = set(_tr_lower(product_name or "").split())
+    eslesen = [r for r in renkler if set(_tr_lower(r).split()) <= ad_kelimeler]
+    if eslesen:
+        # En çok kelimesi eşleşen (en spesifik) renk: 'Rugan' değil 'Siyah Rugan'
+        return max(eslesen, key=lambda r: (len(r.split()), len(r)))
+    return None
 
 
 def stock_context(product_main_id: str | None) -> str:
