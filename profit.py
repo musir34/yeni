@@ -22,6 +22,7 @@ from models import (
     ReturnProduct,
     db,
     OrderCreated,
+    OrderHazirlaniyor,
     OrderPicking,
     OrderShipped,
     OrderDelivered,
@@ -397,7 +398,7 @@ def profit_report():
 
             # -- Aktif siparişler --
             orders = []
-            table_classes = [OrderCreated, OrderPicking, OrderShipped, OrderDelivered]
+            table_classes = [OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered]
             all_individual_barcodes = set()
             logging.info("Ana sipariş tabloları sorgulanıyor...")
             all_excluded_order_nos = cancelled_order_numbers.union(returned_order_numbers)
