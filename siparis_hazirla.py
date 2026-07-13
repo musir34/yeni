@@ -370,7 +370,11 @@ def get_home(order_number=None):
                 trendyol_q = PrepModel.query
                 if archived_numbers:
                     trendyol_q = trendyol_q.filter(~PrepModel.order_number.in_(archived_numbers))
-                oldest_order = trendyol_q.order_by(PrepModel.order_date).first()
+                # Kargo süresi en az olan önce (cut-off'a göre); tarihi olmayan en sona, sonra FIFO
+                oldest_order = (trendyol_q
+                                .order_by(PrepModel.agreed_delivery_date.asc().nullslast(),
+                                          PrepModel.order_date.asc())
+                                .first())
         is_from_woo_table = False
 
         # Hava durumu bilgisi
@@ -733,7 +737,10 @@ def get_queue_orders():
             if active_order_number:
                 trendyol_query = trendyol_query.filter(PrepModel.order_number != active_order_number)
 
-            trendyol_orders = trendyol_query.order_by(PrepModel.order_date).limit(remaining_slots).all()
+            trendyol_orders = (trendyol_query
+                               .order_by(PrepModel.agreed_delivery_date.asc().nullslast(),
+                                         PrepModel.order_date.asc())
+                               .limit(remaining_slots).all())
 
             for order in trendyol_orders:
                 first_image = "/static/images/default.jpg"
