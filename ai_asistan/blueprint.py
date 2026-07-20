@@ -25,6 +25,7 @@ GÜVENLİK:
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import threading
@@ -432,6 +433,66 @@ def _claude_calistir(soru: str, resume_session_id: str | None = None) -> dict:
     return sonuc
 
 
+SQL_BLOK = re.compile(r"```sql\s*(.+?)```", re.DOTALL | re.IGNORECASE)
+AZAMI_SQL_TUR = 6      # Codex'in art arda yapabileceği azami sorgu sayısı
+
+CODEX_SQL_TALIMATI = """
+# Veritabanı erişimin (ÖNEMLİ)
+Veriye ihtiyacın olduğunda SQL yaz; sorguyu senin adına ben çalıştırıp sonucu
+sana geri veririm. Kurallar:
+- Sorguyu TEK bir ```sql ... ``` bloğunda yaz ve o mesajda BAŞKA bir şey yazma.
+- Tek seferde TEK sorgu; yalnızca SELECT (veya WITH ... SELECT).
+- Sonucu alınca gerekirse yeni bir sorgu yazabilirsin (en fazla {tur} sorgu).
+- Yeterli veriye ulaşınca ```sql bloğu YAZMA; doğrudan Türkçe nihai cevabı yaz.
+- Veriyi uydurma; yalnızca sorgudan dönen sonuçlara dayan.
+- Tarih sütunları UTC saklanır.
+
+# Veritabanı şeması (public)
+{sema}
+"""
+
+
+def _codex_sql_dongusu(soru: str, resume_session_id: str | None = None) -> dict:
+    """
+    Codex için Claude'un MCP döngüsünün eşdeğeri: Codex ```sql bloğu yazar,
+    sorgu burada ai_readonly ile çalıştırılır, sonuç bir sonraki tura beslenir.
+    Codex sql bloğu yazmayı bırakınca son cevap kullanıcıya döner.
+
+    MCP kullanılmamasının sebebi sql_kopru.py başında açıklanmıştır.
+    """
+    from ai_asistan.sql_kopru import sema_ozeti, sql_calistir
+
+    sistem = _system_prompt() + "\n\n" + CODEX_SQL_TALIMATI.format(
+        tur=AZAMI_SQL_TUR, sema=sema_ozeti())
+
+    sonuc = _codex_calistir(soru, sistem, QUERY_TIMEOUT_SN, resume_session_id)
+    if not sonuc["ok"] and resume_session_id:
+        # Oturum kayıp/bozuk olabilir → taze oturumla bir kez daha.
+        sonuc = _codex_calistir(soru, sistem, QUERY_TIMEOUT_SN, None)
+
+    for _ in range(AZAMI_SQL_TUR):
+        if not sonuc["ok"]:
+            return sonuc
+        eslesme = SQL_BLOK.search(sonuc["cevap"])
+        if not eslesme:
+            return sonuc                      # sql istemedi → nihai cevap
+
+        cikti = sql_calistir(eslesme.group(1))
+        # Oturum sürdüğü için sistem promptu tekrar gönderilmez.
+        sonuc = _codex_calistir(
+            f"Sorgu sonucu:\n\n{cikti}\n\n"
+            "Bu sonuca göre devam et: ya yeni bir ```sql bloğu yaz ya da "
+            "kullanıcıya Türkçe nihai cevabı yaz.",
+            "", QUERY_TIMEOUT_SN, sonuc.get("session_id"))
+
+    # Tur sınırı doldu: elde ne varsa onu döndür, uydurma cevap üretme.
+    if sonuc["ok"] and SQL_BLOK.search(sonuc["cevap"]):
+        return {"ok": False, "session_id": sonuc.get("session_id"),
+                "hata": "Soru çok fazla sorgu gerektirdi; lütfen daha dar bir "
+                        "soru sorun (ör. tarih aralığı veya ürün belirtin)."}
+    return sonuc
+
+
 def _ai_calistir(soru: str, resume_session_id: str | None = None) -> dict:
     """
     Seçili motora göre Claude Code veya Codex CLI'yi çalıştırır (aynı sözleşme).
@@ -442,11 +503,7 @@ def _ai_calistir(soru: str, resume_session_id: str | None = None) -> dict:
 
     if aktif_motor("asistan") != "codex":
         return _claude_calistir(soru, resume_session_id)
-
-    sonuc = _codex_calistir(soru, _system_prompt(), QUERY_TIMEOUT_SN, resume_session_id)
-    if not sonuc["ok"] and resume_session_id:
-        sonuc = _codex_calistir(soru, _system_prompt(), QUERY_TIMEOUT_SN, None)
-    return sonuc
+    return _codex_sql_dongusu(soru, resume_session_id)
 
 
 def _arka_planda_cevapla(app, mesaj_id: int, sohbet_id: int, soru: str) -> None:
