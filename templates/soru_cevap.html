@@ -50,6 +50,11 @@
     <div class="ms-auto d-flex gap-2">
       <input type="search" class="form-control form-control-sm" id="qnaSearch"
              placeholder="Soru / ürün / model ara..." style="max-width:260px;">
+      <select class="form-select form-select-sm" id="qnaMotorSec" style="max-width:150px;display:none;"
+              title="Taslakları üreten AI motoru">
+        <option value="claude">Taslak: Claude</option>
+        <option value="codex">Taslak: Codex</option>
+      </select>
       <button class="btn btn-sm btn-outline-secondary" id="qnaSyncBtn" title="Trendyol'dan son 14 günü çek">
         <i class="bi bi-arrow-repeat"></i> Senkronla
       </button>
@@ -346,7 +351,33 @@
     load();
   });
 
+  // ── Taslak motoru seçimi (yalnızca yönetici görür) ──
+  const motorSec = document.getElementById('qnaMotorSec');
+
+  async function motorYukle() {
+    try {
+      const r = await fetch('/ai-asistan/motor');
+      const d = await r.json();
+      if (!d.ok || !d.duzenleyebilir) return;
+      motorSec.value = d.motorlar.qna;
+      motorSec.style.display = '';
+    } catch (e) { /* sessiz: seçici olmadan sayfa çalışmaya devam eder */ }
+  }
+
+  motorSec.addEventListener('change', async function() {
+    try {
+      const r = await fetch('/ai-asistan/motor', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-Requested-With': 'fetch'},
+        body: JSON.stringify({alan: 'qna', motor: motorSec.value})
+      });
+      const d = await r.json();
+      if (!d.ok) { alert(d.hata || 'Motor değiştirilemedi.'); motorYukle(); }
+    } catch (e) { alert('Motor değiştirilemedi.'); motorYukle(); }
+  });
+
   load();
+  motorYukle();
   setInterval(() => { if (curStatus === 'WAITING_FOR_ANSWER' && curPage === 1) load(); else refreshBadge(); }, 30000);
 })();
 </script>

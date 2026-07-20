@@ -9,6 +9,11 @@
     .ai-araclar button{background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:.85rem}
     .ai-araclar button:hover{background:rgba(255,255,255,.3)}
 
+    .ai-motor{position:absolute;top:14px;left:14px;display:none;align-items:center;gap:6px;font-size:.78rem;opacity:.9}
+    .ai-motor.acik{display:flex}
+    .ai-motor select{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:5px 8px;font-size:.78rem;cursor:pointer}
+    .ai-motor select option{color:#222}
+
     .ai-chat{background:var(--color-bg-light);border:1px solid var(--color-border);border-radius:var(--border-radius);display:flex;flex-direction:column;height:65vh;position:relative;overflow:hidden}
     .ai-mesajlar{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
     .ai-msg{max-width:80%;padding:10px 14px;border-radius:12px;font-size:.9rem;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
@@ -40,6 +45,13 @@
 <div class="ai-header">
     <h1>🤖 AI Asistanı</h1>
     <p>Sipariş, stok, satış ve kasa verilerini doğal dille sorgula (salt-okunur)</p>
+    <div class="ai-motor" id="aiMotorKutu" title="Cevapları üreten AI motoru">
+        <i class="fas fa-microchip"></i>
+        <select id="aiMotorSec">
+            <option value="claude">Claude</option>
+            <option value="codex">Codex</option>
+        </select>
+    </div>
     <div class="ai-araclar">
         <button id="aiYeni" title="Yeni sohbet"><i class="fas fa-plus"></i></button>
         <button id="aiGecmisBtn" title="Geçmiş sohbetler"><i class="fas fa-history"></i></button>
@@ -228,6 +240,36 @@
         sohbetSil(id, null);
     }
 
+    // ── AI motoru seçimi (yalnızca yönetici görür) ──
+    const motorKutu = document.getElementById('aiMotorKutu');
+    const motorSec = document.getElementById('aiMotorSec');
+
+    async function motorYukle() {
+        try {
+            const r = await fetch('/ai-asistan/motor');
+            const d = await r.json();
+            if (!d.ok || !d.duzenleyebilir) return;
+            motorSec.value = d.motorlar.asistan;
+            motorKutu.classList.add('acik');
+        } catch (e) { /* sessiz: motor seçici olmadan sayfa çalışmaya devam eder */ }
+    }
+
+    motorSec.addEventListener('change', async function () {
+        const secim = motorSec.value;
+        try {
+            const r = await fetch('/ai-asistan/motor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+                body: JSON.stringify({ alan: 'asistan', motor: secim })
+            });
+            const d = await r.json();
+            if (!d.ok) { alert(d.hata || 'Motor değiştirilemedi.'); await motorYukle(); return; }
+            // Oturum kimlikleri motora özgü: süren sohbet öbür motorda sürdürülemez,
+            // sunucu taze oturuma düşer → bağlam kaybını kullanıcıya baştan söyle.
+            ekle('Motor "' + secim + '" olarak değiştirildi. Süren sohbetin bağlamı bu motorda taşınmaz; "Yeni sohbet" ile başlaman önerilir.', 'asistan');
+        } catch (e) { alert('Motor değiştirilemedi.'); await motorYukle(); }
+    });
+
     gonderBtn.addEventListener('click', gonder);
     yeniBtn.addEventListener('click', yeniSohbet);
     gecmisBtn.addEventListener('click', gecmisAcKapa);
@@ -240,6 +282,7 @@
     });
 
     sohbetYukle();
+    motorYukle();
 })();
 </script>
 {% endblock %}

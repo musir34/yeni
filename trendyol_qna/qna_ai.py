@@ -16,7 +16,6 @@ from pathlib import Path
 from ai_asistan.blueprint import (
     _claude_bin,
     _codex_calistir,
-    AI_MOTOR,
     BASE_DIR as AI_ASISTAN_DIR,
     CLAUDE_MODEL,
 )
@@ -123,8 +122,10 @@ def _run_claude(prompt: str) -> str | None:
 
 
 def _run_ai(prompt: str) -> str | None:
-    """AI_MOTOR'a göre Claude veya Codex ile taslak üret (hata → None)."""
-    if AI_MOTOR != "codex":
+    """Seçili motorla (panel ayarı > .env AI_MOTOR) taslak üret (hata → None)."""
+    from ai_asistan.motor_ayar import aktif_motor
+
+    if aktif_motor("qna") != "codex":
         return _run_claude(prompt)
 
     sonuc = _codex_calistir(prompt, _kurallar(), DRAFT_TIMEOUT_SN, cwd=AI_ASISTAN_DIR)

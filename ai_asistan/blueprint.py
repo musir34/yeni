@@ -434,10 +434,13 @@ def _claude_calistir(soru: str, resume_session_id: str | None = None) -> dict:
 
 def _ai_calistir(soru: str, resume_session_id: str | None = None) -> dict:
     """
-    AI_MOTOR'a göre Claude Code veya Codex CLI'yi çalıştırır (aynı sözleşme).
+    Seçili motora göre Claude Code veya Codex CLI'yi çalıştırır (aynı sözleşme).
+    Motor panelden değiştirilebilir; ayar yoksa .env'deki AI_MOTOR geçerlidir.
     Codex tarafında da resume başarısız olursa taze oturumla bir kez denenir.
     """
-    if AI_MOTOR != "codex":
+    from ai_asistan.motor_ayar import aktif_motor
+
+    if aktif_motor("asistan") != "codex":
         return _claude_calistir(soru, resume_session_id)
 
     sonuc = _codex_calistir(soru, _system_prompt(), QUERY_TIMEOUT_SN, resume_session_id)
@@ -518,6 +521,44 @@ def _utc_iso(dt) -> str | None:
 def sayfa():
     """Sohbet kutusu sayfası."""
     return render_template("ai_asistan.html")
+
+
+@ai_asistan_bp.route("/motor", methods=["GET", "POST"])
+@login_required
+def motor():
+    """
+    AI motoru (claude|codex) oku/değiştir. Her iki ekran da (asistan, qna) bu
+    endpoint'i kullanır. Değiştirme YALNIZCA yöneticiye açık — motor seçimi
+    maliyet/gizlilik etkisi olan bir sistem ayarı.
+    """
+    from ai_asistan.motor_ayar import motor_ayarla, motorlari_getir
+
+    if request.method == "GET":
+        return jsonify({"ok": True, "motorlar": motorlari_getir(),
+                        "duzenleyebilir": _yonetici_mi()})
+
+    if not _yonetici_mi():
+        return jsonify({"ok": False, "hata": "Bu ayarı yalnızca yönetici değiştirebilir."}), 403
+
+    # Basit CSRF kalkanı (qna_routes.py:40 ile aynı desen): siteler arası form
+    # POST'u bu özel başlığı gönderemez, fetch gönderir.
+    if request.headers.get("X-Requested-With") != "fetch":
+        return jsonify({"ok": False, "hata": "Geçersiz istek."}), 400
+
+    payload = request.get_json(silent=True) or {}
+    alan = (payload.get("alan") or "").strip()
+    secim = (payload.get("motor") or "").strip().lower()
+    try:
+        motor_ayarla(alan, secim)
+    except ValueError as e:
+        return jsonify({"ok": False, "hata": str(e)}), 400
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("[AI-MOTOR] ayar yazılamadı")
+        return jsonify({"ok": False, "hata": "Ayar kaydedilemedi."}), 500
+
+    current_app.logger.info("[AI-MOTOR] %s → %s (kullanıcı=%s)", alan, secim, _kullanici_id())
+    return jsonify({"ok": True, "motorlar": motorlari_getir()})
 
 
 @ai_asistan_bp.route("/sor", methods=["POST"])
