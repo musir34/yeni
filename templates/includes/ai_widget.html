@@ -25,6 +25,9 @@
   .aiw-head .aiw-sub{font-size:.68rem;opacity:.8;display:block;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .aiw-head button{background:rgba(255,255,255,.15);border:none;color:#fff;width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:.8rem;flex:none}
   .aiw-head button:hover{background:rgba(255,255,255,.3)}
+  .aiw-motor{display:none;align-items:center;gap:6px;padding:6px 14px;background:#eef2ff;border-bottom:1px solid #e0e7ff;font-size:.72rem;color:#4338ca}
+  .aiw-motor.acik{display:flex}
+  .aiw-motor select{margin-left:auto;border:1px solid #c7d2fe;background:#fff;color:#312e81;border-radius:6px;padding:3px 6px;font-size:.72rem;cursor:pointer}
   #aiw-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#f7f8fa}
   .aiw-msg{max-width:85%;padding:9px 12px;border-radius:12px;font-size:.86rem;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
   .aiw-msg.kul{align-self:flex-end;background:#4f46e5;color:#fff;border-bottom-right-radius:3px}
@@ -64,6 +67,13 @@
       <button id="aiw-gecmis-btn" title="Geçmiş sohbetler"><i class="fas fa-history"></i></button>
       <button id="aiw-sil" title="Bu sohbeti sil"><i class="fas fa-trash"></i></button>
       <button id="aiw-kapat" title="Kapat"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="aiw-motor" id="aiw-motor-kutu">
+      <i class="fas fa-microchip"></i> Motor
+      <select id="aiw-motor-sec" title="Cevapları üreten AI motoru">
+        <option value="claude">Claude</option>
+        <option value="codex">Codex</option>
+      </select>
     </div>
     <div id="aiw-gecmis">
       <div class="aiw-gec-bas">Geçmiş Sohbetler</div>
@@ -236,6 +246,35 @@
   silBtn.addEventListener('click',aktifSil);
   gonder.addEventListener('click',sor);
   soruEl.addEventListener('keydown',function(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sor();} });
+
+  // ── AI motoru seçimi (yalnızca yönetici görür) ──
+  var motorKutu=document.getElementById('aiw-motor-kutu');
+  var motorSec=document.getElementById('aiw-motor-sec');
+
+  async function motorYukle(){
+    try{
+      const r=await fetch('/ai-asistan/motor');
+      const d=await r.json();
+      if(!d.ok||!d.duzenleyebilir) return;
+      motorSec.value=d.motorlar.asistan;
+      motorKutu.classList.add('acik');
+    }catch(e){ /* sessiz: seçici olmadan widget çalışmaya devam eder */ }
+  }
+
+  motorSec.addEventListener('change',async function(){
+    var secim=motorSec.value;
+    try{
+      const r=await fetch('/ai-asistan/motor',{method:'POST',
+        headers:{'Content-Type':'application/json','X-Requested-With':'fetch'},
+        body:JSON.stringify({alan:'asistan',motor:secim})});
+      const d=await r.json();
+      if(!d.ok){ alert(d.hata||'Motor değiştirilemedi.'); motorYukle(); return; }
+      // Oturum kimlikleri motora özgü: süren sohbet öbür motorda sürdürülemez.
+      ekle('Motor "'+secim+'" olarak değiştirildi. Süren sohbetin bağlamı taşınmaz; yeni sohbet başlatman önerilir.','bot');
+    }catch(e){ alert('Motor değiştirilemedi.'); motorYukle(); }
+  });
+
+  motorYukle();
 
   // Sayfalar arası: panel açık kalsın
   if(localStorage.getItem('aiw_acik')==='1') ac();
