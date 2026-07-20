@@ -13,7 +13,13 @@ import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from ai_asistan.blueprint import _claude_bin, BASE_DIR as AI_ASISTAN_DIR, CLAUDE_MODEL
+from ai_asistan.blueprint import (
+    _claude_bin,
+    _codex_calistir,
+    AI_MOTOR,
+    BASE_DIR as AI_ASISTAN_DIR,
+    CLAUDE_MODEL,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +122,18 @@ def _run_claude(prompt: str) -> str | None:
     return text or None
 
 
+def _run_ai(prompt: str) -> str | None:
+    """AI_MOTOR'a göre Claude veya Codex ile taslak üret (hata → None)."""
+    if AI_MOTOR != "codex":
+        return _run_claude(prompt)
+
+    sonuc = _codex_calistir(prompt, _kurallar(), DRAFT_TIMEOUT_SN, cwd=AI_ASISTAN_DIR)
+    if not sonuc["ok"]:
+        logger.warning("[QNA-AI] codex hata: %s", sonuc.get("hata"))
+        return None
+    return sonuc["cevap"] or None
+
+
 def generate_draft(question_id: int, talimat: str | None = None,
                    mevcut_metin: str | None = None) -> dict:
     """
@@ -146,9 +164,9 @@ def generate_draft(question_id: int, talimat: str | None = None,
 
     onceki_taslak = mevcut_metin or row.ai_draft
     renk = question_renk(row.product_main_id, row.product_name)
-    taslak = _run_claude(_draft_prompt(row, stock_context(row.product_main_id),
-                                       talimat=talimat, mevcut_metin=mevcut_metin,
-                                       renk=renk))
+    taslak = _run_ai(_draft_prompt(row, stock_context(row.product_main_id),
+                                   talimat=talimat, mevcut_metin=mevcut_metin,
+                                   renk=renk))
     if taslak:
         if talimat:
             # Düzeltme talimatını ders olarak bilgi bankasına not düş

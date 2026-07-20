@@ -80,6 +80,12 @@ BASLIK_UZUNLUK = 60            # sohbet başlığı = ilk sorunun ilk N karakter
 
 CLAUDE_MODEL = "opus"          # premium cevap kalitesi (abonelik dahilinde)
 
+# Hangi AI motoru çalışsın: 'claude' (varsayılan) veya 'codex'. .env ile değiştirilir;
+# sorun çıkarsa AI_MOTOR=claude ile tek satırda geri dönülür.
+AI_MOTOR = (os.getenv("AI_MOTOR") or "claude").strip().lower()
+# Boş bırakılırsa codex kendi yapılandırmasındaki varsayılan modeli kullanır.
+CODEX_MODEL = (os.getenv("CODEX_MODEL") or "").strip()
+
 
 def _tam_dogrulanmis_mi() -> bool:
     """
@@ -171,6 +177,140 @@ def _claude_bin() -> str | None:
         if aday.is_file():
             return str(aday)
     return None
+
+
+def _codex_bin() -> str | None:
+    """
+    'codex' çalıştırılabilirinin tam yolunu bul (_claude_bin ile aynı mantık).
+    """
+    env_bin = os.getenv("CODEX_BIN")
+    if env_bin and Path(env_bin).is_file():
+        return env_bin
+
+    found = shutil.which("codex")
+    if found:
+        return found
+
+    for aday in (
+        Path.home() / ".local/bin/codex",
+        Path("/usr/local/bin/codex"),
+        Path("/usr/bin/codex"),
+        Path.home() / ".npm-global/bin/codex",
+    ):
+        if aday.is_file():
+            return str(aday)
+    return None
+
+
+def _codex_env() -> dict:
+    """
+    Codex alt süreci için ortam: abonelik (codex login) kullanılsın diye
+    OPENAI_API_KEY temizlenir; üst süreçten sızan CODEX_* oturum/sandbox
+    değişkenleri de (CODEX_BIN, CODEX_HOME hariç) alt sürecin sandbox'ını
+    bozmasın diye atılır.
+    """
+    return {
+        k: v for k, v in os.environ.items()
+        if not (k.startswith("OPENAI")
+                or (k.startswith("CODEX") and k not in ("CODEX_BIN", "CODEX_HOME")))
+    }
+
+
+def _codex_ciktisi_coz(stdout: str) -> tuple[str, str | None]:
+    """
+    'codex exec --json' JSONL akışını çöz → (cevap, thread_id).
+    İlgilendiğimiz olaylar: thread.started (oturum kimliği) ve
+    item.completed/agent_message (asistan metni; sonuncusu esas alınır).
+    """
+    cevap = ""
+    thread_id = None
+    for satir in stdout.splitlines():
+        satir = satir.strip()
+        if not satir.startswith("{"):
+            continue
+        try:
+            olay = json.loads(satir)
+        except json.JSONDecodeError:
+            continue
+        tur = olay.get("type")
+        if tur == "thread.started":
+            thread_id = olay.get("thread_id") or thread_id
+        elif tur == "item.completed":
+            item = olay.get("item") or {}
+            if item.get("type") == "agent_message" and item.get("text"):
+                cevap = item["text"]
+    return cevap.strip(), thread_id
+
+
+def _codex_calistir(soru: str, sistem_prompt: str, timeout_sn: int,
+                    resume_session_id: str | None = None,
+                    cwd: Path | None = None) -> dict:
+    """
+    Headless Codex CLI'yi çağırır; _claude_calistir ile AYNI sözleşmeyi döner:
+    {'ok': bool, 'cevap'/'hata': str, 'session_id': str|None}
+
+    Claude'dan farkları (codex 0.144):
+    - '--append-system-prompt' yok → sistem promptu ilk soruya önekleniyor
+      (resume'da gerekmez, oturumda zaten var).
+    - Araç bazlı beyaz liste ('--allowedTools') yok → yazma engeli sandbox
+      (read-only) ve DB tarafındaki ai_readonly rolüyle sağlanır.
+    - Oturum sürdürme ayrı alt komut: 'codex exec resume <thread_id>'; bu alt
+      komut '-s' kabul etmediği için sandbox/onay '-c' ile veriliyor.
+    """
+    codex_bin = _codex_bin()
+    if not codex_bin:
+        return {
+            "ok": False, "session_id": None,
+            "hata": "Codex CLI bulunamadı. Sunucuda 'which codex' ile yolu bulup "
+                    ".env'e CODEX_BIN=<tam yol> ekleyin (systemd dar PATH kullanır).",
+        }
+
+    cmd = [codex_bin, "exec"]
+    if resume_session_id:
+        cmd += ["resume", resume_session_id, soru]
+    else:
+        cmd += [f"{sistem_prompt}\n\n---\n\n{soru}"]
+    cmd += [
+        "--json",
+        "--skip-git-repo-check",
+        "-c", 'sandbox_mode="read-only"',
+        "-c", 'approval_policy="never"',
+    ]
+    if CODEX_MODEL:
+        cmd += ["-m", CODEX_MODEL]
+
+    try:
+        sonuc = subprocess.run(
+            cmd,
+            cwd=str(cwd or BASE_DIR),
+            env=_codex_env(),
+            capture_output=True,
+            text=True,
+            timeout=timeout_sn,
+            stdin=subprocess.DEVNULL,   # aksi halde codex prompt'u stdin'den bekler
+        )
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "session_id": None,
+                "hata": "Sorgu zaman aşımına uğradı. Lütfen soruyu sadeleştirin."}
+    except OSError as e:
+        return {"ok": False, "session_id": None,
+                "hata": f"Codex çalıştırılamadı: {e}"}
+
+    if sonuc.returncode != 0:
+        import logging
+        logging.getLogger(__name__).error(
+            "[AI-ASISTAN] codex rc=%s resume=%s stderr=%r stdout=%r",
+            sonuc.returncode, bool(resume_session_id),
+            (sonuc.stderr or "")[:500], (sonuc.stdout or "")[:500],
+        )
+        detay = (sonuc.stderr or "").strip() or (sonuc.stdout or "").strip()[:500]
+        return {"ok": False, "session_id": None,
+                "hata": f"Asistan hatası: {detay or 'bilinmeyen hata'}"}
+
+    cevap, thread_id = _codex_ciktisi_coz(sonuc.stdout or "")
+    if not cevap:
+        return {"ok": False, "session_id": None, "hata": "Asistandan boş cevap geldi."}
+    return {"ok": True, "cevap": cevap, "session_id": thread_id}
 
 
 def _system_prompt() -> str:
@@ -292,6 +432,20 @@ def _claude_calistir(soru: str, resume_session_id: str | None = None) -> dict:
     return sonuc
 
 
+def _ai_calistir(soru: str, resume_session_id: str | None = None) -> dict:
+    """
+    AI_MOTOR'a göre Claude Code veya Codex CLI'yi çalıştırır (aynı sözleşme).
+    Codex tarafında da resume başarısız olursa taze oturumla bir kez denenir.
+    """
+    if AI_MOTOR != "codex":
+        return _claude_calistir(soru, resume_session_id)
+
+    sonuc = _codex_calistir(soru, _system_prompt(), QUERY_TIMEOUT_SN, resume_session_id)
+    if not sonuc["ok"] and resume_session_id:
+        sonuc = _codex_calistir(soru, _system_prompt(), QUERY_TIMEOUT_SN, None)
+    return sonuc
+
+
 def _arka_planda_cevapla(app, mesaj_id: int, sohbet_id: int, soru: str) -> None:
     """
     Thread gövdesi: Claude'u çalıştır, sonucu 'bekliyor' durumundaki asistan
@@ -302,7 +456,7 @@ def _arka_planda_cevapla(app, mesaj_id: int, sohbet_id: int, soru: str) -> None:
             sohbet = db.session.get(AiSohbet, sohbet_id)
             resume_id = sohbet.claude_session_id if sohbet else None
 
-            sonuc = _claude_calistir(soru, resume_id)
+            sonuc = _ai_calistir(soru, resume_id)
 
             mesaj = db.session.get(AiMesaj, mesaj_id)
             if mesaj is None:                      # sohbet bu arada silinmiş
