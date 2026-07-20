@@ -151,7 +151,11 @@ def save_to_database(data: dict, session):
             continue  # onaylanmış iadeleri kaydetme
 
         claim_date_ms = item.get("claimDate")
-        claim_date = datetime.fromtimestamp(claim_date_ms / 1000) if claim_date_ms else None
+        # DİKKAT: claims API'sinin `claimDate`'i GERÇEK UTC epoch'tur (orders API'sinin
+        # `orderDate`'inden farklı — o İstanbul duvar saati kodluyor).
+        # Eski kod `fromtimestamp` kullanıyordu; app.py TZ'yi Europe/Istanbul yaptığı için
+        # bu +3 kaymış İstanbul saati yazıyordu. Doğrusu doğrudan naive UTC.
+        claim_date = datetime.utcfromtimestamp(claim_date_ms / 1000) if claim_date_ms else None
 
         orders_to_upsert.append(
             {

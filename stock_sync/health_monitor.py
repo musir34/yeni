@@ -15,6 +15,8 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Tuple
 
+from time_utils import fmt_ist
+
 logger = logging.getLogger(__name__)
 
 # Eşik değerleri — aşılırsa uyarı gönderilir
@@ -83,7 +85,7 @@ def check_sync_staleness() -> Dict[str, Any]:
         ("Toplam mapping", str(total_mappings)),
         (f"Son {STALE_SYNC_DAYS}+ gündür sync olmamış", str(stale_count)),
         ("Panel ↔ Shopify tutarsız", str(len(mismatches))),
-        ("Kontrol zamanı", datetime.now().strftime("%Y-%m-%d %H:%M")),
+        ("Kontrol zamanı", fmt_ist(datetime.utcnow(), "%Y-%m-%d %H:%M")),
     ]
     action = (
         "Panel → Ayarlar → Shopify Stok Senkronu'ndan manuel 'Stok Gönder' çalıştırın. "
@@ -142,7 +144,7 @@ def check_oversell_risk() -> Dict[str, Any]:
     )
     summary_rows: List[Tuple[str, str]] = [
         ("Riskli ürün sayısı", str(len(risk_rows))),
-        ("Kontrol zamanı", datetime.now().strftime("%Y-%m-%d %H:%M")),
+        ("Kontrol zamanı", fmt_ist(datetime.utcnow(), "%Y-%m-%d %H:%M")),
     ]
     action = (
         "Bu ürünlerin Shopify stoğunu manuel 0'a çekin veya bir sonraki "

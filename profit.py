@@ -32,6 +32,7 @@ from models import (
     ModelMaliyet,
     ModelDirekMaliyet,
 )
+from time_utils import ist_to_utc
 # --------------------------------------------------------------------------
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -327,7 +328,12 @@ def profit_report():
 
             logging.info(f"Form Girdileri - Paket/adet: {package_cost_per_item}, Aylık Maaş: {monthly_employee_salary}, Baz/İade Kargo: {form_shipping_cost}, Başlangıç: {start_date_str}, Bitiş: {end_date_str}")
             logging.info(f"Tarih aralığındaki gün sayısı: {days_in_range}")
-            db_query_end_date = end_date_obj_inclusive
+            # Kullanıcının seçtiği tarihler İSTANBUL takvim günüdür; DB'deki
+            # timestamp'lar naive UTC. Filtre sınırlarını UTC'ye çevirmezsek
+            # gün sınırı 3 saat kayar (yerel 00:00-03:00 siparişleri önceki güne düşer).
+            # start_date_obj takvim aritmetiği (days_in_range/monthrange) için IST kalır.
+            db_query_start_date = ist_to_utc(start_date_obj)
+            db_query_end_date = ist_to_utc(end_date_obj_inclusive)
             cancelled_order_numbers = set()
             returned_order_numbers = set()
 
@@ -339,7 +345,7 @@ def profit_report():
                         OrderCancelled.order_number, OrderCancelled.merchant_sku,
                         OrderCancelled.status, OrderCancelled.product_barcode
                     ).filter(
-                        OrderCancelled.order_date >= start_date_obj,
+                        OrderCancelled.order_date >= db_query_start_date,
                         OrderCancelled.order_date <= db_query_end_date,
                     ).all()
                 )
@@ -362,7 +368,7 @@ def profit_report():
                         ReturnOrder.order_number, ReturnOrder.status,
                         ReturnOrder.return_reason, ReturnProduct.barcode,
                     ).filter(
-                        ReturnOrder.return_date >= start_date_obj,
+                        ReturnOrder.return_date >= db_query_start_date,
                         ReturnOrder.return_date <= db_query_end_date,
                     ).all()
                 )
@@ -407,7 +413,7 @@ def profit_report():
                 try:
                     results = (
                         cls.query.filter(
-                            cls.order_date >= start_date_obj,
+                            cls.order_date >= db_query_start_date,
                             cls.order_date <= db_query_end_date,
                         )
                         .filter(cls.order_number.notin_(all_excluded_order_nos))

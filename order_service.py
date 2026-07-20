@@ -13,6 +13,7 @@ import threading
 import os
 from barcode_utils import generate_barcode
 from barcode_alias_helper import normalize_barcode
+from time_utils import ist_to_utc
 # Tablolar: Created, Picking, Shipped, Delivered, Cancelled, Archive
 # models.py içindeki doğru import yolu varsayılıyor
 from models import (
@@ -988,7 +989,12 @@ def combine_line_items(order_data, status):
         if not timestamp_ms: return None
         try:
             ts = float(timestamp_ms)
-            return datetime.utcfromtimestamp(ts / 1000.0)
+            # Trendyol'un epoch değeri gerçek UTC epoch DEĞİL; İstanbul duvar
+            # saatini kodluyor (kanıt: order_date, siparişi çektiğimiz andaki
+            # created_at'ten +3 saat ileride çıkıyor). Bu yüzden utcfromtimestamp
+            # bize İstanbul duvar saatini verir; konvansiyon gereği naive UTC'ye
+            # çeviriyoruz.
+            return ist_to_utc(datetime.utcfromtimestamp(ts / 1000.0))
         except (ValueError, TypeError, OverflowError):
             return None
 

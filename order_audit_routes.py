@@ -28,6 +28,7 @@ from models import (
     UserLog,
     db,
 )
+from time_utils import fmt_ist, to_ist
 
 logger = logging.getLogger(__name__)
 order_audit_bp = Blueprint("order_audit", __name__)
@@ -53,6 +54,16 @@ def _safe_get(obj, *names, default=None):
     return default
 
 
+def _ts(value) -> str:
+    """Timestamp → İstanbul saatinde metin (DB konvansiyonu: naive = UTC).
+
+    Datetime olmayan değerler eskisi gibi olduğu haliyle metne çevrilir.
+    """
+    if isinstance(value, datetime):
+        return fmt_ist(value, "%Y-%m-%d %H:%M:%S")
+    return str(value or "")
+
+
 def _serialize_order_row(row, table_label: str) -> dict:
     return {
         "table": table_label,
@@ -60,16 +71,16 @@ def _serialize_order_row(row, table_label: str) -> dict:
         "order_number": _safe_get(row, "order_number"),
         "package_number": _safe_get(row, "package_number"),
         "status": _safe_get(row, "status"),
-        "order_date": str(_safe_get(row, "order_date") or ""),
-        "created_at": str(_safe_get(row, "created_at") or ""),
-        "updated_at": str(_safe_get(row, "updated_at") or ""),
+        "order_date": _ts(_safe_get(row, "order_date")),
+        "created_at": _ts(_safe_get(row, "created_at")),
+        "updated_at": _ts(_safe_get(row, "updated_at")),
         "product_barcode": _safe_get(row, "product_barcode"),
         "merchant_sku": _safe_get(row, "merchant_sku"),
         "product_name": _safe_get(row, "product_name"),
         "quantity": _safe_get(row, "quantity"),
         "amount": _safe_get(row, "amount"),
         "atanan_raf": _safe_get(row, "atanan_raf"),
-        "picking_start_time": str(_safe_get(row, "picking_start_time") or "") or None,
+        "picking_start_time": _ts(_safe_get(row, "picking_start_time")) or None,
         "picked_by": _safe_get(row, "picked_by"),
         "cargo_provider_name": _safe_get(row, "cargo_provider_name"),
         "cargo_tracking_number": _safe_get(row, "cargo_tracking_number"),
@@ -258,7 +269,7 @@ def _audit_events(needle: str, barcodes: list[str], limit: int = 500) -> list[di
     return [
         {
             "id": r.id,
-            "ts": r.ts.strftime("%Y-%m-%d %H:%M:%S") if r.ts else "",
+            "ts": fmt_ist(r.ts, "%Y-%m-%d %H:%M:%S"),
             "event_type": r.event_type,
             "severity": r.severity,
             "order_number": r.order_number,
@@ -304,7 +315,7 @@ def _ledger_movements(needle: str, barcodes: list[str], limit: int = 500) -> lis
         return []
     return [
         {
-            "ts": r.created_at.strftime("%Y-%m-%d %H:%M:%S") if r.created_at else "",
+            "ts": fmt_ist(r.created_at, "%Y-%m-%d %H:%M:%S"),
             "barcode": r.barcode,
             "delta": r.delta,
             "reason": r.reason,
@@ -327,7 +338,7 @@ def _user_logs(needle: str, limit: int = 50) -> list[dict]:
     )
     return [
         {
-            "ts": u.timestamp.strftime("%Y-%m-%d %H:%M:%S") if u.timestamp else "",
+            "ts": fmt_ist(u.timestamp, "%Y-%m-%d %H:%M:%S"),
             "user_id": u.user_id,
             "action": u.action,
             "details": (u.details or "")[:1000],
@@ -404,7 +415,8 @@ def _stock_source_breakdown(hours: int) -> dict:
         if isinstance(r.details, dict):
             origin = r.details.get("origin")
         samples.append({
-            "ts": r.ts.isoformat() if r.ts else None,
+            # isoformat: +03:00 ofseti taşır, tüketici için tek anlamlı
+            "ts": to_ist(r.ts).isoformat() if r.ts else None,
             "barcode": r.barcode,
             "before": r.central_qty_before,
             "after": r.central_qty_after,
@@ -415,7 +427,7 @@ def _stock_source_breakdown(hours: int) -> dict:
 
     return {
         "hours": hours,
-        "since": since.isoformat(),
+        "since": to_ist(since).isoformat(),  # filtre UTC kalır, gösterim İstanbul
         "total": base.count(),
         "breakdown": breakdown,
         "inflate": inflate,

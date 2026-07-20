@@ -7,6 +7,7 @@ import requests
 from collections import Counter
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from datetime import datetime, timedelta
+from time_utils import ist_to_utc
 import uuid
 import random
 import os
@@ -740,13 +741,15 @@ def degisim_talep():
         query = query.filter(Degisim.degisim_durumu == filter_status)
     if start_date_str:
         try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            # Secilen tarih Istanbul takvim gunu; kolon naive UTC
+            start_date = ist_to_utc(datetime.strptime(start_date_str, '%Y-%m-%d'))
             query = query.filter(Degisim.degisim_tarihi >= start_date)
         except ValueError:
             pass
     if end_date_str:
         try:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+            end_date = ist_to_utc(datetime.strptime(end_date_str, '%Y-%m-%d')
+                                  .replace(hour=23, minute=59, second=59))
             query = query.filter(Degisim.degisim_tarihi <= end_date)
         except ValueError:
             pass

@@ -131,7 +131,7 @@ def process_all_products(all_products_data):
                 'brand': product_data.get('brand', ''),
                 'stock_code': product_data.get('stockCode', ''),
                 'images': product_data.get('images', [{}])[0].get('url', '') if product_data.get('images') else '',
-                'last_update_date': datetime.now(),
+                'last_update_date': datetime.utcnow(),
                 'color': color, 'size': size,
             }
 
@@ -271,7 +271,7 @@ async def update_price_stock():
                         if 'quantity' in item: product.quantity = item['quantity']
                         if 'salePrice' in item: product.sale_price = item['salePrice']
                         if 'listPrice' in item: product.list_price = item['listPrice']
-                        product.last_update_date = datetime.now()
+                        product.last_update_date = datetime.utcnow()
                         db.session.add(product)
 
                 db.session.commit()

@@ -31,6 +31,7 @@ from models import (
     BarcodeAlias,
     Rapor, User, UserLog,
 )
+from time_utils import ist_to_utc, to_ist
 from stock_management import sync_central_stock, sync_multiple_barcodes
 from barcode_alias_helper import normalize_barcode
 
@@ -209,12 +210,13 @@ def list_orders():
 
         if start_date:
             try:
-                q = q.filter(table_cls.order_date >= datetime.strptime(start_date, '%Y-%m-%d'))
+                # Gelen tarih İstanbul takvim günü; DB naive UTC → sınırı çevir
+                q = q.filter(table_cls.order_date >= ist_to_utc(datetime.strptime(start_date, '%Y-%m-%d')))
             except ValueError:
                 pass
         if end_date:
             try:
-                q = q.filter(table_cls.order_date <= datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
+                q = q.filter(table_cls.order_date <= ist_to_utc(datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)))
             except ValueError:
                 pass
 
@@ -588,12 +590,12 @@ def list_exchanges():
         ))
     if start_date:
         try:
-            q = q.filter(Degisim.degisim_tarihi >= datetime.strptime(start_date, '%Y-%m-%d'))
+            q = q.filter(Degisim.degisim_tarihi >= ist_to_utc(datetime.strptime(start_date, '%Y-%m-%d')))
         except ValueError:
             pass
     if end_date:
         try:
-            q = q.filter(Degisim.degisim_tarihi <= datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
+            q = q.filter(Degisim.degisim_tarihi <= ist_to_utc(datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)))
         except ValueError:
             pass
 
@@ -682,7 +684,7 @@ def create_exchange():
             soyad=data['soyad'],
             adres=data['adres'],
             telefon_no=data.get('telefon_no', ''),
-            degisim_tarihi=datetime.now(),
+            degisim_tarihi=datetime.utcnow(),
             degisim_durumu='Oluşturuldu',
             kargo_kodu=generate_kargo_kodu(),
             degisim_nedeni=data.get('degisim_nedeni', ''),
@@ -1040,7 +1042,7 @@ def create_manual_order():
             musteri_soyadi=data['musteri_soyadi'],
             musteri_adres=data['musteri_adres'],
             musteri_telefon=data.get('musteri_telefon', ''),
-            siparis_tarihi=datetime.now(),
+            siparis_tarihi=datetime.utcnow(),
             toplam_tutar=toplam_tutar,
             durum='Yeni',
             notlar=data.get('notlar', ''),
@@ -1547,8 +1549,11 @@ def dashboard():
         label = STATUS_LABEL.get(table_cls, table_cls.__tablename__)
         order_counts[label] = table_cls.query.count()
 
-    # Bugünkü siparişler
-    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    # Bugünkü siparişler — "bugün" İSTANBUL günüdür (sunucu UTC), sınır UTC'ye çevrilir
+    ist_gun_basi = to_ist(datetime.utcnow()).replace(
+        hour=0, minute=0, second=0, microsecond=0, tzinfo=None
+    )
+    today = ist_to_utc(ist_gun_basi)
     today_orders = OrderCreated.query.filter(OrderCreated.order_date >= today).count()
 
     # Stok

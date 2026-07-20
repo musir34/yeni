@@ -3,17 +3,15 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from models import db, OrderHazirlaniyor, RafUrun, Product, Archive, BarcodeAlias
 from barcode_alias_helper import normalize_barcode, strip_turkish
 from weather_service import get_istanbul_time
+from time_utils import to_ist
 from sqlalchemy.orm import load_only
 import json
 import traceback
 import io
 from datetime import datetime
-from zoneinfo import ZoneInfo
 from qr_utils import qr_utils_bp  # routes/__init__.py bu modülden export ediyor
 
 new_orders_service_bp = Blueprint('new_orders_service', __name__)
-
-IST = ZoneInfo("Europe/Istanbul")
 
 # Kargo cut-off'una bu saatten az kalan siparişler "acil" kovasına düşer.
 # Pazaryeri/kargo bazında ileride parametrik yapılabilir.
@@ -21,12 +19,8 @@ KARGO_ACIL_ESIK_SAAT = 24
 
 
 def _to_ist(dt):
-    """Naive ise IST varsay, aware ise IST'ye çevir."""
-    if dt is None:
-        return None
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=IST)
-    return dt.astimezone(IST)
+    """Naive ise UTC varsay (DB konvansiyonu), aware ise IST'ye çevir."""
+    return to_ist(dt)
 
 
 def _remaining_seconds(agreed_delivery_date):

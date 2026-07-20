@@ -5,7 +5,6 @@ import traceback
 from datetime import datetime
 from flask import Blueprint, render_template, request
 from sqlalchemy import desc
-from zoneinfo import ZoneInfo
 
 # Modeller
 from models import db, OrderCreated, OrderHazirlaniyor, RafUrun, Product, Archive, Degisim, ShopifyMapping
@@ -32,15 +31,7 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(levelname)s - %(message)s")
 
 
-IST = ZoneInfo("Europe/Istanbul")
-
-def to_ist(dt):
-    """Naive ise IST varsay, aware ise IST'ye çevir."""
-    if dt is None:
-        return None
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=IST)
-    return dt.astimezone(IST)
+from time_utils import to_ist  # naive = UTC konvansiyonu (DB'deki tüm timestamp'lar)
 
 
 

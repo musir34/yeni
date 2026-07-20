@@ -3,6 +3,7 @@ from flask_login import current_user
 from sqlalchemy import or_
 from models import db, UserLog, User
 from login_logout import roles_required
+from time_utils import fmt_ist, ist_to_utc
 from datetime import datetime, timedelta
 import json
 import urllib.parse
@@ -205,7 +206,8 @@ def log_user_action(action: str, details = None, force_log: bool = False, log_le
             'Kullanıcı Rolü': role_display,
             'Tarayıcı': get_browser_info(),
             'İşletim Sistemi': get_platform_info(),
-            'Zaman': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            # Sunucu UTC; details'e İstanbul saati yazılır ki 'Tarih' kolonuyla tutarlı olsun
+            'Zaman': fmt_ist(datetime.utcnow(), '%Y-%m-%d %H:%M:%S'),
         }
 
         # Sayfa bilgisi varsa ekle
@@ -339,14 +341,15 @@ def view_logs():
 
     try:
         if start_date_str:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            # Secilen tarih Istanbul takvim gunu; timestamp naive UTC
+            start_date = ist_to_utc(datetime.strptime(start_date_str, '%Y-%m-%d'))
             query = query.filter(UserLog.timestamp >= start_date)
     except ValueError as ve:
         logging.error(f"Başlangıç tarihi hatalı: {ve}")
 
     try:
         if end_date_str:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1)
+            end_date = ist_to_utc(datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1))
             query = query.filter(UserLog.timestamp <= end_date)
     except ValueError as ve:
         logging.error(f"Bitiş tarihi hatalı: {ve}")
@@ -404,14 +407,15 @@ def export_logs():
     from datetime import datetime, timedelta
     try:
         if start_date_str:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            # Secilen tarih Istanbul takvim gunu; timestamp naive UTC
+            start_date = ist_to_utc(datetime.strptime(start_date_str, '%Y-%m-%d'))
             query = query.filter(UserLog.timestamp >= start_date)
     except ValueError:
         pass
 
     try:
         if end_date_str:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1)
+            end_date = ist_to_utc(datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1))
             query = query.filter(UserLog.timestamp <= end_date)
     except ValueError:
         pass
@@ -428,7 +432,7 @@ def export_logs():
             details_dict = {}
 
         data.append({
-            "Tarih": log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            "Tarih": fmt_ist(log.timestamp, '%Y-%m-%d %H:%M:%S'),
             "Kullanıcı": log.user.username,
             "IP": log.ip_address,
             "Ham Aksiyon": log.action,

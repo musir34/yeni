@@ -149,8 +149,10 @@ def process_all_claims(all_claims_data):
             shipment_address = claim_data.get('shipmentAddress', {})
             
             # Unix timestamp ms -> datetime
-            create_date = datetime.fromtimestamp(claim_data.get('createDate', 0) / 1000) if claim_data.get('createDate') else None
-            last_modified_date = datetime.fromtimestamp(claim_data.get('lastModifiedDate', 0) / 1000) if claim_data.get('lastModifiedDate') else None
+            # claims API epoch'u GERÇEK UTC (orders API'sinden farklı, bkz. iade_islemleri).
+            # Eski `fromtimestamp` app.py TZ=Europe/Istanbul yüzünden +3 kaymış yazıyordu.
+            create_date = datetime.utcfromtimestamp(claim_data.get('createDate', 0) / 1000) if claim_data.get('createDate') else None
+            last_modified_date = datetime.utcfromtimestamp(claim_data.get('lastModifiedDate', 0) / 1000) if claim_data.get('lastModifiedDate') else None
             
             claim_data_dict = {
                 'claim_id': claim_id,
@@ -233,7 +235,7 @@ async def approve_claim(claim_id):
                 # Veritabanını güncelle
                 claim.status = 'APPROVED'
                 claim.notes = f"{claim.notes}\nOnaylandı: {reason}"
-                claim.last_modified_date = datetime.now()
+                claim.last_modified_date = datetime.utcnow()
                 db.session.commit()
                 
                 flash('İade talebi başarıyla onaylandı', 'success')
@@ -280,7 +282,7 @@ async def reject_claim(claim_id):
                 # Veritabanını güncelle
                 claim.status = 'REJECTED'
                 claim.notes = f"{claim.notes}\nReddedildi: {reason}"
-                claim.last_modified_date = datetime.now()
+                claim.last_modified_date = datetime.utcnow()
                 db.session.commit()
                 
                 flash('İade talebi başarıyla reddedildi', 'success')

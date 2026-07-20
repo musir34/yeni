@@ -29,6 +29,7 @@ import numpy as np
 import os
 import logging
 from datetime import datetime, timedelta
+from time_utils import ist_to_utc, to_ist
 from werkzeug.utils import secure_filename
 from login_logout import login_required, roles_required
 
@@ -183,7 +184,8 @@ def _query_sales_data(days: int = 90) -> pd.DataFrame:
     """Son N günlük sipariş verisini DB'den çeker (varsayılan 90)."""
     from models import OrderShipped, OrderDelivered
 
-    cutoff = datetime.now() - timedelta(days=days)
+    # order_date naive UTC; app.py TZ=Europe/Istanbul oldugu icin now() +3 kayardi
+    cutoff = datetime.utcnow() - timedelta(days=days)
     rows = []
 
     for model_cls in [OrderShipped, OrderDelivered]:
@@ -271,7 +273,9 @@ def _kaydet_oneri_gecmisi(results: list[dict], strateji: str,
     from models import db, MotorOneriLog
 
     try:
-        gun_basi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        # "Bugun" Istanbul gunudur; created_at naive UTC -> sinir UTC'ye cevrilir
+        gun_basi = ist_to_utc(to_ist(datetime.utcnow()).replace(
+            hour=0, minute=0, second=0, microsecond=0, tzinfo=None))
         bugunkuler = {
             (r.model_kodu, r.renk)
             for r in MotorOneriLog.query.filter(

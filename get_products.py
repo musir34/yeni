@@ -1215,7 +1215,7 @@ def update_product_cost():
         for product in products:
             product.cost_usd = cost_usd
             product.cost_try = cost_usd * usd_rate
-            product.cost_date = datetime.now()
+            product.cost_date = datetime.utcnow()
             db.session.add(product)
         db.session.commit()
         

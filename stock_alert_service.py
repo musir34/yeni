@@ -15,6 +15,7 @@ import logging
 from datetime import datetime
 
 from models import db, OrderCreated
+from time_utils import fmt_ist
 from mail_service import build_stock_shortage_email, notify
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ def _order_to_info(order):
         'order_number': order.order_number,
         'customer_name': ' '.join(filter(None, [order.customer_name, order.customer_surname])) or '-',
         'source': getattr(order, 'source', 'TRENDYOL'),
-        'agreed': order.agreed_delivery_date.strftime('%d.%m.%Y %H:%M') if order.agreed_delivery_date else '-',
+        'agreed': fmt_ist(order.agreed_delivery_date, '%d.%m.%Y %H:%M') or '-',
         'products': products,
     }
 

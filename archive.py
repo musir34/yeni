@@ -87,7 +87,7 @@ def compute_archived_duration(archive_date):
     if not archive_date:
         return "Süre Hesaplanamıyor"
     try:
-        now = datetime.now()
+        now = datetime.utcnow()  # archive_date naive UTC (konvansiyon)
         diff = now - archive_date # Geçen süre olduğu için now - archive_date
         if diff.total_seconds() < 0:
             return "Henüz Arşivlenmedi" # Gelecekteki bir tarihse
@@ -603,7 +603,7 @@ def archive_an_order():
             new_archive = Archive(
                 order_number=order_number,
                 status=getattr(fake_order, 'status', None) or "Archived",
-                order_date=getattr(fake_order, 'order_date', None) or datetime.now(),
+                order_date=getattr(fake_order, 'order_date', None) or datetime.utcnow(),
                 details=getattr(fake_order, 'details', None),
                 shipment_package_id=None,
                 package_number=None,
@@ -616,7 +616,7 @@ def archive_an_order():
                 estimated_delivery_start=getattr(fake_order, 'estimated_delivery_start', None),
                 estimated_delivery_end=getattr(fake_order, 'estimated_delivery_end', None),
                 archive_reason=archive_reason or 'Manuel Arşiv',
-                archive_date=datetime.now(),
+                archive_date=datetime.utcnow(),
                 source='shopify',
             )
             db.session.add(new_archive)
@@ -701,7 +701,7 @@ def archive_an_order():
             estimated_delivery_end=getattr(order_obj, 'estimated_delivery_end', None),
             cargo_tracking_link=getattr(order_obj, 'cargo_tracking_link', None),
             archive_reason=archive_reason,
-            archive_date=datetime.now(),
+            archive_date=datetime.utcnow(),
             source='trendyol'
         )
 

@@ -7,6 +7,15 @@ from sqlalchemy import func
 from archive import format_turkish_date_filter as _format_tr_date
 
 
+def _ist(col):
+    """Naive UTC timestamp kolonunu Istanbul duvar saatine cevirir (gun kesmek icin).
+
+    Postgres'te tek `timezone('Europe/Istanbul', ts)` naive degeri IST SANAR ve
+    yanlis sonuc verir; naive UTC icin cift cevrim sarttir.
+    """
+    return func.timezone('Europe/Istanbul', func.timezone('UTC', col))
+
+
 rapor_gir_bp = Blueprint('rapor_gir', __name__)
 
 @rapor_gir_bp.route('/raporlama', methods=['GET', 'POST'])
@@ -69,7 +78,7 @@ def giris():
             view_mode = 'kullanici_detay'
             kullanici = User.query.get_or_404(secilen_kullanici_id)
             raporlar = Rapor.query.filter(
-                func.date(Rapor.zaman_damgasi) == secilen_gun,
+                func.date(_ist(Rapor.zaman_damgasi)) == secilen_gun,
                 Rapor.kullanici_id == secilen_kullanici_id
             ).order_by(Rapor.zaman_damgasi.asc()).all()
             view_data = {'gun': secilen_gun, 'kullanici': kullanici, 'raporlar': raporlar}
@@ -77,14 +86,14 @@ def giris():
         elif secilen_gun:
             view_mode = 'gun_detay'
             kullanicilar = db.session.query(User).join(Rapor).filter(
-                func.date(Rapor.zaman_damgasi) == secilen_gun
+                func.date(_ist(Rapor.zaman_damgasi)) == secilen_gun
             ).distinct().all()
             view_data = {'gun': secilen_gun, 'kullanicilar': kullanicilar}
 
         else:
             view_mode = 'gun_liste'
-            gunler = db.session.query(func.date(Rapor.zaman_damgasi).label('gun')).distinct().order_by(
-                func.date(Rapor.zaman_damgasi).desc()
+            gunler = db.session.query(func.date(_ist(Rapor.zaman_damgasi)).label('gun')).distinct().order_by(
+                func.date(_ist(Rapor.zaman_damgasi)).desc()
             ).all()
             view_data = {'gunler': [g.gun for g in gunler]}
 
