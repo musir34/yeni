@@ -11,7 +11,7 @@ import math
 from datetime import datetime
 from barcode_utils import generate_barcode_data_uri
 
-from models import db, Product, OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled, PlatformConfig
+from models import db, Product, OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled, PlatformConfig, Archive
 from overdue_orders import OVERDUE_STATUSES, STATUS_CODE, overdue_orders_query
 from barcode_utils import generate_barcode
 import qrcode
@@ -19,6 +19,9 @@ import os
 
 order_list_service_bp = Blueprint('order_list_service', __name__)
 logger = logging.getLogger(__name__)
+
+# Süre/gecikme rozeti gösterilecek statüler (overdue_orders ile aynı küme)
+PRIORITY_STATUS_CODES = frozenset(STATUS_CODE.values())
 
 
 def _get_order_pull_enabled() -> bool:
@@ -282,13 +285,67 @@ def _overdue_order_numbers(overdue_orders):
     return {o.order_number for o in overdue_orders if getattr(o, 'order_number', None)}
 
 
+def _archived_search_matches(search_query, limit=5):
+    """Aranan ifadeyle eşleşen ARŞİVDEKİ siparişler (liste üstünde uyarı bandı için).
+
+    Arşivlenen sipariş statü tablolarından silindiği için normal aramada hiç
+    çıkmıyordu; kullanıcı "sipariş kayboldu" sanıyordu. Alanlar sipariş
+    listesindeki arama kutusuyla aynı: sipariş no + müşteri adı/soyadı.
+    """
+    if not search_query:
+        return []
+    sq = search_query.strip()
+    if not sq:
+        return []
+    try:
+        like = f"%{sq}%"
+        rows = (
+            Archive.query
+            .filter(
+                or_(
+                    Archive.order_number.ilike(like),
+                    Archive.customer_name.ilike(like),
+                    Archive.customer_surname.ilike(like),
+                    (Archive.customer_name + ' ' + Archive.customer_surname).ilike(like),
+                )
+            )
+            .order_by(Archive.archive_date.desc())
+            .limit(limit)
+            .all()
+        )
+        seen = set()
+        matches = []
+        for r in rows:
+            if r.order_number in seen:
+                continue
+            seen.add(r.order_number)
+            matches.append({
+                'order_number': r.order_number,
+                'customer': f"{r.customer_name or ''} {r.customer_surname or ''}".strip(),
+                'archive_date': r.archive_date,
+                'archive_reason': r.archive_reason or '',
+            })
+        return matches
+    except Exception as e:
+        # Uyarı bandı ikincil bir yardım; hata olursa sipariş listesi bozulmasın.
+        logger.error(f"Hata: _archived_search_matches - {e}")
+        return []
+
+
 def _decorate_order_priority(orders):
-    """Kartlarda hızlı öncelik sinyali için süre durumunu ekle."""
+    """Kartlarda hızlı öncelik sinyali için süre durumunu ekle.
+
+    Yalnızca hâlâ kargoya verilmemiş statüler (Yeni/Hazırlanıyor/İşleme Alındı)
+    için hesaplanır; Kargoda/Teslim Edildi/İptal siparişlerde teslim tarihi
+    geçmiş olsa bile "Süresi Doldu"/"Acil" rozeti gösterilmez.
+    """
     now = datetime.utcnow()
     for order in orders:
         deadline = getattr(order, 'agreed_delivery_date', None) or getattr(order, 'estimated_delivery_end', None)
         order.is_overdue = False
         order.is_urgent = False
+        if getattr(order, 'status', None) not in PRIORITY_STATUS_CODES:
+            continue
         if not deadline:
             continue
         remaining_seconds = (deadline - now).total_seconds()
@@ -381,6 +438,7 @@ def get_order_list():
             sort_key=sort_key, overdue_orders=overdue_orders,
             active_list='all', per_page=per_page, per_page_options=PER_PAGE_OPTIONS,
             show_overdue=show_overdue,
+            archived_matches=_archived_search_matches(search_query),
             order_pull_enabled=_get_order_pull_enabled()
         )
     except Exception as e:
@@ -533,6 +591,7 @@ def get_filtered_orders(status):
             sort_key=sort_key, overdue_orders=overdue_orders,
             active_list=active_map.get(model_cls), per_page=per_page,
             per_page_options=PER_PAGE_OPTIONS, show_overdue=False,
+            archived_matches=_archived_search_matches(search_query),
             order_pull_enabled=_get_order_pull_enabled()
         )
     except Exception as e:

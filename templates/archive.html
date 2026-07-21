@@ -404,6 +404,16 @@ html.gs-dark .pagination .page-link { background: #1e1e1e; color: #ddd; border-c
 <h4>Toplam Arşivlenmiş Sipariş: <span class="badge bg-secondary">{{ total_archived_orders_count }}</span></h4>
 </div>
 <div class="d-flex gap-2">
+{# Sipariş listesinden "bu sipariş arşivde" uyarısıyla gelen aramayı burada da sürdürebilmek için #}
+<form method="GET" action="{{ url_for('archive.display_archive') }}" class="d-flex">
+<div class="input-group">
+<input type="text" class="form-control" name="search" placeholder="Sipariş No veya Müşteri Adı" value="{{ search_query or '' }}">
+<button class="btn btn-outline-secondary" type="submit"><i class="fas fa-search"></i></button>
+{% if search_query %}
+<a class="btn btn-outline-danger" href="{{ url_for('archive.display_archive') }}" title="Aramayı temizle"><i class="fas fa-times"></i></a>
+{% endif %}
+</div>
+</form>
 <a href="{{ url_for('home.home') }}" class="btn btn-secondary">
 <i class="fas fa-arrow-circle-left me-2"></i>Anasayfaya Dön
 </a>
@@ -618,7 +628,7 @@ data-image-url="{{ product.image_url if product.image_url else '/static/images/d
 <ul class="pagination justify-content-center">
 {% if page > 1 %}
 <li class="page-item">
-<a class="page-link" href="{{ url_for('archive.display_archive', page=page-1) }}" aria-label="Önceki">
+<a class="page-link" href="{{ url_for('archive.display_archive', search=search_query or None, page=page-1) }}" aria-label="Önceki">
 <span aria-hidden="true">&laquo;</span>
 <span class="sr-only">Önceki</span>
 </a>
@@ -630,7 +640,7 @@ data-image-url="{{ product.image_url if product.image_url else '/static/images/d
 
 {% if window_start > 1 %}
 <li class="page-item">
-<a class="page-link" href="{{ url_for('archive.display_archive', page=1) }}">1</a>
+<a class="page-link" href="{{ url_for('archive.display_archive', search=search_query or None, page=1) }}">1</a>
 </li>
 {% if window_start > 2 %}
 <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -639,7 +649,7 @@ data-image-url="{{ product.image_url if product.image_url else '/static/images/d
 
 {% for i in range(window_start, window_end + 1) %}
 <li class="page-item {% if i == page %}active{% endif %}" aria-current="{{ 'page' if i == page else false }}">
-<a class="page-link" href="{{ url_for('archive.display_archive', page=i) }}">{{ i }}</a>
+<a class="page-link" href="{{ url_for('archive.display_archive', search=search_query or None, page=i) }}">{{ i }}</a>
 </li>
 {% endfor %}
 
@@ -648,13 +658,13 @@ data-image-url="{{ product.image_url if product.image_url else '/static/images/d
 <li class="page-item disabled"><span class="page-link">...</span></li>
 {% endif %}
 <li class="page-item">
-<a class="page-link" href="{{ url_for('archive.display_archive', page=total_pages) }}">{{ total_pages }}</a>
+<a class="page-link" href="{{ url_for('archive.display_archive', search=search_query or None, page=total_pages) }}">{{ total_pages }}</a>
 </li>
 {% endif %}
 
 {% if page < total_pages %}
 <li class="page-item">
-<a class="page-link" href="{{ url_for('archive.display_archive', page=page+1) }}" aria-label="Sonraki">
+<a class="page-link" href="{{ url_for('archive.display_archive', search=search_query or None, page=page+1) }}" aria-label="Sonraki">
 <span aria-hidden="true">&raquo;</span>
 <span class="sr-only">Sonraki</span>
 </a>

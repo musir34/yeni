@@ -4,6 +4,7 @@ import logging
 import traceback
 from datetime import datetime
 from flask import Blueprint, render_template, request, jsonify
+from sqlalchemy import or_
 from models import db, Archive, Product
 
 logger = logging.getLogger(__name__)
@@ -475,9 +476,23 @@ def display_archive():
     """
     page = request.args.get('page', 1, type=int)
     per_page = 20
+    # Sipariş listesindeki arama kutusuyla aynı alanlar: sipariş no + müşteri adı/soyadı.
+    # Ana listede bulunamayan arşivli sipariş buraya link ile yönlendirilir.
+    search_query = (request.args.get('search') or '').strip()
 
     try:
-        pagination = Archive.query.order_by(Archive.archive_date.desc()).paginate( # order_date yerine archive_date ile sırala
+        archive_query = Archive.query
+        if search_query:
+            like = f"%{search_query}%"
+            archive_query = archive_query.filter(
+                or_(
+                    Archive.order_number.ilike(like),
+                    Archive.customer_name.ilike(like),
+                    Archive.customer_surname.ilike(like),
+                    (Archive.customer_name + ' ' + Archive.customer_surname).ilike(like),
+                )
+            )
+        pagination = archive_query.order_by(Archive.archive_date.desc()).paginate( # order_date yerine archive_date ile sırala
             page=page, per_page=per_page, error_out=False)
         orders_to_show = pagination.items
         total_archived_orders_count = pagination.total
@@ -548,7 +563,8 @@ def display_archive():
         orders=orders_to_show,
         page=page,
         total_pages=total_pages,
-        total_archived_orders_count=total_archived_orders_count
+        total_archived_orders_count=total_archived_orders_count,
+        search_query=search_query
     )
 
 #############################
