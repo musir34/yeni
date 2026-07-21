@@ -42,6 +42,15 @@
         }
         .filter-section .btn { width: 100%; }
 
+        .order-search-form { flex: 1 1 320px; max-width: 420px; }
+        .order-search-group .form-control { min-width: 0; }
+        .order-search-group .order-search-submit {
+            flex: 0 0 48px; width: 48px; padding: 0;
+            display: inline-grid; place-items: center;
+        }
+        .order-results { transition: opacity .15s ease; }
+        .order-results.is-loading { opacity: .55; pointer-events: none; }
+
         .order-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; }
         .card {
             border: none; border-radius: var(--border-radius);
@@ -183,6 +192,12 @@
             .list-toolbar-actions {
                 width: 100%;
             }
+            .order-search-form { flex-basis: auto; max-width: none; }
+            .list-toolbar .order-search-group { display: flex; flex-wrap: nowrap; }
+            .list-toolbar .order-search-group .form-control { width: auto !important; flex: 1 1 auto; }
+            .d-flex.justify-content-between.align-items-center.my-4 .d-flex.gap-2 .order-search-submit {
+                flex: 0 0 48px; width: 48px;
+            }
 
             .order-list { grid-template-columns: 1fr; gap: 0.75rem; }
             .card:hover { transform: none; }
@@ -300,7 +315,7 @@
         </div>
 
         <div class="list-toolbar d-flex justify-content-between align-items-center my-4 gap-3">
-             <h4>Toplam Sipariş: {{ total_orders_count }}</h4>
+             <h4>Toplam Sipariş: <span id="orderTotalCount">{{ total_orders_count }}</span></h4>
              <div class="list-toolbar-actions d-flex gap-2 flex-wrap align-items-center">
                 <form method="POST" action="{{ url_for('order_service.fetch_trendyol_orders_route') }}">
                     <button type="submit" class="btn btn-primary"><i class="fas fa-sync-alt"></i> Siparişleri Güncelle</button>
@@ -315,18 +330,19 @@
                     <option value="{{ option }}" {% if per_page == option %}selected{% endif %}>{{ option }} / sayfa</option>
                     {% endfor %}
                 </select>
-                <form method="GET" action="{{ url_for(request.endpoint) }}">
+                <form id="orderSearchForm" class="order-search-form" method="GET" action="{{ url_for(request.endpoint) }}">
                     <input type="hidden" name="sort" value="{{ sort_key }}">
                     <input type="hidden" name="per_page" value="{{ per_page }}">
                     {% if show_overdue %}<input type="hidden" name="show_overdue" value="1">{% endif %}
-                    <div class="input-group">
+                    <div class="input-group order-search-group">
                         <input type="text" class="form-control" name="search" placeholder="Sipariş No veya Müşteri Adı" value="{{ request.args.get('search', '') }}">
-                        <button class="btn btn-secondary" type="submit"><i class="fas fa-search"></i></button>
+                        <button class="btn btn-secondary order-search-submit" type="submit" title="Sipariş ara" aria-label="Sipariş ara"><i class="fas fa-search"></i></button>
                     </div>
                 </form>
              </div>
         </div>
 
+        <div id="orderResults" class="order-results" aria-live="polite">
         {# Aranan sipariş arşivdeyse burada uyarılır — arşivlenen sipariş statü tablolarından silindiği için normal listede çıkmaz #}
         {% if archived_matches|default([]) %}
         <div class="alert alert-warning archive-hint" role="alert">
@@ -470,6 +486,7 @@
             </ul>
         </nav>
         {% endif %}
+        </div>
     </div>
 
     <div class="modal fade" id="archiveModal" tabindex="-1">
@@ -556,10 +573,84 @@
                 }
                 localStorage.setItem('orderListCompact', on ? '1' : '0');
             }
+            window.applyOrderListCompact = applyCompact;
             applyCompact(compact);
             btn.addEventListener('click', function(){
                 compact = !compact;
                 applyCompact(compact);
+            });
+        })();
+
+        // ─── Sayfayı yenilemeden sipariş arama ────────────────────────────────────
+        (function(){
+            var form = document.getElementById('orderSearchForm');
+            var results = document.getElementById('orderResults');
+            var submitButton = form?.querySelector('.order-search-submit');
+            var activeRequest = null;
+            if (!form || !results || !submitButton) return;
+
+            function setLoading(loading) {
+                results.classList.toggle('is-loading', loading);
+                results.setAttribute('aria-busy', loading ? 'true' : 'false');
+                submitButton.disabled = loading;
+                submitButton.innerHTML = loading
+                    ? '<i class="fas fa-spinner fa-spin"></i>'
+                    : '<i class="fas fa-search"></i>';
+            }
+
+            async function loadResults(url, pushHistory) {
+                if (activeRequest) activeRequest.abort();
+                var requestController = new AbortController();
+                activeRequest = requestController;
+                setLoading(true);
+                try {
+                    var response = await fetch(url, {
+                        signal: requestController.signal,
+                        headers: { 'X-Requested-With': 'fetch' }
+                    });
+                    if (!response.ok) throw new Error('Arama sonucu alınamadı.');
+
+                    var nextDocument = new DOMParser().parseFromString(await response.text(), 'text/html');
+                    var nextResults = nextDocument.getElementById('orderResults');
+                    var nextCount = nextDocument.getElementById('orderTotalCount');
+                    if (!nextResults || !nextCount) {
+                        window.location.assign(url);
+                        return;
+                    }
+
+                    results.innerHTML = nextResults.innerHTML;
+                    document.getElementById('orderTotalCount').textContent = nextCount.textContent;
+                    var nextSearch = nextDocument.querySelector('#orderSearchForm [name="search"]');
+                    if (nextSearch) form.elements.search.value = nextSearch.value;
+                    if (pushHistory) history.pushState({ orderSearch: true }, '', url);
+
+                    window.applyOrderListCompact?.(localStorage.getItem('orderListCompact') === '1');
+                    updateRemainingTime();
+                    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } catch (error) {
+                    if (error.name !== 'AbortError') {
+                        window.GS
+                            ? GS.showToast('Sipariş araması tamamlanamadı.', 'danger')
+                            : alert('Sipariş araması tamamlanamadı.');
+                    }
+                } finally {
+                    if (activeRequest === requestController) {
+                        setLoading(false);
+                        activeRequest = null;
+                    }
+                }
+            }
+
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+                var params = new URLSearchParams(new FormData(form));
+                params.delete('page');
+                var url = form.action + (params.toString() ? '?' + params.toString() : '');
+                loadResults(url, true);
+            });
+
+            window.addEventListener('popstate', function() {
+                loadResults(window.location.href, false);
             });
         })();
 
