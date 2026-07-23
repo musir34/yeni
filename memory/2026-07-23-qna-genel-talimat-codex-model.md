@@ -32,6 +32,12 @@
      devreye girer; UI kayıt mesajı bunu söylüyor.
    - Endpoint: `/ai-asistan/genel-talimat` GET/POST (yönetici + fetch başlığı CSRF).
 
+4. **Widget'a da model seçici:** her sayfadaki yüzen sohbet widget'ının
+   (`templates/includes/ai_widget.html`) Motor şeridine aynı Codex model
+   dropdown'ı eklendi (motor codex iken görünür; 'asistan' alanını değiştirir,
+   /ai-asistan sayfasıyla ortak ayar). Genel talimat widget'ta zaten geçerliydi
+   (aynı backend), UI eklenmedi.
+
 ## Neden
 Kullanıcı taslakların genel üslubunu/mesajını tek yerden yönlendirmek ve Codex
 motorunda hangi modelin çalıştığını panelden seçmek istedi.
