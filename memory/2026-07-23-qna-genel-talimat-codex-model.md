@@ -22,6 +22,16 @@
    - `/ai-asistan/motor` endpoint'i genişledi: GET `codex_modeller` + `codex_hazir`
      döner; POST `motor` ve/veya `codex_model` kabul eder (ikisi de yoksa 400).
 
+3. **AI asistan genel talimatı (aynı gün eklendi):** /ai-asistan başlığındaki
+   araçlara ⚙(sliders) butonu → açılır "AI Genel Talimatı" paneli (yalnızca yönetici).
+   - Saklama: `ai_asistan/asistan_ayar.py` (`platform='asistan_ayar'`, migration YOK).
+   - Injection: `blueprint.py::_system_prompt()` sonuna `_genel_talimat_ekle()` ile —
+     hem Claude hem Codex yolu buradan geçtiği için tek nokta.
+   - DİKKAT: sistem promptu yalnızca TAZE oturumda gönderilir (resume'da değil,
+     blueprint.py `_dene` içi) → talimat süren sohbeti etkilemez, yeni sohbette
+     devreye girer; UI kayıt mesajı bunu söylüyor.
+   - Endpoint: `/ai-asistan/genel-talimat` GET/POST (yönetici + fetch başlığı CSRF).
+
 ## Neden
 Kullanıcı taslakların genel üslubunu/mesajını tek yerden yönlendirmek ve Codex
 motorunda hangi modelin çalıştığını panelden seçmek istedi.

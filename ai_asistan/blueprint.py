@@ -323,6 +323,7 @@ def _system_prompt() -> str:
     İş bilgisini sistem promptu olarak yükle.
     Öncelik: Obsidian vault klasöründeki tüm .md notları (ada göre sıralı, birleştirilmiş).
     Vault yoksa IS_KURALLARI.md; o da yoksa asgari bir prompt.
+    Panelden girilen kalıcı genel talimat (varsa) her durumda sona eklenir.
     """
     if VAULT_DIR.is_dir():
         notlar = sorted(VAULT_DIR.glob("*.md"))
@@ -333,13 +334,25 @@ def _system_prompt() -> str:
             except OSError:
                 continue
         if parcalar:
-            return "\n\n---\n\n".join(parcalar)
+            return _genel_talimat_ekle("\n\n---\n\n".join(parcalar))
 
     try:
-        return IS_KURALLARI.read_text(encoding="utf-8")
+        return _genel_talimat_ekle(IS_KURALLARI.read_text(encoding="utf-8"))
     except OSError:
         # Hiçbir bağlam yoksa asistan yine çalışır.
-        return "Sen Güllü panelinin AI asistanısın. Soruları gulludb veritabanını sorgulayarak Türkçe yanıtla."
+        return _genel_talimat_ekle(
+            "Sen Güllü panelinin AI asistanısın. Soruları gulludb veritabanını sorgulayarak Türkçe yanıtla.")
+
+
+def _genel_talimat_ekle(prompt: str) -> str:
+    """Panelden girilen kalıcı genel talimatı sistem promptunun sonuna ekle (boşsa dokunma)."""
+    from ai_asistan.asistan_ayar import genel_talimat
+    talimat = genel_talimat()
+    if not talimat:
+        return prompt
+    return (prompt + "\n\n---\n\n# Panel Genel Talimatı\n"
+            "Mağaza yöneticisinin panelden girdiği güncel talimat — TÜM cevaplarda uygula:\n\n"
+            + talimat)
 
 
 def _claude_calistir(soru: str, resume_session_id: str | None = None) -> dict:
@@ -636,6 +649,36 @@ def motor():
 
     return jsonify({"ok": True, "motorlar": motorlari_getir(),
                     "codex_modeller": codex_modelleri_getir()})
+
+
+@ai_asistan_bp.route("/genel-talimat", methods=["GET", "POST"])
+@login_required
+def genel_talimat_api():
+    """
+    Sohbet cevapları için kalıcı genel talimatı oku/değiştir. Motor ayarıyla
+    aynı gerekçeyle değiştirme YALNIZCA yöneticiye açık; aynı fetch-başlığı
+    CSRF kalkanı uygulanır. Süren sohbetlerde sistem promptu yeniden
+    gönderilmediği için talimat yeni sohbetlerde etkili olur.
+    """
+    from ai_asistan.asistan_ayar import TALIMAT_MAX, genel_talimat, genel_talimat_ayarla
+
+    if request.method == "GET":
+        return jsonify({"ok": True, "talimat": genel_talimat(),
+                        "azami": TALIMAT_MAX, "duzenleyebilir": _yonetici_mi()})
+
+    if not _yonetici_mi():
+        return jsonify({"ok": False, "hata": "Bu ayarı yalnızca yönetici değiştirebilir."}), 403
+    if request.headers.get("X-Requested-With") != "fetch":
+        return jsonify({"ok": False, "hata": "Geçersiz istek."}), 400
+
+    payload = request.get_json(silent=True) or {}
+    try:
+        genel_talimat_ayarla(payload.get("talimat") or "")
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("[ASISTAN-AYAR] genel talimat yazılamadı")
+        return jsonify({"ok": False, "hata": "Talimat kaydedilemedi."}), 500
+    return jsonify({"ok": True, "talimat": genel_talimat()})
 
 
 @ai_asistan_bp.route("/sor", methods=["POST"])

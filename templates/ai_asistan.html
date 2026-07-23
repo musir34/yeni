@@ -14,6 +14,15 @@
     .ai-motor select{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:5px 8px;font-size:.78rem;cursor:pointer}
     .ai-motor select option{color:#222}
 
+    .ai-talimat{display:none;background:var(--color-bg-light);border:1px solid var(--color-border);border-radius:var(--border-radius);padding:12px;margin-bottom:16px}
+    .ai-talimat.acik{display:block}
+    .ai-talimat label{font-size:.82rem;font-weight:700;display:block;margin-bottom:6px}
+    .ai-talimat textarea{width:100%;resize:vertical;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:.85rem;font-family:inherit}
+    .ai-talimat-alt{display:flex;align-items:center;gap:10px;margin-top:8px}
+    .ai-talimat-alt button{padding:6px 16px;border:none;border-radius:8px;background:var(--color-primary);color:#fff;font-weight:600;cursor:pointer;font-size:.82rem}
+    .ai-talimat-alt button:disabled{opacity:.5;cursor:not-allowed}
+    .ai-talimat-alt span{font-size:.78rem;color:#888}
+
     .ai-chat{background:var(--color-bg-light);border:1px solid var(--color-border);border-radius:var(--border-radius);display:flex;flex-direction:column;height:65vh;position:relative;overflow:hidden}
     .ai-mesajlar{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
     .ai-msg{max-width:80%;padding:10px 14px;border-radius:12px;font-size:.9rem;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
@@ -56,9 +65,20 @@
         </select>
     </div>
     <div class="ai-araclar">
+        <button id="aiTalimatBtn" title="AI genel talimatı" style="display:none;"><i class="fas fa-sliders-h"></i></button>
         <button id="aiYeni" title="Yeni sohbet"><i class="fas fa-plus"></i></button>
         <button id="aiGecmisBtn" title="Geçmiş sohbetler"><i class="fas fa-history"></i></button>
         <button id="aiSil" title="Bu sohbeti sil"><i class="fas fa-trash"></i></button>
+    </div>
+</div>
+
+<div class="ai-talimat" id="aiTalimatPanel">
+    <label for="aiTalimatMetin">💡 AI Genel Talimatı — tüm cevaplarda uygulanır (boşsa etkisiz)</label>
+    <textarea id="aiTalimatMetin" rows="3" maxlength="2000"
+              placeholder="Ör: Cevaplarda tutarları her zaman TL simgesiyle yaz; tablo yerine kısa madde listesi kullan..."></textarea>
+    <div class="ai-talimat-alt">
+        <button id="aiTalimatKaydet"><i class="fas fa-check"></i> Kaydet</button>
+        <span id="aiTalimatDurum"></span>
     </div>
 </div>
 
@@ -316,6 +336,48 @@
         } catch (e) { alert('Model değiştirilemedi.'); await motorYukle(); }
     });
 
+    // ── AI genel talimatı (yalnızca yönetici görür) ──
+    const talimatBtn = document.getElementById('aiTalimatBtn');
+    const talimatPanel = document.getElementById('aiTalimatPanel');
+    const talimatMetin = document.getElementById('aiTalimatMetin');
+    const talimatDurum = document.getElementById('aiTalimatDurum');
+
+    async function talimatYukle() {
+        try {
+            const r = await fetch('/ai-asistan/genel-talimat', { cache: 'no-store' });
+            const d = await r.json();
+            if (!d.ok || !d.duzenleyebilir) return;
+            talimatMetin.value = d.talimat || '';
+            talimatBtn.style.display = '';
+        } catch (e) { /* sessiz: talimat paneli olmadan sayfa çalışmaya devam eder */ }
+    }
+
+    talimatBtn.addEventListener('click', function () {
+        talimatPanel.classList.toggle('acik');
+    });
+
+    document.getElementById('aiTalimatKaydet').addEventListener('click', async function () {
+        this.disabled = true;
+        talimatDurum.textContent = 'Kaydediliyor...';
+        try {
+            const r = await fetch('/ai-asistan/genel-talimat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+                body: JSON.stringify({ talimat: talimatMetin.value.trim() })
+            });
+            const d = await r.json();
+            if (d.ok) {
+                talimatMetin.value = d.talimat || '';
+                talimatDurum.textContent = d.talimat
+                    ? 'Kaydedildi — yeni sohbetlerde uygulanır (süren sohbeti etkilemez).'
+                    : 'Talimat kaldırıldı.';
+            } else {
+                talimatDurum.textContent = d.hata || 'Kaydedilemedi.';
+            }
+        } catch (e) { talimatDurum.textContent = 'Sunucuya ulaşılamadı.'; }
+        this.disabled = false;
+    });
+
     gonderBtn.addEventListener('click', gonder);
     yeniBtn.addEventListener('click', yeniSohbet);
     gecmisBtn.addEventListener('click', gecmisAcKapa);
@@ -329,6 +391,7 @@
 
     sohbetYukle();
     motorYukle();
+    talimatYukle();
 })();
 </script>
 {% endblock %}
