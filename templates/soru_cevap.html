@@ -3,132 +3,394 @@
 {% block title %}Trendyol Soru-Cevap{% endblock %}
 
 {% block content %}
-<!-- Üst hızlı erişim barı (anasayfa stiliyle) -->
-<div class="qna-topbar">
-  <a href="{{ url_for('home.home') }}" class="btn btn-sm qna-nav-btn" style="background:linear-gradient(135deg,#757f9a,#d7dde8);">
-    <i class="bi bi-house-fill"></i> Anasayfa
-  </a>
-  <a href="{{ url_for('siparis_hazirla.index') }}" class="btn btn-sm qna-nav-btn" style="background:linear-gradient(135deg,#cb2d3e,#ef473a);">
-    <i class="bi bi-box-seam"></i> Sipariş Hazırla
-  </a>
-  <div class="dropdown">
-    <button class="btn btn-sm qna-nav-btn dropdown-toggle" data-bs-toggle="dropdown"
-            style="background:linear-gradient(135deg,#2193b0,#6dd5ed);">Sipariş İşlemleri</button>
-    <ul class="dropdown-menu">
-      <li><a class="dropdown-item" href="{{ url_for('siparisler_bp.yeni_siparis') }}"><i class="bi bi-plus-circle me-2"></i>Yeni Sipariş</a></li>
-      <li><a class="dropdown-item" href="{{ url_for('order_list_all') }}"><i class="bi bi-list-ul me-2"></i>Sipariş Listesi</a></li>
-      <li><a class="dropdown-item" href="{{ url_for('degisim_talep') }}"><i class="bi bi-arrow-left-right me-2"></i>Değişim Talepleri</a></li>
-      <li><hr class="dropdown-divider"></li>
-      <li><a class="dropdown-item" href="{{ url_for('display_archive') }}"><i class="bi bi-archive me-2"></i>Arşiv</a></li>
-    </ul>
-  </div>
-  <div class="dropdown">
-    <button class="btn btn-sm qna-nav-btn dropdown-toggle" data-bs-toggle="dropdown"
-            style="background:linear-gradient(135deg,#56ab2f,#a8e063);">Ürün İşlemleri</button>
-    <ul class="dropdown-menu">
-      <li><a class="dropdown-item" href="{{ url_for('get_products.product_list') }}"><i class="bi bi-tags me-2"></i>Ürün Listesi</a></li>
-      <li><a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="bi bi-building me-2"></i>Stok Ekleme</a></li>
-      <li><a class="dropdown-item" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="bi bi-bookshelf me-2"></i>Raf Listesi</a></li>
-      <li><a class="dropdown-item" href="{{ url_for('stock_sync.dashboard') }}"><i class="bi bi-arrow-repeat me-2"></i>Stok Senkronizasyon</a></li>
-      <li><a class="dropdown-item" href="{{ url_for('iade_listesi') }}"><i class="bi bi-arrow-counterclockwise me-2"></i>İade Listesi</a></li>
-    </ul>
-  </div>
-  <div class="dropdown">
-    <button class="btn btn-sm qna-nav-btn dropdown-toggle" data-bs-toggle="dropdown"
-            style="background:linear-gradient(135deg,#667db6,#0082c8);">Analizler</button>
-    <ul class="dropdown-menu">
-      <li><a class="dropdown-item" href="{{ url_for('profit.profit_report') }}"><i class="bi bi-coin me-2"></i>Kâr Analizi</a></li>
-      <li><a class="dropdown-item" href="{{ url_for('canli_panel.canli_panel_sayfa') }}"><i class="bi bi-broadcast me-2"></i>Canlı Satış &amp; Stok</a></li>
-    </ul>
-  </div>
-</div>
-
-<div class="container-fluid py-3" id="qnaApp">
-  <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-    <h4 class="mb-0"><i class="bi bi-chat-left-question text-warning"></i> Trendyol Soru-Cevap</h4>
-    <span class="badge bg-danger" id="qnaWaitBadge" style="display:none;">0 bekleyen</span>
-    <div class="ms-auto d-flex gap-2">
-      <input type="search" class="form-control form-control-sm" id="qnaSearch"
-             placeholder="Soru / ürün / model ara..." style="max-width:260px;">
-      <select class="form-select form-select-sm" id="qnaMotorSec" style="max-width:150px;display:none;"
-              title="Taslakları üreten AI motoru">
-        <option value="claude">Taslak: Claude</option>
-        <option value="codex">Taslak: Codex</option>
-      </select>
-      <select class="form-select form-select-sm" id="qnaCodexModelSec" style="max-width:200px;display:none;"
-              title="Codex'in kullanacağı model">
-        <option value="">Model: Varsayılan</option>
-      </select>
-      <button class="btn btn-sm btn-outline-secondary" id="qnaSyncBtn" title="Trendyol'dan son 14 günü çek">
-        <i class="bi bi-arrow-repeat"></i> Senkronla
-      </button>
-    </div>
-  </div>
-
-  <div class="card qna-card" id="qnaTalimatKart" style="display:none;">
-    <div class="card-body py-2">
-      <div class="d-flex align-items-center gap-2" role="button" data-bs-toggle="collapse"
-           data-bs-target="#qnaTalimatGovde" aria-expanded="false">
-        <i class="bi bi-stars text-info"></i>
-        <strong class="small">AI Genel Talimatı</strong>
-        <span class="badge bg-info qna-draft-tag" id="qnaTalimatAktif" style="display:none;">aktif</span>
-        <span class="qna-meta">— tüm taslaklar bu talimata göre üretilir (boşsa etkisiz)</span>
-        <i class="bi bi-chevron-down ms-auto"></i>
+<div class="qna-page" id="qnaApp">
+  <header class="qna-appbar">
+    <div class="qna-appbar-inner">
+      <a href="{{ url_for('home.home') }}" class="qna-icon-btn" aria-label="Anasayfaya dön" title="Anasayfa">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div class="qna-brand">
+        <span class="qna-brand-logo" aria-hidden="true">t</span>
+        <span>
+          <strong>Soru &amp; Cevap</strong>
+          <small>Güllü Shoes mağazası</small>
+        </span>
       </div>
-      <div class="collapse" id="qnaTalimatGovde">
-        <textarea class="form-control mt-2" id="qnaTalimatMetin" rows="3" maxlength="2000"
-                  placeholder="Ör: Kampanya döneminde kargonun 2-4 iş günü sürebileceğini belirt; fiyat sorularında indirim sözü verme..."></textarea>
-        <div class="d-flex align-items-center gap-2 mt-2">
-          <button class="btn btn-sm btn-info text-white" id="qnaTalimatKaydet">
-            <i class="bi bi-check-lg"></i> Kaydet
+      <div class="qna-appbar-actions">
+        <button class="qna-sync-btn" id="qnaSyncBtn" title="Trendyol'dan son 14 günü çek">
+          <i class="bi bi-arrow-repeat"></i>
+          <span>Senkronla</span>
+        </button>
+        <div class="dropdown">
+          <button class="qna-icon-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Hızlı menü">
+            <i class="bi bi-grid"></i>
           </button>
-          <span class="qna-meta" id="qnaTalimatDurum"></span>
+          <ul class="dropdown-menu dropdown-menu-end qna-quick-menu">
+            <li><span class="dropdown-header">Hızlı erişim</span></li>
+            <li><a class="dropdown-item" href="{{ url_for('siparis_hazirla.index') }}"><i class="bi bi-box-seam"></i>Sipariş Hazırla</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('order_list_all') }}"><i class="bi bi-list-check"></i>Sipariş Listesi</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('get_products.product_list') }}"><i class="bi bi-tags"></i>Ürün Listesi</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('canli_panel.canli_panel_sayfa') }}"><i class="bi bi-activity"></i>Canlı Panel</a></li>
+          </ul>
         </div>
       </div>
     </div>
-  </div>
+  </header>
 
-  <ul class="nav nav-pills mb-3" id="qnaTabs">
-    <li class="nav-item"><button class="nav-link active" data-status="WAITING_FOR_ANSWER">⏳ Cevap Bekleyen</button></li>
-    <li class="nav-item"><button class="nav-link" data-status="ANSWERED">✅ Cevaplanan</button></li>
-    <li class="nav-item"><button class="nav-link" data-status="DIGER">⚠️ Diğer</button></li>
-    <li class="nav-item"><button class="nav-link" data-status="ALL">Tümü</button></li>
-  </ul>
+  <main class="qna-shell">
+    <section class="qna-hero">
+      <div>
+        <span class="qna-eyebrow">Müşteri iletişimi</span>
+        <h1>Soruları yanıtla</h1>
+        <p>Müşteri sorularını incele, AI taslağını düzenle ve Trendyol'a gönder.</p>
+      </div>
+      <div class="qna-wait-pill" id="qnaWaitBadge">
+        <span class="qna-pulse"></span>
+        <strong>0</strong>
+        <span>bekleyen</span>
+      </div>
+    </section>
 
-  <div id="qnaList"><div class="text-center text-muted py-5">Yükleniyor...</div></div>
+    <section class="qna-controls" id="qnaControls">
+      <div class="qna-tabs-scroll">
+        <div class="qna-tabs" id="qnaTabs" role="tablist" aria-label="Soru durumları">
+          <button class="qna-tab active" data-status="WAITING_FOR_ANSWER" role="tab" aria-selected="true">
+            Bekleyen <span id="qnaWaitTabCount">0</span>
+          </button>
+          <button class="qna-tab" data-status="ANSWERED" role="tab" aria-selected="false">Cevaplanan</button>
+          <button class="qna-tab" data-status="DIGER" role="tab" aria-selected="false">Diğer</button>
+          <button class="qna-tab" data-status="ALL" role="tab" aria-selected="false">Tümü</button>
+        </div>
+      </div>
 
-  <nav class="mt-3 d-flex justify-content-center">
-    <ul class="pagination pagination-sm" id="qnaPager"></ul>
-  </nav>
+      <div class="qna-toolbar">
+        <label class="qna-search">
+          <i class="bi bi-search"></i>
+          <input type="search" id="qnaSearch" placeholder="Soru, ürün veya model ara" autocomplete="off">
+          <button type="button" id="qnaSearchClear" aria-label="Aramayı temizle" title="Temizle">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </label>
+        <div class="qna-admin-tools">
+          <select class="form-select" id="qnaMotorSec" style="display:none;" title="Taslakları üreten AI motoru">
+            <option value="claude">Taslak: Claude</option>
+            <option value="codex">Taslak: Codex</option>
+          </select>
+          <select class="form-select" id="qnaCodexModelSec" style="display:none;" title="Codex'in kullanacağı model">
+            <option value="">Model: Varsayılan</option>
+          </select>
+        </div>
+      </div>
+      <div class="qna-result-meta" id="qnaResultMeta" aria-live="polite">Sorular yükleniyor…</div>
+    </section>
+
+    <section class="qna-ai-settings" id="qnaTalimatKart" style="display:none;">
+      <button class="qna-ai-settings-toggle" type="button" data-bs-toggle="collapse"
+              data-bs-target="#qnaTalimatGovde" aria-expanded="false">
+        <span class="qna-ai-icon"><i class="bi bi-stars"></i></span>
+        <span>
+          <strong>AI cevap ayarları</strong>
+          <small>Tüm taslaklarda uygulanacak genel talimat</small>
+        </span>
+        <span class="qna-active-tag" id="qnaTalimatAktif" style="display:none;">Aktif</span>
+        <i class="bi bi-chevron-down qna-chevron"></i>
+      </button>
+      <div class="collapse" id="qnaTalimatGovde">
+        <div class="qna-ai-settings-body">
+          <label for="qnaTalimatMetin">Genel talimat</label>
+          <textarea class="form-control" id="qnaTalimatMetin" rows="3" maxlength="2000"
+                    placeholder="Ör: Kargo süresini 2–4 iş günü olarak belirt, indirim sözü verme…"></textarea>
+          <div class="qna-settings-actions">
+            <button class="qna-secondary-btn qna-secondary-btn--filled" id="qnaTalimatKaydet">
+              <i class="bi bi-check-lg"></i> Kaydet
+            </button>
+            <span class="qna-meta" id="qnaTalimatDurum"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div id="qnaList" class="qna-list" aria-live="polite">
+      <div class="qna-skeleton" aria-label="Sorular yükleniyor">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <nav class="qna-pagination-wrap" aria-label="Soru sayfaları">
+      <ul class="pagination" id="qnaPager"></ul>
+    </nav>
+  </main>
 </div>
 
 <style>
-  .qna-topbar {
-    display:flex; flex-wrap:wrap; gap:8px; align-items:center;
-    padding:10px 12px; margin-bottom:4px;
-    position:sticky; top:0; z-index:100;
-    background:rgba(255,255,255,.95); backdrop-filter:blur(6px);
-    border-bottom:1px solid rgba(0,0,0,.06);
+  :root {
+    --qna-orange:#f27a1a;
+    --qna-orange-dark:#d9610b;
+    --qna-orange-soft:#fff4e9;
+    --qna-ink:#20242c;
+    --qna-muted:#6f7682;
+    --qna-line:#e7e8eb;
+    --qna-bg:#f6f7f9;
+    --qna-card:#ffffff;
+    --qna-green:#16865c;
+    --qna-red:#c9493d;
+    --qna-blue:#4e66d8;
+    --qna-shadow:0 12px 34px rgba(28,35,48,.07);
   }
-  .qna-nav-btn {
-    color:#fff !important; border:none; border-radius:10px; font-weight:600;
-    box-shadow:0 6px 12px rgba(0,0,0,.12); padding:6px 14px;
+  body > .container {
+    width:100% !important;
+    max-width:none !important;
+    margin:0 !important;
+    padding:0 !important;
   }
-  .qna-nav-btn:hover { transform:translateY(-1px); box-shadow:0 10px 16px rgba(0,0,0,.18); }
-  @media (max-width: 576px) {
-    .qna-topbar { gap:5px; padding:8px 6px; }
-    .qna-nav-btn { font-size:.75rem; padding:5px 8px; }
+  body { background:var(--qna-bg); }
+  .qna-page { min-height:100vh; color:var(--qna-ink); background:var(--qna-bg); font-family:Inter,system-ui,sans-serif; }
+  .qna-appbar {
+    position:sticky; top:0; z-index:1020;
+    background:rgba(255,255,255,.92); border-bottom:1px solid rgba(32,36,44,.08);
+    backdrop-filter:saturate(160%) blur(14px); -webkit-backdrop-filter:saturate(160%) blur(14px);
   }
-  .qna-card { border:none; border-radius:14px; box-shadow:0 4px 14px rgba(0,0,0,.07); margin-bottom:14px; }
-  .qna-card .card-body { padding:16px 18px; }
-  .qna-img { width:64px; height:64px; object-fit:cover; border-radius:10px; background:#f2f2f2; }
-  .qna-question { font-size:1.02rem; white-space:pre-wrap; }
-  .qna-meta { font-size:.8rem; color:#888; }
-  .qna-answer-box textarea { border-radius:10px; }
-  .qna-draft-tag { font-size:.72rem; }
-  .qna-status-badge { font-size:.72rem; }
-  .qna-char { font-size:.75rem; }
-  .qna-char.bad { color:#cb2d3e; font-weight:600; }
+  .qna-appbar-inner {
+    max-width:1180px; height:68px; margin:0 auto; padding:0 24px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .qna-brand { display:flex; align-items:center; gap:10px; min-width:0; }
+  .qna-brand-logo {
+    width:38px; height:38px; border-radius:12px; background:var(--qna-orange-soft);
+    display:grid; place-items:center; overflow:hidden; flex:0 0 auto;
+    color:var(--qna-orange); font-size:1.45rem; font-weight:800; line-height:1; letter-spacing:-.08em;
+  }
+  .qna-brand strong,.qna-brand small { display:block; line-height:1.2; }
+  .qna-brand strong { font-size:.96rem; letter-spacing:-.01em; }
+  .qna-brand small { color:var(--qna-muted); font-size:.72rem; margin-top:3px; }
+  .qna-appbar-actions { margin-left:auto; display:flex; align-items:center; gap:8px; }
+  .qna-icon-btn,.qna-sync-btn {
+    border:1px solid var(--qna-line); background:#fff; color:var(--qna-ink);
+    min-height:42px; border-radius:13px; display:inline-flex; align-items:center; justify-content:center;
+    transition:.18s ease; text-decoration:none;
+  }
+  .qna-icon-btn { width:42px; padding:0; flex:0 0 auto; }
+  .qna-sync-btn { gap:8px; padding:0 15px; font-size:.86rem; font-weight:650; }
+  .qna-icon-btn:hover,.qna-sync-btn:hover { border-color:#cfd1d6; color:var(--qna-orange-dark); transform:translateY(-1px); }
+  .qna-sync-btn:disabled { opacity:.65; transform:none; }
+  .qna-quick-menu { width:220px; padding:8px; border:1px solid var(--qna-line); border-radius:14px; box-shadow:var(--qna-shadow); }
+  .qna-quick-menu .dropdown-item { display:flex; align-items:center; gap:11px; border-radius:9px; padding:9px 10px; font-size:.87rem; }
+  .qna-quick-menu .dropdown-item i { width:19px; color:var(--qna-muted); }
+  .qna-shell { width:100%; max-width:1180px; margin:0 auto; padding:42px 24px 64px; }
+  .qna-hero { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; margin-bottom:28px; }
+  .qna-eyebrow { display:block; color:var(--qna-orange-dark); font-size:.71rem; font-weight:750; letter-spacing:.12em; text-transform:uppercase; margin-bottom:8px; }
+  .qna-hero h1 { margin:0; font-size:clamp(1.8rem,4vw,2.45rem); font-weight:760; letter-spacing:-.045em; }
+  .qna-hero p { margin:9px 0 0; color:var(--qna-muted); font-size:.94rem; }
+  .qna-wait-pill {
+    display:flex; align-items:center; gap:7px; flex:0 0 auto; padding:10px 14px;
+    background:#fff; border:1px solid var(--qna-line); border-radius:999px; box-shadow:0 5px 18px rgba(28,35,48,.04);
+    color:var(--qna-muted); font-size:.8rem;
+  }
+  .qna-wait-pill strong { color:var(--qna-ink); font-size:1rem; }
+  .qna-pulse { width:8px; height:8px; border-radius:50%; background:var(--qna-orange); box-shadow:0 0 0 4px var(--qna-orange-soft); }
+  .qna-controls {
+    background:var(--qna-card); border:1px solid var(--qna-line); border-radius:18px;
+    box-shadow:var(--qna-shadow); margin-bottom:16px; overflow:hidden;
+  }
+  .qna-tabs-scroll { overflow-x:auto; scrollbar-width:none; border-bottom:1px solid var(--qna-line); }
+  .qna-tabs-scroll::-webkit-scrollbar { display:none; }
+  .qna-tabs { display:flex; min-width:max-content; padding:0 18px; }
+  .qna-tab {
+    position:relative; min-height:54px; padding:0 16px; border:0; background:transparent;
+    color:var(--qna-muted); font-size:.86rem; font-weight:650; white-space:nowrap;
+  }
+  .qna-tab::after { content:""; position:absolute; left:16px; right:16px; bottom:0; height:3px; border-radius:3px 3px 0 0; background:transparent; }
+  .qna-tab.active { color:var(--qna-ink); }
+  .qna-tab.active::after { background:var(--qna-orange); }
+  .qna-tab span { display:inline-grid; place-items:center; min-width:22px; height:22px; margin-left:5px; padding:0 6px; border-radius:999px; background:var(--qna-orange-soft); color:var(--qna-orange-dark); font-size:.7rem; }
+  .qna-toolbar { display:flex; align-items:center; gap:12px; padding:16px 18px 8px; }
+  .qna-search {
+    height:46px; flex:1; display:flex; align-items:center; gap:10px; padding:0 12px;
+    background:#f8f8fa; border:1px solid transparent; border-radius:12px; transition:.18s ease;
+  }
+  .qna-search:focus-within { background:#fff; border-color:rgba(242,122,26,.55); box-shadow:0 0 0 4px rgba(242,122,26,.1); }
+  .qna-search > i { color:#9196a0; }
+  .qna-search input { width:100%; min-width:0; border:0; outline:0; background:transparent; color:var(--qna-ink); font-size:.9rem; }
+  .qna-search input::placeholder { color:#969ba5; }
+  .qna-search button { display:none; width:30px; height:30px; border:0; background:transparent; color:var(--qna-muted); border-radius:8px; padding:0; }
+  .qna-search.has-value button { display:grid; place-items:center; }
+  .qna-admin-tools { display:flex; gap:8px; }
+  .qna-admin-tools .form-select { width:auto; min-width:150px; height:46px; border-radius:12px; border-color:var(--qna-line); font-size:.82rem; }
+  .qna-result-meta { padding:0 20px 13px; color:var(--qna-muted); font-size:.75rem; }
+  .qna-ai-settings { background:#f7f7ff; border:1px solid #e3e4f4; border-radius:16px; margin-bottom:16px; overflow:hidden; }
+  .qna-ai-settings-toggle { width:100%; min-height:66px; display:flex; align-items:center; gap:12px; padding:11px 16px; border:0; background:transparent; text-align:left; color:var(--qna-ink); }
+  .qna-ai-icon { width:38px; height:38px; flex:0 0 auto; display:grid; place-items:center; border-radius:11px; background:#ebeafe; color:var(--qna-blue); }
+  .qna-ai-settings-toggle strong,.qna-ai-settings-toggle small { display:block; }
+  .qna-ai-settings-toggle strong { font-size:.86rem; }
+  .qna-ai-settings-toggle small { color:var(--qna-muted); font-size:.72rem; margin-top:3px; }
+  .qna-active-tag { margin-left:auto; padding:4px 8px; border-radius:999px; background:#e2f5ed; color:var(--qna-green); font-size:.67rem; font-weight:700; }
+  .qna-chevron { margin-left:8px; color:var(--qna-muted); transition:transform .2s ease; }
+  .qna-ai-settings-toggle[aria-expanded="true"] .qna-chevron { transform:rotate(180deg); }
+  .qna-ai-settings-body { padding:0 16px 16px 66px; }
+  .qna-ai-settings-body > label { display:block; font-size:.73rem; font-weight:700; color:var(--qna-muted); margin-bottom:7px; }
+  .qna-ai-settings textarea { border-color:#dedff0; border-radius:12px; resize:vertical; font-size:.85rem; }
+  .qna-settings-actions { display:flex; align-items:center; gap:10px; margin-top:10px; }
+  .qna-list { display:grid; gap:16px; }
+  .qna-card {
+    background:var(--qna-card); border:1px solid var(--qna-line); border-radius:20px;
+    box-shadow:var(--qna-shadow); overflow:hidden; transition:opacity .2s ease,transform .2s ease;
+  }
+  .qna-product-row { min-height:82px; display:flex; align-items:center; gap:13px; padding:14px 18px; border-bottom:1px solid var(--qna-line); }
+  .qna-img-link,.qna-img,.qna-img-placeholder { width:54px; height:54px; border-radius:12px; flex:0 0 54px; }
+  .qna-img-link { display:block; overflow:hidden; background:#f2f3f5; }
+  .qna-img { object-fit:cover; background:#f2f3f5; }
+  .qna-img-placeholder { display:grid; place-items:center; background:#f2f3f5; color:#a3a7af; font-size:1.1rem; }
+  .qna-product-info { min-width:0; flex:1; }
+  .qna-product-info strong { display:block; max-width:720px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.86rem; }
+  .qna-model { display:inline-flex; align-items:center; gap:5px; margin-top:5px; color:var(--qna-muted); font-size:.7rem; }
+  .qna-status { flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; padding:6px 9px; border-radius:999px; font-size:.68rem; font-weight:700; }
+  .qna-status--waiting { background:#fff0ea; color:#c45722; }
+  .qna-status--answered { background:#e8f6ef; color:#147653; }
+  .qna-status--rejected { background:#fff4d9; color:#94640a; }
+  .qna-status--reported,.qna-status--unanswered,.qna-status--other { background:#f0f1f3; color:#656b75; }
+  .qna-card-grid { display:grid; grid-template-columns:minmax(0,.86fr) minmax(430px,1.14fr); }
+  .qna-question-pane,.qna-answer-pane { padding:20px; min-width:0; }
+  .qna-question-pane { border-right:1px solid var(--qna-line); }
+  .qna-customer-meta { display:flex; flex-wrap:wrap; gap:8px 14px; color:var(--qna-muted); font-size:.73rem; margin-bottom:15px; }
+  .qna-customer-meta span { display:inline-flex; align-items:center; gap:6px; }
+  .qna-section-label { display:block; margin-bottom:8px; color:var(--qna-muted); font-size:.67rem; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
+  .qna-question { margin:0; font-size:1.03rem; line-height:1.6; font-weight:520; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .qna-answer-pane { background:#fbfbfc; }
+  .qna-answer-head { display:flex; align-items:center; gap:8px; min-height:30px; margin-bottom:9px; }
+  .qna-answer-head .qna-section-label { margin:0; }
+  .qna-draft-state { display:inline-flex; align-items:center; gap:5px; padding:5px 8px; border-radius:999px; background:#ecebfd; color:var(--qna-blue); font-size:.66rem; font-weight:700; }
+  .qna-ai-btn {
+    margin-left:auto; min-height:34px; padding:0 10px; display:inline-flex; align-items:center; gap:6px;
+    border:1px solid #d8d8ed; border-radius:10px; background:#fff; color:var(--qna-blue); font-size:.72rem; font-weight:650;
+  }
+  .qna-ai-btn:hover { background:#f3f2ff; }
+  .qna-ai-btn:disabled { opacity:.65; }
+  .qna-answer-text {
+    width:100%; min-height:116px; max-height:320px; padding:13px 14px; resize:vertical;
+    border:1px solid #dcdee3; border-radius:13px; background:#fff; color:var(--qna-ink);
+    font-size:.91rem; line-height:1.55; outline:0; transition:.18s ease;
+  }
+  .qna-answer-text:focus { border-color:rgba(242,122,26,.65); box-shadow:0 0 0 4px rgba(242,122,26,.1); }
+  .qna-revise { margin-top:9px; border:1px solid #e4e4ea; border-radius:11px; background:#fff; }
+  .qna-revise summary { min-height:38px; display:flex; align-items:center; gap:7px; padding:0 11px; color:var(--qna-muted); font-size:.72rem; font-weight:650; cursor:pointer; list-style:none; }
+  .qna-revise summary::-webkit-details-marker { display:none; }
+  .qna-revise summary::after { content:"›"; margin-left:auto; font-size:1rem; transform:rotate(90deg); transition:transform .15s ease; }
+  .qna-revise[open] summary::after { transform:rotate(-90deg); }
+  .qna-revise-row { display:flex; gap:7px; padding:0 8px 8px; }
+  .qna-draft-talimat { min-width:0; height:40px; border-radius:9px !important; border-color:#e1e2e7; font-size:.78rem; }
+  .qna-revise-btn { flex:0 0 auto; min-height:40px; padding:0 12px; border:0; border-radius:9px; background:#ecebfd; color:var(--qna-blue); font-size:.74rem; font-weight:700; }
+  .qna-answer-actions { display:flex; align-items:center; gap:9px; margin-top:11px; }
+  .qna-send-btn {
+    min-height:43px; display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:0 16px;
+    border:0; border-radius:11px; background:var(--qna-orange); color:#fff; font-size:.8rem; font-weight:720;
+    box-shadow:0 7px 15px rgba(242,122,26,.2); transition:.18s ease;
+  }
+  .qna-send-btn:hover { background:var(--qna-orange-dark); transform:translateY(-1px); }
+  .qna-send-btn:disabled { opacity:.65; transform:none; }
+  .qna-char { color:var(--qna-muted); font-size:.7rem; font-variant-numeric:tabular-nums; }
+  .qna-char.bad { color:var(--qna-red); font-weight:700; }
+  .qna-err { margin-left:auto; color:var(--qna-red); font-size:.72rem; text-align:right; }
+  .qna-published { padding:14px; border:1px solid #dfeee7; border-radius:13px; background:#f5fbf8; }
+  .qna-published-meta { color:var(--qna-green); font-size:.69rem; font-weight:700; margin-bottom:7px; }
+  .qna-published-text { white-space:pre-wrap; line-height:1.55; overflow-wrap:anywhere; font-size:.88rem; }
+  .qna-rejected { grid-column:1/-1; margin:0 20px 20px; padding:12px 14px; border-radius:12px; background:#fff4f3; border:1px solid #f3ddda; }
+  .qna-rejected strong { display:block; color:var(--qna-red); font-size:.69rem; margin-bottom:5px; }
+  .qna-rejected div { white-space:pre-wrap; font-size:.8rem; line-height:1.5; }
+  .qna-meta { color:var(--qna-muted); font-size:.74rem; }
+  .qna-secondary-btn { min-height:40px; padding:0 13px; border:1px solid #d7d8df; border-radius:10px; background:#fff; color:var(--qna-ink); font-size:.78rem; font-weight:680; }
+  .qna-secondary-btn--filled { border-color:var(--qna-blue); background:var(--qna-blue); color:#fff; }
+  .qna-pagination-wrap { display:flex; justify-content:center; margin-top:24px; }
+  .qna-pagination-wrap .pagination { gap:5px; margin:0; }
+  .qna-pagination-wrap .page-link { min-width:40px; min-height:40px; display:grid; place-items:center; border:1px solid var(--qna-line); border-radius:10px !important; color:var(--qna-ink); background:#fff; font-size:.78rem; box-shadow:none; }
+  .qna-pagination-wrap .active .page-link { border-color:var(--qna-orange); background:var(--qna-orange); color:#fff; }
+  .qna-pagination-wrap .disabled .page-link { color:#b4b7bd; background:#f2f3f5; }
+  .qna-empty,.qna-error { padding:54px 20px; text-align:center; border:1px dashed #d9dbe0; border-radius:18px; background:rgba(255,255,255,.6); }
+  .qna-empty-icon,.qna-error-icon { width:54px; height:54px; margin:0 auto 13px; display:grid; place-items:center; border-radius:17px; background:#edf7f2; color:var(--qna-green); font-size:1.35rem; }
+  .qna-error-icon { background:#fff0ee; color:var(--qna-red); }
+  .qna-empty strong,.qna-error strong { display:block; font-size:.95rem; margin-bottom:5px; }
+  .qna-empty span,.qna-error span { color:var(--qna-muted); font-size:.8rem; }
+  .qna-skeleton { display:grid; gap:16px; }
+  .qna-skeleton span { height:250px; border-radius:20px; background:linear-gradient(90deg,#eceef1 25%,#f7f8f9 40%,#eceef1 60%); background-size:300% 100%; animation:qna-shimmer 1.35s infinite; }
+  @keyframes qna-shimmer { to { background-position:-100% 0; } }
+  @media (max-width:900px) {
+    .qna-card-grid { grid-template-columns:1fr; }
+    .qna-question-pane { border-right:0; border-bottom:1px solid var(--qna-line); }
+    .qna-admin-tools { width:100%; }
+    .qna-admin-tools .form-select { flex:1; width:50%; }
+    .qna-toolbar { flex-wrap:wrap; }
+  }
+  @media (max-width:600px) {
+    .qna-appbar-inner { height:60px; padding:0 12px; }
+    .qna-brand-logo { width:34px; height:34px; border-radius:10px; }
+    .qna-brand small { display:none; }
+    .qna-icon-btn { width:40px; min-height:40px; border-radius:12px; }
+    .qna-sync-btn { width:40px; min-height:40px; padding:0; border-radius:12px; }
+    .qna-sync-btn span { display:none; }
+    .qna-shell { padding:25px 10px max(40px,env(safe-area-inset-bottom)); }
+    .qna-hero { align-items:center; gap:12px; padding:0 4px; margin-bottom:20px; }
+    .qna-hero h1 { font-size:1.65rem !important; }
+    .qna-hero p { display:none; }
+    .qna-eyebrow { font-size:.64rem; margin-bottom:5px; }
+    .qna-wait-pill { padding:8px 10px; gap:5px; font-size:.7rem; }
+    .qna-wait-pill strong { font-size:.9rem; }
+    .qna-controls { border-radius:16px; margin-bottom:12px; }
+    .qna-tabs { padding:0 8px; }
+    .qna-tab { min-height:50px; padding:0 12px; font-size:.79rem; }
+    .qna-tab::after { left:12px; right:12px; }
+    .qna-toolbar { padding:12px 12px 7px; gap:8px; }
+    .qna-search { width:100%; flex-basis:100%; height:44px; }
+    .qna-admin-tools { flex-direction:column; }
+    .qna-admin-tools .form-select { width:100%; height:44px; }
+    .qna-result-meta { padding:0 14px 11px; }
+    .qna-ai-settings { border-radius:14px; }
+    .qna-ai-settings-toggle { min-height:61px; padding:10px 12px; }
+    .qna-ai-settings-toggle small { max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .qna-ai-settings-body { padding:0 12px 13px; }
+    .qna-active-tag { display:none !important; }
+    .qna-card { border-radius:17px; }
+    .qna-product-row { min-height:74px; padding:11px 13px; gap:10px; }
+    .qna-img-link,.qna-img,.qna-img-placeholder { width:48px; height:48px; flex-basis:48px; border-radius:11px; }
+    .qna-product-info strong { font-size:.79rem; }
+    .qna-status { align-self:flex-start; padding:5px 7px; }
+    .qna-status span { display:none; }
+    .qna-question-pane,.qna-answer-pane { padding:16px 14px; }
+    .qna-customer-meta { margin-bottom:12px; }
+    .qna-question { font-size:.98rem; line-height:1.55; }
+    .qna-answer-head { flex-wrap:wrap; }
+    .qna-answer-head .qna-ai-btn { order:3; width:100%; margin:2px 0 0; }
+    .qna-answer-text { min-height:126px; font-size:16px !important; }
+    .qna-revise-row { flex-direction:column; }
+    .qna-revise-btn { width:100%; }
+    .qna-answer-actions { flex-wrap:wrap; }
+    .qna-send-btn { order:3; width:100%; min-height:46px; }
+    .qna-err { width:100%; order:4; text-align:left; }
+    .qna-rejected { margin:0 14px 14px; }
+    .qna-pagination-wrap .page-link { min-width:38px; min-height:40px; }
+    .qna-skeleton span { height:370px; border-radius:17px; }
+  }
+  html.gs-dark {
+    --qna-ink:#f0f1f3; --qna-muted:#a4a8b0; --qna-line:#32343a;
+    --qna-bg:#141519; --qna-card:#1d1f24; --qna-orange-soft:#38271b;
+    --qna-shadow:0 14px 36px rgba(0,0,0,.2);
+  }
+  html.gs-dark body,html.gs-dark .qna-page { background:var(--qna-bg); }
+  html.gs-dark .qna-appbar { background:rgba(29,31,36,.92); border-color:var(--qna-line); }
+  html.gs-dark .qna-icon-btn,html.gs-dark .qna-sync-btn,html.gs-dark .qna-wait-pill,
+  html.gs-dark .qna-search,html.gs-dark .qna-ai-btn,html.gs-dark .qna-revise,
+  html.gs-dark .qna-answer-text,html.gs-dark .qna-secondary-btn { background:#23252b; color:var(--qna-ink); border-color:var(--qna-line); }
+  html.gs-dark .qna-search:focus-within { background:#25272d; }
+  html.gs-dark .qna-search input { color:var(--qna-ink); }
+  html.gs-dark .qna-answer-pane { background:#191b20; }
+  html.gs-dark .qna-ai-settings { background:#20212b; border-color:#34364a; }
+  html.gs-dark .qna-ai-icon { background:#2b2c45; }
+  html.gs-dark .qna-published { background:#182720; border-color:#294438; }
+  html.gs-dark .qna-rejected { background:#2b1f20; border-color:#4a3031; }
+  html.gs-dark .qna-empty,html.gs-dark .qna-error { background:rgba(29,31,36,.55); border-color:var(--qna-line); }
+  html.gs-dark .qna-skeleton span { background:linear-gradient(90deg,#23252a 25%,#2b2d33 40%,#23252a 60%); background-size:300% 100%; }
+  @media (prefers-reduced-motion:reduce) {
+    .qna-skeleton span { animation:none; }
+    .qna-icon-btn,.qna-sync-btn,.qna-card,.qna-send-btn { transition:none; }
+  }
 </style>
 
 <script>
@@ -136,116 +398,196 @@
   const list = document.getElementById('qnaList');
   const pager = document.getElementById('qnaPager');
   const waitBadge = document.getElementById('qnaWaitBadge');
+  const waitTabCount = document.getElementById('qnaWaitTabCount');
+  const resultMeta = document.getElementById('qnaResultMeta');
   let curStatus = 'WAITING_FOR_ANSWER', curPage = 1, curQ = '';
 
   const STATUS_TR = {
-    'WAITING_FOR_ANSWER': ['Cevap Bekliyor', 'bg-danger'],
-    'ANSWERED':           ['Cevaplandı', 'bg-success'],
-    'REJECTED':           ['Cevap Reddedildi', 'bg-warning text-dark'],
-    'REPORTED':           ['Raporlandı', 'bg-secondary'],
-    'UNANSWERED':         ['Süresi Doldu', 'bg-dark'],
+    'WAITING_FOR_ANSWER': ['Cevap bekliyor', 'waiting', 'bi-hourglass-split'],
+    'ANSWERED':           ['Cevaplandı', 'answered', 'bi-check2'],
+    'REJECTED':           ['Cevap reddedildi', 'rejected', 'bi-exclamation-triangle'],
+    'REPORTED':           ['Raporlandı', 'reported', 'bi-flag'],
+    'UNANSWERED':         ['Süresi doldu', 'unanswered', 'bi-clock-history'],
   };
-  const esc = s => (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   function cardHtml(s) {
-    const st = STATUS_TR[s.status] || [s.status, 'bg-light text-dark'];
+    const st = STATUS_TR[s.status] || [s.status || 'Diğer', 'other', 'bi-circle'];
     const waiting = s.status === 'WAITING_FOR_ANSWER';
     const draftReady = s.ai_draft_status === 'ready' && s.ai_draft;
-    let body = `
-      <div class="d-flex gap-3">
-        ${s.image_url ? `<a href="${esc(s.web_url)}" target="_blank"><img src="${esc(s.image_url)}" class="qna-img" loading="lazy"></a>` : ''}
-        <div class="flex-grow-1">
-          <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-            <span class="badge qna-status-badge ${st[1]}">${st[0]}</span>
-            <span class="qna-meta"><i class="bi bi-person"></i> ${esc(s.user_name || 'Müşteri')}</span>
-            <span class="qna-meta"><i class="bi bi-clock"></i> ${esc(s.creation_date || '')}</span>
-            ${s.product_main_id ? `<span class="qna-meta"><i class="bi bi-upc"></i> Model: ${esc(s.product_main_id)}</span>` : ''}
-          </div>
-          <div class="qna-meta mb-1">${esc(s.product_name || '')}</div>
-          <div class="qna-question mb-2">❓ ${esc(s.text)}</div>`;
-
+    const image = s.image_url
+      ? `${s.web_url ? `<a href="${esc(s.web_url)}" class="qna-img-link" target="_blank" rel="noopener">` : ''}
+           <img src="${esc(s.image_url)}" class="qna-img" loading="lazy" alt="${esc(s.product_name || 'Ürün')}">
+         ${s.web_url ? '</a>' : ''}`
+      : '<span class="qna-img-placeholder"><i class="bi bi-image"></i></span>';
+    let answer = '';
     if (waiting) {
       const draftVal = draftReady ? s.ai_draft : '';
-      body += `
-          <div class="qna-answer-box">
-            <div class="d-flex align-items-center gap-2 mb-1">
-              ${draftReady
-                ? '<span class="badge bg-info qna-draft-tag"><i class="bi bi-stars"></i> AI taslağı — kontrol edip gönderin</span>'
-                : (s.ai_draft_status === 'pending'
-                    ? '<span class="badge bg-secondary qna-draft-tag"><i class="bi bi-hourglass-split"></i> AI taslak hazırlanıyor...</span>'
-                    : '')}
-              <button class="btn btn-sm btn-outline-info py-0 qna-draft-btn" data-id="${s.id}">
-                <i class="bi bi-stars"></i> ${draftReady ? 'Taslağı Yenile' : 'AI Taslak Üret'}
-              </button>
-            </div>
-            <textarea class="form-control qna-answer-text" data-id="${s.id}" rows="3"
-                      placeholder="Cevabınızı yazın (10-2000 karakter) — sonuna 'Güllü Shoes🌹' imzası otomatik eklenir">${esc(draftVal)}</textarea>
-            <div class="input-group input-group-sm mt-2">
-              <span class="input-group-text"><i class="bi bi-pencil"></i></span>
+      answer = `
+        <section class="qna-answer-pane">
+          <div class="qna-answer-head">
+            <span class="qna-section-label">Cevabınız</span>
+            <span class="qna-char" data-id="${s.id}">${draftVal.trim().length}/2000</span>
+            ${draftReady
+              ? '<span class="qna-draft-state"><i class="bi bi-stars"></i> AI taslağı</span>'
+              : (s.ai_draft_status === 'pending'
+                  ? '<span class="qna-draft-state"><span class="spinner-border spinner-border-sm"></span> Hazırlanıyor</span>'
+                  : '')}
+            <button class="qna-ai-btn qna-draft-btn" data-id="${s.id}">
+              <i class="bi bi-stars"></i> ${draftReady ? 'Taslağı yenile' : 'AI taslak üret'}
+            </button>
+          </div>
+          <textarea class="qna-answer-text" id="qna-answer-${s.id}" data-id="${s.id}" rows="4"
+                    aria-label="Müşteriye verilecek cevap"
+                    placeholder="Cevabınızı yazın… İmza gönderimde otomatik eklenir.">${esc(draftVal)}</textarea>
+          <details class="qna-revise">
+            <summary><i class="bi bi-magic"></i> AI ile bu cevabı düzenle</summary>
+            <div class="qna-revise-row">
               <input type="text" class="form-control qna-draft-talimat" data-id="${s.id}" maxlength="500"
-                     placeholder="AI'a düzeltme talimatı (ör: fiyattan bahsetme, daha kısa yaz) — yazıp 'Düzelttir'e bas">
-              <button class="btn btn-outline-info qna-revise-btn" data-id="${s.id}">
-                <i class="bi bi-stars"></i> Düzelttir
+                     aria-label="AI düzeltme talimatı"
+                     placeholder="Ör: Daha kısa yaz, fiyattan bahsetme…">
+              <button class="qna-revise-btn" data-id="${s.id}">
+                <i class="bi bi-stars"></i> Düzenle
               </button>
             </div>
-            <div class="d-flex align-items-center gap-2 mt-2">
-              <button class="btn btn-sm btn-success qna-send-btn" data-id="${s.id}">
-                <i class="bi bi-send"></i> Trendyol'a Gönder
-              </button>
-              <span class="qna-char" data-id="${s.id}">${draftVal.length}/2000</span>
-              <span class="text-danger small qna-err" data-id="${s.id}"></span>
-            </div>
-          </div>`;
+          </details>
+          <div class="qna-answer-actions">
+            <span class="qna-meta"><i class="bi bi-info-circle"></i> Herkese açık yayınlanır</span>
+            <span class="qna-err" data-id="${s.id}"></span>
+            <button class="qna-send-btn" data-id="${s.id}">
+              <i class="bi bi-send"></i><span>Trendyol'a gönder</span>
+            </button>
+          </div>
+        </section>`;
     } else if (s.answer_text) {
-      body += `
-          <div class="p-2 rounded" style="background:#f4faf4;">
-            <div class="qna-meta mb-1">💬 Cevap ${s.answer_date ? '· ' + esc(s.answer_date) : ''} ${s.answered_by ? '· ' + esc(s.answered_by) : ''}</div>
-            <div style="white-space:pre-wrap;">${esc(s.answer_text)}</div>
-          </div>`;
+      answer = `
+        <section class="qna-answer-pane">
+          <span class="qna-section-label">Yayınlanan cevap</span>
+          <div class="qna-published">
+            <div class="qna-published-meta">
+              <i class="bi bi-check2-circle"></i>
+              ${s.answer_date ? esc(s.answer_date) : 'Cevaplandı'}
+              ${s.answered_by ? ' · ' + esc(s.answered_by) : ''}
+            </div>
+            <div class="qna-published-text">${esc(s.answer_text)}</div>
+          </div>
+        </section>`;
+    } else {
+      answer = `
+        <section class="qna-answer-pane">
+          <span class="qna-section-label">Cevap durumu</span>
+          <div class="qna-published">
+            <div class="qna-published-text">Bu soru için yayınlanmış bir cevap bulunmuyor.</div>
+          </div>
+        </section>`;
     }
+    let rejected = '';
     if (s.rejected_answer_text) {
-      body += `<div class="mt-2 p-2 rounded" style="background:#fdf3f3;">
-        <div class="qna-meta">🚫 Reddedilen cevap${s.report_reason ? ' — ' + esc(s.report_reason) : ''}</div>
-        <div class="small" style="white-space:pre-wrap;">${esc(s.rejected_answer_text)}</div></div>`;
+      rejected = `<div class="qna-rejected">
+        <strong><i class="bi bi-x-circle"></i> Reddedilen cevap${s.report_reason ? ' · ' + esc(s.report_reason) : ''}</strong>
+        <div>${esc(s.rejected_answer_text)}</div>
+      </div>`;
     }
-    body += `</div></div>`;
-    return `<div class="card qna-card" id="qna-${s.id}"><div class="card-body">${body}</div></div>`;
+    return `
+      <article class="qna-card" id="qna-${s.id}">
+        <header class="qna-product-row">
+          ${image}
+          <div class="qna-product-info">
+            <strong title="${esc(s.product_name || '')}">${esc(s.product_name || 'Ürün bilgisi bulunamadı')}</strong>
+            ${s.product_main_id ? `<span class="qna-model"><i class="bi bi-upc-scan"></i> Model ${esc(s.product_main_id)}</span>` : ''}
+          </div>
+          <span class="qna-status qna-status--${st[1]}" title="${esc(st[0])}">
+            <i class="bi ${st[2]}"></i><span>${esc(st[0])}</span>
+          </span>
+        </header>
+        <div class="qna-card-grid">
+          <section class="qna-question-pane">
+            <div class="qna-customer-meta">
+              <span><i class="bi bi-person"></i>${esc(s.user_name || 'Müşteri')}</span>
+              ${s.creation_date ? `<span><i class="bi bi-clock"></i>${esc(s.creation_date)}</span>` : ''}
+            </div>
+            <span class="qna-section-label">Müşteri sorusu</span>
+            <p class="qna-question">${esc(s.text)}</p>
+          </section>
+          ${answer}
+          ${rejected}
+        </div>
+      </article>`;
   }
 
   async function load() {
+    list.setAttribute('aria-busy', 'true');
     try {
       const r = await fetch(`/soru-cevap/api/sorular?status=${curStatus}&q=${encodeURIComponent(curQ)}&page=${curPage}`, {cache:'no-store'});
       const d = await r.json();
       if (!d.ok) throw new Error();
       list.innerHTML = d.sorular.length
         ? d.sorular.map(cardHtml).join('')
-        : '<div class="text-center text-muted py-5">Bu sekmede soru yok 🎉</div>';
+        : `<div class="qna-empty">
+             <div class="qna-empty-icon"><i class="bi bi-check2"></i></div>
+             <strong>${curQ ? 'Aramanızla eşleşen soru yok' : 'Bu bölüm tertemiz'}</strong>
+             <span>${curQ ? 'Başka bir kelimeyle tekrar deneyin.' : 'Şimdilik burada gösterilecek soru bulunmuyor.'}</span>
+           </div>`;
+      resultMeta.textContent = d.toplam
+        ? `${d.toplam} soru · ${d.sayfa}. sayfa`
+        : (curQ ? `"${curQ}" için sonuç bulunamadı` : 'Gösterilecek soru yok');
       renderPager(d.toplam, d.sayfa, d.sayfa_boyu);
       bindCards();
     } catch (e) {
-      list.innerHTML = '<div class="alert alert-danger">Sorular yüklenemedi.</div>';
+      list.innerHTML = `<div class="qna-error">
+        <div class="qna-error-icon"><i class="bi bi-wifi-off"></i></div>
+        <strong>Sorular yüklenemedi</strong>
+        <span>Bağlantıyı kontrol edip sayfayı yenileyin.</span>
+      </div>`;
+      resultMeta.textContent = 'Yükleme sırasında bir sorun oluştu';
     }
+    list.removeAttribute('aria-busy');
     refreshBadge();
   }
 
   function renderPager(total, page, size) {
     const pages = Math.max(Math.ceil(total / size), 1);
-    let html = '';
-    for (let p = 1; p <= pages && p <= 30; p++) {
-      html += `<li class="page-item ${p === page ? 'active' : ''}"><button class="page-link" data-p="${p}">${p}</button></li>`;
+    if (pages <= 1) { pager.innerHTML = ''; return; }
+    const visible = [...new Set([1, pages, page - 1, page, page + 1].filter(p => p >= 1 && p <= pages))].sort((a,b) => a - b);
+    let html = `<li class="page-item ${page === 1 ? 'disabled' : ''}">
+      <button class="page-link" data-p="${page - 1}" aria-label="Önceki sayfa"><i class="bi bi-chevron-left"></i></button>
+    </li>`;
+    let previous = 0;
+    for (const p of visible) {
+      if (previous && p - previous > 1) {
+        html += '<li class="page-item disabled"><span class="page-link">…</span></li>';
+      }
+      html += `<li class="page-item ${p === page ? 'active' : ''}">
+        <button class="page-link" data-p="${p}" ${p === page ? 'aria-current="page"' : ''}>${p}</button>
+      </li>`;
+      previous = p;
     }
-    pager.innerHTML = pages > 1 ? html : '';
-    pager.querySelectorAll('button').forEach(b =>
-      b.addEventListener('click', () => { curPage = +b.dataset.p; load(); }));
+    html += `<li class="page-item ${page === pages ? 'disabled' : ''}">
+      <button class="page-link" data-p="${page + 1}" aria-label="Sonraki sayfa"><i class="bi bi-chevron-right"></i></button>
+    </li>`;
+    pager.innerHTML = html;
+    pager.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      if (b.closest('.disabled')) return;
+      curPage = +b.dataset.p;
+      load();
+      document.getElementById('qnaControls').scrollIntoView({behavior:'smooth', block:'start'});
+    }));
   }
 
   function bindCards() {
     list.querySelectorAll('.qna-answer-text').forEach(t => {
+      const resize = () => {
+        t.style.height = 'auto';
+        t.style.height = `${Math.min(Math.max(t.scrollHeight, 116), 320)}px`;
+      };
+      resize();
       t.addEventListener('input', () => {
         const c = list.querySelector(`.qna-char[data-id="${t.dataset.id}"]`);
         const n = t.value.trim().length;
         c.textContent = `${n}/2000`;
         c.classList.toggle('bad', n < 10 || n > 2000);
+        t.dataset.dirty = 'true';
+        resize();
       });
     });
     list.querySelectorAll('.qna-send-btn').forEach(b => b.addEventListener('click', () => send(b)));
@@ -270,7 +612,8 @@
     if (text.length < 10) { err.textContent = 'Cevap en az 10 karakter olmalı.'; return; }
     if (!confirm('Cevap Trendyol\'da herkese açık yayınlanacak. Gönderilsin mi?')) return;
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gönderiliyor...';
+    const eskiHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span><span>Gönderiliyor…</span>';
     try {
       const r = await fetch('/soru-cevap/api/cevapla', {
         method: 'POST',
@@ -285,12 +628,12 @@
       } else {
         err.textContent = d.hata || 'Gönderilemedi.';
         btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-send"></i> Trendyol\'a Gönder';
+        btn.innerHTML = eskiHtml;
       }
     } catch (e) {
       err.textContent = 'Sunucuya ulaşılamadı.';
       btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-send"></i> Trendyol\'a Gönder';
+      btn.innerHTML = eskiHtml;
     }
   }
 
@@ -301,8 +644,8 @@
     if (revize && !talimat) { alert('Önce düzeltme talimatını yazın.'); return; }
     const metinEl = list.querySelector(`.qna-answer-text[data-id="${id}"]`);
     btn.disabled = true;
-    const eskiHtml = revize ? '<i class="bi bi-stars"></i> Düzelttir' : '<i class="bi bi-stars"></i> Taslağı Yenile';
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Üretiliyor...';
+    const eskiHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Üretiliyor…';
     const done = (msg) => {
       if (msg) alert(msg);
       btn.disabled = false;
@@ -344,28 +687,45 @@
     try {
       const r = await fetch('/soru-cevap/api/bekleyen-sayi', {cache: 'no-store'});
       const d = await r.json();
-      if (d.ok && d.sayi > 0) {
-        waitBadge.textContent = `${d.sayi} bekleyen`;
-        waitBadge.style.display = '';
-      } else waitBadge.style.display = 'none';
+      if (!d.ok) return;
+      const sayi = Number(d.sayi) || 0;
+      waitBadge.querySelector('strong').textContent = sayi;
+      waitTabCount.textContent = sayi;
+      waitBadge.classList.toggle('is-empty', sayi === 0);
     } catch (e) {}
   }
 
-  document.querySelectorAll('#qnaTabs .nav-link').forEach(b => {
+  document.querySelectorAll('#qnaTabs .qna-tab').forEach(b => {
     b.addEventListener('click', () => {
-      document.querySelectorAll('#qnaTabs .nav-link').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('#qnaTabs .qna-tab').forEach(x => {
+        x.classList.remove('active');
+        x.setAttribute('aria-selected', 'false');
+      });
       b.classList.add('active');
+      b.setAttribute('aria-selected', 'true');
       curStatus = b.dataset.status; curPage = 1; load();
     });
   });
 
+  const searchInput = document.getElementById('qnaSearch');
+  const searchWrap = searchInput.closest('.qna-search');
+  const searchClear = document.getElementById('qnaSearchClear');
   let searchT;
-  document.getElementById('qnaSearch').addEventListener('input', e => {
+  searchInput.addEventListener('input', e => {
+    searchWrap.classList.toggle('has-value', Boolean(e.target.value));
     clearTimeout(searchT);
     searchT = setTimeout(() => { curQ = e.target.value.trim(); curPage = 1; load(); }, 400);
   });
+  searchClear.addEventListener('click', () => {
+    searchInput.value = '';
+    searchWrap.classList.remove('has-value');
+    curQ = ''; curPage = 1;
+    searchInput.focus();
+    load();
+  });
 
   document.getElementById('qnaSyncBtn').addEventListener('click', async function() {
+    const eskiHtml = this.innerHTML;
     this.disabled = true;
     this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
     try {
@@ -374,7 +734,7 @@
       if (!d.ok) alert(d.hata || 'Senkron hatası');
     } catch (e) { alert('Sunucuya ulaşılamadı.'); }
     this.disabled = false;
-    this.innerHTML = '<i class="bi bi-arrow-repeat"></i> Senkronla';
+    this.innerHTML = eskiHtml;
     load();
   });
 
@@ -487,7 +847,11 @@
   load();
   motorYukle();
   talimatYukle();
-  setInterval(() => { if (curStatus === 'WAITING_FOR_ANSWER' && curPage === 1) load(); else refreshBadge(); }, 30000);
+  setInterval(() => {
+    const aktifDuzenleme = list.querySelector('.qna-answer-text:focus, .qna-answer-text[data-dirty="true"]');
+    if (curStatus === 'WAITING_FOR_ANSWER' && curPage === 1 && !aktifDuzenleme) load();
+    else refreshBadge();
+  }, 30000);
 })();
 </script>
 {% endblock %}
