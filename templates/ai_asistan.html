@@ -51,6 +51,9 @@
             <option value="claude">Claude</option>
             <option value="codex">Codex</option>
         </select>
+        <select id="aiCodexModelSec" style="display:none;" title="Codex'in kullanacağı model">
+            <option value="">Varsayılan</option>
+        </select>
     </div>
     <div class="ai-araclar">
         <button id="aiYeni" title="Yeni sohbet"><i class="fas fa-plus"></i></button>
@@ -240,9 +243,32 @@
         sohbetSil(id, null);
     }
 
-    // ── AI motoru seçimi (yalnızca yönetici görür) ──
+    // ── AI motoru + Codex model seçimi (yalnızca yönetici görür) ──
     const motorKutu = document.getElementById('aiMotorKutu');
     const motorSec = document.getElementById('aiMotorSec');
+    const modelSec = document.getElementById('aiCodexModelSec');
+
+    function modelGoster() {
+        modelSec.style.display = motorSec.value === 'codex' ? '' : 'none';
+    }
+
+    function modelSecDoldur(hazir, secili) {
+        modelSec.innerHTML = '<option value="">Varsayılan</option>';
+        (hazir || []).forEach(function (m) {
+            const o = document.createElement('option');
+            o.value = m; o.textContent = m;
+            modelSec.appendChild(o);
+        });
+        if (secili && ![...modelSec.options].some(o => o.value === secili)) {
+            const o = document.createElement('option');
+            o.value = secili; o.textContent = secili;
+            modelSec.appendChild(o);
+        }
+        const diger = document.createElement('option');
+        diger.value = '__diger'; diger.textContent = 'Diğer…';
+        modelSec.appendChild(diger);
+        modelSec.value = secili || '';
+    }
 
     async function motorYukle() {
         try {
@@ -250,24 +276,44 @@
             const d = await r.json();
             if (!d.ok || !d.duzenleyebilir) return;
             motorSec.value = d.motorlar.asistan;
+            modelSecDoldur(d.codex_hazir, (d.codex_modeller || {}).asistan || '');
+            modelGoster();
             motorKutu.classList.add('acik');
         } catch (e) { /* sessiz: motor seçici olmadan sayfa çalışmaya devam eder */ }
+    }
+
+    async function motorAyarKaydet(body) {
+        const r = await fetch('/ai-asistan/motor', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+            body: JSON.stringify(body)
+        });
+        return r.json();
     }
 
     motorSec.addEventListener('change', async function () {
         const secim = motorSec.value;
         try {
-            const r = await fetch('/ai-asistan/motor', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
-                body: JSON.stringify({ alan: 'asistan', motor: secim })
-            });
-            const d = await r.json();
+            const d = await motorAyarKaydet({ alan: 'asistan', motor: secim });
             if (!d.ok) { alert(d.hata || 'Motor değiştirilemedi.'); await motorYukle(); return; }
+            modelGoster();
             // Oturum kimlikleri motora özgü: süren sohbet öbür motorda sürdürülemez,
             // sunucu taze oturuma düşer → bağlam kaybını kullanıcıya baştan söyle.
             ekle('Motor "' + secim + '" olarak değiştirildi. Süren sohbetin bağlamı bu motorda taşınmaz; "Yeni sohbet" ile başlaman önerilir.', 'asistan');
         } catch (e) { alert('Motor değiştirilemedi.'); await motorYukle(); }
+    });
+
+    modelSec.addEventListener('change', async function () {
+        let model = modelSec.value;
+        if (model === '__diger') {
+            model = (prompt('Codex model adını yazın (boş = varsayılan):') || '').trim();
+        }
+        try {
+            const d = await motorAyarKaydet({ alan: 'asistan', codex_model: model });
+            if (!d.ok) { alert(d.hata || 'Model değiştirilemedi.'); await motorYukle(); return; }
+            modelSecDoldur([...modelSec.options].filter(o => o.value && o.value !== '__diger').map(o => o.value),
+                           (d.codex_modeller || {}).asistan || '');
+        } catch (e) { alert('Model değiştirilemedi.'); await motorYukle(); }
     });
 
     gonderBtn.addEventListener('click', gonder);

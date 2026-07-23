@@ -30,11 +30,19 @@ FALLBACK_PROMPT = "Sen Güllü Shoes'un Trendyol müşteri sorularına kısa, ki
 
 
 def _kurallar() -> str:
-    """Sistem promptu: cevap kuralları + Obsidian vault'taki bilgi notları."""
+    """Sistem promptu: cevap kuralları + panel genel talimatı + bilgi notları."""
     try:
         kurallar = KURALLAR_MD.read_text(encoding="utf-8")
     except OSError:
         kurallar = FALLBACK_PROMPT
+    from trendyol_qna.qna_ayar import genel_talimat
+    talimat = genel_talimat()
+    if talimat:
+        kurallar += (
+            "\n\n---\n\n# Panel Genel Talimatı\n"
+            "Mağaza yöneticisinin panelden girdiği güncel talimat — TÜM taslaklarda uygula:\n\n"
+            + talimat
+        )
     from trendyol_qna.qna_notes import load_vault_notes
     notlar = load_vault_notes()
     if notlar:
@@ -123,12 +131,13 @@ def _run_claude(prompt: str) -> str | None:
 
 def _run_ai(prompt: str) -> str | None:
     """Seçili motorla (panel ayarı > .env AI_MOTOR) taslak üret (hata → None)."""
-    from ai_asistan.motor_ayar import aktif_motor
+    from ai_asistan.motor_ayar import aktif_motor, codex_model
 
     if aktif_motor("qna") != "codex":
         return _run_claude(prompt)
 
-    sonuc = _codex_calistir(prompt, _kurallar(), DRAFT_TIMEOUT_SN, cwd=AI_ASISTAN_DIR)
+    sonuc = _codex_calistir(prompt, _kurallar(), DRAFT_TIMEOUT_SN, cwd=AI_ASISTAN_DIR,
+                            model=codex_model("qna"))
     if not sonuc["ok"]:
         logger.warning("[QNA-AI] codex hata: %s", sonuc.get("hata"))
         return None

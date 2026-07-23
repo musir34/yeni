@@ -245,7 +245,8 @@ def _codex_ciktisi_coz(stdout: str) -> tuple[str, str | None]:
 
 def _codex_calistir(soru: str, sistem_prompt: str, timeout_sn: int,
                     resume_session_id: str | None = None,
-                    cwd: Path | None = None) -> dict:
+                    cwd: Path | None = None,
+                    model: str | None = None) -> dict:
     """
     Headless Codex CLI'yi çağırır; _claude_calistir ile AYNI sözleşmeyi döner:
     {'ok': bool, 'cevap'/'hata': str, 'session_id': str|None}
@@ -277,8 +278,11 @@ def _codex_calistir(soru: str, sistem_prompt: str, timeout_sn: int,
         "-c", 'sandbox_mode="read-only"',
         "-c", 'approval_policy="never"',
     ]
-    if CODEX_MODEL:
-        cmd += ["-m", CODEX_MODEL]
+    # model=None → .env CODEX_MODEL; '' (panelden "Varsayılan") → codex config.toml varsayılanı.
+    if model is None:
+        model = CODEX_MODEL
+    if model:
+        cmd += ["-m", model]
 
     try:
         sonuc = subprocess.run(
@@ -460,15 +464,17 @@ def _codex_sql_dongusu(soru: str, resume_session_id: str | None = None) -> dict:
 
     MCP kullanılmamasının sebebi sql_kopru.py başında açıklanmıştır.
     """
+    from ai_asistan.motor_ayar import codex_model
     from ai_asistan.sql_kopru import sema_ozeti, sql_calistir
 
     sistem = _system_prompt() + "\n\n" + CODEX_SQL_TALIMATI.format(
         tur=AZAMI_SQL_TUR, sema=sema_ozeti())
+    model = codex_model("asistan")
 
-    sonuc = _codex_calistir(soru, sistem, QUERY_TIMEOUT_SN, resume_session_id)
+    sonuc = _codex_calistir(soru, sistem, QUERY_TIMEOUT_SN, resume_session_id, model=model)
     if not sonuc["ok"] and resume_session_id:
         # Oturum kayıp/bozuk olabilir → taze oturumla bir kez daha.
-        sonuc = _codex_calistir(soru, sistem, QUERY_TIMEOUT_SN, None)
+        sonuc = _codex_calistir(soru, sistem, QUERY_TIMEOUT_SN, None, model=model)
 
     for _ in range(AZAMI_SQL_TUR):
         if not sonuc["ok"]:
@@ -483,7 +489,7 @@ def _codex_sql_dongusu(soru: str, resume_session_id: str | None = None) -> dict:
             f"Sorgu sonucu:\n\n{cikti}\n\n"
             "Bu sonuca göre devam et: ya yeni bir ```sql bloğu yaz ya da "
             "kullanıcıya Türkçe nihai cevabı yaz.",
-            "", QUERY_TIMEOUT_SN, sonuc.get("session_id"))
+            "", QUERY_TIMEOUT_SN, sonuc.get("session_id"), model=model)
 
     # Tur sınırı doldu: elde ne varsa onu döndür, uydurma cevap üretme.
     if sonuc["ok"] and SQL_BLOK.search(sonuc["cevap"]):
@@ -584,14 +590,19 @@ def sayfa():
 @login_required
 def motor():
     """
-    AI motoru (claude|codex) oku/değiştir. Her iki ekran da (asistan, qna) bu
-    endpoint'i kullanır. Değiştirme YALNIZCA yöneticiye açık — motor seçimi
-    maliyet/gizlilik etkisi olan bir sistem ayarı.
+    AI motoru (claude|codex) ve alan bazlı Codex modelini oku/değiştir. Her iki
+    ekran da (asistan, qna) bu endpoint'i kullanır. Değiştirme YALNIZCA
+    yöneticiye açık — motor seçimi maliyet/gizlilik etkisi olan bir sistem ayarı.
     """
-    from ai_asistan.motor_ayar import motor_ayarla, motorlari_getir
+    from ai_asistan.motor_ayar import (
+        CODEX_HAZIR_MODELLER, codex_model_ayarla, codex_modelleri_getir,
+        motor_ayarla, motorlari_getir,
+    )
 
     if request.method == "GET":
         return jsonify({"ok": True, "motorlar": motorlari_getir(),
+                        "codex_modeller": codex_modelleri_getir(),
+                        "codex_hazir": list(CODEX_HAZIR_MODELLER),
                         "duzenleyebilir": _yonetici_mi()})
 
     if not _yonetici_mi():
@@ -604,9 +615,18 @@ def motor():
 
     payload = request.get_json(silent=True) or {}
     alan = (payload.get("alan") or "").strip()
-    secim = (payload.get("motor") or "").strip().lower()
     try:
-        motor_ayarla(alan, secim)
+        if "motor" in payload:
+            secim = (payload.get("motor") or "").strip().lower()
+            motor_ayarla(alan, secim)
+            current_app.logger.info("[AI-MOTOR] %s → %s (kullanıcı=%s)", alan, secim, _kullanici_id())
+        if "codex_model" in payload:
+            model = (payload.get("codex_model") or "").strip()
+            codex_model_ayarla(alan, model)
+            current_app.logger.info("[AI-MOTOR] %s codex modeli → %r (kullanıcı=%s)",
+                                    alan, model, _kullanici_id())
+        if "motor" not in payload and "codex_model" not in payload:
+            return jsonify({"ok": False, "hata": "Değiştirilecek ayar belirtilmedi."}), 400
     except ValueError as e:
         return jsonify({"ok": False, "hata": str(e)}), 400
     except Exception:
@@ -614,8 +634,8 @@ def motor():
         current_app.logger.exception("[AI-MOTOR] ayar yazılamadı")
         return jsonify({"ok": False, "hata": "Ayar kaydedilemedi."}), 500
 
-    current_app.logger.info("[AI-MOTOR] %s → %s (kullanıcı=%s)", alan, secim, _kullanici_id())
-    return jsonify({"ok": True, "motorlar": motorlari_getir()})
+    return jsonify({"ok": True, "motorlar": motorlari_getir(),
+                    "codex_modeller": codex_modelleri_getir()})
 
 
 @ai_asistan_bp.route("/sor", methods=["POST"])

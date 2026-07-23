@@ -55,9 +55,36 @@
         <option value="claude">Taslak: Claude</option>
         <option value="codex">Taslak: Codex</option>
       </select>
+      <select class="form-select form-select-sm" id="qnaCodexModelSec" style="max-width:200px;display:none;"
+              title="Codex'in kullanacağı model">
+        <option value="">Model: Varsayılan</option>
+      </select>
       <button class="btn btn-sm btn-outline-secondary" id="qnaSyncBtn" title="Trendyol'dan son 14 günü çek">
         <i class="bi bi-arrow-repeat"></i> Senkronla
       </button>
+    </div>
+  </div>
+
+  <div class="card qna-card" id="qnaTalimatKart" style="display:none;">
+    <div class="card-body py-2">
+      <div class="d-flex align-items-center gap-2" role="button" data-bs-toggle="collapse"
+           data-bs-target="#qnaTalimatGovde" aria-expanded="false">
+        <i class="bi bi-stars text-info"></i>
+        <strong class="small">AI Genel Talimatı</strong>
+        <span class="badge bg-info qna-draft-tag" id="qnaTalimatAktif" style="display:none;">aktif</span>
+        <span class="qna-meta">— tüm taslaklar bu talimata göre üretilir (boşsa etkisiz)</span>
+        <i class="bi bi-chevron-down ms-auto"></i>
+      </div>
+      <div class="collapse" id="qnaTalimatGovde">
+        <textarea class="form-control mt-2" id="qnaTalimatMetin" rows="3" maxlength="2000"
+                  placeholder="Ör: Kampanya döneminde kargonun 2-4 iş günü sürebileceğini belirt; fiyat sorularında indirim sözü verme..."></textarea>
+        <div class="d-flex align-items-center gap-2 mt-2">
+          <button class="btn btn-sm btn-info text-white" id="qnaTalimatKaydet">
+            <i class="bi bi-check-lg"></i> Kaydet
+          </button>
+          <span class="qna-meta" id="qnaTalimatDurum"></span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -351,8 +378,31 @@
     load();
   });
 
-  // ── Taslak motoru seçimi (yalnızca yönetici görür) ──
+  // ── Taslak motoru + Codex model seçimi (yalnızca yönetici görür) ──
   const motorSec = document.getElementById('qnaMotorSec');
+  const modelSec = document.getElementById('qnaCodexModelSec');
+
+  function modelGoster() {
+    modelSec.style.display = (motorSec.style.display !== 'none' && motorSec.value === 'codex') ? '' : 'none';
+  }
+
+  function modelSecDoldur(hazir, secili) {
+    modelSec.innerHTML = '<option value="">Model: Varsayılan</option>';
+    (hazir || []).forEach(m => {
+      const o = document.createElement('option');
+      o.value = m; o.textContent = 'Model: ' + m;
+      modelSec.appendChild(o);
+    });
+    if (secili && ![...modelSec.options].some(o => o.value === secili)) {
+      const o = document.createElement('option');
+      o.value = secili; o.textContent = 'Model: ' + secili;
+      modelSec.appendChild(o);
+    }
+    const diger = document.createElement('option');
+    diger.value = '__diger'; diger.textContent = 'Model: Diğer…';
+    modelSec.appendChild(diger);
+    modelSec.value = secili || '';
+  }
 
   async function motorYukle() {
     try {
@@ -361,23 +411,82 @@
       if (!d.ok || !d.duzenleyebilir) return;
       motorSec.value = d.motorlar.qna;
       motorSec.style.display = '';
+      modelSecDoldur(d.codex_hazir, (d.codex_modeller || {}).qna || '');
+      modelGoster();
     } catch (e) { /* sessiz: seçici olmadan sayfa çalışmaya devam eder */ }
+  }
+
+  async function motorAyarKaydet(body) {
+    const r = await fetch('/ai-asistan/motor', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-Requested-With': 'fetch'},
+      body: JSON.stringify(body)
+    });
+    return r.json();
   }
 
   motorSec.addEventListener('change', async function() {
     try {
-      const r = await fetch('/ai-asistan/motor', {
+      const d = await motorAyarKaydet({alan: 'qna', motor: motorSec.value});
+      if (!d.ok) { alert(d.hata || 'Motor değiştirilemedi.'); motorYukle(); return; }
+      modelGoster();
+    } catch (e) { alert('Motor değiştirilemedi.'); motorYukle(); }
+  });
+
+  modelSec.addEventListener('change', async function() {
+    let model = modelSec.value;
+    if (model === '__diger') {
+      model = (prompt('Codex model adını yazın (boş = varsayılan):') || '').trim();
+    }
+    try {
+      const d = await motorAyarKaydet({alan: 'qna', codex_model: model});
+      if (!d.ok) { alert(d.hata || 'Model değiştirilemedi.'); motorYukle(); return; }
+      modelSecDoldur([...modelSec.options].filter(o => o.value && o.value !== '__diger').map(o => o.value),
+                     (d.codex_modeller || {}).qna || '');
+    } catch (e) { alert('Model değiştirilemedi.'); motorYukle(); }
+  });
+
+  // ── AI genel talimatı (yalnızca yönetici görür) ──
+  const talimatKart = document.getElementById('qnaTalimatKart');
+  const talimatMetin = document.getElementById('qnaTalimatMetin');
+  const talimatAktif = document.getElementById('qnaTalimatAktif');
+  const talimatDurum = document.getElementById('qnaTalimatDurum');
+
+  async function talimatYukle() {
+    try {
+      const r = await fetch('/soru-cevap/api/genel-talimat', {cache: 'no-store'});
+      const d = await r.json();
+      if (!d.ok || !d.duzenleyebilir) return;
+      talimatMetin.value = d.talimat || '';
+      talimatAktif.style.display = d.talimat ? '' : 'none';
+      talimatKart.style.display = '';
+    } catch (e) { /* sessiz: kart olmadan sayfa çalışmaya devam eder */ }
+  }
+
+  document.getElementById('qnaTalimatKaydet').addEventListener('click', async function() {
+    this.disabled = true;
+    talimatDurum.textContent = 'Kaydediliyor...';
+    try {
+      const r = await fetch('/soru-cevap/api/genel-talimat', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-Requested-With': 'fetch'},
-        body: JSON.stringify({alan: 'qna', motor: motorSec.value})
+        body: JSON.stringify({talimat: talimatMetin.value.trim()})
       });
       const d = await r.json();
-      if (!d.ok) { alert(d.hata || 'Motor değiştirilemedi.'); motorYukle(); }
-    } catch (e) { alert('Motor değiştirilemedi.'); motorYukle(); }
+      if (d.ok) {
+        talimatMetin.value = d.talimat || '';
+        talimatAktif.style.display = d.talimat ? '' : 'none';
+        talimatDurum.textContent = d.talimat ? 'Kaydedildi — yeni taslaklarda uygulanacak.' : 'Talimat kaldırıldı.';
+      } else {
+        talimatDurum.textContent = d.hata || 'Kaydedilemedi.';
+      }
+    } catch (e) { talimatDurum.textContent = 'Sunucuya ulaşılamadı.'; }
+    this.disabled = false;
   });
 
   load();
   motorYukle();
+  talimatYukle();
   setInterval(() => { if (curStatus === 'WAITING_FOR_ANSWER' && curPage === 1) load(); else refreshBadge(); }, 30000);
 })();
 </script>

@@ -169,6 +169,33 @@ def taslak_durum(qid: int):
     })
 
 
+@qna_bp.route("/api/genel-talimat", methods=["GET", "POST"])
+def genel_talimat_api():
+    """
+    AI taslakları için kalıcı genel talimatı oku/değiştir. Değiştirme motor
+    seçimiyle aynı gerekçeyle YALNIZCA yöneticiye açık; CSRF kalkanı
+    before_request'te (fetch başlığı) zaten uygulanıyor.
+    """
+    from ai_asistan.blueprint import _yonetici_mi
+    from trendyol_qna.qna_ayar import TALIMAT_MAX, genel_talimat, genel_talimat_ayarla
+
+    if request.method == "GET":
+        return jsonify({"ok": True, "talimat": genel_talimat(),
+                        "azami": TALIMAT_MAX, "duzenleyebilir": _yonetici_mi()})
+
+    if not _yonetici_mi():
+        return jsonify({"ok": False, "hata": "Bu ayarı yalnızca yönetici değiştirebilir."}), 403
+
+    payload = request.get_json(silent=True) or {}
+    try:
+        genel_talimat_ayarla(payload.get("talimat") or "")
+    except Exception:
+        db.session.rollback()
+        logger.exception("[QNA-AYAR] genel talimat yazılamadı")
+        return jsonify({"ok": False, "hata": "Talimat kaydedilemedi."}), 500
+    return jsonify({"ok": True, "talimat": genel_talimat()})
+
+
 @qna_bp.route("/api/senkron", methods=["POST"])
 def senkron():
     """Elle tam senkron (son 14 gün, tüm statüler)."""
