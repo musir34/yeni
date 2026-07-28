@@ -109,18 +109,11 @@ def uretildi_isaretle(kayit_id: int):
     return jsonify({"success": True, "message": mesaj})
 
 
-@uretim_bp.route("/api/ayar", methods=["GET", "POST"])
+@uretim_bp.route("/api/ayar", methods=["GET"])
 def ayar():
-    from uretim_modu import get_uretim_ayar, set_mail_to
-    if request.method == "POST":
-        data = request.get_json(silent=True) or {}
-        try:
-            set_mail_to(str(data.get("mail_to") or ""))
-        except Exception:
-            db.session.rollback()
-            logger.exception("[URETIM] ayar kaydetme hatası")
-            return jsonify({"success": False, "message": "Ayar kaydedilemedi"}), 500
-        return jsonify({"success": True, "message": "Ayar kaydedildi", "ayar": get_uretim_ayar()})
+    # Mail alıcıları kullanıcı yönetiminden ('uretim_siparis' bildirimi) yönetilir;
+    # burada yalnız model listesi döner.
+    from uretim_modu import get_uretim_ayar
     return jsonify({"success": True, "ayar": get_uretim_ayar()})
 
 

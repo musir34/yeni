@@ -118,11 +118,21 @@ def check_oversell_risk() -> Dict[str, Any]:
     from models import db, ShopifyMapping, CentralStock
     from mail_service import notify, build_alert_email_html
 
+    # 🏭 Üretim modundaki barkodlarda panel=0 iken Shopify'da satışta olmak
+    # BİLİNÇLİ durumdur (sabit adet gönderilir) — oversell alarmına girmesin.
+    try:
+        from uretim_modu import get_uretim_barcodes
+        uretim_barcodes = get_uretim_barcodes()
+    except Exception:
+        uretim_barcodes = set()
+
     risk_rows: List[Dict[str, Any]] = []
     rows = db.session.query(ShopifyMapping, CentralStock).outerjoin(
         CentralStock, CentralStock.barcode == ShopifyMapping.barcode
     ).filter(ShopifyMapping.last_stock_sent > 0).all()
     for m, cs in rows:
+        if m.barcode in uretim_barcodes:
+            continue
         panel = cs.qty if cs else 0
         if panel == 0 and (m.last_stock_sent or 0) > 0:
             risk_rows.append({

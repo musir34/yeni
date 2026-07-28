@@ -1,98 +1,281 @@
 {% extends "base.html" %}
 
-{% block title %}Üretim — Güllü Panel{% endblock %}
-
-{% block extra_css %}
-<style>
-    /* base.html'in .container.mt-5 sarmalayıcısını etkisizleştir */
-    .container.mt-5 { max-width: none; margin: 0; padding: 0; }
-
-    .uretim-wrap { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
-    .uretim-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; margin-bottom: 1.25rem; }
-    .uretim-header h2 { margin: 0; font-size: 1.4rem; }
-    .uretim-card { background: var(--color-white, #fff); border: 1px solid var(--color-border, #e5e5e5); border-radius: 10px; padding: 1.1rem 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
-    .uretim-card h5 { margin: 0 0 .75rem; font-size: 1.02rem; }
-    .ayar-satir { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
-    .ayar-satir input[type=email] { flex: 1 1 260px; }
-    .model-chipler { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .75rem; }
-    .model-chip { display: inline-flex; align-items: center; gap: .4rem; background: #eef4ff; border: 1px solid #cfe0ff; color: #2c4a8a; border-radius: 20px; padding: .2rem .7rem; font-size: .85rem; }
-    .model-chip button { border: none; background: none; color: #a33; cursor: pointer; padding: 0; font-size: .85rem; line-height: 1; }
-    .model-ekle { display: flex; gap: .5rem; margin-top: .75rem; }
-    .model-ekle input { max-width: 200px; }
-    .uretim-tablo { width: 100%; border-collapse: collapse; font-size: .9rem; }
-    .uretim-tablo th { text-align: left; font-size: .75rem; color: #888; text-transform: uppercase; padding: .5rem .6rem; border-bottom: 2px solid var(--color-border, #eee); }
-    .uretim-tablo td { padding: .55rem .6rem; border-bottom: 1px solid var(--color-border, #f0f0f0); vertical-align: top; }
-    .urun-satir { font-size: .84rem; color: #555; }
-    .urun-satir code { font-size: .8rem; }
-    .rozet { display: inline-block; border-radius: 12px; padding: .1rem .55rem; font-size: .75rem; }
-    .rozet-mail-ok { background: #d1e7dd; color: #0f5132; }
-    .rozet-mail-yok { background: #f8d7da; color: #842029; }
-    .rozet-iptal { background: #dc3545; color: #fff; font-weight: 600; }
-    tr.satir-iptal td { opacity: .55; text-decoration: line-through; }
-    tr.satir-iptal td:last-child { text-decoration: none; }
-    .bos-mesaj { text-align: center; color: #999; padding: 1.5rem 0; }
-    html.gs-dark .uretim-card { background: #1e1e1e; border-color: #333; }
-    html.gs-dark .model-chip { background: #1d2b45; border-color: #2c4a8a; color: #9db9ee; }
-</style>
-{% endblock %}
+{% block title %}Üretim Siparişleri — Güllü Panel{% endblock %}
 
 {% block content %}
-<div class="uretim-wrap">
-    <div class="uretim-header">
-        <h2><i class="fas fa-industry"></i> Üretim Siparişleri</h2>
-        <a href="/" class="btn btn-sm btn-outline-secondary"><i class="fas fa-home"></i> Ana Sayfa</a>
+<div class="ur-page" id="urApp">
+  <header class="ur-appbar">
+    <div class="ur-appbar-inner">
+      <a href="{{ url_for('home.home') }}" class="ur-icon-btn" aria-label="Anasayfaya dön" title="Anasayfa">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div class="ur-brand">
+        <span class="ur-brand-logo" aria-hidden="true"><i class="fas fa-industry"></i></span>
+        <span>
+          <strong>Üretim Siparişleri</strong>
+          <small>Güllü Shoes üretim takibi</small>
+        </span>
+      </div>
+      <div class="ur-appbar-actions">
+        <button class="ur-sync-btn" id="urYenile" title="Listeyi yenile">
+          <i class="bi bi-arrow-repeat"></i>
+          <span>Yenile</span>
+        </button>
+        <div class="dropdown">
+          <button class="ur-icon-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Hızlı menü">
+            <i class="bi bi-grid"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end ur-quick-menu">
+            <li><span class="dropdown-header">Hızlı erişim</span></li>
+            <li><a class="dropdown-item" href="{{ url_for('get_products.product_list') }}"><i class="bi bi-tags"></i>Ürün Listesi</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('siparis_hazirla.index') }}"><i class="bi bi-box-seam"></i>Sipariş Hazırla</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('order_list_all') }}"><i class="bi bi-list-check"></i>Sipariş Listesi</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('login_logout.approve_users') }}"><i class="bi bi-people"></i>Kullanıcı Yönetimi</a></li>
+          </ul>
+        </div>
+      </div>
     </div>
+  </header>
 
-    <div class="uretim-card">
-        <h5><i class="fas fa-gear"></i> Ayarlar</h5>
-        <div class="ayar-satir">
-            <label for="mailTo" class="form-label mb-0">Bildirim maili:</label>
-            <input type="email" id="mailTo" class="form-control form-control-sm" placeholder="ornek@mail.com (boş = mail kapalı)">
-            <button id="mailKaydet" class="btn btn-sm btn-primary">Kaydet</button>
-        </div>
-        <div class="mt-3">
-            <strong style="font-size:.9rem;">Üretim modundaki modeller</strong>
-            <span class="text-muted" style="font-size:.82rem;">— bu modeller Trendyol'a stok ne olursa olsun sabit 5 adet gönderilir</span>
-            <div class="model-chipler" id="modelChipler"></div>
-            <div class="model-ekle">
-                <input type="text" id="yeniModel" class="form-control form-control-sm" placeholder="Model kodu">
-                <button id="modelEkle" class="btn btn-sm btn-outline-primary"><i class="fas fa-plus"></i> Ekle</button>
-            </div>
-        </div>
-    </div>
+  <main class="ur-shell">
+    <section class="ur-hero">
+      <div>
+        <span class="ur-eyebrow">Ön sipariş · Üretim modu</span>
+        <h1>Üretim siparişleri</h1>
+        <p>Üretim modundaki modellere gelen siparişleri takip et; üretilenler otomatik olarak normal akışa döner.</p>
+      </div>
+      <div class="ur-wait-pill" id="urWaitPill">
+        <span class="ur-pulse"></span>
+        <strong id="urWaitCount">0</strong>
+        <span>üretim bekliyor</span>
+      </div>
+    </section>
 
-    <div class="uretim-card">
-        <h5><i class="fas fa-hourglass-half"></i> Üretim Bekleyen</h5>
-        <div style="overflow-x:auto;">
-            <table class="uretim-tablo" id="bekleyenTablo">
-                <thead><tr>
-                    <th>Sipariş No</th><th>Model</th><th>Ürünler</th><th>Müşteri</th>
-                    <th>Sipariş Tarihi</th><th>Mail</th><th></th>
-                </tr></thead>
-                <tbody></tbody>
-            </table>
+    <section class="ur-settings">
+      <button class="ur-settings-toggle" type="button" data-bs-toggle="collapse"
+              data-bs-target="#urSettingsBody" aria-expanded="false">
+        <span class="ur-settings-icon"><i class="bi bi-sliders"></i></span>
+        <span>
+          <strong>Üretim modu ayarları</strong>
+          <small>Modeller stok 0 olsa bile Trendyol + Shopify'a sabit 5 adet gönderilir</small>
+        </span>
+        <span class="ur-active-tag" id="urModelSayi" style="display:none;"></span>
+        <i class="bi bi-chevron-down ur-chevron"></i>
+      </button>
+      <div class="collapse" id="urSettingsBody">
+        <div class="ur-settings-inner">
+          <label>Üretim modundaki modeller</label>
+          <div class="ur-chips" id="modelChipler"></div>
+          <div class="ur-model-add">
+            <input type="text" id="yeniModel" class="form-control" placeholder="Model kodu (örn: 0172)" autocomplete="off">
+            <button id="modelEkle" class="ur-primary-btn"><i class="bi bi-plus-lg"></i> Ekle</button>
+          </div>
+          <div class="ur-mail-note">
+            <i class="bi bi-envelope"></i>
+            Mail bildirimleri kullanıcı bazlıdır:
+            <a href="{{ url_for('login_logout.approve_users') }}">Kullanıcı Yönetimi</a> → Bildirimler →
+            <strong>"Üretim siparişi geldiğinde"</strong> olayını istediğin kullanıcıya aç/kapat.
+          </div>
         </div>
-        <div class="bos-mesaj d-none" id="bekleyenBos">Üretim bekleyen sipariş yok. 🎉</div>
-    </div>
+      </div>
+    </section>
 
-    <div class="uretim-card">
-        <h5 style="cursor:pointer;" id="uretilenBaslik">
-            <i class="fas fa-check-circle"></i> Üretilenler <i class="fas fa-chevron-down" style="font-size:.8rem;"></i>
-        </h5>
-        <div id="uretilenAlan" class="d-none">
-            <div style="overflow-x:auto;">
-                <table class="uretim-tablo" id="uretilenTablo">
-                    <thead><tr>
-                        <th>Sipariş No</th><th>Model</th><th>Ürünler</th><th>Müşteri</th>
-                        <th>Üretildi</th><th></th>
-                    </tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-            <div class="bos-mesaj d-none" id="uretilenBos">Henüz üretilen sipariş yok.</div>
-        </div>
+    <section class="ur-controls">
+      <div class="ur-tabs" role="tablist" aria-label="Üretim durumları">
+        <button class="ur-tab active" data-durum="bekleyen" role="tab" aria-selected="true">
+          Bekleyen <span id="urTabBekleyen">0</span>
+        </button>
+        <button class="ur-tab" data-durum="uretildi" role="tab" aria-selected="false">
+          Üretilenler <span id="urTabUretilen">0</span>
+        </button>
+      </div>
+    </section>
+
+    <div id="urList" class="ur-list" aria-live="polite">
+      <div class="ur-skeleton"><span></span><span></span><span></span></div>
     </div>
+  </main>
 </div>
+
+<style>
+  :root {
+    --ur-rose:#B76E79;
+    --ur-rose-dark:#A05F6A;
+    --ur-rose-soft:#f9eef0;
+    --ur-ink:#20242c;
+    --ur-muted:#6f7682;
+    --ur-line:#e7e8eb;
+    --ur-bg:#f6f7f9;
+    --ur-card:#ffffff;
+    --ur-green:#16865c;
+    --ur-green-soft:#e2f5ed;
+    --ur-red:#c9493d;
+    --ur-red-soft:#fdecea;
+    --ur-shadow:0 12px 34px rgba(28,35,48,.07);
+  }
+  body > .container {
+    width:100% !important; max-width:none !important;
+    margin:0 !important; padding:0 !important;
+  }
+  body { background:var(--ur-bg); }
+  .ur-page { min-height:100vh; color:var(--ur-ink); background:var(--ur-bg); font-family:Inter,system-ui,sans-serif; }
+
+  .ur-appbar {
+    position:sticky; top:0; z-index:1020;
+    background:rgba(255,255,255,.92); border-bottom:1px solid rgba(32,36,44,.08);
+    backdrop-filter:saturate(160%) blur(14px); -webkit-backdrop-filter:saturate(160%) blur(14px);
+  }
+  .ur-appbar-inner { max-width:1180px; height:68px; margin:0 auto; padding:0 24px; display:flex; align-items:center; gap:12px; }
+  .ur-brand { display:flex; align-items:center; gap:10px; min-width:0; }
+  .ur-brand-logo {
+    width:38px; height:38px; border-radius:12px; background:var(--ur-rose-soft);
+    display:grid; place-items:center; color:var(--ur-rose-dark); font-size:1.05rem; flex:0 0 auto;
+  }
+  .ur-brand strong,.ur-brand small { display:block; line-height:1.2; }
+  .ur-brand strong { font-size:.96rem; letter-spacing:-.01em; }
+  .ur-brand small { color:var(--ur-muted); font-size:.72rem; margin-top:3px; }
+  .ur-appbar-actions { margin-left:auto; display:flex; align-items:center; gap:8px; }
+  .ur-icon-btn,.ur-sync-btn {
+    border:1px solid var(--ur-line); background:#fff; color:var(--ur-ink);
+    min-height:42px; border-radius:13px; display:inline-flex; align-items:center; justify-content:center;
+    transition:.18s ease; text-decoration:none;
+  }
+  .ur-icon-btn { width:42px; padding:0; flex:0 0 auto; }
+  .ur-sync-btn { gap:8px; padding:0 15px; font-size:.86rem; font-weight:650; }
+  .ur-icon-btn:hover,.ur-sync-btn:hover { border-color:#cfd1d6; color:var(--ur-rose-dark); transform:translateY(-1px); }
+  .ur-quick-menu { width:220px; padding:8px; border:1px solid var(--ur-line); border-radius:14px; box-shadow:var(--ur-shadow); }
+  .ur-quick-menu .dropdown-item { display:flex; align-items:center; gap:11px; border-radius:9px; padding:9px 10px; font-size:.87rem; }
+  .ur-quick-menu .dropdown-item i { width:19px; color:var(--ur-muted); }
+
+  .ur-shell { width:100%; max-width:1180px; margin:0 auto; padding:42px 24px 64px; }
+  .ur-hero { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; margin-bottom:28px; }
+  .ur-eyebrow { display:block; color:var(--ur-rose-dark); font-size:.71rem; font-weight:750; letter-spacing:.12em; text-transform:uppercase; margin-bottom:8px; }
+  .ur-hero h1 { margin:0; font-size:clamp(1.8rem,4vw,2.45rem); font-weight:760; letter-spacing:-.045em; }
+  .ur-hero p { margin:9px 0 0; color:var(--ur-muted); font-size:.94rem; max-width:560px; }
+  .ur-wait-pill {
+    display:flex; align-items:center; gap:7px; flex:0 0 auto; padding:10px 14px;
+    background:#fff; border:1px solid var(--ur-line); border-radius:999px;
+    box-shadow:0 5px 18px rgba(28,35,48,.04); color:var(--ur-muted); font-size:.8rem;
+  }
+  .ur-wait-pill strong { color:var(--ur-ink); font-size:1rem; }
+  .ur-pulse { width:8px; height:8px; border-radius:50%; background:var(--ur-rose); box-shadow:0 0 0 4px var(--ur-rose-soft); }
+
+  .ur-settings { background:#fdf8f9; border:1px solid #f0dfe2; border-radius:16px; margin-bottom:16px; overflow:hidden; }
+  .ur-settings-toggle { width:100%; min-height:66px; display:flex; align-items:center; gap:12px; padding:11px 16px; border:0; background:transparent; text-align:left; color:var(--ur-ink); }
+  .ur-settings-icon { width:38px; height:38px; flex:0 0 auto; display:grid; place-items:center; border-radius:11px; background:var(--ur-rose-soft); color:var(--ur-rose-dark); }
+  .ur-settings-toggle strong,.ur-settings-toggle small { display:block; }
+  .ur-settings-toggle strong { font-size:.86rem; }
+  .ur-settings-toggle small { color:var(--ur-muted); font-size:.72rem; margin-top:3px; }
+  .ur-active-tag { margin-left:auto; padding:4px 8px; border-radius:999px; background:var(--ur-rose-soft); color:var(--ur-rose-dark); font-size:.67rem; font-weight:700; }
+  .ur-chevron { margin-left:8px; color:var(--ur-muted); transition:transform .2s ease; }
+  .ur-settings-toggle[aria-expanded="true"] .ur-chevron { transform:rotate(180deg); }
+  .ur-settings-inner { padding:0 16px 16px 66px; }
+  .ur-settings-inner > label { display:block; font-size:.73rem; font-weight:700; color:var(--ur-muted); margin-bottom:7px; }
+  .ur-chips { display:flex; flex-wrap:wrap; gap:6px; min-height:30px; }
+  .ur-chip {
+    display:inline-flex; align-items:center; gap:7px; padding:5px 7px 5px 12px;
+    background:#fff; border:1px solid #ecd7db; border-radius:999px;
+    color:var(--ur-rose-dark); font-size:.8rem; font-weight:650;
+  }
+  .ur-chip button {
+    width:20px; height:20px; display:grid; place-items:center; border:0; border-radius:50%;
+    background:var(--ur-rose-soft); color:var(--ur-rose-dark); font-size:.65rem; cursor:pointer; padding:0;
+  }
+  .ur-chip button:hover { background:var(--ur-red-soft); color:var(--ur-red); }
+  .ur-chips-empty { color:var(--ur-muted); font-size:.8rem; align-self:center; }
+  .ur-model-add { display:flex; gap:8px; margin-top:12px; max-width:340px; }
+  .ur-model-add .form-control { height:42px; border-radius:12px; border-color:#ecd7db; font-size:.86rem; }
+  .ur-model-add .form-control:focus { border-color:var(--ur-rose); box-shadow:0 0 0 4px rgba(183,110,121,.12); }
+  .ur-primary-btn {
+    display:inline-flex; align-items:center; gap:7px; padding:0 15px; height:42px; flex:0 0 auto;
+    border:0; border-radius:12px; background:linear-gradient(45deg,var(--ur-rose),var(--ur-rose-dark));
+    color:#fff; font-size:.85rem; font-weight:650; cursor:pointer; transition:.18s ease;
+  }
+  .ur-primary-btn:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(160,95,106,.3); }
+  .ur-mail-note { margin-top:14px; padding:10px 12px; border-radius:11px; background:#fff; border:1px dashed #ecd7db; color:var(--ur-muted); font-size:.78rem; line-height:1.5; }
+  .ur-mail-note i { color:var(--ur-rose-dark); margin-right:4px; }
+  .ur-mail-note a { color:var(--ur-rose-dark); font-weight:650; }
+
+  .ur-controls { background:var(--ur-card); border:1px solid var(--ur-line); border-radius:16px; box-shadow:var(--ur-shadow); margin-bottom:16px; overflow:hidden; }
+  .ur-tabs { display:flex; padding:0 18px; }
+  .ur-tab {
+    position:relative; min-height:54px; padding:0 16px; border:0; background:transparent;
+    color:var(--ur-muted); font-size:.86rem; font-weight:650; white-space:nowrap; cursor:pointer;
+  }
+  .ur-tab::after { content:""; position:absolute; left:16px; right:16px; bottom:0; height:3px; border-radius:3px 3px 0 0; background:transparent; }
+  .ur-tab.active { color:var(--ur-ink); }
+  .ur-tab.active::after { background:var(--ur-rose); }
+  .ur-tab span { display:inline-grid; place-items:center; min-width:22px; height:22px; margin-left:5px; padding:0 6px; border-radius:999px; background:var(--ur-rose-soft); color:var(--ur-rose-dark); font-size:.7rem; }
+
+  .ur-list { display:grid; gap:14px; }
+  .ur-card {
+    background:var(--ur-card); border:1px solid var(--ur-line); border-radius:18px;
+    box-shadow:var(--ur-shadow); padding:18px 20px; display:flex; gap:18px; align-items:flex-start;
+    transition:opacity .2s ease;
+  }
+  .ur-card--iptal { opacity:.72; background:#fffbfb; border-color:#f2d9d6; }
+  .ur-card-main { flex:1; min-width:0; }
+  .ur-card-top { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+  .ur-order-no { font-size:1rem; font-weight:720; letter-spacing:-.01em; }
+  .ur-model-tag { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px; background:var(--ur-rose-soft); color:var(--ur-rose-dark); font-size:.72rem; font-weight:700; }
+  .ur-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:999px; font-size:.68rem; font-weight:700; }
+  .ur-badge--iptal { background:var(--ur-red); color:#fff; }
+  .ur-badge--mail-ok { background:var(--ur-green-soft); color:var(--ur-green); }
+  .ur-badge--mail-yok { background:#f0f1f3; color:#656b75; }
+  .ur-card--iptal .ur-order-no,.ur-card--iptal .ur-urun { text-decoration:line-through; }
+  .ur-urunler { display:grid; gap:5px; margin-bottom:10px; }
+  .ur-urun { display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; font-size:.85rem; color:#3c414b; }
+  .ur-urun code { padding:2px 7px; border-radius:7px; background:#f3f4f6; color:#4a4f59; font-size:.76rem; }
+  .ur-urun .ur-adet { font-weight:720; color:var(--ur-rose-dark); }
+  .ur-meta { display:flex; flex-wrap:wrap; gap:6px 16px; color:var(--ur-muted); font-size:.76rem; }
+  .ur-meta span { display:inline-flex; align-items:center; gap:6px; }
+  .ur-card-side { display:flex; flex-direction:column; align-items:flex-end; gap:10px; flex:0 0 auto; }
+  .ur-done-btn {
+    display:inline-flex; align-items:center; gap:8px; padding:0 16px; height:42px;
+    border:0; border-radius:12px; background:linear-gradient(45deg,#2fa878,#16865c);
+    color:#fff; font-size:.85rem; font-weight:680; cursor:pointer; transition:.18s ease;
+  }
+  .ur-done-btn:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(22,134,92,.3); }
+  .ur-undo-btn {
+    display:inline-flex; align-items:center; gap:8px; padding:0 14px; height:38px;
+    border:1px solid var(--ur-line); border-radius:12px; background:#fff; color:var(--ur-muted);
+    font-size:.8rem; font-weight:650; cursor:pointer; transition:.18s ease;
+  }
+  .ur-undo-btn:hover { border-color:#cfd1d6; color:var(--ur-ink); }
+
+  .ur-empty {
+    background:var(--ur-card); border:1px dashed var(--ur-line); border-radius:18px;
+    padding:46px 20px; text-align:center; color:var(--ur-muted);
+  }
+  .ur-empty i { display:block; font-size:1.9rem; margin-bottom:10px; color:#c6c9cf; }
+  .ur-skeleton { display:grid; gap:14px; }
+  .ur-skeleton span { display:block; height:92px; border-radius:18px; background:linear-gradient(100deg,#eef0f3 40%,#f7f8fa 50%,#eef0f3 60%); background-size:200% 100%; animation:urShimmer 1.2s infinite linear; }
+  @keyframes urShimmer { to { background-position:-200% 0; } }
+
+  @media (max-width: 680px) {
+    .ur-shell { padding:26px 14px 48px; }
+    .ur-hero { flex-direction:column; align-items:flex-start; gap:14px; margin-bottom:20px; }
+    .ur-card { flex-direction:column; }
+    .ur-card-side { flex-direction:row; align-items:center; width:100%; justify-content:flex-end; }
+    .ur-settings-inner { padding-left:16px; }
+    .ur-appbar-inner { padding:0 14px; }
+  }
+
+  /* Gece modu */
+  html.gs-dark .ur-page { --ur-bg:#141518; --ur-card:#1e1f24; --ur-ink:#e6e7ea; --ur-muted:#9a9fa9;
+    --ur-line:#2c2e34; --ur-rose-soft:#3a2b2e; --ur-shadow:0 12px 34px rgba(0,0,0,.35); }
+  html.gs-dark body { background:#141518; }
+  html.gs-dark .ur-appbar { background:rgba(24,25,29,.92); border-bottom-color:rgba(255,255,255,.06); }
+  html.gs-dark .ur-icon-btn,html.gs-dark .ur-sync-btn,html.gs-dark .ur-undo-btn,
+  html.gs-dark .ur-chip,html.gs-dark .ur-mail-note { background:#26272d; border-color:#33353c; color:#d5d7db; }
+  html.gs-dark .ur-settings { background:#232025; border-color:#3a3238; }
+  html.gs-dark .ur-model-add .form-control { background:#26272d; border-color:#33353c; color:#e6e7ea; }
+  html.gs-dark .ur-urun { color:#c9ccd2; }
+  html.gs-dark .ur-urun code { background:#2b2d33; color:#c1c4cb; }
+  html.gs-dark .ur-card--iptal { background:#252022; }
+  html.gs-dark .ur-empty { background:#1e1f24; border-color:#2c2e34; }
+  html.gs-dark .ur-skeleton span { background:linear-gradient(100deg,#26272d 40%,#2d2e35 50%,#26272d 60%); background-size:200% 100%; }
+</style>
 {% endblock %}
 
 {% block scripts %}
@@ -105,47 +288,84 @@
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => (
         { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+    let aktifDurum = 'bekleyen';
+
     function urunHtml(details) {
-        return (details || []).map(u =>
-            `<div class="urun-satir">${esc(u.sku) || '-'} <code>${esc(u.barcode)}</code> ${esc(u.color)} ${esc(u.size)} × ${esc(u.quantity) || 1}</div>`
-        ).join('');
+        return (details || []).map(u => `
+            <div class="ur-urun">
+                <strong>${esc(u.sku) || '-'}</strong>
+                <code>${esc(u.barcode)}</code>
+                <span>${esc(u.color)}${u.size ? ' / ' + esc(u.size) : ''}</span>
+                <span class="ur-adet">× ${esc(u.quantity) || 1}</span>
+            </div>`).join('');
     }
 
-    async function listeYukle(durum) {
+    function kartHtml(r, durum) {
+        const iptal = !!r.iptal;
+        const bekleyen = durum === 'bekleyen';
+        return `
+        <article class="ur-card${iptal ? ' ur-card--iptal' : ''}">
+            <div class="ur-card-main">
+                <div class="ur-card-top">
+                    <span class="ur-order-no">#${esc(r.order_number)}</span>
+                    ${r.product_main_id ? `<span class="ur-model-tag"><i class="fas fa-industry"></i> ${esc(r.product_main_id)}</span>` : ''}
+                    ${iptal ? '<span class="ur-badge ur-badge--iptal"><i class="bi bi-x-octagon"></i> İPTAL — üretme!</span>' : ''}
+                    ${bekleyen ? (r.mail_sent
+                        ? '<span class="ur-badge ur-badge--mail-ok"><i class="bi bi-envelope-check"></i> Mail gitti</span>'
+                        : '<span class="ur-badge ur-badge--mail-yok"><i class="bi bi-envelope"></i> Mail yok</span>') : ''}
+                </div>
+                <div class="ur-urunler">${urunHtml(r.details)}</div>
+                <div class="ur-meta">
+                    <span><i class="bi bi-person"></i> ${esc(r.customer_name) || '-'}</span>
+                    <span><i class="bi bi-calendar3"></i> Sipariş: ${esc(r.order_date) || '-'}</span>
+                    ${!bekleyen ? `<span><i class="bi bi-check2-circle"></i> Üretildi: ${esc(r.uretildi_at) || '-'}</span>` : ''}
+                </div>
+            </div>
+            <div class="ur-card-side">
+                ${bekleyen
+                    ? `<button class="ur-done-btn" data-uretildi="${Number(r.id)}"><i class="bi bi-check-lg"></i> Üretildi</button>`
+                    : `<button class="ur-undo-btn" data-gerial="${Number(r.id)}"><i class="bi bi-arrow-counterclockwise"></i> Geri Al</button>`}
+            </div>
+        </article>`;
+    }
+
+    async function listeYukle(durum, goster) {
         const res = await fetch(`/uretim/api/liste?durum=${durum}`);
         const data = await res.json();
         const rows = data.rows || [];
-        const tbody = document.querySelector(durum === 'bekleyen' ? '#bekleyenTablo tbody' : '#uretilenTablo tbody');
-        const bos = document.getElementById(durum === 'bekleyen' ? 'bekleyenBos' : 'uretilenBos');
-        bos.classList.toggle('d-none', rows.length > 0);
-        tbody.innerHTML = rows.map(r => durum === 'bekleyen' ? `
-            <tr${r.iptal ? ' class="satir-iptal"' : ''}>
-                <td><strong>${esc(r.order_number)}</strong>${r.iptal ? ' <span class="rozet rozet-iptal">İPTAL — üretme!</span>' : ''}</td>
-                <td>${esc(r.product_main_id) || '-'}</td>
-                <td>${urunHtml(r.details)}</td>
-                <td>${esc(r.customer_name) || '-'}</td>
-                <td>${esc(r.order_date) || '-'}</td>
-                <td>${r.mail_sent ? '<span class="rozet rozet-mail-ok">Gönderildi</span>' : '<span class="rozet rozet-mail-yok">Gönderilmedi</span>'}</td>
-                <td><button class="btn btn-sm btn-success" data-uretildi="${Number(r.id)}"><i class="fas fa-check"></i> Üretildi</button></td>
-            </tr>` : `
-            <tr>
-                <td><strong>${esc(r.order_number)}</strong></td>
-                <td>${esc(r.product_main_id) || '-'}</td>
-                <td>${urunHtml(r.details)}</td>
-                <td>${esc(r.customer_name) || '-'}</td>
-                <td>${esc(r.uretildi_at) || '-'}</td>
-                <td><button class="btn btn-sm btn-outline-secondary" data-gerial="${Number(r.id)}"><i class="fas fa-undo"></i> Geri Al</button></td>
-            </tr>`).join('');
+        if (durum === 'bekleyen') {
+            document.getElementById('urWaitCount').textContent = rows.length;
+            document.getElementById('urTabBekleyen').textContent = rows.length;
+        } else {
+            document.getElementById('urTabUretilen').textContent = rows.length;
+        }
+        if (!goster) return;
+        const list = document.getElementById('urList');
+        if (!rows.length) {
+            list.innerHTML = durum === 'bekleyen'
+                ? '<div class="ur-empty"><i class="bi bi-stars"></i>Üretim bekleyen sipariş yok. 🎉</div>'
+                : '<div class="ur-empty"><i class="bi bi-inbox"></i>Henüz üretilen sipariş yok.</div>';
+            return;
+        }
+        list.innerHTML = rows.map(r => kartHtml(r, durum)).join('');
+    }
+
+    function tazele() {
+        listeYukle('bekleyen', aktifDurum === 'bekleyen');
+        listeYukle('uretildi', aktifDurum === 'uretildi');
     }
 
     async function ayarYukle() {
         const res = await fetch('/uretim/api/ayar');
         const data = await res.json();
-        const ayar = data.ayar || { models: [], mail_to: '' };
-        document.getElementById('mailTo').value = ayar.mail_to || '';
-        document.getElementById('modelChipler').innerHTML = (ayar.models || []).map(m =>
-            `<span class="model-chip">${esc(m)}<button title="Üretim modundan çıkar" data-model-sil="${esc(m)}">✕</button></span>`
-        ).join('') || '<span class="text-muted" style="font-size:.85rem;">Henüz model eklenmedi.</span>';
+        const modeller = (data.ayar || {}).models || [];
+        const tag = document.getElementById('urModelSayi');
+        tag.style.display = modeller.length ? '' : 'none';
+        tag.textContent = `${modeller.length} model aktif`;
+        document.getElementById('modelChipler').innerHTML = modeller.map(m => `
+            <span class="ur-chip">${esc(m)}
+                <button title="Üretim modundan çıkar" data-model-sil="${esc(m)}"><i class="bi bi-x-lg"></i></button>
+            </span>`).join('') || '<span class="ur-chips-empty">Henüz model eklenmedi — ürün listesinden de ekleyebilirsin.</span>';
     }
 
     async function modelToggle(model) {
@@ -157,15 +377,6 @@
         if (data.success) ayarYukle();
     }
 
-    document.getElementById('mailKaydet').addEventListener('click', async () => {
-        const res = await fetch('/uretim/api/ayar', {
-            method: 'POST', headers: POST_HEADERS,
-            body: JSON.stringify({ mail_to: document.getElementById('mailTo').value.trim() })
-        });
-        const data = await res.json();
-        toast(data.message || 'Hata', data.success ? 'success' : 'error');
-    });
-
     document.getElementById('modelEkle').addEventListener('click', () => {
         const input = document.getElementById('yeniModel');
         const model = input.value.trim();
@@ -173,13 +384,29 @@
         input.value = '';
         modelToggle(model);
     });
-
-    document.getElementById('modelChipler').addEventListener('click', (e) => {
-        const model = e.target.getAttribute('data-model-sil');
-        if (model) modelToggle(model);
+    document.getElementById('yeniModel').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); document.getElementById('modelEkle').click(); }
     });
 
-    document.body.addEventListener('click', async (e) => {
+    document.getElementById('modelChipler').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-model-sil]');
+        if (btn) modelToggle(btn.getAttribute('data-model-sil'));
+    });
+
+    document.querySelectorAll('.ur-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.ur-tab').forEach(t => {
+                t.classList.toggle('active', t === tab);
+                t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+            });
+            aktifDurum = tab.getAttribute('data-durum');
+            listeYukle(aktifDurum, true);
+        });
+    });
+
+    document.getElementById('urYenile').addEventListener('click', () => { tazele(); ayarYukle(); });
+
+    document.getElementById('urList').addEventListener('click', async (e) => {
         const uretildiBtn = e.target.closest('[data-uretildi]');
         const geriAlBtn = e.target.closest('[data-gerial]');
         if (!uretildiBtn && !geriAlBtn) return;
@@ -190,16 +417,11 @@
         });
         const data = await res.json();
         toast(data.message || 'Hata', data.success ? 'success' : 'error');
-        if (data.success) { listeYukle('bekleyen'); listeYukle('uretildi'); }
-    });
-
-    document.getElementById('uretilenBaslik').addEventListener('click', () => {
-        document.getElementById('uretilenAlan').classList.toggle('d-none');
+        if (data.success) tazele();
     });
 
     ayarYukle();
-    listeYukle('bekleyen');
-    listeYukle('uretildi');
+    tazele();
 })();
 </script>
 {% endblock %}

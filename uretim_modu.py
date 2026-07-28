@@ -3,12 +3,13 @@
 Üretim Modu (ön sipariş) servisi.
 
 - Ayarlar: PlatformConfig 'ayar torbası' deseni (platform='uretim_ayar') —
-  extra_config = {"models": ["0172", ...], "mail_to": "kisi@ornek.com"}.
-  Migration GEREKMEZ (desen: trendyol_qna/qna_ayar.py).
+  extra_config = {"models": ["0172", ...]}. Migration GEREKMEZ
+  (desen: trendyol_qna/qna_ayar.py).
 - Üretim modundaki modellerin barkodları Trendyol'a daima URETIM_SABIT_ADET
   olarak gider (stock_sync/service.py bu modülden get_uretim_barcodes çağırır).
 - Yeni sipariş ingest'inde eşleşen siparişler uretim_siparis tablosuna yazılır
-  ve ayarlanan tek adrese anında mail gider (isle_yeni_siparisler).
+  ve 'uretim_siparis' olayına abone kullanıcılara anında mail gider
+  (kullanıcı yönetimi → Bildirimler; mail_service.notify aboneliği).
 
 Tüm okuma fonksiyonları hata durumunda boş/etkisiz döner — stok senkronu ve
 sipariş akışı üretim modu yüzünden ASLA durmaz (sözleşme:
@@ -16,7 +17,6 @@ stock_sync/listing_policy.get_extra_buffer_map ile aynı).
 """
 import json
 import logging
-import threading
 from datetime import datetime
 
 from models import db, PlatformConfig, Product, UretimSiparis
@@ -43,23 +43,11 @@ def get_uretim_ayar() -> dict:
         if kayit is not None:
             cfg = kayit.extra_config or {}
             models = cfg.get("models") or []
-            mail_to = cfg.get("mail_to") or ""
-            return {
-                "models": [str(m).strip() for m in models if str(m).strip()],
-                "mail_to": str(mail_to).strip(),
-            }
+            return {"models": [str(m).strip() for m in models if str(m).strip()]}
     except Exception:
         logger.warning("[URETIM] ayar okunamadı", exc_info=True)
         db.session.rollback()
-    return {"models": [], "mail_to": ""}
-
-
-def set_mail_to(email: str) -> None:
-    """Bildirim mail adresini kalıcı olarak değiştir ('' = mail kapalı)."""
-    email = (email or "").strip()[:255]
-    kayit = _kayit(olustur=True)
-    kayit.extra_config = {**(kayit.extra_config or {}), "mail_to": email}
-    db.session.commit()
+    return {"models": []}
 
 
 def toggle_model(model_id: str) -> bool:
@@ -106,28 +94,6 @@ def get_uretim_barcodes() -> set[str]:
         return set()
 
 
-def _mail_gonder_async(siparis_id: int, subject: str, body: str, mail_to: str) -> None:
-    """Fire-and-forget mail (desen: mail_service.notify). Başarılıysa mail_sent_at yazar."""
-    from app import app
-
-    def _send():
-        with app.app_context():
-            try:
-                from mail_service import send_email
-                if send_email(subject, body, [mail_to]):
-                    kayit = db.session.get(UretimSiparis, siparis_id)
-                    if kayit and not kayit.mail_sent_at:
-                        kayit.mail_sent_at = datetime.utcnow()
-                        db.session.commit()
-            except Exception:
-                db.session.rollback()
-                logger.exception("[URETIM] mail gönderme hatası (yutuldu)")
-
-    thread = threading.Thread(target=_send)
-    thread.daemon = True
-    thread.start()
-
-
 def _mail_govdesi(order_number: str, musteri: str, model_kodlari: str,
                   eslesen: list[dict]) -> str:
     from mail_service import build_alert_email_html
@@ -153,15 +119,15 @@ def _mail_govdesi(order_number: str, musteri: str, model_kodlari: str,
 def isle_yeni_siparisler(new_order_dicts: list[dict]) -> int:
     """
     Yeni gelen Trendyol siparişlerinde üretim modundaki modelleri yakalar:
-    uretim_siparis kaydı açar + ayarlı adrese mail atar. Sipariş commit'inden
-    SONRA çağrılmalıdır (kendi commit'ini yapar). Dönüş: eklenen kayıt sayısı.
+    uretim_siparis kaydı açar + 'uretim_siparis' olayına abone kullanıcılara
+    mail atar. Sipariş commit'inden SONRA çağrılmalıdır (kendi commit'ini
+    yapar). Dönüş: eklenen kayıt sayısı.
     """
     try:
         barkod_seti = get_uretim_barcodes()
         if not barkod_seti or not new_order_dicts:
             return 0
         from barcode_alias_helper import normalize_barcode
-        ayar = get_uretim_ayar()
         eklenen = 0
         for order_dict in new_order_dicts:
             try:
@@ -211,13 +177,18 @@ def isle_yeni_siparisler(new_order_dicts: list[dict]) -> int:
                 eklenen += 1
                 logger.info(f"[URETIM] 🏭 Üretim siparişi kaydedildi: {order_number} (model: {model_kodlari})")
 
-                if ayar["mail_to"]:
-                    _mail_gonder_async(
-                        kayit.id,
-                        subject=f"🏭 Üretim siparişi — {order_number} ({model_kodlari})",
-                        body=_mail_govdesi(order_number, musteri, model_kodlari, eslesen),
-                        mail_to=ayar["mail_to"],
-                    )
+                # Abonelik bazlı bildirim (kullanıcı yönetimi → Bildirimler).
+                # notify fire-and-forget; işaret dedupe içindir (desen: stok_yok_mail_at).
+                try:
+                    from mail_service import notify
+                    notify('uretim_siparis',
+                           subject=f"🏭 Üretim siparişi — {order_number} ({model_kodlari})",
+                           body=_mail_govdesi(order_number, musteri, model_kodlari, eslesen))
+                    kayit.mail_sent_at = datetime.utcnow()
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+                    logger.exception("[URETIM] mail bildirimi hatası (yutuldu)")
             except Exception:
                 db.session.rollback()
                 logger.exception(f"[URETIM] sipariş işlenemedi (yutuldu): {order_dict.get('order_number')}")

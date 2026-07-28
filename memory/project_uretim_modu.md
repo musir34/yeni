@@ -1,6 +1,6 @@
 ---
 name: project-uretim-modu
-description: "Üretim Modu (ön sipariş): seçili modeller stok 0 olsa da Trendyol'a sabit 5 stok, gelen sipariş /uretim sayfası + tek adrese mail, üretilene dek terfi bekletme; deploy bekliyor"
+description: "Üretim Modu (ön sipariş): seçili modeller stok 0 olsa da Trendyol'a sabit 5 stok, gelen sipariş /uretim sayfası + abone kullanıcılara mail, üretilene dek terfi bekletme; deploy bekliyor"
 metadata:
   node_type: memory
   type: project
@@ -12,15 +12,15 @@ metadata:
 **Ne:** Admin ürün listesinden (model kartı ⋮ menüsü) veya `/uretim` sayfasından bir modeli
 (product_main_id) üretim moduna alır → o modelin TÜM barkodları Trendyol'a **daima sabit 5**
 stok gider (fiziksel stok/rezerv/tampon/raf-yok-sıfırlama ezilir). Bu modele sipariş gelince
-`uretim_siparis` kaydı + panelden ayarlanan tek adrese anlık mail; sipariş orders_created'da
+`uretim_siparis` kaydı + bildirimi açık kullanıcılara anlık mail; sipariş orders_created'da
 kalır ama "Üretildi" işaretlenene dek otomatik terfi ETMEZ ve stok-yok maillerine GİRMEZ.
 
 **Nerede:**
 - `uretim_modu.py` — ayarlar (PlatformConfig `uretim_ayar` torbası, migration'sız:
-  `{"models": [...], "mail_to": "..."}`), `get_uretim_barcodes()` (hata→boş set, senkron asla
+  `{"models": [...]}`; mail alıcıları User.notify_events `uretim_siparis` olayı (kullanıcı yönetimi → Bildirimler)), `get_uretim_barcodes()` (hata→boş set, senkron asla
   durmaz), `isle_yeni_siparisler()` (ingest yakalama + mail, `URETIM_SABIT_ADET=5`)
 - `stock_sync/service.py` — `_get_all_stocks` / `_get_stocks_by_barcodes` içinde
-  `platform == "trendyol"` kapılı override (Idefix/Amazon/HB/Shopify etkilenmez);
+  `platform == "trendyol"` kapılı override (Idefix/Amazon/HB etkilenmez);
   CentralStock satırı olmayan üretim barkodu da listeye eklenir
 - `order_service.py` `_process_sync_orders_bulk` — commit SONRASI kanca
 - `promotion_service.py` + `stock_alert_service.py` — üretim bekleyen hariç tutma
@@ -38,5 +38,7 @@ model kodu DEĞİL → eşleşme barkod üzerinden yapılır (barkod → Product
 **Deploy:** `git pull` → `venv/bin/python scripts/create_uretim_tables.py` (bir kez, idempotent)
 → `systemctl restart gullupanel.service`. Tablo açılmadan restart olursa tüm kancalar hatayı
 yutar, mevcut davranış korunur. Rollback: modeli üretim modundan çıkar → ilk senkronla gerçek stok.
+
+- Shopify (2026-07-28 ek): `shopify_stock_service.push_stock` de sabit adedi uygular; `health_monitor.check_oversell_risk` üretim barkodlarını sahte oversell alarmından hariç tutar. ⚠️ Shopify siparişleri DB'ye inmediği için (canlı GraphQL görünüm) Shopify'dan gelen üretim siparişi /uretim listesine DÜŞMEZ ve mail TETİKLEMEZ — sadece stok 5 gider; sipariş yakalama Trendyol'a özgü.
 
 İlgili: [[project-listing-buffer-cancel-prone]], [[project-stock-ledger]]

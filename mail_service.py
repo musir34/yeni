@@ -18,6 +18,7 @@ NOTIFY_EVENTS = {
     'stok_yok_siparis':      'Sipariş stok yetersizliğinden hazırlanamadığında (anlık)',
     'stok_yok_hatirlatma':   'Stoksuz bekleyen siparişler (periyodik hatırlatma)',
     'yeni_soru':             "Trendyol'da yeni müşteri sorusu geldiğinde",
+    'uretim_siparis':        'Üretim modundaki modele sipariş geldiğinde',
 }
 
 # Statü -> olay eşlemesi

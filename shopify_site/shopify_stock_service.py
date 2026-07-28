@@ -349,6 +349,18 @@ class ShopifyStockService:
         if safety_buffer:
             logger.info("[SHOPIFY] Güvenlik stoğu tamponu aktif: -%s adet/ürün", safety_buffer)
 
+        # 🏭 Üretim Modu: seçili modellerin barkodları Shopify'a da daima sabit
+        # adet gider (Trendyol ile aynı kural; hata → boş set, gönderim durmaz).
+        try:
+            from uretim_modu import get_uretim_barcodes, URETIM_SABIT_ADET
+            uretim_barcodes = get_uretim_barcodes()
+            if uretim_barcodes:
+                logger.info("[SHOPIFY] %d barkoda üretim modu sabit adedi (%d) uygulanacak",
+                            len(uretim_barcodes), URETIM_SABIT_ADET)
+        except Exception:
+            uretim_barcodes = set()
+            URETIM_SABIT_ADET = 5
+
         # Envanter takibi kapalı olan ürünlerde tracking'i aç.
         # Yavaş bir işlem (1000+ ardışık mutation olabilir); 6 saatte bir yeterli.
         from datetime import timedelta
@@ -366,9 +378,12 @@ class ShopifyStockService:
         for mapping in mappings:
             raw_qty = stocks.get(mapping.barcode, 0)
             reserved = reserved_map.get(mapping.barcode, 0)
+            qty = max(0, raw_qty - reserved - safety_buffer)
+            if mapping.barcode in uretim_barcodes:
+                qty = URETIM_SABIT_ADET
             batch.append({
                 "mapping": mapping,
-                "qty": max(0, raw_qty - reserved - safety_buffer),
+                "qty": qty,
             })
 
         # Shopify inventorySetQuantities max 100 item per call.
