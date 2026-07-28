@@ -46,6 +46,19 @@ def recover_missing_raf(
         q = q.filter(OrderCreated.order_number == order_number)
 
     orders = q.limit(limit).all()
+
+    # 🏭 Üretim bekleyen siparişlerde rafsızlık BEKLENEN durum — tarama dışı
+    # (aksi halde her turda "raf bulunamadı" uyarısı üretilir).
+    try:
+        from models import UretimSiparis
+        uretim_bekleyen = {r.order_number for r in
+                           UretimSiparis.query.filter_by(uretildi=False)
+                           .with_entities(UretimSiparis.order_number)}
+    except Exception:
+        uretim_bekleyen = set()
+    if uretim_bekleyen:
+        orders = [o for o in orders if o.order_number not in uretim_bekleyen]
+
     if not orders:
         return {
             "scanned": 0,

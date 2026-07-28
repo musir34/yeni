@@ -467,6 +467,13 @@ def _process_sync_orders_bulk(sync_orders):
         # (Stok düşümü yalnızca paketleme onayında yapılır — çift düşümü önlemek için)
         if new_order_dicts:
             logger.info(f"[RAF] {len(new_order_dicts)} yeni sipariş için raf ataması yapılıyor...")
+            # 🏭 Üretim modundaki barkodlarda rafta stok OLMAMASI beklenen durum —
+            # kritik "raf yok" uyarısı üretilmez (hata → boş set, akış durmaz).
+            try:
+                from uretim_modu import get_uretim_barcodes as _uretim_bcs
+                uretim_barcodes = _uretim_bcs()
+            except Exception:
+                uretim_barcodes = set()
             for order_dict in new_order_dicts:
                 details_json = order_dict.get('details')
                 if details_json:
@@ -537,10 +544,10 @@ def _process_sync_orders_bulk(sync_orders):
                                     "raf_kodu": u.get("atanan_raf"),
                                     "status_to": "Created",
                                     "source": order_dict.get('source', 'TRENDYOL'),
-                                    "severity": "info" if u.get("atanan_raf") else "warning",
+                                    "severity": "info" if (u.get("atanan_raf") or u["barkod"] in uretim_barcodes) else "warning",
                                     "message": (
                                         f"Sipariş geldi · {u['adet']} adet · "
-                                        f"raf={u.get('atanan_raf') or 'BULUNAMADI'}"
+                                        f"raf={u.get('atanan_raf') or ('ÜRETİM MODU' if u['barkod'] in uretim_barcodes else 'BULUNAMADI')}"
                                     ),
                                     "details": {
                                         "musteri": musteri,
@@ -562,6 +569,18 @@ def _process_sync_orders_bulk(sync_orders):
                                         "message": f"Otomatik raf ataması: {u['atanan_raf']}",
                                         "details": {"raf_mevcut_stok": u.get("raf_mevcut_stok")},
                                         "snapshot": False,
+                                    })
+                                elif u["barkod"] in uretim_barcodes:
+                                    ev_list.append({
+                                        "event_type": "warning",
+                                        "order_number": siparis_no,
+                                        "package_number": order_dict.get('package_number'),
+                                        "barcode": u["barkod"],
+                                        "quantity": u["adet"],
+                                        "source": "SYSTEM",
+                                        "severity": "info",
+                                        "message": "Üretim modunda — rafta stok beklenmiyor, sipariş üretim sürecine düşecek.",
+                                        "snapshot": True,
                                     })
                                 else:
                                     ev_list.append({
@@ -652,6 +671,15 @@ def _process_sync_orders_bulk(sync_orders):
 
         db.session.commit()
         logger.info("Senkron sipariş işlemleri başarıyla tamamlandı.")
+
+        # 🏭 ÜRETİM MODU: yeni siparişlerde üretim modundaki modelleri yakala
+        # (uretim_siparis kaydı + anlık mail). Commit'ten SONRA — kendi commit'ini yapar.
+        if new_order_dicts:
+            try:
+                from uretim_modu import isle_yeni_siparisler
+                isle_yeni_siparisler(new_order_dicts)
+            except Exception:
+                logger.exception("[URETIM] yeni sipariş işleme hatası (yutuldu)")
 
         # AUTO-HEAL: Bu sync turunda raf atanamamış (atanan_raf=NULL) Created siparişleri
         # otomatik olarak rafa bağla + audit event'lerini yaz.

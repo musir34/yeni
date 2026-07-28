@@ -219,6 +219,16 @@ class StockSyncService:
         if extra_buffer_map:
             logger.info(f"[SYNC] {len(extra_buffer_map)} ürüne ekstra listeleme tamponu uygulanıyor")
 
+        # 🏭 Üretim Modu: seçili modellerin barkodları Trendyol'a daima sabit
+        # adet gider (fiziksel stok/rezerv/tampon ne olursa olsun). Yalnız
+        # Trendyol — aynı yolu paylaşan Idefix/Amazon/HB etkilenmez.
+        uretim_barcodes = set()
+        if platform == "trendyol":
+            from uretim_modu import get_uretim_barcodes, URETIM_SABIT_ADET
+            uretim_barcodes = get_uretim_barcodes()
+            if uretim_barcodes:
+                logger.info(f"[SYNC] {len(uretim_barcodes)} barkoda üretim modu sabit adedi ({URETIM_SABIT_ADET}) uygulanacak")
+
         # Platform'a göre eşleştirme map'leri
         asin_map = {}
         sku_map = {}
@@ -252,12 +262,22 @@ class StockSyncService:
             effective_buffer = safety_buffer + extra_buffer_map.get(stock.barcode, 0)
             available_qty = max(0, (stock.qty or 0) - reserved - effective_buffer)
 
+            if stock.barcode in uretim_barcodes:
+                available_qty = URETIM_SABIT_ADET
+
             items.append(StockItem(
                 barcode=stock.barcode,
                 quantity=available_qty,
                 sku=sku,
                 asin=asin,
             ))
+
+        # Üretim modundaki barkodun CentralStock satırı hiç yoksa döngüye
+        # girmez ve push edilmez — sabit adetle listeye ekle.
+        if uretim_barcodes:
+            gonderilen = {item.barcode for item in items}
+            for bc in uretim_barcodes - gonderilen:
+                items.append(StockItem(barcode=bc, quantity=URETIM_SABIT_ADET))
 
         logger.info(f"[SYNC] {len(items)} ürün CentralStock'tan alındı")
         return items
@@ -277,6 +297,12 @@ class StockSyncService:
 
         from stock_sync.listing_policy import get_extra_buffer_map
         extra_buffer_map = get_extra_buffer_map()
+
+        # 🏭 Üretim Modu: sabit adet override'ı (yalnız Trendyol) — bkz. _get_all_stocks
+        uretim_barcodes = set()
+        if platform == "trendyol":
+            from uretim_modu import get_uretim_barcodes, URETIM_SABIT_ADET
+            uretim_barcodes = get_uretim_barcodes()
 
         # Amazon için ASIN + seller SKU eşleştirmesi
         asin_map = {}
@@ -306,6 +332,9 @@ class StockSyncService:
             reserved = reserved_map.get(barcode, 0)
             effective_buffer = safety_buffer + extra_buffer_map.get(barcode, 0)
             available_qty = max(0, stock_dict.get(barcode, 0) - reserved - effective_buffer)
+
+            if barcode in uretim_barcodes:
+                available_qty = URETIM_SABIT_ADET
 
             items.append(StockItem(
                 barcode=barcode,

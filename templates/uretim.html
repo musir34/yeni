@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}Üretim — Güllü Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* base.html'in .container.mt-5 sarmalayıcısını etkisizleştir */
+    .container.mt-5 { max-width: none; margin: 0; padding: 0; }
+
+    .uretim-wrap { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+    .uretim-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; margin-bottom: 1.25rem; }
+    .uretim-header h2 { margin: 0; font-size: 1.4rem; }
+    .uretim-card { background: var(--color-white, #fff); border: 1px solid var(--color-border, #e5e5e5); border-radius: 10px; padding: 1.1rem 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+    .uretim-card h5 { margin: 0 0 .75rem; font-size: 1.02rem; }
+    .ayar-satir { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+    .ayar-satir input[type=email] { flex: 1 1 260px; }
+    .model-chipler { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .75rem; }
+    .model-chip { display: inline-flex; align-items: center; gap: .4rem; background: #eef4ff; border: 1px solid #cfe0ff; color: #2c4a8a; border-radius: 20px; padding: .2rem .7rem; font-size: .85rem; }
+    .model-chip button { border: none; background: none; color: #a33; cursor: pointer; padding: 0; font-size: .85rem; line-height: 1; }
+    .model-ekle { display: flex; gap: .5rem; margin-top: .75rem; }
+    .model-ekle input { max-width: 200px; }
+    .uretim-tablo { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    .uretim-tablo th { text-align: left; font-size: .75rem; color: #888; text-transform: uppercase; padding: .5rem .6rem; border-bottom: 2px solid var(--color-border, #eee); }
+    .uretim-tablo td { padding: .55rem .6rem; border-bottom: 1px solid var(--color-border, #f0f0f0); vertical-align: top; }
+    .urun-satir { font-size: .84rem; color: #555; }
+    .urun-satir code { font-size: .8rem; }
+    .rozet { display: inline-block; border-radius: 12px; padding: .1rem .55rem; font-size: .75rem; }
+    .rozet-mail-ok { background: #d1e7dd; color: #0f5132; }
+    .rozet-mail-yok { background: #f8d7da; color: #842029; }
+    .rozet-iptal { background: #dc3545; color: #fff; font-weight: 600; }
+    tr.satir-iptal td { opacity: .55; text-decoration: line-through; }
+    tr.satir-iptal td:last-child { text-decoration: none; }
+    .bos-mesaj { text-align: center; color: #999; padding: 1.5rem 0; }
+    html.gs-dark .uretim-card { background: #1e1e1e; border-color: #333; }
+    html.gs-dark .model-chip { background: #1d2b45; border-color: #2c4a8a; color: #9db9ee; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="uretim-wrap">
+    <div class="uretim-header">
+        <h2><i class="fas fa-industry"></i> Üretim Siparişleri</h2>
+        <a href="/" class="btn btn-sm btn-outline-secondary"><i class="fas fa-home"></i> Ana Sayfa</a>
+    </div>
+
+    <div class="uretim-card">
+        <h5><i class="fas fa-gear"></i> Ayarlar</h5>
+        <div class="ayar-satir">
+            <label for="mailTo" class="form-label mb-0">Bildirim maili:</label>
+            <input type="email" id="mailTo" class="form-control form-control-sm" placeholder="ornek@mail.com (boş = mail kapalı)">
+            <button id="mailKaydet" class="btn btn-sm btn-primary">Kaydet</button>
+        </div>
+        <div class="mt-3">
+            <strong style="font-size:.9rem;">Üretim modundaki modeller</strong>
+            <span class="text-muted" style="font-size:.82rem;">— bu modeller Trendyol'a stok ne olursa olsun sabit 5 adet gönderilir</span>
+            <div class="model-chipler" id="modelChipler"></div>
+            <div class="model-ekle">
+                <input type="text" id="yeniModel" class="form-control form-control-sm" placeholder="Model kodu">
+                <button id="modelEkle" class="btn btn-sm btn-outline-primary"><i class="fas fa-plus"></i> Ekle</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="uretim-card">
+        <h5><i class="fas fa-hourglass-half"></i> Üretim Bekleyen</h5>
+        <div style="overflow-x:auto;">
+            <table class="uretim-tablo" id="bekleyenTablo">
+                <thead><tr>
+                    <th>Sipariş No</th><th>Model</th><th>Ürünler</th><th>Müşteri</th>
+                    <th>Sipariş Tarihi</th><th>Mail</th><th></th>
+                </tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="bos-mesaj d-none" id="bekleyenBos">Üretim bekleyen sipariş yok. 🎉</div>
+    </div>
+
+    <div class="uretim-card">
+        <h5 style="cursor:pointer;" id="uretilenBaslik">
+            <i class="fas fa-check-circle"></i> Üretilenler <i class="fas fa-chevron-down" style="font-size:.8rem;"></i>
+        </h5>
+        <div id="uretilenAlan" class="d-none">
+            <div style="overflow-x:auto;">
+                <table class="uretim-tablo" id="uretilenTablo">
+                    <thead><tr>
+                        <th>Sipariş No</th><th>Model</th><th>Ürünler</th><th>Müşteri</th>
+                        <th>Üretildi</th><th></th>
+                    </tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="bos-mesaj d-none" id="uretilenBos">Henüz üretilen sipariş yok.</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const POST_HEADERS = { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' };
+    const toast = (msg, type) => (window.gsToast ? gsToast(msg, type) : alert(msg));
+    // XSS koruması: Trendyol kaynaklı (müşteri adı, sku, renk...) her değer
+    // innerHTML'e girmeden kaçışlanır — Jinja auto-escape'in JS karşılığı.
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    function urunHtml(details) {
+        return (details || []).map(u =>
+            `<div class="urun-satir">${esc(u.sku) || '-'} <code>${esc(u.barcode)}</code> ${esc(u.color)} ${esc(u.size)} × ${esc(u.quantity) || 1}</div>`
+        ).join('');
+    }
+
+    async function listeYukle(durum) {
+        const res = await fetch(`/uretim/api/liste?durum=${durum}`);
+        const data = await res.json();
+        const rows = data.rows || [];
+        const tbody = document.querySelector(durum === 'bekleyen' ? '#bekleyenTablo tbody' : '#uretilenTablo tbody');
+        const bos = document.getElementById(durum === 'bekleyen' ? 'bekleyenBos' : 'uretilenBos');
+        bos.classList.toggle('d-none', rows.length > 0);
+        tbody.innerHTML = rows.map(r => durum === 'bekleyen' ? `
+            <tr${r.iptal ? ' class="satir-iptal"' : ''}>
+                <td><strong>${esc(r.order_number)}</strong>${r.iptal ? ' <span class="rozet rozet-iptal">İPTAL — üretme!</span>' : ''}</td>
+                <td>${esc(r.product_main_id) || '-'}</td>
+                <td>${urunHtml(r.details)}</td>
+                <td>${esc(r.customer_name) || '-'}</td>
+                <td>${esc(r.order_date) || '-'}</td>
+                <td>${r.mail_sent ? '<span class="rozet rozet-mail-ok">Gönderildi</span>' : '<span class="rozet rozet-mail-yok">Gönderilmedi</span>'}</td>
+                <td><button class="btn btn-sm btn-success" data-uretildi="${Number(r.id)}"><i class="fas fa-check"></i> Üretildi</button></td>
+            </tr>` : `
+            <tr>
+                <td><strong>${esc(r.order_number)}</strong></td>
+                <td>${esc(r.product_main_id) || '-'}</td>
+                <td>${urunHtml(r.details)}</td>
+                <td>${esc(r.customer_name) || '-'}</td>
+                <td>${esc(r.uretildi_at) || '-'}</td>
+                <td><button class="btn btn-sm btn-outline-secondary" data-gerial="${Number(r.id)}"><i class="fas fa-undo"></i> Geri Al</button></td>
+            </tr>`).join('');
+    }
+
+    async function ayarYukle() {
+        const res = await fetch('/uretim/api/ayar');
+        const data = await res.json();
+        const ayar = data.ayar || { models: [], mail_to: '' };
+        document.getElementById('mailTo').value = ayar.mail_to || '';
+        document.getElementById('modelChipler').innerHTML = (ayar.models || []).map(m =>
+            `<span class="model-chip">${esc(m)}<button title="Üretim modundan çıkar" data-model-sil="${esc(m)}">✕</button></span>`
+        ).join('') || '<span class="text-muted" style="font-size:.85rem;">Henüz model eklenmedi.</span>';
+    }
+
+    async function modelToggle(model) {
+        const res = await fetch('/uretim/api/model-toggle', {
+            method: 'POST', headers: POST_HEADERS, body: JSON.stringify({ model })
+        });
+        const data = await res.json();
+        toast(data.message || (data.success ? 'Tamam' : 'Hata'), data.success ? 'success' : 'error');
+        if (data.success) ayarYukle();
+    }
+
+    document.getElementById('mailKaydet').addEventListener('click', async () => {
+        const res = await fetch('/uretim/api/ayar', {
+            method: 'POST', headers: POST_HEADERS,
+            body: JSON.stringify({ mail_to: document.getElementById('mailTo').value.trim() })
+        });
+        const data = await res.json();
+        toast(data.message || 'Hata', data.success ? 'success' : 'error');
+    });
+
+    document.getElementById('modelEkle').addEventListener('click', () => {
+        const input = document.getElementById('yeniModel');
+        const model = input.value.trim();
+        if (!model) return;
+        input.value = '';
+        modelToggle(model);
+    });
+
+    document.getElementById('modelChipler').addEventListener('click', (e) => {
+        const model = e.target.getAttribute('data-model-sil');
+        if (model) modelToggle(model);
+    });
+
+    document.body.addEventListener('click', async (e) => {
+        const uretildiBtn = e.target.closest('[data-uretildi]');
+        const geriAlBtn = e.target.closest('[data-gerial]');
+        if (!uretildiBtn && !geriAlBtn) return;
+        const id = uretildiBtn ? uretildiBtn.getAttribute('data-uretildi') : geriAlBtn.getAttribute('data-gerial');
+        const res = await fetch(`/uretim/api/uretildi/${id}`, {
+            method: 'POST', headers: POST_HEADERS,
+            body: JSON.stringify({ geri_al: !!geriAlBtn })
+        });
+        const data = await res.json();
+        toast(data.message || 'Hata', data.success ? 'success' : 'error');
+        if (data.success) { listeYukle('bekleyen'); listeYukle('uretildi'); }
+    });
+
+    document.getElementById('uretilenBaslik').addEventListener('click', () => {
+        document.getElementById('uretilenAlan').classList.toggle('d-none');
+    });
+
+    ayarYukle();
+    listeYukle('bekleyen');
+    listeYukle('uretildi');
+})();
+</script>
+{% endblock %}

@@ -355,6 +355,7 @@
                                 <button class="btn btn-sm dropdown-toggle"><i class="fas fa-ellipsis-v"></i></button>
                                 <div class="dropdown-content">
                                     <button class="open-action-modal" data-action="list_variants" data-model="{{ model_id }}"><i class="fas fa-list-ul"></i> Tüm Varyantları Listele</button>
+                                    <button class="toggle-uretim-modu" data-model="{{ model_id }}"><i class="fas fa-industry"></i> Üretim Modu<span class="uretim-durum">{% if model_id in (uretim_models or []) %} (Açık){% endif %}</span></button>
                                     <button class="delete-model delete-action" data-model="{{ model_id }}"><i class="fas fa-trash"></i> Modeli Sil</button>
                                 </div>
                             </div>
@@ -578,6 +579,19 @@ $(function(){
     });
     $('.model-grid').on('click','.update-model-price',function(){
         openActionModal('update_model_price', $(this).data('model'));
+    });
+
+    // 🏭 Üretim Modu toggle — model stok 0 olsa da Trendyol'a sabit 5 gider
+    $('.model-grid').on('click','.toggle-uretim-modu',function(){
+        const btn=$(this), modelId=String(btn.data('model'));
+        fetch('/uretim/api/model-toggle',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','X-Requested-With':'fetch'},
+            body:JSON.stringify({model:modelId})
+        }).then(r=>r.json()).then(res=>{
+            gsToast(res.message||(res.success?'Tamam':'Hata'), res.success?'success':'error');
+            if(res.success) btn.find('.uretim-durum').text(res.acik?' (Açık)':'');
+        }).catch(()=>gsToast('Sunucu hatası oluştu.','error'));
     });
 
 

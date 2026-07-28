@@ -80,8 +80,18 @@ def _currently_uncovered():
     central = _physical_central()
     committed = _committed_in_hazirlaniyor()
     available = {bc: central.get(bc, 0) - committed.get(bc, 0) for bc in set(central) | set(committed)}
+    # 🏭 Üretim bekleyen siparişler stoksuz DEĞİL, üretim bekliyor — hatırlatmaya girmesin.
+    try:
+        from models import UretimSiparis
+        uretim_bekleyen = {r.order_number for r in
+                           UretimSiparis.query.filter_by(uretildi=False)
+                           .with_entities(UretimSiparis.order_number)}
+    except Exception:
+        uretim_bekleyen = set()
     uncovered = []
     for order in OrderCreated.query.all():
+        if order.order_number in uretim_bekleyen:
+            continue
         ok, _need = _order_can_be_covered(order, available)
         if not ok:
             uncovered.append(order)

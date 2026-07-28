@@ -885,12 +885,20 @@ def product_list():
                 range(max(1, page - left_current), min(total_pages, page + right_current) + 1)
         }
 
+        # 🏭 Üretim modundaki modeller (kartta toggle durumunu göstermek için)
+        try:
+            from uretim_modu import get_uretim_models
+            uretim_models = get_uretim_models()
+        except Exception:
+            uretim_models = set()
+
         return render_template(
             'product_list.html',
             grouped_products=hierarchical_products,
             pagination=pagination,
             search_mode=False,
-            marketplace_filter=marketplace_filter
+            marketplace_filter=marketplace_filter,
+            uretim_models=uretim_models
         )
 
     except Exception as e:

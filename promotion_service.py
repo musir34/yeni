@@ -134,7 +134,7 @@ async def promote_eligible_orders(max_promotions=MAX_PROMOTIONS_PER_RUN):
     from update_service import update_order_status_to_picking
     from trendyol_api import SUPPLIER_ID
 
-    stats = {'promoted': 0, 'checked': 0, 'skipped_stock': 0, 'skipped_api': 0}
+    stats = {'promoted': 0, 'checked': 0, 'skipped_stock': 0, 'skipped_api': 0, 'skipped_uretim': 0}
     consecutive_api_fail = 0  # devre kesici sayacı
     uncovered = []  # stok yetersizliğinden terfi edilemeyenler (anlık mail için)
 
@@ -149,10 +149,23 @@ async def promote_eligible_orders(max_promotions=MAX_PROMOTIONS_PER_RUN):
                             OrderCreated.order_date.asc())
                   .all())
 
+    # 🏭 Üretim bekleyen siparişler terfi ETMEZ: tesadüfi stokla erken Picking'e
+    # gitmesin, stok-yok mailine de düşmesin. "Üretildi" işaretlenince normal terfi.
+    try:
+        from models import UretimSiparis
+        uretim_bekleyen = {r.order_number for r in
+                           UretimSiparis.query.filter_by(uretildi=False)
+                           .with_entities(UretimSiparis.order_number)}
+    except Exception:
+        uretim_bekleyen = set()
+
     for order in candidates:
         if stats['promoted'] >= max_promotions:
             logger.info(f"[TERFI] Tur sınırına ulaşıldı ({max_promotions}); kalanlar sonraki turda.")
             break
+        if order.order_number in uretim_bekleyen:
+            stats['skipped_uretim'] += 1
+            continue
         stats['checked'] += 1
 
         ok, need = _order_can_be_covered(order, available)

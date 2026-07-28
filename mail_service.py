@@ -58,6 +58,7 @@ EVENT_COLORS = {
     'shopify_oversell_risk': '#DC3545',
     'stok_yok_siparis':      '#DC3545',
     'stok_yok_hatirlatma':   '#FD7E14',
+    'uretim_siparis':        '#0D6EFD',
 }
 
 # Olay başlıkları
@@ -72,6 +73,7 @@ EVENT_TITLES = {
     'shopify_oversell_risk': '🚨 Shopify Oversell Riski',
     'stok_yok_siparis':      '⚠️ Stoksuz Sipariş — Hazırlanamıyor',
     'stok_yok_hatirlatma':   '📋 Stoksuz Bekleyen Siparişler',
+    'uretim_siparis':        '🏭 Üretim Siparişi Geldi',
 }
 
 

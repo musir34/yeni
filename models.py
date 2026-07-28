@@ -743,6 +743,28 @@ class OrderReadyToShip(OrderBase):
     label_printed = db.Column(db.Boolean, default=False)            # etiketi basıldı mı
 
 
+# 🏭 Üretim Modu siparişleri — üretim modundaki modellere gelen siparişlerin
+# takip kaydı. Sipariş normal yaşam döngüsünde (orders_created → ...) kalır;
+# bu tablo /uretim sayfası listesi + mail dedupe + terfi-bekletme için paralel izdir.
+class UretimSiparis(db.Model):
+    __tablename__ = 'uretim_siparis'
+    id = db.Column(db.Integer, primary_key=True)
+    order_number = db.Column(db.String(50), nullable=False, index=True)
+    package_number = db.Column(db.String(50))
+    product_main_id = db.Column(db.String(255))   # eşleşen model kod(lar)ı, virgüllü
+    details = db.Column(db.Text)                  # eşleşen satırlar JSON (barkod, adet, renk, beden)
+    customer_name = db.Column(db.String(255))
+    order_date = db.Column(db.DateTime)
+    uretildi = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    uretildi_at = db.Column(db.DateTime)
+    mail_sent_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (db.UniqueConstraint('order_number', name='uq_uretim_siparis_order'),)
+
+    def __repr__(self):
+        return f"<UretimSiparis {self.order_number} uretildi={self.uretildi}>"
+
+
 # Geriye dönük uyumluluk için mevcut sipariş tablosu ('orders')
 # Bu tablodan da original_product_barcode kaldırılıyor.
 # Eğer bu tablo artık kullanılmıyorsa tamamen kaldırılabilir.
