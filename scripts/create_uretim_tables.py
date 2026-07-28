@@ -34,7 +34,24 @@ def main():
         insp = inspect(db.engine)
         tablo = "uretim_siparis"
         if insp.has_table(tablo):
-            print(f"ℹ️  {tablo} tablosu ZATEN VAR — değişiklik yapılmadı.")
+            # Tablo var: sonradan eklenen kolonları (isleme_alindi ara statüsü)
+            # additive olarak tamamla — mevcut satırlara DOKUNMAZ, idempotent.
+            mevcut = {c["name"] for c in insp.get_columns(tablo)}
+            eksikler = {
+                "isleme_alindi": "BOOLEAN NOT NULL DEFAULT FALSE",
+                "isleme_alindi_at": "TIMESTAMP",
+            }
+            from sqlalchemy import text
+            eklendi = []
+            for kolon, tanim in eksikler.items():
+                if kolon not in mevcut:
+                    db.session.execute(text(f"ALTER TABLE {tablo} ADD COLUMN {kolon} {tanim}"))
+                    eklendi.append(kolon)
+            db.session.commit()
+            if eklendi:
+                print(f"✅ {tablo} tablosuna eksik kolonlar eklendi: {', '.join(eklendi)}")
+            else:
+                print(f"ℹ️  {tablo} tablosu ZATEN VAR ve güncel — değişiklik yapılmadı.")
             return
         UretimSiparis.__table__.create(bind=db.engine, checkfirst=True)
         insp = inspect(db.engine)  # doğrulama için tazele

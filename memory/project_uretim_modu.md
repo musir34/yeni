@@ -41,4 +41,8 @@ yutar, mevcut davranış korunur. Rollback: modeli üretim modundan çıkar → 
 
 - Shopify (2026-07-28 ek): `shopify_stock_service.push_stock` de sabit adedi uygular; `health_monitor.check_oversell_risk` üretim barkodlarını sahte oversell alarmından hariç tutar. ⚠️ Shopify siparişleri DB'ye inmediği için (canlı GraphQL görünüm) Shopify'dan gelen üretim siparişi /uretim listesine DÜŞMEZ ve mail TETİKLEMEZ — sadece stok 5 gider; sipariş yakalama Trendyol'a özgü.
 
+- Sayfa v2 (2026-07-28): 3 statü — Bekleyen → **İşleme Alındı** (`isleme_alindi(+_at)` kolonları, `/uretim/api/isleme-al/<id>`) → Üretildi; her karta 'Ürün Özellikleri' paneli (liste API'si Product'tan görsel/başlık/model zenginleştirir, sipariş listesi detay düzeniyle aynı). İşlemde olanlar da terfiden hariç (uretildi=False filtresi kapsıyor). Kolonlar `scripts/create_uretim_tables.py` ile additive eklenir (idempotent ALTER).
+
+- Kargo çıktısı (2026-07-28): Üretildi tıklanınca (ve her karttaki 🖨 ile) kargo diyaloğu — 'Yazdır (normal akış)' `/order-label` formuna POST (sipariş hazırla ile birebir alanlar), 'Otomatik Gönderim' kodu kopyalar+overlay gösterir (sipariş hazırladaki autoShip karşılığı). Liste API'si kargo verisini orders_created/hazirlaniyor/picking/shipped'den canlı çeker; cargo_tracking_number sipariş Yeni'yken zaten mevcut, /order-label statü kontrolü yapmaz. Not: 'Otomatik Gönderim' backend'de ayrı akış DEĞİL, yalnız istemci tarafı yazdırma tercihi.
+
 İlgili: [[project-listing-buffer-cancel-prone]], [[project-stock-ledger]]

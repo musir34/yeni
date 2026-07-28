@@ -35,6 +35,8 @@ def upgrade():
         sa.Column('order_date', sa.DateTime(), nullable=True),
         sa.Column('uretildi', sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column('uretildi_at', sa.DateTime(), nullable=True),
+        sa.Column('isleme_alindi', sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column('isleme_alindi_at', sa.DateTime(), nullable=True),
         sa.Column('mail_sent_at', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),
         sa.PrimaryKeyConstraint('id'),

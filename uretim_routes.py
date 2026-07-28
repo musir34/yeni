@@ -40,12 +40,20 @@ def _guvenlik_kalkani():
         abort(403)
 
 
-def _to_dict(r: UretimSiparis) -> dict:
+def _to_dict(r: UretimSiparis, urun_map: dict | None = None) -> dict:
     from time_utils import fmt_ist
     try:
         detaylar = json.loads(r.details) if r.details else []
     except (json.JSONDecodeError, TypeError):
         detaylar = []
+    # Ürün özellikleri: barkod → görsel/başlık (sipariş listesindeki detay paneliyle aynı veri)
+    if urun_map:
+        for d in detaylar:
+            p = urun_map.get(str(d.get("barcode") or ""))
+            if p is not None:
+                d["image_url"] = (p.images or "").split(",")[0].strip() if p.images else ""
+                d["title"] = p.title or ""
+                d["model_code"] = p.product_main_id or ""
     return {
         "id": r.id,
         "order_number": r.order_number,
@@ -56,6 +64,8 @@ def _to_dict(r: UretimSiparis) -> dict:
         "order_date": fmt_ist(r.order_date, "%d.%m.%Y %H:%M"),
         "uretildi": r.uretildi,
         "uretildi_at": fmt_ist(r.uretildi_at, "%d.%m.%Y %H:%M"),
+        "isleme_alindi": bool(getattr(r, "isleme_alindi", False)),
+        "isleme_alindi_at": fmt_ist(r.isleme_alindi_at, "%d.%m.%Y %H:%M"),
         "mail_sent": bool(r.mail_sent_at),
         "created_at": fmt_ist(r.created_at, "%d.%m.%Y %H:%M"),
     }
@@ -69,9 +79,14 @@ def index():
 @uretim_bp.route("/api/liste", methods=["GET"])
 def liste():
     durum = (request.args.get("durum") or "bekleyen").strip()
-    rows = (UretimSiparis.query
-            .filter_by(uretildi=(durum == "uretildi"))
-            .order_by(UretimSiparis.created_at.desc())
+    q = UretimSiparis.query
+    if durum == "uretildi":
+        q = q.filter_by(uretildi=True)
+    elif durum == "islemde":
+        q = q.filter_by(uretildi=False, isleme_alindi=True)
+    else:  # bekleyen
+        q = q.filter_by(uretildi=False, isleme_alindi=False)
+    rows = (q.order_by(UretimSiparis.created_at.desc())
             .limit(500)
             .all())
     # Üretim beklerken Trendyol'da iptal edilen sipariş: üretici boşuna üretmesin
@@ -87,10 +102,48 @@ def liste():
                         .with_entities(OrderCancelled.order_number)}
         except Exception:
             logger.warning("[URETIM] iptal kontrolü yapılamadı", exc_info=True)
+    # Ürün özellikleri için Product haritası (görsel/başlık/model) — tek sorgu
+    urun_map = {}
+    if rows:
+        try:
+            from models import Product
+            barkodlar = set()
+            for r in rows:
+                try:
+                    det = json.loads(r.details) if r.details else []
+                except (json.JSONDecodeError, TypeError):
+                    det = []
+                for d in det:
+                    bc = str(d.get("barcode") or "").strip()
+                    if bc:
+                        barkodlar.add(bc)
+            if barkodlar:
+                urun_map = {p.barcode: p for p in Product.query.filter(Product.barcode.in_(barkodlar))}
+        except Exception:
+            logger.warning("[URETIM] ürün özellikleri okunamadı", exc_info=True)
+    # Kargo çıktısı için canlı sipariş verisi (/order-label form alanları) —
+    # cargo_tracking_number sipariş daha Yeni'yken Trendyol'dan gelir, statü şartı yok.
+    kargo_map = {}
+    if rows:
+        try:
+            from models import OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped
+            nolar = [r.order_number for r in rows]
+            for M in (OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped):
+                for o in M.query.filter(M.order_number.in_(nolar)).all():
+                    kargo_map.setdefault(o.order_number, {
+                        "shipping_barcode": o.cargo_tracking_number or "",
+                        "cargo_provider": o.cargo_provider_name or "",
+                        "customer_name": o.customer_name or "",
+                        "customer_surname": o.customer_surname or "",
+                        "customer_address": o.customer_address or "",
+                    })
+        except Exception:
+            logger.warning("[URETIM] kargo verisi okunamadı", exc_info=True)
     sonuc = []
     for r in rows:
-        d = _to_dict(r)
+        d = _to_dict(r, urun_map)
         d["iptal"] = r.order_number in iptaller
+        d["kargo"] = kargo_map.get(r.order_number)
         sonuc.append(d)
     return jsonify({"success": True, "rows": sonuc})
 
@@ -105,6 +158,20 @@ def uretildi_isaretle(kayit_id: int):
     kayit.uretildi_at = None if geri_al else datetime.utcnow()
     db.session.commit()
     mesaj = "Üretildi işareti geri alındı" if geri_al else "Üretildi olarak işaretlendi — sipariş normal akışına devam edecek"
+    logger.info(f"[URETIM] {kayit.order_number}: {mesaj}")
+    return jsonify({"success": True, "message": mesaj})
+
+
+@uretim_bp.route("/api/isleme-al/<int:kayit_id>", methods=["POST"])
+def isleme_al(kayit_id: int):
+    kayit = db.session.get(UretimSiparis, kayit_id)
+    if not kayit:
+        return jsonify({"success": False, "message": "Kayıt bulunamadı"}), 404
+    geri_al = bool((request.get_json(silent=True) or {}).get("geri_al"))
+    kayit.isleme_alindi = not geri_al
+    kayit.isleme_alindi_at = None if geri_al else datetime.utcnow()
+    db.session.commit()
+    mesaj = "Bekleyenlere geri alındı" if geri_al else "İşleme alındı — üretim başladı"
     logger.info(f"[URETIM] {kayit.order_number}: {mesaj}")
     return jsonify({"success": True, "message": mesaj})
 

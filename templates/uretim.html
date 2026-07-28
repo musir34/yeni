@@ -85,6 +85,9 @@
         <button class="ur-tab active" data-durum="bekleyen" role="tab" aria-selected="true">
           Bekleyen <span id="urTabBekleyen">0</span>
         </button>
+        <button class="ur-tab" data-durum="islemde" role="tab" aria-selected="false">
+          İşleme Alındı <span id="urTabIslemde">0</span>
+        </button>
         <button class="ur-tab" data-durum="uretildi" role="tab" aria-selected="false">
           Üretilenler <span id="urTabUretilen">0</span>
         </button>
@@ -95,6 +98,48 @@
       <div class="ur-skeleton"><span></span><span></span><span></span></div>
     </div>
   </main>
+
+  <!-- Kargo çıktısı: sipariş hazırla ekranındaki /order-label formunun birebir alanları -->
+  <form id="kargoForm" method="POST" action="{{ url_for('order_label') }}" target="_blank" hidden>
+    <input type="hidden" name="order_number">
+    <input type="hidden" name="shipping_barcode">
+    <input type="hidden" name="cargo_provider">
+    <input type="hidden" name="customer_name">
+    <input type="hidden" name="customer_surname">
+    <input type="hidden" name="customer_address">
+  </form>
+
+  <!-- Kargo seçenekleri diyaloğu -->
+  <div class="ur-kargo-overlay" id="urKargoDialog" hidden>
+    <div class="ur-kargo-card">
+      <div class="ur-kargo-head">
+        <strong><i class="bi bi-truck"></i> Kargo Çıktısı <span id="urKargoNo"></span></strong>
+        <button type="button" class="ur-icon-btn" id="urKargoKapat" aria-label="Kapat"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="ur-kargo-info">
+        <span id="urKargoFirma">-</span>
+        <code id="urKargoKod">-</code>
+      </div>
+      <div class="ur-kargo-actions">
+        <button type="button" class="ur-done-btn" id="urKargoYazdir">
+          <i class="bi bi-printer"></i> Yazdır (Normal Akış)
+        </button>
+        <button type="button" class="ur-work-btn" id="urKargoOtomatik">
+          <i class="bi bi-lightning-charge"></i> Otomatik Gönderim
+        </button>
+      </div>
+      <small class="ur-kargo-hint">Otomatik gönderim: kargo kodu kopyalanır ve ekranda gösterilir — etiket kargo firmasının terminalinden basılır.</small>
+    </div>
+  </div>
+
+  <!-- Otomatik gönderim bildirimi (sipariş hazırla ekranındaki kartın karşılığı) -->
+  <div class="ur-autoship" id="urAutoShip" hidden>
+    <i class="bi bi-lightning-charge-fill"></i>
+    <div>
+      <strong>Otomatik Gönderim</strong>
+      <div>Kargo kodu kopyalandı: <code id="urAutoShipKod"></code></div>
+    </div>
+  </div>
 </div>
 
 <style>
@@ -220,6 +265,7 @@
   .ur-model-tag { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px; background:var(--ur-rose-soft); color:var(--ur-rose-dark); font-size:.72rem; font-weight:700; }
   .ur-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:999px; font-size:.68rem; font-weight:700; }
   .ur-badge--iptal { background:var(--ur-red); color:#fff; }
+  .ur-badge--islemde { background:#fff3d6; color:#8a6410; }
   .ur-badge--mail-ok { background:var(--ur-green-soft); color:var(--ur-green); }
   .ur-badge--mail-yok { background:#f0f1f3; color:#656b75; }
   .ur-card--iptal .ur-order-no,.ur-card--iptal .ur-urun { text-decoration:line-through; }
@@ -227,6 +273,31 @@
   .ur-urun { display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; font-size:.85rem; color:#3c414b; }
   .ur-urun code { padding:2px 7px; border-radius:7px; background:#f3f4f6; color:#4a4f59; font-size:.76rem; }
   .ur-urun .ur-adet { font-weight:720; color:var(--ur-rose-dark); }
+  .ur-detail-toggle {
+    display:inline-flex; align-items:center; gap:7px; margin-bottom:10px; padding:7px 12px;
+    border:1px solid var(--ur-line); border-radius:10px; background:#fafbfc;
+    color:var(--ur-muted); font-size:.78rem; font-weight:650; cursor:pointer; transition:.18s ease;
+  }
+  .ur-detail-toggle:hover { border-color:#cfd1d6; color:var(--ur-ink); }
+  .ur-detail-chevron { transition:transform .2s ease; }
+  .ur-detail-toggle.open .ur-detail-chevron { transform:rotate(180deg); }
+  .ur-detail-panel { display:grid; gap:10px; margin:2px 0 12px; }
+  .ur-detail-item {
+    display:flex; align-items:center; gap:13px; padding:11px 13px;
+    background:#fafbfc; border:1px solid var(--ur-line); border-radius:13px;
+  }
+  .ur-detail-img { width:56px; height:56px; border-radius:11px; object-fit:cover; background:#f2f3f5; flex:0 0 56px; display:block; }
+  .ur-detail-img--bos { display:grid; place-items:center; color:#a3a7af; font-size:1.2rem; }
+  .ur-detail-main { flex:1; min-width:0; }
+  .ur-detail-main > strong { display:block; font-size:.88rem; letter-spacing:-.01em; }
+  .ur-detail-title { color:var(--ur-muted); font-size:.75rem; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:520px; }
+  .ur-detail-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+  .ur-chip2 { padding:3px 9px; border-radius:999px; background:var(--ur-rose-soft); color:var(--ur-rose-dark); font-size:.7rem; font-weight:700; }
+  .ur-detail-barcode { display:inline-flex; align-items:center; gap:6px; margin-top:7px; font-size:.74rem; color:var(--ur-muted); font-family:monospace; }
+  .ur-copy-btn { width:24px; height:24px; display:grid; place-items:center; border:0; border-radius:7px; background:transparent; color:var(--ur-muted); cursor:pointer; padding:0; }
+  .ur-copy-btn:hover { background:var(--ur-rose-soft); color:var(--ur-rose-dark); }
+  .ur-detail-qty { flex:0 0 auto; text-align:center; padding:6px 13px; border-radius:11px; background:#fff; border:1px solid var(--ur-line); font-size:1rem; font-weight:750; }
+  .ur-detail-qty span { display:block; font-size:.62rem; font-weight:700; color:var(--ur-muted); text-transform:uppercase; letter-spacing:.06em; }
   .ur-meta { display:flex; flex-wrap:wrap; gap:6px 16px; color:var(--ur-muted); font-size:.76rem; }
   .ur-meta span { display:inline-flex; align-items:center; gap:6px; }
   .ur-card-side { display:flex; flex-direction:column; align-items:flex-end; gap:10px; flex:0 0 auto; }
@@ -236,6 +307,12 @@
     color:#fff; font-size:.85rem; font-weight:680; cursor:pointer; transition:.18s ease;
   }
   .ur-done-btn:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(22,134,92,.3); }
+  .ur-work-btn {
+    display:inline-flex; align-items:center; gap:8px; padding:0 16px; height:42px;
+    border:0; border-radius:12px; background:linear-gradient(45deg,#e0a63c,#c98a1b);
+    color:#fff; font-size:.85rem; font-weight:680; cursor:pointer; transition:.18s ease;
+  }
+  .ur-work-btn:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(201,138,27,.3); }
   .ur-undo-btn {
     display:inline-flex; align-items:center; gap:8px; padding:0 14px; height:38px;
     border:1px solid var(--ur-line); border-radius:12px; background:#fff; color:var(--ur-muted);
@@ -243,6 +320,34 @@
   }
   .ur-undo-btn:hover { border-color:#cfd1d6; color:var(--ur-ink); }
 
+  .ur-kargo-overlay {
+    position:fixed; inset:0; z-index:1050; display:grid; place-items:center;
+    background:rgba(20,22,28,.45); backdrop-filter:blur(3px); padding:16px;
+  }
+  .ur-kargo-card {
+    width:100%; max-width:440px; background:var(--ur-card); border:1px solid var(--ur-line);
+    border-radius:20px; box-shadow:0 24px 60px rgba(0,0,0,.25); padding:18px 20px;
+  }
+  .ur-kargo-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+  .ur-kargo-head strong { display:inline-flex; align-items:center; gap:8px; font-size:.95rem; }
+  .ur-kargo-info {
+    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    padding:11px 13px; border-radius:12px; background:#fafbfc; border:1px solid var(--ur-line); margin-bottom:14px;
+  }
+  .ur-kargo-info span { font-size:.85rem; font-weight:650; }
+  .ur-kargo-info code { font-size:.85rem; padding:3px 9px; border-radius:8px; background:#f0f1f3; }
+  .ur-kargo-actions { display:grid; gap:9px; }
+  .ur-kargo-actions button { width:100%; justify-content:center; }
+  .ur-kargo-hint { display:block; margin-top:11px; color:var(--ur-muted); font-size:.72rem; line-height:1.5; }
+  .ur-autoship {
+    position:fixed; left:50%; bottom:34px; transform:translateX(-50%); z-index:1060;
+    display:flex; align-items:center; gap:12px; padding:14px 18px; max-width:92vw;
+    background:linear-gradient(45deg,#2fa878,#16865c); color:#fff; border-radius:16px;
+    box-shadow:0 14px 40px rgba(22,134,92,.4); font-size:.85rem;
+  }
+  .ur-autoship i { font-size:1.3rem; }
+  .ur-autoship strong { display:block; font-size:.9rem; }
+  .ur-autoship code { color:#fff; background:rgba(255,255,255,.18); padding:2px 8px; border-radius:7px; }
   .ur-empty {
     background:var(--ur-card); border:1px dashed var(--ur-line); border-radius:18px;
     padding:46px 20px; text-align:center; color:var(--ur-muted);
@@ -272,6 +377,11 @@
   html.gs-dark .ur-model-add .form-control { background:#26272d; border-color:#33353c; color:#e6e7ea; }
   html.gs-dark .ur-urun { color:#c9ccd2; }
   html.gs-dark .ur-urun code { background:#2b2d33; color:#c1c4cb; }
+  html.gs-dark .ur-detail-toggle,html.gs-dark .ur-detail-item { background:#26272d; border-color:#33353c; }
+  html.gs-dark .ur-detail-qty { background:#1e1f24; border-color:#33353c; }
+  html.gs-dark .ur-kargo-info { background:#26272d; border-color:#33353c; }
+  html.gs-dark .ur-kargo-info code { background:#2b2d33; color:#c1c4cb; }
+  html.gs-dark .ur-badge--islemde { background:#3d331a; color:#e3b654; }
   html.gs-dark .ur-card--iptal { background:#252022; }
   html.gs-dark .ur-empty { background:#1e1f24; border-color:#2c2e34; }
   html.gs-dark .ur-skeleton span { background:linear-gradient(100deg,#26272d 40%,#2d2e35 50%,#26272d 60%); background-size:200% 100%; }
@@ -289,6 +399,8 @@
         { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
     let aktifDurum = 'bekleyen';
+    const rowCache = {};  // id → satır (kargo diyaloğu için)
+    let kargoAktif = null;
 
     function urunHtml(details) {
         return (details || []).map(u => `
@@ -300,9 +412,45 @@
             </div>`).join('');
     }
 
+    // Ürün özellikleri paneli — sipariş listesindeki "Ürün Detayları" ile aynı düzen
+    function detayHtml(details) {
+        return (details || []).map(u => `
+            <div class="ur-detail-item">
+                ${u.image_url
+                    ? `<a href="${esc(u.image_url)}" target="_blank" rel="noopener"><img src="${esc(u.image_url)}" alt="Ürün" class="ur-detail-img"></a>`
+                    : '<span class="ur-detail-img ur-detail-img--bos"><i class="bi bi-image"></i></span>'}
+                <div class="ur-detail-main">
+                    <strong>${esc(u.model_code || u.sku) || 'N/A'}</strong>
+                    ${u.title ? `<div class="ur-detail-title">${esc(u.title)}</div>` : ''}
+                    <div class="ur-detail-chips">
+                        <span class="ur-chip2">${esc(u.color) || 'N/A'}</span>
+                        <span class="ur-chip2">${esc(u.size) || 'N/A'}</span>
+                    </div>
+                    <div class="ur-detail-barcode">
+                        <span>${esc(u.barcode) || 'N/A'}</span>
+                        ${u.barcode ? `<button type="button" class="ur-copy-btn" data-copy="${esc(u.barcode)}" title="Barkodu kopyala"><i class="far fa-copy"></i></button>` : ''}
+                    </div>
+                </div>
+                <div class="ur-detail-qty"><span>Adet</span>${esc(u.quantity) || 1}</div>
+            </div>`).join('');
+    }
+
     function kartHtml(r, durum) {
         const iptal = !!r.iptal;
         const bekleyen = durum === 'bekleyen';
+        const islemde = durum === 'islemde';
+        const kargoBtn = (r.kargo && r.kargo.shipping_barcode)
+            ? `<button class="ur-undo-btn" data-kargo="${Number(r.id)}" title="Kargo çıktısı"><i class="bi bi-printer"></i></button>` : '';
+        let butonlar = '';
+        if (bekleyen) {
+            butonlar = `<button class="ur-work-btn" data-isleme="${Number(r.id)}"><i class="bi bi-hammer"></i> İşleme Al</button>
+                        <button class="ur-done-btn" data-uretildi="${Number(r.id)}"><i class="bi bi-check-lg"></i> Üretildi</button>${kargoBtn}`;
+        } else if (islemde) {
+            butonlar = `<button class="ur-done-btn" data-uretildi="${Number(r.id)}"><i class="bi bi-check-lg"></i> Üretildi</button>${kargoBtn}
+                        <button class="ur-undo-btn" data-isleme-geri="${Number(r.id)}" title="Bekleyenlere geri al"><i class="bi bi-arrow-counterclockwise"></i></button>`;
+        } else {
+            butonlar = `${kargoBtn}<button class="ur-undo-btn" data-gerial="${Number(r.id)}"><i class="bi bi-arrow-counterclockwise"></i> Geri Al</button>`;
+        }
         return `
         <article class="ur-card${iptal ? ' ur-card--iptal' : ''}">
             <div class="ur-card-main">
@@ -310,22 +458,24 @@
                     <span class="ur-order-no">#${esc(r.order_number)}</span>
                     ${r.product_main_id ? `<span class="ur-model-tag"><i class="fas fa-industry"></i> ${esc(r.product_main_id)}</span>` : ''}
                     ${iptal ? '<span class="ur-badge ur-badge--iptal"><i class="bi bi-x-octagon"></i> İPTAL — üretme!</span>' : ''}
+                    ${islemde ? '<span class="ur-badge ur-badge--islemde"><i class="bi bi-hammer"></i> Üretimde</span>' : ''}
                     ${bekleyen ? (r.mail_sent
                         ? '<span class="ur-badge ur-badge--mail-ok"><i class="bi bi-envelope-check"></i> Mail gitti</span>'
                         : '<span class="ur-badge ur-badge--mail-yok"><i class="bi bi-envelope"></i> Mail yok</span>') : ''}
                 </div>
                 <div class="ur-urunler">${urunHtml(r.details)}</div>
+                <button class="ur-detail-toggle" type="button">
+                    <i class="bi bi-box-seam"></i> Ürün Özellikleri <i class="bi bi-chevron-down ur-detail-chevron"></i>
+                </button>
+                <div class="ur-detail-panel" hidden>${detayHtml(r.details)}</div>
                 <div class="ur-meta">
                     <span><i class="bi bi-person"></i> ${esc(r.customer_name) || '-'}</span>
                     <span><i class="bi bi-calendar3"></i> Sipariş: ${esc(r.order_date) || '-'}</span>
-                    ${!bekleyen ? `<span><i class="bi bi-check2-circle"></i> Üretildi: ${esc(r.uretildi_at) || '-'}</span>` : ''}
+                    ${islemde ? `<span><i class="bi bi-hammer"></i> İşleme alındı: ${esc(r.isleme_alindi_at) || '-'}</span>` : ''}
+                    ${durum === 'uretildi' ? `<span><i class="bi bi-check2-circle"></i> Üretildi: ${esc(r.uretildi_at) || '-'}</span>` : ''}
                 </div>
             </div>
-            <div class="ur-card-side">
-                ${bekleyen
-                    ? `<button class="ur-done-btn" data-uretildi="${Number(r.id)}"><i class="bi bi-check-lg"></i> Üretildi</button>`
-                    : `<button class="ur-undo-btn" data-gerial="${Number(r.id)}"><i class="bi bi-arrow-counterclockwise"></i> Geri Al</button>`}
-            </div>
+            <div class="ur-card-side">${butonlar}</div>
         </article>`;
     }
 
@@ -336,15 +486,21 @@
         if (durum === 'bekleyen') {
             document.getElementById('urWaitCount').textContent = rows.length;
             document.getElementById('urTabBekleyen').textContent = rows.length;
+        } else if (durum === 'islemde') {
+            document.getElementById('urTabIslemde').textContent = rows.length;
         } else {
             document.getElementById('urTabUretilen').textContent = rows.length;
         }
+        rows.forEach(r => { rowCache[r.id] = r; });
         if (!goster) return;
         const list = document.getElementById('urList');
         if (!rows.length) {
-            list.innerHTML = durum === 'bekleyen'
-                ? '<div class="ur-empty"><i class="bi bi-stars"></i>Üretim bekleyen sipariş yok. 🎉</div>'
-                : '<div class="ur-empty"><i class="bi bi-inbox"></i>Henüz üretilen sipariş yok.</div>';
+            const bosMesaj = {
+                bekleyen: '<div class="ur-empty"><i class="bi bi-stars"></i>Üretim bekleyen sipariş yok. 🎉</div>',
+                islemde: '<div class="ur-empty"><i class="bi bi-hammer"></i>Şu an üretimde sipariş yok.</div>',
+                uretildi: '<div class="ur-empty"><i class="bi bi-inbox"></i>Henüz üretilen sipariş yok.</div>'
+            };
+            list.innerHTML = bosMesaj[durum] || bosMesaj.bekleyen;
             return;
         }
         list.innerHTML = rows.map(r => kartHtml(r, durum)).join('');
@@ -352,6 +508,7 @@
 
     function tazele() {
         listeYukle('bekleyen', aktifDurum === 'bekleyen');
+        listeYukle('islemde', aktifDurum === 'islemde');
         listeYukle('uretildi', aktifDurum === 'uretildi');
     }
 
@@ -407,17 +564,87 @@
     document.getElementById('urYenile').addEventListener('click', () => { tazele(); ayarYukle(); });
 
     document.getElementById('urList').addEventListener('click', async (e) => {
+        // Ürün özellikleri panelini aç/kapat
+        const detayBtn = e.target.closest('.ur-detail-toggle');
+        if (detayBtn) {
+            const panel = detayBtn.nextElementSibling;
+            panel.hidden = !panel.hidden;
+            detayBtn.classList.toggle('open', !panel.hidden);
+            return;
+        }
+        // Barkod kopyala
+        const copyBtn = e.target.closest('.ur-copy-btn');
+        if (copyBtn) {
+            try {
+                await navigator.clipboard.writeText(copyBtn.getAttribute('data-copy'));
+                toast('Barkod kopyalandı', 'success');
+            } catch { toast('Kopyalanamadı', 'error'); }
+            return;
+        }
+        // Kargo çıktısı diyaloğu
+        const kargoBtn = e.target.closest('[data-kargo]');
+        if (kargoBtn) { kargoDialogAc(rowCache[kargoBtn.getAttribute('data-kargo')]); return; }
+        // Durum aksiyonları
         const uretildiBtn = e.target.closest('[data-uretildi]');
         const geriAlBtn = e.target.closest('[data-gerial]');
-        if (!uretildiBtn && !geriAlBtn) return;
-        const id = uretildiBtn ? uretildiBtn.getAttribute('data-uretildi') : geriAlBtn.getAttribute('data-gerial');
-        const res = await fetch(`/uretim/api/uretildi/${id}`, {
-            method: 'POST', headers: POST_HEADERS,
-            body: JSON.stringify({ geri_al: !!geriAlBtn })
-        });
+        const islemeBtn = e.target.closest('[data-isleme]');
+        const islemeGeriBtn = e.target.closest('[data-isleme-geri]');
+        if (!uretildiBtn && !geriAlBtn && !islemeBtn && !islemeGeriBtn) return;
+        let url, body;
+        if (islemeBtn) { url = `/uretim/api/isleme-al/${islemeBtn.getAttribute('data-isleme')}`; body = {}; }
+        else if (islemeGeriBtn) { url = `/uretim/api/isleme-al/${islemeGeriBtn.getAttribute('data-isleme-geri')}`; body = { geri_al: true }; }
+        else if (uretildiBtn) { url = `/uretim/api/uretildi/${uretildiBtn.getAttribute('data-uretildi')}`; body = {}; }
+        else { url = `/uretim/api/uretildi/${geriAlBtn.getAttribute('data-gerial')}`; body = { geri_al: true }; }
+        const res = await fetch(url, { method: 'POST', headers: POST_HEADERS, body: JSON.stringify(body) });
         const data = await res.json();
         toast(data.message || 'Hata', data.success ? 'success' : 'error');
-        if (data.success) tazele();
+        if (data.success) {
+            tazele();
+            // Üretildi işaretlenince kargo seçeneklerini hemen sun
+            if (uretildiBtn) kargoDialogAc(rowCache[uretildiBtn.getAttribute('data-uretildi')]);
+        }
+    });
+
+    // ── Kargo çıktısı: Yazdır (normal akış) + Otomatik Gönderim ──
+    function kargoDialogAc(r) {
+        if (!r) return;
+        if (!r.kargo || !r.kargo.shipping_barcode) {
+            toast('Bu sipariş için kargo kodu bulunamadı.', 'error');
+            return;
+        }
+        kargoAktif = r;
+        document.getElementById('urKargoNo').textContent = '#' + r.order_number;
+        document.getElementById('urKargoFirma').textContent = r.kargo.cargo_provider || '-';
+        document.getElementById('urKargoKod').textContent = r.kargo.shipping_barcode;
+        document.getElementById('urKargoDialog').hidden = false;
+    }
+    document.getElementById('urKargoKapat').addEventListener('click', () => {
+        document.getElementById('urKargoDialog').hidden = true;
+    });
+    document.getElementById('urKargoDialog').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) e.currentTarget.hidden = true;
+    });
+    document.getElementById('urKargoYazdir').addEventListener('click', () => {
+        if (!kargoAktif) return;
+        const f = document.getElementById('kargoForm');
+        f.order_number.value = kargoAktif.order_number || '';
+        f.shipping_barcode.value = kargoAktif.kargo.shipping_barcode || '';
+        f.cargo_provider.value = kargoAktif.kargo.cargo_provider || '';
+        f.customer_name.value = kargoAktif.kargo.customer_name || '';
+        f.customer_surname.value = kargoAktif.kargo.customer_surname || '';
+        f.customer_address.value = kargoAktif.kargo.customer_address || '';
+        f.submit();
+        document.getElementById('urKargoDialog').hidden = true;
+    });
+    document.getElementById('urKargoOtomatik').addEventListener('click', async () => {
+        if (!kargoAktif) return;
+        const kod = kargoAktif.kargo.shipping_barcode;
+        try { await navigator.clipboard.writeText(kod); } catch {}
+        document.getElementById('urAutoShipKod').textContent = kod;
+        const kart = document.getElementById('urAutoShip');
+        kart.hidden = false;
+        setTimeout(() => { kart.hidden = true; }, 3000);
+        document.getElementById('urKargoDialog').hidden = true;
     });
 
     ayarYukle();

@@ -757,6 +757,8 @@ class UretimSiparis(db.Model):
     order_date = db.Column(db.DateTime)
     uretildi = db.Column(db.Boolean, default=False, nullable=False, index=True)
     uretildi_at = db.Column(db.DateTime)
+    isleme_alindi = db.Column(db.Boolean, default=False, nullable=False)  # üretime başlandı (ara statü)
+    isleme_alindi_at = db.Column(db.DateTime)
     mail_sent_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     __table_args__ = (db.UniqueConstraint('order_number', name='uq_uretim_siparis_order'),)
