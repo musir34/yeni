@@ -1540,6 +1540,8 @@ class ShopifyQuestion(db.Model):
     question = db.Column(db.Text, nullable=False)
     page_url = db.Column(db.String(500), default='')
     product_title = db.Column(db.String(300), default='')
+    product_sku = db.Column(db.String(120), default='')       # Shopify SKU / model kodu
+    product_image = db.Column(db.String(500), default='')     # yalnızca cdn.shopify.com
     status = db.Column(db.String(20), default='new', index=True)  # 'new' | 'answered'
     answer = db.Column(db.Text, default='')
     answered_by = db.Column(db.String(120))                   # cevabı panelden gönderen kullanıcı

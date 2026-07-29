@@ -533,8 +533,11 @@
     const contact = s.contact_type === 'email'
       ? `<span><i class="bi bi-envelope"></i>${esc(s.email)}</span>`
       : `<span><i class="bi bi-telephone"></i>${esc(s.phone)}</span>`;
+    const gorsel = s.image_url
+      ? `<img src="${esc(s.image_url)}" class="qna-img" loading="lazy" alt="${esc(s.product_name || 'Ürün')}">`
+      : '<span class="qna-img-placeholder"><i class="bi bi-globe2"></i></span>';
     const image = `${s.web_url ? `<a href="${esc(s.web_url)}" class="qna-img-link" target="_blank" rel="noopener">` : ''}
-        <span class="qna-img-placeholder"><i class="bi bi-globe2"></i></span>
+        ${gorsel}
       ${s.web_url ? '</a>' : ''}`;
     let answer = '';
     if (waiting) {
@@ -611,6 +614,7 @@
           ${image}
           <div class="qna-product-info">
             <strong title="${esc(s.product_name || '')}">${esc(s.product_name || 'Site sorusu (gullushoes.com)')}</strong>
+            ${s.product_main_id ? `<span class="qna-model"><i class="bi bi-upc-scan"></i> Model ${esc(s.product_main_id)}</span>` : ''}
             ${s.web_url ? `<span class="qna-model"><i class="bi bi-link-45deg"></i> <a href="${esc(s.web_url)}" target="_blank" rel="noopener">Soru sorulan sayfa</a></span>` : ''}
           </div>
           <span class="qna-source" title="Site sorusu (Shopify)"><img src="/static/logo/shopify.png" alt="Shopify"></span>

@@ -79,6 +79,12 @@ def _safe_page_url(raw) -> str:
     return url if url.lower().startswith(("https://", "http://")) else ""
 
 
+def _safe_product_image(raw) -> str:
+    """Ürün görseli yalnızca Shopify CDN'inden kabul edilir (talimat gereği)."""
+    url = (raw or "").strip()[:500]
+    return url if url.startswith("https://cdn.shopify.com/") else ""
+
+
 def _cors_headers(resp):
     origin = request.headers.get("Origin", "")
     if origin in ALLOWED_ORIGINS:
@@ -129,6 +135,8 @@ def shopify_question_intake():
         question=question,
         page_url=_safe_page_url(payload.get("page_url")),
         product_title=(payload.get("product_title") or "").strip()[:300],
+        product_sku=(payload.get("product_sku") or "").strip()[:120],
+        product_image=_safe_product_image(payload.get("product_image")),
         ip=ip,
         created_at=datetime.now(timezone.utc),
     )
@@ -177,8 +185,9 @@ def _answer_mail_html(row: ShopifyQuestion, answer: str) -> str:
     isim = f" {escape(row.name)}" if row.name else ""
     urun = ""
     if row.product_title:
+        model = f" (Model: {escape(row.product_sku)})" if getattr(row, "product_sku", "") else ""
         urun = (f'<p>İlgili ürün: <a href="{escape(row.page_url or SITE_URL)}">'
-                f'{escape(row.product_title)}</a></p>')
+                f'{escape(row.product_title)}</a>{model}</p>')
     return f"""
 <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a">
   <h2 style="color:#1a1a1a">Güllü Shoes</h2>
@@ -274,6 +283,8 @@ def ensure_table_exists() -> None:
         "ALTER TABLE shopify_questions ADD COLUMN ai_draft TEXT",
         "ALTER TABLE shopify_questions ADD COLUMN ai_draft_status VARCHAR(20) DEFAULT 'none'",
         "ALTER TABLE shopify_questions ADD COLUMN ai_draft_at TIMESTAMP WITH TIME ZONE",
+        "ALTER TABLE shopify_questions ADD COLUMN product_sku VARCHAR(120) DEFAULT ''",
+        "ALTER TABLE shopify_questions ADD COLUMN product_image VARCHAR(500) DEFAULT ''",
     ):
         try:
             with db.engine.begin() as conn:

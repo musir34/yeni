@@ -194,17 +194,28 @@ def generate_draft(question_id: int, talimat: str | None = None,
     return {"ok": False, "hata": "AI taslak üretilemedi (sunucu loglarına bakın)."}
 
 
-def _shopify_draft_prompt(row, talimat: str | None = None,
+def _shopify_draft_prompt(row, stok_bilgisi: str | None = None,
+                          talimat: str | None = None,
                           mevcut_metin: str | None = None) -> str:
     kanal = "e-posta" if row.contact_type == "email" else "WhatsApp"
+    sku = getattr(row, "product_sku", "") or ""
+    if sku:
+        stok_satiri = (
+            f"Model kodu: {sku}\n"
+            f"CANLI STOK: {stok_bilgisi or 'alınamadı'}\n"
+        )
+    else:
+        stok_satiri = (
+            "Model kodu bilinmiyor; stok bilgisi gerekiyorsa mcp__gulludb__query ile "
+            "ürün adından bakabilirsin, emin olamazsan stok sözü verme.\n"
+        )
     prompt = (
         "Bu soru Trendyol'dan DEĞİL, kendi sitemizden (gullushoes.com) geldi; "
         f"cevap müşteriye {kanal} ile iletilecek. Trendyol'a özgü ifadeler kullanma.\n"
         f"Ürün: {row.product_title or 'belirtilmemiş (genel soru)'}\n"
         f"Soru sorulan sayfa: {row.page_url or 'bilinmiyor'}\n"
-        "Model kodu bilinmiyor; stok bilgisi gerekiyorsa mcp__gulludb__query ile "
-        "ürün adından bakabilirsin, emin olamazsan stok sözü verme.\n\n"
-        f"Müşteri sorusu:\n{row.question}\n\n"
+        + stok_satiri +
+        f"\nMüşteri sorusu:\n{row.question}\n\n"
     )
     if talimat:
         prompt += (
@@ -226,7 +237,7 @@ def generate_shopify_draft(question_id: int, talimat: str | None = None,
     model kodu/stok bağlamı ve bilgi bankası ders kaydı yoktur.
     """
     from models import db, ShopifyQuestion
-    from trendyol_qna.qna_service import ANSWER_MAX
+    from trendyol_qna.qna_service import ANSWER_MAX, stock_context
 
     row = db.session.get(ShopifyQuestion, question_id)
     if not row:
@@ -243,7 +254,11 @@ def generate_shopify_draft(question_id: int, talimat: str | None = None,
     row.ai_draft_at = datetime.now(timezone.utc)
     db.session.commit()
 
-    taslak = _run_ai(_shopify_draft_prompt(row, talimat=talimat, mevcut_metin=mevcut_metin))
+    # SKU paneldeki model koduyla eşleşirse canlı stok promptta hazır gelir;
+    # eşleşmezse stock_context 'bulunamadı' der, AI stok sözü vermez.
+    stok = stock_context(row.product_sku) if getattr(row, "product_sku", "") else None
+    taslak = _run_ai(_shopify_draft_prompt(row, stok_bilgisi=stok,
+                                           talimat=talimat, mevcut_metin=mevcut_metin))
     if taslak:
         row.ai_draft = taslak[:ANSWER_MAX]
         row.ai_draft_status = "ready"
