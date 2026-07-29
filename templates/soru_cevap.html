@@ -742,7 +742,6 @@
     const err = list.querySelector(`.qna-err[data-id="${id}"]`);
     err.textContent = '';
     if (text.length < 10) { err.textContent = 'Cevap en az 10 karakter olmalı.'; return; }
-    if (!confirm('Cevap Trendyol\'da herkese açık yayınlanacak. Gönderilsin mi?')) return;
     btn.disabled = true;
     const eskiHtml = btn.innerHTML;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span><span>Gönderiliyor…</span>';
@@ -776,9 +775,6 @@
     const err = list.querySelector(`.qna-err[data-id="${key}"]`);
     if (err) err.textContent = '';
     if (!markOnly && text.length < 2) { if (err) err.textContent = 'Cevap boş olamaz.'; return; }
-    if (!confirm(markOnly
-        ? 'Soru yanıtlandı olarak işaretlenecek. Onaylıyor musunuz?'
-        : 'Cevap müşteriye e-posta ile gönderilecek. Gönderilsin mi?')) return;
     btn.disabled = true;
     const eskiHtml = btn.innerHTML;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span><span>Gönderiliyor…</span>';
