@@ -6,12 +6,12 @@ kapsamındadır (login zorunlu; /api/ öneki bilinçli olarak KULLANILMADI çün
 o önek auth'tan muaf).
 """
 import logging
-from datetime import timezone
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, jsonify, render_template, request, session
 
-from models import db, TrendyolQuestion
+from models import db, TrendyolQuestion, ShopifyQuestion
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +55,7 @@ def _tr(dt) -> str | None:
 def _to_dict(r: TrendyolQuestion) -> dict:
     return {
         "id": r.id,
+        "source": "trendyol",
         "text": r.text,
         "user_name": r.user_name if r.show_user_name else (r.user_name or "Müşteri"),
         "product_name": r.product_name,
@@ -71,6 +72,35 @@ def _to_dict(r: TrendyolQuestion) -> dict:
         "answered_by": r.answered_by,
         "ai_draft": r.ai_draft,
         "ai_draft_status": r.ai_draft_status or "none",
+    }
+
+
+def _shopify_to_dict(r: ShopifyQuestion) -> dict:
+    """Shopify sorusunu Trendyol kart sözlüğüyle aynı şekle getirir."""
+    from trendyol_qna.shopify_qna import whatsapp_link
+    return {
+        "id": r.id,
+        "source": "shopify",
+        "text": r.question,
+        "user_name": r.name or "Müşteri",
+        "contact_type": r.contact_type,
+        "email": r.email,
+        "phone": r.phone,
+        "wa_link": whatsapp_link(r) if r.contact_type == "phone" else None,
+        "product_name": r.product_title,
+        "product_main_id": None,
+        "image_url": None,
+        "web_url": r.page_url,
+        "status": "WAITING_FOR_ANSWER" if r.status == "new" else "ANSWERED",
+        "public": False,
+        "creation_date": _tr(r.created_at),
+        "answer_text": r.answer,
+        "answer_date": _tr(r.answered_at),
+        "rejected_answer_text": None,
+        "report_reason": None,
+        "answered_by": r.answered_by,
+        "ai_draft": None,
+        "ai_draft_status": "none",
     }
 
 
@@ -101,19 +131,60 @@ def sorular():
             | TrendyolQuestion.product_main_id.ilike(like)
         )
 
+    # Shopify soruları aynı listeye tarihe göre karışır (DIGER sekmesi Shopify'da yok)
+    sh_status = {"WAITING_FOR_ANSWER": "new", "ANSWERED": "answered", "ALL": None}
+    sh_rows: list[ShopifyQuestion] = []
+    sh_total = 0
+    fetch_limit = page * PAGE_SIZE
+    if status in sh_status:
+        try:
+            sh_query = db.session.query(ShopifyQuestion)
+            if sh_status[status]:
+                sh_query = sh_query.filter(ShopifyQuestion.status == sh_status[status])
+            if q:
+                like = f"%{q}%"
+                sh_query = sh_query.filter(
+                    ShopifyQuestion.question.ilike(like)
+                    | ShopifyQuestion.product_title.ilike(like)
+                    | ShopifyQuestion.name.ilike(like)
+                )
+            sh_total = sh_query.count()
+            sh_rows = (
+                sh_query.order_by(ShopifyQuestion.created_at.desc().nullslast())
+                .limit(fetch_limit)
+                .all()
+            )
+        except Exception:
+            db.session.rollback()
+            logger.exception("[QNA] Shopify soruları okunamadı (tablo yok olabilir)")
+
     total = query.count()
-    rows = (
+    t_rows = (
         query.order_by(TrendyolQuestion.creation_date.desc().nullslast())
-        .offset((page - 1) * PAGE_SIZE)
-        .limit(PAGE_SIZE)
+        .limit(fetch_limit)
         .all()
     )
+
+    def _key(dt):
+        if not dt:
+            return datetime.min.replace(tzinfo=timezone.utc)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+
+    merged = sorted(
+        [(_key(r.creation_date), _to_dict(r)) for r in t_rows]
+        + [(_key(r.created_at), _shopify_to_dict(r)) for r in sh_rows],
+        key=lambda x: x[0],
+        reverse=True,
+    )
+    offset = (page - 1) * PAGE_SIZE
     return jsonify({
         "ok": True,
-        "toplam": total,
+        "toplam": total + sh_total,
         "sayfa": page,
         "sayfa_boyu": PAGE_SIZE,
-        "sorular": [_to_dict(r) for r in rows],
+        "sorular": [d for _, d in merged[offset:offset + PAGE_SIZE]],
     })
 
 
@@ -136,6 +207,21 @@ def cevapla():
 
     from trendyol_qna.qna_service import answer_question
     sonuc = answer_question(qid, text, username=session.get("username"))
+    return jsonify(sonuc), (200 if sonuc["ok"] else 422)
+
+
+@qna_bp.route("/api/shopify/cevapla", methods=["POST"])
+def shopify_cevapla():
+    """Shopify sorusu: email ise mail gönderir, telefon ise yanıtlandı işaretler."""
+    payload = request.get_json(silent=True) or {}
+    try:
+        qid = int(payload.get("id"))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "hata": "Geçersiz soru ID."}), 400
+
+    from trendyol_qna.shopify_qna import answer_shopify_question
+    sonuc = answer_shopify_question(qid, (payload.get("text") or "").strip(),
+                                    username=session.get("username"))
     return jsonify(sonuc), (200 if sonuc["ok"] else 422)
 
 

@@ -43,6 +43,7 @@ def register_blueprints(app):
     from agent_api import agent_api  # 🤖 OPENCLAW AGENT API
     from order_audit_routes import order_audit_bp  # 🔎 SİPARİŞ İZ SÜRME
     from trendyol_qna import qna_bp  # 💬 TRENDYOL SORU-CEVAP
+    from trendyol_qna.shopify_qna import shopify_q_bp  # 🛍️ SHOPIFY SİTE SORULARI (public intake)
     from uretim_routes import uretim_bp  # 🏭 ÜRETİM MODU
 
     # Register all blueprints
@@ -90,6 +91,7 @@ def register_blueprints(app):
         agent_api,  # 🤖 OPENCLAW AGENT API
         order_audit_bp,  # 🔎 SİPARİŞ İZ SÜRME
         qna_bp,  # 💬 TRENDYOL SORU-CEVAP
+        shopify_q_bp,  # 🛍️ SHOPIFY SİTE SORULARI (public intake)
         uretim_bp,  # 🏭 ÜRETİM MODU
     ]:
         app.register_blueprint(bp)

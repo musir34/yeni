@@ -156,6 +156,15 @@ except Exception as _e:
     import logging as _logging
     _logging.getLogger(__name__).exception("[QNA] init başarısız: %s", _e)
 
+# 🛍️ Shopify site soruları: tablo garantisi
+try:
+    from trendyol_qna.shopify_qna import ensure_table_exists as _shq_ensure
+    with app.app_context():
+        _shq_ensure()
+except Exception as _e:
+    import logging as _logging
+    _logging.getLogger(__name__).exception("[SHOPIFY-QNA] init başarısız: %s", _e)
+
 # 🔥 Stok Senkronizasyon Blueprint
 
 # >>> Forecast cache fonksiyonlarını blueprint yüklendikten sonra import et

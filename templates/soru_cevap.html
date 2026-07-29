@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Trendyol Soru-Cevap{% endblock %}
+{% block title %}Soru-Cevap{% endblock %}
 
 {% block content %}
 <div class="qna-page" id="qnaApp">
@@ -42,7 +42,7 @@
       <div>
         <span class="qna-eyebrow">Müşteri iletişimi</span>
         <h1>Soruları yanıtla</h1>
-        <p>Müşteri sorularını incele, AI taslağını düzenle ve Trendyol'a gönder.</p>
+        <p>Trendyol ve gullushoes.com sorularını incele, cevapla — kaynak her kartta logosuyla görünür.</p>
       </div>
       <div class="qna-wait-pill" id="qnaWaitBadge">
         <span class="qna-pulse"></span>
@@ -243,6 +243,13 @@
   .qna-product-info { min-width:0; flex:1; }
   .qna-product-info strong { display:block; max-width:720px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.86rem; }
   .qna-model { display:inline-flex; align-items:center; gap:5px; margin-top:5px; color:var(--qna-muted); font-size:.7rem; }
+  .qna-source {
+    flex:0 0 auto; width:28px; height:28px; border-radius:9px; display:grid; place-items:center;
+    background:#fff; border:1px solid var(--qna-line);
+  }
+  .qna-source img { width:18px; height:18px; object-fit:contain; }
+  .qna-wa-btn { background:#1faf54; box-shadow:0 7px 15px rgba(31,175,84,.2); }
+  .qna-wa-btn:hover { background:#188f45; }
   .qna-status { flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; padding:6px 9px; border-radius:999px; font-size:.68rem; font-weight:700; }
   .qna-status--waiting { background:#fff0ea; color:#c45722; }
   .qna-status--answered { background:#e8f6ef; color:#147653; }
@@ -381,6 +388,7 @@
   html.gs-dark .qna-search:focus-within { background:#25272d; }
   html.gs-dark .qna-search input { color:var(--qna-ink); }
   html.gs-dark .qna-answer-pane { background:#191b20; }
+  html.gs-dark .qna-source { background:#f0f1f3; }
   html.gs-dark .qna-ai-settings { background:#20212b; border-color:#34364a; }
   html.gs-dark .qna-ai-icon { background:#2b2c45; }
   html.gs-dark .qna-published { background:#182720; border-color:#294438; }
@@ -496,6 +504,7 @@
             <strong title="${esc(s.product_name || '')}">${esc(s.product_name || 'Ürün bilgisi bulunamadı')}</strong>
             ${s.product_main_id ? `<span class="qna-model"><i class="bi bi-upc-scan"></i> Model ${esc(s.product_main_id)}</span>` : ''}
           </div>
+          <span class="qna-source" title="Trendyol sorusu"><img src="/static/logo/trendyol.png" alt="Trendyol"></span>
           <span class="qna-status qna-status--${st[1]}" title="${esc(st[0])}">
             <i class="bi ${st[2]}"></i><span>${esc(st[0])}</span>
           </span>
@@ -515,6 +524,94 @@
       </article>`;
   }
 
+  function shopifyCardHtml(s) {
+    const key = 's' + s.id;
+    const waiting = s.status === 'WAITING_FOR_ANSWER';
+    const st = waiting
+      ? ['Cevap bekliyor', 'waiting', 'bi-hourglass-split']
+      : ['Cevaplandı', 'answered', 'bi-check2'];
+    const contact = s.contact_type === 'email'
+      ? `<span><i class="bi bi-envelope"></i>${esc(s.email)}</span>`
+      : `<span><i class="bi bi-telephone"></i>${esc(s.phone)}</span>`;
+    const image = `${s.web_url ? `<a href="${esc(s.web_url)}" class="qna-img-link" target="_blank" rel="noopener">` : ''}
+        <span class="qna-img-placeholder"><i class="bi bi-globe2"></i></span>
+      ${s.web_url ? '</a>' : ''}`;
+    let answer = '';
+    if (waiting && s.contact_type === 'email') {
+      answer = `
+        <section class="qna-answer-pane">
+          <div class="qna-answer-head">
+            <span class="qna-section-label">Cevabınız</span>
+            <span class="qna-char" data-id="${key}">0/2000</span>
+          </div>
+          <textarea class="qna-answer-text" id="qna-answer-${key}" data-id="${key}" rows="4"
+                    aria-label="Müşteriye e-posta ile gönderilecek cevap"
+                    placeholder="Cevabınızı yazın… Müşteriye e-posta ile gönderilir."></textarea>
+          <div class="qna-answer-actions">
+            <span class="qna-meta"><i class="bi bi-envelope"></i> Müşteriye e-posta ile gönderilir</span>
+            <span class="qna-err" data-id="${key}"></span>
+            <button class="qna-send-btn qna-shopify-send" data-id="${key}" data-qid="${s.id}">
+              <i class="bi bi-envelope"></i><span>Mail ile gönder</span>
+            </button>
+          </div>
+        </section>`;
+    } else if (waiting) {
+      answer = `
+        <section class="qna-answer-pane">
+          <span class="qna-section-label">WhatsApp ile cevapla</span>
+          <p class="qna-meta" style="margin:6px 0 12px">Cevabı WhatsApp'tan yazın, ardından soruyu yanıtlandı olarak işaretleyin.</p>
+          <div class="qna-answer-actions" style="margin-top:0">
+            <a class="qna-send-btn qna-wa-btn" href="${esc(s.wa_link || '')}" target="_blank" rel="noopener">
+              <i class="bi bi-whatsapp"></i><span>WhatsApp'ı aç</span>
+            </a>
+            <button class="qna-secondary-btn qna-shopify-done" data-id="${key}" data-qid="${s.id}">
+              <i class="bi bi-check2"></i> Yanıtlandı olarak işaretle
+            </button>
+            <span class="qna-err" data-id="${key}"></span>
+          </div>
+        </section>`;
+    } else {
+      answer = `
+        <section class="qna-answer-pane">
+          <span class="qna-section-label">${s.contact_type === 'email' ? 'Gönderilen cevap' : 'Cevap durumu'}</span>
+          <div class="qna-published">
+            <div class="qna-published-meta">
+              <i class="bi ${s.contact_type === 'email' ? 'bi-envelope-check' : 'bi-whatsapp'}"></i>
+              ${s.answer_date ? esc(s.answer_date) : 'Yanıtlandı'}
+              ${s.answered_by ? ' · ' + esc(s.answered_by) : ''}
+            </div>
+            <div class="qna-published-text">${s.answer_text ? esc(s.answer_text) : 'WhatsApp üzerinden yanıtlandı.'}</div>
+          </div>
+        </section>`;
+    }
+    return `
+      <article class="qna-card" id="qna-${key}">
+        <header class="qna-product-row">
+          ${image}
+          <div class="qna-product-info">
+            <strong title="${esc(s.product_name || '')}">${esc(s.product_name || 'Site sorusu (gullushoes.com)')}</strong>
+            ${s.web_url ? `<span class="qna-model"><i class="bi bi-link-45deg"></i> <a href="${esc(s.web_url)}" target="_blank" rel="noopener">Soru sorulan sayfa</a></span>` : ''}
+          </div>
+          <span class="qna-source" title="Site sorusu (Shopify)"><img src="/static/logo/shopify.png" alt="Shopify"></span>
+          <span class="qna-status qna-status--${st[1]}" title="${esc(st[0])}">
+            <i class="bi ${st[2]}"></i><span>${esc(st[0])}</span>
+          </span>
+        </header>
+        <div class="qna-card-grid">
+          <section class="qna-question-pane">
+            <div class="qna-customer-meta">
+              <span><i class="bi bi-person"></i>${esc(s.user_name || 'Müşteri')}</span>
+              ${contact}
+              ${s.creation_date ? `<span><i class="bi bi-clock"></i>${esc(s.creation_date)}</span>` : ''}
+            </div>
+            <span class="qna-section-label">Müşteri sorusu</span>
+            <p class="qna-question">${esc(s.text)}</p>
+          </section>
+          ${answer}
+        </div>
+      </article>`;
+  }
+
   async function load() {
     list.setAttribute('aria-busy', 'true');
     try {
@@ -522,7 +619,7 @@
       const d = await r.json();
       if (!d.ok) throw new Error();
       list.innerHTML = d.sorular.length
-        ? d.sorular.map(cardHtml).join('')
+        ? d.sorular.map(s => s.source === 'shopify' ? shopifyCardHtml(s) : cardHtml(s)).join('')
         : `<div class="qna-empty">
              <div class="qna-empty-icon"><i class="bi bi-check2"></i></div>
              <strong>${curQ ? 'Aramanızla eşleşen soru yok' : 'Bu bölüm tertemiz'}</strong>
@@ -590,7 +687,9 @@
         resize();
       });
     });
-    list.querySelectorAll('.qna-send-btn').forEach(b => b.addEventListener('click', () => send(b)));
+    list.querySelectorAll('.qna-send-btn:not(.qna-shopify-send):not(.qna-wa-btn)').forEach(b => b.addEventListener('click', () => send(b)));
+    list.querySelectorAll('.qna-shopify-send').forEach(b => b.addEventListener('click', () => sendShopify(b, false)));
+    list.querySelectorAll('.qna-shopify-done').forEach(b => b.addEventListener('click', () => sendShopify(b, true)));
     list.querySelectorAll('.qna-draft-btn').forEach(b => b.addEventListener('click', () => draft(b)));
     list.querySelectorAll('.qna-revise-btn').forEach(b => b.addEventListener('click', () => draft(b, true)));
     list.querySelectorAll('.qna-draft-talimat').forEach(t => {
@@ -632,6 +731,42 @@
       }
     } catch (e) {
       err.textContent = 'Sunucuya ulaşılamadı.';
+      btn.disabled = false;
+      btn.innerHTML = eskiHtml;
+    }
+  }
+
+  async function sendShopify(btn, markOnly) {
+    const key = btn.dataset.id, qid = btn.dataset.qid;
+    const textEl = list.querySelector(`.qna-answer-text[data-id="${key}"]`);
+    const text = textEl ? textEl.value.trim() : '';
+    const err = list.querySelector(`.qna-err[data-id="${key}"]`);
+    if (err) err.textContent = '';
+    if (!markOnly && text.length < 2) { if (err) err.textContent = 'Cevap boş olamaz.'; return; }
+    if (!confirm(markOnly
+        ? 'Soru yanıtlandı olarak işaretlenecek. Onaylıyor musunuz?'
+        : 'Cevap müşteriye e-posta ile gönderilecek. Gönderilsin mi?')) return;
+    btn.disabled = true;
+    const eskiHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span><span>Gönderiliyor…</span>';
+    try {
+      const r = await fetch('/soru-cevap/api/shopify/cevapla', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-Requested-With': 'fetch'},
+        body: JSON.stringify({id: +qid, text})
+      });
+      const d = await r.json();
+      if (d.ok) {
+        const card = document.getElementById(`qna-${key}`);
+        if (card) card.style.opacity = '.4';
+        setTimeout(load, 700);
+      } else {
+        if (err) err.textContent = d.hata || 'Gönderilemedi.';
+        btn.disabled = false;
+        btn.innerHTML = eskiHtml;
+      }
+    } catch (e) {
+      if (err) err.textContent = 'Sunucuya ulaşılamadı.';
       btn.disabled = false;
       btn.innerHTML = eskiHtml;
     }

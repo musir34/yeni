@@ -1524,6 +1524,30 @@ class TrendyolQuestion(db.Model):
     last_synced_at = db.Column(db.DateTime(timezone=True))
 
 
+class ShopifyQuestion(db.Model):
+    """gullushoes.com 'Hızlı Soru Sor' widget'ından gelen sorular.
+
+    Tablo oluşturma: trendyol_qna/shopify_qna.py ensure_table_exists (app init'te,
+    TrendyolQuestion deseniyle aynı — migration'sız, additive).
+    """
+    __tablename__ = 'shopify_questions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    contact_type = db.Column(db.String(10), nullable=False)   # 'email' | 'phone'
+    email = db.Column(db.String(255), default='')
+    phone = db.Column(db.String(32), default='')              # 05xxxxxxxxx normalize
+    name = db.Column(db.String(120), default='')
+    question = db.Column(db.Text, nullable=False)
+    page_url = db.Column(db.String(500), default='')
+    product_title = db.Column(db.String(300), default='')
+    status = db.Column(db.String(20), default='new', index=True)  # 'new' | 'answered'
+    answer = db.Column(db.Text, default='')
+    answered_by = db.Column(db.String(120))                   # cevabı panelden gönderen kullanıcı
+    ip = db.Column(db.String(64), default='')
+    created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), index=True)
+    answered_at = db.Column(db.DateTime(timezone=True))
+
+
 class MotorOneriLog(db.Model):
     """Akıllı motor öneri geçmişi — geri besleme döngüsü.
 
