@@ -83,6 +83,7 @@ def _shopify_to_dict(r: ShopifyQuestion) -> dict:
         "source": "shopify",
         "text": r.question,
         "user_name": r.name or "Müşteri",
+        "name": r.name or "",
         "contact_type": r.contact_type,
         "email": r.email,
         "phone": r.phone,
@@ -99,8 +100,8 @@ def _shopify_to_dict(r: ShopifyQuestion) -> dict:
         "rejected_answer_text": None,
         "report_reason": None,
         "answered_by": r.answered_by,
-        "ai_draft": None,
-        "ai_draft_status": "none",
+        "ai_draft": r.ai_draft,
+        "ai_draft_status": r.ai_draft_status or "none",
     }
 
 
@@ -223,6 +224,32 @@ def shopify_cevapla():
     sonuc = answer_shopify_question(qid, (payload.get("text") or "").strip(),
                                     username=session.get("username"))
     return jsonify(sonuc), (200 if sonuc["ok"] else 422)
+
+
+@qna_bp.route("/api/shopify/taslak/<int:qid>", methods=["POST"])
+def shopify_taslak(qid: int):
+    """Shopify sorusu için AI taslağını (yeniden) üretmeyi tetikler (arka plan)."""
+    row = db.session.get(ShopifyQuestion, qid)
+    if not row:
+        return jsonify({"ok": False, "hata": "Soru bulunamadı."}), 404
+    payload = request.get_json(silent=True) or {}
+    talimat = (payload.get("talimat") or "").strip()[:500] or None
+    mevcut_metin = (payload.get("metin") or "").strip()[:2000] or None
+    from trendyol_qna.qna_ai import generate_shopify_drafts_async
+    generate_shopify_drafts_async([qid], talimat=talimat, mevcut_metin=mevcut_metin)
+    return jsonify({"ok": True, "durum": "pending"})
+
+
+@qna_bp.route("/api/shopify/taslak-durum/<int:qid>", methods=["GET"])
+def shopify_taslak_durum(qid: int):
+    row = db.session.get(ShopifyQuestion, qid)
+    if not row:
+        return jsonify({"ok": False, "hata": "Soru bulunamadı."}), 404
+    return jsonify({
+        "ok": True,
+        "durum": row.ai_draft_status or "none",
+        "taslak": row.ai_draft if row.ai_draft_status == "ready" else None,
+    })
 
 
 @qna_bp.route("/api/taslak/<int:qid>", methods=["POST"])

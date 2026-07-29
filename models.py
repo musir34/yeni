@@ -1544,6 +1544,9 @@ class ShopifyQuestion(db.Model):
     answer = db.Column(db.Text, default='')
     answered_by = db.Column(db.String(120))                   # cevabı panelden gönderen kullanıcı
     ip = db.Column(db.String(64), default='')
+    ai_draft = db.Column(db.Text)
+    ai_draft_status = db.Column(db.String(20), default='none')  # none|pending|ready|failed
+    ai_draft_at = db.Column(db.DateTime(timezone=True))
     created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), index=True)
     answered_at = db.Column(db.DateTime(timezone=True))
 

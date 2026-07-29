@@ -194,6 +194,87 @@ def generate_draft(question_id: int, talimat: str | None = None,
     return {"ok": False, "hata": "AI taslak üretilemedi (sunucu loglarına bakın)."}
 
 
+def _shopify_draft_prompt(row, talimat: str | None = None,
+                          mevcut_metin: str | None = None) -> str:
+    kanal = "e-posta" if row.contact_type == "email" else "WhatsApp"
+    prompt = (
+        "Bu soru Trendyol'dan DEĞİL, kendi sitemizden (gullushoes.com) geldi; "
+        f"cevap müşteriye {kanal} ile iletilecek. Trendyol'a özgü ifadeler kullanma.\n"
+        f"Ürün: {row.product_title or 'belirtilmemiş (genel soru)'}\n"
+        f"Soru sorulan sayfa: {row.page_url or 'bilinmiyor'}\n"
+        "Model kodu bilinmiyor; stok bilgisi gerekiyorsa mcp__gulludb__query ile "
+        "ürün adından bakabilirsin, emin olamazsan stok sözü verme.\n\n"
+        f"Müşteri sorusu:\n{row.question}\n\n"
+    )
+    if talimat:
+        prompt += (
+            f"Mevcut taslak (panelde görünen hali):\n{mevcut_metin or row.ai_draft or '(boş)'}\n\n"
+            f"Kullanıcının düzeltme talimatı: {talimat}\n\n"
+            "Mevcut taslağı bu talimata göre düzelt; talimatın dokunmadığı kısımları koru. "
+            "Kurallara uygun, müşteriye gönderilmeye hazır TEK bir cevap taslağı yaz."
+        )
+    else:
+        prompt += "Bu soruya kurallara uygun, müşteriye gönderilmeye hazır TEK bir cevap taslağı yaz."
+    return prompt
+
+
+def generate_shopify_draft(question_id: int, talimat: str | None = None,
+                           mevcut_metin: str | None = None) -> dict:
+    """
+    Shopify (site) sorusu için taslak üret ve kaydet (senkron; app context
+    İÇİNDE çağrılmalı). Trendyol tarafındaki generate_draft ile aynı akış;
+    model kodu/stok bağlamı ve bilgi bankası ders kaydı yoktur.
+    """
+    from models import db, ShopifyQuestion
+    from trendyol_qna.qna_service import ANSWER_MAX
+
+    row = db.session.get(ShopifyQuestion, question_id)
+    if not row:
+        return {"ok": False, "hata": "Soru bulunamadı."}
+
+    if row.ai_draft_status == "pending" and row.ai_draft_at:
+        ts = row.ai_draft_at
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) - ts < timedelta(minutes=5):
+            return {"ok": False, "hata": "Taslak zaten üretiliyor."}
+
+    row.ai_draft_status = "pending"
+    row.ai_draft_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+    taslak = _run_ai(_shopify_draft_prompt(row, talimat=talimat, mevcut_metin=mevcut_metin))
+    if taslak:
+        row.ai_draft = taslak[:ANSWER_MAX]
+        row.ai_draft_status = "ready"
+        row.ai_draft_at = datetime.now(timezone.utc)
+        db.session.commit()
+        return {"ok": True, "taslak": row.ai_draft}
+
+    row.ai_draft_status = "failed"
+    db.session.commit()
+    return {"ok": False, "hata": "AI taslak üretilemedi (sunucu loglarına bakın)."}
+
+
+def generate_shopify_drafts_async(question_ids: list[int], talimat: str | None = None,
+                                  mevcut_metin: str | None = None) -> None:
+    """Shopify soruları için taslakları arka plan thread'inde sırayla üret."""
+    if not question_ids:
+        return
+
+    def _worker():
+        from app import app
+        with app.app_context():
+            for qid in question_ids:
+                try:
+                    generate_shopify_draft(qid, talimat=talimat, mevcut_metin=mevcut_metin)
+                except Exception:
+                    logger.exception("[QNA-AI] shopify taslak hatası (soru %s)", qid)
+
+    t = threading.Thread(target=_worker, name="qna-ai-shopify-draft", daemon=True)
+    t.start()
+
+
 def generate_drafts_async(question_ids: list[int], talimat: str | None = None,
                           mevcut_metin: str | None = None) -> None:
     """Yeni sorular için taslakları arka plan thread'inde sırayla üret."""

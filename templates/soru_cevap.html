@@ -537,38 +537,59 @@
         <span class="qna-img-placeholder"><i class="bi bi-globe2"></i></span>
       ${s.web_url ? '</a>' : ''}`;
     let answer = '';
-    if (waiting && s.contact_type === 'email') {
-      answer = `
-        <section class="qna-answer-pane">
-          <div class="qna-answer-head">
-            <span class="qna-section-label">Cevabınız</span>
-            <span class="qna-char" data-id="${key}">0/2000</span>
-          </div>
-          <textarea class="qna-answer-text" id="qna-answer-${key}" data-id="${key}" rows="4"
-                    aria-label="Müşteriye e-posta ile gönderilecek cevap"
-                    placeholder="Cevabınızı yazın… Müşteriye e-posta ile gönderilir."></textarea>
-          <div class="qna-answer-actions">
+    if (waiting) {
+      const draftReady = s.ai_draft_status === 'ready' && s.ai_draft;
+      const draftVal = draftReady ? s.ai_draft : '';
+      const emailMi = s.contact_type === 'email';
+      const actions = emailMi
+        ? `<div class="qna-answer-actions">
             <span class="qna-meta"><i class="bi bi-envelope"></i> Müşteriye e-posta ile gönderilir</span>
             <span class="qna-err" data-id="${key}"></span>
             <button class="qna-send-btn qna-shopify-send" data-id="${key}" data-qid="${s.id}">
               <i class="bi bi-envelope"></i><span>Mail ile gönder</span>
             </button>
-          </div>
-        </section>`;
-    } else if (waiting) {
-      answer = `
-        <section class="qna-answer-pane">
-          <span class="qna-section-label">WhatsApp ile cevapla</span>
-          <p class="qna-meta" style="margin:6px 0 12px">Cevabı WhatsApp'tan yazın, ardından soruyu yanıtlandı olarak işaretleyin.</p>
-          <div class="qna-answer-actions" style="margin-top:0">
-            <a class="qna-send-btn qna-wa-btn" href="${esc(s.wa_link || '')}" target="_blank" rel="noopener">
-              <i class="bi bi-whatsapp"></i><span>WhatsApp'ı aç</span>
-            </a>
+          </div>`
+        : `<div class="qna-answer-actions">
+            <span class="qna-meta"><i class="bi bi-whatsapp"></i> Cevap WhatsApp mesajına eklenir</span>
+            <span class="qna-err" data-id="${key}"></span>
             <button class="qna-secondary-btn qna-shopify-done" data-id="${key}" data-qid="${s.id}">
               <i class="bi bi-check2"></i> Yanıtlandı olarak işaretle
             </button>
-            <span class="qna-err" data-id="${key}"></span>
+            <a class="qna-send-btn qna-wa-btn" data-id="${key}" data-phone="${esc(s.phone)}"
+               data-name="${esc(s.name || '')}" data-question="${esc(s.text)}"
+               href="${esc(s.wa_link || '')}" target="_blank" rel="noopener">
+              <i class="bi bi-whatsapp"></i><span>WhatsApp'ı aç</span>
+            </a>
+          </div>`;
+      answer = `
+        <section class="qna-answer-pane">
+          <div class="qna-answer-head">
+            <span class="qna-section-label">Cevabınız</span>
+            <span class="qna-char" data-id="${key}">${draftVal.trim().length}/2000</span>
+            ${draftReady
+              ? '<span class="qna-draft-state"><i class="bi bi-stars"></i> AI taslağı</span>'
+              : (s.ai_draft_status === 'pending'
+                  ? '<span class="qna-draft-state"><span class="spinner-border spinner-border-sm"></span> Hazırlanıyor</span>'
+                  : '')}
+            <button class="qna-ai-btn qna-draft-btn" data-id="${key}" data-qid="${s.id}">
+              <i class="bi bi-stars"></i> ${draftReady ? 'Taslağı yenile' : 'AI taslak üret'}
+            </button>
           </div>
+          <textarea class="qna-answer-text" id="qna-answer-${key}" data-id="${key}" rows="4"
+                    aria-label="${emailMi ? 'Müşteriye e-posta ile gönderilecek cevap' : 'WhatsApp mesajına eklenecek cevap'}"
+                    placeholder="${emailMi ? 'Cevabınızı yazın… Müşteriye e-posta ile gönderilir.' : 'Cevabınızı yazın… WhatsApp mesajına eklenir.'}">${esc(draftVal)}</textarea>
+          <details class="qna-revise">
+            <summary><i class="bi bi-magic"></i> AI ile bu cevabı düzenle</summary>
+            <div class="qna-revise-row">
+              <input type="text" class="form-control qna-draft-talimat" data-id="${key}" maxlength="500"
+                     aria-label="AI düzeltme talimatı"
+                     placeholder="Ör: Daha kısa yaz, fiyattan bahsetme…">
+              <button class="qna-revise-btn" data-id="${key}" data-qid="${s.id}">
+                <i class="bi bi-stars"></i> Düzenle
+              </button>
+            </div>
+          </details>
+          ${actions}
         </section>`;
     } else {
       answer = `
@@ -690,6 +711,14 @@
     list.querySelectorAll('.qna-send-btn:not(.qna-shopify-send):not(.qna-wa-btn)').forEach(b => b.addEventListener('click', () => send(b)));
     list.querySelectorAll('.qna-shopify-send').forEach(b => b.addEventListener('click', () => sendShopify(b, false)));
     list.querySelectorAll('.qna-shopify-done').forEach(b => b.addEventListener('click', () => sendShopify(b, true)));
+    // WhatsApp linki tıklama anında kurulur — kutudaki güncel cevap mesaja gömülür
+    list.querySelectorAll('.qna-wa-btn').forEach(a => a.addEventListener('click', () => {
+      const t = list.querySelector(`.qna-answer-text[data-id="${a.dataset.id}"]`);
+      const cevap = t ? t.value.trim() : '';
+      const isim = a.dataset.name ? ' ' + a.dataset.name : '';
+      const mesaj = `Merhaba${isim}, Güllü Shoes'tan yazıyoruz. gullushoes.com'da sormuş olduğunuz soruya istinaden dönüş yapıyoruz:\n\n"${a.dataset.question}"\n\n${cevap ? cevap + '\n\n' : ''}`;
+      a.href = `https://wa.me/90${a.dataset.phone.slice(-10)}?text=${encodeURIComponent(mesaj)}`;
+    }));
     list.querySelectorAll('.qna-draft-btn').forEach(b => b.addEventListener('click', () => draft(b)));
     list.querySelectorAll('.qna-revise-btn').forEach(b => b.addEventListener('click', () => draft(b, true)));
     list.querySelectorAll('.qna-draft-talimat').forEach(t => {
@@ -774,6 +803,10 @@
 
   async function draft(btn, revize) {
     const id = btn.dataset.id;
+    // Shopify kartlarında DOM anahtarı 's<id>' + data-qid sayısal ID taşır;
+    // Trendyol kartlarında data-qid yoktur, endpoint tabanı ona göre seçilir.
+    const qid = btn.dataset.qid || id;
+    const base = btn.dataset.qid ? '/soru-cevap/api/shopify' : '/soru-cevap/api';
     const talimatEl = list.querySelector(`.qna-draft-talimat[data-id="${id}"]`);
     const talimat = revize ? (talimatEl ? talimatEl.value.trim() : '') : '';
     if (revize && !talimat) { alert('Önce düzeltme talimatını yazın.'); return; }
@@ -789,7 +822,7 @@
     };
     try {
       // Üretimi tetikle (arka planda çalışır), sonra durumu yokla
-      const r = await fetch(`/soru-cevap/api/taslak/${id}`, {
+      const r = await fetch(`${base}/taslak/${qid}`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-Requested-With': 'fetch'},
         body: JSON.stringify(revize
@@ -803,7 +836,7 @@
       const poll = async () => {
         if (Date.now() - t0 > 180000) return done('Taslak üretimi zaman aşımına uğradı.');
         try {
-          const rs = await fetch(`/soru-cevap/api/taslak-durum/${id}`, {cache: 'no-store'});
+          const rs = await fetch(`${base}/taslak-durum/${qid}`, {cache: 'no-store'});
           const ds = await rs.json();
           if (ds.ok && ds.durum === 'ready' && ds.taslak) {
             const t = list.querySelector(`.qna-answer-text[data-id="${id}"]`);

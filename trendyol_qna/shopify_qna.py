@@ -142,6 +142,11 @@ def shopify_question_intake():
 
     logger.info("[SHOPIFY-QNA] yeni soru #%s (%s)", row.id, contact_type)
     _notify_new_question(row)
+    try:
+        from trendyol_qna.qna_ai import generate_shopify_drafts_async
+        generate_shopify_drafts_async([row.id])
+    except Exception:
+        logger.exception("[SHOPIFY-QNA] AI taslak tetiklenemedi (soru %s)", row.id)
     return _cors_headers(jsonify({"ok": True}))
 
 
@@ -255,8 +260,23 @@ def new_count() -> int:
 
 
 def ensure_table_exists() -> None:
-    """Tablo yoksa oluştur (prod'da alembic yok — TrendyolQuestion deseni)."""
+    """Tablo yoksa oluştur (prod'da alembic yok — TrendyolQuestion deseni).
+
+    Tablo önceki deploy'da kolonsuz kurulmuş olabilir; AI taslak kolonları
+    additive ALTER ile tamamlanır (her biri ayrı denenir — SQLite'ta
+    IF NOT EXISTS desteklenmez, mevcut kolon hatası sessizce yutulur).
+    """
     try:
         ShopifyQuestion.__table__.create(bind=db.engine, checkfirst=True)
     except Exception:
         logger.exception("[SHOPIFY-QNA] tablo oluşturma hatası")
+    for ddl in (
+        "ALTER TABLE shopify_questions ADD COLUMN ai_draft TEXT",
+        "ALTER TABLE shopify_questions ADD COLUMN ai_draft_status VARCHAR(20) DEFAULT 'none'",
+        "ALTER TABLE shopify_questions ADD COLUMN ai_draft_at TIMESTAMP WITH TIME ZONE",
+    ):
+        try:
+            with db.engine.begin() as conn:
+                conn.execute(db.text(ddl))
+        except Exception:
+            pass  # kolon zaten var
