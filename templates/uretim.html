@@ -327,6 +327,8 @@
   .ur-detail-qty span { display:block; font-size:.62rem; font-weight:700; color:var(--ur-muted); text-transform:uppercase; letter-spacing:.06em; }
   .ur-meta { display:flex; flex-wrap:wrap; gap:6px 16px; color:var(--ur-muted); font-size:.76rem; }
   .ur-meta span { display:inline-flex; align-items:center; gap:6px; }
+  .ur-meta .ur-musteri { color:var(--ur-ink); font-size:.92rem; font-weight:800; letter-spacing:-.01em; }
+  .ur-meta .ur-musteri i { color:var(--ur-rose-dark); }
   .ur-card-side { display:flex; flex-direction:column; align-items:flex-end; gap:10px; flex:0 0 auto; }
   .ur-done-btn {
     display:inline-flex; align-items:center; gap:8px; padding:0 16px; height:42px;
@@ -530,7 +532,7 @@
                 </button>
                 <div class="ur-detail-panel" hidden>${detayHtml(r)}</div>
                 <div class="ur-meta">
-                    <span><i class="bi bi-person"></i> ${esc(r.customer_name) || '-'}</span>
+                    <span class="ur-musteri"><i class="bi bi-person-fill"></i> ${esc(r.customer_name) || '-'}</span>
                     <span><i class="bi bi-calendar3"></i> Sipariş: ${esc(r.order_date) || '-'}</span>
                     ${islemde ? `<span><i class="bi bi-hammer"></i> İşleme alındı: ${esc(r.isleme_alindi_at) || '-'}</span>` : ''}
                     ${(durum === 'uretildi' || tamamlanan) ? `<span><i class="bi bi-check2-circle"></i> Üretildi: ${esc(r.uretildi_at) || '-'}</span>` : ''}
