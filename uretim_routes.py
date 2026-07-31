@@ -108,6 +108,7 @@ def liste():
                                M.query.filter(M.order_number.in_(nolar))
                                .with_entities(M.order_number)}
         except Exception:
+            db.session.rollback()
             logger.warning("[URETIM] kargolanan kontrolü yapılamadı", exc_info=True)
         rows = [r for r in rows
                 if (r.order_number in kargolanan) == (durum == "tamamlanan")]
@@ -138,7 +139,16 @@ def liste():
             nolar = [r.order_number for r in rows]
             for M in (OrderCreated, OrderHazirlaniyor, OrderPicking,
                       OrderShipped, OrderDelivered, OrderArchived):
-                for o in M.query.filter(M.order_number.in_(nolar)).all():
+                # with_entities: tam entity ÇEKME — prod'da orders_archived'ın
+                # kolon adları model ile birebir değil (stockCode/stockcode),
+                # tam select UndefinedColumn ile patlıyor. Gereken kolonlar yeter.
+                satirlar = (M.query.filter(M.order_number.in_(nolar))
+                            .with_entities(M.order_number, M.cargo_tracking_number,
+                                           M.cargo_provider_name, M.customer_name,
+                                           M.customer_surname, M.customer_address,
+                                           M.details)
+                            .all())
+                for o in satirlar:
                     kargo_map.setdefault(o.order_number, {
                         "shipping_barcode": o.cargo_tracking_number or "",
                         "cargo_provider": o.cargo_provider_name or "",
@@ -154,6 +164,7 @@ def liste():
                         except (json.JSONDecodeError, TypeError):
                             pass
         except Exception:
+            db.session.rollback()
             logger.warning("[URETIM] kargo/sipariş içeriği okunamadı", exc_info=True)
     # Ürün özellikleri için Product haritası (görsel/başlık/model) — tek sorgu
     urun_map = {}
@@ -178,6 +189,7 @@ def liste():
             if barkodlar:
                 urun_map = {p.barcode: p for p in Product.query.filter(Product.barcode.in_(barkodlar))}
         except Exception:
+            db.session.rollback()
             logger.warning("[URETIM] ürün özellikleri okunamadı", exc_info=True)
     # Raftan toplanacak kalemler için raf bilgisi (adet>0, çoktan aza)
     raf_map = {}
@@ -193,6 +205,7 @@ def liste():
                            .order_by(RafUrun.adet.desc())):
                     raf_map.setdefault(ru.urun_barkodu, []).append(f"{ru.raf_kodu} ({ru.adet})")
         except Exception:
+            db.session.rollback()
             logger.warning("[URETIM] raf bilgisi okunamadı", exc_info=True)
     sonuc = []
     for r in rows:
