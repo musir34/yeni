@@ -281,6 +281,25 @@
   .ur-src { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; font-size:.68rem; font-weight:700; }
   .ur-src--uretim { background:var(--ur-rose-soft); color:var(--ur-rose-dark); }
   .ur-src--raf { background:var(--ur-green-soft); color:var(--ur-green); }
+  .ur-src--ok { background:var(--ur-green); color:#fff; }
+  .ur-badge--kilit { background:var(--ur-red-soft); color:var(--ur-red); }
+  .ur-detail-item--bekliyor { border-color:#f0c9c4; }
+  .ur-okut { display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
+  .ur-okut input {
+    height:38px; padding:0 11px; border:1px solid var(--ur-line); border-radius:10px;
+    background:#fff; font-size:.82rem; width:150px; font-family:monospace;
+  }
+  .ur-okut input:focus { outline:none; border-color:var(--ur-rose); box-shadow:0 0 0 3px rgba(183,110,121,.14); }
+  .ur-okut-btn {
+    display:inline-flex; align-items:center; gap:6px; padding:0 13px; height:38px;
+    border:0; border-radius:10px; background:linear-gradient(45deg,#2fa878,#16865c);
+    color:#fff; font-size:.8rem; font-weight:680; cursor:pointer;
+  }
+  .ur-okut-ok {
+    display:inline-flex; align-items:center; gap:7px; margin-top:9px; padding:7px 12px;
+    border-radius:10px; background:var(--ur-green-soft); color:var(--ur-green);
+    font-size:.8rem; font-weight:700;
+  }
   .ur-card--iptal .ur-order-no,.ur-card--iptal .ur-urun { text-decoration:line-through; }
   .ur-urunler { display:grid; gap:5px; margin-bottom:10px; }
   .ur-urun { display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; font-size:.85rem; color:#3c414b; }
@@ -415,6 +434,10 @@
   html.gs-dark .ur-badge--karma { background:#2c2138; color:#b489e3; }
   html.gs-dark .ur-src--raf { background:#17332a; color:#4fc794; }
   html.gs-dark .ur-urun-img { background:#26272d; }
+  html.gs-dark .ur-badge--kilit { background:#3a2321; color:#e07b6f; }
+  html.gs-dark .ur-okut input { background:#26272d; border-color:#33353c; color:#e6e7ea; }
+  html.gs-dark .ur-okut-ok { background:#17332a; color:#4fc794; }
+  html.gs-dark .ur-detail-item--bekliyor { border-color:#4a322f; }
   html.gs-dark .ur-card--iptal { background:#252022; }
   html.gs-dark .ur-empty { background:#1e1f24; border-color:#2c2e34; }
   html.gs-dark .ur-skeleton span { background:linear-gradient(100deg,#26272d 40%,#2d2e35 50%,#26272d 60%); background-size:200% 100%; }
@@ -446,9 +469,9 @@
     }
     function kaynakRozet(u, karma) {
         if (!karma) return '';
-        return u.uretim
-            ? '<span class="ur-src ur-src--uretim"><i class="fas fa-industry"></i> Üretilecek</span>'
-            : `<span class="ur-src ur-src--raf"><i class="bi bi-box2"></i> Raftan${(u.raflar && u.raflar.length) ? ' · ' + esc(u.raflar.join(', ')) : ''}</span>`;
+        if (u.uretim) return '<span class="ur-src ur-src--uretim"><i class="fas fa-industry"></i> Üretilecek</span>';
+        if (u.toplandi) return '<span class="ur-src ur-src--ok"><i class="bi bi-check-circle-fill"></i> Toplandı</span>';
+        return `<span class="ur-src ur-src--raf"><i class="bi bi-box2"></i> Raftan${(u.raflar && u.raflar.length) ? ' · ' + esc(u.raflar.join(', ')) : ''}</span>`;
     }
     function urunHtml(r) {
         const karma = karmaMi(r);
@@ -466,10 +489,24 @@
     }
 
     // Ürün özellikleri paneli — sipariş listesindeki "Ürün Detayları" ile aynı düzen
+    // Raftan kaleme okutma satırı: ürün barkodu + raf kodu okutulur → o raftan düşer.
+    // Okutulmuş kalem yeşil "Toplandı" gösterir. Üretim kalemine okutma gerekmez.
+    function okutmaHtml(r, u) {
+        if (u.uretim !== false) return '';
+        if (u.toplandi) {
+            return '<div class="ur-okut-ok"><i class="bi bi-check-circle-fill"></i> Toplandı — raftan düşüldü</div>';
+        }
+        return `
+            <div class="ur-okut" data-kayit="${Number(r.id)}">
+                <input type="text" class="ur-okut-urun" placeholder="Ürün barkodu okut" autocomplete="off" inputmode="none">
+                <input type="text" class="ur-okut-raf" placeholder="Raf kodu okut" autocomplete="off" inputmode="none">
+                <button type="button" class="ur-okut-btn"><i class="bi bi-upc-scan"></i> Okut</button>
+            </div>`;
+    }
     function detayHtml(r) {
         const karma = karmaMi(r);
         return kalemListesi(r).map(u => `
-            <div class="ur-detail-item">
+            <div class="ur-detail-item${u.uretim === false && !u.toplandi ? ' ur-detail-item--bekliyor' : ''}">
                 ${u.image_url
                     ? `<a href="${esc(u.image_url)}" target="_blank" rel="noopener"><img src="${esc(u.image_url)}" alt="Ürün" class="ur-detail-img"></a>`
                     : '<span class="ur-detail-img ur-detail-img--bos"><i class="bi bi-image"></i></span>'}
@@ -485,6 +522,7 @@
                         <span>${esc(u.barcode) || 'N/A'}</span>
                         ${u.barcode ? `<button type="button" class="ur-copy-btn" data-copy="${esc(u.barcode)}" title="Barkodu kopyala"><i class="far fa-copy"></i></button>` : ''}
                     </div>
+                    ${okutmaHtml(r, u)}
                 </div>
                 <div class="ur-detail-qty"><span>Adet</span>${esc(u.quantity) || 1}</div>
             </div>`).join('');
@@ -522,6 +560,7 @@
                     ${islemde ? '<span class="ur-badge ur-badge--islemde"><i class="bi bi-hammer"></i> Üretimde</span>' : ''}
                     ${tamamlanan ? '<span class="ur-badge ur-badge--kargo"><i class="bi bi-truck"></i> Kargoya verildi</span>' : ''}
                     ${karma ? `<span class="ur-badge ur-badge--karma"><i class="bi bi-exclamation-triangle"></i> Karma paket: ${sd.length} kalem · ${uretimKalem} üretim + ${sd.length - uretimKalem} raftan</span>` : ''}
+                    ${r.raf_tamam === false ? '<span class="ur-badge ur-badge--kilit"><i class="bi bi-lock-fill"></i> Raf okutulmadı — etiket kilitli</span>' : ''}
                     ${bekleyen ? (r.mail_sent
                         ? '<span class="ur-badge ur-badge--mail-ok"><i class="bi bi-envelope-check"></i> Mail gitti</span>'
                         : '<span class="ur-badge ur-badge--mail-yok"><i class="bi bi-envelope"></i> Mail yok</span>') : ''}
@@ -646,6 +685,9 @@
             detayBtn.classList.toggle('open', !panel.hidden);
             return;
         }
+        // Raf okutma gönder
+        const okutBtn = e.target.closest('.ur-okut-btn');
+        if (okutBtn) { await rafOkutGonder(okutBtn.closest('.ur-okut')); return; }
         // Barkod kopyala
         const copyBtn = e.target.closest('.ur-copy-btn');
         if (copyBtn) {
@@ -679,9 +721,50 @@
         }
     });
 
+    // ── Raf okutma: ürün + raf okut → okutulan raftan düş (panel açık kalır) ──
+    async function rafOkutGonder(kutu) {
+        if (!kutu) return;
+        const kayitId = kutu.getAttribute('data-kayit');
+        const urun = kutu.querySelector('.ur-okut-urun').value.trim();
+        const raf = kutu.querySelector('.ur-okut-raf').value.trim();
+        if (!urun) { toast('Önce ürün barkodunu okutun.', 'error'); kutu.querySelector('.ur-okut-urun').focus(); return; }
+        if (!raf) { toast('Raf kodunu okutun.', 'error'); kutu.querySelector('.ur-okut-raf').focus(); return; }
+        const res = await fetch(`/uretim/api/raf-okut/${kayitId}`, {
+            method: 'POST', headers: POST_HEADERS,
+            body: JSON.stringify({ barcode: urun, raf_kodu: raf })
+        });
+        const data = await res.json();
+        toast(data.message || 'Hata', data.success ? 'success' : 'error');
+        if (!data.success) return;
+        // Yerinde güncelle — panel kapanmasın, sıradaki ürün hemen okutulsun
+        kutu.outerHTML = '<div class="ur-okut-ok"><i class="bi bi-check-circle-fill"></i> Toplandı — raftan düşüldü</div>';
+        const r = rowCache[kayitId];
+        if (r) r.raf_tamam = data.raf_tamam;
+        if (data.raf_tamam) {
+            document.querySelectorAll('.ur-badge--kilit').forEach(b => {
+                if (b.closest('.ur-card') && b.closest('.ur-card').querySelector(`[data-kayit="${kayitId}"], .ur-okut-ok`)) b.remove();
+            });
+        }
+    }
+    document.getElementById('urList').addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        if (e.target.classList.contains('ur-okut-urun')) {
+            e.preventDefault();
+            e.target.closest('.ur-okut').querySelector('.ur-okut-raf').focus();
+        } else if (e.target.classList.contains('ur-okut-raf')) {
+            e.preventDefault();
+            rafOkutGonder(e.target.closest('.ur-okut'));
+        }
+    });
+
     // ── Kargo çıktısı: Yazdır (normal akış) + Otomatik Gönderim ──
     function kargoDialogAc(r) {
         if (!r) return;
+        // Etiket kilidi: raftan kalemler okutulmadan kargo çıktısı verilmez
+        if (r.raf_tamam === false) {
+            toast('Önce raftan toplanacak ürünleri okutun — Ürün Özellikleri panelinden raf okutmadan etiket verilmez.', 'error');
+            return;
+        }
         if (!r.kargo || !r.kargo.shipping_barcode) {
             toast('Bu sipariş için kargo kodu bulunamadı.', 'error');
             return;

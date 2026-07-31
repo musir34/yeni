@@ -642,6 +642,18 @@ def order_label():
     try:
         logger.info("🚀 /order-label POST isteği alındı.")
         order_number = request.form.get('order_number')
+
+        # 🏭 Üretim kilidi: karma siparişte raftan kalemler okutulmadan etiket
+        # verilmez (hangi ekrandan istenirse istensin). Hata → engel yok.
+        try:
+            from uretim_modu import eksik_raf_okutmalar
+            eksik = eksik_raf_okutmalar(order_number)
+        except Exception:
+            eksik = []
+        if eksik:
+            flash(f"Kargo etiketi verilemez: raftan toplanacak {len(eksik)} ürün henüz "
+                  f"okutulmadı. Üretim ekranı → Ürün Özellikleri'nden raf okutun.", 'danger')
+            return redirect(url_for('uretim.index'))
         shipping_barcode = request.form.get('shipping_barcode')
         cargo_provider = unquote(unquote(request.form.get('cargo_provider', '')))
         customer_name = unquote(unquote(request.form.get('customer_name', '')))

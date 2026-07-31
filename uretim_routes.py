@@ -207,6 +207,25 @@ def liste():
         except Exception:
             db.session.rollback()
             logger.warning("[URETIM] raf bilgisi okunamadı", exc_info=True)
+    # Raf okutma durumu: hangi kalemler okutulmuş (ledger pick anahtarı) — tek sorgu
+    okutulan_keys = set()
+    if detay_map:
+        try:
+            from models import StockMovement
+            from uretim_modu import pick_key
+            keys = []
+            for r in rows:
+                for item in (detay_map.get(r.order_number) or []):
+                    bc = normalize_barcode(str(item.get("barcode", "") or "").strip())
+                    if bc:
+                        keys.append(pick_key(r.order_number, bc))
+            if keys:
+                okutulan_keys = {k for (k,) in
+                                 db.session.query(StockMovement.idempotency_key)
+                                 .filter(StockMovement.idempotency_key.in_(keys))}
+        except Exception:
+            db.session.rollback()
+            logger.warning("[URETIM] raf okutma durumu okunamadı", exc_info=True)
     sonuc = []
     for r in rows:
         d = _to_dict(r, urun_map)
@@ -215,6 +234,7 @@ def liste():
         # Siparişin tam içeriği: her kalem üretilecek mi, raftan mı (raf kodlarıyla)
         tam = detay_map.get(r.order_number)
         if tam:
+            from uretim_modu import pick_key
             uretim_bcs = {str(k.get("barcode") or "") for k in d["details"]}
             kalemler = []
             for item in tam:
@@ -228,11 +248,16 @@ def liste():
                     "quantity": int(item.get("quantity", 1) or 1),
                     "uretim": bc in uretim_bcs,
                     "raflar": raf_map.get(bc, []),
+                    "toplandi": pick_key(r.order_number, bc) in okutulan_keys,
                     "image_url": ((p.images or "").split(",")[0].strip() if (p and p.images) else ""),
                     "title": (p.title or "") if p else "",
                     "model_code": (p.product_main_id or "") if p else "",
                 })
             d["siparis_detay"] = kalemler
+            # Etiket kilidi: tüm RAFTAN kalemler okutulmuş mu?
+            d["raf_tamam"] = all(k["toplandi"] for k in kalemler if not k["uretim"])
+        else:
+            d["raf_tamam"] = True  # içerik bilinmiyorsa kilitleme (eski kayıt)
         sonuc.append(d)
     return jsonify({"success": True, "rows": sonuc})
 
@@ -263,6 +288,92 @@ def isleme_al(kayit_id: int):
     mesaj = "Bekleyenlere geri alındı" if geri_al else "İşleme alındı — üretim başladı"
     logger.info(f"[URETIM] {kayit.order_number}: {mesaj}")
     return jsonify({"success": True, "message": mesaj})
+
+
+@uretim_bp.route("/api/raf-okut/<int:kayit_id>", methods=["POST"])
+def raf_okut(kayit_id: int):
+    """Karma siparişin RAFTAN kalemini üretim ekranından okut: okutulan raftan
+    fiziksel düşüm + pack_out ledger (picking_service ile aynı idempotency
+    anahtarı → sipariş hazırla ile çift düşüm imkânsız). Tüm raf kalemleri
+    okutulunca sipariş 'toplandı' damgalanır."""
+    from barcode_alias_helper import normalize_barcode
+    from picking_service import _norm_raf
+    from stock_ledger import record_movement, has_movement, REASON_PACK_OUT
+    from stock_management import sync_central_stock
+    from uretim_modu import raftan_kalemler, pick_key
+    from models import RafUrun
+
+    kayit = db.session.get(UretimSiparis, kayit_id)
+    if not kayit:
+        return jsonify({"success": False, "message": "Kayıt bulunamadı"}), 404
+    data = request.get_json(silent=True) or {}
+    bc = normalize_barcode(str(data.get("barcode") or "").strip())
+    raf_kodu = str(data.get("raf_kodu") or "").strip()
+    if not bc or not raf_kodu:
+        return jsonify({"success": False, "message": "Ürün barkodu ve raf kodu gerekli."}), 400
+
+    kalemler = raftan_kalemler(kayit)
+    kalem = next((k for k in kalemler if k["barcode"] == bc), None)
+    if kalem is None:
+        return jsonify({"success": False,
+                        "message": "Okutulan ürün bu siparişin raftan toplanacak kalemlerinden değil."}), 400
+
+    key = pick_key(kayit.order_number, bc)
+    if not has_movement(key):
+        qty = kalem["quantity"]
+        raf_hedef = _norm_raf(raf_kodu)
+        rec = next(
+            (r for r in (RafUrun.query
+                         .filter(RafUrun.urun_barkodu == bc, RafUrun.adet > 0)
+                         .with_for_update()
+                         .all())
+             if _norm_raf(r.raf_kodu) == raf_hedef),
+            None,
+        )
+        if not rec or (rec.adet or 0) < qty:
+            mevcut = (rec.adet or 0) if rec else 0
+            db.session.rollback()
+            return jsonify({"success": False,
+                            "message": f"{raf_kodu} rafında {bc} ürününden yeterli yok (var: {mevcut}, gerekli: {qty})."}), 400
+        try:
+            rec.adet = (rec.adet or 0) - qty
+            db.session.flush()
+            record_movement(
+                barcode=bc, delta=-qty, reason=REASON_PACK_OUT, shelf_code=rec.raf_kodu,
+                order_number=kayit.order_number, idempotency_key=key,
+                source="USER", note="uretim ekranı raf okutma",
+                mutate_shelf=False, commit=False,
+            )
+            sync_central_stock(bc, commit=False)
+            db.session.commit()
+            logger.info(f"[URETIM] 📦 {kayit.order_number} · {rec.raf_kodu} rafından {bc} × {qty} okutuldu/düşüldü")
+        except Exception:
+            db.session.rollback()
+            logger.exception("[URETIM] raf okutma düşümü hatası")
+            return jsonify({"success": False, "message": "Düşüm sırasında hata oluştu."}), 500
+
+    kalan = [k["barcode"] for k in kalemler
+             if not has_movement(pick_key(kayit.order_number, k["barcode"]))]
+    raf_tamam = not kalan
+    # Tümü okutulduysa 'toplandı' damgası — sipariş hazırla ekranı aynı siparişi
+    # ikinci kez okutup düşmesin (picking_service idempotency'si damgaya bakar).
+    if raf_tamam:
+        try:
+            from models import OrderCreated, OrderHazirlaniyor, OrderPicking
+            for M in (OrderCreated, OrderHazirlaniyor, OrderPicking):
+                o = M.query.filter_by(order_number=kayit.order_number).first()
+                if o:
+                    if not getattr(o, "toplandi_at", None):
+                        o.toplandi_at = datetime.utcnow()
+                        o.toplandi_raf = raf_kodu
+                        db.session.commit()
+                    break
+        except Exception:
+            db.session.rollback()
+            logger.warning("[URETIM] toplandı damgası yazılamadı", exc_info=True)
+    mesaj = ("Tüm raf ürünleri okutuldu — etiket alınabilir." if raf_tamam
+             else f"Okutuldu. Kalan raf ürünü: {len(kalan)}")
+    return jsonify({"success": True, "raf_tamam": raf_tamam, "kalan": kalan, "message": mesaj})
 
 
 @uretim_bp.route("/api/ayar", methods=["GET"])

@@ -110,6 +110,75 @@ def _raf_stok_haritasi(barkodlar: list[str]) -> dict[str, int]:
         return {}
 
 
+def _siparis_tam_detay(order_number: str) -> list[dict]:
+    """Siparişin TAM kalem listesi — aktif→arşiv sipariş tablolarında ilk bulunan.
+    with_entities: prod'da orders_archived kolon adları model ile birebir değil,
+    tam entity select patlar. Hata/bulunamadı → boş liste."""
+    from models import (OrderCreated, OrderHazirlaniyor, OrderPicking,
+                        OrderShipped, OrderDelivered, OrderArchived)
+    for M in (OrderCreated, OrderHazirlaniyor, OrderPicking,
+              OrderShipped, OrderDelivered, OrderArchived):
+        row = (M.query.filter_by(order_number=order_number)
+               .with_entities(M.details).first())
+        if row and row.details:
+            try:
+                det = json.loads(row.details) if isinstance(row.details, str) else row.details
+                if isinstance(det, list):
+                    return det
+            except (json.JSONDecodeError, TypeError):
+                pass
+    return []
+
+
+def raftan_kalemler(kayit) -> list[dict]:
+    """Üretim kaydındaki siparişin RAFTAN toplanacak kalemleri:
+    [{"barcode", "quantity"}] — tam sipariş içeriğinden üretim kalemleri çıkarılır."""
+    from barcode_alias_helper import normalize_barcode
+    try:
+        uretim_bcs = {normalize_barcode(str(u.get("barcode") or "").strip())
+                      for u in (json.loads(kayit.details) if kayit.details else [])}
+    except (json.JSONDecodeError, TypeError):
+        uretim_bcs = set()
+    kalemler = []
+    for item in _siparis_tam_detay(kayit.order_number):
+        bc = normalize_barcode(str(item.get("barcode", "") or "").strip())
+        if bc and bc not in uretim_bcs:
+            kalemler.append({"barcode": bc, "quantity": int(item.get("quantity", 1) or 1)})
+    return kalemler
+
+
+def pick_key(order_number: str, barcode: str) -> str:
+    """Raf okutma ledger idempotency anahtarı — picking_service ile BİREBİR aynı
+    format: iki ekrandan hangisi okutursa okutsun ikinci düşüm engellenir."""
+    return f"{order_number}:pick:{barcode}"
+
+
+def eksik_raf_okutmalar(order_number: str) -> list[str]:
+    """Kargo etiketi kilidi: üretim kaydı olan siparişte henüz raf okutulmamış
+    raftan-kalem barkodları. Kayıt yok / sipariş zaten kargolanmış / hata → []
+    (engel yok — normal akış asla durmaz)."""
+    try:
+        order_number = str(order_number or "").strip()
+        if not order_number:
+            return []
+        kayit = UretimSiparis.query.filter_by(order_number=order_number).first()
+        if not kayit:
+            return []
+        # Kargolanmış siparişin etiketini tekrar basmak engellenmez.
+        from models import OrderShipped, OrderDelivered, OrderArchived
+        for M in (OrderShipped, OrderDelivered, OrderArchived):
+            if (M.query.filter_by(order_number=order_number)
+                    .with_entities(M.order_number).first()):
+                return []
+        from stock_ledger import has_movement
+        return [k["barcode"] for k in raftan_kalemler(kayit)
+                if not has_movement(pick_key(order_number, k["barcode"]))]
+    except Exception:
+        logger.warning("[URETIM] raf okutma kontrolü yapılamadı", exc_info=True)
+        db.session.rollback()
+        return []
+
+
 def _mail_govdesi(order_number: str, musteri: str, model_kodlari: str,
                   eslesen: list[dict]) -> str:
     from mail_service import build_alert_email_html
