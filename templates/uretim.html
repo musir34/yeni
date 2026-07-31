@@ -91,6 +91,9 @@
         <button class="ur-tab" data-durum="uretildi" role="tab" aria-selected="false">
           Üretilenler <span id="urTabUretilen">0</span>
         </button>
+        <button class="ur-tab" data-durum="tamamlanan" role="tab" aria-selected="false">
+          Tamamlanan <span id="urTabTamamlanan">0</span>
+        </button>
       </div>
     </section>
 
@@ -108,6 +111,11 @@
     <input type="hidden" name="customer_surname">
     <input type="hidden" name="customer_address">
   </form>
+
+  <!-- Ürün görseli büyütme (lightbox) -->
+  <div class="ur-img-overlay" id="urImgOverlay" hidden>
+    <img src="" alt="Ürün görseli" id="urImgBuyuk">
+  </div>
 
   <!-- Kargo seçenekleri diyaloğu -->
   <div class="ur-kargo-overlay" id="urKargoDialog" hidden>
@@ -268,10 +276,29 @@
   .ur-badge--islemde { background:#fff3d6; color:#8a6410; }
   .ur-badge--mail-ok { background:var(--ur-green-soft); color:var(--ur-green); }
   .ur-badge--mail-yok { background:#f0f1f3; color:#656b75; }
+  .ur-badge--kargo { background:#e2edf9; color:#1d6fb8; }
+  .ur-badge--karma { background:#f3ebfd; color:#7b3fb8; }
+  .ur-src { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; font-size:.68rem; font-weight:700; }
+  .ur-src--uretim { background:var(--ur-rose-soft); color:var(--ur-rose-dark); }
+  .ur-src--raf { background:var(--ur-green-soft); color:var(--ur-green); }
   .ur-card--iptal .ur-order-no,.ur-card--iptal .ur-urun { text-decoration:line-through; }
   .ur-urunler { display:grid; gap:5px; margin-bottom:10px; }
   .ur-urun { display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; font-size:.85rem; color:#3c414b; }
   .ur-urun code { padding:2px 7px; border-radius:7px; background:#f3f4f6; color:#4a4f59; font-size:.76rem; }
+  .ur-urun-img {
+    width:34px; height:34px; border-radius:8px; object-fit:cover; flex:0 0 34px;
+    background:#f2f3f5; border:1px solid var(--ur-line); cursor:zoom-in; transition:.15s ease;
+  }
+  .ur-urun-img:hover { transform:scale(1.08); border-color:var(--ur-rose); }
+  .ur-urun-img--bos { display:grid; place-items:center; color:#a3a7af; font-size:.85rem; cursor:default; }
+  .ur-img-overlay {
+    position:fixed; inset:0; z-index:1070; display:grid; place-items:center;
+    background:rgba(15,17,22,.78); backdrop-filter:blur(4px); padding:24px; cursor:zoom-out;
+  }
+  .ur-img-overlay img {
+    max-width:min(92vw,640px); max-height:86vh; border-radius:18px;
+    box-shadow:0 24px 70px rgba(0,0,0,.5); background:#fff;
+  }
   .ur-urun .ur-adet { font-weight:720; color:var(--ur-rose-dark); }
   .ur-detail-toggle {
     display:inline-flex; align-items:center; gap:7px; margin-bottom:10px; padding:7px 12px;
@@ -382,6 +409,10 @@
   html.gs-dark .ur-kargo-info { background:#26272d; border-color:#33353c; }
   html.gs-dark .ur-kargo-info code { background:#2b2d33; color:#c1c4cb; }
   html.gs-dark .ur-badge--islemde { background:#3d331a; color:#e3b654; }
+  html.gs-dark .ur-badge--kargo { background:#1c2c3d; color:#6aa5dd; }
+  html.gs-dark .ur-badge--karma { background:#2c2138; color:#b489e3; }
+  html.gs-dark .ur-src--raf { background:#17332a; color:#4fc794; }
+  html.gs-dark .ur-urun-img { background:#26272d; }
   html.gs-dark .ur-card--iptal { background:#252022; }
   html.gs-dark .ur-empty { background:#1e1f24; border-color:#2c2e34; }
   html.gs-dark .ur-skeleton span { background:linear-gradient(100deg,#26272d 40%,#2d2e35 50%,#26272d 60%); background-size:200% 100%; }
@@ -402,19 +433,40 @@
     const rowCache = {};  // id → satır (kargo diyaloğu için)
     let kargoAktif = null;
 
-    function urunHtml(details) {
-        return (details || []).map(u => `
+    // Karma sipariş desteği: sipariş içeriği biliniyorsa (siparis_detay) TÜM
+    // kalemler listelenir — üretilecek / raftan toplanacak etiketiyle. Bilinmiyorsa
+    // (eski kayıt / sipariş bulunamadı) yalnız üretim kalemleri (details) görünür.
+    function kalemListesi(r) {
+        return (r.siparis_detay && r.siparis_detay.length) ? r.siparis_detay : (r.details || []);
+    }
+    function karmaMi(r) {
+        return !!(r.siparis_detay && r.siparis_detay.some(u => !u.uretim));
+    }
+    function kaynakRozet(u, karma) {
+        if (!karma) return '';
+        return u.uretim
+            ? '<span class="ur-src ur-src--uretim"><i class="fas fa-industry"></i> Üretilecek</span>'
+            : `<span class="ur-src ur-src--raf"><i class="bi bi-box2"></i> Raftan${(u.raflar && u.raflar.length) ? ' · ' + esc(u.raflar.join(', ')) : ''}</span>`;
+    }
+    function urunHtml(r) {
+        const karma = karmaMi(r);
+        return kalemListesi(r).map(u => `
             <div class="ur-urun">
+                ${u.image_url
+                    ? `<img src="${esc(u.image_url)}" alt="Ürün" class="ur-urun-img" data-buyut="${esc(u.image_url)}" title="Büyütmek için tıkla">`
+                    : '<span class="ur-urun-img ur-urun-img--bos"><i class="bi bi-image"></i></span>'}
                 <strong>${esc(u.sku) || '-'}</strong>
                 <code>${esc(u.barcode)}</code>
                 <span>${esc(u.color)}${u.size ? ' / ' + esc(u.size) : ''}</span>
                 <span class="ur-adet">× ${esc(u.quantity) || 1}</span>
+                ${kaynakRozet(u, karma)}
             </div>`).join('');
     }
 
     // Ürün özellikleri paneli — sipariş listesindeki "Ürün Detayları" ile aynı düzen
-    function detayHtml(details) {
-        return (details || []).map(u => `
+    function detayHtml(r) {
+        const karma = karmaMi(r);
+        return kalemListesi(r).map(u => `
             <div class="ur-detail-item">
                 ${u.image_url
                     ? `<a href="${esc(u.image_url)}" target="_blank" rel="noopener"><img src="${esc(u.image_url)}" alt="Ürün" class="ur-detail-img"></a>`
@@ -425,6 +477,7 @@
                     <div class="ur-detail-chips">
                         <span class="ur-chip2">${esc(u.color) || 'N/A'}</span>
                         <span class="ur-chip2">${esc(u.size) || 'N/A'}</span>
+                        ${kaynakRozet(u, karma)}
                     </div>
                     <div class="ur-detail-barcode">
                         <span>${esc(u.barcode) || 'N/A'}</span>
@@ -439,6 +492,10 @@
         const iptal = !!r.iptal;
         const bekleyen = durum === 'bekleyen';
         const islemde = durum === 'islemde';
+        const tamamlanan = durum === 'tamamlanan';
+        const sd = r.siparis_detay || [];
+        const uretimKalem = sd.filter(u => u.uretim).length;
+        const karma = sd.length > 0 && uretimKalem < sd.length;
         const kargoBtn = (r.kargo && r.kargo.shipping_barcode)
             ? `<button class="ur-undo-btn" data-kargo="${Number(r.id)}" title="Kargo çıktısı"><i class="bi bi-printer"></i></button>` : '';
         let butonlar = '';
@@ -448,6 +505,8 @@
         } else if (islemde) {
             butonlar = `<button class="ur-done-btn" data-uretildi="${Number(r.id)}"><i class="bi bi-check-lg"></i> Üretildi</button>${kargoBtn}
                         <button class="ur-undo-btn" data-isleme-geri="${Number(r.id)}" title="Bekleyenlere geri al"><i class="bi bi-arrow-counterclockwise"></i></button>`;
+        } else if (tamamlanan) {
+            butonlar = kargoBtn;  // kargolanmış sipariş: durum aksiyonu yok
         } else {
             butonlar = `${kargoBtn}<button class="ur-undo-btn" data-gerial="${Number(r.id)}"><i class="bi bi-arrow-counterclockwise"></i> Geri Al</button>`;
         }
@@ -459,20 +518,22 @@
                     ${r.product_main_id ? `<span class="ur-model-tag"><i class="fas fa-industry"></i> ${esc(r.product_main_id)}</span>` : ''}
                     ${iptal ? '<span class="ur-badge ur-badge--iptal"><i class="bi bi-x-octagon"></i> İPTAL — üretme!</span>' : ''}
                     ${islemde ? '<span class="ur-badge ur-badge--islemde"><i class="bi bi-hammer"></i> Üretimde</span>' : ''}
+                    ${tamamlanan ? '<span class="ur-badge ur-badge--kargo"><i class="bi bi-truck"></i> Kargoya verildi</span>' : ''}
+                    ${karma ? `<span class="ur-badge ur-badge--karma"><i class="bi bi-exclamation-triangle"></i> Karma paket: ${sd.length} kalem · ${uretimKalem} üretim + ${sd.length - uretimKalem} raftan</span>` : ''}
                     ${bekleyen ? (r.mail_sent
                         ? '<span class="ur-badge ur-badge--mail-ok"><i class="bi bi-envelope-check"></i> Mail gitti</span>'
                         : '<span class="ur-badge ur-badge--mail-yok"><i class="bi bi-envelope"></i> Mail yok</span>') : ''}
                 </div>
-                <div class="ur-urunler">${urunHtml(r.details)}</div>
+                <div class="ur-urunler">${urunHtml(r)}</div>
                 <button class="ur-detail-toggle" type="button">
                     <i class="bi bi-box-seam"></i> Ürün Özellikleri <i class="bi bi-chevron-down ur-detail-chevron"></i>
                 </button>
-                <div class="ur-detail-panel" hidden>${detayHtml(r.details)}</div>
+                <div class="ur-detail-panel" hidden>${detayHtml(r)}</div>
                 <div class="ur-meta">
                     <span><i class="bi bi-person"></i> ${esc(r.customer_name) || '-'}</span>
                     <span><i class="bi bi-calendar3"></i> Sipariş: ${esc(r.order_date) || '-'}</span>
                     ${islemde ? `<span><i class="bi bi-hammer"></i> İşleme alındı: ${esc(r.isleme_alindi_at) || '-'}</span>` : ''}
-                    ${durum === 'uretildi' ? `<span><i class="bi bi-check2-circle"></i> Üretildi: ${esc(r.uretildi_at) || '-'}</span>` : ''}
+                    ${(durum === 'uretildi' || tamamlanan) ? `<span><i class="bi bi-check2-circle"></i> Üretildi: ${esc(r.uretildi_at) || '-'}</span>` : ''}
                 </div>
             </div>
             <div class="ur-card-side">${butonlar}</div>
@@ -488,6 +549,8 @@
             document.getElementById('urTabBekleyen').textContent = rows.length;
         } else if (durum === 'islemde') {
             document.getElementById('urTabIslemde').textContent = rows.length;
+        } else if (durum === 'tamamlanan') {
+            document.getElementById('urTabTamamlanan').textContent = rows.length;
         } else {
             document.getElementById('urTabUretilen').textContent = rows.length;
         }
@@ -498,7 +561,8 @@
             const bosMesaj = {
                 bekleyen: '<div class="ur-empty"><i class="bi bi-stars"></i>Üretim bekleyen sipariş yok. 🎉</div>',
                 islemde: '<div class="ur-empty"><i class="bi bi-hammer"></i>Şu an üretimde sipariş yok.</div>',
-                uretildi: '<div class="ur-empty"><i class="bi bi-inbox"></i>Henüz üretilen sipariş yok.</div>'
+                uretildi: '<div class="ur-empty"><i class="bi bi-inbox"></i>Henüz üretilen sipariş yok.</div>',
+                tamamlanan: '<div class="ur-empty"><i class="bi bi-truck"></i>Henüz kargoya verilen üretim siparişi yok.</div>'
             };
             list.innerHTML = bosMesaj[durum] || bosMesaj.bekleyen;
             return;
@@ -510,6 +574,7 @@
         listeYukle('bekleyen', aktifDurum === 'bekleyen');
         listeYukle('islemde', aktifDurum === 'islemde');
         listeYukle('uretildi', aktifDurum === 'uretildi');
+        listeYukle('tamamlanan', aktifDurum === 'tamamlanan');
     }
 
     async function ayarYukle() {
@@ -564,6 +629,13 @@
     document.getElementById('urYenile').addEventListener('click', () => { tazele(); ayarYukle(); });
 
     document.getElementById('urList').addEventListener('click', async (e) => {
+        // Ürün görselini büyüt (lightbox)
+        const imgBtn = e.target.closest('[data-buyut]');
+        if (imgBtn) {
+            document.getElementById('urImgBuyuk').src = imgBtn.getAttribute('data-buyut');
+            document.getElementById('urImgOverlay').hidden = false;
+            return;
+        }
         // Ürün özellikleri panelini aç/kapat
         const detayBtn = e.target.closest('.ur-detail-toggle');
         if (detayBtn) {
@@ -618,6 +690,11 @@
         document.getElementById('urKargoKod').textContent = r.kargo.shipping_barcode;
         document.getElementById('urKargoDialog').hidden = false;
     }
+    const imgOverlay = document.getElementById('urImgOverlay');
+    imgOverlay.addEventListener('click', () => { imgOverlay.hidden = true; });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !imgOverlay.hidden) imgOverlay.hidden = true;
+    });
     document.getElementById('urKargoKapat').addEventListener('click', () => {
         document.getElementById('urKargoDialog').hidden = true;
     });

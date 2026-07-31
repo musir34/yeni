@@ -80,15 +80,37 @@ def index():
 def liste():
     durum = (request.args.get("durum") or "bekleyen").strip()
     q = UretimSiparis.query
-    if durum == "uretildi":
+    if durum in ("uretildi", "tamamlanan"):
         q = q.filter_by(uretildi=True)
     elif durum == "islemde":
         q = q.filter_by(uretildi=False, isleme_alindi=True)
     else:  # bekleyen
         q = q.filter_by(uretildi=False, isleme_alindi=False)
-    rows = (q.order_by(UretimSiparis.created_at.desc())
+    # Sıralama sipariş tarihine göre: aktif kuyruklarda en eski üstte (FIFO),
+    # tamamlananlarda en yeni üstte. order_date boşsa sona düşer.
+    if durum == "tamamlanan":
+        siralama = UretimSiparis.order_date.desc().nullslast()
+    else:
+        siralama = UretimSiparis.order_date.asc().nullslast()
+    rows = (q.order_by(siralama, UretimSiparis.created_at.desc())
             .limit(500)
             .all())
+    # Tamamlanan = üretildi + kargoya verildi (Shipped/Delivered/Arşiv'de canlı
+    # kontrol — ayrı kolon yok, sipariş kargolanınca kendiliğinden taşınır).
+    # Hata → boş set: tamamlanan boş kalır, üretilenler eski davranışla tümünü gösterir.
+    if durum in ("uretildi", "tamamlanan") and rows:
+        kargolanan = set()
+        try:
+            from models import OrderShipped, OrderDelivered, OrderArchived
+            nolar = [r.order_number for r in rows]
+            for M in (OrderShipped, OrderDelivered, OrderArchived):
+                kargolanan |= {o.order_number for o in
+                               M.query.filter(M.order_number.in_(nolar))
+                               .with_entities(M.order_number)}
+        except Exception:
+            logger.warning("[URETIM] kargolanan kontrolü yapılamadı", exc_info=True)
+        rows = [r for r in rows
+                if (r.order_number in kargolanan) == (durum == "tamamlanan")]
     # Üretim beklerken Trendyol'da iptal edilen sipariş: üretici boşuna üretmesin
     # diye listede İPTAL rozetiyle işaretlenir (kayıt silinmez, iz kalır).
     iptaller = set()
@@ -102,6 +124,37 @@ def liste():
                         .with_entities(OrderCancelled.order_number)}
         except Exception:
             logger.warning("[URETIM] iptal kontrolü yapılamadı", exc_info=True)
+    # Kargo çıktısı + TAM sipariş içeriği için canlı sipariş verisi —
+    # cargo_tracking_number sipariş daha Yeni'yken Trendyol'dan gelir, statü şartı yok.
+    # Karma siparişlerde (üretim + raftan kalemler birlikte) paketlemede eksik
+    # ürün kalmasın diye siparişin TÜM kalemleri de buradan okunur (detay_map).
+    from barcode_alias_helper import normalize_barcode
+    kargo_map = {}
+    detay_map = {}  # order_number → siparişin tam kalem listesi (ham details)
+    if rows:
+        try:
+            from models import (OrderCreated, OrderHazirlaniyor, OrderPicking,
+                                OrderShipped, OrderDelivered, OrderArchived)
+            nolar = [r.order_number for r in rows]
+            for M in (OrderCreated, OrderHazirlaniyor, OrderPicking,
+                      OrderShipped, OrderDelivered, OrderArchived):
+                for o in M.query.filter(M.order_number.in_(nolar)).all():
+                    kargo_map.setdefault(o.order_number, {
+                        "shipping_barcode": o.cargo_tracking_number or "",
+                        "cargo_provider": o.cargo_provider_name or "",
+                        "customer_name": o.customer_name or "",
+                        "customer_surname": o.customer_surname or "",
+                        "customer_address": o.customer_address or "",
+                    })
+                    if o.order_number not in detay_map and o.details:
+                        try:
+                            det = json.loads(o.details) if isinstance(o.details, str) else o.details
+                            if isinstance(det, list) and det:
+                                detay_map[o.order_number] = det
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+        except Exception:
+            logger.warning("[URETIM] kargo/sipariş içeriği okunamadı", exc_info=True)
     # Ürün özellikleri için Product haritası (görsel/başlık/model) — tek sorgu
     urun_map = {}
     if rows:
@@ -117,33 +170,56 @@ def liste():
                     bc = str(d.get("barcode") or "").strip()
                     if bc:
                         barkodlar.add(bc)
+            for det in detay_map.values():
+                for item in det:
+                    bc = normalize_barcode(str(item.get("barcode", "") or "").strip())
+                    if bc:
+                        barkodlar.add(bc)
             if barkodlar:
                 urun_map = {p.barcode: p for p in Product.query.filter(Product.barcode.in_(barkodlar))}
         except Exception:
             logger.warning("[URETIM] ürün özellikleri okunamadı", exc_info=True)
-    # Kargo çıktısı için canlı sipariş verisi (/order-label form alanları) —
-    # cargo_tracking_number sipariş daha Yeni'yken Trendyol'dan gelir, statü şartı yok.
-    kargo_map = {}
-    if rows:
+    # Raftan toplanacak kalemler için raf bilgisi (adet>0, çoktan aza)
+    raf_map = {}
+    if detay_map:
         try:
-            from models import OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped
-            nolar = [r.order_number for r in rows]
-            for M in (OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped):
-                for o in M.query.filter(M.order_number.in_(nolar)).all():
-                    kargo_map.setdefault(o.order_number, {
-                        "shipping_barcode": o.cargo_tracking_number or "",
-                        "cargo_provider": o.cargo_provider_name or "",
-                        "customer_name": o.customer_name or "",
-                        "customer_surname": o.customer_surname or "",
-                        "customer_address": o.customer_address or "",
-                    })
+            from models import RafUrun
+            bcs = {normalize_barcode(str(item.get("barcode", "") or "").strip())
+                   for det in detay_map.values() for item in det}
+            bcs.discard("")
+            if bcs:
+                for ru in (RafUrun.query
+                           .filter(RafUrun.urun_barkodu.in_(bcs), RafUrun.adet > 0)
+                           .order_by(RafUrun.adet.desc())):
+                    raf_map.setdefault(ru.urun_barkodu, []).append(f"{ru.raf_kodu} ({ru.adet})")
         except Exception:
-            logger.warning("[URETIM] kargo verisi okunamadı", exc_info=True)
+            logger.warning("[URETIM] raf bilgisi okunamadı", exc_info=True)
     sonuc = []
     for r in rows:
         d = _to_dict(r, urun_map)
         d["iptal"] = r.order_number in iptaller
         d["kargo"] = kargo_map.get(r.order_number)
+        # Siparişin tam içeriği: her kalem üretilecek mi, raftan mı (raf kodlarıyla)
+        tam = detay_map.get(r.order_number)
+        if tam:
+            uretim_bcs = {str(k.get("barcode") or "") for k in d["details"]}
+            kalemler = []
+            for item in tam:
+                bc = normalize_barcode(str(item.get("barcode", "") or "").strip())
+                p = urun_map.get(bc)
+                kalemler.append({
+                    "barcode": bc,
+                    "sku": item.get("sku") or "",
+                    "color": item.get("color") or "",
+                    "size": item.get("size") or "",
+                    "quantity": int(item.get("quantity", 1) or 1),
+                    "uretim": bc in uretim_bcs,
+                    "raflar": raf_map.get(bc, []),
+                    "image_url": ((p.images or "").split(",")[0].strip() if (p and p.images) else ""),
+                    "title": (p.title or "") if p else "",
+                    "model_code": (p.product_main_id or "") if p else "",
+                })
+            d["siparis_detay"] = kalemler
         sonuc.append(d)
     return jsonify({"success": True, "rows": sonuc})
 

@@ -94,6 +94,22 @@ def get_uretim_barcodes() -> set[str]:
         return set()
 
 
+def _raf_stok_haritasi(barkodlar: list[str]) -> dict[str, int]:
+    """Barkod → rafta toplam adet. Hata → boş harita (raf önceliği devre
+    dışı kalır, kalemler eski davranışla üretime yazılır)."""
+    try:
+        from models import RafUrun
+        rows = (db.session.query(RafUrun.urun_barkodu, db.func.sum(RafUrun.adet))
+                .filter(RafUrun.urun_barkodu.in_(barkodlar), RafUrun.adet > 0)
+                .group_by(RafUrun.urun_barkodu)
+                .all())
+        return {bc: int(toplam or 0) for bc, toplam in rows}
+    except Exception:
+        logger.warning("[URETIM] raf stok haritası okunamadı", exc_info=True)
+        db.session.rollback()
+        return {}
+
+
 def _mail_govdesi(order_number: str, musteri: str, model_kodlari: str,
                   eslesen: list[dict]) -> str:
     from mail_service import build_alert_email_html
@@ -149,6 +165,23 @@ def isle_yeni_siparisler(new_order_dicts: list[dict]) -> int:
                             'size': item.get('size') or '',
                             'quantity': int(item.get('quantity', 1) or 1),
                         })
+                if not eslesen:
+                    continue
+                # 📦 Raf önceliği: barkodun rafta yeterli stoğu varsa o kalem
+                # üretime YAZILMAZ — sipariş normal akışta raftan toplanır.
+                # Yalnız raf stoğu yetmeyen kalemler üretim kaydına girer.
+                raf_stok = _raf_stok_haritasi([u['barcode'] for u in eslesen])
+                rafta_karsilanan = [u for u in eslesen
+                                    if raf_stok.get(u['barcode'], 0) >= u['quantity']]
+                if rafta_karsilanan:
+                    eslesen = [u for u in eslesen
+                               if raf_stok.get(u['barcode'], 0) < u['quantity']]
+                    logger.info(
+                        f"[URETIM] 📦 {order_number}: raf önceliği — "
+                        + ", ".join(f"{u['barcode']} (rafta {raf_stok.get(u['barcode'], 0)})"
+                                    for u in rafta_karsilanan)
+                        + " rafta mevcut, üretime yazılmadı"
+                    )
                 if not eslesen:
                     continue
                 # Resync koruması: aynı sipariş için ikinci kayıt açılmaz.
