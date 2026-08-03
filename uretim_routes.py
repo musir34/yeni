@@ -112,8 +112,9 @@ def liste():
             logger.warning("[URETIM] kargolanan kontrolü yapılamadı", exc_info=True)
         rows = [r for r in rows
                 if (r.order_number in kargolanan) == (durum == "tamamlanan")]
-    # Üretim beklerken Trendyol'da iptal edilen sipariş: üretici boşuna üretmesin
-    # diye listede İPTAL rozetiyle işaretlenir (kayıt silinmez, iz kalır).
+    # Pazaryerinde iptal edilen sipariş üretim sayfasında GÖSTERİLMEZ (kafa
+    # karışıklığı olmasın) — kayıt silinmez (iz kalır), sipariş normal iptal
+    # sayfasında görünür; aboneler 'uretim_iptal' mailiyle haberdar edilir.
     iptaller = set()
     if rows:
         try:
@@ -124,7 +125,9 @@ def liste():
                         .filter(OrderCancelled.order_number.in_(nolar))
                         .with_entities(OrderCancelled.order_number)}
         except Exception:
+            db.session.rollback()
             logger.warning("[URETIM] iptal kontrolü yapılamadı", exc_info=True)
+        rows = [r for r in rows if r.order_number not in iptaller]
     # Kargo çıktısı + TAM sipariş içeriği için canlı sipariş verisi —
     # cargo_tracking_number sipariş daha Yeni'yken Trendyol'dan gelir, statü şartı yok.
     # Karma siparişlerde (üretim + raftan kalemler birlikte) paketlemede eksik

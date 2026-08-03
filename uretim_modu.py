@@ -201,6 +201,69 @@ def _mail_govdesi(order_number: str, musteri: str, model_kodlari: str,
     )
 
 
+def isle_iptal_bildirimleri() -> int:
+    """Üretim bekleyen/işlemdeki sipariş pazaryerinde iptal edildiyse
+    (OrderCancelled'a düştüyse) 'uretim_iptal' abonelerine mail atar —
+    üretici boşuna üretmesin. iptal_mail_at ile tek sefer (dedupe).
+    Sipariş sync'i sonrası çağrılır; her hata yutulur, akış durmaz.
+    Dönüş: mail atılan kayıt sayısı."""
+    try:
+        from models import OrderCancelled
+        adaylar = (UretimSiparis.query
+                   .filter_by(uretildi=False)
+                   .filter(UretimSiparis.iptal_mail_at.is_(None))
+                   .all())
+        if not adaylar:
+            return 0
+        nolar = [k.order_number for k in adaylar]
+        iptaller = {o.order_number for o in
+                    OrderCancelled.query
+                    .filter(OrderCancelled.order_number.in_(nolar))
+                    .with_entities(OrderCancelled.order_number)}
+        if not iptaller:
+            return 0
+        from mail_service import notify, build_alert_email_html
+        sayi = 0
+        for kayit in adaylar:
+            if kayit.order_number not in iptaller:
+                continue
+            try:
+                try:
+                    eslesen = json.loads(kayit.details) if kayit.details else []
+                except (json.JSONDecodeError, TypeError):
+                    eslesen = []
+                govde = build_alert_email_html(
+                    'uretim_iptal',
+                    headline=f"{kayit.order_number} numaralı üretim siparişi pazaryerinde İPTAL edildi.",
+                    summary_rows=[
+                        ("Sipariş No", kayit.order_number),
+                        ("Müşteri", kayit.customer_name or "-"),
+                        ("Model", kayit.product_main_id or "-"),
+                        ("Ürünler", "<br>".join(
+                            f"{u.get('sku') or '-'} <span style=\"color:#888;\">({u.get('barcode')})</span> "
+                            f"{u.get('color') or ''} {u.get('size') or ''} × {u.get('quantity', 1)}"
+                            for u in eslesen) or "-"),
+                    ],
+                    action_hint=("Bu siparişin üretimini DURDURUN. Sipariş üretim sayfasından "
+                                 "kaldırıldı; iptal edilen siparişler sayfasında görülebilir."),
+                )
+                notify('uretim_iptal',
+                       subject=f"🛑 Üretim siparişi İPTAL — {kayit.order_number} ({kayit.product_main_id})",
+                       body=govde)
+                kayit.iptal_mail_at = datetime.utcnow()
+                db.session.commit()
+                sayi += 1
+                logger.info(f"[URETIM] 🛑 İptal bildirimi gönderildi: {kayit.order_number}")
+            except Exception:
+                db.session.rollback()
+                logger.exception(f"[URETIM] iptal bildirimi hatası (yutuldu): {kayit.order_number}")
+        return sayi
+    except Exception:
+        db.session.rollback()
+        logger.warning("[URETIM] isle_iptal_bildirimleri hatası (yutuldu)", exc_info=True)
+        return 0
+
+
 def isle_yeni_siparisler(new_order_dicts: list[dict]) -> int:
     """
     Yeni gelen Trendyol siparişlerinde üretim modundaki modelleri yakalar:

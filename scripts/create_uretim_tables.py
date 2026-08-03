@@ -40,6 +40,7 @@ def main():
             eksikler = {
                 "isleme_alindi": "BOOLEAN NOT NULL DEFAULT FALSE",
                 "isleme_alindi_at": "TIMESTAMP",
+                "iptal_mail_at": "TIMESTAMP",
             }
             from sqlalchemy import text
             eklendi = []

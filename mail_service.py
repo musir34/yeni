@@ -19,6 +19,7 @@ NOTIFY_EVENTS = {
     'stok_yok_hatirlatma':   'Stoksuz bekleyen siparişler (periyodik hatırlatma)',
     'yeni_soru':             "Trendyol'da yeni müşteri sorusu geldiğinde",
     'uretim_siparis':        'Üretim modundaki modele sipariş geldiğinde',
+    'uretim_iptal':          'Üretim bekleyen sipariş iptal edildiğinde',
 }
 
 # Statü -> olay eşlemesi
@@ -60,6 +61,7 @@ EVENT_COLORS = {
     'stok_yok_siparis':      '#DC3545',
     'stok_yok_hatirlatma':   '#FD7E14',
     'uretim_siparis':        '#0D6EFD',
+    'uretim_iptal':          '#DC3545',
 }
 
 # Olay başlıkları
@@ -75,6 +77,7 @@ EVENT_TITLES = {
     'stok_yok_siparis':      '⚠️ Stoksuz Sipariş — Hazırlanamıyor',
     'stok_yok_hatirlatma':   '📋 Stoksuz Bekleyen Siparişler',
     'uretim_siparis':        '🏭 Üretim Siparişi Geldi',
+    'uretim_iptal':          '🛑 Üretim Siparişi İptal Edildi',
 }
 
 

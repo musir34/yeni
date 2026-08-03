@@ -681,6 +681,14 @@ def _process_sync_orders_bulk(sync_orders):
             except Exception:
                 logger.exception("[URETIM] yeni sipariş işleme hatası (yutuldu)")
 
+        # 🏭 ÜRETİM MODU: üretim bekleyen sipariş pazaryerinde iptal edildiyse
+        # abonelere anlık mail (uretim_iptal) — üretici boşuna üretmesin.
+        try:
+            from uretim_modu import isle_iptal_bildirimleri
+            isle_iptal_bildirimleri()
+        except Exception:
+            logger.exception("[URETIM] iptal bildirimi hatası (yutuldu)")
+
         # AUTO-HEAL: Bu sync turunda raf atanamamış (atanan_raf=NULL) Created siparişleri
         # otomatik olarak rafa bağla + audit event'lerini yaz.
         # Bug öncesi düşmüş siparişler veya geçici raf yokluğu yüzünden boş kalanlar
