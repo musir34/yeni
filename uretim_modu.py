@@ -179,14 +179,44 @@ def eksik_raf_okutmalar(order_number: str) -> list[str]:
         return []
 
 
+def _urun_satirlari_html(eslesen: list[dict]) -> str:
+    """Mail için üretilecek kalem satırları — ürün görselli. Görsel Product.images
+    ilk URL'den gelir; mutlak (http) değilse mail istemcisi erişemeyeceği için
+    görsel basılmaz. Hata → görselsiz satırlar (mail yine gider)."""
+    gorsel_map: dict[str, str] = {}
+    try:
+        barkodlar = [str(u.get("barcode") or "").strip() for u in eslesen]
+        barkodlar = [b for b in barkodlar if b]
+        if barkodlar:
+            rows = (Product.query
+                    .filter(Product.barcode.in_(barkodlar))
+                    .with_entities(Product.barcode, Product.images)
+                    .all())
+            for bc, images in rows:
+                url = (images or "").split(",")[0].strip()
+                if url.startswith("http"):
+                    gorsel_map[bc] = url
+    except Exception:
+        logger.warning("[URETIM] mail görselleri okunamadı", exc_info=True)
+        db.session.rollback()
+    satirlar = []
+    for u in eslesen:
+        url = gorsel_map.get(str(u.get("barcode") or "").strip())
+        img = (f'<img src="{url}" width="52" height="52" alt="" '
+               f'style="border-radius:8px;object-fit:cover;vertical-align:middle;'
+               f'margin-right:10px;border:1px solid #eee;">' if url else "")
+        satirlar.append(
+            f'<div style="margin:4px 0;display:flex;align-items:center;">{img}'
+            f'<span>{u.get("sku") or "-"} <span style="color:#888;">({u.get("barcode")})</span> '
+            f'{u.get("color") or ""} {u.get("size") or ""} × {u.get("quantity", 1)}</span></div>'
+        )
+    return "".join(satirlar)
+
+
 def _mail_govdesi(order_number: str, musteri: str, model_kodlari: str,
                   eslesen: list[dict]) -> str:
     from mail_service import build_alert_email_html
-    urun_satirlari = "<br>".join(
-        f"{u.get('sku') or '-'} <span style=\"color:#888;\">({u.get('barcode')})</span> "
-        f"{u.get('color') or ''} {u.get('size') or ''} × {u.get('quantity', 1)}"
-        for u in eslesen
-    )
+    urun_satirlari = _urun_satirlari_html(eslesen)
     return build_alert_email_html(
         'uretim_siparis',
         headline=f"{order_number} numaralı sipariş üretim modundaki bir modele geldi.",
@@ -239,10 +269,7 @@ def isle_iptal_bildirimleri() -> int:
                         ("Sipariş No", kayit.order_number),
                         ("Müşteri", kayit.customer_name or "-"),
                         ("Model", kayit.product_main_id or "-"),
-                        ("Ürünler", "<br>".join(
-                            f"{u.get('sku') or '-'} <span style=\"color:#888;\">({u.get('barcode')})</span> "
-                            f"{u.get('color') or ''} {u.get('size') or ''} × {u.get('quantity', 1)}"
-                            for u in eslesen) or "-"),
+                        ("Ürünler", _urun_satirlari_html(eslesen) or "-"),
                     ],
                     action_hint=("Bu siparişin üretimini DURDURUN. Sipariş üretim sayfasından "
                                  "kaldırıldı; iptal edilen siparişler sayfasında görülebilir."),
