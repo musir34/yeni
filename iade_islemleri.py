@@ -27,6 +27,10 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+CLAIMS_PAGE_SIZE = 50
+CLAIMS_RESULT_CAP = 500
+CLAIMS_MIN_SPLIT = timedelta(minutes=5)
+
 iade_islemleri = Blueprint("iade_islemleri", __name__)
 
 # ------------------------------------------------------------------ #
@@ -85,15 +89,13 @@ def fetch_data_from_api(start_date: datetime, end_date: datetime):
     }
 
     session = get_requests_session()
-    page, size = 0, 50
-    all_content = []
 
-    while True:
+    def fetch_page(window_start, window_end, page):
         params = {
-            "size": size,
+            "size": CLAIMS_PAGE_SIZE,
             "page": page,
-            "startDate": int(start_date.timestamp() * 1000),
-            "endDate": int(end_date.timestamp() * 1000),
+            "startDate": int(window_start.timestamp() * 1000),
+            "endDate": int(window_end.timestamp() * 1000),
             "sortColumn": "CLAIM_DATE",
             "sortDirection": "DESC",
         }
@@ -101,16 +103,55 @@ def fetch_data_from_api(start_date: datetime, end_date: datetime):
         if r.status_code != 200:
             logger.error("API hatası [%s]: %s", r.status_code, r.text)
             return None
+        return r.json()
 
-        data = r.json()
-        content = data.get("content", [])
-        if not content:
-            break
+    def fetch_window(window_start, window_end):
+        first = fetch_page(window_start, window_end, 0)
+        if first is None:
+            return None
 
-        all_content.extend(content)
-        page += 1
+        total_elements = int(first.get("totalElements") or 0)
+        duration = window_end - window_start
 
-    logger.info("API’den toplam %d kayıt alındı.", len(all_content))
+        # Claims servisi tek sorguyu 500 kayıtta sessizce kesiyor. Sınıra
+        # gelindiyse zaman aralığını böl; birleşimde claim id ile dedupe yapılır.
+        if total_elements >= CLAIMS_RESULT_CAP and duration > CLAIMS_MIN_SPLIT:
+            midpoint = window_start + (duration / 2)
+            left = fetch_window(window_start, midpoint)
+            right = fetch_window(midpoint, window_end)
+            if left is None or right is None:
+                return None
+            return left + right
+
+        content = list(first.get("content", []))
+        total_pages = int(first.get("totalPages") or (1 if content else 0))
+        for page in range(1, total_pages):
+            data = fetch_page(window_start, window_end, page)
+            if data is None:
+                return None
+            content.extend(data.get("content", []))
+        if total_elements >= CLAIMS_RESULT_CAP:
+            logger.warning(
+                "Claims API en küçük zaman diliminde de %s kayıt sınırına ulaştı: %s – %s",
+                CLAIMS_RESULT_CAP, window_start, window_end,
+            )
+        return content
+
+    rows = fetch_window(start_date, end_date)
+    if rows is None:
+        return None
+
+    unique = {}
+    for item in rows:
+        claim_id = item.get("id") or item.get("claimId")
+        if claim_id:
+            unique[str(claim_id)] = item
+    all_content = sorted(
+        unique.values(),
+        key=lambda item: item.get("claimDate") or 0,
+        reverse=True,
+    )
+    logger.info("API’den toplam %d benzersiz kayıt alındı.", len(all_content))
     return {"content": all_content}
 
 
@@ -230,7 +271,7 @@ def fetch_and_save_daily_returns(app):
         now = datetime.now()
         # Durumu sonradan Accepted/Rejected olan talepleri de upsert edebilmek için
         # yalnız son 24 saati değil yakın geçmişi yeniden tara.
-        data = fetch_data_from_api(now - timedelta(days=30), now)
+        data = fetch_data_from_api(now - timedelta(days=60), now)
         if data:
             save_to_database(data, db.session)
 

@@ -1,8 +1,10 @@
 from datetime import datetime
 from pathlib import Path
 
+import canli_panel as panel
 from canli_panel import (
     IST,
+    _aggregate_shopify_sales,
     _model_matches,
     _normalize_source_filter,
     _order_net_amount,
@@ -65,3 +67,79 @@ def test_supplier_api_requires_login(client):
 
     assert response.status_code == 302
     assert "/login" in response.headers["Location"]
+
+
+def test_cancelled_orders_are_removed_from_range_order_numbers(monkeypatch):
+    class FakeQuery:
+        def filter(self, *_args):
+            return self
+
+        def all(self):
+            return [("SATIS-1",), ("IPTAL-1",)]
+
+    monkeypatch.setattr(panel.db.session, "query", lambda *_args: FakeQuery())
+    monkeypatch.setattr(panel, "_apply_source_filter", lambda query, *_args: query)
+    monkeypatch.setattr(
+        panel,
+        "_cancelled_order_numbers_between",
+        lambda *_args, **_kwargs: {"IPTAL-1"},
+    )
+
+    start = datetime(2026, 7, 7, tzinfo=IST)
+    end = datetime(2026, 8, 6, tzinfo=IST)
+
+    assert panel._order_numbers_created_between(start, end, "trendyol") == {"SATIS-1"}
+
+
+def test_shopify_api_orders_are_aggregated_without_refunded_or_unpaid_orders():
+    def line(barcode, quantity=1, current_quantity=1, total="500"):
+        return {
+            "quantity": quantity,
+            "currentQuantity": current_quantity,
+            "resolved_barcode": barcode,
+            "originalTotalSet": {"shopMoney": {"amount": total}},
+        }
+
+    orders = [
+        {
+            "legacyResourceId": "1",
+            "displayFinancialStatus": "PAID",
+            "currentTotalPriceSet": {"shopMoney": {"amount": "150"}},
+            "line_items": [line("BC-1", quantity=2, current_quantity=1, total="300")],
+        },
+        {
+            "legacyResourceId": "2",
+            "displayFinancialStatus": "PENDING",
+            "paymentGatewayNames": ["Cash on Delivery"],
+            "currentTotalPriceSet": {"shopMoney": {"amount": "500"}},
+            "line_items": [line("BC-2")],
+        },
+        {
+            "legacyResourceId": "3",
+            "displayFinancialStatus": "PENDING",
+            "paymentGatewayNames": ["Bank Transfer"],
+            "currentTotalPriceSet": {"shopMoney": {"amount": "500"}},
+            "line_items": [line("BC-3")],
+        },
+        {
+            "legacyResourceId": "4",
+            "displayFinancialStatus": "REFUNDED",
+            "currentTotalPriceSet": {"shopMoney": {"amount": "0"}},
+            "line_items": [line("BC-4", current_quantity=0)],
+        },
+        {
+            "legacyResourceId": "5",
+            "displayFinancialStatus": "PAID",
+            "currentTotalPriceSet": {"shopMoney": {"amount": "500"}},
+            "line_items": [line("BC-5")],
+        },
+    ]
+
+    quantities, amounts, order_ids = _aggregate_shopify_sales(
+        orders,
+        excluded_order_ids={"SH-5"},
+    )
+
+    assert quantities == {"BC-1": 1, "BC-2": 1}
+    assert amounts == {"BC-1": 150.0, "BC-2": 500.0}
+    assert order_ids == {"SH-1", "SH-2"}

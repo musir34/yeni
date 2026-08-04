@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 from flask import Blueprint, Response, jsonify, request, stream_with_context, render_template, redirect, url_for
 from sqlalchemy import func, literal, text, and_, or_
 from models import db, Product, CentralStock
-from models import OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, Archive, ReturnOrder, ReturnProduct
+from models import OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderCancelled, Archive, ReturnOrder, ReturnProduct
 from login_logout import login_required, roles_required
 try:
     from models import OrderDelivered
@@ -100,6 +100,20 @@ def _utc_naive_bounds(start_ist, end_ist):
         start_ist.astimezone(timezone.utc).replace(tzinfo=None),
         end_ist.astimezone(timezone.utc).replace(tzinfo=None),
     )
+
+
+def _cancelled_order_numbers_between(start_ist, end_ist, source_filter="all"):
+    """Aralıkta oluşturulmuş fakat sonradan iptal edilmiş siparişleri döndür."""
+    ts_col, _, _ = _col(OrderCancelled, ORD_TS_CANDS, "ts")
+    if ts_col is None or not hasattr(OrderCancelled, "order_number"):
+        return set()
+    start_utc, end_utc = _utc_naive_bounds(start_ist, end_ist)
+    q = db.session.query(OrderCancelled.order_number).filter(
+        ts_col >= start_utc,
+        ts_col < end_utc,
+    )
+    q = _apply_source_filter(q, OrderCancelled, source_filter)
+    return {str(row[0]) for row in q.all() if row and row[0]}
     
 
 def _collect_returns_by_order_created_between(start_ist: datetime, end_ist: datetime):
@@ -192,6 +206,7 @@ def _count_orders_between_distinct(start_ist, end_ist, source_filter="all"):
     source_filter = _normalize_source_filter(source_filter)
     sources = [OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered, Archive]
     start_utc, end_utc = _utc_naive_bounds(start_ist, end_ist)
+    cancelled_orders = _cancelled_order_numbers_between(start_ist, end_ist, source_filter)
     ids = set()
     for cls in sources:
         ts_col, _, _ = _col(cls, ORD_TS_CANDS, "ts")
@@ -202,7 +217,17 @@ def _count_orders_between_distinct(start_ist, end_ist, source_filter="all"):
         for row in q.all():
             payload = getattr(row, det_name) if (det_name and hasattr(row, det_name)) else None
             oid = _extract_order_id_from_row_or_payload(row, payload) or _content_signature([], cls.__name__, getattr(row,"id",None))
+            if str(oid) in cancelled_orders:
+                continue
             ids.add(str(oid))
+    if source_filter in (SOURCE_ALL, SOURCE_SHOPIFY):
+        stored_shopify_ids = _order_numbers_created_between(start_ist, end_ist, SOURCE_SHOPIFY)
+        _, _, live_shopify_ids = _collect_shopify_sales_between(
+            start_ist,
+            end_ist,
+            excluded_order_ids=stored_shopify_ids,
+        )
+        ids.update(live_shopify_ids)
     return len(ids)
 
 
@@ -237,6 +262,7 @@ def _order_numbers_created_between(start_ist: datetime, end_ist: datetime, sourc
         if rows:
             order_nos.update(map(str, rows))
         _info("order_nos: table fetched", table=name, rows=len(rows))
+    order_nos.difference_update(_cancelled_order_numbers_between(start_ist, end_ist, source_filter))
     _info("order_nos: aggregated", count=len(order_nos))
     return order_nos
 
@@ -259,6 +285,7 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
     source_filter = _normalize_source_filter(source_filter)
     start_utc, end_utc = _utc_naive_bounds(start_ist, end_ist)
     seen_orders = set()
+    cancelled_orders = _cancelled_order_numbers_between(start_ist, end_ist, source_filter)
     _info("orders: collecting", start=str(start_ist), end=str(end_ist), source=source_filter)
 
     def add(bc, q, a):
@@ -307,6 +334,9 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
                 order_id = _extract_order_id_from_row_or_payload(row, payload)
                 if not order_id:
                     order_id = f"{name}:{getattr(row, 'id', None)}"
+                if str(order_id) in cancelled_orders:
+                    _info("orders: cancelled row skipped", table=name, order=order_id)
+                    continue
                 if order_id in seen_orders:
                     _info("orders: duplicate lifecycle row skipped", table=name, order=order_id)
                     continue
@@ -347,6 +377,18 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
 
         except Exception:
             _exc(f"orders: table failed ({name})")
+
+    # Aktif Shopify siparişleri DB lifecycle tablolarına yazılmıyor; API'den
+    # önbellekli çek ve arşiv/DB kopyalarını order_number ile dışarıda bırak.
+    if source_filter in (SOURCE_ALL, SOURCE_SHOPIFY):
+        stored_shopify_ids = _order_numbers_created_between(start_ist, end_ist, SOURCE_SHOPIFY)
+        shopify_qty, shopify_amt, _ = _collect_shopify_sales_between(
+            start_ist,
+            end_ist,
+            excluded_order_ids=stored_shopify_ids,
+        )
+        for barcode, quantity in shopify_qty.items():
+            add(barcode, quantity, shopify_amt.get(barcode))
 
     _info("orders: aggregated", uniq_barcodes=len(qty_map), ms=_dt_ms(t0))
     return qty_map, amt_map
@@ -551,6 +593,154 @@ def _content_signature(items, src_name, row_id):
         parts.append(f"{bc}|{sz}|{qt}")
     sig = "|".join(sorted(parts)) or f"{src_name}:{row_id}"
     return "SIG:" + hashlib.md5(sig.encode("utf-8")).hexdigest()
+
+
+_SHOPIFY_SALES_CACHE = {}
+_SHOPIFY_CACHE_TTL_SECONDS = 60
+_SHOPIFY_STALE_TTL_SECONDS = 600
+
+
+def _is_shopify_cod_order(order):
+    gateways = order.get("paymentGatewayNames") or []
+    cod_keywords = ("cash on delivery", "kapida", "kapıda", "cod", "manual")
+    return any(
+        any(keyword in str(gateway).casefold() for keyword in cod_keywords)
+        for gateway in gateways
+    )
+
+
+def _aggregate_shopify_sales(orders, excluded_order_ids=None):
+    """Shopify GraphQL siparişlerini barkod bazında net adet/tutara çevir."""
+    excluded_order_ids = {str(value) for value in (excluded_order_ids or set())}
+    qty_map, amount_map, order_ids = {}, {}, set()
+    allowed_financial = {"PAID", "PARTIALLY_PAID", "PARTIALLY_REFUNDED", "AUTHORIZED"}
+
+    for order in orders or []:
+        legacy_id = order.get("legacyResourceId") or str(order.get("id") or "").split("/")[-1]
+        if not legacy_id:
+            continue
+        order_number = f"SH-{legacy_id}"
+        if order_number in excluded_order_ids or order.get("cancelledAt"):
+            continue
+
+        financial = str(order.get("displayFinancialStatus") or "").upper()
+        if financial == "PENDING":
+            if not _is_shopify_cod_order(order):
+                continue
+        elif financial not in allowed_financial:
+            continue
+
+        items = []
+        for line in order.get("line_items") or []:
+            original_qty = max(0, int(_to_number(line.get("quantity"), 0) or 0))
+            current_raw = line.get("currentQuantity")
+            current_qty = original_qty if current_raw is None else max(0, int(_to_number(current_raw, 0) or 0))
+            if current_qty <= 0:
+                continue
+            variant = line.get("variant") or {}
+            barcode = line.get("resolved_barcode") or variant.get("barcode") or line.get("sku")
+            if not barcode:
+                continue
+            original_total = _to_number(
+                ((line.get("originalTotalSet") or {}).get("shopMoney") or {}).get("amount"),
+                None,
+            )
+            effective_weight = None
+            if original_total is not None and original_qty > 0:
+                effective_weight = float(original_total) * (current_qty / original_qty)
+            items.append({
+                "barcode": str(barcode).strip(),
+                "quantity": current_qty,
+                "weight": effective_weight,
+            })
+
+        if not items:
+            continue
+
+        order_total = _to_number(
+            ((order.get("currentTotalPriceSet") or {}).get("shopMoney") or {}).get("amount"),
+            None,
+        )
+        weighted_total = sum(item["weight"] or 0 for item in items)
+        total_qty = sum(item["quantity"] for item in items)
+        order_ids.add(order_number)
+
+        for item in items:
+            barcode = item["barcode"]
+            quantity = item["quantity"]
+            qty_map[barcode] = qty_map.get(barcode, 0) + quantity
+            if order_total is None:
+                line_amount = item["weight"]
+            elif weighted_total > 0 and item["weight"] is not None:
+                line_amount = float(order_total) * (item["weight"] / weighted_total)
+            elif total_qty > 0:
+                line_amount = float(order_total) * (quantity / total_qty)
+            else:
+                line_amount = None
+            if line_amount is not None:
+                amount_map[barcode] = amount_map.get(barcode, 0.0) + float(line_amount)
+
+    return qty_map, amount_map, order_ids
+
+
+def _collect_shopify_sales_between(start_ist, end_ist, excluded_order_ids=None):
+    """Tarih aralığındaki Shopify satışlarını 60 sn önbellekle ve grupla."""
+    cache_key = (
+        start_ist.astimezone(timezone.utc).isoformat(),
+        end_ist.astimezone(timezone.utc).isoformat(),
+    )
+    now_ts = _pytime.time()
+    cached = _SHOPIFY_SALES_CACHE.get(cache_key)
+    orders = None
+    if cached and now_ts - cached["fetched_at"] <= _SHOPIFY_CACHE_TTL_SECONDS:
+        orders = cached["orders"]
+
+    if orders is None:
+        try:
+            from shopify_site.shopify_service import shopify_service
+
+            if not shopify_service.is_configured():
+                return {}, {}, set()
+            start_iso = start_ist.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+            end_iso = end_ist.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+            query_filter = f"created_at:>={start_iso} created_at:<{end_iso}"
+            orders = []
+            cursor = None
+            for _page in range(50):
+                result = shopify_service.get_orders(
+                    limit=100,
+                    query_filter=query_filter,
+                    after=cursor,
+                    oldest_first=True,
+                )
+                if not result.get("success"):
+                    raise RuntimeError(str(result.get("error") or "Shopify siparişleri alınamadı"))
+                orders.extend(result.get("orders") or [])
+                page_info = result.get("pageInfo") or {}
+                if not page_info.get("hasNextPage"):
+                    break
+                next_cursor = page_info.get("endCursor")
+                if not next_cursor or next_cursor == cursor:
+                    break
+                cursor = next_cursor
+
+            _SHOPIFY_SALES_CACHE[cache_key] = {"fetched_at": now_ts, "orders": orders}
+            if len(_SHOPIFY_SALES_CACHE) > 16:
+                oldest_key = min(
+                    _SHOPIFY_SALES_CACHE,
+                    key=lambda key: _SHOPIFY_SALES_CACHE[key]["fetched_at"],
+                )
+                if oldest_key != cache_key:
+                    _SHOPIFY_SALES_CACHE.pop(oldest_key, None)
+            _info("shopify: fetched", orders=len(orders), start=start_iso, end=end_iso)
+        except Exception:
+            _exc("shopify: fetch failed")
+            if cached and now_ts - cached["fetched_at"] <= _SHOPIFY_STALE_TTL_SECONDS:
+                orders = cached["orders"]
+            else:
+                return {}, {}, set()
+
+    return _aggregate_shopify_sales(orders, excluded_order_ids)
 
 # ── BUGÜN OLUŞTURULAN SİPARİŞ SETİ (YALNIZ OrderCreated)
 def _collect_today_order_ids_by_created():

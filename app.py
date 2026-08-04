@@ -328,7 +328,9 @@ def fetch_and_save_returns():
     with app.app_context():
         try:
             from iade_islemleri import fetch_data_from_api, save_to_database
-            data = fetch_data_from_api(datetime.now() - timedelta(days=1), datetime.now())
+            # İade talebi günler sonra Accepted olabilir. Son 1 günü çekmek eski
+            # kaydın durumunu güncelleyemiyordu; 60 günlük pencere upsert edilir.
+            data = fetch_data_from_api(datetime.now() - timedelta(days=60), datetime.now())
             if data:
                 save_to_database(data, db.session)
         except Exception as e:
@@ -481,7 +483,9 @@ def schedule_jobs():
         trigger='cron',
         id="pull_returns_daily",
         hour=23,
-        minute=50
+        minute=50,
+        # Deploy/restart sonrasında geçmiş durumları bir kez hemen iyileştir.
+        next_run_time=now + timedelta(minutes=1)
     )
 
     # >>> Sipariş mutabakatı: her 3 saatte bir
