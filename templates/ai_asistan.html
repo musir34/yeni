@@ -30,6 +30,10 @@
     .ai-msg.asistan{align-self:flex-start;background:#f1f3f5;color:#222;border-bottom-left-radius:2px}
     .ai-msg.hata{align-self:flex-start;background:#fdecea;color:#c0392b}
     .ai-bos{color:#888;text-align:center;margin:auto;font-size:.9rem}
+    .ai-excel{align-self:flex-start;margin-top:-6px}
+    .ai-excel button{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid #1d6f42;border-radius:8px;background:#fff;color:#1d6f42;font-size:.78rem;font-weight:600;cursor:pointer}
+    .ai-excel button:hover{background:#1d6f42;color:#fff}
+    .ai-excel button:disabled{opacity:.5;cursor:not-allowed}
 
     .ai-giris{display:flex;gap:8px;padding:12px;border-top:1px solid var(--color-border)}
     .ai-giris textarea{flex:1;resize:none;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:.9rem;font-family:inherit;height:44px}
@@ -121,14 +125,48 @@
         mesajlar.innerHTML = '<div class="ai-bos"></div>';
         bos = mesajlar.firstChild; bos.textContent = metin;
     }
-    function ekle(metin, tip) {
+    function ekle(metin, tip, excelId) {
         if (bos) { bos.remove(); bos = null; }
         const div = document.createElement('div');
         div.className = 'ai-msg ' + tip;
         div.textContent = metin;
         mesajlar.appendChild(div);
+        if (excelId) mesajlar.appendChild(excelButonu(excelId));
         mesajlar.scrollTop = mesajlar.scrollHeight;
         return div;
+    }
+
+    // ── Excel indir: cevabı üreten SON sorgu sunucuda yeniden çalışır (tam veri) ──
+    function excelButonu(mesajId) {
+        const sar = document.createElement('div');
+        sar.className = 'ai-excel';
+        const btn = document.createElement('button');
+        btn.innerHTML = '<i class="fas fa-file-excel"></i> Excel indir';
+        btn.addEventListener('click', async function () {
+            btn.disabled = true;
+            const eski = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Hazırlanıyor…';
+            try {
+                const r = await fetch('/ai-asistan/excel/' + mesajId);
+                if (!r.ok) {
+                    let hata = 'Excel oluşturulamadı.';
+                    try { const d = await r.json(); if (d.hata) hata = d.hata; } catch (e) { /* yut */ }
+                    ekle(hata, 'hata');
+                } else {
+                    const blob = await r.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = 'asistan-' + mesajId + '.xlsx';
+                    document.body.appendChild(a); a.click(); a.remove();
+                    URL.revokeObjectURL(url);
+                }
+            } catch (e) {
+                ekle('Sunucuya ulaşılamadı.', 'hata');
+            }
+            btn.disabled = false; btn.innerHTML = eski;
+        });
+        sar.appendChild(btn);
+        return sar;
     }
 
     // ── Aktif sohbeti yükle (sayfa yenilemeye dayanıklı) ──
@@ -143,7 +181,8 @@
                 let bekleyenVar = false;
                 d.mesajlar.forEach(function (m) {
                     if (m.durum === 'bekliyor') { bekleyenVar = true; return; }
-                    ekle(m.metin, m.rol === 'kullanici' ? 'kullanici' : (m.durum === 'hata' ? 'hata' : 'asistan'));
+                    ekle(m.metin, m.rol === 'kullanici' ? 'kullanici' : (m.durum === 'hata' ? 'hata' : 'asistan'),
+                         m.excel ? m.id : null);
                 });
                 const b = bekleyen();
                 if (bekleyenVar && b && b.sohbetId === id) {
@@ -165,7 +204,7 @@
                 const d = await r.json(); hataUst = 0;
                 if (d.ok && d.durum !== 'bekliyor') {
                     clearInterval(timer); beklDiv.remove(); bekleyenYaz(null);
-                    ekle(d.metin, d.durum === 'hata' ? 'hata' : 'asistan');
+                    ekle(d.metin, d.durum === 'hata' ? 'hata' : 'asistan', d.excel ? mesajId : null);
                     gonderBtn.disabled = false; soruEl.focus();
                 }
             } catch (e) {

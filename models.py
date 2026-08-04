@@ -1621,4 +1621,8 @@ class AiMesaj(db.Model):
     rol = db.Column(db.String(16), nullable=False)              # kullanici | asistan
     metin = db.Column(db.Text, nullable=False, default='')
     durum = db.Column(db.String(16), nullable=False, default='hazir')
+    # Cevabı üretirken çalıştırılan SON SELECT (Codex motoru). Doluysa cevabın
+    # altında "Excel indir" çıkar; sorgu indirme anında ai_readonly ile yeniden
+    # çalıştırılır (sohbete beslenen 200 satır sınırı olmadan).
+    son_sql = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

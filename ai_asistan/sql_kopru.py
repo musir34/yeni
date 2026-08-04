@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 SORGU_TIMEOUT_MS = 30000       # DB tarafında statement_timeout
 AZAMI_SATIR = 200              # modele beslenecek azami satır
 AZAMI_KARAKTER = 12000         # sonuç metninin azami boyutu (prompt şişmesin)
+AZAMI_EXCEL_SATIR = 50000      # Excel'e aktarımda azami satır (modele değil dosyaya gider)
 
 # Tek ifade + salt-okunur güvencesi: ai_readonly zaten yazamaz, bu ikinci katman.
 YASAKLI = re.compile(
@@ -93,6 +94,26 @@ def sql_calistir(sql: str) -> str:
         return f"SORGU HATASI: {str(e)[:500]}"
 
     return _tabloya_cevir(sutunlar, satirlar)
+
+
+def sql_verisi(sql: str, azami_satir: int = AZAMI_EXCEL_SATIR) -> tuple[list, list]:
+    """
+    Doğrulanmış SELECT'i çalıştır ve HAM sonucu döndür → (sütunlar, satırlar).
+
+    sql_calistir'dan farkı: sonuç modele değil Excel'e gideceği için metne
+    çevrilmez ve 200 satır sınırı yerine azami_satir uygulanır.
+    Hata durumunda ValueError yükseltir (metne gömmez) — çağıran HTTP tarafı.
+    """
+    temiz = sql_dogrula(sql)
+    try:
+        with _motor().connect() as baglanti:
+            sonuc = baglanti.execute(text(temiz))
+            sutunlar = list(sonuc.keys())
+            satirlar = sonuc.fetchmany(azami_satir)
+    except Exception as e:
+        logger.warning("[SQL-KOPRU] dışa aktarım sorgusu hatası: %s", e)
+        raise ValueError(f"Sorgu çalıştırılamadı: {str(e)[:300]}") from e
+    return sutunlar, satirlar
 
 
 def _tabloya_cevir(sutunlar: list, satirlar: list) -> str:

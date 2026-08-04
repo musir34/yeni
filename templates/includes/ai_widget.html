@@ -34,6 +34,10 @@
   .aiw-msg.bot{align-self:flex-start;background:#fff;color:#222;border:1px solid #e5e7eb;border-bottom-left-radius:3px}
   .aiw-msg.err{align-self:flex-start;background:#fdecea;color:#c0392b}
   .aiw-bos{margin:auto;color:#9ca3af;font-size:.82rem;text-align:center;padding:0 20px}
+  .aiw-excel{align-self:flex-start;margin-top:-4px}
+  .aiw-excel button{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid #1d6f42;border-radius:8px;background:#fff;color:#1d6f42;font-size:.75rem;font-weight:600;cursor:pointer}
+  .aiw-excel button:hover{background:#1d6f42;color:#fff}
+  .aiw-excel button:disabled{opacity:.5;cursor:not-allowed}
   .aiw-giris{display:flex;gap:8px;padding:10px;border-top:1px solid #eee;background:#fff}
   .aiw-giris textarea{flex:1;resize:none;height:40px;padding:9px 11px;border:1px solid #d1d5db;border-radius:10px;font-size:.86rem;font-family:inherit}
   .aiw-giris button{border:none;border-radius:10px;background:#4f46e5;color:#fff;padding:0 16px;font-weight:600;cursor:pointer}
@@ -110,10 +114,36 @@
     msgs.innerHTML='<div class="aiw-bos"></div>';
     bos=msgs.firstChild; bos.textContent=metin;
   }
-  function ekle(metin,tip){
+  function ekle(metin,tip,excelId){
     if(bos){bos.remove();bos=null;}
     var d=document.createElement('div'); d.className='aiw-msg '+tip; d.textContent=metin;
-    msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight; return d;
+    msgs.appendChild(d);
+    if(excelId) msgs.appendChild(excelButonu(excelId));
+    msgs.scrollTop=msgs.scrollHeight; return d;
+  }
+  // ── Excel indir: cevabı üreten SON sorgu sunucuda yeniden çalışır (tam veri) ──
+  function excelButonu(mesajId){
+    var sar=document.createElement('div'); sar.className='aiw-excel';
+    var btn=document.createElement('button');
+    btn.innerHTML='<i class="fas fa-file-excel"></i> Excel indir';
+    btn.addEventListener('click', async function(){
+      btn.disabled=true; var eski=btn.innerHTML;
+      btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Hazırlanıyor…';
+      try{
+        var r=await fetch('/ai-asistan/excel/'+mesajId);
+        if(!r.ok){
+          var hata='Excel oluşturulamadı.';
+          try{ var j=await r.json(); if(j.hata) hata=j.hata; }catch(e){}
+          ekle(hata,'err');
+        } else {
+          var blob=await r.blob(), url=URL.createObjectURL(blob);
+          var a=document.createElement('a'); a.href=url; a.download='asistan-'+mesajId+'.xlsx';
+          document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+        }
+      }catch(e){ ekle('Sunucuya ulaşılamadı.','err'); }
+      btn.disabled=false; btn.innerHTML=eski;
+    });
+    sar.appendChild(btn); return sar;
   }
   function ac(){
     panel.classList.add('acik'); localStorage.setItem('aiw_acik','1');
@@ -134,7 +164,7 @@
         var bekleyenVar=false;
         d.mesajlar.forEach(function(m){
           if(m.durum==='bekliyor'){ bekleyenVar=true; return; }
-          ekle(m.metin, m.rol==='kullanici'?'kul':(m.durum==='hata'?'err':'bot'));
+          ekle(m.metin, m.rol==='kullanici'?'kul':(m.durum==='hata'?'err':'bot'), m.excel?m.id:null);
         });
         // Cevap hâlâ hazırlanıyorsa yoklamaya kaldığı yerden devam et.
         var b=bekleyen();
@@ -157,7 +187,7 @@
         var d=await r.json(); hataUst=0;
         if(d.ok && d.durum!=='bekliyor'){
           clearInterval(timer); beklDiv.remove(); bekleyenYaz(null);
-          ekle(d.metin, d.durum==='hata'?'err':'bot');
+          ekle(d.metin, d.durum==='hata'?'err':'bot', d.excel?mesajId:null);
           gonder.disabled=false; soruEl.focus();
         }
       }catch(e){

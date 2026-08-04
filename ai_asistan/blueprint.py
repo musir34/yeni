@@ -29,7 +29,9 @@ import re
 import shutil
 import subprocess
 import threading
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
+from io import BytesIO
 from pathlib import Path
 
 from flask import (
@@ -39,6 +41,7 @@ from flask import (
     jsonify,
     render_template,
     request,
+    send_file,
     session,
 )
 from flask_login import current_user, login_required
@@ -464,6 +467,16 @@ sana geri veririm. Kurallar:
 - Veriyi uydurma; yalnızca sorgudan dönen sonuçlara dayan.
 - Tarih sütunları UTC saklanır.
 
+# Excel / dosya istenirse
+Dosya üretemezsin, ama buna gerek yok: çalıştırdığın SON sorgunun sonucu panelde
+cevabının altında çıkan "Excel indir" butonuyla TAM olarak (sana gösterilen 200
+satır sınırı olmadan) indirilebilir. Bu yüzden:
+- "Excel/tablo/liste ver" denince "yapamam" DEME; istenen tüm sütunları içeren,
+  anlamlı sütun adları (AS) verilmiş tek bir SELECT yaz.
+- O sorgu son sorgun olsun (sonrasında başka sorgu çalıştırma).
+- Nihai cevapta kısa bir özet yaz ve "Tam listeyi aşağıdaki 'Excel indir'
+  butonundan indirebilirsin" de.
+
 # Veritabanı şeması (public)
 {sema}
 """
@@ -489,14 +502,18 @@ def _codex_sql_dongusu(soru: str, resume_session_id: str | None = None) -> dict:
         # Oturum kayıp/bozuk olabilir → taze oturumla bir kez daha.
         sonuc = _codex_calistir(soru, sistem, QUERY_TIMEOUT_SN, None, model=model)
 
+    son_sql = None            # başarıyla çalışan SON sorgu → "Excel indir" bunu kullanır
     for _ in range(AZAMI_SQL_TUR):
         if not sonuc["ok"]:
             return sonuc
         eslesme = SQL_BLOK.search(sonuc["cevap"])
         if not eslesme:
+            sonuc["son_sql"] = son_sql
             return sonuc                      # sql istemedi → nihai cevap
 
         cikti = sql_calistir(eslesme.group(1))
+        if not cikti.startswith(("SORGU REDDEDİLDİ", "SORGU HATASI")):
+            son_sql = eslesme.group(1).strip()
         # Oturum sürdüğü için sistem promptu tekrar gönderilmez.
         sonuc = _codex_calistir(
             f"Sorgu sonucu:\n\n{cikti}\n\n"
@@ -543,6 +560,7 @@ def _arka_planda_cevapla(app, mesaj_id: int, sohbet_id: int, soru: str) -> None:
             if sonuc["ok"]:
                 mesaj.metin = sonuc["cevap"]
                 mesaj.durum = "hazir"
+                mesaj.son_sql = sonuc.get("son_sql")
                 if sohbet is not None and sonuc.get("session_id"):
                     sohbet.claude_session_id = sonuc["session_id"]
             else:
@@ -750,7 +768,94 @@ def durum(mesaj_id: int):
     if mesaj.durum == "bekliyor":
         _bayat_bekleyenleri_isaretle(_kullanici_id())
         db.session.refresh(mesaj)
-    return jsonify({"ok": True, "durum": mesaj.durum, "metin": mesaj.metin})
+    return jsonify({"ok": True, "durum": mesaj.durum, "metin": mesaj.metin,
+                    "excel": bool(mesaj.son_sql)})
+
+
+@ai_asistan_bp.route("/excel/<int:mesaj_id>", methods=["GET"])
+@login_required
+def excel(mesaj_id: int):
+    """
+    Cevabı üretirken çalıştırılan SON sorguyu yeniden çalıştırıp .xlsx indirir.
+
+    Neden sohbetteki tablo değil de sorgu: modele beslenen sonuç 200 satır /
+    12.000 karakterle kırpılıyor (sql_kopru.py) — Excel'de TAM veri istiyoruz.
+    Sorgu indirme anında çalıştığı için veri o anki hâlini yansıtır.
+    Güvenlik: sahiplik kontrolü + sql_dogrula (salt-okunur tek SELECT) + ai_readonly.
+    """
+    from ai_asistan.sql_kopru import AZAMI_EXCEL_SATIR, sql_verisi
+
+    mesaj = db.session.get(AiMesaj, mesaj_id)
+    if mesaj is None or not mesaj.son_sql:
+        abort(404)
+    _sohbet_getir(mesaj.sohbet_id)   # sahiplik kontrolü
+
+    try:
+        sutunlar, satirlar = sql_verisi(mesaj.son_sql)
+    except ValueError as e:
+        return jsonify({"ok": False, "hata": str(e)}), 400
+    except Exception:
+        current_app.logger.exception("[AI-ASISTAN] Excel sorgusu çalıştırılamadı")
+        return jsonify({"ok": False, "hata": "Veri alınamadı."}), 500
+
+    cikti = _excel_uret(sutunlar, satirlar)
+    current_app.logger.info("[AI-ASISTAN] Excel indirildi mesaj=%s satır=%s kullanıcı=%s",
+                            mesaj_id, len(satirlar), _kullanici_id())
+    if len(satirlar) >= AZAMI_EXCEL_SATIR:
+        current_app.logger.warning("[AI-ASISTAN] Excel satır tavanına ulaşıldı mesaj=%s", mesaj_id)
+    return send_file(
+        cikti,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=f"asistan-{mesaj_id}.xlsx",
+    )
+
+
+def _excel_uret(sutunlar: list, satirlar: list) -> BytesIO:
+    """Sorgu sonucunu tek sayfalık .xlsx'e yaz (bellek içi)."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Veri"
+
+    ws.append([str(s) for s in sutunlar])
+    for hucre in ws[1]:
+        hucre.font = Font(bold=True)
+
+    for satir in satirlar:
+        degerler = [_excel_deger(d) for d in satir]
+        ws.append(degerler)
+        # '=' ile başlayan metinler openpyxl tarafından formül sayılır; metne
+        # sabitle ki Excel veriyi hesaplamaya çalışmasın (formül enjeksiyonu).
+        for i, d in enumerate(degerler, start=1):
+            if isinstance(d, str) and d.startswith("="):
+                ws.cell(row=ws.max_row, column=i).data_type = "s"
+
+    # Sütun genişliği: başlık/veri uzunluğuna göre kaba bir tahmin (okunabilirlik).
+    for i, ad in enumerate(sutunlar, start=1):
+        en = max([len(str(ad))] + [len(str(_excel_deger(s[i - 1]))) for s in satirlar[:200]])
+        ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = min(max(en + 2, 10), 50)
+
+    ws.freeze_panes = "A2"
+
+    tampon = BytesIO()
+    wb.save(tampon)
+    tampon.seek(0)
+    return tampon
+
+
+def _excel_deger(deger):
+    """
+    Hücreye yazılabilir değere çevir. Excel'in doğrudan yazamadığı tipler
+    (jsonb, list, Interval…) metne düşer.
+    """
+    if deger is None or isinstance(deger, (str, int, float, bool, datetime, date, time)):
+        return deger
+    if isinstance(deger, Decimal):
+        return float(deger)
+    return str(deger)
 
 
 @ai_asistan_bp.route("/sohbetler", methods=["GET"])
@@ -782,7 +887,8 @@ def sohbet_detay(sohbet_id: int):
         .all()
     )
     return jsonify({"ok": True, "baslik": sohbet.baslik, "mesajlar": [
-        {"id": m.id, "rol": m.rol, "metin": m.metin, "durum": m.durum}
+        {"id": m.id, "rol": m.rol, "metin": m.metin, "durum": m.durum,
+         "excel": bool(m.son_sql)}
         for m in mesajlar
     ]})
 
