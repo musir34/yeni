@@ -15,21 +15,12 @@ import logging, traceback, time as _pytime
 from flask import current_app
 from datetime import timezone  # <-- eklendi
 
-# Shopify/WooCommerce modeli — modül yoksa None
-try:
-    from shopify_site.shopify_service import ShopifyOrder  # type: ignore
-except (ImportError, ModuleNotFoundError):
-    ShopifyOrder = None
-
-
-
-
 canli_panel_bp = Blueprint("canli_panel", __name__)
 
 # ── Ayarlar
 IST = ZoneInfo("Europe/Istanbul")
 DUSUK_STOK_ESIK = 5
-AKIS_ARALIGI_SANIYE = 300
+AKIS_ARALIGI_SANIYE = 30
 PING_INTERVAL = 10
 IADE_UYARI_ORAN = 0.25
 
@@ -68,6 +59,47 @@ def _to_ist_aware(dt):
         dt = dt.replace(tzinfo=(timezone.utc if ASSUME_DB_UTC else IST))
     # IST'ye çevir
     return dt.astimezone(IST)
+
+
+SOURCE_ALL = "all"
+SOURCE_TRENDYOL = "trendyol"
+SOURCE_SHOPIFY = "shopify"
+ACCEPTED_RETURN_STATUSES = ("accepted", "onaylandı")
+
+
+def _normalize_source_filter(value):
+    """UI/API kaynak değerini tek bir küçük-harf sözleşmesine çevir."""
+    value = str(value or SOURCE_ALL).strip().lower()
+    return value if value in {SOURCE_ALL, SOURCE_TRENDYOL, SOURCE_SHOPIFY} else SOURCE_ALL
+
+
+def _model_matches(model, filter_text):
+    """Model filtresi tam eşleşme yerine kullanıcı dostu parça eşleşmesi yapar."""
+    if not filter_text:
+        return True
+    return str(filter_text).casefold() in str(model or "").casefold()
+
+
+def _apply_source_filter(query, model_cls, source_filter):
+    """Lifecycle/Archive tablolarındaki kaynak alanını güvenli biçimde filtrele."""
+    source_filter = _normalize_source_filter(source_filter)
+    source_col = getattr(model_cls, "source", None)
+    if source_filter == SOURCE_ALL or source_col is None:
+        return query
+    normalized = func.lower(func.coalesce(source_col, ""))
+    if source_filter == SOURCE_SHOPIFY:
+        # Eski kayıtların bir bölümü WOOCOMMERCE adıyla tutulmuş olabilir.
+        return query.filter(normalized.in_(("shopify", "woocommerce")))
+    # Kaynak kolonu eklenmeden önceki kayıtlar Trendyol akışından geliyordu.
+    return query.filter(normalized.in_(("", "trendyol")))
+
+
+def _utc_naive_bounds(start_ist, end_ist):
+    """İstanbul-aware aralığı DB konvansiyonu olan naive UTC sınırlara çevir."""
+    return (
+        start_ist.astimezone(timezone.utc).replace(tzinfo=None),
+        end_ist.astimezone(timezone.utc).replace(tzinfo=None),
+    )
     
 
 def _collect_returns_by_order_created_between(start_ist: datetime, end_ist: datetime):
@@ -87,6 +119,7 @@ def _collect_returns_by_order_created_between(start_ist: datetime, end_ist: date
                              func.coalesce(func.sum(ReturnProduct.quantity), 0))
             .join(ReturnOrder, ReturnProduct.return_order_id == ReturnOrder.id)
             .filter(ReturnOrder.order_number.in_(list(ord_nos)))
+            .filter(func.lower(func.coalesce(ReturnOrder.status, "")).in_(ACCEPTED_RETURN_STATUSES))
             .group_by(ReturnProduct.barcode)
             .all())
     for bc, q in rows:
@@ -154,44 +187,18 @@ def _tr_range_from_params(args):
 def _count_orders_between_distinct(start_ist, end_ist, source_filter="all"):
     """
     Seçilen aralıktaki benzersiz sipariş sayısını döndürür.
-    source_filter: "all", "trendyol", "Shopify"
+    source_filter: "all", "trendyol", "shopify"
     """
-    if source_filter == "Shopify" and ShopifyOrder:
-        sources = [ShopifyOrder]
-    elif source_filter == "trendyol" or (source_filter == "Shopify" and not ShopifyOrder):
-        sources = [OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered]
-    else:  # "all"
-        sources = [OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered]
-        if ShopifyOrder:
-            sources.append(ShopifyOrder)
-    
+    source_filter = _normalize_source_filter(source_filter)
+    sources = [OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered, Archive]
+    start_utc, end_utc = _utc_naive_bounds(start_ist, end_ist)
     ids = set()
     for cls in sources:
-        # WooCommerce için özel işlem
-        if cls == ShopifyOrder:
-            q = db.session.query(ShopifyOrder).filter(
-                or_(
-                    and_(func.timezone('Europe/Istanbul', ShopifyOrder.date_created) >= start_ist,
-                         func.timezone('Europe/Istanbul', ShopifyOrder.date_created) <  end_ist),
-                    and_(ShopifyOrder.date_created >= start_ist, ShopifyOrder.date_created < end_ist)
-                )
-            )
-            for row in q.all():
-                if hasattr(row, 'order_number') and row.order_number:
-                    ids.add(str(row.order_number))
-            continue
-        
-        # Trendyol siparişleri için mevcut mantık
         ts_col, _, _ = _col(cls, ORD_TS_CANDS, "ts")
         det_name = next((n for n in ORD_DTL_CANDS if hasattr(cls, n)), None)
         if ts_col is None: continue
-        q = db.session.query(cls).filter(
-            or_(
-                and_(func.timezone('Europe/Istanbul', ts_col) >= start_ist,
-                     func.timezone('Europe/Istanbul', ts_col) <  end_ist),
-                and_(ts_col >= start_ist, ts_col < end_ist)
-            )
-        )
+        q = db.session.query(cls).filter(ts_col >= start_utc, ts_col < end_utc)
+        q = _apply_source_filter(q, cls, source_filter)
         for row in q.all():
             payload = getattr(row, det_name) if (det_name and hasattr(row, det_name)) else None
             oid = _extract_order_id_from_row_or_payload(row, payload) or _content_signature([], cls.__name__, getattr(row,"id",None))
@@ -199,12 +206,14 @@ def _count_orders_between_distinct(start_ist, end_ist, source_filter="all"):
     return len(ids)
 
 
-def _order_numbers_created_between(start_ist: datetime, end_ist: datetime) -> set[str]:
+def _order_numbers_created_between(start_ist: datetime, end_ist: datetime, source_filter="all") -> set[str]:
     """
     Created/Picking/Shipped/Delivered/Archive tablolarında
     Europe/Istanbul aralığı [start,end) için order_number seti döner.
     """
     order_nos = set()
+    source_filter = _normalize_source_filter(source_filter)
+    start_utc, end_utc = _utc_naive_bounds(start_ist, end_ist)
     sources = [("Created",      OrderCreated),
                ("Hazirlaniyor", OrderHazirlaniyor),
                ("Picking",      OrderPicking),
@@ -219,12 +228,11 @@ def _order_numbers_created_between(start_ist: datetime, end_ist: datetime) -> se
         if ts_col is None:
             _info("order_nos: skip (no ts)", table=name); 
             continue
-        q = (db.session.query(getattr(cls, "order_number"))
-             .filter(or_(
-                 and_(func.timezone('Europe/Istanbul', ts_col) >= start_ist,
-                      func.timezone('Europe/Istanbul', ts_col) <  end_ist),
-                 and_(ts_col >= start_ist, ts_col < end_ist)
-             )))
+        q = db.session.query(getattr(cls, "order_number")).filter(
+            ts_col >= start_utc,
+            ts_col < end_utc,
+        )
+        q = _apply_source_filter(q, cls, source_filter)
         rows = [r[0] for r in q.all() if r and r[0]]
         if rows:
             order_nos.update(map(str, rows))
@@ -241,13 +249,16 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
     Args:
         start_ist: Başlangıç tarihi (IST)
         end_ist: Bitiş tarihi (IST)
-        source_filter: Kaynak filtresi - "all", "trendyol", "Shopify"
+        source_filter: Kaynak filtresi - "all", "trendyol", "shopify"
     
     Returns:
         (qty_map, amt_map): Barkod bazında miktar ve NET tutar haritaları
     """
     t0=_t0()
-    qty_map, amt_map = {}, {}   # amt_map artık NET tutar olacak
+    qty_map, amt_map = {}, {}   # amt_map indirim sonrası satış tutarıdır
+    source_filter = _normalize_source_filter(source_filter)
+    start_utc, end_utc = _utc_naive_bounds(start_ist, end_ist)
+    seen_orders = set()
     _info("orders: collecting", start=str(start_ist), end=str(end_ist), source=source_filter)
 
     def add(bc, q, a):
@@ -257,35 +268,14 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
         if a is not None:
             amt_map[s] = amt_map.get(s, 0.0) + float(a)
 
-    # Shopify/WooCommerce modeli — modül yoksa atla
-    try:
-        from shopify_site.shopify_service import ShopifyOrder  # type: ignore
-    except (ImportError, ModuleNotFoundError):
-        ShopifyOrder = None
-
-    # Kaynak filtresine göre source listesini belirle
-    if source_filter == "Shopify" and ShopifyOrder:
-        sources = [("Shopify", ShopifyOrder)]
-    elif source_filter == "trendyol" or (source_filter == "Shopify" and not ShopifyOrder):
-        sources = [
-            ("Created",      OrderCreated),
-            ("Hazirlaniyor", OrderHazirlaniyor),
-            ("Picking",      OrderPicking),
-            ("Shipped",      OrderShipped),
-            ("Delivered",    OrderDelivered),
-            ("Archive",      Archive)
-        ]
-    else:  # "all"
-        sources = [
-            ("Created",      OrderCreated),
-            ("Hazirlaniyor", OrderHazirlaniyor),
-            ("Picking",      OrderPicking),
-            ("Shipped",      OrderShipped),
-            ("Delivered",    OrderDelivered),
-            ("Archive",      Archive),
-        ]
-        if ShopifyOrder:
-            sources.append(("Shopify", ShopifyOrder))
+    sources = [
+        ("Created",      OrderCreated),
+        ("Hazirlaniyor", OrderHazirlaniyor),
+        ("Picking",      OrderPicking),
+        ("Shipped",      OrderShipped),
+        ("Delivered",    OrderDelivered),
+        ("Archive",      Archive),
+    ]
     
     _info("collect_orders: source_filter", filter=source_filter, source_count=len(sources))
     
@@ -294,77 +284,6 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
     for name, cls in sources:
         t1=_t0()
         try:
-            # 🛒 WooCommerce için özel işlem
-            if cls == ShopifyOrder:
-                # WooCommerce siparişlerini tarih aralığında filtrele
-                q = db.session.query(cls).filter(
-                    or_(
-                        and_(func.timezone('Europe/Istanbul', cls.date_created) >= start_ist,
-                             func.timezone('Europe/Istanbul', cls.date_created) <  end_ist),
-                        and_(cls.date_created >= start_ist, cls.date_created < end_ist)
-                    )
-                )
-                rows = q.all()
-                _info("orders: WooCommerce fetched", rows=len(rows), ms=_dt_ms(t1))
-                
-                for row in rows:
-                    # Tutar ve indirim
-                    amount_gross = float(row.total) if row.total else 0.0
-                    discount_total = float(row.discount_total) if row.discount_total else 0.0
-                    amount_net = amount_gross - discount_total
-                    
-                    # line_items JSON'dan ürünleri al
-                    items, total_qty = [], 0
-                    for item in (row.line_items or []):
-                        # WooCommerce'den product_id veya variation_id al
-                        woo_id = item.get('variation_id') or item.get('product_id')
-                        qty = int(item.get('quantity', 1))
-                        price = float(item.get('price', 0))
-                        
-                        if not woo_id or qty <= 0:
-                            continue
-                        
-                        # Product tablosundan barkod bul
-                        product = None
-                        if woo_id:
-                            product = Product.query.filter_by(shopify_variant_id=str(woo_id)).first()
-                        
-                        if not product:
-                            # SKU fallback - önce direkt eşleşme
-                            sku = item.get('sku', '').strip()
-                            if sku:
-                                # Tam eşleşme dene
-                                product = Product.query.filter_by(barcode=sku).first()
-                                
-                                # Bulamazsa, normalize edilmiş karşılaştırma (boşluk/tire farksız)
-                                if not product:
-                                    # SQL ile case-insensitive ve normalize edilmiş arama
-                                    sku_clean = sku.replace(' ', '').replace('-', '').upper()
-                                    product = (
-                                        Product.query
-                                        .filter(func.replace(func.replace(func.upper(Product.barcode), ' ', ''), '-', '') == sku_clean)
-                                        .first()
-                                    )
-                        
-                        if product:
-                            bc = product.barcode
-                        else:
-                            # Eşleşme bulunamadı - SKU'yu direkt kullan
-                            bc = item.get('sku', str(woo_id))
-                            _info("ShopifyOrder: ürün eşleşmedi", woo_id=woo_id, sku=item.get('sku'), order=row.order_number)
-                        
-                        items.append({"bc": bc, "qty": qty, "price": price})
-                        total_qty += qty
-                    
-                    # NET paylaşım
-                    per_unit_net = (amount_net / total_qty) if total_qty > 0 else None
-                    for it in items:
-                        line_amt_net = (per_unit_net * it["qty"]) if per_unit_net is not None else (it["price"] * it["qty"])
-                        add(it["bc"], it["qty"], line_amt_net)
-                
-                continue  # WooCommerce işlendi, devam et
-            
-            # 📦 Trendyol siparişleri için mevcut mantık
             ts_col, _, _   = _col(cls, ORD_TS_CANDS, "ts")
             amt_col, _, A  = _col(cls, ORD_AMT_CANDS,  "amount")
             disc_col,_, D  = _col(cls, ORD_DISC_CANDS, "discount")  # ← indirim
@@ -373,13 +292,8 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
                 _info("orders: skip (no ts)", table=name)
                 continue
 
-            q = db.session.query(cls).filter(
-                or_(
-                    and_(func.timezone('Europe/Istanbul', ts_col) >= start_ist,
-                         func.timezone('Europe/Istanbul', ts_col) <  end_ist),
-                    and_(ts_col >= start_ist, ts_col < end_ist)
-                )
-            )
+            q = db.session.query(cls).filter(ts_col >= start_utc, ts_col < end_utc)
+            q = _apply_source_filter(q, cls, source_filter)
             rows = q.all()
             _info("orders: table fetched", table=name, rows=len(rows), ms=_dt_ms(t1))
             for row in rows:
@@ -390,15 +304,21 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
                             payload = getattr(row, alt)
                             if payload not in (None,"",[]): break
 
+                order_id = _extract_order_id_from_row_or_payload(row, payload)
+                if not order_id:
+                    order_id = f"{name}:{getattr(row, 'id', None)}"
+                if order_id in seen_orders:
+                    _info("orders: duplicate lifecycle row skipped", table=name, order=order_id)
+                    continue
+                seen_orders.add(order_id)
+
                 # ---- BRÜT ve İNDİRİM ----
-                amount_gross   = _to_number(getattr(row, A, None), None) if (A and hasattr(row, A)) else None
-                discount_total = _to_number(getattr(row, D, None), 0.0)  if (D and hasattr(row, D)) else 0.0
-                amount_net     = None
-                if amount_gross is not None:
-                    try:
-                        amount_net = float(amount_gross) - float(discount_total or 0.0)
-                    except Exception:
-                        amount_net = amount_gross
+                # Order pipeline `amount` alanını zaten indirim sonrası lineUnitPrice
+                # toplamı olarak saklar. `discount`u yeniden düşmek çift indirim olur.
+                amount_net = _order_net_amount(
+                    getattr(row, A, None) if (A and hasattr(row, A)) else None,
+                    getattr(row, D, None) if (D and hasattr(row, D)) else None,
+                )
 
                 # ---- KALEMLER ----
                 items, total_qty = [], 0
@@ -411,10 +331,18 @@ def _collect_orders_between_strict(start_ist: datetime, end_ist: datetime, sourc
                     total_qty += int(qt)
 
                 # ---- NET PAYLAŞIM ----
-                per_unit_net = (amount_net/float(total_qty)) if (amount_net is not None and total_qty>0) else None
+                # Farklı fiyatlı ürünleri eşit bölmek yerine satır fiyatı oranını koru;
+                # yine de toplam kart cirosu sipariş `amount` değeriyle birebir kalsın.
+                priced_total = sum((it["price"] or 0) * it["qty"] for it in items if it["price"] is not None)
+                scale = (float(amount_net) / priced_total) if amount_net is not None and priced_total > 0 else None
+                per_unit_net = (float(amount_net) / total_qty) if amount_net is not None and total_qty > 0 else None
                 for it in items:
-                    # öncelik NET toplamı paylaştırmak; fallback olarak satır fiyatını kullan
-                    line_amt_net = (per_unit_net*it["qty"]) if per_unit_net is not None else ((it["price"]*it["qty"]) if it["price"] is not None else None)
+                    if scale is not None and it["price"] is not None:
+                        line_amt_net = it["price"] * it["qty"] * scale
+                    elif per_unit_net is not None:
+                        line_amt_net = per_unit_net * it["qty"]
+                    else:
+                        line_amt_net = (it["price"] * it["qty"]) if it["price"] is not None else None
                     add(it["bc"], it["qty"], line_amt_net)
 
         except Exception:
@@ -553,6 +481,24 @@ def _to_number(x, default=None):
         if "," in s: s = s.replace(",",".")
     try: return float(s)
     except Exception: return default
+
+
+def _order_net_amount(amount, discount=None):
+    """Pipeline `amount` zaten indirim sonrasıdır; discount ikinci kez düşülmez."""
+    return _to_number(amount, None)
+
+
+def _return_adjusted_amount(sold_qty, returned_qty, sale_amount):
+    """İade adedi oranında ciroyu azalt; adet ve para NET tanımı aynı kalsın."""
+    sold_qty = max(0, int(sold_qty or 0))
+    returned_qty = max(0, int(returned_qty or 0))
+    amount = _to_number(sale_amount, None)
+    if amount is None:
+        return amount
+    if sold_qty <= 0:
+        return 0.0
+    net_qty = max(0, sold_qty - returned_qty)
+    return float(amount) * (net_qty / sold_qty)
 
 def _json_parse(obj):
     if isinstance(obj, (dict, list)): return obj
@@ -951,9 +897,7 @@ def ozet_json():
         _info("ozet_json: start", start=str(start_ist), end=str(end_ist))
 
         # 🔥 Kaynak filtresi
-        source_filter = (request.args.get("source") or "all").lower().strip()
-        if source_filter not in ["all", "trendyol", "Shopify"]:
-            source_filter = "all"
+        source_filter = _normalize_source_filter(request.args.get("source"))
 
         # 2) satış (adet + NET tutar) — barcode→qty / barcode→net_tutar
         t1=_t0()
@@ -962,7 +906,7 @@ def ozet_json():
 
         # 3) sadece gösterilen siparişlerin iadeleri
         t2=_t0()
-        ord_nos = _order_numbers_created_between(start_ist, end_ist)
+        ord_nos = _order_numbers_created_between(start_ist, end_ist, source_filter)
         ret_qty_map, returned_orders = _collect_returns_for_order_numbers(ord_nos)
         _info("ozet_json: returns done", ret=len(ret_qty_map), returned=len(returned_orders), ms=_dt_ms(t2))
 
@@ -984,7 +928,8 @@ def ozet_json():
         for bc in barcodes:
             sat = int(qty_map.get(bc, 0))
             iad = int(ret_qty_map.get(bc, 0))
-            net = _to_number(net_map.get(bc, None), None)   # NET tutar
+            sale_net = _to_number(net_map.get(bc, None), None)
+            net = _return_adjusted_amount(sat, iad, sale_net)
             info = pinfo.get(bc, {"model":"Bilinmiyor","renk":"Bilinmiyor","beden":"—","image":None,
                                   "tedarikci_kodu":"","tedarikci_adi":""})
 
@@ -1001,12 +946,12 @@ def ozet_json():
                 rec["stok"]     += int(sdict.get(bc, 0))
                 if net is not None and sat > 0:
                     rec["net_tutar"]   += float(net)
-                    rec["tutarli_adet"]+= sat
+                    rec["tutarli_adet"]+= max(0, sat - iad)
             else:
                 key = (info["model"], info["renk"])
                 if key not in rep_image and info.get("image"): rep_image[key] = info["image"]
-                if key not in rep_tedarikci and info.get("tedarikci_kodu"):
-                    rep_tedarikci[key] = {"tedarikci_kodu": info["tedarikci_kodu"], "tedarikci_adi": info["tedarikci_adi"]}
+                if info.get("tedarikci_kodu"):
+                    rep_tedarikci.setdefault(key, {})[str(info["tedarikci_kodu"])] = info.get("tedarikci_adi", "")
                 d = grp.setdefault(key, {})
                 b = info["beden"]
                 rec = d.setdefault(b, {"siparis":0,"iade":0,"net_adet":0,"stok":0,"net_tutar":0.0,"tutarli_adet":0})
@@ -1016,7 +961,7 @@ def ozet_json():
                 rec["stok"]     += int(sdict.get(bc, 0))
                 if net is not None and sat > 0:
                     rec["net_tutar"]   += float(net)
-                    rec["tutarli_adet"]+= sat
+                    rec["tutarli_adet"]+= max(0, sat - iad)
 
         # 6) kartlar
         now_tr = datetime.now(IST)
@@ -1028,7 +973,7 @@ def ozet_json():
         if group_by_barcode:
             for bc, rec in grp.items():
                 model, renk, beden = rec["model"], rec["renk"], rec["beden"]
-                if tek_model and str(model) != tek_model: continue
+                if not _model_matches(model, tek_model): continue
                 s = rec["siparis"]; r = rec["iade"]; n_adet = rec["net_adet"]
                 k = rec["stok"];    nt = rec["net_tutar"]; qa = rec["tutarli_adet"]
 
@@ -1053,7 +998,7 @@ def ozet_json():
                 try: return (0, float(str(b).replace(',','.')))
                 except: return (1, str(b))
             for (model, renk), beden_map in grp.items():
-                if tek_model and str(model) != tek_model: continue
+                if not _model_matches(model, tek_model): continue
                 detay=[]; top_sat=top_iade=top_net_adet=top_stok=0; top_net_tutar=0.0; top_tutarli_adet=0
                 for beden in sorted(beden_map.keys(), key=_beden_key):
                     s = beden_map[beden]["siparis"]; r = beden_map[beden]["iade"]; n_adet = beden_map[beden]["net_adet"]
@@ -1068,15 +1013,17 @@ def ozet_json():
                 ort_net    = (top_net_tutar/top_tutarli_adet) if top_tutarli_adet>0 else 0.0
                 iade_uyari = (iade_oran >= IADE_UYARI_ORAN)
 
-                ted = rep_tedarikci.get((model, renk), {})
+                ted_map = rep_tedarikci.get((model, renk), {})
+                ted_codes = sorted(ted_map)
                 kartlar.append({
                     "model":model,"renk":renk,"image":rep_image.get((model,renk)),
                     "toplam_siparis_bugun":top_sat,"toplam_iade":top_iade,"toplam_net_satis":top_net_adet,
                     "iade_orani":round(iade_oran,2),"iade_uyari":iade_uyari,
                     "toplam_stok":top_stok,"ortalama_fiyat":round(ort_net,2),
                     "saatlik_hiz":round(top_net_adet/hours,2),"dusuk_stok":top_stok < DUSUK_STOK_ESIK,
-                    "tedarikci_kodu": ted.get("tedarikci_kodu", ""),
-                    "tedarikci_adi": ted.get("tedarikci_adi", ""),
+                    "tedarikci_kodu": ted_codes[0] if len(ted_codes) == 1 else "",
+                    "tedarikci_adi": ted_map.get(ted_codes[0], "") if len(ted_codes) == 1 else "",
+                    "tedarikci_kodlari": ted_codes,
                     "detay":detay
                 })
 
@@ -1121,14 +1068,12 @@ def akis_sse():
                     _info("SSE: loop start", start=str(start_ist), end=str(end_ist))
 
                     # 🔥 Kaynak filtresi
-                    source_filter = (request.args.get("source") or "all").lower().strip()
-                    if source_filter not in ["all", "trendyol", "Shopify"]:
-                        source_filter = "all"
+                    source_filter = _normalize_source_filter(request.args.get("source"))
 
                     # satış (adet + NET tutar)
                     qty_map, net_map = _collect_orders_between_strict(start_ist, end_ist, source_filter)
                     # sadece gösterilen siparişlerin iadeleri
-                    ord_nos = _order_numbers_created_between(start_ist, end_ist)
+                    ord_nos = _order_numbers_created_between(start_ist, end_ist, source_filter)
                     ret_qty_map, returned_orders = _collect_returns_for_order_numbers(ord_nos)
 
                     barcodes = set(qty_map.keys()) | set(net_map.keys()) | set(ret_qty_map.keys())
@@ -1147,7 +1092,8 @@ def akis_sse():
                     for bc in barcodes:
                         sat=int(qty_map.get(bc,0))
                         iad=int(ret_qty_map.get(bc,0))
-                        net=_to_number(net_map.get(bc,None), None)
+                        sale_net=_to_number(net_map.get(bc,None), None)
+                        net=_return_adjusted_amount(sat, iad, sale_net)
                         info = pinfo.get(bc, {"model":"Bilinmiyor","renk":"Bilinmiyor","beden":"—","image":None,
                                               "tedarikci_kodu":"","tedarikci_adi":""})
 
@@ -1157,17 +1103,21 @@ def akis_sse():
                                 "siparis":0,"iade":0,"net_adet":0,"stok":0,"net_tutar":0.0,"tutarli_adet":0
                             })
                             rec["siparis"]+=sat; rec["iade"]+=iad; rec["net_adet"]+=max(0,sat-iad); rec["stok"]+=int(sdict.get(bc,0))
-                            if net is not None and sat>0: rec["net_tutar"]+=float(net); rec["tutarli_adet"]+=sat
+                            if net is not None and sat>0:
+                                rec["net_tutar"]+=float(net)
+                                rec["tutarli_adet"]+=max(0, sat-iad)
                         else:
                             key=(info["model"],info["renk"])
                             if key not in rep_image and info.get("image"): rep_image[key]=info["image"]
-                            if key not in rep_tedarikci and info.get("tedarikci_kodu"):
-                                rep_tedarikci[key] = {"tedarikci_kodu": info["tedarikci_kodu"], "tedarikci_adi": info["tedarikci_adi"]}
+                            if info.get("tedarikci_kodu"):
+                                rep_tedarikci.setdefault(key, {})[str(info["tedarikci_kodu"])] = info.get("tedarikci_adi", "")
                             d=grp.setdefault(key,{})
                             b=info["beden"]
                             rec=d.setdefault(b,{"siparis":0,"iade":0,"net_adet":0,"stok":0,"net_tutar":0.0,"tutarli_adet":0})
                             rec["siparis"]+=sat; rec["iade"]+=iad; rec["net_adet"]+=max(0,sat-iad); rec["stok"]+=int(sdict.get(bc,0))
-                            if net is not None and sat>0: rec["net_tutar"]+=float(net); rec["tutarli_adet"]+=sat
+                            if net is not None and sat>0:
+                                rec["net_tutar"]+=float(net)
+                                rec["tutarli_adet"]+=max(0, sat-iad)
 
                     now_tr=datetime.now(IST); hours=max(1.0, now_tr.hour + now_tr.minute/60.0)
                     kartlar=[]; toplam_net_satis=0; toplam_net_tutar_sse=0.0
@@ -1175,7 +1125,7 @@ def akis_sse():
                     if group_by_barcode:
                         for bc, rec in grp.items():
                             model,renk,beden = rec["model"], rec["renk"], rec["beden"]
-                            if tek_model and str(model) != tek_model: continue
+                            if not _model_matches(model, tek_model): continue
                             s=rec["siparis"]; r=rec["iade"]; n_adet=rec["net_adet"]
                             k=rec["stok"];    nt=rec["net_tutar"]; qa=rec["tutarli_adet"]
                             toplam_net_satis += n_adet
@@ -1196,7 +1146,7 @@ def akis_sse():
                             try: return (0, float(str(b).replace(',','.')))
                             except: return (1, str(b))
                         for (model,renk), beden_map in grp.items():
-                            if tek_model and str(model) != tek_model: continue
+                            if not _model_matches(model, tek_model): continue
                             detay=[]; top_sat=top_iade=top_net_adet=top_stok=0; top_net_tutar=0.0; top_tutarli_adet=0
                             for beden in sorted(beden_map.keys(), key=_beden_key):
                                 s=beden_map[beden]["siparis"]; r=beden_map[beden]["iade"]; n_adet=beden_map[beden]["net_adet"]
@@ -1208,15 +1158,17 @@ def akis_sse():
                             iade_oran=(top_iade/top_sat) if top_sat>0 else 0.0
                             ort_net=(top_net_tutar/top_tutarli_adet) if top_tutarli_adet>0 else 0.0
                             iade_uyari=(iade_oran>=IADE_UYARI_ORAN)
-                            ted = rep_tedarikci.get((model, renk), {})
+                            ted_map = rep_tedarikci.get((model, renk), {})
+                            ted_codes = sorted(ted_map)
                             kartlar.append({
                                 "model":model,"renk":renk,"image":rep_image.get((model,renk)),
                                 "toplam_siparis_bugun":top_sat,"toplam_iade":top_iade,"toplam_net_satis":top_net_adet,
                                 "iade_orani":round(iade_oran,2),"iade_uyari":iade_uyari,
                                 "toplam_stok":top_stok,"ortalama_fiyat":round(ort_net,2),
                                 "saatlik_hiz":round(top_net_adet/hours,2),"dusuk_stok":top_stok < DUSUK_STOK_ESIK,
-                                "tedarikci_kodu": ted.get("tedarikci_kodu", ""),
-                                "tedarikci_adi": ted.get("tedarikci_adi", ""),
+                                "tedarikci_kodu": ted_codes[0] if len(ted_codes) == 1 else "",
+                                "tedarikci_adi": ted_map.get(ted_codes[0], "") if len(ted_codes) == 1 else "",
+                                "tedarikci_kodlari": ted_codes,
                                 "detay":detay
                             })
 
@@ -1244,13 +1196,22 @@ def akis_sse():
                     _exc("SSE: loop error")
                     yield "event: error\ndata: {\"error\":\"internal_error\"}\n\n"
 
-                # heartbeat
-                yield "event: ping\ndata: {}\n\n"
-                _pytime.sleep(AKIS_ARALIGI_SANIYE)
+                # Proxy bağlantısını canlı tut; veri yenilemeleri arasında 10 sn'de
+                # bir heartbeat gönder. PING_INTERVAL artık gerçekten kullanılıyor.
+                waited = 0
+                while waited < AKIS_ARALIGI_SANIYE:
+                    _pytime.sleep(min(PING_INTERVAL, AKIS_ARALIGI_SANIYE - waited))
+                    waited += PING_INTERVAL
+                    yield "event: ping\ndata: {}\n\n"
         finally:
             _info("SSE: connection closed", alive_ms=_dt_ms(conn_t0))
 
-    headers = {"Content-Type":"text/event-stream","Cache-Control":"no-cache","Connection":"keep-alive"}
+    headers = {
+        "Content-Type":"text/event-stream",
+        "Cache-Control":"no-cache, no-transform",
+        "Connection":"keep-alive",
+        "X-Accel-Buffering":"no",
+    }
     return Response(stream_with_context(_gen()), headers=headers)
 
 
@@ -1472,6 +1433,7 @@ def _collect_returns_for_order_numbers(order_nos: set[str]):
                              func.coalesce(func.sum(ReturnProduct.quantity), 0))
             .join(ReturnProduct, ReturnProduct.return_order_id == ReturnOrder.id)
             .filter(ReturnOrder.order_number.in_(list(order_nos)))
+            .filter(func.lower(func.coalesce(ReturnOrder.status, "")).in_(ACCEPTED_RETURN_STATUSES))
             .group_by(ReturnOrder.order_number, ReturnProduct.barcode)
             .all())
 

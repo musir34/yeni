@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 from models import db, SiparisFisi, Product, Tedarikci, MaliyetKategori, MaliyetKalem, ModelMaliyet, ModelDirekMaliyet
 from user_logs import log_user_action
+from login_logout import login_required
 import os
 import qrcode
 import qrcode.image.svg
@@ -761,6 +762,7 @@ def tedarikci_sayfasi():
 
 
 @siparis_fisi_bp.route("/api/tedarikcilar", methods=["GET"])
+@login_required
 def api_tedarikcilar():
     """Tedarikci tablosundan tüm tedarikçileri listele."""
     rows = Tedarikci.query.order_by(Tedarikci.kod).all()
@@ -768,6 +770,7 @@ def api_tedarikcilar():
 
 
 @siparis_fisi_bp.route("/api/tedarikci_ekle", methods=["POST"])
+@login_required
 def api_tedarikci_ekle():
     data = request.get_json(force=True) or {}
     kod = (data.get("kod") or "").strip()
@@ -964,6 +967,7 @@ def mark_as_printed():
 
 # ── 14) Canlı Panelden Tedarik Oluştur ──
 @siparis_fisi_bp.route("/siparis_fisi/tedarik_olustur", methods=["POST"])
+@login_required
 def tedarik_olustur_from_panel():
     """
     Canlı panelden seçilen kartların satış adetlerine göre

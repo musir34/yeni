@@ -59,6 +59,7 @@
     .kpi .sub{font-size:12px;color:var(--muted)}
 
     .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+    .twocol>*{min-width:0}
     .chartbox{background:#fff;border:1px solid var(--color-border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:16px}
     .chartbox h4{margin:0 0 10px;color:#111;letter-spacing:.2px}
 
@@ -84,6 +85,7 @@
     .bar{height:10px;background:#f1f3f5;border-radius:999px;border:1px solid var(--color-border);overflow:hidden;margin:0 12px 12px}
     .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--color-primary),var(--color-primary-dark));transition:width .6s ease}
     .details{display:none;padding:12px;border-top:1px dashed var(--color-border);background:#fff}
+    .table-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
     table{width:100%;border-collapse:collapse}
     th,td{padding:10px;border-top:1px solid var(--color-border);text-align:left}
     thead th{background:#f6f7f8;color:var(--muted)}
@@ -214,6 +216,26 @@
     html.gs-dark .zero-stock-section{background:rgba(245,158,11,.08);border-color:#664400}
     html.gs-dark .media img{background:#1a1a1a}
 
+    @media (max-width:760px){
+      .appbar-inner{padding:8px 12px;flex-wrap:wrap}
+      .brand{font-size:14px}
+      .filters{padding:0 12px 10px;gap:8px;max-height:44vh;overflow-y:auto}
+      .seg{max-width:100%;overflow-x:auto;border-radius:12px}
+      .seg button{flex:0 0 auto;padding:8px 10px}
+      .date-range{width:100%}
+      .date-range .inp{min-width:0;width:50%}
+      .filters>.inp{min-width:0!important;flex:1 1 145px}
+      .twocol{grid-template-columns:1fr}
+      .grid{grid-template-columns:minmax(0,1fr)}
+      .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      .card-head{align-items:flex-start}
+      .head-right{justify-content:flex-end}
+      .media img{height:170px}
+      .pagination-controls{max-width:100%;overflow-x:auto}
+      .modal-overlay{align-items:flex-end;padding:0}
+      .modal-box{max-height:92vh;border-radius:16px 16px 0 0}
+    }
+
     /* ── Pagination ── */
     .pagination-bar{display:flex;align-items:center;justify-content:space-between;margin-top:16px;gap:12px;flex-wrap:wrap}
     .pagination-info{font-size:13px;color:var(--muted)}
@@ -229,7 +251,7 @@
     html.gs-dark .pagination-controls button.active{background:var(--color-primary);color:#fff}
     html.gs-dark .page-size-wrap select{background:#1e1e1e;color:#ddd;border-color:#333}
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -261,7 +283,7 @@
       <div class="seg" id="segSource">
         <button data-source="all" class="active">Tümü</button>
         <button data-source="trendyol">Trendyol</button>
-        <button data-source="Shopify">Shopify</button>
+        <button data-source="shopify">Shopify</button>
       </div>
 
       <input id="filtreModel" class="inp" type="text" placeholder="Model filtresi (örn: 099)" />
@@ -359,8 +381,8 @@
   <div class="lightbox" id="lightbox"><img id="lightImg" alt=""></div>
 
   <!-- Tedarik Modal -->
-  <div class="modal-overlay" id="tedarikModal">
-    <div class="modal-box">
+  <div class="modal-overlay" id="tedarikModal" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal-header">
         <h3 id="modalTitle">Tedarik Siparişi</h3>
         <span class="modal-step" id="modalStep">1/1</span>
@@ -390,7 +412,8 @@
       ctx.restore();
     }
   };
-  Chart.register(ShadowPlugin);
+  const chartAvailable = typeof window.Chart !== 'undefined';
+  if (chartAvailable) Chart.register(ShadowPlugin);
 
   // Admin kontrolü (backend'den gelen)
   const isAdmin = {{ 'true' if is_admin else 'false' }};
@@ -434,7 +457,13 @@
 
   // Chart.js instances (with rounded bars)
   function newBar(canvasId, label){
+    if (!chartAvailable) {
+      const box = document.getElementById(canvasId).closest('.chartbox');
+      if (box) box.style.display = 'none';
+      return {data:{labels:[],datasets:[{data:[]}]},update(){}};
+    }
     const ctx = document.getElementById(canvasId).getContext('2d');
+    const dark = document.documentElement.classList.contains('gs-dark');
     return new Chart(ctx,{
       type:'bar',
       data:{labels:[],datasets:[{label, data:[], borderWidth:1, borderRadius:10, backgroundColor:'rgba(183,110,121,0.35)', borderColor:'#B76E79'}]},
@@ -442,8 +471,8 @@
         responsive:true,
         plugins:{legend:{display:false}, tooltip:{enabled:true, mode:'index', intersect:false}},
         scales:{
-          x:{ticks:{color:'#374151'}, grid:{display:false}},
-          y:{beginAtZero:true, ticks:{precision:0,color:'#6b7280'}, grid:{color:'rgba(0,0,0,0.06)'}}
+          x:{ticks:{color:dark?'#d1d5db':'#374151'}, grid:{display:false}},
+          y:{beginAtZero:true, ticks:{precision:0,color:dark?'#9ca3af':'#6b7280'}, grid:{color:dark?'rgba(255,255,255,.08)':'rgba(0,0,0,0.06)'}}
         }
       }
     });
@@ -455,6 +484,13 @@
   const tl = v => (Number(v)||0).toLocaleString('tr-TR',{style:'currency',currency:'TRY',minimumFractionDigits:2,maximumFractionDigits:2});
   const bedenKey = b => {const t=String(b??'').replace(',','.');const n=Number(t);return Number.isFinite(n)?[0,n]:[1,String(b??'')];};
   const pct = (a,b)=>{if(!b)return 0;return Math.max(0,Math.min(100,Math.round((a/b)*100)));};
+  const esc = v => String(v ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+  function safeImageUrl(value){
+    try {
+      const u = new URL(String(value || ''), window.location.origin);
+      return (u.protocol === 'http:' || u.protocol === 'https:') ? esc(u.href) : '';
+    } catch(e) { return ''; }
+  }
 
   function getPreset(){
     const active = seg.querySelector('.active');
@@ -492,6 +528,10 @@
       GS.countTween(el, oldVal, newVal, 280);
       el.classList.remove('val-changed'); void el.offsetWidth; el.classList.add('val-changed');
     } else {
+      if (el._gsTweenFrame) {
+        cancelAnimationFrame(el._gsTweenFrame);
+        el._gsTweenFrame = null;
+      }
       el.textContent = newVal;
     }
   }
@@ -520,9 +560,9 @@
   }
 
   function _buildCardHTML(k, detayId){
-    const net  = (k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0);
+    const net  = Number(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0) || 0;
     const netStyle = _netSatisColor(net);
-    const ret  = (k.toplam_iade ?? 0);
+    const ret  = Number(k.toplam_iade ?? 0) || 0;
     const retP = pct(ret, (k.toplam_siparis_bugun ?? 0));
     const cap  = (k.toplam_stok ?? 0) + (net);
     const barP = pct((k.toplam_stok ?? 0), (cap || (k.toplam_stok ?? 1)));
@@ -543,8 +583,8 @@
     return `
       <div class="card-head">
         <div class="head-left">
-          <span class="chip">${k.model ?? '-'}</span>
-          <span class="chip"><span class="dot"></span>${k.renk ?? '-'}</span>
+          <span class="chip">${esc(k.model ?? '-')}</span>
+          <span class="chip"><span class="dot"></span>${esc(k.renk ?? '-')}</span>
         </div>
         <div class="head-right">
           ${badgeHigh}
@@ -556,13 +596,13 @@
           <button class="btn ghost" data-target="${detayId}">Detay</button>
         </div>
       </div>
-      ${k.image ? `<div class="media"><img class="card-img" src="${k.image}" alt="${k.model ?? ''} ${k.renk ?? ''}" loading="lazy" onerror="this.onerror=null;this.src='/static/logo/gullu.png';"></div>` : ``}
+      ${safeImageUrl(k.image) ? `<div class="media"><img class="card-img" src="${safeImageUrl(k.image)}" alt="${esc(k.model ?? '')} ${esc(k.renk ?? '')}" loading="lazy" onerror="this.onerror=null;this.src='/static/logo/gullu.png';"></div>` : ``}
       <div class="stats">
         ${statsHTML}
       </div>
       <div class="bar"><i style="width:${barP}%"></i></div>
       <div class="details" id="${detayId}">
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Beden</th><th>Satış (NET)</th><th>İade ( % )</th><th>Kalan Stok</th></tr></thead>
           <tbody>
             ${[...(k.detay||[])].sort((a,b)=>{const A=bedenKey(a.beden),B=bedenKey(b.beden);return A[0]-B[0]||A[1]-B[1];})
@@ -571,16 +611,16 @@
                   const r = d.iade ?? 0;
                   const n = (d.net ?? Math.max(0,s - r));
                   const rp = pct(r, s);
-                  const nStyle = n > 0 ? _netSatisColor(n) : 'color:#000;font-weight:700';
+                  const nStyle = n > 0 ? _netSatisColor(n) : 'font-weight:700';
                   return `<tr>
-                    <td>${d.beden ?? '-'}</td>
+                    <td>${esc(d.beden ?? '-')}</td>
                     <td style="${nStyle}">${n}</td>
                     <td>${r} <span style="color:var(--muted)">(%${rp})</span></td>
                     <td>${d.stok ?? 0}</td>
                   </tr>`;
                }).join('')}
           </tbody>
-        </table>
+        </table></div>
       </div>`;
   }
 
@@ -598,6 +638,7 @@
 
   // Tüm backend verisi (filtresiz)
   let _allKartlar = [];
+  const _selectedCardKeys = new Set();
 
   // ─── Pagination State ──────────────────────────────────────────────────
   let _currentPage = 1;
@@ -726,25 +767,24 @@
         const el = existingEls[key];
         const prev = _prevCardData[key];
         if (prev) {
-          const oldNet = (prev.toplam_net_satis ?? prev.toplam_siparis_bugun ?? 0);
-          const newNet = (k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0);
-          if (oldNet !== newNet || (prev.toplam_stok ?? 0) !== (k.toplam_stok ?? 0)) {
-            const wasSelected = el.classList.contains('selected');
+          if (JSON.stringify(prev) !== JSON.stringify(k)) {
             el.innerHTML = _buildCardHTML(k, detayId);
             _bindCardEvents(el);
-            if (wasSelected) {
-              el.classList.add('selected');
-              const cb = el.querySelector('.tedarik-cb');
-              const wrap = el.querySelector('.tedarik-cb-wrap');
-              if (cb) cb.checked = true;
-              if (wrap) wrap.classList.add('checked');
-            }
             el.querySelectorAll('.num[data-field]').forEach(n => {
               n.classList.remove('val-changed');
               void n.offsetWidth;
               n.classList.add('val-changed');
             });
           }
+        }
+        if (_selectedCardKeys.has(key)) {
+          el.classList.add('selected');
+          const cb = el.querySelector('.tedarik-cb');
+          const wrap = el.querySelector('.tedarik-cb-wrap');
+          if (cb) cb.checked = true;
+          if (wrap) wrap.classList.add('checked');
+        } else {
+          el.classList.remove('selected');
         }
         frag.appendChild(el);
       } else {
@@ -753,6 +793,13 @@
         div.dataset.cardKey = key;
         div.innerHTML = _buildCardHTML(k, detayId);
         _bindCardEvents(div);
+        if (_selectedCardKeys.has(key)) {
+          div.classList.add('selected');
+          const cb = div.querySelector('.tedarik-cb');
+          const wrap = div.querySelector('.tedarik-cb-wrap');
+          if (cb) cb.checked = true;
+          if (wrap) wrap.classList.add('checked');
+        }
         frag.appendChild(div);
       }
     });
@@ -763,6 +810,7 @@
 
     _prevCardData = {..._prevCardData, ...newMap};
     _isFirstRender = false;
+    _updateTedarikCount();
   }
 
   // Render
@@ -772,11 +820,17 @@
 
     // Ham veriyi sakla (tedarikçi filtresi tekrar uygulanabilsin)
     _allKartlar = kartlar;
+    const availableKeys = new Set(kartlar.map(_cardKey));
+    [..._selectedCardKeys].forEach(key => { if (!availableKeys.has(key)) _selectedCardKeys.delete(key); });
 
     // Frontend tedarikçi filtresi
     const tedFilter = getTedarikci();
     if (tedFilter) {
-      kartlar = kartlar.filter(k => (k.tedarikci_kodu || '') === tedFilter);
+      kartlar = kartlar.filter(k => Array.isArray(k.tedarikci_kodlari)
+        ? k.tedarikci_kodlari.includes(tedFilter)
+        : (k.tedarikci_kodu || '') === tedFilter);
+      const filteredKeys = new Set(kartlar.map(_cardKey));
+      [..._selectedCardKeys].forEach(key => { if (!filteredKeys.has(key)) _selectedCardKeys.delete(key); });
     }
 
     // Filtrelenmiş kartları sakla (pagination için)
@@ -785,25 +839,26 @@
     // ── KPI güncelleme (count tween) ──
     elZaman.textContent = 'Güncellendi: ' + ts;
     const toplamNet = kartlar.reduce((a,k)=>a+(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0);
-    const newOrders = tedFilter
-        ? kartlar.reduce((a,k)=>a+(k.toplam_siparis_bugun ?? 0),0)
-        : ((typeof toplamSiparis === 'number') ? toplamSiparis : 0);
+    const productFiltered = Boolean(tedFilter || inpModel.value.trim());
+    const newOrders = productFiltered ? null : ((typeof toplamSiparis === 'number') ? toplamSiparis : 0);
     const totalReturns = kartlar.reduce((a,k)=>a+(k.toplam_iade ?? 0),0);
 
     _tweenKpi(elToplam, _prevKpi.toplam, toplamNet ?? 0);
-    _tweenKpi(elOrders, _prevKpi.orders, newOrders);
+    if (newOrders === null) _tweenKpi(elOrders, null, '—');
+    else _tweenKpi(elOrders, _prevKpi.orders, newOrders);
     _tweenKpi(elRet, _prevKpi.returns, totalReturns);
 
     _prevKpi.toplam = toplamNet ?? 0;
-    _prevKpi.orders = newOrders;
+    if (newOrders !== null) _prevKpi.orders = newOrders;
     _prevKpi.returns = totalReturns;
 
     if (isAdmin) {
-      const netAvg = (typeof genelAvg === 'number') ? genelAvg
+      const filteredCiro = kartlar.reduce((acc,k)=>acc+(k.ortalama_fiyat ?? 0)*(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0);
+      const netAvg = (!tedFilter && typeof genelAvg === 'number') ? genelAvg
                       : (kartlar.reduce((acc,k)=>acc+(k.ortalama_fiyat ?? 0)*(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0)) /
                         Math.max(1,kartlar.reduce((acc,k)=>acc+(k.toplam_net_satis ?? k.toplam_siparis_bugun ?? 0),0));
       if (elAvg) elAvg.textContent = tl(netAvg);
-      if (elCiro) elCiro.textContent = (typeof toplamCiro === 'number') ? tl(toplamCiro) : tl(0);
+      if (elCiro) elCiro.textContent = (!tedFilter && typeof toplamCiro === 'number') ? tl(toplamCiro) : tl(filteredCiro);
     }
 
     const totalSales = kartlar.reduce((a,k)=>a+(k.toplam_siparis_bugun ?? 0),0);
@@ -830,16 +885,38 @@
   document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ document.getElementById('lightbox').style.display='none'; } });
 
   // Data I/O
+  let _fetchController = null;
+  let _fetchSeq = 0;
+
+  function filtersValid(){
+    if (getPreset() !== 'custom') return true;
+    if (!inpStart.value || !inpEnd.value) {
+      if (window.GS) GS.showToast('Özel aralık için başlangıç ve bitiş tarihi seçin.', 'warning');
+      return false;
+    }
+    if (inpStart.value > inpEnd.value) {
+      if (window.GS) GS.showToast('Başlangıç tarihi bitiş tarihinden sonra olamaz.', 'warning');
+      return false;
+    }
+    return true;
+  }
+
   async function yukle(model){
+    if (!filtersValid()) return;
+    if (_fetchController) _fetchController.abort();
+    _fetchController = new AbortController();
+    const seq = ++_fetchSeq;
     try{
       const u = '/api/canli/ozet' + buildQuery(model);
-      const r = await fetch(u);
+      const r = await fetch(u, {signal:_fetchController.signal, headers:{'Accept':'application/json'}});
       if(!r.ok) throw new Error('HTTP ' + r.status);
       const j = await r.json();
+      if (seq !== _fetchSeq) return;
       console.log('[OZET] yanit', j);
       const toplamA = (typeof j.toplam_net_satis === 'number') ? j.toplam_net_satis : j.toplam_satis;
       render(j.kartlar, j.guncellendi, toplamA, j.toplam_siparis_sayisi, j.genel_ortalama_fiyat, j.toplam_ciro);
     }catch(err){
+      if (err && err.name === 'AbortError') return;
       console.error('[FETCH ERROR]', err);
       elZaman.textContent = 'İstek hatası: ' + (err.message || err);
     }
@@ -848,10 +925,12 @@
   let ev=null;
   function startSSE(model){
     if(ev){ev.close();ev=null;}
-    if(!liveToggle.checked){ return; }
+    if(!liveToggle.checked || !filtersValid()){ return; }
     const url='/api/canli/akis'+buildQuery(model);
-    ev=new EventSource(url);
-    ev.onmessage=(e)=>{
+    const connection = new EventSource(url);
+    ev=connection;
+    connection.onmessage=(e)=>{
+      if (ev !== connection) return;
       try{
         const j=JSON.parse(e.data);
         console.log('[SSE] paket', j);
@@ -859,15 +938,26 @@
         render(j.kartlar, j.guncellendi, toplamA, j.toplam_siparis_sayisi, j.genel_ortalama_fiyat, j.toplam_ciro);
       }catch(err){ console.error(err); elZaman.textContent='SSE veri hatası: '+err.message; }
     };
-    ev.onerror = (err) => {
+    connection.onerror = (err) => {
+      if (ev !== connection) return;
       console.error('[SSE ERROR]', err);
       elZaman.textContent = 'SSE Hatası — akış koptu, yeniden bağlanılıyor…';
     };
   }
 
   // Events
-  btnUygula.onclick=()=>{ saveFilters(); _currentPage=1; const m=inpModel.value.trim(); _allKartlar=[]; startSSE(m); yukle(m); };
-  btnYenile.onclick = ()=>{ saveFilters(); _currentPage=1; _allKartlar=[]; yukle(inpModel.value.trim()); };
+  btnUygula.onclick=()=>{
+    if (!filtersValid()) return;
+    saveFilters(); _currentPage=1;
+    const m=inpModel.value.trim(); _allKartlar=[];
+    startSSE(m); yukle(m);
+  };
+  btnYenile.onclick = ()=>{
+    if (!filtersValid()) return;
+    saveFilters(); _currentPage=1; _allKartlar=[];
+    const m=inpModel.value.trim();
+    startSSE(m); yukle(m);
+  };
   liveToggle.onchange = ()=>{ const m=inpModel.value.trim(); if(liveToggle.checked){ startSSE(m); } else { if(ev){ev.close();ev=null;} } };
   // Tedarikçi filtresi değiştiğinde mevcut veriyi tekrar render et (backend'e istek yok)
   document.getElementById('filtreTedarikci').onchange = ()=>{
@@ -893,13 +983,15 @@
   function tedarikToggle(cb) {
     const card = cb.closest('.card');
     const wrap = cb.closest('.tedarik-cb-wrap');
+    const key = card.dataset.cardKey;
+    if (cb.checked) _selectedCardKeys.add(key); else _selectedCardKeys.delete(key);
     card.classList.toggle('selected', cb.checked);
     if (wrap) wrap.classList.toggle('checked', cb.checked);
     _updateTedarikCount();
   }
 
   function _updateTedarikCount() {
-    const n = document.querySelectorAll('.tedarik-cb:checked').length;
+    const n = _selectedCardKeys.size;
     tedarikBtn.disabled = (n === 0);
     const c = document.getElementById('tedarikCount');
     if (c) { c.textContent = n; c.style.display = n > 0 ? 'inline' : 'none'; }
@@ -918,17 +1010,30 @@
   let _tedarikStep = 0;
   let _tedarikEdits = []; // her kart için düzenlenmiş beden adetleri
 
-  function _closeModal() { modal.classList.remove('show'); }
+  function _closeModal() {
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function _resetModalControls() {
+    modalNext.style.display = '';
+    modalNext.disabled = false;
+    modalSkip.style.display = '';
+    modalSkip.disabled = false;
+    modalPrev.disabled = false;
+    modalNext.onclick = _handleModalNext;
+    modalSkip.onclick = _handleModalSkip;
+    modalPrev.onclick = _handleModalPrev;
+  }
 
   tedarikBtn.onclick = () => {
-    const checkedBoxes = document.querySelectorAll('.tedarik-cb:checked');
-    if (checkedBoxes.length === 0) return;
+    if (_selectedCardKeys.size === 0) return;
+
+    _resetModalControls();
 
     _tedarikKartlar = [];
     _tedarikEdits = [];
-    checkedBoxes.forEach(cb => {
-      const card = cb.closest('.card');
-      const key = card.dataset.cardKey;
+    _selectedCardKeys.forEach(key => {
       const kd = _prevCardData[key];
       if (kd) {
         _tedarikKartlar.push(kd);
@@ -950,6 +1055,8 @@
     _tedarikStep = 0;
     _renderTedarikStep();
     modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+    modalNext.focus();
   };
 
   function _renderTedarikStep() {
@@ -1052,13 +1159,13 @@
     });
   }
 
-  modalPrev.onclick = () => {
+  function _handleModalPrev() {
     _saveCurrentStep();
     _tedarikStep--;
     _renderTedarikStep();
-  };
+  }
 
-  modalSkip.onclick = () => {
+  function _handleModalSkip() {
     // Bu kartı sıfırla (dahil etme)
     const edits = _tedarikEdits[_tedarikStep];
     for (let s = 35; s <= 41; s++) { if(edits[s]) edits[s].net = 0; }
@@ -1067,33 +1174,34 @@
       _tedarikStep++;
       _renderTedarikStep();
     } else {
-      _submitTedarik();
+      _submitTedarik(false);
     }
-  };
+  }
 
-  modalNext.onclick = () => {
+  function _handleModalNext() {
     _saveCurrentStep();
     if (_tedarikStep < _tedarikKartlar.length - 1) {
       _tedarikStep++;
       _renderTedarikStep();
     } else {
-      _submitTedarik();
+      _submitTedarik(false);
     }
-  };
+  }
+
+  _resetModalControls();
 
   // Tümünü Onayla — mevcut adımı kaydet, kalan tüm kartları olduğu gibi kabul et ve gönder
   document.getElementById('modalApproveAll').onclick = () => {
     _saveCurrentStep();
-    _tedarikStep = _tedarikKartlar.length - 1; // son adıma atla
-    _submitTedarik();
+    _submitTedarik(false);
   };
 
   // Modal overlay tıklama ile kapatma
   modal.onclick = (e) => { if (e.target === modal) _closeModal(); };
 
-  async function _submitTedarik() {
+  async function _submitTedarik(saveCurrent = true) {
     // Son adımdaki inputları kaydet
-    _saveCurrentStep();
+    if (saveCurrent) _saveCurrentStep();
 
     // Kartları hazırla
     const payload = [];
@@ -1139,13 +1247,16 @@
         modalBody.innerHTML = `
           <div style="text-align:center;padding:24px">
             <div style="font-size:48px;margin-bottom:12px">✅</div>
-            <h4 style="margin:0 0 8px;color:var(--color-secondary)">${result.message}</h4>
+            <h4 style="margin:0 0 8px;color:var(--color-secondary)">${esc(result.message || 'Tedarik siparişi oluşturuldu.')}</h4>
             <p style="color:var(--muted);font-size:13px">${payload.length} kalem ürün tedarik siparişine eklendi.</p>
           </div>`;
         modalNext.textContent = 'Fişi Görüntüle';
         modalNext.disabled = false;
         modalNext.onclick = () => {
-          if (result.redirect_url) window.open(result.redirect_url, '_blank');
+          if (result.redirect_url) {
+            const target = new URL(result.redirect_url, window.location.origin);
+            if (target.origin === window.location.origin) window.open(target.href, '_blank', 'noopener');
+          }
           _closeModal();
           _resetTedarikSelection();
         };
@@ -1153,14 +1264,14 @@
         modalSkip.disabled = false;
         modalSkip.onclick = () => { _closeModal(); _resetTedarikSelection(); };
       } else {
-        modalBody.innerHTML = `<div style="text-align:center;padding:24px"><div style="font-size:48px;margin-bottom:12px">❌</div><p style="color:var(--color-danger)">${result.message || 'Bir hata oluştu'}</p></div>`;
+        modalBody.innerHTML = `<div style="text-align:center;padding:24px"><div style="font-size:48px;margin-bottom:12px">❌</div><p style="color:var(--color-danger)">${esc(result.message || 'Bir hata oluştu')}</p></div>`;
         modalSkip.textContent = 'Kapat';
         modalSkip.disabled = false;
         modalSkip.onclick = _closeModal;
         modalNext.style.display = 'none';
       }
     } catch (err) {
-      modalBody.innerHTML = `<div style="text-align:center;padding:24px"><div style="font-size:48px;margin-bottom:12px">❌</div><p style="color:var(--color-danger)">Bağlantı hatası: ${err.message}</p></div>`;
+      modalBody.innerHTML = `<div style="text-align:center;padding:24px"><div style="font-size:48px;margin-bottom:12px">❌</div><p style="color:var(--color-danger)">Bağlantı hatası: ${esc(err.message)}</p></div>`;
       modalSkip.textContent = 'Kapat';
       modalSkip.disabled = false;
       modalSkip.onclick = _closeModal;
@@ -1169,17 +1280,15 @@
   }
 
   function _resetTedarikSelection() {
-    document.querySelectorAll('.tedarik-cb:checked').forEach(cb => {
+    _selectedCardKeys.clear();
+    document.querySelectorAll('.tedarik-cb').forEach(cb => {
       cb.checked = false;
       cb.closest('.card').classList.remove('selected');
       const wrap = cb.closest('.tedarik-cb-wrap');
       if (wrap) wrap.classList.remove('checked');
     });
     _updateTedarikCount();
-    // Modal butonlarını resetle
-    modalNext.style.display = '';
-    modalNext.disabled = false;
-    modalSkip.disabled = false;
+    _resetModalControls();
   }
 
   // ─── Filtre Durumunu Koru (localStorage) ───────────────────────────────
@@ -1205,7 +1314,8 @@
         customRange.style.display = (s.preset === 'custom') ? '' : 'none';
       }
       if (s.source) {
-        [...segSource.children].forEach(b => b.classList.toggle('active', b.dataset.source === s.source));
+        const restoredSource = String(s.source).toLowerCase();
+        [...segSource.children].forEach(b => b.classList.toggle('active', b.dataset.source === restoredSource));
       }
       if (s.model) inpModel.value = s.model;
       if (s.customStart) inpStart.value = s.customStart;
@@ -1235,6 +1345,10 @@
       if (window._pendingTedarikci) {
         sel.value = window._pendingTedarikci;
         delete window._pendingTedarikci;
+        if (_allKartlar.length > 0) {
+          _currentPage = 1;
+          render(_allKartlar, elZaman.textContent.replace('Güncellendi: ',''), null, null, null, null);
+        }
       }
     } catch(e) { console.error('Tedarikçi listesi yüklenemedi', e); }
   })();

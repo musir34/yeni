@@ -166,6 +166,10 @@
    * Sayıyı animasyonlu olarak günceller.
    */
   function countTween(el, from, to, duration) {
+    if (el._gsTweenFrame) {
+      cancelAnimationFrame(el._gsTweenFrame);
+      el._gsTweenFrame = null;
+    }
     if (prefersReduced || from === to) { el.textContent = to; return; }
     duration = duration || 220;
     var start = performance.now();
@@ -175,9 +179,10 @@
       // ease in-out quad
       var e = t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
       el.textContent = Math.round(from + delta * e);
-      if (t < 1) requestAnimationFrame(step);
+      if (t < 1) el._gsTweenFrame = requestAnimationFrame(step);
+      else el._gsTweenFrame = null;
     }
-    requestAnimationFrame(step);
+    el._gsTweenFrame = requestAnimationFrame(step);
   }
 
   // ─── Refresh Manager ───────────────────────────────────────────────────────

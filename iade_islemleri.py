@@ -123,18 +123,12 @@ def save_to_database(data: dict, session):
     if not content:
         return True
 
-    try:
-        existing = {str(o.id) for o in session.query(ReturnOrder.id).all()}
-    except Exception as e:
-        logger.error("Mevcut iadeler alınamadı: %s", e)
-        return False
-
     orders_to_upsert, products_to_upsert = [], []
     processed = set()
 
     for item in content:
         claim_id = item.get("id")
-        if (not claim_id) or (claim_id in processed) or (str(claim_id) in existing) or (not is_valid_uuid(claim_id)):
+        if (not claim_id) or (claim_id in processed) or (not is_valid_uuid(claim_id)):
             continue
         processed.add(claim_id)
 
@@ -147,9 +141,6 @@ def save_to_database(data: dict, session):
             .get("claimItemStatus", {})
             .get("name", "")
         )
-        if claim_status in ("Accepted", "Onaylandı"):
-            continue  # onaylanmış iadeleri kaydetme
-
         claim_date_ms = item.get("claimDate")
         # DİKKAT: claims API'sinin `claimDate`'i GERÇEK UTC epoch'tur (orders API'sinin
         # `orderDate`'inden farklı — o İstanbul duvar saati kodluyor).
@@ -237,7 +228,9 @@ def fetch_and_save_daily_returns(app):
     with app.app_context():
         logger.info("Günlük iade çekme başladı")
         now = datetime.now()
-        data = fetch_data_from_api(now - timedelta(days=1), now)
+        # Durumu sonradan Accepted/Rejected olan talepleri de upsert edebilmek için
+        # yalnız son 24 saati değil yakın geçmişi yeniden tara.
+        data = fetch_data_from_api(now - timedelta(days=30), now)
         if data:
             save_to_database(data, db.session)
 
@@ -385,5 +378,3 @@ def iade_guncelle(claim_id):
         session.close()
 
     return redirect(url_for("iade_islemleri.iade_listesi"))
-
-
