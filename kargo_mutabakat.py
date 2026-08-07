@@ -511,11 +511,13 @@ def kargo_mutabakat_itiraz_excel(filename):
 
     ws3 = wb.create_sheet('Fiyat Anomalileri')
     _fill_sheet(ws3, sonuc['fiyat_anomali'],
-                extra_headers=('Beklenen Fiyat', 'Fark', 'Durum'),
+                extra_headers=('Beklenen Fiyat', 'Fark', 'Durum', 'Kaynak', 'Sipariş No'),
                 extra_getter=lambda d: [
                     d.get('beklenen_fiyat'),
                     round((d['tasima_ucreti'] or 0) - (d.get('beklenen_fiyat') or 0), 2) if d.get('beklenen_fiyat') is not None else None,
                     'Tarife dışı desi' if d.get('tarife_durum') == 'tarife_disi' else 'Fiyat farkı',
+                    d.get('kaynak') or 'Bizde Yok',
+                    d.get('siparis_no'),
                 ])
 
     buf = BytesIO()
