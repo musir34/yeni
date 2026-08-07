@@ -83,16 +83,22 @@
     <section class="ur-controls">
       <div class="ur-tabs" role="tablist" aria-label="Üretim durumları">
         <button class="ur-tab active" data-durum="bekleyen" role="tab" aria-selected="true">
-          Bekleyen <span id="urTabBekleyen">0</span>
+          Bekleyen <span id="urTabSay-bekleyen">0</span>
         </button>
-        <button class="ur-tab" data-durum="islemde" role="tab" aria-selected="false">
-          İşleme Alındı <span id="urTabIslemde">0</span>
+        <button class="ur-tab" data-durum="uretiliyor" role="tab" aria-selected="false">
+          Üretiliyor <span id="urTabSay-uretiliyor">0</span>
         </button>
-        <button class="ur-tab" data-durum="uretildi" role="tab" aria-selected="false">
-          Üretilenler <span id="urTabUretilen">0</span>
+        <button class="ur-tab" data-durum="uretilen" role="tab" aria-selected="false">
+          Üretilen <span id="urTabSay-uretilen">0</span>
         </button>
-        <button class="ur-tab" data-durum="tamamlanan" role="tab" aria-selected="false">
-          Tamamlanan <span id="urTabTamamlanan">0</span>
+        <button class="ur-tab" data-durum="paketlenen" role="tab" aria-selected="false">
+          Paketlenen <span id="urTabSay-paketlenen">0</span>
+        </button>
+        <button class="ur-tab" data-durum="kargoda" role="tab" aria-selected="false">
+          Kargoya Verilen <span id="urTabSay-kargoda">0</span>
+        </button>
+        <button class="ur-tab" data-durum="teslim" role="tab" aria-selected="false">
+          Teslim Edilen <span id="urTabSay-teslim">0</span>
         </button>
       </div>
       <!-- Hazırlayana göre filtre: raf okutan / etiketi basan kullanıcı -->
@@ -549,8 +555,11 @@
     function kartHtml(r, durum) {
         const iptal = !!r.iptal;
         const bekleyen = durum === 'bekleyen';
-        const islemde = durum === 'islemde';
-        const tamamlanan = durum === 'tamamlanan';
+        const uretiliyor = durum === 'uretiliyor';
+        const uretilen = durum === 'uretilen';
+        const paketlenen = durum === 'paketlenen';
+        const kargoda = durum === 'kargoda';
+        const teslim = durum === 'teslim';
         const sd = r.siparis_detay || [];
         const uretimKalem = sd.filter(u => u.uretim).length;
         const karma = sd.length > 0 && uretimKalem < sd.length;
@@ -558,15 +567,18 @@
             ? `<button class="ur-undo-btn" data-kargo="${Number(r.id)}" title="Kargo çıktısı"><i class="bi bi-printer"></i></button>` : '';
         let butonlar = '';
         if (bekleyen) {
-            butonlar = `<button class="ur-work-btn" data-isleme="${Number(r.id)}"><i class="bi bi-hammer"></i> İşleme Al</button>
+            butonlar = `<button class="ur-work-btn" data-isleme="${Number(r.id)}"><i class="bi bi-hammer"></i> Üretime Al</button>
                         <button class="ur-done-btn" data-uretildi="${Number(r.id)}"><i class="bi bi-check-lg"></i> Üretildi</button>${kargoBtn}`;
-        } else if (islemde) {
+        } else if (uretiliyor) {
             butonlar = `<button class="ur-done-btn" data-uretildi="${Number(r.id)}"><i class="bi bi-check-lg"></i> Üretildi</button>${kargoBtn}
                         <button class="ur-undo-btn" data-isleme-geri="${Number(r.id)}" title="Bekleyenlere geri al"><i class="bi bi-arrow-counterclockwise"></i></button>`;
-        } else if (tamamlanan) {
-            butonlar = kargoBtn;  // kargolanmış sipariş: durum aksiyonu yok
+        } else if (uretilen) {
+            butonlar = `<button class="ur-done-btn" data-paketlendi="${Number(r.id)}"><i class="bi bi-box-seam"></i> Paketlendi</button>${kargoBtn}
+                        <button class="ur-undo-btn" data-gerial="${Number(r.id)}" title="Üretiliyor'a geri al"><i class="bi bi-arrow-counterclockwise"></i></button>`;
+        } else if (paketlenen) {
+            butonlar = `${kargoBtn}<button class="ur-undo-btn" data-paketlendi-geri="${Number(r.id)}" title="Üretilenlere geri al"><i class="bi bi-arrow-counterclockwise"></i></button>`;
         } else {
-            butonlar = `${kargoBtn}<button class="ur-undo-btn" data-gerial="${Number(r.id)}"><i class="bi bi-arrow-counterclockwise"></i> Geri Al</button>`;
+            butonlar = kargoBtn;  // kargoda/teslim: durum aksiyonu yok
         }
         return `
         <article class="ur-card${iptal ? ' ur-card--iptal' : ''}">
@@ -575,8 +587,10 @@
                     <span class="ur-order-no">#${esc(r.order_number)}</span>
                     ${r.product_main_id ? `<span class="ur-model-tag"><i class="fas fa-industry"></i> ${esc(r.product_main_id)}</span>` : ''}
                     ${iptal ? '<span class="ur-badge ur-badge--iptal"><i class="bi bi-x-octagon"></i> İPTAL — üretme!</span>' : ''}
-                    ${islemde ? '<span class="ur-badge ur-badge--islemde"><i class="bi bi-hammer"></i> Üretimde</span>' : ''}
-                    ${tamamlanan ? '<span class="ur-badge ur-badge--kargo"><i class="bi bi-truck"></i> Kargoya verildi</span>' : ''}
+                    ${uretiliyor ? '<span class="ur-badge ur-badge--islemde"><i class="bi bi-hammer"></i> Üretimde</span>' : ''}
+                    ${paketlenen ? '<span class="ur-badge ur-badge--islemde"><i class="bi bi-box-seam"></i> Paketlendi</span>' : ''}
+                    ${kargoda ? '<span class="ur-badge ur-badge--kargo"><i class="bi bi-truck"></i> Kargoya verildi</span>' : ''}
+                    ${teslim ? '<span class="ur-badge ur-badge--kargo"><i class="bi bi-check-circle"></i> Teslim edildi</span>' : ''}
                     ${karma ? `<span class="ur-badge ur-badge--karma"><i class="bi bi-exclamation-triangle"></i> Karma paket: ${sd.length} kalem · ${uretimKalem} üretim + ${sd.length - uretimKalem} raftan</span>` : ''}
                     ${r.raf_tamam === false ? '<span class="ur-badge ur-badge--kilit"><i class="bi bi-lock-fill"></i> Raf okutulmadı — etiket kilitli</span>' : ''}
                     ${bekleyen ? (r.mail_sent
@@ -592,8 +606,9 @@
                     <span class="ur-musteri"><i class="bi bi-person-fill"></i> ${esc(r.customer_name) || '-'}</span>
                     <span><i class="bi bi-calendar3"></i> Sipariş: ${esc(r.order_date) || '-'}</span>
                     ${r.hazirlayan ? `<span><i class="bi bi-person-check"></i> Hazırlayan: ${esc(r.hazirlayan)}</span>` : ''}
-                    ${islemde ? `<span><i class="bi bi-hammer"></i> İşleme alındı: ${esc(r.isleme_alindi_at) || '-'}</span>` : ''}
-                    ${(durum === 'uretildi' || tamamlanan) ? `<span><i class="bi bi-check2-circle"></i> Üretildi: ${esc(r.uretildi_at) || '-'}</span>` : ''}
+                    ${uretiliyor ? `<span><i class="bi bi-hammer"></i> Üretime alındı: ${esc(r.isleme_alindi_at) || '-'}</span>` : ''}
+                    ${(uretilen || paketlenen || kargoda || teslim) ? `<span><i class="bi bi-check2-circle"></i> Üretildi: ${esc(r.uretildi_at) || '-'}</span>` : ''}
+                    ${(paketlenen || kargoda || teslim) && r.paketlendi_at ? `<span><i class="bi bi-box-seam"></i> Paketlendi: ${esc(r.paketlendi_at)}</span>` : ''}
                 </div>
             </div>
             <div class="ur-card-side">${butonlar}</div>
@@ -606,14 +621,9 @@
         const rows = data.rows || [];
         if (durum === 'bekleyen') {
             document.getElementById('urWaitCount').textContent = rows.length;
-            document.getElementById('urTabBekleyen').textContent = rows.length;
-        } else if (durum === 'islemde') {
-            document.getElementById('urTabIslemde').textContent = rows.length;
-        } else if (durum === 'tamamlanan') {
-            document.getElementById('urTabTamamlanan').textContent = rows.length;
-        } else {
-            document.getElementById('urTabUretilen').textContent = rows.length;
         }
+        const sayac = document.getElementById('urTabSay-' + durum);
+        if (sayac) sayac.textContent = rows.length;
         rows.forEach(r => { rowCache[r.id] = r; });
         durumRows[durum] = rows;
         hazirChipleriYenile();
@@ -625,9 +635,11 @@
         if (!gorunecek.length) {
             const bosMesaj = {
                 bekleyen: '<div class="ur-empty"><i class="bi bi-stars"></i>Üretim bekleyen sipariş yok. 🎉</div>',
-                islemde: '<div class="ur-empty"><i class="bi bi-hammer"></i>Şu an üretimde sipariş yok.</div>',
-                uretildi: '<div class="ur-empty"><i class="bi bi-inbox"></i>Henüz üretilen sipariş yok.</div>',
-                tamamlanan: '<div class="ur-empty"><i class="bi bi-truck"></i>Henüz kargoya verilen üretim siparişi yok.</div>'
+                uretiliyor: '<div class="ur-empty"><i class="bi bi-hammer"></i>Şu an üretimde sipariş yok.</div>',
+                uretilen: '<div class="ur-empty"><i class="bi bi-inbox"></i>Paketlenmeyi bekleyen üretilmiş sipariş yok.</div>',
+                paketlenen: '<div class="ur-empty"><i class="bi bi-box-seam"></i>Kargoya verilmeyi bekleyen paket yok.</div>',
+                kargoda: '<div class="ur-empty"><i class="bi bi-truck"></i>Kargoda üretim siparişi yok.</div>',
+                teslim: '<div class="ur-empty"><i class="bi bi-check-circle"></i>Henüz teslim edilen üretim siparişi yok.</div>'
             };
             list.innerHTML = aktifHazirlayan
                 ? `<div class="ur-empty"><i class="bi bi-person-x"></i>${esc(aktifHazirlayan)} kullanıcısının bu sekmede hazırladığı sipariş yok.</div>`
@@ -660,10 +672,8 @@
     });
 
     function tazele() {
-        listeYukle('bekleyen', aktifDurum === 'bekleyen');
-        listeYukle('islemde', aktifDurum === 'islemde');
-        listeYukle('uretildi', aktifDurum === 'uretildi');
-        listeYukle('tamamlanan', aktifDurum === 'tamamlanan');
+        ['bekleyen', 'uretiliyor', 'uretilen', 'paketlenen', 'kargoda', 'teslim']
+            .forEach(d => listeYukle(d, aktifDurum === d));
     }
 
     async function ayarYukle() {
@@ -753,10 +763,14 @@
         const geriAlBtn = e.target.closest('[data-gerial]');
         const islemeBtn = e.target.closest('[data-isleme]');
         const islemeGeriBtn = e.target.closest('[data-isleme-geri]');
-        if (!uretildiBtn && !geriAlBtn && !islemeBtn && !islemeGeriBtn) return;
+        const paketBtn = e.target.closest('[data-paketlendi]');
+        const paketGeriBtn = e.target.closest('[data-paketlendi-geri]');
+        if (!uretildiBtn && !geriAlBtn && !islemeBtn && !islemeGeriBtn && !paketBtn && !paketGeriBtn) return;
         let url, body;
         if (islemeBtn) { url = `/uretim/api/isleme-al/${islemeBtn.getAttribute('data-isleme')}`; body = {}; }
         else if (islemeGeriBtn) { url = `/uretim/api/isleme-al/${islemeGeriBtn.getAttribute('data-isleme-geri')}`; body = { geri_al: true }; }
+        else if (paketBtn) { url = `/uretim/api/paketlendi/${paketBtn.getAttribute('data-paketlendi')}`; body = {}; }
+        else if (paketGeriBtn) { url = `/uretim/api/paketlendi/${paketGeriBtn.getAttribute('data-paketlendi-geri')}`; body = { geri_al: true }; }
         else if (uretildiBtn) { url = `/uretim/api/uretildi/${uretildiBtn.getAttribute('data-uretildi')}`; body = {}; }
         else { url = `/uretim/api/uretildi/${geriAlBtn.getAttribute('data-gerial')}`; body = { geri_al: true }; }
         const res = await fetch(url, { method: 'POST', headers: POST_HEADERS, body: JSON.stringify(body) });

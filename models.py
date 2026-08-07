@@ -759,6 +759,8 @@ class UretimSiparis(db.Model):
     uretildi_at = db.Column(db.DateTime)
     isleme_alindi = db.Column(db.Boolean, default=False, nullable=False)  # üretime başlandı (ara statü)
     isleme_alindi_at = db.Column(db.DateTime)
+    paketlendi = db.Column(db.Boolean, default=False, nullable=False)  # üretim bitti + paketlendi (kargo öncesi)
+    paketlendi_at = db.Column(db.DateTime)
     mail_sent_at = db.Column(db.DateTime)
     iptal_mail_at = db.Column(db.DateTime)  # pazaryeri iptali bildirimi (dedupe)
     hazirlayan = db.Column(db.String(150))  # siparişi hazırlayan (raf okutan / etiketi basan) kullanıcı adı

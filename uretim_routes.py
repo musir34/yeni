@@ -66,6 +66,8 @@ def _to_dict(r: UretimSiparis, urun_map: dict | None = None) -> dict:
         "uretildi_at": fmt_ist(r.uretildi_at, "%d.%m.%Y %H:%M"),
         "isleme_alindi": bool(getattr(r, "isleme_alindi", False)),
         "isleme_alindi_at": fmt_ist(r.isleme_alindi_at, "%d.%m.%Y %H:%M"),
+        "paketlendi": bool(getattr(r, "paketlendi", False)),
+        "paketlendi_at": fmt_ist(getattr(r, "paketlendi_at", None), "%d.%m.%Y %H:%M"),
         "hazirlayan": r.hazirlayan or "",
         "mail_sent": bool(r.mail_sent_at),
         "created_at": fmt_ist(r.created_at, "%d.%m.%Y %H:%M"),
@@ -79,40 +81,59 @@ def index():
 
 @uretim_bp.route("/api/liste", methods=["GET"])
 def liste():
+    # 6 statü: bekleyen → uretiliyor → uretilen → paketlenen → kargoda → teslim.
+    # Kargo statüleri canlı tespit edilir (Shipped/Delivered/Arşiv), kolon yok —
+    # sipariş kargolanınca/teslim olunca kendiliğinden taşınır.
+    # Eski istemci anahtarları çalışmaya devam eder: islemde→uretiliyor,
+    # uretildi→uretilen, tamamlanan→kargoda+teslim birleşik.
     durum = (request.args.get("durum") or "bekleyen").strip()
+    URETILDI_GRUBU = ("uretilen", "uretildi", "paketlenen", "kargoda", "teslim", "tamamlanan")
     q = UretimSiparis.query
-    if durum in ("uretildi", "tamamlanan"):
-        q = q.filter_by(uretildi=True)
-    elif durum == "islemde":
+    if durum in ("uretiliyor", "islemde"):
         q = q.filter_by(uretildi=False, isleme_alindi=True)
+    elif durum in URETILDI_GRUBU:
+        q = q.filter_by(uretildi=True)
     else:  # bekleyen
         q = q.filter_by(uretildi=False, isleme_alindi=False)
     # Sıralama sipariş tarihine göre: aktif kuyruklarda en eski üstte (FIFO),
-    # tamamlananlarda en yeni üstte. order_date boşsa sona düşer.
-    if durum == "tamamlanan":
+    # kargolanmış/teslim edilmişlerde en yeni üstte. order_date boşsa sona düşer.
+    if durum in ("kargoda", "teslim", "tamamlanan"):
         siralama = UretimSiparis.order_date.desc().nullslast()
     else:
         siralama = UretimSiparis.order_date.asc().nullslast()
     rows = (q.order_by(siralama, UretimSiparis.created_at.desc())
             .limit(500)
             .all())
-    # Tamamlanan = üretildi + kargoya verildi (Shipped/Delivered/Arşiv'de canlı
-    # kontrol — ayrı kolon yok, sipariş kargolanınca kendiliğinden taşınır).
-    # Hata → boş set: tamamlanan boş kalır, üretilenler eski davranışla tümünü gösterir.
-    if durum in ("uretildi", "tamamlanan") and rows:
-        kargolanan = set()
+    # Canlı kargo sınıflandırması. Hata → boş setler: kargoda/teslim boş kalır,
+    # üretilen/paketlenen eski davranışla tümünü gösterir.
+    if durum in URETILDI_GRUBU and rows:
+        kargoda_set, teslim_set = set(), set()
         try:
             from models import OrderShipped, OrderDelivered, OrderArchived
             nolar = [r.order_number for r in rows]
-            for M in (OrderShipped, OrderDelivered, OrderArchived):
-                kargolanan |= {o.order_number for o in
+            kargoda_set = {o.order_number for o in
+                           OrderShipped.query.filter(OrderShipped.order_number.in_(nolar))
+                           .with_entities(OrderShipped.order_number)}
+            for M in (OrderDelivered, OrderArchived):
+                teslim_set |= {o.order_number for o in
                                M.query.filter(M.order_number.in_(nolar))
                                .with_entities(M.order_number)}
         except Exception:
             db.session.rollback()
             logger.warning("[URETIM] kargolanan kontrolü yapılamadı", exc_info=True)
-        rows = [r for r in rows
-                if (r.order_number in kargolanan) == (durum == "tamamlanan")]
+        kargolanan = kargoda_set | teslim_set
+        if durum in ("uretilen", "uretildi"):
+            rows = [r for r in rows if r.order_number not in kargolanan
+                    and not getattr(r, "paketlendi", False)]
+        elif durum == "paketlenen":
+            rows = [r for r in rows if r.order_number not in kargolanan
+                    and getattr(r, "paketlendi", False)]
+        elif durum == "kargoda":
+            rows = [r for r in rows if r.order_number in kargoda_set - teslim_set]
+        elif durum == "teslim":
+            rows = [r for r in rows if r.order_number in teslim_set]
+        else:  # tamamlanan (eski anahtar): kargoda + teslim birleşik
+            rows = [r for r in rows if r.order_number in kargolanan]
     # Pazaryerinde iptal edilen sipariş üretim sayfasında GÖSTERİLMEZ (kafa
     # karışıklığı olmasın) — kayıt silinmez (iz kalır), sipariş normal iptal
     # sayfasında görünür; aboneler 'uretim_iptal' mailiyle haberdar edilir.
@@ -290,6 +311,20 @@ def isleme_al(kayit_id: int):
     kayit.isleme_alindi_at = None if geri_al else datetime.utcnow()
     db.session.commit()
     mesaj = "Bekleyenlere geri alındı" if geri_al else "İşleme alındı — üretim başladı"
+    logger.info(f"[URETIM] {kayit.order_number}: {mesaj}")
+    return jsonify({"success": True, "message": mesaj})
+
+
+@uretim_bp.route("/api/paketlendi/<int:kayit_id>", methods=["POST"])
+def paketlendi_isaretle(kayit_id: int):
+    kayit = db.session.get(UretimSiparis, kayit_id)
+    if not kayit:
+        return jsonify({"success": False, "message": "Kayıt bulunamadı"}), 404
+    geri_al = bool((request.get_json(silent=True) or {}).get("geri_al"))
+    kayit.paketlendi = not geri_al
+    kayit.paketlendi_at = None if geri_al else datetime.utcnow()
+    db.session.commit()
+    mesaj = "Paketlendi işareti geri alındı — Üretilenlere döndü" if geri_al else "Paketlendi — kargoya verilmeyi bekliyor"
     logger.info(f"[URETIM] {kayit.order_number}: {mesaj}")
     return jsonify({"success": True, "message": mesaj})
 
