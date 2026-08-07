@@ -761,6 +761,7 @@ class UretimSiparis(db.Model):
     isleme_alindi_at = db.Column(db.DateTime)
     mail_sent_at = db.Column(db.DateTime)
     iptal_mail_at = db.Column(db.DateTime)  # pazaryeri iptali bildirimi (dedupe)
+    hazirlayan = db.Column(db.String(150))  # siparişi hazırlayan (raf okutan / etiketi basan) kullanıcı adı
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     __table_args__ = (db.UniqueConstraint('order_number', name='uq_uretim_siparis_order'),)
 

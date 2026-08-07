@@ -66,6 +66,7 @@ def _to_dict(r: UretimSiparis, urun_map: dict | None = None) -> dict:
         "uretildi_at": fmt_ist(r.uretildi_at, "%d.%m.%Y %H:%M"),
         "isleme_alindi": bool(getattr(r, "isleme_alindi", False)),
         "isleme_alindi_at": fmt_ist(r.isleme_alindi_at, "%d.%m.%Y %H:%M"),
+        "hazirlayan": r.hazirlayan or "",
         "mail_sent": bool(r.mail_sent_at),
         "created_at": fmt_ist(r.created_at, "%d.%m.%Y %H:%M"),
     }
@@ -354,6 +355,18 @@ def raf_okut(kayit_id: int):
             db.session.rollback()
             logger.exception("[URETIM] raf okutma düşümü hatası")
             return jsonify({"success": False, "message": "Düşüm sırasında hata oluştu."}), 500
+
+    # Hazırlayan damgası: rafı ilk okutan kullanıcı kayda yazılır (sekme filtresi
+    # için). İlk yazan kalır — sonraki okutmalar üzerine yazmaz.
+    if not kayit.hazirlayan:
+        try:
+            from flask_login import current_user
+            if getattr(current_user, "is_authenticated", False):
+                kayit.hazirlayan = current_user.username
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.warning("[URETIM] hazırlayan damgası yazılamadı", exc_info=True)
 
     kalan = [k["barcode"] for k in kalemler
              if not has_movement(pick_key(kayit.order_number, k["barcode"]))]

@@ -892,13 +892,21 @@ def product_list():
         except Exception:
             uretim_models = set()
 
+        # 📌 Takibe alınan modeller (kart menüsünde "(Takipte)" etiketi için)
+        try:
+            from takip_notu import get_takip_models
+            takip_models = get_takip_models()
+        except Exception:
+            takip_models = set()
+
         return render_template(
             'product_list.html',
             grouped_products=hierarchical_products,
             pagination=pagination,
             search_mode=False,
             marketplace_filter=marketplace_filter,
-            uretim_models=uretim_models
+            uretim_models=uretim_models,
+            takip_models=takip_models
         )
 
     except Exception as e:

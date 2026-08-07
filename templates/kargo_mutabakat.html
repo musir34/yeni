@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block title %}Kargo Mutabakat - Güllü Shoes{% endblock %}
+{% block extra_css %}
+<style>
+  .km-card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.06); margin-bottom: 1.5rem; }
+  .km-badge { font-size: .95rem; padding: .5rem .9rem; }
+  .km-table td, .km-table th { font-size: .85rem; white-space: nowrap; }
+  .km-table-wrap { overflow-x: auto; }
+  .km-section-header { cursor: pointer; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+  <h3 class="mb-0">🚚 Kargo Mutabakat</h3>
+  <span class="text-muted ms-3">MNG fatura Excel'i ↔ sistem karşılaştırması</span>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
+      {{ msg }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endwith %}
+
+<div class="row">
+  <div class="col-lg-6">
+    <div class="card km-card">
+      <div class="card-header fw-bold">📄 Fatura Excel'i Yükle</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('kargo_mutabakat_bp.kargo_mutabakat_analiz') }}" enctype="multipart/form-data">
+          <div class="mb-3">
+            <input type="file" class="form-control" name="excel_file" accept=".xls,.xlsx" required>
+            <div class="form-text">MNG "Toplu Fatura Listesi Detay" dosyası (.xls / .xlsx)</div>
+          </div>
+          <button type="submit" class="btn btn-primary">Analiz Et</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card km-card">
+      <div class="card-header fw-bold">💰 Desi Tarifesi (anlaşmalı taşıma ücreti)</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('kargo_mutabakat_bp.kargo_mutabakat_tarife') }}">
+          <table class="table table-sm km-table mb-2" id="tarifeTable">
+            <thead>
+              <tr><th>Min Desi</th><th>Max Desi</th><th>Fiyat (TL)</th><th></th></tr>
+            </thead>
+            <tbody>
+              {% for b in tarife %}
+              <tr>
+                <td><input type="text" class="form-control form-control-sm" name="min_desi" value="{{ b.min_desi }}"></td>
+                <td><input type="text" class="form-control form-control-sm" name="max_desi" value="{{ b.max_desi }}"></td>
+                <td><input type="text" class="form-control form-control-sm" name="fiyat" value="{{ b.fiyat }}"></td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()">✕</button></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="tarifeSatirEkle()">+ Bant Ekle</button>
+          <button type="submit" class="btn btn-sm btn-success">Tarifeyi Kaydet</button>
+          <div class="form-text mt-1">Örn: 0–2 → 117,98 · Karşılaştırma TASIMA UCRETI üzerinden yapılır.</div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if sonuc %}
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <span class="badge bg-secondary km-badge">Toplam: {{ sonuc.toplam }}</span>
+  <span class="badge bg-success km-badge">Eşleşti: {{ sonuc.eslesen|length }}</span>
+  <span class="badge bg-warning text-dark km-badge">Şüpheli: {{ sonuc.supheli|length }}</span>
+  <span class="badge bg-danger km-badge">Bizde Yok: {{ sonuc.bizde_yok|length }}</span>
+  <span class="badge bg-info text-dark km-badge">Fiyat Anomalisi: {{ sonuc.fiyat_anomali|length }}</span>
+  <span class="badge bg-dark km-badge">İtiraz Tutarı: {{ '%.2f'|format(sonuc.itiraz_tutari) }} TL</span>
+  <a class="btn btn-sm btn-outline-primary ms-auto"
+     href="{{ url_for('kargo_mutabakat_bp.kargo_mutabakat_itiraz_excel', filename=saved_filename) }}">
+    ⬇️ İtiraz Listesi Excel İndir
+  </a>
+</div>
+
+{% macro satir_hucreleri(d) %}
+  <td>{{ d.sira_no }}</td>
+  <td>{{ d.fatura_no }}</td>
+  <td>{{ d.fatura_tarihi }}</td>
+  <td><code>{{ d.gonderi_no }}</code></td>
+  <td>{{ d.alici }}</td>
+  <td>{{ d.alici_il }}</td>
+  <td>{{ d.desi if d.desi is not none else '-' }}</td>
+  <td>{{ '%.2f'|format(d.tasima_ucreti) if d.tasima_ucreti is not none else '-' }}</td>
+  <td>{{ '%.2f'|format(d.genel_toplam) if d.genel_toplam is not none else '-' }}</td>
+  <td>{{ d.teslim_tarihi }}</td>
+  <td>{{ d.son_durum }}</td>
+{% endmacro %}
+
+<div class="card km-card border-danger">
+  <div class="card-header bg-danger text-white fw-bold">
+    ❌ Bizde Yok — İtiraz Listesi ({{ sonuc.bizde_yok|length }})
+  </div>
+  <div class="card-body km-table-wrap">
+    {% if sonuc.bizde_yok %}
+    <table class="table table-sm table-striped km-table">
+      <thead><tr>
+        <th>Sıra</th><th>Fatura No</th><th>Fatura Tarihi</th><th>Gönderi No</th><th>Alıcı</th>
+        <th>İl</th><th>Desi</th><th>Taşıma</th><th>Toplam</th><th>Teslim Tarihi</th><th>Son Durum</th>
+      </tr></thead>
+      <tbody>
+        {% for d in sonuc.bizde_yok %}
+        <tr>{{ satir_hucreleri(d) }}</tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="text-muted mb-0">Sistemde bulunamayan kargo yok. 🎉</p>{% endif %}
+  </div>
+</div>
+
+<div class="card km-card border-warning">
+  <div class="card-header bg-warning text-dark fw-bold">
+    ⚠️ Şüpheli — Muhtemelen Bizim ({{ sonuc.supheli|length }})
+  </div>
+  <div class="card-body km-table-wrap">
+    {% if sonuc.supheli %}
+    <table class="table table-sm table-striped km-table">
+      <thead><tr>
+        <th>Sıra</th><th>Fatura No</th><th>Fatura Tarihi</th><th>Gönderi No</th><th>Alıcı</th>
+        <th>İl</th><th>Desi</th><th>Taşıma</th><th>Toplam</th><th>Teslim Tarihi</th><th>Son Durum</th>
+        <th>Benzer Müşteri</th><th>Benzerlik</th><th>Kaynak</th><th>Sipariş No</th>
+      </tr></thead>
+      <tbody>
+        {% for d in sonuc.supheli %}
+        <tr>
+          {{ satir_hucreleri(d) }}
+          <td>{{ d.aday_ad }}</td>
+          <td><span class="badge bg-warning text-dark">%{{ d.benzerlik }}</span></td>
+          <td>{{ d.kaynak }}</td>
+          <td>{{ d.siparis_no }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="text-muted mb-0">Şüpheli kayıt yok.</p>{% endif %}
+  </div>
+</div>
+
+<div class="card km-card border-info">
+  <div class="card-header bg-info text-dark fw-bold">
+    💸 Fiyat Anomalileri ({{ sonuc.fiyat_anomali|length }})
+  </div>
+  <div class="card-body km-table-wrap">
+    {% if not tarife %}
+      <p class="text-muted mb-0">Tarife girilmediği için fiyat kontrolü yapılmadı. Yukarıdan desi tarifenizi girin.</p>
+    {% elif sonuc.fiyat_anomali %}
+    <table class="table table-sm table-striped km-table">
+      <thead><tr>
+        <th>Sıra</th><th>Gönderi No</th><th>Alıcı</th><th>Desi</th>
+        <th>Beklenen</th><th>Kesilen (Taşıma)</th><th>Fark</th>
+        <th>Teslimat Ücreti</th><th>Alım Ücreti</th><th>Genel Toplam</th><th>Durum</th>
+      </tr></thead>
+      <tbody>
+        {% for d in sonuc.fiyat_anomali %}
+        <tr>
+          <td>{{ d.sira_no }}</td>
+          <td><code>{{ d.gonderi_no }}</code></td>
+          <td>{{ d.alici }}</td>
+          <td>{{ d.desi if d.desi is not none else '-' }}</td>
+          <td>{{ '%.2f'|format(d.beklenen_fiyat) if d.beklenen_fiyat is not none else '-' }}</td>
+          <td>{{ '%.2f'|format(d.tasima_ucreti) if d.tasima_ucreti is not none else '-' }}</td>
+          <td class="fw-bold text-danger">
+            {{ '%.2f'|format(d.tasima_ucreti - d.beklenen_fiyat) if d.beklenen_fiyat is not none and d.tasima_ucreti is not none else '-' }}
+          </td>
+          <td>{{ '%.2f'|format(d.teslim_ucreti) if d.teslim_ucreti is not none else '-' }}</td>
+          <td>{{ '%.2f'|format(d.alim_ucreti) if d.alim_ucreti is not none else '-' }}</td>
+          <td>{{ '%.2f'|format(d.genel_toplam) if d.genel_toplam is not none else '-' }}</td>
+          <td>
+            {% if d.tarife_durum == 'tarife_disi' %}
+              <span class="badge bg-secondary">Tarife dışı desi</span>
+            {% else %}
+              <span class="badge bg-danger">Fiyat farkı</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="text-muted mb-0">Tarifeye aykırı fiyat yok. 🎉</p>{% endif %}
+  </div>
+</div>
+
+<div class="card km-card border-success">
+  <div class="card-header bg-success text-white fw-bold km-section-header"
+       data-bs-toggle="collapse" data-bs-target="#eslesenBody">
+    ✅ Eşleşti ({{ sonuc.eslesen|length }}) — göster/gizle
+  </div>
+  <div class="card-body km-table-wrap collapse" id="eslesenBody">
+    {% if sonuc.eslesen %}
+    <table class="table table-sm table-striped km-table">
+      <thead><tr>
+        <th>Sıra</th><th>Fatura No</th><th>Fatura Tarihi</th><th>Gönderi No</th><th>Alıcı</th>
+        <th>İl</th><th>Desi</th><th>Taşıma</th><th>Toplam</th><th>Teslim Tarihi</th><th>Son Durum</th>
+        <th>Eşleşme</th><th>Kaynak</th><th>Sipariş No</th>
+      </tr></thead>
+      <tbody>
+        {% for d in sonuc.eslesen %}
+        <tr>
+          {{ satir_hucreleri(d) }}
+          <td><span class="badge bg-success">{{ 'Takip No' if d.match_type == 'takip_no' else 'Ref No' }}</span></td>
+          <td>{{ d.kaynak }}</td>
+          <td>{{ d.siparis_no }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="text-muted mb-0">Birebir eşleşen kayıt yok.</p>{% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function tarifeSatirEkle() {
+    const tbody = document.querySelector('#tarifeTable tbody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" class="form-control form-control-sm" name="min_desi"></td>
+      <td><input type="text" class="form-control form-control-sm" name="max_desi"></td>
+      <td><input type="text" class="form-control form-control-sm" name="fiyat"></td>
+      <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()">✕</button></td>`;
+    tbody.appendChild(tr);
+  }
+</script>
+{% endblock %}

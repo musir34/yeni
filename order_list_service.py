@@ -665,6 +665,32 @@ def order_label():
         kapida_odeme = request.form.get('kapida_odeme', '0') == '1'
         kapida_odeme_tutari = float(request.form.get('kapida_odeme_tutari', 0) or 0)
 
+        # Kullanıcı hareketi: etiket basımı hangi ekrandan gelirse gelsin loglanır
+        # (üretim ekranında confirm_packing çalışmadığı için başka iz kalmıyordu).
+        try:
+            from user_logs import log_user_action
+            sayfa = "Üretim Siparişleri" if "/uretim" in (request.referrer or "") else "Sipariş Hazırla"
+            log_user_action("PRINT", {
+                "işlem_açıklaması": f"Kargo etiketi yazdırıldı — {order_number}",
+                "sayfa": sayfa,
+                "kargo_firması": cargo_provider or "-",
+            })
+        except Exception:
+            logger.warning("order_label: PRINT hareketi loglanamadı", exc_info=True)
+
+        # Üretim siparişiyse hazırlayan damgası: raf okutması olmayan (salt üretim)
+        # siparişte hazırlayan, etiketi basan kullanıcıdır. İlk yazan kalır.
+        try:
+            from flask_login import current_user
+            from models import UretimSiparis
+            u = UretimSiparis.query.filter_by(order_number=order_number).first()
+            if u and not u.hazirlayan and getattr(current_user, "is_authenticated", False):
+                u.hazirlayan = current_user.username
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.warning("order_label: üretim hazırlayan damgası yazılamadı", exc_info=True)
+
         # Barkod dosya YOK: inline (base64) veri
         barcode_data_uri = generate_barcode_data_uri(shipping_barcode) if shipping_barcode else None
         # QR kaydetmeye devam (istersen bunu da inline'a çevirebiliriz)

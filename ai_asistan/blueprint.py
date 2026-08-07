@@ -82,6 +82,16 @@ MAX_SORU_UZUNLUK = 2000        # aşırı uzun promptları reddet
 MAX_SOHBET_LISTE = 50          # geçmiş listesinde gösterilecek azami sohbet
 BASLIK_UZUNLUK = 60            # sohbet başlığı = ilk sorunun ilk N karakteri
 
+# Dosya ekleri (Excel/CSV/PDF): içerik sunucuda metne çevrilip soruya iliştirilir.
+# Motorlar diskten dosya OKUYAMAZ (claude --allowedTools yalnız DB sorgusu,
+# codex salt-okunur sandbox) — dosya diske de yazılmaz, bellekte işlenir.
+DOSYA_UZANTILAR = {".xlsx", ".csv", ".pdf"}
+MAX_DOSYA_SAYISI = 3
+MAX_DOSYA_BOYUT = 10 * 1024 * 1024   # dosya başına 10 MB
+MAX_DOSYA_METIN = 20000              # dosya başına prompta girecek azami karakter
+MAX_EXCEL_SATIR = 300                # Excel sayfası başına azami satır
+MAX_PDF_SAYFA = 30                   # PDF'ten okunacak azami sayfa
+
 CLAUDE_MODEL = "opus"          # premium cevap kalitesi (abonelik dahilinde)
 
 # Hangi AI motoru çalışsın: 'claude' (varsayılan) veya 'codex'. .env ile değiştirilir;
@@ -319,6 +329,81 @@ def _codex_calistir(soru: str, sistem_prompt: str, timeout_sn: int,
     if not cevap:
         return {"ok": False, "session_id": None, "hata": "Asistandan boş cevap geldi."}
     return {"ok": True, "cevap": cevap, "session_id": thread_id}
+
+
+def _csv_metni(veri: bytes) -> str:
+    """CSV baytlarını metne çevir — Türkçe Excel çıktıları için cp1254 denenir."""
+    for kodlama in ("utf-8-sig", "cp1254", "latin-1"):
+        try:
+            return veri.decode(kodlama)
+        except UnicodeDecodeError:
+            continue
+    return veri.decode("utf-8", errors="replace")
+
+
+def _xlsx_metni(veri: bytes) -> str:
+    """Excel'i sayfa sayfa sekmeli metne çevir (read_only — büyük dosyada hızlı)."""
+    from openpyxl import load_workbook
+    try:
+        wb = load_workbook(BytesIO(veri), read_only=True, data_only=True)
+    except Exception as e:
+        raise ValueError(f"Excel dosyası açılamadı: {e}")
+    parcalar = []
+    for ws in wb.worksheets:
+        satirlar = []
+        for i, row in enumerate(ws.iter_rows(values_only=True)):
+            if i >= MAX_EXCEL_SATIR:
+                satirlar.append(f"… (sayfa uzun — ilk {MAX_EXCEL_SATIR} satır gösteriliyor)")
+                break
+            satirlar.append("\t".join("" if h is None else str(h) for h in row))
+        parcalar.append(f"[Sayfa: {ws.title}]\n" + "\n".join(satirlar))
+    wb.close()
+    return "\n\n".join(parcalar)
+
+
+def _pdf_metni(veri: bytes, ad: str) -> str:
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        raise ValueError("PDF okumak için sunucuda 'pypdf' paketi gerekli: "
+                         "venv/bin/pip install pypdf (requirements.txt'e eklendi).")
+    try:
+        okuyucu = PdfReader(BytesIO(veri))
+        return "\n\n".join((s.extract_text() or "") for s in okuyucu.pages[:MAX_PDF_SAYFA])
+    except Exception as e:
+        raise ValueError(f"'{ad}' PDF'i okunamadı: {e}")
+
+
+def _dosya_metni(dosya) -> tuple[str, str]:
+    """
+    Yüklenen dosyayı (werkzeug FileStorage) metne çevir → (dosya adı, metin).
+    Geçersiz/okunamayan dosyada kullanıcıya gösterilecek ValueError fırlatır.
+    """
+    ad = (dosya.filename or "dosya").rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+    uzanti = ("." + ad.rsplit(".", 1)[-1].lower()) if "." in ad else ""
+    if uzanti == ".xls":
+        raise ValueError(f"'{ad}': eski .xls biçimi desteklenmiyor — dosyayı Excel'de "
+                         f".xlsx olarak kaydedip yükleyin.")
+    if uzanti not in DOSYA_UZANTILAR:
+        raise ValueError(f"'{ad}': yalnızca Excel (.xlsx), CSV ve PDF yüklenebilir.")
+    veri = dosya.read(MAX_DOSYA_BOYUT + 1)
+    if len(veri) > MAX_DOSYA_BOYUT:
+        raise ValueError(f"'{ad}' çok büyük (sınır {MAX_DOSYA_BOYUT // (1024 * 1024)} MB).")
+    if not veri:
+        raise ValueError(f"'{ad}' boş görünüyor.")
+    if uzanti == ".csv":
+        metin = _csv_metni(veri)
+    elif uzanti == ".xlsx":
+        metin = _xlsx_metni(veri)
+    else:
+        metin = _pdf_metni(veri, ad)
+    metin = metin.strip()
+    if not metin:
+        raise ValueError(f"'{ad}' içinden okunabilir metin çıkarılamadı.")
+    if len(metin) > MAX_DOSYA_METIN:
+        metin = (metin[:MAX_DOSYA_METIN]
+                 + f"\n… (dosya uzun — ilk {MAX_DOSYA_METIN} karakter gösteriliyor)")
+    return ad, metin
 
 
 def _system_prompt() -> str:
@@ -706,11 +791,34 @@ def sor():
     Soruyu al, doğrula, DB'ye yaz, Claude'u ARKA PLANDA başlat ve anında dön.
     Dönen: {ok, sohbet_id, mesaj_id, baslik} — frontend /durum/<mesaj_id> yoklar.
     """
-    payload = request.get_json(silent=True) or {}
+    # Dosya ekli istekler multipart/form-data gelir; düz sorular JSON (eski akış).
+    dosyalar = []
+    if request.content_type and "multipart/form-data" in request.content_type:
+        # Multipart tarayıcıdan form ile de POST edilebilir (simple request) —
+        # JSON yolundaki doğal CSRF korumasının karşılığı: fetch başlığı şartı.
+        if request.headers.get("X-Requested-With") != "fetch":
+            return jsonify({"ok": False, "hata": "Geçersiz istek."}), 400
+        payload = request.form
+        dosyalar = [f for f in request.files.getlist("dosyalar") if f and f.filename]
+    else:
+        payload = request.get_json(silent=True) or {}
     soru = (payload.get("soru") or "").strip()
     sohbet_id = payload.get("sohbet_id")
 
     # Girdi doğrulama (sistem sınırında)
+    if len(dosyalar) > MAX_DOSYA_SAYISI:
+        return jsonify({"ok": False, "hata": f"En fazla {MAX_DOSYA_SAYISI} dosya eklenebilir."}), 400
+    ek_bloklar = []
+    for dosya in dosyalar:
+        try:
+            ek_bloklar.append(_dosya_metni(dosya))
+        except ValueError as e:
+            return jsonify({"ok": False, "hata": str(e)}), 400
+        except Exception:
+            current_app.logger.exception("[AI-ASISTAN] dosya okunamadı: %r", dosya.filename)
+            return jsonify({"ok": False, "hata": f"'{dosya.filename}' okunamadı."}), 400
+    if not soru and ek_bloklar:
+        soru = "Ekli dosyaları incele ve özetle."
     if not soru:
         return jsonify({"ok": False, "hata": "Soru boş olamaz."}), 400
     if len(soru) > MAX_SORU_UZUNLUK:
@@ -736,15 +844,27 @@ def sor():
         db.session.add(sohbet)
         db.session.flush()
 
+    # Sohbet geçmişinde ham içerik değil ek işareti görünür; AI'ya giden soruya
+    # ise dosya içerikleri metin olarak iliştirilir (motorlar dosya okuyamaz).
+    kayit_metin = soru + "".join(f"\n📎 {ad}" for ad, _ in ek_bloklar)
+    ai_soru = soru
+    if ek_bloklar:
+        parcalar = [f"## Dosya: {ad}\n```\n{metin}\n```" for ad, metin in ek_bloklar]
+        ai_soru = (soru + "\n\n# Kullanıcının eklediği dosyalar\n"
+                   "Aşağıdaki içerikler kullanıcının yüklediği dosyalardan sunucuda "
+                   "çıkarıldı. Soruyu bu içeriklere dayanarak yanıtla; gerekirse "
+                   "veritabanı sorgularıyla birleştir. İçerikleri uydurma, yalnızca "
+                   "verilenlere dayan:\n\n" + "\n\n".join(parcalar))
+
     sohbet.updated_at = datetime.utcnow()
-    db.session.add(AiMesaj(sohbet_id=sohbet.id, rol="kullanici", metin=soru, durum="hazir"))
+    db.session.add(AiMesaj(sohbet_id=sohbet.id, rol="kullanici", metin=kayit_metin, durum="hazir"))
     cevap_mesaj = AiMesaj(sohbet_id=sohbet.id, rol="asistan", metin="", durum="bekliyor")
     db.session.add(cevap_mesaj)
     db.session.commit()
 
     t = threading.Thread(
         target=_arka_planda_cevapla,
-        args=(current_app._get_current_object(), cevap_mesaj.id, sohbet.id, soru),
+        args=(current_app._get_current_object(), cevap_mesaj.id, sohbet.id, ai_soru),
         daemon=True,
     )
     t.start()

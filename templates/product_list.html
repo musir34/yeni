@@ -156,6 +156,43 @@
         html.gs-dark .image-modal-footer{background:#1e1e1e;color:#ddd;border-color:#333}
 
         /* ── Responsive ── */
+        /* 📌 Takip Notları paneli */
+        .takip-panel{background:#fdf8f9;border:1px solid #f0dfe2;border-radius:12px;margin-bottom:1rem;overflow:hidden}
+        .takip-toggle{width:100%;display:flex;align-items:center;gap:8px;padding:.7rem 1rem;border:0;background:transparent;text-align:left;cursor:pointer;color:#333;font-size:.95rem}
+        .takip-toggle > .fa-thumbtack{color:#A05F6A}
+        .takip-count{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#f3dfe2;color:#A05F6A;font-size:.75rem;font-weight:700}
+        .takip-chevron{margin-left:auto;color:#999;transition:transform .2s ease}
+        .takip-panel.acik .takip-chevron{transform:rotate(180deg)}
+        .takip-body{padding:0 1rem 1rem;border-top:1px solid #f0dfe2}
+        .takip-add{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0}
+        .takip-add input{width:200px;height:36px;font-size:.85rem}
+        .takip-add small{color:#8a8f98}
+        .takip-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px}
+        .takip-card{display:flex;gap:10px;padding:10px;background:#fff;border:1px solid #eee;border-radius:10px;align-items:flex-start}
+        .takip-card-img{width:58px;height:58px;border-radius:8px;object-fit:cover;background:#f2f3f5;flex:0 0 58px}
+        .takip-card-img.bos{display:grid;place-items:center;color:#bbb}
+        .takip-card-main{flex:1;min-width:0}
+        .takip-card-top{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+        .takip-card-top a{font-weight:700;color:#A05F6A;text-decoration:none}
+        .takip-card-top a:hover{text-decoration:underline}
+        .takip-rozet{padding:2px 8px;border-radius:999px;font-size:.66rem;font-weight:700}
+        .takip-rozet--uretim{background:#f3dfe2;color:#A05F6A}
+        .takip-title{color:#8a8f98;font-size:.72rem;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .takip-renkler{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+        .takip-renk{padding:2px 8px;border-radius:999px;background:#f3f4f6;color:#555;font-size:.68rem;font-weight:600}
+        .takip-not{margin-top:5px;font-size:.78rem;color:#444;white-space:pre-wrap}
+        .takip-renk-not{margin-top:3px;font-size:.74rem;color:#666}
+        .takip-renk-not strong{color:#A05F6A}
+        .takip-card-btns{display:flex;flex-direction:column;gap:4px;flex:0 0 auto}
+        .takip-card-btns button{width:28px;height:28px;display:grid;place-items:center;border:1px solid #eee;border-radius:8px;background:#fff;color:#888;cursor:pointer;padding:0}
+        .takip-card-btns button:hover{color:#A05F6A;border-color:#e5cdd2}
+        .takip-edit{display:grid;gap:6px;margin-top:6px}
+        .takip-edit label{display:flex;align-items:center;gap:6px;font-size:.78rem;margin:0;color:#444}
+        .takip-edit textarea,.takip-edit input[type=text]{width:100%;font-size:.8rem;border:1px solid #ddd;border-radius:8px;padding:4px 8px}
+        .takip-edit-renk{display:flex;align-items:center;gap:6px}
+        .takip-edit-renk input[type=text]{flex:1}
+        .takip-edit-btns{display:flex;gap:6px;margin-top:4px}
+        .takip-bos{color:#8a8f98;font-size:.82rem;padding:6px 0}
         @media (max-width:991px){
             .container{padding:10px;max-width:none}
             .model-grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}
@@ -258,6 +295,23 @@
         {% endif %}
     </form>
 
+    <!-- 📌 Takip Notları: unutulmaması gereken modeller (üretimdekiler otomatik girer) -->
+    <div class="takip-panel">
+        <button type="button" class="takip-toggle" id="takipToggle">
+            <i class="fas fa-thumbtack"></i> <strong>Takip Notları</strong>
+            <span class="takip-count" id="takipSayi">0</span>
+            <i class="fas fa-chevron-down takip-chevron"></i>
+        </button>
+        <div class="takip-body" id="takipBody" style="display:none;">
+            <div class="takip-add">
+                <input type="text" id="takipYeniModel" class="form-control" placeholder="Model kodu (örn: 0172)" autocomplete="off">
+                <button type="button" class="btn btn-sm btn-primary" id="takipEkleBtn"><i class="fas fa-plus"></i> Ekle</button>
+                <small>Üretim modundaki modeller otomatik listelenir; üretimden çıkınca düşer.</small>
+            </div>
+            <div class="takip-cards" id="takipKartlar"></div>
+        </div>
+    </div>
+
     {% if pagination %}
     <div class="list-summary">
         <span>{{ pagination.total }} model gösteriliyor{% if marketplace_filter %} · filtre: {{ marketplace_filter }}{% endif %}</span>
@@ -356,6 +410,7 @@
                                 <div class="dropdown-content">
                                     <button class="open-action-modal" data-action="list_variants" data-model="{{ model_id }}"><i class="fas fa-list-ul"></i> Tüm Varyantları Listele</button>
                                     <button class="toggle-uretim-modu" data-model="{{ model_id }}"><i class="fas fa-industry"></i> Üretim Modu<span class="uretim-durum">{% if model_id in (uretim_models or []) %} (Açık){% endif %}</span></button>
+                                    <button class="toggle-takip-notu" data-model="{{ model_id }}"><i class="fas fa-thumbtack"></i> Takip Notu<span class="takip-durum">{% if model_id in (takip_models or []) %} (Takipte){% endif %}</span></button>
                                     <button class="delete-model delete-action" data-model="{{ model_id }}"><i class="fas fa-trash"></i> Modeli Sil</button>
                                 </div>
                             </div>
@@ -590,9 +645,164 @@ $(function(){
             body:JSON.stringify({model:modelId})
         }).then(r=>r.json()).then(res=>{
             gsToast(res.message||(res.success?'Tamam':'Hata'), res.success?'success':'error');
-            if(res.success) btn.find('.uretim-durum').text(res.acik?' (Açık)':'');
+            if(res.success){
+                btn.find('.uretim-durum').text(res.acik?' (Açık)':'');
+                takipYukle(); // canlı bağ: üretimdeki modeller takip panelinde otomatik
+            }
         }).catch(()=>gsToast('Sunucu hatası oluştu.','error'));
     });
+
+    // 📌 Takip Notları paneli — model bazlı not, renk kapsamı + renk notları.
+    // Üretim modundaki modeller CANLI bağla otomatik listelenir (kopya değil).
+    const TAKIP_HEADERS={'Content-Type':'application/json','X-Requested-With':'fetch'};
+    let takipRows=[];
+    let takipDuzenlenen=null; // düzenleme modundaki model kodu
+
+    function takipYukle(){
+        fetch('/takip-notu/api/liste').then(r=>r.json()).then(res=>{
+            takipRows=res.rows||[];
+            $('#takipSayi').text(takipRows.length);
+            takipRender();
+        }).catch(()=>{});
+    }
+    function takipRozet(r){
+        return r.uretim?'<span class="takip-rozet takip-rozet--uretim"><i class="fas fa-industry"></i> Üretimde</span>':'';
+    }
+    function takipGoruntuKart(r){
+        const m=escapeHtml(r.model);
+        const renkler=r.colors.length
+            ? r.colors.map(c=>`<span class="takip-renk">${escapeHtml(c)}</span>`).join('')
+            : '<span class="takip-renk">Tüm renkler</span>';
+        const renkNotlari=Object.entries(r.color_notes||{}).map(([c,n])=>
+            `<div class="takip-renk-not"><strong>${escapeHtml(c)}:</strong> ${escapeHtml(n)}</div>`).join('');
+        return `
+        <div class="takip-card">
+            ${r.image_url?`<img src="${escapeHtml(r.image_url)}" class="takip-card-img" alt="">`:'<span class="takip-card-img bos"><i class="fas fa-image"></i></span>'}
+            <div class="takip-card-main">
+                <div class="takip-card-top">
+                    <a href="/search_products?search_type=model_code&query=${encodeURIComponent(r.model)}" title="Ürün listesinde bu modeli ara">${m}</a>
+                    ${takipRozet(r)}
+                </div>
+                ${r.title?`<div class="takip-title">${escapeHtml(r.title)}</div>`:''}
+                <div class="takip-renkler">${renkler}</div>
+                ${r.note?`<div class="takip-not">${escapeHtml(r.note)}</div>`:''}
+                ${renkNotlari}
+            </div>
+            <div class="takip-card-btns">
+                <button type="button" class="takip-duzenle" data-model="${m}" title="Düzenle"><i class="fas fa-pen"></i></button>
+                ${r.manuel?`<button type="button" class="takip-sil" data-model="${m}" title="Takipten çıkar"><i class="fas fa-trash"></i></button>`:''}
+            </div>
+        </div>`;
+    }
+    function takipEditKart(r){
+        const m=escapeHtml(r.model);
+        const tumu=!r.colors.length;
+        const renkListesi=r.mevcut_renkler.length?r.mevcut_renkler:r.colors;
+        const renkSatirlari=renkListesi.map(c=>{
+            const secili=tumu||r.colors.includes(c);
+            const not=(r.color_notes||{})[c]||'';
+            return `<div class="takip-edit-renk">
+                <label><input type="checkbox" class="takip-renk-sec" value="${escapeHtml(c)}" ${secili?'checked':''} ${tumu?'disabled':''}> ${escapeHtml(c)}</label>
+                <input type="text" class="takip-renk-not-input" data-renk="${escapeHtml(c)}" placeholder="Renk notu" value="${escapeHtml(not)}">
+            </div>`;
+        }).join('');
+        return `
+        <div class="takip-card" data-edit-model="${m}">
+            <div class="takip-card-main">
+                <div class="takip-card-top"><strong>${m}</strong> ${takipRozet(r)}</div>
+                <div class="takip-edit">
+                    <textarea class="takip-not-input" rows="2" placeholder="Model notu (serbest)">${escapeHtml(r.note)}</textarea>
+                    <label><input type="checkbox" class="takip-tum-renkler" ${tumu?'checked':''}> Tüm renkler</label>
+                    ${renkSatirlari||'<small class="takip-bos">Bu modelin renk verisi bulunamadı.</small>'}
+                    <div class="takip-edit-btns">
+                        <button type="button" class="btn btn-sm btn-primary takip-kaydet" data-model="${m}"><i class="fas fa-check"></i> Kaydet</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary takip-vazgec"><i class="fas fa-times"></i> Vazgeç</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    }
+    function takipRender(){
+        const $k=$('#takipKartlar');
+        if(!takipRows.length){
+            $k.html('<div class="takip-bos">Takipte model yok. Yukarıdan model kodu ekleyin — üretim modundakiler otomatik görünür.</div>');
+            return;
+        }
+        $k.html(takipRows.map(r=>r.model===takipDuzenlenen?takipEditKart(r):takipGoruntuKart(r)).join(''));
+    }
+    function takipDurumEtiketi(model, takipte){
+        $(`.toggle-takip-notu[data-model="${model}"] .takip-durum`).text(takipte?' (Takipte)':'');
+    }
+
+    $('#takipToggle').on('click', function(){
+        $('.takip-panel').toggleClass('acik');
+        $('#takipBody').slideToggle(200);
+    });
+    $('#takipEkleBtn').on('click', function(){
+        const model=$('#takipYeniModel').val().trim();
+        if(!model) return;
+        fetch('/takip-notu/api/kaydet',{method:'POST',headers:TAKIP_HEADERS,body:JSON.stringify({model})})
+            .then(r=>r.json()).then(res=>{
+                gsToast(res.message||(res.success?'Eklendi':'Hata'), res.success?'success':'error');
+                if(res.success){ $('#takipYeniModel').val(''); takipDurumEtiketi(model,true); takipYukle(); }
+            }).catch(()=>gsToast('Sunucu hatası oluştu.','error'));
+    });
+    $('#takipYeniModel').on('keydown', function(e){
+        if(e.key==='Enter'){ e.preventDefault(); $('#takipEkleBtn').click(); }
+    });
+
+    $('#takipKartlar').on('click','.takip-duzenle',function(){
+        takipDuzenlenen=$(this).data('model'); takipRender();
+    });
+    $('#takipKartlar').on('click','.takip-vazgec',function(){
+        takipDuzenlenen=null; takipRender();
+    });
+    $('#takipKartlar').on('change','.takip-tum-renkler',function(){
+        const tumu=this.checked;
+        const $secler=$(this).closest('.takip-edit').find('.takip-renk-sec');
+        $secler.prop('disabled',tumu);
+        if(tumu) $secler.prop('checked',true);
+    });
+    $('#takipKartlar').on('click','.takip-kaydet',function(){
+        const model=$(this).data('model');
+        const $edit=$(this).closest('.takip-edit');
+        const tumu=$edit.find('.takip-tum-renkler').is(':checked');
+        const colors=tumu?[]:$edit.find('.takip-renk-sec:checked').map(function(){return this.value;}).get();
+        const color_notes={};
+        $edit.find('.takip-renk-not-input').each(function(){
+            const v=this.value.trim();
+            if(v) color_notes[$(this).data('renk')]=v;
+        });
+        fetch('/takip-notu/api/kaydet',{method:'POST',headers:TAKIP_HEADERS,
+            body:JSON.stringify({model, colors, note:$edit.find('.takip-not-input').val().trim(), color_notes})})
+            .then(r=>r.json()).then(res=>{
+                gsToast(res.message||(res.success?'Kaydedildi':'Hata'), res.success?'success':'error');
+                if(res.success){ takipDuzenlenen=null; takipDurumEtiketi(model,true); takipYukle(); }
+            }).catch(()=>gsToast('Sunucu hatası oluştu.','error'));
+    });
+    $('#takipKartlar').on('click','.takip-sil',function(){
+        const model=$(this).data('model');
+        gsConfirm(`${model} takip notundan çıkarılsın mı?`,{danger:true,okText:'Çıkar'}).then(ok=>{
+            if(!ok) return;
+            fetch('/takip-notu/api/sil',{method:'POST',headers:TAKIP_HEADERS,body:JSON.stringify({model})})
+                .then(r=>r.json()).then(res=>{
+                    gsToast(res.message||(res.success?'Çıkarıldı':'Hata'), res.success?'success':'error');
+                    if(res.success){ takipDurumEtiketi(model,false); takipYukle(); }
+                }).catch(()=>gsToast('Sunucu hatası oluştu.','error'));
+        });
+    });
+
+    // Kart ⋮ menüsünden hızlı ekle/çıkar
+    $('.model-grid').on('click','.toggle-takip-notu',function(){
+        const btn=$(this), modelId=String(btn.data('model'));
+        fetch('/takip-notu/api/toggle',{method:'POST',headers:TAKIP_HEADERS,body:JSON.stringify({model:modelId})})
+            .then(r=>r.json()).then(res=>{
+                gsToast(res.message||(res.success?'Tamam':'Hata'), res.success?'success':'error');
+                if(res.success){ btn.find('.takip-durum').text(res.takipte?' (Takipte)':''); takipYukle(); }
+            }).catch(()=>gsToast('Sunucu hatası oluştu.','error'));
+    });
+
+    takipYukle();
 
 
     $('#modalSaveBtn').on('click', function(){

@@ -95,6 +95,11 @@
           Tamamlanan <span id="urTabTamamlanan">0</span>
         </button>
       </div>
+      <!-- Hazırlayana göre filtre: raf okutan / etiketi basan kullanıcı -->
+      <div class="ur-hazir-bar" id="urHazirBar" hidden>
+        <span class="ur-hazir-label"><i class="bi bi-person-check"></i> Hazırlayan:</span>
+        <div class="ur-hazir-chips" id="urHazirChips"></div>
+      </div>
     </section>
 
     <div id="urList" class="ur-list" aria-live="polite">
@@ -259,6 +264,15 @@
   .ur-tab.active { color:var(--ur-ink); }
   .ur-tab.active::after { background:var(--ur-rose); }
   .ur-tab span { display:inline-grid; place-items:center; min-width:22px; height:22px; margin-left:5px; padding:0 6px; border-radius:999px; background:var(--ur-rose-soft); color:var(--ur-rose-dark); font-size:.7rem; }
+  .ur-hazir-bar { display:flex; align-items:center; flex-wrap:wrap; gap:8px 10px; padding:10px 18px; border-top:1px solid var(--ur-line); }
+  .ur-hazir-label { display:inline-flex; align-items:center; gap:6px; color:var(--ur-muted); font-size:.78rem; font-weight:700; }
+  .ur-hazir-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .ur-hazir-chip {
+    padding:5px 12px; border:1px solid var(--ur-line); border-radius:999px; background:#fff;
+    color:var(--ur-muted); font-size:.78rem; font-weight:650; cursor:pointer; transition:.15s ease;
+  }
+  .ur-hazir-chip:hover { border-color:#cfd1d6; color:var(--ur-ink); }
+  .ur-hazir-chip.active { background:var(--ur-rose-soft); border-color:#ecd7db; color:var(--ur-rose-dark); }
 
   .ur-list { display:grid; gap:14px; }
   .ur-card {
@@ -429,6 +443,8 @@
   html.gs-dark .ur-detail-qty { background:#1e1f24; border-color:#33353c; }
   html.gs-dark .ur-kargo-info { background:#26272d; border-color:#33353c; }
   html.gs-dark .ur-kargo-info code { background:#2b2d33; color:#c1c4cb; }
+  html.gs-dark .ur-hazir-chip { background:#26272d; border-color:#33353c; color:#d5d7db; }
+  html.gs-dark .ur-hazir-chip.active { background:#3a2b2e; border-color:#4a383c; color:#e3a5ae; }
   html.gs-dark .ur-badge--islemde { background:#3d331a; color:#e3b654; }
   html.gs-dark .ur-badge--kargo { background:#1c2c3d; color:#6aa5dd; }
   html.gs-dark .ur-badge--karma { background:#2c2138; color:#b489e3; }
@@ -457,6 +473,8 @@
     let aktifDurum = 'bekleyen';
     const rowCache = {};  // id → satır (kargo diyaloğu için)
     let kargoAktif = null;
+    let aktifHazirlayan = '';   // '' = tümü; kullanıcı adı = yalnız onun hazırladıkları
+    const durumRows = {};       // durum → son yüklenen satırlar (hazırlayan chip'leri için)
 
     // Karma sipariş desteği: sipariş içeriği biliniyorsa (siparis_detay) TÜM
     // kalemler listelenir — üretilecek / raftan toplanacak etiketiyle. Bilinmiyorsa
@@ -573,6 +591,7 @@
                 <div class="ur-meta">
                     <span class="ur-musteri"><i class="bi bi-person-fill"></i> ${esc(r.customer_name) || '-'}</span>
                     <span><i class="bi bi-calendar3"></i> Sipariş: ${esc(r.order_date) || '-'}</span>
+                    ${r.hazirlayan ? `<span><i class="bi bi-person-check"></i> Hazırlayan: ${esc(r.hazirlayan)}</span>` : ''}
                     ${islemde ? `<span><i class="bi bi-hammer"></i> İşleme alındı: ${esc(r.isleme_alindi_at) || '-'}</span>` : ''}
                     ${(durum === 'uretildi' || tamamlanan) ? `<span><i class="bi bi-check2-circle"></i> Üretildi: ${esc(r.uretildi_at) || '-'}</span>` : ''}
                 </div>
@@ -596,20 +615,49 @@
             document.getElementById('urTabUretilen').textContent = rows.length;
         }
         rows.forEach(r => { rowCache[r.id] = r; });
+        durumRows[durum] = rows;
+        hazirChipleriYenile();
         if (!goster) return;
         const list = document.getElementById('urList');
-        if (!rows.length) {
+        // Hazırlayan filtresi yalnız görünümü daraltır — sekme sayaçları toplamı gösterir
+        const gorunecek = aktifHazirlayan
+            ? rows.filter(r => (r.hazirlayan || '') === aktifHazirlayan) : rows;
+        if (!gorunecek.length) {
             const bosMesaj = {
                 bekleyen: '<div class="ur-empty"><i class="bi bi-stars"></i>Üretim bekleyen sipariş yok. 🎉</div>',
                 islemde: '<div class="ur-empty"><i class="bi bi-hammer"></i>Şu an üretimde sipariş yok.</div>',
                 uretildi: '<div class="ur-empty"><i class="bi bi-inbox"></i>Henüz üretilen sipariş yok.</div>',
                 tamamlanan: '<div class="ur-empty"><i class="bi bi-truck"></i>Henüz kargoya verilen üretim siparişi yok.</div>'
             };
-            list.innerHTML = bosMesaj[durum] || bosMesaj.bekleyen;
+            list.innerHTML = aktifHazirlayan
+                ? `<div class="ur-empty"><i class="bi bi-person-x"></i>${esc(aktifHazirlayan)} kullanıcısının bu sekmede hazırladığı sipariş yok.</div>`
+                : (bosMesaj[durum] || bosMesaj.bekleyen);
             return;
         }
-        list.innerHTML = rows.map(r => kartHtml(r, durum)).join('');
+        list.innerHTML = gorunecek.map(r => kartHtml(r, durum)).join('');
     }
+
+    // Hazırlayan chip'leri: tüm sekmelerdeki satırlardan kullanıcı adları toplanır
+    function hazirChipleriYenile() {
+        const isimler = new Set();
+        Object.values(durumRows).forEach(rows =>
+            rows.forEach(r => { if (r.hazirlayan) isimler.add(r.hazirlayan); }));
+        const bar = document.getElementById('urHazirBar');
+        if (!isimler.size) { bar.hidden = true; aktifHazirlayan = ''; return; }
+        bar.hidden = false;
+        if (aktifHazirlayan && !isimler.has(aktifHazirlayan)) aktifHazirlayan = '';
+        const chips = [`<button type="button" class="ur-hazir-chip${aktifHazirlayan ? '' : ' active'}" data-hazirlayan="">Tümü</button>`]
+            .concat([...isimler].sort().map(n =>
+                `<button type="button" class="ur-hazir-chip${aktifHazirlayan === n ? ' active' : ''}" data-hazirlayan="${esc(n)}">${esc(n)}</button>`));
+        document.getElementById('urHazirChips').innerHTML = chips.join('');
+    }
+    document.getElementById('urHazirChips').addEventListener('click', (e) => {
+        const chip = e.target.closest('[data-hazirlayan]');
+        if (!chip) return;
+        aktifHazirlayan = chip.getAttribute('data-hazirlayan');
+        hazirChipleriYenile();
+        listeYukle(aktifDurum, true);
+    });
 
     function tazele() {
         listeYukle('bekleyen', aktifDurum === 'bekleyen');

@@ -39,6 +39,11 @@
     .ai-giris textarea{flex:1;resize:none;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:.9rem;font-family:inherit;height:44px}
     .ai-giris button{padding:0 20px;border:none;border-radius:8px;background:var(--color-primary);color:#fff;font-weight:600;cursor:pointer;font-size:.9rem}
     .ai-giris button:disabled{opacity:.5;cursor:not-allowed}
+    .ai-giris .ai-dosya-btn{background:transparent;color:#888;border:1px solid var(--color-border);padding:0 13px;font-size:1rem}
+    .ai-giris .ai-dosya-btn:hover{color:var(--color-primary);border-color:var(--color-primary)}
+    .ai-ekler{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 0}
+    .ai-ek-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-bg-light);font-size:.78rem}
+    .ai-ek-chip button{background:none;border:none;color:#c0392b;cursor:pointer;font-size:.85rem;padding:0 2px;line-height:1}
     .ai-ipucu{font-size:.75rem;color:#888;margin:8px 4px 0}
 
     /* Geçmiş sohbetler overlay'i */
@@ -96,7 +101,10 @@
             Örnek: "Bugün kaç sipariş geldi?" &nbsp;·&nbsp; "En çok satan 5 model?" &nbsp;·&nbsp; "Kaç sipariş gecikti?"
         </div>
     </div>
+    <div class="ai-ekler" id="aiEkler" style="display:none;"></div>
     <div class="ai-giris">
+        <button id="aiDosyaBtn" class="ai-dosya-btn" title="Dosya ekle (Excel .xlsx, CSV, PDF — en fazla 3)"><i class="fas fa-paperclip"></i></button>
+        <input type="file" id="aiDosyaInput" accept=".xlsx,.csv,.pdf" multiple hidden>
         <textarea id="aiSoru" placeholder="Sorunuzu yazın... (Enter ile gönder)"></textarea>
         <button id="aiGonder">Sor</button>
     </div>
@@ -115,6 +123,38 @@
     const silBtn = document.getElementById('aiSil');
     const gecmisPanel = document.getElementById('aiGecmis');
     const gecmisListe = document.getElementById('aiGecmisListe');
+    const dosyaBtn = document.getElementById('aiDosyaBtn');
+    const dosyaInput = document.getElementById('aiDosyaInput');
+    const eklerKutu = document.getElementById('aiEkler');
+
+    // ── Dosya ekleri (Excel/CSV/PDF): sunucu içeriği metne çevirip AI'ya verir ──
+    const MAX_DOSYA = 3;
+    let ekliDosyalar = [];
+
+    function eklerCiz() {
+        eklerKutu.innerHTML = '';
+        if (!ekliDosyalar.length) { eklerKutu.style.display = 'none'; return; }
+        eklerKutu.style.display = 'flex';
+        ekliDosyalar.forEach(function (f, i) {
+            const chip = document.createElement('span');
+            chip.className = 'ai-ek-chip';
+            chip.textContent = '📎 ' + f.name;
+            const x = document.createElement('button');
+            x.type = 'button'; x.title = 'Kaldır'; x.textContent = '×';
+            x.addEventListener('click', function () { ekliDosyalar.splice(i, 1); eklerCiz(); });
+            chip.appendChild(x);
+            eklerKutu.appendChild(chip);
+        });
+    }
+    dosyaBtn.addEventListener('click', function () { dosyaInput.click(); });
+    dosyaInput.addEventListener('change', function () {
+        for (const f of dosyaInput.files) {
+            if (ekliDosyalar.length >= MAX_DOSYA) { ekle('En fazla ' + MAX_DOSYA + ' dosya eklenebilir.', 'hata'); break; }
+            ekliDosyalar.push(f);
+        }
+        dosyaInput.value = '';
+        eklerCiz();
+    });
 
     function sohbetId() { const v = localStorage.getItem('aip_sohbet'); return v ? parseInt(v, 10) : null; }
     function sohbetIdYaz(id) { if (id) localStorage.setItem('aip_sohbet', id); else localStorage.removeItem('aip_sohbet'); }
@@ -215,21 +255,37 @@
 
     async function gonder() {
         const soru = soruEl.value.trim();
-        if (!soru) return;
+        const dosyalar = ekliDosyalar.slice();
+        if (!soru && !dosyalar.length) return;
         soruEl.value = '';
         gonderBtn.disabled = true;
         gecmisPanel.classList.remove('acik');
-        ekle(soru, 'kullanici');
+        const ekList = dosyalar.length ? '\n📎 ' + dosyalar.map(f => f.name).join(', ') : '';
+        ekle((soru || 'Ekli dosyaları incele ve özetle.') + ekList, 'kullanici');
         const beklDiv = ekle('Düşünüyor…', 'asistan');
 
         try {
-            const res = await fetch('/ai-asistan/sor', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ soru: soru, sohbet_id: sohbetId() })
-            });
+            let res;
+            if (dosyalar.length) {
+                const fd = new FormData();
+                fd.append('soru', soru);
+                if (sohbetId()) fd.append('sohbet_id', sohbetId());
+                dosyalar.forEach(f => fd.append('dosyalar', f));
+                res = await fetch('/ai-asistan/sor', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'fetch' },
+                    body: fd
+                });
+            } else {
+                res = await fetch('/ai-asistan/sor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ soru: soru, sohbet_id: sohbetId() })
+                });
+            }
             const data = await res.json();
             if (data.ok) {
+                ekliDosyalar = []; eklerCiz();
                 sohbetIdYaz(data.sohbet_id);
                 bekleyenYaz({ mesajId: data.mesaj_id, sohbetId: data.sohbet_id });
                 yokla(data.mesaj_id, beklDiv);
