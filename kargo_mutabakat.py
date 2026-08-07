@@ -43,11 +43,23 @@ ORDER_TABLES = [
     OrderDelivered, OrderCancelled, OrderArchived, OrderReadyToShip,
 ]
 TABLE_LABELS = {
-    'orders_created': 'Yeni Sipariş', 'orders_hazirlaniyor': 'Hazırlanıyor',
+    'orders_created': 'Yeni', 'orders_hazirlaniyor': 'Hazırlanıyor',
     'orders_picking': 'İşleme Alınan', 'orders_shipped': 'Kargoda',
     'orders_delivered': 'Teslim', 'orders_cancelled': 'İptal',
     'orders_archived': 'Arşiv (statü)', 'orders_ready_to_ship': 'Hazır Gönderim',
 }
+
+
+def _platform_label(source, status_label):
+    """source kolonundan platform etiketi: 'Trendyol Siparişi (Kargoda)' gibi."""
+    src = (source or 'trendyol').strip().lower()
+    if src == 'shopify':
+        platform = 'Shopify Siparişi'
+    elif src == 'woocommerce':
+        platform = 'WooCommerce Siparişi'
+    else:
+        platform = 'Trendyol Siparişi'
+    return f"{platform} ({status_label})" if status_label else platform
 
 # Bulanık eşleşme eşikleri (ayar için tek yer)
 NAME_SIMILARITY_THRESHOLD = 0.85
@@ -168,30 +180,30 @@ def _exact_match_maps(tracking_set, ref_set):
     ref_map = {}
 
     for cls in ORDER_TABLES:
-        label = TABLE_LABELS.get(cls.__tablename__, cls.__tablename__)
+        durum = TABLE_LABELS.get(cls.__tablename__, cls.__tablename__)
         if tracking_set:
             rows = (cls.query
-                    .with_entities(cls.cargo_tracking_number, cls.order_number)
+                    .with_entities(cls.cargo_tracking_number, cls.order_number, cls.source)
                     .filter(cls.cargo_tracking_number.in_(tracking_set)).all())
-            for tr, on in rows:
-                tracking_map.setdefault(tr, (label, on))
+            for tr, on, src in rows:
+                tracking_map.setdefault(tr, (_platform_label(src, durum), on))
         if ref_set:
             rows = (cls.query
-                    .with_entities(cls.order_number, cls.package_number)
+                    .with_entities(cls.order_number, cls.package_number, cls.source)
                     .filter((cls.order_number.in_(ref_set)) | (cls.package_number.in_(ref_set)))
                     .all())
-            for on, pn in rows:
+            for on, pn, src in rows:
                 if on in ref_set:
-                    ref_map.setdefault(on, (label, on))
+                    ref_map.setdefault(on, (_platform_label(src, durum), on))
                 if pn in ref_set:
-                    ref_map.setdefault(pn, (label, on))
+                    ref_map.setdefault(pn, (_platform_label(src, durum), on))
 
     if tracking_set:
         rows = (Archive.query
                 .with_entities(Archive.shipping_barcode, Archive.order_number, Archive.source)
                 .filter(Archive.shipping_barcode.in_(tracking_set)).all())
         for tr, on, src in rows:
-            tracking_map.setdefault(tr, (f"Arşiv/{src or 'trendyol'}", on))
+            tracking_map.setdefault(tr, (_platform_label(src, 'Arşiv'), on))
 
         rows = (ReturnOrder.query
                 .with_entities(ReturnOrder.cargo_tracking_number, ReturnOrder.order_number)
@@ -216,9 +228,9 @@ def _exact_match_maps(tracking_set, ref_set):
                 .all())
         for on, pn, src in rows:
             if on in ref_set:
-                ref_map.setdefault(on, (f"Arşiv/{src or 'trendyol'}", on))
+                ref_map.setdefault(on, (_platform_label(src, 'Arşiv'), on))
             if pn in ref_set:
-                ref_map.setdefault(pn, (f"Arşiv/{src or 'trendyol'}", on))
+                ref_map.setdefault(pn, (_platform_label(src, 'Arşiv'), on))
 
     return tracking_map, ref_map
 
@@ -228,19 +240,20 @@ def _fuzzy_candidates(window_start, window_end):
     candidates = []
 
     for cls in ORDER_TABLES:
-        label = TABLE_LABELS.get(cls.__tablename__, cls.__tablename__)
+        durum = TABLE_LABELS.get(cls.__tablename__, cls.__tablename__)
         rows = (cls.query
-                .with_entities(cls.customer_name, cls.customer_surname, cls.order_date, cls.order_number)
+                .with_entities(cls.customer_name, cls.customer_surname, cls.order_date,
+                               cls.order_number, cls.source)
                 .filter(cls.order_date >= window_start, cls.order_date <= window_end).all())
-        for ad, soyad, tarih, on in rows:
-            candidates.append((_tr_upper(f"{ad or ''} {soyad or ''}"), tarih, label, on))
+        for ad, soyad, tarih, on, src in rows:
+            candidates.append((_tr_upper(f"{ad or ''} {soyad or ''}"), tarih, _platform_label(src, durum), on))
 
     rows = (Archive.query
             .with_entities(Archive.customer_name, Archive.customer_surname, Archive.order_date,
                            Archive.order_number, Archive.source)
             .filter(Archive.order_date >= window_start, Archive.order_date <= window_end).all())
     for ad, soyad, tarih, on, src in rows:
-        candidates.append((_tr_upper(f"{ad or ''} {soyad or ''}"), tarih, f"Arşiv/{src or 'trendyol'}", on))
+        candidates.append((_tr_upper(f"{ad or ''} {soyad or ''}"), tarih, _platform_label(src, 'Arşiv'), on))
 
     rows = (Degisim.query
             .with_entities(Degisim.ad, Degisim.soyad, Degisim.degisim_tarihi, Degisim.degisim_no)
@@ -253,7 +266,7 @@ def _fuzzy_candidates(window_start, window_end):
                            YeniSiparis.siparis_tarihi, YeniSiparis.siparis_no)
             .filter(YeniSiparis.siparis_tarihi >= window_start, YeniSiparis.siparis_tarihi <= window_end).all())
     for ad, soyad, tarih, sn in rows:
-        candidates.append((_tr_upper(f"{ad or ''} {soyad or ''}"), tarih, 'Manuel Sipariş', sn))
+        candidates.append((_tr_upper(f"{ad or ''} {soyad or ''}"), tarih, 'Yeni Sipariş (Manuel)', sn))
 
     return [c for c in candidates if c[0]]
 
