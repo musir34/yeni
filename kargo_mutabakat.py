@@ -20,15 +20,15 @@ logger = logging.getLogger(__name__)
 
 try:
     from .models import (
-        OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered,
+        db, OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered,
         OrderCancelled, OrderArchived, OrderReadyToShip, Archive, ReturnOrder,
-        Degisim, YeniSiparis,
+        Degisim, YeniSiparis, Order, UretimSiparis,
     )
 except ImportError:
     from models import (
-        OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered,
+        db, OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered,
         OrderCancelled, OrderArchived, OrderReadyToShip, Archive, ReturnOrder,
-        Degisim, YeniSiparis,
+        Degisim, YeniSiparis, Order, UretimSiparis,
     )
 
 kargo_mutabakat_bp = Blueprint('kargo_mutabakat_bp', __name__)
@@ -221,6 +221,17 @@ def _exact_match_maps(tracking_set, ref_set):
             if kk in tracking_set:
                 tracking_map.setdefault(kk, ('Değişim', dn))
 
+        # Eski ana 'orders' tablosu (geriye dönük uyum — iki ayrı takip kolonu var)
+        rows = (Order.query
+                .with_entities(Order.cargo_tracking_number, Order.shipping_barcode, Order.order_number)
+                .filter((Order.cargo_tracking_number.in_(tracking_set)) | (Order.shipping_barcode.in_(tracking_set)))
+                .all())
+        for tr, sb, on in rows:
+            if tr in tracking_set:
+                tracking_map.setdefault(tr, ('Sipariş (Eski Tablo)', on))
+            if sb in tracking_set:
+                tracking_map.setdefault(sb, ('Sipariş (Eski Tablo)', on))
+
     if ref_set:
         rows = (Archive.query
                 .with_entities(Archive.order_number, Archive.package_number, Archive.source)
@@ -267,6 +278,37 @@ def _fuzzy_candidates(window_start, window_end):
             .filter(YeniSiparis.siparis_tarihi >= window_start, YeniSiparis.siparis_tarihi <= window_end).all())
     for ad, soyad, tarih, sn in rows:
         candidates.append((_tr_upper(f"{ad or ''} {soyad or ''}"), tarih, 'Yeni Sipariş (Manuel)', sn))
+
+    # Eski ana 'orders' tablosu
+    rows = (Order.query
+            .with_entities(Order.customer_name, Order.customer_surname, Order.order_date, Order.order_number)
+            .filter(Order.order_date >= window_start, Order.order_date <= window_end).all())
+    for ad, soyad, tarih, on in rows:
+        candidates.append((_tr_upper(f"{ad or ''} {soyad or ''}"), tarih, 'Sipariş (Eski Tablo)', on))
+
+    # Üretim siparişleri (yaşam döngüsü tablolarının kopyası olsa da tam kapsam için)
+    rows = (UretimSiparis.query
+            .with_entities(UretimSiparis.customer_name, UretimSiparis.order_date, UretimSiparis.order_number)
+            .filter(UretimSiparis.order_date >= window_start, UretimSiparis.order_date <= window_end).all())
+    for ad, tarih, on in rows:
+        candidates.append((_tr_upper(ad or ''), tarih, 'Üretim Siparişi', on))
+
+    # shopify_orders / woo_orders tabloları (model sınıfı yok → ham SQL; hata olursa atla)
+    from sqlalchemy import text
+    for tablo, etiket in (('shopify_orders', 'Shopify Siparişi (Tablo)'),
+                          ('woo_orders', 'WooCommerce Siparişi (Tablo)')):
+        try:
+            rows = db.session.execute(
+                text(f"SELECT customer_first_name, customer_last_name, customer_name, "
+                     f"date_created, order_number FROM {tablo} "
+                     f"WHERE date_created >= :s AND date_created <= :e"),
+                {'s': window_start, 'e': window_end}).fetchall()
+            for ad, soyad, tam_ad, tarih, on in rows:
+                isim = f"{ad or ''} {soyad or ''}".strip() or (tam_ad or '')
+                candidates.append((_tr_upper(isim), tarih, etiket, on))
+        except Exception as e:
+            db.session.rollback()
+            logger.warning(f"Kargo mutabakat {tablo} taraması atlandı: {e}")
 
     return [c for c in candidates if c[0]]
 
@@ -413,13 +455,8 @@ def _analyze(df):
 
     eslesen, supheli, bizde_yok, fiyat_anomali = [], [], [], []
 
+    # 1. Adım: bizde var mı? Birebir eşleşenler sonraki işleme, olmayanlar 2. adıma
     for d in rows:
-        durum, beklenen = _check_tarife(d['desi'], d['tasima_ucreti'], bands)
-        d['tarife_durum'] = durum
-        d['beklenen_fiyat'] = beklenen
-        if durum in ('anomali', 'tarife_disi'):
-            fiyat_anomali.append(d)
-
         if d['gonderi_no'] in tracking_map:
             label, on = tracking_map[d['gonderi_no']]
             d.update(match_type='takip_no', kaynak=label, siparis_no=on)
@@ -431,6 +468,7 @@ def _analyze(df):
             eslesen.append(d)
             continue
 
+        # 2. Adım: şüpheli mi? (ad + tarih benzerliği) Değilse → Bizde Yok
         best = _best_fuzzy_match(_tr_upper(d['alici']), d['_tarih'], candidates, exact_name_index)
         if best:
             d.update(match_type='ad_tarih', aday_ad=best[0], benzerlik=round(best[1] * 100),
@@ -438,6 +476,15 @@ def _analyze(df):
             supheli.append(d)
         else:
             bizde_yok.append(d)
+
+    # 3. Adım: fiyat kontrolü — yalnızca bizim olan (eşleşen + şüpheli) kargolarda.
+    # "Bizde Yok" satırları zaten komple itiraz konusu, fiyatına ayrıca bakılmaz.
+    for d in eslesen + supheli:
+        durum, beklenen = _check_tarife(d['desi'], d['tasima_ucreti'], bands)
+        d['tarife_durum'] = durum
+        d['beklenen_fiyat'] = beklenen
+        if durum in ('anomali', 'tarife_disi'):
+            fiyat_anomali.append(d)
 
     for d in rows:
         d.pop('_tarih', None)

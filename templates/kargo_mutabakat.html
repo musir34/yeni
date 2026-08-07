@@ -85,10 +85,12 @@
 
 <div class="alert alert-light border small mb-3">
   <strong>Kontrol edilen kaynaklar:</strong>
-  Trendyol/Shopify sipariş tabloları (yeni, hazırlanıyor, işlemde, kargoda, teslim, iptal, arşiv, hazır gönderim),
-  arşiv, iadeler, değişim, manuel yeni siparişler
+  8 sipariş yaşam-döngüsü tablosu (yeni, hazırlanıyor, işlemde, kargoda, teslim, iptal, arşiv, hazır gönderim — Trendyol+Shopify),
+  eski ana sipariş tablosu (orders), arşiv, iadeler, değişim, manuel yeni siparişler, üretim siparişleri,
+  shopify_orders / woo_orders tabloları
   ve <strong>canlı Shopify API</strong> ({{ sonuc.shopify_canli }} sipariş tarandı{% if sonuc.shopify_canli == 0 %} — ⚠️ Shopify'a ulaşılamadıysa canlı siparişler eşleşmez{% endif %}).
   Toplam {{ sonuc.aday_sayisi }} aday kayıt üzerinden ad-tarih benzerliği denendi.
+  Akış: ① birebir eşleşme → ② ad-tarih benzerliği (şüpheli) → ③ fiyat kontrolü (yalnız eşleşen+şüpheli kargolarda).
 </div>
 
 {% macro satir_hucreleri(d) %}
