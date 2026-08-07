@@ -83,6 +83,14 @@
   </a>
 </div>
 
+<div class="alert alert-light border small mb-3">
+  <strong>Kontrol edilen kaynaklar:</strong>
+  Trendyol/Shopify sipariş tabloları (yeni, hazırlanıyor, işlemde, kargoda, teslim, iptal, arşiv, hazır gönderim),
+  arşiv, iadeler, değişim, manuel yeni siparişler
+  ve <strong>canlı Shopify API</strong> ({{ sonuc.shopify_canli }} sipariş tarandı{% if sonuc.shopify_canli == 0 %} — ⚠️ Shopify'a ulaşılamadıysa canlı siparişler eşleşmez{% endif %}).
+  Toplam {{ sonuc.aday_sayisi }} aday kayıt üzerinden ad-tarih benzerliği denendi.
+</div>
+
 {% macro satir_hucreleri(d) %}
   <td>{{ d.sira_no }}</td>
   <td>{{ d.fatura_no }}</td>

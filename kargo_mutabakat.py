@@ -271,6 +271,64 @@ def _fuzzy_candidates(window_start, window_end):
     return [c for c in candidates if c[0]]
 
 
+def _shopify_live_sources(window_start):
+    """Canlı Shopify siparişlerini API'den tarar (arşivlenmemiş siparişler DB'de YOK).
+    (tracking_map_ek, aday_listesi_ek) döner; API hatasında boş döner, analiz DB ile sürer."""
+    try:
+        from shopify_site.shopify_service import shopify_service
+        if not shopify_service.is_configured():
+            return {}, []
+        # NOT: customer alanı read_customers scope ister (token'da YOK) — kullanma!
+        # MNG'deki ALICI MUSTERI zaten kargo adresi adıdır → shippingAddress.name yeterli.
+        q = """
+        query KargoMutabakat($first: Int!, $query: String, $after: String) {
+          orders(first: $first, query: $query, after: $after, sortKey: PROCESSED_AT, reverse: true) {
+            pageInfo { hasNextPage endCursor }
+            edges { node {
+              name
+              createdAt
+              shippingAddress { name }
+              fulfillments { trackingInfo { number } }
+            } }
+          }
+        }
+        """
+        qf = f"created_at:>={window_start.strftime('%Y-%m-%d')}"
+        tracking_map, candidates = {}, []
+        after = None
+        for _ in range(20):  # sayfa emniyeti (20×100 sipariş)
+            res = shopify_service.run_graphql(q, {'first': 100, 'query': qf, 'after': after})
+            if not res.get('success'):
+                logger.warning(f"Kargo mutabakat Shopify sorgusu başarısız: {res.get('error')}")
+                break
+            data = (res.get('data') or {}).get('orders') or {}
+            for e in data.get('edges', []):
+                n = e.get('node') or {}
+                order_name = n.get('name')
+                full = (n.get('shippingAddress') or {}).get('name') or ''
+                tarih = None
+                created = str(n.get('createdAt') or '')[:10]
+                if created:
+                    try:
+                        tarih = datetime.strptime(created, '%Y-%m-%d')
+                    except ValueError:
+                        pass
+                for ff in (n.get('fulfillments') or []):
+                    for ti in (ff.get('trackingInfo') or []):
+                        num = _clean_tracking(ti.get('number'))
+                        if num:
+                            tracking_map.setdefault(num, ('Shopify Siparişi (Canlı)', order_name))
+                if full:
+                    candidates.append((_tr_upper(full), tarih, 'Shopify Siparişi (Canlı)', order_name))
+            if not data.get('pageInfo', {}).get('hasNextPage'):
+                break
+            after = data.get('pageInfo', {}).get('endCursor')
+        return tracking_map, candidates
+    except Exception as e:
+        logger.warning(f"Kargo mutabakat Shopify canlı tarama atlandı: {e}")
+        return {}, []
+
+
 def _best_fuzzy_match(norm_name, invoice_date, candidates, exact_name_index):
     """En iyi aday: (aday adı, benzerlik, kaynak, sipariş no) veya None.
     Önce ucuz birebir-ad eşitliği, sonra SequenceMatcher."""
@@ -343,7 +401,12 @@ def _analyze(df):
         window_end = datetime.utcnow()
         window_start = window_end - timedelta(days=90)
 
-    candidates = _fuzzy_candidates(window_start, window_end)
+    # Canlı Shopify siparişleri (arşivlenmemişler DB'de yok — API'den taranır)
+    shopify_tracking, shopify_cands = _shopify_live_sources(window_start)
+    for k, v in shopify_tracking.items():
+        tracking_map.setdefault(k, v)
+
+    candidates = _fuzzy_candidates(window_start, window_end) + shopify_cands
     exact_name_index = {}
     for c in candidates:
         exact_name_index.setdefault(c[0], []).append(c)
@@ -386,6 +449,8 @@ def _analyze(df):
         'bizde_yok': bizde_yok,
         'fiyat_anomali': fiyat_anomali,
         'itiraz_tutari': round(sum(d['genel_toplam'] or 0 for d in bizde_yok), 2),
+        'shopify_canli': len(shopify_cands),
+        'aday_sayisi': len(candidates),
     }
 
 
