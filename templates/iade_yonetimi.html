@@ -1,0 +1,386 @@
+{% extends "base.html" %}
+{% block title %}İade Yönetimi · Güllü Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+    .container.mt-5 { max-width: none; margin: 0 !important; padding: 0; }
+
+    :root {
+        --return-ink: #17212b;
+        --return-muted: #6b7280;
+        --return-line: #e8eaed;
+        --return-surface: #ffffff;
+        --return-bg: #f4f6f8;
+        --return-red: #b4232d;
+        --return-red-dark: #861923;
+    }
+
+    .return-page { min-height: 100vh; background: var(--return-bg); color: var(--return-ink); }
+    .return-topbar {
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        min-height: 72px; padding: 0 2rem; background: #17191c; color: #fff;
+        box-shadow: 0 2px 12px rgba(0,0,0,.12);
+    }
+    .return-brand { display: flex; align-items: center; gap: .9rem; }
+    .return-brand img { width: 118px; height: auto; }
+    .return-brand-divider { width: 1px; height: 30px; background: rgba(255,255,255,.2); }
+    .return-brand-title { font-size: .92rem; font-weight: 700; letter-spacing: .03em; }
+    .return-top-actions { display: flex; gap: .55rem; align-items: center; }
+    .return-shell { max-width: 1480px; margin: 0 auto; padding: 2rem; }
+    .return-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; margin-bottom: 1.5rem; }
+    .return-eyebrow { color: var(--return-red); font-size: .74rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; margin-bottom: .3rem; }
+    .return-heading h1 { font-size: clamp(1.65rem, 3vw, 2.35rem); font-weight: 750; letter-spacing: -.035em; margin: 0; }
+    .return-heading p { color: var(--return-muted); margin: .35rem 0 0; }
+    .return-sync-time { color: var(--return-muted); font-size: .82rem; white-space: nowrap; }
+
+    .return-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+    .return-stat {
+        position: relative; overflow: hidden; border: 1px solid var(--return-line); border-radius: 15px;
+        background: var(--return-surface); padding: 1.15rem 1.25rem; cursor: pointer; text-align: left;
+        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .return-stat:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(23,33,43,.08); }
+    .return-stat.active { border-color: currentColor; box-shadow: 0 0 0 2px currentColor inset; }
+    .return-stat::after { content: ""; position: absolute; inset: auto -25px -35px auto; width: 95px; height: 95px; border-radius: 50%; background: currentColor; opacity: .055; }
+    .return-stat__top { display: flex; justify-content: space-between; align-items: center; }
+    .return-stat__label { color: var(--return-muted); font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .055em; }
+    .return-stat__icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: currentColor; }
+    .return-stat__icon i { color: #fff; }
+    .return-stat__value { display: block; margin-top: .35rem; color: var(--return-ink); font-size: 2rem; font-weight: 800; line-height: 1; }
+    .return-stat.waiting { color: #c7830c; }
+    .return-stat.transit { color: #1e6fc7; }
+    .return-stat.delivered { color: #218759; }
+
+    .return-panel { border: 1px solid var(--return-line); border-radius: 16px; background: var(--return-surface); box-shadow: 0 5px 20px rgba(23,33,43,.045); overflow: hidden; }
+    .return-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.15rem; border-bottom: 1px solid var(--return-line); }
+    .return-tabs { display: flex; flex-wrap: wrap; gap: .35rem; }
+    .return-tab { border: 0; border-radius: 9px; background: transparent; color: var(--return-muted); font-size: .86rem; font-weight: 700; padding: .58rem .8rem; }
+    .return-tab:hover { background: #f2f3f5; color: var(--return-ink); }
+    .return-tab.active { background: var(--return-ink); color: #fff; }
+    .return-tools { display: flex; align-items: center; gap: .55rem; }
+    .return-search { position: relative; }
+    .return-search i { position: absolute; left: .8rem; top: 50%; transform: translateY(-50%); color: #9299a2; }
+    .return-search input { width: 245px; border: 1px solid var(--return-line); border-radius: 9px; padding: .58rem .75rem .58rem 2.25rem; font-size: .86rem; outline: none; }
+    .return-search input:focus { border-color: #87909b; box-shadow: 0 0 0 3px rgba(23,33,43,.07); }
+    .return-refresh { border: 0; border-radius: 9px; background: var(--return-red); color: #fff; padding: .62rem .85rem; font-size: .84rem; font-weight: 700; white-space: nowrap; }
+    .return-refresh:hover { background: var(--return-red-dark); }
+    .return-refresh:disabled { opacity: .62; cursor: wait; }
+    .return-refresh.loading i { animation: return-spin 1s linear infinite; }
+    @keyframes return-spin { to { transform: rotate(360deg); } }
+
+    .return-alert { display: none; align-items: flex-start; gap: .8rem; margin: 1rem; padding: 1rem; border: 1px solid #efc3c6; border-radius: 10px; background: #fff2f3; color: #7f1d25; }
+    .return-alert.show { display: flex; }
+    .return-table-wrap { overflow-x: auto; }
+    .return-table { width: 100%; border-collapse: collapse; min-width: 1050px; }
+    .return-table th { padding: .76rem 1rem; background: #f8f9fa; color: #747b84; font-size: .69rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; border-bottom: 1px solid var(--return-line); white-space: nowrap; }
+    .return-table td { padding: .92rem 1rem; border-bottom: 1px solid #eef0f2; font-size: .84rem; vertical-align: middle; }
+    .return-table tbody tr:hover { background: #fbfbfc; }
+    .return-order { font-weight: 800; color: var(--return-ink); }
+    .return-code { display: block; margin-top: .18rem; color: var(--return-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .72rem; }
+    .return-email { max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .return-reason { max-width: 280px; color: #454b52; }
+    .return-badge { display: inline-flex; align-items: center; gap: .35rem; border-radius: 999px; padding: .35rem .58rem; font-size: .72rem; font-weight: 800; white-space: nowrap; }
+    .return-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .return-badge.bekliyor { color: #996000; background: #fff4d8; }
+    .return-badge.kargoda { color: #175fa8; background: #e7f2ff; }
+    .return-badge.teslim { color: #176c45; background: #e4f6ed; }
+    .return-status { display: block; max-width: 190px; margin-top: .32rem; color: var(--return-muted); font-size: .72rem; }
+    .return-actions { display: flex; gap: .35rem; align-items: center; white-space: nowrap; }
+    .return-action { display: inline-grid; place-items: center; min-width: 32px; height: 32px; padding: 0 .55rem; border: 1px solid var(--return-line); border-radius: 8px; background: #fff; color: #4b5560; text-decoration: none; }
+    .return-action:hover { border-color: #aeb4bb; color: var(--return-red); }
+    .return-action:disabled { opacity: .35; cursor: not-allowed; }
+    .return-footer { display: flex; justify-content: space-between; align-items: center; padding: .85rem 1rem; color: var(--return-muted); font-size: .8rem; }
+    .return-empty { display: none; padding: 4rem 1rem; text-align: center; color: var(--return-muted); }
+    .return-empty.show { display: block; }
+    .return-empty i { display: block; margin-bottom: .8rem; color: #bcc1c7; font-size: 2rem; }
+    .return-loading td { padding: 1rem; }
+    .return-skeleton { height: 13px; border-radius: 5px; background: linear-gradient(90deg,#f0f1f2 25%,#e5e7e9 37%,#f0f1f2 63%); background-size: 400% 100%; animation: return-shimmer 1.3s ease infinite; }
+    @keyframes return-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+
+    .return-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem 1.3rem; }
+    .return-detail-item { border-bottom: 1px solid var(--return-line); padding-bottom: .7rem; }
+    .return-detail-item.wide { grid-column: 1 / -1; }
+    .return-detail-label { display: block; color: var(--return-muted); font-size: .69rem; font-weight: 800; letter-spacing: .055em; text-transform: uppercase; margin-bottom: .25rem; }
+    .return-detail-value { font-size: .88rem; overflow-wrap: anywhere; }
+
+    html.gs-dark .return-page { --return-ink:#f2f4f7; --return-muted:#aab1ba; --return-line:#353a42; --return-surface:#22262c; --return-bg:#171a1f; }
+    html.gs-dark .return-topbar { background: #0e1013; }
+    html.gs-dark .return-tab:hover, html.gs-dark .return-table th { background:#292e35; }
+    html.gs-dark .return-tab.active { background:#f1f3f5; color:#17191c; }
+    html.gs-dark .return-search input, html.gs-dark .return-action { background:#1b1f24; color:#eceff2; border-color:#3b4149; }
+    html.gs-dark .return-table tbody tr:hover { background:#272c32; }
+    html.gs-dark .return-table td { border-color:#32373e; }
+    html.gs-dark .return-alert { background:#3b2024; border-color:#6f343b; color:#ffd6d9; }
+
+    @media (max-width: 900px) {
+        .return-topbar { padding: .85rem 1rem; }
+        .return-shell { padding: 1.25rem 1rem; }
+        .return-heading { align-items: flex-start; flex-direction: column; }
+        .return-toolbar { align-items: stretch; flex-direction: column; }
+        .return-tools { width: 100%; }
+        .return-search { flex: 1; }
+        .return-search input { width: 100%; }
+    }
+    @media (max-width: 620px) {
+        .return-brand-divider, .return-brand-title { display:none; }
+        .return-user-name { display:none; }
+        .return-stats { grid-template-columns: 1fr; gap: .65rem; }
+        .return-stat { padding: .9rem 1rem; }
+        .return-stat__value { font-size: 1.55rem; }
+        .return-tools { align-items: stretch; flex-direction: column; }
+        .return-refresh { width: 100%; }
+        .return-detail-grid { grid-template-columns: 1fr; }
+        .return-detail-item.wide { grid-column: auto; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="return-page">
+    <header class="return-topbar">
+        <div class="return-brand">
+            <img src="{{ url_for('static', filename='logo/gullu.png') }}" alt="Güllü Shoes">
+            <span class="return-brand-divider"></span>
+            <span class="return-brand-title">İade Yönetimi</span>
+        </div>
+        <div class="return-top-actions">
+            <span class="return-user-name small text-white-50">{{ session.get('first_name', '') }} {{ session.get('last_name', '') }}</span>
+            <a href="{{ url_for('home.home') }}" class="btn btn-sm btn-outline-light"><i class="bi bi-house-door me-1"></i>Anasayfa</a>
+            <form method="POST" action="{{ url_for('login_logout.logout') }}" class="m-0">
+                <button class="btn btn-sm btn-danger" type="submit"><i class="bi bi-box-arrow-right"></i></button>
+            </form>
+        </div>
+    </header>
+
+    <section class="return-shell">
+        <div class="return-heading">
+            <div>
+                <div class="return-eyebrow">Müşteri iadeleri</div>
+                <h1>Paketler nerede, tek bakışta.</h1>
+                <p>Oluşturulan iade kodlarını ve MNG hareketlerini canlı takip edin.</p>
+            </div>
+            <div class="return-sync-time" id="lastUpdate"><i class="bi bi-clock me-1"></i>Veri yükleniyor…</div>
+        </div>
+
+        <div class="return-stats" aria-label="İade durum sayaçları">
+            <button class="return-stat waiting" type="button" data-category="bekliyor">
+                <span class="return-stat__top"><span class="return-stat__label">Bekleyenler</span><span class="return-stat__icon"><i class="bi bi-hourglass-split"></i></span></span>
+                <strong class="return-stat__value" id="countWaiting">—</strong>
+            </button>
+            <button class="return-stat transit" type="button" data-category="kargoda">
+                <span class="return-stat__top"><span class="return-stat__label">Kargoda</span><span class="return-stat__icon"><i class="bi bi-truck"></i></span></span>
+                <strong class="return-stat__value" id="countTransit">—</strong>
+            </button>
+            <button class="return-stat delivered" type="button" data-category="teslim">
+                <span class="return-stat__top"><span class="return-stat__label">Elime Ulaştı</span><span class="return-stat__icon"><i class="bi bi-box2-heart"></i></span></span>
+                <strong class="return-stat__value" id="countDelivered">—</strong>
+            </button>
+        </div>
+
+        <div class="return-panel">
+            <div class="return-toolbar">
+                <div class="return-tabs" role="tablist" aria-label="İade filtresi">
+                    <button class="return-tab active" type="button" data-category="">Tümü</button>
+                    <button class="return-tab" type="button" data-category="bekliyor">Bekleyenler</button>
+                    <button class="return-tab" type="button" data-category="kargoda">Kargoda</button>
+                    <button class="return-tab" type="button" data-category="teslim">Elime Ulaştı</button>
+                </div>
+                <div class="return-tools">
+                    <label class="return-search">
+                        <i class="bi bi-search"></i>
+                        <input id="returnSearch" type="search" placeholder="Sipariş, e-posta veya kod ara" autocomplete="off">
+                    </label>
+                    <button class="return-refresh" id="syncButton" type="button" title="MNG'den anlık durum çek">
+                        <i class="bi bi-arrow-repeat me-1"></i>MNG'den Yenile
+                    </button>
+                </div>
+            </div>
+
+            <div class="return-alert" id="errorAlert" role="alert">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <div><strong>Veriler alınamadı.</strong><div id="errorMessage"></div></div>
+            </div>
+
+            <div class="return-table-wrap" id="tableWrap">
+                <table class="return-table">
+                    <thead>
+                        <tr>
+                            <th>Sipariş / İade Kodu</th>
+                            <th>Müşteri</th>
+                            <th>Neden</th>
+                            <th>Durum</th>
+                            <th>Takip No</th>
+                            <th>Oluşturulma</th>
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="returnRows">
+                        {% for _ in range(4) %}
+                        <tr class="return-loading">
+                            {% for _ in range(7) %}<td><div class="return-skeleton"></div></td>{% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="return-empty" id="emptyState"><i class="bi bi-inbox"></i><strong>Bu filtrede iade bulunamadı.</strong></div>
+            <div class="return-footer">
+                <span id="resultCount">Yükleniyor…</span>
+                <span>Saatlik otomatik MNG senkronu</span>
+            </div>
+        </div>
+    </section>
+</main>
+
+<div class="modal fade" id="returnDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div><div class="return-eyebrow">KAYIT DETAYI</div><h5 class="modal-title" id="detailTitle">İade</h5></div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body"><div class="return-detail-grid" id="detailGrid"></div></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const endpoint = {{ url_for('iade_yonetimi.veri') | tojson }};
+    const shopifyAdminBase = {{ shopify_admin_base | tojson }};
+    const labels = { bekliyor: 'Bekliyor', kargoda: 'Kargoda', teslim: 'Elime Ulaştı' };
+    let currentCategory = '';
+    let currentItems = [];
+
+    const rows = document.getElementById('returnRows');
+    const tableWrap = document.getElementById('tableWrap');
+    const emptyState = document.getElementById('emptyState');
+    const searchInput = document.getElementById('returnSearch');
+    const syncButton = document.getElementById('syncButton');
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+    }
+
+    function safeUrl(value) {
+        try {
+            const parsed = new URL(value);
+            return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : '';
+        } catch (_) { return ''; }
+    }
+
+    function formatDate(value) {
+        if (!value) return '—';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return new Intl.DateTimeFormat('tr-TR', {
+            timeZone: 'Europe/Istanbul', day: '2-digit', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        }).format(date);
+    }
+
+    function shopifyUrl(orderId) {
+        if (!shopifyAdminBase || !orderId) return '';
+        const match = String(orderId).match(/(\d+)$/);
+        return match ? `${shopifyAdminBase}/${match[1]}` : '';
+    }
+
+    function render(items) {
+        currentItems = items;
+        const term = searchInput.value.trim().toLocaleLowerCase('tr-TR');
+        const visible = term ? items.filter(item => [
+            item.orderNumber, item.email, item.referenceId, item.iadeKodu,
+            item.reason, item.durum, item.shipmentId
+        ].some(value => String(value ?? '').toLocaleLowerCase('tr-TR').includes(term))) : items;
+
+        rows.innerHTML = visible.map((item, index) => {
+            const category = labels[item.kategori] ? item.kategori : 'bekliyor';
+            const labelUrl = safeUrl(item.labelUrl);
+            const orderUrl = safeUrl(shopifyUrl(item.orderId));
+            return `<tr>
+                <td><span class="return-order">#${escapeHtml(item.orderNumber || '—')}</span><span class="return-code">${escapeHtml(item.iadeKodu || item.referenceId || '—')}</span></td>
+                <td><div class="return-email" title="${escapeHtml(item.email || '')}">${escapeHtml(item.email || '—')}</div></td>
+                <td><div class="return-reason">${escapeHtml(item.reason || '—')}</div></td>
+                <td><span class="return-badge ${category}">${labels[category]}</span><span class="return-status">${escapeHtml(item.durum || '—')}</span></td>
+                <td>${escapeHtml(item.shipmentId || '—')}</td>
+                <td>${escapeHtml(formatDate(item.createdAt))}</td>
+                <td><div class="return-actions">
+                    ${labelUrl ? `<a class="return-action" href="${escapeHtml(labelUrl)}" target="_blank" rel="noopener noreferrer" title="Barkodu aç"><i class="bi bi-upc-scan"></i></a>` : '<button class="return-action" disabled title="Barkod henüz oluşmadı"><i class="bi bi-upc-scan"></i></button>'}
+                    ${orderUrl ? `<a class="return-action" href="${escapeHtml(orderUrl)}" target="_blank" rel="noopener noreferrer" title="Shopify siparişini aç"><i class="bi bi-bag"></i></a>` : ''}
+                    <button class="return-action detail-button" type="button" data-index="${currentItems.indexOf(item)}" title="Detay"><i class="bi bi-three-dots"></i></button>
+                </div></td>
+            </tr>`;
+        }).join('');
+
+        tableWrap.style.display = visible.length ? '' : 'none';
+        emptyState.classList.toggle('show', !visible.length);
+        document.getElementById('resultCount').textContent = `${visible.length} iade gösteriliyor`;
+    }
+
+    function showDetail(item) {
+        const fields = [
+            ['Sipariş No', item.orderNumber], ['İade Kodu', item.iadeKodu || item.referenceId],
+            ['Müşteri', item.email], ['Kategori', labels[item.kategori] || item.kategori],
+            ['MNG Durumu', item.durum], ['Takip No', item.shipmentId],
+            ['Son Hareket', item.shipmentLastMove, true], ['İade Nedeni', item.reason, true],
+            ['Oluşturulma', formatDate(item.createdAt)], ['Son Senkron', formatDate(item.lastSyncAt)]
+        ];
+        document.getElementById('detailTitle').textContent = `Sipariş #${item.orderNumber || '—'}`;
+        document.getElementById('detailGrid').innerHTML = fields.map(([label, value, wide]) =>
+            `<div class="return-detail-item ${wide ? 'wide' : ''}"><span class="return-detail-label">${escapeHtml(label)}</span><div class="return-detail-value">${escapeHtml(value || '—')}</div></div>`
+        ).join('');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('returnDetailModal')).show();
+    }
+
+    function setCategory(category) {
+        currentCategory = category;
+        document.querySelectorAll('.return-tab').forEach(button => button.classList.toggle('active', button.dataset.category === category));
+        document.querySelectorAll('.return-stat').forEach(button => button.classList.toggle('active', button.dataset.category === category));
+        loadReturns(false);
+    }
+
+    async function loadReturns(sync) {
+        const query = new URLSearchParams();
+        if (currentCategory) query.set('durum', currentCategory);
+        if (sync) query.set('sync', '1');
+        syncButton.disabled = true;
+        syncButton.classList.add('loading');
+        document.getElementById('errorAlert').classList.remove('show');
+
+        try {
+            const response = await fetch(`${endpoint}?${query}`, {headers: {'Accept': 'application/json'}});
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.mesaj || 'Beklenmeyen bir hata oluştu.');
+
+            const counts = payload.sayac || {};
+            document.getElementById('countWaiting').textContent = counts.bekliyor ?? 0;
+            document.getElementById('countTransit').textContent = counts.kargoda ?? 0;
+            document.getElementById('countDelivered').textContent = counts.teslim ?? 0;
+            document.getElementById('lastUpdate').innerHTML = `<i class="bi bi-clock me-1"></i>Son veri: ${escapeHtml(formatDate(payload.guncelleme))}`;
+            render(payload.iadeler || []);
+        } catch (error) {
+            rows.innerHTML = '';
+            tableWrap.style.display = 'none';
+            emptyState.classList.remove('show');
+            document.getElementById('errorMessage').textContent = error.message;
+            document.getElementById('errorAlert').classList.add('show');
+            document.getElementById('resultCount').textContent = 'Veri alınamadı';
+        } finally {
+            syncButton.disabled = false;
+            syncButton.classList.remove('loading');
+        }
+    }
+
+    document.querySelectorAll('[data-category]').forEach(button => button.addEventListener('click', () => setCategory(button.dataset.category)));
+    searchInput.addEventListener('input', () => render(currentItems));
+    syncButton.addEventListener('click', () => loadReturns(true));
+    rows.addEventListener('click', event => {
+        const button = event.target.closest('.detail-button');
+        if (button) showDetail(currentItems[Number(button.dataset.index)]);
+    });
+    loadReturns(false);
+})();
+</script>
+{% endblock %}

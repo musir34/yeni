@@ -20,6 +20,8 @@ class BaseConfig:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     CACHE_TYPE = 'redis'
     CACHE_REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+    IADE_API_URL = os.getenv('IADE_API_URL', 'http://localhost:3434')
+    IADE_PANEL_KEY = os.getenv('IADE_PANEL_KEY', '')
 
 class DevelopmentConfig(BaseConfig):
     DEBUG = True

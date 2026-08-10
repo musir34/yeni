@@ -47,6 +47,7 @@ def register_blueprints(app):
     from uretim_routes import uretim_bp  # 🏭 ÜRETİM MODU
     from takip_notu import takip_bp  # 📌 TAKİP NOTLARI
     from kargo_mutabakat import kargo_mutabakat_bp  # 🚚 KARGO MUTABAKAT
+    from iade_yonetimi import iade_yonetimi_bp  # 📦 SİTE İADE YÖNETİMİ
 
     # Register all blueprints
     for bp in [
@@ -97,5 +98,6 @@ def register_blueprints(app):
         uretim_bp,  # 🏭 ÜRETİM MODU
         takip_bp,  # 📌 TAKİP NOTLARI
         kargo_mutabakat_bp,  # 🚚 KARGO MUTABAKAT
+        iade_yonetimi_bp,  # 📦 SİTE İADE YÖNETİMİ
     ]:
         app.register_blueprint(bp)
