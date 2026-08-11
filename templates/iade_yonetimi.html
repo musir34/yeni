@@ -32,6 +32,9 @@
     .return-heading h1 { font-size: clamp(1.65rem, 3vw, 2.35rem); font-weight: 750; letter-spacing: -.035em; margin: 0; }
     .return-heading p { color: var(--return-muted); margin: .35rem 0 0; }
     .return-sync-time { color: var(--return-muted); font-size: .82rem; white-space: nowrap; }
+    .return-heading-actions { display:flex; flex-direction:column; align-items:flex-end; gap:.65rem; }
+    .return-create { border:0; border-radius:10px; background:var(--return-red); color:#fff; padding:.72rem 1rem; font-size:.86rem; font-weight:750; box-shadow:0 6px 16px rgba(180,35,45,.2); }
+    .return-create:hover { background:var(--return-red-dark); }
 
     .return-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
     .return-stat {
@@ -102,6 +105,11 @@
     .return-detail-item.wide { grid-column: 1 / -1; }
     .return-detail-label { display: block; color: var(--return-muted); font-size: .69rem; font-weight: 800; letter-spacing: .055em; text-transform: uppercase; margin-bottom: .25rem; }
     .return-detail-value { font-size: .88rem; overflow-wrap: anywhere; }
+    .return-create-note { border-left:3px solid #d99818; border-radius:0 8px 8px 0; background:#fff8e8; color:#72540f; padding:.7rem .8rem; font-size:.8rem; }
+    .return-result { display:none; text-align:center; padding:.8rem 0 1rem; }
+    .return-result.show { display:block; }
+    .return-result-icon { width:54px; height:54px; display:grid; place-items:center; margin:0 auto .8rem; border-radius:50%; background:#e6f6ee; color:#218759; font-size:1.55rem; }
+    .return-result-code { display:flex; align-items:center; justify-content:center; gap:.6rem; margin:1rem 0; border:1px dashed #b9bec5; border-radius:10px; background:#f7f8f9; padding:.9rem; font:800 1.05rem ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap:anywhere; }
 
     html.gs-dark .return-page { --return-ink:#f2f4f7; --return-muted:#aab1ba; --return-line:#353a42; --return-surface:#22262c; --return-bg:#171a1f; }
     html.gs-dark .return-topbar { background: #0e1013; }
@@ -111,11 +119,14 @@
     html.gs-dark .return-table tbody tr:hover { background:#272c32; }
     html.gs-dark .return-table td { border-color:#32373e; }
     html.gs-dark .return-alert { background:#3b2024; border-color:#6f343b; color:#ffd6d9; }
+    html.gs-dark .return-create-note { background:#3a301b; color:#f3d58f; }
+    html.gs-dark .return-result-code { background:#1b1f24; border-color:#555c65; }
 
     @media (max-width: 900px) {
         .return-topbar { padding: .85rem 1rem; }
         .return-shell { padding: 1.25rem 1rem; }
         .return-heading { align-items: flex-start; flex-direction: column; }
+        .return-heading-actions { width:100%; align-items:flex-start; }
         .return-toolbar { align-items: stretch; flex-direction: column; }
         .return-tools { width: 100%; }
         .return-search { flex: 1; }
@@ -159,7 +170,14 @@
                 <h1>Paketler nerede, tek bakışta.</h1>
                 <p>Oluşturulan iade kodlarını ve MNG hareketlerini canlı takip edin.</p>
             </div>
-            <div class="return-sync-time" id="lastUpdate"><i class="bi bi-clock me-1"></i>Veri yükleniyor…</div>
+            <div class="return-heading-actions">
+                {% if session.get('role') in ['admin', 'manager'] %}
+                <button class="return-create" type="button" data-bs-toggle="modal" data-bs-target="#createReturnModal">
+                    <i class="bi bi-plus-circle me-1"></i>İade Kodu Oluştur
+                </button>
+                {% endif %}
+                <div class="return-sync-time" id="lastUpdate"><i class="bi bi-clock me-1"></i>Veri yükleniyor…</div>
+            </div>
         </div>
 
         <div class="return-stats" aria-label="İade durum sayaçları">
@@ -243,12 +261,84 @@
         </div>
     </div>
 </div>
+
+{% if session.get('role') in ['admin', 'manager'] %}
+<div class="modal fade" id="createReturnModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form id="createReturnForm">
+                <div class="modal-header">
+                    <div><div class="return-eyebrow">GERÇEK MNG KODU</div><h5 class="modal-title">İade Kodu Oluştur</h5></div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="createFormFields">
+                        <div class="return-create-note mb-3"><i class="bi bi-exclamation-circle me-1"></i>Bu işlem MNG sisteminde gerçek ve ücretsiz gönderim kodu oluşturur. Sipariş numarasını kontrol edin.</div>
+                        <div class="row g-3">
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold" for="createSource">Sipariş kaynağı</label>
+                                <select class="form-select" id="createSource" required>
+                                    <option value="degisim" selected>Değişim</option>
+                                    <option value="trendyol">Trendyol siparişi</option>
+                                    <option value="shopify">Shopify siparişi</option>
+                                    <option value="manuel">Diğer / Manuel</option>
+                                </select>
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label fw-semibold" for="createOrderNumber">Sipariş numarası</label>
+                                <input class="form-control" id="createOrderNumber" maxlength="64" placeholder="Örn. 123456789 veya 1532" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="createCustomerName">Müşteri adı <span class="text-muted fw-normal">(isteğe bağlı)</span></label>
+                                <input class="form-control" id="createCustomerName" maxlength="150" autocomplete="name">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="createEmail">E-posta <span class="text-muted fw-normal">(isteğe bağlı)</span></label>
+                                <input class="form-control" id="createEmail" type="email" maxlength="255" autocomplete="email">
+                                <div class="form-text">Trendyol siparişlerinde boş bırakabilirsiniz.</div>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold" for="createReasonType">İşlem nedeni</label>
+                                <select class="form-select" id="createReasonType" required>
+                                    <option value="Değişim gönderimi" selected>Değişim gönderimi</option>
+                                    <option value="Beden uymadı">Beden uymadı</option>
+                                    <option value="Kusurlu veya hasarlı ürün">Kusurlu / hasarlı ürün</option>
+                                    <option value="Yanlış ürün">Yanlış ürün</option>
+                                    <option value="Müşteri vazgeçti">Müşteri vazgeçti</option>
+                                    <option value="Diğer">Diğer</option>
+                                </select>
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label fw-semibold" for="createReasonNote">Açıklama <span class="text-muted fw-normal">(isteğe bağlı)</span></label>
+                                <input class="form-control" id="createReasonNote" maxlength="300" placeholder="Örn. 38 yerine 39 numara gönderilecek">
+                            </div>
+                        </div>
+                        <div class="alert alert-danger mt-3 mb-0 d-none" id="createError" role="alert"></div>
+                    </div>
+                    <div class="return-result" id="createResult">
+                        <div class="return-result-icon"><i class="bi bi-check2"></i></div>
+                        <h5>İade kodu hazır</h5>
+                        <p class="text-muted mb-0">Müşteri bu kodla DHL eCommerce (MNG Kargo) şubesine gidebilir.</p>
+                        <div class="return-result-code"><span id="createdReturnCode"></span><button class="btn btn-sm btn-outline-secondary" id="copyCreatedCode" type="button" title="Kopyala"><i class="bi bi-copy"></i></button></div>
+                        <a class="btn btn-outline-dark d-none" id="createdLabelLink" target="_blank" rel="noopener noreferrer"><i class="bi bi-upc-scan me-1"></i>Barkodu Aç</a>
+                    </div>
+                </div>
+                <div class="modal-footer" id="createFooter">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Vazgeç</button>
+                    <button type="submit" class="btn btn-danger" id="createSubmit"><i class="bi bi-check2-circle me-1"></i>Kodu Oluştur</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script>
 (() => {
     const endpoint = {{ url_for('iade_yonetimi.veri') | tojson }};
+    const createEndpoint = {{ url_for('iade_yonetimi.olustur') | tojson }};
     const shopifyAdminBase = {{ shopify_admin_base | tojson }};
     const labels = { bekliyor: 'Bekliyor', kargoda: 'Kargoda', teslim: 'Elime Ulaştı' };
     let currentCategory = '';
@@ -291,7 +381,7 @@
         currentItems = items;
         const term = searchInput.value.trim().toLocaleLowerCase('tr-TR');
         const visible = term ? items.filter(item => [
-            item.orderNumber, item.email, item.referenceId, item.iadeKodu,
+            item.orderNumber, item.email, item.customerName, item.referenceId, item.iadeKodu,
             item.reason, item.durum, item.shipmentId
         ].some(value => String(value ?? '').toLocaleLowerCase('tr-TR').includes(term))) : items;
 
@@ -301,7 +391,7 @@
             const orderUrl = safeUrl(shopifyUrl(item.orderId));
             return `<tr>
                 <td><span class="return-order">#${escapeHtml(item.orderNumber || '—')}</span><span class="return-code">${escapeHtml(item.iadeKodu || item.referenceId || '—')}</span></td>
-                <td><div class="return-email" title="${escapeHtml(item.email || '')}">${escapeHtml(item.email || '—')}</div></td>
+                <td><div class="return-email" title="${escapeHtml(item.email || '')}">${escapeHtml(item.customerName || item.email || '—')}</div>${item.customerName && item.email ? `<span class="return-code">${escapeHtml(item.email)}</span>` : ''}</td>
                 <td><div class="return-reason">${escapeHtml(item.reason || '—')}</div></td>
                 <td><span class="return-badge ${category}">${labels[category]}</span><span class="return-status">${escapeHtml(item.durum || '—')}</span></td>
                 <td>${escapeHtml(item.shipmentId || '—')}</td>
@@ -322,7 +412,9 @@
     function showDetail(item) {
         const fields = [
             ['Sipariş No', item.orderNumber], ['İade Kodu', item.iadeKodu || item.referenceId],
-            ['Müşteri', item.email], ['Kategori', labels[item.kategori] || item.kategori],
+            ['Müşteri', item.customerName || item.email], ['E-posta', item.email],
+            ['Kaynak', ({degisim:'Değişim',trendyol:'Trendyol',shopify:'Shopify',manuel:'Manuel',site:'Site'}[item.source] || item.source)],
+            ['Oluşturan', item.createdBy], ['Kategori', labels[item.kategori] || item.kategori],
             ['MNG Durumu', item.durum], ['Takip No', item.shipmentId],
             ['Son Hareket', item.shipmentLastMove, true], ['İade Nedeni', item.reason, true],
             ['Oluşturulma', formatDate(item.createdAt)], ['Son Senkron', formatDate(item.lastSyncAt)]
@@ -380,6 +472,76 @@
         const button = event.target.closest('.detail-button');
         if (button) showDetail(currentItems[Number(button.dataset.index)]);
     });
+
+    const createForm = document.getElementById('createReturnForm');
+    if (createForm) {
+        const createModal = document.getElementById('createReturnModal');
+        const createSubmit = document.getElementById('createSubmit');
+        let createRequestId = '';
+
+        function newRequestId() {
+            if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, char => {
+                const random = Math.random() * 16 | 0;
+                return (char === 'x' ? random : (random & 3 | 8)).toString(16);
+            });
+        }
+        function resetCreateForm() {
+            createForm.reset();
+            createRequestId = newRequestId();
+            document.getElementById('createFormFields').style.display = '';
+            document.getElementById('createResult').classList.remove('show');
+            document.getElementById('createFooter').style.display = '';
+            document.getElementById('createError').classList.add('d-none');
+            document.getElementById('createdLabelLink').classList.add('d-none');
+            document.getElementById('copyCreatedCode').innerHTML = '<i class="bi bi-copy"></i>';
+            createSubmit.disabled = false;
+            createSubmit.innerHTML = '<i class="bi bi-check2-circle me-1"></i>Kodu Oluştur';
+        }
+        createModal.addEventListener('show.bs.modal', resetCreateForm);
+        createForm.addEventListener('submit', async event => {
+            event.preventDefault();
+            const reasonType = document.getElementById('createReasonType').value;
+            const reasonNote = document.getElementById('createReasonNote').value.trim();
+            const errorBox = document.getElementById('createError');
+            errorBox.classList.add('d-none');
+            createSubmit.disabled = true;
+            createSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>MNG kodu oluşturuluyor…';
+            try {
+                const response = await fetch(createEndpoint, {
+                    method: 'POST',
+                    headers: {'Accept':'application/json','Content-Type':'application/json','X-Requested-With':'XMLHttpRequest'},
+                    body: JSON.stringify({
+                        source: document.getElementById('createSource').value,
+                        orderNumber: document.getElementById('createOrderNumber').value.trim(),
+                        customerName: document.getElementById('createCustomerName').value.trim(),
+                        email: document.getElementById('createEmail').value.trim(),
+                        reason: [reasonType, reasonNote].filter(Boolean).join(' — '),
+                        requestId: createRequestId
+                    })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(result.mesaj || 'İade kodu oluşturulamadı.');
+                document.getElementById('createdReturnCode').textContent = result.iadeKodu;
+                const labelLink = document.getElementById('createdLabelLink');
+                const labelUrl = safeUrl(result.labelUrl);
+                if (labelUrl) { labelLink.href = labelUrl; labelLink.classList.remove('d-none'); }
+                document.getElementById('createFormFields').style.display = 'none';
+                document.getElementById('createResult').classList.add('show');
+                document.getElementById('createFooter').style.display = 'none';
+                await loadReturns(false);
+            } catch (error) {
+                errorBox.textContent = error.message;
+                errorBox.classList.remove('d-none');
+                createSubmit.disabled = false;
+                createSubmit.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Aynı İşlemi Tekrar Dene';
+            }
+        });
+        document.getElementById('copyCreatedCode').addEventListener('click', async () => {
+            await navigator.clipboard.writeText(document.getElementById('createdReturnCode').textContent);
+            document.getElementById('copyCreatedCode').innerHTML = '<i class="bi bi-check2"></i>';
+        });
+    }
     loadReturns(false);
 })();
 </script>

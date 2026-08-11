@@ -5,7 +5,7 @@ import base64
 import re
 import requests
 from collections import Counter
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from datetime import datetime, timedelta
 from time_utils import ist_to_utc
 import uuid
@@ -787,8 +787,66 @@ def degisim_talep():
         current_filters=current_filters
     )
 
+
 # ──────────────────────────────────────────────────────────────────────────────
-# 7) Yeni Değişim Talebi Formu
+# 7) Değişim kaydından gerçek MNG iade kodu oluşturma
+# ──────────────────────────────────────────────────────────────────────────────
+@degisim_bp.route('/degisim/<degisim_no>/iade-kodu-olustur', methods=['POST'])
+def iade_kodu_olustur(degisim_no):
+    """Değişim kartındaki bilgilerle, mükerrer üretime kapalı MNG dönüş kodu oluştur."""
+    if session.get('role') not in {'admin', 'manager'}:
+        return jsonify({'mesaj': 'İade kodu oluşturmak için yönetici yetkisi gerekli.'}), 403
+    if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+        return jsonify({'mesaj': 'Geçersiz istek.'}), 400
+
+    exchange = Degisim.query.filter_by(degisim_no=degisim_no).first()
+    if not exchange:
+        return jsonify({'mesaj': 'Değişim kaydı bulunamadı.'}), 404
+
+    siparis_no = str(exchange.siparis_no or '').strip()
+    if not siparis_no:
+        return jsonify({'mesaj': 'Değişim kaydında sipariş numarası bulunmuyor.'}), 400
+
+    try:
+        # Yeni kayıtların değişim numarası zaten UUID'dir. Eski kayıtlar farklı
+        # biçimdeyse de aynı kayda her seferinde aynı UUID üretilir.
+        request_id = str(uuid.UUID(str(exchange.degisim_no)))
+    except (ValueError, TypeError, AttributeError):
+        request_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f'gullu-degisim:{exchange.degisim_no}'))
+
+    created_by = session.get('username') or ' '.join(filter(None, [
+        session.get('first_name'), session.get('last_name')
+    ])) or 'panel'
+    reason = str(exchange.degisim_nedeni or 'Değişim gönderimi').strip()
+    payload = {
+        'orderNumber': siparis_no[:64],
+        'email': '',
+        'customerName': f'{exchange.ad or ""} {exchange.soyad or ""}'.strip()[:150],
+        'reason': reason[:400],
+        'source': 'degisim',
+        'requestId': request_id,
+        'createdBy': str(created_by)[:120],
+    }
+
+    try:
+        from iade_yonetimi import create_iade, IadeKopruHatasi
+
+        result = create_iade(payload)
+        _safe_log('CREATE', {
+            'işlem_açıklaması': f'MNG iade kodu oluşturuldu — {siparis_no}',
+            'sayfa': 'Değişim Talepleri',
+            'değişim_no': exchange.degisim_no,
+            'sipariş_no': siparis_no,
+            'iade_kodu': result.get('iadeKodu'),
+        })
+        return jsonify(result), 200
+    except IadeKopruHatasi as exc:
+        logger.warning('Değişim kaydı için MNG iade kodu oluşturulamadı: %s', exc)
+        return jsonify({'mesaj': str(exc)}), exc.status_code
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 8) Yeni Değişim Talebi Formu
 # ──────────────────────────────────────────────────────────────────────────────
 @degisim_bp.route('/yeni-degisim-talebi', methods=['GET', 'POST'])
 def yeni_degisim_talebi():
@@ -835,7 +893,7 @@ def yeni_degisim_talebi():
     return render_template('yeni_degisim_talebi.html')
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 8) Kargo Kodu Üretme (DB'de benzersizlik garanti)
+# 9) Kargo Kodu Üretme (DB'de benzersizlik garanti)
 # ──────────────────────────────────────────────────────────────────────────────
 def generate_kargo_kodu(max_attempts: int = 10) -> str:
     """Benzersiz bir kargo kodu üretir. 10 denemede bulamazsa UUID suffix ekler."""

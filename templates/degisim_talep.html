@@ -209,6 +209,18 @@
           </div>
 
           <div class="card-footer border-0">
+            {% if session.get('role') in ['admin', 'manager'] %}
+            <button
+              type="button"
+              class="btn btn-outline-primary btn-sm w-100 mb-2"
+              data-return-code-endpoint="{{ url_for('degisim.iade_kodu_olustur', degisim_no=exchange.degisim_no) }}"
+              data-return-order="{{ exchange.siparis_no|e }}"
+              data-return-customer="{{ ((exchange.ad or '') ~ ' ' ~ (exchange.soyad or ''))|trim|e }}"
+              data-return-reason="{{ (exchange.degisim_nedeni or 'Değişim gönderimi')|e }}"
+              onclick="openReturnCodeModal(this)">
+              <i class="fas fa-undo-alt me-1"></i> MNG İade Kodu Oluştur
+            </button>
+            {% endif %}
             <div class="btn-toolbar" role="toolbar">
               <div class="btn-group me-2 mb-2" role="group">
                 <button class="btn btn-success btn-sm" onclick="tryMoveToProcessing('{{ exchange.degisim_no }}')">İşleme Al</button>
@@ -283,6 +295,56 @@
       </div>
     </div>
   </div>
+
+  {% if session.get('role') in ['admin', 'manager'] %}
+  <!-- Değişim kaydından gerçek MNG dönüş kodu oluşturma modalı -->
+  <div class="modal fade" id="returnCodeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <small class="text-muted fw-semibold">GERÇEK MNG KODU</small>
+            <h5 class="modal-title">Değişim İade Kodu</h5>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+        </div>
+        <div class="modal-body">
+          <div id="returnCodeConfirmation">
+            <div class="alert alert-warning small">
+              Bu işlem müşterinin ürünü size geri göndermesi için gerçek ve ücretsiz MNG iade kodu oluşturur.
+            </div>
+            <dl class="row mb-0">
+              <dt class="col-4">Sipariş</dt><dd class="col-8" id="returnCodeOrder">—</dd>
+              <dt class="col-4">Müşteri</dt><dd class="col-8" id="returnCodeCustomer">—</dd>
+              <dt class="col-4">Neden</dt><dd class="col-8" id="returnCodeReason">—</dd>
+            </dl>
+            <div class="alert alert-danger d-none mt-3 mb-0" id="returnCodeError" role="alert"></div>
+          </div>
+          <div class="text-center d-none" id="returnCodeResult">
+            <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+            <h5>İade kodu hazır</h5>
+            <p class="text-muted small">Müşteri bu kodla DHL eCommerce (MNG Kargo) şubesine gidebilir.</p>
+            <div class="d-flex align-items-center justify-content-center gap-2 mb-3">
+              <code class="fs-4 fw-bold" id="returnCodeValue"></code>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="copyReturnCode" title="Kopyala">
+                <i class="far fa-copy"></i>
+              </button>
+            </div>
+            <a class="btn btn-outline-dark btn-sm d-none" id="returnCodeLabel" target="_blank" rel="noopener noreferrer">
+              <i class="fas fa-barcode me-1"></i> Barkodu Aç
+            </a>
+          </div>
+        </div>
+        <div class="modal-footer" id="returnCodeFooter">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Vazgeç</button>
+          <button type="button" class="btn btn-primary" id="createReturnCodeBtn">
+            <i class="fas fa-check-circle me-1"></i> Kodu Oluştur
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -297,6 +359,79 @@
         setTimeout(()=>{$i.removeClass(ok).addClass(original).css('color','')},2000);
       });
     }
+
+    {% if session.get('role') in ['admin', 'manager'] %}
+    const returnCodeModal = new bootstrap.Modal(document.getElementById('returnCodeModal'));
+    let pendingReturnCode = null;
+
+    function openReturnCodeModal(button) {
+      pendingReturnCode = {
+        endpoint: button.dataset.returnCodeEndpoint,
+        order: button.dataset.returnOrder || '—',
+        customer: button.dataset.returnCustomer || '—',
+        reason: button.dataset.returnReason || '—'
+      };
+      document.getElementById('returnCodeOrder').textContent = pendingReturnCode.order;
+      document.getElementById('returnCodeCustomer').textContent = pendingReturnCode.customer;
+      document.getElementById('returnCodeReason').textContent = pendingReturnCode.reason;
+      document.getElementById('returnCodeConfirmation').classList.remove('d-none');
+      document.getElementById('returnCodeResult').classList.add('d-none');
+      document.getElementById('returnCodeFooter').classList.remove('d-none');
+      document.getElementById('returnCodeError').classList.add('d-none');
+      document.getElementById('returnCodeError').textContent = '';
+      document.getElementById('returnCodeLabel').classList.add('d-none');
+      document.getElementById('returnCodeLabel').removeAttribute('href');
+      returnCodeModal.show();
+    }
+
+    document.getElementById('createReturnCodeBtn').addEventListener('click', async function () {
+      if (!pendingReturnCode) return;
+      const button = this;
+      const errorBox = document.getElementById('returnCodeError');
+      const originalHtml = button.innerHTML;
+      button.disabled = true;
+      button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Oluşturuluyor…';
+      errorBox.classList.add('d-none');
+
+      try {
+        const response = await fetch(pendingReturnCode.endpoint, {
+          method: 'POST',
+          headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'}
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.ok || !data.iadeKodu) {
+          throw new Error(data.mesaj || 'MNG iade kodu oluşturulamadı.');
+        }
+
+        document.getElementById('returnCodeValue').textContent = data.iadeKodu;
+        const label = document.getElementById('returnCodeLabel');
+        if (data.labelUrl) {
+          const parsed = new URL(data.labelUrl, window.location.origin);
+          if (['http:', 'https:'].includes(parsed.protocol)) {
+            label.href = parsed.href;
+            label.classList.remove('d-none');
+          }
+        }
+        document.getElementById('returnCodeConfirmation').classList.add('d-none');
+        document.getElementById('returnCodeResult').classList.remove('d-none');
+        document.getElementById('returnCodeFooter').classList.add('d-none');
+      } catch (error) {
+        errorBox.textContent = error.message || 'Sunucuyla iletişim kurulamadı.';
+        errorBox.classList.remove('d-none');
+      } finally {
+        button.disabled = false;
+        button.innerHTML = originalHtml;
+      }
+    });
+
+    document.getElementById('copyReturnCode').addEventListener('click', function () {
+      const code = document.getElementById('returnCodeValue').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        this.innerHTML = '<i class="fas fa-check text-success"></i>';
+        setTimeout(() => { this.innerHTML = '<i class="far fa-copy"></i>'; }, 1800);
+      });
+    });
+    {% endif %}
 
     // Etiket sadece "İşleme Alındı" iken
     function guardedLabelPrint(degisim_no, status){

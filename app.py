@@ -88,7 +88,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login_logout.login"
 
-print("DB URL:", os.getenv("DATABASE_URL"))
+logger.info("Veritabanı bağlantı ayarı yüklendi: %s", "evet" if os.getenv("DATABASE_URL") else "hayır")
 
 @login_manager.user_loader
 def load_user(user_id):
