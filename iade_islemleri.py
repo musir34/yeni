@@ -1,7 +1,11 @@
 import base64
 import logging
+import os
 import requests
-from datetime import datetime, timedelta
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 
 from flask import (
@@ -27,9 +31,24 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-CLAIMS_PAGE_SIZE = 50
+def _bounded_env_int(name, default, minimum, maximum):
+    try:
+        value = int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        value = default
+    return max(minimum, min(value, maximum))
+
+
+CLAIMS_PAGE_SIZE = 200
 CLAIMS_RESULT_CAP = 500
 CLAIMS_MIN_SPLIT = timedelta(minutes=5)
+LIVE_RETURN_CACHE_SECONDS = 55
+LIVE_RETURN_LOOKBACK_DAYS = _bounded_env_int(
+    "TRENDYOL_RETURN_LOOKBACK_DAYS", 30, 7, 180
+)
+
+_live_return_cache = {"payload": None, "stored_at": 0.0}
+_live_return_lock = threading.Lock()
 
 iade_islemleri = Blueprint("iade_islemleri", __name__)
 
@@ -81,14 +100,17 @@ def is_valid_uuid(uuid_str):
 def fetch_data_from_api(start_date: datetime, end_date: datetime):
     logger.info("API’den iade verileri çekiliyor: %s – %s", start_date, end_date)
 
+    if not API_KEY or not API_SECRET or not SUPPLIER_ID:
+        logger.error("Trendyol iade API bilgileri eksik; canlı istek atlanıyor.")
+        return None
+
     url = f"https://apigw.trendyol.com/integration/order/sellers/{SUPPLIER_ID}/claims"
     cred = base64.b64encode(f"{API_KEY}:{API_SECRET}".encode()).decode()
     headers = {
         "Authorization": f"Basic {cred}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "User-Agent": f"{SUPPLIER_ID} - SelfIntegration",
     }
-
-    session = get_requests_session()
 
     def fetch_page(window_start, window_end, page):
         params = {
@@ -99,11 +121,29 @@ def fetch_data_from_api(start_date: datetime, end_date: datetime):
             "sortColumn": "CLAIM_DATE",
             "sortDirection": "DESC",
         }
-        r = session.get(url, headers=headers, params=params)
+        page_session = get_requests_session()
+        try:
+            r = page_session.get(
+                url,
+                headers=headers,
+                params=params,
+                timeout=(5, 30),
+            )
+        except requests.RequestException as exc:
+            logger.error("Trendyol iade API bağlantı hatası: %s", exc)
+            return None
+        finally:
+            close = getattr(page_session, "close", None)
+            if close:
+                close()
         if r.status_code != 200:
             logger.error("API hatası [%s]: %s", r.status_code, r.text)
             return None
-        return r.json()
+        try:
+            return r.json()
+        except ValueError:
+            logger.error("Trendyol iade API geçersiz JSON döndürdü.")
+            return None
 
     def fetch_window(window_start, window_end):
         first = fetch_page(window_start, window_end, 0)
@@ -125,11 +165,26 @@ def fetch_data_from_api(start_date: datetime, end_date: datetime):
 
         content = list(first.get("content", []))
         total_pages = int(first.get("totalPages") or (1 if content else 0))
-        for page in range(1, total_pages):
-            data = fetch_page(window_start, window_end, page)
-            if data is None:
-                return None
-            content.extend(data.get("content", []))
+        pages = range(1, total_pages)
+        if total_pages > 1:
+            page_results = {}
+            with ThreadPoolExecutor(max_workers=min(4, total_pages - 1)) as executor:
+                futures = {
+                    executor.submit(fetch_page, window_start, window_end, page): page
+                    for page in pages
+                }
+                for future in as_completed(futures):
+                    page = futures[future]
+                    try:
+                        data = future.result()
+                    except Exception as exc:
+                        logger.error("Trendyol iade sayfası %s alınamadı: %s", page, exc)
+                        return None
+                    if data is None:
+                        return None
+                    page_results[page] = data.get("content", [])
+            for page in sorted(page_results):
+                content.extend(page_results[page])
         if total_elements >= CLAIMS_RESULT_CAP:
             logger.warning(
                 "Claims API en küçük zaman diliminde de %s kayıt sınırına ulaştı: %s – %s",
@@ -148,7 +203,7 @@ def fetch_data_from_api(start_date: datetime, end_date: datetime):
             unique[str(claim_id)] = item
     all_content = sorted(
         unique.values(),
-        key=lambda item: item.get("claimDate") or 0,
+        key=lambda item: item.get("lastModifiedDate") or item.get("claimDate") or 0,
         reverse=True,
     )
     logger.info("API’den toplam %d benzersiz kayıt alındı.", len(all_content))
@@ -250,6 +305,208 @@ def save_to_database(data: dict, session):
 
 
 # ------------------------------------------------------------------ #
+# Canlı panel veri katmanı
+# ------------------------------------------------------------------ #
+STATUS_GROUPS = {
+    "Created": "new",
+    "WaitingInAction": "action",
+    "WaitingFraudCheck": "action",
+    "Unresolved": "action",
+    "InAnalysis": "action",
+    "Accepted": "accepted",
+    "Rejected": "rejected",
+    "Cancelled": "cancelled",
+}
+
+STATUS_PRIORITY = {
+    "WaitingInAction": 0,
+    "Unresolved": 1,
+    "InAnalysis": 2,
+    "WaitingFraudCheck": 3,
+    "Created": 4,
+    "Rejected": 5,
+    "Cancelled": 6,
+    "Accepted": 7,
+}
+
+
+def _millis_to_iso(value):
+    try:
+        return datetime.fromtimestamp(int(value) / 1000, timezone.utc).isoformat().replace("+00:00", "Z")
+    except (TypeError, ValueError, OSError):
+        return None
+
+
+def _status_group(status):
+    return STATUS_GROUPS.get(status, "action")
+
+
+def _normalize_claim(claim):
+    products = []
+    statuses = []
+
+    for group in claim.get("items") or []:
+        order_line = group.get("orderLine") or {}
+        claim_items = group.get("claimItems") or [{}]
+        for claim_item in claim_items:
+            status = (claim_item.get("claimItemStatus") or {}).get("name") or "Unknown"
+            statuses.append(status)
+            products.append({
+                "claimItemId": claim_item.get("id"),
+                "barcode": order_line.get("barcode"),
+                "merchantSku": order_line.get("merchantSku"),
+                "productName": order_line.get("productName"),
+                "size": order_line.get("productSize"),
+                "color": order_line.get("productColor"),
+                "quantity": 1,
+                "reason": (claim_item.get("customerClaimItemReason") or {}).get("name"),
+                "customerNote": claim_item.get("customerNote") or claim_item.get("note") or "",
+                "status": status,
+                "autoAccepted": bool(claim_item.get("autoAccepted")),
+                "acceptedBySeller": bool(claim_item.get("acceptedBySeller")),
+            })
+
+    status = min(statuses, key=lambda value: STATUS_PRIORITY.get(value, 99)) if statuses else "Unknown"
+    claim_id = claim.get("id") or claim.get("claimId")
+    tracking_number = claim.get("cargoTrackingNumber")
+
+    return {
+        "id": str(claim_id) if claim_id else None,
+        "returnRequestNumber": str(claim_id) if claim_id else None,
+        "orderNumber": str(claim.get("orderNumber") or ""),
+        "customerFirstName": claim.get("customerFirstName") or "",
+        "customerLastName": claim.get("customerLastName") or "",
+        "status": status,
+        "statusGroup": _status_group(status),
+        "statuses": sorted(set(statuses), key=lambda value: STATUS_PRIORITY.get(value, 99)),
+        "returnDate": _millis_to_iso(claim.get("claimDate")),
+        "lastModifiedAt": _millis_to_iso(claim.get("lastModifiedDate") or claim.get("claimDate")),
+        "cargoTrackingNumber": str(tracking_number) if tracking_number else None,
+        "cargoProviderName": claim.get("cargoProviderName"),
+        "cargoSenderNumber": claim.get("cargoSenderNumber"),
+        "cargoTrackingLink": claim.get("cargoTrackingLink"),
+        "products": products,
+    }
+
+
+def _build_live_payload(claims, *, source, stale=False, warning=None, updated_at=None):
+    normalized = [_normalize_claim(claim) for claim in claims]
+    normalized.sort(
+        key=lambda item: item.get("lastModifiedAt") or item.get("returnDate") or "",
+        reverse=True,
+    )
+    counts = {"all": len(normalized), "new": 0, "action": 0, "accepted": 0, "rejected": 0, "cancelled": 0}
+    for item in normalized:
+        group = item["statusGroup"]
+        counts[group] = counts.get(group, 0) + 1
+
+    return {
+        "success": True,
+        "source": source,
+        "stale": stale,
+        "warning": warning,
+        "updatedAt": updated_at or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "windowDays": LIVE_RETURN_LOOKBACK_DAYS,
+        "total": len(normalized),
+        "itemTotal": sum(len(item["products"]) for item in normalized),
+        "counts": counts,
+        "returns": normalized,
+    }
+
+
+def _database_fallback_payload():
+    cutoff = datetime.utcnow() - timedelta(days=LIVE_RETURN_LOOKBACK_DAYS)
+    orders = (
+        db.session.query(ReturnOrder)
+        .filter(ReturnOrder.return_date >= cutoff)
+        .order_by(ReturnOrder.return_date.desc())
+        .limit(2000)
+        .all()
+    )
+    order_ids = [order.id for order in orders]
+    products = (
+        db.session.query(ReturnProduct)
+        .filter(ReturnProduct.return_order_id.in_(order_ids))
+        .all()
+        if order_ids else []
+    )
+    product_map = {}
+    for product in products:
+        product_map.setdefault(product.return_order_id, []).append(product)
+
+    claims = []
+    for order in orders:
+        claim_products = []
+        for product in product_map.get(order.id, []):
+            claim_products.append({
+                "orderLine": {
+                    "barcode": product.barcode,
+                    "productName": product.product_name,
+                    "productSize": product.size,
+                    "productColor": product.color,
+                },
+                "claimItems": [{
+                    "id": product.claim_line_item_id,
+                    "customerClaimItemReason": {"name": product.reason},
+                    "claimItemStatus": {"name": order.status or "Unknown"},
+                }],
+            })
+        timestamp = int(order.return_date.replace(tzinfo=timezone.utc).timestamp() * 1000) if order.return_date else None
+        claims.append({
+            "id": str(order.id),
+            "orderNumber": order.order_number,
+            "customerFirstName": order.customer_first_name,
+            "customerLastName": order.customer_last_name,
+            "claimDate": timestamp,
+            "lastModifiedDate": timestamp,
+            "cargoTrackingNumber": order.cargo_tracking_number,
+            "cargoProviderName": order.cargo_provider_name,
+            "cargoSenderNumber": order.cargo_sender_number,
+            "cargoTrackingLink": order.cargo_tracking_link,
+            "items": claim_products,
+        })
+
+    return _build_live_payload(
+        claims,
+        source="database",
+        stale=True,
+        warning="Trendyol'a ulaşılamadı; son kayıtlı veriler gösteriliyor.",
+    )
+
+
+def get_live_return_payload(force=False):
+    now_monotonic = time.monotonic()
+    cached = _live_return_cache["payload"]
+    cache_age = now_monotonic - _live_return_cache["stored_at"]
+    if cached and not force and cache_age < LIVE_RETURN_CACHE_SECONDS:
+        return {**cached, "source": "cache"}
+
+    with _live_return_lock:
+        now_monotonic = time.monotonic()
+        cached = _live_return_cache["payload"]
+        cache_age = now_monotonic - _live_return_cache["stored_at"]
+        if cached and not force and cache_age < LIVE_RETURN_CACHE_SECONDS:
+            return {**cached, "source": "cache"}
+
+        now = datetime.now(timezone.utc)
+        data = fetch_data_from_api(now - timedelta(days=LIVE_RETURN_LOOKBACK_DAYS), now)
+        if data is None:
+            if cached:
+                return {
+                    **cached,
+                    "source": "cache",
+                    "stale": True,
+                    "warning": "Trendyol'a şu anda ulaşılamıyor; son başarılı veri gösteriliyor.",
+                }
+            return _database_fallback_payload()
+
+        payload = _build_live_payload(data.get("content", []), source="trendyol")
+        _live_return_cache["payload"] = payload
+        _live_return_cache["stored_at"] = time.monotonic()
+        return payload
+
+
+# ------------------------------------------------------------------ #
 # Planlayıcı
 # ------------------------------------------------------------------ #
 def schedule_daily_return_fetch(app):
@@ -288,55 +545,22 @@ def iade_verileri():
 
 
 @iade_islemleri.route("/iade-listesi")
-@with_db_session
-def iade_listesi(session):
-    page = request.args.get("page", 1, type=int)
-    search = request.args.get("search", "", type=str)
+def iade_listesi():
+    return render_template("iade_listesi.html")
 
-    query = session.query(ReturnOrder)
-    if search:
-        query = query.filter(ReturnOrder.order_number.ilike(f"%{search}%"))
 
-    per_page = 100
-    total = query.count()
-    orders = (
-        query.order_by(ReturnOrder.return_date.desc())
-        .offset((page - 1) * per_page)
-        .limit(per_page)
-        .all()
-    )
-
-    products = (
-        session.query(ReturnProduct)
-        .filter(ReturnProduct.return_order_id.in_([o.id for o in orders]))
-        .all()
-    )
-    pdict = {}
-    for p in products:
-        pdict.setdefault(p.return_order_id, []).append(p)
-
-    claims = [
-        {
-            "id": o.id,
-            "order_number": o.order_number,
-            "status": o.status,
-            "return_date": o.return_date,
-            "customer_first_name": o.customer_first_name,
-            "customer_last_name": o.customer_last_name,
-            "products": pdict.get(o.id, []),
-        }
-        for o in orders
-    ]
-
-    return render_template(
-        "iade_listesi.html",
-        claims=claims,
-        page=page,
-        per_page=per_page,
-        total_pages=(total + per_page - 1) // per_page,
-        total_elements=total,
-        search=search,
-    )
+@iade_islemleri.route("/iade-listesi/veri")
+def iade_listesi_veri():
+    force = request.args.get("sync") == "1"
+    try:
+        return jsonify(get_live_return_payload(force=force))
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception("Canlı Trendyol iade verisi alınamadı: %s", exc)
+        return jsonify({
+            "success": False,
+            "message": "Trendyol iade verileri şu anda alınamıyor.",
+        }), 503
 
 
 # --------------------------- Onay / Güncelle ---------------------- #

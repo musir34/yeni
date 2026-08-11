@@ -287,7 +287,6 @@
         <li><a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="fas fa-warehouse me-2"></i>Stok Ekleme</a></li>
         <li><a class="dropdown-item" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="fas fa-archive me-2"></i>Raf Listesi</a></li>
         <li><a class="dropdown-item" href="{{ url_for('stock_sync.dashboard') }}"><i class="fas fa-sync-alt me-2"></i>Stok Senkronizasyon</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('iade_yonetimi.index') }}"><i class="fas fa-box-open me-2"></i>Site İade Yönetimi</a></li>
         <li><a class="dropdown-item" href="{{ url_for('iade_listesi') }}"><i class="fas fa-undo me-2"></i>Trendyol İade Listesi</a></li>
         <li><a class="dropdown-item" href="{{ url_for('image_manager.image_manager') }}"><i class="fas fa-images me-2"></i>Görsel Yönetimi</a></li>
       </ul>
@@ -309,6 +308,7 @@
       </button>
       <ul class="dropdown-menu dropdown-menu-end">
         <li><a class="dropdown-item" href="{{ url_for('shopify.orders_dashboard') }}"><i class="fab fa-shopify me-2" style="color:#96bf48"></i>Shopify Siparişler</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('iade_yonetimi.index') }}"><i class="fas fa-box-open me-2" style="color:#96bf48"></i>Site İade Yönetimi</a></li>
         <li><a class="dropdown-item" href="{{ url_for('shopify.price_compare_dashboard') }}"><i class="fas fa-balance-scale me-2" style="color:#96bf48"></i>Shopify ↔ Trendyol Fiyat</a></li>
         <li><hr class="dropdown-divider"></li>
         <li><a class="dropdown-item" href="{{ url_for('idefix.index') }}"><i class="fas fa-store me-2" style="color:#8e24aa"></i>Idefix</a></li>

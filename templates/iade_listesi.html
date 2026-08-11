@@ -1,314 +1,246 @@
 {% extends "base.html" %}
-{% block title %}İade Listesi{% endblock %}
+{% block title %}Trendyol İadeleri · Güllü Panel{% endblock %}
+
 {% block extra_css %}
-    <style>
-        /* base.html'in dış .container.mt-5 sarmalayıcısını nötrle — navbar tam genişlik
-           kalsın, sayfa kendi .container'ıyla (mt-4) çalışsın. Sayfaya özgü stiller: */
-        .container.mt-5 { max-width: none; margin: 0; padding: 0; }
+<style>
+    .container.mt-5 { max-width: none; margin: 0 !important; padding: 0; }
+    :root {
+        --ty-orange: #f27a1a;
+        --ty-orange-dark: #d9610a;
+        --ty-ink: #20242a;
+        --ty-muted: #6f7782;
+        --ty-line: #e7e9ec;
+        --ty-surface: #fff;
+        --ty-bg: #f5f6f8;
+    }
+    .ty-page { min-height: 100vh; background: var(--ty-bg); color: var(--ty-ink); }
+    .ty-topbar { display:flex; align-items:center; justify-content:space-between; gap:1rem; min-height:72px; padding:0 2rem; background:#191b1f; color:#fff; box-shadow:0 2px 12px rgba(0,0,0,.13); }
+    .ty-brand { display:flex; align-items:center; gap:.9rem; }
+    .ty-brand img { width:116px; height:auto; }
+    .ty-brand-line { width:1px; height:30px; background:rgba(255,255,255,.2); }
+    .ty-brand-title { font-size:.92rem; font-weight:750; letter-spacing:.025em; }
+    .ty-top-actions { display:flex; align-items:center; gap:.55rem; }
+    .ty-shell { max-width:1480px; margin:0 auto; padding:2rem; }
+    .ty-heading { display:flex; justify-content:space-between; align-items:flex-end; gap:1rem; margin-bottom:1.4rem; }
+    .ty-eyebrow { color:var(--ty-orange); font-size:.72rem; font-weight:850; letter-spacing:.14em; text-transform:uppercase; margin-bottom:.3rem; }
+    .ty-heading h1 { margin:0; font-size:clamp(1.65rem,3vw,2.35rem); font-weight:780; letter-spacing:-.035em; }
+    .ty-heading p { margin:.35rem 0 0; color:var(--ty-muted); }
+    .ty-live-meta { display:flex; flex-direction:column; align-items:flex-end; gap:.3rem; color:var(--ty-muted); font-size:.8rem; white-space:nowrap; }
+    .ty-live-pill { display:inline-flex; align-items:center; gap:.4rem; border:1px solid #cce7d8; border-radius:999px; background:#edf9f2; color:#23754a; padding:.3rem .62rem; font-weight:750; }
+    .ty-live-pill::before { content:""; width:7px; height:7px; border-radius:50%; background:#2fa56a; box-shadow:0 0 0 4px rgba(47,165,106,.13); }
+    .ty-live-pill.stale { border-color:#ecd49c; background:#fff8e8; color:#8a640d; }
+    .ty-live-pill.stale::before { background:#d59b17; box-shadow:0 0 0 4px rgba(213,155,23,.13); }
 
-        body {
-            background-color: #f8f9fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+    .ty-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; margin-bottom:1.2rem; }
+    .ty-stat { position:relative; overflow:hidden; border:1px solid var(--ty-line); border-radius:15px; background:var(--ty-surface); padding:1.05rem 1.15rem; text-align:left; color:var(--ty-ink); cursor:pointer; transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease; }
+    .ty-stat:hover { transform:translateY(-2px); box-shadow:0 9px 25px rgba(25,29,35,.075); }
+    .ty-stat.active { border-color:var(--stat-color); box-shadow:0 0 0 2px var(--stat-color) inset; }
+    .ty-stat::after { content:""; position:absolute; right:-28px; bottom:-38px; width:100px; height:100px; border-radius:50%; background:var(--stat-color); opacity:.06; }
+    .ty-stat-top { display:flex; align-items:center; justify-content:space-between; }
+    .ty-stat-label { color:var(--ty-muted); font-size:.73rem; font-weight:800; letter-spacing:.055em; text-transform:uppercase; }
+    .ty-stat-icon { width:34px; height:34px; display:grid; place-items:center; border-radius:9px; background:color-mix(in srgb,var(--stat-color) 12%,transparent); color:var(--stat-color); }
+    .ty-stat-value { display:block; margin-top:.35rem; font-size:1.85rem; font-weight:850; line-height:1; }
+    .ty-stat.new { --stat-color:#ef8a22; }
+    .ty-stat.action { --stat-color:#256fbe; }
+    .ty-stat.accepted { --stat-color:#27825a; }
+    .ty-stat.rejected { --stat-color:#bb3d49; }
 
-        /* Navbar */
-        .navbar {
-            background-color: #343a40; /* Koyu gri */
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
+    .ty-panel { border:1px solid var(--ty-line); border-radius:16px; background:var(--ty-surface); box-shadow:0 5px 20px rgba(28,32,38,.045); overflow:hidden; }
+    .ty-toolbar { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1rem 1.15rem; border-bottom:1px solid var(--ty-line); }
+    .ty-tabs { display:flex; flex-wrap:wrap; gap:.32rem; }
+    .ty-tab { border:0; border-radius:9px; background:transparent; color:var(--ty-muted); padding:.57rem .76rem; font-size:.82rem; font-weight:760; }
+    .ty-tab:hover { background:#f1f2f4; color:var(--ty-ink); }
+    .ty-tab.active { background:var(--ty-ink); color:#fff; }
+    .ty-tools { display:flex; align-items:center; gap:.55rem; }
+    .ty-search { position:relative; }
+    .ty-search i { position:absolute; left:.8rem; top:50%; transform:translateY(-50%); color:#979da5; }
+    .ty-search input { width:260px; border:1px solid var(--ty-line); border-radius:9px; padding:.59rem .75rem .59rem 2.25rem; background:var(--ty-surface); color:var(--ty-ink); font-size:.84rem; outline:none; }
+    .ty-search input:focus { border-color:#9fa5ac; box-shadow:0 0 0 3px rgba(30,35,40,.07); }
+    .ty-refresh { border:0; border-radius:9px; background:var(--ty-orange); color:#fff; padding:.62rem .86rem; font-size:.83rem; font-weight:780; white-space:nowrap; }
+    .ty-refresh:hover { background:var(--ty-orange-dark); }
+    .ty-refresh:disabled { opacity:.62; cursor:wait; }
+    .ty-refresh.loading i { animation:ty-spin .9s linear infinite; }
+    @keyframes ty-spin { to { transform:rotate(360deg); } }
 
-        .navbar-brand img {
-            width: 150px; /* Biraz daha büyük logo */
-            height: auto;
-        }
+    .ty-notice { display:none; align-items:flex-start; gap:.75rem; margin:1rem; padding:.9rem 1rem; border-radius:10px; font-size:.84rem; }
+    .ty-notice.show { display:flex; }
+    .ty-notice.warning { border:1px solid #ecd49c; background:#fff8e8; color:#76570e; }
+    .ty-notice.error { border:1px solid #efc3c7; background:#fff1f2; color:#821f29; }
+    .ty-table-wrap { overflow-x:auto; }
+    .ty-table { width:100%; min-width:1070px; border-collapse:collapse; }
+    .ty-table th { padding:.76rem 1rem; border-bottom:1px solid var(--ty-line); background:#f8f9fa; color:#747b84; font-size:.67rem; font-weight:850; letter-spacing:.075em; text-transform:uppercase; white-space:nowrap; }
+    .ty-table td { padding:.9rem 1rem; border-bottom:1px solid #eef0f2; font-size:.83rem; vertical-align:middle; }
+    .ty-table tbody tr:hover { background:#fcfcfd; }
+    .ty-order { font-weight:850; }
+    .ty-claim-id { display:block; max-width:180px; margin-top:.2rem; overflow:hidden; color:var(--ty-muted); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.68rem; text-overflow:ellipsis; white-space:nowrap; }
+    .ty-customer { max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ty-product-name { display:block; max-width:310px; overflow:hidden; font-weight:650; text-overflow:ellipsis; white-space:nowrap; }
+    .ty-product-meta { display:block; margin-top:.23rem; color:var(--ty-muted); font-size:.71rem; }
+    .ty-badge { display:inline-flex; align-items:center; gap:.35rem; border-radius:999px; padding:.35rem .58rem; font-size:.7rem; font-weight:850; white-space:nowrap; }
+    .ty-badge::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
+    .ty-badge.new { color:#95500a; background:#fff1df; }
+    .ty-badge.action { color:#1c5f9f; background:#e8f2fc; }
+    .ty-badge.accepted { color:#176b48; background:#e5f6ee; }
+    .ty-badge.rejected { color:#9b2c38; background:#fcebed; }
+    .ty-badge.cancelled { color:#626972; background:#eceef0; }
+    .ty-cargo { display:block; font-weight:700; }
+    .ty-cargo-provider { display:block; margin-top:.2rem; color:var(--ty-muted); font-size:.7rem; }
+    .ty-action { display:inline-grid; place-items:center; min-width:33px; height:33px; padding:0 .56rem; border:1px solid var(--ty-line); border-radius:8px; background:var(--ty-surface); color:#505862; text-decoration:none; }
+    .ty-action:hover { border-color:#b9bec4; color:var(--ty-orange); }
+    .ty-footer { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.85rem 1rem; color:var(--ty-muted); font-size:.78rem; }
+    .ty-pagination { display:flex; align-items:center; gap:.45rem; }
+    .ty-page-button { border:1px solid var(--ty-line); border-radius:7px; background:var(--ty-surface); color:var(--ty-ink); padding:.35rem .55rem; }
+    .ty-page-button:disabled { opacity:.35; }
+    .ty-empty { display:none; padding:4rem 1rem; color:var(--ty-muted); text-align:center; }
+    .ty-empty.show { display:block; }
+    .ty-empty i { display:block; margin-bottom:.8rem; color:#bbc0c6; font-size:2rem; }
+    .ty-loading td { padding:1rem; }
+    .ty-skeleton { height:13px; border-radius:5px; background:linear-gradient(90deg,#f0f1f2 25%,#e5e7e9 37%,#f0f1f2 63%); background-size:400% 100%; animation:ty-shimmer 1.25s ease infinite; }
+    @keyframes ty-shimmer { 0% { background-position:100% 0; } 100% { background-position:0 0; } }
 
-        .navbar-text {
-            color: white;
-            font-size: 1rem;
-            margin-right: 15px;
-        }
+    .ty-detail-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.8rem 1rem; margin-bottom:1.15rem; }
+    .ty-detail-item { border-bottom:1px solid var(--ty-line); padding-bottom:.65rem; }
+    .ty-detail-label { display:block; margin-bottom:.22rem; color:var(--ty-muted); font-size:.66rem; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }
+    .ty-detail-value { font-size:.85rem; overflow-wrap:anywhere; }
+    .ty-product-card { border:1px solid var(--ty-line); border-radius:10px; padding:.85rem; margin-top:.65rem; }
+    .ty-product-card-name { font-size:.86rem; font-weight:750; }
+    .ty-product-card-meta { margin-top:.35rem; color:var(--ty-muted); font-size:.74rem; }
+    .ty-product-note { margin-top:.55rem; border-left:3px solid var(--ty-orange); background:#fff7ef; border-radius:0 7px 7px 0; padding:.5rem .65rem; font-size:.76rem; }
 
-        /* Ana içerik */
-        .container {
-            margin-top: 20px;
-        }
+    html.gs-dark .ty-page { --ty-ink:#f0f2f4; --ty-muted:#aab0b8; --ty-line:#353a42; --ty-surface:#22262c; --ty-bg:#171a1f; }
+    html.gs-dark .ty-topbar { background:#0e1013; }
+    html.gs-dark .ty-tab:hover,html.gs-dark .ty-table th { background:#292e35; }
+    html.gs-dark .ty-tab.active { background:#f0f2f4; color:#17191c; }
+    html.gs-dark .ty-table tbody tr:hover { background:#272c32; }
+    html.gs-dark .ty-table td { border-color:#32373e; }
+    html.gs-dark .ty-live-pill { background:#173326; border-color:#28533e; }
+    html.gs-dark .ty-live-pill.stale { background:#3b321c; border-color:#67552b; }
+    html.gs-dark .ty-product-note { background:#372a1e; }
 
-        .page-header {
-            background-color: #ffffff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-            margin-bottom: 30px;
-        }
-
-        .page-header h2 {
-            color: #495057;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        /* Arama çubuğu */
-        .search-bar {
-            margin-bottom: 20px;
-        }
-
-        /* Tablo */
-        .table-container {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-            overflow-x: auto; /* Yatay kaydırma */
-        }
-
-        .table thead th {
-            background-color: #0d6efd; /* Mavi başlık */
-            color: white;
-            border-bottom: 2px solid #dee2e6;
-            font-weight: bold;
-            padding: 12px;
-        }
-
-        .table tbody tr:hover {
-            background-color: #f5f5f5;
-        }
-
-        /* İade Nedeni */
-        .reason-highlight {
-            background-color: #fff8e1; /* Açık sarı */
-            border-left: 4px solid #ffc107;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 5px;
-            font-size: 0.9em;
-        }
-
-        /* Statü Rozetleri */
-        .badge {
-            border-radius: 20px;
-            font-size: 0.9em;
-        }
-
-        /* Butonlar */
-        .btn-primary {
-            background-color: #007bff;
-            border-color: #007bff;
-        }
-
-        .btn-primary:hover {
-            background-color: #0056b3;
-            border-color: #0056b3;
-        }
-
-        .btn-success {
-            background-color: #28a745;
-            border-color: #28a745;
-        }
-
-        .btn-success:hover {
-            background-color: #1e7e34;
-            border-color: #1e7e34;
-        }
-
-        /* Sayfalama */
-        .pagination {
-            justify-content: center;
-            margin-top: 20px;
-        }
-
-        .page-link {
-            border-radius: 5px;
-            color: #007bff;
-        }
-
-        .page-item.active .page-link {
-            background-color: #007bff;
-            border-color: #007bff;
-            color: white;
-        }
-
-        /* Modal */
-        .modal-content {
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-        }
-
-        .modal-header {
-            background-color: #f0f0f0;
-            border-bottom: 1px solid #dee2e6;
-            border-top-left-radius: 10px;
-            border-top-right-radius: 10px;
-        }
-
-        .modal-footer {
-            border-top: none;
-        }
-
-        /* Kopyalama */
-        .copy-container {
-            display: inline-flex;
-            align-items: center;
-            margin-left: 5px;
-        }
-
-        .clipboard-icon {
-            cursor: pointer;
-            font-size: 1.1em;
-            color: #6c757d; /* Daha soft bir gri */
-        }
-
-        .copy-confirmation {
-            display: none;
-            margin-left: 5px;
-            color: #28a745;
-            font-size: 0.9em;
-        }
-
-        .copy-confirmation.show {
-            display: inline;
-        }
-    </style>
+    @media (max-width:1000px) {
+        .ty-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .ty-toolbar { align-items:stretch; flex-direction:column; }
+        .ty-tools { width:100%; }
+        .ty-search { flex:1; }
+        .ty-search input { width:100%; }
+    }
+    @media (max-width:680px) {
+        .ty-topbar { padding:.85rem 1rem; }
+        .ty-brand-line,.ty-brand-title,.ty-user { display:none; }
+        .ty-shell { padding:1.2rem .9rem; }
+        .ty-heading { align-items:flex-start; flex-direction:column; }
+        .ty-live-meta { align-items:flex-start; }
+        .ty-stats { grid-template-columns:1fr 1fr; gap:.65rem; }
+        .ty-stat { padding:.85rem .9rem; }
+        .ty-stat-value { font-size:1.5rem; }
+        .ty-tools { align-items:stretch; flex-direction:column; }
+        .ty-refresh { width:100%; }
+        .ty-footer { align-items:flex-start; flex-direction:column; }
+        .ty-detail-grid { grid-template-columns:1fr; }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<nav class="navbar navbar-expand-lg navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="#">
-            <img src="static/logo/gullu.png" alt="Güllü Shoes Logo">
-        </a>
-        <span class="navbar-text ms-auto">
-            Giriş Yapan: <strong>{{ session.get('first_name', 'Ad') }} {{ session.get('last_name', 'Soyad') }}</strong>
-        </span>
-        <div class="btn-group ms-3 me-3">
-            {% if session.get('role') == 'admin' %}
-            <a href="{{ url_for('approve_users') }}" class="btn btn-warning btn-sm">Kullanıcı Yönetimi</a>
-            {% endif %}
-            <a href="{{ url_for('home') }}" class="btn btn-secondary btn-sm">Anasayfa</a>
-            <form method="POST" action="{{ url_for('login_logout.logout') }}">
-                <button type="submit" class="btn btn-danger btn-sm">Çıkış Yap</button>
+<main class="ty-page">
+    <header class="ty-topbar">
+        <div class="ty-brand">
+            <img src="{{ url_for('static', filename='logo/gullu.png') }}" alt="Güllü Shoes">
+            <span class="ty-brand-line"></span>
+            <span class="ty-brand-title">Trendyol İadeleri</span>
+        </div>
+        <div class="ty-top-actions">
+            <span class="ty-user small text-white-50">{{ session.get('first_name', '') }} {{ session.get('last_name', '') }}</span>
+            <a href="{{ url_for('home.home') }}" class="btn btn-sm btn-outline-light"><i class="bi bi-house-door me-1"></i>Anasayfa</a>
+            <form method="POST" action="{{ url_for('login_logout.logout') }}" class="m-0">
+                <button class="btn btn-sm btn-danger" type="submit" aria-label="Çıkış"><i class="bi bi-box-arrow-right"></i></button>
             </form>
         </div>
-    </div>
-</nav>
+    </header>
 
-<div class="container mt-4">
-    <div class="page-header">
-        <h2 class="text-center">İade Listesi</h2>
-        <p class="text-center text-muted">Toplam İade Sayısı: <strong>{{ total_elements }}</strong></p>
-    </div>
-
-    <div class="row search-bar">
-        <div class="col-md-8">
-            <form method="GET" action="{{ url_for('iade_islemleri.iade_listesi') }}" class="d-flex">
-                <input type="text" class="form-control me-2" name="search"
-                       placeholder="İade/Sipariş No Ara" value="{{ search }}">
-                <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Ara</button>
-            </form>
+    <section class="ty-shell">
+        <div class="ty-heading">
+            <div>
+                <div class="ty-eyebrow">Trendyol pazaryeri</div>
+                <h1>İadeler, gerçek durumuyla.</h1>
+                <p>Yeni talepleri, aksiyon bekleyenleri ve sonuçlanan iadeleri tek ekrandan izleyin.</p>
+            </div>
+            <div class="ty-live-meta">
+                <span class="ty-live-pill" id="livePill">Canlı bağlantı</span>
+                <span id="lastUpdate">Trendyol'a bağlanıyor…</span>
+                <span id="nextUpdate"></span>
+            </div>
         </div>
-        <div class="col-md-4 text-end">
-            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#refreshModal">
-                <i class="bi bi-arrow-clockwise"></i> İadeleri Güncelle
+
+        <div class="ty-stats" aria-label="Trendyol iade sayaçları">
+            <button class="ty-stat new" type="button" data-filter="new">
+                <span class="ty-stat-top"><span class="ty-stat-label">Yeni İade</span><span class="ty-stat-icon"><i class="bi bi-box-seam"></i></span></span>
+                <strong class="ty-stat-value" id="countNew">—</strong>
+            </button>
+            <button class="ty-stat action" type="button" data-filter="action">
+                <span class="ty-stat-top"><span class="ty-stat-label">Aksiyon Bekleyen</span><span class="ty-stat-icon"><i class="bi bi-lightning-charge"></i></span></span>
+                <strong class="ty-stat-value" id="countAction">—</strong>
+            </button>
+            <button class="ty-stat accepted" type="button" data-filter="accepted">
+                <span class="ty-stat-top"><span class="ty-stat-label">Kabul Edilen</span><span class="ty-stat-icon"><i class="bi bi-check2-circle"></i></span></span>
+                <strong class="ty-stat-value" id="countAccepted">—</strong>
+            </button>
+            <button class="ty-stat rejected" type="button" data-filter="rejected">
+                <span class="ty-stat-top"><span class="ty-stat-label">Reddedilen</span><span class="ty-stat-icon"><i class="bi bi-x-circle"></i></span></span>
+                <strong class="ty-stat-value" id="countRejected">—</strong>
             </button>
         </div>
-    </div>
 
-    <div class="table-responsive table-container">
-        <table class="table table-hover">
-            <thead class="table-light">
-                <tr>
-                    <th>#</th>
-                    <th>İade Numarası</th>
-                    <th>Sipariş Numarası</th>
-                    <th>Müşteri Adı</th>
-                    <th>İade Tarihi</th>
-                    <th>Statü</th>
-                    <th>Ürün Barkodu</th>
-                    <th>Model No</th>
-                    <th>Boyut</th>
-                    <th>Renk</th>
-                    <th style="min-width:250px;">İade Nedeni / Açıklama</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% set global_index = 0 %}
-                {% for claim in claims %}
-                    {% for product in claim.products %}
-                        {% set global_index = global_index + 1 %}
-                        <tr>
-                            <td>{{ global_index }}</td>
-                            <td>
-                                {{ claim.return_request_number }}
-                                <span class="copy-container">
-                                    <span class="clipboard-icon" onclick="copyToClipboard('{{ claim.return_request_number }}', this)"
-                                          title="Kopyala"><i class="bi bi-clipboard"></i></span>
-                                    <span class="copy-confirmation">Kopyalandı!</span>
-                                </span>
-                            </td>
-                            <td>{{ claim.order_number }}</td>
-                            <td>{{ claim.customer_first_name }} {{ claim.customer_last_name }}</td>
-                            <td>{{ claim.return_date | ist('%Y-%m-%d %H:%M:%S') }}</td>
-                            <td>
-                                {% set translated_status = {
-                                    'Created': 'Oluşturuldu',
-                                    'WaitingInAction': 'Aksiyon Bekleniyor',
-                                    'Accepted': 'Kabul Edildi',
-                                    'Rejected': 'Reddedildi',
-                                    'Cancelled': 'İptal Edildi',
-                                    'Unresolved': 'Çözümlenmedi',
-                                    'InAnalysis': 'Analizde'
-                                }.get(claim.status, claim.status) %}
-                                <span class="badge
-                                    {% if translated_status == 'Oluşturuldu' %}bg-warning
-                                    {% elif translated_status == 'Kabul Edildi' %}bg-success
-                                    {% elif translated_status == 'Reddedildi' %}bg-danger
-                                    {% elif translated_status == 'İptal Edildi' %}bg-secondary
-                                    {% else %}bg-info{% endif %}">{{ translated_status }}</span>
-                            </td>
-                            <td>{{ product.barcode }}</td>
-                            <td>{{ product.model_number }}</td>
-                            <td>{{ product.size }}</td>
-                            <td>{{ product.color }}</td>
-                            <td>
-                                <div class="reason-highlight">
-                                    <strong>Neden:</strong> {{ product.reason }}<br>
-                                    <strong>Açıklama:</strong> {{ product.customer_explanation }}
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+        <div class="ty-panel">
+            <div class="ty-toolbar">
+                <div class="ty-tabs" role="tablist" aria-label="Durum filtresi">
+                    <button class="ty-tab active" type="button" data-filter="all">Tümü</button>
+                    <button class="ty-tab" type="button" data-filter="new">Yeni</button>
+                    <button class="ty-tab" type="button" data-filter="action">Aksiyon Bekleyen</button>
+                    <button class="ty-tab" type="button" data-filter="accepted">Kabul Edilen</button>
+                    <button class="ty-tab" type="button" data-filter="rejected">Reddedilen</button>
+                    <button class="ty-tab" type="button" data-filter="cancelled">İptal Edilen</button>
+                </div>
+                <div class="ty-tools">
+                    <label class="ty-search">
+                        <i class="bi bi-search"></i>
+                        <input id="returnSearch" type="search" placeholder="Sipariş, iade no, müşteri veya barkod" autocomplete="off">
+                    </label>
+                    <button class="ty-refresh" id="refreshButton" type="button">
+                        <i class="bi bi-arrow-repeat me-1"></i>Şimdi Yenile
+                    </button>
+                </div>
+            </div>
 
-    <nav aria-label="Sayfa navigasyonu">
-        <ul class="pagination">
-            {% if page > 1 %}
-            <li class="page-item"><a class="page-link" href="{{ url_for('iade_islemleri.iade_listesi', page=page-1, search=search) }}"><i class="bi bi-arrow-left"></i> Önceki</a></li>
-            {% endif %}
-            {% for i in range(1, total_pages + 1) %}
-            <li class="page-item {% if i == page %}active{% endif %}"><a class="page-link" href="{{ url_for('iade_islemleri.iade_listesi', page=i, search=search) }}">{{ i }}</a></li>
-            {% endfor %}
-            {% if page < total_pages %}
-            <li class="page-item"><a class="page-link" href="{{ url_for('iade_islemleri.iade_listesi', page=page+1, search=search) }}">Sonraki <i class="bi bi-arrow-right"></i></a></li>
-            {% endif %}
-        </ul>
-    </nav>
-</div>
+            <div class="ty-notice warning" id="warningNotice"><i class="bi bi-exclamation-circle-fill"></i><span id="warningText"></span></div>
+            <div class="ty-notice error" id="errorNotice"><i class="bi bi-exclamation-triangle-fill"></i><div><strong>Veriler alınamadı.</strong><div id="errorText"></div></div></div>
 
-<div class="modal fade" id="refreshModal" tabindex="-1" aria-labelledby="refreshModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+            <div class="ty-table-wrap" id="tableWrap">
+                <table class="ty-table">
+                    <thead><tr><th>Sipariş / İade No</th><th>Müşteri</th><th>Ürün</th><th>Durum</th><th>Kargo</th><th>Son Hareket</th><th>İşlem</th></tr></thead>
+                    <tbody id="returnRows">
+                        {% for _ in range(5) %}<tr class="ty-loading">{% for _ in range(7) %}<td><div class="ty-skeleton"></div></td>{% endfor %}</tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="ty-empty" id="emptyState"><i class="bi bi-inbox"></i><strong>Bu filtrede iade bulunamadı.</strong></div>
+            <div class="ty-footer">
+                <span id="resultCount">Yükleniyor…</span>
+                <div class="ty-pagination">
+                    <button class="ty-page-button" id="previousPage" type="button" aria-label="Önceki sayfa"><i class="bi bi-chevron-left"></i></button>
+                    <span id="pageLabel">1 / 1</span>
+                    <button class="ty-page-button" id="nextPage" type="button" aria-label="Sonraki sayfa"><i class="bi bi-chevron-right"></i></button>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<div class="modal fade" id="returnDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="refreshModalLabel">İadeleri Güncelle</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
-            </div>
-            <div class="modal-body">
-                <p>İadeleri Trendyol API'sinden güncellemek istediğinizden emin misiniz?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                <a href="{{ url_for('iade_islemleri.iade_verileri') }}" class="btn btn-success">Güncelle</a>
-            </div>
+            <div class="modal-header"><div><div class="ty-eyebrow">İADE DETAYI</div><h5 class="modal-title" id="detailTitle">Trendyol İadesi</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button></div>
+            <div class="modal-body"><div class="ty-detail-grid" id="detailGrid"></div><h6 class="fw-bold mb-2">Ürünler</h6><div id="detailProducts"></div></div>
         </div>
     </div>
 </div>
@@ -316,12 +248,150 @@
 
 {% block scripts %}
 <script>
-    function copyToClipboard(text, element) {
-        navigator.clipboard.writeText(text).then(() => {
-            const confirmation = element.nextElementSibling;
-            confirmation.classList.add('show');
-            setTimeout(() => confirmation.classList.remove('show'), 2000);
-        }).catch(err => console.error('Kopyalama hatası:', err));
+(() => {
+    const endpoint = {{ url_for('iade_islemleri.iade_listesi_veri') | tojson }};
+    const statusLabels = {
+        Created: 'Yeni iade', WaitingInAction: 'Aksiyon bekliyor', WaitingFraudCheck: 'Fraud kontrolünde',
+        Accepted: 'Kabul edildi', Rejected: 'Reddedildi', Cancelled: 'İptal edildi',
+        Unresolved: 'Uyuşmazlık', InAnalysis: 'İncelemede', Unknown: 'Bilinmiyor'
+    };
+    const pageSize = 50;
+    let allReturns = [];
+    let pageItems = [];
+    let activeFilter = 'all';
+    let currentPage = 1;
+    let loading = false;
+    let secondsToRefresh = 60;
+
+    const rows = document.getElementById('returnRows');
+    const tableWrap = document.getElementById('tableWrap');
+    const emptyState = document.getElementById('emptyState');
+    const searchInput = document.getElementById('returnSearch');
+    const refreshButton = document.getElementById('refreshButton');
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
     }
+    function safeUrl(value) {
+        try { const url = new URL(value); return ['http:','https:'].includes(url.protocol) ? url.href : ''; }
+        catch (_) { return ''; }
+    }
+    function formatDate(value) {
+        if (!value) return '—';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+        return new Intl.DateTimeFormat('tr-TR', {timeZone:'Europe/Istanbul',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(date);
+    }
+    function searchText(item) {
+        return [item.orderNumber,item.returnRequestNumber,item.customerFirstName,item.customerLastName,item.cargoTrackingNumber,
+            ...(item.products || []).flatMap(product => [product.barcode,product.merchantSku,product.productName,product.reason,product.customerNote])]
+            .map(value => String(value ?? '')).join(' ').toLocaleLowerCase('tr-TR');
+    }
+    function filteredReturns() {
+        const term = searchInput.value.trim().toLocaleLowerCase('tr-TR');
+        return allReturns.filter(item => (activeFilter === 'all' || item.statusGroup === activeFilter) && (!term || searchText(item).includes(term)));
+    }
+    function updateActiveButtons() {
+        document.querySelectorAll('.ty-tab').forEach(button => button.classList.toggle('active', button.dataset.filter === activeFilter));
+        document.querySelectorAll('.ty-stat').forEach(button => button.classList.toggle('active', button.dataset.filter === activeFilter));
+    }
+    function render() {
+        const visible = filteredReturns();
+        const totalPages = Math.max(1, Math.ceil(visible.length / pageSize));
+        currentPage = Math.min(currentPage, totalPages);
+        pageItems = visible.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+        rows.innerHTML = pageItems.map((item,index) => {
+            const product = (item.products || [])[0] || {};
+            const cargoUrl = safeUrl(item.cargoTrackingLink);
+            const extraProducts = Math.max(0, (item.products || []).length - 1);
+            return `<tr>
+                <td><span class="ty-order">#${escapeHtml(item.orderNumber || '—')}</span><span class="ty-claim-id" title="${escapeHtml(item.returnRequestNumber || '')}">${escapeHtml(item.returnRequestNumber || '—')}</span></td>
+                <td><div class="ty-customer">${escapeHtml(`${item.customerFirstName || ''} ${item.customerLastName || ''}`.trim() || '—')}</div></td>
+                <td><span class="ty-product-name" title="${escapeHtml(product.productName || '')}">${escapeHtml(product.productName || '—')}</span><span class="ty-product-meta">${escapeHtml([product.barcode,product.size,product.color].filter(Boolean).join(' · ') || '—')}${extraProducts ? ` · +${extraProducts} ürün` : ''}</span></td>
+                <td><span class="ty-badge ${escapeHtml(item.statusGroup)}">${escapeHtml(statusLabels[item.status] || item.status)}</span></td>
+                <td>${cargoUrl ? `<a class="ty-cargo" href="${escapeHtml(cargoUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.cargoTrackingNumber || 'Takip et')}</a>` : `<span class="ty-cargo">${escapeHtml(item.cargoTrackingNumber || '—')}</span>`}<span class="ty-cargo-provider">${escapeHtml(item.cargoProviderName || '—')}</span></td>
+                <td>${escapeHtml(formatDate(item.lastModifiedAt || item.returnDate))}</td>
+                <td><button class="ty-action detail-button" type="button" data-index="${index}" title="Detay"><i class="bi bi-three-dots"></i></button></td>
+            </tr>`;
+        }).join('');
+
+        tableWrap.style.display = pageItems.length ? '' : 'none';
+        emptyState.classList.toggle('show', !pageItems.length);
+        document.getElementById('resultCount').textContent = `${visible.length} iade · ${allReturns.length} toplam`;
+        document.getElementById('pageLabel').textContent = `${currentPage} / ${totalPages}`;
+        document.getElementById('previousPage').disabled = currentPage <= 1;
+        document.getElementById('nextPage').disabled = currentPage >= totalPages;
+    }
+    function showDetail(item) {
+        const fields = [
+            ['Sipariş No', item.orderNumber],['İade No',item.returnRequestNumber],['Müşteri',`${item.customerFirstName || ''} ${item.customerLastName || ''}`.trim()],
+            ['Durum',statusLabels[item.status] || item.status],['İade Tarihi',formatDate(item.returnDate)],['Son Hareket',formatDate(item.lastModifiedAt)],
+            ['Kargo',item.cargoProviderName],['Takip No',item.cargoTrackingNumber],['Gönderici No',item.cargoSenderNumber]
+        ];
+        document.getElementById('detailTitle').textContent = `Sipariş #${item.orderNumber || '—'}`;
+        document.getElementById('detailGrid').innerHTML = fields.map(([label,value]) => `<div class="ty-detail-item"><span class="ty-detail-label">${escapeHtml(label)}</span><div class="ty-detail-value">${escapeHtml(value || '—')}</div></div>`).join('');
+        document.getElementById('detailProducts').innerHTML = (item.products || []).map(product => `<div class="ty-product-card">
+            <div class="d-flex justify-content-between gap-3"><div class="ty-product-card-name">${escapeHtml(product.productName || '—')}</div><span class="ty-badge ${escapeHtml(item.statusGroup)}">${escapeHtml(statusLabels[product.status] || product.status)}</span></div>
+            <div class="ty-product-card-meta">${escapeHtml([product.barcode,product.merchantSku,product.size,product.color].filter(Boolean).join(' · ') || '—')}</div>
+            <div class="ty-product-card-meta"><strong>Neden:</strong> ${escapeHtml(product.reason || '—')}${product.autoAccepted ? ' · Otomatik kabul' : ''}</div>
+            ${product.customerNote ? `<div class="ty-product-note"><strong>Müşteri notu:</strong> ${escapeHtml(product.customerNote)}</div>` : ''}
+        </div>`).join('') || '<div class="text-muted small">Ürün bilgisi bulunamadı.</div>';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('returnDetailModal')).show();
+    }
+    function applyPayload(payload) {
+        allReturns = payload.returns || [];
+        const counts = payload.counts || {};
+        document.getElementById('countNew').textContent = counts.new ?? 0;
+        document.getElementById('countAction').textContent = counts.action ?? 0;
+        document.getElementById('countAccepted').textContent = counts.accepted ?? 0;
+        document.getElementById('countRejected').textContent = counts.rejected ?? 0;
+        document.getElementById('lastUpdate').textContent = `Son veri: ${formatDate(payload.updatedAt)}`;
+        const livePill = document.getElementById('livePill');
+        livePill.textContent = payload.stale ? 'Yedek veri' : 'Canlı bağlantı';
+        livePill.classList.toggle('stale', Boolean(payload.stale));
+        document.getElementById('warningNotice').classList.toggle('show', Boolean(payload.warning));
+        document.getElementById('warningText').textContent = payload.warning || '';
+        currentPage = 1;
+        render();
+    }
+    async function loadData(force=false) {
+        if (loading) return;
+        loading = true;
+        refreshButton.disabled = true;
+        refreshButton.classList.add('loading');
+        document.getElementById('errorNotice').classList.remove('show');
+        try {
+            const response = await fetch(`${endpoint}${force ? '?sync=1' : ''}`, {headers:{Accept:'application/json'},cache:'no-store'});
+            const contentType = response.headers.get('content-type') || '';
+            if (response.redirected || !contentType.includes('application/json')) throw new Error('Oturumunuz sona ermiş olabilir. Sayfayı yenileyip tekrar giriş yapın.');
+            const payload = await response.json();
+            if (!response.ok || !payload.success) throw new Error(payload.message || 'Beklenmeyen bir hata oluştu.');
+            applyPayload(payload);
+            secondsToRefresh = 60;
+        } catch (error) {
+            if (!allReturns.length) { rows.innerHTML=''; tableWrap.style.display='none'; }
+            document.getElementById('errorText').textContent = error.message;
+            document.getElementById('errorNotice').classList.add('show');
+        } finally {
+            loading = false;
+            refreshButton.disabled = false;
+            refreshButton.classList.remove('loading');
+        }
+    }
+
+    document.querySelectorAll('[data-filter]').forEach(button => button.addEventListener('click', () => { activeFilter=button.dataset.filter; currentPage=1; updateActiveButtons(); render(); }));
+    searchInput.addEventListener('input', () => { currentPage=1; render(); });
+    refreshButton.addEventListener('click', () => loadData(true));
+    document.getElementById('previousPage').addEventListener('click', () => { if(currentPage>1){currentPage--;render();} });
+    document.getElementById('nextPage').addEventListener('click', () => { const pages=Math.ceil(filteredReturns().length/pageSize); if(currentPage<pages){currentPage++;render();} });
+    rows.addEventListener('click', event => { const button=event.target.closest('.detail-button'); if(button) showDetail(pageItems[Number(button.dataset.index)]); });
+    setInterval(() => {
+        secondsToRefresh--;
+        document.getElementById('nextUpdate').textContent = `Otomatik yenileme: ${Math.max(0,secondsToRefresh)} sn`;
+        if(secondsToRefresh<=0){ secondsToRefresh=60; if(!document.hidden) loadData(false); }
+    },1000);
+    loadData(false);
+})();
 </script>
 {% endblock %}

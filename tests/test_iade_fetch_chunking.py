@@ -18,8 +18,9 @@ class _CappedClaimsSession:
     def __init__(self):
         self.calls = []
 
-    def get(self, _url, headers, params):
+    def get(self, _url, headers, params, timeout=None):
         self.calls.append(dict(params))
+        assert timeout == (5, 30)
         start = params["startDate"]
         end = params["endDate"]
         duration = end - start
