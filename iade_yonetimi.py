@@ -78,7 +78,7 @@ def fetch_iadeler(kategori=None, sync=False):
 
 
 def create_iade(payload):
-    """Admin anahtarıyla köprü serviste gerçek MNG iade kodu oluşturur."""
+    """Admin anahtarıyla köprü serviste gerçek DHL eCommerce iade kodu oluşturur."""
     panel_key = _config_value("IADE_PANEL_KEY")
     if not panel_key:
         raise IadeKopruHatasi("İade Panel API anahtarı henüz yapılandırılmamış.")
@@ -97,7 +97,7 @@ def create_iade(payload):
         )
     except requests.Timeout as exc:
         raise IadeKopruHatasi(
-            "MNG kod oluşturma isteği zaman aşımına uğradı. Aynı formu tekrar gönderirseniz çift kod oluşturulmaz."
+            "DHL eCommerce kod oluşturma isteği zaman aşımına uğradı. Aynı formu tekrar gönderirseniz çift kod oluşturulmaz."
         ) from exc
     except requests.RequestException as exc:
         logger.warning("İade oluştururken köprü servisine ulaşılamadı: %s", exc)
@@ -113,7 +113,7 @@ def create_iade(payload):
     if response.status_code >= 400:
         message = result.get("mesaj") if isinstance(result, dict) else None
         status_code = 400 if response.status_code in {400, 413, 422} else 503
-        raise IadeKopruHatasi(message or "MNG iade kodu oluşturulamadı.", status_code)
+        raise IadeKopruHatasi(message or "DHL eCommerce iade kodu oluşturulamadı.", status_code)
     if not isinstance(result, dict) or not result.get("ok") or not result.get("iadeKodu"):
         raise IadeKopruHatasi("İade servisinin cevap biçimi beklenenden farklı.")
     return result
@@ -196,7 +196,7 @@ def olustur():
         try:
             from user_logs import log_user_action
             log_user_action("CREATE", {
-                "işlem_açıklaması": f"MNG iade kodu oluşturuldu — {order_number}",
+                "işlem_açıklaması": f"DHL eCommerce iade kodu oluşturuldu — {order_number}",
                 "sayfa": "Site İade Yönetimi",
                 "sipariş_no": order_number,
                 "kaynak": source,

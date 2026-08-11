@@ -651,8 +651,8 @@ def order_label():
         except Exception:
             eksik = []
         if eksik:
-            flash(f"Kargo etiketi verilemez: raftan toplanacak {len(eksik)} ürün henüz "
-                  f"okutulmadı. Üretim ekranı → Ürün Özellikleri'nden raf okutun.", 'danger')
+            flash(f"Kargo etiketi verilemez: {len(eksik)} kalem henüz okutulmadı/doğrulanmadı. "
+                  f"Üretim ekranı → Ürün Özellikleri'nden okutun.", 'danger')
             return redirect(url_for('uretim.index'))
         shipping_barcode = request.form.get('shipping_barcode')
         cargo_provider = unquote(unquote(request.form.get('cargo_provider', '')))

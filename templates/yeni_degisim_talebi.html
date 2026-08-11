@@ -88,6 +88,46 @@
             border-radius: var(--border-radius);
             margin-top: 0.5rem;
         }
+
+        .entry-mode-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem;
+        }
+        .entry-mode-card {
+            width: 100%;
+            min-height: 150px;
+            padding: 1.25rem;
+            border: 2px solid var(--color-border);
+            border-radius: var(--border-radius);
+            background: var(--color-white);
+            color: var(--color-text);
+            text-align: left;
+            transition: var(--transition);
+        }
+        .entry-mode-card:hover,
+        .entry-mode-card.active {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 0.2rem rgba(183, 110, 121, 0.14);
+            transform: translateY(-2px);
+        }
+        .entry-mode-card .mode-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            margin-bottom: 0.75rem;
+            border-radius: 50%;
+            background: rgba(183, 110, 121, 0.12);
+            color: var(--color-primary);
+            font-size: 1.1rem;
+        }
+        .entry-mode-card strong { display: block; font-size: 1.05rem; }
+        .entry-mode-card small { display: block; margin-top: 0.35rem; color: #6c757d; }
+        @media (max-width: 767.98px) {
+            .entry-mode-grid { grid-template-columns: 1fr; }
+        }
 </style>
 {% endblock %}
 
@@ -111,7 +151,23 @@
 
         <div class="card">
             <div class="card-body p-4">
-                <div class="mb-4">
+                <div class="mb-4" id="entryModeChooser">
+                    <h5 class="mb-3">Nasıl değişim oluşturmak istersiniz?</h5>
+                    <div class="entry-mode-grid">
+                        <button type="button" class="entry-mode-card" id="orderModeButton" onclick="selectEntryMode('siparisli')">
+                            <span class="mode-icon"><i class="fas fa-receipt"></i></span>
+                            <strong>Sipariş Numarasıyla <span class="badge bg-primary ms-1">Varsayılan</span></strong>
+                            <small>Trendyol, Shopify veya panel siparişini bulup müşteri bilgilerini otomatik doldurur.</small>
+                        </button>
+                        <button type="button" class="entry-mode-card" id="manualModeButton" onclick="selectEntryMode('manuel')">
+                            <span class="mode-icon"><i class="fas fa-pen"></i></span>
+                            <strong>Manuel / Siparişsiz</strong>
+                            <small>Sipariş numarası olmadan müşteri ve değişim ürününü elle girmenizi sağlar.</small>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-4" id="orderLookupSection" style="display: none;">
                     <label for="siparis_no_input" class="form-label fs-5">Sipariş Numarası</label>
                     <div class="input-group">
                         <input type="text" class="form-control form-control-lg" id="siparis_no_input" required placeholder="Değişim yapılacak siparişin numarasını girin...">
@@ -120,9 +176,14 @@
                 </div>
 
                 <form id="degisimKayitForm">
+                    <input type="hidden" id="kayit_tipi" name="kayit_tipi" value="siparisli">
                     <div id="orderDetails" style="display: none;">
                         <input type="hidden" id="siparis_no" name="siparis_no">
 
+                        <div class="alert alert-info d-none" id="manualEntryNotice">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Sipariş numarası gerekmiyor. Sistem bu kayıt için otomatik bir dahili referans oluşturacak.
+                        </div>
                         <hr class="my-4">
                         <h5><i class="fas fa-user-circle text-primary"></i> Alıcı Bilgileri</h5>
                         <div class="row">
@@ -144,10 +205,12 @@
                             <input type="text" class="form-control" id="telefon_no" name="telefon_no">
                         </div>
 
-                        <h5 class="mt-4"><i class="fas fa-box-open text-primary"></i> Sipariş Edilen Ürünler</h5>
-                        <div id="productList" class="row"></div>
+                        <div id="orderedProductsSection">
+                            <h5 class="mt-4"><i class="fas fa-box-open text-primary"></i> Sipariş Edilen Ürünler</h5>
+                            <div id="productList" class="row"></div>
+                        </div>
 
-                        <button class="btn btn-success mt-3 w-100" type="button" onclick="showExchangeForm()">
+                        <button class="btn btn-success mt-3 w-100" id="showExchangeButton" type="button" onclick="showExchangeForm()">
                             <i class="fas fa-plus"></i> Değişim İçin Yeni Ürün Ekle
                         </button>
                     </div>
@@ -190,6 +253,7 @@
     <script>
         let productFieldIndex = 0;
         let isFetchingOrder = false;
+        let activeEntryMode = null;
 
         // ────────────────────────────────────────────────────────────────
         // Güvenlik yardımcıları
@@ -214,6 +278,53 @@
             box.textContent = message;
             box.scrollIntoView({ behavior: 'smooth', block: 'center' });
             setTimeout(() => { box.style.display = 'none'; }, 4000);
+        }
+
+        function resetEntryFields() {
+            const form = document.getElementById('degisimKayitForm');
+            form.reset();
+            document.getElementById('siparis_no_input').value = '';
+            document.getElementById('siparis_no').value = '';
+            document.getElementById('productList').replaceChildren();
+            document.getElementById('exchangeProductsContainer').replaceChildren();
+            document.getElementById('orderDetails').style.display = 'none';
+            document.getElementById('exchangeForm').style.display = 'none';
+            document.getElementById('custom_reason_div').style.display = 'none';
+            productFieldIndex = 0;
+        }
+
+        function selectEntryMode(mode) {
+            if (!['siparisli', 'manuel'].includes(mode)) return;
+            if (activeEntryMode !== mode) resetEntryFields();
+            activeEntryMode = mode;
+
+            document.getElementById('kayit_tipi').value = mode;
+            document.getElementById('orderModeButton').classList.toggle('active', mode === 'siparisli');
+            document.getElementById('manualModeButton').classList.toggle('active', mode === 'manuel');
+
+            const lookup = document.getElementById('orderLookupSection');
+            const details = document.getElementById('orderDetails');
+            const manualNotice = document.getElementById('manualEntryNotice');
+            const orderedProducts = document.getElementById('orderedProductsSection');
+            const showExchangeButton = document.getElementById('showExchangeButton');
+
+            if (mode === 'siparisli') {
+                lookup.style.display = 'block';
+                details.style.display = 'none';
+                manualNotice.classList.add('d-none');
+                orderedProducts.style.display = 'block';
+                showExchangeButton.style.display = 'block';
+                document.getElementById('siparis_no_input').focus();
+                return;
+            }
+
+            lookup.style.display = 'none';
+            details.style.display = 'block';
+            manualNotice.classList.remove('d-none');
+            orderedProducts.style.display = 'none';
+            showExchangeButton.style.display = 'none';
+            showExchangeForm();
+            document.getElementById('ad').focus();
         }
 
         // ────────────────────────────────────────────────────────────────
@@ -318,6 +429,8 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    activeEntryMode = 'siparisli';
+                    document.getElementById('kayit_tipi').value = 'siparisli';
                     document.getElementById('siparis_no').value  = siparisNo;
                     document.getElementById('ad').value          = safeText(data.ad);
                     document.getElementById('soyad').value       = safeText(data.soyad);
@@ -330,6 +443,9 @@
                     details.forEach(product => {
                         productList.appendChild(buildProductCard(product));
                     });
+                    document.getElementById('manualEntryNotice').classList.add('d-none');
+                    document.getElementById('orderedProductsSection').style.display = 'block';
+                    document.getElementById('showExchangeButton').style.display = 'block';
                     document.getElementById('orderDetails').style.display = 'block';
                     document.getElementById('exchangeForm').style.display = 'none';
                 } else {
@@ -464,6 +580,13 @@
 
         document.getElementById('degisimKayitForm').addEventListener('submit', async function(event) {
             event.preventDefault();
+
+            if (!activeEntryMode) {
+                return showMessage("Lütfen sipariş numarasıyla veya manuel giriş seçeneklerinden birini seçin.", false);
+            }
+            if (activeEntryMode === 'siparisli' && !document.getElementById('siparis_no').value.trim()) {
+                return showMessage("Lütfen sipariş numarasını girip siparişi getirin.", false);
+            }
 
             const reasonSelect = document.getElementById('reason_select');
             const hiddenReasonInput = document.getElementById('degisim_nedeni');

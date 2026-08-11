@@ -147,6 +147,45 @@ def raftan_kalemler(kayit) -> list[dict]:
     return kalemler
 
 
+def uretim_kalemleri(kayit) -> list[dict]:
+    """Üretim kaydının ÜRETİLECEK kalemleri: [{"barcode","quantity"}] —
+    kayit.details'ten okunur (canlı sipariş tablosu gerekmez), barkod bazında
+    adetler toplanır. Hata → boş liste."""
+    from barcode_alias_helper import normalize_barcode
+    toplam: dict[str, int] = {}
+    try:
+        for u in (json.loads(kayit.details) if kayit.details else []):
+            bc = normalize_barcode(str(u.get("barcode") or "").strip())
+            if bc:
+                toplam[bc] = toplam.get(bc, 0) + int(u.get("quantity", 1) or 1)
+    except (json.JSONDecodeError, TypeError):
+        return []
+    return [{"barcode": b, "quantity": q} for b, q in toplam.items()]
+
+
+def dogrulama_sayilari(order_number: str) -> dict[str, int]:
+    """Üretim kalemi doğrulama okutmaları: barkod → okutulan adet. Hata → boş
+    (boş = okutulmamış sayılır → etiket kilitli kalır, güvenli taraf)."""
+    from models import UretimDogrulama
+    try:
+        rows = (db.session.query(UretimDogrulama.barcode, db.func.count())
+                .filter(UretimDogrulama.order_number == order_number)
+                .group_by(UretimDogrulama.barcode)
+                .all())
+        return {b: int(c) for b, c in rows}
+    except Exception:
+        logger.warning("[URETIM] doğrulama sayıları okunamadı", exc_info=True)
+        db.session.rollback()
+        return {}
+
+
+def eksik_uretim_dogrulamalar(kayit) -> list[str]:
+    """Henüz gereken adedi okutulmamış ÜRETİM kalemi barkodları."""
+    sayilar = dogrulama_sayilari(kayit.order_number)
+    return [k["barcode"] for k in uretim_kalemleri(kayit)
+            if sayilar.get(k["barcode"], 0) < k["quantity"]]
+
+
 def pick_key(order_number: str, barcode: str) -> str:
     """Raf okutma ledger idempotency anahtarı — picking_service ile BİREBİR aynı
     format: iki ekrandan hangisi okutursa okutsun ikinci düşüm engellenir."""
@@ -154,9 +193,10 @@ def pick_key(order_number: str, barcode: str) -> str:
 
 
 def eksik_raf_okutmalar(order_number: str) -> list[str]:
-    """Kargo etiketi kilidi: üretim kaydı olan siparişte henüz raf okutulmamış
-    raftan-kalem barkodları. Kayıt yok / sipariş zaten kargolanmış / hata → []
-    (engel yok — normal akış asla durmaz)."""
+    """Kargo etiketi kilidi: üretim kaydı olan siparişte henüz okutulmamış
+    kalem barkodları — RAFTAN kalemler (raf okutması) VE ÜRETİLEN kalemler
+    (adet adet doğrulama okutması). Kayıt yok / sipariş zaten kargolanmış /
+    hata → [] (engel yok — normal akış asla durmaz)."""
     try:
         order_number = str(order_number or "").strip()
         if not order_number:
@@ -171,8 +211,11 @@ def eksik_raf_okutmalar(order_number: str) -> list[str]:
                     .with_entities(M.order_number).first()):
                 return []
         from stock_ledger import has_movement
-        return [k["barcode"] for k in raftan_kalemler(kayit)
-                if not has_movement(pick_key(order_number, k["barcode"]))]
+        eksik = [k["barcode"] for k in raftan_kalemler(kayit)
+                 if not has_movement(pick_key(order_number, k["barcode"]))]
+        # Üretilen kalemler de okutulmadan etiket YOK (yanlış ürün gitmesin).
+        eksik += [b for b in eksik_uretim_dogrulamalar(kayit) if b not in eksik]
+        return eksik
     except Exception:
         logger.warning("[URETIM] raf okutma kontrolü yapılamadı", exc_info=True)
         db.session.rollback()

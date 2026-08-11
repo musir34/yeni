@@ -771,6 +771,22 @@ class UretimSiparis(db.Model):
         return f"<UretimSiparis {self.order_number} uretildi={self.uretildi}>"
 
 
+class UretimDogrulama(db.Model):
+    """Üretim kalemi doğrulama okutması: paketlemede üretilen ürünün barkodu
+    ADET ADET okutulur (yanlış ürün gitmesin). Stok düşümü YOKTUR — ürün raftan
+    gelmediği için ledger'a yazılmaz; yalnız 'doğru ürün pakete girdi' izidir.
+    Etiket, siparişin tüm kalemleri (raf + üretim) okutulmadan verilmez."""
+    __tablename__ = 'uretim_dogrulama'
+    id = db.Column(db.Integer, primary_key=True)
+    order_number = db.Column(db.String(50), nullable=False, index=True)
+    barcode = db.Column(db.String(100), nullable=False)
+    adet_no = db.Column(db.Integer, nullable=False, default=1)  # aynı barkodun kaçıncı adedi
+    okutan = db.Column(db.String(150))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (db.UniqueConstraint('order_number', 'barcode', 'adet_no',
+                                          name='uq_uretim_dogrulama_adet'),)
+
+
 # Geriye dönük uyumluluk için mevcut sipariş tablosu ('orders')
 # Bu tablodan da original_product_barcode kaldırılıyor.
 # Eğer bu tablo artık kullanılmıyorsa tamamen kaldırılabilir.

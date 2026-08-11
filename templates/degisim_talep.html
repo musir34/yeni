@@ -55,6 +55,31 @@
     .row-check{position:absolute;top:.5rem;left:.5rem;z-index:5;width:1.25rem;height:1.25rem;cursor:pointer;background:#fff;border-radius:.25rem;border:1.5px solid var(--color-primary)}
     .card{position:relative}
     .card .card-header{padding-left:2.5rem}
+
+    .return-journey{
+      display:flex;align-items:flex-start;gap:.75rem;padding:.85rem 1rem;margin:.25rem 0 1rem;
+      border:1px solid var(--color-border);border-radius:var(--border-radius);background:#f8f9fa;
+    }
+    .return-journey-icon{
+      width:36px;height:36px;flex:0 0 36px;display:flex;align-items:center;justify-content:center;
+      border-radius:50%;background:#e9ecef;color:#6c757d;
+    }
+    .return-journey-label{display:block;font-weight:700;font-size:.9rem;line-height:1.25}
+    .return-journey-detail{display:block;color:#6c757d;font-size:.76rem;line-height:1.35;margin-top:.2rem}
+    .return-journey.kod-yok{background:#f8f9fa;border-color:#ced4da}
+    .return-journey.vermedi{background:#fff8e1;border-color:#ffe08a}
+    .return-journey.vermedi .return-journey-icon{background:#fff0bd;color:#9a6b00}
+    .return-journey.kargoda{background:#e8f4ff;border-color:#9ed0ff}
+    .return-journey.kargoda .return-journey-icon{background:#cfe9ff;color:#0969a8}
+    .return-journey.ulasti{background:#e8f7ee;border-color:#9ad5ae}
+    .return-journey.ulasti .return-journey-icon{background:#ccebd7;color:#18733a}
+    .return-journey.hata{background:#fff0f1;border-color:#efb2b8}
+    .return-journey.hata .return-journey-icon{background:#f9d7da;color:#a72c37}
+    .early-action-icon{
+      width:64px;height:64px;margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;
+      border-radius:50%;background:#fff0d0;color:#b56a00;font-size:1.6rem;
+    }
+    .early-action-state{padding:.75rem 1rem;border-radius:var(--border-radius);background:#f8f9fa;font-size:.88rem}
   </style>
 {% endblock %}
 
@@ -115,6 +140,9 @@
 
     <div class="text-center mb-4">
       <a href="{{ url_for('degisim.yeni_degisim_talebi') }}" class="btn btn-success me-2"><i class="fas fa-plus-circle"></i> Yeni Değişim Talebi</a>
+      <button type="button" class="btn btn-outline-primary me-2" id="refreshReturnStatuses">
+        <i class="fas fa-sync-alt me-1"></i> DHL Durumlarını Yenile
+      </button>
       <a href="{{ url_for('home.home') }}" class="btn btn-secondary"><i class="fas fa-home"></i> Anasayfa</a>
     </div>
 
@@ -141,11 +169,16 @@
     <div class="row">
       {% for exchange in degisim_kayitlari %}
       <div class="col-md-6 col-lg-4 mb-4" id="card-{{ exchange.degisim_no }}">
-        <div class="card h-100" data-degisim-no="{{ exchange.degisim_no }}">
+        <div class="card h-100" data-degisim-no="{{ exchange.degisim_no }}" data-return-state="loading" data-return-tracking="">
           <input type="checkbox" class="row-check form-check-input" title="Seç" data-no="{{ exchange.degisim_no }}">
           <div class="card-header d-flex justify-content-between align-items-center">
             <div>
+              {% if exchange.siparis_no and exchange.siparis_no.startswith('MANUEL-') %}
+              <strong class="text-primary">Manuel / Siparişsiz</strong>
+              <small class="text-muted d-block">{{ exchange.siparis_no }}</small>
+              {% else %}
               <strong class="text-primary">{{ exchange.siparis_no }}</strong>
+              {% endif %}
               <i class="far fa-copy ms-2" style="cursor:pointer" onclick="copyToClipboard('{{ exchange.siparis_no }}', this)"></i><br>
               <small class="text-muted">{{ exchange.degisim_tarihi | ist('%d.%m.%Y %H:%M') }}</small>
             </div>
@@ -163,6 +196,13 @@
           <div class="card-body d-flex flex-column">
             <h6 class="card-title">{{ exchange.ad }} {{ exchange.soyad }}</h6>
             <p class="card-text text-muted small">{{ exchange.adres }}</p>
+            <div class="return-journey loading" data-return-status>
+              <span class="return-journey-icon"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span></span>
+              <span>
+                <span class="return-journey-label">DHL dönüş durumu yükleniyor</span>
+                <span class="return-journey-detail">Müşterinin geri gönderdiği ürün kontrol ediliyor.</span>
+              </span>
+            </div>
             <p class="card-text text-muted small"><strong>Neden:</strong> {{ exchange.degisim_nedeni or 'Belirtilmemiş' }}</p>
             {% if exchange.musteri_kargo_takip %}
               <p class="card-text text-muted small"><strong>Müşteri Takip No:</strong> {{ exchange.musteri_kargo_takip }}</p>
@@ -218,7 +258,7 @@
               data-return-customer="{{ ((exchange.ad or '') ~ ' ' ~ (exchange.soyad or ''))|trim|e }}"
               data-return-reason="{{ (exchange.degisim_nedeni or 'Değişim gönderimi')|e }}"
               onclick="openReturnCodeModal(this)">
-              <i class="fas fa-undo-alt me-1"></i> MNG İade Kodu Oluştur
+              <i class="fas fa-undo-alt me-1"></i> DHL İade Kodu Oluştur
             </button>
             {% endif %}
             <div class="btn-toolbar" role="toolbar">
@@ -296,14 +336,37 @@
     </div>
   </div>
 
+  <!-- Ürün ulaşmadan devam etme onayı: tarayıcı confirm'i yerine uygulama modalı -->
+  <div class="modal fade" id="earlyActionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header border-0 pb-0">
+          <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Kapat"></button>
+        </div>
+        <div class="modal-body text-center px-4 pt-0">
+          <div class="early-action-icon"><i class="fas fa-exclamation-triangle"></i></div>
+          <h4 class="mb-2" id="earlyActionTitle">Ürün henüz ulaşmadı</h4>
+          <p class="text-muted mb-3" id="earlyActionMessage"></p>
+          <div class="early-action-state text-start" id="earlyActionState"></div>
+        </div>
+        <div class="modal-footer border-0 justify-content-center pb-4">
+          <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Vazgeç</button>
+          <button type="button" class="btn btn-danger px-4" id="earlyActionConfirm">
+            <i class="fas fa-arrow-right me-1"></i> Evet, Devam Et
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   {% if session.get('role') in ['admin', 'manager'] %}
-  <!-- Değişim kaydından gerçek MNG dönüş kodu oluşturma modalı -->
+  <!-- Değişim kaydından gerçek DHL eCommerce dönüş kodu oluşturma modalı -->
   <div class="modal fade" id="returnCodeModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
           <div>
-            <small class="text-muted fw-semibold">GERÇEK MNG KODU</small>
+            <small class="text-muted fw-semibold">GERÇEK DHL ECOMMERCE KODU</small>
             <h5 class="modal-title">Değişim İade Kodu</h5>
           </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
@@ -311,7 +374,7 @@
         <div class="modal-body">
           <div id="returnCodeConfirmation">
             <div class="alert alert-warning small">
-              Bu işlem müşterinin ürünü size geri göndermesi için gerçek ve ücretsiz MNG iade kodu oluşturur.
+              Bu işlem müşterinin ürünü size geri göndermesi için gerçek ve ücretsiz DHL eCommerce iade kodu oluşturur.
             </div>
             <dl class="row mb-0">
               <dt class="col-4">Sipariş</dt><dd class="col-8" id="returnCodeOrder">—</dd>
@@ -323,7 +386,7 @@
           <div class="text-center d-none" id="returnCodeResult">
             <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
             <h5>İade kodu hazır</h5>
-            <p class="text-muted small">Müşteri bu kodla DHL eCommerce (MNG Kargo) şubesine gidebilir.</p>
+            <p class="text-muted small">Müşteri bu kodla DHL eCommerce şubesine gidebilir.</p>
             <div class="d-flex align-items-center justify-content-center gap-2 mb-3">
               <code class="fs-4 fw-bold" id="returnCodeValue"></code>
               <button type="button" class="btn btn-outline-secondary btn-sm" id="copyReturnCode" title="Kopyala">
@@ -349,6 +412,7 @@
 
 {% block scripts %}
   <script>
+    const returnStatusesEndpoint = {{ url_for('degisim.iade_durumlari') | tojson }};
     const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
     function showImageModal(url){ document.getElementById('modalImage').src = url; imageModal.show(); }
 
@@ -360,12 +424,111 @@
       });
     }
 
+    const returnStateMeta = {
+      kod_yok: {
+        css: 'kod-yok', icon: 'fa-ticket-alt',
+        label: 'DHL iade kodu henüz oluşturulmadı',
+        detail: 'Kod oluşturulduğunda müşterinin kargo hareketleri burada görünecek.'
+      },
+      vermedi: {
+        css: 'vermedi', icon: 'fa-clock',
+        label: 'Müşteri henüz kargoya vermedi',
+        detail: 'DHL kodu hazır; şubeye teslim edildiğine dair hareket yok.'
+      },
+      kargoda: {
+        css: 'kargoda', icon: 'fa-truck',
+        label: 'Müşteri kargoya verdi',
+        detail: 'Geri gelen ürün DHL eCommerce taşımasında.'
+      },
+      ulasti: {
+        css: 'ulasti', icon: 'fa-check-circle',
+        label: 'Geri gelen ürün bize ulaştı',
+        detail: 'DHL eCommerce teslim hareketi doğrulandı.'
+      },
+      hata: {
+        css: 'hata', icon: 'fa-exclamation-circle',
+        label: 'DHL durumu doğrulanamadı',
+        detail: 'Yenile düğmesiyle tekrar kontrol edin.'
+      }
+    };
+
+    function cardFor(degisimNo) {
+      return document.querySelector(`.card[data-degisim-no="${CSS.escape(String(degisimNo))}"]`);
+    }
+
+    function applyReturnStatus(degisimNo, item) {
+      const card = cardFor(degisimNo);
+      if (!card) return;
+
+      let state = 'kod_yok';
+      if (item) {
+        if (item.kategori === 'teslim') state = 'ulasti';
+        else if (item.kategori === 'kargoda') state = 'kargoda';
+        else state = 'vermedi';
+      }
+      const meta = returnStateMeta[state];
+      const box = card.querySelector('[data-return-status]');
+      card.dataset.returnState = state;
+      card.dataset.returnTracking = item && item.shipmentId ? String(item.shipmentId) : '';
+      box.className = `return-journey ${meta.css}`;
+      box.querySelector('.return-journey-icon').innerHTML = `<i class="fas ${meta.icon}"></i>`;
+      box.querySelector('.return-journey-label').textContent = meta.label;
+
+      let detail = meta.detail;
+      if (item && state === 'kargoda') {
+        detail = item.shipmentLastMove || (item.shipmentId ? `Takip: ${item.shipmentId}` : meta.detail);
+      } else if (item && state === 'ulasti') {
+        detail = item.shipmentLastMove || meta.detail;
+      } else if (item && state === 'vermedi' && item.iadeKodu) {
+        detail = `İade kodu: ${item.iadeKodu} · Henüz ilk kargo hareketi yok.`;
+      }
+      box.querySelector('.return-journey-detail').textContent = detail;
+    }
+
+    function applyReturnStatusError() {
+      document.querySelectorAll('.card[data-degisim-no]').forEach(card => {
+        if (card.dataset.returnState !== 'loading') return;
+        const meta = returnStateMeta.hata;
+        const box = card.querySelector('[data-return-status]');
+        card.dataset.returnState = 'hata';
+        box.className = `return-journey ${meta.css}`;
+        box.querySelector('.return-journey-icon').innerHTML = `<i class="fas ${meta.icon}"></i>`;
+        box.querySelector('.return-journey-label').textContent = meta.label;
+        box.querySelector('.return-journey-detail').textContent = meta.detail;
+      });
+    }
+
+    async function loadReturnStatuses(sync = true) {
+      const refreshButton = document.getElementById('refreshReturnStatuses');
+      const originalHtml = refreshButton.innerHTML;
+      refreshButton.disabled = true;
+      refreshButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Kontrol ediliyor…';
+      try {
+        const response = await fetch(`${returnStatusesEndpoint}?sync=${sync ? '1' : '0'}`, {
+          headers: {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'}
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.success) throw new Error(data.mesaj || 'DHL durumları alınamadı.');
+        document.querySelectorAll('.card[data-degisim-no]').forEach(card => {
+          applyReturnStatus(card.dataset.degisimNo, data.durumlar[card.dataset.degisimNo] || null);
+        });
+      } catch (_) {
+        applyReturnStatusError();
+      } finally {
+        refreshButton.disabled = false;
+        refreshButton.innerHTML = originalHtml;
+      }
+    }
+
+    document.getElementById('refreshReturnStatuses').addEventListener('click', () => loadReturnStatuses(true));
+
     {% if session.get('role') in ['admin', 'manager'] %}
     const returnCodeModal = new bootstrap.Modal(document.getElementById('returnCodeModal'));
     let pendingReturnCode = null;
 
     function openReturnCodeModal(button) {
       pendingReturnCode = {
+        degisimNo: button.closest('.card').dataset.degisimNo,
         endpoint: button.dataset.returnCodeEndpoint,
         order: button.dataset.returnOrder || '—',
         customer: button.dataset.returnCustomer || '—',
@@ -400,7 +563,7 @@
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok || !data.ok || !data.iadeKodu) {
-          throw new Error(data.mesaj || 'MNG iade kodu oluşturulamadı.');
+          throw new Error(data.mesaj || 'DHL eCommerce iade kodu oluşturulamadı.');
         }
 
         document.getElementById('returnCodeValue').textContent = data.iadeKodu;
@@ -415,6 +578,10 @@
         document.getElementById('returnCodeConfirmation').classList.add('d-none');
         document.getElementById('returnCodeResult').classList.remove('d-none');
         document.getElementById('returnCodeFooter').classList.add('d-none');
+        applyReturnStatus(pendingReturnCode.degisimNo, {
+          kategori: 'bekliyor', durum: 'OLUŞTURULDU', iadeKodu: data.iadeKodu,
+          shipmentId: null, shipmentLastMove: null
+        });
       } catch (error) {
         errorBox.textContent = error.message || 'Sunucuyla iletişim kurulamadı.';
         errorBox.classList.remove('d-none');
@@ -433,10 +600,71 @@
     });
     {% endif %}
 
-    // Etiket sadece "İşleme Alındı" iken
+    const earlyActionModal = new bootstrap.Modal(document.getElementById('earlyActionModal'));
+    const earlyActionConfirmButton = document.getElementById('earlyActionConfirm');
+    const earlyActionCancelButton = document.querySelector('#earlyActionModal .modal-footer [data-bs-dismiss]');
+    let pendingEarlyAction = null;
+
+    function returnWarningText(state) {
+      if (state === 'kargoda') return 'Müşteri ürünü DHL eCommerce’e teslim etti fakat ürün henüz bize ulaşmadı.';
+      if (state === 'vermedi') return 'DHL hareketlerine göre müşteri ürünü henüz kargoya vermedi.';
+      if (state === 'kod_yok') return 'Bu değişim için DHL iade kodu henüz oluşturulmadı.';
+      return 'DHL dönüş durumu şu anda doğrulanamadı.';
+    }
+
+    function askEarlyAction(degisimNo, actionType, callback) {
+      const card = cardFor(degisimNo);
+      const state = card ? card.dataset.returnState : 'hata';
+      const stateBox = card ? card.querySelector('[data-return-status]') : null;
+      const actionText = actionType === 'label'
+        ? 'giden ürünün kargo etiketini yine de yazdırmak'
+        : 'değişimi yine de işleme almak';
+
+      pendingEarlyAction = callback;
+      document.getElementById('earlyActionTitle').textContent = 'Geri gelen ürün henüz ulaşmadı';
+      document.getElementById('earlyActionMessage').textContent = `${returnWarningText(state)} Buna rağmen ${actionText} istediğinizden emin misiniz?`;
+      document.getElementById('earlyActionState').textContent = stateBox
+        ? `${stateBox.querySelector('.return-journey-label').textContent} — ${stateBox.querySelector('.return-journey-detail').textContent}`
+        : 'DHL durumu bilinmiyor.';
+      earlyActionConfirmButton.classList.remove('d-none');
+      earlyActionConfirmButton.innerHTML = '<i class="fas fa-arrow-right me-1"></i> Evet, Devam Et';
+      earlyActionCancelButton.textContent = 'Vazgeç';
+      earlyActionModal.show();
+    }
+
+    function showActionNotice(title, message) {
+      pendingEarlyAction = null;
+      document.getElementById('earlyActionTitle').textContent = title;
+      document.getElementById('earlyActionMessage').textContent = message;
+      document.getElementById('earlyActionState').textContent = 'Değişim akışı korunmak için işlem durduruldu.';
+      earlyActionConfirmButton.classList.add('d-none');
+      earlyActionCancelButton.textContent = 'Tamam';
+      earlyActionModal.show();
+    }
+
+    earlyActionConfirmButton.addEventListener('click', function () {
+      const action = pendingEarlyAction;
+      pendingEarlyAction = null;
+      earlyActionModal.hide();
+      // Etiketin yeni sekmesi tarayıcı tarafından engellenmesin diye kullanıcı
+      // tıklamasının aynı event zincirinde devam et.
+      if (action) action();
+    });
+
+    // Ürün ulaşmadan etiket istenirse özel onayla erken yazdırmaya izin ver.
     function guardedLabelPrint(degisim_no, status){
-      if(status !== 'İşleme Alındı'){ alert("Etiket sadece 'İşleme Alındı' statüsünde yazdırılabilir."); return; }
-      document.getElementById(`label-form-${degisim_no}`).submit();
+      const printLabel = () => document.getElementById(`label-form-${degisim_no}`).submit();
+      const card = cardFor(degisim_no);
+      const returnState = card ? card.dataset.returnState : 'hata';
+      if (returnState !== 'ulasti') {
+        askEarlyAction(degisim_no, 'label', printLabel);
+        return;
+      }
+      if(status !== 'İşleme Alındı'){
+        showActionNotice('Önce işleme alın', "Ürün bize ulaştı. Etiket yazdırmak için değişimi önce 'İşleme Alındı' durumuna getirin.");
+        return;
+      }
+      printLabel();
     }
 
     // Genel statü güncelle
@@ -457,13 +685,30 @@
     const trackingModal = new bootstrap.Modal(trackingModalEl);
     let pendingDegisimNo = null;
 
-    function tryMoveToProcessing(degisim_no){
-      $.post("{{ url_for('degisim.update_status') }}",{degisim_no, status:'İşleme Alındı'})
+    function moveToProcessing(degisim_no){
+      const card = cardFor(degisim_no);
+      const tracking = card ? card.dataset.returnTracking : '';
+      $.post("{{ url_for('degisim.update_status') }}",{
+        degisim_no,
+        status:'İşleme Alındı',
+        musteri_kargo_takip: tracking || '',
+        return_check_confirmed: '1'
+      })
         .done(res=>{
           if(res.success){ location.reload(); return; }
           if(res.need_tracking){ pendingDegisimNo = degisim_no; $('#trackingInput').val(''); trackingModal.show(); }
           else{ alert(res.message || 'Güncellenemedi.'); }
         }).fail(()=>alert('Sunucuyla iletişim kurulamadı.'));
+    }
+
+    function tryMoveToProcessing(degisim_no){
+      const card = cardFor(degisim_no);
+      const returnState = card ? card.dataset.returnState : 'hata';
+      if (returnState !== 'ulasti') {
+        askEarlyAction(degisim_no, 'processing', () => moveToProcessing(degisim_no));
+        return;
+      }
+      moveToProcessing(degisim_no);
     }
 
     // Modal "Kaydet ve İşleme Al"
@@ -629,5 +874,7 @@
 
       refreshState();
     })();
+
+    loadReturnStatuses(true);
   </script>
 {% endblock %}

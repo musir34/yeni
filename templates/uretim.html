@@ -516,21 +516,34 @@
     // Raftan kaleme okutma satırı: ürün barkodu + raf kodu okutulur → o raftan düşer.
     // Okutulmuş kalem yeşil "Toplandı" gösterir. Üretim kalemine okutma gerekmez.
     function okutmaHtml(r, u) {
-        if (u.uretim !== false) return '';
-        if (u.toplandi) {
-            return '<div class="ur-okut-ok"><i class="bi bi-check-circle-fill"></i> Toplandı — raftan düşüldü</div>';
+        if (u.uretim === false) {
+            if (u.toplandi) {
+                return '<div class="ur-okut-ok"><i class="bi bi-check-circle-fill"></i> Toplandı — raftan düşüldü</div>';
+            }
+            return `
+                <div class="ur-okut" data-kayit="${Number(r.id)}">
+                    <input type="text" class="ur-okut-urun" placeholder="Ürün barkodu okut" autocomplete="off" inputmode="none">
+                    <input type="text" class="ur-okut-raf" placeholder="Raf kodu okut" autocomplete="off" inputmode="none">
+                    <button type="button" class="ur-okut-btn"><i class="bi bi-upc-scan"></i> Okut</button>
+                </div>`;
+        }
+        // ÜRETİLEN kalem: adet adet doğrulama okutması — yanlış ürün gitmesin.
+        // Stok düşümü yok; etiket tüm adetler okutulmadan verilmez.
+        const gerekli = Number(u.quantity) || 1;
+        const yapilan = Number(u.dogrulanan) || 0;
+        if (yapilan >= gerekli) {
+            return `<div class="ur-okut-ok"><i class="bi bi-check-circle-fill"></i> Doğrulandı (${gerekli}/${gerekli})</div>`;
         }
         return `
-            <div class="ur-okut" data-kayit="${Number(r.id)}">
+            <div class="ur-okut" data-kayit="${Number(r.id)}" data-dogrula="1">
                 <input type="text" class="ur-okut-urun" placeholder="Ürün barkodu okut" autocomplete="off" inputmode="none">
-                <input type="text" class="ur-okut-raf" placeholder="Raf kodu okut" autocomplete="off" inputmode="none">
-                <button type="button" class="ur-okut-btn"><i class="bi bi-upc-scan"></i> Okut</button>
+                <button type="button" class="ur-okut-btn"><i class="bi bi-upc-scan"></i> Doğrula (${yapilan}/${gerekli})</button>
             </div>`;
     }
     function detayHtml(r) {
         const karma = karmaMi(r);
         return kalemListesi(r).map(u => `
-            <div class="ur-detail-item${u.uretim === false && !u.toplandi ? ' ur-detail-item--bekliyor' : ''}">
+            <div class="ur-detail-item${(u.uretim === false ? !u.toplandi : (Number(u.dogrulanan) || 0) < (Number(u.quantity) || 1)) ? ' ur-detail-item--bekliyor' : ''}">
                 ${u.image_url
                     ? `<a href="${esc(u.image_url)}" target="_blank" rel="noopener"><img src="${esc(u.image_url)}" alt="Ürün" class="ur-detail-img"></a>`
                     : '<span class="ur-detail-img ur-detail-img--bos"><i class="bi bi-image"></i></span>'}
@@ -563,7 +576,7 @@
         const sd = r.siparis_detay || [];
         const uretimKalem = sd.filter(u => u.uretim).length;
         const karma = sd.length > 0 && uretimKalem < sd.length;
-        const kargoBtn = (r.kargo && r.kargo.shipping_barcode)
+        const kargoBtn = (r.kargo && (r.kargo.has_kargo || r.kargo.shipping_barcode))
             ? `<button class="ur-undo-btn" data-kargo="${Number(r.id)}" title="Kargo çıktısı"><i class="bi bi-printer"></i></button>` : '';
         let butonlar = '';
         if (bekleyen) {
@@ -592,7 +605,7 @@
                     ${kargoda ? '<span class="ur-badge ur-badge--kargo"><i class="bi bi-truck"></i> Kargoya verildi</span>' : ''}
                     ${teslim ? '<span class="ur-badge ur-badge--kargo"><i class="bi bi-check-circle"></i> Teslim edildi</span>' : ''}
                     ${karma ? `<span class="ur-badge ur-badge--karma"><i class="bi bi-exclamation-triangle"></i> Karma paket: ${sd.length} kalem · ${uretimKalem} üretim + ${sd.length - uretimKalem} raftan</span>` : ''}
-                    ${r.raf_tamam === false ? '<span class="ur-badge ur-badge--kilit"><i class="bi bi-lock-fill"></i> Raf okutulmadı — etiket kilitli</span>' : ''}
+                    ${r.raf_tamam === false ? '<span class="ur-badge ur-badge--kilit"><i class="bi bi-lock-fill"></i> Okutma eksik — etiket kilitli</span>' : ''}
                     ${bekleyen ? (r.mail_sent
                         ? '<span class="ur-badge ur-badge--mail-ok"><i class="bi bi-envelope-check"></i> Mail gitti</span>'
                         : '<span class="ur-badge ur-badge--mail-yok"><i class="bi bi-envelope"></i> Mail yok</span>') : ''}
@@ -743,9 +756,14 @@
             detayBtn.classList.toggle('open', !panel.hidden);
             return;
         }
-        // Raf okutma gönder
+        // Okutma gönder: raf okutma ya da üretim kalemi doğrulaması
         const okutBtn = e.target.closest('.ur-okut-btn');
-        if (okutBtn) { await rafOkutGonder(okutBtn.closest('.ur-okut')); return; }
+        if (okutBtn) {
+            const kutu = okutBtn.closest('.ur-okut');
+            if (kutu && kutu.hasAttribute('data-dogrula')) { await urunDogrulaGonder(kutu); }
+            else { await rafOkutGonder(kutu); }
+            return;
+        }
         // Barkod kopyala
         const copyBtn = e.target.closest('.ur-copy-btn');
         if (copyBtn) {
@@ -812,29 +830,70 @@
         if (e.key !== 'Enter') return;
         if (e.target.classList.contains('ur-okut-urun')) {
             e.preventDefault();
-            e.target.closest('.ur-okut').querySelector('.ur-okut-raf').focus();
+            const kutu = e.target.closest('.ur-okut');
+            if (kutu.hasAttribute('data-dogrula')) { urunDogrulaGonder(kutu); }
+            else { kutu.querySelector('.ur-okut-raf').focus(); }
         } else if (e.target.classList.contains('ur-okut-raf')) {
             e.preventDefault();
             rafOkutGonder(e.target.closest('.ur-okut'));
         }
     });
 
+    // ── Üretim kalemi doğrulama: ürün barkodu adet adet okutulur (stok düşümü yok) ──
+    async function urunDogrulaGonder(kutu) {
+        if (!kutu) return;
+        const kayitId = kutu.getAttribute('data-kayit');
+        const girdi = kutu.querySelector('.ur-okut-urun');
+        const urun = girdi.value.trim();
+        if (!urun) { toast('Ürün barkodunu okutun.', 'error'); girdi.focus(); return; }
+        const res = await fetch(`/uretim/api/urun-dogrula/${kayitId}`, {
+            method: 'POST', headers: POST_HEADERS,
+            body: JSON.stringify({ barcode: urun })
+        });
+        const data = await res.json();
+        toast(data.message || 'Hata', data.success ? 'success' : 'error');
+        girdi.value = '';
+        if (!data.success) { girdi.focus(); return; }
+        if (data.dogrulanan >= data.gerekli) {
+            kutu.outerHTML = `<div class="ur-okut-ok"><i class="bi bi-check-circle-fill"></i> Doğrulandı (${data.gerekli}/${data.gerekli})</div>`;
+        } else {
+            kutu.querySelector('.ur-okut-btn').innerHTML =
+                `<i class="bi bi-upc-scan"></i> Doğrula (${data.dogrulanan}/${data.gerekli})`;
+            girdi.focus();
+        }
+        const r = rowCache[kayitId];
+        if (r) r.raf_tamam = data.etiket_tamam;
+        if (data.etiket_tamam) {
+            document.querySelectorAll('.ur-badge--kilit').forEach(b => {
+                if (b.closest('.ur-card') && b.closest('.ur-card').querySelector(`[data-kayit="${kayitId}"], .ur-okut-ok`)) b.remove();
+            });
+        }
+    }
+
     // ── Kargo çıktısı: Yazdır (normal akış) + Otomatik Gönderim ──
-    function kargoDialogAc(r) {
+    // 🔒 Kargo kodu liste verisinde YOKTUR; diyalog açılırken sunucudan kilit
+    // kontrolüyle alınır — okutmalar bitmeden kod istemciye hiç inmez.
+    async function kargoDialogAc(r) {
         if (!r) return;
-        // Etiket kilidi: raftan kalemler okutulmadan kargo çıktısı verilmez
         if (r.raf_tamam === false) {
-            toast('Önce raftan toplanacak ürünleri okutun — Ürün Özellikleri panelinden raf okutmadan etiket verilmez.', 'error');
+            toast('Önce siparişin TÜM kalemlerini okutun — Ürün Özellikleri panelinden okutmadan etiket verilmez.', 'error');
             return;
         }
-        if (!r.kargo || !r.kargo.shipping_barcode) {
+        if (!r.kargo || !(r.kargo.has_kargo || r.kargo.shipping_barcode)) {
             toast('Bu sipariş için kargo kodu bulunamadı.', 'error');
             return;
         }
-        kargoAktif = r;
+        let kargo;
+        try {
+            const res = await fetch(`/uretim/api/kargo-kodu/${r.id}`);
+            const data = await res.json();
+            if (!data.success) { toast(data.message || 'Etiket kilitli.', 'error'); return; }
+            kargo = data.kargo;
+        } catch { toast('Sunucuya ulaşılamadı.', 'error'); return; }
+        kargoAktif = { ...r, kargo };
         document.getElementById('urKargoNo').textContent = '#' + r.order_number;
-        document.getElementById('urKargoFirma').textContent = r.kargo.cargo_provider || '-';
-        document.getElementById('urKargoKod').textContent = r.kargo.shipping_barcode;
+        document.getElementById('urKargoFirma').textContent = kargo.cargo_provider || '-';
+        document.getElementById('urKargoKod').textContent = kargo.shipping_barcode;
         document.getElementById('urKargoDialog').hidden = false;
     }
     const imgOverlay = document.getElementById('urImgOverlay');

@@ -107,3 +107,94 @@ def test_exchange_return_code_reports_missing_record(monkeypatch):
 
     assert response.status_code == 404
     assert 'bulunamadı' in response.get_json()['mesaj'].lower()
+
+
+def test_exchange_return_statuses_map_by_panel_request_id(monkeypatch):
+    captured = {}
+
+    def fake_fetch(kategori=None, sync=False):
+        captured['sync'] = sync
+        return {
+            'guncelleme': '2026-08-11T10:00:00Z',
+            'iadeler': [
+                {
+                    'source': 'degisim',
+                    'panelRequestId': 'deg-1',
+                    'kategori': 'kargoda',
+                    'durum': 'TRANSFER MERKEZİNDE',
+                    'shipmentId': '123456',
+                    'shipmentLastMove': 'İstanbul Transfer Merkezi',
+                    'iadeKodu': 'RETURN-1',
+                },
+                {'source': 'shopify', 'panelRequestId': 'ignored', 'kategori': 'teslim'},
+            ],
+        }
+
+    monkeypatch.setattr(iade_yonetimi, 'fetch_iadeler', fake_fetch)
+    app = make_app()
+
+    with app.test_client() as client:
+        response = client.get('/degisim/iade-durumlari?sync=1')
+
+    assert response.status_code == 200
+    assert captured['sync'] is True
+    payload = response.get_json()
+    assert list(payload['durumlar']) == ['deg-1']
+    assert payload['durumlar']['deg-1']['kategori'] == 'kargoda'
+    assert payload['durumlar']['deg-1']['shipmentId'] == '123456'
+
+
+def test_processing_can_continue_after_explicit_return_warning(monkeypatch):
+    exchange = SimpleNamespace(
+        degisim_no='deg-1',
+        musteri_kargo_takip=None,
+        degisim_durumu='Oluşturuldu',
+    )
+    query = FakeQuery(exchange)
+
+    class FakeSession:
+        committed = False
+
+        def commit(self):
+            self.committed = True
+
+        def rollback(self):
+            pass
+
+    fake_session = FakeSession()
+    monkeypatch.setattr(degisim, 'Degisim', SimpleNamespace(query=query))
+    monkeypatch.setattr(degisim, 'db', SimpleNamespace(session=fake_session))
+    monkeypatch.setattr(degisim, '_safe_log', lambda *args, **kwargs: None)
+    app = make_app()
+
+    with app.test_client() as client:
+        response = client.post('/update_status', data={
+            'degisim_no': 'deg-1',
+            'status': 'İşleme Alındı',
+            'return_check_confirmed': '1',
+        })
+
+    assert response.status_code == 200
+    assert response.get_json()['success'] is True
+    assert exchange.degisim_durumu == 'İşleme Alındı'
+    assert fake_session.committed is True
+
+
+def test_processing_without_arrival_confirmation_still_requires_tracking(monkeypatch):
+    exchange = SimpleNamespace(
+        degisim_no='deg-1',
+        musteri_kargo_takip=None,
+        degisim_durumu='Oluşturuldu',
+    )
+    monkeypatch.setattr(degisim, 'Degisim', SimpleNamespace(query=FakeQuery(exchange)))
+    app = make_app()
+
+    with app.test_client() as client:
+        response = client.post('/update_status', data={
+            'degisim_no': 'deg-1',
+            'status': 'İşleme Alındı',
+        })
+
+    assert response.status_code == 200
+    assert response.get_json()['need_tracking'] is True
+    assert exchange.degisim_durumu == 'Oluşturuldu'

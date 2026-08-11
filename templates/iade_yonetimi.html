@@ -168,7 +168,7 @@
             <div>
                 <div class="return-eyebrow">Müşteri iadeleri</div>
                 <h1>Paketler nerede, tek bakışta.</h1>
-                <p>Oluşturulan iade kodlarını ve MNG hareketlerini canlı takip edin.</p>
+                <p>Oluşturulan iade kodlarını ve DHL eCommerce hareketlerini canlı takip edin.</p>
             </div>
             <div class="return-heading-actions">
                 {% if session.get('role') in ['admin', 'manager'] %}
@@ -208,8 +208,8 @@
                         <i class="bi bi-search"></i>
                         <input id="returnSearch" type="search" placeholder="Sipariş, e-posta veya kod ara" autocomplete="off">
                     </label>
-                    <button class="return-refresh" id="syncButton" type="button" title="MNG'den anlık durum çek">
-                        <i class="bi bi-arrow-repeat me-1"></i>MNG'den Yenile
+                    <button class="return-refresh" id="syncButton" type="button" title="DHL eCommerce'ten anlık durum çek">
+                        <i class="bi bi-arrow-repeat me-1"></i>DHL'den Yenile
                     </button>
                 </div>
             </div>
@@ -244,7 +244,7 @@
             <div class="return-empty" id="emptyState"><i class="bi bi-inbox"></i><strong>Bu filtrede iade bulunamadı.</strong></div>
             <div class="return-footer">
                 <span id="resultCount">Yükleniyor…</span>
-                <span>Saatlik otomatik MNG senkronu</span>
+                <span>Saatlik otomatik DHL eCommerce senkronu</span>
             </div>
         </div>
     </section>
@@ -268,12 +268,12 @@
         <div class="modal-content">
             <form id="createReturnForm">
                 <div class="modal-header">
-                    <div><div class="return-eyebrow">GERÇEK MNG KODU</div><h5 class="modal-title">İade Kodu Oluştur</h5></div>
+                    <div><div class="return-eyebrow">GERÇEK DHL ECOMMERCE KODU</div><h5 class="modal-title">İade Kodu Oluştur</h5></div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
                 </div>
                 <div class="modal-body">
                     <div id="createFormFields">
-                        <div class="return-create-note mb-3"><i class="bi bi-exclamation-circle me-1"></i>Bu işlem MNG sisteminde gerçek ve ücretsiz gönderim kodu oluşturur. Sipariş numarasını kontrol edin.</div>
+                        <div class="return-create-note mb-3"><i class="bi bi-exclamation-circle me-1"></i>Bu işlem DHL eCommerce sisteminde gerçek ve ücretsiz gönderim kodu oluşturur. Sipariş numarasını kontrol edin.</div>
                         <div class="row g-3">
                             <div class="col-md-5">
                                 <label class="form-label fw-semibold" for="createSource">Sipariş kaynağı</label>
@@ -318,7 +318,7 @@
                     <div class="return-result" id="createResult">
                         <div class="return-result-icon"><i class="bi bi-check2"></i></div>
                         <h5>İade kodu hazır</h5>
-                        <p class="text-muted mb-0">Müşteri bu kodla DHL eCommerce (MNG Kargo) şubesine gidebilir.</p>
+                        <p class="text-muted mb-0">Müşteri bu kodla DHL eCommerce şubesine gidebilir.</p>
                         <div class="return-result-code"><span id="createdReturnCode"></span><button class="btn btn-sm btn-outline-secondary" id="copyCreatedCode" type="button" title="Kopyala"><i class="bi bi-copy"></i></button></div>
                         <a class="btn btn-outline-dark d-none" id="createdLabelLink" target="_blank" rel="noopener noreferrer"><i class="bi bi-upc-scan me-1"></i>Barkodu Aç</a>
                     </div>
@@ -415,7 +415,7 @@
             ['Müşteri', item.customerName || item.email], ['E-posta', item.email],
             ['Kaynak', ({degisim:'Değişim',trendyol:'Trendyol',shopify:'Shopify',manuel:'Manuel',site:'Site'}[item.source] || item.source)],
             ['Oluşturan', item.createdBy], ['Kategori', labels[item.kategori] || item.kategori],
-            ['MNG Durumu', item.durum], ['Takip No', item.shipmentId],
+            ['DHL Durumu', item.durum], ['Takip No', item.shipmentId],
             ['Son Hareket', item.shipmentLastMove, true], ['İade Nedeni', item.reason, true],
             ['Oluşturulma', formatDate(item.createdAt)], ['Son Senkron', formatDate(item.lastSyncAt)]
         ];
@@ -506,7 +506,7 @@
             const errorBox = document.getElementById('createError');
             errorBox.classList.add('d-none');
             createSubmit.disabled = true;
-            createSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>MNG kodu oluşturuluyor…';
+            createSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>DHL kodu oluşturuluyor…';
             try {
                 const response = await fetch(createEndpoint, {
                     method: 'POST',

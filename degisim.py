@@ -265,6 +265,7 @@ def degisim_kaydet():
     try:
         logger.info("--- /degisim-kaydet isteği alındı ---")
 
+        kayit_tipi     = (request.form.get('kayit_tipi') or 'siparisli').strip().lower()
         siparis_no     = (request.form.get('siparis_no') or '').strip()
         ad             = (request.form.get('ad') or '').strip()
         soyad          = (request.form.get('soyad') or '').strip()
@@ -272,7 +273,13 @@ def degisim_kaydet():
         telefon_no     = (request.form.get('telefon_no') or '').strip()
         degisim_nedeni = (request.form.get('degisim_nedeni') or '').strip()
 
-        if not siparis_no:
+        if kayit_tipi not in {'siparisli', 'manuel'}:
+            return jsonify(success=False, message='Geçersiz değişim kayıt tipi.'), 400
+        if kayit_tipi == 'manuel':
+            # Kullanıcıdan sipariş numarası istenmez; fakat liste, log, stok izi ve
+            # DHL iade kodu akışlarının güvenli çalışması için dahili referans tutulur.
+            siparis_no = f"MANUEL-{uuid.uuid4().hex[:10].upper()}"
+        elif not siparis_no:
             return jsonify(success=False, message='Sipariş numarası zorunludur.'), 400
         if not degisim_nedeni:
             return jsonify(success=False, message='Değişim sebebi zorunludur.'), 400
@@ -419,6 +426,7 @@ def update_status():
     degisim_no = (request.form.get('degisim_no') or '').strip()
     status = (request.form.get('status') or '').strip()
     musteri_kargo_takip = (request.form.get('musteri_kargo_takip') or '').strip()
+    return_check_confirmed = request.form.get('return_check_confirmed') == '1'
 
     if not degisim_no or not status:
         return jsonify(success=False, message="Eksik parametre"), 400
@@ -429,7 +437,8 @@ def update_status():
             return jsonify(success=False, message="Kayıt bulunamadı"), 404
 
         # Takip no kontrolü (her statü için)
-        if not (rec.musteri_kargo_takip or musteri_kargo_takip):
+        allow_without_tracking = status == 'İşleme Alındı' and return_check_confirmed
+        if not (rec.musteri_kargo_takip or musteri_kargo_takip) and not allow_without_tracking:
             return jsonify(
                 success=False,
                 need_tracking=True,
@@ -447,6 +456,7 @@ def update_status():
             "sayfa": "Değişim Talepleri",
             "değişim_no": degisim_no,
             "yeni_durum": status,
+            "dhl_donus_kontrolu_onaylandi": return_check_confirmed,
         })
         return jsonify(success=True)
     except Exception as exc:
@@ -788,12 +798,42 @@ def degisim_talep():
     )
 
 
+@degisim_bp.route('/degisim/iade-durumlari')
+def iade_durumlari():
+    """DHL dönüş kayıtlarını değişim UUID'siyle eşleyerek kartlara sunar."""
+    sync = request.args.get('sync') == '1'
+    try:
+        from iade_yonetimi import fetch_iadeler, IadeKopruHatasi
+
+        payload = fetch_iadeler(sync=sync)
+        durumlar = {}
+        for item in payload.get('iadeler', []):
+            if item.get('source') != 'degisim' or not item.get('panelRequestId'):
+                continue
+            durumlar[str(item['panelRequestId'])] = {
+                'kategori': item.get('kategori') or 'bekliyor',
+                'durum': item.get('durum'),
+                'shipmentId': item.get('shipmentId'),
+                'shipmentLastMove': item.get('shipmentLastMove'),
+                'iadeKodu': item.get('iadeKodu') or item.get('referenceId'),
+                'lastSyncAt': item.get('lastSyncAt'),
+            }
+        return jsonify({
+            'success': True,
+            'durumlar': durumlar,
+            'guncelleme': payload.get('guncelleme'),
+        })
+    except IadeKopruHatasi as exc:
+        logger.warning('Değişim DHL durumları alınamadı: %s', exc)
+        return jsonify({'success': False, 'mesaj': str(exc)}), 503
+
+
 # ──────────────────────────────────────────────────────────────────────────────
-# 7) Değişim kaydından gerçek MNG iade kodu oluşturma
+# 7) Değişim kaydından gerçek DHL eCommerce iade kodu oluşturma
 # ──────────────────────────────────────────────────────────────────────────────
 @degisim_bp.route('/degisim/<degisim_no>/iade-kodu-olustur', methods=['POST'])
 def iade_kodu_olustur(degisim_no):
-    """Değişim kartındaki bilgilerle, mükerrer üretime kapalı MNG dönüş kodu oluştur."""
+    """Değişim kartındaki bilgilerle, mükerrer üretime kapalı DHL dönüş kodu oluştur."""
     if session.get('role') not in {'admin', 'manager'}:
         return jsonify({'mesaj': 'İade kodu oluşturmak için yönetici yetkisi gerekli.'}), 403
     if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
@@ -833,7 +873,7 @@ def iade_kodu_olustur(degisim_no):
 
         result = create_iade(payload)
         _safe_log('CREATE', {
-            'işlem_açıklaması': f'MNG iade kodu oluşturuldu — {siparis_no}',
+            'işlem_açıklaması': f'DHL eCommerce iade kodu oluşturuldu — {siparis_no}',
             'sayfa': 'Değişim Talepleri',
             'değişim_no': exchange.degisim_no,
             'sipariş_no': siparis_no,
@@ -841,7 +881,7 @@ def iade_kodu_olustur(degisim_no):
         })
         return jsonify(result), 200
     except IadeKopruHatasi as exc:
-        logger.warning('Değişim kaydı için MNG iade kodu oluşturulamadı: %s', exc)
+        logger.warning('Değişim kaydı için DHL eCommerce iade kodu oluşturulamadı: %s', exc)
         return jsonify({'mesaj': str(exc)}), exc.status_code
 
 

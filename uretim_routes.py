@@ -251,6 +251,21 @@ def liste():
         except Exception:
             db.session.rollback()
             logger.warning("[URETIM] raf okutma durumu okunamadı", exc_info=True)
+    # Üretim kalemi doğrulama durumu: (sipariş, barkod) → okutulan adet — tek sorgu
+    dogrulama_map = {}
+    if rows:
+        try:
+            from models import UretimDogrulama
+            nolar = [r.order_number for r in rows]
+            for onum, bc, cnt in (
+                    db.session.query(UretimDogrulama.order_number,
+                                     UretimDogrulama.barcode, db.func.count())
+                    .filter(UretimDogrulama.order_number.in_(nolar))
+                    .group_by(UretimDogrulama.order_number, UretimDogrulama.barcode)):
+                dogrulama_map[(onum, bc)] = int(cnt)
+        except Exception:
+            db.session.rollback()
+            logger.warning("[URETIM] doğrulama durumu okunamadı", exc_info=True)
     sonuc = []
     for r in rows:
         d = _to_dict(r, urun_map)
@@ -274,15 +289,43 @@ def liste():
                     "uretim": bc in uretim_bcs,
                     "raflar": raf_map.get(bc, []),
                     "toplandi": pick_key(r.order_number, bc) in okutulan_keys,
+                    "dogrulanan": dogrulama_map.get((r.order_number, bc), 0),
                     "image_url": ((p.images or "").split(",")[0].strip() if (p and p.images) else ""),
                     "title": (p.title or "") if p else "",
                     "model_code": (p.product_main_id or "") if p else "",
                 })
             d["siparis_detay"] = kalemler
-            # Etiket kilidi: tüm RAFTAN kalemler okutulmuş mu?
-            d["raf_tamam"] = all(k["toplandi"] for k in kalemler if not k["uretim"])
+            # Etiket kilidi: RAFTAN kalemler okutulmuş VE ÜRETİM kalemleri
+            # adet adet doğrulanmış mı? (yanlış ürün gitmesin)
+            gerekli_uretim = {}
+            for k in kalemler:
+                if k["uretim"]:
+                    gerekli_uretim[k["barcode"]] = gerekli_uretim.get(k["barcode"], 0) + k["quantity"]
+            uretim_tamam = all(dogrulama_map.get((r.order_number, b), 0) >= q
+                               for b, q in gerekli_uretim.items())
+            d["raf_tamam"] = (uretim_tamam and
+                              all(k["toplandi"] for k in kalemler if not k["uretim"]))
         else:
-            d["raf_tamam"] = True  # içerik bilinmiyorsa kilitleme (eski kayıt)
+            # İçerik canlı tablolardan okunamadı (eski/arşiv kayıt): üretim
+            # kalemleri details'ten yine de doğrulanmadan etiket YOK —
+            # "bilinmeyen içerik = kilitsiz" varsayımı kaldırıldı.
+            gerekli = {}
+            for u in d["details"]:
+                bc = normalize_barcode(str(u.get("barcode") or "").strip())
+                if bc:
+                    gerekli[bc] = gerekli.get(bc, 0) + int(u.get("quantity", 1) or 1)
+                    u["dogrulanan"] = dogrulama_map.get((r.order_number, bc), 0)
+            d["raf_tamam"] = all(dogrulama_map.get((r.order_number, b), 0) >= q
+                                 for b, q in gerekli.items())
+        # Kargolanmış siparişte yeniden basım engellenmez (sunucu kilidiyle tutarlı)
+        if durum == "tamamlanan":
+            d["raf_tamam"] = True
+        # 🔒 Kargo kodu kilitliyken istemciye HİÇ inmez ("Otomatik Gönderim"
+        # sunucu kilidini aşamasın) — kod, /api/kargo-kodu ile kilit kontrolünden
+        # geçilerek alınır. has_kargo yalnız butonun görünürlüğü içindir.
+        if d.get("kargo"):
+            d["kargo"]["has_kargo"] = bool(d["kargo"].get("shipping_barcode"))
+            d["kargo"]["shipping_barcode"] = ""
         sonuc.append(d)
     return jsonify({"success": True, "rows": sonuc})
 
@@ -422,9 +465,112 @@ def raf_okut(kayit_id: int):
         except Exception:
             db.session.rollback()
             logger.warning("[URETIM] toplandı damgası yazılamadı", exc_info=True)
-    mesaj = ("Tüm raf ürünleri okutuldu — etiket alınabilir." if raf_tamam
-             else f"Okutuldu. Kalan raf ürünü: {len(kalan)}")
-    return jsonify({"success": True, "raf_tamam": raf_tamam, "kalan": kalan, "message": mesaj})
+    # Etiket serbestliği raf kalemleriyle bitmez: üretim kalemleri de doğrulanmalı.
+    from uretim_modu import eksik_uretim_dogrulamalar
+    uretim_eksik = eksik_uretim_dogrulamalar(kayit)
+    etiket_tamam = raf_tamam and not uretim_eksik
+    if etiket_tamam:
+        mesaj = "Tüm kalemler okutuldu — etiket alınabilir."
+    elif raf_tamam:
+        mesaj = f"Raf ürünleri tamam. Doğrulanacak üretim kalemi: {len(uretim_eksik)}"
+    else:
+        mesaj = f"Okutuldu. Kalan raf ürünü: {len(kalan)}"
+    return jsonify({"success": True, "raf_tamam": etiket_tamam, "kalan": kalan, "message": mesaj})
+
+
+@uretim_bp.route("/api/urun-dogrula/<int:kayit_id>", methods=["POST"])
+def urun_dogrula(kayit_id: int):
+    """ÜRETİLEN kalemi paketleme anında doğrula: ürünün üzerindeki barkod adet
+    adet okutulur. Stok düşümü YOK (ürün raftan gelmez) — yalnız 'doğru ürün
+    pakete girdi' izi (uretim_dogrulama). Etiket bu iz tamamlanmadan verilmez."""
+    from barcode_alias_helper import normalize_barcode
+    from models import UretimDogrulama
+    from uretim_modu import dogrulama_sayilari, eksik_raf_okutmalar, uretim_kalemleri
+
+    kayit = db.session.get(UretimSiparis, kayit_id)
+    if not kayit:
+        return jsonify({"success": False, "message": "Kayıt bulunamadı"}), 404
+    data = request.get_json(silent=True) or {}
+    bc = normalize_barcode(str(data.get("barcode") or "").strip())
+    if not bc:
+        return jsonify({"success": False, "message": "Ürün barkodu gerekli."}), 400
+
+    kalem = next((k for k in uretim_kalemleri(kayit) if k["barcode"] == bc), None)
+    if kalem is None:
+        return jsonify({"success": False,
+                        "message": "⛔ Okutulan barkod bu siparişin ÜRETİLECEK "
+                                   "kalemlerinden değil — YANLIŞ ÜRÜN!"}), 400
+
+    mevcut = dogrulama_sayilari(kayit.order_number).get(bc, 0)
+    if mevcut >= kalem["quantity"]:
+        return jsonify({"success": False,
+                        "message": f"{bc} için gereken {kalem['quantity']} adedin "
+                                   f"tamamı zaten okutuldu."}), 400
+    try:
+        from flask_login import current_user
+        okutan = (current_user.username
+                  if getattr(current_user, "is_authenticated", False) else None)
+        db.session.add(UretimDogrulama(order_number=kayit.order_number, barcode=bc,
+                                       adet_no=mevcut + 1, okutan=okutan))
+        # Hazırlayan damgası: doğrulamayı ilk yapan da hazırlayandır (raf okutmayla aynı ilke)
+        if not kayit.hazirlayan and okutan:
+            kayit.hazirlayan = okutan
+        db.session.commit()
+        logger.info(f"[URETIM] ✅ {kayit.order_number} · {bc} doğrulandı "
+                    f"({mevcut + 1}/{kalem['quantity']}) · okutan={okutan}")
+    except Exception:
+        db.session.rollback()
+        logger.exception("[URETIM] doğrulama yazılamadı")
+        return jsonify({"success": False, "message": "Kaydedilemedi — tekrar okutun."}), 500
+
+    dogrulanan = mevcut + 1
+    etiket_tamam = not eksik_raf_okutmalar(kayit.order_number)
+    mesaj = f"{bc} doğrulandı ({dogrulanan}/{kalem['quantity']})."
+    if etiket_tamam:
+        mesaj += " Tüm kalemler okutuldu — etiket alınabilir."
+    return jsonify({"success": True, "dogrulanan": dogrulanan,
+                    "gerekli": kalem["quantity"], "etiket_tamam": etiket_tamam,
+                    "message": mesaj})
+
+
+@uretim_bp.route("/api/kargo-kodu/<int:kayit_id>", methods=["GET"])
+def kargo_kodu(kayit_id: int):
+    """Kargo kodu/etiket bilgisi SUNUCU kilidiyle verilir: siparişin tüm
+    kalemleri okutulmadan kod istemciye hiç inmez — 'Otomatik Gönderim'
+    (kargo terminalinden basım) yolu da böylece kilitlenir."""
+    from uretim_modu import eksik_raf_okutmalar
+
+    kayit = db.session.get(UretimSiparis, kayit_id)
+    if not kayit:
+        return jsonify({"success": False, "message": "Kayıt bulunamadı"}), 404
+    eksik = eksik_raf_okutmalar(kayit.order_number)
+    if eksik:
+        return jsonify({"success": False,
+                        "message": f"Etiket kilitli: {len(eksik)} kalem henüz "
+                                   f"okutulmadı. Ürün Özellikleri'nden okutun."}), 423
+    from models import (OrderCreated, OrderHazirlaniyor, OrderPicking,
+                        OrderShipped, OrderDelivered, OrderArchived)
+    for M in (OrderCreated, OrderHazirlaniyor, OrderPicking,
+              OrderShipped, OrderDelivered, OrderArchived):
+        try:
+            o = (M.query.filter_by(order_number=kayit.order_number)
+                 .with_entities(M.order_number, M.cargo_tracking_number,
+                                M.cargo_provider_name, M.customer_name,
+                                M.customer_surname, M.customer_address)
+                 .first())
+        except Exception:
+            db.session.rollback()
+            logger.warning("[URETIM] kargo kodu okunamadı (%s)", M.__tablename__, exc_info=True)
+            continue
+        if o and (o.cargo_tracking_number or "").strip():
+            return jsonify({"success": True, "kargo": {
+                "shipping_barcode": o.cargo_tracking_number or "",
+                "cargo_provider": o.cargo_provider_name or "",
+                "customer_name": o.customer_name or "",
+                "customer_surname": o.customer_surname or "",
+                "customer_address": o.customer_address or "",
+            }})
+    return jsonify({"success": False, "message": "Bu sipariş için kargo kodu bulunamadı."}), 404
 
 
 @uretim_bp.route("/api/ayar", methods=["GET"])
