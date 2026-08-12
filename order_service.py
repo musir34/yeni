@@ -38,7 +38,8 @@ from order_list_service import process_order_details # order_list_service.py'den
 from update_service import update_package_to_picking # update_service.py'den
 
 # Trendyol API için temel URL
-BASE_URL = "https://api.trendyol.com/sapigw/"
+# Sipariş V2 (v1 /orders 15 Ekim 2026'da kapanıyor)
+BASE_URL = "https://apigw.trendyol.com/integration/"
 
 # Blueprint
 order_service_bp = Blueprint('order_service', __name__)
@@ -99,7 +100,7 @@ async def fetch_trendyol_orders_async():
     try:
         auth_str = f"{API_KEY}:{API_SECRET}"
         b64_auth_str = base64.b64encode(auth_str.encode()).decode('utf-8')
-        url = f"{BASE_URL}suppliers/{SUPPLIER_ID}/orders"
+        url = f"{BASE_URL}order/sellers/{SUPPLIER_ID}/v2/orders"
         headers = {
             "Authorization": f"Basic {b64_auth_str}",
             "Content-Type": "application/json"
@@ -209,9 +210,9 @@ async def fetch_orders_page(session, url, headers, params, semaphore):
 ############################
 async def _fetch_order_by_number(session, headers, order_number, semaphore):
     """Tek bir siparişi orderNumber ile çeker. Bu sorgu Trendyol'un varsayılan
-    ~2 haftalık tarih penceresinden ETKİLENMEZ — eski siparişin güncel statüsünü
+    tarih penceresinden (v2'de ~7 gün) ETKİLENMEZ — eski siparişin güncel statüsünü
     de döndürür. Sipariş listesi için içerik (content) listesini döner."""
-    url = f"{BASE_URL}suppliers/{SUPPLIER_ID}/orders"
+    url = f"{BASE_URL}order/sellers/{SUPPLIER_ID}/v2/orders"
     params = {"orderNumber": order_number}
     async with semaphore:
         try:
@@ -226,16 +227,18 @@ async def _fetch_order_by_number(session, headers, order_number, semaphore):
             return []
 
 
-async def reconcile_active_orders_async(max_orders=300, min_age_days=12):
+async def reconcile_active_orders_async(max_orders=300, min_age_days=5):
     """Aktif tablolarda (Yeni/Hazırlanıyor/İşleme Alındı) takılı kalan ESKİ Trendyol
     siparişlerini orderNumber ile tek tek Trendyol'a sorup gerçek statüsüne göre
     senkronlar.
 
     GEREKÇE: Normal sync (fetch_trendyol_orders_async) tarihsiz çalışır ve Trendyol
-    yalnızca son ~2 haftayı döndürür. Bir sipariş aktif statüdeyken 2 haftadan SONRA
-    iptal/UnSupplied/teslim olursa, normal sync onu bir daha görmez → ilgili tabloda
-    sonsuza dek takılı kalır (ör. anasayfada hayalet "geciken" sipariş). orderNumber
-    sorgusu tarih penceresinden bağımsız olduğu için bu açığı kapatır.
+    v2'de yalnızca son ~7 günü döndürür. Bir sipariş aktif statüdeyken pencereden
+    SONRA iptal/UnSupplied/teslim olursa, normal sync onu bir daha görmez → ilgili
+    tabloda sonsuza dek takılı kalır (ör. anasayfada hayalet "geciken" sipariş).
+    orderNumber sorgusu tarih penceresinden bağımsız olduğu için bu açığı kapatır.
+    min_age_days, 7 günlük v2 penceresiyle örtüşme payı bırakacak şekilde 5'tir
+    (v1 döneminde ~2 haftalık pencereye göre 12 idi).
     """
     from datetime import timedelta
     try:
@@ -1057,8 +1060,9 @@ def combine_line_items(order_data, status):
         'discount': sum(safe_float(line.get('lineTotalDiscount') or line.get('discount'), 0) for line in lines),
         'currency_code': order_data.get('currencyCode', 'TRY'),
         'vat_base_amount': sum(safe_float(line.get('vatBaseAmount'), 0) for line in lines),
-        'package_number': str(order_data.get('id', '')),
-        'shipment_package_id': str(order_data.get('shipmentPackageId', '')),
+        # Trendyol API v2: paket id alanı 'id' yerine 'shipmentPackageId'
+        'package_number': str(order_data.get('id') or order_data.get('shipmentPackageId') or ''),
+        'shipment_package_id': str(order_data.get('shipmentPackageId') or order_data.get('id') or ''),
         'estimated_delivery_start': ts_to_dt(order_data.get('estimatedDeliveryStartDate')),
         'estimated_delivery_end': ts_to_dt(order_data.get('estimatedDeliveryEndDate')),
         'origin_shipment_date': ts_to_dt(order_data.get('originShipmentDate')),

@@ -6,6 +6,7 @@ import json
 from datetime import datetime
 from models import db, Product
 from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID
+from trendyol_v2 import flatten_v2_page, V2_MAX_PAGE_SIZE
 import logging
 
 # Loglama ayarları
@@ -16,8 +17,8 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-# Trendyol ürünler için API temel URL
-BASE_URL = "https://api.trendyol.com/"
+# Trendyol ürünler için API temel URL (V2 — apigw)
+BASE_URL = "https://apigw.trendyol.com/"
 
 product_service_bp = Blueprint('product_service', __name__)
 
@@ -41,8 +42,8 @@ async def fetch_trendyol_products_async():
         auth_str = f"{API_KEY}:{API_SECRET}"
         b64_auth_str = base64.b64encode(auth_str.encode()).decode('utf-8')
 
-        # Bu endpoint doğru ve teyit edildi.
-        url = f"{BASE_URL}integration/product/sellers/{SUPPLIER_ID}/products"
+        # V2: Ürün Filtreleme - Onaylı Ürün (v1 /products 15 Eylül 2026'da kapanıyor)
+        url = f"{BASE_URL}integration/product/sellers/{SUPPLIER_ID}/products/approved"
 
         headers = {
             "Authorization": f"Basic {b64_auth_str}",
@@ -50,7 +51,7 @@ async def fetch_trendyol_products_async():
             "User-Agent": f"SellerId={SUPPLIER_ID} - SelfIntegration"
         }
 
-        params = { "page": 0, "size": 200, "approved": "true" }
+        params = { "page": 0, "size": V2_MAX_PAGE_SIZE }
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=headers, params=params) as response:
@@ -94,8 +95,8 @@ async def fetch_products_page(session, url, headers, params, semaphore):
                     logger.error(f"API isteği başarısız oldu: {response.status} - {await response.text()}")
                     return []
                 data = await response.json()
-                products_data = data.get('content', [])
-                return products_data
+                # V2 content+variants yapısını v1 düz ürün listesine çevir
+                return flatten_v2_page(data)
         except Exception as e:
             logger.error(f"Hata: fetch_products_page - {e}", exc_info=True)
             return []
@@ -216,8 +217,8 @@ async def get_category_attributes(category_id):
         auth_str = f"{API_KEY}:{API_SECRET}"
         b64_auth_str = base64.b64encode(auth_str.encode()).decode('utf-8')
 
-        # DÜZELTİLDİ: Gönderdiğin tabloya göre doğru endpoint.
-        url = f"{BASE_URL}integration/product/product-categories/{category_id}/attributes"
+        # V2: Kategori Özellik Listesi (v1 product-categories/{id}/attributes yolu değişti)
+        url = f"{BASE_URL}integration/product/categories/{category_id}/attributes"
 
         headers = { "Authorization": f"Basic {b64_auth_str}", "User-Agent": f"SellerId={SUPPLIER_ID} - SelfIntegration" }
 

@@ -489,9 +489,10 @@ def schedule_jobs():
     )
 
     # >>> Sipariş mutabakatı: her 3 saatte bir
-    # Normal sync tarihsiz ~2 hafta baktığı için, 2 haftadan sonra iptal/UnSupplied/
-    # teslim olan eski aktif siparişler tabloda takılı kalır. Bu job onları orderNumber
-    # ile (tarih penceresinden bağımsız) sorgulayıp gerçek statüsüne taşır.
+    # Normal sync tarihsiz çalışır ve Trendyol v2 yalnızca son ~7 günü döndürür;
+    # pencereden sonra iptal/UnSupplied/teslim olan eski aktif siparişler tabloda
+    # takılı kalır. Bu job onları orderNumber ile (tarih penceresinden bağımsız)
+    # sorgulayıp gerçek statüsüne taşır.
     _add_job_safe(
         reconcile_orders_job,
         trigger='interval',

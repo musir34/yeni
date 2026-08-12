@@ -501,7 +501,8 @@ async def fetch_orders_from_api():
     auth_str = f"{API_KEY}:{API_SECRET}"
     b64_auth_str = base64.b64encode(auth_str.encode()).decode('utf-8')
 
-    url = f"{BASE_URL}{SUPPLIER_ID}/orders"
+    # Sipariş V2 (v1 /orders 15 Ekim 2026'da kapanıyor)
+    url = f"{BASE_URL}{SUPPLIER_ID}/v2/orders"
     headers = {
         "Authorization": f"Basic {b64_auth_str}",
         "Content-Type": "application/json"

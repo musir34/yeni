@@ -98,7 +98,7 @@ def _fetch_trendyol_phone(order_number: str) -> str:
     """Trendyol API'den sipariş numarasıyla müşteri telefonunu çeker."""
     try:
         auth = base64.b64encode(f"{API_KEY}:{API_SECRET}".encode()).decode()
-        url = f"https://api.trendyol.com/sapigw/suppliers/{SUPPLIER_ID}/orders"
+        url = f"https://apigw.trendyol.com/integration/order/sellers/{SUPPLIER_ID}/v2/orders"
         resp = requests.get(url, headers={
             "Authorization": f"Basic {auth}",
             "Content-Type": "application/json"

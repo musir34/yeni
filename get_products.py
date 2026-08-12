@@ -18,6 +18,7 @@ from sqlalchemy import func, or_
 from login_logout import roles_required
 from sqlalchemy.dialects.postgresql import insert
 from trendyol_api import API_KEY, API_SECRET, SUPPLIER_ID
+from trendyol_v2 import flatten_v2_page, V2_MAX_PAGE_SIZE
 from models import db, Product, ProductArchive, RafUrun, CentralStock, ShopifyMapping
 from cache_config import cache, CACHE_TIMES
 from sqlalchemy import event
@@ -419,16 +420,16 @@ async def save_products_to_db_async(products):
 async def fetch_all_products_async():
     """Sadece onaylı ve arşivde olmayan ürünleri Trendyol'dan çeker."""
     all_products = []
-    page_size = 1000
-    url = f"{BASE_URL}product/sellers/{SUPPLIER_ID}/products"
+    page_size = V2_MAX_PAGE_SIZE  # V2'de sayfa boyutu en fazla 100
+    url = f"{BASE_URL}product/sellers/{SUPPLIER_ID}/products/approved"
     credentials = f"{API_KEY}:{API_SECRET}"
     encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
     headers = {"Authorization": f"Basic {encoded_credentials}"}
 
+    # V2 /products/approved zaten yalnızca onaylıları döner;
+    # arşiv filtresi varyant seviyesinde aşağıda uygulanır.
     base_params = {
-        "size": page_size,
-        "approved": "true",
-        "archived": "false"
+        "size": page_size
     }
 
     async with aiohttp.ClientSession() as session:
@@ -441,8 +442,10 @@ async def fetch_all_products_async():
                 data = await response.json()
                 total_pages = data.get('totalPages', 1)
                 logging.info(f"Toplam ürün detay sayfası sayısı: {total_pages}")
+                if data.get('totalElements', 0) > 10000:
+                    logging.warning("V2 sayfalama limiti: 10.000+ içerik var, nextPageToken desteği gerekebilir.")
                 if 'content' in data and isinstance(data['content'], list):
-                    all_products.extend(data['content'])
+                    all_products.extend(flatten_v2_page(data))
 
                 # Diğer sayfalar
                 tasks = [
@@ -457,6 +460,8 @@ async def fetch_all_products_async():
             logger.error(f"fetch_all_products_async hata: {e}", exc_info=True)
             return None
 
+    # v1'deki archived=false filtresinin V2 karşılığı: arşivli varyantları ele
+    all_products = [p for p in all_products if not p.get('archived')]
     logging.info(f"Toplam çekilen ürün sayısı: {len(all_products)}")
     return all_products
 
@@ -475,7 +480,8 @@ async def fetch_products_page(session, url, headers, params):
                     logging.error(f"Sayfa verisi content beklenen bir liste değil: {type(data.get('content'))}")
                     return []
                 logging.debug(f"Sayfa {params.get('page', 'N/A')} başarıyla çekildi, içerik boyutu: {len(data['content'])}")
-                return data.get('content', [])
+                # V2 content+variants yapısını v1 düz ürün listesine çevir
+                return flatten_v2_page(data)
             except Exception as e:
                 error_text = await response.text()
                 logging.error(f"JSON çözümleme hatası: {e} - Yanıt: {error_text}")
@@ -1369,7 +1375,7 @@ async def update_prices_in_trendyol_bulk(price_updates):
         if not price_updates:
             return []
 
-        url = f"https://api.trendyol.com/sapigw/suppliers/{supplier_id}/products/price-and-inventory"
+        url = f"https://apigw.trendyol.com/integration/inventory/sellers/{supplier_id}/products/price-and-inventory"
 
         import base64
         credentials = base64.b64encode(f"{api_key}:{secret_key}".encode()).decode()
@@ -1715,13 +1721,13 @@ def get_model_info():
 
 async def fetch_archived_barcodes_async():
     """Trendyol'da ARŞİVDE olan ürünlerin barkod listesini döner."""
-    page_size = 1000
-    url = f"{BASE_URL}product/sellers/{SUPPLIER_ID}/products"
+    page_size = V2_MAX_PAGE_SIZE  # V2'de sayfa boyutu en fazla 100
+    url = f"{BASE_URL}product/sellers/{SUPPLIER_ID}/products/approved"
     creds = base64.b64encode(f"{API_KEY}:{API_SECRET}".encode()).decode()
     headers = {"Authorization": f"Basic {creds}"}
 
     archived_barcodes = set()
-    base_params = {"size": page_size, "archived": "true"}  # sadece arşivdekiler
+    base_params = {"size": page_size, "status": "archived"}  # sadece arşivdekiler
 
     async with aiohttp.ClientSession() as session:
         timeout = aiohttp.ClientTimeout(total=60)
@@ -1730,8 +1736,10 @@ async def fetch_archived_barcodes_async():
             resp.raise_for_status()
             data = await resp.json()
             total_pages = data.get("totalPages", 1)
-            for p in data.get("content", []):
-                if p.get("barcode"): archived_barcodes.add(p["barcode"])
+            # status=archived content bazlı filtreler; aynı content'teki aktif
+            # kardeş varyantlar da dönebilir → varyant seviyesinde archived şartı
+            for p in flatten_v2_page(data):
+                if p.get("barcode") and p.get("archived"): archived_barcodes.add(p["barcode"])
         # Diğer sayfalar
         tasks = [
             fetch_products_page(session, url, headers, {**base_params, "page": page})
@@ -1741,7 +1749,7 @@ async def fetch_archived_barcodes_async():
         for content in pages:
             for p in content:
                 b = p.get("barcode")
-                if b: archived_barcodes.add(b)
+                if b and p.get("archived"): archived_barcodes.add(b)
 
     return archived_barcodes
 

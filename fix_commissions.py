@@ -27,7 +27,8 @@ from order_service import process_all_orders
 API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
 SUPPLIER_ID = os.getenv("SUPPLIER_ID")
-BASE_URL = "https://api.trendyol.com/sapigw/"
+# Sipariş V2 (v1 /orders 15 Ekim 2026'da kapanıyor)
+BASE_URL = "https://apigw.trendyol.com/integration/"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -44,7 +45,7 @@ async def fetch_all_orders_by_status(status):
     """Belirli statüdeki TÜM siparişleri Trendyol API'den sayfalama ile çeker."""
     auth_str = f"{API_KEY}:{API_SECRET}"
     b64_auth = base64.b64encode(auth_str.encode()).decode('utf-8')
-    url = f"{BASE_URL}suppliers/{SUPPLIER_ID}/orders"
+    url = f"{BASE_URL}order/sellers/{SUPPLIER_ID}/v2/orders"
     headers = {
         "Authorization": f"Basic {b64_auth}",
         "Content-Type": "application/json"
@@ -60,7 +61,7 @@ async def fetch_all_orders_by_status(status):
                 "status": status,
                 "page": page,
                 "size": 200,
-                "orderByField": "CreatedDate",
+                "orderByField": "PackageLastModifiedDate",
                 "orderByDirection": "DESC"
             }
 

@@ -14,6 +14,7 @@ from models import CentralStock
 from stock_sync.service import stock_sync_service
 from stock_sync.adapters.shopify import shopify_adapter
 from stock_sync.adapters.trendyol import trendyol_adapter
+from trendyol_v2 import flatten_v2_page, V2_MAX_PAGE_SIZE
 
 SAMPLE_SIZE = 20
 
@@ -21,7 +22,7 @@ SAMPLE_SIZE = 20
 async def fetch_trendyol_map() -> dict[str, int]:
     """Trendyol barkod -> quantity (guncel integration endpoint)"""
     supplier_id = trendyol_adapter.supplier_id
-    url = f"https://api.trendyol.com/integration/product/sellers/{supplier_id}/products"
+    url = f"https://apigw.trendyol.com/integration/product/sellers/{supplier_id}/products/approved"
     headers = {
         "Authorization": f"Basic {trendyol_adapter._auth_header}",
         "Content-Type": "application/json",
@@ -31,13 +32,13 @@ async def fetch_trendyol_map() -> dict[str, int]:
     session = await trendyol_adapter.get_session()
     page = 0
     while True:
-        params = {"page": page, "size": 200, "approved": "true"}
+        params = {"page": page, "size": V2_MAX_PAGE_SIZE}
         async with session.get(url, headers=headers, params=params) as resp:
             if resp.status != 200:
                 print(f"[TRENDYOL] HTTP {resp.status}: {(await resp.text())[:200]}")
                 break
             data = await resp.json()
-        for p in data.get("content", []):
+        for p in flatten_v2_page(data):
             bc = str(p.get("barcode", "") or "").strip()
             if bc:
                 result[bc] = int(p.get("quantity", 0) or 0)

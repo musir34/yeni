@@ -13,6 +13,7 @@ import aiohttp
 
 from .base import BasePlatformAdapter, StockItem, SyncResult
 from logger_config import app_logger as logger
+from trendyol_v2 import flatten_v2_page, V2_MAX_PAGE_SIZE
 
 
 class TrendyolAdapter(BasePlatformAdapter):
@@ -21,7 +22,7 @@ class TrendyolAdapter(BasePlatformAdapter):
     PLATFORM_NAME = "trendyol"
     BATCH_SIZE = 100  # Trendyol max 100 ürün/istek
     RATE_LIMIT_DELAY = 0.2  # 200ms bekleme
-    BASE_URL = "https://api.trendyol.com/sapigw"
+    BASE_URL = "https://apigw.trendyol.com/integration"
     
     def _init_config(self):
         """Trendyol API yapılandırması"""
@@ -52,7 +53,7 @@ class TrendyolAdapter(BasePlatformAdapter):
     async def send_stock_batch(self, items: List[StockItem]) -> List[SyncResult]:
         """
         Trendyol'a stok batch'i gönder.
-        API: POST /sapigw/suppliers/{supplierId}/products/price-and-inventory
+        API: POST /integration/inventory/sellers/{sellerId}/products/price-and-inventory
         """
         results: List[SyncResult] = []
         
@@ -70,7 +71,7 @@ class TrendyolAdapter(BasePlatformAdapter):
             ]
         }
         
-        url = f"{self.BASE_URL}/suppliers/{self.supplier_id}/products/price-and-inventory"
+        url = f"{self.BASE_URL}/inventory/sellers/{self.supplier_id}/products/price-and-inventory"
         sent_at = datetime.utcnow()
         
         try:
@@ -136,30 +137,31 @@ class TrendyolAdapter(BasePlatformAdapter):
     async def get_platform_products(self) -> List[Dict[str, Any]]:
         """
         Trendyol'daki tüm ürünleri çek
-        API: GET /sapigw/suppliers/{supplierId}/products
+        API: GET /integration/product/sellers/{sellerId}/products/approved (V2)
         """
         all_products = []
         page = 0
-        page_size = 200  # Trendyol max 200/sayfa
+        page_size = V2_MAX_PAGE_SIZE  # V2'de max 100/sayfa
         
         try:
             session = await self.get_session()
             
             while True:
-                url = f"{self.BASE_URL}/suppliers/{self.supplier_id}/products"
+                url = f"{self.BASE_URL}/product/sellers/{self.supplier_id}/products/approved"
                 params = {
                     "page": page,
-                    "size": page_size,
-                    "approved": "true"
+                    "size": page_size
                 }
-                
+
                 async with session.get(url, params=params, headers=self._get_headers()) as response:
                     if response.status != 200:
                         logger.error(f"[TRENDYOL] Ürün çekme hatası: {response.status}")
                         break
-                    
+
                     data = await response.json()
-                    products = data.get("content", [])
+                    # V2 content+variants yapısını v1 düz ürün listesine çevir;
+                    # arşivli varyantlar stok karşılaştırmasına girmesin
+                    products = [p for p in flatten_v2_page(data) if not p.get('archived')]
                     
                     if not products:
                         break
@@ -186,9 +188,9 @@ class TrendyolAdapter(BasePlatformAdapter):
     async def check_batch_status(self, batch_request_id: str) -> Dict[str, Any]:
         """
         Batch istek durumunu kontrol et
-        API: GET /sapigw/suppliers/{supplierId}/products/batch-requests/{batchRequestId}
+        API: GET /integration/product/sellers/{sellerId}/products/batch-requests/{batchRequestId}
         """
-        url = f"{self.BASE_URL}/suppliers/{self.supplier_id}/products/batch-requests/{batch_request_id}"
+        url = f"{self.BASE_URL}/product/sellers/{self.supplier_id}/products/batch-requests/{batch_request_id}"
         
         try:
             session = await self.get_session()

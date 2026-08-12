@@ -21,6 +21,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
 load_dotenv()
 
+from trendyol_v2 import flatten_v2_page, V2_MAX_PAGE_SIZE
+
 # Trendyol API bilgileri
 API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
@@ -31,16 +33,14 @@ BASE_URL = "https://apigw.trendyol.com/integration/"
 async def fetch_all_trendyol_barcodes():
     """Trendyol'dan tüm ürün barkodlarını çeker (orijinal haliyle)"""
     all_products = []
-    page_size = 1000
-    url = f"{BASE_URL}product/sellers/{SUPPLIER_ID}/products"
+    page_size = V2_MAX_PAGE_SIZE  # V2'de sayfa boyutu en fazla 100
+    url = f"{BASE_URL}product/sellers/{SUPPLIER_ID}/products/approved"
     credentials = f"{API_KEY}:{API_SECRET}"
     encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
     headers = {"Authorization": f"Basic {encoded_credentials}"}
 
     base_params = {
-        "size": page_size,
-        "approved": "true",
-        "archived": "false"
+        "size": page_size
     }
 
     async with aiohttp.ClientSession() as session:
@@ -56,7 +56,7 @@ async def fetch_all_trendyol_barcodes():
             print(f"📦 Toplam ürün: {total_elements}, Sayfa: {total_pages}")
             
             if 'content' in data and isinstance(data['content'], list):
-                all_products.extend(data['content'])
+                all_products.extend(flatten_v2_page(data))
 
             # Diğer sayfaları çek
             for page_num in range(1, total_pages):
@@ -66,9 +66,10 @@ async def fetch_all_trendyol_barcodes():
                     if resp.status == 200:
                         page_data = await resp.json()
                         if 'content' in page_data:
-                            all_products.extend(page_data['content'])
+                            all_products.extend(flatten_v2_page(page_data))
 
-    return all_products
+    # v1'deki archived=false filtresinin V2 karşılığı
+    return [p for p in all_products if not p.get('archived')]
 
 
 def update_database_barcodes(trendyol_products):
