@@ -580,6 +580,26 @@ def update_notify(username):
     return jsonify({'success': True, 'events': events})
 
 
+@login_logout_bp.route('/admin/update-whatsapp/<username>', methods=['POST'])
+@roles_required('admin')
+def update_whatsapp(username):
+    """Admin: kullanıcının WhatsApp bildirim numarasını kaydeder (boş = kaldır)."""
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({'success': False, 'message': 'Kullanıcı bulunamadı.'}), 404
+    raw = (request.json.get('whatsapp_no') or '').strip()
+    if raw:
+        from whatsapp_service import normalize_whatsapp_no
+        norm = normalize_whatsapp_no(raw)
+        if not norm:
+            return jsonify({'success': False, 'message': 'Geçersiz numara. 05xx xxx xx xx biçiminde girin.'}), 400
+        user.whatsapp_no = norm
+    else:
+        user.whatsapp_no = None
+    db.session.commit()
+    return jsonify({'success': True, 'whatsapp_no': user.whatsapp_no or ''})
+
+
 @login_logout_bp.route('/admin/set-notification-image/<username>', methods=['POST'])
 @roles_required('admin')
 def set_notification_image(username):

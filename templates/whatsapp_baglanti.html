@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}WhatsApp Bağlantısı — Güllü Panel{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 760px;">
+    <h4 class="mb-1"><i class="fab fa-whatsapp text-success me-2"></i>WhatsApp Cloud API Bağlantısı</h4>
+    <p class="text-muted mb-4">Şirket hattını (WhatsApp Business uygulamasındaki numarayı) panele bağlar.
+        Telefondaki kullanım <strong>bozulmaz</strong> (Coexistence). Erişim anahtarı ~60 günde bir dolar;
+        dolunca bu sayfadan yeniden bağlanmak yeterlidir.</p>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="card-title">Mevcut Durum</h6>
+            {% if mevcut.token_var %}
+                <p class="mb-1"><span class="badge bg-success">Bağlı</span>
+                    <span class="ms-2">WABA: <code>{{ mevcut.waba_id or "-" }}</code>
+                    · Numara ID: <code>{{ mevcut.phone_number_id or "-" }}</code></span></p>
+                <p class="text-muted small mb-0">Bağlanma: {{ mevcut.baglandi_at or "-" }} (UTC)</p>
+            {% else %}
+                <p class="mb-0"><span class="badge bg-secondary">Bağlı değil</span>
+                    <span class="ms-2 text-muted">Aşağıdaki düğmeyle bağlantıyı başlatın.</span></p>
+            {% endif %}
+            {% if not app_secret_hazir %}
+                <div class="alert alert-warning mt-3 mb-0 py-2">
+                    <i class="fas fa-triangle-exclamation me-1"></i>
+                    Sunucu <code>.env</code> dosyasında <code>FB_APP_SECRET</code> tanımlı değil —
+                    bağlantı tamamlanamaz. Meta uygulama ayarlarındaki (Gullu Panel → App settings →
+                    Basic) "App secret" değerini ekleyip servisi yeniden başlatın.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="card-title">1) Hattı Bağla</h6>
+            <p class="text-muted small">Açılan Meta penceresinde <strong>Güllü Shoes</strong> işletmesini seçin,
+                "mevcut WhatsApp Business uygulaması numaranı bağla" seçeneğiyle <strong>+90 552 200 09 53</strong>'ü
+                seçin ve telefondaki WhatsApp Business uygulamasıyla onaylayın (uygulama güncel olmalı).</p>
+            <button id="waBaglaBtn" class="btn btn-success">
+                <i class="fab fa-facebook me-1"></i> Meta ile Bağlan
+            </button>
+            <div id="waSonuc" class="mt-3"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <h6 class="card-title">2) Test Mesajı</h6>
+            <div class="input-group" style="max-width: 420px;">
+                <input type="text" id="waTestNo" class="form-control" placeholder="05xx xxx xx xx">
+                <button id="waTestBtn" class="btn btn-outline-success">Gönder</button>
+            </div>
+            <div id="waTestSonuc" class="mt-2 small"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var sonSessionInfo = {};
+
+    // Embedded Signup, WABA/numara kimliklerini postMessage ile bildirir.
+    window.addEventListener('message', function (event) {
+        if (event.origin !== 'https://www.facebook.com' && event.origin !== 'https://web.facebook.com') return;
+        try {
+            var data = JSON.parse(event.data);
+            if (data.type === 'WA_EMBEDDED_SIGNUP') {
+                if (data.data) sonSessionInfo = data.data;
+            }
+        } catch (e) { /* ES dışı mesajlar */ }
+    });
+
+    window.fbAsyncInit = function () {
+        FB.init({
+            appId: '{{ fb_app_id }}',
+            autoLogAppEvents: true,
+            xfbml: false,
+            version: '{{ graph_version }}'
+        });
+    };
+
+    function goster(el, tip, mesaj) {
+        el.innerHTML = '<div class="alert alert-' + tip + ' py-2 mb-0">' + mesaj + '</div>';
+    }
+
+    document.getElementById('waBaglaBtn').addEventListener('click', function () {
+        var sonuc = document.getElementById('waSonuc');
+        if (typeof FB === 'undefined') {
+            goster(sonuc, 'danger', 'Meta SDK yüklenemedi — sayfayı yenileyin (reklam engelleyici kapalı olmalı).');
+            return;
+        }
+        FB.login(function (response) {
+            if (response.authResponse && response.authResponse.code) {
+                goster(sonuc, 'info', 'Bağlantı doğrulanıyor…');
+                fetch('/whatsapp-baglanti/api/tamamla', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+                    body: JSON.stringify({
+                        code: response.authResponse.code,
+                        waba_id: (sonSessionInfo.waba_id || ''),
+                        phone_number_id: (sonSessionInfo.phone_number_id || '')
+                    })
+                }).then(function (r) { return r.json(); }).then(function (data) {
+                    if (data.success) {
+                        goster(sonuc, 'success', '✅ Bağlantı tamamlandı. WABA: <code>' + (data.waba_id || '-') +
+                            '</code>, Numara ID: <code>' + (data.phone_number_id || '-') + '</code>');
+                        setTimeout(function () { location.reload(); }, 2500);
+                    } else {
+                        goster(sonuc, 'danger', 'Hata: ' + (data.message || 'bilinmeyen'));
+                    }
+                }).catch(function (e) { goster(sonuc, 'danger', 'Sunucu hatası: ' + e); });
+            } else {
+                goster(sonuc, 'warning', 'Akış tamamlanmadı (pencere kapatıldı ya da izin verilmedi).');
+            }
+        }, {
+            config_id: '{{ es_config_id }}',
+            response_type: 'code',
+            override_default_response_type: true,
+            extras: {
+                setup: {},
+                featureType: 'whatsapp_business_app_onboarding',
+                sessionInfoVersion: '3'
+            }
+        });
+    });
+
+    document.getElementById('waTestBtn').addEventListener('click', function () {
+        var sonuc = document.getElementById('waTestSonuc');
+        sonuc.textContent = 'Gönderiliyor…';
+        fetch('/whatsapp-baglanti/api/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+            body: JSON.stringify({ numara: document.getElementById('waTestNo').value })
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            sonuc.textContent = (data.success ? '✅ ' : '❌ ') + (data.message || '');
+        }).catch(function (e) { sonuc.textContent = '❌ ' + e; });
+    });
+</script>
+<script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+{% endblock %}

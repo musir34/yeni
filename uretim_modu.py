@@ -320,6 +320,16 @@ def isle_iptal_bildirimleri() -> int:
                 notify('uretim_iptal',
                        subject=f"🛑 Üretim siparişi İPTAL — {kayit.order_number} ({kayit.product_main_id})",
                        body=govde)
+                # WhatsApp bildirimi (mail'in ikizi, aynı abonelik olayı ve
+                # aynı iptal_mail_at dedupe'u). Config yoksa sessizce atlanır.
+                try:
+                    from whatsapp_service import notify_whatsapp
+                    notify_whatsapp('uretim_iptal',
+                                    f"🛑 Üretim siparişi İPTAL — {kayit.order_number}",
+                                    f"Model: {kayit.product_main_id or '-'} | "
+                                    f"Müşteri: {kayit.customer_name or '-'} | Üretimi DURDURUN.")
+                except Exception:
+                    logger.exception("[URETIM] whatsapp iptal bildirimi hatası (yutuldu)")
                 kayit.iptal_mail_at = datetime.utcnow()
                 db.session.commit()
                 sayi += 1
@@ -424,6 +434,16 @@ def isle_yeni_siparisler(new_order_dicts: list[dict]) -> int:
                 except Exception:
                     db.session.rollback()
                     logger.exception("[URETIM] mail bildirimi hatası (yutuldu)")
+                # WhatsApp bildirimi (mail'in ikizi, aynı abonelik olayı).
+                # Config yoksa notify_whatsapp sessizce hiçbir şey yapmaz.
+                try:
+                    from whatsapp_service import notify_whatsapp
+                    notify_whatsapp('uretim_siparis',
+                                    f"🏭 Üretim siparişi — {order_number}",
+                                    f"Model: {model_kodlari or '-'} | Müşteri: {musteri or '-'} | "
+                                    f"Üretimi planlayın; detay /uretim sayfasında.")
+                except Exception:
+                    logger.exception("[URETIM] whatsapp bildirimi hatası (yutuldu)")
             except Exception:
                 db.session.rollback()
                 logger.exception(f"[URETIM] sipariş işlenemedi (yutuldu): {order_dict.get('order_number')}")

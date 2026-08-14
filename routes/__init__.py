@@ -48,6 +48,7 @@ def register_blueprints(app):
     from takip_notu import takip_bp  # 📌 TAKİP NOTLARI
     from kargo_mutabakat import kargo_mutabakat_bp  # 🚚 KARGO MUTABAKAT
     from iade_yonetimi import iade_yonetimi_bp  # 📦 SİTE İADE YÖNETİMİ
+    from whatsapp_baglanti import whatsapp_baglanti_bp  # 📱 WHATSAPP COEXISTENCE BAĞLANTISI
 
     # Register all blueprints
     for bp in [
@@ -99,5 +100,6 @@ def register_blueprints(app):
         takip_bp,  # 📌 TAKİP NOTLARI
         kargo_mutabakat_bp,  # 🚚 KARGO MUTABAKAT
         iade_yonetimi_bp,  # 📦 SİTE İADE YÖNETİMİ
+        whatsapp_baglanti_bp,  # 📱 WHATSAPP COEXISTENCE BAĞLANTISI
     ]:
         app.register_blueprint(bp)

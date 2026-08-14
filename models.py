@@ -583,6 +583,7 @@ class User(db.Model, UserMixin):
     notify_events = db.Column(db.Text, default='')  # virgülle ayrılmış bildirim olayları
     max_pc = db.Column(db.Integer, default=1)  # kullanıcı başına izin verilen PC sayısı
     notification_image = db.Column(db.String(300), nullable=True)  # admin tarafından atanan bildirim görseli
+    whatsapp_no = db.Column(db.String(32), nullable=True)  # WhatsApp bildirimi için, 905xxxxxxxxx biçiminde
     # backref ile UserLog ilişkisi UserLog modelinde tanımlandı
 
 

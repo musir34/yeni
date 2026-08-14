@@ -267,6 +267,14 @@
                                             <li class="mb-1"><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="stok_yok_hatirlatma" {{ 'checked' if 'stok_yok_hatirlatma' in user_events }}><label class="form-check-label">Stoksuz bekleyen siparişler (günlük hatırlatma)</label></div></li>
                                             <li class="mb-1"><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="uretim_siparis" {{ 'checked' if 'uretim_siparis' in user_events }}><label class="form-check-label">Üretim siparişi geldiğinde</label></div></li>
                                             <li><div class="form-check"><input class="form-check-input notify-cb" type="checkbox" data-user="{{ user.username }}" value="uretim_iptal" {{ 'checked' if 'uretim_iptal' in user_events }}><label class="form-check-label">Üretim bekleyen sipariş iptal edildiğinde</label></div></li>
+                                            <li><hr class="dropdown-divider my-1"></li>
+                                            <li class="mb-1"><small class="text-muted ps-1">WhatsApp Numarası <span title="Doluysa seçili bildirimler mail'e ek olarak WhatsApp'tan da gider"><i class="fas fa-circle-info"></i></span></small></li>
+                                            <li>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="text" class="form-control" id="waNo-{{ user.username }}" value="{{ user.whatsapp_no or '' }}" placeholder="05xx xxx xx xx">
+                                                    <button class="btn btn-outline-success" type="button" onclick="updateWhatsapp('{{ user.username }}')" title="Kaydet"><i class="fab fa-whatsapp"></i></button>
+                                                </div>
+                                            </li>
                                         </ul>
                                     </div>
                                 </td>
@@ -366,6 +374,25 @@
                     var sel = document.getElementById('maxPc-' + username);
                     sel.style.borderColor = '#28a745';
                     setTimeout(function() { sel.style.borderColor = ''; }, 1500);
+                }
+            });
+        }
+
+        // WhatsApp numarası kaydetme
+        function updateWhatsapp(username) {
+            var input = document.getElementById('waNo-' + username);
+            fetch('/admin/update-whatsapp/' + username, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ whatsapp_no: input.value })
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.success) {
+                    input.value = data.whatsapp_no;
+                    input.style.borderColor = '#28a745';
+                    setTimeout(function() { input.style.borderColor = ''; }, 1500);
+                } else {
+                    input.style.borderColor = '#dc3545';
+                    alert(data.message || 'Numara kaydedilemedi.');
                 }
             });
         }
