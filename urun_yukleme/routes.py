@@ -88,18 +88,30 @@ def kategori_ara():
         return jsonify({"success": False, "error": "Kategori listesi alınamadı."}), 500
 
 
+# Mağazanın fiilen sattığı kategoriler (panel ürünleri + gullushoes koleksiyonlarından):
+# spor/tenis/krampon/ev terliği gibi alakasızlar listeye girmez (kullanıcı emri).
+KULLANILAN_KATEGORILER = {
+    "Abiye Ayakkabı", "Dolgu Topuklu Ayakkabı", "Klasik Topuklu Ayakkabı", "Stiletto",
+    "Sandalet", "Terlik",
+    "Babet", "Casual Ayakkabı", "Loafer Ayakkabı",
+    "Bot & Bootie", "Çizme",
+}
+
+
 @urun_yukleme_bp.route("/urun-yukleme/api/kategoriler")
 @roles_required("admin")
 def kategoriler():
     """
-    Seçim kutusu için yaprak kategoriler. Varsayılan: yalnızca Ayakkabı kökü
-    (mağazanın sattığı grup — 3.361 yapraklık tam ağaç kalabalıktı, kullanıcı emri).
-    ?hepsi=1 ile tam liste alınabilir (ileride başka grup satılırsa).
+    Seçim kutusu için yaprak kategoriler. Varsayılan: yalnızca mağazanın
+    kullandığı Ayakkabı kategorileri (KULLANILAN_KATEGORILER beyaz listesi).
+    ?hepsi=1 → tam ağaç (yeni bir kategoriye girilecekse).
     """
     try:
         yapraklar = katalog.kategori_yapraklari()
         if request.args.get("hepsi") != "1":
-            yapraklar = [k for k in yapraklar if k["yol"].split(" > ")[0] == "Ayakkabı"]
+            yapraklar = [k for k in yapraklar
+                         if k["yol"].split(" > ")[0] == "Ayakkabı"
+                         and k["ad"] in KULLANILAN_KATEGORILER]
         return jsonify({"success": True, "kategoriler": yapraklar})
     except Exception as e:
         logger.error("[URUN] kategori listesi: %s", e, exc_info=True)
