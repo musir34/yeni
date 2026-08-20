@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 PLATFORM_ANAHTAR = "ai_motor"
 GECERLI_MOTORLAR = ("claude", "codex")
-# Motor seçimi olan alanlar: panel sohbeti ve Trendyol Q&A taslakları.
-GECERLI_ALANLAR = ("asistan", "qna")
+# Motor seçimi olan alanlar: panel sohbeti, Trendyol Q&A taslakları ve ürün yükleme metinleri.
+GECERLI_ALANLAR = ("asistan", "qna", "urun")
 # UI'da hazır sunulan Codex modelleri; serbest girişle başka model de yazılabilir.
 CODEX_HAZIR_MODELLER = ("gpt-5.2", "gpt-5.1-codex-max", "gpt-5.1-codex-mini")
 # Model adı doğrulaması: alt sürece argüman gidiyor, keyfi metin kabul edilmez.

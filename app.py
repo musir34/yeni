@@ -137,6 +137,10 @@ app.register_blueprint(idefix_bp)
 from ai_asistan.blueprint import ai_asistan_bp
 app.register_blueprint(ai_asistan_bp)
 
+# Ürün Yükleme Blueprint (AI destekli Trendyol ürün açma)
+from urun_yukleme.routes import urun_yukleme_bp
+app.register_blueprint(urun_yukleme_bp)
+
 # 🔎 Sipariş audit log: tablo + event listener'lar
 try:
     from order_audit import ensure_table_exists as _audit_ensure, install_listeners as _audit_install

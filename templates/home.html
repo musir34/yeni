@@ -234,22 +234,11 @@
     </div>
   </div>
 
-  <!-- Navigasyon (sağ üst) — Bootstrap 5 dropdown -->
+  <!-- Navigasyon (sağ üst) — Bootstrap 5 dropdown
+       Düzen: nabız atan uyarı butonları (Soru-Cevap, Sipariş Hazırla) tek başına,
+       diğer her şey 6 mantıklı dropdown'da. -->
   <div class="btn-group-top">
     <a href="{{ url_for('home.home') }}" class="btn btn-secondary" title="Anasayfa"><i class="fas fa-home"></i> Anasayfa</a>
-
-    <div class="dropdown">
-      <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Kullanıcı İşlemleri</button>
-      <ul class="dropdown-menu dropdown-menu-end">
-        <li><a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a></li>
-        {% if session.get('role') in ['admin','manager'] %}
-        <li><a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}"><i class="fas fa-history me-2"></i>Kullanıcı Hareketleri</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('order_audit.page') }}"><i class="fas fa-search-location me-2"></i>Sipariş İz Sürme</a></li>
-        {% endif %}
-        <li><hr class="dropdown-divider"></li>
-        <li><a class="dropdown-item" href="{{ url_for('login_logout.cihazlarim') }}"><i class="fas fa-mobile-alt me-2"></i>Cihazlarım</a></li>
-      </ul>
-    </div>
 
     <!-- SORU-CEVAP: Trendyol müşteri soruları — bekleyen soru varsa nabız atar -->
     <a href="{{ url_for('qna.index') }}"
@@ -268,36 +257,52 @@
     </a>
 
     <div class="dropdown">
-      <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Sipariş İşlemleri</button>
+      <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Siparişler</button>
       <ul class="dropdown-menu dropdown-menu-end">
         <li><a class="dropdown-item" href="{{ url_for('siparisler_bp.yeni_siparis') }}"><i class="fas fa-plus-circle me-2"></i>Yeni Sipariş</a></li>
         <li><a class="dropdown-item" href="{{ url_for('order_list_all') }}"><i class="fas fa-list me-2"></i>Sipariş Listesi</a></li>
         <li><a class="dropdown-item" href="{{ url_for('degisim_talep') }}"><i class="fas fa-exchange-alt me-2"></i>Değişim Talepleri</a></li>
         <li><a class="dropdown-item" href="{{ url_for('uretim.index') }}"><i class="fas fa-industry me-2"></i>Üretim Siparişleri</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('kargo_mutabakat_bp.kargo_mutabakat_page') }}"><i class="fas fa-truck me-2"></i>Kargo Mutabakat</a></li>
         <li><hr class="dropdown-divider"></li>
         <li><a class="dropdown-item" href="{{ url_for('display_archive') }}"><i class="fas fa-box me-2"></i>Arşiv</a></li>
+        {% if session.get('role') in ['admin','manager'] %}
+        <li><a class="dropdown-item" href="{{ url_for('order_audit.page') }}"><i class="fas fa-search-location me-2"></i>Sipariş İz Sürme</a></li>
+        {% endif %}
       </ul>
     </div>
 
     <div class="dropdown">
-      <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Ürün İşlemleri</button>
+      <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Ürünler & Stok</button>
       <ul class="dropdown-menu dropdown-menu-end">
-        <li><a class="dropdown-item" href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}"><i class="fas fa-dolly me-2"></i>Ürün Tedarik</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('urun_yukleme.sayfa') }}"><i class="fas fa-cloud-upload-alt me-2"></i>Ürün Yükleme (AI)</a></li>
         <li><a class="dropdown-item" href="{{ url_for('get_products.product_list') }}"><i class="fas fa-tags me-2"></i>Ürün Listesi</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}"><i class="fas fa-dolly me-2"></i>Ürün Tedarik</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('image_manager.image_manager') }}"><i class="fas fa-images me-2"></i>Görsel Yönetimi</a></li>
+        <li><hr class="dropdown-divider"></li>
         <li><a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="fas fa-warehouse me-2"></i>Stok Ekleme</a></li>
         <li><a class="dropdown-item" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="fas fa-archive me-2"></i>Raf Listesi</a></li>
         <li><a class="dropdown-item" href="{{ url_for('stock_sync.dashboard') }}"><i class="fas fa-sync-alt me-2"></i>Stok Senkronizasyon</a></li>
+        <li><hr class="dropdown-divider"></li>
         <li><a class="dropdown-item" href="{{ url_for('iade_listesi') }}"><i class="fas fa-undo me-2"></i>Trendyol İade Listesi</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('image_manager.image_manager') }}"><i class="fas fa-images me-2"></i>Görsel Yönetimi</a></li>
       </ul>
     </div>
 
     <div class="dropdown">
-      <button class="btn btn-info dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Analizler</button>
+      <button class="btn btn-info dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Analiz & Fiyat</button>
       <ul class="dropdown-menu dropdown-menu-end">
-        <li><a class="dropdown-item" href="{{ url_for('commission_update_bp.update_commission_page') }}"><i class="fas fa-file-upload me-2"></i>Excel Komisyon Yükle</a></li>
         <li><a class="dropdown-item" href="{{ url_for('profit.profit_report') }}"><i class="fas fa-coins me-2"></i>Kâr Analizi</a></li>
         <li><a class="dropdown-item" href="{{ url_for('canli_panel.canli_panel_sayfa') }}"><i class="fas fa-broadcast-tower me-2"></i>Canlı Satış & Stok</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('commission_update_bp.update_commission_page') }}"><i class="fas fa-file-upload me-2"></i>Excel Komisyon Yükle</a></li>
+        {% if session.get('role') == 'admin' %}
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="{{ url_for('akilli_motor.akilli_motor_sayfasi') }}"><i class="fas fa-microchip me-2"></i>Ürün Komisyon Tarifeleri</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('flas_indirim.flas_indirim_sayfasi') }}"><i class="fas fa-bolt me-2" style="color:#e67e22"></i>Flaş İndirimler</a></li>
+        {% endif %}
+        {% if session.get('role') in ['admin','manager'] %}
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="{{ url_for('kasa.kasa_sayfasi') }}"><i class="fas fa-cash-register me-2"></i>Kasa</a></li>
+        {% endif %}
       </ul>
     </div>
 
@@ -316,22 +321,19 @@
       </ul>
     </div>
 
-    {% if session.get('role') in ['admin','manager'] %}
-    <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-dark" title="Kasa"><i class="fas fa-cash-register"></i> Kasa</a>
-    {% endif %}
+    <a href="{{ url_for('ai_asistan.sayfa') }}" class="btn btn-dark" title="AI Asistan"><i class="fas fa-robot"></i> AI Asistan</a>
 
-    {% if session.get('role') == 'admin' %}
     <div class="dropdown">
-      <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"
-              style="background:linear-gradient(135deg,#1a1a2e,#0f3460);color:white;">
-        <i class="fas fa-percent"></i> İndirimler
-      </button>
+      <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Kullanıcı</button>
       <ul class="dropdown-menu dropdown-menu-end">
-        <li><a class="dropdown-item" href="{{ url_for('akilli_motor.akilli_motor_sayfasi') }}"><i class="fas fa-microchip me-2"></i>Ürün Komisyon Tarifeleri</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('flas_indirim.flas_indirim_sayfasi') }}"><i class="fas fa-bolt me-2" style="color:#e67e22"></i>Flaş İndirimler</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a></li>
+        {% if session.get('role') in ['admin','manager'] %}
+        <li><a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}"><i class="fas fa-history me-2"></i>Kullanıcı Hareketleri</a></li>
+        {% endif %}
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="{{ url_for('login_logout.cihazlarim') }}"><i class="fas fa-mobile-alt me-2"></i>Cihazlarım</a></li>
       </ul>
     </div>
-    {% endif %}
 
     <!-- Ayarlar -->
     <div class="dropdown">
@@ -487,16 +489,14 @@
     <!-- Hızlı İşlemler -->
     <div class="card-soft p-2 quick-links mt-3" style="background:rgba(255,255,255,.85);backdrop-filter:blur(8px);">
       <div class="d-flex flex-wrap justify-content-center">
-        <a class="btn btn-danger m-1" href="{{ url_for('siparis_hazirla.index') }}"><i class="fas fa-box-open"></i> Sipariş Hazırla</a>
         <a class="btn btn-primary m-1" href="{{ url_for('order_list_all') }}"><i class="fas fa-list"></i> Siparişler</a>
         <a class="btn btn-success m-1" href="{{ url_for('get_products.product_list') }}"><i class="fas fa-tags"></i> Ürün Listesi</a>
-        <a class="btn btn-success m-1" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="fas fa-plus-circle"></i> Stok Ekle</a>
+        <a class="btn btn-success m-1" href="{{ url_for('urun_yukleme.sayfa') }}"><i class="fas fa-cloud-upload-alt"></i> Ürün Yükleme</a>
+        <a class="btn btn-warning m-1" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="fas fa-plus-circle"></i> Stok Ekle</a>
         <a class="btn btn-warning m-1" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="fas fa-archive"></i> Raflar</a>
         <a class="btn btn-info m-1" href="{{ url_for('canli_panel.canli_panel_sayfa') }}"><i class="fas fa-chart-line"></i> Canlı Satış & Stok</a>
         <a class="btn btn-secondary m-1" href="{{ url_for('display_archive') }}"><i class="fas fa-box"></i> Arşiv</a>
         <a class="btn btn-danger m-1" href="{{ url_for('iade_yonetimi.index') }}"><i class="fas fa-box-open"></i> Site İadeleri</a>
-        <a class="btn btn-dark m-1" href="{{ url_for('ai_asistan.sayfa') }}"><i class="fas fa-robot"></i> AI Asistan</a>
-        <a class="btn btn-warning m-1" href="{{ url_for('kargo_mutabakat_bp.kargo_mutabakat_page') }}"><i class="fas fa-truck"></i> Kargo Mutabakat</a>
       </div>
     </div>
   </div><!-- /container -->
