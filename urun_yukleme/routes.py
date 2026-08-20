@@ -16,6 +16,7 @@ sürebilir; rezerv beklemeseydi eşzamanlı iki taslağa aynı barkod bloğu ön
 """
 import json
 import logging
+import re
 import threading
 import time
 import uuid
@@ -113,6 +114,18 @@ def ozellik_degerleri():
         return jsonify({"success": False, "error": "Değer listesi alınamadı."}), 500
 
 
+@urun_yukleme_bp.route("/urun-yukleme/api/onek-oner")
+@roles_required("admin")
+def onek_oner():
+    """Seçilen kategorinin barkod öneki (mevcut ürünlerden öğrenilir)."""
+    try:
+        return jsonify({"success": True,
+                        **katalog.onek_oner(request.args.get("kategori", ""))})
+    except Exception as e:
+        logger.error("[URUN] önek önerisi: %s", e, exc_info=True)
+        return jsonify({"success": False, "error": "Önek önerisi alınamadı."}), 500
+
+
 @urun_yukleme_bp.route("/urun-yukleme/api/gorsel", methods=["POST"])
 @roles_required("admin")
 def gorsel_yukle():
@@ -147,17 +160,64 @@ def gorsel_yukle():
 
 # ------------------------------------------------------------- taslak üretimi
 
+_GEREKSIZ_OZELLIK = re.compile(r"ithalatçı|üretici|analiz testi", re.I)
+
+
+def _ozellik_katalogu(cid: int) -> tuple[dict, dict]:
+    """
+    AI'nın seçim yapacağı özellik kataloğu.
+    Döner: ({ad: [değer adları (≤80)]}, {ad_lower: {"attr": ozellik, "degerler": {ad_lower: id}}})
+    """
+    katalog_ai, harita = {}, {}
+    for o in katalog.kategori_ozellikleri(cid):
+        ad = o.get("ad") or ""
+        if o.get("varyant") or ad == "Renk" or _GEREKSIZ_OZELLIK.search(ad):
+            continue
+        degerler = katalog.ozellik_degerleri(cid, o["id"])
+        if not degerler and not o.get("serbest"):
+            continue
+        katalog_ai[ad] = [str(v["ad"]) for v in degerler[:80]] or ["(serbest metin)"]
+        harita[ad.lower()] = {"attr": o,
+                              "degerler": {str(v["ad"]).strip().lower(): v["id"] for v in degerler}}
+    return katalog_ai, harita
+
+
+def _ozellik_onerileri(ai_secimleri: dict, harita: dict) -> list[dict]:
+    """AI'nın ad→değer seçimlerini Trendyol attribute kimliklerine çevirir."""
+    oneriler = []
+    for ad, deger in (ai_secimleri or {}).items():
+        kayit = harita.get(str(ad).strip().lower())
+        if not kayit:
+            continue
+        deger_id = kayit["degerler"].get(str(deger).strip().lower())
+        if deger_id:
+            oneriler.append({"attributeId": kayit["attr"]["id"], "attributeValueId": deger_id,
+                             "ad": kayit["attr"]["ad"], "deger": str(deger)})
+        elif kayit["attr"].get("serbest") and str(deger).strip():
+            oneriler.append({"attributeId": kayit["attr"]["id"],
+                             "customAttributeValue": str(deger).strip()[:100],
+                             "ad": kayit["attr"]["ad"], "deger": str(deger)})
+    return oneriler
+
+
 def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                    renkler: list[str], bedenler: list[str]) -> None:
     try:
         with app.app_context():
             # Kod tahsisi + ANINDA rezerv (eşzamanlı taslaklara aynı blok gitmesin)
-            kodlar = katalog.kod_oner(f.get("barkod_onek") or katalog.VARSAYILAN_ONEK,
-                                      len(renkler), len(bedenler))
+            kodlar = katalog.kod_oner(f["barkod_onek"], len(renkler), len(bedenler))
             tum_barkodlar = [b for blok in kodlar["renk_bloklari"] for b in blok]
             katalog.rezerv_ekle(kodlar["model_kodu"], tum_barkodlar)
 
+            # Özellik kataloğu: AI hepsini doldursun (kullanıcı önizlemede değiştirir)
+            harita = {}
+            try:
+                bilgi["ozellik_katalogu"], harita = _ozellik_katalogu(int(f["kategori_id"]))
+            except Exception:
+                logger.warning("[URUN] özellik kataloğu kurulamadı, AI seçimi atlanıyor", exc_info=True)
+
             metin = metin_uret(bilgi)
+            oneriler = _ozellik_onerileri(metin.get("ozellikler"), harita)
 
             renk_taslaklari, uyarilar = {}, []
             for i, renk in enumerate(renkler):
@@ -175,6 +235,7 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
 
             taslak = {"taslak_id": taslak_id, "form": f, "model_kodu": kodlar["model_kodu"],
                       "renkler": renk_taslaklari, "bedenler": bedenler,
+                      "ozellik_onerileri": oneriler,
                       "uyarilar": uyarilar, "durum": "hazir"}
             _taslak_kaydet(taslak_id, taslak)
     except Exception as e:
@@ -192,6 +253,9 @@ def taslak_uret():
         bedenler = [b.strip() for b in (f.get("bedenler") or []) if b.strip()]
         if not renkler or not bedenler:
             return jsonify({"success": False, "error": "En az bir renk ve beden gerekli."}), 400
+        if not (f.get("barkod_onek") or "").strip():
+            return jsonify({"success": False,
+                            "error": "Barkod öneki boş — kategori seçince otomatik dolar, bulunamadıysa elle girin."}), 400
 
         gorsel_yollari = []
         for renk in renkler:
@@ -349,6 +413,31 @@ def yukle():
     except Exception as e:
         logger.error("[URUN] yükleme başlatma: %s", e, exc_info=True)
         return jsonify({"success": False, "error": "Yükleme başlatılamadı."}), 500
+
+
+@urun_yukleme_bp.route("/urun-yukleme/api/motor", methods=["GET", "POST"])
+@roles_required("admin")
+def motor():
+    """Ürün yükleme AI motoru + model seçimi (motor_ayar 'urun' alanı)."""
+    from ai_asistan.motor_ayar import (aktif_motor, motor_ayarla,
+                                       codex_model, codex_model_ayarla)
+    try:
+        if request.method == "POST":
+            f = request.json or {}
+            if f.get("motor"):
+                motor_ayarla("urun", f["motor"])
+            if "claude_model" in f:
+                katalog.claude_model_kaydet(f["claude_model"])
+            if "codex_model" in f:
+                codex_model_ayarla("urun", f["codex_model"])
+        return jsonify({"success": True, "motor": aktif_motor("urun"),
+                        "claude_model": katalog.claude_model_getir(),
+                        "codex_model": codex_model("urun")})
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        logger.error("[URUN] motor ayarı: %s", e, exc_info=True)
+        return jsonify({"success": False, "error": "Motor ayarı kaydedilemedi/okunamadı."}), 500
 
 
 @urun_yukleme_bp.route("/urun-yukleme/api/talimat", methods=["GET", "POST"])

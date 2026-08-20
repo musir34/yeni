@@ -43,6 +43,16 @@ SADECE istenen JSON'u döndür; başka hiçbir şey yazma."""
 def _prompt(bilgi: dict) -> str:
     renkler = ", ".join(bilgi.get("renkler") or [])
     teknik = "\n".join(f"- {t}" for t in bilgi.get("teknik") or [])
+    ozellik_katalogu = bilgi.get("ozellik_katalogu") or {}
+    ozellik_blok = ""
+    if ozellik_katalogu:
+        satirlar = "\n".join(
+            f"- {ad}: {' | '.join(degerler)}" for ad, degerler in ozellik_katalogu.items())
+        ozellik_blok = f"""
+TRENDYOL ÖZELLİK SEÇİMİ — aşağıdaki HER özellik için, verilen izinli değerlerden
+ürüne en uygun BİRİNİ seç (değeri birebir aynı yazımla döndür; emin olamadığını atla):
+{satirlar}
+"""
     gorseller = "\n".join(f"- {g}" for g in bilgi.get("gorsel_yollari") or [])
     gorsel_notu = (
         f"\nHer rengin ilk görselinin dosya yolu aşağıda; Read aracıyla AÇIP BAK ve "
@@ -55,7 +65,7 @@ def _prompt(bilgi: dict) -> str:
         if talimat else ""
     )
     return f"""Yeni ürün için Trendyol içeriği üret.
-{talimat_blok}
+{talimat_blok}{ozellik_blok}
 ÜRÜN BİLGİLERİ
 - Kategori: {bilgi.get('kategori_yolu', '')}
 - Ürün türü öbeği (ana arama kelimesi): {bilgi.get('urun_turu', '')}
@@ -75,7 +85,8 @@ def _prompt(bilgi: dict) -> str:
       "kombin": "<KOMBİN ÖNERİLERİ paragrafı, 3-5 cümle, renge özel>"
     }}
   }},
-  "renk_secenekleri": "<tüm renkleri tek cümlede tanıtan paragraf: 'Bu model (X) ... renklerinde üretilmektedir: ...'>"
+  "renk_secenekleri": "<tüm renkleri tek cümlede tanıtan paragraf: 'Bu model (X) ... renklerinde üretilmektedir: ...'>",
+  "ozellikler": {{"<ÖzellikAdı>": "<izinli değerlerden birebir seçim>"}}
 }}"""
 
 
@@ -89,7 +100,12 @@ def _claude_calistir(prompt: str, gorsel_var: bool) -> str | None:
     env = {k: v for k, v in os.environ.items()
            if not (k.startswith("ANTHROPIC")
                    or (k.startswith("CLAUDE") and k not in ("CLAUDE_BIN", "CLAUDE_CODE_OAUTH_TOKEN")))}
-    cmd = [claude_bin, "-p", prompt, "--model", CLAUDE_MODEL,
+    from .katalog import claude_model_getir
+    try:
+        model = claude_model_getir() or CLAUDE_MODEL
+    except Exception:
+        model = CLAUDE_MODEL
+    cmd = [claude_bin, "-p", prompt, "--model", model,
            "--append-system-prompt", KURALLAR,
            "--output-format", "json"]
     if gorsel_var:

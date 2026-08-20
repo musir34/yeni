@@ -53,8 +53,8 @@
       </div>
       <div class="col-md-4">
         <label class="form-label">Barkod öneki</label>
-        <input class="form-control" id="uyOnek" value="079950">
-        <small class="text-muted">Sandalet: 079950 — toplam 9 hane olacak şekilde</small>
+        <input class="form-control" id="uyOnek" value="" placeholder="kategori seçince otomatik dolar">
+        <small class="text-muted" id="uyOnekIpucu">Her kategorinin kendi öneki vardır; kategori seçilince mevcut ürünlerden öğrenilir.</small>
       </div>
       <div class="col-md-3">
         <label class="form-label">Satış fiyatı (TL)</label>
@@ -73,11 +73,12 @@
         <input class="form-control" id="uyKdv" type="number" value="10">
       </div>
       <div class="col-12">
-        <label class="form-label">Teknik özellikler (satır satır, "Ad: Değer")</label>
+        <label class="form-label">Ek teknik özellikler (satır satır, "Ad: Değer")</label>
         <textarea class="form-control" id="uyTeknik" rows="4">Yüzey: Rugan (parlak)
 Dış Materyal: %100 vegan deri
 İç Astar ve İç Taban: Vegan deri, hafızalı ped
 Alt Taban: Kaymaz taban</textarea>
+        <small class="text-muted">Aşağıda seçtiğiniz Trendyol özellikleri açıklamanın teknik listesine OTOMATİK eklenir — buraya yalnızca listede olmayanları yazın (ör. Topuk Yüksekliği: 9 cm).</small>
       </div>
     </div>
 
@@ -97,6 +98,23 @@ Alt Taban: Kaymaz taban</textarea>
   <!-- ADIM 3: AI TASLAK -->
   <div class="uy-kart">
     <div class="uy-adim-baslik"><span class="uy-adim-no">3</span> AI Taslağı</div>
+    <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
+      <div>
+        <label class="form-label mb-0"><small>AI Motoru</small></label>
+        <select class="form-select form-select-sm" id="uyMotor" style="min-width:110px">
+          <option value="claude">Claude</option>
+          <option value="codex">Codex</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label mb-0"><small>Model</small></label>
+        <input class="form-control form-control-sm" id="uyModel" list="uyModelListe" style="min-width:190px"
+               placeholder="boş = varsayılan">
+        <datalist id="uyModelListe"></datalist>
+      </div>
+      <button class="btn btn-outline-secondary btn-sm" id="uyMotorKaydet"><i class="bi bi-save"></i> Motoru Kaydet</button>
+      <span class="text-muted" id="uyMotorDurum"></span>
+    </div>
     <details class="mb-3">
       <summary class="fw-bold">📌 Kalıcı Özel Talimatlar <small class="text-muted">(her üründe AI'ya otomatik verilir)</small></summary>
       <textarea class="form-control mt-2" id="uyTalimat" rows="5"
@@ -135,6 +153,35 @@ Alt Taban: Kaymaz taban</textarea>
     return d;
   }
 
+  // --- AI motoru + model seçimi (kalıcı; motor_ayar 'urun' alanı)
+  const MODEL_ONERILERI = { claude: ["opus", "sonnet", "fable"],
+                            codex: ["gpt-5.2", "gpt-5.5", "gpt-5.6", "gpt-5.1-codex-max", "gpt-5.1-codex-mini"] };
+  const S_motor = { claude_model: "", codex_model: "" };
+  function motorArayuzu(d) {
+    $("uyMotor").value = d.motor;
+    S_motor.claude_model = d.claude_model || ""; S_motor.codex_model = d.codex_model || "";
+    modelAlaniniGuncelle();
+  }
+  function modelAlaniniGuncelle() {
+    const m = $("uyMotor").value;
+    $("uyModel").value = m === "codex" ? S_motor.codex_model : S_motor.claude_model;
+    $("uyModelListe").innerHTML = (MODEL_ONERILERI[m] || []).map(x => `<option value="${x}">`).join("");
+  }
+  getJSON("/urun-yukleme/api/motor").then(motorArayuzu).catch(() => {});
+  $("uyMotor").addEventListener("change", modelAlaniniGuncelle);
+  $("uyMotorKaydet").addEventListener("click", async () => {
+    try {
+      const m = $("uyMotor").value;
+      const govde = { motor: m };
+      govde[m === "codex" ? "codex_model" : "claude_model"] = $("uyModel").value.trim();
+      const d = await getJSON("/urun-yukleme/api/motor", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(govde) });
+      motorArayuzu(d);
+      $("uyMotorDurum").textContent = "Kaydedildi ✓";
+      setTimeout(() => { $("uyMotorDurum").textContent = ""; }, 2500);
+    } catch (e) { alert("Motor ayarı kaydedilemedi: " + e.message); }
+  });
+
   // --- Kalıcı özel talimatlar
   getJSON("/urun-yukleme/api/talimat").then(d => { $("uyTalimat").value = d.talimat || ""; }).catch(() => {});
   $("uyTalimatKaydet").addEventListener("click", async () => {
@@ -163,39 +210,74 @@ Alt Taban: Kaymaz taban</textarea>
   $("uyKategori").addEventListener("change", async () => {
     const sec = $("uyKategori").selectedOptions[0];
     if (!sec) return;
-    S.kategori = { id: parseInt(sec.value), yol: sec.dataset.yol };
+    const yol = sec.dataset.yol;
+    S.kategori = { id: parseInt(sec.value), yol: yol, ad: yol.split(" > ").pop() };
+
+    // Kategorinin barkod önekini mevcut ürünlerden öğren
+    $("uyOnekIpucu").textContent = "Önek öğreniliyor…";
+    getJSON("/urun-yukleme/api/onek-oner?kategori=" + encodeURIComponent(S.kategori.ad)).then(d => {
+      if (d.onek) {
+        $("uyOnek").value = d.onek;
+        $("uyOnekIpucu").textContent = `${S.kategori.ad} ürünlerinden öğrenildi: ${d.onek} (${d.ornek} örnek) — toplam 9 hane`;
+      } else {
+        $("uyOnek").value = "";
+        $("uyOnekIpucu").textContent = `${S.kategori.ad} için kayıtlı önek bulunamadı — elle girin (6 hane önerilir).`;
+      }
+    }).catch(() => { $("uyOnekIpucu").textContent = "Önek öğrenilemedi — elle girin."; });
     $("uyOzelliklerKutu").style.display = "";
     $("uyOzellikler").innerHTML = "<em>Özellikler yükleniyor…</em>";
     try {
       const d = await getJSON("/urun-yukleme/api/ozellikler?cid=" + S.kategori.id);
-      const onemli = d.ozellikler.filter(o => o.zorunlu || o.varyant);
-      S.bedenAttrId = (onemli.find(o => o.varyant) || {}).id || null;
+      S.bedenAttrId = (d.ozellikler.find(o => o.varyant) || {}).id || null;
       $("uyOzellikler").innerHTML = "";
-      for (const o of onemli) {
+
+      const satirEkle = (hedef, o) => {
         if (o.varyant) {
-          $("uyOzellikler").insertAdjacentHTML("beforeend",
-            `<div class="uy-ozellik-satir"><span><b>${o.ad}</b> <small class="text-muted">(varyant — bedenler otomatik eşlenir)</small></span><span id="uyBedenEsleme" class="text-muted">eşleme yükleme sırasında yapılır</span></div>`);
-          continue;
+          hedef.insertAdjacentHTML("beforeend",
+            `<div class="uy-ozellik-satir"><span><b>${o.ad}</b> <small class="text-muted">(varyant — bedenler otomatik eşlenir)</small></span><span class="text-muted">eşleme yükleme sırasında yapılır</span></div>`);
+          return;
         }
         if (o.ad === "Renk") {
-          $("uyOzellikler").insertAdjacentHTML("beforeend",
+          hedef.insertAdjacentHTML("beforeend",
             `<div class="uy-ozellik-satir"><span><b>Renk</b></span><span class="text-muted">form üzerindeki renk adları serbest metin olarak gönderilir</span></div>`);
-          continue;
+          return;
         }
         const kutuId = "uyAttr_" + o.id;
-        $("uyOzellikler").insertAdjacentHTML("beforeend",
-          `<div class="uy-ozellik-satir"><span><b>${o.ad}</b>${o.zorunlu ? ' <span class="text-danger">*</span>' : ""}</span><select class="form-select form-select-sm uy-attr" data-aid="${o.id}" id="${kutuId}"><option value="">— yükleniyor —</option></select></div>`);
+        hedef.insertAdjacentHTML("beforeend",
+          `<div class="uy-ozellik-satir"><span><b>${o.ad}</b>${o.zorunlu ? ' <span class="text-danger">*</span>' : ""}</span><select class="form-select form-select-sm uy-attr" data-aid="${o.id}" data-ad="${o.ad}" id="${kutuId}"><option value="">— yükleniyor —</option></select></div>`);
         getJSON(`/urun-yukleme/api/ozellik-degerleri?cid=${S.kategori.id}&aid=${o.id}`).then(dv => {
           const sel = $(kutuId);
           sel.innerHTML = '<option value="">— seçin —</option>' +
             dv.degerler.map(v => `<option value="${v.id}">${v.ad}</option>`).join("");
           otomatikSec(sel, o.ad);
         }).catch(() => { $(kutuId).innerHTML = '<option value="">yüklenemedi</option>'; });
+      };
+
+      // Zorunlu + varyant üstte; isteğe bağlılar açılır bölümde
+      // (Trendyol'da kart ne kadar doluysa o kadar iyi — hepsi doldurulabilir)
+      const zorunlu = d.ozellikler.filter(o => o.zorunlu || o.varyant);
+      const opsiyonel = d.ozellikler.filter(o => !o.zorunlu && !o.varyant && o.ad !== "Renk"
+        && !/ithalatçı|üretici|analiz testi/i.test(o.ad || ""));
+      for (const o of zorunlu) satirEkle($("uyOzellikler"), o);
+      if (opsiyonel.length) {
+        $("uyOzellikler").insertAdjacentHTML("beforeend",
+          `<details class="mt-2"><summary class="fw-bold">İsteğe bağlı özellikler (${opsiyonel.length}) — mümkün olduğunca doldurun</summary><div id="uyOzellikOps" class="mt-2"></div></details>`);
+        for (const o of opsiyonel) satirEkle($("uyOzellikOps"), o);
       }
     } catch (e) {
       $("uyOzellikler").innerHTML = `<span class="uy-uyari">${e.message}</span>`;
     }
   });
+
+  // Seçili Trendyol özelliklerini "Ad: Değer" satırlarına çevir (açıklamaya otomatik girer)
+  function ozellikSatirlari() {
+    const satirlar = [];
+    document.querySelectorAll(".uy-attr").forEach(sel => {
+      const secili = sel.selectedOptions[0];
+      if (sel.value && secili && sel.dataset.ad) satirlar.push(sel.dataset.ad + ": " + secili.text);
+    });
+    return satirlar;
+  }
 
   // Bilinen alanlarda akıllı ön seçim (Cinsiyet, Yaş Grubu, Menşei...)
   function otomatikSec(sel, ad) {
@@ -262,7 +344,15 @@ Alt Taban: Kaymaz taban</textarea>
         urun_turu: $("uyUrunTuru").value, not: $("uyNot").value,
         renkler: renkListesi(), bedenler: bedenListesi(),
         barkod_onek: $("uyOnek").value,
-        teknik: $("uyTeknik").value.split("\n").map(s => s.trim()).filter(Boolean),
+        // Teknik liste = Trendyol özellik seçimleri + serbest satırlar
+        // (aynı adı iki kez yazmamak için özellik seçimi öncelikli)
+        teknik: (() => {
+          const secim = ozellikSatirlari();
+          const anahtarlar = new Set(secim.map(s => s.split(":")[0].trim().toLowerCase()));
+          const serbest = $("uyTeknik").value.split("\n").map(s => s.trim()).filter(Boolean)
+            .filter(s => !anahtarlar.has(s.split(":")[0].trim().toLowerCase()));
+          return [...secim, ...serbest];
+        })(),
       };
       const d = await getJSON("/urun-yukleme/api/taslak", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(govde) });
@@ -286,10 +376,26 @@ Alt Taban: Kaymaz taban</textarea>
     kutu.className = "uy-sayac " + ((n >= 95 && n <= 100) ? "tamam" : "hata");
   }
 
+  // AI'nın özellik seçimlerini formdaki dropdown'lara uygula (kullanıcı değiştirebilir)
+  function ozellikOnerileriniUygula(oneriler) {
+    let uygulanan = 0;
+    for (const o of oneriler || []) {
+      const sel = document.querySelector(`.uy-attr[data-aid="${o.attributeId}"]`);
+      if (sel && o.attributeValueId) {
+        sel.value = String(o.attributeValueId);
+        if (sel.value === String(o.attributeValueId)) uygulanan++;
+      }
+    }
+    return uygulanan;
+  }
+
   function onizlemeCiz(t) {
     let html = "";
     if (t.uyarilar && t.uyarilar.length)
       html += `<div class="alert alert-warning py-2"><b>Uyarılar:</b><br>${t.uyarilar.join("<br>")}</div>`;
+    const doldurulan = ozellikOnerileriniUygula(t.ozellik_onerileri);
+    if (doldurulan)
+      html += `<div class="alert alert-info py-2">🤖 AI ${doldurulan} Trendyol özelliğini doldurdu — Adım 1'deki seçimlerden kontrol edebilirsiniz.</div>`;
     html += `<div class="mb-2"><b>Model kodu:</b> ${t.model_kodu}</div>`;
     for (const [renk, r] of Object.entries(t.renkler)) {
       html += `

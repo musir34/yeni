@@ -127,6 +127,43 @@ def ozellik_degerleri(cid: int, aid: int) -> list[dict]:
     return _cached(f"degerler_{cid}_{aid}", _uret)
 
 
+def kategori_onekleri() -> dict:
+    """
+    Kategori adı → mevcut ürünlerden öğrenilen en yaygın barkod öneki.
+    Barkod standardı kategoriye göre değişir (stiletto 730734, sandalet 079950...);
+    uydurmak yerine canlı katalogdan sayılarak çıkarılır. 30 dk önbellek.
+    Dönen değer: {kategori_ad: {"onek": "730734", "ornek": 238}}
+    """
+    def _uret():
+        sayim: dict = {}
+        for uc in ("approved", "unapproved"):
+            sayfa = 0
+            while True:
+                d = _get(f"{BASE}/sellers/{SUPPLIER_ID}/products/{uc}?size=100&page={sayfa}", timeout=90)
+                for c in d.get("content", []):
+                    kat = (c.get("category") or {}).get("name") or ""
+                    for v in c.get("variants") or []:
+                        bc = str(v.get("barcode") or "")
+                        if kat and len(bc) == BARKOD_UZUNLUK and bc.isdigit():
+                            sayim.setdefault(kat, {}).setdefault(bc[:6], 0)
+                            sayim[kat][bc[:6]] += 1
+                if sayfa >= d.get("totalPages", 1) - 1:
+                    break
+                sayfa += 1
+        return {kat: {"onek": max(onekler, key=onekler.get), "ornek": max(onekler.values())}
+                for kat, onekler in sayim.items()}
+
+    return _cached("kategori_onekleri", _uret, ttl_sn=1800)
+
+
+def onek_oner(kategori_ad: str) -> dict:
+    """Kategorinin öneki (öğrenilmişse) — yoksa None döner, kullanıcı elle girer."""
+    kayit = kategori_onekleri().get((kategori_ad or "").strip())
+    if kayit:
+        return {"onek": kayit["onek"], "ornek": kayit["ornek"]}
+    return {"onek": None, "ornek": 0}
+
+
 # ------------------------------------------------------------- kod tahsisleri
 
 def _dolu_kodlar() -> tuple[set, set]:
@@ -182,6 +219,24 @@ def talimat_getir() -> str:
 def talimat_kaydet(metin: str) -> None:
     kayit = _rezerv_kaydi(olustur=True)
     kayit.extra_config = {**(kayit.extra_config or {}), "genel_talimat": (metin or "").strip()[:8000]}
+    db.session.commit()
+
+
+_MODEL_ADI_DESENI = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")  # alt sürece gidiyor
+
+
+def claude_model_getir() -> str:
+    """'urun' alanının Claude modeli (boş = ai_asistan varsayılanı: opus)."""
+    kayit = PlatformConfig.query.filter_by(platform="urun_yukleme").first()
+    return ((kayit.extra_config or {}).get("claude_model") or "") if kayit else ""
+
+
+def claude_model_kaydet(model: str) -> None:
+    model = (model or "").strip()
+    if model and not _MODEL_ADI_DESENI.match(model):
+        raise ValueError(f"Geçersiz model adı: {model}")
+    kayit = _rezerv_kaydi(olustur=True)
+    kayit.extra_config = {**(kayit.extra_config or {}), "claude_model": model}
     db.session.commit()
 
 
