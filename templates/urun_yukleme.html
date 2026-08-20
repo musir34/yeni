@@ -4,6 +4,20 @@
 
 {% block extra_css %}
 <style>
+/* Kremsi, hafif dalgalı zemin — düz beyaz göz yoruyordu (kullanıcı isteği).
+   Katmanlar: sıcak krem taban + yumuşak ışık öbekleri + çok silik dalga çizgileri. */
+body {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='260' viewBox='0 0 900 260'%3E%3Cpath d='M0 130 Q 112 70 225 130 T 450 130 T 675 130 T 900 130' fill='none' stroke='%23d9c6a3' stroke-opacity='.22' stroke-width='2'/%3E%3Cpath d='M0 200 Q 112 150 225 200 T 450 200 T 675 200 T 900 200' fill='none' stroke='%23d9c6a3' stroke-opacity='.14' stroke-width='2'/%3E%3C/svg%3E") repeat,
+    radial-gradient(1100px 550px at 85% -10%, rgba(238,218,185,.50), transparent 60%),
+    radial-gradient(900px 500px at -10% 35%, rgba(248,236,214,.60), transparent 55%),
+    radial-gradient(1000px 650px at 55% 115%, rgba(232,212,180,.40), transparent 60%),
+    #faf6ee;
+  background-attachment: fixed;
+}
+/* Gece modunda krem zemin devre dışı — dark-mode katmanı bozulmasın */
+html.gs-dark body { background: #161618; }
+
 /* Ortak üst menü bu sayfada sayfa akışında durur (anasayfadaki gibi sabit değil) */
 .uy-nav-sarici .btn-group-top {
   position: static; display: flex; flex-wrap: wrap; gap: 8px;
@@ -11,7 +25,8 @@
 }
 .uy-nav-sarici .btn { border-radius: 18px; }
 .uy-sayfa { max-width: 1050px; margin: 0 auto; padding: 1rem; }
-.uy-kart { background: var(--bs-body-bg, #fff); border: 1px solid rgba(0,0,0,.1); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+.uy-kart { background: #fff; border: 1px solid rgba(120,95,55,.12); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; box-shadow: 0 10px 26px rgba(120,95,55,.10); }
+html.gs-dark .uy-kart { background: #1e1e1e; border-color: #333; box-shadow: none; }
 .uy-adim-baslik { display: flex; align-items: center; gap: .6rem; font-weight: 700; margin-bottom: .75rem; }
 .uy-adim-no { background: #b02a37; color: #fff; border-radius: 50%; width: 1.7rem; height: 1.7rem; display: inline-flex; align-items: center; justify-content: center; font-size: .9rem; }
 .uy-renk-satir { display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; flex-wrap: wrap; }
@@ -40,9 +55,11 @@
 
     <div class="row g-2">
       <div class="col-md-6">
-        <label class="form-label">Kategori (yaprak) ara</label>
-        <input class="form-control" id="uyKategoriAra" placeholder="ör. abiye ayakkabı, sandalet, babet...">
-        <select class="form-select mt-1" id="uyKategori" size="4"></select>
+        <label class="form-label">Kategori</label>
+        <select class="form-select" id="uyKategori">
+          <option value="">— kategoriler yükleniyor… —</option>
+        </select>
+        <input class="form-control form-control-sm mt-1" id="uyKategoriAra" placeholder="listeyi daralt (isteğe bağlı): sandalet, babet...">
       </div>
       <div class="col-md-6">
         <label class="form-label">Ürün türü öbeği (başlığın ana kelimesi)</label>
@@ -201,22 +218,33 @@ Alt Taban: Kaymaz taban</textarea>
     } catch (e) { alert("Talimat kaydedilemedi: " + e.message); }
   });
 
-  // --- Kategori arama
-  let araZaman = null;
-  $("uyKategoriAra").addEventListener("input", () => {
-    clearTimeout(araZaman);
-    araZaman = setTimeout(async () => {
-      try {
-        const d = await getJSON("/urun-yukleme/api/kategori-ara?q=" + encodeURIComponent($("uyKategoriAra").value));
-        $("uyKategori").innerHTML = d.kategoriler.map(k =>
-          `<option value="${k.id}" data-yol="${k.yol}">${k.yol}</option>`).join("");
-      } catch (e) { /* sessiz */ }
-    }, 350);
-  });
+  // --- Kategori: tek kutu, tüm yapraklar gruplu (Ayakkabı en üstte); üstteki alan süzer
+  let TUM_KATEGORILER = [];
+  function kategoriKutusunuDoldur(suzgec) {
+    const q = (suzgec || "").trim().toLowerCase();
+    const liste = q ? TUM_KATEGORILER.filter(k => k.yol.toLowerCase().includes(q)) : TUM_KATEGORILER;
+    const gruplar = {};
+    for (const k of liste) {
+      const kok = k.yol.split(" > ")[0];
+      (gruplar[kok] = gruplar[kok] || []).push(k);
+    }
+    const kokler = Object.keys(gruplar).sort((a, b) =>
+      (a === "Ayakkabı" ? -1 : b === "Ayakkabı" ? 1 : a.localeCompare(b, "tr")));
+    $("uyKategori").innerHTML = '<option value="">— kategori seçin —</option>' +
+      kokler.map(kok => `<optgroup label="${kok}">` +
+        gruplar[kok].map(k =>
+          `<option value="${k.id}" data-yol="${k.yol}">${k.yol.split(" > ").slice(1).join(" > ") || k.ad}</option>`
+        ).join("") + "</optgroup>").join("");
+  }
+  getJSON("/urun-yukleme/api/kategoriler").then(d => {
+    TUM_KATEGORILER = d.kategoriler;
+    kategoriKutusunuDoldur("");
+  }).catch(() => { $("uyKategori").innerHTML = '<option value="">kategoriler yüklenemedi</option>'; });
+  $("uyKategoriAra").addEventListener("input", () => kategoriKutusunuDoldur($("uyKategoriAra").value));
 
   $("uyKategori").addEventListener("change", async () => {
     const sec = $("uyKategori").selectedOptions[0];
-    if (!sec) return;
+    if (!sec || !sec.value) return;
     const yol = sec.dataset.yol;
     S.kategori = { id: parseInt(sec.value), yol: yol, ad: yol.split(" > ").pop() };
 

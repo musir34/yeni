@@ -88,6 +88,17 @@ def kategori_ara():
         return jsonify({"success": False, "error": "Kategori listesi alınamadı."}), 500
 
 
+@urun_yukleme_bp.route("/urun-yukleme/api/kategoriler")
+@roles_required("admin")
+def kategoriler():
+    """TÜM yaprak kategoriler — tek seçim kutusunda gruplu gösterim için."""
+    try:
+        return jsonify({"success": True, "kategoriler": katalog.kategori_yapraklari()})
+    except Exception as e:
+        logger.error("[URUN] kategori listesi: %s", e, exc_info=True)
+        return jsonify({"success": False, "error": "Kategori listesi alınamadı."}), 500
+
+
 @urun_yukleme_bp.route("/urun-yukleme/api/ozellikler")
 @roles_required("admin")
 def ozellikler():
