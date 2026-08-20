@@ -4,6 +4,12 @@
 
 {% block extra_css %}
 <style>
+/* Ortak üst menü bu sayfada sayfa akışında durur (anasayfadaki gibi sabit değil) */
+.uy-nav-sarici .btn-group-top {
+  position: static; display: flex; flex-wrap: wrap; gap: 8px;
+  justify-content: center; margin: .5rem auto 1rem; max-width: 1200px;
+}
+.uy-nav-sarici .btn { border-radius: 18px; }
 .uy-sayfa { max-width: 1050px; margin: 0 auto; padding: 1rem; }
 .uy-kart { background: var(--bs-body-bg, #fff); border: 1px solid rgba(0,0,0,.1); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
 .uy-adim-baslik { display: flex; align-items: center; gap: .6rem; font-weight: 700; margin-bottom: .75rem; }
@@ -24,6 +30,7 @@
 {% endblock %}
 
 {% block content %}
+<div class="uy-nav-sarici">{% include "_ust_menu.html" %}</div>
 <div class="uy-sayfa">
   <h3 class="mb-3"><i class="bi bi-cloud-arrow-up"></i> Ürün Yükleme <small class="text-muted">— AI destekli Trendyol ürün açma</small></h3>
 
@@ -247,6 +254,11 @@ Alt Taban: Kaymaz taban</textarea>
           `<div class="uy-ozellik-satir"><span><b>${o.ad}</b>${o.zorunlu ? ' <span class="text-danger">*</span>' : ""}</span><select class="form-select form-select-sm uy-attr" data-aid="${o.id}" data-ad="${o.ad}" id="${kutuId}"><option value="">— yükleniyor —</option></select></div>`);
         getJSON(`/urun-yukleme/api/ozellik-degerleri?cid=${S.kategori.id}&aid=${o.id}`).then(dv => {
           const sel = $(kutuId);
+          if (!dv.degerler.length && o.serbest) {
+            // Değer listesi yok + serbest metin kabul ediyor → metin kutusu
+            sel.outerHTML = `<input class="form-control form-control-sm uy-attr-metin" data-aid="${o.id}" data-ad="${o.ad}" id="${kutuId}" placeholder="serbest metin — AI doldurabilir">`;
+            return;
+          }
           sel.innerHTML = '<option value="">— seçin —</option>' +
             dv.degerler.map(v => `<option value="${v.id}">${v.ad}</option>`).join("");
           otomatikSec(sel, o.ad);
@@ -275,6 +287,9 @@ Alt Taban: Kaymaz taban</textarea>
     document.querySelectorAll(".uy-attr").forEach(sel => {
       const secili = sel.selectedOptions[0];
       if (sel.value && secili && sel.dataset.ad) satirlar.push(sel.dataset.ad + ": " + secili.text);
+    });
+    document.querySelectorAll(".uy-attr-metin").forEach(kutu => {
+      if (kutu.value.trim() && kutu.dataset.ad) satirlar.push(kutu.dataset.ad + ": " + kutu.value.trim());
     });
     return satirlar;
   }
@@ -376,14 +391,20 @@ Alt Taban: Kaymaz taban</textarea>
     kutu.className = "uy-sayac " + ((n >= 95 && n <= 100) ? "tamam" : "hata");
   }
 
-  // AI'nın özellik seçimlerini formdaki dropdown'lara uygula (kullanıcı değiştirebilir)
+  // AI'nın özellik seçimlerini formdaki kutulara uygula (kullanıcı değiştirebilir).
+  // Değer listesi geç yüklenmiş olabilir → 4 sn sonra bir kez daha denenir.
   function ozellikOnerileriniUygula(oneriler) {
     let uygulanan = 0;
     for (const o of oneriler || []) {
-      const sel = document.querySelector(`.uy-attr[data-aid="${o.attributeId}"]`);
-      if (sel && o.attributeValueId) {
-        sel.value = String(o.attributeValueId);
-        if (sel.value === String(o.attributeValueId)) uygulanan++;
+      if (o.attributeValueId) {
+        const sel = document.querySelector(`.uy-attr[data-aid="${o.attributeId}"]`);
+        if (sel) {
+          sel.value = String(o.attributeValueId);
+          if (sel.value === String(o.attributeValueId)) uygulanan++;
+        }
+      } else if (o.customAttributeValue) {
+        const kutu = document.querySelector(`.uy-attr-metin[data-aid="${o.attributeId}"]`);
+        if (kutu && !kutu.value) { kutu.value = o.customAttributeValue; uygulanan++; }
       }
     }
     return uygulanan;
@@ -394,6 +415,7 @@ Alt Taban: Kaymaz taban</textarea>
     if (t.uyarilar && t.uyarilar.length)
       html += `<div class="alert alert-warning py-2"><b>Uyarılar:</b><br>${t.uyarilar.join("<br>")}</div>`;
     const doldurulan = ozellikOnerileriniUygula(t.ozellik_onerileri);
+    setTimeout(() => ozellikOnerileriniUygula(t.ozellik_onerileri), 4000); // geç yüklenen listelere ikinci geçiş
     if (doldurulan)
       html += `<div class="alert alert-info py-2">🤖 AI ${doldurulan} Trendyol özelliğini doldurdu — Adım 1'deki seçimlerden kontrol edebilirsiniz.</div>`;
     html += `<div class="mb-2"><b>Model kodu:</b> ${t.model_kodu}</div>`;
@@ -436,6 +458,10 @@ Alt Taban: Kaymaz taban</textarea>
       const ozellikler = [];
       document.querySelectorAll(".uy-attr").forEach(sel => {
         if (sel.value) ozellikler.push({ attributeId: parseInt(sel.dataset.aid), attributeValueId: parseInt(sel.value) });
+      });
+      document.querySelectorAll(".uy-attr-metin").forEach(kutu => {
+        const v = kutu.value.trim();
+        if (v) ozellikler.push({ attributeId: parseInt(kutu.dataset.aid), customAttributeValue: v.slice(0, 100) });
       });
       const renkDuzeltme = {};
       document.querySelectorAll(".uy-baslik").forEach(inp => {

@@ -166,17 +166,27 @@ _GEREKSIZ_OZELLIK = re.compile(r"ithalatçı|üretici|analiz testi", re.I)
 def _ozellik_katalogu(cid: int) -> tuple[dict, dict]:
     """
     AI'nın seçim yapacağı özellik kataloğu.
-    Döner: ({ad: [değer adları (≤80)]}, {ad_lower: {"attr": ozellik, "degerler": {ad_lower: id}}})
+    Döner: ({"secmeli": {ad: [değerler ≤80]}, "serbest": [adlar]},
+            {ad_lower: {"attr": ozellik, "degerler": {ad_lower: id}}})
+    Değer listeleri paralel çekilir (kategori başına ilk seferde N ayrı uç çağrısı).
     """
-    katalog_ai, harita = {}, {}
-    for o in katalog.kategori_ozellikleri(cid):
+    from concurrent.futures import ThreadPoolExecutor
+
+    adaylar = [o for o in katalog.kategori_ozellikleri(cid)
+               if not o.get("varyant") and (o.get("ad") or "") != "Renk"
+               and not _GEREKSIZ_OZELLIK.search(o.get("ad") or "")]
+    with ThreadPoolExecutor(max_workers=6) as havuz:
+        deger_listeleri = list(havuz.map(lambda o: katalog.ozellik_degerleri(cid, o["id"]), adaylar))
+
+    katalog_ai, harita = {"secmeli": {}, "serbest": []}, {}
+    for o, degerler in zip(adaylar, deger_listeleri):
         ad = o.get("ad") or ""
-        if o.get("varyant") or ad == "Renk" or _GEREKSIZ_OZELLIK.search(ad):
+        if degerler:
+            katalog_ai["secmeli"][ad] = [str(v["ad"]) for v in degerler[:80]]
+        elif o.get("serbest"):
+            katalog_ai["serbest"].append(ad)
+        else:
             continue
-        degerler = katalog.ozellik_degerleri(cid, o["id"])
-        if not degerler and not o.get("serbest"):
-            continue
-        katalog_ai[ad] = [str(v["ad"]) for v in degerler[:80]] or ["(serbest metin)"]
         harita[ad.lower()] = {"attr": o,
                               "degerler": {str(v["ad"]).strip().lower(): v["id"] for v in degerler}}
     return katalog_ai, harita
@@ -189,14 +199,16 @@ def _ozellik_onerileri(ai_secimleri: dict, harita: dict) -> list[dict]:
         kayit = harita.get(str(ad).strip().lower())
         if not kayit:
             continue
-        deger_id = kayit["degerler"].get(str(deger).strip().lower())
+        deger = str(deger).strip()
+        deger_id = kayit["degerler"].get(deger.lower())
         if deger_id:
             oneriler.append({"attributeId": kayit["attr"]["id"], "attributeValueId": deger_id,
-                             "ad": kayit["attr"]["ad"], "deger": str(deger)})
-        elif kayit["attr"].get("serbest") and str(deger).strip():
+                             "ad": kayit["attr"]["ad"], "deger": deger})
+        elif (kayit["attr"].get("serbest") and deger
+              and not deger.startswith("(")):  # yer tutucu/parantezli cevapları eleme
             oneriler.append({"attributeId": kayit["attr"]["id"],
-                             "customAttributeValue": str(deger).strip()[:100],
-                             "ad": kayit["attr"]["ad"], "deger": str(deger)})
+                             "customAttributeValue": deger[:100],
+                             "ad": kayit["attr"]["ad"], "deger": deger})
     return oneriler
 
 

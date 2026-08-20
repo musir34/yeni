@@ -45,14 +45,21 @@ def _prompt(bilgi: dict) -> str:
     teknik = "\n".join(f"- {t}" for t in bilgi.get("teknik") or [])
     ozellik_katalogu = bilgi.get("ozellik_katalogu") or {}
     ozellik_blok = ""
-    if ozellik_katalogu:
+    secmeli = ozellik_katalogu.get("secmeli") or {}
+    serbest = ozellik_katalogu.get("serbest") or []
+    if secmeli or serbest:
         satirlar = "\n".join(
-            f"- {ad}: {' | '.join(degerler)}" for ad, degerler in ozellik_katalogu.items())
+            f"- {ad}: {' | '.join(degerler)}" for ad, degerler in secmeli.items())
+        serbest_blok = (
+            "\nŞu özellikler SERBEST METİNDİR — ürüne uygun KISA bir değeri kendin yaz "
+            "(yer tutucu/parantezli cevap yazma):\n"
+            + "\n".join(f"- {ad}" for ad in serbest) + "\n"
+        ) if serbest else ""
         ozellik_blok = f"""
 TRENDYOL ÖZELLİK SEÇİMİ — aşağıdaki HER özellik için, verilen izinli değerlerden
 ürüne en uygun BİRİNİ seç (değeri birebir aynı yazımla döndür; emin olamadığını atla):
 {satirlar}
-"""
+{serbest_blok}"""
     gorseller = "\n".join(f"- {g}" for g in bilgi.get("gorsel_yollari") or [])
     gorsel_notu = (
         f"\nHer rengin ilk görselinin dosya yolu aşağıda; Read aracıyla AÇIP BAK ve "
