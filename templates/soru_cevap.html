@@ -143,8 +143,17 @@
     margin:0 !important;
     padding:0 !important;
   }
-  body { background:var(--qna-bg); }
-  .qna-page { min-height:100vh; color:var(--qna-ink); background:var(--qna-bg); font-family:Inter,system-ui,sans-serif; }
+  /* Kremsi dalgalı zemin — Ürün Yükleme sayfasıyla aynı doku (düz beyaz göz yoruyordu) */
+  body {
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='260' viewBox='0 0 900 260'%3E%3Cpath d='M0 130 Q 112 70 225 130 T 450 130 T 675 130 T 900 130' fill='none' stroke='%23d9c6a3' stroke-opacity='.22' stroke-width='2'/%3E%3Cpath d='M0 200 Q 112 150 225 200 T 450 200 T 675 200 T 900 200' fill='none' stroke='%23d9c6a3' stroke-opacity='.14' stroke-width='2'/%3E%3C/svg%3E") repeat,
+      radial-gradient(1100px 550px at 85% -10%, rgba(238,218,185,.50), transparent 60%),
+      radial-gradient(900px 500px at -10% 35%, rgba(248,236,214,.60), transparent 55%),
+      radial-gradient(1000px 650px at 55% 115%, rgba(232,212,180,.40), transparent 60%),
+      #faf6ee;
+    background-attachment: fixed;
+  }
+  .qna-page { min-height:100vh; color:var(--qna-ink); background:transparent; font-family:Inter,system-ui,sans-serif; }
   .qna-appbar {
     position:sticky; top:0; z-index:1020;
     background:rgba(255,255,255,.92); border-bottom:1px solid rgba(32,36,44,.08);
