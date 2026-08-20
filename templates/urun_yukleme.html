@@ -223,17 +223,18 @@ Alt Taban: Kaymaz taban</textarea>
   function kategoriKutusunuDoldur(suzgec) {
     const q = (suzgec || "").trim().toLowerCase();
     const liste = q ? TUM_KATEGORILER.filter(k => k.yol.toLowerCase().includes(q)) : TUM_KATEGORILER;
+    // Grup = yolun ara halkası (ör. "Topuklu Ayakkabı", "Sandalet ve Terlik")
     const gruplar = {};
     for (const k of liste) {
-      const kok = k.yol.split(" > ")[0];
-      (gruplar[kok] = gruplar[kok] || []).push(k);
+      const parcalar = k.yol.split(" > ");
+      const grup = parcalar.length > 2 ? parcalar[parcalar.length - 2] : parcalar[0];
+      (gruplar[grup] = gruplar[grup] || []).push(k);
     }
-    const kokler = Object.keys(gruplar).sort((a, b) =>
-      (a === "Ayakkabı" ? -1 : b === "Ayakkabı" ? 1 : a.localeCompare(b, "tr")));
+    const adlar = Object.keys(gruplar).sort((a, b) => a.localeCompare(b, "tr"));
     $("uyKategori").innerHTML = '<option value="">— kategori seçin —</option>' +
-      kokler.map(kok => `<optgroup label="${kok}">` +
-        gruplar[kok].map(k =>
-          `<option value="${k.id}" data-yol="${k.yol}">${k.yol.split(" > ").slice(1).join(" > ") || k.ad}</option>`
+      adlar.map(grup => `<optgroup label="${grup}">` +
+        gruplar[grup].map(k =>
+          `<option value="${k.id}" data-yol="${k.yol}">${k.ad}</option>`
         ).join("") + "</optgroup>").join("");
   }
   getJSON("/urun-yukleme/api/kategoriler").then(d => {

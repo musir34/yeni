@@ -91,9 +91,16 @@ def kategori_ara():
 @urun_yukleme_bp.route("/urun-yukleme/api/kategoriler")
 @roles_required("admin")
 def kategoriler():
-    """TÜM yaprak kategoriler — tek seçim kutusunda gruplu gösterim için."""
+    """
+    Seçim kutusu için yaprak kategoriler. Varsayılan: yalnızca Ayakkabı kökü
+    (mağazanın sattığı grup — 3.361 yapraklık tam ağaç kalabalıktı, kullanıcı emri).
+    ?hepsi=1 ile tam liste alınabilir (ileride başka grup satılırsa).
+    """
     try:
-        return jsonify({"success": True, "kategoriler": katalog.kategori_yapraklari()})
+        yapraklar = katalog.kategori_yapraklari()
+        if request.args.get("hepsi") != "1":
+            yapraklar = [k for k in yapraklar if k["yol"].split(" > ")[0] == "Ayakkabı"]
+        return jsonify({"success": True, "kategoriler": yapraklar})
     except Exception as e:
         logger.error("[URUN] kategori listesi: %s", e, exc_info=True)
         return jsonify({"success": False, "error": "Kategori listesi alınamadı."}), 500
