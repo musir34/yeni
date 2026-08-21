@@ -127,12 +127,12 @@ def ozellik_degerleri(cid: int, aid: int) -> list[dict]:
     return _cached(f"degerler_{cid}_{aid}", _uret)
 
 
-def kategori_onekleri() -> dict:
+def _kategori_taramasi() -> dict:
     """
-    Kategori adı → mevcut ürünlerden öğrenilen en yaygın barkod öneki.
-    Barkod standardı kategoriye göre değişir (stiletto 730734, sandalet 079950...);
-    uydurmak yerine canlı katalogdan sayılarak çıkarılır. 30 dk önbellek.
-    Dönen değer: {kategori_ad: {"onek": "730734", "ornek": 238}}
+    Kategori başına, mevcut ürünlerden öğrenilen kalıplar (30 dk önbellek):
+    - barkod öneki (6 hane; stiletto 730734, sandalet 079950...)
+    - MODEL KODU öneki (productMainId'nin son 2 hane hariç kısmı; 0121 → "01")
+    Dönen: {kat: {"barkod": {onek: adet}, "model": {onek: adet}}}
     """
     def _uret():
         sayim: dict = {}
@@ -142,26 +142,38 @@ def kategori_onekleri() -> dict:
                 d = _get(f"{BASE}/sellers/{SUPPLIER_ID}/products/{uc}?size=100&page={sayfa}", timeout=90)
                 for c in d.get("content", []):
                     kat = (c.get("category") or {}).get("name") or ""
+                    if not kat:
+                        continue
+                    kayit = sayim.setdefault(kat, {"barkod": {}, "model": {}})
+                    mid = str(c.get("productMainId") or "").strip()
+                    if mid.isdigit() and 3 <= len(mid) <= 6:
+                        m_onek = mid[:-2]
+                        kayit["model"][m_onek] = kayit["model"].get(m_onek, 0) + 1
                     for v in c.get("variants") or []:
                         bc = str(v.get("barcode") or "")
-                        if kat and len(bc) == BARKOD_UZUNLUK and bc.isdigit():
-                            sayim.setdefault(kat, {}).setdefault(bc[:6], 0)
-                            sayim[kat][bc[:6]] += 1
+                        if len(bc) == BARKOD_UZUNLUK and bc.isdigit():
+                            kayit["barkod"][bc[:6]] = kayit["barkod"].get(bc[:6], 0) + 1
                 if sayfa >= d.get("totalPages", 1) - 1:
                     break
                 sayfa += 1
-        return {kat: {"onek": max(onekler, key=onekler.get), "ornek": max(onekler.values())}
-                for kat, onekler in sayim.items()}
+        return sayim
 
-    return _cached("kategori_onekleri", _uret, ttl_sn=1800)
+    return _cached("kategori_taramasi", _uret, ttl_sn=1800)
 
 
 def onek_oner(kategori_ad: str) -> dict:
-    """Kategorinin öneki (öğrenilmişse) — yoksa None döner, kullanıcı elle girer."""
-    kayit = kategori_onekleri().get((kategori_ad or "").strip())
+    """Kategorinin barkod öneki (öğrenilmişse) — yoksa None, kullanıcı elle girer."""
+    kayit = (_kategori_taramasi().get((kategori_ad or "").strip()) or {}).get("barkod") or {}
     if kayit:
-        return {"onek": kayit["onek"], "ornek": kayit["ornek"]}
+        onek = max(kayit, key=kayit.get)
+        return {"onek": onek, "ornek": kayit[onek]}
     return {"onek": None, "ornek": 0}
+
+
+def model_onek_oner(kategori_ad: str) -> str:
+    """Kategorinin model kodu öneki (öğrenilmişse) — yoksa varsayılan '01'."""
+    kayit = (_kategori_taramasi().get((kategori_ad or "").strip()) or {}).get("model") or {}
+    return max(kayit, key=kayit.get) if kayit else "01"
 
 
 # ------------------------------------------------------------- kod tahsisleri
@@ -249,10 +261,12 @@ def rezerv_ekle(model_kodu: str, barkodlar: list[str]) -> None:
     db.session.commit()
 
 
-def kod_oner(onek: str, renk_sayisi: int, beden_sayisi: int) -> dict:
+def kod_oner(onek: str, renk_sayisi: int, beden_sayisi: int,
+             model_onek: str = "01", ozel_model: str | None = None) -> dict:
     """
-    Boş model kodu (01XX) + renk başına ardışık barkod bloğu önerir.
-    Dönen kodlar öneri niteliğindedir; kesin tahsis yükleme anında yapılır.
+    Model kodu + renk başına ardışık barkod bloğu önerir.
+    - ozel_model verilirse (kullanıcı belirledi) doluluk kontrolüyle aynen kullanılır.
+    - verilmezse kategorinin KENDİ model serisinden (model_onek, ör. '01') devam edilir.
     """
     onek = (onek or VARSAYILAN_ONEK).strip()
     if not (onek.isdigit() and 1 <= len(onek) <= BARKOD_UZUNLUK - 1):
@@ -264,20 +278,29 @@ def kod_oner(onek: str, renk_sayisi: int, beden_sayisi: int) -> dict:
     dolu_bc |= rez_bc
     dolu_model |= rez_model
 
-    # Model kodu: alışılmış pratik son dolu 01XX'in devamı (0121 → 0122 gibi);
-    # aralık biterse küçük boşluklara düşülür.
-    dolu_01xx = {int(m[1:]) for m in dolu_model
-                 if len(m) == 4 and m.startswith("01") and m.isdigit()}
-    model_kodu = None
-    if dolu_01xx and max(dolu_01xx) + 1 < 200:
-        model_kodu = f"0{max(dolu_01xx) + 1}"
+    # Model kodu
+    if ozel_model:
+        ozel_model = ozel_model.strip()
+        if not (ozel_model.isdigit() and 3 <= len(ozel_model) <= 6):
+            raise ValueError(f"Geçersiz model kodu: {ozel_model!r} (3-6 haneli rakam olmalı)")
+        if ozel_model in dolu_model:
+            raise ValueError(f"Model kodu {ozel_model} zaten kullanımda — başka bir kod seçin.")
+        model_kodu = ozel_model
     else:
-        for n in range(100, 200):
-            if n not in dolu_01xx:
-                model_kodu = f"0{n}"
-                break
-    if not model_kodu:
-        raise ValueError("01XX aralığında boş model kodu kalmadı — aralık kararı gerekiyor.")
+        model_onek = (model_onek or "01").strip()
+        seri = {int(m[len(model_onek):]) for m in dolu_model
+                if m.startswith(model_onek) and len(m) == len(model_onek) + 2
+                and m.isdigit()}
+        model_kodu = None
+        if seri and max(seri) + 1 < 100:
+            model_kodu = f"{model_onek}{max(seri) + 1:02d}"
+        else:
+            for n in range(0, 100):
+                if n not in seri:
+                    model_kodu = f"{model_onek}{n:02d}"
+                    break
+        if not model_kodu:
+            raise ValueError(f"'{model_onek}XX' serisinde boş model kodu kalmadı — elle belirleyin.")
 
     # Barkod blokları: önekin en büyük dolu numarasından devam eden ardışık boşluk
     kullanilmis = set()

@@ -80,27 +80,50 @@ toplanır, bu yüzden şu alanlar hiçbir renge özel olmamalı:
 - "genel.h1": ürünün tam adı (60-85 karakter; renk adı GEÇMEZ; ör. "Rugan Fiyonk Tokalı Arkası Açık Topuklu Sandalet 9 cm Kadeh Topuk")
 - "genel.seo_baslik": 50-60 karakter, sonu " - Güllü Shoes" ile biter, ana kelime önde
 - "genel.seo_aciklama": 140-160 karakter; ana kelime + malzeme/kalıp + renk seçenekleri imasi + "35-41 numara"
-- "genel.vurgu" / "genel.neden" / "genel.kombin": renk-nötr sürümler (renklerden toplu bahsedebilir)
+- "genel.vurgu" / "genel.neden" (EN AZ 120 kelime) / "genel.kombin" (EN AZ 70 kelime):
+  renk-nötr sürümler (renklerden toplu bahsedebilir)
+- "genel.maddeler": ürüne özel 3-4 ek özellik maddesi ("<b>Detay</b> — açıklama")
+"""
+    duzeltme_blok = ""
+    if bilgi.get("duzeltme_talimati"):
+        onceki = bilgi.get("onceki_metin") or {}
+        duzeltme_blok = f"""
+BU BİR REVİZYONDUR. Önceki üretim aşağıda; satıcının düzeltme talebini uygula,
+istenmeyen kısımları koru (baştan yazma, talebi işle):
+--- ÖNCEKİ ÜRETİM (JSON) ---
+{json.dumps(onceki, ensure_ascii=False)[:6000]}
+--- SATICININ DÜZELTME TALEBİ ---
+{bilgi['duzeltme_talimati']}
 """
     return f"""Yeni ürün için Trendyol içeriği üret.
-{talimat_blok}{ozellik_blok}{shopify_blok}
+{duzeltme_blok}{talimat_blok}{ozellik_blok}{shopify_blok}
 ÜRÜN BİLGİLERİ
 - Kategori: {bilgi.get('kategori_yolu', '')}
-- Ürün türü öbeği (ana arama kelimesi): {bilgi.get('urun_turu', '')}
+- ÜRÜN TÜRÜ ÖBEĞİ (ZORUNLU): "{bilgi.get('urun_turu', '')}" — bu öbek HER başlıkta
+  birebir geçmeli ve açıklamaların ana ekseni olmalı.
+- SATICI NOTU (ZORUNLU DETAYLAR): "{bilgi.get('not', '') or '-'}" — buradaki her
+  detayı hem başlıklarda hem açıklamalarda mutlaka işle; bunlar ürünün ayırt edici
+  özellikleridir, atlanamaz.
 - Renkler: {renkler}
 - Beden aralığı: {bilgi.get('beden_araligi', '')}
 - Teknik özellikler:
 {teknik}
-- Satıcı notu (varsa tasarım detayı): {bilgi.get('not', '') or '-'}
+
+UZUNLUK ŞARTLARI (kısa metin KABUL EDİLMEZ):
+- Her rengin "neden" paragrafı EN AZ 120 kelime (5-8 cümle, renge özel, satıcı notundaki detayları işleyerek)
+- Her rengin "kombin" paragrafı EN AZ 70 kelime (4-6 cümle, takı/çanta uyumları dahil)
+- Her rengin "maddeler" listesi: ürüne/renge özel 3-4 EK özellik maddesi
+  ("<b>başlık</b> — açıklama" biçiminde; genel kalıpları değil, BU ürünün detaylarını yaz)
 {gorsel_notu}
 İSTENEN JSON (bire bir bu şema, her renk için ayrı):
 {{
   "renkler": {{
     "<RenkAdı>": {{
-      "baslik": "<95-100 karakter başlık>",
-      "vurgu": "<öne çıkanların ilk maddesi: renge/detaya özel tek cümle, kalın kısım — açıklama>",
-      "neden": "<NEDEN BU MODEL paragrafı, 4-6 cümle, renge özel>",
-      "kombin": "<KOMBİN ÖNERİLERİ paragrafı, 3-5 cümle, renge özel>"
+      "baslik": "<95-100 karakter başlık — ürün türü öbeği ve satıcı notu detayları içinde>",
+      "vurgu": "<öne çıkanların ilk maddesi: renge/detaya özel tek cümle>",
+      "maddeler": ["<b>Detay</b> — açıklama", "... renge/ürüne özel 3-4 madde"],
+      "neden": "<NEDEN BU MODEL paragrafı, EN AZ 120 kelime, renge özel>",
+      "kombin": "<KOMBİN ÖNERİLERİ paragrafı, EN AZ 70 kelime, renge özel>"
     }}
   }},
   "renk_secenekleri": "<tüm renkleri tek cümlede tanıtan paragraf: 'Bu model (X) ... renklerinde üretilmektedir: ...'>",
@@ -190,6 +213,7 @@ def shopify_aciklama_kur(genel: dict, bilgi: dict, renkler: list[str],
 <p>{genel.get('vurgu', '')}</p>
 <h3>✨ Öne Çıkan Özellikler</h3>
 <ul>
+{"".join(f"<li>{m}</li>" for m in (genel.get('maddeler') or []))}
 <li><strong>Hafızalı ped</strong> — iç tabanda ayağın şeklini alarak baskıyı dağıtır, uzun süre ayakta kalmayı kolaylaştırır</li>
 <li><strong>Kaymaz taban</strong> — parke ve mermer zeminde de açık havada da güvenli adım</li>
 <li><strong>%100 vegan deri</strong> — hayvansal deri kullanılmadan üretilmiş, hayvan dostu ve etik tercih</li>
@@ -227,6 +251,7 @@ def aciklama_kur(renk: str, icerik: dict, bilgi: dict, renk_secenekleri: str) ->
 <p><b>✨ ÖNE ÇIKAN ÖZELLİKLER</b></p>
 <ul>
 <li><b>{icerik.get('vurgu', '')}</b></li>
+{"".join(f"<li>{m}</li>" for m in (icerik.get('maddeler') or []))}
 <li><b>Hafızalı ped</b> — iç tabanda ayağın şeklini alarak baskıyı dağıtır, uzun süre ayakta kalmayı kolaylaştırır</li>
 <li><b>Kaymaz taban</b> — parke ve mermer zeminde de açık havada da güvenli adım</li>
 <li><b>%100 vegan deri</b> — hayvansal deri kullanılmadan üretilmiş, hayvan dostu ve etik tercih</li>

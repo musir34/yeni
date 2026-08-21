@@ -246,16 +246,26 @@ def _ozellik_onerileri(ai_secimleri: dict, harita: dict) -> list[dict]:
 
 
 def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
-                   renkler: list[str], bedenler: list[str]) -> None:
+                   renkler: list[str], bedenler: list[str],
+                   mevcut: dict | None = None) -> None:
     try:
         with app.app_context():
             hedefler = bilgi.get("hedefler") or ["trendyol"]
 
-            # Kod tahsisi + ANINDA rezerv — barkod/model kodu HER hedefte ortak
-            # standarttır (Shopify SKU/barkodları Trendyol'la aynı havuzdan gelir).
-            kodlar = katalog.kod_oner(f["barkod_onek"], len(renkler), len(bedenler))
-            tum_barkodlar = [b for blok in kodlar["renk_bloklari"] for b in blok]
-            katalog.rezerv_ekle(kodlar["model_kodu"], tum_barkodlar)
+            if mevcut and mevcut.get("model_kodu"):
+                # REVİZYON: kodlar korunur, yeniden tahsis/rezerv YAPILMAZ
+                kodlar = {"model_kodu": mevcut["model_kodu"],
+                          "renk_bloklari": [mevcut["renkler"][r]["barkodlar"] for r in renkler]}
+            else:
+                # Kod tahsisi + ANINDA rezerv — barkod/model kodu HER hedefte ortak
+                # standarttır (Shopify SKU/barkodları Trendyol'la aynı havuzdan gelir).
+                kategori_ad = (f.get("kategori_yolu") or "").split(" > ")[-1]
+                kodlar = katalog.kod_oner(
+                    f["barkod_onek"], len(renkler), len(bedenler),
+                    model_onek=katalog.model_onek_oner(kategori_ad),
+                    ozel_model=(f.get("ozel_model_kodu") or "").strip() or None)
+                tum_barkodlar = [b for blok in kodlar["renk_bloklari"] for b in blok]
+                katalog.rezerv_ekle(kodlar["model_kodu"], tum_barkodlar)
 
             # Trendyol özellik kataloğu yalnız Trendyol hedefliyken gerekir
             harita = {}
@@ -315,6 +325,26 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
         _hata_yaz(taslak_id, "Taslak üretimi", e)
 
 
+def _bilgi_kur(taslak_id: str, f: dict, renkler: list[str], bedenler: list[str],
+               hedefler: list[str]) -> dict:
+    gorsel_yollari = []
+    for renk in renkler:
+        klasor = _taslak_yolu(taslak_id) / "gorsel" / secure_filename(renk)
+        ilk = sorted(klasor.glob("*"))[:1] if klasor.exists() else []
+        gorsel_yollari += [str(p) for p in ilk]
+    return {
+        "kategori_yolu": f.get("kategori_yolu", ""),
+        "urun_turu": f.get("urun_turu", ""),
+        "renkler": renkler,
+        "beden_araligi": f"{bedenler[0]}-{bedenler[-1]}" if len(bedenler) > 1 else bedenler[0],
+        "teknik": f.get("teknik") or [],
+        "not": f.get("not", ""),
+        "gorsel_yollari": gorsel_yollari,
+        "genel_talimat": katalog.talimat_getir(),
+        "hedefler": hedefler,
+    }
+
+
 @urun_yukleme_bp.route("/urun-yukleme/api/taslak", methods=["POST"])
 @roles_required("admin")
 def taslak_uret():
@@ -333,23 +363,7 @@ def taslak_uret():
             return jsonify({"success": False,
                             "error": "Barkod öneki boş — kategori seçince otomatik dolar, bulunamadıysa elle girin."}), 400
 
-        gorsel_yollari = []
-        for renk in renkler:
-            klasor = _taslak_yolu(taslak_id) / "gorsel" / secure_filename(renk)
-            ilk = sorted(klasor.glob("*"))[:1] if klasor.exists() else []
-            gorsel_yollari += [str(p) for p in ilk]
-
-        bilgi = {
-            "kategori_yolu": f.get("kategori_yolu", ""),
-            "urun_turu": f.get("urun_turu", ""),
-            "renkler": renkler,
-            "beden_araligi": f"{bedenler[0]}-{bedenler[-1]}" if len(bedenler) > 1 else bedenler[0],
-            "teknik": f.get("teknik") or [],
-            "not": f.get("not", ""),
-            "gorsel_yollari": gorsel_yollari,
-            "genel_talimat": katalog.talimat_getir(),
-            "hedefler": hedefler,
-        }
+        bilgi = _bilgi_kur(taslak_id, f, renkler, bedenler, hedefler)
         _taslak_kaydet(taslak_id, {"taslak_id": taslak_id, "form": f, "durum": "uretiliyor"})
         app = current_app._get_current_object()
         threading.Thread(target=_taslak_worker, daemon=True,
@@ -360,6 +374,44 @@ def taslak_uret():
     except Exception as e:
         logger.error("[URUN] taslak başlatma: %s", e, exc_info=True)
         return jsonify({"success": False, "error": "Taslak başlatılamadı."}), 500
+
+
+@urun_yukleme_bp.route("/urun-yukleme/api/taslak-duzelt", methods=["POST"])
+@roles_required("admin")
+def taslak_duzelt():
+    """Q&A'daki 'Düzelttir' deseni: talimatla yeniden üretim — kodlar KORUNUR."""
+    try:
+        f = request.json or {}
+        talimat = (f.get("talimat") or "").strip()
+        if not talimat:
+            return jsonify({"success": False, "error": "Düzeltme talimatı boş."}), 400
+        taslak = _taslak_oku(f.get("taslak_id") or "")
+        if taslak.get("durum") not in ("hazir", "hata"):
+            return jsonify({"success": False,
+                            "error": f"Taslak düzeltmeye uygun durumda değil: {taslak.get('durum')}"}), 400
+        form = taslak["form"]
+        renkler = list(taslak["renkler"].keys())
+        bedenler = taslak["bedenler"]
+        hedefler = taslak.get("hedefler") or ["trendyol"]
+
+        bilgi = _bilgi_kur(taslak["taslak_id"], form, renkler, bedenler, hedefler)
+        bilgi["duzeltme_talimati"] = talimat
+        bilgi["onceki_metin"] = {
+            "renkler": {r: {k: v for k, v in taslak["renkler"][r].items() if k != "barkodlar"}
+                        for r in renkler},
+            "shopify": taslak.get("shopify"),
+        }
+        taslak["durum"] = "uretiliyor"
+        _taslak_kaydet(taslak["taslak_id"], taslak)
+        app = current_app._get_current_object()
+        threading.Thread(target=_taslak_worker, daemon=True,
+                         args=(app, taslak["taslak_id"], form, bilgi, renkler, bedenler, taslak)).start()
+        return jsonify({"success": True, "taslak_id": taslak["taslak_id"], "durum": "uretiliyor"})
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        logger.error("[URUN] taslak düzeltme: %s", e, exc_info=True)
+        return jsonify({"success": False, "error": "Düzeltme başlatılamadı."}), 500
 
 
 @urun_yukleme_bp.route("/urun-yukleme/api/taslak-durum")
