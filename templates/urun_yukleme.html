@@ -705,6 +705,7 @@ Alt Taban: Kaymaz taban</textarea>
       const d = await getJSON("/urun-yukleme/api/yukle", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taslak_id: S.taslakId, renkler: renkDuzeltme,
+                               hedefler: S.hedefler,
                                shopify: shopifyDuzeltme, form: S.taslak.form }) });
       const t = await durumBekle(["gonderildi"], 5000, 10 * 60 * 1000);
       let sonucHtml = "";

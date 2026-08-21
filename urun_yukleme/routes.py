@@ -602,6 +602,12 @@ def yukle():
                                       for k in ("h1", "seo_baslik", "seo_aciklama", "aciklama")
                                       if f["shopify"].get(k)})
 
+        # Yükleme anındaki hedef seçimi esastır (taslak sonrasında değiştirilebilir)
+        if f.get("hedefler"):
+            secilen = [h for h in f["hedefler"] if h in GECERLI_HEDEFLER]
+            if secilen:
+                taslak["hedefler"] = secilen
+
         form = taslak["form"]
         hedefler = taslak.get("hedefler") or ["trendyol"]
         for alan, ad in (("kategori_id", "Kategori"), ("satis_fiyat", "Satış fiyatı"),
