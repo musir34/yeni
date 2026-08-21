@@ -359,7 +359,7 @@ class ShopifyStockService:
                             len(uretim_barcodes), URETIM_SABIT_ADET)
         except Exception:
             uretim_barcodes = set()
-            URETIM_SABIT_ADET = 5
+            URETIM_SABIT_ADET = 10
 
         # Envanter takibi kapalı olan ürünlerde tracking'i aç.
         # Yavaş bir işlem (1000+ ardışık mutation olabilir); 6 saatte bir yeterli.

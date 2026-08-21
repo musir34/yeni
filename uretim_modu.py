@@ -24,7 +24,7 @@ from models import db, PlatformConfig, Product, UretimSiparis
 logger = logging.getLogger(__name__)
 
 PLATFORM_ANAHTAR = "uretim_ayar"
-URETIM_SABIT_ADET = 5  # Trendyol'a gönderilen sabit stok adedi
+URETIM_SABIT_ADET = 10  # Trendyol'a gönderilen sabit stok adedi
 
 
 def _kayit(olustur: bool = False) -> PlatformConfig | None:
