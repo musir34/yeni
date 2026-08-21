@@ -69,6 +69,13 @@ def urun_ac(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
                                          "quantity": int(form.get("stok", 5))}],
             })
 
+    # Aynı barkod Shopify'da zaten bir üründeyse KOPYA AÇMA — o ürünü güncelle
+    ilk_barkod = (taslak["renkler"][renkler[0]]["barkodlar"] or [""])[0]
+    mevcut_pid = _barkodla_urun_bul(ilk_barkod)
+    if mevcut_pid:
+        logger.info("[SHOPIFY-URUN] %s barkodu mevcut üründe (%s) — güncelleme yapılacak",
+                    ilk_barkod, mevcut_pid)
+
     girdi = {
         "title": sh.get("h1") or form.get("urun_turu") or urun_tipi,
         "handle": handle,
@@ -85,6 +92,9 @@ def urun_ac(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
         "files": dosyalar,
         "variants": varyantlar,
     }
+    if mevcut_pid:
+        girdi["id"] = mevcut_pid
+        girdi.pop("handle", None)  # mevcut ürünün adresi korunur
     d = _graphql("""
         mutation urunAc($input: ProductSetInput!) {
           productSet(synchronous: true, input: $input) {
@@ -107,6 +117,18 @@ def urun_ac(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
 
     return {"product_id": urun["id"], "handle": urun["handle"],
             "url": f"https://www.gullushoes.com/products/{urun['handle']}"}
+
+
+def _barkodla_urun_bul(barkod: str) -> str | None:
+    """Barkod Shopify'da kayıtlıysa ürün gid'ini döndürür (kopya ürünü önler)."""
+    if not barkod:
+        return None
+    d = _graphql("""
+        query bul($q: String!) {
+          productVariants(first: 1, query: $q) { nodes { product { id } } }
+        }""", {"q": f"barcode:{barkod}"})
+    dugumler = d["productVariants"]["nodes"]
+    return dugumler[0]["product"]["id"] if dugumler else None
 
 
 def _kapaklari_ata(urun: dict, renkler: list[str], renk_gorselleri: dict) -> None:

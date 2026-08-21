@@ -255,10 +255,23 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
         with app.app_context():
             hedefler = bilgi.get("hedefler") or ["trendyol"]
 
+            ozel = (f.get("ozel_model_kodu") or "").strip()
             if mevcut and mevcut.get("model_kodu"):
                 # REVİZYON: kodlar korunur, yeniden tahsis/rezerv YAPILMAZ
                 kodlar = {"model_kodu": mevcut["model_kodu"],
                           "renk_bloklari": [mevcut["renkler"][r]["barkodlar"] for r in renkler]}
+            elif ozel and (eslesen := katalog.mevcut_model_kodlari(ozel, renkler, bedenler)):
+                # MEVCUT MODEL: Trendyol'daki barkodlar aynen kullanılır (yeni tahsis YOK)
+                # — Shopify/Trendyol barkod tutarlılığı için (0121 senaryosu).
+                eksik = [r for r in renkler if r not in eslesen]
+                if eksik:
+                    raise ValueError(
+                        f"{ozel} modelinde şu renkler mevcut barkodlarla eşleşti: "
+                        f"{', '.join(eslesen)} — eşleşmeyen: {', '.join(eksik)}. "
+                        "Eşleşmeyen renkleri ayrı bir taslakla (kod boş) yükleyin "
+                        "ya da Trendyol'daki stok kodu biçimini kontrol edin.")
+                kodlar = {"model_kodu": ozel,
+                          "renk_bloklari": [eslesen[r] for r in renkler]}
             else:
                 # Kod tahsisi + ANINDA rezerv — barkod/model kodu HER hedefte ortak
                 # standarttır (Shopify SKU/barkodları Trendyol'la aynı havuzdan gelir).
@@ -266,7 +279,7 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                 kodlar = katalog.kod_oner(
                     f["barkod_onek"], len(renkler), len(bedenler),
                     model_onek=katalog.model_onek_oner(kategori_ad),
-                    ozel_model=(f.get("ozel_model_kodu") or "").strip() or None)
+                    ozel_model=ozel or None)
                 tum_barkodlar = [b for blok in kodlar["renk_bloklari"] for b in blok]
                 katalog.rezerv_ekle(kodlar["model_kodu"], tum_barkodlar)
 
@@ -461,8 +474,17 @@ def _trendyol_gonder(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
     ortak_ozellikler = form.get("ozellik_secimleri") or []
     beden_attr_id = form.get("beden_attr_id")
 
+    # Zorunlu özellik güvencesi: eksikler otomatik tamamlanır (Web Color renk
+    # bazlı eşlenir); tamamlanamayan kalırsa batch'e gitmeden hata verilir.
+    ortak_ek, renk_web_color, eksikler = katalog.zorunlu_tamamla(
+        int(form["kategori_id"]), ortak_ozellikler, list(taslak["renkler"].keys()))
+    if eksikler:
+        raise ValueError("Şu zorunlu özellikler eşlenemedi, Adım 1'den seçin: "
+                         + ", ".join(eksikler))
+
     items = []
     for renk, r in taslak["renkler"].items():
+        renk_ozel = [renk_web_color[renk]] if renk_web_color.get(renk) else []
         for beden, barkod in zip(bedenler, r["barkodlar"]):
             if len(barkod) != katalog.BARKOD_UZUNLUK:
                 raise ValueError(f"Barkod {katalog.BARKOD_UZUNLUK} hane değil: {barkod}")
@@ -481,7 +503,7 @@ def _trendyol_gonder(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
                 "vatRate": int(form.get("kdv", 10)),
                 "images": [{"url": u} for u in renk_gorselleri[renk]],
                 "attributes": [{"attributeId": 47, "customAttributeValue": renk}]
-                              + ortak_ozellikler
+                              + ortak_ozellikler + ortak_ek + renk_ozel
                               + [{"attributeId": int(beden_attr_id),
                                   "attributeValueId": int(beden_deger[beden])}],
             })

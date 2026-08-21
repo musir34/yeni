@@ -327,6 +327,85 @@ def kod_oner(onek: str, renk_sayisi: int, beden_sayisi: int,
     return {"model_kodu": model_kodu, "renk_bloklari": renk_bloklari}
 
 
+# ------------------------------------------- zorunlu özellik güvencesi
+
+WEB_COLOR_ID = 348
+# Web Color'da birebir karşılığı olmayan mağaza renkleri → en yakın resmi renk
+WEB_COLOR_ES = {"vizon": "bej", "krem": "ekru", "ten": "bej", "nude": "bej",
+                "taba": "kahverengi", "camel": "kahverengi", "gold": "altın",
+                "gümüş rengi": "gümüş", "leopar": "kahverengi"}
+# Diğer zorunlularda güvenli varsayılanlar (ad → aranacak değer adı)
+ZORUNLU_VARSAYILAN = {"cinsiyet": "kadın / kız", "yaş grubu": "yetişkin",
+                      "menşei": "tr", "desen": "düz"}
+
+
+def zorunlu_tamamla(cid: int, secimler: list[dict], renkler: list[str]) -> tuple[list, dict, list]:
+    """
+    Batch'e eksik zorunlu özellik gitmesin: seçimlerde olmayan zorunluları
+    otomatik tamamlar. Döner: (ortak_ek, renk_web_color, tamamlanamayanlar).
+    - Web Color RENK BAŞINA eşlenir (Kırmızı→Kırmızı, Vizon→Bej ...).
+    - Cinsiyet/Yaş/Menşei/Desen güvenli varsayılanla doldurulur.
+    """
+    secili_idler = {int(s.get("attributeId")) for s in secimler if s.get("attributeId")}
+    ortak_ek, renk_web_color, eksikler = [], {}, []
+    for o in kategori_ozellikleri(cid):
+        if not o.get("zorunlu") or o.get("varyant") or (o.get("ad") or "") == "Renk":
+            continue
+        if o["id"] in secili_idler:
+            continue
+        degerler = {str(v["ad"]).strip().lower(): v["id"]
+                    for v in ozellik_degerleri(cid, o["id"])}
+        if o["id"] == WEB_COLOR_ID:
+            for renk in renkler:
+                r = renk.strip().lower()
+                deger_id = degerler.get(r) or degerler.get(WEB_COLOR_ES.get(r, "")) \
+                    or degerler.get("çok renkli")
+                if deger_id:
+                    renk_web_color[renk] = {"attributeId": WEB_COLOR_ID,
+                                            "attributeValueId": deger_id}
+                else:
+                    eksikler.append(f"Web Color ({renk})")
+            continue
+        hedef = ZORUNLU_VARSAYILAN.get((o.get("ad") or "").strip().lower())
+        deger_id = degerler.get(hedef) if hedef else None
+        if deger_id:
+            ortak_ek.append({"attributeId": o["id"], "attributeValueId": deger_id})
+        elif o.get("serbest"):
+            continue  # serbest zorunlu: boş bırakılabilirlik kategoriye kalmış, zorlamayalım
+        else:
+            eksikler.append(o.get("ad") or str(o["id"]))
+    return ortak_ek, renk_web_color, eksikler
+
+
+def mevcut_model_kodlari(model_kodu: str, renkler: list[str], bedenler: list[str]) -> dict:
+    """
+    Model zaten Trendyol'daysa mevcut barkodlarını getirir (yeniden tahsis YOK —
+    Shopify/Trendyol barkod tutarlılığı). stockCode deseni: '<model>-<beden> <Renk>'.
+    Döner: {renk: [beden sırasında barkodlar]} — yalnız TAM bloklar dahil edilir.
+    """
+    harita: dict = {}
+    for uc in ("approved", "unapproved"):
+        d = _get(f"{BASE}/sellers/{SUPPLIER_ID}/products/{uc}"
+                 f"?productMainId={model_kodu}&size=100", timeout=90)
+        for c in d.get("content", []):
+            for v in c.get("variants") or []:
+                sc = str(v.get("stockCode") or "")
+                bc = str(v.get("barcode") or "")
+                if not (sc.startswith(f"{model_kodu}-") and bc):
+                    continue
+                kalan = sc[len(model_kodu) + 1:]
+                parcalar = kalan.split(" ", 1)
+                if len(parcalar) == 2:
+                    beden, renk = parcalar[0].strip(), parcalar[1].strip()
+                    harita.setdefault(renk, {})[beden] = bc
+    sonuc = {}
+    for renk in renkler:
+        kayit = harita.get(renk) or {}
+        if all(b in kayit for b in bedenler):
+            sonuc[renk] = [kayit[b] for b in bedenler]
+    return sonuc
+
+
 # ------------------------------------------------------------------ denetim
 
 def yasak_tara(*metinler: str) -> list[str]:
