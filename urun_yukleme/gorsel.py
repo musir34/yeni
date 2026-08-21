@@ -18,10 +18,10 @@ from shopify_site.shopify_config import ShopifyConfig
 logger = logging.getLogger(__name__)
 
 
-def _graphql(query: str, variables: dict) -> dict:
+def _graphql(query: str, variables: dict, timeout: int = 60) -> dict:
     r = requests.post(ShopifyConfig.graphql_url(),
                       json={"query": query, "variables": variables},
-                      headers=ShopifyConfig.get_headers(), timeout=60)
+                      headers=ShopifyConfig.get_headers(), timeout=timeout)
     r.raise_for_status()
     data = r.json()
     if data.get("errors"):

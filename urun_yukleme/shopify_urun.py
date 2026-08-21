@@ -95,27 +95,34 @@ def urun_ac(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
             }
             userErrors { code field message }
           }
-        }""", {"input": girdi})
+        }""", {"input": girdi},
+        timeout=300)  # senkron productSet çok varyant/görselde 60 sn'yi aşabilir
     hatalar = d["productSet"]["userErrors"]
     if hatalar:
         raise RuntimeError(f"Shopify productSet: {hatalar}")
     urun = d["productSet"]["product"]
 
-    _kapaklari_ata(urun, renkler)
+    _kapaklari_ata(urun, renkler, renk_gorselleri)
     _yayinla(urun["id"])
 
     return {"product_id": urun["id"], "handle": urun["handle"],
             "url": f"https://www.gullushoes.com/products/{urun['handle']}"}
 
 
-def _kapaklari_ata(urun: dict, renkler: list[str]) -> None:
-    """Her rengin İLK görselini o rengin tüm varyantlarına kapak yap (swatch görseli)."""
-    kapaklar = {}
-    for m in urun["media"]["nodes"]:
-        for renk in renkler:
-            # ALT metni "<Renk> ..." ile başlıyor; rengin ilk medyası kapaktır
-            if (m.get("alt") or "").startswith(renk) and renk not in kapaklar:
-                kapaklar[renk] = m["id"]
+def _kapaklari_ata(urun: dict, renkler: list[str], renk_gorselleri: dict) -> None:
+    """
+    Her rengin İLK görselini o rengin tüm varyantlarına kapak yap (swatch görseli).
+    Eşleme SIRAYLA yapılır: productSet files sırası korunur, blok başlangıçları
+    renk başına görsel sayısından hesaplanır (ad/önek tahmini yok — "Bej"/"Bej Rugan"
+    gibi önek çakışan renk adlarında bile şaşmaz).
+    """
+    medya = urun["media"]["nodes"]
+    kapaklar, konum = {}, 0
+    for renk in renkler:
+        adet = len(renk_gorselleri.get(renk) or [])
+        if adet and konum < len(medya):
+            kapaklar[renk] = medya[konum]["id"]
+        konum += adet
     atama = []
     for v in urun["variants"]["nodes"]:
         renk = (v.get("title") or "").split(" / ")[0]

@@ -201,6 +201,12 @@ Alt Taban: Kaymaz taban</textarea>
   const renkListesi = () => $("uyRenkler").value.split(",").map(s => s.trim()).filter(Boolean);
   const bedenListesi = () => $("uyBedenler").value.split(",").map(s => s.trim()).filter(Boolean);
 
+  // Önizlemeye basılan tüm metinler kaçışlanır (AI çıktısı güvenilmez girdi sayılır)
+  function kacir(s) {
+    return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
   async function getJSON(url, secenek) {
     const r = await fetch(url, secenek);
     const d = await r.json().catch(() => ({}));
@@ -491,15 +497,15 @@ Alt Taban: Kaymaz taban</textarea>
         <div class="border border-success rounded p-2 mb-3">
           <div class="fw-bold mb-1">🛍️ Site (Shopify) İçeriği <small class="text-muted">tüm renkler tek üründe</small></div>
           <label class="form-label mb-0 mt-1"><small>Ürün adı (H1)</small></label>
-          <input class="form-control" id="uyShH1" value="${(t.shopify.h1 || "").replace(/"/g, "&quot;")}">
+          <input class="form-control" id="uyShH1" value="${kacir(t.shopify.h1)}">
           <label class="form-label mb-0 mt-1"><small>SEO başlığı (≤60)</small></label>
-          <input class="form-control uy-onizleme-baslik" id="uyShSeoB" value="${(t.shopify.seo_baslik || "").replace(/"/g, "&quot;")}">
+          <input class="form-control uy-onizleme-baslik" id="uyShSeoB" value="${kacir(t.shopify.seo_baslik)}">
           <span class="uy-sayac" id="uyShSeoBSayac"></span>
           <label class="form-label mb-0 mt-1"><small>SEO meta açıklaması (140-160)</small></label>
-          <textarea class="form-control" id="uyShSeoA" rows="2">${t.shopify.seo_aciklama || ""}</textarea>
+          <textarea class="form-control" id="uyShSeoA" rows="2">${kacir(t.shopify.seo_aciklama)}</textarea>
           <span class="uy-sayac" id="uyShSeoASayac"></span>
           <details class="mt-2"><summary>Site açıklaması HTML (düzenlenebilir)</summary>
-            <textarea class="form-control uy-aciklama-kutu" id="uyShAciklama">${t.shopify.aciklama || ""}</textarea>
+            <textarea class="form-control uy-aciklama-kutu" id="uyShAciklama">${kacir(t.shopify.aciklama)}</textarea>
           </details>
         </div>`;
     }
@@ -508,13 +514,13 @@ Alt Taban: Kaymaz taban</textarea>
       if (!r.baslik && !r.aciklama) continue;  // Shopify-only: renk bazlı Trendyol kartı yok
       html += `
         <div class="border rounded p-2 mb-3">
-          <div class="fw-bold mb-1">${renk} <small class="text-muted">${r.barkodlar[0]} – ${r.barkodlar[r.barkodlar.length - 1]}</small></div>
+          <div class="fw-bold mb-1">${kacir(renk)} <small class="text-muted">${r.barkodlar[0]} – ${r.barkodlar[r.barkodlar.length - 1]}</small></div>
           <div>
-            <input class="form-control uy-onizleme-baslik uy-baslik" data-renk="${renk}" value="${(r.baslik || "").replace(/"/g, "&quot;")}">
+            <input class="form-control uy-onizleme-baslik uy-baslik" data-renk="${kacir(renk)}" value="${kacir(r.baslik)}">
             <span class="uy-sayac"></span> <small class="text-muted">(95-100 zorunlu)</small>
           </div>
           <details class="mt-2"><summary>Açıklama HTML (düzenlenebilir)</summary>
-            <textarea class="form-control uy-aciklama-kutu uy-aciklama" data-renk="${renk}">${r.aciklama || ""}</textarea>
+            <textarea class="form-control uy-aciklama-kutu uy-aciklama" data-renk="${kacir(renk)}">${kacir(r.aciklama)}</textarea>
           </details>
         </div>`;
     }

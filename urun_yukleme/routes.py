@@ -439,9 +439,11 @@ def _yukle_worker(app, taslak_id: str) -> None:
                 taslak["cdn"] = renk_gorselleri
                 _taslak_kaydet(taslak_id, taslak)
 
-            # Hedefler bağımsız denenir; biri düşerse diğeri tamamlanır
+            # Hedefler bağımsız ve İDEMPOTENT denenir: daha önce başarılmış hedef
+            # yeniden gönderilmez (tekrar denemede çift batch / çift ürün oluşmaz).
             hatalar = []
-            if "trendyol" in hedefler:
+            trendyol_tamam = bool(taslak.get("batch_sonuc")) and not taslak["batch_sonuc"].get("hata")
+            if "trendyol" in hedefler and not trendyol_tamam:
                 taslak["durum"] = "gonderiliyor"
                 _taslak_kaydet(taslak_id, taslak)
                 try:
@@ -452,7 +454,8 @@ def _yukle_worker(app, taslak_id: str) -> None:
                     hatalar.append("Trendyol")
                 _taslak_kaydet(taslak_id, taslak)
 
-            if "shopify" in hedefler:
+            shopify_tamam = bool((taslak.get("shopify_sonuc") or {}).get("product_id"))
+            if "shopify" in hedefler and not shopify_tamam:
                 try:
                     taslak["shopify_sonuc"] = shopify_urun.urun_ac(taslak, form, renk_gorselleri)
                 except Exception as e:
@@ -461,9 +464,15 @@ def _yukle_worker(app, taslak_id: str) -> None:
                     hatalar.append("Shopify")
                 _taslak_kaydet(taslak_id, taslak)
 
-            taslak["durum"] = "hata" if len(hatalar) == len(hedefler) else "gonderildi"
+            # HERHANGİ bir hedef başarısızsa durum "hata" kalır → "Onayla ve Yükle"
+            # tekrar çalışır; başarılan hedefler yukarıdaki kontrollerle atlanır.
+            taslak["durum"] = "hata" if hatalar else "gonderildi"
             if hatalar:
-                taslak["hata"] = f"Şu hedefler başarısız: {', '.join(hatalar)} (detay sonuç bloklarında)"
+                taslak["hata"] = (f"Şu hedefler başarısız: {', '.join(hatalar)} — "
+                                  "düzeltip tekrar 'Onayla ve Yükle' diyebilirsiniz; "
+                                  "başarılan hedefler yeniden gönderilmez.")
+            else:
+                taslak.pop("hata", None)
             _taslak_kaydet(taslak_id, taslak)
     except Exception as e:
         _hata_yaz(taslak_id, "Yükleme", e)
