@@ -377,13 +377,18 @@ Alt Taban: Kaymaz taban</textarea>
     return satirlar;
   }
 
-  // Bilinen alanlarda akıllı ön seçim (Cinsiyet, Yaş Grubu, Menşei...)
+  // Bilinen alanlarda akıllı ön seçim (Cinsiyet, Yaş Grubu, Menşei=TR, Desen)
   function otomatikSec(sel, ad) {
     const varsayilan = { "Cinsiyet": "kadın", "Yaş Grubu": "yetişkin", "Menşei": "tr", "Desen": "düz" };
     const hedef = varsayilan[ad];
     if (!hedef) return;
+    // Önce BİREBİR eşleşme ("tr" → "TR"; yoksa "Trinidad..." gibi yanlış başlangıç
+    // eşleşmelerine düşülürdü), bulunamazsa kelime-başı eşleşme.
     for (const opt of sel.options) {
-      if (opt.text.toLowerCase() === hedef || opt.text.toLowerCase().startsWith(hedef)) { sel.value = opt.value; return; }
+      if (opt.text.trim().toLowerCase() === hedef) { sel.value = opt.value; return; }
+    }
+    for (const opt of sel.options) {
+      if (opt.text.trim().toLowerCase().startsWith(hedef + " ")) { sel.value = opt.value; return; }
     }
   }
 
