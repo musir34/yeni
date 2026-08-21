@@ -69,6 +69,14 @@ html.gs-dark .uy-kart { background: #1e1e1e; border-color: #333; box-shadow: non
       <button class="btn btn-sm btn-primary ms-2" id="uyDevamBtn"><i class="bi bi-play-fill"></i> Devam Et</button>
     </div>
     <small class="text-muted d-block mt-2">Sitede tüm renkler tek üründe toplanır (renk daireleri); Trendyol'da model kodu renkleri birbirine bağlar. Barkod ve stok kodları iki platformda da ortaktır.</small>
+    <hr>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <b>📥 Trendyol'dan Aktar:</b>
+      <input class="form-control form-control-sm" id="uyAktarModel" placeholder="model kodu (ör. 0121)" style="max-width:160px">
+      <button class="btn btn-outline-danger btn-sm" id="uyAktarBtn"><i class="bi bi-download"></i> Getir</button>
+      <span class="text-muted" id="uyAktarDurum"></span>
+    </div>
+    <small class="text-muted">Trendyol'daki mevcut ürünün renkleri, bedenleri, <b>aynı barkodları</b>, fiyatı, özellikleri ve görselleri otomatik doldurulur — AI üretip onaylarsınız, Shopify'a birebir aynı kodlarla gider.</small>
   </div>
 
   <!-- ADIM 1: ÜRÜN BİLGİLERİ -->
@@ -259,6 +267,7 @@ Alt Taban: Kaymaz taban</textarea>
       if (f.stok) $("uyStok").value = f.stok;
       if (f.kdv) $("uyKdv").value = f.kdv;
       if (Array.isArray(f.teknik) && f.teknik.length) $("uyTeknik").value = f.teknik.join("\n");
+      S.trendyolAciklama = f.trendyol_aciklama || "";  // aktarımdan geldiyse korunur
       // Görsel rozetleri (dosyalar sunucuda — yeniden seçmeye gerek yok)
       for (const [renk, adet] of Object.entries(t.gorsel_sayilari || {})) {
         const roz = $("uyG_" + renk);
@@ -291,6 +300,52 @@ Alt Taban: Kaymaz taban</textarea>
       }
     });
   }).catch(() => {});
+
+  // --- Trendyol'dan Aktar: mevcut ürünü tek tıkla forma doldur (hedef: Shopify)
+  $("uyAktarBtn").addEventListener("click", async () => {
+    const model = $("uyAktarModel").value.trim();
+    if (!model) return alert("Model kodu girin (ör. 0121).");
+    $("uyAktarBtn").classList.add("uy-bekliyor");
+    $("uyAktarDurum").textContent = "Trendyol'dan çekiliyor (görseller dahil)…";
+    try {
+      const d = await getJSON("/urun-yukleme/api/trendyol-getir", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: model }) });
+      const p = d.paket;
+      S.taslakId = d.taslak_id;
+      hedefUygula(["shopify"]);  // aktarımın doğal hedefi site; isterseniz karttan değiştirin
+      $("uyModelKodu").value = p.model_kodu;
+      $("uyUrunTuru").value = p.baslik || "";
+      $("uyRenkler").value = (p.renkler || []).join(", ");
+      $("uyRenkler").dispatchEvent(new Event("change"));
+      $("uyBedenler").value = (p.bedenler || []).join(", ");
+      if (p.satis_fiyat) $("uySatis").value = p.satis_fiyat;
+      if (p.liste_fiyat) $("uyListe").value = p.liste_fiyat;
+      if (Array.isArray(p.teknik) && p.teknik.length) $("uyTeknik").value = p.teknik.join("\n");
+      for (const [renk, adet] of Object.entries(d.gorsel_sayilari || {})) {
+        const roz = $("uyG_" + renk);
+        if (roz && adet) { roz.style.display = ""; roz.textContent = adet + " görsel Trendyol'dan ✓"; }
+      }
+      // Kategoriyi ada göre seç (özellikler + önek otomatik gelir)
+      if (p.kategori_ad) {
+        for (const opt of $("uyKategori").options) {
+          if (opt.text.trim() === p.kategori_ad) {
+            $("uyKategori").value = opt.value;
+            $("uyKategori").dispatchEvent(new Event("change"));
+            break;
+          }
+        }
+      }
+      // AI'ya kaynak: mevcut Trendyol açıklaması (uyarlaması için)
+      S.trendyolAciklama = p.aciklama_ham || "";
+      $("uyAktarDurum").textContent = `✓ ${p.model_kodu} yüklendi — ${(p.renkler || []).length} renk, aynı barkodlarla. Şimdi "AI ile Üret"e basın.`;
+    } catch (e) {
+      $("uyAktarDurum").textContent = "";
+      alert("Aktarım başarısız: " + e.message);
+    } finally {
+      $("uyAktarBtn").classList.remove("uy-bekliyor");
+    }
+  });
 
   // --- AI motoru + model seçimi (kalıcı; motor_ayar 'urun' alanı)
   const MODEL_ONERILERI = { claude: ["opus", "sonnet", "claude-fable-5"],
@@ -514,6 +569,7 @@ Alt Taban: Kaymaz taban</textarea>
         renkler: renkListesi(), bedenler: bedenListesi(),
         barkod_onek: $("uyOnek").value,
         ozel_model_kodu: $("uyModelKodu").value.trim(),
+        trendyol_aciklama: S.trendyolAciklama || "",
         // Teknik liste = Trendyol özellik seçimleri + serbest satırlar
         // (aynı adı iki kez yazmamak için özellik seçimi öncelikli)
         teknik: (() => {

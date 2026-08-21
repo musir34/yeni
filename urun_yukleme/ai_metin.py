@@ -84,6 +84,16 @@ toplanır, bu yüzden şu alanlar hiçbir renge özel olmamalı:
   renk-nötr sürümler (renklerden toplu bahsedebilir)
 - "genel.maddeler": ürüne özel 3-4 ek özellik maddesi ("<b>Detay</b> — açıklama")
 """
+    aktarim_blok = ""
+    if bilgi.get("trendyol_aciklama"):
+        aktarim_blok = f"""
+BU ÜRÜN TRENDYOL'DAN AKTARILIYOR. Mevcut Trendyol açıklaması aşağıda — içindeki
+ürün bilgilerini/karakterini KAYNAK olarak kullan ama metni birebir kopyalama,
+site için yeniden yaz:
+--- TRENDYOL AÇIKLAMASI ---
+{bilgi['trendyol_aciklama'][:4000]}
+---
+"""
     duzeltme_blok = ""
     if bilgi.get("duzeltme_talimati"):
         onceki = bilgi.get("onceki_metin") or {}
@@ -96,7 +106,7 @@ istenmeyen kısımları koru (baştan yazma, talebi işle):
 {bilgi['duzeltme_talimati']}
 """
     return f"""Yeni ürün için Trendyol içeriği üret.
-{duzeltme_blok}{talimat_blok}{ozellik_blok}{shopify_blok}
+{aktarim_blok}{duzeltme_blok}{talimat_blok}{ozellik_blok}{shopify_blok}
 ÜRÜN BİLGİLERİ
 - Kategori: {bilgi.get('kategori_yolu', '')}
 - ÜRÜN TÜRÜ ÖBEĞİ (ZORUNLU): "{bilgi.get('urun_turu', '')}" — bu öbek HER başlıkta

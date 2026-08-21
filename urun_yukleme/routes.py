@@ -358,6 +358,7 @@ def _bilgi_kur(taslak_id: str, f: dict, renkler: list[str], bedenler: list[str],
         "gorsel_yollari": gorsel_yollari,
         "genel_talimat": katalog.talimat_getir(),
         "hedefler": hedefler,
+        "trendyol_aciklama": f.get("trendyol_aciklama", ""),
     }
 
 
@@ -428,6 +429,48 @@ def taslak_duzelt():
     except Exception as e:
         logger.error("[URUN] taslak düzeltme: %s", e, exc_info=True)
         return jsonify({"success": False, "error": "Düzeltme başlatılamadı."}), 500
+
+
+@urun_yukleme_bp.route("/urun-yukleme/api/trendyol-getir", methods=["POST"])
+@roles_required("admin")
+def trendyol_getir():
+    """
+    Trendyol'daki mevcut ürünü tek tıkla aktarım için hazırlar: paketi çözer,
+    görselleri sunucuya indirir, formu dolduracak veriyi döndürür.
+    Barkod/model kodu AYNEN korunur (platformlar arası tutarlılık kuralı).
+    """
+    import requests as _requests
+    try:
+        model = ((request.json or {}).get("model") or "").strip()
+        if not model:
+            return jsonify({"success": False, "error": "Model kodu girin."}), 400
+        paket = katalog.trendyol_urun_paketi(model)
+
+        taslak_id = uuid.uuid4().hex[:12]
+        gorsel_sayilari = {}
+        for renk, urller in paket["gorseller"].items():
+            hedef = _taslak_yolu(taslak_id) / "gorsel" / secure_filename(renk)
+            hedef.mkdir(parents=True, exist_ok=True)
+            for i, url in enumerate(urller, 1):
+                try:
+                    r = _requests.get(url, timeout=30)
+                    r.raise_for_status()
+                    uzanti = ".png" if url.lower().endswith(".png") else ".jpg"
+                    (hedef / f"{i}{uzanti}").write_bytes(r.content)
+                except Exception:
+                    logger.warning("[URUN] Trendyol görseli indirilemedi: %s", url)
+            gorsel_sayilari[renk] = len(list(hedef.glob("*")))
+        if not any(gorsel_sayilari.values()):
+            return jsonify({"success": False, "error": "Ürün görselleri indirilemedi."}), 502
+
+        return jsonify({"success": True, "taslak_id": taslak_id,
+                        "paket": {k: v for k, v in paket.items() if k != "gorseller"},
+                        "gorsel_sayilari": gorsel_sayilari})
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        logger.error("[URUN] Trendyol getir: %s", e, exc_info=True)
+        return jsonify({"success": False, "error": "Ürün Trendyol'dan çekilemedi."}), 500
 
 
 @urun_yukleme_bp.route("/urun-yukleme/api/son-taslak")

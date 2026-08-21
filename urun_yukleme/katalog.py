@@ -432,6 +432,64 @@ def baslik_denetle(baslik: str) -> str | None:
     return None
 
 
+def trendyol_urun_paketi(model_kodu: str) -> dict:
+    """
+    Trendyol'daki mevcut ürünü 'aktarım paketi'ne çevirir (tek tıkla Shopify'a
+    taşıma için): renkler, bedenler, MEVCUT barkodlar, fiyat, teknik özellikler,
+    renk başına görsel URL'leri ve ham açıklama.
+    """
+    icerikler = []
+    for uc in ("approved", "unapproved"):
+        d = _get(f"{BASE}/sellers/{SUPPLIER_ID}/products/{uc}"
+                 f"?productMainId={model_kodu}&size=100", timeout=90)
+        icerikler += d.get("content") or []
+    if not icerikler:
+        raise ValueError(f"Trendyol'da {model_kodu} modeli bulunamadı.")
+
+    paket = {"model_kodu": model_kodu, "renkler": [], "bedenler": [],
+             "gorseller": {}, "barkodlar": {}, "teknik": [], "aciklama_ham": "",
+             "kategori_ad": "", "baslik": "", "satis_fiyat": None, "liste_fiyat": None}
+    bedenler = set()
+    for c in icerikler:
+        attrs = {a.get("attributeName"): a.get("attributeValue")
+                 for a in c.get("attributes") or []}
+        renk = (attrs.get("Renk") or "").strip()
+        paket["kategori_ad"] = paket["kategori_ad"] or (c.get("category") or {}).get("name", "")
+        paket["baslik"] = paket["baslik"] or (c.get("title") or "")
+        paket["aciklama_ham"] = paket["aciklama_ham"] or (c.get("description") or "")
+        for ad, deger in attrs.items():
+            satir = f"{ad}: {deger}"
+            if ad not in ("Renk",) and deger and satir not in paket["teknik"]:
+                paket["teknik"].append(satir)
+        for v in c.get("variants") or []:
+            sc = str(v.get("stockCode") or "")
+            bc = str(v.get("barcode") or "")
+            # stockCode 'model-beden Renk' → renk content'te yoksa buradan
+            if sc.startswith(f"{model_kodu}-"):
+                parcalar = sc[len(model_kodu) + 1:].split(" ", 1)
+                beden = parcalar[0].strip()
+                if not renk and len(parcalar) == 2:
+                    renk = parcalar[1].strip()
+            else:
+                beden = next((a.get("attributeValue") for a in v.get("attributes") or []
+                              if a.get("attributeName") == "Beden"), "")
+            if not (renk and beden and bc):
+                continue
+            bedenler.add(beden)
+            paket["barkodlar"].setdefault(renk, {})[beden] = bc
+            fiyat = v.get("price") or {}
+            paket["satis_fiyat"] = paket["satis_fiyat"] or fiyat.get("salePrice")
+            paket["liste_fiyat"] = paket["liste_fiyat"] or fiyat.get("listPrice")
+        if renk and renk not in paket["renkler"]:
+            paket["renkler"].append(renk)
+            paket["gorseller"][renk] = [g.get("url") for g in c.get("images") or []
+                                        if g.get("url")][:8]
+    paket["bedenler"] = sorted(bedenler, key=lambda b: (len(b), b))
+    if not paket["renkler"]:
+        raise ValueError(f"{model_kodu}: renk bilgisi çözülemedi (Renk özelliği/stok kodu biçimi).")
+    return paket
+
+
 # ------------------------------------------------------------------ gönderim
 
 def urun_gonder(items: list[dict]) -> str:
