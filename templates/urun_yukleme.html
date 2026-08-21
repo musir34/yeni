@@ -64,6 +64,10 @@ html.gs-dark .uy-kart { background: #1e1e1e; border-color: #333; box-shadow: non
       </button>
       <span class="align-self-center text-muted" id="uyHedefDurum"></span>
     </div>
+    <div id="uyDevamKutu" class="alert alert-info py-2 mt-2" style="display:none">
+      <b>Kaldığınız taslak bulundu:</b> <span id="uyDevamOzet"></span>
+      <button class="btn btn-sm btn-primary ms-2" id="uyDevamBtn"><i class="bi bi-play-fill"></i> Devam Et</button>
+    </div>
     <small class="text-muted d-block mt-2">Sitede tüm renkler tek üründe toplanır (renk daireleri); Trendyol'da model kodu renkleri birbirine bağlar. Barkod ve stok kodları iki platformda da ortaktır.</small>
   </div>
 
@@ -200,14 +204,9 @@ Alt Taban: Kaymaz taban</textarea>
 
   // --- ADIM 0: hedef seçimi — sayfa hedefe göre şekillenir
   document.querySelectorAll(".uy-hedef").forEach(btn => btn.addEventListener("click", () => {
-    S.hedefler = btn.dataset.hedef === "ikisi" ? ["trendyol", "shopify"] : [btn.dataset.hedef];
     document.querySelectorAll(".uy-hedef").forEach(b => b.classList.remove("border", "border-3", "border-dark"));
     btn.classList.add("border", "border-3", "border-dark");
-    const ad = S.hedefler.length === 2 ? "Trendyol + Shopify" : (S.hedefler[0] === "shopify" ? "Shopify (Site)" : "Trendyol");
-    $("uyHedefDurum").textContent = "Hedef: " + ad;
-    $("uyYukleBtn").innerHTML = '<i class="bi bi-cloud-arrow-up"></i> Onayla ve Yükle — ' + ad;
-    ["uyAdim1", "uyAdim2"].forEach(id => { $(id).style.display = ""; });
-    document.querySelectorAll(".uy-sonraki-adim").forEach(k => { k.style.display = ""; });
+    hedefUygula(btn.dataset.hedef === "ikisi" ? ["trendyol", "shopify"] : [btn.dataset.hedef]);
     // Trendyol özellikleri bölümü yalnız Trendyol hedefliyken anlamlı
     $("uyOzelliklerKutu").style.display = (S.hedefler.includes("trendyol") && S.kategori) ? "" : "none";
   }));
@@ -226,6 +225,72 @@ Alt Taban: Kaymaz taban</textarea>
     if (!r.ok || d.success === false) throw new Error(d.error || ("HTTP " + r.status));
     return d;
   }
+
+  // --- Kaldığın yerden devam: sunucudaki son taslağı bul ve teklif et
+  function hedefUygula(hedefler) {
+    S.hedefler = hedefler;
+    const ad = hedefler.length === 2 ? "Trendyol + Shopify" : (hedefler[0] === "shopify" ? "Shopify (Site)" : "Trendyol");
+    $("uyHedefDurum").textContent = "Hedef: " + ad;
+    $("uyYukleBtn").innerHTML = '<i class="bi bi-cloud-arrow-up"></i> Onayla ve Yükle — ' + ad;
+    ["uyAdim1", "uyAdim2"].forEach(id => { $(id).style.display = ""; });
+    document.querySelectorAll(".uy-sonraki-adim").forEach(k => { k.style.display = ""; });
+  }
+
+  getJSON("/urun-yukleme/api/son-taslak").then(d => {
+    const t = d.taslak;
+    if (!t || !t.form) return;
+    const f = t.form;
+    $("uyDevamOzet").textContent = `${t.model_kodu || "üretiliyor"} — ${(f.renkler || []).join(", ")} — hedef: ${(t.hedefler || f.hedefler || []).join("+")} — durum: ${t.durum}`;
+    $("uyDevamKutu").style.display = "";
+    $("uyDevamBtn").addEventListener("click", async () => {
+      $("uyDevamKutu").style.display = "none";
+      S.taslakId = t.taslak_id;
+      hedefUygula(t.hedefler || f.hedefler || ["trendyol"]);
+      // Formu geri doldur
+      $("uyUrunTuru").value = f.urun_turu || "";
+      $("uyNot").value = f["not"] || "";
+      $("uyRenkler").value = (f.renkler || []).join(", ");
+      $("uyRenkler").dispatchEvent(new Event("change"));
+      $("uyBedenler").value = (f.bedenler || []).join(", ");
+      $("uyOnek").value = f.barkod_onek || "";
+      $("uyModelKodu").value = f.ozel_model_kodu || "";
+      if (f.satis_fiyat) $("uySatis").value = f.satis_fiyat;
+      if (f.liste_fiyat) $("uyListe").value = f.liste_fiyat;
+      if (f.stok) $("uyStok").value = f.stok;
+      if (f.kdv) $("uyKdv").value = f.kdv;
+      if (Array.isArray(f.teknik) && f.teknik.length) $("uyTeknik").value = f.teknik.join("\n");
+      // Görsel rozetleri (dosyalar sunucuda — yeniden seçmeye gerek yok)
+      for (const [renk, adet] of Object.entries(t.gorsel_sayilari || {})) {
+        const roz = $("uyG_" + renk);
+        if (roz && adet) { roz.style.display = ""; roz.textContent = adet + " görsel sunucuda ✓"; }
+      }
+      // Kategoriyi seç (liste yüklendiyse hemen, değilse yüklenince) → özellikler + önek gelir
+      const kategoriSec = () => {
+        if (!f.kategori_id) return;
+        $("uyKategori").value = String(f.kategori_id);
+        if ($("uyKategori").value) $("uyKategori").dispatchEvent(new Event("change"));
+        else setTimeout(kategoriSec, 1500);  // liste henüz yüklenmediyse tekrar dene
+      };
+      kategoriSec();
+      // Taslak hazırsa önizlemeyi bas; üretim/yükleme sürüyorsa beklemeye geç
+      if (t.durum === "hazir" || t.durum === "hata") {
+        S.taslak = t;
+        if (t.renkler) onizlemeCiz(t);
+        $("uyYukleBtn").disabled = false;
+        $("uyDuzeltKutu").style.display = "";
+        if (t.durum === "hata" && t.hata) $("uyTaslakDurum").textContent = "Son durum: " + t.hata;
+      } else {
+        $("uyTaslakDurum").textContent = "Devam eden işlem bulundu, bekleniyor…";
+        durumBekle(["hazir", "gonderildi"], 5000, 10 * 60 * 1000).then(ts => {
+          S.taslak = ts;
+          if (ts.renkler) onizlemeCiz(ts);
+          $("uyYukleBtn").disabled = false;
+          $("uyDuzeltKutu").style.display = "";
+          $("uyTaslakDurum").textContent = "Hazır.";
+        }).catch(e => { $("uyTaslakDurum").textContent = "Durum: " + e.message; });
+      }
+    });
+  }).catch(() => {});
 
   // --- AI motoru + model seçimi (kalıcı; motor_ayar 'urun' alanı)
   const MODEL_ONERILERI = { claude: ["opus", "sonnet", "claude-fable-5"],

@@ -417,6 +417,30 @@ def taslak_duzelt():
         return jsonify({"success": False, "error": "Düzeltme başlatılamadı."}), 500
 
 
+@urun_yukleme_bp.route("/urun-yukleme/api/son-taslak")
+@roles_required("admin")
+def son_taslak():
+    """Sayfa yenilense de kayıp yok: sunucudaki en güncel taslağı döndürür."""
+    try:
+        dosyalar = sorted(TASLAK_DIR.glob("*/taslak.json"),
+                          key=lambda p: p.stat().st_mtime, reverse=True)
+        for p in dosyalar[:5]:
+            try:
+                t = json.loads(p.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if t.get("durum") in ("hazir", "hata", "uretiliyor", "yukleniyor", "gonderiliyor"):
+                gorseller = {}
+                for renk_dizin in sorted((p.parent / "gorsel").glob("*")) if (p.parent / "gorsel").exists() else []:
+                    gorseller[renk_dizin.name] = len(list(renk_dizin.glob("*")))
+                t["gorsel_sayilari"] = gorseller
+                return jsonify({"success": True, "taslak": t})
+        return jsonify({"success": True, "taslak": None})
+    except Exception as e:
+        logger.error("[URUN] son taslak: %s", e, exc_info=True)
+        return jsonify({"success": False, "error": "Son taslak okunamadı."}), 500
+
+
 @urun_yukleme_bp.route("/urun-yukleme/api/taslak-durum")
 @roles_required("admin")
 def taslak_durum():
