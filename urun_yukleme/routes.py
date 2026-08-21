@@ -139,9 +139,12 @@ def ozellik_degerleri():
         cid, aid = int(request.args.get("cid", "0")), int(request.args.get("aid", "0"))
         q = (request.args.get("q") or "").strip().lower()
         degerler = katalog.ozellik_degerleri(cid, aid)
+        toplam = len(degerler)
         if q:
             degerler = [v for v in degerler if q in str(v["ad"]).lower()]
-        return jsonify({"success": True, "degerler": degerler[:100], "toplam": len(degerler)})
+        # Kırpma YOK: Beden gibi 300+ değerli listelerde "35" ilk 100'e girmeyip
+        # beden eşlemesi boş kalıyordu; dropdown'lar da tam listeyi kaldırır.
+        return jsonify({"success": True, "degerler": degerler, "toplam": toplam})
     except Exception as e:
         logger.error("[URUN] özellik değerleri: %s", e, exc_info=True)
         return jsonify({"success": False, "error": "Değer listesi alınamadı."}), 500
