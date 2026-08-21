@@ -47,10 +47,28 @@ html.gs-dark .uy-kart { background: #1e1e1e; border-color: #333; box-shadow: non
 {% block content %}
 <div class="uy-nav-sarici">{% include "_ust_menu.html" %}</div>
 <div class="uy-sayfa">
-  <h3 class="mb-3"><i class="bi bi-cloud-arrow-up"></i> Ürün Yükleme <small class="text-muted">— AI destekli Trendyol ürün açma</small></h3>
+  <h3 class="mb-3"><i class="bi bi-cloud-arrow-up"></i> Ürün Yükleme <small class="text-muted">— AI destekli ürün açma</small></h3>
+
+  <!-- ADIM 0: HEDEF SEÇİMİ -->
+  <div class="uy-kart" id="uyHedefKart">
+    <div class="uy-adim-baslik"><span class="uy-adim-no">?</span> Ürün nereye yüklenecek?</div>
+    <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-warning uy-hedef" data-hedef="trendyol" style="min-width:180px">
+        <i class="bi bi-shop"></i> Trendyol
+      </button>
+      <button class="btn btn-success uy-hedef" data-hedef="shopify" style="min-width:180px">
+        <i class="bi bi-bag"></i> Shopify (Site)
+      </button>
+      <button class="btn btn-danger uy-hedef" data-hedef="ikisi" style="min-width:180px">
+        <i class="bi bi-lightning"></i> İkisi Birden
+      </button>
+      <span class="align-self-center text-muted" id="uyHedefDurum"></span>
+    </div>
+    <small class="text-muted d-block mt-2">Sitede tüm renkler tek üründe toplanır (renk daireleri); Trendyol'da model kodu renkleri birbirine bağlar. Barkod ve stok kodları iki platformda da ortaktır.</small>
+  </div>
 
   <!-- ADIM 1: ÜRÜN BİLGİLERİ -->
-  <div class="uy-kart" id="uyAdim1">
+  <div class="uy-kart" id="uyAdim1" style="display:none">
     <div class="uy-adim-baslik"><span class="uy-adim-no">1</span> Ürün Bilgileri</div>
 
     <div class="row g-2">
@@ -114,13 +132,13 @@ Alt Taban: Kaymaz taban</textarea>
   </div>
 
   <!-- ADIM 2: GÖRSELLER -->
-  <div class="uy-kart" id="uyAdim2">
+  <div class="uy-kart" id="uyAdim2" style="display:none">
     <div class="uy-adim-baslik"><span class="uy-adim-no">2</span> Görseller <small class="text-muted">(renk başına en fazla 8, ilk görsel ana görseldir)</small></div>
     <div id="uyGorselAlan"><em class="text-muted">Önce renkleri yazın.</em></div>
   </div>
 
   <!-- ADIM 3: AI TASLAK -->
-  <div class="uy-kart">
+  <div class="uy-kart uy-sonraki-adim" style="display:none">
     <div class="uy-adim-baslik"><span class="uy-adim-no">3</span> AI Taslağı</div>
     <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
       <div>
@@ -152,7 +170,7 @@ Alt Taban: Kaymaz taban</textarea>
   </div>
 
   <!-- ADIM 4: ONAY VE YÜKLEME -->
-  <div class="uy-kart">
+  <div class="uy-kart uy-sonraki-adim" style="display:none">
     <div class="uy-adim-baslik"><span class="uy-adim-no">4</span> Onay ve Yükleme</div>
     <div class="text-muted mb-2">Önizlemeyi kontrol etmeden yükleme yapmayın — onaysız hiçbir şey Trendyol'a gitmez.</div>
     <button class="btn btn-success" id="uyYukleBtn" disabled><i class="bi bi-cloud-arrow-up"></i> Onayla ve Trendyol'a Yükle</button>
@@ -165,8 +183,21 @@ Alt Taban: Kaymaz taban</textarea>
 {% block scripts %}
 <script>
 (function () {
-  const S = { taslakId: null, kategori: null, taslak: null, bedenAttrId: null };
+  const S = { taslakId: null, kategori: null, taslak: null, bedenAttrId: null, hedefler: [] };
   const $ = (id) => document.getElementById(id);
+
+  // --- ADIM 0: hedef seçimi — sayfa hedefe göre şekillenir
+  document.querySelectorAll(".uy-hedef").forEach(btn => btn.addEventListener("click", () => {
+    S.hedefler = btn.dataset.hedef === "ikisi" ? ["trendyol", "shopify"] : [btn.dataset.hedef];
+    document.querySelectorAll(".uy-hedef").forEach(b => b.classList.remove("border", "border-3", "border-dark"));
+    btn.classList.add("border", "border-3", "border-dark");
+    const ad = S.hedefler.length === 2 ? "Trendyol + Shopify" : (S.hedefler[0] === "shopify" ? "Shopify (Site)" : "Trendyol");
+    $("uyHedefDurum").textContent = "Hedef: " + ad;
+    ["uyAdim1", "uyAdim2"].forEach(id => { $(id).style.display = ""; });
+    document.querySelectorAll(".uy-sonraki-adim").forEach(k => { k.style.display = ""; });
+    // Trendyol özellikleri bölümü yalnız Trendyol hedefliyken anlamlı
+    $("uyOzelliklerKutu").style.display = (S.hedefler.includes("trendyol") && S.kategori) ? "" : "none";
+  }));
   const renkListesi = () => $("uyRenkler").value.split(",").map(s => s.trim()).filter(Boolean);
   const bedenListesi = () => $("uyBedenler").value.split(",").map(s => s.trim()).filter(Boolean);
 
@@ -260,6 +291,10 @@ Alt Taban: Kaymaz taban</textarea>
         $("uyOnekIpucu").textContent = `${S.kategori.ad} için kayıtlı önek bulunamadı — elle girin (6 hane önerilir).`;
       }
     }).catch(() => { $("uyOnekIpucu").textContent = "Önek öğrenilemedi — elle girin."; });
+    if (!S.hedefler.includes("trendyol")) {
+      $("uyOzelliklerKutu").style.display = "none";  // Shopify-only: Trendyol özellikleri gereksiz
+      return;
+    }
     $("uyOzelliklerKutu").style.display = "";
     $("uyOzellikler").innerHTML = "<em>Özellikler yükleniyor…</em>";
     try {
@@ -384,6 +419,7 @@ Alt Taban: Kaymaz taban</textarea>
     try {
       const govde = {
         taslak_id: S.taslakId,
+        hedefler: S.hedefler,
         kategori_id: S.kategori.id, kategori_yolu: S.kategori.yol,
         urun_turu: $("uyUrunTuru").value, not: $("uyNot").value,
         renkler: renkListesi(), bedenler: bedenListesi(),
@@ -447,8 +483,29 @@ Alt Taban: Kaymaz taban</textarea>
     setTimeout(() => ozellikOnerileriniUygula(t.ozellik_onerileri), 4000); // geç yüklenen listelere ikinci geçiş
     if (doldurulan)
       html += `<div class="alert alert-info py-2">🤖 AI ${doldurulan} Trendyol özelliğini doldurdu — Adım 1'deki seçimlerden kontrol edebilirsiniz.</div>`;
-    html += `<div class="mb-2"><b>Model kodu:</b> ${t.model_kodu}</div>`;
+    html += `<div class="mb-2"><b>Model kodu:</b> ${t.model_kodu} — <b>Hedef:</b> ${(t.hedefler || []).join(" + ")}</div>`;
+
+    // Site (Shopify) önizlemesi — renk-nötr tek ürün içeriği
+    if (t.shopify) {
+      html += `
+        <div class="border border-success rounded p-2 mb-3">
+          <div class="fw-bold mb-1">🛍️ Site (Shopify) İçeriği <small class="text-muted">tüm renkler tek üründe</small></div>
+          <label class="form-label mb-0 mt-1"><small>Ürün adı (H1)</small></label>
+          <input class="form-control" id="uyShH1" value="${(t.shopify.h1 || "").replace(/"/g, "&quot;")}">
+          <label class="form-label mb-0 mt-1"><small>SEO başlığı (≤60)</small></label>
+          <input class="form-control uy-onizleme-baslik" id="uyShSeoB" value="${(t.shopify.seo_baslik || "").replace(/"/g, "&quot;")}">
+          <span class="uy-sayac" id="uyShSeoBSayac"></span>
+          <label class="form-label mb-0 mt-1"><small>SEO meta açıklaması (140-160)</small></label>
+          <textarea class="form-control" id="uyShSeoA" rows="2">${t.shopify.seo_aciklama || ""}</textarea>
+          <span class="uy-sayac" id="uyShSeoASayac"></span>
+          <details class="mt-2"><summary>Site açıklaması HTML (düzenlenebilir)</summary>
+            <textarea class="form-control uy-aciklama-kutu" id="uyShAciklama">${t.shopify.aciklama || ""}</textarea>
+          </details>
+        </div>`;
+    }
+
     for (const [renk, r] of Object.entries(t.renkler)) {
+      if (!r.baslik && !r.aciklama) continue;  // Shopify-only: renk bazlı Trendyol kartı yok
       html += `
         <div class="border rounded p-2 mb-3">
           <div class="fw-bold mb-1">${renk} <small class="text-muted">${r.barkodlar[0]} – ${r.barkodlar[r.barkodlar.length - 1]}</small></div>
@@ -466,6 +523,19 @@ Alt Taban: Kaymaz taban</textarea>
       sayacGuncelle(inp);
       inp.addEventListener("input", () => sayacGuncelle(inp));
     });
+    // Shopify SEO sayaçları
+    const shSayac = (inpId, sayacId, min, maks) => {
+      const inp = $(inpId);
+      if (!inp) return;
+      const ciz = () => {
+        const n = inp.value.length, kutu = $(sayacId);
+        kutu.textContent = n + " karakter";
+        kutu.className = "uy-sayac " + ((n >= min && n <= maks) ? "tamam" : "hata");
+      };
+      ciz(); inp.addEventListener("input", ciz);
+    };
+    shSayac("uyShSeoB", "uyShSeoBSayac", 40, 60);
+    shSayac("uyShSeoA", "uyShSeoASayac", 140, 160);
   }
 
   // --- Yükleme
@@ -475,23 +545,30 @@ Alt Taban: Kaymaz taban</textarea>
     $("uyYukleBtn").classList.add("uy-bekliyor");
     $("uyYukleDurum").textContent = "Görseller CDN'e taşınıyor ve ürün gönderiliyor… (1-2 dk)";
     try {
-      // Bedenleri Trendyol değerleriyle eşle (ad birebir eşleşmesi)
+      // Bedenleri Trendyol değerleriyle eşle (yalnız Trendyol hedefliyken gerekir)
       const bedenDeger = {};
-      if (S.bedenAttrId) {
-        const dv = await getJSON(`/urun-yukleme/api/ozellik-degerleri?cid=${S.kategori.id}&aid=${S.bedenAttrId}`);
-        for (const b of bedenListesi()) {
-          const v = dv.degerler.find(x => String(x.ad).trim() === b);
-          if (v) bedenDeger[b] = v.id;
-        }
-      }
       const ozellikler = [];
-      document.querySelectorAll(".uy-attr").forEach(sel => {
-        if (sel.value) ozellikler.push({ attributeId: parseInt(sel.dataset.aid), attributeValueId: parseInt(sel.value) });
-      });
-      document.querySelectorAll(".uy-attr-metin").forEach(kutu => {
-        const v = kutu.value.trim();
-        if (v) ozellikler.push({ attributeId: parseInt(kutu.dataset.aid), customAttributeValue: v.slice(0, 100) });
-      });
+      if (S.hedefler.includes("trendyol")) {
+        if (S.bedenAttrId) {
+          const dv = await getJSON(`/urun-yukleme/api/ozellik-degerleri?cid=${S.kategori.id}&aid=${S.bedenAttrId}`);
+          for (const b of bedenListesi()) {
+            const v = dv.degerler.find(x => String(x.ad).trim() === b);
+            if (v) bedenDeger[b] = v.id;
+          }
+        }
+        document.querySelectorAll(".uy-attr").forEach(sel => {
+          if (sel.value) ozellikler.push({ attributeId: parseInt(sel.dataset.aid), attributeValueId: parseInt(sel.value) });
+        });
+        document.querySelectorAll(".uy-attr-metin").forEach(kutu => {
+          const v = kutu.value.trim();
+          if (v) ozellikler.push({ attributeId: parseInt(kutu.dataset.aid), customAttributeValue: v.slice(0, 100) });
+        });
+      }
+      // Shopify alanlarının (varsa) düzeltilmiş halleri
+      const shopifyDuzeltme = $("uyShH1") ? {
+        h1: $("uyShH1").value, seo_baslik: $("uyShSeoB").value,
+        seo_aciklama: $("uyShSeoA").value, aciklama: $("uyShAciklama").value,
+      } : null;
       const renkDuzeltme = {};
       document.querySelectorAll(".uy-baslik").forEach(inp => {
         renkDuzeltme[inp.dataset.renk] = renkDuzeltme[inp.dataset.renk] || {};
@@ -514,16 +591,28 @@ Alt Taban: Kaymaz taban</textarea>
       const d = await getJSON("/urun-yukleme/api/yukle", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taslak_id: S.taslakId, renkler: renkDuzeltme,
-                               form: S.taslak.form }) });
+                               shopify: shopifyDuzeltme, form: S.taslak.form }) });
       const t = await durumBekle(["gonderildi"], 5000, 10 * 60 * 1000);
-      const s = t.batch_sonuc || {};
-      $("uySonuc").innerHTML = `
-        <div class="alert ${s.hatali ? "alert-danger" : "alert-success"}">
-          <b>${d.model_kodu}</b> — ${t.gonderilen_varyant} varyant gönderildi.<br>
-          Batch: ${s.durum || "?"} | hatalı: ${s.hatali ?? "?"}<br>
-          ${(s.hatalar || []).map(h => `${h.barkod}: ${JSON.stringify(h.sebepler)}`).join("<br>")}
-          <br><small>Ürün Trendyol içerik onayına düştü; onaylanınca satışa çıkar ve panele senkronla düşer.</small>
-        </div>`;
+      let sonucHtml = "";
+      if (t.batch_sonuc) {
+        const s = t.batch_sonuc;
+        sonucHtml += `
+          <div class="alert ${(s.hatali || s.hata) ? "alert-danger" : "alert-success"}">
+            <b>Trendyol — ${d.model_kodu}</b>${s.varyant ? ` — ${s.varyant} varyant` : ""}<br>
+            ${s.hata ? "Hata: " + s.hata : `Batch: ${s.durum || "?"} | hatalı: ${s.hatali ?? "?"}`}<br>
+            ${(s.hatalar || []).map(h => `${h.barkod}: ${JSON.stringify(h.sebepler)}`).join("<br>")}
+            <small>Ürün içerik onayına düştü; onaylanınca satışa çıkar ve panele senkronla düşer.</small>
+          </div>`;
+      }
+      if (t.shopify_sonuc) {
+        const s = t.shopify_sonuc;
+        sonucHtml += s.hata
+          ? `<div class="alert alert-danger"><b>Shopify</b> — Hata: ${s.hata}</div>`
+          : `<div class="alert alert-success"><b>Shopify</b> — ürün yayında:
+               <a href="${s.url}" target="_blank">${s.url}</a><br>
+               <small>Renk daireleri ve kapak görselleri otomatik kuruldu; tüm satış kanallarına yayınlandı.</small></div>`;
+      }
+      $("uySonuc").innerHTML = sonucHtml || "<div class='alert alert-warning'>Sonuç bilgisi bulunamadı.</div>";
       $("uyYukleDurum").textContent = "";
     } catch (e) {
       $("uyYukleDurum").textContent = "";

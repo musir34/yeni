@@ -27,8 +27,11 @@ from werkzeug.utils import secure_filename
 
 from login_logout import roles_required
 from . import katalog
-from .ai_metin import metin_uret, aciklama_kur
+from . import shopify_urun
+from .ai_metin import metin_uret, aciklama_kur, shopify_aciklama_kur
 from .gorsel import cdn_yukle
+
+GECERLI_HEDEFLER = ("trendyol", "shopify")
 
 logger = logging.getLogger(__name__)
 
@@ -246,17 +249,21 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                    renkler: list[str], bedenler: list[str]) -> None:
     try:
         with app.app_context():
-            # Kod tahsisi + ANINDA rezerv (eşzamanlı taslaklara aynı blok gitmesin)
+            hedefler = bilgi.get("hedefler") or ["trendyol"]
+
+            # Kod tahsisi + ANINDA rezerv — barkod/model kodu HER hedefte ortak
+            # standarttır (Shopify SKU/barkodları Trendyol'la aynı havuzdan gelir).
             kodlar = katalog.kod_oner(f["barkod_onek"], len(renkler), len(bedenler))
             tum_barkodlar = [b for blok in kodlar["renk_bloklari"] for b in blok]
             katalog.rezerv_ekle(kodlar["model_kodu"], tum_barkodlar)
 
-            # Özellik kataloğu: AI hepsini doldursun (kullanıcı önizlemede değiştirir)
+            # Trendyol özellik kataloğu yalnız Trendyol hedefliyken gerekir
             harita = {}
-            try:
-                bilgi["ozellik_katalogu"], harita = _ozellik_katalogu(int(f["kategori_id"]))
-            except Exception:
-                logger.warning("[URUN] özellik kataloğu kurulamadı, AI seçimi atlanıyor", exc_info=True)
+            if "trendyol" in hedefler:
+                try:
+                    bilgi["ozellik_katalogu"], harita = _ozellik_katalogu(int(f["kategori_id"]))
+                except Exception:
+                    logger.warning("[URUN] özellik kataloğu kurulamadı, AI seçimi atlanıyor", exc_info=True)
 
             metin = metin_uret(bilgi)
             oneriler = _ozellik_onerileri(metin.get("ozellikler"), harita)
@@ -265,18 +272,42 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
             for i, renk in enumerate(renkler):
                 icerik = (metin.get("renkler") or {}).get(renk) or {}
                 baslik = (icerik.get("baslik") or "").strip()
-                hata = katalog.baslik_denetle(baslik)
-                if hata:
-                    uyarilar.append(f"{renk}: {hata}")
-                aciklama = aciklama_kur(renk, icerik, bilgi, metin.get("renk_secenekleri", ""))
-                yasak = katalog.yasak_tara(aciklama)
+                kayit = {"barkodlar": kodlar["renk_bloklari"][i]}
+                if "trendyol" in hedefler:
+                    hata = katalog.baslik_denetle(baslik)
+                    if hata:
+                        uyarilar.append(f"{renk}: {hata}")
+                    aciklama = aciklama_kur(renk, icerik, bilgi, metin.get("renk_secenekleri", ""))
+                    yasak = katalog.yasak_tara(aciklama)
+                    if yasak:
+                        uyarilar.append(f"{renk} açıklamasında yasaklı ifade: {', '.join(yasak)}")
+                    kayit.update({"baslik": baslik, "aciklama": aciklama})
+                renk_taslaklari[renk] = kayit
+
+            # Site (Shopify) içeriği: renk-nötr tek ürün (tema renk kuralı)
+            shopify = None
+            if "shopify" in hedefler:
+                genel = metin.get("genel") or {}
+                seo_baslik = (genel.get("seo_baslik") or "").strip()
+                if not genel.get("h1"):
+                    uyarilar.append("Site: H1 üretilemedi — önizlemede elle doldurun.")
+                if seo_baslik and not 40 <= len(seo_baslik) <= 60:
+                    uyarilar.append(f"Site SEO başlığı {len(seo_baslik)} karakter — 50-60 hedeflenir.")
+                shopify = {
+                    "h1": (genel.get("h1") or "").strip(),
+                    "seo_baslik": seo_baslik,
+                    "seo_aciklama": (genel.get("seo_aciklama") or "").strip(),
+                    "aciklama": shopify_aciklama_kur(genel, bilgi, renkler,
+                                                     metin.get("renk_secenekleri", "")),
+                }
+                yasak = katalog.yasak_tara(shopify["aciklama"], shopify["h1"])
                 if yasak:
-                    uyarilar.append(f"{renk} açıklamasında yasaklı ifade: {', '.join(yasak)}")
-                renk_taslaklari[renk] = {"baslik": baslik, "aciklama": aciklama,
-                                         "barkodlar": kodlar["renk_bloklari"][i]}
+                    uyarilar.append(f"Site açıklamasında yasaklı ifade: {', '.join(yasak)}")
 
             taslak = {"taslak_id": taslak_id, "form": f, "model_kodu": kodlar["model_kodu"],
+                      "hedefler": hedefler,
                       "renkler": renk_taslaklari, "bedenler": bedenler,
+                      "shopify": shopify,
                       "ozellik_onerileri": oneriler,
                       "uyarilar": uyarilar, "durum": "hazir"}
             _taslak_kaydet(taslak_id, taslak)
@@ -293,6 +324,9 @@ def taslak_uret():
         taslak_id = f.get("taslak_id") or uuid.uuid4().hex[:12]
         renkler = [r.strip() for r in (f.get("renkler") or []) if r.strip()]
         bedenler = [b.strip() for b in (f.get("bedenler") or []) if b.strip()]
+        hedefler = [h for h in (f.get("hedefler") or ["trendyol"]) if h in GECERLI_HEDEFLER]
+        if not hedefler:
+            return jsonify({"success": False, "error": "Hedef seçin: Trendyol, Shopify veya ikisi."}), 400
         if not renkler or not bedenler:
             return jsonify({"success": False, "error": "En az bir renk ve beden gerekli."}), 400
         if not (f.get("barkod_onek") or "").strip():
@@ -314,6 +348,7 @@ def taslak_uret():
             "not": f.get("not", ""),
             "gorsel_yollari": gorsel_yollari,
             "genel_talimat": katalog.talimat_getir(),
+            "hedefler": hedefler,
         }
         _taslak_kaydet(taslak_id, {"taslak_id": taslak_id, "form": f, "durum": "uretiliyor"})
         app = current_app._get_current_object()
@@ -341,64 +376,94 @@ def taslak_durum():
 
 # ------------------------------------------------------------------ yükleme
 
+def _trendyol_gonder(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
+    bedenler = taslak["bedenler"]
+    beden_deger = form.get("beden_degerleri") or {}
+    ortak_ozellikler = form.get("ozellik_secimleri") or []
+    beden_attr_id = form.get("beden_attr_id")
+
+    items = []
+    for renk, r in taslak["renkler"].items():
+        for beden, barkod in zip(bedenler, r["barkodlar"]):
+            if len(barkod) != katalog.BARKOD_UZUNLUK:
+                raise ValueError(f"Barkod {katalog.BARKOD_UZUNLUK} hane değil: {barkod}")
+            items.append({
+                "barcode": barkod,
+                "title": r["baslik"],
+                "productMainId": taslak["model_kodu"],
+                "brandId": katalog.MARKA_ID,
+                "categoryId": int(form["kategori_id"]),
+                "quantity": int(form.get("stok", 5)),
+                "stockCode": f"{taslak['model_kodu']}-{beden} {renk}",
+                "description": r["aciklama"],
+                "currencyType": "TRY",
+                "listPrice": float(form["liste_fiyat"]),
+                "salePrice": float(form["satis_fiyat"]),
+                "vatRate": int(form.get("kdv", 10)),
+                "images": [{"url": u} for u in renk_gorselleri[renk]],
+                "attributes": [{"attributeId": 47, "customAttributeValue": renk}]
+                              + ortak_ozellikler
+                              + [{"attributeId": int(beden_attr_id),
+                                  "attributeValueId": int(beden_deger[beden])}],
+            })
+
+    batch_id = katalog.urun_gonder(items)
+    sonuc = {"batch_id": batch_id, "varyant": len(items)}
+    for _ in range(9):
+        time.sleep(10)
+        durum = katalog.batch_durum(batch_id)
+        sonuc.update(durum)
+        if durum.get("durum") == "COMPLETED":
+            break
+    return sonuc
+
+
 def _yukle_worker(app, taslak_id: str) -> None:
     try:
         with app.app_context():
             taslak = _taslak_oku(taslak_id)
             form = taslak["form"]
-            bedenler = taslak["bedenler"]
-            beden_deger = form.get("beden_degerleri") or {}
-            ortak_ozellikler = form.get("ozellik_secimleri") or []
-            beden_attr_id = form.get("beden_attr_id")
+            hedefler = taslak.get("hedefler") or ["trendyol"]
 
-            # Görselleri CDN'e taşı
-            renk_gorselleri = {}
-            for renk in taslak["renkler"]:
-                klasor = _taslak_yolu(taslak_id) / "gorsel" / secure_filename(renk)
-                yerel = sorted(klasor.glob("*"))[:MAKS_GORSEL] if klasor.exists() else []
-                if not yerel:
-                    raise ValueError(f"{renk} için görsel yüklenmemiş.")
-                adlar = [(f"{taslak['model_kodu']}-{secure_filename(renk).lower()}-{i+1}{p.suffix.lower()}", str(p))
-                         for i, p in enumerate(yerel)]
-                renk_gorselleri[renk] = cdn_yukle(adlar)
+            # Görselleri CDN'e taşı (iki hedef de aynı HTTPS adresleri kullanır)
+            renk_gorselleri = taslak.get("cdn") or {}
+            if not renk_gorselleri:
+                for renk in taslak["renkler"]:
+                    klasor = _taslak_yolu(taslak_id) / "gorsel" / secure_filename(renk)
+                    yerel = sorted(klasor.glob("*"))[:MAKS_GORSEL] if klasor.exists() else []
+                    if not yerel:
+                        raise ValueError(f"{renk} için görsel yüklenmemiş.")
+                    adlar = [(f"{taslak['model_kodu']}-{secure_filename(renk).lower()}-{i+1}{p.suffix.lower()}", str(p))
+                             for i, p in enumerate(yerel)]
+                    renk_gorselleri[renk] = cdn_yukle(adlar)
+                taslak["cdn"] = renk_gorselleri
+                _taslak_kaydet(taslak_id, taslak)
 
-            items = []
-            for renk, r in taslak["renkler"].items():
-                for beden, barkod in zip(bedenler, r["barkodlar"]):
-                    if len(barkod) != katalog.BARKOD_UZUNLUK:
-                        raise ValueError(f"Barkod {katalog.BARKOD_UZUNLUK} hane değil: {barkod}")
-                    items.append({
-                        "barcode": barkod,
-                        "title": r["baslik"],
-                        "productMainId": taslak["model_kodu"],
-                        "brandId": katalog.MARKA_ID,
-                        "categoryId": int(form["kategori_id"]),
-                        "quantity": int(form.get("stok", 5)),
-                        "stockCode": f"{taslak['model_kodu']}-{beden} {renk}",
-                        "description": r["aciklama"],
-                        "currencyType": "TRY",
-                        "listPrice": float(form["liste_fiyat"]),
-                        "salePrice": float(form["satis_fiyat"]),
-                        "vatRate": int(form.get("kdv", 10)),
-                        "images": [{"url": u} for u in renk_gorselleri[renk]],
-                        "attributes": [{"attributeId": 47, "customAttributeValue": renk}]
-                                      + ortak_ozellikler
-                                      + [{"attributeId": int(beden_attr_id),
-                                          "attributeValueId": int(beden_deger[beden])}],
-                    })
+            # Hedefler bağımsız denenir; biri düşerse diğeri tamamlanır
+            hatalar = []
+            if "trendyol" in hedefler:
+                taslak["durum"] = "gonderiliyor"
+                _taslak_kaydet(taslak_id, taslak)
+                try:
+                    taslak["batch_sonuc"] = _trendyol_gonder(taslak, form, renk_gorselleri)
+                except Exception as e:
+                    logger.error("[URUN] Trendyol gönderimi: %s", e, exc_info=True)
+                    taslak["batch_sonuc"] = {"hata": str(e)[:300]}
+                    hatalar.append("Trendyol")
+                _taslak_kaydet(taslak_id, taslak)
 
-            batch_id = katalog.urun_gonder(items)
-            taslak.update({"durum": "gonderiliyor", "batch_id": batch_id,
-                           "gonderilen_varyant": len(items)})
-            _taslak_kaydet(taslak_id, taslak)
+            if "shopify" in hedefler:
+                try:
+                    taslak["shopify_sonuc"] = shopify_urun.urun_ac(taslak, form, renk_gorselleri)
+                except Exception as e:
+                    logger.error("[URUN] Shopify gönderimi: %s", e, exc_info=True)
+                    taslak["shopify_sonuc"] = {"hata": str(e)[:300]}
+                    hatalar.append("Shopify")
+                _taslak_kaydet(taslak_id, taslak)
 
-            sonuc = {}
-            for _ in range(9):
-                time.sleep(10)
-                sonuc = katalog.batch_durum(batch_id)
-                if sonuc.get("durum") == "COMPLETED":
-                    break
-            taslak.update({"durum": "gonderildi", "batch_sonuc": sonuc})
+            taslak["durum"] = "hata" if len(hatalar) == len(hedefler) else "gonderildi"
+            if hatalar:
+                taslak["hata"] = f"Şu hedefler başarısız: {', '.join(hatalar)} (detay sonuç bloklarında)"
             _taslak_kaydet(taslak_id, taslak)
     except Exception as e:
         _hata_yaz(taslak_id, "Yükleme", e)
@@ -422,27 +487,45 @@ def yukle():
                 if renk in taslak["renkler"]:
                     taslak["renkler"][renk].update(
                         {k: duzeltme[k] for k in ("baslik", "aciklama") if duzeltme.get(k)})
+        if isinstance(f.get("shopify"), dict) and taslak.get("shopify"):
+            taslak["shopify"].update({k: f["shopify"][k]
+                                      for k in ("h1", "seo_baslik", "seo_aciklama", "aciklama")
+                                      if f["shopify"].get(k)})
 
         form = taslak["form"]
+        hedefler = taslak.get("hedefler") or ["trendyol"]
         for alan, ad in (("kategori_id", "Kategori"), ("satis_fiyat", "Satış fiyatı"),
                          ("liste_fiyat", "Liste fiyatı")):
             if not form.get(alan):
                 return jsonify({"success": False, "error": f"{ad} eksik."}), 400
-        if not form.get("beden_attr_id"):
-            return jsonify({"success": False, "error": "Beden (varyant) özelliği seçilmemiş."}), 400
-        beden_deger = form.get("beden_degerleri") or {}
-        eksik = [b for b in taslak["bedenler"] if not beden_deger.get(b)]
-        if eksik:
-            return jsonify({"success": False,
-                            "error": f"Şu bedenlerin Trendyol değeri eşlenmemiş: {', '.join(eksik)}"}), 400
 
-        # Son denetim: başlık sınırı + yasaklı ifadeler (elle düzeltme sonrası hali)
-        for renk, r in taslak["renkler"].items():
-            hata = katalog.baslik_denetle(r["baslik"])
-            yasak = katalog.yasak_tara(r["aciklama"])
-            if hata or yasak:
-                sebep = hata or f"açıklamada yasaklı ifade: {', '.join(yasak)}"
-                return jsonify({"success": False, "error": f"{renk}: {sebep}"}), 400
+        if "trendyol" in hedefler:
+            if not form.get("beden_attr_id"):
+                return jsonify({"success": False, "error": "Beden (varyant) özelliği seçilmemiş."}), 400
+            beden_deger = form.get("beden_degerleri") or {}
+            eksik = [b for b in taslak["bedenler"] if not beden_deger.get(b)]
+            if eksik:
+                return jsonify({"success": False,
+                                "error": f"Şu bedenlerin Trendyol değeri eşlenmemiş: {', '.join(eksik)}"}), 400
+            # Son denetim: başlık sınırı + yasaklı ifadeler (elle düzeltme sonrası hali)
+            for renk, r in taslak["renkler"].items():
+                hata = katalog.baslik_denetle(r.get("baslik", ""))
+                yasak = katalog.yasak_tara(r.get("aciklama", ""))
+                if hata or yasak:
+                    sebep = hata or f"açıklamada yasaklı ifade: {', '.join(yasak)}"
+                    return jsonify({"success": False, "error": f"{renk}: {sebep}"}), 400
+
+        if "shopify" in hedefler:
+            sh = taslak.get("shopify") or {}
+            if not sh.get("h1") or not sh.get("aciklama"):
+                return jsonify({"success": False, "error": "Site içeriği (H1/açıklama) eksik."}), 400
+            if sh.get("seo_baslik") and len(sh["seo_baslik"]) > 60:
+                return jsonify({"success": False,
+                                "error": f"Site SEO başlığı {len(sh['seo_baslik'])} karakter — en fazla 60."}), 400
+            yasak = katalog.yasak_tara(sh.get("aciklama", ""), sh.get("h1", ""))
+            if yasak:
+                return jsonify({"success": False,
+                                "error": f"Site açıklamasında yasaklı ifade: {', '.join(yasak)}"}), 400
 
         taslak["durum"] = "yukleniyor"
         _taslak_kaydet(taslak_id, taslak)

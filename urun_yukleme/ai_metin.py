@@ -71,8 +71,19 @@ TRENDYOL ÖZELLİK SEÇİMİ — aşağıdaki HER özellik için, verilen izinli
         f"\nSATICININ KALICI TALİMATLARI (her üründe uygula; yasak listesiyle çelişirse yasak kazanır):\n{talimat}\n"
         if talimat else ""
     )
+    hedefler = bilgi.get("hedefler") or ["trendyol"]
+    shopify_blok = ""
+    if "shopify" in hedefler:
+        shopify_blok = """
+AYRICA SİTE (gullushoes.com) İÇİN RENK-NÖTR İÇERİK — sitede tüm renkler TEK üründe
+toplanır, bu yüzden şu alanlar hiçbir renge özel olmamalı:
+- "genel.h1": ürünün tam adı (60-85 karakter; renk adı GEÇMEZ; ör. "Rugan Fiyonk Tokalı Arkası Açık Topuklu Sandalet 9 cm Kadeh Topuk")
+- "genel.seo_baslik": 50-60 karakter, sonu " - Güllü Shoes" ile biter, ana kelime önde
+- "genel.seo_aciklama": 140-160 karakter; ana kelime + malzeme/kalıp + renk seçenekleri imasi + "35-41 numara"
+- "genel.vurgu" / "genel.neden" / "genel.kombin": renk-nötr sürümler (renklerden toplu bahsedebilir)
+"""
     return f"""Yeni ürün için Trendyol içeriği üret.
-{talimat_blok}{ozellik_blok}
+{talimat_blok}{ozellik_blok}{shopify_blok}
 ÜRÜN BİLGİLERİ
 - Kategori: {bilgi.get('kategori_yolu', '')}
 - Ürün türü öbeği (ana arama kelimesi): {bilgi.get('urun_turu', '')}
@@ -93,8 +104,10 @@ TRENDYOL ÖZELLİK SEÇİMİ — aşağıdaki HER özellik için, verilen izinli
     }}
   }},
   "renk_secenekleri": "<tüm renkleri tek cümlede tanıtan paragraf: 'Bu model (X) ... renklerinde üretilmektedir: ...'>",
-  "ozellikler": {{"<ÖzellikAdı>": "<izinli değerlerden birebir seçim>"}}
-}}"""
+  "ozellikler": {{"<ÖzellikAdı>": "<izinli değerlerden birebir seçim>"}},
+  "genel": {{"h1": "...", "seo_baslik": "...", "seo_aciklama": "...", "vurgu": "...", "neden": "...", "kombin": "..."}}
+}}
+("genel" alanı yalnızca site içeriği istendiyse doldurulur; istenmediyse boş bırakılabilir.)"""
 
 
 def _claude_calistir(prompt: str, gorsel_var: bool) -> str | None:
@@ -166,6 +179,41 @@ def metin_uret(bilgi: dict) -> dict:
     if not isinstance(veri.get("renkler"), dict) or not veri["renkler"]:
         raise ValueError("AI çıktısında renk içerikleri eksik — tekrar deneyin.")
     return veri
+
+
+def shopify_aciklama_kur(genel: dict, bilgi: dict, renkler: list[str],
+                         renk_secenekleri: str) -> str:
+    """Site için RENK-NÖTR açıklama (tüm renkler tek üründe — tema kuralı)."""
+    teknik = "\n".join(f"<li>{t}</li>" for t in bilgi.get("teknik") or [])
+    beden = bilgi.get("beden_araligi", "35-41")
+    return f"""
+<p>{genel.get('vurgu', '')}</p>
+<h3>✨ Öne Çıkan Özellikler</h3>
+<ul>
+<li><strong>Hafızalı ped</strong> — iç tabanda ayağın şeklini alarak baskıyı dağıtır, uzun süre ayakta kalmayı kolaylaştırır</li>
+<li><strong>Kaymaz taban</strong> — parke ve mermer zeminde de açık havada da güvenli adım</li>
+<li><strong>%100 vegan deri</strong> — hayvansal deri kullanılmadan üretilmiş, hayvan dostu ve etik tercih</li>
+<li><strong>Türkiye üretimi</strong> — yerli işçilikle üretilen kalıp ve montaj kalitesi</li>
+</ul>
+<h3>📋 Teknik Ürün Bilgileri</h3>
+<ul>
+<li>Renk Seçenekleri: {", ".join(renkler)}</li>
+{teknik}
+<li>Kalıp: Tam kalıp — Beden Aralığı: {beden} — Menşei: Türkiye</li>
+</ul>
+<h3>💡 Neden Bu Model?</h3>
+<p>{genel.get('neden', '')}</p>
+<h3>👗 Kombin Önerileri</h3>
+<p>{genel.get('kombin', '')}</p>
+<h3>🎨 Renk Seçenekleri</h3>
+<p>{renk_secenekleri}</p>
+<h3>📏 Beden ve Uyum</h3>
+<p>Ürün {beden} beden aralığında üretilmiştir ve tam kalıptır; normal numaranızı seçebilirsiniz.</p>
+<h3>🧴 Bakım</h3>
+<p>Yüzeyi nemli ve yumuşak bir bezle silin; deri cilası, boya veya çözücü içeren temizleyici kullanmayın. Kullanmadığınız dönemde kutusunda ve doğrudan güneş görmeyen bir yerde saklayın.</p>
+<h3>🌱 Üretim ve Sürdürülebilirlik</h3>
+<p>Bu ürün %100 vegan deriden üretilmiştir; hiçbir aşamasında hayvansal deri kullanılmaz. Hayvan dostu, etik ve sürdürülebilir üretim anlayışıyla Türkiye'de üretilmektedir.</p>
+""".strip()
 
 
 # --------------------------------------------------- açıklama HTML iskeleti
