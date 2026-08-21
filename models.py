@@ -772,6 +772,22 @@ class UretimSiparis(db.Model):
         return f"<UretimSiparis {self.order_number} uretildi={self.uretildi}>"
 
 
+# 📝 Sipariş Notu — siparişe özel serbest metin (sipariş listesi + sipariş hazırla).
+# Sipariş satırları statü geçişinde tablolar arasında fiziksel taşındığı için not
+# yaşam döngüsü tablolarına kolon olarak değil, order_number ile bu ayrı tabloya
+# yazılır — sipariş hangi statüde olursa olsun notu takip eder.
+class SiparisNotu(db.Model):
+    __tablename__ = 'siparis_notu'
+    id = db.Column(db.Integer, primary_key=True)
+    order_number = db.Column(db.String(50), nullable=False, unique=True, index=True)
+    note = db.Column(db.Text, nullable=False)
+    updated_by = db.Column(db.String(150))  # notu son kaydeden kullanıcı adı
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<SiparisNotu {self.order_number}>"
+
+
 class UretimDogrulama(db.Model):
     """Üretim kalemi doğrulama okutması: paketlemede üretilen ürünün barkodu
     ADET ADET okutulur (yanlış ürün gitmesin). Stok düşümü YOKTUR — ürün raftan

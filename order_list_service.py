@@ -255,6 +255,12 @@ def _merge_order_rows(rows, status_getter):
         mock.estimated_delivery_end = getattr(r, 'estimated_delivery_end', None)
         seen_orders[on] = mock
         orders.append(mock)
+
+    # 📝 Siparişe özel notlar (tek toplu sorgu) — kart üzerinde göster/düzenle
+    from siparis_notu import get_notes_map
+    notes = get_notes_map(seen_orders.keys())
+    for mock in orders:
+        mock.siparis_notu = notes.get(mock.order_number, "")
     return orders
 
 

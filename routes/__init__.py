@@ -46,6 +46,7 @@ def register_blueprints(app):
     from trendyol_qna.shopify_qna import shopify_q_bp  # 🛍️ SHOPIFY SİTE SORULARI (public intake)
     from uretim_routes import uretim_bp  # 🏭 ÜRETİM MODU
     from takip_notu import takip_bp  # 📌 TAKİP NOTLARI
+    from siparis_notu import siparis_notu_bp  # 📝 SİPARİŞ NOTLARI
     from kargo_mutabakat import kargo_mutabakat_bp  # 🚚 KARGO MUTABAKAT
     from iade_yonetimi import iade_yonetimi_bp  # 📦 SİTE İADE YÖNETİMİ
     from whatsapp_baglanti import whatsapp_baglanti_bp  # 📱 WHATSAPP COEXISTENCE BAĞLANTISI
@@ -98,6 +99,7 @@ def register_blueprints(app):
         shopify_q_bp,  # 🛍️ SHOPIFY SİTE SORULARI (public intake)
         uretim_bp,  # 🏭 ÜRETİM MODU
         takip_bp,  # 📌 TAKİP NOTLARI
+        siparis_notu_bp,  # 📝 SİPARİŞ NOTLARI
         kargo_mutabakat_bp,  # 🚚 KARGO MUTABAKAT
         iade_yonetimi_bp,  # 📦 SİTE İADE YÖNETİMİ
         whatsapp_baglanti_bp,  # 📱 WHATSAPP COEXISTENCE BAĞLANTISI

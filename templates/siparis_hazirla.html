@@ -713,7 +713,23 @@
         <span class="badge bg-warning text-dark">📦 Trendyol</span>
         {% endif %}
       </div>
-    
+
+      <!-- 📝 Siparişe özel not — paketleyenin gözünden kaçmasın -->
+      <div id="siparisNotuBanner" class="alert alert-warning mb-2 {% if not siparis_notu %}d-none{% endif %}" style="font-size:1.05rem;">
+        <strong>📝 Sipariş Notu:</strong> <span id="siparisNotuMetin">{{ siparis_notu }}</span>
+        <button type="button" class="btn btn-sm btn-outline-dark ms-2" onclick="siparisNotuDuzenle()">Düzenle</button>
+      </div>
+      <div id="siparisNotuEdit" class="d-none mb-2">
+        <textarea id="siparisNotuInput" class="form-control" rows="2" placeholder="Siparişe özel not...">{{ siparis_notu }}</textarea>
+        <div class="mt-1">
+          <button type="button" class="btn btn-success btn-sm" onclick="siparisNotuKaydet()">Kaydet</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" onclick="siparisNotuVazgec()">Vazgeç</button>
+        </div>
+      </div>
+      <div id="siparisNotuEkleWrap" class="mb-2 {% if siparis_notu %}d-none{% endif %}">
+        <button type="button" class="btn btn-outline-warning btn-sm" onclick="siparisNotuDuzenle()">📝 Not Ekle</button>
+      </div>
+
       <form method="POST" action="{{ url_for('update_service.confirm_packing') }}" id="packingForm" autocomplete="off">
         {# Sıralı mod: AÇIK=1 (raf okutarak manuel düşüm), KAPALI=0 (stok zaten toplu ekranda düştü) #}
         <input type="hidden" name="sirali" id="siraliField" value="{{ '0' if manuel_mod else '1' }}">
@@ -1476,6 +1492,41 @@
           var conf = el.nextElementSibling;
           if (conf) { conf.classList.add('show'); setTimeout(function(){ conf.classList.remove('show'); }, 1500); }
         }).catch(function(err){ console.error('Kopyalama hatası:', err); });
+      }
+    }
+
+    // 📝 Siparişe özel not — bant/düzenleme (kaydet: /siparis-notu/api/kaydet)
+    function siparisNotuDuzenle() {
+      document.getElementById('siparisNotuEdit').classList.remove('d-none');
+      document.getElementById('siparisNotuBanner').classList.add('d-none');
+      document.getElementById('siparisNotuEkleWrap').classList.add('d-none');
+      document.getElementById('siparisNotuInput').focus();
+    }
+    function siparisNotuVazgec() {
+      var metin = document.getElementById('siparisNotuMetin').textContent.trim();
+      document.getElementById('siparisNotuInput').value = metin;
+      document.getElementById('siparisNotuEdit').classList.add('d-none');
+      document.getElementById('siparisNotuBanner').classList.toggle('d-none', !metin);
+      document.getElementById('siparisNotuEkleWrap').classList.toggle('d-none', !!metin);
+    }
+    async function siparisNotuKaydet() {
+      var orderNumber = document.getElementById('order-data').dataset.orderNumber;
+      var not = document.getElementById('siparisNotuInput').value.trim();
+      try {
+        var r = await fetch('/siparis-notu/api/kaydet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+          body: JSON.stringify({ order_number: orderNumber, note: not })
+        });
+        var j = await r.json();
+        if (!j.success) throw new Error(j.message || 'Kaydedilemedi');
+        document.getElementById('siparisNotuMetin').textContent = j.note;
+        document.getElementById('siparisNotuEdit').classList.add('d-none');
+        document.getElementById('siparisNotuBanner').classList.toggle('d-none', !j.note);
+        document.getElementById('siparisNotuEkleWrap').classList.toggle('d-none', !!j.note);
+        gsToast(j.message, 'success');
+      } catch (e) {
+        gsToast('Sipariş notu kaydedilemedi.', 'danger');
       }
     }
 

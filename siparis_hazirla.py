@@ -536,9 +536,14 @@ def get_home(order_number=None):
         # Sipariş objesine iliştir
         oldest_order.products = products
 
+        # 📝 Siparişe özel not (siparis_notu tablosu, order_number ile)
+        from siparis_notu import get_note
+        siparis_notu = get_note(getattr(oldest_order, "order_number", "")) if oldest_order else ""
+
         # Dönüş
         return {
             "order": oldest_order,
+            "siparis_notu": siparis_notu,
             "remaining_time": remaining_time,
             "archive_warnings": warnings,
             "archive_count": archive_count,
@@ -585,7 +590,8 @@ def default_order_data():
         "customer_address": "Adres Yok",
         "remaining_time": "Kalan Süre Yok",
         "archive_warnings": [],
-        "archive_count": 0
+        "archive_count": 0,
+        "siparis_notu": ""
     }
 
 def calculate_remaining_time(delivery_date):

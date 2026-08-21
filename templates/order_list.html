@@ -433,7 +433,18 @@
                         </div>
                     </div>
                 </div>
-                 <div class="card-footer bg-light text-center">
+                 <div class="card-footer bg-light text-center" id="notu-box-{{ uid }}" data-order-number="{{ order.order_number }}">
+                    <div class="alert alert-warning py-1 px-2 mb-2 text-start {% if not order.siparis_notu %}d-none{% endif %}" id="notu-goster-{{ uid }}">
+                        📝 <span id="notu-metin-{{ uid }}">{{ order.siparis_notu }}</span>
+                    </div>
+                    <div class="d-none mb-2 text-start" id="notu-edit-{{ uid }}">
+                        <textarea class="form-control form-control-sm" id="notu-input-{{ uid }}" rows="2" placeholder="Siparişe özel not...">{{ order.siparis_notu }}</textarea>
+                        <div class="mt-1">
+                            <button type="button" class="btn btn-success btn-sm" onclick="siparisNotuKaydet('{{ uid }}')">Kaydet</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="siparisNotuIptal('{{ uid }}')">Vazgeç</button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="siparisNotuAc('{{ uid }}')" title="Siparişe özel not ekle/düzenle">📝 Not</button>
                     <button class="btn btn-secondary btn-sm" onclick="showArchiveModal('{{ order.order_number }}')">Arşivle</button>
                  </div>
             </div>
@@ -692,6 +703,38 @@
             const original = button.innerHTML;
             button.innerHTML = '<i class="fas fa-check"></i>';
             setTimeout(function(){ button.innerHTML = original; }, 1200);
+        }
+
+        // 📝 Siparişe özel not — kart altındaki kutu (kaydet: /siparis-notu/api/kaydet)
+        function siparisNotuAc(uid) {
+            document.getElementById('notu-edit-' + uid).classList.remove('d-none');
+            document.getElementById('notu-goster-' + uid).classList.add('d-none');
+            document.getElementById('notu-input-' + uid).focus();
+        }
+        function siparisNotuIptal(uid) {
+            var metin = document.getElementById('notu-metin-' + uid).textContent.trim();
+            document.getElementById('notu-input-' + uid).value = metin;
+            document.getElementById('notu-edit-' + uid).classList.add('d-none');
+            document.getElementById('notu-goster-' + uid).classList.toggle('d-none', !metin);
+        }
+        async function siparisNotuKaydet(uid) {
+            var box = document.getElementById('notu-box-' + uid);
+            var not = document.getElementById('notu-input-' + uid).value.trim();
+            try {
+                var r = await fetch('/siparis-notu/api/kaydet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+                    body: JSON.stringify({ order_number: box.dataset.orderNumber, note: not })
+                });
+                var j = await r.json();
+                if (!j.success) throw new Error(j.message || 'Kaydedilemedi');
+                document.getElementById('notu-metin-' + uid).textContent = j.note;
+                document.getElementById('notu-edit-' + uid).classList.add('d-none');
+                document.getElementById('notu-goster-' + uid).classList.toggle('d-none', !j.note);
+                window.GS ? GS.showToast(j.message, 'success') : null;
+            } catch (e) {
+                window.GS ? GS.showToast('Sipariş notu kaydedilemedi.', 'danger') : alert('Sipariş notu kaydedilemedi.');
+            }
         }
 
         function showArchiveModal(order_number) {
