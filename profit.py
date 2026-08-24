@@ -274,6 +274,25 @@ def profit_report():
         "shipping_cost_str": "0,00", "avg_profit_margin_str": "0.00",
     }
 
+    # Tedarikçi filtresi (boş = Hepsi)
+    context["tedarikci"] = (form_source.get("tedarikci") or "").strip()
+    try:
+        tedarikci_rows = (
+            db.session.query(Product.tedarikci_kodu, Product.tedarikci_adi)
+            .filter(Product.tedarikci_kodu.isnot(None), Product.tedarikci_kodu != "")
+            .distinct()
+            .order_by(Product.tedarikci_adi)
+            .all()
+        )
+        context["tedarikciler"] = [{"kod": r[0], "adi": r[1]} for r in tedarikci_rows]
+    except Exception as e:
+        logging.error("Tedarikçi listesi çekilirken hata: %s", e, exc_info=True)
+        context["tedarikciler"] = []
+    context["tedarikci_adi"] = next(
+        (t["adi"] or t["kod"] for t in context["tedarikciler"] if t["kod"] == context["tedarikci"]),
+        context["tedarikci"],
+    )
+
     # Formdaki kargo baz maliyetini oku (Decimal)
     form_shipping_cost = d(context["shipping_cost"])
     context["shipping_cost_str"] = format_number(form_shipping_cost)
@@ -337,6 +356,32 @@ def profit_report():
             cancelled_order_numbers = set()
             returned_order_numbers = set()
 
+            # -- Tedarikçi filtresi: seçili tedarikçinin barkod kümesi --
+            tedarikci_barcodes = None
+            if context["tedarikci"]:
+                try:
+                    ted_rows = (
+                        Product.query.with_entities(Product.barcode)
+                        .filter(Product.tedarikci_kodu == context["tedarikci"])
+                        .all()
+                    )
+                    tedarikci_barcodes = {(r[0] or "").strip() for r in ted_rows if r[0]}
+                    logging.info(f"Tedarikçi filtresi aktif: {context['tedarikci']} → {len(tedarikci_barcodes)} barkod")
+                    if not tedarikci_barcodes:
+                        flash(f"'{context['tedarikci_adi']}' tedarikçisine atanmış ürün bulunamadı.", "warning")
+                except Exception as e:
+                    logging.error("Tedarikçi barkodları çekilirken hata: %s", e, exc_info=True)
+                    flash("Tedarikçi filtresi uygulanamadı, tüm siparişler listeleniyor.", "warning")
+                    tedarikci_barcodes = None
+
+            def _tedarikciye_ait(barcode_raw):
+                """Barkod(lar)dan en az biri seçili tedarikçiye aitse True (filtre yoksa daima True)."""
+                if tedarikci_barcodes is None:
+                    return True
+                if not barcode_raw:
+                    return False
+                return any(b.strip() in tedarikci_barcodes for b in str(barcode_raw).split(',') if b.strip())
+
             # -- İptal & iade siparişleri çek
             try:
                 # İptal Edilenler
@@ -359,6 +404,9 @@ def profit_report():
                         })
                 cancelled_order_numbers = {item["order_number"] for item in cancelled_orders_temp if item["order_number"]}
                 logging.info(f"{len(cancelled_order_numbers)} adet iptal edilmiş sipariş listelendi.")
+                # Tedarikçi filtresi: yalnızca GÖSTERİM listesi daraltılır;
+                # cancelled_order_numbers (aktiften hariç tutma) tam kalır.
+                cancelled_orders_temp = [c for c in cancelled_orders_temp if _tedarikciye_ait(c["barcode"])]
 
                 # İade Edilenler
                 returned_orders_query_result = (
@@ -392,6 +440,11 @@ def profit_report():
                         temp_returned_nos.add(order_num)
                 returned_order_numbers = temp_returned_nos
                 logging.info(f"{len(returned_order_numbers)} adet iade edilmiş sipariş listelendi.")
+                # Tedarikçi filtresi: gösterim + iade kargo maliyeti daraltılır;
+                # returned_order_numbers (aktiften hariç tutma) tam kalır.
+                if tedarikci_barcodes is not None:
+                    returned_orders_temp = [r for r in returned_orders_temp if _tedarikciye_ait(r["barcode"])]
+                    total_return_shipping_cost = sum((r["cost"] for r in returned_orders_temp), Decimal("0.0"))
                 logging.info(f"Toplam iade kargo maliyeti (dönüş): {total_return_shipping_cost} TL")
 
             except AttributeError as ae:
@@ -431,6 +484,12 @@ def profit_report():
                 except Exception as e:
                     logging.error("Tablo sorgulanırken hata (%s): %s", cls.__tablename__, e, exc_info=True)
                     flash(f"{cls.__tablename__} tablosu sorgulanırken bir veritabanı hatası oluştu.", "error")
+
+            # Tedarikçi filtresi: en az bir barkodu seçili tedarikçiye ait siparişler kalır
+            if tedarikci_barcodes is not None:
+                onceki = len(orders)
+                orders = [o for o in orders if _tedarikciye_ait(getattr(o, "product_barcode", None))]
+                logging.info(f"Tedarikçi filtresi: {onceki} siparişten {len(orders)} tanesi kaldı.")
 
             logging.info(f"İncelenecek (iptal/iade olmayan) sipariş sayısı: {len(orders)}")
             context["total_records_found"] = total_records_found
@@ -612,7 +671,8 @@ def profit_report():
             # --- İADE SİPARİŞLER İÇİN GİDİŞ KARGOSUNU DA EKLE ---
             # Aktif listeden çıkarıldıkları için (not in) onların gidiş kargosu toplam giden kargoya DAHİL DEĞİL.
             # Senin istediğin: iade varsa 1×baz (gidiş) + 1×baz (dönüş).
-            extra_outgoing_for_returns = Decimal(len(returned_order_numbers)) * form_shipping_cost
+            # returned_orders_temp sipariş başına tek kayıttır (tedarikçi filtresi uygulanmış hali)
+            extra_outgoing_for_returns = Decimal(len(returned_orders_temp)) * form_shipping_cost
             total_outgoing_shipping_cost_period += extra_outgoing_for_returns
             total_expenses_minus_employee += extra_outgoing_for_returns
             total_profit_minus_employee -= extra_outgoing_for_returns  # kârdan düş

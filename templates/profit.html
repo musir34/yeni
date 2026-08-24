@@ -75,7 +75,8 @@
         form#analysis-params-form .form-group label {
             font-size: 12px; font-weight: 600; color: var(--muted);
         }
-        form#analysis-params-form .form-group input {
+        form#analysis-params-form .form-group input,
+        form#analysis-params-form .form-group select {
             padding: 10px 12px;
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -85,7 +86,8 @@
             background: var(--card);
             transition: border-color 0.2s ease;
         }
-        form#analysis-params-form .form-group input:focus {
+        form#analysis-params-form .form-group input:focus,
+        form#analysis-params-form .form-group select:focus {
             border-color: var(--primary);
             outline: 0;
         }
@@ -413,6 +415,15 @@
                 <label for="exchange_rate">Döviz Kuru (USD/TL) <span id="kurKaynak" style="font-weight:400;color:var(--muted);font-size:11px"></span></label>
                 <input type="text" id="exchange_rate" name="exchange_rate" value="{{ exchange_rate or '0' }}" placeholder="Otomatik yükleniyor..." inputmode="decimal" />
             </div>
+            <div class="form-group">
+                <label for="tedarikci">Tedarikçi / Üretici</label>
+                <select id="tedarikci" name="tedarikci">
+                    <option value="">Hepsi</option>
+                    {% for t in tedarikciler %}
+                    <option value="{{ t.kod }}" {% if tedarikci == t.kod %}selected{% endif %}>{{ t.adi or t.kod }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <div class="form-submit-area">
                 <button type="submit"><i class="fas fa-chart-line"></i> Analiz Et</button>
             </div>
@@ -426,7 +437,7 @@
 
             {# --- ANALIZ OZETI --- #}
             {% if order_count > 0 or warned_order_count > 0 or total_return_shipping_cost > 0 %}
-                <h2 class="analysis-table-title">Analiz Özeti ({{ start_date }} - {{ end_date }})</h2>
+                <h2 class="analysis-table-title">Analiz Özeti ({{ start_date }} - {{ end_date }}){% if tedarikci %} — Tedarikçi: {{ tedarikci_adi }}{% endif %}</h2>
                 <div class="summary-grid">
                     <!-- Satır 1: Temel metrikler -->
                     <div class="summary-card">
