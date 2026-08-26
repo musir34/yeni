@@ -262,10 +262,13 @@ def rezerv_ekle(model_kodu: str, barkodlar: list[str]) -> None:
 
 
 def kod_oner(onek: str, renk_sayisi: int, beden_sayisi: int,
-             model_onek: str = "01", ozel_model: str | None = None) -> dict:
+             model_onek: str = "01", ozel_model: str | None = None,
+             model_dolu_ok: bool = False) -> dict:
     """
     Model kodu + renk başına ardışık barkod bloğu önerir.
     - ozel_model verilirse (kullanıcı belirledi) doluluk kontrolüyle aynen kullanılır.
+    - model_dolu_ok=True: mevcut modele YENİ RENK eklenirken doluluk kontrolü atlanır
+      (model kodu bilerek aynı kalır, yalnız yeni barkod blokları tahsis edilir).
     - verilmezse kategorinin KENDİ model serisinden (model_onek, ör. '01') devam edilir.
     """
     onek = (onek or VARSAYILAN_ONEK).strip()
@@ -283,7 +286,7 @@ def kod_oner(onek: str, renk_sayisi: int, beden_sayisi: int,
         ozel_model = ozel_model.strip()
         if not (ozel_model.isdigit() and 3 <= len(ozel_model) <= 6):
             raise ValueError(f"Geçersiz model kodu: {ozel_model!r} (3-6 haneli rakam olmalı)")
-        if ozel_model in dolu_model:
+        if ozel_model in dolu_model and not model_dolu_ok:
             raise ValueError(f"Model kodu {ozel_model} zaten kullanımda — başka bir kod seçin.")
         model_kodu = ozel_model
     else:
@@ -377,11 +380,10 @@ def zorunlu_tamamla(cid: int, secimler: list[dict], renkler: list[str]) -> tuple
     return ortak_ek, renk_web_color, eksikler
 
 
-def mevcut_model_kodlari(model_kodu: str, renkler: list[str], bedenler: list[str]) -> dict:
+def mevcut_renk_haritasi(model_kodu: str) -> dict:
     """
-    Model zaten Trendyol'daysa mevcut barkodlarını getirir (yeniden tahsis YOK —
-    Shopify/Trendyol barkod tutarlılığı). stockCode deseni: '<model>-<beden> <Renk>'.
-    Döner: {renk: [beden sırasında barkodlar]} — yalnız TAM bloklar dahil edilir.
+    Modelin Trendyol'daki MEVCUT varyant haritası: {renk: {beden: barkod}}.
+    stockCode deseni: '<model>-<beden> <Renk>'. Model yoksa boş döner.
     """
     harita: dict = {}
     for uc in ("approved", "unapproved"):
@@ -398,6 +400,16 @@ def mevcut_model_kodlari(model_kodu: str, renkler: list[str], bedenler: list[str
                 if len(parcalar) == 2:
                     beden, renk = parcalar[0].strip(), parcalar[1].strip()
                     harita.setdefault(renk, {})[beden] = bc
+    return harita
+
+
+def mevcut_model_kodlari(model_kodu: str, renkler: list[str], bedenler: list[str]) -> dict:
+    """
+    Model zaten Trendyol'daysa mevcut barkodlarını getirir (yeniden tahsis YOK —
+    Shopify/Trendyol barkod tutarlılığı). stockCode deseni: '<model>-<beden> <Renk>'.
+    Döner: {renk: [beden sırasında barkodlar]} — yalnız TAM bloklar dahil edilir.
+    """
+    harita = mevcut_renk_haritasi(model_kodu)
     sonuc = {}
     for renk in renkler:
         kayit = harita.get(renk) or {}

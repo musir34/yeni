@@ -69,12 +69,17 @@ def urun_ac(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
                                          "quantity": int(form.get("stok", 5))}],
             })
 
-    # Aynı barkod Shopify'da zaten bir üründeyse KOPYA AÇMA — o ürünü güncelle
-    ilk_barkod = (taslak["renkler"][renkler[0]]["barkodlar"] or [""])[0]
-    mevcut_pid = _barkodla_urun_bul(ilk_barkod)
-    if mevcut_pid:
-        logger.info("[SHOPIFY-URUN] %s barkodu mevcut üründe (%s) — güncelleme yapılacak",
-                    ilk_barkod, mevcut_pid)
+    # Aynı barkod Shopify'da zaten bir üründeyse KOPYA AÇMA — o ürünü güncelle.
+    # HER rengin ilk barkoduna bakılır: mevcut modele yeni renk eklenirken ilk
+    # renk yeni (Shopify'da yok) olabilir, eski renklerin barkodu ürünü bulur.
+    mevcut_pid = None
+    for renk in renkler:
+        ilk_barkod = (taslak["renkler"][renk]["barkodlar"] or [""])[0]
+        mevcut_pid = _barkodla_urun_bul(ilk_barkod)
+        if mevcut_pid:
+            logger.info("[SHOPIFY-URUN] %s barkodu mevcut üründe (%s) — güncelleme yapılacak",
+                        ilk_barkod, mevcut_pid)
+            break
 
     girdi = {
         "title": sh.get("h1") or form.get("urun_turu") or urun_tipi,
