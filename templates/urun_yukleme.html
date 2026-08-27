@@ -37,6 +37,8 @@ html.gs-dark .uy-kart { background: #1e1e1e; border-color: #333; box-shadow: non
 .uy-aciklama-kutu { width: 100%; min-height: 260px; font-size: .85rem; }
 .uy-uyari { color: #b02a37; font-size: .85rem; }
 .uy-rozet { display: inline-block; background: rgba(25,135,84,.12); color: #198754; border-radius: 6px; padding: .1rem .5rem; font-size: .8rem; margin: .1rem; }
+.uy-onizle-serit { display: flex; gap: .35rem; flex-wrap: wrap; width: 100%; margin: .15rem 0 .35rem 90px; }
+.uy-onizle-serit img { height: 64px; width: 64px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(0,0,0,.12); }
 .uy-bekliyor { opacity: .6; pointer-events: none; }
 #uySonuc pre { max-height: 260px; overflow: auto; }
 .uy-ozellik-satir { display: grid; grid-template-columns: 1fr 2fr; gap: .5rem; margin-bottom: .4rem; align-items: center; }
@@ -550,7 +552,9 @@ Alt Taban: Kaymaz taban</textarea>
           <b style="min-width:90px">${r}</b>
           <input type="file" class="form-control form-control-sm uy-gorsel" data-renk="${r}" accept=".jpg,.jpeg,.png" multiple style="max-width:340px">
           <span class="uy-rozet" id="uyG_${r}" style="display:none"></span>
+          <div class="uy-onizle-serit" id="uyOnz_${r}"></div>
         </div>`).join("");
+    renkler.forEach(r => gorselOnizleTazele(r));  // sunucuda görsel varsa hemen göster
     document.querySelectorAll(".uy-gorsel").forEach(inp => inp.addEventListener("change", async () => {
       const fd = new FormData();
       if (S.taslakId) fd.append("taslak_id", S.taslakId);
@@ -561,9 +565,22 @@ Alt Taban: Kaymaz taban</textarea>
         S.taslakId = d.taslak_id;
         const roz = $("uyG_" + inp.dataset.renk);
         roz.style.display = ""; roz.textContent = d.toplam + " görsel yüklendi";
+        gorselOnizleTazele(inp.dataset.renk);
       } catch (e) { alert("Görsel yüklenemedi: " + e.message); }
     }));
   });
+
+  // --- Görsel önizleme şeridi: rengin sunucudaki görsellerini küçük resim olarak basar
+  async function gorselOnizleTazele(renk) {
+    const kutu = $("uyOnz_" + renk);
+    if (!kutu || !S.taslakId) return;
+    try {
+      const d = await getJSON(`/urun-yukleme/api/gorsel-liste?taslak_id=${encodeURIComponent(S.taslakId)}&renk=${encodeURIComponent(renk)}`);
+      kutu.innerHTML = (d.adlar || []).map(a =>
+        `<img src="/urun-yukleme/api/gorsel-onizle?taslak_id=${encodeURIComponent(S.taslakId)}&renk=${encodeURIComponent(renk)}&ad=${encodeURIComponent(a)}" alt="${kacir(renk)}" loading="lazy">`
+      ).join("");
+    } catch (e) { /* önizleme kritik değil — sessiz geç */ }
+  }
 
   // --- Taslak durum sorgulama (uzun işler arka planda koşar, 502 yok)
   function durumBekle(hedefler, aralikMs, zamanAsimiMs) {

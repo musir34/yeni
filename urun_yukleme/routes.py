@@ -22,7 +22,7 @@ import time
 import uuid
 from pathlib import Path
 
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import Blueprint, current_app, jsonify, render_template, request, send_file
 from werkzeug.utils import secure_filename
 
 from login_logout import roles_required
@@ -192,6 +192,36 @@ def gorsel_yukle():
     except Exception as e:
         logger.error("[URUN] görsel yükleme: %s", e, exc_info=True)
         return jsonify({"success": False, "error": "Görsel kaydedilemedi."}), 500
+
+
+@urun_yukleme_bp.route("/urun-yukleme/api/gorsel-liste")
+@roles_required("admin")
+def gorsel_liste():
+    """Rengin sunucudaki görsel dosya adlarını döner (önizleme şeridi için)."""
+    try:
+        taslak_id = secure_filename(request.args.get("taslak_id") or "")
+        renk = secure_filename(request.args.get("renk") or "")
+        if not (taslak_id and renk):
+            return jsonify({"success": False, "error": "taslak_id ve renk gerekli."}), 400
+        klasor = _taslak_yolu(taslak_id) / "gorsel" / renk
+        adlar = sorted(p.name for p in klasor.glob("*")) if klasor.exists() else []
+        return jsonify({"success": True, "adlar": adlar})
+    except Exception as e:
+        logger.error("[URUN] görsel listesi: %s", e, exc_info=True)
+        return jsonify({"success": False, "error": "Görsel listesi alınamadı."}), 500
+
+
+@urun_yukleme_bp.route("/urun-yukleme/api/gorsel-onizle")
+@roles_required("admin")
+def gorsel_onizle():
+    """Taslak klasöründeki tek görseli servis eder (secure_filename ile sınırlı)."""
+    taslak_id = secure_filename(request.args.get("taslak_id") or "")
+    renk = secure_filename(request.args.get("renk") or "")
+    ad = secure_filename(request.args.get("ad") or "")
+    yol = _taslak_yolu(taslak_id) / "gorsel" / renk / ad
+    if not (taslak_id and renk and ad and yol.is_file()):
+        return jsonify({"success": False, "error": "Görsel bulunamadı."}), 404
+    return send_file(yol, max_age=3600)
 
 
 # ------------------------------------------------------------- taslak üretimi
