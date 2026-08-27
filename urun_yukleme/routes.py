@@ -396,6 +396,11 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
         _hata_yaz(taslak_id, "Taslak üretimi", e)
 
 
+def _beden_normalize(b: str) -> str:
+    """Ondalık beden ayracı birliği: '35.5' → '35,5' (JS'teki normalize'ın ikizi)."""
+    return str(b).strip().replace(".", ",")
+
+
 def _bilgi_kur(taslak_id: str, f: dict, renkler: list[str], bedenler: list[str],
                hedefler: list[str]) -> dict:
     gorsel_yollari = []
@@ -425,7 +430,8 @@ def taslak_uret():
         f = request.json or {}
         taslak_id = f.get("taslak_id") or uuid.uuid4().hex[:12]
         renkler = [r.strip() for r in (f.get("renkler") or []) if r.strip()]
-        bedenler = [b.strip() for b in (f.get("bedenler") or []) if b.strip()]
+        bedenler = [_beden_normalize(b) for b in (f.get("bedenler") or []) if str(b).strip()]
+        f["bedenler"] = bedenler  # taslağa da tek biçim yazılsın
         hedefler = [h for h in (f.get("hedefler") or ["trendyol"]) if h in GECERLI_HEDEFLER]
         if not hedefler:
             return jsonify({"success": False, "error": "Hedef seçin: Trendyol, Shopify veya ikisi."}), 400
@@ -717,6 +723,14 @@ def yukle():
 
         form = taslak["form"]
         hedefler = taslak.get("hedefler") or ["trendyol"]
+
+        # Ondalık ayraç birliği: eski taslakta '35.5' kalmışsa tarayıcının
+        # virgüllü ("35,5") beden eşlemesiyle çakışıp yüklemeyi düşürmesin.
+        taslak["bedenler"] = [_beden_normalize(b) for b in taslak.get("bedenler") or []]
+        if isinstance(form.get("beden_degerleri"), dict):
+            form["beden_degerleri"] = {_beden_normalize(k): v
+                                       for k, v in form["beden_degerleri"].items()}
+
         for alan, ad in (("kategori_id", "Kategori"), ("satis_fiyat", "Satış fiyatı"),
                          ("liste_fiyat", "Liste fiyatı")):
             if not form.get(alan):
