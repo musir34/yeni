@@ -502,6 +502,7 @@ def trendyol_urun_paketi(model_kodu: str) -> dict:
                               if a.get("attributeName") == "Beden"), "")
             if not (renk and beden and bc):
                 continue
+            beden = beden.replace(".", ",")  # ondalık ayraç birliği (35.5 → 35,5)
             bedenler.add(beden)
             paket["barkodlar"].setdefault(renk, {})[beden] = bc
             fiyat = v.get("price") or {}
@@ -511,7 +512,12 @@ def trendyol_urun_paketi(model_kodu: str) -> dict:
             paket["renkler"].append(renk)
             paket["gorseller"][renk] = [g.get("url") for g in c.get("images") or []
                                         if g.get("url")][:8]
-    paket["bedenler"] = sorted(bedenler, key=lambda b: (len(b), b))
+    def _beden_sira(b: str) -> float:
+        try:
+            return float(b.replace(",", "."))
+        except ValueError:
+            return 999.0
+    paket["bedenler"] = sorted(bedenler, key=_beden_sira)  # 35 < 35,5 < 36 ...
     if not paket["renkler"]:
         raise ValueError(f"{model_kodu}: renk bilgisi çözülemedi (Renk özelliği/stok kodu biçimi).")
     return paket
