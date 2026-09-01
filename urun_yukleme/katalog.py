@@ -35,6 +35,9 @@ YASAKLI_KELIMELER = ("trendyol", "iade", "garanti", "kargo", "değişim",
                      "http", "www", "tel:", "ortopedik", "@",
                      "indirim", "kampanya", "ücretsiz", "fiyat")
 _YIL_DESENI = re.compile(r"20[2-9]\d")  # yıl yazmak yasak (metin eskir)
+# Geçerli ayakkabı bedeni: '35', '35,5' (eski kayıtlarda stockCode'da beden ile
+# renk bitişik olabilir — '051-35Bej Kırışık' → '35Bej' beden DEĞİLDİR)
+_BEDEN_DESENI = re.compile(r"^\d{2}(,5)?$")
 
 _ttl_cache: dict = {}
 
@@ -406,6 +409,8 @@ def mevcut_renk_haritasi(model_kodu: str) -> dict:
                     parcalar = sc[len(model_kodu) + 1:].split(" ", 1)
                     if len(parcalar) == 2:
                         beden, renk = parcalar[0].strip(), parcalar[1].strip()
+                        if not _BEDEN_DESENI.match(beden.replace(".", ",")):
+                            beden = renk = ""  # bitişik desen — özniteliklere düş
                 if not (beden and renk):
                     beden = next((str(a.get("attributeValue") or "").strip()
                                   for a in v.get("attributes") or []
@@ -521,6 +526,9 @@ def trendyol_urun_paketi(model_kodu: str) -> dict:
                 if not renk and len(parcalar) == 2:
                     renk = parcalar[1].strip()
             else:
+                beden = ""
+            if not _BEDEN_DESENI.match(str(beden).replace(".", ",")):
+                # stockCode'dan beden çözülemedi (bitişik/farklı desen) → öznitelik
                 beden = next((a.get("attributeValue") for a in v.get("attributes") or []
                               if a.get("attributeName") == "Beden"), "")
             if not (renk and beden and bc):
