@@ -874,6 +874,22 @@ Alt Taban: Kaymaz taban</textarea>
   // --- Yükleme
   $("uyYukleBtn").addEventListener("click", async () => {
     if (!S.taslak) return;
+    // Form sonradan değiştiyse taslak BAYAT demektir — yükleme taslağı gönderir,
+    // formu değil; kullanıcı 'buçuk ekledim ama gitmedi' tuzağına düşmesin.
+    const formBeden = bedenListesi().join(", ");
+    const taslakBeden = (S.taslak.bedenler || []).join(", ");
+    if (formBeden !== taslakBeden) {
+      return alert("Beden listesi taslaktan farklı!\n\nTaslak: " + taslakBeden +
+                   "\nForm:   " + formBeden +
+                   "\n\nDeğişikliğin gitmesi için önce 'AI'sız Hazırla' ya da 'AI ile Üret' ile taslağı yeniden kurun, sonra Yükle'ye basın.");
+    }
+    const formRenk = renkListesi().join(", ");
+    const taslakRenk = Object.keys(S.taslak.renkler || {}).join(", ");
+    if (formRenk !== taslakRenk) {
+      return alert("Renk listesi taslaktan farklı!\n\nTaslak: " + taslakRenk +
+                   "\nForm:   " + formRenk +
+                   "\n\nDeğişikliğin gitmesi için taslağı yeniden hazırlayın.");
+    }
     if (!confirm("Ürün Trendyol'a gönderilecek. Önizlemeyi kontrol ettiniz mi?")) return;
     $("uyYukleBtn").classList.add("uy-bekliyor");
     $("uyYukleDurum").textContent = "Görseller CDN'e taşınıyor ve ürün gönderiliyor… (1-2 dk)";
