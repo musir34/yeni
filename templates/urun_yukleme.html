@@ -292,6 +292,11 @@ Alt Taban: Kaymaz taban</textarea>
     $("uyYukleBtn").innerHTML = '<i class="bi bi-cloud-arrow-up"></i> Onayla ve Yükle — ' + ad;
     ["uyAdim1", "uyAdim2"].forEach(id => { $(id).style.display = ""; });
     document.querySelectorAll(".uy-sonraki-adim").forEach(k => { k.style.display = ""; });
+    // Hedef sonradan Trendyol'a dönerse kategori özellikleri (Beden varyant
+    // dahil) Shopify-only seçiminde atlanmıştı — yeniden yükle.
+    if (hedefler.includes("trendyol") && S.kategori && !S.bedenAttrId) {
+      $("uyKategori").dispatchEvent(new Event("change"));
+    }
   }
 
   getJSON("/urun-yukleme/api/son-taslak").then(d => {
@@ -877,6 +882,11 @@ Alt Taban: Kaymaz taban</textarea>
       const bedenDeger = {};
       const ozellikler = [];
       if (S.hedefler.includes("trendyol")) {
+        if (!S.bedenAttrId && S.kategori) {
+          // Kategori Shopify hedefliyken seçildiyse varyant özelliği yüklenmemiştir
+          const dOz = await getJSON("/urun-yukleme/api/ozellikler?cid=" + S.kategori.id);
+          S.bedenAttrId = (dOz.ozellikler.find(o => o.varyant) || {}).id || null;
+        }
         if (S.bedenAttrId) {
           const dv = await getJSON(`/urun-yukleme/api/ozellik-degerleri?cid=${S.kategori.id}&aid=${S.bedenAttrId}`);
           // "35,5" ↔ "35.5" yazım farkı eşlemeyi bozmasın (nokta→virgül normalize)
