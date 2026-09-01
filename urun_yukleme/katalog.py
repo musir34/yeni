@@ -459,6 +459,28 @@ def baslik_denetle(baslik: str) -> str | None:
     return None
 
 
+def model_ozellikleri(model_kodu: str) -> list[dict]:
+    """
+    Mevcut modelin içerik özniteliklerinden ORTAK seçimler: [{attributeId,
+    attributeValueId}]. Renk-bağımlı olanlar (47 serbest Renk, 348 Web Color)
+    hariç — onlar renk başına ayrıca eşlenir. Mevcut modele renk/beden eklerken
+    zorunlu özellikler (Topuk Boyu/Tipi vb.) buradan devralınır.
+    """
+    secimler: list[dict] = []
+    gorulen: set = set()
+    for uc in ("approved", "unapproved"):
+        d = _get(f"{BASE}/sellers/{SUPPLIER_ID}/products/{uc}"
+                 f"?productMainId={model_kodu}&size=100", timeout=90)
+        for c in d.get("content", []):
+            for a in c.get("attributes") or []:
+                aid, vid = a.get("attributeId"), a.get("attributeValueId")
+                if not (aid and vid) or aid in (47, WEB_COLOR_ID) or aid in gorulen:
+                    continue
+                gorulen.add(aid)
+                secimler.append({"attributeId": int(aid), "attributeValueId": int(vid)})
+    return secimler
+
+
 def trendyol_urun_paketi(model_kodu: str) -> dict:
     """
     Trendyol'daki mevcut ürünü 'aktarım paketi'ne çevirir (tek tıkla Shopify'a

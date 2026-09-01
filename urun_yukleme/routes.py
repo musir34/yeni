@@ -608,8 +608,21 @@ def taslak_durum():
 def _trendyol_gonder(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
     bedenler = taslak["bedenler"]
     beden_deger = form.get("beden_degerleri") or {}
-    ortak_ozellikler = form.get("ozellik_secimleri") or []
+    ortak_ozellikler = list(form.get("ozellik_secimleri") or [])
     beden_attr_id = form.get("beden_attr_id")
+
+    # Mevcut modele ekleme (yeni renk/buçuk beden): formda seçilmeyen özellikler
+    # Trendyol'daki MEVCUT üründen devralınır — AI'sız yolda Topuk Boyu/Tipi gibi
+    # varsayılansız zorunlular bu sayede eşlenir, içerik modelle tutarlı kalır.
+    if taslak.get("mevcut_varyantlar") or taslak.get("mevcut_renkler"):
+        try:
+            secili = {int(s["attributeId"]) for s in ortak_ozellikler if s.get("attributeId")}
+            for s in katalog.model_ozellikleri(taslak["model_kodu"]):
+                if s["attributeId"] not in secili:
+                    ortak_ozellikler.append(s)
+                    secili.add(s["attributeId"])
+        except Exception:
+            logger.warning("[URUN] mevcut model özellikleri devralınamadı", exc_info=True)
 
     # Zorunlu özellik güvencesi: eksikler otomatik tamamlanır (Web Color renk
     # bazlı eşlenir); tamamlanamayan kalırsa batch'e gitmeden hata verilir.
