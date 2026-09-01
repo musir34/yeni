@@ -475,6 +475,7 @@ def trendyol_urun_paketi(model_kodu: str) -> dict:
 
     paket = {"model_kodu": model_kodu, "renkler": [], "bedenler": [],
              "gorseller": {}, "barkodlar": {}, "teknik": [], "aciklama_ham": "",
+             "basliklar": {}, "aciklamalar": {},
              "kategori_ad": "", "baslik": "", "satis_fiyat": None, "liste_fiyat": None}
     bedenler = set()
     for c in icerikler:
@@ -508,6 +509,12 @@ def trendyol_urun_paketi(model_kodu: str) -> dict:
             fiyat = v.get("price") or {}
             paket["satis_fiyat"] = paket["satis_fiyat"] or fiyat.get("salePrice")
             paket["liste_fiyat"] = paket["liste_fiyat"] or fiyat.get("listPrice")
+        if renk:
+            # AI'sız hızlı yükleme için mevcut metinler renk bazında saklanır
+            if c.get("title"):
+                paket["basliklar"].setdefault(renk, c["title"])
+            if c.get("description"):
+                paket["aciklamalar"].setdefault(renk, c["description"])
         if renk and renk not in paket["renkler"]:
             paket["renkler"].append(renk)
             paket["gorseller"][renk] = [g.get("url") for g in c.get("images") or []

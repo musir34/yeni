@@ -350,30 +350,45 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                 tum_barkodlar = [b for blok in kodlar["renk_bloklari"] for b in blok]
                 katalog.rezerv_ekle(kodlar["model_kodu"], tum_barkodlar)
 
-            # Trendyol özellik kataloğu yalnız Trendyol hedefliyken gerekir
-            harita = {}
-            if "trendyol" in hedefler:
-                try:
-                    bilgi["ozellik_katalogu"], harita = _ozellik_katalogu(int(f["kategori_id"]))
-                except Exception:
-                    logger.warning("[URUN] özellik kataloğu kurulamadı, AI seçimi atlanıyor", exc_info=True)
+            if f.get("aisiz"):
+                # AI'SIZ HIZLI YOL (aktarımla gelen mevcut başlık/açıklamalar
+                # aynen kullanılır): yalnız Trendyol hedefiyle çalışır — site
+                # içeriği (H1/SEO/açıklama) AI üretimi ister.
+                if "shopify" in hedefler:
+                    raise ValueError("AI'sız hızlı yükleme yalnız Trendyol hedefiyle "
+                                     "kullanılır — site için 'AI ile Üret'i kullanın.")
+                metin, oneriler = {}, []
+            else:
+                # Trendyol özellik kataloğu yalnız Trendyol hedefliyken gerekir
+                harita = {}
+                if "trendyol" in hedefler:
+                    try:
+                        bilgi["ozellik_katalogu"], harita = _ozellik_katalogu(int(f["kategori_id"]))
+                    except Exception:
+                        logger.warning("[URUN] özellik kataloğu kurulamadı, AI seçimi atlanıyor", exc_info=True)
 
-            metin = metin_uret(bilgi)
-            oneriler = _ozellik_onerileri(metin.get("ozellikler"), harita)
+                metin = metin_uret(bilgi)
+                oneriler = _ozellik_onerileri(metin.get("ozellikler"), harita)
 
             renk_taslaklari, uyarilar = {}, []
             for i, renk in enumerate(renkler):
                 icerik = (metin.get("renkler") or {}).get(renk) or {}
                 baslik = (icerik.get("baslik") or "").strip()
+                if not baslik and f.get("aisiz"):
+                    baslik = ((f.get("trendyol_basliklar") or {}).get(renk)
+                              or f.get("trendyol_baslik") or "").strip()
                 kayit = {"barkodlar": kodlar["renk_bloklari"][i]}
                 if "trendyol" in hedefler:
-                    hata = katalog.baslik_denetle(baslik)
+                    # AI'sız yolda başlık Trendyol'daki mevcut başlıktır —
+                    # 95-100 karakter kuralına zorlanmaz.
+                    hata = None if f.get("aisiz") else katalog.baslik_denetle(baslik)
                     if hata:
                         uyarilar.append(f"{renk}: {hata}")
-                    # Aktarımda "açıklamayı aynen koru" seçiliyse AI iskeleti yerine
-                    # Trendyol'daki mevcut açıklama kullanılır (başlıklar yine AI'dan)
-                    if f.get("aciklama_koru") and f.get("trendyol_aciklama"):
-                        aciklama = f["trendyol_aciklama"]
+                    # Aktarımda "açıklamayı aynen koru" ya da AI'sız yol: AI iskeleti
+                    # yerine Trendyol'daki mevcut açıklama (renk bazlısı öncelikli)
+                    if f.get("aisiz") or (f.get("aciklama_koru") and f.get("trendyol_aciklama")):
+                        aciklama = ((f.get("trendyol_aciklamalar") or {}).get(renk)
+                                    or f.get("trendyol_aciklama") or "")
                     else:
                         aciklama = aciklama_kur(renk, icerik, bilgi, metin.get("renk_secenekleri", ""))
                     yasak = katalog.yasak_tara(aciklama)
@@ -766,8 +781,15 @@ def yukle():
             if eksik:
                 return jsonify({"success": False,
                                 "error": f"Şu bedenlerin Trendyol değeri eşlenmemiş: {', '.join(eksik)}"}), 400
-            # Son denetim: başlık sınırı + yasaklı ifadeler (elle düzeltme sonrası hali)
+            # Son denetim: başlık sınırı + yasaklı ifadeler (elle düzeltme sonrası
+            # hali). AI'sız yolda metinler Trendyol'da ZATEN yayında olan mevcut
+            # metinlerdir — kurala zorlanmaz, boş başlık yine engellenir.
             for renk, r in taslak["renkler"].items():
+                if form.get("aisiz"):
+                    if not (r.get("baslik") or "").strip():
+                        return jsonify({"success": False,
+                                        "error": f"{renk}: başlık boş — mevcut üründen alınamadı."}), 400
+                    continue
                 hata = katalog.baslik_denetle(r.get("baslik", ""))
                 yasak = katalog.yasak_tara(r.get("aciklama", ""))
                 if hata or yasak:

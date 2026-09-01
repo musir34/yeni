@@ -81,6 +81,7 @@ html.gs-dark .uy-kart { background: #1e1e1e; border-color: #333; box-shadow: non
       <b>📥 Trendyol'dan Aktar:</b>
       <input class="form-control form-control-sm" id="uyAktarModel" placeholder="model kodu (ör. 0121)" style="max-width:160px">
       <button class="btn btn-outline-danger btn-sm" id="uyAktarBtn"><i class="bi bi-download"></i> Getir</button>
+      <button class="btn btn-outline-success btn-sm" id="uyAisizBtn" style="display:none">⚡ AI'sız Hazırla — mevcut metinlerle</button>
       <span class="text-muted" id="uyAktarDurum"></span>
     </div>
     <small class="text-muted">Trendyol'daki mevcut ürünün renkleri, bedenleri, <b>aynı barkodları</b>, fiyatı, özellikleri ve görselleri otomatik doldurulur — AI üretip onaylarsınız, Shopify'a birebir aynı kodlarla gider.<br>
@@ -318,10 +319,14 @@ Alt Taban: Kaymaz taban</textarea>
       if (f.kdv) $("uyKdv").value = f.kdv;
       if (Array.isArray(f.teknik) && f.teknik.length) $("uyTeknik").value = f.teknik.join("\n");
       S.trendyolAciklama = f.trendyol_aciklama || "";  // aktarımdan geldiyse korunur
+      S.trendyolBaslik = f.trendyol_baslik || "";
+      S.trendyolBasliklar = f.trendyol_basliklar || {};
+      S.trendyolAciklamalar = f.trendyol_aciklamalar || {};
       if (S.trendyolAciklama) {
         $("uyAktarAcikKutu").style.display = "";
         $("uyAktarAcik").value = S.trendyolAciklama;
         $("uyAciklamaKoru").checked = !!f.aciklama_koru;
+        $("uyAisizBtn").style.display = "";
       }
       // Görsel rozetleri (dosyalar sunucuda — yeniden seçmeye gerek yok)
       for (const [renk, adet] of Object.entries(t.gorsel_sayilari || {})) {
@@ -394,11 +399,15 @@ Alt Taban: Kaymaz taban</textarea>
       }
       // AI'ya kaynak: mevcut Trendyol açıklaması (uyarlaması için) + görünür kutu
       S.trendyolAciklama = p.aciklama_ham || "";
+      S.trendyolBaslik = p.baslik || "";
+      S.trendyolBasliklar = p.basliklar || {};
+      S.trendyolAciklamalar = p.aciklamalar || {};
       if (S.trendyolAciklama) {
         $("uyAktarAcikKutu").style.display = "";
         $("uyAktarAcik").value = S.trendyolAciklama;
       }
-      $("uyAktarDurum").textContent = `✓ ${p.model_kodu} yüklendi — ${(p.renkler || []).length} renk, aynı barkodlarla. Şimdi "AI ile Üret"e basın.`;
+      $("uyAisizBtn").style.display = "";  // mevcut metinlerle hızlı yol açılır
+      $("uyAktarDurum").textContent = `✓ ${p.model_kodu} yüklendi — ${(p.renkler || []).length} renk, aynı barkodlarla. "AI ile Üret" ya da "AI'sız Hazırla" ile devam edin.`;
     } catch (e) {
       $("uyAktarDurum").textContent = "";
       alert("Aktarım başarısız: " + e.message);
@@ -667,32 +676,68 @@ Alt Taban: Kaymaz taban</textarea>
     });
   }
 
+  // Taslak üretim gövdesi (AI'lı ve AI'sız yolun ortak formu)
+  function govdeKur() {
+    return {
+      taslak_id: S.taslakId,
+      hedefler: S.hedefler,
+      kategori_id: S.kategori.id, kategori_yolu: S.kategori.yol,
+      urun_turu: $("uyUrunTuru").value, not: $("uyNot").value,
+      renkler: renkListesi(), bedenler: bedenListesi(),
+      barkod_onek: $("uyOnek").value,
+      ozel_model_kodu: $("uyModelKodu").value.trim(),
+      trendyol_aciklama: S.trendyolAciklama || "",
+      aciklama_koru: $("uyAciklamaKoru").checked,
+      // Teknik liste = Trendyol özellik seçimleri + serbest satırlar
+      // (aynı adı iki kez yazmamak için özellik seçimi öncelikli)
+      teknik: (() => {
+        const secim = ozellikSatirlari();
+        const anahtarlar = new Set(secim.map(s => s.split(":")[0].trim().toLowerCase()));
+        const serbest = $("uyTeknik").value.split("\n").map(s => s.trim()).filter(Boolean)
+          .filter(s => !anahtarlar.has(s.split(":")[0].trim().toLowerCase()));
+        return [...secim, ...serbest];
+      })(),
+    };
+  }
+
+  // --- AI'sız hızlı taslak: aktarımdan gelen MEVCUT başlık/açıklamalarla,
+  // AI beklemeden (yalnız Trendyol hedefi — mevcut modele beden/renk ekleme)
+  $("uyAisizBtn").addEventListener("click", async () => {
+    if (!S.kategori) return alert("Önce kategori seçin (Getir genelde otomatik seçer).");
+    hedefUygula(["trendyol"]);  // site içeriği AI ister; bu yol Trendyol'a gider
+    $("uyAisizBtn").classList.add("uy-bekliyor");
+    $("uyTaslakDurum").textContent = "Mevcut metinlerle taslak kuruluyor… (AI yok, saniyeler sürer)";
+    try {
+      const govde = Object.assign(govdeKur(), {
+        aisiz: true,
+        trendyol_baslik: S.trendyolBaslik || "",
+        trendyol_basliklar: S.trendyolBasliklar || {},
+        trendyol_aciklamalar: S.trendyolAciklamalar || {},
+      });
+      const d = await getJSON("/urun-yukleme/api/taslak", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(govde) });
+      S.taslakId = d.taslak_id;
+      const t = await durumBekle(["hazir"], 2000, 90 * 1000);
+      S.taslak = t;
+      onizlemeCiz(t);
+      $("uyYukleBtn").disabled = false;
+      $("uyDuzeltKutu").style.display = "";
+      $("uyTaslakDurum").textContent = "Taslak mevcut metinlerle hazır — kontrol edip Yükle'ye basın.";
+    } catch (e) {
+      $("uyTaslakDurum").textContent = "";
+      alert("Hazırlanamadı: " + e.message);
+    } finally {
+      $("uyAisizBtn").classList.remove("uy-bekliyor");
+    }
+  });
+
   // --- AI taslak
   $("uyTaslakBtn").addEventListener("click", async () => {
     if (!S.kategori) return alert("Önce kategori seçin.");
     $("uyTaslakBtn").classList.add("uy-bekliyor");
     $("uyTaslakDurum").textContent = "AI çalışıyor… (1-3 dk sürebilir)";
     try {
-      const govde = {
-        taslak_id: S.taslakId,
-        hedefler: S.hedefler,
-        kategori_id: S.kategori.id, kategori_yolu: S.kategori.yol,
-        urun_turu: $("uyUrunTuru").value, not: $("uyNot").value,
-        renkler: renkListesi(), bedenler: bedenListesi(),
-        barkod_onek: $("uyOnek").value,
-        ozel_model_kodu: $("uyModelKodu").value.trim(),
-        trendyol_aciklama: S.trendyolAciklama || "",
-        aciklama_koru: $("uyAciklamaKoru").checked,
-        // Teknik liste = Trendyol özellik seçimleri + serbest satırlar
-        // (aynı adı iki kez yazmamak için özellik seçimi öncelikli)
-        teknik: (() => {
-          const secim = ozellikSatirlari();
-          const anahtarlar = new Set(secim.map(s => s.split(":")[0].trim().toLowerCase()));
-          const serbest = $("uyTeknik").value.split("\n").map(s => s.trim()).filter(Boolean)
-            .filter(s => !anahtarlar.has(s.split(":")[0].trim().toLowerCase()));
-          return [...secim, ...serbest];
-        })(),
-      };
+      const govde = govdeKur();
       const d = await getJSON("/urun-yukleme/api/taslak", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(govde) });
       S.taslakId = d.taslak_id;
