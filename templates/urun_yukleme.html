@@ -876,15 +876,15 @@ Alt Taban: Kaymaz taban</textarea>
     if (!S.taslak) return;
     // Form sonradan değiştiyse taslak BAYAT demektir — yükleme taslağı gönderir,
     // formu değil; kullanıcı 'buçuk ekledim ama gitmedi' tuzağına düşmesin.
-    const formBeden = bedenListesi().join(", ");
-    const taslakBeden = (S.taslak.bedenler || []).join(", ");
+    const formBeden = bedenListesi().slice().sort().join(", ");
+    const taslakBeden = (S.taslak.bedenler || []).slice().sort().join(", ");
     if (formBeden !== taslakBeden) {
       return alert("Beden listesi taslaktan farklı!\n\nTaslak: " + taslakBeden +
                    "\nForm:   " + formBeden +
                    "\n\nDeğişikliğin gitmesi için önce 'AI'sız Hazırla' ya da 'AI ile Üret' ile taslağı yeniden kurun, sonra Yükle'ye basın.");
     }
-    const formRenk = renkListesi().join(", ");
-    const taslakRenk = Object.keys(S.taslak.renkler || {}).join(", ");
+    const formRenk = renkListesi().slice().sort().join(", ");
+    const taslakRenk = Object.keys(S.taslak.renkler || {}).sort().join(", ");
     if (formRenk !== taslakRenk) {
       return alert("Renk listesi taslaktan farklı!\n\nTaslak: " + taslakRenk +
                    "\nForm:   " + formRenk +
