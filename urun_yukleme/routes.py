@@ -370,7 +370,12 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                     hata = katalog.baslik_denetle(baslik)
                     if hata:
                         uyarilar.append(f"{renk}: {hata}")
-                    aciklama = aciklama_kur(renk, icerik, bilgi, metin.get("renk_secenekleri", ""))
+                    # Aktarımda "açıklamayı aynen koru" seçiliyse AI iskeleti yerine
+                    # Trendyol'daki mevcut açıklama kullanılır (başlıklar yine AI'dan)
+                    if f.get("aciklama_koru") and f.get("trendyol_aciklama"):
+                        aciklama = f["trendyol_aciklama"]
+                    else:
+                        aciklama = aciklama_kur(renk, icerik, bilgi, metin.get("renk_secenekleri", ""))
                     yasak = katalog.yasak_tara(aciklama)
                     if yasak:
                         uyarilar.append(f"{renk} açıklamasında yasaklı ifade: {', '.join(yasak)}")

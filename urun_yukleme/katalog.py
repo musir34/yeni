@@ -383,23 +383,38 @@ def zorunlu_tamamla(cid: int, secimler: list[dict], renkler: list[str]) -> tuple
 def mevcut_renk_haritasi(model_kodu: str) -> dict:
     """
     Modelin Trendyol'daki MEVCUT varyant haritası: {renk: {beden: barkod}}.
-    stockCode deseni: '<model>-<beden> <Renk>'. Model yoksa boş döner.
+    Önce stockCode deseni ('<model>-<beden> <Renk>') denenir; eski modellerde
+    stockCode düz olabildiğinden (ör. '001') içerik Renk + varyant Beden
+    özniteliklerinden de çözülür. Model yoksa boş döner.
     """
     harita: dict = {}
     for uc in ("approved", "unapproved"):
         d = _get(f"{BASE}/sellers/{SUPPLIER_ID}/products/{uc}"
                  f"?productMainId={model_kodu}&size=100", timeout=90)
         for c in d.get("content", []):
+            icerik_renk = next((str(a.get("attributeValue") or "").strip()
+                                for a in c.get("attributes") or []
+                                if a.get("attributeName") == "Renk"
+                                and a.get("attributeValue")), "")
             for v in c.get("variants") or []:
-                sc = str(v.get("stockCode") or "")
                 bc = str(v.get("barcode") or "")
-                if not (sc.startswith(f"{model_kodu}-") and bc):
+                if not bc:
                     continue
-                kalan = sc[len(model_kodu) + 1:]
-                parcalar = kalan.split(" ", 1)
-                if len(parcalar) == 2:
-                    beden, renk = parcalar[0].strip(), parcalar[1].strip()
-                    harita.setdefault(renk, {})[beden] = bc
+                sc = str(v.get("stockCode") or "")
+                beden = renk = ""
+                if sc.startswith(f"{model_kodu}-"):
+                    parcalar = sc[len(model_kodu) + 1:].split(" ", 1)
+                    if len(parcalar) == 2:
+                        beden, renk = parcalar[0].strip(), parcalar[1].strip()
+                if not (beden and renk):
+                    beden = next((str(a.get("attributeValue") or "").strip()
+                                  for a in v.get("attributes") or []
+                                  if a.get("attributeName") == "Beden"
+                                  and a.get("attributeValue")), "")
+                    renk = icerik_renk
+                if beden and renk:
+                    # ondalık ayraç birliği: '35.5' → '35,5' (formla aynı biçim)
+                    harita.setdefault(renk, {})[beden.replace(".", ",")] = bc
     return harita
 
 
