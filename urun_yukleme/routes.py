@@ -287,23 +287,18 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
 
             ozel = (f.get("ozel_model_kodu") or "").strip()
             mevcut_renkler: list[str] = []
+            mevcut_varyantlar: list[list[str]] = []
             if mevcut and mevcut.get("model_kodu"):
                 # REVİZYON: kodlar korunur, yeniden tahsis/rezerv YAPILMAZ
                 kodlar = {"model_kodu": mevcut["model_kodu"],
                           "renk_bloklari": [mevcut["renkler"][r]["barkodlar"] for r in renkler]}
                 mevcut_renkler = list(mevcut.get("mevcut_renkler") or [])
+                mevcut_varyantlar = list(mevcut.get("mevcut_varyantlar") or [])
             elif ozel and (harita := katalog.mevcut_renk_haritasi(ozel)):
-                # MEVCUT MODEL: eşleşen renkler Trendyol'daki barkodları AYNEN kullanır
-                # (Shopify/Trendyol tutarlılığı); YENİ renklere aynı serinin devamından
-                # blok tahsis edilir — "mevcut modele yeni renk" yolu.
-                eslesen = {r: [harita[r][b] for b in bedenler] for r in renkler
-                           if all(b in (harita.get(r) or {}) for b in bedenler)}
-                kismi = [r for r in renkler if r not in eslesen and harita.get(r)]
-                if kismi:
-                    raise ValueError(
-                        f"{ozel} modelinde {', '.join(kismi)} renginin beden seti "
-                        "formdakiyle uyuşmuyor (Trendyol'da eksik/farklı bedenler var). "
-                        "Beden listesini Trendyol'daki mevcut bedenlerle eşitleyin.")
+                # MEVCUT MODEL: var olan (renk, beden) ikilileri Trendyol'daki
+                # barkodları AYNEN kullanır (Shopify/Trendyol tutarlılığı); yalnız
+                # YENİ ikililere (yeni renk ya da mevcut renge yeni/buçuk beden)
+                # aynı serinin devamından barkod tahsis edilir.
                 # Site hedefliyse modelin TÜM mevcut renkleri formda olmalı:
                 # productSet tam seti yeniden yazar, eksik renk siteden SİLİNİR.
                 disarida = [r for r in harita if r not in renkler]
@@ -313,20 +308,37 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                         "renkleri formda yok. Site tek-ürün kuralı gereği tüm "
                         "renkler birlikte gönderilmeli — modeli 'Trendyol'dan "
                         "Aktar' ile doldurup yeni rengi listeye ekleyin.")
-                yeni_renkler = [r for r in renkler if r not in eslesen]
-                yeni_bloklar: list[list[str]] = []
-                if yeni_renkler:
+                # Aynı güvence bedenler için: mevcut bir beden formda eksikse
+                # site güncellemesi o bedeni SİLERDİ.
+                eksik_beden = sorted({b for r in renkler
+                                      for b in (harita.get(r) or {}) if b not in bedenler})
+                if eksik_beden and "shopify" in hedefler:
+                    raise ValueError(
+                        f"{ozel} modelinin Trendyol'daki şu bedenleri formda yok: "
+                        f"{', '.join(eksik_beden)}. Site tam seti yeniden yazar — "
+                        "beden listesinde mevcut bedenler de kalmalı (buçuk eklerken "
+                        "tam bedenleri silmeyin).")
+                yeni_kombin = [(r, b) for r in renkler for b in bedenler
+                               if b not in (harita.get(r) or {})]
+                yeni_barkodlar: list[str] = []
+                if yeni_kombin:
                     ornek_bc = next(iter(next(iter(harita.values())).values()))
                     onek = (f.get("barkod_onek") or "").strip() or ornek_bc[:6]
-                    yeni = katalog.kod_oner(onek, len(yeni_renkler), len(bedenler),
+                    yeni = katalog.kod_oner(onek, 1, len(yeni_kombin),
                                             ozel_model=ozel, model_dolu_ok=True)
-                    yeni_bloklar = yeni["renk_bloklari"]
-                    katalog.rezerv_ekle(ozel, [b for blok in yeni_bloklar for b in blok])
-                sirali = iter(yeni_bloklar)
-                kodlar = {"model_kodu": ozel,
-                          "renk_bloklari": [eslesen[r] if r in eslesen else next(sirali)
-                                            for r in renkler]}
-                mevcut_renkler = [r for r in renkler if r in eslesen]
+                    yeni_barkodlar = yeni["renk_bloklari"][0]
+                    katalog.rezerv_ekle(ozel, yeni_barkodlar)
+                sirali = iter(yeni_barkodlar)
+                bloklar = []
+                for r in renkler:
+                    kayit = harita.get(r) or {}
+                    bloklar.append([kayit[b] if b in kayit else next(sirali)
+                                    for b in bedenler])
+                kodlar = {"model_kodu": ozel, "renk_bloklari": bloklar}
+                mevcut_renkler = [r for r in renkler
+                                  if all(b in (harita.get(r) or {}) for b in bedenler)]
+                mevcut_varyantlar = [[r, b] for r in renkler for b in bedenler
+                                     if b in (harita.get(r) or {})]
             else:
                 # Kod tahsisi + ANINDA rezerv — barkod/model kodu HER hedefte ortak
                 # standarttır (Shopify SKU/barkodları Trendyol'la aynı havuzdan gelir).
@@ -387,6 +399,7 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
 
             taslak = {"taslak_id": taslak_id, "form": f, "model_kodu": kodlar["model_kodu"],
                       "hedefler": hedefler, "mevcut_renkler": mevcut_renkler,
+                      "mevcut_varyantlar": mevcut_varyantlar,
                       "renkler": renk_taslaklari, "bedenler": bedenler,
                       "shopify": shopify,
                       "ozellik_onerileri": oneriler,
@@ -586,15 +599,19 @@ def _trendyol_gonder(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
         raise ValueError("Şu zorunlu özellikler eşlenemedi, Adım 1'den seçin: "
                          + ", ".join(eksikler))
 
-    # Zaten Trendyol'da olan renkler YENİDEN gönderilmez (çift barkod hatası olur);
-    # "mevcut modele yeni renk" yolunda yalnız yeni renkler batch'e girer.
+    # Zaten Trendyol'da olan varyantlar YENİDEN gönderilmez (çift barkod hatası
+    # olur); yeni renk / mevcut renge yeni-buçuk beden yollarında yalnız yeni
+    # (renk, beden) ikilileri batch'e girer.
     zaten_var = set(taslak.get("mevcut_renkler") or [])
+    zaten_var_vb = {(v[0], v[1]) for v in taslak.get("mevcut_varyantlar") or []}
     items = []
     for renk, r in taslak["renkler"].items():
         if renk in zaten_var:
             continue
         renk_ozel = [renk_web_color[renk]] if renk_web_color.get(renk) else []
         for beden, barkod in zip(bedenler, r["barkodlar"]):
+            if (renk, beden) in zaten_var_vb:
+                continue
             if len(barkod) != katalog.BARKOD_UZUNLUK:
                 raise ValueError(f"Barkod {katalog.BARKOD_UZUNLUK} hane değil: {barkod}")
             items.append({
@@ -619,7 +636,7 @@ def _trendyol_gonder(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
 
     if not items:
         return {"varyant": 0,
-                "mesaj": "Tüm renkler zaten Trendyol'da — yeni gönderim gerekmedi."}
+                "mesaj": "Tüm renk/beden varyantları zaten Trendyol'da — yeni gönderim gerekmedi."}
 
     batch_id = katalog.urun_gonder(items)
     sonuc = {"batch_id": batch_id, "varyant": len(items)}
