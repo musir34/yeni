@@ -691,6 +691,9 @@ Alt Taban: Kaymaz taban</textarea>
       renkler: renkListesi(), bedenler: bedenListesi(),
       barkod_onek: $("uyOnek").value,
       ozel_model_kodu: $("uyModelKodu").value.trim(),
+      // Fiyat/stok da taslakla saklansın — 'Devam Et' dönüşünde form boş kalmasın
+      satis_fiyat: $("uySatis").value, liste_fiyat: $("uyListe").value,
+      stok: $("uyStok").value, kdv: $("uyKdv").value,
       trendyol_aciklama: S.trendyolAciklama || "",
       aciklama_koru: $("uyAciklamaKoru").checked,
       // Teknik liste = Trendyol özellik seçimleri + serbest satırlar
