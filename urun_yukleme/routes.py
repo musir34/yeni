@@ -288,6 +288,7 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
             ozel = (f.get("ozel_model_kodu") or "").strip()
             mevcut_renkler: list[str] = []
             mevcut_varyantlar: list[list[str]] = []
+            yeni_varyant_yok = False
             if mevcut and mevcut.get("model_kodu"):
                 # REVİZYON: kodlar korunur, yeniden tahsis/rezerv YAPILMAZ
                 kodlar = {"model_kodu": mevcut["model_kodu"],
@@ -320,6 +321,7 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                         "tam bedenleri silmeyin).")
                 yeni_kombin = [(r, b) for r in renkler for b in bedenler
                                if b not in (harita.get(r) or {})]
+                yeni_varyant_yok = not yeni_kombin
                 yeni_barkodlar: list[str] = []
                 if yeni_kombin:
                     ornek_bc = next(iter(next(iter(harita.values())).values()))
@@ -371,6 +373,11 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                 oneriler = _ozellik_onerileri(metin.get("ozellikler"), harita)
 
             renk_taslaklari, uyarilar = {}, []
+            if yeni_varyant_yok and "trendyol" in hedefler:
+                uyarilar.append(
+                    "DİKKAT: Formdaki tüm renk/beden ikilileri zaten Trendyol'da — "
+                    "yüklerseniz Trendyol'a YENİ bir şey gönderilmez. Buçuk eklemek "
+                    "istiyorsanız beden listesine buçukları (35,5 gibi) ekleyin.")
             for i, renk in enumerate(renkler):
                 icerik = (metin.get("renkler") or {}).get(renk) or {}
                 baslik = (icerik.get("baslik") or "").strip()

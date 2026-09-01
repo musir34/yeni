@@ -937,13 +937,24 @@ Alt Taban: Kaymaz taban</textarea>
       let sonucHtml = "";
       if (t.batch_sonuc) {
         const s = t.batch_sonuc;
-        sonucHtml += `
+        if (s.varyant === 0 && s.mesaj) {
+          // Yeni varyant çıkmadı: başarı gibi görünmesin, sebebini net söyle
+          sonucHtml += `
+            <div class="alert alert-warning">
+              <b>Trendyol — ${d.model_kodu}</b> — YENİ BİR ŞEY GÖNDERİLMEDİ<br>
+              ${kacir(s.mesaj)}<br>
+              <small>Buçuk/yeni beden eklemek istediyseniz: beden listesinde yeni bedenlerin
+              (ör. 35,5) olduğundan emin olup taslağı yeniden hazırlayın.</small>
+            </div>`;
+        } else {
+          sonucHtml += `
           <div class="alert ${(s.hatali || s.hata) ? "alert-danger" : "alert-success"}">
             <b>Trendyol — ${d.model_kodu}</b>${s.varyant ? ` — ${s.varyant} varyant` : ""}<br>
             ${s.hata ? "Hata: " + s.hata : `Batch: ${s.durum || "?"} | hatalı: ${s.hatali ?? "?"}`}<br>
             ${(s.hatalar || []).map(h => `${h.barkod}: ${JSON.stringify(h.sebepler)}`).join("<br>")}
             <small>Ürün içerik onayına düştü; onaylanınca satışa çıkar ve panele senkronla düşer.</small>
           </div>`;
+        }
       }
       if (t.shopify_sonuc) {
         const s = t.shopify_sonuc;
