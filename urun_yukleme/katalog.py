@@ -508,7 +508,12 @@ def trendyol_urun_paketi(model_kodu: str) -> dict:
     for c in icerikler:
         attrs = {a.get("attributeName"): a.get("attributeValue")
                  for a in c.get("attributes") or []}
-        renk = (attrs.get("Renk") or "").strip()
+        # İLK Renk özniteliği esas: 47 (satış rengi, ör. 'Bej Kırışık') listede
+        # 348'den (Web Color, 'Bej') önce gelir — dict son geleni ezdiği için
+        # attrs üzerinden okunursa yanlış renk çıkar (051 dersi).
+        renk = next((str(a.get("attributeValue") or "").strip()
+                     for a in c.get("attributes") or []
+                     if a.get("attributeName") == "Renk" and a.get("attributeValue")), "")
         paket["kategori_ad"] = paket["kategori_ad"] or (c.get("category") or {}).get("name", "")
         paket["baslik"] = paket["baslik"] or (c.get("title") or "")
         paket["aciklama_ham"] = paket["aciklama_ham"] or (c.get("description") or "")
