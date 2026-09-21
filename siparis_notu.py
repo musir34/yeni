@@ -76,6 +76,7 @@ def kaydet():
                 db.session.commit()
             return jsonify({"success": True, "note": "", "message": "Not silindi"})
         kullanici = getattr(current_user, "username", None) or ""
+        guncelleme = kayit is not None
         if kayit is not None:
             kayit.note = note
             kayit.updated_by = kullanici
@@ -83,6 +84,18 @@ def kaydet():
             db.session.add(SiparisNotu(order_number=order_number, note=note,
                                        updated_by=kullanici))
         db.session.commit()
+        # Bildirim hatası kaydı ETKİLEMEMELİ (commit zaten yapıldı).
+        try:
+            from mail_service import notify, build_order_note_email
+            notify(
+                "siparis_notu",
+                subject=f"Sipariş Notu: {order_number}",
+                body=build_order_note_email(order_number=order_number, note=note,
+                                            updated_by=kullanici,
+                                            is_update=guncelleme),
+            )
+        except Exception:
+            logger.warning("[SIPARIS-NOT] bildirim gönderilemedi", exc_info=True)
         return jsonify({"success": True, "note": note, "message": "Not kaydedildi"})
     except Exception:
         db.session.rollback()

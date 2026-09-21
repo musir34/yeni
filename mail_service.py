@@ -1,4 +1,5 @@
 import os
+import html
 import json
 import smtplib
 import threading
@@ -20,6 +21,7 @@ NOTIFY_EVENTS = {
     'yeni_soru':             "Trendyol'da yeni müşteri sorusu geldiğinde",
     'uretim_siparis':        'Üretim modundaki modele sipariş geldiğinde',
     'uretim_iptal':          'Üretim bekleyen sipariş iptal edildiğinde',
+    'siparis_notu':          'Siparişe not eklendiğinde/güncellendiğinde',
 }
 
 # Statü -> olay eşlemesi
@@ -62,6 +64,7 @@ EVENT_COLORS = {
     'stok_yok_hatirlatma':   '#FD7E14',
     'uretim_siparis':        '#0D6EFD',
     'uretim_iptal':          '#DC3545',
+    'siparis_notu':          '#6F42C1',
 }
 
 # Olay başlıkları
@@ -78,6 +81,7 @@ EVENT_TITLES = {
     'stok_yok_hatirlatma':   '📋 Stoksuz Bekleyen Siparişler',
     'uretim_siparis':        '🏭 Üretim Siparişi Geldi',
     'uretim_iptal':          '🛑 Üretim Siparişi İptal Edildi',
+    'siparis_notu':          '📝 Siparişe Not Eklendi',
 }
 
 
@@ -329,6 +333,49 @@ def build_stock_shortage_email(event: str, headline: str, orders: list[dict]) ->
     </div>
     <div style="padding:16px 24px;background:#f8f9fa;text-align:center;border-top:1px solid #eee;">
         <p style="margin:0;font-size:12px;color:#aaa;">Güllü Ayakkabı — Stok Uyarı Sistemi</p>
+    </div>
+</div></body></html>'''
+
+
+def build_order_note_email(order_number: str, note: str, updated_by: str = '',
+                           is_update: bool = False) -> str:
+    """Siparişe eklenen/güncellenen not için HTML email oluşturur."""
+    event = 'siparis_notu'
+    title = EVENT_TITLES.get(event, 'Sipariş Notu')
+    title_color = EVENT_COLORS.get(event, '#6F42C1')
+    headline = 'Mevcut not güncellendi' if is_update else 'Siparişe yeni not eklendi'
+
+    safe_note = html.escape(note or '-').replace('\n', '<br/>')
+    safe_user = html.escape(updated_by or '-')
+    safe_order = html.escape(order_number or '-')
+
+    return f'''<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div style="max-width:520px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+    <div style="background:{title_color};padding:20px 24px;">
+        <h2 style="margin:0;color:#fff;font-size:18px;">{title}</h2>
+        <div style="margin-top:6px;color:rgba(255,255,255,0.9);font-size:14px;">{headline}</div>
+    </div>
+    <div style="padding:24px;">
+        <table style="width:100%;border-collapse:collapse;">
+            <tr>
+                <td style="padding:8px 0;color:#666;width:140px;">Sipariş No</td>
+                <td style="padding:8px 0;font-weight:700;font-size:15px;">{safe_order}</td>
+            </tr>
+            <tr>
+                <td style="padding:8px 0;color:#666;">Notu Yazan</td>
+                <td style="padding:8px 0;font-weight:600;">{safe_user}</td>
+            </tr>
+        </table>
+
+        <div style="margin-top:20px;padding-top:16px;border-top:2px solid #f0f0f0;">
+            <h3 style="margin:0 0 12px;font-size:15px;color:#333;">Not</h3>
+            <div style="padding:14px 16px;background:#f8f7fc;border-left:4px solid {title_color};border-radius:4px;color:#333;font-size:14px;line-height:1.5;">{safe_note}</div>
+        </div>
+    </div>
+    <div style="padding:16px 24px;background:#f8f9fa;text-align:center;border-top:1px solid #eee;">
+        <p style="margin:0;font-size:12px;color:#aaa;">Güllü Ayakkabı — Sipariş Bildirim Sistemi</p>
     </div>
 </div></body></html>'''
 
