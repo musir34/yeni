@@ -344,6 +344,45 @@ def isle_iptal_bildirimleri() -> int:
         return 0
 
 
+def isle_shopify_siparisler() -> int:
+    """
+    Web sitesi (Shopify) siparişlerinde üretim modundaki modelleri yakalar.
+    Trendyol'un aksine site siparişleri panele tablo olarak inmez (siparis_hazirla
+    canlı çeker), dolayısıyla order_service'teki üretim yakalama onları hiç
+    görmüyordu → site siparişinde mail gitmiyordu. Bu fonksiyon beklemedeki site
+    siparişlerini API'den çekip isle_yeni_siparisler'e verir — kayıt + mail +
+    raf önceliği + resync dedupe'u aynı akıştan gelir. app.py'de zamanlanmış
+    job olarak koşar; her hata yutulur, 0 döner (akış durmaz).
+    """
+    try:
+        if not get_uretim_barcodes():
+            return 0
+        from siparis_hazirla import (_fetch_shopify_beklemede_orders,
+                                     _shopify_order_to_hazirla_format)
+        order_dicts = []
+        for raw in _fetch_shopify_beklemede_orders(limit=20):
+            raw["line_items"] = raw.get("line_items") or []
+            fake, _ = _shopify_order_to_hazirla_format(raw)
+            order_date = fake.order_date
+            if order_date is not None and order_date.tzinfo is not None:
+                # Kolon naive-UTC saklar (| ist ile gösterim) — tz düşürülür.
+                from datetime import timezone
+                order_date = order_date.astimezone(timezone.utc).replace(tzinfo=None)
+            order_dicts.append({
+                'order_number': fake.order_number,
+                'package_number': None,
+                'customer_name': fake.customer_name,
+                'customer_surname': fake.customer_surname,
+                'order_date': order_date,
+                'details': fake.details,
+            })
+        return isle_yeni_siparisler(order_dicts)
+    except Exception:
+        db.session.rollback()
+        logger.warning("[URETIM] isle_shopify_siparisler hatası (yutuldu)", exc_info=True)
+        return 0
+
+
 def isle_yeni_siparisler(new_order_dicts: list[dict]) -> int:
     """
     Yeni gelen Trendyol siparişlerinde üretim modundaki modelleri yakalar:

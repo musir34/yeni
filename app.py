@@ -609,6 +609,24 @@ def schedule_jobs():
         next_run_time=now + timedelta(minutes=15)
     )
 
+    # >>> Üretim modu — web sitesi (Shopify) siparişleri: her 5 dakikada bir
+    # Site siparişleri panele tablo olarak inmediğinden Trendyol sync'indeki
+    # üretim yakalama onları görmüyordu (site siparişinde mail gitmiyordu).
+    # Bu job beklemedeki site siparişlerini tarayıp uretim_siparis kaydı +
+    # abone maili atar; dedupe/raf önceliği uretim_modu içinde.
+    def _uretim_shopify_job():
+        with app.app_context():
+            from uretim_modu import isle_shopify_siparisler
+            isle_shopify_siparisler()
+
+    _add_job_safe(
+        _uretim_shopify_job,
+        trigger='interval',
+        id="uretim_shopify_orders",
+        minutes=5,
+        next_run_time=now + timedelta(minutes=4)
+    )
+
     # >>> WooCommerce sipariş senkronizasyonu: her 10 dakika - DEVRE DIŞI
     # _add_job_safe(
     #     sync_woo_orders_background,
