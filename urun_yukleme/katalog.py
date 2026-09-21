@@ -386,9 +386,12 @@ def zorunlu_tamamla(cid: int, secimler: list[dict], renkler: list[str]) -> tuple
 def mevcut_renk_haritasi(model_kodu: str) -> dict:
     """
     Modelin Trendyol'daki MEVCUT varyant haritası: {renk: {beden: barkod}}.
-    Önce stockCode deseni ('<model>-<beden> <Renk>') denenir; eski modellerde
-    stockCode düz olabildiğinden (ör. '001') içerik Renk + varyant Beden
-    özniteliklerinden de çözülür. Model yoksa boş döner.
+    Renk önceliği trendyol_urun_paketi ile AYNIDIR (önce içerik Renk özniteliği,
+    yoksa stockCode'daki renk): 43 modelde stockCode rengi öznitelikten farklı
+    yazılmış — harita stockCode'u esas alınca aktarımdan gelen form renkleri
+    eşleşmiyor, tüm varyantlar "yeni" sayılıp YENİDEN yükleniyordu. Beden ise
+    stockCode deseninden ('<model>-<beden> <Renk>'), çözülemezse varyant Beden
+    özniteliğinden alınır. Model yoksa boş döner.
     """
     harita: dict = {}
     for uc in ("approved", "unapproved"):
@@ -404,19 +407,19 @@ def mevcut_renk_haritasi(model_kodu: str) -> dict:
                 if not bc:
                     continue
                 sc = str(v.get("stockCode") or "")
-                beden = renk = ""
+                beden = sc_renk = ""
                 if sc.startswith(f"{model_kodu}-"):
                     parcalar = sc[len(model_kodu) + 1:].split(" ", 1)
                     if len(parcalar) == 2:
-                        beden, renk = parcalar[0].strip(), parcalar[1].strip()
+                        beden, sc_renk = parcalar[0].strip(), parcalar[1].strip()
                         if not _BEDEN_DESENI.match(beden.replace(".", ",")):
-                            beden = renk = ""  # bitişik desen — özniteliklere düş
-                if not (beden and renk):
+                            beden = sc_renk = ""  # bitişik desen — özniteliklere düş
+                if not beden:
                     beden = next((str(a.get("attributeValue") or "").strip()
                                   for a in v.get("attributes") or []
                                   if a.get("attributeName") == "Beden"
                                   and a.get("attributeValue")), "")
-                    renk = icerik_renk
+                renk = icerik_renk or sc_renk
                 if beden and renk:
                     # ondalık ayraç birliği: '35.5' → '35,5' (formla aynı biçim)
                     harita.setdefault(renk, {})[beden.replace(".", ",")] = bc
