@@ -437,3 +437,4 @@ def rapor():
 
 # Cari hesap route'ları aynı blueprint'e finans_cari.py'de eklenir (dosya boyutu için ayrı).
 import finans_cari  # noqa: E402,F401
+import finans_excel  # noqa: E402,F401  — Excel'den gelir yükleme

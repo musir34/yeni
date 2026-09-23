@@ -32,3 +32,12 @@ iki tür gider (tek seferlik küçük gider + aylık tekrar eden ana gider) iste
 ikisi tek transaction, `islem_id` bağı. İptal iki yönden de iki tarafı geri alır. Bakiyeli hesap kapatılamaz.
 Rapor/panel'de cari ödeme & tahsilat ayrı kolon.
 **Deploy:** `DISABLE_JOBS=1 ../venv/bin/python scripts/create_finans_cari_tables.py` + restart.
+
+## Ek: Excel'den gelir yükleme (/finans/gelir/excel)
+**Ne:** `finans_excel.py` (finans_bp'ye eklenir, finans.py sonunda import) + `templates/finans_gelir_excel.html`;
+Gelir sayfasında "Excel'den yükle" butonu. Eski kasanın İşbankası ekstre düzeni birebir (A tarih
+`28/11/2025-12:55:35`, D tutar, I açıklama; başlık/boş/negatif satırlar atlanır).
+**Fark:** iki adımlı — önce önizleme (geçerli satırlar seçili, geçersizler nedeniyle: başlık / çıkış /
+tarih tanınamadı / tutar yok / zaten yüklenmiş), satır satır seçim, sonra tek transaction'da kayıt.
+Mükerrer koruması: aynı tarih+tutar+açıklama (iptal edilmemiş gelir) tekrar yazılmaz. Her satır
+finans_islem'de ayrı gelir, gelir kategorisi zorunlu, tarih İstanbul→UTC. DB değişikliği yok.

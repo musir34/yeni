@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Excel'den Gelir - Finans{% endblock %}
+{% block extra_css %}
+<style>
+  .fn-drop { border: 2px dashed #adb5bd; border-radius: 12px; padding: 2rem; text-align: center; cursor: pointer; transition: .15s; }
+  .fn-drop:hover, .fn-drop.fn-over { border-color: #0d6efd; background: rgba(13,110,253,.05); }
+  .fn-drop input { display: none; }
+  .fn-adim { display: inline-flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: #0d6efd; color: #fff; font-size: .8rem; font-weight: 700; margin-right: .4rem; }
+  .fn-gecersiz td { opacity: .5; }
+  .fn-excel-tablo tbody tr { cursor: pointer; }
+</style>
+{% endblock %}
+{% block content %}
+{% include '_finans_nav.html' %}
+
+<div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+  <a href="{{ url_for('finans.gelir') }}" class="btn btn-outline-secondary btn-sm">‹ Gelir</a>
+  <h5 class="mb-0">📥 Excel'den Gelir Yükle <span class="fn-mini fw-normal">İşbankası hesap ekstresi → Beyazıt (Ana Bakiye)</span></h5>
+</div>
+
+{% if satirlar is none %}
+<div class="row">
+  <div class="col-lg-7">
+    <div class="card fn-card">
+      <div class="card-body">
+        <form method="POST" enctype="multipart/form-data" id="fnExcelForm">
+          <div class="mb-3"><span class="fn-adim">1</span><strong>Gelir kategorisi</strong>
+            <select name="kategori_id" class="form-select mt-2" required>
+              <option value="">Seçin…</option>
+              {% for k in kategoriler %}<option value="{{ k.id }}">{{ k.ad }}</option>{% endfor %}
+            </select>
+            {% if not kategoriler %}<div class="fn-mini text-danger mt-1">Önce <a href="{{ url_for('finans.tanimlar') }}">Tanımlar</a>'dan gelir kategorisi ekleyin.</div>{% endif %}
+          </div>
+          <div class="mb-3"><span class="fn-adim">2</span><strong>Ekstre dosyası</strong>
+            <label class="fn-drop d-block mt-2" id="fnDrop">
+              <input type="file" name="excel_file" accept=".xlsx,.xls" required id="fnFile">
+              <div class="fs-1">📄</div>
+              <div id="fnDropText">Excel dosyasını buraya bırakın ya da tıklayıp seçin</div>
+              <div class="fn-mini">.xlsx / .xls — İşbankası "Hesap Hareketleri" çıktısı</div>
+            </label>
+          </div>
+          <button class="btn btn-primary w-100"><span class="fn-adim" style="background:#fff;color:#0d6efd">3</span>Önizle</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card fn-card">
+      <div class="card-header fw-bold">Nasıl çalışır?</div>
+      <div class="card-body fn-mini">
+        <ul class="mb-0 ps-3">
+          <li>Ekstredeki <b>A</b> sütunu tarih, <b>D</b> sütunu tutar, <b>I</b> sütunu açıklama olarak okunur.</li>
+          <li>Başlık satırları, boş satırlar ve çıkışlar (negatif) atlanır.</li>
+          <li>Önizlemede istemediğiniz satırların işaretini kaldırabilirsiniz.</li>
+          <li>Daha önce yüklenmiş aynı satır (tarih + tutar + açıklama) tekrar yazılmaz.</li>
+          <li>Kaydet'e basınca seçili satırlar Beyazıt bakiyesine gelir olarak eklenir; her satır defterde ayrı görünür ve tek tek iptal edilebilir.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<form method="POST" action="{{ url_for('finans.gelir_excel_kaydet') }}">
+  <div class="card fn-card">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <span><b>📄 {{ dosya_adi }}</b> <span class="fn-mini">— {{ satirlar | length }} satır okundu</span></span>
+      <span class="fn-mini">Seçili: <b id="fnSecAdet">{{ gecerli_adet }}</b> satır · <b id="fnSecToplam">{{ gecerli_toplam | tl_format }}</b> ₺</span>
+    </div>
+    <div class="card-body p-0 fn-table-wrap">
+      <table class="table table-sm table-hover fn-table fn-excel-tablo mb-0">
+        <thead><tr><th style="width:2.5rem"><input type="checkbox" class="form-check-input" id="fnTumu" checked title="Tümünü seç/bırak"></th><th>#</th><th>Tarih</th><th>Açıklama</th><th class="fn-num">Tutar</th><th>Durum</th></tr></thead>
+        <tbody>
+        {% for s in satirlar %}
+          <tr class="{{ '' if s.gecerli else 'fn-gecersiz' }}">
+            <td>{% if s.gecerli %}
+              <input type="checkbox" class="form-check-input fn-sec" name="sec" value="{{ s.satir }}" data-tutar="{{ s.tutar }}" checked>
+              <input type="hidden" name="tarih_{{ s.satir }}" value="{{ s.tarih_iso }}">
+              <input type="hidden" name="tutar_{{ s.satir }}" value="{{ s.tutar_str }}">
+              <input type="hidden" name="aciklama_{{ s.satir }}" value="{{ s.aciklama }}">
+              {% endif %}</td>
+            <td class="fn-mini">{{ s.satir }}</td>
+            <td class="text-nowrap">{{ s.tarih_str }}</td>
+            <td>{{ s.aciklama or '—' }}</td>
+            <td class="fn-num {{ 'fn-pos' if s.gecerli }}">{% if s.gecerli %}{{ s.tutar | tl_format }}{% else %}{{ s.tutar_str }}{% endif %}</td>
+            <td>{% if s.gecerli %}<span class="badge bg-success">gelir</span>{% else %}<span class="badge bg-secondary">{{ s.neden }}</span>{% endif %}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <label class="fn-mini mb-0">Kategori</label>
+        <select name="kategori_id" class="form-select form-select-sm" required style="min-width:12rem">
+          <option value="">Seçin…</option>
+          {% for k in kategoriler %}<option value="{{ k.id }}" {{ 'selected' if k.id == secili_kategori }}>{{ k.ad }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('finans.gelir_excel') }}" class="btn btn-outline-secondary">Başka dosya</a>
+        <button class="btn btn-success" id="fnKaydet" {{ 'disabled' if not gecerli_adet }}><i class="fas fa-check me-1"></i>Seçili satırları Beyazıt'a ekle</button>
+      </div>
+    </div>
+  </div>
+</form>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+  (function () {
+    var drop = document.getElementById('fnDrop'), file = document.getElementById('fnFile');
+    if (drop) {
+      ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('fn-over'); }); });
+      ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('fn-over'); }); });
+      drop.addEventListener('drop', function (e) { if (e.dataTransfer.files.length) { file.files = e.dataTransfer.files; goster(); } });
+      file.addEventListener('change', goster);
+      function goster() { if (file.files[0]) document.getElementById('fnDropText').innerHTML = '<b>' + file.files[0].name.replace(/</g, '&lt;') + '</b> seçildi'; }
+    }
+    var tumu = document.getElementById('fnTumu');
+    if (tumu) {
+      var kutular = Array.prototype.slice.call(document.querySelectorAll('.fn-sec'));
+      function fmt(n) { return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+      function say() {
+        var adet = 0, toplam = 0;
+        kutular.forEach(function (k) { if (k.checked) { adet++; toplam += parseFloat(k.getAttribute('data-tutar')) || 0; } });
+        document.getElementById('fnSecAdet').textContent = adet;
+        document.getElementById('fnSecToplam').textContent = fmt(toplam);
+        document.getElementById('fnKaydet').disabled = adet === 0;
+        tumu.checked = adet === kutular.length && adet > 0;
+      }
+      tumu.addEventListener('change', function () { kutular.forEach(function (k) { k.checked = tumu.checked; }); say(); });
+      kutular.forEach(function (k) { k.addEventListener('change', say); });
+      document.querySelectorAll('.fn-excel-tablo tbody tr').forEach(function (tr) {
+        tr.addEventListener('click', function (e) {
+          if (e.target.tagName === 'INPUT') return;
+          var k = tr.querySelector('.fn-sec'); if (k) { k.checked = !k.checked; say(); }
+        });
+      });
+    }
+  })();
+</script>
+{% endblock %}
