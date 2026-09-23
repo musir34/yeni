@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Ana Gider - Finans{% endblock %}
+{% block content %}
+{% include '_finans_nav.html' %}
+
+<div class="card fn-card">
+  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <span class="fw-bold">📆 {{ fn_donem_etiket(donem) }} — Ana Giderler (aylık sabit kalemler)</span>
+    <div class="btn-group btn-group-sm">
+      <a class="btn btn-outline-secondary" href="{{ url_for('finans.ana_gider', donem=fn_donem_kaydir(donem, -1)) }}">‹</a>
+      <a class="btn btn-outline-secondary" href="{{ url_for('finans.ana_gider') }}">Bu ay</a>
+      <a class="btn btn-outline-secondary" href="{{ url_for('finans.ana_gider', donem=fn_donem_kaydir(donem, 1)) }}">›</a>
+    </div>
+  </div>
+  <div class="card-body p-0 fn-table-wrap">
+    <table class="table table-sm table-hover fn-table mb-0">
+      <thead><tr><th>Kalem</th><th>Kategori</th><th class="fn-num">Varsayılan</th><th>Durum</th><th class="fn-num">Ödenen</th><th></th></tr></thead>
+      <tbody>
+      {% for d in durum %}
+        {% set k = d.kalem %}{% set o = d.odeme %}
+        <tr>
+          <td>{{ k.ad }}{% if k.notlar %}<div class="fn-mini">{{ k.notlar }}</div>{% endif %}</td>
+          <td>{{ k.kategori.ad if k.kategori else '—' }}</td>
+          <td class="fn-num">{{ k.varsayilan_tutar | tl_format }} ₺</td>
+          <td>
+            {% if o %}<span class="badge bg-success">Ödendi</span> <span class="fn-mini">{{ o.tarih | ist('%d.%m.%Y') }} · {{ o.hesap.ad }}</span>
+            {% else %}<span class="badge bg-warning text-dark">Bekliyor</span>{% endif %}
+          </td>
+          <td class="fn-num">{% if o %}<span class="fn-neg">{{ o.tutar | tl_format }} ₺</span>{% endif %}</td>
+          <td class="fn-actions text-end">
+            {% if o %}
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="fnIptal({{ o.id }}, {{ (o.aciklama or '') | tojson }})" title="Ödemeyi iptal et">✕ İptal</button>
+            {% else %}
+            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#fnOdeModal"
+                    data-kalem-id="{{ k.id }}" data-kalem-ad="{{ k.ad }}" data-tutar="{{ '%.2f' | format(k.varsayilan_tutar or 0) }}"
+                    data-hesap="{{ k.varsayilan_hesap_kodu or 'elde' }}">Öde</button>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="text-muted p-3">Bu dönem için tanımlı ana gider kalemi yok. Aşağıdan kalem ekleyin.</td></tr>
+      {% endfor %}
+      </tbody>
+      {% if durum %}
+      <tfoot><tr class="fw-bold"><td colspan="2">Toplam</td><td class="fn-num">Bekleyen: {{ bekleyen | tl_format }} ₺</td><td></td><td class="fn-num fn-neg">{{ odenen | tl_format }} ₺</td><td></td></tr></tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-4">
+    <div class="card fn-card">
+      <div class="card-header fw-bold">➕ Yeni Kalem</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('finans.kalem_ekle') }}">
+          <input type="hidden" name="next" value="{{ url_for('finans.ana_gider', donem=donem) }}">
+          <div class="mb-2"><input type="text" name="ad" class="form-control" placeholder="Kalem adı (örn. Ahmet maaşı, Meta reklam, Shopify)" required></div>
+          <div class="row g-2 mb-2">
+            <div class="col-6"><select name="kategori_id" class="form-select"><option value="">Kategori (isteğe bağlı)</option>{% for k in kategoriler %}<option value="{{ k.id }}">{{ k.ad }}</option>{% endfor %}</select></div>
+            <div class="col-6"><input type="text" name="varsayilan_tutar" class="form-control" inputmode="decimal" placeholder="Aylık tutar ₺"></div>
+            <div class="col-6"><select name="varsayilan_hesap_kodu" class="form-select"><option value="">Varsayılan hesap</option>{% for h in fn_hesaplar if h.kod in ('elde','banka') %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}</select></div>
+            <div class="col-6"><input type="month" name="baslangic_donem" class="form-control" value="{{ donem }}" title="Başlangıç ayı" required></div>
+            <div class="col-12"><input type="month" name="bitis_donem" class="form-control" title="Bitiş ayı (boş = süresiz)"><div class="fn-mini">Bitiş ayı (boş = süresiz)</div></div>
+            <div class="col-12"><input type="text" name="notlar" class="form-control" placeholder="Not (isteğe bağlı)"></div>
+          </div>
+          <button class="btn btn-primary w-100">Kalem Ekle</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card fn-card">
+      <div class="card-header fw-bold">🗂️ Kalem Tanımları</div>
+      <div class="card-body p-0 fn-table-wrap">
+        <table class="table table-sm fn-table mb-0">
+          <thead><tr><th>Kalem</th><th>Kategori</th><th class="fn-num">Aylık</th><th>Hesap</th><th>Dönem</th><th></th></tr></thead>
+          <tbody>
+          {% for k in tum_kalemler %}
+            <tr class="{{ 'text-muted' if not k.aktif }}">
+              <td>{{ k.ad }}{% if not k.aktif %} <span class="badge bg-secondary">pasif</span>{% endif %}</td>
+              <td>{{ k.kategori.ad if k.kategori else '—' }}</td>
+              <td class="fn-num">{{ k.varsayilan_tutar | tl_format }} ₺</td>
+              <td>{{ k.varsayilan_hesap_kodu or '—' }}</td>
+              <td class="fn-mini">{{ k.baslangic_donem }} → {{ k.bitis_donem or '∞' }}</td>
+              <td class="fn-actions text-end text-nowrap">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#fnKalemModal"
+                        data-id="{{ k.id }}" data-ad="{{ k.ad }}" data-kategori="{{ k.kategori_id or '' }}" data-tutar="{{ '%.2f' | format(k.varsayilan_tutar or 0) }}"
+                        data-hesap="{{ k.varsayilan_hesap_kodu or '' }}" data-bas="{{ k.baslangic_donem }}" data-bit="{{ k.bitis_donem or '' }}" data-notlar="{{ k.notlar or '' }}">✎</button>
+                <form method="POST" action="{{ url_for('finans.kalem_pasif', kalem_id=k.id) }}" class="d-inline">
+                  <input type="hidden" name="next" value="{{ url_for('finans.ana_gider', donem=donem) }}">
+                  <input type="hidden" name="aktif" value="{{ '0' if k.aktif else '1' }}">
+                  <button class="btn btn-sm {{ 'btn-outline-danger' if k.aktif else 'btn-outline-success' }}">{{ 'Pasif' if k.aktif else 'Aktif' }}</button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="text-muted p-3">Kalem yok.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="fnKalemModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="POST" id="fnKalemForm">
+      <input type="hidden" name="next" value="{{ url_for('finans.ana_gider', donem=donem) }}">
+      <div class="modal-header"><h5 class="modal-title">Kalemi Düzenle</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="mb-2"><input type="text" name="ad" id="fnKlAd" class="form-control" required></div>
+        <div class="row g-2">
+          <div class="col-6"><select name="kategori_id" id="fnKlKat" class="form-select"><option value="">Kategori yok</option>{% for k in kategoriler %}<option value="{{ k.id }}">{{ k.ad }}</option>{% endfor %}</select></div>
+          <div class="col-6"><input type="text" name="varsayilan_tutar" id="fnKlTutar" class="form-control" inputmode="decimal" placeholder="Aylık tutar"></div>
+          <div class="col-6"><select name="varsayilan_hesap_kodu" id="fnKlHesap" class="form-select"><option value="">Varsayılan hesap</option>{% for h in fn_hesaplar if h.kod in ('elde','banka') %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}</select></div>
+          <div class="col-6"><input type="month" name="baslangic_donem" id="fnKlBas" class="form-control" required></div>
+          <div class="col-12"><input type="month" name="bitis_donem" id="fnKlBit" class="form-control"><div class="fn-mini">Bitiş ayı (boş = süresiz)</div></div>
+          <div class="col-12"><input type="text" name="notlar" id="fnKlNot" class="form-control" placeholder="Not"></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button><button class="btn btn-primary">Kaydet</button></div>
+    </form>
+  </div>
+</div>
+
+{% include '_finans_ode_modal.html' %}
+{% endblock %}
+{% block scripts %}
+<script>
+  document.getElementById('fnKalemModal').addEventListener('show.bs.modal', function (ev) {
+    var b = ev.relatedTarget; if (!b) return;
+    document.getElementById('fnKalemForm').action = '/finans/ana-gider/kalem/' + b.getAttribute('data-id') + '/guncelle';
+    document.getElementById('fnKlAd').value = b.getAttribute('data-ad');
+    document.getElementById('fnKlKat').value = b.getAttribute('data-kategori');
+    document.getElementById('fnKlTutar').value = (b.getAttribute('data-tutar') || '').replace('.', ',');
+    document.getElementById('fnKlHesap').value = b.getAttribute('data-hesap');
+    document.getElementById('fnKlBas').value = b.getAttribute('data-bas');
+    document.getElementById('fnKlBit').value = b.getAttribute('data-bit');
+    document.getElementById('fnKlNot').value = b.getAttribute('data-notlar');
+  });
+</script>
+{% endblock %}

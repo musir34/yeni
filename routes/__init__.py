@@ -50,6 +50,7 @@ def register_blueprints(app):
     from kargo_mutabakat import kargo_mutabakat_bp  # 🚚 KARGO MUTABAKAT
     from iade_yonetimi import iade_yonetimi_bp  # 📦 SİTE İADE YÖNETİMİ
     from whatsapp_baglanti import whatsapp_baglanti_bp  # 📱 WHATSAPP COEXISTENCE BAĞLANTISI
+    from finans import finans_bp  # 💰 FİNANS KASASI (üç hesaplı yeni kasa)
 
     # Register all blueprints
     for bp in [
@@ -103,5 +104,6 @@ def register_blueprints(app):
         kargo_mutabakat_bp,  # 🚚 KARGO MUTABAKAT
         iade_yonetimi_bp,  # 📦 SİTE İADE YÖNETİMİ
         whatsapp_baglanti_bp,  # 📱 WHATSAPP COEXISTENCE BAĞLANTISI
+        finans_bp,  # 💰 FİNANS KASASI
     ]:
         app.register_blueprint(bp)

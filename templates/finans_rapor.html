@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Rapor - Finans{% endblock %}
+{% block content %}
+{% include '_finans_nav.html' %}
+
+{% if tutarsizlik %}
+<div class="alert alert-danger"><strong>⚠️ Bakiye tutarsızlığı!</strong> Hesap bakiyesi ile defter toplamı uyuşmuyor:
+  {% for t in tutarsizlik %}<div>{{ t.hesap.ad }}: bakiye {{ t.bakiye | tl_format }} ₺, defter {{ t.defter | tl_format }} ₺ (fark {{ t.fark | tl_format }} ₺)</div>{% endfor %}
+</div>
+{% else %}
+<div class="alert alert-success fn-mini py-2">✅ Bakiye ↔ defter tutarlılığı doğrulandı (iptaller hariç toplamlar hesap bakiyeleriyle birebir).</div>
+{% endif %}
+
+<div class="row">
+  <div class="col-lg-9">
+    <div class="card fn-card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-bold">📊 {{ yil }} yılı aylık özet</span>
+        <div class="btn-group btn-group-sm">
+          <a class="btn btn-outline-secondary" href="{{ url_for('finans.rapor', yil=yil-1) }}">‹ {{ yil-1 }}</a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('finans.rapor') }}">{{ bu_yil }}</a>
+          {% if yil < bu_yil + 1 %}<a class="btn btn-outline-secondary" href="{{ url_for('finans.rapor', yil=yil+1) }}">{{ yil+1 }} ›</a>{% endif %}
+        </div>
+      </div>
+      <div class="card-body p-0 fn-table-wrap">
+        <table class="table table-sm table-hover fn-table mb-0">
+          <thead><tr><th>Ay</th><th class="fn-num">Gelir</th><th class="fn-num">Küçük Gider</th><th class="fn-num">Ana Gider</th><th class="fn-num">Toplam Gider</th><th class="fn-num">Net</th></tr></thead>
+          <tbody>
+          {% for s in satirlar %}
+            <tr class="{{ 'table-active' if s.donem == fn_bugun_donem }}">
+              <td><a href="{{ url_for('finans.ana_gider', donem=s.donem) }}" class="text-decoration-none">{{ s.etiket }}</a></td>
+              <td class="fn-num fn-pos">{{ s.gelir | tl_format }}</td>
+              <td class="fn-num">{{ s.kucuk_gider | tl_format }}</td>
+              <td class="fn-num">{{ s.ana_gider | tl_format }}</td>
+              <td class="fn-num fn-neg">{{ s.toplam_gider | tl_format }}</td>
+              <td class="fn-num {{ 'fn-pos' if s.net >= 0 else 'fn-neg' }}">{{ s.net | tl_format }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+          <tfoot><tr class="fw-bold">
+            <td>Yıl toplamı</td>
+            <td class="fn-num fn-pos">{{ toplam.gelir | tl_format }}</td>
+            <td class="fn-num">{{ toplam.kucuk_gider | tl_format }}</td>
+            <td class="fn-num">{{ toplam.ana_gider | tl_format }}</td>
+            <td class="fn-num fn-neg">{{ toplam.toplam_gider | tl_format }}</td>
+            <td class="fn-num {{ 'fn-pos' if toplam.net >= 0 else 'fn-neg' }}">{{ toplam.net | tl_format }}</td>
+          </tr></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3">
+    <div class="card fn-card">
+      <div class="card-header fw-bold">🏦 Hesap Bakiyeleri</div>
+      <div class="card-body">
+        {% for h in fn_hesaplar %}
+        <div class="mb-3 fn-hesap-{{ h.kod }} ps-2"><div class="fn-mini">{{ h.ad }}</div><div class="fw-bold fs-5">{{ h.bakiye | tl_format }} ₺</div></div>
+        {% endfor %}
+        <div class="border-top pt-2"><div class="fn-mini">Toplam</div><div class="fw-bold fs-5">{{ (fn_hesaplar | sum(attribute='bakiye')) | tl_format }} ₺</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

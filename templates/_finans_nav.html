@@ -1,0 +1,73 @@
+{# Finans Kasası ortak üst şerit: başlık + sekmeler + flash. Her finans_*.html başında include edilir. #}
+<style>
+  .fn-card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.06); margin-bottom: 1.5rem; }
+  .fn-tabs .nav-link { font-weight: 500; }
+  .fn-tabs .nav-link.active { font-weight: 700; }
+  .fn-bakiye { font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; }
+  .fn-hesap-beyazit { border-left: 5px solid #0d6efd; }
+  .fn-hesap-elde { border-left: 5px solid #198754; }
+  .fn-hesap-banka { border-left: 5px solid #6f42c1; }
+  .fn-table td, .fn-table th { font-size: .88rem; vertical-align: middle; }
+  .fn-table-wrap { overflow-x: auto; }
+  .fn-iptal td { opacity: .55; text-decoration: line-through; }
+  .fn-iptal td.fn-actions { text-decoration: none; }
+  .fn-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .fn-pos { color: #198754; font-weight: 600; }
+  .fn-neg { color: #dc3545; font-weight: 600; }
+  .fn-mini { font-size: .8rem; color: #6c757d; }
+</style>
+<div class="d-flex align-items-center flex-wrap mb-3 gap-2">
+  <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-home"></i> Anasayfa</a>
+  <h3 class="mb-0 ms-2">💰 Finans</h3>
+  <span class="text-muted ms-2 fn-mini">Beyazıt · Elde · Banka</span>
+</div>
+
+<ul class="nav nav-pills fn-tabs mb-3 flex-wrap gap-1">
+  {% set ep = request.endpoint %}
+  <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'finans.panel' }}" href="{{ url_for('finans.panel') }}"><i class="fas fa-gauge me-1"></i>Panel</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'finans.gelir' }}" href="{{ url_for('finans.gelir') }}"><i class="fas fa-arrow-down me-1 text-success"></i>Gelir</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'finans.kucuk_gider' }}" href="{{ url_for('finans.kucuk_gider') }}"><i class="fas fa-receipt me-1"></i>Küçük Gider</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'finans.ana_gider' }}" href="{{ url_for('finans.ana_gider') }}"><i class="fas fa-calendar-check me-1"></i>Ana Gider</a></li>
+  <li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle {{ 'active' if ep == 'finans.defter' }}" data-bs-toggle="dropdown" href="#"><i class="fas fa-book me-1"></i>Defter</a>
+    <ul class="dropdown-menu">
+      {% for h in fn_hesaplar %}
+      <li><a class="dropdown-item" href="{{ url_for('finans.defter', hesap_kodu=h.kod) }}">{{ h.ad }} <span class="fn-mini">({{ h.bakiye | tl_format }} ₺)</span></a></li>
+      {% endfor %}
+    </ul>
+  </li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'finans.tanimlar' }}" href="{{ url_for('finans.tanimlar') }}"><i class="fas fa-tags me-1"></i>Tanımlar</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'finans.rapor' }}" href="{{ url_for('finans.rapor') }}"><i class="fas fa-chart-column me-1"></i>Rapor</a></li>
+</ul>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
+      {{ msg }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endwith %}
+
+{# Ortak iptal formu: fnIptal(islemId, aciklama) → onay → POST /finans/islem/<id>/iptal #}
+<form id="fnIptalForm" method="POST" class="d-none">
+  <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+  <input type="hidden" name="neden" id="fnIptalNeden">
+</form>
+<script>
+  function fnIptal(id, aciklama) {
+    var f = document.getElementById('fnIptalForm');
+    f.action = '/finans/islem/' + id + '/iptal';
+    var msg = 'Bu işlem iptal edilsin mi?\n' + (aciklama || '') + '\nBakiye geri alınır; kayıt defterde "iptal" olarak kalır.';
+    if (window.GS && GS.showConfirmSheet) { GS.showConfirmSheet(msg, function () { f.submit(); }); }
+    else if (window.confirm(msg)) { f.submit(); }
+  }
+  function fnToast(msg, type) {
+    if (window.GS && GS.showToast) GS.showToast(msg, type || 'info'); else alert(msg);
+  }
+  function fnFetch(url, body) {
+    return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+                        body: JSON.stringify(body || {}) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.success) throw new Error(j.message || 'Hata'); return j; }); });
+  }
+</script>

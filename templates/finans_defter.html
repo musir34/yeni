@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}{{ hesap.ad }} Defteri - Finans{% endblock %}
+{% block content %}
+{% include '_finans_nav.html' %}
+
+<div class="card fn-card fn-hesap-{{ hesap.kod }}">
+  <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <div><div class="fn-mini">{{ hesap.ad }} — kayıt defteri</div><div class="fn-bakiye">{{ hesap.bakiye | tl_format }} ₺</div></div>
+    <form method="GET" class="d-flex flex-wrap gap-2 align-items-end">
+      <div><label class="fn-mini">Ay</label><input type="month" name="donem" class="form-control form-control-sm" value="{{ donem }}"></div>
+      <div><label class="fn-mini">Tür</label>
+        <select name="tur" class="form-select form-select-sm">
+          <option value="">Tümü</option>
+          {% for k, v in fn_tur_etiket.items() %}<option value="{{ k }}" {{ 'selected' if k == tur }}>{{ v }}</option>{% endfor %}
+        </select></div>
+      <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="iptal" value="1" id="fnIptalGoster" {{ 'checked' if iptal_goster }}>
+        <label class="form-check-label fn-mini" for="fnIptalGoster">İptalleri göster</label></div>
+      <button class="btn btn-sm btn-outline-primary">Filtrele</button>
+      <a href="{{ url_for('finans.defter', hesap_kodu=hesap.kod) }}" class="btn btn-sm btn-outline-secondary">Temizle</a>
+    </form>
+  </div>
+</div>
+
+<div class="card fn-card">
+  <div class="card-body p-0 fn-table-wrap">
+    <table class="table table-sm table-hover fn-table mb-0">
+      <thead><tr><th>Tarih</th><th>Tür</th><th>Kategori / Kalem</th><th>Açıklama</th>
+        <th class="fn-num">Giriş</th><th class="fn-num">Çıkış</th><th class="fn-num">Önceki</th><th class="fn-num">Sonrası</th><th>Kullanıcı</th><th></th></tr></thead>
+      <tbody>
+      {% for i in sayfalama.items %}
+        <tr class="{{ 'fn-iptal' if i.iptal }}">
+          <td class="text-nowrap">{{ i.tarih | ist('%d.%m.%Y %H:%M') }}</td>
+          <td><span class="badge {{ 'bg-success' if i.yon > 0 else 'bg-danger' }}">{{ fn_tur_etiket.get(i.tur, i.tur) }}</span></td>
+          <td>{{ i.kalem.ad if i.kalem else (i.kategori.ad if i.kategori else '—') }}{% if i.gider_adi %} <span class="fn-mini">/ {{ i.gider_adi.ad }}</span>{% endif %}{% if i.donem %} <span class="fn-mini">({{ fn_donem_etiket(i.donem) }})</span>{% endif %}</td>
+          <td>{{ i.aciklama or '' }}{% if i.iptal %}<div class="fn-mini">İptal: {{ i.iptal_tarihi | ist }} {{ i.iptal_kullanici.username if i.iptal_kullanici else '' }} {{ i.iptal_neden or '' }}</div>{% endif %}</td>
+          <td class="fn-num fn-pos">{% if i.yon > 0 %}{{ i.tutar | tl_format }}{% endif %}</td>
+          <td class="fn-num fn-neg">{% if i.yon < 0 %}{{ i.tutar | tl_format }}{% endif %}</td>
+          <td class="fn-num">{{ i.onceki_bakiye | tl_format }}</td>
+          <td class="fn-num">{{ i.yeni_bakiye | tl_format }}</td>
+          <td class="fn-mini">{{ i.kullanici.username if i.kullanici else '' }}</td>
+          <td class="fn-actions text-end text-nowrap">
+            {% if not i.iptal %}
+            {% if i.tur in ('gelir', 'kucuk_gider', 'ana_gider') %}
+            <button type="button" class="btn btn-sm btn-outline-secondary" title="Düzenle" data-bs-toggle="modal" data-bs-target="#fnDuzenleModal"
+                    data-id="{{ i.id }}" data-tur="{{ i.tur }}" data-aciklama="{{ i.aciklama or '' }}" data-kategori="{{ i.kategori_id or '' }}"
+                    data-gider-adi="{{ i.gider_adi_id or '' }}" data-tutar="{{ '%.2f' | format(i.tutar) }}" data-hesap="{{ i.hesap.kod }}"
+                    data-tarih="{{ i.tarih | ist('%Y-%m-%dT%H:%M') }}">✎</button>
+            {% endif %}
+            <button type="button" class="btn btn-sm btn-outline-danger" title="İptal" onclick="fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})">✕</button>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="10" class="text-muted p-3">Kayıt yok.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if sayfalama.pages > 1 %}
+  <div class="card-footer d-flex justify-content-between align-items-center">
+    <span class="fn-mini">{{ sayfalama.total }} kayıt · sayfa {{ sayfalama.page }}/{{ sayfalama.pages }}</span>
+    <div>
+      {% if sayfalama.has_prev %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('finans.defter', hesap_kodu=hesap.kod, donem=donem, tur=tur, iptal='1' if iptal_goster else None, sayfa=sayfalama.prev_num) }}">‹ Önceki</a>{% endif %}
+      {% if sayfalama.has_next %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('finans.defter', hesap_kodu=hesap.kod, donem=donem, tur=tur, iptal='1' if iptal_goster else None, sayfa=sayfalama.next_num) }}">Sonraki ›</a>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{# Düzenleme modalı: açıklama/kategori yerinde; tutar/hesap/tarih değişirse eski iptal + yeni kayıt #}
+<div class="modal fade" id="fnDuzenleModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">İşlemi Düzenle</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <form method="POST" id="fnMetaForm" class="mb-3 border-bottom pb-3">
+          <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+          <div class="fw-bold mb-2">Açıklama / kategori <span class="fn-mini">(bakiye değişmez)</span></div>
+          <input type="text" name="aciklama" id="fnMetaAciklama" class="form-control form-control-sm mb-2" placeholder="Açıklama">
+          <div class="row g-2" id="fnMetaKatRow">
+            <div class="col-6"><select name="kategori_id" id="fnMetaKategori" class="form-select form-select-sm"></select></div>
+            <div class="col-6"><select name="gider_adi_id" id="fnMetaGiderAdi" class="form-select form-select-sm"><option value="">— gider adı —</option></select></div>
+          </div>
+          <button class="btn btn-sm btn-outline-primary mt-2">Kaydet</button>
+        </form>
+        <form method="POST" id="fnDuzeltForm">
+          <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+          <div class="fw-bold mb-2">Tutar / hesap / tarih <span class="fn-mini">(eski kayıt iptal edilir, yeni kayıt açılır)</span></div>
+          <div class="row g-2">
+            <div class="col-4"><input type="text" name="tutar" id="fnDuzeltTutar" class="form-control form-control-sm" inputmode="decimal" placeholder="Tutar"></div>
+            <div class="col-4"><select name="hesap" id="fnDuzeltHesap" class="form-select form-select-sm">
+              {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}
+            </select></div>
+            <div class="col-4"><input type="datetime-local" name="tarih" id="fnDuzeltTarih" class="form-control form-control-sm"></div>
+          </div>
+          <button class="btn btn-sm btn-warning mt-2">Düzelt</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  var FN_GELIR_KAT = {{ gelir_kategorileri | map(attribute='id') | list | tojson }};
+  var FN_GELIR_KAT_AD = {{ gelir_kategorileri | map(attribute='ad') | list | tojson }};
+  var FN_KUCUK_KAT = {{ kucuk_kategorileri | map(attribute='id') | list | tojson }};
+  var FN_KUCUK_KAT_AD = {{ kucuk_kategorileri | map(attribute='ad') | list | tojson }};
+  function fnDoldurGiderAdi(katId, secili) {
+    var sel = document.getElementById('fnMetaGiderAdi');
+    sel.innerHTML = '<option value="">— gider adı —</option>';
+    if (!katId) return;
+    fetch('/finans/api/gider-adi?kategori_id=' + katId).then(function (r) { return r.json(); }).then(function (j) {
+      (j.items || []).forEach(function (g) {
+        var o = document.createElement('option'); o.value = g.id; o.textContent = g.ad; if (String(g.id) === String(secili)) o.selected = true; sel.appendChild(o);
+      });
+    });
+  }
+  document.getElementById('fnDuzenleModal').addEventListener('show.bs.modal', function (ev) {
+    var b = ev.relatedTarget; if (!b) return;
+    var id = b.getAttribute('data-id'), tur = b.getAttribute('data-tur');
+    document.getElementById('fnMetaForm').action = '/finans/islem/' + id + '/meta';
+    document.getElementById('fnDuzeltForm').action = '/finans/islem/' + id + '/duzelt';
+    document.getElementById('fnMetaAciklama').value = b.getAttribute('data-aciklama');
+    document.getElementById('fnDuzeltTutar').value = (b.getAttribute('data-tutar') || '').replace('.', ',');
+    document.getElementById('fnDuzeltTarih').value = b.getAttribute('data-tarih');
+    var hs = document.getElementById('fnDuzeltHesap'); hs.value = b.getAttribute('data-hesap'); hs.disabled = (tur === 'gelir');
+    var katRow = document.getElementById('fnMetaKatRow'), katSel = document.getElementById('fnMetaKategori');
+    katSel.innerHTML = '';
+    if (tur === 'ana_gider') { katRow.style.display = 'none'; return; }
+    katRow.style.display = '';
+    var ids = tur === 'gelir' ? FN_GELIR_KAT : FN_KUCUK_KAT, ads = tur === 'gelir' ? FN_GELIR_KAT_AD : FN_KUCUK_KAT_AD;
+    ids.forEach(function (kid, i) { var o = document.createElement('option'); o.value = kid; o.textContent = ads[i]; if (String(kid) === b.getAttribute('data-kategori')) o.selected = true; katSel.appendChild(o); });
+    document.getElementById('fnMetaGiderAdi').style.display = (tur === 'kucuk_gider') ? '' : 'none';
+    if (tur === 'kucuk_gider') fnDoldurGiderAdi(katSel.value, b.getAttribute('data-gider-adi'));
+  });
+  document.getElementById('fnMetaKategori').addEventListener('change', function () { fnDoldurGiderAdi(this.value, null); });
+</script>
+{% endblock %}

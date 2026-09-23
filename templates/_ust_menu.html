@@ -76,6 +76,9 @@
         <li><hr class="dropdown-divider"></li>
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Finans</div></li>
         <li><a class="dropdown-item" href="{{ url_for('kasa.kasa_sayfasi') }}"><i class="fas fa-cash-register me-2"></i>Kasa</a></li>
+        {% if session.get('role') == 'admin' %}
+        <li><a class="dropdown-item" href="{{ url_for('finans.panel') }}"><i class="fas fa-wallet me-2"></i>Finans</a></li>
+        {% endif %}
         {% endif %}
       </ul>
     </div>

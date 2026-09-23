@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Finans - Güllü Shoes{% endblock %}
+{% block content %}
+{% include '_finans_nav.html' %}
+
+{% if tutarsizlik %}
+<div class="alert alert-danger"><strong>⚠️ Bakiye tutarsızlığı!</strong>
+  {% for t in tutarsizlik %}<div>{{ t.hesap.ad }}: bakiye {{ t.bakiye | tl_format }} ₺, defter {{ t.defter | tl_format }} ₺ (fark {{ t.fark | tl_format }} ₺)</div>{% endfor %}
+</div>
+{% endif %}
+
+<div class="row">
+  {% for h in fn_hesaplar %}
+  <div class="col-md-4">
+    <div class="card fn-card fn-hesap-{{ h.kod }}">
+      <div class="card-body">
+        <div class="fn-mini">{{ h.ad }}</div>
+        <div class="fn-bakiye">{{ h.bakiye | tl_format }} ₺</div>
+        <a href="{{ url_for('finans.defter', hesap_kodu=h.kod) }}" class="fn-mini"><i class="fas fa-book"></i> Kayıt defteri</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card fn-card">
+  <div class="card-header fw-bold">📅 {{ ozet.etiket }}</div>
+  <div class="card-body">
+    <div class="row text-center">
+      <div class="col-6 col-md-3"><div class="fn-mini">Gelir</div><div class="fn-pos fs-5">{{ ozet.gelir | tl_format }} ₺</div></div>
+      <div class="col-6 col-md-3"><div class="fn-mini">Küçük Gider</div><div class="fn-neg fs-5">{{ ozet.kucuk_gider | tl_format }} ₺</div></div>
+      <div class="col-6 col-md-3"><div class="fn-mini">Ana Gider (ödenen)</div><div class="fn-neg fs-5">{{ ozet.ana_gider | tl_format }} ₺</div></div>
+      <div class="col-6 col-md-3"><div class="fn-mini">Bekleyen Ana Gider</div><div class="text-warning fs-5 fw-bold">{{ ozet.bekleyen_adet }} kalem · {{ ozet.bekleyen_tutar | tl_format }} ₺</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-5">
+    <div class="card fn-card">
+      <div class="card-header fw-bold">🔁 Hızlı Transfer</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('finans.transfer') }}">
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label fn-mini">Kaynak</label>
+              <select name="kaynak" class="form-select form-select-sm" required>
+                {% for h in fn_hesaplar %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label fn-mini">Hedef</label>
+              <select name="hedef" class="form-select form-select-sm" required>
+                {% for h in fn_hesaplar %}<option value="{{ h.kod }}" {{ 'selected' if h.kod == 'elde' }}>{{ h.ad }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label fn-mini">Tutar (₺)</label>
+              <input type="text" name="tutar" class="form-control form-control-sm" inputmode="decimal" placeholder="0,00" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label fn-mini">Tarih</label>
+              <input type="date" name="tarih" class="form-control form-control-sm" value="{{ bugun }}">
+            </div>
+            <div class="col-12">
+              <input type="text" name="aciklama" class="form-control form-control-sm" placeholder="Açıklama (isteğe bağlı)">
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm mt-2 w-100"><i class="fas fa-right-left me-1"></i>Aktar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card fn-card">
+      <div class="card-header fw-bold d-flex justify-content-between">
+        <span>⏳ Bekleyen Ana Giderler — {{ ozet.etiket }}</span>
+        <a href="{{ url_for('finans.ana_gider') }}" class="fn-mini">Tümü</a>
+      </div>
+      <div class="card-body p-0">
+        {% if ozet.bekleyenler %}
+        <table class="table table-sm fn-table mb-0">
+          <tbody>
+          {% for d in ozet.bekleyenler %}
+            <tr>
+              <td>{{ d.kalem.ad }}<div class="fn-mini">{{ d.kalem.kategori.ad if d.kalem.kategori else '' }}</div></td>
+              <td class="fn-num">{{ d.kalem.varsayilan_tutar | tl_format }} ₺</td>
+              <td class="fn-actions text-end">
+                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#fnOdeModal"
+                        data-kalem-id="{{ d.kalem.id }}" data-kalem-ad="{{ d.kalem.ad }}"
+                        data-tutar="{{ '%.2f' | format(d.kalem.varsayilan_tutar or 0) }}"
+                        data-hesap="{{ d.kalem.varsayilan_hesap_kodu or 'elde' }}">Öde</button>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="p-3 text-muted">Bu ay bekleyen ana gider yok. 🎉</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card fn-card">
+  <div class="card-header fw-bold">🕘 Son İşlemler</div>
+  <div class="card-body p-0 fn-table-wrap">
+    <table class="table table-sm table-hover fn-table mb-0">
+      <thead><tr><th>Tarih</th><th>Hesap</th><th>Tür</th><th>Açıklama</th><th class="fn-num">Tutar</th><th class="fn-num">Sonra</th><th></th></tr></thead>
+      <tbody>
+      {% for i in son_islemler %}
+        <tr>
+          <td class="text-nowrap">{{ i.tarih | ist('%d.%m.%Y %H:%M') }}</td>
+          <td>{{ i.hesap.ad }}</td>
+          <td><span class="badge {{ 'bg-success' if i.yon > 0 else 'bg-danger' }}">{{ fn_tur_etiket.get(i.tur, i.tur) }}</span></td>
+          <td>{{ i.aciklama or '' }}{% if i.kategori %} <span class="fn-mini">· {{ i.kategori.ad }}</span>{% endif %}</td>
+          <td class="fn-num {{ 'fn-pos' if i.yon > 0 else 'fn-neg' }}">{{ '+' if i.yon > 0 else '−' }}{{ i.tutar | tl_format }}</td>
+          <td class="fn-num">{{ i.yeni_bakiye | tl_format }}</td>
+          <td class="fn-actions text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick="fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})" title="İptal">✕</button></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="text-muted p-3">Henüz işlem yok. Gelir ekleyerek başlayın.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include '_finans_ode_modal.html' %}
+{% endblock %}

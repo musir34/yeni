@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Küçük Gider - Finans{% endblock %}
+{% block content %}
+{% include '_finans_nav.html' %}
+
+<div class="row">
+  <div class="col-lg-4">
+    <div class="card fn-card">
+      <div class="card-header fw-bold">➖ Küçük Gider Ekle</div>
+      <div class="card-body">
+        {% if not kategoriler %}
+        <div class="alert alert-warning fn-mini">Önce <a href="{{ url_for('finans.tanimlar') }}">Tanımlar</a>'dan küçük gider kategorisi ekleyin.</div>
+        {% endif %}
+        <form method="POST" action="{{ url_for('finans.kucuk_gider_ekle') }}">
+          <input type="hidden" name="next" value="{{ url_for('finans.kucuk_gider', donem=donem) }}">
+          <div class="mb-2"><label class="form-label fn-mini">Hangi hesaptan?</label>
+            <div>
+              {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="hesap" id="fnKgHesap_{{ h.kod }}" value="{{ h.kod }}" {{ 'checked' if h.kod == 'elde' }} required>
+                <label class="form-check-label" for="fnKgHesap_{{ h.kod }}">{{ h.ad }} <span class="fn-mini">({{ h.bakiye | tl_format }} ₺)</span></label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="mb-2"><label class="form-label fn-mini">Kategori</label>
+            <select name="kategori_id" id="fnKgKategori" class="form-select" required>
+              <option value="">Seçin…</option>
+              {% for k in kategoriler %}<option value="{{ k.id }}">{{ k.ad }}</option>{% endfor %}
+            </select></div>
+          <div class="mb-2"><label class="form-label fn-mini">Gider adı <span class="text-muted">(hazır liste, isteğe bağlı)</span></label>
+            <select name="gider_adi_id" id="fnKgGiderAdi" class="form-select"><option value="">— seçin ya da aşağıya yazın —</option></select></div>
+          <div class="mb-2"><input type="text" name="aciklama" id="fnKgAciklama" class="form-control" placeholder="Açıklama (gider adı seçilmediyse yazın)"></div>
+          <div class="row g-2 mb-2">
+            <div class="col-6"><label class="form-label fn-mini">Tutar (₺)</label><input type="text" name="tutar" id="fnKgTutar" class="form-control" inputmode="decimal" placeholder="0,00" required></div>
+            <div class="col-6"><label class="form-label fn-mini">Tarih</label><input type="date" name="tarih" class="form-control" value="{{ bugun }}"></div>
+          </div>
+          <button class="btn btn-danger w-100"><i class="fas fa-minus me-1"></i>Gider Kaydet</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card fn-card">
+      <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span class="fw-bold">🧾 {{ fn_donem_etiket(donem) }} küçük giderleri</span>
+        <form method="GET" class="d-flex gap-1 align-items-center">
+          <input type="hidden" name="donem" value="{{ donem }}">
+          <select name="hesap" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">Tüm hesaplar</option>
+            {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}<option value="{{ h.kod }}" {{ 'selected' if h.kod == hesap_f }}>{{ h.ad }}</option>{% endfor %}
+          </select>
+          <select name="kategori_id" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">Tüm kategoriler</option>
+            {% for k in kategoriler %}<option value="{{ k.id }}" {{ 'selected' if k.id == kat_f }}>{{ k.ad }}</option>{% endfor %}
+          </select>
+          <div class="btn-group btn-group-sm">
+            <a class="btn btn-outline-secondary" href="{{ url_for('finans.kucuk_gider', donem=fn_donem_kaydir(donem, -1), hesap=hesap_f, kategori_id=kat_f) }}">‹</a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('finans.kucuk_gider') }}">Bu ay</a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('finans.kucuk_gider', donem=fn_donem_kaydir(donem, 1), hesap=hesap_f, kategori_id=kat_f) }}">›</a>
+          </div>
+        </form>
+      </div>
+      <div class="card-body p-0 fn-table-wrap">
+        <table class="table table-sm table-hover fn-table mb-0">
+          <thead><tr><th>Tarih</th><th>Hesap</th><th>Kategori</th><th>Açıklama</th><th class="fn-num">Tutar</th><th></th></tr></thead>
+          <tbody>
+          {% for i in islemler %}
+            <tr>
+              <td class="text-nowrap">{{ i.tarih | ist('%d.%m.%Y') }}</td>
+              <td>{{ i.hesap.ad }}</td>
+              <td>{{ i.kategori.ad if i.kategori else '—' }}{% if i.gider_adi %} <span class="fn-mini">/ {{ i.gider_adi.ad }}</span>{% endif %}</td>
+              <td>{{ i.aciklama or '' }}</td>
+              <td class="fn-num fn-neg">{{ i.tutar | tl_format }} ₺</td>
+              <td class="fn-actions text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick="fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})">✕</button></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="text-muted p-3">Bu ay küçük gider kaydı yok.</td></tr>
+          {% endfor %}
+          </tbody>
+          {% if islemler %}
+          <tfoot><tr class="fw-bold"><td colspan="4">Toplam</td><td class="fn-num fn-neg">{{ toplam | tl_format }} ₺</td><td></td></tr></tfoot>
+          {% endif %}
+        </table>
+      </div>
+      {% if toplamlar %}
+      <div class="card-footer fn-mini">
+        {% for t in toplamlar %}<span class="badge bg-light text-dark border me-1">{{ t.ad }}: {{ t.toplam | tl_format }} ₺ ({{ t.adet }})</span>{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  (function () {
+    var kat = document.getElementById('fnKgKategori'), ga = document.getElementById('fnKgGiderAdi');
+    var tutar = document.getElementById('fnKgTutar'), acik = document.getElementById('fnKgAciklama');
+    var cache = {};
+    kat.addEventListener('change', function () {
+      ga.innerHTML = '<option value="">— seçin ya da aşağıya yazın —</option>';
+      if (!kat.value) return;
+      fetch('/finans/api/gider-adi?kategori_id=' + kat.value).then(function (r) { return r.json(); }).then(function (j) {
+        (j.items || []).forEach(function (g) {
+          cache[g.id] = g;
+          var o = document.createElement('option'); o.value = g.id;
+          o.textContent = g.ad + (g.varsayilan_tutar ? ' (' + g.varsayilan_tutar.replace('.', ',') + ' ₺)' : '');
+          ga.appendChild(o);
+        });
+      });
+    });
+    ga.addEventListener('change', function () {
+      var g = cache[ga.value]; if (!g) return;
+      if (g.varsayilan_tutar && !tutar.value) tutar.value = g.varsayilan_tutar.replace('.', ',');
+      if (!acik.value) acik.placeholder = g.ad;
+    });
+  })();
+</script>
+{% endblock %}

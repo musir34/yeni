@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Gelir - Finans{% endblock %}
+{% block content %}
+{% include '_finans_nav.html' %}
+
+<div class="row">
+  <div class="col-lg-4">
+    <div class="card fn-card">
+      <div class="card-header fw-bold">➕ Gelir Ekle <span class="fn-mini">→ Beyazıt (Ana Bakiye)</span></div>
+      <div class="card-body">
+        {% if not kategoriler %}
+        <div class="alert alert-warning fn-mini">Önce <a href="{{ url_for('finans.tanimlar') }}">Tanımlar</a>'dan gelir kategorisi ekleyin.</div>
+        {% endif %}
+        <form method="POST" action="{{ url_for('finans.gelir_ekle') }}">
+          <input type="hidden" name="next" value="{{ url_for('finans.gelir', donem=donem) }}">
+          <div class="mb-2"><label class="form-label fn-mini">Kategori</label>
+            <select name="kategori_id" class="form-select" required>
+              <option value="">Seçin…</option>
+              {% for k in kategoriler %}<option value="{{ k.id }}">{{ k.ad }}</option>{% endfor %}
+            </select></div>
+          <div class="row g-2 mb-2">
+            <div class="col-6"><label class="form-label fn-mini">Tutar (₺)</label><input type="text" name="tutar" class="form-control" inputmode="decimal" placeholder="0,00" required></div>
+            <div class="col-6"><label class="form-label fn-mini">Tarih</label><input type="date" name="tarih" class="form-control" value="{{ bugun }}"></div>
+          </div>
+          <div class="mb-2"><input type="text" name="aciklama" class="form-control" placeholder="Açıklama (isteğe bağlı)"></div>
+          <button class="btn btn-success w-100"><i class="fas fa-plus me-1"></i>Gelir Ekle</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card fn-card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-bold">📥 {{ fn_donem_etiket(donem) }} gelirleri</span>
+        <div class="btn-group btn-group-sm">
+          <a class="btn btn-outline-secondary" href="{{ url_for('finans.gelir', donem=fn_donem_kaydir(donem, -1)) }}">‹</a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('finans.gelir') }}">Bu ay</a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('finans.gelir', donem=fn_donem_kaydir(donem, 1)) }}">›</a>
+        </div>
+      </div>
+      <div class="card-body p-0 fn-table-wrap">
+        <table class="table table-sm table-hover fn-table mb-0">
+          <thead><tr><th>Tarih</th><th>Kategori</th><th>Açıklama</th><th class="fn-num">Tutar</th><th></th></tr></thead>
+          <tbody>
+          {% for i in islemler %}
+            <tr>
+              <td class="text-nowrap">{{ i.tarih | ist('%d.%m.%Y') }}</td>
+              <td>{{ i.kategori.ad if i.kategori else '—' }}</td>
+              <td>{{ i.aciklama or '' }}</td>
+              <td class="fn-num fn-pos">{{ i.tutar | tl_format }} ₺</td>
+              <td class="fn-actions text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick="fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})">✕</button></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-muted p-3">Bu ay gelir kaydı yok.</td></tr>
+          {% endfor %}
+          </tbody>
+          {% if islemler %}
+          <tfoot><tr class="fw-bold"><td colspan="3">Toplam</td><td class="fn-num fn-pos">{{ toplam | tl_format }} ₺</td><td></td></tr></tfoot>
+          {% endif %}
+        </table>
+      </div>
+      {% if toplamlar %}
+      <div class="card-footer fn-mini">
+        {% for t in toplamlar %}<span class="badge bg-light text-dark border me-1">{{ t.ad }}: {{ t.toplam | tl_format }} ₺ ({{ t.adet }})</span>{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

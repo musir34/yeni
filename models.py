@@ -1662,3 +1662,119 @@ class AiMesaj(db.Model):
     # çalıştırılır (sohbete beslenen 200 satır sınırı olmadan).
     son_sql = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  FİNANS KASASI — mevcut kasa (AnaKasa/Kasa/KasaKategori) modülünden
+#  BAĞIMSIZ, üç hesaplı (Beyazıt / Elde / Banka) yeni kasa.
+#  Tablolar additive: scripts/create_finans_tables.py
+#  Bakiyenin tek gerçek kaynağı finans_hesap.bakiye; finans_islem satırları
+#  o anki snapshot'ı taşır ve silinmez, "iptal" işaretlenir (ters delta).
+# ═══════════════════════════════════════════════════════════════════════
+class FinansHesap(db.Model):
+    __tablename__ = 'finans_hesap'
+    id = db.Column(db.Integer, primary_key=True)
+    kod = db.Column(db.String(20), nullable=False, unique=True)  # beyazit / elde / banka
+    ad = db.Column(db.String(100), nullable=False)
+    bakiye = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    sira = db.Column(db.SmallInteger, nullable=False, default=0)
+    guncelleme_tarihi = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # naive=UTC
+
+    def __repr__(self):
+        return f'<FinansHesap {self.kod}: {self.bakiye}>'
+
+
+class FinansKategori(db.Model):
+    __tablename__ = 'finans_kategori'
+    id = db.Column(db.Integer, primary_key=True)
+    tur = db.Column(db.String(20), nullable=False)  # gelir / kucuk_gider / ana_gider
+    ad = db.Column(db.String(100), nullable=False)
+    aktif = db.Column(db.Boolean, nullable=False, default=True)
+    sira = db.Column(db.SmallInteger, nullable=False, default=0)
+    olusturma_tarihi = db.Column(db.DateTime, default=datetime.utcnow)  # naive=UTC
+    olusturan_kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    __table_args__ = (UniqueConstraint('tur', 'ad', name='uq_finans_kategori_tur_ad'),)
+
+    gider_adlari = db.relationship('FinansGiderAdi', backref='kategori', lazy='dynamic')
+
+    def __repr__(self):
+        return f'<FinansKategori {self.tur}/{self.ad}>'
+
+
+class FinansGiderAdi(db.Model):
+    """Küçük gider kategorisi altındaki hazır gider adları (Çay, Kargo poşeti...)."""
+    __tablename__ = 'finans_gider_adi'
+    id = db.Column(db.Integer, primary_key=True)
+    kategori_id = db.Column(db.Integer, db.ForeignKey('finans_kategori.id'), nullable=False)
+    ad = db.Column(db.String(150), nullable=False)
+    varsayilan_tutar = db.Column(db.Numeric(12, 2), nullable=True)
+    aktif = db.Column(db.Boolean, nullable=False, default=True)
+    olusturma_tarihi = db.Column(db.DateTime, default=datetime.utcnow)  # naive=UTC
+
+    __table_args__ = (UniqueConstraint('kategori_id', 'ad', name='uq_finans_gider_adi_kat_ad'),)
+
+    def __repr__(self):
+        return f'<FinansGiderAdi {self.ad}>'
+
+
+class FinansAnaGiderKalem(db.Model):
+    """Aylık tekrar eden ana gider kalemi (işçi maaşı, reklam, site...)."""
+    __tablename__ = 'finans_ana_gider_kalem'
+    id = db.Column(db.Integer, primary_key=True)
+    ad = db.Column(db.String(150), nullable=False, unique=True)
+    kategori_id = db.Column(db.Integer, db.ForeignKey('finans_kategori.id'), nullable=True)
+    varsayilan_tutar = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    varsayilan_hesap_kodu = db.Column(db.String(20), nullable=True)  # elde / banka
+    baslangic_donem = db.Column(db.String(7), nullable=False)  # 'YYYY-MM'
+    bitis_donem = db.Column(db.String(7), nullable=True)
+    aktif = db.Column(db.Boolean, nullable=False, default=True)
+    sira = db.Column(db.SmallInteger, nullable=False, default=0)
+    notlar = db.Column(db.Text, nullable=True)
+    olusturma_tarihi = db.Column(db.DateTime, default=datetime.utcnow)  # naive=UTC
+    olusturan_kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    kategori = db.relationship('FinansKategori', backref=db.backref('ana_gider_kalemleri', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<FinansAnaGiderKalem {self.ad}>'
+
+
+class FinansIslem(db.Model):
+    """Birleşik kayıt defteri: gelir, küçük gider, ana gider ödemesi ve transfer bacakları."""
+    __tablename__ = 'finans_islem'
+    id = db.Column(db.Integer, primary_key=True)
+    hesap_id = db.Column(db.Integer, db.ForeignKey('finans_hesap.id'), nullable=False)
+    tur = db.Column(db.String(20), nullable=False)  # gelir / kucuk_gider / ana_gider / transfer_cikis / transfer_giris
+    yon = db.Column(db.SmallInteger, nullable=False)  # +1 artış, -1 azalış
+    tutar = db.Column(db.Numeric(12, 2), nullable=False)
+    onceki_bakiye = db.Column(db.Numeric(12, 2), nullable=False)
+    yeni_bakiye = db.Column(db.Numeric(12, 2), nullable=False)
+    tarih = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)  # naive=UTC (işlem tarihi)
+    aciklama = db.Column(db.String(500), nullable=True)
+    kategori_id = db.Column(db.Integer, db.ForeignKey('finans_kategori.id'), nullable=True)
+    gider_adi_id = db.Column(db.Integer, db.ForeignKey('finans_gider_adi.id'), nullable=True)
+    kalem_id = db.Column(db.Integer, db.ForeignKey('finans_ana_gider_kalem.id'), nullable=True)
+    donem = db.Column(db.String(7), nullable=True)  # ana gider ödemesi hangi ay için
+    transfer_grup = db.Column(PG_UUID(as_uuid=True), nullable=True)  # transferin iki bacağını bağlar
+    iptal = db.Column(db.Boolean, nullable=False, default=False)
+    iptal_tarihi = db.Column(db.DateTime, nullable=True)  # naive=UTC
+    iptal_kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    iptal_neden = db.Column(db.String(255), nullable=True)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    olusturma_tarihi = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)  # naive=UTC
+
+    hesap = db.relationship('FinansHesap', backref=db.backref('islemler', lazy='dynamic'))
+    kategori = db.relationship('FinansKategori', foreign_keys=[kategori_id])
+    gider_adi = db.relationship('FinansGiderAdi', foreign_keys=[gider_adi_id])
+    kalem = db.relationship('FinansAnaGiderKalem', foreign_keys=[kalem_id])
+    kullanici = db.relationship('User', foreign_keys=[kullanici_id],
+                                backref=db.backref('finans_islemleri', lazy='dynamic'))
+    iptal_kullanici = db.relationship('User', foreign_keys=[iptal_kullanici_id])
+
+    @property
+    def delta(self):
+        return self.tutar * self.yon
+
+    def __repr__(self):
+        return f'<FinansIslem {self.id} {self.tur} {self.yon * self.tutar}>'

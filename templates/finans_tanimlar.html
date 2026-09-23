@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Tanımlar - Finans{% endblock %}
+{% block content %}
+{% include '_finans_nav.html' %}
+
+{% macro kategori_kolonu(baslik, tur, liste, ipucu) %}
+<div class="col-lg-4">
+  <div class="card fn-card">
+    <div class="card-header fw-bold">{{ baslik }}</div>
+    <div class="card-body">
+      <div class="fn-mini mb-2">{{ ipucu }}</div>
+      <div class="input-group input-group-sm mb-2">
+        <input type="text" class="form-control" placeholder="Yeni kategori adı" id="fnYeniKat_{{ tur }}" maxlength="100">
+        <button class="btn btn-primary" type="button" onclick="fnKatEkle('{{ tur }}')">Ekle</button>
+      </div>
+      <ul class="list-group list-group-flush" id="fnKatListe_{{ tur }}">
+        {% for k in liste %}
+        <li class="list-group-item px-0 py-1 {{ 'text-muted' if not k.aktif }}" id="fnKat_{{ k.id }}">
+          <div class="d-flex justify-content-between align-items-center">
+            <span>{{ k.ad }}{% if not k.aktif %} <span class="badge bg-secondary">pasif</span>{% endif %}</span>
+            <span>
+              {% if tur == 'kucuk_gider' %}<button type="button" class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="collapse" data-bs-target="#fnGa_{{ k.id }}" title="Gider adları">▾</button>{% endif %}
+              <button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="fnKatSil({{ k.id }}, {{ k.ad | tojson }})">✕</button>
+            </span>
+          </div>
+          {% if tur == 'kucuk_gider' %}
+          <div class="collapse mt-1 ps-2 border-start" id="fnGa_{{ k.id }}">
+            <ul class="list-unstyled mb-1 fn-mini" id="fnGaListe_{{ k.id }}">
+              {% for g in gider_adlari.get(k.id, []) %}
+              <li class="d-flex justify-content-between align-items-center py-1 {{ 'text-muted' if not g.aktif }}" id="fnGa_item_{{ g.id }}">
+                <span>{{ g.ad }}{% if g.varsayilan_tutar is not none %} <span class="text-muted">({{ g.varsayilan_tutar | tl_format }} ₺)</span>{% endif %}{% if not g.aktif %} <span class="badge bg-secondary">pasif</span>{% endif %}</span>
+                <button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="fnGaSil({{ g.id }}, {{ g.ad | tojson }})">✕</button>
+              </li>
+              {% endfor %}
+            </ul>
+            <div class="input-group input-group-sm mb-1">
+              <input type="text" class="form-control" placeholder="Gider adı" id="fnYeniGa_{{ k.id }}" maxlength="150">
+              <input type="text" class="form-control" placeholder="₺ (ops.)" id="fnYeniGaTutar_{{ k.id }}" inputmode="decimal" style="max-width:6rem">
+              <button class="btn btn-outline-primary" type="button" onclick="fnGaEkle({{ k.id }})">+</button>
+            </div>
+          </div>
+          {% endif %}
+        </li>
+        {% else %}
+        <li class="list-group-item px-0 py-1 text-muted fn-mini" id="fnKatBos_{{ tur }}">Henüz kategori yok.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+<div class="row">
+  {{ kategori_kolonu('📥 Gelir Kategorileri', 'gelir', gelir_kategorileri, 'Örn. Trendyol, Shopify, Mağaza, Toptan') }}
+  {{ kategori_kolonu('🧾 Küçük Gider Kategorileri', 'kucuk_gider', kucuk_kategorileri, 'Kategori altına hazır gider adları ekleyin (örn. Mutfak → Çay, Şeker).') }}
+  {{ kategori_kolonu('📆 Ana Gider Kategorileri', 'ana_gider', ana_kategorileri, 'Örn. Personel, Reklam, Site/Yazılım, Kira. Kalemler Ana Gider sayfasında tanımlanır.') }}
+</div>
+<div class="fn-mini text-muted">Kullanımda olan kategori/gider adı silinmez, pasife alınır; aynı adla yeniden eklenirse tekrar aktif olur.</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  function fnKatEkle(tur) {
+    var inp = document.getElementById('fnYeniKat_' + tur);
+    fnFetch('/finans/api/kategori', { tur: tur, ad: inp.value })
+      .then(function () { fnToast('Kategori eklendi', 'success'); location.reload(); })
+      .catch(function (e) { fnToast(e.message, 'danger'); });
+  }
+  function fnKatSil(id, ad) {
+    var go = function () {
+      fnFetch('/finans/api/kategori/' + id + '/sil').then(function (j) {
+        fnToast(j.pasif ? '"' + ad + '" kullanımda olduğu için pasife alındı' : '"' + ad + '" silindi', j.pasif ? 'warning' : 'success');
+        location.reload();
+      }).catch(function (e) { fnToast(e.message, 'danger'); });
+    };
+    if (window.GS && GS.showConfirmSheet) GS.showConfirmSheet('"' + ad + '" silinsin mi?', go); else if (confirm('"' + ad + '" silinsin mi?')) go();
+  }
+  function fnGaEkle(katId) {
+    fnFetch('/finans/api/gider-adi', { kategori_id: katId, ad: document.getElementById('fnYeniGa_' + katId).value,
+                                       varsayilan_tutar: document.getElementById('fnYeniGaTutar_' + katId).value })
+      .then(function () { fnToast('Gider adı eklendi', 'success'); location.reload(); })
+      .catch(function (e) { fnToast(e.message, 'danger'); });
+  }
+  function fnGaSil(id, ad) {
+    var go = function () {
+      fnFetch('/finans/api/gider-adi/' + id + '/sil').then(function (j) {
+        fnToast(j.pasif ? '"' + ad + '" kullanımda, pasife alındı' : '"' + ad + '" silindi', j.pasif ? 'warning' : 'success');
+        location.reload();
+      }).catch(function (e) { fnToast(e.message, 'danger'); });
+    };
+    if (window.GS && GS.showConfirmSheet) GS.showConfirmSheet('"' + ad + '" silinsin mi?', go); else if (confirm('"' + ad + '" silinsin mi?')) go();
+  }
+  // Enter ile ekleme
+  document.querySelectorAll('[id^="fnYeniKat_"]').forEach(function (el) {
+    el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); fnKatEkle(el.id.replace('fnYeniKat_', '')); } });
+  });
+  document.querySelectorAll('[id^="fnYeniGa_"]').forEach(function (el) {
+    el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); fnGaEkle(el.id.replace('fnYeniGa_', '')); } });
+  });
+</script>
+{% endblock %}
