@@ -1778,3 +1778,67 @@ class FinansIslem(db.Model):
 
     def __repr__(self):
         return f'<FinansIslem {self.id} {self.tur} {self.yon * self.tutar}>'
+
+
+# ── Finans: Cari hesaplar (tedarikçi / müşteri defteri) ─────────────────────
+# bakiye = "bizim borcumuz": pozitif → biz ona borçluyuz, negatif → o bize borçlu (alacak).
+# Kasa bağlantılı hareketler (odeme/tahsilat) finans_islem satırıyla çift yönlü bağlıdır.
+class FinansCari(db.Model):
+    __tablename__ = 'finans_cari'
+    id = db.Column(db.Integer, primary_key=True)
+    ad = db.Column(db.String(150), nullable=False, unique=True)
+    tur = db.Column(db.String(20), nullable=False, default='tedarikci')  # tedarikci / musteri / diger
+    telefon = db.Column(db.String(50), nullable=True)
+    notlar = db.Column(db.Text, nullable=True)
+    bakiye = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    aktif = db.Column(db.Boolean, nullable=False, default=True)
+    olusturma_tarihi = db.Column(db.DateTime, default=datetime.utcnow)  # naive=UTC
+    guncelleme_tarihi = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    olusturan_kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    def __repr__(self):
+        return f'<FinansCari {self.ad}: {self.bakiye}>'
+
+
+class FinansCariHareket(db.Model):
+    __tablename__ = 'finans_cari_hareket'
+    id = db.Column(db.Integer, primary_key=True)
+    cari_id = db.Column(db.Integer, db.ForeignKey('finans_cari.id'), nullable=False)
+    tur = db.Column(db.String(20), nullable=False)  # alim / odeme / satis / tahsilat
+    yon = db.Column(db.SmallInteger, nullable=False)  # +1 borcumuz artar, -1 borcumuz azalır
+    tutar = db.Column(db.Numeric(12, 2), nullable=False)
+    onceki_bakiye = db.Column(db.Numeric(12, 2), nullable=False)
+    yeni_bakiye = db.Column(db.Numeric(12, 2), nullable=False)
+    tarih = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)  # naive=UTC
+    aciklama = db.Column(db.String(500), nullable=True)
+    islem_id = db.Column(db.Integer, db.ForeignKey('finans_islem.id'), nullable=True)  # kasa bağı
+    iptal = db.Column(db.Boolean, nullable=False, default=False)
+    iptal_tarihi = db.Column(db.DateTime, nullable=True)
+    iptal_kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    olusturma_tarihi = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    cari = db.relationship('FinansCari', backref=db.backref('hareketler', lazy='dynamic'))
+    islem = db.relationship('FinansIslem', foreign_keys=[islem_id],
+                            backref=db.backref('cari_hareket', uselist=False))
+    kalemler = db.relationship('FinansCariKalem', backref='hareket', cascade='all, delete-orphan',
+                               order_by='FinansCariKalem.id')
+    kullanici = db.relationship('User', foreign_keys=[kullanici_id])
+    iptal_kullanici = db.relationship('User', foreign_keys=[iptal_kullanici_id])
+
+    def __repr__(self):
+        return f'<FinansCariHareket {self.id} {self.tur} {self.yon * self.tutar}>'
+
+
+class FinansCariKalem(db.Model):
+    """Mal girişi / satış hareketinin dökümü (ne aldık: ad, adet, birim fiyat)."""
+    __tablename__ = 'finans_cari_kalem'
+    id = db.Column(db.Integer, primary_key=True)
+    hareket_id = db.Column(db.Integer, db.ForeignKey('finans_cari_hareket.id'), nullable=False)
+    ad = db.Column(db.String(200), nullable=False)
+    adet = db.Column(db.Numeric(12, 2), nullable=False, default=1)
+    birim_fiyat = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    tutar = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+
+    def __repr__(self):
+        return f'<FinansCariKalem {self.ad} x{self.adet}>'

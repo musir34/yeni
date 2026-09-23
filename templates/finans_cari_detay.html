@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}{{ cari.ad }} - Cari - Finans{% endblock %}
+{% block content %}
+{% include '_finans_nav.html' %}
+
+<div class="card fn-card {{ 'fn-hesap-elde' if cari.bakiye < 0 else 'fn-hesap-banka' }}">
+  <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <div>
+      <div class="fn-mini"><a href="{{ url_for('finans.cari_liste') }}">Cari Hesaplar</a> › {{ tur_etiket.get(cari.tur, cari.tur) }}{% if cari.telefon %} · {{ cari.telefon }}{% endif %}{% if not cari.aktif %} · <span class="badge bg-secondary">kapalı</span>{% endif %}</div>
+      <h4 class="mb-0">{{ cari.ad }}</h4>
+      <div class="fn-bakiye {{ 'fn-neg' if cari.bakiye > 0 else ('fn-pos' if cari.bakiye < 0 else '') }}">
+        {{ (cari.bakiye | abs) | tl_format }} ₺ <span class="fn-mini fw-normal">{% if cari.bakiye > 0 %}borcumuz{% elif cari.bakiye < 0 %}alacağımız{% else %}bakiye sıfır{% endif %}</span>
+      </div>
+      {% if cari.notlar %}<div class="fn-mini">{{ cari.notlar }}</div>{% endif %}
+    </div>
+    <div class="d-flex gap-1 flex-wrap">
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#fnCariDuzenle">✎ Hesap bilgisi</button>
+      <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#fnAlimModal"><i class="fas fa-box me-1"></i>Mal Girişi</button>
+      <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#fnOdemeModal"><i class="fas fa-money-bill me-1"></i>Ödeme Yap</button>
+      <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#fnSatisModal">Satış</button>
+      <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#fnTahsilatModal">Tahsilat</button>
+    </div>
+  </div>
+</div>
+
+<div class="card fn-card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="fw-bold">📖 Hesap defteri</span>
+    <a class="fn-mini" href="{{ url_for('finans.cari_detay', cari_id=cari.id, iptal=None if iptal_goster else '1') }}">{{ 'İptalleri gizle' if iptal_goster else 'İptalleri göster' }}</a>
+  </div>
+  <div class="card-body p-0 fn-table-wrap">
+    <table class="table table-sm table-hover fn-table mb-0">
+      <thead><tr><th>Tarih</th><th>Hareket</th><th>Açıklama / Döküm</th><th class="fn-num">Borç ↑</th><th class="fn-num">Borç ↓</th><th class="fn-num">Bakiye</th><th></th></tr></thead>
+      <tbody>
+      {% for h in sayfalama.items %}
+        <tr class="{{ 'fn-iptal' if h.iptal }}">
+          <td class="text-nowrap">{{ h.tarih | ist('%d.%m.%Y') }}</td>
+          <td><span class="badge {{ 'bg-danger' if h.yon > 0 else 'bg-success' }}">{{ hareket_etiket.get(h.tur, h.tur) }}</span>
+            {% if h.islem %}<div class="fn-mini">{{ h.islem.hesap.ad }}</div>{% endif %}</td>
+          <td>{{ h.aciklama or '' }}
+            {% if h.kalemler %}
+            <details class="fn-mini"><summary>{{ h.kalemler | length }} kalem</summary>
+              <table class="table table-sm table-borderless mb-0 fn-mini"><tbody>
+              {% for k in h.kalemler %}<tr><td>{{ k.ad }}</td><td class="fn-num">{{ k.adet | tl_format }} × {{ k.birim_fiyat | tl_format }}</td><td class="fn-num">{{ k.tutar | tl_format }} ₺</td></tr>{% endfor %}
+              </tbody></table>
+            </details>
+            {% endif %}
+            {% if h.iptal %}<div class="fn-mini">İptal: {{ h.iptal_tarihi | ist }} {{ h.iptal_kullanici.username if h.iptal_kullanici else '' }}</div>{% endif %}
+          </td>
+          <td class="fn-num fn-neg">{% if h.yon > 0 %}{{ h.tutar | tl_format }}{% endif %}</td>
+          <td class="fn-num fn-pos">{% if h.yon < 0 %}{{ h.tutar | tl_format }}{% endif %}</td>
+          <td class="fn-num">{{ h.yeni_bakiye | tl_format }}</td>
+          <td class="fn-actions text-end">
+            {% if not h.iptal %}
+            <form method="POST" action="{{ url_for('finans.cari_hareket_iptal', hareket_id=h.id) }}" class="d-inline fn-cari-iptal">
+              <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+              <button type="submit" class="btn btn-sm btn-outline-danger" title="İptal">✕</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="text-muted p-3">Henüz hareket yok. "Mal Girişi" ile başlayın.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if sayfalama.pages > 1 %}
+  <div class="card-footer d-flex justify-content-between align-items-center">
+    <span class="fn-mini">{{ sayfalama.total }} kayıt · sayfa {{ sayfalama.page }}/{{ sayfalama.pages }}</span>
+    <div>
+      {% if sayfalama.has_prev %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('finans.cari_detay', cari_id=cari.id, iptal='1' if iptal_goster else None, sayfa=sayfalama.prev_num) }}">‹ Önceki</a>{% endif %}
+      {% if sayfalama.has_next %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('finans.cari_detay', cari_id=cari.id, iptal='1' if iptal_goster else None, sayfa=sayfalama.next_num) }}">Sonraki ›</a>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{# ── Kalemli hareket modalı (Mal Girişi / Satış) ─────────────────────────── #}
+{% macro kalem_modal(id, baslik, action, buton_sinif, bilgi) %}
+<div class="modal fade" id="{{ id }}" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form class="modal-content" method="POST" action="{{ action }}">
+      <div class="modal-header"><h5 class="modal-title">{{ baslik }} — {{ cari.ad }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="fn-mini mb-2">{{ bilgi }}</div>
+        <div class="row g-2 mb-2">
+          <div class="col-4"><label class="form-label fn-mini">Tarih</label><input type="date" name="tarih" class="form-control form-control-sm" value="{{ bugun }}"></div>
+          <div class="col-8"><label class="form-label fn-mini">Açıklama (ops.)</label><input type="text" name="aciklama" class="form-control form-control-sm" placeholder="Fatura no, parti, not…"></div>
+        </div>
+        <table class="table table-sm fn-table mb-1 fn-kalem-tablo">
+          <thead><tr><th>Ne aldık / verdik</th><th style="width:7rem">Adet</th><th style="width:9rem">Birim ₺</th><th style="width:9rem" class="fn-num">Tutar</th><th style="width:2.5rem"></th></tr></thead>
+          <tbody>
+            <tr>
+              <td><input type="text" name="kalem_ad" class="form-control form-control-sm" placeholder="örn. Siyah deri (m²)" required></td>
+              <td><input type="text" name="kalem_adet" class="form-control form-control-sm fn-adet" inputmode="decimal" value="1"></td>
+              <td><input type="text" name="kalem_fiyat" class="form-control form-control-sm fn-fiyat" inputmode="decimal" placeholder="0,00" required></td>
+              <td class="fn-num fn-satir-tutar">0,00</td>
+              <td><button type="button" class="btn btn-sm btn-outline-danger py-0 fn-satir-sil">✕</button></td>
+            </tr>
+          </tbody>
+          <tfoot><tr><td colspan="3" class="text-end fw-bold">Toplam</td><td class="fn-num fw-bold fn-toplam">0,00</td><td></td></tr></tfoot>
+        </table>
+        <button type="button" class="btn btn-sm btn-outline-secondary fn-satir-ekle">+ Kalem ekle</button>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button><button class="btn {{ buton_sinif }}">Kaydet</button></div>
+    </form>
+  </div>
+</div>
+{% endmacro %}
+{{ kalem_modal('fnAlimModal', '📦 Mal Girişi', url_for('finans.cari_alim', cari_id=cari.id), 'btn-danger', 'Aldığınız malı kalem kalem yazın; toplam borcunuza eklenir. Kasa bakiyesine dokunmaz.') }}
+{{ kalem_modal('fnSatisModal', '🧾 Satış', url_for('finans.cari_satis', cari_id=cari.id), 'btn-primary', 'Bu hesaba verdiğiniz mal; alacağınıza eklenir (borcunuz azalır). Kasa bakiyesine dokunmaz.') }}
+
+{# ── Ödeme modalı ─────────────────────────────────────────────────────────── #}
+<div class="modal fade" id="fnOdemeModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="POST" action="{{ url_for('finans.cari_odeme', cari_id=cari.id) }}">
+      <div class="modal-header"><h5 class="modal-title">💸 Ödeme Yap — {{ cari.ad }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="fn-mini mb-2">Para Elde veya Banka hesabından düşer, bu hesabın borcu azalır.</div>
+        <div class="mb-2">
+          {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="hesap" id="fnOdHesap_{{ h.kod }}" value="{{ h.kod }}" {{ 'checked' if h.kod == 'elde' }} required>
+            <label class="form-check-label" for="fnOdHesap_{{ h.kod }}">{{ h.ad }} <span class="fn-mini">({{ h.bakiye | tl_format }} ₺)</span></label>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label fn-mini">Tutar (₺)</label><input type="text" name="tutar" class="form-control" inputmode="decimal" placeholder="0,00" value="{{ '%.2f' | format(cari.bakiye) | replace('.', ',') if cari.bakiye > 0 else '' }}" required></div>
+          <div class="col-6"><label class="form-label fn-mini">Tarih</label><input type="date" name="tarih" class="form-control" value="{{ bugun }}"></div>
+          <div class="col-12"><input type="text" name="aciklama" class="form-control" placeholder="Açıklama (ops.)"></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button><button class="btn btn-success">Ödemeyi Kaydet</button></div>
+    </form>
+  </div>
+</div>
+
+{# ── Tahsilat modalı ──────────────────────────────────────────────────────── #}
+<div class="modal fade" id="fnTahsilatModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="POST" action="{{ url_for('finans.cari_tahsilat', cari_id=cari.id) }}">
+      <div class="modal-header"><h5 class="modal-title">💰 Tahsilat — {{ cari.ad }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="fn-mini mb-2">Bu hesaptan aldığınız para Beyazıt (Ana Bakiye) hesabına girer, alacağınız azalır.</div>
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label fn-mini">Tutar (₺)</label><input type="text" name="tutar" class="form-control" inputmode="decimal" placeholder="0,00" value="{{ '%.2f' | format(-cari.bakiye) | replace('.', ',') if cari.bakiye < 0 else '' }}" required></div>
+          <div class="col-6"><label class="form-label fn-mini">Tarih</label><input type="date" name="tarih" class="form-control" value="{{ bugun }}"></div>
+          <div class="col-12"><input type="text" name="aciklama" class="form-control" placeholder="Açıklama (ops.)"></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button><button class="btn btn-success">Tahsilatı Kaydet</button></div>
+    </form>
+  </div>
+</div>
+
+{# ── Hesap bilgisi modalı ─────────────────────────────────────────────────── #}
+<div class="modal fade" id="fnCariDuzenle" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="POST" action="{{ url_for('finans.cari_guncelle', cari_id=cari.id) }}">
+      <div class="modal-header"><h5 class="modal-title">Hesap Bilgisi</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="mb-2"><input type="text" name="ad" class="form-control" value="{{ cari.ad }}" required maxlength="150"></div>
+        <div class="row g-2">
+          <div class="col-6"><select name="tur" class="form-select">{% for k, v in tur_etiket.items() %}<option value="{{ k }}" {{ 'selected' if k == cari.tur }}>{{ v }}</option>{% endfor %}</select></div>
+          <div class="col-6"><input type="text" name="telefon" class="form-control" value="{{ cari.telefon or '' }}" placeholder="Telefon"></div>
+          <div class="col-12"><input type="text" name="notlar" class="form-control" value="{{ cari.notlar or '' }}" placeholder="Not"></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button><button class="btn btn-primary">Kaydet</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  (function () {
+    function num(v) { v = String(v || '').trim(); if (!v) return 0; if (v.indexOf(',') >= 0) v = v.replace(/\./g, '').replace(',', '.'); return parseFloat(v) || 0; }
+    function fmt(n) { return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function hesapla(tablo) {
+      var toplam = 0;
+      tablo.querySelectorAll('tbody tr').forEach(function (tr) {
+        var t = num(tr.querySelector('.fn-adet').value) * num(tr.querySelector('.fn-fiyat').value);
+        tr.querySelector('.fn-satir-tutar').textContent = fmt(t); toplam += t;
+      });
+      tablo.querySelector('.fn-toplam').textContent = fmt(toplam);
+    }
+    document.querySelectorAll('.fn-kalem-tablo').forEach(function (tablo) {
+      var sablon = tablo.querySelector('tbody tr').cloneNode(true);
+      tablo.addEventListener('input', function () { hesapla(tablo); });
+      tablo.addEventListener('click', function (e) {
+        if (e.target.classList.contains('fn-satir-sil')) {
+          var tb = tablo.querySelector('tbody');
+          if (tb.querySelectorAll('tr').length > 1) e.target.closest('tr').remove(); else e.target.closest('tr').querySelectorAll('input').forEach(function (i) { i.value = i.classList.contains('fn-adet') ? '1' : ''; });
+          hesapla(tablo);
+        }
+      });
+      tablo.closest('.modal').querySelector('.fn-satir-ekle').addEventListener('click', function () {
+        var yeni = sablon.cloneNode(true); yeni.querySelectorAll('input').forEach(function (i) { i.value = i.classList.contains('fn-adet') ? '1' : ''; });
+        tablo.querySelector('tbody').appendChild(yeni); yeni.querySelector('input').focus();
+      });
+    });
+    document.querySelectorAll('.fn-cari-iptal').forEach(function (f) {
+      f.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var msg = 'Bu hareket iptal edilsin mi? Bakiye (ve varsa kasa hareketi) geri alınır.';
+        if (window.GS && GS.showConfirmSheet) GS.showConfirmSheet(msg, function () { f.submit(); }); else if (confirm(msg)) f.submit();
+      });
+    });
+  })();
+</script>
+{% endblock %}

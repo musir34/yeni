@@ -21,3 +21,14 @@ iki tür gider (tek seferlik küçük gider + aylık tekrar eden ana gider) iste
 
 **Deploy:** `git pull && DISABLE_JOBS=1 venv/bin/python scripts/create_finans_tables.py && systemctl restart gullupanel.service`
 (script additive + idempotent; 3 hesabı seed eder).
+
+## Ek (aynı gün): Cari Hesaplar (/finans/cari)
+**Ne:** Tedarikçi/müşteri cari defteri: `finans_cari`, `finans_cari_hareket`, `finans_cari_kalem`
+(scripts/create_finans_cari_tables.py, additive). Kod: `finans_cari_service.py` + `finans_cari.py`
+(aynı `finans_bp`, finans.py sonunda import). Şablon: finans_cari.html, finans_cari_detay.html.
+**Neden:** "Her mal geldiğinde ne aldığımızı giriyorum, hesapları tutabileyim" — kalem dökümlü borç takibi.
+**Kurallar:** bakiye = bizim borcumuz (+ borç / − alacak). Mal girişi & satış kalemli, kasaya dokunmaz.
+Ödeme → Elde/Banka'dan `cari_odeme` gideri + borç ↓; Tahsilat → Beyazıt'a `cari_tahsilat` + alacak ↓;
+ikisi tek transaction, `islem_id` bağı. İptal iki yönden de iki tarafı geri alır. Bakiyeli hesap kapatılamaz.
+Rapor/panel'de cari ödeme & tahsilat ayrı kolon.
+**Deploy:** `DISABLE_JOBS=1 ../venv/bin/python scripts/create_finans_cari_tables.py` + restart.

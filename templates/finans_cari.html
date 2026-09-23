@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Cari Hesaplar - Finans{% endblock %}
+{% block content %}
+{% include '_finans_nav.html' %}
+
+{% if tutarsizlik %}
+<div class="alert alert-danger"><strong>⚠️ Cari bakiye tutarsızlığı!</strong>
+  {% for t in tutarsizlik %}<div>{{ t.cari.ad }}: bakiye {{ t.bakiye | tl_format }} ₺, defter {{ t.defter | tl_format }} ₺</div>{% endfor %}
+</div>
+{% endif %}
+
+<div class="row">
+  <div class="col-lg-4">
+    <div class="card fn-card">
+      <div class="card-header fw-bold">➕ Yeni Cari Hesap</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('finans.cari_ekle') }}">
+          <div class="mb-2"><input type="text" name="ad" class="form-control" placeholder="Hesap adı (örn. Ahmet Deri, Taban Ltd.)" required maxlength="150"></div>
+          <div class="row g-2 mb-2">
+            <div class="col-6"><select name="tur" class="form-select">{% for k, v in tur_etiket.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+            <div class="col-6"><input type="text" name="telefon" class="form-control" placeholder="Telefon (ops.)"></div>
+          </div>
+          <div class="mb-2"><input type="text" name="notlar" class="form-control" placeholder="Not (ops.)"></div>
+          <button class="btn btn-primary w-100">Hesap Aç</button>
+        </form>
+      </div>
+    </div>
+    <div class="card fn-card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between"><span class="fn-mini">Toplam borcumuz</span><span class="fn-neg">{{ ozet.borc | tl_format }} ₺</span></div>
+        <div class="d-flex justify-content-between"><span class="fn-mini">Toplam alacağımız</span><span class="fn-pos">{{ ozet.alacak | tl_format }} ₺</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card fn-card">
+      <div class="card-header fw-bold">📒 Cari Hesaplar</div>
+      <div class="card-body p-0 fn-table-wrap">
+        <table class="table table-sm table-hover fn-table mb-0">
+          <thead><tr><th>Hesap</th><th>Tür</th><th>Telefon</th><th class="fn-num">Bakiye</th><th>Durum</th><th></th></tr></thead>
+          <tbody>
+          {% for c in cariler %}
+            <tr class="{{ 'text-muted' if not c.aktif }}">
+              <td><a href="{{ url_for('finans.cari_detay', cari_id=c.id) }}" class="fw-semibold text-decoration-none">{{ c.ad }}</a>{% if c.notlar %}<div class="fn-mini">{{ c.notlar }}</div>{% endif %}</td>
+              <td>{{ tur_etiket.get(c.tur, c.tur) }}</td>
+              <td class="fn-mini">{{ c.telefon or '' }}</td>
+              <td class="fn-num {{ 'fn-neg' if c.bakiye > 0 else ('fn-pos' if c.bakiye < 0 else '') }}">{{ (c.bakiye | abs) | tl_format }} ₺</td>
+              <td class="fn-mini">{% if c.bakiye > 0 %}Borçluyuz{% elif c.bakiye < 0 %}Alacaklıyız{% else %}Sıfır{% endif %}{% if not c.aktif %} · <span class="badge bg-secondary">kapalı</span>{% endif %}</td>
+              <td class="fn-actions text-end">
+                <form method="POST" action="{{ url_for('finans.cari_pasif', cari_id=c.id) }}" class="d-inline">
+                  <input type="hidden" name="aktif" value="{{ '0' if c.aktif else '1' }}">
+                  <button class="btn btn-sm {{ 'btn-outline-secondary' if c.aktif else 'btn-outline-success' }}" title="{{ 'Kapat (bakiye sıfır olmalı)' if c.aktif else 'Yeniden aç' }}">{{ 'Kapat' if c.aktif else 'Aç' }}</button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="text-muted p-3">Henüz cari hesap yok. Mal aldığınız yerler için soldan hesap açın.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

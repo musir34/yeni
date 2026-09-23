@@ -29,11 +29,19 @@
     <div class="row text-center">
       <div class="col-6 col-md-3"><div class="fn-mini">Gelir</div><div class="fn-pos fs-5">{{ ozet.gelir | tl_format }} ₺</div></div>
       <div class="col-6 col-md-3"><div class="fn-mini">Küçük Gider</div><div class="fn-neg fs-5">{{ ozet.kucuk_gider | tl_format }} ₺</div></div>
-      <div class="col-6 col-md-3"><div class="fn-mini">Ana Gider (ödenen)</div><div class="fn-neg fs-5">{{ ozet.ana_gider | tl_format }} ₺</div></div>
+      <div class="col-6 col-md-3"><div class="fn-mini">Ana Gider (ödenen)</div><div class="fn-neg fs-5">{{ ozet.ana_gider | tl_format }} ₺</div>{% if ozet.cari_odeme %}<div class="fn-mini">+ cari ödeme {{ ozet.cari_odeme | tl_format }} ₺</div>{% endif %}</div>
       <div class="col-6 col-md-3"><div class="fn-mini">Bekleyen Ana Gider</div><div class="text-warning fs-5 fw-bold">{{ ozet.bekleyen_adet }} kalem · {{ ozet.bekleyen_tutar | tl_format }} ₺</div></div>
     </div>
   </div>
 </div>
+
+{% if cari_ozet.borc or cari_ozet.alacak %}
+<div class="alert alert-light border d-flex flex-wrap gap-3 py-2">
+  <span>📒 <a href="{{ url_for('finans.cari_liste') }}">Cari</a>:</span>
+  <span class="fn-mini">Borcumuz <b class="fn-neg">{{ cari_ozet.borc | tl_format }} ₺</b></span>
+  <span class="fn-mini">Alacağımız <b class="fn-pos">{{ cari_ozet.alacak | tl_format }} ₺</b></span>
+</div>
+{% endif %}
 
 <div class="row">
   <div class="col-lg-5">

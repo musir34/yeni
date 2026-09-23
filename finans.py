@@ -65,6 +65,11 @@ def _bugun_ist() -> str:
     return to_ist(datetime.utcnow()).strftime('%Y-%m-%d')
 
 
+def _cari_ozet() -> dict:
+    import finans_cari_service as cs  # tembel import: finans_cari(.py) bu modülü import ediyor
+    return cs.cari_ozet()
+
+
 # ============================== #
 #   PANEL / TRANSFER             #
 # ============================== #
@@ -77,7 +82,8 @@ def panel():
                            ozet=fs.donem_ozet(donem),
                            son_islemler=fs.son_islemler(15),
                            bugun=_bugun_ist(),
-                           tutarsizlik=fs.tutarlilik_kontrol())
+                           tutarsizlik=fs.tutarlilik_kontrol(),
+                           cari_ozet=_cari_ozet())
 
 
 @finans_bp.route('/transfer', methods=['POST'])
@@ -424,6 +430,10 @@ def rapor():
         yil = bu_yil
     satirlar = fs.yillik_rapor(yil)
     toplam = {k: sum((s[k] for s in satirlar), 0)
-              for k in ('gelir', 'kucuk_gider', 'ana_gider', 'toplam_gider', 'net')}
+              for k in ('gelir', 'cari_tahsilat', 'kucuk_gider', 'ana_gider', 'cari_odeme', 'toplam_gider', 'net')}
     return render_template('finans_rapor.html', yil=yil, bu_yil=bu_yil, satirlar=satirlar,
                            toplam=toplam, tutarsizlik=fs.tutarlilik_kontrol())
+
+
+# Cari hesap route'ları aynı blueprint'e finans_cari.py'de eklenir (dosya boyutu için ayrı).
+import finans_cari  # noqa: E402,F401

@@ -26,7 +26,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
 from models import (db, FinansHesap, FinansKategori, FinansGiderAdi,
-                    FinansAnaGiderKalem, FinansIslem)
+                    FinansAnaGiderKalem, FinansIslem, FinansCari, FinansCariHareket)
 from time_utils import ist_to_utc, to_ist
 
 logger = logging.getLogger(__name__)
@@ -35,11 +35,13 @@ HESAP_KODLARI = ('beyazit', 'elde', 'banka')
 GELIR_HESABI = 'beyazit'
 GIDER_HESAPLARI = ('elde', 'banka')
 KATEGORI_TURLERI = ('gelir', 'kucuk_gider', 'ana_gider')
-ISLEM_TURLERI = ('gelir', 'kucuk_gider', 'ana_gider', 'transfer_cikis', 'transfer_giris')
+ISLEM_TURLERI = ('gelir', 'kucuk_gider', 'ana_gider', 'transfer_cikis', 'transfer_giris',
+                 'cari_odeme', 'cari_tahsilat')
 KATEGORI_TUR_ETIKET = {'gelir': 'Gelir', 'kucuk_gider': 'Küçük Gider', 'ana_gider': 'Ana Gider'}
 ISLEM_TUR_ETIKET = {
     'gelir': 'Gelir', 'kucuk_gider': 'Küçük Gider', 'ana_gider': 'Ana Gider',
     'transfer_cikis': 'Transfer (Çıkış)', 'transfer_giris': 'Transfer (Giriş)',
+    'cari_odeme': 'Cari Ödeme', 'cari_tahsilat': 'Cari Tahsilat',
 }
 IKI_HANE = Decimal('0.01')
 
@@ -284,6 +286,22 @@ def transfer_yap(kaynak_kodu: str, hedef_kodu: str, tutar: Decimal, tarih: datet
         raise
 
 
+def cari_hareket_geri_al(h: FinansCariHareket, kullanici_id: int, simdi: datetime) -> None:
+    """Cari hareketi iptal işaretle + cari bakiyeyi ters delta ile geri al. COMMIT ETMEZ.
+    Hem islem_iptal (kasa bağlı) hem finans_cari_service.hareket_iptal (bağsız) buradan geçer."""
+    h = db.session.query(FinansCariHareket).filter_by(id=h.id).with_for_update().one()
+    db.session.refresh(h)
+    if h.iptal:
+        raise FinansHata('Bu cari hareket az önce başka bir istekle iptal edildi.')
+    cari = db.session.query(FinansCari).filter_by(id=h.cari_id).with_for_update().one()
+    db.session.refresh(cari)
+    cari.bakiye = Decimal(str(cari.bakiye or 0)) - h.yon * Decimal(str(h.tutar))
+    cari.guncelleme_tarihi = simdi
+    h.iptal = True
+    h.iptal_tarihi = simdi
+    h.iptal_kullanici_id = kullanici_id
+
+
 def islem_iptal(islem_id: int, kullanici_id: int, neden: str = None,
                 commit: bool = True) -> list:
     """İşlemi (transferse iki bacağını) iptal eder; bakiyeyi ters delta ile geri alır."""
@@ -319,6 +337,9 @@ def islem_iptal(islem_id: int, kullanici_id: int, neden: str = None,
             b.iptal_tarihi = simdi
             b.iptal_kullanici_id = kullanici_id
             b.iptal_neden = (neden or '').strip()[:255] or None
+            # Cari bağlı işlem (cari_odeme / cari_tahsilat): cari hareketi de birlikte geri al
+            if b.cari_hareket and not b.cari_hareket.iptal:
+                cari_hareket_geri_al(b.cari_hareket, kullanici_id, simdi)
         if commit:
             db.session.commit()
         return bacaklar
@@ -364,8 +385,8 @@ def islem_duzelt(islem_id: int, kullanici_id: int, yeni_tutar: Decimal = None,
             raise FinansHata('İşlem bulunamadı.')
         if eski.iptal:
             raise FinansHata('İptal edilmiş işlem düzeltilemez.')
-        if eski.tur in ('transfer_cikis', 'transfer_giris'):
-            raise FinansHata('Transferi düzeltmek için iptal edip yeniden oluşturun.')
+        if eski.tur in ('transfer_cikis', 'transfer_giris', 'cari_odeme', 'cari_tahsilat'):
+            raise FinansHata('Bu işlemi düzeltmek için iptal edip yeniden oluşturun.')
         tutar = yeni_tutar or Decimal(str(eski.tutar))
         tarih = yeni_tarih or eski.tarih
         hesap_kodu = yeni_hesap_kodu or eski.hesap.kod
@@ -637,10 +658,13 @@ def donem_ozet(donem: str) -> dict:
     gelir = _donem_toplam(donem, 'gelir')
     kucuk = _donem_toplam(donem, 'kucuk_gider')
     ana = _donem_toplam(donem, 'ana_gider')
+    cari_odeme = _donem_toplam(donem, 'cari_odeme')
+    cari_tahsilat = _donem_toplam(donem, 'cari_tahsilat')
     return {
         'donem': donem, 'etiket': donem_etiket(donem),
         'gelir': gelir, 'kucuk_gider': kucuk, 'ana_gider': ana,
-        'toplam_gider': kucuk + ana, 'net': gelir - kucuk - ana,
+        'cari_odeme': cari_odeme, 'cari_tahsilat': cari_tahsilat,
+        'toplam_gider': kucuk + ana + cari_odeme, 'net': gelir + cari_tahsilat - kucuk - ana - cari_odeme,
         'bekleyen_adet': len(bekleyen),
         'bekleyen_tutar': sum((Decimal(str(d['kalem'].varsayilan_tutar or 0)) for d in bekleyen), Decimal('0.00')),
         'bekleyenler': bekleyen,
@@ -654,9 +678,13 @@ def yillik_rapor(yil: int) -> list:
         gelir = _donem_toplam(donem, 'gelir')
         kucuk = _donem_toplam(donem, 'kucuk_gider')
         ana = _donem_toplam(donem, 'ana_gider')
+        cari_odeme = _donem_toplam(donem, 'cari_odeme')
+        cari_tahsilat = _donem_toplam(donem, 'cari_tahsilat')
         satirlar.append({'donem': donem, 'etiket': donem_etiket(donem), 'gelir': gelir,
                          'kucuk_gider': kucuk, 'ana_gider': ana,
-                         'toplam_gider': kucuk + ana, 'net': gelir - kucuk - ana})
+                         'cari_odeme': cari_odeme, 'cari_tahsilat': cari_tahsilat,
+                         'toplam_gider': kucuk + ana + cari_odeme,
+                         'net': gelir + cari_tahsilat - kucuk - ana - cari_odeme})
     return satirlar
 
 

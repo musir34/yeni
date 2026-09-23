@@ -24,14 +24,16 @@
       </div>
       <div class="card-body p-0 fn-table-wrap">
         <table class="table table-sm table-hover fn-table mb-0">
-          <thead><tr><th>Ay</th><th class="fn-num">Gelir</th><th class="fn-num">Küçük Gider</th><th class="fn-num">Ana Gider</th><th class="fn-num">Toplam Gider</th><th class="fn-num">Net</th></tr></thead>
+          <thead><tr><th>Ay</th><th class="fn-num">Gelir</th><th class="fn-num">Cari Tahsilat</th><th class="fn-num">Küçük Gider</th><th class="fn-num">Ana Gider</th><th class="fn-num">Cari Ödeme</th><th class="fn-num">Toplam Gider</th><th class="fn-num">Net</th></tr></thead>
           <tbody>
           {% for s in satirlar %}
             <tr class="{{ 'table-active' if s.donem == fn_bugun_donem }}">
               <td><a href="{{ url_for('finans.ana_gider', donem=s.donem) }}" class="text-decoration-none">{{ s.etiket }}</a></td>
               <td class="fn-num fn-pos">{{ s.gelir | tl_format }}</td>
+              <td class="fn-num">{{ s.cari_tahsilat | tl_format }}</td>
               <td class="fn-num">{{ s.kucuk_gider | tl_format }}</td>
               <td class="fn-num">{{ s.ana_gider | tl_format }}</td>
+              <td class="fn-num">{{ s.cari_odeme | tl_format }}</td>
               <td class="fn-num fn-neg">{{ s.toplam_gider | tl_format }}</td>
               <td class="fn-num {{ 'fn-pos' if s.net >= 0 else 'fn-neg' }}">{{ s.net | tl_format }}</td>
             </tr>
@@ -40,8 +42,10 @@
           <tfoot><tr class="fw-bold">
             <td>Yıl toplamı</td>
             <td class="fn-num fn-pos">{{ toplam.gelir | tl_format }}</td>
+            <td class="fn-num">{{ toplam.cari_tahsilat | tl_format }}</td>
             <td class="fn-num">{{ toplam.kucuk_gider | tl_format }}</td>
             <td class="fn-num">{{ toplam.ana_gider | tl_format }}</td>
+            <td class="fn-num">{{ toplam.cari_odeme | tl_format }}</td>
             <td class="fn-num fn-neg">{{ toplam.toplam_gider | tl_format }}</td>
             <td class="fn-num {{ 'fn-pos' if toplam.net >= 0 else 'fn-neg' }}">{{ toplam.net | tl_format }}</td>
           </tr></tfoot>
