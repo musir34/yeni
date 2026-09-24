@@ -45,4 +45,6 @@ yutar, mevcut davranış korunur. Rollback: modeli üretim modundan çıkar → 
 
 - Kargo çıktısı (2026-07-28): Üretildi tıklanınca (ve her karttaki 🖨 ile) kargo diyaloğu — 'Yazdır (normal akış)' `/order-label` formuna POST (sipariş hazırla ile birebir alanlar), 'Otomatik Gönderim' kodu kopyalar+overlay gösterir (sipariş hazırladaki autoShip karşılığı). Liste API'si kargo verisini orders_created/hazirlaniyor/picking/shipped'den canlı çeker; cargo_tracking_number sipariş Yeni'yken zaten mevcut, /order-label statü kontrolü yapmaz. Not: 'Otomatik Gönderim' backend'de ayrı akış DEĞİL, yalnız istemci tarafı yazdırma tercihi.
 
+- Raf önceliği kanıt testi (2026-09-24): Komutan "iade rafa girince tekrar sipariş üretime düşmesin, beden bazında stok varsa normal yol" istedi — davranış 2026-07-31 raf önceliğiyle ZATEN vardı, kod değişmedi; `tests/test_uretim_raf_onceligi.py` (4 test, izole sqlite) senaryoyu kanıtlıyor: rafta olan beden üretime yazılmaz, olmayan yazılır; iade rafa okutulunca (RafUrun) sonraki sipariş üretime düşmez; adet yetmiyorsa üretime girer. Bilinen sınır aynen duruyor: rezerv düşülmez (iyimser), iade merkeze yazılıp rafa OKUTULMAZSA görülmez.
+
 İlgili: [[project-listing-buffer-cancel-prone]], [[project-stock-ledger]]
