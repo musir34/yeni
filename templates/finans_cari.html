@@ -32,6 +32,9 @@
       <div class="card-body">
         <div class="d-flex justify-content-between"><span class="fn-mini">Toplam borcumuz</span><span class="fn-neg">{{ ozet.borc | tl_format }} ₺</span></div>
         <div class="d-flex justify-content-between"><span class="fn-mini">Toplam alacağımız</span><span class="fn-pos">{{ ozet.alacak | tl_format }} ₺</span></div>
+        {% if ozet.sahsi %}
+        <div class="d-flex justify-content-between"><span class="fn-mini">Kasadan aldığım borç</span><span class="fn-neg">{{ ozet.sahsi | tl_format }} ₺</span></div>
+        {% endif %}
         {% if ozet.borc_usd or ozet.alacak_usd %}
         <div class="d-flex justify-content-between"><span class="fn-mini">Dolar borcumuz</span><span class="fn-neg">{{ ozet.borc_usd | tl_format }} $</span></div>
         <div class="d-flex justify-content-between"><span class="fn-mini">Dolar alacağımız</span><span class="fn-pos">{{ ozet.alacak_usd | tl_format }} $</span></div>
@@ -53,7 +56,7 @@
               <td>{{ tur_etiket.get(c.tur, c.tur) }}{% if c.para_birimi == 'USD' %} <span class="badge bg-info text-dark">$</span>{% endif %}</td>
               <td class="fn-mini">{{ c.telefon or '' }}</td>
               <td class="fn-num {{ 'fn-neg' if c.bakiye > 0 else ('fn-pos' if c.bakiye < 0 else '') }}">{{ (c.bakiye | abs) | tl_format }} {{ para_sembol.get(c.para_birimi, '₺') }}</td>
-              <td class="fn-mini">{% if c.bakiye > 0 %}Borçluyuz{% elif c.bakiye < 0 %}Alacaklıyız{% else %}Sıfır{% endif %}{% if not c.aktif %} · <span class="badge bg-secondary">kapalı</span>{% endif %}</td>
+              <td class="fn-mini">{% if c.bakiye > 0 %}Borçluyuz{% elif c.bakiye < 0 %}{{ 'Kasaya borcum' if c.tur == 'sahsi' else 'Alacaklıyız' }}{% else %}Sıfır{% endif %}{% if not c.aktif %} · <span class="badge bg-secondary">kapalı</span>{% endif %}</td>
               <td class="fn-actions text-end">
                 <form method="POST" action="{{ url_for('finans.cari_pasif', cari_id=c.id) }}" class="d-inline">
                   <input type="hidden" name="aktif" value="{{ '0' if c.aktif else '1' }}">

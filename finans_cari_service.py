@@ -9,6 +9,8 @@ Hareketler (yon: +1 borcumuz artar, -1 azalır):
 - odeme    (-1) ona ödedik → Elde/Banka'dan `cari_odeme` gider kaydı (finans_service._hareket)
 - satis    (-1) ona mal verdik (alacak), kalem dökümlü; kasaya dokunmaz
 - tahsilat (+1) o bize ödedi → Beyazıt'a `cari_tahsilat` gelir kaydı
+- borc_alma  (-1) yalnız şahsi hesapta: kasadan kendimize aldığımız borç; kasa tarafı ödeme gibi
+- borc_odeme (+1) yalnız şahsi hesapta: bu borcun kasaya geri ödenmesi; kasa tarafı tahsilat gibi
 
 Kasa bağı olan hareketler tek transaction'da yazılır ve finans_cari_hareket.islem_id ile
 bağlanır; iptal iki tarafı birlikte geri alır (finans_service.islem_iptal bağı tanır).
@@ -29,12 +31,14 @@ from models import db, FinansCari, FinansCariHareket, FinansCariKalem, FinansIsl
 import finans_service as fs
 from finans_service import FinansHata, IKI_HANE
 
-CARI_TURLERI = ('tedarikci', 'musteri', 'diger', 'calisan')
-CARI_TUR_ETIKET = {'tedarikci': 'Tedarikçi', 'musteri': 'Müşteri', 'diger': 'Diğer', 'calisan': 'Çalışan'}
+CARI_TURLERI = ('tedarikci', 'musteri', 'diger', 'calisan', 'sahsi')
+CARI_TUR_ETIKET = {'tedarikci': 'Tedarikçi', 'musteri': 'Müşteri', 'diger': 'Diğer', 'calisan': 'Çalışan',
+                  'sahsi': 'Şahsi (kasadan borç)'}
 HAREKET_TURLERI = {'alim': +1, 'odeme': -1, 'satis': -1, 'tahsilat': +1,
-                  'hakedis': +1, 'hakedis_azaltma': -1}
+                  'hakedis': +1, 'hakedis_azaltma': -1, 'borc_alma': -1, 'borc_odeme': +1}
 HAREKET_ETIKET = {'alim': 'Mal Girişi', 'odeme': 'Ödeme', 'satis': 'Satış', 'tahsilat': 'Tahsilat',
-                 'hakedis': 'Hak ediş', 'hakedis_azaltma': 'Hak ediş düzeltmesi'}
+                 'hakedis': 'Hak ediş', 'hakedis_azaltma': 'Hak ediş düzeltmesi',
+                 'borc_alma': 'Kasadan borç aldım', 'borc_odeme': 'Borç geri ödemesi'}
 PARA_BIRIMLERI = ('TRY', 'USD')
 PARA_SEMBOL = {'TRY': '₺', 'USD': '$'}
 PARA_ETIKET = {'TRY': 'Türk Lirası (₺)', 'USD': 'Dolar ($)'}
@@ -59,6 +63,15 @@ def parse_kur(raw) -> Decimal:
     if kur <= 0:
         raise FinansHata('Dolar kuru sıfırdan büyük olmalı.')
     return kur
+
+
+def _sahsi_kontrol(cari: FinansCari, tur: str) -> None:
+    """Şahsi hesapta yalnız borç alma/geri ödeme; diğer hesaplarda bu ikisi kullanılamaz."""
+    sahsi_hareket = tur in ('borc_alma', 'borc_odeme')
+    if cari.tur == 'sahsi' and not sahsi_hareket:
+        raise FinansHata('Şahsi hesapta yalnız kasadan borç alma ve geri ödeme kaydedilir.')
+    if cari.tur != 'sahsi' and sahsi_hareket:
+        raise FinansHata('Kasadan borç alma yalnız şahsi hesapta kullanılır.')
 
 
 def _para_birimi_kontrol(tur: str, para_birimi: str) -> str:
@@ -140,6 +153,8 @@ def cari_guncelle(cari_id, ad: str, tur: str, telefon: str, notlar: str,
         raise FinansHata('Çalışan hesabının türü değiştirilemez.')
     if c.tur != 'calisan' and tur == 'calisan' and c.hareketler.first():
         raise FinansHata('Hareketi olan cari çalışan hesabına çevrilemez; ayrı bir çalışan hesabı açın.')
+    if (c.tur == 'sahsi') != (tur == 'sahsi') and c.hareketler.first():
+        raise FinansHata('Hareketi olan hesap şahsi hesaba çevrilemez (ya da tersi); ayrı bir hesap açın.')
     para_birimi = _para_birimi_kontrol(tur, para_birimi or c.para_birimi)
     if para_birimi != (c.para_birimi or 'TRY') and c.hareketler.first():
         raise FinansHata('Hareketi olan hesabın para birimi değiştirilemez; yeni bir hesap açın.')
@@ -230,6 +245,8 @@ def mal_girisi(cari_id, kalemler: list[dict], tarih: datetime, aciklama: str, ku
         cari = cari_getir(cari_id, kilitle=True)
         if cari.tur == 'calisan':
             raise FinansHata('Çalışan hak edişini düzenli ödeme planından girin.')
+        if cari.tur == 'sahsi':
+            raise FinansHata('Şahsi hesapta yalnız kasadan borç alma ve geri ödeme kaydedilir.')
         if not cari.aktif:
             raise FinansHata('Kapalı cari hesaba hareket girilemez.')
         h = _cari_hareket(cari, tur, toplam, tarih, aciklama or (', '.join(k['ad'] for k in kalemler)[:500]),
@@ -242,9 +259,10 @@ def mal_girisi(cari_id, kalemler: list[dict], tarih: datetime, aciklama: str, ku
 
 
 def odeme_yap(cari_id, hesap_kodu: str, tutar: Decimal, tarih: datetime, aciklama: str,
-              kullanici_id: int, kur: Decimal = None) -> FinansCariHareket:
+              kullanici_id: int, kur: Decimal = None, tur: str = 'odeme') -> FinansCariHareket:
     """Ona ödedik: Elde/Banka'dan cari_odeme gideri + cari borç ↓ (tek transaction).
-    USD caride tutar dolardır; kasadan tutar×kur TL düşer."""
+    USD caride tutar dolardır; kasadan tutar×kur TL düşer.
+    tur='borc_alma': şahsi hesapta kasadan kendimize aldığımız borç (kasa tarafı aynı)."""
     try:
         fs._gider_hesabi_kontrol(hesap_kodu)
         # Kilit sırası her yerde hesap → cari (islem_iptal ile aynı) — deadlock önleme
@@ -252,13 +270,15 @@ def odeme_yap(cari_id, hesap_kodu: str, tutar: Decimal, tarih: datetime, aciklam
         cari = cari_getir(cari_id, kilitle=True)
         if cari.tur == 'calisan':
             raise FinansHata('Çalışana ödeme yapmak için hesabındaki ilgili haftayı seçin.')
+        _sahsi_kontrol(cari, tur)
         if not cari.aktif:
             raise FinansHata('Kapalı cari hesaba hareket girilemez.')
-        aciklama = (aciklama or '').strip() or f'{cari.ad} — ödeme'
+        aciklama = (aciklama or '').strip() or (f'{cari.ad} — kasadan borç' if tur == 'borc_alma'
+                                                else f'{cari.ad} — ödeme')
         kasa_tutar, kur = _kasa_tutari(cari, tutar, kur)
         islem = fs._hareket(hesap, 'cari_odeme', -1, kasa_tutar, tarih, kullanici_id,
                             aciklama=_kasa_aciklama(aciklama, tutar, kur))
-        h = _cari_hareket(cari, 'odeme', tutar, tarih, aciklama, kullanici_id, islem_id=islem.id, kur=kur)
+        h = _cari_hareket(cari, tur, tutar, tarih, aciklama, kullanici_id, islem_id=islem.id, kur=kur)
         db.session.commit()
         return h
     except Exception:
@@ -267,22 +287,25 @@ def odeme_yap(cari_id, hesap_kodu: str, tutar: Decimal, tarih: datetime, aciklam
 
 
 def tahsilat_al(cari_id, tutar: Decimal, tarih: datetime, aciklama: str,
-                kullanici_id: int, kur: Decimal = None) -> FinansCariHareket:
+                kullanici_id: int, kur: Decimal = None, tur: str = 'tahsilat') -> FinansCariHareket:
     """O bize ödedi: Beyazıt'a cari_tahsilat geliri + cari alacak ↓ (tek transaction).
-    USD caride tutar dolardır; Beyazıt'a tutar×kur TL girer."""
+    USD caride tutar dolardır; Beyazıt'a tutar×kur TL girer.
+    tur='borc_odeme': şahsi hesapta kasadan alınan borcun geri ödenmesi (kasa tarafı aynı)."""
     try:
         # Kilit sırası hesap → cari (islem_iptal ile aynı) — deadlock önleme
         hesap = fs.hesap_getir(fs.GELIR_HESABI, kilitle=True)
         cari = cari_getir(cari_id, kilitle=True)
         if cari.tur == 'calisan':
             raise FinansHata('Çalışan ödemesini düzeltmek için ilgili ödemeyi iptal edin.')
+        _sahsi_kontrol(cari, tur)
         if not cari.aktif:
             raise FinansHata('Kapalı cari hesaba hareket girilemez.')
-        aciklama = (aciklama or '').strip() or f'{cari.ad} — tahsilat'
+        aciklama = (aciklama or '').strip() or (f'{cari.ad} — borç geri ödemesi' if tur == 'borc_odeme'
+                                                else f'{cari.ad} — tahsilat')
         kasa_tutar, kur = _kasa_tutari(cari, tutar, kur)
         islem = fs._hareket(hesap, 'cari_tahsilat', +1, kasa_tutar, tarih, kullanici_id,
                             aciklama=_kasa_aciklama(aciklama, tutar, kur))
-        h = _cari_hareket(cari, 'tahsilat', tutar, tarih, aciklama, kullanici_id, islem_id=islem.id, kur=kur)
+        h = _cari_hareket(cari, tur, tutar, tarih, aciklama, kullanici_id, islem_id=islem.id, kur=kur)
         db.session.commit()
         return h
     except Exception:
@@ -323,11 +346,15 @@ def hareketler(cari_id, iptal_goster: bool = False, sayfa: int = 1, adet: int = 
 
 
 def cari_ozet() -> dict:
-    """Aktif hesaplar: toplam borcumuz ve toplam alacağımız; TL ve USD ayrı toplanır."""
-    borc = alacak = borc_usd = alacak_usd = Decimal('0.00')
+    """Aktif hesaplar: toplam borcumuz ve toplam alacağımız; TL ve USD ayrı toplanır.
+    Şahsi hesapların (kasadan alınan borç) TL bakiyesi ayrı toplanır, alacağa karışmaz."""
+    borc = alacak = borc_usd = alacak_usd = sahsi = Decimal('0.00')
     for c in FinansCari.query.filter_by(aktif=True).all():
         b = Decimal(str(c.bakiye or 0))
         usd = (c.para_birimi or 'TRY') == 'USD'
+        if c.tur == 'sahsi' and b < 0 and not usd:
+            sahsi += -b
+            continue
         if b > 0:
             if usd:
                 borc_usd += b
@@ -338,7 +365,8 @@ def cari_ozet() -> dict:
                 alacak_usd += -b
             else:
                 alacak += -b
-    return {'borc': borc, 'alacak': alacak, 'borc_usd': borc_usd, 'alacak_usd': alacak_usd}
+    return {'borc': borc, 'alacak': alacak, 'borc_usd': borc_usd, 'alacak_usd': alacak_usd,
+            'sahsi': sahsi}
 
 
 def cari_tutarlilik_kontrol() -> list:

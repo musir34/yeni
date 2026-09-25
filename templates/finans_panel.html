@@ -35,11 +35,14 @@
   </div>
 </div>
 
-{% if cari_ozet.borc or cari_ozet.alacak or cari_ozet.borc_usd or cari_ozet.alacak_usd %}
+{% if cari_ozet.borc or cari_ozet.alacak or cari_ozet.borc_usd or cari_ozet.alacak_usd or cari_ozet.sahsi %}
 <div class="alert alert-light border d-flex flex-wrap gap-3 py-2">
   <span>📒 <a href="{{ url_for('finans.cari_liste') }}">Cari</a>:</span>
   <span class="fn-mini">Borcumuz <b class="fn-neg">{{ cari_ozet.borc | tl_format }} ₺</b></span>
   <span class="fn-mini">Alacağımız <b class="fn-pos">{{ cari_ozet.alacak | tl_format }} ₺</b></span>
+  {% if cari_ozet.sahsi %}
+  <span class="fn-mini">Kasadan aldığım borç <b class="fn-neg">{{ cari_ozet.sahsi | tl_format }} ₺</b></span>
+  {% endif %}
   {% if cari_ozet.borc_usd or cari_ozet.alacak_usd %}
   <span class="fn-mini">Dolar borcumuz <b class="fn-neg">{{ cari_ozet.borc_usd | tl_format }} $</b></span>
   <span class="fn-mini">Dolar alacağımız <b class="fn-pos">{{ cari_ozet.alacak_usd | tl_format }} $</b></span>
