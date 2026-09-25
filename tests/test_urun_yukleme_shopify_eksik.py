@@ -92,6 +92,8 @@ class SahteShopify:
             return {"productVariantAppendMedia": {"userErrors": []}}
         if "productOptionsReorder" in query:
             return {"productOptionsReorder": {"userErrors": []}}
+        if "productReorderMedia" in query:
+            return {"productReorderMedia": {"job": {"id": "j1"}, "mediaUserErrors": []}}
         raise AssertionError(f"beklenmeyen sorgu: {query[:80]}")
 
     def bul(self, parca: str) -> list[dict]:
@@ -114,8 +116,8 @@ def test_sitedeki_barkodlar_yalniz_barkodla_esler(sahte):
 
 def test_eksik_tamamla_yalniz_eksikleri_ekler(sahte):
     form = {"satis_fiyat": "999", "liste_fiyat": "1299", "stok": 5, "urun_turu": "Sandalet"}
-    renk_gorselleri = {"Bej": ["https://cdn/bej-1.jpg", "https://cdn/bej-2.jpg"],
-                       "Kırmızı": ["https://cdn/kirmizi-1.jpg"]}
+    # Kırmızı için görsel yüklenmedi (Getir indirmez; kullanıcı yalnız yeni renge yükledi)
+    renk_gorselleri = {"Bej": ["https://cdn/bej-1.jpg", "https://cdn/bej-2.jpg"]}
 
     sonuc = shopify_urun.eksik_tamamla(_taslak(), form, renk_gorselleri)
 
@@ -306,3 +308,54 @@ def test_eksik_tamamla_yeni_beden_sonrasi_sayisal_siralar(sahte):
     sahte.cagrilar.clear()
     shopify_urun.eksik_tamamla(_taslak(), form, {"Bej": ["https://cdn/b-1.jpg"]})  # 37 sona: sıra doğru
     assert not sahte.bul("productOptionsReorder")
+
+
+def test_galeri_bloguna_tasi_hamleleri_sirali_simule_eder(sahte):
+    """009 dersi: sona eklenen görseller kapağın hemen arkasına taşınır; hamleler
+    sırayla uygulandığında hedef dizilişi verir."""
+    sira = ["A", "B", "C", "N1", "N2"]         # A = Kırmızı kapağı; N1,N2 sona düşmüş
+    shopify_urun._galeri_bloguna_tasi(PID, sira, [("A", ["N1", "N2"])])
+    hamleler = sahte.bul("productReorderMedia")[0]["moves"]
+    # Simülasyon: hamleleri sırayla uygula → beklenen diziliş
+    guncel = list(sira)
+    for h in hamleler:
+        guncel.remove(h["id"]); guncel.insert(int(h["newPosition"]), h["id"])
+    assert guncel == ["A", "N1", "N2", "B", "C"]
+
+
+def test_galeri_bloguna_tasi_gerekmiyorsa_cagri_yok(sahte):
+    shopify_urun._galeri_bloguna_tasi(PID, ["A", "N1", "B"], [("A", ["N1"])])
+    assert not sahte.bul("productReorderMedia")
+
+
+def test_eksik_tamamla_kapakli_renge_ek_gorsel_bloguna_tasinir(sahte, monkeypatch):
+    """Kırmızı'nın kapağı var (MEDYA_KIRMIZI, galeride ilk). Kırmızı'ya 2 yeni görsel
+    yüklenince: galeriye eklenir, kapak değişmez, yeni görseller kapağın arkasına taşınır;
+    varyant açılmaz."""
+    orijinal = sahte.__call__
+
+    def galerili(query, variables, timeout=60):
+        d = orijinal(query, variables, timeout)
+        if "product(id: $id)" in query:
+            d["product"]["media"]["nodes"].append({"id": "B"})          # başka rengin görseli
+        if "productUpdate(product" in query:
+            d["productUpdate"]["product"]["media"]["nodes"].insert(1, {"id": "B"})  # yeniler SONA düştü
+        return d
+
+    monkeypatch.setattr(shopify_urun, "_graphql", galerili)
+    form = {"satis_fiyat": "1", "liste_fiyat": "1", "stok": 5}
+    taslak = _taslak()
+    taslak["bedenler"] = ["35", "36"]
+    taslak["renkler"] = {"Kırmızı": {"barkodlar": ["079950000001", "079950000002"],
+                                    "alt": ["Kırmızı sandalet ek 1", "Kırmızı sandalet ek 2"]}}
+    sonuc = shopify_urun.eksik_tamamla(taslak, form, {"Kırmızı": ["https://cdn/e-1.jpg", "https://cdn/e-2.jpg"]})
+    assert sonuc["ek_renkler"] == ["Kırmızı"] and sonuc["varyant"] == 0
+    assert not sahte.bul("productVariantsBulkCreate")
+    assert not sahte.bul("productVariantAppendMedia")       # kapak değişmedi
+    medya = sahte.bul("productUpdate(product")[0]["media"]
+    assert [m["alt"] for m in medya] == ["Kırmızı sandalet ek 1", "Kırmızı sandalet ek 2"]
+    hamleler = sahte.bul("productReorderMedia")[0]["moves"]
+    guncel = [MEDYA_KIRMIZI, "B", "gid://shopify/MediaImage/200", "gid://shopify/MediaImage/201"]
+    for h in hamleler:
+        guncel.remove(h["id"]); guncel.insert(int(h["newPosition"]), h["id"])
+    assert guncel == [MEDYA_KIRMIZI, "gid://shopify/MediaImage/200", "gid://shopify/MediaImage/201", "B"]

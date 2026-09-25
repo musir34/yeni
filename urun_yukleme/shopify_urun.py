@@ -248,6 +248,47 @@ def site_kapaksiz_renkler(pid: str) -> list[str]:
     return [r for r in hepsi if r not in kapakli]
 
 
+def _galeri_bloguna_tasi(pid: str, medya_sirasi: list[str],
+                         bloklar: list[tuple[str, list[str]]]) -> None:
+    """
+    Sonradan eklenen görselleri renginin bloğuna taşır (009 dersi: Shopify yeni
+    görseli galerinin SONUNA koyar; kapak PNG'leri sonda kalınca renk filtresi
+    bozulmuştu). bloklar: [(kapak_medya_id, [yeni_medya_id, ...])] → yeni
+    görseller kapağın hemen arkasına girer. productReorderMedia hamleleri SIRAYLA
+    uygulandığından hedef diziliş simüle edilip yalnız gereken hamleler gönderilir.
+    """
+    hedef = list(medya_sirasi)
+    for kapak, yeni in bloklar:
+        hedef = [m for m in hedef if m not in yeni]
+        if kapak in hedef:
+            k = hedef.index(kapak) + 1
+            hedef[k:k] = list(yeni)
+        else:
+            hedef += list(yeni)
+    guncel, hamleler = list(medya_sirasi), []
+    for i, mid in enumerate(hedef):
+        if i < len(guncel) and guncel[i] == mid:
+            continue
+        if mid in guncel:
+            guncel.remove(mid)
+        guncel.insert(i, mid)
+        hamleler.append({"id": mid, "newPosition": str(i)})
+    if not hamleler:
+        return
+    d = _graphql("""
+        mutation galeriSirala($id: ID!, $moves: [MoveInput!]!) {
+          productReorderMedia(id: $id, moves: $moves) {
+            job { id }
+            mediaUserErrors { field message code }
+          }
+        }""", {"id": pid, "moves": hamleler})
+    hatalar = d["productReorderMedia"]["mediaUserErrors"]
+    if hatalar:
+        logger.warning("[SHOPIFY-URUN] galeri blok taşıma uyarısı: %s", hatalar)
+    else:
+        logger.info("[SHOPIFY-URUN] galeri: %d görsel renk bloğuna taşındı", len(hamleler))
+
+
 def _medya_bekle(kimlikler: list[str]) -> None:
     """Yeni eklenen ürün medyası READY olana dek bekler (kapak ataması için şart)."""
     import time
@@ -328,8 +369,13 @@ def eksik_tamamla(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
     # (canlıda hâlâ kapaksızsa; metne/varyanta dokunulmaz)
     kapak_renkleri = [r for r in (taslak.get("shopify") or {}).get("kapaksiz_renkler") or []
                       if r in sitedeki_renkler and r not in kapaklar and renk_gorselleri.get(r)]
+    # KAPAKLI mevcut renge EK görsel: galeriye eklenir ve o rengin bloğuna
+    # (kapağının hemen arkasına) taşınır — Shopify yeni görseli galerinin
+    # sonuna koyar, blok bölünürse tema renk filtresi bozulur (009 dersi).
+    ek_renkler = [r for r in taslak["renkler"]
+                  if r in sitedeki_renkler and r in kapaklar and renk_gorselleri.get(r)]
 
-    if not yeni and not kapak_renkleri:
+    if not yeni and not kapak_renkleri and not ek_renkler:
         return {"product_id": pid, "handle": urun["handle"], "url": url, "varyant": 0,
                 "mesaj": "Sitede tüm renk/beden varyantları zaten var — yeni gönderim gerekmedi."}
     # "Yeni renk" = sitede hiç VARYANTI olmayan renk (görselleriyle açılır).
@@ -380,7 +426,7 @@ def eksik_tamamla(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
             mevcut_alt[m["alt"]] = m["id"]
     medya_girdi, blok_sira = [], []   # blok_sira: (renk, yeni yüklenen adet)
     urun_adi = urun.get("title") or form.get("urun_turu") or ""
-    for renk in yeni_renkler + kapak_renkleri:
+    for renk in yeni_renkler + kapak_renkleri + ek_renkler:
         urller = renk_gorselleri.get(renk) or []
         if not urller:
             raise RuntimeError(f"{renk} için görsel yok — yeni renk sitede görselsiz açılamaz.")
@@ -413,12 +459,18 @@ def eksik_tamamla(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
         if len(yeni_medya) != len(medya_girdi):
             logger.warning("[SHOPIFY-URUN] eklenen medya sayısı beklenenden farklı (%d/%d)",
                            len(yeni_medya), len(medya_girdi))
-        konum = 0
+        konum, tasinacak = 0, []
         for renk, adet in blok_sira:
-            if adet and konum < len(yeni_medya) and renk not in kapaklar:
-                kapaklar[renk] = yeni_medya[konum]
+            blok = yeni_medya[konum:konum + adet]
+            if adet and blok and renk not in kapaklar:
+                kapaklar[renk] = blok[0]
+            elif adet and blok and renk in ek_renkler:
+                tasinacak.append((kapaklar[renk], blok))  # kapağının arkasına
             konum += adet
         _medya_bekle(yeni_medya)
+        if tasinacak:
+            _galeri_bloguna_tasi(pid, [m["id"] for m in d["productUpdate"]["product"]["media"]["nodes"]],
+                                 tasinacak)
 
     # 3) Yalnız yeni varyantlar (SKU/barkod Trendyol standardı, stok formdan;
     #    stok senkron sonraki turda kendi değerine çeker)
@@ -470,11 +522,11 @@ def eksik_tamamla(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
     else:
         logger.warning("[SHOPIFY-URUN] eksik-tamamlama kapak ataması boş (%s)", urun["handle"])
 
-    logger.info("[SHOPIFY-URUN] %s: %d varyant eklendi (yeni renk: %s, yeni beden: %s, kapak: %s)",
-                urun["handle"], len(olusan), yeni_renkler, yeni_bedenler, kapak_renkleri)
+    logger.info("[SHOPIFY-URUN] %s: %d varyant eklendi (yeni renk: %s, yeni beden: %s, kapak: %s, ek görsel: %s)",
+                urun["handle"], len(olusan), yeni_renkler, yeni_bedenler, kapak_renkleri, ek_renkler)
     return {"product_id": pid, "handle": urun["handle"], "url": url,
             "varyant": len(olusan), "yeni_renkler": yeni_renkler, "yeni_bedenler": yeni_bedenler,
-            "kapak_renkleri": kapak_renkleri}
+            "kapak_renkleri": kapak_renkleri, "ek_renkler": ek_renkler}
 
 
 def _kapaklari_ata(urun: dict, renkler: list[str], renk_gorselleri: dict) -> None:

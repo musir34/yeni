@@ -455,8 +455,10 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
             alt_metinleri: dict[str, list[str]] = {}
             if "shopify" in hedefler and not f.get("aisiz"):
                 gorseller = bilgi.get("gorseller") or {}
-                # eksik modda: yeni renkler + görseli yüklenmiş kapaksız mevcut renkler
-                alt_renkler = (site_eksik_renkler + [r for r in site_kapaksiz if gorseller.get(r)]
+                # eksik modda: yeni renkler + görseli yüklenmiş her mevcut renk
+                # (kapaksıza kapak, kapaklıya ek görsel — ikisi de siteye gider)
+                alt_renkler = (site_eksik_renkler
+                               + [r for r in renkler if r not in site_eksik_renkler and gorseller.get(r)]
                                if site_eksik else renkler)
                 urun_adi = ((site_metin.get("genel") or {}).get("h1")
                             or site.get("title") or f.get("urun_turu") or "").strip()
@@ -528,9 +530,13 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                     "kapaksiz_renkler": site_kapaksiz,
                     # kapak atanacaklar = kapaksız + görseli yüklenmiş
                     "kapak_atanacak": [r for r in site_kapaksiz if (bilgi.get("gorseller") or {}).get(r)],
+                    # kapaklı mevcut renge EK görsel (bloğuna taşınır — 009 dersi)
+                    "ek_gorsel_renkler": [r for r in renkler
+                                          if r not in site_eksik_renkler and r not in site_kapaksiz
+                                          and (bilgi.get("gorseller") or {}).get(r)],
                 }
                 kapak_atanacak = shopify["kapak_atanacak"]
-                if not site_eksik_varyantlar and not kapak_atanacak:
+                if not site_eksik_varyantlar and not kapak_atanacak and not shopify["ek_gorsel_renkler"]:
                     uyarilar.append("Sitede bu modelin tüm renk/beden varyantları zaten var — "
                                     "Shopify'a yeni bir şey gönderilmez.")
                 gorselsiz_kapaksiz = [r for r in site_kapaksiz if r not in kapak_atanacak]
@@ -847,11 +853,25 @@ def _yukle_worker(app, taslak_id: str) -> None:
             sh = taslak.get("shopify") or {}
             urun_slug = shopify_urun._slug(sh.get("h1") or sh.get("mevcut_baslik")
                                            or form.get("urun_turu") or "")[:60]
-            gerekli = set(taslak["renkler"])
-            istege_bagli: set[str] = set()   # görseli varsa yüklenir, yoksa hata değil
-            if sh.get("mod") == "eksik" and "trendyol" not in hedefler:
-                gerekli = set(sh.get("eksik_renkler") or [])
-                istege_bagli = set(sh.get("kapak_atanacak") or [])
+            # Görsel ŞART olan renkler: Trendyol'a yeni varyant gidecekler + sitede
+            # yeni açılacaklar (tam yüklemede tümü). Diğerleri (eksik modda) isteğe
+            # bağlı: görseli varsa siteye kapak/ek görsel olarak gider, yoksa hata
+            # değil. Getir görsel indirmediğinden mevcut renklere görsel zorlanmaz.
+            zaten_var = set(taslak.get("mevcut_renkler") or [])
+            zaten_var_vb = {(v[0], v[1]) for v in taslak.get("mevcut_varyantlar") or []}
+            gerekli: set[str] = set()
+            if "trendyol" in hedefler:
+                gerekli |= {renk for renk, r in taslak["renkler"].items()
+                            if renk not in zaten_var
+                            and any(bc and (renk, b) not in zaten_var_vb
+                                    for b, bc in zip(taslak["bedenler"], r["barkodlar"]))}
+            if "shopify" in hedefler:
+                if sh.get("mod") == "eksik":
+                    gerekli |= set(sh.get("eksik_renkler") or [])
+                else:
+                    gerekli = set(taslak["renkler"])  # tam yükleme: her rengin görseli şart
+            istege_bagli: set[str] = (set(taslak["renkler"]) - gerekli
+                                      if sh.get("mod") == "eksik" else set())
             renk_gorselleri = taslak.get("cdn") or {}
             if not renk_gorselleri:
                 for renk in taslak["renkler"]:
