@@ -35,6 +35,37 @@ def _yayin_kanallari() -> list[str]:
     return [n["id"] for n in d["publications"]["nodes"]]
 
 
+def _beden_anahtar(b: str) -> tuple[int, float, str]:
+    """Sayısal sıralama: '35,5' → 35.5 (35 < 35,5 < 36); sayı olmayanlar sona."""
+    try:
+        return (0, float(str(b).strip().replace(",", ".")), "")
+    except ValueError:
+        return (1, 0.0, str(b))
+
+
+def bedenleri_sirala(bedenler: list[str]) -> list[str]:
+    """Sitede beden sırası seçenek değerlerinin sırasıdır: 35, 35,5, 36, 36,5 ...
+    (kullanıcı emri — önce tamlar sonra buçuklar dizilimi yanlış)."""
+    return sorted(bedenler, key=_beden_anahtar)
+
+
+def _beden_secenegini_sirala(pid: str, beden_opt: dict, degerler: list[str]) -> None:
+    """Sitedeki Beden seçeneğinin değerlerini sayısal sıraya koyar (productOptionsReorder)."""
+    sirali = bedenleri_sirala(degerler)
+    if sirali == list(degerler):
+        return
+    d = _graphql("""
+        mutation bedenSirala($productId: ID!, $options: [OptionReorderInput!]!) {
+          productOptionsReorder(productId: $productId, options: $options) {
+            userErrors { field message code }
+          }
+        }""", {"productId": pid,
+               "options": [{"id": beden_opt["id"], "values": [{"name": b} for b in sirali]}]})
+    hatalar = d["productOptionsReorder"]["userErrors"]
+    if hatalar:
+        logger.warning("[SHOPIFY-URUN] beden sıralama uyarısı: %s", hatalar)
+
+
 def gorsel_alt(taslak: dict, renk: str, i: int, varsayilan: str) -> str:
     """
     Görselin ALT metni: AI'nın görsele bakarak yazdığı metin (taslak.renkler[renk].alt,
@@ -107,7 +138,7 @@ def urun_ac(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
         "tags": etiketler,
         "productOptions": [
             {"name": "Renk", "position": 1, "values": [{"name": r} for r in renkler]},
-            {"name": "Beden", "position": 2, "values": [{"name": b} for b in bedenler]},
+            {"name": "Beden", "position": 2, "values": [{"name": b} for b in bedenleri_sirala(bedenler)]},
         ],
         "files": dosyalar,
         "variants": varyantlar,
@@ -334,6 +365,10 @@ def eksik_tamamla(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
         hatalar = d["productOptionUpdate"]["userErrors"]
         if hatalar:
             raise RuntimeError(f"Shopify seçenek ekleme ({opt['name']}): {hatalar}")
+    # Yeni beden sona eklenir (35..41 sonra 35,5..) → tüm listeyi sayısal sıraya koy
+    if yeni_bedenler:
+        _beden_secenegini_sirala(
+            pid, beden_opt, [o["name"] for o in beden_opt["optionValues"]] + yeni_bedenler)
 
     # 2) Yeni renklerin + kapaksız mevcut renklerin görselleri galeriye (AI ALT
     #    ile); her bloğun ilk görseli o rengin kapağı

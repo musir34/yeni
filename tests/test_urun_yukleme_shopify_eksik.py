@@ -90,6 +90,8 @@ class SahteShopify:
                 "userErrors": []}}
         if "productVariantAppendMedia" in query:
             return {"productVariantAppendMedia": {"userErrors": []}}
+        if "productOptionsReorder" in query:
+            return {"productOptionsReorder": {"userErrors": []}}
         raise AssertionError(f"beklenmeyen sorgu: {query[:80]}")
 
     def bul(self, parca: str) -> list[dict]:
@@ -282,3 +284,25 @@ def test_site_kapaksiz_renkler(sahte, monkeypatch):
 
     monkeypatch.setattr(shopify_urun, "_graphql", karisik)
     assert shopify_urun.site_kapaksiz_renkler(PID) == ["Gri"]
+
+
+def test_bedenleri_sirala_bucuklar_araya_girer():
+    assert shopify_urun.bedenleri_sirala(["35", "36", "37", "35,5", "36,5", "40", "38"]) == [
+        "35", "35,5", "36", "36,5", "37", "38", "40"]
+
+
+def test_eksik_tamamla_yeni_beden_sonrasi_sayisal_siralar(sahte):
+    """Sitede 35-36 varken 35,5 eklenince Shopify değeri sona koyar (35, 36, 35,5);
+    motor listeyi 35, 35,5, 36 sırasına çeker. Sıra zaten doğruysa çağrı yapılmaz."""
+    form = {"satis_fiyat": "1", "liste_fiyat": "1", "stok": 5}
+    taslak = _taslak()
+    taslak["bedenler"] = ["35", "36", "35,5"]
+    shopify_urun.eksik_tamamla(taslak, form, {"Bej": ["https://cdn/b-1.jpg"]})
+    sira = sahte.bul("productOptionsReorder")
+    assert len(sira) == 1
+    assert [v["name"] for v in sira[0]["options"][0]["values"]] == ["35", "35,5", "36"]
+    assert sira[0]["options"][0]["id"] == "opt-beden"
+
+    sahte.cagrilar.clear()
+    shopify_urun.eksik_tamamla(_taslak(), form, {"Bej": ["https://cdn/b-1.jpg"]})  # 37 sona: sıra doğru
+    assert not sahte.bul("productOptionsReorder")
