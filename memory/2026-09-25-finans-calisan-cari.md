@@ -26,7 +26,7 @@
 
 ## Güncel dağıtım
 Önceki haftalık ödeme güncellemesinin yerine tam güncelleme:
-`DISABLE_JOBS=1 python scripts/update_finans_calisan.py`
+Sunucudaki `~/gullupanel/yeni` dizininden: `DISABLE_JOBS=1 ../venv/bin/python scripts/update_finans_calisan.py`
 Ardından servis yeniden başlatılır. Script temel finans+cari+haftalık önkoşulları içerir; mevcut kayıtları silmez/değiştirmez, tekrar çalıştırılabilir.
 Önceki `update_finans_haftalik.py` ve `create_finans_tables.py` çalıştırma girişleri de tam şemaya yönlendirildi.
 Canlı veritabanı güncellemesi ve deploy yapılmadı.

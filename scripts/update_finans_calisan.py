@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Çalışan carisi/hak ediş desteğini ekler. Mevcut kasa kayıtlarını değiştirmez.
 
-DISABLE_JOBS=1 python scripts/update_finans_calisan.py
+DISABLE_JOBS=1 ../venv/bin/python scripts/update_finans_calisan.py
 Haftalık ödeme ve cari önkoşullarını da tamamlar. Tekrar çalıştırılabilir.
 """
 import os
