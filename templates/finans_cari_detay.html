@@ -261,7 +261,7 @@
 {% block scripts %}
 <script>
   (function () {
-    function num(v) { v = String(v || '').trim(); if (!v) return 0; if (v.indexOf(',') >= 0) v = v.replace(/\./g, '').replace(',', '.'); return parseFloat(v) || 0; }
+    function num(v) { return window.fnSayi ? fnSayi.num(v) : (parseFloat(String(v || '').replace(/\./g, '').replace(',', '.')) || 0); }
     function fmt(n) { return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
     function hesapla(tablo) {
       var toplam = 0;

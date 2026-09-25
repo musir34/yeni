@@ -50,12 +50,17 @@ def sembol(cari: FinansCari) -> str:
 
 
 def parse_kur(raw) -> Decimal:
-    """'34,5678' / '34.5' → Decimal(4 hane); boş/≤0/bozuk → FinansHata."""
+    """'34,5678' / '34.5' / '1.250' → Decimal(4 hane); boş/≤0/bozuk → FinansHata."""
     s = str(raw if raw is not None else '').strip()
     if not s:
         raise FinansHata('Dolar kuru boş olamaz.')
     if ',' in s:
         s = s.replace('.', '').replace(',', '.')
+    elif '.' in s:
+        # parse_tutar ile aynı kural: virgülsüz "1.250" binlik yazımıdır (alanlar binlik nokta koyar).
+        parcalar = s.split('.')
+        if all(len(x) == 3 and x.isdigit() for x in parcalar[1:]) and parcalar[0].isdigit():
+            s = ''.join(parcalar)
     try:
         kur = Decimal(s).quantize(DORT_HANE)
     except Exception:

@@ -72,3 +72,6 @@
       .then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.success) throw new Error(j.message || 'Hata'); return j; }); });
   }
 </script>
+
+{# Sayı alanlarında canlı binlik ayırıcı (100000 → 100.000) — tüm finans sayfaları için. #}
+<script src="{{ url_for('static', filename='js/finans_sayi.js') }}" defer></script>

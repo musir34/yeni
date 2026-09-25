@@ -176,7 +176,10 @@
       var g = cache[ga.value];
       acik.placeholder = g ? g.ad : 'Örn. Kargo ücreti, öğle yemeği';
       if (!g) return;
-      if (g.varsayilan_tutar && !tutar.value) tutar.value = g.varsayilan_tutar.replace('.', ',');
+      if (g.varsayilan_tutar && !tutar.value) {
+        tutar.value = g.varsayilan_tutar.replace('.', ',');
+        if (window.fnSayi) fnSayi.uygula(tutar);
+      }
     });
   })();
 </script>

@@ -113,6 +113,8 @@ class DovizCariTest(unittest.TestCase):
     def test_parse_kur(self):
         self.assertEqual(cs.parse_kur('34,5678'), Decimal('34.5678'))
         self.assertEqual(cs.parse_kur('34.5'), Decimal('34.5000'))
+        self.assertEqual(cs.parse_kur('1.250'), Decimal('1250.0000'))      # binlik nokta (alan böyle yazar)
+        self.assertEqual(cs.parse_kur('1.250,75'), Decimal('1250.7500'))
         for bad in ('', '0', '-1', 'abc'):
             with self.assertRaises(FinansHata):
                 cs.parse_kur(bad)
