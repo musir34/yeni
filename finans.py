@@ -10,6 +10,7 @@ Tanım işlemleri (kategori / gider adı): fetch JSON + `X-Requested-With: fetch
 başlığı (siparis_notu.py deseni) — before_request bunu zorlar.
 """
 from datetime import datetime
+import uuid
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, jsonify, session, abort)
@@ -39,6 +40,7 @@ def _finans_ctx():
         'fn_bugun_donem': fs.bugun_donem(),
         'fn_donem_etiket': fs.donem_etiket,
         'fn_donem_kaydir': fs.donem_kaydir,
+        'fn_odeme_anahtari': lambda: str(uuid.uuid4()),
     }
 
 
@@ -77,6 +79,8 @@ def _cari_ozet() -> dict:
 @login_required
 @roles_required('admin')
 def panel():
+    from finans_calisan_service import hakedisleri_isle
+    hakedisleri_isle()
     donem = fs.bugun_donem()
     return render_template('finans_panel.html',
                            ozet=fs.donem_ozet(donem),
@@ -259,20 +263,25 @@ def kucuk_gider_ekle():
 @login_required
 @roles_required('admin')
 def ana_gider():
+    from finans_calisan_service import hakedisleri_isle
+    hakedisleri_isle()
     try:
         donem = fs.parse_donem(request.args.get('donem'))
     except FinansHata:
         donem = fs.bugun_donem()
     durum = fs.donem_ana_gider_durumu(donem)
-    odenen = sum((d['odeme'].tutar for d in durum if d['odeme']), 0)
-    bekleyen = sum((d['kalem'].varsayilan_tutar or 0 for d in durum if not d['odeme']), 0)
-    from models import FinansAnaGiderKalem
+    odenen = sum((d['odenen'] for d in durum), 0)
+    bekleyen = sum((d['kalan'] or 0 for d in durum if d['bekleyen']), 0)
+    belirsiz_adet = sum(1 for d in durum if d['belirsiz'])
+    from models import FinansAnaGiderKalem, FinansCari
     tum_kalemler = FinansAnaGiderKalem.query.order_by(FinansAnaGiderKalem.aktif.desc(),
                                                       FinansAnaGiderKalem.sira,
                                                       FinansAnaGiderKalem.ad).all()
     return render_template('finans_ana_gider.html', donem=donem, durum=durum,
                            odenen=odenen, bekleyen=bekleyen, tum_kalemler=tum_kalemler,
-                           kategoriler=fs.kategoriler('ana_gider'), bugun=_bugun_ist())
+                           kategoriler=fs.kategoriler('ana_gider'), bugun=_bugun_ist(),
+                           belirsiz_adet=belirsiz_adet,
+                           calisan_cariler=FinansCari.query.filter_by(tur='calisan', aktif=True).order_by(FinansCari.ad).all())
 
 
 @finans_bp.route('/ana-gider/ode', methods=['POST'])
@@ -281,7 +290,7 @@ def ana_gider():
 def ana_gider_ode():
     donem = request.form.get('donem', '')
     try:
-        donem = fs.parse_donem(donem)
+        donem = fs.parse_odeme_donemi(donem)
         tutar = fs.parse_tutar(request.form.get('tutar'))
         islem = fs.ana_gider_ode(request.form.get('kalem_id'), donem, request.form.get('hesap', ''),
                                  tutar, fs.parse_tarih(request.form.get('tarih')),
@@ -290,7 +299,7 @@ def ana_gider_ode():
         flash(f'✅ {islem.kalem.ad} ödendi, {islem.hesap.ad} bakiyesi {islem.yeni_bakiye:.2f} ₺ oldu.', 'success')
     except FinansHata as e:
         flash(str(e), 'danger')
-    return _geri(url_for('finans.ana_gider', donem=donem or None))
+    return _geri(url_for('finans.ana_gider', donem=donem[:7] or None))
 
 
 @finans_bp.route('/ana-gider/kalem/ekle', methods=['POST'])
@@ -301,7 +310,11 @@ def kalem_ekle():
     try:
         kalem = fs.kalem_ekle(f.get('ad'), f.get('kategori_id') or None, f.get('varsayilan_tutar'),
                               f.get('varsayilan_hesap_kodu', ''), f.get('baslangic_donem'),
-                              f.get('bitis_donem'), f.get('notlar'), _uid())
+                              f.get('bitis_donem'), f.get('notlar'), _uid(),
+                              siklik=f.get('siklik', 'aylik'), ilk_odeme_tarihi=f.get('ilk_odeme_tarihi'),
+                              tutar_degisken=f.get('tutar_degisken') == '1',
+                              calisan=f.get('calisan') == '1', calisan_adi=f.get('calisan_adi', ''),
+                              calisan_cari_id=f.get('calisan_cari_id') or None)
         _log("CREATE", f"Finans ana gider kalemi — {kalem.ad}")
         flash(f'✅ "{kalem.ad}" kalemi eklendi.', 'success')
     except FinansHata as e:
@@ -317,7 +330,13 @@ def kalem_guncelle(kalem_id):
     try:
         kalem = fs.kalem_guncelle(kalem_id, f.get('ad'), f.get('kategori_id') or None,
                                   f.get('varsayilan_tutar'), f.get('varsayilan_hesap_kodu', ''),
-                                  f.get('baslangic_donem'), f.get('bitis_donem'), f.get('notlar'))
+                                  f.get('baslangic_donem'), f.get('bitis_donem'), f.get('notlar'),
+                                  siklik=f.get('siklik'), ilk_odeme_tarihi=f.get('ilk_odeme_tarihi'),
+                                  tutar_degisken=(f.get('tutar_degisken') == '1'
+                                                   if 'tutar_degisken' in f else None),
+                                  calisan=(f.get('calisan') == '1' if 'calisan' in f else None),
+                                  calisan_adi=f.get('calisan_adi', ''),
+                                  calisan_cari_id=f.get('calisan_cari_id') or None, kullanici_id=_uid())
         _log("UPDATE", f"Finans ana gider kalemi güncellendi — {kalem.ad}", kalem_id=kalem_id)
         flash(f'✅ "{kalem.ad}" güncellendi.', 'success')
     except FinansHata as e:
@@ -438,3 +457,5 @@ def rapor():
 # Cari hesap route'ları aynı blueprint'e finans_cari.py'de eklenir (dosya boyutu için ayrı).
 import finans_cari  # noqa: E402,F401
 import finans_excel  # noqa: E402,F401  — Excel'den gelir yükleme
+
+import finans_calisan  # noqa: E402,F401 — çalışan hak edişi/ödeme route

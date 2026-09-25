@@ -1,0 +1,10 @@
+{# d: çalışan hak ediş satırı #}
+<button type="button" class="btn btn-sm {{ 'btn-success' if d.bekleyen else 'btn-outline-secondary' }}"
+        data-bs-toggle="modal" data-bs-target="#fnCalisanModal"
+        data-kalem-id="{{ d.kalem.id }}" data-kalem-ad="{{ d.kalem.calisan_cari.ad }}"
+        data-donem="{{ d.donem }}" data-etiket="{{ d.etiket }}"
+        data-hak="{{ '%.2f' | format(d.hak_tutar) if d.hak_tutar is not none else '' }}"
+        data-odenen="{{ '%.2f' | format(d.odenen) }}"
+        data-kalan="{{ '%.2f' | format(d.kalan) if d.kalan is not none else '' }}"
+        data-hesap="{{ d.kalem.varsayilan_hesap_kodu or 'elde' }}"
+        data-anahtar="{{ fn_odeme_anahtari() }}">{{ 'Hak ediş gir' if d.belirsiz else ('Ödeme ekle' if d.bekleyen else 'Hak edişi düzenle') }}</button>

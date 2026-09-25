@@ -1,41 +1,63 @@
 {% extends "base.html" %}
-{% block title %}Küçük Gider - Finans{% endblock %}
+{% block title %}Günlük Harcamalar - Finans{% endblock %}
 {% block content %}
 {% include '_finans_nav.html' %}
 
 <div class="row">
   <div class="col-lg-4">
     <div class="card fn-card">
-      <div class="card-header fw-bold">➖ Küçük Gider Ekle</div>
+      <div class="card-header fw-bold">➖ Harcama Ekle</div>
       <div class="card-body">
-        {% if not kategoriler %}
-        <div class="alert alert-warning fn-mini">Önce <a href="{{ url_for('finans.tanimlar') }}">Tanımlar</a>'dan küçük gider kategorisi ekleyin.</div>
-        {% endif %}
+        <p class="fn-mini">Tek seferlik harcamalarınızı buradan kaydedin.</p>
         <form method="POST" action="{{ url_for('finans.kucuk_gider_ekle') }}">
           <input type="hidden" name="next" value="{{ url_for('finans.kucuk_gider', donem=donem) }}">
-          <div class="mb-2"><label class="form-label fn-mini">Hangi hesaptan?</label>
-            <div>
-              {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}
-              <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="hesap" id="fnKgHesap_{{ h.kod }}" value="{{ h.kod }}" {{ 'checked' if h.kod == 'elde' }} required>
-                <label class="form-check-label" for="fnKgHesap_{{ h.kod }}">{{ h.ad }} <span class="fn-mini">({{ h.bakiye | tl_format }} ₺)</span></label>
-              </div>
-              {% endfor %}
-            </div>
+          <div class="mb-3">
+            <label for="fnKgTutar" class="form-label">Ne kadar harcadın?</label>
+            <div class="input-group"><input type="text" name="tutar" id="fnKgTutar" class="form-control" inputmode="decimal" placeholder="0,00" required><span class="input-group-text">₺</span></div>
           </div>
-          <div class="mb-2"><label class="form-label fn-mini">Kategori</label>
+          <div class="mb-3">
+            <label for="fnKgAciklama" class="form-label">Ne için?</label>
+            <input type="text" name="aciklama" id="fnKgAciklama" class="form-control" placeholder="Örn. Kargo ücreti, öğle yemeği">
+            <div class="form-text">Boş bırakırsan kategori veya hazır harcama adı kullanılır.</div>
+          </div>
+          <fieldset class="mb-3">
+            <legend class="form-label fs-6">Nereden ödedin?</legend>
+            {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="hesap" id="fnKgHesap_{{ h.kod }}" value="{{ h.kod }}" {{ 'checked' if h.kod == 'elde' }} required>
+              <label class="form-check-label" for="fnKgHesap_{{ h.kod }}">{{ h.ad }} <span class="fn-mini">({{ h.bakiye | tl_format }} ₺)</span></label>
+            </div>
+            {% endfor %}
+          </fieldset>
+          <div class="mb-3">
+            <label for="fnKgKategori" class="form-label">Kategori</label>
             <select name="kategori_id" id="fnKgKategori" class="form-select" required>
               <option value="">Seçin…</option>
               {% for k in kategoriler %}<option value="{{ k.id }}">{{ k.ad }}</option>{% endfor %}
-            </select></div>
-          <div class="mb-2"><label class="form-label fn-mini">Gider adı <span class="text-muted">(hazır liste, isteğe bağlı)</span></label>
-            <select name="gider_adi_id" id="fnKgGiderAdi" class="form-select"><option value="">— seçin ya da aşağıya yazın —</option></select></div>
-          <div class="mb-2"><input type="text" name="aciklama" id="fnKgAciklama" class="form-control" placeholder="Açıklama (gider adı seçilmediyse yazın)"></div>
-          <div class="row g-2 mb-2">
-            <div class="col-6"><label class="form-label fn-mini">Tutar (₺)</label><input type="text" name="tutar" id="fnKgTutar" class="form-control" inputmode="decimal" placeholder="0,00" required></div>
-            <div class="col-6"><label class="form-label fn-mini">Tarih</label><input type="date" name="tarih" class="form-control" value="{{ bugun }}"></div>
+            </select>
+            <details class="mt-2" id="fnKgYeniKategori" {{ 'open' if not kategoriler }}>
+              <summary class="text-primary small">Yeni kategori ekle</summary>
+              <label for="fnKgKategoriAd" class="form-label fn-mini mt-2">Kategori adı</label>
+              <div class="input-group input-group-sm">
+                <input type="text" id="fnKgKategoriAd" class="form-control" maxlength="100" placeholder="Örn. Ulaşım">
+                <button type="button" id="fnKgKategoriEkle" class="btn btn-outline-primary">Ekle</button>
+              </div>
+              <div id="fnKgKategoriHata" class="small text-danger mt-1" role="alert"></div>
+            </details>
           </div>
-          <button class="btn btn-danger w-100"><i class="fas fa-minus me-1"></i>Gider Kaydet</button>
+          <details class="mb-3">
+            <summary class="fn-mini">Tarih / hazır harcama seç <span id="fnKgTarihOzet">· Bugün</span></summary>
+            <div class="mt-2 mb-2">
+              <label for="fnKgTarih" class="form-label fn-mini">Tarih</label>
+              <input type="date" name="tarih" id="fnKgTarih" class="form-control" value="{{ bugun }}">
+            </div>
+            <div>
+              <label for="fnKgGiderAdi" class="form-label fn-mini">Hazır harcama (isteğe bağlı)</label>
+              <select name="gider_adi_id" id="fnKgGiderAdi" class="form-select" disabled><option value="">Önce kategori seçin</option></select>
+              <div id="fnKgHazirDurum" class="form-text" role="status"></div>
+            </div>
+          </details>
+          <button class="btn btn-danger w-100"><i class="fas fa-minus me-1"></i>Harcamayı Kaydet</button>
         </form>
       </div>
     </div>
@@ -44,7 +66,7 @@
   <div class="col-lg-8">
     <div class="card fn-card">
       <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <span class="fw-bold">🧾 {{ fn_donem_etiket(donem) }} küçük giderleri</span>
+        <span class="fw-bold">🧾 {{ fn_donem_etiket(donem) }} günlük harcamaları</span>
         <form method="GET" class="d-flex gap-1 align-items-center">
           <input type="hidden" name="donem" value="{{ donem }}">
           <select name="hesap" class="form-select form-select-sm" onchange="this.form.submit()">
@@ -76,7 +98,7 @@
               <td class="fn-actions text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick="fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})">✕</button></td>
             </tr>
           {% else %}
-            <tr><td colspan="6" class="text-muted p-3">Bu ay küçük gider kaydı yok.</td></tr>
+            <tr><td colspan="6" class="text-muted p-3">Bu ay günlük harcama kaydı yok.</td></tr>
           {% endfor %}
           </tbody>
           {% if islemler %}
@@ -98,23 +120,63 @@
   (function () {
     var kat = document.getElementById('fnKgKategori'), ga = document.getElementById('fnKgGiderAdi');
     var tutar = document.getElementById('fnKgTutar'), acik = document.getElementById('fnKgAciklama');
-    var cache = {};
+    var cache = {}, yukleme = 0;
+    var durum = document.getElementById('fnKgHazirDurum');
     kat.addEventListener('change', function () {
-      ga.innerHTML = '<option value="">— seçin ya da aşağıya yazın —</option>';
+      var istek = ++yukleme;
+      cache = {};
+      ga.innerHTML = '';
+      ga.add(new Option(kat.value ? 'İsteğe bağlı — seçin' : 'Önce kategori seçin', ''));
+      ga.disabled = true;
+      durum.textContent = '';
+      acik.placeholder = 'Örn. Kargo ücreti, öğle yemeği';
       if (!kat.value) return;
-      fetch('/finans/api/gider-adi?kategori_id=' + kat.value).then(function (r) { return r.json(); }).then(function (j) {
-        (j.items || []).forEach(function (g) {
-          cache[g.id] = g;
-          var o = document.createElement('option'); o.value = g.id;
-          o.textContent = g.ad + (g.varsayilan_tutar ? ' (' + g.varsayilan_tutar.replace('.', ',') + ' ₺)' : '');
-          ga.appendChild(o);
+      fetch('/finans/api/gider-adi?kategori_id=' + encodeURIComponent(kat.value))
+        .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+        .then(function (j) {
+          if (istek !== yukleme) return;
+          if (!j.success) throw new Error();
+          (j.items || []).forEach(function (g) {
+            cache[g.id] = g;
+            ga.add(new Option(g.ad + (g.varsayilan_tutar ? ' (' + g.varsayilan_tutar.replace('.', ',') + ' ₺)' : ''), g.id));
+          });
+          ga.disabled = !ga.options[1];
+          if (ga.disabled) durum.textContent = 'Bu kategoride hazır harcama yok. Açıklama yazarak kaydedebilirsin.';
+        }).catch(function () {
+          if (istek === yukleme) durum.textContent = 'Hazır harcamalar yüklenemedi. Açıklama yazarak devam edebilirsin.';
         });
-      });
+    });
+    var ekle = document.getElementById('fnKgKategoriEkle');
+    var ad = document.getElementById('fnKgKategoriAd');
+    var hata = document.getElementById('fnKgKategoriHata');
+    ekle.addEventListener('click', function () {
+      hata.textContent = '';
+      if (!ad.value.trim()) { hata.textContent = 'Kategori adını yazın.'; ad.focus(); return; }
+      ekle.disabled = true;
+      fnFetch({{ url_for('finans.api_kategori_ekle') | tojson }}, {tur: 'kucuk_gider', ad: ad.value.trim()})
+        .then(function (j) {
+          var mevcut = Array.from(kat.options).find(function (o) { return o.value === String(j.id); });
+          if (!mevcut) kat.add(new Option(j.ad, j.id));
+          kat.value = String(j.id);
+          kat.dispatchEvent(new Event('change'));
+          ad.value = '';
+          document.getElementById('fnKgYeniKategori').open = false;
+          kat.focus();
+        }).catch(function (e) { hata.textContent = e.message; })
+        .finally(function () { ekle.disabled = false; });
+    });
+    ad.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); if (!ekle.disabled) ekle.click(); }
+    });
+    document.getElementById('fnKgTarih').addEventListener('change', function () {
+      document.getElementById('fnKgTarihOzet').textContent = '· ' +
+        (!this.value || this.value === {{ bugun | tojson }} ? 'Bugün' : this.value.split('-').reverse().join('.'));
     });
     ga.addEventListener('change', function () {
-      var g = cache[ga.value]; if (!g) return;
+      var g = cache[ga.value];
+      acik.placeholder = g ? g.ad : 'Örn. Kargo ücreti, öğle yemeği';
+      if (!g) return;
       if (g.varsayilan_tutar && !tutar.value) tutar.value = g.varsayilan_tutar.replace('.', ',');
-      if (!acik.value) acik.placeholder = g.ad;
     });
   })();
 </script>

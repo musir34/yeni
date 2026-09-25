@@ -4,7 +4,7 @@
 Mevcut kasa (ana_kasa / kasa / kasa_kategoriler / odeme) tablolarına DOKUNMAZ.
 Üç hesaplı yeni kasa: finans_hesap, finans_kategori, finans_gider_adi,
 finans_ana_gider_kalem, finans_islem + 3 sabit hesap seed'i (beyazit/elde/banka).
-Tablolar zaten varsa hiçbir şey yapmaz.
+Tablolar zaten varsa kayıtları korur; haftalık ödeme alanlarını tamamlar.
 
 Çalıştırma (production DB'ye .env üzerinden bağlanır):
     DISABLE_JOBS=1 python scripts/create_finans_tables.py
@@ -99,7 +99,7 @@ DDL = [
     "CREATE INDEX IF NOT EXISTS ix_finans_islem_tur_tarih ON finans_islem (tur, tarih)",
     "CREATE INDEX IF NOT EXISTS ix_finans_islem_transfer_grup ON finans_islem (transfer_grup)",
     "CREATE INDEX IF NOT EXISTS ix_finans_islem_kalem_donem ON finans_islem (kalem_id, donem)",
-    # Aynı kalem aynı ay iki kez ödenemez; iptal edilince tekrar ödenebilir.
+    # Aynı kalem aynı ödeme dönemi için iki kez ödenemez; iptal edilince tekrar ödenebilir.
     """
     CREATE UNIQUE INDEX IF NOT EXISTS uq_finans_islem_kalem_donem
         ON finans_islem (kalem_id, donem)
@@ -114,14 +114,20 @@ DDL = [
     """,
 ]
 
+# İlk kurulum ve mevcut kurulum aynı şemayı kullanır.
+from scripts.update_finans_haftalik import DDL as HAFTALIK_DDL
+DDL.extend(HAFTALIK_DDL)
+
 
 def main():
+    # Eski kurulum komutu da artık tüm finans önkoşullarını tamamlar.
+    from scripts.update_finans_calisan import DDL as tum_ddl
     from app import app
     from models import db
     from sqlalchemy import text, inspect
 
     with app.app_context():
-        for stmt in DDL:
+        for stmt in tum_ddl:
             db.session.execute(text(stmt))
         db.session.commit()
 

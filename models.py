@@ -1719,7 +1719,7 @@ class FinansGiderAdi(db.Model):
 
 
 class FinansAnaGiderKalem(db.Model):
-    """Aylık tekrar eden ana gider kalemi (işçi maaşı, reklam, site...)."""
+    """Aylık veya haftalık tekrar eden düzenli ödeme."""
     __tablename__ = 'finans_ana_gider_kalem'
     id = db.Column(db.Integer, primary_key=True)
     ad = db.Column(db.String(150), nullable=False, unique=True)
@@ -1728,6 +1728,11 @@ class FinansAnaGiderKalem(db.Model):
     varsayilan_hesap_kodu = db.Column(db.String(20), nullable=True)  # elde / banka
     baslangic_donem = db.Column(db.String(7), nullable=False)  # 'YYYY-MM'
     bitis_donem = db.Column(db.String(7), nullable=True)
+    siklik = db.Column(db.String(10), nullable=False, default='aylik', server_default='aylik')
+    ilk_odeme_tarihi = db.Column(db.Date, nullable=True)  # haftalık takvimin ilk günü
+    tutar_degisken = db.Column(db.Boolean, nullable=False, default=False, server_default='false')
+    calisan_cari_id = db.Column(db.Integer, db.ForeignKey('finans_cari.id'), nullable=True)
+    calisan_cari = db.relationship('FinansCari', foreign_keys=[calisan_cari_id])
     aktif = db.Column(db.Boolean, nullable=False, default=True)
     sira = db.Column(db.SmallInteger, nullable=False, default=0)
     notlar = db.Column(db.Text, nullable=True)
@@ -1755,7 +1760,7 @@ class FinansIslem(db.Model):
     kategori_id = db.Column(db.Integer, db.ForeignKey('finans_kategori.id'), nullable=True)
     gider_adi_id = db.Column(db.Integer, db.ForeignKey('finans_gider_adi.id'), nullable=True)
     kalem_id = db.Column(db.Integer, db.ForeignKey('finans_ana_gider_kalem.id'), nullable=True)
-    donem = db.Column(db.String(7), nullable=True)  # ana gider ödemesi hangi ay için
+    donem = db.Column(db.String(10), nullable=True)  # aylık: YYYY-MM; haftalık: planlanan YYYY-MM-DD
     transfer_grup = db.Column(PG_UUID(as_uuid=True), nullable=True)  # transferin iki bacağını bağlar
     iptal = db.Column(db.Boolean, nullable=False, default=False)
     iptal_tarihi = db.Column(db.DateTime, nullable=True)  # naive=UTC
@@ -1800,6 +1805,17 @@ class FinansCari(db.Model):
         return f'<FinansCari {self.ad}: {self.bakiye}>'
 
 
+class FinansCalisanHakedis(db.Model):
+    """Bir çalışanın bir dönemlik hak edişi; nakit ödemelerinden bağımsızdır."""
+    __tablename__ = 'finans_calisan_hakedis'
+    id = db.Column(db.Integer, primary_key=True)
+    kalem_id = db.Column(db.Integer, db.ForeignKey('finans_ana_gider_kalem.id'), nullable=False)
+    donem = db.Column(db.String(10), nullable=False)
+    tutar = db.Column(db.Numeric(12, 2), nullable=True)  # None: değişken tutar henüz belirlenmedi
+    kalem = db.relationship('FinansAnaGiderKalem')
+    __table_args__ = (UniqueConstraint('kalem_id', 'donem', name='uq_finans_calisan_hakedis'),)
+
+
 class FinansCariHareket(db.Model):
     __tablename__ = 'finans_cari_hareket'
     id = db.Column(db.Integer, primary_key=True)
@@ -1812,6 +1828,9 @@ class FinansCariHareket(db.Model):
     tarih = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)  # naive=UTC
     aciklama = db.Column(db.String(500), nullable=True)
     islem_id = db.Column(db.Integer, db.ForeignKey('finans_islem.id'), nullable=True)  # kasa bağı
+    hakedis_id = db.Column(db.Integer, db.ForeignKey('finans_calisan_hakedis.id'), nullable=True)
+    odeme_anahtari = db.Column(db.String(36), nullable=True, unique=True)
+    hakedis = db.relationship('FinansCalisanHakedis', backref='hareketler')
     iptal = db.Column(db.Boolean, nullable=False, default=False)
     iptal_tarihi = db.Column(db.DateTime, nullable=True)
     iptal_kullanici_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)

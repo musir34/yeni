@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
 from sqlalchemy import func
@@ -37,9 +37,9 @@ GIDER_HESAPLARI = ('elde', 'banka')
 KATEGORI_TURLERI = ('gelir', 'kucuk_gider', 'ana_gider')
 ISLEM_TURLERI = ('gelir', 'kucuk_gider', 'ana_gider', 'transfer_cikis', 'transfer_giris',
                  'cari_odeme', 'cari_tahsilat')
-KATEGORI_TUR_ETIKET = {'gelir': 'Gelir', 'kucuk_gider': 'Küçük Gider', 'ana_gider': 'Ana Gider'}
+KATEGORI_TUR_ETIKET = {'gelir': 'Gelir', 'kucuk_gider': 'Günlük Harcamalar', 'ana_gider': 'Düzenli Ödemeler'}
 ISLEM_TUR_ETIKET = {
-    'gelir': 'Gelir', 'kucuk_gider': 'Küçük Gider', 'ana_gider': 'Ana Gider',
+    'gelir': 'Gelir', 'kucuk_gider': 'Günlük Harcamalar', 'ana_gider': 'Düzenli Ödemeler',
     'transfer_cikis': 'Transfer (Çıkış)', 'transfer_giris': 'Transfer (Giriş)',
     'cari_odeme': 'Cari Ödeme', 'cari_tahsilat': 'Cari Tahsilat',
 }
@@ -126,9 +126,43 @@ def donem_kaydir(donem: str, adim: int) -> str:
 
 
 def donem_etiket(donem: str) -> str:
+    if len(donem) == 10:
+        return f'{date.fromisoformat(donem):%d.%m.%Y} haftası'
     aylar = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
              'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
     return f'{aylar[int(donem[5:7]) - 1]} {donem[:4]}'
+
+
+def parse_odeme_donemi(raw) -> str:
+    s = str(raw or '').strip()
+    try:
+        if len(s) == 10 and date.fromisoformat(s).isoformat() == s:
+            return s
+        if len(s) == 7 and datetime.strptime(s, '%Y-%m').strftime('%Y-%m') == s:
+            return s
+    except ValueError:
+        pass
+    raise FinansHata('Ödeme dönemi geçersiz.')
+
+
+def kalem_odeme_donemleri(kalem, donem: str) -> list[str]:
+    """Ayın ödeme tarihleri; haftalar ay/yıl sınırında kesilmeden yedi gün ilerler."""
+    if donem < kalem.baslangic_donem or (kalem.bitis_donem and donem > kalem.bitis_donem):
+        return []
+    if kalem.siklik != 'haftalik':
+        return [donem]
+    ilk = kalem.ilk_odeme_tarihi
+    # Aylıktan haftalığa geçişten önceki aylık dönemleri koru.
+    if donem < ilk.strftime('%Y-%m'):
+        return [donem]
+    bas = date.fromisoformat(donem + '-01')
+    son = date.fromisoformat(donem_kaydir(donem, 1) + '-01')
+    gun = ilk + timedelta(days=max(0, ((bas - ilk).days + 6) // 7) * 7)
+    sonuc = []
+    while gun < son:
+        sonuc.append(gun.isoformat())
+        gun += timedelta(days=7)
+    return sonuc
 
 
 # ============================== #
@@ -139,7 +173,7 @@ def hesap_getir(kod: str, kilitle: bool = False) -> FinansHesap:
         raise FinansHata('Geçersiz hesap.')
     q = FinansHesap.query.filter_by(kod=kod)
     if kilitle:
-        q = q.with_for_update()
+        q = q.populate_existing().with_for_update()
     hesap = q.first()
     if not hesap:
         raise FinansHata(f'"{kod}" hesabı bulunamadı — scripts/create_finans_tables.py çalıştırılmalı.')
@@ -232,10 +266,15 @@ def ana_gider_ode(kalem_id, donem: str, hesap_kodu: str, tutar: Decimal, tarih: 
                   aciklama: str, kullanici_id: int, commit: bool = True) -> FinansIslem:
     try:
         _gider_hesabi_kontrol(hesap_kodu)
-        kalem = FinansAnaGiderKalem.query.get(int(kalem_id or 0))
+        donem = parse_odeme_donemi(donem)
+        tutar = parse_tutar(tutar)
+        kalem = (FinansAnaGiderKalem.query.filter_by(id=int(kalem_id or 0))
+                 .populate_existing().with_for_update().first())
         if not kalem or not kalem.aktif:
-            raise FinansHata('Ana gider kalemi bulunamadı ya da pasif.')
-        if donem < kalem.baslangic_donem or (kalem.bitis_donem and donem > kalem.bitis_donem):
+            raise FinansHata('Düzenli ödeme bulunamadı ya da pasif.')
+        if kalem.calisan_cari_id:
+            raise FinansHata('Çalışan için hak ediş ve ödeme formunu kullanın.')
+        if donem not in kalem_odeme_donemleri(kalem, donem[:7]):
             raise FinansHata(f'"{kalem.ad}" kalemi {donem_etiket(donem)} dönemi için tanımlı değil.')
         mevcut = FinansIslem.query.filter_by(kalem_id=kalem.id, donem=donem,
                                              tur='ana_gider', iptal=False).first()
@@ -311,6 +350,9 @@ def islem_iptal(islem_id: int, kullanici_id: int, neden: str = None,
             raise FinansHata('İşlem bulunamadı.')
         if islem.iptal:
             raise FinansHata('Bu işlem zaten iptal edilmiş.')
+        if islem.cari_hareket and islem.cari_hareket.hakedis_id:
+            FinansAnaGiderKalem.query.filter_by(
+                id=islem.cari_hareket.hakedis.kalem_id).with_for_update().one()
         if islem.transfer_grup:
             bacaklar = FinansIslem.query.filter_by(transfer_grup=islem.transfer_grup, iptal=False).all()
         else:
@@ -387,9 +429,14 @@ def islem_duzelt(islem_id: int, kullanici_id: int, yeni_tutar: Decimal = None,
             raise FinansHata('İptal edilmiş işlem düzeltilemez.')
         if eski.tur in ('transfer_cikis', 'transfer_giris', 'cari_odeme', 'cari_tahsilat'):
             raise FinansHata('Bu işlemi düzeltmek için iptal edip yeniden oluşturun.')
+        if eski.cari_hareket and eski.cari_hareket.hakedis_id:
+            raise FinansHata('Çalışan ödemesini iptal edip ilgili haftaya yeniden ödeme ekleyin.')
         tutar = yeni_tutar or Decimal(str(eski.tutar))
         tarih = yeni_tarih or eski.tarih
         hesap_kodu = yeni_hesap_kodu or eski.hesap.kod
+        if eski.tur == 'ana_gider':
+            # Ödeme ile aynı kilit sırası: önce plan, sonra işlem/hesap.
+            FinansAnaGiderKalem.query.filter_by(id=eski.kalem_id).with_for_update().one()
         islem_iptal(eski.id, kullanici_id, neden='düzeltme', commit=False)
         if eski.tur == 'gelir':
             yeni = gelir_ekle(eski.kategori_id, tutar, tarih, eski.aciklama, kullanici_id, commit=False)
@@ -503,26 +550,52 @@ def gider_adi_sil(gider_adi_id: int) -> bool:
         raise
 
 
+def _kalem_takvimi(siklik, ilk_odeme_tarihi, baslangic_donem, bitis_donem):
+    if siklik not in ('aylik', 'haftalik'):
+        raise FinansHata('Ödeme sıklığı aylık veya haftalık olmalı.')
+    ilk = None
+    if siklik == 'haftalik':
+        try:
+            ilk = date.fromisoformat(str(ilk_odeme_tarihi or ''))
+        except ValueError:
+            raise FinansHata('İlk haftalık ödeme tarihini seçin.')
+    bas = parse_donem(baslangic_donem or (ilk.strftime('%Y-%m') if ilk else None))
+    bit = parse_donem(bitis_donem) if str(bitis_donem or '').strip() else None
+    if ilk and bas > ilk.strftime('%Y-%m'):
+        raise FinansHata('İlk haftalık ödeme başlangıç ayından önce olamaz.')
+    if bit and (bit < bas or (ilk and bit < ilk.strftime('%Y-%m'))):
+        raise FinansHata('Bitiş ayı başlangıçtan önce olamaz.')
+    return bas, bit, ilk
+
+
 def kalem_ekle(ad: str, kategori_id, varsayilan_tutar, varsayilan_hesap_kodu: str,
-               baslangic_donem: str, bitis_donem: str, notlar: str, kullanici_id: int) -> FinansAnaGiderKalem:
+               baslangic_donem: str, bitis_donem: str, notlar: str, kullanici_id: int,
+               siklik: str = 'aylik', ilk_odeme_tarihi=None, tutar_degisken: bool = False,
+               calisan=False, calisan_adi='', calisan_cari_id=None) -> FinansAnaGiderKalem:
     ad = _ad_temizle(ad, 150)
     kat = _kategori_getir(kategori_id, 'ana_gider', zorunlu=False)
-    tutar = parse_tutar(varsayilan_tutar) if str(varsayilan_tutar or '').strip() else Decimal('0.00')
+    tutar = (parse_tutar(varsayilan_tutar)
+             if not tutar_degisken and str(varsayilan_tutar or '').strip() else Decimal('0.00'))
     if varsayilan_hesap_kodu and varsayilan_hesap_kodu not in GIDER_HESAPLARI:
         raise FinansHata('Varsayılan hesap Elde veya Banka olmalı.')
-    bas = parse_donem(baslangic_donem)
-    bit = parse_donem(bitis_donem) if str(bitis_donem or '').strip() else None
-    if bit and bit < bas:
-        raise FinansHata('Bitiş dönemi başlangıçtan önce olamaz.')
+    bas, bit, ilk = _kalem_takvimi(siklik, ilk_odeme_tarihi, baslangic_donem, bitis_donem)
+    if siklik == 'haftalik':
+        bas = ilk.strftime('%Y-%m')
     try:
         if any(_ad_esit(k.ad, ad) for k in FinansAnaGiderKalem.query.all()):
             raise FinansHata(f'"{ad}" kalemi zaten var.')
         kalem = FinansAnaGiderKalem(ad=ad, kategori_id=kat.id if kat else None, varsayilan_tutar=tutar,
                                     varsayilan_hesap_kodu=varsayilan_hesap_kodu or None,
                                     baslangic_donem=bas, bitis_donem=bit,
+                                    siklik=siklik, ilk_odeme_tarihi=ilk, tutar_degisken=tutar_degisken,
                                     notlar=(notlar or '').strip() or None,
                                     olusturan_kullanici_id=kullanici_id)
         db.session.add(kalem)
+        db.session.flush()
+        if calisan:
+            from finans_calisan_service import cari_bagla, plan_hakedislerini_isle
+            cari_bagla(kalem, kullanici_id, calisan_adi, calisan_cari_id)
+            plan_hakedislerini_isle(kalem)
         db.session.commit()
         return kalem
     except Exception:
@@ -531,20 +604,44 @@ def kalem_ekle(ad: str, kategori_id, varsayilan_tutar, varsayilan_hesap_kodu: st
 
 
 def kalem_guncelle(kalem_id: int, ad: str, kategori_id, varsayilan_tutar, varsayilan_hesap_kodu: str,
-                   baslangic_donem: str, bitis_donem: str, notlar: str) -> FinansAnaGiderKalem:
-    kalem = FinansAnaGiderKalem.query.get(int(kalem_id))
+                   baslangic_donem: str, bitis_donem: str, notlar: str,
+                   siklik=None, ilk_odeme_tarihi=None, tutar_degisken=None,
+                   calisan=None, calisan_adi='', calisan_cari_id=None, kullanici_id=None) -> FinansAnaGiderKalem:
+    kalem = (FinansAnaGiderKalem.query.filter_by(id=int(kalem_id))
+             .populate_existing().with_for_update().first())
     if not kalem:
         raise FinansHata('Kalem bulunamadı.')
     ad = _ad_temizle(ad, 150)
     kat = _kategori_getir(kategori_id, 'ana_gider', zorunlu=False)
-    tutar = parse_tutar(varsayilan_tutar) if str(varsayilan_tutar or '').strip() else Decimal('0.00')
+    siklik = siklik or kalem.siklik
+    if ilk_odeme_tarihi is None:
+        ilk_odeme_tarihi = kalem.ilk_odeme_tarihi
+    if tutar_degisken is None:
+        tutar_degisken = kalem.tutar_degisken
+    tutar = (parse_tutar(varsayilan_tutar)
+             if not tutar_degisken and str(varsayilan_tutar or '').strip() else Decimal('0.00'))
     if varsayilan_hesap_kodu and varsayilan_hesap_kodu not in GIDER_HESAPLARI:
         raise FinansHata('Varsayılan hesap Elde veya Banka olmalı.')
-    bas = parse_donem(baslangic_donem)
-    bit = parse_donem(bitis_donem) if str(bitis_donem or '').strip() else None
-    if bit and bit < bas:
-        raise FinansHata('Bitiş dönemi başlangıçtan önce olamaz.')
+    bas, bit, ilk = _kalem_takvimi(siklik, ilk_odeme_tarihi, baslangic_donem, bitis_donem)
     try:
+        from finans_calisan_service import cari_bagla, plan_hakedislerini_isle
+        if kalem.calisan_cari_id:
+            if calisan is False:
+                raise FinansHata('Çalışan bağlantısı kaldırılamaz; ayrı bir gider planı açın.')
+            if calisan_cari_id and int(calisan_cari_id) != kalem.calisan_cari_id:
+                raise FinansHata('Çalışan bağlantısı değiştirilemez.')
+            plan_hakedislerini_isle(kalem)
+            from models import FinansCalisanHakedis
+            if ((siklik != kalem.siklik or ilk != kalem.ilk_odeme_tarihi or bas != kalem.baslangic_donem)
+                    and FinansCalisanHakedis.query.filter_by(kalem_id=kalem.id).first()):
+                raise FinansHata('Hak edişi oluşmuş planın takvimi değiştirilemez; yeni takvim için ayrı plan açın.')
+        odemeler = FinansIslem.query.filter_by(kalem_id=kalem.id, tur='ana_gider', iptal=False).all()
+        if siklik != kalem.siklik or ilk != kalem.ilk_odeme_tarihi:
+            if any(len(o.donem) == 10 for o in odemeler):
+                raise FinansHata('Haftalık ödemesi olan kaydın takvimi değiştirilemez. '
+                                 'Bitiş ayı belirleyip yeni takvim için ayrı bir ödeme tanımlayın.')
+            if siklik == 'haftalik' and any(o.donem >= ilk.strftime('%Y-%m') for o in odemeler):
+                raise FinansHata('Haftalık başlangıcı, ödenmiş son aylık dönemden sonraki bir ayda seçin.')
         cakisan = any(_ad_esit(k.ad, ad) for k in FinansAnaGiderKalem.query.filter(FinansAnaGiderKalem.id != kalem.id).all())
         if cakisan:
             raise FinansHata(f'"{ad}" adında başka bir kalem var.')
@@ -554,7 +651,13 @@ def kalem_guncelle(kalem_id: int, ad: str, kategori_id, varsayilan_tutar, varsay
         kalem.varsayilan_hesap_kodu = varsayilan_hesap_kodu or None
         kalem.baslangic_donem = bas
         kalem.bitis_donem = bit
+        kalem.siklik = siklik
+        kalem.ilk_odeme_tarihi = ilk
+        kalem.tutar_degisken = tutar_degisken
         kalem.notlar = (notlar or '').strip() or None
+        if calisan and not kalem.calisan_cari_id:
+            cari_bagla(kalem, kullanici_id or kalem.olusturan_kullanici_id, calisan_adi, calisan_cari_id)
+            plan_hakedislerini_isle(kalem)
         db.session.commit()
         return kalem
     except Exception:
@@ -564,9 +667,16 @@ def kalem_guncelle(kalem_id: int, ad: str, kategori_id, varsayilan_tutar, varsay
 
 def kalem_pasif(kalem_id: int, aktif: bool = False) -> FinansAnaGiderKalem:
     try:
-        kalem = FinansAnaGiderKalem.query.get(int(kalem_id))
+        kalem = FinansAnaGiderKalem.query.filter_by(id=int(kalem_id)).populate_existing().with_for_update().first()
         if not kalem:
             raise FinansHata('Kalem bulunamadı.')
+        if kalem.calisan_cari_id and kalem.aktif:
+            from finans_calisan_service import plan_hakedislerini_isle
+            plan_hakedislerini_isle(kalem)
+        if aktif and kalem.calisan_cari_id:
+            from finans_cari_service import cari_getir
+            if not cari_getir(kalem.calisan_cari_id, kilitle=True).aktif:
+                raise FinansHata('Önce çalışanın cari hesabını yeniden açın.')
         kalem.aktif = aktif
         db.session.commit()
         return kalem
@@ -635,13 +745,36 @@ def kategori_toplamlari(islemler: list) -> list:
 
 
 def donem_ana_gider_durumu(donem: str) -> list:
-    """Dönemde geçerli aktif kalemler + varsa (iptal edilmemiş) ödemesi."""
+    """Aylık/haftalık giderler ve çalışanların hak ediş/ödenen/kalan dökümü."""
+    from finans_calisan_service import hakedis_satirlari, durum_satiri
     kalemler = (FinansAnaGiderKalem.query.filter_by(aktif=True)
                 .filter(FinansAnaGiderKalem.baslangic_donem <= donem)
                 .filter((FinansAnaGiderKalem.bitis_donem.is_(None)) | (FinansAnaGiderKalem.bitis_donem >= donem))
                 .order_by(FinansAnaGiderKalem.sira, FinansAnaGiderKalem.ad).all())
-    odemeler = {o.kalem_id: o for o in FinansIslem.query.filter_by(tur='ana_gider', donem=donem, iptal=False).all()}
-    return [{'kalem': k, 'odeme': odemeler.get(k.id)} for k in kalemler]
+    odemeler = {(o.kalem_id, o.donem): o for o in FinansIslem.query
+                .filter_by(tur='ana_gider', iptal=False)
+                .filter(FinansIslem.donem.startswith(donem)).all() if not o.kalem.calisan_cari_id}
+    haklar = {(d['kalem'].id, d['donem']): d for d in hakedis_satirlari(donem)}
+    sonuc = []
+    for k in kalemler:
+        for vade in kalem_odeme_donemleri(k, donem):
+            if k.calisan_cari_id:
+                sonuc.append(haklar.pop((k.id, vade), None) or durum_satiri(k, vade))
+            else:
+                sonuc.append({'kalem': k, 'donem': vade, 'etiket': donem_etiket(vade),
+                              'odeme': odemeler.pop((k.id, vade), None)})
+    for o in odemeler.values():
+        sonuc.append({'kalem': o.kalem, 'donem': o.donem,
+                      'etiket': donem_etiket(o.donem), 'odeme': o})
+    sonuc.extend(haklar.values())
+    for d in sonuc:
+        if 'calisan' not in d:
+            d.update(calisan=False, hakedis=None, hak_tutar=d['kalem'].varsayilan_tutar or None,
+                     odenen=d['odeme'].tutar if d['odeme'] else Decimal('0'),
+                     kalan=Decimal('0') if d['odeme'] else (d['kalem'].varsayilan_tutar or None),
+                     belirsiz=not d['odeme'] and not d['kalem'].varsayilan_tutar,
+                     bekleyen=d['odeme'] is None)
+    return sorted(sonuc, key=lambda d: (d['donem'], d['kalem'].sira, d['kalem'].ad))
 
 
 def _donem_toplam(donem: str, tur: str) -> Decimal:
@@ -654,7 +787,9 @@ def _donem_toplam(donem: str, tur: str) -> Decimal:
 
 def donem_ozet(donem: str) -> dict:
     durum = donem_ana_gider_durumu(donem)
-    bekleyen = [d for d in durum if d['odeme'] is None]
+    bekleyen = [d for d in durum if d['bekleyen']]
+    from finans_calisan_service import hakedis_satirlari
+    bekleyen += [d for d in hakedis_satirlari() if d['donem'][:7] < donem and d['bekleyen']]
     gelir = _donem_toplam(donem, 'gelir')
     kucuk = _donem_toplam(donem, 'kucuk_gider')
     ana = _donem_toplam(donem, 'ana_gider')
@@ -666,7 +801,8 @@ def donem_ozet(donem: str) -> dict:
         'cari_odeme': cari_odeme, 'cari_tahsilat': cari_tahsilat,
         'toplam_gider': kucuk + ana + cari_odeme, 'net': gelir + cari_tahsilat - kucuk - ana - cari_odeme,
         'bekleyen_adet': len(bekleyen),
-        'bekleyen_tutar': sum((Decimal(str(d['kalem'].varsayilan_tutar or 0)) for d in bekleyen), Decimal('0.00')),
+        'bekleyen_belirsiz_adet': sum(1 for d in bekleyen if d['belirsiz']),
+        'bekleyen_tutar': sum((d['kalan'] or Decimal('0') for d in bekleyen), Decimal('0.00')),
         'bekleyenler': bekleyen,
     }
 

@@ -1,12 +1,13 @@
-{# Ana gider "Öde" modalı — panel ve ana gider sayfasında ortak. Buton data-* ile doldurur. #}
+{# Düzenli ödeme "Öde" modalı — panel ve düzenli ödeme sayfasında ortak. Buton data-* ile doldurur. #}
 <div class="modal fade" id="fnOdeModal" tabindex="-1">
   <div class="modal-dialog">
     <form class="modal-content" method="POST" action="{{ url_for('finans.ana_gider_ode') }}">
-      <div class="modal-header"><h5 class="modal-title">Ana Gider Öde — <span id="fnOdeKalemAd"></span></h5>
+      <div class="modal-header"><h5 class="modal-title">Düzenli Ödeme Yap — <span id="fnOdeKalemAd"></span></h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
+        <p class="fw-bold" id="fnOdeDonemEtiket"></p>
         <input type="hidden" name="kalem_id" id="fnOdeKalemId">
-        <input type="hidden" name="donem" value="{{ donem if donem is defined else ozet.donem }}">
+        <input type="hidden" name="donem" id="fnOdeDonem" value="{{ donem if donem is defined else ozet.donem }}">
         <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
         <div class="mb-2">
           <label class="form-label fn-mini">Hangi hesaptan?</label>
@@ -19,9 +20,10 @@
             {% endfor %}
           </div>
         </div>
+        <div class="fn-mini mb-2">Bu ödemenin gerçek tutarını girin; diğer haftaların tutarı değişmez.</div>
         <div class="row g-2">
           <div class="col-6"><label class="form-label fn-mini">Tutar (₺)</label>
-            <input type="text" name="tutar" id="fnOdeTutar" class="form-control" inputmode="decimal" required></div>
+            <input type="text" name="tutar" id="fnOdeTutar" class="form-control" inputmode="decimal" placeholder="Bu ödemenin tutarı" required></div>
           <div class="col-6"><label class="form-label fn-mini">Tarih</label>
             <input type="date" name="tarih" class="form-control" value="{{ bugun }}"></div>
           <div class="col-12"><input type="text" name="aciklama" class="form-control" placeholder="Açıklama (isteğe bağlı)"></div>
@@ -42,6 +44,8 @@
       var b = ev.relatedTarget; if (!b) return;
       document.getElementById('fnOdeKalemId').value = b.getAttribute('data-kalem-id');
       document.getElementById('fnOdeKalemAd').textContent = b.getAttribute('data-kalem-ad');
+      document.getElementById('fnOdeDonem').value = b.getAttribute('data-donem');
+      document.getElementById('fnOdeDonemEtiket').textContent = b.getAttribute('data-donem-etiket');
       document.getElementById('fnOdeTutar').value = (b.getAttribute('data-tutar') || '').replace('.', ',');
       var r = document.getElementById('fnOdeHesap_' + (b.getAttribute('data-hesap') || 'elde'));
       if (r) r.checked = true;

@@ -472,6 +472,17 @@ def _add_job_safe(func, *, trigger, id, **kw):
 def schedule_jobs():
     now = datetime.now()
 
+    def _finans_calisan_hakedis_job():
+        with app.app_context():
+            from finans_calisan_service import hakedisleri_isle
+            hakedisleri_isle()
+
+    _add_job_safe(
+        _finans_calisan_hakedis_job,
+        trigger='interval', id='finans_calisan_hakedis', hours=1,
+        next_run_time=now + timedelta(minutes=2)
+    )
+
     # ÇEK: hemen başla, her 4 dk
     _add_job_safe(
         pull_orders_job,

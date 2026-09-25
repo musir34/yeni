@@ -1,0 +1,47 @@
+<div class="modal fade" id="fnCalisanModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="POST" action="{{ url_for('finans.calisan_hakedis_odeme') }}">
+      <div class="modal-header"><h5 class="modal-title">Çalışan — <span id="fnClAd"></span></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <p id="fnClDonemEtiket" class="fw-bold"></p>
+        <input type="hidden" name="kalem_id" id="fnClKalem">
+        <input type="hidden" name="donem" id="fnClDonem">
+        <input type="hidden" name="odeme_anahtari" id="fnClAnahtar">
+        <input type="hidden" name="beklenen_hakedis" id="fnClBeklenen">
+        <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+        <div class="mb-3"><label for="fnClHak" class="form-label">Bu dönem hak ettiği toplam (₺)</label><input type="text" name="hak_tutar" id="fnClHak" class="form-control" inputmode="decimal" required><div class="form-text">Hak ediş borç olarak cariye yazılır; kasadan para düşmez.</div></div>
+        <div class="alert alert-light border py-2">Önceden ödenen: <b id="fnClOdenen"></b> ₺</div>
+        <div class="mb-3"><label for="fnClTutar" class="form-label">Şimdi verdiğin para (₺)</label><input type="text" name="tutar" id="fnClTutar" class="form-control" inputmode="decimal" placeholder="Ödeme yapmadıysan boş bırak"><div class="form-text">Eksik verebilirsin. Kalan borç sonraki haftalarda da görünür.</div></div>
+        <div class="row g-2">
+          <div class="col-6"><label for="fnClHesap" class="form-label">Ödeme hesabı</label><select name="hesap" id="fnClHesap" class="form-select">{% for h in fn_hesaplar if h.kod in ('elde','banka') %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}</select></div>
+          <div class="col-6"><label for="fnClTarih" class="form-label">Ödeme tarihi</label><input type="date" name="tarih" id="fnClTarih" class="form-control" value="{{ bugun }}"></div>
+          <div class="col-12"><label for="fnClAciklama" class="form-label">Açıklama (isteğe bağlı)</label><input type="text" name="aciklama" id="fnClAciklama" class="form-control"></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button><button type="submit" class="btn btn-success">Kaydet</button></div>
+    </form>
+  </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var modal = document.getElementById('fnCalisanModal');
+    modal.addEventListener('show.bs.modal', function (ev) {
+      var b = ev.relatedTarget; if (!b) return;
+      modal.querySelector('form').reset();
+      document.getElementById('fnClAd').textContent = b.dataset.kalemAd;
+      document.getElementById('fnClKalem').value = b.dataset.kalemId;
+      document.getElementById('fnClDonem').value = b.dataset.donem;
+      document.getElementById('fnClDonemEtiket').textContent = b.dataset.etiket;
+      document.getElementById('fnClHak').value = b.dataset.hak.replace('.', ',');
+      document.getElementById('fnClBeklenen').value = b.dataset.hak;
+      document.getElementById('fnClOdenen').textContent = b.dataset.odenen.replace('.', ',');
+      document.getElementById('fnClTutar').value = '';
+      document.getElementById('fnClHesap').value = b.dataset.hesap;
+      document.getElementById('fnClAnahtar').value = b.dataset.anahtar;
+      modal.querySelector('[type="submit"]').disabled = false;
+    });
+    modal.querySelector('form').addEventListener('submit', function () {
+      modal.querySelector('[type="submit"]').disabled = true;
+    });
+  });
+</script>

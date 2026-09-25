@@ -26,8 +26,8 @@
   {% set ep = request.endpoint %}
   <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'finans.panel' }}" href="{{ url_for('finans.panel') }}"><i class="fas fa-gauge me-1"></i>Panel</a></li>
   <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'finans.gelir' }}" href="{{ url_for('finans.gelir') }}"><i class="fas fa-arrow-down me-1 text-success"></i>Gelir</a></li>
-  <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'finans.kucuk_gider' }}" href="{{ url_for('finans.kucuk_gider') }}"><i class="fas fa-receipt me-1"></i>Küçük Gider</a></li>
-  <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'finans.ana_gider' }}" href="{{ url_for('finans.ana_gider') }}"><i class="fas fa-calendar-check me-1"></i>Ana Gider</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'finans.kucuk_gider' }}" href="{{ url_for('finans.kucuk_gider') }}"><i class="fas fa-receipt me-1"></i>Günlük Harcamalar</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'finans.ana_gider' }}" href="{{ url_for('finans.ana_gider') }}"><i class="fas fa-calendar-check me-1"></i>Düzenli Ödemeler</a></li>
   <li class="nav-item dropdown">
     <a class="nav-link dropdown-toggle {{ 'active' if ep == 'finans.defter' }}" data-bs-toggle="dropdown" href="#"><i class="fas fa-book me-1"></i>Defter</a>
     <ul class="dropdown-menu">

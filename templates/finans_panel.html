@@ -28,9 +28,9 @@
   <div class="card-body">
     <div class="row text-center">
       <div class="col-6 col-md-3"><div class="fn-mini">Gelir</div><div class="fn-pos fs-5">{{ ozet.gelir | tl_format }} ₺</div></div>
-      <div class="col-6 col-md-3"><div class="fn-mini">Küçük Gider</div><div class="fn-neg fs-5">{{ ozet.kucuk_gider | tl_format }} ₺</div></div>
-      <div class="col-6 col-md-3"><div class="fn-mini">Ana Gider (ödenen)</div><div class="fn-neg fs-5">{{ ozet.ana_gider | tl_format }} ₺</div>{% if ozet.cari_odeme %}<div class="fn-mini">+ cari ödeme {{ ozet.cari_odeme | tl_format }} ₺</div>{% endif %}</div>
-      <div class="col-6 col-md-3"><div class="fn-mini">Bekleyen Ana Gider</div><div class="text-warning fs-5 fw-bold">{{ ozet.bekleyen_adet }} kalem · {{ ozet.bekleyen_tutar | tl_format }} ₺</div></div>
+      <div class="col-6 col-md-3"><div class="fn-mini">Günlük Harcamalar</div><div class="fn-neg fs-5">{{ ozet.kucuk_gider | tl_format }} ₺</div></div>
+      <div class="col-6 col-md-3"><div class="fn-mini">Düzenli Ödemeler (ödenen)</div><div class="fn-neg fs-5">{{ ozet.ana_gider | tl_format }} ₺</div>{% if ozet.cari_odeme %}<div class="fn-mini">+ cari ödeme {{ ozet.cari_odeme | tl_format }} ₺</div>{% endif %}</div>
+      <div class="col-6 col-md-3"><div class="fn-mini">Bekleyen Düzenli Ödemeler</div><div class="text-warning fs-5 fw-bold">{{ ozet.bekleyen_adet }} ödeme · {{ ozet.bekleyen_tutar | tl_format }} ₺</div>{% if ozet.bekleyen_belirsiz_adet %}<div class="fn-mini">{{ ozet.bekleyen_belirsiz_adet }} ödemenin tutarı ayrıca belirlenecek</div>{% endif %}</div>
     </div>
   </div>
 </div>
@@ -83,7 +83,7 @@
   <div class="col-lg-7">
     <div class="card fn-card">
       <div class="card-header fw-bold d-flex justify-content-between">
-        <span>⏳ Bekleyen Ana Giderler — {{ ozet.etiket }}</span>
+        <span>⏳ Bekleyen Ödemeler — {{ ozet.etiket }} ve geçmiş çalışan borçları</span>
         <a href="{{ url_for('finans.ana_gider') }}" class="fn-mini">Tümü</a>
       </div>
       <div class="card-body p-0">
@@ -92,20 +92,21 @@
           <tbody>
           {% for d in ozet.bekleyenler %}
             <tr>
-              <td>{{ d.kalem.ad }}<div class="fn-mini">{{ d.kalem.kategori.ad if d.kalem.kategori else '' }}</div></td>
-              <td class="fn-num">{{ d.kalem.varsayilan_tutar | tl_format }} ₺</td>
+              <td>{{ d.kalem.ad }}<div class="fn-mini">{{ d.etiket }}</div><div class="fn-mini">{{ d.kalem.kategori.ad if d.kalem.kategori else '' }}</div></td>
+              <td class="fn-num">{% if d.kalan is not none %}{{ d.kalan | tl_format }} ₺{% else %}<span class="fn-mini">Öderken girilecek</span>{% endif %}</td>
               <td class="fn-actions text-end">
+                {% if d.calisan %}{% include '_finans_calisan_buton.html' %}{% else %}
                 <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#fnOdeModal"
-                        data-kalem-id="{{ d.kalem.id }}" data-kalem-ad="{{ d.kalem.ad }}"
-                        data-tutar="{{ '%.2f' | format(d.kalem.varsayilan_tutar or 0) }}"
-                        data-hesap="{{ d.kalem.varsayilan_hesap_kodu or 'elde' }}">Öde</button>
+                        data-donem="{{ d.donem }}" data-donem-etiket="{{ d.etiket }}" data-kalem-id="{{ d.kalem.id }}" data-kalem-ad="{{ d.kalem.ad }}"
+                        data-tutar="{{ '%.2f' | format(d.kalem.varsayilan_tutar) if d.kalem.varsayilan_tutar else '' }}"
+                        data-hesap="{{ d.kalem.varsayilan_hesap_kodu or 'elde' }}">Öde</button>{% endif %}
               </td>
             </tr>
           {% endfor %}
           </tbody>
         </table>
         {% else %}
-        <div class="p-3 text-muted">Bu ay bekleyen ana gider yok. 🎉</div>
+        <div class="p-3 text-muted">Bu ay bekleyen düzenli ödeme yok. 🎉</div>
         {% endif %}
       </div>
     </div>
@@ -137,4 +138,5 @@
 </div>
 
 {% include '_finans_ode_modal.html' %}
+{% include '_finans_calisan_modal.html' %}
 {% endblock %}

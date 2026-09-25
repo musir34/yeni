@@ -18,6 +18,8 @@ from finans_service import FinansHata
 @login_required
 @roles_required('admin')
 def cari_liste():
+    from finans_calisan_service import hakedisleri_isle
+    hakedisleri_isle()
     return render_template('finans_cari.html', cariler=cs.cariler(sadece_aktif=False),
                            ozet=cs.cari_ozet(), tur_etiket=cs.CARI_TUR_ETIKET,
                            tutarsizlik=cs.cari_tutarlilik_kontrol())
@@ -70,6 +72,8 @@ def cari_pasif(cari_id):
 @login_required
 @roles_required('admin')
 def cari_detay(cari_id):
+    from finans_calisan_service import hakedisleri_isle, hakedis_satirlari
+    hakedisleri_isle()
     try:
         cari = cs.cari_getir(cari_id)
     except FinansHata as e:
@@ -80,7 +84,8 @@ def cari_detay(cari_id):
                            sayfalama=cs.hareketler(cari_id, iptal_goster=iptal_goster,
                                                    sayfa=request.args.get('sayfa', 1, type=int)),
                            iptal_goster=iptal_goster, tur_etiket=cs.CARI_TUR_ETIKET,
-                           hareket_etiket=cs.HAREKET_ETIKET, bugun=_bugun_ist())
+                           hareket_etiket=cs.HAREKET_ETIKET, bugun=_bugun_ist(),
+                           calisan_haklari=hakedis_satirlari(cari_id=cari_id) if cari.tur == 'calisan' else [])
 
 
 def _kalemler_from_form():

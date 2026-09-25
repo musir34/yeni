@@ -15,13 +15,31 @@
     </div>
     <div class="d-flex gap-1 flex-wrap">
       <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#fnCariDuzenle">✎ Hesap bilgisi</button>
+      {% if cari.tur != 'calisan' %}
       <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#fnAlimModal"><i class="fas fa-box me-1"></i>Mal Girişi</button>
       <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#fnOdemeModal"><i class="fas fa-money-bill me-1"></i>Ödeme Yap</button>
       <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#fnSatisModal">Satış</button>
-      <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#fnTahsilatModal">Tahsilat</button>
+      <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#fnTahsilatModal">Tahsilat</button>{% else %}<a class="btn btn-sm btn-outline-primary" href="{{ url_for('finans.ana_gider') }}">Ödeme planları</a>{% endif %}
     </div>
   </div>
 </div>
+
+{% if cari.tur == 'calisan' %}
+<div class="card fn-card">
+  <div class="card-header fw-bold">Hak edişler ve ödemeler</div>
+  <div class="card-body p-0 fn-table-wrap"><table class="table table-sm fn-table mb-0">
+    <thead><tr><th>Dönem</th><th>Hak ediş</th><th>Ödenen</th><th>Kalan</th><th></th></tr></thead><tbody>
+    {% for d in calisan_haklari %}<tr>
+      <td>{{ d.etiket }}<div class="fn-mini">{{ d.kalem.ad }}</div>{% if d.odenen and d.bekleyen %}<span class="badge bg-warning text-dark">Kısmen ödendi</span>{% endif %}</td>
+      <td>{% if d.hak_tutar is not none %}{{ d.hak_tutar | tl_format }} ₺{% else %}Belirlenecek{% endif %}</td>
+      <td>{{ d.odenen | tl_format }} ₺</td><td>{% if d.kalan is not none %}{{ d.kalan | tl_format }} ₺{% else %}Belirlenecek{% endif %}</td>
+      <td>{% include '_finans_calisan_buton.html' %}</td>
+    </tr>{% else %}<tr><td colspan="5" class="p-3 text-muted">Henüz hak ediş yok. Düzenli Ödemeler'den bu çalışana bir ödeme planı ekleyin.</td></tr>{% endfor %}
+    </tbody></table></div>
+  <div class="card-footer fn-mini">Hak edişi belirlenecek dönemler yukarıdaki borç bakiyesine henüz dahil değildir.</div>
+</div>
+{% include '_finans_calisan_modal.html' %}
+{% endif %}
 
 <div class="card fn-card">
   <div class="card-header d-flex justify-content-between align-items-center">
@@ -51,7 +69,7 @@
           <td class="fn-num fn-pos">{% if h.yon < 0 %}{{ h.tutar | tl_format }}{% endif %}</td>
           <td class="fn-num">{{ h.yeni_bakiye | tl_format }}</td>
           <td class="fn-actions text-end">
-            {% if not h.iptal %}
+            {% if not h.iptal and (not h.hakedis_id or h.islem_id) %}
             <form method="POST" action="{{ url_for('finans.cari_hareket_iptal', hareket_id=h.id) }}" class="d-inline fn-cari-iptal">
               <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
               <button type="submit" class="btn btn-sm btn-outline-danger" title="İptal">✕</button>
