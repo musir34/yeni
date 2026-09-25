@@ -39,6 +39,8 @@ html.gs-dark .uy-kart { background: #1e1e1e; border-color: #333; box-shadow: non
 .uy-rozet { display: inline-block; background: rgba(25,135,84,.12); color: #198754; border-radius: 6px; padding: .1rem .5rem; font-size: .8rem; margin: .1rem; }
 .uy-onizle-serit { display: flex; gap: .35rem; flex-wrap: wrap; width: 100%; margin: .15rem 0 .35rem 90px; }
 .uy-onizle-serit img { height: 64px; width: 64px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(0,0,0,.12); cursor: zoom-in; }
+.uy-alt-satir { display: flex; gap: .5rem; align-items: center; margin: .25rem 0; }
+.uy-alt-thumb { height: 44px; width: 44px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(0,0,0,.12); flex: 0 0 auto; background: rgba(0,0,0,.05); }
 .uy-lightbox { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,.82); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .6rem; cursor: zoom-out; }
 .uy-lightbox img { max-width: 92vw; max-height: 84vh; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,.5); cursor: default; }
 .uy-lightbox .uy-lb-yazi { color: #fff; font-size: .95rem; opacity: .85; }
@@ -86,7 +88,8 @@ html.gs-dark .uy-kart { background: #1e1e1e; border-color: #333; box-shadow: non
     </div>
     <small class="text-muted">Trendyol'daki mevcut ürünün renkleri, bedenleri, <b>aynı barkodları</b>, fiyatı, özellikleri ve görselleri otomatik doldurulur — AI üretip onaylarsınız, Shopify'a birebir aynı kodlarla gider.<br>
     <b>Mevcut modele yeni renk:</b> modeli Getir'le doldurun, Renkler listesine yeni rengi ekleyip görsellerini yükleyin — mevcut renkler aynı barkodlarla korunur, Trendyol'a yalnız yeni renk gönderilir (bunun için hedefi <b>İkisi</b> yapın), sitede aynı ürüne eklenir.<br>
-    <b>Mevcut modele buçuklu beden:</b> yine Getir'le doldurun, buçuk anahtarını açın — mevcut bedenler barkodlarını korur, yalnız buçuklara yeni barkod verilir ve sadece onlar Trendyol'a gönderilir.</small>
+    <b>Mevcut modele buçuklu beden:</b> yine Getir'le doldurun, buçuk anahtarını açın — mevcut bedenler barkodlarını korur, yalnız buçuklara yeni barkod verilir ve sadece onlar Trendyol'a gönderilir.<br>
+    <b>Sitede eksik renk/beden tamamlama:</b> model sitede zaten varsa motor barkodları Shopify'da tarar, olmayanları ayırır ve <b>yalnız eksikleri</b> ekler (yeni renk görselleriyle, mevcut renge yeni beden görselsiz); sitedeki başlık, açıklama, görsel ve stok değişmez.</small>
     <details class="mt-2" id="uyAktarAcikKutu" style="display:none">
       <summary class="small text-muted">Mevcut Trendyol açıklaması (Getir ile geldi)</summary>
       <textarea class="form-control form-control-sm mt-1" id="uyAktarAcik" rows="8" readonly></textarea>
@@ -625,6 +628,18 @@ Alt Taban: Kaymaz taban</textarea>
     } catch (e) { /* önizleme kritik değil — sessiz geç */ }
   }
 
+  // ALT satırlarının küçük resimleri (önizlemede hangi görsele hangi metin)
+  async function altThumbYukle(renk) {
+    if (!S.taslakId) return;
+    try {
+      const d = await getJSON(`/urun-yukleme/api/gorsel-liste?taslak_id=${encodeURIComponent(S.taslakId)}&renk=${encodeURIComponent(renk)}`);
+      (d.adlar || []).forEach((ad, i) => {
+        const img = document.querySelector(`.uy-alt-thumb[data-renk="${CSS.escape(renk)}"][data-i="${i}"]`);
+        if (img) img.src = `/urun-yukleme/api/gorsel-onizle?taslak_id=${encodeURIComponent(S.taslakId)}&renk=${encodeURIComponent(renk)}&ad=${encodeURIComponent(ad)}`;
+      });
+    } catch (e) { /* küçük resim kritik değil */ }
+  }
+
   // --- Görsel büyütme (lightbox): tık ile açılır, ← → ile AYNI rengin
   // görselleri arasında gezilir, Esc / boşluğa tık ile kapanır.
   const LB = { urller: [], i: 0, renk: "" };
@@ -821,8 +836,23 @@ Alt Taban: Kaymaz taban</textarea>
       html += `<div class="alert alert-info py-2">🤖 AI ${doldurulan} Trendyol özelliğini doldurdu — Adım 1'deki seçimlerden kontrol edebilirsiniz.</div>`;
     html += `<div class="mb-2"><b>Model kodu:</b> ${t.model_kodu} — <b>Hedef:</b> ${(t.hedefler || []).join(" + ")}</div>`;
 
+    // Site (Shopify) EKSİK TAMAMLAMA — model sitede zaten var: yalnız eksik
+    // varyantlar eklenir, mevcut metin/medya/stok korunur (H1/SEO editörü yok)
+    if (t.shopify && t.shopify.mod === "eksik") {
+      const sh = t.shopify;
+      const vb = (liste) => (liste || []).map(v => `${v[0]} ${v[1]}`).join(", ") || "—";
+      html += `
+        <div class="border border-success rounded p-2 mb-3">
+          <div class="fw-bold mb-1">🛍️ Site (Shopify) — Eksik Tamamlama <small class="text-muted">sitedeki ürüne yalnız eksikler eklenir</small></div>
+          <div><b>Sitedeki ürün:</b> <a href="${kacir(sh.mevcut_url)}" target="_blank">${kacir(sh.mevcut_baslik || sh.mevcut_handle)}</a></div>
+          <div class="mt-1"><b>Eksik renkler (görselleriyle eklenir):</b> ${kacir((sh.eksik_renkler || []).join(", ") || "—")}</div>
+          <div><b>Eklenecek varyantlar (${(sh.eksik_varyantlar || []).length}):</b> ${kacir(vb(sh.eksik_varyantlar))}</div>
+          <div class="text-muted"><small><b>Sitede zaten var (${(sh.sitede_var || []).length}, dokunulmaz):</b> ${kacir(vb(sh.sitede_var))}</small></div>
+          <small class="text-muted">Fiyat sitedeki kardeş varyanttan alınır; başlık, açıklama, SEO ve mevcut görseller değişmez.</small>
+        </div>`;
+    }
     // Site (Shopify) önizlemesi — renk-nötr tek ürün içeriği
-    if (t.shopify) {
+    else if (t.shopify) {
       html += `
         <div class="border border-success rounded p-2 mb-3">
           <div class="fw-bold mb-1">🛍️ Site (Shopify) İçeriği <small class="text-muted">tüm renkler tek üründe</small></div>
@@ -840,21 +870,40 @@ Alt Taban: Kaymaz taban</textarea>
         </div>`;
     }
 
+    const altRenkler = [];
     for (const [renk, r] of Object.entries(t.renkler)) {
-      if (!r.baslik && !r.aciklama) continue;  // Shopify-only: renk bazlı Trendyol kartı yok
+      const trendyolVar = r.baslik || r.aciklama;   // Shopify-only: renk bazlı Trendyol metni yok
+      const altVar = Array.isArray(r.alt) && r.alt.length;
+      if (!trendyolVar && !altVar) continue;
       html += `
         <div class="border rounded p-2 mb-3">
-          <div class="fw-bold mb-1">${kacir(renk)} <small class="text-muted">${r.barkodlar[0]} – ${r.barkodlar[r.barkodlar.length - 1]}</small></div>
+          <div class="fw-bold mb-1">${kacir(renk)} <small class="text-muted">${r.barkodlar[0]} – ${r.barkodlar[r.barkodlar.length - 1]}</small></div>`;
+      if (trendyolVar) html += `
           <div>
             <input class="form-control uy-onizleme-baslik uy-baslik" data-renk="${kacir(renk)}" value="${kacir(r.baslik)}">
             <span class="uy-sayac"></span> <small class="text-muted">(95-100 zorunlu)</small>
           </div>
           <details class="mt-2"><summary>Açıklama HTML (düzenlenebilir)</summary>
             <textarea class="form-control uy-aciklama-kutu uy-aciklama" data-renk="${kacir(renk)}">${kacir(r.aciklama)}</textarea>
-          </details>
-        </div>`;
+          </details>`;
+      // Görsel başına ALT metni (Google Görseller) — AI görsele bakarak yazdı, düzenlenebilir
+      if (altVar) {
+        altRenkler.push(renk);
+        html += `
+          <details class="mt-2" open><summary>🖼️ Görsel ALT metinleri — Google Görseller (${r.alt.length}, düzenlenebilir)</summary>
+            <div class="uy-alt-liste" data-renk="${kacir(renk)}">
+              ${r.alt.map((a, i) => `
+                <div class="uy-alt-satir">
+                  <img class="uy-alt-thumb" data-renk="${kacir(renk)}" data-i="${i}" alt="">
+                  <input class="form-control form-control-sm uy-alt" data-renk="${kacir(renk)}" data-i="${i}" maxlength="125" value="${kacir(a)}">
+                </div>`).join("")}
+            </div>
+          </details>`;
+      }
+      html += `</div>`;
     }
     $("uyOnizleme").innerHTML = html;
+    altRenkler.forEach(r => altThumbYukle(r));
     document.querySelectorAll(".uy-baslik").forEach(inp => {
       sayacGuncelle(inp);
       inp.addEventListener("input", () => sayacGuncelle(inp));
@@ -937,6 +986,12 @@ Alt Taban: Kaymaz taban</textarea>
         renkDuzeltme[ta.dataset.renk] = renkDuzeltme[ta.dataset.renk] || {};
         renkDuzeltme[ta.dataset.renk].aciklama = ta.value;
       });
+      // Görsel ALT metinlerinin düzeltilmiş halleri (sıra = görsel sırası)
+      document.querySelectorAll(".uy-alt-liste").forEach(liste => {
+        const renk = liste.dataset.renk;
+        renkDuzeltme[renk] = renkDuzeltme[renk] || {};
+        renkDuzeltme[renk].alt = [...liste.querySelectorAll(".uy-alt")].map(inp => inp.value.trim());
+      });
       // Formun fiyat/özellik alanlarını taslağa işle
       S.taslak.form.kategori_id = S.kategori.id;
       S.taslak.form.satis_fiyat = $("uySatis").value;
@@ -977,11 +1032,21 @@ Alt Taban: Kaymaz taban</textarea>
       }
       if (t.shopify_sonuc) {
         const s = t.shopify_sonuc;
-        sonucHtml += s.hata
-          ? `<div class="alert alert-danger"><b>Shopify</b> — Hata: ${s.hata}</div>`
-          : `<div class="alert alert-success"><b>Shopify</b> — ürün yayında:
-               <a href="${s.url}" target="_blank">${s.url}</a><br>
+        if (s.hata) {
+          sonucHtml += `<div class="alert alert-danger"><b>Shopify</b> — Hata: ${kacir(s.hata)}</div>`;
+        } else if (s.varyant === 0 && s.mesaj) {
+          sonucHtml += `<div class="alert alert-warning"><b>Shopify</b> — YENİ BİR ŞEY GÖNDERİLMEDİ<br>${kacir(s.mesaj)}<br>
+               <a href="${kacir(s.url)}" target="_blank">${kacir(s.url)}</a></div>`;
+        } else if (typeof s.varyant === "number") {
+          sonucHtml += `<div class="alert alert-success"><b>Shopify</b> — sitedeki ürüne <b>${s.varyant} varyant</b> eklendi:
+               <a href="${kacir(s.url)}" target="_blank">${kacir(s.url)}</a><br>
+               <small>Yeni renk: ${kacir((s.yeni_renkler || []).join(", ") || "—")} — yeni beden: ${kacir((s.yeni_bedenler || []).join(", ") || "—")}.
+               Mevcut varyantlar, görseller ve metin değişmedi; yeni renklerin görselleri ALT metinleriyle galeriye eklendi.</small></div>`;
+        } else {
+          sonucHtml += `<div class="alert alert-success"><b>Shopify</b> — ürün yayında:
+               <a href="${kacir(s.url)}" target="_blank">${kacir(s.url)}</a><br>
                <small>Renk daireleri ve kapak görselleri otomatik kuruldu; tüm satış kanallarına yayınlandı.</small></div>`;
+        }
       }
       $("uySonuc").innerHTML = sonucHtml || "<div class='alert alert-warning'>Sonuç bilgisi bulunamadı.</div>";
       $("uyYukleDurum").textContent = "";

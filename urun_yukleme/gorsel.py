@@ -29,13 +29,15 @@ def _graphql(query: str, variables: dict, timeout: int = 60) -> dict:
     return data["data"]
 
 
-def cdn_yukle(dosyalar: list[tuple[str, str]]) -> list[str]:
+def cdn_yukle(dosyalar: list[tuple[str, str]], altlar: list[str] | None = None) -> list[str]:
     """
     [(cdn_dosya_adi, yerel_yol)] listesini Shopify CDN'e taşır;
-    aynı sırada HTTPS URL listesi döner.
+    aynı sırada HTTPS URL listesi döner. altlar: dosya sırasına göre ALT metni
+    (yoksa dosya adı) — Shopify dosya kütüğü de Google'a ALT ile gider.
     """
     if not dosyalar:
         return []
+    altlar = list(altlar or [])
 
     girdiler = []
     for ad, yol in dosyalar:
@@ -74,7 +76,8 @@ def cdn_yukle(dosyalar: list[tuple[str, str]]) -> list[str]:
             userErrors { field message }
           }
         }""", {"files": [{"originalSource": h["resourceUrl"], "contentType": "IMAGE",
-                          "alt": ad} for (ad, _), h in zip(dosyalar, hedefler)]})
+                          "alt": (altlar[i] if i < len(altlar) and altlar[i] else ad)}
+                         for i, ((ad, _), h) in enumerate(zip(dosyalar, hedefler))]})
     if d["fileCreate"]["userErrors"]:
         raise RuntimeError(f"fileCreate: {d['fileCreate']['userErrors']}")
     kimlikler = [f["id"] for f in d["fileCreate"]["files"]]

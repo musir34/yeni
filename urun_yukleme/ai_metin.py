@@ -71,19 +71,6 @@ TRENDYOL ÖZELLİK SEÇİMİ — aşağıdaki HER özellik için, verilen izinli
         f"\nSATICININ KALICI TALİMATLARI (her üründe uygula; yasak listesiyle çelişirse yasak kazanır):\n{talimat}\n"
         if talimat else ""
     )
-    hedefler = bilgi.get("hedefler") or ["trendyol"]
-    shopify_blok = ""
-    if "shopify" in hedefler:
-        shopify_blok = """
-AYRICA SİTE (gullushoes.com) İÇİN RENK-NÖTR İÇERİK — sitede tüm renkler TEK üründe
-toplanır, bu yüzden şu alanlar hiçbir renge özel olmamalı:
-- "genel.h1": ürünün tam adı (60-85 karakter; renk adı GEÇMEZ; ör. "Rugan Fiyonk Tokalı Arkası Açık Topuklu Sandalet 9 cm Kadeh Topuk")
-- "genel.seo_baslik": 50-60 karakter, sonu " - Güllü Shoes" ile biter, ana kelime önde
-- "genel.seo_aciklama": 140-160 karakter; ana kelime + malzeme/kalıp + renk seçenekleri imasi + "35-41 numara"
-- "genel.vurgu" / "genel.neden" (EN AZ 120 kelime) / "genel.kombin" (EN AZ 70 kelime):
-  renk-nötr sürümler (renklerden toplu bahsedebilir)
-- "genel.maddeler": ürüne özel 3-4 ek özellik maddesi ("<b>Detay</b> — açıklama")
-"""
     aktarim_blok = ""
     if bilgi.get("trendyol_aciklama"):
         aktarim_blok = f"""
@@ -106,7 +93,7 @@ istenmeyen kısımları koru (baştan yazma, talebi işle):
 {bilgi['duzeltme_talimati']}
 """
     return f"""Yeni ürün için Trendyol içeriği üret.
-{aktarim_blok}{duzeltme_blok}{talimat_blok}{ozellik_blok}{shopify_blok}
+{aktarim_blok}{duzeltme_blok}{talimat_blok}{ozellik_blok}
 ÜRÜN BİLGİLERİ
 - Kategori: {bilgi.get('kategori_yolu', '')}
 - ÜRÜN TÜRÜ ÖBEĞİ (ZORUNLU): "{bilgi.get('urun_turu', '')}" — bu öbek HER başlıkta
@@ -137,13 +124,170 @@ UZUNLUK ŞARTLARI (kısa metin KABUL EDİLMEZ):
     }}
   }},
   "renk_secenekleri": "<tüm renkleri tek cümlede tanıtan paragraf: 'Bu model (X) ... renklerinde üretilmektedir: ...'>",
-  "ozellikler": {{"<ÖzellikAdı>": "<izinli değerlerden birebir seçim>"}},
-  "genel": {{"h1": "...", "seo_baslik": "...", "seo_aciklama": "...", "vurgu": "...", "neden": "...", "kombin": "..."}}
-}}
-("genel" alanı yalnızca site içeriği istendiyse doldurulur; istenmediyse boş bırakılabilir.)"""
+  "ozellikler": {{"<ÖzellikAdı>": "<izinli değerlerden birebir seçim>"}}
+}}"""
 
 
-def _claude_calistir(prompt: str, gorsel_var: bool) -> str | None:
+# ------------------------------------------------ SİTE (Shopify) — Google SEO
+# Trendyol promptundan AYRI: platform kuralları farklı (Trendyol: 95-100 karakter
+# başlık + içerik politikası; site: Google arama/görsel arama uyumu). İki hedef
+# seçilince iki ayrı üretim yapılır — kullanıcı emri ("shopify için google ile
+# uyumlu, trendyol için trendyol'a uygun").
+KURALLAR_SITE = """Sen Güllü Shoes'un (kadın ayakkabı, gullushoes.com) web sitesi SEO içerik yazarısın.
+Hedef: Google organik arama ve Google Görseller'de görünürlük. Kurallar — HEPSİ ZORUNLU:
+1) Doğal, akıcı Türkçe; anahtar kelime yığmak YASAK (Google spam sayar). Ana arama öbeğini
+   (ör. "topuklu sandalet") H1'de, SEO başlığında, meta açıklamada ve ilk paragrafta
+   DOĞAL biçimde bir kez kullan.
+2) H1 (ürün adı): 50-70 karakter, renk adı geçmez (sitede tüm renkler tek üründe).
+3) SEO başlığı: 50-60 karakter, ana öbek önde, sonu " - Güllü Shoes" ile biter.
+4) Meta açıklama: 140-160 karakter, ana öbek + malzeme/kalıp + renk çeşitliliği iması +
+   "35-41 numara" + kullanıcıyı tıklamaya çağıran doğal bir kapanış.
+5) Her renk için AYRI ve BENZERSİZ bir paragraf yaz (40-70 kelime): o rengin görünümü,
+   hangi kombin/ortama uyduğu; şablon cümle tekrarı YASAK (Google yinelenen içerik).
+6) YASAK: trendyol, iade, garanti, kargo, değişim, ortopedik, indirim, kampanya, fiyat,
+   ücretsiz, yıl (2025/2026), link/telefon. Uydurma rakam yok.
+7) Mağazanın farklılaştırıcıları uygun yerde: vegan deri, hafızalı ped, yerli üretim, rahatlık.
+SADECE istenen JSON'u döndür; başka hiçbir şey yazma."""
+
+
+def _site_prompt(bilgi: dict) -> str:
+    renkler = ", ".join(bilgi.get("renkler") or [])
+    teknik = "\n".join(f"- {t}" for t in bilgi.get("teknik") or [])
+    gorseller = "\n".join(f"- {g}" for g in bilgi.get("gorsel_yollari") or [])
+    gorsel_notu = (
+        f"\nHer rengin ilk görselinin dosya yolu aşağıda; Read aracıyla AÇIP BAK ve "
+        f"ürünü gördüğün haliyle anlat (toka/fiyonk/taş gibi detayları atlama):\n{gorseller}\n"
+        if gorseller else ""
+    )
+    talimat = (bilgi.get("genel_talimat") or "").strip()
+    talimat_blok = (
+        f"\nSATICININ KALICI TALİMATLARI (yasak listesiyle çelişirse yasak kazanır):\n{talimat}\n"
+        if talimat else ""
+    )
+    aktarim_blok = ""
+    if bilgi.get("trendyol_aciklama"):
+        aktarim_blok = f"""
+Ürün Trendyol'da da satılıyor; mevcut açıklaması KAYNAK olarak aşağıda — bilgileri
+kullan ama birebir kopyalama, site için Google uyumlu yeniden yaz:
+--- TRENDYOL AÇIKLAMASI ---
+{bilgi['trendyol_aciklama'][:4000]}
+---
+"""
+    duzeltme_blok = ""
+    if bilgi.get("duzeltme_talimati"):
+        onceki = (bilgi.get("onceki_metin") or {}).get("shopify") or {}
+        duzeltme_blok = f"""
+BU BİR REVİZYONDUR. Önceki site üretimi aşağıda; satıcının düzeltme talebini uygula,
+istenmeyen kısımları koru:
+--- ÖNCEKİ ÜRETİM (JSON) ---
+{json.dumps(onceki, ensure_ascii=False)[:6000]}
+--- SATICININ DÜZELTME TALEBİ ---
+{bilgi['duzeltme_talimati']}
+"""
+    return f"""gullushoes.com için Google SEO uyumlu ürün içeriği üret.
+{aktarim_blok}{duzeltme_blok}{talimat_blok}
+ÜRÜN BİLGİLERİ
+- Kategori: {bilgi.get('kategori_yolu', '')}
+- ÜRÜN TÜRÜ ÖBEĞİ (ana arama öbeği, ZORUNLU): "{bilgi.get('urun_turu', '')}"
+- SATICI NOTU (ZORUNLU DETAYLAR): "{bilgi.get('not', '') or '-'}" — ayırt edici özellikler, atlanamaz.
+- Renkler: {renkler}
+- Beden aralığı: {bilgi.get('beden_araligi', '')}
+- Teknik özellikler:
+{teknik}
+{gorsel_notu}
+UZUNLUK ŞARTLARI: "neden" EN AZ 120 kelime, "kombin" EN AZ 70 kelime, her renk paragrafı 40-70 kelime.
+
+İSTENEN JSON (bire bir bu şema):
+{{
+  "genel": {{
+    "h1": "<50-70 karakter ürün adı, renk adı yok>",
+    "seo_baslik": "<50-60 karakter, sonu ' - Güllü Shoes'>",
+    "seo_aciklama": "<140-160 karakter meta açıklama>",
+    "vurgu": "<öne çıkan tek cümle, renk-nötr>",
+    "maddeler": ["<b>Detay</b> — açıklama", "... ürüne özel 3-4 madde"],
+    "neden": "<NEDEN BU MODEL paragrafı, EN AZ 120 kelime, renk-nötr>",
+    "kombin": "<KOMBİN ÖNERİLERİ paragrafı, EN AZ 70 kelime, renk-nötr>"
+  }},
+  "renk_bolumleri": {{"<RenkAdı>": "<o renge özel benzersiz 40-70 kelimelik paragraf>"}},
+  "renk_secenekleri": "<tüm renkleri tek cümlede tanıtan paragraf>"
+}}"""
+
+
+def site_metin_uret(bilgi: dict) -> dict:
+    """Site (Shopify) içeriği: {"genel": {...}, "renk_bolumleri": {renk: str}, "renk_secenekleri": str}."""
+    ham = _run_ai(_site_prompt(bilgi), gorsel_var=bool(bilgi.get("gorsel_yollari")),
+                  kurallar=KURALLAR_SITE)
+    if not ham:
+        raise ValueError("AI motoru site içeriği için yanıt vermedi — motor ayarını kontrol edin.")
+    eslesme = _JSON_DESENI.search(ham)
+    if not eslesme:
+        raise ValueError("Site içeriği AI çıktısı çözümlenemedi (JSON bulunamadı).")
+    try:
+        veri = json.loads(eslesme.group(0))
+    except json.JSONDecodeError:
+        raise ValueError("Site içeriği AI çıktısı geçerli JSON değil — tekrar deneyin.")
+    if not isinstance(veri.get("genel"), dict) or not veri["genel"].get("h1"):
+        raise ValueError("Site içeriğinde H1 üretilemedi — tekrar deneyin.")
+    if not isinstance(veri.get("renk_bolumleri"), dict):
+        veri["renk_bolumleri"] = {}
+    return veri
+
+
+# ------------------------------------------------ GÖRSEL BAŞINA ALT METNİ
+# Google Görseller ALT metnini okur; her görsele AYRI, gördüğünü anlatan metin
+# kullanıcı emriyle zorunlu. AI (claude yolu) görselleri Read ile açıp bakar;
+# bakamayan motorda/hatada açı şablonuna düşülür — yükleme asla bloklanmaz.
+KURALLAR_ALT = """Sen bir e-ticaret görsel SEO uzmanısın. Verilen ürün fotoğraflarının HER BİRİ için
+Google Görseller'e uygun Türkçe ALT metni yaz. Kurallar:
+- 60-125 karakter; her görsel için FARKLI metin (aynı cümleyi tekrarlama).
+- Görselde gerçekten ne görünüyorsa onu yaz: açı (önden/yandan/arkadan/üstten),
+  görünen detay (toka, fiyonk, topuk, taban, bilek bandı), ürün adı ve rengi.
+- "resim", "görsel", "fotoğraf" kelimeleri ve anahtar kelime yığını YASAK.
+- YASAK: trendyol, iade, garanti, kargo, indirim, fiyat, yıl, link/telefon.
+SADECE istenen JSON'u döndür."""
+
+_ACI_SABLONU = ["önden görünüm", "yandan görünüm", "arkadan görünüm", "topuk detayı",
+                "üstten görünüm", "taban görünümü", "yakın detay", "kombin görünümü"]
+
+
+def alt_sablon(renk: str, urun_adi: str, adet: int) -> list[str]:
+    """AI'sız yedek ALT listesi (açı şablonu) — yine her görselde farklı metin."""
+    return [f"{renk} {urun_adi} {_ACI_SABLONU[i % len(_ACI_SABLONU)]}".strip()[:125]
+            for i in range(adet)]
+
+
+def alt_uret(renk: str, gorsel_yollari: list[str], urun_adi: str) -> list[str]:
+    """
+    Rengin görselleri için ALT listesi (görsel sırasıyla). Claude yolu görsellere
+    bakar; codex yolu görsel açamaz → şablon. Hatada da şablon (loglanır).
+    """
+    from ai_asistan.motor_ayar import aktif_motor
+    adet = len(gorsel_yollari)
+    if not adet:
+        return []
+    if aktif_motor(ALAN) == "codex":
+        return alt_sablon(renk, urun_adi, adet)
+    liste = "\n".join(f"{i + 1}. {y}" for i, y in enumerate(gorsel_yollari))
+    prompt = f"""Ürün: "{urun_adi}" — Renk: {renk}
+Aşağıdaki {adet} fotoğrafı Read aracıyla SIRAYLA aç ve her biri için ALT metni yaz:
+{liste}
+
+İSTENEN JSON: {{"alt": ["<1. görsel ALT>", "<2. görsel ALT>", ...]}} — tam {adet} eleman, aynı sırayla."""
+    ham = _run_ai(prompt, gorsel_var=True, kurallar=KURALLAR_ALT)
+    try:
+        veri = json.loads(_JSON_DESENI.search(ham or "").group(0))
+        altlar = [str(a).strip()[:125] for a in veri.get("alt") or []]
+    except (AttributeError, json.JSONDecodeError, TypeError):
+        altlar = []
+    if len(altlar) != adet or not all(altlar):
+        logger.warning("[URUN-AI] %s için ALT üretimi eksik (%d/%d) — şablona düşüldü",
+                       renk, len(altlar), adet)
+        yedek = alt_sablon(renk, urun_adi, adet)
+        altlar = [(altlar[i] if i < len(altlar) and altlar[i] else yedek[i]) for i in range(adet)]
+    return altlar
+
+
+def _claude_calistir(prompt: str, gorsel_var: bool, kurallar: str = KURALLAR) -> str | None:
     from ai_asistan.blueprint import _claude_bin, BASE_DIR as AI_ASISTAN_DIR, CLAUDE_MODEL
 
     claude_bin = _claude_bin()
@@ -159,7 +303,7 @@ def _claude_calistir(prompt: str, gorsel_var: bool) -> str | None:
     except Exception:
         model = CLAUDE_MODEL
     cmd = [claude_bin, "-p", prompt, "--model", model,
-           "--append-system-prompt", KURALLAR,
+           "--append-system-prompt", kurallar,
            "--output-format", "json"]
     if gorsel_var:
         cmd += ["--allowedTools", "Read"]  # görselleri açıp bakabilsin
@@ -179,13 +323,13 @@ def _claude_calistir(prompt: str, gorsel_var: bool) -> str | None:
         return (sonuc.stdout or "").strip() or None
 
 
-def _run_ai(prompt: str, gorsel_var: bool) -> str | None:
+def _run_ai(prompt: str, gorsel_var: bool, kurallar: str = KURALLAR) -> str | None:
     from ai_asistan.motor_ayar import aktif_motor, codex_model
     from ai_asistan.blueprint import _codex_calistir, BASE_DIR as AI_ASISTAN_DIR
 
     if aktif_motor(ALAN) != "codex":
-        return _claude_calistir(prompt, gorsel_var)
-    sonuc = _codex_calistir(prompt, KURALLAR, TIMEOUT_SN, cwd=AI_ASISTAN_DIR,
+        return _claude_calistir(prompt, gorsel_var, kurallar)
+    sonuc = _codex_calistir(prompt, kurallar, TIMEOUT_SN, cwd=AI_ASISTAN_DIR,
                             model=codex_model(ALAN))
     if not sonuc["ok"]:
         logger.warning("[URUN-AI] codex hata: %s", sonuc.get("hata"))
@@ -215,10 +359,17 @@ def metin_uret(bilgi: dict) -> dict:
 
 
 def shopify_aciklama_kur(genel: dict, bilgi: dict, renkler: list[str],
-                         renk_secenekleri: str) -> str:
-    """Site için RENK-NÖTR açıklama (tüm renkler tek üründe — tema kuralı)."""
+                         renk_secenekleri: str, renk_bolumleri: dict | None = None) -> str:
+    """
+    Site için RENK-NÖTR açıklama (tüm renkler tek üründe — tema kuralı).
+    renk_bolumleri: {renk: paragraf} — sitede SEO başlığı/meta üründe TEK olduğundan
+    renk bazlı Google görünürlüğü açıklama içindeki renk bölümlerinden gelir.
+    """
     teknik = "\n".join(f"<li>{t}</li>" for t in bilgi.get("teknik") or [])
     beden = bilgi.get("beden_araligi", "35-41")
+    renk_html = "".join(
+        f"\n<h4>{r}</h4>\n<p>{(renk_bolumleri or {}).get(r, '')}</p>"
+        for r in renkler if (renk_bolumleri or {}).get(r))
     return f"""
 <p>{genel.get('vurgu', '')}</p>
 <h3>✨ Öne Çıkan Özellikler</h3>
@@ -240,7 +391,7 @@ def shopify_aciklama_kur(genel: dict, bilgi: dict, renkler: list[str],
 <h3>👗 Kombin Önerileri</h3>
 <p>{genel.get('kombin', '')}</p>
 <h3>🎨 Renk Seçenekleri</h3>
-<p>{renk_secenekleri}</p>
+<p>{renk_secenekleri}</p>{renk_html}
 <h3>📏 Beden ve Uyum</h3>
 <p>Ürün {beden} beden aralığında üretilmiştir ve tam kalıptır; normal numaranızı seçebilirsiniz.</p>
 <h3>🧴 Bakım</h3>

@@ -35,6 +35,18 @@ def _yayin_kanallari() -> list[str]:
     return [n["id"] for n in d["publications"]["nodes"]]
 
 
+def gorsel_alt(taslak: dict, renk: str, i: int, varsayilan: str) -> str:
+    """
+    Görselin ALT metni: AI'nın görsele bakarak yazdığı metin (taslak.renkler[renk].alt,
+    önizlemede düzeltilebilir) varsa o; yoksa şablon. Google Görseller ALT'ı okur —
+    her görselde benzersiz, açıklayıcı metin SEO için şarttır (kullanıcı emri).
+    """
+    altlar = (taslak.get("renkler") or {}).get(renk, {}).get("alt") or []
+    if i - 1 < len(altlar) and str(altlar[i - 1]).strip():
+        return str(altlar[i - 1]).strip()[:512]
+    return varsayilan
+
+
 def urun_ac(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
     """
     Taslaktan Shopify ürünü oluşturur. renk_gorselleri: {renk: [cdn_url, ...]}.
@@ -55,7 +67,8 @@ def urun_ac(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
         urller = renk_gorselleri.get(renk) or []
         for i, url in enumerate(urller, 1):
             dosyalar.append({"originalSource": url, "contentType": "IMAGE",
-                             "alt": f"{renk} {sh.get('h1') or urun_tipi} {i}"})
+                             "alt": gorsel_alt(taslak, renk, i,
+                                               f"{renk} {sh.get('h1') or urun_tipi} {i}")})
         blok = taslak["renkler"][renk]["barkodlar"]
         for beden, barkod in zip(bedenler, blok):
             varyantlar.append({
@@ -134,6 +147,252 @@ def _barkodla_urun_bul(barkod: str) -> str | None:
         }""", {"q": f"barcode:{barkod}"})
     dugumler = d["productVariants"]["nodes"]
     return dugumler[0]["product"]["id"] if dugumler else None
+
+
+def sitedeki_barkodlar(barkodlar: list[str]) -> dict:
+    """
+    Barkod listesinin Shopify'daki karşılığı (eksik tamamlama modunun temeli):
+    {"pid": ürün gid|None, "handle", "title", "barkodlar": {barkod: ürün gid}}.
+    Eşleşme YALNIZ barkodla yapılır (ad/SKU tahmini yok). Barkodlar birden çok
+    ürüne dağılmışsa en çok barkodu taşıyan ürün esas alınır ve uyarı loglanır.
+    """
+    bulunan: dict[str, dict] = {}
+    temiz = [b for b in dict.fromkeys(barkodlar) if b]
+    for i in range(0, len(temiz), 40):  # arama dizgisi çok uzamasın
+        parca = temiz[i:i + 40]
+        q = " OR ".join(f"barcode:{b}" for b in parca)
+        d = _graphql("""
+            query bul($q: String!) {
+              productVariants(first: 250, query: $q) {
+                nodes { barcode product { id title handle } }
+              }
+            }""", {"q": q})
+        for v in d["productVariants"]["nodes"]:
+            bc = str(v.get("barcode") or "")
+            if bc in parca:  # arama gevşek eşleyebilir — birebir doğrula
+                bulunan[bc] = v["product"]
+    if not bulunan:
+        return {"pid": None, "handle": "", "title": "", "barkodlar": {}}
+    sayim: dict[str, int] = {}
+    for u in bulunan.values():
+        sayim[u["id"]] = sayim.get(u["id"], 0) + 1
+    pid = max(sayim, key=sayim.get)
+    if len(sayim) > 1:
+        logger.warning("[SHOPIFY-URUN] barkodlar %d ayrı üründe: %s — %s esas alındı",
+                       len(sayim), sayim, pid)
+    urun = next(u for u in bulunan.values() if u["id"] == pid)
+    return {"pid": pid, "handle": urun.get("handle") or "", "title": urun.get("title") or "",
+            "barkodlar": {bc: u["id"] for bc, u in bulunan.items()}}
+
+
+def _medya_bekle(kimlikler: list[str]) -> None:
+    """Yeni eklenen ürün medyası READY olana dek bekler (kapak ataması için şart)."""
+    import time
+    for _ in range(20):
+        d = _graphql("""
+            query medyaDurum($ids: [ID!]!) {
+              nodes(ids: $ids) { ... on MediaImage { id status } }
+            }""", {"ids": kimlikler})
+        dugumler = [n for n in d["nodes"] if n]
+        if dugumler and all(n.get("status") == "READY" for n in dugumler):
+            return
+        if any(n.get("status") == "FAILED" for n in dugumler):
+            raise RuntimeError("Shopify ürün medyası FAILED döndü.")
+        time.sleep(3)
+    logger.warning("[SHOPIFY-URUN] medya zamanında READY olmadı, kapak ataması denenecek")
+
+
+def eksik_tamamla(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
+    """
+    EKSİK TAMAMLAMA MODU: model sitede zaten varken yalnız sitede OLMAYAN
+    (renk, beden) varyantlarını ekler. Mevcut varyant, medya, stok, başlık,
+    açıklama ve SEO alanlarına DOKUNULMAZ (productSet tam-set yazımı yerine
+    additive uçlar: productOptionUpdate + productUpdate(media) +
+    productVariantsBulkCreate + productVariantAppendMedia).
+    - Fark canlı barkod listesinden hesaplanır (taslak eskimiş olsa da güvenli).
+    - Fiyat: sitedeki kardeş varyanttan (kullanıcı kararı), formdan değil.
+    - Yeni renk: görselleri AI ALT'larıyla galeriye eklenir, ilk görsel kapak.
+    - Mevcut renge yeni beden: görsel eklenmez, rengin mevcut kapağı bağlanır.
+    Döner: {"product_id","handle","url","varyant","yeni_renkler","yeni_bedenler"}
+    """
+    pid = (taslak.get("shopify") or {}).get("mevcut_pid")
+    if not pid:
+        raise RuntimeError("Eksik tamamlama: sitedeki ürün kimliği taslakta yok.")
+    d = _graphql("""
+        query mevcut($id: ID!) {
+          product(id: $id) {
+            id title handle
+            options { id name optionValues { id name } }
+            media(first: 250) { nodes { id alt } }
+            variants(first: 250) {
+              nodes { id title barcode price compareAtPrice
+                      selectedOptions { name value } media(first: 1) { nodes { id } } }
+            }
+          }
+        }""", {"id": pid})
+    urun = d["product"]
+    if not urun:
+        raise RuntimeError(f"Sitedeki ürün bulunamadı: {pid}")
+    url = f"https://www.gullushoes.com/products/{urun['handle']}"
+    mevcut_vs = urun["variants"]["nodes"]
+    mevcut_bc = {str(v.get("barcode") or ""): v for v in mevcut_vs}
+
+    def _secenek(v: dict, ad: str) -> str:
+        return next((o["value"] for o in v.get("selectedOptions") or [] if o["name"] == ad), "")
+
+    secenekler = {o["name"]: o for o in urun["options"]}
+    renk_opt = secenekler.get("Renk") or (urun["options"][0] if urun["options"] else None)
+    beden_opt = secenekler.get("Beden") or (urun["options"][1] if len(urun["options"]) > 1 else None)
+    if not (renk_opt and beden_opt):
+        raise RuntimeError("Sitedeki üründe Renk/Beden seçenekleri bulunamadı — elle kontrol edin.")
+    renk_ad, beden_ad = renk_opt["name"], beden_opt["name"]
+    sitedeki_renkler = {_secenek(v, renk_ad) for v in mevcut_vs}
+
+    # Fark: sitede olmayan barkodlar (bire bir barkod eşlemesi)
+    yeni = [(renk, beden, bc)
+            for renk, r in taslak["renkler"].items()
+            for beden, bc in zip(taslak["bedenler"], r["barkodlar"])
+            if bc and bc not in mevcut_bc]
+    if not yeni:
+        return {"product_id": pid, "handle": urun["handle"], "url": url, "varyant": 0,
+                "mesaj": "Sitede tüm renk/beden varyantları zaten var — yeni gönderim gerekmedi."}
+    # "Yeni renk" = sitede hiç VARYANTI olmayan renk (görselleriyle açılır).
+    # Seçenek DEĞERİ ekleme ise mevcut değer listesine göre süzülür: yarım kalmış
+    # bir denemede (medya eklendi, varyant düştü) tekrar yüklemede aynı değer
+    # ikinci kez eklenmeye çalışılıp hata vermesin (idempotent tekrar).
+    yeni_renkler = [r for r in dict.fromkeys(x[0] for x in yeni) if r not in sitedeki_renkler]
+    renk_degerleri = {o["name"] for o in renk_opt["optionValues"]}
+    yeni_renk_degerleri = [r for r in yeni_renkler if r not in renk_degerleri]
+    yeni_bedenler = [b for b in dict.fromkeys(x[1] for x in yeni)
+                     if b not in {o["name"] for o in beden_opt["optionValues"]}]
+
+    # Fiyat kardeş varyanttan (siteyle tutarlı); site boşsa form
+    if not mevcut_vs:
+        raise RuntimeError("Sitedeki üründe varyant bulunamadı — fiyat devralınamaz, elle kontrol edin.")
+    kardes = mevcut_vs[0]
+    fiyat = kardes.get("price") or f"{float(form['satis_fiyat']):.2f}"
+    liste = kardes.get("compareAtPrice") or f"{float(form['liste_fiyat']):.2f}"
+
+    # 1) Seçenek değerleri (yeni renk / yeni beden) — mevcut değerlere dokunulmaz
+    for opt, degerler in ((renk_opt, yeni_renk_degerleri), (beden_opt, yeni_bedenler)):
+        if not degerler:
+            continue
+        d = _graphql("""
+            mutation secenekEkle($productId: ID!, $option: OptionUpdateInput!,
+                                 $optionValuesToAdd: [OptionValueCreateInput!]) {
+              productOptionUpdate(productId: $productId, option: $option,
+                                  optionValuesToAdd: $optionValuesToAdd) {
+                userErrors { field message code }
+              }
+            }""", {"productId": pid, "option": {"id": opt["id"]},
+                   "optionValuesToAdd": [{"name": x} for x in degerler]})
+        hatalar = d["productOptionUpdate"]["userErrors"]
+        if hatalar:
+            raise RuntimeError(f"Shopify seçenek ekleme ({opt['name']}): {hatalar}")
+
+    # 2) Yeni renklerin görselleri galeriye (AI ALT ile); ilk görsel = kapak
+    kapaklar: dict[str, str] = {}
+    for v in mevcut_vs:  # mevcut renklerin kapağı: o rengin ilk varyantının medyası
+        renk = _secenek(v, renk_ad)
+        medya = (v.get("media") or {}).get("nodes") or []
+        if renk and medya and renk not in kapaklar:
+            kapaklar[renk] = medya[0]["id"]
+    # Yarım kalmış denemede aynı görsel (aynı ALT ile) galeride zaten varsa
+    # yeniden yüklenmez; kapak o mevcut medya olur (çift galeri görseli olmaz).
+    mevcut_alt = {}
+    for m in urun["media"]["nodes"]:
+        if m.get("alt") and m["alt"] not in mevcut_alt:
+            mevcut_alt[m["alt"]] = m["id"]
+    medya_girdi, blok_sira = [], []   # blok_sira: (renk, yeni yüklenen adet)
+    urun_adi = urun.get("title") or form.get("urun_turu") or ""
+    for renk in yeni_renkler:
+        urller = renk_gorselleri.get(renk) or []
+        if not urller:
+            raise RuntimeError(f"{renk} için görsel yok — yeni renk sitede görselsiz açılamaz.")
+        adet = 0
+        for i, u in enumerate(urller, 1):
+            alt = gorsel_alt(taslak, renk, i, f"{renk} {urun_adi} {i}")
+            if alt in mevcut_alt:
+                if i == 1:
+                    kapaklar[renk] = mevcut_alt[alt]
+                continue
+            medya_girdi.append({"originalSource": u, "mediaContentType": "IMAGE", "alt": alt})
+            adet += 1
+        blok_sira.append((renk, adet))
+    if medya_girdi:
+        onceki = {m["id"] for m in urun["media"]["nodes"]}
+        d = _graphql("""
+            mutation medyaEkle($product: ProductUpdateInput!, $media: [CreateMediaInput!]) {
+              productUpdate(product: $product, media: $media) {
+                product { media(first: 250) { nodes { id } } }
+                userErrors { field message }
+              }
+            }""", {"product": {"id": pid}, "media": medya_girdi}, timeout=180)
+        hatalar = d["productUpdate"]["userErrors"]
+        if hatalar:
+            raise RuntimeError(f"Shopify medya ekleme: {hatalar}")
+        # Yeni medya, ürün galerisine girdi SIRASIYLA eklenir (productSet ile aynı
+        # varsayım — _kapaklari_ata); blok başlangıçları görsel sayısından bulunur.
+        yeni_medya = [m["id"] for m in d["productUpdate"]["product"]["media"]["nodes"]
+                      if m["id"] not in onceki]
+        if len(yeni_medya) != len(medya_girdi):
+            logger.warning("[SHOPIFY-URUN] eklenen medya sayısı beklenenden farklı (%d/%d)",
+                           len(yeni_medya), len(medya_girdi))
+        konum = 0
+        for renk, adet in blok_sira:
+            if adet and konum < len(yeni_medya) and renk not in kapaklar:
+                kapaklar[renk] = yeni_medya[konum]
+            konum += adet
+        _medya_bekle(yeni_medya)
+
+    # 3) Yalnız yeni varyantlar (SKU/barkod Trendyol standardı, stok formdan;
+    #    stok senkron sonraki turda kendi değerine çeker)
+    konum_id = _konum_id()
+    model = taslak["model_kodu"]
+    girdiler = [{
+        "optionValues": [{"optionName": renk_ad, "name": renk},
+                         {"optionName": beden_ad, "name": beden}],
+        "barcode": bc,
+        "price": fiyat,
+        "compareAtPrice": liste,
+        "inventoryItem": {"sku": f"{model}-{beden} {renk}", "tracked": True},
+        "inventoryQuantities": [{"locationId": konum_id,
+                                 "availableQuantity": int(form.get("stok", 5))}],
+    } for renk, beden, bc in yeni]
+    d = _graphql("""
+        mutation varyantEkle($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+          productVariantsBulkCreate(productId: $productId, variants: $variants, strategy: DEFAULT) {
+            productVariants { id title barcode }
+            userErrors { field message code }
+          }
+        }""", {"productId": pid, "variants": girdiler}, timeout=180)
+    hatalar = d["productVariantsBulkCreate"]["userErrors"]
+    if hatalar:
+        raise RuntimeError(f"Shopify varyant ekleme: {hatalar}")
+    olusan = d["productVariantsBulkCreate"]["productVariants"]
+
+    # 4) Kapak: yeni varyant → renginin kapağı (yeni renk: yeni blok ilk görseli;
+    #    mevcut renk: rengin mevcut kapağı)
+    bc_renk = {bc: renk for renk, _, bc in yeni}
+    atama = [{"variantId": v["id"], "mediaIds": [kapaklar[bc_renk[v["barcode"]]]]}
+             for v in olusan if kapaklar.get(bc_renk.get(str(v.get("barcode") or ""), ""))]
+    if atama:
+        d = _graphql("""
+            mutation kapak($productId: ID!, $variantMedia: [ProductVariantAppendMediaInput!]!) {
+              productVariantAppendMedia(productId: $productId, variantMedia: $variantMedia) {
+                userErrors { field message }
+              }
+            }""", {"productId": pid, "variantMedia": atama})
+        hatalar = d["productVariantAppendMedia"]["userErrors"]
+        if hatalar:
+            logger.warning("[SHOPIFY-URUN] eksik-tamamlama kapak uyarısı: %s", hatalar)
+    else:
+        logger.warning("[SHOPIFY-URUN] eksik-tamamlama kapak ataması boş (%s)", urun["handle"])
+
+    logger.info("[SHOPIFY-URUN] %s: %d varyant eklendi (yeni renk: %s, yeni beden: %s)",
+                urun["handle"], len(olusan), yeni_renkler, yeni_bedenler)
+    return {"product_id": pid, "handle": urun["handle"], "url": url,
+            "varyant": len(olusan), "yeni_renkler": yeni_renkler, "yeni_bedenler": yeni_bedenler}
 
 
 def _kapaklari_ata(urun: dict, renkler: list[str], renk_gorselleri: dict) -> None:

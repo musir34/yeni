@@ -28,7 +28,8 @@ from werkzeug.utils import secure_filename
 from login_logout import roles_required
 from . import katalog
 from . import shopify_urun
-from .ai_metin import metin_uret, aciklama_kur, shopify_aciklama_kur
+from .ai_metin import (metin_uret, aciklama_kur, shopify_aciklama_kur,
+                       site_metin_uret, alt_uret)
 from .gorsel import cdn_yukle
 
 GECERLI_HEDEFLER = ("trendyol", "shopify")
@@ -289,21 +290,37 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
             mevcut_renkler: list[str] = []
             mevcut_varyantlar: list[list[str]] = []
             yeni_varyant_yok = False
+            # Sitedeki durum (eksik tamamlama modu): {"pid", "handle", "title", "barkodlar"}
+            site: dict = {"pid": None, "handle": "", "title": "", "barkodlar": {}}
             if mevcut and mevcut.get("model_kodu"):
                 # REVİZYON: kodlar korunur, yeniden tahsis/rezerv YAPILMAZ
                 kodlar = {"model_kodu": mevcut["model_kodu"],
                           "renk_bloklari": [mevcut["renkler"][r]["barkodlar"] for r in renkler]}
                 mevcut_renkler = list(mevcut.get("mevcut_renkler") or [])
                 mevcut_varyantlar = list(mevcut.get("mevcut_varyantlar") or [])
+                site = mevcut.get("site") or site
             elif ozel and (harita := katalog.mevcut_renk_haritasi(ozel)):
                 # MEVCUT MODEL: var olan (renk, beden) ikilileri Trendyol'daki
                 # barkodları AYNEN kullanır (Shopify/Trendyol tutarlılığı); yalnız
                 # YENİ ikililere (yeni renk ya da mevcut renge yeni/buçuk beden)
                 # aynı serinin devamından barkod tahsis edilir.
-                # Site hedefliyse modelin TÜM mevcut renkleri formda olmalı:
+                # SİTE EKSİK TAMAMLAMA: modelin barkodları Shopify'da bir üründe
+                # kayıtlıysa tam-set (productSet) yerine yalnız sitede OLMAYAN
+                # varyantlar eklenir; mevcut varyant/medya/metne dokunulmaz.
+                # Tarama başarısızsa taslak ÜRETİLMEZ (tam-set moduna sessizce
+                # düşmek mevcut ürünü yeniden yazardı).
+                if "shopify" in hedefler:
+                    try:
+                        site = shopify_urun.sitedeki_barkodlar(
+                            [bc for r in harita.values() for bc in r.values()])
+                    except Exception as e:
+                        raise ValueError(f"Shopify barkod taraması yapılamadı: {str(e)[:200]}")
+                site_eksik = bool(site.get("pid"))
+                # Site TAM-SET modunda modelin TÜM mevcut renkleri formda olmalı:
                 # productSet tam seti yeniden yazar, eksik renk siteden SİLİNİR.
+                # (Eksik tamamlama modunda gereksiz — ekleme yapılır, silme yok.)
                 disarida = [r for r in harita if r not in renkler]
-                if disarida and "shopify" in hedefler:
+                if disarida and "shopify" in hedefler and not site_eksik:
                     raise ValueError(
                         f"{ozel} modelinin Trendyol'daki {', '.join(disarida)} "
                         "renkleri formda yok. Site tek-ürün kuralı gereği tüm "
@@ -313,7 +330,7 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                 # site güncellemesi o bedeni SİLERDİ.
                 eksik_beden = sorted({b for r in renkler
                                       for b in (harita.get(r) or {}) if b not in bedenler})
-                if eksik_beden and "shopify" in hedefler:
+                if eksik_beden and "shopify" in hedefler and not site_eksik:
                     raise ValueError(
                         f"{ozel} modelinin Trendyol'daki şu bedenleri formda yok: "
                         f"{', '.join(eksik_beden)}. Site tam seti yeniden yazar — "
@@ -352,6 +369,21 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                 tum_barkodlar = [b for blok in kodlar["renk_bloklari"] for b in blok]
                 katalog.rezerv_ekle(kodlar["model_kodu"], tum_barkodlar)
 
+            # Sitedeki fark (eksik tamamlama modu): bire bir BARKOD eşlemesi —
+            # rengin hiçbir barkodu sitede yoksa "eksik renk" (görselleriyle
+            # eklenir), bazı bedenleri yoksa yalnız o varyantlar eklenir.
+            site_eksik = bool(site.get("pid"))
+            sitede = site.get("barkodlar") or {}
+            site_eksik_varyantlar = [[r, b] for i, r in enumerate(renkler)
+                                     for b, bc in zip(bedenler, kodlar["renk_bloklari"][i])
+                                     if bc not in sitede] if site_eksik else []
+            site_mevcut_varyantlar = [[r, b] for i, r in enumerate(renkler)
+                                      for b, bc in zip(bedenler, kodlar["renk_bloklari"][i])
+                                      if bc in sitede] if site_eksik else []
+            site_eksik_renkler = [r for i, r in enumerate(renkler)
+                                  if not any(bc in sitede for bc in kodlar["renk_bloklari"][i])
+                                  ] if site_eksik else []
+
             if f.get("aisiz"):
                 # AI'SIZ HIZLI YOL (aktarımla gelen mevcut başlık/açıklamalar
                 # aynen kullanılır): yalnız Trendyol hedefiyle çalışır — site
@@ -359,7 +391,7 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                 if "shopify" in hedefler:
                     raise ValueError("AI'sız hızlı yükleme yalnız Trendyol hedefiyle "
                                      "kullanılır — site için 'AI ile Üret'i kullanın.")
-                metin, oneriler = {}, []
+                metin, oneriler, site_metin = {}, [], {}
             else:
                 # Trendyol özellik kataloğu yalnız Trendyol hedefliyken gerekir
                 harita = {}
@@ -369,8 +401,39 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                     except Exception:
                         logger.warning("[URUN] özellik kataloğu kurulamadı, AI seçimi atlanıyor", exc_info=True)
 
-                metin = metin_uret(bilgi)
+                # İki hedef = iki AYRI üretim (Trendyol kuralları / Google SEO
+                # kuralları), paralel koşar. Eksik tamamlama modunda site metni
+                # üretilmez (sitedeki ürünün metnine dokunulmaz).
+                from concurrent.futures import ThreadPoolExecutor
+                with ThreadPoolExecutor(max_workers=2) as havuz:
+                    ty_is = havuz.submit(metin_uret, bilgi) if "trendyol" in hedefler else None
+                    site_is = (havuz.submit(site_metin_uret, bilgi)
+                               if "shopify" in hedefler and not site_eksik else None)
+                    metin = ty_is.result() if ty_is else {}
+                    site_metin = site_is.result() if site_is else {}
                 oneriler = _ozellik_onerileri(metin.get("ozellikler"), harita)
+
+            # Görsel başına ALT metni (Google Görseller): siteye görsel gidecek
+            # renkler için AI her görsele bakıp ayrı metin yazar — tam modda tüm
+            # renkler, eksik modda yalnız sitede olmayan renkler. Revizyonda önceki
+            # ALT'lar korunur (görsel değişmedi).
+            alt_metinleri: dict[str, list[str]] = {}
+            if "shopify" in hedefler and not f.get("aisiz"):
+                alt_renkler = site_eksik_renkler if site_eksik else renkler
+                urun_adi = ((site_metin.get("genel") or {}).get("h1")
+                            or site.get("title") or f.get("urun_turu") or "").strip()
+                gorseller = bilgi.get("gorseller") or {}
+                from concurrent.futures import ThreadPoolExecutor
+                with ThreadPoolExecutor(max_workers=3) as havuz:
+                    isler = {}
+                    for r in alt_renkler:
+                        onceki_alt = ((mevcut or {}).get("renkler") or {}).get(r, {}).get("alt") or []
+                        if onceki_alt and len(onceki_alt) == len(gorseller.get(r) or []):
+                            alt_metinleri[r] = onceki_alt
+                        else:
+                            isler[r] = havuz.submit(alt_uret, r, gorseller.get(r) or [], urun_adi)
+                    for r, t in isler.items():
+                        alt_metinleri[r] = t.result()
 
             renk_taslaklari, uyarilar = {}, []
             if yeni_varyant_yok and "trendyol" in hedefler:
@@ -385,6 +448,8 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                     baslik = ((f.get("trendyol_basliklar") or {}).get(renk)
                               or f.get("trendyol_baslik") or "").strip()
                 kayit = {"barkodlar": kodlar["renk_bloklari"][i]}
+                if alt_metinleri.get(renk):
+                    kayit["alt"] = alt_metinleri[renk]
                 if "trendyol" in hedefler:
                     # AI'sız yolda başlık Trendyol'daki mevcut başlıktır —
                     # 95-100 karakter kuralına zorlanmaz.
@@ -406,19 +471,37 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
 
             # Site (Shopify) içeriği: renk-nötr tek ürün (tema renk kuralı)
             shopify = None
-            if "shopify" in hedefler:
-                genel = metin.get("genel") or {}
+            if "shopify" in hedefler and site_eksik:
+                # EKSİK TAMAMLAMA: sitedeki ürünün metni korunur, yalnız fark listesi
+                shopify = {
+                    "mod": "eksik",
+                    "mevcut_pid": site["pid"], "mevcut_handle": site.get("handle", ""),
+                    "mevcut_baslik": site.get("title", ""),
+                    "mevcut_url": f"https://www.gullushoes.com/products/{site.get('handle', '')}",
+                    "eksik_renkler": site_eksik_renkler,
+                    "eksik_varyantlar": site_eksik_varyantlar,
+                    "sitede_var": site_mevcut_varyantlar,
+                }
+                if not site_eksik_varyantlar:
+                    uyarilar.append("Sitede bu modelin tüm renk/beden varyantları zaten var — "
+                                    "Shopify'a yeni bir şey gönderilmez.")
+            elif "shopify" in hedefler:
+                genel = site_metin.get("genel") or {}
                 seo_baslik = (genel.get("seo_baslik") or "").strip()
                 if not genel.get("h1"):
                     uyarilar.append("Site: H1 üretilemedi — önizlemede elle doldurun.")
                 if seo_baslik and not 40 <= len(seo_baslik) <= 60:
                     uyarilar.append(f"Site SEO başlığı {len(seo_baslik)} karakter — 50-60 hedeflenir.")
+                eksik_bolum = [r for r in renkler if not (site_metin.get("renk_bolumleri") or {}).get(r)]
+                if eksik_bolum:
+                    uyarilar.append(f"Site: şu renklerin özel paragrafı üretilemedi: {', '.join(eksik_bolum)}")
                 shopify = {
                     "h1": (genel.get("h1") or "").strip(),
                     "seo_baslik": seo_baslik,
                     "seo_aciklama": (genel.get("seo_aciklama") or "").strip(),
                     "aciklama": shopify_aciklama_kur(genel, bilgi, renkler,
-                                                     metin.get("renk_secenekleri", "")),
+                                                     site_metin.get("renk_secenekleri", ""),
+                                                     site_metin.get("renk_bolumleri")),
                 }
                 yasak = katalog.yasak_tara(shopify["aciklama"], shopify["h1"])
                 if yasak:
@@ -428,7 +511,7 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                       "hedefler": hedefler, "mevcut_renkler": mevcut_renkler,
                       "mevcut_varyantlar": mevcut_varyantlar,
                       "renkler": renk_taslaklari, "bedenler": bedenler,
-                      "shopify": shopify,
+                      "shopify": shopify, "site": site,
                       "ozellik_onerileri": oneriler,
                       "uyarilar": uyarilar, "durum": "hazir"}
             _taslak_kaydet(taslak_id, taslak)
@@ -443,12 +526,14 @@ def _beden_normalize(b: str) -> str:
 
 def _bilgi_kur(taslak_id: str, f: dict, renkler: list[str], bedenler: list[str],
                hedefler: list[str]) -> dict:
-    gorsel_yollari = []
+    gorsel_yollari, gorseller = [], {}
     for renk in renkler:
         klasor = _taslak_yolu(taslak_id) / "gorsel" / secure_filename(renk)
-        ilk = sorted(klasor.glob("*"))[:1] if klasor.exists() else []
-        gorsel_yollari += [str(p) for p in ilk]
+        hepsi = sorted(klasor.glob("*"))[:MAKS_GORSEL] if klasor.exists() else []
+        gorsel_yollari += [str(p) for p in hepsi[:1]]
+        gorseller[renk] = [str(p) for p in hepsi]  # ALT üretimi: her görsel ayrı
     return {
+        "gorseller": gorseller,
         "kategori_yolu": f.get("kategori_yolu", ""),
         "urun_turu": f.get("urun_turu", ""),
         "renkler": renkler,
@@ -696,17 +781,30 @@ def _yukle_worker(app, taslak_id: str) -> None:
             form = taslak["form"]
             hedefler = taslak.get("hedefler") or ["trendyol"]
 
-            # Görselleri CDN'e taşı (iki hedef de aynı HTTPS adresleri kullanır)
+            # Görselleri CDN'e taşı (iki hedef de aynı HTTPS adresleri kullanır).
+            # Dosya adı Google Görseller için açıklayıcı: model-ürünadı-renk-sıra.
+            # Eksik tamamlama + yalnız site hedefinde sitede zaten olan renklerin
+            # görseli gerekmez (yeniden yüklenmez).
+            sh = taslak.get("shopify") or {}
+            urun_slug = shopify_urun._slug(sh.get("h1") or sh.get("mevcut_baslik")
+                                           or form.get("urun_turu") or "")[:60]
+            gerekli = set(taslak["renkler"])
+            if sh.get("mod") == "eksik" and "trendyol" not in hedefler:
+                gerekli = set(sh.get("eksik_renkler") or [])
             renk_gorselleri = taslak.get("cdn") or {}
             if not renk_gorselleri:
                 for renk in taslak["renkler"]:
+                    if renk not in gerekli:
+                        continue
                     klasor = _taslak_yolu(taslak_id) / "gorsel" / secure_filename(renk)
                     yerel = sorted(klasor.glob("*"))[:MAKS_GORSEL] if klasor.exists() else []
                     if not yerel:
                         raise ValueError(f"{renk} için görsel yüklenmemiş.")
-                    adlar = [(f"{taslak['model_kodu']}-{secure_filename(renk).lower()}-{i+1}{p.suffix.lower()}", str(p))
+                    on_ad = f"{taslak['model_kodu']}-{urun_slug + '-' if urun_slug else ''}{shopify_urun._slug(renk)}"
+                    adlar = [(f"{on_ad}-{i+1}{p.suffix.lower()}", str(p))
                              for i, p in enumerate(yerel)]
-                    renk_gorselleri[renk] = cdn_yukle(adlar)
+                    renk_gorselleri[renk] = cdn_yukle(
+                        adlar, altlar=(taslak["renkler"][renk] or {}).get("alt"))
                 taslak["cdn"] = renk_gorselleri
                 _taslak_kaydet(taslak_id, taslak)
 
@@ -728,7 +826,11 @@ def _yukle_worker(app, taslak_id: str) -> None:
             shopify_tamam = bool((taslak.get("shopify_sonuc") or {}).get("product_id"))
             if "shopify" in hedefler and not shopify_tamam:
                 try:
-                    taslak["shopify_sonuc"] = shopify_urun.urun_ac(taslak, form, renk_gorselleri)
+                    if sh.get("mod") == "eksik":
+                        # Sitedeki ürüne yalnız eksik varyantlar eklenir (additive)
+                        taslak["shopify_sonuc"] = shopify_urun.eksik_tamamla(taslak, form, renk_gorselleri)
+                    else:
+                        taslak["shopify_sonuc"] = shopify_urun.urun_ac(taslak, form, renk_gorselleri)
                 except Exception as e:
                     logger.error("[URUN] Shopify gönderimi: %s", e, exc_info=True)
                     taslak["shopify_sonuc"] = {"hata": str(e)[:300]}
@@ -766,7 +868,7 @@ def yukle():
             for renk, duzeltme in f["renkler"].items():
                 if renk in taslak["renkler"]:
                     taslak["renkler"][renk].update(
-                        {k: duzeltme[k] for k in ("baslik", "aciklama") if duzeltme.get(k)})
+                        {k: duzeltme[k] for k in ("baslik", "aciklama", "alt") if duzeltme.get(k)})
         if isinstance(f.get("shopify"), dict) and taslak.get("shopify"):
             taslak["shopify"].update({k: f["shopify"][k]
                                       for k in ("h1", "seo_baslik", "seo_aciklama", "aciklama")
@@ -816,7 +918,11 @@ def yukle():
                     sebep = hata or f"açıklamada yasaklı ifade: {', '.join(yasak)}"
                     return jsonify({"success": False, "error": f"{renk}: {sebep}"}), 400
 
-        if "shopify" in hedefler:
+        if "shopify" in hedefler and (taslak.get("shopify") or {}).get("mod") == "eksik":
+            # Eksik tamamlama: sitedeki metne dokunulmaz, H1/SEO denetimi gerekmez
+            if not (taslak["shopify"].get("mevcut_pid")):
+                return jsonify({"success": False, "error": "Sitedeki ürün kimliği taslakta yok — taslağı yeniden hazırlayın."}), 400
+        elif "shopify" in hedefler:
             sh = taslak.get("shopify") or {}
             if not sh.get("h1") or not sh.get("aciklama"):
                 return jsonify({"success": False, "error": "Site içeriği (H1/açıklama) eksik."}), 400
