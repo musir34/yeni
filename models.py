@@ -1795,7 +1795,8 @@ class FinansCari(db.Model):
     tur = db.Column(db.String(20), nullable=False, default='tedarikci')  # tedarikci / musteri / diger
     telefon = db.Column(db.String(50), nullable=True)
     notlar = db.Column(db.Text, nullable=True)
-    bakiye = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    para_birimi = db.Column(db.String(3), nullable=False, default='TRY', server_default='TRY')  # TRY / USD
+    bakiye = db.Column(db.Numeric(12, 2), nullable=False, default=0)  # carinin para biriminde
     aktif = db.Column(db.Boolean, nullable=False, default=True)
     olusturma_tarihi = db.Column(db.DateTime, default=datetime.utcnow)  # naive=UTC
     guncelleme_tarihi = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -1828,6 +1829,7 @@ class FinansCariHareket(db.Model):
     tarih = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)  # naive=UTC
     aciklama = db.Column(db.String(500), nullable=True)
     islem_id = db.Column(db.Integer, db.ForeignKey('finans_islem.id'), nullable=True)  # kasa bağı
+    kur = db.Column(db.Numeric(12, 4), nullable=True)  # USD cari kasa bağında: 1 $ = kur ₺ (islem.tutar = tutar×kur)
     hakedis_id = db.Column(db.Integer, db.ForeignKey('finans_calisan_hakedis.id'), nullable=True)
     odeme_anahtari = db.Column(db.String(36), nullable=True, unique=True)
     hakedis = db.relationship('FinansCalisanHakedis', backref='hareketler')

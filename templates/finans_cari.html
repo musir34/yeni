@@ -20,6 +20,9 @@
             <div class="col-6"><select name="tur" class="form-select">{% for k, v in tur_etiket.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
             <div class="col-6"><input type="text" name="telefon" class="form-control" placeholder="Telefon (ops.)"></div>
           </div>
+          <div class="mb-2"><label class="form-label fn-mini">Hangi parayla çalışıyorsunuz?</label>
+            <select name="para_birimi" class="form-select">{% for k, v in para_etiket.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select>
+            <div class="fn-mini">Dolar hesabında mal girişi ve borç dolarla tutulur; kasadan ödeme yaparken o günkü kur sorulur. Hareket girildikten sonra değiştirilemez.</div></div>
           <div class="mb-2"><input type="text" name="notlar" class="form-control" placeholder="Not (ops.)"></div>
           <button class="btn btn-primary w-100">Hesap Aç</button>
         </form>
@@ -29,6 +32,10 @@
       <div class="card-body">
         <div class="d-flex justify-content-between"><span class="fn-mini">Toplam borcumuz</span><span class="fn-neg">{{ ozet.borc | tl_format }} ₺</span></div>
         <div class="d-flex justify-content-between"><span class="fn-mini">Toplam alacağımız</span><span class="fn-pos">{{ ozet.alacak | tl_format }} ₺</span></div>
+        {% if ozet.borc_usd or ozet.alacak_usd %}
+        <div class="d-flex justify-content-between"><span class="fn-mini">Dolar borcumuz</span><span class="fn-neg">{{ ozet.borc_usd | tl_format }} $</span></div>
+        <div class="d-flex justify-content-between"><span class="fn-mini">Dolar alacağımız</span><span class="fn-pos">{{ ozet.alacak_usd | tl_format }} $</span></div>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -43,9 +50,9 @@
           {% for c in cariler %}
             <tr class="{{ 'text-muted' if not c.aktif }}">
               <td><a href="{{ url_for('finans.cari_detay', cari_id=c.id) }}" class="fw-semibold text-decoration-none">{{ c.ad }}</a>{% if c.notlar %}<div class="fn-mini">{{ c.notlar }}</div>{% endif %}</td>
-              <td>{{ tur_etiket.get(c.tur, c.tur) }}</td>
+              <td>{{ tur_etiket.get(c.tur, c.tur) }}{% if c.para_birimi == 'USD' %} <span class="badge bg-info text-dark">$</span>{% endif %}</td>
               <td class="fn-mini">{{ c.telefon or '' }}</td>
-              <td class="fn-num {{ 'fn-neg' if c.bakiye > 0 else ('fn-pos' if c.bakiye < 0 else '') }}">{{ (c.bakiye | abs) | tl_format }} ₺</td>
+              <td class="fn-num {{ 'fn-neg' if c.bakiye > 0 else ('fn-pos' if c.bakiye < 0 else '') }}">{{ (c.bakiye | abs) | tl_format }} {{ para_sembol.get(c.para_birimi, '₺') }}</td>
               <td class="fn-mini">{% if c.bakiye > 0 %}Borçluyuz{% elif c.bakiye < 0 %}Alacaklıyız{% else %}Sıfır{% endif %}{% if not c.aktif %} · <span class="badge bg-secondary">kapalı</span>{% endif %}</td>
               <td class="fn-actions text-end">
                 <form method="POST" action="{{ url_for('finans.cari_pasif', cari_id=c.id) }}" class="d-inline">

@@ -6,10 +6,10 @@
 <div class="card fn-card {{ 'fn-hesap-elde' if cari.bakiye < 0 else 'fn-hesap-banka' }}">
   <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
     <div>
-      <div class="fn-mini"><a href="{{ url_for('finans.cari_liste') }}">Cari Hesaplar</a> › {{ tur_etiket.get(cari.tur, cari.tur) }}{% if cari.telefon %} · {{ cari.telefon }}{% endif %}{% if not cari.aktif %} · <span class="badge bg-secondary">kapalı</span>{% endif %}</div>
+      <div class="fn-mini"><a href="{{ url_for('finans.cari_liste') }}">Cari Hesaplar</a> › {{ tur_etiket.get(cari.tur, cari.tur) }}{% if cari.para_birimi == 'USD' %} · <span class="badge bg-info text-dark">Dolar hesabı</span>{% endif %}{% if cari.telefon %} · {{ cari.telefon }}{% endif %}{% if not cari.aktif %} · <span class="badge bg-secondary">kapalı</span>{% endif %}</div>
       <h4 class="mb-0">{{ cari.ad }}</h4>
       <div class="fn-bakiye {{ 'fn-neg' if cari.bakiye > 0 else ('fn-pos' if cari.bakiye < 0 else '') }}">
-        {{ (cari.bakiye | abs) | tl_format }} ₺ <span class="fn-mini fw-normal">{% if cari.bakiye > 0 %}borcumuz{% elif cari.bakiye < 0 %}alacağımız{% else %}bakiye sıfır{% endif %}</span>
+        {{ (cari.bakiye | abs) | tl_format }} {{ sembol }} <span class="fn-mini fw-normal">{% if cari.bakiye > 0 %}borcumuz{% elif cari.bakiye < 0 %}alacağımız{% else %}bakiye sıfır{% endif %}</span>
       </div>
       {% if cari.notlar %}<div class="fn-mini">{{ cari.notlar }}</div>{% endif %}
     </div>
@@ -54,12 +54,12 @@
         <tr class="{{ 'fn-iptal' if h.iptal }}">
           <td class="text-nowrap">{{ h.tarih | ist('%d.%m.%Y') }}</td>
           <td><span class="badge {{ 'bg-danger' if h.yon > 0 else 'bg-success' }}">{{ hareket_etiket.get(h.tur, h.tur) }}</span>
-            {% if h.islem %}<div class="fn-mini">{{ h.islem.hesap.ad }}</div>{% endif %}</td>
+            {% if h.islem %}<div class="fn-mini">{{ h.islem.hesap.ad }}{% if h.kur %} · {{ h.islem.tutar | tl_format }} ₺ (kur {{ h.kur }}){% endif %}</div>{% endif %}</td>
           <td>{{ h.aciklama or '' }}
             {% if h.kalemler %}
             <details class="fn-mini"><summary>{{ h.kalemler | length }} kalem</summary>
               <table class="table table-sm table-borderless mb-0 fn-mini"><tbody>
-              {% for k in h.kalemler %}<tr><td>{{ k.ad }}</td><td class="fn-num">{{ k.adet | tl_format }} × {{ k.birim_fiyat | tl_format }}</td><td class="fn-num">{{ k.tutar | tl_format }} ₺</td></tr>{% endfor %}
+              {% for k in h.kalemler %}<tr><td>{{ k.ad }}</td><td class="fn-num">{{ k.adet | tl_format }} × {{ k.birim_fiyat | tl_format }}</td><td class="fn-num">{{ k.tutar | tl_format }} {{ sembol }}</td></tr>{% endfor %}
               </tbody></table>
             </details>
             {% endif %}
@@ -107,7 +107,7 @@
           <div class="col-8"><label class="form-label fn-mini">Açıklama (ops.)</label><input type="text" name="aciklama" class="form-control form-control-sm" placeholder="Fatura no, parti, not…"></div>
         </div>
         <table class="table table-sm fn-table mb-1 fn-kalem-tablo">
-          <thead><tr><th>Ne aldık / verdik</th><th style="width:7rem">Adet</th><th style="width:9rem">Birim ₺</th><th style="width:9rem" class="fn-num">Tutar</th><th style="width:2.5rem"></th></tr></thead>
+          <thead><tr><th>Ne aldık / verdik</th><th style="width:7rem">Adet</th><th style="width:9rem">Birim {{ sembol }}</th><th style="width:9rem" class="fn-num">Tutar</th><th style="width:2.5rem"></th></tr></thead>
           <tbody>
             <tr>
               <td><input type="text" name="kalem_ad" class="form-control form-control-sm" placeholder="örn. Siyah deri (m²)" required></td>
@@ -135,7 +135,7 @@
     <form class="modal-content" method="POST" action="{{ url_for('finans.cari_odeme', cari_id=cari.id) }}">
       <div class="modal-header"><h5 class="modal-title">💸 Ödeme Yap — {{ cari.ad }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
-        <div class="fn-mini mb-2">Para Elde veya Banka hesabından düşer, bu hesabın borcu azalır.</div>
+        <div class="fn-mini mb-2">Para Elde veya Banka hesabından düşer, bu hesabın borcu azalır.{% if cari.para_birimi == 'USD' %} Dolar hesabı: tutarı dolar girin, kasadan tutar × kur kadar TL düşer.{% endif %}</div>
         <div class="mb-2">
           {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}
           <div class="form-check form-check-inline">
@@ -145,7 +145,11 @@
           {% endfor %}
         </div>
         <div class="row g-2">
-          <div class="col-6"><label class="form-label fn-mini">Tutar (₺)</label><input type="text" name="tutar" class="form-control" inputmode="decimal" placeholder="0,00" value="{{ '%.2f' | format(cari.bakiye) | replace('.', ',') if cari.bakiye > 0 else '' }}" required></div>
+          <div class="col-6"><label class="form-label fn-mini">Tutar ({{ sembol }})</label><input type="text" name="tutar" class="form-control fn-doviz-tutar" inputmode="decimal" placeholder="0,00" value="{{ '%.2f' | format(cari.bakiye) | replace('.', ',') if cari.bakiye > 0 else '' }}" required></div>
+          {% if cari.para_birimi == 'USD' %}
+          <div class="col-6"><label class="form-label fn-mini">Kur (1 $ = ? ₺)</label><input type="text" name="kur" class="form-control fn-doviz-kur" inputmode="decimal" placeholder="örn. 41,25" required></div>
+          <div class="col-12 fn-mini">Kasadan düşecek: <b class="fn-doviz-tl">0,00</b> ₺</div>
+          {% endif %}
           <div class="col-6"><label class="form-label fn-mini">Tarih</label><input type="date" name="tarih" class="form-control" value="{{ bugun }}"></div>
           <div class="col-12"><input type="text" name="aciklama" class="form-control" placeholder="Açıklama (ops.)"></div>
         </div>
@@ -161,9 +165,13 @@
     <form class="modal-content" method="POST" action="{{ url_for('finans.cari_tahsilat', cari_id=cari.id) }}">
       <div class="modal-header"><h5 class="modal-title">💰 Tahsilat — {{ cari.ad }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
-        <div class="fn-mini mb-2">Bu hesaptan aldığınız para Beyazıt (Ana Bakiye) hesabına girer, alacağınız azalır.</div>
+        <div class="fn-mini mb-2">Bu hesaptan aldığınız para Beyazıt (Ana Bakiye) hesabına girer, alacağınız azalır.{% if cari.para_birimi == 'USD' %} Dolar hesabı: tutarı dolar girin, Beyazıt'a tutar × kur kadar TL girer.{% endif %}</div>
         <div class="row g-2">
-          <div class="col-6"><label class="form-label fn-mini">Tutar (₺)</label><input type="text" name="tutar" class="form-control" inputmode="decimal" placeholder="0,00" value="{{ '%.2f' | format(-cari.bakiye) | replace('.', ',') if cari.bakiye < 0 else '' }}" required></div>
+          <div class="col-6"><label class="form-label fn-mini">Tutar ({{ sembol }})</label><input type="text" name="tutar" class="form-control fn-doviz-tutar" inputmode="decimal" placeholder="0,00" value="{{ '%.2f' | format(-cari.bakiye) | replace('.', ',') if cari.bakiye < 0 else '' }}" required></div>
+          {% if cari.para_birimi == 'USD' %}
+          <div class="col-6"><label class="form-label fn-mini">Kur (1 $ = ? ₺)</label><input type="text" name="kur" class="form-control fn-doviz-kur" inputmode="decimal" placeholder="örn. 41,25" required></div>
+          <div class="col-12 fn-mini">Kasaya girecek: <b class="fn-doviz-tl">0,00</b> ₺</div>
+          {% endif %}
           <div class="col-6"><label class="form-label fn-mini">Tarih</label><input type="date" name="tarih" class="form-control" value="{{ bugun }}"></div>
           <div class="col-12"><input type="text" name="aciklama" class="form-control" placeholder="Açıklama (ops.)"></div>
         </div>
@@ -183,6 +191,9 @@
         <div class="row g-2">
           <div class="col-6"><select name="tur" class="form-select">{% for k, v in tur_etiket.items() %}<option value="{{ k }}" {{ 'selected' if k == cari.tur }}>{{ v }}</option>{% endfor %}</select></div>
           <div class="col-6"><input type="text" name="telefon" class="form-control" value="{{ cari.telefon or '' }}" placeholder="Telefon"></div>
+          <div class="col-12"><label class="form-label fn-mini">Para birimi</label>
+            <select name="para_birimi" class="form-select" {{ 'disabled' if cari.tur == 'calisan' or hareket_var }}>{% for k, v in para_etiket.items() %}<option value="{{ k }}" {{ 'selected' if k == (cari.para_birimi or 'TRY') }}>{{ v }}</option>{% endfor %}</select>
+            {% if cari.tur == 'calisan' %}<div class="fn-mini">Çalışan hesabı TL ile çalışır.</div>{% elif hareket_var %}<div class="fn-mini">Hareketi olan hesabın para birimi değiştirilemez.</div>{% endif %}</div>
           <div class="col-12"><input type="text" name="notlar" class="form-control" value="{{ cari.notlar or '' }}" placeholder="Not"></div>
         </div>
       </div>
@@ -218,6 +229,11 @@
         var yeni = sablon.cloneNode(true); yeni.querySelectorAll('input').forEach(function (i) { i.value = i.classList.contains('fn-adet') ? '1' : ''; });
         tablo.querySelector('tbody').appendChild(yeni); yeni.querySelector('input').focus();
       });
+    });
+    document.querySelectorAll('.fn-doviz-kur').forEach(function (kurInput) {
+      var form = kurInput.closest('form'), tutar = form.querySelector('.fn-doviz-tutar'), hedef = form.querySelector('.fn-doviz-tl');
+      function guncelle() { hedef.textContent = fmt(num(tutar.value) * num(kurInput.value)); }
+      kurInput.addEventListener('input', guncelle); tutar.addEventListener('input', guncelle);
     });
     document.querySelectorAll('.fn-cari-iptal').forEach(function (f) {
       f.addEventListener('submit', function (e) {
