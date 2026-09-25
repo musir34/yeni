@@ -49,21 +49,39 @@ def bedenleri_sirala(bedenler: list[str]) -> list[str]:
     return sorted(bedenler, key=_beden_anahtar)
 
 
-def _beden_secenegini_sirala(pid: str, beden_opt: dict, degerler: list[str]) -> None:
-    """Sitedeki Beden seçeneğinin değerlerini sayısal sıraya koyar (productOptionsReorder)."""
+def _beden_secenegini_sirala(pid: str, secenekler: list[dict], beden_opt: dict,
+                             degerler: list[str]) -> bool:
+    """
+    Sitedeki Beden seçeneğinin değerlerini sayısal sıraya koyar (productOptionsReorder).
+    Shopify TÜM seçeneklerin listelenmesini ister (yalnız Beden gönderilince
+    MISSING_OPTION_NAME 'Renk' — canlı ders); diğerleri yalnız id ile, değerleri
+    aynen kalır. 100+ varyantlı üründe Shopify çağrıyı hatasız ama ETKİSİZ
+    döndürüyor (011, 213 varyant — canlı ders); sonuç yeniden okunarak doğrulanır.
+    Döner: sıra doğru mu.
+    """
     sirali = bedenleri_sirala(degerler)
     if sirali == list(degerler):
-        return
+        return True
+    girdi = [{"id": o["id"]} for o in secenekler if o["id"] != beden_opt["id"]]
+    girdi.append({"id": beden_opt["id"], "values": [{"name": b} for b in sirali]})
     d = _graphql("""
         mutation bedenSirala($productId: ID!, $options: [OptionReorderInput!]!) {
           productOptionsReorder(productId: $productId, options: $options) {
+            product { options { id values } }
             userErrors { field message code }
           }
-        }""", {"productId": pid,
-               "options": [{"id": beden_opt["id"], "values": [{"name": b} for b in sirali]}]})
+        }""", {"productId": pid, "options": girdi})
     hatalar = d["productOptionsReorder"]["userErrors"]
     if hatalar:
         logger.warning("[SHOPIFY-URUN] beden sıralama uyarısı: %s", hatalar)
+        return False
+    simdiki = next((o["values"] for o in (d["productOptionsReorder"].get("product") or {}).get("options") or []
+                    if o["id"] == beden_opt["id"]), None)
+    if simdiki is not None and list(simdiki) != sirali:
+        logger.warning("[SHOPIFY-URUN] beden sıralaması uygulanmadı (Shopify 100+ varyant sınırı?) %s: %s",
+                       pid, simdiki)
+        return False
+    return True
 
 
 def gorsel_alt(taslak: dict, renk: str, i: int, varsayilan: str) -> str:
@@ -114,6 +132,15 @@ def urun_ac(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
                 "inventoryQuantities": [{"locationId": konum, "name": "available",
                                          "quantity": int(form.get("stok", 5))}],
             })
+    # Shopify seçenek DEĞER sırasını productOptions.values'tan değil varyantların
+    # İLK GÖRÜLDÜĞÜ sıradan kurar (011 dersi: ilk renkler yalnız buçuklu olunca
+    # sitede 35,5..40,5 önce, 35..41 sonra dizildi; productOptionsReorder da
+    # 100+ varyantlı üründe sessizce uygulanmıyor). Varyantlar BEDEN → RENK
+    # sırasıyla gönderilir: beden değerleri baştan sayısal sırada kurulur; renk
+    # sırası en küçük bedeni olan renklerden başlayarak form sırasını izler.
+    renk_sira = {r: i for i, r in enumerate(renkler)}
+    varyantlar.sort(key=lambda v: (_beden_anahtar(v["optionValues"][1]["name"]),
+                                   renk_sira.get(v["optionValues"][0]["name"], 0)))
 
     # Aynı barkod Shopify'da zaten bir üründeyse KOPYA AÇMA — o ürünü güncelle.
     # HER rengin ilk barkoduna bakılır: mevcut modele yeni renk eklenirken ilk
@@ -151,8 +178,9 @@ def urun_ac(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
           productSet(synchronous: true, input: $input) {
             product {
               id handle
-              media(first: 50) { nodes { id alt } }
-              variants(first: 50) { nodes { id title } }
+              options { id name optionValues { name } }
+              media(first: 250) { nodes { id alt } }
+              variants(first: 250) { nodes { id title } }
             }
             userErrors { code field message }
           }
@@ -163,11 +191,24 @@ def urun_ac(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
         raise RuntimeError(f"Shopify productSet: {hatalar}")
     urun = d["productSet"]["product"]
 
+    # Shopify, seçenek DEĞER sırasını productOptions.values'tan değil varyantların
+    # ilk görüldüğü sıradan kurar (011 dersi: ilk renkler yalnız buçuklu olunca
+    # 35,5..40,5 önce, 35..41 sonra dizildi) → yükleme sonrası kesin sıralama.
+    beden_opt = next((o for o in urun.get("options") or [] if o["name"] == "Beden"), None)
+    beden_sirasi_ok = True
+    if beden_opt:
+        beden_sirasi_ok = _beden_secenegini_sirala(
+            urun["id"], urun["options"], beden_opt, [v["name"] for v in beden_opt["optionValues"]])
+
     _kapaklari_ata(urun, renkler, renk_gorselleri)
     _yayinla(urun["id"])
 
-    return {"product_id": urun["id"], "handle": urun["handle"],
-            "url": f"https://www.gullushoes.com/products/{urun['handle']}"}
+    sonuc = {"product_id": urun["id"], "handle": urun["handle"],
+             "url": f"https://www.gullushoes.com/products/{urun['handle']}"}
+    if not beden_sirasi_ok:
+        sonuc["uyari"] = ("Beden sırası Shopify'da düzeltilemedi (100+ varyantlı üründe sıralama "
+                          "uygulanmıyor) — Shopify yönetiminde Beden seçeneğini elle sıralayın.")
+    return sonuc
 
 
 def _barkodla_urun_bul(barkod: str) -> str | None:
@@ -412,9 +453,11 @@ def eksik_tamamla(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
         if hatalar:
             raise RuntimeError(f"Shopify seçenek ekleme ({opt['name']}): {hatalar}")
     # Yeni beden sona eklenir (35..41 sonra 35,5..) → tüm listeyi sayısal sıraya koy
+    beden_sirasi_ok = True
     if yeni_bedenler:
-        _beden_secenegini_sirala(
-            pid, beden_opt, [o["name"] for o in beden_opt["optionValues"]] + yeni_bedenler)
+        beden_sirasi_ok = _beden_secenegini_sirala(
+            pid, urun["options"], beden_opt,
+            [o["name"] for o in beden_opt["optionValues"]] + yeni_bedenler)
 
     # 2) Yeni renklerin + kapaksız mevcut renklerin görselleri galeriye (AI ALT
     #    ile); her bloğun ilk görseli o rengin kapağı
@@ -526,7 +569,10 @@ def eksik_tamamla(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
                 urun["handle"], len(olusan), yeni_renkler, yeni_bedenler, kapak_renkleri, ek_renkler)
     return {"product_id": pid, "handle": urun["handle"], "url": url,
             "varyant": len(olusan), "yeni_renkler": yeni_renkler, "yeni_bedenler": yeni_bedenler,
-            "kapak_renkleri": kapak_renkleri, "ek_renkler": ek_renkler}
+            "kapak_renkleri": kapak_renkleri, "ek_renkler": ek_renkler,
+            **({} if beden_sirasi_ok else {"uyari": (
+                "Beden sırası Shopify'da düzeltilemedi (100+ varyantlı üründe sıralama "
+                "uygulanmıyor) — Shopify yönetiminde Beden seçeneğini elle sıralayın.")})}
 
 
 def _kapaklari_ata(urun: dict, renkler: list[str], renk_gorselleri: dict) -> None:

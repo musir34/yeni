@@ -302,8 +302,10 @@ def test_eksik_tamamla_yeni_beden_sonrasi_sayisal_siralar(sahte):
     shopify_urun.eksik_tamamla(taslak, form, {"Bej": ["https://cdn/b-1.jpg"]})
     sira = sahte.bul("productOptionsReorder")
     assert len(sira) == 1
-    assert [v["name"] for v in sira[0]["options"][0]["values"]] == ["35", "35,5", "36"]
-    assert sira[0]["options"][0]["id"] == "opt-beden"
+    beden_girdi = next(o for o in sira[0]["options"] if o["id"] == "opt-beden")
+    assert [v["name"] for v in beden_girdi["values"]] == ["35", "35,5", "36"]
+    assert {o["id"] for o in sira[0]["options"]} == {"opt-renk", "opt-beden"}   # tüm seçenekler listelenir
+    assert "values" not in next(o for o in sira[0]["options"] if o["id"] == "opt-renk")
 
     sahte.cagrilar.clear()
     shopify_urun.eksik_tamamla(_taslak(), form, {"Bej": ["https://cdn/b-1.jpg"]})  # 37 sona: sıra doğru
@@ -359,3 +361,37 @@ def test_eksik_tamamla_kapakli_renge_ek_gorsel_bloguna_tasinir(sahte, monkeypatc
     for h in hamleler:
         guncel.remove(h["id"]); guncel.insert(int(h["newPosition"]), h["id"])
     assert guncel == [MEDYA_KIRMIZI, "gid://shopify/MediaImage/200", "gid://shopify/MediaImage/201", "B"]
+
+
+def test_urun_ac_varyantlari_beden_sirasiyla_gonderir(sahte, monkeypatch):
+    """011 dersi: Shopify seçenek değer sırasını varyantların İLK GÖRÜLDÜĞÜ sıradan
+    kurar; ilk renk yalnız buçuklu olsa bile beden değerleri 35, 35,5, 36 ... dizilmeli.
+    Varyantlar beden → renk sırasıyla gider."""
+    def productset(query, variables, timeout=60):
+        if "locations(first: 1)" in query:
+            return {"locations": {"nodes": [{"id": "gid://shopify/Location/1"}]}}
+        if "publications(first: 10)" in query:
+            return {"publications": {"nodes": []}}
+        if "productVariants(first: 1, query" in query:
+            return {"productVariants": {"nodes": []}}
+        if "productSet(" in query:
+            sahte.cagrilar.append((query, variables))
+            return {"productSet": {"product": {"id": "p", "handle": "h", "options": [
+                {"id": "o1", "name": "Renk", "optionValues": [{"name": "Gri"}, {"name": "Siyah"}]},
+                {"id": "o2", "name": "Beden", "optionValues": [{"name": "35"}, {"name": "35,5"}, {"name": "36"}]}],
+                "media": {"nodes": []}, "variants": {"nodes": []}}, "userErrors": []}}
+        if "productVariantAppendMedia" in query or "publishablePublish" in query:
+            return {"productVariantAppendMedia": {"userErrors": []}, "publishablePublish": {"userErrors": []}}
+        raise AssertionError(query[:60])
+
+    monkeypatch.setattr(shopify_urun, "_graphql", productset)
+    taslak = {"model_kodu": "011", "bedenler": ["35", "35,5", "36"], "shopify": {"h1": "Stiletto"},
+              "renkler": {"Gri": {"barkodlar": ["", "730734000002", ""]},          # Gri yalnız 35,5
+                          "Siyah": {"barkodlar": ["730734000011", "730734000012", "730734000013"]}}}
+    form = {"satis_fiyat": "1", "liste_fiyat": "2", "stok": 5, "kategori_yolu": "Ayakkabı > Stiletto"}
+    sonuc = shopify_urun.urun_ac(taslak, form, {"Gri": ["https://cdn/g.jpg"], "Siyah": ["https://cdn/s.jpg"]})
+    girdi = sahte.bul("productSet(")[0]["input"]
+    sira = [(v["optionValues"][1]["name"], v["optionValues"][0]["name"]) for v in girdi["variants"]]
+    assert sira == [("35", "Siyah"), ("35,5", "Gri"), ("35,5", "Siyah"), ("36", "Siyah")]
+    assert [v["name"] for v in girdi["productOptions"][1]["values"]] == ["35", "35,5", "36"]
+    assert "uyari" not in sonuc   # sahte üründe sıra zaten doğru → sıralama çağrısı gerekmedi
