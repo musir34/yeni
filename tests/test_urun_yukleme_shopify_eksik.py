@@ -217,3 +217,19 @@ def test_eksik_tamamla_yarim_kalan_deneme_tekrarinda_cift_eklemez(sahte, monkeyp
     kapak = {a["variantId"]: a["mediaIds"][0]
              for a in sahte.bul("productVariantAppendMedia")[0]["variantMedia"]}
     assert kapak["var-yeni-1"] == "gid://shopify/MediaImage/777"          # mevcut kapak
+
+
+def test_baglamli_havuz_isi_uygulama_baglaminda_kosar():
+    """Canlı ders (2026-09-25): ThreadPool iş parçacığı Flask app_context'ini devralmaz,
+    motor ayarı DB'den okunurken 'Working outside of application context' düştü."""
+    from concurrent.futures import ThreadPoolExecutor
+    from flask import Flask, current_app
+    from urun_yukleme.routes import _baglamli
+
+    app = Flask("baglam-test")
+
+    def isim(ek: str) -> str:
+        return current_app.name + ek
+
+    with ThreadPoolExecutor(max_workers=1) as havuz:
+        assert havuz.submit(_baglamli(app, isim, "!")).result() == "baglam-test!"

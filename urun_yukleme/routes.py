@@ -279,6 +279,18 @@ def _ozellik_onerileri(ai_secimleri: dict, harita: dict) -> list[dict]:
     return oneriler
 
 
+def _baglamli(app, fn, *args):
+    """
+    Havuz iş parçacığında çalışacak işi uygulama bağlamına sarar: ThreadPool
+    iş parçacıkları Flask app_context'ini devralmaz, motor ayarı/model seçimi
+    DB'den okunurken "Working outside of application context" düşer (canlı ders).
+    """
+    def _kos():
+        with app.app_context():
+            return fn(*args)
+    return _kos
+
+
 def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                    renkler: list[str], bedenler: list[str],
                    mevcut: dict | None = None) -> None:
@@ -406,8 +418,9 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                 # üretilmez (sitedeki ürünün metnine dokunulmaz).
                 from concurrent.futures import ThreadPoolExecutor
                 with ThreadPoolExecutor(max_workers=2) as havuz:
-                    ty_is = havuz.submit(metin_uret, bilgi) if "trendyol" in hedefler else None
-                    site_is = (havuz.submit(site_metin_uret, bilgi)
+                    ty_is = (havuz.submit(_baglamli(app, metin_uret, bilgi))
+                             if "trendyol" in hedefler else None)
+                    site_is = (havuz.submit(_baglamli(app, site_metin_uret, bilgi))
                                if "shopify" in hedefler and not site_eksik else None)
                     metin = ty_is.result() if ty_is else {}
                     site_metin = site_is.result() if site_is else {}
@@ -431,7 +444,8 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                         if onceki_alt and len(onceki_alt) == len(gorseller.get(r) or []):
                             alt_metinleri[r] = onceki_alt
                         else:
-                            isler[r] = havuz.submit(alt_uret, r, gorseller.get(r) or [], urun_adi)
+                            isler[r] = havuz.submit(
+                                _baglamli(app, alt_uret, r, gorseller.get(r) or [], urun_adi))
                     for r, t in isler.items():
                         alt_metinleri[r] = t.result()
 
