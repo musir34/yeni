@@ -22,6 +22,32 @@ def _slug(metin: str) -> str:
     return "".join(c for c in s if c.isalnum() or c == "-").strip("-")
 
 
+def _tum_dugumler(pid: str, alan: str, secim: str) -> list[dict]:
+    """
+    product.<alan> (variants/media) bağlantısını SAYFALAYARAK tam çeker.
+    Tek sayfa (first: 50/250) ile kapak ataması 51./251. varyanttan sonrasını
+    görmüyordu (011: 213 varyantta yalnız 50 kapak — canlı ders); 18 renk × 13
+    beden 234 ile 250'ye çok yakın, 20 renkli model sınırı aşar.
+    """
+    dugumler, after = [], None
+    while True:
+        d = _graphql(f"""
+            query sayfa($id: ID!, $after: String) {{
+              product(id: $id) {{
+                {alan}(first: 250, after: $after) {{
+                  nodes {{ {secim} }}
+                  pageInfo {{ hasNextPage endCursor }}
+                }}
+              }}
+            }}""", {"id": pid, "after": after})
+        blok = (d.get("product") or {}).get(alan) or {}
+        dugumler += blok.get("nodes") or []
+        sayfa = blok.get("pageInfo") or {}
+        if not sayfa.get("hasNextPage"):
+            return dugumler
+        after = sayfa.get("endCursor")
+
+
 def _konum_id() -> str:
     d = _graphql("query { locations(first: 1) { nodes { id } } }", {})
     dugumler = d["locations"]["nodes"]
@@ -179,8 +205,6 @@ def urun_ac(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
             product {
               id handle
               options { id name optionValues { name } }
-              media(first: 250) { nodes { id alt } }
-              variants(first: 250) { nodes { id title } }
             }
             userErrors { code field message }
           }
@@ -190,6 +214,9 @@ def urun_ac(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
     if hatalar:
         raise RuntimeError(f"Shopify productSet: {hatalar}")
     urun = d["productSet"]["product"]
+    # Kapak ataması için medya + varyant listesi SAYFALI tam çekilir (50/250 tuzağı)
+    urun["media"] = {"nodes": _tum_dugumler(urun["id"], "media", "id alt")}
+    urun["variants"] = {"nodes": _tum_dugumler(urun["id"], "variants", "id title")}
 
     # Shopify, seçenek DEĞER sırasını productOptions.values'tan değil varyantların
     # ilk görüldüğü sıradan kurar (011 dersi: ilk renkler yalnız buçuklu olunca
@@ -267,18 +294,14 @@ def site_kapaksiz_renkler(pid: str) -> list[str]:
     """
     d = _graphql("""
         query kapaksiz($id: ID!) {
-          product(id: $id) {
-            options { name }
-            variants(first: 250) {
-              nodes { selectedOptions { name value } media(first: 1) { nodes { id } } }
-            }
-          }
+          product(id: $id) { options { name } }
         }""", {"id": pid})
     urun = d.get("product") or {}
     secenekler = [o["name"] for o in urun.get("options") or []]
     renk_ad = "Renk" if "Renk" in secenekler else (secenekler[0] if secenekler else "")
     kapakli, hepsi = set(), []
-    for v in (urun.get("variants") or {}).get("nodes") or []:
+    for v in _tum_dugumler(pid, "variants",
+                           "selectedOptions { name value } media(first: 1) { nodes { id } }"):
         renk = next((o["value"] for o in v.get("selectedOptions") or [] if o["name"] == renk_ad), "")
         if not renk:
             continue
@@ -368,18 +391,16 @@ def eksik_tamamla(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
           product(id: $id) {
             id title handle
             options { id name optionValues { id name } }
-            media(first: 250) { nodes { id alt } }
-            variants(first: 250) {
-              nodes { id title barcode price compareAtPrice
-                      selectedOptions { name value } media(first: 1) { nodes { id } } }
-            }
           }
         }""", {"id": pid})
     urun = d["product"]
     if not urun:
         raise RuntimeError(f"Sitedeki ürün bulunamadı: {pid}")
     url = f"https://www.gullushoes.com/products/{urun['handle']}"
-    mevcut_vs = urun["variants"]["nodes"]
+    # Varyant + medya listeleri SAYFALI tam çekilir (50/250 tuzağı — 011 dersi)
+    mevcut_vs = _tum_dugumler(pid, "variants", "id title barcode price compareAtPrice "
+                              "selectedOptions { name value } media(first: 1) { nodes { id } }")
+    galeri = _tum_dugumler(pid, "media", "id alt")
     mevcut_bc = {str(v.get("barcode") or ""): v for v in mevcut_vs}
 
     def _secenek(v: dict, ad: str) -> str:
@@ -464,7 +485,7 @@ def eksik_tamamla(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
     # Yarım kalmış denemede aynı görsel (aynı ALT ile) galeride zaten varsa
     # yeniden yüklenmez; kapak o mevcut medya olur (çift galeri görseli olmaz).
     mevcut_alt = {}
-    for m in urun["media"]["nodes"]:
+    for m in galeri:
         if m.get("alt") and m["alt"] not in mevcut_alt:
             mevcut_alt[m["alt"]] = m["id"]
     medya_girdi, blok_sira = [], []   # blok_sira: (renk, yeni yüklenen adet)
@@ -484,11 +505,11 @@ def eksik_tamamla(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
             adet += 1
         blok_sira.append((renk, adet))
     if medya_girdi:
-        onceki = {m["id"] for m in urun["media"]["nodes"]}
+        onceki = {m["id"] for m in galeri}
         d = _graphql("""
             mutation medyaEkle($product: ProductUpdateInput!, $media: [CreateMediaInput!]) {
               productUpdate(product: $product, media: $media) {
-                product { media(first: 250) { nodes { id } } }
+                product { id }
                 userErrors { field message }
               }
             }""", {"product": {"id": pid}, "media": medya_girdi}, timeout=180)
@@ -497,8 +518,8 @@ def eksik_tamamla(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
             raise RuntimeError(f"Shopify medya ekleme: {hatalar}")
         # Yeni medya, ürün galerisine girdi SIRASIYLA eklenir (productSet ile aynı
         # varsayım — _kapaklari_ata); blok başlangıçları görsel sayısından bulunur.
-        yeni_medya = [m["id"] for m in d["productUpdate"]["product"]["media"]["nodes"]
-                      if m["id"] not in onceki]
+        galeri_sonra = [m["id"] for m in _tum_dugumler(pid, "media", "id")]
+        yeni_medya = [m for m in galeri_sonra if m not in onceki]
         if len(yeni_medya) != len(medya_girdi):
             logger.warning("[SHOPIFY-URUN] eklenen medya sayısı beklenenden farklı (%d/%d)",
                            len(yeni_medya), len(medya_girdi))
@@ -512,8 +533,7 @@ def eksik_tamamla(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
             konum += adet
         _medya_bekle(yeni_medya)
         if tasinacak:
-            _galeri_bloguna_tasi(pid, [m["id"] for m in d["productUpdate"]["product"]["media"]["nodes"]],
-                                 tasinacak)
+            _galeri_bloguna_tasi(pid, galeri_sonra, tasinacak)
 
     # 3) Yalnız yeni varyantlar (SKU/barkod Trendyol standardı, stok formdan;
     #    stok senkron sonraki turda kendi değerine çeker)

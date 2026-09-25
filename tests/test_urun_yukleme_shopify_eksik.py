@@ -45,6 +45,18 @@ class SahteShopify:
 
     def __init__(self):
         self.cagrilar: list[tuple[str, dict]] = []
+        self.galeri: list[dict] = [{"id": MEDYA_KIRMIZI}]   # ürün galerisi (durumlu)
+        self.varyantlar: list[dict] = [
+            {"id": "var-1", "title": "Kırmızı / 35", "barcode": "079950000001",
+             "price": "1699.90", "compareAtPrice": "1999.90",
+             "selectedOptions": [{"name": "Renk", "value": "Kırmızı"}, {"name": "Beden", "value": "35"}],
+             "media": {"nodes": [{"id": MEDYA_KIRMIZI}]}},
+            {"id": "var-2", "title": "Kırmızı / 36", "barcode": "079950000002",
+             "price": "1699.90", "compareAtPrice": "1999.90",
+             "selectedOptions": [{"name": "Renk", "value": "Kırmızı"}, {"name": "Beden", "value": "36"}],
+             "media": {"nodes": [{"id": MEDYA_KIRMIZI}]}},
+        ]
+        self.renk_degerleri = [{"id": "v1", "name": "Kırmızı"}]
 
     def __call__(self, query: str, variables: dict, timeout: int = 60) -> dict:
         self.cagrilar.append((query, variables))
@@ -57,30 +69,23 @@ class SahteShopify:
                 {"barcode": "079950000002", "product": {"id": PID, "title": "Rugan Sandalet", "handle": "0122-rugan"}},
             ]}}
         if "product(id: $id)" in query:
+            # Hem tek sorgu hem de sayfalı variants/media sorguları (pageInfo yok → tek sayfa)
             return {"product": {
                 "id": PID, "title": "Rugan Sandalet", "handle": "0122-rugan",
                 "options": [
-                    {"id": "opt-renk", "name": "Renk", "optionValues": [{"id": "v1", "name": "Kırmızı"}]},
+                    {"id": "opt-renk", "name": "Renk", "optionValues": list(self.renk_degerleri)},
                     {"id": "opt-beden", "name": "Beden", "optionValues": [{"id": "v2", "name": "35"}, {"id": "v3", "name": "36"}]},
                 ],
-                "media": {"nodes": [{"id": MEDYA_KIRMIZI}]},
-                "variants": {"nodes": [
-                    {"id": "var-1", "title": "Kırmızı / 35", "barcode": "079950000001",
-                     "price": "1699.90", "compareAtPrice": "1999.90",
-                     "selectedOptions": [{"name": "Renk", "value": "Kırmızı"}, {"name": "Beden", "value": "35"}],
-                     "media": {"nodes": [{"id": MEDYA_KIRMIZI}]}},
-                    {"id": "var-2", "title": "Kırmızı / 36", "barcode": "079950000002",
-                     "price": "1699.90", "compareAtPrice": "1999.90",
-                     "selectedOptions": [{"name": "Renk", "value": "Kırmızı"}, {"name": "Beden", "value": "36"}],
-                     "media": {"nodes": [{"id": MEDYA_KIRMIZI}]}},
-                ]},
+                "media": {"nodes": [dict(m) for m in self.galeri]},
+                "variants": {"nodes": [dict(v) for v in self.varyantlar]},
             }}
         if "productOptionUpdate" in query:
             return {"productOptionUpdate": {"userErrors": []}}
         if "productUpdate(product" in query:
-            yeni = [{"id": f"gid://shopify/MediaImage/2{i:02d}"} for i in range(len(variables["media"]))]
-            return {"productUpdate": {"product": {"media": {"nodes": [{"id": MEDYA_KIRMIZI}] + yeni}},
-                                      "userErrors": []}}
+            yeni = [{"id": f"gid://shopify/MediaImage/2{i:02d}", "alt": m.get("alt")}
+                    for i, m in enumerate(variables["media"])]
+            self.galeri = self.galeri + yeni      # Shopify yeni görseli galerinin SONUNA koyar
+            return {"productUpdate": {"product": {"id": PID}, "userErrors": []}}
         if "medyaDurum" in query:
             return {"nodes": [{"id": i, "status": "READY"} for i in variables["ids"]]}
         if "productVariantsBulkCreate" in query:
@@ -197,18 +202,9 @@ def test_eksik_tamamla_yarim_kalan_deneme_tekrarinda_cift_eklemez(sahte, monkeyp
     """Önceki denemede 'Bej' değeri ve 1. görsel eklenmiş, varyant adımı düşmüş olsun:
     tekrar yüklemede Bej değeri yeniden eklenmez, 1. görsel yeniden yüklenmez,
     kapak mevcut medyadır; yalnız 2. görsel + varyantlar gider."""
-    orijinal = sahte.__call__
-
-    def yarim(query, variables, timeout=60):
-        d = orijinal(query, variables, timeout)
-        if "product(id: $id)" in query:
-            d["product"]["options"][0]["optionValues"].append({"id": "v9", "name": "Bej"})
-            d["product"]["media"]["nodes"].append(
-                {"id": "gid://shopify/MediaImage/777",
-                 "alt": "Bej topuklu sandalet önden fiyonk tokalı görünüm"})
-        return d
-
-    monkeypatch.setattr(shopify_urun, "_graphql", yarim)
+    sahte.renk_degerleri.append({"id": "v9", "name": "Bej"})
+    sahte.galeri.append({"id": "gid://shopify/MediaImage/777",
+                         "alt": "Bej topuklu sandalet önden fiyonk tokalı görünüm"})
     form = {"satis_fiyat": "999", "liste_fiyat": "1299", "stok": 5}
     sonuc = shopify_urun.eksik_tamamla(
         _taslak(), form, {"Bej": ["https://cdn/bej-1.jpg", "https://cdn/bej-2.jpg"]})
@@ -243,16 +239,8 @@ def test_eksik_tamamla_kapaksiz_mevcut_renge_kapak_atar(sahte, monkeypatch):
     """011 dersi: sitedeki rengin hiçbir varyantında görsel yok → vitrin siyahı gösteriyor.
     Kullanıcı o renge görsel yükleyince galeriye eklenir ve rengin TÜM varyantlarına
     kapak olur; varyant oluşturulmaz, metne dokunulmaz."""
-    orijinal = sahte.__call__
-
-    def kapaksiz(query, variables, timeout=60):
-        d = orijinal(query, variables, timeout)
-        if "product(id: $id)" in query:
-            for v in d["product"]["variants"]["nodes"]:
-                v["media"] = {"nodes": []}          # Kırmızı'nın kapağı yok
-        return d
-
-    monkeypatch.setattr(shopify_urun, "_graphql", kapaksiz)
+    for v in sahte.varyantlar:
+        v["media"] = {"nodes": []}          # Kırmızı'nın kapağı yok
     taslak = _taslak()
     taslak["bedenler"] = ["35", "36"]
     taslak["renkler"] = {"Kırmızı": {"barkodlar": ["079950000001", "079950000002"],
@@ -274,17 +262,10 @@ def test_eksik_tamamla_kapaksiz_mevcut_renge_kapak_atar(sahte, monkeypatch):
 
 
 def test_site_kapaksiz_renkler(sahte, monkeypatch):
-    orijinal = sahte.__call__
-
-    def karisik(query, variables, timeout=60):
-        d = orijinal(query, variables, timeout)
-        if "product(id: $id)" in query:
-            d["product"]["variants"]["nodes"].append(
-                {"selectedOptions": [{"name": "Renk", "value": "Gri"}, {"name": "Beden", "value": "35"}],
-                 "media": {"nodes": []}})
-        return d
-
-    monkeypatch.setattr(shopify_urun, "_graphql", karisik)
+    sahte.varyantlar.append(
+        {"id": "var-gri", "title": "Gri / 35", "barcode": "079950000099", "price": "1", "compareAtPrice": "1",
+         "selectedOptions": [{"name": "Renk", "value": "Gri"}, {"name": "Beden", "value": "35"}],
+         "media": {"nodes": []}})
     assert shopify_urun.site_kapaksiz_renkler(PID) == ["Gri"]
 
 
@@ -334,17 +315,7 @@ def test_eksik_tamamla_kapakli_renge_ek_gorsel_bloguna_tasinir(sahte, monkeypatc
     """Kırmızı'nın kapağı var (MEDYA_KIRMIZI, galeride ilk). Kırmızı'ya 2 yeni görsel
     yüklenince: galeriye eklenir, kapak değişmez, yeni görseller kapağın arkasına taşınır;
     varyant açılmaz."""
-    orijinal = sahte.__call__
-
-    def galerili(query, variables, timeout=60):
-        d = orijinal(query, variables, timeout)
-        if "product(id: $id)" in query:
-            d["product"]["media"]["nodes"].append({"id": "B"})          # başka rengin görseli
-        if "productUpdate(product" in query:
-            d["productUpdate"]["product"]["media"]["nodes"].insert(1, {"id": "B"})  # yeniler SONA düştü
-        return d
-
-    monkeypatch.setattr(shopify_urun, "_graphql", galerili)
+    sahte.galeri.append({"id": "B"})          # başka rengin görseli; yeniler bunun da SONUNA düşer
     form = {"satis_fiyat": "1", "liste_fiyat": "1", "stok": 5}
     taslak = _taslak()
     taslak["bedenler"] = ["35", "36"]
@@ -382,6 +353,8 @@ def test_urun_ac_varyantlari_beden_sirasiyla_gonderir(sahte, monkeypatch):
                 "media": {"nodes": []}, "variants": {"nodes": []}}, "userErrors": []}}
         if "productVariantAppendMedia" in query or "publishablePublish" in query:
             return {"productVariantAppendMedia": {"userErrors": []}, "publishablePublish": {"userErrors": []}}
+        if "query sayfa(" in query:   # sayfalı medya/varyant listesi (boş ürün)
+            return {"product": {"media": {"nodes": []}, "variants": {"nodes": []}}}
         raise AssertionError(query[:60])
 
     monkeypatch.setattr(shopify_urun, "_graphql", productset)
