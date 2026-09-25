@@ -304,6 +304,7 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
             yeni_varyant_yok = False
             # Sitedeki durum (eksik tamamlama modu): {"pid", "handle", "title", "barkodlar"}
             site: dict = {"pid": None, "handle": "", "title": "", "barkodlar": {}}
+            atlanan: list[tuple[str, str]] = []  # yalnız-site hedefinde barkodsuz bırakılan ikililer
             if mevcut and mevcut.get("model_kodu"):
                 # REVİZYON: kodlar korunur, yeniden tahsis/rezerv YAPILMAZ
                 kodlar = {"model_kodu": mevcut["model_kodu"],
@@ -350,6 +351,15 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                         "tam bedenleri silmeyin).")
                 yeni_kombin = [(r, b) for r in renkler for b in bedenler
                                if b not in (harita.get(r) or {})]
+                # YALNIZ SİTE hedefinde Trendyol'daki bir rengin Trendyol'da OLMAYAN
+                # bedenine barkod TAHSİS EDİLMEZ (011 dersi: Getir bedenleri tüm
+                # renklerin birleşimi olarak doldurur, buçuğu olmayan renklerde
+                # "yeni varyant" çıkıp önek dolu hatası veriyordu). Site aynı
+                # barkodlarla beslenir; o ikililer atlanır (boş barkod = atla).
+                # Trendyol'da hiç olmayan YENİ renk ise yine tahsis alır.
+                if "trendyol" not in hedefler:
+                    atlanan = [(r, b) for r, b in yeni_kombin if r in harita]
+                    yeni_kombin = [(r, b) for r, b in yeni_kombin if r not in harita]
                 yeni_varyant_yok = not yeni_kombin
                 yeni_barkodlar: list[str] = []
                 if yeni_kombin:
@@ -360,10 +370,12 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                     yeni_barkodlar = yeni["renk_bloklari"][0]
                     katalog.rezerv_ekle(ozel, yeni_barkodlar)
                 sirali = iter(yeni_barkodlar)
+                atlanan_kume = set(atlanan)
                 bloklar = []
                 for r in renkler:
                     kayit = harita.get(r) or {}
-                    bloklar.append([kayit[b] if b in kayit else next(sirali)
+                    bloklar.append([kayit[b] if b in kayit
+                                    else ("" if (r, b) in atlanan_kume else next(sirali))
                                     for b in bedenler])
                 kodlar = {"model_kodu": ozel, "renk_bloklari": bloklar}
                 mevcut_renkler = [r for r in renkler
@@ -388,12 +400,12 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
             sitede = site.get("barkodlar") or {}
             site_eksik_varyantlar = [[r, b] for i, r in enumerate(renkler)
                                      for b, bc in zip(bedenler, kodlar["renk_bloklari"][i])
-                                     if bc not in sitede] if site_eksik else []
+                                     if bc and bc not in sitede] if site_eksik else []
             site_mevcut_varyantlar = [[r, b] for i, r in enumerate(renkler)
                                       for b, bc in zip(bedenler, kodlar["renk_bloklari"][i])
-                                      if bc in sitede] if site_eksik else []
+                                      if bc and bc in sitede] if site_eksik else []
             site_eksik_renkler = [r for i, r in enumerate(renkler)
-                                  if not any(bc in sitede for bc in kodlar["renk_bloklari"][i])
+                                  if not any(bc and bc in sitede for bc in kodlar["renk_bloklari"][i])
                                   ] if site_eksik else []
 
             if f.get("aisiz"):
@@ -450,6 +462,12 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                         alt_metinleri[r] = t.result()
 
             renk_taslaklari, uyarilar = {}, []
+            if atlanan:
+                uyarilar.append(
+                    "Trendyol'da olmayan şu renk/beden ikilileri ATLANDI (yalnız site "
+                    "hedefinde yeni barkod tahsis edilmez, site aynı barkodlarla beslenir): "
+                    + ", ".join(f"{r} {b}" for r, b in atlanan)
+                    + ". Bunları Trendyol'a da eklemek istiyorsanız hedefi 'İkisi' yapın.")
             if yeni_varyant_yok and "trendyol" in hedefler:
                 uyarilar.append(
                     "DİKKAT: Formdaki tüm renk/beden ikilileri zaten Trendyol'da — "
@@ -751,6 +769,8 @@ def _trendyol_gonder(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
         for beden, barkod in zip(bedenler, r["barkodlar"]):
             if (renk, beden) in zaten_var_vb:
                 continue
+            if not barkod:
+                continue  # yalnız-site taslağında barkodsuz bırakılan ikili (Trendyol'da yok)
             if len(barkod) != katalog.BARKOD_UZUNLUK:
                 raise ValueError(f"Barkod {katalog.BARKOD_UZUNLUK} hane değil: {barkod}")
             items.append({

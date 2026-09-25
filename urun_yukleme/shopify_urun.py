@@ -71,6 +71,8 @@ def urun_ac(taslak: dict, form: dict, renk_gorselleri: dict) -> dict:
                                                f"{renk} {sh.get('h1') or urun_tipi} {i}")})
         blok = taslak["renkler"][renk]["barkodlar"]
         for beden, barkod in zip(bedenler, blok):
+            if not barkod:
+                continue  # Trendyol'da olmayan ikili (yalnız-site taslağı) — siteye de açılmaz
             varyantlar.append({
                 "optionValues": [{"optionName": "Renk", "name": renk},
                                  {"optionName": "Beden", "name": beden}],

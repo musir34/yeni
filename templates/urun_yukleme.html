@@ -877,7 +877,7 @@ Alt Taban: Kaymaz taban</textarea>
       if (!trendyolVar && !altVar) continue;
       html += `
         <div class="border rounded p-2 mb-3">
-          <div class="fw-bold mb-1">${kacir(renk)} <small class="text-muted">${r.barkodlar[0]} – ${r.barkodlar[r.barkodlar.length - 1]}</small></div>`;
+          <div class="fw-bold mb-1">${kacir(renk)} <small class="text-muted">${(() => { const b = r.barkodlar.filter(Boolean); return b.length ? `${b[0]} – ${b[b.length - 1]}` : "barkod yok"; })()}</small></div>`;
       if (trendyolVar) html += `
           <div>
             <input class="form-control uy-onizleme-baslik uy-baslik" data-renk="${kacir(renk)}" value="${kacir(r.baslik)}">
