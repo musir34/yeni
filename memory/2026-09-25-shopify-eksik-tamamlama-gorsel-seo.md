@@ -78,3 +78,9 @@ göndermeme, yarım kalan deneme tekrarı, ALT yedek, renk bölümleri.
 - ALT üretimi renk başına ayrı claude çağrısı (≤8 görsel): taslak süresi uzar
   (UI zaman aşımı 6 dk).
 - Deploy: `git pull && systemctl restart gullupanel.service` (migration yok).
+
+## Canlı test ekleri (aynı gün, 011 dersleri)
+- **app_context**: ThreadPool iş parçacıkları Flask bağlamını devralmaz → `_baglamli(app, fn)` sarmalı (043bfb4).
+- **Beden birleşimi**: Getir bedenleri tüm renklerin birleşimi doldurur; buçuğu olmayan renklerde "yeni varyant" çıkıp önek-dolu (730734) hatası veriyordu. Yalnız-site hedefinde Trendyol'daki rengin Trendyol'da olmayan bedenine barkod TAHSİS EDİLMEZ, ikili atlanır (boş barkod = her yerde atla), uyarı bandı (5d1a601). "İkisi" hedefinde eski davranış (buçuk ekleme tahsis alır). NOT: 730734 öneki dolu — Stiletto'ya yeni model/buçuk için yeni önek gerekecek.
+- **Görseller Trendyol'dan indirilmez** (varsayılan): kalite düşük, kullanıcı her renge kendi görselini yükler; Getir yanında "Görselleri de Trendyol'dan indir" kutusu (`gorseller_indir`).
+- **Kapaksız mevcut renkler**: `site_kapaksiz_renkler(pid)` → sitede hiçbir varyantına görsel bağlı olmayan renkler; taslakta `shopify.kapaksiz_renkler` + `kapak_atanacak` (görseli yüklenenler). `eksik_tamamla` bu renklerin görsellerini galeriye ekleyip TÜM varyantlarına kapak atar (varyant/metin dokunulmaz); ALT üretimi bu renkleri de kapsar. 011'de tüm renkler kapaksızdı → vitrin hepsinde siyahı gösteriyordu.

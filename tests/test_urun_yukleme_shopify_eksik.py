@@ -233,3 +233,52 @@ def test_baglamli_havuz_isi_uygulama_baglaminda_kosar():
 
     with ThreadPoolExecutor(max_workers=1) as havuz:
         assert havuz.submit(_baglamli(app, isim, "!")).result() == "baglam-test!"
+
+
+def test_eksik_tamamla_kapaksiz_mevcut_renge_kapak_atar(sahte, monkeypatch):
+    """011 dersi: sitedeki rengin hiçbir varyantında görsel yok → vitrin siyahı gösteriyor.
+    Kullanıcı o renge görsel yükleyince galeriye eklenir ve rengin TÜM varyantlarına
+    kapak olur; varyant oluşturulmaz, metne dokunulmaz."""
+    orijinal = sahte.__call__
+
+    def kapaksiz(query, variables, timeout=60):
+        d = orijinal(query, variables, timeout)
+        if "product(id: $id)" in query:
+            for v in d["product"]["variants"]["nodes"]:
+                v["media"] = {"nodes": []}          # Kırmızı'nın kapağı yok
+        return d
+
+    monkeypatch.setattr(shopify_urun, "_graphql", kapaksiz)
+    taslak = _taslak()
+    taslak["bedenler"] = ["35", "36"]
+    taslak["renkler"] = {"Kırmızı": {"barkodlar": ["079950000001", "079950000002"],
+                                    "alt": ["Kırmızı sandalet önden", "Kırmızı sandalet yandan"]}}
+    taslak["shopify"]["kapaksiz_renkler"] = ["Kırmızı"]
+
+    sonuc = shopify_urun.eksik_tamamla(
+        taslak, {"satis_fiyat": "1", "liste_fiyat": "1"},
+        {"Kırmızı": ["https://cdn/k-1.jpg", "https://cdn/k-2.jpg"]})
+
+    assert sonuc["varyant"] == 0 and sonuc["kapak_renkleri"] == ["Kırmızı"]
+    assert not sahte.bul("productVariantsBulkCreate")
+    assert not sahte.bul("productOptionUpdate")
+    medya = sahte.bul("productUpdate(product")[0]["media"]
+    assert [m["alt"] for m in medya] == ["Kırmızı sandalet önden", "Kırmızı sandalet yandan"]
+    atama = sahte.bul("productVariantAppendMedia")[0]["variantMedia"]
+    assert {a["variantId"] for a in atama} == {"var-1", "var-2"}
+    assert {a["mediaIds"][0] for a in atama} == {"gid://shopify/MediaImage/200"}
+
+
+def test_site_kapaksiz_renkler(sahte, monkeypatch):
+    orijinal = sahte.__call__
+
+    def karisik(query, variables, timeout=60):
+        d = orijinal(query, variables, timeout)
+        if "product(id: $id)" in query:
+            d["product"]["variants"]["nodes"].append(
+                {"selectedOptions": [{"name": "Renk", "value": "Gri"}, {"name": "Beden", "value": "35"}],
+                 "media": {"nodes": []}})
+        return d
+
+    monkeypatch.setattr(shopify_urun, "_graphql", karisik)
+    assert shopify_urun.site_kapaksiz_renkler(PID) == ["Gri"]

@@ -83,10 +83,11 @@ html.gs-dark .uy-kart { background: #1e1e1e; border-color: #333; box-shadow: non
       <b>📥 Trendyol'dan Aktar:</b>
       <input class="form-control form-control-sm" id="uyAktarModel" placeholder="model kodu (ör. 0121)" style="max-width:160px">
       <button class="btn btn-outline-danger btn-sm" id="uyAktarBtn"><i class="bi bi-download"></i> Getir</button>
+      <label class="form-check-label small text-muted"><input class="form-check-input" type="checkbox" id="uyAktarGorsel"> Görselleri de Trendyol'dan indir <span title="Trendyol kopyaları düşük kaliteli — varsayılan kapalı, her renge kendi görselinizi yükleyin">(kalite düşük)</span></label>
       <button class="btn btn-outline-success btn-sm" id="uyAisizBtn" style="display:none">⚡ AI'sız Hazırla — mevcut metinlerle</button>
       <span class="text-muted" id="uyAktarDurum"></span>
     </div>
-    <small class="text-muted">Trendyol'daki mevcut ürünün renkleri, bedenleri, <b>aynı barkodları</b>, fiyatı, özellikleri ve görselleri otomatik doldurulur — AI üretip onaylarsınız, Shopify'a birebir aynı kodlarla gider.<br>
+    <small class="text-muted">Trendyol'daki mevcut ürünün renkleri, bedenleri, <b>aynı barkodları</b>, fiyatı ve özellikleri otomatik doldurulur (görseller varsayılan olarak indirilmez, her renge kendi görselinizi yükleyin) — AI üretip onaylarsınız, Shopify'a birebir aynı kodlarla gider.<br>
     <b>Mevcut modele yeni renk:</b> modeli Getir'le doldurun, Renkler listesine yeni rengi ekleyip görsellerini yükleyin — mevcut renkler aynı barkodlarla korunur, Trendyol'a yalnız yeni renk gönderilir (bunun için hedefi <b>İkisi</b> yapın), sitede aynı ürüne eklenir.<br>
     <b>Mevcut modele buçuklu beden:</b> yine Getir'le doldurun, buçuk anahtarını açın — mevcut bedenler barkodlarını korur, yalnız buçuklara yeni barkod verilir ve sadece onlar Trendyol'a gönderilir.<br>
     <b>Sitede eksik renk/beden tamamlama:</b> model sitede zaten varsa motor barkodları Shopify'da tarar, olmayanları ayırır ve <b>yalnız eksikleri</b> ekler (yeni renk görselleriyle, mevcut renge yeni beden görselsiz); sitedeki başlık, açıklama, görsel ve stok değişmez.</small>
@@ -374,11 +375,12 @@ Alt Taban: Kaymaz taban</textarea>
     const model = $("uyAktarModel").value.trim();
     if (!model) return alert("Model kodu girin (ör. 0121).");
     $("uyAktarBtn").classList.add("uy-bekliyor");
-    $("uyAktarDurum").textContent = "Trendyol'dan çekiliyor (görseller dahil)…";
+    $("uyAktarDurum").textContent = $("uyAktarGorsel").checked
+      ? "Trendyol'dan çekiliyor (görseller dahil)…" : "Trendyol'dan çekiliyor (görseller hariç — kendiniz yükleyin)…";
     try {
       const d = await getJSON("/urun-yukleme/api/trendyol-getir", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: model }) });
+        body: JSON.stringify({ model: model, gorseller_indir: $("uyAktarGorsel").checked }) });
       const p = d.paket;
       S.taslakId = d.taslak_id;
       hedefUygula(["shopify"]);  // aktarımın doğal hedefi site; isterseniz karttan değiştirin
@@ -848,6 +850,9 @@ Alt Taban: Kaymaz taban</textarea>
           <div class="mt-1"><b>Eksik renkler (görselleriyle eklenir):</b> ${kacir((sh.eksik_renkler || []).join(", ") || "—")}</div>
           <div><b>Eklenecek varyantlar (${(sh.eksik_varyantlar || []).length}):</b> ${kacir(vb(sh.eksik_varyantlar))}</div>
           <div class="text-muted"><small><b>Sitede zaten var (${(sh.sitede_var || []).length}, dokunulmaz):</b> ${kacir(vb(sh.sitede_var))}</small></div>
+          ${(sh.kapaksiz_renkler || []).length ? `
+          <div class="mt-1"><b>Sitede kapak görseli olmayan renkler:</b> ${kacir(sh.kapaksiz_renkler.join(", "))}<br>
+            <small>Görseli yüklenenler → kapak atanacak: <b>${kacir((sh.kapak_atanacak || []).join(", ") || "— (görsel yüklenmedi)")}</b>. Diğerleri kapaksız kalır; kapak istiyorsanız görselini yükleyip taslağı yeniden üretin.</small></div>` : ""}
           <small class="text-muted">Fiyat sitedeki kardeş varyanttan alınır; başlık, açıklama, SEO ve mevcut görseller değişmez.</small>
         </div>`;
     }
@@ -1040,8 +1045,9 @@ Alt Taban: Kaymaz taban</textarea>
         } else if (typeof s.varyant === "number") {
           sonucHtml += `<div class="alert alert-success"><b>Shopify</b> — sitedeki ürüne <b>${s.varyant} varyant</b> eklendi:
                <a href="${kacir(s.url)}" target="_blank">${kacir(s.url)}</a><br>
-               <small>Yeni renk: ${kacir((s.yeni_renkler || []).join(", ") || "—")} — yeni beden: ${kacir((s.yeni_bedenler || []).join(", ") || "—")}.
-               Mevcut varyantlar, görseller ve metin değişmedi; yeni renklerin görselleri ALT metinleriyle galeriye eklendi.</small></div>`;
+               <small>Yeni renk: ${kacir((s.yeni_renkler || []).join(", ") || "—")} — yeni beden: ${kacir((s.yeni_bedenler || []).join(", ") || "—")}
+               — kapak atanan mevcut renk: ${kacir((s.kapak_renkleri || []).join(", ") || "—")}.
+               Mevcut varyantlar ve metin değişmedi; yeni görseller ALT metinleriyle galeriye eklendi.</small></div>`;
         } else {
           sonucHtml += `<div class="alert alert-success"><b>Shopify</b> — ürün yayında:
                <a href="${kacir(s.url)}" target="_blank">${kacir(s.url)}</a><br>

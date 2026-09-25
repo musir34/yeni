@@ -407,6 +407,16 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
             site_eksik_renkler = [r for i, r in enumerate(renkler)
                                   if not any(bc and bc in sitede for bc in kodlar["renk_bloklari"][i])
                                   ] if site_eksik else []
+            # Sitede KAPAKSIZ mevcut renkler: görsel yüklendiyse kapak atanır
+            # (011 dersi: hiçbir rengin varyant görseli yoktu, vitrin hepsinde
+            # siyahı gösteriyordu). Sorgu düşerse özellik atlanır, taslak sürer.
+            site_kapaksiz: list[str] = []
+            if site_eksik:
+                try:
+                    site_kapaksiz = [r for r in shopify_urun.site_kapaksiz_renkler(site["pid"])
+                                     if r in renkler and r not in site_eksik_renkler]
+                except Exception:
+                    logger.warning("[URUN] sitedeki kapaksız renkler okunamadı", exc_info=True)
 
             if f.get("aisiz"):
                 # AI'SIZ HIZLI YOL (aktarımla gelen mevcut başlık/açıklamalar
@@ -444,10 +454,12 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
             # ALT'lar korunur (görsel değişmedi).
             alt_metinleri: dict[str, list[str]] = {}
             if "shopify" in hedefler and not f.get("aisiz"):
-                alt_renkler = site_eksik_renkler if site_eksik else renkler
+                gorseller = bilgi.get("gorseller") or {}
+                # eksik modda: yeni renkler + görseli yüklenmiş kapaksız mevcut renkler
+                alt_renkler = (site_eksik_renkler + [r for r in site_kapaksiz if gorseller.get(r)]
+                               if site_eksik else renkler)
                 urun_adi = ((site_metin.get("genel") or {}).get("h1")
                             or site.get("title") or f.get("urun_turu") or "").strip()
-                gorseller = bilgi.get("gorseller") or {}
                 from concurrent.futures import ThreadPoolExecutor
                 with ThreadPoolExecutor(max_workers=3) as havuz:
                     isler = {}
@@ -513,10 +525,19 @@ def _taslak_worker(app, taslak_id: str, f: dict, bilgi: dict,
                     "eksik_renkler": site_eksik_renkler,
                     "eksik_varyantlar": site_eksik_varyantlar,
                     "sitede_var": site_mevcut_varyantlar,
+                    "kapaksiz_renkler": site_kapaksiz,
+                    # kapak atanacaklar = kapaksız + görseli yüklenmiş
+                    "kapak_atanacak": [r for r in site_kapaksiz if (bilgi.get("gorseller") or {}).get(r)],
                 }
-                if not site_eksik_varyantlar:
+                kapak_atanacak = shopify["kapak_atanacak"]
+                if not site_eksik_varyantlar and not kapak_atanacak:
                     uyarilar.append("Sitede bu modelin tüm renk/beden varyantları zaten var — "
                                     "Shopify'a yeni bir şey gönderilmez.")
+                gorselsiz_kapaksiz = [r for r in site_kapaksiz if r not in kapak_atanacak]
+                if gorselsiz_kapaksiz:
+                    uyarilar.append("Sitede kapak görseli olmayan renkler (görsel yüklerseniz kapak "
+                                    "atanır, yüklemezseniz vitrin ürünün ilk görselini gösterir): "
+                                    + ", ".join(gorselsiz_kapaksiz))
             elif "shopify" in hedefler:
                 genel = site_metin.get("genel") or {}
                 seo_baslik = (genel.get("seo_baslik") or "").strip()
@@ -662,11 +683,15 @@ def trendyol_getir():
         model = ((request.json or {}).get("model") or "").strip()
         if not model:
             return jsonify({"success": False, "error": "Model kodu girin."}), 400
+        # Görseller VARSAYILAN olarak Trendyol'dan İNDİRİLMEZ: Trendyol kopyaları
+        # düşük kaliteli, kullanıcı her renge kendi görselini yükler (kullanıcı
+        # emri, 2026-09-25). İsteğe bağlı gorseller_indir=true ile eski davranış.
+        gorseller_indir = bool((request.json or {}).get("gorseller_indir"))
         paket = katalog.trendyol_urun_paketi(model)
 
         taslak_id = uuid.uuid4().hex[:12]
         gorsel_sayilari = {}
-        for renk, urller in paket["gorseller"].items():
+        for renk, urller in (paket["gorseller"].items() if gorseller_indir else []):
             hedef = _taslak_yolu(taslak_id) / "gorsel" / secure_filename(renk)
             hedef.mkdir(parents=True, exist_ok=True)
             for i, url in enumerate(urller, 1):
@@ -678,7 +703,7 @@ def trendyol_getir():
                 except Exception:
                     logger.warning("[URUN] Trendyol görseli indirilemedi: %s", url)
             gorsel_sayilari[renk] = len(list(hedef.glob("*")))
-        if not any(gorsel_sayilari.values()):
+        if gorseller_indir and not any(gorsel_sayilari.values()):
             return jsonify({"success": False, "error": "Ürün görselleri indirilemedi."}), 502
 
         return jsonify({"success": True, "taslak_id": taslak_id,
@@ -823,16 +848,20 @@ def _yukle_worker(app, taslak_id: str) -> None:
             urun_slug = shopify_urun._slug(sh.get("h1") or sh.get("mevcut_baslik")
                                            or form.get("urun_turu") or "")[:60]
             gerekli = set(taslak["renkler"])
+            istege_bagli: set[str] = set()   # görseli varsa yüklenir, yoksa hata değil
             if sh.get("mod") == "eksik" and "trendyol" not in hedefler:
                 gerekli = set(sh.get("eksik_renkler") or [])
+                istege_bagli = set(sh.get("kapak_atanacak") or [])
             renk_gorselleri = taslak.get("cdn") or {}
             if not renk_gorselleri:
                 for renk in taslak["renkler"]:
-                    if renk not in gerekli:
+                    if renk not in gerekli and renk not in istege_bagli:
                         continue
                     klasor = _taslak_yolu(taslak_id) / "gorsel" / secure_filename(renk)
                     yerel = sorted(klasor.glob("*"))[:MAKS_GORSEL] if klasor.exists() else []
                     if not yerel:
+                        if renk in istege_bagli:
+                            continue
                         raise ValueError(f"{renk} için görsel yüklenmemiş.")
                     on_ad = f"{taslak['model_kodu']}-{urun_slug + '-' if urun_slug else ''}{shopify_urun._slug(renk)}"
                     adlar = [(f"{on_ad}-{i+1}{p.suffix.lower()}", str(p))
