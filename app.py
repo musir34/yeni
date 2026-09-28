@@ -638,6 +638,22 @@ def schedule_jobs():
         next_run_time=now + timedelta(minutes=4)
     )
 
+    # >>> WhatsApp gecikme bildirimleri: 08:00–20:00 arası saat başı
+    # Süresi dolmak üzere (4 saatten az) ve dolmuş siparişleri çalışanlara bildirir;
+    # her sipariş her tür için bir kez gider (dedupe whatsapp_gecikme içinde).
+    def _whatsapp_gecikme_job():
+        with app.app_context():
+            from whatsapp_gecikme import gecikme_bildir
+            gecikme_bildir()
+
+    _add_job_safe(
+        _whatsapp_gecikme_job,
+        trigger='cron',
+        id="whatsapp_gecikme",
+        hour='8-20',
+        minute=0
+    )
+
     # >>> WooCommerce sipariş senkronizasyonu: her 10 dakika - DEVRE DIŞI
     # _add_job_safe(
     #     sync_woo_orders_background,

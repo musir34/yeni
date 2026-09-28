@@ -256,6 +256,69 @@ def _urun_satirlari_html(eslesen: list[dict]) -> str:
     return "".join(satirlar)
 
 
+def _wa_urun_ozeti(eslesen: list[dict]) -> tuple[str, str]:
+    """WhatsApp şablonu için (ürün metni, toplam adet). Çok kalemde ilk kalem
+    yazılır, kalanlar "(+N kalem daha)" ile belirtilir."""
+    if not eslesen:
+        return "-", "-"
+    ilk = eslesen[0]
+    urun = " ".join(str(x) for x in (ilk.get("sku"), ilk.get("color"), ilk.get("size")) if x) or "-"
+    if len(eslesen) > 1:
+        urun += f" (+{len(eslesen) - 1} kalem daha)"
+    adet = 0
+    for u in eslesen:
+        try:
+            adet += int(u.get("quantity", 1) or 0)
+        except (TypeError, ValueError):
+            adet += 1
+    return urun, str(adet)
+
+
+def _wa_urun_gorseli(eslesen: list[dict]) -> str | None:
+    """İlk kalemin ürün görseli (Product.images ilk URL). Meta görseli kendisi
+    indirdiği için yalnız https adres kabul edilir; yoksa/hata → None."""
+    try:
+        barkod = str((eslesen[0] if eslesen else {}).get("barcode") or "").strip()
+        if not barkod:
+            return None
+        row = (Product.query.filter(Product.barcode == barkod)
+               .with_entities(Product.images).first())
+        url = ((row[0] if row else "") or "").split(",")[0].strip()
+        return url if url.startswith("https://") else None
+    except Exception:
+        logger.warning("[URETIM] whatsapp görseli okunamadı", exc_info=True)
+        db.session.rollback()
+        return None
+
+
+def _wa_personel_bildirimi(olay: str, order_number: str, model_kodlari: str,
+                           eslesen: list[dict]) -> None:
+    """Çalışan WhatsApp bildirimi (whatsapp_notify hattı, olay şablonlarıyla).
+    Alıcılar /whatsapp-duyuru'daki dağılımdan gelir. uretim_siparisi şablonu
+    görsel ZORUNLU tuttuğu için görseli olmayan üründe genel şablon kullanılır."""
+    from whatsapp_alici import alicilar
+    from whatsapp_notify import notify_staff_async, notify_staff_template_async
+
+    kime = alicilar(olay)
+    if not kime:
+        return
+    urun, adet = _wa_urun_ozeti(eslesen)
+    params = [order_number, urun, adet]
+    detay = f"Sipariş: {order_number} | Model: {model_kodlari or '-'} | Ürün: {urun} | Adet: {adet}"
+    if olay == "uretim_iptal":
+        notify_staff_template_async("uretim_iptal", params,
+                                    fallback=("Üretim siparişi İPTAL", detay),
+                                    only_last4=kime)
+        return
+    gorsel = _wa_urun_gorseli(eslesen)
+    if gorsel:
+        notify_staff_template_async("uretim_siparisi", params, image_url=gorsel,
+                                    fallback=("Yeni üretim siparişi", detay),
+                                    only_last4=kime)
+    else:
+        notify_staff_async("Yeni üretim siparişi", detay, only_last4=kime)
+
+
 def _mail_govdesi(order_number: str, musteri: str, model_kodlari: str,
                   eslesen: list[dict]) -> str:
     from mail_service import build_alert_email_html
@@ -330,6 +393,11 @@ def isle_iptal_bildirimleri() -> int:
                                     f"Müşteri: {kayit.customer_name or '-'} | Üretimi DURDURUN.")
                 except Exception:
                     logger.exception("[URETIM] whatsapp iptal bildirimi hatası (yutuldu)")
+                try:
+                    _wa_personel_bildirimi("uretim_iptal", kayit.order_number,
+                                           kayit.product_main_id or "", eslesen)
+                except Exception:
+                    logger.exception("[URETIM] whatsapp personel iptal bildirimi hatası (yutuldu)")
                 kayit.iptal_mail_at = datetime.utcnow()
                 db.session.commit()
                 sayi += 1
@@ -483,6 +551,11 @@ def isle_yeni_siparisler(new_order_dicts: list[dict]) -> int:
                                     f"Üretimi planlayın; detay /uretim sayfasında.")
                 except Exception:
                     logger.exception("[URETIM] whatsapp bildirimi hatası (yutuldu)")
+                try:
+                    _wa_personel_bildirimi("uretim_siparis", order_number,
+                                           model_kodlari, eslesen)
+                except Exception:
+                    logger.exception("[URETIM] whatsapp personel bildirimi hatası (yutuldu)")
             except Exception:
                 db.session.rollback()
                 logger.exception(f"[URETIM] sipariş işlenemedi (yutuldu): {order_dict.get('order_number')}")
