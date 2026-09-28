@@ -21,3 +21,12 @@
 ## Deploy
 - Migration yok, yeni .env anahtarı yok. `git pull && systemctl restart gullupanel.service`.
 - Tarayıcıda görsel test yapılmadı (lokalde DB yok); rota + şablon derlemesi + uç nokta testleri geçti.
+
+## Düzeltme (aynı gün) — "gönderildi" diyor ama mesaj gelmiyor
+- Belirti: duyuru sayfası iki alıcı için "gönderildi (sade metin)" gösterdi, telefona mesaj düşmedi.
+- Neden: talimattaki "önce serbest metin, 131047 gelirse şablon" tasarımı çalışmıyor. Meta, 24 saat
+  penceresi kapalıyken de serbest metin isteğini 200 + mesaj kimliğiyle kabul ediyor; hata sonradan
+  yalnız webhook'a düşüyor. Eşzamanlı yanıtta 131047 gelmediği için şablona geçiş hiç tetiklenmedi.
+- Çözüm: `whatsapp_notify._send_one` artık HER ZAMAN şablonla gönderir; serbest metin yolu kaldırıldı.
+- Ders: Cloud API'de 200 = "kabul edildi", "teslim edildi" değil. Teslim bilgisi yalnız webhook ile alınır.
+  Önceki "OK" test sonuçları da teslimi kanıtlamıyordu.

@@ -49,9 +49,9 @@
     </div>
 
     <div class="alert alert-light border small mb-0">
-        <strong>Mesaj nasıl görünür?</strong> Alıcı son 24 saatte test numarasına yazdıysa sade metin
-        olarak, yazmadıysa "Güllü Panel bildirimi: başlık / Detay: metin" kalıbıyla gider.
-        Yalnızca Meta'daki alıcı listesine kayıtlı numaralara ulaşır.
+        <strong>Mesaj nasıl görünür?</strong> "Güllü Panel bildirimi: başlık / Detay: metin"
+        kalıbıyla gider. "Gönderildi" sonucu Meta'nın mesajı kabul ettiğini gösterir; telefona
+        ulaştığı panelden görülemez. Yalnızca Meta'daki alıcı listesine kayıtlı numaralara ulaşır.
     </div>
     {% endif %}
 </div>
@@ -66,8 +66,7 @@
 
     function waSatir(s) {
         var li = document.createElement('li');
-        var kanal = s.kanal === 'template' ? 'şablon' : 'sade metin';
-        li.textContent = '…' + s.alici + ': ' + (s.ok ? '✅ gönderildi (' + kanal + ')' : '❌ ' + (s.hata || 'gönderilemedi'));
+        li.textContent = '…' + s.alici + ': ' + (s.ok ? '✅ Meta kabul etti' : '❌ ' + (s.hata || 'gönderilemedi'));
         return li;
     }
 

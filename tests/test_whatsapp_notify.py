@@ -45,38 +45,26 @@ def cagrilar(monkeypatch):
     return kayit
 
 
-def test_pencere_aciksa_serbest_metin_gider(ayarli, cagrilar):
-    sonuc = whatsapp_notify.notify_staff("Shopify sorusu", "Ayşe: 38 var mı?")
-
-    assert [s["ok"] for s in sonuc] == [True, True]
-    assert [c["payload"]["type"] for c in cagrilar["liste"]] == ["text", "text"]
-    assert cagrilar["liste"][0]["url"].endswith("/v25.0/111/messages")
-
-
-def test_pencere_kapaliysa_sablona_duser(ayarli, cagrilar):
-    cagrilar["cevapla"] = lambda p: (
-        _hata(whatsapp_notify.WINDOW_CLOSED_ERROR_CODE) if p["type"] == "text" else _ok()
-    )
-
+def test_her_zaman_sablonla_gonderir(ayarli, cagrilar):
+    """Serbest metin 200 dönüp sessizce düşebildiği için hiç kullanılmaz."""
     sonuc = whatsapp_notify.notify_staff("Shopify sorusu", "satır1\nsatır2")
 
-    assert all(s["ok"] for s in sonuc)
-    tipler = [c["payload"]["type"] for c in cagrilar["liste"]]
-    assert tipler == ["text", "template", "text", "template"]
-    sablon = cagrilar["liste"][1]["payload"]["template"]
+    assert [(s["ok"], s["via"]) for s in sonuc] == [(True, "template")] * 2
+    assert [c["payload"]["type"] for c in cagrilar["liste"]] == ["template", "template"]
+    assert cagrilar["liste"][0]["url"].endswith("/v25.0/111/messages")
+    sablon = cagrilar["liste"][0]["payload"]["template"]
     assert sablon["name"] == "gullu_bildirim"
     assert sablon["language"]["code"] == "en"
-    parametreler = sablon["components"][0]["parameters"]
-    assert parametreler[1]["text"] == "satır1 satır2"
+    assert sablon["components"][0]["parameters"][1]["text"] == "satır1 satır2"
 
 
-def test_baska_hatada_sablona_dusmez(ayarli, cagrilar):
+def test_hata_donerse_basarisiz_sayilir(ayarli, cagrilar):
     cagrilar["cevapla"] = lambda p: _hata(131030)
 
     sonuc = whatsapp_notify.notify_staff("Test", "özet")
 
     assert [s["ok"] for s in sonuc] == [False, False]
-    assert all(c["payload"]["type"] == "text" for c in cagrilar["liste"])
+    assert len(cagrilar["liste"]) == 2
 
 
 def test_bir_aliciya_gitmezse_digerine_devam_eder(ayarli, cagrilar):
@@ -129,7 +117,7 @@ def test_sirket_hatti_anahtarlarini_okumaz(monkeypatch, cagrilar):
 def test_only_last4_yalniz_secilen_aliciya_gonderir(ayarli, cagrilar):
     sonuc = whatsapp_notify.notify_staff("Duyuru", "metin", only_last4=["5566"])
 
-    assert [(s["to_last4"], s["ok"], s["via"]) for s in sonuc] == [("5566", True, "text")]
+    assert [(s["to_last4"], s["ok"], s["via"]) for s in sonuc] == [("5566", True, "template")]
     assert [c["payload"]["to"] for c in cagrilar["liste"]] == ["905004445566"]
 
 

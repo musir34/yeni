@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT_SECONDS = 10
 MAX_PARAM_LENGTH = 200
-WINDOW_CLOSED_ERROR_CODE = 131047  # 24 saatlik pencere kapalı
 
 
 class WhatsAppConfigError(RuntimeError):
@@ -72,16 +71,6 @@ def _post(payload: dict) -> dict:
     return {"ok": True, "message_id": body.get("messages", [{}])[0].get("id")}
 
 
-def _text_payload(to: str, text: str) -> dict:
-    return {
-        "messaging_product": "whatsapp",
-        "recipient_type": "individual",
-        "to": to,
-        "type": "text",
-        "text": {"body": text[:4000]},
-    }
-
-
 def _template_payload(to: str, event_type: str, summary: str) -> dict:
     return {
         "messaging_product": "whatsapp",
@@ -105,11 +94,10 @@ def _template_payload(to: str, event_type: str, summary: str) -> dict:
 
 
 def _send_one(to: str, event_type: str, summary: str) -> dict:
-    """Önce serbest metin dener; pencere kapalıysa şablona düşer."""
-    text = f"Güllü Panel — {event_type}\n{summary}"
-    result = _post(_text_payload(to, text))
-    if result["ok"] or result.get("code") != WINDOW_CLOSED_ERROR_CODE:
-        return {**result, "via": "text"}
+    """Her zaman onaylı şablonla gönderir. Serbest metin KULLANILMAZ: Meta,
+    24 saat penceresi kapalıyken de isteği 200 ile kabul edip mesajı sonradan
+    (yalnız webhook'a bildirerek, hata 131047) düşürüyor; yani "önce metin,
+    olmazsa şablon" geçişi hiç tetiklenmiyor ve mesaj sessizce kayboluyor."""
     return {**_post(_template_payload(to, event_type, summary)), "via": "template"}
 
 
