@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}WhatsApp Duyuru — Güllü Panel{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 760px;">
+    <h4 class="mb-1"><i class="fab fa-whatsapp text-success me-2"></i>WhatsApp Duyuru</h4>
+    <p class="text-muted mb-4">Çalışanların WhatsApp'ına duyuru gönderir. Gönderen numara
+        <strong>+1 555-669-3519</strong> ("Test Number") olarak görünür.</p>
+
+    {% if not hazir %}
+        <div class="alert alert-warning">
+            <i class="fas fa-triangle-exclamation me-1"></i>
+            Sunucu <code>.env</code> dosyasında <code>WHATSAPP_STAFF_TOKEN</code>,
+            <code>WHATSAPP_STAFF_PHONE_NUMBER_ID</code> ve <code>WHATSAPP_STAFF_NUMBERS</code>
+            tanımlı olmalı. Ekleyip servisi yeniden başlatın.
+        </div>
+    {% else %}
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="waBaslik" class="form-label">Başlık</label>
+                <input type="text" id="waBaslik" class="form-control" maxlength="{{ baslik_max }}"
+                       placeholder="Duyuru">
+            </div>
+            <div class="mb-3">
+                <label for="waMetin" class="form-label">Metin</label>
+                <textarea id="waMetin" class="form-control" rows="4" maxlength="{{ metin_max }}"
+                          placeholder="Yarın sevkiyat 14:00'te, paketler hazır olsun"></textarea>
+                <div class="form-text"><span id="waSayac">0</span> / {{ metin_max }} karakter ·
+                    satır sonları tek boşluğa çevrilir.</div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label d-block">Alıcılar</label>
+                {% for a in alicilar %}
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input wa-alici" type="checkbox" id="waAlici{{ loop.index }}"
+                           value="{{ a }}" checked>
+                    <label class="form-check-label" for="waAlici{{ loop.index }}">…{{ a }}</label>
+                </div>
+                {% endfor %}
+                <div class="form-text">Numaraların yalnızca son 4 hanesi gösterilir.</div>
+            </div>
+            <button id="waGonderBtn" class="btn btn-success">
+                <i class="fas fa-paper-plane me-1"></i> Gönder
+            </button>
+            <div id="waSonuc" class="mt-3"></div>
+        </div>
+    </div>
+
+    <div class="alert alert-light border small mb-0">
+        <strong>Mesaj nasıl görünür?</strong> Alıcı son 24 saatte test numarasına yazdıysa sade metin
+        olarak, yazmadıysa "Güllü Panel bildirimi: başlık / Detay: metin" kalıbıyla gider.
+        Yalnızca Meta'daki alıcı listesine kayıtlı numaralara ulaşır.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if hazir %}
+<script>
+    var waMetin = document.getElementById('waMetin');
+    var waSayac = document.getElementById('waSayac');
+    waMetin.addEventListener('input', function () { waSayac.textContent = waMetin.value.length; });
+
+    function waSatir(s) {
+        var li = document.createElement('li');
+        var kanal = s.kanal === 'template' ? 'şablon' : 'sade metin';
+        li.textContent = '…' + s.alici + ': ' + (s.ok ? '✅ gönderildi (' + kanal + ')' : '❌ ' + (s.hata || 'gönderilemedi'));
+        return li;
+    }
+
+    function waGoster(tip, mesaj, sonuclar) {
+        var kutu = document.getElementById('waSonuc');
+        kutu.textContent = '';
+        var uyari = document.createElement('div');
+        uyari.className = 'alert alert-' + tip + ' py-2 mb-0';
+        uyari.textContent = mesaj;
+        if (sonuclar && sonuclar.length) {
+            var liste = document.createElement('ul');
+            liste.className = 'mb-0 mt-1';
+            sonuclar.forEach(function (s) { liste.appendChild(waSatir(s)); });
+            uyari.appendChild(liste);
+        }
+        kutu.appendChild(uyari);
+    }
+
+    document.getElementById('waGonderBtn').addEventListener('click', function () {
+        var btn = this;
+        var alicilar = Array.prototype.slice.call(document.querySelectorAll('.wa-alici:checked'))
+            .map(function (el) { return el.value; });
+        var baslik = document.getElementById('waBaslik').value.trim();
+        var metin = waMetin.value.trim();
+        if (!baslik || !metin) { waGoster('warning', 'Başlık ve metin boş olamaz.'); return; }
+        if (!alicilar.length) { waGoster('warning', 'En az bir alıcı seçin.'); return; }
+
+        btn.disabled = true;
+        waGoster('info', 'Gönderiliyor…');
+        fetch('/whatsapp-duyuru/api/gonder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+            body: JSON.stringify({ baslik: baslik, metin: metin, alicilar: alicilar })
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            if (data.sonuclar) {
+                waGoster(data.success ? 'success' : 'danger',
+                         data.success ? 'Duyuru gönderildi.' : 'Bazı alıcılara gönderilemedi.',
+                         data.sonuclar);
+            } else {
+                waGoster('danger', 'Hata: ' + (data.message || 'bilinmeyen'));
+            }
+        }).catch(function (e) {
+            waGoster('danger', 'Sunucu hatası: ' + e);
+        }).then(function () { btn.disabled = false; });
+    });
+</script>
+{% endif %}
+{% endblock %}

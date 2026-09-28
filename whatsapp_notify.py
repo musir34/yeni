@@ -109,8 +109,8 @@ def _send_one(to: str, event_type: str, summary: str) -> dict:
     text = f"Güllü Panel — {event_type}\n{summary}"
     result = _post(_text_payload(to, text))
     if result["ok"] or result.get("code") != WINDOW_CLOSED_ERROR_CODE:
-        return result
-    return _post(_template_payload(to, event_type, summary))
+        return {**result, "via": "text"}
+    return {**_post(_template_payload(to, event_type, summary)), "via": "template"}
 
 
 def is_configured() -> bool:
@@ -122,15 +122,27 @@ def is_configured() -> bool:
     )
 
 
-def notify_staff(event_type: str, summary: str) -> list[dict]:
+def staff_last4() -> list[str]:
+    """Alıcı listesinin yalnız son 4 haneleri (arayüzde seçim için)."""
+    try:
+        return [n[-4:] for n in _staff_numbers()]
+    except WhatsAppConfigError:
+        return []
+
+
+def notify_staff(event_type: str, summary: str,
+                 only_last4: list[str] | None = None) -> list[dict]:
     """Tüm çalışanlara bildirim gönderir. Asla istisna fırlatmaz:
-    bildirim hatası asıl işlemi (soru kaydı, sipariş vb.) bozmamalı."""
+    bildirim hatası asıl işlemi (soru kaydı, sipariş vb.) bozmamalı.
+    only_last4 verilirse yalnız son 4 hanesi listede olan alıcılara gider."""
     results = []
     try:
         numbers = _staff_numbers()
     except WhatsAppConfigError as exc:
         logger.error("WhatsApp bildirimi atlandı: %s", exc)
         return results
+    if only_last4 is not None:
+        numbers = [n for n in numbers if n[-4:] in only_last4]
 
     for number in numbers:
         try:

@@ -110,6 +110,9 @@
         {% if session.get('role') in ['admin','manager'] %}
         <li><a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}"><i class="fas fa-history me-2"></i>Kullanıcı Hareketleri</a></li>
         {% endif %}
+        {% if session.get('role') == 'admin' %}
+        <li><a class="dropdown-item" href="{{ url_for('whatsapp_duyuru.sayfa') }}"><i class="fab fa-whatsapp me-2"></i>WhatsApp Duyuru</a></li>
+        {% endif %}
         <li><hr class="dropdown-divider"></li>
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Hesabım</div></li>
         <li><a class="dropdown-item" href="{{ url_for('login_logout.cihazlarim') }}"><i class="fas fa-mobile-alt me-2"></i>Cihazlarım</a></li>

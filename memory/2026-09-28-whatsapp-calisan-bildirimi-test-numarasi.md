@@ -38,3 +38,4 @@
 - Kurulum testi: `python scripts/test_whatsapp_notify.py` (listedeki herkese deneme bildirimi atar).
 - Talimattaki WHATSAPP_TOKEN adı KULLANILMAZ; bu modülün anahtarı WHATSAPP_STAFF_TOKEN.
 - 2026-09-28: Lokal uçtan uca deneme BAŞARILI — scripts/test_whatsapp_notify.py iki alıcıya da OK döndü (API mesajı kabul etti). Kalan: commit/push + sunucu .env + restart.
+- 2026-09-28: Komutan commit 951eb81 ("wp mesaj") ile push etti ve yayına aldı. .env Git dışında (doğrulandı). Sunucu .env satırları ve canlı uçtan uca test komutan teyidi bekliyor.

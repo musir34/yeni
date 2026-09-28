@@ -124,3 +124,14 @@ def test_sirket_hatti_anahtarlarini_okumaz(monkeypatch, cagrilar):
     assert whatsapp_notify.is_configured() is False
     assert whatsapp_notify.notify_staff("Test", "özet") == []
     assert cagrilar["liste"] == []
+
+
+def test_only_last4_yalniz_secilen_aliciya_gonderir(ayarli, cagrilar):
+    sonuc = whatsapp_notify.notify_staff("Duyuru", "metin", only_last4=["5566"])
+
+    assert [(s["to_last4"], s["ok"], s["via"]) for s in sonuc] == [("5566", True, "text")]
+    assert [c["payload"]["to"] for c in cagrilar["liste"]] == ["905004445566"]
+
+
+def test_staff_last4_tam_numarayi_vermez(ayarli):
+    assert whatsapp_notify.staff_last4() == ["2233", "5566"]
