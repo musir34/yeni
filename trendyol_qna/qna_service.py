@@ -236,6 +236,17 @@ def _notify_new_questions(rows) -> None:
         )
     except Exception:
         logger.exception("[QNA] yeni soru bildirimi gönderilemedi")
+    # WhatsApp (çalışan) bildirimi — mail'den bağımsız; toplu düşüşte tek mesaj.
+    try:
+        from whatsapp_notify import notify_staff_async
+        if rows:
+            ilk = rows[0]
+            ozet = f"{ilk.product_name or 'Ürün'}: {(ilk.text or '')[:120]}"
+            if len(rows) > 1:
+                ozet += f" (+{len(rows) - 1} soru daha)"
+            notify_staff_async("Trendyol sorusu", ozet)
+    except Exception:
+        logger.exception("[QNA] WhatsApp bildirimi gönderilemedi")
 
 
 def answer_question(question_id: int, text: str, username: str | None = None) -> dict:
