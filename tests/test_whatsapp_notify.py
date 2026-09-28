@@ -123,3 +123,51 @@ def test_only_last4_yalniz_secilen_aliciya_gonderir(ayarli, cagrilar):
 
 def test_staff_last4_tam_numarayi_vermez(ayarli):
     assert whatsapp_notify.staff_last4() == ["2233", "5566"]
+
+
+def test_olay_sablonu_adi_dili_ve_degiskenleriyle_gider(ayarli, cagrilar):
+    sonuc = whatsapp_notify.notify_staff_template(
+        "musteri_sorusu", ["Trendyol", "Kırmızı Sandalet", "Kalıbı\ndar mı?"])
+
+    assert [(s["ok"], s["via"]) for s in sonuc] == [(True, "musteri_sorusu")] * 2
+    sablon = cagrilar["liste"][0]["payload"]["template"]
+    assert (sablon["name"], sablon["language"]["code"]) == ("musteri_sorusu", "tr")
+    assert [c["type"] for c in sablon["components"]] == ["body"]
+    metinler = [p["text"] for p in sablon["components"][0]["parameters"]]
+    assert metinler == ["Trendyol", "Kırmızı Sandalet", "Kalıbı dar mı?"]
+
+
+def test_gorselli_sablonda_header_govdeden_once_gelir(ayarli, cagrilar):
+    whatsapp_notify.notify_staff_template(
+        "uretim_siparisi", ["123", "Model 0121", "2"],
+        image_url="https://cdn.example.com/urun.jpg", only_last4=["5566"])
+
+    bilesenler = cagrilar["liste"][0]["payload"]["template"]["components"]
+    assert [c["type"] for c in bilesenler] == ["header", "body"]
+    assert bilesenler[0]["parameters"][0] == {
+        "type": "image", "image": {"link": "https://cdn.example.com/urun.jpg"}}
+
+
+def test_sablon_onaysizsa_genel_sablona_duser(ayarli, cagrilar):
+    cagrilar["cevapla"] = lambda p: (
+        _hata(whatsapp_notify.TEMPLATE_MISSING_ERROR_CODE)
+        if p["template"]["name"] == "uretim_iptal" else _ok()
+    )
+
+    sonuc = whatsapp_notify.notify_staff_template(
+        "uretim_iptal", ["123", "Model 0121", "2"],
+        fallback=("Üretim iptali", "123 — Model 0121"), only_last4=["5566"])
+
+    assert [(s["ok"], s["via"]) for s in sonuc] == [(True, "template")]
+    adlar = [c["payload"]["template"]["name"] for c in cagrilar["liste"]]
+    assert adlar == ["uretim_iptal", "gullu_bildirim"]
+    assert cagrilar["liste"][1]["payload"]["template"]["language"]["code"] == "en"
+
+
+def test_fallback_yoksa_hata_oldugu_gibi_doner(ayarli, cagrilar):
+    cagrilar["cevapla"] = lambda p: _hata(whatsapp_notify.TEMPLATE_MISSING_ERROR_CODE)
+
+    sonuc = whatsapp_notify.notify_staff_template("yok", ["a"], only_last4=["5566"])
+
+    assert [(s["ok"], s["code"]) for s in sonuc] == [(False, 132001)]
+    assert len(cagrilar["liste"]) == 1

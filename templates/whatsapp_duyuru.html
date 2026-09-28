@@ -1,60 +1,115 @@
 {% extends "base.html" %}
 
-{% block title %}WhatsApp Duyuru — Güllü Panel{% endblock %}
+{% block title %}WhatsApp Mesajları — Güllü Panel{% endblock %}
 
+{% block extra_css %}
+<style>
+  .wa-card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.06); margin-bottom: 1.5rem; }
+  .wa-table td, .wa-table th { font-size: .85rem; white-space: nowrap; }
+  .wa-table .wa-dagilim-ad { min-width: 110px; }
+</style>
+{% endblock %}
 {% block content %}
-<div class="container py-4" style="max-width: 760px;">
-    <h4 class="mb-1"><i class="fab fa-whatsapp text-success me-2"></i>WhatsApp Duyuru</h4>
-    <p class="text-muted mb-4">Çalışanların WhatsApp'ına duyuru gönderir. Gönderen numara
-        <strong>+1 555-669-3519</strong> ("Test Number") olarak görünür.</p>
-
-    {% if not hazir %}
-        <div class="alert alert-warning">
-            <i class="fas fa-triangle-exclamation me-1"></i>
-            Sunucu <code>.env</code> dosyasında <code>WHATSAPP_STAFF_TOKEN</code>,
-            <code>WHATSAPP_STAFF_PHONE_NUMBER_ID</code> ve <code>WHATSAPP_STAFF_NUMBERS</code>
-            tanımlı olmalı. Ekleyip servisi yeniden başlatın.
-        </div>
-    {% else %}
-    <div class="card mb-3">
-        <div class="card-body">
-            <div class="mb-3">
-                <label for="waBaslik" class="form-label">Başlık</label>
-                <input type="text" id="waBaslik" class="form-control" maxlength="{{ baslik_max }}"
-                       placeholder="Duyuru">
-            </div>
-            <div class="mb-3">
-                <label for="waMetin" class="form-label">Metin</label>
-                <textarea id="waMetin" class="form-control" rows="4" maxlength="{{ metin_max }}"
-                          placeholder="Yarın sevkiyat 14:00'te, paketler hazır olsun"></textarea>
-                <div class="form-text"><span id="waSayac">0</span> / {{ metin_max }} karakter ·
-                    satır sonları tek boşluğa çevrilir.</div>
-            </div>
-            <div class="mb-3">
-                <label class="form-label d-block">Alıcılar</label>
-                {% for a in alicilar %}
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input wa-alici" type="checkbox" id="waAlici{{ loop.index }}"
-                           value="{{ a }}" checked>
-                    <label class="form-check-label" for="waAlici{{ loop.index }}">…{{ a }}</label>
-                </div>
-                {% endfor %}
-                <div class="form-text">Numaraların yalnızca son 4 hanesi gösterilir.</div>
-            </div>
-            <button id="waGonderBtn" class="btn btn-success">
-                <i class="fas fa-paper-plane me-1"></i> Gönder
-            </button>
-            <div id="waSonuc" class="mt-3"></div>
-        </div>
-    </div>
-
-    <div class="alert alert-light border small mb-0">
-        <strong>Mesaj nasıl görünür?</strong> "Güllü Panel bildirimi: başlık / Detay: metin"
-        kalıbıyla gider. "Gönderildi" sonucu Meta'nın mesajı kabul ettiğini gösterir; telefona
-        ulaştığı panelden görülemez. Yalnızca Meta'daki alıcı listesine kayıtlı numaralara ulaşır.
-    </div>
-    {% endif %}
+<div class="d-flex align-items-center flex-wrap mb-4">
+  <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm me-3"><i class="fas fa-home"></i> Anasayfa</a>
+  <h3 class="mb-0"><i class="fab fa-whatsapp"></i> WhatsApp Mesajları</h3>
+  <span class="text-muted ms-3">Duyuru gönderme ve otomatik bildirim alıcıları</span>
 </div>
+
+{% if not hazir %}
+<div class="alert alert-warning">
+  <i class="fas fa-triangle-exclamation me-1"></i>
+  Sunucu <code>.env</code> dosyasında <code>WHATSAPP_STAFF_TOKEN</code>,
+  <code>WHATSAPP_STAFF_PHONE_NUMBER_ID</code> ve <code>WHATSAPP_STAFF_NUMBERS</code>
+  tanımlı olmalı. Ekleyip servisi yeniden başlatın.
+</div>
+{% else %}
+<div class="row">
+  <div class="col-lg-5">
+    <div class="card wa-card">
+      <div class="card-header fw-bold"><i class="fas fa-paper-plane"></i> Mesaj Gönder</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label for="waBaslik" class="form-label">Başlık</label>
+          <input type="text" id="waBaslik" class="form-control" maxlength="{{ baslik_max }}"
+                 placeholder="Duyuru">
+        </div>
+        <div class="mb-3">
+          <label for="waMetin" class="form-label">Metin</label>
+          <textarea id="waMetin" class="form-control" rows="4" maxlength="{{ metin_max }}"
+                    placeholder="Yarın sevkiyat 14:00'te, paketler hazır olsun"></textarea>
+          <div class="form-text"><span id="waSayac">0</span> / {{ metin_max }} karakter ·
+            satır sonları tek boşluğa çevrilir.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label d-block">Alıcılar</label>
+          {% for a in alicilar %}
+          <div class="form-check form-check-inline">
+            <input class="form-check-input wa-alici" type="checkbox" id="waAlici{{ loop.index }}"
+                   value="{{ a.son4 }}" {% if 'duyuru' in a.olaylar %}checked{% endif %}>
+            <label class="form-check-label" for="waAlici{{ loop.index }}">{{ a.ad or 'Adsız' }} …{{ a.son4 }}</label>
+          </div>
+          {% endfor %}
+        </div>
+        <button id="waGonderBtn" class="btn btn-primary">
+          <i class="fas fa-paper-plane"></i> Gönder
+        </button>
+        <div id="waSonuc" class="mt-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card wa-card">
+      <div class="card-header fw-bold"><i class="fas fa-users"></i> Bildirim Alıcıları</div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm wa-table align-middle text-center mb-2">
+            <thead>
+              <tr>
+                <th class="text-start">Alıcı</th>
+                {% for anahtar, etiket in olaylar %}<th>{{ etiket }}</th>{% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for a in alicilar %}
+              <tr class="wa-dagilim-satir" data-son4="{{ a.son4 }}">
+                <td class="text-start">
+                  <div class="input-group input-group-sm">
+                    <input type="text" class="form-control form-control-sm wa-dagilim-ad" maxlength="{{ ad_max }}"
+                           value="{{ a.ad }}" placeholder="Ad" aria-label="Alıcı adı">
+                    <span class="input-group-text">…{{ a.son4 }}</span>
+                  </div>
+                </td>
+                {% for anahtar, etiket in olaylar %}
+                <td><input class="form-check-input wa-dagilim-olay" type="checkbox" value="{{ anahtar }}"
+                           aria-label="{{ etiket }}" {% if anahtar in a.olaylar %}checked{% endif %}></td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <button id="waDagilimBtn" class="btn btn-sm btn-success">Dağılımı Kaydet</button>
+        <span id="waDagilimSonuc" class="ms-2 small"></span>
+        <div class="form-text mt-1">Hangi bildirimin hangi numaraya gideceğini işaretleyin.
+          "Duyuru" sütunu, mesaj gönderme formunda kimin işaretli geleceğini belirler.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="alert alert-light border small mb-3">
+  <strong>Bilgi:</strong>
+  Gönderen numara +1 555-669-3519 ("Test Number") olarak görünür. Duyurular
+  "Güllü Panel bildirimi: başlık / Detay: metin" kalıbıyla gider. "Meta kabul etti" sonucu
+  mesajın gönderime alındığını gösterir; telefona ulaştığı panelden görülemez. Yeni numara
+  önce Meta'daki alıcı listesine, sonra sunucudaki <code>WHATSAPP_STAFF_NUMBERS</code> satırına eklenir.
+</div>
+{% endif %}
+
+<p class="small text-muted mb-0">Şirket hattını (+90 552 200 09 53) panele bağlama:
+  <a href="{{ url_for('whatsapp_baglanti.sayfa') }}">WhatsApp Bağlantısı</a></p>
 {% endblock %}
 
 {% block scripts %}
@@ -110,6 +165,31 @@
             }
         }).catch(function (e) {
             waGoster('danger', 'Sunucu hatası: ' + e);
+        }).then(function () { btn.disabled = false; });
+    });
+
+    document.getElementById('waDagilimBtn').addEventListener('click', function () {
+        var btn = this;
+        var sonuc = document.getElementById('waDagilimSonuc');
+        var satirlar = Array.prototype.slice.call(document.querySelectorAll('.wa-dagilim-satir'))
+            .map(function (tr) {
+                return {
+                    son4: tr.getAttribute('data-son4'),
+                    ad: tr.querySelector('.wa-dagilim-ad').value.trim(),
+                    olaylar: Array.prototype.slice.call(tr.querySelectorAll('.wa-dagilim-olay:checked'))
+                        .map(function (el) { return el.value; })
+                };
+            });
+        btn.disabled = true;
+        sonuc.textContent = 'Kaydediliyor…';
+        fetch('/whatsapp-duyuru/api/alicilar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+            body: JSON.stringify({ alicilar: satirlar })
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            sonuc.textContent = data.success ? '✅ Kaydedildi.' : '❌ ' + (data.message || 'Kaydedilemedi.');
+        }).catch(function (e) {
+            sonuc.textContent = '❌ Sunucu hatası: ' + e;
         }).then(function () { btn.disabled = false; });
     });
 </script>

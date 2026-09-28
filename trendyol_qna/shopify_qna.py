@@ -174,10 +174,14 @@ def _notify_new_question(row: ShopifyQuestion) -> None:
     # WhatsApp (çalışan) bildirimi — mail'den bağımsız, hatası kaydı bozmaz.
     # Müşterinin telefonu/e-postası bildirime konmaz; yalnız ad + kısa özet.
     try:
-        from whatsapp_notify import notify_staff_async
-        notify_staff_async(
-            "Shopify sorusu",
-            f"{row.name or 'Müşteri'}: {(row.question or '')[:120]}",
+        from whatsapp_alici import alicilar
+        from whatsapp_notify import notify_staff_template_async
+        soru = f"{row.name or 'Müşteri'}: {(row.question or '')[:120]}"
+        notify_staff_template_async(
+            "musteri_sorusu",
+            ["gullushoes.com", row.product_title or "Genel soru", soru],
+            fallback=("Shopify sorusu", soru),
+            only_last4=alicilar("soru"),
         )
     except Exception:
         logger.exception("[SHOPIFY-QNA] WhatsApp bildirimi gönderilemedi")

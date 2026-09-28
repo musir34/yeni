@@ -5,6 +5,9 @@ Yönetici başlık + metin yazar, alıcıları seçer; mesaj whatsapp_notify
 (Meta test numarası hattı) üzerinden çalışanlara gider. Alıcılar .env'deki
 WHATSAPP_STAFF_NUMBERS listesidir; sayfaya numaraların yalnız son 4 hanesi iner.
 
+Aynı sayfadaki "Bildirim Alıcıları" tablosu hangi bildirim türünün hangi
+numaraya gideceğini belirler (whatsapp_alici).
+
 Güvenlik kalkanı deseni: whatsapp_baglanti (2FA + fetch başlığı) + admin rolü.
 """
 import logging
@@ -41,11 +44,14 @@ def _guvenlik_kalkani():
 @whatsapp_duyuru_bp.route("", methods=["GET"])
 @whatsapp_duyuru_bp.route("/", methods=["GET"])
 def sayfa():
-    from whatsapp_notify import is_configured, staff_last4
+    from whatsapp_alici import OLAYLAR, AD_MAX, dagilim
+    from whatsapp_notify import is_configured
     return render_template(
         "whatsapp_duyuru.html",
         hazir=is_configured(),
-        alicilar=staff_last4(),
+        alicilar=dagilim(),
+        olaylar=OLAYLAR,
+        ad_max=AD_MAX,
         baslik_max=BASLIK_MAX,
         metin_max=METIN_MAX,
     )
@@ -99,3 +105,33 @@ def gonder():
             "hata": None if s.get("ok") else f"{s.get('code')}: {s.get('message')}",
         } for s in sonuclar],
     })
+
+
+@whatsapp_duyuru_bp.route("/api/alicilar", methods=["POST"])
+def alicilari_kaydet():
+    """Bildirim türü → alıcı dağılımını kaydeder."""
+    from whatsapp_alici import kaydet
+
+    veri = request.get_json(silent=True) or {}
+    satirlar = veri.get("alicilar")
+    if not isinstance(satirlar, list) or not all(isinstance(s, dict) for s in satirlar):
+        return jsonify({"success": False, "message": "Geçersiz istek."}), 400
+    try:
+        kaydet(satirlar)
+    except ValueError as e:
+        return jsonify({"success": False, "message": str(e)}), 400
+    except Exception:
+        from models import db
+        db.session.rollback()
+        logger.exception("[WA-DUYURU] alıcı dağılımı kaydedilemedi")
+        return jsonify({"success": False, "message": "Kayıt hatası, tekrar deneyin."}), 500
+
+    try:
+        from user_logs import log_user_action
+        log_user_action("UPDATE: whatsapp_duyuru", {
+            "sayfa": "WhatsApp Duyuru",
+            "değişiklik": "Bildirim alıcı dağılımı güncellendi",
+        })
+    except Exception:
+        logger.exception("[WA-DUYURU] hareket logu yazılamadı")
+    return jsonify({"success": True})

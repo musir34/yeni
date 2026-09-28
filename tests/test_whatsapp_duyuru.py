@@ -35,6 +35,16 @@ def istemci(monkeypatch):
     monkeypatch.setattr(whatsapp_notify, "notify_staff", sahte_notify)
     import user_logs
     monkeypatch.setattr(user_logs, "log_user_action", lambda *a, **kw: None)
+    import whatsapp_alici
+    durum["kayitlar"] = []
+    monkeypatch.setattr(whatsapp_alici, "_kayitli", lambda: None)
+
+    def sahte_kaydet(satirlar):
+        if any(x.get("son4") == "9999" for x in satirlar):
+            raise ValueError("Bilinmeyen alıcı: …9999")
+        durum["kayitlar"].append(satirlar)
+
+    monkeypatch.setattr(whatsapp_alici, "kaydet", sahte_kaydet)
 
     istemci = app.test_client()
     with istemci.session_transaction() as oturum:
@@ -97,3 +107,36 @@ def test_fetch_basligi_olmadan_post_reddedilir(istemci):
 
     assert yanit.status_code == 403
     assert istemci["cagrilar"] == []
+
+
+def _kaydet(durum, govde, basliklar=None):
+    return durum["istemci"].post(
+        "/whatsapp-duyuru/api/alicilar", json=govde,
+        headers=basliklar if basliklar is not None else {"X-Requested-With": "fetch"})
+
+
+def test_dagilim_kaydedilir(istemci):
+    satirlar = [{"son4": "5566", "ad": "Ahmet", "olaylar": ["uretim_siparis"]}]
+
+    yanit = _kaydet(istemci, {"alicilar": satirlar})
+
+    assert yanit.status_code == 200 and yanit.get_json()["success"] is True
+    assert istemci["kayitlar"] == [satirlar]
+
+
+@pytest.mark.parametrize("govde", [
+    {},
+    {"alicilar": "5566"},
+    {"alicilar": ["5566"]},
+    {"alicilar": [{"son4": "9999", "ad": "X", "olaylar": []}]},
+])
+def test_gecersiz_dagilim_reddedilir(istemci, govde):
+    assert _kaydet(istemci, govde).status_code == 400
+    assert istemci["kayitlar"] == []
+
+
+def test_dagilimi_admin_olmayan_kaydedemez(istemci):
+    istemci["kullanici"] = _Kullanici("manager")
+
+    assert _kaydet(istemci, {"alicilar": []}).status_code == 403
+    assert istemci["kayitlar"] == []

@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT_SECONDS = 10
 MAX_PARAM_LENGTH = 200
+TEMPLATE_MISSING_ERROR_CODE = 132001  # şablon adı/dili yok ya da henüz onaylanmadı
 
 
 class WhatsAppConfigError(RuntimeError):
@@ -72,23 +73,38 @@ def _post(payload: dict) -> dict:
 
 
 def _template_payload(to: str, event_type: str, summary: str) -> dict:
+    """Genel şablon (gullu_bildirim): {{1}}=başlık, {{2}}=detay."""
+    return _named_template_payload(
+        to,
+        os.environ.get("WHATSAPP_STAFF_TEMPLATE_NAME", "gullu_bildirim"),
+        os.environ.get("WHATSAPP_STAFF_TEMPLATE_LANG", "en"),
+        [event_type, summary],
+    )
+
+
+def _named_template_payload(to: str, template: str, lang: str, params: list,
+                            image_url: str | None = None) -> dict:
+    """Olay bazlı şablon. image_url yalnız görsel başlıklı şablonlarda verilir
+    (o şablonlarda ZORUNLUDUR; herkese açık https adresi olmalı)."""
+    components = []
+    if image_url:
+        components.append({
+            "type": "header",
+            "parameters": [{"type": "image", "image": {"link": image_url}}],
+        })
+    components.append({
+        "type": "body",
+        "parameters": [{"type": "text", "text": _clean_param(p)} for p in params],
+    })
     return {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
         "to": to,
         "type": "template",
         "template": {
-            "name": os.environ.get("WHATSAPP_STAFF_TEMPLATE_NAME", "gullu_bildirim"),
-            "language": {"code": os.environ.get("WHATSAPP_STAFF_TEMPLATE_LANG", "en")},
-            "components": [
-                {
-                    "type": "body",
-                    "parameters": [
-                        {"type": "text", "text": _clean_param(event_type)},
-                        {"type": "text", "text": _clean_param(summary)},
-                    ],
-                }
-            ],
+            "name": template,
+            "language": {"code": lang},
+            "components": components,
         },
     }
 
@@ -99,6 +115,16 @@ def _send_one(to: str, event_type: str, summary: str) -> dict:
     (yalnız webhook'a bildirerek, hata 131047) düşürüyor; yani "önce metin,
     olmazsa şablon" geçişi hiç tetiklenmiyor ve mesaj sessizce kayboluyor."""
     return {**_post(_template_payload(to, event_type, summary)), "via": "template"}
+
+
+def _send_one_named(to: str, template: str, params: list, lang: str,
+                    image_url: str | None, fallback: tuple[str, str] | None) -> dict:
+    """Olay şablonuyla gönderir; şablon yok/onaysızsa (132001) ve fallback
+    verildiyse genel şablona (başlık, detay) düşer."""
+    result = _post(_named_template_payload(to, template, lang, params, image_url))
+    if result["ok"] or fallback is None or result.get("code") != TEMPLATE_MISSING_ERROR_CODE:
+        return {**result, "via": template}
+    return _send_one(to, fallback[0], fallback[1])
 
 
 def is_configured() -> bool:
@@ -118,11 +144,8 @@ def staff_last4() -> list[str]:
         return []
 
 
-def notify_staff(event_type: str, summary: str,
-                 only_last4: list[str] | None = None) -> list[dict]:
-    """Tüm çalışanlara bildirim gönderir. Asla istisna fırlatmaz:
-    bildirim hatası asıl işlemi (soru kaydı, sipariş vb.) bozmamalı.
-    only_last4 verilirse yalnız son 4 hanesi listede olan alıcılara gider."""
+def _send_to_staff(send, only_last4: list[str] | None) -> list[dict]:
+    """send(numara) -> sonuç işlevini her alıcı için çalıştırır; istisna fırlatmaz."""
     results = []
     try:
         numbers = _staff_numbers()
@@ -134,7 +157,7 @@ def notify_staff(event_type: str, summary: str,
 
     for number in numbers:
         try:
-            result = _send_one(number, event_type, summary)
+            result = send(number)
         except (requests.RequestException, WhatsAppConfigError, ValueError) as exc:
             result = {"ok": False, "code": None, "message": str(exc)}
         if not result["ok"]:
@@ -146,11 +169,49 @@ def notify_staff(event_type: str, summary: str,
     return results
 
 
-def notify_staff_async(event_type: str, summary: str) -> None:
+def notify_staff(event_type: str, summary: str,
+                 only_last4: list[str] | None = None) -> list[dict]:
+    """Tüm çalışanlara bildirim gönderir. Asla istisna fırlatmaz:
+    bildirim hatası asıl işlemi (soru kaydı, sipariş vb.) bozmamalı.
+    only_last4 verilirse yalnız son 4 hanesi listede olan alıcılara gider."""
+    return _send_to_staff(lambda n: _send_one(n, event_type, summary), only_last4)
+
+
+def notify_staff_template(template: str, params: list, lang: str = "tr",
+                          image_url: str | None = None,
+                          fallback: tuple[str, str] | None = None,
+                          only_last4: list[str] | None = None) -> list[dict]:
+    """Olay bazlı onaylı şablonla bildirim (ör. musteri_sorusu). Asla istisna
+    fırlatmaz. fallback=(başlık, detay) verilirse şablon yok/onaysızken genel
+    şablonla gönderilir."""
+    return _send_to_staff(
+        lambda n: _send_one_named(n, template, params, lang, image_url, fallback),
+        only_last4,
+    )
+
+
+def notify_staff_async(event_type: str, summary: str,
+                       only_last4: list[str] | None = None) -> None:
     """notify_staff'ı arka planda çalıştırır (isteği/poll turunu bekletmez).
     Ayarlar girilmemişse sessizce hiçbir şey yapmaz."""
     if not is_configured():
         return
     threading.Thread(
-        target=notify_staff, args=(event_type, summary), daemon=True
+        target=notify_staff, args=(event_type, summary, only_last4), daemon=True
+    ).start()
+
+
+def notify_staff_template_async(template: str, params: list, lang: str = "tr",
+                                image_url: str | None = None,
+                                fallback: tuple[str, str] | None = None,
+                                only_last4: list[str] | None = None) -> None:
+    """notify_staff_template'ı arka planda çalıştırır; ayar yoksa sessizdir."""
+    if not is_configured():
+        return
+    threading.Thread(
+        target=notify_staff_template,
+        kwargs={"template": template, "params": params, "lang": lang,
+                "image_url": image_url, "fallback": fallback,
+                "only_last4": only_last4},
+        daemon=True,
     ).start()

@@ -30,3 +30,4 @@
 - Çözüm: `whatsapp_notify._send_one` artık HER ZAMAN şablonla gönderir; serbest metin yolu kaldırıldı.
 - Ders: Cloud API'de 200 = "kabul edildi", "teslim edildi" değil. Teslim bilgisi yalnız webhook ile alınır.
   Önceki "OK" test sonuçları da teslimi kanıtlamıyordu.
+- Teyit: şablonla gönderilen deneme telefonlara ULAŞTI (komutan teyidi). Teşhis doğrulandı; yalnız-şablon düzeltmesi komutan tarafından push + deploy ediliyor.
