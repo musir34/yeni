@@ -95,6 +95,16 @@ def liste():
         q = q.filter_by(uretildi=True)
     else:  # bekleyen
         q = q.filter_by(uretildi=False, isleme_alindi=False)
+    # Üretilen/Paketlenen: kargolanmışlar SQL'de elenir — limit(500) elemeden
+    # ÖNCE uygulandığı için eski kargolanmış kayıtlar kotayı dolduruyor, yeni
+    # üretilen sipariş hiçbir sekmede görünmüyordu.
+    if durum in ("uretilen", "uretildi", "paketlenen"):
+        from models import OrderShipped, OrderDelivered, OrderArchived
+        for M in (OrderShipped, OrderDelivered, OrderArchived):
+            q = q.filter(~db.session.query(M.order_number)
+                         .filter(M.order_number == UretimSiparis.order_number)
+                         .exists())
+        q = q.filter(UretimSiparis.paketlendi.is_(durum == "paketlenen"))
     # Sıralama sipariş tarihine göre: aktif kuyruklarda en eski üstte (FIFO),
     # kargolanmış/teslim edilmişlerde en yeni üstte. order_date boşsa sona düşer.
     if durum in ("kargoda", "teslim", "tamamlanan"):

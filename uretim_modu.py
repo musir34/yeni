@@ -110,6 +110,81 @@ def _raf_stok_haritasi(barkodlar: list[str]) -> dict[str, int]:
         return {}
 
 
+def _acik_raf_talepleri(barkod_seti: set[str]) -> list[dict]:
+    """Rafı bekleyen açık talepler: Yeni + Hazırlanıyor (toplanmamış) siparişlerin
+    üretim modundaki barkodlu kalemleri —
+    [{"order_number", "order_date", "barcode", "quantity"}].
+    Üretim kaydına yazılmış kalem (raftan alınmayacak) ve rafı zaten okutulmuş
+    kalem (raf stoğundan düşülmüş) talep sayılmaz. Hata → boş liste (rezerv
+    düşülmez, eski iyimser davranış)."""
+    try:
+        from barcode_alias_helper import normalize_barcode
+        from models import OrderCreated, OrderHazirlaniyor, StockMovement
+        rows = (db.session.query(OrderCreated.order_number, OrderCreated.order_date,
+                                 OrderCreated.details).all()
+                + db.session.query(OrderHazirlaniyor.order_number,
+                                   OrderHazirlaniyor.order_date,
+                                   OrderHazirlaniyor.details)
+                    .filter(OrderHazirlaniyor.toplandi_at.is_(None)).all())
+        talepler = []
+        for order_number, order_date, details_str in rows:
+            try:
+                det = json.loads(details_str) if isinstance(details_str, str) else details_str
+            except (json.JSONDecodeError, TypeError):
+                continue
+            if not isinstance(det, list):
+                continue
+            for item in det:
+                bc = normalize_barcode(str(item.get('barcode', '') or '').strip())
+                if bc and bc in barkod_seti:
+                    talepler.append({
+                        'order_number': str(order_number),
+                        'order_date': order_date,
+                        'barcode': bc,
+                        'quantity': int(item.get('quantity', 1) or 1),
+                    })
+        if not talepler:
+            return []
+        siparisler = list({t['order_number'] for t in talepler})
+        uretimde = set()
+        for k in (UretimSiparis.query
+                  .filter(UretimSiparis.order_number.in_(siparisler))
+                  .with_entities(UretimSiparis.order_number, UretimSiparis.details)
+                  .all()):
+            for u in uretim_kalemleri(k):
+                uretimde.add((k.order_number, u['barcode']))
+        anahtarlar = [pick_key(t['order_number'], t['barcode']) for t in talepler]
+        okutulan = {r[0] for r in
+                    db.session.query(StockMovement.idempotency_key)
+                    .filter(StockMovement.idempotency_key.in_(anahtarlar))
+                    .all()}
+        return [t for t in talepler
+                if (t['order_number'], t['barcode']) not in uretimde
+                and pick_key(t['order_number'], t['barcode']) not in okutulan]
+    except Exception:
+        logger.warning("[URETIM] açık raf talepleri okunamadı", exc_info=True)
+        db.session.rollback()
+        return []
+
+
+def _oncelikli_rezerv(talepler: list[dict], order_number: str, order_date) -> dict[str, int]:
+    """Bu siparişten ÖNCE gelmiş açık taleplerin barkod → adet toplamı (FIFO):
+    raftaki adet önce eski siparişin hakkıdır. Tarihi bilinmeyen/karşılaştırılamayan
+    talep önce gelmiş sayılır (güvenli taraf: kalem üretime yazılır)."""
+    rezerv: dict[str, int] = {}
+    for t in talepler:
+        if t['order_number'] == order_number:
+            continue
+        try:
+            once = (t['order_date'] is None or order_date is None
+                    or t['order_date'] <= order_date)
+        except TypeError:
+            once = True
+        if once:
+            rezerv[t['barcode']] = rezerv.get(t['barcode'], 0) + t['quantity']
+    return rezerv
+
+
 def _siparis_tam_detay(order_number: str) -> list[dict]:
     """Siparişin TAM kalem listesi — aktif→arşiv sipariş tablolarında ilk bulunan.
     with_entities: prod'da orders_archived kolon adları model ile birebir değil,
@@ -451,6 +526,67 @@ def isle_shopify_siparisler() -> int:
         return 0
 
 
+def isle_sahipsiz_siparisler() -> int:
+    """
+    Sahipsiz sipariş taraması: 'Yeni' statüsündeki, üretim modunda barkodu olan
+    ve üretim kaydı açılmamış siparişleri isle_yeni_siparisler'den YENİDEN
+    geçirir. Yakalama tek seferlik olduğu için, indiği an rafta görünen adet
+    sonradan başka siparişe gidince sipariş ne rafta ne üretimde kalıyordu.
+    Rafı hâlâ karşılanan sipariş yine yazılmaz; kayıt + mail + dedupe aynı
+    akıştan gelir. Her hata yutulur, 0 döner (akış durmaz).
+    """
+    try:
+        barkod_seti = get_uretim_barcodes()
+        if not barkod_seti:
+            return 0
+        from barcode_alias_helper import normalize_barcode
+        from models import OrderCreated
+        from stock_ledger import has_movement
+        rows = (OrderCreated.query
+                .with_entities(OrderCreated.order_number, OrderCreated.package_number,
+                               OrderCreated.customer_name, OrderCreated.customer_surname,
+                               OrderCreated.order_date, OrderCreated.details)
+                .order_by(OrderCreated.order_date.asc().nullslast())
+                .all())
+        adaylar = []
+        for r in rows:
+            try:
+                det = json.loads(r.details) if isinstance(r.details, str) else r.details
+            except (json.JSONDecodeError, TypeError):
+                continue
+            if not isinstance(det, list):
+                continue
+            order_number = str(r.order_number or '').strip()
+            # Rafı zaten okutulmuş kalem raftan düşülmüştür — üretime yazılmaz.
+            kalan = [item for item in det
+                     if not has_movement(pick_key(
+                         order_number,
+                         normalize_barcode(str(item.get('barcode', '') or '').strip())))]
+            if any(normalize_barcode(str(item.get('barcode', '') or '').strip()) in barkod_seti
+                   for item in kalan):
+                adaylar.append({
+                    'order_number': order_number,
+                    'package_number': r.package_number,
+                    'customer_name': r.customer_name,
+                    'customer_surname': r.customer_surname,
+                    'order_date': r.order_date,
+                    'details': kalan,
+                })
+        if not adaylar:
+            return 0
+        kayitli = {k.order_number for k in
+                   UretimSiparis.query
+                   .filter(UretimSiparis.order_number.in_([a['order_number'] for a in adaylar]))
+                   .with_entities(UretimSiparis.order_number)
+                   .all()}
+        return isle_yeni_siparisler([a for a in adaylar
+                                     if a['order_number'] not in kayitli])
+    except Exception:
+        db.session.rollback()
+        logger.warning("[URETIM] isle_sahipsiz_siparisler hatası (yutuldu)", exc_info=True)
+        return 0
+
+
 def isle_yeni_siparisler(new_order_dicts: list[dict]) -> int:
     """
     Yeni gelen Trendyol siparişlerinde üretim modundaki modelleri yakalar:
@@ -463,6 +599,7 @@ def isle_yeni_siparisler(new_order_dicts: list[dict]) -> int:
         if not barkod_seti or not new_order_dicts:
             return 0
         from barcode_alias_helper import normalize_barcode
+        talepler = _acik_raf_talepleri(barkod_seti)
         eklenen = 0
         for order_dict in new_order_dicts:
             try:
@@ -490,6 +627,12 @@ def isle_yeni_siparisler(new_order_dicts: list[dict]) -> int:
                 # üretime YAZILMAZ — sipariş normal akışta raftan toplanır.
                 # Yalnız raf stoğu yetmeyen kalemler üretim kaydına girer.
                 raf_stok = _raf_stok_haritasi([u['barcode'] for u in eslesen])
+                # Rezerv: raftaki adet önce eski siparişlerin hakkı — onların
+                # talebi düşülür, yoksa aynı tek adede birden çok sipariş yaslanır.
+                rezerv = _oncelikli_rezerv(talepler, order_number,
+                                           order_dict.get('order_date'))
+                raf_stok = {bc: max(0, adet - rezerv.get(bc, 0))
+                            for bc, adet in raf_stok.items()}
                 rafta_karsilanan = [u for u in eslesen
                                     if raf_stok.get(u['barcode'], 0) >= u['quantity']]
                 if rafta_karsilanan:
@@ -528,6 +671,11 @@ def isle_yeni_siparisler(new_order_dicts: list[dict]) -> int:
                 db.session.commit()
                 eklenen += 1
                 logger.info(f"[URETIM] 🏭 Üretim siparişi kaydedildi: {order_number} (model: {model_kodlari})")
+                # Üretime yazılan kalem artık raf talebi değil — sonraki siparişe rezerv sayılmasın.
+                yazilan = {u['barcode'] for u in eslesen}
+                talepler = [t for t in talepler
+                            if not (t['order_number'] == order_number
+                                    and t['barcode'] in yazilan)]
 
                 # Abonelik bazlı bildirim (kullanıcı yönetimi → Bildirimler).
                 # notify fire-and-forget; işaret dedupe içindir (desen: stok_yok_mail_at).
