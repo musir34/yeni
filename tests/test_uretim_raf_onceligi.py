@@ -244,3 +244,110 @@ def test_uretilen_sekmesi_500_kargolanmis_kayit_arkasinda_kaybolmaz(_ctx_clean):
 
     assert _liste("uretilen") == ["YENI-1"]
     assert _liste("paketlenen") == ["YENI-2"]
+
+
+# ── Site siparişi bekletmesi (2026-09-29) ────────────────────────────────────
+# Canlı vaka: üretim bekleyen site siparişi (#1414) sipariş hazırlada paketleyene
+# sunuldu, rafta bulunamayınca "stokta yok" diye arşivlendi.
+
+def test_uretim_ekranindaki_siparisler_paketlenene_kadar_doner(_ctx_clean):
+    from uretim_modu import uretim_ekranindaki_siparisler
+
+    db.session.add(UretimSiparis(order_number="SH-1", details="[]"))
+    db.session.add(UretimSiparis(order_number="SH-2", details="[]", uretildi=True))
+    db.session.add(UretimSiparis(order_number="SH-3", details="[]", uretildi=True,
+                                 paketlendi=True))
+    db.session.commit()
+
+    assert uretim_ekranindaki_siparisler() == {"SH-1", "SH-2"}
+
+
+# ── Site siparişi üretim ekranında Trendyol gibi (2026-09-29) ────────────────
+# Canlı vaka #1414: 3 kalemli site siparişi üretim ekranında 2 kalem görünüyordu;
+# raftan gelecek 3. kalem ne gösteriliyor ne okutuluyordu.
+
+def _site_siparisi(monkeypatch, no="SH-1414"):
+    """Shopify'ı taklit eder: 2 kalem üretilecek (rafta yok) + 1 kalem raftan."""
+    from types import SimpleNamespace
+    import uretim_modu
+
+    kalemler = [{"barcode": BC_YOK, "sku": "097-35", "quantity": 1},
+                {"barcode": BC_RAFTA, "sku": "259-35", "quantity": 1}]
+    so = SimpleNamespace(details=json.dumps(kalemler), customer_name="Sibel",
+                         customer_surname="Yılmaz", customer_address="Kadıköy",
+                         kapida_odeme=True, kapida_odeme_tutari=100.0)
+    monkeypatch.setattr(uretim_modu, "shopify_siparis",
+                        lambda order_number: so if order_number == no else None)
+    db.session.add(UretimSiparis(
+        order_number=no,
+        details=json.dumps([{"barcode": BC_YOK, "sku": "097-35", "quantity": 1}])))
+    db.session.commit()
+    return UretimSiparis.query.filter_by(order_number=no).one()
+
+
+def test_site_siparisi_listede_tam_icerikle_gorunur(_ctx_clean, monkeypatch):
+    import uretim_routes
+    _site_siparisi(monkeypatch)
+
+    with app.test_request_context("/uretim/api/liste?durum=bekleyen"):
+        rows = uretim_routes.liste().get_json()["rows"]
+
+    assert len(rows) == 1
+    detay = {k["barcode"]: k for k in rows[0]["siparis_detay"]}
+    assert detay[BC_YOK]["uretim"] is True
+    assert detay[BC_RAFTA]["uretim"] is False, "3. kalem raftan olarak görünmeli"
+    assert detay[BC_RAFTA]["raflar"] == ["A1 (1)"]
+    assert rows[0]["raf_tamam"] is False, "okutulmadan etiket kilitli"
+    assert rows[0]["kargo"]["has_kargo"] is True
+    assert rows[0]["kargo"]["shipping_barcode"] == ""
+
+
+def test_site_siparisi_etiket_kilidi_raftan_kalemi_de_ister(_ctx_clean, monkeypatch):
+    from uretim_modu import eksik_raf_okutmalar, pick_key
+    import uretim_routes
+    kayit = _site_siparisi(monkeypatch)
+
+    assert set(eksik_raf_okutmalar("SH-1414")) == {BC_RAFTA, BC_YOK}
+    with app.test_request_context(f"/uretim/api/kargo-kodu/{kayit.id}"):
+        yanit = uretim_routes.kargo_kodu(kayit.id)
+    assert yanit[1] == 423
+
+    # Raftan kalem okutuldu + üretilen kalem doğrulandı → etiket açılır
+    db.session.add(StockMovement(barcode=BC_RAFTA, shelf_code="A1", delta=-1,
+                                 reason="pack_out", order_number="SH-1414",
+                                 idempotency_key=pick_key("SH-1414", BC_RAFTA)))
+    db.session.add(UretimDogrulama(order_number="SH-1414", barcode=BC_YOK))
+    db.session.commit()
+
+    assert eksik_raf_okutmalar("SH-1414") == []
+    with app.test_request_context(f"/uretim/api/kargo-kodu/{kayit.id}"):
+        kargo = uretim_routes.kargo_kodu(kayit.id).get_json()["kargo"]
+    assert kargo["adres_etiketi"] is True
+    assert kargo["kapida_odeme"] is True
+    assert kargo["customer_address"] == "Kadıköy"
+
+
+def test_site_siparisi_paketlenince_shopify_guncellenir(_ctx_clean, monkeypatch):
+    import uretim_routes
+    from shopify_site.shopify_service import shopify_service
+    kayit = _site_siparisi(monkeypatch)
+    cagrilar = []
+
+    def _guncelle(order_id, durum, sonuc):
+        cagrilar.append((order_id, durum))
+        return {"success": sonuc}
+
+    # Shopify güncellenemezse paketlendi İŞARETLENMEZ
+    monkeypatch.setattr(shopify_service, "update_order_status",
+                        lambda oid, d: _guncelle(oid, d, False))
+    with app.test_request_context(f"/uretim/api/paketlendi/{kayit.id}", method="POST", json={}):
+        yanit = uretim_routes.paketlendi_isaretle(kayit.id)
+    assert yanit[1] == 502
+    assert UretimSiparis.query.get(kayit.id).paketlendi is False
+
+    monkeypatch.setattr(shopify_service, "update_order_status",
+                        lambda oid, d: _guncelle(oid, d, True))
+    with app.test_request_context(f"/uretim/api/paketlendi/{kayit.id}", method="POST", json={}):
+        assert uretim_routes.paketlendi_isaretle(kayit.id).get_json()["success"] is True
+    assert UretimSiparis.query.get(kayit.id).paketlendi is True
+    assert cagrilar == [("1414", "Hazirlaniyor"), ("1414", "Hazirlaniyor")]

@@ -121,6 +121,8 @@
     <input type="hidden" name="customer_name">
     <input type="hidden" name="customer_surname">
     <input type="hidden" name="customer_address">
+    <input type="hidden" name="kapida_odeme" value="0">
+    <input type="hidden" name="kapida_odeme_tutari" value="0">
   </form>
 
   <!-- Ürün görseli büyütme (lightbox) -->
@@ -892,8 +894,11 @@
         } catch { toast('Sunucuya ulaşılamadı.', 'error'); return; }
         kargoAktif = { ...r, kargo };
         document.getElementById('urKargoNo').textContent = '#' + r.order_number;
-        document.getElementById('urKargoFirma').textContent = kargo.cargo_provider || '-';
-        document.getElementById('urKargoKod').textContent = kargo.shipping_barcode;
+        // Site siparişi: adres etiketi (kargo kodu yok) — otomatik gönderim uygulanmaz
+        const adres = !!kargo.adres_etiketi;
+        document.getElementById('urKargoFirma').textContent = adres ? 'Site siparişi' : (kargo.cargo_provider || '-');
+        document.getElementById('urKargoKod').textContent = adres ? 'Adres etiketi' : kargo.shipping_barcode;
+        document.getElementById('urKargoOtomatik').hidden = adres;
         document.getElementById('urKargoDialog').hidden = false;
     }
     const imgOverlay = document.getElementById('urImgOverlay');
@@ -916,6 +921,8 @@
         f.customer_name.value = kargoAktif.kargo.customer_name || '';
         f.customer_surname.value = kargoAktif.kargo.customer_surname || '';
         f.customer_address.value = kargoAktif.kargo.customer_address || '';
+        f.kapida_odeme.value = kargoAktif.kargo.kapida_odeme ? '1' : '0';
+        f.kapida_odeme_tutari.value = kargoAktif.kargo.kapida_odeme_tutari || 0;
         f.submit();
         document.getElementById('urKargoDialog').hidden = true;
     });

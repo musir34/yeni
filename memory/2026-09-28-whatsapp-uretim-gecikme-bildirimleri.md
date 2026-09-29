@@ -26,3 +26,15 @@ Meta'da 5 olay şablonunun hepsi AKTİF (28 Eyl). Bu notla birlikte tüm otomati
 - Canlı DB'de çalıştırılmadı (lokalde tünel kapalı); sorgu derlemesi + birim testleri geçti (46).
 - Görselli şablonla gerçek gönderim denenmedi. Meta görseli indiremezse hata yalnız webhook'a
   düşer, panel "kabul edildi" görür → ilk gerçek üretim siparişinde telefondan teyit gerekli.
+
+## 2026-09-29 — Üretim siparişi görselli şablonla gitmiyordu
+- Belirti: komutan üretim bildiriminin `uretim_siparisi` (görselli) şablonuyla gelmediğini bildirdi.
+- Şablon adı/dili kodda doğruydu (`uretim_siparisi`, `tr`). Asıl neden görsel adresi: `_wa_urun_gorseli`
+  yalnız `https://` ile başlayan Product.images değerini kabul ediyordu; göreli (`/static/images/..`),
+  `http://` ya da boş değerde sessizce genel `gullu_bildirim` şablonuna düşüyordu.
+  (Canlı veriyle doğrulanamadı: tünel kapalıydı; teşhis kod okumasına dayanıyor.)
+- Düzeltme (uretim_modu.py): `_wa_gorsel_adresi` — http→https, göreli yol → `PANEL_BASE_URL`
+  (varsayılan https://gullupanel.com) ile tamamlanır, yalnız JPG/PNG kabul (Meta webp/gif almaz);
+  Product.images uygun değilse `static/images/<barkod>.jpg|jpeg|png` dosyasına bakılır.
+- Genel şablona düşüşte artık log yazılır: "[URETIM] <no>: görsel yok, ... genel şablonla gidiyor".
+- Doğrulandı: gullupanel.com/static girişsiz erişilebilir (check_authentication muaf).

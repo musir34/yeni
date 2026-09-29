@@ -346,11 +346,17 @@ def get_home(order_number=None):
             # 🛍️ Öncelik: Shopify Beklemede siparişleri, sonra Trendyol
             # Arşivdekileri atla (Shopify tag filtresi + yerel kontrol).
             # archived_numbers yukarıda zaten hesaplandı.
-            shopify_orders = _fetch_shopify_beklemede_orders(limit=5)
+            # 🏭 Üretim ekranında işi süren site siparişi paketleyene sunulmaz (Trendyol'daki
+            # terfi bekletmesinin karşılığı) — yoksa rafta bulunamayıp "stokta yok"
+            # diye arşivleniyor. Atlananlar kotayı doldurmasın diye limit 5→20.
+            from uretim_modu import uretim_ekranindaki_siparisler
+            uretim_ekraninda = uretim_ekranindaki_siparisler()
+            shopify_orders = _fetch_shopify_beklemede_orders(limit=20)
             shopify_match = None
             for so in shopify_orders:
                 so_id = so.get("legacyResourceId") or so.get("id", "").split("/")[-1]
-                if f"SH-{so_id}" not in archived_numbers:
+                if (f"SH-{so_id}" not in archived_numbers
+                        and f"SH-{so_id}" not in uretim_ekraninda):
                     shopify_match = so
                     break
             if shopify_match:
@@ -649,12 +655,17 @@ def get_queue_orders():
         remaining_slots = 10
 
         # 🛍️ ÖNCELİK 1: Shopify Beklemede siparişleri
+        # 🏭 Üretim ekranında işi süren site siparişi kuyrukta gösterilmez (get_home ile tutarlı)
+        from uretim_modu import uretim_ekranindaki_siparisler
+        uretim_ekraninda = uretim_ekranindaki_siparisler()
         shopify_orders_raw = _fetch_shopify_beklemede_orders(limit=remaining_slots)
         for s_order in shopify_orders_raw:
             s_id = s_order.get("legacyResourceId") or s_order.get("id", "").split("/")[-1]
             s_order_number = f"SH-{s_id}"
 
             if s_order_number == active_order_number or s_order_number in archived_order_numbers:
+                continue
+            if s_order_number in uretim_ekraninda:
                 continue
 
             customer = s_order.get("customer") or {}

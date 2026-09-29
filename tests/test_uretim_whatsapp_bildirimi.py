@@ -62,3 +62,20 @@ def test_alici_yoksa_hic_gonderilmez(cagrilar):
     uretim_modu._wa_personel_bildirimi("uretim_siparis", "987", "0121", [KALEM])
 
     assert cagrilar["sablon"] == [] and cagrilar["genel"] == []
+
+
+@pytest.mark.parametrize("ham, beklenen", [
+    ("https://cdn.dsmcdn.com/a/b_org_zoom.jpg", "https://cdn.dsmcdn.com/a/b_org_zoom.jpg"),
+    ("http://cdn.dsmcdn.com/a/b.JPG", "https://cdn.dsmcdn.com/a/b.JPG"),
+    ("https://cdn.shopify.com/x.png?v=12", "https://cdn.shopify.com/x.png?v=12"),
+    ("/static/images/111.jpg", "https://panel.example/static/images/111.jpg"),
+    ("static/images/111.jpeg", "https://panel.example/static/images/111.jpeg"),
+    ("https://cdn.example.com/x.webp", None),
+    ("/static/images/111.gif", None),
+    ("", None),
+    (None, None),
+])
+def test_gorsel_adresi(monkeypatch, ham, beklenen):
+    monkeypatch.setenv("PANEL_BASE_URL", "https://panel.example/")
+
+    assert uretim_modu._wa_gorsel_adresi(ham) == beklenen

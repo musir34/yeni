@@ -201,6 +201,31 @@ def liste():
         except Exception:
             db.session.rollback()
             logger.warning("[URETIM] kargo/sipariş içeriği okunamadı", exc_info=True)
+    # 🛍️ Site siparişleri panel tablolarına inmez — tam içerik + etiket bilgisi
+    # Shopify'dan (önbellekli). Site etiketi adres etiketidir, kargo kodu taşımaz.
+    # Kargolanmış sekmelerde gerekmez.
+    if durum not in ("kargoda", "teslim", "tamamlanan"):
+        from uretim_modu import shopify_siparis
+        for r in rows:
+            if not r.order_number.startswith("SH-") or r.order_number in detay_map:
+                continue
+            so = shopify_siparis(r.order_number)
+            if so is None:
+                continue
+            try:
+                det = json.loads(so.details) if isinstance(so.details, str) else so.details
+            except (json.JSONDecodeError, TypeError):
+                det = None
+            if isinstance(det, list) and det:
+                detay_map[r.order_number] = det
+            kargo_map.setdefault(r.order_number, {
+                "shipping_barcode": "",
+                "cargo_provider": "",
+                "customer_name": so.customer_name or "",
+                "customer_surname": so.customer_surname or "",
+                "customer_address": so.customer_address or "",
+                "adres_etiketi": True,
+            })
     # Ürün özellikleri için Product haritası (görsel/başlık/model) — tek sorgu
     urun_map = {}
     if rows:
@@ -293,8 +318,9 @@ def liste():
                 kalemler.append({
                     "barcode": bc,
                     "sku": item.get("sku") or "",
-                    "color": item.get("color") or "",
-                    "size": item.get("size") or "",
+                    # Site siparişi kalemi renk/beden taşımaz → ürün kaydından
+                    "color": item.get("color") or (p.color if p else "") or "",
+                    "size": item.get("size") or (p.size if p else "") or "",
                     "quantity": int(item.get("quantity", 1) or 1),
                     "uretim": bc in uretim_bcs,
                     "raflar": raf_map.get(bc, []),
@@ -334,7 +360,8 @@ def liste():
         # sunucu kilidini aşamasın) — kod, /api/kargo-kodu ile kilit kontrolünden
         # geçilerek alınır. has_kargo yalnız butonun görünürlüğü içindir.
         if d.get("kargo"):
-            d["kargo"]["has_kargo"] = bool(d["kargo"].get("shipping_barcode"))
+            d["kargo"]["has_kargo"] = bool(d["kargo"].get("shipping_barcode")
+                                           or d["kargo"].get("adres_etiketi"))
             d["kargo"]["shipping_barcode"] = ""
         sonuc.append(d)
     return jsonify({"success": True, "rows": sonuc})
@@ -374,6 +401,20 @@ def paketlendi_isaretle(kayit_id: int):
     if not kayit:
         return jsonify({"success": False, "message": "Kayıt bulunamadı"}), 404
     geri_al = bool((request.get_json(silent=True) or {}).get("geri_al"))
+    # 🛍️ Site siparişi: paketlenince Shopify'da Hazirlaniyor'a çekilir (sipariş
+    # hazırladaki paketleme onayının karşılığı). Etiket güncellenemezse
+    # paketlendi İŞARETLENMEZ — sipariş iki ekran arasında sahipsiz kalmasın.
+    if not geri_al and kayit.order_number.startswith("SH-"):
+        try:
+            from shopify_site.shopify_service import shopify_service
+            sonuc = shopify_service.update_order_status(
+                kayit.order_number.replace("SH-", "", 1), "Hazirlaniyor")
+        except Exception:
+            logger.exception("[URETIM] Shopify statü güncelleme hatası")
+            sonuc = {"success": False}
+        if not sonuc.get("success"):
+            return jsonify({"success": False,
+                            "message": "Shopify'da sipariş durumu güncellenemedi — tekrar deneyin."}), 502
     kayit.paketlendi = not geri_al
     kayit.paketlendi_at = None if geri_al else datetime.utcnow()
     db.session.commit()
@@ -558,6 +599,23 @@ def kargo_kodu(kayit_id: int):
         return jsonify({"success": False,
                         "message": f"Etiket kilitli: {len(eksik)} kalem henüz "
                                    f"okutulmadı. Ürün Özellikleri'nden okutun."}), 423
+    # 🛍️ Site siparişi: adres etiketi (kargo kodu yok) — bilgi Shopify'dan.
+    if kayit.order_number.startswith("SH-"):
+        from uretim_modu import shopify_siparis
+        so = shopify_siparis(kayit.order_number)
+        if so is None:
+            return jsonify({"success": False,
+                            "message": "Site siparişi Shopify'dan okunamadı."}), 502
+        return jsonify({"success": True, "kargo": {
+            "shipping_barcode": "",
+            "cargo_provider": "",
+            "customer_name": so.customer_name or "",
+            "customer_surname": so.customer_surname or "",
+            "customer_address": so.customer_address or "",
+            "adres_etiketi": True,
+            "kapida_odeme": bool(so.kapida_odeme),
+            "kapida_odeme_tutari": so.kapida_odeme_tutari or 0,
+        }})
     from models import (OrderCreated, OrderHazirlaniyor, OrderPicking,
                         OrderShipped, OrderDelivered, OrderArchived)
     for M in (OrderCreated, OrderHazirlaniyor, OrderPicking,

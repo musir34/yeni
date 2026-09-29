@@ -248,6 +248,14 @@ async def confirm_packing():
                     logger.debug(f"[STOCK] atla bc={bc} adet={adet}")
                     continue
 
+                # 🏭 Site siparişi kalemi üretim ekranında raftan okutulduysa stok
+                # ZATEN düşülmüştür (aynı ledger anahtarı) — burada tekrar düşme.
+                if is_shopify_order:
+                    from stock_ledger import has_movement
+                    if has_movement(f"{order_number}:pick:{bc}"):
+                        logger.info(f"[STOCK] {order_number} {bc} üretim ekranında düşülmüş, atlandı")
+                        continue
+
                 toplam_beklenen += adet
                 # Sıralı-AÇIK: okutulan raf kodu (raf_{barcode}); eski radio (pick_) fallback.
                 chosen_raf = (request.form.get(f"raf_{d.get('barcode')}")

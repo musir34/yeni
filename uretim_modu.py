@@ -17,6 +17,7 @@ stock_sync/listing_policy.get_extra_buffer_map ile aynı).
 """
 import json
 import logging
+import os
 from datetime import datetime
 
 from models import db, PlatformConfig, Product, UretimSiparis
@@ -92,6 +93,52 @@ def get_uretim_barcodes() -> set[str]:
         logger.warning("[URETIM] barkod seti okunamadı", exc_info=True)
         db.session.rollback()
         return set()
+
+
+def uretim_ekranindaki_siparisler() -> set[str]:
+    """Üretim ekranında işi bitmemiş (paketlendi=False) üretim kayıtlarının
+    sipariş numaraları. Sipariş hazırla bu SİTE siparişlerini paketleyene sunmaz:
+    üretim + raf okutma + etiket üretim ekranından yürür, 'Paketlendi' ile
+    Shopify'da Hazirlaniyor'a geçer. Hata → boş set (hiçbir sipariş gizlenmez)."""
+    try:
+        return {r.order_number for r in
+                UretimSiparis.query.filter_by(paketlendi=False)
+                .with_entities(UretimSiparis.order_number)}
+    except Exception:
+        logger.warning("[URETIM] üretim ekranındaki siparişler okunamadı", exc_info=True)
+        db.session.rollback()
+        return set()
+
+
+SHOPIFY_ONBELLEK_SN = 300
+_shopify_onbellek: dict[str, tuple[float, object]] = {}
+
+
+def shopify_siparis(order_number: str):
+    """Site siparişinin canlı hali (siparis_hazirla'nın sahte sipariş nesnesi:
+    details panel barkodlarıyla, müşteri/adres, kapıda ödeme). Site siparişleri
+    panel tablolarına inmediği için üretim ekranı içeriği buradan okur.
+    SHOPIFY_ONBELLEK_SN saniye önbelleklenir. Hata/bulunamadı → None."""
+    import time
+    simdi = time.monotonic()
+    kayit = _shopify_onbellek.get(order_number)
+    if kayit and simdi - kayit[0] < SHOPIFY_ONBELLEK_SN:
+        return kayit[1]
+    try:
+        from shopify_site.shopify_service import shopify_service
+        from siparis_hazirla import _shopify_order_to_hazirla_format
+        sonuc = shopify_service.get_order(order_number.replace("SH-", "", 1))
+        if not (sonuc.get("success") and sonuc.get("order")):
+            return None
+        raw = sonuc["order"]
+        raw["line_items"] = raw.get("line_items") or []
+        siparis, _ = _shopify_order_to_hazirla_format(raw)
+    except Exception:
+        logger.warning("[URETIM] site siparişi okunamadı: %s", order_number, exc_info=True)
+        db.session.rollback()
+        return None
+    _shopify_onbellek[order_number] = (simdi, siparis)
+    return siparis
 
 
 def _raf_stok_haritasi(barkodlar: list[str]) -> dict[str, int]:
@@ -202,6 +249,15 @@ def _siparis_tam_detay(order_number: str) -> list[dict]:
                     return det
             except (json.JSONDecodeError, TypeError):
                 pass
+    # 🛍️ Site siparişi panel tablolarında yok — içerik Shopify'dan.
+    if str(order_number).startswith("SH-"):
+        siparis = shopify_siparis(order_number)
+        try:
+            det = json.loads(siparis.details) if siparis else []
+            if isinstance(det, list):
+                return det
+        except (json.JSONDecodeError, TypeError):
+            pass
     return []
 
 
@@ -349,21 +405,44 @@ def _wa_urun_ozeti(eslesen: list[dict]) -> tuple[str, str]:
     return urun, str(adet)
 
 
+def _wa_gorsel_adresi(ham: str) -> str | None:
+    """Ham görsel değerini Meta'nın indirebileceği adrese çevirir: herkese açık
+    https + JPG/PNG. Panelin /static yolu girişsiz açıktır; göreli yol panel
+    adresiyle tamamlanır. Uygun değilse None."""
+    url = (ham or "").strip()
+    if not url:
+        return None
+    if url.startswith("http://"):
+        url = "https://" + url[len("http://"):]
+    elif not url.startswith("https://"):
+        taban = os.environ.get("PANEL_BASE_URL", "https://gullupanel.com").rstrip("/")
+        url = f"{taban}/{url.lstrip('/')}"
+    yol = url.split("?", 1)[0].lower()
+    return url if yol.endswith((".jpg", ".jpeg", ".png")) else None
+
+
 def _wa_urun_gorseli(eslesen: list[dict]) -> str | None:
-    """İlk kalemin ürün görseli (Product.images ilk URL). Meta görseli kendisi
-    indirdiği için yalnız https adres kabul edilir; yoksa/hata → None."""
+    """İlk kalemin ürün görseli: Product.images ilk değeri, yoksa panelde
+    barkod adıyla yüklü dosya (static/images/<barkod>.jpg|png). Yoksa/hata → None."""
+    barkod = str((eslesen[0] if eslesen else {}).get("barcode") or "").strip()
+    if not barkod:
+        return None
     try:
-        barkod = str((eslesen[0] if eslesen else {}).get("barcode") or "").strip()
-        if not barkod:
-            return None
         row = (Product.query.filter(Product.barcode == barkod)
                .with_entities(Product.images).first())
-        url = ((row[0] if row else "") or "").split(",")[0].strip()
-        return url if url.startswith("https://") else None
+        ham = ((row[0] if row else "") or "").split(",")[0]
     except Exception:
         logger.warning("[URETIM] whatsapp görseli okunamadı", exc_info=True)
         db.session.rollback()
-        return None
+        ham = ""
+    adres = _wa_gorsel_adresi(ham)
+    if adres:
+        return adres
+    for uzanti in (".jpg", ".jpeg", ".png"):
+        if os.path.exists(os.path.join("static", "images", f"{barkod}{uzanti}")):
+            return _wa_gorsel_adresi(f"/static/images/{barkod}{uzanti}")
+    logger.info(f"[URETIM] whatsapp görseli bulunamadı (barkod {barkod}, kayıtlı değer: {ham.strip()[:80]!r})")
+    return None
 
 
 def _wa_personel_bildirimi(olay: str, order_number: str, model_kodlari: str,
@@ -391,6 +470,7 @@ def _wa_personel_bildirimi(olay: str, order_number: str, model_kodlari: str,
                                     fallback=("Yeni üretim siparişi", detay),
                                     only_last4=kime)
     else:
+        logger.info(f"[URETIM] {order_number}: görsel yok, WhatsApp bildirimi genel şablonla gidiyor")
         notify_staff_async("Yeni üretim siparişi", detay, only_last4=kime)
 
 
