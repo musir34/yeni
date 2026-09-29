@@ -11,6 +11,7 @@
       <div class="fn-bakiye {{ 'fn-neg' if cari.bakiye > 0 else ('fn-pos' if cari.bakiye < 0 else '') }}">
         {{ (cari.bakiye | abs) | tl_format }} {{ sembol }} <span class="fn-mini fw-normal">{% if cari.bakiye > 0 %}borcumuz{% elif cari.bakiye < 0 %}{{ 'kasaya borcunuz' if cari.tur == 'sahsi' else 'alacağımız' }}{% else %}bakiye sıfır{% endif %}</span>
       </div>
+      {% if calisan_borc_kalan %}<div class="fn-mini">Bunun <b>{{ calisan_borc_kalan | tl_format }} ₺</b>'si cebinden verdiği para, kalanı maaş hak edişi.</div>{% endif %}
       {% if cari.notlar %}<div class="fn-mini">{{ cari.notlar }}</div>{% endif %}
     </div>
     <div class="d-flex gap-1 flex-wrap">
@@ -22,7 +23,10 @@
       <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#fnAlimModal"><i class="fas fa-box me-1"></i>Mal Girişi</button>
       <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#fnOdemeModal"><i class="fas fa-money-bill me-1"></i>Ödeme Yap</button>
       <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#fnSatisModal">Satış</button>
-      <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#fnTahsilatModal">Tahsilat</button>{% else %}<a class="btn btn-sm btn-outline-primary" href="{{ url_for('finans.ana_gider') }}">Ödeme planları</a>{% endif %}
+      <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#fnTahsilatModal">Tahsilat</button>{% else %}
+      <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#fnCalisanBorcModal"><i class="fas fa-hand-holding-usd me-1"></i>Cebinden Para Verdi</button>
+      {% if calisan_borc_kalan %}<button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#fnCalisanBorcOdemeModal"><i class="fas fa-money-bill me-1"></i>Geri Öde</button>{% endif %}
+      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('finans.ana_gider') }}">Ödeme planları</a>{% endif %}
     </div>
   </div>
 </div>
@@ -227,6 +231,59 @@
           <div class="col-6"><label class="form-label fn-mini">Kur (1 $ = ? ₺)</label><input type="text" name="kur" class="form-control fn-doviz-kur" inputmode="decimal" placeholder="örn. 41,25" required></div>
           <div class="col-12 fn-mini">Kasaya girecek: <b class="fn-doviz-tl">0,00</b> ₺</div>
           {% endif %}
+          <div class="col-6"><label class="form-label fn-mini">Tarih</label><input type="date" name="tarih" class="form-control" value="{{ bugun }}"></div>
+          <div class="col-12"><input type="text" name="aciklama" class="form-control" placeholder="Açıklama (ops.)"></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button><button class="btn btn-success">Ödemeyi Kaydet</button></div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{# ── Çalışan hesabı: cebinden verdiği para / geri ödeme ───────────────────── #}
+{% if cari.tur == 'calisan' %}
+<div class="modal fade" id="fnCalisanBorcModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="POST" action="{{ url_for('finans.cari_calisan_borc', cari_id=cari.id) }}">
+      <div class="modal-header"><h5 class="modal-title">🫱 Cebinden Para Verdi — {{ cari.ad }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="fn-mini mb-2">Çalışanın dükkân için cebinden verdiği para seçtiğiniz hesaba girer, ona borcunuz artar. Parayla yapılan harcamayı Günlük Harcamalar'dan ayrıca girin. Maaş hak edişini etkilemez.</div>
+        <div class="mb-2">
+          {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="hesap" id="fnCbHesap_{{ h.kod }}" value="{{ h.kod }}" {{ 'checked' if h.kod == 'elde' }} required>
+            <label class="form-check-label" for="fnCbHesap_{{ h.kod }}">{{ h.ad }} <span class="fn-mini">({{ h.bakiye | tl_format }} ₺)</span></label>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label fn-mini">Tutar (₺)</label><input type="text" name="tutar" class="form-control" inputmode="decimal" placeholder="0,00" required></div>
+          <div class="col-6"><label class="form-label fn-mini">Tarih</label><input type="date" name="tarih" class="form-control" value="{{ bugun }}"></div>
+          <div class="col-12"><input type="text" name="aciklama" class="form-control" placeholder="Ne için verdi? (ops.)"></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button><button class="btn btn-danger">Kaydet</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal fade" id="fnCalisanBorcOdemeModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="POST" action="{{ url_for('finans.cari_calisan_borc_odeme', cari_id=cari.id) }}">
+      <div class="modal-header"><h5 class="modal-title">💸 Geri Öde — {{ cari.ad }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="fn-mini mb-2">Cebinden verdiği paranın geri ödemesi Elde veya Banka hesabından düşer. Geri ödenecek: <b>{{ calisan_borc_kalan | tl_format }} ₺</b>. Maaş ödemesi için yukarıdaki dönem satırını kullanın.</div>
+        <div class="mb-2">
+          {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="hesap" id="fnCboHesap_{{ h.kod }}" value="{{ h.kod }}" {{ 'checked' if h.kod == 'elde' }} required>
+            <label class="form-check-label" for="fnCboHesap_{{ h.kod }}">{{ h.ad }} <span class="fn-mini">({{ h.bakiye | tl_format }} ₺)</span></label>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label fn-mini">Tutar (₺)</label><input type="text" name="tutar" class="form-control" inputmode="decimal" placeholder="0,00" value="{{ '%.2f' | format(calisan_borc_kalan) | replace('.', ',') if calisan_borc_kalan else '' }}" required></div>
           <div class="col-6"><label class="form-label fn-mini">Tarih</label><input type="date" name="tarih" class="form-control" value="{{ bugun }}"></div>
           <div class="col-12"><input type="text" name="aciklama" class="form-control" placeholder="Açıklama (ops.)"></div>
         </div>

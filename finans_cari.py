@@ -91,7 +91,8 @@ def cari_detay(cari_id):
                            para_etiket=cs.PARA_ETIKET, sembol=cs.sembol(cari),
                            hareket_var=cari.hareketler.first() is not None,  # iptaller dahil (servis kilidiyle aynı)
                            hareket_etiket=cs.HAREKET_ETIKET, bugun=_bugun_ist(),
-                           calisan_haklari=hakedis_satirlari(cari_id=cari_id) if cari.tur == 'calisan' else [])
+                           calisan_haklari=hakedis_satirlari(cari_id=cari_id) if cari.tur == 'calisan' else [],
+                           calisan_borc_kalan=cs.calisan_borc_kalan(cari_id) if cari.tur == 'calisan' else 0)
 
 
 def _kalemler_from_form():
@@ -208,6 +209,44 @@ def cari_borc_odeme(cari_id):
         kalan = -h.yeni_bakiye if h.yeni_bakiye < 0 else 0
         flash(f'✅ Borç ödemesi kaydedildi: {tutar:.2f} {s}{_kasa_eki(h)} Beyazıt hesabına girdi. '
               f'Kalan borcunuz {kalan:.2f} {s}.', 'success')
+    except FinansHata as e:
+        flash(str(e), 'danger')
+    return _geri(url_for('finans.cari_detay', cari_id=cari_id))
+
+
+@finans_bp.route('/cari/<int:cari_id>/calisan-borc', methods=['POST'])
+@login_required
+@roles_required('admin')
+def cari_calisan_borc(cari_id):
+    """Çalışan hesabı: çalışanın cebinden verdiği para (Elde/Banka'ya giriş + borcumuz ↑)."""
+    try:
+        tutar = fs.parse_tutar(request.form.get('tutar'))
+        h = cs.tahsilat_al(cari_id, tutar, fs.parse_tarih(request.form.get('tarih')),
+                           request.form.get('aciklama', ''), _uid(), tur='calisan_borc',
+                           hesap_kodu=request.form.get('hesap', ''))
+        _log("CREATE", f"Finans çalışandan para alındı — {h.cari.ad}: {tutar}₺ ({h.islem.hesap.ad})",
+             tutar=str(tutar))
+        flash(f'✅ {h.cari.ad} cebinden {tutar:.2f} ₺ verdi; {h.islem.hesap.ad} hesabına girdi. '
+              f'Geri ödenecek: {cs.calisan_borc_kalan(cari_id):.2f} ₺.', 'success')
+    except FinansHata as e:
+        flash(str(e), 'danger')
+    return _geri(url_for('finans.cari_detay', cari_id=cari_id))
+
+
+@finans_bp.route('/cari/<int:cari_id>/calisan-borc-odeme', methods=['POST'])
+@login_required
+@roles_required('admin')
+def cari_calisan_borc_odeme(cari_id):
+    """Çalışan hesabı: cebinden verdiği paranın geri ödenmesi (Elde/Banka'dan çıkış + borcumuz ↓)."""
+    try:
+        tutar = fs.parse_tutar(request.form.get('tutar'))
+        h = cs.odeme_yap(cari_id, request.form.get('hesap', ''), tutar,
+                         fs.parse_tarih(request.form.get('tarih')), request.form.get('aciklama', ''), _uid(),
+                         tur='calisan_borc_odeme')
+        _log("CREATE", f"Finans çalışana geri ödeme — {h.cari.ad}: {tutar}₺ ({h.islem.hesap.ad})",
+             tutar=str(tutar))
+        flash(f'✅ {h.cari.ad} için {tutar:.2f} ₺ geri ödendi; {h.islem.hesap.ad} hesabından düştü. '
+              f'Kalan: {cs.calisan_borc_kalan(cari_id):.2f} ₺.', 'success')
     except FinansHata as e:
         flash(str(e), 'danger')
     return _geri(url_for('finans.cari_detay', cari_id=cari_id))
