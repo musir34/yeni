@@ -52,6 +52,7 @@ def register_blueprints(app):
     from whatsapp_baglanti import whatsapp_baglanti_bp  # 📱 WHATSAPP COEXISTENCE BAĞLANTISI
     from whatsapp_duyuru import whatsapp_duyuru_bp  # 📣 WHATSAPP DUYURU
     from finans import finans_bp  # 💰 FİNANS KASASI (üç hesaplı yeni kasa)
+    from alissa.routes import alissa_bp  # 👞 MUHAMMET ALİSSA HESABI
 
     # Register all blueprints
     for bp in [
@@ -107,5 +108,6 @@ def register_blueprints(app):
         whatsapp_baglanti_bp,  # 📱 WHATSAPP COEXISTENCE BAĞLANTISI
         whatsapp_duyuru_bp,  # 📣 WHATSAPP DUYURU
         finans_bp,  # 💰 FİNANS KASASI
+        alissa_bp,  # 👞 MUHAMMET ALİSSA HESABI
     ]:
         app.register_blueprint(bp)

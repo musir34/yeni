@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+{% block title %}Muhammet Alissa Hesabı - Güllü Shoes{% endblock %}
+{% block extra_css %}
+<style>
+  .al-card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.06); margin-bottom: 1.5rem; }
+  .al-kpi .num { font-size: 1.6rem; font-weight: 700; }
+  .al-table td, .al-table th { font-size: .85rem; white-space: nowrap; text-align: right; }
+  .al-table td:first-child, .al-table th:first-child { text-align: left; }
+  .al-table-wrap { overflow-x: auto; }
+  .al-eksi { color: var(--bs-danger); }
+</style>
+{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center flex-wrap gap-2 mb-4">
+  <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm me-2"><i class="fas fa-home"></i> Anasayfa</a>
+  <h3 class="mb-0">👞 Muhammet Alissa Hesabı</h3>
+  <span class="text-muted ms-2">Trendyol satışlarının haftalık hakedişi</span>
+  <form method="POST" action="{{ url_for('alissa.senkron_baslat') }}" class="ms-auto d-flex align-items-center gap-2">
+    <span class="text-muted small">
+      {% if durum.calisiyor %}<span class="spinner-border spinner-border-sm"></span> Trendyol'dan çekiliyor…
+      {% elif durum.son_senkron %}Son güncelleme: {{ durum.son_senkron.strftime('%d.%m.%Y %H:%M') }}
+      {% else %}Henüz veri çekilmedi{% endif %}
+    </span>
+    <button type="submit" class="btn btn-primary btn-sm" {% if durum.calisiyor %}disabled{% endif %}>
+      <i class="fas fa-rotate"></i> Trendyol'dan Güncelle
+    </button>
+  </form>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
+      {{ msg }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endwith %}
+{% if durum.hata and not durum.calisiyor %}
+  <div class="alert alert-danger">Son güncelleme başarısız oldu; rakamlar eski olabilir. Hata: {{ durum.hata }}</div>
+{% endif %}
+
+<div class="row al-kpi">
+  <div class="col-lg-4">
+    <div class="card al-card"><div class="card-body">
+      <div class="text-muted">Toplam hakediş (kesintiler sonrası)</div>
+      <div class="num">{{ ozet.toplam.net | tl_format }} ₺</div>
+      <div class="small text-muted">{{ ozet.toplam.satis_adet }} çift teslim · {{ ozet.toplam.iade_adet }} çift iade · {{ ozet.yolda }} sipariş yolda</div>
+    </div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card al-card"><div class="card-body">
+      <div class="text-muted">Alissa'ya ödenen</div>
+      <div class="num">{{ ozet.odenen | tl_format }} ₺</div>
+      <div class="small text-muted">{{ odemeler | rejectattr('iptal') | list | length }} ödeme</div>
+    </div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card al-card"><div class="card-body">
+      <div class="text-muted">{% if ozet.bakiye >= 0 %}Ödenecek bakiye{% else %}Fazla ödenen (sonraki haftadan düşülecek){% endif %}</div>
+      <div class="num {% if ozet.bakiye < 0 %}al-eksi{% endif %}">{{ ozet.bakiye | tl_format }} ₺</div>
+      <div class="small text-muted">Toplam hakediş − ödenen</div>
+    </div></div>
+  </div>
+</div>
+
+<div class="card al-card">
+  <div class="card-header fw-bold">📅 Haftalık Hesap</div>
+  <div class="card-body">
+    <div class="al-table-wrap">
+      <table class="table table-sm table-hover al-table mb-2">
+        <thead>
+          <tr>
+            <th>Hafta</th><th>Gelen sipariş</th><th>İptal</th><th>Teslim (çift)</th><th>İade (çift)</th>
+            <th>Satış</th><th>İade</th><th>İndirim + kupon</th><th>Komisyon</th><th>Platform bedeli</th>
+            <th>Kargo</th><th>Masraf</th><th>Hafta neti</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for h in ozet.haftalar %}
+          <tr class="{% if secili == h.bas %}table-active{% endif %}">
+            <td>
+              {{ h.bas.strftime('%d.%m') }} – {{ h.son.strftime('%d.%m.%Y') }}
+              {% if h.suruyor %}<span class="badge bg-info text-dark">sürüyor</span>{% endif %}
+            </td>
+            <td>{{ h.gelen or '–' }}</td>
+            <td>{{ h.iptal or '–' }}</td>
+            <td>{{ h.satis_adet }}</td>
+            <td>{{ h.iade_adet or '–' }}</td>
+            <td>{{ h.satis | tl_format }}</td>
+            <td>{{ h.iade | tl_format }}</td>
+            <td>{{ h.indirim | tl_format }}</td>
+            <td>{{ h.komisyon | tl_format }}</td>
+            <td>{{ h.phb | tl_format }}</td>
+            <td>
+              {{ h.kargo | tl_format }}
+              {% if h.tahmin %}<span class="badge bg-warning text-dark" title="Faturası henüz gelmemiş kargo tahminle yazıldı">tahmin</span>{% endif %}
+              {% if h.fark %}<span class="badge bg-secondary" title="Önceki haftaların kargo faturası geldi, fark bu haftaya işlendi">fark</span>{% endif %}
+            </td>
+            <td>{{ h.masraf | tl_format }}</td>
+            <td class="fw-bold {% if h.net < 0 %}al-eksi{% endif %}">{{ h.net | tl_format }}</td>
+            <td><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('alissa.index', hafta=h.bas.isoformat()) }}#detay">Detay</a></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="14" class="text-center text-muted">Henüz kayıt yok. "Trendyol'dan Güncelle"ye basın.</td></tr>
+          {% endfor %}
+        </tbody>
+        {% if ozet.haftalar %}
+        <tfoot>
+          <tr class="fw-bold">
+            <td>Toplam</td><td></td><td></td><td>{{ ozet.toplam.satis_adet }}</td><td>{{ ozet.toplam.iade_adet }}</td>
+            <td>{{ ozet.toplam.satis | tl_format }}</td><td>{{ ozet.toplam.iade | tl_format }}</td>
+            <td>{{ ozet.toplam.indirim | tl_format }}</td><td>{{ ozet.toplam.komisyon | tl_format }}</td>
+            <td>{{ ozet.toplam.phb | tl_format }}</td><td>{{ ozet.toplam.kargo | tl_format }}</td>
+            <td>{{ ozet.toplam.masraf | tl_format }}</td><td>{{ ozet.toplam.net | tl_format }}</td><td></td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+    <div class="form-text">
+      Satış, müşteriye teslim edildiği haftaya; iade, Trendyol'un iadeyi kestiği haftaya yazılır.
+      Hafta neti = satış − iade − indirim/kupon − komisyon − platform bedeli − kargo − masraf. Ürün maliyeti dahil değildir.
+    </div>
+  </div>
+</div>
+
+{% if secili %}
+<div class="card al-card" id="detay">
+  <div class="card-header fw-bold">🔎 {{ secili.strftime('%d.%m.%Y') }} haftası — sipariş dökümü</div>
+  <div class="card-body">
+    <div class="al-table-wrap">
+      <table class="table table-sm al-table mb-0">
+        <thead>
+          <tr><th>Sipariş</th><th>Model</th><th>Teslim</th><th>İade</th><th>Satış</th><th>İade</th><th>İndirim + kupon</th>
+              <th>Komisyon</th><th>Platform bedeli</th><th>Kargo</th><th>Masraf</th><th>Net</th></tr>
+        </thead>
+        <tbody>
+          {% for s in detay %}
+          <tr>
+            <td>
+              {{ s.order_number }}
+              {% if s.onceki %}<span class="badge bg-secondary">önceki hafta siparişi</span>{% endif %}
+            </td>
+            <td>{{ s.modeller }}</td>
+            <td>{{ s.satis_adet or '–' }}</td>
+            <td>{{ s.iade_adet or '–' }}</td>
+            <td>{{ s.satis | tl_format }}</td>
+            <td>{{ s.iade | tl_format }}</td>
+            <td>{{ s.indirim | tl_format }}</td>
+            <td>{{ s.komisyon | tl_format }}</td>
+            <td>{{ s.phb | tl_format }}</td>
+            <td>
+              {{ s.kargo | tl_format }}
+              {% if s.tahmin %}<span class="badge bg-warning text-dark">tahmin</span>{% endif %}
+              {% if s.fark %}<span class="badge bg-secondary">fark</span>{% endif %}
+            </td>
+            <td>{{ s.masraf | tl_format }}</td>
+            <td class="fw-bold {% if s.net < 0 %}al-eksi{% endif %}">{{ s.net | tl_format }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="12" class="text-center text-muted">Bu haftada kayıt yok.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="row">
+  <div class="col-lg-6">
+    <div class="card al-card">
+      <div class="card-header fw-bold">💸 Ödemeler</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('alissa.odeme_ekle') }}" class="row g-2 align-items-end mb-3">
+          <div class="col-sm-4">
+            <label class="form-label small mb-1" for="alOdemeTarih">Tarih</label>
+            <input type="date" class="form-control form-control-sm" id="alOdemeTarih" name="tarih" value="{{ bugun.isoformat() }}" required>
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label small mb-1" for="alOdemeTutar">Tutar (₺)</label>
+            <input type="text" inputmode="decimal" class="form-control form-control-sm" id="alOdemeTutar" name="tutar"
+                   value="{% if ozet.bakiye > 0 %}{{ ozet.bakiye | tl_format }}{% endif %}" required>
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label small mb-1" for="alOdemeNot">Not</label>
+            <input type="text" class="form-control form-control-sm" id="alOdemeNot" name="aciklama" maxlength="255">
+          </div>
+          <div class="col-12"><button type="submit" class="btn btn-sm btn-success">Ödemeyi Kaydet</button></div>
+        </form>
+        <div class="al-table-wrap">
+          <table class="table table-sm al-table mb-0">
+            <thead><tr><th>Tarih</th><th>Tutar</th><th>Not</th><th>Kaydeden</th><th></th></tr></thead>
+            <tbody>
+              {% for o in odemeler %}
+              <tr class="{% if o.iptal %}text-muted text-decoration-line-through{% endif %}">
+                <td>{{ o.tarih.strftime('%d.%m.%Y') }}</td>
+                <td>{{ o.tutar | tl_format }}</td>
+                <td>{{ o.aciklama or '' }}</td>
+                <td>{{ o.kullanici or '' }}</td>
+                <td>
+                  {% if not o.iptal %}
+                  <form method="POST" action="{{ url_for('alissa.odeme_iptal', odeme_id=o.id) }}"
+                        onsubmit="return confirm('Bu ödeme iptal edilsin mi?');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">İptal</button>
+                  </form>
+                  {% else %}iptal{% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" class="text-center text-muted">Henüz ödeme kaydı yok.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card al-card">
+      <div class="card-header fw-bold">⚙️ Kesinti Tutarları</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('alissa.ayar_kaydet') }}" class="row g-2 align-items-end">
+          {% for anahtar, etiket in etiketler.items() %}
+          <div class="col-sm-4">
+            <label class="form-label small mb-1" for="al_{{ anahtar }}">{{ etiket }}</label>
+            <input type="text" inputmode="decimal" class="form-control form-control-sm" id="al_{{ anahtar }}"
+                   name="{{ anahtar }}" value="{{ tutarlar[anahtar] | tl_format }}" required>
+          </div>
+          {% endfor %}
+          <div class="col-12"><button type="submit" class="btn btn-sm btn-success">Kaydet</button></div>
+        </form>
+        <div class="form-text mt-2">Değişiklik yalnız bundan sonra teslim edilen siparişlere uygulanır; geçmiş haftalar değişmez.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card al-card">
+      <div class="card-header fw-bold">👠 Model Bazlı Toplam</div>
+      <div class="card-body">
+        <div class="al-table-wrap">
+          <table class="table table-sm al-table mb-0">
+            <thead><tr><th>Model</th><th>Teslim</th><th>İade</th><th>Satış</th><th>İade tutarı</th><th>Net hakediş</th></tr></thead>
+            <tbody>
+              {% for m in modeller %}
+              <tr>
+                <td>{{ m.model }}</td><td>{{ m.satis_adet }}</td><td>{{ m.iade_adet }}</td>
+                <td>{{ m.satis | tl_format }}</td><td>{{ m.iade | tl_format }}</td>
+                <td class="fw-bold">{{ m.net | tl_format }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="6" class="text-center text-muted">Henüz kayıt yok.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if durum.calisiyor %}
+<script>
+  // Senkron bitince sayfayı yenile
+  (function bekle() {
+    setTimeout(function () {
+      fetch("{{ url_for('alissa.senkron_durum') }}", { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { if (d.calisiyor) { bekle(); } else { location.reload(); } })
+        .catch(bekle);
+    }, 5000);
+  })();
+</script>
+{% endif %}
+{% endblock %}

@@ -35,6 +35,12 @@ def get_safety_stock_buffer() -> int:
         return 1
 
 
+# Stok gönderimi kalıcı olarak kapatılan platformlar. Amazon'da satış
+# istenmiyor: stoklar scripts/amazon_stok_sifirla.py ile bir kez 0'landı,
+# bundan sonra hiçbir yoldan (otomatik/manuel/barkod bazlı) stok gönderilmez.
+DISABLED_PLATFORMS = {"amazon"}
+
+
 class StockSyncService:
     """
     Merkezi Stok Senkronizasyon Servisi
@@ -110,7 +116,10 @@ class StockSyncService:
     
     def get_configured_platforms(self) -> List[str]:
         """Yapılandırılmış platformları döndür"""
-        platforms = [name for name, adapter in self._adapters.items() if adapter.is_configured]
+        platforms = [
+            name for name, adapter in self._adapters.items()
+            if adapter.is_configured and name not in DISABLED_PLATFORMS
+        ]
         # Shopify yeni dedicated servisten kontrol edilir
         from shopify_site.shopify_stock_service import shopify_stock_service
         if shopify_stock_service.is_configured():
@@ -479,9 +488,12 @@ class StockSyncService:
         if platform == "shopify":
             return self._sync_shopify(triggered_by, triggered_by_user, barcodes=barcodes)
 
+        if platform in DISABLED_PLATFORMS:
+            return {"success": False, "error": f"{platform} stok gönderimi kapatıldı"}
+
         if platform not in self._adapters:
             return {"success": False, "error": f"Bilinmeyen platform: {platform}"}
-        
+
         adapter = self._adapters[platform]
         
         if not adapter.is_configured:
@@ -883,7 +895,7 @@ def auto_sync_platforms_except_idefix() -> Dict[str, Any]:
     logger.info("[AUTO-SYNC] Otomatik stok senkronizasyonu başlatılıyor (Idefix hariç)...")
     
     # İdefix hariç platformlar
-    platforms_to_sync = ["trendyol", "amazon", "shopify"]
+    platforms_to_sync = ["trendyol", "shopify"]
     
     results = {}
     loop = asyncio.new_event_loop()

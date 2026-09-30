@@ -101,6 +101,27 @@ class CalisanBorcTest(unittest.TestCase):
         self.assertEqual(cs.calisan_borc_kalan(c.id), Decimal('0'))
         self.tutarli()
 
+    def test_kismen_geri_odenmis_para_iptal_edilemez(self):
+        c = self.calisan()
+        h = self.al(c, '300')
+        odeme = self.geri_ode(c, '200')
+        # Hem cari defterinden hem kasa defterinden iptal yolu kapalı; hiçbir şey değişmez.
+        with self.assertRaises(FinansHata):
+            cs.hareket_iptal(h.id, 1)
+        with self.assertRaises(FinansHata):
+            fs.islem_iptal(h.islem_id, 1)
+        db.session.refresh(c)
+        self.assertEqual(c.bakiye, Decimal('100'))
+        self.assertEqual(fs.hesap_getir('elde').bakiye, Decimal('10100'))
+        self.assertEqual(cs.calisan_borc_kalan(c.id), Decimal('100'))
+        # Önce geri ödeme iptal edilince alınan para da iptal edilebilir.
+        cs.hareket_iptal(odeme.id, 1)
+        cs.hareket_iptal(h.id, 1)
+        db.session.refresh(c)
+        self.assertEqual(c.bakiye, Decimal('0'))
+        self.assertEqual(fs.hesap_getir('elde').bakiye, Decimal('10000'))
+        self.tutarli()
+
     def test_yalniz_calisan_hesabinda_kullanilir(self):
         t = cs.cari_ekle('Taban Ltd', 'tedarikci', '', '', 1)
         s = cs.cari_ekle('Musir — şahsi', 'sahsi', '', '', 1)

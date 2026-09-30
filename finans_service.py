@@ -334,6 +334,14 @@ def cari_hareket_geri_al(h: FinansCariHareket, kullanici_id: int, simdi: datetim
         raise FinansHata('Bu cari hareket az önce başka bir istekle iptal edildi.')
     cari = db.session.query(FinansCari).filter_by(id=h.cari_id).with_for_update().one()
     db.session.refresh(cari)
+    if h.tur == 'calisan_borc':
+        # Geri ödemesi yapılmış para iptal edilirse fark sessizce maaş borcundan düşerdi.
+        kalan = (db.session.query(func.coalesce(func.sum(FinansCariHareket.yon * FinansCariHareket.tutar), 0))
+                 .filter(FinansCariHareket.cari_id == h.cari_id, FinansCariHareket.iptal.is_(False),
+                         FinansCariHareket.tur.in_(('calisan_borc', 'calisan_borc_odeme'))).scalar())
+        if Decimal(str(kalan or 0)) - Decimal(str(h.tutar)) < 0:
+            raise FinansHata('İptal edilemez: bu paranın bir kısmı çalışana geri ödenmiş. '
+                             'Önce geri ödemeyi iptal edin.')
     cari.bakiye = Decimal(str(cari.bakiye or 0)) - h.yon * Decimal(str(h.tutar))
     cari.guncelleme_tarihi = simdi
     h.iptal = True

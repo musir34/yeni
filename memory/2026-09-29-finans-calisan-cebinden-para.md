@@ -30,3 +30,11 @@ Netleştirme cevabı: "Para kasaya girsin" (yalnız borç yazılsın seçeneği 
 
 ## Yayına alma
 `git pull && systemctl restart gullupanel.service` (şema adımı yok).
+
+## İnceleme sonrası düzeltme (aynı gün)
+- Kod inceleme bulgusu (orta): kısmen geri ödenmiş `calisan_borc` iptal edilince fark sessizce maaş
+  borcundan düşüyordu (300 al, 200 geri öde, 300'ü iptal et → bakiye −200 / maaş 5000→4800).
+- Çözüm: finans_service.cari_hareket_geri_al içinde koruma — iki iptal yolu da (cari defteri + kasa defteri)
+  buradan geçer. Geri ödemesi olan para iptal edilemez; önce geri ödeme iptal edilir.
+- Test: test_kismen_geri_odenmis_para_iptal_edilemez (koruma kaldırılınca kırmızı, koruma ile yeşil). Toplam 54 OK.
+- "Bilinçli sınırlar"daki "kalan 0'a sabitlenir" maddesi artık yalnız teorik; koruma bu duruma izin vermiyor.
