@@ -32,7 +32,7 @@ from models import (  # noqa: E402
     db, Raf, RafUrun, Product, BarcodeAlias, PlatformConfig, UretimSiparis,
     OrderCreated, OrderHazirlaniyor, StockMovement,
     OrderPicking, OrderShipped, OrderDelivered, OrderArchived, OrderCancelled,
-    UretimDogrulama,
+    UretimDogrulama, CentralStock,
 )
 
 app = Flask(__name__)
@@ -43,7 +43,7 @@ db.init_app(app)
 _NEEDED = (Raf, RafUrun, Product, BarcodeAlias, PlatformConfig, UretimSiparis,
            OrderCreated, OrderHazirlaniyor, StockMovement,
            OrderPicking, OrderShipped, OrderDelivered, OrderArchived,
-           OrderCancelled, UretimDogrulama)
+           OrderCancelled, UretimDogrulama, CentralStock)
 
 with app.app_context():
     for _m in _NEEDED:
@@ -58,7 +58,8 @@ BC_YOK = "079950000037"     # 37 numara — rafta yok
 def _ctx_clean(monkeypatch):
     with app.app_context():
         for m in (UretimSiparis, RafUrun, Raf, Product, PlatformConfig,
-                  OrderCreated, OrderHazirlaniyor, StockMovement, OrderShipped):
+                  OrderCreated, OrderHazirlaniyor, StockMovement, OrderShipped,
+                  UretimDogrulama, CentralStock):
             m.query.delete()
         db.session.commit()
         # Model üretim modunda
@@ -351,3 +352,107 @@ def test_site_siparisi_paketlenince_shopify_guncellenir(_ctx_clean, monkeypatch)
         assert uretim_routes.paketlendi_isaretle(kayit.id).get_json()["success"] is True
     assert UretimSiparis.query.get(kayit.id).paketlendi is True
     assert cagrilar == [("1414", "Hazirlaniyor"), ("1414", "Hazirlaniyor")]
+
+
+# ── Sonradan rafa giren stok: Raftan Karşıla + kargoda düşüm koruması (2026-09-30) ──
+# Canlı vaka 11657096149: sipariş üretimdeyken aynı üründen iade rafa girdi; ürün
+# doğrulama okutmasıyla (stok düşmeden) paketlendi, sipariş tekrar Hazırlanıyor'a düştü.
+
+def _uretim_siparisi_rafta_stokla(no="TY-30"):
+    """Sipariş geldiğinde rafta yoktu → üretime yazıldı; sonra rafa 1 adet girdi (A1)."""
+    from datetime import datetime
+    _yeni_siparis_db(no, [(BC_RAFTA, 1)], datetime(2026, 9, 29, 20, 0))
+    db.session.add(UretimSiparis(
+        order_number=no, product_main_id=MODEL, isleme_alindi=True,
+        details=json.dumps([{"barcode": BC_RAFTA, "sku": "x", "quantity": 1}])))
+    db.session.commit()
+    return UretimSiparis.query.filter_by(order_number=no).one()
+
+
+def _karsila(kayit_id, barkod, raf):
+    import uretim_routes
+    with app.test_request_context(f"/uretim/api/raftan-karsila/{kayit_id}", method="POST",
+                                  json={"barcode": barkod, "raf_kodu": raf}):
+        return uretim_routes.raftan_karsila(kayit_id)
+
+
+def test_raftan_karsila_stok_duser_kalem_uretimden_cikar(_ctx_clean, monkeypatch):
+    import whatsapp_notify
+    from uretim_modu import pick_key, eksik_raf_okutmalar
+    monkeypatch.setattr(whatsapp_notify, "notify_staff_async", lambda *a, **kw: None)
+    kayit = _uretim_siparisi_rafta_stokla()
+
+    yanit = _karsila(kayit.id, BC_RAFTA, "A1")
+
+    assert not isinstance(yanit, tuple) and yanit.get_json()["success"] is True
+    assert RafUrun.query.filter_by(urun_barkodu=BC_RAFTA).one().adet == 0, "stok raftan düşmeli"
+    hareket = StockMovement.query.filter_by(idempotency_key=pick_key("TY-30", BC_RAFTA)).one()
+    assert hareket.delta == -1
+    kayit = UretimSiparis.query.get(kayit.id)
+    assert json.loads(kayit.details) == [], "kalem üretimden çıkmalı"
+    assert kayit.uretildi is True, "üretilecek kalem kalmadı → Üretilenler"
+    assert eksik_raf_okutmalar("TY-30") == [], "etiket açılmalı"
+    assert _ctx_clean == ["uretim_iptal"], "üreticiye 'üretmeyin' maili gitmeli"
+
+
+def test_raftan_karsila_yanlis_rafta_hicbir_sey_degismez(_ctx_clean):
+    kayit = _uretim_siparisi_rafta_stokla()
+    onceki = kayit.details
+
+    yanit = _karsila(kayit.id, BC_RAFTA, "Z9")
+
+    assert yanit[1] == 400
+    assert UretimSiparis.query.get(kayit.id).details == onceki
+    assert RafUrun.query.filter_by(urun_barkodu=BC_RAFTA).one().adet == 1
+    assert StockMovement.query.count() == 0
+    assert _ctx_clean == []
+
+
+def test_raftan_karsila_uretimden_dogrulanmis_kalemi_reddeder(_ctx_clean):
+    kayit = _uretim_siparisi_rafta_stokla()
+    db.session.add(UretimDogrulama(order_number="TY-30", barcode=BC_RAFTA))
+    db.session.commit()
+
+    assert _karsila(kayit.id, BC_RAFTA, "A1")[1] == 400
+    assert RafUrun.query.filter_by(urun_barkodu=BC_RAFTA).one().adet == 1
+
+
+def _kargola(no):
+    from stock_ledger import apply_lifecycle_effect
+    o = OrderCreated.query.filter_by(order_number=no).one()
+    return apply_lifecycle_effect(order_number=no, from_status="Created", to_status="Shipped",
+                                  details=o.details, shelf_code=None)
+
+
+def test_kargoda_uretimden_gelen_kalem_raftan_dusulmez(_ctx_clean):
+    # Üretimden gelen ürün doğrudan paketlendi; raftaki iade yerinde durmalı.
+    _uretim_siparisi_rafta_stokla()
+
+    _kargola("TY-30")
+
+    assert RafUrun.query.filter_by(urun_barkodu=BC_RAFTA).one().adet == 1
+    assert StockMovement.query.count() == 0
+
+
+def test_kargoda_raftan_karsilanan_kalem_ikinci_kez_dusulmez(_ctx_clean, monkeypatch):
+    import whatsapp_notify
+    monkeypatch.setattr(whatsapp_notify, "notify_staff_async", lambda *a, **kw: None)
+    kayit = _uretim_siparisi_rafta_stokla()
+    db.session.add(RafUrun(raf_kodu="A1", urun_barkodu=BC_YOK, adet=0))
+    RafUrun.query.filter_by(urun_barkodu=BC_RAFTA).update({"adet": 2})
+    db.session.commit()
+    _karsila(kayit.id, BC_RAFTA, "A1")
+    assert RafUrun.query.filter_by(urun_barkodu=BC_RAFTA).one().adet == 1
+
+    _kargola("TY-30")
+
+    assert RafUrun.query.filter_by(urun_barkodu=BC_RAFTA).one().adet == 1, "çift düşüm olmamalı"
+
+
+def test_kargoda_uretim_kaydi_olmayan_siparis_eskisi_gibi_duser(_ctx_clean):
+    from datetime import datetime
+    _yeni_siparis_db("TY-31", [(BC_RAFTA, 1)], datetime(2026, 9, 29, 20, 0))
+
+    _kargola("TY-31")
+
+    assert RafUrun.query.filter_by(urun_barkodu=BC_RAFTA).one().adet == 0

@@ -149,12 +149,14 @@ async def promote_eligible_orders(max_promotions=MAX_PROMOTIONS_PER_RUN):
                             OrderCreated.order_date.asc())
                   .all())
 
-    # 🏭 Üretim bekleyen siparişler terfi ETMEZ: tesadüfi stokla erken Picking'e
-    # gitmesin, stok-yok mailine de düşmesin. "Üretildi" işaretlenince normal terfi.
+    # 🏭 Üretim kaydı olan siparişler terfi ETMEZ: tesadüfi stokla Hazırlanıyor'a
+    # gitmesin, stok-yok mailine de düşmesin. "Üretildi" sonrası da muaf kalır —
+    # sipariş üretim ekranından (doğrulama / raf okutma + etiket) yürür; yoksa
+    # etiketi basılmış paket, rafta iade varsa tekrar hazırlanmaya düşüyordu.
     try:
         from models import UretimSiparis
         uretim_bekleyen = {r.order_number for r in
-                           UretimSiparis.query.filter_by(uretildi=False)
+                           UretimSiparis.query
                            .with_entities(UretimSiparis.order_number)}
     except Exception:
         uretim_bekleyen = set()

@@ -323,6 +323,69 @@ def pick_key(order_number: str, barcode: str) -> str:
     return f"{order_number}:pick:{barcode}"
 
 
+def kargoda_raftan_dusulmeyecekler(order_number: str, barkodlar: list[str]) -> set[str]:
+    """Üretim kaydı olan sipariş kargolanırken (ledger ship_out) raftan
+    DÜŞÜLMEYECEK barkodlar: üretimden gelen kalemler (rafa hiç girmedi — düşülürse
+    raftaki iade sistemden silinir) + üretim ekranında rafı okutulmuş kalemler
+    (zaten düşüldü — tekrar düşülürse çift düşüm). Kayıt yok / hata → boş küme
+    (ledger eski davranışıyla devam eder)."""
+    try:
+        order_number = str(order_number or "").strip()
+        kayit = UretimSiparis.query.filter_by(order_number=order_number).first()
+        if not kayit:
+            return set()
+        from stock_ledger import has_movement
+        atla = {k["barcode"] for k in uretim_kalemleri(kayit)}
+        atla |= {bc for bc in barkodlar if has_movement(pick_key(order_number, bc))}
+        return atla
+    except Exception:
+        logger.warning("[URETIM] kargoda düşülmeyecek kalemler okunamadı", exc_info=True)
+        db.session.rollback()
+        return set()
+
+
+def raftan_karsilandi_bildir(kayit, kalemler: list[dict], raf_kodu: str) -> None:
+    """Üretilecek kalem sonradan rafa giren stoktan karşılandı → üretici boşuna
+    üretmesin. 'uretim_iptal' abonelerine mail + WhatsApp (ayrı abonelik olayı
+    açılmadı: alıcı kitlesi aynı — üretimi durdurması gerekenler). Her hata yutulur."""
+    urun, adet = _wa_urun_ozeti(kalemler)
+    try:
+        from mail_service import notify, build_alert_email_html
+        govde = build_alert_email_html(
+            'uretim_raftan',
+            headline=f"{kayit.order_number} numaralı siparişin ürünü RAFTAN karşılandı.",
+            summary_rows=[
+                ("Sipariş No", kayit.order_number),
+                ("Müşteri", kayit.customer_name or "-"),
+                ("Model", kayit.product_main_id or "-"),
+                ("Raftan alınan", _urun_satirlari_html(kalemler) or "-"),
+                ("Raf", raf_kodu or "-"),
+            ],
+            action_hint="Bu kalemi ÜRETMEYİN — ürün rafta bulundu ve siparişe ayrıldı.",
+        )
+        notify('uretim_iptal',
+               subject=f"📦 Raftan karşılandı, ÜRETMEYİN — {kayit.order_number} ({kayit.product_main_id})",
+               body=govde)
+    except Exception:
+        logger.exception("[URETIM] raftan karşılama mail bildirimi hatası (yutuldu)")
+    detay = (f"Sipariş: {kayit.order_number} | Ürün: {urun} | Adet: {adet} | "
+             f"Raf: {raf_kodu or '-'} | Bu kalemi ÜRETMEYİN.")
+    try:
+        from whatsapp_service import notify_whatsapp
+        notify_whatsapp('uretim_iptal',
+                        f"📦 Raftan karşılandı — {kayit.order_number}", detay)
+    except Exception:
+        logger.exception("[URETIM] raftan karşılama whatsapp bildirimi hatası (yutuldu)")
+    try:
+        from whatsapp_alici import alicilar
+        from whatsapp_notify import notify_staff_async
+        kime = alicilar("uretim_iptal")
+        if kime:
+            notify_staff_async("Raftan karşılandı — ÜRETMEYİN", detay, only_last4=kime)
+    except Exception:
+        logger.exception("[URETIM] raftan karşılama personel bildirimi hatası (yutuldu)")
+
+
 def eksik_raf_okutmalar(order_number: str) -> list[str]:
     """Kargo etiketi kilidi: üretim kaydı olan siparişte henüz okutulmamış
     kalem barkodları — RAFTAN kalemler (raf okutması) VE ÜRETİLEN kalemler

@@ -536,11 +536,21 @@
         if (yapilan >= gerekli) {
             return `<div class="ur-okut-ok"><i class="bi bi-check-circle-fill"></i> Doğrulandı (${gerekli}/${gerekli})</div>`;
         }
+        // Sipariş geldiğinde rafta yoktu, sonradan rafa girdi (iade vb.): ürün raftan
+        // alınacaksa "Raftan Karşıla" ile okutulur → stok düşer, üreticiye haber gider.
+        // Doğrulama okutması stok düşmez; raftaki ürün onunla pakete girmemeli.
+        const raftanKarsila = (yapilan === 0 && !r.uretildi && u.raflar && u.raflar.length) ? `
+            <div class="ur-src ur-src--raf"><i class="bi bi-box2"></i> Rafta stok var · ${esc(u.raflar.join(', '))} — ürün RAFTAN alınacaksa buradan okutun</div>
+            <div class="ur-okut" data-kayit="${Number(r.id)}" data-karsila="1">
+                <input type="text" class="ur-okut-urun" placeholder="Ürün barkodu okut" autocomplete="off" inputmode="none">
+                <input type="text" class="ur-okut-raf" placeholder="Raf kodu okut" autocomplete="off" inputmode="none">
+                <button type="button" class="ur-okut-btn"><i class="bi bi-box-arrow-in-down"></i> Raftan Karşıla</button>
+            </div>` : '';
         return `
             <div class="ur-okut" data-kayit="${Number(r.id)}" data-dogrula="1">
-                <input type="text" class="ur-okut-urun" placeholder="Ürün barkodu okut" autocomplete="off" inputmode="none">
+                <input type="text" class="ur-okut-urun" placeholder="Üretimden gelen ürünü okut" autocomplete="off" inputmode="none">
                 <button type="button" class="ur-okut-btn"><i class="bi bi-upc-scan"></i> Doğrula (${yapilan}/${gerekli})</button>
-            </div>`;
+            </div>${raftanKarsila}`;
     }
     function detayHtml(r) {
         const karma = karmaMi(r);
@@ -607,6 +617,7 @@
                     ${kargoda ? '<span class="ur-badge ur-badge--kargo"><i class="bi bi-truck"></i> Kargoya verildi</span>' : ''}
                     ${teslim ? '<span class="ur-badge ur-badge--kargo"><i class="bi bi-check-circle"></i> Teslim edildi</span>' : ''}
                     ${karma ? `<span class="ur-badge ur-badge--karma"><i class="bi bi-exclamation-triangle"></i> Karma paket: ${sd.length} kalem · ${uretimKalem} üretim + ${sd.length - uretimKalem} raftan</span>` : ''}
+                    ${(!r.uretildi && sd.some(u => u.uretim && !(Number(u.dogrulanan) || 0) && u.raflar && u.raflar.length)) ? '<span class="ur-badge ur-badge--karma"><i class="bi bi-box2"></i> Rafta stok var — raftan karşılanabilir</span>' : ''}
                     ${r.raf_tamam === false ? '<span class="ur-badge ur-badge--kilit"><i class="bi bi-lock-fill"></i> Okutma eksik — etiket kilitli</span>' : ''}
                     ${bekleyen ? (r.mail_sent
                         ? '<span class="ur-badge ur-badge--mail-ok"><i class="bi bi-envelope-check"></i> Mail gitti</span>'
@@ -811,13 +822,16 @@
         const raf = kutu.querySelector('.ur-okut-raf').value.trim();
         if (!urun) { toast('Önce ürün barkodunu okutun.', 'error'); kutu.querySelector('.ur-okut-urun').focus(); return; }
         if (!raf) { toast('Raf kodunu okutun.', 'error'); kutu.querySelector('.ur-okut-raf').focus(); return; }
-        const res = await fetch(`/uretim/api/raf-okut/${kayitId}`, {
+        const karsila = kutu.hasAttribute('data-karsila');
+        const res = await fetch(`/uretim/api/${karsila ? 'raftan-karsila' : 'raf-okut'}/${kayitId}`, {
             method: 'POST', headers: POST_HEADERS,
             body: JSON.stringify({ barcode: urun, raf_kodu: raf })
         });
         const data = await res.json();
         toast(data.message || 'Hata', data.success ? 'success' : 'error');
         if (!data.success) return;
+        // Raftan karşılama kalemin kaynağını ve sekmesini değiştirebilir → listeyi yenile
+        if (karsila) { tazele(); return; }
         // Yerinde güncelle — panel kapanmasın, sıradaki ürün hemen okutulsun
         kutu.outerHTML = '<div class="ur-okut-ok"><i class="bi bi-check-circle-fill"></i> Toplandı — raftan düşüldü</div>';
         const r = rowCache[kayitId];

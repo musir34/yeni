@@ -40,6 +40,20 @@ def _guvenlik_kalkani():
         abort(403)
 
 
+def _hareket_logla(islem: str, kayit: UretimSiparis) -> None:
+    """Durum düğmeleri kullanıcı hareketlerine yazılır — kimin bastığı sonradan
+    bulunabilsin. Log hatası işlemi bozmaz."""
+    try:
+        from user_logs import log_user_action
+        log_user_action("UPDATE", {
+            "işlem_açıklaması": f"Üretim siparişi: {islem} — {kayit.order_number}",
+            "sayfa": "Üretim Siparişleri",
+            "sipariş_no": kayit.order_number,
+        })
+    except Exception:
+        logger.warning("[URETIM] kullanıcı hareketi loglanamadı", exc_info=True)
+
+
 def _to_dict(r: UretimSiparis, urun_map: dict | None = None) -> dict:
     from time_utils import fmt_ist
     try:
@@ -376,8 +390,9 @@ def uretildi_isaretle(kayit_id: int):
     kayit.uretildi = not geri_al
     kayit.uretildi_at = None if geri_al else datetime.utcnow()
     db.session.commit()
-    mesaj = "Üretildi işareti geri alındı" if geri_al else "Üretildi olarak işaretlendi — sipariş normal akışına devam edecek"
+    mesaj = "Üretildi işareti geri alındı" if geri_al else "Üretildi olarak işaretlendi"
     logger.info(f"[URETIM] {kayit.order_number}: {mesaj}")
+    _hareket_logla(mesaj, kayit)
     return jsonify({"success": True, "message": mesaj})
 
 
@@ -392,6 +407,7 @@ def isleme_al(kayit_id: int):
     db.session.commit()
     mesaj = "Bekleyenlere geri alındı" if geri_al else "İşleme alındı — üretim başladı"
     logger.info(f"[URETIM] {kayit.order_number}: {mesaj}")
+    _hareket_logla(mesaj, kayit)
     return jsonify({"success": True, "message": mesaj})
 
 
@@ -420,6 +436,7 @@ def paketlendi_isaretle(kayit_id: int):
     db.session.commit()
     mesaj = "Paketlendi işareti geri alındı — Üretilenlere döndü" if geri_al else "Paketlendi — kargoya verilmeyi bekliyor"
     logger.info(f"[URETIM] {kayit.order_number}: {mesaj}")
+    _hareket_logla(mesaj, kayit)
     return jsonify({"success": True, "message": mesaj})
 
 
@@ -527,6 +544,76 @@ def raf_okut(kayit_id: int):
     else:
         mesaj = f"Okutuldu. Kalan raf ürünü: {len(kalan)}"
     return jsonify({"success": True, "raf_tamam": etiket_tamam, "kalan": kalan, "message": mesaj})
+
+
+@uretim_bp.route("/api/raftan-karsila/<int:kayit_id>", methods=["POST"])
+def raftan_karsila(kayit_id: int):
+    """ÜRETİLECEK kalemi raftan karşıla: sipariş geldiğinde rafta yoktu, sonradan
+    (iade vb.) rafa girdi. Kalem üretim kaydından çıkarılır (artık 'raftan'),
+    ürün + raf okutmasıyla o raftan düşülür (raf_okut — picking ile aynı
+    idempotency) ve üreticiye 'üretmeyin' bildirimi gider. Böylece raftaki ürün
+    doğrulama okutmasıyla stok düşülmeden pakete girmez (hayalet stok)."""
+    from barcode_alias_helper import normalize_barcode
+    from picking_service import _norm_raf
+    from uretim_modu import dogrulama_sayilari, raftan_karsilandi_bildir
+    from models import RafUrun
+
+    kayit = db.session.get(UretimSiparis, kayit_id)
+    if not kayit:
+        return jsonify({"success": False, "message": "Kayıt bulunamadı"}), 404
+    if kayit.uretildi:
+        return jsonify({"success": False,
+                        "message": "Bu sipariş üretildi olarak işaretli — raftan karşılanamaz."}), 400
+    data = request.get_json(silent=True) or {}
+    bc = normalize_barcode(str(data.get("barcode") or "").strip())
+    raf_kodu = str(data.get("raf_kodu") or "").strip()
+    if not bc or not raf_kodu:
+        return jsonify({"success": False, "message": "Ürün barkodu ve raf kodu gerekli."}), 400
+
+    try:
+        details = json.loads(kayit.details) if kayit.details else []
+    except (json.JSONDecodeError, TypeError):
+        details = []
+
+    def _bc(u):
+        return normalize_barcode(str(u.get("barcode") or "").strip())
+
+    karsilanan = [u for u in details if _bc(u) == bc]
+    if not karsilanan:
+        return jsonify({"success": False,
+                        "message": "Okutulan ürün bu siparişin üretilecek kalemlerinden değil."}), 400
+    if dogrulama_sayilari(kayit.order_number).get(bc, 0) > 0:
+        return jsonify({"success": False,
+                        "message": "Bu kalem üretimden gelen ürünle doğrulanmış — raftan karşılanamaz."}), 400
+    qty = sum(int(u.get("quantity", 1) or 1) for u in karsilanan)
+    raf_hedef = _norm_raf(raf_kodu)
+    rec = next((r for r in RafUrun.query.filter(RafUrun.urun_barkodu == bc, RafUrun.adet > 0)
+                if _norm_raf(r.raf_kodu) == raf_hedef), None)
+    if not rec or (rec.adet or 0) < qty:
+        mevcut = (rec.adet or 0) if rec else 0
+        return jsonify({"success": False,
+                        "message": f"{raf_kodu} rafında {bc} ürününden yeterli yok (var: {mevcut}, gerekli: {qty})."}), 400
+
+    # Kalemi üretim kaydından çıkar → siparişin 'raftan' kalemi olur; düşümü
+    # mevcut raf okutma akışı yapar. Düşüm başarısızsa kayıt eski haline döner.
+    eski_details = kayit.details
+    kayit.details = json.dumps([u for u in details if _bc(u) != bc], ensure_ascii=False)
+    db.session.commit()
+    yanit = raf_okut(kayit_id)
+    if isinstance(yanit, tuple):
+        kayit = db.session.get(UretimSiparis, kayit_id)
+        kayit.details = eski_details
+        db.session.commit()
+        return yanit
+    logger.info(f"[URETIM] 📦 {kayit.order_number}: {bc} × {qty} raftan karşılandı ({rec.raf_kodu}), üretimden çıkarıldı")
+    # Üretilecek kalem kalmadıysa beklenecek üretim yok → Üretilenler'e geçer.
+    if not [u for u in details if _bc(u) != bc]:
+        kayit.uretildi = True
+        kayit.uretildi_at = datetime.utcnow()
+        db.session.commit()
+    _hareket_logla(f"kalem raftan karşılandı ({bc}, {rec.raf_kodu})", kayit)
+    raftan_karsilandi_bildir(kayit, karsilanan, rec.raf_kodu)
+    return yanit
 
 
 @uretim_bp.route("/api/urun-dogrula/<int:kayit_id>", methods=["POST"])

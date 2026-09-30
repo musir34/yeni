@@ -64,6 +64,7 @@ EVENT_COLORS = {
     'stok_yok_hatirlatma':   '#FD7E14',
     'uretim_siparis':        '#0D6EFD',
     'uretim_iptal':          '#DC3545',
+    'uretim_raftan':         '#FD7E14',
     'siparis_notu':          '#6F42C1',
 }
 
@@ -81,6 +82,7 @@ EVENT_TITLES = {
     'stok_yok_hatirlatma':   '📋 Stoksuz Bekleyen Siparişler',
     'uretim_siparis':        '🏭 Üretim Siparişi Geldi',
     'uretim_iptal':          '🛑 Üretim Siparişi İptal Edildi',
+    'uretim_raftan':         '📦 Üretim Siparişi Raftan Karşılandı',
     'siparis_notu':          '📝 Siparişe Not Eklendi',
 }
 

@@ -351,12 +351,26 @@ def apply_lifecycle_effect(
     sign = -1 if reason in (REASON_SHIP_OUT, REASON_PACK_OUT) else 1
     results: list[MovementResult] = []
 
+    # 🏭 Üretim siparişi kargolanırken: üretimden gelen kalem rafa hiç girmedi,
+    # üretim ekranında rafı okutulan kalem zaten düşüldü → ikisi de DÜŞÜLMEZ.
+    atla: set[str] = set()
+    if sign < 0:
+        from uretim_modu import kargoda_raftan_dusulmeyecekler
+        atla = kargoda_raftan_dusulmeyecekler(
+            order_number,
+            [normalize_barcode(it.get("barcode")) for it in items if it.get("barcode")],
+        )
+
     for it in items:
         bc = it.get("barcode")
         qty = int(it.get("quantity") or 1)
         if not bc or qty <= 0:
             continue
         norm = normalize_barcode(bc)
+        if norm in atla:
+            logger.info("[LEDGER] %s %s: üretim siparişi kalemi, raftan düşülmedi",
+                        order_number, norm)
+            continue
         idem = f"{order_number}:{cfrom or 'NEW'}->{cto}:{norm}:{reason}"
         results.append(
             record_movement(
