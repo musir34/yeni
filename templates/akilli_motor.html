@@ -201,7 +201,7 @@
                 <th>Yaşam <span class="th-tip" data-tip="Ürün yaşam döngüsü: Lansman, Yükseliş, Olgunluk, Düşüş, Ölü">!</span></th>
                 <th>BCG <span class="th-tip" data-tip="Portföy pozisyonu: Yıldız, Nakit İneği, Fırsatçı, Sorun">!</span></th>
                 <th>Aksiyon <span class="th-tip" data-tip="TUT: mevcut kademede kal, DÜŞÜR: alt kademeye geç, TASFİYE: en düşük fiyatla sat">!</span></th>
-                <th>Önerilen <span class="th-tip" data-tip="Motorun önerdiği kademe ve fiyat">!</span></th>
+                <th>Mevcut → Yeni <span class="th-tip" data-tip="Mevcut satış fiyatı → motorun önerdiği fiyat (kademe) ve aradaki fark">!</span></th>
                 <th>Skor <span class="th-tip" data-tip="7 modülün ağırlıklı puanı (0-100). Yüksek = daha iyi">!</span></th>
                 <th>Aylık Kâr Fark <span class="th-tip" data-tip="Öneri uygulanırsa aylık kâr değişimi">!</span></th>
                 <th>Sezon <span class="th-tip" data-tip="Rengin mevcut mevsime uyumu">!</span></th>
@@ -373,6 +373,7 @@ document.addEventListener('DOMContentLoaded', function(){
             const alarmBg=m.uretim_alarm==='kritik'?'background:#fde8e8;':'';
             const kalanColor=m.kalan_gun<30?'color:#e74c3c;font-weight:700':m.kalan_gun<60?'color:#f39c12':'';
             const skorW=Math.min(m.onerilen_skor,100);
+            const fiyatFark=Math.round(Number(m.onerilen_fiyat||0)-Number(m.guncel_tsf||0));
             const sezonIcon=m.sezon_uyum==='yuksek'?'☀️':m.sezon_uyum==='dusuk'?'❄️':'🔄';
 
             tr.innerHTML=`
@@ -389,7 +390,10 @@ document.addEventListener('DOMContentLoaded', function(){
                 <td><span class="badge-sm b-${m.yasam_asama==='olu'?'olu2':m.yasam_asama}">${yasamLabel[m.yasam_asama]||m.yasam_asama}</span></td>
                 <td>${m.bcg_icon}</td>
                 <td><span class="badge-sm b-${m.aksiyon==='TUT'?'tut':m.aksiyon==='DÜŞÜR'?'dusur':'tasfiye'}">${m.aksiyon==='TASFİYE'?'TASFİYE':m.aksiyon}</span></td>
-                <td><strong>K${m.onerilen_kademe}</strong> ${fm(m.onerilen_fiyat)}</td>
+                <td>
+                    <div><span style="color:#95a5a6">${fm(m.guncel_tsf)}</span> → <strong>${fm(m.onerilen_fiyat)}</strong> <small>(K${m.onerilen_kademe})</small></div>
+                    <div class="${fiyatFark>0?'pos':fiyatFark<0?'neg':'neu'}" style="font-size:.75rem">${fiyatFark>0?'+':''}${fm(fiyatFark)} TL</div>
+                </td>
                 <td>
                     <div style="font-size:.75rem">${m.onerilen_skor}</div>
                     <div style="background:#e0e0e0;border-radius:3px;height:5px;width:50px;margin:2px auto 0"><div class="skor-bar" style="background:${skorW>70?'#2ecc71':skorW>40?'#f39c12':'#e74c3c'};width:${skorW}%"></div></div>

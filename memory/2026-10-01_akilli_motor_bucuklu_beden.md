@@ -12,3 +12,8 @@
 - Test: tests/test_akilli_motor.py::test_extract_color_from_tariff_bucuklu_beden
 
 **Deploy:** `git pull && systemctl restart gullupanel.service`
+
+## Ek (aynı gün): Analiz tablosunda "Mevcut → Yeni" fiyat
+- `templates/akilli_motor.html`: "Önerilen" sütunu "Mevcut → Yeni" oldu; hücrede
+  `guncel_tsf → onerilen_fiyat (Kx)` ve altında TL farkı (pos/neg renkli). Veri zaten
+  satırda vardı (`guncel_tsf`), backend değişmedi.
