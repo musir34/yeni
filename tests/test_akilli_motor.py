@@ -74,6 +74,14 @@ class TestYardimcilar:
         assert _extract_color_from_tariff('0172-36-Bej Rugan', '0172', 36) == 'Bej Rugan'
         assert _extract_color_from_tariff('0172-36', '0172', 36) == 'Standart'
 
+    def test_extract_color_from_tariff_bucuklu_beden(self):
+        # Tarife BEDEN hücresi "39,5" (metin) ya da 39.5 (sayı) gelebilir; int() ile çökmemeli
+        assert _extract_color_from_tariff('0172-39,5 Siyah', '0172', '39,5') == 'Siyah'
+        assert _extract_color_from_tariff('0172-39,5 Siyah', '0172', 39.5) == 'Siyah'
+        assert _extract_color_from_tariff('0172-39.5 Siyah', '0172', '39,5') == 'Siyah'
+        assert _extract_color_from_tariff('0172-36 Siyah', '0172', 36.0) == 'Siyah'
+        assert _extract_color_from_tariff('0172-39,5', '0172', '39,5') == 'Standart'
+
 
 # ═══ Beklenen birim kâr ════════════════════════════════════════════════
 

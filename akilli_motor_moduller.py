@@ -106,18 +106,44 @@ def _extract_color_from_sku(sku: str, model: str, beden: str = '') -> str:
     return 'Standart'
 
 
+def _beden_to_str(beden) -> str:
+    """Tarife BEDEN hücresini SKU'daki yazımına çevirir.
+
+    36 / 36.0 / "36" → "36"; 39.5 / "39,5" / "39.5" → "39,5" (buçuklu beden,
+    stok kodunda virgülle yazılır). Sayı olmayan değer olduğu gibi döner.
+    """
+    if beden is None or not pd.notna(beden):
+        return ''
+    raw = str(beden).strip()
+    if not raw:
+        return ''
+    try:
+        num = float(raw.replace(',', '.'))
+    except ValueError:
+        return raw
+    if num.is_integer():
+        return str(int(num))
+    return raw.replace('.', ',')
+
+
 def _extract_color_from_tariff(sku: str, model_kodu: str, beden) -> str:
     """Tarife Excel'indeki SATICI STOK KODU'ndan renk çıkarır."""
     sku = str(sku).strip()
-    beden_str = str(int(beden)) if pd.notna(beden) else ''
-    prefix = f"{model_kodu}-{beden_str}"
-    if sku.startswith(prefix):
-        rest = sku[len(prefix):].lstrip(' -')
-        return rest if rest else 'Standart'
-    if beden_str and beden_str in sku:
-        idx = sku.index(beden_str) + len(beden_str)
-        rest = sku[idx:].lstrip(' -')
-        return rest if rest else 'Standart'
+    beden_str = _beden_to_str(beden)
+    # Buçuklu beden stok kodunda "39,5" ya da "39.5" yazılmış olabilir; ikisini de dene
+    beden_adaylari = [beden_str] if beden_str else []
+    if ',' in beden_str:
+        beden_adaylari.append(beden_str.replace(',', '.'))
+    for aday in beden_adaylari:
+        prefix = f"{model_kodu}-{aday}"
+        if sku.startswith(prefix):
+            rest = sku[len(prefix):].lstrip(' -')
+            return rest if rest else 'Standart'
+    for aday in beden_adaylari:
+        if aday in sku:
+            idx = sku.index(aday) + len(aday)
+            rest = sku[idx:].lstrip(' -')
+            return rest if rest else 'Standart'
     return 'Standart'
 
 
