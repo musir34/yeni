@@ -16,9 +16,9 @@
     <table class="table table-sm table-hover fn-table mb-0">
       <thead><tr><th>Ödeme</th><th>Hak ediş / Planlanan</th><th>Durum</th><th class="fn-num">Ödenen</th><th class="fn-num">Kalan</th><th></th></tr></thead>
       <tbody>
-      {% for d in durum %}
+      {% macro satir(d, sinif='') %}
         {% set k = d.kalem %}{% set o = d.odeme %}
-        <tr>
+        <tr class="{{ sinif }}">
           <td>{{ k.ad }}<div class="fn-mini">{{ d.etiket }}</div>{% if d.calisan %}<a class="fn-mini" href="{{ url_for('finans.cari_detay', cari_id=k.calisan_cari_id) }}">{{ k.calisan_cari.ad }} · Cari hesabı</a>{% endif %}</td>
           <td class="fn-num">{% if d.hak_tutar is not none %}{{ d.hak_tutar | tl_format }} ₺{% else %}<span class="fn-mini">Belirlenecek</span>{% endif %}</td>
           <td>{% if d.calisan and not d.hakedis %}<span class="badge bg-light text-dark">Planlandı</span>{% elif not d.bekleyen %}<span class="badge bg-success">Tamamlandı</span>{% elif d.odenen %}<span class="badge bg-warning text-dark">Kısmen ödendi</span>{% elif d.belirsiz %}<span class="badge bg-secondary">Tutar bekleniyor</span>{% else %}<span class="badge bg-warning text-dark">Bekliyor</span>{% endif %}</td>
@@ -37,9 +37,26 @@
             {% endif %}
           </td>
         </tr>
-      {% else %}
+      {% endmacro %}
+      {% if gruplar.aylik %}
+        <tr class="fn-grup table-light"><th colspan="6">📅 Aylıkçılar <span class="fn-mini fw-normal">({{ gruplar.aylik | length }} ödeme)</span></th></tr>
+        {% for d in gruplar.aylik %}{{ satir(d) }}{% endfor %}
+      {% endif %}
+      {% if gruplar.haftalar %}
+        <tr class="fn-grup table-light"><th colspan="6">🗓️ Haftalıkçılar <span class="fn-mini fw-normal">({{ gruplar.haftalar | length }} hafta)</span></th></tr>
+        {% for h in gruplar.haftalar %}
+        <tr class="fn-hafta" role="button" tabindex="0" data-bs-toggle="collapse" data-bs-target=".fn-hafta-{{ h.no }}" aria-expanded="{{ 'true' if h.acik else 'false' }}" title="Aç / kapat">
+          <td colspan="3"><span class="fn-ok">▶</span> <b>{{ h.no }}. Hafta</b> <span class="fn-mini">· {{ h.etiket }} · {{ h.satirlar | length }} kişi{% if h.bekleyen_adet %}, {{ h.bekleyen_adet }} bekliyor{% else %}, tamamlandı{% endif %}</span></td>
+          <td class="fn-num">{{ h.odenen | tl_format }} ₺</td>
+          <td class="fn-num">{{ h.kalan | tl_format }} ₺{% if h.belirsiz_adet %}<div class="fn-mini">+ {{ h.belirsiz_adet }} tutar belirlenecek</div>{% endif %}</td>
+          <td></td>
+        </tr>
+        {% for d in h.satirlar %}{{ satir(d, 'collapse fn-hafta-' ~ h.no ~ (' show' if h.acik else '')) }}{% endfor %}
+        {% endfor %}
+      {% endif %}
+      {% if not durum %}
         <tr><td colspan="6" class="text-muted p-3">Bu dönem için ödeme planı yok. Aşağıdan ekleyin.</td></tr>
-      {% endfor %}
+      {% endif %}
       </tbody>
       {% if durum %}<tfoot><tr class="fw-bold"><td colspan="3">Toplam</td><td class="fn-num">{{ odenen | tl_format }} ₺</td><td class="fn-num">{{ bekleyen | tl_format }} ₺{% if belirsiz_adet %}<div class="fn-mini">+ {{ belirsiz_adet }} tutar belirlenecek</div>{% endif %}</td><td></td></tr></tfoot>{% endif %}
     </table>

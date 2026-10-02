@@ -15,6 +15,12 @@
   .fn-pos { color: #198754; font-weight: 600; }
   .fn-neg { color: #dc3545; font-weight: 600; }
   .fn-mini { font-size: .8rem; color: #6c757d; }
+  .fn-grup th { font-size: .95rem; padding-top: .6rem; }
+  .fn-hafta { cursor: pointer; }
+  .fn-hafta .fn-ok { display: inline-block; transition: transform .15s; font-size: .75rem; }
+  .fn-hafta[aria-expanded="true"] .fn-ok { transform: rotate(90deg); }
+  tr.collapse:not(.show) { display: none; }
+  tr.collapsing { display: table-row; height: auto; transition: none; }  /* tr yükseklik animasyonu titrer */
 </style>
 <div class="d-flex align-items-center flex-wrap mb-3 gap-2">
   <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-home"></i> Anasayfa</a>

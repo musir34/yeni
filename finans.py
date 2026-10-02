@@ -278,6 +278,7 @@ def ana_gider():
                                                       FinansAnaGiderKalem.sira,
                                                       FinansAnaGiderKalem.ad).all()
     return render_template('finans_ana_gider.html', donem=donem, durum=durum,
+                           gruplar=fs.ana_gider_gruplari(durum, _bugun_ist()),
                            odenen=odenen, bekleyen=bekleyen, tum_kalemler=tum_kalemler,
                            kategoriler=fs.kategoriler('ana_gider'), bugun=_bugun_ist(),
                            belirsiz_adet=belirsiz_adet,

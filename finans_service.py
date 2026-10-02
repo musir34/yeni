@@ -785,6 +785,31 @@ def donem_ana_gider_durumu(donem: str) -> list:
     return sorted(sonuc, key=lambda d: (d['donem'], d['kalem'].sira, d['kalem'].ad))
 
 
+def ana_gider_gruplari(durum: list, bugun: str) -> dict:
+    """Düzenli Ödemeler listesi: aylıkçılar ayrı, haftalıkçılar vade gününe göre 1./2./3. hafta grupları.
+    Hafta ara toplamları satırlardan; 'acik' = bugünü kapsayan hafta (son geçen vade; ay gelecekteyse
+    ilk hafta, ay geçmişteyse hiçbiri)."""
+    aylik = [d for d in durum if len(d['donem']) == 7]
+    haftalar = []
+    for d in durum:
+        if len(d['donem']) != 10:
+            continue
+        if not haftalar or haftalar[-1]['donem'] != d['donem']:
+            haftalar.append({'no': len(haftalar) + 1, 'donem': d['donem'], 'etiket': donem_etiket(d['donem']),
+                             'satirlar': [], 'odenen': Decimal('0'), 'kalan': Decimal('0'),
+                             'belirsiz_adet': 0, 'bekleyen_adet': 0, 'acik': False})
+        h = haftalar[-1]
+        h['satirlar'].append(d)
+        h['odenen'] += d['odenen'] or 0
+        h['kalan'] += d['kalan'] or 0
+        h['belirsiz_adet'] += 1 if d['belirsiz'] else 0
+        h['bekleyen_adet'] += 1 if d['bekleyen'] else 0
+    if haftalar and bugun[:7] <= haftalar[0]['donem'][:7]:
+        gecenler = [h for h in haftalar if h['donem'] <= bugun]
+        (gecenler[-1] if gecenler else haftalar[0])['acik'] = True
+    return {'aylik': aylik, 'haftalar': haftalar}
+
+
 def _donem_toplam(donem: str, tur: str) -> Decimal:
     bas, son = donem_utc_araligi(donem)
     v = (db.session.query(func.coalesce(func.sum(FinansIslem.tutar), 0))
