@@ -9,6 +9,7 @@ Hesap kuralları (2026-09-30, Komutan kararı):
 - Kargo faturası 4-6 hafta gecikir: önce tahmin yazılır, fatura gelince FARK faturanın
   geldiği haftaya işlenir (geçmiş haftaların rakamı değişmez).
 """
+import json
 import logging
 import threading
 from collections import defaultdict
@@ -320,9 +321,15 @@ def senkronla(istemci=None, simdi=None, nabiz=None):
     son = ayar.oku('son_senkron')
     bas = (datetime.fromisoformat(son) - timedelta(days=ayar.ORTUSME_GUN) if son
            else datetime.combine(ayar.BASLANGIC, time.min))
+    # Tedarikçiye sonradan etiketlenen model: geçmişi baştan taranır (eski satışları dahil olsun).
+    modeller = {m for m, _, _ in barkodlar.values()}
+    yeni_modeller = sorted(modeller - set(json.loads(ayar.oku('bilinen_modeller') or '[]')))
+    if son and yeni_modeller:
+        bas = datetime.combine(ayar.BASLANGIC, time.min)
+        logger.info('Alissa: yeni model(ler) %s — geçmiş baştan taranıyor', yeni_modeller)
     tutarlar = ayar.tutarlar()
 
-    ozet = {'kargo_kalem': kargo_kalem_kaydet(istemci, bas, simdi)}
+    ozet = {'kargo_kalem': kargo_kalem_kaydet(istemci, bas, simdi), 'yeni_modeller': yeni_modeller}
     db.session.commit()   # ham fatura kalemleri: sonraki adım hata verse de tekrar çekilmesin
     nabiz()
     satirlar = list(istemci.settlements(bas, simdi))
@@ -334,6 +341,7 @@ def senkronla(istemci=None, simdi=None, nabiz=None):
     siparis_bas = max(bas, simdi - timedelta(days=SIPARIS_GERI_GUN))
     ozet['siparis'] = siparis_isle(list(istemci.siparis_paketleri(siparis_bas, simdi)), barkodlar)
     ayar.yaz('son_senkron', simdi.isoformat(timespec='seconds'))
+    ayar.yaz('bilinen_modeller', json.dumps(sorted(modeller)))
     db.session.commit()
     logger.info('Alissa senkron tamam: %s', ozet)
     return ozet

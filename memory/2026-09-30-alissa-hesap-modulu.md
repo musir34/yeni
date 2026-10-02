@@ -48,3 +48,10 @@ systemctl restart gullupanel.service
 - Tutar girişinde `1.500` artık bin beş yüz okunur (önce 1,50 okunuyordu).
 - Bilinen sınır: karma sipariş iki pakette, paketler farklı senkronlarda teslim olursa 100 TL masrafın
   tamamı Alissa'ya yazılabilir (nadir; en çok 100 TL/sipariş).
+
+## 2026-10-02 — sonradan etiketlenen model
+Komutan 014 modelini tedarikçiye sonradan ekledi. Kural: etiketlenen yeni model geçmişiyle birlikte
+dahil olmalı. Senkron artık bilinen model listesini (`alissa_ayar.bilinen_modeller`) tutar; listede
+olmayan model görürse o çalışmada pencereyi 20 gün yerine başlangıçtan (10 Mayıs) açar. Defter tekil
+olduğu için eski kayıtlar ikinci kez yazılmaz. Eski satışlar kendi teslim haftalarına girer; ödenmiş
+haftaların neti artar, fark bakiyeye yansır. Test: test_sonradan_etiketlenen_model_gecmisiyle_dahil_olur.

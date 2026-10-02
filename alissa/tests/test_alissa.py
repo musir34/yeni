@@ -13,6 +13,7 @@ from models import db
 from alissa import hesap, senkron
 from alissa.models import TABLOLAR, AlissaHareket, AlissaOdeme
 from alissa.routes import _tutar_oku
+from alissa.trendyol import utc_ms_ist
 
 BARKODLAR = {'B1': ('160', 'Krem', '38'), 'B2': ('4480', 'Pembe', '37')}
 PZT = datetime(2026, 9, 7, 9)            # Pazartesi 12:00 İstanbul (kayıtlar UTC)
@@ -35,7 +36,7 @@ class SahteIstemci:
         self.finans, self.faturalar, self.paketler = [], {}, []
 
     def settlements(self, bas, son):
-        return list(self.finans)
+        return [f for f in self.finans if bas <= utc_ms_ist(f['transactionDate']) < son]
 
     def kargo_faturalari(self, bas, son):
         return [(no, tarih) for no, (tarih, _) in self.faturalar.items()]
@@ -190,6 +191,22 @@ class AlissaTest(unittest.TestCase):
         ayar.yaz('son_deneme', senkron.simdi_ist().isoformat(timespec='seconds'))
         db.session.commit()
         self.assertFalse(senkron.eskidi())
+
+    def test_sonradan_etiketlenen_model_gecmisiyle_dahil_olur(self):
+        eski = PZT - timedelta(days=60)     # senkron penceresinin (20 gün) çok dışında
+        self.istemci.finans = [kayit(1, 'satis', 'S1', 'B1', PZT, 1000, 200),
+                               kayit(2, 'satis', 'S9', 'B9', eski, 700, 100)]   # B9 henüz etiketsiz
+        self.senkron()
+        self.assertEqual(AlissaHareket.query.filter_by(order_number='S9').count(), 0)
+        self.yama.stop()
+        self.yama = patch('alissa.senkron.alissa_barkodlar',
+                          return_value=dict(BARKODLAR, B9=('014', 'Siyah', '37')))
+        self.yama.start()
+        ozet = self.senkron(gun_sonra=2)                      # model 014 yeni etiketlendi
+        self.assertEqual(ozet['yeni_modeller'], ['014'])
+        h = self.hafta(hesap.hafta_basi(eski))
+        self.assertEqual((h['satis_adet'], h['satis']), (1, Decimal('700')))
+        self.assertEqual(self.senkron(gun_sonra=3)['yeni_modeller'], [])
 
     def test_tutar_oku(self):
         self.assertEqual(_tutar_oku('1.234,56'), Decimal('1234.56'))
