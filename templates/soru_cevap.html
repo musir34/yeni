@@ -1025,7 +1025,7 @@
   motorYukle();
   talimatYukle();
   setInterval(() => {
-    const aktifDuzenleme = list.querySelector('.qna-answer-text:focus, .qna-answer-text[data-dirty="true"]');
+    const aktifDuzenleme = list.querySelector('.qna-answer-text:focus, .qna-answer-text[data-dirty="true"], details.qna-revise[open]');
     if (curStatus === 'WAITING_FOR_ANSWER' && curPage === 1 && !aktifDuzenleme) load();
     else refreshBadge();
   }, 30000);

@@ -31,3 +31,10 @@ AI'a "şunu düzelt" diyebileceği bir alan yoktu (elle düzeltmek zorundaydı).
      dersi yazılır (`answer_question` içinde). Vault zaten her taslak promptuna giriyor.
 
 **Deploy:** `git pull && systemctl restart gullupanel.service` (migration yok).
+
+## 2026-10-04 — "AI ile bu cevabı düzenle" yazarken kapanıyordu
+- Sebep: `templates/soru_cevap.html` sonundaki 30 sn'lik otomatik yenileme yalnız cevap kutusunu
+  (odak / dirty) koruyordu; düzeltme talimatı kutusuna yazarken liste yeniden çiziliyor, açılır
+  bölüm kapanıp yazılan talimat siliniyordu.
+- Çözüm: koruma seçicisine `details.qna-revise[open]` eklendi (tek satır). Düzenleme bölümü
+  açıkken liste yenilenmez, yalnız bekleyen sayısı güncellenir. DB değişikliği yok, deploy bekliyor.
