@@ -393,8 +393,22 @@ def generate_instagram_drafts_async(conv_ids: list[int], talimat: str | None = N
 
 
 def _instagram_comment_draft_prompt(yorum, talimat: str | None = None,
-                                    mevcut_metin: str | None = None) -> str:
+                                    mevcut_metin: str | None = None,
+                                    urun_bilgisi: str | None = None) -> str:
     from trendyol_qna.instagram_dm import TEXT_MAX
+
+    if urun_bilgisi:
+        urun_kismi = (
+            f"\n{urun_bilgisi}\n"
+            "Fiyat sorulduysa fiyatı bu listeden AYNEN yaz (yuvarlama, tahmin etme). Numara/stok "
+            "sorulduysa listedeki stok durumuna göre cevapla. Mesajın sonuna ürün sayfası bağlantısını "
+            "'Detaylar ve sipariş için:' diyerek ekle. Listede olmayan bir bilgi için söz verme.\n"
+        )
+    else:
+        urun_kismi = (
+            "\nBu gönderinin hangi ürüne ait olduğu panelde ONAYLANMAMIŞ. Fiyat, stok ya da ürün "
+            "bağlantısı YAZMA; müşteriden hangi modeli/rengi/numarayı sorduğunu netleştirmesini iste.\n"
+        )
 
     prompt = (
         "Bu soru Trendyol'dan DEĞİL, Instagram gönderimizin altına yazılmış bir yorumdan geldi. "
@@ -404,8 +418,7 @@ def _instagram_comment_draft_prompt(yorum, talimat: str | None = None,
         f"Yorumu yazan: {'@' + yorum.username if yorum.username else 'bilinmiyor'}\n"
         f"Gönderinin açıklaması (hangi üründen bahsedildiği buradan anlaşılır):\n"
         f"{(yorum.media_caption or '(açıklama yok)')[:1200]}\n"
-        "Stok/fiyat gerekiyorsa mcp__gulludb__query ile bakabilirsin; ürünü kesin belirleyemezsen "
-        "söz verme, müşteriden model/renk/numara netleştirmesini iste.\n"
+        + urun_kismi +
         f"\nMüşteri yorumu:\n{yorum.text}\n\n"
     )
     if talimat:
@@ -441,8 +454,16 @@ def generate_instagram_comment_draft(yorum_id: int, talimat: str | None = None,
     yorum.ai_draft_at = datetime.now(timezone.utc)
     db.session.commit()
 
+    from trendyol_qna.instagram_urun import urun_baglami
+    try:
+        urun_bilgisi = urun_baglami(yorum.media_id)
+    except Exception:
+        db.session.rollback()
+        logger.exception("[QNA-AI] ürün bilgisi okunamadı (yorum %s)", yorum_id)
+        urun_bilgisi = None
     taslak = _run_ai(_instagram_comment_draft_prompt(yorum, talimat=talimat,
-                                                     mevcut_metin=mevcut_metin))
+                                                     mevcut_metin=mevcut_metin,
+                                                     urun_bilgisi=urun_bilgisi))
     if taslak:
         yorum.ai_draft = taslak[:TEXT_MAX]
         yorum.ai_draft_status = "ready"

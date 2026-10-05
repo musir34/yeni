@@ -1662,6 +1662,29 @@ class InstagramComment(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), index=True)  # yorumun yazıldığı an
 
 
+class InstagramMediaProduct(db.Model):
+    """Instagram gönderisi ↔ site (Shopify) ürünü bağı.
+
+    Yorumlar ürünü söylemez ("fiyat nedir?"); gönderi bir kez ürüne bağlanır,
+    o gönderinin yorumlarına AI taslağı ürünün canlı fiyat/stok/bağlantısıyla
+    hazırlanır. confirmed=False → AI önerisi, kullanıcı onayı bekliyor
+    (onaysız bağ taslağa fiyat olarak girmez).
+
+    Tablo oluşturma: trendyol_qna/instagram_dm.py ensure_table_exists (additive).
+    """
+    __tablename__ = 'instagram_media_products'
+
+    id = db.Column(db.Integer, primary_key=True)
+    media_id = db.Column(db.String(64), unique=True, nullable=False)
+    shopify_product_id = db.Column(db.String(32), nullable=False)
+    title = db.Column(db.String(300), default='')
+    url = db.Column(db.String(500), default='')
+    color = db.Column(db.String(120), default='')      # '' = ürünün tüm renkleri
+    confirmed = db.Column(db.Boolean, default=False)
+    updated_by = db.Column(db.String(120))
+    updated_at = db.Column(db.DateTime(timezone=True))
+
+
 class MotorOneriLog(db.Model):
     """Akıllı motor öneri geçmişi — geri besleme döngüsü.
 

@@ -34,7 +34,8 @@ import requests
 from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import IntegrityError
 
-from models import db, InstagramComment, InstagramConversation, InstagramMessage, PlatformConfig
+from models import (db, InstagramComment, InstagramConversation, InstagramMediaProduct,
+                    InstagramMessage, PlatformConfig)
 
 logger = logging.getLogger(__name__)
 
@@ -640,6 +641,7 @@ def sync_comments() -> int:
         "limit": YORUM_GONDERI_SAYISI})
     simdi = _simdi()
     yeni = 0
+    yeni_yorumlu: list[str] = []
     for gonderi in liste.get("data") or []:
         mid = str(gonderi.get("id") or "")
         try:
@@ -688,6 +690,7 @@ def sync_comments() -> int:
             ))
             if not yanitladik:
                 yeni += 1
+                yeni_yorumlu.append(mid)
         try:
             db.session.commit()
         except IntegrityError:
@@ -695,7 +698,27 @@ def sync_comments() -> int:
             continue
         with _yorum_kilit:
             _yorum_sayilari[mid] = sayi
+    _yeni_yorum_sonrasi(list(dict.fromkeys(yeni_yorumlu)))
     return yeni
+
+
+def _yeni_yorum_sonrasi(media_ids: list[str]) -> None:
+    """Yeni yorum düşen gönderiler: ürünü bağlıysa taslak üret, değilse AI ürün önersin."""
+    if not media_ids:
+        return
+    try:
+        from trendyol_qna import instagram_urun
+        onerilecek = []
+        for media_id in media_ids:
+            bag = instagram_urun.bagli_urun(media_id)
+            if bag is None:
+                onerilecek.append(media_id)
+            elif bag.confirmed:
+                instagram_urun.taslaklari_uret_async(media_id)
+        instagram_urun.oner_async(onerilecek)
+    except Exception:
+        db.session.rollback()
+        logger.exception("[INSTAGRAM] yeni yorum sonrası işler başlatılamadı")
 
 
 def ozel_yanit_bitisi(yorum: InstagramComment) -> datetime | None:
@@ -793,7 +816,7 @@ def new_comment_count() -> int:
 
 def ensure_table_exists() -> None:
     """Tablolar yoksa oluştur (prod'da alembic yok — ShopifyQuestion deseni)."""
-    for model in (InstagramConversation, InstagramMessage, InstagramComment):
+    for model in (InstagramConversation, InstagramMessage, InstagramComment, InstagramMediaProduct):
         try:
             model.__table__.create(bind=db.engine, checkfirst=True)
         except Exception:

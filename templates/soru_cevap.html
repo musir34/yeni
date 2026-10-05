@@ -401,6 +401,25 @@
   .qna-source-tag { margin-left:5px; font-size:.68rem; font-weight:700; letter-spacing:.02em; color:var(--qna-muted,#7a7f87); }
   .qna-source--yorum { display:inline-flex; align-items:center; width:auto; padding:0 9px; }
   .qna-yorum-send,.qna-yorum-ignore { white-space:nowrap; }
+  .qna-urun { margin:14px 0 0; padding:11px 12px; border:1px dashed var(--qna-line,#e6e7ea); border-radius:12px; font-size:.84rem; }
+  .qna-urun--onayli { border-style:solid; background:#f5fbf8; border-color:#dfeee7; }
+  .qna-urun--oneri { background:#fff8ec; border-color:#f3dcae; }
+  .qna-urun-head { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  .qna-urun-head strong { overflow-wrap:anywhere; }
+  .qna-urun-btn { padding:4px 10px; border:1px solid var(--qna-line,#e6e7ea); border-radius:9px; background:var(--qna-card,#fff);
+    color:inherit; font-size:.76rem; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .qna-urun-btn--ok { background:#1f8f5f; border-color:#1f8f5f; color:#fff; }
+  .qna-urun-panel { margin-top:8px; }
+  .qna-urun-panel > summary { cursor:pointer; font-size:.76rem; font-weight:600; color:var(--qna-muted,#7a7f87); }
+  .qna-urun-ara { width:100%; margin:8px 0; padding:8px 11px; border:1px solid var(--qna-line,#e6e7ea); border-radius:10px;
+    background:var(--qna-card,#fff); color:inherit; font-size:.86rem; }
+  .qna-urun-sonuc { display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto; }
+  .qna-urun-satir { padding:8px 10px; border:1px solid var(--qna-line,#e6e7ea); border-radius:10px; }
+  .qna-urun-satir b { display:block; font-size:.82rem; overflow-wrap:anywhere; }
+  .qna-urun-renkler { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  html.gs-dark .qna-urun--onayli { background:#182720; border-color:#294438; }
+  html.gs-dark .qna-urun--oneri { background:#38271b; border-color:#5a4124; }
+  html.gs-dark .qna-urun-btn,html.gs-dark .qna-urun-ara { background:#23252b; }
   .qna-note-label { display:block; margin:10px 0 4px; font-size:.72rem; font-weight:700; letter-spacing:.04em;
     text-transform:uppercase; color:var(--qna-muted,#7a7f87); }
   .qna-note-input { width:100%; padding:8px 11px; border:1px solid var(--qna-line,#e6e7ea); border-radius:11px;
@@ -790,6 +809,37 @@
       </article>`;
   }
 
+  function yorumUrunHtml(s, key) {
+    const u = s.urun;
+    const panel = `
+      <details class="qna-urun-panel">
+        <summary><i class="bi bi-search"></i> ${u ? 'Ürünü değiştir' : 'Ürün bağla'}</summary>
+        <input type="search" class="qna-urun-ara" data-id="${key}" data-qid="${s.id}" maxlength="80"
+               aria-label="Site ürünü ara" placeholder="Ürün adı ya da model kodu yazın…">
+        <div class="qna-urun-sonuc" data-id="${key}"><span class="qna-meta">En az 2 harf yazın.</span></div>
+      </details>`;
+    if (!u) {
+      return `<div class="qna-urun">
+        <div class="qna-urun-head"><i class="bi bi-tag"></i> <span>Bu gönderi henüz bir ürüne bağlı değil; taslak fiyat yazmaz.</span></div>
+        ${panel}</div>`;
+    }
+    const ad = `${esc(u.title)}${u.renk ? ' · ' + esc(u.renk) : ''}`;
+    const link = u.url ? ` <a href="${esc(u.url)}" target="_blank" rel="noopener noreferrer" title="Ürün sayfasını aç"><i class="bi bi-box-arrow-up-right"></i></a>` : '';
+    if (u.onayli) {
+      return `<div class="qna-urun qna-urun--onayli">
+        <div class="qna-urun-head"><i class="bi bi-tag-fill"></i> <span>Ürün:</span> <strong>${ad}</strong>${link}</div>
+        ${panel}</div>`;
+    }
+    return `<div class="qna-urun qna-urun--oneri">
+      <div class="qna-urun-head"><i class="bi bi-stars"></i> <span>AI önerisi:</span> <strong>${ad}</strong>${link}
+        <button class="qna-urun-btn qna-urun-btn--ok qna-urun-sec" data-qid="${s.id}" data-pid="${esc(u.product_id)}" data-renk="${esc(u.renk)}">
+          <i class="bi bi-check2"></i> Doğru, onayla
+        </button>
+      </div>
+      <div class="qna-meta" style="margin-top:6px">Onaylayana kadar taslak fiyat ve bağlantı yazmaz.</div>
+      ${panel}</div>`;
+  }
+
   function instagramYorumCardHtml(s) {
     const key = 'y' + s.id;
     const waiting = s.status === 'WAITING_FOR_ANSWER';
@@ -915,10 +965,52 @@
             </div>
             <span class="qna-section-label">Müşteri yorumu</span>
             <p class="qna-question">${esc(s.text)}</p>
+            ${waiting ? yorumUrunHtml(s, key) : ''}
           </section>
           ${answer}
         </div>
       </article>`;
+  }
+
+  async function urunBagla(btn) {
+    btn.disabled = true;
+    try {
+      const r = await fetch('/soru-cevap/api/instagram-yorum/urun-bagla', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-Requested-With': 'fetch'},
+        body: JSON.stringify({id: +btn.dataset.qid, product_id: btn.dataset.pid, renk: btn.dataset.renk || ''})
+      });
+      const d = await r.json();
+      if (!d.ok) { alert(d.hata || 'Ürün bağlanamadı.'); btn.disabled = false; return; }
+      load();
+    } catch (e) { alert('Sunucuya ulaşılamadı.'); btn.disabled = false; }
+  }
+
+  let urunAraT;
+  function urunAra(input) {
+    clearTimeout(urunAraT);
+    const kutu = list.querySelector(`.qna-urun-sonuc[data-id="${input.dataset.id}"]`);
+    const q = input.value.trim();
+    if (q.length < 2) { kutu.innerHTML = '<span class="qna-meta">En az 2 harf yazın.</span>'; return; }
+    urunAraT = setTimeout(async () => {
+      kutu.innerHTML = '<span class="qna-meta"><span class="spinner-border spinner-border-sm"></span> Aranıyor…</span>';
+      try {
+        const r = await fetch('/soru-cevap/api/instagram-yorum/urun-ara?q=' + encodeURIComponent(q), {cache: 'no-store'});
+        const d = await r.json();
+        if (!d.ok) { kutu.innerHTML = `<span class="qna-meta">${esc(d.hata || 'Arama yapılamadı.')}</span>`; return; }
+        if (!d.urunler.length) { kutu.innerHTML = '<span class="qna-meta">Sitede eşleşen aktif ürün yok.</span>'; return; }
+        const para = f => f == null ? '' : ' — ' + Number(f).toLocaleString('tr-TR', {minimumFractionDigits: 2}) + ' TL';
+        kutu.innerHTML = d.urunler.map(u => {
+          const renkler = u.renkler.filter(x => x.renk);
+          const sec = (renk, etiket) => `<button class="qna-urun-btn qna-urun-sec" data-qid="${input.dataset.qid}" data-pid="${esc(u.id)}" data-renk="${esc(renk)}">${etiket}</button>`;
+          return `<div class="qna-urun-satir"><b>${esc(u.title)}</b>
+            <div class="qna-urun-renkler">${renkler.length
+              ? renkler.map(x => sec(x.renk, esc(x.renk) + para(x.fiyat))).join('') + (renkler.length > 1 ? sec('', 'Tüm renkler') : '')
+              : sec('', 'Bu ürünü bağla' + para((u.renkler[0] || {}).fiyat))}</div></div>`;
+        }).join('');
+        kutu.querySelectorAll('.qna-urun-sec').forEach(b => b.addEventListener('click', () => urunBagla(b)));
+      } catch (e) { kutu.innerHTML = '<span class="qna-meta">Sunucuya ulaşılamadı.</span>'; }
+    }, 350);
   }
 
   async function load() {
@@ -1002,6 +1094,8 @@
     list.querySelectorAll('.qna-send-btn:not(.qna-shopify-send):not(.qna-wa-btn):not(.qna-instagram-send):not(.qna-yorum-send)').forEach(b => b.addEventListener('click', () => send(b)));
     list.querySelectorAll('.qna-yorum-send').forEach(b => b.addEventListener('click', () => sendYorum(b, false)));
     list.querySelectorAll('.qna-yorum-ignore').forEach(b => b.addEventListener('click', () => sendYorum(b, true)));
+    list.querySelectorAll('.qna-urun-sec').forEach(b => b.addEventListener('click', () => urunBagla(b)));
+    list.querySelectorAll('.qna-urun-ara').forEach(i => i.addEventListener('input', () => urunAra(i)));
     list.querySelectorAll('.qna-instagram-send').forEach(b => b.addEventListener('click', () => sendInstagram(b)));
     list.querySelectorAll('.qna-thread').forEach(t => { t.scrollTop = t.scrollHeight; });
     list.querySelectorAll('.qna-shopify-send').forEach(b => b.addEventListener('click', () => sendShopify(b, false)));
@@ -1377,7 +1471,7 @@
   motorYukle();
   talimatYukle();
   setInterval(() => {
-    const aktifDuzenleme = list.querySelector('.qna-answer-text:focus, .qna-answer-text[data-dirty="true"], .qna-note-input:focus, details.qna-revise[open]');
+    const aktifDuzenleme = list.querySelector('.qna-answer-text:focus, .qna-answer-text[data-dirty="true"], .qna-note-input:focus, details.qna-revise[open], details.qna-urun-panel[open]');
     if (curStatus === 'WAITING_FOR_ANSWER' && curPage === 1 && !aktifDuzenleme) load();
     else refreshBadge();
   }, 30000);

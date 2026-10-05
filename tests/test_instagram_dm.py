@@ -404,6 +404,8 @@ def yorum_api(monkeypatch):
 
     monkeypatch.setattr(instagram_dm, "_api", sahte_api)
     monkeypatch.setattr(instagram_dm, "_ben", None)
+    # Yeni yorum sonrası işler (AI önerisi/taslak) gerçek uygulamayı yükler — testte yalnız kaydedilir
+    monkeypatch.setattr(instagram_dm, "_yeni_yorum_sonrasi", lambda ids: durum.setdefault("sonrasi", []).append(ids))
     instagram_dm._yorum_sayilari.clear()
     db.session.query(InstagramComment).delete()
     db.session.commit()
@@ -507,6 +509,130 @@ def test_yorum_kart_sozlugu():
     assert kart["source"] == "instagram_yorum" and kart["status"] == "WAITING_FOR_ANSWER"
     assert kart["user_name"] == "@ayse.y" and kart["product_name"] == "Topuklu sandalet"
     assert kart["ozel_yanit_bitis"] and kart["not_varsayilan"] == instagram_dm.YORUM_NOTU_VARSAYILAN
+
+
+# ── Gönderi ↔ ürün bağı ──────────────────────────────────────────────────────
+
+from models import InstagramMediaProduct  # noqa: E402
+from trendyol_qna import instagram_urun  # noqa: E402
+
+with app.app_context():
+    InstagramMediaProduct.__table__.create(bind=db.engine, checkfirst=True)
+
+URUN_DUGUMU = {
+    "legacyResourceId": "8814245511346", "title": "Timsah Desenli Tokalı Loafer", "handle": "03155-loafer",
+    "status": "ACTIVE", "onlineStoreUrl": "https://www.gullushoes.com/products/03155-loafer",
+    "featuredImage": {"url": "https://cdn.shopify.com/x.jpg"},
+    "variants": {"nodes": [
+        {"title": "Bej Leopar / 36", "price": "1449.99", "compareAtPrice": "1899.99", "inventoryQuantity": 4, "availableForSale": True},
+        {"title": "Bej Leopar / 37", "price": "1449.99", "compareAtPrice": "1899.99", "inventoryQuantity": 0, "availableForSale": False},
+        {"title": "Siyah / 36", "price": "1349.61", "compareAtPrice": None, "inventoryQuantity": 2, "availableForSale": True},
+    ]},
+}
+
+
+@pytest.fixture
+def urun_ortami(monkeypatch):
+    """Sahte Shopify + boş bağ tablosu."""
+    def sahte_shopify(query, variables):
+        if "product(id:" in query:
+            return {"product": URUN_DUGUMU if variables["id"].endswith("/8814245511346") else None}
+        return {"products": {"nodes": [URUN_DUGUMU], "pageInfo": {"hasNextPage": False}}}
+
+    monkeypatch.setattr(instagram_urun, "_shopify", sahte_shopify)
+    monkeypatch.setattr(instagram_urun, "_katalog", (0.0, []))
+    for m in (InstagramMediaProduct, InstagramComment):
+        db.session.query(m).delete()
+    db.session.add(InstagramComment(comment_id="u1", media_id="g1", username="ayse.y", text="Fiyat nedir?",
+                                    media_caption="Tokalı loafer dokunuşu, bej leopar", status="new",
+                                    created_at=datetime.now(timezone.utc)))
+    db.session.commit()
+
+
+def test_urun_arama_renk_fiyat_ve_stogu_sadelestirir(urun_ortami):
+    urun = instagram_urun.urun_ara("loafer")[0]
+    assert urun["id"] == "8814245511346" and urun["url"].endswith("/products/03155-loafer")
+    renkler = {r["renk"]: r for r in urun["renkler"]}
+    assert renkler["Bej Leopar"]["fiyat"] == 1449.99 and renkler["Bej Leopar"]["eski_fiyat"] == 1899.99
+    assert [b["stokta"] for b in renkler["Bej Leopar"]["bedenler"]] == [True, False]
+    assert renkler["Siyah"]["eski_fiyat"] is None
+    assert instagram_urun.urun_ara("x") == []          # tek harfle Shopify'a gidilmez
+
+
+def test_onaysiz_oneri_taslaga_fiyat_olarak_girmez(urun_ortami):
+    assert instagram_urun.bagla("g1", "8814245511346", "Bej Leopar", confirmed=False)["ok"] is True
+    assert instagram_urun.urun_baglami("g1") is None
+    yorum = InstagramComment.query.filter_by(comment_id="u1").one()
+    from trendyol_qna.qna_ai import _instagram_comment_draft_prompt
+    prompt = _instagram_comment_draft_prompt(yorum, urun_bilgisi=None)
+    assert "ONAYLANMAMIŞ" in prompt and "1.449,99" not in prompt
+
+
+def test_onayli_bag_canli_fiyat_stok_ve_baglantiyi_verir(urun_ortami):
+    assert instagram_urun.bagla("g1", "8814245511346", "Bej Leopar", username="ayse")["ok"] is True
+    bilgi = instagram_urun.urun_baglami("g1")
+    assert "Timsah Desenli Tokalı Loafer" in bilgi
+    assert "https://www.gullushoes.com/products/03155-loafer" in bilgi
+    assert "Bej Leopar: 1.449,99 TL (indirimli; eski fiyat 1.899,99 TL)" in bilgi
+    assert "stokta olan numaralar: 36" in bilgi and "tükenenler: 37" in bilgi
+    assert "Siyah" not in bilgi                         # yalnız bağlanan renk
+    yorum = InstagramComment.query.filter_by(comment_id="u1").one()
+    from trendyol_qna.qna_ai import _instagram_comment_draft_prompt
+    prompt = _instagram_comment_draft_prompt(yorum, urun_bilgisi=bilgi)
+    assert "1.449,99 TL" in prompt and "AYNEN" in prompt and "ONAYLANMAMIŞ" not in prompt
+
+
+def test_baglama_dogrulamalari(urun_ortami):
+    assert instagram_urun.bagla("g1", "999", "")["ok"] is False                    # sitede yok
+    assert instagram_urun.bagla("g1", "8814245511346", "Mor")["ok"] is False       # üründe olmayan renk
+    assert instagram_urun.bagla("g1", "8814245511346", "", username="ayse")["ok"] is True
+    assert instagram_urun.bagli_urun("g1").color == ""                             # çok renkli → tüm renkler
+    assert "Siyah: 1.349,61 TL" in instagram_urun.urun_baglami("g1")
+    # Kullanıcının onayladığı bağ, sonradan gelen AI önerisiyle ezilmez
+    instagram_urun.bagla("g1", "8814245511346", "Siyah", confirmed=False)
+    bag = instagram_urun.bagli_urun("g1")
+    assert bag.confirmed is True and bag.color == ""
+    instagram_urun.bagi_kaldir("g1")
+    assert instagram_urun.bagli_urun("g1") is None
+
+
+def test_ai_onerisi_onaysiz_kaydedilir_ve_emin_degilse_kaydedilmez(urun_ortami, monkeypatch):
+    from trendyol_qna import qna_ai
+    monkeypatch.setattr(qna_ai, "_run_ai", lambda prompt: "URUN: YOK")
+    assert instagram_urun.oner("g1") is False and instagram_urun.bagli_urun("g1") is None
+    monkeypatch.setattr(qna_ai, "_run_ai", lambda prompt: "URUN: 8814245511346 | RENK: Bej Leopar")
+    assert instagram_urun.oner("g1") is True
+    bag = instagram_urun.bagli_urun("g1")
+    assert bag.confirmed is False and bag.color == "Bej Leopar" and bag.updated_by == "AI önerisi"
+    # Listede olmayan ürün numarası uydurulursa kaydedilmez
+    instagram_urun.bagi_kaldir("g1")
+    monkeypatch.setattr(qna_ai, "_run_ai", lambda prompt: "URUN: 1234567890123 | RENK: ")
+    assert instagram_urun.oner("g1") is False
+
+
+def test_bag_onaylaninca_hazir_taslaklar_yenilenmek_uzere_sifirlanir(urun_ortami, monkeypatch):
+    from trendyol_qna import qna_ai
+    uretilen = []
+    monkeypatch.setattr(qna_ai, "generate_instagram_comment_drafts_async", lambda ids, **k: uretilen.append(list(ids)))
+    yorum = InstagramComment.query.filter_by(comment_id="u1").one()
+    yorum.ai_draft, yorum.ai_draft_status = "Hangi modeli soruyorsunuz?", "ready"
+    db.session.commit()
+    instagram_urun.taslaklari_uret_async("g1")          # bağ yok → hiçbir şey
+    assert uretilen == []
+    instagram_urun.bagla("g1", "8814245511346", "Bej Leopar", username="ayse")
+    instagram_urun.taslaklari_uret_async("g1", yenile=True)
+    db.session.refresh(yorum)
+    assert yorum.ai_draft is None and uretilen == [[yorum.id]]
+
+
+def test_yorum_karti_urun_bagini_tasir(urun_ortami):
+    from trendyol_qna.qna_routes import _instagram_yorum_to_dict
+    yorum = InstagramComment.query.filter_by(comment_id="u1").one()
+    assert _instagram_yorum_to_dict(yorum)["urun"] is None
+    instagram_urun.bagla("g1", "8814245511346", "Bej Leopar", confirmed=False)
+    kart = _instagram_yorum_to_dict(yorum, instagram_urun.bagli_urun("g1"))
+    assert kart["urun"] == {"title": "Timsah Desenli Tokalı Loafer", "renk": "Bej Leopar", "onayli": False,
+                            "url": "https://www.gullushoes.com/products/03155-loafer", "product_id": "8814245511346"}
 
 
 def test_gercek_uygulama_hala_yuklenmedi():

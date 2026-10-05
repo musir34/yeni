@@ -152,8 +152,8 @@ def _instagram_to_dict(c: InstagramConversation, mesajlar: list[InstagramMessage
     }
 
 
-def _instagram_yorum_to_dict(y: InstagramComment) -> dict:
-    """Instagram gönderi yorumunu kart sözlüğüne çevirir."""
+def _instagram_yorum_to_dict(y: InstagramComment, bag=None) -> dict:
+    """Instagram gönderi yorumunu kart sözlüğüne çevirir (bag: gönderinin ürün bağı)."""
     from trendyol_qna.instagram_dm import (TEXT_MAX, YORUM_NOTU_MAX, YORUM_NOTU_VARSAYILAN,
                                            ozel_yanit_bitisi)
     bitis = ozel_yanit_bitisi(y)
@@ -180,6 +180,13 @@ def _instagram_yorum_to_dict(y: InstagramComment) -> dict:
         "metin_azami": TEXT_MAX,
         "not_azami": YORUM_NOTU_MAX,
         "not_varsayilan": YORUM_NOTU_VARSAYILAN,
+        "urun": {
+            "title": bag.title or "",
+            "url": bag.url or "",
+            "renk": bag.color or "",
+            "onayli": bool(bag.confirmed),
+            "product_id": bag.shopify_product_id,
+        } if bag is not None else None,
     }
 
 
@@ -289,6 +296,7 @@ def sorular():
     # Instagram gönderi yorumları (yoksayılanlar yalnız "Tümü"nde görünür)
     yr_rows: list[InstagramComment] = []
     yr_total = 0
+    yr_bag: dict = {}
     if status in sh_status:
         try:
             yr_query = db.session.query(InstagramComment)
@@ -307,9 +315,14 @@ def sorular():
                 .limit(fetch_limit)
                 .all()
             )
+            from models import InstagramMediaProduct
+            yr_medyalar = {r.media_id for r in yr_rows}
+            if yr_medyalar:
+                yr_bag = {b.media_id: b for b in db.session.query(InstagramMediaProduct)
+                          .filter(InstagramMediaProduct.media_id.in_(yr_medyalar)).all()}
         except Exception:
             db.session.rollback()
-            yr_rows, yr_total = [], 0
+            yr_rows, yr_total, yr_bag = [], 0, {}
             logger.exception("[QNA] Instagram yorumları okunamadı (tablo yok olabilir)")
 
     total = query.count()
@@ -330,7 +343,7 @@ def sorular():
         [(_key(r.creation_date), _to_dict(r)) for r in t_rows]
         + [(_key(r.created_at), _shopify_to_dict(r)) for r in sh_rows]
         + [(_key(r.last_message_at), _instagram_to_dict(r, ig_mesaj.get(r.id, []))) for r in ig_rows]
-        + [(_key(r.created_at), _instagram_yorum_to_dict(r)) for r in yr_rows],
+        + [(_key(r.created_at), _instagram_yorum_to_dict(r, yr_bag.get(r.media_id))) for r in yr_rows],
         key=lambda x: x[0],
         reverse=True,
     )
@@ -476,6 +489,40 @@ def instagram_yorum_yoksay():
     from trendyol_qna.instagram_dm import ignore_comment
     sonuc = ignore_comment(yid, username=session.get("username"))
     return jsonify(sonuc), (200 if sonuc["ok"] else 404)
+
+
+@qna_bp.route("/api/instagram-yorum/urun-ara", methods=["GET"])
+def instagram_yorum_urun_ara():
+    """Gönderiye bağlanacak site ürününü ara (başlık/model kodu)."""
+    from trendyol_qna.instagram_urun import urun_ara
+    try:
+        return jsonify({"ok": True, "urunler": urun_ara(request.args.get("q") or "")})
+    except Exception:
+        logger.exception("[QNA] ürün araması başarısız")
+        return jsonify({"ok": False, "hata": "Ürün araması yapılamadı."}), 502
+
+
+@qna_bp.route("/api/instagram-yorum/urun-bagla", methods=["POST"])
+def instagram_yorum_urun_bagla():
+    """Yorumun gönderisini site ürününe bağlar/onaylar; bekleyen yorumlara taslak üretir."""
+    payload = request.get_json(silent=True) or {}
+    try:
+        row = db.session.get(InstagramComment, int(payload.get("id")))
+    except (TypeError, ValueError):
+        row = None
+    if not row:
+        return jsonify({"ok": False, "hata": "Yorum bulunamadı."}), 404
+
+    from trendyol_qna import instagram_urun
+    if payload.get("kaldir"):
+        instagram_urun.bagi_kaldir(row.media_id)
+        return jsonify({"ok": True, "hata": None})
+    sonuc = instagram_urun.bagla(row.media_id, str(payload.get("product_id") or ""),
+                                 renk=str(payload.get("renk") or ""),
+                                 username=session.get("username"), confirmed=True)
+    if sonuc["ok"]:
+        instagram_urun.taslaklari_uret_async(row.media_id, yenile=True)
+    return jsonify(sonuc), (200 if sonuc["ok"] else 422)
 
 
 @qna_bp.route("/api/instagram-yorum/taslak/<int:qid>", methods=["POST"])
