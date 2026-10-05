@@ -392,6 +392,7 @@
     white-space:pre-wrap; overflow-wrap:anywhere; }
   .qna-bubble--in { align-self:flex-start; background:var(--qna-card,#fff); border:1px solid var(--qna-line,#e6e7ea); border-bottom-left-radius:4px; }
   .qna-bubble--out { align-self:flex-end; background:#f5fbf8; border:1px solid #dfeee7; border-bottom-right-radius:4px; }
+  .qna-bubble--now { border-color:var(--qna-orange,#f27a1a); box-shadow:0 0 0 1px var(--qna-orange,#f27a1a) inset; font-weight:600; }
   .qna-bubble-meta { display:block; margin-top:4px; font-size:.7rem; color:var(--qna-muted,#7a7f87); }
   .qna-bubble-ek { display:inline-flex; align-items:center; gap:5px; font-size:.78rem; color:var(--qna-muted,#7a7f87); }
   .qna-window { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px;
@@ -571,8 +572,15 @@
               <span><i class="bi bi-person"></i>${esc(s.user_name || 'Müşteri')}</span>
               ${s.creation_date ? `<span><i class="bi bi-clock"></i>${esc(s.creation_date)}</span>` : ''}
             </div>
-            <span class="qna-section-label">Müşteri sorusu</span>
-            <p class="qna-question">${esc(s.text)}</p>
+            ${(s.mesajlar || []).length
+              ? `<span class="qna-section-label">Müşterinin soruları</span>
+                 <div class="qna-thread">${s.mesajlar.map(m => {
+                   const urun = m.urun ? `<span class="qna-bubble-ek"><i class="bi bi-tag"></i>${esc(m.urun)}</span><br>` : '';
+                   const kim = m.yon === 'out' ? (m.gonderen ? esc(m.gonderen) + ' · ' : 'Biz · ') : (m.simdiki ? 'Bu soru · ' : '');
+                   return `<div class="qna-bubble qna-bubble--${m.yon === 'out' ? 'out' : 'in'}${m.simdiki && m.yon !== 'out' ? ' qna-bubble--now' : ''}">${urun}${esc(m.text)}<span class="qna-bubble-meta">${kim}${esc(m.tarih || '')}</span></div>`;
+                 }).join('')}</div>`
+              : `<span class="qna-section-label">Müşteri sorusu</span>
+                 <p class="qna-question">${esc(s.text)}</p>`}
           </section>
           ${answer}
           ${rejected}

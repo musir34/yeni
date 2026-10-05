@@ -759,5 +759,71 @@ def test_eski_renksiz_bag_gonderimde_renk_adresine_tamamlanir(urun_ortami):
     assert instagram_dm.urun_baglantisi_ekle(metin, "g1") == metin
 
 
+# ── Trendyol: müşterinin önceki soruları ─────────────────────────────────────
+
+from models import TrendyolQuestion  # noqa: E402
+
+with app.app_context():
+    TrendyolQuestion.__table__.create(bind=db.engine, checkfirst=True)
+
+
+@pytest.fixture
+def trendyol_sorulari():
+    db.session.query(TrendyolQuestion).delete()
+    simdi = datetime.now(timezone.utc)
+
+    def soru(qid, musteri, metin, gun_once, model="0121", urun="Topuklu Sandalet", cevap=None, durum=None):
+        db.session.add(TrendyolQuestion(
+            id=qid, customer_id=musteri, text=metin, user_name="Ayşe Y.", product_name=urun,
+            product_main_id=model, status=durum or ("ANSWERED" if cevap else "WAITING_FOR_ANSWER"),
+            creation_date=simdi - timedelta(days=gun_once), answer_text=cevap,
+            answer_date=(simdi - timedelta(days=gun_once)) if cevap else None,
+            answered_by="ayse" if cevap else None))
+
+    soru(1, 77, "38 numara dar mı?", 5, cevap="Tam kalıptır.")
+    soru(2, 77, "Bot su geçirir mi?", 3, model="0155", urun="Deri Bot", cevap="Su geçirmez.")
+    soru(3, 77, "O zaman 38 alayım, ne zaman kargolanır?", 0)
+    soru(4, 88, "Kapıda ödeme var mı?", 1)
+    db.session.commit()
+
+
+def test_trendyol_karti_musterinin_onceki_sorularini_balon_olarak_verir(trendyol_sorulari):
+    from trendyol_qna.qna_routes import _to_dict
+    from trendyol_qna.qna_service import musteri_gecmisi
+
+    gecmis = musteri_gecmisi([77, 88, None])
+    assert [g.id for g in gecmis[77]] == [1, 2, 3] and [g.id for g in gecmis[88]] == [4]
+    kart = _to_dict(db.session.get(TrendyolQuestion, 3), gecmis[77])
+    assert [(m["yon"], m["text"]) for m in kart["mesajlar"]] == [
+        ("in", "38 numara dar mı?"), ("out", "Tam kalıptır."),
+        ("in", "Bot su geçirir mi?"), ("out", "Su geçirmez."),
+        ("in", "O zaman 38 alayım, ne zaman kargolanır?"),
+    ]
+    assert [m["simdiki"] for m in kart["mesajlar"]] == [False, False, False, False, True]
+    # Başka ürüne sorulan soruda ürün adı görünür; aynı üründe ve şimdiki soruda görünmez
+    assert [m["urun"] for m in kart["mesajlar"]] == ["", "", "Deri Bot", "", ""]
+    assert kart["mesajlar"][1]["gonderen"] == "ayse"
+    # Tek sorusu olan müşteride yazışma yok → kart eskisi gibi tek soruyu gösterir
+    assert _to_dict(db.session.get(TrendyolQuestion, 4), gecmis[88])["mesajlar"] == []
+    assert _to_dict(db.session.get(TrendyolQuestion, 4))["mesajlar"] == []
+
+
+def test_trendyol_taslak_istemi_onceki_soru_cevaplari_icerir(trendyol_sorulari):
+    from trendyol_qna.qna_ai import _draft_prompt
+    from trendyol_qna.qna_service import musteri_gecmisi
+
+    satir = db.session.get(TrendyolQuestion, 3)
+    prompt = _draft_prompt(satir, "38: 4 adet", gecmis=musteri_gecmisi([77])[77])
+    assert "ÖNCEKİ soruları" in prompt
+    assert "Müşteri: 38 numara dar mı?" in prompt and "Biz: Tam kalıptır." in prompt
+    assert "Müşteri [başka ürün: Deri Bot]: Bot su geçirir mi?" in prompt
+    assert prompt.index("ÖNCEKİ soruları") < prompt.index("Müşteri sorusu:")
+    assert prompt.count("O zaman 38 alayım") == 1            # şimdiki soru geçmişte tekrarlanmaz
+    # Geçmişi olmayan müşteride istem eskisiyle aynı kalır
+    tek = db.session.get(TrendyolQuestion, 4)
+    assert "ÖNCEKİ" not in _draft_prompt(tek, "stok", gecmis=musteri_gecmisi([88])[88])
+    assert "ÖNCEKİ" not in _draft_prompt(tek, "stok")
+
+
 def test_gercek_uygulama_hala_yuklenmedi():
     assert "app" not in sys.modules

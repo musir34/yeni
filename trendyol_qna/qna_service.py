@@ -310,6 +310,39 @@ def answer_question(question_id: int, text: str, username: str | None = None) ->
     return {"ok": True, "hata": None}
 
 
+GECMIS_AZAMI = 12   # müşteri başına gösterilen/isteme giren en fazla soru
+
+
+def musteri_gecmisi(customer_ids) -> dict[int, list[TrendyolQuestion]]:
+    """Müşterilerin panele düşmüş tüm soruları, müşteri başına eskiden yeniye (tek sorgu).
+
+    Aynı müşteri birden çok soru sorar, bazen eski sorusuna atıfla yazar;
+    cevap verirken (ve AI taslağında) önceki soru-cevaplar görülebilsin diye.
+    Trendyol'dan ek istek atılmaz: kaynak yerel tablo, anahtar customerId.
+    """
+    ids = {int(c) for c in customer_ids if c}
+    if not ids:
+        return {}
+    gruplar: dict[int, list[TrendyolQuestion]] = {c: [] for c in ids}
+    try:
+        satirlar = (
+            db.session.query(TrendyolQuestion)
+            .filter(TrendyolQuestion.customer_id.in_(ids))
+            .order_by(TrendyolQuestion.creation_date.desc().nullslast(), TrendyolQuestion.id.desc())
+            .limit(len(ids) * GECMIS_AZAMI * 3)
+            .all()
+        )
+    except Exception:
+        db.session.rollback()
+        logger.exception("[QNA] müşteri geçmişi okunamadı")
+        return {}
+    for s in satirlar:
+        grup = gruplar.get(s.customer_id)
+        if grup is not None and len(grup) < GECMIS_AZAMI:
+            grup.append(s)
+    return {c: grup[::-1] for c, grup in gruplar.items()}
+
+
 def waiting_count() -> int:
     """Cevap bekleyen soru sayısı (anasayfa rozeti) — Trendyol + Shopify + Instagram toplamı."""
     toplam = 0

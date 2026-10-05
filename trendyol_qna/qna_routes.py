@@ -53,8 +53,33 @@ def _tr(dt) -> str | None:
     return dt.astimezone(IST).strftime("%d.%m.%Y %H:%M")
 
 
-def _to_dict(r: TrendyolQuestion) -> dict:
+def _trendyol_yazisma(r: TrendyolQuestion, gecmis: list[TrendyolQuestion]) -> list[dict]:
+    """Müşterinin soruları + cevaplarımız, Instagram kartındaki balon biçiminde (eskiden yeniye).
+
+    Müşterinin bu sorudan başka sorusu yoksa boş liste döner; kart o zaman
+    tek soruyu eskisi gibi gösterir. Başka ürüne sorulmuş soruda ürün adı da verilir.
+    """
+    if not any(g.id != r.id for g in gecmis):
+        return []
+    mesajlar = []
+    for g in gecmis:
+        ayni_urun = bool(g.product_main_id) and g.product_main_id == r.product_main_id
+        mesajlar.append({
+            "yon": "in", "text": g.text or "", "tarih": _tr(g.creation_date),
+            "simdiki": g.id == r.id,
+            "urun": "" if (g.id == r.id or ayni_urun) else (g.product_name or ""),
+        })
+        if g.answer_text:
+            mesajlar.append({
+                "yon": "out", "text": g.answer_text, "tarih": _tr(g.answer_date),
+                "gonderen": g.answered_by, "simdiki": g.id == r.id, "urun": "",
+            })
+    return mesajlar
+
+
+def _to_dict(r: TrendyolQuestion, gecmis: list[TrendyolQuestion] | None = None) -> dict:
     return {
+        "mesajlar": _trendyol_yazisma(r, gecmis or []),
         "id": r.id,
         "source": "trendyol",
         "text": r.text,
@@ -380,8 +405,11 @@ def sorular():
             dt = dt.replace(tzinfo=timezone.utc)
         return dt
 
+    from trendyol_qna.qna_service import musteri_gecmisi
+    t_gecmis = musteri_gecmisi(r.customer_id for r in t_rows)
+
     merged = sorted(
-        [(_key(r.creation_date), _to_dict(r)) for r in t_rows]
+        [(_key(r.creation_date), _to_dict(r, t_gecmis.get(r.customer_id))) for r in t_rows]
         + [(_key(r.created_at), _shopify_to_dict(r)) for r in sh_rows]
         + [(_key(r.last_message_at), _instagram_to_dict(r, ig_mesaj.get(r.id, []), ig_bag.get(r.id)))
            for r in ig_rows]

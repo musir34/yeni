@@ -59,13 +59,35 @@ def _kurallar() -> str:
     return kurallar
 
 
+GECMIS_ISTEM_SORU = 5   # taslak istemine giren önceki soru sayısı
+
+
+def _gecmis_metni(row, gecmis) -> str:
+    """Aynı müşterinin önceki soru-cevapları (istem için); yoksa ''."""
+    onceki = [g for g in (gecmis or []) if g.id != row.id][-GECMIS_ISTEM_SORU:]
+    if not onceki:
+        return ""
+    satirlar = []
+    for g in onceki:
+        urun = "" if g.product_main_id == row.product_main_id else f" [başka ürün: {g.product_name or 'bilinmiyor'}]"
+        satirlar.append(f"Müşteri{urun}: {(g.text or '').strip()}")
+        satirlar.append(f"Biz: {(g.answer_text or '').strip()}" if g.answer_text else "Biz: (henüz cevaplanmadı)")
+    return (
+        "Bu müşterinin ÖNCEKİ soruları ve cevaplarımız (eskiden yeniye). Yeni soru bunlara atıf "
+        "yapıyor olabilir; çelişme, gerekiyorsa önceki cevabı dikkate al:\n"
+        + "\n".join(satirlar) + "\n\n"
+    )
+
+
 def _draft_prompt(row, stok_bilgisi: str, talimat: str | None = None,
-                  mevcut_metin: str | None = None, renk: str | None = None) -> str:
+                  mevcut_metin: str | None = None, renk: str | None = None,
+                  gecmis=None) -> str:
     prompt = (
         f"Ürün: {row.product_name or 'bilinmiyor'}\n"
         f"Model kodu: {row.product_main_id or 'bilinmiyor'}\n"
         f"Renk: {renk or 'bilinmiyor'}\n"
         f"CANLI STOK: {stok_bilgisi}\n\n"
+        + _gecmis_metni(row, gecmis) +
         f"Müşteri sorusu:\n{row.text}\n\n"
     )
     if talimat:
@@ -174,9 +196,11 @@ def generate_draft(question_id: int, talimat: str | None = None,
 
     onceki_taslak = mevcut_metin or row.ai_draft
     renk = question_renk(row.product_main_id, row.product_name)
+    from trendyol_qna.qna_service import musteri_gecmisi
+    gecmis = musteri_gecmisi([row.customer_id]).get(row.customer_id, [])
     taslak = _run_ai(_draft_prompt(row, stock_context(row.product_main_id),
                                    talimat=talimat, mevcut_metin=mevcut_metin,
-                                   renk=renk))
+                                   renk=renk, gecmis=gecmis))
     if taslak:
         if talimat:
             # Düzeltme talimatını ders olarak bilgi bankasına not düş
