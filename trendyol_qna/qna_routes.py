@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 from flask import Blueprint, jsonify, render_template, request, session
 
-from models import db, TrendyolQuestion, ShopifyQuestion
+from models import db, TrendyolQuestion, ShopifyQuestion, InstagramConversation, InstagramMessage
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +105,65 @@ def _shopify_to_dict(r: ShopifyQuestion) -> dict:
     }
 
 
+INSTAGRAM_KART_MESAJ = 20   # kartta gösterilen son mesaj sayısı
+
+
+def _instagram_to_dict(c: InstagramConversation, mesajlar: list[InstagramMessage]) -> dict:
+    """Instagram konuşmasını kart sözlüğüne çevirir (mesajlar eskiden yeniye)."""
+    from trendyol_qna.instagram_dm import TEXT_MAX, pencere_acik, pencere_bitisi
+    bitis = pencere_bitisi(c)
+    son_giden = next((m for m in reversed(mesajlar) if m.direction == "out"), None)
+    son_gelen = next((m for m in reversed(mesajlar) if m.direction == "in"), None)
+    return {
+        "id": c.id,
+        "source": "instagram",
+        "text": (son_gelen.text if son_gelen else "") or "",
+        "user_name": c.name or (f"@{c.username}" if c.username else "Instagram kullanıcısı"),
+        "username": c.username or "",
+        "status": "WAITING_FOR_ANSWER" if c.status == "new" else "ANSWERED",
+        "public": False,
+        "creation_date": _tr(c.last_customer_at or c.last_message_at),
+        "answer_text": son_giden.text if son_giden else None,
+        "answer_date": _tr(c.answered_at),
+        "answered_by": c.answered_by,
+        "ai_draft": c.ai_draft,
+        "ai_draft_status": c.ai_draft_status or "none",
+        "pencere_acik": pencere_acik(c),
+        "pencere_bitis": bitis.isoformat() if bitis else None,
+        "metin_azami": TEXT_MAX,
+        "mesajlar": [
+            {
+                "yon": m.direction,
+                "text": m.text or "",
+                "ek_tipi": m.attachment_type or "",
+                "ek_url": m.attachment_url or "",
+                "tarih": _tr(m.created_at),
+                "gonderen": m.sent_by,
+            }
+            for m in mesajlar
+        ],
+    }
+
+
+def _instagram_mesajlari(conv_ids: list[int]) -> dict[int, list[InstagramMessage]]:
+    """Verilen konuşmaların son mesajları, konuşma başına eskiden yeniye (tek sorgu)."""
+    gruplar: dict[int, list[InstagramMessage]] = {cid: [] for cid in conv_ids}
+    if not conv_ids:
+        return gruplar
+    satirlar = (
+        db.session.query(InstagramMessage)
+        .filter(InstagramMessage.conversation_id.in_(conv_ids))
+        .order_by(InstagramMessage.created_at.desc(), InstagramMessage.id.desc())
+        .limit(len(conv_ids) * INSTAGRAM_KART_MESAJ * 3)
+        .all()
+    )
+    for m in satirlar:
+        grup = gruplar.get(m.conversation_id)
+        if grup is not None and len(grup) < INSTAGRAM_KART_MESAJ:
+            grup.append(m)
+    return {cid: grup[::-1] for cid, grup in gruplar.items()}
+
+
 @qna_bp.route("/", methods=["GET"])
 def index():
     return render_template("soru_cevap.html")
@@ -159,6 +218,36 @@ def sorular():
             db.session.rollback()
             logger.exception("[QNA] Shopify soruları okunamadı (tablo yok olabilir)")
 
+    # Instagram konuşmaları da aynı listeye karışır (kart = konuşma)
+    ig_rows: list[InstagramConversation] = []
+    ig_total = 0
+    ig_mesaj: dict[int, list[InstagramMessage]] = {}
+    if status in sh_status:
+        try:
+            ig_query = db.session.query(InstagramConversation)
+            if sh_status[status]:
+                ig_query = ig_query.filter(InstagramConversation.status == sh_status[status])
+            if q:
+                like = f"%{q}%"
+                eslesen = db.session.query(InstagramMessage.conversation_id).filter(
+                    InstagramMessage.text.ilike(like))
+                ig_query = ig_query.filter(
+                    InstagramConversation.username.ilike(like)
+                    | InstagramConversation.name.ilike(like)
+                    | InstagramConversation.id.in_(eslesen)
+                )
+            ig_total = ig_query.count()
+            ig_rows = (
+                ig_query.order_by(InstagramConversation.last_message_at.desc().nullslast())
+                .limit(fetch_limit)
+                .all()
+            )
+            ig_mesaj = _instagram_mesajlari([r.id for r in ig_rows])
+        except Exception:
+            db.session.rollback()
+            ig_rows, ig_total = [], 0
+            logger.exception("[QNA] Instagram konuşmaları okunamadı (tablo yok olabilir)")
+
     total = query.count()
     t_rows = (
         query.order_by(TrendyolQuestion.creation_date.desc().nullslast())
@@ -175,14 +264,15 @@ def sorular():
 
     merged = sorted(
         [(_key(r.creation_date), _to_dict(r)) for r in t_rows]
-        + [(_key(r.created_at), _shopify_to_dict(r)) for r in sh_rows],
+        + [(_key(r.created_at), _shopify_to_dict(r)) for r in sh_rows]
+        + [(_key(r.last_message_at), _instagram_to_dict(r, ig_mesaj.get(r.id, []))) for r in ig_rows],
         key=lambda x: x[0],
         reverse=True,
     )
     offset = (page - 1) * PAGE_SIZE
     return jsonify({
         "ok": True,
-        "toplam": total + sh_total,
+        "toplam": total + sh_total + ig_total,
         "sayfa": page,
         "sayfa_boyu": PAGE_SIZE,
         "sorular": [d for _, d in merged[offset:offset + PAGE_SIZE]],
@@ -245,6 +335,47 @@ def shopify_taslak_durum(qid: int):
     row = db.session.get(ShopifyQuestion, qid)
     if not row:
         return jsonify({"ok": False, "hata": "Soru bulunamadı."}), 404
+    return jsonify({
+        "ok": True,
+        "durum": row.ai_draft_status or "none",
+        "taslak": row.ai_draft if row.ai_draft_status == "ready" else None,
+    })
+
+
+@qna_bp.route("/api/instagram/cevapla", methods=["POST"])
+def instagram_cevapla():
+    """Instagram konuşmasına cevabı direkt mesaj olarak gönderir (24 saat kuralı)."""
+    payload = request.get_json(silent=True) or {}
+    try:
+        cid = int(payload.get("id"))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "hata": "Geçersiz konuşma ID."}), 400
+
+    from trendyol_qna.instagram_dm import answer_conversation
+    sonuc = answer_conversation(cid, (payload.get("text") or "").strip(),
+                                username=session.get("username"))
+    return jsonify(sonuc), (200 if sonuc["ok"] else 422)
+
+
+@qna_bp.route("/api/instagram/taslak/<int:qid>", methods=["POST"])
+def instagram_taslak(qid: int):
+    """Instagram konuşması için AI taslağını (yeniden) üretmeyi tetikler (arka plan)."""
+    row = db.session.get(InstagramConversation, qid)
+    if not row:
+        return jsonify({"ok": False, "hata": "Konuşma bulunamadı."}), 404
+    payload = request.get_json(silent=True) or {}
+    talimat = (payload.get("talimat") or "").strip()[:500] or None
+    mevcut_metin = (payload.get("metin") or "").strip()[:2000] or None
+    from trendyol_qna.qna_ai import generate_instagram_drafts_async
+    generate_instagram_drafts_async([qid], talimat=talimat, mevcut_metin=mevcut_metin)
+    return jsonify({"ok": True, "durum": "pending"})
+
+
+@qna_bp.route("/api/instagram/taslak-durum/<int:qid>", methods=["GET"])
+def instagram_taslak_durum(qid: int):
+    row = db.session.get(InstagramConversation, qid)
+    if not row:
+        return jsonify({"ok": False, "hata": "Konuşma bulunamadı."}), 404
     return jsonify({
         "ok": True,
         "durum": row.ai_draft_status or "none",
@@ -315,6 +446,13 @@ def senkron():
     from trendyol_qna.qna_service import sync_questions
     try:
         yeni = sync_questions(days=14)
+        # Instagram ayarlıysa konuşmaları da çek; hatası Trendyol senkronunu bozmaz
+        try:
+            from trendyol_qna.instagram_dm import sync_conversations
+            sync_conversations()
+        except Exception:
+            db.session.rollback()
+            logger.exception("[QNA] Instagram senkronu başarısız")
         return jsonify({"ok": True, "yeni": len(yeni)})
     except Exception as e:
         logger.exception("[QNA] elle senkron hatası")

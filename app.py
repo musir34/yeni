@@ -169,6 +169,15 @@ except Exception as _e:
     import logging as _logging
     _logging.getLogger(__name__).exception("[SHOPIFY-QNA] init başarısız: %s", _e)
 
+# 📷 Instagram DM: tablo garantisi
+try:
+    from trendyol_qna.instagram_dm import ensure_table_exists as _ig_ensure
+    with app.app_context():
+        _ig_ensure()
+except Exception as _e:
+    import logging as _logging
+    _logging.getLogger(__name__).exception("[INSTAGRAM] init başarısız: %s", _e)
+
 # 🔥 Stok Senkronizasyon Blueprint
 
 # >>> Forecast cache fonksiyonlarını blueprint yüklendikten sonra import et
@@ -368,6 +377,28 @@ def pull_qna_job():
             logger.error(f"pull_qna_job hata: {e}", exc_info=True)
 
 
+def pull_instagram_dm_job():
+    """Instagram konuşmalarını çeker (yalnız INSTAGRAM_POLL=1 ise; asıl yol webhook)."""
+    if str(os.getenv("INSTAGRAM_POLL", "0")).lower() not in ("1", "true", "yes"):
+        return
+    with app.app_context():
+        try:
+            from trendyol_qna.instagram_dm import sync_conversations
+            sync_conversations()
+        except Exception as e:
+            logger.error(f"pull_instagram_dm_job hata: {e}", exc_info=True)
+
+
+def instagram_token_job():
+    """Instagram erişim anahtarını (60 gün ömürlü) süresi dolmadan yeniler."""
+    with app.app_context():
+        try:
+            from trendyol_qna.instagram_dm import refresh_token_if_needed
+            refresh_token_if_needed()
+        except Exception as e:
+            logger.error(f"instagram_token_job hata: {e}", exc_info=True)
+
+
 def qna_reconcile_job():
     """Soru statülerini geniş pencerede (14 gün, tüm statüler) mutabakata alır."""
     with app.app_context():
@@ -533,6 +564,24 @@ def schedule_jobs():
         id="qna_reconcile",
         hours=3,
         next_run_time=now + timedelta(minutes=3)
+    )
+
+    # >>> Instagram DM yoklaması: dakikada bir (INSTAGRAM_POLL=1 değilse boş döner)
+    _add_job_safe(
+        pull_instagram_dm_job,
+        trigger='interval',
+        id="pull_instagram_dm",
+        seconds=60,
+        next_run_time=now + timedelta(seconds=45)
+    )
+
+    # >>> Instagram erişim anahtarı yenileme: günde bir kontrol
+    _add_job_safe(
+        instagram_token_job,
+        trigger='interval',
+        id="instagram_token",
+        hours=24,
+        next_run_time=now + timedelta(minutes=7)
     )
 
     # >>> Forecast cache worker: her 10 saniye

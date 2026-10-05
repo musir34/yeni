@@ -1590,6 +1590,49 @@ class ShopifyQuestion(db.Model):
     answered_at = db.Column(db.DateTime(timezone=True))
 
 
+class InstagramConversation(db.Model):
+    """Instagram DM konuşması — /soru-cevap ekranında tek kart = tek müşteri.
+
+    Trendyol/Shopify sorusundan farkı: tek mesaj değil karşılıklı yazışmadır;
+    mesajlar InstagramMessage'da tutulur. status müşterinin son mesajı
+    cevaplanmadıysa 'new', cevaplandıysa 'answered' olur.
+
+    Tablo oluşturma: trendyol_qna/instagram_dm.py ensure_table_exists (app
+    init'te, ShopifyQuestion deseniyle aynı — migration'sız, additive).
+    """
+    __tablename__ = 'instagram_conversations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    igsid = db.Column(db.String(64), unique=True, nullable=False)  # Instagram-scoped müşteri ID'si
+    username = db.Column(db.String(120), default='')
+    name = db.Column(db.String(160), default='')
+    status = db.Column(db.String(20), default='new', index=True)   # 'new' | 'answered'
+    last_customer_at = db.Column(db.DateTime(timezone=True), index=True)  # 24 saat penceresi buradan sayılır
+    last_message_at = db.Column(db.DateTime(timezone=True), index=True)
+    answered_by = db.Column(db.String(120))
+    answered_at = db.Column(db.DateTime(timezone=True))
+    ai_draft = db.Column(db.Text)
+    ai_draft_status = db.Column(db.String(20), default='none')  # none|pending|ready|failed
+    ai_draft_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
+
+
+class InstagramMessage(db.Model):
+    """Instagram DM konuşmasındaki tek mesaj (gelen veya giden)."""
+    __tablename__ = 'instagram_messages'
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('instagram_conversations.id'),
+                                nullable=False, index=True)
+    mid = db.Column(db.String(400), unique=True, nullable=False)  # Instagram mesaj ID'si (tekilleştirme anahtarı)
+    direction = db.Column(db.String(3), nullable=False)           # 'in' | 'out'
+    text = db.Column(db.Text, default='')
+    attachment_type = db.Column(db.String(40), default='')        # image|video|audio|share|story_mention|...
+    attachment_url = db.Column(db.Text, default='')               # yalnızca https; Meta CDN linki geçicidir
+    sent_by = db.Column(db.String(120))                           # panelden gönderen kullanıcı (giden mesaj)
+    created_at = db.Column(db.DateTime(timezone=True), index=True)
+
+
 class MotorOneriLog(db.Model):
     """Akıllı motor öneri geçmişi — geri besleme döngüsü.
 

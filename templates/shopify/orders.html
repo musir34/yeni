@@ -3,9 +3,9 @@
 {% block title %}Shopify Siparisler{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 shopify-orders">
     <!-- Baslik -->
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 so-header">
         <div>
             <h1 class="mb-1"><i class="bi bi-bag-check me-2"></i>Shopify Siparis Yonetimi</h1>
             <p class="text-muted mb-0">Siparisleri goruntule, karsila ve yonet</p>
@@ -109,7 +109,7 @@
     </div>
 
     <!-- Filtre Alani -->
-    <div class="card mb-4 border-0">
+    <div class="card mb-4 border-0 so-filter">
         <div class="card-body py-3">
             <div class="row g-2 align-items-end">
                 <div class="col-md-3">
@@ -170,7 +170,7 @@
 
     <!-- Toplu Islem Cubugu -->
     <div id="bulkActionBar" class="card border-0 mb-3" style="display:none;">
-        <div class="card-body py-2 px-3 d-flex align-items-center gap-3 flex-wrap" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:0.75rem;">
+        <div class="card-body py-2 px-3 d-flex align-items-center gap-3 flex-wrap so-bulk-inner">
             <div class="text-white fw-bold">
                 <i class="bi bi-check2-square me-1"></i>
                 <span id="bulkSelectedCount">0</span> siparis secildi
@@ -205,12 +205,12 @@
     <!-- Siparis Tablosu -->
     <div class="card border-0">
         <div class="card-body p-0">
-            <div class="table-responsive" style="overflow:visible;">
+            <div class="table-responsive">
                 <table class="table table-hover mb-0 orders-table">
                     <thead>
                         <tr>
                             <th class="ps-3" style="width:40px;">
-                                <input type="checkbox" class="form-check-input" id="selectAllCheckbox" title="Tumunu sec/kaldir" style="cursor:pointer;">
+                                <input type="checkbox" class="form-check-input" id="selectAllCheckbox" title="Tumunu sec/kaldir">
                             </th>
                             <th>Siparis</th>
                             <th>Tarih</th>
@@ -390,7 +390,7 @@
     <div class="modal fade" id="kargoModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header bg-purple text-white" style="background:#8b5cf6;">
+                <div class="modal-header so-kargo-head">
                     <h5 class="modal-title"><i class="bi bi-truck me-2"></i>Kargoya Ver</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -421,7 +421,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgec</button>
-                    <button type="button" id="btnKargoSubmit" class="btn btn-sm" style="background:#8b5cf6;color:#fff;">
+                    <button type="button" id="btnKargoSubmit" class="btn btn-sm so-kargo-btn">
                         <i class="bi bi-truck me-1"></i> Kargoya Ver
                     </button>
                 </div>
@@ -447,272 +447,328 @@
 
 <style>
     /* ══════════════════════════════════════════════════════
-       ANIMASYONLAR
+       SHOPIFY SIPARISLER — SAYFA STILI
+       Tum kurallar .shopify-orders altindadir; ust menu ve ortak
+       bilesenler (btn, card, dropdown, modal) bu sayfadan etkilenmez.
+       Kalici transform kullanilmaz: acilir menuler ve modallar
+       position:fixed ile dogru yerde acilsin diye giris animasyonlari
+       "backwards" doldurma ile biter.
        ══════════════════════════════════════════════════════ */
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes fadeInLeft { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
-    @keyframes fadeInRight { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
-    @keyframes scaleIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
-    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes bounceIn { 0% { opacity:0; transform:scale(0.3); } 50% { opacity:1; transform:scale(1.05); } 70% { transform:scale(0.95); } 100% { transform:scale(1); } }
-    @keyframes pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.05); } }
-    @keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
-    @keyframes ripple { 0% { transform:scale(0); opacity:0.5; } 100% { transform:scale(4); opacity:0; } }
-    @keyframes glow { 0%,100% { box-shadow:0 0 5px rgba(118,75,162,0.3); } 50% { box-shadow:0 0 20px rgba(118,75,162,0.6); } }
-    @keyframes toastIn { from { transform:translateX(120%); opacity:0; } to { transform:translateX(0); opacity:1; } }
-    @keyframes toastOut { from { transform:translateX(0); opacity:1; } to { transform:translateX(120%); opacity:0; } }
-    @keyframes dialogOverlayIn { from { opacity:0; } to { opacity:1; } }
-    @keyframes dialogIn { from { opacity:0; transform:scale(0.7) translateY(-20px); } to { opacity:1; transform:scale(1) translateY(0); } }
-    @keyframes dialogOut { to { opacity:0; transform:scale(0.7) translateY(-20px); } }
-    @keyframes iconBounce { 0% { transform:scale(0) rotate(-45deg); } 50% { transform:scale(1.2) rotate(10deg); } 100% { transform:scale(1) rotate(0deg); } }
-    @keyframes checkDraw { to { stroke-dashoffset:0; } }
-    @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
-    @keyframes countUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-    @keyframes rowAppear { from { opacity:0; transform:translateX(-15px); } to { opacity:1; transform:translateX(0); } }
-    @keyframes badgePop { 0% { transform:scale(0); } 60% { transform:scale(1.3); } 100% { transform:scale(1); } }
-    @keyframes tabSwitch { 0% { transform:scaleX(0); } 100% { transform:scaleX(1); } }
-
-    /* ══════════════════════════════════════════════════════
-       SAYFA ELEMANLARI ANIMASYONLARI
-       ══════════════════════════════════════════════════════ */
-    .container-fluid > .d-flex:first-child { animation: fadeInDown 0.6s cubic-bezier(0.22,1,0.36,1); }
-    .container-fluid > .d-flex:first-child h1 { animation: fadeInLeft 0.7s cubic-bezier(0.22,1,0.36,1) 0.1s both; }
-    .container-fluid > .d-flex:first-child p { animation: fadeInLeft 0.7s cubic-bezier(0.22,1,0.36,1) 0.2s both; }
-
-    #statsRow .col-6 { animation: fadeInUp 0.5s cubic-bezier(0.22,1,0.36,1) both; }
-    #statsRow .col-6:nth-child(1) { animation-delay: 0.1s; }
-    #statsRow .col-6:nth-child(2) { animation-delay: 0.15s; }
-    #statsRow .col-6:nth-child(3) { animation-delay: 0.2s; }
-    #statsRow .col-6:nth-child(4) { animation-delay: 0.25s; }
-    #statsRow .col-6:nth-child(5) { animation-delay: 0.3s; }
-    #statsRow .col-6:nth-child(6) { animation-delay: 0.35s; }
-
-    .stats-card { border-radius: 0.75rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: all 0.3s cubic-bezier(0.22,1,0.36,1); }
-    .stats-card:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
-    .stats-card h3 { transition: all 0.3s; }
-    .stats-card:hover h3 { transform: scale(1.1); }
-    .stats-card i { transition: all 0.4s cubic-bezier(0.22,1,0.36,1); }
-    .stats-card:hover i { transform: scale(1.3) rotate(-5deg); }
-
-    #statusTabs { animation: fadeInUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.3s both; }
-    .status-tab {
-        background: #f0f0f0; color: #555; border: 1px solid #ddd;
-        transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
-        position: relative; overflow: hidden;
+    .shopify-orders {
+        --so-beklemede: #f59e0b;
+        --so-hazirlaniyor: #3b82f6;
+        --so-kargoda: #8b5cf6;
+        --so-teslim: #10b981;
+        --so-iade: #f97316;
+        --so-iptal: #ef4444;
+        --so-tumu: #333;
+        --so-accent: #764ba2;
+        --so-accent-2: #667eea;
+        --so-accent-rgb: 118, 75, 162;
+        --so-radius: 0.75rem;
+        --so-ease: cubic-bezier(0.22, 1, 0.36, 1);
+        --so-surface: #fff;
+        --so-soft: #f0f0f0;
+        --so-soft-hover: #e0e0e0;
+        --so-soft-text: #555;
+        --so-line: #dee2e6;
+        --so-line-soft: #f0f0f0;
+        --so-muted: #6c757d;
+        --so-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        --so-card-shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.12);
+        --so-row-hover: rgba(183, 110, 121, 0.06);
+        --so-row-selected: rgba(var(--so-accent-rgb), 0.08);
+        --so-box-kargo: #f0f4ff;
+        --so-box-iade: #fff3e0;
     }
-    .status-tab::before {
-        content: ''; position: absolute; top: 50%; left: 50%; width: 10px; height: 10px;
-        background: rgba(255,255,255,0.3); border-radius: 50%;
-        transform: translate(-50%,-50%) scale(0); transition: transform 0.5s;
+    html.gs-dark .shopify-orders {
+        --so-surface: #1f2937;
+        --so-soft: var(--bs-tertiary-bg, #2a2a2a);
+        --so-soft-hover: #353535;
+        --so-soft-text: #cfcfcf;
+        --so-line: #333;
+        --so-line-soft: #333;
+        --so-muted: #999;
+        --so-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        --so-card-shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.45);
+        --so-row-hover: rgba(183, 110, 121, 0.12);
+        --so-row-selected: rgba(var(--so-accent-rgb), 0.15);
+        --so-box-kargo: rgba(139, 92, 246, 0.14);
+        --so-box-iade: rgba(249, 115, 22, 0.14);
     }
-    .status-tab:hover { background: #e0e0e0; transform: translateY(-2px); }
-    .status-tab:active::before { transform: translate(-50%,-50%) scale(10); transition: transform 0s; }
-    .status-tab.active { animation: badgePop 0.3s cubic-bezier(0.22,1,0.36,1); }
-    .status-tab.active[data-status="Beklemede"] { background: #f59e0b; color: #fff; border-color: #f59e0b; box-shadow: 0 4px 15px rgba(245,158,11,0.4); }
-    .status-tab.active[data-status="Hazirlaniyor"] { background: #3b82f6; color: #fff; border-color: #3b82f6; box-shadow: 0 4px 15px rgba(59,130,246,0.4); }
-    .status-tab.active[data-status="Kargoda"] { background: #8b5cf6; color: #fff; border-color: #8b5cf6; box-shadow: 0 4px 15px rgba(139,92,246,0.4); }
-    .status-tab.active[data-status="Teslim Edildi"] { background: #10b981; color: #fff; border-color: #10b981; box-shadow: 0 4px 15px rgba(16,185,129,0.4); }
-    .status-tab.active[data-status="Iade"] { background: #f97316; color: #fff; border-color: #f97316; box-shadow: 0 4px 15px rgba(249,115,22,0.4); }
-    .status-tab.active[data-status="Iptal"] { background: #ef4444; color: #fff; border-color: #ef4444; box-shadow: 0 4px 15px rgba(239,68,68,0.4); }
-    .status-tab.active[data-status=""] { background: #333; color: #fff; border-color: #333; box-shadow: 0 4px 15px rgba(51,51,51,0.4); }
-    .status-tab .badge { transition: all 0.3s; }
-    .status-tab:hover .badge { transform: scale(1.15); }
 
-    /* ══════════════════════════════════════════════════════
-       TABLO
-       ══════════════════════════════════════════════════════ */
-    .orders-table th { font-weight: 600; font-size: 0.8rem; text-transform: uppercase; color: #6c757d; border-bottom: 2px solid #dee2e6; white-space: nowrap; }
-    .orders-table td { vertical-align: middle; font-size: 0.88rem; }
-    .orders-table tr { cursor: pointer; transition: all 0.25s cubic-bezier(0.22,1,0.36,1); }
-    .orders-table tbody tr { animation: rowAppear 0.4s cubic-bezier(0.22,1,0.36,1) both; }
-    .orders-table tbody tr:hover { background-color: rgba(183,110,121,0.06) !important; transform: scale(1.005); }
-    .badge-financial, .badge-fulfillment { font-size: 0.75rem; padding: 0.3em 0.65em; border-radius: 0.5rem; font-weight: 500; transition: all 0.2s; }
-    .badge-financial:hover, .badge-fulfillment:hover { transform: scale(1.1); }
-    .card { border-radius: 0.75rem; transition: all 0.3s; }
-    .order-detail-section { margin-bottom: 1.25rem; animation: fadeInUp 0.4s both; }
-    .order-detail-section h6 { font-weight: 700; color: var(--color-primary); margin-bottom: 0.75rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
-    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-    .detail-label { font-size: 0.8rem; color: #6c757d; }
-    .detail-value { font-size: 0.9rem; font-weight: 500; }
-    .line-item-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0; border-bottom: 1px solid #f0f0f0; transition: all 0.2s; }
-    .line-item-row:hover { background: rgba(118,75,162,0.04); padding-left: 8px; }
-    .line-item-row:last-child { border-bottom: none; }
-    .line-item-img { width: 40px; height: 40px; border-radius: 0.5rem; object-fit: cover; background: #f5f5f5; transition: transform 0.3s; }
-    .line-item-img:hover { transform: scale(1.15); }
-    .line-item-img-lg { width: 60px; height: 60px; border-radius: 0.5rem; object-fit: cover; background: #f5f5f5; transition: transform 0.3s; }
-    .line-item-img-lg:hover { transform: scale(1.2) rotate(2deg); }
-    .actions-dropdown .dropdown-toggle::after { display: none; }
-    .orders-table .dropdown-menu { position: fixed !important; animation: scaleIn 0.2s cubic-bezier(0.22,1,0.36,1); }
-    .dropdown-menu { animation: scaleIn 0.2s cubic-bezier(0.22,1,0.36,1); transform-origin: top center; }
-    .dropdown-item { transition: all 0.15s; }
-    .dropdown-item:hover { transform: translateX(4px); }
+    /* ── Animasyonlar ───────────────────────────────────── */
+    @keyframes soFadeUp { from { opacity: 0; transform: translateY(30px); } }
+    @keyframes soFadeDown { from { opacity: 0; transform: translateY(-20px); } }
+    @keyframes soFadeLeft { from { opacity: 0; transform: translateX(-30px); } }
+    @keyframes soRowIn { from { opacity: 0; transform: translateX(-15px); } }
+    @keyframes soPop { 0% { transform: scale(0.85); } 60% { transform: scale(1.06); } }
+    @keyframes soScaleIn { from { opacity: 0; transform: scale(0.8); } }
+    @keyframes soOverlayIn { from { opacity: 0; } }
+    @keyframes soOverlayOut { to { opacity: 0; } }
+    @keyframes soDialogIn { from { opacity: 0; transform: scale(0.7) translateY(-20px); } }
+    @keyframes soDialogOut { to { opacity: 0; transform: scale(0.7) translateY(-20px); } }
+    @keyframes soIconBounce { 0% { transform: scale(0) rotate(-45deg); } 50% { transform: scale(1.2) rotate(10deg); } }
+    @keyframes soBounceIn { 0% { opacity: 0; transform: scale(0.3); } 50% { opacity: 1; transform: scale(1.05); } 70% { transform: scale(0.95); } }
+    @keyframes soShimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+    @keyframes soToastIn { from { transform: translateX(120%); opacity: 0; } }
+    @keyframes soToastOut { to { transform: translateX(120%); opacity: 0; } }
+    @keyframes soToastProgress { from { width: 100%; } to { width: 0; } }
+    /* Betik sayaclari bu adla cagirir (animateValue) */
+    @keyframes countUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* Status badges */
-    .status-beklemede { background-color: #f59e0b; color: #fff; }
-    .status-hazirlaniyor { background-color: #3b82f6; color: #fff; }
-    .status-kargoda { background-color: #8b5cf6; color: #fff; }
-    .status-teslim-edildi { background-color: #10b981; color: #fff; }
-    .status-iptal { background-color: #ef4444; color: #fff; }
-    .status-iade { background-color: #f97316; color: #fff; }
+    /* ── Baslik ─────────────────────────────────────────── */
+    .shopify-orders .so-header { animation: soFadeDown 0.6s var(--so-ease) backwards; }
+    .shopify-orders .so-header h1 { animation: soFadeLeft 0.7s var(--so-ease) 0.1s backwards; }
+    .shopify-orders .so-header p { animation: soFadeLeft 0.7s var(--so-ease) 0.2s backwards; }
 
-    /* ══════════════════════════════════════════════════════
-       BUTONLAR
-       ══════════════════════════════════════════════════════ */
-    .btn { position: relative; overflow: hidden; transition: all 0.25s cubic-bezier(0.22,1,0.36,1); }
-    .btn:hover { transform: translateY(-1px); }
-    .btn:active { transform: translateY(0) scale(0.97); }
-    .btn::after {
-        content: ''; position: absolute; top: 50%; left: 50%; width: 5px; height: 5px;
-        background: rgba(255,255,255,0.4); border-radius: 50%; opacity: 0;
-        transform: translate(-50%,-50%) scale(0);
+    /* ── Kartlar ────────────────────────────────────────── */
+    .shopify-orders .card { border-radius: var(--so-radius); }
+
+    .shopify-orders #statsRow > div { animation: soFadeUp 0.5s var(--so-ease) backwards; }
+    .shopify-orders #statsRow > div:nth-child(1) { animation-delay: 0.1s; }
+    .shopify-orders #statsRow > div:nth-child(2) { animation-delay: 0.15s; }
+    .shopify-orders #statsRow > div:nth-child(3) { animation-delay: 0.2s; }
+    .shopify-orders #statsRow > div:nth-child(4) { animation-delay: 0.25s; }
+    .shopify-orders #statsRow > div:nth-child(5) { animation-delay: 0.3s; }
+    .shopify-orders #statsRow > div:nth-child(6) { animation-delay: 0.35s; }
+
+    .shopify-orders .stats-card {
+        box-shadow: var(--so-card-shadow);
+        transition: transform 0.3s var(--so-ease), box-shadow 0.3s var(--so-ease);
     }
-    .btn:active::after { animation: ripple 0.5s ease-out; }
+    .shopify-orders .stats-card:hover { transform: translateY(-4px) scale(1.02); box-shadow: var(--so-card-shadow-hover); }
+    .shopify-orders .stats-card h3,
+    .shopify-orders .stats-card i { display: inline-block; transition: transform 0.3s var(--so-ease); }
+    .shopify-orders .stats-card h3 { display: block; overflow-wrap: anywhere; }
+    .shopify-orders .stats-card:hover h3 { transform: scale(1.1); }
+    .shopify-orders .stats-card:hover i { transform: scale(1.3) rotate(-5deg); }
 
-    /* ══════════════════════════════════════════════════════
-       MODALLER
-       ══════════════════════════════════════════════════════ */
-    .modal.show .modal-dialog { animation: dialogIn 0.35s cubic-bezier(0.22,1,0.36,1); }
-    .modal .modal-content { border-radius: 1rem; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.2); }
-    .modal-header { transition: all 0.3s; }
-    .modal-body { animation: fadeInUp 0.3s 0.1s both; }
+    /* ── Durum sekmeleri ────────────────────────────────── */
+    .shopify-orders #statusTabs { animation: soFadeUp 0.5s var(--so-ease) 0.3s backwards; }
+    .shopify-orders .status-tab {
+        --so-tab: var(--so-tumu);
+        background: var(--so-soft); color: var(--so-soft-text); border: 1px solid var(--so-line);
+        transition: background-color 0.3s var(--so-ease), color 0.3s var(--so-ease),
+                    box-shadow 0.3s var(--so-ease), transform 0.3s var(--so-ease);
+    }
+    .shopify-orders .status-tab[data-status="Beklemede"] { --so-tab: var(--so-beklemede); }
+    .shopify-orders .status-tab[data-status="Hazirlaniyor"] { --so-tab: var(--so-hazirlaniyor); }
+    .shopify-orders .status-tab[data-status="Kargoda"] { --so-tab: var(--so-kargoda); }
+    .shopify-orders .status-tab[data-status="Teslim Edildi"] { --so-tab: var(--so-teslim); }
+    .shopify-orders .status-tab[data-status="Iade"] { --so-tab: var(--so-iade); }
+    .shopify-orders .status-tab[data-status="Iptal"] { --so-tab: var(--so-iptal); }
+    .shopify-orders .status-tab:hover { background: var(--so-soft-hover); color: var(--so-soft-text); transform: translateY(-2px); }
+    .shopify-orders .status-tab.active,
+    .shopify-orders .status-tab.active:hover {
+        background: var(--so-tab); color: #fff; border-color: var(--so-tab);
+        box-shadow: 0 4px 15px color-mix(in srgb, var(--so-tab) 40%, transparent);
+        animation: soPop 0.3s var(--so-ease);
+    }
+    .shopify-orders .status-tab .badge { transition: transform 0.3s; }
+    .shopify-orders .status-tab:hover .badge { transform: scale(1.15); }
 
-    /* ══════════════════════════════════════════════════════
-       OZEL DIALOG
-       ══════════════════════════════════════════════════════ */
-    .custom-dialog-overlay {
-        position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999;
-        background: rgba(0,0,0,0.5); backdrop-filter: blur(6px);
+    /* ── Filtre alani ───────────────────────────────────── */
+    .shopify-orders .so-filter { animation: soFadeUp 0.5s var(--so-ease) 0.35s backwards; }
+    .shopify-orders .form-control,
+    .shopify-orders .form-select { border-radius: 0.5rem; transition: border-color 0.25s, box-shadow 0.25s; }
+    .shopify-orders .form-control:focus,
+    .shopify-orders .form-select:focus { border-color: var(--so-accent); box-shadow: 0 0 0 3px rgba(var(--so-accent-rgb), 0.2); }
+
+    /* ── Toplu islem cubugu ─────────────────────────────── */
+    .shopify-orders #bulkActionBar { animation: soFadeDown 0.3s var(--so-ease) backwards; }
+    .shopify-orders .so-bulk-inner {
+        background: linear-gradient(135deg, var(--so-accent-2) 0%, var(--so-accent) 100%);
+        border-radius: var(--so-radius);
+    }
+
+    /* ── Tablo ──────────────────────────────────────────── */
+    .shopify-orders .orders-table { min-width: 980px; --bs-table-hover-bg: var(--so-row-hover); }
+    .shopify-orders .orders-table th {
+        font-weight: 600; font-size: 0.8rem; text-transform: uppercase; white-space: nowrap;
+        color: var(--so-muted); border-bottom: 2px solid var(--so-line);
+    }
+    .shopify-orders .orders-table td { vertical-align: middle; font-size: 0.88rem; }
+    .shopify-orders .orders-table tbody tr {
+        cursor: pointer;
+        animation: soRowIn 0.4s var(--so-ease) backwards;
+    }
+    .shopify-orders .orders-table tbody tr:has(.order-checkbox:checked) > * { --bs-table-bg-state: var(--so-row-selected); }
+    .shopify-orders .orders-table .form-check-input { cursor: pointer; }
+    .shopify-orders .order-checkbox:checked { background-color: var(--so-accent); border-color: var(--so-accent); }
+
+    .shopify-orders .badge-financial,
+    .shopify-orders .badge-fulfillment { font-size: 0.75rem; padding: 0.3em 0.65em; border-radius: 0.5rem; font-weight: 500; }
+
+    /* Durum rozetleri / dugmeleri */
+    .shopify-orders .status-beklemede { --so-st: var(--so-beklemede); }
+    .shopify-orders .status-hazirlaniyor { --so-st: var(--so-hazirlaniyor); }
+    .shopify-orders .status-kargoda { --so-st: var(--so-kargoda); }
+    .shopify-orders .status-teslim-edildi { --so-st: var(--so-teslim); }
+    .shopify-orders .status-iade { --so-st: var(--so-iade); }
+    .shopify-orders .status-iptal { --so-st: var(--so-iptal); }
+    .shopify-orders [class*="status-"]:not(.status-tab),
+    .shopify-orders .btn[class*="status-"]:hover,
+    .shopify-orders .btn[class*="status-"]:focus,
+    .shopify-orders .btn[class*="status-"].show {
+        background-color: var(--so-st); border-color: var(--so-st); color: #fff;
+    }
+    .shopify-orders .btn[class*="status-"]:hover { filter: brightness(0.93); }
+
+    /* Acilir menuler */
+    .shopify-orders .actions-dropdown .dropdown-toggle::after { display: none; }
+    .shopify-orders .dropdown-item { transition: background-color 0.15s, padding-left 0.15s; }
+    .shopify-orders .dropdown-item:hover { padding-left: calc(var(--bs-dropdown-item-padding-x, 1rem) + 4px); }
+
+    .shopify-orders .card-footer { animation: soFadeUp 0.4s 0.3s backwards; }
+
+    /* ── Dugmeler ───────────────────────────────────────── */
+    .shopify-orders .btn { transition: transform 0.25s var(--so-ease), box-shadow 0.25s var(--so-ease), background-color 0.25s, border-color 0.25s, color 0.25s, filter 0.25s; }
+    .shopify-orders .btn:hover { transform: translateY(-1px); }
+    .shopify-orders .btn:active { transform: scale(0.97); }
+    .shopify-orders .so-kargo-head,
+    .shopify-orders .so-kargo-btn,
+    .shopify-orders .so-kargo-btn:hover,
+    .shopify-orders .so-kargo-btn:focus { background: var(--so-kargoda); border-color: var(--so-kargoda); color: #fff; }
+
+    /* ── Modallar ───────────────────────────────────────── */
+    .shopify-orders .modal .modal-content { border-radius: 1rem; overflow: hidden; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2); }
+    /* gullu-common.css .modal-dialog{margin:10px} pencereyi sol uste yapistiriyor; ortala */
+    @media (min-width: 576px) { .shopify-orders .modal-dialog { margin: 1.75rem auto; } }
+
+    .shopify-orders .order-detail-section { margin-bottom: 1.25rem; animation: soFadeUp 0.4s backwards; }
+    .shopify-orders .order-detail-section h6 {
+        font-weight: 700; color: var(--color-primary); margin-bottom: 0.75rem;
+        border-bottom: 1px solid var(--so-line-soft); padding-bottom: 0.5rem;
+    }
+    .shopify-orders .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .shopify-orders .detail-label { font-size: 0.8rem; color: var(--so-muted); overflow-wrap: anywhere; }
+    .shopify-orders .detail-value { font-size: 0.9rem; font-weight: 500; overflow-wrap: anywhere; }
+    .shopify-orders .line-item-row {
+        display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0;
+        border-bottom: 1px solid var(--so-line-soft); transition: background-color 0.2s, padding-left 0.2s;
+    }
+    .shopify-orders .line-item-row:hover { background: rgba(var(--so-accent-rgb), 0.04); padding-left: 8px; }
+    .shopify-orders .line-item-row:last-child { border-bottom: none; }
+    .shopify-orders .line-item-img,
+    .shopify-orders .line-item-img-lg {
+        width: 40px; height: 40px; flex-shrink: 0; border-radius: 0.5rem; object-fit: cover;
+        background: var(--so-soft); transition: transform 0.3s;
+    }
+    .shopify-orders .line-item-img-lg { width: 60px; height: 60px; }
+    .shopify-orders .line-item-img:hover { transform: scale(1.15); }
+    .shopify-orders .line-item-img-lg:hover { transform: scale(1.2) rotate(2deg); }
+    .shopify-orders .so-box { border-left: 4px solid var(--so-kargoda); background: var(--so-box-kargo); }
+    .shopify-orders .so-box-iade { border-left-color: var(--so-iade); background: var(--so-box-iade); }
+
+    /* ── Ozel dialog ────────────────────────────────────── */
+    .shopify-orders .custom-dialog-overlay {
+        position: fixed; inset: 0; z-index: 9999; padding: 1rem;
+        background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(6px);
         display: flex; align-items: center; justify-content: center;
-        animation: dialogOverlayIn 0.25s ease-out;
+        animation: soOverlayIn 0.25s ease-out;
     }
-    .custom-dialog-overlay.closing { animation: dialogOverlayIn 0.2s ease-out reverse forwards; }
-    .custom-dialog {
-        background: #fff; border-radius: 1.25rem; padding: 2rem 2.5rem; text-align: center;
-        max-width: 420px; width: 90%; box-shadow: 0 30px 80px rgba(0,0,0,0.25);
-        animation: dialogIn 0.4s cubic-bezier(0.22,1,0.36,1);
-        position: relative; overflow: hidden;
+    .shopify-orders .custom-dialog-overlay.closing { animation: soOverlayOut 0.2s ease-out forwards; }
+    .shopify-orders .custom-dialog {
+        position: relative; overflow: hidden; text-align: center;
+        width: 100%; max-width: 420px; padding: 2rem 2.5rem;
+        background: var(--so-surface); border-radius: 1.25rem; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.25);
+        animation: soDialogIn 0.4s var(--so-ease);
     }
-    .custom-dialog-overlay.closing .custom-dialog { animation: dialogOut 0.25s ease-in forwards; }
-    .custom-dialog::before {
+    .shopify-orders .custom-dialog-overlay.closing .custom-dialog { animation: soDialogOut 0.25s ease-in forwards; }
+    .shopify-orders .custom-dialog::before {
         content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
-        background: linear-gradient(90deg, #667eea, #764ba2, #f59e0b, #10b981);
-        background-size: 300% 100%; animation: shimmer 3s linear infinite;
+        background: linear-gradient(90deg, var(--so-accent-2), var(--so-accent), var(--so-beklemede), var(--so-teslim));
+        background-size: 300% 100%; animation: soShimmer 3s linear infinite;
     }
-    .custom-dialog-icon {
-        width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 1rem;
+    .shopify-orders .custom-dialog-icon {
+        width: 72px; height: 72px; margin: 0 auto 1rem; border-radius: 50%;
         display: flex; align-items: center; justify-content: center; font-size: 2rem;
-        animation: iconBounce 0.6s cubic-bezier(0.22,1,0.36,1) 0.2s both;
+        animation: soIconBounce 0.6s var(--so-ease) 0.2s backwards;
     }
-    .custom-dialog-icon.icon-warning { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #f59e0b; border: 3px solid #fbbf24; }
-    .custom-dialog-icon.icon-danger { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #ef4444; border: 3px solid #f87171; }
-    .custom-dialog-icon.icon-success { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #10b981; border: 3px solid #34d399; }
-    .custom-dialog-icon.icon-info { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #3b82f6; border: 3px solid #60a5fa; }
-    .custom-dialog-title {
-        font-weight: 700; margin-bottom: 0.5rem; font-size: 1.15rem;
-        animation: fadeInUp 0.4s cubic-bezier(0.22,1,0.36,1) 0.15s both;
+    .shopify-orders .custom-dialog-icon.icon-warning { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #f59e0b; border: 3px solid #fbbf24; }
+    .shopify-orders .custom-dialog-icon.icon-danger { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #ef4444; border: 3px solid #f87171; }
+    .shopify-orders .custom-dialog-icon.icon-success { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #10b981; border: 3px solid #34d399; }
+    .shopify-orders .custom-dialog-icon.icon-info { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #3b82f6; border: 3px solid #60a5fa; }
+    .shopify-orders .custom-dialog-title { font-weight: 700; font-size: 1.15rem; margin-bottom: 0.5rem; animation: soFadeUp 0.4s var(--so-ease) 0.15s backwards; }
+    .shopify-orders .custom-dialog-message {
+        color: #6b7280; font-size: 0.92rem; line-height: 1.5; margin-bottom: 1.5rem; overflow-wrap: anywhere;
+        animation: soFadeUp 0.4s var(--so-ease) 0.2s backwards;
     }
-    .custom-dialog-message {
-        color: #6b7280; margin-bottom: 1.5rem; font-size: 0.92rem; line-height: 1.5;
-        animation: fadeInUp 0.4s cubic-bezier(0.22,1,0.36,1) 0.2s both;
+    .shopify-orders .custom-dialog-buttons {
+        display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center;
+        animation: soFadeUp 0.4s var(--so-ease) 0.25s backwards;
     }
-    .custom-dialog-buttons {
-        display: flex; gap: 0.75rem; justify-content: center;
-        animation: fadeInUp 0.4s cubic-bezier(0.22,1,0.36,1) 0.25s both;
+    .shopify-orders .custom-dialog-buttons .btn { min-width: 110px; font-weight: 600; border-radius: 0.75rem; padding: 0.6rem 1.5rem; }
+    .shopify-orders .dialog-btn-cancel { background: #f3f4f6; color: #4b5563; border: 2px solid #e5e7eb; }
+    .shopify-orders .dialog-btn-cancel:hover { background: #e5e7eb; color: #374151; border-color: #d1d5db; }
+    .shopify-orders [class*="dialog-btn-confirm-"] { --so-c1: #3b82f6; --so-c2: #2563eb; --so-c3: #1d4ed8; }
+    .shopify-orders .dialog-btn-confirm-warning { --so-c1: #f59e0b; --so-c2: #d97706; --so-c3: #b45309; }
+    .shopify-orders .dialog-btn-confirm-danger { --so-c1: #ef4444; --so-c2: #dc2626; --so-c3: #b91c1c; }
+    .shopify-orders .dialog-btn-confirm-success { --so-c1: #10b981; --so-c2: #059669; --so-c3: #047857; }
+    .shopify-orders [class*="dialog-btn-confirm-"] { background: linear-gradient(135deg, var(--so-c1), var(--so-c2)); color: #fff; border: none; }
+    .shopify-orders [class*="dialog-btn-confirm-"]:hover {
+        background: linear-gradient(135deg, var(--so-c2), var(--so-c3)); color: #fff;
+        box-shadow: 0 4px 15px color-mix(in srgb, var(--so-c1) 40%, transparent);
     }
-    .custom-dialog-buttons .btn { min-width: 110px; font-weight: 600; border-radius: 0.75rem; padding: 0.6rem 1.5rem; }
-    .dialog-btn-cancel {
-        background: #f3f4f6; color: #4b5563; border: 2px solid #e5e7eb;
-    }
-    .dialog-btn-cancel:hover { background: #e5e7eb; color: #374151; border-color: #d1d5db; }
-    .dialog-btn-confirm-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; border: none; }
-    .dialog-btn-confirm-warning:hover { background: linear-gradient(135deg, #d97706, #b45309); color: #fff; box-shadow: 0 4px 15px rgba(245,158,11,0.4); }
-    .dialog-btn-confirm-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; border: none; }
-    .dialog-btn-confirm-danger:hover { background: linear-gradient(135deg, #dc2626, #b91c1c); color: #fff; box-shadow: 0 4px 15px rgba(239,68,68,0.4); }
-    .dialog-btn-confirm-success { background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; }
-    .dialog-btn-confirm-success:hover { background: linear-gradient(135deg, #059669, #047857); color: #fff; box-shadow: 0 4px 15px rgba(16,185,129,0.4); }
-    .dialog-btn-confirm-info { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: none; }
-    .dialog-btn-confirm-info:hover { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; box-shadow: 0 4px 15px rgba(59,130,246,0.4); }
+    html.gs-dark .shopify-orders .custom-dialog { color: #f3f4f6; }
+    html.gs-dark .shopify-orders .custom-dialog-message { color: #9ca3af; }
+    html.gs-dark .shopify-orders .dialog-btn-cancel { background: #374151; color: #d1d5db; border-color: #4b5563; }
+    html.gs-dark .shopify-orders .dialog-btn-cancel:hover { background: #4b5563; color: #f3f4f6; }
 
-    /* ══════════════════════════════════════════════════════
-       TOAST BILDIRIMLERI
-       ══════════════════════════════════════════════════════ */
-    .toast-container {
+    /* ── Toast bildirimleri ─────────────────────────────── */
+    .shopify-orders .toast-container {
         position: fixed; top: 20px; right: 20px; z-index: 10000;
-        display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+        display: flex; flex-direction: column; align-items: flex-end; gap: 10px; pointer-events: none;
+        width: min(450px, calc(100vw - 32px));
     }
-    .custom-toast {
-        pointer-events: all; display: flex; align-items: center; gap: 12px;
-        padding: 14px 20px; border-radius: 1rem; min-width: 320px; max-width: 450px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.15); animation: toastIn 0.4s cubic-bezier(0.22,1,0.36,1);
-        backdrop-filter: blur(10px); position: relative; overflow: hidden;
+    .shopify-orders .custom-toast {
+        position: relative; overflow: hidden; pointer-events: auto;
+        display: flex; align-items: center; gap: 12px; padding: 14px 20px;
+        min-width: min(320px, 100%); max-width: 100%;
+        border-radius: 1rem; color: #fff; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        animation: soToastIn 0.4s var(--so-ease);
     }
-    .custom-toast.removing { animation: toastOut 0.3s ease-in forwards; }
-    .custom-toast::before {
+    .shopify-orders .custom-toast.removing { animation: soToastOut 0.3s ease-in forwards; }
+    .shopify-orders .custom-toast::before {
         content: ''; position: absolute; bottom: 0; left: 0; height: 3px;
-        background: rgba(255,255,255,0.5); animation: toastProgress var(--toast-duration, 3s) linear forwards;
-        border-radius: 0 0 1rem 1rem;
+        background: rgba(255, 255, 255, 0.5);
+        animation: soToastProgress var(--toast-duration, 3s) linear forwards;
     }
-    @keyframes toastProgress { from { width: 100%; } to { width: 0%; } }
-    .custom-toast.toast-success { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
-    .custom-toast.toast-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; }
-    .custom-toast.toast-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
-    .custom-toast.toast-info { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
-    .toast-icon { font-size: 1.4rem; animation: bounceIn 0.5s 0.2s both; flex-shrink: 0; }
-    .toast-body { flex: 1; }
-    .toast-title { font-weight: 700; font-size: 0.88rem; margin-bottom: 2px; }
-    .toast-message { font-size: 0.82rem; opacity: 0.9; }
-    .toast-close { background: none; border: none; color: #fff; opacity: 0.7; cursor: pointer; font-size: 1.1rem; padding: 0 4px; transition: all 0.2s; flex-shrink: 0; }
-    .toast-close:hover { opacity: 1; transform: scale(1.2) rotate(90deg); }
+    .shopify-orders .custom-toast.toast-success { background: linear-gradient(135deg, #10b981, #059669); }
+    .shopify-orders .custom-toast.toast-danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .shopify-orders .custom-toast.toast-warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .shopify-orders .custom-toast.toast-info { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .shopify-orders .custom-toast .toast-icon { font-size: 1.4rem; flex-shrink: 0; animation: soBounceIn 0.5s 0.2s backwards; }
+    .shopify-orders .custom-toast .toast-body { flex: 1; min-width: 0; padding: 0; color: inherit; overflow-wrap: anywhere; }
+    .shopify-orders .custom-toast .toast-title { font-weight: 700; font-size: 0.88rem; margin-bottom: 2px; }
+    .shopify-orders .custom-toast .toast-message { font-size: 0.82rem; opacity: 0.9; }
+    .shopify-orders .custom-toast .toast-close {
+        flex-shrink: 0; background: none; border: none; color: #fff; opacity: 0.7;
+        cursor: pointer; font-size: 1.1rem; padding: 0 4px; transition: opacity 0.2s, transform 0.2s;
+    }
+    .shopify-orders .custom-toast .toast-close:hover { opacity: 1; transform: scale(1.2) rotate(90deg); }
 
-    /* ══════════════════════════════════════════════════════
-       FILTRE ALANI
-       ══════════════════════════════════════════════════════ */
-    .card.mb-4.border-0 { animation: fadeInUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.35s both; }
-    .form-control, .form-select { transition: all 0.25s cubic-bezier(0.22,1,0.36,1); border-radius: 0.5rem; }
-    .form-control:focus, .form-select:focus { transform: scale(1.02); box-shadow: 0 0 0 3px rgba(118,75,162,0.2); border-color: #764ba2; }
+    /* ── Kaydirma cubugu (yalniz tablo alani) ───────────── */
+    .shopify-orders .table-responsive::-webkit-scrollbar { height: 8px; }
+    .shopify-orders .table-responsive::-webkit-scrollbar-track { background: transparent; }
+    .shopify-orders .table-responsive::-webkit-scrollbar-thumb { background: linear-gradient(135deg, var(--so-accent-2), var(--so-accent)); border-radius: 4px; }
 
-    /* ══════════════════════════════════════════════════════
-       PAGINATION
-       ══════════════════════════════════════════════════════ */
-    .card-footer { animation: fadeInUp 0.4s 0.3s both; }
+    /* ── Dar ekran ──────────────────────────────────────── */
+    @media (max-width: 767.98px) {
+        .shopify-orders .so-header h1 { font-size: 1.35rem; }
+        .shopify-orders .stats-card h3 { font-size: 1.2rem; }
+        .shopify-orders .status-tab { flex: 1 1 auto; }
+        .shopify-orders .detail-grid { grid-template-columns: 1fr; }
+        .shopify-orders .custom-dialog { padding: 1.5rem 1.25rem; }
+        .shopify-orders .toast-container { top: 12px; right: 16px; }
+    }
 
-    /* ══════════════════════════════════════════════════════
-       DARK MODE
-       ══════════════════════════════════════════════════════ */
-    html.gs-dark .orders-table th { color: #999; border-bottom-color: #333; }
-    html.gs-dark .orders-table tbody tr:hover { background-color: rgba(183,110,121,0.12) !important; }
-    html.gs-dark .order-detail-section h6 { border-bottom-color: #333; }
-    html.gs-dark .line-item-row { border-bottom-color: #333; }
-    html.gs-dark .stats-card { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
-    html.gs-dark .custom-dialog { background: #1f2937; color: #f3f4f6; }
-    html.gs-dark .custom-dialog-message { color: #9ca3af; }
-    html.gs-dark .dialog-btn-cancel { background: #374151; color: #d1d5db; border-color: #4b5563; }
-    html.gs-dark .dialog-btn-cancel:hover { background: #4b5563; color: #f3f4f6; }
-
-    /* ══════════════════════════════════════════════════════
-       BULK SELECTION
-       ══════════════════════════════════════════════════════ */
-    .order-checkbox { transition: all 0.2s; cursor: pointer; }
-    .order-checkbox:checked { accent-color: #764ba2; animation: badgePop 0.3s; }
-    .orders-table tbody tr:has(.order-checkbox:checked) { background-color: rgba(118,75,162,0.08) !important; }
-    html.gs-dark .orders-table tbody tr:has(.order-checkbox:checked) { background-color: rgba(118,75,162,0.15) !important; }
-    #bulkActionBar { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
-
-    /* ══════════════════════════════════════════════════════
-       LOADING SHIMMER
-       ══════════════════════════════════════════════════════ */
-    .spinner-border { animation: spin 0.8s linear infinite, pulse 2s infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ══════════════════════════════════════════════════════
-       SCROLLBAR
-       ══════════════════════════════════════════════════════ */
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: linear-gradient(135deg, #764ba2, #667eea); }
+    @media (prefers-reduced-motion: reduce) {
+        .shopify-orders *:not(.spinner-border),
+        .shopify-orders *::before,
+        .shopify-orders *::after { animation-duration: 0.01ms !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; }
+    }
 </style>
 
 <script>
@@ -1151,7 +1207,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </td>
                     <td class="text-center" onclick="event.stopPropagation()">
                         <div class="dropdown">
-                            <button class="btn btn-sm ${STATUS_CONFIG[currentStatus].cls} dropdown-toggle" data-bs-toggle="dropdown" style="font-size:0.75rem; min-width:110px;">
+                            <button class="btn btn-sm ${STATUS_CONFIG[currentStatus].cls} dropdown-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' style="font-size:0.75rem; min-width:110px;">
                                 ${currentStatus === 'Iade' && order.displayFinancialStatus === 'PARTIALLY_REFUNDED' ? 'Kismi Iade' : currentStatus}
                             </button>
                             <ul class="dropdown-menu">${statusOptions}</ul>
@@ -1159,7 +1215,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </td>
                     <td class="text-center" onclick="event.stopPropagation()">
                         <div class="dropdown actions-dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}'>
                                 <i class="bi bi-three-dots-vertical"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
@@ -1384,7 +1440,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         o.fulfillments.forEach((f, idx) => {
                             const statusMap = { 'SUCCESS': ['bg-success','Teslim Edildi'], 'IN_TRANSIT': ['bg-info','Yolda'], 'DELIVERED': ['bg-success','Teslim Edildi'], 'FAILURE': ['bg-danger','Hata'] };
                             const [sCls, sLabel] = statusMap[f.status] || ['bg-secondary', f.status];
-                            html += `<div class="p-3 rounded mb-2" style="background:#f0f4ff;border-left:4px solid #8b5cf6;">
+                            html += `<div class="p-3 rounded mb-2 so-box">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <strong><i class="bi bi-truck me-1"></i>Kargo #${idx + 1}</strong>
                                     <span class="badge ${sCls}">${sLabel}</span>
@@ -1424,7 +1480,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Kismi iade ise hangi urunler iade edilmis goster
                         if (o.parsed_refunds && o.parsed_refunds.length > 0) {
                             o.parsed_refunds.forEach((ref, ri) => {
-                                html += `<div class="p-2 rounded mb-2" style="background:#fff3e0;border-left:4px solid #f97316;">
+                                html += `<div class="p-2 rounded mb-2 so-box so-box-iade">
                                     <div class="d-flex justify-content-between mb-1">
                                         <strong>Iade #${ri + 1}</strong>
                                         <span class="fw-bold text-danger">${ref.total.toFixed(2)} TL</span>

@@ -290,6 +290,108 @@ def generate_shopify_drafts_async(question_ids: list[int], talimat: str | None =
     t.start()
 
 
+INSTAGRAM_BAGLAM_MESAJ = 12   # taslak için konuşmanın son kaç mesajı verilir
+
+
+def _instagram_draft_prompt(conv, mesajlar, talimat: str | None = None,
+                            mevcut_metin: str | None = None) -> str:
+    from trendyol_qna.instagram_dm import TEXT_MAX
+
+    satirlar = []
+    for m in mesajlar:
+        kim = "Müşteri" if m.direction == "in" else "Biz"
+        ek = f" [ek: {m.attachment_type}]" if m.attachment_type else ""
+        satirlar.append(f"{kim}: {(m.text or '').strip()}{ek}")
+    prompt = (
+        "Bu mesaj Trendyol'dan DEĞİL, Instagram hesabımıza gelen direkt mesajdan (DM); "
+        "cevap müşteriye Instagram mesajı olarak gidecek. Trendyol'a özgü ifadeler kullanma, "
+        "mesajlaşma diline uygun kısa ve samimi yaz. "
+        f"Cevap en fazla {TEXT_MAX} karakter olmalı.\n"
+        f"Müşteri: {conv.name or 'bilinmiyor'}"
+        f"{' (@' + conv.username + ')' if conv.username else ''}\n"
+        "Hangi üründen bahsettiği yalnızca yazışmadan anlaşılır; stok/fiyat gerekiyorsa "
+        "mcp__gulludb__query ile bakabilirsin, emin olamazsan söz verme ve müşteriden "
+        "ürünü (model/renk/numara) netleştirmesini iste.\n"
+        "\nYazışma (eskiden yeniye):\n" + "\n".join(satirlar) + "\n\n"
+    )
+    if talimat:
+        prompt += (
+            f"Mevcut taslak (panelde görünen hali):\n{mevcut_metin or conv.ai_draft or '(boş)'}\n\n"
+            f"Kullanıcının düzeltme talimatı: {talimat}\n\n"
+            "Mevcut taslağı bu talimata göre düzelt; talimatın dokunmadığı kısımları koru. "
+            "Kurallara uygun, müşteriye gönderilmeye hazır TEK bir cevap taslağı yaz."
+        )
+    else:
+        prompt += ("Müşterinin cevaplanmamış son mesaj(lar)ına kurallara uygun, "
+                   "gönderilmeye hazır TEK bir cevap taslağı yaz.")
+    return prompt
+
+
+def generate_instagram_draft(conv_id: int, talimat: str | None = None,
+                             mevcut_metin: str | None = None) -> dict:
+    """
+    Instagram konuşması için taslak üret ve kaydet (senkron; app context
+    İÇİNDE çağrılmalı). generate_shopify_draft ile aynı akış; bağlam tek soru
+    değil konuşmanın son mesajlarıdır.
+    """
+    from models import db, InstagramConversation, InstagramMessage
+    from trendyol_qna.instagram_dm import TEXT_MAX
+
+    conv = db.session.get(InstagramConversation, conv_id)
+    if not conv:
+        return {"ok": False, "hata": "Konuşma bulunamadı."}
+
+    if conv.ai_draft_status == "pending" and conv.ai_draft_at:
+        ts = conv.ai_draft_at
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) - ts < timedelta(minutes=5):
+            return {"ok": False, "hata": "Taslak zaten üretiliyor."}
+
+    conv.ai_draft_status = "pending"
+    conv.ai_draft_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+    mesajlar = (
+        db.session.query(InstagramMessage)
+        .filter_by(conversation_id=conv.id)
+        .order_by(InstagramMessage.created_at.desc(), InstagramMessage.id.desc())
+        .limit(INSTAGRAM_BAGLAM_MESAJ)
+        .all()
+    )[::-1]
+    taslak = _run_ai(_instagram_draft_prompt(conv, mesajlar, talimat=talimat,
+                                             mevcut_metin=mevcut_metin))
+    if taslak:
+        conv.ai_draft = taslak[:TEXT_MAX]
+        conv.ai_draft_status = "ready"
+        conv.ai_draft_at = datetime.now(timezone.utc)
+        db.session.commit()
+        return {"ok": True, "taslak": conv.ai_draft}
+
+    conv.ai_draft_status = "failed"
+    db.session.commit()
+    return {"ok": False, "hata": "AI taslak üretilemedi (sunucu loglarına bakın)."}
+
+
+def generate_instagram_drafts_async(conv_ids: list[int], talimat: str | None = None,
+                                    mevcut_metin: str | None = None) -> None:
+    """Instagram konuşmaları için taslakları arka plan thread'inde sırayla üret."""
+    if not conv_ids:
+        return
+
+    def _worker():
+        from app import app
+        with app.app_context():
+            for cid in conv_ids:
+                try:
+                    generate_instagram_draft(cid, talimat=talimat, mevcut_metin=mevcut_metin)
+                except Exception:
+                    logger.exception("[QNA-AI] instagram taslak hatası (konuşma %s)", cid)
+
+    t = threading.Thread(target=_worker, name="qna-ai-instagram-draft", daemon=True)
+    t.start()
+
+
 def generate_drafts_async(question_ids: list[int], talimat: str | None = None,
                           mevcut_metin: str | None = None) -> None:
     """Yeni sorular için taslakları arka plan thread'inde sırayla üret."""

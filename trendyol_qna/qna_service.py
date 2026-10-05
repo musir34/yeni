@@ -311,7 +311,7 @@ def answer_question(question_id: int, text: str, username: str | None = None) ->
 
 
 def waiting_count() -> int:
-    """Cevap bekleyen soru sayısı (anasayfa rozeti) — Trendyol + Shopify toplamı."""
+    """Cevap bekleyen soru sayısı (anasayfa rozeti) — Trendyol + Shopify + Instagram toplamı."""
     toplam = 0
     try:
         toplam += db.session.query(TrendyolQuestion).filter_by(status=ANSWERABLE_STATUS).count()
@@ -320,6 +320,8 @@ def waiting_count() -> int:
         logger.exception("[QNA] bekleyen sayısı okunamadı")
     from trendyol_qna.shopify_qna import new_count
     toplam += new_count()
+    from trendyol_qna.instagram_dm import new_count as instagram_new_count
+    toplam += instagram_new_count()
     return toplam
 
 

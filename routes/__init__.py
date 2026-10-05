@@ -44,6 +44,7 @@ def register_blueprints(app):
     from order_audit_routes import order_audit_bp  # 🔎 SİPARİŞ İZ SÜRME
     from trendyol_qna import qna_bp  # 💬 TRENDYOL SORU-CEVAP
     from trendyol_qna.shopify_qna import shopify_q_bp  # 🛍️ SHOPIFY SİTE SORULARI (public intake)
+    from trendyol_qna.instagram_dm import instagram_bp  # 📷 INSTAGRAM DM (public webhook)
     from uretim_routes import uretim_bp  # 🏭 ÜRETİM MODU
     from takip_notu import takip_bp  # 📌 TAKİP NOTLARI
     from siparis_notu import siparis_notu_bp  # 📝 SİPARİŞ NOTLARI
@@ -100,6 +101,7 @@ def register_blueprints(app):
         order_audit_bp,  # 🔎 SİPARİŞ İZ SÜRME
         qna_bp,  # 💬 TRENDYOL SORU-CEVAP
         shopify_q_bp,  # 🛍️ SHOPIFY SİTE SORULARI (public intake)
+        instagram_bp,  # 📷 INSTAGRAM DM (public webhook)
         uretim_bp,  # 🏭 ÜRETİM MODU
         takip_bp,  # 📌 TAKİP NOTLARI
         siparis_notu_bp,  # 📝 SİPARİŞ NOTLARI
