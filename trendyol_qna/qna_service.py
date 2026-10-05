@@ -320,8 +320,9 @@ def waiting_count() -> int:
         logger.exception("[QNA] bekleyen sayısı okunamadı")
     from trendyol_qna.shopify_qna import new_count
     toplam += new_count()
-    from trendyol_qna.instagram_dm import new_count as instagram_new_count
+    from trendyol_qna.instagram_dm import new_comment_count, new_count as instagram_new_count
     toplam += instagram_new_count()
+    toplam += new_comment_count()
     return toplam
 
 

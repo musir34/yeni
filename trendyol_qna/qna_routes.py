@@ -11,7 +11,8 @@ from zoneinfo import ZoneInfo
 
 from flask import Blueprint, jsonify, render_template, request, session
 
-from models import db, TrendyolQuestion, ShopifyQuestion, InstagramConversation, InstagramMessage
+from models import (db, TrendyolQuestion, ShopifyQuestion, InstagramComment,
+                    InstagramConversation, InstagramMessage)
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +109,12 @@ def _shopify_to_dict(r: ShopifyQuestion) -> dict:
 INSTAGRAM_KART_MESAJ = 20   # kartta gösterilen son mesaj sayısı
 
 
+def yorum_cekme_acik() -> bool:
+    """Gönderi yorumları yalnız INSTAGRAM_COMMENTS=1 ise çekilir (anahtarda yorum izni gerekir)."""
+    import os
+    return str(os.getenv("INSTAGRAM_COMMENTS", "0")).lower() in ("1", "true", "yes")
+
+
 def _instagram_to_dict(c: InstagramConversation, mesajlar: list[InstagramMessage]) -> dict:
     """Instagram konuşmasını kart sözlüğüne çevirir (mesajlar eskiden yeniye)."""
     from trendyol_qna.instagram_dm import TEXT_MAX, pencere_acik, pencere_bitisi
@@ -142,6 +149,37 @@ def _instagram_to_dict(c: InstagramConversation, mesajlar: list[InstagramMessage
             }
             for m in mesajlar
         ],
+    }
+
+
+def _instagram_yorum_to_dict(y: InstagramComment) -> dict:
+    """Instagram gönderi yorumunu kart sözlüğüne çevirir."""
+    from trendyol_qna.instagram_dm import (TEXT_MAX, YORUM_NOTU_MAX, YORUM_NOTU_VARSAYILAN,
+                                           ozel_yanit_bitisi)
+    bitis = ozel_yanit_bitisi(y)
+    durum = {"new": "WAITING_FOR_ANSWER", "answered": "ANSWERED"}.get(y.status, "IGNORED")
+    return {
+        "id": y.id,
+        "source": "instagram_yorum",
+        "text": y.text or "",
+        "user_name": f"@{y.username}" if y.username else "Instagram kullanıcısı",
+        "username": y.username or "",
+        "product_name": (y.media_caption or "").strip()[:140],
+        "image_url": y.media_thumb or None,
+        "web_url": y.media_permalink or None,
+        "status": durum,
+        "public": True,
+        "creation_date": _tr(y.created_at),
+        "answer_text": y.answer or None,
+        "yorum_notu": y.public_note or None,
+        "answer_date": _tr(y.answered_at),
+        "answered_by": y.answered_by,
+        "ai_draft": y.ai_draft,
+        "ai_draft_status": y.ai_draft_status or "none",
+        "ozel_yanit_bitis": bitis.isoformat() if bitis else None,
+        "metin_azami": TEXT_MAX,
+        "not_azami": YORUM_NOTU_MAX,
+        "not_varsayilan": YORUM_NOTU_VARSAYILAN,
     }
 
 
@@ -248,6 +286,32 @@ def sorular():
             ig_rows, ig_total = [], 0
             logger.exception("[QNA] Instagram konuşmaları okunamadı (tablo yok olabilir)")
 
+    # Instagram gönderi yorumları (yoksayılanlar yalnız "Tümü"nde görünür)
+    yr_rows: list[InstagramComment] = []
+    yr_total = 0
+    if status in sh_status:
+        try:
+            yr_query = db.session.query(InstagramComment)
+            if sh_status[status]:
+                yr_query = yr_query.filter(InstagramComment.status == sh_status[status])
+            if q:
+                like = f"%{q}%"
+                yr_query = yr_query.filter(
+                    InstagramComment.text.ilike(like)
+                    | InstagramComment.username.ilike(like)
+                    | InstagramComment.media_caption.ilike(like)
+                )
+            yr_total = yr_query.count()
+            yr_rows = (
+                yr_query.order_by(InstagramComment.created_at.desc().nullslast())
+                .limit(fetch_limit)
+                .all()
+            )
+        except Exception:
+            db.session.rollback()
+            yr_rows, yr_total = [], 0
+            logger.exception("[QNA] Instagram yorumları okunamadı (tablo yok olabilir)")
+
     total = query.count()
     t_rows = (
         query.order_by(TrendyolQuestion.creation_date.desc().nullslast())
@@ -265,14 +329,15 @@ def sorular():
     merged = sorted(
         [(_key(r.creation_date), _to_dict(r)) for r in t_rows]
         + [(_key(r.created_at), _shopify_to_dict(r)) for r in sh_rows]
-        + [(_key(r.last_message_at), _instagram_to_dict(r, ig_mesaj.get(r.id, []))) for r in ig_rows],
+        + [(_key(r.last_message_at), _instagram_to_dict(r, ig_mesaj.get(r.id, []))) for r in ig_rows]
+        + [(_key(r.created_at), _instagram_yorum_to_dict(r)) for r in yr_rows],
         key=lambda x: x[0],
         reverse=True,
     )
     offset = (page - 1) * PAGE_SIZE
     return jsonify({
         "ok": True,
-        "toplam": total + sh_total + ig_total,
+        "toplam": total + sh_total + ig_total + yr_total,
         "sayfa": page,
         "sayfa_boyu": PAGE_SIZE,
         "sorular": [d for _, d in merged[offset:offset + PAGE_SIZE]],
@@ -383,6 +448,62 @@ def instagram_taslak_durum(qid: int):
     })
 
 
+@qna_bp.route("/api/instagram-yorum/cevapla", methods=["POST"])
+def instagram_yorum_cevapla():
+    """Yorumu iki mesajla cevaplar: özelden asıl cevap + yorumun altına not."""
+    payload = request.get_json(silent=True) or {}
+    try:
+        yid = int(payload.get("id"))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "hata": "Geçersiz yorum ID."}), 400
+
+    from trendyol_qna.instagram_dm import answer_comment
+    sonuc = answer_comment(yid, (payload.get("text") or "").strip(),
+                           public_note=(payload.get("not") or "").strip(),
+                           username=session.get("username"))
+    return jsonify(sonuc), (200 if sonuc["ok"] else 422)
+
+
+@qna_bp.route("/api/instagram-yorum/yoksay", methods=["POST"])
+def instagram_yorum_yoksay():
+    """Cevap gerektirmeyen yorumu listeden düşürür."""
+    payload = request.get_json(silent=True) or {}
+    try:
+        yid = int(payload.get("id"))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "hata": "Geçersiz yorum ID."}), 400
+
+    from trendyol_qna.instagram_dm import ignore_comment
+    sonuc = ignore_comment(yid, username=session.get("username"))
+    return jsonify(sonuc), (200 if sonuc["ok"] else 404)
+
+
+@qna_bp.route("/api/instagram-yorum/taslak/<int:qid>", methods=["POST"])
+def instagram_yorum_taslak(qid: int):
+    """Instagram yorumu için AI taslağını (yeniden) üretmeyi tetikler (arka plan)."""
+    row = db.session.get(InstagramComment, qid)
+    if not row:
+        return jsonify({"ok": False, "hata": "Yorum bulunamadı."}), 404
+    payload = request.get_json(silent=True) or {}
+    talimat = (payload.get("talimat") or "").strip()[:500] or None
+    mevcut_metin = (payload.get("metin") or "").strip()[:2000] or None
+    from trendyol_qna.qna_ai import generate_instagram_comment_drafts_async
+    generate_instagram_comment_drafts_async([qid], talimat=talimat, mevcut_metin=mevcut_metin)
+    return jsonify({"ok": True, "durum": "pending"})
+
+
+@qna_bp.route("/api/instagram-yorum/taslak-durum/<int:qid>", methods=["GET"])
+def instagram_yorum_taslak_durum(qid: int):
+    row = db.session.get(InstagramComment, qid)
+    if not row:
+        return jsonify({"ok": False, "hata": "Yorum bulunamadı."}), 404
+    return jsonify({
+        "ok": True,
+        "durum": row.ai_draft_status or "none",
+        "taslak": row.ai_draft if row.ai_draft_status == "ready" else None,
+    })
+
+
 @qna_bp.route("/api/taslak/<int:qid>", methods=["POST"])
 def taslak(qid: int):
     """
@@ -450,6 +571,9 @@ def senkron():
         try:
             from trendyol_qna.instagram_dm import sync_conversations
             sync_conversations()
+            if yorum_cekme_acik():
+                from trendyol_qna.instagram_dm import sync_comments
+                sync_comments()
         except Exception:
             db.session.rollback()
             logger.exception("[QNA] Instagram senkronu başarısız")

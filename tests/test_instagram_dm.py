@@ -349,3 +349,165 @@ def test_kart_sozlugu_konusmayi_eskiden_yeniye_verir():
 
 def test_gercek_uygulama_yuklenmedi():
     assert "app" not in sys.modules
+
+
+# ── Gönderi yorumları ────────────────────────────────────────────────────────
+
+from models import InstagramComment  # noqa: E402
+
+with app.app_context():
+    InstagramComment.__table__.create(bind=db.engine, checkfirst=True)
+
+
+@pytest.fixture
+def yorum_api(monkeypatch):
+    """Sahte Instagram: bir gönderi + yorumları. Dönen sözlük çağrıları ve veriyi taşır."""
+    simdi = datetime.now(timezone.utc)
+
+    def zs(saat):
+        return (simdi - timedelta(hours=saat)).strftime("%Y-%m-%dT%H:%M:%S+0000")
+
+    durum = {"cagrilar": [], "sayi": 4, "yorumlar": [
+        {"id": "c1", "text": "38 numara var mı?", "username": "ayse.y", "timestamp": zs(2),
+         "from": {"id": "111", "username": "ayse.y"}},
+        {"id": "c2", "text": "Fiyat?", "username": "zeynep", "timestamp": zs(5),
+         "from": {"id": "222", "username": "zeynep"},
+         "replies": {"data": [{"id": "r1", "username": "gullushoes", "from": {"id": BIZ}}]}},
+        {"id": "c3", "text": "Yeni sezon 🌹", "username": "gullushoes", "timestamp": zs(6),
+         "from": {"id": BIZ, "username": "gullushoes"}},
+        {"id": "c4", "text": "Çok eski yorum", "username": "eski", "timestamp": zs(10 * 24),
+         "from": {"id": "333", "username": "eski"}},
+    ]}
+
+    def sahte_api(method, path, **kw):
+        durum["cagrilar"].append((method, path, kw.get("json_body") or kw.get("params")))
+        if path == "me":
+            return {"id": "app-scoped-1", "user_id": BIZ, "username": "gullushoes"}
+        if path == "me/media":
+            return {"data": [
+                {"id": "g1", "caption": "Topuklu sandalet 0121", "permalink": "https://www.instagram.com/p/abc/",
+                 "media_type": "IMAGE", "media_url": "https://cdn.example.com/g1.jpg",
+                 "comments_count": durum["sayi"]},
+                {"id": "g2", "caption": "Yorumsuz", "media_type": "IMAGE", "comments_count": 0},
+            ]}
+        if path == "g1/comments":
+            return {"data": durum["yorumlar"]}
+        if method == "POST" and path == "me/messages":
+            if durum.get("dm_hata"):
+                raise instagram_dm.InstagramHatasi("özel yanıt reddedildi")
+            return {"recipient_id": MUSTERI, "message_id": "mid-ozel"}
+        if method == "POST" and path.endswith("/replies"):
+            if durum.get("not_hata"):
+                raise instagram_dm.InstagramHatasi("yorum kapalı")
+            return {"id": "r-yeni"}
+        pytest.fail(f"beklenmeyen çağrı: {method} {path}")
+
+    monkeypatch.setattr(instagram_dm, "_api", sahte_api)
+    monkeypatch.setattr(instagram_dm, "_ben", None)
+    instagram_dm._yorum_sayilari.clear()
+    db.session.query(InstagramComment).delete()
+    db.session.commit()
+    return durum
+
+
+def test_yorum_cekme_yenileri_kaydeder_bizimkileri_ve_eskileri_atlar(yorum_api):
+    assert instagram_dm.sync_comments() == 1
+    satirlar = {y.comment_id: y for y in InstagramComment.query.all()}
+    assert set(satirlar) == {"c1", "c2"}            # kendi yorumumuz ve 3 günden eski yok
+    assert satirlar["c1"].status == "new" and satirlar["c1"].username == "ayse.y"
+    assert satirlar["c1"].media_caption == "Topuklu sandalet 0121"
+    assert satirlar["c1"].media_permalink.startswith("https://www.instagram.com/")
+    assert satirlar["c2"].status == "answered"      # altında bizim yanıtımız var
+    assert instagram_dm.new_comment_count() == 1
+    # Yorum sayısı değişmediyse gönderinin yorumları yeniden istenmez
+    onceki = len([c for c in yorum_api["cagrilar"] if c[1] == "g1/comments"])
+    assert instagram_dm.sync_comments() == 0
+    assert len([c for c in yorum_api["cagrilar"] if c[1] == "g1/comments"]) == onceki
+
+
+def test_instagramdan_yanitlanan_yorum_kendiliginden_kapanir(yorum_api):
+    instagram_dm.sync_comments()
+    yorum_api["yorumlar"][0]["replies"] = {"data": [{"id": "r9", "username": "gullushoes"}]}
+    yorum_api["sayi"] = 5
+    instagram_dm.sync_comments()
+    yorum = InstagramComment.query.filter_by(comment_id="c1").one()
+    assert yorum.status == "answered" and yorum.answered_by == "Instagram uygulaması"
+
+
+def test_yorum_cevabi_once_ozelden_sonra_not_olarak_gider(yorum_api):
+    instagram_dm.sync_comments()
+    yorum = InstagramComment.query.filter_by(comment_id="c1").one()
+    yorum_api["cagrilar"].clear()
+    sonuc = instagram_dm.answer_comment(yorum.id, "38 numara mevcut.", public_note="Özelden yanıtladık 🌹",
+                                        username="ayse")
+    assert sonuc == {"ok": True, "hata": None, "uyari": None}
+    assert yorum_api["cagrilar"] == [
+        ("POST", "me/messages", {"recipient": {"comment_id": "c1"}, "message": {"text": "38 numara mevcut."}}),
+        ("POST", "c1/replies", {"message": "Özelden yanıtladık 🌹"}),
+    ]
+    db.session.refresh(yorum)
+    assert yorum.status == "answered" and yorum.answer == "38 numara mevcut."
+    assert yorum.public_note == "Özelden yanıtladık 🌹" and yorum.answered_by == "ayse"
+    # Giden özel mesaj konuşma geçmişine de yazılır
+    mesaj = InstagramMessage.query.filter_by(mid="mid-ozel").one()
+    assert mesaj.direction == "out" and mesaj.sent_by == "ayse"
+    # İkinci kez cevaplanamaz
+    assert instagram_dm.answer_comment(yorum.id, "tekrar")["ok"] is False
+
+
+def test_ozel_mesaj_gitmezse_yoruma_not_da_yazilmaz(yorum_api):
+    instagram_dm.sync_comments()
+    yorum = InstagramComment.query.filter_by(comment_id="c1").one()
+    yorum_api["dm_hata"] = True
+    yorum_api["cagrilar"].clear()
+    sonuc = instagram_dm.answer_comment(yorum.id, "Merhaba", public_note="Not")
+    assert sonuc["ok"] is False
+    assert [c[1] for c in yorum_api["cagrilar"]] == ["me/messages"]
+    assert yorum.status == "new"
+
+
+def test_not_yazilamazsa_cevap_yine_sayilir_ve_uyari_doner(yorum_api):
+    instagram_dm.sync_comments()
+    yorum = InstagramComment.query.filter_by(comment_id="c1").one()
+    yorum_api["not_hata"] = True
+    sonuc = instagram_dm.answer_comment(yorum.id, "Merhaba", public_note="Not")
+    assert sonuc["ok"] is True and "not yazılamadı" in sonuc["uyari"]
+    assert yorum.status == "answered" and yorum.public_note == ""
+
+
+def test_yedi_gunu_gecen_yoruma_instagram_cagrilmadan_ret(yorum_api):
+    db.session.add(InstagramComment(comment_id="eski", media_id="g1", text="?", status="new",
+                                    created_at=datetime.now(timezone.utc) - timedelta(days=8)))
+    db.session.commit()
+    yorum = InstagramComment.query.filter_by(comment_id="eski").one()
+    yorum_api["cagrilar"].clear()
+    sonuc = instagram_dm.answer_comment(yorum.id, "Merhaba", public_note="Not")
+    assert sonuc["ok"] is False and "7 gün" in sonuc["hata"]
+    assert yorum_api["cagrilar"] == []
+
+
+def test_yoksay_instagrama_dokunmadan_listeden_dusurur(yorum_api):
+    instagram_dm.sync_comments()
+    yorum = InstagramComment.query.filter_by(comment_id="c1").one()
+    yorum_api["cagrilar"].clear()
+    assert instagram_dm.ignore_comment(yorum.id, username="ayse") == {"ok": True, "hata": None}
+    assert yorum.status == "ignored" and yorum_api["cagrilar"] == []
+    assert instagram_dm.new_comment_count() == 0
+
+
+def test_yorum_kart_sozlugu():
+    from trendyol_qna.qna_routes import _instagram_yorum_to_dict
+
+    db.session.query(InstagramComment).delete()
+    db.session.add(InstagramComment(comment_id="k1", media_id="g1", media_caption="Topuklu sandalet",
+                                    username="ayse.y", text="Var mı?", status="new",
+                                    created_at=datetime.now(timezone.utc) - timedelta(hours=1)))
+    db.session.commit()
+    kart = _instagram_yorum_to_dict(InstagramComment.query.one())
+    assert kart["source"] == "instagram_yorum" and kart["status"] == "WAITING_FOR_ANSWER"
+    assert kart["user_name"] == "@ayse.y" and kart["product_name"] == "Topuklu sandalet"
+    assert kart["ozel_yanit_bitis"] and kart["not_varsayilan"] == instagram_dm.YORUM_NOTU_VARSAYILAN
+
+
+def test_gercek_uygulama_hala_yuklenmedi():
+    assert "app" not in sys.modules

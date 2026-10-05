@@ -19,6 +19,8 @@ Ayarlar (.env):
   INSTAGRAM_API_VERSION    (opsiyonel) ör. v23.0; boşsa sürümsüz çağrılır
   INSTAGRAM_POLL=1         (opsiyonel) webhook yerine/yanında dakikada bir
                            konuşmaları çekerek mesajları al
+  INSTAGRAM_COMMENTS=1     (opsiyonel) gönderi yorumlarını 2 dakikada bir çek;
+                           anahtarda instagram_business_manage_comments izni gerekir
 """
 import hashlib
 import hmac
@@ -32,7 +34,7 @@ import requests
 from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import IntegrityError
 
-from models import db, InstagramConversation, InstagramMessage, PlatformConfig
+from models import db, InstagramComment, InstagramConversation, InstagramMessage, PlatformConfig
 
 logger = logging.getLogger(__name__)
 
@@ -587,9 +589,211 @@ def sync_conversations(limit: int = 25) -> int:
     return eklenen
 
 
+# ── Gönderi yorumları ────────────────────────────────────────────────────────
+# Yorum bildirimi (webhook) Meta incelemesi ister; incelemesiz yol son
+# gönderilerin yorumlarını aralıklı çekmektir.
+
+YORUM_GONDERI_SAYISI = 20
+YORUM_ILK_GORUS = timedelta(days=3)        # ilk görüşte bundan eski yorum içeri alınmaz
+OZEL_YANIT_PENCERESI = timedelta(days=7)   # Meta: yoruma özel yanıt süresi
+YORUM_NOTU_MAX = 300
+YORUM_NOTU_VARSAYILAN = "Merhaba, sorunuzu özelden (DM) yanıtladık 🌹"
+BEKLEYEN_YOKLAMA_TURU = 5                  # bekleyen yorumlu gönderi kaç turda bir yeniden bakılır
+
+_yorum_kilit = threading.Lock()
+_yorum_sayilari: dict[str, int] = {}       # gönderi ID'si → son görülen yorum sayısı
+_yorum_turu = 0
+
+
+def _gonderi_yorumlari(media_id: str) -> list[dict]:
+    alanlar = "id,text,username,timestamp,from"
+    try:
+        data = _api("GET", f"{media_id}/comments",
+                    params={"fields": alanlar + ",replies{id,username,from,timestamp}", "limit": 50})
+    except InstagramHatasi:
+        # İç içe yanıt alanı desteklenmiyorsa yalnız ana yorumlarla devam et
+        data = _api("GET", f"{media_id}/comments", params={"fields": alanlar, "limit": 50})
+    return [y for y in (data.get("data") or []) if isinstance(y, dict)]
+
+
+def _bizden_mi(kayit: dict, ben: dict) -> bool:
+    gonderen = kayit.get("from") if isinstance(kayit.get("from"), dict) else {}
+    return (str(gonderen.get("id") or "") in ben["idler"]
+            or (kayit.get("username") or gonderen.get("username") or "").lower() == ben["username"])
+
+
+def sync_comments() -> int:
+    """Son gönderilerin yorumlarını çekip yenilerini kaydet. Dönen: yeni bekleyen yorum sayısı.
+
+    Yorumu Instagram uygulamasından yanıtladıysak (altında bizim yanıtımız
+    varsa) kart kendiliğinden 'answered' olur.
+    """
+    global _yorum_turu
+    if not configured():
+        return 0
+    ben = _hesap()
+    with _yorum_kilit:
+        _yorum_turu += 1
+        tur = _yorum_turu
+    liste = _api("GET", "me/media", params={
+        "fields": "id,caption,permalink,media_type,media_url,thumbnail_url,comments_count",
+        "limit": YORUM_GONDERI_SAYISI})
+    simdi = _simdi()
+    yeni = 0
+    for gonderi in liste.get("data") or []:
+        mid = str(gonderi.get("id") or "")
+        try:
+            sayi = int(gonderi.get("comments_count") or 0)
+        except (TypeError, ValueError):
+            sayi = 0
+        if not mid or sayi <= 0:
+            continue
+        with _yorum_kilit:
+            degisti = _yorum_sayilari.get(mid) != sayi
+        if not degisti:
+            bekleyen_var = (tur % BEKLEYEN_YOKLAMA_TURU == 0 and db.session.query(InstagramComment.id)
+                            .filter_by(media_id=mid, status="new").first() is not None)
+            if not bekleyen_var:
+                continue
+
+        gorsel = gonderi.get("thumbnail_url") if gonderi.get("media_type") == "VIDEO" else gonderi.get("media_url")
+        for yorum in _gonderi_yorumlari(mid):
+            cid = str(yorum.get("id") or "")
+            if not cid or _bizden_mi(yorum, ben):
+                continue
+            yanitlar = ((yorum.get("replies") or {}).get("data")) or []
+            yanitladik = any(isinstance(y, dict) and _bizden_mi(y, ben) for y in yanitlar)
+            satir = InstagramComment.query.filter_by(comment_id=cid).first()
+            if satir is not None:
+                if yanitladik and satir.status == "new":
+                    satir.status = "answered"
+                    satir.answered_by = "Instagram uygulaması"
+                    satir.answered_at = simdi
+                continue
+            zaman = _zaman_coz(yorum.get("timestamp")) or simdi
+            if simdi - zaman > YORUM_ILK_GORUS:
+                continue
+            gonderen = yorum.get("from") if isinstance(yorum.get("from"), dict) else {}
+            db.session.add(InstagramComment(
+                comment_id=cid, media_id=mid,
+                media_caption=(gonderi.get("caption") or "")[:2000],
+                media_permalink=_https(gonderi.get("permalink"))[:500],
+                media_thumb=_https(gonderi.get("thumbnail_url") or gorsel),
+                username=(yorum.get("username") or gonderen.get("username") or "")[:120],
+                text=(yorum.get("text") or "")[:4000],
+                status="answered" if yanitladik else "new",
+                answered_by="Instagram uygulaması" if yanitladik else None,
+                answered_at=simdi if yanitladik else None,
+                created_at=zaman,
+            ))
+            if not yanitladik:
+                yeni += 1
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()   # aynı yorum eşzamanlı ikinci bir turda yazıldı
+            continue
+        with _yorum_kilit:
+            _yorum_sayilari[mid] = sayi
+    return yeni
+
+
+def ozel_yanit_bitisi(yorum: InstagramComment) -> datetime | None:
+    zaman = _aware(yorum.created_at)
+    return zaman + OZEL_YANIT_PENCERESI if zaman else None
+
+
+def answer_comment(yorum_id: int, text: str, public_note: str = "",
+                   username: str | None = None) -> dict:
+    """Yorumu iki mesajla cevapla: önce özelden (DM) asıl cevap, sonra yorumun altına not.
+
+    DM gitmezse hiçbir şey yayınlanmaz. DM gidip not yayınlanamazsa yorum
+    yine cevaplanmış sayılır ve 'uyari' döner.
+    Dönen: {'ok': bool, 'hata': str|None, 'uyari': str|None}
+    """
+    text, public_note = (text or "").strip(), (public_note or "").strip()
+    yorum = db.session.get(InstagramComment, yorum_id)
+    if not yorum:
+        return {"ok": False, "hata": "Yorum bulunamadı.", "uyari": None}
+    if yorum.status != "new":
+        return {"ok": False, "hata": "Bu yorum zaten kapatılmış.", "uyari": None}
+    if not text:
+        return {"ok": False, "hata": "Cevap boş olamaz.", "uyari": None}
+    if len(text) > TEXT_MAX:
+        return {"ok": False, "hata": f"Instagram mesajı en fazla {TEXT_MAX} karakter olabilir.", "uyari": None}
+    if len(public_note) > YORUM_NOTU_MAX:
+        return {"ok": False, "hata": f"Yorum notu en fazla {YORUM_NOTU_MAX} karakter olabilir.", "uyari": None}
+    bitis = ozel_yanit_bitisi(yorum)
+    if not bitis or _simdi() >= bitis:
+        return {"ok": False, "uyari": None,
+                "hata": "Yorumun üzerinden 7 gün geçti; Instagram özelden yanıta izin vermiyor. "
+                        "Instagram uygulamasından yanıtlayın ya da yorumu yoksayın."}
+
+    try:
+        dm = _api("POST", f"{_env('INSTAGRAM_ACCOUNT_ID') or 'me'}/messages",
+                  json_body={"recipient": {"comment_id": yorum.comment_id}, "message": {"text": text}},
+                  timeout=20)
+    except InstagramHatasi as exc:
+        logger.warning("[INSTAGRAM] yoruma özel yanıt gönderilemedi (yorum %s): %s", yorum_id, exc)
+        return {"ok": False, "hata": f"Instagram özel yanıtı kabul etmedi: {exc}", "uyari": None}
+
+    uyari = None
+    if public_note:
+        try:
+            _api("POST", f"{yorum.comment_id}/replies", params={"message": public_note}, timeout=20)
+        except InstagramHatasi as exc:
+            logger.warning("[INSTAGRAM] yorum notu yayınlanamadı (yorum %s): %s", yorum_id, exc)
+            public_note = ""
+            uyari = f"Özel mesaj gitti ama yorumun altına not yazılamadı: {exc}"
+
+    yorum.status = "answered"
+    yorum.answer = text
+    yorum.public_note = public_note
+    yorum.answered_by = username or "panel"
+    yorum.answered_at = _simdi()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("[INSTAGRAM] yorum cevabı kaydedilemedi (yorum %s)", yorum_id)
+    # Giden DM konuşma geçmişine de yazılır; müşteri cevap verirse aynı kartta sürer
+    try:
+        if dm.get("recipient_id") and dm.get("message_id"):
+            kaydet_mesaj(dm["recipient_id"], dm["message_id"], "out", text, _simdi(),
+                         sent_by=username or "panel", username=yorum.username or "")
+    except Exception:
+        db.session.rollback()
+        logger.exception("[INSTAGRAM] özel yanıt konuşmaya yazılamadı (yorum %s)", yorum_id)
+    logger.info("[INSTAGRAM] yorum %s cevaplandı (%s)", yorum_id, username)
+    return {"ok": True, "hata": None, "uyari": uyari}
+
+
+def ignore_comment(yorum_id: int, username: str | None = None) -> dict:
+    """Cevap gerektirmeyen yorumu listeden düşür (Instagram'a hiçbir şey gönderilmez)."""
+    yorum = db.session.get(InstagramComment, yorum_id)
+    if not yorum:
+        return {"ok": False, "hata": "Yorum bulunamadı."}
+    if yorum.status == "new":
+        yorum.status = "ignored"
+        yorum.answered_by = username
+        yorum.answered_at = _simdi()
+        db.session.commit()
+    return {"ok": True, "hata": None}
+
+
+def new_comment_count() -> int:
+    """Cevap bekleyen Instagram yorumu sayısı (rozet için)."""
+    try:
+        return db.session.query(InstagramComment).filter_by(status="new").count()
+    except Exception:
+        db.session.rollback()
+        logger.exception("[INSTAGRAM] bekleyen yorum sayısı okunamadı")
+        return 0
+
+
 def ensure_table_exists() -> None:
     """Tablolar yoksa oluştur (prod'da alembic yok — ShopifyQuestion deseni)."""
-    for model in (InstagramConversation, InstagramMessage):
+    for model in (InstagramConversation, InstagramMessage, InstagramComment):
         try:
             model.__table__.create(bind=db.engine, checkfirst=True)
         except Exception:

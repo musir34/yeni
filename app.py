@@ -389,6 +389,18 @@ def pull_instagram_dm_job():
             logger.error(f"pull_instagram_dm_job hata: {e}", exc_info=True)
 
 
+def pull_instagram_comments_job():
+    """Instagram gönderi yorumlarını çeker (yalnız INSTAGRAM_COMMENTS=1 ise)."""
+    if str(os.getenv("INSTAGRAM_COMMENTS", "0")).lower() not in ("1", "true", "yes"):
+        return
+    with app.app_context():
+        try:
+            from trendyol_qna.instagram_dm import sync_comments
+            sync_comments()
+        except Exception as e:
+            logger.error(f"pull_instagram_comments_job hata: {e}", exc_info=True)
+
+
 def instagram_token_job():
     """Instagram erişim anahtarını (60 gün ömürlü) süresi dolmadan yeniler."""
     with app.app_context():
@@ -573,6 +585,15 @@ def schedule_jobs():
         id="pull_instagram_dm",
         seconds=60,
         next_run_time=now + timedelta(seconds=45)
+    )
+
+    # >>> Instagram gönderi yorumları: 2 dakikada bir (INSTAGRAM_COMMENTS=1 değilse boş döner)
+    _add_job_safe(
+        pull_instagram_comments_job,
+        trigger='interval',
+        id="pull_instagram_comments",
+        seconds=120,
+        next_run_time=now + timedelta(seconds=75)
     )
 
     # >>> Instagram erişim anahtarı yenileme: günde bir kontrol

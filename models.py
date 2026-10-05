@@ -1633,6 +1633,35 @@ class InstagramMessage(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), index=True)
 
 
+class InstagramComment(db.Model):
+    """Instagram gönderi yorumu — /soru-cevap ekranında tek kart = tek yorum.
+
+    Cevap iki mesajdır: asıl cevap yorum sahibine özelden (DM) gider, yorumun
+    altına da herkese açık kısa bir not ("özelden yanıtladık") yazılır.
+
+    Tablo oluşturma: trendyol_qna/instagram_dm.py ensure_table_exists (additive).
+    """
+    __tablename__ = 'instagram_comments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    comment_id = db.Column(db.String(64), unique=True, nullable=False)  # Instagram yorum ID'si
+    media_id = db.Column(db.String(64), nullable=False, index=True)
+    media_caption = db.Column(db.Text, default='')
+    media_permalink = db.Column(db.String(500), default='')
+    media_thumb = db.Column(db.Text, default='')                  # Meta CDN linki geçicidir
+    username = db.Column(db.String(120), default='')
+    text = db.Column(db.Text, default='')
+    status = db.Column(db.String(20), default='new', index=True)  # 'new' | 'answered' | 'ignored'
+    answer = db.Column(db.Text, default='')                       # özelden giden cevap
+    public_note = db.Column(db.Text, default='')                  # yorumun altına yazılan not
+    answered_by = db.Column(db.String(120))
+    answered_at = db.Column(db.DateTime(timezone=True))
+    ai_draft = db.Column(db.Text)
+    ai_draft_status = db.Column(db.String(20), default='none')    # none|pending|ready|failed
+    ai_draft_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), index=True)  # yorumun yazıldığı an
+
+
 class MotorOneriLog(db.Model):
     """Akıllı motor öneri geçmişi — geri besleme döngüsü.
 

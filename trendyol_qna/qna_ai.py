@@ -392,6 +392,88 @@ def generate_instagram_drafts_async(conv_ids: list[int], talimat: str | None = N
     t.start()
 
 
+def _instagram_comment_draft_prompt(yorum, talimat: str | None = None,
+                                    mevcut_metin: str | None = None) -> str:
+    from trendyol_qna.instagram_dm import TEXT_MAX
+
+    prompt = (
+        "Bu soru Trendyol'dan DEĞİL, Instagram gönderimizin altına yazılmış bir yorumdan geldi. "
+        "Cevap yorum sahibine özelden (Instagram direkt mesajı) gidecek; yorumun altına ayrıca "
+        "kısa bir 'özelden yanıtladık' notu düşülüyor, o notu SEN yazma. Trendyol'a özgü ifadeler "
+        f"kullanma, mesajlaşma diline uygun kısa ve samimi yaz. Cevap en fazla {TEXT_MAX} karakter olmalı.\n"
+        f"Yorumu yazan: {'@' + yorum.username if yorum.username else 'bilinmiyor'}\n"
+        f"Gönderinin açıklaması (hangi üründen bahsedildiği buradan anlaşılır):\n"
+        f"{(yorum.media_caption or '(açıklama yok)')[:1200]}\n"
+        "Stok/fiyat gerekiyorsa mcp__gulludb__query ile bakabilirsin; ürünü kesin belirleyemezsen "
+        "söz verme, müşteriden model/renk/numara netleştirmesini iste.\n"
+        f"\nMüşteri yorumu:\n{yorum.text}\n\n"
+    )
+    if talimat:
+        prompt += (
+            f"Mevcut taslak (panelde görünen hali):\n{mevcut_metin or yorum.ai_draft or '(boş)'}\n\n"
+            f"Kullanıcının düzeltme talimatı: {talimat}\n\n"
+            "Mevcut taslağı bu talimata göre düzelt; talimatın dokunmadığı kısımları koru. "
+            "Kurallara uygun, müşteriye gönderilmeye hazır TEK bir cevap taslağı yaz."
+        )
+    else:
+        prompt += "Bu yoruma kurallara uygun, özelden gönderilmeye hazır TEK bir cevap taslağı yaz."
+    return prompt
+
+
+def generate_instagram_comment_draft(yorum_id: int, talimat: str | None = None,
+                                     mevcut_metin: str | None = None) -> dict:
+    """Instagram yorumu için taslak üret ve kaydet (senkron; app context İÇİNDE çağrılmalı)."""
+    from models import db, InstagramComment
+    from trendyol_qna.instagram_dm import TEXT_MAX
+
+    yorum = db.session.get(InstagramComment, yorum_id)
+    if not yorum:
+        return {"ok": False, "hata": "Yorum bulunamadı."}
+
+    if yorum.ai_draft_status == "pending" and yorum.ai_draft_at:
+        ts = yorum.ai_draft_at
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) - ts < timedelta(minutes=5):
+            return {"ok": False, "hata": "Taslak zaten üretiliyor."}
+
+    yorum.ai_draft_status = "pending"
+    yorum.ai_draft_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+    taslak = _run_ai(_instagram_comment_draft_prompt(yorum, talimat=talimat,
+                                                     mevcut_metin=mevcut_metin))
+    if taslak:
+        yorum.ai_draft = taslak[:TEXT_MAX]
+        yorum.ai_draft_status = "ready"
+        yorum.ai_draft_at = datetime.now(timezone.utc)
+        db.session.commit()
+        return {"ok": True, "taslak": yorum.ai_draft}
+
+    yorum.ai_draft_status = "failed"
+    db.session.commit()
+    return {"ok": False, "hata": "AI taslak üretilemedi (sunucu loglarına bakın)."}
+
+
+def generate_instagram_comment_drafts_async(yorum_ids: list[int], talimat: str | None = None,
+                                            mevcut_metin: str | None = None) -> None:
+    """Instagram yorumları için taslakları arka plan thread'inde sırayla üret."""
+    if not yorum_ids:
+        return
+
+    def _worker():
+        from app import app
+        with app.app_context():
+            for yid in yorum_ids:
+                try:
+                    generate_instagram_comment_draft(yid, talimat=talimat, mevcut_metin=mevcut_metin)
+                except Exception:
+                    logger.exception("[QNA-AI] instagram yorum taslağı hatası (yorum %s)", yid)
+
+    t = threading.Thread(target=_worker, name="qna-ai-instagram-comment-draft", daemon=True)
+    t.start()
+
+
 def generate_drafts_async(question_ids: list[int], talimat: str | None = None,
                           mevcut_metin: str | None = None) -> None:
     """Yeni sorular için taslakları arka plan thread'inde sırayla üret."""

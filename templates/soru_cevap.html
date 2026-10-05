@@ -42,7 +42,7 @@
       <div>
         <span class="qna-eyebrow">Müşteri iletişimi</span>
         <h1>Soruları yanıtla</h1>
-        <p>Trendyol, gullushoes.com ve Instagram mesajlarını incele, cevapla — kaynak her kartta logosuyla görünür.</p>
+        <p>Trendyol, gullushoes.com ve Instagram mesaj/yorumlarını incele, cevapla — kaynak her kartta logosuyla görünür.</p>
       </div>
       <div class="qna-wait-pill" id="qnaWaitBadge">
         <span class="qna-pulse"></span>
@@ -398,6 +398,14 @@
     font-size:.76rem; font-weight:600; background:#eef6ff; color:#1d5fa8; }
   .qna-window--warn { background:#fff4e5; color:#a15c00; }
   .qna-window--closed { background:#fdecec; color:#b3261e; }
+  .qna-source-tag { margin-left:5px; font-size:.68rem; font-weight:700; letter-spacing:.02em; color:var(--qna-muted,#7a7f87); }
+  .qna-source--yorum { display:inline-flex; align-items:center; width:auto; padding:0 9px; }
+  .qna-yorum-send,.qna-yorum-ignore { white-space:nowrap; }
+  .qna-note-label { display:block; margin:10px 0 4px; font-size:.72rem; font-weight:700; letter-spacing:.04em;
+    text-transform:uppercase; color:var(--qna-muted,#7a7f87); }
+  .qna-note-input { width:100%; padding:8px 11px; border:1px solid var(--qna-line,#e6e7ea); border-radius:11px;
+    background:var(--qna-card,#fff); color:inherit; font-size:.86rem; }
+  html.gs-dark .qna-note-input { background:#23252b; }
   html.gs-dark .qna-bubble--out { background:#182720; border-color:#294438; }
   html.gs-dark .qna-window { background:#1c2a3a; color:#9cc7f5; }
   html.gs-dark .qna-window--warn { background:#38271b; color:#f3b56b; }
@@ -782,6 +790,137 @@
       </article>`;
   }
 
+  function instagramYorumCardHtml(s) {
+    const key = 'y' + s.id;
+    const waiting = s.status === 'WAITING_FOR_ANSWER';
+    const st = waiting
+      ? ['Cevap bekliyor', 'waiting', 'bi-hourglass-split']
+      : (s.status === 'ANSWERED' ? ['Cevaplandı', 'answered', 'bi-check2'] : ['Yoksayıldı', 'other', 'bi-eye-slash']);
+    const azami = s.metin_azami || 1000;
+    const kalanDk = s.ozel_yanit_bitis ? Math.floor((new Date(s.ozel_yanit_bitis) - Date.now()) / 60000) : 0;
+    const acik = waiting && kalanDk > 0;
+    const gorsel = s.image_url
+      ? `<img src="${esc(s.image_url)}" class="qna-img" loading="lazy" alt="Gönderi" onerror="this.outerHTML='<span class=&quot;qna-img-placeholder qna-ig-avatar&quot;><i class=&quot;bi bi-image&quot;></i></span>'">`
+      : '<span class="qna-img-placeholder qna-ig-avatar"><i class="bi bi-image"></i></span>';
+    const image = `${s.web_url ? `<a href="${esc(s.web_url)}" class="qna-img-link" target="_blank" rel="noopener noreferrer">` : ''}${gorsel}${s.web_url ? '</a>' : ''}`;
+    let sure = '';
+    if (waiting) {
+      const gun = Math.floor(kalanDk / 1440), sa = Math.floor((kalanDk % 1440) / 60);
+      sure = acik
+        ? `<span class="qna-window ${kalanDk < 1440 ? 'qna-window--warn' : ''}"><i class="bi bi-clock-history"></i> Özelden yanıt için kalan: ${gun ? gun + ' gün ' : ''}${sa} sa</span>`
+        : '<span class="qna-window qna-window--closed"><i class="bi bi-lock"></i> 7 gün doldu — özelden yanıtlanamaz</span>';
+    }
+    let answer = '';
+    if (acik) {
+      const draftReady = s.ai_draft_status === 'ready' && s.ai_draft;
+      const draftVal = draftReady ? s.ai_draft : '';
+      answer = `
+        <section class="qna-answer-pane">
+          <div class="qna-answer-head">
+            <span class="qna-section-label">Özelden cevabınız</span>
+            <span class="qna-char" data-id="${key}">${draftVal.trim().length}/${azami}</span>
+            ${draftReady
+              ? '<span class="qna-draft-state"><i class="bi bi-stars"></i> AI taslağı</span>'
+              : (s.ai_draft_status === 'pending'
+                  ? '<span class="qna-draft-state"><span class="spinner-border spinner-border-sm"></span> Hazırlanıyor</span>'
+                  : '')}
+            <button class="qna-ai-btn qna-draft-btn" data-id="${key}" data-qid="${s.id}" data-base="/soru-cevap/api/instagram-yorum">
+              <i class="bi bi-stars"></i> ${draftReady ? 'Taslağı yenile' : 'AI taslak üret'}
+            </button>
+          </div>
+          <textarea class="qna-answer-text" id="qna-answer-${key}" data-id="${key}" data-min="1" data-max="${azami}" rows="4"
+                    maxlength="${azami}" aria-label="Yorum sahibine özelden gönderilecek cevap"
+                    placeholder="Cevabınızı yazın… Yorum sahibine özelden (DM) gider.">${esc(draftVal)}</textarea>
+          <label class="qna-note-label" for="qna-note-${key}">Yorumun altına yazılacak not (herkese açık)</label>
+          <input type="text" class="qna-note-input" id="qna-note-${key}" data-id="${key}" maxlength="${s.not_azami || 300}"
+                 value="${esc(s.not_varsayilan || '')}">
+          <details class="qna-revise">
+            <summary><i class="bi bi-magic"></i> AI ile bu cevabı düzenle</summary>
+            <div class="qna-revise-row">
+              <input type="text" class="form-control qna-draft-talimat" data-id="${key}" maxlength="500"
+                     aria-label="AI düzeltme talimatı"
+                     placeholder="Ör: Daha kısa yaz, fiyattan bahsetme…">
+              <button class="qna-revise-btn" data-id="${key}" data-qid="${s.id}" data-base="/soru-cevap/api/instagram-yorum">
+                <i class="bi bi-stars"></i> Düzenle
+              </button>
+            </div>
+          </details>
+          <div class="qna-answer-actions">
+            <span class="qna-meta"><i class="bi bi-instagram"></i> Özelden cevap + yorum notu birlikte gider</span>
+            <span class="qna-err" data-id="${key}"></span>
+            <button class="qna-secondary-btn qna-yorum-ignore" data-id="${key}" data-qid="${s.id}">
+              <i class="bi bi-eye-slash"></i> Yoksay
+            </button>
+            <button class="qna-send-btn qna-yorum-send" data-id="${key}" data-qid="${s.id}">
+              <i class="bi bi-send"></i><span>İkisini gönder</span>
+            </button>
+          </div>
+        </section>`;
+    } else if (waiting) {
+      answer = `
+        <section class="qna-answer-pane">
+          <span class="qna-section-label">Cevap durumu</span>
+          <div class="qna-rejected" style="margin:0 0 12px">
+            <strong><i class="bi bi-lock"></i> Özelden yanıt süresi doldu</strong>
+            <div>Yorumun üzerinden 7 gün geçti. Instagram uygulamasından yorumu yanıtlayabilir ya da buradan yoksayabilirsiniz.</div>
+          </div>
+          <div class="qna-answer-actions">
+            <span class="qna-err" data-id="${key}"></span>
+            <button class="qna-secondary-btn qna-yorum-ignore" data-id="${key}" data-qid="${s.id}">
+              <i class="bi bi-eye-slash"></i> Yoksay
+            </button>
+          </div>
+        </section>`;
+    } else if (s.status === 'ANSWERED') {
+      answer = `
+        <section class="qna-answer-pane">
+          <span class="qna-section-label">Verilen cevap</span>
+          <div class="qna-published">
+            <div class="qna-published-meta">
+              <i class="bi bi-check2-circle"></i>
+              ${s.answer_date ? esc(s.answer_date) : 'Cevaplandı'}
+              ${s.answered_by ? ' · ' + esc(s.answered_by) : ''}
+            </div>
+            <div class="qna-published-text">${s.answer_text ? '<strong>Özelden:</strong> ' + esc(s.answer_text) : 'Instagram üzerinden yanıtlandı.'}${s.yorum_notu ? '\n<strong>Yorum notu:</strong> ' + esc(s.yorum_notu) : ''}</div>
+          </div>
+        </section>`;
+    } else {
+      answer = `
+        <section class="qna-answer-pane">
+          <span class="qna-section-label">Cevap durumu</span>
+          <div class="qna-published">
+            <div class="qna-published-text">Bu yorum yoksayıldı${s.answered_by ? ' (' + esc(s.answered_by) + ')' : ''}; Instagram'a bir şey gönderilmedi.</div>
+          </div>
+        </section>`;
+    }
+    return `
+      <article class="qna-card" id="qna-${key}">
+        <header class="qna-product-row">
+          ${image}
+          <div class="qna-product-info">
+            <strong title="${esc(s.product_name || '')}">${esc(s.product_name || 'Instagram gönderisi')}</strong>
+            ${s.web_url ? `<span class="qna-model"><i class="bi bi-link-45deg"></i> <a href="${esc(s.web_url)}" target="_blank" rel="noopener noreferrer">Gönderiyi aç</a></span>` : ''}
+          </div>
+          <span class="qna-source qna-source--ig qna-source--yorum" title="Instagram gönderi yorumu"><i class="bi bi-instagram"></i><span class="qna-source-tag">Yorum</span></span>
+          <span class="qna-status qna-status--${st[1]}" title="${esc(st[0])}">
+            <i class="bi ${st[2]}"></i><span>${esc(st[0])}</span>
+          </span>
+        </header>
+        <div class="qna-card-grid">
+          <section class="qna-question-pane">
+            <div class="qna-customer-meta">
+              <span><i class="bi bi-person"></i>${esc(s.user_name || 'Instagram kullanıcısı')}</span>
+              ${s.creation_date ? `<span><i class="bi bi-clock"></i>${esc(s.creation_date)}</span>` : ''}
+              ${sure}
+            </div>
+            <span class="qna-section-label">Müşteri yorumu</span>
+            <p class="qna-question">${esc(s.text)}</p>
+          </section>
+          ${answer}
+        </div>
+      </article>`;
+  }
+
   async function load() {
     list.setAttribute('aria-busy', 'true');
     try {
@@ -790,7 +929,8 @@
       if (!d.ok) throw new Error();
       list.innerHTML = d.sorular.length
         ? d.sorular.map(s => s.source === 'shopify' ? shopifyCardHtml(s)
-            : (s.source === 'instagram' ? instagramCardHtml(s) : cardHtml(s))).join('')
+            : (s.source === 'instagram' ? instagramCardHtml(s)
+            : (s.source === 'instagram_yorum' ? instagramYorumCardHtml(s) : cardHtml(s)))).join('')
         : `<div class="qna-empty">
              <div class="qna-empty-icon"><i class="bi bi-check2"></i></div>
              <strong>${curQ ? 'Aramanızla eşleşen soru yok' : 'Bu bölüm tertemiz'}</strong>
@@ -859,7 +999,9 @@
         resize();
       });
     });
-    list.querySelectorAll('.qna-send-btn:not(.qna-shopify-send):not(.qna-wa-btn):not(.qna-instagram-send)').forEach(b => b.addEventListener('click', () => send(b)));
+    list.querySelectorAll('.qna-send-btn:not(.qna-shopify-send):not(.qna-wa-btn):not(.qna-instagram-send):not(.qna-yorum-send)').forEach(b => b.addEventListener('click', () => send(b)));
+    list.querySelectorAll('.qna-yorum-send').forEach(b => b.addEventListener('click', () => sendYorum(b, false)));
+    list.querySelectorAll('.qna-yorum-ignore').forEach(b => b.addEventListener('click', () => sendYorum(b, true)));
     list.querySelectorAll('.qna-instagram-send').forEach(b => b.addEventListener('click', () => sendInstagram(b)));
     list.querySelectorAll('.qna-thread').forEach(t => { t.scrollTop = t.scrollHeight; });
     list.querySelectorAll('.qna-shopify-send').forEach(b => b.addEventListener('click', () => sendShopify(b, false)));
@@ -974,6 +1116,42 @@
         setTimeout(load, 700);
       } else {
         if (err) err.textContent = d.hata || 'Gönderilemedi.';
+        btn.disabled = false;
+        btn.innerHTML = eskiHtml;
+      }
+    } catch (e) {
+      if (err) err.textContent = 'Sunucuya ulaşılamadı.';
+      btn.disabled = false;
+      btn.innerHTML = eskiHtml;
+    }
+  }
+
+  async function sendYorum(btn, yoksay) {
+    const key = btn.dataset.id, qid = btn.dataset.qid;
+    const textEl = list.querySelector(`.qna-answer-text[data-id="${key}"]`);
+    const noteEl = list.querySelector(`.qna-note-input[data-id="${key}"]`);
+    const text = textEl ? textEl.value.trim() : '';
+    const err = list.querySelector(`.qna-err[data-id="${key}"]`);
+    if (err) err.textContent = '';
+    if (!yoksay && !text) { if (err) err.textContent = 'Cevap boş olamaz.'; return; }
+    btn.disabled = true;
+    const eskiHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span><span>' + (yoksay ? 'Kaldırılıyor…' : 'Gönderiliyor…') + '</span>';
+    try {
+      const r = await fetch('/soru-cevap/api/instagram-yorum/' + (yoksay ? 'yoksay' : 'cevapla'), {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-Requested-With': 'fetch'},
+        body: JSON.stringify(yoksay ? {id: +qid} : {id: +qid, text, not: noteEl ? noteEl.value.trim() : ''})
+      });
+      const d = await r.json();
+      if (d.ok) {
+        if (textEl) textEl.dataset.dirty = '';
+        if (d.uyari) alert(d.uyari);
+        const card = document.getElementById(`qna-${key}`);
+        if (card) card.style.opacity = '.4';
+        setTimeout(load, 700);
+      } else {
+        if (err) err.textContent = d.hata || 'İşlem tamamlanamadı.';
         btn.disabled = false;
         btn.innerHTML = eskiHtml;
       }
@@ -1199,7 +1377,7 @@
   motorYukle();
   talimatYukle();
   setInterval(() => {
-    const aktifDuzenleme = list.querySelector('.qna-answer-text:focus, .qna-answer-text[data-dirty="true"], details.qna-revise[open]');
+    const aktifDuzenleme = list.querySelector('.qna-answer-text:focus, .qna-answer-text[data-dirty="true"], .qna-note-input:focus, details.qna-revise[open]');
     if (curStatus === 'WAITING_FOR_ANSWER' && curPage === 1 && !aktifDuzenleme) load();
     else refreshBadge();
   }, 30000);
