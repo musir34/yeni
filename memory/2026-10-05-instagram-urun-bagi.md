@@ -37,3 +37,13 @@ gönderimi kendisi onaylayacak ("ben onaylarım, o düzgün hazırlasın yeter")
   + onaylı bağda "Kaldır" düğmesi (yorum kartında da). Yorumda bağ kaldırılınca o gönderinin hazır taslakları sıfırlanır.
 - Bağ konuşmada kalır; sonraki müşteri mesajlarının taslağı da o ürünle gelir.
 - 38 test. Mesaj kartındaki şerit tarayıcıda GÖRÜLMEDİ (yalnız JS sözdizimi denetlendi; aynı bileşen yorum kartında görüldü).
+
+## Ürün bağlanınca cevap kutusu hemen dolar (aynı gün, yerelde)
+- Komutan ürünü bağlayıp kendi yazdığını gönderdi; müşteriye yalnız yazdığı gitti, ürün bilgisi eklenmedi.
+  Sebep: bağ yalnız AI taslağını besliyordu (taslak 1–2 dk sonra, o da kutu "dirty" ise hiç görünmüyordu).
+- Çözüm: `instagram_urun.hazir_metin` — AI'sız, siteden canlı okunan "ürün (renk) fiyatı X. Stokta olan
+  numaralar: … / Detaylar ve sipariş için: <bağlantı>" metni. `urun-bagla` uçları `urun_metni` döndürür;
+  `urunBagla` (soru_cevap.html) bunu cevap kutusuna yazar: kutu boşsa "Merhaba," ile, doluysa yazılanın
+  sonuna; aynı bağlantı zaten yazılıysa eklemez. Kullanıcı gönderilecek metni kutuda GÖRÜR (gizli ekleme yok).
+- Doğrulama: 39 test; önizlemede dört durum (boş kutu, yazılı kutu, bağlantı zaten var, DM kartı) sahte
+  sunucuyla denendi. Canlıda denenmedi; commit+deploy bekliyor.

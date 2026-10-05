@@ -242,6 +242,38 @@ def urun_baglami(media_id: str) -> str | None:
     )
 
 
+def hazir_metin(media_id: str) -> str:
+    """Bağlı ürünün müşteriye gönderilmeye hazır fiyat + stok + bağlantı metni ('' = üretilemedi).
+
+    Ürün bağlanınca cevap kutusuna HEMEN yazılır: kullanıcı AI taslağını
+    beklemeden ya da kendi cümlesinin sonuna ekleyerek gönderebilir. Yalnız
+    siteden okunan canlı veriden kurulur, yapay zekâ kullanılmaz.
+    """
+    satir = bagli_urun(media_id)
+    if satir is None or not satir.confirmed:
+        return ""
+    urun = urun_getir(satir.shopify_product_id)
+    if not urun:
+        return ""
+    renkler = [r for r in urun["renkler"]
+               if r["fiyat"] is not None and (not satir.color or r["renk"] == satir.color)]
+    if not renkler:
+        return ""
+
+    def _stok(r) -> str:
+        var = [b["beden"] for b in r["bedenler"] if b["stokta"] and b["beden"]]
+        return ("Stokta olan numaralar: " + ", ".join(var)) if var else "Şu an stokta numara kalmadı"
+
+    if len(renkler) == 1:
+        r = renkler[0]
+        ad = urun["title"] + (f" ({r['renk']})" if r["renk"] else "")
+        govde = f"{ad} fiyatı {_tl(r['fiyat'])}. {_stok(r)}."
+    else:
+        govde = f"{urun['title']} fiyatları:\n" + "\n".join(
+            f"- {r['renk'] or 'Tek renk'}: {_tl(r['fiyat'])}. {_stok(r)}." for r in renkler)
+    return f"{govde}\nDetaylar ve sipariş için: {urun['url']}" if urun["url"] else govde
+
+
 # ── AI ürün önerisi ──────────────────────────────────────────────────────────
 
 def _oneri_promptu(caption: str, urunler: list[dict]) -> str:

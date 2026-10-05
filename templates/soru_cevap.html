@@ -990,7 +990,25 @@
       });
       const d = await r.json();
       if (!d.ok) { alert(d.hata || 'Ürün bağlanamadı.'); btn.disabled = false; return; }
-      load();
+      // Ürünün fiyat + stok + bağlantı metni cevap kutusuna hemen yazılır: kutu boşsa
+      // selamla birlikte, doluysa yazılanın sonuna (aynı bağlantı zaten varsa eklenmez).
+      const card = btn.closest('.qna-card');
+      const key = card ? card.id.replace(/^qna-/, '') : '';
+      const eski = card ? card.querySelector('.qna-answer-text') : null;
+      const yazilan = eski && eski.dataset.dirty === 'true' ? eski.value.trim() : '';
+      await load();
+      const kutu = document.getElementById(`qna-answer-${key}`);
+      if (kutu && d.urun_metni) {
+        const baglanti = (d.urun_metni.match(/https?:\/\/\S+/) || [''])[0];
+        let metin = yazilan;
+        if (!yazilan) metin = 'Merhaba,\n' + d.urun_metni;
+        else if (!baglanti || !yazilan.includes(baglanti)) metin = yazilan + '\n\n' + d.urun_metni;
+        kutu.value = metin.slice(0, +kutu.dataset.max || 1000);
+        kutu.dispatchEvent(new Event('input'));
+      } else if (kutu && yazilan) {
+        kutu.value = yazilan;
+        kutu.dispatchEvent(new Event('input'));
+      }
     } catch (e) { alert('Sunucuya ulaşılamadı.'); btn.disabled = false; }
   }
 

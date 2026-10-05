@@ -115,6 +115,17 @@ def yorum_cekme_acik() -> bool:
     return str(os.getenv("INSTAGRAM_COMMENTS", "0")).lower() in ("1", "true", "yes")
 
 
+def _urun_metni(anahtar: str) -> str:
+    """Bağlanan ürünün cevap kutusuna yazılacak hazır metni; okunamazsa '' (bağlama yine geçerlidir)."""
+    from trendyol_qna.instagram_urun import hazir_metin
+    try:
+        return hazir_metin(anahtar)
+    except Exception:
+        db.session.rollback()
+        logger.exception("[QNA] ürün hazır metni üretilemedi (%s)", anahtar)
+        return ""
+
+
 def _urun_sozlugu(bag) -> dict | None:
     """Ürün bağını kartın kullandığı sözlüğe çevirir (bağ yoksa None)."""
     if bag is None:
@@ -478,6 +489,8 @@ def instagram_urun_bagla():
             db.session.commit()
         from trendyol_qna.qna_ai import generate_instagram_drafts_async
         generate_instagram_drafts_async([conv.id])
+    if sonuc["ok"] and not payload.get("kaldir"):
+        sonuc = {**sonuc, "urun_metni": _urun_metni(anahtar)}
     return jsonify(sonuc), (200 if sonuc["ok"] else 422)
 
 
@@ -574,6 +587,7 @@ def instagram_yorum_urun_bagla():
                                  username=session.get("username"), confirmed=True)
     if sonuc["ok"]:
         instagram_urun.taslaklari_uret_async(row.media_id, yenile=True)
+        sonuc = {**sonuc, "urun_metni": _urun_metni(row.media_id)}
     return jsonify(sonuc), (200 if sonuc["ok"] else 422)
 
 

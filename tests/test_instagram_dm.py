@@ -670,5 +670,22 @@ def test_dm_konusmasina_elle_baglanan_urun_taslak_istemine_girer(urun_ortami):
     assert instagram_dm._bagsiz_bekleyen_gonderiler() == ["g1"]
 
 
+def test_baglanan_urunun_hazir_metni_fiyat_stok_ve_baglanti_tasir(urun_ortami):
+    assert instagram_urun.hazir_metin("g1") == ""                       # bağ yok
+    instagram_urun.bagla("g1", "8814245511346", "Bej Leopar", confirmed=False)
+    assert instagram_urun.hazir_metin("g1") == ""                       # onaysız öneri metin üretmez
+    instagram_urun.bagi_kaldir("g1")
+    instagram_urun.bagla("g1", "8814245511346", "Bej Leopar", username="ayse")
+    assert instagram_urun.hazir_metin("g1") == (
+        "Timsah Desenli Tokalı Loafer (Bej Leopar) fiyatı 1.449,99 TL. Stokta olan numaralar: 36.\n"
+        "Detaylar ve sipariş için: https://www.gullushoes.com/products/03155-loafer")
+    # Tüm renkler bağlıysa renk renk yazılır
+    instagram_urun.bagla("g1", "8814245511346", "", username="ayse")
+    metin = instagram_urun.hazir_metin("g1")
+    assert "- Bej Leopar: 1.449,99 TL. Stokta olan numaralar: 36." in metin
+    assert "- Siyah: 1.349,61 TL. Stokta olan numaralar: 36." in metin
+    assert metin.endswith("Detaylar ve sipariş için: https://www.gullushoes.com/products/03155-loafer")
+
+
 def test_gercek_uygulama_hala_yuklenmedi():
     assert "app" not in sys.modules
