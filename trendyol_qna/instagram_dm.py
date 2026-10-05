@@ -485,6 +485,28 @@ PENCERE_HATASI = ("Müşterinin son mesajının üzerinden 24 saat geçti; Insta
                   "konuşmaya panelden cevap yazılmasına izin vermiyor.")
 
 
+URUN_BAGLANTI_ONEKI = "Detaylar ve sipariş için: "
+
+
+def urun_baglantisi_ekle(text: str, anahtar: str) -> str:
+    """Bağlı (onaylı) ürünün sayfa bağlantısı mesajda yoksa sonuna ekle.
+
+    Ürün bağlıyken müşteriye bağlantısız cevap gitmesin: kullanıcı taslağı
+    silip kendi cümlesini yazsa da, ürün önceden bağlanmış olup kutuya metin
+    hiç düşmemiş olsa da bağlantı gider. Bağ yoksa metin aynen döner.
+    """
+    try:
+        from trendyol_qna.instagram_urun import bagli_urun
+        bag = bagli_urun(anahtar)
+    except Exception:
+        db.session.rollback()
+        logger.exception("[INSTAGRAM] ürün bağı okunamadı (%s)", anahtar)
+        return text
+    if bag is None or not bag.confirmed or not bag.url or bag.url in text:
+        return text
+    return f"{text}\n\n{URUN_BAGLANTI_ONEKI}{bag.url}"
+
+
 def answer_conversation(conv_id: int, text: str, username: str | None = None) -> dict:
     """Cevabı Instagram'dan müşteriye gönder. Dönen: {'ok': bool, 'hata': str|None}"""
     text = (text or "").strip()
@@ -493,8 +515,10 @@ def answer_conversation(conv_id: int, text: str, username: str | None = None) ->
         return {"ok": False, "hata": "Konuşma bulunamadı."}
     if not text:
         return {"ok": False, "hata": "Cevap boş olamaz."}
+    from trendyol_qna.instagram_urun import konusma_anahtari
+    text = urun_baglantisi_ekle(text, konusma_anahtari(conv.id))
     if len(text) > TEXT_MAX:
-        return {"ok": False, "hata": f"Instagram mesajı en fazla {TEXT_MAX} karakter olabilir."}
+        return {"ok": False, "hata": f"Instagram mesajı (ürün bağlantısı dahil) en fazla {TEXT_MAX} karakter olabilir."}
     if not pencere_acik(conv):
         return {"ok": False, "hata": PENCERE_HATASI}
 
@@ -760,6 +784,7 @@ def answer_comment(yorum_id: int, text: str, public_note: str = "",
         return {"ok": False, "hata": "Bu yorum zaten kapatılmış.", "uyari": None}
     if not text:
         return {"ok": False, "hata": "Cevap boş olamaz.", "uyari": None}
+    text = urun_baglantisi_ekle(text, yorum.media_id)
     if len(text) > TEXT_MAX:
         return {"ok": False, "hata": f"Instagram mesajı en fazla {TEXT_MAX} karakter olabilir.", "uyari": None}
     if len(public_note) > YORUM_NOTU_MAX:

@@ -463,6 +463,8 @@
   const waitTabCount = document.getElementById('qnaWaitTabCount');
   const resultMeta = document.getElementById('qnaResultMeta');
   let curStatus = 'WAITING_FOR_ANSWER', curPage = 1, curQ = '';
+  // Deploy'dan sonra açık kalan sekme eski ekran koduyla kalmasın (bkz. qna_routes.sayfa_surumu)
+  const SAYFA_SURUMU = {{ (sayfa_surumu or 0)|int }};
 
   const STATUS_TR = {
     'WAITING_FOR_ANSWER': ['Cevap bekliyor', 'waiting', 'bi-hourglass-split'],
@@ -830,10 +832,14 @@
     if (u.onayli) {
       return `<div class="qna-urun qna-urun--onayli">
         <div class="qna-urun-head"><i class="bi bi-tag-fill"></i> <span>Ürün:</span> <strong>${ad}</strong>${link}
+          <button class="qna-urun-btn qna-urun-metin" data-qid="${s.id}" data-uc="${uc}" title="Fiyat, stoktaki numaralar ve bağlantıyı cevap kutusuna yaz">
+            <i class="bi bi-pencil-square"></i> Fiyatı kutuya yaz
+          </button>
           <button class="qna-urun-btn qna-urun-kaldir" data-qid="${s.id}" data-uc="${uc}" title="Ürün bağını kaldır">
             <i class="bi bi-x-lg"></i> Kaldır
           </button>
         </div>
+        <div class="qna-meta" style="margin-top:6px"><i class="bi bi-link-45deg"></i> Ürün bağlantısı mesajda yoksa gönderirken sonuna kendiliğinden eklenir.</div>
         ${panel}</div>`;
     }
     return `<div class="qna-urun qna-urun--oneri">
@@ -979,6 +985,7 @@
   }
 
   async function urunBagla(btn) {
+    const yalnizMetin = btn.classList.contains('qna-urun-metin');
     btn.disabled = true;
     try {
       const r = await fetch(btn.dataset.uc || '/soru-cevap/api/instagram-yorum/urun-bagla', {
@@ -986,7 +993,9 @@
         headers: {'Content-Type': 'application/json', 'X-Requested-With': 'fetch'},
         body: JSON.stringify(btn.classList.contains('qna-urun-kaldir')
           ? {id: +btn.dataset.qid, kaldir: true}
-          : {id: +btn.dataset.qid, product_id: btn.dataset.pid, renk: btn.dataset.renk || ''})
+          : (yalnizMetin
+              ? {id: +btn.dataset.qid, yalniz_metin: true}
+              : {id: +btn.dataset.qid, product_id: btn.dataset.pid, renk: btn.dataset.renk || ''}))
       });
       const d = await r.json();
       if (!d.ok) { alert(d.hata || 'Ürün bağlanamadı.'); btn.disabled = false; return; }
@@ -995,8 +1004,9 @@
       const card = btn.closest('.qna-card');
       const key = card ? card.id.replace(/^qna-/, '') : '';
       const eski = card ? card.querySelector('.qna-answer-text') : null;
-      const yazilan = eski && eski.dataset.dirty === 'true' ? eski.value.trim() : '';
-      await load();
+      // "Fiyatı kutuya yaz": kutudaki metin (taslak dahil) korunur, liste yeniden çizilmez
+      const yazilan = eski && (yalnizMetin || eski.dataset.dirty === 'true') ? eski.value.trim() : '';
+      if (yalnizMetin) btn.disabled = false; else await load();
       const kutu = document.getElementById(`qna-answer-${key}`);
       if (kutu && d.urun_metni) {
         const baglanti = (d.urun_metni.match(/https?:\/\/\S+/) || [''])[0];
@@ -1005,9 +1015,11 @@
         else if (!baglanti || !yazilan.includes(baglanti)) metin = yazilan + '\n\n' + d.urun_metni;
         kutu.value = metin.slice(0, +kutu.dataset.max || 1000);
         kutu.dispatchEvent(new Event('input'));
-      } else if (kutu && yazilan) {
+      } else if (kutu && yazilan && !yalnizMetin) {
         kutu.value = yazilan;
         kutu.dispatchEvent(new Event('input'));
+      } else if (yalnizMetin) {
+        alert('Ürün bilgisi şu an siteden okunamadı. Bağlantı yine de gönderirken mesaja eklenir.');
       }
     } catch (e) { alert('Sunucuya ulaşılamadı.'); btn.disabled = false; }
   }
@@ -1045,6 +1057,11 @@
       const r = await fetch(`/soru-cevap/api/sorular?status=${curStatus}&q=${encodeURIComponent(curQ)}&page=${curPage}`, {cache:'no-store'});
       const d = await r.json();
       if (!d.ok) throw new Error();
+      if (SAYFA_SURUMU && d.surum && d.surum !== SAYFA_SURUMU
+          && !list.querySelector('.qna-answer-text[data-dirty="true"]')) {
+        location.reload();
+        return;
+      }
       list.innerHTML = d.sorular.length
         ? d.sorular.map(s => s.source === 'shopify' ? shopifyCardHtml(s)
             : (s.source === 'instagram' ? instagramCardHtml(s)
@@ -1120,7 +1137,7 @@
     list.querySelectorAll('.qna-send-btn:not(.qna-shopify-send):not(.qna-wa-btn):not(.qna-instagram-send):not(.qna-yorum-send)').forEach(b => b.addEventListener('click', () => send(b)));
     list.querySelectorAll('.qna-yorum-send').forEach(b => b.addEventListener('click', () => sendYorum(b, false)));
     list.querySelectorAll('.qna-yorum-ignore').forEach(b => b.addEventListener('click', () => sendYorum(b, true)));
-    list.querySelectorAll('.qna-urun-sec, .qna-urun-kaldir').forEach(b => b.addEventListener('click', () => urunBagla(b)));
+    list.querySelectorAll('.qna-urun-sec, .qna-urun-kaldir, .qna-urun-metin').forEach(b => b.addEventListener('click', () => urunBagla(b)));
     list.querySelectorAll('.qna-urun-ara').forEach(i => i.addEventListener('input', () => urunAra(i)));
     list.querySelectorAll('.qna-instagram-send').forEach(b => b.addEventListener('click', () => sendInstagram(b)));
     list.querySelectorAll('.qna-thread').forEach(t => { t.scrollTop = t.scrollHeight; });

@@ -687,5 +687,45 @@ def test_baglanan_urunun_hazir_metni_fiyat_stok_ve_baglanti_tasir(urun_ortami):
     assert metin.endswith("Detaylar ve sipariş için: https://www.gullushoes.com/products/03155-loafer")
 
 
+def test_bagli_urunun_baglantisi_gonderimde_mesaja_eklenir(urun_ortami, monkeypatch):
+    url = "https://www.gullushoes.com/products/03155-loafer"
+    giden = []
+
+    def sahte_api(method, path, **kw):
+        giden.append((path, (kw.get("json_body") or {}).get("message", {}).get("text")))
+        return {"recipient_id": MUSTERI, "message_id": f"mid-{len(giden)}"}
+
+    monkeypatch.setattr(instagram_dm, "_api", sahte_api)
+
+    # DM: ürün konuşmaya önceden bağlı, kullanıcı yalnız kendi cümlesini yazıyor
+    _gonder(_olay("mid-in", text="fiyat nedir"))
+    conv = InstagramConversation.query.one()
+    assert instagram_dm.answer_conversation(conv.id, "Merhaba, mevcut.")["ok"] is True
+    assert giden[-1][1] == "Merhaba, mevcut."                       # bağ yokken metne dokunulmaz
+    _gonder(_olay("mid-in2", text="link atar mısınız", dk_once=0))
+    instagram_urun.bagla(instagram_urun.konusma_anahtari(conv.id), "8814245511346", "Bej Leopar", username="ayse")
+    assert instagram_dm.answer_conversation(conv.id, "Tabii, buyurun.")["ok"] is True
+    assert giden[-1][1] == f"Tabii, buyurun.\n\nDetaylar ve sipariş için: {url}"
+    # Bağlantı zaten yazılıysa ikinci kez eklenmez
+    _gonder(_olay("mid-in3", text="teşekkürler", dk_once=0))
+    assert instagram_dm.answer_conversation(conv.id, f"Buradan: {url}")["ok"] is True
+    assert giden[-1][1] == f"Buradan: {url}"
+
+    # Yorum: gönderi ürüne bağlı; özelden giden cevaba bağlantı eklenir, yorum notuna eklenmez
+    instagram_urun.bagla("g1", "8814245511346", "Bej Leopar", username="ayse")
+    yorum = InstagramComment.query.filter_by(comment_id="u1").one()
+    giden.clear()
+    assert instagram_dm.answer_comment(yorum.id, "Merhaba, 1.449,99 TL.", public_note="Özelden yazdık")["ok"] is True
+    assert giden[0] == ("me/messages", f"Merhaba, 1.449,99 TL.\n\nDetaylar ve sipariş için: {url}")
+    db.session.refresh(yorum)
+    assert yorum.answer.endswith(url) and yorum.public_note == "Özelden yazdık"
+
+
+def test_onaysiz_oneri_gonderime_baglanti_eklemez(urun_ortami):
+    instagram_urun.bagla("g1", "8814245511346", "Bej Leopar", confirmed=False)
+    assert instagram_dm.urun_baglantisi_ekle("Merhaba", "g1") == "Merhaba"
+    assert instagram_dm.urun_baglantisi_ekle("Merhaba", "bagsiz-gonderi") == "Merhaba"
+
+
 def test_gercek_uygulama_hala_yuklenmedi():
     assert "app" not in sys.modules

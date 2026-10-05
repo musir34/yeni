@@ -109,6 +109,21 @@ def _shopify_to_dict(r: ShopifyQuestion) -> dict:
 INSTAGRAM_KART_MESAJ = 20   # kartta gösterilen son mesaj sayısı
 
 
+def sayfa_surumu() -> int:
+    """Ekran şablonunun sürümü (dosya değişim zamanı).
+
+    Deploy'dan sonra açık kalan sekme eski ekran koduyla çalışmayı sürdürür
+    (yeni kart türlerini Trendyol kartı gibi çizer, yeni düğmeler görünmez).
+    Liste cevabındaki sürüm sayfadakinden farklıysa sayfa kendini yeniler.
+    """
+    import os
+    from flask import current_app
+    try:
+        return int(os.path.getmtime(os.path.join(current_app.root_path, "templates", "soru_cevap.html")))
+    except OSError:
+        return 0
+
+
 def yorum_cekme_acik() -> bool:
     """Gönderi yorumları yalnız INSTAGRAM_COMMENTS=1 ise çekilir (anahtarda yorum izni gerekir)."""
     import os
@@ -230,7 +245,7 @@ def _instagram_mesajlari(conv_ids: list[int]) -> dict[int, list[InstagramMessage
 
 @qna_bp.route("/", methods=["GET"])
 def index():
-    return render_template("soru_cevap.html")
+    return render_template("soru_cevap.html", sayfa_surumu=sayfa_surumu())
 
 
 @qna_bp.route("/api/sorular", methods=["GET"])
@@ -380,6 +395,7 @@ def sorular():
         "toplam": total + sh_total + ig_total + yr_total,
         "sayfa": page,
         "sayfa_boyu": PAGE_SIZE,
+        "surum": sayfa_surumu(),
         "sorular": [d for _, d in merged[offset:offset + PAGE_SIZE]],
     })
 
@@ -475,6 +491,8 @@ def instagram_urun_bagla():
 
     from trendyol_qna import instagram_urun
     anahtar = instagram_urun.konusma_anahtari(conv.id)
+    if payload.get("yalniz_metin"):
+        return jsonify({"ok": True, "hata": None, "urun_metni": _urun_metni(anahtar)})
     if payload.get("kaldir"):
         instagram_urun.bagi_kaldir(anahtar)
         sonuc = {"ok": True, "hata": None}
@@ -573,6 +591,9 @@ def instagram_yorum_urun_bagla():
         return jsonify({"ok": False, "hata": "Yorum bulunamadı."}), 404
 
     from trendyol_qna import instagram_urun
+    if payload.get("yalniz_metin"):
+        # Ürün zaten bağlı; fiyat + stok + bağlantı metnini kutuya yazmak için yalnız metni ver
+        return jsonify({"ok": True, "hata": None, "urun_metni": _urun_metni(row.media_id)})
     if payload.get("kaldir"):
         instagram_urun.bagi_kaldir(row.media_id)
         # Kaldırılan ürünün fiyatıyla yazılmış hazır taslaklar ekranda kalmasın

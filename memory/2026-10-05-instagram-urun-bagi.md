@@ -47,3 +47,16 @@ gönderimi kendisi onaylayacak ("ben onaylarım, o düzgün hazırlasın yeter")
   sonuna; aynı bağlantı zaten yazılıysa eklemez. Kullanıcı gönderilecek metni kutuda GÖRÜR (gizli ekleme yok).
 - Doğrulama: 39 test; önizlemede dört durum (boş kutu, yazılı kutu, bağlantı zaten var, DM kartı) sahte
   sunucuyla denendi. Canlıda denenmedi; commit+deploy bekliyor.
+
+## Bağlantı gönderimde garanti + eski sayfa kendini yeniler (aynı gün, yerelde)
+- Komutan f7da975 yayınından sonra da "mesajda ürün linki gitmedi" dedi. Sunucu parçası sağlamdı (51 ürün/renk
+  bileşiminde hazır metin bağlantılı üretildi). Açık: metin kutuya yalnız BAĞLAMA ANINDA yazılıyordu; ürün
+  önceden bağlıysa (ya da sekme eski ekran koduyla açıksa) kutuya hiçbir şey düşmüyor, mesaj bağlantısız gidiyordu.
+- Çözüm 1 (kök): `instagram_dm.urun_baglantisi_ekle` — onaylı bağın adresi metinde yoksa `answer_conversation`
+  ve `answer_comment` GÖNDERİRKEN sona ekler ("Detaylar ve sipariş için: <url>"). Adres tablodan okunur
+  (Shopify çağrısı yok). Onaysız öneri eklemez; yorum notuna eklenmez. Kartta bunu söyleyen satır var.
+- Çözüm 2: onaylı şeritte "Fiyatı kutuya yaz" düğmesi (`yalniz_metin` → yeniden bağlamadan hazır metni kutuya yazar).
+- Çözüm 3: `qna_routes.sayfa_surumu` (şablon dosyasının değişim zamanı) sayfaya ve liste cevabına konur; farklıysa
+  ve yazılmakta olan cevap yoksa sayfa kendini yeniler. Bugün iki kez "eski sekme" yüzünden yanlış görüntü oldu.
+  Bu sürümden ÖNCE açılmış sekmeler bir kez elle yenilenmeli.
+- 41 test. Canlıda denenmedi; commit+deploy bekliyor.
