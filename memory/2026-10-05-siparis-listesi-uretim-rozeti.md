@@ -9,3 +9,11 @@
   fabrika ikonlu rozet (`.uretim-rozeti`; üretildi/paketlendi yeşil). Gece modu karşılığı var.
 - Şema değişikliği yok. Test: `tests/test_uretim_rozeti.py` (yalıtılmış). Kart önizlemede dört haliyle görüldü;
   canlı veriyle denenmedi.
+
+## Düzeltme (aynı gün): rozet kartı uzatmasın
+- İlk yerleşim (başlıkta, sipariş no altında) kartı ~16 px uzatıyordu; komutan "yanında yer var, kartı uzatma" dedi.
+- Rozet "Durum" satırına, durum rozetinin yanına taşındı. Ad satırı denendi ama uzun isimde satır bölünüyordu.
+- Sığması için etiketler kısaltıldı: Üretim / Üretimde / Üretildi / Paketli (tam açıklama ipucunda,
+  `URETIM_DURUM_ACIKLAMASI`); rozet yazısı .62rem.
+- Ölçüm: 285 px kartta 6 durum × 4 rozet = 24 bileşimin hepsinde kart boyu normal kartla aynı, en dar pay 10 px.
+  Etiket uzatılırsa ya da kart daralırsa yeniden ölçülmeli.

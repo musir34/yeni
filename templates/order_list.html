@@ -75,7 +75,7 @@
         .priority-badge.urgent { background: rgba(255,193,7,.18); color: #946300; border: 1px solid rgba(255,193,7,.55); }
         /* 🏭 Üretim siparişi: kart sol kenarı + başlıkta rozet (normal siparişlerden ayırt edilsin) */
         .card.uretim-karti { border-left: 5px solid #6f42c1; }
-        .uretim-rozeti { display: inline-flex; align-items: center; gap: .3rem; margin: .25rem 0 0 .35rem; padding: .22rem .55rem; border-radius: 999px; font-size: .72rem; font-weight: 800; white-space: nowrap; background: rgba(111,66,193,.12); color: #5a32a3; border: 1px solid rgba(111,66,193,.45); }
+        .uretim-rozeti { display: inline-flex; align-items: center; gap: .2rem; margin-left: .1rem; vertical-align: middle; padding: .1rem .36rem; border-radius: 999px; font-size: .62rem; font-weight: 800; line-height: 1.3; white-space: nowrap; background: rgba(111,66,193,.12); color: #5a32a3; border: 1px solid rgba(111,66,193,.45); }
         .uretim-rozeti--uretildi, .uretim-rozeti--paketlendi { background: rgba(25,135,84,.12); color: #146c43; border-color: rgba(25,135,84,.45); }
         html.gs-dark .uretim-rozeti { background: rgba(111,66,193,.25); color: #c9b3f5; }
         html.gs-dark .uretim-rozeti--uretildi, html.gs-dark .uretim-rozeti--paketlendi { background: rgba(25,135,84,.25); color: #8fd6b1; }
@@ -378,9 +378,6 @@
                     <div><strong>Sipariş No:</strong> {{ order.order_number }}
                         <span class="copy-container" onclick="copyToClipboard('{{ order.order_number }}', this)"><i class="far fa-copy"></i></span>
                         <span class="copy-confirmation">✔️</span>
-                        {% if order.uretim_durumu %}
-                            <span class="uretim-rozeti uretim-rozeti--{{ order.uretim_durumu }}" title="Bu sipariş üretim siparişidir"><i class="fas fa-industry"></i> {{ order.uretim_etiketi }}</span>
-                        {% endif %}
                     </div>
                     <form method="POST" action="{{ url_for('order_list_service.order_label') }}" target="_blank">
                         <input type="hidden" name="order_number" value="{{ order.order_number }}"><input type="hidden" name="shipping_barcode" value="{{ order.cargo_tracking_number }}"><input type="hidden" name="cargo_provider" value="{{ order.cargo_provider_name }}"><input type="hidden" name="customer_name" value="{{ order.customer_name }}"><input type="hidden" name="customer_surname" value="{{ order.customer_surname }}"><input type="hidden" name="customer_address" value="{{ order.customer_address }}">
@@ -399,6 +396,8 @@
                         {% set translated_status = {'Created': 'Yeni', 'Hazirlaniyor': 'Hazırlanıyor', 'Picking': 'İşleme Alındı', 'Shipped': 'Kargoda', 'Delivered': 'Teslim Edildi', 'Cancelled': 'İptal Edildi'}.get(order.status, order.status) %}
                         <strong>Durum:</strong>
                         <span class="badge {% if translated_status == 'Yeni' %}bg-warning{% elif translated_status == 'Hazırlanıyor' %}bg-info text-white{% elif translated_status == 'İşleme Alındı' %}bg-success{% elif translated_status == 'Kargoda' %}bg-danger{% elif translated_status == 'Teslim Edildi' %}bg-orange{% else %}bg-secondary{% endif %}">{{ translated_status }}</span>
+                        {# Üretim rozeti durum rozetinin yanındaki boşlukta durur; kart boyu uzamaz #}
+                        {% if order.uretim_durumu %}<span class="uretim-rozeti uretim-rozeti--{{ order.uretim_durumu }}" title="{{ order.uretim_aciklamasi }}"><i class="fas fa-industry"></i> {{ order.uretim_etiketi }}</span>{% endif %}
                     </p>
                     <p class="mb-1"><small><strong>Kargo:</strong> <span class="cargo-provider {% if order.cargo_provider_name and 'MNG Kargo' in order.cargo_provider_name %}orange{% endif %}">{{ order.cargo_provider_name or '-' }}</span></small></p>
                     {% if translated_status in ['Yeni','Hazırlanıyor','İşleme Alındı'] %}

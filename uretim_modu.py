@@ -110,11 +110,18 @@ def uretim_ekranindaki_siparisler() -> set[str]:
         return set()
 
 
+# Kısa tutulur: rozet sipariş kartında "Durum" satırının sonuna, tek satıra sığmalı
 URETIM_DURUM_ETIKETI = {
-    "bekliyor": "Üretim bekliyor",
+    "bekliyor": "Üretim",
     "uretimde": "Üretimde",
     "uretildi": "Üretildi",
-    "paketlendi": "Üretildi · Paketlendi",
+    "paketlendi": "Paketli",
+}
+URETIM_DURUM_ACIKLAMASI = {
+    "bekliyor": "Üretim siparişi — üretim bekliyor",
+    "uretimde": "Üretim siparişi — üretimde",
+    "uretildi": "Üretim siparişi — üretildi",
+    "paketlendi": "Üretim siparişi — üretildi ve paketlendi",
 }
 
 
