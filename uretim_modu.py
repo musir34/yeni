@@ -110,6 +110,41 @@ def uretim_ekranindaki_siparisler() -> set[str]:
         return set()
 
 
+URETIM_DURUM_ETIKETI = {
+    "bekliyor": "Üretim bekliyor",
+    "uretimde": "Üretimde",
+    "uretildi": "Üretildi",
+    "paketlendi": "Üretildi · Paketlendi",
+}
+
+
+def uretim_durum_haritasi(order_numbers) -> dict[str, str]:
+    """Verilen siparişlerden üretim siparişi olanların durumu: {sipariş no: durum anahtarı}.
+
+    Sipariş listesi normal ve üretim siparişlerini karışık gösterir; kartta
+    'Üretim' rozeti basılabilsin diye. Üretim kaydı olmayan sipariş sözlükte
+    yer almaz. Hata → boş sözlük (liste rozetsiz ama çalışır halde kalır).
+    """
+    numaralar = [n for n in order_numbers if n]
+    if not numaralar:
+        return {}
+    try:
+        satirlar = (UretimSiparis.query
+                    .filter(UretimSiparis.order_number.in_(numaralar))
+                    .with_entities(UretimSiparis.order_number, UretimSiparis.isleme_alindi,
+                                   UretimSiparis.uretildi, UretimSiparis.paketlendi)
+                    .all())
+    except Exception:
+        logger.warning("[URETIM] üretim durum haritası okunamadı", exc_info=True)
+        db.session.rollback()
+        return {}
+    harita = {}
+    for no, isleme_alindi, uretildi, paketlendi in satirlar:
+        harita[no] = ("paketlendi" if paketlendi else "uretildi" if uretildi
+                      else "uretimde" if isleme_alindi else "bekliyor")
+    return harita
+
+
 SHOPIFY_ONBELLEK_SN = 300
 _shopify_onbellek: dict[str, tuple[float, object]] = {}
 

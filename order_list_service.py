@@ -261,6 +261,13 @@ def _merge_order_rows(rows, status_getter):
     notes = get_notes_map(seen_orders.keys())
     for mock in orders:
         mock.siparis_notu = notes.get(mock.order_number, "")
+
+    # 🏭 Üretim siparişi rozeti (tek toplu sorgu) — normal siparişlerden ayırt edilsin
+    from uretim_modu import URETIM_DURUM_ETIKETI, uretim_durum_haritasi
+    uretim = uretim_durum_haritasi(seen_orders.keys())
+    for mock in orders:
+        mock.uretim_durumu = uretim.get(mock.order_number, "")
+        mock.uretim_etiketi = URETIM_DURUM_ETIKETI.get(mock.uretim_durumu, "")
     return orders
 
 
