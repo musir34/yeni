@@ -370,11 +370,11 @@
     <div class="card-soft p-2 quick-links mt-3" style="background:rgba(255,255,255,.85);backdrop-filter:blur(8px);">
       <div class="d-flex flex-wrap justify-content-center">
         <a class="btn btn-primary m-1" href="{{ url_for('order_list_all') }}"><i class="fas fa-list"></i> Siparişler</a>
+        <a class="btn btn-primary m-1" href="{{ url_for('shopify.orders_dashboard') }}"><i class="fab fa-shopify"></i> Shopify Siparişleri</a>
         <a class="btn btn-success m-1" href="{{ url_for('get_products.product_list') }}"><i class="fas fa-tags"></i> Ürün Listesi</a>
-        <a class="btn btn-success m-1" href="{{ url_for('urun_yukleme.sayfa') }}"><i class="fas fa-cloud-upload-alt"></i> Ürün Yükleme</a>
+        <a class="btn btn-info m-1" href="{{ url_for('degisim_talep') }}"><i class="fas fa-exchange-alt"></i> Değişim Listesi</a>
         <a class="btn btn-warning m-1" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="fas fa-plus-circle"></i> Stok Ekle</a>
         <a class="btn btn-warning m-1" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="fas fa-archive"></i> Raflar</a>
-        <a class="btn btn-info m-1" href="{{ url_for('canli_panel.canli_panel_sayfa') }}"><i class="fas fa-chart-line"></i> Canlı Satış & Stok</a>
         <a class="btn btn-secondary m-1" href="{{ url_for('display_archive') }}"><i class="fas fa-box"></i> Arşiv</a>
         <a class="btn btn-danger m-1" href="{{ url_for('iade_yonetimi.index') }}"><i class="fas fa-box-open"></i> Site İadeleri</a>
       </div>
