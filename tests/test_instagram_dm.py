@@ -524,9 +524,10 @@ URUN_DUGUMU = {
     "status": "ACTIVE", "onlineStoreUrl": "https://www.gullushoes.com/products/03155-loafer",
     "featuredImage": {"url": "https://cdn.shopify.com/x.jpg"},
     "variants": {"nodes": [
-        {"title": "Bej Leopar / 36", "price": "1449.99", "compareAtPrice": "1899.99", "inventoryQuantity": 4, "availableForSale": True},
-        {"title": "Bej Leopar / 37", "price": "1449.99", "compareAtPrice": "1899.99", "inventoryQuantity": 0, "availableForSale": False},
-        {"title": "Siyah / 36", "price": "1349.61", "compareAtPrice": None, "inventoryQuantity": 2, "availableForSale": True},
+        {"legacyResourceId": "501", "title": "Bej Leopar / 36", "price": "1449.99", "compareAtPrice": "1899.99", "inventoryQuantity": 4, "availableForSale": True},
+        {"legacyResourceId": "502", "title": "Bej Leopar / 37", "price": "1449.99", "compareAtPrice": "1899.99", "inventoryQuantity": 0, "availableForSale": False},
+        {"legacyResourceId": "601", "title": "Siyah / 35", "price": "1349.61", "compareAtPrice": None, "inventoryQuantity": 0, "availableForSale": False},
+        {"legacyResourceId": "602", "title": "Siyah / 36", "price": "1349.61", "compareAtPrice": None, "inventoryQuantity": 2, "availableForSale": True},
     ]},
 }
 
@@ -572,7 +573,8 @@ def test_onayli_bag_canli_fiyat_stok_ve_baglantiyi_verir(urun_ortami):
     assert instagram_urun.bagla("g1", "8814245511346", "Bej Leopar", username="ayse")["ok"] is True
     bilgi = instagram_urun.urun_baglami("g1")
     assert "Timsah Desenli Tokalı Loafer" in bilgi
-    assert "https://www.gullushoes.com/products/03155-loafer" in bilgi
+    assert "https://www.gullushoes.com/products/03155-loafer?variant=501" in bilgi
+    assert "YALNIZ bu renk hakkında yaz" in bilgi
     assert "Bej Leopar: 1.449,99 TL (indirimli; eski fiyat 1.899,99 TL)" in bilgi
     assert "stokta olan numaralar: 36" in bilgi and "tükenenler: 37" in bilgi
     assert "Siyah" not in bilgi                         # yalnız bağlanan renk
@@ -632,7 +634,8 @@ def test_yorum_karti_urun_bagini_tasir(urun_ortami):
     instagram_urun.bagla("g1", "8814245511346", "Bej Leopar", confirmed=False)
     kart = _instagram_yorum_to_dict(yorum, instagram_urun.bagli_urun("g1"))
     assert kart["urun"] == {"title": "Timsah Desenli Tokalı Loafer", "renk": "Bej Leopar", "onayli": False,
-                            "url": "https://www.gullushoes.com/products/03155-loafer", "product_id": "8814245511346"}
+                            "url": "https://www.gullushoes.com/products/03155-loafer?variant=501",
+                            "product_id": "8814245511346"}
 
 
 def test_onceden_dusmus_bekleyen_yorumun_gonderisi_de_oneriye_girer(urun_ortami):
@@ -663,7 +666,7 @@ def test_dm_konusmasina_elle_baglanan_urun_taslak_istemine_girer(urun_ortami):
     assert instagram_urun.bagla(anahtar, "8814245511346", "Bej Leopar", username="ayse")["ok"] is True
     bilgi = instagram_urun.urun_baglami(anahtar)
     prompt = _instagram_draft_prompt(conv, mesajlar, urun_bilgisi=bilgi)
-    assert "1.449,99 TL" in prompt and "/products/03155-loafer" in prompt and "AYNEN" in prompt
+    assert "1.449,99 TL" in prompt and "/products/03155-loafer?variant=501" in prompt and "AYNEN" in prompt
     kart = _instagram_to_dict(conv, mesajlar, instagram_urun.bagli_urun(anahtar))
     assert kart["urun"]["title"] == "Timsah Desenli Tokalı Loafer" and kart["urun"]["onayli"] is True
     # Konuşma bağı, gönderi önerisi taramasına karışmaz
@@ -678,17 +681,18 @@ def test_baglanan_urunun_hazir_metni_fiyat_stok_ve_baglanti_tasir(urun_ortami):
     instagram_urun.bagla("g1", "8814245511346", "Bej Leopar", username="ayse")
     assert instagram_urun.hazir_metin("g1") == (
         "Timsah Desenli Tokalı Loafer (Bej Leopar) fiyatı 1.449,99 TL. Stokta olan numaralar: 36.\n"
-        "Detaylar ve sipariş için: https://www.gullushoes.com/products/03155-loafer")
+        "Detaylar ve sipariş için: https://www.gullushoes.com/products/03155-loafer?variant=501")
     # Tüm renkler bağlıysa renk renk yazılır
     instagram_urun.bagla("g1", "8814245511346", "", username="ayse")
     metin = instagram_urun.hazir_metin("g1")
     assert "- Bej Leopar: 1.449,99 TL. Stokta olan numaralar: 36." in metin
     assert "- Siyah: 1.349,61 TL. Stokta olan numaralar: 36." in metin
+    assert "variant=" not in metin                                      # tüm renkler → düz ürün adresi
     assert metin.endswith("Detaylar ve sipariş için: https://www.gullushoes.com/products/03155-loafer")
 
 
 def test_bagli_urunun_baglantisi_gonderimde_mesaja_eklenir(urun_ortami, monkeypatch):
-    url = "https://www.gullushoes.com/products/03155-loafer"
+    url = "https://www.gullushoes.com/products/03155-loafer?variant=501"
     giden = []
 
     def sahte_api(method, path, **kw):
@@ -725,6 +729,34 @@ def test_onaysiz_oneri_gonderime_baglanti_eklemez(urun_ortami):
     instagram_urun.bagla("g1", "8814245511346", "Bej Leopar", confirmed=False)
     assert instagram_dm.urun_baglantisi_ekle("Merhaba", "g1") == "Merhaba"
     assert instagram_dm.urun_baglantisi_ekle("Merhaba", "bagsiz-gonderi") == "Merhaba"
+
+
+def test_baglanti_secilen_rengin_stoktaki_varyantina_gider(urun_ortami):
+    taban = "https://www.gullushoes.com/products/03155-loafer"
+    urun = instagram_urun.urun_getir("8814245511346")
+    assert instagram_urun.renk_url(urun, "Bej Leopar") == taban + "?variant=501"
+    assert instagram_urun.renk_url(urun, "Siyah") == taban + "?variant=602"    # 35 tükenmiş → stoktaki 36
+    assert instagram_urun.renk_url(urun, "") == taban
+    assert instagram_urun.renk_url(urun, "Olmayan Renk") == taban
+    instagram_urun.bagla("g1", "8814245511346", "Siyah", username="ayse")
+    assert instagram_urun.bagli_urun("g1").url == taban + "?variant=602"
+    assert instagram_urun.hazir_metin("g1").endswith(taban + "?variant=602")
+    bilgi = instagram_urun.urun_baglami("g1")
+    assert "Kullanıcının bağladığı renk: Siyah" in bilgi and "Bej Leopar" not in bilgi
+
+
+def test_eski_renksiz_bag_gonderimde_renk_adresine_tamamlanir(urun_ortami):
+    taban = "https://www.gullushoes.com/products/03155-loafer"
+    instagram_urun.bagla("g1", "8814245511346", "Siyah", username="ayse")
+    bag = instagram_urun.bagli_urun("g1")
+    bag.url = taban                      # bu düzeltmeden önce bağlanmış kayıt
+    db.session.commit()
+    assert instagram_dm.urun_baglantisi_ekle("Merhaba", "g1") == (
+        f"Merhaba\n\nDetaylar ve sipariş için: {taban}?variant=602")
+    assert instagram_urun.bagli_urun("g1").url == taban + "?variant=602"
+    # Aynı ürün sayfası başka bedenle zaten yazılıysa ikinci bağlantı eklenmez
+    metin = f"Buyurun: {taban}?variant=601"
+    assert instagram_dm.urun_baglantisi_ekle(metin, "g1") == metin
 
 
 def test_gercek_uygulama_hala_yuklenmedi():

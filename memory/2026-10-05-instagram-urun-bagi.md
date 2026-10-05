@@ -60,3 +60,15 @@ gönderimi kendisi onaylayacak ("ben onaylarım, o düzgün hazırlasın yeter")
   ve yazılmakta olan cevap yoksa sayfa kendini yeniler. Bugün iki kez "eski sekme" yüzünden yanlış görüntü oldu.
   Bu sürümden ÖNCE açılmış sekmeler bir kez elle yenilenmeli.
 - 41 test. Canlıda denenmedi; commit+deploy bekliyor.
+
+## Bağlantı seçilen rengi açar (aynı gün, yerelde)
+- Komutan: "Müşteri siyah matı soruyor, AI farklı rengi veriyor; ben doğru rengi seçmeme rağmen."
+  Sebep: bağlantı düz ürün adresiydi; Shopify sayfayı ürünün İLK rengiyle açıyor.
+- `instagram_urun.renk_url`: adres `…/products/<handle>?variant=<id>`; varyant = seçilen rengin stokta olan
+  ilk bedeni (yoksa rengin ilk bedeni). Renk seçilmediyse ('' = tüm renkler) düz ürün adresi.
+  `bagla` bu adresi saklar; `hazir_metin` ve `urun_baglami` aynı adresi kullanır.
+- AI istemi: "Kullanıcının bağladığı renk: X. YALNIZ bu renk hakkında yaz…" + "bu bağlantıyı AYNEN kullan".
+- Eski (renksiz adresli) bağlar gönderimde `guncel_baglanti` ile renk adresine tamamlanır.
+- "Aynı bağlantı zaten yazılı mı" denetimi artık `?variant` öncesine bakar (sunucu + ekran).
+- Doğrulama: 43 test; gerçek sitede `?variant=` adresinin SİYAH MAT'ı seçili açtığı salt-okunur doğrulandı
+  (sayfadaki seçili varyant kimliği beklenenle aynı). Commit+deploy bekliyor.

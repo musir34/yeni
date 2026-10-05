@@ -502,9 +502,19 @@ def urun_baglantisi_ekle(text: str, anahtar: str) -> str:
         db.session.rollback()
         logger.exception("[INSTAGRAM] ürün bağı okunamadı (%s)", anahtar)
         return text
-    if bag is None or not bag.confirmed or not bag.url or bag.url in text:
+    if bag is None or not bag.confirmed or not bag.url:
         return text
-    return f"{text}\n\n{URUN_BAGLANTI_ONEKI}{bag.url}"
+    # Aynı ürün sayfası (hangi beden/varyantla olursa olsun) zaten yazılıysa ikinci kez ekleme
+    if bag.url.split("?")[0] in text:
+        return text
+    try:
+        from trendyol_qna.instagram_urun import guncel_baglanti
+        adres = guncel_baglanti(bag)
+    except Exception:
+        db.session.rollback()
+        logger.exception("[INSTAGRAM] ürün bağlantısı güncellenemedi (%s)", anahtar)
+        adres = bag.url
+    return f"{text}\n\n{URUN_BAGLANTI_ONEKI}{adres}"
 
 
 def answer_conversation(conv_id: int, text: str, username: str | None = None) -> dict:

@@ -1009,7 +1009,7 @@
       if (yalnizMetin) btn.disabled = false; else await load();
       const kutu = document.getElementById(`qna-answer-${key}`);
       if (kutu && d.urun_metni) {
-        const baglanti = (d.urun_metni.match(/https?:\/\/\S+/) || [''])[0];
+        const baglanti = (d.urun_metni.match(/https?:\/\/\S+/) || [''])[0].split('?')[0];
         let metin = yazilan;
         if (!yazilan) metin = 'Merhaba,\n' + d.urun_metni;
         else if (!baglanti || !yazilan.includes(baglanti)) metin = yazilan + '\n\n' + d.urun_metni;

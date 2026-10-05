@@ -31,7 +31,7 @@ OTOMATIK_TASLAK_AZAMI = 15   # bir gönderi bağlanınca en çok kaç bekleyen y
 _URUN_ALANLARI = """
   legacyResourceId title handle status onlineStoreUrl
   featuredImage{ url }
-  variants(first:100){ nodes{ title price compareAtPrice inventoryQuantity availableForSale } }
+  variants(first:100){ nodes{ legacyResourceId title price compareAtPrice inventoryQuantity availableForSale } }
 """
 _ARAMA_SORGUSU = """
 query($first:Int!, $query:String, $after:String){
@@ -78,7 +78,8 @@ def _sadelestir(node: dict) -> dict:
     renkler: dict[str, dict] = {}
     for v in ((node.get("variants") or {}).get("nodes")) or []:
         renk, beden = _renk_beden(v.get("title"))
-        kayit = renkler.setdefault(renk, {"renk": renk, "fiyat": None, "eski_fiyat": None, "bedenler": []})
+        kayit = renkler.setdefault(renk, {"renk": renk, "fiyat": None, "eski_fiyat": None, "bedenler": [],
+                                          "varyant_id": "", "_stoklu_varyant": False})
         fiyat, eski = _sayi(v.get("price")), _sayi(v.get("compareAtPrice"))
         if fiyat is not None and (kayit["fiyat"] is None or fiyat < kayit["fiyat"]):
             kayit["fiyat"] = fiyat
@@ -87,7 +88,14 @@ def _sadelestir(node: dict) -> dict:
             adet = int(v.get("inventoryQuantity") or 0)
         except (TypeError, ValueError):
             adet = 0
-        kayit["bedenler"].append({"beden": beden, "stokta": adet > 0 and v.get("availableForSale") is not False})
+        stokta = adet > 0 and v.get("availableForSale") is not False
+        kayit["bedenler"].append({"beden": beden, "stokta": stokta})
+        # Rengin sayfasını açacak varyant: stokta olan ilk beden, yoksa rengin ilk bedeni
+        vid = str(v.get("legacyResourceId") or "")
+        if vid and (not kayit["varyant_id"] or (stokta and not kayit["_stoklu_varyant"])):
+            kayit["varyant_id"], kayit["_stoklu_varyant"] = vid, stokta
+    for kayit in renkler.values():
+        kayit.pop("_stoklu_varyant", None)
     handle = node.get("handle") or ""
     return {
         "id": str(node.get("legacyResourceId") or ""),
@@ -97,6 +105,22 @@ def _sadelestir(node: dict) -> dict:
         "aktif": node.get("status") == "ACTIVE",
         "renkler": list(renkler.values()),
     }
+
+
+def renk_url(urun: dict, renk: str) -> str:
+    """Ürün sayfasının, seçilen renk açık gelecek adresi (…?variant=<id>).
+
+    Düz ürün adresi sayfayı ürünün İLK rengiyle açar; müşteri "siyah mat"
+    sorduysa bağlantı o rengi göstermeli. Renk seçilmediyse ('' = tüm renkler)
+    ya da varyant bilinmiyorsa düz ürün adresi döner.
+    """
+    taban = urun.get("url") or ""
+    if not taban or not renk:
+        return taban
+    secilen = next((r for r in urun.get("renkler") or [] if r["renk"] == renk), None)
+    if not secilen or not secilen.get("varyant_id"):
+        return taban
+    return f"{taban}{'&' if '?' in taban else '?'}variant={secilen['varyant_id']}"
 
 
 def urun_ara(q: str, limit: int = ARAMA_LIMIT) -> list[dict]:
@@ -180,13 +204,24 @@ def bagla(media_id: str, product_id: str, renk: str = "", username: str | None =
         return {"ok": True, "hata": None}   # kullanıcının onayladığı bağ AI önerisiyle ezilmez
     satir.shopify_product_id = urun["id"]
     satir.title = urun["title"][:300]
-    satir.url = urun["url"][:500]
+    satir.url = renk_url(urun, renk)[:500]
     satir.color = renk[:120]
     satir.confirmed = bool(confirmed)
     satir.updated_by = username or ("AI önerisi" if not confirmed else "panel")
     satir.updated_at = datetime.now(timezone.utc)
     db.session.commit()
     return {"ok": True, "hata": None}
+
+
+def guncel_baglanti(satir: InstagramMediaProduct) -> str:
+    """Bağın gönderilecek adresi; renk bağlı ama adres renksizse (eski kayıt) siteden tamamlar."""
+    if satir.color and "variant=" not in (satir.url or ""):
+        urun = urun_getir(satir.shopify_product_id)
+        yeni = renk_url(urun, satir.color) if urun else ""
+        if yeni and yeni != satir.url:
+            satir.url = yeni[:500]
+            db.session.commit()
+    return satir.url or ""
 
 
 def bagi_kaldir(media_id: str) -> None:
@@ -234,9 +269,14 @@ def urun_baglami(media_id: str) -> str | None:
         if var and yok:
             stok += "; tükenenler: " + ", ".join(yok)
         satirlar.append(f"- {r['renk'] or 'Tek renk'}: {fiyat} — {stok}")
+    renk_notu = (
+        f"Kullanıcının bağladığı renk: {satir.color}. YALNIZ bu renk hakkında yaz; başka renk önerme, "
+        "başka rengin fiyatını ya da bağlantısını verme.\n"
+    ) if satir.color else ""
     return (
         f"Bu gönderideki ürün (kullanıcı onaylı): {urun['title']}\n"
-        f"Ürün sayfası: {urun['url']}\n"
+        + renk_notu +
+        f"Ürün sayfası (bu bağlantıyı AYNEN kullan, değiştirme): {renk_url(urun, satir.color)}\n"
         f"Sitedeki güncel fiyat ve stok{'' if urun['aktif'] else ' (DİKKAT: ürün sitede yayında değil)'}:\n"
         + ("\n".join(satirlar) or "- fiyat bilgisi okunamadı")
     )
@@ -271,7 +311,8 @@ def hazir_metin(media_id: str) -> str:
     else:
         govde = f"{urun['title']} fiyatları:\n" + "\n".join(
             f"- {r['renk'] or 'Tek renk'}: {_tl(r['fiyat'])}. {_stok(r)}." for r in renkler)
-    return f"{govde}\nDetaylar ve sipariş için: {urun['url']}" if urun["url"] else govde
+    adres = renk_url(urun, satir.color)
+    return f"{govde}\nDetaylar ve sipariş için: {adres}" if adres else govde
 
 
 # ── AI ürün önerisi ──────────────────────────────────────────────────────────
