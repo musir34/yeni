@@ -20,3 +20,20 @@ gönderimi kendisi onaylayacak ("ben onaylarım, o düzgün hazırlasın yeter")
 - Doğrulama: 36 test (yalıtılmış), ürün arama + katalog gerçek Shopify verisiyle salt-okunur denendi, kart
   üç haliyle önizlemede görüldü. AI önerisinin isabeti ve taslak kalitesi CANLIDA DENENMEDİ.
 - Kapsam dışı: DM'lerde ürün tespiti (düz "fiyat?" mesajında AI hâlâ hangi ürün olduğunu sorar).
+
+## Düzeltme (aynı gün, yayından sonra fark edildi)
+- AI ürün önerisi yalnız YENİ yorum düşünce tetikleniyordu; özellik açılmadan önce düşmüş bekleyen yorumların
+  gönderilerine hiç öneri üretilmiyordu (kartta hep "bağlı değil"). `sync_comments` artık her turda
+  `_bagsiz_bekleyen_gonderiler()` ile bekleyeni olup bağı olmayan gönderileri de öneriye veriyor
+  (tekrarı `oner_async` süreç içinde süzer). 37 test. Bu düzeltme 1790a4c yayınında YOK; ayrı commit+deploy bekliyor.
+
+## Mesajlara (DM) elle ürün bağlama (aynı gün, yerelde)
+- Komutan: "DM'dekine ürünü ben vereyim." Mesajın bağlı olduğu gönderi olmadığından AI önerisi YOK; ürünü
+  kullanıcı konuşmaya elle bağlar.
+- Ayrı tablo/kolon açılmadı: bağ `InstagramMediaProduct`'ta `media_id = "conv:<konuşma id>"` anahtarıyla tutulur
+  (`instagram_urun.konusma_anahtari`). Gerçek gönderi kimlikleri yalnız rakam olduğundan çakışmaz.
+- `/soru-cevap/api/instagram/urun-bagla` (bağla/kaldır; bekleyen konuşmanın taslağını ürün bilgisiyle yeniden üretir).
+- Mesaj kartında yorum kartındaki ürün şeridinin aynısı (`yorumUrunHtml` uç ve "gönderi/konuşma" sözcüğü parametreli)
+  + onaylı bağda "Kaldır" düğmesi (yorum kartında da). Yorumda bağ kaldırılınca o gönderinin hazır taslakları sıfırlanır.
+- Bağ konuşmada kalır; sonraki müşteri mesajlarının taslağı da o ürünle gelir.
+- 38 test. Mesaj kartındaki şerit tarayıcıda GÖRÜLMEDİ (yalnız JS sözdizimi denetlendi; aynı bileşen yorum kartında görüldü).

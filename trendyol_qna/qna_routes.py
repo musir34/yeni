@@ -115,8 +115,21 @@ def yorum_cekme_acik() -> bool:
     return str(os.getenv("INSTAGRAM_COMMENTS", "0")).lower() in ("1", "true", "yes")
 
 
-def _instagram_to_dict(c: InstagramConversation, mesajlar: list[InstagramMessage]) -> dict:
-    """Instagram konuşmasını kart sözlüğüne çevirir (mesajlar eskiden yeniye)."""
+def _urun_sozlugu(bag) -> dict | None:
+    """Ürün bağını kartın kullandığı sözlüğe çevirir (bağ yoksa None)."""
+    if bag is None:
+        return None
+    return {
+        "title": bag.title or "",
+        "url": bag.url or "",
+        "renk": bag.color or "",
+        "onayli": bool(bag.confirmed),
+        "product_id": bag.shopify_product_id,
+    }
+
+
+def _instagram_to_dict(c: InstagramConversation, mesajlar: list[InstagramMessage], bag=None) -> dict:
+    """Instagram konuşmasını kart sözlüğüne çevirir (mesajlar eskiden yeniye; bag: ürün bağı)."""
     from trendyol_qna.instagram_dm import TEXT_MAX, pencere_acik, pencere_bitisi
     bitis = pencere_bitisi(c)
     son_giden = next((m for m in reversed(mesajlar) if m.direction == "out"), None)
@@ -138,6 +151,7 @@ def _instagram_to_dict(c: InstagramConversation, mesajlar: list[InstagramMessage
         "pencere_acik": pencere_acik(c),
         "pencere_bitis": bitis.isoformat() if bitis else None,
         "metin_azami": TEXT_MAX,
+        "urun": _urun_sozlugu(bag),
         "mesajlar": [
             {
                 "yon": m.direction,
@@ -180,13 +194,7 @@ def _instagram_yorum_to_dict(y: InstagramComment, bag=None) -> dict:
         "metin_azami": TEXT_MAX,
         "not_azami": YORUM_NOTU_MAX,
         "not_varsayilan": YORUM_NOTU_VARSAYILAN,
-        "urun": {
-            "title": bag.title or "",
-            "url": bag.url or "",
-            "renk": bag.color or "",
-            "onayli": bool(bag.confirmed),
-            "product_id": bag.shopify_product_id,
-        } if bag is not None else None,
+        "urun": _urun_sozlugu(bag),
     }
 
 
@@ -267,6 +275,7 @@ def sorular():
     ig_rows: list[InstagramConversation] = []
     ig_total = 0
     ig_mesaj: dict[int, list[InstagramMessage]] = {}
+    ig_bag: dict = {}
     if status in sh_status:
         try:
             ig_query = db.session.query(InstagramConversation)
@@ -288,9 +297,15 @@ def sorular():
                 .all()
             )
             ig_mesaj = _instagram_mesajlari([r.id for r in ig_rows])
+            if ig_rows:
+                from models import InstagramMediaProduct
+                from trendyol_qna.instagram_urun import konusma_anahtari
+                anahtarlar = {konusma_anahtari(r.id): r.id for r in ig_rows}
+                ig_bag = {anahtarlar[b.media_id]: b for b in db.session.query(InstagramMediaProduct)
+                          .filter(InstagramMediaProduct.media_id.in_(list(anahtarlar))).all()}
         except Exception:
             db.session.rollback()
-            ig_rows, ig_total = [], 0
+            ig_rows, ig_total, ig_bag = [], 0, {}
             logger.exception("[QNA] Instagram konuşmaları okunamadı (tablo yok olabilir)")
 
     # Instagram gönderi yorumları (yoksayılanlar yalnız "Tümü"nde görünür)
@@ -342,7 +357,8 @@ def sorular():
     merged = sorted(
         [(_key(r.creation_date), _to_dict(r)) for r in t_rows]
         + [(_key(r.created_at), _shopify_to_dict(r)) for r in sh_rows]
-        + [(_key(r.last_message_at), _instagram_to_dict(r, ig_mesaj.get(r.id, []))) for r in ig_rows]
+        + [(_key(r.last_message_at), _instagram_to_dict(r, ig_mesaj.get(r.id, []), ig_bag.get(r.id)))
+           for r in ig_rows]
         + [(_key(r.created_at), _instagram_yorum_to_dict(r, yr_bag.get(r.media_id))) for r in yr_rows],
         key=lambda x: x[0],
         reverse=True,
@@ -435,6 +451,36 @@ def instagram_cevapla():
     return jsonify(sonuc), (200 if sonuc["ok"] else 422)
 
 
+@qna_bp.route("/api/instagram/urun-bagla", methods=["POST"])
+def instagram_urun_bagla():
+    """DM konuşmasına site ürünü bağlar/kaldırır; taslağı ürün bilgisiyle yeniden üretir."""
+    payload = request.get_json(silent=True) or {}
+    try:
+        conv = db.session.get(InstagramConversation, int(payload.get("id")))
+    except (TypeError, ValueError):
+        conv = None
+    if not conv:
+        return jsonify({"ok": False, "hata": "Konuşma bulunamadı."}), 404
+
+    from trendyol_qna import instagram_urun
+    anahtar = instagram_urun.konusma_anahtari(conv.id)
+    if payload.get("kaldir"):
+        instagram_urun.bagi_kaldir(anahtar)
+        sonuc = {"ok": True, "hata": None}
+    else:
+        sonuc = instagram_urun.bagla(anahtar, str(payload.get("product_id") or ""),
+                                     renk=str(payload.get("renk") or ""),
+                                     username=session.get("username"), confirmed=True)
+    if sonuc["ok"] and conv.status == "new":
+        # Eski taslak başka ürünle/ürünsüz yazıldı; üretimi sürmüyorsa yenile
+        if conv.ai_draft_status != "pending":
+            conv.ai_draft, conv.ai_draft_status = None, "none"
+            db.session.commit()
+        from trendyol_qna.qna_ai import generate_instagram_drafts_async
+        generate_instagram_drafts_async([conv.id])
+    return jsonify(sonuc), (200 if sonuc["ok"] else 422)
+
+
 @qna_bp.route("/api/instagram/taslak/<int:qid>", methods=["POST"])
 def instagram_taslak(qid: int):
     """Instagram konuşması için AI taslağını (yeniden) üretmeyi tetikler (arka plan)."""
@@ -516,6 +562,12 @@ def instagram_yorum_urun_bagla():
     from trendyol_qna import instagram_urun
     if payload.get("kaldir"):
         instagram_urun.bagi_kaldir(row.media_id)
+        # Kaldırılan ürünün fiyatıyla yazılmış hazır taslaklar ekranda kalmasın
+        (db.session.query(InstagramComment)
+         .filter(InstagramComment.media_id == row.media_id, InstagramComment.status == "new",
+                 InstagramComment.ai_draft_status == "ready")
+         .update({"ai_draft": None, "ai_draft_status": "none"}, synchronize_session=False))
+        db.session.commit()
         return jsonify({"ok": True, "hata": None})
     sonuc = instagram_urun.bagla(row.media_id, str(payload.get("product_id") or ""),
                                  renk=str(payload.get("renk") or ""),

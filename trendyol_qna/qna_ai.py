@@ -294,8 +294,24 @@ INSTAGRAM_BAGLAM_MESAJ = 12   # taslak için konuşmanın son kaç mesajı veril
 
 
 def _instagram_draft_prompt(conv, mesajlar, talimat: str | None = None,
-                            mevcut_metin: str | None = None) -> str:
+                            mevcut_metin: str | None = None,
+                            urun_bilgisi: str | None = None) -> str:
     from trendyol_qna.instagram_dm import TEXT_MAX
+
+    if urun_bilgisi:
+        # Ürünü kullanıcı konuşmaya elle bağladı: canlı site fiyatı/stok/bağlantı hazır
+        urun_kismi = (
+            f"Kullanıcı bu konuşmayı şu ürüne bağladı (gönderi değil, konuşma):\n{urun_bilgisi}\n"
+            "Fiyat sorulduysa fiyatı bu listeden AYNEN yaz (yuvarlama, tahmin etme). Numara/stok "
+            "sorulduysa listedeki stok durumuna göre cevapla. Mesajın sonuna ürün sayfası bağlantısını "
+            "'Detaylar ve sipariş için:' diyerek ekle. Listede olmayan bir bilgi için söz verme.\n"
+        )
+    else:
+        urun_kismi = (
+            "Hangi üründen bahsettiği yalnızca yazışmadan anlaşılır; stok/fiyat gerekiyorsa "
+            "mcp__gulludb__query ile bakabilirsin, emin olamazsan söz verme ve müşteriden "
+            "ürünü (model/renk/numara) netleştirmesini iste.\n"
+        )
 
     satirlar = []
     for m in mesajlar:
@@ -309,9 +325,7 @@ def _instagram_draft_prompt(conv, mesajlar, talimat: str | None = None,
         f"Cevap en fazla {TEXT_MAX} karakter olmalı.\n"
         f"Müşteri: {conv.name or 'bilinmiyor'}"
         f"{' (@' + conv.username + ')' if conv.username else ''}\n"
-        "Hangi üründen bahsettiği yalnızca yazışmadan anlaşılır; stok/fiyat gerekiyorsa "
-        "mcp__gulludb__query ile bakabilirsin, emin olamazsan söz verme ve müşteriden "
-        "ürünü (model/renk/numara) netleştirmesini iste.\n"
+        + urun_kismi +
         "\nYazışma (eskiden yeniye):\n" + "\n".join(satirlar) + "\n\n"
     )
     if talimat:
@@ -359,8 +373,16 @@ def generate_instagram_draft(conv_id: int, talimat: str | None = None,
         .limit(INSTAGRAM_BAGLAM_MESAJ)
         .all()
     )[::-1]
+    from trendyol_qna.instagram_urun import konusma_anahtari, urun_baglami
+    try:
+        urun_bilgisi = urun_baglami(konusma_anahtari(conv.id))
+    except Exception:
+        db.session.rollback()
+        logger.exception("[QNA-AI] ürün bilgisi okunamadı (konuşma %s)", conv_id)
+        urun_bilgisi = None
     taslak = _run_ai(_instagram_draft_prompt(conv, mesajlar, talimat=talimat,
-                                             mevcut_metin=mevcut_metin))
+                                             mevcut_metin=mevcut_metin,
+                                             urun_bilgisi=urun_bilgisi))
     if taslak:
         conv.ai_draft = taslak[:TEXT_MAX]
         conv.ai_draft_status = "ready"

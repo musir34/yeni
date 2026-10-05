@@ -803,36 +803,42 @@
             </div>
             <span class="qna-section-label">Yazışma</span>
             <div class="qna-thread">${thread || '<span class="qna-meta">Mesaj içeriği yok.</span>'}</div>
+            ${waiting ? yorumUrunHtml(s, key, '/soru-cevap/api/instagram/urun-bagla', 'konuşma') : ''}
           </section>
           ${answer}
         </div>
       </article>`;
   }
 
-  function yorumUrunHtml(s, key) {
+  // uc: bağlama ucu; nerede: 'gönderi' (yorum kartı) ya da 'konuşma' (mesaj kartı)
+  function yorumUrunHtml(s, key, uc = '/soru-cevap/api/instagram-yorum/urun-bagla', nerede = 'gönderi') {
     const u = s.urun;
     const panel = `
       <details class="qna-urun-panel">
         <summary><i class="bi bi-search"></i> ${u ? 'Ürünü değiştir' : 'Ürün bağla'}</summary>
-        <input type="search" class="qna-urun-ara" data-id="${key}" data-qid="${s.id}" maxlength="80"
+        <input type="search" class="qna-urun-ara" data-id="${key}" data-qid="${s.id}" data-uc="${uc}" maxlength="80"
                aria-label="Site ürünü ara" placeholder="Ürün adı ya da model kodu yazın…">
         <div class="qna-urun-sonuc" data-id="${key}"><span class="qna-meta">En az 2 harf yazın.</span></div>
       </details>`;
     if (!u) {
       return `<div class="qna-urun">
-        <div class="qna-urun-head"><i class="bi bi-tag"></i> <span>Bu gönderi henüz bir ürüne bağlı değil; taslak fiyat yazmaz.</span></div>
+        <div class="qna-urun-head"><i class="bi bi-tag"></i> <span>Bu ${nerede} henüz bir ürüne bağlı değil; ürünü seçerseniz taslak fiyat ve bağlantıyla hazırlanır.</span></div>
         ${panel}</div>`;
     }
     const ad = `${esc(u.title)}${u.renk ? ' · ' + esc(u.renk) : ''}`;
     const link = u.url ? ` <a href="${esc(u.url)}" target="_blank" rel="noopener noreferrer" title="Ürün sayfasını aç"><i class="bi bi-box-arrow-up-right"></i></a>` : '';
     if (u.onayli) {
       return `<div class="qna-urun qna-urun--onayli">
-        <div class="qna-urun-head"><i class="bi bi-tag-fill"></i> <span>Ürün:</span> <strong>${ad}</strong>${link}</div>
+        <div class="qna-urun-head"><i class="bi bi-tag-fill"></i> <span>Ürün:</span> <strong>${ad}</strong>${link}
+          <button class="qna-urun-btn qna-urun-kaldir" data-qid="${s.id}" data-uc="${uc}" title="Ürün bağını kaldır">
+            <i class="bi bi-x-lg"></i> Kaldır
+          </button>
+        </div>
         ${panel}</div>`;
     }
     return `<div class="qna-urun qna-urun--oneri">
       <div class="qna-urun-head"><i class="bi bi-stars"></i> <span>AI önerisi:</span> <strong>${ad}</strong>${link}
-        <button class="qna-urun-btn qna-urun-btn--ok qna-urun-sec" data-qid="${s.id}" data-pid="${esc(u.product_id)}" data-renk="${esc(u.renk)}">
+        <button class="qna-urun-btn qna-urun-btn--ok qna-urun-sec" data-qid="${s.id}" data-uc="${uc}" data-pid="${esc(u.product_id)}" data-renk="${esc(u.renk)}">
           <i class="bi bi-check2"></i> Doğru, onayla
         </button>
       </div>
@@ -975,10 +981,12 @@
   async function urunBagla(btn) {
     btn.disabled = true;
     try {
-      const r = await fetch('/soru-cevap/api/instagram-yorum/urun-bagla', {
+      const r = await fetch(btn.dataset.uc || '/soru-cevap/api/instagram-yorum/urun-bagla', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-Requested-With': 'fetch'},
-        body: JSON.stringify({id: +btn.dataset.qid, product_id: btn.dataset.pid, renk: btn.dataset.renk || ''})
+        body: JSON.stringify(btn.classList.contains('qna-urun-kaldir')
+          ? {id: +btn.dataset.qid, kaldir: true}
+          : {id: +btn.dataset.qid, product_id: btn.dataset.pid, renk: btn.dataset.renk || ''})
       });
       const d = await r.json();
       if (!d.ok) { alert(d.hata || 'Ürün bağlanamadı.'); btn.disabled = false; return; }
@@ -1002,7 +1010,7 @@
         const para = f => f == null ? '' : ' — ' + Number(f).toLocaleString('tr-TR', {minimumFractionDigits: 2}) + ' TL';
         kutu.innerHTML = d.urunler.map(u => {
           const renkler = u.renkler.filter(x => x.renk);
-          const sec = (renk, etiket) => `<button class="qna-urun-btn qna-urun-sec" data-qid="${input.dataset.qid}" data-pid="${esc(u.id)}" data-renk="${esc(renk)}">${etiket}</button>`;
+          const sec = (renk, etiket) => `<button class="qna-urun-btn qna-urun-sec" data-qid="${input.dataset.qid}" data-uc="${esc(input.dataset.uc || '')}" data-pid="${esc(u.id)}" data-renk="${esc(renk)}">${etiket}</button>`;
           return `<div class="qna-urun-satir"><b>${esc(u.title)}</b>
             <div class="qna-urun-renkler">${renkler.length
               ? renkler.map(x => sec(x.renk, esc(x.renk) + para(x.fiyat))).join('') + (renkler.length > 1 ? sec('', 'Tüm renkler') : '')
@@ -1094,7 +1102,7 @@
     list.querySelectorAll('.qna-send-btn:not(.qna-shopify-send):not(.qna-wa-btn):not(.qna-instagram-send):not(.qna-yorum-send)').forEach(b => b.addEventListener('click', () => send(b)));
     list.querySelectorAll('.qna-yorum-send').forEach(b => b.addEventListener('click', () => sendYorum(b, false)));
     list.querySelectorAll('.qna-yorum-ignore').forEach(b => b.addEventListener('click', () => sendYorum(b, true)));
-    list.querySelectorAll('.qna-urun-sec').forEach(b => b.addEventListener('click', () => urunBagla(b)));
+    list.querySelectorAll('.qna-urun-sec, .qna-urun-kaldir').forEach(b => b.addEventListener('click', () => urunBagla(b)));
     list.querySelectorAll('.qna-urun-ara').forEach(i => i.addEventListener('input', () => urunAra(i)));
     list.querySelectorAll('.qna-instagram-send').forEach(b => b.addEventListener('click', () => sendInstagram(b)));
     list.querySelectorAll('.qna-thread').forEach(t => { t.scrollTop = t.scrollHeight; });

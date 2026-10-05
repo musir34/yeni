@@ -635,5 +635,40 @@ def test_yorum_karti_urun_bagini_tasir(urun_ortami):
                             "url": "https://www.gullushoes.com/products/03155-loafer", "product_id": "8814245511346"}
 
 
+def test_onceden_dusmus_bekleyen_yorumun_gonderisi_de_oneriye_girer(urun_ortami):
+    # u1 yorumu g1 gönderisinde bekliyor ve gönderi bağsız → öneri listesinde
+    assert instagram_dm._bagsiz_bekleyen_gonderiler() == ["g1"]
+    instagram_urun.bagla("g1", "8814245511346", "Bej Leopar", confirmed=False)
+    assert instagram_dm._bagsiz_bekleyen_gonderiler() == []     # önerisi/bağı olan tekrar sorulmaz
+    instagram_urun.bagi_kaldir("g1")
+    InstagramComment.query.filter_by(comment_id="u1").one().status = "answered"
+    db.session.commit()
+    assert instagram_dm._bagsiz_bekleyen_gonderiler() == []     # bekleyeni kalmayan gönderi de
+
+
+def test_dm_konusmasina_elle_baglanan_urun_taslak_istemine_girer(urun_ortami):
+    from trendyol_qna.qna_ai import _instagram_draft_prompt
+    from trendyol_qna.qna_routes import _instagram_mesajlari, _instagram_to_dict
+
+    _gonder(_olay("mid-dm", text="fiyat nedir"))
+    conv = InstagramConversation.query.one()
+    mesajlar = _instagram_mesajlari([conv.id])[conv.id]
+    anahtar = instagram_urun.konusma_anahtari(conv.id)
+    assert anahtar == f"conv:{conv.id}"
+    # Bağ yokken: fiyat yok, netleştirme istenir; kartta ürün yok
+    assert instagram_urun.urun_baglami(anahtar) is None
+    assert "netleştirmesini iste" in _instagram_draft_prompt(conv, mesajlar)
+    assert _instagram_to_dict(conv, mesajlar)["urun"] is None
+    # Kullanıcı ürünü bağlayınca: canlı fiyat + bağlantı isteme girer, kart bağı taşır
+    assert instagram_urun.bagla(anahtar, "8814245511346", "Bej Leopar", username="ayse")["ok"] is True
+    bilgi = instagram_urun.urun_baglami(anahtar)
+    prompt = _instagram_draft_prompt(conv, mesajlar, urun_bilgisi=bilgi)
+    assert "1.449,99 TL" in prompt and "/products/03155-loafer" in prompt and "AYNEN" in prompt
+    kart = _instagram_to_dict(conv, mesajlar, instagram_urun.bagli_urun(anahtar))
+    assert kart["urun"]["title"] == "Timsah Desenli Tokalı Loafer" and kart["urun"]["onayli"] is True
+    # Konuşma bağı, gönderi önerisi taramasına karışmaz
+    assert instagram_dm._bagsiz_bekleyen_gonderiler() == ["g1"]
+
+
 def test_gercek_uygulama_hala_yuklenmedi():
     assert "app" not in sys.modules

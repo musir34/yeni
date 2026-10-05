@@ -143,6 +143,16 @@ def katalog() -> list[dict]:
 
 # ── Bağlama ──────────────────────────────────────────────────────────────────
 
+def konusma_anahtari(conv_id: int) -> str:
+    """DM konuşmasının ürün bağı aynı tabloda 'conv:<id>' anahtarıyla tutulur.
+
+    Mesajın bağlı olduğu bir gönderi yoktur; ürünü kullanıcı konuşmaya elle
+    bağlar. Ayrı tablo/kolon açmamak için InstagramMediaProduct.media_id
+    alanı bu önekli anahtarı taşır (gerçek gönderi kimlikleri yalnız rakamdır).
+    """
+    return f"conv:{int(conv_id)}"
+
+
 def bagli_urun(media_id: str) -> InstagramMediaProduct | None:
     if not media_id:
         return None

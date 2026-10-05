@@ -698,8 +698,26 @@ def sync_comments() -> int:
             continue
         with _yorum_kilit:
             _yorum_sayilari[mid] = sayi
-    _yeni_yorum_sonrasi(list(dict.fromkeys(yeni_yorumlu)))
+    _yeni_yorum_sonrasi(list(dict.fromkeys(yeni_yorumlu + _bagsiz_bekleyen_gonderiler())))
     return yeni
+
+
+def _bagsiz_bekleyen_gonderiler() -> list[str]:
+    """Bekleyen yorumu olup henüz ürüne bağlanmamış gönderiler (AI önerisi için).
+
+    Yalnız yeni yorumda tetiklenseydi, özellik açılmadan önce düşmüş bekleyen
+    yorumların gönderilerine hiç öneri üretilmezdi. Tekrarı oner_async süzer.
+    """
+    try:
+        bagli = db.session.query(InstagramMediaProduct.media_id)
+        satirlar = (db.session.query(InstagramComment.media_id)
+                    .filter(InstagramComment.status == "new", ~InstagramComment.media_id.in_(bagli))
+                    .distinct().limit(YORUM_GONDERI_SAYISI).all())
+        return [s[0] for s in satirlar]
+    except Exception:
+        db.session.rollback()
+        logger.exception("[INSTAGRAM] bağsız gönderiler okunamadı")
+        return []
 
 
 def _yeni_yorum_sonrasi(media_ids: list[str]) -> None:
