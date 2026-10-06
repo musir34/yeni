@@ -72,3 +72,13 @@ gönderimi kendisi onaylayacak ("ben onaylarım, o düzgün hazırlasın yeter")
 - "Aynı bağlantı zaten yazılı mı" denetimi artık `?variant` öncesine bakar (sunucu + ekran).
 - Doğrulama: 43 test; gerçek sitede `?variant=` adresinin SİYAH MAT'ı seçili açtığı salt-okunur doğrulandı
   (sayfadaki seçili varyant kimliği beklenenle aynı). Commit+deploy bekliyor.
+
+## Ürün bağlamada model kodu araması tam eşleşir (2026-10-06, yerelde)
+- Komutan: "Model kodunu yazınca yalnız o model çıksın, yakın diye başka modeller gösterilmesin."
+- Sebep: Shopify serbest araması ad/açıklamada da geziyor; "155" yazınca 0107 ve 730734482 de dönüyordu.
+- Sitede model kodu = varyant stok kodunun öneki ("155-36 Bej Rugan" → 155); 176 üründen 171'inde var, ürün
+  başına tek önek. Aynı model kodu birden çok ilanda olabilir (03155 iki ürün) — ikisi de gösterilir.
+- `instagram_urun.urun_ara`: metin kod gibiyse (boşluksuz, rakam içeren ≤12 karakter) `sku:<kod>*` ile çekilir,
+  kodu TAM tutan varsa yalnız onlar; yoksa kodu o harflerle başlayanlar (yazarken yardımcı olsun diye). Ada göre
+  yakın ürün gösterilmez. Ürün adıyla arama aynen duruyor. Sonuç satırında model kodu da yazar.
+- Doğrulama: 50 test + gerçek sitede "155" → yalnız 155 (önce 3 ürün), "03155" → 2 ilan, "loafer" → ad araması.

@@ -31,7 +31,7 @@ OTOMATIK_TASLAK_AZAMI = 15   # bir gönderi bağlanınca en çok kaç bekleyen y
 _URUN_ALANLARI = """
   legacyResourceId title handle status onlineStoreUrl
   featuredImage{ url }
-  variants(first:100){ nodes{ legacyResourceId title price compareAtPrice inventoryQuantity availableForSale } }
+  variants(first:100){ nodes{ legacyResourceId sku title price compareAtPrice inventoryQuantity availableForSale } }
 """
 _ARAMA_SORGUSU = """
 query($first:Int!, $query:String, $after:String){
@@ -73,6 +73,28 @@ def _renk_beden(varyant_basligi: str) -> tuple[str, str]:
     return "", parcalar[0] if parcalar else ""
 
 
+def _model_kodu(node: dict) -> str:
+    """Ürünün model kodu: stok kodlarının ortak öneki ('155-36 Bej Rugan' → '155').
+
+    Sitede stok kodu "Model-Beden Renk" biçimindedir ve bir üründe tek model
+    öneki bulunur. Stok kodu yoksa ürün adresinin baştaki rakam kısmına bakılır.
+    """
+    sayac: dict[str, int] = {}
+    for v in ((node.get("variants") or {}).get("nodes")) or []:
+        onek = re.split(r"[-\s]", (v.get("sku") or "").strip(), maxsplit=1)[0]
+        if onek:
+            sayac[onek] = sayac.get(onek, 0) + 1
+    if sayac:
+        return max(sayac, key=sayac.get)
+    eslesme = re.match(r"^(\d{2,12})-", node.get("handle") or "")
+    return eslesme.group(1) if eslesme else ""
+
+
+def _kod_gibi(q: str) -> bool:
+    """Arama metni model kodu gibi mi (boşluksuz, içinde rakam olan kısa dizgi)?"""
+    return bool(re.fullmatch(r"[0-9A-Za-z+]{1,12}", q)) and any(c.isdigit() for c in q)
+
+
 def _sadelestir(node: dict) -> dict:
     """Shopify ürün düğümünü panelin kullandığı yalın sözlüğe çevirir."""
     renkler: dict[str, dict] = {}
@@ -99,6 +121,7 @@ def _sadelestir(node: dict) -> dict:
     handle = node.get("handle") or ""
     return {
         "id": str(node.get("legacyResourceId") or ""),
+        "model": _model_kodu(node),
         "title": node.get("title") or "",
         "url": node.get("onlineStoreUrl") or (f"{SITE_URL}/products/{handle}" if handle else ""),
         "gorsel": ((node.get("featuredImage") or {}).get("url")) or "",
@@ -125,9 +148,19 @@ def renk_url(urun: dict, renk: str) -> str:
 
 def urun_ara(q: str, limit: int = ARAMA_LIMIT) -> list[dict]:
     """Sitedeki aktif ürünlerde ara (panelde 'Ürün bağla' kutusu)."""
-    q = re.sub(r"[^\w\s\-]", " ", (q or ""), flags=re.UNICODE).strip()[:80]
+    q = re.sub(r"[^\w\s\-+]", " ", (q or ""), flags=re.UNICODE).strip()[:80]
     if len(q) < 2:
         return []
+    if _kod_gibi(q):
+        # Model kodu yazıldı: site araması ad/açıklamada da gezdiği için "155" yazınca
+        # alakasız ürünler de dönüyordu. Yalnız stok kodu bu kodla başlayanlar çekilir,
+        # kodu TAM tutan varsa yalnız o model gösterilir; yoksa (kod henüz yazılıyorken)
+        # kodu bu harflerle başlayanlar. Ada göre "yakın" ürün hiç gösterilmez.
+        data = _shopify(_ARAMA_SORGUSU, {"first": 25, "query": f"status:active sku:{q}*", "after": None})
+        urunler = [_sadelestir(n) for n in ((data.get("products") or {}).get("nodes")) or []]
+        hedef = q.lower()
+        tam = [u for u in urunler if u["model"].lower() == hedef]
+        return (tam or [u for u in urunler if u["model"].lower().startswith(hedef)])[:max(1, min(limit, 25))]
     data = _shopify(_ARAMA_SORGUSU, {"first": max(1, min(limit, 25)), "query": f"status:active {q}", "after": None})
     return [_sadelestir(n) for n in ((data.get("products") or {}).get("nodes")) or []]
 

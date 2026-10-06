@@ -1049,7 +1049,7 @@
         kutu.innerHTML = d.urunler.map(u => {
           const renkler = u.renkler.filter(x => x.renk);
           const sec = (renk, etiket) => `<button class="qna-urun-btn qna-urun-sec" data-qid="${input.dataset.qid}" data-uc="${esc(input.dataset.uc || '')}" data-pid="${esc(u.id)}" data-renk="${esc(renk)}">${etiket}</button>`;
-          return `<div class="qna-urun-satir"><b>${esc(u.title)}</b>
+          return `<div class="qna-urun-satir"><b>${u.model ? esc(u.model) + ' · ' : ''}${esc(u.title)}</b>
             <div class="qna-urun-renkler">${renkler.length
               ? renkler.map(x => sec(x.renk, esc(x.renk) + para(x.fiyat))).join('') + (renkler.length > 1 ? sec('', 'Tüm renkler') : '')
               : sec('', 'Bu ürünü bağla' + para((u.renkler[0] || {}).fiyat))}</div></div>`;

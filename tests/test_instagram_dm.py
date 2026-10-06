@@ -920,5 +920,44 @@ def test_model_notu_takip_notlarindan_okunur(monkeypatch):
     assert qna_service.model_notu("0999") == "" and qna_service.model_notu(None) == ""
 
 
+def test_model_kodu_aramasi_yalniz_o_modeli_getirir(monkeypatch):
+    def urun(pid, baslik, handle, skular):
+        return {"legacyResourceId": pid, "title": baslik, "handle": handle, "status": "ACTIVE",
+                "onlineStoreUrl": f"https://www.gullushoes.com/products/{handle}", "featuredImage": None,
+                "variants": {"nodes": [{"legacyResourceId": f"{pid}{i}", "sku": sku, "title": "Bej / 36",
+                                        "price": "100.00", "compareAtPrice": None, "inventoryQuantity": 1,
+                                        "availableForSale": True} for i, sku in enumerate(skular)]}}
+
+    katalog = [
+        urun("1", "Bilekten Bağlamalı Çift Tokalı", "155-bilekten", ["155-35 Bej Rugan", "155-36 Bej Rugan"]),
+        urun("2", "Yakın Kodlu Başka Model", "1550-baska", ["1550-36 Siyah"]),
+        urun("3", "Adında 155 Geçen Ürün", "0107-bilekten", ["0107-35Bej"]),
+        urun("4", "Timsah Loafer", "03155-loafer", ["03155-36Bej Leopar"]),
+        urun("5", "Timsah Loafer Siyah", "03155-siyah", ["03155-Siyah Timsah DSN 35"]),
+    ]
+    sorgular = []
+
+    def sahte_shopify(query, variables):
+        sorgular.append(variables["query"])
+        q = variables["query"].replace("status:active ", "")
+        if q.startswith("sku:"):
+            onek = q[4:].rstrip("*")
+            nodes = [u for u in katalog if any(v["sku"].startswith(onek) for v in u["variants"]["nodes"])]
+        else:   # sitenin serbest araması: ad/açıklamada da gezer, alakasızları da döndürür
+            nodes = [u for u in katalog if q in u["title"] or q in u["handle"]]
+        return {"products": {"nodes": nodes, "pageInfo": {"hasNextPage": False}}}
+
+    monkeypatch.setattr(instagram_urun, "_shopify", sahte_shopify)
+    assert [u["id"] for u in instagram_urun.urun_ara("155")] == ["1"]            # 1550 ve 0107 gelmez
+    assert sorgular[-1] == "status:active sku:155*"
+    assert [u["id"] for u in instagram_urun.urun_ara("03155")] == ["4", "5"]     # aynı modelin iki ilanı
+    assert [u["id"] for u in instagram_urun.urun_ara("15")] == ["1", "2"]        # kod yazılırken: önek
+    assert instagram_urun.urun_ara("9999") == []                                 # yakın ürün gösterilmez
+    assert [u["model"] for u in instagram_urun.urun_ara("1550")] == ["1550"]
+    # Ürün adıyla arama eskisi gibi çalışır
+    assert [u["id"] for u in instagram_urun.urun_ara("Timsah")] == ["4", "5"]
+    assert sorgular[-1] == "status:active Timsah"
+
+
 def test_gercek_uygulama_hala_yuklenmedi():
     assert "app" not in sys.modules
