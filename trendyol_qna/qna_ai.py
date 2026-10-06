@@ -11,6 +11,7 @@ import os
 import subprocess
 import threading
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 from ai_asistan.blueprint import (
@@ -60,34 +61,97 @@ def _kurallar() -> str:
 
 
 GECMIS_ISTEM_SORU = 5   # taslak istemine giren önceki soru sayısı
+ART_ARDA_SORU = timedelta(minutes=60)   # bu süre içinde gelen sorular tek konuşma sayılır
+_IST = ZoneInfo("Europe/Istanbul")
 
 
-def _gecmis_metni(row, gecmis) -> str:
+def _utc(dt):
+    return dt.replace(tzinfo=timezone.utc) if (dt is not None and dt.tzinfo is None) else dt
+
+
+def _tarih_etiketi(dt, simdi) -> str:
+    """'22.09.2026 (14 gün önce)' — AI göreli süreleri ('2 hafta sonra') bugüne göre hesaplasın diye."""
+    dt = _utc(dt)
+    if dt is None:
+        return "tarih bilinmiyor"
+    gun = (simdi.astimezone(_IST).date() - dt.astimezone(_IST).date()).days
+    ne_zaman = "bugün" if gun <= 0 else ("dün" if gun == 1 else f"{gun} gün önce")
+    return f"{dt.astimezone(_IST):%d.%m.%Y} ({ne_zaman})"
+
+
+def _gecmis_metni(row, gecmis, simdi=None) -> str:
     """Aynı müşterinin önceki soru-cevapları (istem için); yoksa ''."""
+    simdi = simdi or datetime.now(timezone.utc)
     onceki = [g for g in (gecmis or []) if g.id != row.id][-GECMIS_ISTEM_SORU:]
     if not onceki:
         return ""
     satirlar = []
     for g in onceki:
         urun = "" if g.product_main_id == row.product_main_id else f" [başka ürün: {g.product_name or 'bilinmiyor'}]"
-        satirlar.append(f"Müşteri{urun}: {(g.text or '').strip()}")
-        satirlar.append(f"Biz: {(g.answer_text or '').strip()}" if g.answer_text else "Biz: (henüz cevaplanmadı)")
-    return (
+        satirlar.append(f"{_tarih_etiketi(g.creation_date, simdi)} — Müşteri{urun}: {(g.text or '').strip()}")
+        if g.answer_text:
+            satirlar.append(f"Biz: {g.answer_text.strip()}")
+        elif g.ai_draft_status == "ready" and g.ai_draft:
+            satirlar.append(f"Biz (hazırlanan taslak, henüz gönderilmedi): {g.ai_draft.strip()}")
+        else:
+            satirlar.append("Biz: (henüz cevaplanmadı)")
+    metin = (
         "Bu müşterinin ÖNCEKİ soruları ve cevaplarımız (eskiden yeniye). Yeni soru bunlara atıf "
         "yapıyor olabilir; çelişme, gerekiyorsa önceki cevabı dikkate al:\n"
         + "\n".join(satirlar) + "\n\n"
     )
+    # Art arda soru: müşteri az önce de yazdıysa her cevaba baştan selam verilmez
+    bu, yakin = _utc(row.creation_date), None
+    for g in onceki:
+        diger = _utc(g.creation_date)
+        if bu is not None and diger is not None and timedelta(0) <= bu - diger <= ART_ARDA_SORU:
+            yakin = bu - diger if yakin is None else min(yakin, bu - diger)
+    if yakin is not None:
+        metin += (
+            f"DİKKAT: Bu müşteri bu sorudan yalnızca {max(int(yakin.total_seconds() // 60), 1)} dakika önce "
+            "başka bir soru daha sordu; ikisi aynı konuşmanın devamı. Bu cevapta 'Merhaba', 'Merhabalar' gibi "
+            "bir selamlamayla BAŞLAMA (genel kuraldaki selamlama şartı burada geçerli değil), doğrudan cevaba "
+            "gir ve az önceki cevapta söyleneni tekrar etme.\n\n"
+        )
+    return metin
+
+
+def _model_hafizasi_metni(model_cevaplari, not_metni: str, simdi) -> str:
+    """Model koduna özel hafıza: yöneticinin notu + bu modele verilmiş tarihli eski cevaplar."""
+    metin = ""
+    if not_metni:
+        metin += (
+            "MAĞAZA NOTU — yöneticinin bu model için yazdığı güncel bilgi; eski cevaplardan ve "
+            f"tahminden ÖNCE gelir, aynen uy:\n{not_metni}\n\n"
+        )
+    if model_cevaplari:
+        satirlar = []
+        for g in model_cevaplari:
+            kim = (g.user_name or "bir müşteri").strip()
+            satirlar.append(f"{_tarih_etiketi(g.answer_date or g.creation_date, simdi)} — {kim} sordu: "
+                            f"{(g.text or '').strip()}\n  Biz: {(g.answer_text or '').strip()}")
+        metin += (
+            "BU MODELE daha önce başka müşterilere verdiğimiz cevaplar (eskiden yeniye, tarihleriyle). "
+            "Tutarlı ol. Bu cevaplardaki '2 hafta sonra gelecek', 'haftaya' gibi SÜRELİ ifadeleri o cevabın "
+            "tarihine göre bugüne çevir: süre hâlâ dolmadıysa kalan süreyi söyle; dolduysa aynı sözü "
+            "tekrarlama, CANLI STOK ve mağaza notuna göre cevapla. Başka müşterilerin adını cevapta kullanma:\n"
+            + "\n".join(satirlar) + "\n\n"
+        )
+    return metin
 
 
 def _draft_prompt(row, stok_bilgisi: str, talimat: str | None = None,
                   mevcut_metin: str | None = None, renk: str | None = None,
-                  gecmis=None) -> str:
+                  gecmis=None, model_cevaplari=None, model_notu: str = "", simdi=None) -> str:
+    simdi = simdi or datetime.now(timezone.utc)
     prompt = (
+        f"Bugünün tarihi: {simdi.astimezone(_IST):%d.%m.%Y}\n"
         f"Ürün: {row.product_name or 'bilinmiyor'}\n"
         f"Model kodu: {row.product_main_id or 'bilinmiyor'}\n"
         f"Renk: {renk or 'bilinmiyor'}\n"
         f"CANLI STOK: {stok_bilgisi}\n\n"
-        + _gecmis_metni(row, gecmis) +
+        + _model_hafizasi_metni(model_cevaplari, model_notu, simdi)
+        + _gecmis_metni(row, gecmis, simdi) +
         f"Müşteri sorusu:\n{row.text}\n\n"
     )
     if talimat:
@@ -196,11 +260,14 @@ def generate_draft(question_id: int, talimat: str | None = None,
 
     onceki_taslak = mevcut_metin or row.ai_draft
     renk = question_renk(row.product_main_id, row.product_name)
-    from trendyol_qna.qna_service import musteri_gecmisi
+    from trendyol_qna.qna_service import model_hafizasi, model_notu, musteri_gecmisi
     gecmis = musteri_gecmisi([row.customer_id]).get(row.customer_id, [])
-    taslak = _run_ai(_draft_prompt(row, stock_context(row.product_main_id),
-                                   talimat=talimat, mevcut_metin=mevcut_metin,
-                                   renk=renk, gecmis=gecmis))
+    taslak = _run_ai(_draft_prompt(
+        row, stock_context(row.product_main_id),
+        talimat=talimat, mevcut_metin=mevcut_metin, renk=renk, gecmis=gecmis,
+        model_cevaplari=model_hafizasi(row.product_main_id, haric_id=row.id,
+                                       haric_musteri=row.customer_id),
+        model_notu=model_notu(row.product_main_id, renk)))
     if taslak:
         if talimat:
             # Düzeltme talimatını ders olarak bilgi bankasına not düş

@@ -13,3 +13,14 @@
 - AI taslağı: `_draft_prompt(..., gecmis=)` son 5 önceki soru-cevabı isteme ekler ("yeni soru bunlara atıf yapıyor olabilir").
 - Sınır: yalnız panele düşmüş sorular görünür (entegrasyon öncesi ve hiç senkronlanmamış eski sorular yok).
 - 45 test; kart önizlemede geçmişli ve geçmişsiz haliyle görüldü. Canlı veriyle denenmedi.
+
+## 2026-10-06: "sıra karışık / tarih tutmuyor" incelemesi — hata bulunmadı, değişiklik YOK
+- Komutan soldaki yazışmanın sırasının karışık olduğunu, sonra da Trendyol'daki tarihle tutmadığını söyledi.
+- İlk tepkim (cevabı kendi tarihine göre yerleştirme) YANLIŞ teşhisti; yayınlanmadan `git checkout` ile geri alındı.
+  Komutan açıkça "soru-cevap-soru-cevap olmalı" dedi → cevap her zaman kendi sorusunun hemen altında kalır.
+- Doğrulama: Trendyol API'sinden müşteri 913938'in 4 sorusu salt-okunur çekildi. `creationDate` ve
+  `answer.creationDate` İstanbul'a çevrilince Trendyol panelindeki saatlerle birebir aynı (ör. soru 03.10 15:40,
+  cevap 04.10 20:00). Yayındaki `_to_dict` aynı veriyle çalıştırıldı: sıra en eski üstte, çiftler bozulmadan.
+- Komutanın iki ekran görüntüsü aynı müşterinin FARKLI sorularını gösteriyordu (Trendyol: 3. soru; panel: ilk iki soru).
+- Komutan sıra yönünü seçti: en eski üstte (mevcut davranış). Kod değişmedi.
+- Ders: "karışık/tutmuyor" şikâyetinde kod değiştirmeden önce gerçek veriyle karşılaştır.

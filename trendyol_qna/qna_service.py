@@ -343,6 +343,64 @@ def musteri_gecmisi(customer_ids) -> dict[int, list[TrendyolQuestion]]:
     return {c: grup[::-1] for c, grup in gruplar.items()}
 
 
+MODEL_HAFIZA_CEVAP = 8   # taslak istemine giren, aynı modele verilmiş son cevap sayısı
+
+
+def model_hafizasi(product_main_id: str | None, haric_id=None, haric_musteri=None) -> list[TrendyolQuestion]:
+    """Bu model koduna daha önce verdiğimiz son cevaplar, eskiden yeniye.
+
+    "Bu modele geçen hafta bir müşteriye '2 hafta sonra gelecek' demiştim" bilgisini
+    AI'nın kendiliğinden bilmesi için: ortak not defteri eskidikçe kırpılır, burası
+    doğrudan soru tablosundan modele göre süzülür. Sorunun kendisi ve aynı müşterinin
+    soruları (onlar müşteri geçmişinde zaten var) dışarıda kalır.
+    """
+    if not product_main_id:
+        return []
+    try:
+        sorgu = (db.session.query(TrendyolQuestion)
+                 .filter(TrendyolQuestion.product_main_id == product_main_id)
+                 .filter(TrendyolQuestion.answer_text.isnot(None), TrendyolQuestion.answer_text != ""))
+        if haric_id is not None:
+            sorgu = sorgu.filter(TrendyolQuestion.id != haric_id)
+        if haric_musteri:
+            sorgu = sorgu.filter((TrendyolQuestion.customer_id != haric_musteri)
+                                 | TrendyolQuestion.customer_id.is_(None))
+        satirlar = (sorgu.order_by(TrendyolQuestion.answer_date.desc().nullslast(),
+                                   TrendyolQuestion.id.desc())
+                    .limit(MODEL_HAFIZA_CEVAP).all())
+    except Exception:
+        db.session.rollback()
+        logger.exception("[QNA] model hafızası okunamadı")
+        return []
+    return satirlar[::-1]
+
+
+def model_notu(product_main_id: str | None, renk: str | None = None) -> str:
+    """Yöneticinin bu model için Takip Notları paneline yazdığı not ('' = yok).
+
+    Model genel notu + (renk biliniyorsa) o rengin notu; renk bilinmiyorsa tüm
+    renk notları etiketiyle verilir. Not yeri tektir: ürün listesindeki panel.
+    """
+    if not product_main_id:
+        return ""
+    try:
+        from takip_notu import get_takip_entries
+        kayit = next((e for e in get_takip_entries() if e["model"] == str(product_main_id).strip()), None)
+    except Exception:
+        db.session.rollback()
+        logger.exception("[QNA] model notu okunamadı")
+        return ""
+    if not kayit:
+        return ""
+    satirlar = [kayit["note"]] if kayit.get("note") else []
+    renk_notlari = kayit.get("color_notes") or {}
+    hedef = _tr_lower(renk) if renk else ""
+    for ad, metin in renk_notlari.items():
+        if not hedef or _tr_lower(ad) == hedef:
+            satirlar.append(f"{ad} rengi: {metin}")
+    return "\n".join(s for s in satirlar if s)
+
+
 def waiting_count() -> int:
     """Cevap bekleyen soru sayısı (anasayfa rozeti) — Trendyol + Shopify + Instagram toplamı."""
     toplam = 0

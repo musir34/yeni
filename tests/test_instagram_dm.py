@@ -825,5 +825,100 @@ def test_trendyol_taslak_istemi_onceki_soru_cevaplari_icerir(trendyol_sorulari):
     assert "ÖNCEKİ" not in _draft_prompt(tek, "stok")
 
 
+# ── Trendyol: model koduna özel hafıza + art arda soru ───────────────────────
+
+@pytest.fixture
+def model_sorulari(monkeypatch):
+    db.session.query(TrendyolQuestion).delete()
+    simdi = datetime(2026, 10, 6, 9, 0, tzinfo=timezone.utc)
+
+    def soru(qid, musteri, ad, metin, gun_once, dk_once=0, model="0121", cevap=None, taslak=None):
+        zaman = simdi - timedelta(days=gun_once, minutes=dk_once)
+        db.session.add(TrendyolQuestion(
+            id=qid, customer_id=musteri, user_name=ad, text=metin, product_name="Topuklu Sandalet",
+            product_main_id=model, status="ANSWERED" if cevap else "WAITING_FOR_ANSWER",
+            creation_date=zaman, answer_text=cevap, answer_date=zaman if cevap else None,
+            ai_draft=taslak, ai_draft_status="ready" if taslak else "none"))
+
+    soru(1, 11, "Ayşe Y.", "37 numara ne zaman gelir?", 14, cevap="Merhaba, 2 hafta sonra stoklarımızda olacak.")
+    soru(2, 12, "Zeynep K.", "Kalıbı dar mı?", 3, cevap="Merhaba, tam kalıptır.")
+    soru(3, 13, "Elif Ş.", "Bot su geçirir mi?", 2, model="0155", cevap="Su geçirmez.")     # başka model
+    soru(4, 20, "Hale Ş.", "38 var mı?", 0, dk_once=5, taslak="Merhaba, 38 numara mevcut.")
+    soru(5, 20, "Hale Ş.", "Peki kargo ne zaman çıkar?", 0, dk_once=3)
+    soru(6, 20, "Hale Ş.", "Kapıda ödeme var mı?", 0, dk_once=1)
+    db.session.commit()
+    return simdi
+
+
+def test_model_hafizasi_yalniz_ayni_modelin_baska_musterilere_verilen_cevaplarini_getirir(model_sorulari):
+    from trendyol_qna.qna_service import model_hafizasi
+
+    assert [g.id for g in model_hafizasi("0121", haric_id=6, haric_musteri=20)] == [1, 2]   # eskiden yeniye
+    assert [g.id for g in model_hafizasi("0155")] == [3]
+    assert model_hafizasi(None) == [] and model_hafizasi("yok-boyle-model") == []
+    # Müşterinin kendi cevaplanmış sorusu model hafızasına girmez (müşteri geçmişinde zaten var)
+    assert [g.id for g in model_hafizasi("0121", haric_id=99, haric_musteri=11)] == [2]
+
+
+def test_taslak_istemi_model_hafizasini_tarihiyle_ve_notla_verir(model_sorulari):
+    from trendyol_qna.qna_ai import _draft_prompt
+    from trendyol_qna.qna_service import model_hafizasi
+
+    satir = db.session.get(TrendyolQuestion, 6)
+    prompt = _draft_prompt(satir, "37: stok yok", simdi=model_sorulari,
+                           model_cevaplari=model_hafizasi("0121", haric_id=6, haric_musteri=20),
+                           model_notu="Yeni parti 20 Ekim'de gelecek.")
+    assert "Bugünün tarihi: 06.10.2026" in prompt
+    assert "22.09.2026 (14 gün önce) — Ayşe Y. sordu: 37 numara ne zaman gelir?" in prompt
+    assert "Biz: Merhaba, 2 hafta sonra stoklarımızda olacak." in prompt
+    assert "03.10.2026 (3 gün önce) — Zeynep K. sordu" in prompt
+    assert "SÜRELİ ifadeleri" in prompt and "Başka müşterilerin adını cevapta kullanma" in prompt
+    assert "MAĞAZA NOTU" in prompt and "Yeni parti 20 Ekim'de gelecek." in prompt
+    assert prompt.index("MAĞAZA NOTU") < prompt.index("BU MODELE daha önce")     # not önce gelir
+    assert "Bot su geçirir mi?" not in prompt                                    # başka modelin cevabı yok
+    # Hafıza ve not yoksa istem bu bölümleri hiç içermez
+    yalin = _draft_prompt(satir, "stok", simdi=model_sorulari)
+    assert "MAĞAZA NOTU" not in yalin and "BU MODELE daha önce" not in yalin
+
+
+def test_art_arda_soruda_ikinci_cevap_selamla_baslamaz(model_sorulari):
+    from trendyol_qna.qna_ai import _draft_prompt
+    from trendyol_qna.qna_service import musteri_gecmisi
+
+    gecmis = musteri_gecmisi([20])[20]
+    ilk = _draft_prompt(db.session.get(TrendyolQuestion, 4), "stok", gecmis=gecmis, simdi=model_sorulari)
+    ikinci = _draft_prompt(db.session.get(TrendyolQuestion, 5), "stok", gecmis=gecmis, simdi=model_sorulari)
+    ucuncu = _draft_prompt(db.session.get(TrendyolQuestion, 6), "stok", gecmis=gecmis, simdi=model_sorulari)
+    assert "selamlamayla BAŞLAMA" not in ilk                 # konuşmanın ilk sorusu selamlanır
+    assert "yalnızca 2 dakika önce" in ikinci and "selamlamayla BAŞLAMA" in ikinci
+    assert "yalnızca 2 dakika önce" in ucuncu                # en yakın önceki soruya göre
+    # Henüz gönderilmemiş hazır taslak da bağlama girer ki aynı şey tekrarlanmasın
+    assert "Biz (hazırlanan taslak, henüz gönderilmedi): Merhaba, 38 numara mevcut." in ikinci
+    # Günler önce soru sormuş müşteriye yine selam verilir
+    eski = musteri_gecmisi([11])[11]
+    db.session.add(TrendyolQuestion(id=7, customer_id=11, user_name="Ayşe Y.", text="Geldi mi?",
+                                    product_main_id="0121", status="WAITING_FOR_ANSWER",
+                                    creation_date=model_sorulari))
+    db.session.commit()
+    sonra = _draft_prompt(db.session.get(TrendyolQuestion, 7), "stok", gecmis=musteri_gecmisi([11])[11],
+                          simdi=model_sorulari)
+    assert "ÖNCEKİ soruları" in sonra and "selamlamayla BAŞLAMA" not in sonra
+
+
+def test_model_notu_takip_notlarindan_okunur(monkeypatch):
+    import types
+    from trendyol_qna import qna_service
+
+    sahte = types.SimpleNamespace(get_takip_entries=lambda: [
+        {"model": "0121", "colors": ["Siyah", "Kırmızı"], "note": "Yeni parti 20 Ekim'de.",
+         "color_notes": {"Kırmızı": "Üretimi bitti, gelmeyecek.", "Siyah": "37-38 haftaya."}},
+    ])
+    monkeypatch.setitem(sys.modules, "takip_notu", sahte)
+    assert qna_service.model_notu("0121", "kırmızı") == "Yeni parti 20 Ekim'de.\nKırmızı rengi: Üretimi bitti, gelmeyecek."
+    tum = qna_service.model_notu("0121")
+    assert "Kırmızı rengi:" in tum and "Siyah rengi:" in tum     # renk bilinmiyorsa hepsi etiketli
+    assert qna_service.model_notu("0999") == "" and qna_service.model_notu(None) == ""
+
+
 def test_gercek_uygulama_hala_yuklenmedi():
     assert "app" not in sys.modules
