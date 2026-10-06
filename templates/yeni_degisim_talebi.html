@@ -66,6 +66,18 @@
             border: 1px solid var(--color-border);
             transition: var(--transition);
         }
+        /* Hızlı değişim önerileri */
+        .oneri-kutu { margin-top: .75rem; padding-top: .75rem; border-top: 1px dashed var(--color-border, #dee2e6); text-align: left; }
+        .oneri-mevcut { font-size: .82rem; color: #6c757d; margin-bottom: .5rem; }
+        .oneri-baslik { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: #6c757d; margin: .6rem 0 .35rem; }
+        .oneri-satir { display: flex; flex-wrap: wrap; gap: .4rem; }
+        .oneri-btn { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0; padding: .35rem .65rem; border: 1px solid #198754; border-radius: 10px; background: rgba(25,135,84,.08); color: #146c43; font-size: .85rem; font-weight: 700; line-height: 1.25; cursor: pointer; transition: background-color .15s; }
+        .oneri-btn small { font-size: .7rem; font-weight: 600; opacity: .85; }
+        .oneri-btn:hover { background: rgba(25,135,84,.18); }
+        .oneri-btn--yok { border-color: #adb5bd; background: rgba(108,117,125,.08); color: #6c757d; }
+        .oneri-btn--yok:hover { background: rgba(108,117,125,.16); }
+        html.gs-dark .oneri-btn { color: #8fd6b1; background: rgba(25,135,84,.2); }
+        html.gs-dark .oneri-btn--yok { color: #adb5bd; background: rgba(108,117,125,.2); }
         .product-card:hover {
             box-shadow: var(--shadow-sm);
         }
@@ -356,10 +368,76 @@
 
             body.appendChild(title);
             body.appendChild(text);
+            const oneriler = buildSuggestions(product.oneriler);
+            if (oneriler) body.appendChild(oneriler);
             card.appendChild(img);
             card.appendChild(body);
             col.appendChild(card);
             return col;
+        }
+
+        // ────────────────────────────────────────────────────────────────
+        // Hızlı değişim önerileri: bir küçük / bir büyük numara, diğer renkler
+        // ────────────────────────────────────────────────────────────────
+        function suggestionButton(etiket, oneri) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            const stokta = oneri.stok > 0;
+            btn.className = 'oneri-btn' + (stokta ? '' : ' oneri-btn--yok');
+            const ad = document.createElement('span');
+            ad.textContent = etiket;
+            const stok = document.createElement('small');
+            stok.textContent = stokta ? oneri.stok + ' adet' : 'stok yok';
+            btn.appendChild(ad);
+            btn.appendChild(stok);
+            btn.title = stokta ? 'Bu ürünü değişim ürünü olarak seç' : 'Stokta yok — yine de seçilebilir';
+            btn.addEventListener('click', () => selectSuggestion(oneri.barcode));
+            return btn;
+        }
+
+        function buildSuggestions(o) {
+            if (!o || (!o.kucuk && !o.buyuk && !(o.renkler || []).length)) return null;
+            const kutu = document.createElement('div');
+            kutu.className = 'oneri-kutu';
+
+            const mevcut = document.createElement('div');
+            mevcut.className = 'oneri-mevcut';
+            mevcut.textContent = 'Aldığı: ' + safeText(o.renk) + ' · ' + safeText(o.beden) + ' numara';
+            kutu.appendChild(mevcut);
+
+            if (o.kucuk || o.buyuk) {
+                const satir = document.createElement('div');
+                satir.className = 'oneri-satir';
+                if (o.kucuk) satir.appendChild(suggestionButton('◀ Bir küçük: ' + safeText(o.kucuk.size), o.kucuk));
+                if (o.buyuk) satir.appendChild(suggestionButton('Bir büyük: ' + safeText(o.buyuk.size) + ' ▶', o.buyuk));
+                kutu.appendChild(satir);
+            }
+            if ((o.renkler || []).length) {
+                const baslik = document.createElement('div');
+                baslik.className = 'oneri-baslik';
+                baslik.textContent = 'Aynı numara, başka renk';
+                kutu.appendChild(baslik);
+                const satir = document.createElement('div');
+                satir.className = 'oneri-satir';
+                o.renkler.forEach(r => satir.appendChild(suggestionButton(safeText(r.color), r)));
+                kutu.appendChild(satir);
+            }
+            return kutu;
+        }
+
+        // Öneriye tıklanınca: değişim formunu aç, barkodu boş ürün alanına yaz, ürünü getir
+        function selectSuggestion(barcode) {
+            showExchangeForm();
+            const container = document.getElementById('exchangeProductsContainer');
+            let input = Array.from(container.querySelectorAll('input[name="urun_barkod"]')).find(i => !i.value.trim());
+            if (!input) {
+                addNewProductField();
+                const hepsi = container.querySelectorAll('input[name="urun_barkod"]');
+                input = hepsi[hepsi.length - 1];
+            }
+            input.value = barcode;
+            fetchProductDetails(Number(input.id.replace('new_barcode_', '')));
+            input.closest('.product-field-block').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         function renderProductDetails(detailsDiv, data) {

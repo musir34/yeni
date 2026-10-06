@@ -144,6 +144,7 @@
         <i class="fas fa-sync-alt me-1"></i> DHL Durumlarını Yenile
       </button>
       <a href="{{ url_for('home.home') }}" class="btn btn-secondary"><i class="fas fa-home"></i> Anasayfa</a>
+      <div class="small text-muted mt-2" id="returnStatusFreshness"></div>
     </div>
 
     <!-- Toplu İşlem Toolbarı -->
@@ -498,6 +499,18 @@
       });
     }
 
+    // Durumların en son ne zaman DHL'den kontrol edildiğini düğmenin altında göster
+    function showReturnStatusFreshness(durumlar) {
+      const zamanlar = Object.values(durumlar || {})
+        .map(d => Date.parse(d.lastSyncAt || '')).filter(t => !Number.isNaN(t));
+      const kutu = document.getElementById('returnStatusFreshness');
+      if (!zamanlar.length) { kutu.textContent = ''; return; }
+      const son = new Date(Math.max(...zamanlar));
+      const dk = Math.max(Math.round((Date.now() - son.getTime()) / 60000), 0);
+      const saat = son.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'});
+      kutu.textContent = `Son DHL kontrolü: ${saat} (${dk < 1 ? 'az önce' : dk + ' dk önce'}) · saatte bir kendiliğinden yenilenir`;
+    }
+
     async function loadReturnStatuses(sync = true) {
       const refreshButton = document.getElementById('refreshReturnStatuses');
       const originalHtml = refreshButton.innerHTML;
@@ -512,6 +525,7 @@
         document.querySelectorAll('.card[data-degisim-no]').forEach(card => {
           applyReturnStatus(card.dataset.degisimNo, data.durumlar[card.dataset.degisimNo] || null);
         });
+        showReturnStatusFreshness(data.durumlar);
       } catch (_) {
         applyReturnStatusError();
       } finally {
@@ -875,6 +889,9 @@
       refreshState();
     })();
 
-    loadReturnStatuses(true);
+    // Sayfa açılışında kayıtlı durumlar gösterilir (anında). DHL'in canlı taraması her açık
+    // kayıt için ayrı istek atar ve onlarca saniye sürer; köprü bunu zaten saatte bir kendisi
+    // yapıyor. Canlı tarama yalnız "DHL Durumlarını Yenile" düğmesiyle tetiklenir.
+    loadReturnStatuses(false);
   </script>
 {% endblock %}

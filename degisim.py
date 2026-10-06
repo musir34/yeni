@@ -675,6 +675,87 @@ def get_product_details():
     return jsonify({'success': False, 'message': 'Ürün bulunamadı'})
 
 # ──────────────────────────────────────────────────────────────────────────────
+# 4b) Hızlı değişim önerileri (bir küçük / bir büyük numara, diğer renkler)
+# ──────────────────────────────────────────────────────────────────────────────
+def _beden_sayisi(beden) -> float | None:
+    """'38' → 38.0, '39,5' → 39.5; sayı değilse None (sıralanamaz, öneriye girmez)."""
+    try:
+        return float(str(beden).strip().replace(',', '.'))
+    except (TypeError, ValueError):
+        return None
+
+
+def degisim_onerileri(barcode: str) -> dict | None:
+    """Sipariş edilen ürüne göre değişimde en çok istenen seçenekler.
+
+    Aynı modelin aynı renginde bir küçük ve bir büyük numara ile aynı numaranın
+    diğer renkleri; her biri barkodu ve merkez stok adediyle. Değişim formu
+    bunları tek tıkla seçilebilir düğme olarak gösterir. Ürün panelde yoksa None.
+    """
+    safe = _safe_barcode(barcode)
+    urun = Product.query.filter_by(barcode=safe).first() if safe else None
+    if not urun or not urun.product_main_id:
+        return None
+    kardesler = (
+        Product.query
+        .filter(Product.product_main_id == urun.product_main_id)
+        .filter((Product.archived.is_(False)) | (Product.archived.is_(None)))
+        .all()
+    )
+    stoklar = dict(
+        db.session.query(CentralStock.barcode, CentralStock.qty)
+        .filter(CentralStock.barcode.in_([k.barcode for k in kardesler])).all()
+    ) if kardesler else {}
+
+    def _renk(p):
+        return (p.color or '').strip().casefold()
+
+    def _kart(p):
+        return {'barcode': p.barcode, 'size': p.size or '', 'color': p.color or '',
+                'stok': int(stoklar.get(p.barcode) or 0)}
+
+    bu_beden, bu_renk = _beden_sayisi(urun.size), _renk(urun)
+    # Aynı renk+numara birden çok barkoddaysa stoğu çok olan gösterilir
+    en_iyi: dict[tuple, Product] = {}
+    for k in kardesler:
+        beden = _beden_sayisi(k.size)
+        if beden is None or k.barcode == urun.barcode:
+            continue
+        anahtar = (_renk(k), beden)
+        mevcut = en_iyi.get(anahtar)
+        if mevcut is None or int(stoklar.get(k.barcode) or 0) > int(stoklar.get(mevcut.barcode) or 0):
+            en_iyi[anahtar] = k
+
+    kucuk = buyuk = None
+    if bu_beden is not None:
+        ayni_renk = sorted((beden, k) for (renk, beden), k in en_iyi.items() if renk == bu_renk)
+        kucukler = [k for beden, k in ayni_renk if beden < bu_beden]
+        buyukler = [k for beden, k in ayni_renk if beden > bu_beden]
+        kucuk = _kart(kucukler[-1]) if kucukler else None
+        buyuk = _kart(buyukler[0]) if buyukler else None
+    renkler = sorted(
+        (_kart(k) for (renk, beden), k in en_iyi.items() if renk != bu_renk and beden == bu_beden),
+        key=lambda x: x['color'].casefold(),
+    )
+    return {
+        'model': urun.product_main_id, 'renk': urun.color or '', 'beden': urun.size or '',
+        'kucuk': kucuk, 'buyuk': buyuk, 'renkler': renkler,
+    }
+
+
+def _onerileri_ekle(details: list) -> list:
+    """Sipariş kalemlerine 'oneriler' alanını iliştir; hata öneriyi düşürür, formu bozmaz."""
+    for detail in details or []:
+        try:
+            detail['oneriler'] = degisim_onerileri(detail.get('barcode') or '')
+        except Exception:
+            db.session.rollback()
+            logger.exception("Değişim önerileri üretilemedi (barkod %s)", detail.get('barcode'))
+            detail['oneriler'] = None
+    return details
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # 5) Sipariş detay getir (değişim formunda otomatik doldurma)
 # ──────────────────────────────────────────────────────────────────────────────
 @degisim_bp.route('/get_order_details', methods=['POST'])
@@ -687,6 +768,7 @@ def get_order_details():
     if siparis_no.startswith("SH-"):
         info = _fetch_shopify_order_info(siparis_no)
         if info:
+            _onerileri_ekle(info.get('details'))
             return jsonify({'success': True, **info})
         return jsonify({'success': False, 'message': 'Shopify siparişi bulunamadı'})
 
@@ -715,7 +797,7 @@ def get_order_details():
         'soyad': getattr(order, 'customer_surname', '') or '',
         'adres': getattr(order, 'customer_address', '') or '',
         'telefon_no': telefon,
-        'details': details_list,
+        'details': _onerileri_ekle(details_list),
     })
 
 # ──────────────────────────────────────────────────────────────────────────────
