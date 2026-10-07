@@ -51,6 +51,7 @@ def register_blueprints(app):
     from kargo_mutabakat import kargo_mutabakat_bp  # 🚚 KARGO MUTABAKAT
     from iade_yonetimi import iade_yonetimi_bp  # 📦 SİTE İADE YÖNETİMİ
     from whatsapp_baglanti import whatsapp_baglanti_bp  # 📱 WHATSAPP COEXISTENCE BAĞLANTISI
+    from whatsapp_webhook import whatsapp_webhook_bp  # 📱 WHATSAPP WEBHOOK (public, Coexistence şartı)
     from whatsapp_duyuru import whatsapp_duyuru_bp  # 📣 WHATSAPP DUYURU
     from finans import finans_bp  # 💰 FİNANS KASASI (üç hesaplı yeni kasa)
     from alissa.routes import alissa_bp  # 👞 MUHAMMET ALİSSA HESABI
@@ -108,6 +109,7 @@ def register_blueprints(app):
         kargo_mutabakat_bp,  # 🚚 KARGO MUTABAKAT
         iade_yonetimi_bp,  # 📦 SİTE İADE YÖNETİMİ
         whatsapp_baglanti_bp,  # 📱 WHATSAPP COEXISTENCE BAĞLANTISI
+        whatsapp_webhook_bp,  # 📱 WHATSAPP WEBHOOK (public, Coexistence şartı)
         whatsapp_duyuru_bp,  # 📣 WHATSAPP DUYURU
         finans_bp,  # 💰 FİNANS KASASI
         alissa_bp,  # 👞 MUHAMMET ALİSSA HESABI
