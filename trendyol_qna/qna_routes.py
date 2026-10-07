@@ -77,9 +77,22 @@ def _trendyol_yazisma(r: TrendyolQuestion, gecmis: list[TrendyolQuestion]) -> li
     return mesajlar
 
 
-def _to_dict(r: TrendyolQuestion, gecmis: list[TrendyolQuestion] | None = None) -> dict:
+def uretim_modelleri() -> set[str]:
+    """Üretim modundaki model kodları; kartta 'Üretimde' işareti için. Hata → boş küme."""
+    try:
+        from uretim_modu import get_uretim_models
+        return set(get_uretim_models())
+    except Exception:
+        db.session.rollback()
+        logger.exception("[QNA] üretim modeli listesi okunamadı")
+        return set()
+
+
+def _to_dict(r: TrendyolQuestion, gecmis: list[TrendyolQuestion] | None = None,
+             uretim: set[str] | None = None) -> dict:
     return {
         "mesajlar": _trendyol_yazisma(r, gecmis or []),
+        "uretim_modu": bool(r.product_main_id) and r.product_main_id in (uretim or set()),
         "id": r.id,
         "source": "trendyol",
         "text": r.text,
@@ -101,10 +114,11 @@ def _to_dict(r: TrendyolQuestion, gecmis: list[TrendyolQuestion] | None = None) 
     }
 
 
-def _shopify_to_dict(r: ShopifyQuestion) -> dict:
+def _shopify_to_dict(r: ShopifyQuestion, uretim: set[str] | None = None) -> dict:
     """Shopify sorusunu Trendyol kart sözlüğüyle aynı şekle getirir."""
     from trendyol_qna.shopify_qna import whatsapp_link
     return {
+        "uretim_modu": bool(r.product_sku) and r.product_sku in (uretim or set()),
         "id": r.id,
         "source": "shopify",
         "text": r.question,
@@ -407,10 +421,11 @@ def sorular():
 
     from trendyol_qna.qna_service import musteri_gecmisi
     t_gecmis = musteri_gecmisi(r.customer_id for r in t_rows)
+    uretim = uretim_modelleri() if (t_rows or sh_rows) else set()
 
     merged = sorted(
-        [(_key(r.creation_date), _to_dict(r, t_gecmis.get(r.customer_id))) for r in t_rows]
-        + [(_key(r.created_at), _shopify_to_dict(r)) for r in sh_rows]
+        [(_key(r.creation_date), _to_dict(r, t_gecmis.get(r.customer_id), uretim)) for r in t_rows]
+        + [(_key(r.created_at), _shopify_to_dict(r, uretim)) for r in sh_rows]
         + [(_key(r.last_message_at), _instagram_to_dict(r, ig_mesaj.get(r.id, []), ig_bag.get(r.id)))
            for r in ig_rows]
         + [(_key(r.created_at), _instagram_yorum_to_dict(r, yr_bag.get(r.media_id))) for r in yr_rows],

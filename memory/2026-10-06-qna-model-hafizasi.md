@@ -21,3 +21,13 @@ müşteriye elle not YOK, müşteri hafızası otomatik.
 - Kapsam: yalnız Trendyol soruları. Site (Shopify) ve Instagram taslakları değişmedi.
 - Şema değişikliği yok. 49 test (yalıtılmış). Gerçek yapay zekâ çıktısıyla DENENMEDİ: istemin doğru kurulduğu
   doğrulandı, modelin talimata uyup uymadığı canlıda görülecek.
+
+## 2026-10-07: üretim modundaki model soru kartında işaretli (yerelde)
+- Komutan: "müşteri ne zaman elimde olur diye soruyor; hangi model üretimde ezbere bilmiyorum."
+- Kaynak: `uretim_modu.get_uretim_models()` (mevcut üretim modu ayarı). `qna_routes.uretim_modelleri()` liste
+  başına bir kez okur; Trendyol (`product_main_id`) ve site (`product_sku`) kart sözlüğüne `uretim_modu` eklendi.
+- Kart: model kodunun yanında mor "⚙ Üretimde" rozeti (`.qna-uretim`, ipucu: stok 0 olsa da sipariş alınır).
+- AI taslağı: `_draft_prompt(..., uretim_modu=)` → "ÜRETİM MODU … 'stok yok' deme; süreyi yalnız mağaza notu /
+  genel talimat yazıyorsa belirt" (`URETIM_MODU_NOTU`). Üretim süresi kodda yok; komutan genel talimata ya da
+  Takip Notları'na yazarsa taslak onu kullanır. Instagram kartlarında işaret yok (model kodu bilinmiyor).
+- 51 test. Canlıda denenmedi.

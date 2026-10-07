@@ -959,5 +959,22 @@ def test_model_kodu_aramasi_yalniz_o_modeli_getirir(monkeypatch):
     assert sorgular[-1] == "status:active Timsah"
 
 
+def test_uretim_modundaki_model_kartta_ve_istemde_isaretlenir(trendyol_sorulari):
+    from trendyol_qna.qna_ai import _draft_prompt
+    from trendyol_qna.qna_routes import _to_dict, _shopify_to_dict
+    from models import ShopifyQuestion
+
+    satir = db.session.get(TrendyolQuestion, 3)          # model 0121
+    assert _to_dict(satir, uretim={"0121"})["uretim_modu"] is True
+    assert _to_dict(satir, uretim={"0155"})["uretim_modu"] is False
+    assert _to_dict(satir)["uretim_modu"] is False
+    sh = ShopifyQuestion(contact_type="email", question="?", product_sku="0121")
+    assert _shopify_to_dict(sh, uretim={"0121"})["uretim_modu"] is True
+    assert _shopify_to_dict(sh)["uretim_modu"] is False
+    prompt = _draft_prompt(satir, "38: stok yok", uretim_modu=True)
+    assert "ÜRETİM MODU" in prompt and "'Stok yok, alamazsınız' DEME" in prompt
+    assert "ÜRETİM MODU" not in _draft_prompt(satir, "38: stok yok")
+
+
 def test_gercek_uygulama_hala_yuklenmedi():
     assert "app" not in sys.modules

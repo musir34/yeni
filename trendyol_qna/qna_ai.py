@@ -116,6 +116,18 @@ def _gecmis_metni(row, gecmis, simdi=None) -> str:
     return metin
 
 
+def _uretim_modunda(model_kodu) -> bool:
+    """Model üretim modunda mı (uretim_modu ayarı). Okunamazsa False — taslak yine üretilir."""
+    if not model_kodu:
+        return False
+    try:
+        from uretim_modu import get_uretim_models
+        return model_kodu in get_uretim_models()
+    except Exception:
+        logger.warning("[QNA-AI] üretim modu listesi okunamadı", exc_info=True)
+        return False
+
+
 def _model_hafizasi_metni(model_cevaplari, not_metni: str, simdi) -> str:
     """Model koduna özel hafıza: yöneticinin notu + bu modele verilmiş tarihli eski cevaplar."""
     metin = ""
@@ -140,16 +152,26 @@ def _model_hafizasi_metni(model_cevaplari, not_metni: str, simdi) -> str:
     return metin
 
 
+URETIM_MODU_NOTU = (
+    "ÜRETİM MODU: Bu model üretim modunda — stokta görünmeyen numaralar için de sipariş alınır, "
+    "ürün üretilip gönderilir. 'Stok yok, alamazsınız' DEME; sipariş verilebileceğini söyle. "
+    "Üretim/teslim süresini yalnız mağaza notunda ya da genel talimatta yazıyorsa belirt; "
+    "yazmıyorsa kesin gün verme, 'üretim süresi eklenir' de.\n"
+)
+
+
 def _draft_prompt(row, stok_bilgisi: str, talimat: str | None = None,
                   mevcut_metin: str | None = None, renk: str | None = None,
-                  gecmis=None, model_cevaplari=None, model_notu: str = "", simdi=None) -> str:
+                  gecmis=None, model_cevaplari=None, model_notu: str = "", simdi=None,
+                  uretim_modu: bool = False) -> str:
     simdi = simdi or datetime.now(timezone.utc)
     prompt = (
         f"Bugünün tarihi: {simdi.astimezone(_IST):%d.%m.%Y}\n"
         f"Ürün: {row.product_name or 'bilinmiyor'}\n"
         f"Model kodu: {row.product_main_id or 'bilinmiyor'}\n"
         f"Renk: {renk or 'bilinmiyor'}\n"
-        f"CANLI STOK: {stok_bilgisi}\n\n"
+        f"CANLI STOK: {stok_bilgisi}\n"
+        + (URETIM_MODU_NOTU if uretim_modu else "") + "\n"
         + _model_hafizasi_metni(model_cevaplari, model_notu, simdi)
         + _gecmis_metni(row, gecmis, simdi) +
         f"Müşteri sorusu:\n{row.text}\n\n"
@@ -267,7 +289,8 @@ def generate_draft(question_id: int, talimat: str | None = None,
         talimat=talimat, mevcut_metin=mevcut_metin, renk=renk, gecmis=gecmis,
         model_cevaplari=model_hafizasi(row.product_main_id, haric_id=row.id,
                                        haric_musteri=row.customer_id),
-        model_notu=model_notu(row.product_main_id, renk)))
+        model_notu=model_notu(row.product_main_id, renk),
+        uretim_modu=_uretim_modunda(row.product_main_id)))
     if taslak:
         if talimat:
             # Düzeltme talimatını ders olarak bilgi bankasına not düş

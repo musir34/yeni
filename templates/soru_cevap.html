@@ -252,6 +252,9 @@
   .qna-product-info { min-width:0; flex:1; }
   .qna-product-info strong { display:block; max-width:720px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.86rem; }
   .qna-model { display:inline-flex; align-items:center; gap:5px; margin-top:5px; color:var(--qna-muted); font-size:.7rem; }
+  .qna-uretim { display:inline-flex; align-items:center; gap:4px; margin:5px 0 0 6px; padding:2px 8px; border-radius:999px;
+    font-size:.68rem; font-weight:700; background:rgba(111,66,193,.12); color:#5a32a3; border:1px solid rgba(111,66,193,.45); vertical-align:middle; }
+  html.gs-dark .qna-uretim { background:rgba(111,66,193,.25); color:#c9b3f5; }
   .qna-source {
     flex:0 0 auto; width:28px; height:28px; border-radius:9px; display:grid; place-items:center;
     background:#fff; border:1px solid var(--qna-line);
@@ -476,6 +479,13 @@
   };
   const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+  // Model üretim modundaysa (stok 0 olsa da sipariş alınıp üretilir) kartta işaret
+  function uretimRozeti(s) {
+    return s.uretim_modu
+      ? ' <span class="qna-uretim" title="Bu model üretim modunda: stokta görünmese de sipariş alınır, üretilip gönderilir"><i class="bi bi-gear-fill"></i> Üretimde</span>'
+      : '';
+  }
+
   function cardHtml(s) {
     const st = STATUS_TR[s.status] || [s.status || 'Diğer', 'other', 'bi-circle'];
     const waiting = s.status === 'WAITING_FOR_ANSWER';
@@ -559,7 +569,7 @@
           ${image}
           <div class="qna-product-info">
             <strong title="${esc(s.product_name || '')}">${esc(s.product_name || 'Ürün bilgisi bulunamadı')}</strong>
-            ${s.product_main_id ? `<span class="qna-model"><i class="bi bi-upc-scan"></i> Model ${esc(s.product_main_id)}</span>` : ''}
+            ${s.product_main_id ? `<span class="qna-model"><i class="bi bi-upc-scan"></i> Model ${esc(s.product_main_id)}</span>` : ''}${uretimRozeti(s)}
           </div>
           <span class="qna-source" title="Trendyol sorusu"><img src="/static/logo/trendyol.png" alt="Trendyol"></span>
           <span class="qna-status qna-status--${st[1]}" title="${esc(st[0])}">
@@ -678,7 +688,7 @@
           ${image}
           <div class="qna-product-info">
             <strong title="${esc(s.product_name || '')}">${esc(s.product_name || 'Site sorusu (gullushoes.com)')}</strong>
-            ${s.product_main_id ? `<span class="qna-model"><i class="bi bi-upc-scan"></i> Model ${esc(s.product_main_id)}</span>` : ''}
+            ${s.product_main_id ? `<span class="qna-model"><i class="bi bi-upc-scan"></i> Model ${esc(s.product_main_id)}</span>` : ''}${uretimRozeti(s)}
             ${s.web_url ? `<span class="qna-model"><i class="bi bi-link-45deg"></i> <a href="${esc(s.web_url)}" target="_blank" rel="noopener">Soru sorulan sayfa</a></span>` : ''}
           </div>
           <span class="qna-source" title="Site sorusu (Shopify)"><img src="/static/logo/shopify.png" alt="Shopify"></span>
