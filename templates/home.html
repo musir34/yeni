@@ -81,6 +81,21 @@
       transition:color .3s ease;
     }
     .tile .num.changed { color:var(--color-primary); }
+    /* Görev: Stok Eritme kartı */
+    .eritme-card h5 { color:#666; font-weight:600; }
+    .eritme-grup { border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:12px 14px; height:100%; }
+    .eritme-grup__baslik { font-weight:700; color:#333; }
+    .eritme-grup__stok { font-size:1.6rem; font-weight:800; color:var(--color-primary); line-height:1.1; }
+    .eritme-modeller { display:flex; flex-wrap:wrap; gap:6px; max-height:260px; overflow:auto; }
+    .eritme-model {
+      display:inline-flex; align-items:baseline; gap:4px; padding:2px 8px; border-radius:999px;
+      background:rgba(0,0,0,.05); font-size:.8rem; color:#333;
+    }
+    .eritme-model small { color:#777; }
+    .eritme-model--sifir { opacity:.45; text-decoration:line-through; }
+    html.gs-dark .eritme-grup { border-color:#333; }
+    html.gs-dark .eritme-grup__baslik, html.gs-dark .eritme-model { color:#ddd; }
+    html.gs-dark .eritme-model { background:rgba(255,255,255,.08); }
     .stock-substats {
       margin-top:12px; padding-top:12px; border-top:1px solid rgba(0,0,0,.08);
       display:flex; flex-direction:column; gap:7px;
@@ -379,6 +394,49 @@
         <a class="btn btn-danger m-1" href="{{ url_for('iade_yonetimi.index') }}"><i class="fas fa-box-open"></i> Site İadeleri</a>
       </div>
     </div>
+
+    <!-- Görev: Stok Eritme -->
+    {% if eritme %}
+    <div class="card-soft p-3 mt-3 eritme-card">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <h5 class="mb-0">🎯 Görev: Bu Modeller Eritilecek</h5>
+        <span class="text-muted small">Hedef: elde 1 çift kalmayacak · stoklar canlı</span>
+      </div>
+      <div class="row g-3">
+        {% for key, baslik, ikon, grup in [
+          ('cok', 'Çok Satan Modeller', '🔥', eritme.cok_satan),
+          ('agir', 'Ağır Giden Modeller', '🐢', eritme.agir_giden)] %}
+        <div class="col-12 col-md-6">
+          <div class="eritme-grup">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <div class="eritme-grup__baslik">{{ ikon }} {{ baslik }}</div>
+                <div class="text-muted small">{{ grup.modeller|length }} model</div>
+              </div>
+              <div class="text-end">
+                <div class="eritme-grup__stok">{{ "{:,}".format(grup.toplam).replace(",", ".") }}</div>
+                <div class="text-muted small">çift stok</div>
+              </div>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary mt-2 w-100 collapsed" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#eritme-{{ key }}" aria-expanded="false">
+              <i class="fas fa-chevron-down me-1"></i> Modelleri göster / gizle
+            </button>
+            <div class="collapse" id="eritme-{{ key }}">
+              <div class="eritme-modeller mt-2">
+                {% for m in grup.modeller %}
+                <span class="eritme-model{% if m.stok == 0 %} eritme-model--sifir{% endif %}" title="Model {{ m.kod }} · {{ m.stok }} çift">
+                  <strong>{{ m.kod }}</strong><small>{{ m.stok }}</small>
+                </span>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
   </div><!-- /container -->
 {% endblock %}
 

@@ -21,6 +21,9 @@ from weather_service import get_weather_info, get_istanbul_time
 # --- Geciken (teslim süresi dolmuş) sipariş sayıları ---
 from overdue_orders import overdue_counts
 
+# --- Stok eritme görevi (anasayfa kartı) ---
+from eritme_gorevi import eritme_ozeti
+
 # --- Shopify Servisi ---
 try:
     from shopify_site.shopify_service import shopify_service
@@ -162,7 +165,8 @@ def index():
         ay_adi=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"][now.month-1],
         ortalama_siparis_tutari=ortalama_siparis_tutari,
         weather=weather_info,
-        current_time=now
+        current_time=now,
+        eritme=eritme_ozeti(),
     )
 
 
