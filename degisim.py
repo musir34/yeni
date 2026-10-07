@@ -112,6 +112,53 @@ def _fetch_trendyol_phone(order_number: str) -> str:
     return ""
 
 
+_SHOPIFY_ID_UZUNLUK = 10   # Shopify iç sipariş kimliği bundan uzun rakam dizisidir; sipariş adı (#1423) kısadır
+
+
+def _shopify_id_adla_bul(siparis_adi: str) -> str | None:
+    """Sitedeki sipariş ADINDAN (#1423) Shopify iç kimliğini bul; yoksa None.
+
+    Panel site siparişini 'SH-<iç kimlik>' diye anar ama kullanıcı mağazadaki
+    görünür numarayı (1423) bilir; form ikisini de kabul etsin diye.
+    """
+    try:
+        from shopify_site.shopify_service import shopify_service
+        sonuc = shopify_service.run_graphql(
+            "query($q:String!){ orders(first:1, query:$q){ nodes{ legacyResourceId name } } }",
+            {"q": f"name:#{siparis_adi}"})
+        dugumler = (((sonuc.get("data") or {}).get("orders") or {}).get("nodes")) or []
+        dugum = dugumler[0] if dugumler else None
+        if dugum and (dugum.get("name") or "").lstrip("#") == siparis_adi:
+            return str(dugum.get("legacyResourceId") or "") or None
+    except Exception as e:
+        logger.warning(f"Shopify sipariş adıyla arama hatası ({siparis_adi}): {e}")
+    return None
+
+
+def shopify_siparis_bilgisi(girdi: str) -> tuple[dict | None, str | None]:
+    """Kullanıcının yazdığı site sipariş numarasını çöz: (bilgi, kanonik 'SH-<id>').
+
+    Kabul edilen biçimler: 'SH-<iç kimlik>', '#1423', '1423', 'SH-1423', 'sh 1423'.
+    Kısa sayı sipariş adı sayılır ve Shopify'da adla aranır; uzun sayı iç kimliktir.
+    """
+    ham = (girdi or "").strip().lstrip("#").strip()
+    if ham[:3].upper() == "SH-" or ham[:2].upper() == "SH":
+        ham = ham[3:] if ham[:3].upper() == "SH-" else ham[2:]
+        ham = ham.strip().lstrip("-").lstrip("#").strip()
+    if not ham.isdigit():
+        return None, None
+    adaylar = [ham] if len(ham) >= _SHOPIFY_ID_UZUNLUK else []
+    if len(ham) < _SHOPIFY_ID_UZUNLUK:
+        bulunan = _shopify_id_adla_bul(ham)
+        if bulunan:
+            adaylar.append(bulunan)
+    for shopify_id in adaylar:
+        info = _fetch_shopify_order_info(f"SH-{shopify_id}")
+        if info:
+            return info, f"SH-{shopify_id}"
+    return None, None
+
+
 def _fetch_shopify_order_info(order_number: str) -> dict | None:
     """Shopify sipariş numarasıyla müşteri bilgilerini ve ürünleri çeker."""
     try:
@@ -764,17 +811,22 @@ def get_order_details():
     if not siparis_no:
         return jsonify({'success': False, 'message': 'Sipariş numarası eksik'}), 400
 
-    # Shopify siparişi
-    if siparis_no.startswith("SH-"):
-        info = _fetch_shopify_order_info(siparis_no)
+    # Site (Shopify) siparişi: 'SH-…' ya da '#1423' açıkça site siparişidir
+    site_gibi = siparis_no.upper().startswith("SH") or siparis_no.startswith("#")
+    if site_gibi:
+        info, kanonik = shopify_siparis_bilgisi(siparis_no)
         if info:
             _onerileri_ekle(info.get('details'))
-            return jsonify({'success': True, **info})
+            return jsonify({'success': True, 'siparis_no': kanonik, **info})
         return jsonify({'success': False, 'message': 'Shopify siparişi bulunamadı'})
 
-    # Trendyol / WooCommerce — DB'den
+    # Trendyol / WooCommerce — DB'den; bulunamazsa kısa numara site sipariş adı olabilir (1423)
     order, _table_cls = find_order_across_tables(siparis_no)
     if not order:
+        info, kanonik = shopify_siparis_bilgisi(siparis_no) if siparis_no.isdigit() else (None, None)
+        if info:
+            _onerileri_ekle(info.get('details'))
+            return jsonify({'success': True, 'siparis_no': kanonik, **info})
         return jsonify({'success': False, 'message': 'Sipariş bulunamadı'})
 
     order_details = _safe_json_loads(getattr(order, 'details', None), default=[])
@@ -793,6 +845,7 @@ def get_order_details():
 
     return jsonify({
         'success': True,
+        'siparis_no': siparis_no,
         'ad': getattr(order, 'customer_name', '') or '',
         'soyad': getattr(order, 'customer_surname', '') or '',
         'adres': getattr(order, 'customer_address', '') or '',
@@ -977,8 +1030,8 @@ def yeni_degisim_talebi():
         if not siparis_no:
             return jsonify({'success': False, 'message': 'Sipariş numarası eksik'}), 400
 
-        if siparis_no.startswith("SH-"):
-            info = _fetch_shopify_order_info(siparis_no)
+        if siparis_no.upper().startswith("SH") or siparis_no.startswith("#"):
+            info, _kanonik = shopify_siparis_bilgisi(siparis_no)
             if info:
                 return jsonify({
                     'success': True,

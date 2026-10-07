@@ -182,7 +182,7 @@
                 <div class="mb-4" id="orderLookupSection" style="display: none;">
                     <label for="siparis_no_input" class="form-label fs-5">Sipariş Numarası</label>
                     <div class="input-group">
-                        <input type="text" class="form-control form-control-lg" id="siparis_no_input" required placeholder="Değişim yapılacak siparişin numarasını girin...">
+                        <input type="text" class="form-control form-control-lg" id="siparis_no_input" required placeholder="Trendyol sipariş no ya da site sipariş no (örn. 1423)">
                         <button type="button" class="btn btn-primary" onclick="fetchOrderDetails()">Siparişi Getir</button>
                     </div>
                 </div>
@@ -509,7 +509,8 @@
                 if (data.success) {
                     activeEntryMode = 'siparisli';
                     document.getElementById('kayit_tipi').value = 'siparisli';
-                    document.getElementById('siparis_no').value  = siparisNo;
+                    // Site siparişi 1423 diye girilse de kayıt panelin bildiği 'SH-<kimlik>' adıyla yapılır
+                    document.getElementById('siparis_no').value  = safeText(data.siparis_no || siparisNo);
                     document.getElementById('ad').value          = safeText(data.ad);
                     document.getElementById('soyad').value       = safeText(data.soyad);
                     document.getElementById('adres').value       = safeText(data.adres);

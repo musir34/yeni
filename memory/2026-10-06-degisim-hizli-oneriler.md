@@ -14,3 +14,14 @@
 - Kayıt akışı (`/degisim-kaydet`) değişmedi. Şema değişikliği yok.
 - Test: `tests/test_degisim_oneri.py` (5, yalıtılmış). Önizlemede sahte siparişle düğmeler ve tıklama akışı denendi;
   canlı veriyle denenmedi.
+
+## 2026-10-07: site siparişi adıyla (1423) kabul edilir
+- Komutan: değişim formuna Shopify sipariş no 1423 yazınca kabul etmiyor.
+- Sebep: form site siparişini yalnız `SH-<Shopify iç kimlik>` (uzun sayı) biçiminde tanıyordu; 1423 sipariş ADI.
+  Düz sayı Trendyol tablolarında aranıp "bulunamadı" dönüyordu.
+- `degisim.shopify_siparis_bilgisi(girdi)` → (bilgi, kanonik "SH-<id>"): '1423', '#1423', 'SH-1423', 'sh 1423'
+  kabul; kısa sayı Shopify'da adla aranır (`_shopify_id_adla_bul`, GraphQL `orders(query:"name:#1423")`),
+  10+ haneli sayı iç kimlik sayılır. `/get_order_details` düz sayıda önce Trendyol, bulunamazsa site adı dener;
+  cevaba `siparis_no` (kanonik) eklendi, form gizli alanı onu yazar → kayıt yine `SH-<id>` adıyla (liste, DHL
+  kodu, değişim akışları değişmedi). Yinelenen POST yolu da aynı çözücüyü kullanır.
+- Gerçek Shopify'da 1423 adla bulundu, müşteri adı/adresi geldi (yerel sqlite denemesinde ürün listesi boş kaldı: eşleme tablosu boştu — canlıda eski SH- akışıyla aynı kod). Sipariş adı araması sırasında `read_customers` yetkisi eksik uyarısı önceden de vardı. 6 test (test_degisim_oneri.py). Canlıda denenmedi.

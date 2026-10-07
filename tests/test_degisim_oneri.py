@@ -96,3 +96,29 @@ def test_siparis_kalemlerine_oneriler_eklenir():
 
 def test_gercek_uygulama_yuklenmedi():
     assert "app" not in sys.modules
+
+
+# ── Site siparişi adıyla (1423) bulunabilsin ─────────────────────────────────
+
+def test_site_siparisi_adiyla_veya_kimligiyle_cozulur(monkeypatch):
+    cagrilar = []
+
+    def sahte_bilgi(order_number):
+        cagrilar.append(order_number)
+        return {"ad": "Hale", "details": []} if order_number == "SH-5800000000001" else None
+
+    monkeypatch.setattr(degisim, "_fetch_shopify_order_info", sahte_bilgi)
+    monkeypatch.setattr(degisim, "_shopify_id_adla_bul", lambda ad: "5800000000001" if ad == "1423" else None)
+
+    for girdi in ("1423", "#1423", "SH-1423", "sh 1423", " SH-#1423 "):
+        cagrilar.clear()
+        info, kanonik = degisim.shopify_siparis_bilgisi(girdi)
+        assert info and kanonik == "SH-5800000000001", girdi
+        assert cagrilar == ["SH-5800000000001"]            # kısa numara adla çözülür, kimlik olarak denenmez
+    # Uzun sayı doğrudan iç kimliktir
+    cagrilar.clear()
+    assert degisim.shopify_siparis_bilgisi("SH-5800000000001")[1] == "SH-5800000000001"
+    assert cagrilar == ["SH-5800000000001"]
+    # Bulunamayan ad ve sayı olmayan girdi
+    assert degisim.shopify_siparis_bilgisi("9999") == (None, None)
+    assert degisim.shopify_siparis_bilgisi("abc") == (None, None)
