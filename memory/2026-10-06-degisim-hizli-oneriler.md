@@ -25,3 +25,11 @@
   cevaba `siparis_no` (kanonik) eklendi, form gizli alanı onu yazar → kayıt yine `SH-<id>` adıyla (liste, DHL
   kodu, değişim akışları değişmedi). Yinelenen POST yolu da aynı çözücüyü kullanır.
 - Gerçek Shopify'da 1423 adla bulundu, müşteri adı/adresi geldi (yerel sqlite denemesinde ürün listesi boş kaldı: eşleme tablosu boştu — canlıda eski SH- akışıyla aynı kod). Sipariş adı araması sırasında `read_customers` yetkisi eksik uyarısı önceden de vardı. 6 test (test_degisim_oneri.py). Canlıda denenmedi.
+
+## 2026-10-07: site siparişinde ürünler hiç gelmiyordu (eski hata, düzeltildi)
+- Komutan: "ürün bilgisini neden getirmedi?" — `_fetch_shopify_order_info` kalemleri ham `lineItems.edges`'den
+  okuyordu; `shopify_service.get_order` ise kalemleri `line_items` listesine çevirip `lineItems`'ı siliyor
+  (shopify_service.py ~723). Sonuç: SH- siparişlerinde değişim formu ürün listesi HER ZAMAN boştu.
+- Düzeltme: `line_items` okunur (yoksa `lineItems.edges`'e düşer); barkod olarak önce `resolved_barcode`
+  (eşleme tablosundan panel barkodu), yoksa Shopify varyant barkodu → hızlı öneriler site siparişinde de çıkar.
+- Gerçek 1423 siparişi: müşteri + 1 ürün geldi. 7 test. Aynı deseni kullanan başka yer var mı bakılmadı.

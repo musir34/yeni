@@ -122,3 +122,22 @@ def test_site_siparisi_adiyla_veya_kimligiyle_cozulur(monkeypatch):
     # Bulunamayan ad ve sayı olmayan girdi
     assert degisim.shopify_siparis_bilgisi("9999") == (None, None)
     assert degisim.shopify_siparis_bilgisi("abc") == (None, None)
+
+
+def test_site_siparisinin_urunleri_line_items_alanindan_okunur(monkeypatch):
+    """get_order kalemleri 'line_items' + 'resolved_barcode' ile verir; form bunu okumalı."""
+    import types
+    siparis = {"customer": {"firstName": "Hale", "lastName": "Şahin"}, "shippingAddress": {"address1": "Örnek Mah.", "city": "İstanbul"},
+               "line_items": [
+                   {"sku": "0121-38 Siyah", "resolved_barcode": "S38", "variant": {"barcode": "8690000000001", "image": {"url": "https://cdn.shopify.com/x.jpg"}}},
+                   {"sku": "0155-37 Bej", "variant": {"barcode": "8690000000002"}},
+               ]}
+    sahte = types.SimpleNamespace(get_order=lambda oid: {"success": True, "order": siparis})
+    monkeypatch.setitem(sys.modules, "shopify_site.shopify_service", types.SimpleNamespace(shopify_service=sahte))
+    info = degisim._fetch_shopify_order_info("SH-5800000000001")
+    assert info["ad"] == "Hale" and info["adres"].startswith("Örnek Mah.")
+    assert [(d["sku"], d["barcode"]) for d in info["details"]] == [("0121-38 Siyah", "S38"), ("0155-37 Bej", "8690000000002")]
+    assert info["details"][0]["image_url"] == "https://cdn.shopify.com/x.jpg"
+    # Panel barkodu çözüldüğü için hızlı öneriler site siparişinde de çıkar
+    kalemler = degisim._onerileri_ekle(info["details"])
+    assert kalemler[0]["oneriler"]["kucuk"]["barcode"] == "S37"

@@ -186,13 +186,18 @@ def _fetch_shopify_order_info(order_number: str) -> dict | None:
         ]
         address = " ".join(p for p in address_parts if p).strip()
 
-        line_items = order.get("lineItems", {}).get("edges", [])
+        # get_order kalemleri 'line_items' olarak verir (ham 'lineItems' silinir) ve her
+        # kaleme panel barkodunu 'resolved_barcode' diye iliştirir. Eski 'lineItems'
+        # okuması bu yüzden hep boş kalıyordu → site siparişinde ürünler hiç gelmiyordu.
+        line_items = order.get("line_items")
+        if line_items is None:
+            line_items = [e.get("node", {}) for e in (order.get("lineItems") or {}).get("edges", [])]
         details_list = []
-        for edge in line_items:
-            li = edge.get("node", {})
+        for li in line_items:
             variant = li.get("variant") or {}
             remote_img = (variant.get("image") or {}).get("url", "") or ""
-            barcode = variant.get("barcode") or ""
+            # Panel barkodu (eşleme tablosundan) öncelikli: öneriler ve stok ona bakar
+            barcode = li.get("resolved_barcode") or variant.get("barcode") or ""
             # Shopify mutlak URL dönebilir; frontend aynı mantıkla handle eder
             image_url = remote_img if remote_img else _safe_image_url(barcode)
             details_list.append({
