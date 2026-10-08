@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Sipariş Zaman Çizgisi - Güllü Shoes{% endblock %}
+{% block extra_css %}
+<style>
+  .sz-card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.06); margin-bottom: 1.5rem; }
+
+  /* Özet şeridi: her adım bir kutu, tarih+saat büyük */
+  .sz-steps { display:flex; flex-wrap:wrap; gap:.6rem; }
+  .sz-step { flex:1 1 150px; min-width:150px; border:1px solid var(--bs-border-color, #dee2e6); border-radius:10px; padding:.6rem .8rem; position:relative; }
+  .sz-step .sz-lbl { font-size:.75rem; text-transform:uppercase; letter-spacing:.4px; color:#6c757d; font-weight:600; }
+  .sz-step .sz-time { font-size:1.35rem; font-weight:700; line-height:1.1; margin-top:.15rem; }
+  .sz-step .sz-date { font-size:.82rem; color:#6c757d; }
+  .sz-step.yok { opacity:.45; border-style:dashed; }
+  .sz-step.yok .sz-time { font-size:1rem; font-weight:500; }
+  .sz-step::before { content:""; position:absolute; left:0; top:8px; bottom:8px; width:4px; border-radius:4px; background:var(--sz-renk, #adb5bd); }
+
+  .sz-primary   { --sz-renk:#0d6efd; } .sz-secondary { --sz-renk:#6c757d; } .sz-info { --sz-renk:#0dcaf0; }
+  .sz-success   { --sz-renk:#198754; } .sz-warning   { --sz-renk:#f27a1a; } .sz-danger { --sz-renk:#dc3545; }
+  .sz-dark      { --sz-renk:#212529; } .sz-purple    { --sz-renk:#6f42c1; } .sz-muted { --sz-renk:#ced4da; }
+
+  /* Zaman çizgisi */
+  .sz-tl { position:relative; padding-left:1.6rem; }
+  .sz-tl::before { content:""; position:absolute; left:.45rem; top:0; bottom:0; width:2px; background:#dee2e6; }
+  .sz-day { font-weight:700; font-size:.9rem; color:#6c757d; margin:.9rem 0 .4rem; }
+  .sz-ev { position:relative; display:flex; gap:.9rem; align-items:baseline; padding:.35rem 0; }
+  .sz-ev::before { content:""; position:absolute; left:-1.45rem; top:.7rem; width:12px; height:12px; border-radius:50%; background:var(--sz-renk, #adb5bd); box-shadow:0 0 0 3px #fff; }
+  .sz-ev .sz-clock { font-variant-numeric:tabular-nums; font-weight:700; min-width:72px; }
+  .sz-ev .sz-title { font-weight:600; }
+  .sz-ev .sz-sub { font-size:.82rem; color:#6c757d; }
+  .sz-ev.stok .sz-title, .sz-ev.raf .sz-title, .sz-ev.diger .sz-title { font-weight:400; color:#6c757d; }
+  .sz-kim { font-size:.75rem; background:#e7f1ff; color:#0d6efd; border-radius:6px; padding:1px 6px; }
+
+  .kargo-tyex { color:#f27a1a; font-weight:700; }
+  .kargo-dhl  { color:#1565c0; font-weight:700; }
+
+  html.gs-dark .sz-ev::before { box-shadow:0 0 0 3px #1e1e1e; }
+  html.gs-dark .sz-tl::before { background:#444; }
+  html.gs-dark .sz-kim { background:#243a5e; color:#9ec5fe; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-4 flex-wrap gap-2">
+  <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm me-3"><i class="fas fa-home"></i> Anasayfa</a>
+  <h3 class="mb-0">🕒 Sipariş Zaman Çizgisi</h3>
+  <span class="text-muted ms-3">Sipariş ne zaman hazırlandı, işleme alındı, kargoya verildi — tüm saatler İstanbul</span>
+</div>
+
+<div class="card sz-card">
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-8">
+        <label class="form-label mb-1">Sipariş No / Paket No</label>
+        <input type="text" name="q" class="form-control form-control-lg" value="{{ q }}" autocomplete="off" autofocus
+               placeholder="örn: 11680029013" required />
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-lg flex-fill"><i class="fas fa-search"></i> Göster</button>
+        {% if q %}
+        <a href="{{ url_for('order_audit.page') }}?q={{ q|urlencode }}" class="btn btn-outline-secondary btn-lg" title="Eski ayrıntılı iz sürme (ham kayıtlar)">Ayrıntı</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if hata %}
+<div class="alert alert-danger">Hata: {{ hata }}</div>
+{% endif %}
+
+{% if sonuc and not sonuc.bulundu %}
+<div class="alert alert-warning">"{{ q }}" için kayıt bulunamadı. Sipariş numarasını ya da paket numarasını kontrol edin.</div>
+{% endif %}
+
+{% if sonuc and sonuc.bulundu %}
+  {% set s = sonuc.siparis %}
+
+  <!-- Sipariş kimliği -->
+  {% if s %}
+  <div class="card sz-card">
+    <div class="card-header fw-bold">
+      📦 {{ s.order_number }}
+      {% if s.package_number %}<span class="text-muted fw-normal ms-2" style="font-size:.85rem;">Paket {{ s.package_number }}</span>{% endif %}
+      <span class="badge bg-secondary ms-2">{{ s.durum }}</span>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4"><div class="text-muted small">Müşteri</div><div class="fw-semibold">{{ s.musteri or '-' }}</div></div>
+        <div class="col-md-4"><div class="text-muted small">Kargo</div>
+          <div class="{{ s.kargo_sinif }}">{{ s.kargo or '-' }}</div>
+          {% if s.takip %}<div class="small text-muted">{{ s.takip }}</div>{% endif %}
+        </div>
+        <div class="col-md-4"><div class="text-muted small">Son kargo tarihi</div><div class="fw-semibold">{{ s.son_teslim or '-' }}</div></div>
+      </div>
+      <div class="mt-3">
+        {% for k in s.kalemler %}
+        <div class="small">
+          <span class="fw-semibold">{{ k.urun }}</span>
+          {% if k.beden %}· {{ k.beden }}{% endif %}{% if k.renk %} {{ k.renk }}{% endif %}
+          {% if k.adet %}· {{ k.adet }} adet{% endif %}
+          <span class="text-muted">· {{ k.barkod }} · {{ k.tablo }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% if sonuc.not %}
+      <div class="alert alert-warning mt-3 mb-0 py-2">
+        <strong>📝 Sipariş notu:</strong> {{ sonuc.not.metin }}
+        <span class="text-muted small ms-2">{{ sonuc.not.kim }} · {{ sonuc.not.zaman }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Özet şeridi -->
+  <div class="card sz-card">
+    <div class="card-header fw-bold d-flex justify-content-between flex-wrap gap-2">
+      <span>⏱️ Tek bakışta</span>
+      <span class="fw-normal small text-muted">
+        {% if sonuc.sureler.siparis_paket %}Sipariş → Paket: <strong>{{ sonuc.sureler.siparis_paket }}</strong>{% endif %}
+        {% if sonuc.sureler.paket_kargo %} &nbsp;·&nbsp; Paket → Kargo: <strong>{{ sonuc.sureler.paket_kargo }}</strong>{% endif %}
+        {% if sonuc.sureler.siparis_kargo %} &nbsp;·&nbsp; Toplam: <strong>{{ sonuc.sureler.siparis_kargo }}</strong>{% endif %}
+      </span>
+    </div>
+    <div class="card-body">
+      <div class="sz-steps">
+        {% for a in sonuc.ozet %}
+        <div class="sz-step sz-{{ a.renk }} {% if not a.var %}yok{% endif %}">
+          <div class="sz-lbl">{{ a.etiket }}</div>
+          {% if a.var %}
+            <div class="sz-time">{{ a.saat }}</div>
+            <div class="sz-date">{{ a.tarih }}</div>
+          {% else %}
+            <div class="sz-time">—</div>
+            <div class="sz-date">henüz yok</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Kronolojik akış -->
+  <div class="card sz-card">
+    <div class="card-header fw-bold">📜 Adım adım ({{ sonuc.olaylar|length }} kayıt)</div>
+    <div class="card-body">
+      {% if not sonuc.olaylar %}
+        <div class="text-muted">Zaman damgalı kayıt yok.</div>
+      {% else %}
+      <div class="sz-tl">
+        {% set ns = namespace(gun='') %}
+        {% for o in sonuc.olaylar %}
+          {% if o.tarih != ns.gun %}
+            {% set ns.gun = o.tarih %}
+            <div class="sz-day">{{ o.tarih }}</div>
+          {% endif %}
+          <div class="sz-ev sz-{{ o.renk }} {{ o.adim }}">
+            <span class="sz-clock">{{ o.saat }}</span>
+            <span>
+              <span class="sz-title">{{ o.baslik }}</span>
+              {% if o.kim %}<span class="sz-kim ms-1">{{ o.kim }}</span>{% endif %}
+              {% if o.detay or (o.kaynak and o.kaynak != 'Kullanıcı') %}
+                <div class="sz-sub">{{ o.detay }}{% if o.detay and o.kaynak and o.kaynak != 'Kullanıcı' %} · {% endif %}{% if o.kaynak and o.kaynak != 'Kullanıcı' %}{{ o.kaynak }}{% endif %}</div>
+              {% endif %}
+            </span>
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

@@ -42,6 +42,7 @@ def register_blueprints(app):
     from flas_indirim import flas_indirim_bp  # ⚡ FLAŞ İNDİRİM MOTORU
     from agent_api import agent_api  # 🤖 OPENCLAW AGENT API
     from order_audit_routes import order_audit_bp  # 🔎 SİPARİŞ İZ SÜRME
+    from siparis_zaman import siparis_zaman_bp  # 🕒 SİPARİŞ ZAMAN ÇİZGİSİ
     from trendyol_qna import qna_bp  # 💬 TRENDYOL SORU-CEVAP
     from trendyol_qna.shopify_qna import shopify_q_bp  # 🛍️ SHOPIFY SİTE SORULARI (public intake)
     from trendyol_qna.instagram_dm import instagram_bp  # 📷 INSTAGRAM DM (public webhook)
@@ -100,6 +101,7 @@ def register_blueprints(app):
         flas_indirim_bp,  # ⚡ FLAŞ İNDİRİM MOTORU
         agent_api,  # 🤖 OPENCLAW AGENT API
         order_audit_bp,  # 🔎 SİPARİŞ İZ SÜRME
+        siparis_zaman_bp,  # 🕒 SİPARİŞ ZAMAN ÇİZGİSİ
         qna_bp,  # 💬 TRENDYOL SORU-CEVAP
         shopify_q_bp,  # 🛍️ SHOPIFY SİTE SORULARI (public intake)
         instagram_bp,  # 📷 INSTAGRAM DM (public webhook)

@@ -601,20 +601,38 @@
     <div class="dropdown">
       <button class="btn btn-primary dropdown-toggle" type="button" id="siparisMenu" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Sipariş İşlemleri</button>
       <div class="dropdown-menu" aria-labelledby="siparisMenu">
-        <a class="dropdown-item" href="{{ url_for('siparisler_bp.yeni_siparis') }}">Yeni Sipariş</a>
-        <a class="dropdown-item" href="{{ url_for('order_list_all') }}">Sipariş Listesi</a>
-        <a class="dropdown-item" href="{{ url_for('degisim_talep') }}">Değişim Talepleri</a>
+        <div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Sipariş İşlemleri</div>
+        <a class="dropdown-item" href="{{ url_for('siparisler_bp.yeni_siparis') }}"><i class="fas fa-plus-circle me-2"></i>Yeni Sipariş</a>
+        <a class="dropdown-item" href="{{ url_for('order_list_all') }}"><i class="fas fa-list me-2"></i>Sipariş Listesi</a>
+        <a class="dropdown-item" href="{{ url_for('degisim_talep') }}"><i class="fas fa-exchange-alt me-2"></i>Değişim Talepleri</a>
+        <a class="dropdown-item" href="{{ url_for('uretim.index') }}"><i class="fas fa-industry me-2"></i>Üretim Siparişleri</a>
+        <a class="dropdown-item" href="{{ url_for('kargo_mutabakat_bp.kargo_mutabakat_page') }}"><i class="fas fa-truck me-2"></i>Kargo Mutabakat</a>
+        <hr class="dropdown-divider">
+        <div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Geçmiş &amp; Takip</div>
+        <a class="dropdown-item" href="{{ url_for('display_archive') }}"><i class="fas fa-box me-2"></i>Arşiv</a>
+        {% if session.get('role') in ['admin','manager'] %}
+        <a class="dropdown-item" href="{{ url_for('siparis_zaman.page') }}"><i class="fas fa-clock me-2"></i>Sipariş Zaman Çizgisi</a>
+        <a class="dropdown-item" href="{{ url_for('order_audit.page') }}"><i class="fas fa-search-location me-2"></i>Sipariş İz Sürme</a>
+        {% endif %}
       </div>
     </div>
 
     <div class="dropdown">
       <button class="btn btn-success dropdown-toggle" type="button" id="urunMenu" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Ürün İşlemleri</button>
       <div class="dropdown-menu" aria-labelledby="urunMenu">
-        <a class="dropdown-item" href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}">Ürün Tedarik Sayfası</a>
-        <a class="dropdown-item" href="{{ url_for('get_products.product_list') }}">Ürün Listesi</a>
-        <a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_page') }}">Stok Ekleme</a>
-        <a class="dropdown-item" href="{{ url_for('raf.raf_form_sayfasi') }}">Raf Listesi</a>
-        <a class="dropdown-item" href="{{ url_for('iade_listesi') }}">İade Listesi</a>
+        <div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Ürünler</div>
+        <a class="dropdown-item" href="{{ url_for('urun_yukleme.sayfa') }}"><i class="fas fa-cloud-upload-alt me-2"></i>Ürün Yükleme (AI)</a>
+        <a class="dropdown-item" href="{{ url_for('get_products.product_list') }}"><i class="fas fa-tags me-2"></i>Ürün Listesi</a>
+        <a class="dropdown-item" href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}"><i class="fas fa-dolly me-2"></i>Ürün Tedarik</a>
+        <a class="dropdown-item" href="{{ url_for('image_manager.image_manager') }}"><i class="fas fa-images me-2"></i>Görsel Yönetimi</a>
+        <hr class="dropdown-divider">
+        <div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Stok &amp; Depo</div>
+        <a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="fas fa-warehouse me-2"></i>Stok Ekleme</a>
+        <a class="dropdown-item" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="fas fa-archive me-2"></i>Raf Listesi</a>
+        <a class="dropdown-item" href="{{ url_for('stock_sync.dashboard') }}"><i class="fas fa-sync-alt me-2"></i>Stok Senkronizasyon</a>
+        <hr class="dropdown-divider">
+        <div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">İadeler</div>
+        <a class="dropdown-item" href="{{ url_for('iade_listesi') }}"><i class="fas fa-undo me-2"></i>Trendyol İade Listesi</a>
       </div>
     </div>
 
@@ -1219,11 +1237,23 @@
         if (autoShipMessage) autoShipMessage.classList.remove('show');
       }
 
+      var autoShipLogged = '';  // aynı sipariş için tek kayıt (updateButtons her değişimde çağrılır)
       function showAutoShip() {
         var disp = document.getElementById('autoShipBarcodeDisplay');
         var span = document.getElementById('autoShipBarcode');
         if (disp) disp.innerText = shippingBarcode;
         if (span) span.innerText = shippingBarcode;
+        // Zaman çizgisi için iz: otomatik gönderimde etiket panelden basılmıyor, bu an başka yerde loglanmıyor
+        var ordNo = orderData ? (orderData.dataset.orderNumber || '') : '';
+        if (ordNo && autoShipLogged !== ordNo) {
+          autoShipLogged = ordNo;
+          fetch("{{ url_for('siparis_zaman.kargo_kodu_verildi') }}", {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ order_number: ordNo, shipping_barcode: shippingBarcode,
+              cargo_provider: (yazdirForm && yazdirForm.cargo_provider) ? yazdirForm.cargo_provider.value : '',
+              sayfa: 'Sipariş Hazırla' })
+          }).catch(function(){});
+        }
         if (autoShipMessage) {
           autoShipMessage.classList.add('show');
           setTimeout(function(){ autoShipMessage.classList.remove('show'); }, 3000);

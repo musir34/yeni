@@ -944,6 +944,12 @@
         if (!kargoAktif) return;
         const kod = kargoAktif.kargo.shipping_barcode;
         try { await navigator.clipboard.writeText(kod); } catch {}
+        // Zaman çizgisi için iz: otomatik gönderimde etiket panelden basılmıyor
+        fetch("{{ url_for('siparis_zaman.kargo_kodu_verildi') }}", {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_number: kargoAktif.order_number || '', shipping_barcode: kod || '',
+                cargo_provider: kargoAktif.kargo.cargo_provider || '', sayfa: 'Üretim Siparişleri' })
+        }).catch(() => {});
         document.getElementById('urAutoShipKod').textContent = kod;
         const kart = document.getElementById('urAutoShip');
         kart.hidden = false;
