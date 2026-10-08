@@ -1,4 +1,4 @@
-"""Sipariş Zaman Çizgisi — tek bakışta "ne zaman ne oldu" sayfası.
+"""Sipariş Takip (eski adı Sipariş Zaman Çizgisi) — tek bakışta "ne zaman ne oldu" sayfası.
 
 Eski /siparis-iz sayfası tüm audit kayıtlarını (4 dakikada bir tekrarlayan
 AUTO_HEAL satırları dahil) ham döker; bu sayfa aynı kaynaklardan yalnızca

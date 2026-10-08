@@ -83,6 +83,7 @@ def _to_dict(r: UretimSiparis, urun_map: dict | None = None) -> dict:
         "paketlendi": bool(getattr(r, "paketlendi", False)),
         "paketlendi_at": fmt_ist(getattr(r, "paketlendi_at", None), "%d.%m.%Y %H:%M"),
         "hazirlayan": r.hazirlayan or "",
+        "arsivlendi_at": fmt_ist(getattr(r, "arsivlendi_at", None), "%d.%m.%Y %H:%M"),
         "mail_sent": bool(r.mail_sent_at),
         "created_at": fmt_ist(r.created_at, "%d.%m.%Y %H:%M"),
     }
@@ -109,6 +110,10 @@ def liste():
         q = q.filter_by(uretildi=True)
     else:  # bekleyen
         q = q.filter_by(uretildi=False, isleme_alindi=False)
+    # Elle arşivlenen (kargo tespiti düşmeyen eski paketlenmiş) kayıt aktif kuyruklarda görünmez;
+    # yalnız Teslim sekmesinde "Arşivlendi" rozetiyle durur, oradan geri alınabilir.
+    if durum not in ("teslim", "tamamlanan"):
+        q = q.filter(UretimSiparis.arsivlendi_at.is_(None))
     # Üretilen/Paketlenen: kargolanmışlar SQL'de elenir — limit(500) elemeden
     # ÖNCE uygulandığı için eski kargolanmış kayıtlar kotayı dolduruyor, yeni
     # üretilen sipariş hiçbir sekmede görünmüyordu.
@@ -155,7 +160,7 @@ def liste():
         elif durum == "kargoda":
             rows = [r for r in rows if r.order_number in kargoda_set - teslim_set]
         elif durum == "teslim":
-            rows = [r for r in rows if r.order_number in teslim_set]
+            rows = [r for r in rows if r.order_number in teslim_set or getattr(r, "arsivlendi_at", None)]
         else:  # tamamlanan (eski anahtar): kargoda + teslim birleşik
             rows = [r for r in rows if r.order_number in kargolanan]
     # Pazaryerinde iptal edilen sipariş üretim sayfasında GÖSTERİLMEZ (kafa
@@ -406,6 +411,25 @@ def isleme_al(kayit_id: int):
     kayit.isleme_alindi_at = None if geri_al else datetime.utcnow()
     db.session.commit()
     mesaj = "Bekleyenlere geri alındı" if geri_al else "İşleme alındı — üretim başladı"
+    logger.info(f"[URETIM] {kayit.order_number}: {mesaj}")
+    _hareket_logla(mesaj, kayit)
+    return jsonify({"success": True, "message": mesaj})
+
+
+@uretim_bp.route("/api/arsivle/<int:kayit_id>", methods=["POST"])
+def arsivle(kayit_id: int):
+    """Paketlenen sekmesinde takılı kalan eski siparişi elle arşivler (geri alınabilir).
+
+    Kargo tespiti orders_shipped/delivered/archived'a bakar; site siparişi (SH-) oraya
+    hiç inmediği ve bazı eski kayıtların izi kalmadığı için Paketlenen'de sonsuza dek
+    bekliyordu. Kayıt silinmez; Teslim sekmesinde 'Arşivlendi' rozetiyle görünür."""
+    kayit = db.session.get(UretimSiparis, kayit_id)
+    if not kayit:
+        return jsonify({"success": False, "message": "Kayıt bulunamadı"}), 404
+    geri_al = bool((request.get_json(silent=True) or {}).get("geri_al"))
+    kayit.arsivlendi_at = None if geri_al else datetime.utcnow()
+    db.session.commit()
+    mesaj = "Arşivden çıkarıldı — Paketlenenlere döndü" if geri_al else "Arşivlendi — listeden kaldırıldı"
     logger.info(f"[URETIM] {kayit.order_number}: {mesaj}")
     _hareket_logla(mesaj, kayit)
     return jsonify({"success": True, "message": mesaj})

@@ -47,3 +47,7 @@ render (normal sipariş 11680029013, üretim siparişi 11678528052, bulunamayan)
 - user_log'da "Kullanıcı" yoksa user_id'den ad çözülür. 10 test geçiyor.
 - Geçmişe dönük: deploy öncesi otomatik gönderimle çıkan siparişlerde bu adım geri kazanılamaz (veri yok); o siparişlerde
   aynı anın izi "Sipariş hazırlandı" (paketlendi) kaydıdır.
+
+## Ek — ad değişikliği (aynı gün)
+- Komutan emri: sayfanın adı "Sipariş Takip" (menü, başlık, sipariş hazırla menüsü); URL /siparis-zaman korundu.
+- Sipariş listesindeki "Sipariş İzi Sür" düğmesi kaldırıldı, yerine "Sipariş Takip" (yeni sayfa) konuldu; eski /siparis-iz yalnız menüden ve yeni sayfadaki "Ayrıntı" düğmesinden ulaşılır.

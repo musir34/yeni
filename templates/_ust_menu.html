@@ -41,7 +41,7 @@
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Geçmiş & Takip</div></li>
         <li><a class="dropdown-item" href="{{ url_for('display_archive') }}"><i class="fas fa-box me-2"></i>Arşiv</a></li>
         {% if session.get('role') in ['admin','manager'] %}
-        <li><a class="dropdown-item" href="{{ url_for('siparis_zaman.page') }}"><i class="fas fa-clock me-2"></i>Sipariş Zaman Çizgisi</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('siparis_zaman.page') }}"><i class="fas fa-clock me-2"></i>Sipariş Takip</a></li>
         <li><a class="dropdown-item" href="{{ url_for('order_audit.page') }}"><i class="fas fa-search-location me-2"></i>Sipariş İz Sürme</a></li>
         {% endif %}
       </ul>

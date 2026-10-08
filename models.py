@@ -765,6 +765,7 @@ class UretimSiparis(db.Model):
     mail_sent_at = db.Column(db.DateTime)
     iptal_mail_at = db.Column(db.DateTime)  # pazaryeri iptali bildirimi (dedupe)
     hazirlayan = db.Column(db.String(150))  # siparişi hazırlayan (raf okutan / etiketi basan) kullanıcı adı
+    arsivlendi_at = db.Column(db.DateTime)  # elle arşivlendi (kargo tespiti düşmeyen eski paketlenmiş sipariş); scripts/add_uretim_arsiv.py
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     __table_args__ = (db.UniqueConstraint('order_number', name='uq_uretim_siparis_order'),)
 

@@ -302,7 +302,7 @@
                     <span id="orderPullLabel">Oto Çekme: {% if order_pull_enabled %}Aktif{% else %}Kapalı{% endif %}</span>
                 </button>
                 <a href="{{ url_for('siparis_hazirla.index') }}" class="btn btn-sm btn-primary text-white"><i class="fas fa-box"></i> Sipariş Hazırla</a>
-                <a href="{{ url_for('order_audit.page') }}" class="btn btn-sm btn-dark text-white"><i class="fas fa-route"></i> Sipariş İzi Sür</a>
+                <a href="{{ url_for('siparis_zaman.page') }}" class="btn btn-sm btn-dark text-white"><i class="fas fa-clock"></i> Sipariş Takip</a>
                 <a href="{{ url_for('home.home') }}" class="btn btn-sm btn-outline-secondary">Ana Sayfa</a>
                 <form method="POST" action="{{ url_for('logout') }}" class="mb-0"><button type="submit" class="btn btn-sm btn-danger">Çıkış Yap</button></form>
             </div>

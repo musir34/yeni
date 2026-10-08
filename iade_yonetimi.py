@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import uuid
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 import requests
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 iade_yonetimi_bp = Blueprint("iade_yonetimi", __name__)
 
 VALID_KATEGORILER = {"bekliyor", "kargoda", "teslim"}
+BEKLEYEN_IADE_OMRU_GUN = 30  # bu süreyi geçen "bekliyor" iadeler listeden düşer (komutan emri 2026-10-08)
 VALID_KAYNAKLAR = {"degisim", "trendyol", "shopify", "manuel"}
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
@@ -27,6 +29,40 @@ class IadeKopruHatasi(Exception):
 
 def _config_value(name, default=""):
     return current_app.config.get(name) or os.getenv(name, default)
+
+
+def _iso_tarih(deger):
+    """Köprü servisinin ISO (…Z) createdAt değeri → tz-aware UTC datetime; bozuksa None."""
+    if not deger or not isinstance(deger, str):
+        return None
+    try:
+        dt = datetime.fromisoformat(deger.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def eski_bekleyenleri_ele(payload, simdi=None, gun=BEKLEYEN_IADE_OMRU_GUN):
+    """'bekliyor' kategorisinde olup oluşturulalı `gun` günü geçen iadeleri listeden düşürür.
+
+    Kayıt köprü servisinde (iadeler.json) silinmez — müşteri kodu kullanıp kargoya verirse
+    DHL senkronuyla 'kargoda'ya düşer ve yeniden görünür. Sayaç ve toplam yeniden hesaplanır.
+    Tarihi okunamayan kayıt elenmez (yanlışlıkla kaybolmasın).
+    """
+    simdi = simdi or datetime.now(timezone.utc)
+    esik = simdi - timedelta(days=gun)
+    kalan = []
+    for iade in payload.get("iadeler", []):
+        olusturma = _iso_tarih((iade or {}).get("createdAt"))
+        if (iade or {}).get("kategori") == "bekliyor" and olusturma and olusturma < esik:
+            continue
+        kalan.append(iade)
+    sayac = {"bekliyor": 0, "kargoda": 0, "teslim": 0}
+    for iade in kalan:
+        k = (iade or {}).get("kategori")
+        if k in sayac:
+            sayac[k] += 1
+    return {**payload, "iadeler": kalan, "toplam": len(kalan), "sayac": sayac}
 
 
 def fetch_iadeler(kategori=None, sync=False):
@@ -74,7 +110,7 @@ def fetch_iadeler(kategori=None, sync=False):
 
     payload.setdefault("toplam", len(payload["iadeler"]))
     payload.setdefault("sayac", {"bekliyor": 0, "kargoda": 0, "teslim": 0})
-    return payload
+    return eski_bekleyenleri_ele(payload)
 
 
 def create_iade(payload):

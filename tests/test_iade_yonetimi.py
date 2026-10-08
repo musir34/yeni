@@ -231,3 +231,38 @@ def test_create_route_rejects_invalid_email(monkeypatch):
 
     assert response.status_code == 400
     assert "e-posta" in response.get_json()["mesaj"].lower()
+
+
+def test_eski_bekleyen_iadeler_elenir_digerleri_kalir():
+    """30 günü geçen 'bekliyor' iadeler listeden düşer; kargoda/teslim ve yeni bekleyenler kalır,
+    sayaç yeniden hesaplanır, tarihi bozuk kayıt elenmez."""
+    from datetime import datetime, timezone
+
+    simdi = datetime(2026, 10, 8, 12, 0, tzinfo=timezone.utc)
+    payload = {
+        "toplam": 5, "sayac": {"bekliyor": 3, "kargoda": 1, "teslim": 1},
+        "iadeler": [
+            {"referenceId": "eski", "kategori": "bekliyor", "createdAt": "2026-08-01T10:00:00.000Z"},
+            {"referenceId": "yeni", "kategori": "bekliyor", "createdAt": "2026-10-01T10:00:00.000Z"},
+            {"referenceId": "bozuk", "kategori": "bekliyor", "createdAt": "tarih-yok"},
+            {"referenceId": "kargo", "kategori": "kargoda", "createdAt": "2026-07-01T10:00:00.000Z"},
+            {"referenceId": "teslim", "kategori": "teslim", "createdAt": "2026-06-01T10:00:00.000Z"},
+        ],
+    }
+    sonuc = iade_yonetimi.eski_bekleyenleri_ele(payload, simdi=simdi)
+    assert [i["referenceId"] for i in sonuc["iadeler"]] == ["yeni", "bozuk", "kargo", "teslim"]
+    assert sonuc["toplam"] == 4
+    assert sonuc["sayac"] == {"bekliyor": 2, "kargoda": 1, "teslim": 1}
+
+
+def test_veri_ucu_eski_bekleyeni_dusurur(monkeypatch):
+    app = make_app(IADE_PANEL_KEY="secret")
+    payload = {"iadeler": [
+        {"referenceId": "eski", "kategori": "bekliyor", "createdAt": "2020-01-01T00:00:00.000Z"},
+        {"referenceId": "kargo", "kategori": "kargoda", "createdAt": "2020-01-01T00:00:00.000Z"},
+    ]}
+    monkeypatch.setattr(iade_yonetimi.requests, "get", lambda url, **kw: FakeResponse(payload))
+    with app.test_client() as client:
+        data = client.get("/iade-yonetimi/veri").get_json()
+    assert [i["referenceId"] for i in data["iadeler"]] == ["kargo"]
+    assert data["sayac"]["bekliyor"] == 0 and data["toplam"] == 1

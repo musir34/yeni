@@ -601,7 +601,10 @@
             butonlar = `<button class="ur-done-btn" data-paketlendi="${Number(r.id)}"><i class="bi bi-box-seam"></i> Paketlendi</button>${kargoBtn}
                         <button class="ur-undo-btn" data-gerial="${Number(r.id)}" title="Üretiliyor'a geri al"><i class="bi bi-arrow-counterclockwise"></i></button>`;
         } else if (paketlenen) {
-            butonlar = `${kargoBtn}<button class="ur-undo-btn" data-paketlendi-geri="${Number(r.id)}" title="Üretilenlere geri al"><i class="bi bi-arrow-counterclockwise"></i></button>`;
+            butonlar = `${kargoBtn}<button class="ur-undo-btn" data-arsivle="${Number(r.id)}" title="Arşivle — bitmiş eski siparişi listeden kaldır"><i class="bi bi-archive"></i> Arşivle</button>
+                        <button class="ur-undo-btn" data-paketlendi-geri="${Number(r.id)}" title="Üretilenlere geri al"><i class="bi bi-arrow-counterclockwise"></i></button>`;
+        } else if (teslim && r.arsivlendi_at) {
+            butonlar = `${kargoBtn}<button class="ur-undo-btn" data-arsivle-geri="${Number(r.id)}" title="Arşivden çıkar — Paketlenenlere geri al"><i class="bi bi-arrow-counterclockwise"></i></button>`;
         } else {
             butonlar = kargoBtn;  // kargoda/teslim: durum aksiyonu yok
         }
@@ -615,7 +618,8 @@
                     ${uretiliyor ? '<span class="ur-badge ur-badge--islemde"><i class="bi bi-hammer"></i> Üretimde</span>' : ''}
                     ${paketlenen ? '<span class="ur-badge ur-badge--islemde"><i class="bi bi-box-seam"></i> Paketlendi</span>' : ''}
                     ${kargoda ? '<span class="ur-badge ur-badge--kargo"><i class="bi bi-truck"></i> Kargoya verildi</span>' : ''}
-                    ${teslim ? '<span class="ur-badge ur-badge--kargo"><i class="bi bi-check-circle"></i> Teslim edildi</span>' : ''}
+                    ${teslim && !r.arsivlendi_at ? '<span class="ur-badge ur-badge--kargo"><i class="bi bi-check-circle"></i> Teslim edildi</span>' : ''}
+                    ${r.arsivlendi_at ? `<span class="ur-badge ur-badge--mail-yok"><i class="bi bi-archive"></i> Arşivlendi: ${esc(r.arsivlendi_at)}</span>` : ''}
                     ${karma ? `<span class="ur-badge ur-badge--karma"><i class="bi bi-exclamation-triangle"></i> Karma paket: ${sd.length} kalem · ${uretimKalem} üretim + ${sd.length - uretimKalem} raftan</span>` : ''}
                     ${(!r.uretildi && sd.some(u => u.uretim && !(Number(u.dogrulanan) || 0) && u.raflar && u.raflar.length)) ? '<span class="ur-badge ur-badge--karma"><i class="bi bi-box2"></i> Rafta stok var — raftan karşılanabilir</span>' : ''}
                     ${r.raf_tamam === false ? '<span class="ur-badge ur-badge--kilit"><i class="bi bi-lock-fill"></i> Okutma eksik — etiket kilitli</span>' : ''}
@@ -796,9 +800,13 @@
         const islemeGeriBtn = e.target.closest('[data-isleme-geri]');
         const paketBtn = e.target.closest('[data-paketlendi]');
         const paketGeriBtn = e.target.closest('[data-paketlendi-geri]');
-        if (!uretildiBtn && !geriAlBtn && !islemeBtn && !islemeGeriBtn && !paketBtn && !paketGeriBtn) return;
+        const arsivBtn = e.target.closest('[data-arsivle]');
+        const arsivGeriBtn = e.target.closest('[data-arsivle-geri]');
+        if (!uretildiBtn && !geriAlBtn && !islemeBtn && !islemeGeriBtn && !paketBtn && !paketGeriBtn && !arsivBtn && !arsivGeriBtn) return;
         let url, body;
-        if (islemeBtn) { url = `/uretim/api/isleme-al/${islemeBtn.getAttribute('data-isleme')}`; body = {}; }
+        if (arsivBtn) { url = `/uretim/api/arsivle/${arsivBtn.getAttribute('data-arsivle')}`; body = {}; }
+        else if (arsivGeriBtn) { url = `/uretim/api/arsivle/${arsivGeriBtn.getAttribute('data-arsivle-geri')}`; body = { geri_al: true }; }
+        else if (islemeBtn) { url = `/uretim/api/isleme-al/${islemeBtn.getAttribute('data-isleme')}`; body = {}; }
         else if (islemeGeriBtn) { url = `/uretim/api/isleme-al/${islemeGeriBtn.getAttribute('data-isleme-geri')}`; body = { geri_al: true }; }
         else if (paketBtn) { url = `/uretim/api/paketlendi/${paketBtn.getAttribute('data-paketlendi')}`; body = {}; }
         else if (paketGeriBtn) { url = `/uretim/api/paketlendi/${paketGeriBtn.getAttribute('data-paketlendi-geri')}`; body = { geri_al: true }; }
