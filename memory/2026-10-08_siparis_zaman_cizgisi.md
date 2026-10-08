@@ -51,3 +51,13 @@ render (normal sipariş 11680029013, üretim siparişi 11678528052, bulunamayan)
 ## Ek — ad değişikliği (aynı gün)
 - Komutan emri: sayfanın adı "Sipariş Takip" (menü, başlık, sipariş hazırla menüsü); URL /siparis-zaman korundu.
 - Sipariş listesindeki "Sipariş İzi Sür" düğmesi kaldırıldı, yerine "Sipariş Takip" (yeni sayfa) konuldu; eski /siparis-iz yalnız menüden ve yeni sayfadaki "Ayrıntı" düğmesinden ulaşılır.
+
+## Ek — Shopify (site) siparişleri kapsandı (aynı gün, komutan emri, örnek 1428)
+- Giriş çözümleme `girdi_turu`: ≤6 hane (#1428 / 1428 / SH-1428) = site sipariş ADI → değişim ekranındaki
+  `degisim._shopify_id_adla_bul` ile iç kimlik; ≥13 hane ya da SH-<uzun> = Shopify iç kimliği; gerisi Trendyol.
+- Panel izleri iki biçimde: üretim/ledger "SH-<id>", bazı hareketler çıplak "<id>" → her iki biçim birlikte aranır
+  (toplayıcılar artık needle listesi alır, user_logs OR-LIKE).
+- Sipariş kartı + "Sipariş verildi / Kargoya verildi (fulfillment, takip no) / İptal" adımları Shopify'dan canlı
+  GraphQL ile (`SHOPIFY_SORGU`, run_graphql); API hatasında panel izleri yine gösterilir.
+- Site siparişinde "Panele düştü" adımı gizlenir (canlıdan okunur, düşme anı yok). user_log eşlemesine
+  "→ Hazirlaniyor" ve "karşılandı"(=kargoda) eklendi. 14 test geçiyor; 1428 canlıda doğrulandı (6 kayıt, iki biçim birleşti).

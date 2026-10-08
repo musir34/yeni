@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, render_template, request
 from sqlalchemy import or_
@@ -151,7 +151,9 @@ def user_log_adimi(aciklama: str) -> str:
         return "paketlendi"
     if "sipariş hazırlandı" in a:
         return "hazirlandi"
-    if "→ kargoda" in a:
+    if "→ hazirlaniyor" in a or "→ hazırlanıyor" in a:
+        return "hazirlaniyor"
+    if "→ kargoda" in a or "karşılandı" in a:
         return "kargoda"
     if "→ teslim" in a:
         return "teslim"
@@ -162,6 +164,60 @@ def user_log_adimi(aciklama: str) -> str:
     if "arşiv" in a:
         return "arsiv"
     return "diger"
+
+
+SHOPIFY_ID_EN_AZ = 13   # Shopify iç sipariş kimliği (18929721835698); Trendyol sipariş no 10-11 hane
+SHOPIFY_AD_EN_COK = 6   # mağazadaki görünür sipariş adı (#1428) kısadır
+
+
+def girdi_turu(girdi: str) -> tuple[str, str]:
+    """Aranan numaranın türü: ('shopify_id', '1893…') | ('shopify_ad', '1428') | ('trendyol', '1168…').
+
+    'SH-' öneki ya da ≥13 haneli rakam → Shopify iç kimliği; ≤6 haneli rakam → site sipariş adı;
+    gerisi Trendyol sipariş/paket numarası olarak aranır.
+    """
+    ham = (girdi or "").strip().lstrip("#").strip()
+    sh = ham[:3].upper() == "SH-" or ham[:2].upper() == "SH"
+    if sh:
+        ham = ham[3:] if ham[:3].upper() == "SH-" else ham[2:]
+        ham = ham.strip().lstrip("-").lstrip("#").strip()
+    if ham.isdigit() and len(ham) <= SHOPIFY_AD_EN_COK:
+        return "shopify_ad", ham          # 'SH-1428' de sipariş adıdır (değişim ekranıyla aynı kabul)
+    if ham.isdigit() and (sh or len(ham) >= SHOPIFY_ID_EN_AZ):
+        return "shopify_id", ham
+    return "trendyol", ham
+
+
+def _iso_utc(deger) -> datetime | None:
+    """Shopify ISO zamanı (…Z / +03:00) → naive UTC (DB konvansiyonu)."""
+    if not deger or not isinstance(deger, str):
+        return None
+    try:
+        dt = datetime.fromisoformat(deger.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        return dt
+    return dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def shopify_olaylari(order: dict) -> list[Olay]:
+    """Shopify sipariş kaydından adımlar: sipariş verildi, iptal, kargoya verildi (fulfillment)."""
+    olaylar: list[Olay] = []
+    ts = _iso_utc(order.get("createdAt"))
+    if ts:
+        olaylar.append(Olay(ts, "siparis", "Sipariş verildi (site)", kaynak="Shopify"))
+    ts = _iso_utc(order.get("cancelledAt"))
+    if ts:
+        olaylar.append(Olay(ts, "iptal", "İptal edildi (site)", detay=order.get("cancelReason") or "", kaynak="Shopify"))
+    for f in order.get("fulfillments") or []:
+        ts = _iso_utc(f.get("createdAt"))
+        if not ts:
+            continue
+        takip = [t for t in (f.get("trackingInfo") or []) if t]
+        detay = " · ".join(p for p in ((takip[0].get("company") if takip else ""), (takip[0].get("number") if takip else "")) if p)
+        olaylar.append(Olay(ts, "kargoda", "Kargoya verildi (Shopify kayıt)", detay=detay, kaynak="Shopify"))
+    return olaylar
 
 
 def olaylari_birlestir(olaylar: list[Olay]) -> list[Olay]:
@@ -191,8 +247,8 @@ def olaylari_birlestir(olaylar: list[Olay]) -> list[Olay]:
     return sonuc
 
 
-def ozet_adimlar(olaylar: list[Olay]) -> list[dict]:
-    """Özet şeridi: her adımın İLK zamanı. Üretim/iptal/arşiv adımları yalnızca varsa."""
+def ozet_adimlar(olaylar: list[Olay], gizle: set[str] | None = None) -> list[dict]:
+    """Özet şeridi: her adımın İLK zamanı. Üretim/iptal/arşiv adımları yalnızca varsa; `gizle` hiç gösterilmez."""
     ilk: dict[str, datetime] = {}
     for o in olaylar:
         if o.ts is None:
@@ -202,6 +258,8 @@ def ozet_adimlar(olaylar: list[Olay]) -> list[dict]:
             ilk[anahtar] = o.ts
     satirlar = []
     for anahtar, etiket in OZET_ADIMLAR:
+        if gizle and anahtar in gizle:
+            continue
         ts = ilk.get(anahtar)
         if ts is None and anahtar in ISTEGE_BAGLI_ADIMLAR:
             continue
@@ -254,7 +312,7 @@ ARSIV_KOLONLAR = (
 )
 
 
-def _siparis_satirlari(needle: str) -> list[tuple[object, str]]:
+def _siparis_satirlari(needles: list[str]) -> list[tuple[object, str]]:
     bulunan = []
     for model, etiket in ORDER_TABLES:
         try:
@@ -263,7 +321,7 @@ def _siparis_satirlari(needle: str) -> list[tuple[object, str]]:
                 q = db.session.query(*(getattr(OrderArchived, k) for k in ARSIV_KOLONLAR))
             else:
                 q = db.session.query(model)
-            rows = q.filter(or_(model.order_number == needle, model.package_number == needle)).all()
+            rows = q.filter(or_(model.order_number.in_(needles), model.package_number.in_(needles))).all()
         except Exception:
             db.session.rollback()
             logger.warning("siparis_zaman: %s okunamadı", model.__tablename__, exc_info=True)
@@ -297,11 +355,11 @@ def _tablo_olaylari(satirlar: list[tuple[object, str]]) -> list[Olay]:
     return olaylar
 
 
-def _uretim_olaylari(needle: str) -> list[Olay]:
+def _uretim_olaylari(needles: list[str]) -> list[Olay]:
     olaylar: list[Olay] = []
     try:
         rows = db.session.query(UretimSiparis).filter(
-            or_(UretimSiparis.order_number == needle, UretimSiparis.package_number == needle)
+            or_(UretimSiparis.order_number.in_(needles), UretimSiparis.package_number.in_(needles))
         ).all()
     except Exception:
         db.session.rollback()
@@ -329,11 +387,11 @@ def _kullanici_adlari(ids: set[int]) -> dict[int, str]:
         return {}
 
 
-def _audit_olaylari(needle: str) -> list[Olay]:
+def _audit_olaylari(needles: list[str]) -> list[Olay]:
     try:
         rows = (
             db.session.query(OrderAuditLog)
-            .filter(or_(OrderAuditLog.order_number == needle, OrderAuditLog.package_number == needle))
+            .filter(or_(OrderAuditLog.order_number.in_(needles), OrderAuditLog.package_number.in_(needles)))
             .filter(~OrderAuditLog.event_type.in_(AUDIT_GURULTU))
             .order_by(OrderAuditLog.ts.asc())
             .limit(500)
@@ -371,11 +429,11 @@ def _audit_olaylari(needle: str) -> list[Olay]:
     return olaylar
 
 
-def _user_log_olaylari(needle: str) -> list[Olay]:
+def _user_log_olaylari(needles: list[str]) -> list[Olay]:
     try:
         rows = (
             db.session.query(UserLog)
-            .filter(UserLog.details.like(f"%{needle}%"))
+            .filter(or_(*[UserLog.details.like(f"%{n}%") for n in needles]))
             .filter(~UserLog.action.like("PAGE_VIEW%"))
             .order_by(UserLog.timestamp.asc())
             .limit(200)
@@ -403,11 +461,11 @@ def _user_log_olaylari(needle: str) -> list[Olay]:
     return olaylar
 
 
-def _ledger_olaylari(needle: str) -> list[Olay]:
+def _ledger_olaylari(needles: list[str]) -> list[Olay]:
     try:
         rows = (
             db.session.query(StockMovement)
-            .filter(StockMovement.order_number == needle)
+            .filter(StockMovement.order_number.in_(needles))
             .order_by(StockMovement.created_at.asc())
             .limit(100)
             .all()
@@ -456,7 +514,7 @@ def _siparis_ozeti(satirlar: list[tuple[object, str]]) -> dict | None:
     }
 
 
-def _panele_dusme(needle: str, satirlar: list[tuple[object, str]], digerleri: list[Olay]) -> list[Olay]:
+def _panele_dusme(needles: list[str], satirlar: list[tuple[object, str]], digerleri: list[Olay]) -> list[Olay]:
     """Panele ilk düşme anı: satır created_at'leri, ilk audit kaydı (gürültü dahil) ve panel
     tarafındaki diğer olayların (üretim kaydı, raf ataması...) en erkeni.
 
@@ -467,7 +525,7 @@ def _panele_dusme(needle: str, satirlar: list[tuple[object, str]], digerleri: li
     try:
         ilk_audit = (
             db.session.query(OrderAuditLog.ts)
-            .filter(or_(OrderAuditLog.order_number == needle, OrderAuditLog.package_number == needle))
+            .filter(or_(OrderAuditLog.order_number.in_(needles), OrderAuditLog.package_number.in_(needles)))
             .order_by(OrderAuditLog.ts.asc())
             .first()
         )
@@ -485,18 +543,101 @@ def _panele_dusme(needle: str, satirlar: list[tuple[object, str]], digerleri: li
     return [Olay(en_erken, "panel", "Panele düştü", kaynak="Trendyol senkron")]
 
 
+SHOPIFY_SORGU = """
+query($id: ID!) { order(id: $id) {
+  legacyResourceId name createdAt cancelledAt cancelReason closedAt
+  displayFulfillmentStatus displayFinancialStatus
+  customer { firstName lastName phone }
+  shippingAddress { name address1 address2 city province phone }
+  fulfillments { createdAt status trackingInfo { company number } }
+  lineItems(first: 50) { edges { node { title sku quantity variant { barcode } } } }
+} }"""
+
+
+def _shopify_siparis(shopify_id: str) -> dict | None:
+    """Shopify'dan canlı sipariş: site siparişi panel sipariş tablolarına inmediği için
+    sipariş saati, müşteri, kargo ve kalemler buradan gelir. Hata → None (panel izleri yine gösterilir)."""
+    try:
+        from shopify_site.shopify_service import shopify_service
+        sonuc = shopify_service.run_graphql(SHOPIFY_SORGU, {"id": f"gid://shopify/Order/{shopify_id}"})
+        return ((sonuc.get("data") or {}).get("order")) or None
+    except Exception:
+        logger.warning("siparis_zaman: Shopify siparişi alınamadı (%s)", shopify_id, exc_info=True)
+        return None
+
+
+def _shopify_ozeti(order: dict, shopify_id: str) -> dict:
+    musteri = order.get("customer") or {}
+    adres = order.get("shippingAddress") or {}
+    ad = f"{musteri.get('firstName') or ''} {musteri.get('lastName') or ''}".strip() or (adres.get("name") or "")
+    kalemler = []
+    for e in ((order.get("lineItems") or {}).get("edges") or []):
+        n = e.get("node") or {}
+        kalemler.append({
+            "urun": n.get("title") or n.get("sku") or "",
+            "beden": "", "renk": "",
+            "barkod": ((n.get("variant") or {}).get("barcode")) or n.get("sku") or "",
+            "adet": n.get("quantity"),
+            "tablo": "Site",
+        })
+    takip = next((t for f in (order.get("fulfillments") or []) for t in (f.get("trackingInfo") or []) if t), {})
+    kargo = takip.get("company") or ""
+    kargo_l = kucuk(kargo)
+    durum = {"FULFILLED": "Kargolandı", "UNFULFILLED": "Kargolanmadı", "PARTIALLY_FULFILLED": "Kısmen kargolandı"}.get(
+        order.get("displayFulfillmentStatus") or "", order.get("displayFulfillmentStatus") or "")
+    if order.get("cancelledAt"):
+        durum = "İptal"
+    return {
+        "order_number": order.get("name") or f"#{shopify_id}",
+        "package_number": "",
+        "alt_kimlik": f"SH-{shopify_id}",
+        "kaynak": "Shopify",
+        "musteri": ad,
+        "adres": " ".join(p for p in (adres.get("address1"), adres.get("address2"), adres.get("city"), adres.get("province")) if p),
+        "durum": durum,
+        "kargo": kargo,
+        "kargo_sinif": "kargo-dhl" if "dhl" in kargo_l else ("kargo-tyex" if "trendyol" in kargo_l or "tyex" in kargo_l else ""),
+        "takip": takip.get("number") or "",
+        "son_teslim": "",
+        "kalemler": kalemler,
+    }
+
+
+def _shopify_adiyla_kimlik(siparis_adi: str) -> str | None:
+    """'#1428' → Shopify iç kimliği; değişim ekranındaki çözücü yeniden kullanılır."""
+    try:
+        from degisim import _shopify_id_adla_bul
+        return _shopify_id_adla_bul(siparis_adi)
+    except Exception:
+        logger.warning("siparis_zaman: Shopify sipariş adı çözülemedi (%s)", siparis_adi, exc_info=True)
+        return None
+
+
 def zaman_cizgisi(needle: str) -> dict:
-    satirlar = _siparis_satirlari(needle)
+    tur, ham = girdi_turu(needle)
+    shopify_id = ham if tur == "shopify_id" else (_shopify_adiyla_kimlik(ham) if tur == "shopify_ad" else None)
+    if shopify_id:
+        # Panel izleri iki biçimde tutuluyor: üretim/ledger 'SH-<id>', bazı hareketler çıplak '<id>'
+        needles = [f"SH-{shopify_id}", shopify_id]
+        shopify = _shopify_siparis(shopify_id)
+    else:
+        needles = [ham or needle]
+        shopify = None
+    needle = needles[0]
+    satirlar = _siparis_satirlari(needles)
     olaylar = (
         _tablo_olaylari(satirlar)
-        + _uretim_olaylari(needle)
-        + _audit_olaylari(needle)
-        + _user_log_olaylari(needle)
-        + _ledger_olaylari(needle)
+        + _uretim_olaylari(needles)
+        + _audit_olaylari(needles)
+        + _user_log_olaylari(needles)
+        + _ledger_olaylari(needles)
+        + (shopify_olaylari(shopify) if shopify else [])
     )
-    olaylar += _panele_dusme(needle, satirlar, olaylar)
+    # Site siparişi panele "düşmez" (canlı Shopify'dan okunur) → bu adım site siparişinde anlamsız
+    if not shopify_id:
+        olaylar += _panele_dusme(needles, satirlar, olaylar)
     birlesik = olaylari_birlestir(olaylar)
-    ozet = ozet_adimlar(birlesik)
+    ozet = ozet_adimlar(birlesik, gizle={"panel"} if shopify_id else None)
     ilk = {o.adim: o.ts for o in reversed(birlesik)}  # reversed → sözlükte en erken kalır
     paket_ts = min((t for a, t in ilk.items() if a in ("hazirlandi", "paketlendi")), default=None)
     sureler = {
@@ -505,17 +646,18 @@ def zaman_cizgisi(needle: str) -> dict:
         "siparis_kargo": sure_metni(ilk.get("siparis"), ilk.get("kargoda")),
     }
     try:
-        notu = db.session.query(SiparisNotu).filter_by(order_number=needle).first()
+        notu = db.session.query(SiparisNotu).filter(SiparisNotu.order_number.in_(needles)).first()
     except Exception:
         db.session.rollback()
         notu = None
     return {
-        "siparis": _siparis_ozeti(satirlar),
+        "siparis": _shopify_ozeti(shopify, shopify_id) if shopify else _siparis_ozeti(satirlar),
         "ozet": ozet,
         "sureler": sureler,
         "olaylar": [o.gorunum() for o in birlesik],
         "not": {"metin": notu.note, "kim": notu.updated_by or "", "zaman": fmt_ist(notu.updated_at)} if notu else None,
-        "bulundu": bool(satirlar or birlesik),
+        "bulundu": bool(satirlar or birlesik or shopify),
+        "aranan": needle,
     }
 
 

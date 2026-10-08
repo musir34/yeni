@@ -51,7 +51,7 @@
       <div class="col-md-8">
         <label class="form-label mb-1">Sipariş No / Paket No</label>
         <input type="text" name="q" class="form-control form-control-lg" value="{{ q }}" autocomplete="off" autofocus
-               placeholder="örn: 11680029013" required />
+               placeholder="Trendyol: 11680029013 · Site: 1428 / #1428 / SH-…" required />
       </div>
       <div class="col-md-4 d-flex gap-2">
         <button type="submit" class="btn btn-primary btn-lg flex-fill"><i class="fas fa-search"></i> Göster</button>
@@ -79,12 +79,15 @@
   <div class="card sz-card">
     <div class="card-header fw-bold">
       📦 {{ s.order_number }}
+      {% if s.kaynak == 'Shopify' %}<span class="badge text-white ms-2" style="background:#96bf48;">🛍️ Shopify</span>
+      <span class="text-muted fw-normal ms-2" style="font-size:.85rem;">{{ s.alt_kimlik }}</span>{% endif %}
       {% if s.package_number %}<span class="text-muted fw-normal ms-2" style="font-size:.85rem;">Paket {{ s.package_number }}</span>{% endif %}
       <span class="badge bg-secondary ms-2">{{ s.durum }}</span>
     </div>
     <div class="card-body">
       <div class="row g-3">
-        <div class="col-md-4"><div class="text-muted small">Müşteri</div><div class="fw-semibold">{{ s.musteri or '-' }}</div></div>
+        <div class="col-md-4"><div class="text-muted small">Müşteri</div><div class="fw-semibold">{{ s.musteri or '-' }}</div>
+          {% if s.adres %}<div class="small text-muted">{{ s.adres }}</div>{% endif %}</div>
         <div class="col-md-4"><div class="text-muted small">Kargo</div>
           <div class="{{ s.kargo_sinif }}">{{ s.kargo or '-' }}</div>
           {% if s.takip %}<div class="small text-muted">{{ s.takip }}</div>{% endif %}

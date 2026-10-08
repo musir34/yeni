@@ -130,3 +130,41 @@ def test_kargo_kodu_verildi_rotasi_print_logu_yazar(monkeypatch):
     assert yazilan[0][1]["işlem_açıklaması"] == "Otomatik gönderim — kargo kodu verildi — 11680029013"
     assert yazilan[0][1]["kargo_firması"] == "DHL eCommerce Marketplace"
     assert c.post("/siparis-zaman/kargo-kodu-verildi", json={}).status_code == 400
+
+
+def test_girdi_turu_shopify_ve_trendyol_ayrimi():
+    from siparis_zaman import girdi_turu
+    assert girdi_turu("1428") == ("shopify_ad", "1428")
+    assert girdi_turu("#1428") == ("shopify_ad", "1428")
+    assert girdi_turu("SH-1428") == ("shopify_ad", "1428")
+    assert girdi_turu("SH-18929721835698") == ("shopify_id", "18929721835698")
+    assert girdi_turu("18929721835698") == ("shopify_id", "18929721835698")
+    assert girdi_turu("11680029013") == ("trendyol", "11680029013")   # Trendyol 11 hane
+    assert girdi_turu("4218386531") == ("trendyol", "4218386531")     # paket no 10 hane
+
+
+def test_shopify_olaylari_siparis_iptal_kargo_utc():
+    from siparis_zaman import shopify_olaylari
+    order = {
+        "createdAt": "2026-10-06T19:49:00+03:00",          # İstanbul 19:49 → UTC 16:49
+        "cancelledAt": None,
+        "fulfillments": [{"createdAt": "2026-10-08T11:00:00Z",
+                          "trackingInfo": [{"company": "DHL eCommerce", "number": "728003"}]}],
+    }
+    olaylar = {o.adim: o for o in shopify_olaylari(order)}
+    assert olaylar["siparis"].ts == datetime(2026, 10, 6, 16, 49)
+    assert olaylar["kargoda"].ts == datetime(2026, 10, 8, 11, 0)
+    assert olaylar["kargoda"].detay == "DHL eCommerce · 728003"
+    assert "iptal" not in olaylar
+    assert shopify_olaylari({"createdAt": "bozuk", "cancelledAt": "2026-10-07T10:00:00Z"})[0].adim == "iptal"
+
+
+def test_shopify_user_log_metinleri_eslenir():
+    assert user_log_adimi("Shopify sipariş durumu güncellendi — 18928185442482 → Hazirlaniyor") == "hazirlaniyor"
+    assert user_log_adimi("Shopify sipariş karşılandı — 18928185442482") == "kargoda"
+    assert user_log_adimi("Shopify sipariş iptal edildi — 18916792664242") == "iptal"
+
+
+def test_ozet_gizle_panel_adimi():
+    ozet = {a["anahtar"] for a in ozet_adimlar([Olay(T0, "siparis", "x")], gizle={"panel"})}
+    assert "panel" not in ozet and "siparis" in ozet
