@@ -38,6 +38,12 @@
     text-align:center; font-weight:bold; font-size:12pt; /* ↑ */
     margin:2.5mm 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:0 0 auto;
   }
+  /* Trendyol Express: siyah bant + beyaz büyük harf — termal yazıcıda bile ilk bakışta DHL'den ayrılsın */
+  .cargo-provider.cargo-tyex{
+    background:#000; color:#fff; text-transform:uppercase; letter-spacing:0.3px; font-size:11pt;
+    padding:1.5mm 3mm; border-radius:1.5mm;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
 
   /* Kapıda Ödeme kutusu */
   .kapida-odeme-box{
@@ -104,7 +110,8 @@
 
     <!-- Kargo Firması -->
     {% if cargo_provider_name %}
-    <div class="cargo-provider clamp-1">{{ cargo_provider_name }}</div>
+    {% set _kargo = cargo_provider_name|lower %}
+    <div class="cargo-provider clamp-1{% if 'trendyol' in _kargo or 'tyex' in _kargo %} cargo-tyex{% endif %}">{{ cargo_provider_name }}</div>
     {% endif %}
 
     <!-- Kapıda Ödeme -->

@@ -98,6 +98,12 @@
     .fixed-header h4{margin-top:0;margin-bottom:4px;color:#333;font-size:0.95rem;font-weight:600}
     .fixed-header p{margin:0;line-height:1.35;color:#444;font-size:0.9rem}
     .fixed-header .copy-container{color:#555}
+    /* Kargo firması ayrımı: Trendyol Express turuncu, DHL mavi */
+    .kargo-firma{font-weight:700}
+    .kargo-firma.kargo-tyex{color:#f27a1a}
+    .kargo-firma.kargo-dhl{color:#1565c0}
+    .badge.kargo-tyex{background:#f27a1a;color:#fff}
+    .badge.kargo-dhl{background:#1565c0;color:#fff}
 
     .modal-content{border-radius:12px;padding:15px}
     .modal-header{border-bottom:none;justify-content:center}
@@ -137,6 +143,8 @@
     html.gs-dark .fixed-header{background:#1e1e1e;color:#ddd;box-shadow:0 2px 8px rgba(0,0,0,.3)}
     html.gs-dark .fixed-header h4{color:#eee}
     html.gs-dark .fixed-header p{color:#bbb}
+    html.gs-dark .kargo-firma.kargo-tyex{color:#ff9a4d}
+    html.gs-dark .kargo-firma.kargo-dhl{color:#64a9f0}
     html.gs-dark .modal-content{background:#1e1e1e;color:#ddd}
     html.gs-dark .modal-header{border-bottom-color:#333}
     html.gs-dark .modal-footer{border-top-color:#333}
@@ -712,6 +720,12 @@
         {% else %}
         <span class="badge bg-warning text-dark">📦 Trendyol</span>
         {% endif %}
+        {% set _kargo = (order.cargo_provider_name or '')|lower %}
+        {% if 'dhl' in _kargo %}
+        <span class="badge kargo-dhl">🚚 DHL</span>
+        {% elif 'trendyol' in _kargo or 'tyex' in _kargo %}
+        <span class="badge kargo-tyex">🚚 Trendyol Express</span>
+        {% endif %}
       </div>
 
       <!-- 📝 Siparişe özel not — paketleyenin gözünden kaçmasın -->
@@ -886,7 +900,9 @@
         <br/>
         <strong>Müşteri:</strong> {{ order.customer_name }} {{ order.customer_surname }}<br/>
         <strong>Kargoya Kalan Süre:</strong> {{ remaining_time }}<br/>
-        <strong>Kargo Firması:</strong> {{ order.cargo_provider_name }}<br/>
+        {% set _kargo = (order.cargo_provider_name or '')|lower %}
+        <strong>Kargo Firması:</strong>
+        <span class="kargo-firma {% if 'dhl' in _kargo %}kargo-dhl{% elif 'trendyol' in _kargo or 'tyex' in _kargo %}kargo-tyex{% endif %}">{{ order.cargo_provider_name }}</span><br/>
         <strong>Kargo Kodu:</strong>
         <span id="shippingBarcode">{{ order.cargo_tracking_number }}</span>
         <span class="copy-container">
