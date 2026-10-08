@@ -1,7 +1,7 @@
 """Çalışan hak edişini kaydet ve isteğe bağlı kısmi ödeme ekle."""
 from flask import request, flash, url_for
 from login_logout import login_required, roles_required
-from finans import finans_bp, _uid, _geri, _log
+from finans import finans_bp, _uid, _geri, _log, _hata_flash
 import finans_service as fs
 import finans_calisan_service as cs
 
@@ -21,5 +21,5 @@ def calisan_hakedis_odeme():
         flash(f'✅ {"Ödeme ve hak ediş" if islem else "Hak ediş"} kaydedildi. '
               f'Bu dönem kalan borç: {kalan:.2f} ₺.', 'success')
     except fs.FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.ana_gider'))

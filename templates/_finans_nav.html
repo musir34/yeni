@@ -49,10 +49,28 @@
 
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% for cat, msg in messages %}
+    {% if cat == 'bakiye_onay' and session.get('finans_bakiye_onay') %}
+    {# Yetersiz bakiye sert hata değil: aynı form bakiye_onay=1 ile yeniden gönderilir, bakiye eksiye düşer #}
+    {% set onay = session.get('finans_bakiye_onay') %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+      <div class="fw-bold mb-1">⚠️ Emin misiniz?</div>
+      <div class="mb-2">{{ msg }}</div>
+      <form method="POST" action="{{ onay.url }}" class="d-inline">
+        {% for ad, degerler in onay.form.items() %}{% for d in degerler %}
+        <input type="hidden" name="{{ ad }}" value="{{ d }}">
+        {% endfor %}{% endfor %}
+        <input type="hidden" name="bakiye_onay" value="1">
+        <button type="submit" class="btn btn-sm btn-warning fw-bold">Evet, eminim — yine de kaydet</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary ms-1" data-bs-dismiss="alert">Vazgeç</button>
+      </form>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% else %}
     <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
       {{ msg }}
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
+    {% endif %}
   {% endfor %}
 {% endwith %}
 

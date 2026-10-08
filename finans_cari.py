@@ -9,7 +9,7 @@ Sayfalar: /finans/cari (hesap listesi + yeni hesap), /finans/cari/<id> (defter +
 from flask import render_template, request, redirect, url_for, flash
 
 from login_logout import login_required, roles_required
-from finans import finans_bp, _uid, _geri, _log, _bugun_ist
+from finans import finans_bp, _uid, _geri, _log, _bugun_ist, _hata_flash
 import finans_service as fs
 import finans_cari_service as cs
 from finans_service import FinansHata
@@ -39,7 +39,7 @@ def cari_ekle():
         flash(f'✅ "{c.ad}" cari hesabı açıldı.', 'success')
         return redirect(url_for('finans.cari_detay', cari_id=c.id))
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.cari_liste'))
 
 
@@ -54,7 +54,7 @@ def cari_guncelle(cari_id):
         _log("UPDATE", f"Finans cari hesap güncellendi — {c.ad}", cari_id=cari_id)
         flash('✅ Cari hesap güncellendi.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.cari_detay', cari_id=cari_id))
 
 
@@ -68,7 +68,7 @@ def cari_pasif(cari_id):
         _log("UPDATE", f"Finans cari hesap {'açıldı' if aktif else 'kapatıldı'} — {c.ad}", cari_id=cari_id)
         flash(f'✅ "{c.ad}" {"yeniden açıldı" if aktif else "kapatıldı"}.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.cari_liste'))
 
 
@@ -81,7 +81,7 @@ def cari_detay(cari_id):
     try:
         cari = cs.cari_getir(cari_id)
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
         return redirect(url_for('finans.cari_liste'))
     iptal_goster = request.args.get('iptal') == '1'
     return render_template('finans_cari_detay.html', cari=cari,
@@ -122,7 +122,7 @@ def cari_alim(cari_id):
         _log("CREATE", f"Finans cari mal girişi — {h.cari.ad}: {h.tutar}{s}", tutar=str(h.tutar))
         flash(f'✅ Mal girişi kaydedildi: {h.tutar:.2f} {s}. Borç bakiyesi {h.yeni_bakiye:.2f} {s}.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.cari_detay', cari_id=cari_id))
 
 
@@ -137,7 +137,7 @@ def cari_satis(cari_id):
         _log("CREATE", f"Finans cari satış — {h.cari.ad}: {h.tutar}{s}", tutar=str(h.tutar))
         flash(f'✅ Satış kaydedildi: {h.tutar:.2f} {s}. Bakiye {h.yeni_bakiye:.2f} {s}.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.cari_detay', cari_id=cari_id))
 
 
@@ -155,7 +155,7 @@ def cari_odeme(cari_id):
         flash(f'✅ Ödeme kaydedildi: {tutar:.2f} {s}{_kasa_eki(h)} {h.islem.hesap.ad} hesabından düştü. '
               f'Borç bakiyesi {h.yeni_bakiye:.2f} {s}.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.cari_detay', cari_id=cari_id))
 
 
@@ -172,7 +172,7 @@ def cari_tahsilat(cari_id):
         flash(f'✅ Tahsilat kaydedildi: {tutar:.2f} {s}{_kasa_eki(h)} Beyazıt hesabına girdi. '
               f'Bakiye {h.yeni_bakiye:.2f} {s}.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.cari_detay', cari_id=cari_id))
 
 
@@ -191,7 +191,7 @@ def cari_borc_alma(cari_id):
         flash(f'✅ Kasadan alınan borç kaydedildi: {tutar:.2f} {s}{_kasa_eki(h)} {h.islem.hesap.ad} hesabından düştü. '
               f'Toplam borcunuz {(-h.yeni_bakiye):.2f} {s}.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.cari_detay', cari_id=cari_id))
 
 
@@ -210,7 +210,7 @@ def cari_borc_odeme(cari_id):
         flash(f'✅ Borç ödemesi kaydedildi: {tutar:.2f} {s}{_kasa_eki(h)} Beyazıt hesabına girdi. '
               f'Kalan borcunuz {kalan:.2f} {s}.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.cari_detay', cari_id=cari_id))
 
 
@@ -229,7 +229,7 @@ def cari_calisan_borc(cari_id):
         flash(f'✅ {h.cari.ad} cebinden {tutar:.2f} ₺ verdi; {h.islem.hesap.ad} hesabına girdi. '
               f'Geri ödenecek: {cs.calisan_borc_kalan(cari_id):.2f} ₺.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.cari_detay', cari_id=cari_id))
 
 
@@ -248,7 +248,7 @@ def cari_calisan_borc_odeme(cari_id):
         flash(f'✅ {h.cari.ad} için {tutar:.2f} ₺ geri ödendi; {h.islem.hesap.ad} hesabından düştü. '
               f'Kalan: {cs.calisan_borc_kalan(cari_id):.2f} ₺.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.cari_detay', cari_id=cari_id))
 
 
@@ -262,5 +262,5 @@ def cari_hareket_iptal(hareket_id):
         flash('✅ Hareket iptal edildi; bakiye(ler) geri alındı.', 'success')
         return _geri(url_for('finans.cari_detay', cari_id=h.cari_id))
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.cari_liste'))

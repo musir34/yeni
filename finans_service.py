@@ -50,6 +50,30 @@ class FinansHata(ValueError):
     """Kullanıcıya flash/JSON ile gösterilecek iş kuralı hatası."""
 
 
+class YetersizBakiye(FinansHata):
+    """Bakiye eksiye düşecek — sert hata değil, "emin misin?" onayı ister (komutan emri 2026-10-08).
+
+    Aynı form `bakiye_onay=1` ile yeniden gönderilirse işlem yapılır ve bakiye eksiye düşer.
+    """
+
+
+BAKIYE_ONAY_ALANI = 'bakiye_onay'
+
+
+def bakiye_asimi_onayli() -> bool:
+    """İstek formunda/JSON'unda onay bayrağı var mı? İstek bağlamı yoksa (betik/test) False."""
+    try:
+        from flask import has_request_context, request
+        if not has_request_context():
+            return False
+        if request.form.get(BAKIYE_ONAY_ALANI) == '1':
+            return True
+        j = request.get_json(silent=True) or {}
+        return str(j.get(BAKIYE_ONAY_ALANI, '')) == '1'
+    except Exception:
+        return False
+
+
 # ============================== #
 #   PARSE YARDIMCILARI           #
 # ============================== #
@@ -198,8 +222,9 @@ def _hareket(hesap: FinansHesap, tur: str, yon: int, tutar: Decimal, tarih: date
     """Tek yerden bakiye değişimi. Hesap FOR UPDATE ile gelmiş olmalı. COMMIT ETMEZ."""
     onceki = Decimal(str(hesap.bakiye or 0))
     yeni = onceki + yon * tutar
-    if yeni < 0:
-        raise FinansHata(f'Yetersiz bakiye: {hesap.ad} hesabında {onceki:.2f} ₺ var, {tutar:.2f} ₺ çıkılamaz.')
+    if yeni < 0 and not bakiye_asimi_onayli():
+        raise YetersizBakiye(f'Yetersiz bakiye: {hesap.ad} hesabında {onceki:.2f} ₺ var, {tutar:.2f} ₺ çıkılıyor; '
+                             f'bakiye {yeni:.2f} ₺ olacak.')
     hesap.bakiye = yeni
     hesap.guncelleme_tarihi = datetime.utcnow()
     islem = FinansIslem(
@@ -377,10 +402,9 @@ def islem_iptal(islem_id: int, kullanici_id: int, neden: str = None,
             db.session.refresh(hesap)
             onceki = Decimal(str(hesap.bakiye or 0))
             yeni = onceki - b.yon * Decimal(str(b.tutar))
-            if yeni < 0:
-                raise FinansHata(f'İptal edilemez: {hesap.ad} bakiyesi {onceki:.2f} ₺, '
-                                 f'{b.tutar:.2f} ₺ geri alınırsa eksiye düşer. '
-                                 'Önce bu paraya bağlı giderleri/transferleri iptal edin.')
+            if yeni < 0 and not bakiye_asimi_onayli():
+                raise YetersizBakiye(f'{hesap.ad} bakiyesi {onceki:.2f} ₺, {b.tutar:.2f} ₺ geri alınırsa '
+                                     f'bakiye {yeni:.2f} ₺ olacak.')
             hesap.bakiye = yeni
             hesap.guncelleme_tarihi = simdi
             b.iptal = True

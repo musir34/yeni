@@ -19,7 +19,7 @@ from login_logout import login_required, roles_required
 from user_logs import log_user_action
 from time_utils import to_ist
 import finans_service as fs
-from finans_service import FinansHata
+from finans_service import FinansHata, YetersizBakiye
 
 finans_bp = Blueprint('finans', __name__, url_prefix='/finans')
 
@@ -54,6 +54,19 @@ def _geri(varsayilan: str):
     if nxt.startswith('/') and not nxt.startswith('//'):
         return redirect(nxt)
     return redirect(varsayilan)
+
+
+def _hata_flash(e: FinansHata) -> None:
+    """İş kuralı hatasını flash'la. Yetersiz bakiye sert hata değildir: aynı formu
+    `bakiye_onay=1` ile yeniden gönderen "Emin misin?" kutusu gösterilir (_finans_nav.html)."""
+    if isinstance(e, YetersizBakiye):
+        session['finans_bakiye_onay'] = {
+            'url': request.path,
+            'form': {k: v for k, v in request.form.lists()},
+        }
+        flash(str(e), 'bakiye_onay')
+        return
+    flash(str(e), 'danger')
 
 
 def _log(action: str, aciklama: str, **ek):
@@ -103,7 +116,7 @@ def transfer():
              tutar=str(tutar))
         flash(f'✅ {cikis.hesap.ad} → {giris.hesap.ad}: {tutar:.2f} ₺ aktarıldı.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.panel'))
 
 
@@ -125,7 +138,7 @@ def defter(hesap_kodu):
         hesap, sayfalama = fs.defter(hesap_kodu, donem=donem, tur=tur,
                                      iptal_goster=request.args.get('iptal') == '1', sayfa=sayfa)
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
         return redirect(url_for('finans.panel'))
     return render_template('finans_defter.html', hesap=hesap, sayfalama=sayfalama,
                            donem=donem or '', tur=tur or '',
@@ -144,7 +157,7 @@ def islem_iptal(islem_id):
         _log("DELETE", f"Finans işlem iptal — #{islem_id} ({len(bacaklar)} kayıt)", islem_id=islem_id)
         flash(f'✅ İşlem iptal edildi, bakiye geri alındı ({len(bacaklar)} kayıt).', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.panel'))
 
 
@@ -159,7 +172,7 @@ def islem_meta(islem_id):
         _log("UPDATE", f"Finans işlem açıklama/kategori — #{islem_id}", islem_id=islem_id)
         flash('✅ İşlem güncellendi.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.panel'))
 
 
@@ -178,7 +191,7 @@ def islem_duzelt(islem_id):
         _log("UPDATE", f"Finans işlem düzeltildi — #{islem_id} → #{yeni.id}", islem_id=islem_id)
         flash(f'✅ İşlem düzeltildi (eski kayıt iptal, yeni kayıt #{yeni.id}).', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.panel'))
 
 
@@ -212,7 +225,7 @@ def gelir_ekle():
         _log("CREATE", f"Finans gelir — {islem.aciklama}: {tutar}₺", tutar=str(tutar))
         flash(f'✅ Gelir eklendi, Beyazıt bakiyesi {islem.yeni_bakiye:.2f} ₺ oldu.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.gelir'))
 
 
@@ -252,7 +265,7 @@ def kucuk_gider_ekle():
         _log("CREATE", f"Finans küçük gider — {islem.aciklama}: {tutar}₺ ({islem.hesap.ad})", tutar=str(tutar))
         flash(f'✅ Gider kaydedildi, {islem.hesap.ad} bakiyesi {islem.yeni_bakiye:.2f} ₺ oldu.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.kucuk_gider'))
 
 
@@ -299,7 +312,7 @@ def ana_gider_ode():
         _log("CREATE", f"Finans ana gider ödendi — {islem.aciklama}: {tutar}₺ ({islem.hesap.ad})", tutar=str(tutar))
         flash(f'✅ {islem.kalem.ad} ödendi, {islem.hesap.ad} bakiyesi {islem.yeni_bakiye:.2f} ₺ oldu.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.ana_gider', donem=donem[:7] or None))
 
 
@@ -319,7 +332,7 @@ def kalem_ekle():
         _log("CREATE", f"Finans ana gider kalemi — {kalem.ad}")
         flash(f'✅ "{kalem.ad}" kalemi eklendi.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.ana_gider'))
 
 
@@ -341,7 +354,7 @@ def kalem_guncelle(kalem_id):
         _log("UPDATE", f"Finans ana gider kalemi güncellendi — {kalem.ad}", kalem_id=kalem_id)
         flash(f'✅ "{kalem.ad}" güncellendi.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.ana_gider'))
 
 
@@ -355,7 +368,7 @@ def kalem_pasif(kalem_id):
         _log("UPDATE", f"Finans ana gider kalemi {'aktif' if aktif else 'pasif'} — {kalem.ad}", kalem_id=kalem_id)
         flash(f'✅ "{kalem.ad}" {"yeniden aktif" if aktif else "pasife alındı"}.', 'success')
     except FinansHata as e:
-        flash(str(e), 'danger')
+        _hata_flash(e)
     return _geri(url_for('finans.ana_gider'))
 
 
