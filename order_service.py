@@ -297,6 +297,13 @@ def process_all_orders(all_orders_data):
             logger.info("İşlenecek sipariş verisi yok.")
             return
 
+        # Soru-Cevap kartı için sipariş no → customerId eşlemesi (arşivdekiler dahil; hata senkronu durdurmaz)
+        try:
+            from trendyol_qna.siparis_musteri import musteri_siparislerini_kaydet
+            musteri_siparislerini_kaydet(all_orders_data)
+        except Exception as e:
+            logger.error(f"Müşteri-sipariş eşlemesi hatası: {e}", exc_info=True)
+
         archived_numbers = set(
             o.order_number for o in Archive.query.with_entities(Archive.order_number).all()
         )

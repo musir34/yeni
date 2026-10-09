@@ -495,5 +495,7 @@ def ensure_table_exists() -> None:
     """Tablo yoksa oluştur (migration çalışmadıysa yedek)."""
     try:
         TrendyolQuestion.__table__.create(bind=db.engine, checkfirst=True)
+        from models import TrendyolSiparisMusteri
+        TrendyolSiparisMusteri.__table__.create(bind=db.engine, checkfirst=True)
     except Exception:
         logger.exception("[QNA] tablo oluşturma hatası")

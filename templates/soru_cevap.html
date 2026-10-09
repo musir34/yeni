@@ -453,11 +453,34 @@
   html.gs-dark .qna-rejected { background:#2b1f20; border-color:#4a3031; }
   html.gs-dark .qna-empty,html.gs-dark .qna-error { background:rgba(29,31,36,.55); border-color:var(--qna-line); }
   html.gs-dark .qna-skeleton span { background:linear-gradient(90deg,#23252a 25%,#2b2d33 40%,#23252a 60%); background-size:300% 100%; }
+  .qna-siparisler { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:-6px 0 14px; font-size:.73rem; color:var(--qna-muted); }
+  .qna-siparis-btn { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:999px; cursor:pointer;
+    border:1px solid var(--qna-line); background:transparent; color:var(--qna-ink); font-size:.72rem; font-weight:600; }
+  .qna-siparis-btn:hover { border-color:var(--bs-primary); color:var(--bs-primary); }
+  .qna-siparis-btn--bu { border-color:rgba(25,135,84,.55); background:rgba(25,135,84,.08); }
+  .qna-siparis-etiket { font-size:.64rem; font-weight:700; color:#198754; }
+  .qna-sip-kalem { display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--bs-border-color); }
+  .qna-sip-kalem img,.qna-sip-kalem .qna-img-placeholder { width:64px; height:64px; flex:0 0 64px; border-radius:10px; object-fit:cover; }
+  .qna-sip-kalem--bu { background:rgba(25,135,84,.06); border-radius:10px; padding-left:6px; }
+  .qna-sip-tablo { font-size:.8rem; margin:0; }
+  .qna-sip-tablo th { color:var(--bs-secondary-color); font-weight:600; padding-right:10px; white-space:nowrap; }
   @media (prefers-reduced-motion:reduce) {
     .qna-skeleton span { animation:none; }
     .qna-icon-btn,.qna-sync-btn,.qna-card,.qna-send-btn { transition:none; }
   }
 </style>
+
+<div class="modal fade" id="qnaSiparisModal" tabindex="-1" aria-labelledby="qnaSiparisBaslik" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="qnaSiparisBaslik">Sipariş</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+      </div>
+      <div class="modal-body" id="qnaSiparisGovde"></div>
+    </div>
+  </div>
+</div>
 
 <script>
 (function() {
@@ -484,6 +507,47 @@
     return s.uretim_modu
       ? ' <span class="qna-uretim" title="Bu model üretim modunda: stokta görünmese de sipariş alınır, üretilip gönderilir"><i class="bi bi-gear-fill"></i> Üretimde</span>'
       : '';
+  }
+
+  // Soruyu soranın Trendyol siparişleri (kart düğmesi → ayrıntı penceresi)
+  const SIPARISLER = {};
+  function siparisSeridi(s) {
+    const liste = s.siparisler || [];
+    SIPARISLER[s.id] = {model: s.product_main_id || '', liste};
+    if (!liste.length) return '';
+    return `<div class="qna-siparisler"><i class="bi bi-bag"></i> Siparişleri:
+      ${liste.map((o, i) => `<button type="button" class="qna-siparis-btn${o.bu_model ? ' qna-siparis-btn--bu' : ''}"
+          data-qid="${s.id}" data-i="${i}" title="${esc(o.durum || '')}${o.tarih ? ' · ' + esc(o.tarih) : ''}">
+          #${esc(o.no)}${o.bu_model ? ' <span class="qna-siparis-etiket">bu ürün</span>' : ''}</button>`).join('')}
+    </div>`;
+  }
+
+  function siparisGoster(b) {
+    const kayit = SIPARISLER[b.dataset.qid] || {model: '', liste: []};
+    const o = kayit.liste[+b.dataset.i];
+    if (!o) return;
+    const soruModel = kayit.model;
+    document.getElementById('qnaSiparisBaslik').textContent = `Sipariş #${o.no}`;
+    const kalemler = (o.kalemler || []).map(k => `
+      <div class="qna-sip-kalem${k.model && k.model === soruModel ? ' qna-sip-kalem--bu' : ''}">
+        ${k.gorsel ? `<img src="${esc(k.gorsel)}" alt="${esc(k.urun || 'Ürün')}" loading="lazy">`
+                   : '<span class="qna-img-placeholder"><i class="bi bi-image"></i></span>'}
+        <table class="qna-sip-tablo">
+          <tr><th>Model kodu</th><td>${esc(k.model || '-')}</td></tr>
+          <tr><th>Renk</th><td>${esc(k.renk || '-')}</td></tr>
+          <tr><th>Beden</th><td>${esc(k.beden || '-')}${k.adet ? ` · ${esc(k.adet)} adet` : ''}</td></tr>
+          <tr><th>Barkod</th><td>${esc(k.barkod || '-')}</td></tr>
+        </table>
+      </div>`).join('');
+    document.getElementById('qnaSiparisGovde').innerHTML = `
+      <table class="qna-sip-tablo mb-3">
+        <tr><th>Durum</th><td>${esc(o.durum || '-')}</td></tr>
+        ${o.tarih ? `<tr><th>Sipariş tarihi</th><td>${esc(o.tarih)}</td></tr>` : ''}
+        <tr><th>Alıcı</th><td>${esc(o.alici || '-')}</td></tr>
+        <tr><th>Adres</th><td>${esc(o.adres || '-')}</td></tr>
+      </table>
+      ${kalemler || '<div class="text-muted small">Bu sipariş panele düşmemiş; ayrıntı yok.</div>'}`;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('qnaSiparisModal')).show();
   }
 
   function cardHtml(s) {
@@ -582,6 +646,7 @@
               <span><i class="bi bi-person"></i>${esc(s.user_name || 'Müşteri')}</span>
               ${s.creation_date ? `<span><i class="bi bi-clock"></i>${esc(s.creation_date)}</span>` : ''}
             </div>
+            ${siparisSeridi(s)}
             ${(s.mesajlar || []).length
               ? `<span class="qna-section-label">Müşterinin soruları</span>
                  <div class="qna-thread">${s.mesajlar.map(m => {
@@ -1158,6 +1223,7 @@
     list.querySelectorAll('.qna-urun-sec, .qna-urun-kaldir, .qna-urun-metin').forEach(b => b.addEventListener('click', () => urunBagla(b)));
     list.querySelectorAll('.qna-urun-ara').forEach(i => i.addEventListener('input', () => urunAra(i)));
     list.querySelectorAll('.qna-instagram-send').forEach(b => b.addEventListener('click', () => sendInstagram(b)));
+    list.querySelectorAll('.qna-siparis-btn').forEach(b => b.addEventListener('click', () => siparisGoster(b)));
     list.querySelectorAll('.qna-thread').forEach(t => { t.scrollTop = t.scrollHeight; });
     list.querySelectorAll('.qna-shopify-send').forEach(b => b.addEventListener('click', () => sendShopify(b, false)));
     list.querySelectorAll('.qna-shopify-done').forEach(b => b.addEventListener('click', () => sendShopify(b, true)));

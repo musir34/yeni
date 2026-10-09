@@ -88,9 +88,21 @@ def uretim_modelleri() -> set[str]:
         return set()
 
 
+def _soru_siparisleri(r: TrendyolQuestion, nolar: list[str], ozetler: dict[str, dict]) -> list[dict]:
+    """Soruyu soranın siparişleri; sorulan modeli içerenler başta (bu_model işaretli)."""
+    siparisler = []
+    for no in nolar:
+        o = ozetler.get(no) or {"no": no, "tarih": None, "durum": "Panelde yok",
+                                "alici": "", "adres": "", "kalemler": []}
+        bu_model = bool(r.product_main_id) and any(k.get("model") == r.product_main_id for k in o["kalemler"])
+        siparisler.append({**o, "bu_model": bu_model})
+    return sorted(siparisler, key=lambda s: not s["bu_model"])
+
+
 def _to_dict(r: TrendyolQuestion, gecmis: list[TrendyolQuestion] | None = None,
-             uretim: set[str] | None = None) -> dict:
+             uretim: set[str] | None = None, siparisler: list[dict] | None = None) -> dict:
     return {
+        "siparisler": siparisler or [],
         "mesajlar": _trendyol_yazisma(r, gecmis or []),
         "uretim_modu": bool(r.product_main_id) and r.product_main_id in (uretim or set()),
         "id": r.id,
@@ -422,9 +434,14 @@ def sorular():
     from trendyol_qna.qna_service import musteri_gecmisi
     t_gecmis = musteri_gecmisi(r.customer_id for r in t_rows)
     uretim = uretim_modelleri() if (t_rows or sh_rows) else set()
+    from trendyol_qna.siparis_musteri import musteri_siparis_nolari, siparis_ozetleri
+    t_siparis_no = musteri_siparis_nolari(r.customer_id for r in t_rows)
+    t_ozet = siparis_ozetleri([n for nolar in t_siparis_no.values() for n in nolar], _tr)
 
     merged = sorted(
-        [(_key(r.creation_date), _to_dict(r, t_gecmis.get(r.customer_id), uretim)) for r in t_rows]
+        [(_key(r.creation_date), _to_dict(r, t_gecmis.get(r.customer_id), uretim,
+                                          _soru_siparisleri(r, t_siparis_no.get(r.customer_id, []), t_ozet)))
+         for r in t_rows]
         + [(_key(r.created_at), _shopify_to_dict(r, uretim)) for r in sh_rows]
         + [(_key(r.last_message_at), _instagram_to_dict(r, ig_mesaj.get(r.id, []), ig_bag.get(r.id)))
            for r in ig_rows]

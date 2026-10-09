@@ -803,6 +803,18 @@ class SiparisNotu(db.Model):
         return f"<SiparisNotu {self.order_number}>"
 
 
+# Trendyol sipariş no → müşteri hesabı (customerId). Soru-Cevap kartında soruyu soranın
+# siparişlerini göstermek için (soru API'si sipariş no vermez, ortak anahtar customerId).
+# Sipariş satırları statü değişiminde tablolar arasında taşındığından ayrı tabloda tutulur.
+# Tablo additive: trendyol_qna.qna_service.ensure_table_exists (checkfirst).
+class TrendyolSiparisMusteri(db.Model):
+    __tablename__ = 'trendyol_siparis_musteri'
+    order_number = db.Column(db.String(50), primary_key=True)
+    customer_id = db.Column(db.BigInteger, nullable=False, index=True)
+    order_date = db.Column(db.DateTime, nullable=True)   # naive UTC
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class UretimDogrulama(db.Model):
     """Üretim kalemi doğrulama okutması: paketlemede üretilen ürünün barkodu
     ADET ADET okutulur (yanlış ürün gitmesin). Stok düşümü YOKTUR — ürün raftan
