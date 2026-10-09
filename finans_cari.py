@@ -91,7 +91,7 @@ def cari_detay(cari_id):
                            para_etiket=cs.PARA_ETIKET, sembol=cs.sembol(cari),
                            hareket_var=cari.hareketler.first() is not None,  # iptaller dahil (servis kilidiyle aynı)
                            hareket_etiket=cs.HAREKET_ETIKET, bugun=_bugun_ist(),
-                           calisan_haklari=hakedis_satirlari(cari_id=cari_id) if cari.tur == 'calisan' else [],
+                           calisan_haklari=hakedis_satirlari(cari_id=cari_id) if cari.tur in ('calisan', 'sahsi') else [],
                            calisan_borc_kalan=cs.calisan_borc_kalan(cari_id) if cari.tur == 'calisan' else 0)
 
 

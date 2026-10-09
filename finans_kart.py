@@ -6,6 +6,8 @@ Kart "kredi_karti" borç hesabıdır (bakiye eksi = kart borcu). Aylık İşbank
 (PDF) yüklenir; satırlar önizlenir, tür/kategori seçilir, mevcut kayıtla eşleşenler (tutar + ±3 gün)
 "zaten kayıtlı" diye tiksiz gelir. Kaydet: işletme gideri → kucuk_gider, şahsi → kart_sahsi,
 iade → kart_iade, bankadan/elden ödeme → transfer, nakit avans → transfer Kart → Elde.
+Şahsi satırda isteğe bağlı şahsi cari seçilir: kart_sahsi işlemine bağlı `borc_alma` cari hareketi yazılır
+(kişinin kasaya borcu artar; iptal iki tarafı birlikte geri alır). Yalnız aktif, TL, 'sahsi' türü cari.
 Mutabakat: ekstre borcu ↔ yükleme sonrası kart bakiyesi; fark elle satır ekleyerek ya da
 düzeltme kaydıyla kapatılabilir (komutan: "mutabakata manuel müdahale şansım olmalı").
 Satıcı hafızası PlatformConfig 'finans_kart' torbasında (takip_notu deseni, migration yok).
@@ -23,7 +25,8 @@ from finans_service import FinansHata
 from finans_kart_parser import (ekstre_ayristir, pdf_metni, tutar_cevir, satici_anahtari, oneri_tur,
                                 TURLER, TUR_ETIKET, TUR_GIDER, TUR_SAHSI, TUR_ODEME_BANKA,
                                 TUR_ODEME_ELDE, TUR_IADE, TUR_NAKIT, TUR_ATLA)
-from models import db, FinansIslem, PlatformConfig
+from models import db, FinansCari, FinansIslem, PlatformConfig
+import finans_cari_service as cs
 from time_utils import ist_to_utc, to_ist
 
 logger = logging.getLogger(__name__)
@@ -61,6 +64,35 @@ def hafiza_yaz(guncelle: dict) -> None:
     satici.update(guncelle)
     torba['satici'] = satici
     k.extra_config = torba   # JSON kolonu: yeni nesne atanmalı ki değişiklik algılansın
+
+
+def sahsi_cariler() -> list:
+    """Şahsi harcamanın düşebileceği cariler: aktif, TL, 'sahsi' türü."""
+    return (FinansCari.query.filter_by(tur='sahsi', aktif=True, para_birimi='TRY')
+            .order_by(FinansCari.ad).all())
+
+
+def hafiza_cari(kayit: dict, cari_idler: set):
+    """Hafızadaki şahsi satıcının carisi; tür şahsi değilse ya da cari artık listede yoksa None."""
+    if (kayit or {}).get('tur') != TUR_SAHSI:
+        return None
+    cid = kayit.get('cari_id')
+    return cid if cid in cari_idler else None
+
+
+def _sahsi_cari_getir(cari_id, kaynak: str) -> FinansCari:
+    """Kilitli getirir; şahsi/aktif/TL değilse FinansHata. Kilit sırası hesap → cari (kart önce kilitli)."""
+    try:
+        cari = cs.cari_getir(cari_id, kilitle=True)
+    except (ValueError, TypeError):
+        raise FinansHata(f'{kaynak}: cari hesap geçersiz.')
+    if cari.tur != 'sahsi':
+        raise FinansHata(f'{kaynak}: şahsi harcama yalnız şahsi cari hesaba yazılır ({cari.ad}).')
+    if not cari.aktif:
+        raise FinansHata(f'{kaynak}: {cari.ad} hesabı kapalı.')
+    if (cari.para_birimi or 'TRY') != 'TRY':
+        raise FinansHata(f'{kaynak}: {cari.ad} dolar hesabı; kart harcaması TL hesaba yazılır.')
+    return cari
 
 
 # ============================== #
@@ -105,7 +137,7 @@ def eslestir(satirlar: list, hareketler: list) -> dict:
     return sonuc
 
 
-def _onizleme_satirlari(ekstre, hafiza: dict, kategoriler: list) -> list[dict]:
+def _onizleme_satirlari(ekstre, hafiza: dict, kategoriler: list, cari_idler: set = frozenset()) -> list[dict]:
     hareketler = []
     if ekstre.satirlar:
         bas = min(s.tarih for s in ekstre.satirlar)
@@ -126,7 +158,7 @@ def _onizleme_satirlari(ekstre, hafiza: dict, kategoriler: list) -> list[dict]:
             'sira': s.sira, 'tarih_iso': s.tarih.isoformat(), 'tarih_str': s.tarih.strftime('%d.%m.%Y'),
             'aciklama': s.aciklama, 'tutar': s.tutar, 'tutar_str': f'{s.tutar:.2f}',
             'taksit': s.taksit, 'taksit_toplam': s.taksit_toplam, 'sanal': s.sanal_kart, 'satici': s.satici_anahtari,
-            'tur': tur, 'kategori_id': kategori_id, 'hafizadan': bool(h),
+            'tur': tur, 'kategori_id': kategori_id, 'cari_id': hafiza_cari(h, cari_idler), 'hafizadan': bool(h),
             'eslesen': e, 'eslesen_metin': (f'{to_ist(e.tarih).strftime("%d.%m")} · {fs.ISLEM_TUR_ETIKET.get(e.tur, e.tur)}'
                                              f' · {(e.aciklama or "")[:40]}') if e else '',
             'secili': e is None,
@@ -150,6 +182,7 @@ def _sayfa_ctx() -> dict:
     son = (FinansIslem.query.filter_by(hesap_id=kart.id, iptal=False)
            .order_by(FinansIslem.tarih.desc(), FinansIslem.id.desc()).limit(12).all())
     return {'kart': kart, 'son_hareketler': son, 'kategoriler': fs.kategoriler('kucuk_gider'),
+            'sahsi_cariler': sahsi_cariler(),
             'tur_etiket': TUR_ETIKET, 'turler': TURLER, 'satirlar': None, 'bugun': _bugun_ist()}
 
 
@@ -182,7 +215,8 @@ def kart_ekstre():
         flash(f'Ekstrede {len(ekstre.satirlar)} satır var; en çok {EN_COK_SATIR} satır yüklenebilir.', 'danger')
         return redirect(url_for('finans.kart_ekstre'))
 
-    satirlar = _onizleme_satirlari(ekstre, hafiza_oku(), ctx['kategoriler'])
+    satirlar = _onizleme_satirlari(ekstre, hafiza_oku(), ctx['kategoriler'],
+                                   {c.id for c in ctx['sahsi_cariler']})
     secili_net = sum((s['tutar'] for s in satirlar if s['secili']), Decimal('0.00'))
     ctx.update({
         'satirlar': satirlar, 'ekstre': ekstre, 'dosya_adi': dosya.filename,
@@ -205,6 +239,7 @@ def _form_satirlari(f) -> list[dict]:
                 'tutar': Decimal(f.get(f'tutar_{sira}', '0')),
                 'tur': f.get(f'tur_{sira}', TUR_ATLA),
                 'kategori_id': f.get(f'kategori_{sira}') or None,
+                'cari_id': f.get(f'cari_{sira}') or None,
                 'kaynak': f'satır {sira}',
             })
         except Exception as exc:
@@ -221,6 +256,7 @@ def _form_satirlari(f) -> list[dict]:
                 'tutar': tutar_cevir(tutar_ham) if ',' in tutar_ham else Decimal(tutar_ham),
                 'tur': f.getlist('ek_tur')[i] if i < len(f.getlist('ek_tur')) else TUR_GIDER,
                 'kategori_id': (f.getlist('ek_kategori')[i] if i < len(f.getlist('ek_kategori')) else '') or None,
+                'cari_id': (f.getlist('ek_cari')[i] if i < len(f.getlist('ek_cari')) else '') or None,
                 'kaynak': f'elle eklenen {i + 1}',
             })
         except Exception as exc:
@@ -257,7 +293,10 @@ def satirlari_kaydet(satirlar: list[dict], kullanici_id: int) -> dict:
                 raise FinansHata(f"{s['kaynak']} ({s['aciklama'][:30]}): işletme gideri için kategori seçin.")
             fs.kucuk_gider_ekle(KART_HESABI, s['kategori_id'], None, s['aciklama'], tutar, tarih, kullanici_id, commit=False)
         elif tur == TUR_SAHSI:
-            fs._hareket(kart, 'kart_sahsi', -1, tutar, tarih, kullanici_id, aciklama=s['aciklama'])
+            cari = _sahsi_cari_getir(s['cari_id'], s['kaynak']) if s.get('cari_id') else None
+            islem = fs._hareket(kart, 'kart_sahsi', -1, tutar, tarih, kullanici_id, aciklama=s['aciklama'])
+            if cari is not None:
+                cs._cari_hareket(cari, 'borc_alma', tutar, tarih, s['aciklama'], kullanici_id, islem_id=islem.id)
         elif tur == TUR_IADE:
             fs._hareket(kart, 'kart_iade', +1, tutar, tarih, kullanici_id, aciklama=s['aciklama'])
         elif tur == TUR_ODEME_BANKA:
@@ -271,6 +310,8 @@ def satirlari_kaydet(satirlar: list[dict], kullanici_id: int) -> dict:
             anahtar = satici_anahtari(s['aciklama'])
             if anahtar:
                 ogrenilen[anahtar] = {'tur': tur, 'kategori_id': int(s['kategori_id']) if s['kategori_id'] else None}
+                if tur == TUR_SAHSI:
+                    ogrenilen[anahtar]['cari_id'] = int(s['cari_id']) if s.get('cari_id') else None
     hafiza_yaz(ogrenilen)
     db.session.refresh(kart)
     return {'eklenen': eklenen, 'atlanan': atlanan, 'bakiye': Decimal(str(kart.bakiye or 0))}

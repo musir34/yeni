@@ -73,7 +73,7 @@
 <div class="mb-2"><label for="fnYeniCalisan" class="form-label fn-mini">Bu ödeme kimin için?</label><select name="calisan" id="fnYeniCalisan" class="form-select"><option value="0">Diğer gider</option><option value="1">Çalışan ödemesi</option></select></div>
           <div data-calisan-alan hidden class="mb-3">
             <label for="fnYeniCari" class="form-label fn-mini">Çalışan</label>
-            <select name="calisan_cari_id" id="fnYeniCari" class="form-select"><option value="">Yeni çalışan ekle</option>{% for c in calisan_cariler %}<option value="{{ c.id }}">{{ c.ad }}</option>{% endfor %}</select>
+            <select name="calisan_cari_id" id="fnYeniCari" class="form-select"><option value="">Yeni çalışan ekle</option>{% for c in calisan_cariler %}<option value="{{ c.id }}">{{ c.ad }}{{ ' (şahsi)' if c.tur == 'sahsi' }}</option>{% endfor %}</select>
             <div data-calisan-ad-alan class="mt-2"><label for="fnYeniCalisanAd" class="form-label fn-mini">Çalışanın adı</label><input type="text" name="calisan_adi" id="fnYeniCalisanAd" class="form-control" maxlength="150" placeholder="Ad soyad"></div>
             <div class="form-text">Cari hesap otomatik açılır. Başlangıçtan itibaren vadesi gelen sabit hak edişler borca yazılır; eksik ödemeler borç olarak kalır.</div>
           </div>
@@ -138,7 +138,7 @@
 <div class="mb-2"><label for="fnKlCalisan" class="form-label fn-mini">Bu ödeme kimin için?</label><select name="calisan" id="fnKlCalisan" class="form-select"><option value="0">Diğer gider</option><option value="1">Çalışan ödemesi</option></select></div>
           <div data-calisan-alan hidden class="mb-3">
             <label for="fnKlCari" class="form-label fn-mini">Çalışan</label>
-            <select name="calisan_cari_id" id="fnKlCari" class="form-select"><option value="">Yeni çalışan ekle</option>{% for c in calisan_cariler %}<option value="{{ c.id }}">{{ c.ad }}</option>{% endfor %}</select>
+            <select name="calisan_cari_id" id="fnKlCari" class="form-select"><option value="">Yeni çalışan ekle</option>{% for c in calisan_cariler %}<option value="{{ c.id }}">{{ c.ad }}{{ ' (şahsi)' if c.tur == 'sahsi' }}</option>{% endfor %}</select>
             <div data-calisan-ad-alan class="mt-2"><label for="fnKlCalisanAd" class="form-label fn-mini">Çalışanın adı</label><input type="text" name="calisan_adi" id="fnKlCalisanAd" class="form-control" maxlength="150" placeholder="Ad soyad"></div>
             <div class="form-text">Cari hesap otomatik açılır. Başlangıçtan itibaren vadesi gelen sabit hak edişler borca yazılır; eksik ödemeler borç olarak kalır.</div>
           </div>

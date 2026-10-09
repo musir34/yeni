@@ -24,8 +24,18 @@ def _tutar(raw):
     return value
 
 
+MAAS_CARI_TURLERI = ('calisan', 'sahsi')   # şahsi: sahibin kendi hesabı; maaş kasa borcuyla mahsuplaşır
+
+
+def maas_carileri():
+    """Ödeme planına bağlanabilen cariler: açık, TL çalışan ve şahsi hesaplar."""
+    return (FinansCari.query.filter(FinansCari.tur.in_(MAAS_CARI_TURLERI), FinansCari.aktif.is_(True),
+                                    FinansCari.para_birimi == 'TRY')
+            .order_by(FinansCari.tur, FinansCari.ad).all())
+
+
 def cari_bagla(kalem, kullanici_id, calisan_adi='', cari_id=None):
-    """Plan kaydıyla aynı transaction; yalnız açık çalışan carisine bağlanır."""
+    """Plan kaydıyla aynı transaction; yalnız açık, TL çalışan ya da şahsi cariye bağlanır."""
     if kalem.calisan_cari_id:
         if cari_id and int(cari_id) != kalem.calisan_cari_id:
             raise fs.FinansHata('Çalışan bağlantısı değiştirilemez; ayrı bir ödeme planı açın.')
@@ -42,8 +52,9 @@ def cari_bagla(kalem, kullanici_id, calisan_adi='', cari_id=None):
                               olusturan_kullanici_id=kullanici_id)
             db.session.add(cari)
             db.session.flush()
-    if cari.tur != 'calisan' or not cari.aktif:
-        raise fs.FinansHata('Aynı isimli hesap çalışan hesabı değil veya kapalı; açık bir çalışan hesabı seçin.')
+    if cari.tur not in MAAS_CARI_TURLERI or not cari.aktif or (cari.para_birimi or 'TRY') != 'TRY':
+        raise fs.FinansHata('Seçilen hesap çalışan ya da şahsi TL hesabı değil veya kapalı; '
+                            'açık bir çalışan ya da şahsi hesap seçin.')
     kalem.calisan_cari_id = cari.id
     if not kalem.olusturan_kullanici_id:
         kalem.olusturan_kullanici_id = kullanici_id

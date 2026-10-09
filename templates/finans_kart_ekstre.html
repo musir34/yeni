@@ -110,7 +110,7 @@
     <div class="card-body p-0 fn-table-wrap">
       <table class="table table-sm table-hover fn-table fn-kart-tablo mb-0">
         <thead><tr><th style="width:2.5rem"><input type="checkbox" class="form-check-input" id="fnTumu" title="Tümünü seç/bırak"></th>
-          <th>Tarih</th><th>Açıklama</th><th class="text-end">Tutar</th><th>Tür</th><th>Kategori</th><th>Durum</th></tr></thead>
+          <th>Tarih</th><th>Açıklama</th><th class="text-end">Tutar</th><th>Tür</th><th>Kategori / Cari</th><th>Durum</th></tr></thead>
         <tbody>
         {% for s in satirlar %}
           <tr class="{{ 'fn-kayitli' if s.eslesen }}" data-satici="{{ s.satici }}">
@@ -123,9 +123,12 @@
             <td class="fn-num {{ 'fn-neg' if s.tutar > 0 else 'fn-pos' }}">{{ s.tutar | tl_format }}</td>
             <td><select name="tur_{{ s.sira }}" class="form-select form-select-sm fn-tur">
               {% for t in turler %}<option value="{{ t }}" {{ 'selected' if t == s.tur }}>{{ tur_etiket[t] }}</option>{% endfor %}</select></td>
-            <td><select name="kategori_{{ s.sira }}" class="form-select form-select-sm fn-kat" {{ 'disabled' if s.tur != 'gider' }}>
+            <td><select name="kategori_{{ s.sira }}" class="form-select form-select-sm fn-kat" {{ 'disabled' if s.tur != 'gider' }} {{ 'hidden' if s.tur == 'sahsi' }}>
               <option value="">— kategori —</option>
-              {% for k in kategoriler %}<option value="{{ k.id }}" {{ 'selected' if k.id == s.kategori_id }}>{{ k.ad }}</option>{% endfor %}</select></td>
+              {% for k in kategoriler %}<option value="{{ k.id }}" {{ 'selected' if k.id == s.kategori_id }}>{{ k.ad }}</option>{% endfor %}</select>
+              <select name="cari_{{ s.sira }}" class="form-select form-select-sm fn-cari" {{ 'hidden disabled' if s.tur != 'sahsi' }}>
+              <option value="">— cari yok —</option>
+              {% for c in sahsi_cariler %}<option value="{{ c.id }}" {{ 'selected' if c.id == s.cari_id }}>{{ c.ad }}</option>{% endfor %}</select></td>
             <td class="fn-mini">{% if s.eslesen %}<span class="badge bg-secondary">kayıtlı</span> {{ s.eslesen_metin }}{% elif s.hafizadan %}<span class="badge bg-info text-dark">hafızadan</span>{% else %}<span class="badge bg-success">yeni</span>{% endif %}</td>
           </tr>
         {% endfor %}
@@ -180,6 +183,8 @@
   var KATEGORILER = {{ kategoriler | map(attribute='id') | list | tojson }};
   var KATEGORI_AD = {{ kategoriler | map(attribute='ad') | list | tojson }};
   var TURLER = {{ turler | list | tojson }}, TUR_ETIKET = {{ tur_etiket | tojson }};
+  var CARILER = {{ sahsi_cariler | map(attribute='id') | list | tojson }};
+  var CARI_AD = {{ sahsi_cariler | map(attribute='ad') | list | tojson }};
   function fmt(n) { return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function say() {
     var adet = 0, net = 0;
@@ -201,24 +206,30 @@
       farkEl.className = 'fn-buyuk ' + (Math.abs(fark) < 0.005 ? 'fn-fark-sifir' : 'fn-fark-var');
     }
   }
+  // Şahsi harcamada kategori yerine şahsi cari listesi görünür
+  function alanGoster(tr, tur) {
+    var kat = tr.querySelector('.fn-kat, [name=ek_kategori]'), cari = tr.querySelector('.fn-cari');
+    if (kat) { kat.disabled = tur !== 'gider'; kat.hidden = tur === 'sahsi'; }
+    if (cari) { cari.disabled = tur !== 'sahsi'; cari.hidden = tur !== 'sahsi'; }
+  }
   function turDegisti(sel) {
-    var kat = sel.closest('tr').querySelector('.fn-kat, [name=ek_kategori]');
-    if (kat) kat.disabled = sel.value !== 'gider';
+    alanGoster(sel.closest('tr'), sel.value);
     say();
   }
   // Aynı satıcının (FACEBK, UBER EATS…) tüm satırlarına aynı tür/kategori: ilk ay 100 satırı tek tek sınıflamamak için
   function saticiyaYay(kaynakTr) {
     var key = kaynakTr.getAttribute('data-satici'); if (!key) return;
     var tur = kaynakTr.querySelector('.fn-tur').value, kat = kaynakTr.querySelector('.fn-kat').value;
+    var cari = kaynakTr.querySelector('.fn-cari').value;
     form.querySelectorAll('tr[data-satici]').forEach(function (tr) {
       if (tr === kaynakTr || tr.getAttribute('data-satici') !== key) return;
       var t = tr.querySelector('.fn-tur'), k = tr.querySelector('.fn-kat');
       if (t.value === 'odeme_banka' || t.value === 'odeme_elde' || t.value === 'iade' || t.value === 'nakit') return;
-      t.value = tur; k.value = kat; k.disabled = tur !== 'gider';
+      t.value = tur; k.value = kat; tr.querySelector('.fn-cari').value = cari; alanGoster(tr, tur);
     });
   }
   form.querySelectorAll('.fn-tur').forEach(function (s) { s.addEventListener('change', function () { turDegisti(s); if (s.closest('tr').hasAttribute('data-satici')) saticiyaYay(s.closest('tr')); }); });
-  form.querySelectorAll('.fn-kat').forEach(function (k) { k.addEventListener('change', function () { saticiyaYay(k.closest('tr')); }); });
+  form.querySelectorAll('.fn-kat, .fn-cari').forEach(function (k) { k.addEventListener('change', function () { if (k.closest('tr').hasAttribute('data-satici')) saticiyaYay(k.closest('tr')); }); });
   form.querySelectorAll('.fn-sec').forEach(function (k) { k.addEventListener('change', say); });
   var tumu = document.getElementById('fnTumu');
   tumu.addEventListener('change', function () { form.querySelectorAll('.fn-sec').forEach(function (k) { k.checked = tumu.checked; }); say(); });
@@ -226,12 +237,14 @@
     var tr = document.createElement('tr'); tr.className = 'fn-ek-satir';
     var turOpts = TURLER.map(function (t) { return '<option value="' + t + '"' + (t === 'gider' ? ' selected' : '') + '>' + TUR_ETIKET[t] + '</option>'; }).join('');
     var katOpts = '<option value="">— kategori —</option>' + KATEGORILER.map(function (id, i) { return '<option value="' + id + '">' + KATEGORI_AD[i].replace(/</g, '&lt;') + '</option>'; }).join('');
+    var cariOpts = '<option value="">— cari yok —</option>' + CARILER.map(function (id, i) { return '<option value="' + id + '">' + CARI_AD[i].replace(/</g, '&lt;') + '</option>'; }).join('');
     tr.innerHTML = '<td><button type="button" class="btn btn-sm btn-outline-danger fn-ek-sil" title="Satırı kaldır">×</button></td>'
       + '<td><input type="date" name="ek_tarih" class="form-control form-control-sm" required></td>'
       + '<td><input name="ek_aciklama" class="form-control form-control-sm" placeholder="Açıklama"></td>'
       + '<td><input name="ek_tutar" class="form-control form-control-sm text-end" placeholder="255,97" required></td>'
       + '<td><select name="ek_tur" class="form-select form-select-sm fn-tur">' + turOpts + '</select></td>'
-      + '<td><select name="ek_kategori" class="form-select form-select-sm">' + katOpts + '</select></td>'
+      + '<td><select name="ek_kategori" class="form-select form-select-sm">' + katOpts + '</select>'
+      + '<select name="ek_cari" class="form-select form-select-sm fn-cari" hidden disabled>' + cariOpts + '</select></td>'
       + '<td class="fn-mini"><span class="badge bg-warning text-dark">elle</span></td>';
     document.getElementById('fnEkSatirlar').appendChild(tr);
     tr.querySelector('.fn-ek-sil').addEventListener('click', function () { tr.remove(); say(); });

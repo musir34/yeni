@@ -186,6 +186,10 @@ def cari_guncelle(cari_id, ad: str, tur: str, telefon: str, notlar: str,
     if (c.tur == 'sahsi') != (tur == 'sahsi') and c.hareketler.first():
         raise FinansHata('Hareketi olan hesap şahsi hesaba çevrilemez (ya da tersi); ayrı bir hesap açın.')
     para_birimi = _para_birimi_kontrol(tur, para_birimi or c.para_birimi)
+    if c.tur == 'sahsi' and (tur != 'sahsi' or para_birimi != 'TRY'):
+        from models import FinansAnaGiderKalem
+        if FinansAnaGiderKalem.query.filter_by(calisan_cari_id=c.id).first():
+            raise FinansHata('Ödeme planı bağlı şahsi hesabın türü ya da para birimi değiştirilemez.')
     if para_birimi != (c.para_birimi or 'TRY') and c.hareketler.first():
         raise FinansHata('Hareketi olan hesabın para birimi değiştirilemez; yeni bir hesap açın.')
     try:
@@ -207,7 +211,7 @@ def cari_guncelle(cari_id, ad: str, tur: str, telefon: str, notlar: str,
 def cari_pasif(cari_id, aktif: bool = False) -> FinansCari:
     try:
         c = cari_getir(cari_id, kilitle=True)
-        if not aktif and c.tur == 'calisan':
+        if not aktif and c.tur in ('calisan', 'sahsi'):
             from models import FinansAnaGiderKalem
             if FinansAnaGiderKalem.query.filter_by(calisan_cari_id=c.id, aktif=True).first():
                 raise FinansHata('Önce çalışanın düzenli ödeme planını pasife alın.')

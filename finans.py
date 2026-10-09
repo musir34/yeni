@@ -276,7 +276,7 @@ def kucuk_gider_ekle():
 @login_required
 @roles_required('admin')
 def ana_gider():
-    from finans_calisan_service import hakedisleri_isle
+    from finans_calisan_service import hakedisleri_isle, maas_carileri
     hakedisleri_isle()
     try:
         donem = fs.parse_donem(request.args.get('donem'))
@@ -295,7 +295,7 @@ def ana_gider():
                            odenen=odenen, bekleyen=bekleyen, tum_kalemler=tum_kalemler,
                            kategoriler=fs.kategoriler('ana_gider'), bugun=_bugun_ist(),
                            belirsiz_adet=belirsiz_adet,
-                           calisan_cariler=FinansCari.query.filter_by(tur='calisan', aktif=True).order_by(FinansCari.ad).all())
+                           calisan_cariler=maas_carileri())
 
 
 @finans_bp.route('/ana-gider/ode', methods=['POST'])
