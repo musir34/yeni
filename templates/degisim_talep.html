@@ -224,9 +224,14 @@
                         <span class="text-muted">{{ urun.renk }} - {{ urun.beden }}</span><br>
                         <span class="text-muted">Barkod: {{ urun.barkod }}</span>
                       </div>
+                      <div class="d-flex flex-column align-items-end gap-1 align-self-start">
                       {% if urun.adet %}
-                        <span class="badge bg-secondary align-self-start">Adet: {{ urun.adet }}</span>
+                        <span class="badge bg-secondary">Adet: {{ urun.adet }}</span>
                       {% endif %}
+                      {% if urun.uretim %}
+                        <span class="badge" style="background:#f3dfe2;color:#A05F6A" title="Rafta yoktu — üretime yazıldı, etiket üretim ekranındaki doğrulama okutmasıyla açılır"><i class="fas fa-industry"></i> Üretimde</span>
+                      {% endif %}
+                      </div>
                     </div>
                     <div class="raf-line">
                       <span class="text-muted">Raf:</span>
@@ -271,6 +276,7 @@
               <div class="btn-group mb-2" role="group">
                 <form id="label-form-{{ exchange.degisim_no }}" action="{{ url_for('order_label') }}" method="post" target="_blank" class="d-inline">
                   <input type="hidden" name="order_number" value="{{ exchange.siparis_no }}">
+                  <input type="hidden" name="uretim_ref" value="DG-{{ exchange.degisim_no }}">
                   <input type="hidden" name="shipping_barcode" value="{{ exchange.kargo_kodu }}">
                   <input type="hidden" name="customer_name" value="{{ exchange.ad }}">
                   <input type="hidden" name="customer_surname" value="{{ exchange.soyad }}">

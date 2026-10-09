@@ -116,6 +116,7 @@
   <!-- Kargo çıktısı: sipariş hazırla ekranındaki /order-label formunun birebir alanları -->
   <form id="kargoForm" method="POST" action="{{ url_for('order_label') }}" target="_blank" hidden>
     <input type="hidden" name="order_number">
+    <input type="hidden" name="uretim_ref">
     <input type="hidden" name="shipping_barcode">
     <input type="hidden" name="cargo_provider">
     <input type="hidden" name="customer_name">
@@ -919,6 +920,7 @@
         // Site siparişi: adres etiketi (kargo kodu yok) — otomatik gönderim uygulanmaz
         const adres = !!kargo.adres_etiketi;
         document.getElementById('urKargoFirma').textContent = adres ? 'Site siparişi' : (kargo.cargo_provider || '-');
+        if (kargo.etiket_order_number) document.getElementById('urKargoNo').textContent = '#' + kargo.etiket_order_number + ' (değişim)';
         document.getElementById('urKargoKod').textContent = adres ? 'Adres etiketi' : kargo.shipping_barcode;
         document.getElementById('urKargoOtomatik').hidden = adres;
         document.getElementById('urKargoDialog').hidden = false;
@@ -937,7 +939,9 @@
     document.getElementById('urKargoYazdir').addEventListener('click', () => {
         if (!kargoAktif) return;
         const f = document.getElementById('kargoForm');
-        f.order_number.value = kargoAktif.order_number || '';
+        // Değişimde etiket orijinal sipariş numarasıyla basılır; kilit DG- kimliğiyle sorulur
+        f.order_number.value = kargoAktif.kargo.etiket_order_number || kargoAktif.order_number || '';
+        f.uretim_ref.value = kargoAktif.order_number || '';
         f.shipping_barcode.value = kargoAktif.kargo.shipping_barcode || '';
         f.cargo_provider.value = kargoAktif.kargo.cargo_provider || '';
         f.customer_name.value = kargoAktif.kargo.customer_name || '';

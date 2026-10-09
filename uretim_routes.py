@@ -150,6 +150,22 @@ def liste():
         except Exception:
             db.session.rollback()
             logger.warning("[URETIM] kargolanan kontrolü yapılamadı", exc_info=True)
+        # 🔁 Değişim sipariş tablolarına inmez — kargo/teslim kendi durumundan.
+        try:
+            from uretim_modu import DEGISIM_ONEK
+            from models import Degisim
+            dg_nolar = [r.order_number[len(DEGISIM_ONEK):] for r in rows
+                        if r.order_number.startswith(DEGISIM_ONEK)]
+            if dg_nolar:
+                for dno, durumu in (Degisim.query.filter(Degisim.degisim_no.in_(dg_nolar))
+                                    .with_entities(Degisim.degisim_no, Degisim.degisim_durumu)):
+                    if durumu == "Kargoya Verildi":
+                        kargoda_set.add(DEGISIM_ONEK + dno)
+                    elif durumu == "Teslim Edildi":
+                        teslim_set.add(DEGISIM_ONEK + dno)
+        except Exception:
+            db.session.rollback()
+            logger.warning("[URETIM] değişim kargo kontrolü yapılamadı", exc_info=True)
         kargolanan = kargoda_set | teslim_set
         if durum in ("uretilen", "uretildi"):
             rows = [r for r in rows if r.order_number not in kargolanan
@@ -245,6 +261,19 @@ def liste():
                 "customer_address": so.customer_address or "",
                 "adres_etiketi": True,
             })
+    # 🔁 Değişimden açılan kayıt: tam içerik + etiket bilgisi Degisim kaydından
+    # (değişim sayfasındaki etiket formuyla aynı alanlar; kargo kodu değişimin kodu).
+    from uretim_modu import DEGISIM_ONEK, degisim_kaydi, degisim_detay, degisim_kargo
+    for r in rows:
+        if not r.order_number.startswith(DEGISIM_ONEK) or r.order_number in detay_map:
+            continue
+        rec = degisim_kaydi(r.order_number)
+        if rec is None:
+            continue
+        det = degisim_detay(rec)
+        if det:
+            detay_map[r.order_number] = det
+        kargo_map.setdefault(r.order_number, degisim_kargo(rec))
     # Ürün özellikleri için Product haritası (görsel/başlık/model) — tek sorgu
     urun_map = {}
     if rows:
@@ -343,7 +372,9 @@ def liste():
                     "quantity": int(item.get("quantity", 1) or 1),
                     "uretim": bc in uretim_bcs,
                     "raflar": raf_map.get(bc, []),
-                    "toplandi": pick_key(r.order_number, bc) in okutulan_keys,
+                    # 🔁 Değişimde raftan kalem kayıt anında raftan tahsis edilmiştir
+                    "toplandi": (r.order_number.startswith(DEGISIM_ONEK)
+                                 or pick_key(r.order_number, bc) in okutulan_keys),
                     "dogrulanan": dogrulama_map.get((r.order_number, bc), 0),
                     "image_url": ((p.images or "").split(",")[0].strip() if (p and p.images) else ""),
                     "title": (p.title or "") if p else "",
@@ -710,6 +741,11 @@ def kargo_kodu(kayit_id: int):
         return jsonify({"success": False,
                         "message": f"Etiket kilitli: {len(eksik)} kalem henüz "
                                    f"okutulmadı. Ürün Özellikleri'nden okutun."}), 423
+    # 🔁 Değişim: kargo kodu + müşteri bilgisi Degisim kaydından.
+    from uretim_modu import degisim_kaydi, degisim_kargo
+    rec = degisim_kaydi(kayit.order_number)
+    if rec is not None:
+        return jsonify({"success": True, "kargo": degisim_kargo(rec)})
     # 🛍️ Site siparişi: adres etiketi (kargo kodu yok) — bilgi Shopify'dan.
     if kayit.order_number.startswith("SH-"):
         from uretim_modu import shopify_siparis

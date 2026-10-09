@@ -674,9 +674,12 @@ def order_label():
 
         # 🏭 Üretim kilidi: karma siparişte raftan kalemler okutulmadan etiket
         # verilmez (hangi ekrandan istenirse istensin). Hata → engel yok.
+        # uretim_ref: değişim etiketi orijinal sipariş numarasıyla basılır, üretim
+        # kaydı ise DG-<degisim_no> ile tutulur — kilit o kimlikle sorulur.
+        uretim_ref = (request.form.get('uretim_ref') or '').strip()
         try:
             from uretim_modu import eksik_raf_okutmalar
-            eksik = eksik_raf_okutmalar(order_number)
+            eksik = eksik_raf_okutmalar(uretim_ref or order_number)
         except Exception:
             eksik = []
         if eksik:
@@ -712,7 +715,7 @@ def order_label():
         try:
             from flask_login import current_user
             from models import UretimSiparis
-            u = UretimSiparis.query.filter_by(order_number=order_number).first()
+            u = UretimSiparis.query.filter_by(order_number=uretim_ref or order_number).first()
             if u and not u.hazirlayan and getattr(current_user, "is_authenticated", False):
                 u.hazirlayan = current_user.username
                 db.session.commit()

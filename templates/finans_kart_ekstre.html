@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block title %}Kredi Kartı - Finans{% endblock %}
+{% block extra_css %}
+<style>
+  .fn-drop { border: 2px dashed #adb5bd; border-radius: 12px; padding: 2rem; text-align: center; cursor: pointer; transition: .15s; }
+  .fn-drop:hover, .fn-drop.fn-over { border-color: #0d6efd; background: rgba(13,110,253,.05); }
+  .fn-drop input { display: none; }
+  .fn-adim { display: inline-flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: #0d6efd; color: #fff; font-size: .8rem; font-weight: 700; margin-right: .5rem; }
+  .fn-kayitli td { opacity: .55; }
+  .fn-kart-tablo select { min-width: 9rem; }
+  .fn-kart-tablo .fn-tur { min-width: 11rem; }
+  .fn-mutabakat { font-variant-numeric: tabular-nums; }
+  .fn-mutabakat .fn-buyuk { font-size: 1.35rem; font-weight: 700; }
+  .fn-fark-sifir { color: #198754; } .fn-fark-var { color: #dc3545; }
+  .fn-ek-satir input, .fn-ek-satir select { font-size: .85rem; }
+</style>
+{% endblock %}
+{% block content %}
+{% include '_finans_nav.html' %}
+
+<div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+  <h5 class="mb-0">💳 {{ kart.ad }}
+    <span class="fn-mini fw-normal">kart borcu:</span>
+    <span class="{{ 'text-danger' if kart.bakiye < 0 else 'text-success' }}">{{ (-kart.bakiye) | tl_format }} ₺</span>
+  </h5>
+  <a href="{{ url_for('finans.defter', hesap_kodu='kredi_karti') }}" class="btn btn-outline-secondary btn-sm ms-auto"><i class="fas fa-book me-1"></i>Kart defteri</a>
+</div>
+
+{% if satirlar is none %}
+<div class="row">
+  <div class="col-lg-7">
+    <div class="card fn-card mb-3">
+      <div class="card-header fw-bold">📥 Aylık ekstre yükle</div>
+      <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+          <label class="fn-drop d-block" id="fnDrop">
+            <input type="file" name="pdf_file" accept=".pdf,application/pdf" required id="fnFile">
+            <div class="fs-1">📄</div>
+            <div id="fnDropText">Kart ekstresi PDF'ini buraya bırakın ya da tıklayıp seçin</div>
+            <div class="fn-mini">İşbankası Maximum "Hesap Özetiniz" PDF'i</div>
+          </label>
+          <button class="btn btn-primary w-100 mt-3"><span class="fn-adim" style="background:#fff;color:#0d6efd">1</span>Önizle — hiçbir şey kaydedilmez</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card fn-card">
+      <div class="card-header fw-bold">🛠️ Elle mutabakat düzeltmesi</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('finans.kart_duzelt') }}" class="row g-2 align-items-end">
+          <div class="col-sm-3"><label class="form-label fn-mini mb-0">Tarih</label><input type="date" name="tarih" class="form-control form-control-sm" value="{{ bugun or '' }}" required></div>
+          <div class="col-sm-3"><label class="form-label fn-mini mb-0">Yön</label>
+            <select name="yon" class="form-select form-select-sm"><option value="artir">Kart borcunu artır</option><option value="azalt">Kart borcunu azalt</option></select></div>
+          <div class="col-sm-2"><label class="form-label fn-mini mb-0">Tutar</label><input name="tutar" class="form-control form-control-sm" placeholder="1.250,50" required></div>
+          <div class="col-sm-4"><label class="form-label fn-mini mb-0">Neden (zorunlu)</label><input name="aciklama" class="form-control form-control-sm" placeholder="Ekstrede okunamayan satır…" required></div>
+          <div class="col-12"><button class="btn btn-outline-dark btn-sm">Düzeltmeyi yaz</button>
+            <span class="fn-mini ms-2">Kart defterinde "Kart Mutabakat Düzeltmesi" olarak görünür, tek tek iptal edilebilir.</span></div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card fn-card mb-3">
+      <div class="card-header fw-bold">Nasıl çalışır?</div>
+      <div class="card-body fn-mini">
+        <ul class="mb-0 ps-3">
+          <li>Ekstredeki her satır önizlenir: <b>işletme gideri</b> (kategorili, raporlara girer), <b>şahsi</b> (kart borcunu artırır, raporlara girmez), <b>ödeme</b> (Banka/Elde → Kart), <b>iade</b>, <b>nakit avans</b> (Kart → Elde).</li>
+          <li>Sistemde zaten olan kayıt (aynı tutar, ±3 gün) "kayıtlı" gelir ve tiki kapalıdır; cariden kartla ödediğiniz tedarikçi böyle tanınır.</li>
+          <li>Satıcı bir kez sınıflanınca sonraki aylarda kendiliğinden gelir.</li>
+          <li>Taksitli alışveriş ekstredeki aylık dilimiyle yazılır; kartla taksitli alınan şeyi elle girmeyin.</li>
+          <li>Altta mutabakat: ekstre borcu ile yükleme sonrası kart bakiyesi karşılaştırılır. Fark varsa satır ekler/çıkarır ya da düzeltme kaydıyla kapatırsınız.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card fn-card">
+      <div class="card-header fw-bold">Son kart hareketleri</div>
+      <div class="card-body p-0 fn-table-wrap">
+        <table class="table table-sm fn-table mb-0">
+          <tbody>
+          {% for i in son_hareketler %}
+          <tr><td class="fn-mini text-nowrap">{{ i.tarih | ist('%d.%m.%Y') }}</td><td class="fn-mini">{{ fn_tur_etiket.get(i.tur, i.tur) }}</td>
+              <td class="fn-mini">{{ (i.aciklama or '')[:38] }}</td><td class="fn-num {{ 'fn-pos' if i.yon > 0 else 'fn-neg' }}">{{ (i.yon * i.tutar) | tl_format }}</td></tr>
+          {% else %}<tr><td class="fn-mini text-muted p-3">Henüz kart hareketi yok.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<form method="POST" action="{{ url_for('finans.kart_ekstre_kaydet') }}" id="fnKartForm">
+  <input type="hidden" name="dosya_adi" value="{{ dosya_adi }}">
+  <input type="hidden" name="ekstre_borc" value="{{ '%.2f' % ekstre.borc if ekstre.borc is not none else '' }}">
+  <input type="hidden" name="ekstre_kesim" value="{{ ekstre.kesim_tarihi.isoformat() if ekstre.kesim_tarihi else '' }}">
+  {# Bankadan karta ödeme satırları Banka bakiyesini eksiye düşürebilir; önizleme onayın kendisidir #}
+  <input type="hidden" name="bakiye_onay" value="1">
+
+  <div class="card fn-card mb-3">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <span><b>📄 {{ dosya_adi }}</b>
+        <span class="fn-mini">— kesim {{ ekstre.kesim_tarihi.strftime('%d.%m.%Y') if ekstre.kesim_tarihi else '?' }} · son ödeme {{ ekstre.son_odeme_tarihi.strftime('%d.%m.%Y') if ekstre.son_odeme_tarihi else '?' }} · {{ satirlar | length }} satır · {{ eslesen_adet }} zaten kayıtlı</span></span>
+      <span class="fn-mini">Seçili: <b id="fnSecAdet">{{ secili_adet }}</b> satır · net <b id="fnSecNet">{{ mutabakat.secili_net | tl_format }}</b> ₺</span>
+    </div>
+    {% if ic_fark is not none and ic_fark != 0 %}
+    <div class="alert alert-warning rounded-0 mb-0 py-2 fn-mini">⚠️ Ekstre eksik okundu: önceki bakiye + satırlar − borç = <b>{{ ic_fark | tl_format }} ₺</b>.
+      {% if ekstre.okunamayan %}Okunamayan satır: {% for o in ekstre.okunamayan %}<code>{{ o }}</code> {% endfor %}{% endif %}
+      Eksik satırı aşağıda "elle satır ekle" ile girebilirsiniz.</div>
+    {% endif %}
+    <div class="card-body p-0 fn-table-wrap">
+      <table class="table table-sm table-hover fn-table fn-kart-tablo mb-0">
+        <thead><tr><th style="width:2.5rem"><input type="checkbox" class="form-check-input" id="fnTumu" title="Tümünü seç/bırak"></th>
+          <th>Tarih</th><th>Açıklama</th><th class="text-end">Tutar</th><th>Tür</th><th>Kategori</th><th>Durum</th></tr></thead>
+        <tbody>
+        {% for s in satirlar %}
+          <tr class="{{ 'fn-kayitli' if s.eslesen }}" data-satici="{{ s.satici }}">
+            <td><input type="checkbox" class="form-check-input fn-sec" name="sec" value="{{ s.sira }}" data-tutar="{{ s.tutar_str }}" {{ 'checked' if s.secili }}>
+              <input type="hidden" name="tarih_{{ s.sira }}" value="{{ s.tarih_iso }}">
+              <input type="hidden" name="tutar_{{ s.sira }}" value="{{ s.tutar_str }}">
+              <input type="hidden" name="aciklama_{{ s.sira }}" value="{{ s.aciklama }}"></td>
+            <td class="text-nowrap fn-mini">{{ s.tarih_str }}</td>
+            <td>{{ s.aciklama }}{% if s.taksit %} <span class="badge bg-light text-dark border">{{ s.taksit }} taksit · {{ s.taksit_toplam | tl_format }}</span>{% endif %}{% if s.sanal %} <span class="badge bg-light text-dark border">sanal kart</span>{% endif %}</td>
+            <td class="fn-num {{ 'fn-neg' if s.tutar > 0 else 'fn-pos' }}">{{ s.tutar | tl_format }}</td>
+            <td><select name="tur_{{ s.sira }}" class="form-select form-select-sm fn-tur">
+              {% for t in turler %}<option value="{{ t }}" {{ 'selected' if t == s.tur }}>{{ tur_etiket[t] }}</option>{% endfor %}</select></td>
+            <td><select name="kategori_{{ s.sira }}" class="form-select form-select-sm fn-kat" {{ 'disabled' if s.tur != 'gider' }}>
+              <option value="">— kategori —</option>
+              {% for k in kategoriler %}<option value="{{ k.id }}" {{ 'selected' if k.id == s.kategori_id }}>{{ k.ad }}</option>{% endfor %}</select></td>
+            <td class="fn-mini">{% if s.eslesen %}<span class="badge bg-secondary">kayıtlı</span> {{ s.eslesen_metin }}{% elif s.hafizadan %}<span class="badge bg-info text-dark">hafızadan</span>{% else %}<span class="badge bg-success">yeni</span>{% endif %}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+        <tbody id="fnEkSatirlar"></tbody>
+      </table>
+    </div>
+    <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <button type="button" class="btn btn-outline-secondary btn-sm" id="fnEkEkle"><i class="fas fa-plus me-1"></i>Elle satır ekle</button>
+      <span class="fn-mini">Bir satırda tür/kategori seçince aynı satıcının diğer satırlarına da uygulanır. Elle eklenen satırlar ekstrede okunamayan ya da eksik kalanlar içindir.</span>
+    </div>
+  </div>
+
+  <div class="card fn-card mb-3">
+    <div class="card-header fw-bold">⚖️ Mutabakat</div>
+    <div class="card-body fn-mutabakat">
+      <div class="row text-center g-3">
+        <div class="col-md-3"><div class="fn-mini">Ekstre borcu</div><div class="fn-buyuk">{{ ekstre.borc | tl_format if ekstre.borc is not none else '?' }} ₺</div></div>
+        <div class="col-md-3"><div class="fn-mini">Şu anki kart borcu</div><div class="fn-buyuk">{{ (-mutabakat.kart_bakiye) | tl_format }} ₺</div></div>
+        <div class="col-md-3"><div class="fn-mini">Yükleme sonrası kart borcu</div><div class="fn-buyuk" id="fnSonrasi">{{ (-mutabakat.sonrasi) | tl_format }} ₺</div></div>
+        <div class="col-md-3"><div class="fn-mini">Fark (ekstre − sistem)</div>
+          <div class="fn-buyuk {{ 'fn-fark-sifir' if mutabakat.fark == 0 else 'fn-fark-var' }}" id="fnFark" data-hedef="{{ '%.2f' % mutabakat.hedef if mutabakat.hedef is not none else '' }}" data-bakiye="{{ '%.2f' % mutabakat.kart_bakiye }}">{{ mutabakat.fark | tl_format if mutabakat.fark is not none else '?' }} ₺</div></div>
+      </div>
+      <div class="form-check mt-3">
+        <input class="form-check-input" type="checkbox" name="duzeltme_kapat" value="1" id="fnDuzeltme" {{ 'disabled' if ekstre.borc is none }}>
+        <label class="form-check-label" for="fnDuzeltme">Kalan farkı <b>mutabakat düzeltme kaydıyla</b> kapat (kart borcu ekstreye eşitlenir; kayıt defterde ayrı görünür, iptal edilebilir)</label>
+      </div>
+      <input name="duzeltme_aciklama" class="form-control form-control-sm mt-2" placeholder="Düzeltme nedeni (örn. ekstrede okunamayan 255,97 ₺ Trendyol satırı)" maxlength="400">
+      <div class="fn-mini text-muted mt-2">Fark sıfırsa düzeltme yazılmaz. Önce satırları gözden geçirin: tik kaldırmak, tür değiştirmek ya da elle satır eklemek farkı çoğu zaman sıfırlar.</div>
+    </div>
+    <div class="card-footer d-flex justify-content-between flex-wrap gap-2">
+      <a href="{{ url_for('finans.kart_ekstre') }}" class="btn btn-outline-secondary">Vazgeç / başka dosya</a>
+      <button class="btn btn-success" id="fnKaydet"><i class="fas fa-check me-1"></i>Seçili satırları karta yaz</button>
+    </div>
+  </div>
+</form>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var drop = document.getElementById('fnDrop'), file = document.getElementById('fnFile');
+  if (drop) {
+    ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('fn-over'); }); });
+    ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('fn-over'); }); });
+    drop.addEventListener('drop', function (e) { if (e.dataTransfer.files.length) { file.files = e.dataTransfer.files; goster(); } });
+    file.addEventListener('change', goster);
+    function goster() { if (file.files[0]) document.getElementById('fnDropText').innerHTML = '<b>' + file.files[0].name.replace(/</g, '&lt;') + '</b>'; }
+  }
+  var form = document.getElementById('fnKartForm');
+  if (!form) return;
+  var KATEGORILER = {{ kategoriler | map(attribute='id') | list | tojson }};
+  var KATEGORI_AD = {{ kategoriler | map(attribute='ad') | list | tojson }};
+  var TURLER = {{ turler | list | tojson }}, TUR_ETIKET = {{ tur_etiket | tojson }};
+  function fmt(n) { return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function say() {
+    var adet = 0, net = 0;
+    form.querySelectorAll('.fn-sec').forEach(function (k) { if (k.checked) { adet++; net += parseFloat(k.getAttribute('data-tutar')) || 0; } });
+    form.querySelectorAll('.fn-ek-satir').forEach(function (tr) {
+      var t = (tr.querySelector('[name=ek_tutar]').value || '').trim().replace(/\./g, '').replace(',', '.');
+      var tur = tr.querySelector('[name=ek_tur]').value, v = parseFloat(t) || 0;
+      if (tur === 'odeme_banka' || tur === 'odeme_elde' || tur === 'iade') v = -Math.abs(v); else if (tur !== 'atla') v = Math.abs(v); else v = 0;
+      if (v) { adet++; net += v; }
+    });
+    document.getElementById('fnSecAdet').textContent = adet;
+    document.getElementById('fnSecNet').textContent = fmt(net);
+    var farkEl = document.getElementById('fnFark'), hedef = parseFloat(farkEl.getAttribute('data-hedef')), bakiye = parseFloat(farkEl.getAttribute('data-bakiye'));
+    var sonrasi = bakiye - net;
+    document.getElementById('fnSonrasi').textContent = fmt(-sonrasi) + ' ₺';
+    if (!isNaN(hedef)) {
+      var fark = Math.round((hedef - sonrasi) * 100) / 100;
+      farkEl.textContent = fmt(fark) + ' ₺';
+      farkEl.className = 'fn-buyuk ' + (Math.abs(fark) < 0.005 ? 'fn-fark-sifir' : 'fn-fark-var');
+    }
+  }
+  function turDegisti(sel) {
+    var kat = sel.closest('tr').querySelector('.fn-kat, [name=ek_kategori]');
+    if (kat) kat.disabled = sel.value !== 'gider';
+    say();
+  }
+  // Aynı satıcının (FACEBK, UBER EATS…) tüm satırlarına aynı tür/kategori: ilk ay 100 satırı tek tek sınıflamamak için
+  function saticiyaYay(kaynakTr) {
+    var key = kaynakTr.getAttribute('data-satici'); if (!key) return;
+    var tur = kaynakTr.querySelector('.fn-tur').value, kat = kaynakTr.querySelector('.fn-kat').value;
+    form.querySelectorAll('tr[data-satici]').forEach(function (tr) {
+      if (tr === kaynakTr || tr.getAttribute('data-satici') !== key) return;
+      var t = tr.querySelector('.fn-tur'), k = tr.querySelector('.fn-kat');
+      if (t.value === 'odeme_banka' || t.value === 'odeme_elde' || t.value === 'iade' || t.value === 'nakit') return;
+      t.value = tur; k.value = kat; k.disabled = tur !== 'gider';
+    });
+  }
+  form.querySelectorAll('.fn-tur').forEach(function (s) { s.addEventListener('change', function () { turDegisti(s); if (s.closest('tr').hasAttribute('data-satici')) saticiyaYay(s.closest('tr')); }); });
+  form.querySelectorAll('.fn-kat').forEach(function (k) { k.addEventListener('change', function () { saticiyaYay(k.closest('tr')); }); });
+  form.querySelectorAll('.fn-sec').forEach(function (k) { k.addEventListener('change', say); });
+  var tumu = document.getElementById('fnTumu');
+  tumu.addEventListener('change', function () { form.querySelectorAll('.fn-sec').forEach(function (k) { k.checked = tumu.checked; }); say(); });
+  document.getElementById('fnEkEkle').addEventListener('click', function () {
+    var tr = document.createElement('tr'); tr.className = 'fn-ek-satir';
+    var turOpts = TURLER.map(function (t) { return '<option value="' + t + '"' + (t === 'gider' ? ' selected' : '') + '>' + TUR_ETIKET[t] + '</option>'; }).join('');
+    var katOpts = '<option value="">— kategori —</option>' + KATEGORILER.map(function (id, i) { return '<option value="' + id + '">' + KATEGORI_AD[i].replace(/</g, '&lt;') + '</option>'; }).join('');
+    tr.innerHTML = '<td><button type="button" class="btn btn-sm btn-outline-danger fn-ek-sil" title="Satırı kaldır">×</button></td>'
+      + '<td><input type="date" name="ek_tarih" class="form-control form-control-sm" required></td>'
+      + '<td><input name="ek_aciklama" class="form-control form-control-sm" placeholder="Açıklama"></td>'
+      + '<td><input name="ek_tutar" class="form-control form-control-sm text-end" placeholder="255,97" required></td>'
+      + '<td><select name="ek_tur" class="form-select form-select-sm fn-tur">' + turOpts + '</select></td>'
+      + '<td><select name="ek_kategori" class="form-select form-select-sm">' + katOpts + '</select></td>'
+      + '<td class="fn-mini"><span class="badge bg-warning text-dark">elle</span></td>';
+    document.getElementById('fnEkSatirlar').appendChild(tr);
+    tr.querySelector('.fn-ek-sil').addEventListener('click', function () { tr.remove(); say(); });
+    tr.querySelector('[name=ek_tur]').addEventListener('change', function () { turDegisti(this); });
+    tr.querySelector('[name=ek_tutar]').addEventListener('input', say);
+  });
+  say();
+})();
+</script>
+{% endblock %}

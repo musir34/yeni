@@ -31,17 +31,19 @@ from time_utils import ist_to_utc, to_ist
 
 logger = logging.getLogger(__name__)
 
-HESAP_KODLARI = ('beyazit', 'elde', 'banka')
+HESAP_KODLARI = ('beyazit', 'elde', 'banka', 'kredi_karti')
 GELIR_HESABI = 'beyazit'
-GIDER_HESAPLARI = ('elde', 'banka')
+GIDER_HESAPLARI = ('elde', 'banka', 'kredi_karti')
+BORC_HESAPLARI = ('kredi_karti',)   # bakiyesi eksi olması normal (kart borcu); "emin misin?" sorulmaz
 KATEGORI_TURLERI = ('gelir', 'kucuk_gider', 'ana_gider')
 ISLEM_TURLERI = ('gelir', 'kucuk_gider', 'ana_gider', 'transfer_cikis', 'transfer_giris',
-                 'cari_odeme', 'cari_tahsilat')
+                 'cari_odeme', 'cari_tahsilat', 'kart_sahsi', 'kart_iade', 'kart_duzeltme')
 KATEGORI_TUR_ETIKET = {'gelir': 'Gelir', 'kucuk_gider': 'Günlük Harcamalar', 'ana_gider': 'Düzenli Ödemeler'}
 ISLEM_TUR_ETIKET = {
     'gelir': 'Gelir', 'kucuk_gider': 'Günlük Harcamalar', 'ana_gider': 'Düzenli Ödemeler',
     'transfer_cikis': 'Transfer (Çıkış)', 'transfer_giris': 'Transfer (Giriş)',
     'cari_odeme': 'Cari Ödeme', 'cari_tahsilat': 'Cari Tahsilat',
+    'kart_sahsi': 'Şahsi Kart Harcaması', 'kart_iade': 'Kart İadesi', 'kart_duzeltme': 'Kart Mutabakat Düzeltmesi',
 }
 IKI_HANE = Decimal('0.01')
 
@@ -222,7 +224,7 @@ def _hareket(hesap: FinansHesap, tur: str, yon: int, tutar: Decimal, tarih: date
     """Tek yerden bakiye değişimi. Hesap FOR UPDATE ile gelmiş olmalı. COMMIT ETMEZ."""
     onceki = Decimal(str(hesap.bakiye or 0))
     yeni = onceki + yon * tutar
-    if yeni < 0 and not bakiye_asimi_onayli():
+    if yeni < 0 and hesap.kod not in BORC_HESAPLARI and not bakiye_asimi_onayli():
         raise YetersizBakiye(f'Yetersiz bakiye: {hesap.ad} hesabında {onceki:.2f} ₺ var, {tutar:.2f} ₺ çıkılıyor; '
                              f'bakiye {yeni:.2f} ₺ olacak.')
     hesap.bakiye = yeni
@@ -402,7 +404,7 @@ def islem_iptal(islem_id: int, kullanici_id: int, neden: str = None,
             db.session.refresh(hesap)
             onceki = Decimal(str(hesap.bakiye or 0))
             yeni = onceki - b.yon * Decimal(str(b.tutar))
-            if yeni < 0 and not bakiye_asimi_onayli():
+            if yeni < 0 and hesap.kod not in BORC_HESAPLARI and not bakiye_asimi_onayli():
                 raise YetersizBakiye(f'{hesap.ad} bakiyesi {onceki:.2f} ₺, {b.tutar:.2f} ₺ geri alınırsa '
                                      f'bakiye {yeni:.2f} ₺ olacak.')
             hesap.bakiye = yeni

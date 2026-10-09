@@ -183,6 +183,63 @@ def shopify_siparis(order_number: str):
     return siparis
 
 
+# 🔁 Değişim kaynağı: değişimden açılan üretim kaydı DEGISIM_ONEK + degisim_no
+# numarasıyla tutulur (SH- site deseni gibi). Değişim sipariş tablolarına
+# inmez; içerik/müşteri/kargo kodu Degisim kaydından okunur.
+DEGISIM_ONEK = "DG-"
+
+
+def degisim_kaydi(order_number: str):
+    """DG- numaralı üretim kaydının Degisim satırı. Değil/bulunamadı/hata → None."""
+    order_number = str(order_number or "")
+    if not order_number.startswith(DEGISIM_ONEK):
+        return None
+    try:
+        from models import Degisim
+        return Degisim.query.filter_by(
+            degisim_no=order_number[len(DEGISIM_ONEK):]).first()
+    except Exception:
+        logger.warning("[URETIM] değişim kaydı okunamadı: %s", order_number, exc_info=True)
+        db.session.rollback()
+        return None
+
+
+def degisim_detay(rec) -> list[dict]:
+    """Degisim.urunler_json → sipariş details biçimi (barcode/quantity/sku/color/size).
+    Üretim ekranı karma görünüm + doğrulama bu biçimi bekler. Hata → []."""
+    try:
+        urunler = json.loads(rec.urunler_json) if rec and rec.urunler_json else []
+    except (json.JSONDecodeError, TypeError):
+        return []
+    if not isinstance(urunler, list):
+        return []
+    return [{
+        "barcode": str(u.get("barkod") or "").strip(),
+        "quantity": int(u.get("adet", 1) or 1),
+        "sku": u.get("model_kodu") or "",
+        "color": u.get("renk") or "",
+        "size": u.get("beden") or "",
+    } for u in urunler if str(u.get("barkod") or "").strip()]
+
+
+def degisim_kargo(rec) -> dict:
+    """Değişim kaydının etiket bilgisi — değişim sayfasındaki etiket formuyla aynı
+    alanlar; etiketteki sipariş no orijinal sipariştir (DG- iç kimliktir)."""
+    return {
+        "shipping_barcode": rec.kargo_kodu or "",
+        "cargo_provider": "Değişim",
+        "customer_name": rec.ad or "",
+        "customer_surname": rec.soyad or "",
+        "customer_address": rec.adres or "",
+        "etiket_order_number": rec.siparis_no or "",
+    }
+
+
+def degisim_kargolandi(rec) -> bool:
+    """Değişim kargoya verildi/teslim edildi mi (kendi durum alanından)."""
+    return (rec.degisim_durumu or "") in ("Kargoya Verildi", "Teslim Edildi")
+
+
 def _raf_stok_haritasi(barkodlar: list[str]) -> dict[str, int]:
     """Barkod → rafta toplam adet. Hata → boş harita (raf önceliği devre
     dışı kalır, kalemler eski davranışla üretime yazılır)."""
@@ -291,6 +348,10 @@ def _siparis_tam_detay(order_number: str) -> list[dict]:
                     return det
             except (json.JSONDecodeError, TypeError):
                 pass
+    # 🔁 Değişim panel sipariş tablolarında yok — içerik Degisim kaydından.
+    rec = degisim_kaydi(order_number)
+    if rec is not None:
+        return degisim_detay(rec)
     # 🛍️ Site siparişi panel tablolarında yok — içerik Shopify'dan.
     if str(order_number).startswith("SH-"):
         siparis = shopify_siparis(order_number)
@@ -307,6 +368,10 @@ def raftan_kalemler(kayit) -> list[dict]:
     """Üretim kaydındaki siparişin RAFTAN toplanacak kalemleri:
     [{"barcode", "quantity"}] — tam sipariş içeriğinden üretim kalemleri çıkarılır."""
     from barcode_alias_helper import normalize_barcode
+    # 🔁 Değişimde raftan kalemler kayıt anında raftan tahsis edilir (degisim_kaydet);
+    # üretim ekranında ikinci kez okutulup düşülmez — okutulacak raf kalemi yoktur.
+    if str(kayit.order_number or "").startswith(DEGISIM_ONEK):
+        return []
     try:
         uretim_bcs = {normalize_barcode(str(u.get("barcode") or "").strip())
                       for u in (json.loads(kayit.details) if kayit.details else [])}
@@ -441,6 +506,9 @@ def eksik_raf_okutmalar(order_number: str) -> list[str]:
         if not kayit:
             return []
         # Kargolanmış siparişin etiketini tekrar basmak engellenmez.
+        rec = degisim_kaydi(order_number)
+        if rec is not None and degisim_kargolandi(rec):
+            return []
         from models import OrderShipped, OrderDelivered, OrderArchived
         for M in (OrderShipped, OrderDelivered, OrderArchived):
             if (M.query.filter_by(order_number=order_number)
@@ -579,13 +647,18 @@ def _wa_personel_bildirimi(olay: str, order_number: str, model_kodlari: str,
         notify_staff_async("Yeni üretim siparişi", detay, only_last4=kime)
 
 
+def _kaynak_adi(order_number: str) -> str:
+    """Bildirim metinleri için kaynak adı: değişimden açılan kayıt 'değişim', gerisi 'sipariş'."""
+    return "değişim" if str(order_number or "").startswith(DEGISIM_ONEK) else "sipariş"
+
+
 def _mail_govdesi(order_number: str, musteri: str, model_kodlari: str,
                   eslesen: list[dict]) -> str:
     from mail_service import build_alert_email_html
     urun_satirlari = _urun_satirlari_html(eslesen)
     return build_alert_email_html(
         'uretim_siparis',
-        headline=f"{order_number} numaralı sipariş üretim modundaki bir modele geldi.",
+        headline=f"{order_number} numaralı {_kaynak_adi(order_number)} üretim modundaki bir modele geldi.",
         summary_rows=[
             ("Sipariş No", order_number),
             ("Müşteri", musteri or "-"),
@@ -595,6 +668,75 @@ def _mail_govdesi(order_number: str, musteri: str, model_kodlari: str,
         action_hint=("Üretimi planlayın; ürün rafa girilip /uretim sayfasında "
                      "'Üretildi' işaretlenince sipariş normal akışına devam eder."),
     )
+
+
+def _iptal_bildirimi_gonder(kayit, headline: str, action_hint: str) -> None:
+    """'uretim_iptal' abonelerine mail + WhatsApp (ikisi aynı olay). Mail hatası
+    yukarı fırlar (çağıran dedupe damgasını atmasın); WhatsApp hataları yutulur."""
+    from mail_service import notify, build_alert_email_html
+    try:
+        eslesen = json.loads(kayit.details) if kayit.details else []
+    except (json.JSONDecodeError, TypeError):
+        eslesen = []
+    govde = build_alert_email_html(
+        'uretim_iptal',
+        headline=headline,
+        summary_rows=[
+            ("Sipariş No", kayit.order_number),
+            ("Müşteri", kayit.customer_name or "-"),
+            ("Model", kayit.product_main_id or "-"),
+            ("Ürünler", _urun_satirlari_html(eslesen) or "-"),
+        ],
+        action_hint=action_hint,
+    )
+    notify('uretim_iptal',
+           subject=f"🛑 Üretim siparişi İPTAL — {kayit.order_number} ({kayit.product_main_id})",
+           body=govde)
+    # WhatsApp bildirimi (mail'in ikizi, aynı abonelik olayı). Config yoksa sessizce atlanır.
+    try:
+        from whatsapp_service import notify_whatsapp
+        notify_whatsapp('uretim_iptal',
+                        f"🛑 Üretim siparişi İPTAL — {kayit.order_number}",
+                        f"Model: {kayit.product_main_id or '-'} | "
+                        f"Müşteri: {kayit.customer_name or '-'} | Üretimi DURDURUN.")
+    except Exception:
+        logger.exception("[URETIM] whatsapp iptal bildirimi hatası (yutuldu)")
+    try:
+        _wa_personel_bildirimi("uretim_iptal", kayit.order_number,
+                               kayit.product_main_id or "", eslesen)
+    except Exception:
+        logger.exception("[URETIM] whatsapp personel iptal bildirimi hatası (yutuldu)")
+
+
+def isle_degisim_silindi(degisim_no: str) -> bool:
+    """Değişim silindi: ona bağlı üretim kaydı varsa üretilmemişse 'uretim_iptal'
+    bildirimi atılır (üretici boşuna üretmesin) ve kayıt silinir (değişim satırı
+    da silindiğinden iz bırakacak sipariş kalmaz; doğrulama okutmaları da düşer).
+    Her hata yutulur → False (değişim silme akışı durmaz)."""
+    try:
+        order_number = DEGISIM_ONEK + str(degisim_no or "").strip()
+        kayit = UretimSiparis.query.filter_by(order_number=order_number).first()
+        if not kayit:
+            return False
+        if not kayit.uretildi:
+            try:
+                _iptal_bildirimi_gonder(
+                    kayit,
+                    headline=f"{kayit.order_number} numaralı üretim DEĞİŞİMİ silindi.",
+                    action_hint="Bu değişimin üretimini DURDURUN. Kayıt üretim sayfasından kaldırıldı.",
+                )
+            except Exception:
+                logger.exception("[URETIM] değişim silme bildirimi hatası (yutuldu)")
+        from models import UretimDogrulama
+        UretimDogrulama.query.filter_by(order_number=order_number).delete(synchronize_session=False)
+        db.session.delete(kayit)
+        db.session.commit()
+        logger.info(f"[URETIM] 🔁 Değişim silindi, üretim kaydı kaldırıldı: {order_number}")
+        return True
+    except Exception:
+        db.session.rollback()
+        logger.exception("[URETIM] isle_degisim_silindi hatası (yutuldu)")
+        return False
 
 
 def isle_iptal_bildirimleri() -> int:
@@ -618,46 +760,17 @@ def isle_iptal_bildirimleri() -> int:
                     .with_entities(OrderCancelled.order_number)}
         if not iptaller:
             return 0
-        from mail_service import notify, build_alert_email_html
         sayi = 0
         for kayit in adaylar:
             if kayit.order_number not in iptaller:
                 continue
             try:
-                try:
-                    eslesen = json.loads(kayit.details) if kayit.details else []
-                except (json.JSONDecodeError, TypeError):
-                    eslesen = []
-                govde = build_alert_email_html(
-                    'uretim_iptal',
+                _iptal_bildirimi_gonder(
+                    kayit,
                     headline=f"{kayit.order_number} numaralı üretim siparişi pazaryerinde İPTAL edildi.",
-                    summary_rows=[
-                        ("Sipariş No", kayit.order_number),
-                        ("Müşteri", kayit.customer_name or "-"),
-                        ("Model", kayit.product_main_id or "-"),
-                        ("Ürünler", _urun_satirlari_html(eslesen) or "-"),
-                    ],
                     action_hint=("Bu siparişin üretimini DURDURUN. Sipariş üretim sayfasından "
                                  "kaldırıldı; iptal edilen siparişler sayfasında görülebilir."),
                 )
-                notify('uretim_iptal',
-                       subject=f"🛑 Üretim siparişi İPTAL — {kayit.order_number} ({kayit.product_main_id})",
-                       body=govde)
-                # WhatsApp bildirimi (mail'in ikizi, aynı abonelik olayı ve
-                # aynı iptal_mail_at dedupe'u). Config yoksa sessizce atlanır.
-                try:
-                    from whatsapp_service import notify_whatsapp
-                    notify_whatsapp('uretim_iptal',
-                                    f"🛑 Üretim siparişi İPTAL — {kayit.order_number}",
-                                    f"Model: {kayit.product_main_id or '-'} | "
-                                    f"Müşteri: {kayit.customer_name or '-'} | Üretimi DURDURUN.")
-                except Exception:
-                    logger.exception("[URETIM] whatsapp iptal bildirimi hatası (yutuldu)")
-                try:
-                    _wa_personel_bildirimi("uretim_iptal", kayit.order_number,
-                                           kayit.product_main_id or "", eslesen)
-                except Exception:
-                    logger.exception("[URETIM] whatsapp personel iptal bildirimi hatası (yutuldu)")
                 kayit.iptal_mail_at = datetime.utcnow()
                 db.session.commit()
                 sayi += 1
@@ -867,7 +980,8 @@ def isle_yeni_siparisler(new_order_dicts: list[dict]) -> int:
                 try:
                     from mail_service import notify
                     notify('uretim_siparis',
-                           subject=f"🏭 Üretim siparişi — {order_number} ({model_kodlari})",
+                           subject=(f"🏭 Üretim {'DEĞİŞİMİ' if _kaynak_adi(order_number) == 'değişim' else 'siparişi'}"
+                                    f" — {order_number} ({model_kodlari})"),
                            body=_mail_govdesi(order_number, musteri, model_kodlari, eslesen))
                     kayit.mail_sent_at = datetime.utcnow()
                     db.session.commit()
@@ -879,7 +993,8 @@ def isle_yeni_siparisler(new_order_dicts: list[dict]) -> int:
                 try:
                     from whatsapp_service import notify_whatsapp
                     notify_whatsapp('uretim_siparis',
-                                    f"🏭 Üretim siparişi — {order_number}",
+                                    f"🏭 Üretim {'DEĞİŞİMİ' if _kaynak_adi(order_number) == 'değişim' else 'siparişi'}"
+                                    f" — {order_number}",
                                     f"Model: {model_kodlari or '-'} | Müşteri: {musteri or '-'} | "
                                     f"Üretimi planlayın; detay /uretim sayfasında.")
                 except Exception:

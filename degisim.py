@@ -369,6 +369,18 @@ def degisim_kaydet():
         urunler_listesi = []
         toplam_tahsis = 0
         stok_hatalari = []
+        uretim_kalemleri = []  # 🏭 üretim modunda + raf yetmiyor → üretime yazılacak
+
+        # 🏭 Üretim modundaki barkodlar: raf yetmiyorsa "stok yetersiz" hatası
+        # yerine kalem üretime gider (Trendyol siparişindeki raf önceliğiyle aynı
+        # kural: raf kalemi tamamen karşılamıyorsa kalemin TAMAMI üretilir).
+        # Hata → boş set: eski sert davranış aynen sürer.
+        try:
+            from uretim_modu import get_uretim_barcodes
+            from barcode_alias_helper import normalize_barcode
+            uretim_barkodlari = get_uretim_barcodes()
+        except Exception:
+            uretim_barkodlari = set()
 
         # Tek transaction: herhangi bir ürün yetersizse rollback olur.
         for i in range(n):
@@ -381,6 +393,29 @@ def degisim_kaydet():
             renk  = (urun_renkleri[i]  or '').strip()
             beden = (urun_bedenleri[i] or '').strip()
             adet  = adet_listesi[i]
+
+            if uretim_barkodlari and normalize_barcode(barkod) in uretim_barkodlari:
+                raf_toplam = (db.session.query(db.func.coalesce(db.func.sum(RafUrun.adet), 0))
+                              .filter(RafUrun.urun_barkodu == barkod, RafUrun.adet > 0)
+                              .scalar() or 0)
+                if raf_toplam < adet:
+                    kalem = {
+                        "barkod": barkod,
+                        "model_kodu": model,
+                        "renk": renk,
+                        "beden": beden,
+                        "adet": adet,
+                        "raf_kodlari": [],
+                        "raf_kodu": None,
+                        "tahsis_edilen": 0,
+                        "uretim": True,
+                    }
+                    urunler_listesi.append(kalem)
+                    uretim_kalemleri.append({
+                        "barcode": barkod, "quantity": adet,
+                        "sku": model, "color": renk, "size": beden,
+                    })
+                    continue
 
             alloc = allocate_from_shelves(barkod, qty=adet)
 
@@ -452,11 +487,29 @@ def degisim_kaydet():
         # CentralStock & Product.quantity event listener tarafından commit sonrası
         # otomatik senkronize edilir (models.py).
 
+        # 🏭 Üretime gidecek kalemler: üretim kaydı + abone mail/WhatsApp — sipariş
+        # yakalamayla aynı akış (DG-<degisim_no> numarasıyla). Hata yutulur.
+        if uretim_kalemleri:
+            try:
+                from uretim_modu import isle_yeni_siparisler, DEGISIM_ONEK
+                isle_yeni_siparisler([{
+                    'order_number': DEGISIM_ONEK + degisim_kaydi.degisim_no,
+                    'package_number': None,
+                    'customer_name': ad,
+                    'customer_surname': soyad,
+                    'order_date': degisim_kaydi.degisim_tarihi,
+                    'details': uretim_kalemleri,
+                }])
+            except Exception:
+                logger.exception("[DEGISIM] üretim kaydı açılamadı (yutuldu, değişim kaydı korunur)")
+
         _safe_log("CREATE", {
-            "işlem_açıklaması": f"Değişim talebi oluşturuldu — {degisim_kaydi.degisim_no}, {toplam_tahsis} adet",
+            "işlem_açıklaması": (f"Değişim talebi oluşturuldu — {degisim_kaydi.degisim_no}, {toplam_tahsis} adet"
+                                 + (f", {len(uretim_kalemleri)} kalem üretime" if uretim_kalemleri else "")),
             "sayfa": "Değişim Talepleri",
             "değişim_no": degisim_kaydi.degisim_no,
             "toplam_tahsis": toplam_tahsis,
+            "uretime_giden_kalem": len(uretim_kalemleri),
         })
         logger.info(
             f"Değişim kaydı oluşturuldu: {degisim_kaydi.degisim_no} | "
@@ -688,6 +741,14 @@ def delete_exchange():
         db.session.delete(rec)
         db.session.commit()
         # CentralStock otomatik senkronize edilir (models.py event listener).
+
+        # 🏭 Değişimden açılmış üretim kaydı varsa: üretici boşuna üretmesin
+        # (uretim_iptal mail/WhatsApp) + kayıt üretim sayfasından kaldırılır.
+        try:
+            from uretim_modu import isle_degisim_silindi
+            isle_degisim_silindi(degisim_no)
+        except Exception:
+            logger.exception("[DEGISIM] üretim kaydı kaldırılamadı (yutuldu)")
 
         _safe_log("DELETE", {
             "işlem_açıklaması": f"Değişim talebi silindi — {degisim_no} (stok iade: {iade_edilen})",

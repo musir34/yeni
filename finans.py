@@ -473,3 +473,4 @@ import finans_cari  # noqa: E402,F401
 import finans_excel  # noqa: E402,F401  — Excel'den gelir yükleme
 
 import finans_calisan  # noqa: E402,F401 — çalışan hak edişi/ödeme route
+import finans_kart  # noqa: E402,F401 — kredi kartı ekstresi (PDF) yükleme + mutabakat
