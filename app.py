@@ -151,6 +151,15 @@ except Exception as _e:
     import logging as _logging
     _logging.getLogger(__name__).exception("[ORDER_AUDIT] init başarısız: %s", _e)
 
+# 🔐 Sayfa yetkileri: users.is_owner + kullanici_sayfa_yetki garantisi (kataloğu sayfa_yetki.py)
+try:
+    from sayfa_yetki import ensure_schema as _yetki_ensure
+    with app.app_context():
+        _yetki_ensure()
+except Exception as _e:
+    import logging as _logging
+    _logging.getLogger(__name__).exception("[SAYFA-YETKI] init başarısız: %s", _e)
+
 # 💬 Trendyol Soru-Cevap: tablo garantisi
 try:
     from trendyol_qna.qna_service import ensure_table_exists as _qna_ensure
@@ -208,6 +217,12 @@ def custom_url_for(endpoint, **values):
 
 app.jinja_env.globals['url_for'] = custom_url_for
 
+# 🔐 Sayfa yetkileri: menü görünürlüğü = açılabilirlik (sayfa_yetki.py kataloğu)
+from sayfa_yetki import kullanici_erisebilir as _sayfa_erisebilir, istek_engelli_sayfa as _istek_engelli_sayfa
+from sayfa_yetki_routes import sayfa_yetki_bp
+app.jinja_env.globals['sayfa_erisebilir'] = _sayfa_erisebilir
+app.register_blueprint(sayfa_yetki_bp)
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Request log & Basit auth kalkanı
 # ──────────────────────────────────────────────────────────────────────────────
@@ -261,6 +276,33 @@ def check_authentication():
         and not session.get('totp_verified')):
         flash('İki adımlı doğrulama gereklidir.', 'warning')
         return redirect(url_for('login_logout.verify_totp'))
+
+
+@app.before_request
+def check_sayfa_yetkisi():
+    """Sayfa yetkisi: rol varsayılanı ± kişiye özel istisna (sayfa_yetki.py).
+    check_authentication ile aynı muafiyetler; giriş/2FA yoksa oraya bırakır. Katalog dışı
+    endpoint'ler dokunulmaz. Hata → engelleme yok (panel yetki modülü yüzünden kapanmaz)."""
+    if (request.path.startswith('/enhanced_product_label')
+        or request.path.startswith('/static/')
+        or request.path.startswith('/api/')
+        or request.path.startswith('/agent/api/')
+        or request.path.startswith('/health')):
+        return None
+    if not current_user.is_authenticated or not session.get('totp_verified'):
+        return None
+    try:
+        sayfa = _istek_engelli_sayfa()
+    except Exception:
+        logger.error("Sayfa yetkisi kontrolü başarısız, istek serbest bırakıldı", exc_info=True)
+        return None
+    if sayfa is None:
+        return None
+    logger.warning(f"Yetkisiz sayfa isteği - Kullanıcı: {current_user.username}, Sayfa: {sayfa.kod}, Yol: {request.path}")
+    if request.headers.get('X-Requested-With') or request.is_json or request.accept_mimetypes.best == 'application/json':
+        return {'success': False, 'error': f'Bu sayfaya erişim yetkiniz yok: {sayfa.ad}'}, 403
+    flash(f'Bu sayfaya erişim yetkiniz yok: {sayfa.ad}', 'warning')
+    return redirect(url_for('home.home'))
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Global Error Handlers

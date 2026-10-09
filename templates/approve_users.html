@@ -163,6 +163,7 @@
                             <th>Ad</th>
                             <th>Soyad</th>
                             <th>Rol</th>
+                            <th>Sayfa Yetkileri</th>
                             <th>PC Limiti</th>
                             <th>QR Kodu Göster</th>
                             <th>Güncelle</th>
@@ -185,6 +186,22 @@
                                             <option value="worker" {% if user.role == 'worker' %}selected{% endif %}>Çalışan</option>
                                             <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Yönetici</option>
                                         </select>
+                                </td>
+                                <td>
+                                    {# 🔐 Sayfa yetkileri: rol varsayılanı ± kişiye özel istisna; yalnız sahip düzenler #}
+                                    {% if user.is_owner %}
+                                        <span class="badge bg-dark" title="Sahip: tüm sayfalar, kısıtlanamaz"><i class="fas fa-crown me-1"></i>Sahip</span>
+                                    {% else %}
+                                        {% set yd = yetki_durumu.get(user.username, {}) %}
+                                        {% set acik_sayisi = yd.values()|selectattr('acik')|list|length %}
+                                        {% set fark_sayisi = namespace(n=0) %}
+                                        {% for d in yd.values() %}{% if d.acik != d.varsayilan %}{% set fark_sayisi.n = fark_sayisi.n + 1 %}{% endif %}{% endfor %}
+                                        <button type="button" class="btn btn-sm {{ 'btn-warning' if fark_sayisi.n else 'btn-outline-primary' }}"
+                                                onclick="sayfaYetkiAc('{{ user.username }}')" id="yetkiBtn-{{ user.username }}"
+                                                title="{{ 'Düzenle' if sahip_mi else 'Görüntüle (yalnız sahip düzenler)' }}">
+                                            <i class="fas fa-key me-1"></i><span id="yetkiOzet-{{ user.username }}">{{ acik_sayisi }}/{{ yd|length }}{% if fark_sayisi.n %} · {{ fark_sayisi.n }} özel{% endif %}</span>
+                                        </button>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center gap-1">
@@ -328,6 +345,33 @@
 
     <!-- Geçici Kopyalama Alanı -->
     <textarea id="temp-copier" style="position: absolute; top: -1000px;"></textarea>
+
+    <!-- 🔐 Sayfa Yetkileri modalı (tüm kullanıcılar için tek modal; JS doldurur) -->
+    <div class="modal fade" id="sayfaYetkiModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-key me-2"></i>Sayfa Yetkileri — <span id="yetkiModalKullanici"></span> <span class="badge bg-secondary ms-1" id="yetkiModalRol"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3" style="font-size:.9rem;">
+                        İşaretli sayfa açılabilir. <span class="badge bg-light text-dark border">rol</span> = rolün varsayılanı,
+                        <span class="badge bg-warning text-dark">özel</span> = bu kullanıcıya özel ekleme/kaldırma.
+                        {% if not sahip_mi %}<strong class="text-danger">Yalnız sahip düzenleyebilir; görüntüleme modu.</strong>{% endif %}
+                    </p>
+                    <div class="row g-3" id="yetkiModalGruplar"></div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="sayfaYetkiVarsayilan()" {% if not sahip_mi %}disabled{% endif %}><i class="fas fa-undo me-1"></i>Rol varsayılanına dön</button>
+                    <div>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Kapat</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="yetkiKaydetBtn" onclick="sayfaYetkiKaydet()" {% if not sahip_mi %}disabled{% endif %}><i class="fas fa-save me-1"></i>Kaydet</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
@@ -396,6 +440,73 @@
                     alert(data.message || 'Numara kaydedilemedi.');
                 }
             });
+        }
+
+        // 🔐 Sayfa yetkileri — katalog ve kullanıcı durumları sunucudan gömülü gelir
+        var SAYFA_GRUPLARI = {{ sayfa_gruplari|tojson }};
+        var YETKI_DURUMU = {{ yetki_durumu|tojson }};
+        var SAHIP_MI = {{ 'true' if sahip_mi else 'false' }};
+        var yetkiAktifKullanici = null;
+
+        function sayfaYetkiCiz(username) {
+            var durum = YETKI_DURUMU[username] || {};
+            var kap = document.getElementById('yetkiModalGruplar');
+            kap.innerHTML = '';
+            SAYFA_GRUPLARI.forEach(function(grup) {
+                var col = document.createElement('div');
+                col.className = 'col-md-6 col-lg-4';
+                var html = '<div class="card h-100"><div class="card-header fw-bold py-2">' + grup.grup + '</div><div class="card-body py-2">';
+                grup.sayfalar.forEach(function(s) {
+                    var d = durum[s.kod] || {acik: false, varsayilan: false};
+                    var ozel = d.acik !== d.varsayilan;
+                    html += '<div class="form-check mb-1">' +
+                        '<input class="form-check-input yetki-cb" type="checkbox" id="yetki-' + s.kod + '" value="' + s.kod + '" data-varsayilan="' + (d.varsayilan ? '1' : '0') + '"' +
+                        (d.acik ? ' checked' : '') + (SAHIP_MI ? '' : ' disabled') + ' onchange="sayfaYetkiRozet(this)">' +
+                        '<label class="form-check-label" for="yetki-' + s.kod + '">' + s.ad +
+                        ' <span class="badge ' + (ozel ? 'bg-warning text-dark' : 'bg-light text-dark border') + '" id="yetki-rozet-' + s.kod + '">' + (ozel ? 'özel' : 'rol') + '</span></label></div>';
+                });
+                html += '</div></div>';
+                col.innerHTML = html;
+                kap.appendChild(col);
+            });
+        }
+        function sayfaYetkiRozet(cb) {
+            var ozel = cb.checked !== (cb.dataset.varsayilan === '1');
+            var rozet = document.getElementById('yetki-rozet-' + cb.value);
+            rozet.className = 'badge ' + (ozel ? 'bg-warning text-dark' : 'bg-light text-dark border');
+            rozet.textContent = ozel ? 'özel' : 'rol';
+        }
+        function sayfaYetkiAc(username) {
+            yetkiAktifKullanici = username;
+            document.getElementById('yetkiModalKullanici').textContent = username;
+            var rolBtn = document.querySelector('select[name="role_' + username + '"]');
+            document.getElementById('yetkiModalRol').textContent = rolBtn ? rolBtn.options[rolBtn.selectedIndex].text : '';
+            sayfaYetkiCiz(username);
+            new bootstrap.Modal(document.getElementById('sayfaYetkiModal')).show();
+        }
+        function sayfaYetkiVarsayilan() {
+            document.querySelectorAll('.yetki-cb').forEach(function(cb) { cb.checked = cb.dataset.varsayilan === '1'; sayfaYetkiRozet(cb); });
+        }
+        function sayfaYetkiKaydet() {
+            if (!yetkiAktifKullanici) return;
+            var kodlar = [];
+            document.querySelectorAll('.yetki-cb:checked').forEach(function(cb) { kodlar.push(cb.value); });
+            var btn = document.getElementById('yetkiKaydetBtn');
+            btn.disabled = true;
+            fetch('/admin/sayfa-yetki/' + yetkiAktifKullanici, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+                body: JSON.stringify({ kodlar: kodlar })
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                btn.disabled = false;
+                if (!data.success) { alert(data.error || 'Kaydedilemedi.'); return; }
+                YETKI_DURUMU[yetkiAktifKullanici] = data.sayfalar;
+                var acik = 0, toplam = 0, fark = 0;
+                Object.keys(data.sayfalar).forEach(function(k) { toplam++; if (data.sayfalar[k].acik) acik++; if (data.sayfalar[k].acik !== data.sayfalar[k].varsayilan) fark++; });
+                document.getElementById('yetkiOzet-' + yetkiAktifKullanici).textContent = acik + '/' + toplam + (fark ? ' · ' + fark + ' özel' : '');
+                document.getElementById('yetkiBtn-' + yetkiAktifKullanici).className = 'btn btn-sm ' + (fark ? 'btn-warning' : 'btn-outline-primary');
+                bootstrap.Modal.getInstance(document.getElementById('sayfaYetkiModal')).hide();
+            }).catch(function() { btn.disabled = false; alert('Sunucu ile iletişim kurulamadı.'); });
         }
 
         // Mail bildirim checkbox değişikliği

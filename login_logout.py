@@ -181,8 +181,11 @@ def roles_required(*roles):
                 flash('İki adımlı doğrulama gereklidir.', 'warning')
                 return redirect(url_for('login_logout.verify_totp'))
             if session.get('role') not in roles:
-                flash('Bu sayfaya erişim yetkiniz yok.', 'warning')
-                return redirect(url_for('home.home'))
+                # Sahip, ya da sahibin bu sayfayı kişiye özel açtığı (istisna) kullanıcı geçer.
+                from sayfa_yetki import istisna_ile_acik_mi
+                if not istisna_ile_acik_mi():
+                    flash('Bu sayfaya erişim yetkiniz yok.', 'warning')
+                    return redirect(url_for('home.home'))
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -565,7 +568,14 @@ def approve_users():
 
     pending_users = User.query.filter_by(status='pending').all()
     approved_users = User.query.filter_by(status='active').all()
-    return render_template('approve_users.html', pending_users=pending_users, approved_users=approved_users)
+    # 🔐 Sayfa yetkileri paneli: katalog + kullanıcı başına etkin durum (yalnız sahip düzenler)
+    from sayfa_yetki import gruplu_sayfalar, kullanici_yetki_durumu
+    yetki_durumu = {u.username: kullanici_yetki_durumu(u) for u in approved_users}
+    sayfa_gruplari = [{'grup': g, 'sayfalar': [{'kod': s.kod, 'ad': s.ad} for s in sayfalar]}
+                      for g, sayfalar in gruplu_sayfalar()]
+    return render_template('approve_users.html', pending_users=pending_users, approved_users=approved_users,
+                           sayfa_gruplari=sayfa_gruplari, yetki_durumu=yetki_durumu,
+                           sahip_mi=bool(getattr(current_user, 'is_owner', False)))
 
 
 @login_logout_bp.route('/admin/update-notify/<username>', methods=['POST'])

@@ -7,6 +7,7 @@
     <a href="{{ url_for('home.home') }}" class="btn btn-secondary" title="Anasayfa"><i class="fas fa-home"></i> Anasayfa</a>
 
     <!-- SORU-CEVAP: Trendyol müşteri soruları — bekleyen soru varsa nabız atar -->
+{% if sayfa_erisebilir('soru_cevap') %}
     <a href="{{ url_for('qna.index') }}"
        class="btn {% if stats.soru_bekleyen and stats.soru_bekleyen > 0 %}btn-pulse-active{% endif %}"
        style="background:linear-gradient(135deg,#f27121,#e94057);color:#fff;"
@@ -14,15 +15,18 @@
       <i class="fas fa-comments"></i>
       <span id="soruCevapText">{% if stats.soru_bekleyen and stats.soru_bekleyen > 0 %}SORU-CEVAP — {{ stats.soru_bekleyen }} Soru Var!{% else %}SORU-CEVAP{% endif %}</span>
     </a>
+{% endif %}
 
     <!-- Sipariş Hazırla: pulse yalnızca hazırlanacak (Hazırlanıyor) sipariş varsa -->
+{% if sayfa_erisebilir('siparis_hazirla') %}
     <a href="{{ url_for('siparis_hazirla.index') }}"
        class="btn btn-danger {% if stats.hazirlanan and stats.hazirlanan > 0 %}btn-pulse-active{% endif %}"
        title="Sipariş Hazırla" id="siparisHazirlaBtn">
       <i class="fas fa-box-open"></i> Sipariş Hazırla
     </a>
+{% endif %}
 
-    {% if session.get('role') == 'admin' %}
+    {% if sayfa_erisebilir('alissa') %}
     <a href="{{ url_for('alissa.index') }}" class="btn btn-dark" title="Muhammet Alissa haftalık hesap">
       <i class="fas fa-handshake"></i> Muhammet Alissa
     </a>
@@ -32,18 +36,16 @@
       <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Siparişler</button>
       <ul class="dropdown-menu dropdown-menu-end">
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Sipariş İşlemleri</div></li>
-        <li><a class="dropdown-item" href="{{ url_for('siparisler_bp.yeni_siparis') }}"><i class="fas fa-plus-circle me-2"></i>Yeni Sipariş</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('order_list_all') }}"><i class="fas fa-list me-2"></i>Sipariş Listesi</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('degisim_talep') }}"><i class="fas fa-exchange-alt me-2"></i>Değişim Talepleri</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('uretim.index') }}"><i class="fas fa-industry me-2"></i>Üretim Siparişleri</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('kargo_mutabakat_bp.kargo_mutabakat_page') }}"><i class="fas fa-truck me-2"></i>Kargo Mutabakat</a></li>
+        {% if sayfa_erisebilir('yeni_siparis') %}<li><a class="dropdown-item" href="{{ url_for('siparisler_bp.yeni_siparis') }}"><i class="fas fa-plus-circle me-2"></i>Yeni Sipariş</a></li>{% endif %}
+        {% if sayfa_erisebilir('siparis_listesi') %}<li><a class="dropdown-item" href="{{ url_for('order_list_all') }}"><i class="fas fa-list me-2"></i>Sipariş Listesi</a></li>{% endif %}
+        {% if sayfa_erisebilir('degisim') %}<li><a class="dropdown-item" href="{{ url_for('degisim_talep') }}"><i class="fas fa-exchange-alt me-2"></i>Değişim Talepleri</a></li>{% endif %}
+        {% if sayfa_erisebilir('uretim') %}<li><a class="dropdown-item" href="{{ url_for('uretim.index') }}"><i class="fas fa-industry me-2"></i>Üretim Siparişleri</a></li>{% endif %}
+        {% if sayfa_erisebilir('kargo_mutabakat') %}<li><a class="dropdown-item" href="{{ url_for('kargo_mutabakat_bp.kargo_mutabakat_page') }}"><i class="fas fa-truck me-2"></i>Kargo Mutabakat</a></li>{% endif %}
         <li><hr class="dropdown-divider"></li>
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Geçmiş & Takip</div></li>
-        <li><a class="dropdown-item" href="{{ url_for('display_archive') }}"><i class="fas fa-box me-2"></i>Arşiv</a></li>
-        {% if session.get('role') in ['admin','manager'] %}
-        <li><a class="dropdown-item" href="{{ url_for('siparis_zaman.page') }}"><i class="fas fa-clock me-2"></i>Sipariş Takip</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('order_audit.page') }}"><i class="fas fa-search-location me-2"></i>Sipariş İz Sürme</a></li>
-        {% endif %}
+        {% if sayfa_erisebilir('arsiv') %}<li><a class="dropdown-item" href="{{ url_for('display_archive') }}"><i class="fas fa-box me-2"></i>Arşiv</a></li>{% endif %}
+        {% if sayfa_erisebilir('siparis_takip') %}<li><a class="dropdown-item" href="{{ url_for('siparis_zaman.page') }}"><i class="fas fa-clock me-2"></i>Sipariş Takip</a></li>{% endif %}
+        {% if sayfa_erisebilir('siparis_iz') %}<li><a class="dropdown-item" href="{{ url_for('order_audit.page') }}"><i class="fas fa-search-location me-2"></i>Sipariş İz Sürme</a></li>{% endif %}
       </ul>
     </div>
 
@@ -51,18 +53,18 @@
       <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Ürünler & Stok</button>
       <ul class="dropdown-menu dropdown-menu-end">
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Ürünler</div></li>
-        <li><a class="dropdown-item" href="{{ url_for('urun_yukleme.sayfa') }}"><i class="fas fa-cloud-upload-alt me-2"></i>Ürün Yükleme (AI)</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('get_products.product_list') }}"><i class="fas fa-tags me-2"></i>Ürün Listesi</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}"><i class="fas fa-dolly me-2"></i>Ürün Tedarik</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('image_manager.image_manager') }}"><i class="fas fa-images me-2"></i>Görsel Yönetimi</a></li>
+        {% if sayfa_erisebilir('urun_yukleme') %}<li><a class="dropdown-item" href="{{ url_for('urun_yukleme.sayfa') }}"><i class="fas fa-cloud-upload-alt me-2"></i>Ürün Yükleme (AI)</a></li>{% endif %}
+        {% if sayfa_erisebilir('urun_listesi') %}<li><a class="dropdown-item" href="{{ url_for('get_products.product_list') }}"><i class="fas fa-tags me-2"></i>Ürün Listesi</a></li>{% endif %}
+        {% if sayfa_erisebilir('urun_tedarik') %}<li><a class="dropdown-item" href="{{ url_for('siparis_fisi_bp.siparis_fisi_sayfasi') }}"><i class="fas fa-dolly me-2"></i>Ürün Tedarik</a></li>{% endif %}
+        {% if sayfa_erisebilir('gorsel_yonetimi') %}<li><a class="dropdown-item" href="{{ url_for('image_manager.image_manager') }}"><i class="fas fa-images me-2"></i>Görsel Yönetimi</a></li>{% endif %}
         <li><hr class="dropdown-divider"></li>
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Stok & Depo</div></li>
-        <li><a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="fas fa-warehouse me-2"></i>Stok Ekleme</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="fas fa-archive me-2"></i>Raf Listesi</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('stock_sync.dashboard') }}"><i class="fas fa-sync-alt me-2"></i>Stok Senkronizasyon</a></li>
+        {% if sayfa_erisebilir('stok_ekleme') %}<li><a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="fas fa-warehouse me-2"></i>Stok Ekleme</a></li>{% endif %}
+        {% if sayfa_erisebilir('raf') %}<li><a class="dropdown-item" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="fas fa-archive me-2"></i>Raf Listesi</a></li>{% endif %}
+        {% if sayfa_erisebilir('stok_senkron') %}<li><a class="dropdown-item" href="{{ url_for('stock_sync.dashboard') }}"><i class="fas fa-sync-alt me-2"></i>Stok Senkronizasyon</a></li>{% endif %}
         <li><hr class="dropdown-divider"></li>
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">İadeler</div></li>
-        <li><a class="dropdown-item" href="{{ url_for('iade_listesi') }}"><i class="fas fa-undo me-2"></i>Trendyol İade Listesi</a></li>
+        {% if sayfa_erisebilir('iade_listesi') %}<li><a class="dropdown-item" href="{{ url_for('iade_listesi') }}"><i class="fas fa-undo me-2"></i>Trendyol İade Listesi</a></li>{% endif %}
       </ul>
     </div>
 
@@ -70,22 +72,20 @@
       <button class="btn btn-info dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Analiz & Fiyat</button>
       <ul class="dropdown-menu dropdown-menu-end">
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Analizler</div></li>
-        <li><a class="dropdown-item" href="{{ url_for('profit.profit_report') }}"><i class="fas fa-coins me-2"></i>Kâr Analizi</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('canli_panel.canli_panel_sayfa') }}"><i class="fas fa-broadcast-tower me-2"></i>Canlı Satış & Stok</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('commission_update_bp.update_commission_page') }}"><i class="fas fa-file-upload me-2"></i>Excel Komisyon Yükle</a></li>
-        {% if session.get('role') == 'admin' %}
+        {% if sayfa_erisebilir('kar_analizi') %}<li><a class="dropdown-item" href="{{ url_for('profit.profit_report') }}"><i class="fas fa-coins me-2"></i>Kâr Analizi</a></li>{% endif %}
+        {% if sayfa_erisebilir('canli_panel') %}<li><a class="dropdown-item" href="{{ url_for('canli_panel.canli_panel_sayfa') }}"><i class="fas fa-broadcast-tower me-2"></i>Canlı Satış & Stok</a></li>{% endif %}
+        {% if sayfa_erisebilir('komisyon_yukle') %}<li><a class="dropdown-item" href="{{ url_for('commission_update_bp.update_commission_page') }}"><i class="fas fa-file-upload me-2"></i>Excel Komisyon Yükle</a></li>{% endif %}
+        {% if sayfa_erisebilir('komisyon_tarifeleri') or sayfa_erisebilir('flas_indirim') %}
         <li><hr class="dropdown-divider"></li>
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">İndirimler</div></li>
-        <li><a class="dropdown-item" href="{{ url_for('akilli_motor.akilli_motor_sayfasi') }}"><i class="fas fa-microchip me-2"></i>Ürün Komisyon Tarifeleri</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('flas_indirim.flas_indirim_sayfasi') }}"><i class="fas fa-bolt me-2" style="color:#e67e22"></i>Flaş İndirimler</a></li>
+        {% if sayfa_erisebilir('komisyon_tarifeleri') %}<li><a class="dropdown-item" href="{{ url_for('akilli_motor.akilli_motor_sayfasi') }}"><i class="fas fa-microchip me-2"></i>Ürün Komisyon Tarifeleri</a></li>{% endif %}
+        {% if sayfa_erisebilir('flas_indirim') %}<li><a class="dropdown-item" href="{{ url_for('flas_indirim.flas_indirim_sayfasi') }}"><i class="fas fa-bolt me-2" style="color:#e67e22"></i>Flaş İndirimler</a></li>{% endif %}
         {% endif %}
-        {% if session.get('role') in ['admin','manager'] %}
+        {% if sayfa_erisebilir('kasa') or sayfa_erisebilir('finans') %}
         <li><hr class="dropdown-divider"></li>
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Finans</div></li>
-        <li><a class="dropdown-item" href="{{ url_for('kasa.kasa_sayfasi') }}"><i class="fas fa-cash-register me-2"></i>Kasa</a></li>
-        {% if session.get('role') == 'admin' %}
-        <li><a class="dropdown-item" href="{{ url_for('finans.panel') }}"><i class="fas fa-wallet me-2"></i>Finans</a></li>
-        {% endif %}
+        {% if sayfa_erisebilir('kasa') %}<li><a class="dropdown-item" href="{{ url_for('kasa.kasa_sayfasi') }}"><i class="fas fa-cash-register me-2"></i>Kasa</a></li>{% endif %}
+        {% if sayfa_erisebilir('finans') %}<li><a class="dropdown-item" href="{{ url_for('finans.panel') }}"><i class="fas fa-wallet me-2"></i>Finans</a></li>{% endif %}
         {% endif %}
       </ul>
     </div>
@@ -97,27 +97,29 @@
       </button>
       <ul class="dropdown-menu dropdown-menu-end">
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Shopify (Site)</div></li>
-        <li><a class="dropdown-item" href="{{ url_for('shopify.orders_dashboard') }}"><i class="fab fa-shopify me-2" style="color:#96bf48"></i>Shopify Siparişler</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('iade_yonetimi.index') }}"><i class="fas fa-box-open me-2" style="color:#96bf48"></i>Site İade Yönetimi</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('shopify.price_compare_dashboard') }}"><i class="fas fa-balance-scale me-2" style="color:#96bf48"></i>Shopify ↔ Trendyol Fiyat</a></li>
+        {% if sayfa_erisebilir('shopify_siparisler') %}<li><a class="dropdown-item" href="{{ url_for('shopify.orders_dashboard') }}"><i class="fab fa-shopify me-2" style="color:#96bf48"></i>Shopify Siparişler</a></li>{% endif %}
+        {% if sayfa_erisebilir('site_iade') %}<li><a class="dropdown-item" href="{{ url_for('iade_yonetimi.index') }}"><i class="fas fa-box-open me-2" style="color:#96bf48"></i>Site İade Yönetimi</a></li>{% endif %}
+        {% if sayfa_erisebilir('shopify_fiyat') %}<li><a class="dropdown-item" href="{{ url_for('shopify.price_compare_dashboard') }}"><i class="fas fa-balance-scale me-2" style="color:#96bf48"></i>Shopify ↔ Trendyol Fiyat</a></li>{% endif %}
         <li><hr class="dropdown-divider"></li>
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Diğer Pazaryerleri</div></li>
-        <li><a class="dropdown-item" href="{{ url_for('idefix.index') }}"><i class="fas fa-store me-2" style="color:#8e24aa"></i>Idefix</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('hepsiburada.index') }}"><i class="fas fa-store me-2" style="color:#FF6000"></i>Hepsiburada</a></li>
+        {% if sayfa_erisebilir('idefix') %}<li><a class="dropdown-item" href="{{ url_for('idefix.index') }}"><i class="fas fa-store me-2" style="color:#8e24aa"></i>Idefix</a></li>{% endif %}
+        {% if sayfa_erisebilir('hepsiburada') %}<li><a class="dropdown-item" href="{{ url_for('hepsiburada.index') }}"><i class="fas fa-store me-2" style="color:#FF6000"></i>Hepsiburada</a></li>{% endif %}
       </ul>
     </div>
 
+{% if sayfa_erisebilir('ai_asistan') %}
     <a href="{{ url_for('ai_asistan.sayfa') }}" class="btn btn-dark" title="AI Asistan"><i class="fas fa-robot"></i> AI Asistan</a>
+{% endif %}
 
     <div class="dropdown">
       <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Kullanıcı</button>
       <ul class="dropdown-menu dropdown-menu-end">
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Yönetim</div></li>
-        <li><a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a></li>
-        {% if session.get('role') in ['admin','manager'] %}
+        {% if sayfa_erisebilir('kullanici_yonetimi') %}<li><a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a></li>{% endif %}
+        {% if sayfa_erisebilir('kullanici_hareketleri') %}
         <li><a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}"><i class="fas fa-history me-2"></i>Kullanıcı Hareketleri</a></li>
         {% endif %}
-        {% if session.get('role') == 'admin' %}
+        {% if sayfa_erisebilir('whatsapp_mesajlari') %}
         <li><hr class="dropdown-divider"></li>
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Mesajlar</div></li>
         <li><a class="dropdown-item" href="{{ url_for('whatsapp_duyuru.sayfa') }}"><i class="fab fa-whatsapp me-2"></i>WhatsApp Mesajları</a></li>

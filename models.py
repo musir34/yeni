@@ -584,7 +584,21 @@ class User(db.Model, UserMixin):
     max_pc = db.Column(db.Integer, default=1)  # kullanıcı başına izin verilen PC sayısı
     notification_image = db.Column(db.String(300), nullable=True)  # admin tarafından atanan bildirim görseli
     whatsapp_no = db.Column(db.String(32), nullable=True)  # WhatsApp bildirimi için, 905xxxxxxxxx biçiminde
+    is_owner = db.Column(db.Boolean, default=False, nullable=False, server_default='false')  # Sahip: her sayfa + sayfa yetkilerini yalnız o düzenler
     # backref ile UserLog ilişkisi UserLog modelinde tanımlandı
+
+
+class KullaniciSayfaYetki(db.Model):
+    """Sayfa yetkisi istisnası: rol varsayılanından FARK. izin=True → ekle, izin=False → kaldır.
+    Sayfa kataloğu ve rol varsayılanları sayfa_yetki.py'de (kodda)."""
+    __tablename__ = 'kullanici_sayfa_yetki'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    sayfa_kodu = db.Column(db.String(64), nullable=False)
+    izin = db.Column(db.Boolean, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    __table_args__ = (db.UniqueConstraint('user_id', 'sayfa_kodu', name='uq_kullanici_sayfa_yetki'),)
 
 
 class UserDevice(db.Model):
