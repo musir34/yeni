@@ -14,6 +14,7 @@ from barcode_utils import generate_barcode_data_uri
 from models import db, Product, OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled, PlatformConfig, Archive
 from overdue_orders import OVERDUE_STATUSES, STATUS_CODE, overdue_orders_query
 from barcode_utils import generate_barcode
+from shopify_siparis_listesi import shopify_kartlari, kartlari_sirala
 import qrcode
 import os
 
@@ -443,6 +444,14 @@ def get_order_list():
 
         orders = _merge_order_rows(rows, lambda r: r.status_name)
 
+        # 🛍️ Shopify (site) siparişleri DB'de değil, canlı API'de → ilk sayfaya kart olarak
+        # katılır ve aynı sıralama kuralıyla Trendyol kartlarına karışır. Teslim tarihi
+        # olmadığı için "geciken" görünümüne girmez.
+        if page == 1 and not show_overdue:
+            shopify_orders = shopify_kartlari(aranan=search_query)
+            orders = kartlari_sirala(orders + shopify_orders, sort_key)
+            total_orders_count += len(shopify_orders)
+
         process_order_details(orders)
         _decorate_order_priority(orders)
 
@@ -595,6 +604,12 @@ def get_filtered_orders(status):
 
         status_code = status_map[status].__name__.replace("Order", "")
         orders = _merge_order_rows(raw_orders, lambda _r: status_code)
+
+        # 🛍️ Shopify siparişleri: etiketi bu sekmenin durumuna denk gelenler ilk sayfaya katılır
+        if page == 1:
+            shopify_orders = shopify_kartlari(durum=status_code, aranan=search_query)
+            orders = kartlari_sirala(orders + shopify_orders, sort_key)
+            total_orders_count += len(shopify_orders)
 
         process_order_details(orders)
         _decorate_order_priority(orders)

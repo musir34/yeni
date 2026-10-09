@@ -181,6 +181,8 @@ class ShopifyService:
                 }
                 shippingAddress {
                   name
+                  address1
+                  address2
                   city
                   province
                   country

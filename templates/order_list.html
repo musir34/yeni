@@ -375,8 +375,10 @@
         {% macro order_card(order, uid) %}
             <div class="card{% if order.uretim_durumu %} uretim-karti{% endif %}">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <div><strong>Sipariş No:</strong> {{ order.order_number }}
-                        <span class="copy-container" onclick="copyToClipboard('{{ order.order_number }}', this)"><i class="far fa-copy"></i></span>
+                    {# Shopify kartında display_number mağaza adı (1428); eylemler order_number (SH-…) ile çalışır #}
+                    {% set gosterilen_no = order.display_number or order.order_number %}
+                    <div><strong>Sipariş No:</strong> {{ gosterilen_no }}
+                        <span class="copy-container" onclick="copyToClipboard('{{ gosterilen_no }}', this)"><i class="far fa-copy"></i></span>
                         <span class="copy-confirmation">✔️</span>
                     </div>
                     <form method="POST" action="{{ url_for('order_list_service.order_label') }}" target="_blank">
@@ -400,7 +402,7 @@
                         {% if order.uretim_durumu %}<span class="uretim-rozeti uretim-rozeti--{{ order.uretim_durumu }}" title="{{ order.uretim_aciklamasi }}"><i class="fas fa-industry"></i> {{ order.uretim_etiketi }}</span>{% endif %}
                     </p>
                     <p class="mb-1"><small><strong>Kargo:</strong> <span class="cargo-provider {% if order.cargo_provider_name and 'MNG Kargo' in order.cargo_provider_name %}orange{% endif %}">{{ order.cargo_provider_name or '-' }}</span></small></p>
-                    {% if translated_status in ['Yeni','Hazırlanıyor','İşleme Alındı'] %}
+                    {% if translated_status in ['Yeni','Hazırlanıyor','İşleme Alındı'] and (order.agreed_delivery_date or order.estimated_delivery_end) %}
                         <p class="mb-3"><strong>Kalan Süre:</strong> <span class="remaining-time red" data-end-time="{{ order.agreed_delivery_date or order.estimated_delivery_end }}">{{ order.remaining_time }}</span></p>
                     {% endif %}
                     <button class="btn btn-outline-secondary w-100" data-bs-toggle="collapse" data-bs-target="#details-{{ uid }}">
