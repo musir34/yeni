@@ -7,4 +7,5 @@
         data-odenen="{{ '%.2f' | format(d.odenen) }}"
         data-kalan="{{ '%.2f' | format(d.kalan) if d.kalan is not none else '' }}"
         data-hesap="{{ d.kalem.varsayilan_hesap_kodu or 'elde' }}"
+        data-sahsi="{{ '1' if d.kalem.calisan_cari and d.kalem.calisan_cari.tur == 'sahsi' else '0' }}"
         data-anahtar="{{ fn_odeme_anahtari() }}">{{ 'Hak ediş gir' if d.belirsiz else ('Ödeme ekle' if d.bekleyen else 'Hak edişi düzenle') }}</button>

@@ -40,11 +40,13 @@ CARI_TUR_ETIKET = {'tedarikci': 'Tedarikçi', 'musteri': 'Müşteri', 'diger': '
                   'sahsi': 'Şahsi (kasadan borç)'}
 HAREKET_TURLERI = {'alim': +1, 'odeme': -1, 'satis': -1, 'tahsilat': +1,
                   'hakedis': +1, 'hakedis_azaltma': -1, 'borc_alma': -1, 'borc_odeme': +1,
-                  'calisan_borc': +1, 'calisan_borc_odeme': -1}
+                  'calisan_borc': +1, 'calisan_borc_odeme': -1, 'mahsup': +1}
 HAREKET_ETIKET = {'alim': 'Mal Girişi', 'odeme': 'Ödeme', 'satis': 'Satış', 'tahsilat': 'Tahsilat',
                  'hakedis': 'Hak ediş', 'hakedis_azaltma': 'Hak ediş düzeltmesi',
                  'borc_alma': 'Kasadan borç aldım', 'borc_odeme': 'Borç geri ödemesi',
-                 'calisan_borc': 'Cebinden verdi', 'calisan_borc_odeme': 'Geri ödeme'}
+                 'calisan_borc': 'Cebinden verdi', 'calisan_borc_odeme': 'Geri ödeme',
+                 'mahsup': 'Maaştan mahsup'}
+SAHSI_BORC_TURLERI = ('borc_alma', 'borc_odeme', 'mahsup')
 CALISAN_BORC_TURLERI = ('calisan_borc', 'calisan_borc_odeme')
 PARA_BIRIMLERI = ('TRY', 'USD')
 PARA_SEMBOL = {'TRY': '₺', 'USD': '$'}
@@ -102,6 +104,33 @@ def calisan_borc_kalan(cari_id) -> Decimal:
               .filter(FinansCariHareket.cari_id == int(cari_id), FinansCariHareket.iptal.is_(False),
                       FinansCariHareket.tur.in_(CALISAN_BORC_TURLERI)).scalar())
     return max(Decimal(str(toplam or 0)).quantize(IKI_HANE), Decimal('0.00'))
+
+
+def sahsi_kasa_borcu(cari_id) -> Decimal:
+    """Şahsi hesabın kasaya borcu: kasadan alınan − geri ödenen − maaştan mahsup (iptaller hariç, en az 0)."""
+    from sqlalchemy import func
+    toplam = (db.session.query(func.coalesce(func.sum(FinansCariHareket.yon * FinansCariHareket.tutar), 0))
+              .filter(FinansCariHareket.cari_id == int(cari_id), FinansCariHareket.iptal.is_(False),
+                      FinansCariHareket.tur.in_(SAHSI_BORC_TURLERI)).scalar())
+    return max(-Decimal(str(toplam or 0)).quantize(IKI_HANE), Decimal('0.00'))
+
+
+def _mahsup_ciftini_iptal(h: FinansCariHareket, kullanici_id: int) -> None:
+    """Maaştan mahsup iki kasasız satırdır (hak ediş 'odeme' − ve 'mahsup' +); biri iptal edilince ikisi birden."""
+    es_tur = 'mahsup' if h.tur == 'odeme' else 'odeme'
+    adaylar = (FinansCariHareket.query
+               .filter_by(cari_id=h.cari_id, hakedis_id=h.hakedis_id, tur=es_tur, tutar=h.tutar,
+                          tarih=h.tarih, iptal=False)
+               .filter(FinansCariHareket.islem_id.is_(None)).all())
+    if not adaylar:
+        raise FinansHata('Mahsup kaydının eşi bulunamadı; iptal edilmedi.')
+    es = min(adaylar, key=lambda x: abs(x.id - h.id))
+    # İki sekmeden eşzamanlı iptal birbirini beklemesin: iki satır sabit (id) sırayla kilitlenir.
+    (FinansCariHareket.query.filter(FinansCariHareket.id.in_((h.id, es.id)))
+     .order_by(FinansCariHareket.id).with_for_update().all())
+    simdi = datetime.utcnow()
+    fs.cari_hareket_geri_al(h, kullanici_id, simdi)
+    fs.cari_hareket_geri_al(es, kullanici_id, simdi)
 
 
 def _para_birimi_kontrol(tur: str, para_birimi: str) -> str:
@@ -371,6 +400,10 @@ def hareket_iptal(hareket_id, kullanici_id: int, neden: str = None) -> FinansCar
             raise FinansHata('Hareket bulunamadı.')
         if h.iptal:
             raise FinansHata('Bu hareket zaten iptal edilmiş.')
+        if h.hakedis_id and not h.islem_id and h.tur in ('odeme', 'mahsup'):
+            _mahsup_ciftini_iptal(h, kullanici_id)
+            db.session.commit()
+            return h
         if h.hakedis_id and not h.islem_id:
             raise FinansHata('Hak edişi iptal etmek yerine ilgili haftanın hak ediş tutarını düzenleyin.')
         if h.islem_id:

@@ -22,3 +22,25 @@ istiyor. Sorun: plan formunda yalnız çalışan carileri listeleniyordu, "Yeni 
 ## Kullanım
 Düzenli Ödemeler → Düzenli Ödeme Ekle → "Çalışan ödemesi" → listeden "<adınız> (şahsi)" → Haftalık,
 ilk ödeme günü, 15.000 sabit → Ekle. Yayın: `git pull && systemctl restart gullupanel.service`.
+
+## İnceleme sonrası (aynı gün)
+- Kritik yok. Uygulanan küçük düzeltmeler: şahsi hesapta "Borcumu Ödedim" yalnız kasaya borç varken (bakiye < 0)
+  görünür; defter sütunu hak ediş varken "Ödediğim / Hak ediş".
+- İnceleme bulgusu (orta): mahsuplaşma yalnız bakiyedeydi, hafta "kalan"ı gerçek ödeme olmadan kapanmıyordu.
+  Komutan kararı: "Borçtan mahsup seçeneği eklensin".
+
+## Borçtan mahsup (aynı gün)
+- Maaş ödeme penceresinde, yalnız şahsi hesapta görünen "Kasa borcundan düş" seçeneği (hesap='mahsup').
+- hakedis_ve_odeme: iki kasasız cari satırı, aynı hakedis_id/tutar/tarih: `odeme` (−1, odeme_anahtari, haftayı
+  kapatır) + `mahsup` (+1, kasa borcunu düşer). Net bakiye değişmez, kasadan para çıkmaz.
+  Sınır: haftanın kalanı ve `sahsi_kasa_borcu` (borc_alma/borc_odeme/mahsup toplamı). Çift tıklama anahtarı korunur.
+- İptal: herhangi biri iptal edilince `_mahsup_ciftini_iptal` ikisini birden geri alır; defterde iptal düğmesi görünür.
+- Testler: tests/test_finans_sahsi_maas.py +5 (kapanış, sınır, yalnız şahsi, iki yönlü iptal, çift tıklama).
+  Finans testleri 105 OK.
+
+## Mahsup incelemesi sonrası (aynı gün)
+- Orta bulgu düzeltildi: mahsup edilmiş kasa borcunun (borc_alma) iptali engellendi (finans_service.cari_hareket_geri_al;
+  cari ve kasa defteri iptal yollarının ortak noktası). Mahsup yoksa iptal eskisi gibi serbest. Önce mahsup iptal edilir.
+- Küçükler: mahsup çiftinin iki satırı iptalde id sırasıyla önce kilitlenir (eşzamanlı iptalde kilitlenme yok);
+  "Borcumu Ödedim" düğmesi artık gerçek kasa borcuna (sahsi_kasa_borcu > 0) göre görünür; yorum satırı düzeltildi.
+- +2 test; finans testleri 107 OK.

@@ -18,7 +18,8 @@ def calisan_hakedis_odeme():
             _uid(), f.get('odeme_anahtari'), f.get('beklenen_hakedis'))
         kalan = h.tutar - cs.odenen_tutar(h.id)
         _log('CREATE', f'Çalışan hak ediş/ödeme — {h.kalem.ad} {h.donem}', hakedis_id=h.id)
-        flash(f'✅ {"Ödeme ve hak ediş" if islem else "Hak ediş"} kaydedildi. '
+        mahsup = f.get('hesap') == cs.MAHSUP_HESABI and (f.get('tutar') or '').strip()
+        flash(f'✅ {"Mahsup ve hak ediş" if mahsup else ("Ödeme ve hak ediş" if islem else "Hak ediş")} kaydedildi. '
               f'Bu dönem kalan borç: {kalan:.2f} ₺.', 'success')
     except fs.FinansHata as e:
         _hata_flash(e)

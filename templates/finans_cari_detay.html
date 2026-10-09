@@ -18,7 +18,7 @@
       <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#fnCariDuzenle">✎ Hesap bilgisi</button>
       {% if cari.tur == 'sahsi' %}
       <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#fnBorcAlmaModal"><i class="fas fa-hand-holding-usd me-1"></i>Kasadan Borç Aldım</button>
-      <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#fnBorcOdemeModal">Borcumu Ödedim</button>
+      {% if sahsi_borc %}<button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#fnBorcOdemeModal">Borcumu Ödedim</button>{% endif %}
       {% elif cari.tur != 'calisan' %}
       <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#fnAlimModal"><i class="fas fa-box me-1"></i>Mal Girişi</button>
       <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#fnOdemeModal"><i class="fas fa-money-bill me-1"></i>Ödeme Yap</button>
@@ -55,7 +55,7 @@
   </div>
   <div class="card-body p-0 fn-table-wrap">
     <table class="table table-sm table-hover fn-table mb-0">
-      <thead><tr><th>Tarih</th><th>Hareket</th><th>Açıklama / Döküm</th><th class="fn-num">{{ 'Ödediğim' if cari.tur == 'sahsi' else 'Borç ↑' }}</th><th class="fn-num">{{ 'Aldığım' if cari.tur == 'sahsi' else 'Borç ↓' }}</th><th class="fn-num">Bakiye</th><th></th></tr></thead>
+      <thead><tr><th>Tarih</th><th>Hareket</th><th>Açıklama / Döküm</th><th class="fn-num">{{ ('Ödediğim / Hak ediş' if calisan_haklari else 'Ödediğim') if cari.tur == 'sahsi' else 'Borç ↑' }}</th><th class="fn-num">{{ 'Aldığım' if cari.tur == 'sahsi' else 'Borç ↓' }}</th><th class="fn-num">Bakiye</th><th></th></tr></thead>
       <tbody>
       {% for h in sayfalama.items %}
         <tr class="{{ 'fn-iptal' if h.iptal }}">
@@ -76,7 +76,7 @@
           <td class="fn-num {{ 'fn-neg' if cari.tur == 'sahsi' else 'fn-pos' }}">{% if h.yon < 0 %}{{ h.tutar | tl_format }}{% endif %}</td>
           <td class="fn-num">{{ h.yeni_bakiye | tl_format }}</td>
           <td class="fn-actions text-end">
-            {% if not h.iptal and (not h.hakedis_id or h.islem_id) %}
+            {% if not h.iptal and (not h.hakedis_id or h.islem_id or h.tur in ('odeme', 'mahsup')) %}
             <form method="POST" action="{{ url_for('finans.cari_hareket_iptal', hareket_id=h.id) }}" class="d-inline fn-cari-iptal">
               <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
               <button type="submit" class="btn btn-sm btn-outline-danger" title="İptal">✕</button>

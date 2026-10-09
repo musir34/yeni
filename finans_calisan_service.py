@@ -25,6 +25,7 @@ def _tutar(raw):
 
 
 MAAS_CARI_TURLERI = ('calisan', 'sahsi')   # şahsi: sahibin kendi hesabı; maaş kasa borcuyla mahsuplaşır
+MAHSUP_HESABI = 'mahsup'   # şahsi hesapta maaşın kasa borcundan düşülmesi; kasadan para çıkmaz
 
 
 def maas_carileri():
@@ -166,7 +167,7 @@ def hakedis_ve_odeme(kalem_id, donem, hak_tutar, odeme_tutar, hesap_kodu, tarih,
         if tekrar:
             if (tekrar.iptal or tekrar.hakedis.kalem_id != k.id or tekrar.hakedis.donem != donem
                     or tekrar.tutar != odeme or tekrar.hakedis.tutar != hak
-                    or tekrar.islem.hesap.kod != hesap_kodu):
+                    or (tekrar.islem.hesap.kod if tekrar.islem else MAHSUP_HESABI) != hesap_kodu):
                 raise fs.FinansHata('Bu ödeme isteği daha önce kullanılmış; sayfayı yenileyin.')
             db.session.commit()
             return tekrar.hakedis, tekrar.islem
@@ -188,15 +189,27 @@ def hakedis_ve_odeme(kalem_id, donem, hak_tutar, odeme_tutar, hesap_kodu, tarih,
         if odeme > hak - odenen:
             raise fs.FinansHata(f'Ödeme kalan borcu aşamaz. Kalan: {hak - odenen:.2f} ₺.')
         hesap = None
-        if odeme:
+        mahsup = bool(odeme) and hesap_kodu == MAHSUP_HESABI
+        if odeme and not mahsup:
             fs._gider_hesabi_kontrol(hesap_kodu)
             hesap = fs.hesap_getir(hesap_kodu, kilitle=True)
         cari = cs.cari_getir(k.calisan_cari_id, kilitle=True)
         if not cari.aktif:
             raise fs.FinansHata('Çalışanın cari hesabı kapalı.')
+        if mahsup:
+            if cari.tur != 'sahsi':
+                raise fs.FinansHata('Kasa borcundan düşme yalnız şahsi hesapta kullanılır.')
+            borc = cs.sahsi_kasa_borcu(cari.id)
+            if odeme > borc:
+                raise fs.FinansHata(f'Kasa borcundan en çok {borc:.2f} ₺ düşülebilir.')
         _hak_yaz(h, cari, hak, kullanici_id)
         islem = None
-        if odeme:
+        if mahsup:
+            aciklama = (aciklama or '').strip() or f'{k.ad} — {fs.donem_etiket(donem)} kasa borcundan mahsup'
+            cs._cari_hareket(cari, 'odeme', odeme, tarih, aciklama, kullanici_id,
+                             hakedis_id=h.id, odeme_anahtari=token)
+            cs._cari_hareket(cari, 'mahsup', odeme, tarih, aciklama, kullanici_id, hakedis_id=h.id)
+        elif odeme:
             aciklama = (aciklama or '').strip() or f'{k.ad} — {fs.donem_etiket(donem)} ödemesi'
             islem = fs._hareket(hesap, 'cari_odeme', -1, odeme, tarih, kullanici_id,
                                 kalem_id=k.id, donem=donem, kategori_id=k.kategori_id, aciklama=aciklama)

@@ -369,6 +369,15 @@ def cari_hareket_geri_al(h: FinansCariHareket, kullanici_id: int, simdi: datetim
         if Decimal(str(kalan or 0)) - Decimal(str(h.tutar)) < 0:
             raise FinansHata('İptal edilemez: bu paranın bir kısmı çalışana geri ödenmiş. '
                              'Önce geri ödemeyi iptal edin.')
+    if h.tur == 'borc_alma' and db.session.query(FinansCariHareket.id).filter_by(
+            cari_id=h.cari_id, tur='mahsup', iptal=False).first():
+        # Maaştan mahsup edilmiş kasa borcu kaybolursa hafta, kasadan para çıkmadan ödenmiş görünürdü.
+        borc = (db.session.query(func.coalesce(func.sum(FinansCariHareket.yon * FinansCariHareket.tutar), 0))
+                .filter(FinansCariHareket.cari_id == h.cari_id, FinansCariHareket.iptal.is_(False),
+                        FinansCariHareket.tur.in_(('borc_alma', 'borc_odeme', 'mahsup'))).scalar())
+        if Decimal(str(borc or 0)) + Decimal(str(h.tutar)) > 0:
+            raise FinansHata('İptal edilemez: bu kasa borcu maaştan mahsup edilmiş. '
+                             'Önce ilgili haftadaki mahsubu iptal edin.')
     cari.bakiye = Decimal(str(cari.bakiye or 0)) - h.yon * Decimal(str(h.tutar))
     cari.guncelleme_tarihi = simdi
     h.iptal = True
