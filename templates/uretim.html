@@ -106,6 +106,16 @@
         <span class="ur-hazir-label"><i class="bi bi-person-check"></i> Hazırlayan:</span>
         <div class="ur-hazir-chips" id="urHazirChips"></div>
       </div>
+      <!-- Paketlenen sekmesi: toplu kargo firması değiştirme (Trendyol changeCargoProvider) -->
+      <div class="ur-toplu-bar" id="urTopluBar" hidden>
+        <label class="ur-toplu-sec"><input type="checkbox" id="urTopluHepsi"> Tümünü seç</label>
+        <span class="ur-toplu-sayi" id="urTopluSayi">0 seçili</span>
+        <select class="form-select form-select-sm ur-toplu-select" id="urTopluKargo" aria-label="Yeni kargo firması">
+          <option value="">Kargo firması seç…</option>
+        </select>
+        <button type="button" class="ur-work-btn" id="urTopluDegistir" disabled><i class="bi bi-truck"></i> Kargo Firmasını Değiştir</button>
+        <small class="ur-toplu-hint">Yalnız Trendyol paketleri · kargoya verilmemiş olmalı · aynı pakette 5 dk içinde 1 değişiklik · yeni kargo kodu üretilir, eski etiket geçersiz olur.</small>
+      </div>
     </section>
 
     <div id="urList" class="ur-list" aria-live="polite">
@@ -282,6 +292,17 @@
   }
   .ur-hazir-chip:hover { border-color:#cfd1d6; color:var(--ur-ink); }
   .ur-hazir-chip.active { background:var(--ur-rose-soft); border-color:#ecd7db; color:var(--ur-rose-dark); }
+  .ur-toplu-bar { display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; padding:10px 18px; border-top:1px solid var(--ur-line); background:#fbf7f2; }
+  .ur-toplu-sec { display:inline-flex; align-items:center; gap:6px; font-size:.82rem; font-weight:700; margin:0; cursor:pointer; }
+  .ur-toplu-sayi { font-size:.78rem; font-weight:700; color:#8a6410; background:#fff3d6; padding:3px 9px; border-radius:999px; }
+  .ur-toplu-select { width:auto; min-width:180px; }
+  .ur-toplu-hint { flex-basis:100%; color:#777; font-size:.72rem; }
+  .ur-sec { display:inline-flex; align-items:center; margin:0; cursor:pointer; }
+  .ur-sec input { width:18px; height:18px; cursor:pointer; accent-color:var(--ur-rose-dark); }
+  .ur-sec input:disabled { cursor:not-allowed; opacity:.4; }
+  .ur-card--secili { outline:2px solid var(--ur-rose-dark); outline-offset:-2px; }
+  html.gs-dark .ur-toplu-bar { background:#2a2622; }
+  html.gs-dark .ur-toplu-sayi { background:#3d331a; color:#e3b654; }
 
   .ur-list { display:grid; gap:14px; }
   .ur-card {
@@ -481,6 +502,8 @@
 
     let aktifDurum = 'bekleyen';
     const rowCache = {};  // id → satır (kargo diyaloğu için)
+    const seciliIdler = new Set();  // Paketlenen sekmesi: toplu kargo değişimi için seçilen kayıt id'leri
+    const trendyolMu = r => !/^(SH|DG)-/.test(r.order_number || '');
     let kargoAktif = null;
     let aktifHazirlayan = '';   // '' = tümü; kullanıcı adı = yalnız onun hazırladıkları
     const durumRows = {};       // durum → son yüklenen satırlar (hazırlayan chip'leri için)
@@ -610,9 +633,12 @@
             butonlar = kargoBtn;  // kargoda/teslim: durum aksiyonu yok
         }
         return `
-        <article class="ur-card${iptal ? ' ur-card--iptal' : ''}">
+        <article class="ur-card${iptal ? ' ur-card--iptal' : ''}${paketlenen && seciliIdler.has(Number(r.id)) ? ' ur-card--secili' : ''}" data-kayit-id="${Number(r.id)}">
             <div class="ur-card-main">
                 <div class="ur-card-top">
+                    ${paketlenen ? (trendyolMu(r)
+                        ? `<label class="ur-sec" title="Toplu kargo değişimi için seç"><input type="checkbox" class="ur-sec-cb" data-sec="${Number(r.id)}"${seciliIdler.has(Number(r.id)) ? ' checked' : ''}></label>`
+                        : '<label class="ur-sec" title="Yalnız Trendyol paketlerinin kargo firması değiştirilebilir"><input type="checkbox" disabled></label>') : ''}
                     <span class="ur-order-no">#${esc(r.order_number)}</span>
                     ${r.product_main_id ? `<span class="ur-model-tag"><i class="fas fa-industry"></i> ${esc(r.product_main_id)}</span>` : ''}
                     ${iptal ? '<span class="ur-badge ur-badge--iptal"><i class="bi bi-x-octagon"></i> İPTAL — üretme!</span>' : ''}
@@ -675,9 +701,11 @@
             list.innerHTML = aktifHazirlayan
                 ? `<div class="ur-empty"><i class="bi bi-person-x"></i>${esc(aktifHazirlayan)} kullanıcısının bu sekmede hazırladığı sipariş yok.</div>`
                 : (bosMesaj[durum] || bosMesaj.bekleyen);
+            topluBarGuncelle();
             return;
         }
         list.innerHTML = gorunecek.map(r => kartHtml(r, durum)).join('');
+        topluBarGuncelle();
     }
 
     // Hazırlayan chip'leri: tüm sekmelerdeki satırlardan kullanıcı adları toplanır
@@ -752,13 +780,23 @@
                 t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
             });
             aktifDurum = tab.getAttribute('data-durum');
+            seciliIdler.clear();
             listeYukle(aktifDurum, true);
         });
     });
 
     document.getElementById('urYenile').addEventListener('click', () => { tazele(); ayarYukle(); });
 
+    document.getElementById('urList').addEventListener('change', (e) => {
+        const cb = e.target.closest('.ur-sec-cb');
+        if (!cb) return;
+        const id = Number(cb.getAttribute('data-sec'));
+        if (cb.checked) seciliIdler.add(id); else seciliIdler.delete(id);
+        cb.closest('.ur-card')?.classList.toggle('ur-card--secili', cb.checked);
+        topluBarGuncelle();
+    });
     document.getElementById('urList').addEventListener('click', async (e) => {
+        if (e.target.closest('.ur-sec')) return;  // seçim kutusu: change olayı işler
         // Ürün görselini büyüt (lightbox)
         const imgBtn = e.target.closest('[data-buyut]');
         if (imgBtn) {
@@ -967,6 +1005,88 @@
         kart.hidden = false;
         setTimeout(() => { kart.hidden = true; }, 3000);
         document.getElementById('urKargoDialog').hidden = true;
+    });
+
+    // ── Toplu kargo firması değiştirme (Paketlenen sekmesi) ──
+    // Kaynak: /kargo-firmasi/api/* (kargo_degistir.py) — Trendyol changeCargoProvider.
+    let kargoFirmalariYuklendi = false;
+    async function kargoFirmalariYukle() {
+        if (kargoFirmalariYuklendi) return;
+        try {
+            const res = await fetch('/kargo-firmasi/api/liste');
+            const data = await res.json();
+            const sel = document.getElementById('urTopluKargo');
+            (data.firmalar || []).forEach(f => {
+                const o = document.createElement('option');
+                o.value = f.kod; o.textContent = f.ad;
+                sel.appendChild(o);
+            });
+            kargoFirmalariYuklendi = true;
+        } catch { toast('Kargo firmaları yüklenemedi.', 'error'); }
+    }
+    function topluBarGuncelle() {
+        const bar = document.getElementById('urTopluBar');
+        const paketlenenSekme = aktifDurum === 'paketlenen';
+        bar.hidden = !paketlenenSekme;
+        if (!paketlenenSekme) return;
+        kargoFirmalariYukle();
+        // Görünen listede artık olmayan seçimleri düşür
+        const gorunen = new Set([...document.querySelectorAll('.ur-sec-cb')].map(cb => Number(cb.getAttribute('data-sec'))));
+        [...seciliIdler].forEach(id => { if (!gorunen.has(id)) seciliIdler.delete(id); });
+        document.getElementById('urTopluSayi').textContent = `${seciliIdler.size} seçili`;
+        const hepsi = document.getElementById('urTopluHepsi');
+        hepsi.checked = gorunen.size > 0 && seciliIdler.size === gorunen.size;
+        hepsi.indeterminate = seciliIdler.size > 0 && seciliIdler.size < gorunen.size;
+        topluButonGuncelle();
+    }
+    function topluButonGuncelle() {
+        const kod = document.getElementById('urTopluKargo').value;
+        document.getElementById('urTopluDegistir').disabled = !(kod && seciliIdler.size);
+    }
+    document.getElementById('urTopluKargo').addEventListener('change', topluButonGuncelle);
+    document.getElementById('urTopluHepsi').addEventListener('change', (e) => {
+        document.querySelectorAll('.ur-sec-cb').forEach(cb => {
+            cb.checked = e.target.checked;
+            const id = Number(cb.getAttribute('data-sec'));
+            if (cb.checked) seciliIdler.add(id); else seciliIdler.delete(id);
+            cb.closest('.ur-card')?.classList.toggle('ur-card--secili', cb.checked);
+        });
+        topluBarGuncelle();
+    });
+    document.getElementById('urTopluDegistir').addEventListener('click', async () => {
+        const sel = document.getElementById('urTopluKargo');
+        const kod = sel.value;
+        const ids = [...seciliIdler];
+        if (!kod || !ids.length) return;
+        const ad = sel.options[sel.selectedIndex].textContent;
+        const onay = window.gsConfirm
+            ? await gsConfirm(`${ids.length} paketin kargo firması <strong>${esc(ad)}</strong> olarak değiştirilsin mi?<br><small>Trendyol yeni kargo kodu üretir; daha önce basılmış etiketler geçersiz olur.</small>`, { okText: 'Değiştir', type: 'warning' })
+            : confirm(`${ids.length} paketin kargo firması ${ad} olarak değiştirilsin mi?`);
+        if (!onay) return;
+        const btn = document.getElementById('urTopluDegistir');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Değiştiriliyor…';
+        try {
+            const res = await fetch('/kargo-firmasi/api/degistir', {
+                method: 'POST', headers: POST_HEADERS,
+                body: JSON.stringify({ kargo_kodu: kod, kayit_ids: ids })
+            });
+            const data = await res.json();
+            toast(data.message || (data.success ? 'Tamam' : 'Hata'), data.success ? 'success' : (data.basarili ? 'warning' : 'error'));
+            // Hatalı siparişleri tek tek göster (toast tek mesaj taşıyor)
+            const hatalar = (data.sonuclar || []).filter(x => !x.success && !x.skipped);
+            if (hatalar.length && window.gsConfirm) {
+                gsConfirm('<strong>Değiştirilemeyenler</strong><br>' + hatalar.map(x => `#${esc(x.order_number)}: ${esc(x.message)}`).join('<br>'),
+                          { okText: 'Tamam', cancelText: 'Kapat', type: 'danger' });
+            }
+            seciliIdler.clear();
+            tazele();
+        } catch {
+            toast('Sunucuya ulaşılamadı.', 'error');
+        } finally {
+            btn.innerHTML = '<i class="bi bi-truck"></i> Kargo Firmasını Değiştir';
+            topluButonGuncelle();
+        }
     });
 
     ayarYukle();

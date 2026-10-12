@@ -64,6 +64,16 @@
         .card-body { padding: 1.25rem; }
         .card-footer { background-color: #fcfcfc; border-top: 1px solid var(--color-border); }
         .cargo-provider.orange { color: #fd7e14; }
+        /* Toplu kargo firması değiştirme: kart seçimi */
+        .kargo-sec { display: inline-flex; align-items: center; margin: 0 .5rem 0 0; cursor: pointer; }
+        .kargo-sec input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--color-primary, #b76e79); }
+        .card.kargo-secili { outline: 2px solid var(--color-primary, #b76e79); outline-offset: -2px; }
+        .kargo-toplu-wrap { display: inline-flex; align-items: center; gap: .5rem; }
+        .kargo-toplu-wrap label { display: inline-flex; align-items: center; gap: .35rem; margin: 0; font-size: .85rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+        #kargoSonucListe { max-height: 40vh; overflow: auto; font-size: .9rem; }
+        #kargoSonucListe .ks-ok { color: var(--color-success); }
+        #kargoSonucListe .ks-skip { color: #946300; }
+        #kargoSonucListe .ks-err { color: var(--color-danger); }
         .red { color: var(--color-danger); }
         .badge { font-size: 0.8rem; padding: 0.4em 0.7em; }
 
@@ -326,6 +336,13 @@
         <div class="list-toolbar d-flex justify-content-between align-items-center my-4 gap-3">
              <h4>Toplam Sipariş: <span id="orderTotalCount">{{ total_orders_count }}</span></h4>
              <div class="list-toolbar-actions d-flex gap-2 flex-wrap align-items-center">
+                {# Toplu kargo firması değiştirme — yalnız kargoya verilmemiş Trendyol siparişleri seçilebilir #}
+                <div class="kargo-toplu-wrap">
+                    <label title="Bu sayfadaki seçilebilir siparişlerin tümünü seç"><input type="checkbox" id="kargoHepsiSec"> Tümünü seç</label>
+                    <button type="button" class="btn btn-outline-dark" id="btnKargoDegistir" disabled title="Seçili siparişlerin kargo firmasını Trendyol'da değiştir">
+                        <i class="fas fa-truck"></i> Kargo Firmasını Değiştir <span class="badge bg-dark" id="kargoSeciliSayi">0</span>
+                    </button>
+                </div>
                 <form method="POST" action="{{ url_for('order_service.fetch_trendyol_orders_route') }}">
                     <button type="submit" class="btn btn-primary"><i class="fas fa-sync-alt"></i> Siparişleri Güncelle</button>
                 </form>
@@ -387,7 +404,8 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     {# Shopify kartında display_number mağaza adı (1428); eylemler order_number (SH-…) ile çalışır #}
                     {% set gosterilen_no = order.display_number or order.order_number %}
-                    <div><strong>Sipariş No:</strong> {{ gosterilen_no }}
+                    {% set kargo_secilebilir = order.status in ['Created', 'Hazirlaniyor', 'Picking'] and not (order.order_number or '').startswith('SH-') %}
+                    <div>{% if kargo_secilebilir %}<label class="kargo-sec" title="Toplu kargo değişimi için seç"><input type="checkbox" class="kargo-sec-cb" value="{{ order.order_number }}"></label>{% endif %}<strong>Sipariş No:</strong> {{ gosterilen_no }}
                         <span class="copy-container" onclick="copyToClipboard('{{ gosterilen_no }}', this)"><i class="far fa-copy"></i></span>
                         <span class="copy-confirmation">✔️</span>
                     </div>
@@ -517,6 +535,39 @@
             </ul>
         </nav>
         {% endif %}
+        </div>
+    </div>
+
+    <!-- Toplu kargo firması değiştirme (Trendyol changeCargoProvider — kargo_degistir.py) -->
+    <div class="modal fade" id="kargoModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: var(--border-radius);">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-truck"></i> Kargo Firmasını Değiştir</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="kargoFormAlani">
+                        <p class="mb-2"><strong id="kargoModalSayi">0</strong> sipariş seçildi.</p>
+                        <label for="kargoFirmaSec" class="form-label">Yeni kargo firması</label>
+                        <select class="form-select" id="kargoFirmaSec">
+                            <option value="">Seçin…</option>
+                        </select>
+                        <div class="alert alert-warning py-2 px-3 mt-3 mb-0 small">
+                            Yalnız kargoya verilmemiş Trendyol paketleri değiştirilebilir. Aynı pakette 5 dakikada 1 değişiklik yapılabilir.
+                            Trendyol yeni kargo kodu üretir; daha önce basılmış etiketler geçersiz olur.
+                        </div>
+                    </div>
+                    <div id="kargoSonucAlani" class="d-none">
+                        <p class="mb-2" id="kargoSonucOzet"></p>
+                        <div id="kargoSonucListe"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn btn-primary" id="kargoDegistirOnay" disabled>Değiştir</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -903,6 +954,124 @@
             params.delete('page');
             window.location.search = params.toString();
         }
+
+        // ── Toplu kargo firması değiştirme ──
+        // Seçim durumu DOM'daki checkbox'lardan okunur: arama sonuçları yenilenince (#orderResults
+        // yeniden yazılır) seçim doğal olarak sıfırlanır.
+        (function(){
+            const results = document.getElementById('orderResults');
+            const btn = document.getElementById('btnKargoDegistir');
+            const sayi = document.getElementById('kargoSeciliSayi');
+            const hepsi = document.getElementById('kargoHepsiSec');
+            const modalEl = document.getElementById('kargoModal');
+            const firmaSec = document.getElementById('kargoFirmaSec');
+            const onayBtn = document.getElementById('kargoDegistirOnay');
+            if (!results || !btn || !modalEl) return;
+            let firmalarYuklendi = false;
+            const escHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            const toastGoster = (msg, type) => window.GS ? GS.showToast(msg, type) : (window.gsToast ? gsToast(msg, type) : alert(msg));
+
+            const kutular = () => [...results.querySelectorAll('.kargo-sec-cb')];
+            const secili = () => kutular().filter(cb => cb.checked).map(cb => cb.value);
+
+            function sayacGuncelle() {
+                const tum = kutular();
+                const n = tum.filter(cb => cb.checked).length;
+                sayi.textContent = n;
+                btn.disabled = n === 0;
+                hepsi.checked = tum.length > 0 && n === tum.length;
+                hepsi.indeterminate = n > 0 && n < tum.length;
+                hepsi.disabled = tum.length === 0;
+            }
+            results.addEventListener('change', function(e){
+                const cb = e.target.closest('.kargo-sec-cb');
+                if (!cb) return;
+                cb.closest('.card')?.classList.toggle('kargo-secili', cb.checked);
+                sayacGuncelle();
+            });
+            hepsi.addEventListener('change', function(){
+                kutular().forEach(cb => {
+                    cb.checked = hepsi.checked;
+                    cb.closest('.card')?.classList.toggle('kargo-secili', cb.checked);
+                });
+                sayacGuncelle();
+            });
+            // Arama sonuçları yenilenince sayaç sıfırlansın
+            new MutationObserver(sayacGuncelle).observe(results, { childList: true });
+            sayacGuncelle();
+
+            async function firmalariYukle() {
+                if (firmalarYuklendi) return;
+                const r = await fetch('/kargo-firmasi/api/liste', { headers: { 'X-Requested-With': 'fetch' } });
+                const j = await r.json();
+                (j.firmalar || []).forEach(f => {
+                    const o = document.createElement('option');
+                    o.value = f.kod; o.textContent = f.ad;
+                    firmaSec.appendChild(o);
+                });
+                firmalarYuklendi = true;
+            }
+            btn.addEventListener('click', async function(){
+                const nolar = secili();
+                if (!nolar.length) return;
+                document.getElementById('kargoModalSayi').textContent = nolar.length;
+                document.getElementById('kargoFormAlani').classList.remove('d-none');
+                document.getElementById('kargoSonucAlani').classList.add('d-none');
+                onayBtn.classList.remove('d-none');
+                onayBtn.disabled = !firmaSec.value;
+                onayBtn.innerHTML = 'Değiştir';
+                try { await firmalariYukle(); } catch { toastGoster('Kargo firmaları yüklenemedi.', 'danger'); return; }
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            });
+            firmaSec.addEventListener('change', function(){ onayBtn.disabled = !firmaSec.value; });
+
+            onayBtn.addEventListener('click', async function(){
+                const nolar = secili();
+                const kod = firmaSec.value;
+                if (!nolar.length || !kod) return;
+                onayBtn.disabled = true;
+                onayBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Değiştiriliyor…';
+                try {
+                    const r = await fetch('/kargo-firmasi/api/degistir', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+                        body: JSON.stringify({ kargo_kodu: kod, order_numbers: nolar })
+                    });
+                    const j = await r.json();
+                    if (!r.ok && !j.sonuclar) throw new Error(j.message || 'İstek reddedildi');
+                    // Sonuçları modalda göster, kartları yerinde güncelle (sayfa yenilemeden)
+                    document.getElementById('kargoFormAlani').classList.add('d-none');
+                    document.getElementById('kargoSonucAlani').classList.remove('d-none');
+                    document.getElementById('kargoSonucOzet').innerHTML = '<strong>' + escHtml(j.message || '') + '</strong>';
+                    document.getElementById('kargoSonucListe').innerHTML = (j.sonuclar || []).map(x => {
+                        const cls = x.skipped ? 'ks-skip' : (x.success ? 'ks-ok' : 'ks-err');
+                        const ico = x.skipped ? 'fa-minus-circle' : (x.success ? 'fa-check-circle' : 'fa-times-circle');
+                        return `<div class="${cls}"><i class="fas ${ico}"></i> <strong>${escHtml(x.order_number)}</strong> — ${escHtml(x.message)}</div>`;
+                    }).join('');
+                    onayBtn.classList.add('d-none');
+                    (j.sonuclar || []).forEach(x => {
+                        if (!x.success || x.skipped) return;
+                        const cb = kutular().find(c => c.value === x.order_number);
+                        const card = cb?.closest('.card');
+                        if (!card) return;
+                        const prov = card.querySelector('.cargo-provider');
+                        if (prov && x.cargo_provider_name) { prov.textContent = x.cargo_provider_name; prov.classList.remove('orange'); }
+                        const bc = card.querySelector('input[name="shipping_barcode"]');
+                        if (bc) bc.value = x.cargo_tracking_number || '';
+                        const cp = card.querySelector('input[name="cargo_provider"]');
+                        if (cp && x.cargo_provider_name) cp.value = x.cargo_provider_name;
+                        cb.checked = false;
+                        card.classList.remove('kargo-secili');
+                    });
+                    sayacGuncelle();
+                    toastGoster(j.message || 'Tamamlandı', j.success ? 'success' : (j.basarili ? 'warning' : 'danger'));
+                } catch (e) {
+                    toastGoster('Kargo firması değiştirilemedi: ' + e.message, 'danger');
+                    onayBtn.disabled = false;
+                    onayBtn.innerHTML = 'Değiştir';
+                }
+            });
+        })();
 
         // ── Otomatik Sipariş Çekme Toggle ──
         document.getElementById('btnToggleOrderPull').addEventListener('click', function () {

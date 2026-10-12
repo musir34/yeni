@@ -48,6 +48,7 @@ def register_blueprints(app):
     from trendyol_qna.instagram_dm import instagram_bp  # 📷 INSTAGRAM DM (public webhook)
     from uretim_routes import uretim_bp  # 🏭 ÜRETİM MODU
     from takip_notu import takip_bp  # 📌 TAKİP NOTLARI
+    from kargo_degistir import kargo_degistir_bp  # 🚚 KARGO FİRMASI DEĞİŞTİRME
     from siparis_notu import siparis_notu_bp  # 📝 SİPARİŞ NOTLARI
     from kargo_mutabakat import kargo_mutabakat_bp  # 🚚 KARGO MUTABAKAT
     from iade_yonetimi import iade_yonetimi_bp  # 📦 SİTE İADE YÖNETİMİ
@@ -107,6 +108,7 @@ def register_blueprints(app):
         instagram_bp,  # 📷 INSTAGRAM DM (public webhook)
         uretim_bp,  # 🏭 ÜRETİM MODU
         takip_bp,  # 📌 TAKİP NOTLARI
+        kargo_degistir_bp,  # 🚚 KARGO FİRMASI DEĞİŞTİRME
         siparis_notu_bp,  # 📝 SİPARİŞ NOTLARI
         kargo_mutabakat_bp,  # 🚚 KARGO MUTABAKAT
         iade_yonetimi_bp,  # 📦 SİTE İADE YÖNETİMİ
