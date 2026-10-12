@@ -81,11 +81,14 @@
         {% if sayfa_erisebilir('komisyon_tarifeleri') %}<li><a class="dropdown-item" href="{{ url_for('akilli_motor.akilli_motor_sayfasi') }}"><i class="fas fa-microchip me-2"></i>Ürün Komisyon Tarifeleri</a></li>{% endif %}
         {% if sayfa_erisebilir('flas_indirim') %}<li><a class="dropdown-item" href="{{ url_for('flas_indirim.flas_indirim_sayfasi') }}"><i class="fas fa-bolt me-2" style="color:#e67e22"></i>Flaş İndirimler</a></li>{% endif %}
         {% endif %}
-        {% if sayfa_erisebilir('kasa') or sayfa_erisebilir('finans') %}
+        {# Finans grubu KATALOGDAN üretilir: kullanıcıya hangi finans sayfası verildiyse menüde o çıkar #}
+        {% set finans_sayfalari = menu_sayfalari('Finans') %}
+        {% if finans_sayfalari %}
         <li><hr class="dropdown-divider"></li>
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Finans</div></li>
-        {% if sayfa_erisebilir('kasa') %}<li><a class="dropdown-item" href="{{ url_for('kasa.kasa_sayfasi') }}"><i class="fas fa-cash-register me-2"></i>Kasa</a></li>{% endif %}
-        {% if sayfa_erisebilir('finans') %}<li><a class="dropdown-item" href="{{ url_for('finans.panel') }}"><i class="fas fa-wallet me-2"></i>Finans</a></li>{% endif %}
+        {% for s in finans_sayfalari %}
+        <li><a class="dropdown-item" href="{{ url_for(s.menu_endpoint) }}"><i class="fas {{ 'fa-cash-register' if s.kod == 'kasa' else 'fa-wallet' }} me-2"></i>{{ s.menu_etiketi }}</a></li>
+        {% endfor %}
         {% endif %}
       </ul>
     </div>

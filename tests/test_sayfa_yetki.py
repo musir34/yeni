@@ -80,3 +80,44 @@ def test_istisna_farki_yalniz_varsayilandan_sapmayi_saklar():
     # Bilinmeyen kod yok sayılır, varsayılanda olan sayfa işaretlenmezse kaldırma olur
     fark = istisna_farki("worker", (varsayilan - {"raf"}) | {"yok_boyle_sayfa"})
     assert fark == {"raf": False}
+
+
+def test_her_gorunen_sayfanin_menude_bir_girisi_var():
+    """Komutan olayı (2026-10-12): Ahmet'e finans_cari verildi ama menüde Cari kalemi yoktu → yetki var, düğme yok.
+    Kural: yetki ekranında görünen her sayfa ya menüde sayfa_erisebilir('kod') ile sarılı bir kalemdir ya da
+    menu_endpoint tanımlıdır ve grubu menüde menu_sayfalari('grup') ile katalogdan üretilir."""
+    menu = (Path(__file__).resolve().parent.parent / "templates" / "_ust_menu.html").read_text(encoding="utf-8")
+    eksik = []
+    for s in SAYFALAR:
+        if not s.menude or s.menu_disi:
+            continue
+        elle = f"sayfa_erisebilir('{s.kod}')" in menu
+        katalogdan = bool(s.menu_endpoint) and f"menu_sayfalari('{s.grup}')" in menu
+        if not (elle or katalogdan):
+            eksik.append(s.kod)
+    assert eksik == [], f"menüde girişi olmayan sayfalar: {eksik}"
+    # menu_disi yalnız bilinçli URL sayfaları için; liste büyürse bu test bilerek kırılsın
+    assert sorted(s.kod for s in SAYFALAR if s.menu_disi) == ["amazon", "gizli_ozellikler", "raporlama"]
+
+
+def test_eylem_sayfasi_ebeveynlerini_izler():
+    # Çalışan hakediş ödemesi: Panel'e YA DA Cari'ye erişen herkese açık; yetki ekranında ayrı kutu değil
+    assert sayfa_bul("finans.calisan_hakedis_odeme", "/finans/calisan/hakedis-odeme").kod == "finans_calisan"
+    assert not erisebilir("finans_calisan", "worker")
+    assert erisebilir("finans_calisan", "worker", {"finans_cari": True})          # Ahmet senaryosu
+    assert erisebilir("finans_calisan", "worker", {"finans": True})
+    assert erisebilir("finans_calisan", "admin")
+    assert not erisebilir("finans_calisan", "admin", {"finans": False, "finans_cari": False})
+    assert erisebilir("finans_calisan", "admin", {"finans": False})               # cari hâlâ açık → eylem açık
+    gorunen = {s.kod for _, sayfalar in gruplu_sayfalar() for s in sayfalar}
+    assert "finans_calisan" not in gorunen and "finans_cari" in gorunen
+    # Yetki ekranından gelen seçim eylem sayfaları için asla istisna üretmez
+    assert "finans_calisan" not in istisna_farki("admin", gorunen - {"raf"})
+    assert istisna_farki("admin", gorunen) == {}
+
+
+def test_finans_grubu_menu_rotalari_tanimli():
+    for s in SAYFALAR:
+        if s.grup == "Finans" and s.menude:
+            assert s.menu_endpoint, s.kod
+            assert s.menu_etiketi

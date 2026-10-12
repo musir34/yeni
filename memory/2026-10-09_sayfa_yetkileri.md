@@ -39,3 +39,19 @@ düzenleyemez) → script şart.
 **Bilinçli sınırlar:** istisna yalnız katalog sayfaları için; `manager` rolü arayüzden atanamıyor, katalogda bugünkü
 erişimiyle duruyor; satır içi rol kontrolleri (gizli_ozellikler, rapor_gir, degisim/iade eylemleri) değişmedi;
 Kalan `menu.html` (gizli özellikler sayfası) eski rol koşuluyla duruyor.
+
+## 2026-10-12 ek — "yetki var, düğme yok" olayı ve kalıcı kural
+**Olay:** Komutan Ahmet'e (worker) finans yetkisi verdi, anasayfada Finans düğmesi çıkmadı. Canlı DB: Ahmet'in tek
+istisnası `finans_cari=True`. Menüdeki "Finans" kalemi yalnız `finans` (Kasa Paneli) yetkisine bağlıydı; Cari için menüde
+kalem yoktu → yetki doğru yazılmış ama ulaşılacak düğme yoktu.
+**Kalıcı çözüm:**
+- `Sayfa` kataloğuna `menu_endpoint`/`menu_ad` eklendi; `_ust_menu.html` Finans bölümü `menu_sayfalari('Finans')` ile
+  KATALOGDAN üretilir → hangi finans alt sayfası verilirse menüde o kalem çıkar (Analiz & Fiyat açılır menüsü, Finans başlığı).
+- `_finans_nav.html` sekmeleri `sayfa_erisebilir` ile yetkiye bağlı (Panel/Gelir/Defter/Tanımlar/Rapor → finans, Kredi Kartı
+  → finans_kart, Cari → finans_cari).
+- Eylem sayfası kavramı: `finans_calisan` (hakediş ödemesi; panel, düzenli ödemeler ve cari detayda modal) `menude=False`,
+  `ebeveynler=("finans","finans_cari")` → yetkisi tamamen ebeveynlerinden türer, yetki ekranında kutu değil, istisna almaz.
+- `menu_disi=True`: bilinçli menü dışı URL sayfaları (raporlama, amazon, gizli_ozellikler).
+- TEST ZORLAR: `test_her_gorunen_sayfanin_menude_bir_girisi_var` — yetki ekranındaki her sayfa menüde ya elle
+  `sayfa_erisebilir('kod')` ile ya da katalogdan `menu_sayfalari('grup')` ile yer almalı; aksi hâlde test kırılır.
+  Yeni sayfa eklerken: katalog + menü girişi (ya da menu_disi gerekçesiyle).

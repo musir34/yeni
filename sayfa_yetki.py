@@ -41,6 +41,15 @@ class Sayfa:
     endpoints: tuple = ()
     yollar: tuple = ()          # URL path önekleri (blueprint içi alt sayfalar için)
     roller: tuple = HERKES      # varsayılan olarak erişen roller
+    menu_endpoint: str = ""     # menüden gidilecek açılış rotası; grup menüsü katalogdan üretilir (menu_sayfalari)
+    menu_ad: str = ""           # menüde farklı ad gerekiyorsa (boş → ad)
+    ebeveynler: tuple = ()      # bu sayfa/eylem, ebeveynlerinden birine erişebilen herkese açıktır
+    menude: bool = True         # False → bağımsız sayfa değil, ebeveyn sayfaların içindeki eylem; yetki ekranında ve menüde yer almaz
+    menu_disi: bool = False     # True → bilinçli olarak menüde yok (yalnız URL ile açılır); tutarlılık testi bunu kabul eder
+
+    @property
+    def menu_etiketi(self) -> str:
+        return self.menu_ad or self.ad
 
 
 SAYFALAR: tuple[Sayfa, ...] = (
@@ -73,14 +82,24 @@ SAYFALAR: tuple[Sayfa, ...] = (
     Sayfa("komisyon_tarifeleri", "Ürün Komisyon Tarifeleri", "Analiz & Fiyat",
           blueprints=("akilli_motor", "komisyon_tarife"), roller=SADECE_ADMIN),
     Sayfa("flas_indirim", "Flaş İndirimler", "Analiz & Fiyat", blueprints=("flas_indirim",), roller=SADECE_ADMIN),
-    Sayfa("raporlama", "Raporlama", "Analiz & Fiyat", blueprints=("rapor_gir",)),
+    Sayfa("raporlama", "Raporlama (günlük rapor girişi)", "Analiz & Fiyat", blueprints=("rapor_gir",), menu_disi=True),  # /raporlama, menüde hiç olmadı
     # ── Finans (alt sayfalar ayrı yetkilenir; yollar blueprint'ten önce eşleşir) ──
-    Sayfa("kasa", "Kasa (eski)", "Finans", blueprints=("kasa",), roller=SADECE_ADMIN),
-    Sayfa("finans_cari", "Finans — Cari Hesaplar", "Finans", yollar=("/finans/cari",), roller=SADECE_ADMIN),
-    Sayfa("finans_calisan", "Finans — Çalışan Hakediş", "Finans", yollar=("/finans/calisan",), roller=SADECE_ADMIN),
-    Sayfa("finans_kart", "Finans — Kredi Kartı", "Finans", yollar=("/finans/kart",), roller=SADECE_ADMIN),
-    Sayfa("finans_excel", "Finans — Excel Gelir Yükleme", "Finans", yollar=("/finans/gelir/excel",), roller=SADECE_ADMIN),
-    Sayfa("finans", "Finans — Kasa Paneli", "Finans", blueprints=("finans",), roller=SADECE_ADMIN),
+    # Menü bu grubu KATALOGDAN üretir (menu_sayfalari('Finans')): alt sayfalardan hangisi verilirse menüde o çıkar.
+    # Eşleme sırası yollar → endpoints → blueprints olduğu için 'finans' (blueprint) önde dursa da alt yollar önce yakalanır.
+    Sayfa("finans", "Finans — Kasa Paneli", "Finans", blueprints=("finans",), roller=SADECE_ADMIN,
+          menu_endpoint="finans.panel", menu_ad="Finans"),
+    Sayfa("kasa", "Kasa (eski)", "Finans", blueprints=("kasa",), roller=SADECE_ADMIN,
+          menu_endpoint="kasa.kasa_sayfasi", menu_ad="Kasa"),
+    Sayfa("finans_cari", "Finans — Cari Hesaplar", "Finans", yollar=("/finans/cari",), roller=SADECE_ADMIN,
+          menu_endpoint="finans.cari_liste"),
+    Sayfa("finans_kart", "Finans — Kredi Kartı", "Finans", yollar=("/finans/kart",), roller=SADECE_ADMIN,
+          menu_endpoint="finans.kart_ekstre"),
+    Sayfa("finans_excel", "Finans — Excel Gelir Yükleme", "Finans", yollar=("/finans/gelir/excel",), roller=SADECE_ADMIN,
+          menu_endpoint="finans.gelir_excel"),
+    # Çalışan hakediş ödemesi bağımsız sayfa değil: panel, düzenli ödemeler ve cari detay içindeki eylem.
+    # Panel'e ya da Cari'ye erişen herkes kullanır; yetki ekranında ayrı kutu olarak görünmez.
+    Sayfa("finans_calisan", "Finans — Çalışan Hakediş Ödemesi", "Finans", yollar=("/finans/calisan",),
+          roller=SADECE_ADMIN, ebeveynler=("finans", "finans_cari"), menude=False),
     # ── Paneller ──
     Sayfa("shopify_fiyat", "Shopify ↔ Trendyol Fiyat", "Paneller",
           endpoints=("shopify.price_compare_dashboard", "shopify.price_compare_api", "shopify.price_compare_export")),
@@ -88,7 +107,7 @@ SAYFALAR: tuple[Sayfa, ...] = (
     Sayfa("site_iade", "Site İade Yönetimi", "Paneller", blueprints=("iade_yonetimi",)),
     Sayfa("idefix", "Idefix", "Paneller", blueprints=("idefix",)),
     Sayfa("hepsiburada", "Hepsiburada", "Paneller", blueprints=("hepsiburada",)),
-    Sayfa("amazon", "Amazon", "Paneller", blueprints=("amazon",)),
+    Sayfa("amazon", "Amazon", "Paneller", blueprints=("amazon",), menu_disi=True),  # satış kapalı, menüde yok (/amazon/)
     Sayfa("ai_asistan", "AI Asistan", "Paneller", blueprints=("ai_asistan",)),
     # ── Kullanıcı & Yönetim ──
     Sayfa("kullanici_yonetimi", "Kullanıcı Yönetimi", "Yönetim", roller=SADECE_ADMIN, endpoints=(
@@ -101,7 +120,7 @@ SAYFALAR: tuple[Sayfa, ...] = (
     Sayfa("whatsapp_mesajlari", "WhatsApp Mesajları", "Yönetim",
           blueprints=("whatsapp_duyuru", "whatsapp_baglanti"), roller=SADECE_ADMIN),
     Sayfa("alissa", "Muhammet Alissa", "Yönetim", blueprints=("alissa",), roller=SADECE_ADMIN),
-    Sayfa("gizli_ozellikler", "Gizli Özellikler", "Yönetim", blueprints=("gizli_ozellikler",), roller=SADECE_ADMIN),
+    Sayfa("gizli_ozellikler", "Gizli Özellikler", "Yönetim", blueprints=("gizli_ozellikler",), roller=SADECE_ADMIN, menu_disi=True),  # adı üstünde: yalnız URL
 )
 
 SAYFA_MAP: dict[str, Sayfa] = {s.kod: s for s in SAYFALAR}
@@ -140,7 +159,10 @@ def erisebilir(kod: str, rol: str | None, istisnalar: dict[str, bool] | None = N
         return True                      # katalog dışı kod → kısıt yok
     if istisnalar and kod in istisnalar:
         return bool(istisnalar[kod])
-    return rol in SAYFA_MAP[kod].roller
+    sayfa = SAYFA_MAP[kod]
+    if sayfa.ebeveynler:                 # eylem sayfası: yetkisi tamamen ebeveynlerinden türer
+        return any(erisebilir(e, rol, istisnalar, sahip) for e in sayfa.ebeveynler)
+    return rol in sayfa.roller
 
 
 def etkin_sayfalar(rol: str | None, istisnalar: dict[str, bool] | None = None, sahip: bool = False) -> set[str]:
@@ -151,7 +173,9 @@ def istisna_farki(rol: str | None, secili: set[str]) -> dict[str, bool]:
     """Sahibin işaretlediği küme → saklanacak istisnalar (yalnız varsayılandan fark)."""
     varsayilan = rol_varsayilani(rol)
     fark: dict[str, bool] = {}
-    for kod in SAYFA_MAP:
+    for kod, sayfa in SAYFA_MAP.items():
+        if not sayfa.menude:
+            continue                     # eylem sayfaları ebeveynlerini izler, istisna almaz
         acik = kod in secili
         if acik != (kod in varsayilan):
             fark[kod] = acik
@@ -159,8 +183,9 @@ def istisna_farki(rol: str | None, secili: set[str]) -> dict[str, bool]:
 
 
 def gruplu_sayfalar() -> list[tuple[str, list[Sayfa]]]:
-    """Ekran için gruplanmış katalog (GRUP_SIRASI düzeninde)."""
-    return [(g, [s for s in SAYFALAR if s.grup == g]) for g in GRUP_SIRASI if any(s.grup == g for s in SAYFALAR)]
+    """Yetki ekranı için gruplanmış katalog (GRUP_SIRASI düzeninde; menude=False eylemler hariç)."""
+    gorunen = [s for s in SAYFALAR if s.menude]
+    return [(g, [s for s in gorunen if s.grup == g]) for g in GRUP_SIRASI if any(s.grup == g for s in gorunen)]
 
 
 # ─────────────────────────── Flask/DB bağlı yardımcılar ───────────────────────────
@@ -219,6 +244,19 @@ def kullanici_erisebilir(kod: str) -> bool:
     return erisebilir(kod, user.role, _istisnalari_oku(user.id), bool(getattr(user, "is_owner", False)))
 
 
+def menu_sayfalari(grup: str) -> list[Sayfa]:
+    """Jinja global: oturumdaki kullanıcının açabildiği, menü rotası tanımlı sayfalar (grup sırasıyla).
+    Menü bu grupları katalogdan üretir → kataloğa eklenen/verilen her alt sayfa kendiliğinden düğme kazanır."""
+    user = _aktif_kullanici()
+    if user is None:
+        return []
+    istisnalar = _istisnalari_oku(user.id)
+    sahip = bool(getattr(user, "is_owner", False))
+    return [s for s in SAYFALAR
+            if s.grup == grup and s.menude and s.menu_endpoint
+            and erisebilir(s.kod, user.role, istisnalar, sahip)]
+
+
 def istek_engelli_sayfa() -> Sayfa | None:
     """before_request için: istek yetkisiz bir katalog sayfasına düşüyorsa o sayfayı döner."""
     from flask import request
@@ -254,7 +292,7 @@ def kullanici_yetki_durumu(user) -> dict[str, dict]:
     return {
         s.kod: {"varsayilan": user.role in s.roller,
                 "acik": erisebilir(s.kod, user.role, istisnalar, sahip)}
-        for s in SAYFALAR
+        for s in SAYFALAR if s.menude
     }
 
 

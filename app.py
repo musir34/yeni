@@ -218,9 +218,10 @@ def custom_url_for(endpoint, **values):
 app.jinja_env.globals['url_for'] = custom_url_for
 
 # 🔐 Sayfa yetkileri: menü görünürlüğü = açılabilirlik (sayfa_yetki.py kataloğu)
-from sayfa_yetki import kullanici_erisebilir as _sayfa_erisebilir, istek_engelli_sayfa as _istek_engelli_sayfa
+from sayfa_yetki import kullanici_erisebilir as _sayfa_erisebilir, istek_engelli_sayfa as _istek_engelli_sayfa, menu_sayfalari as _menu_sayfalari
 from sayfa_yetki_routes import sayfa_yetki_bp
 app.jinja_env.globals['sayfa_erisebilir'] = _sayfa_erisebilir
+app.jinja_env.globals['menu_sayfalari'] = _menu_sayfalari
 app.register_blueprint(sayfa_yetki_bp)
 
 # ──────────────────────────────────────────────────────────────────────────────
