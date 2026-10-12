@@ -172,6 +172,17 @@ class SahsiMaasTest(unittest.TestCase):
         cs.hareket_iptal(borc.id, 1)
         self.tutarli()
 
+    def test_defterde_hesaba_yazma_tek_satir_gorunur(self):
+        k = self.plan(self.musir.id)
+        self.mahsup(k, '15000')
+        turler = [h.tur for h in cs.hareketler(self.musir.id).items]
+        self.assertEqual(sorted(turler), ['hakedis', 'mahsup'])            # eşleşen 'odeme' satırı gizli
+        self.assertEqual(cs.hareketler(self.musir.id).total, 2)
+        # Kasadan gerçekten ödenen maaş satırı gizlenmez.
+        ws.hakedis_ve_odeme(k.id, '2026-01-09', '15000', '1000', 'elde', datetime(2026, 1, 9, 12),
+                            '', 1, str(uuid.uuid4()), '15000')
+        self.assertIn('odeme', [h.tur for h in cs.hareketler(self.musir.id).items])
+
     def test_mahsup_cift_tiklama_tekrar_yazmaz(self):
         cs.odeme_yap(self.musir.id, 'elde', Decimal('4000'), T, 'ev', 1, tur='borc_alma')
         k = self.plan(self.musir.id)

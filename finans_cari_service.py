@@ -422,7 +422,12 @@ def hareket_iptal(hareket_id, kullanici_id: int, neden: str = None) -> FinansCar
 #   SORGULAR                     #
 # ============================== #
 def hareketler(cari_id, iptal_goster: bool = False, sayfa: int = 1, adet: int = 100):
-    q = FinansCariHareket.query.filter_by(cari_id=int(cari_id))
+    """Defter görünümü. "Hesabıma yaz" ikilisinin kasasız 'odeme' bacağı gizlenir; eşi 'mahsup' satırı tek satır
+    olarak görünür (ikisinin bakiye etkisi sıfır, bakiye sütunu 'mahsup' satırında doğru kalır)."""
+    from sqlalchemy import and_, not_
+    q = FinansCariHareket.query.filter_by(cari_id=int(cari_id)).filter(not_(and_(
+        FinansCariHareket.tur == 'odeme', FinansCariHareket.islem_id.is_(None),
+        FinansCariHareket.hakedis_id.isnot(None))))
     if not iptal_goster:
         q = q.filter_by(iptal=False)
     q = q.order_by(FinansCariHareket.tarih.desc(), FinansCariHareket.id.desc())

@@ -62,7 +62,7 @@
           <td class="text-nowrap">{{ h.tarih | ist('%d.%m.%Y') }}</td>
           <td><span class="badge {{ 'bg-danger' if (h.yon > 0) != (cari.tur == 'sahsi') else 'bg-success' }}">{{ hareket_etiket.get(h.tur, h.tur) }}</span>
             {% if h.islem %}<div class="fn-mini">{{ h.islem.hesap.ad }}{% if h.kur %} · {{ h.islem.tutar | tl_format }} ₺ (kur {{ h.kur }}){% endif %}</div>{% endif %}</td>
-          <td>{{ h.aciklama or '' }}
+          <td>{{ h.aciklama or '' }}{% if h.tur == 'mahsup' %} <span class="fn-mini">· {{ h.tutar | tl_format }} ₺ · kasadan para çıkmadı</span>{% endif %}
             {% if h.kalemler %}
             <details class="fn-mini"><summary>{{ h.kalemler | length }} kalem</summary>
               <table class="table table-sm table-borderless mb-0 fn-mini"><tbody>
@@ -72,7 +72,7 @@
             {% endif %}
             {% if h.iptal %}<div class="fn-mini">İptal: {{ h.iptal_tarihi | ist }} {{ h.iptal_kullanici.username if h.iptal_kullanici else '' }}</div>{% endif %}
           </td>
-          <td class="fn-num {{ 'fn-pos' if cari.tur == 'sahsi' else 'fn-neg' }}">{% if h.yon > 0 %}{{ h.tutar | tl_format }}{% endif %}</td>
+          <td class="fn-num {{ 'fn-pos' if cari.tur == 'sahsi' else 'fn-neg' }}">{% if h.yon > 0 and h.tur != 'mahsup' %}{{ h.tutar | tl_format }}{% endif %}</td>
           <td class="fn-num {{ 'fn-neg' if cari.tur == 'sahsi' else 'fn-pos' }}">{% if h.yon < 0 %}{{ h.tutar | tl_format }}{% endif %}</td>
           <td class="fn-num">{{ h.yeni_bakiye | tl_format }}</td>
           <td class="fn-actions text-end">

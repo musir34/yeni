@@ -53,3 +53,7 @@ ilk ödeme günü, 15.000 sabit → Ekle. Yayın: `git pull && systemctl restart
 - Mahsup edilmiş borc_alma iptal engeli kaldırıldı: yeni anlamda borç iptali yalnız alacağı büyütür, tutarsızlık yok.
 - Etiketler: seçenek "Hesabıma yaz (kasadan para çıkmaz)", defter "Maaş hesaba yazıldı", açıklama "… maaşı hesaba yazıldı".
 - Testler güncellendi (borçsuz hesaba yazma + sonraki alım, kalan sınırı, borç iptali serbest); finans 110 OK.
+- 2026-10-12 (sonra): Kullanıcı "neden 2 defa görünüyor" → defterde tek satır istendi. cs.hareketler() artık
+  "Hesabıma yaz" ikilisinin kasasız `odeme` bacağını (tur=odeme, islem_id NULL, hakedis_id dolu) listelemez;
+  `mahsup` satırı tutarı açıklamada "· X ₺ · kasadan para çıkmadı" olarak gösterir, tutar sütunu boş, bakiye sütunu doğru.
+  Hesaplama/iptal değişmedi (iptal yine ikiliyi birlikte geri alır). Test +1; finans 111 OK.
