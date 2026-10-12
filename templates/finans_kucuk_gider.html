@@ -14,6 +14,12 @@
           <div class="mb-3">
             <label for="fnKgTutar" class="form-label">Ne kadar harcadın?</label>
             <div class="input-group"><input type="text" name="tutar" id="fnKgTutar" class="form-control" inputmode="decimal" placeholder="0,00" required><span class="input-group-text">₺</span></div>
+            {# Para üstü hesaplayıcı: alanların name'i yok → forma gönderilmez, yalnız Tutar'ı doldurur #}
+            <div class="row g-2 mt-1">
+              <div class="col-6"><input type="text" id="fnKgVerdigim" class="form-control form-control-sm" inputmode="decimal" placeholder="Verdiğim" aria-label="Verdiğim para"></div>
+              <div class="col-6"><input type="text" id="fnKgUstu" class="form-control form-control-sm" inputmode="decimal" placeholder="Para üstü" aria-label="Geri gelen para üstü"></div>
+            </div>
+            <div class="form-text" id="fnKgUstuSonuc">Verdiğin ve geri gelen parayı yazarsan harcanan tutar kendiliğinden hesaplanır.</div>
           </div>
           <div class="mb-3">
             <label for="fnKgAciklama" class="form-label">Ne için?</label>
@@ -117,6 +123,28 @@
 {% endblock %}
 {% block scripts %}
 <script>
+  // Para üstü hesaplayıcı: verdiğim − para üstü = harcanan → Tutar alanı
+  (function () {
+    var ver = document.getElementById('fnKgVerdigim'), ust = document.getElementById('fnKgUstu');
+    var tutar = document.getElementById('fnKgTutar'), sonuc = document.getElementById('fnKgUstuSonuc');
+    if (!ver || !ust || !tutar) return;
+    var ilkMetin = sonuc.textContent;
+    function sayi(v) { return window.fnSayi ? fnSayi.num(v) : (parseFloat(String(v).replace(/\./g, '').replace(',', '.')) || 0); }
+    function yaz(n) {
+      var s = (Math.round(n * 100) / 100).toFixed(2).replace('.', ',').replace(/,00$/, '');
+      return window.fnSayi ? fnSayi.bicimle(s) : s;
+    }
+    function hesapla() {
+      var v = sayi(ver.value), u = sayi(ust.value);
+      sonuc.classList.remove('text-danger');
+      if (!ver.value.trim()) { sonuc.textContent = ilkMetin; return; }
+      if (u > v) { sonuc.textContent = 'Para üstü verdiğinden fazla olamaz.'; sonuc.classList.add('text-danger'); return; }
+      tutar.value = yaz(v - u);
+      sonuc.textContent = 'Harcanan: ' + yaz(v - u) + ' ₺ (' + yaz(v) + ' − ' + yaz(u) + ')';
+    }
+    ver.addEventListener('input', hesapla);
+    ust.addEventListener('input', hesapla);
+  })();
   (function () {
     var kat = document.getElementById('fnKgKategori'), ga = document.getElementById('fnKgGiderAdi');
     var tutar = document.getElementById('fnKgTutar'), acik = document.getElementById('fnKgAciklama');
