@@ -2,6 +2,20 @@
 {% block title %}Finans - Güllü Shoes{% endblock %}
 {% block content %}
 {% include '_finans_nav.html' %}
+<style>
+  .fnp-baslik { font-size: .95rem; font-weight: 700; margin: 0 0 .6rem; }
+  .fnp-hesap { display: block; border-radius: 12px; padding: .9rem 1rem; text-decoration: none; color: inherit;
+               background: var(--bs-body-bg); box-shadow: 0 4px 12px rgba(0,0,0,.06); height: 100%; }
+  .fnp-hesap:hover { box-shadow: 0 6px 16px rgba(0,0,0,.10); color: inherit; }
+  .fnp-hesap .fnp-ad { font-size: .8rem; color: var(--bs-secondary-color); }
+  .fnp-hesap .fnp-tutar { font-size: 1.45rem; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; }
+  .fnp-hesap .fnp-alt { font-size: .75rem; color: var(--bs-secondary-color); }
+  .fnp-buyuk { font-size: 1.35rem; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .fnp-satir { display: flex; justify-content: space-between; align-items: baseline; padding: .35rem 0; }
+  .fnp-satir + .fnp-satir { border-top: 1px dashed var(--bs-border-color); }
+  .fnp-bekleyen td { padding-top: .5rem; padding-bottom: .5rem; }
+  .fnp-hesap.fn-hesap-kredi_karti { border-left: 5px solid #dc3545; }
+</style>
 
 {% if tutarsizlik %}
 <div class="alert alert-danger"><strong>⚠️ Bakiye tutarsızlığı!</strong>
@@ -9,97 +23,88 @@
 </div>
 {% endif %}
 
-<div class="row">
+{# ── 1. Hızlı işlemler ─────────────────────────────────────────────────── #}
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a href="{{ url_for('finans.gelir') }}" class="btn btn-success"><i class="fas fa-arrow-down me-1"></i>Gelir ekle</a>
+  <a href="{{ url_for('finans.kucuk_gider') }}" class="btn btn-danger"><i class="fas fa-receipt me-1"></i>Harcama ekle</a>
+  <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#fnTransferModal"><i class="fas fa-right-left me-1"></i>Para aktar</button>
+  <a href="{{ url_for('finans.ana_gider') }}" class="btn btn-outline-secondary"><i class="fas fa-calendar-check me-1"></i>Düzenli ödemeler</a>
+</div>
+
+{# ── 2. Param nerede? ──────────────────────────────────────────────────── #}
+{% set nakit = namespace(toplam=0) %}
+{% for h in fn_hesaplar if h.kod != 'kredi_karti' %}{% set nakit.toplam = nakit.toplam + h.bakiye %}{% endfor %}
+<div class="d-flex justify-content-between align-items-baseline">
+  <p class="fnp-baslik">💰 Param nerede?</p>
+  <span class="fn-mini">Toplam nakit: <b class="{{ 'text-danger' if nakit.toplam < 0 else 'text-body' }}">{{ nakit.toplam | tl_format }} ₺</b></span>
+</div>
+<div class="row g-3 mb-4">
   {% for h in fn_hesaplar %}
-  <div class="col-md-4">
-    <div class="card fn-card fn-hesap-{{ h.kod }}">
-      <div class="card-body">
-        <div class="fn-mini">{{ h.ad }}</div>
-        <div class="fn-bakiye">{{ h.bakiye | tl_format }} ₺</div>
-        <a href="{{ url_for('finans.defter', hesap_kodu=h.kod) }}" class="fn-mini"><i class="fas fa-book"></i> Kayıt defteri</a>
-      </div>
-    </div>
+  <div class="col-6 col-xl-3">
+    <a href="{{ url_for('finans.defter', hesap_kodu=h.kod) }}" class="fnp-hesap fn-hesap-{{ h.kod }}">
+      {% if h.kod == 'kredi_karti' %}
+        <div class="fnp-ad"><i class="fas fa-credit-card me-1"></i>{{ h.ad }}</div>
+        <div class="fnp-tutar {{ 'text-danger' if h.bakiye < 0 }}">{{ (h.bakiye | abs) | tl_format }} ₺</div>
+        <div class="fnp-alt">{{ 'kart borcu' if h.bakiye < 0 else 'borç yok' }} · defter ›</div>
+      {% else %}
+        <div class="fnp-ad">{{ h.ad }}</div>
+        <div class="fnp-tutar {{ 'text-danger' if h.bakiye < 0 }}">{{ h.bakiye | tl_format }} ₺</div>
+        <div class="fnp-alt">defter ›</div>
+      {% endif %}
+    </a>
   </div>
   {% endfor %}
 </div>
 
-<div class="card fn-card">
-  <div class="card-header fw-bold">📅 {{ ozet.etiket }}</div>
-  <div class="card-body">
-    <div class="row text-center">
-      <div class="col-6 col-md-3"><div class="fn-mini">Gelir</div><div class="fn-pos fs-5">{{ ozet.gelir | tl_format }} ₺</div></div>
-      <div class="col-6 col-md-3"><div class="fn-mini">Günlük Harcamalar</div><div class="fn-neg fs-5">{{ ozet.kucuk_gider | tl_format }} ₺</div></div>
-      <div class="col-6 col-md-3"><div class="fn-mini">Düzenli Ödemeler (ödenen)</div><div class="fn-neg fs-5">{{ ozet.ana_gider | tl_format }} ₺</div>{% if ozet.cari_odeme %}<div class="fn-mini">+ cari ödeme {{ ozet.cari_odeme | tl_format }} ₺</div>{% endif %}</div>
-      <div class="col-6 col-md-3"><div class="fn-mini">Bekleyen Düzenli Ödemeler</div><div class="text-warning fs-5 fw-bold">{{ ozet.bekleyen_adet }} ödeme · {{ ozet.bekleyen_tutar | tl_format }} ₺</div>{% if ozet.bekleyen_belirsiz_adet %}<div class="fn-mini">{{ ozet.bekleyen_belirsiz_adet }} ödemenin tutarı ayrıca belirlenecek</div>{% endif %}</div>
-    </div>
-  </div>
-</div>
-
-{% if cari_ozet.borc or cari_ozet.alacak or cari_ozet.borc_usd or cari_ozet.alacak_usd or cari_ozet.sahsi %}
-<div class="alert alert-light border d-flex flex-wrap gap-3 py-2">
-  <span>📒 <a href="{{ url_for('finans.cari_liste') }}">Cari</a>:</span>
-  <span class="fn-mini">Borcumuz <b class="fn-neg">{{ cari_ozet.borc | tl_format }} ₺</b></span>
-  <span class="fn-mini">Alacağımız <b class="fn-pos">{{ cari_ozet.alacak | tl_format }} ₺</b></span>
-  {% if cari_ozet.sahsi %}
-  <span class="fn-mini">Kasadan aldığım borç <b class="fn-neg">{{ cari_ozet.sahsi | tl_format }} ₺</b></span>
-  {% endif %}
-  {% if cari_ozet.borc_usd or cari_ozet.alacak_usd %}
-  <span class="fn-mini">Dolar borcumuz <b class="fn-neg">{{ cari_ozet.borc_usd | tl_format }} $</b></span>
-  <span class="fn-mini">Dolar alacağımız <b class="fn-pos">{{ cari_ozet.alacak_usd | tl_format }} $</b></span>
-  {% endif %}
-</div>
-{% endif %}
-
-<div class="row">
+<div class="row g-3">
+  {# ── 3. Bu ay ─────────────────────────────────────────────────────────── #}
   <div class="col-lg-5">
     <div class="card fn-card">
-      <div class="card-header fw-bold">🔁 Hızlı Transfer</div>
+      <div class="card-header fw-bold">📅 {{ ozet.etiket }}</div>
       <div class="card-body">
-        <form method="POST" action="{{ url_for('finans.transfer') }}">
-          <div class="row g-2">
-            <div class="col-6">
-              <label class="form-label fn-mini">Kaynak</label>
-              <select name="kaynak" class="form-select form-select-sm" required>
-                {% for h in fn_hesaplar %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}
-              </select>
-            </div>
-            <div class="col-6">
-              <label class="form-label fn-mini">Hedef</label>
-              <select name="hedef" class="form-select form-select-sm" required>
-                {% for h in fn_hesaplar %}<option value="{{ h.kod }}" {{ 'selected' if h.kod == 'elde' }}>{{ h.ad }}</option>{% endfor %}
-              </select>
-            </div>
-            <div class="col-6">
-              <label class="form-label fn-mini">Tutar (₺)</label>
-              <input type="text" name="tutar" class="form-control form-control-sm" inputmode="decimal" placeholder="0,00" required>
-            </div>
-            <div class="col-6">
-              <label class="form-label fn-mini">Tarih</label>
-              <input type="date" name="tarih" class="form-control form-control-sm" value="{{ bugun }}">
-            </div>
-            <div class="col-12">
-              <input type="text" name="aciklama" class="form-control form-control-sm" placeholder="Açıklama (isteğe bağlı)">
-            </div>
-          </div>
-          <button class="btn btn-primary btn-sm mt-2 w-100"><i class="fas fa-right-left me-1"></i>Aktar</button>
-        </form>
+        <div class="row text-center mb-3">
+          <div class="col-4"><div class="fn-mini">Giren</div><div class="fnp-buyuk text-success">{{ (ozet.gelir + ozet.cari_tahsilat) | tl_format }}</div></div>
+          <div class="col-4"><div class="fn-mini">Çıkan</div><div class="fnp-buyuk text-danger">{{ ozet.toplam_gider | tl_format }}</div></div>
+          <div class="col-4"><div class="fn-mini">Kalan</div><div class="fnp-buyuk {{ 'text-success' if ozet.net >= 0 else 'text-danger' }}">{{ ozet.net | tl_format }}</div></div>
+        </div>
+        <div class="fn-mini">
+          <div class="fnp-satir"><span>Gelir</span><span>{{ ozet.gelir | tl_format }} ₺</span></div>
+          {% if ozet.cari_tahsilat %}<div class="fnp-satir"><span>Cari tahsilat</span><span>{{ ozet.cari_tahsilat | tl_format }} ₺</span></div>{% endif %}
+          <div class="fnp-satir"><span>Günlük harcamalar</span><span>{{ ozet.kucuk_gider | tl_format }} ₺</span></div>
+          <div class="fnp-satir"><span>Düzenli ödemeler</span><span>{{ ozet.ana_gider | tl_format }} ₺</span></div>
+          {% if ozet.cari_odeme %}<div class="fnp-satir"><span>Cari ödemeler</span><span>{{ ozet.cari_odeme | tl_format }} ₺</span></div>{% endif %}
+        </div>
+        {% if cari_ozet.borc or cari_ozet.alacak or cari_ozet.borc_usd or cari_ozet.alacak_usd or cari_ozet.sahsi %}
+        <hr class="my-3">
+        <div class="d-flex justify-content-between align-items-baseline mb-1">
+          <span class="fw-bold small">📒 Cari</span><a href="{{ url_for('finans.cari_liste') }}" class="fn-mini">Cari hesaplar ›</a>
+        </div>
+        <div class="fn-mini">
+          {% if cari_ozet.borc %}<div class="fnp-satir"><span>Borcumuz</span><b class="text-danger">{{ cari_ozet.borc | tl_format }} ₺</b></div>{% endif %}
+          {% if cari_ozet.alacak %}<div class="fnp-satir"><span>Alacağımız</span><b class="text-success">{{ cari_ozet.alacak | tl_format }} ₺</b></div>{% endif %}
+          {% if cari_ozet.sahsi %}<div class="fnp-satir"><span>Kasadan aldığım borç</span><b class="text-danger">{{ cari_ozet.sahsi | tl_format }} ₺</b></div>{% endif %}
+          {% if cari_ozet.borc_usd %}<div class="fnp-satir"><span>Dolar borcumuz</span><b class="text-danger">{{ cari_ozet.borc_usd | tl_format }} $</b></div>{% endif %}
+          {% if cari_ozet.alacak_usd %}<div class="fnp-satir"><span>Dolar alacağımız</span><b class="text-success">{{ cari_ozet.alacak_usd | tl_format }} $</b></div>{% endif %}
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>
 
+  {# ── 4. Ödenmeyi bekleyenler ──────────────────────────────────────────── #}
   <div class="col-lg-7">
     <div class="card fn-card">
-      <div class="card-header fw-bold d-flex justify-content-between">
-        <span>⏳ Bekleyen Ödemeler — {{ ozet.etiket }} ve geçmiş çalışan borçları</span>
-        <a href="{{ url_for('finans.ana_gider') }}" class="fn-mini">Tümü</a>
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-bold">⏳ Ödenmeyi bekleyenler</span>
+        {% if ozet.bekleyenler %}<span class="fn-mini">{{ ozet.bekleyen_adet }} ödeme · <b class="text-danger">{{ ozet.bekleyen_tutar | tl_format }} ₺</b>{% if ozet.bekleyen_belirsiz_adet %} + {{ ozet.bekleyen_belirsiz_adet }} tutarı belirlenecek{% endif %}</span>{% endif %}
       </div>
       <div class="card-body p-0">
         {% if ozet.bekleyenler %}
-        <table class="table table-sm fn-table mb-0">
+        <table class="table table-sm fn-table fnp-bekleyen mb-0">
           <tbody>
           {% for d in ozet.bekleyenler %}
             <tr>
-              <td>{{ d.kalem.ad }}<div class="fn-mini">{{ d.etiket }}</div><div class="fn-mini">{{ d.kalem.kategori.ad if d.kalem.kategori else '' }}</div></td>
+              <td>{{ d.kalem.ad }}<div class="fn-mini">{{ d.etiket }}</div></td>
               <td class="fn-num">{% if d.kalan is not none %}{{ d.kalan | tl_format }} ₺{% else %}<span class="fn-mini">Öderken girilecek</span>{% endif %}</td>
               <td class="fn-actions text-end">
                 {% if d.calisan %}{% include '_finans_calisan_buton.html' %}{% else %}
@@ -113,34 +118,69 @@
           </tbody>
         </table>
         {% else %}
-        <div class="p-3 text-muted">Bu ay bekleyen düzenli ödeme yok. 🎉</div>
+        <div class="p-4 text-center text-muted">Bekleyen ödeme yok. 🎉</div>
         {% endif %}
       </div>
     </div>
   </div>
 </div>
 
+{# ── 5. Son işlemler ──────────────────────────────────────────────────── #}
 <div class="card fn-card">
-  <div class="card-header fw-bold">🕘 Son İşlemler</div>
+  <div class="card-header fw-bold">🕘 Son işlemler</div>
   <div class="card-body p-0 fn-table-wrap">
     <table class="table table-sm table-hover fn-table mb-0">
-      <thead><tr><th>Tarih</th><th>Hesap</th><th>Tür</th><th>Açıklama</th><th class="fn-num">Tutar</th><th class="fn-num">Sonra</th><th></th></tr></thead>
       <tbody>
-      {% for i in son_islemler %}
+      {% for i in son_islemler[:10] %}
         <tr>
-          <td class="text-nowrap">{{ i.tarih | ist('%d.%m.%Y %H:%M') }}</td>
-          <td>{{ i.hesap.ad }}</td>
-          <td><span class="badge {{ 'bg-success' if i.yon > 0 else 'bg-danger' }}">{{ fn_tur_etiket.get(i.tur, i.tur) }}</span></td>
-          <td>{{ i.aciklama or '' }}{% if i.kategori %} <span class="fn-mini">· {{ i.kategori.ad }}</span>{% endif %}</td>
-          <td class="fn-num {{ 'fn-pos' if i.yon > 0 else 'fn-neg' }}">{{ '+' if i.yon > 0 else '−' }}{{ i.tutar | tl_format }}</td>
-          <td class="fn-num">{{ i.yeni_bakiye | tl_format }}</td>
+          <td class="text-nowrap fn-mini">{{ i.tarih | ist('%d.%m %H:%M') }}</td>
+          <td>{{ i.aciklama or fn_tur_etiket.get(i.tur, i.tur) }}
+            <div class="fn-mini">{{ i.hesap.ad }} · {{ fn_tur_etiket.get(i.tur, i.tur) }}{% if i.kategori %} · {{ i.kategori.ad }}{% endif %}</div></td>
+          <td class="fn-num {{ 'fn-pos' if i.yon > 0 else 'fn-neg' }}">{{ '+' if i.yon > 0 else '−' }}{{ i.tutar | tl_format }} ₺</td>
           <td class="fn-actions text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick='fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})' title="İptal">✕</button></td>
         </tr>
       {% else %}
-        <tr><td colspan="7" class="text-muted p-3">Henüz işlem yok. Gelir ekleyerek başlayın.</td></tr>
+        <tr><td class="text-muted p-3">Henüz işlem yok. "Gelir ekle" ile başlayın.</td></tr>
       {% endfor %}
       </tbody>
     </table>
+  </div>
+</div>
+
+{# ── Para aktar penceresi (önceki "Hızlı Transfer" formu, aynı alanlar) ────── #}
+<div class="modal fade" id="fnTransferModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="POST" action="{{ url_for('finans.transfer') }}">
+      <div class="modal-header"><h5 class="modal-title">🔁 Para aktar</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label fn-mini">Nereden</label>
+            <select name="kaynak" class="form-select" required>
+              {% for h in fn_hesaplar %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label fn-mini">Nereye</label>
+            <select name="hedef" class="form-select" required>
+              {% for h in fn_hesaplar %}<option value="{{ h.kod }}" {{ 'selected' if h.kod == 'elde' }}>{{ h.ad }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label fn-mini">Tutar (₺)</label>
+            <input type="text" name="tutar" class="form-control" inputmode="decimal" placeholder="0,00" required>
+          </div>
+          <div class="col-6">
+            <label class="form-label fn-mini">Tarih</label>
+            <input type="date" name="tarih" class="form-control" value="{{ bugun }}">
+          </div>
+          <div class="col-12">
+            <input type="text" name="aciklama" class="form-control" placeholder="Açıklama (isteğe bağlı)">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button><button class="btn btn-primary"><i class="fas fa-right-left me-1"></i>Aktar</button></div>
+    </form>
   </div>
 </div>
 
