@@ -412,6 +412,11 @@ def liste():
         if d.get("kargo"):
             d["kargo"]["has_kargo"] = bool(d["kargo"].get("shipping_barcode")
                                            or d["kargo"].get("adres_etiketi"))
+            # Mini kargo rozeti: takip no ön ekinden (733→TEX, 728→DHL) — kod istemciye inmez,
+            # yalnız rozet sözlüğü iner.
+            from kargo_degistir import kargo_firma_tespit
+            d["kargo"]["firma"] = kargo_firma_tespit(d["kargo"].get("shipping_barcode"),
+                                                     d["kargo"].get("cargo_provider"))
             d["kargo"]["shipping_barcode"] = ""
         sonuc.append(d)
     return jsonify({"success": True, "rows": sonuc})
@@ -778,12 +783,14 @@ def kargo_kodu(kayit_id: int):
             logger.warning("[URETIM] kargo kodu okunamadı (%s)", M.__tablename__, exc_info=True)
             continue
         if o and (o.cargo_tracking_number or "").strip():
+            from kargo_degistir import kargo_firma_tespit
             return jsonify({"success": True, "kargo": {
                 "shipping_barcode": o.cargo_tracking_number or "",
                 "cargo_provider": o.cargo_provider_name or "",
                 "customer_name": o.customer_name or "",
                 "customer_surname": o.customer_surname or "",
                 "customer_address": o.customer_address or "",
+                "firma": kargo_firma_tespit(o.cargo_tracking_number, o.cargo_provider_name),
             }})
     return jsonify({"success": False, "message": "Bu sipariş için kargo kodu bulunamadı."}), 404
 

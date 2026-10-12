@@ -8,8 +8,9 @@ değiştirilebilir:
     {"cargoProvider": "YKMP"}
 
 Kullanım yerleri:
-  • Üretim Siparişleri → Paketlenen sekmesi (toplu seçim)
+  • Üretim Siparişleri → Üretilen / Paketlenen sekmeleri (toplu seçim)
   • Sipariş Listesi (toplu seçim)
+  • Mini kargo rozeti (kargo_firma_tespit / kargo_rozet): takip no ön eki 733→TEX, 728→DHL
 
 Kurallar (Trendyol dokümanı):
   • Aynı paket için 5 dakikada yalnızca 1 değişiklik.
@@ -63,11 +64,63 @@ _AD_ANAHTAR = {
     "DHLECOMMP": ("dhl",),
     "CEVAMP": ("ceva",),
     "KOLAYGELSINMP": ("kolay gelsin", "kolaygelsin"),
+    "MNGMP": ("mng",),  # yalnız rozet tespiti için; değiştirme listesinde yok
 }
 
 # Yalnız bu tablolardaki (kargoya verilmemiş) paketler değiştirilebilir.
 AKTIF_TABLOLAR = (OrderCreated, OrderHazirlaniyor, OrderPicking)
 MAKS_TOPLU = 50
+
+# ── Mini kargo rozeti ─────────────────────────────────────────────────────────
+# Kargo takip numarasının ÖN EKİ firmayı söyler (kod değişince rozet de değişir):
+#   733… → Trendyol Express, 728… → DHL eCommerce. Ön ek bilinmiyorsa kargo adına bakılır.
+TAKIP_ONEKLERI: tuple[tuple[str, str], ...] = (
+    ("733", "TEXMP"),
+    ("728", "DHLECOMMP"),
+)
+# Marka renkleriyle kısa rozet (logo dosyası yok; CSS rozet). fg/bg hex.
+KARGO_ROZET: dict[str, dict] = {
+    "TEXMP":         {"kisa": "TEX",          "ad": "Trendyol Express", "bg": "#f27a1a", "fg": "#ffffff"},
+    "DHLECOMMP":     {"kisa": "DHL",          "ad": "DHL eCommerce",    "bg": "#ffcc00", "fg": "#d40511"},
+    "YKMP":          {"kisa": "YURTİÇİ",      "ad": "Yurtiçi Kargo",    "bg": "#0b3d91", "fg": "#ffffff"},
+    "ARASMP":        {"kisa": "ARAS",         "ad": "Aras Kargo",       "bg": "#e2001a", "fg": "#ffffff"},
+    "SURATMP":       {"kisa": "SÜRAT",        "ad": "Sürat Kargo",      "bg": "#1b4f9c", "fg": "#ffffff"},
+    "PTTMP":         {"kisa": "PTT",          "ad": "PTT Kargo",        "bg": "#ffd200", "fg": "#1a1a1a"},
+    "HOROZMP":       {"kisa": "HOROZ",        "ad": "Horoz Lojistik",   "bg": "#c8102e", "fg": "#ffffff"},
+    "CEVAMP":        {"kisa": "CEVA",         "ad": "Ceva Lojistik",    "bg": "#e30613", "fg": "#ffffff"},
+    "KOLAYGELSINMP": {"kisa": "KOLAY GELSİN", "ad": "Kolay Gelsin",     "bg": "#6c2bd9", "fg": "#ffffff"},
+    "MNGMP":         {"kisa": "MNG",          "ad": "MNG Kargo",        "bg": "#f58220", "fg": "#ffffff"},
+}
+
+
+def kargo_firma_tespit(takip_no: str | None, kargo_adi: str | None = None) -> dict | None:
+    """Takip numarası ön eki → firma; yoksa kargo adından tahmin. Rozet sözlüğü döner
+    ({"kod","kisa","ad","bg","fg"}) ya da None."""
+    takip = (takip_no or "").strip()
+    kod = None
+    for onek, k in TAKIP_ONEKLERI:
+        if takip.startswith(onek):
+            kod = k
+            break
+    if kod is None:
+        kod = kod_tahmin(kargo_adi)
+    if kod is None or kod not in KARGO_ROZET:
+        return None
+    return {"kod": kod, **KARGO_ROZET[kod]}
+
+
+@kargo_degistir_bp.app_template_global("kargo_rozet")
+def kargo_rozet_html(takip_no, kargo_adi=None):
+    """Jinja: {{ kargo_rozet(order.cargo_tracking_number, order.cargo_provider_name) }} —
+    static/js/kargo-rozet.js ile birebir aynı işaretleme (sınıf: kargo-rozet)."""
+    from markupsafe import Markup, escape
+    f = kargo_firma_tespit(takip_no, kargo_adi)
+    if not f:
+        return Markup("")
+    return Markup(
+        f'<span class="kargo-rozet" data-kargo-kod="{escape(f["kod"])}" title="{escape(f["ad"])}" '
+        f'style="background:{escape(f["bg"])};color:{escape(f["fg"])}">{escape(f["kisa"])}</span>'
+    )
 
 
 @kargo_degistir_bp.before_request
@@ -163,7 +216,8 @@ def siparis_kargo_degistir(order_number: str, kargo_kodu: str) -> dict:
     """Tek siparişin kargo firmasını değiştirir; sonucu sözlük olarak döner.
     {"order_number", "success", "message", "cargo_provider_name", "cargo_tracking_number", "skipped"}"""
     sonuc = {"order_number": order_number, "success": False, "skipped": False,
-             "message": "", "cargo_provider_name": None, "cargo_tracking_number": None}
+             "message": "", "cargo_provider_name": None, "cargo_tracking_number": None,
+             "firma": None}
     order_number = (order_number or "").strip()
     if not order_number:
         sonuc["message"] = "Sipariş numarası boş."
@@ -186,12 +240,24 @@ def siparis_kargo_degistir(order_number: str, kargo_kodu: str) -> dict:
         sonuc["message"] = "Paket numarası yok — Trendyol'dan yeniden çekin."
         return sonuc
 
-    mevcut_kod = kod_tahmin(getattr(ilk, "cargo_provider_name", ""))
-    if mevcut_kod == kargo_kodu:
+    # "Zaten aynı firma" kararı YEREL kayda değil Trendyol'daki canlı pakete göre verilir —
+    # yerel ad bayat olabilir (panelden değiştirilmiş vb.). Canlı veri okunamazsa PUT atılır.
+    canli = trendyol_paket_cek(order_number, package_id)
+    if canli and kod_tahmin(canli.get("cargoProviderName", "")) == kargo_kodu:
+        canli_ad = canli.get("cargoProviderName") or KARGO_KOD_AD.get(kargo_kodu, kargo_kodu)
+        canli_takip = canli.get("cargoTrackingNumber") or None
+        try:  # yerel kaydı canlıyla hizala
+            for s in satirlar:
+                s.cargo_provider_name = canli_ad
+                if canli_takip:
+                    s.cargo_tracking_number = canli_takip
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
         sonuc.update(skipped=True, success=True,
-                     message=f"Zaten {KARGO_KOD_AD.get(kargo_kodu, kargo_kodu)} — atlandı.",
-                     cargo_provider_name=ilk.cargo_provider_name,
-                     cargo_tracking_number=ilk.cargo_tracking_number)
+                     message=f"Trendyol'da zaten {KARGO_KOD_AD.get(kargo_kodu, kargo_kodu)} — atlandı.",
+                     cargo_provider_name=canli_ad, cargo_tracking_number=canli_takip,
+                     firma=kargo_firma_tespit(canli_takip, canli_ad))
         return sonuc
 
     ok, mesaj = trendyol_kargo_degistir(package_id, kargo_kodu)
@@ -235,6 +301,7 @@ def siparis_kargo_degistir(order_number: str, kargo_kodu: str) -> dict:
         logger.warning("[KARGO] kullanıcı hareketi loglanamadı", exc_info=True)
 
     sonuc.update(success=True, cargo_provider_name=yeni_ad, cargo_tracking_number=yeni_takip,
+                 firma=kargo_firma_tespit(yeni_takip, yeni_ad),
                  message=("Değiştirildi — yeni kargo kodu alındı." if yeni_takip
                           else "Değiştirildi — yeni kargo kodu birazdan Siparişleri Güncelle ile gelir."))
     return sonuc

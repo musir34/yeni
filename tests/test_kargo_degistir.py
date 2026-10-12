@@ -67,8 +67,9 @@ class _Yanit:
 class _SahteTrendyol:
     """requests.put / requests.get yerine geçer; çağrıları kaydeder."""
 
-    def __init__(self, put_status=200, put_body=None, get_paket=None):
+    def __init__(self, put_status=200, put_body=None, get_paket=None, get_paket_oncesi=None):
         self.put_status, self.put_body, self.get_paket = put_status, put_body, get_paket
+        self.get_paket_oncesi = get_paket_oncesi  # PUT'tan ÖNCE dönen paket (canlı kontrol)
         self.put_calls, self.get_calls = [], []
 
     def put(self, url, headers=None, json=None, timeout=None):
@@ -77,7 +78,8 @@ class _SahteTrendyol:
 
     def get(self, url, headers=None, params=None, timeout=None):
         self.get_calls.append((url, params))
-        return _Yanit(200, {"content": [self.get_paket] if self.get_paket else []})
+        paket = self.get_paket_oncesi if (not self.put_calls and self.get_paket_oncesi) else self.get_paket
+        return _Yanit(200, {"content": [paket] if paket else []})
 
 
 def _sahte(monkeypatch, **kw):
@@ -114,8 +116,11 @@ def test_basarili_degisim_yerel_kaydi_gunceller(monkeypatch):
     _siparis(OrderCreated, "100")
     # Aynı siparişin ikinci satırı (çok kalemli sipariş) — ikisi de güncellenmeli
     _siparis(OrderCreated, "100")
-    s = _sahte(monkeypatch, get_paket={"shipmentPackageId": 555, "cargoProviderName": "Yurtiçi Kargo Marketplace",
-                                       "cargoTrackingNumber": "YK999", "cargoTrackingLink": "http://x"})
+    s = _sahte(monkeypatch,
+               get_paket_oncesi={"shipmentPackageId": 555, "cargoProviderName": "Aras Kargo Marketplace",
+                                 "cargoTrackingNumber": "ARAS111"},
+               get_paket={"shipmentPackageId": 555, "cargoProviderName": "Yurtiçi Kargo Marketplace",
+                          "cargoTrackingNumber": "YK999", "cargoTrackingLink": "http://x"})
     with app.app_context():
         r = kargo_degistir.siparis_kargo_degistir("100", "YKMP")
         assert r["success"] and not r["skipped"], r
@@ -127,6 +132,8 @@ def test_basarili_degisim_yerel_kaydi_gunceller(monkeypatch):
     assert s.put_calls[0][0].endswith("/shipment-packages/555/cargo-providers")
     assert s.put_calls[0][1] == {"cargoProvider": "YKMP"}
     assert s.get_calls[0][1] == {"orderNumber": "100"}
+    assert len(s.get_calls) == 2  # canlı kontrol + değişiklik sonrası doğrulama
+    assert r["firma"]["kod"] == "YKMP"
 
 
 def test_yeniden_cekme_eski_adi_dondururse_yerel_ad_yazilir(monkeypatch):
@@ -143,14 +150,41 @@ def test_yeniden_cekme_eski_adi_dondururse_yerel_ad_yazilir(monkeypatch):
         assert o.cargo_tracking_number == "ARAS111"  # eski kod silinmez
 
 
-def test_ayni_firma_atlanir_api_cagrilmaz(monkeypatch):
+def test_ayni_firma_canli_pakete_gore_atlanir_ve_yerel_hizalanir(monkeypatch):
     _temizle()
-    _siparis(OrderHazirlaniyor, "102", kargo="Yurtiçi Kargo Marketplace")
-    s = _sahte(monkeypatch)
+    # Yerel kayıt bayat (Aras) ama Trendyol'da paket zaten Yurtiçi → PUT atılmaz, yerel hizalanır
+    _siparis(OrderHazirlaniyor, "102", kargo="Aras Kargo Marketplace", takip="ARAS111")
+    s = _sahte(monkeypatch, get_paket={"shipmentPackageId": 555, "cargoProviderName": "Yurtiçi Kargo Marketplace",
+                                       "cargoTrackingNumber": "YK123"})
     with app.app_context():
         r = kargo_degistir.siparis_kargo_degistir("102", "YKMP")
-    assert r["skipped"] and r["success"]
+        o = OrderHazirlaniyor.query.filter_by(order_number="102").first()
+        assert o.cargo_provider_name == "Yurtiçi Kargo Marketplace" and o.cargo_tracking_number == "YK123"
+    assert r["skipped"] and r["success"] and r["firma"]["kod"] == "YKMP"
     assert not s.put_calls
+
+
+def test_yerel_ayni_gorunse_de_canli_farkliysa_degistirilir(monkeypatch):
+    _temizle()
+    _siparis(OrderCreated, "107", kargo="Yurtiçi Kargo Marketplace")
+    s = _sahte(monkeypatch, get_paket={"shipmentPackageId": 555, "cargoProviderName": "Aras Kargo Marketplace",
+                                       "cargoTrackingNumber": "ARAS9"})
+    with app.app_context():
+        r = kargo_degistir.siparis_kargo_degistir("107", "YKMP")
+    assert not r["skipped"] and r["success"], r
+    assert len(s.put_calls) == 1
+
+
+def test_rozet_takip_onekine_gore_sonra_ada_gore():
+    t = kargo_degistir.kargo_firma_tespit
+    assert t("733123456789", "Yurtiçi Kargo Marketplace")["kod"] == "TEXMP"   # ön ek ad'ı ezer
+    assert t("728000111", None)["kisa"] == "DHL"
+    assert t("1234567890", "Aras Kargo Marketplace")["kod"] == "ARASMP"
+    assert t("", "MNG Kargo Marketplace")["kisa"] == "MNG"
+    assert t(None, None) is None
+    with app.app_context():
+        html = str(kargo_degistir.kargo_rozet_html("733999", "<x>"))
+    assert 'data-kargo-kod="TEXMP"' in html and ">TEX<" in html and "<x>" not in html
 
 
 def test_kargoya_verilmis_ve_site_siparisi_reddedilir(monkeypatch):

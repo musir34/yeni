@@ -2,6 +2,10 @@
 
 {% block title %}Üretim Siparişleri — Güllü Panel{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kargo-rozet.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="ur-page" id="urApp">
   <header class="ur-appbar">
@@ -491,6 +495,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/kargo-rozet.js') }}"></script>
 <script>
 (function () {
     const POST_HEADERS = { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' };
@@ -642,6 +647,7 @@
                         ? `<label class="ur-sec" title="Toplu kargo değişimi için seç"><input type="checkbox" class="ur-sec-cb" data-sec="${Number(r.id)}"${seciliIdler.has(Number(r.id)) ? ' checked' : ''}></label>`
                         : '<label class="ur-sec" title="Yalnız Trendyol paketlerinin kargo firması değiştirilebilir"><input type="checkbox" disabled></label>') : ''}
                     <span class="ur-order-no">#${esc(r.order_number)}</span>
+                    ${(r.kargo && r.kargo.firma) ? kargoRozetHtml(r.kargo.firma) : ''}
                     ${r.product_main_id ? `<span class="ur-model-tag"><i class="fas fa-industry"></i> ${esc(r.product_main_id)}</span>` : ''}
                     ${iptal ? '<span class="ur-badge ur-badge--iptal"><i class="bi bi-x-octagon"></i> İPTAL — üretme!</span>' : ''}
                     ${uretiliyor ? '<span class="ur-badge ur-badge--islemde"><i class="bi bi-hammer"></i> Üretimde</span>' : ''}
@@ -959,7 +965,8 @@
         document.getElementById('urKargoNo').textContent = '#' + r.order_number;
         // Site siparişi: adres etiketi (kargo kodu yok) — otomatik gönderim uygulanmaz
         const adres = !!kargo.adres_etiketi;
-        document.getElementById('urKargoFirma').textContent = adres ? 'Site siparişi' : (kargo.cargo_provider || '-');
+        document.getElementById('urKargoFirma').innerHTML = adres ? 'Site siparişi'
+            : (kargo.firma ? kargoRozetHtml(kargo.firma, true) + ' ' : '') + esc(kargo.cargo_provider || '-');
         if (kargo.etiket_order_number) document.getElementById('urKargoNo').textContent = '#' + kargo.etiket_order_number + ' (değişim)';
         document.getElementById('urKargoKod').textContent = adres ? 'Adres etiketi' : kargo.shipping_barcode;
         document.getElementById('urKargoOtomatik').hidden = adres;
