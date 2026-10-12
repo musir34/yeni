@@ -89,20 +89,49 @@
         {% endif %}
       </div>
     </div>
+    {# Son işlemler: sol sütunda, aylık özetin altında #}
+    <div class="card fn-card">
+      <div class="card-header fw-bold">🕘 Son işlemler</div>
+      <div class="card-body p-0 fn-table-wrap">
+        <table class="table table-sm table-hover fn-table mb-0">
+          <tbody>
+          {% for i in son_islemler[:10] %}
+            <tr>
+              <td>{{ i.aciklama or fn_tur_etiket.get(i.tur, i.tur) }}
+                <div class="fn-mini">{{ i.tarih | ist('%d.%m %H:%M') }} · {{ i.hesap.ad }} · {{ fn_tur_etiket.get(i.tur, i.tur) }}{% if i.kategori %} · {{ i.kategori.ad }}{% endif %}</div></td>
+              <td class="fn-num {{ 'fn-pos' if i.yon > 0 else 'fn-neg' }}">{{ '+' if i.yon > 0 else '−' }}{{ i.tutar | tl_format }} ₺</td>
+              <td class="fn-actions text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick='fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})' title="İptal">✕</button></td>
+            </tr>
+          {% else %}
+            <tr><td class="text-muted p-3">Henüz işlem yok. "Gelir ekle" ile başlayın.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   {# ── 4. Ödenmeyi bekleyenler ──────────────────────────────────────────── #}
   <div class="col-lg-7">
     <div class="card fn-card">
+      {# Vadesi gelen: aylık (YYYY-MM) ya da haftası bugüne kadar olan; sonrakiler tek satırda özetlenir #}
+      {% set bk = namespace(simdi=[], sonra=0, sonra_tutar=0, tutar=0, belirsiz=0) %}
+      {% for d in ozet.bekleyenler %}
+        {% if d.donem | length == 10 and d.donem > bugun %}
+          {% set bk.sonra = bk.sonra + 1 %}{% set bk.sonra_tutar = bk.sonra_tutar + (d.kalan or 0) %}
+        {% else %}
+          {% set bk.simdi = bk.simdi + [d] %}{% set bk.tutar = bk.tutar + (d.kalan or 0) %}{% if d.belirsiz %}{% set bk.belirsiz = bk.belirsiz + 1 %}{% endif %}
+        {% endif %}
+      {% endfor %}
       <div class="card-header d-flex justify-content-between align-items-center">
         <span class="fw-bold">⏳ Ödenmeyi bekleyenler</span>
-        {% if ozet.bekleyenler %}<span class="fn-mini">{{ ozet.bekleyen_adet }} ödeme · <b class="text-danger">{{ ozet.bekleyen_tutar | tl_format }} ₺</b>{% if ozet.bekleyen_belirsiz_adet %} + {{ ozet.bekleyen_belirsiz_adet }} tutarı belirlenecek{% endif %}</span>{% endif %}
+        {% if bk.simdi %}<span class="fn-mini">{{ bk.simdi | length }} ödeme · <b class="text-danger">{{ bk.tutar | tl_format }} ₺</b>{% if bk.belirsiz %} + {{ bk.belirsiz }} tutarı belirlenecek{% endif %}</span>{% endif %}
       </div>
       <div class="card-body p-0">
-        {% if ozet.bekleyenler %}
+        {% if bk.simdi %}
         <table class="table table-sm fn-table fnp-bekleyen mb-0">
           <tbody>
-          {% for d in ozet.bekleyenler %}
+          {% for d in bk.simdi %}
             <tr>
               <td>{{ d.kalem.ad }}<div class="fn-mini">{{ d.etiket }}</div></td>
               <td class="fn-num">{% if d.kalan is not none %}{{ d.kalan | tl_format }} ₺{% else %}<span class="fn-mini">Öderken girilecek</span>{% endif %}</td>
@@ -118,32 +147,14 @@
           </tbody>
         </table>
         {% else %}
-        <div class="p-4 text-center text-muted">Bekleyen ödeme yok. 🎉</div>
+        <div class="p-4 text-center text-muted">Vadesi gelen ödeme yok. 🎉</div>
+        {% endif %}
+        {% if bk.sonra %}
+        <a href="{{ url_for('finans.ana_gider') }}" class="d-flex justify-content-between px-3 py-2 border-top fn-mini text-decoration-none">
+          <span>Sonraki haftalar: {{ bk.sonra }} ödeme · {{ bk.sonra_tutar | tl_format }} ₺</span><span>Düzenli Ödemeler ›</span></a>
         {% endif %}
       </div>
     </div>
-  </div>
-</div>
-
-{# ── 5. Son işlemler ──────────────────────────────────────────────────── #}
-<div class="card fn-card">
-  <div class="card-header fw-bold">🕘 Son işlemler</div>
-  <div class="card-body p-0 fn-table-wrap">
-    <table class="table table-sm table-hover fn-table mb-0">
-      <tbody>
-      {% for i in son_islemler[:10] %}
-        <tr>
-          <td class="text-nowrap fn-mini">{{ i.tarih | ist('%d.%m %H:%M') }}</td>
-          <td>{{ i.aciklama or fn_tur_etiket.get(i.tur, i.tur) }}
-            <div class="fn-mini">{{ i.hesap.ad }} · {{ fn_tur_etiket.get(i.tur, i.tur) }}{% if i.kategori %} · {{ i.kategori.ad }}{% endif %}</div></td>
-          <td class="fn-num {{ 'fn-pos' if i.yon > 0 else 'fn-neg' }}">{{ '+' if i.yon > 0 else '−' }}{{ i.tutar | tl_format }} ₺</td>
-          <td class="fn-actions text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick='fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})' title="İptal">✕</button></td>
-        </tr>
-      {% else %}
-        <tr><td class="text-muted p-3">Henüz işlem yok. "Gelir ekle" ile başlayın.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
   </div>
 </div>
 

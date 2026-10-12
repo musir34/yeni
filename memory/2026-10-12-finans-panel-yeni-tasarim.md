@@ -11,3 +11,11 @@ Yalnız templates/finans_panel.html değişti (route/veri aynı, şema yok). Sı
 5. Son işlemler: 10 satır, açıklama + "hesap · tür · kategori" alt satırı, tutar, iptal ✕ (tek tırnaklı onclick korundu).
 Doğrulama: finans testleri 112 OK (HTTP render dahil); örnek verilerle önizleme tarayıcıda ekran görüntüsüyle kontrol
 edildi (masaüstü). Mobil genişlik görülemedi (pencere küçültme işlemedi). Deploy bekliyor.
+
+## Düzeltme (aynı gün, canlı ekran görüntüsü sonrası)
+- Kullanıcı: "son işlemlerin yeri doğru mu" — bekleyen listesi ayın tüm gelecek haftalarıyla 22 satıra uzuyor, son
+  işlemler en alta itilip sol taraf boş kalıyordu.
+- Son işlemler sol sütuna (aylık özetin altına) taşındı; satırda tarih alt satıra indi.
+- Bekleyenler: yalnız vadesi gelenler (aylık YYYY-MM + haftası ≤ bugün + geçmiş borçlar); gelecek haftalar tek satır
+  "Sonraki haftalar: N ödeme · X ₺ › Düzenli Ödemeler". Başlık sayısı/toplamı vadesi gelenlerden.
+- Önizleme: 12.10 itibarıyla 7 vadesi gelen + 9 sonraki doğrulandı; dar ekran ekran görüntüsü düzgün. Finans 112 OK.
