@@ -418,10 +418,17 @@
                 <div class="text-muted small">çift stok</div>
               </div>
             </div>
-            <button class="btn btn-sm btn-outline-secondary mt-2 w-100 collapsed" type="button"
-                    data-bs-toggle="collapse" data-bs-target="#eritme-{{ key }}" aria-expanded="false">
-              <i class="fas fa-chevron-down me-1"></i> Modelleri göster / gizle
-            </button>
+            <div class="d-flex gap-2 mt-2">
+              <button class="btn btn-sm btn-outline-secondary flex-grow-1 collapsed" type="button"
+                      data-bs-toggle="collapse" data-bs-target="#eritme-{{ key }}" aria-expanded="false">
+                <i class="fas fa-chevron-down me-1"></i> Modelleri göster / gizle
+              </button>
+              <button class="btn btn-sm btn-outline-primary eritme-kopyala" type="button"
+                      data-modeller="{{ grup.modeller|map(attribute='kod')|join('. ') }}"
+                      title="Model listesini kopyala">
+                <i class="fas fa-copy me-1"></i> Kopyala
+              </button>
+            </div>
             <div class="collapse" id="eritme-{{ key }}">
               <div class="eritme-modeller mt-2">
                 {% for m in grup.modeller %}
@@ -598,6 +605,34 @@
     })();
   </script>
 
+  <!-- Görev: model listesini kopyala -->
+  <script>
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.eritme-kopyala');
+      if (!btn) return;
+      var text = btn.dataset.modeller || '';
+      var toast = function (msg, type) {
+        if (window.GS && GS.showToast) GS.showToast(msg, type); else alert(msg);
+      };
+      if (!text) { toast('Kopyalanacak model yok', 'warning'); return; }
+      var done = function () {
+        toast('Modeller kopyalandı', 'success');
+        var ic = btn.querySelector('i');
+        if (ic) { ic.className = 'fas fa-check me-1'; setTimeout(function(){ ic.className = 'fas fa-copy me-1'; }, 1500); }
+      };
+      var fallback = function () {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); }
+        catch (err) { toast('Kopyalanamadı', 'danger'); }
+        document.body.removeChild(ta);
+      };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done).catch(fallback);
+      } else { fallback(); }
+    });
+  </script>
   <script src="{{ url_for('static', filename='js/weather-canvas.js') }}"></script>
   <script>
     // Aktif dark mode seçeneğini vurgula

@@ -37,11 +37,16 @@
         .btn-danger, .bg-danger { background-color: var(--color-danger) !important; }
         .bg-orange { background-color: #fd7e14 !important; }
 
-        .filter-section {
-            background-color: var(--color-white); padding: 1.5rem;
-            border-radius: var(--border-radius); box-shadow: var(--shadow-sm); margin-bottom: 2rem;
-        }
-        .filter-section .btn { width: 100%; }
+        /* Filtreler: tek satır, açılır menü (durum renkleri korunur) */
+        .filtre-bar h5 { font-size: 1rem; font-weight: 700; white-space: nowrap; }
+        .filtre-dd .btn { white-space: nowrap; font-weight: 600; }
+        .filtre-dd .dropdown-menu { min-width: 220px; border-radius: 10px; padding: .35rem; }
+        .filtre-dd .dropdown-item { border-radius: 8px; padding: .45rem .75rem; font-size: .9rem; }
+        .filtre-dd .dropdown-item.active-filter { font-weight: 700; background: rgba(183,110,121,.10); }
+        .filtre-dd .dropdown-header { font-size: .72rem; text-transform: uppercase; letter-spacing: .4px; }
+        .durum-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: .55rem; flex: 0 0 11px; box-shadow: 0 0 0 2px rgba(0,0,0,.06); }
+        .list-toolbar-actions .btn, .list-toolbar-actions .form-select { padding: .3rem .6rem; font-size: .85rem; }
+        .list-toolbar-actions .form-select { height: calc(1.5em + .6rem + 2px); }
 
         .order-search-form { flex: 1 1 320px; max-width: 420px; }
         .order-search-group .form-control { min-width: 0; }
@@ -76,7 +81,6 @@
 
         .overdue-pill { display: inline-flex; align-items: center; gap: .4rem; background: var(--color-danger); color: #fff; font-weight: 700; padding: .45rem 1rem; border-radius: 999px; text-decoration: none; white-space: nowrap; box-shadow: 0 2px 6px rgba(220,53,69,.35); }
         .overdue-pill:hover { color: #fff; filter: brightness(.93); }
-        .filter-section .btn.active-filter { box-shadow: 0 0 0 3px rgba(183,110,121,.35), inset 0 0 0 2px rgba(255,255,255,.7); transform: translateY(-1px); }
         .priority-badge { display: inline-flex; align-items: center; gap: .25rem; margin-left: .5rem; padding: .25rem .5rem; border-radius: 999px; font-size: .72rem; font-weight: 800; }
         .priority-badge.overdue { background: rgba(220,53,69,.12); color: var(--color-danger); border: 1px solid rgba(220,53,69,.45); }
         .priority-badge.urgent { background: rgba(255,193,7,.18); color: #946300; border: 1px solid rgba(255,193,7,.55); }
@@ -178,10 +182,8 @@
             .page-header .user-actions form .btn { width: 100%; }
             .page-header img { height: 30px !important; margin-right: 8px !important; }
 
-            .filter-section { padding: 0.75rem; }
-            .filter-section .row { gap: 0; }
-            .filter-section .col-md { flex: 0 0 50%; max-width: 50%; }
-            .filter-section .col-12 { flex: 0 0 100%; max-width: 100%; }
+            .filtre-bar { width: 100%; }
+            .filtre-bar .btn { width: auto; }
 
             .d-flex.justify-content-between.align-items-center.my-4 {
                 flex-direction: column;
@@ -230,7 +232,7 @@
         @media (max-width: 480px) {
             .page-header .user-actions { flex-direction: column; }
             .page-header .user-actions span { font-size: 0.85rem; }
-            .filter-section .col-md, .filter-section .col-6 { flex: 0 0 100%; max-width: 100%; }
+            .filtre-bar .filtre-dd, .filtre-bar .filtre-dd .btn { width: 100%; }
             .card-header { flex-direction: column; gap: 0.5rem; align-items: flex-start !important; }
             .product-detail-item { grid-template-columns: 52px minmax(0, 1fr); }
             .product-detail-image { width: 52px; }
@@ -241,7 +243,9 @@
         html.gs-dark body { background-color: #121212; color: #e0e0e0; }
         html.gs-dark .page-header { background-color: #1e1e1e; color: #ddd; }
         html.gs-dark h2, html.gs-dark h4, html.gs-dark h5 { color: #f0f0f0; }
-        html.gs-dark .filter-section { background-color: #1e1e1e; }
+        html.gs-dark .filtre-dd .dropdown-menu { background: #1e1e1e; border-color: #333; }
+        html.gs-dark .filtre-dd .dropdown-item { color: #eee; }
+        html.gs-dark .filtre-dd .dropdown-item:hover { background: #2a2a2a; }
         html.gs-dark .card { background: #1e1e1e; border-color: #333; color: #ddd; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
         html.gs-dark .card:hover { box-shadow: 0 5px 20px rgba(0,0,0,.5); }
         html.gs-dark .card-header { background-color: #1a1a1a; border-bottom-color: #333; color: #ddd; }
@@ -289,9 +293,6 @@
         {# Kaynak filtresi: hepsi/trendyol/shopify — URL'de yalnız varsayılan dışıysa taşınır #}
         {% set kaynak = kaynak|default('hepsi', true) %}
         {% set kaynak_param = kaynak if kaynak != 'hepsi' else none %}
-        {% macro filter_button(endpoint, label, button_classes, key) -%}
-            <a href="{{ url_for(endpoint, search=request.args.get('search', ''), sort=sort_key, per_page=per_page, kaynak=kaynak_param) }}" class="btn {{ button_classes }} {% if active_list == key %}active-filter{% endif %}">{{ label }}</a>
-        {%- endmacro %}
         {% macro page_url(page_no) -%}
             {{ url_for(request.endpoint, page=page_no, search=request.args.get('search', ''), sort=sort_key, per_page=per_page, show_overdue=(1 if show_overdue else none), kaynak=kaynak_param) }}
         {%- endmacro %}
@@ -318,20 +319,63 @@
             </div>
         </div>
 
-        <div class="filter-section mt-4">
-            <div class="row g-2">
-                <div class="col-md col-6">{{ filter_button('order_list_service.order_list_all', 'Tümü', 'btn-secondary', 'all') }}</div>
-                <div class="col-md col-6">{{ filter_button('order_list_service.order_list_new', 'Yeni Siparişler', 'btn-warning', 'new') }}</div>
-                <div class="col-md col-6">{{ filter_button('order_list_service.order_list_hazirlaniyor', 'Hazırlanıyor', 'btn-info text-white', 'hazirlaniyor') }}</div>
-                <div class="col-md col-6">{{ filter_button('order_list_service.order_list_processed', 'İşleme Alınanlar', 'btn-success', 'processed') }}</div>
-                <div class="col-md col-6">{{ filter_button('order_list_service.order_list_shipped', 'Kargoda', 'btn-danger text-white', 'shipped') }}</div>
-                <div class="col-md col-6">{{ filter_button('order_list_service.order_list_delivered', 'Teslim Edilenler', 'bg-orange text-white', 'delivered') }}</div>
-                <div class="col-md col-6"><a href="{{ url_for('new_orders_service.prepare_new_orders') }}" class="btn btn-info text-white">Toplu Ürün Hazırla</a></div>
-            </div>
-        </div>
+        {# ── Filtreler: durum ve pazaryeri tek başlık altında açılır menü (renkler korunur) ── #}
+        {% set durumlar = [
+            ('all',          'Tümü',             'order_list_service.order_list_all',          'btn-secondary',        'bg-secondary'),
+            ('new',          'Yeni Siparişler',  'order_list_service.order_list_new',          'btn-warning',          'bg-warning'),
+            ('hazirlaniyor', 'Hazırlanıyor',     'order_list_service.order_list_hazirlaniyor', 'btn-info text-white',  'bg-info'),
+            ('processed',    'İşleme Alınanlar', 'order_list_service.order_list_processed',    'btn-success',          'bg-success'),
+            ('shipped',      'Kargoda',          'order_list_service.order_list_shipped',      'btn-danger text-white','bg-danger'),
+            ('delivered',    'Teslim Edilenler', 'order_list_service.order_list_delivered',    'bg-orange text-white', 'bg-orange'),
+            ('cancelled',    'İptal Edilenler',  'order_list_service.order_list_cancelled',    'btn-dark',             'bg-dark'),
+        ] %}
+        {% set ns = namespace(aktif=durumlar[0]) %}
+        {% for d in durumlar %}{% if d[0] == active_list %}{% set ns.aktif = d %}{% endif %}{% endfor %}
+        {% set kaynaklar = [
+            ('hepsi',    'Hepsi',    'fas fa-layer-group', '#6c757d'),
+            ('trendyol', 'Trendyol', 'fas fa-store',       '#f27a1a'),
+            ('shopify',  'Shopify',  'fab fa-shopify',     '#96bf48'),
+        ] %}
+        {% set ns2 = namespace(aktif=kaynaklar[0]) %}
+        {% for k in kaynaklar %}{% if k[0] == kaynak %}{% set ns2.aktif = k %}{% endif %}{% endfor %}
 
         <div class="list-toolbar d-flex justify-content-between align-items-center my-4 gap-3">
-             <h4>Toplam Sipariş: <span id="orderTotalCount">{{ total_orders_count }}</span></h4>
+             <div class="filtre-bar d-flex align-items-center gap-2 flex-wrap">
+                <h5 class="mb-0 me-1">Toplam Sipariş: <span id="orderTotalCount">{{ total_orders_count }}</span></h5>
+
+                <div class="dropdown filtre-dd">
+                    <button class="btn btn-sm {{ ns.aktif[3] }} dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Sipariş durumu">
+                        <i class="fas fa-filter me-1"></i>Durum: <strong>{{ ns.aktif[1] }}</strong>
+                    </button>
+                    <ul class="dropdown-menu shadow-sm">
+                        <li><h6 class="dropdown-header">Sipariş durumu</h6></li>
+                        {% for d in durumlar %}
+                        <li><a class="dropdown-item d-flex align-items-center {% if d[0] == ns.aktif[0] %}active-filter{% endif %}"
+                               href="{{ url_for(d[2], search=request.args.get('search', ''), sort=sort_key, per_page=per_page, kaynak=kaynak_param) }}">
+                            <span class="durum-dot {{ d[4] }}"></span>{{ d[1] }}
+                            {% if d[0] == ns.aktif[0] %}<i class="fas fa-check ms-auto"></i>{% endif %}
+                        </a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div class="dropdown filtre-dd">
+                    <button class="btn btn-sm btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Sipariş kaynağı">
+                        <i class="{{ ns2.aktif[2] }} me-1" style="color:{{ ns2.aktif[3] }}"></i>Pazaryeri: <strong>{{ ns2.aktif[1] }}</strong>
+                    </button>
+                    <ul class="dropdown-menu shadow-sm">
+                        <li><h6 class="dropdown-header">Sipariş kaynağı</h6></li>
+                        {% for k in kaynaklar %}
+                        <li><button type="button" class="dropdown-item d-flex align-items-center {% if k[0] == ns2.aktif[0] %}active-filter{% endif %}" onclick="applyKaynak('{{ k[0] }}')">
+                            <i class="{{ k[2] }} me-2" style="color:{{ k[3] }}; width:16px; text-align:center"></i>{{ k[1] }}
+                            {% if k[0] == ns2.aktif[0] %}<i class="fas fa-check ms-auto"></i>{% endif %}
+                        </button></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <a href="{{ url_for('new_orders_service.prepare_new_orders') }}" class="btn btn-sm btn-info text-white" title="Yeni siparişleri toplu hazırla"><i class="fas fa-boxes me-1"></i>Toplu Ürün Hazırla</a>
+             </div>
              <div class="list-toolbar-actions d-flex gap-2 flex-wrap align-items-center">
                 {# Toplu kargo firması değiştirme — yalnız kargoya verilmemiş Trendyol siparişleri seçilebilir #}
                 <div class="kargo-toplu-wrap">
@@ -343,12 +387,6 @@
                 <form method="POST" action="{{ url_for('order_service.fetch_trendyol_orders_route') }}">
                     <button type="submit" class="btn btn-primary"><i class="fas fa-sync-alt"></i> Siparişleri Güncelle</button>
                 </form>
-                {# Kaynak filtresi: tek tıkla Trendyol / Shopify / hepsi #}
-                <div class="btn-group kaynak-filtre" role="group" aria-label="Sipariş kaynağı">
-                    <button type="button" class="btn btn-sm {% if kaynak == 'hepsi' %}btn-dark{% else %}btn-outline-dark{% endif %}" onclick="applyKaynak('hepsi')">Hepsi</button>
-                    <button type="button" class="btn btn-sm {% if kaynak == 'trendyol' %}btn-dark{% else %}btn-outline-dark{% endif %}" onclick="applyKaynak('trendyol')" title="Yalnız Trendyol siparişleri"><i class="fas fa-store me-1" style="color:#f27a1a"></i>Trendyol</button>
-                    <button type="button" class="btn btn-sm {% if kaynak == 'shopify' %}btn-dark{% else %}btn-outline-dark{% endif %}" onclick="applyKaynak('shopify')" title="Yalnız Shopify (site) siparişleri"><i class="fab fa-shopify me-1" style="color:#96bf48"></i>Shopify</button>
-                </div>
                 <select class="form-select w-auto" aria-label="Sıralama" onchange="applySort(this.value)">
                     <option value="date_desc" {% if sort_key == 'date_desc' or not sort_key %}selected{% endif %}>Sipariş Tarihi (Yeni → Eski)</option>
                     <option value="deadline_asc" {% if sort_key == 'deadline_asc' %}selected{% endif %}>Teslimata Kalan Süre (Az → Çok)</option>
