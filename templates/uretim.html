@@ -106,7 +106,7 @@
         <span class="ur-hazir-label"><i class="bi bi-person-check"></i> Hazırlayan:</span>
         <div class="ur-hazir-chips" id="urHazirChips"></div>
       </div>
-      <!-- Paketlenen sekmesi: toplu kargo firması değiştirme (Trendyol changeCargoProvider) -->
+      <!-- Üretilen + Paketlenen sekmeleri: toplu kargo firması değiştirme (Trendyol changeCargoProvider) -->
       <div class="ur-toplu-bar" id="urTopluBar" hidden>
         <label class="ur-toplu-sec"><input type="checkbox" id="urTopluHepsi"> Tümünü seç</label>
         <span class="ur-toplu-sayi" id="urTopluSayi">0 seçili</span>
@@ -502,7 +502,8 @@
 
     let aktifDurum = 'bekleyen';
     const rowCache = {};  // id → satır (kargo diyaloğu için)
-    const seciliIdler = new Set();  // Paketlenen sekmesi: toplu kargo değişimi için seçilen kayıt id'leri
+    const seciliIdler = new Set();  // Üretilen/Paketlenen sekmeleri: toplu kargo değişimi için seçilen kayıt id'leri
+    const KARGO_SECIM_SEKMELERI = new Set(['uretilen', 'paketlenen']);
     const trendyolMu = r => !/^(SH|DG)-/.test(r.order_number || '');
     let kargoAktif = null;
     let aktifHazirlayan = '';   // '' = tümü; kullanıcı adı = yalnız onun hazırladıkları
@@ -609,6 +610,7 @@
         const paketlenen = durum === 'paketlenen';
         const kargoda = durum === 'kargoda';
         const teslim = durum === 'teslim';
+        const kargoSecim = KARGO_SECIM_SEKMELERI.has(durum);  // toplu kargo değişimi seçim kutusu
         const sd = r.siparis_detay || [];
         const uretimKalem = sd.filter(u => u.uretim).length;
         const karma = sd.length > 0 && uretimKalem < sd.length;
@@ -633,10 +635,10 @@
             butonlar = kargoBtn;  // kargoda/teslim: durum aksiyonu yok
         }
         return `
-        <article class="ur-card${iptal ? ' ur-card--iptal' : ''}${paketlenen && seciliIdler.has(Number(r.id)) ? ' ur-card--secili' : ''}" data-kayit-id="${Number(r.id)}">
+        <article class="ur-card${iptal ? ' ur-card--iptal' : ''}${kargoSecim && seciliIdler.has(Number(r.id)) ? ' ur-card--secili' : ''}" data-kayit-id="${Number(r.id)}">
             <div class="ur-card-main">
                 <div class="ur-card-top">
-                    ${paketlenen ? (trendyolMu(r)
+                    ${kargoSecim ? (trendyolMu(r)
                         ? `<label class="ur-sec" title="Toplu kargo değişimi için seç"><input type="checkbox" class="ur-sec-cb" data-sec="${Number(r.id)}"${seciliIdler.has(Number(r.id)) ? ' checked' : ''}></label>`
                         : '<label class="ur-sec" title="Yalnız Trendyol paketlerinin kargo firması değiştirilebilir"><input type="checkbox" disabled></label>') : ''}
                     <span class="ur-order-no">#${esc(r.order_number)}</span>
@@ -1007,7 +1009,7 @@
         document.getElementById('urKargoDialog').hidden = true;
     });
 
-    // ── Toplu kargo firması değiştirme (Paketlenen sekmesi) ──
+    // ── Toplu kargo firması değiştirme (Üretilen + Paketlenen sekmeleri) ──
     // Kaynak: /kargo-firmasi/api/* (kargo_degistir.py) — Trendyol changeCargoProvider.
     let kargoFirmalariYuklendi = false;
     async function kargoFirmalariYukle() {
@@ -1026,9 +1028,9 @@
     }
     function topluBarGuncelle() {
         const bar = document.getElementById('urTopluBar');
-        const paketlenenSekme = aktifDurum === 'paketlenen';
-        bar.hidden = !paketlenenSekme;
-        if (!paketlenenSekme) return;
+        const secimSekmesi = KARGO_SECIM_SEKMELERI.has(aktifDurum);
+        bar.hidden = !secimSekmesi;
+        if (!secimSekmesi) return;
         kargoFirmalariYukle();
         // Görünen listede artık olmayan seçimleri düşür
         const gorunen = new Set([...document.querySelectorAll('.ur-sec-cb')].map(cb => Number(cb.getAttribute('data-sec'))));
