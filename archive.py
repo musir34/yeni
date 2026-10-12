@@ -716,6 +716,21 @@ def archive_an_order():
             estimated_delivery_start=getattr(order_obj, 'estimated_delivery_start', None),
             estimated_delivery_end=getattr(order_obj, 'estimated_delivery_end', None),
             cargo_tracking_link=getattr(order_obj, 'cargo_tracking_link', None),
+            # Ürün alanları — arşivden çıkarırken geri yüklenebilsinler diye
+            merchant_sku=getattr(order_obj, 'merchant_sku', None),
+            product_barcode=getattr(order_obj, 'product_barcode', None),
+            line_id=getattr(order_obj, 'line_id', None),
+            product_name=getattr(order_obj, 'product_name', None),
+            product_code=getattr(order_obj, 'product_code', None),
+            product_size=getattr(order_obj, 'product_size', None),
+            product_color=getattr(order_obj, 'product_color', None),
+            product_main_id=getattr(order_obj, 'product_main_id', None),
+            stockCode=getattr(order_obj, 'stockCode', None),
+            amount=getattr(order_obj, 'amount', None),
+            discount=getattr(order_obj, 'discount', None),
+            currency_code=getattr(order_obj, 'currency_code', None),
+            vat_base_amount=getattr(order_obj, 'vat_base_amount', None),
+            origin_shipment_date=getattr(order_obj, 'origin_shipment_date', None),
             archive_reason=archive_reason,
             archive_date=datetime.utcnow(),
             source='trendyol'
@@ -843,7 +858,9 @@ def recover_from_archive():
         restored_order.details = archived_order.details
         restored_order.shipment_package_id = archived_order.shipment_package_id
         restored_order.package_number = archived_order.package_number
-        restored_order.shipping_barcode = archived_order.shipping_barcode
+        # Archive kargo kodunu shipping_barcode'da tutar; statü tablolarında bu sütun YOK,
+        # kargo kodu cargo_tracking_number'dır (sipariş hazırla buradan okur).
+        restored_order.cargo_tracking_number = archived_order.shipping_barcode
         restored_order.cargo_provider_name = archived_order.cargo_provider_name
         restored_order.customer_name = archived_order.customer_name
         restored_order.customer_surname = archived_order.customer_surname
