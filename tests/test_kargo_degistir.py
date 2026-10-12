@@ -86,6 +86,7 @@ def _sahte(monkeypatch, **kw):
     s = _SahteTrendyol(**kw)
     monkeypatch.setattr(kargo_degistir.requests, "put", s.put)
     monkeypatch.setattr(kargo_degistir.requests, "get", s.get)
+    monkeypatch.setattr(kargo_degistir.time, "sleep", lambda _s: None)  # yeniden çekme beklemesi yok
     return s
 
 
@@ -136,18 +137,37 @@ def test_basarili_degisim_yerel_kaydi_gunceller(monkeypatch):
     assert r["firma"]["kod"] == "YKMP"
 
 
-def test_yeniden_cekme_eski_adi_dondururse_yerel_ad_yazilir(monkeypatch):
+def test_yeniden_cekme_eski_adi_dondururse_yerel_ad_yazilir_eski_kod_silinir(monkeypatch):
     _temizle()
-    _siparis(OrderPicking, "101")
-    _sahte(monkeypatch, get_paket={"shipmentPackageId": 555, "cargoProviderName": "Aras Kargo Marketplace",
-                                   "cargoTrackingNumber": "ARAS111"})
+    _siparis(OrderPicking, "101", takip="733111")
+    s = _sahte(monkeypatch, get_paket={"shipmentPackageId": 555, "cargoProviderName": "Trendyol Express Marketplace",
+                                       "cargoTrackingNumber": "733111"})
     with app.app_context():
         r = kargo_degistir.siparis_kargo_degistir("101", "PTTMP")
         assert r["success"], r
         assert r["cargo_tracking_number"] is None  # yeni kod henüz yok → sonraki senkronda gelir
         o = OrderPicking.query.filter_by(order_number="101").first()
         assert o.cargo_provider_name == "PTT Kargo"
-        assert o.cargo_tracking_number == "ARAS111"  # eski kod silinmez
+        assert o.cargo_tracking_number == ""  # eski (artık geçersiz) 733 kodu silindi → rozet TEX kalmaz
+    assert r["firma"]["kod"] == "PTTMP"
+    assert "eski kod silindi" in r["message"]
+    assert len(s.get_calls) == 1 + kargo_degistir.YENIDEN_CEKME_DENEME  # canlı kontrol + denemeler
+
+
+def test_yeni_ad_geldi_ama_kod_eskiyse_kod_temizlenir(monkeypatch):
+    _temizle()
+    _siparis(OrderCreated, "108", kargo="Trendyol Express Marketplace", takip="733555")
+    _sahte(monkeypatch,
+           get_paket_oncesi={"shipmentPackageId": 555, "cargoProviderName": "Trendyol Express Marketplace",
+                             "cargoTrackingNumber": "733555"},
+           get_paket={"shipmentPackageId": 555, "cargoProviderName": "DHL eCommerce Marketplace",
+                      "cargoTrackingNumber": "733555"})  # ad değişti, kod henüz eski
+    with app.app_context():
+        r = kargo_degistir.siparis_kargo_degistir("108", "DHLECOMMP")
+        o = OrderCreated.query.filter_by(order_number="108").first()
+        assert o.cargo_provider_name == "DHL eCommerce Marketplace"
+        assert o.cargo_tracking_number == ""
+    assert r["success"] and r["firma"]["kisa"] == "DHL"
 
 
 def test_ayni_firma_canli_pakete_gore_atlanir_ve_yerel_hizalanir(monkeypatch):

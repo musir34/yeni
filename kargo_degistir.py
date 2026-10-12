@@ -23,6 +23,7 @@ Route güvenliği uretim_routes ile birebir: 2FA kalkanı + fetch başlığı CS
 """
 import base64
 import logging
+import time
 
 import requests
 from flask import Blueprint, jsonify, request, session
@@ -70,6 +71,9 @@ _AD_ANAHTAR = {
 # Yalnız bu tablolardaki (kargoya verilmemiş) paketler değiştirilebilir.
 AKTIF_TABLOLAR = (OrderCreated, OrderHazirlaniyor, OrderPicking)
 MAKS_TOPLU = 50
+# Değişiklik sonrası yeni takip numarası için yeniden çekme: deneme sayısı ve aralık (sn)
+YENIDEN_CEKME_DENEME = 3
+YENIDEN_CEKME_BEKLEME_SN = 2.0
 
 # ── Mini kargo rozeti ─────────────────────────────────────────────────────────
 # Kargo takip numarasının ÖN EKİ firmayı söyler (kod değişince rozet de değişir):
@@ -265,22 +269,33 @@ def siparis_kargo_degistir(order_number: str, kargo_kodu: str) -> dict:
         sonuc["message"] = mesaj
         return sonuc
 
-    # Doğrulama + yeni takip numarası: paketi yeniden çek. Trendyol tarafında
-    # atama anlık olmayabilir; çekilemezse/eski ad dönerse yerel adı kendimiz yazarız,
-    # takip numarası bir sonraki "Siparişleri Güncelle" ile gelir.
+    # Doğrulama + yeni takip numarası: paketi yeniden çek. Trendyol yeni kodu anında
+    # üretmeyebilir → kısa aralıkla birkaç deneme. Yine gelmezse ESKİ KOD SİLİNİR:
+    # kargo değişince eski kod geçersizdir; yerelde kalırsa eski etiket basılır ve
+    # rozet (takip no ön eki) eski firmayı gösterir. Yeni kod sonraki senkronla gelir.
+    eski_takip = (getattr(ilk, "cargo_tracking_number", "") or "").strip()
     yeni_ad = KARGO_KOD_AD.get(kargo_kodu, kargo_kodu)
     yeni_takip = None
-    paket = trendyol_paket_cek(order_number, package_id)
-    if paket and kod_tahmin(paket.get("cargoProviderName", "")) == kargo_kodu:
-        yeni_ad = paket.get("cargoProviderName") or yeni_ad
-        yeni_takip = paket.get("cargoTrackingNumber") or None
+    paket = None
+    for deneme in range(YENIDEN_CEKME_DENEME):
+        if deneme:
+            time.sleep(YENIDEN_CEKME_BEKLEME_SN)
+        paket = trendyol_paket_cek(order_number, package_id)
+        if paket and kod_tahmin(paket.get("cargoProviderName", "")) == kargo_kodu:
+            yeni_ad = paket.get("cargoProviderName") or yeni_ad
+            t = (paket.get("cargoTrackingNumber") or "").strip()
+            if t and t != eski_takip:
+                yeni_takip = t
+                break
+    if not yeni_takip:
+        logger.info("[KARGO] %s yeni takip numarası henüz oluşmadı — eski kod (%s) temizlendi",
+                    order_number, eski_takip or "-")
     try:
         for s in satirlar:
             s.cargo_provider_name = yeni_ad
-            if yeni_takip:
-                s.cargo_tracking_number = yeni_takip
-                if paket and paket.get("cargoTrackingLink") and hasattr(s, "cargo_tracking_link"):
-                    s.cargo_tracking_link = paket.get("cargoTrackingLink")
+            s.cargo_tracking_number = yeni_takip or ""
+            if hasattr(s, "cargo_tracking_link"):
+                s.cargo_tracking_link = (paket.get("cargoTrackingLink") or "") if (yeni_takip and paket) else ""
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -303,7 +318,8 @@ def siparis_kargo_degistir(order_number: str, kargo_kodu: str) -> dict:
     sonuc.update(success=True, cargo_provider_name=yeni_ad, cargo_tracking_number=yeni_takip,
                  firma=kargo_firma_tespit(yeni_takip, yeni_ad),
                  message=("Değiştirildi — yeni kargo kodu alındı." if yeni_takip
-                          else "Değiştirildi — yeni kargo kodu birazdan Siparişleri Güncelle ile gelir."))
+                          else "Değiştirildi — yeni kargo kodu henüz oluşmadı; eski kod silindi, "
+                               "yenisi Siparişleri Güncelle ile gelir."))
     return sonuc
 
 
